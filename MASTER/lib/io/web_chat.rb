@@ -55,12 +55,14 @@ module Master
         # marks a page that failed to go idle at its deadline. Neither is a
         # Timeout::Error with a "timed out" message. Treat both as hard timeouts
         # or the fallback chain retries the same browser profile after 30/60s.
-        timeout_class = error.class.ancestors.any? do |ancestor|
-          ancestor.name.to_s.match?(/\A(?:Ferrum::)?(?:(?:Process)?TimeoutError|PendingConnectionsError)\z/)
+        classes = error.class.ancestors.filter_map(&:name)
+        timeout_class = classes.any? do |name|
+          name.match?(/\A(?:Ferrum::)?(?:(?:Process)?TimeoutError|PendingConnectionsError)\z/)
         end
         return :timeout if timeout_class || error.is_a?(Timeout::Error) || message.match?(/timed out/i)
-        return :offline if error.is_a?(SystemCallError)
-        return :model_missing if message.match?(/unknown web chat provider/i)
+        return :offline if error.is_a?(SystemCallError) || classes.include?("Ferrum::DeadBrowserError")
+        return :model_missing if classes.include?("Ferrum::BinaryNotFoundError") ||
+                                 message.match?(/unknown web chat provider/i)
         return :auth_error if error.is_a?(DisabledError) || error.is_a?(ProviderError)
 
         :provider_error
@@ -137,13 +139,16 @@ module Master
       # waiting for teardown here defeats that deadline. Finish teardown off-thread;
       # do not reopen the shared profile until that cleanup has actually exited.
       def cleanup_browser(browser)
-        worker = Thread.new do
-          begin
-            browser.quit
-          rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "WebChat.browser_cleanup", provider: @provider)
-          end
-        end
+        # Ferrum >= 0.19.1 can kill Chrome asynchronously itself and returns
+        # the cleanup thread. Older locked versions have only synchronous
+        # #quit, so put that call on one worker instead.
+        worker = if async_quit_supported?(browser)
+                   browser.quit(wait: false)
+                 else
+                   Thread.new { browser.quit }
+                 end
+        return unless worker.is_a?(Thread)
+
         PROFILE_CLEANUP[:thread] = worker
         return if worker.join(PROFILE_CLEANUP_WAIT_S)
 
@@ -152,6 +157,14 @@ module Master
         )
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "WebChat.browser_cleanup_start", provider: @provider)
+      end
+
+      def async_quit_supported?(browser)
+        browser.method(:quit).parameters.any? do |kind, name|
+          kind == :keyrest || (%i[key keyreq].include?(kind) && name == :wait)
+        end
+      rescue StandardError
+        false
       end
 
       def refuse_if_cleanup_pending!
