@@ -20,7 +20,7 @@ class TestServerLeases < Minitest::Test
       lease(run_dir, "amber", owner: 111, pid: 61_352)
       killed = []
 
-      reaped = Leases.reap_orphans!(run_dir, alive: ->(_owner) { false }, killer: ->(pid) { killed << pid })
+      reaped = Leases.reap_orphans!(run_dir, alive: ->(_owner) { false }, killer: ->(pid) { killed << pid; true })
 
       assert_equal ["amber"], reaped
       assert_equal [61_352], killed
@@ -44,6 +44,71 @@ class TestServerLeases < Minitest::Test
     end
   end
 
+  def test_an_unconfirmed_orphan_stop_keeps_both_files_for_retry
+    Dir.mktmpdir("triangle-run") do |run_dir|
+      pid_path = File.join(run_dir, "amber.pid")
+      owner_path = "#{pid_path}.owner"
+      lease(run_dir, "amber", owner: 111, pid: 61_352)
+
+      first = Leases.reap_orphans!(
+        run_dir, alive: ->(_owner) { false }, killer: ->(_pid) { false }
+      )
+
+      assert_empty first
+      assert_equal "61352\n", File.read(pid_path)
+      assert_equal "111 61352\n", File.read(owner_path)
+
+      second = Leases.reap_orphans!(
+        run_dir, alive: ->(_owner) { false }, killer: ->(_pid) { true }
+      )
+
+      assert_equal ["amber"], second
+      refute File.exist?(pid_path)
+      refute File.exist?(owner_path)
+    end
+  end
+
+  def test_orphan_reaper_does_not_remove_a_replacement_owner_lease
+    Dir.mktmpdir("triangle-run") do |run_dir|
+      pid_path = File.join(run_dir, "amber.pid")
+      owner_path = "#{pid_path}.owner"
+      lease(run_dir, "amber", owner: 111, pid: 61_352)
+      killer = lambda do |_pid|
+        File.write(owner_path, "222 61352\\n")
+        true
+      end
+
+      assert_empty Leases.reap_orphans!(run_dir, alive: ->(_owner) { false }, killer:)
+      assert_equal "222 61352\\n", File.read(owner_path)
+    end
+  end
+
+  def test_process_group_stop_escalates_and_waits_for_the_group_to_disappear
+    Dir.mktmpdir("triangle-group-stop") do |dir|
+      child_file = File.join(dir, "renderer.pid")
+      child_code = "Signal.trap('TERM', 'IGNORE'); File.write(#{child_file.dump}, Process.pid.to_s); sleep 30"
+      leader_code = <<~RUBY
+        Signal.trap("TERM", "IGNORE")
+        Process.spawn(RbConfig.ruby, "-e", #{child_code.dump}, out: File::NULL, err: File::NULL)
+        sleep 30
+      RUBY
+      pid = Process.spawn(RbConfig.ruby, "-e", leader_code, pgroup: true, out: File::NULL, err: File::NULL)
+      waiter = Process.detach(pid)
+      child = wait_for_file(child_file).to_i
+
+      assert_equal pid, Process.getpgid(child)
+      assert Leases.stop_process_group(pid, term_grace: 0.1, kill_grace: 1.0)
+      refute waiter.alive?
+      assert_process_gone(child)
+      refute Leases.process_group_alive?(pid)
+    ensure
+      if defined?(pid) && pid
+        Process.kill("KILL", -pid) rescue nil
+      end
+      waiter&.join(1) if defined?(waiter)
+    end
+  end
+
   # The real trap context, where a Mutex cannot be taken and exit! follows at once.
   def test_a_term_trap_that_exits_bang_still_stops_the_held_server
     Dir.mktmpdir("trap-proof") do |dir|
@@ -52,6 +117,32 @@ class TestServerLeases < Minitest::Test
 
       assert_equal 143, status.exitstatus
       assert_equal "61352", File.read(marker)
+    end
+  end
+
+  def wait_for_file(path, timeout: 3)
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+    until File.file?(path)
+      raise "subprocess did not publish #{File.basename(path)}" if
+        Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+      sleep 0.01
+    end
+    File.read(path)
+  end
+
+  def assert_process_gone(pid)
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 2
+    loop do
+      begin
+        Process.kill(0, pid)
+      rescue Errno::ESRCH
+        return
+      end
+      flunk "child process #{pid} survived process-group stop" if
+        Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+      sleep 0.01
     end
   end
 
