@@ -24,6 +24,19 @@ class TestStudioReplicateClientPaths < Minitest::Test
     end
   end
 
+  class SchemaClient < StubClient
+    def get(uri)
+      @requests << [:get, uri]
+      properties = if uri.path.include?("/versions/")
+                     { "prompt" => {}, "pinned_parameter" => {} }
+                   else
+                     { "prompt" => {}, "latest_parameter" => {} }
+                   end
+      schema = { "components" => { "schemas" => { "Input" => { "properties" => properties } } } }
+      uri.path.include?("/versions/") ? { "openapi_schema" => schema } : { "latest_version" => { "openapi_schema" => schema } }
+    end
+  end
+
   class StatusClient < Studio::ReplicateClient
     def initialize(status)
       @status = status
@@ -126,6 +139,54 @@ class TestStudioReplicateClientPaths < Minitest::Test
     assert_empty @client.requests
   end
 
+  def test_pinned_input_schema_uses_the_version_specific_endpoint
+    version = "b" * 64
+    client = SchemaClient.new
+
+    assert_equal %w[prompt pinned_parameter], client.input_names("owner/model:#{version}")
+    method, uri = client.requests.fetch(0)
+    assert_equal :get, method
+    assert_equal "/v1/models/owner/model/versions/#{version}", uri.path
+  end
+
+  def test_training_input_cannot_override_dataset_trigger_or_numeric_controls
+    url = "https://files.replicate.delivery/photos.zip"
+    %w[input_images trigger_word steps lora_rank].each do |key|
+      error = assert_raises(ArgumentError) do
+        @client.train_lora(url, "owner/model", wait: false, extra_input: { key => "override" })
+      end
+      assert_match(/cannot override/, error.message)
+    end
+    assert_empty @client.requests
+  end
+
+  def test_training_request_validates_url_trigger_steps_rank_and_extra_input_before_network
+    url = "https://files.replicate.delivery/photos.zip"
+    [
+      -> { @client.train_lora("http://files.example.invalid/photos.zip", "owner/model", wait: false) },
+      -> { @client.train_lora(url, "owner/model", trigger_word: "two words", wait: false) },
+      -> { @client.train_lora(url, "owner/model", steps: 0, wait: false) },
+      -> { @client.train_lora(url, "owner/model", lora_rank: "16", wait: false) },
+      -> { @client.train_lora(url, "owner/model", extra_input: [], wait: false) }
+    ].each { |call| assert_raises(ArgumentError, &call) }
+    assert_empty @client.requests
+  end
+
+  def test_training_extra_input_is_merged_without_replacing_protected_fields
+    url = "https://files.replicate.delivery/photos.zip"
+    @client.train_lora(
+      url, "owner/model", trigger_word: "SAMPLE", steps: 1_000, lora_rank: 16,
+      wait: false, extra_input: { "seed" => 7 }
+    )
+
+    body = @client.requests.find { |request| request.first == :post }.fetch(2)
+    assert_equal url, body.fetch(:input).fetch(:input_images)
+    assert_equal "SAMPLE", body.fetch(:input).fetch(:trigger_word)
+    assert_equal 1_000, body.fetch(:input).fetch(:steps)
+    assert_equal 16, body.fetch(:input).fetch(:lora_rank)
+    assert_equal 7, body.fetch(:input).fetch(:seed)
+  end
+
   def test_training_destination_must_be_a_single_unpinned_model_reference
     error = assert_raises(ArgumentError) { @client.create_model("owner/model:version") }
 
@@ -148,7 +209,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
     end
 
     assert_match(/trainer version/, error.message)
-    assert_equal [:get], @client.requests.map(&:first)
+    assert_empty @client.requests, "invalid trainer version must fail before model lookup"
   end
 
   def test_api_origin_guard_rejects_dot_segments_and_escaped_paths
