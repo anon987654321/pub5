@@ -15,6 +15,10 @@ nb:
       popular: "Best vurdert"
       delivery_fee: "Lavest leveringsgebyr"
       minimum_order: "Lavest minsteordre"
+    sort_headings:
+      popular: "Best vurdert i %{city}"
+      delivery_fee: "Lavest leveringsgebyr i %{city}"
+      minimum_order: "Lavest minsteordre i %{city}"
     opening_hours_heading: "Åpningstider"
     closed_all_day: "Stengt"
     tip_line: "Tips: %{amount}"
