@@ -573,7 +573,8 @@ module Master
       def send_web_chat(provider, messages, sys:)
         Result.ok(Io::WebChat.call(provider:, prompt: text_prompt_for(messages), system: sys))
       rescue StandardError => e
-        Result.err("web-chat: #{e.message}", category: :provider_error)
+        category = Io::WebChat.failure_category(e)
+        Result.err("web-chat: #{e.message}", category:)
       end
 
       def breaker_for(model_id)
