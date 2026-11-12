@@ -699,7 +699,7 @@ module Master
                             end
                    {
                      status:, applicable: true, findings:,
-                     groups:, cleared,
+                     groups:, cleared:,
                      remaining:, resweep:,
                      report: read(@visual_groups, :report),
                    }
