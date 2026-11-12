@@ -372,6 +372,37 @@ class TestCouncilDeliberation < Minitest::Test
     assert_equal [["SECOND", "thread limit reached"], ["THIRD", "thread limit reached"]], failures
   end
 
+  def test_lane_catalogue_lookup_does_not_block_persona_failure_recording
+    previous_local = ENV["MASTER_LOCAL_ONLY"]
+    ENV.delete("MASTER_LOCAL_ONLY")
+    persona = Persona.new(name: "Maintainer", role: "r", bias: "b", prompt: "p")
+    lookup_started = Queue.new
+    release_lookup = Queue.new
+    agent = Object.new
+    agent.define_singleton_method(:candidate_models) do |task_type:|
+      lookup_started << task_type
+      release_lookup.pop
+      []
+    end
+    delib = Master::Review::Council::Deliberation.new(
+      personas: [persona], agent:, judge_enabled: false
+    )
+
+    lookup_thread = Thread.new { delib.send(:lane_for, persona) }
+    assert_equal :review, lookup_started.pop
+    failure_thread = Thread.new do
+      delib.send(:note_persona_failure, persona, RuntimeError.new("provider unavailable"))
+    end
+
+    assert failure_thread.join(1),
+           "persona failure bookkeeping must not wait for a slow candidate-model lookup"
+  ensure
+    release_lookup << true if release_lookup
+    lookup_thread&.join(1)
+    failure_thread&.join(1)
+    ENV["MASTER_LOCAL_ONLY"] = previous_local
+  end
+
   def test_council_emits_machine_synthesis_without_majority_vote
     events = []
     bus = Struct.new(:events) do

@@ -88,6 +88,7 @@ module Master
           @mode = options.fetch(:mode, :parallel)
           @persona_failures = []
           @persona_failures_lock = Mutex.new
+          @lane_candidates_lock = Mutex.new
           validate_dependencies!
         end
 
@@ -621,7 +622,7 @@ module Master
         def lane_for(persona, image: nil)
           return if ENV["MASTER_LOCAL_ONLY"] == "1" || !@agent.respond_to?(:candidate_models)
 
-          @persona_failures_lock.synchronize { @lane_candidates ||= Array(@agent.candidate_models(task_type: :review)) }
+          @lane_candidates_lock.synchronize { @lane_candidates ||= Array(@agent.candidate_models(task_type: :review)) }
           names = (@personas.map(&:name) | [persona.name])
           Io::LaneSelection.spread(names, @lane_candidates, vision: !image.nil? && image != "")[persona.name]
         end
