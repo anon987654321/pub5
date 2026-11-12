@@ -39,25 +39,34 @@ options = { probe: true, dry: false, no_publish: false, resume: false }
 wrapper_args = []
 args = []
 index = 0
-while index < ARGV.length
-  token = ARGV[index]
-  case token
-  when "--dry", "--no-probe", "--no-publish", "--resume", "-h", "--help"
-    wrapper_args << token
-  when "--model", "--lane"
-    wrapper_args << token
-    value = ARGV[index + 1]
-    if value.nil? || value.start_with?("--")
-      raise OptionParser::MissingArgument, token
+begin
+  while index < ARGV.length
+    token = ARGV[index]
+    case token
+    when "--dry", "--no-probe", "--no-publish", "--resume", "-h", "--help"
+      wrapper_args << token
+    when "--model", "--lane"
+      wrapper_args << token
+      value = ARGV[index + 1]
+      if value.nil? || value.start_with?("--")
+        raise OptionParser::MissingArgument, token
+      end
+      wrapper_args << value
+      index += 1
+    when /\A--(?:model|lane|checks)=/
+      wrapper_args << token
+    else
+      args << token
     end
-    wrapper_args << value
     index += 1
-  when /\A--(?:model|lane|checks)=/
-    wrapper_args << token
-  else
-    args << token
   end
-  index += 1
+rescue OptionParser::ParseError => error
+  # The scan raises before the parser's rescue below is in scope; report the same
+  # friendly line here instead of letting the raw OptionParser text escape.
+  detail = error.message
+  detail = "--model requires an ID or 'none'" if detail.match?(/missing argument: --model/)
+  detail = "--lane requires a lane name" if detail.match?(/missing argument: --lane/)
+  abort "fix-here: #{detail}"
 end
 
 parser = OptionParser.new do |opts|

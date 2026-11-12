@@ -123,6 +123,10 @@ module Master
     # anomalies to let the model find new selectors before failing.
     class Crawler
       SELECTOR_KEYS = %w[row title link next].freeze
+      # A page that will not yield is retried with fresh selectors at most this
+      # many times: rescout asks a model, so an unbounded redo would spend a
+      # budget on one page instead of proving it INCONCLUSIVE.
+      MAX_RESCOUTS_PER_PAGE = 3
 
       attr_reader :papers, :pages, :status, :reason
 
@@ -144,11 +148,13 @@ module Master
         FileUtils.mkdir_p(@evidence_dir, mode: 0700)
         seen = {}
         previous_first = nil
+        rescouts = Hash.new(0)
         @max_pages.times do |i|
           rows = @browser.css(@sel["row"])
           if rows.empty?
-            if @rescout && attempt_rescout("zero rows matched on page #{i + 1}")
-              retry
+            if @rescout && (rescouts[i] += 1) <= MAX_RESCOUTS_PER_PAGE &&
+               attempt_rescout("zero rows matched on page #{i + 1}")
+              redo
             else
               return finish("INCONCLUSIVE", "zero rows matched on page #{i + 1} (rescout failed)")
             end
@@ -156,8 +162,9 @@ module Master
 
           first = link_of(rows.first)
           if i.positive? && first == previous_first
-            if @rescout && attempt_rescout("pagination did not advance at page #{i + 1}")
-              retry
+            if @rescout && (rescouts[i] += 1) <= MAX_RESCOUTS_PER_PAGE &&
+               attempt_rescout("pagination did not advance at page #{i + 1}")
+              redo
             else
               return finish("INCONCLUSIVE", "pagination did not advance at page #{i + 1} (rescout failed)")
             end
