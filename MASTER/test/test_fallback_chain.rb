@@ -222,9 +222,11 @@ class TestFallbackChain < Minitest::Test
   def test_failover_skip_model_identifies_transient_errors
     agent = build_agent(CountingDispatcher.new({}))
     timeout = Master::Result.err("timed out", category: :timeout)
+    quota = Master::Result.err("subscription quota exhausted", category: :quota_exceeded)
     provider = Master::Result.err("upstream", category: :provider_error)
 
     assert agent.send(:failover_skip_model?, timeout)
+    assert agent.send(:failover_skip_model?, quota)
     refute agent.send(:failover_skip_model?, provider)
   end
 end
