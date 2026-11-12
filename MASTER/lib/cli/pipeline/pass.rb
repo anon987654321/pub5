@@ -478,8 +478,8 @@ module Master
       counts = @observation_totals.values_at("obs0", "obs1")
       line = self.class.scorecard(**@scored, counts:, proof: @proof, gaps: fix_gaps)
       Master::Trace::Dmesg.status("fix0", line)
-      Residual.write(target: File.basename(@resolved.to_s), scorecard: line, proof: @proof,
-                     named: Master::Fix::CheckFocus.named)
+      Pipeline::Residual.write(target: File.basename(@resolved.to_s), scorecard: line, proof: @proof,
+                               named: Master::Fix::CheckFocus.named)
       line
     end
 
