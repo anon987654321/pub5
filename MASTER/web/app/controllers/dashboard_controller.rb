@@ -33,28 +33,41 @@ class DashboardController < ApplicationController
     session = c[:session]
     agent = c[:agent]
     logging = c[:logging]
-    bus_events = logging.respond_to?(:dmesg) ? logging.dmesg(20).to_s.lines.map(&:chomp) : []
-    pressure = Master::Trace::ContextPressure.snapshot(session:)
+    pressure = panel_value("context_pressure", {}) { Master::Trace::ContextPressure.snapshot(session:) }
+
     {
-      events: session.respond_to?(:messages) ? session.messages.last(10) : [],
-      bus_events:,
-      model: agent.model.to_s,
-      mission: Master::Fix::Mission.current(root:),
-      tokens: pressure[:tokens],
-      cost: session.respond_to?(:cost) ? session.cost : 0.0,
-      open_breakers: c[:breaker].respond_to?(:open_models) ? c[:breaker].open_models : [],
-      agent_pool: c[:agent_pool]&.active_count || 0,
-      rtk: Master::Io::OutputFilter.stats(root),
-      rsi_inbox: rsi_inbox(root),
-      active_plan: Master::Ground::ActivePlan.read(root),
-      skills: Array(c[:skills]&.loaded).pluck(:name),
+      events: panel_value("events", []) { session.respond_to?(:messages) ? session.messages.last(10) : [] },
+      bus_events: panel_value("bus", []) { logging.respond_to?(:dmesg) ? logging.dmesg(20).to_s.lines.map(&:chomp) : [] },
+      model: panel_value("status.model", "unknown") { agent.model.to_s },
+      mission: panel_value("status.mission", {}) { Master::Fix::Mission.current(root:) },
+      tokens: pressure[:tokens] || 0,
+      cost: panel_value("status.cost", 0.0) { session.respond_to?(:cost) ? session.cost : 0.0 },
+      open_breakers: panel_value("status.breakers", []) do
+        breaker = c[:breaker]
+        breaker.respond_to?(:open_models) ? Array(breaker.open_models) : []
+      end,
+      agent_pool: panel_value("status.agent_pool", 0) { c[:agent_pool]&.active_count || 0 },
+      rtk: panel_value("rtk", {}) { Master::Io::OutputFilter.stats(root) },
+      rsi_inbox: panel_value("rsi", []) { rsi_inbox(root) },
+      active_plan: panel_value("plan", nil) { Master::Ground::ActivePlan.read(root) },
+      skills: panel_value("skills", []) { Array(c[:skills]&.loaded).pluck(:name) },
       context_pressure: pressure,
-      provider_health: provider_health(c),
-      cache_efficiency: Master::Trace::CacheEfficiency.snapshot,
-      model_quota: Master::Io::ModelQuota.snapshot,
-      repair_queue: repair_queue(root),
-      fleet: FleetPanel.read(root: root),
+      provider_health: panel_value("providers", {}) { provider_health(c) },
+      cache_efficiency: panel_value("quota.cache", {}) { Master::Trace::CacheEfficiency.snapshot },
+      model_quota: panel_value("quota.models", {}) { Master::Io::ModelQuota.snapshot },
+      repair_queue: panel_value("repair", []) { repair_queue(root) },
+      fleet: panel_value("fleet", {}) { FleetPanel.read(root:) },
     }
+  end
+
+  # A panel is a failure boundary of its own. One missing telemetry store or
+  # unreadable ledger must not make the other ten panels disappear behind a
+  # single 503 response.
+  def panel_value(name, fallback)
+    yield
+  rescue StandardError => e
+    Master::Ground::Swallow.log(e, context: "Dashboard.panel.#{name}")
+    fallback
   end
 
   def provider_health(c)

@@ -86,6 +86,19 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "one failed panel does not make the other dashboard panels unavailable" do
+    Master::Fix::Mission.stub(:current, ->(root:) { raise IOError, "mission store unavailable" }) do
+      get "/dashboard/live", headers: auth_headers
+
+      assert_response :success
+      body = JSON.parse(response.body)
+      assert_equal({}, body["mission"])
+      assert_equal "test/model", body["model"]
+      assert body.key?("fleet")
+      assert body.key?("model_quota")
+    end
+  end
+
   test "live returns the mission payload when container present" do
     get "/dashboard/live", headers: auth_headers
 
@@ -105,7 +118,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     panels = css_select("#mission-grid > section")
-    assert_equal 9, panels.size
+    assert_equal 11, panels.size
     panels.each do |panel|
       heading = panel.at_css("h2")
       assert_equal heading["id"], panel["aria-labelledby"]
