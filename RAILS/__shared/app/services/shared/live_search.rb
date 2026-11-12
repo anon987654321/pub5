@@ -61,10 +61,10 @@ module Shared
 
     attr_reader :scope, :query, :columns, :vertical, :app
 
-    # data_source_exists? is a schema query, and the search controller asks
-    # ten verticals per keystroke - each one re-probed the same answer. The
-    # existence of a model's FTS table does not change while the process
-    # runs, so it is computed once per model class and remembered.
+    # The search controller asks ten verticals per keystroke, so the connection's
+    # table inventory is checked once per model class and remembered. SQLite FTS
+    # indexes are virtual tables; inspecting tables keeps them on the same path
+    # as ordinary tables.
     FTS_SCOPE_BY_MODEL = {}
 
     def fts_scope?
