@@ -17,16 +17,20 @@ module Master
 
           def deploy_bare_rescue_findings
             deploy_paths.flat_map do |path|
-              next [] unless path.end_with?(".rb", ".sh")
+              ruby_source = ruby_deploy_path?(path)
+              shell_source = shell_deploy_path?(path)
+              next [] unless ruby_source || shell_source
+
               read_lines(path).each_with_index.filter_map do |line, index|
-                next unless line.match?(/^\s*rescue\s*(?:$|=>)/) || line.match?(/^\s*trap\s+.*\s+do/)
-                finding(path:, line: index + 1, message: "bare rescue/trap in OPERATOR - use explicit error handling")
+                rescue_line = ruby_source && line.match?(/^\\s*rescue\\s*(?:$|=>)/)
+                trap_line = shell_source && line.match?(/^\\s*trap\\s+.*\\s+do/)
+                finding(path:, line: index + 1, message: "bare rescue/trap in OPERATOR - use explicit error handling") if rescue_line || trap_line
               end
             end
           end
 
           def deploy_duplicate_id_findings
-            deploy_paths.select { |p| p.end_with?(".yml") }.flat_map do |path|
+            deploy_paths.select { |path| path.end_with?(".yml", ".yaml") }.flat_map do |path|
               yaml = Master.load_yaml(path)
               ids = law_ids(yaml)
               ids.group_by(&:itself).filter_map do |id, values|
@@ -51,13 +55,11 @@ module Master
           end
 
           def nesting_findings_for(path)
-            case File.extname(path).downcase
-            when ".sh", ".zsh", ".ksh" then shell_nesting_findings(path)
-            when ".erb" then erb_nesting_findings(path)
-            when ".rb"
-              deploy_law_findings(path, Laws::NestingDepthLaw.new, "LINEARITY", context: "SelfTest.deploy_nesting")
-            else []
-            end
+            return deploy_law_findings(path, Laws::NestingDepthLaw.new, "LINEARITY", context: "SelfTest.deploy_nesting") if ruby_deploy_path?(path)
+            return shell_nesting_findings(path) if shell_deploy_path?(path)
+            return erb_nesting_findings(path) if File.extname(path).downcase == ".erb"
+
+            []
           end
 
           def shell_nesting_findings(path)
@@ -96,7 +98,7 @@ module Master
 
           def deploy_god_class_findings
             law = Laws::GodClassLaw.new
-            deploy_paths.select { |path| path.end_with?(".rb") }
+            deploy_paths.select { |path| ruby_deploy_path?(path) }
               .flat_map { |path| deploy_law_findings(path, law, "ABSTRACTION", context: "SelfTest.deploy_god_class") }
           end
 
@@ -105,14 +107,15 @@ module Master
           # outside DENSITY, despite sharing the same maintenance risk.
           def deploy_small_functions_findings
             law = Laws::SmallFunctionsLaw.new
-            deploy_paths.select { |path| path.end_with?(".rb") }
+            deploy_paths.select { |path| ruby_deploy_path?(path) }
               .flat_map { |path| deploy_law_findings(path, law, "DENSITY", context: "SelfTest.deploy_small_functions") }
           end
 
           # Reuse each canonical AST detector so MASTER and deploy code share
           # thresholds, code-line counting, and parse-failure behavior.
           def deploy_law_findings(path, law, dimension, context:)
-            law.check(read_text(path), path:).map do |result|
+            detector_path = File.extname(path).downcase == ".rb" ? path : "#{path}.rb"
+            law.check(read_text(path), path: detector_path).map do |result|
               finding(path:, line: result.line, message: "#{result.message} (#{dimension})")
             end
           rescue StandardError => e
@@ -123,6 +126,8 @@ module Master
 
           def deploy_small_files_findings
             deploy_paths.filter_map do |path|
+              next if DEPLOY_SIZE_EXEMPT_EXTENSIONS.include?(File.extname(path).downcase)
+
               size = begin
                 File.size(path)
               rescue StandardError => e
@@ -141,19 +146,50 @@ module Master
             @deploy_paths ||= build_deploy_paths
           end
 
-          DEPLOY_EXTENSIONS = %w[.rb .sh .zsh .ksh .erb .yml .yaml].freeze
+          SHELL_EXTENSIONS = %w[.sh .zsh .ksh].freeze
+          SHELL_SOURCE_BASENAMES = %w[.zshrc zshrc.shared].freeze
+          DEPLOY_SIZE_EXEMPT_EXTENSIONS = %w[.md .markdown .8].freeze
           DEPLOY_IGNORED_SEGMENTS = %w[test quarantine].freeze
 
           def build_deploy_paths
             deploy_root = File.expand_path("../OPENBSD", @root)
             return [] unless File.directory?(deploy_root)
 
-            Dir.glob(File.join(deploy_root, "**", "*"))
+            Dir.glob(File.join(deploy_root, "**", "*"), File::FNM_DOTMATCH)
               .select { |path| File.file?(path) }
-              .select { |path| DEPLOY_EXTENSIONS.include?(File.extname(path).downcase) }
               .select { |path| deploy_path_allowed?(path, deploy_root) }
               .uniq.sort
           end
+
+          # OpenBSD service and deploy commands are often extensionless. Discover
+          # their language from the shebang instead of letting suffixes hide them.
+          def deploy_script_kind(path)
+            @deploy_script_kinds ||= {}
+            return @deploy_script_kinds[path] if @deploy_script_kinds.key?(path)
+
+            @deploy_script_kinds[path] = script_kind_for(path)
+          end
+
+          def script_kind_for(path)
+            extension = File.extname(path).downcase
+            return :ruby if extension == ".rb"
+            return :shell if SHELL_EXTENSIONS.include?(extension) || SHELL_SOURCE_BASENAMES.include?(File.basename(path))
+
+            header = File.open(path, "rb", &:readline)
+            return :ruby if header.match?(/\\A#!.*\\bruby\\b/)
+            return :shell if header.match?(/\\A#!.*\\b(?:zsh|ksh|sh)\\b/)
+
+            nil
+          rescue EOFError
+            nil
+          rescue StandardError => e
+            Master::Ground::Swallow.log(e, context: "SelfTest.deploy_script_kind", severity: :load_bearing)
+            nil
+          end
+
+          def ruby_deploy_path?(path) = deploy_script_kind(path) == :ruby
+
+          def shell_deploy_path?(path) = deploy_script_kind(path) == :shell
 
           def deploy_path_allowed?(path, deploy_root)
             rel = path.delete_prefix("#{deploy_root}/")

@@ -97,6 +97,98 @@ class TestSelfTest < Minitest::Test
     end
   end
 
+  def test_openbsd_deploy_corpus_includes_extensionless_services_and_native_config_files
+    Dir.mktmpdir do |workspace|
+      root = File.join(workspace, "MASTER")
+      openbsd = File.join(workspace, "OPENBSD")
+      FileUtils.mkdir_p(File.join(openbsd, "dev"))
+      FileUtils.mkdir_p(File.join(openbsd, "test"))
+      FileUtils.mkdir_p(File.join(openbsd, "etc", "rc.d"))
+      FileUtils.mkdir_p(File.join(openbsd, "etc"))
+      FileUtils.mkdir_p(File.join(openbsd, "bin"))
+
+      operator = File.join(openbsd, "OPERATOR.sh")
+      stage = File.join(openbsd, "dev", "operator_stage_1.zsh")
+      service = File.join(openbsd, "etc", "rc.d", "master")
+      config = File.join(openbsd, "etc", "pf.conf")
+      command = File.join(openbsd, "bin", "vps-deploy")
+      hidden = File.join(openbsd, ".pub5")
+      readme = File.join(openbsd, "RUNBOOK.md")
+      test_file = File.join(openbsd, "test", "fixture.rb")
+      [operator, stage, service, config, command, hidden, readme, test_file].each { |path| File.write(path, "fixture\n") }
+
+      paths = Master::Review::Scan::SelfTest.new(root:).send(:build_deploy_paths)
+
+      [operator, stage, service, config, command, hidden, readme].each { |path| assert_includes paths, path }
+      refute_includes paths, test_file
+    end
+  end
+
+  def test_extensionless_openbsd_ruby_command_is_measured_by_class_and_method_laws
+    Dir.mktmpdir do |workspace|
+      root = File.join(workspace, "MASTER")
+      openbsd = File.join(workspace, "OPENBSD")
+      FileUtils.mkdir_p(File.join(openbsd, "usr", "local", "sbin"))
+      path = File.join(openbsd, "usr", "local", "sbin", "pub5-admin")
+      methods = 11.times.map { |index| "  def method_#{index}; end" }.join("\n")
+      long_body = (1..21).map { |index| "      value_#{index} = #{index}" }.join("\n")
+      source = "#!/usr/local/bin/ruby\nclass Large\n#{methods}\n  def long\n#{long_body}\n  end\nend\n"
+      File.write(path, source)
+
+      audit = Master::Review::Scan::SelfTest.new(root:)
+      abstraction = audit.send(:deploy_god_class_findings)
+      density = audit.send(:deploy_small_functions_findings)
+
+      assert abstraction.any? { |finding| finding[:path] == path && finding[:message].include?("god class Large") }
+      assert density.any? { |finding| finding[:path] == path && finding[:message].include?("method long is 21 code lines") }
+    end
+  end
+
+  def test_extensionless_openbsd_shell_service_is_measured_for_nesting
+    Dir.mktmpdir do |workspace|
+      root = File.join(workspace, "MASTER")
+      openbsd = File.join(workspace, "OPENBSD")
+      FileUtils.mkdir_p(File.join(openbsd, "etc", "rc.d"))
+      path = File.join(openbsd, "etc", "rc.d", "master")
+      File.write(path, <<~KSH)
+        #!/bin/ksh
+        if true; then
+          if true; then
+            if true; then
+              if true; then
+                if true; then
+                  print yes
+                fi
+              fi
+            fi
+          fi
+        fi
+      KSH
+
+      findings = Master::Review::Scan::SelfTest.new(root:).send(:deploy_nesting_findings)
+
+      assert_equal 1, findings.size
+      assert_includes findings.first[:message], "nesting >4"
+    end
+  end
+
+  def test_deploy_file_size_measures_configs_but_not_long_runbook_documents
+    Dir.mktmpdir do |workspace|
+      root = File.join(workspace, "MASTER")
+      openbsd = File.join(workspace, "OPENBSD")
+      FileUtils.mkdir_p(File.join(openbsd, "etc"))
+      config = File.join(openbsd, "etc", "pf.conf")
+      runbook = File.join(openbsd, "RUNBOOK.md")
+      File.write(config, "x" * 24_001)
+      File.write(runbook, "x" * 60_000)
+
+      findings = Master::Review::Scan::SelfTest.new(root:).send(:deploy_small_files_findings)
+
+      assert_equal 1, findings.size
+      assert_equal config, findings.first[:path]
+    end
+  end
+
   def test_deploy_ruby_nesting_allows_four_levels
     Dir.mktmpdir do |workspace|
       root = File.join(workspace, "MASTER")
