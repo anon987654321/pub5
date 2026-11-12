@@ -60,7 +60,7 @@ module Deploy
       return true unless pid
 
       signal_chrome_group("TERM", pid)
-      deadline = monotonic + TERM_GRACE_S
+      deadline = monotonic + chrome_term_grace
       leader_reaped = false
 
       loop do
@@ -68,11 +68,11 @@ module Deploy
         break if leader_reaped && !chrome_group_alive?(pid)
         break if monotonic >= deadline
 
-        sleep STOP_POLL_S
+        sleep chrome_stop_poll
       end
 
       signal_chrome_group("KILL", pid) unless leader_reaped && !chrome_group_alive?(pid)
-      deadline = monotonic + KILL_GRACE_S
+      deadline = monotonic + chrome_kill_grace
 
       loop do
         leader_reaped ||= reap_chrome_leader(pid)
@@ -90,9 +90,12 @@ module Deploy
       false
     end
 
+    def chrome_term_grace = TERM_GRACE_S
+    def chrome_kill_grace = KILL_GRACE_S
+    def chrome_stop_poll = STOP_POLL_S
+
     def reap_chrome_leader(pid)
-      Process.waitpid(pid, Process::WNOHANG)
-      true
+      !Process.waitpid(pid, Process::WNOHANG).nil?
     rescue Errno::ECHILD
       true
     rescue Errno::EINTR
