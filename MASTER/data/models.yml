@@ -21,16 +21,18 @@ fallback_policy:
   # as boolean true; the reader therefore found no string key. The first
   # proposed vocabulary also included names this runtime does not emit
   # (`network_error`, `refusal`, `insufficient_balance`). The current list
-  # below uses actual Result categories, including the live adapter's
-  # `quota_exceeded` category.
+  # below uses only Result categories the fallback chain actually judges.
   #
   # A rate-limited, quota-exhausted or out-of-budget model cannot succeed on
   # an immediate retry, so all three belong here, as does a model the provider
-  # does not hold. Live adapters emit both :budget and :quota_exceeded.
-  # `exhausted` is the paid-tier spelling a subscription CLI answers with
-  # (claude-cli's session limit, lib/review/llm_dispatcher/cli_sender.rb) —
-  # left out on 2026-11-12, a quota-dead claude-cli was re-asked on every call
-  # of an audit run because :exhausted matched nothing in this list.
+  # does not hold. `exhausted` is the paid-tier spelling the chain sees a
+  # subscription CLI answer with (claude-cli's session limit,
+  # lib/review/llm_dispatcher/cli_sender.rb) — left out on 2026-11-12, a
+  # quota-dead claude-cli was re-asked on every call of an audit run because
+  # :exhausted matched nothing in this list. The `quota_exceeded` spelling
+  # exists only in the skip-cache bookkeeping (Agent#park_failed_single_call
+  # normalizes into it); no Result the fallback chain judges carries it, so
+  # listing it here would match nothing.
   # `provider_error` deliberately does not: a transient 5xx is what in-place
   # retry exists for. `retries_per_tier` was removed — the retry count has one
   # source, `failover.max_retries` below.
@@ -41,7 +43,6 @@ fallback_policy:
     - auth_error
     - rate_limit
     - budget
-    - quota_exceeded
     - exhausted
     - model_missing
     - invalid_request
