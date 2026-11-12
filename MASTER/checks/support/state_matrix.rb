@@ -18,8 +18,10 @@ module Deploy
       "disabled" => "el.disabled = true; el.setAttribute('aria-disabled', 'true');",
       "loading" => "el.setAttribute('aria-busy', 'true');",
       "error" => "el.setAttribute('aria-invalid', 'true');",
-      "empty" => "el.textContent = '';",
-      "long-text" => "el.textContent = 'Langtekst for et smalt felt '.repeat(6);",
+      # Form controls paint their current value, not textContent. This keeps
+      # empty/long-text states meaningful for search fields and textareas.
+      "empty" => "if (el.matches('input, textarea')) { el.value = ''; } else { el.textContent = ''; }",
+      "long-text" => "if (el.matches('input, textarea')) { el.value = 'Langtekst for et smalt felt '.repeat(6); } else { el.textContent = 'Langtekst for et smalt felt '.repeat(6); }",
     }.freeze
 
     RECT_JS = <<~'JS'
