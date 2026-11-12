@@ -61,6 +61,17 @@ class TestRenderer < Minitest::Test
     assert_match(/tasks0 at mainbus0: .*; \/help by task/, text)
   end
 
+  def test_compact_splash_reports_web_configuration_without_claiming_readiness
+    renderer = FakeRenderer.new(config: {})
+
+    renderer.stub(:splash_web_url, "https://master.example.invalid") do
+      text = strip_ansi(renderer.splash("model"))
+
+      assert_includes text, "web0 at mainbus0: configured"
+      refute_includes text, "web0 at mainbus0: ready"
+    end
+  end
+
   def test_compact_splash_calls_a_capability_probe_available_not_ready
     old_degraded = ENV["MASTER_TTS_DEGRADED"]
     ENV.delete("MASTER_TTS_DEGRADED")
