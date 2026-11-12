@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 class Playlist::PlaylistsController < Playlist::BaseController
-  include Shared::FindableBySlug
-  include Playlist::OwnerVisibility
+    include Playlist::OwnerVisibility
   include Playlist::WaveformComments
   allow_unauthenticated_access only: %i[index show embed]
   before_action :require_user_session, only: %i[new create analytics]
