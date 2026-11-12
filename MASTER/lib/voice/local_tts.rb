@@ -73,17 +73,35 @@ module Master
         File.executable?(sibling) ? sibling : nil
       end
 
-      # Detached, logging to .master/local_tts.log; at most once per process.
-      def start_server(entry)
-        return false if @started || !(command = server_bin(entry))
+      # The warm server deliberately outlives the synthesis call. Keep its
+      # detached waiter, though: it reaps the owned child and lets a later
+      # request restart the server if it exited. A boolean latch made one failed
+      # startup permanent for the lifetime of the MASTER process.
+      def server_child_running?
+        waiter = @server_waiter
+        return false unless waiter
+        return true if waiter.alive?
+
+        waiter.value
+        @server_waiter = nil
+        false
+      rescue StandardError => e
+        @server_waiter = nil
+        Master::Ground::Swallow.log(e, context: "LocalTts.server_child_running?")
+        false
+      end
+
+      def start_server(entry, root: Master::ROOT)
+        return true if server_child_running?
+        return false unless (command = server_bin(entry))
 
         uri = server_uri(entry)
-        log = File.join(Master::ROOT, ".master", "local_tts.log")
+        log = File.join(root, ".master", "local_tts.log")
         FileUtils.mkdir_p(File.dirname(log))
         pid = Process.spawn(Master::Io::ProcessSpawn.environment, command, "--host", uri.host, "--port", uri.port.to_s,
                             in: File::NULL, out: [log, "a"], err: [log, "a"], pgroup: true)
-        Process.detach(pid)
-        @started = true
+        @server_waiter = Process.detach(pid)
+        true
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "LocalTts.start_server")
         false
