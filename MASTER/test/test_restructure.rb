@@ -72,6 +72,42 @@ class TestRestructure < Minitest::Test
 
   def restructure(proof = Proof.new) = Restructure.new(repo_root: @repo, proof:)
 
+  def test_preview_reports_a_real_diff_without_writing
+    plan = split_plan
+    before = plan.paths.to_h { |path| [path, File.file?(File.join(@repo, path)) ? read(path) : nil] }
+
+    result = restructure.preview(plan, allowed_operations: ["split"])
+
+    assert result.ok?, -> { result.message }
+    value = result.value!
+    refute value.fetch(:already_applied)
+    assert_includes value.fetch(:diff), "second.rb"
+    assert_equal before, plan.paths.to_h do |path|
+      [path, File.file?(File.join(@repo, path)) ? read(path) : nil]
+    end
+    assert_empty sh("git", "status", "--porcelain", chdir: @repo)
+  end
+
+  def test_preview_refuses_a_symlinked_path_without_following_it
+    outside = File.join(@tmp, "outside.rb")
+    File.write(outside, "OUTSIDE = 1\\n")
+    linked = File.join(@repo, "MASTER/lib/linked.rb")
+    File.symlink(outside, linked)
+    plan = Restructure::Plan.parse(<<~TEXT)
+      SUMMARY: Refuse symlinked source
+      OPERATIONS: merge
+      === WRITE MASTER/lib/linked.rb
+      LINKED = 2
+      === END
+    TEXT
+
+    result = restructure.preview(plan, allowed_operations: ["merge"])
+
+    refute result.ok?
+    assert_includes result.message, "symlinked path"
+    assert_equal "OUTSIDE = 1\\n", File.read(outside)
+  end
+
   def test_a_plan_reads_its_explicit_operations
     plan = split_plan
 
