@@ -892,17 +892,43 @@ class TestTaskContract < Minitest::Test
   end
 
 
-  def test_direct_operator_ssh_adapter_requires_preflight_even_for_a_custom_host_alias
+  def test_direct_operator_ssh_adapter_requires_preflight_for_the_canonical_vm23_host
     contract = CONTRACT.build(
       intent: "functional_change", scope: ["OPENBSD/**"], preserve: [], proof: []
     )
     reason = Master::Fix::OpenBSDManualPreflight.refusal_for_ssh_argv(
-      ssh_argv: ["ssh", "-o", "BatchMode=yes", "dev@private-openbsd-alias"],
+      ssh_argv: ["ssh", "-o", "BatchMode=yes", "dev@brgen.no"],
       remote_command: "rcctl restart master",
       contract:
     )
 
     assert_match(/openbsd_preflight/, reason)
+  end
+
+  def test_ssh_receipt_must_match_the_requested_openbsd_host
+    contract = openbsd_task_contract
+    reason = Master::Fix::OpenBSDManualPreflight.refusal_for_ssh_argv(
+      ssh_argv: ["ssh", "dev@server4.openbsd.amsterdam"],
+      remote_command: "rcctl restart master",
+      contract:
+    )
+
+    assert_match(/target identity mismatch/, reason)
+    assert_match(/receipt is for vm23/, reason)
+  end
+
+  def test_custom_ssh_alias_must_be_declared_in_the_preflight_receipt
+    receipt = openbsd_preflight_fixture
+    receipt[:ssh_aliases] = ["private-openbsd-alias"]
+    contract = openbsd_task_contract(receipt)
+    reason = Master::Fix::OpenBSDManualPreflight.refusal_for_ssh_argv(
+      ssh_argv: ["ssh", "dev@private-openbsd-alias"],
+      remote_command: "rcctl restart master",
+      contract:
+    )
+
+    refute_match(/target identity mismatch/, reason)
+    assert_match(/source-read receipt for controlled service/, reason)
   end
 
   def test_operator_ssh_adapter_leaves_manual_and_identity_bootstrap_available
@@ -922,6 +948,12 @@ class TestTaskContract < Minitest::Test
     )
 
     assert_nil reason
+  end
+
+  def test_uname_all_is_an_allowed_read_only_identity_bootstrap
+    assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "ssh -o BatchMode=yes dev@brgen.no 'uname -a'"
+    )
   end
 
 end

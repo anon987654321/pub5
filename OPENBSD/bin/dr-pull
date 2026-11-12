@@ -48,6 +48,8 @@ KEY = File.expand_path(ENV.fetch("PUB4_SSH_KEY", "~/.ssh/id_ed25519_brgen"))
 DEST = File.expand_path(ENV.fetch("PUB4_DR_DIR", "~/pub5-dr"))
 KEEP = Integer(ENV.fetch("PUB4_DR_KEEP", "14"))
 APPS = %w[brgen amber bsdports].freeze
+REPO_ROOT = File.expand_path("../..", __dir__).freeze
+OPERATOR = File.join(REPO_ROOT, "MASTER", "bin", "operator").freeze
 
 STALE_AFTER_DAYS = Integer(ENV.fetch("PUB4_DR_STALE_DAYS", "2"))
 
@@ -62,8 +64,28 @@ if ARGV.intersect?(%w[-h --help])
   exit 0
 end
 
+def ssh_preflight(cmd)
+  Open3.capture2e(
+    OPERATOR, "rtfm", "--host", HOST, "--key", KEY,
+    "--source", File.join(REPO_ROOT, "OPENBSD/bin/dr-pull"), "--", cmd
+  )
+rescue Errno::ENOENT => error
+  warn "dr-pull: BLOCKED - local operator preflight is unavailable (#{error.class})"
+  exit 78
+end
+
 def ssh(cmd)
+  output, status = ssh_preflight(cmd)
+  return [output, status] unless status.success?
+
   Open3.capture2e("ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=20", "-i", KEY, HOST, cmd)
+end
+
+def ssh_binary(cmd)
+  output, status = ssh_preflight(cmd)
+  return [output, status] unless status.success?
+
+  Open3.capture2("ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=20", "-i", KEY, HOST, cmd)
 end
 
 # --check answers one question: how old is the newest pull? Nothing asked it
@@ -297,7 +319,7 @@ abort("dr-pull: #{problems.size} of #{APPS.size} database(s) did not snapshot\n#
 # this disk are compared to the bytes written there rather than to themselves.
 remote_sums, status = ssh("cd /tmp/dr && sha256 -r *.sqlite3")
 abort("dr-pull: checksum on vm23 failed\n#{remote_sums}") unless status.success?
-tar, status = Open3.capture2("ssh", "-o", "BatchMode=yes", "-i", KEY, HOST, "tar -C /tmp/dr -cf - .")
+tar, status = ssh_binary("tar -C /tmp/dr -cf - .")
 abort("dr-pull: tar stream failed") unless status.success? && !tar.empty?
 IO.popen(["tar", "-C", target, "-xf", "-"], "wb") { |io| io.write(tar) }
 ssh("rm -rf /tmp/dr")
@@ -325,7 +347,7 @@ blob_problems = []
 blob_summary = APPS.filter_map do |app|
   dir = "/home/#{app}/app/storage"
   remote = "doas sh -c 'cd #{dir} && set -- [0-9a-z][0-9a-z]; [ -d \"$1\" ] || exit 0; tar -cf - \"$@\"'"
-  data, status = Open3.capture2("ssh", "-o", "BatchMode=yes", "-i", KEY, HOST, remote)
+  data, status = ssh_binary(remote)
   unless status.success?
     blob_problems << "#{app}: could not read #{dir}"
     next

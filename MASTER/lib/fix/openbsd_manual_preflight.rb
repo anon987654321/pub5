@@ -94,7 +94,7 @@ module Master
 
         attributes = value.to_h.transform_keys(&:to_s)
         required = %w[hostname os_release architecture scope source_reads native_interfaces manual_pages]
-        optional = %w[no_native_interfaces_reason]
+        optional = %w[no_native_interfaces_reason ssh_aliases]
         missing = required - attributes.keys
         unknown = attributes.keys - required - optional
         raise TaskContract::Invalid, "openbsd_preflight is missing: #{missing.join(', ')}" unless missing.empty?
@@ -111,6 +111,13 @@ module Master
           raise TaskContract::Invalid, "openbsd_preflight.architecture is required"
         end
 
+        ssh_aliases = Array(attributes.fetch("ssh_aliases", [])).map do |entry|
+          value = entry.to_s.strip.downcase
+          unless value.match?(/\A[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\z/) && !value.include?("..")
+            raise TaskContract::Invalid, "invalid OpenBSD SSH alias: #{entry.inspect}"
+          end
+          value
+        end.uniq.sort
         scope = Array(attributes.fetch("scope")).map { |path| TaskContract.safe_path(path) }.uniq.sort
         raise TaskContract::Invalid, "openbsd_preflight.scope must name an OPENBSD path" if scope.empty?
         scope.each do |entry|
@@ -234,6 +241,7 @@ module Master
           "architecture" => architecture.freeze, "scope" => scope.freeze,
           "source_reads" => source_reads.freeze, "native_interfaces" => interfaces.freeze,
           "manual_pages" => manual_pages.freeze,
+          "ssh_aliases" => ssh_aliases.freeze,
           "no_native_interfaces_reason" => (no_native_reason.freeze unless no_native_reason.empty?)
         }.compact.freeze
       rescue KeyError => error
@@ -446,6 +454,15 @@ module Master
 
         preflight = contract.openbsd_preflight
         return "RTFM_FIRST requires complete target-release manuals before this native operation" unless preflight
+        if remote
+          target_host = ssh_destination(argv)
+          accepted_hosts = [preflight.fetch("hostname").to_s.downcase]
+          accepted_hosts.concat(HOST_IDENTITY_ALIASES.fetch(preflight.fetch("hostname").to_s.downcase, []))
+          accepted_hosts.concat(Array(preflight.fetch("ssh_aliases")))
+          unless accepted_hosts.include?(target_host.to_s.downcase)
+            return "RTFM_FIRST target identity mismatch: receipt is for #{preflight.fetch("hostname")}, SSH destination is #{target_host.inspect}; verify identity and declare the alias"
+          end
+        end
         declared = Array(preflight.fetch("native_interfaces"))
         missing = command_manuals - declared
         return "RTFM_FIRST missing declared manual interface(s): #{missing.join(', ')}" unless missing.empty?
@@ -807,6 +824,32 @@ module Master
         executable == "git" && %w[status diff show log ls-files].include?(tokens[1].to_s)
       end
 
+      HOST_IDENTITY_ALIASES = {
+        "vm23" => %w[vm23 brgen.no www.brgen.no],
+        "server4" => %w[server4 server4.openbsd.amsterdam www.openbsd.amsterdam],
+      }.freeze
+
+      def ssh_destination(argv)
+        values = Array(argv)
+        return unless File.basename(values.first.to_s) == "ssh"
+
+        index = 1
+        while index < values.length
+          token = values[index].to_s
+          if token == "--"
+            index += 1
+            break
+          elsif SSH_OPTIONS_WITH_VALUE.include?(token)
+            index += 2
+          elsif token.start_with?("-")
+            index += 1
+          else
+            break
+          end
+        end
+        values[index].to_s.split("@").last
+      end
+
       def openbsd_ssh_command?(argv)
         return false unless File.basename(Array(argv).first.to_s) == "ssh"
 
@@ -852,7 +895,7 @@ module Master
         first = File.basename(remote.first.to_s)
         return true if first == "man"
         return true if first == "hostname" && remote.length == 1
-        first == "uname" && (remote.include?("-srm") || remote.include?("-v"))
+        first == "uname" && (remote.include?("-srm") || remote.include?("-v") || remote.include?("-a"))
       rescue ArgumentError
         false
       end

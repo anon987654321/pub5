@@ -22,6 +22,7 @@
 
 require "open3"
 require "digest"
+require "shellwords"
 
 # Every sibling here reaches this through `require_relative "lib/utf8"`. This one
 # is the only file OPERATOR.sh installs to /usr/local/bin, and a require_relative
@@ -48,6 +49,8 @@ DRIFT_ROOT = [ENV["PUB5_ROOT"], File.expand_path("../..", __dir__), "/home/dev/p
        File.expand_path("../..", __dir__)
 
 MIRROR = File.join(DRIFT_ROOT, "OPENBSD")
+OPERATOR = File.join(DRIFT_ROOT, "MASTER", "bin", "operator")
+SOURCE_PATH = File.join(DRIFT_ROOT, "OPENBSD", "checks", "config_drift_check.rb")
 
 # Repo mirror => live path, for every file installed byte-for-byte.
 #
@@ -126,6 +129,15 @@ end
 # without the rescue this check raises Errno::ENOENT where it means to report
 # nothing found.
 def doas_run(*command)
+  gate, gate_status = Open3.capture2e(
+    OPERATOR, "rtfm", "--local", "--source", SOURCE_PATH, "--",
+    Shellwords.join(["doas", "-n", *command])
+  )
+  unless gate_status.success?
+    warn gate.to_s.strip
+    warn "config-drift: BLOCKED - native command was not executed"
+    exit 78
+  end
   out, status = Open3.capture2e("doas", "-n", *command)
 
   status.success? ? out : nil
@@ -157,6 +169,14 @@ def live_files(paths)
     "echo #{(MARKER + path).dump}; doas cat #{path} 2>/dev/null || cat #{path} 2>/dev/null"
   end.join("; ")
   script += "; echo #{(MARKER + CRONTAB_KEY).dump}; doas crontab -l -u root 2>/dev/null"
+  gate, gate_status = Open3.capture2e(
+    OPERATOR, "rtfm", "--host", SSH_HOST, "--key", SSH_KEY, "--source", SOURCE_PATH, "--", script
+  )
+  unless gate_status.success?
+    warn gate.to_s.strip
+    warn "config-drift: BLOCKED - remote command was not executed"
+    return keys.to_h { |key| [key, nil] }
+  end
   out, status = Open3.capture2e(
     "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", "-i", SSH_KEY, SSH_HOST, script
   )

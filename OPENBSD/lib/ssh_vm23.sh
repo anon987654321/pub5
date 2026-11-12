@@ -23,6 +23,21 @@ set -euo pipefail
 : "${SSH_KEY:=${HOME}/.ssh/id_ed25519_brgen}"
 : "${REMOTE_PUB4:=/home/dev/pub5}"
 
+# Resolve the checkout without relying on the caller's working directory.
+# %N at source time names this file, including when another script sources it.
+typeset -g SSH_VM23_SOURCE=${${(%):-%N}:A}
+typeset -g SSH_VM23_REPO_ROOT=${SSH_VM23_SOURCE:h:h:h}
+typeset -g SSH_VM23_OPERATOR=${SSH_VM23_REPO_ROOT}/MASTER/bin/operator
+
+vm23_rtfm() {
+  [[ -x $SSH_VM23_OPERATOR ]] || {
+    print -u2 "ssh_vm23: BLOCKED - local MASTER/bin/operator is unavailable; no SSH was opened"
+    return 78
+  }
+  "$SSH_VM23_OPERATOR" rtfm --host "${SSH_USER}@${SSH_HOST}" --key "$SSH_KEY" \
+    --source "$SSH_VM23_REPO_ROOT/OPENBSD/lib/ssh_vm23.sh" -- "$*"
+}
+
 # One copy of the usage, above the functions rather than in the dispatch at the
 # foot of the file, and reachable as -h so an operator does not have to run the
 # script with no argument to be told what it takes.
@@ -46,6 +61,7 @@ typeset -ga VM23_SSH_OPTS=(
 [[ -f $SSH_KEY ]] && VM23_SSH_OPTS+=(-i "$SSH_KEY")
 
 vm23_ssh() {
+  vm23_rtfm "$*" || return $?
   ssh "${VM23_SSH_OPTS[@]}" "${SSH_USER}@${SSH_HOST}" "$@"
 }
 

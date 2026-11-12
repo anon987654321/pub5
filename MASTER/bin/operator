@@ -39,6 +39,7 @@ def usage
       bin/operator check [--scan-only] [--only=a,b] [--tree=T] [--list] [--release]  every declared check in the repo, fixing as it goes
       bin/operator check --fix-proof [--tree=T]  internal /fix final proof against a verified candidate baseline
       bin/operator status [--json]
+      bin/operator rtfm [--host USER@HOST] [--key PATH] [--source PATH] [--receipt PATH] [--local] -- <native command>  read-only OpenBSD admission check
       bin/operator fix status [--trees=A,B] [--json]  /fix runs, queue, pass, logs, commits and retained worktrees; read-only
       bin/operator vps state [--json] [--remote]
       bin/operator vps master <status|start|stop|restart> [--remote]
@@ -231,6 +232,61 @@ when "status", nil
   json = ARGV.include?("--json")
   output = Operator::StatusReport.new(root: ROOT).render(json:)
   json ? puts(output) : Master::Trace::Dmesg::Report.print("/status", output)
+when "rtfm"
+  options = {
+    host: ENV.fetch("PUB5_SSH_HOST", "dev@brgen.no"),
+    key: File.expand_path(ENV.fetch("PUB5_SSH_KEY", "~/.ssh/id_ed25519_brgen")),
+    source: nil,
+    receipt: nil,
+    local: false,
+  }
+  OptionParser.new do |parser|
+    parser.on("--host HOST") { |value| options[:host] = value }
+    parser.on("--key PATH") { |value| options[:key] = File.expand_path(value) }
+    parser.on("--source PATH") { |value| options[:source] = value }
+    parser.on("--receipt PATH") { |value| options[:receipt] = File.expand_path(value) }
+    parser.on("--local") { options[:local] = true }
+  end.parse!(ARGV)
+  die("rtfm", "usage: bin/operator rtfm [--host USER@HOST] [--key PATH] [--source PATH] [--receipt PATH] [--local] -- <native command>", 64) if ARGV.empty?
+  native_command = ARGV.join(" ").strip
+  die("rtfm", "native command is empty", 64) if native_command.empty?
+  contract = Master::Fix::TaskContract.current ||
+    Master::Fix::TaskContract.build(
+      intent: "functional_change", scope: ["OPENBSD/**"], preserve: [], proof: []
+    )
+  preflight = Master::Fix::OpenBSDManualPreflight
+  if options[:local]
+    reason = if options[:source]
+               preflight.refusal_for_path(
+                 path: File.expand_path(options[:source], ROOT), contract:,
+                 repo_root: ROOT, receipt_path: options[:receipt]
+               )
+             end
+    reason ||= preflight.refusal_for_command(
+      command: native_command, contract:, repo_root: ROOT, receipt_path: options[:receipt]
+    )
+  else
+    ssh_argv = [
+      "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15",
+      "-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=8"
+    ]
+    ssh_argv.concat(["-i", options[:key]]) if File.file?(options[:key])
+    ssh_argv << options[:host]
+    wire_command = Shellwords.join(ssh_argv + [native_command])
+    unless preflight.bootstrap_command?(wire_command)
+      reason = preflight.refusal_for_path(
+        path: File.expand_path(options[:source], ROOT), contract:,
+        repo_root: ROOT, receipt_path: options[:receipt]
+      ) if options[:source]
+    end
+    reason ||= preflight.refusal_for_ssh_argv(
+      ssh_argv: ssh_argv, remote_command: native_command, contract:,
+      repo_root: ROOT, receipt_path: options[:receipt]
+    )
+  end
+  die("rtfm", "BLOCKED: #{reason}", 78) if reason
+  Master::Trace::Dmesg.status("rtfm0", "PASS, source + target manuals + command scope admitted")
+  exit 0
 when "fix"
   # Read-only: /fix itself is started with bin/master "/fix <tree...>" (trees run
   # in the order typed) or bin/fix-here. This only reports on what it wrote.

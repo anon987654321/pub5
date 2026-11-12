@@ -23,4 +23,11 @@ end
 def test_remote_command_payload_remains_quoted
     assert_includes SOURCE, "${(q)cmd}"
   end
+  def test_shared_ssh_library_and_operator_expose_one_preflight_command
+    operator = File.read(File.expand_path("../../MASTER/bin/operator", __dir__))
+    assert_includes operator, 'when "rtfm"'
+    assert_includes operator, 'preflight.refusal_for_ssh_argv'
+    assert_includes operator, 'preflight.refusal_for_command'
+  end
+
 end

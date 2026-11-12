@@ -124,4 +124,18 @@ class TestDrPullCheck < Minitest::Test
       RbConfig.ruby, SCRIPT, "--check"
     )
   end
+  def test_every_remote_ssh_transport_checks_rtfm_before_connecting
+    source = File.read(SCRIPT)
+    preflight = source.index("def ssh_preflight")
+    text_transport = source.index('Open3.capture2e("ssh"')
+    binary_transport = source.index('Open3.capture2("ssh"')
+    refute_nil preflight
+    refute_nil text_transport
+    refute_nil binary_transport
+    assert_operator preflight, :<, text_transport
+    assert_operator preflight, :<, binary_transport
+    assert_includes source, '"--source", File.join(REPO_ROOT, "OPENBSD/bin/dr-pull")'
+    assert_includes source, 'exit 78'
+  end
+
 end

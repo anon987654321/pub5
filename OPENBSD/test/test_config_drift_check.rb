@@ -167,4 +167,12 @@ class ConfigDriftCheckVerbatimTest < Minitest::Test
     assert_empty report[:drift]
     assert_empty VERBATIM.keys & EXCLUDED, "a file cannot be both byte-compared and excluded"
   end
+  def test_local_and_remote_native_command_paths_require_operator_rtfm
+    source = File.read(File.expand_path("../checks/config_drift_check.rb", __dir__))
+    assert_includes source, 'OPERATOR, "rtfm", "--local", "--source", SOURCE_PATH'
+    assert_includes source, 'OPERATOR, "rtfm", "--host", SSH_HOST, "--key", SSH_KEY'
+    assert_includes source, 'config-drift: BLOCKED - native command was not executed'
+    assert_includes source, 'config-drift: BLOCKED - remote command was not executed'
+  end
+
 end
