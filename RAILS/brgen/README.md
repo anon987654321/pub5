@@ -18,9 +18,11 @@ can finish is listed in `MASTER/data/operator_seams.yml`.
 
 ## Cities
 
-A city is an apex host, and the apex serves the social feed. The registry in
-Brgen::DomainRegistry lists forty-three apexes, each the city's name with a vowel dropped:
-brgen.no for Bergen, oshlo.no, lsangeles.com, lndon.uk, chcago.us. The public
+A city is an apex host, and the apex serves the social feed. The canonical city records
+live in `config/cities.yml`; `Brgen::DomainRegistry` projects their host identity into
+the stable six-field `ENTRIES` API, and `CitySeed` reads coordinates and time zones
+from those same records. The catalogue currently lists forty-three apexes, including
+brgen.no for Bergen, oshlo.no, lsangeles.com, lndon.uk and chcago.us. The public
 network has eleven members, while LIVE_DOMAINS records the seven apexes with
 verified TLS in the deployment contract. Footer, search palette and mobile city
 navigation show only CITY_NETWORK_DOMAINS intersected with LIVE_DOMAINS; the four
