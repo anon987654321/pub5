@@ -42,20 +42,15 @@ module Master
         "style0: audit unavailable, #{e.class}: #{e.message}"
       end
 
-      private
-
-      def audit_dir(dir)
-        return [] unless File.directory?(dir)
-
-        Dir.glob(File.join(dir, "**", "*.rb")).sort.flat_map { |file| audit_file(file) }
-      end
-
-      # A small source-side sensor, not rendered terminal proof. Remember the
-      # emission line across a short multiline call so the message literal is
-      # measured even when it sits on the next line.
-      def audit_file(file)
-        relative = file.delete_prefix("#{@root}/")
-        lines = File.readlines(file, chomp: true)
+      # The Law scanner and the operator's style report use one sensor. Keeping
+      # this source-level reading here prevents the output-width rule from
+      # becoming a second, weaker implementation inside law/typesetting.rb.
+      def findings_for_source(source:, path:)
+        expanded_root = File.expand_path(@root)
+        absolute_path = path.to_s
+        relative = absolute_path.start_with?(expanded_root + File::SEPARATOR) ?
+          absolute_path.delete_prefix(expanded_root + File::SEPARATOR) : absolute_path
+        lines = source.to_s.lines.map(&:chomp)
         output_context = {}
         lines.each_with_index do |source_line, index|
           next unless source_line.match?(OUTPUT_CALL)
@@ -74,8 +69,22 @@ module Master
 
           Finding.new(file: relative, line: index + 1, kind:, snippet: text[0, 80])
         end
-      rescue StandardError
-        []
+      end
+
+      private
+
+      def audit_dir(dir)
+        return [] unless File.directory?(dir)
+
+        Dir.glob(File.join(dir, "**", "*.rb")).sort.flat_map { |file| audit_file(file) }
+      end
+
+      # A small source-side sensor, not rendered terminal proof. Remember the
+      # emission line across a short multiline call so the message literal is
+      # measured even when it sits on the next line.
+      def audit_file(file)
+        source = File.read(file, encoding: "UTF-8", invalid: :replace)
+        findings_for_source(source:, path: file)
       end
 
       def violation_kind(text, line, relative, output_call:)

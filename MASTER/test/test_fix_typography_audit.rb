@@ -60,6 +60,27 @@ class TestFixTypographyAudit < Minitest::Test
     end
   end
 
+  def test_terminal_output_typography_is_a_canonical_executable_law
+    require File.expand_path("../law/definition", __dir__) unless defined?(::Law::Definition)
+    require File.expand_path("../law/typesetting", __dir__) unless defined?(::Law::Typesetting)
+    ::Law.load_all(File.expand_path("../law", __dir__)) if ::Law.definitions.empty?
+    law = ::Law.definitions.fetch(:TERMINAL_OUTPUT_TYPOGRAPHY)
+
+    assert law.scannable?
+    assert_includes law.tags, :TYPOGRAPHY
+    assert law.assessment_surfaces.include?(:whole_file)
+    bad = law.scan(
+      'Master::Trace::Dmesg.status("fix0", "This operator-facing sentence is deliberately much too long for the terminal measure and must be rewritten as concise copy.")',
+      file: "MASTER/lib/cli/fixture.rb",
+    )
+    good = law.scan(
+      'Master::Trace::Dmesg.status("fix0", "repair complete")',
+      file: "MASTER/lib/cli/fixture.rb",
+    )
+    refute_empty bad
+    assert_empty good
+  end
+
   def test_typesetting_reads_plain_business_html_and_markdown_readme
     require File.expand_path("../law/definition", __dir__) unless defined?(::Law::Definition)
     require File.expand_path("../law/typesetting", __dir__) unless defined?(::Law::Typesetting)

@@ -9,12 +9,15 @@
 # that is not copy: YAML keys and quoting, tag attributes, code spans and fences. The glyphs
 # the fixes name are built from code points, so this file stays ASCII.
 require_relative "../checks/support/rendered_design"
+require_relative "../lib/fix/typography_audit"
 
 module Law
   module Typesetting
     # Bringhurst governs all reader-facing copy, including Markdown read in a
-    # terminal. Terminal output keeps its separate ASCII profile.
+    # terminal. Terminal output keeps its separate ASCII punctuation profile,
+    # but emitted strings are assessed by TERMINAL_OUTPUT_TYPOGRAPHY.
     TERMINAL_OUTPUT = %r{MASTER/(?:lib/(?:cli|voice/renderer|trace)|bin)/|face_ascii|dmesg}
+    TERMINAL_PATH = %r{(?:\A|/)MASTER/lib/(?:cli|voice|trace|fix)/.+\.rb\z}
     # Every Markdown file is reader-facing copy, including BIZ plans, TODOs,
     # tree READMEs and nested documentation. HTML/ERB and locale values remain
     # scoped by their own readers below.
@@ -180,6 +183,25 @@ module Law
   end
 
   C = Typesetting
+
+  # The terminal is a reading surface too. Its punctuation remains ASCII by
+  # contract, but its emitted copy is now an executable Law read by the same
+  # scanner and repaired through the ordinary /fix transaction.
+  ::Law.define(:TERMINAL_OUTPUT_TYPOGRAPHY) do
+    source "Bringhurst, The Elements of Typographic Style: measure, rhythm and hierarchy; operator terminal profile"
+    tags %i[TYPOGRAPHY EDITORIAL]
+    path C::TERMINAL_PATH
+    measures :whole_file, :lines
+    example_path "/repo/MASTER/lib/cli/fixture.rb"
+    fix "Keep operator-facing strings ASCII and within the 72-character terminal measure; split long status copy into short, meaningful lines."
+    bad 'Master::Trace::Dmesg.status("fix0", "This operator-facing sentence is deliberately much too long for the terminal measure and must be rewritten as concise copy.")'
+    good 'Master::Trace::Dmesg.status("fix0", "repair complete")'
+    check do |src, file|
+      Master::Fix::TypographyAudit.new(root: Master::ROOT)
+        .findings_for_source(source: src, path: file)
+        .map { |hit| finding(line: hit.line, message: "#{hit.kind}: #{hit.snippet}") }
+    end
+  end
 
   ::Law.define(:QUOTES_BY_LOCALE) do
     source "Butterick, Practical Typography: curly quotes, apostrophes point down; regjeringen.no: guillemets in nb"

@@ -1280,6 +1280,12 @@ TABULAR_NUMERALS:
   severity: warning
   resolution: review
 
+TERMINAL_OUTPUT_TYPOGRAPHY:
+  parent: BRINGHURST
+  statement: "Terminal output is ASCII, concise and measured; long status copy is split at meaningful boundaries."
+  severity: warning
+  resolution: review
+
 HEADING_WRAP_BALANCE:
   parent: BRINGHURST
   statement: "A heading never ends on one stray word; it wraps balanced."
@@ -4306,6 +4312,11 @@ law_catalogue:
       definition_sources: [MASTER/law/geometry.rb]
       severity: warning
       languages: [json]
+    TERMINAL_OUTPUT_TYPOGRAPHY:
+      definition_sources: [MASTER/law/typesetting.rb]
+      severity: warning
+      languages: [ruby]
+      surfaces: [whole_file, lines]
     TACTILE_FEEDBACK:
       definition_sources: [MASTER/law/javascript.rb]
       severity: info
