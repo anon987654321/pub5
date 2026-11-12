@@ -155,6 +155,18 @@ class TestDillaTheory < Minitest::Test
     end
   end
 
+  def test_unknown_chord_qualities_and_invalid_slash_bass_are_rejected
+    error = assert_raises(ArgumentError) do
+      Dilla::ChordParser.parse("Cmajorr", Dilla.theory)
+    end
+    assert_match(/unknown chord quality/, error.message)
+
+    error = assert_raises(ArgumentError) do
+      Dilla::ChordParser.parse("C7/H", Dilla.theory)
+    end
+    assert_match(/unknown chord quality/, error.message)
+  end
+
   def test_slash_bass_pitch_class_is_read
     parsed = Dilla::ChordParser.parse("Bb/E", Dilla.theory)
     assert_equal 4, parsed[:bass]
@@ -210,6 +222,15 @@ class TestDillaTheory < Minitest::Test
     voiced.each do |voicing|
       assert voicing.max.between?(67, 96), "top voice out of register: #{voicing.inspect}"
     end
+  end
+
+  def test_voice_leading_requires_distinct_predecessors
+    voicer = Dilla::Voicer.new(Dilla.theory)
+
+    # All three new notes are individually within a fifth of C4, but that one
+    # old voice cannot explain three simultaneous new voices.
+    refute voicer.send(:within_lead?, [55, 58, 62], [60, 80, 90])
+    assert voicer.send(:within_lead?, [55, 78, 88], [60, 80, 90])
   end
 
   def test_recovered_transcriptions_carry_provenance
