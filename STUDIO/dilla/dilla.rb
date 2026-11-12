@@ -98,13 +98,18 @@ module Dilla
     @showcase_data ||= load_json("showcase.json")
   end
 
-  # The menu MASTER parses from --list: engine progressions first, then the
-  # recovered transcriptions, numbered straight through.
+  # Artist-sourced recordings lead the menu. Engine studies, authored theory
+  # progressions and lower-confidence recovered notes remain separate tiers.
+  # Aliases are deliberately deduplicated in recovered_music.json.
   def progressions
     @progressions ||= begin
+      verified = Array(recovered["artist_verified_progressions"]).map { |p| p.merge("source" => "artist_verified") }
+      studies = Array(recovered["engine_modules"]).map { |p| p.merge("source" => "engine_study") }
+      verified_ids = verified.map { |p| p["id"] }
       base = catalogue.fetch("progressions").map { |p| p.merge("source" => "engine") }
-      rec = recovered.fetch("progressions").map { |p| p.merge("source" => "recovered") }
-      base.concat(rec)
+      rec = recovered.fetch("progressions").reject { |p| verified_ids.include?(p["id"]) }
+                    .map { |p| p.merge("source" => "recovered") }
+      verified.concat(studies).concat(base).concat(rec)
     end
   end
 
@@ -274,7 +279,15 @@ module Dilla
   def print_list
     puts "Progressions:"
     progressions.each_with_index do |p, i|
-      puts format("  %2d  %-18s %-28s %s", i + 1, p["id"], p["title"].to_s[0, 28], "#{p['key']} #{p['bpm']} BPM")
+      source_tag = {
+        "artist_verified" => "[record]",
+        "engine_study" => "[study]",
+        "engine" => "[original]",
+        "recovered" => "[recovered]"
+      }.fetch(p["source"], "")
+      tempo = p["bpm"] ? "#{p['bpm']} BPM" : "tempo not pinned"
+      puts format("  %2d  %-18s %-28s %s %s", i + 1, p["id"], p["title"].to_s[0, 28],
+                  "#{p['key']} #{tempo}", source_tag)
     end
     puts "Drum patterns: #{catalogue.fetch('drum_patterns').keys.reject { |k| k == 'comment' }.join(', ')}"
     puts "Groove profiles: #{catalogue.fetch('groove_profiles').keys.reject { |k| k == 'comment' }.join(', ')}"
@@ -395,36 +408,49 @@ module Dilla
       intervals = apply_modifiers(intervals, modifiers)
       root_pc = theory.fetch("keys").fetch(root_name) { raise ArgumentError, "unknown root #{root_name}" }
       bass_pc = bass && theory.fetch("keys")[bass]
-      { root: root_pc, intervals: intervals.uniq.sort, quality: quality, bass: bass_pc, symbol: symbol }
+      named_voicing = theory.fetch("named_voicings", {}).fetch(symbol, nil)
+      {
+        root: root_pc, intervals: intervals.uniq.sort, quality: quality,
+        bass: bass_pc, symbol: symbol, voicing_midi: named_voicing
+      }
     end
 
     def split_quality(rest)
       bass = nil
-      if (i = rest.index("/"))
-        bass = rest[(i + 1)..]
-        rest = rest[0...i]
+      if (i = rest.rindex("/"))
+        candidate = rest[(i + 1)..]
+        if candidate.match?(/\A[A-G][#b]?\z/)
+          bass = candidate
+          rest = rest[0...i]
+        end
       end
+
+      # These spellings belong to the historical record charts. Keep their
+      # labels on the chord event, while resolving them to usable harmony.
+      aliases = { "m7fil" => "m9", "7climax" => "9" }
+      return [aliases.fetch(rest), [], bass] if aliases.key?(rest)
+      return ["7alt", [], bass] if rest == "7alt"
+
       modifiers = []
-      rest = rest.sub(/(b5|#5|b9|#9|#11|b13|alt)\z/) { modifiers << Regexp.last_match(1); "" }
+      rest = rest.sub(/(b5|#5|b9|#9|#11|b13)\z/) { modifiers << Regexp.last_match(1); "" }
       quality = case rest
                 when "", "maj", "M" then "maj"
                 when "m", "min", "-" then "m"
                 when "mMaj", "mM" then "mMaj7"
                 when "mMaj7", "mM9" then rest == "mM9" ? "mMaj9" : "mMaj7"
+                when "mMaj9", "mmaj9" then "mMaj9"
                 else rest
                 end
       [quality, modifiers, bass]
     end
 
     def apply_modifiers(intervals, modifiers)
-      map = { "b5" => 6, "#5" => 8, "b9" => 13, "#9" => 15, "#11" => 18, "b13" => 20, "alt" => -1 }
+      additions = { "b5" => 6, "#5" => 8, "b9" => 13, "#9" => 15, "#11" => 18, "b13" => 20 }
+      replacements = { "b5" => 7, "#5" => 7, "b9" => 14, "#9" => 14, "#11" => 17, "b13" => 21 }
       modifiers.each do |mod|
-        next if mod == "alt"
-
-        iv = map.fetch(mod)
-        intervals = intervals.map { |x| x == (iv % 12 == 6 || iv % 12 == 8 || iv % 12 == 5 || iv % 12 == 1 || iv % 12 == 3 || iv % 12 == 10 ? 0 : -999) ? x : x }
-        intervals |= [iv]
-        intervals -= [iv == 6 ? 7 : nil].compact
+        natural = replacements.fetch(mod)
+        intervals = intervals.reject { |value| value % 12 == natural % 12 }
+        intervals |= [additions.fetch(mod)]
       end
       intervals.compact.uniq.sort
     end
@@ -466,6 +492,13 @@ module Dilla
     end
 
     def voice_one(chord, previous)
+      if chord[:voicing_midi].is_a?(Array)
+        named = named_voicing(chord[:voicing_midi], previous)
+        return named if named
+      end
+      quartal = quartal_stack(chord)
+      return quartal if quartal && within_lead?(quartal, previous)
+
       tone_sets = [chord_tones(chord), chord_tones(chord)[0...-1]].reject { |set| set.length < 3 }
       candidates = tone_sets.flat_map { |tone_set| candidate_stacks(tone_set) }
       # Two constraints are structural rather than preferential: the top voice
@@ -481,6 +514,35 @@ module Dilla
     end
 
     private
+
+    # Source-specific grips are exact pitch lists recovered with the historical
+    # transcriptions. Octave placement may move, but the internal grip does not.
+    def named_voicing(notes, previous)
+      base = notes.map(&:to_i).sort
+      return if base.length < 3
+
+      candidates = (-2..3).map { |octaves| base.map { |note| note + octaves * 12 } }
+                          .select { |stack| stack.all? { |note| note.between?(24, 108) } && singing_top?(stack) }
+      return if candidates.empty?
+
+      pool = candidates.select { |stack| within_lead?(stack, previous) }
+      pool = candidates if pool.empty?
+      pool.min_by { |stack| [score(stack, previous), stack.last - stack.first] }
+    end
+
+    # A minor-eleventh shell can float in fourths from the fifth:
+    # Cm11 = G-C-F-Bb-Eb. Use it only when every pitch is in the parsed chord.
+    def quartal_stack(chord)
+      return unless chord[:quality] == "m11"
+
+      pitch_classes = chord[:intervals].map { |interval| interval % 12 }
+      return unless [0, 3, 5, 7, 10].all? { |pitch_class| pitch_classes.include?(pitch_class) }
+
+      start_pc = (chord[:root] + 7) % 12
+      start = LOWEST_VOICE + ((start_pc - (LOWEST_VOICE % 12)) % 12)
+      stack = Array.new(5) { |index| start + index * 5 }
+      singing_top?(stack) ? stack : nil
+    end
 
     # 3rd and 7th define the function; one extension defines the colour
     # (9th, #11th, 6th or the altered tension); the 5th fills only what
@@ -547,7 +609,8 @@ module Dilla
         end
       end
       spread = stack.last - stack.first
-      s += spread > 13 ? 6.0 : 0.0
+      s += (spread - 22) * 0.4 if spread > 22
+      s += (12 - spread) * 0.3 if spread < 12
       s += 8 unless singing_top?(stack)
       s += 6 if stack.first < 52
       s
@@ -605,6 +668,12 @@ module Dilla
       nudge = @profile.fetch("nudge", {})
       base = { "kick" => 16.0, "snare" => -11.0, "hat" => -5.0, "ghost" => 8.0 }.fetch(lane, 0.0)
       (nudge.fetch(lane, base).to_f * (1.0 + @performer.fetch("kick_bias", 0.0)))
+    end
+
+    # The clap leads the backbeat, setting an early reference point for the ear.
+    def clap_early_ms
+      nudges = @profile.fetch("nudge", {})
+      nudges.fetch("soulclap", nudges.fetch("snare", -11.0).to_f - 8.0).to_f
     end
 
     def spread(lane)
@@ -695,7 +764,7 @@ module Dilla
 
     def step_time(bar, step, lane = nil)
       t = bar * @groove.bar_s + step * @groove.sixteenth_s
-      t += @groove.swing_delay_s(lane) if step.odd?
+      t += @groove.swing_delay_s(lane) if step.to_f == step.to_i && step.to_i.odd?
       t
     end
 
@@ -706,7 +775,8 @@ module Dilla
       offset = @timing_offsets.fetch([groove_lane, step]) do
         @timing_offsets[[groove_lane, step]] = @rng.jitter_ms(jitter) / 1000.0
       end
-      t = step_time(bar, step, groove_lane) + (@groove.nudge(groove_lane) / 1000.0) +
+      nudge_ms = groove_lane == "soulclap" ? @groove.clap_early_ms : @groove.nudge(groove_lane)
+      t = step_time(bar, step, groove_lane) + (nudge_ms / 1000.0) +
           (@groove.step_offset_ms(groove_lane, step) / 1000.0) + offset
       vel = (vel * (1.0 + @rng.jitter_ms(2.8) / 100.0)).clamp(0.05, 1.0)
       Event.new(t + @groove.drag_s, 0.0, lane.to_sym, nil, vel, nil)
@@ -749,16 +819,26 @@ module Dilla
     def build_chord_plan(loop_bars, bar_count)
       chords = @progress["chords"]
       per_chord = @progress["bars_per_chord"]
-      plan = [] # [{chord_index, start_bar, bars}]
-      if per_chord && per_chord < 1
-        steps_per_bar = 1.0 / per_chord
-        bars = bar_count
+      plan = []
+      chord_bars = Array(@progress["chord_bars"]).map(&:to_f)
+      if chord_bars.length == chords.length && chord_bars.all? { |bars| bars.finite? && bars.positive? }
         idx = 0
         pos = 0.0
-        while pos < bars
-          plan << { index: idx % chords.length, start_bar: pos, bars: 1.0 / steps_per_bar }
+        while pos < bar_count
+          span = [chord_bars[idx % chord_bars.length], bar_count - pos].min
+          plan << { index: idx % chords.length, start_bar: pos, bars: span }
           idx += 1
-          pos += 1.0 / steps_per_bar
+          pos += span
+        end
+      elsif per_chord && per_chord < 1
+        step_bars = 1.0 / per_chord.to_f
+        idx = 0
+        pos = 0.0
+        while pos < bar_count
+          span = [step_bars, bar_count - pos].min
+          plan << { index: idx % chords.length, start_bar: pos, bars: span }
+          idx += 1
+          pos += span
         end
       else
         bpc = (per_chord || 1).to_f
@@ -874,7 +954,11 @@ module Dilla
     # tones; phrases end resolving to the root or fifth.
     def melody_events(chord, slot, plan)
       style = (@progress["feel"] || {}).fetch("melody", "dorian_moan")
-      return [] if @rng.chance(0.18) # bars of rest keep it sparse
+      motif = Array(@progress["melody_midi"]).filter_map do |note|
+        value = Integer(note) rescue nil
+        value if value && value.between?(48, 84)
+      end
+      return [] if motif.empty? && @rng.chance(0.22)
 
       scale = Dilla.scale_for(chord, Dilla.theory)
       root_pc = chord[:root]
@@ -882,31 +966,42 @@ module Dilla
       events = []
       base = slot[:start_bar] * @groove.bar_s
       span = slot[:bars] * @groove.bar_s
-      scale_steps = nil
+      last_midi = nil
+      motif_index = 0
       rhythm.each do |step, length|
-        t = base + step * @groove.sixteenth_s
+        t = step_time(slot[:start_bar], step.to_f, "melody")
         next unless t < base + span
+        next if motif.empty? && step.to_f.positive? && @rng.chance(0.08)
 
-        strong = (step % 4).zero?
-        midi = pick_melody_note(chord, scale, root_pc, strong, style)
-        events << Event.new(t, length * @groove.sixteenth_s * 0.92, :melody, midi, 0.62 + @rng.jitter_ms(5.0) / 100.0, nil)
-        events << Event.new(t, length * @groove.sixteenth_s * 0.92, :melody, midi + 12, 0.3, nil) if style == "horn_stabs" && strong
+        strong = (step.to_f % 4).zero?
+        midi = if motif.empty?
+                 pick_melody_note(chord, scale, root_pc, strong, style, last_midi)
+               else
+                 note = motif[motif_index % motif.length]
+                 motif_index += 1
+                 note
+               end
+        last_midi = midi
+        dur = length * @groove.sixteenth_s * 0.92
+        events << Event.new(t, dur, :melody, midi, 0.62 + @rng.jitter_ms(5.0) / 100.0, nil)
+        events << Event.new(t, dur, :melody, midi + 12, 0.3, nil) if style == "horn_stabs" && strong
       end
       events
     end
 
-    def pick_melody_note(chord, scale, root_pc, strong, style)
-      tones = chord[:intervals].map { |iv| root_pc + iv }
-      if strong || @rng.chance(0.35)
-        pc = tones.fetch(@rng.rand(tones.length))
-      else
-        pc = (root_pc + scale.fetch(@rng.rand(scale.length))) % 12
-        pc = (pc + 6) % 12 if style == "dorian_moan" && @rng.chance(0.12)
+    def pick_melody_note(chord, scale, root_pc, strong, _style, previous = nil)
+      chord_tones = chord[:intervals].map { |interval| (root_pc + interval) % 12 }.uniq
+      scale_tones = scale.map { |degree| (root_pc + degree) % 12 }.uniq
+      pitch_classes = (strong || @rng.chance(0.35)) ? chord_tones : scale_tones
+      candidates = (72..83).select { |midi| pitch_classes.include?(midi % 12) }
+
+      # Move by step when the scale offers a nearby choice; never invent a
+      # passing note outside the chord or scale just to smooth the line.
+      if previous && @rng.chance(strong ? 0.10 : 0.35)
+        nearby = candidates.select { |midi| midi != previous && (midi - previous).abs <= 2 }
+        return @rng.pick(nearby) unless nearby.empty?
       end
-      midi = 60 + (pc - root_pc)
-      midi += 12 while midi < 72
-      midi -= 12 while midi > 84
-      midi
+      @rng.pick(candidates)
     end
 
     # Scale-locked upper-register FM droplets and broken arpeggio fragments.
@@ -1953,11 +2048,23 @@ module Dilla
         warn "dilla: unknown sonitex preset #{preset.inspect}; skipping wear"
         return
       end
-      instances.to_i.clamp(1, 6).times do
-        one_pass!(mix, cfg, rng)
+      instances.to_i.clamp(1, 6).times do |index|
+        one_pass!(mix, index.zero? ? cfg : vary(cfg, rng), rng)
       end
       wow_flutter!(mix, cfg, rng)
       head_bump!(mix, cfg)
+    end
+
+    # Later instances compound a slightly different wear profile. Variation
+    # comes from the render's seeded RNG, so identical seeds still reproduce.
+    def vary(cfg, rng)
+      cfg.merge(
+        "drive" => cfg.fetch("drive", 1.0).to_f * (0.90 + rng.rand * 0.20),
+        "lowpass" => cfg.fetch("lowpass", 12_000).to_f * (0.95 + rng.rand * 0.10),
+        "wow" => cfg.fetch("wow", 0.0).to_f * (0.70 + rng.rand * 0.60),
+        "crackle" => cfg.fetch("crackle", 0.0).to_f * (0.85 + rng.rand * 0.30),
+        "hiss" => cfg.fetch("hiss", 0.0).to_f * (0.85 + rng.rand * 0.30)
+      )
     end
 
     def one_pass!(mix, cfg, rng)
