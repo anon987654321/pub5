@@ -50,6 +50,30 @@ class TestHeartbeat < Minitest::Test
     end
   end
 
+  def test_prune_undo_targets_the_canonical_journal_and_keeps_the_latest_entries
+    Dir.mktmpdir do |root|
+      master_dir = File.join(root, ".master")
+      FileUtils.mkdir_p(master_dir)
+      journal = File.join(master_dir, "undo_journal.jsonl")
+      wrong_legacy_path = File.join(master_dir, "undo.jsonl")
+      rows = 55.times.map do |index|
+        { "path" => "file-#{index}", "content" => "before-#{index}", "ts" => index }
+      end
+      File.write(journal, rows.map { |row| JSON.generate(row) + "\n" }.join)
+      File.write(wrong_legacy_path, "leave this unrelated file alone\n")
+
+      result = Master::Fix::Heartbeat.new(root:).send(:prune_undo_journal)
+
+      retained = File.readlines(journal).map { |line| JSON.parse(line) }
+      assert_match(/removed 5 entries/, result)
+      assert_equal 50, retained.size
+      assert_equal "file-5", retained.first.fetch("path")
+      assert_equal "file-54", retained.last.fetch("path")
+      assert_equal "leave this unrelated file alone\n", File.read(wrong_legacy_path)
+      assert_equal 0o600, File.stat(journal).mode & 0o777
+    end
+  end
+
   def test_personal_pulse_returns_heartbeat_ok_when_nothing_to_say
     Dir.mktmpdir do |root|
       write_heartbeat_jobs(root, <<~YAML)
