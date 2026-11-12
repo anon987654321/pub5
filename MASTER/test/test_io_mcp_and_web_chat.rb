@@ -223,7 +223,7 @@ class TestIoMcpAndWebChat < Minitest::Test
   def test_web_chat_switches_still_refuse_before_opening_a_browser
     chat = Master::Io::WebChat.new(provider: "grok")
     [{ "MASTER_WEB_CHAT" => "0" }, { "MASTER_NO_WEB_CHAT" => "1" },
-     { "MASTER_LOCAL_ONLY" => "1" }].each do |switch|
+     { "MASTER_NO_KEYLESS" => "1" }, { "MASTER_LOCAL_ONLY" => "1" }].each do |switch|
       with_env(switch) do
         assert_raises(Master::Io::WebChat::DisabledError) { chat.ask(prompt: "hi") }
       end
