@@ -42,10 +42,10 @@ Law.define(:CLI_TREE_TARGET_RESOLUTION) do
 end
 
 Law.define(:CLI_PROMPT_COMPOSITION) do
-  path "MASTER/lib/voice/renderer/"
+  path %r{/MASTER/(?:lib/cli/|lib/voice/renderer/)}
   source "OpenBSD dmesg console discipline; shell line editing remains the input transport"
-  ask "Does the interactive prompt remain a restrained OpenBSD-console line that shows the checkout/tree, current directory, active conversation destination, Git state, meaningful phase/error state and input token, with no Starship/powerline-style segments or decorative emphasis? Is it bounded, single-line, plain in scrollback and cheap to redraw? Return CLEAN when it follows the dmesg-first house style."
-  fix "Keep one compact text line with checkout/tree-relative path, active destination, plain Git state, phase and shell token. Prefer ASCII and stable spacing; avoid badges, icon glyphs, color-coded segments, boxes and duplicated status. Cache or bound Git probes and move detail to /status, /doctor or /help."
+  ask "Across the CLI and REPL prompt renderer, does the input line remain one restrained, bounded OpenBSD-console prompt? Show only useful checkout/tree path, current directory, destination, meaningful Git state, phase when it changes, and the input token. Keep the cursor and editable input stable while asynchronous events arrive. Reject Starship/powerline segments, decorative emphasis, repeated model/token counters, hidden probes on every redraw, and duplicated status. Details belong in existing /status, /doctor and /help commands. Return CLEAN when the prompt is plain in scrollback and cheap to redraw."
+  fix "Keep one compact ASCII prompt with checkout-relative path, useful Git state and input token. Preserve the editable line and never let asynchronous status overwrite it. Avoid badges, icon glyphs, color-coded segments, boxes, repeated counters and expensive redraw probes. Move detail to existing status commands; do not add prompt frameworks or new configuration."
   # Quoted heredocs: the examples quote instance and local variables, and an
   # interpolating heredoc evaluates them against the Builder at load time —
   # one #{e.class} here once made every law definition crash the registry.
@@ -63,10 +63,10 @@ Law.define(:CLI_PROMPT_COMPOSITION) do
 end
 
 Law.define(:OPENBSD_DMESG_CONSOLE_STYLE) do
-  path "MASTER/lib/voice/"
+  path %r{/MASTER/(?:lib/(?:cli|trace|voice)/|bin/)}
   source "OpenBSD dmesg - xsa/openbsd-dmesgs and Master::Trace::Dmesg"
-  ask "For startup, status, progress and operational events, does CLI output follow the native console idiom: append-only, one factual event per line, a stable subsystem0: or unit0 at parent: prefix, truthful status, and useful scrollback? Look for banners, decorative panels, ASCII art outside the face, badge-like status, repeated progress chatter, and information hidden behind color alone. Conversational replies may retain plain Markdown when structure serves the content. Return CLEAN when operational output remains clear in a pipe, serial terminal and saved transcript."
-  fix "Use Master::Trace::Dmesg's existing unit0: grammar for operational events; emit one concise factual line per event, order events by occurrence, keep state and recovery explicit, and preserve plain-text meaning without relying on ANSI or animation. Conversational replies may use restrained, width-aware Markdown. Do not create a second event logging format."
+  ask "Across the pub5 MASTER CLI and REPL - boot, prompt, help, routing, progress, status, errors, voice and media feedback - does the operator surface follow OpenBSD console discipline? Operational events are append-only: one factual event per line, stable subsystem0: or unit0 at parent: grammar, observed state, and useful scrollback. The implementation favors a small auditable surface, conservative defaults, least privilege, bounded work, explicit recovery and fail-closed action gates. Reject banners, decorative panels, ASCII art outside the face, badge-only status, repeated progress chatter, state hidden behind ANSI, optimistic readiness, or success inferred from process creation. Conversational replies may retain plain, width-aware Markdown. Return CLEAN only when the terminal remains useful in a pipe, serial terminal and saved transcript."
+  fix "Use Master::Trace::Dmesg's existing unit0: grammar for operational events; emit one concise factual line per event, order events by occurrence, and keep state and recovery explicit. Prefer the smallest auditable implementation, conservative defaults and existing permission gates. Preserve plain-text meaning without relying on ANSI, color or animation. Keep details behind existing /status, /doctor and /help surfaces. Do not add another event, status or logging framework."
   bad <<~'X'
     ╭─ MASTER ───────────────────────────╮
     │  ◉ ONLINE  MODEL: ready  TOKENS 5k │
@@ -80,10 +80,10 @@ Law.define(:OPENBSD_DMESG_CONSOLE_STYLE) do
 end
 
 Law.define(:VOICE_FAILURES_ARE_ACTIONABLE) do
-  path "MASTER/lib/voice/"
+  path %r{/MASTER/lib/(?:cli|io|voice)/}
   source "OpenBSD-style explicit failure reporting - degraded capability is state, not noise"
-  ask "When synthesis, transport, or playback fails, does the runtime produce one bounded actionable state, preserve a useful last_error, and use the declared fallback chain without replaying or spawning uncontrolled work? Return CLEAN when the failure path is already explicit and bounded."
-  fix "Return an explicit failure/result, retain the reason for /status or /doctor, rate-limit repeated diagnostics, and fall through only to declared voice/audio fallbacks."
+  ask "When voice or media synthesis, stream transport, player startup, playback, or their CLI/REPL dispatch fails, does the runtime emit one bounded actionable state and preserve the observed reason? Distinguish a rendered artifact, a started process, and audible output; distinguish a normal exit from signal termination; and use only declared, bounded fallback paths. Do not retry or print the same failure without a state change. Return CLEAN when the operator can tell what happened, what remains available, and the next safe action."
+  fix "Return a typed failure/result, retain the measured cause for /status or /doctor, and emit one concise Dmesg line. Report exit status or terminating signal explicitly. Prove that an output artifact exists before passing it to a player; never infer audible success from a PID. Rate-limit repeated diagnostics and use only declared fallback paths."
   bad <<~'X'
     rescue StandardError
       warn e
