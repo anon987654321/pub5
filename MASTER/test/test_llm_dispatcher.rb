@@ -480,6 +480,43 @@ class TestLLMDispatcher < Minitest::Test
     refute finished.last.key?(:error)
   end
 
+  def test_post_settle_detail_fault_does_not_replace_a_provider_answer
+    dispatcher, _session, bus = build_dispatcher
+    cache = Object.new
+    cache.define_singleton_method(:fetch) { |*_args, &block| block.call }
+    breaker = Object.new
+    breaker.define_singleton_method(:call) { |_cost, &block| block.call }
+    dispatcher.instance_variable_set(:@cache, cache)
+    dispatcher.instance_variable_set(:@circuit_breaker, breaker)
+    dispatcher.instance_variable_set(:@tools, [])
+    dispatcher.define_singleton_method(:breaker_for) { |_model| breaker }
+    dispatcher.define_singleton_method(:answering_model) { |model, _image| model }
+    dispatcher.define_singleton_method(:local_only_refusal) { |_model| nil }
+    dispatcher.define_singleton_method(:refusal_before_send) { |_model| nil }
+    dispatcher.define_singleton_method(:estimate_cost) { |_prompt, _model| 0.0 }
+    dispatcher.define_singleton_method(:send_llm_request) { |*_args, **_kwargs| Master::Result.ok("answer") }
+    dispatcher.define_singleton_method(:settle) do |result, model, _started, streamed_bytes:|
+      bus.publish("llm:provider_outcome", model:, status: :success, latency_ms: 10)
+      result
+    end
+
+    result = nil
+    Master::Trace::Dmesg.stub(:detail_enabled?, true) do
+      Master::Trace::Dmesg.stub(:detail, ->(*) { raise IOError, "detail write failed" }) do
+        Master::Ground::Swallow.stub(:log, ->(*) {}) do
+          result = dispatcher.send_with_cache(
+            "test-provider:model", [{ role: "user", content: "hi" }], system: ""
+          )
+        end
+      end
+    end
+
+    assert_equal "answer", result.value!
+    assert bus.events.any? { |name, payload| name == "llm:provider_outcome" && payload[:status] == :success }
+    finished = bus.events.find { |name, payload| name == "llm:call_finished" && payload[:model] == "test-provider:model" }
+    refute finished.last.key?(:status), "a settled provider answer is not rewritten as a MASTER crash"
+  end
+
   # Every LLM call in the tree passes through send_with_cache. With no provider
   # key every caller would fail slowly somewhere below it, one persona at a time,
   # so the refusal belongs at the door, before the breaker, the cache or the request.
