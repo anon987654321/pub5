@@ -43,6 +43,29 @@ class TestFixTypographyAudit < Minitest::Test
     end
   end
 
+  def test_measures_long_terminal_output_literals_in_fix_sources
+    Dir.mktmpdir do |dir|
+      write_cli_file(dir, 'lib/fix/fixture.rb', <<~RUBY)
+        module Fixture
+          Master::Trace::Dmesg.status("fix0", "This terminal status sentence is deliberately much too long for the operator display and should wrap naturally.")
+        end
+      RUBY
+
+      report = Audit.new(root: dir).call
+      assert_match(/terminal measure/, report)
+      assert_match(/lib\/fix\/fixture\.rb:2 terminal_measure/, report)
+    end
+  end
+
+  def test_typesetting_reads_plain_business_html_and_markdown_readme
+    require File.expand_path("../law/typesetting", __dir__)
+    html = ::Law::Typesetting.each_text("<p>En lesbar plan.</p>", "BIZ/plan.html").to_a
+    readme = ::Law::Typesetting.each_text("A readable paragraph.", "MASTER/README.md").to_a
+
+    assert_equal "En lesbar plan.", html.first.first
+    assert_equal "A readable paragraph.", readme.first.first
+  end
+
   def test_a_scope_that_is_not_there_is_not_an_error
     Dir.mktmpdir do |dir|
       assert_match(/\Astyle0: clean/, Audit.new(root: dir).call)
