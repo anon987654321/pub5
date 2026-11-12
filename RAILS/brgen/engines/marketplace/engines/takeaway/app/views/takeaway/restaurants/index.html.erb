@@ -1,6 +1,6 @@
 <% content_for :title, t("storefront.restaurants") %>
 
-<%= render "takeaway/nav_bar", active: "restaurants", live: true, hidden_fields: { cuisine: params[:cuisine] } %>
+<%= render "takeaway/nav_bar", active: "restaurants", live: true, hidden_fields: { cuisine: params[:cuisine], sort: @sort } %>
 
 <%# Kaufland.de's front page, measured at 1440 and 400, dressed for kitchens:
     the campaign banner in --font-ad, the category shortcut rail as the
