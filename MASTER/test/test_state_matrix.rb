@@ -2,8 +2,10 @@
 
 require_relative "test_helper"
 require "tmpdir"
+require "minitest/mock"
 require File.expand_path("../checks/support/geometry_probe", __dir__)
 require File.expand_path("../checks/support/state_matrix", __dir__)
+require File.expand_path("../checks/lib/rendered/state_matrix", __dir__)
 
 # The state matrix on a fake session: the plan's mobile-first order and cap, the crop each cell
 # takes, and the two findings - a focus state no one can see, and an overflowing component.
@@ -23,7 +25,7 @@ class TestStateMatrix < Minitest::Test
       @state = "default"
     end
 
-    def viewport(width, _height, mobile:, scale:) = (@width = width) && @calls << [:viewport, width, mobile, scale]
+    def viewport(width, height, mobile:, scale:) = (@width = width) && @calls << [:viewport, width, height, mobile, scale]
     def command(method, **params) = @calls << [method, params]
     def headers(hash) = @calls << [:headers, hash]
     def navigate(_url) = @state = "default"
@@ -63,6 +65,40 @@ class TestStateMatrix < Minitest::Test
     assert_equal [360, 320, 768], cells.drop(9).first(3).map(&:width)
     assert_equal ["default 640px x2 nb light", "default 390px en light", "default 390px nb dark"],
                  cells.drop(12).map(&:label)
+  end
+
+  def test_zoom_cell_uses_desktop_mode_and_scales_both_viewport_dimensions
+    zoom = SM.plan(CONFIG).find { |cell| cell.scale == 2 }
+    cdp = FakeCdp.new(focus_paints: true)
+
+    zoom.emulate(cdp, "http://127.0.0.1:1/")
+
+    assert_equal [:viewport, 640, 450, false, 2], cdp.calls.first
+  end
+
+  def test_every_declared_component_resolves_to_an_existing_surface
+    rows = Deploy::StateMatrixCheck.new.send(:components)
+    missing = rows.filter_map { |row, surface| row["id"] unless surface }
+
+    assert_empty missing
+  end
+
+  def test_a_missing_surface_is_retained_and_makes_the_check_incomplete
+    row = { "id" => "missing/example", "surface" => "missing/route", "selector" => ".example" }
+    check = Deploy::StateMatrixCheck.new(config: { "components" => [row] })
+    result = Deploy::CheckResult.new
+
+    Deploy::GeometryProbe.stub(:available?, true) do
+      Deploy::GeometryProbe.stub(:surfaces, []) do
+        Deploy::GeometryProbe.stub(:reachable, []) do
+          check.send(:measure, result)
+        end
+      end
+    end
+
+    assert result.incomplete?
+    assert_equal :inconclusive, result.outcome
+    assert result.unchecked.any? { |message| message.include?("missing/example references missing surface") }
   end
 
   def test_every_variant_is_planned_when_the_cap_allows
