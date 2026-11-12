@@ -104,12 +104,13 @@ module Dilla
   def progressions
     @progressions ||= begin
       verified = Array(recovered["artist_verified_progressions"]).map { |p| p.merge("source" => "artist_verified") }
+      charts = Array(recovered["chart_references"]).map { |p| p.merge("source" => "chart_reference") }
       studies = Array(recovered["engine_modules"]).map { |p| p.merge("source" => "engine_study") }
       verified_ids = verified.map { |p| p["id"] }
       base = catalogue.fetch("progressions").map { |p| p.merge("source" => "engine") }
       rec = recovered.fetch("progressions").reject { |p| verified_ids.include?(p["id"]) }
                     .map { |p| p.merge("source" => "recovered") }
-      verified.concat(studies).concat(base).concat(rec)
+      verified.concat(charts).concat(studies).concat(base).concat(rec)
     end
   end
 
@@ -281,6 +282,7 @@ module Dilla
     progressions.each_with_index do |p, i|
       source_tag = {
         "artist_verified" => "[record]",
+        "chart_reference" => "[chart]",
         "engine_study" => "[study]",
         "engine" => "[original]",
         "recovered" => "[recovered]"
@@ -2360,7 +2362,8 @@ module Dilla
     sonitex_presets = catalogue.fetch("sonitex").keys.reject { |k| k == "comment" }
     wear_candidate = opts.sonitex || style["sonitex"] || "subtle"
     sonitex = sonitex_presets.include?(wear_candidate) ? wear_candidate : "subtle"
-    bpm = (opts.bpm || style["bpm"] || prog["bpm"]).to_f.clamp(50.0, 200.0)
+    # An explicit recording's own tempo outranks the generic style preset.
+    bpm = (opts.bpm || prog["bpm"] || style["bpm"]).to_f.clamp(50.0, 200.0)
     arrangement = showcase && Array(showcase["arrangement"]).any? ? showcase["arrangement"] : nil
     arrangement_bars = Array(arrangement).sum { |section| section.fetch("bars", 0).to_i }
     bars = (opts.bars || (arrangement_bars.positive? ? arrangement_bars : nil) ||
