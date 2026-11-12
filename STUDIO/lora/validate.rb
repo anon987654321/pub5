@@ -62,6 +62,14 @@ module Studio
           "warnings" => []
         }
 
+        consent = Consent.validate(subject:, subject_directory: directory)
+        report["consent_valid"] = consent.fetch("valid")
+        if consent.fetch("valid")
+          pass_check(report, "subject_consent", "Private consent and source-rights evidence are valid")
+        else
+          block(report, "subject_consent", consent.fetch("errors").join("; "))
+        end
+
         env_path = %w[subject.env subject.env.example].map { |name| File.join(directory, name) }
                                                     .find { |path| File.file?(path) && !File.symlink?(path) }
         unless env_path
@@ -82,14 +90,6 @@ module Studio
           block(report, "preparation_only", "A local preparation script exists; no executable training plan is declared")
         else
           block(report, "training_plan_missing", "No train.yaml or local preparation script is present")
-        end
-
-        consent = Consent.validate(subject:, subject_directory: directory)
-        report["consent_valid"] = consent.fetch("valid")
-        if consent.fetch("valid")
-          pass_check(report, "subject_consent", "Private consent and source-rights evidence are valid")
-        else
-          block(report, "subject_consent", consent.fetch("errors").join("; "))
         end
 
         report["training_ready"] = report["state"] == "PASS" && report["blockers"].empty?
