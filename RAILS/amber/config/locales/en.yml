@@ -1097,6 +1097,15 @@ en:
     looking: Looking for a stranger to talk to …
     looking_note: This page refreshes itself. The thread opens as soon as someone else asks.
     leave: Leave
+    video_title: Video room
+    video_connecting: Connecting …
+    video_self: Yourself
+    video_stranger: The stranger
+    video_leave: Leave the room
+  linktree:
+    links: Links
+    empty: No links yet.
+
   flash:
     master_invited: "MASTER joined the chat."
     no_outfit_suggestion: "No outfit suggestion generated."
@@ -1114,6 +1123,11 @@ en:
     connection_requested: "Connection requested."
     encounters_rate_limited: Easy now - too many random encounters started. Try again shortly.
     encounter_left: Random encounter left.
+    encounter_no_match: "No live pairing. Ask for a stranger first."
+    age_verification_required: "Age verification is required for stranger video."
+    live_stream_ticket_required: "This session requires a ticket."
+    linktree_not_found: "That page does not exist."
+    linktree_link_unavailable: "The link points nowhere."
     creator_profile_private: "Creator profile is private."
     creator_profile_published: "Creator profile published."
     creator_profile_updated: "Creator profile updated."

@@ -53,6 +53,10 @@ class User < ApplicationRecord
   has_many :account_merges, dependent: :destroy
   has_many :account_merges_as_guest, class_name: "AccountMerge", foreign_key: :guest_user_id,
            dependent: :destroy, inverse_of: :guest_user
+  has_many :entitlements, dependent: :destroy
+  has_many :payment_transactions, dependent: :destroy
+  has_many :vipps_payments, dependent: :destroy
+  has_many :vipps_agreements, dependent: :destroy
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
 
@@ -65,6 +69,27 @@ class User < ApplicationRecord
   def guest? = has_attribute?(:guest) && self[:guest]
   def bot? = has_attribute?(:bot) && self[:bot]
   def master_bot? = bot? && email_address.to_s == "master@amber.local"
+
+  # Does this user currently hold access to this specific gated thing? The
+  # premium plan answers yes for everything ticketed; a stored Entitlement
+  # (a PPV unlock, a live ticket, a Vipps agreement's grant) answers for the
+  # one subject it names. Ownership is not access - the host's controller
+  # decides that - but the author of a thing never needs an entitlement.
+  def entitled_to?(subject)
+    return true if entitled?(:amber_premium)
+
+    entitlements.live.for_subject(subject).exists?
+  end
+
+  # Record the grant a payment just bought. Idempotent: a retried webhook
+  # grants once (Entitlement.grant! holds the uniqueness).
+  def grant_entitlement!(subject: nil, source: "ppv", entitlement_name: nil, expires_at: nil)
+    Entitlement.grant!(self, subject:, source:, entitlement_name:, expires_at:)
+  end
+
+  # The compliance gate reads only this stored answer; how it was earned (a
+  # third-party age-assurance vendor) lives outside this app's data.
+  def age_verified? = age_verified_at.present?
 
   # Scheduled for deletion or already gone. The person still has a row, so a
   # lookup by id finds them; what they no longer have is a mailbox, which is

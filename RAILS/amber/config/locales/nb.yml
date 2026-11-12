@@ -1101,6 +1101,15 @@ nb:
     looking: Leter etter en fremmed å prate med …
     looking_note: Siden oppdaterer seg selv. Så snart noen andre spør, åpnes samtalen.
     leave: Avbryt
+    video_title: Videorom
+    video_connecting: Kobler til …
+    video_self: Deg selv
+    video_stranger: Fremmeden
+    video_leave: Forlat rommet
+  linktree:
+    links: Lenker
+    empty: Ingen lenker ennå.
+
   flash:
     master_invited: "MASTER ble med i chatten."
     no_outfit_suggestion: "Fant ikke noe antrekk å foreslå."
@@ -1118,6 +1127,11 @@ nb:
     connection_requested: "Forespørsel om kontakt er sendt."
     encounters_rate_limited: Rolig nå - for mange tilfeldige møter startet. Prøv igjen om litt.
     encounter_left: Tilfeldig møte avbrutt.
+    encounter_no_match: "Ingen aktiv pairing. Be om en fremmed først."
+    age_verification_required: "Aldersverifisering kreves for fremmedvideo."
+    live_stream_ticket_required: "Denne sendingen krever billett."
+    linktree_not_found: "Fant ikke den siden."
+    linktree_link_unavailable: "Lenken peker ingen steder."
     creator_profile_private: "Skaperprofilen er privat."
     creator_profile_published: "Skaperprofilen er publisert."
     creator_profile_updated: "Skaperprofilen er oppdatert."

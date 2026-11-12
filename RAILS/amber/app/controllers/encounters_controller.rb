@@ -2,8 +2,14 @@
 
 # Chatroulette-style random pairing. A stranger chat needs both sides to ask
 # for a stranger, so guests play without an account - the ask is the consent.
+# The video layer on top is not: a camera pointed at a stranger needs an
+# age-verified account on both ends, so the video page and its TURN
+# credentials sit behind the AgeGate while the text pairing stays as it was.
 class EncountersController < ApplicationController
+  include AgeGate
+
   before_action :require_user_session
+  age_gate_only :video, :turn
 
   # Anonymous stranger chat is abuse-prone - cap how fast encounters start,
   # the same rule NearbyController applies to brgen's stranger chats.
@@ -38,5 +44,30 @@ class EncountersController < ApplicationController
   def destroy
     Current.user.encounters.waiting.update_all(status: Encounter::CLOSED)
     redirect_to root_path, notice: t("flash.encounter_left")
+  end
+
+  # The stranger video room for a live match. The page carries no video of
+  # its own: the browser peers connect through the RandomVideoChannel's
+  # signaling and the TURN credentials below.
+  def video
+    @encounter = live_match or redirect_to(waiting_encounters_path, alert: t("flash.encounter_no_match"))
+  end
+
+  # TURN REST credentials for the room's peer connection. They name this
+  # user, die with their timestamp, and are the only TURN secret the browser
+  # ever sees.
+  def turn
+    credential = TurnCredentialService.generate(user_id: Current.user.id)
+    render json: credential.to_h
+  rescue ArgumentError
+    # No coturn on this host: the room answers without a relay, and peers on
+    # friendly networks still connect.
+    render json: { urls: [] }
+  end
+
+  private
+
+  def live_match
+    Current.user.encounters.matched.order(:updated_at).last
   end
 end

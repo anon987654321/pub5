@@ -85,7 +85,9 @@ Rails.application.routes.draw do
     end
   end
   resources :connections, only: %i[index create update]
-  resources :live_streams, only: %i[index show create update destroy]
+  resources :live_streams, only: %i[index show create update destroy] do
+    member { get :access }
+  end
   resources :messages, only: %i[index create]
   post "messages/invite_master" => "messages#invite_master", as: :invite_master_messages
   get "messages/widget" => "messages#widget", as: :messages_widget
@@ -97,6 +99,11 @@ Rails.application.routes.draw do
   resources :encounters, only: :create
   delete "encounters" => "encounters#destroy"
   get "encounters/waiting" => "encounters#waiting", as: :waiting_encounters
+  # The stranger video layer: an age-gated room plus the TURN credentials its
+  # peer connection asks for. The signaling itself runs over the
+  # RandomVideoChannel, not over HTTP.
+  get "encounters/video" => "encounters#video", as: :encounter_video
+  get "encounters/turn" => "encounters#turn", as: :encounter_turn
 
   resources :posts, only: %i[index show new create destroy] do
     resources :comments, only: %i[create destroy]
@@ -117,6 +124,18 @@ Rails.application.routes.draw do
   scope "creators/:handle", as: :creator_profile do
     resources :wardrobe_items, only: %i[create destroy], controller: "creator_wardrobe_items"
   end
+
+  # The link-in-bio surface. The page is public by design; the click tracker
+  # records the moment and sends the visitor on, into the gated surface when
+  # the link points inward.
+  get "@:slug" => "linktree_pages#show", as: :linktree,
+      constraints: { slug: /[a-z0-9\-_]+/ }
+  get "linktree/:slug" => "linktree_pages#show"
+  get "links/:id" => "linktree_links#show", as: :linktree_link
+
+  # Vipps calls back here for both rails (ePayment events, Recurring
+  # agreement events). The polling job stays the source of truth.
+  post "webhooks/vipps" => "webhooks/vipps#create", as: :webhooks_vipps
 
   resources :declutter, only: :index, param: :id do
     member do

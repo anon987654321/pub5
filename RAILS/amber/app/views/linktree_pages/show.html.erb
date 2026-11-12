@@ -1,0 +1,23 @@
+<% content_for :title, "@#{@page.slug}" %>
+
+<header aria-label="@<%= @page.slug %>">
+  <%= tag.h1 "@#{@page.slug}" %>
+  <% if @page.creator_profile.display_name.present? %>
+    <p><%= @page.creator_profile.display_name %></p>
+  <% end %>
+</header>
+
+<section class="linktree-links" aria-label="<%= t("linktree.links") %>">
+  <% if @links.empty? %>
+    <p><%= t("linktree.empty") %></p>
+  <% else %>
+    <ul>
+      <% @links.each do |link| %>
+        <li>
+          <%= link_to link.title, linktree_link_path(link),
+                      data: { icon: link.icon.presence } %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</section>

@@ -23,6 +23,20 @@ class Post < ApplicationRecord
   scope :anonymous, -> { where(anonymous: true) }
   scope :public_feed, -> { recent }
 
+  # Pay-per-view: a price makes the post gated; nil or zero keeps it free.
+  def ppv? = price_minor.to_i.positive?
+
+  # The access question the feed, the linktree and the controller all ask:
+  # can this user read this post right now? The author needs no entitlement;
+  # a free post belongs to the public feed; a gated post needs the unlock a
+  # payment granted.
+  def accessible_by?(user)
+    return true unless ppv?
+    return false if user.nil?
+
+    user.id == user_id || user.entitled_to?(self)
+  end
+
   def author_name
     return "anon" if anonymous? || user&.guest? || user&.deleted_at.present? || user&.deletion_scheduled_at.present?
 

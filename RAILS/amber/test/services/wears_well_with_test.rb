@@ -31,18 +31,21 @@ class WearsWellWithTest < ActiveSupport::TestCase
     assert_includes best[:shared], "material:linen"
     assert_includes best[:shared], "season:summer"
     assert_includes best[:shared], "occasion_tags:travel"
-    assert(best[:similarity]).positive?
+    assert_predicate best[:similarity], :positive?
     assert_empty(matches.filter_map { |m| m[:item].id if m[:item].id == winter_coat.id },
                  "a winter wool coat shares nothing with a summer linen dress")
   end
 
-  test "an item with no typed attributes matches nothing instead of guessing" do
+  test "an item with only its required category matches nothing instead of guessing" do
     owner = owner("www-blank@example.com")
-    blank = garment(owner, "Mystery garment")
-    garment(owner, "Tagged dress", category: "Dresses", season: "summer")
+    # category is mandatory on Item, so "no typed attributes" means: the
+    # required category and nothing else. Paired with an item sharing no
+    # typed token, the honest answer is an empty list, not a guess.
+    blank = garment(owner, "Plain dress", category: "Dresses")
+    garment(owner, "Wool coat", category: "Outerwear", material: "wool")
 
     assert_empty WearsWellWith.new(blank).neighbors
-    assert_empty WearsWellWith.new(blank).tokens
+    assert_equal ["category:dresses"], WearsWellWith.new(blank).tokens
   end
 
   test "retired and inactive garments are not suggested" do
@@ -74,11 +77,11 @@ class WearsWellWithTest < ActiveSupport::TestCase
     score_twin, shared_twin = service.compare(twin)
     score_half, = service.compare(half)
 
-    # Two tokens out of two, over sqrt(2 * 2): identical typed vectors score 1.
+    # Two tokens out of two: identical typed vectors score 1.
     assert_in_delta 1.0, score_twin, 1e-9
-    assert_equal %w[category:dresses], shared_twin.sort
-    # One shared token of two and two: 1 / sqrt(4) = 0.5.
-    assert_in_delta 0.5, score_half, 1e-9
+    assert_equal %w[category:dresses season:summer], shared_twin.sort
+    # One shared token of two and one: 1 / sqrt(2 * 1) = 0.707.
+    assert_in_delta 0.7071, score_half, 1e-3
   end
 
   test "items#wears_well_with is the one entry the surfaces call" do

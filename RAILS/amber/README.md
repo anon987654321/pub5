@@ -101,6 +101,13 @@ can be invited into a message thread. A sign-in from brgen never reaches amber, 
 session cookie is scoped to the registrable domain, and the one door between them is the
 MASTER-signed token at /sso/from_master.
 
+Random pairing has a video layer. An Encounter pairs two askers as before; the
+RandomVideoChannel now relays the WebRTC dance between the two browsers, coturn relays the
+pairs that cannot connect directly, and TurnCredentialService mints time-limited TURN
+credentials from one shared secret. The video room and its TURN endpoint sit behind the age
+gate: a camera pointed at a stranger needs an age-verified account, the text thread stays as
+it was.
+
 ## Guests
 
 User carries a guest column, so an anonymous visitor gets a soft Current.user and can use the
@@ -228,6 +235,18 @@ analytics the free tier only samples. The `/billing` page shows the plan as not 
 while its Stripe price env is unset, so nobody reaches a checkout that cannot complete. Do not
 raise the paywall before import and export work; a wardrobe someone cannot leave is not a
 product someone joins.
+
+Beneath the plan sits the entitlement spine: an Entitlement row answers `accessible_by?` for
+one gated thing, and a PaymentTransaction records the money fact that granted it. A Post with
+a price is pay-per-view (the unlock is permanent), a ticketed style session costs its price,
+and a fresh access token carries one seat for an hour. The Vipps rail (ePayment for one-off
+charges, Recurring for Norwegian agreements) lives behind `Payments::VippsAdapter`; until its
+env is set it is simply unavailable, like the Stripe half. Vipps' own rule holds in code: the
+poller, not the webhook, confirms every payment.
+
+Creator pages are public at `/@slug`: the link-in-bio surface counts a page view and a link
+click with an anonymized visitor hash and no more. Internal links land behind the normal
+access checks; the page is the top of the funnel, never a way around the paywall.
 
 Affiliate income stays elective and disclosed: `ShopTheLook` ranks links the owner added
 herself, and its remote half waits on the TradeDoubler token that lives on brgen, and says so

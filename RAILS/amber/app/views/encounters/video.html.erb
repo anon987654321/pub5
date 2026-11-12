@@ -1,0 +1,18 @@
+<% content_for :title, t("encounters.video_title") %>
+
+<header aria-label="<%= t("encounters.video_title") %>">
+  <%= tag.h1 t("encounters.video_title") %>
+</header>
+
+<section data-controller="random-video"
+         data-random-video-turn-url-value="<%= encounter_turn_path %>"
+         data-random-video-channel-value="RandomVideoChannel"
+         aria-live="polite">
+  <p data-random-video-target="status"><%= t("encounters.video_connecting") %></p>
+  <video data-random-video-target="local" autoplay playsinline muted
+         aria-label="<%= t("encounters.video_self") %>"></video>
+  <video data-random-video-target="remote" autoplay playsinline
+         aria-label="<%= t("encounters.video_stranger") %>"></video>
+  <%= button_to t("encounters.video_leave"), waiting_encounters_path, method: :get,
+                form: { data: { action: "random-video#leave" } } %>
+</section>

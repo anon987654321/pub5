@@ -6,6 +6,7 @@ require_relative "../../__shared/test/coverage"
 ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
+require "minitest/mock"
 require "shared/test_defaults"
 
 module ActiveSupport

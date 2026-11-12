@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_11_07_200000) do
+ActiveRecord::Schema[8.2].define(version: 2026_11_12_100100) do
   create_table "account_merges", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "guest_user_id", null: false
@@ -288,6 +288,21 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_200000) do
     t.index ["user_id"], name: "index_encounters_on_user_id"
   end
 
+  create_table "entitlements", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.string "subject_type"
+    t.integer "subject_id"
+    t.string "entitlement_name"
+    t.string "source", default: "ppv", null: false
+    t.datetime "expires_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["subject_type", "subject_id"], name: "index_entitlements_on_subject_type_and_subject_id"
+    t.index ["user_id", "entitlement_name"], name: "index_entitlements_on_user_id_and_entitlement_name"
+    t.index ["user_id", "subject_type", "subject_id", "source"], name: "index_entitlements_on_user_and_subject_and_source", unique: true
+    t.index ["user_id"], name: "index_entitlements_on_user_id"
+  end
+
   create_table "external_identities", force: :cascade do |t|
     t.string "assurance_level", default: "account", null: false
     t.datetime "created_at", null: false
@@ -374,6 +389,45 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_200000) do
     t.index ["user_id"], name: "index_items_on_user_id"
   end
 
+  create_table "linktree_events", force: :cascade do |t|
+    t.integer "linktree_page_id", null: false
+    t.integer "linktree_link_id"
+    t.string "event_type", null: false
+    t.string "visitor_hash"
+    t.string "referrer"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["linktree_link_id"], name: "index_linktree_events_on_linktree_link_id"
+    t.index ["linktree_page_id", "event_type", "created_at"], name: "idx_on_linktree_page_id_event_type_created_at_a06b2dbfb0"
+    t.index ["linktree_page_id"], name: "index_linktree_events_on_linktree_page_id"
+  end
+
+  create_table "linktree_links", force: :cascade do |t|
+    t.integer "linktree_page_id", null: false
+    t.string "title", null: false
+    t.string "url"
+    t.string "icon"
+    t.integer "position", default: 0, null: false
+    t.boolean "visible", default: true, null: false
+    t.string "linkable_type"
+    t.integer "linkable_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["linkable_type", "linkable_id"], name: "index_linktree_links_on_linkable_type_and_linkable_id"
+    t.index ["linktree_page_id", "position"], name: "index_linktree_links_on_linktree_page_id_and_position"
+    t.index ["linktree_page_id"], name: "index_linktree_links_on_linktree_page_id"
+  end
+
+  create_table "linktree_pages", force: :cascade do |t|
+    t.integer "creator_profile_id", null: false
+    t.string "slug", null: false
+    t.json "theme_config", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["creator_profile_id"], name: "index_linktree_pages_on_creator_profile_id"
+    t.index ["slug"], name: "index_linktree_pages_on_slug", unique: true
+  end
+
   create_table "live_streams", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "description"
@@ -385,6 +439,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_200000) do
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
     t.integer "viewer_count", default: 0, null: false
+    t.boolean "ticketed", default: false, null: false
+    t.integer "price_minor"
     t.index ["status", "scheduled_at"], name: "index_live_streams_on_status_and_scheduled_at"
     t.index ["user_id"], name: "index_live_streams_on_user_id"
   end
@@ -484,6 +540,22 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_200000) do
     t.index ["user_id"], name: "index_packing_lists_on_user_id"
   end
 
+  create_table "payment_transactions", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.string "rail", default: "vipps", null: false
+    t.string "reference", null: false
+    t.integer "amount_minor", null: false
+    t.string "currency", default: "NOK", null: false
+    t.string "state", default: "pending", null: false
+    t.string "purchasable_type"
+    t.integer "purchasable_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["purchasable_type", "purchasable_id"], name: "idx_on_purchasable_type_purchasable_id_3aa84e11ab"
+    t.index ["rail", "reference"], name: "index_payment_transactions_on_rail_and_reference", unique: true
+    t.index ["user_id"], name: "index_payment_transactions_on_user_id"
+  end
+
   create_table "planned_outfits", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "notes"
@@ -507,6 +579,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_200000) do
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
     t.integer "score", default: 0, null: false
+    t.integer "price_minor"
+    t.string "currency"
     t.index ["item_id"], name: "index_posts_on_item_id"
     t.index ["outfit_id"], name: "index_posts_on_outfit_id"
     t.index ["score"], name: "index_posts_on_score"
@@ -662,6 +736,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_200000) do
     t.datetime "remember_token_expires_at"
     t.boolean "two_factor_enabled", default: false, null: false
     t.datetime "updated_at", null: false
+    t.datetime "age_verified_at"
     t.index ["bot"], name: "index_users_on_bot"
     t.index ["deletion_scheduled_at"], name: "index_users_on_deletion_scheduled_at"
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
@@ -669,6 +744,36 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_200000) do
     t.index ["guest", "created_at"], name: "index_users_on_guest_and_created_at"
     t.index ["magic_link_token"], name: "index_users_on_magic_link_token", unique: true
     t.index ["remember_token"], name: "index_users_on_remember_token", unique: true
+  end
+
+  create_table "vipps_agreements", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.string "agreement_id", null: false
+    t.string "entitlement_name", null: false
+    t.integer "amount_minor", null: false
+    t.string "currency", default: "NOK", null: false
+    t.string "interval", default: "MONTH", null: false
+    t.string "state", default: "PENDING", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["agreement_id"], name: "index_vipps_agreements_on_agreement_id", unique: true
+    t.index ["user_id"], name: "index_vipps_agreements_on_user_id"
+  end
+
+  create_table "vipps_payments", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.string "reference", null: false
+    t.integer "amount_minor", null: false
+    t.string "currency", default: "NOK", null: false
+    t.string "state", default: "CREATED", null: false
+    t.string "idempotency_key", null: false
+    t.string "purchasable_type"
+    t.integer "purchasable_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["purchasable_type", "purchasable_id"], name: "index_vipps_payments_on_purchasable_type_and_purchasable_id"
+    t.index ["reference"], name: "index_vipps_payments_on_reference", unique: true
+    t.index ["user_id"], name: "index_vipps_payments_on_user_id"
   end
 
   create_table "visit_counts", force: :cascade do |t|
@@ -745,6 +850,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_200000) do
   add_foreign_key "declutter_reviews", "users"
   add_foreign_key "encounters", "users"
   add_foreign_key "encounters", "users", column: "partner_id"
+  add_foreign_key "entitlements", "users"
   add_foreign_key "external_identities", "identity_providers"
   add_foreign_key "external_identities", "users"
   add_foreign_key "follows", "users", column: "followee_id"
@@ -752,6 +858,10 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_200000) do
   add_foreign_key "garment_embeddings", "items"
   add_foreign_key "identity_verifications", "users"
   add_foreign_key "items", "users"
+  add_foreign_key "linktree_events", "linktree_links"
+  add_foreign_key "linktree_events", "linktree_pages"
+  add_foreign_key "linktree_links", "linktree_pages"
+  add_foreign_key "linktree_pages", "creator_profiles"
   add_foreign_key "live_streams", "users"
   add_foreign_key "messages", "users", column: "recipient_id"
   add_foreign_key "messages", "users", column: "sender_id"
@@ -763,6 +873,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_200000) do
   add_foreign_key "packing_list_items", "items"
   add_foreign_key "packing_list_items", "packing_lists"
   add_foreign_key "packing_lists", "users"
+  add_foreign_key "payment_transactions", "users"
   add_foreign_key "planned_outfits", "outfits"
   add_foreign_key "planned_outfits", "users"
   add_foreign_key "posts", "items"
@@ -783,6 +894,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_200000) do
   add_foreign_key "sessions", "users"
   add_foreign_key "style_preferences", "users"
   add_foreign_key "sustainability_metrics", "items"
+  add_foreign_key "vipps_agreements", "users"
+  add_foreign_key "vipps_payments", "users"
   add_foreign_key "votes", "users"
   add_foreign_key "wardrobe_items", "items"
   add_foreign_key "wardrobe_items", "users"
