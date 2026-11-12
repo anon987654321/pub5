@@ -51,8 +51,7 @@ class TurnRouterTest < Minitest::Test
   end
 
   def test_do_can_and_will_imperatives_are_not_misrouted_as_questions
-    %w["Do\ fix\ the\ broken\ tests" "Can\ refactor\ this\ method" "Will\ add\ authentication"].each do |source|
-      text = source.delete_prefix('"').delete_suffix('"').gsub('\\ ', ' ')
+    ["Do fix the broken tests", "Can refactor this method", "Will add authentication"].each do |text|
       refute Master::CLI::TurnRouter.question?(text), text
     end
     assert Master::CLI::TurnRouter.question?("Can refactor this method?")
