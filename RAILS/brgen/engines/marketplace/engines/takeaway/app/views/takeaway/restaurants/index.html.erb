@@ -20,6 +20,8 @@
            end %>
 
 <% if promo %>
+  <%# Keep a page-level heading even when the campaign art supplies the visible h2. %>
+  <%= tag.h1 t("takeaway.order_food"), class: "visually-hidden" %>
   <%= render "shared/promotional_art",
         art: promo,
         image_url: (@promo_menu_item&.photo&.attached? ? main_app.url_for(@promo_menu_item.media_variant(:photo, :card)) : nil),
