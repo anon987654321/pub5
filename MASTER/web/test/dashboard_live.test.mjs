@@ -51,7 +51,7 @@ function loadDashboard({ answers = [] } = {}) {
   const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
   const live = () => timers.filter((timer) => !timer.cleared && !timer.ran);
   const run = async (timer) => { timer.ran = true; timer.fn(); await settle(); };
-  return { timers, fetches, streams, live, run, settle };
+  return { timers, fetches, streams, nodes, live, run, settle };
 }
 
 const failing = { status: 503, ok: false, json: async () => ({ error: "warming up" }) };
@@ -114,4 +114,26 @@ test("an authentication failure stops both the poll and the stream", async () =>
 
   assert.equal(page.streams[0].closed, true);
   assert.deepEqual(page.live(), []);
+});
+
+
+test("one malformed panel does not prevent sibling panels from rendering", async () => {
+  const malformed = {
+    status: 200,
+    ok: true,
+    json: async () => ({
+      model: "test/model",
+      mission: { id: "mission-1" },
+      fleet: { apps: { unexpected: true } },
+      model_quota: { day: "2026-11-12", models: {}, forecasts: {} },
+      bus_events: ["bus event survives"]
+    })
+  };
+  const page = loadDashboard({ answers: [malformed] });
+  await page.settle();
+
+  assert.match(page.nodes.fleet.textContent, /unavailable:.*map/i);
+  assert.match(page.nodes.status.textContent, /test\/model/);
+  assert.match(page.nodes.quota.textContent, /2026-11-12/);
+  assert.match(page.nodes.bus.textContent, /bus event survives/);
 });
