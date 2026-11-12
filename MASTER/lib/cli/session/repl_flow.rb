@@ -706,13 +706,14 @@ module Master
       end
 
       def stop_interactive_queue(reason: "stop")
+        active_operation = false
         @turn_queue_mutex.synchronize do
           @turn_queue_paused = true
           @turn_cancel_requested = true
+          active_operation = !!(@turn_worker&.alive? && @turn_current_started)
         end
         turn = @pipeline_thread
         active_turn = turn&.alive?
-        active_operation = @turn_worker&.alive?
         if active_turn
           # Use the same cancellation policy as Ctrl-C: Fold-owned work stops
           # at a safe boundary; only non-Fold work takes the immediate kill path.
