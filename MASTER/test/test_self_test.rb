@@ -104,10 +104,10 @@ class TestSelfTest < Minitest::Test
       FileUtils.mkdir_p(openbsd)
       path = File.join(openbsd, "OPERATOR.rb")
       classes = 2.times.map do |index|
-        methods = 6.times.map { |method| "  def method_#{index}_#{method}; end" }.join("\\n")
-        "class Type#{index}\\n#{methods}\\nend"
+        methods = 6.times.map { |method| "  def method_#{index}_#{method}; end" }.join("\n")
+        "class Type#{index}\n#{methods}\nend"
       end
-      File.write(path, classes.join("\\n"))
+      File.write(path, classes.join("\n"))
 
       findings = Master::Review::Scan::SelfTest.new(root:).send(:deploy_god_class_findings)
 
@@ -121,8 +121,8 @@ class TestSelfTest < Minitest::Test
       openbsd = File.join(workspace, "OPENBSD")
       FileUtils.mkdir_p(openbsd)
       path = File.join(openbsd, "OPERATOR.rb")
-      methods = 11.times.map { |index| "  def method_#{index}; end" }.join("\\n")
-      File.write(path, "class Large\\n#{methods}\\nend\\n")
+      methods = 11.times.map { |index| "  def method_#{index}; end" }.join("\n")
+      File.write(path, "class Large\n#{methods}\nend\n")
 
       findings = Master::Review::Scan::SelfTest.new(root:).send(:deploy_god_class_findings)
 
