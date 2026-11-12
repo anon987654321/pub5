@@ -201,14 +201,14 @@ module Master
       end
 
       def dispatch_structural_recipe(raw, deliberation:)
-        tokens = raw.to_s.split(/\\s+/)
+        tokens = raw.to_s.split(/\s+/)
         recipes = Master::Fix::StructuralRecipes.new(repo_root: Master.repo_root)
 
         if tokens == ["--list-recipes"]
-          return recipes.list.map { |name, description| "#{name}  #{description}" }.join("\\n")
+          return recipes.list.map { |name, description| "#{name}  #{description}" }.join("\n")
         end
 
-        unless tokens.length == 3 && tokens[0] == "--recipe" && tokens[1].match?(/\\A[a-z][a-z0-9_]*\\z/) &&
+        unless tokens.length == 3 && tokens[0] == "--recipe" && tokens[1].match?(/\A[a-z][a-z0-9_]*\z/) &&
                %w[--dry-run --apply].include?(tokens[2])
           return "recipe0: usage: /fix --list-recipes | /fix --recipe NAME --dry-run | /fix --recipe NAME --apply"
         end
@@ -222,7 +222,7 @@ module Master
           value = result.value!
           state = value.fetch(:already_applied) ? "already applied; no diff" : "dry-run; no files changed"
           diff = value.fetch(:diff).to_s
-          suffix = diff.empty? ? "" : "\\n#{diff}"
+          suffix = diff.empty? ? "" : "\n#{diff}"
           "recipe0: #{name}, #{state}; operation=#{value.fetch(:operations).join(",")}; paths=#{value.fetch(:paths).join(", ")}#{suffix}"
         when "--apply"
           result = recipes.apply(name, agent: deliberation&.agent)
