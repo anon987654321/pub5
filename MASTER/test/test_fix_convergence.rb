@@ -953,6 +953,31 @@ end
     assert_equal expected, events.first
   end
 
+  def test_run_budget_distinguishes_repair_passes_from_read_only_audits
+    [ [false, 0], [true, Master::Fix::FixLoop::ABSOLUTE_MAX_PASSES] ].each do |apply, expected_passes|
+      observed_passes = nil
+      run_budget = lambda do |**kwargs, &block|
+        observed_passes = kwargs.fetch(:max_passes)
+        block.call
+      end
+      preflight = ->(*_args, **_kwargs) { raise "preflight sentinel" }
+
+      Master::Fix::RunBudget.stub(:with_shared_run, run_budget) do
+        Master::CLI::CommandRegistry.stub(:fix_targets, preflight) do
+          error = assert_raises(RuntimeError) do
+            Master::CLI::CommandRegistry.dispatch_fix_parsed(
+              scanner: nil, fix_loop: nil, deliberation: nil, root: @root, bus: nil, swarm: nil,
+              raw: "", apply:, critique: false, aesthetic: false, only: nil, target: "."
+            )
+          end
+          assert_equal "preflight sentinel", error.message
+        end
+      end
+
+      assert_equal expected_passes, observed_passes
+    end
+  end
+
   def test_bare_fix_routes_to_write_enabled_repair_and_delivery
     previous_trace = ENV["MASTER_FIX_DEEP_TRACE"]
     ENV["MASTER_FIX_DEEP_TRACE"] = "0"
