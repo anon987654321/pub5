@@ -414,8 +414,11 @@ measure is already owned by the Bymorgen item above.
   authored/extended but NOT_RUN; the broader process-kill and provider-boundary
   audits remain open.
   H6 is partial: `.zshrc` checks operator-file ownership and group/other mode
-  bits, and the host permission audit checks secrets/storage/logs; a source-path
-  symlink review and dedicated zsh-source test remain open. R8 also has a definite commit-refusal rollback regression;
+  bits; `PermissionAudit` now checks `/etc/<app>.env` as `root:<app>`, storage
+  owner as `<app>`, daemon-log owner and symlinked leaf paths. `health_check.rb`
+  uses `lstat` and includes `/etc/rails/*.env`; owner/group/symlink regressions
+  are authored but NOT_RUN. A parent-directory/symlink-chain review, dedicated
+  zsh-source test and live vm23 permission run remain open. R8 also has a definite commit-refusal rollback regression;
   the full transaction-aware candidate/apply and later-verification recovery
   path remains open.
 - [ ] **Local Claude hooks.** On macOS, launch a real Claude Code session and
