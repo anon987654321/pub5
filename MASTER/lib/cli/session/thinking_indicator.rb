@@ -399,7 +399,21 @@ module Master
         return stage_with_detail(event, payload) if event.start_with?("stage:")
         return payload[:stage].to_s.downcase if event == "pipeline:stage_start"
 
-        STAGE_EVENTS[event]
+        stage = STAGE_EVENTS[event]
+        return stage unless %w[llm:send llm:stream_started].include?(event)
+
+        provider_stage(stage, payload[:model])
+      end
+
+      # The dispatch event names the lane that actually passed the send gate,
+      # not the route's earlier candidate. Keep the spinner useful on failover
+      # without printing a long model id or untrusted terminal control text.
+      def provider_stage(stage, model)
+        provider = Master::Io::LaneSelection.provider(model).to_s
+        provider = provider.gsub(/[^A-Za-z0-9_.:-]/, "")[0, 18]
+        provider.empty? ? stage : "#{stage} #{provider}"
+      rescue StandardError
+        stage
       end
 
       # "stage:*" events name their own unit and may carry a live detail — the
