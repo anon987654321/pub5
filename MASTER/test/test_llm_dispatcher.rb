@@ -451,7 +451,11 @@ class TestLLMDispatcher < Minitest::Test
 
     assert_equal :crash, result.category
     assert bus.events.any? { |name, payload| name == "llm:send" && payload[:model] == "test-provider:model" }
-    assert bus.events.any? { |name, payload| name == "llm:call_finished" && payload[:model] == "test-provider:model" }
+    finished = bus.events.find { |name, payload| name == "llm:call_finished" && payload[:model] == "test-provider:model" }
+    assert_equal :crash, finished.last[:status]
+    assert_equal Digest::SHA256.hexdigest("MASTER fault"), finished.last[:error_digest]
+    assert_equal "MASTER fault".bytesize, finished.last[:error_bytes]
+    refute finished.last.key?(:error), "the completion event carries no raw exception text"
     refute bus.events.any? { |name, _payload| name == "llm:provider_outcome" },
            "MASTER faults must close the in-flight UI without penalizing provider health"
   end
