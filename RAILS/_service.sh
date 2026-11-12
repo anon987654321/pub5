@@ -56,27 +56,12 @@ install_rcd() {
 }
 
 # relayd_confirm_live PORT
-# Deploy-time proxy-listener verification, separate from route configuration.
-# This runs before the app restart; application health is checked after it by
-# post_restart_probe below.
+# Check the already-running TLS listener during deploy preflight. This does not
+# claim the Rails process is ready; post_restart_probe checks the app's own /up
+# endpoint after the service restart.
 #
-# `rcctl restart relayd` returns 0 when the start command succeeded, and that is
-# not the same claim as "relayd is serving". On 2026-08-10 the ca process died
-# during a restart (ca_dispatch_relay: invalid relay hash -> lost child ->
-# parent terminating) and took every site on the box down for nine minutes; the
-# deploy that triggered it had logged relayd(ok) seconds earlier, because the
-# only check ran before the restart. the old backlog #2 records that as open
-# with "nothing yet re-checks liveness after the restart". This is that check.
-#
-# The two failure shapes are distinguishable and it is worth saying which one
-# happened, because they need different actions:
-#
-#   relayd died   443 refuses in ~30ms while the app still answers on its own
-#                 port from the box. Every site is down. Not port 80 — relayd
-#                 declares one relay, `listen on 0.0.0.0 port 443 tls`, so 80
-#                 refuses on a healthy box and tests nothing.
-#   app shed      443 still answers TLS and only the app port is closed. TLS
-#                 answering is why a shed reads as curl 000 rather than a 5xx.
+# If 443 refuses, checking the app's own port distinguishes a proxy failure from
+# an app failure. Port 80 is not useful here: this host's relay listens on 443.
 relayd_confirm_live() {
   local app_port=$1
   local deadline=20
