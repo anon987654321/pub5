@@ -18,6 +18,8 @@ module Master
       REPOSITORY_TARGET_RE = /\b(?:pub5|repo(?:sitory)?|codebase|whole\s+(?:repo|repository)|entire\s+(?:repo|repository))\b/i.freeze
       DIRECT_DEPLOY_REQUEST_RE = /\A\s*(?:(?:please|can you|could you|i need you to|i want you to|go ahead and)\s+)?(?:deploy|re[- ]?deploy|release|ship|publish)\b/i.freeze
       NON_PRODUCTION_ENV_RE = /\b(?:local|development|dev|test|staging|stage|preview)\b/i.freeze
+      DESTINATION_RE = /\b(?:to|onto|on|at|for)\s+([a-z0-9][a-z0-9._-]*)/i.freeze
+      VM23_DESTINATIONS = %w[vm23 production prod].freeze
       REQUIRED_KEYS = %w[intent operation environment target_type target exclude confidence reason].freeze
 
       SYSTEM = <<~PROMPT.freeze
@@ -96,6 +98,8 @@ module Master
         request = text.to_s
         return false unless request.match?(REPOSITORY_TARGET_RE) && request.match?(DIRECT_DEPLOY_REQUEST_RE)
         return false if request.match?(NON_PRODUCTION_ENV_RE)
+        destination = request.match(DESTINATION_RE)&.captures&.first
+        return false if destination && !VM23_DESTINATIONS.include?(destination.downcase)
 
         named_app = inventory.ordered_apps.any? do |app|
           [app.name, app.title, app.domain].any? do |value|
