@@ -57,7 +57,7 @@ delegated, 2026-10-31), and are recorded so that no one reopens them as drift:
   open status, delivery fee, minimum order, ratings, dish price, dietary/allergen
   facts, quantity and one clear order action. Never invent availability, ratings,
   delivery promises or scarcity.
-  
+
   These are user-selected structural templates, not permission to reproduce the
   references' logos, wordmarks, campaign art, photography, copy, distinctive
   typography or exact branded visual skin. Brgen retains its deep-blue city identity,

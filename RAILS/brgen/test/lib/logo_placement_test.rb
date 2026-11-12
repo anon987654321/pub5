@@ -65,7 +65,6 @@ class LogoPlacementTest < ActiveSupport::TestCase
                  "the mark must render on every surface, not behind a guard")
   end
 
-
   def test_city_wordmark_uses_helvetica_bold_and_a_reduced_motion_particle_overlay
     layout = Rails.root.join("app/views/layouts/application.html.erb").read
     storefront = Rails.root.join("app/views/shared/_storefront_nav_bar.html.erb").read

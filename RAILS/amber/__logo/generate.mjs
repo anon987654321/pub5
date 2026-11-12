@@ -131,7 +131,6 @@ function hairY(y0, x) {
   return y0;
 }
 
-
 // frozen position of the animated radial ink (reference)
 const RADIAL = [500, 250, 560];
 const radT = (x, y) => Math.min(1, Math.hypot(x - RADIAL[0], y - RADIAL[1]) / RADIAL[2]);

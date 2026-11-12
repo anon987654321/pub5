@@ -193,7 +193,7 @@ class LogoContractTest < ActionView::TestCase
     {
       "amber-logo-avatar-canon.svg" => "amber-canon.svg",
       "amber-logo-avatar-bit8.svg" => "amber-bit8.svg",
-      "amber-logo-avatar-candy.svg" => "amber-candy.svg"
+      "amber-logo-avatar-candy.svg" => "amber-candy.svg",
     }.each do |public_name, generated_name|
       public_svg = root.join(public_name).read
       generated_svg = source.join(generated_name).read

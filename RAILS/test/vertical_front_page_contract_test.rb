@@ -66,7 +66,6 @@ class VerticalFrontPageContractTest < Minitest::Test
     end
   end
 
-
   def test_front_pages_keep_distinct_content_postures
     brgen = source("brgen/app/views/home/index.html.erb")
     amber_home = source("amber/app/views/home/index.html.erb")

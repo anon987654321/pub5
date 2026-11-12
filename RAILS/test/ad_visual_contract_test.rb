@@ -107,7 +107,6 @@ class AdVisualContractTest < Minitest::Test
   end
 end
 
-
 class SponsoredPostLayoutTest < Minitest::Test
   def test_in_feed_sponsored_card_uses_a_horizontal_media_and_copy_layout
     css = File.read(File.expand_path("../__shared/app/assets/stylesheets/_affiliate_feed_unit.scss", __dir__))

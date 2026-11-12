@@ -64,7 +64,7 @@ module Payments
             pricing: { type: "FIXED_PRICE", amount: amount_minor },
             productName: entitlement_name,
             merchantAgreementUrl: merchant_agreement_url,
-            initialCharge: nil
+            initialCharge: nil,
           }.compact,
           idempotency_key:,
         )
@@ -95,7 +95,7 @@ module Payments
           paymentMethod: { type: "WALLET" },
           # amber holds no phone numbers, so the customer confirms in the Vipps
           # app through the return flow instead of a push to one number.
-          returnUrl: Rails.application.routes.url_helpers.billing_url
+          returnUrl: Rails.application.routes.url_helpers.billing_url,
         }.compact
       end
     end

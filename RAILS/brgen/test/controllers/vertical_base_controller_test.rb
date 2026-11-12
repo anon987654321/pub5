@@ -8,7 +8,7 @@ class VerticalBaseControllerTest < ActionDispatch::IntegrationTest
       Marketplace::BaseController,
       Takeaway::BaseController,
       Tv::BaseController,
-      Playlist::BaseController
+      Playlist::BaseController,
     ].each do |controller|
       assert_operator controller, :<, Shared::SluggedVerticalController
     end

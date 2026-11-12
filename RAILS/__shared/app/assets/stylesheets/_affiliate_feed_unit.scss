@@ -61,7 +61,6 @@
   transition: transform 180ms var(--ease-out);
 }
 
-
 .affiliate_feed_tile:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
@@ -267,8 +266,6 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
-
-
 
 // The in-feed sponsored card follows the reference's horizontal image/copy
 // composition. The collage and catalogue variants above remain independent.
