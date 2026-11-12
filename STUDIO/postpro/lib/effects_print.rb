@@ -168,11 +168,8 @@ rescue StandardError => e
   $logger.error "expired_film: #{e.message}"; image
 end
 
-def gate_weave(image, intensity = 0.40)
+def gate_weave(image, intensity = 0.40, offsets: nil)
   w, h = image.width, image.height
-  offsets = if defined?(Postpro::Motion) && Postpro::Motion.respond_to?(:gate_weave_offset)
-              Postpro::Motion.gate_weave_offset
-            end
   if offsets.is_a?(Hash)
     # Motion supplies a continuous, seeded offset sampled at the video's frame
     # rate. Still images keep one stable, reproducible registration error.
