@@ -15,6 +15,6 @@ class RestaurantsInfiniteScrollReflex < Shared::InfiniteScrollReflex
         term, term, term, term
       )
     end
-    element.dataset["q"].present? ? scope : scope.popular
+    scope.merge(Takeaway::Restaurant.sorted(element.dataset["sort"]))
   end
 end
