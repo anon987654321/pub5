@@ -59,7 +59,10 @@ class Post < ApplicationRecord
     content = [
       live_count_update(%([data-post-score="#{key}"]), score.to_i.to_s),
       live_count_update(%([data-post-like-count="#{key}"]), likes_count.to_i.to_s),
-      live_count_update(%([data-post-comment-count="#{key}"]), comments_count.positive? ? comments_count.to_s : "")
+      live_count_update(
+        %([data-post-comment-count="#{key}"]),
+        comments_count.positive? ? comments_count.to_s : ""
+      )
     ].join
 
     ["posts", self].each do |stream|
