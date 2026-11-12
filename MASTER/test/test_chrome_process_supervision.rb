@@ -2,6 +2,7 @@
 
 require_relative "test_helper"
 require "rbconfig"
+require "shellwords"
 require "tmpdir"
 require_relative "../checks/support/chrome_process"
 require_relative "../checks/support/cdp_session"
@@ -28,7 +29,7 @@ class TestChromeProcessSupervision < Minitest::Test
       child_file = File.join(dir, "renderer.pid")
       worker_code = <<~'RUBY'
         Signal.trap("TERM", "IGNORE")
-        File.write(CHILD_PID_FILE, Process.pid.to_s)
+        File.write(ENV.fetch("CHILD_PID_FILE"), Process.pid.to_s)
         sleep 60
       RUBY
       browser_code = <<~RUBY
@@ -43,7 +44,8 @@ class TestChromeProcessSupervision < Minitest::Test
       executable = File.join(dir, "fake-chrome")
       File.write(
         executable,
-        "#!/bin/sh\nCHILD_PID_FILE=#{child_file.dump} exec #{RbConfig.ruby} -e #{browser_code.dump}\n"
+        "#!/bin/sh\nexport CHILD_PID_FILE=#{Shellwords.escape(child_file)}\n" \
+          "exec #{Shellwords.escape(RbConfig.ruby)} -e #{Shellwords.escape(browser_code)}\n"
       )
       File.chmod(0o700, executable)
 
