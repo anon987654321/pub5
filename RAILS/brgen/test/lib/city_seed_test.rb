@@ -16,6 +16,7 @@ class CitySeedTest < ActiveSupport::TestCase
   test "every catalogue city becomes a complete seed row" do
     records = Brgen::DomainRegistry::CITY_RECORDS.index_by { |record| record.fetch("domain") }
     domains = records.keys.sort
+    assert_equal 43, domains.length, "city seed inventory must cover all registered cities"
 
     assert_equal domains, Brgen::DomainRegistry::ENTRIES.map(&:domain).sort
     assert_equal domains, rows.map(&:domain).sort
