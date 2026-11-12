@@ -24,6 +24,11 @@ class TestImproveEngine < Minitest::Test
     full
   end
 
+  def test_elevation_findings_use_the_nonblocking_warning_severity
+    assert_equal :warning, Master::Fix::Improve::SEVERITY
+    assert_equal 1, Master::Fix::Severity.rank(Master::Fix::Improve::SEVERITY)
+  end
+
   def test_elevates_a_long_method_as_an_improvement_finding
     path = write("lib/wide.rb", "# frozen_string_literal: true\nclass Wide\n" +
       "  def claimable\n" + (1..60).map { |i| "    x#{i} = #{i}" }.join("\n") + "\n  end\nend\n")
