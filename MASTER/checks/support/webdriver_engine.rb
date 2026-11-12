@@ -50,7 +50,8 @@ module Deploy
         raise Unavailable, @missing if @missing || @driver.nil?
 
         @port = free_port
-        @pid = Process.spawn(Master::Io::ProcessSpawn.environment, @driver, "-p", @port.to_s, out: File::NULL, err: File::NULL)
+        @pid = Process.spawn(Master::Io::ProcessSpawn.environment, @driver, "-p", @port.to_s,
+                            out: File::NULL, err: File::NULL, pgroup: true)
         wait_for_driver
         reply = post("/session", capabilities: { alwaysMatch: @caps })
         @session = reply.dig("value", "sessionId")
@@ -67,12 +68,18 @@ module Deploy
 
       def close
         post_quietly("/session/#{@session}", method: :delete) if @session
-        Process.kill("TERM", @pid) if @pid
-        Process.wait(@pid) if @pid
-      rescue SystemCallError
-        nil
-      ensure
+        pid = @pid
+        return true unless pid
+        unless stop_driver_group(pid)
+          warn "#{@name} driver process group #{pid} is still present; PID ownership retained"
+          return false
+        end
+
         @session = @pid = nil
+        true
+      rescue StandardError => e
+        warn "#{@name} driver cleanup is inconclusive: #{e.class}: #{e.message}"
+        false
       end
 
       # The window includes browser chrome, so the size is corrected once by
@@ -122,6 +129,63 @@ module Deploy
       end
 
       def free_port = TCPServer.open("127.0.0.1", 0) { |server| server.addr[1] }
+
+      TERM_GRACE_S = 2.0
+      KILL_GRACE_S = 2.0
+      STOP_POLL_S = 0.05
+
+      def stop_driver_group(pid, term_grace: webdriver_term_grace, kill_grace: webdriver_kill_grace)
+        group = Integer(pid)
+        return false unless group.positive?
+        return false if group == Process.getpgrp
+
+        signal_driver_group("TERM", group)
+        return true if wait_for_driver_group_exit(group, term_grace)
+
+        signal_driver_group("KILL", group)
+        wait_for_driver_group_exit(group, kill_grace)
+      rescue ArgumentError, TypeError
+        false
+      end
+
+      def wait_for_driver_group_exit(group, timeout)
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+        loop do
+          leader_reaped = reap_driver_leader(group)
+          return true if leader_reaped && !driver_group_alive?(group)
+          return false if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+          sleep webdriver_stop_poll
+        end
+      end
+
+      def reap_driver_leader(pid)
+        !Process.waitpid(pid, Process::WNOHANG).nil?
+      rescue Errno::ECHILD
+        true
+      rescue Errno::EINTR
+        retry
+      end
+
+      def driver_group_alive?(group)
+        Process.kill(0, -group)
+        true
+      rescue Errno::ESRCH
+        false
+      rescue Errno::EPERM
+        true
+      end
+
+      def signal_driver_group(signal, group)
+        Process.kill(signal, -group)
+        true
+      rescue Errno::ESRCH, Errno::EPERM
+        false
+      end
+
+      def webdriver_term_grace = TERM_GRACE_S
+      def webdriver_kill_grace = KILL_GRACE_S
+      def webdriver_stop_poll = STOP_POLL_S
 
       def wait_for_driver
         deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + BOOT_SECONDS
