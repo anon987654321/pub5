@@ -16,6 +16,16 @@ class TestEventBus < Minitest::Test
     FileUtils.rm_rf(@dir)
   end
 
+  def test_symbol_event_names_are_normalized_before_glob_matching
+    seen = []
+    @bus.subscribe("council:**") { |event| seen << event[:event] }
+
+    @bus.publish(:"council:feedback")
+
+    assert_equal ["council:feedback"], seen
+    assert_equal "council:feedback", log_lines("runtime/events/activity.jsonl").last.fetch("event")
+  end
+
   def test_nested_publish_is_queued_instead_of_recursing
     seen = []
     @bus.subscribe("outer") do
