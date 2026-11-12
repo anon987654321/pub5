@@ -23,6 +23,7 @@ module Master
 
       DisabledError = Class.new(StandardError)
       ProviderError = Class.new(StandardError)
+      RequestTimeout = Class.new(StandardError)
 
       def self.call(provider:, prompt:, system: nil)
         new(provider:).ask(prompt:, system:)
@@ -65,8 +66,8 @@ module Master
         @screenshot_capture_failure_reported = false
         @submitted_text = nil
         full_prompt = [system, prompt].compact.join("\n\n")
-        Timeout.timeout(timeout_seconds) { with_browser { |page| converse(page, full_prompt) } }
-      rescue Timeout::Error
+        Timeout.timeout(timeout_seconds, RequestTimeout) { with_browser { |page| converse(page, full_prompt) } }
+      rescue RequestTimeout
         raise ProviderError, "#{@provider}: timed out after #{timeout_seconds}s"
       end
 
