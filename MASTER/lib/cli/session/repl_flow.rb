@@ -712,6 +712,7 @@ module Master
         end
         turn = @pipeline_thread
         active_turn = turn&.alive?
+        active_operation = @turn_worker&.alive?
         if active_turn
           # Use the same cancellation policy as Ctrl-C: Fold-owned work stops
           # at a safe boundary; only non-Fold work takes the immediate kill path.
@@ -722,6 +723,8 @@ module Master
         count = interactive_queue_count
         status = if active_turn
                    reason.to_s == "ctrl_c" ? "Ctrl-C cancellation requested" : "/stop cancellation requested"
+                 elsif active_operation
+                   "queue paused; current operation continues"
                  else
                    "queue paused; pending turn will not start"
                  end
