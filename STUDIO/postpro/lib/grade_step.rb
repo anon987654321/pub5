@@ -216,7 +216,7 @@ end
 
 # `stock:` swaps the film under an otherwise unchanged chain, which is how the
 # stock sheet shows one grade on every emulsion.
-def preset(image, name, stock: nil)
+def preset(image, name, stock: nil, frame_context: nil)
   p = PRESETS[name.to_sym] or
     raise ArgumentError, "unknown preset #{name.inspect}; have #{PRESETS.keys.join(', ')}"
 
@@ -247,7 +247,7 @@ def preset(image, name, stock: nil)
     # does not cover the arm that exists, runs, and changes nothing — which looks
     # identical from outside.
     before_stats = PostproExplain.snapshot(processed)
-    processed = grade_step(fx, processed, p, head, "preset #{name}")
+    processed = grade_step(fx, processed, p, head, "preset #{name}", frame_context:)
     processed = processed.copy_memory
     GC.start(full_mark: false) if (i % 4).zero?
     PostproBootstrap.dmesg "fx=#{fx} step=#{i + 1}/#{n_steps} time=%.3fs%s" %
