@@ -6,6 +6,21 @@ require "brgen/locale_bridge"
 require "brgen/city_content"
 
 class DomainRegistryTest < ActiveSupport::TestCase
+  test "city catalogue preserves the existing host entry API" do
+    records = Brgen::DomainRegistry::CITY_RECORDS
+    entries = Brgen::DomainRegistry::ENTRIES
+
+    assert_equal records.map { |record| record.fetch("domain") }.sort, entries.map(&:domain).sort
+    records.each do |record|
+      entry = Brgen::DomainRegistry::ENTRIES_BY_DOMAIN.fetch(record.fetch("domain"))
+      assert_equal record.fetch("city"), entry.city
+      assert_equal record.fetch("country"), entry.country
+      assert_equal record.fetch("locale").to_sym, entry.locale
+      assert_equal record.fetch("currency"), entry.currency
+      assert_equal record.fetch("marketplace_subdomain"), entry.marketplace_subdomain
+    end
+  end
+
   test "network readiness separates live, pending and not-yet-live domains" do
     assert_equal %w[brgen.no cardff.uk edinbrgh.uk frankfrt.de oshlo.no stvanger.no trndheim.no],
                  Brgen::DomainRegistry.live_network_domains.sort
