@@ -88,8 +88,6 @@ module Studio
     def prepare!
       migrate_legacy_local_data!
       secure_directory(SOURCE_ROOT)
-      FileUtils.rm_f(ZIP_PATH)
-      FileUtils.rm_rf(DATASET_ROOT) if inside_subject?(DATASET_ROOT)
       secure_directory(CACHE_ROOT)
 
       missing = CURATED_CAPTIONS.keys.reject { |name| verified_original?(name) }
@@ -136,8 +134,16 @@ module Studio
         return report
       end
 
-      build_dataset(additional)
-      zip_dataset!
+      staging_root = Dir.mktmpdir("merethe-prepare-", CACHE_ROOT)
+      staging_dataset = File.join(staging_root, "dataset")
+      staging_zip = File.join(staging_root, "merethe_training.zip")
+      build_dataset(additional, dataset_root: staging_dataset)
+      zip_dataset!(dataset_root: staging_dataset, zip_path: staging_zip)
+      publish_prepared_artifacts!(
+        staged_dataset: staging_dataset,
+        staged_zip: staging_zip,
+        staging_root:
+      )
       report["dataset_zip"] = ZIP_PATH
       report["status"] = "READY_FOR_OPERATOR_REVIEW"
       write_report(report)
@@ -151,6 +157,58 @@ module Studio
       }
       write_report(report) rescue nil
       report
+    ensure
+      FileUtils.remove_entry(staging_root) if staging_root && File.directory?(staging_root) && !File.symlink?(staging_root)
+    end
+
+    # Stage both artefacts on the same filesystem, retain the previous pair
+    # until both new paths are in place, and roll back ordinary rename failures.
+    # No failed validation/build is allowed to erase the last usable package.
+    def publish_prepared_artifacts!(staged_dataset:, staged_zip:, staging_root:)
+      unless File.directory?(staged_dataset) && !File.symlink?(staged_dataset) &&
+             File.file?(staged_zip) && !File.symlink?(staged_zip) && File.size(staged_zip).positive?
+        raise Error, "staged dataset and non-empty training ZIP are required"
+      end
+
+      if [DATASET_ROOT, ZIP_PATH].any? { |path| File.symlink?(path) }
+        raise Error, "refusing to replace a symlinked prepared artifact"
+      end
+      if File.exist?(DATASET_ROOT) && !File.directory?(DATASET_ROOT)
+        raise Error, "existing prepared dataset is not a directory"
+      end
+      if File.exist?(ZIP_PATH) && !File.file?(ZIP_PATH)
+        raise Error, "existing training ZIP path is not a regular file"
+      end
+
+      backup_dataset = File.join(staging_root, "previous-dataset")
+      backup_zip = File.join(staging_root, "previous-training.zip")
+      previous_dataset = previous_zip = published_dataset = published_zip = false
+
+      begin
+        if File.exist?(DATASET_ROOT)
+          File.rename(DATASET_ROOT, backup_dataset)
+          previous_dataset = true
+        end
+        if File.exist?(ZIP_PATH)
+          File.rename(ZIP_PATH, backup_zip)
+          previous_zip = true
+        end
+
+        File.rename(staged_dataset, DATASET_ROOT)
+        published_dataset = true
+        File.rename(staged_zip, ZIP_PATH)
+        published_zip = true
+        File.chmod(0o700, DATASET_ROOT)
+        File.chmod(0o600, ZIP_PATH)
+      rescue StandardError
+        FileUtils.remove_entry(DATASET_ROOT) if published_dataset && File.directory?(DATASET_ROOT) && !File.symlink?(DATASET_ROOT)
+        FileUtils.rm_f(ZIP_PATH) if published_zip && File.file?(ZIP_PATH) && !File.symlink?(ZIP_PATH)
+        File.rename(backup_dataset, DATASET_ROOT) if previous_dataset && File.exist?(backup_dataset)
+        File.rename(backup_zip, ZIP_PATH) if previous_zip && File.exist?(backup_zip)
+        raise
+      end
+
+      true
     end
 
     def migrate_legacy_local_data!
@@ -196,32 +254,33 @@ module Studio
       [images.reject { |item| item[:size] > MAX_ADDITIONAL_BYTES }, invalid]
     end
 
-    def build_dataset(additional)
-      secure_directory(DATASET_ROOT)
+    def build_dataset(additional, dataset_root: DATASET_ROOT)
+      secure_directory(dataset_root)
       CURATED_CAPTIONS.each do |filename, caption|
-        copy_with_caption(File.join(SOURCE_ROOT, filename), filename, caption)
+        copy_with_caption(File.join(SOURCE_ROOT, filename), filename, caption, dataset_root:)
       end
       additional.each do |item|
         destination_name = "additional_#{File.basename(item[:name])}"
-        copy_with_caption(item[:path], destination_name, item[:caption])
+        copy_with_caption(item[:path], destination_name, item[:caption], dataset_root:)
       end
     end
 
-    def copy_with_caption(source, filename, caption)
+    def copy_with_caption(source, filename, caption, dataset_root: DATASET_ROOT)
       raise Error, "caption for #{filename} must contain #{TRIGGER_WORD}" unless caption.match?(/\b#{Regexp.escape(TRIGGER_WORD)}\b/i)
 
-      FileUtils.copy_file(source, File.join(DATASET_ROOT, filename))
-      File.write(File.join(DATASET_ROOT, "#{File.basename(filename, File.extname(filename))}.txt"), "#{caption.strip}\n", mode: "w", perm: 0o600)
-      File.chmod(0o600, File.join(DATASET_ROOT, filename))
+      FileUtils.copy_file(source, File.join(dataset_root, filename))
+      caption_path = File.join(dataset_root, "#{File.basename(filename, File.extname(filename))}.txt")
+      File.write(caption_path, "#{caption.strip}\n", mode: "w", perm: 0o600)
+      File.chmod(0o600, File.join(dataset_root, filename))
     end
 
-    def zip_dataset!
+    def zip_dataset!(dataset_root: DATASET_ROOT, zip_path: ZIP_PATH)
       zip_executable = ENV.fetch("ZIP", "zip")
-      stdout, stderr, status = Open3.capture3(zip_executable, "-q", "-X", "-r", ZIP_PATH, ".", chdir: DATASET_ROOT)
+      stdout, stderr, status = Open3.capture3(zip_executable, "-q", "-X", "-r", zip_path, ".", chdir: dataset_root)
       raise Error, "zip command unavailable or failed: #{[stdout, stderr].join(" ").strip}" unless status.success?
-      raise Error, "training ZIP is missing or empty" unless File.file?(ZIP_PATH) && File.size(ZIP_PATH).positive?
+      raise Error, "training ZIP is missing or empty" unless File.file?(zip_path) && File.size(zip_path).positive?
 
-      File.chmod(0o600, ZIP_PATH)
+      File.chmod(0o600, zip_path)
     rescue Errno::ENOENT
       raise Error, "zip executable not found; install the system zip utility"
     end
