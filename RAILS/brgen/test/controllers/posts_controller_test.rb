@@ -40,7 +40,7 @@ class PostsControllerTest < ActionDispatch::IntegrationTest
     post post_vote_path(post_record), params: { vote: { value: 1 } }, as: :turbo_stream
 
     assert_response :success
-    rail = "post_#{post_record.id}_vote_rail"
+    rail = "vote_rail_post_#{post_record.id}"
     assert_select "turbo-stream[action='replace'][target=?]", rail, 1
     assert_select "turbo-stream[action='replace'][target='post_#{post_record.id}']", 0
     assert_includes response.body, 'aria-pressed="true"'
