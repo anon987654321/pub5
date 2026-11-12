@@ -128,10 +128,16 @@ class TestStudioReplicateClientPaths < Minitest::Test
     end
   end
 
-  def with_http(response)
+  def with_http(response, timeout: nil)
     start = lambda do |_host, _port, **options, &block|
       assert_equal true, options.fetch(:use_ssl)
-      assert_equal Studio::ReplicateClient::WRITE_TIMEOUT_SECONDS, options.fetch(:write_timeout)
+      expected_write_timeout = timeout ? [Studio::ReplicateClient::WRITE_TIMEOUT_SECONDS, timeout].min :
+        Studio::ReplicateClient::WRITE_TIMEOUT_SECONDS
+      assert_equal expected_write_timeout, options.fetch(:write_timeout)
+      if timeout
+        assert_equal [Studio::ReplicateClient::OPEN_TIMEOUT_SECONDS, timeout].min, options.fetch(:open_timeout)
+        assert_equal [Studio::ReplicateClient::READ_TIMEOUT_SECONDS, timeout].min, options.fetch(:read_timeout)
+      end
       block.call(FakeHTTP.new(response))
     end
     Net::HTTP.stub(:start, start) { yield }
@@ -445,7 +451,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
       times = [0.0, 2.0]
 
       @client.stub(:monotonic_now, -> { times.shift || 2.0 }) do
-        with_http(response) do
+        with_http(response, timeout: 1) do
           error = assert_raises(IOError) do
             @client.download_url("https://replicate.delivery/audio.wav", target, timeout: 1)
           end
