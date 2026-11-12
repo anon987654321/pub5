@@ -272,6 +272,22 @@ module Operator
             "Only Brgen and Amber social posts use the shared social post card.",
             source:, needle: "shared/post_card")
       end
+
+      market_path = pages.fetch("marketplace").first
+      market_view = read(market_path)
+      market_css_path = "RAILS/brgen/app/assets/stylesheets/_brgen_marketplace.scss"
+      market_css = read(market_css_path)
+      %w[bol-market-hero bol-market-hero-copy bol-market-hero-media bol-market-kicker
+         bol-market-hero-price bol-primary bol-kind-tabs bol-catalog-layout
+         bol-filter-column bol-results-column].each do |selector|
+        expect("vertical.marketplace.css.#{selector}", market_css_path, market_css, ".#{selector}",
+               "The marketplace front page must style its current #{selector} structure.")
+        expect("vertical.marketplace.view.#{selector}", market_path, market_view, selector,
+               "The marketplace front page must render its current #{selector} structure.")
+      end
+      expect("vertical.marketplace.mobile_layout", market_css_path, market_css,
+             "@media (max-width: 767px)",
+             "The current marketplace hero and catalog layout must have a phone breakpoint.")
     end
 
     def audit_feed_lists
