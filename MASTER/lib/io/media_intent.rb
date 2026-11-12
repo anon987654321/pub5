@@ -838,7 +838,11 @@ module Master
         Process.waitpid(pid)
         @player_pid = nil
         pid
-      rescue Errno::ECHILD, Errno::ESRCH
+      rescue Errno::ESRCH
+        Process.waitpid(pid, Process::WNOHANG) if pid
+        @player_pid = nil
+        nil
+      rescue Errno::ECHILD
         @player_pid = nil
         nil
       end
