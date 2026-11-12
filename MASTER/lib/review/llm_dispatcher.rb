@@ -273,6 +273,10 @@ module Master
 
       # MASTER_MODEL first, then a vision model when an image rides along.
       def answering_model(selected_model, image)
+        # The explicit adult-content lane is isolated from global model pins;
+        # its sender rechecks the exact local model opt-in before posting.
+        return selected_model if Io::LaneSelection.nsfw_model?(selected_model)
+
         # A pin is the first choice, not the only one: a pinned lane that is quota-dead
         # or has just failed (parked in the skip cache) yields to the router's lane,
         # so a failover hop is not sent back to the lane that failed.
@@ -380,7 +384,7 @@ module Master
 
       def local_model_id?(model)
         id = model.to_s
-        return true if id.start_with?("local:")
+        return true if id.start_with?("local:", "local_uncensored:")
         return false unless id.start_with?("ollama:", "ollama/")
 
         !id.sub(%r{\Aollama[:/]}, "").match?(/\A.+(?::cloud|-cloud)\z/)
@@ -486,7 +490,7 @@ module Master
 
       # One local runner crash affects every model using its daemon until it recovers.
       def local_runtime_failure?(model, message)
-        return false unless model.to_s.start_with?("ollama:", "ollama/", "local:")
+        return false unless model.to_s.start_with?("ollama:", "ollama/", "local:", "local_uncensored:")
 
         message.to_s.match?(/llama-server process has terminated|failed to create (?:shared )?library|model runner.*(?:terminated|crashed|exited)|runner process.*(?:terminated|crashed|exited)/i)
       end
