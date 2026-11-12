@@ -302,6 +302,9 @@ class TestDillaHistoricalMaterial < Minitest::Test
 
     assert_equal 7, progress.fetch("loop_bars")
     assert_equal "source_loop_length_only", progress.fetch("chord_timing_status")
+    source = progress.fetch("source_refs").fetch(0)
+    assert_equal "ethan_hein_2022_get_dis_money", source.fetch("source_id")
+    assert_includes source.fetch("claims"), "seven-bar sampled loop"
     progress.fetch("chord_bars").each do |duration|
       assert_in_delta 7.0 / 6.0, duration, 0.0001
     end
@@ -323,6 +326,24 @@ class TestDillaHistoricalMaterial < Minitest::Test
     assert_equal 86, evidence.fetch("render_bpm")
     assert_equal 95, evidence.fetch("reported_bpm")
     assert_match(/pending direct audio measurement/, evidence.fetch("note"))
+    source = progress.fetch("source_refs").fetch(0)
+    assert_equal "hooktheory_time_donut", source.fetch("source_id")
+    assert_equal true, source.fetch("community_maintained")
+  end
+
+  def test_source_meters_outside_four_four_are_explicitly_marked_as_not_native_to_the_sequencer
+    rows = Dilla.progressions.select { |row| row["source"] == "artist_verified" && row["meter"] }
+    assert_includes rows.map { |row| row.fetch("meter") }, "3/4"
+    assert_includes rows.map { |row| row.fetch("meter") }, "6/8"
+
+    rows.each do |row|
+      assert_match(/current sequencer's bar clock is 4\\/4/, row.fetch("rendering_note"))
+    end
+
+    untitled = Dilla.progression_by_ref("untitled_dangelo_mixo")
+    source = untitled.fetch("source_refs").fetch(0)
+    assert_equal "hooktheory_dangelo_untitled", source.fetch("source_id")
+    assert_equal "6/8", untitled.fetch("meter")
   end
 
   def test_source_record_tempo_and_form_override_the_generic_profile
