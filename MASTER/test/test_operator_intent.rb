@@ -67,6 +67,18 @@ class OperatorIntentTest < Minitest::Test
     end
   end
 
+  def test_pub5_deployment_resolves_to_all_registered_surfaces_without_model_guessing
+    with_inventory do |root|
+      agent = FakeAgent.new("", [])
+      result = Master::CLI::OperatorIntent.new(root:, agent:).call("deploy pub5 to vm23")
+
+      assert_equal :deploy, result.status
+      assert_equal "all", result.target
+      assert_equal %w[control_web city_app wardrobe_app private_service], result.selected
+      assert_empty agent.calls, "the repository alias is deterministic"
+    end
+  end
+
   def test_unregistered_app_id_is_rejected
     with_inventory do |root|
       reply = JSON.generate(
