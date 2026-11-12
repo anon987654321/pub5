@@ -10,6 +10,13 @@ subject: REPLACE_WITH_SUBJECT_SLUG
 subject_consent:
   likeness_generation: false
   provider_processing: false
+  # A separate written permission record is mandatory; booleans alone do not
+  # establish consent. Record who granted it, the date, scope and private file.
+  evidence:
+    granted_by: "REPLACE_WITH_SUBJECT"
+    granted_on: "YYYY-MM-DD"
+    covers: "likeness_generation, provider_processing"
+    stored_at: "evidence/subject-consent.pdf"
 
 # Who granted what. A page being reachable is not permission to train on it.
 source_rights:
