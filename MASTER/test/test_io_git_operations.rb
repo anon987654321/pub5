@@ -291,6 +291,25 @@ class GitOperationsTest < Minitest::Test
     assert_includes sh("git", "log", "--oneline", chdir: @remote), "Pushes"
   end
 
+  def test_push_verification_works_for_a_first_push_without_an_upstream
+    sh("git", "checkout", "-b", "work/verified-first-push", chdir: @repo)
+    write("verified-topic.rb", "# verified\n")
+    @git.commit("verified topic", paths: ["verified-topic.rb"])
+
+    @git.push
+
+    assert @git.verify_push_target!
+  end
+
+  def test_push_verification_refuses_when_remote_branch_is_absent
+    sh("git", "checkout", "-b", "work/not-pushed", chdir: @repo)
+    write("not-pushed.rb", "# local only\n")
+    @git.commit("local only", paths: ["not-pushed.rb"])
+
+    error = assert_raises(RuntimeError) { @git.verify_push_target! }
+    assert_includes error.message, "found no remote ref origin/work/not-pushed"
+  end
+
   def test_push_target_uses_current_topic_branch_even_when_it_tracks_main
     sh("git", "checkout", "-b", "work/fix-topic", chdir: @repo)
     sh("git", "branch", "--set-upstream-to", "origin/main", "work/fix-topic", chdir: @repo)
