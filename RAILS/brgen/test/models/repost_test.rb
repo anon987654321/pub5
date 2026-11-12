@@ -128,4 +128,12 @@ class RepostTest < ActiveSupport::TestCase
       post.destroy
     end
   end
+
+test "following timeline does not include a removed post" do
+    @follower.follow!(@booster)
+    post = post_by(@booster, title: "Removed #{SecureRandom.hex(3)}")
+    post.update!(removed_at: Time.current)
+
+    refute_includes @follower.timeline_posts.map(&:id), post.id
+  end
 end
