@@ -7,6 +7,15 @@ module Master
     class Consensus
       Vote = Struct.new(:model, :approved, :reason, keyword_init: true)
       MIN_INDEPENDENT_FAMILIES = 2
+      VOTE_SCHEMA = {
+        type: "object",
+        additionalProperties: false,
+        required: %w[approved reason],
+        properties: {
+          approved: { type: "boolean" },
+          reason: { type: "string", minLength: 1 },
+        },
+      }.freeze
       MODEL_FAMILIES = [
         [/claude|anthropic/i, "anthropic"],
         [/grok|xai/i, "xai"],
@@ -104,7 +113,7 @@ module Master
       private
 
       def vote(model, prompt:, candidate:, violation:)
-        response = @agent.ask_once(vote_prompt(prompt, candidate, violation), model:, failover: false)
+        response = @agent.ask_once(vote_prompt(prompt, candidate, violation), model:, format: VOTE_SCHEMA, failover: false)
         parsed = parse_vote(response)
         Vote.new(model:, approved: parsed.fetch("approved", false), reason: parsed.fetch("reason", response.to_s[0, 240]))
       rescue StandardError => e
