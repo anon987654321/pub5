@@ -59,6 +59,37 @@ class TestScanner < Minitest::Test
       assert bus.events.any? { |name, payload| name == "scan:complete" && payload[:count].zero? }
     end
   end
+  def test_scan_progress_heartbeat_is_throttled_to_sixty_seconds
+    reporter = Object.new.extend(Master::Fix::Scan::ProgressReporter)
+    reporter.instance_variable_set(:@mutex, Mutex.new)
+    reporter.instance_variable_set(:@scan_progress, { last_beat: 0.0 })
+    now = 0.0
+    Process.stub(:clock_gettime, ->(*) { now }) do
+      refute reporter.send(:heartbeat_due?)
+      now = 59.9
+      refute reporter.send(:heartbeat_due?)
+      now = 60.0
+      assert reporter.send(:heartbeat_due?)
+      refute reporter.send(:heartbeat_due?)
+    end
+  end
+
+  def test_mechanical_autofix_file_detail_is_verbose_only
+    scanner = Master::Fix::Scanner.allocate
+    applied = [Struct.new(:transforms).new(["spacing"]) ]
+    events = []
+    Master::Trace::Dmesg.stub(:status, ->(*args) { events << args }) do
+      Master::Trace::Dmesg.stub(:verbose?, false) do
+        scanner.send(:emit_autofixed, dir: "/repo", path: "/repo/a.rb", applied:)
+      end
+      assert_empty events
+      Master::Trace::Dmesg.stub(:verbose?, true) do
+        scanner.send(:emit_autofixed, dir: "/repo", path: "/repo/a.rb", applied:)
+      end
+    end
+    assert_equal 1, events.size
+    assert_includes events.first.last, "a.rb"
+  end
 
   def test_scan_documents_and_enforces_preconditions
     scanner = Master::Fix::Scanner.new(laws: [build_rule])
