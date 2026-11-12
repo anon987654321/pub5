@@ -79,11 +79,10 @@ module Master
         end
 
         review = lambda do |diff|
-          proof_failure = run_declared_proofs(recipe)
-          next proof_failure if proof_failure
-
           answer = agent.ask(review_prompt(recipe, diff), operation: :restructure).to_s.strip
-          answer.match?(APPROVAL) ? nil : "hostile review rejected recipe: #{answer.lines.first.to_s.strip[0, 220]}"
+          next "hostile review rejected recipe: #{answer.lines.first.to_s.strip[0, 220]}" unless answer.match?(APPROVAL)
+
+          run_declared_proofs(recipe)
         rescue StandardError => error
           "recipe review unavailable: #{error.class}: #{error.message}"
         end
