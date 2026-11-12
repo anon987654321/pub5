@@ -35,7 +35,7 @@ class ImagePresenterTest < ActiveSupport::TestCase
       )
 
       elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
-      child, group = File.read(child_pid_file).split.map { |value| Integer(value, 10) }
+      _child, group = File.read(child_pid_file).split.map { |value| Integer(value, 10) }
       assert_nil status, "an inherited pipe held open past the deadline must be reported as timeout"
       assert_includes output, "parent exited"
       assert_operator elapsed, :<, 4.0, "a descendant holding stdout must not turn the timeout into an unbounded wait"
@@ -52,6 +52,7 @@ class ImagePresenterTest < ActiveSupport::TestCase
     assert_nil status
     assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 10
   end
+
   private
 
   def assert_process_group_gone(group)
@@ -68,5 +69,4 @@ class ImagePresenterTest < ActiveSupport::TestCase
       sleep 0.01
     end
   end
-
 end
