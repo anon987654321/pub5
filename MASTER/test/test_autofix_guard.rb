@@ -45,9 +45,9 @@ class TestAutofixGuard < Minitest::Test
     success = status_type.new(true)
     failure = status_type.new(false)
     calls = 0
-    runner = lambda do |*_, **_|
+    runner = lambda do |*args, **kwargs|
       calls += 1
-      calls == 1 ? ["MASTER/data/tokens.yml\\n", success] : ["fatal: not a git repository", failure]
+      calls == 1 ? ["MASTER/data/tokens.yml\n", success] : ["fatal: not a git repository", failure]
     end
 
     Master::Io::Exec.stub(:capture2e, runner) do
