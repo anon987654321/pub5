@@ -219,8 +219,12 @@ module Master
         # park the lane and record a timeout so fallback does not ask it again.
         completed_result = call_deadline_exceeded(selected_model, started)
       rescue StandardError => err
-        record_provider_outcome(selected_model, :llm_call_failure, latency_ms: elapsed_ms(started), error: err.message)
-        completed_result = classified_call_failure(err)
+        # Provider adapters execute inside CircuitBreaker#execute_with_tracking,
+        # which converts their failures to typed Result errors. An exception
+        # escaping this boundary came from MASTER's routing/cache/dispatch
+        # machinery; blaming the chosen provider would poison healthy lanes.
+        diagnostic = "#{err.class}: #{redact_secrets(err.message.to_s)}"
+        completed_result = Result.err("MASTER fault: #{diagnostic}", category: :crash)
       ensure
         # A :crash result deliberately bypasses provider-health accounting.
         # Preserve its typed, redacted diagnosis on the completion event so
