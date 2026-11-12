@@ -106,16 +106,20 @@ module Deploy
     rescue StandardError # scan: intentional — teardown; the session is ending either way
       nil
     ensure
-      reap_chrome
-
-      # Chrome keeps writing to the profile until it has fully exited, so a
-      # remove_entry racing that write blows up mid-traverse. Reaping first
-      # makes it rare; swallowing makes a leftover tmpdir a non-event.
-      begin
-        FileUtils.remove_entry(@profile) if @profile && File.directory?(@profile)
-      rescue StandardError # scan: intentional — teardown; the socket is closing either way
-        nil
+      # Profile deletion is safe only after the direct child has been reaped
+      # and the session process group is gone. If either fact is inconclusive,
+      # keep the directory for diagnosis and for a later cleanup attempt.
+      stopped = reap_chrome
+      if stopped
+        begin
+          FileUtils.remove_entry(@profile) if @profile && File.directory?(@profile)
+        rescue StandardError => e # scan: intentional — teardown; preserve a failed cleanup as a visible warning
+          warn "CDP profile cleanup failed for #{@profile}: #{e.class}: #{e.message}"
+        end
+      elsif @profile
+        warn "CDP profile retained because Chrome shutdown is unverified: #{@profile}"
       end
+      stopped
     end
 
     # --- high level ---------------------------------------------------------
