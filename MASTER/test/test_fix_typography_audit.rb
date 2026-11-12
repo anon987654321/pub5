@@ -61,12 +61,17 @@ class TestFixTypographyAudit < Minitest::Test
   end
 
   def test_typesetting_reads_plain_business_html_and_markdown_readme
-    require File.expand_path("../law/typesetting", __dir__)
+    require File.expand_path("../law/definition", __dir__) unless defined?(::Law::Definition)
+    require File.expand_path("../law/typesetting", __dir__) unless defined?(::Law::Typesetting)
     html = ::Law::Typesetting.each_text("<p>En lesbar plan.</p>", "BIZ/plan.html").to_a
     readme = ::Law::Typesetting.each_text("A readable paragraph.", "MASTER/README.md").to_a
 
     assert_equal "En lesbar plan.", html.first.first
     assert_equal "A readable paragraph.", readme.first.first
+    assert_equal "nb", ::Law::Typesetting.locale("BIZ/plan.html")
+    assert_equal "en", ::Law::Typesetting.locale("MASTER/README.md")
+    assert ::Law::Typesetting::PATH.match?("BIZ/plan.html")
+    assert ::Law::Typesetting::PATH.match?("MASTER/README.md")
   end
 
   def test_a_scope_that_is_not_there_is_not_an_error
