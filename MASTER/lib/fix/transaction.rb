@@ -291,7 +291,7 @@ module Master
       end
 
       def conflicts
-        @paths.reject { |path| @seen[path].include?(fingerprint(absolute(path))) }
+        @paths.reject { |path| @seen.fetch(path, []).include?(fingerprint(absolute(path))) }
       end
 
       # Before a rollback of an open pass: another writer's edits leave the transaction, so the
