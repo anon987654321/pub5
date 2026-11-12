@@ -1026,7 +1026,8 @@ module Master
           def check_ast(ast, _code, path:)
             return [] unless ast
 
-            walk(ast).filter_map do |node|
+            findings = []
+            walk(ast) do |node|
               next unless node.is_a?(Prism::DefNode)
 
               name = node.name.to_s
@@ -1035,11 +1036,12 @@ module Master
               effects = side_effect_evidence(node.body)
               next if effects.empty?
 
-              finding(
+              findings << finding(
                 line: node.location.start_line,
                 message: "#{name} reads by name but has side effects (#{effects.join(", ")}) - separate the query from the command",
               )
             end
+            findings
           end
 
           private
@@ -1063,7 +1065,7 @@ module Master
             return if !root && (node.is_a?(Prism::DefNode) || node.is_a?(Prism::ClassNode) || node.is_a?(Prism::ModuleNode))
 
             block.call(node)
-            node.compact_child_nodes.each { |child| walk_method_body(child, root: false, &block) }
+            node.child_nodes.compact.each { |child| walk_method_body(child, root: false, &block) }
           end
 
           def variable_write?(node)
