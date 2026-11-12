@@ -15,6 +15,8 @@ module Master
       # are not complete phrases, app names, or a command vocabulary.
       ACTION_CUES = /\b(?:deploy(?:ment)?|re[- ]?deploy|release|ship|publish|roll(?:\s+out)?|rollout|refresh|update|sync|synchroni[sz]e|push|promote|launch|bring|move|restart|start|stop|inspect|check|status|show|list|tail|backup|restore|health)\b/i.freeze
       CONFIDENCE_FLOOR = 0.72
+      REPOSITORY_TARGET_RE = /\b(?:pub5|repo(?:sitory)?|codebase|whole\s+(?:repo|repository)|entire\s+(?:repo|repository))\b/i.freeze
+      DEPLOY_ACTION_RE = /\b(?:deploy(?:ment)?|re[- ]?deploy|release|ship|publish|rollout?)\b/i.freeze
       REQUIRED_KEYS = %w[intent operation environment target_type target exclude confidence reason].freeze
 
       SYSTEM = <<~PROMPT.freeze
@@ -65,6 +67,12 @@ module Master
         inventory = Deploy::Inventory.new(root: @root)
         return Result.new(status: :unavailable, message: "Deployment inventory is empty; no action was taken.") if inventory.apps.empty?
 
+        if repository_wide_deployment?(text, inventory)
+          selected = inventory.ordered_apps
+          @bus&.publish("operator:intent_resolved", operation: "deploy", target: "all", app_count: selected.length)
+          return Result.new(status: :deploy, target: "all", selected: selected.map(&:name))
+        end
+
         raw = @agent.ask_once(
           prompt(text, inventory),
           system: SYSTEM,
@@ -79,6 +87,24 @@ module Master
       end
 
       private
+
+      # The repository name means every registered deployable surface, not every
+      # source tree. The normal /deploy command still applies its explicit
+      # --confirm review gate before any production effect.
+      def repository_wide_deployment?(text, inventory)
+        request = text.to_s
+        return false unless request.match?(REPOSITORY_TARGET_RE) && request.match?(DEPLOY_ACTION_RE)
+
+        named_app = inventory.ordered_apps.any? do |app|
+          [app.name, app.title, app.domain].any? do |value|
+            !value.to_s.empty? && request.match?(/\b#{Regexp.escape(value.to_s)}\b/i)
+          end
+        end
+        named_group = inventory.group_names.any? do |name|
+          request.match?(/\b#{Regexp.escape(name)}\b/i)
+        end
+        !named_app && !named_group
+      end
 
       def repository_root(root)
         candidate = File.expand_path(root.to_s)
