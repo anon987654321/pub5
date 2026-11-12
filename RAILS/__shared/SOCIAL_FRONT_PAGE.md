@@ -68,9 +68,10 @@ The card's live targets are deliberately small and stable:
 - `data-post-score="post_ID"` is the score value.
 - `data-post-like-count="post_ID"` is the like count.
 - `data-post-comment-count="post_ID"` is the comment count.
+- `data-post-repost-count="post_ID"` is the shared repost count.
 - `dom_id(post, :vote_rail)` is the current reader's vote-control region.
 
-A count update changes only its text target. A vote replaces only the vote rail belonging to the reader who submitted it. A like replaces that reader's like button and broadcasts the new shared count. Do not broadcast a complete post card containing another reader's pressed states, ownership actions, or moderation controls.
+A count update changes only its text target. A vote replaces only the vote rail belonging to the reader who submitted it. A like replaces that reader's like button and broadcasts the new shared count. A repost or undo updates only the shared repost count; the local request returns that reader's pressed state, and the broadcast never carries another reader's button. Do not broadcast a complete post card containing another reader's pressed states, ownership actions, or moderation controls.
 
 The event boundary matters as much as the markup:
 
@@ -80,7 +81,7 @@ The event boundary matters as much as the markup:
 - A real post-content edit or other card-changing mutation still refreshes the card/page. Related item or outfit changes must not be mistaken for a counter-only touch.
 - Brgen's city feed keeps its existing staged-arrival protocol: new cards wait in the hidden pending region until the reader chooses to reveal them. Amber keeps its editorial front-page rhythm; it does not inherit Brgen's city-arrival chip simply for sharing the post renderer.
 
-Brgen's vote and comment counters are emitted by their own commits. A post vote updates the score with SQL and broadcasts the score target; it does not touch the Post row or invalidate its cached card. A post comment moves the counter cache and broadcasts the count; it also does not touch the Post row. The polymorphic associations preserve touch behaviour for non-post records, so event/item/outfit activity is not silently changed by the social-post optimization.
+Brgen's vote, comment and repost counters are emitted by their own commits. A post vote updates the score with SQL and broadcasts the score target; it does not touch the Post row or invalidate its cached card. A post comment moves the counter cache and broadcasts the count; a repost moves its counter cache and broadcasts that count. Neither touches the Post row. The polymorphic associations preserve touch behaviour for non-post records, so event/item/outfit activity is not silently changed by the social-post optimization.
 
 `shared/feed_card` remains the generic entity-card primitive for communities, channels, shows, matches, orders and other vertical records. It is not a second implementation of the social-post card. Marketplace listings, dating profiles, live video, maps, takeaway restaurants, ports and order flows keep their own content hierarchy and primary interaction.
 
