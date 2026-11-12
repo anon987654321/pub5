@@ -758,6 +758,19 @@ class TestKeylessRouting < Minitest::Test
     refute_includes router.fallback_chain(task_type: :exploration), "web-chat:grok"
   end
 
+  def test_global_no_keyless_overrides_explicit_browser_chat_opt_in
+    ENV["MASTER_KEYLESS"] = "1"
+    ENV["MASTER_WEB_CHAT"] = "1"
+    ENV["MASTER_NO_KEYLESS"] = "1"
+    router = Master::CLI::Routing::ModelRouter.new(
+      config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT,
+    )
+
+    refute router.keyless_mode?
+    refute router.web_chat_enabled?
+    refute_includes router.fallback_chain(task_type: :exploration), "web-chat:grok"
+  end
+
   def test_local_only_mode_excludes_browser_chat
     ENV["MASTER_LOCAL_ONLY"] = "1"
     router = Master::CLI::Routing::ModelRouter.new(
