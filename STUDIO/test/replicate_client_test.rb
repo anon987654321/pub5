@@ -398,7 +398,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
       File.write(original, "keep original")
       File.symlink(original, target)
 
-      Net::HTTP.stub(:start, ->(*) { flunk "symlink target must be refused before network" }) do
+      Net::HTTP.stub(:start, ->(*_args, **_options) { flunk "symlink target must be refused before network" }) do
         error = assert_raises(ArgumentError) do
           @client.download_url("https://replicate.delivery/audio.wav", target)
         end
@@ -415,7 +415,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
       target = File.join(directory, "download")
       Dir.mkdir(target)
 
-      Net::HTTP.stub(:start, ->(*) { flunk "directory target must be refused before network" }) do
+      Net::HTTP.stub(:start, ->(*_args, **_options) { flunk "directory target must be refused before network" }) do
         error = assert_raises(ArgumentError) do
           @client.download_url("https://replicate.delivery/audio.wav", target)
         end
@@ -427,7 +427,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
   def test_download_deadline_must_be_positive_and_finite_before_network
     Dir.mktmpdir do |directory|
       target = File.join(directory, "download.wav")
-      Net::HTTP.stub(:start, ->(*) { flunk "invalid deadline must be refused before network" }) do
+      Net::HTTP.stub(:start, ->(*_args, **_options) { flunk "invalid deadline must be refused before network" }) do
         [0, -1, Float::INFINITY, Float::NAN, "not-a-number"].each do |timeout|
           assert_raises(ArgumentError) do
             @client.download_url("https://replicate.delivery/audio.wav", target, timeout:)
