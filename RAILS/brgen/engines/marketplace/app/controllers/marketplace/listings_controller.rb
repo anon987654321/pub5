@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 class Marketplace::ListingsController < Marketplace::BaseController
-  include Shared::FindableBySlug
-  include StorefrontSearch
+    include StorefrontSearch
   include Shared::TwoFactorAuth
 
   rate_limit to: 20, within: 3.minutes, only: %i[create],
