@@ -460,6 +460,26 @@ class TestLLMDispatcher < Minitest::Test
            "MASTER faults must close the in-flight UI without penalizing provider health"
   end
 
+  def test_dispatcher_setup_fault_does_not_penalize_selected_provider
+    dispatcher, _session, bus = build_dispatcher
+    dispatcher.define_singleton_method(:answering_model) { |model, _image| model }
+    dispatcher.define_singleton_method(:local_only_refusal) { |_model| nil }
+    dispatcher.define_singleton_method(:refusal_before_send) { |_model| nil }
+    dispatcher.define_singleton_method(:breaker_for) { |_model| raise IOError, "cache plumbing failed" }
+
+    result = dispatcher.send_with_cache(
+      "test-provider:model", [{ role: "user", content: "hi" }], system: ""
+    )
+
+    assert_equal :crash, result.category
+    assert_match(/MASTER fault: IOError: cache plumbing failed/, result.message)
+    refute bus.events.any? { |name, _payload| name == "llm:provider_outcome" },
+           "a dispatcher fault must not mark the selected provider unhealthy"
+    finished = bus.events.find { |name, payload| name == "llm:call_finished" && payload[:model] == "test-provider:model" }
+    assert_equal :crash, finished.last[:status]
+    refute finished.last.key?(:error)
+  end
+
   # Every LLM call in the tree passes through send_with_cache. With no provider
   # key every caller would fail slowly somewhere below it, one persona at a time,
   # so the refusal belongs at the door, before the breaker, the cache or the request.
