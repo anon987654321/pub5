@@ -222,7 +222,16 @@ module Operator
       add(brgen_vote&.match?(/belongs_to :votable, polymorphic: true, touch: true/) ? "FAIL" : "PASS",
           "post_card.brgen_vote_no_post_touch", brgen_vote_path,
           "A post vote must not touch the Post row or invalidate every cached card.", source: brgen_vote)
-      brgen_comment_path = "RAILS/brgen/app/models/comment.rb"
+      brgen_repost_path = "RAILS/brgen/app/models/repost.rb"
+      brgen_repost = read(brgen_repost_path)
+      expect("post_card.brgen_repost_event", brgen_repost_path, brgen_repost,
+             "after_commit :broadcast_post_counts, on: [ :create, :destroy ]",
+             "Reposts must publish shared count changes on create and undo.")
+      expect("post_card.brgen_repost_target", "RAILS/brgen/app/views/posts/_post.html.erb",
+             read("RAILS/brgen/app/views/posts/_post.html.erb"), "post_repost_count: dom_id(post)",
+             "The shared card must expose an independent repost count target.")
+
+            brgen_comment_path = "RAILS/brgen/app/models/comment.rb"
       brgen_comment = read(brgen_comment_path)
       expect("post_card.brgen_comment_count_event", brgen_comment_path, brgen_comment,
              "after_commit :broadcast_commentable_counts",
