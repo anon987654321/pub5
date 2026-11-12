@@ -22,6 +22,7 @@ require "net/http"
 require_relative "../../lib/io/exec"
 require "yaml"
 require_relative "../../lib/operator/ruby_runner"
+require_relative "../../lib/fix/server_leases"
 
 module Deploy
   module Triangle
@@ -262,27 +263,55 @@ module Deploy
     end
 
     def self.down(names = [])
+      failed = []
       selected(names).each do |app|
         path = pid_file(app)
         unless File.file?(path)
-          # A server whose pid file is gone (the run was killed) still holds the port.
+          # A server whose pid file is gone (the run was killed) still holds the
+          # port. The listener must still belong to this app and be the leader
+          # of its own process group before the group is safe to stop.
           mine = listener(app[:port])
           if mine && mine[:cwd].start_with?(app[:dir])
-            Process.kill("TERM", mine[:pid])
-            puts "triangle: stopped #{app[:name]} (pid #{mine[:pid]}, no pid file)"
+            begin
+              owned_group = Process.getpgid(mine[:pid]) == mine[:pid]
+            rescue SystemCallError
+              owned_group = false
+            end
+            unless owned_group
+              warn "triangle: #{app[:name]} listener pid #{mine[:pid]} is not a verified isolated process group; refusing to stop it"
+              failed << app[:name]
+              next
+            end
+            if Master::Fix::ServerLeases.stop_process_group(mine[:pid])
+              puts "triangle: stopped #{app[:name]} (pid #{mine[:pid]}, no pid file)"
+            else
+              warn "triangle: #{app[:name]} process group #{mine[:pid]} is still present; no pid file was removed"
+              failed << app[:name]
+            end
           end
           next
         end
 
-        pid = File.read(path).to_i
-        begin
-          Process.kill("TERM", -pid)
-          puts "triangle: stopped #{app[:name]} (pid #{pid})"
-        rescue Errno::ESRCH
-          puts "triangle: #{app[:name]} already gone"
+        pid = Integer(File.read(path).strip, 10, exception: false)
+        unless pid&.positive?
+          warn "triangle: #{app[:name]} has an invalid pid file at #{path}; refusing to signal it"
+          failed << app[:name]
+          next
         end
-        FileUtils.rm_f(path)
+
+        if Master::Fix::ServerLeases.stop_process_group(pid)
+          FileUtils.rm_f(path) if Integer(File.read(path).strip, 10, exception: false) == pid
+          Master::Fix::ServerLeases.release_record(pid_path: path, pid:)
+          puts "triangle: stopped #{app[:name]} (pid #{pid})"
+        else
+          warn "triangle: #{app[:name]} process group #{pid} is still present; pid and owner leases retained"
+          failed << app[:name]
+        end
+      rescue SystemCallError, ArgumentError => e
+        warn "triangle: could not stop #{app[:name]} (#{e.class}: #{e.message})"
+        failed << app[:name]
       end
+      failed
     end
   end
 end
@@ -295,7 +324,8 @@ if File.expand_path($PROGRAM_NAME) == File.expand_path(__FILE__)
   when "status"
     exit(Deploy::Triangle.status.all? ? 0 : 1)
   when "down"
-    Deploy::Triangle.down(ARGV.drop(1))
+    failed = Deploy::Triangle.down(ARGV.drop(1))
+    exit(failed.empty? ? 0 : 1)
   else
     warn "usage: bin/operator triangle [up|status|down] [surface ...]"
     exit 2
