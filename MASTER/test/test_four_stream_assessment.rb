@@ -207,15 +207,20 @@ class TestFourStreamAssessment < Minitest::Test
 
   def test_quality_contract_projects_ledger_into_universal_dimensions
     ledger = {
-      summary: { laws: 2, expected_cells: 2, recorded_cells: 2, clean_passes_required: 2, complete: true },
+      summary: { laws: 3, expected_cells: 3, recorded_cells: 3, clean_passes_required: 2, complete: true },
       cells: [
         { law: "BRINGHURST_measure", status: "assessed_clean", clean_streak: 2 },
+        { law: "PARENTHETICAL_DASH", status: "assessed_clean", clean_streak: 2 },
         { law: "DRY", status: "assessed_clean", clean_streak: 2 },
       ],
     }
-    report = Master::Fix::QualityContract.build(ledger:, target: "MASTER", files: [], lane: :code)
+    report = Master::Fix::QualityContract.build(
+      ledger:, target: "MASTER", files: [], lane: :code,
+      law_tags: { "PARENTHETICAL_DASH" => [:TYPOGRAPHY] }
+    )
 
     assert_equal "PASS", report[:dimensions][:editorial][:status]
+    assert_equal ["BRINGHURST_measure", "PARENTHETICAL_DASH"], report[:dimensions][:editorial][:law_ids]
     assert_equal "PASS", report[:dimensions][:engineering][:status]
     assert_equal "NOT_RUN", report[:workflows][:grouped_visual_repair][:status]
     assert_equal "PASS", report[:overall_status]

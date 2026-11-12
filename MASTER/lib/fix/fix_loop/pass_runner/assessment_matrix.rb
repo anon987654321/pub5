@@ -346,6 +346,11 @@ module Master
           end
 
           def assessment_quality_contract
+            law_tags = (@assessment_law_info || {}).to_h do |id, info|
+              law = info[:law] || info[:scanner_law]
+              tags = law.respond_to?(:tags) ? Array(law.tags) : []
+              [id, tags]
+            end
             QualityContract.build(
               ledger: @assessment_ledger&.evidence_report,
               surface_report: @assessment_surface_report,
@@ -354,6 +359,7 @@ module Master
               lane: WorkLane.current,
               visual_groups: @assessment_visual_group_result,
               improvement: @assessment_improvement_state,
+              law_tags:,
             )
           end
 

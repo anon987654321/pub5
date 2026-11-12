@@ -462,11 +462,11 @@ module Master
       DIMENSIONS = %i[engineering editorial visual experience operations].freeze
 
       def self.build(ledger:, surface_report: nil, target: nil, files: [], lane: :code,
-                     visual_groups: nil, improvement: nil)
-        new(ledger:, surface_report:, target:, files:, lane:, visual_groups:, improvement:).build
+                     visual_groups: nil, improvement: nil, law_tags: {})
+        new(ledger:, surface_report:, target:, files:, lane:, visual_groups:, improvement:, law_tags:).build
       end
 
-      def initialize(ledger:, surface_report:, target:, files:, lane:, visual_groups:, improvement:)
+      def initialize(ledger:, surface_report:, target:, files:, lane:, visual_groups:, improvement:, law_tags:)
         @ledger = ledger
         @surface_report = surface_report || {}
         @target = target.to_s.tr("\\", "/")
@@ -474,6 +474,7 @@ module Master
         @lane = lane.to_s
         @visual_groups = visual_groups
         @improvement = improvement
+        @law_tags = law_tags || {}
       end
 
       def build
@@ -537,8 +538,13 @@ module Master
       end
 
       def dimension_for(law_id)
-        SPECIALISTS.each { |name, pattern| return name if law_id.match?(pattern) }
+        tags = Array(@law_tags[law_id] || @law_tags[law_id.to_sym]).map { |tag| tag.to_s.upcase }
+        return :editorial if tags.any? { |tag| %w[TYPOGRAPHY EDITORIAL PROSE WRITING].include?(tag) }
+        return :visual if tags.any? { |tag| %w[VISUAL VISUAL_DESIGN AESTHETIC DESIGN LAYOUT COMPOSITION].include?(tag) }
+        return :experience if tags.any? { |tag| %w[UX UX_LAWS ACCESSIBILITY INTERACTION USABILITY].include?(tag) }
+        return :operations if tags.any? { |tag| %w[OPERATIONS OPENBSD DEPLOYMENT].include?(tag) }
 
+        SPECIALISTS.each { |name, pattern| return name if law_id.match?(pattern) }
         :engineering
       end
 
