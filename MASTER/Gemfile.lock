@@ -99,20 +99,6 @@ GEM
       timeout
     net-smtp (0.5.1)
       net-protocol
-    opentelemetry-api (1.9.0)
-      logger
-    opentelemetry-common (0.24.0)
-      opentelemetry-api (~> 1.0)
-    opentelemetry-registry (0.5.0)
-      opentelemetry-api (~> 1.1)
-    opentelemetry-sdk (1.11.0)
-      logger
-      opentelemetry-api (~> 1.1)
-      opentelemetry-common (~> 0.20)
-      opentelemetry-registry (~> 0.2)
-      opentelemetry-semantic_conventions
-    opentelemetry-semantic_conventions (1.37.0)
-      opentelemetry-api (~> 1.0)
     parallel (1.27.0)
     parser (3.3.10.2)
       ast (~> 2.4.1)
@@ -233,7 +219,6 @@ DEPENDENCIES
   mail (~> 2.9)
   mcp (~> 1.6)
   minitest (~> 5.25)
-  opentelemetry-sdk (~> 1.11)
   pastel (~> 0.8)
   psych
   rack-test (~> 2.1)
@@ -304,11 +289,6 @@ CHECKSUMS
   net-pop (0.1.2) sha256=848b4e982013c15b2f0382792268763b748cce91c9e91e36b0f27ed26420dff3
   net-protocol (0.4.0) sha256=f9f90c8c6f64794a45160bf422177a336db12809de3beeeaa26b88fcd2e8c853
   net-smtp (0.5.1) sha256=ed96a0af63c524fceb4b29b0d352195c30d82dd916a42f03c62a3a70e5b70736
-  opentelemetry-api (1.9.0) sha256=d24065dd26583babd8d498d38ea35f74dfa193fb7102512e6e161649440079fb
-  opentelemetry-common (0.24.0) sha256=f1647b233b8ac667feeb74d66a65b702008d9ab55aae825c220b4fe2c14fa773
-  opentelemetry-registry (0.5.0) sha256=726ca58ada93a23efaa5f7bb81b8ab7a8a1e14602935c9c65dfa2e597a19fb4f
-  opentelemetry-sdk (1.11.0) sha256=427c6708f4732105ffa46c11afecb91807085c59e92538eaa6cf46b97b1850c6
-  opentelemetry-semantic_conventions (1.37.0) sha256=1e2dc5ad649e19ba2fb0fa7c6f9303e5cdd8d3952511415cb07efe28a0f8f4c3
   parallel (1.27.0) sha256=4ac151e1806b755fb4e2dc2332cbf0e54f2e24ba821ff2d3dcf86bf6dc4ae130
   parser (3.3.10.2) sha256=6f60c84aa4bdcedb6d1a2434b738fe8a8136807b6adc8f7f53b97da9bc4e9357
   pastel (0.8.0) sha256=481da9fb7d2f6e6b1a08faf11fa10363172dc40fd47848f096ae21209f805a75
@@ -358,7 +338,6 @@ CHECKSUMS
   wisper (2.0.1) sha256=ce17bc5c3a166f241a2e6613848b025c8146fce2defba505920c1d1f3f88fae6
   yaml (0.4.0) sha256=240e69d1e6ce3584d6085978719a0faa6218ae426e034d8f9b02fb54d3471942
   zeitwerk (2.7.5) sha256=d8da92128c09ea6ec62c949011b00ed4a20242b255293dd66bf41545398f73dd
-
 
 BUNDLED WITH
   4.0.20
