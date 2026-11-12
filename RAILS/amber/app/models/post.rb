@@ -21,7 +21,23 @@ class Post < ApplicationRecord
 
   scope :recent, -> { order(created_at: :desc) }
   scope :anonymous, -> { where(anonymous: true) }
-  scope :public_feed, -> { recent }
+
+  # Feed counts are projected once with the posts query, not read from the
+  # comments association once per card. The composite commentable index serves
+  # this correlated count, and the same target receives live Turbo updates.
+  scope :with_feed_comment_count, lambda {
+    count = Comment.unscoped.where(commentable_type: name)
+                   .where("comments.commentable_id = posts.id")
+                   .select("COUNT(*)")
+    select("posts.*, (#{count.to_sql}) AS feed_comment_count")
+  }
+  scope :public_feed, -> { recent.with_feed_comment_count }
+
+  # Shared::Commentable remains the fallback for individual records;
+  # feed relations carry a correlated count projection to avoid N+1 reads.
+  def comment_count
+    has_attribute?(:feed_comment_count) ? self[:feed_comment_count].to_i : super
+  end
 
   # Pay-per-view: a price makes the post gated; nil or zero keeps it free.
   def ppv? = price_minor.to_i.positive?
