@@ -66,6 +66,25 @@ class TestLaneSelection < Minitest::Test
     FileUtils.remove_entry(@dir)
   end
 
+  # Use a fixed hosted index so routing policy tests do not depend on a live
+  # provider /models endpoint, its cache, or the machine's network.
+  def with_hosted_models(ids, keyless: false)
+    resolver = Object.new
+    resolver.define_singleton_method(:hosted_models) { ids }
+    resolver.define_singleton_method(:hosted_endpoint_for) do |model|
+      next unless ids.include?(model)
+
+      spec = Selection.config.dig("openai_compatible", Selection.provider(model)) || {}
+      key = if keyless
+        nil
+      else
+        Array(spec["key_env"]).filter_map { |name| ENV[name] }.find { |value| !value.empty? }
+      end
+      { key: }
+    end
+    Selection.stub(:hosted_resolver, resolver) { yield }
+  end
+
   # Counts every call that reaches the selection function while the block runs.
   def counting(method_name)
     calls = []
@@ -167,17 +186,23 @@ class TestLaneSelection < Minitest::Test
   end
 
   def test_llm7_hosted_turbo_models_are_ranked_in_the_free_class
-    assert_equal :free, Selection.kind(LLM7)
-    assert_equal [DEEPSEEK, LLM7], Selection.order([LLM7, DEEPSEEK])
+    with_hosted_models([LLM7], keyless: true) do
+      assert_equal :free, Selection.kind(LLM7)
+      assert_equal [DEEPSEEK, LLM7], Selection.order([LLM7, DEEPSEEK])
+    end
   end
 
   def test_vision_review_order_uses_human_preference_after_capability_filtering
     models = ["gpt-6.1-sol", "gemini-3.7-flash", "qwen3.8-max", OPUS, "text-only"]
     expected = [OPUS, "qwen3.8-max", "gemini-3.7-flash", "gpt-6.1-sol"]
     Selection.stub(:vision?, ->(id) { id != "text-only" }) do
-      assert_equal expected, Selection.vision_rank_order(models)
-      assert_equal expected + ["text-only"], Selection.order(models, free_last: false, vision: true)
-      assert_equal expected + ["text-only"], Selection.ranked_order(models, free_last: false, vision: true)
+      Master::Io::LaneQuota.stub(:dead?, ->(*_args, **_kwargs) { false }) do
+        Master::Io::LaneState.stub(:usable?, ->(*_args, **_kwargs) { true }) do
+          assert_equal expected, Selection.vision_rank_order(models)
+          assert_equal expected + ["text-only"], Selection.order(models, free_last: false, vision: true)
+          assert_equal expected + ["text-only"], Selection.ranked_order(models, free_last: false, vision: true)
+        end
+      end
     end
   end
 
@@ -611,26 +636,32 @@ class TestLaneSelection < Minitest::Test
   # kilo:openrouter/free pool walked 66 dead attempts without ever counting
   # as a free-class death because kind() called it remote.
   def test_the_verified_keyless_gateway_slugs_are_free_class
-    config = Selection.config
-    %w[kilo:openrouter/free kilo:reflection/beam-free].each do |id|
-      assert_equal :free, Selection.kind(id, cfg: config),
-                   "#{id} answers without a key and is the floor"
+    ids = %w[kilo:openrouter/free kilo:reflection/beam-free ovh:gpt-oss-120b]
+    with_hosted_models(ids, keyless: true) do
+      config = Selection.config
+      %w[kilo:openrouter/free kilo:reflection/beam-free].each do |id|
+        assert_equal :free, Selection.kind(id, cfg: config),
+                     "#{id} answers without a key and is the floor"
+      end
+      assert_equal :free, Selection.kind("ovh:gpt-oss-120b", cfg: config),
+                   "the allow-listed keyless OVH slug is free-class keylessly"
+      refute_equal :free, Selection.kind("kilo:dots-studio/paid-slug", cfg: config),
+                   "a slug the gateway does not offer keylessly is not free-class"
     end
-    assert_equal :free, Selection.kind("ovh:gpt-oss-120b", cfg: config),
-                 "the allow-listed keyless OVH slug is free-class keylessly"
-    refute_equal :free, Selection.kind("kilo:dots-studio/paid-slug", cfg: config),
-                 "a slug the gateway does not offer keylessly is not free-class"
   end
 
   # With the provider's own key set, the same gateway answers its paid slugs;
   # the keyless classification holds only for keyless use.
   def test_a_set_provider_key_moves_the_gateway_off_the_free_class
-    config = Selection.config
+    previous_key = ENV["KILO_API_KEY"]
     ENV["KILO_API_KEY"] = "operator-set-operator-key-with-at-least-20-chars"
-    assert_equal :remote, Selection.kind("kilo:openrouter/free", cfg: config),
-                 "with the gateway's key, the slug may be a paid route"
+    with_hosted_models(["kilo:openrouter/free"]) do
+      config = Selection.config
+      assert_equal :remote, Selection.kind("kilo:openrouter/free", cfg: config),
+                   "with the gateway's key, the slug may be a paid route"
+    end
   ensure
-    ENV.delete("KILO_API_KEY")
+    previous_key.nil? ? ENV.delete("KILO_API_KEY") : ENV["KILO_API_KEY"] = previous_key
   end
 
   def test_three_dead_free_class_outcomes_suspend_the_floor_from_inside_the_process
@@ -691,6 +722,8 @@ class TestLaneSelection < Minitest::Test
       @floor_notice = nil
     end
     Selection.watch_free_class!
+    # Suspension is justified only after a non-free lane has actually answered.
+    Selection.note_provider_outcome(OPUS, :success, alive: ALL)
 
     3.times { Selection.note_provider_outcome(NANO, :timeout, alive: ALL) }
     assert_predicate Selection, :free_floor_suspended?

@@ -923,11 +923,6 @@ end
         "one operator request authorized the whole per-app ideation batch; each ideations record is standalone and names the authorization it ran under",
       "# Split out of data/limits.yml on 2026-10-31." =>
         "coincident provenance note for one split event: budgets and scan each carry the same date line under their own header prose",
-      "auxiliary: '(?:was|were|been)'" =>
-        "same detector row in both registries during the documented registry migration: the passive-voice pattern block is normative in laws.yml and consumed from the same file",
-      "banned_commands: [sed, awk, tr, cut, find, head, tail, wc, perl, python, bash]" =>
-        "same detector row in both registries during the documented registry migration: the zsh ban list is normative in laws.yml and read from the same file by Io::GnuTextTools",
-
       # The four lines below are one Law id appearing in two groupings that ask
       # different questions. law_map.laws.design_books is routing for the
       # design_book_violation detector (meaning, severity, operation, 44 ids);
@@ -944,9 +939,6 @@ end
         "one Law id in two groupings with different jobs: law_map routing for the design-book detector versus membership of the scan.yml aesthetic scan profile",
       "- SMALLEST_EFFECTIVE_DIFFERENCE" =>
         "one Law id in two groupings with different jobs: law_map routing for the design-book detector versus membership of the scan.yml aesthetic scan profile",
-
-      "- MASTER/web/public/face.runtime.js" =>
-        "one source path named by two ledgers with different jobs: agent_map lists the files an agent owns, backlog names the one file the current acceptance item edits",
 
       # The nineteen visual/ad law-line exemptions were removed the same way:
       # upstream collapsed the migration block, so no cross-file duplicate

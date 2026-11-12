@@ -224,6 +224,7 @@ module Master
           # not overwrite its answer or turn its successful provider outcome
           # into a second failed attempt.
           Master::Ground::Swallow.log(err, context: "LLMDispatcher.after_settle", severity: :load_bearing)
+          completed_result
         else
           # Provider adapters execute inside CircuitBreaker#execute_with_tracking,
           # which converts their failures to typed Result errors. An exception

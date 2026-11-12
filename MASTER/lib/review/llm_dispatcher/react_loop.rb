@@ -138,7 +138,7 @@ module Master
         def build_react_system(base_sys)
           schema = @tools.filter_map do |t|
             name = tool_registry_name(t)
-            meta = @tool_registry.fetch(name, {})
+            meta = tool_registry.fetch(name, {})
             next unless tool_available_for_context?(meta)
             desc = meta["description"] || name.gsub(/([A-Z])/, ' \1').strip
             rules = Array(meta["usage_rules"]).join(" ")
