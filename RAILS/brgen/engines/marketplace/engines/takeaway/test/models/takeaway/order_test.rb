@@ -299,7 +299,7 @@ class Takeaway::OrderTest < ActiveSupport::TestCase
     end
   end
 
-test "a stale delivery attempt cannot repeat the status notification" do
+  test "a stale delivery attempt cannot repeat the status notification" do
     ActsAsTenant.with_tenant(@city) do
       restaurant = Takeaway::Restaurant.create!(
         user: @owner, name: "Serialized Kitchen", address: "Marken 18",
