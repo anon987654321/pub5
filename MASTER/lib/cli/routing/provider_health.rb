@@ -99,6 +99,8 @@ module Master
           events_for(model.to_s).max_by { |event| event_time(event).to_f }
         end
 
+        private :age_seconds, :freshness, :latest_event
+
         def rank(models)
           Array(models).sort_by { |model| -score(model) }
         end

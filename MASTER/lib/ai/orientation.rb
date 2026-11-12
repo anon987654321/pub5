@@ -194,12 +194,22 @@ module Master
         runbook_path = File.join(repo_root, "OPENBSD", "RUNBOOK.md")
         return unless [inventory_path, operator_path, runbook_path].any? { |path| File.file?(path) }
 
+        openbsd_atlas_summary(openbsd_app_labels(inventory_path))
+      rescue StandardError
+        "openbsd: deploy identity or operational inventory unavailable; " \
+          "inspect OPENBSD/CLAUDE.md and OPENBSD/RUNBOOK.md"
+      end
+
+      def openbsd_app_labels(inventory_path)
         data = JSON.parse(File.read(inventory_path, encoding: "UTF-8"))
-        apps = Array(data["apps"]).filter_map do |app|
+        Array(data["apps"]).filter_map do |app|
           next unless app.is_a?(Hash)
 
           [app["name"], app["domain"], app["port"]].compact.join(":")
         end
+      end
+
+      def openbsd_atlas_summary(apps)
         "openbsd: deploy_identity=OPENBSD/deploy_inventory.json; " +
         "recipes=OPENBSD/data/operator.yml; runbook=OPENBSD/RUNBOOK.md; configs=OPENBSD/etc; " +
         "service_lifecycle=rcctl; privilege_boundary=doas; sandbox_model=MASTER/lib/ground/pledge.rb; " +
@@ -209,40 +219,39 @@ module Master
         "live=target host diagnostics and public health; " +
         "recovery=tmux+vps-deploy; resource_guard=OPENBSD/bin/resource_guard.sh; " +
         "apps=#{apps.join(", ")}"
-      rescue StandardError
-        "openbsd: deploy identity or operational inventory unavailable; " +
-        "inspect OPENBSD/CLAUDE.md and OPENBSD/RUNBOOK.md"
       end
 
       def tree_lines(root, depth:, max_entries:)
-        seen = 0
-        truncated = false
-        lines = []
+        state = { seen: 0, truncated: false, lines: ["#{File.basename(root)}/"] }
+        append_tree_children(root, "", 0, depth:, max_entries:, state:)
+        state[:lines] << "... (orientation tree truncated)" if state[:truncated]
+        state[:lines]
+      end
 
-        walk = lambda do |dir, indent, level|
-          return if level > depth || truncated
+      def append_tree_children(dir, indent, level, depth:, max_entries:, state:)
+        return if level > depth || state[:truncated]
 
-          Dir.children(dir).sort_by do |name|
-            path = File.join(dir, name)
-            [File.directory?(path) ? 0 : 1, name]
-          end.each do |name|
-            break if seen >= max_entries
+        ordered_tree_children(dir).each do |name|
+          break if state[:seen] >= max_entries
+          next if SKIP.include?(name)
 
-            next if SKIP.include?(name)
-
-            path = File.join(dir, name)
-            seen += 1
-            lines << "#{indent}#{name}#{File.directory?(path) ? "/" : ""}"
-            walk.call(path, "#{indent}  ", level + 1) if File.directory?(path)
-          end
-
-          truncated = true if seen >= max_entries
+          append_tree_entry(dir, name, indent, level, depth:, max_entries:, state:)
         end
+        state[:truncated] = true if state[:seen] >= max_entries
+      end
 
-        lines << "#{File.basename(root)}/"
-        walk.call(root, "", 0)
-        lines << "... (orientation tree truncated)" if truncated
-        lines
+      def ordered_tree_children(dir)
+        Dir.children(dir).sort_by do |name|
+          path = File.join(dir, name)
+          [File.directory?(path) ? 0 : 1, name]
+        end
+      end
+
+      def append_tree_entry(dir, name, indent, level, depth:, max_entries:, state:)
+        path = File.join(dir, name)
+        state[:seen] += 1
+        state[:lines] << "#{indent}#{name}#{File.directory?(path) ? "/" : ""}"
+        append_tree_children(path, "#{indent}  ", level + 1, depth:, max_entries:, state:) if File.directory?(path)
       end
 
       def active_plan(root)
@@ -309,6 +318,8 @@ module Master
       def digest(root:)
         Digest::SHA256.hexdigest(render(root:))[0, 16]
       end
+      private_class_method :openbsd_app_labels, :openbsd_atlas_summary, :append_tree_children, :ordered_tree_children, :append_tree_entry
+
     end
   end
 end

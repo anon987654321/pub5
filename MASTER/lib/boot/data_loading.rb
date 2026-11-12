@@ -83,20 +83,8 @@ module Master
 
     def validate_data!(root: ROOT, bus: nil)
       paths = Dir.glob(File.join(root, "data", "**/*.yml")).sort
-      snapshots = {}
-      read_errors = {}
-
-      paths.each do |path|
-        snapshots[path] = read_yaml_content(path)
-      rescue StandardError => e
-        relative = path.delete_prefix(File.join(root, "data") + File::SEPARATOR)
-        read_errors[relative] = e.message.lines.first.to_s.strip
-      end
-
-      signature = snapshots.to_h do |path, content|
-        [path, Digest::SHA256.hexdigest(content.b)]
-      end
-      signature = [signature, read_errors]
+      snapshots, read_errors = validation_snapshots(paths, root)
+      signature = validation_signature(snapshots, read_errors)
       cached = data_validation_cache[root]
       return cached[:errors] if cached && cached[:signature] == signature
 
@@ -151,6 +139,25 @@ module Master
     end
 
     private
+
+    def validation_snapshots(paths, root)
+      snapshots = {}
+      read_errors = {}
+      paths.each do |path|
+        snapshots[path] = read_yaml_content(path)
+      rescue StandardError => e
+        relative = path.delete_prefix(File.join(root, "data") + File::SEPARATOR)
+        read_errors[relative] = e.message.lines.first.to_s.strip
+      end
+      [snapshots, read_errors]
+    end
+
+    def validation_signature(snapshots, read_errors)
+      digest = snapshots.to_h do |path, content|
+        [path, Digest::SHA256.hexdigest(content.b)]
+      end
+      [digest, read_errors]
+    end
 
     def data_validation_cache
       @data_validation_cache ||= {}
