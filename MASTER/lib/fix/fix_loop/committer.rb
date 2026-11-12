@@ -589,6 +589,13 @@ def stage_commit_mode?
         # Only commits still ahead mean the push missed. Behind is the remote
         # moving on, which a push that succeeded has no quarrel with.
         def verify_push!(paths)
+          if @git.respond_to?(:verify_push_target!)
+            @git.verify_push_target!
+            return
+          end
+
+          # Older injected adapters may expose only the upstream comparison;
+          # the production GitOperations path verifies the pushed remote ref.
           ahead, = @git.ahead_behind
           return if ahead.zero?
 
