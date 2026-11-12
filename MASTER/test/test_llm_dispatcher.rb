@@ -427,6 +427,34 @@ class TestLLMDispatcher < Minitest::Test
     old.nil? ? ENV.delete("MASTER_CLAUDE_CLI_TIMEOUT") : ENV["MASTER_CLAUDE_CLI_TIMEOUT"] = old
   end
 
+  def test_master_fault_still_closes_the_run_pulse_call
+    dispatcher, _session, bus = build_dispatcher
+    cache = Object.new
+    cache.define_singleton_method(:fetch) { |*_args| yield }
+    breaker = Object.new
+    breaker.define_singleton_method(:call) { |_cost, &block| block.call }
+    dispatcher.instance_variable_set(:@cache, cache)
+    dispatcher.instance_variable_set(:@circuit_breaker, breaker)
+    dispatcher.instance_variable_set(:@tools, [])
+    dispatcher.define_singleton_method(:answering_model) { |model, _image| model }
+    dispatcher.define_singleton_method(:local_only_refusal) { |_model| nil }
+    dispatcher.define_singleton_method(:refusal_before_send) { |_model| nil }
+    dispatcher.define_singleton_method(:estimate_cost) { |_prompt, _model| 0.0 }
+    dispatcher.define_singleton_method(:send_llm_request) do |*_args, **_kwargs|
+      Master::Result.err("MASTER fault", category: :crash)
+    end
+
+    result = dispatcher.send_with_cache(
+      "test-provider:model", [{ role: "user", content: "hi" }], system: ""
+    )
+
+    assert_equal :crash, result.category
+    assert bus.events.any? { |name, payload| name == "llm:send" && payload[:model] == "test-provider:model" }
+    assert bus.events.any? { |name, payload| name == "llm:call_finished" && payload[:model] == "test-provider:model" }
+    refute bus.events.any? { |name, _payload| name == "llm:provider_outcome" },
+           "MASTER faults must close the in-flight UI without penalizing provider health"
+  end
+
   # Every LLM call in the tree passes through send_with_cache. With no provider
   # key every caller would fail slowly somewhere below it, one persona at a time,
   # so the refusal belongs at the door, before the breaker, the cache or the request.
