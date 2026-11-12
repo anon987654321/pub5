@@ -85,6 +85,10 @@ class OperatorIntentTest < Minitest::Test
              "an explicit app target must be left to the inventory classifier"
       refute intent.send(:repository_wide_deployment?, "how do I deploy pub5 to vm23?", inventory),
              "deployment questions must remain conversational"
+      refute intent.send(:repository_wide_deployment?, "deploy pub5 to aws", inventory),
+             "an explicit third-party host must not be rewritten to vm23"
+      assert intent.send(:repository_wide_deployment?, "please deploy pub5 to production", inventory),
+             "an explicit production destination remains deterministic"
     end
   end
 
