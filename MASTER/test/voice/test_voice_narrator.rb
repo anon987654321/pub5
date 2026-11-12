@@ -382,15 +382,22 @@ class TestVoiceNarrator < Minitest::Test
     runner.define_singleton_method(:capture3) { |*_args, **_kwargs| ["  \n", "", status] }
     writer = Narrator::LaneWriter.new({ "lane_tier" => "fast", "model_timeout_s" => 5 }, lanes:, runner:)
 
-    Master::Io::LaneSilence.stub(:record, ->(answered, _lane) {
-      flunk "empty narration must not report provider success" if answered
+    recorded = nil
+    Master::Io::LaneSilence.stub(:record, ->(answered, lane, reason:) {
+      recorded = [answered, lane, reason]
       true
     }) do
-      error = assert_raises(Narrator::LaneWriter::Unavailable) do
-        writer.call(system: "s", prompt: "p", max_tokens: 90)
+      Master::Trace::Dmesg.stub(:once, ->(*) {}) do
+        error = assert_raises(Narrator::LaneWriter::Unavailable) do
+          writer.call(system: "s", prompt: "p", max_tokens: 90)
+        end
+        assert_match(/answered nothing/, error.message)
       end
-      assert_match(/answered nothing/, error.message)
     end
+
+    assert_equal false, recorded[0]
+    assert_equal "claude-cli", recorded[1]
+    assert_match(/empty reply/, recorded[2])
   end
 
   def test_lane_writer_detects_exit_zero_subscription_refusal
