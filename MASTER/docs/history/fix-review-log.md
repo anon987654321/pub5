@@ -318,3 +318,41 @@ holds stdout open, then asserts the scan times out and the descendant is gone.
 The regression is authored but NOT_RUN. The WebDriver engine's separate
 driver/browser process lifecycle remains an open item, as does the broader
 process-termination census.
+
+## Follow-on scan cleanup confirmation
+
+The constitutional scan group reaper now waits for the process group to
+disappear after SIGKILL as well as after SIGTERM. The scan reports a timeout
+only when group exit is confirmed; an unresolved group is INCONCLUSIVE rather
+than a claimed successful kill. Regression additions remain NOT_RUN.
+
+## Follow-on Rails visual-server lease supervision
+
+The shared ServerLeases helper now performs bounded TERM/KILL shutdown of an
+isolated process group and returns success only after the group disappears.
+It refuses to signal the caller's own process group. Orphan reaping checks
+the owner/PID record before and after the stop and removes only the exact
+lease it observed; an inconclusive stop or replaced record remains on disk
+for retry/diagnosis. VisualRuntime keeps an unconfirmed lease in memory and
+on disk, and only releases the PID/owner files after verified group exit.
+
+Triangle down uses the same bounded group stop, preserves PID/owner markers
+when shutdown cannot be proved, returns a failing app list to the CLI, and
+requires a no-PID listener to be both in the app directory and the leader of
+its own process group. Its sibling-worktree reaper is still a separate direct
+PID TERM/fixed-sleep path and remains open for review.
+
+Regressions now cover TERM-ignoring leader/renderer processes, escalation to
+KILL, direct-child wait completion, unconfirmed-stop retry, replaced owner
+lease preservation, refusal to signal the caller's own process group, and
+Triangle down's owned-group/no-PID safety conditions. They are authored but
+NOT_RUN.
+
+## Follow-on WebDriver process-group supervision
+
+WebDriver now launches its driver in a dedicated process group. Close remains
+best-effort for the W3C session DELETE, then gives TERM a bounded grace,
+escalates to KILL, reaps the direct driver child, and verifies that the group
+including renderer descendants is gone. It retains PID/session ownership if
+shutdown is inconclusive. Real-spawn and renderer regressions are authored
+but NOT_RUN.
