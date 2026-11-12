@@ -230,6 +230,18 @@ class TestIoMcpAndWebChat < Minitest::Test
     end
   end
 
+  def test_web_chat_failure_categories_distinguish_broken_sessions_from_transport_errors
+    classify = Master::Io::WebChat.method(:failure_category)
+
+    assert_equal :auth_error, classify.call(Master::Io::WebChat::ProviderError.new("grok: input not found (login required)"))
+    assert_equal :auth_error, classify.call(Master::Io::WebChat::ProviderError.new("grok: no new assistant reply appeared after submission"))
+    assert_equal :auth_error, classify.call(Master::Io::WebChat::DisabledError.new("browser chat disabled"))
+    assert_equal :model_missing, classify.call(Master::Io::WebChat::ProviderError.new("unknown web chat provider: nope"))
+    assert_equal :timeout, classify.call(Master::Io::WebChat::RequestTimeout.new("provider request timed out"))
+    assert_equal :offline, classify.call(Errno::ECONNREFUSED.new("connection refused"))
+    assert_equal :provider_error, classify.call(StandardError.new("upstream returned 503"))
+  end
+
   def test_an_unknown_provider_is_refused_at_construction
     assert_raises(Master::Io::WebChat::ProviderError) { Master::Io::WebChat.new(provider: "altavista") }
   end
