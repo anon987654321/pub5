@@ -219,6 +219,8 @@ module Operator
       vote_model = read(vote_model_path)
       expect("post_card.amber_vote_event", vote_model_path, vote_model, "after_commit :broadcast_post_counts",
              "Votes must publish counters as interaction events, not touch the post.")
+      add(vote_model&.include?("touch: true") ? "FAIL" : "PASS", "post_card.amber_vote_no_touch",
+          vote_model_path, "A vote must not touch the post and trigger a full feed refresh.", source: vote_model)
       comment_model_path = "RAILS/amber/app/models/comment.rb"
       comment_model = read(comment_model_path)
       expect("post_card.amber_comment_event", comment_model_path, comment_model, "after_commit :broadcast_post_comment",
@@ -226,10 +228,17 @@ module Operator
       expect("post_card.amber_viewer_safe_comments", comment_model_path, comment_model,
              "broadcast_refresh_to target",
              "A comment thread must be rendered for each reader rather than broadcasting another reader's controls.")
+      add(comment_model&.include?("touch: true") ? "FAIL" : "PASS", "post_card.amber_comment_no_touch",
+          comment_model_path, "A comment must not refresh every post feed through belongs_to touch.", source: comment_model)
       create_stream_path = "RAILS/amber/app/views/comments/create.turbo_stream.erb"
-      expect("post_card.amber_no_duplicate_comment_append", create_stream_path, read(create_stream_path),
+      create_stream = read(create_stream_path)
+      expect("post_card.amber_comment_form_reset", create_stream_path, create_stream,
              "replace \"comment_form\"",
-             "The local response must not append a row that the detail stream also refreshes.")
+             "The local response must reset the form after the detail stream refreshes.")
+      add(create_stream&.include?("turbo_stream.append") ? "FAIL" : "PASS",
+          "post_card.amber_no_duplicate_comment_append", create_stream_path,
+          "Comment rows must not be appended locally and then delivered again by the detail stream.",
+          source: create_stream, needle: "turbo_stream.append")
     end
 
     def audit_vertical_front_pages
