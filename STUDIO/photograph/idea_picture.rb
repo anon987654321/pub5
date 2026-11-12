@@ -155,7 +155,7 @@ module Studio
       def film_input(words, still, duration)
         {
           prompt: "The same photograph, held, one slow motion. #{words}",
-          image: client.upload_file(still),
+          image: client.upload_file(still, subject: @subject),
           duration:,
           mode: "quality",
           aspect_ratio: "2:3",
