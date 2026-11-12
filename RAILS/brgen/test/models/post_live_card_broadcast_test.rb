@@ -84,6 +84,27 @@ class PostLiveCardBroadcastTest < ActiveSupport::TestCase
     refute_equal comment_updated_at, comment.reload.updated_at
   end
 
+  test "counter-only events update the searchable posts index without a page refresh" do
+    index_stream = Post.city_posts_stream(@city.id)
+    votes = capture_turbo_stream_broadcasts(index_stream) do
+      Vote.create!(user: @voter, votable: @post, value: 1)
+    end
+    score = votes.find { |stream| stream["targets"] == %([data-post-score="post_#{@post.id}"]) }
+
+    assert score, "the /posts index received no score update"
+    assert_equal "update", score["action"]
+    assert_equal "1", score.at_css("template").inner_html.strip
+    assert votes.none? { |stream| %w[refresh replace].include?(stream["action"]) },
+           "a score change must not refresh or replace the index page"
+
+    comments = capture_turbo_stream_broadcasts(index_stream) do
+      Comment.create!(user: @author, commentable: @post, content: "<p>Synlig i indeksen</p>")
+    end
+    assert_equal "1", count_update(comments)
+    assert comments.none? { |stream| %w[refresh replace].include?(stream["action"]) },
+           "a comment count change must not refresh or replace the index page"
+  end
+
   test "a vote does not resend the card" do
     streams = capture_turbo_stream_broadcasts(@stream) { Vote.create!(user: @voter, votable: @post, value: 1) }
 
