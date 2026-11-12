@@ -103,6 +103,18 @@ class PostLiveCardBroadcastTest < ActiveSupport::TestCase
     assert_equal "1", count_update(comments)
     assert comments.none? { |stream| %w[refresh replace].include?(stream["action"]) },
            "a comment count change must not refresh or replace the index page"
+
+    reposts = capture_turbo_stream_broadcasts(index_stream) do
+      Repost.create!(user: @voter, post: @post)
+    end
+    repost = reposts.find do |stream|
+      stream["targets"] == %([data-post-repost-count="post_#{@post.id}"])
+    end
+    assert repost, "the /posts index received no repost-count update"
+    assert_equal "update", repost["action"]
+    assert_equal "1", repost.at_css("template").inner_html.strip
+    assert reposts.none? { |stream| %w[refresh replace].include?(stream["action"]) },
+           "a repost count change must not refresh or replace the index page"
   end
 
   test "a repost and undo update only the shared repost count" do
