@@ -148,6 +148,11 @@ class TestStudioReplicateClientPaths < Minitest::Test
     assert_match(/provider response/, error.message)
   end
 
+  def test_model_catalog_accepts_positive_integer_string_limits
+    assert_empty @client.models(limit: "10")
+    assert_equal [:get], @client.requests.map(&:first)
+  end
+
   def test_model_catalog_limit_rejects_invalid_values_before_network
     ["ten", "", "1.5", 0, -1, 1.5].each do |limit|
       assert_raises(ArgumentError) { @client.models(limit:) }
