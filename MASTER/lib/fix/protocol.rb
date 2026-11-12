@@ -17,7 +17,7 @@ module Master
     # The canonical /fix execution contract. This is procedure, not a second
     # constitution: soul.yml and executable law remain authoritative.
     module Protocol
-      VERSION = 7
+      VERSION = 8
       STAGES = %w[load trace inventory structure architecture_exploration scan semantic repair verify repeat report].freeze
       TERMINAL_STATES = OutcomePolicy::TERMINAL_STATES.map { |state| state.to_s.upcase }.freeze
 
@@ -78,6 +78,35 @@ module Master
           verification continue to govern every repair. The canonical 90-entry interaction
           acceptance catalogue is MASTER/data/law/ux_refinements.yml; catalogue membership is
           not completion evidence.
+
+          0.3 SERIAL FIVE-TREE DELIVERY
+          A repository-root or multi-tree /fix runs each requested root serially in
+          one checkout with one active writer lease. Do not create worktrees,
+          parallel edit streams or topic branches. Each of MASTER, RAILS, OPENBSD,
+          STUDIO and BIZ receives its own inventory, task contract, four-stream
+          coverage report, proof receipt and terminal state. A blocker in one tree
+          does not cancel independent eligible work in another. Never aggregate
+          PASS while a requested tree is skipped, unmeasured, blocked or still
+          changing; the aggregate is the least-complete tree state. Refresh shared
+          cross-tree owners and dependent-tree evidence after every shared change.
+          Apply the five acceptance profiles in MASTER/data/law/TREE_CONTRACTS.md;
+          absence of a format/runtime adapter is INCONCLUSIVE, never a pass.
+
+          OpenBSD operations are admitted only through TaskContract.openbsd_preflight.
+          The receipt binds hostname, exact OS release and architecture, complete
+          current source reads, declared native interfaces, and full manual text
+          with exact-release source, SHA-256, bytes and lines. WriteGuard, Fold
+          Constitution and the command Shell reject missing or stale receipts.
+          Only the manual reader and minimum read-only target identity probe are
+          bootstrap exceptions. A policy prompt alone is not evidence of admission.
+
+          BIZ work selects a document profile before changing content or layout:
+          business_plan, business_model, funding_application, legal_contract,
+          corporate_governance, or financial_report. The profile determines page
+          format, content gates, evidence and sign-offs. Bob2 applies to the
+          established business-plan series only; it is not a universal BIZ skin.
+          Legal and regulatory text remains INCONCLUSIVE until jurisdiction,
+          authoritative sources, consistency and qualified human review are proven.
 
           1. LOAD
           Read the live constitution, Law registry, executable Law definitions,

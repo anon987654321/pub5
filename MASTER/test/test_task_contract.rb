@@ -514,4 +514,40 @@ class TestTaskContract < Minitest::Test
 
     assert_includes contract.proof, "documentation_review"
   end
+
+  def test_shell_redirection_into_openbsd_is_gated_but_reading_sources_is_allowed
+    reason = Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "printf '%s' value > OPENBSD/RUNBOOK.md"
+    )
+    assert_match(/RTFM_FIRST/, reason)
+
+    assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "cat OPENBSD/RUNBOOK.md"
+    )
+  end
+
+  def test_unrelated_ssh_hosts_do_not_trigger_the_openbsd_manual_gate
+    [
+      "ssh git@github.com 'git-upload-pack /anon987654321/pub5.git'",
+      "ssh deploy@other.example 'chmod 644 /tmp/deploy-marker'"
+    ].each do |command|
+      assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(command:)
+    end
+  end
+
+  def test_canonical_production_operator_ssh_host_parses_its_real_options
+    reason = Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "ssh -o BatchMode=yes -i ~/.ssh/id_ed25519_brgen dev@brgen.no 'pfctl -nf /etc/pf.conf'"
+    )
+
+    assert_match(/RTFM_FIRST/, reason)
+    assert_match(/openbsd_preflight/, reason)
+  end
+  def test_canonical_operator_ssh_host_is_still_allowed_to_read_manuals
+    assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "ssh -o BatchMode=yes -i ~/.ssh/id_ed25519_brgen dev@brgen.no 'man 8 rcctl'"
+    )
+  end
+
+
 end

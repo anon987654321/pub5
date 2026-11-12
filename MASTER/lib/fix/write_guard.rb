@@ -2,6 +2,7 @@
 
 require_relative "../configuration_guard"
 require_relative "task_contract"
+require_relative "openbsd_manual_preflight"
 
 module Master
   module Fix
@@ -70,6 +71,9 @@ module Master
       def refusal(path:, content:, automated:)
         if automated && (reason = Master::Core::Constitution::Paths.write_refusal(path))
           return [:sacred_path, reason]
+        end
+        if (reason = OpenBSDManualPreflight.refusal_for_path(path:))
+          return [:openbsd_manual_preflight, reason]
         end
         if (reason = TaskContract.new_path_refusal(path))
           return [:new_path, reason]

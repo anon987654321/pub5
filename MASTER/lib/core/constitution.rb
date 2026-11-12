@@ -2,6 +2,7 @@
 
 require "prism"
 require "yaml"
+require_relative "../fix/openbsd_manual_preflight"
 
 module Master::Core
   # Constitution — the single check. Every Effect the agent proposes folds
@@ -177,6 +178,7 @@ module Master::Core
         council_for_done_rule,
         ideation_before_write_rule,
         new_path_rule,
+        openbsd_manual_preflight_rule,
         effect_reversibility_rule,
       ]
     end
@@ -314,6 +316,21 @@ module Master::Core
         next nil if reason.nil?
 
         Verdict::Block.new(reason: "read-only probe refused: #{reason}", by: :read_only_probe)
+      })
+    end
+
+    # RTFM_FIRST is a capability-boundary check, not prompt-only conduct.
+    # Fold writes and exec effects consume the same receipt as the tool Shell.
+    def self.openbsd_manual_preflight_rule
+      Law.new(id: :openbsd_manual_preflight, verbs: %i[write exec], judge: lambda { |effect, _memory|
+        reason = if effect.verb == :write
+                   Master::Fix::OpenBSDManualPreflight.refusal_for_path(path: effect.args[:path])
+                 else
+                   Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+                     command: Array(effect.args[:argv]).map(&:to_s).join(" ")
+                   )
+                 end
+        reason ? Verdict::Block.new(reason: "RTFM_FIRST blocked: #{reason}", by: :openbsd_manual_preflight) : nil
       })
     end
 
@@ -597,7 +614,7 @@ module Master::Core
                          :operands_after_flags, :git_clean_all?, :forbidden_file_rule, :scope_creep_rule,
                          :two_hats_rule, :evidence_for_done_rule,
                          :git_commit_evidence_rule, :git_commit_scope_rule, :council_for_done_rule,
-                         :ideation_before_write_rule, :new_path_rule, :effect_reversibility_rule, :ruby_syntax_error, :safe_rx
+                         :ideation_before_write_rule, :new_path_rule, :openbsd_manual_preflight_rule, :effect_reversibility_rule, :ruby_syntax_error, :safe_rx
 
     # One source for paths that are constitutionally protected.
     #

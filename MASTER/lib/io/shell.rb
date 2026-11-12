@@ -3,6 +3,7 @@
 require "tty-command"
 require "timeout"
 require "shellwords"
+require_relative "../fix/openbsd_manual_preflight"
 
 module Master
   module Io
@@ -70,8 +71,17 @@ module Master
 
       def preflight_error(command)
         verify_binaries(command) || blocked_error(command) || sandbox_error(command) ||
-          banned_tool_error(command) || force_error(command) || batch_delete_error(command) ||
-          writable_error(command) || interactive_error(command)
+          openbsd_manual_preflight_error(command) || banned_tool_error(command) ||
+          force_error(command) || batch_delete_error(command) || writable_error(command) ||
+          interactive_error(command)
+      end
+
+      def openbsd_manual_preflight_error(command)
+        reason = Master::Fix::OpenBSDManualPreflight.refusal_for_command(command:)
+        return unless reason
+
+        @bus&.publish("openbsd:manual_preflight_refused", command:, reason:)
+        Result.err("RTFM_FIRST blocked: #{reason}", category: :validation)
       end
 
       # This only warned once: it published zsh:banned_tool_warning and ran the

@@ -1,5 +1,26 @@
 # Tree contracts
 
+## Five-tree /fix acceptance matrix
+
+A tree is complete only against its own applicable profile. A source scan,
+successful build or empty test selection cannot stand in for a different
+surface. Each profile is assessed independently; aggregate completion is no
+stronger than the least-complete requested tree.
+
+| Tree | Required acceptance profile |
+| --- | --- |
+| MASTER | Boot and dependency graph; Law/configuration contracts; core and subsystem suites; CLI/REPL command routes, prompt/face boundaries, model/provider failure states and voice/mobile paths where enabled; current-revision checks and path-scoped delivery evidence. |
+| RAILS | Every active app and vertical; shared engine and consumer contracts; models, routes, jobs, migrations and data boundaries; real browser journeys and responsive/accessibility review where applicable; each app retains its own identity. |
+| OPENBSD | Full target source/dependency review; receipt-backed exact-release/architecture manuals before native commands, daemon/service actions or any OPENBSD/ edit; native syntax and test checks on OpenBSD; authenticated host, deploy, backup and restore evidence for live claims. |
+| STUDIO | Deterministic generation and reproducible artifact checks; source, timing, format and metadata validation; rendered/export integrity; human listening, rights and provider/material approval where relevant. |
+| BIZ | A declared document-family profile; source-backed claims and traceable financial arithmetic; HTML/PDF consistency; every PDF page rasterized for visual inspection; accessibility/reading-order and production checks; qualified legal/financial or funder review where the document requires it. |
+
+For a root or multi-tree run, use one checkout and one writer at a time.
+Give every requested tree its own source inventory, four-stream assessment,
+verification receipts and terminal status. Continue independent work after a
+tree is blocked. Skipped adapters, unavailable browsers/devices/hosts, and
+human sign-offs remain INCONCLUSIVE or BLOCKED; never convert them into PASS.
+
 The one shared tree-contract file for pub5. RAILS, MASTER/web, and OPENBSD keep
 their runtime and operational sharp edges here; STUDIO reads its project READMEs.
 `BIZ/` is the fifth approved content root and owns its document-production
@@ -854,17 +875,46 @@ file to sit on.
 
 ## BIZ
 
-`BIZ/README.md` is the maintained content/build reference. `BIZ/` owns the
-business plans, their published HTML/PDF pairs, preserved correspondence
-templates, research, editable source documents and the build/check/print/index
-chain. It is the fifth approved uppercase content root, not a runtime service
-or a separate deployment tree. Keep editable bases and tools in `BIZ/tools/`;
-plan folders carry only the reader-facing HTML, artwork and the PDF printed
-from that same document. Run the Node build, retemplate, check, print and index
-commands documented in `BIZ/README.md`. Acceptance compares the HTML and PDF;
-a successful source build alone does not prove rendered pagination, links or
-text placement.
+`BIZ/README.md` is the maintained document-studio and build reference.
+`BIZ/` owns professional business plans and related business-model work,
+funding applications, future legal/contract and corporate documents, financial
+and analytical reports, preserved correspondence templates, source research,
+editable documents and the HTML/PDF production chain. It is the fifth approved
+uppercase content root, not a runtime service or deployment tree.
 
+Choose a document profile before writing or redesigning: business plan, business
+model, funding application, legal/contract, corporate/governance, or financial
+report. The established Bob2 156 x 234 mm design applies to the existing
+business-plan series only. It must not be imposed on legal instruments,
+institutional documents or financial reports; A4 is the default for those
+families unless the brief or recipient specifies another format.
+
+Each published pair is printed from its authoritative HTML. Rasterize every
+PDF page to an external audit directory and verify that every page rendered;
+retain only the contracted front-page image in a deliverable folder. Raster
+success is not visual approval: inspect all pages for pagination, clipping,
+widows/orphans, table splits, fonts/glyphs, references and print integrity.
+Check semantic headings, bookmarks, reading order, metadata, link targets and
+accessibility where applicable. PDF/UA and PDF/A are selected by the delivery
+need, not asserted as a substitute for accessible content or human review.
+
+Legal work requires jurisdiction and governing-law identification, primary
+source provenance, defined parties and terms, consistent operative clauses,
+version/effective dates, complete schedules and cross-references, and qualified
+human legal review before execution. MASTER and BIZ may check structure and
+internal consistency; neither may represent an AI-generated document as legal
+advice or certify its legal validity. Financial documents must reconcile to one
+traceable source-of-truth model with units, currency, periods and assumptions.
+Funding work must follow the funder's current form, eligibility and evidence
+requirements. A profile with no actual deliverable or applicable verifier is
+not complete.
+
+Keep editable bases and tools in `BIZ/tools/`; published folders carry only
+reader-facing HTML, artwork and the PDF printed from that HTML. Run the Node
+build, retemplate, check, print and index commands documented in
+`BIZ/README.md`. Acceptance compares HTML and PDF and requires full-page
+raster evidence; a successful source build alone proves neither pagination,
+links, reading order nor text placement.
 ## Repository mechanics
 
 **One branch.** `main` is the only branch; work lands as path-scoped

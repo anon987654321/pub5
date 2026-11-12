@@ -44,6 +44,9 @@ class TestFixProtocol < Minitest::Test
     assert_includes text, "generated documentation"
     assert_includes text, "commit and push"
     assert_includes text, "Never promise that literally every defect was repaired"
+    assert_includes text, "0.3 SERIAL FIVE-TREE DELIVERY"
+    assert_includes text, "TaskContract.openbsd_preflight"
+    assert_includes text, "Bob2 applies to the"
   end
 
   def test_practice_laws_name_full_source_docs_and_verified_checkpoint_contracts

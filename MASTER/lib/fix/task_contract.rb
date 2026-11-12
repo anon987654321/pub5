@@ -3,6 +3,7 @@
 require "digest"
 require "json"
 require "yaml"
+require_relative "openbsd_manual_preflight"
 require_relative "../execution/contract"
 
 module Master
@@ -32,7 +33,7 @@ module Master
         "unchanged_bytes" => [],
       }.transform_values(&:freeze).freeze
 
-      Contract = Data.define(:schema, :intent, :scope, :preserve, :proof, :new_paths) do
+      Contract = Data.define(:schema, :intent, :scope, :preserve, :proof, :new_paths, :openbsd_preflight) do
         def to_h
           value = {
             "schema" => schema,
@@ -42,6 +43,7 @@ module Master
             "proof" => proof,
           }
           value["new_paths"] = new_paths unless new_paths.empty?
+          value["openbsd_preflight"] = openbsd_preflight if openbsd_preflight
           value
         end
       end
@@ -89,6 +91,7 @@ module Master
         unknown_proof = proof - allowed_proof
         raise Invalid, "unknown proof type(s): #{unknown_proof.join(', ')}" unless unknown_proof.empty?
         new_paths = normalize_new_paths(input.fetch("new_paths", []), scope:, schema:)
+        openbsd_preflight = OpenBSDManualPreflight.normalize(input["openbsd_preflight"], task_scope: scope)
 
         Contract.new(
           schema.fetch("schema"),
@@ -97,6 +100,7 @@ module Master
           (preservation + required_preservation).uniq.sort.freeze,
           (proof + Array(schema.fetch("common_proof")).map(&:to_s)).uniq.sort.freeze,
           new_paths.freeze,
+          openbsd_preflight,
         ).freeze
       end
 
@@ -422,6 +426,7 @@ module Master
           "schema" => schema.fetch("schema"),
           "required_fields" => schema.fetch("required_fields"),
           "optional_fields" => schema.fetch("optional_fields", []),
+          "openbsd_preflight" => { "required_fields" => %w[hostname os_release architecture scope source_reads native_interfaces manual_pages], "source_receipt_fields" => %w[path content complete], "manual_receipt_fields" => %w[page section source content complete] },
           "new_path_fields" => schema.fetch("new_path_fields", %w[path reason]),
           "common_proof" => schema.fetch("common_proof"),
           "intents" => schema.fetch("intents").transform_values { |value| value.slice("description", "must_preserve") },
@@ -443,6 +448,7 @@ module Master
           "A new tracked file needs an exact path and non-empty reason in optional new_paths, inside the task scope. A new directory needs a genuine ownership boundary; never create helpers, tests, docs, config or utility folders merely for convenience.",
           "Proof always includes baseline hashes, a path-scoped diff and a Law assessment. Add relevant tests, rendered/runtime evidence, accessibility review, citations or human review.",
           *(["Active contract proof requirements: #{current.proof.join(", ")}. These are obligations, not evidence; report each result and keep missing proof INCONCLUSIVE or NOT_RUN."] if current),
+          "For any OPENBSD/ write or OpenBSD-native command, include a validated openbsd_preflight in the TaskContract: host/release/architecture, complete current source reads with content and digests, every native interface and its complete exact-release manual content. Runtime write and command gates reject missing or stale receipts; only manual reading and minimum read-only identity probes are exempt.",
           "If a required measurement is absent or a format has no verifier, report INCONCLUSIVE or NOT_RUN; do not infer PASS.",
           "Schema: MASTER/data/task_contract.yml.",
         ].join("\n")

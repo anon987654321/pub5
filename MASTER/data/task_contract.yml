@@ -1,6 +1,6 @@
 schema: 1
 required_fields: [intent, scope, preserve, proof]
-optional_fields: [new_paths]
+optional_fields: [new_paths, openbsd_preflight]
 new_path_fields: [path, reason]
 common_proof: [baseline_hashes, path_scoped_diff, law_assessment]
 # documentation_review (convergence.yml workstream documentation_completeness)

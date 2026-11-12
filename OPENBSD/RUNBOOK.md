@@ -202,6 +202,24 @@ complete source and schema/contract review; do not invent irrelevant manuals.
 
 The manual-reading interface itself and the minimum read-only identity probe
 needed to establish an unknown target are the only preflight exceptions.
+
+**Executable admission gate.** An OPENBSD task contract carries
+`openbsd_preflight`: hostname, exact release, architecture, the in-scope
+OPENBSD paths, full current source reads for the target and reviewed
+dependencies/callers, and one content-bearing receipt per native manual
+interface. Every source receipt binds its current repository bytes by SHA-256,
+byte and line count. Every manual receipt retains the complete text, canonical
+page/section, exact-release or target-local source, SHA-256, byte count, line
+count and `complete=true`. A prose/data file with no native interface needs
+an explicit evidence-based reason instead of fabricated manual pages.
+
+The same receipt is checked by Fix::WriteGuard, the Fold Constitution and the
+command Shell. Missing, stale, out-of-scope or incomplete evidence blocks the
+write or operation before it is performed. Source edits invalidate receipts
+for any reviewed source they change; rebuild the preflight before proceeding.
+The only bootstrap commands are the manual reader and the minimum read-only
+identity probe. This is an admission requirement, not a claim that a remote
+host has been inspected when no host evidence was supplied.
 For example, a PF change requires the full target-release `pfctl(8)` and
 `pf.conf(5)` pages plus relevant network/anchor pages; an NSD change needs
 the relevant `nsd(8)`, `nsd.conf(5)`, zone-format and reload pages; a package

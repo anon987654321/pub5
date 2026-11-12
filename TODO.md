@@ -362,6 +362,13 @@ measure is already owned by the Bymorgen item above.
   after checking references, generators, links, tests and agent entrypoints.
   Preserve useful recovery/provenance records. Update sources and generators
   together; add no Markdown files.
+- [ ] **BIZ document-family implementation.** The current source contract now
+  defines distinct business-model/plan, funding, legal/contract, corporate and
+  financial/analytical profiles. The production pipeline still publishes the
+  existing business-plan family only; implement separate family validators,
+  accessible templates and qualified review workflow before claiming legal or
+  institutional deliverables complete. Inspect every page raster at print size;
+  raster generation alone is not visual approval.
 - [ ] **Historical hardening review.** Reconcile the remaining P01–P11
   findings in `MASTER/docs/history/fix-review-log.md`. L4 stale-member
   detection/tests, L5 heredoc/keyword detection plus structured Council

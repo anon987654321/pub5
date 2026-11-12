@@ -6,7 +6,9 @@
 // front page ... in BIZ"; the folder law carries it beside the pair.
 // Usage: node scripts/bp_print.mjs
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, renameSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, renameSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { OUTPUT_DIR as OUT, BIZ_ROOT } from './paths.mjs';
 
 const ORDER = ['syre', 'speis', 'ragnhild', 'future_nato_weapons', 'norwegianhedge', 'pubhealthcare', 'govt_bergen', 'future_healthcare_os', 'fetat'];
@@ -36,6 +38,9 @@ function available(command) {
 }
 
 const CHROME = CHROME_CANDIDATES.find(available);
+const AUDIT_PARENT = process.env.BIZ_AUDIT_DIR ? resolve(process.env.BIZ_AUDIT_DIR) : tmpdir();
+mkdirSync(AUDIT_PARENT, { recursive: true });
+const AUDIT_DIR = mkdtempSync(join(AUDIT_PARENT, 'pub5-biz-pages-'));
 if (!CHROME) {
   throw new Error('Chromium/Chrome not found; set BIZ_CHROME_BIN to its executable path.');
 }
@@ -62,10 +67,24 @@ for (const name of ORDER) {
   }
   const info = infoResult.stdout || '';
   const size = (info.match(/Page size:\s*([\d.]+ x [\d.]+) pts/) || [])[1];
-  const pages = (info.match(/Pages:\s*(\d+)/) || [])[1];
+  const pages = Number((info.match(/Pages:\s*(\d+)/) || [])[1]);
+  if (!Number.isInteger(pages) || pages < 1) throw new Error(`${name}: pdfinfo did not report a valid page count`);
   const bytes = statSync(pdf).size;
   console.log(`${name}: ${bytes} bytes, ${pages} pages, ${size} pts`);
   if (size !== '442.08 x 663.12') throw new Error(`${name}: unexpected page size ${size}`);
+  const allPages = spawnSync('pdftoppm', [
+    '-r', '144', '-png', '-f', '1', '-l', String(pages), pdf, join(AUDIT_DIR, name),
+  ], { encoding: 'utf8' });
+  if (allPages.status !== 0) throw new Error(`${name}: full-page rasterization failed\n${allPages.stderr}`);
+  const pageRasters = readdirSync(AUDIT_DIR)
+    .filter(file => file.startsWith(`${name}-`) && file.endsWith('.png'))
+    .map(file => ({ file, page: Number(file.match(/-(\d+)\.png$/)?.[1]) }))
+    .sort((a, b) => a.page - b.page);
+  if (pageRasters.length !== pages || pageRasters.some((row, index) =>
+    row.page !== index + 1 || statSync(join(AUDIT_DIR, row.file)).size < 2000
+  )) {
+    throw new Error(`${name}: expected ${pages} non-empty sequential page renders; found ${pageRasters.length}`);
+  }
   const ppm = spawnSync('pdftoppm', ['-r', '96', '-png', '-f', '1', '-l', '1', pdf, `${OUT}/${name}/${name}`], { encoding: 'utf8' });
   if (ppm.status !== 0) throw new Error(`${name}: pdftoppm exited ${ppm.status}\n${ppm.stderr}`);
   // poppler zero-pads the page number to the document's page count
@@ -73,6 +92,6 @@ for (const name of ORDER) {
   const raster = readdirSync(`${OUT}/${name}`).find(f => new RegExp(`^${name}-\\d+\\.png$`).test(f));
   if (!raster) throw new Error(`${name}: pdftoppm produced no front-page png`);
   renameSync(`${OUT}/${name}/${raster}`, `${OUT}/${name}/${name}.png`);
-  console.log(`${name}: front page png ${name}.png`);
+  console.log(`${name}: front page png ${name}.png; all ${pages} pages rasterized at 144 dpi in ${AUDIT_DIR} for visual inspection`);
 }
-console.log('done');
+console.log(`done; full-page visual audit renders: ${AUDIT_DIR}`);

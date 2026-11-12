@@ -183,4 +183,26 @@ class WriteGuardTest < Minitest::Test
   def write_effect(content)
     Master::Core::Effect.new(verb: :write, args: { path:, content: })
   end
+
+  def test_openbsd_existing_files_are_refused_without_a_validated_manual_preflight
+    target = File.join(Master::REPO_ROOT, "OPENBSD/RUNBOOK.md")
+    verdict = @guard.verdict(path: target, content: File.binread(target))
+
+    assert_predicate verdict, :blocked?
+    assert_match(/RTFM_FIRST/, verdict.reason)
+  end
+
+  def test_fold_write_to_openbsd_is_blocked_by_the_same_manual_preflight_boundary
+    constitution = Master::Core::Constitution.load(data_dir: Master.data_path, verify: verifier)
+    memory = Master::Core::Memory.new(risk: :low)
+    memory.proof.mark_ideation_complete!
+    target = File.join(Master::REPO_ROOT, "OPENBSD/RUNBOOK.md")
+    effect = Master::Core::Effect.new(verb: :write, args: { path: target, content: File.binread(target) })
+
+    verdict = constitution.admit(effect, memory)
+
+    assert_kind_of Master::Core::Verdict::Block, verdict
+    assert_equal :openbsd_manual_preflight, verdict.by
+  end
+
 end

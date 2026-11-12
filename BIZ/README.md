@@ -1,4 +1,4 @@
-# biz — eight concepts, one pair each
+# BIZ — professional documents, one evidence-backed production chain
 
 Restored from the pub, pub2 and pub3 archives into the pub5 anlage and
 completed for Innovasjon Norge applications. One tree since 8 November 2026,
@@ -30,7 +30,61 @@ for this restoration. `__templates/` keeps the original bob, bob2 and bob3
 correspondence in HTML and PDF form — historical source material, not
 deliverables — and `research/` keeps the evidence notes.
 
-## The typographic contract
+## Scope and document profiles
+
+BIZ is a professional document studio, not only a business-plan archive. Its
+document families are:
+
+- **Business models and plans:** explore credible alternatives early, test the
+  riskiest assumptions, then produce a full plan when the model is supported.
+  The Innovasjon Norge plan series below remains the current Bob2 deliverable.
+  Use the nine Business Model Canvas areas as an initial completeness map, not a
+  substitute for validation; see the [Innovasjon Norge business-model guidance](https://www.innovasjonnorge.no/artikkel/hvordan-lage-forretningsmodell).
+- **Funding applications and proposals:** follow the recipient's current form,
+  eligibility, evaluation criteria, attachments, cost rules and evidence
+  requirements. Distinguish verified facts, attributed claims, assumptions and
+  projections.
+- **Legal and contract documents:** identify jurisdiction, governing law,
+  parties and capacity; define terms; keep operative clauses internally
+  consistent; align dates, term, renewal, termination, payment, delivery,
+  intellectual property, confidentiality, data protection, liability,
+  indemnities, dispute resolution, schedules and cross-references as relevant.
+  Cite authoritative source text and version dates. A qualified lawyer must
+  review legal instruments before execution. Automated checks do not establish
+  legal validity and these documents are not represented as legal advice.
+- **Corporate and governance documents:** board and shareholder resolutions,
+  policies, mandates, minutes, institutional strategies and approval records,
+  with clear authority, scope, effective date, ownership and version history.
+- **Financial and analytical reports:** reconcile every amount to one
+  traceable source-of-truth model; state currency, units, periods, assumptions,
+  methodology, sensitivity and limitations. Never silently mix actuals,
+  estimates and forecasts.
+
+**Layout is profile-specific.** Bob2's 156 x 234 mm hefte format is the
+established design for the existing business-plan series only. Do not skin a
+contract, board resolution or financial report with Bob2 merely because it is
+in BIZ. A4 is the default for legal, corporate and analytical documents unless
+the brief or receiving institution requires another format. Each profile sets
+its own page grid, measure, type hierarchy, headers, footers, folios, tables,
+notes, references and signature/approval zones.
+
+The production bar applies to every page: embedded fonts and correct glyphs;
+stable pagination; no clipping or accidental overflow; controlled widows and
+orphans; sound table and figure breaks; legible notes; working links and
+cross-references; semantic headings, bookmarks, reading order and metadata;
+and sufficient contrast and accessible structure. Render every PDF page into
+an external audit directory and inspect every page at normal reading size and
+print scale. PDF/UA is used when accessibility conformance is required; PDF/A
+when archival preservation is required. Neither standard replaces a content
+and design review. Rasterizing all pages proves renderability, not human
+approval.
+
+No published legal-document family is claimed as complete by this scope
+definition. Its jurisdiction, provenance, structural and human-review gates
+must be implemented and passed for each actual legal deliverable before it is
+released.
+
+## The business-plan typographic contract
 
 Johann, 2026-11-07: "all business plans must use bob2.html as starter
 template". bob2's token vocabulary is the starter of every plan: the

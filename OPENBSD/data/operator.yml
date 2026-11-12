@@ -43,6 +43,8 @@ manual_page_policy:
     examples_are_not_an_allowlist: true
     non_native_prose_and_data: full_source_and_schema_contract_review
   receipt_fields: [hostname, os_release, architecture, page, section, source, sha256, bytes, lines, complete]
+  source_read_fields: [path, content, sha256, bytes, lines, complete]
+  task_contract_fields: [scope, source_reads, native_interfaces, manual_pages]
   receipt_requires_full_content_read: true
   bootstrap_exceptions: [manual_reader, minimum_read_only_target_identity_probe]
   reject: [synopsis_only, search_excerpt, remembered_behavior, current_manual_for_older_release, missing_page, truncated_output, unverified_digest]
