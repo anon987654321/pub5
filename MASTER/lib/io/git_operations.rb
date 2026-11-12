@@ -74,6 +74,31 @@ module Master
         # quietly pushing every intermediate repair straight to main. A branch
         # without an upstream is a normal first-push case, not permission to use
         # Git's implicit push.default behavior.
+        # Verify the ref we actually pushed, not @{u}. A new local branch has
+        # no upstream until its first push, and topic branches may deliberately
+        # track origin/main while publishing to origin/<topic>.
+        def verify_push_target!
+          remote, target = push_target
+          branch = target.delete_prefix("HEAD:")
+          remote_ref = "refs/heads/#{branch}"
+          remote_out, remote_status = Master::Io::Exec.capture2e(
+            "git", "-C", @root_path, "ls-remote", "--heads", remote, remote_ref
+          )
+          raise "git push verification could not read #{remote}/#{branch}: #{remote_out.to_s.strip}" unless remote_status.success?
+
+          remote_sha = remote_out.to_s.lines.filter_map do |line|
+            sha, ref = line.split
+            sha if ref == remote_ref
+          end.first
+          raise "git push verification found no remote ref #{remote}/#{branch}" unless remote_sha
+
+          local_sha, local_status = Master::Io::Exec.capture2e("git", "-C", @root_path, "rev-parse", "HEAD")
+          raise "git push verification could not read local HEAD: #{local_sha.to_s.strip}" unless local_status.success?
+          return true if remote_sha == local_sha.to_s.strip
+
+          raise "git push left HEAD #{local_sha.to_s.strip[0, 12]} absent from #{remote}/#{branch} at #{remote_sha[0, 12]}"
+        end
+
         def push_target
           branch_out, branch_status = Master::Io::Exec.capture2e(
             "git", "-C", @root_path, "symbolic-ref", "--quiet", "--short", "HEAD"
