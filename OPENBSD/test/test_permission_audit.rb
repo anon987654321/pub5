@@ -29,6 +29,56 @@ class TestPermissionAudit < Minitest::Test
   end
 
   # The 2026-09-09 TTS outage: the daemon could not write its own log.
+  def test_a_private_secret_must_be_root_owned_and_app_grouped
+    failures = audit(
+      secrets: [{
+        path: "/etc/brgen.env", mode: 0o100640,
+        owner: "root", group: "brgen",
+        expected_owner: "root", expected_group: "brgen"
+      }]
+    )
+
+    assert_empty failures
+  end
+
+  def test_a_private_secret_with_the_wrong_owner_fails
+    failures = audit(
+      secrets: [{
+        path: "/etc/brgen.env", mode: 0o100600,
+        owner: "nobody", group: "brgen",
+        expected_owner: "root", expected_group: "brgen"
+      }]
+    )
+
+    assert_equal 1, failures.length
+    assert_includes failures.first, "owned by nobody, expected root"
+  end
+
+  def test_a_private_secret_with_the_wrong_group_fails
+    failures = audit(
+      secrets: [{
+        path: "/etc/brgen.env", mode: 0o100640,
+        owner: "root", group: "wheel",
+        expected_owner: "root", expected_group: "brgen"
+      }]
+    )
+
+    assert_equal 1, failures.length
+    assert_includes failures.first, "has group wheel, expected brgen"
+  end
+
+  def test_private_storage_must_be_owned_by_its_app_user
+    failures = audit(
+      private_dirs: [{
+        path: "/home/amber/app/storage", mode: 0o040750,
+        owner: "root", expected_owner: "amber"
+      }]
+    )
+
+    assert_equal 1, failures.length
+    assert_includes failures.first, "owned by root, expected amber"
+  end
+
   def test_a_daemon_log_owned_by_root_fails
     lines = audit(daemon_logs: [{ path: ".master/tts-worker-1.log", owner: "root" }])
 
