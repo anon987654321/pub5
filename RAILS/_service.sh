@@ -56,8 +56,9 @@ install_rcd() {
 }
 
 # relayd_confirm_live PORT
-# Post-restart verification, deliberately separate from the pre-restart config
-# validation above it.
+# Deploy-time proxy-listener verification, separate from route configuration.
+# This runs before the app restart; application health is checked after it by
+# post_restart_probe below.
 #
 # `rcctl restart relayd` returns 0 when the start command succeeded, and that is
 # not the same claim as "relayd is serving". On 2026-08-10 the ca process died
@@ -93,7 +94,7 @@ relayd_confirm_live() {
     end
     exit 1
   ' 443 "$deadline"; then
-    log_ok "relayd: 443 accepting after restart"
+    log_ok "relayd: 443 accepting during deploy preflight"
     return 0
   fi
 
@@ -110,6 +111,28 @@ relayd_confirm_live() {
   else
     log_err "relayd: 443 refused for ${deadline}s and so did ${app_port} - check the app before blaming relayd"
   fi
+  return 1
+}
+
+# post_restart_probe APP_NAME APP_PORT [MAX_TRIES]
+# Prove the Rails process answers its own liveness endpoint after rcctl restart.
+# Falcon can take longer than one connection timeout to boot, so retry boundedly.
+post_restart_probe() {
+  local app_name=$1 app_port=$2 max_tries=${3:-12}
+  local attempt=1
+
+  while (( attempt <= max_tries )); do
+    if curl -fsS -m 10 -o /dev/null "http://127.0.0.1:${app_port}/up" 2>/dev/null; then
+      log_ok "${app_name}: /up answering on :${app_port} after ${attempt} attempt(s)"
+      return 0
+    fi
+    if (( attempt < max_tries )); then
+      sleep 5
+    fi
+    attempt=$(( attempt + 1 ))
+  done
+
+  log_err "${app_name}: /up never answered on :${app_port} after ${max_tries} attempts"
   return 1
 }
 
