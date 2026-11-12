@@ -491,7 +491,7 @@ module Master
                     "FAIL"
                   elsif statuses.include?("BLOCKED")
                     "BLOCKED"
-                  elsif statuses.include?("INCONCLUSIVE") || matrix[:status] != "complete"
+                  elsif statuses.include?("INCONCLUSIVE", "NOT_RUN") || matrix[:status] != "complete"
                     "INCONCLUSIVE"
                   elsif statuses.include?("PASS")
                     "PASS"
@@ -525,7 +525,7 @@ module Master
       def matrix_summary
         summary = read(@ledger, :summary, {})
         surface_complete = read(@surface_report, :complete)
-        complete = read(summary, :complete) == true && (surface_complete.nil? || surface_complete == true)
+        complete = read(summary, :complete) == true && surface_complete == true
         {
           status: complete ? "complete" : "incomplete",
           surface_evidence: surface_complete.nil? ? "NOT_RUN" : (surface_complete ? "PASS" : "INCONCLUSIVE"),
@@ -619,7 +619,10 @@ module Master
         documents = target_has?("BIZ") || @files.any? { |path| path.match?(/\.(?:pdf|docx|xlsx|pptx)\z/i) }
         rails = target_has?("RAILS")
         openbsd = target_has?("OPENBSD")
-        studio = target_has?("STUDIO") || @files.any? { |path| path.match?(/\.(?:wav|mp3|m4a|aac|ogg|flac)\z/i) }
+        audio = @files.any? { |path| path.match?(/\.(?:wav|mp3|m4a|aac|ogg|flac)\z/i) } ||
+          @target.match?(%r{(?:\A|/)STUDIO/dilla(?:/|\z)})
+        visual_media = @files.any? { |path| path.match?(/\.(?:png|jpe?g|gif|webp|avif|svg|mp4|mov|webm)\z/i) } ||
+          @target.match?(%r{(?:\A|/)STUDIO/postpro(?:/|\z)})
         biz = target_has?("BIZ")
         {
           local_test_suite: local_surface("tests"),
@@ -631,11 +634,14 @@ module Master
           assistive_technology: external_row(
             rails, "browser and DOM checks do not prove screen-reader or real-device acceptance",
           ),
+          visual_media_review: external_row(
+            visual_media && !rails, "asset signatures and source inspection do not prove composition, hierarchy or optical quality of rendered media",
+          ),
           live_openbsd_host: external_row(
             openbsd, "local manifests do not prove the live host, daemon or deployed service state",
           ),
           human_listening: external_row(
-            studio, "asset integrity and signal checks do not establish musical or listening quality",
+            audio, "asset integrity and signal checks do not establish musical or listening quality",
           ),
           business_and_legal_review: external_row(
             biz, "business assumptions, factual claims and legal effect require qualified human review",

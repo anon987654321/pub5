@@ -3918,7 +3918,7 @@ law_catalogue:
     PROSE_ACTIVE_VOICE_NB:
       definition_sources: [MASTER/law/prose.rb]
       severity: info
-      languages: [yaml, html]
+      languages: [yaml, html, markdown]
     PROSE_ACTIVE_VOICE_EN_VALUES:
       definition_sources: [MASTER/law/prose.rb]
       severity: info
@@ -3930,8 +3930,8 @@ law_catalogue:
     PROSE_OMIT_QUALIFIERS_NB:
       definition_sources: [MASTER/law/prose.rb]
       severity: warning
-      languages: [yaml, html]
-      # Bokmål reaches translation values and BIZ HTML only. Scoped there, `bare` is Norwegian.
+      languages: [yaml, html, markdown]
+      # Bokmål reaches translation values and BIZ HTML/Markdown. Scoped there, `bare` is Norwegian.
     PROSE_OMIT_QUALIFIERS_EN_VALUES:
       definition_sources: [MASTER/law/prose.rb]
       severity: warning
