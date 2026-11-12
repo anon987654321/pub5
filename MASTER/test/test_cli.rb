@@ -988,6 +988,7 @@ def test_spinner_names_the_provider_actually_waiting_or_streaming
                @cli.send(:stage_for, "llm:send", model: "claude-cli:claude-opus-5-5")
   assert_equal "streaming grok-cli",
                @cli.send(:stage_for, "llm:stream_started", model: "grok-cli:auto")
+  assert_equal "stopping", @cli.send(:stage_for, "user:interrupt", reason: "stop")
 end
 
 def test_spinner_provider_changes_when_a_fallback_lane_is_sent
@@ -1079,12 +1080,17 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     assert_equal "err0: unknown command: /dmesg\n", out
   end
 
-  def test_a_cancelled_turn_prints_nothing
-    out, = capture_io do
+  def test_a_cancelled_turn_reports_only_after_abort_is_confirmed
+    token = Master::Core::CancellationToken.new
+    token.cancel!(reason: "/stop requested cancellation")
+    @cli.instance_variable_set(:@turn_cancellation, token)
+
+    out, err = capture_io do
       @cli.send(:display_result, result: Master::Result.err("interrupted", category: :abort), accumulated: "", streamed: false)
     end
 
-    assert_empty out
+    assert_match(/turn0: cancelled by \/stop/, out + err)
+    refute_match(/answered|complete/i, out + err)
   end
 
   # A late cursor-position reply was saved as "[38;51Rh" and replayed each boot.
@@ -1418,12 +1424,49 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     turn = Object.new
     children = Object.new
     called = nil
-    @cli.define_singleton_method(:cancel_turn) { |actual_turn, actual_children| called = [actual_turn, actual_children] }
+    @cli.define_singleton_method(:cancel_turn) do |actual_turn, actual_children, reason:|
+      called = [actual_turn, actual_children, reason]
+    end
 
     @cli.send(:request_or_interrupt_turn, turn, children, reason: "ctrl_c")
 
-    assert_equal [turn, children], called
+    assert_equal [turn, children, "ctrl_c"], called
     assert_predicate token, :cancelled?
+  end
+
+  def test_stop_interactive_queue_uses_the_shared_cancellation_policy
+    turn = Object.new
+    turn.define_singleton_method(:alive?) { true }
+    turn.define_singleton_method(:join) { |*_args| self }
+    children = Object.new
+    requested = nil
+    @cli.instance_variable_set(:@pipeline_thread, turn)
+    @cli.instance_variable_set(:@turn_children, children)
+    @cli.define_singleton_method(:request_or_interrupt_turn) do |actual_turn, actual_children, reason:|
+      requested = [actual_turn, actual_children, reason]
+    end
+
+    output, = capture_io { @cli.send(:stop_interactive_queue) }
+
+    assert_equal [turn, children, "stop"], requested
+    assert_match(/cancellation requested/, output)
+    assert @cli.instance_variable_get(:@turn_queue_paused)
+  end
+
+  def test_non_fold_stop_receipt_preserves_stop_instead_of_claiming_ctrl_c
+    events = []
+    bus = Object.new
+    bus.define_singleton_method(:publish) { |event, **details| events << [event, details] }
+    @cli.instance_variable_set(:@refs, Struct.new(:bus).new(bus))
+    turn = Object.new
+    killed = false
+    turn.define_singleton_method(:kill) { killed = true }
+    children = Object.new
+
+    @cli.send(:cancel_turn, turn, children, reason: "stop")
+
+    assert killed
+    assert_equal ["user:interrupt", { reason: "stop", source: "cli", children: }], events.fetch(0)
   end
 
   def test_dispatch_stop_race_uses_cooperative_policy_for_fold_work
