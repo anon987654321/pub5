@@ -101,10 +101,15 @@ module Master
         @lock.synchronize do
           promote_pending = @promote_pending
           progress = @max_passes.positive? ? "pass #{@pass}/#{@max_passes}" : "read-only"
-          parts = ["fix0: #{progress}", run_part, @unit, phase_part, files_part, fixes_part,
-                   lane_part(elapsed), "tokens = #{tokens} (#{self.class.human_count(tokens)})",
-                   "elapsed = #{elapsed.round}s (#{self.class.human_time(elapsed)})", pass_eta(eta),
-                   "load #{format("%.1f", @load.call)}"]
+          parts = if Master::Trace::Dmesg.verbose?
+                    ["fix0: #{progress}", run_part, @unit, phase_part, files_part, fixes_part,
+                     lane_part(elapsed), "tokens = #{tokens} (#{self.class.human_count(tokens)})",
+                     "elapsed = #{elapsed.round}s (#{self.class.human_time(elapsed)})", pass_eta(eta),
+                     "load #{format("%.1f", @load.call)}"]
+                  else
+                    ["fix0: #{progress}", @unit, phase_part, files_part, fixes_part,
+                     lane_part(elapsed), "elapsed #{self.class.human_time(elapsed)}", pass_eta(eta)]
+                  end
           text = parts.compact.join(" ")
         end
         # Promoted on the ticker thread, outside every event handler's lock
@@ -453,14 +458,18 @@ module Master
         module_function
 
         def lines(root:, target:, max_passes:, limits:, now: Time.now, probes: {})
+          fix_line = "fix0 at mainbus0: target #{target}, passes #{max_passes}, #{limits}"
+          model = model_line(probes[:choice] || boot_choice)
+          return [fix_line, model] unless Master::Trace::Dmesg.verbose?
+
           [
             "MASTER #{Master::VERSION} (FIX) ##{probes[:sha] || head_sha(root)}: #{stamp(now)}",
             "    #{ENV.fetch("USER", "master")}@#{Socket.gethostname}:#{root}",
             mem_line(probes[:mem] || physical_bytes),
             "ncpu = #{Etc.nprocessors}",
-            "fix0 at mainbus0: target #{target}, passes #{max_passes}, #{limits}",
+            fix_line,
             *lane_lines(probes[:states] || lane_states),
-            model_line(probes[:choice] || boot_choice),
+            model,
             *triangle_lines(target, probes[:ports] || probe_ports),
           ]
         end

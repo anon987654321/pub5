@@ -29,6 +29,7 @@ class TestBinRuby < Minitest::Test
     out, err, status = unbundled { Open3.capture3(BIN, "-e", "print RUBY_VERSION, ' ', ARGV.join(',')", "--", "a b", "c") }
 
     assert status.success?, err
+    assert_empty err
     assert_match(/\A\d+\.\d+\.\d+ a b,c\z/, out)
   end
 

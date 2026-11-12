@@ -80,7 +80,7 @@ module Master
         return false unless yjit_available?
 
         RubyVM::YJIT.enable
-        Master::Trace::Dmesg.status("jit0", "yjit enabled, #{reason}")
+        Master::Trace::Dmesg.status("jit0", "yjit enabled, #{reason}") if Master::Trace::Dmesg.verbose?
         true
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "Runtime::Jit.enable_yjit!")
@@ -95,7 +95,7 @@ module Master
         result = RubyVM::ZJIT.enable
         enabled = zjit_enabled?
         state = enabled ? "enabled" : "not enabled"
-        Master::Trace::Dmesg.status("jit0", "zjit #{state}, #{reason}")
+        Master::Trace::Dmesg.status("jit0", "zjit #{state}, #{reason}") if !enabled || Master::Trace::Dmesg.verbose?
         enabled || result == true
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "Runtime::Jit.enable_zjit!")

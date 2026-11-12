@@ -43,6 +43,27 @@ class TestFixModelPhaseGuards < Minitest::Test
     assert Master::Io::LaneQuota.dead?("mutelane:a")
   end
 
+  def test_preflight_probe_stops_after_first_provider_answers
+    asked = []
+    rows = Probe.run(
+      models: %w[deadlane:model goodlane:model untouchedlane:model],
+      max_lanes: 3,
+      stop_on_success: true,
+      budget: 1,
+      ask: lambda { |model|
+        asked << model
+        raise "offline" if model.start_with?("deadlane")
+
+        "OK"
+      }
+    )
+
+    assert_equal %w[deadlane:model goodlane:model], asked
+    assert_equal %i[dead ok], rows.map(&:status)
+    assert Master::Io::LaneQuota.dead?("deadlane:model")
+    refute Master::Io::LaneQuota.dead?("goodlane:model")
+  end
+
   def test_a_lane_failing_twice_is_dropped_and_not_asked_again
     refute Ledger.lane_failed("flaky:model")
     assert Ledger.lane_failed("flaky:model")

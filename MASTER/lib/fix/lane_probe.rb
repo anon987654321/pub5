@@ -13,7 +13,8 @@ module Master
     module LaneProbe
       PROMPT = "Reply with the single word OK."
       BUDGET_S = 20
-      MAX_LANES = 6
+      # Keep the ranked front while reserving four places for independent free/keyless providers.
+      MAX_LANES = 12
 
       Row = Struct.new(:lane, :model, :status, :seconds, :detail, keyword_init: true)
 
@@ -28,19 +29,31 @@ module Master
       # Probes the first model of each distinct live lane, in selection order,
       # and drops the lanes that are slow or dead. `ask` is
       # ->(model) { reply }, so a test drives it with a fake lane.
-      def run(models:, ask:, budget: budget_s, max_lanes: MAX_LANES, clock: -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) })
-        rows = pick(models, max_lanes).map { |model| probe(model, ask:, budget:, clock:) }
-        rows.reject { |row| row.status == :ok }.each do |row|
-          Master::Io::LaneQuota.drop_for_run!(row.lane, "probe #{row.status}: #{row.detail}")
+      def run(models:, ask:, budget: budget_s, max_lanes: MAX_LANES, stop_on_success: false,
+              clock: -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) })
+        rows = []
+        pick(models, max_lanes).each do |model|
+          row = probe(model, ask:, budget:, clock:)
+          rows << row
+          Master::Io::LaneQuota.drop_for_run!(row.lane, "probe #{row.status}: #{row.detail}") unless row.status == :ok
+          break if stop_on_success && row.status == :ok
         end
-        rows.each { |row| say(row) }
+        rows.each { |row| say(row) } if Master::Trace::Dmesg.verbose?
         say_verdict(rows)
         rows
       end
 
+      # A dead paid prefix must not hide the keyless recovery floor.
       def pick(models, max_lanes)
         lanes = Master::Io::LaneState
-        Master::Io::LaneSelection.order(Array(models)).uniq { |model| lanes.lane_of(model) }.first(max_lanes)
+        ordered = Master::Io::LaneSelection.order(Array(models)).uniq { |model| lanes.lane_of(model) }
+        return ordered.first(max_lanes) if ordered.length <= max_lanes
+
+        free, preferred = ordered.partition do |model|
+          Master::Io::LaneSelection.kind(model) == :free
+        end
+        free_slots = [free.length, [(max_lanes / 3.0).ceil, 4].min].min
+        (preferred.first(max_lanes - free_slots) + free.first(free_slots)).first(max_lanes)
       end
 
       def probe(model, ask:, budget:, clock:)
@@ -66,8 +79,12 @@ module Master
       end
 
       def say_verdict(rows)
-        live = rows.count { |row| row.status == :ok }
-        text = live.zero? ? "lane probe: no lane answered within budget; the model phase has nothing to run on" : "lane probe: #{live} of #{rows.size} lane(s) usable"
+        winner = rows.find { |row| row.status == :ok }
+        text = if winner
+                 "lane probe: #{Master::Io::LaneSelection.provider(winner.model)} answered after #{rows.size} check(s)"
+               else
+                 "lane probe: no reply from #{rows.size} eligible provider(s)"
+               end
         Master::Trace::Dmesg.status("fix0", text)
       end
 

@@ -78,7 +78,14 @@ if [ -n "$GENERIC_RUBY" ]; then
   add_candidate "$GENERIC_RUBY"
   if [ "$BEST_RUBY" = "$GENERIC_RUBY" ]; then
     ACTUAL=$("$GENERIC_RUBY" -e 'print RUBY_VERSION')
-    [ "${MASTER_QUIET:-0}" = 1 ] || printf '%s\n' "ruby0: using installed Ruby $ACTUAL ($GENERIC_RUBY)" >&2
+    VERBOSE=${MASTER_DMESG:-}
+    case "$VERBOSE" in 1|true|yes|verbose|trace|everything) SHOW_RUBY=1 ;; *) SHOW_RUBY=0 ;; esac
+    for arg in "$@"; do
+      case "$arg" in --verbose|--boot-status|--trace|--detail|--everything) SHOW_RUBY=1 ;; esac
+    done
+    if [ "${MASTER_QUIET:-0}" != 1 ] && [ "$SHOW_RUBY" = 1 ]; then
+      printf '%s\n' "ruby0: using installed Ruby $ACTUAL" >&2
+    fi
     exec "$GENERIC_RUBY" "$@"
   fi
 fi

@@ -18,7 +18,7 @@ class TestFixLanePreflight < Minitest::Test
   # needs and a bounded candidate list, so a test never probes the host's
   # real catalogue.
   class ProbingAgent < Agent
-    def initialize(routes, answers: false, candidates: %w[fake:a fake:b])
+    def initialize(routes, answers: false, candidates: %w[fake-a:model fake-b:model])
       super(routes)
       @answers = answers
       @candidates = candidates
@@ -50,25 +50,27 @@ class TestFixLanePreflight < Minitest::Test
     lines = []
     result = nil
 
-    Master::Trace::Dmesg.stub(:status, ->(_unit, text, **) { lines << text }) do
-      Master::Io::LaneSelection.stub(:live_lanes, live) do
-        result = Preflight.check(agent: Agent.new(routes), env:)
+    Master::Trace::Dmesg.stub(:verbose?, true) do
+      Master::Trace::Dmesg.stub(:status, ->(_unit, text, **) { lines << text }) do
+        Master::Io::LaneSelection.stub(:live_lanes, live) do
+          result = Preflight.check(agent: Agent.new(routes), env:)
+        end
       end
     end
     [result, lines]
   end
 
-  def probe(routes, live:, answers: false, candidates: %w[fake:a fake:b])
+  def probe(routes, live:, answers: false, candidates: %w[fake-a:model fake-b:model])
     lines = []
     result = nil
 
-    Master::Trace::Dmesg.stub(:status, ->(_unit, text, **) { lines << text }) do
-      Master::Io::LaneSelection.stub(:live_lanes, live) do
-        # alive? reads host keys and binaries; a test names its own candidates
-        # and declares them alive.
-        Master::Io::LaneSelection.stub(:alive?, ->(_id) { true }) do
-          agent = ProbingAgent.new(routes, answers:, candidates:)
-          result = Preflight.check(agent:, env: {})
+    Master::Trace::Dmesg.stub(:verbose?, false) do
+      Master::Trace::Dmesg.stub(:status, ->(_unit, text, **) { lines << text }) do
+        Master::Io::LaneSelection.stub(:live_lanes, live) do
+          Master::Io::LaneSelection.stub(:alive?, ->(_id) { true }) do
+            agent = ProbingAgent.new(routes, answers:, candidates:)
+            result = Preflight.check(agent:, env: {})
+          end
         end
       end
     end
@@ -115,17 +117,19 @@ class TestFixLanePreflight < Minitest::Test
     result, lines = probe({}, live: [OPUS], answers: false)
 
     assert_kind_of Master::Result::Err, result
-    assert_match(/no model lane answered the preflight probe/, result.message)
-    assert_match(/MASTER_FIX_PROBE=0/, result.message)
+    assert_match(/no model provider answered after 2 readiness checks/, result.message)
+    assert_includes result.message, "/doctor keyless"
+    refute_includes result.message, "MASTER_FIX_PROBE=0"
     assert_equal :offline, result.category
-    assert(lines.any? { |line| line.include?("lane probe fake (fake:a)") })
+    assert_includes lines, "lane probe: no reply from 2 eligible provider(s)"
   end
 
   def test_a_catalogue_with_nothing_alive_is_refused_without_a_call
     result, lines = probe({}, live: [OPUS], answers: true, candidates: [])
 
     assert_kind_of Master::Result::Err, result
-    assert_match(/every catalogue lane is marked dead or spent/, result.message)
+    assert_match(/no eligible model provider is available/, result.message)
+    assert_includes result.message, "/doctor keyless"
     refute(lines.any? { |line| line.include?("lane probe") })
   end
 
@@ -147,5 +151,37 @@ class TestFixLanePreflight < Minitest::Test
 
     assert_nil result
     refute_predicate Preflight, :probed?
+  end
+
+  def test_default_route_and_skipped_lane_details_are_quiet
+    lines = []
+    Master::Trace::Dmesg.stub(:verbose?, false) do
+      Master::Trace::Dmesg.stub(:status, ->(_unit, text, **) { lines << text }) do
+        Master::Io::LaneSelection.stub(:live_lanes, [OPUS]) do
+          Preflight.check(agent: Agent.new({}), env: {})
+        end
+      end
+    end
+
+    assert_empty lines
+  end
+
+  def test_probe_reserves_capacity_for_all_discovered_keyless_providers
+    premium = (1..10).map { |index| "premium#{index}:model" }
+    keyless = %w[
+      llm7:codestral-latest
+      kilo:openrouter/free
+      ovh:gpt-oss-120b
+      pollinations:openai-fast
+    ]
+    models = premium + keyless
+
+    Master::Io::LaneSelection.stub(:order, ->(ids, **_options) { ids }) do
+      Master::Io::LaneSelection.stub(:kind, ->(id, **_options) { keyless.include?(id) ? :free : :remote }) do
+        selected = Master::Fix::LaneProbe.pick(models, 12)
+        keyless.each { |id| assert_includes selected, id }
+        assert_equal 12, selected.size
+      end
+    end
   end
 end

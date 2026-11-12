@@ -507,10 +507,13 @@ files (`MASTER_AUTOFIX_MAX_FILES`); the rest are named in the pass summary.
 writes nothing, dry writes the diff to `.master/autofix-<time>.patch` and leaves
 every file as it was.
 
-The model phase is bounded the same way. Before the first file it sends each
-live lane one tiny request (`Fix::LaneProbe`, 20 s, `MASTER_FIX_PROBE_S`;
-`MASTER_FIX_PROBE=0` skips it) and drops any lane that errors or answers late
-for the rest of the run. Each file gets 240 s of model time
+The model phase is bounded the same way. Before the first file it sends a tiny
+readiness request through up to twelve distinct lanes (`Fix::LaneProbe`, 20 s).
+The probe reserves up to four places for independently discovered keyless
+providers, drops failures for this run, and stops at the first real answer.
+A run with no answering provider is refused before the first file; use
+`/doctor keyless` or `/model list` to inspect availability. Detailed provider
+diagnostics are shown in verbose mode. Each file gets 240 s of model time
 (`MASTER_FIX_FILE_BUDGET_S`); a file that spends it is skipped and named in the
 summary, and a lane that fails twice is dropped for the run. A repair sends the
 failing finding with forty lines around it and asks for a minimal unified diff;

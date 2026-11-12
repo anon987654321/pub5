@@ -6,16 +6,10 @@ require_relative "lane_probe"
 module Master
   module Fix
     # Before /fix reads anything, print the model each kind of call will get
-    # and refuse to start on a free or local one while a better lane is live:
-    # on 2026-10-26 three runs read the tree on gemma3:4b because the router
-    # excluded an idle opus. MASTER_FIX_FREE_OK=1 accepts the free lane.
-    #
-    # The symmetric case is no lane at all. On 2026-11-12 an audit run entered
-    # pass 0 with every catalogue lane dead, spent or unreachable and paid 25
-    # failed model calls to rediscover that one call at a time, each web-chat
-    # refusal arriving after 17 to 163s. One bounded probe before the run
-    # answers the question once; a run with nothing to answer it is refused
-    # before its first pass. MASTER_FIX_PROBE=0 skips the probe.
+    # and refuse to start on a free or local one while a better lane is live.
+    # The bounded readiness pass reserves capacity for keyless providers,
+    # stops at the first real reply and refuses before touching the tree if
+    # every eligible provider fails. Provider-by-provider diagnostics are verbose.
     module LanePreflight
 
       OPERATIONS = %i[tree structural_review file_write code_generation].freeze
@@ -56,7 +50,7 @@ module Master
         OPERATIONS.map do |operation|
           model = agent.model_for(operation:).to_s
           Row.new(operation:, model:, kind: Master::Io::LaneSelection.kind(model))
-        end.each { |row| say("#{row.operation} -> #{row.model} (#{row.kind})") }
+        end.each { |row| say("#{row.operation} -> #{row.model} (#{row.kind})") if Master::Trace::Dmesg.verbose? }
       ensure
         Fiber[:master_operation] = nil
       end
@@ -64,6 +58,8 @@ module Master
       # One line per catalogue lane LaneState refuses, with the store and its
       # reason, so a run says which lanes it is not using and why.
       def explain_skipped
+        return unless Master::Trace::Dmesg.verbose?
+
         lanes = Master::Io::LaneSelection.catalogue.uniq { |id| Master::Io::LaneState.lane_of(id) }
         lanes.map { |id| Master::Io::LaneState.verdict(id) }.reject(&:usable?).each do |verdict|
           say("skipped #{verdict.model}: #{verdict.source}, #{verdict.reason}")
@@ -72,7 +68,7 @@ module Master
 
       def refuse(weak, better)
         message = "fix: #{weak.operation} would run on #{weak.model} (#{weak.kind}) while #{better} is live; " \
-                  "the router is excluding it. MASTER_FIX_FREE_OK=1 runs anyway"
+                  "routing disagrees with provider availability. Inspect /model list; no files were changed."
         say(message)
         Master::Result.err(message, category: :human_decision)
       end
@@ -89,10 +85,10 @@ module Master
         models = probed_models(agent)
         return refuse_dead_catalogue if models.empty?
 
-        rows = LaneProbe.run(models:, ask: LaneProbe.ask_with(agent))
+        rows = LaneProbe.run(models:, ask: LaneProbe.ask_with(agent), stop_on_success: true)
         return if rows.any? { |row| row.status == :ok }
 
-        refuse_no_lane
+        refuse_no_lane(rows)
       end
 
       def probed_models(agent)
@@ -107,16 +103,14 @@ module Master
       # Selection already holds a verdict on every lane (quota records, the
       # hand list); the skipped lines above name each one. No probe can help.
       def refuse_dead_catalogue
-        message = "fix: every catalogue lane is marked dead or spent; the model phase has nothing to run on"
-        say(message)
-        Master::Result.err("#{message}. Revive a lane or set MASTER_FIX_PROBE=0 to run without one",
+        message = "fix: no eligible model provider is available; all discovered lanes are unavailable or over quota"
+        Master::Result.err("#{message}. Inspect /doctor keyless or /model list; no files were changed.",
                            category: :offline)
       end
 
-      def refuse_no_lane
-        message = "fix: no model lane answered the preflight probe; the model phase has nothing to run on"
-        say(message)
-        Master::Result.err("#{message}. Start a lane or set MASTER_FIX_PROBE=0 to run without one",
+      def refuse_no_lane(rows)
+        message = "fix: no model provider answered after #{rows.size} readiness checks"
+        Master::Result.err("#{message}. Inspect /doctor keyless or /model list; no files were changed.",
                            category: :offline)
       end
 

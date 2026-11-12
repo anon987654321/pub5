@@ -54,48 +54,23 @@ class TestRenderer < Minitest::Test
     end
   end
 
-  def test_compact_splash_includes_the_registered_task_card
+  def test_compact_splash_shows_identity_and_host_without_routine_device_chatter
     text = strip_ansi(FakeRenderer.new(config: {}).splash("model"))
 
-    assert_includes text, Master::CLI::CommandRegistry.boot_capability_line
-    assert_match(/tasks0 at mainbus0: .*; \/help by task/, text)
+    assert_match(/\Amaster0 at mainbus0: MASTER 1\.0\.3 #\d+, model model/, text)
+    assert_match(/host0 at mainbus0: .*:/, text)
+    assert_includes text, "root on master0"
+    refute_match(/(?:tasks0|web0|voice0 at mainbus0|net0|bth0)/, text)
   end
 
-  def test_compact_splash_reports_web_configuration_as_unverified
-    renderer = FakeRenderer.new(config: {})
-
-    renderer.stub(:splash_web_url, "https://master.example.invalid") do
-      text = strip_ansi(renderer.splash("model"))
-
-      assert_includes text, "web0 at mainbus0: configured, unverified"
-      refute_includes text, "web0 at mainbus0: ready"
-    end
-
-    authenticated = FakeRenderer.new(config: { "web_token" => "present" })
-    authenticated.stub(:splash_web_url, "https://master.example.invalid") do
-      text = strip_ansi(authenticated.splash("model"))
-
-      assert_includes text, "web0 at mainbus0: configured, token set, unverified"
-      refute_includes text, "web0 at mainbus0: ready"
-    end
-  end
-
-  def test_compact_splash_calls_a_capability_probe_available_not_ready
+  def test_compact_splash_only_reports_degraded_voice_as_a_warning
     old_degraded = ENV["MASTER_TTS_DEGRADED"]
-    ENV.delete("MASTER_TTS_DEGRADED")
-    renderer = FakeRenderer.new(config: {})
+    ENV["MASTER_TTS_DEGRADED"] = "1"
 
-    Master::Voice::Speech.stub(:last_error, nil) do
-      Master::Voice::Playback.stub(:last_error, nil) do
-        Master::Voice::Playback.stub(:enabled?, true) do
-          Master::Voice::Playback.stub(:output_status, "detected, playback unverified") do
-            text = renderer.splash("model")
-            assert_includes strip_ansi(text), "voice0 at mainbus0: CLI speech on; detected, playback unverified"
-            refute_includes strip_ansi(text), "voice0 at mainbus0: ready"
-          end
-        end
-      end
-    end
+    text = strip_ansi(FakeRenderer.new(config: {}).splash("model"))
+
+    assert_includes text, "voice0: degraded; deterministic fallback active"
+    refute_match(/detected, playback unverified|CLI speech on/, text)
   ensure
     old_degraded.nil? ? ENV.delete("MASTER_TTS_DEGRADED") : ENV["MASTER_TTS_DEGRADED"] = old_degraded
   end
@@ -109,7 +84,7 @@ class TestRenderer < Minitest::Test
     Master::Voice::Playback.stub(:enabled?, false) do
       Master::Voice::Speech.stub(:last_error, "provider unavailable") do
         text = renderer.splash("model")
-        assert_includes strip_ansi(text), "voice0 at mainbus0: CLI speech off; degraded"
+        assert_includes strip_ansi(text), "voice0: degraded; deterministic fallback active"
       end
     end
   ensure

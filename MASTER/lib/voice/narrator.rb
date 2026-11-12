@@ -355,7 +355,8 @@ module Master
         reply
       rescue LaneWriter::Unavailable => e
         record_model_failure(now)
-        Master::Trace::Dmesg.once("voice0", "model narration unavailable; using deterministic templates (#{e.message})")
+        detail = Master::Trace::Dmesg.verbose? ? " (#{e.message})" : ""
+        Master::Trace::Dmesg.once("voice0", "model narration unavailable; using deterministic templates#{detail}")
         nil
       rescue StandardError => e
         record_model_failure(now)

@@ -45,30 +45,19 @@ module Master
 
         def compact_splash(context)
           model = short_model(context[:model])
-          # A configured URL and token are not a health check. Boot must not
-          # call the web surface ready without an observed request/response.
-          web = if splash_web_url.to_s.include?("http")
-                  @config["web_token"].to_s.empty? ? "configured, unverified" : "configured, token set, unverified, /pair issue for a code"
-                else
-                  "not configured"
-                end
-          # A command on PATH is only discovery, not a successful speaker test.
-          # Both compact and verbose boots use the same evidence-backed status.
-          voice = voice_output_status
-          [
-            d("master0 at mainbus0: MASTER #{release_version} ##{context[:build]}, configured model #{model}"),
+          lines = [
+            d("master0 at mainbus0: MASTER #{release_version} ##{context[:build]}, model #{model}"),
             d("host0 at mainbus0: #{context[:user]}@#{context[:host]}:#{@config['root'] || Dir.pwd}"),
-            d("voice0 at mainbus0: #{voice}"),
-            d("web0 at mainbus0: #{web}"),
-            d(Master::CLI::CommandRegistry.boot_capability_line),
-            *radio_lines,
-            d("root on master0"),
-          ].join("\n")
+          ]
+          # A degraded voice is actionable; a merely detected speaker or an
+          # unverified web endpoint is inventory, not startup news.
+          lines << d("voice0: degraded; deterministic fallback active") if voice_output_status.include?("degraded")
+          lines << d("root on master0")
+          lines.join("\n")
         rescue StandardError
           [
             d("master0 at mainbus0: MASTER #{release_version}"),
             d("host0 at mainbus0: #{context[:user]}@#{context[:host]}"),
-            d("voice0 at mainbus0: unknown"),
             d("root on master0"),
           ].join("\n")
         end

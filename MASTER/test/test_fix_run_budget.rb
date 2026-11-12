@@ -374,13 +374,30 @@ class TestFixRunBudget < Minitest::Test
     assert_includes summaries.last, " scope=0 "
   end
 
-  def test_banner_is_dmesg_shaped_with_not_configured_lines
-    lines = Master::Fix::RunPulse::Banner.lines(
-      root: "/r/MASTER", target: "RAILS", max_passes: 8, limits: "budget $50.0 / 480m", now: Time.at(0).utc,
-      probes: { sha: "abc1234", mem: 17_179_869_184,
-                states: ["claude-cli: live", "agy: quota spent, back in 140h44m (2026-10-17 04:12)"],
-                ports: { "amber" => false, "bsdports" => true } }
-    )
+  def test_banner_is_compact_by_default
+    lines = Master::Trace::Dmesg.stub(:verbose?, false) do
+      Master::Fix::RunPulse::Banner.lines(
+        root: "/r/MASTER", target: "RAILS", max_passes: 8, limits: "budget $50.0 / 480m",
+        probes: { choice: ["claude-cli:claude-opus-5-5", "availability"] }
+      )
+    end
+
+    assert_equal 2, lines.size
+    assert_match(/\Afix0 at mainbus0: target RAILS, passes 8, budget \$50\.0 \/ 480m\z/, lines[0])
+    assert_match(/\Amodel0 at fix0: claude-cli:claude-opus-5-5/, lines[1])
+    refute(lines.any? { |line| line.match?(/real mem|ncpu|lane\d|triangle0/) })
+  end
+
+  def test_verbose_banner_keeps_the_full_dmesg_inventory
+    lines = Master::Trace::Dmesg.stub(:verbose?, true) do
+      Master::Fix::RunPulse::Banner.lines(
+        root: "/r/MASTER", target: "RAILS", max_passes: 8, limits: "budget $50.0 / 480m", now: Time.at(0).utc,
+        probes: { sha: "abc1234", mem: 17_179_869_184,
+                  states: ["claude-cli: live", "agy: quota spent, back in 140h44m (2026-10-17 04:12)"],
+                  ports: { "amber" => false, "bsdports" => true },
+                  choice: ["claude-cli:claude-opus-5-5", "availability"] }
+      )
+    end
 
     assert_match(/\AMASTER \S+ \(FIX\) #abc1234: /, lines[0])
     assert_match(/\A    \S+@\S+:\/r\/MASTER\z/, lines[1])
@@ -388,8 +405,7 @@ class TestFixRunBudget < Minitest::Test
     assert_includes lines, "lane0 at fix0: claude-cli"
     assert_includes lines, "agy at fix0: not configured, quota spent, back in 140h44m (2026-10-17 04:12)"
     assert_includes lines, "amber0 at triangle0: not configured, port 61352 not answering"
-    refute(lines.any? { |l| l.start_with?("bsdports0") })
-    assert(lines.none? { |l| l.start_with?(" ") && !l.start_with?("    ") })
+    refute(lines.any? { |line| line.start_with?("bsdports0") })
   end
 
   def test_nested_fix_scopes_share_one_command_budget
