@@ -82,10 +82,49 @@ class TestDoctor < Minitest::Test
   # Every construction goes through the three-state struct. A stray `ok:` is an
   # ArgumentError at runtime, which is how this was found: doctor crashed on
   # its first check after the struct changed.
+  def test_empty_quota_ledger_is_unmeasured
+    check = model_quota_check(models: {}, exhausted: [], provider: nil)
+
+    assert_equal :unmeasured, check.state
+    assert_match(/no quota observations/, check.detail)
+  end
+
+  def test_fresh_provider_quota_is_measured_without_local_lane_history
+    check = model_quota_check(
+      models: {}, exhausted: [],
+      provider: { fresh: true, remaining: 12 },
+    )
+
+    assert_equal :pass, check.state
+    assert_match(/12 remaining/, check.detail)
+  end
+
+  def test_confirmed_provider_exhaustion_fails_without_local_lane_history
+    check = model_quota_check(
+      models: {}, exhausted: [],
+      provider: { fresh: true, remaining: 0 },
+    )
+
+    assert_equal :fail, check.state
+    assert_match(/openrouter:free/, check.detail)
+  end
+
   def test_doctor_does_not_swallow_master_boot_errors
     source = File.read(DOCTOR)
     refute_match(/require "master" rescue nil/, source)
     assert_match(/require "master"\n/, source)
+  end
+
+  def model_quota_check(snapshot)
+    require "io/model_quota"
+    definition = File.read(DOCTOR)[/^def check_model_quota.*?^end/m]
+    refute_nil definition, "check_model_quota moved; this test exercises the measured verdict"
+    host = Object.new
+    host.singleton_class.const_set(
+      :Check, Struct.new(:name, :state, :detail, keyword_init: true),
+    )
+    host.singleton_class.class_eval(definition)
+    Master::Io::ModelQuota.stub(:snapshot, ->(**) { snapshot }) { host.check_model_quota }
   end
 
   def test_keyless_probe_is_a_real_anonymous_completion_probe
