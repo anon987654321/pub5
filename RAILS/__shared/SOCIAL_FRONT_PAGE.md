@@ -61,6 +61,8 @@ TikTok:
 
 Brgen and Amber share one social-post anatomy: `shared/post_card` owns the post's reading structure and `shared/post_vote_rail` owns its vote controls. The app partials provide the facts and actions that belong to their own product. Brgen remains the local, community-aware stream; Amber remains the editorial, wardrobe-aware reading surface. A shared card is not a shared front page.
 
+The card's root is also a stable interaction boundary: its `article.feed-card.post-reading-card` carries `data-post-card="true"` and `data-post-id="ID"`. Future controllers can scope updates to one post without relying on title text, list position, or a broad feed selector. These attributes add no client-side state and do not turn the generic entity card into a social post.
+
 The card's live targets are deliberately small and stable:
 
 - `data-post-score="post_ID"` is the score value.
@@ -77,6 +79,8 @@ The event boundary matters as much as the markup:
 - A comment updates the global feed's count and refreshes only the affected post's detail stream. The detail thread is rendered again for each subscriber, so reply, delete and report controls are evaluated for that reader.
 - A real post-content edit or other card-changing mutation still refreshes the card/page. Related item or outfit changes must not be mistaken for a counter-only touch.
 - Brgen's city feed keeps its existing staged-arrival protocol: new cards wait in the hidden pending region until the reader chooses to reveal them. Amber keeps its editorial front-page rhythm; it does not inherit Brgen's city-arrival chip simply for sharing the post renderer.
+
+Brgen's vote and comment counters are emitted by their own commits. A post vote updates the score with SQL and broadcasts the score target; it does not touch the Post row or invalidate its cached card. A post comment moves the counter cache and broadcasts the count; it also does not touch the Post row. The polymorphic associations preserve touch behaviour for non-post records, so event/item/outfit activity is not silently changed by the social-post optimization.
 
 `shared/feed_card` remains the generic entity-card primitive for communities, channels, shows, matches, orders and other vertical records. It is not a second implementation of the social-post card. Marketplace listings, dating profiles, live video, maps, takeaway restaurants, ports and order flows keep their own content hierarchy and primary interaction.
 
