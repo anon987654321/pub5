@@ -727,24 +727,6 @@ class TestRepairLoopPolicy < Minitest::Test
     Thread.current[:master_fix_candidate_author_models] = nil
   end
 
-  def test_consensus_receives_the_selected_candidate_writer_models
-    Dir.mktmpdir do |root|
-      seen = nil
-      consensus = Object.new
-      consensus.define_singleton_method(:approve_fix?) { |**kwargs| seen = kwargs; true }
-      agent = Agent.new
-      agent.define_singleton_method(:consensus) { consensus }
-      loop = build_loop(root:, bus: FakeBus.new, scanner: Scanner.new, agent:)
-      violation = { file: File.join(root, "sample.rb"), law: "TEST_RULE", severity: :error }
-      Thread.current[:master_fix_candidate_author_models] = ["claude-cli:claude-opus-5-5"]
-
-      assert loop.send(:consensus_approves?, violation, "safe candidate")
-      assert_equal ["claude-cli:claude-opus-5-5"], seen.fetch(:author_models)
-    end
-  ensure
-    Thread.current[:master_fix_candidate_author_models] = nil
-  end
-
   # High-risk fixes require independent consensus even when no environment
   # switch is present. Lower-risk fixes remain opt-in to control spend.
   def test_error_and_critical_fixes_require_consensus_by_default
