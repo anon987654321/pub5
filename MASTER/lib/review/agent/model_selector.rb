@@ -55,6 +55,8 @@ module Master
           end
           task = @model_router.classify_intent(message) if task == :general && message
           chain = @model_router.fallback_chain(task_type: task)
+          return Array(chain).map(&:to_s).reject(&:empty?) if task == :nsfw
+
           bias = @homeostat&.model_tier_bias
           chain = cheap_first(chain) if bias == :cheap
           chain = strong_first(chain) if bias == :strong
