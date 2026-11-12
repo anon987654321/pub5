@@ -169,6 +169,15 @@ class TestWebChat < Minitest::Test
     assert_raises(Master::Io::WebChat::ProviderError) { chat.ask(prompt: "ping") }
   end
 
+  def test_ferrum_timeout_is_below_the_dispatcher_free_lane_ceiling
+    chat = build_chat
+    assert_equal 3, chat.send(:ferrum_timeout_s), "a provider-specific shorter limit remains authoritative"
+
+    chat.define_singleton_method(:timeout_seconds) { 120 }
+    assert_equal Master::Io::WebChat::FERRUM_TIMEOUT_S, chat.send(:ferrum_timeout_s)
+    assert_operator chat.send(:ferrum_timeout_s), :<, 60
+  end
+
   def test_slow_browser_cleanup_does_not_block_and_prevents_profile_reuse
     chat = build_chat
     release = Queue.new
