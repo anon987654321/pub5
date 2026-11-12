@@ -729,16 +729,23 @@ class TestKeylessRouting < Minitest::Test
     server&.close
   end
 
-  def test_browser_chat_remains_a_fallback_when_api_keys_are_configured
+  def test_browser_chat_is_not_an_automatic_fallback_when_paid_api_keys_are_configured
     ENV["OPENROUTER_API_KEY"] = "sk-or-v1-" + ("a" * 64)
     router = Master::CLI::Routing::ModelRouter.new(
       config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT,
     )
 
+    refute router.web_chat_enabled?
+    refute_includes router.fallback_chain(task_type: :exploration), "web-chat:grok"
+  end
+
+  def test_browser_chat_auto_activates_when_no_api_keys_are_configured
+    router = Master::CLI::Routing::ModelRouter.new(
+      config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT,
+    )
+
     assert router.web_chat_enabled?
-    chain = router.fallback_chain(task_type: :exploration)
-    assert_includes chain, "web-chat:grok"
-    assert_equal chain, router.send(:priority_fallback_order, chain)
+    assert_includes router.fallback_chain(task_type: :exploration), "web-chat:grok"
   end
 
   def test_browser_chat_can_be_disabled_explicitly
@@ -797,6 +804,17 @@ class TestKeylessRouting < Minitest::Test
 
     refute_includes positions, nil, "every lane in the fallback policy must be present"
     assert_equal positions.sort, positions, "fallback order must be premium, free API, browser, then local"
+  end
+
+  def test_master_keyless_explicitly_enables_browser_chat_even_when_keys_are_present
+    ENV["OPENROUTER_API_KEY"] = "sk-or-v1-" + ("a" * 64)
+    ENV["MASTER_KEYLESS"] = "1"
+    router = Master::CLI::Routing::ModelRouter.new(
+      config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT,
+    )
+
+    assert router.web_chat_enabled?
+    assert_includes router.fallback_chain(task_type: :exploration), "web-chat:grok"
   end
 
   def test_web_chat_enabled_with_master_web_chat_even_when_keys_present
