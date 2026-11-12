@@ -402,7 +402,7 @@ module Master
         source_staleness(preflight, root: repo_root)
       end
 
-      def refusal_for_command(command:, contract: nil, repo_root: Master::REPO_ROOT, receipt_path: nil)
+      def refusal_for_command(command:, contract: nil, repo_root: Master::REPO_ROOT, receipt_path: nil, force_remote: false)
         ensure_task_contract_loaded!
         contract ||= TaskContract.current
         text = command.to_s.strip
@@ -414,7 +414,7 @@ module Master
         end
 
         argv = Shellwords.shellsplit(text)
-        remote = openbsd_ssh_command?(argv)
+        remote = force_remote || openbsd_ssh_command?(argv)
         tokens = remote ? ssh_remote_command_tokens(argv) : argv
         remote_targets = remote ? remote_openbsd_path_sources(tokens) : []
         remote_targets.each do |relative|
@@ -462,6 +462,20 @@ module Master
         source_staleness(preflight, root: repo_root)
       rescue ArgumentError => error
         "RTFM_FIRST cannot parse operation argv for manual preflight: #{error.message}"
+      end
+
+      # The operator's direct Open3/exec SSH boundary has the same target
+      # semantics as Io::Shell. Its configured host is the OpenBSD operator
+      # endpoint even when an operator uses a private DNS alias.
+      def refusal_for_ssh_argv(ssh_argv:, remote_command:, contract: nil,
+                               repo_root: Master::REPO_ROOT, receipt_path: nil)
+        argv = Array(ssh_argv).map(&:to_s)
+        raise TaskContract::Invalid, "SSH preflight requires ssh as argv[0]" unless File.basename(argv.first.to_s) == "ssh"
+
+        refusal_for_command(
+          command: Shellwords.join(argv + [remote_command.to_s]),
+          contract:, repo_root:, receipt_path:, force_remote: true
+        )
       end
 
       def ssh_remote_command_tokens(argv)

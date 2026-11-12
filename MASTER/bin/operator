@@ -21,6 +21,7 @@ require "operator/strict_mode"
 require "operator/law_inventory"
 require "operator/memory_review"
 require_relative "../lib/trace/dmesg"
+require_relative "../lib/fix/task_contract"
 
 RUBY = Operator::RubyRunner.ruby_cmd
 BUNDLE = Operator::RubyRunner.bundle_cmd
@@ -140,10 +141,28 @@ def ssh_base_argv
   ]
 end
 
+# Direct Open3/exec SSH calls bypass Io::Shell, so the operator's one
+# transport boundary asks the same OpenBSD admission law before connecting.
+def ssh_manual_preflight_refusal(remote_cmd)
+  contract = Master::Fix::TaskContract.current ||
+    Master::Fix::TaskContract.build(
+      intent: "functional_change", scope: ["OPENBSD/**"], preserve: [], proof: []
+    )
+  Master::Fix::OpenBSDManualPreflight.refusal_for_ssh_argv(
+    ssh_argv: ssh_base_argv, remote_command: remote_cmd,
+    contract:, repo_root: ROOT
+  )
+rescue Master::Fix::TaskContract::Invalid => error
+  "RTFM_FIRST blocked: #{error.message}"
+end
+
 # Replace the process with ssh (no local retry — ConnectionAttempts covers
 # handshake retries). Log intent before exec; the -E file records the session.
 def ssh_run(remote_cmd)
   require "fileutils"
+  if (reason = ssh_manual_preflight_refusal(remote_cmd))
+    die("vps", reason, 78)
+  end
   summary = remote_cmd.to_s.gsub(/\s+/, " ")[0, 120]
   ssh_log("connect", "cmd=#{summary.inspect}")
   cmd = ssh_base_argv + [remote_cmd]
@@ -154,6 +173,9 @@ end
 def ssh_capture(remote_cmd, attempts: Integer(ENV.fetch("PUB5_SSH_RETRIES", "3")))
   require "fileutils"
   require "open3"
+  if (reason = ssh_manual_preflight_refusal(remote_cmd))
+    return ["RTFM_FIRST blocked: #{reason}", false]
+  end
   summary = remote_cmd.to_s.gsub(/\s+/, " ")[0, 120]
   delay = 2
   last_err = nil

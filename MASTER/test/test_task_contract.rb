@@ -891,4 +891,37 @@ class TestTaskContract < Minitest::Test
     )
   end
 
+
+  def test_direct_operator_ssh_adapter_requires_preflight_even_for_a_custom_host_alias
+    contract = CONTRACT.build(
+      intent: "functional_change", scope: ["OPENBSD/**"], preserve: [], proof: []
+    )
+    reason = Master::Fix::OpenBSDManualPreflight.refusal_for_ssh_argv(
+      ssh_argv: ["ssh", "-o", "BatchMode=yes", "dev@private-openbsd-alias"],
+      remote_command: "rcctl restart master",
+      contract:
+    )
+
+    assert_match(/openbsd_preflight/, reason)
+  end
+
+  def test_operator_ssh_adapter_leaves_manual_and_identity_bootstrap_available
+    ssh_argv = ["ssh", "-o", "BatchMode=yes", "dev@private-openbsd-alias"]
+    assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_ssh_argv(
+      ssh_argv:, remote_command: "man 8 rcctl"
+    )
+    assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_ssh_argv(
+      ssh_argv:, remote_command: "uname -srm"
+    )
+  end
+
+  def test_operator_ssh_adapter_does_not_reclassify_unrelated_ssh
+    reason = Master::Fix::OpenBSDManualPreflight.refusal_for_ssh_argv(
+      ssh_argv: ["ssh", "git@github.com"],
+      remote_command: "git-upload-pack /anon987654321/pub5.git"
+    )
+
+    assert_nil reason
+  end
+
 end
