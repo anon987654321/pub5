@@ -44,7 +44,6 @@ module Master
       # pid of the daemon this process last spawned for each pool slot, so a
       # replacement can retire its predecessor instead of orphaning it.
       @daemon_pids = {}
-      @daemon_waiters = {}
       @busy_strikes = {}
 
       module_function
@@ -81,19 +80,27 @@ module Master
         path
       end
 
-      # Takes one pool worker out of rotation by its socket path. Its pid is only known
-      # to the process that spawned it, so the daemon is also found by its command line;
-      # the next next_socket call respawns the slot.
+      # Retire only the worker this process spawned for a canonical pool slot.
+      # A socket can belong to another MASTER process; its pathname is not
+      # authority to discover and signal an arbitrary command-line match.
       def retire_socket(path, root: Master::ROOT)
-        index = path.to_s[/tts-(\d+)\.sock\z/, 1].to_i
+        expanded = File.expand_path(path.to_s)
+        index = (0...pool_size).find do |candidate|
+          expanded == File.expand_path(socket_path(root, index: candidate))
+        end
+        return false unless index
+
         with_daemon_lock(root, index:) do
-          retire_daemon(index)
-          out, status = Master::Io::Exec.capture2("pgrep", "-f", "tts-worker --daemon #{path}")
-          out.split.map(&:to_i).each { |pid| Process.kill("TERM", pid) rescue nil } if status.success?
-          File.unlink(path) if File.exist?(path)
+          return false unless @daemon_pids.key?(index)
+          retired = retire_daemon(index)
+          return false unless retired
+
+          File.unlink(expanded) if File.exist?(expanded) || File.symlink?(expanded)
+          true
         end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "TtsSupervisor.retire_socket")
+        false
       end
 
       def ensure_pool_worker!(root:, index:)
@@ -125,8 +132,20 @@ module Master
       #
       # Callers hold the pool-slot lock: ensure_pool_worker! is the only one.
       def replace_worker(root:, path:, index:)
-        retire_daemon(index)
-        File.unlink(path) if File.exist?(path)
+        # If the path exists but this process has no child identity for the slot,
+        # it may be owned by another MASTER. Leave both socket and worker alone.
+        if (File.exist?(path) || File.symlink?(path)) && !@daemon_pids.key?(index)
+          Master::Trace::Dmesg.status(
+            "tts0", "slot #{index} has an unowned socket path; refusing to unlink or replace it", io: $stderr
+          )
+          return false
+        end
+
+        if @daemon_pids.key?(index)
+          retired = retire_daemon(index)
+          return false unless retired
+        end
+        File.unlink(path) if File.exist?(path) || File.symlink?(path)
         spawn_daemon(root:, path:, index:)
         return back_off_after_failed_spawn(index) unless wait_for_socket(path)
 
@@ -153,8 +172,9 @@ module Master
           env, RbConfig.ruby, worker, "--daemon", path,
           chdir: root, out: log, err: log, **Master::Io::ProcessSpawn.options
         )
+        # Keep the daemon as a waitable child. This reserves its PID until
+        # retire_daemon reaps it, preventing PID reuse between validation and kill.
         @daemon_pids[index] = pid
-        @daemon_waiters[index] = Process.detach(pid)
       end
 
       # A worker that is synthesising cannot answer a health ping, because it is
@@ -181,46 +201,64 @@ module Master
         true
       end
 
-      # Stop the daemon this process started for `index`, if it is still around.
-      # Only ever touches a pid we spawned ourselves — never sweeps by process
-      # name, so a worker belonging to another MASTER process is left alone.
+      # Stop and reap only a direct child this supervisor still owns. Probe
+      # with waitpid before signalling; ECHILD means there is no kill authority.
       def retire_daemon(index)
-        pid = @daemon_pids.delete(index)
-        return if pid.nil?
+        pid = @daemon_pids[index]
+        return unless pid
 
-        waiter = @daemon_waiters.delete(index)
-        Process.kill("TERM", pid)
-        # Process.detach owns waitpid in another thread. Calling waitpid here raises
-        # ECHILD and used to skip the KILL escalation exactly when a worker was wedged.
-        if waiter
-          unless waiter.join(2.0)
-            Process.kill("KILL", pid) rescue Errno::ESRCH
-            waiter.join(1.0)
-          end
-        else
-          deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 2.0
-          while process_alive?(pid) && Process.clock_gettime(Process::CLOCK_MONOTONIC) < deadline
-            sleep POLL_INTERVAL_S
-          end
-          Process.kill("KILL", pid) if process_alive?(pid)
-          deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 1.0
-          while process_alive?(pid) && Process.clock_gettime(Process::CLOCK_MONOTONIC) < deadline
-            sleep POLL_INTERVAL_S
-          end
+        state = child_state(pid)
+        if state == :not_owned
+          @daemon_pids.delete(index)
+          return
         end
-        nil
-      rescue Errno::ESRCH, Errno::ECHILD
+        if state == :exited
+          @daemon_pids.delete(index)
+          return pid
+        end
+
+        Process.kill("TERM", pid)
+        unless wait_for_child(pid, 2.0)
+          # wait_for_child uses waitpid and the child remains unreaped, so this
+          # PID still names the same worker when the bounded escalation runs.
+          Process.kill("KILL", pid)
+          wait_for_child(pid, 1.0)
+        end
+        @daemon_pids.delete(index)
+        pid
+      rescue Errno::ESRCH
+        wait_for_child(pid, 0.1) if pid
+        @daemon_pids.delete(index)
+        pid
+      rescue Errno::ECHILD
+        @daemon_pids.delete(index)
         nil
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "TtsSupervisor.retire_daemon")
         nil
       end
 
-      def process_alive?(pid)
-        Process.kill(0, pid)
+      def child_state(pid)
+        waited = Process.waitpid(pid, Process::WNOHANG)
+        waited ? :exited : :running
+      rescue Errno::ECHILD
+        :not_owned
+      end
+
+      def wait_for_child(pid, seconds)
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + seconds
+        loop do
+          return true if Process.waitpid(pid, Process::WNOHANG)
+          return false if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+          sleep POLL_INTERVAL_S
+        end
+      rescue Errno::ECHILD
         true
-      rescue Errno::ESRCH, Errno::EPERM
-        false
+      end
+
+      def process_alive?(pid)
+        child_state(pid) == :running
       end
 
       def link_legacy_socket(root)
