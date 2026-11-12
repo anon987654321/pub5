@@ -179,6 +179,45 @@ class TestTraceSupport < Minitest::Test
     assert_includes redacted.first, "#{private_error.bytesize} bytes"
   end
 
+  def test_master_fault_completion_closes_the_dmesg_model_unit
+    console = Master::Trace::Dmesg::Console.new
+    Fiber[:master_unit] = "master0"
+
+    send_lines = Master::Trace::Dmesg.with_verbosity("verbose") do
+      console.lines(event: "llm:send", model: "test-provider:model")
+    end
+    finished_lines = Master::Trace::Dmesg.with_verbosity("verbose") do
+      console.lines(event: "llm:call_finished", model: "test-provider:model")
+    end
+
+    assert_equal ["llm0 at master0: test-provider:model"], send_lines
+    assert_equal ["llm0: call ended without provider outcome"], finished_lines
+    assert_equal "llm", Master::Trace::Dmesg.detail_unit("llm")
+
+    next_lines = Master::Trace::Dmesg.with_verbosity("verbose") do
+      console.lines(event: "llm:send", model: "test-provider:model")
+    end
+    assert_equal ["llm1 at master0: test-provider:model"], next_lines
+  ensure
+    Fiber[:master_unit] = nil
+    Master::Trace::Dmesg.clear_detail_unit("llm")
+  end
+
+  def test_call_finished_after_provider_outcome_is_not_a_second_result_line
+    console = Master::Trace::Dmesg::Console.new
+
+    Master::Trace::Dmesg.with_verbosity("verbose") do
+      console.lines(event: "llm:send", model: "test-provider:model")
+      outcome = console.lines(
+        event: "llm:provider_outcome", model: "test-provider:model", status: :success, latency_ms: 10
+      )
+      finished = console.lines(event: "llm:call_finished", model: "test-provider:model")
+
+      assert_equal 1, outcome.size
+      assert_empty finished
+    end
+  end
+
   def test_verbose_model_calls_are_visible_when_requested
     console = Master::Trace::Dmesg::Console.new
     Fiber[:master_unit] = "scan0"
