@@ -1525,6 +1525,7 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     worker = Object.new
     worker.define_singleton_method(:alive?) { true }
     @cli.instance_variable_set(:@turn_worker, worker)
+    @cli.instance_variable_set(:@turn_current_started, true)
     @cli.instance_variable_set(:@pipeline_thread, nil)
 
     output, = capture_io { @cli.send(:stop_interactive_queue) }
