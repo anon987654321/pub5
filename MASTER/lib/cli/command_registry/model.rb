@@ -200,7 +200,7 @@ module Master
           calls = row[:calls].to_i
           latency = row[:latency_ms].to_f
           average = latency.finite? && latency.positive? ? "avg_ok=#{latency.round}ms" : "avg_ok=n/a"
-          first_token = row[:first_token_ms].to_f
+          first_token = Float(row[:first_token_ms], exception: false) || 0.0
           ttft = "ttft=#{first_token.round}ms" if first_token.finite? && first_token.positive?
           "#{row[:rank]}. #{row[:id]}  #{row[:lane]}  #{quota}  #{rate} calls=#{calls} #{average}#{ttft ? " #{ttft}" : ""}"
         end.join("\n")
