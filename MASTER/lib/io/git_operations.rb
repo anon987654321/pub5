@@ -3,6 +3,8 @@
 require "open3"
 require "tempfile"
 require "pathname"
+require "tmpdir"
+require "digest"
 
 module Master
   module Io
@@ -24,24 +26,66 @@ module Master
       # State-changing git commands (add, commit, push, the rebase a rejected push
       # needs), kept apart from the read-only status and inspection queries.
       module Mutations
-        # Stages and commits the named paths and nothing else, the rule
-        # Core::World#do_git_commit keeps for the fold. The index is shared with
-        # every session in this checkout, so committing it signs their staged
-        # work with this message. A refused add or commit raises: a pre-commit
-        # hook that said no used to read as a commit.
-        def commit(message, paths:, confirmed: nil)
+        # Stage and commit only these paths in a private index. A shared checkout
+        # has many writers and one .git/index; even a path-scoped `git add` mutates
+        # that shared file. Mirror Core::World#do_git_commit: start from HEAD (or
+        # an empty unborn index), stage the requested paths privately, and commit
+        # with the same private index. Optional expected hashes bind a caller's
+        # pre-write proof to the bytes actually delivered.
+        def commit(message, paths:, confirmed: nil, expected_hashes: nil)
           Master::Ground::LawHandshake::Admission.require!
           scoped = scoped_paths(paths)
           raise ArgumentError, "git commit needs paths: an unscoped commit takes the shared index" if scoped.empty?
 
           commit_message = normalize_commit_message(message)
-          # Refused before the add, so a refusal leaves nothing staged in the shared index.
           refuse_sacred!(["commit", "--", *scoped], confirmed:)
+          fingerprints = commit_fingerprints(scoped, expected_hashes:)
           with_pathspec_file(scoped) do |pathspec_file|
-            git!("add", "--pathspec-from-file=#{pathspec_file}", "--pathspec-file-nul")
-            git!("commit", "-m", commit_message, "-m", Master::Core::World::COMMIT_TRAILER,
-                 "--pathspec-from-file=#{pathspec_file}", "--pathspec-file-nul", confirmed:)
+            Dir.mktmpdir("master-git-index-") do |directory|
+              index_env = { "GIT_INDEX_FILE" => File.join(directory, "index") }
+              _head, head_status = Master::Io::Exec.capture2e(
+                "git", "-C", @root_path, "rev-parse", "--verify", "-q", "HEAD"
+              )
+              git!(*(head_status.success? ? %w[read-tree HEAD] : %w[read-tree --empty]), env: index_env)
+              verify_commit_fingerprints!(fingerprints)
+              git!("add", "--pathspec-from-file=#{pathspec_file}", "--pathspec-file-nul", env: index_env)
+              verify_commit_fingerprints!(fingerprints)
+              git!(
+                "commit", "-m", commit_message, "-m", Master::Core::World::COMMIT_TRAILER,
+                "--pathspec-from-file=#{pathspec_file}", "--pathspec-file-nul", confirmed:, env: index_env
+              )
+            end
           end
+        end
+
+        def commit_fingerprints(paths, expected_hashes: nil)
+          captured = paths.to_h { |path| [path, worktree_fingerprint(path)] }
+          return captured unless expected_hashes
+
+          expected = expected_hashes.to_h { |path, digest| [path.to_s, digest.to_s] }
+          unknown = expected.keys - paths
+          raise ArgumentError, "content receipt names uncommitted paths: #{unknown.join(", ")}" if unknown.any?
+          malformed = expected.reject { |_path, digest| digest.match?(/\A[0-9a-f]{64}\z/i) }
+          raise ArgumentError, "content receipt has malformed SHA-256 values" if malformed.any?
+          mismatched = expected.keys.reject { |path| captured[path] == expected[path].downcase }
+          raise "task-owned file content changed since its proof: #{mismatched.join(", ")}" if mismatched.any?
+
+          captured.merge(expected)
+        end
+
+        def verify_commit_fingerprints!(expected)
+          changed = expected.keys.reject { |path| worktree_fingerprint(path) == expected[path] }
+          raise "file content changed during commit: #{changed.join(", ")}" if changed.any?
+        end
+
+        def worktree_fingerprint(path)
+          full = File.expand_path(path, @root_path)
+          raise ArgumentError, "git commit path escapes runtime root: #{path}" unless full.start_with?(File.expand_path(@root_path) + File::SEPARATOR)
+          return "missing" unless File.exist?(full) || File.symlink?(full)
+          raise ArgumentError, "git commit refuses a symlink: #{path}" if File.symlink?(full)
+          raise ArgumentError, "git commit path must be a regular file: #{path}" unless File.file?(full)
+
+          Digest::SHA256.file(full).hexdigest
         end
 
         def normalize_commit_message(message)
@@ -144,19 +188,21 @@ module Master
         # Every write passes here, under the receipt the Fold's tool calls carry: a
         # durable before-event or no git, then an after-event with the outcome. The
         # receipt holds a digest of the arguments, never the message or the paths.
-        def git!(*args, confirmed: nil)
+        def git!(*args, confirmed: nil, env: nil)
           Master::Ground::LawHandshake::Admission.require!
           refuse_sacred!(args, confirmed:) if args.first == "commit"
-          receipt = receipts.before(tool: "git_#{args.first}", tier: "dangerous", args:)
+          receipt_args = env ? args + [{ "environment_keys" => env.keys.sort }] : args
+          receipt = receipts.before(tool: "git_#{args.first}", tier: "dangerous", args: receipt_args)
           started = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)
-          output, status = run_receipted(receipt, args, started)
+          output, status = run_receipted(receipt, args, started, env:)
           raise "git #{args.first} failed: #{output.strip}" unless status.success?
 
           output
         end
 
-        def run_receipted(receipt, args, started)
-          output, status = Master::Io::Exec.capture2e("git", "-C", @root_path, *args)
+        def run_receipted(receipt, args, started, env: nil)
+          command = ["git", "-C", @root_path, *args]
+          output, status = env ? Master::Io::Exec.capture2e(env, *command) : Master::Io::Exec.capture2e(*command)
           close_receipt(receipt, args, started, status.success? ? "success" : "error")
           [output, status]
         rescue StandardError
