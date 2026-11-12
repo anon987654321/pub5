@@ -88,8 +88,10 @@ module Master
       end
 
       def violation_kind(text, line, relative, output_call:)
-        terminal_copy = PUNCTUATION_SCOPE.any? { |scope| relative.start_with?(scope + "/") } ||
-          (relative.start_with?("lib/fix/") && output_call)
+        normalized = relative.to_s.tr("\\", "/")
+        terminal_copy = PUNCTUATION_SCOPE.any? do |scope|
+          normalized.match?(%r{(?:\A|/)(?:MASTER/)?#{Regexp.escape(scope)}/})
+        end || (normalized.match?(%r{(?:\A|/)(?:MASTER/)?lib/fix/}) && output_call)
         return "non_ascii_punctuation" if terminal_copy && text.match?(TERMINAL_MARK)
         return "prose_double_dash" if terminal_copy && text.match?(PROSE_DOUBLE_DASH)
         return "terminal_measure" if output_call && text.length > TERMINAL_LINE_LIMIT

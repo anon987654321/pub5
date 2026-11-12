@@ -17,7 +17,7 @@ module Law
     # terminal. Terminal output keeps its separate ASCII punctuation profile,
     # but emitted strings are assessed by TERMINAL_OUTPUT_TYPOGRAPHY.
     TERMINAL_OUTPUT = %r{MASTER/(?:lib/(?:cli|voice/renderer|trace)|bin)/|face_ascii|dmesg}
-    TERMINAL_PATH = %r{(?:\A|/)MASTER/lib/(?:cli|voice|trace|fix)/.+\.rb\z}
+    TERMINAL_PATH = %r{(?:\A|/)(?:MASTER/)?lib/(?:cli|voice|trace|fix)/.+\.rb\z}
     # Every Markdown file is reader-facing copy, including BIZ plans, TODOs,
     # tree READMEs and nested documentation. HTML/ERB and locale values remain
     # scoped by their own readers below.

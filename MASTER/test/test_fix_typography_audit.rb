@@ -79,6 +79,12 @@ class TestFixTypographyAudit < Minitest::Test
     )
     refute_empty bad
     assert_empty good
+
+    punctuation = law.scan(
+      'Master::Trace::Dmesg.status("fix0", "waiting for it…")',
+      file: "MASTER/lib/cli/fixture.rb",
+    )
+    refute_empty punctuation, "terminal punctuation must be ASCII whether the scanner path is rooted at MASTER or the repository"
   end
 
   def test_typesetting_reads_plain_business_html_and_markdown_readme
