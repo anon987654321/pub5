@@ -26,7 +26,11 @@ module Master
         def call(system:, prompt:, max_tokens:)
           model = pick or raise Unavailable, "no live #{@config["lane_tier"]} lane"
           reply = model.start_with?("claude-cli:") ? via_claude_cli(model, system, prompt) : via_ruby_llm(model, system, prompt, max_tokens)
-          reply.to_s.strip.then { |text| text.empty? ? raise(Unavailable, "#{model} answered nothing") : text }
+          text = reply.to_s.strip
+          raise Unavailable, "#{model} answered nothing" if text.empty?
+
+          Master::Io::LaneSilence.record(true, Master::Io::LaneSilence.lane_of(model)) if model.start_with?("claude-cli:")
+          text
         end
 
         def pick
@@ -75,7 +79,6 @@ module Master
             raise Unavailable, "claude-cli exited #{status.exitstatus.inspect}; #{detail}"
           end
 
-          Master::Io::LaneSilence.record(true, lane)
           out
         rescue Timeout::Error
           lane = Master::Io::LaneSilence.lane_of(model)
