@@ -29,16 +29,19 @@ module Deploy
     private
 
     def measure(result)
-      unless GeometryProbe.available?
-        return result.inconclusive!("state_matrix: no Chrome - states not rendered", gap: Master::Gap::NO_BROWSER)
-      end
-
+      # Validate the declarative inventory without requiring a browser. An invalid
+      # surface is a configuration gap even on a source-only workstation.
       declared = components
       declared.each do |row, surface|
         next if surface
 
         result.incomplete!("state_matrix: #{row["id"]} references missing surface #{row["surface"]}")
       end
+
+      unless GeometryProbe.available?
+        return result.inconclusive!("state_matrix: no Chrome - states not rendered", gap: Master::Gap::NO_BROWSER)
+      end
+
       live = declared.select { |_row, surface| surface && GeometryProbe.reachable([surface]).any? }
       return result.inconclusive!("state_matrix: no declared component's app is reachable") if live.empty?
 
