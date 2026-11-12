@@ -119,7 +119,7 @@ class CheckContractSpec < Minitest::Test
     assert_includes source, "Operator::RubyRunner.ruby_cmd"
     assert_includes source, "Operator::RubyRunner.bundle_cmd"
     assert_includes source, "Master::Io::Exec.capture2e("
-    assert_includes source, "stdin_data: \"#{line}\\n\""
+    assert_includes source, 'stdin_data: "#{line}\\n"'
     assert_includes source, "raise_on_timeout: true"
     assert_includes source, "on_stdout:"
   end
