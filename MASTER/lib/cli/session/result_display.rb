@@ -19,7 +19,11 @@ module Master
           # Do not label a requested stop as complete. Report cancellation
           # only after the pipeline has actually returned its abort result;
           # until then the spinner says "stopping" and /stop says "request".
-          return Master::Trace::Dmesg.status("turn0", cancellation_status) if err.category == :abort
+          if err.category == :abort
+            @last_ok = false
+            @exit_code = cancellation_exit_code
+            return Master::Trace::Dmesg.status("turn0", cancellation_status)
+          end
 
           @last_ok = false
           @exit_code = exit_code_for(err)
@@ -35,7 +39,11 @@ module Master
         return "cancelled by /stop" if reason.start_with?("/stop ")
         return "interrupted by Ctrl-C" if reason.start_with?("Ctrl-C ")
 
-        "cancelled"
+        "aborted"
+      end
+
+      def cancellation_exit_code
+        @turn_cancellation&.reason.to_s.start_with?("Ctrl-C ") ? 130 : 2
       end
 
       # One line for a one-line error; its own lines for a structured one. The
