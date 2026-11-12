@@ -41,6 +41,7 @@ task :check do
   cli_out, cli_status = Open3.capture2e(RUBY, studio_cli, "--list", chdir: STUDIO_ROOT)
   raise "studio --list failed:\n#{cli_out}" unless cli_status.success?
   raise "studio --list does not expose Ableton recovery" unless cli_out.include?("ableton")
+  raise "studio --list does not expose LoRA validation" unless cli_out.include?("lora")
 
   python_sources = Dir.glob(File.join(STUDIO_ROOT, "**", "*.py"))
   raise "Python source files remain in STUDIO: #{python_sources.map { |path| path.delete_prefix("#{STUDIO_ROOT}/") }.join(", ")}" unless python_sources.empty?
