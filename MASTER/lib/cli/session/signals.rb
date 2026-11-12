@@ -33,7 +33,7 @@ module Master
         if turn&.alive?
           # In the interactive queue, Ctrl+C has the same safe semantics as
           # /stop: pause queued turns too. Do mutex work outside the signal trap.
-          return Thread.new { stop_interactive_queue } if @turn_worker&.alive?
+          return Thread.new { stop_interactive_queue(reason: "ctrl_c") } if @turn_worker&.alive?
           return Thread.new do
             @turn_queue_mutex.synchronize { @turn_cancel_requested = true }
             request_or_interrupt_turn(turn, @turn_children, reason: "ctrl_c")
