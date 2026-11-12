@@ -121,10 +121,6 @@ class TestStudioOutputPaths < Minitest::Test
 end
 
 class TestIdeaPictureOutput < Minitest::Test
-  module AllowConsent
-    def self.required_source_sets(**) = []
-    def self.require!(**) = true
-  end
   def test_idea_picture_has_one_canonical_implementation
     root = File.expand_path("..", __dir__)
     canonical = File.join(root, "photograph", "idea_picture.rb")
@@ -180,6 +176,12 @@ class TestIdeaPictureOutput < Minitest::Test
 
   private
 
+  def with_allow_consent
+    Studio::Lora::Consent.stub(:required_source_sets, []) do
+      Studio::Lora::Consent.stub(:require!, true) { yield }
+    end
+  end
+
   def successful_status
     Object.new.tap { |status| status.define_singleton_method(:success?) { true } }
   end
@@ -234,7 +236,7 @@ class TestIdeaPictureOutput < Minitest::Test
         %w[prompt model aspect_ratio num_outputs guidance_scale num_inference_steps output_format output_quality go_fast lora_scale]
       end
       picture = Studio::Visual::IdeaPicture.new(
-        subject: "probe", client:, directory: dir, model_manifest: manifest, consent: AllowConsent
+        subject: "probe", client:, directory: dir, model_manifest: manifest
       )
 
       assert_equal "owner/model:version-123", picture.validate_model!
@@ -250,10 +252,10 @@ class TestIdeaPictureOutput < Minitest::Test
       client.define_singleton_method(:input_names) { |_model| %w[prompt] }
       client.define_singleton_method(:predict) { |*| flunk "prediction must not start with an incomplete input schema" }
       picture = Studio::Visual::IdeaPicture.new(
-        subject: "probe", client:, directory: dir, model_manifest: manifest, consent: AllowConsent
+        subject: "probe", client:, directory: dir, model_manifest: manifest
       )
 
-      error = assert_raises(RuntimeError) { picture.write("portrait", film: false) }
+      error = with_allow_consent { assert_raises(RuntimeError) { picture.write("portrait", film: false) } }
       assert_match(/missing inputs used by the still renderer/, error.message)
       assert_match(/aspect_ratio/, error.message)
       assert_empty Dir.children(dir).grep(/\.jpg\z/)
@@ -272,10 +274,10 @@ class TestIdeaPictureOutput < Minitest::Test
       client.define_singleton_method(:predict) { |*| flunk "still prediction must not start before film schema review" }
       client.define_singleton_method(:upload_file) { |*| flunk "still upload must not start before film schema review" }
       picture = Studio::Visual::IdeaPicture.new(
-        subject: "probe", client:, directory: dir, model_manifest: manifest, consent: AllowConsent
+        subject: "probe", client:, directory: dir, model_manifest: manifest
       )
 
-      error = assert_raises(RuntimeError) { picture.write("portrait", film: true) }
+      error = with_allow_consent { assert_raises(RuntimeError) { picture.write("portrait", film: true) } }
       assert_match(/film model/, error.message)
       assert_match(/duration/, error.message)
       assert_empty Dir.children(dir).grep(/\.jpg\z/)
