@@ -691,7 +691,7 @@ class TestTaskContract < Minitest::Test
 
   def test_remote_absolute_openbsd_config_paths_require_the_tracked_source_read
     contract = openbsd_task_contract(
-      openbsd_preflight_fixture(interfaces: %w[pf(4) pf.conf(5) pfctl(8)]),
+      openbsd_preflight_fixture(interfaces: %w[pf(4) pf.conf(5) pfctl(8) ksh(1)]),
     )
     reason = Master::Fix::OpenBSDManualPreflight.refusal_for_command(
       command: "ssh -o BatchMode=yes dev@brgen.no 'pfctl -nf /etc/pf.conf'", contract:
@@ -704,7 +704,7 @@ class TestTaskContract < Minitest::Test
     contract = openbsd_task_contract(
       openbsd_preflight_fixture(
         source_paths: ["OPENBSD/etc/pf.conf"],
-        interfaces: %w[pf(4) pf.conf(5) pfctl(8)],
+        interfaces: %w[pf(4) pf.conf(5) pfctl(8) ksh(1)],
       ),
     )
     assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
@@ -757,7 +757,7 @@ class TestTaskContract < Minitest::Test
   end
 
   def test_openbsd_script_execution_requires_a_complete_source_read
-    contract = openbsd_task_contract
+    contract = openbsd_task_contract(openbsd_preflight_fixture(interfaces: %w[rcctl(8) rc(8) rc.conf(8) rc.d(8) rc.subr(8) ksh(1) zsh(1)]))
     reason = Master::Fix::OpenBSDManualPreflight.refusal_for_command(
       command: "ssh -o BatchMode=yes dev@brgen.no 'zsh OPENBSD/bin/vps-deploy all'", contract:
     )

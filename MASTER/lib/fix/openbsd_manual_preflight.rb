@@ -69,7 +69,7 @@ module Master
       SHELL_BUILTINS = %w[
         cd command exec exit return set unset export readonly read shift
         getopts trap umask wait jobs fg bg alias unalias type hash times
-        break continue local typeset let eval source test true false echo printf
+        break continue local typeset let eval source . test true false echo printf
       ].freeze
       SHELL_MANUAL_PAGES = %w[ksh(1) sh(1) zsh(1)].freeze
       WRAPPER_VALUE_OPTIONS = {
@@ -434,7 +434,7 @@ module Master
         return manual_error if manual_error
         shell_page = remote && declared_shell_manual(contract&.openbsd_preflight)
         if remote && !shell_page
-          return "RTFM_FIRST requires the verified target shell manual (ksh(1), sh(1), or zsh(1)) before remote command execution"
+          return "RTFM_FIRST requires openbsd_preflight with the verified target shell manual (ksh(1), sh(1), or zsh(1)) before remote command execution"
         end
         command_manuals << shell_page if shell_page
         command_manuals.concat(command_entries.flat_map { |entry| COMMAND_SUPPORT_MANUALS.fetch(entry[:name], []) })
@@ -697,13 +697,12 @@ module Master
       def remote_openbsd_path_sources(tokens)
         Array(tokens).filter_map do |token|
           path = token.to_s
-          case path
-          when %r{\A/etc/(.+)\z}
-            "OPENBSD/etc/#{Regexp.last_match(1)}"
-          when %r{\A/var/nsd/(.+)\z}
-            "OPENBSD/var/nsd/#{Regexp.last_match(1)}"
-          when %r{\A/usr/local/(bin|sbin)/(.+)\z}
-            "OPENBSD/usr/local/#{Regexp.last_match(1)}/#{Regexp.last_match(2)}"
+          if (match = path.match(%r{\A/etc/(.+)\z}))
+            "OPENBSD/etc/#{match[1]}"
+          elsif (match = path.match(%r{\A/var/nsd/(.+)\z}))
+            "OPENBSD/var/nsd/#{match[1]}"
+          elsif (match = path.match(%r{\A/usr/local/(bin|sbin)/(.+)\z}))
+            "OPENBSD/usr/local/#{match[1]}/#{match[2]}"
           end
         end.uniq
       end
