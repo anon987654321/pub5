@@ -105,20 +105,25 @@ class TestLawPathReach < Minitest::Test
         MASTER/bin/master
         MASTER/bin/doctor
         MASTER/lib/cli/session/repl_io.rb
+        MASTER/lib/cli/session/thinking_indicator.rb
         MASTER/lib/cli/turn_router.rb
         MASTER/lib/cli/command_registry.rb
         MASTER/lib/voice/renderer/prompt.rb
+        MASTER/lib/voice/renderer/prompt_components.rb
         MASTER/lib/trace/dmesg.rb
       ],
       CLI_PROMPT_COMPOSITION: %w[
         MASTER/lib/cli/session/repl_io.rb
+        MASTER/lib/cli/session/thinking_indicator.rb
         MASTER/lib/voice/renderer/prompt.rb
+        MASTER/lib/voice/renderer/prompt_components.rb
       ],
       VOICE_FAILURES_ARE_ACTIONABLE: %w[
         MASTER/lib/cli/command_registry.rb
         MASTER/lib/io/media_intent.rb
         MASTER/lib/io/script_dispatch.rb
         MASTER/lib/voice/speech.rb
+        MASTER/lib/voice/playback.rb
       ],
     }
 
