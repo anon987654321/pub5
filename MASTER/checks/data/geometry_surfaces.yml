@@ -241,7 +241,7 @@ settle_images:
 reflow_priority:
   brgen: [messenger, core, markedsplass_marketplace_listings_index, takeaway_restaurants]
   amber: [home, wardrobe, outfits]
-  bsdports: [home, ports_index, empty_results]
+  bsdports: [home, ports_index, categories_index]
 
 # State matrix (BackstopJS's scenario list, read by Deploy::StateMatrix): each
 # component is captured in its declared states and at each width, one cropped
