@@ -787,72 +787,119 @@ module Master
                          writes_requested:, effective_critique:, critique:, aesthetic:, only:, cancellation: nil,
                          task_intent: "functional_change")
         check_label = ::Operator::CheckChain.baseline_scope_key(target)
-        # What already fails, taken before any repair, so delivery can be judged on
-        # what the run added instead of on debt it did not create. This scan-only
-        # check is a baseline phase, not the requested repair's execution mode.
-        baseline = nil
-        return cancelled_fix_result(cancellation) if cancellation&.cancelled?
-        Master::Fix::CheckFocus.reset!
-        resume_from_residual(target)
-        if writes_requested || Master::Fix::CheckFocus.plan?
-          Master::Trace::Dmesg.status("check0", "scope #{check_label}: capturing read-only pre-repair baseline")
-          baseline = begin
-            ::Operator::CheckChain.baseline(target:)
-          rescue ::Operator::CheckChain::BaselineMutation => e
-            Master::Trace::Dmesg.status("check0", "scope #{check_label}: pre-repair baseline blocked; no repair started")
-            return Master::Result.err("pre-repair proof blocked: #{e.message}", category: :validation)
-          rescue ::Operator::CheckChain::InvalidVerificationScope => e
-            Master::Trace::Dmesg.status("check0", "scope #{check_label}: invalid verification scope; no repair started")
-            return Master::Result.err("verification scope invalid: #{e.message}", category: :validation)
-          end
-          # The lexical stage lists every finding; the other stages name what keeps a check red.
-          Master::Fix::CheckFocus.note(baseline.except("lexical").values.flatten)
-          next_step = writes_requested ? "starting write-enabled /fix pass" : "planning, nothing is written"
-          Master::Trace::Dmesg.status("check0", "scope #{check_label}: baseline ready; #{next_step}")
-        end
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
 
-        value = run_pass({ scanner:, fix_loop:, root:, deliberation:, bus:, swarm: },
-                         task_intent:, target:, apply: writes_requested, critique: effective_critique,
-                         aesthetic:, only:, cancellation:)
+        Master::Fix::CheckFocus.reset!
+        resume_from_residual(target)
+        baseline, refusal = capture_fix_target_baseline(target:, check_label:, writes_requested:)
+        return refusal if refusal
+        return cancelled_fix_result(cancellation) if cancellation&.cancelled?
+
+        value = run_fix_target_pass(
+          scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, target:, writes_requested:,
+          effective_critique:, aesthetic:, only:, cancellation:, task_intent:
+        )
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
         return value unless writes_requested
         return incomplete_fix_pipeline(value) if incomplete_fix_pipeline?(value)
 
-        check_rounds = 0
-        check_status = 0
-        check_changed = []
+        verify_fix_target_delivery(
+          value:, scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, target:, baseline:,
+          check_label:, critique:, aesthetic:, only:, cancellation:, task_intent:
+        )
+      end
+
+      def capture_fix_target_baseline(target:, check_label:, writes_requested:)
+        return [nil, nil] unless writes_requested || Master::Fix::CheckFocus.plan?
+
+        Master::Trace::Dmesg.status("check0", "scope #{check_label}: capturing read-only pre-repair baseline")
+        baseline = ::Operator::CheckChain.baseline(target:)
+        Master::Fix::CheckFocus.note(baseline.except("lexical").values.flatten)
+        next_step = writes_requested ? "starting write-enabled /fix pass" : "planning, nothing is written"
+        Master::Trace::Dmesg.status("check0", "scope #{check_label}: baseline ready; #{next_step}")
+        [baseline, nil]
+      rescue ::Operator::CheckChain::BaselineMutation => error
+        Master::Trace::Dmesg.status("check0", "scope #{check_label}: pre-repair baseline blocked; no repair started")
+        [nil, Master::Result.err("pre-repair proof blocked: #{error.message}", category: :validation)]
+      rescue ::Operator::CheckChain::InvalidVerificationScope => error
+        Master::Trace::Dmesg.status("check0", "scope #{check_label}: invalid verification scope; no repair started")
+        [nil, Master::Result.err("verification scope invalid: #{error.message}", category: :validation)]
+      end
+
+      def run_fix_target_pass(scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, target:,
+                              writes_requested:, effective_critique:, aesthetic:, only:, cancellation:, task_intent:)
+        run_pass({ scanner:, fix_loop:, root:, deliberation:, bus:, swarm: },
+          task_intent:, target:, apply: writes_requested, critique: effective_critique,
+          aesthetic:, only:, cancellation:)
+      end
+
+      def verify_fix_target_delivery(value:, scanner:, fix_loop:, root:, deliberation:, bus:, swarm:,
+                                     target:, baseline:, check_label:, critique:, aesthetic:, only:,
+                                     cancellation:, task_intent:)
+        state = verify_fix_target_until_stable(
+          value:, scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, target:, baseline:,
+          critique:, aesthetic:, only:, cancellation:, task_intent:
+        )
+        return state[:terminal] if state.key?(:terminal)
+
+        failure = fix_target_verification_failure(
+          target:, check_label:, status: state[:status], changed: state[:changed], rounds: state[:rounds]
+        )
+        return failure if failure
+
+        Master::Trace::Dmesg.status("check0", "scope #{check_label}: delivery verified")
+        state[:value]
+      end
+
+      def verify_fix_target_until_stable(value:, scanner:, fix_loop:, root:, deliberation:, bus:, swarm:,
+                                         target:, baseline:, critique:, aesthetic:, only:, cancellation:,
+                                         task_intent:)
+        rounds = 0
+        status = 0
+        changed = []
         loop do
-          return cancelled_fix_result(cancellation) if cancellation&.cancelled?
+          return { terminal: cancelled_fix_result(cancellation) } if cancellation&.cancelled?
 
-          check_status, check_changed = ::Operator::CheckChain.verify_fix(target:, baseline:)
-          check_rounds += 1
-          break if check_status == 0 && check_changed.empty?
-          break if check_changed.empty? || check_rounds >= MAX_FIX_CHECK_ROUNDS
+          status, changed = ::Operator::CheckChain.verify_fix(target:, baseline:)
+          rounds += 1
+          break if status == 0 && changed.empty?
+          break if changed.empty? || rounds >= MAX_FIX_CHECK_ROUNDS
 
-          Master::Trace::Dmesg.status(
-            "check0", "verification changed #{check_changed.size} file(s), re-entering /fix"
+          value, terminal = rerun_fix_target_after_check_change(
+            scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, target:, critique:, aesthetic:,
+            only:, cancellation:, task_intent:, changed:
           )
-          value = run_pass({ scanner:, fix_loop:, root:, deliberation:, bus:, swarm: },
-                           task_intent:, target:, apply: true, critique: critique.nil? ? council_default : critique,
-                           aesthetic:, only: "fix", cancellation:)
-          return cancelled_fix_result(cancellation) if cancellation&.cancelled?
-          return incomplete_fix_pipeline(value) if incomplete_fix_pipeline?(value)
+          return { terminal: } if terminal
         end
+        { value:, status:, changed:, rounds: }
+      end
 
-        if check_status != 0
-          message = "check verification did not pass (status #{check_status})"
+      def rerun_fix_target_after_check_change(scanner:, fix_loop:, root:, deliberation:, bus:, swarm:,
+                                              target:, critique:, aesthetic:, only:, cancellation:,
+                                              task_intent:, changed:)
+        Master::Trace::Dmesg.status("check0", "verification changed #{changed.size} file(s), re-entering /fix")
+        value = run_fix_target_pass(
+          scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, target:,
+          writes_requested: true, effective_critique: critique.nil? ? council_default : critique,
+          aesthetic:, only: "fix", cancellation:, task_intent:
+        )
+        return [nil, cancelled_fix_result(cancellation)] if cancellation&.cancelled?
+        return [nil, incomplete_fix_pipeline(value)] if incomplete_fix_pipeline?(value)
+
+        [value, nil]
+      end
+
+      def fix_target_verification_failure(target:, check_label:, status:, changed:, rounds:)
+        if status != 0
+          message = "check verification did not pass (status #{status})"
           Master::Trace::Dmesg.status("check0", "scope #{check_label}: #{message}")
           return Master::Result.err(message, category: :validation)
         end
-        if check_rounds >= MAX_FIX_CHECK_ROUNDS && check_changed.any?
-          message = "check verification reached #{MAX_FIX_CHECK_ROUNDS} rounds without a stable tree"
-          Master::Trace::Dmesg.status("check0", "#{target}: #{message}")
-          return Master::Result.err(message, category: :validation)
-        end
+        return unless rounds >= MAX_FIX_CHECK_ROUNDS && changed.any?
 
-        Master::Trace::Dmesg.status("check0", "scope #{check_label}: delivery verified")
-        value
+        message = "check verification reached #{MAX_FIX_CHECK_ROUNDS} rounds without a stable tree"
+        Master::Trace::Dmesg.status("check0", "#{target}: #{message}")
+        Master::Result.err(message, category: :validation)
       end
 
       # The report footer, at the start of a line. A patch in the same report can quote these words, and

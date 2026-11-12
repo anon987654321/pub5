@@ -2663,4 +2663,30 @@ end
       Master::CLI::CommandRegistry.send(:fix_targets, "MASTER RAILS --apply", root:),
     )
   end
+  def test_fix_does_not_start_repair_when_verification_scope_is_invalid
+    fix_loop = Object.new
+    fix_loop.define_singleton_method(:run) do |*|
+      flunk("repair must not start when the verification scope is invalid")
+    end
+
+    result = nil
+    Operator::CheckChain.stub(:baseline_scope_key, ->(*) { "RAILS" }) do
+      Operator::CheckChain.stub(
+        :baseline,
+        ->(**) { raise Operator::CheckChain::InvalidVerificationScope, "target escaped its governed tree" },
+      ) do
+        result = Master::CLI::CommandRegistry.run_fix_target(
+          scanner: Object.new, fix_loop:, root: Master::ROOT, deliberation: nil, bus: nil, swarm: nil,
+          target: "RAILS", writes_requested: true, effective_critique: false, critique: false,
+          aesthetic: false, only: "fix"
+        )
+      end
+    end
+
+    assert_instance_of Master::Result::Err, result
+    assert_equal :validation, result.category
+    assert_match(/verification scope invalid/, result.message)
+    assert_includes result.message, "target escaped its governed tree"
+  end
+
 end
