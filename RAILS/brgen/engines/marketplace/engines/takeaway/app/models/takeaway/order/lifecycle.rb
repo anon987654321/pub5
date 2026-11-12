@@ -11,46 +11,48 @@ class Takeaway::Order
     end
 
     def transition_to!(next_status)
-      unless may_transition_to?(next_status)
-        errors.add(:status, :bad_transition, from: status, to: next_status)
-        return false
-      end
+      with_lock do
+        unless may_transition_to?(next_status)
+          errors.add(:status, :bad_transition, from: status, to: next_status)
+          next false
+        end
 
-      attrs = { status: next_status }
-      # Dispatch on the same write as the status change, so an order is never
-      # observable as out_for_delivery with no courier attached. A nil id is left
-      # out rather than written: no free driver in range means the order still
-      # leaves the kitchen, it has nobody named on it yet.
-      if next_status.to_s == "out_for_delivery" && delivery_driver_id.blank?
-        assigned = dispatch_driver_id
-        attrs[:delivery_driver_id] = assigned if assigned
+        attrs = { status: next_status }
+        # Dispatch on the same write as the status change, so an order is never
+        # observable as out_for_delivery with no courier attached. A nil id is left
+        # out rather than written: no free driver in range means the order still
+        # leaves the kitchen, it has nobody named on it yet.
+        if next_status.to_s == "out_for_delivery" && delivery_driver_id.blank?
+          assigned = dispatch_driver_id
+          attrs[:delivery_driver_id] = assigned if assigned
+        end
+        update!(attrs)
+        refund_cancelled_payment! if status == "cancelled"
+        # `user`, `restaurant.name` and `restaurant.user` are all lazy reads, and an
+        # order loaded by id (controller, driver request, job) has none of them
+        # preloaded. Under strict loading — on in every environment, raising outside
+        # development — this raised immediately after update! had committed the new
+        # status: the order advanced, the customer was never told, and the caller saw
+        # a 500. See Shared::StrictSafeAssociations.
+        label = I18n.t("takeaway.statuses.#{status}", default: status.to_s)
+        restaurant_record = strict_safe(:restaurant)
+        courier = courier_display_name
+        body = I18n.t("takeaway.order_status_body", restaurant: restaurant_record&.name, status: label)
+        body += " #{I18n.t("takeaway.order_status_courier", courier: courier)}" if courier
+        deliver_notification(strict_safe(:user),
+          title: I18n.t("takeaway.order_status_title", status: label),
+          body: body,
+          source: self,
+          # Waiting on food is the case a push exists for.
+          kind: "order")
+        broadcast_status_change
+        record_activity!("TakeawayOrderUpdated",
+          actor: restaurant_record&.user,
+          source_vertical: "takeaway",
+          locality: restaurant_record&.[](:city),
+          visibility: "private")
+        true
       end
-      update!(attrs)
-      refund_cancelled_payment! if status == "cancelled"
-      # `user`, `restaurant.name` and `restaurant.user` are all lazy reads, and an
-      # order loaded by id (controller, driver request, job) has none of them
-      # preloaded. Under strict loading — on in every environment, raising outside
-      # development — this raised immediately after update! had committed the new
-      # status: the order advanced, the customer was never told, and the caller saw
-      # a 500. See Shared::StrictSafeAssociations.
-      label = I18n.t("takeaway.statuses.#{status}", default: status.to_s)
-      restaurant_record = strict_safe(:restaurant)
-      courier = courier_display_name
-      body = I18n.t("takeaway.order_status_body", restaurant: restaurant_record&.name, status: label)
-      body += " #{I18n.t("takeaway.order_status_courier", courier: courier)}" if courier
-      deliver_notification(strict_safe(:user),
-        title: I18n.t("takeaway.order_status_title", status: label),
-        body: body,
-        source: self,
-        # Waiting on food is the case a push exists for.
-        kind: "order")
-      broadcast_status_change
-      record_activity!("TakeawayOrderUpdated",
-        actor: restaurant_record&.user,
-        source_vertical: "takeaway",
-        locality: restaurant_record&.[](:city),
-        visibility: "private")
-      true
     end
 
     def advanceable?
