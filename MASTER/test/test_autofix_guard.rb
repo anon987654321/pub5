@@ -40,7 +40,7 @@ class TestAutofixGuard < Minitest::Test
     assert_nil Guard.protected_reason("/r/RAILS/brgen/app/models/post.rb")
   end
 
-  def test_protected_changes_fails_closed_when_git_root_cannot_be_resolved
+  def test_protected_changes_holds_all_paths_when_git_root_cannot_be_resolved
     status_type = Struct.new(:ok) { def success? = ok }
     success = status_type.new(true)
     failure = status_type.new(false)
@@ -51,7 +51,8 @@ class TestAutofixGuard < Minitest::Test
     end
 
     Master::Io::Exec.stub(:capture2e, runner) do
-      assert_empty Guard.protected_changes("/tmp/not-a-repository")
+      assert_equal [File.expand_path("MASTER/data/tokens.yml", "/tmp/not-a-repository")],
+                   Guard.protected_changes("/tmp/not-a-repository")
     end
     assert_equal 2, calls
   end

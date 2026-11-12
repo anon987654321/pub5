@@ -248,7 +248,11 @@ module Master
           top, root_status = Master::Io::Exec.capture2e(
             "git", "-C", root.to_s, "rev-parse", "--show-toplevel", timeout: 15
           )
-          return [] unless root_status&.success?
+          unless root_status&.success?
+            # If Git can list changes but cannot identify their absolute base,
+            # conservatively hold every listed path rather than miss a protected write.
+            return out.lines.map { |rel| File.expand_path(rel.strip, root.to_s) }
+          end
 
           base = top.to_s.strip
           out.lines.map(&:strip).reject(&:empty?).select { |rel| protected_reason(File.join(base, rel), root:) }
