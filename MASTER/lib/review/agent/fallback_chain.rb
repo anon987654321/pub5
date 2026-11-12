@@ -129,13 +129,7 @@ module Master
         end
 
         def failover_skip_model?(response)
-          return false unless response.is_a?(Master::Result::Err)
-          # Subscription quota exhaustion is emitted as :exhausted, while the
-          # policy names its canonical :budget refusal. It is never cured by
-          # an in-place retry; the dispatcher has already parked the lane.
-          return true if response.category == :exhausted
-
-          skip_categories.include?(response.category)
+          response.is_a?(Master::Result::Err) && skip_categories.include?(response.category)
         end
 
         # A refused request fails identically on every retry, so retrying it only
