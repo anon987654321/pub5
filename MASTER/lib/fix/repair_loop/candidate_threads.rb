@@ -51,6 +51,7 @@ module Master
         # One candidate's whole lifecycle, sequential or threaded, with the per-candidate rescue.
         def one_candidate(index, violation:, event:, &block)
           Thread.current[:master_llm_answer_model] = nil
+          Thread.current[:master_fix_candidate_author_models] = []
           block.call(index)
         rescue StandardError => e
           Master::Ground::Swallow.log(e, context: "RepairLoop.propose_candidates", rule: @law.id)
