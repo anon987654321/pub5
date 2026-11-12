@@ -19,7 +19,7 @@ class Tv::ViewEventsController < Tv::BaseController
   def create
     # Tv::Video includes Shared::Sluggable, so the nested path carries a slug
     # and find_by(id:) answers nil for every real request. Tv::BaseController
-    # includes Shared::FindableBySlug for exactly this.
+    # inherits Shared::SluggedVerticalController, which provides slug lookup.
     video = Tv::Video.publicly_visible.find_by(slug: params[:video_id]) ||
             Tv::Video.publicly_visible.find_by(id: params[:video_id])
     return head :not_found unless video
