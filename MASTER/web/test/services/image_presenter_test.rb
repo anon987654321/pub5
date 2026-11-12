@@ -1,4 +1,4 @@
-<sub># frozen_string_literal: true
+# frozen_string_literal: true
 
 require "test_helper"
 
@@ -25,7 +25,7 @@ class ImagePresenterTest < ActiveSupport::TestCase
   test "a descendant holding the output pipe is stopped under the same deadline" do
     Dir.mktmpdir("postpro-pipe") do |dir|
       child_pid_file = File.join(dir, "descendant.pid")
-      child_code = "Signal.trap('TERM', 'IGNORE'); File.write(#{child_pid_file.dump}, Process.pid.to_s); sleep 30"
+      child_code = "Signal.trap('TERM', 'IGNORE'); File.write(#{child_pid_file.dump}, [Process.pid, Process.getpgrp].join(' ')); sleep 30"
       parent_code = "Process.spawn(RbConfig.ruby, '-e', #{child_code.dump}); puts 'parent exited'; STDOUT.flush; exit 0"
       presenter = ImagePresenter.new
       started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -35,11 +35,11 @@ class ImagePresenterTest < ActiveSupport::TestCase
       )
 
       elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
-      child = Integer(File.read(child_pid_file), 10)
+      child, group = File.read(child_pid_file).split.map { |value| Integer(value, 10) }
       assert_nil status, "an inherited pipe held open past the deadline must be reported as timeout"
       assert_includes output, "parent exited"
       assert_operator elapsed, :<, 4.0, "a descendant holding stdout must not turn the timeout into an unbounded wait"
-      assert_process_group_gone(child)
+      assert_process_group_gone(group)
     end
   end
 
@@ -52,5 +52,21 @@ class ImagePresenterTest < ActiveSupport::TestCase
     assert_nil status
     assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 10
   end
+  private
+
+  def assert_process_group_gone(group)
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 2
+    loop do
+      begin
+        Process.kill(0, -group)
+      rescue Errno::ESRCH
+        return
+      end
+      flunk "postpro descendant process group #{group} survived timeout cleanup" if
+        Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+      sleep 0.01
+    end
+  end
+
 end
-</sub>
