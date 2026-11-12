@@ -206,6 +206,7 @@ module Master
         @think_t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         @think_paused = false
         @think_stage = "intake"
+        @think_stopping = false
 
         @spin_frame = 0
         @spin_intensity = nil
@@ -393,16 +394,39 @@ module Master
         event = payload[:event].to_s
         @activity&.record(event, payload)
         stage = stage_for(event, payload)
-        @think_mutex&.synchronize { @think_stage = stage } if stage
+        @think_mutex&.synchronize do
+          if event == "user:interrupt"
+            @think_stopping = true
+            @think_stage = stage || "stopping"
+          elsif !@think_stopping && stage
+            @think_stage = stage
+          end
+        end
       end
 
       def stage_for(event, payload)
         return stage_with_detail(event, payload) if event.start_with?("stage:")
         return payload[:stage].to_s.downcase if event == "pipeline:stage_start"
+        return provider_outcome_stage(payload) if event == "llm:provider_outcome"
 
         stage = STAGE_EVENTS[event]
         return stage unless %w[llm:send llm:stream_started].include?(event)
 
+        provider_stage(stage, payload[:model])
+      end
+
+      # Provider outcomes are per-attempt, not whole-turn outcomes. Name a
+      # timeout or completed response while fallback/tools continue; the next
+      # llm:send replaces it with the next actual provider.
+      def provider_outcome_stage(payload)
+        stage = case payload[:status].to_s
+                when "success" then "received"
+                when "timeout" then "timeout"
+                when "rate_limit" then "rate limit"
+                when "quota_exceeded" then "quota"
+                when "llm_call_failure", "provider_error", "failure" then "provider error"
+                else "provider status"
+                end
         provider_stage(stage, payload[:model])
       end
 
