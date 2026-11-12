@@ -17,6 +17,7 @@ module Master
       CONFIDENCE_FLOOR = 0.72
       REPOSITORY_TARGET_RE = /\b(?:pub5|repo(?:sitory)?|codebase|whole\s+(?:repo|repository)|entire\s+(?:repo|repository))\b/i.freeze
       DEPLOY_ACTION_RE = /\b(?:deploy(?:ment)?|re[- ]?deploy|release|ship|publish|rollout?)\b/i.freeze
+      NON_PRODUCTION_ENV_RE = /\b(?:local|development|dev|test|staging|stage|preview)\b/i.freeze
       REQUIRED_KEYS = %w[intent operation environment target_type target exclude confidence reason].freeze
 
       SYSTEM = <<~PROMPT.freeze
@@ -62,7 +63,6 @@ module Master
 
       def call(text)
         return unless self.class.candidate?(text)
-        return Result.new(status: :unavailable, message: "Operator intent is unavailable; no action was taken.") unless @agent.respond_to?(:ask_once)
 
         inventory = Deploy::Inventory.new(root: @root)
         return Result.new(status: :unavailable, message: "Deployment inventory is empty; no action was taken.") if inventory.apps.empty?
@@ -72,6 +72,7 @@ module Master
           @bus&.publish("operator:intent_resolved", operation: "deploy", target: "all", app_count: selected.length)
           return Result.new(status: :deploy, target: "all", selected: selected.map(&:name))
         end
+        return Result.new(status: :unavailable, message: "Operator intent is unavailable; no action was taken.") unless @agent.respond_to?(:ask_once)
 
         raw = @agent.ask_once(
           prompt(text, inventory),
@@ -94,6 +95,7 @@ module Master
       def repository_wide_deployment?(text, inventory)
         request = text.to_s
         return false unless request.match?(REPOSITORY_TARGET_RE) && request.match?(DEPLOY_ACTION_RE)
+        return false if request.match?(NON_PRODUCTION_ENV_RE)
 
         named_app = inventory.ordered_apps.any? do |app|
           [app.name, app.title, app.domain].any? do |value|
