@@ -153,6 +153,23 @@ class TestTtsSupervisor < Minitest::Test
     end
   end
 
+  def test_retire_daemon_never_signals_a_pid_it_does_not_own
+    pid = Process.spawn("sleep", "60", out: File::NULL, err: File::NULL)
+    waiter = Process.detach(pid)
+    slot = 94
+    @pids[slot] = pid
+
+    Process.stub(:kill, ->(*_args) { flunk "an ECHILD PID must never be signalled" }) do
+      assert_nil Sup.retire_daemon(slot)
+    end
+    refute @pids.key?(slot)
+  ensure
+    if pid && waiter&.alive?
+      Process.kill("KILL", pid) rescue nil
+      waiter.join(1.0)
+    end
+  end
+
   def test_retire_daemon_is_safe_when_nothing_was_spawned
     @pids.delete(98)
     assert_nil Sup.retire_daemon(98)
