@@ -64,6 +64,32 @@ class TestIoMcpAndWebChat < Minitest::Test
     FileUtils.rm_rf(root)
   end
 
+  def test_status_distinguishes_disabled_connected_and_failed_servers
+    coordinator, root = coordinator_with(<<~YAML)
+      servers:
+        disabled: { enabled: false, command: npx }
+        connected: { enabled: true, command: npx, args: [-y, connected] }
+        broken: { enabled: true, command: npx, args: [-y, broken] }
+    YAML
+    build = lambda do |name, _transport, _config|
+      FakeClient.new(fail: name == "broken")
+    end
+    coordinator.stub(:build_mcp_client, build) { coordinator.connect_all }
+
+    snapshot = coordinator.status
+    states = snapshot.fetch(:servers).to_h { |server| [server.fetch(:name), server.fetch(:state)] }
+
+    assert_equal 3, snapshot.fetch(:configured)
+    assert_equal 2, snapshot.fetch(:enabled)
+    assert_equal 1, snapshot.fetch(:connected)
+    assert_equal 1, snapshot.fetch(:failed)
+    assert_equal "disabled", states.fetch("disabled")
+    assert_equal "connected", states.fetch("connected")
+    assert_equal "failed", states.fetch("broken")
+  ensure
+    FileUtils.rm_rf(root)
+  end
+
   def test_mcp_sse_accepts_only_loopback_endpoints_without_credentials
     coordinator = Master::Io::McpCoordinator.new(root: Dir.tmpdir, event_bus: Bus.new([]))
     valid = [

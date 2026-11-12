@@ -278,9 +278,44 @@ class TestCommandRegistryDispatch < Minitest::Test
   def test_task_and_capability_commands_are_registered_and_documented
     assert_equal :dispatch_task, built.fetch("task").method_name
     assert_equal :dispatch_capabilities, built.fetch("capabilities").method_name
+    assert built.key?("tools")
+    assert built.key?("mcp")
+    assert built.key?("models")
     assert_includes Registry.help_text("task"), "/task verify-step"
     assert_includes Registry.help_text("capabilities"), "/capabilities describe"
+    assert_includes Registry.help_text("tools"), "/tools search"
+    assert_includes Registry.help_text("mcp"), "read-only"
+    assert_includes Registry.help_text("models"), "/model list"
   end
+
+  def test_mcp_status_command_is_a_passive_snapshot
+    snapshot = {
+      configured: 2, enabled: 1, connected: 1, failed: 0,
+      servers: [
+        { name: "filesystem", state: "connected", transport: "stdio", tier: "guarded" },
+        { name: "brave_search", state: "disabled", transport: "stdio", tier: "guarded" },
+      ],
+    }
+    coordinator = Object.new
+    coordinator.define_singleton_method(:status) { snapshot }
+
+    result = Registry.dispatch_mcp(coordinator, Master::ROOT, ctx: { args: "status" })
+
+    assert_includes result, "configured=2 enabled=1 connected=1 failed=0"
+    assert_includes result, "filesystem [connected]"
+    assert_includes result, "brave_search [disabled]"
+    assert_includes result, "read-only"
+  end
+
+  def test_mcp_status_is_restricted_for_visitors
+    previous = Fiber[:master_visitor]
+    Fiber[:master_visitor] = true
+
+    assert_match(/local operator only/, Registry.dispatch_mcp(nil, Master::ROOT, ctx: { args: "status" }))
+  ensure
+    Fiber[:master_visitor] = previous
+  end
+
 
   def test_nsfw_command_requires_local_opt_in_and_passes_an_nsfw_task
     previous = %w[MASTER_NSFW MASTER_NSFW_MODEL MASTER_NO_OLLAMA].to_h { |key| [key, ENV[key]] }

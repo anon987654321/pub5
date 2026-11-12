@@ -29,6 +29,7 @@ module Master
                          end
         @clients = {}
         @server_config = {}
+        @failed_servers = {}
       end
 
       def connect_all
@@ -61,6 +62,44 @@ module Master
         []
       end
 
+      # Passive snapshot: do not call client.tools here. That method performs
+      # an MCP request; status must remain a local read of boot-time state.
+      def status
+        configured = load_servers
+        servers = configured.filter_map do |name, cfg|
+          next unless cfg.is_a?(Hash)
+
+          enabled = cfg["enabled"] != false
+          connected = @clients.key?(name)
+          failed = @failed_servers.key?(name)
+          state = if !enabled
+                    "disabled"
+                  elsif connected
+                    "connected"
+                  elsif failed
+                    "failed"
+                  else
+                    "enabled_not_connected"
+                  end
+          {
+            name: name.to_s,
+            state:,
+            transport: (cfg["transport"] || "stdio").to_s,
+            tier: (cfg["tier"] || DEFAULT_TIER).to_s,
+          }
+        end
+        {
+          configured: servers.size,
+          enabled: servers.count { |row| row[:state] != "disabled" },
+          connected: servers.count { |row| row[:state] == "connected" },
+          failed: servers.count { |row| row[:state] == "failed" },
+          servers:,
+        }
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "mcp_coordinator.status", event_bus: @bus)
+        { configured: 0, enabled: 0, connected: 0, failed: 0, servers: [], error: e.class.name }
+      end
+
       private
 
       def connect(name, cfg)
@@ -73,8 +112,10 @@ module Master
         client.connect
         @clients[name] = client
         @server_config[name] = cfg
+        @failed_servers.delete(name)
         @bus&.publish("mcp:server_connected", name:, transport: transport.to_s)
       rescue StandardError => e
+        @failed_servers[name] = e.class.name
         @bus&.publish("mcp:server_failed", name:, **Master::Execution::Contract.diagnostic_fields(e.message))
       end
 

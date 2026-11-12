@@ -9,6 +9,7 @@ require_relative "../../device/owner_preferences"
 require_relative "../../ground/personal_calendar"
 require_relative "../../ground/assistant_tasks"
 require_relative "../../ground/capability_catalog"
+require_relative "../../io/mcp_coordinator"
 require_relative "../../../../OPENBSD/lib/deploy_inventory"
 
 module Master
@@ -470,6 +471,42 @@ module Master
         end
         lines << "verification: #{task["verification_note"]}" unless task["verification_note"].to_s.empty?
         lines.join("\n")
+      end
+
+      # /tools is a concise alias for the canonical capability catalogue.
+      # It describes registration and policy; it does not invoke tools.
+      def dispatch_tools(root, ctx: nil)
+        result = dispatch_capabilities(root, ctx:)
+        result.to_s.gsub(/^capabilities(?=[:0])/, "tools").gsub("/capabilities", "/tools")
+      end
+
+      # /mcp reports only what the boot-time coordinator already knows. This
+      # path is passive: it never connects, restarts or invokes a server.
+      def dispatch_mcp(coordinator, root, ctx: nil)
+        return "mcp: local operator only; visitors cannot inspect operator servers" if Fiber[:master_visitor] == true
+
+        args = Shellwords.split(arg_for(ctx).to_s)
+        action = args.shift.to_s.downcase
+        action = "status" if action.empty?
+        return "mcp: usage /mcp [status|list]" unless args.empty? && %w[status list].include?(action)
+
+        view = coordinator || Master::Io::McpCoordinator.new(root:)
+        snapshot = view.status
+        lines = [
+          "mcp: configured=#{snapshot.fetch(:configured)} enabled=#{snapshot.fetch(:enabled)} " \
+          "connected=#{snapshot.fetch(:connected)} failed=#{snapshot.fetch(:failed)}",
+        ]
+        Array(snapshot.fetch(:servers)).each do |server|
+          lines << "mcp #{server.fetch(:name)} [#{server.fetch(:state)}] " \
+                   "transport=#{server.fetch(:transport)} tier=#{server.fetch(:tier)}"
+        end
+        lines << "mcp: no servers configured" if Array(snapshot.fetch(:servers)).empty?
+        lines << "mcp: read-only; no server was contacted by this command"
+        lines.join("\n")
+      rescue ArgumentError, KeyError => e
+        "mcp0: invalid status request - #{e.message}"
+      rescue StandardError => e
+        "mcp0: status unavailable - #{e.class}: #{e.message}"
       end
 
       # Show the universal inventory without running tools or loading provider code.

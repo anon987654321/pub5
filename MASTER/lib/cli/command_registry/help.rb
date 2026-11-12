@@ -194,6 +194,23 @@ module Master
                    "/capabilities describe <tool|plugin|plugin:id:action> - inspect metadata without running it.",
                    "The inventory is not a live health check. Plugins expose only declared read-only observations here; their own policy still governs execution."],
         },
+        "tools" => {
+          summary: "list, search and describe registered built-in tools and read-only plugin observations",
+          detail: ["/tools lists the canonical capability catalogue.",
+                   "/tools search <words> and /tools describe <name> inspect registered metadata without running a tool.",
+                   "Registration is not proof of reachability or permission to execute."],
+        },
+        "models" => {
+          summary: "list currently reachable model routes; alias for /model list",
+          detail: ["/models lists the same reachable pool as /model list.",
+                   "Use /model <id> to select a route, /model health for measured outcomes, or /model compute for the ranked inventory."],
+        },
+        "mcp" => {
+          summary: "inspect configured MCP servers and their boot-time connection state",
+          detail: ["/mcp or /mcp status shows configured, enabled, connected and failed servers.",
+                   "The command is read-only: it does not connect, restart or invoke servers.",
+                   "Server configuration and transport policy live in data/mcp_servers.yml."],
+        },
         "skill" => {
           summary: "review declared skill contracts and approve or revoke one exact content revision",
           detail: [
@@ -420,7 +437,8 @@ module Master
       COMMAND_CATEGORIES = {
         "fix" => "fix", "status" => "health", "doctor" => "health",
         "session" => "session", "pair" => "session", "clear" => "session", "undo" => "session",
-        "model" => "model", "plugin" => "model", "screen" => "session", "wake" => "model",
+        "model" => "model", "models" => "model", "tools" => "model", "mcp" => "model",
+        "plugin" => "model", "screen" => "session", "wake" => "model",
         "privacy" => "constitution", "preferences" => "interface", "agenda" => "session", "task" => "session", "skill" => "constitution", "capabilities" => "model",
         "laws" => "review",
         "why" => "review",
