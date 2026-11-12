@@ -12,7 +12,7 @@ module Master
       scan_profile council autofix_llm autofix_mechanical semantic_sample
       max_fix_passes description severity_floor
     ].freeze
-    TIME_FIELDS = %w[file_s run_s stall_s].freeze
+    TIME_FIELDS = %w[file_s run_s stall_s probe_s].freeze
 
     # Section => its validator and the sections it checks references against.
     # Each validator returns at once when its section is absent, so one table
