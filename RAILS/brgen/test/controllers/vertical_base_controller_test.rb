@@ -21,7 +21,7 @@ class VerticalBaseControllerTest < ActionDispatch::IntegrationTest
   test "dating and maps retain their own controller policies" do
     refute_operator Dating::BaseController, :<, Shared::SluggedVerticalController
     refute_operator Maps::BaseController, :<, Shared::SluggedVerticalController
-    assert_includes Dating::BaseController.instance_methods(true).map(&:to_sym),
+    assert_includes Dating::BaseController.private_instance_methods(true).map(&:to_sym),
                     :candidate_scope
     assert_includes Maps::BaseController.private_instance_methods(true).map(&:to_sym),
                     :places_in_current_city
