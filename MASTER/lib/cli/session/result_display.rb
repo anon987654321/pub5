@@ -16,10 +16,10 @@ module Master
           print_answer_attribution("answered")
           display_ok(ok:, accumulated:, streamed:, units_console:)
         in Master::Result::Err => err
-          # A turn the operator cancelled did what was asked; ^C already
-          # echoed, so there is nothing to add — and "answered" would lie
-          # about a turn no one saw complete.
-          return if err.category == :abort
+          # Do not label a requested stop as complete. Report cancellation
+          # only after the pipeline has actually returned its abort result;
+          # until then the spinner says "stopping" and /stop says "request".
+          return Master::Trace::Dmesg.status("turn0", cancellation_status) if err.category == :abort
 
           @last_ok = false
           @exit_code = exit_code_for(err)
