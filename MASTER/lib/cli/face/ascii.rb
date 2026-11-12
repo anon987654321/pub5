@@ -159,160 +159,6 @@ module Master
 
         private
 
-        def turn(look)
-          angles = [look.yaw + look.turn, look.pitch, look.roll]
-          @cy, @sy, @cp, @sp, @cr, @sr = angles.flat_map { |a| [Math.cos(a), Math.sin(a)] }
-          @camera = CAMERA / look.dolly
-          @gain = @scale * look.scale
-          @bob = look.bob * @scale
-          orbit = look.light
-          lift = Math.cos(ELEVATION)
-          @key = Ascii.unit(Math.sin(orbit) * lift, Math.sin(ELEVATION), Math.cos(orbit) * lift)
-          @rim = Ascii.unit(-Math.sin(orbit), 0.4, -Math.cos(orbit))
-          @half = Ascii.unit(@key[0], @key[1], @key[2] + 1.0)
-        end
-
-        # Yaw, then pitch, then roll: x right, y up, z toward the viewer.
-        def rotate(x, y, z)
-          a = (x * @cy) + (z * @sy)
-          b = (-x * @sy) + (z * @cy)
-          y2 = (y * @cp) - (b * @sp)
-          [(a * @cr) - (y2 * @sr), (a * @sr) + (y2 * @cr), (y * @sp) + (b * @cp)]
-        end
-
-        # Every vertex and normal turned, and the vertices in the sample grid:
-        # sample columns run right and rows down, depth is larger nearer.
-        def transform
-          pos = @mesh.pos
-          norm = @mesh.normals
-          @sx, @sy_, @sd, @nx, @ny, @nz = Array.new(6) { Array.new(@mesh.vertex_count) }
-          @mesh.vertex_count.times do |v|
-            at = 3 * v
-            x, y, z = rotate(pos[at], pos[at + 1] - @lift, pos[at + 2])
-            k = @gain * @camera / (@camera - z)
-            @sx[v] = @samples * ((@cols / 2.0) + (x * k))
-            @sy_[v] = @samples * (@rows - (y * k) - @bob)
-            @sd[v] = z * @scale
-            @nx[v], @ny[v], @nz[v] = rotate(norm[at], norm[at + 1], norm[at + 2])
-          end
-        end
-
-        # Edge functions at sample centres, largest depth wins and the first
-        # triangle keeps a tie. A sample keeps its triangle and two weights.
-        def raster
-          total = @sw * @sh
-          @zb = Array.new(total, NONE)
-          @tri = Array.new(total, -1)
-          @bu, @bv = Array.new(2) { Array.new(total, 0.0) }
-          @mesh.triangle_count.times do |t|
-            i0, i1, i2 = @mesh.tris[3 * t, 3]
-            x0, y0, z0 = @sx[i0], @sy_[i0], @sd[i0]
-            x1, y1, z1 = @sx[i1], @sy_[i1], @sd[i1]
-            x2, y2, z2 = @sx[i2], @sy_[i2], @sd[i2]
-            area = ((x1 - x0) * (y2 - y0)) - ((x2 - x0) * (y1 - y0))
-            next unless area < -1.0e-9
-
-            inv = 1.0 / area
-            cols = [([x0, x1, x2].min - 0.5).ceil, 0].max..[([x0, x1, x2].max - 0.5).floor, @sw - 1].min
-            rows = [([y0, y1, y2].min - 0.5).ceil, 0].max..[([y0, y1, y2].max - 0.5).floor, @sh - 1].min
-            rows.each do |j|
-              py = j + 0.5
-              px = cols.begin + 0.5
-              e0 = ((x2 - x1) * (py - y1)) - ((y2 - y1) * (px - x1))
-              e1 = ((x0 - x2) * (py - y2)) - ((y0 - y2) * (px - x2))
-              e2 = ((x1 - x0) * (py - y0)) - ((y1 - y0) * (px - x0))
-              cols.each do |i|
-                b0 = e0 * inv
-                b1 = e1 * inv
-                b2 = e2 * inv
-                idx = (j * @sw) + i
-                z = (b0 * z0) + (b1 * z1) + (b2 * z2)
-                inside = b0 >= 0.0 && b1 >= 0.0 && b2 >= 0.0
-                @zb[idx], @tri[idx], @bu[idx], @bv[idx] = z, t, b1, b2 if inside && z > @zb[idx]
-                e0 += y1 - y2
-                e1 += y2 - y0
-                e2 += y0 - y1
-              end
-            end
-          end
-        end
-
-        # Light every covered sample and keep its luminance and the slope of its
-        # surface (z against x and against y down), which creases are found in.
-        def light
-          total = @sw * @sh
-          @lum, @slope_x, @slope_y = Array.new(3) { Array.new(total, 0.0) }
-          tris = @mesh.tris
-          bright = @mesh.bright
-          cavity = @mesh.cavity
-          total.times do |idx|
-            t = @tri[idx]
-            next if t.negative?
-
-            b1 = @bu[idx]
-            b2 = @bv[idx]
-            b0 = 1.0 - b1 - b2
-            i0, i1, i2 = tris[3 * t, 3]
-            nx, ny, nz = Ascii.unit((b0 * @nx[i0]) + (b1 * @nx[i1]) + (b2 * @nx[i2]),
-                                    (b0 * @ny[i0]) + (b1 * @ny[i1]) + (b2 * @ny[i2]),
-                                    (b0 * @nz[i0]) + (b1 * @nz[i1]) + (b2 * @nz[i2]))
-            paint = (b0 * bright[i0]) + (b1 * bright[i1]) + (b2 * bright[i2])
-            ao = (b0 * cavity[i0]) + (b1 * cavity[i1]) + (b2 * cavity[i2])
-            @lum[idx] = radiance(nx, ny, nz, paint, ao)
-            facing = nz > 0.25 ? nz : 0.25
-            @slope_x[idx] = -nx / facing
-            @slope_y[idx] = ny / facing
-          end
-        end
-
-        def radiance(nx, ny, nz, brightness, ao)
-          k = (nx * @key[0]) + (ny * @key[1]) + (nz * @key[2])
-          f = (nx * FILL_DIR[0]) + (ny * FILL_DIR[1]) + (nz * FILL_DIR[2])
-          r = (nx * @rim[0]) + (ny * @rim[1]) + (nz * @rim[2])
-          direct = AMBIENT + (KEY * (k > 0.0 ? k : 0.0)) + (FILL * (f > 0.0 ? f : 0.0)) + (RIM * (r > 0.0 ? r : 0.0))
-          lum = direct * (1.0 - PAINT + (PAINT * brightness))
-          if k > 0.0
-            h = (nx * @half[0]) + (ny * @half[1]) + (nz * @half[2])
-            if h > 0.0
-              SQUARINGS.times { h *= h }
-              lum += SPEC * h
-            end
-          end
-          lum * (1.0 - ao)
-        end
-
-        # Per cell: covered samples, their luminance and depth summed; and the
-        # depth range of everything seen.
-        def measure
-          @count = Array.new(@rows * @cols, 0)
-          @lum_sum = Array.new(@rows * @cols, 0.0)
-          @depth_sum = Array.new(@rows * @cols, 0.0)
-          lo = Float::INFINITY
-          hi = -Float::INFINITY
-          @rows.times do |r|
-            @cols.times do |c|
-              cell = (r * @cols) + c
-              (0...(2 * @samples)).each do |dy|
-                base = (((r * 2 * @samples) + dy) * @sw) + (c * @samples)
-                @samples.times do |dx|
-                  next if @tri[base + dx].negative?
-
-                  d = @zb[base + dx]
-                  @count[cell] += 1
-                  @lum_sum[cell] += @lum[base + dx]
-                  @depth_sum[cell] += d
-                  lo = d if d < lo
-                  hi = d if d > hi
-                end
-              end
-            end
-          end
-          @near_lo = lo == Float::INFINITY ? 0.0 : lo
-          @near_span = [(hi == -Float::INFINITY ? 0.0 : hi) - @near_lo, 1.0].max
-        end
-
-        def coverage(c, r) = c >= 0 && c < @cols && r >= 0 && r < @rows ? @count[(r * @cols) + c] / @per_cell : 0.0
-
         def cell(c, r)
           i = (r * @cols) + c
           cover = @count[i] / @per_cell
@@ -452,6 +298,167 @@ module Master
           @ramp[Glyphs.index(tone.clamp(0.0, 1.0), @levels, c, r)]
         end
       end
+
+      module AsciiPipeline
+        private
+
+        def turn(look)
+          angles = [look.yaw + look.turn, look.pitch, look.roll]
+          @cy, @sy, @cp, @sp, @cr, @sr = angles.flat_map { |a| [Math.cos(a), Math.sin(a)] }
+          @camera = Ascii::CAMERA / look.dolly
+          @gain = @scale * look.scale
+          @bob = look.bob * @scale
+          orbit = look.light
+          lift = Math.cos(Ascii::ELEVATION)
+          @key = Ascii.unit(Math.sin(orbit) * lift, Math.sin(Ascii::ELEVATION), Math.cos(orbit) * lift)
+          @rim = Ascii.unit(-Math.sin(orbit), 0.4, -Math.cos(orbit))
+          @half = Ascii.unit(@key[0], @key[1], @key[2] + 1.0)
+        end
+
+        # Yaw, then pitch, then roll: x right, y up, z toward the viewer.
+        def rotate(x, y, z)
+          a = (x * @cy) + (z * @sy)
+          b = (-x * @sy) + (z * @cy)
+          y2 = (y * @cp) - (b * @sp)
+          [(a * @cr) - (y2 * @sr), (a * @sr) + (y2 * @cr), (y * @sp) + (b * @cp)]
+        end
+
+        # Every vertex and normal turned, and the vertices in the sample grid:
+        # sample columns run right and rows down, depth is larger nearer.
+        def transform
+          pos = @mesh.pos
+          norm = @mesh.normals
+          @sx, @sy_, @sd, @nx, @ny, @nz = Array.new(6) { Array.new(@mesh.vertex_count) }
+          @mesh.vertex_count.times do |v|
+            at = 3 * v
+            x, y, z = rotate(pos[at], pos[at + 1] - @lift, pos[at + 2])
+            k = @gain * @camera / (@camera - z)
+            @sx[v] = @samples * ((@cols / 2.0) + (x * k))
+            @sy_[v] = @samples * (@rows - (y * k) - @bob)
+            @sd[v] = z * @scale
+            @nx[v], @ny[v], @nz[v] = rotate(norm[at], norm[at + 1], norm[at + 2])
+          end
+        end
+
+        # Edge functions at sample centres, largest depth wins and the first
+        # triangle keeps a tie. A sample keeps its triangle and two weights.
+        def raster
+          total = @sw * @sh
+          @zb = Array.new(total, Ascii::NONE)
+          @tri = Array.new(total, -1)
+          @bu, @bv = Array.new(2) { Array.new(total, 0.0) }
+          @mesh.triangle_count.times do |t|
+            i0, i1, i2 = @mesh.tris[3 * t, 3]
+            x0, y0, z0 = @sx[i0], @sy_[i0], @sd[i0]
+            x1, y1, z1 = @sx[i1], @sy_[i1], @sd[i1]
+            x2, y2, z2 = @sx[i2], @sy_[i2], @sd[i2]
+            area = ((x1 - x0) * (y2 - y0)) - ((x2 - x0) * (y1 - y0))
+            next unless area < -1.0e-9
+
+            inv = 1.0 / area
+            cols = [([x0, x1, x2].min - 0.5).ceil, 0].max..[([x0, x1, x2].max - 0.5).floor, @sw - 1].min
+            rows = [([y0, y1, y2].min - 0.5).ceil, 0].max..[([y0, y1, y2].max - 0.5).floor, @sh - 1].min
+            rows.each do |j|
+              py = j + 0.5
+              px = cols.begin + 0.5
+              e0 = ((x2 - x1) * (py - y1)) - ((y2 - y1) * (px - x1))
+              e1 = ((x0 - x2) * (py - y2)) - ((y0 - y2) * (px - x2))
+              e2 = ((x1 - x0) * (py - y0)) - ((y1 - y0) * (px - x0))
+              cols.each do |i|
+                b0 = e0 * inv
+                b1 = e1 * inv
+                b2 = e2 * inv
+                idx = (j * @sw) + i
+                z = (b0 * z0) + (b1 * z1) + (b2 * z2)
+                inside = b0 >= 0.0 && b1 >= 0.0 && b2 >= 0.0
+                @zb[idx], @tri[idx], @bu[idx], @bv[idx] = z, t, b1, b2 if inside && z > @zb[idx]
+                e0 += y1 - y2
+                e1 += y2 - y0
+                e2 += y0 - y1
+              end
+            end
+          end
+        end
+
+        # Light every covered sample and keep its luminance and the slope of its
+        # surface (z against x and against y down), which creases are found in.
+        def light
+          total = @sw * @sh
+          @lum, @slope_x, @slope_y = Array.new(3) { Array.new(total, 0.0) }
+          tris = @mesh.tris
+          bright = @mesh.bright
+          cavity = @mesh.cavity
+          total.times do |idx|
+            t = @tri[idx]
+            next if t.negative?
+
+            b1 = @bu[idx]
+            b2 = @bv[idx]
+            b0 = 1.0 - b1 - b2
+            i0, i1, i2 = tris[3 * t, 3]
+            nx, ny, nz = Ascii.unit((b0 * @nx[i0]) + (b1 * @nx[i1]) + (b2 * @nx[i2]),
+                                    (b0 * @ny[i0]) + (b1 * @ny[i1]) + (b2 * @ny[i2]),
+                                    (b0 * @nz[i0]) + (b1 * @nz[i1]) + (b2 * @nz[i2]))
+            paint = (b0 * bright[i0]) + (b1 * bright[i1]) + (b2 * bright[i2])
+            ao = (b0 * cavity[i0]) + (b1 * cavity[i1]) + (b2 * cavity[i2])
+            @lum[idx] = radiance(nx, ny, nz, paint, ao)
+            facing = nz > 0.25 ? nz : 0.25
+            @slope_x[idx] = -nx / facing
+            @slope_y[idx] = ny / facing
+          end
+        end
+
+        def radiance(nx, ny, nz, brightness, ao)
+          k = (nx * @key[0]) + (ny * @key[1]) + (nz * @key[2])
+          f = (nx * Ascii::FILL_DIR[0]) + (ny * Ascii::FILL_DIR[1]) + (nz * Ascii::FILL_DIR[2])
+          r = (nx * @rim[0]) + (ny * @rim[1]) + (nz * @rim[2])
+          direct = Ascii::AMBIENT + (Ascii::KEY * (k > 0.0 ? k : 0.0)) + (Ascii::FILL * (f > 0.0 ? f : 0.0)) + (Ascii::RIM * (r > 0.0 ? r : 0.0))
+          lum = direct * (1.0 - Ascii::PAINT + (Ascii::PAINT * brightness))
+          if k > 0.0
+            h = (nx * @half[0]) + (ny * @half[1]) + (nz * @half[2])
+            if h > 0.0
+              Ascii::SQUARINGS.times { h *= h }
+              lum += Ascii::SPEC * h
+            end
+          end
+          lum * (1.0 - ao)
+        end
+
+        # Per cell: covered samples, their luminance and depth summed; and the
+        # depth range of everything seen.
+        def measure
+          @count = Array.new(@rows * @cols, 0)
+          @lum_sum = Array.new(@rows * @cols, 0.0)
+          @depth_sum = Array.new(@rows * @cols, 0.0)
+          lo = Float::INFINITY
+          hi = -Float::INFINITY
+          @rows.times do |r|
+            @cols.times do |c|
+              cell = (r * @cols) + c
+              (0...(2 * @samples)).each do |dy|
+                base = (((r * 2 * @samples) + dy) * @sw) + (c * @samples)
+                @samples.times do |dx|
+                  next if @tri[base + dx].negative?
+
+                  d = @zb[base + dx]
+                  @count[cell] += 1
+                  @lum_sum[cell] += @lum[base + dx]
+                  @depth_sum[cell] += d
+                  lo = d if d < lo
+                  hi = d if d > hi
+                end
+              end
+            end
+          end
+          @near_lo = lo == Float::INFINITY ? 0.0 : lo
+          @near_span = [(hi == -Float::INFINITY ? 0.0 : hi) - @near_lo, 1.0].max
+        end
+
+        def coverage(c, r) = c >= 0 && c < @cols && r >= 0 && r < @rows ? @count[(r * @cols) + c] / @per_cell : 0.0
+
+      end
+
+      Ascii.include(AsciiPipeline)
     end
   end
 end
