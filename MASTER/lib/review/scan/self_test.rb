@@ -22,8 +22,8 @@ module Master
               next [] unless ruby_source || shell_source
 
               read_lines(path).each_with_index.filter_map do |line, index|
-                rescue_line = ruby_source && line.match?(/^\\s*rescue\\s*(?:$|=>)/)
-                trap_line = shell_source && line.match?(/^\\s*trap\\s+.*\\s+do/)
+                rescue_line = ruby_source && line.match?(/^\s*rescue\s*(?:$|=>)/)
+                trap_line = shell_source && line.match?(/^\s*trap\s+.*\s+do/)
                 finding(path:, line: index + 1, message: "bare rescue/trap in OPERATOR - use explicit error handling") if rescue_line || trap_line
               end
             end
@@ -176,7 +176,7 @@ module Master
             return :shell if SHELL_EXTENSIONS.include?(extension) || SHELL_SOURCE_BASENAMES.include?(File.basename(path))
 
             header = File.open(path, "rb", &:readline)
-            return :shell if header.match?(/\\A#!.*\\b(?:zsh|ksh|sh)\\b/)
+            return :shell if header.match?(/\A#!.*\b(?:zsh|ksh|sh)\b/)
 
             nil
           rescue EOFError
