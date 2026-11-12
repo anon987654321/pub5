@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-# Namespace hook for takeaway/* — keep empty until shared vertical policy/layout lands.
-class Takeaway::BaseController < ApplicationController
-  include Shared::FindableBySlug # restaurants are slug-routed; nested lookups resolve slug-or-id
+# Keep the Takeaway namespace and compatibility mount while sharing slug lookup.
+class Takeaway::BaseController < Shared::SluggedVerticalController
 end
