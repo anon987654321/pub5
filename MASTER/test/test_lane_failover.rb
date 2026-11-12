@@ -322,7 +322,8 @@ class TestLaneFailover < Minitest::Test
     assert_equal 4096, posts.first[3], "the 8 GB host's request window"
     refute Quota.dead?("ollama:#{model}"), "a live probe revives the lane"
   ensure
-    Health.remove_instance_variable(:@warm_probed_at) if Health.instance_variable_defined?(:@warm_probed_at)
+    Health.instance_variable_set(:@warm_probed_at, nil)
+    Health.instance_variable_set(:@warm_probe_ok_at, nil)
   end
 
   def test_a_silent_warm_model_is_dropped_for_the_run_only
@@ -335,6 +336,21 @@ class TestLaneFailover < Minitest::Test
            "the drop names its reason: #{Quota.run_drops.inspect}"
   ensure
     Health.remove_instance_variable(:@warm_probed_at) if Health.instance_variable_defined?(:@warm_probed_at)
+    Quota.clear_run_drops!
+  end
+
+  def test_failed_warm_probe_does_not_suppress_recovery_for_the_full_interval
+    Health.instance_variable_set(:@warm_probed_at, nil)
+    Health.instance_variable_set(:@warm_probe_ok_at, nil)
+    now = Time.utc(2026, 10, 11, 12, 0, 0)
+    Health.stub(:warm_probe_post, ->(*) { nil }) do
+      assert_equal :silent, Health.warm_probe(now:)
+      assert_equal :cooldown, Health.warm_probe(now: now + 10)
+      assert_equal :silent, Health.warm_probe(now: now + 31)
+    end
+  ensure
+    Health.instance_variable_set(:@warm_probed_at, nil)
+    Health.instance_variable_set(:@warm_probe_ok_at, nil)
     Quota.clear_run_drops!
   end
 
