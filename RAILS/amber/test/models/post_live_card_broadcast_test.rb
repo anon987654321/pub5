@@ -19,6 +19,15 @@ class PostLiveCardBroadcastTest < ActiveSupport::TestCase
     @post = Post.find(@post.id)
   end
 
+  test "public feed projects comment counts without loading comments per post" do
+    Comment.create!(user: @reader, commentable: @post, content: "Godt poeng")
+
+    feed_post = Post.public_feed.find(@post.id)
+
+    assert feed_post.has_attribute?(:feed_comment_count)
+    assert_equal 1, feed_post.comment_count
+  end
+
   test "a vote updates the score without refreshing the feed" do
     streams = capture_turbo_stream_broadcasts("posts") do
       Vote.create!(user: @reader, votable: @post, value: 1)
