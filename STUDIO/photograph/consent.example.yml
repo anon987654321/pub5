@@ -16,8 +16,9 @@ source_rights:
   generation_use: false
   provider_processing: false
   # One entry per source set: who granted it, when, scope, and evidence path.
-  # stored_at is relative to this subject directory; the file and directories
-  # must be private and must not be symlinks.
+  # stored_at is relative to this subject directory. Evidence files must be
+  # owner-only (0600); nested evidence directories must be owner-only (0700).
+  # No component of an evidence path may be a symlink.
   evidence: {}
   # me2_archive:
   #   granted_by: "..."
