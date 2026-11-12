@@ -7,10 +7,6 @@ require_relative "minitest_helper"
 require_relative "../photograph/selfie_series"
 
 class TestSelfieSeries < Minitest::Test
-  module AllowConsent
-    def self.required_source_sets(**) = []
-    def self.require!(**) = true
-  end
   # A stand-in for the Replicate predict/download round trip, in the shape
   # idea_picture_test.rb already established for graded stills.
   class FakeClient
@@ -74,12 +70,11 @@ class TestSelfieSeries < Minitest::Test
       client: fail_download_at ? FakeClient.new(fail_download_at:) : @client,
       directory: File.join(@dir, "stills"),
       ledger_path: File.join(@dir, "ledger.jsonl"),
-      consent: AllowConsent
     )
   end
 
   def test_a_series_renders_stills_with_subject_prefixed_filenames_in_the_lora_root
-    rendered = series.run(count: 3)
+    rendered = run_with_allow_consent(series, count: 3)
 
     assert_equal 3, rendered.size
     rendered.each { |path| assert File.file?(path) }
@@ -102,9 +97,8 @@ class TestSelfieSeries < Minitest::Test
 
     box = Studio::Visual::SelfieSeries.new(
       subject: "probe", client: @client, directory:, ledger_path: File.join(@dir, "ledger.jsonl"),
-      consent: AllowConsent
     )
-    box.run(count: 1, replace: true)
+    run_with_allow_consent(box, count: 1, replace: true)
 
     refute File.exist?(old)
     refute File.exist?(processed)
@@ -113,7 +107,7 @@ class TestSelfieSeries < Minitest::Test
   end
 
   def test_no_render_carries_the_film_model
-    series.run(count: 2)
+    run_with_allow_consent(series, count: 2)
 
     models = @client.predictions.map(&:first)
     assert_equal 2, models.size
@@ -128,7 +122,7 @@ class TestSelfieSeries < Minitest::Test
 
   def test_a_failed_render_is_recorded_and_the_series_continues
     box = series(fail_download_at: 2)
-    rendered = box.run(count: 3)
+    rendered = run_with_allow_consent(box, count: 3)
 
     assert_equal 2, rendered.size, "the network-lost scene is skipped, the series continues"
     attempts = ledger_rows("render_attempt")
@@ -138,7 +132,7 @@ class TestSelfieSeries < Minitest::Test
   end
 
   def test_renders_are_recorded_in_the_subject_ledger
-    series.run(count: 2)
+    run_with_allow_consent(series, count: 2)
 
     assert_equal 2, ledger_rows("render").size
     row = ledger_rows("render").first
@@ -155,6 +149,12 @@ class TestSelfieSeries < Minitest::Test
   end
 
   private
+
+  def run_with_allow_consent(box, **options)
+    Studio::Lora::Consent.stub(:required_source_sets, []) do
+      Studio::Lora::Consent.stub(:require!, true) { box.run(**options) }
+    end
+  end
 
   def ledger_rows(kind)
     path = File.join(@dir, "ledger.jsonl")
