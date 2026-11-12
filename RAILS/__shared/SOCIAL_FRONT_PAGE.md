@@ -56,3 +56,28 @@ X:
 TikTok:
 - https://support.tiktok.com/en/getting-started/for-you/test-for-you
 - https://newsroom.tiktok.com/new-features-bring-tiktok-magic-to-desktop?lang=en
+
+## Shared live-post contract
+
+Brgen and Amber share one social-post anatomy: `shared/post_card` owns the post's reading structure and `shared/post_vote_rail` owns its vote controls. The app partials provide the facts and actions that belong to their own product. Brgen remains the local, community-aware stream; Amber remains the editorial, wardrobe-aware reading surface. A shared card is not a shared front page.
+
+The card's live targets are deliberately small and stable:
+
+- `data-post-score="post_ID"` is the score value.
+- `data-post-like-count="post_ID"` is the like count.
+- `data-post-comment-count="post_ID"` is the comment count.
+- `dom_id(post, :vote_rail)` is the current reader's vote-control region.
+
+A count update changes only its text target. A vote replaces only the vote rail belonging to the reader who submitted it. A like replaces that reader's like button and broadcasts the new shared count. Do not broadcast a complete post card containing another reader's pressed states, ownership actions, or moderation controls.
+
+The event boundary matters as much as the markup:
+
+- A vote changes the stored score and broadcasts the counter values; it does not touch the Post and must not refresh every open feed.
+- A like updates its reader's button and broadcasts the shared like count.
+- A comment updates the global feed's count and refreshes only the affected post's detail stream. The detail thread is rendered again for each subscriber, so reply, delete and report controls are evaluated for that reader.
+- A real post-content edit or other card-changing mutation still refreshes the card/page. Related item or outfit changes must not be mistaken for a counter-only touch.
+- Brgen's city feed keeps its existing staged-arrival protocol: new cards wait in the hidden pending region until the reader chooses to reveal them. Amber keeps its editorial front-page rhythm; it does not inherit Brgen's city-arrival chip simply for sharing the post renderer.
+
+`shared/feed_card` remains the generic entity-card primitive for communities, channels, shows, matches, orders and other vertical records. It is not a second implementation of the social-post card. Marketplace listings, dating profiles, live video, maps, takeaway restaurants, ports and order flows keep their own content hierarchy and primary interaction.
+
+Future post capabilities should extend the existing shared card through explicit data/slots and narrowly scoped stream targets. Prefer one event with independently replaceable facts to a full-card redraw; prefer a server-rendered reader-specific control replacement to optimistic state that can lie after a failed request. Keep the feed useful without JavaScript, respect reduced motion, preserve stable IDs, and test both the markup contract and the stream destinations.
