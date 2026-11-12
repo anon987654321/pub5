@@ -79,6 +79,19 @@ class TestPermissionAudit < Minitest::Test
     assert_includes failures.first, "owned by root, expected amber"
   end
 
+  def test_symlinked_permission_targets_are_refused
+    failures = audit(
+      secrets: [{
+        path: "/etc/brgen.env", mode: 0o120777,
+        owner: "root", group: "brgen", symlink: true,
+        expected_owner: "root", expected_group: "brgen"
+      }]
+    )
+
+    assert_equal 1, failures.length
+    assert_includes failures.first, "is a symlink"
+  end
+
   def test_a_daemon_log_owned_by_root_fails
     lines = audit(daemon_logs: [{ path: ".master/tts-worker-1.log", owner: "root" }])
 
