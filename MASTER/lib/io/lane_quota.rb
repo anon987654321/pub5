@@ -68,7 +68,7 @@ module Master
       # free-pool limit, so their vendor slug is not an independent quota lane.
       def lane_of(model)
         id = model.to_s
-        return "ollama" if id.start_with?("ollama:", "ollama/")
+        return "ollama" if id.start_with?("ollama:", "ollama/", "local_uncensored:")
         # Each website has separate login, quota and failure state. A shared
         # "web-chat" lane would let one broken site silence every browser fallback.
         return id.split(":", 2).first(2).join(":") if id.start_with?("web-chat:")
