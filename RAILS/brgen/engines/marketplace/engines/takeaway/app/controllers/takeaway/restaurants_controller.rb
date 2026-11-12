@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 class Takeaway::RestaurantsController < Takeaway::BaseController
-  include Shared::FindableBySlug
-  include StorefrontSearch
+    include StorefrontSearch
 
   allow_unauthenticated_access only: %i[index show]
   before_action :require_real_user, except: %i[index show]
