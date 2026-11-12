@@ -1,3 +1,1 @@
-/opt/rb/lib/ruby/4.0.0/openssl.rb:13:in 'Kernel#require': libssl.so.3: cannot open shared object file: No such file or directory - /opt/rb/lib/ruby/4.0.0/x86_64-linux/openssl.so (LoadError)
-	from /opt/rb/lib/ruby/4.0.0/openssl.rb:13:in '<top (required)>'
-	from <internal:/opt/rb/lib/ruby/4.0.0/rubygems/core_ext/kernel_require.rb>:139:in 'Kernel#require'
+RUBY+SSL OK 4.0.9 OpenSSL 3.5.9 29 Sep 2026

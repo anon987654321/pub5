@@ -21,7 +21,9 @@ for _ in range(8):
     for p in sorted(todo):
         done.add(p)
         d=json.load(urllib.request.urlopen(f"https://api.anaconda.org/package/conda-forge/{p}",timeout=10))
-        fs=[f for f in d["files"] if f["attrs"].get("subdir")=="linux-64"]; fs.sort(key=lambda f:f.get("upload_time",""))
+        fs=[f for f in d["files"] if f["attrs"].get("subdir")=="linux-64"]
+        if p=="openssl": fs=[f for f in fs if f["version"].startswith("3.")]
+        fs.sort(key=lambda f:f.get("upload_time",""))
         f=fs[-1]; raw=urllib.request.urlopen("https://conda.anaconda.org/conda-forge/"+f["basename"],timeout=40).read()
         if f["basename"].endswith(".conda"):
             z=zipfile.ZipFile(io.BytesIO(raw))
