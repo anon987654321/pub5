@@ -171,7 +171,7 @@ module Master
     # is optional. Refusing those for want of a key sent a keyless laptop
     # with Ollama running to "no key".
     KEYLESS_LANE_PREFIXES =
-      %w[ollama: ollama/ local: claude-cli: codex-cli: grok-cli: agy: web-chat: gateway:].freeze
+      %w[ollama: ollama/ local_uncensored: local: claude-cli: codex-cli: grok-cli: agy: web-chat: gateway:].freeze
 
     def llm_reachable?(model = nil)
       ids = [model, ENV["MASTER_MODEL"]].map { |id| id.to_s.strip }.reject(&:empty?)
