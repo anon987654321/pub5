@@ -88,6 +88,14 @@ zai:
   strengths: [cheap, coding, long_context, agentic]
   default_model: glm-5.3-flash
 
+# Explicit local Ollama-only content lane. MASTER_NSFW_MODEL is a model
+# identifier already installed on the operator's own daemon, never an API key.
+# The LaneSelection NSFW gate is the only reader; this is not a general model tier.
+local_uncensored:
+  env: [MASTER_NSFW_MODEL]
+  strengths: [local, privacy, adult_content]
+  default_model: local_uncensored:configured
+
 local:
   env: []
   strengths: [privacy, offline, cheap]
