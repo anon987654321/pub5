@@ -1,0 +1,124 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "optparse"
+require_relative "../lib/master"
+
+options = {
+  base_url: ENV["MASTER_LLM_BASE_URL"] || "http://localhost:11434/v1", # Ollama default
+  api_key:  ENV["MASTER_LLM_API_KEY"]  || "ollama",
+  model:    ENV["MASTER_MODEL"]        || "qwen2.5:7b",
+  thread:   "default",
+  db:       "master.db",
+  schedule: true,
+  remember: false
+}
+
+OptionParser.new do |o|
+  o.on("--base-url URL",  "OpenAI-compatible endpoint")  { |v| options[:base_url]  = v }
+  o.on("--api-key KEY",   "API bearer token")            { |v| options[:api_key]   = v }
+  o.on("--model NAME",    "Model name")                  { |v| options[:model]     = v }
+  o.on("--thread ID",     "Conversation thread id")      { |v| options[:thread]    = v }
+  o.on("--db PATH",       "SQLite database path")        { |v| options[:db]        = v }
+  o.on("--no-schedule",   "Do not start the scheduler")  { options[:schedule] = false }
+  o.on("--remember",      "Store each Q&A turn in semantic memory") { options[:remember] = true }
+end.parse!(ARGV)
+
+db_path = options[:db]
+
+# --- storage -------------------------------------------------------------
+
+memory  = Master::Memory.new(path: db_path)
+vectors = Master::VectorMemory.new(
+  path: db_path,
+  embedder: Master::OllamaEmbedder.new(url: ENV["MASTER_OLLAMA_URL"] || "http://localhost:11434")
+)
+schedules = Master::ScheduleStore.new(path: db_path)
+
+# --- agent + scheduler ---------------------------------------------------
+
+registry = Master::ToolRegistry.new
+registry.register(Master::Tools::WebFetch.new)
+registry.register(Master::Tools::WebSearch.new)
+registry.register(Master::Tools::Browser.new)
+registry.register(Master::Tools::Shell.new)
+registry.register(Master::Tools::DataInspect.new)
+
+agent = Master::Agent.new(
+  llm:    Master::LLMAdapter.new(**options.slice(:base_url, :api_key, :model)),
+  tools:  registry,
+  memory: memory,
+  on_step: lambda { |info|
+    case info[:type]
+    when :tool_call
+      puts "\n[#{info[:step]}] -> #{info[:name]} #{info[:args].to_json[0, 120]}"
+    when :tool_result
+      puts "[#{info[:step]}] <- #{info[:name]} done"
+    end
+  }
+)
+
+scheduler = nil
+if options[:schedule]
+  begin
+    scheduler = Master::Scheduler.new(
+      store: schedules,
+      run_prompt: ->(prompt, thread_id) { agent.run(prompt, thread_id: thread_id) },
+      on_result: lambda { |name, result|
+        puts "\n[schedule:#{name}] #{result.lines.first.to_s.strip[0, 160]}"
+      }
+    )
+  rescue Master::SchedulerUnavailableError => e
+    warn "scheduler disabled: #{e.message}"
+  end
+end
+
+# --- tools that need wiring ----------------------------------------------
+
+subagents = Master::Subagents.new(llm: agent.llm, tools: registry, memory: memory)
+
+registry.register(Master::Tools::Remember.new(vectors))
+registry.register(Master::Tools::Recall.new(vectors))
+registry.register(Master::Tools::DispatchSubtasks.new(subagents))
+registry.register(Master::Tools::ScheduleCreate.new(
+  schedules, on_create: ->(entry) { scheduler&.register(entry) }
+))
+registry.register(Master::Tools::ScheduleList.new(schedules))
+registry.register(Master::Tools::ScheduleDelete.new(
+  schedules, on_delete: ->(name) { scheduler&.unregister(name) }
+))
+
+if scheduler
+  boot = scheduler.boot!
+  puts "scheduler: #{boot[:loaded]} job(s) loaded" +
+       (boot[:failed].empty? ? "" : " (#{boot[:failed].map(&:first).join(', ')} failed)")
+end
+
+# --- REPL ----------------------------------------------------------------
+
+puts "MASTER ready (model=#{options[:model]}, base_url=#{options[:base_url]})"
+puts "Type a request; 'exit' to quit."
+
+loop do
+  print "> "
+  input = $stdin.gets&.strip
+  break if input.nil? || input.empty? || %w[exit quit].include?(input.downcase)
+
+  begin
+    answer = agent.run(input, thread_id: options[:thread])
+    puts answer
+    if options[:remember]
+      begin
+        vectors.add("Q: #{input}\nA: #{answer}", thread_id: options[:thread])
+      rescue Master::VectorMemoryError => e
+        warn "remember failed: #{e.message}"
+      end
+    end
+  rescue Master::MaxStepsExceeded => e
+    puts "stopped: #{e.message}"
+  rescue Master::LLMError => e
+    puts "llm error: #{e.message}"
+  end
+end
+
+scheduler&.shutdown

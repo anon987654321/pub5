@@ -1,0 +1,50 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# MASTER evals runner.
+#
+# Offline (default):   bin/master-evals
+#   Deterministic, no network, no LLM. Run before every change.
+#
+# Live:                bin/master-evals --live [--base-url ... --api-key ... --model ...]
+#   Adds cases that hit a real LLM + network; soft heuristic assertions.
+#
+# Options: --json PATH writes a JSON report (gitignored by default).
+
+require "optparse"
+require_relative "../lib/master"
+require_relative "../evals/cases"
+
+options = {
+  json: nil,
+  live: false,
+  base_url: ENV["MASTER_LLM_BASE_URL"] || "http://localhost:11434/v1",
+  api_key: ENV["MASTER_LLM_API_KEY"] || "ollama",
+  model: ENV["MASTER_MODEL"] || "qwen2.5:7b"
+}
+
+OptionParser.new do |o|
+  o.on("--json PATH", "Write a JSON report to PATH") { |v| options[:json] = v }
+  o.on("--live", "Also run live cases against a real LLM endpoint") { options[:live] = true }
+  o.on("--base-url URL") { |v| options[:base_url] = v }
+  o.on("--api-key KEY")  { |v| options[:api_key] = v }
+  o.on("--model NAME")   { |v| options[:model] = v }
+end.parse!(ARGV)
+
+cases = Master::Evals.cases
+if options[:live]
+  llm = Master::Evals::CountingLLM.new(
+    Master::LLMAdapter.new(base_url: options[:base_url], api_key: options[:api_key], model: options[:model])
+  )
+  cases += Master::Evals.live_cases(llm)
+end
+
+results = Master::Evals::Runner.run(cases)
+Master::Evals::Runner.print_report(results)
+
+if options[:json]
+  path = Master::Evals::Runner.write_json(results, options[:json])
+  puts "report written: #{path}"
+end
+
+exit(results.any? { |r| !r[:ok] } ? 1 : 0)

@@ -1,0 +1,12 @@
+source "https://rubygems.org"
+
+# Core dependencies
+gem "faraday"    # LLM, search + embeddings HTTP client (OpenAI-compatible endpoints)
+gem "nokogiri"   # HTML -> text for web_fetch and browser
+gem "sqlite3"    # conversation memory, vector memory, schedules
+gem "rufus-scheduler" # cron/interval/at scheduling runtime
+
+# Optional tool dependencies (require: false; tools degrade gracefully)
+gem "polars-ruby", require: false # data_inspect tool
+gem "ferrum",      require: false # browser tool (also needs Chromium installed)
+gem "ruby-vips",   require: false # future: image processing tool

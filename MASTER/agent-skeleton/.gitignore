@@ -1,0 +1,10 @@
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+master.db*
+evals_report.json
+.byebug_history
+.bundle/
+vendor/
+coverage/
