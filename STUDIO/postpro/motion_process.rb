@@ -45,15 +45,17 @@ module Postpro
 
                 target = File.join(graded, format("%06d.png", count))
                 frame_seed = seed_for(count - 1, seed, grain:)
+                frame_context = FrameContext.new(
+                  index: count - 1,
+                  time_seconds: (count - 1).to_f / probe.fps,
+                  gate_weave: { x: weave_x.next_value, y: weave_y.next_value }
+                )
                 begin
-                  Postpro::Motion.gate_weave_offset = {
-                    x: weave_x.next_value, y: weave_y.next_value
-                  }.freeze
-                  grade_frame.call(bytes, probe.width, probe.height, target, frame_seed)
+                  grade_frame.call(
+                    bytes, probe.width, probe.height, target, frame_seed, frame_context
+                  )
                 rescue StandardError => e
                   raise Unavailable, "grading frame #{count} failed: #{e.class}: #{e.message}"
-                ensure
-                  Postpro::Motion.gate_weave_offset = nil
                 end
                 unless File.file?(target) && File.size(target).positive?
                   raise Unavailable, "frame #{count} did not produce a readable output"
