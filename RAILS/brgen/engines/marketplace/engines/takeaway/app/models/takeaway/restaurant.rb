@@ -35,6 +35,7 @@ class Takeaway::Restaurant < ApplicationRecord
   has_many :opening_hours, class_name: "Takeaway::OpeningHour", dependent: :destroy
 
   CUISINE_TYPES = %w[Norwegian Italian Chinese Japanese Indian Thai Mexican Pizza Burger Kebab Sushi Vegetarian Vegan].freeze
+  SORTS = %w[popular delivery_fee minimum_order].freeze
   CENTS_PER_KRONE = 100.0
 
   # Upper bound on a stated delivery radius. Bergen end to end is about 10 km
@@ -57,6 +58,21 @@ class Takeaway::Restaurant < ApplicationRecord
   scope :publicly_visible, -> { active.joins(:user).where(users: { deleted_at: nil, deletion_scheduled_at: nil }) }
   scope :popular, -> { order(rating: :desc, updated_at: :desc, id: :desc) }
   scope :near, ->(lat, lng, radius_km = 5) { nearby(lat, lng, radius_km) }
+
+  # The storefront may sort by facts the kitchen has actually supplied.
+  # Unknown fees/minimums stay last; they are not zero-cost offers.
+  def self.sorted(key)
+    case key.to_s
+    when "delivery_fee"
+      order(Arel.sql("CASE WHEN delivery_fee_cents IS NULL THEN 1 ELSE 0 END ASC, " \
+                     "delivery_fee_cents ASC, rating DESC, updated_at DESC, id DESC"))
+    when "minimum_order"
+      order(Arel.sql("CASE WHEN min_order_cents IS NULL THEN 1 ELSE 0 END ASC, " \
+                     "min_order_cents ASC, rating DESC, updated_at DESC, id DESC"))
+    else
+      popular
+    end
+  end
 
   # What a search engine may be told about. A demo restaurant — `demo` is set by
   # the seeders, never by an owner's form — keeps its page but is not presented
