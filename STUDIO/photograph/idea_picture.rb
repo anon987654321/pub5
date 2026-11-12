@@ -32,15 +32,14 @@ module Studio
         client: nil,
         directory: SUBJECTS,
         subject: ENV.fetch("STUDIO_PHOTOGRAPH_SUBJECT", "ragnhild"),
-        model_manifest: nil,
-        subject_directory: nil
+        model_manifest: nil
       )
         @client = client
         @directory = directory
         @subject = subject.to_s
         raise ArgumentError, "subject must be a simple directory name" unless @subject.match?(/\A[a-zA-Z0-9_-]+\z/)
 
-        @subject_directory = File.expand_path(subject_directory || File.join(SUBJECTS, @subject))
+        @subject_directory = File.join(SUBJECTS, @subject)
         @model_manifest = model_manifest || default_model_manifest
       end
 
