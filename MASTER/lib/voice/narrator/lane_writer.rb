@@ -39,9 +39,10 @@ module Master
 
         def via_claude_cli(model, system, prompt)
           claude = Master::Io::Exec.cli_binary("claude") || "claude"
+          timeout_s = Float(@config.fetch("model_timeout_s", 20))
           out, err, status = @runner.capture3(
             SESSION_ENV, claude, "--print", "--model", model.split(":", 2).last, *TEXT_ONLY, "--system-prompt", system,
-            stdin_data: prompt, timeout: Float(@config.fetch("model_timeout_s", 20))
+            stdin_data: prompt, timeout: timeout_s
           )
           combined = [out, err].filter_map { |value| value.to_s.strip unless value.to_s.strip.empty? }.join("\n")
           Master::Trace::Dmesg.detail(
@@ -72,6 +73,11 @@ module Master
 
           Master::Io::LaneSilence.record(true, lane)
           out
+        rescue Timeout::Error
+          lane = Master::Io::LaneSilence.lane_of(model)
+          Master::Io::LaneSilence.silence(lane, reason: "narration call timed out after #{timeout_s}s")
+          Master::Trace::Dmesg.once("llm0-#{lane}", Master::Io::LaneSilence.message(lane))
+          raise Unavailable, "claude-cli timed out after #{timeout_s}s; #{lane} skipped for #{Master::Io::LaneSilence::SILENCE_COOLOFF_S / 60} minutes"
         end
 
         def via_ruby_llm(model, system, prompt, max_tokens)
