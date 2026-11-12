@@ -53,9 +53,16 @@
 # +9 directories were bought upstream before the clone; no path in this
 # checkout could commit anything until the census matched what HEAD itself
 # contains. No path added by this session.
+#
+# 2026-11-13: re-set to 7287 because the 2026-11-12 re-set undercounted the
+# tree it was written against: 44742be and HEAD alike hold 7287 tracked paths
+# (`git ls-tree -r` and `git ls-files` agree), so the recorded 7283 priced a
+# checkout four files smaller than the one carrying it and even a commit that
+# adds nothing could not pass the gate. No path added by this session; the
+# count is corrected, not raised above what HEAD already contains.
 lone_dirs: 37
 stutter: 0
 vague_names: 0
-tracked_files: 7283
+tracked_files: 7287
 tracked_directories: 887
 corpus: 4127
