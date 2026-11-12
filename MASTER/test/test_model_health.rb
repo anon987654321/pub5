@@ -28,13 +28,13 @@ class TestModelHealth < Minitest::Test
     result = report(
       "local:small" => { calls: 4, successes: 4, failures: 0, latency_ms: 850.0 },
       "gateway:unstable" => {
-        calls: 5, successes: 2, failures: 3, latency_ms: 1_200.0,
+        calls: 5, successes: 2, failures: 3, latency_ms: 1_200.0, first_token_ms: 550.0,
         last_error: "Authorization: Bearer must-never-be-rendered"
       },
     )
 
     assert_includes result, "model health: 2 models, 9 calls, success=66.7%, failures=3"
-    assert_includes result, "gateway:unstable  calls=5 ok=2 fail=3 success=40.0% avg_ok=1200ms"
+    assert_includes result, "gateway:unstable  calls=5 ok=2 fail=3 success=40.0% avg_ok=1200ms ttft=550ms"
     assert_includes result, "local:small  calls=4 ok=4 fail=0 success=100.0% avg_ok=850ms"
     refute_includes result, "must-never-be-rendered"
   end
@@ -72,6 +72,7 @@ class TestModelHealth < Minitest::Test
       calls: 4,
       success_rate: 0.75,
       latency_ms: 325.7,
+      first_token_ms: 90.5,
     }]
     router = Router.new(Pool.new({}, rows))
 
@@ -83,7 +84,7 @@ class TestModelHealth < Minitest::Test
       arg: "compute",
     )
 
-    assert_equal "1. ollama:gemma3:4b  local  available  success=75% calls=4 avg_ok=326ms", result
+    assert_equal "1. ollama:gemma3:4b  local  available  success=75% calls=4 avg_ok=326ms ttft=91ms", result
   end
 
   def test_health_report_caps_the_number_of_model_rows
