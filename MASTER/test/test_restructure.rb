@@ -91,7 +91,7 @@ class TestRestructure < Minitest::Test
 
   def test_preview_refuses_a_symlinked_path_without_following_it
     outside = File.join(@tmp, "outside.rb")
-    File.write(outside, "OUTSIDE = 1\\n")
+    File.write(outside, "OUTSIDE = 1\n")
     linked = File.join(@repo, "MASTER/lib/linked.rb")
     File.symlink(outside, linked)
     plan = Restructure::Plan.parse(<<~TEXT)
@@ -106,7 +106,7 @@ class TestRestructure < Minitest::Test
 
     refute result.ok?
     assert_includes result.message, "symlinked path"
-    assert_equal "OUTSIDE = 1\\n", File.read(outside)
+    assert_equal "OUTSIDE = 1\n", File.read(outside)
   end
 
   def test_rollback_preserves_a_concurrent_edit_to_a_written_path
@@ -127,14 +127,14 @@ class TestRestructure < Minitest::Test
       plan,
       message: "Change Big",
       review: lambda do |_diff|
-        write(path, "class Big; def a = :someone_elses_edit; end; end\\n")
+        write(path, "class Big; def a = :someone_elses_edit; end; end\n")
         "concurrent edit arrived during review"
       end,
     )
 
     refute result.ok?
     assert_includes result.message, "concurrent modification preserved"
-    assert_equal "class Big; def a = :someone_elses_edit; end; end\\n", read(path)
+    assert_equal "class Big; def a = :someone_elses_edit; end; end\n", read(path)
     refute_equal original, read(path)
   end
 
