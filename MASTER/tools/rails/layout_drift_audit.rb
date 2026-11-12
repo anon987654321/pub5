@@ -215,8 +215,21 @@ module Operator
       amber_model = read(amber_model_path)
       expect("post_card.amber_live_counts", amber_model_path, amber_model, "def broadcast_live_counts",
              "Amber must publish score, like and comment counts as targeted stream updates.")
-      expect("post_card.amber_touch_only", amber_model_path, amber_model, "TOUCH_ONLY_COLUMNS",
-             "Counter-only touches must not trigger a full-page feed refresh.")
+      vote_model_path = "RAILS/amber/app/models/vote.rb"
+      vote_model = read(vote_model_path)
+      expect("post_card.amber_vote_event", vote_model_path, vote_model, "after_commit :broadcast_post_counts",
+             "Votes must publish counters as interaction events, not touch the post.")
+      comment_model_path = "RAILS/amber/app/models/comment.rb"
+      comment_model = read(comment_model_path)
+      expect("post_card.amber_comment_event", comment_model_path, comment_model, "after_commit :broadcast_post_comment",
+             "Comments must publish their own feed-count and detail-thread events.")
+      expect("post_card.amber_viewer_safe_comments", comment_model_path, comment_model,
+             "broadcast_refresh_to target",
+             "A comment thread must be rendered for each reader rather than broadcasting another reader's controls.")
+      create_stream_path = "RAILS/amber/app/views/comments/create.turbo_stream.erb"
+      expect("post_card.amber_no_duplicate_comment_append", create_stream_path, read(create_stream_path),
+             "replace \"comment_form\"",
+             "The local response must not append a row that the detail stream also refreshes.")
     end
 
     def audit_vertical_front_pages
