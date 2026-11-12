@@ -935,19 +935,19 @@ end
       Master::Fix::CritiquePin.stub(:focus, nil) do
         Master::CLI::CommandRegistry.stub(
           :fix_targets,
-        lambda do |_target, root:|
-          assert_equal expected, events.first,
-                       "the operator must see mode and write boundary before target preflight"
-          raise "preflight sentinel"
-        end,
-      ) do
-        error = assert_raises(RuntimeError) do
-          Master::CLI::CommandRegistry.dispatch_fix_parsed(
-            scanner: nil, fix_loop: nil, deliberation: nil, root: @root, bus: nil, swarm: nil,
-            raw: ". --dry-run", apply: false, critique: true, aesthetic: false, only: nil, target: "."
-          )
-        end
-        assert_equal "preflight sentinel", error.message
+          lambda do |_target, root:|
+            assert_equal expected, events.first,
+                         "the operator must see mode and write boundary before target preflight"
+            raise "preflight sentinel"
+          end,
+        ) do
+          error = assert_raises(RuntimeError) do
+            Master::CLI::CommandRegistry.dispatch_fix_parsed(
+              scanner: nil, fix_loop: nil, deliberation: nil, root: @root, bus: nil, swarm: nil,
+              raw: ". --dry-run", apply: false, critique: true, aesthetic: false, only: nil, target: "."
+            )
+          end
+          assert_equal "preflight sentinel", error.message
         end
       end
     end
