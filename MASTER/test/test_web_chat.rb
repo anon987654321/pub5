@@ -171,6 +171,20 @@ class TestWebChat < Minitest::Test
     assert_equal :timeout, Master::Io::WebChat.failure_category(error)
   end
 
+  def test_ferrum_binary_missing_skips_the_browser_lane
+    error_class = Class.new(StandardError)
+    error_class.define_singleton_method(:name) { "Ferrum::BinaryNotFoundError" }
+
+    assert_equal :model_missing, Master::Io::WebChat.failure_category(error_class.new("Chrome missing"))
+  end
+
+  def test_ferrum_dead_browser_is_offline
+    error_class = Class.new(StandardError)
+    error_class.define_singleton_method(:name) { "Ferrum::DeadBrowserError" }
+
+    assert_equal :offline, Master::Io::WebChat.failure_category(error_class.new("browser process exited"))
+  end
+
   def test_dispatcher_timeout_is_not_relabelled_as_web_chat_provider_error
     chat = build_chat
     chat.define_singleton_method(:enabled?) { true }
@@ -192,6 +206,36 @@ class TestWebChat < Minitest::Test
     chat.define_singleton_method(:timeout_seconds) { 120 }
     assert_equal Master::Io::WebChat::FERRUM_TIMEOUT_S, chat.send(:ferrum_timeout_s)
     assert_operator chat.send(:ferrum_timeout_s), :<, 60
+  end
+
+  def test_native_ferrum_async_quit_thread_is_used_for_profile_cleanup
+    chat = build_chat
+    release = Queue.new
+    native_worker = Thread.new { release.pop }
+    browser = Object.new
+    browser.define_singleton_method(:quit) do |wait: true|
+      raise "wait must be false" unless wait == false
+      native_worker
+    end
+
+    Master::Io::WebChat::PROFILE_MUTEX.synchronize do
+      chat.send(:cleanup_browser, browser)
+      assert_same native_worker, Master::Io::WebChat::PROFILE_CLEANUP[:thread]
+      assert_raises(Master::Io::WebChat::ProviderError) do
+        chat.send(:refuse_if_cleanup_pending!)
+      end
+    end
+
+    release << true
+    native_worker.join(1)
+    Master::Io::WebChat::PROFILE_MUTEX.synchronize do
+      chat.send(:refuse_if_cleanup_pending!)
+      assert_nil Master::Io::WebChat::PROFILE_CLEANUP[:thread]
+    end
+  ensure
+    release << true if release
+    native_worker&.join(1)
+    Master::Io::WebChat::PROFILE_MUTEX.synchronize { Master::Io::WebChat::PROFILE_CLEANUP[:thread] = nil }
   end
 
   def test_slow_browser_cleanup_does_not_block_and_prevents_profile_reuse
