@@ -37,6 +37,7 @@ module Master
       # remains available for an operator who has signed into the local profile.
       def self.enabled?(rules: Master.models_config)
         return false if ENV["MASTER_LOCAL_ONLY"] == "1"
+        return false unless ENV["MASTER_NO_KEYLESS"].to_s.empty?
         return false if ENV["MASTER_NO_WEB_CHAT"] == "1"
         return false if ENV["MASTER_WEB_CHAT"].to_s == "0"
         return true if ENV["MASTER_WEB_CHAT"] == "1" || ENV["MASTER_KEYLESS"] == "1"
