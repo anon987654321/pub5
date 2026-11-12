@@ -24,10 +24,10 @@ but the implementation is owned here.
   entrypoint and its IdeaPicture implementation.
 - `replicate/client.rb` — the Studio-owned Replicate provider client
   (`Studio::ReplicateClient`), with version-aware input-schema reads, bounded
-  transfers and explicit provider errors. `train_lora` requires a `subject:`
-  keyword and validates the private consent record before any provider schema,
-  model-creation or training request. MASTER has its own client and runtime
-  policies; this one is STUDIO's.
+  transfers and explicit provider errors. `train_lora`, `upload_file` and
+  `upload_zip` require a `subject:` keyword and validate the private consent
+  record before any provider schema, model-creation, upload or training request.
+  MASTER has its own client and runtime policies; this one is STUDIO's.
 - `lora/` — subject descriptors and private training plans. `bin/studio lora`
   runs a read-only validator; `lora/consent.rb` is the shared gate for source
   recovery, dataset preparation and likeness generation. It requires separate
