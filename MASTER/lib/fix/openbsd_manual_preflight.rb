@@ -26,6 +26,10 @@ module Master
         "pkg_info" => "pkg_info(1)", "relayd" => "relayd(8)", "httpd" => "httpd(8)",
         "sshd" => "sshd(8)", "smtpd" => "smtpd(8)", "smtpctl" => "smtpctl(8)",
         "rc" => "rc(8)", "syspatch" => "syspatch(8)", "upgrade" => "upgrade(8)",
+        "acme-client" => "acme-client(1)", "newsyslog" => "newsyslog(8)",
+        "nsd" => "nsd(8)", "nsd-checkconf" => "nsd-checkconf(8)",
+        "nsd-checkzone" => "nsd-checkzone(8)", "nsd-control" => "nsd-control(8)",
+        "relayctl" => "relayctl(8)",
         "mount" => "mount(8)", "umount" => "umount(8)", "disklabel" => "disklabel(8)",
         "bioctl" => "bioctl(8)", "installboot" => "installboot(8)", "fsck" => "fsck(8)",
         "useradd" => "useradd(8)", "usermod" => "usermod(8)", "userdel" => "userdel(8)",
@@ -40,7 +44,17 @@ module Master
       ].freeze
       COMMAND_SUPPORT_MANUALS = {
         "rc" => RC_FRAMEWORK_MANUALS,
-        "rcctl" => RC_FRAMEWORK_MANUALS
+        "rcctl" => RC_FRAMEWORK_MANUALS,
+        "pfctl" => %w[pf(4) pf.conf(5)],
+        "relayd" => %w[relayd.conf(5) relayctl(8) pf(4)],
+        "httpd" => %w[httpd.conf(5) slowcgi(8)],
+        "smtpd" => %w[smtpd.conf(5) smtpctl(8)],
+        "acme-client" => %w[acme-client.conf(5)],
+        "newsyslog" => %w[newsyslog(8)],
+        "nsd" => %w[nsd.conf(5) nsd-checkconf(8) nsd-control(8)],
+        "nsd-checkconf" => %w[nsd.conf(5) nsd(8) nsd-control(8)],
+        "nsd-checkzone" => %w[nsd.conf(5) nsd(8) nsd-control(8)],
+        "nsd-control" => %w[nsd.conf(5) nsd(8) nsd-checkconf(8)]
       }.freeze
       RC_SERVICE_ACTIONS = %w[check configtest reload restart start stop].freeze
       RC_SERVICE_NAME = /\A[A-Za-z0-9_][A-Za-z0-9_.-]*\z/.freeze
@@ -423,6 +437,19 @@ module Master
         path = relative.to_s.tr("\\", "/")
         return RC_FRAMEWORK_MANUALS if path.match?(%r{\AOPENBSD/etc/rc\.d/[^/]+\z})
         return %w[rc(8) rc.conf(8) rc.d(8) rcctl(8)] if path.match?(%r{\AOPENBSD/etc/rc\.conf(?:\.local)?\z})
+        return %w[pf(4) pf.conf(5) pfctl(8)] if path.match?(%r{\AOPENBSD/etc/pf(?:\.stage1)?\.conf\z})
+        return %w[relayd.conf(5) relayd(8) relayctl(8) pf(4)] if path == "OPENBSD/etc/relayd.conf"
+        return %w[httpd.conf(5) httpd(8) slowcgi(8)] if path == "OPENBSD/etc/httpd.conf"
+        return %w[acme-client.conf(5) acme-client(1)] if path == "OPENBSD/etc/acme-client.conf"
+        return %w[doas.conf(5) doas(1)] if path == "OPENBSD/etc/doas.conf"
+        return %w[login.conf(5) login(1)] if path == "OPENBSD/etc/login.conf"
+        return %w[smtpd.conf(5) smtpd(8) smtpctl(8)] if path == "OPENBSD/etc/mail/smtpd.conf"
+        return %w[newsyslog(8)] if path == "OPENBSD/etc/newsyslog.conf"
+        return %w[daily(8) cron(8) ksh(1)] if %w[OPENBSD/etc/daily.local OPENBSD/etc/weekly.local].include?(path)
+        return %w[nsd.conf(5) nsd(8) nsd-checkconf(8) nsd-control(8)] if path == "OPENBSD/var/nsd/etc/nsd.conf"
+        if path.match?(%r{\AOPENBSD/var/nsd/zones/master/[^/]+\.zone\z})
+          return %w[nsd.conf(5) nsd(8) nsd-checkzone(8) nsd-control(8)]
+        end
 
         []
       end

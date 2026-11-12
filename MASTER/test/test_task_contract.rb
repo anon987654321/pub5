@@ -641,6 +641,27 @@ class TestTaskContract < Minitest::Test
     assert_match(/rc\.d\(8\)/, reason)
   end
 
+  def test_openbsd_native_configuration_edits_require_their_format_and_daemon_manuals
+    cases = [
+      ["OPENBSD/etc/pf.conf", "pfctl(8)", "pf.conf(5)"],
+      ["OPENBSD/etc/httpd.conf", "httpd(8)", "httpd.conf(5)"],
+      ["OPENBSD/etc/doas.conf", "doas(1)", "doas.conf(5)"],
+      ["OPENBSD/var/nsd/etc/nsd.conf", "nsd(8)", "nsd.conf(5)"],
+      ["OPENBSD/var/nsd/zones/master/brgen.no.zone", "nsd(8)", "nsd-checkzone(8)"]
+    ]
+
+    cases.each do |relative, available_page, required_page|
+      contract = openbsd_task_contract(
+        openbsd_preflight_fixture(source_paths: [relative], interfaces: [available_page]),
+      )
+      reason = Master::Fix::OpenBSDManualPreflight.refusal_for_path(
+        path: File.join(Master::REPO_ROOT, relative), contract:
+      )
+
+      assert_match(Regexp.new(Regexp.escape(required_page)), reason, "#{relative} must require #{required_page}")
+    end
+  end
+
   def test_rc_service_file_edits_require_rc_framework_manuals
     contract = openbsd_task_contract(
       openbsd_preflight_fixture(
