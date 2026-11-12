@@ -50,9 +50,11 @@ class LikeCountStreamTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal 1, record.reload.likes_count
     assert_select "turbo-stream[action=replace][target=?]", "like_post_#{record.id}" do
-      # The post button is an icon with the count beside it; its words are the aria-label.
-      assert_select "template form#like_post_#{record.id} button[aria-label=?]", I18n.t("post.like_count", count: 1)
-      assert_select "template form#like_post_#{record.id} button .feed-action-count", "1"
+      # The name stays stable; the described count is an independently replaceable target.
+      assert_select "template form#like_post_#{record.id} button[aria-label=?][aria-describedby=?]",
+                    I18n.t("post.like"), ActionView::RecordIdentifier.dom_id(record, :like_count)
+      assert_select "template ##{ActionView::RecordIdentifier.dom_id(record, :like_count)}[data-post-like-count=?]",
+                    ActionView::RecordIdentifier.dom_id(record), "1"
     end
   end
 
