@@ -158,9 +158,6 @@ module Master
 
         def empirical_stats(id)
           stat = @mutex.synchronize { @stats[id.to_s]&.dup }
-          calls = stat&.fetch(:calls, 0).to_i
-          successes = stat&.fetch(:successes, 0).to_i
-          success_rate = calls.zero? ? 1.0 : successes.fdiv(calls)
           latency = stat&.fetch(:latency_ms, 0).to_f
           [recent_evidence_factor(stat),
            latency.zero? ? 1.0 : [1000.0 / [latency, 1000.0].max, 1.0].min]
