@@ -433,8 +433,8 @@ re-enable it by assumption.
 
 ## Deferred, not active work
 
-- pub5 is deferred. Do not freeze or migrate pub4 until its acceptance evidence
-  is complete and the operator explicitly chooses to start a new tree.
+- pub5 source work is active on `main`; release acceptance remains deferred
+  until the operator-only evidence is complete and recorded.
 - The archived movie-acquisition proposal is not approved. Reopen only for a
   lawful provider/catalogue integration with explicit provenance and licensing.
 - Amber 3D garment inspection and new STUDIO audio-reactive artwork remain
@@ -708,18 +708,15 @@ keyless, 2 RPM per IP per model, 20+ models). GitHub Models retired 2026-07-30;
 Gemini free tier hides its numbers; Hugging Face free monthly credits are gone.
 
 - [ ] PARTIAL 2026-11-10: `Io::ModelQuota` now parses `free_model_daily_requests` (`used`/`limit`/`remaining`), retains sample freshness and uses key-wide local fallback; quota suite NOT_RUN and live credential probe NOT_RUN.
-- [ ] Wire the pass-0 walk's lane wheel onto the free-floor verdict. The
-  floor suspends honestly twice over (RunPulse `promote_live_lane` and the
-  process-local counter in `Io::LaneSelection.note_provider_outcome`,
-  sharing one `@floor_suspended` flag), and 2026-11-07's proven defect is
-  fixed: the savior naming used `alive?`, which reads only binaries and
-  keys, so it kept naming `google/gemini-2.5-flash` "live" while
-  `data/lanes.yml` held it dead by hand — `live_savior` now demands
-  `LaneState.usable?`. Still open: whether the walk's own wheel reads
-  `order()` ranking and the suspension, or still pays every dead `:free`
-  slug its call. Verify by rerunning an instrumented walk before routing
-  anything. `lane probe` stays on free rows on purpose (its job is to
-  detect the death, so probing must never be filtered).
+- [ ] PARTIAL 2026-11-12: the free-floor savior now requires both a run-local
+  successful non-free provider receipt and `LaneState.usable?`; configured
+  binaries/keys are not proof. The `RunPulse` consecutive-death streak resets
+  on success and counts free/local failures only; the process-local floor
+  counter resets only on a free/local success. Still open: whether the pass-0
+  walk's own wheel reads `order()` ranking and the suspension, or still pays
+  every dead `:free` slug its call. Verify by rerunning an instrumented walk
+  before routing anything. `lane probe` stays on free rows on purpose so the
+  probe can detect the death.
 - [ ] Rank free-load selection by latency: the live-`:free` spread with
   per-model quota buckets landed 2026-11-06, but the catalog carries no
   `free_latency` field, so ranking stays pool order until one exists.
