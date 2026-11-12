@@ -290,3 +290,18 @@ does not duplicate the live child, terminates that child, and proves a later
 start obtains a new waitable child. The test has been authored but NOT_RUN.
 This is one scoped result in the process-ownership census, not closure of the
 remaining detached-service, process-group, or browser-runtime checks.
+## Follow-on CDP Chrome process-group teardown
+
+The headless Chrome launcher now creates a dedicated process group for each
+CDP session. Teardown sends TERM to that owned group, waits with a monotonic
+bound, escalates to KILL, and confirms both direct-child reaping and process-
+group disappearance. It retains the PID/group handle when shutdown is
+inconclusive. CdpSession#close now removes the temporary profile only after
+that proof; otherwise it leaves the profile in place and emits a warning.
+
+A regression exercises the actual spawn_chrome method with a fake browser
+that launches a renderer in the inherited group. It also covers an
+inconclusive group-shutdown result and profile preservation. The new test is
+authored but NOT_RUN. The WebDriver engine has a separate launcher/teardown
+path that still needs bounded process ownership review; this does not close
+the broad process-termination census.
