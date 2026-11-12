@@ -390,50 +390,90 @@ module Master
 
         # Re-check a saved receipt whenever a later tool needs to rely on it.
         def verify_assessment_report(run_id)
-          id = run_id.to_s
-          return { "status" => "invalid_run_id" } unless id.match?(/\A[a-f0-9]{20}\z/)
+          context, failure = assessment_report_receipt_context(run_id.to_s)
+          return failure if failure
+
+          artifact, failure = assessment_report_payload(context)
+          return failure if failure
+
+          document = JSON.parse(artifact[:payload])
+          report, failure = assessment_report_identity(document, context)
+          return failure if failure
+
+          failure = assessment_report_provenance_failure(report, context)
+          return failure if failure
+
+          assessment_report_verified_summary(report, context, artifact)
+        rescue JSON::ParserError => e
+          { "status" => "invalid_json", "message" => e.message.to_s[0, 180] }
+        rescue StandardError => e
+          { "status" => "verification_failed", "error_class" => e.class.name, "message" => e.message.to_s[0, 180] }
+        end
+
+        def assessment_report_receipt_context(id)
+          return [nil, { "status" => "invalid_run_id" }] unless id.match?(/\A[a-f0-9]{20}\z/)
 
           master_dir = File.join(@root, ".master")
           assessment_dir = File.join(@root, ASSESSMENT_DIR)
-          return { "status" => "journal_directory_symlink" } if File.symlink?(master_dir)
-          return { "status" => "assessment_directory_symlink" } if File.symlink?(assessment_dir)
+          return [nil, { "status" => "journal_directory_symlink" }] if File.symlink?(master_dir)
+          return [nil, { "status" => "assessment_directory_symlink" }] if File.symlink?(assessment_dir)
 
           run = history(limit: MAX_RUNS).find { |entry| entry["id"] == id }
-          return { "status" => "run_not_found" } unless run
+          return [nil, { "status" => "run_not_found" }] unless run
 
           receipt = run["assessment_receipt"]
-          return { "status" => "receipt_missing" } unless receipt.is_a?(Hash)
+          return [nil, { "status" => "receipt_missing" }] unless receipt.is_a?(Hash)
 
           expected_path = File.join(assessment_dir, "#{id}.json")
           relative_path = relative(expected_path)
-          return { "status" => "receipt_path_mismatch" } unless receipt["path"] == relative_path
+          return [nil, { "status" => "receipt_path_mismatch" }] unless receipt["path"] == relative_path
+
+          [{ id:, run:, receipt:, expected_path:, relative_path: }, nil]
+        end
+
+        def assessment_report_payload(context)
           begin
-            payload = read_private_artifact(expected_path, label: "assessment report")
+            payload = read_private_artifact(context[:expected_path], label: "assessment report")
           rescue ArtifactReadError => error
-            return { "status" => error.status }.merge(error.details)
+            return [nil, { "status" => error.status }.merge(error.details)]
           end
           actual_digest = Digest::SHA256.hexdigest(payload)
-          return {
-            "status" => "checksum_mismatch",
-            "expected_sha256" => receipt["sha256"],
-            "actual_sha256" => actual_digest,
-          } unless actual_digest == receipt["sha256"]
+          unless actual_digest == context[:receipt]["sha256"]
+            return [nil, {
+              "status" => "checksum_mismatch",
+              "expected_sha256" => context[:receipt]["sha256"],
+              "actual_sha256" => actual_digest,
+            }]
+          end
+          [{ payload:, actual_digest: }, nil]
+        end
 
-          document = JSON.parse(payload)
-          unless document["schema_version"].to_i == 1 && document["run_id"] == id
-            return { "status" => "artifact_identity_mismatch" }
+        def assessment_report_identity(document, context)
+          unless document["schema_version"].to_i == 1 && document["run_id"] == context[:id]
+            return [nil, { "status" => "artifact_identity_mismatch" }]
           end
-          unless document["target"].to_s == run["target"].to_s
-            return { "status" => "artifact_target_mismatch" }
-          end
+          return [nil, { "status" => "artifact_target_mismatch" }] unless
+            document["target"].to_s == context[:run]["target"].to_s
 
           report = document["report"]
-          return { "status" => "artifact_report_missing" } unless report.is_a?(Hash)
+          return [nil, { "status" => "artifact_report_missing" }] unless report.is_a?(Hash)
+
+          [report, nil]
+        end
+
+        def assessment_report_provenance_failure(report, context)
+          failure = assessment_report_receipt_provenance_failure(report, context[:receipt])
+          return failure if failure
+
+          assessment_report_plan_provenance_failure(context[:receipt], context[:run]["plan"])
+        end
+
+        def assessment_report_receipt_provenance_failure(report, receipt)
           matrix_validation = validate_assessment_matrix_report(report)
           return matrix_validation if matrix_validation
-          unless report["status"].to_s == receipt["matrix_status"].to_s
-            return { "status" => "artifact_status_mismatch" }
-          end
+          return { "status" => "artifact_status_mismatch" } unless
+            report["status"].to_s == receipt["matrix_status"].to_s
+
           dimensions = %w[plan_digest identity_digest scope_digest source_digest law_digest law_source_digest authority_digest toolchain_digest exclusion_digest adapter_digest]
           dimensions.each do |key|
             expected = receipt[key]
@@ -441,37 +481,89 @@ module Master
             next if expected.nil? && actual.nil?
             return { "status" => "provenance_mismatch", "dimension" => key } unless expected == actual
           end
+          nil
+        end
 
-          plan = run["plan"]
+        def assessment_report_plan_provenance_failure(receipt, plan)
           if plan.is_a?(Hash)
-            journal_dimensions = {
-              "plan_digest" => plan["digest"],
-              "identity_digest" => plan["identity_digest"],
-              "scope_digest" => plan["scope_digest"],
-              "source_digest" => plan["source_digest"],
-              "law_digest" => plan["law_digest"],
-              "law_source_digest" => plan["law_source_digest"],
-              "authority_digest" => plan["authority_digest"],
-              "toolchain_digest" => plan["toolchain_digest"],
-              "exclusion_digest" => plan["exclusion_digest"],
-              "adapter_digest" => plan["adapter_digest"],
-            }
-            journal_dimensions.each do |key, expected|
-              next if expected.nil?
-              return { "status" => "journal_plan_mismatch", "dimension" => key } unless receipt[key] == expected
-            end
+            failure = assessment_report_journal_plan_mismatch(receipt, plan)
+            return failure if failure
           elsif receipt["matrix_status"].to_s == "complete"
             return { "status" => "journal_plan_missing" }
           end
-          if receipt["matrix_status"].to_s == "complete"
-            missing = dimensions.select { |key| receipt[key].to_s.empty? }
-            return { "status" => "receipt_provenance_incomplete", "dimensions" => missing } unless missing.empty?
-          end
+          assessment_report_complete_receipt_dimensions(receipt)
+        end
 
+        def assessment_report_journal_plan_mismatch(receipt, plan)
+          journal_dimensions = {
+            "plan_digest" => plan["digest"],
+            "identity_digest" => plan["identity_digest"],
+            "scope_digest" => plan["scope_digest"],
+            "source_digest" => plan["source_digest"],
+            "law_digest" => plan["law_digest"],
+            "law_source_digest" => plan["law_source_digest"],
+            "authority_digest" => plan["authority_digest"],
+            "toolchain_digest" => plan["toolchain_digest"],
+            "exclusion_digest" => plan["exclusion_digest"],
+            "adapter_digest" => plan["adapter_digest"],
+          }
+          journal_dimensions.each do |key, expected|
+            next if expected.nil?
+            return { "status" => "journal_plan_mismatch", "dimension" => key } unless receipt[key] == expected
+          end
+          nil
+        end
+
+        def assessment_report_complete_receipt_dimensions(receipt)
+          return unless receipt["matrix_status"].to_s == "complete"
+
+          dimensions = %w[plan_digest identity_digest scope_digest source_digest law_digest law_source_digest authority_digest toolchain_digest exclusion_digest adapter_digest]
+          missing = dimensions.select { |key| receipt[key].to_s.empty? }
+          return { "status" => "receipt_provenance_incomplete", "dimensions" => missing } unless missing.empty?
+        end
+
+        def assessment_report_verified_summary(report, context, artifact)
           ledger = report["ledger"].is_a?(Hash) ? report["ledger"] : {}
           matrix_summary = ledger["summary"].is_a?(Hash) ? ledger["summary"] : {}
           cells = Array(ledger["cells"])
-          blockers = cells.filter_map do |cell|
+          surface_report = report["surface_coverage"].is_a?(Hash) ? report["surface_coverage"] : {}
+          surface_rows = surface_report["surfaces"].is_a?(Hash) ? surface_report["surfaces"] : {}
+          {
+            "status" => "verified",
+            "path" => context[:relative_path],
+            "sha256" => artifact[:actual_digest],
+            "bytes" => artifact[:payload].bytesize,
+            "matrix_status" => context[:receipt]["matrix_status"],
+            "matrix_summary" => assessment_report_matrix_summary(matrix_summary),
+            "surface_coverage" => assessment_report_surface_summary(surface_report, surface_rows),
+            "blockers" => assessment_report_blockers(cells),
+          }
+        end
+
+        def assessment_report_matrix_summary(summary)
+          {
+            "laws" => summary["laws"].to_i,
+            "expected_cells" => summary["expected_cells"].to_i,
+            "recorded_cells" => summary["recorded_cells"].to_i,
+            "pending_cells" => summary["unassessed_cells"].to_i,
+            "inconclusive_cells" => summary["inconclusive_cells"].to_i,
+            "finding_cells" => summary["finding_cells"].to_i,
+          }
+        end
+
+        def assessment_report_surface_summary(surface_report, surface_rows)
+          {
+            "status" => surface_report["complete"] == true ? "complete" : "incomplete",
+            "digest" => surface_report["digest"],
+            "measured" => surface_rows.count { |_name, row| %w[assessed_clean not_applicable].include?(row["status"].to_s) },
+            "expected" => surface_rows.size,
+            "blockers" => assessment_report_surface_blockers(surface_rows),
+            "surfaces" => surface_rows,
+          }
+        end
+
+        def assessment_report_blockers(cells)
+          cells.filter_map do |cell|
             next unless cell.is_a?(Hash)
             next unless %w[pending inconclusive violation_found opportunity_found].include?(cell["status"].to_s)
 
@@ -484,42 +576,15 @@ module Master
               "reason" => (latest.is_a?(Hash) ? latest["reason"] : nil).to_s.gsub(/\s+/, " ").strip[0, 180],
             }
           end.first(5)
-          surface_report = report["surface_coverage"].is_a?(Hash) ? report["surface_coverage"] : {}
-          surface_rows = surface_report["surfaces"].is_a?(Hash) ? surface_report["surfaces"] : {}
-          surface_blockers = surface_rows.filter_map do |name, row|
+        end
+
+        def assessment_report_surface_blockers(surface_rows)
+          surface_rows.filter_map do |name, row|
             next unless row.is_a?(Hash)
             next if %w[assessed_clean not_applicable].include?(row["status"].to_s)
 
             { "surface" => name, "status" => row["status"].to_s, "reason" => row["reason"].to_s[0, 180] }
           end.first(8)
-          {
-            "status" => "verified",
-            "path" => relative_path,
-            "sha256" => actual_digest,
-            "bytes" => payload.bytesize,
-            "matrix_status" => receipt["matrix_status"],
-            "matrix_summary" => {
-              "laws" => matrix_summary["laws"].to_i,
-              "expected_cells" => matrix_summary["expected_cells"].to_i,
-              "recorded_cells" => matrix_summary["recorded_cells"].to_i,
-              "pending_cells" => matrix_summary["unassessed_cells"].to_i,
-              "inconclusive_cells" => matrix_summary["inconclusive_cells"].to_i,
-              "finding_cells" => matrix_summary["finding_cells"].to_i,
-            },
-            "surface_coverage" => {
-              "status" => surface_report["complete"] == true ? "complete" : "incomplete",
-              "digest" => surface_report["digest"],
-              "measured" => surface_rows.count { |_name, row| %w[assessed_clean not_applicable].include?(row["status"].to_s) },
-              "expected" => surface_rows.size,
-              "blockers" => surface_blockers,
-              "surfaces" => surface_rows,
-            },
-            "blockers" => blockers,
-          }
-        rescue JSON::ParserError => e
-          { "status" => "invalid_json", "message" => e.message.to_s[0, 180] }
-        rescue StandardError => e
-          { "status" => "verification_failed", "error_class" => e.class.name, "message" => e.message.to_s[0, 180] }
         end
 
         def pass_start(run_id, pass, transaction_id:)
