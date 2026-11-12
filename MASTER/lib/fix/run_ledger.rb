@@ -79,12 +79,14 @@ module Master
 
         # A model call that produced nothing to judge: the model said UNCHANGED, sent an
         # empty reply, or sent a diff patch(1) refused. Counted apart from rejected
-        # proposals and never against the file's three-reject limit, but named in the log,
-        # because "no_proposal" alone said none of this.
+        # proposals and never against the file's three-reject limit. Normal output keeps
+        # the aggregate; verbose output names individual files and causes.
         def declined(key, file:, law: nil, detail: nil)
           @mutex.synchronize { @declined[key.to_s] += 1 }
-          where = file.to_s.split("/").last(2).join("/")
-          Master::Trace::Dmesg.status("fix0", "no proposal, #{where}#{law ? " #{law}" : ""}: #{key}#{detail ? " (#{detail.to_s[0, 120]})" : ""}")
+          if Master::Trace::Dmesg.verbose?
+            where = file.to_s.split("/").last(2).join("/")
+            Master::Trace::Dmesg.status("fix0", "no proposal, #{where}#{law ? " #{law}" : ""}: #{key}#{detail ? " (#{detail.to_s[0, 120]})" : ""}")
+          end
           nil
         end
 
