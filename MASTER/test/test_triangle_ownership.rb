@@ -44,8 +44,8 @@ class TestTriangleOwnership < Minitest::Test
       code = "Signal.trap('TERM', 'IGNORE'); sleep 30"
       pid = Process.spawn(RbConfig.ruby, "-e", code, pgroup: true, out: File::NULL, err: File::NULL)
       waiter = Process.detach(pid)
-      File.write(pid_path, "#{pid}\\n")
-      File.write(owner_path, "#{Process.pid} #{pid}\\n")
+      File.write(pid_path, "#{pid}\n")
+      File.write(owner_path, "#{Process.pid} #{pid}\n")
 
       failed = with_app(app, pid_path) { Deploy::Triangle.down(["brgen"]) }
 
@@ -65,8 +65,8 @@ class TestTriangleOwnership < Minitest::Test
       app = { name: "brgen", port: 38_182, dir: }
       pid_path = File.join(dir, "brgen.pid")
       owner_path = "#{pid_path}.owner"
-      File.write(pid_path, "41352\\n")
-      File.write(owner_path, "#{Process.pid} 41352\\n")
+      File.write(pid_path, "41352\n")
+      File.write(owner_path, "#{Process.pid} 41352\n")
 
       failed = with_app(app, pid_path) do
         Master::Fix::ServerLeases.stub(:stop_process_group, false) do
@@ -75,7 +75,7 @@ class TestTriangleOwnership < Minitest::Test
       end
 
       assert_equal ["brgen"], failed
-      assert_equal "41352\\n", File.read(pid_path)
+      assert_equal "41352\n", File.read(pid_path)
       assert File.exist?(owner_path)
     end
   end
