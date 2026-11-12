@@ -209,6 +209,19 @@ class TestScanAutofix < Minitest::Test
     end
   end
 
+  def test_observe_settings_restore_the_previous_explicit_autofix_mode
+    previous = Master::Fix::AutofixGuard.explicit_mode_override
+    Master::Fix::AutofixGuard.restore_mode_override("on")
+
+    Master::CLI::CommandRegistry.with_observe_settings do
+      Master::Fix::AutofixGuard.mode = "off"
+    end
+
+    assert_equal "on", Master::Fix::AutofixGuard.explicit_mode_override
+  ensure
+    Master::Fix::AutofixGuard.restore_mode_override(previous)
+  end
+
   def test_help_documents_the_flag_that_holds_the_repair_back
     assert_includes Master::CLI::CommandRegistry.help_text("fix"), "--dry-run"
   end

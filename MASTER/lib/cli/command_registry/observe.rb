@@ -22,7 +22,7 @@ module Master
       # on_total hears the final count, for a caller that reports it; the text
       # stays the report.
       def observe(scanner:, root:, ctx: nil, on_total: nil)
-        Master::Fix::Kernel.with_settings_lock do
+        with_observe_settings do
           Scan::Live.ensure_sync!
           _arg, dry_run, no_autofix, clean_arg, do_autofix = parse_scan_args(ctx)
 
@@ -39,7 +39,7 @@ module Master
       # The same reading of only the files named in context[:files], for a second look at what a repair
       # changed. context[:on_counts] hears the count per file, as it does after a whole-tree reading.
       def observe_files(scanner:, root:, context:, on_total: nil)
-        Master::Fix::Kernel.with_settings_lock do
+        with_observe_settings do
           Scan::Live.ensure_sync!
           _arg, dry_run, _no_autofix, _clean_arg, do_autofix = parse_scan_args(context)
 
@@ -49,6 +49,19 @@ module Master
             context.fetch(:files).map { |file| Scan::Request.new(scanner:, root:, arg: file, autofix: do_autofix).call }
           end
           report_files(requests, dry_run:, on_total:, on_counts: context[:on_counts])
+        end
+      end
+
+      # Scan flags are one-command overrides. Hold the same settings lock as
+      # /fix and restore the explicit mode even when a scan is interrupted.
+      def with_observe_settings
+        Master::Fix::Kernel.with_settings_lock do
+          previous_mode = Master::Fix::AutofixGuard.explicit_mode_override
+          begin
+            yield
+          ensure
+            Master::Fix::AutofixGuard.restore_mode_override(previous_mode)
+          end
         end
       end
 

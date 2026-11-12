@@ -223,7 +223,7 @@ class TestFixWishlist < Minitest::Test
 
   def test_ledger_lock_serializes_separate_wishlist_instances
     FileUtils.mkdir_p(File.join(@root, ".master"))
-    File.chmod(0o770, File.join(@root, ".master"))
+    File.chmod(0o2770, File.join(@root, ".master"))
     first = Master::Fix::Wishlist.new(root: @root, agent: nil)
     second = Master::Fix::Wishlist.new(root: @root, agent: nil)
     entered = Queue.new

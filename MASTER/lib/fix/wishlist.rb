@@ -137,7 +137,8 @@ module Master
           end.then { |rows| Personas.order(rows) }.first(limit.to_i)
 
           save_ledger(ledger) if changed
-          rows        end
+          rows
+        end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "Fix::Wishlist.claimable", event_bus: @bus)
         []
@@ -160,7 +161,8 @@ module Master
           end
           save_ledger(ledger)
           @bus&.publish("wishlist:claimed", run_id:, count: claimed.size)
-          claimed        end
+          claimed
+        end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "Fix::Wishlist.claim!", event_bus: @bus)
         []
@@ -201,7 +203,8 @@ module Master
             fixed: fixed.to_i,
             attempts:,
           )
-          proposal        end
+          proposal
+        end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "Fix::Wishlist.mark_attempt", event_bus: @bus)
         nil
@@ -226,7 +229,8 @@ module Master
             proposal
           end
           save_ledger(ledger) unless changed.empty?
-          changed        end
+          changed
+        end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "Fix::Wishlist.mark_delivered", event_bus: @bus)
         []
@@ -262,7 +266,8 @@ module Master
             proposal
           end
           save_ledger(ledger) unless changed.empty?
-          changed        end
+          changed
+        end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "Fix::Wishlist.mark_verified", event_bus: @bus)
         []
@@ -293,7 +298,8 @@ module Master
           added = merge_new_items!(ledger, [item], state:, target:, run_id:)
           save_ledger(ledger) if added.positive?
           @bus&.publish("wishlist:reflection", added:, law:, anchor:, run_id:)
-          added.positive?        end
+          added.positive?
+        end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "Fix::Wishlist.record_reflection!", event_bus: @bus)
         false
@@ -416,8 +422,10 @@ module Master
           begin
             current_directory = File.lstat(directory)
             current = File.lstat(lock_path)
+            current_group_shared = (current_directory.mode & 0o020).positive?
             unless current_directory.directory? && !current_directory.symlink? &&
                    current_directory.dev == directory_stat.dev && current_directory.ino == directory_stat.ino &&
+                   current_directory.gid == directory_stat.gid && current_group_shared == group_shared &&
                    (current_directory.mode & 0o002).zero? &&
                    current.file? && !current.symlink? && current.nlink == 1 &&
                    current.dev == opened.dev && current.ino == opened.ino
