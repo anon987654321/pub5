@@ -2542,7 +2542,7 @@ module Dilla
     end
 
     # --- sample flip (operator-supplied, rights-cleared audio only)
-    sample_report = apply_sample_flip!(mixer, opts, groove, plan)
+    sample_report = apply_sample_flip!(mixer, opts, groove, plan, rng:)
 
     # --- balances & glue
     mixer.gain!(:drums, opts.drum_balance.to_f) if opts.drum_balance
@@ -2709,7 +2709,7 @@ end
 module Dilla
   module_function
 
-  def apply_sample_flip!(mixer, opts, groove, plan)
+  def apply_sample_flip!(mixer, opts, groove, plan, rng:)
     source = opts.sample_loop || ENV["SAMPLE_LOOP"]
     return nil if source.to_s.strip.empty?
     unless File.file?(File.expand_path(source))
@@ -2732,7 +2732,7 @@ module Dilla
       pcs.uniq
     end
     chop_plan = SampleFlip.plan_chops(slice_data, chord_slots)
-    crusher = DrumKit.new(catalogue.fetch("kits").fetch(plan[:kit]))
+    crusher = DrumKit.new(catalogue.fetch("kits").fetch(plan[:kit]), rng: Random.new(rng.seed ^ 0x51A7))
 
     chop_len = (slice_data.first[:length] * 0.5).to_i
     plan[:progression]["chords"].each_with_index do |_sym, idx|
