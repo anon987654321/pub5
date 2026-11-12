@@ -589,7 +589,7 @@ end
     end
 
     assert_equal 120, seen.fetch(:timeout)
-    refute_empty git.commits
+    assert_empty git.commits
     event = bus.events.find { |name, payload| name == "fix_loop:commit_blocked" && payload[:reason] == "rubocop_timeout" }
     refute_nil event
     refute_equal "rubocop_unavailable", event.last[:reason]
