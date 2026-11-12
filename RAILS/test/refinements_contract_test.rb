@@ -21,14 +21,16 @@ class RefinementsContractTest < Minitest::Test
     assert_equal ids.length, ids.uniq.length, "refinement IDs must be unique"
 
     items.each do |item|
-      assert_equal "open", item.fetch("status"), "#{item.fetch("id")} is not an open item"
-      assert_match(/\\A[a-z][a-z0-9_]*\\z/, item.fetch("app"), "#{item.fetch('id')} has an invalid app")
+      id = item.fetch("id")
+      assert_equal "open", item.fetch("status"), "#{id} is not an open item"
+      assert_match(/\A[a-z][a-z0-9_]*\z/, item.fetch("app"), "#{id} has an invalid app")
+
       path = item.fetch("path")
-      assert_match(/\\ARAILS\\//, path, "#{item.fetch('id')} path must be repository-relative")
+      assert_match(/\ARAILS\//, path, "#{id} path must be repository-relative")
       absolute = File.expand_path(path, REPOSITORY_ROOT)
-      assert absolute.start_with?("#{REPOSITORY_ROOT}/"), "#{item.fetch('id')} path escapes the repository"
-      assert File.file?(absolute), "#{item.fetch('id')} source does not exist: #{path}"
-      refute_empty item.fetch("item").to_s.strip, "#{item.fetch('id')} has no description"
+      assert absolute.start_with?("#{REPOSITORY_ROOT}/"), "#{id} path escapes the repository"
+      assert File.file?(absolute), "#{id} source does not exist: #{path}"
+      refute_empty item.fetch("item").to_s.strip, "#{id} has no description"
     end
   end
 end
