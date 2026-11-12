@@ -576,15 +576,15 @@ module Master
       def dispatch_fix_parsed(scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, raw:,
                               apply:, critique:, aesthetic:, only:, target:, cancellation: nil,
                               mode: "repair", task_intent: "functional_change")
+        writes_requested = writes_requested?(apply:, only:)
+        max_passes = writes_requested ? Master::Fix::FixLoop::ABSOLUTE_MAX_PASSES : 0
         Master::Fix::RunBudget.with_shared_run(
           root: Master::ROOT,
-          max_passes: Master::Fix::FixLoop::ABSOLUTE_MAX_PASSES,
+          max_passes:,
           bus:,
           target:,
         ) do
           next cancelled_fix_result(cancellation) if cancellation&.cancelled?
-
-          writes_requested = writes_requested?(apply:, only:)
           display_target = display_fix_target(target)
           execution = writes_requested ? "write" : "read-only"
           boundary = writes_requested ? "current-checkout" : "no-write-or-publish"
