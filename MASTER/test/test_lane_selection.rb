@@ -724,8 +724,8 @@ class TestLaneSelection < Minitest::Test
     Selection.watch_free_class!
     # Suspension is justified only after a non-free lane has actually answered
     # and remains usable. Model that external health evidence deterministically.
-    Selection.stub(:live_savior, OPUS) do
-      Master::Io::LaneState.stub(:usable?, ->(id) { id == OPUS }) do
+    Selection.stub(:live_savior, ->(**) { OPUS }) do
+      Master::Io::LaneState.stub(:usable?, ->(id, **_kwargs) { id == OPUS }) do
         Selection.note_provider_outcome(OPUS, :success, alive: ALL)
         3.times { Selection.note_provider_outcome(NANO, :timeout, alive: ALL) }
         assert_predicate Selection, :free_floor_suspended?

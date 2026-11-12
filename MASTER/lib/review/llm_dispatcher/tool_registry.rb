@@ -67,6 +67,10 @@ module Master
         # for policy lookup instead of accidentally treating the tool as elevated.
         def tool_registry_name(tool)
           registry = tool_registry
+          # Partial dispatchers and recovery harnesses may not have booted the
+          # registry yet. An absent registry means "no alias metadata", never
+          # a reason to crash while identifying a tool.
+          registry = {} unless registry.is_a?(Hash)
           short = tool.class.name.to_s.split("::").last
           return short if registry.key?(short)
 

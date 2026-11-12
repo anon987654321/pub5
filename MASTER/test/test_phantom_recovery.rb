@@ -202,14 +202,13 @@ class TestPhantomRecovery < Minitest::Test
     def tool_available_for_context?(_) = true
   end
 
-  def test_unexecuted_tool_detection_initializes_a_missing_tool_registry
+  def test_unexecuted_tool_detection_tolerates_an_absent_tool_registry
     harness = ReactHarness.new
-    harness.remove_instance_variable(:@tool_registry)
+    harness.define_singleton_method(:tool_registry) { nil }
 
     names = harness.send(:unexecuted_tool_call_names, 'NilTool(path: ".")')
 
     assert_equal ["NilTool"], names
-    assert_kind_of Hash, harness.instance_variable_get(:@tool_registry)
   end
 
   def test_the_react_loop_stops_after_two_empty_tool_rounds
