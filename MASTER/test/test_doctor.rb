@@ -115,7 +115,7 @@ class TestDoctor < Minitest::Test
     assert_match(/require "master"\n/, source)
   end
 
-  def model_quota_check(snapshot)
+  def model_quota_check(**snapshot)
     require "io/model_quota"
     definition = File.read(DOCTOR)[/^def check_model_quota.*?^end/m]
     refute_nil definition, "check_model_quota moved; this test exercises the measured verdict"
