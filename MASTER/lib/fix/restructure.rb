@@ -15,6 +15,7 @@ require_relative "../ground/preserve_user_intent"
 require_relative "../ground/known_good"
 require_relative "../operator/ratchet_sponsor"
 require_relative "../io/exec"
+require_relative "../io/atomic_write"
 
 module Master
   module Fix
@@ -27,6 +28,8 @@ module Master
     # The single-file repair loop cannot do this: it returns one corrected file
     # per answer, and a split answered as one file came back UNCHANGED.
     class Restructure
+      include ::Master::Io::AtomicWrite
+
       MAX_FILES = 48
       MAX_DELETES = 32
       MAX_WRITES = 24
@@ -55,6 +58,37 @@ module Master
         @ground_truth = ground_truth
         @preserve_user_intent = preserve_user_intent || Ground::PreserveUserIntent.new(root: repo_root)
         @known_good = Ground::KnownGood.new(root: repo_root)
+      end
+
+      # A read-only inspection of the same bounded plan the apply path accepts.
+      # It performs the path, transformation-order, cleanliness and freshness
+      # gates, then returns the real unified diff without writing or staging.
+      def preview(plan, allowed_operations: nil)
+        refusal = plan.validate_operations!(
+          transformation_plan: @transformation_plan,
+          allowed_operations:,
+        )
+        return Result.err("restructure refused: #{refusal}", category: :policy) if refusal
+
+        plan = ratcheted_plan(plan)
+        refusal = refusal_for(plan)
+        return Result.err("restructure refused: #{refusal}", category: :policy) if refusal
+        stale = ground_truth_failure(plan)
+        return Result.err(stale, category: :policy) if stale
+
+        originals = snapshot(plan)
+        already_applied = plan.writes.all? do |path, body|
+          File.file?(full(path)) && File.binread(full(path)) == body.b
+        end && plan.deletes.none? { |path| File.exist?(full(path)) || File.symlink?(full(path)) }
+        Result.ok(
+          summary: plan.summary,
+          paths: plan.paths,
+          operations: plan.operations,
+          already_applied:,
+          diff: already_applied ? "" : diff(plan, originals),
+        )
+      rescue StandardError => e
+        Result.err("restructure preview: #{e.class}: #{e.message}", category: :infrastructure)
       end
 
       # review takes the applied diff and answers nil to approve, or a reason.
@@ -159,7 +193,7 @@ module Master
           raise TaskContract::Invalid, refusal if refusal
 
           FileUtils.mkdir_p(File.dirname(absolute))
-          File.write(absolute, content)
+          write_atomic(absolute, content)
         end
         plan.deletes.each { |path| File.delete(full(path)) }
       end
