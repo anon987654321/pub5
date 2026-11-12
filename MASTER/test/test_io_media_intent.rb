@@ -345,7 +345,17 @@ class MediaIntentSpec < Minitest::Test
       assert_match(/stopped the Dilla player/, MediaIntent.stop_live_audio(bus:).value![:rendered])
       assert_nil MediaIntent.player_pid
     end
-    Process.wait(child)
+    assert_raises(Errno::ECHILD) { Process.waitpid(child, Process::WNOHANG) }
+  end
+
+  def test_live_stop_does_not_signal_a_pid_that_is_not_our_child
+    with_clean_player do
+      MediaIntent.instance_variable_set(:@player_pid, Process.pid)
+      Process.stub(:kill, ->(*) { flunk "MASTER must not signal a PID it does not own" }) do
+        assert_nil MediaIntent.player_pid
+        assert_nil MediaIntent.stop_player
+      end
+    end
   end
 
   def test_reference_audio_request_dispatches_audio_only_to_dilla
