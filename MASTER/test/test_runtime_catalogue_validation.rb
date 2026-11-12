@@ -25,6 +25,25 @@ class TestRuntimeCatalogueValidation < Minitest::Test
     assert_nil validated_file("models.yml")
   end
 
+
+  def test_the_declared_nsfw_tier_may_be_empty
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("models")["nsfw"] = []
+
+    assert_nil Guard.validate(path:, content: YAML.dump(data))
+  end
+
+  def test_other_model_tiers_must_not_be_empty
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("models")["fast"] = []
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/models.fast must be a non-empty list/, error)
+  end
+
   def test_ollama_enabled_must_be_a_boolean
     path = catalogue_path("models.yml")
     data = YAML.safe_load_file(path, aliases: true)
