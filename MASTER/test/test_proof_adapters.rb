@@ -55,12 +55,23 @@ class TestProofAdapters < Minitest::Test
     refute_includes result.to_h.inspect, "/private/customer.txt"
   end
 
-  def test_proof_freezes_nested_evidence
-    proof = Master::Proof.build(claim: "x", evidence: { paths: ["a.rb"] })
+  def test_proof_freezes_private_copies_of_nested_evidence_and_metadata
+    evidence = { paths: ["a.rb"] }
+    metadata = { score: 1, details: ["measured"] }
+    proof = Master::Proof.build(claim: "x", evidence:, metadata:)
 
     assert proof.metadata.frozen?
     assert proof.evidence.frozen?
     assert proof.evidence["paths"].frozen?
+    assert metadata.frozen? == false
+    assert metadata[:details].frozen? == false
+    assert evidence.frozen? == false
+    assert evidence[:paths].frozen? == false
+
+    evidence[:paths] << "later.rb"
+    metadata[:details] << "later"
+    assert_equal ["a.rb"], proof.evidence[:paths]
+    assert_equal ["measured"], proof.metadata[:details]
   end
 
   def test_proof_rejects_unknown_sources
