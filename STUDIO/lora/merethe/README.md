@@ -15,6 +15,25 @@ This package does not upload images, create a Replicate training, or generate
 images. Those are separate operator actions. Keep the destination model private
 unless the subject separately agrees to publication and distribution.
 
+## Consent and source rights
+
+Before `--recover` or dataset preparation, the subject directory must contain a
+private `consent.yml` copied from `STUDIO/photograph/consent.example.yml`.
+The record must name the exact subject, explicitly approve likeness generation
+and provider processing, and name each source set with who granted permission,
+the date, the rights covered, and a local evidence-file path. Keep the record
+and evidence owner-only (0600); the subject directory itself must be 0700.
+
+The shared `STUDIO/lora/consent.rb` gate checks the record and evidence without
+creating, editing or inferring permission. It runs before source recovery,
+dataset construction and likeness generation. Merethe's archived ME2 material
+requires a `me2_archive` evidence entry; any additional photographs also
+require an `additional_images` entry. Missing, mismatched, public, symlinked
+or incomplete records block the operation.
+
+This is not approval to upload a ZIP, start paid training, publish a model or
+distribute generated images. Those remain separate, explicit decisions.
+
 ## Recover and prepare
 
 From the repository root:
