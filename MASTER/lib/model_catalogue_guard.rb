@@ -91,10 +91,10 @@ module Master
         routing["strategy"].is_a?(String) && !routing["strategy"].strip.empty?
       errors << "models.yml routing.provider must be non-empty text" unless
         routing["provider"].is_a?(String) && !routing["provider"].strip.empty?
-      validate_routing_provider(data, routing, path, errors)
+      validate_routing_provider(routing, path, errors)
     end
 
-    def validate_routing_provider(_data, routing, path, errors)
+    def validate_routing_provider(routing, path, errors)
       providers_path = File.join(File.dirname(path), "providers.yml")
       return unless File.file?(providers_path)
 
@@ -167,7 +167,7 @@ module Master
     end
 
     def register_definition_id(name, id, definition_ids, errors)
-      unless id.is_a?(String) && id.match?(/\A[A-Za-z0-9][A-Za-z0-9.:\/+-]*\z/)
+      unless id.is_a?(String) && id.match?(/\A[A-Za-z0-9][A-Za-z0-9._:\/+-]*\z/)
         errors << "model_defs.#{name}.id must be a valid model identifier"
       end
       return unless id.is_a?(String)

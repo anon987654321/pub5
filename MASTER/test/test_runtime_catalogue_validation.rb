@@ -34,6 +34,15 @@ class TestRuntimeCatalogueValidation < Minitest::Test
     assert_nil Guard.validate(path:, content: YAML.dump(data))
   end
 
+  def test_model_definition_identifiers_may_contain_underscores
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    example = data.fetch("model_defs").values.first
+    data.fetch("model_defs")["underscore_probe"] = example.merge("id" => "model_identifier_with_underscores")
+
+    assert_nil Guard.validate(path:, content: YAML.dump(data))
+  end
+
   def test_other_model_tiers_must_not_be_empty
     path = catalogue_path("models.yml")
     data = YAML.safe_load_file(path, aliases: true)
