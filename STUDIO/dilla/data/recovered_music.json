@@ -10,7 +10,8 @@
       "source_loop_length_only": "A source describes the loop length, but individual chord onsets have not been digitized; chord_bars are the engine's even-slot approximation.",
       "engine_grid_assumption": "Chord durations are evenly allocated for rendering; they are not claimed to reproduce source onset timing."
     },
-    "melody_policy": "A melody is source material only when an explicit source-backed MIDI contour is present. Generated melody is an engine interpretation, not a recovered transcription."
+    "melody_policy": "A melody is source material only when an explicit source-backed MIDI contour is present. Generated melody is an engine interpretation, not a recovered transcription.",
+    "source_refs": "Optional structured source records use source_id, kind, publisher, url, claims, and community_maintained when relevant. Claims describe what the source actually supports; a source's existence does not certify every field in the progression."
   },
   "provenance": {
     "transcription_sources": [
@@ -421,7 +422,22 @@
         "source": "Hooktheory community-maintained TheoryTab",
         "url": "https://www.hooktheory.com/theorytab/view/j-dilla/time---the-donut-of-the-heart",
         "note": "Keep 86 BPM as the existing render setting pending direct audio measurement; do not treat it as a source-verified tempo."
-      }
+      },
+      "source_refs": [
+        {
+          "source_id": "hooktheory_time_donut",
+          "kind": "community_theorytab",
+          "publisher": "Hooktheory TheoryTab",
+          "modified": "2026-05-24",
+          "url": "https://www.hooktheory.com/theorytab/view/j-dilla/time---the-donut-of-the-heart",
+          "community_maintained": true,
+          "claims": [
+            "A-flat major key",
+            "4/4 meter",
+            "reported tempo of 95 BPM"
+          ]
+        }
+      ]
     },
     {
       "id": "fall_in_love",
@@ -501,7 +517,22 @@
       ],
       "chord_timing_status": "source_loop_length_only",
       "chord_timing_note": "The cited analysis documents a seven-bar loop and chord transcription, but individual chord onsets have not been imported. Equal 7/6-bar slots are an engine approximation only.",
-      "melody_status": "not_transcribed"
+      "melody_status": "not_transcribed",
+      "source_refs": [
+        {
+          "source_id": "ethan_hein_2022_get_dis_money",
+          "kind": "educational_transcription",
+          "publisher": "Ethan Hein",
+          "published": "2022-03-16",
+          "url": "https://www.ethanhein.com/wp/2022/get-dis-money/",
+          "claims": [
+            "Herbie Hancock sample identification",
+            "six-chord progression transcription",
+            "seven-bar sampled loop",
+            "qualitative microtiming and arrangement analysis"
+          ]
+        }
+      ]
     },
     {
       "id": "climax_slum_village",
@@ -684,7 +715,22 @@
       ],
       "chord_timing_status": "engine_grid_assumption",
       "chord_timing_note": "Equal chord slots are a rendering model. Individual source onset times have not been independently digitized.",
-      "melody_status": "not_transcribed"
+      "melody_status": "not_transcribed",
+      "source_refs": [
+        {
+          "source_id": "hooktheory_dangelo_untitled",
+          "kind": "community_theorytab",
+          "publisher": "Hooktheory TheoryTab",
+          "modified": "2025-10-14",
+          "url": "https://www.hooktheory.com/theorytab/view/dangelo/untitled-how-does-it-feel",
+          "community_maintained": true,
+          "claims": [
+            "D Mixolydian key",
+            "6/8 meter",
+            "reported tempo of 113 BPM"
+          ]
+        }
+      ]
     },
     {
       "id": "brown_sugar_dangelo",
