@@ -23,6 +23,7 @@ module Master
         "llm:routed" => "model",
         "llm:send" => "waiting",
         "llm:stream_started" => "streaming",
+        "user:interrupt" => "stopping",
       }.freeze
 
       private
