@@ -12,7 +12,7 @@ module Master
         # set MASTER_SCAN_VERBOSE=1 when per-file console detail is needed.
         PER_FILE_DETAIL_LIMIT = 10
         # A checkpoint at least this often, so a slow stretch is never silent.
-        HEARTBEAT_SECONDS = 5
+        HEARTBEAT_SECONDS = 60
 
         private
 
