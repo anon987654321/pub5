@@ -72,7 +72,7 @@ module Studio
         report["descriptor"] = File.basename(env_path)
         report["trigger"] = env["TRIGGER"]
         report["model"] = env["MODEL"]
-        validate_descriptor(env, report)
+        validate_descriptor(env, report, directory)
 
         plan_path = File.join(directory, "train.yaml")
         if File.file?(plan_path) && !File.symlink?(plan_path)
@@ -139,7 +139,7 @@ module Studio
         values
       end
 
-      def validate_descriptor(env, report)
+      def validate_descriptor(env, report, directory)
         trigger = env["TRIGGER"].to_s
         if trigger.match?(/\\A[A-Za-z][A-Za-z0-9_-]{0,63}\\z/)
           pass_check(report, "trigger_word", "Subject trigger is a simple, non-empty token")
@@ -159,6 +159,19 @@ module Studio
           fail_check(report, "subject_descriptor_text", "DESCRIPTOR is empty")
         else
           pass_check(report, "subject_descriptor_text", "A descriptive prompt anchor is present")
+        end
+
+        manifest = File.join(directory, "weights", model, "replicate_training.json")
+        if File.file?(manifest) && !File.symlink?(manifest)
+          raise ArgumentError, "training manifest exceeds 64 KB" if File.size(manifest) > 65_536
+
+          version = JSON.parse(File.read(manifest, encoding: "UTF-8"))["version"].to_s
+          if version.match?(/\\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}:[A-Za-z0-9][A-Za-z0-9_-]{0,127}\\z/)
+            pass_check(report, "replicate_version_pin", "Local training manifest pins the Replicate model version")
+            return
+          end
+          fail_check(report, "replicate_training_manifest", "Local training manifest does not contain a pinned owner/model:version")
+          return
         end
 
         remote = env["REPLICATE_MODEL"].to_s.strip
