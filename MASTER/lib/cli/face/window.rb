@@ -276,7 +276,6 @@ module Master
 
         def now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       end
-      end
 
       module WindowTerminalInput
         ENTER = Window::ENTER
@@ -548,7 +547,6 @@ module Master
           :eof
         end
       end
-      end
 
       module WindowConversation
         EXIT_WORDS = Window::EXIT_WORDS
@@ -684,7 +682,6 @@ module Master
           (text || value).to_s.strip
         end
       end
-      end
 
       module WindowStateAndEvents
         private
@@ -770,7 +767,6 @@ module Master
             result
           end
         end
-      end
       end
 
       module WindowDisplay
@@ -869,7 +865,6 @@ module Master
             para.scan(/\S.{0,#{[cols - 1, 1].max}}(?=\s|\z)|\S{#{cols}}/).map(&:strip)
           end
         end
-      end
       end
 
       class Window
