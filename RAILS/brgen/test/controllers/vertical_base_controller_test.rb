@@ -14,6 +14,10 @@ class VerticalBaseControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "shared base remains attached to the host application controller" do
+    assert_equal ApplicationController, Shared::SluggedVerticalController.superclass
+  end
+
   test "playlist keeps its isolated engine helper" do
     assert_includes Playlist::BaseController._helpers.ancestors, PlaylistHelper
   end
