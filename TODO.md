@@ -411,10 +411,12 @@ measure is already owned by the Bymorgen item above.
   local web startup refuses unknown port listeners; Dilla player shutdown
   signals/reaps only its owned direct child; TTS workers remain waitable direct
   children and retirement refuses command-line sweeps or unowned socket paths.
-  MASTER's Replicate API URL validator also rejects dot, escaped and backslash
-  path segments before attaching its bearer token. Focused regressions are
-  authored/extended but NOT_RUN; the broader process-kill and provider-boundary
-  audits remain open.
+  The local MLX TTS server also retains its detached waiter, avoids duplicate
+  starts while that child lives, and retries after the owned child exits; the
+  real-child restart regression is authored but NOT_RUN. MASTER's Replicate API
+  URL validator also rejects dot, escaped and backslash path segments before
+  attaching its bearer token. Focused regressions are authored/extended but
+  NOT_RUN; the broader process-kill and provider-boundary audits remain open.
   H6 is partial: `.zshrc` checks operator-file ownership and group/other mode
   bits; `PermissionAudit` checks `/etc/<app>.env` as `root:<app>`, storage owner
   as `<app>`, daemon-log owner and symlinks in every protected path component.
