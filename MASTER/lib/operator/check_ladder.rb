@@ -22,7 +22,6 @@ require_relative "../trace/dmesg"
 # still write into another, so the clean-tree check at the bottom always
 # includes MASTER alongside whatever was named.
 
-require "open3"
 $stdout.sync = true
 require_relative "ruby_runner"
 
@@ -222,31 +221,24 @@ def inconclusive!(message)
   abort "err: #{message}"
 end
 
-# capture2e, with a wall clock. Streams into a buffer so a stage killed at the
-# deadline still shows whatever it managed to say.
+# The sanctioned executor bounds the process and its inherited output pipe
+# with one deadline. on_stdout preserves live progress without a second reader
+# thread or a post-timeout unbounded join.
 def capture_with_timeout(line)
-  buffer = +""
-  Open3.popen2e(Master::Io::ProcessSpawn.environment(SAFE_ENV), File.join(ROOT, "bin", "master"), chdir: REPO) do |stdin, out, wait|
-    stdin.puts(line)
-    stdin.close
-    reader = Thread.new do
-      out.each_line do |chunk|
-        buffer << chunk
-        $stdout.write(chunk)
-        $stdout.flush
-      end
-    end
-    unless wait.join(STAGE_TIMEOUT)
-      Process.kill("TERM", wait.pid)
-      wait.join(10) || Process.kill("KILL", wait.pid)
-      reader.join(5)
-      inconclusive! "#{line} produced no verdict in #{STAGE_TIMEOUT}s and was killed - " \
-                    "#{buffer.empty? ? 'it printed nothing at all' : "it printed #{buffer.lines.length} line(s)"}. " \
-                    "Nothing was measured; raise MASTER_CHECK_STAGE_TIMEOUT only if you know the stage was working."
-    end
-    reader.join
-    return [buffer, wait.value]
-  end
+  Master::Io::Exec.capture2e(
+    SAFE_ENV, File.join(ROOT, "bin", "master"),
+    chdir: REPO, stdin_data: "#{line}\n", timeout: STAGE_TIMEOUT,
+    raise_on_timeout: true,
+    on_stdout: lambda do |chunk|
+      $stdout.write(chunk)
+      $stdout.flush
+    end,
+  )
+rescue Master::Io::Exec::TimeoutError => error
+  output = Array(error.result).first.to_s
+  detail = output.empty? ? "it printed nothing at all" : "it printed #{output.lines.length} line(s)"
+  inconclusive! "#{line} produced no verdict within #{STAGE_TIMEOUT}s; bounded process-group termination was issued - " \
+                "#{detail}. Nothing was measured; raise MASTER_CHECK_STAGE_TIMEOUT only if you know the stage was working."
 end
 
 def git_diff(*paths)
