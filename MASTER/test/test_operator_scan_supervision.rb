@@ -2,7 +2,6 @@
 
 require_relative "test_helper"
 require "rbconfig"
-require "shellwords"
 require "tmpdir"
 require_relative "../lib/operator/checks"
 
@@ -12,18 +11,14 @@ class TestOperatorScanSupervision < Minitest::Test
       child_pid_file = File.join(dir, "descendant.pid")
       child_code = "File.write(#{child_pid_file.dump}, Process.pid.to_s); sleep 60"
       launcher_code = "require 'rbconfig'; Process.spawn(RbConfig.ruby, '-e', #{child_code.dump})"
-      launcher = File.join(dir, "fake-bundle")
-      File.write(
-        launcher,
-        "#!/bin/sh\nexec #{Shellwords.escape(RbConfig.ruby)} -e #{Shellwords.escape(launcher_code)}\n"
-      )
-      File.chmod(0o700, launcher)
+      fake_bundle = File.join(dir, "fake-bundle.rb")
+      File.write(fake_bundle, launcher_code)
 
       check = Deploy::ConstitutionalScanCheck.allocate
       started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       _output, status = check.send(
         :bounded_scan, "/scan --no-autofix MASTER",
-        ruby: RbConfig.ruby, bundle: launcher, master: dir, timeout: 0.2
+        ruby: RbConfig.ruby, bundle: fake_bundle, master: dir, timeout: 0.2
       )
       elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
 
