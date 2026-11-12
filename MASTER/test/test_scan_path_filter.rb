@@ -50,6 +50,21 @@ class TestScanPathFilter < Minitest::Test
       system("git", "-C", Master::REPO_ROOT, "check-ignore", "-q", "#{entry}probe")
   end
 
+  def test_openbsd_var_configuration_is_scanned_from_every_root
+    root = Master::REPO_ROOT
+    paths = %w[
+      OPENBSD/var/nsd/etc/nsd.conf
+      OPENBSD/var/nsd/zones/master/brgen.no.zone
+    ]
+
+    paths.each do |relative|
+      path = File.join(root, relative)
+      [root, Master::ROOT, File.join(root, "OPENBSD")].each do |scan_root|
+        refute Scanner.skip_path?(path, root: scan_root), "#{relative} is excluded from #{scan_root}"
+      end
+    end
+  end
+
   def test_a_path_outside_master_is_judged_by_its_own_root
     rails_file = File.join(Master::REPO_ROOT, "RAILS", "brgen", "app", "models", "post.rb")
     refute Scanner.skip_path?(rails_file, root: Master::REPO_ROOT)

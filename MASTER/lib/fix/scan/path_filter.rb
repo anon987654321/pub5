@@ -39,7 +39,7 @@ module Master
         # off the walk for the same reason `reports` is.
         SKIP_PATH_SEGMENTS = %w[
           .git vendor node_modules tmp log coverage .bundle storage cache dist build
-          knowledge fixtures var .cache scratch
+          knowledge fixtures .cache scratch
           site-packages venv .venv venv-demucs __pycache__
         ].freeze
 

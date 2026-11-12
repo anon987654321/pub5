@@ -172,11 +172,10 @@ module Master
 
           def script_kind_for(path)
             extension = File.extname(path).downcase
-            return :ruby if extension == ".rb"
+            return :ruby if Master.language_for(path) == "ruby"
             return :shell if SHELL_EXTENSIONS.include?(extension) || SHELL_SOURCE_BASENAMES.include?(File.basename(path))
 
             header = File.open(path, "rb", &:readline)
-            return :ruby if header.match?(/\\A#!.*\\bruby\\b/)
             return :shell if header.match?(/\\A#!.*\\b(?:zsh|ksh|sh)\\b/)
 
             nil
