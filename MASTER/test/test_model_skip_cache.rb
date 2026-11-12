@@ -14,6 +14,31 @@ class TestModelSkipCache < Minitest::Test
     Master::Io::ModelSkipCache.clear!
   end
 
+  def test_default_clock_uses_monotonic_time_but_reset_parser_uses_realtime
+    cache = Master::Io::ModelSkipCache
+    monotonic = 12_345.678
+    realtime = 1_800_000_000.0
+    parsed_times = []
+    clock = lambda do |kind, *_args|
+      kind == Process::CLOCK_MONOTONIC ? monotonic : realtime
+    end
+
+    Master::Io::LaneReply.stub(:stated_wait, ->(_reason, now) { parsed_times << now; nil }) do
+      Master::Io::LaneReply.stub(:daily_reset, ->(_reason, now) { parsed_times << now; nil }) do
+        Process.stub(:clock_gettime, clock) do
+          assert_equal (monotonic * 1000).round, cache.now_ms
+          cache.skip!("m1", reason: "temporary failure", category: :failure)
+        end
+      end
+    end
+
+    assert_equal [realtime, realtime], parsed_times
+    assert_equal (monotonic * 1000).round + cache.transient_skip_ttl_ms,
+      cache.skipped_until_ms("m1")
+  ensure
+    cache.clear!
+  end
+
   def test_skip_and_filter
     Master::Io::ModelSkipCache.skip!("m1", reason: "rate limit", category: :rate_limit)
     assert Master::Io::ModelSkipCache.skipped?("m1")
