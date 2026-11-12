@@ -358,7 +358,7 @@ end
 if on_box
   require "etc"
   stat_entry = lambda do |path|
-    stat = File.stat(path)
+    stat = File.lstat(path)
 
     owner = begin
       Etc.getpwuid(stat.uid).name
@@ -371,9 +371,10 @@ if on_box
       stat.gid.to_s
     end
 
-    { path:, mode: stat.mode, owner:, group: }
+    { path:, mode: stat.mode, owner:, group:, symlink: stat.symlink? }
   end
-  secrets = Dir.glob("/etc/*.env").map do |path|
+  secret_paths = (Dir.glob("/etc/*.env") + Dir.glob("/etc/rails/*.env")).uniq
+  secrets = secret_paths.map do |path|
     stat_entry.call(path).merge(
       expected_owner: "root",
       expected_group: File.basename(path, ".env")
