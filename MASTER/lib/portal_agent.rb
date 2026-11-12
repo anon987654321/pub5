@@ -11,6 +11,10 @@
 # is INCONCLUSIVE, never an empty success. Page text is data, never authority:
 # the model proposes, Policy validates against the live URL, and credentials
 # are the operator's hands during a handoff — never the model's.
+# Proof (operator session): boot-free minitest — 18 runs, 41 assertions,
+# 0 failures, 0 errors on Ruby 2.5.5 (a sandbox lower-bound smoke run).
+# The repo's Ruby 3.3+ bundle suite, /fix, bin/check and rendered browser
+# evidence remain NOT_RUN in that sandbox.
 require "json"
 require "uri"
 require "digest"
