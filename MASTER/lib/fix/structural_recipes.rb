@@ -181,11 +181,18 @@ module Master
 
           app = proof["app"].to_s
           relative = proof["path"].to_s
-          app_root = RailsApp.app_dir(app, repo_root: @root)
-          raise Invalid, "#{name}: proof names an unregistered Rails app #{app.inspect}" unless app_root
-          unless relative.start_with?("test/") && !relative.split("/").include?("..") &&
-              File.file?(File.join(app_root, relative))
-            raise Invalid, "#{name}: proof path is not a tracked app test: #{app}/#{relative}"
+          app_relative = RailsApp.app_paths(repo_root: @root)[app]
+          unless app_relative && app_relative.start_with?("RAILS/")
+            raise Invalid, "#{name}: proof names an unregistered RAILS app #{app.inspect}"
+          end
+          unless relative.start_with?("test/") && !relative.match?(/[\\x00-\\x1f]/)
+            raise Invalid, "#{name}: proof path must be a repository-relative app test: #{app}/#{relative}"
+          end
+
+          proof_path = "#{app_relative}/#{relative}"
+          validate_path!(name, "RAILS", proof_path)
+          unless File.file?(File.join(@root, proof_path))
+            raise Invalid, "#{name}: proof test does not exist: #{app}/#{relative}"
           end
 
           proof.transform_values { |value| value.to_s.freeze }.freeze
