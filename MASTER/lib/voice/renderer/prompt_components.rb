@@ -48,7 +48,7 @@ module Master
           # A configured URL and token are not a health check. Boot must not
           # call the web surface ready without an observed request/response.
           web = if splash_web_url.to_s.include?("http")
-                  @config["web_token"].to_s.empty? ? "configured" : "configured, token set, /pair issue for a code"
+                  @config["web_token"].to_s.empty? ? "configured, unverified" : "configured, token set, unverified, /pair issue for a code"
                 else
                   "not configured"
                 end
