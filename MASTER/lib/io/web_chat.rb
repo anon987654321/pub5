@@ -26,6 +26,18 @@ module Master
         new(provider:).ask(prompt:, system:)
       end
 
+      # Browser-mediated accounts are a keyless fallback, not a default
+      # destination when a paid API key is already configured. Explicit opt-in
+      # remains available for an operator who has signed into the local profile.
+      def self.enabled?(rules: Master.models_config)
+        return false if ENV["MASTER_LOCAL_ONLY"] == "1"
+        return false if ENV["MASTER_NO_WEB_CHAT"] == "1"
+        return false if ENV["MASTER_WEB_CHAT"].to_s == "0"
+        return true if ENV["MASTER_WEB_CHAT"] == "1" || ENV["MASTER_KEYLESS"] == "1"
+
+        rules.dig("ferrum_web_chat", "auto_when_keyless") != false && !Master.any_api_key_present?
+      end
+
       def initialize(provider:)
         @provider = provider.to_s
         @config = provider_config(@provider)
@@ -49,13 +61,10 @@ module Master
 
       private
 
-      def enabled?
-        return false if ENV["MASTER_NO_WEB_CHAT"] == "1"
-        ENV[ENABLE_ENV].to_s != "0"
-      end
+      def enabled? = self.class.enabled?(rules: ferrum_config)
 
       def disabled_message
-        "web chat disabled; unset MASTER_WEB_CHAT=0 and MASTER_NO_WEB_CHAT=1"
+        "web chat needs a keyless setup or explicit opt-in (MASTER_WEB_CHAT=1 or MASTER_KEYLESS=1)"
       end
 
       def provider_config(name)
