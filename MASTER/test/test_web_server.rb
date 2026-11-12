@@ -50,6 +50,56 @@ class TestWebServer < Minitest::Test
   # err: was File::NULL -- confirmed live before this fix (spawn_local
   # printed its success line and returned, but nothing was ever listening
   # on the port).
+  def fake_status(success:, exitstatus:)
+    Object.new.tap do |status|
+      status.define_singleton_method(:success?) { success }
+      status.define_singleton_method(:exitstatus) { exitstatus }
+    end
+  end
+
+  def test_port_is_free_only_when_lsof_confirms_no_listener
+    free = fake_status(success: false, exitstatus: 1)
+    Master::Io::Exec.stub(:capture3, ->(*args, **options) {
+      assert_equal ["lsof", "-nP", "-t", "-iTCP:53187", "-sTCP:LISTEN"], args
+      assert_equal 3, options.fetch(:timeout)
+      ["", "", free]
+    }) do
+      assert Master::CLI::WebServer.port_available?(53_187, io: StringIO.new)
+    end
+  end
+
+  def test_port_listener_is_refused_without_terminating_it
+    listener = fake_status(success: true, exitstatus: 0)
+    calls = []
+    Master::Io::Exec.stub(:capture3, ->(*args, **options) {
+      calls << [args, options]
+      ["4242\\n", "", listener]
+    }) do
+      io = StringIO.new
+      refute Master::CLI::WebServer.port_available?(53_187, io:)
+      assert_includes io.string, "PID(s) 4242"
+      assert_includes io.string, "refusing to stop an unknown process"
+    end
+    assert_equal 1, calls.length
+  end
+
+  def test_lsof_errors_and_unexpected_empty_success_fail_closed
+    failure = fake_status(success: false, exitstatus: 127)
+    Master::Io::Exec.stub(:capture3, ->(*) { ["", "lsof unavailable", failure] }) do
+      refute Master::CLI::WebServer.port_available?(53_187, io: StringIO.new)
+    end
+
+    success_without_evidence = fake_status(success: true, exitstatus: 0)
+    Master::Io::Exec.stub(:capture3, ->(*) { ["", "", success_without_evidence] }) do
+      refute Master::CLI::WebServer.port_available?(53_187, io: StringIO.new)
+    end
+  end
+
+  def test_invalid_port_fails_closed
+    refute Master::CLI::WebServer.port_available?(0, io: StringIO.new)
+    refute Master::CLI::WebServer.port_available?(65_536, io: StringIO.new)
+  end
+
   def test_spawn_env_points_bundle_gemfile_at_web_dir_not_master
     web_dir = File.join(Master::ROOT, "web")
     env = Master::CLI::WebServer.spawn_env(web_dir)
