@@ -21,6 +21,8 @@ module Master
         "infer:rejected" => "infer",
         "route:resolved" => "route",
         "llm:routed" => "model",
+        "llm:send" => "waiting",
+        "llm:stream_started" => "streaming",
       }.freeze
 
       private
