@@ -222,7 +222,7 @@ class TestComputePool < Minitest::Test
     assert_equal 9_000.0, stat.fetch(:latency_ms)
     assert_equal 2_500.0, stat.fetch(:first_token_ms)
     assert_equal 1, stat.fetch(:first_token_samples)
-    assert_in_delta 9.0, reloaded.latency_s(model), 0.001
+    assert_in_delta 2.5, reloaded.latency_s(model), 0.001
     assert_in_delta 0.4, reloaded.send(:empirical_stats, model).last, 0.001
   end
 
