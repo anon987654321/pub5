@@ -391,7 +391,8 @@
         "Hooktheory: Ab IV–iii–vi–ii (Dbmaj7–Cm7–Fm7–Bbm7)",
         "RG-69 researched Donuts symbols",
         "Historical pub4 INLINE_SONIC_PROFILES.dilla_timeless: melody_chop_hz [659.25, 587.33, 523.25, 440.0, 392.0, 349.23]"
-      ]
+      ],
+      "bars": 4
     },
     {
       "id": "fall_in_love",
@@ -419,7 +420,8 @@
         "r/jdilla: “chords for Fall in Love?” — sample identification: Gap Mangione, Diana in the Autumn Wind",
         "ChordU Ebm7/Bbm7 loop transcription",
         "Historical pub4 extended chord voicings: Ebm7fil and Bbm7fil"
-      ]
+      ],
+      "bars": 4
     },
     {
       "id": "get_dis_money",
@@ -449,7 +451,8 @@
       "sources": [
         "Ethan Hein, 2022 transcription: https://ethanhein.com/wp/2022/get-dis-money/",
         "D/E = E9sus4; then Db/E, C/E, Bm/E, Bbm/E and Am/E over the E pedal"
-      ]
+      ],
+      "bars": 7
     },
     {
       "id": "climax_slum_village",
@@ -475,7 +478,8 @@
       "sources": [
         "ChordU Climax transcription",
         "Historical pub4 extended chord voicings: Emaj7 and E7climax"
-      ]
+      ],
+      "bars": 4
     },
     {
       "id": "pavanne_jamal",
@@ -558,7 +562,8 @@
       "source_status": "historical_verified_table",
       "sources": [
         "ChordU / Voodoo published chord analysis"
-      ]
+      ],
+      "bars": 8
     },
     {
       "id": "untitled_dangelo_mixo",
@@ -587,7 +592,8 @@
       "sources": [
         "Hooktheory theorytab: https://www.hooktheory.com/theorytab/view/dangelo/untitled-how-does-it-feel",
         "Play Like the Greats: note-for-note tabs for Untitled (How Does It Feel)"
-      ]
+      ],
+      "bars": 5
     },
     {
       "id": "brown_sugar_dangelo",
@@ -613,7 +619,8 @@
       "sources": [
         "Open Studio / youllhearit.com Brown Sugar episode: chords and gospel lineage",
         "TalkBass Brown Sugar discussion: F13 tritone-sub approach"
-      ]
+      ],
+      "bars": 4
     },
     {
       "id": "spanish_joint_dangelo",
@@ -643,7 +650,8 @@
       "sources": [
         "James L. Salter transcription: jameslsalter.co.uk/transcriptions/dangelospanishjoint",
         "Guitar World, D'Angelo's Voodoo at Twenty-Five (Charlie Hunter); Brown Sugar charts at guitartabs.cc"
-      ]
+      ],
+      "bars": 8
     },
     {
       "id": "really_love_dangelo",
@@ -670,7 +678,8 @@
       "sources": [
         "Ethan Hein professor breakdown, via MusicRadar: lopsided phrasing",
         "Hooktheory theorytab: dangelo/really-love"
-      ]
+      ],
+      "bars": 5
     },
     {
       "id": "the_root_dangelo",
@@ -699,7 +708,8 @@
       "source_status": "historical_verified_table",
       "sources": [
         "Nathan the Composer, Voodoo chord analysis (YouTube); songbpm.com/the-root"
-      ]
+      ],
+      "bars": 8
     },
     {
       "id": "send_it_on_dangelo",
@@ -728,7 +738,8 @@
       "sources": [
         "Hooktheory theorytab: dangelo/send-it-on (Sea of Tranquility interpolation)",
         "Jeff Schneider intro-swell analysis; freebasstranscriptions.com/send-it-on-live"
-      ]
+      ],
+      "bars": 5
     },
     {
       "id": "another_life_dangelo",
@@ -758,7 +769,8 @@
       "source_status": "historical_verified_table",
       "sources": [
         "Wikichords Another Life; tutorial: https://www.youtube.com/watch?v=cO6hZzVpTQU"
-      ]
+      ],
+      "bars": 9
     },
     {
       "id": "sugah_daddy_dangelo",
@@ -784,7 +796,8 @@
       "sources": [
         "Ethan Hein, flypaper.soundfly.com: How D'Angelo uses funky dominant sevenths in Sugah Daddy",
         "Piano Couture: d'angelo-sugah-daddy-lick (root–3rd–b7 shell)"
-      ]
+      ],
+      "bars": 4
     },
     {
       "id": "left_and_right_dangelo",
@@ -808,7 +821,8 @@
       "source_status": "historical_verified_table",
       "sources": [
         "songbpm.com D'Angelo / Method Man Left & Right; Meters sample documented"
-      ]
+      ],
+      "bars": 3
     }
   ],
   "engine_modules": [
@@ -950,7 +964,8 @@
         "Danny Fratina's published chord analysis for Flying Lotus — Never Catch Me (historical pub4 EXTENDED_TENSION_CHORDS comments)",
         "Historical pub4 wonky_camel reference profile retains the sequence and the chord-specific voicings"
       ],
-      "note": "Preserved as a published-chart reference, not folded into the narrower artist_verified table."
+      "note": "Preserved as a published-chart reference, not folded into the narrower artist_verified table.",
+      "bars": 8
     }
   ]
 }
