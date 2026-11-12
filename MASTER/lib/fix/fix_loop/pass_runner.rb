@@ -6,6 +6,7 @@ require "open3"
 require "set"
 require "time"
 require_relative "../kernel"
+require_relative "../lane_preflight"
 
 # Some callers load PassRunner directly. Establish the canonical class identity
 # before child files reopen FixLoop, without recursively loading a half-evaluated
@@ -584,6 +585,9 @@ module Master
 
           @lanes_probed = true
           return unless LaneProbe.enabled? && ENV["MASTER_IN_PROOF"] != "1" && @agent.respond_to?(:ask_once)
+          # The preflight probe covers the run: it asked the same lanes and
+          # dropped the failures for the run already.
+          return if LanePreflight.probed?
 
           models = if @agent.respond_to?(:candidate_models)
                      Array(@agent.candidate_models(task_type: :code_generation))
@@ -596,6 +600,11 @@ module Master
               Master::Io::LaneSelection.alive?(model)
             end
           end
+          # Nothing selection calls alive died since the preflight; the llm
+          # stage names the refusal per file. An empty probe would say
+          # "no lane answered" without having asked one.
+          return if models.empty?
+
           LaneProbe.run(models:, ask: LaneProbe.ask_with(@agent))
         end
 

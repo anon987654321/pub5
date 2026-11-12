@@ -40,6 +40,20 @@ class TestModelSkipCache < Minitest::Test
     Master::Io::ModelSkipCache.clock = nil
   end
 
+  # A refusal that names no category (the dispatcher's failure_status maps one
+  # to :failure) parks a model like any other transient fault; leaving it
+  # unparked re-asked the same dead lane on every call of a run.
+  def test_an_unnamed_failure_parks_briefly_too
+    travel_to(0)
+    cache = Master::Io::ModelSkipCache
+    cache.skip!("m1", reason: "something went wrong", category: :failure)
+
+    assert_equal cache.transient_skip_ttl_ms, cache.skipped_until_ms("m1")
+    refute cache.filter(["m1", "m2"]).include?("m1")
+  ensure
+    Master::Io::ModelSkipCache.clock = nil
+  end
+
   def travel_to(epoch_ms)
     @now = epoch_ms
     Master::Io::ModelSkipCache.clock = -> { @now }

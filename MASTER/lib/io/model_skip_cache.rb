@@ -12,7 +12,7 @@ module Master
     module ModelSkipCache
       SKIP_CATEGORIES = %i[
         rate_limit quota_exceeded no_api_key timeout auth_error
-        provider_error llm_call_failure model_missing
+        provider_error llm_call_failure model_missing failure
       ].freeze
 
       # A failure that says nothing about the next call parks a model briefly. One
@@ -20,7 +20,10 @@ module Master
       # lane ai.brgen.no could reach for the full ten minutes, and every turn in
       # that window walked a chain of lanes with no credit and failed after 268s
       # (measured 2026-09-15). A spent key, a quota or a rate limit keeps the long park.
-      TRANSIENT_CATEGORIES = %i[timeout provider_error llm_call_failure].freeze
+      # The dispatcher's own generic mapping (`failure_status`, else :failure) counts:
+      # on 2026-11-12 an audit run re-walked slow-failing lanes per call because a
+      # refusal that named no category parked nothing at all.
+      TRANSIENT_CATEGORIES = %i[timeout provider_error llm_call_failure failure].freeze
 
       # A park the provider did not time escalates with the model's own failures
       # in the last day: the first is transient_skip_ttl_ms, then a minute, then

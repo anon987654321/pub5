@@ -27,6 +27,10 @@ fallback_policy:
   # A rate-limited, quota-exhausted or out-of-budget model cannot succeed on
   # an immediate retry, so all three belong here, as does a model the provider
   # does not hold. Live adapters emit both :budget and :quota_exceeded.
+  # `exhausted` is the paid-tier spelling a subscription CLI answers with
+  # (claude-cli's session limit, lib/review/llm_dispatcher/cli_sender.rb) —
+  # left out on 2026-11-12, a quota-dead claude-cli was re-asked on every call
+  # of an audit run because :exhausted matched nothing in this list.
   # `provider_error` deliberately does not: a transient 5xx is what in-place
   # retry exists for. `retries_per_tier` was removed — the retry count has one
   # source, `failover.max_retries` below.
