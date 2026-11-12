@@ -219,7 +219,6 @@ class OrderTest < ActiveSupport::TestCase
     assert_equal 1, LoyaltyStamp.where(order_id: order.id).count
   end
 
-
   private
 
   # Guards may raise or return false — both count as a refusal. What must
@@ -234,6 +233,4 @@ class OrderTest < ActiveSupport::TestCase
     order.reload
     assert_equal before, order.state, "#{method} should be refused from #{before}"
   end
-
-
 end
