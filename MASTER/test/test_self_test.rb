@@ -433,6 +433,21 @@ class TestSelfTest < Minitest::Test
     end
   end
 
+  def test_real_openbsd_deploy_corpus_keeps_native_services_and_configs
+    root = Master::Review::Scan::SelfTest.new(root: Master::ROOT).send(:build_deploy_paths)
+    openbsd = File.join(Master::REPO_ROOT, "OPENBSD")
+    expected = %w[
+      etc/rc.d/master
+      bin/vps-deploy
+      usr/local/sbin/pub5-admin
+      etc/pf.conf
+      var/nsd/etc/nsd.conf
+      var/nsd/zones/master/brgen.no.zone
+    ]
+
+    expected.each { |relative| assert_includes root, File.join(openbsd, relative) }
+  end
+
   def test_openbsd_deploy_corpus_uses_real_paths_and_skips_tests
     Dir.mktmpdir do |workspace|
       root = File.join(workspace, "MASTER")
