@@ -201,10 +201,29 @@ class TestIoMcpAndWebChat < Minitest::Test
     assert_empty client.calls
   end
 
-  # Web chat is on by default; either switch turns it off before a browser starts.
-  def test_web_chat_switched_off_refuses_before_opening_a_browser
+  # Browser accounts never join a paid-key route without explicit operator opt-in.
+  def test_web_chat_requires_keyless_mode_or_explicit_opt_in
     chat = Master::Io::WebChat.new(provider: "grok")
-    [{ "MASTER_WEB_CHAT" => "0" }, { "MASTER_NO_WEB_CHAT" => "1" }].each do |switch|
+    Master.stub(:any_api_key_present?, true) do
+      with_env("MASTER_WEB_CHAT" => nil, "MASTER_KEYLESS" => nil, "MASTER_NO_WEB_CHAT" => nil,
+               "MASTER_LOCAL_ONLY" => nil) do
+        refute Master::Io::WebChat.enabled?
+        assert_raises(Master::Io::WebChat::DisabledError) { chat.ask(prompt: "hi") }
+      end
+
+      with_env("MASTER_WEB_CHAT" => "1") do
+        assert Master::Io::WebChat.enabled?
+      end
+      with_env("MASTER_KEYLESS" => "1") do
+        assert Master::Io::WebChat.enabled?
+      end
+    end
+  end
+
+  def test_web_chat_switches_still_refuse_before_opening_a_browser
+    chat = Master::Io::WebChat.new(provider: "grok")
+    [{ "MASTER_WEB_CHAT" => "0" }, { "MASTER_NO_WEB_CHAT" => "1" },
+     { "MASTER_LOCAL_ONLY" => "1" }].each do |switch|
       with_env(switch) do
         assert_raises(Master::Io::WebChat::DisabledError) { chat.ask(prompt: "hi") }
       end
