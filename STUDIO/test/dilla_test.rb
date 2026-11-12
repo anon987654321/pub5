@@ -164,7 +164,7 @@ class TestDillaTheory < Minitest::Test
     error = assert_raises(ArgumentError) do
       Dilla::ChordParser.parse("C7/H", Dilla.theory)
     end
-    assert_match(/unknown chord quality/, error.message)
+    assert_match(/unknown slash-bass note/, error.message)
   end
 
   def test_slash_bass_pitch_class_is_read
