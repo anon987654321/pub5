@@ -22,7 +22,9 @@ private `consent.yml` copied from `STUDIO/photograph/consent.example.yml`.
 The record must name the exact subject, explicitly approve likeness generation
 and provider processing, and name each source set with who granted permission,
 the date, the rights covered, and a local evidence-file path. Keep the record
-and evidence owner-only (0600); the subject directory itself must be 0700.
+and evidence files owner-only (0600). Any nested evidence directory must be
+owner-only (0700); the tracked subject directory may retain normal checkout
+permissions.
 
 The shared `STUDIO/lora/consent.rb` gate checks the record and evidence without
 creating, editing or inferring permission. It runs before source recovery,
