@@ -94,6 +94,25 @@ class TestLaneQuota < Minitest::Test
     refute(Quota.report.any? { |row| row.start_with?("lmstudio:") })
   end
 
+  def test_claude_past_due_billing_is_a_shared_six_hour_hold_without_probe_ladder
+    reply = "Error: payment is past due for this account"
+    assert_equal :billing, Master::Io::LaneReply.read(reply).kind
+    deadline = Quota.note("claude-cli:claude-opus-5-5", reply)
+
+    assert_equal @now + 6 * 3600, deadline
+    assert Quota.dead?("claude-cli:claude-sonnet-5-5"),
+           "Opus and Sonnet share the same Claude CLI billing boundary"
+    assert_equal "billing", Quota.raw.fetch("reason:claude-cli")
+    refute Quota.raw.key?("unknown:claude-cli"), "billing is not an unknown quota guess"
+    refute Quota.raw.key?("probe:claude-cli"), "billing must not enter the rapid probe ladder"
+    report = Quota.report.find { |row| row.start_with?("claude-cli:") }
+    assert_match(/billing hold/, report)
+    assert_match(/resolve the provider account's past-due balance/, report)
+
+    @now += 6 * 3600 + 1
+    refute Quota.dead?("claude-cli:claude-sonnet-5-5"), "the bounded hold expires for a fresh operator/provider check"
+  end
+
   def test_expiry_revives_the_lane
     Quota.note("agy:auto", "quota reached, resets in 1h")
     @now += 3599

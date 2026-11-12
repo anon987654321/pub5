@@ -275,6 +275,7 @@ class TestLaneSelection < Minitest::Test
 
   def test_a_free_class_lane_warns_once_while_a_live_lane_exists
     Selection.watch_free_class!
+    Selection.note_provider_outcome(OPUS, :success, alive: ALL)
     warning = Selection.free_class_warning(NEMOTRON, :file_write, alive: ALL)
     assert_match(/WARNING free-class lane #{Regexp.escape(NEMOTRON)} used for file_write while claude-cli:claude-opus-5-5 is live/, warning)
     assert_nil Selection.free_class_warning(NEMOTRON, :file_write, alive: ALL), "once per lane"
@@ -289,9 +290,12 @@ class TestLaneSelection < Minitest::Test
     # free-class warning and the suspension while the wheel kept paying each
     # dead free slug its call. The savior must survive LaneState's verdict.
     Selection.watch_free_class!
+    assert_nil Selection.free_class_warning(NEMOTRON, :file_write, alive: ALL),
+               "configuration and a visible CLI binary are not successful-completion evidence"
+    Selection.note_provider_outcome(OPUS, :success, alive: ALL)
     warning = Selection.free_class_warning(NEMOTRON, :file_write, alive: ALL).to_s
     refute_match(/gemini/, warning, "a hand-dead lane is never named as the lane that takes the work")
-    assert_match(/while claude-cli:claude-opus-5-5 is live/, warning, "the savior is a lane no store refuses")
+    assert_match(/while claude-cli:claude-opus-5-5 is live/, warning, "the savior must have answered this run and remain usable")
   ensure
     Selection.watch_free_class!(false)
   end
@@ -301,7 +305,10 @@ class TestLaneSelection < Minitest::Test
 
     3.times { Selection.note_provider_outcome(NEMOTRON, :failure, alive: ALL) }
 
-    assert_predicate Selection, :free_floor_suspended?, "three dead free answers are a dead floor"
+    refute_predicate Selection, :free_floor_suspended?, "a configured alternate has not proved it can answer"
+    Selection.note_provider_outcome(OPUS, :success, alive: ALL)
+
+    assert_predicate Selection, :free_floor_suspended?, "a real non-free completion can carry the floor"
     chosen = Selection.live_savior(alive: ALL)
     assert_equal OPUS, chosen, "the suspension names a lane no store refuses"
   ensure
@@ -310,6 +317,7 @@ class TestLaneSelection < Minitest::Test
 
   def test_a_lane_probe_on_a_free_lane_is_not_a_warning
     Selection.watch_free_class!
+    Selection.note_provider_outcome(OPUS, :success, alive: ALL)
 
     assert_nil Selection.free_class_warning(NEMOTRON, :lane_probe, alive: ALL)
     refute_nil Selection.free_class_warning(NEMOTRON, :structural_review, alive: ALL), "the probe used up no warning"
@@ -637,8 +645,13 @@ class TestLaneSelection < Minitest::Test
 
     3.times { Selection.note_provider_outcome(NEMOTRON, :failure, alive: ALL) }
 
+    refute_predicate Selection, :free_floor_suspended?,
+                     "three free failures cannot promote a paid lane that has only been configured"
+    assert_empty notices
+    Selection.note_provider_outcome(OPUS, :success, alive: ALL)
+
     assert_predicate Selection, :free_floor_suspended?,
-                     "three dead free answers with no free success anywhere are a dead floor"
+                     "a successful non-free completion is the evidence needed to suspend the floor"
     assert_equal ["free floor suspended"], notices, "the suspension prints exactly one line"
     assert_nil Selection.instance_variable_get(:@floor_notice),
                  "the notice is consumed by the announce that printed it"
@@ -701,7 +714,8 @@ class TestLaneSelection < Minitest::Test
     assert_equal [GROK, DEEPSEEK, LOCAL, NEMOTRON], Selection.order(mixed), "free stays last while the floor stands"
 
     Selection.watch_free_class!
-    Selection.suspend_free_floor!(DEEPSEEK)
+    Selection.note_provider_outcome(OPUS, :success, alive: ALL)
+    Selection.suspend_free_floor!(OPUS)
     assert_equal [GROK, DEEPSEEK, LOCAL, NEMOTRON], Selection.order(mixed),
                  "free and local stay in the list, never-modelless keeps them, but every remote goes first"
     assert_equal [LOCAL, NEMOTRON], Selection.order([NEMOTRON, LOCAL]),
@@ -723,7 +737,8 @@ class TestLaneSelection < Minitest::Test
   def test_a_suspended_floor_is_ranked_last_even_in_the_all_dead_fallback
     mixed = [NEMOTRON, DEEPSEEK, GROK]
     Selection.watch_free_class!
-    Selection.suspend_free_floor!(DEEPSEEK)
+    Selection.note_provider_outcome(OPUS, :success, alive: ALL)
+    Selection.suspend_free_floor!(OPUS)
     Selection.stub(:order, ->(_models, **_kw) { [] }) do
       assert_equal [GROK, DEEPSEEK, NEMOTRON], Selection.order_or_all(mixed),
                    "the suspended free slug cannot jump a dead remote just because it was listed first"

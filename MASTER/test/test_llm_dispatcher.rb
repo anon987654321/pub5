@@ -255,6 +255,9 @@ class TestLLMDispatcher < Minitest::Test
 
     assert dispatcher.send(:billing_error?, StandardError.new("Insufficient credits. Add more using https://openrouter.ai"))
     assert dispatcher.send(:billing_error?, StandardError.new("402 Payment Required"))
+    past_due = StandardError.new("payment is past due")
+    assert dispatcher.send(:billing_error?, past_due)
+    assert_equal :budget, dispatcher.send(:classified_call_failure, past_due).category
     refute dispatcher.send(:billing_error?, StandardError.new("connection reset"))
 
     assert dispatcher.send(:rate_limit_error?, StandardError.new("Rate limit exceeded: free-models-per-min"))

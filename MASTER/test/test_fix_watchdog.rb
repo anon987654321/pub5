@@ -429,6 +429,51 @@ class TestFixWatchdog < Minitest::Test
     assert_empty @killed
   end
 
+  def test_a_successful_provider_completion_resets_the_consecutive_dead_streak
+    p = pulse
+    2.times do
+      p.observe("llm:send", model: "nvidia/nemotron:free")
+      p.observe("llm:provider_outcome", model: "nvidia/nemotron:free", status: :failure)
+    end
+    assert_equal 2, p.instance_variable_get(:@dead_streak)
+
+    p.observe("llm:send", model: "claude-cli:claude-sonnet-5-5")
+    p.observe("llm:provider_outcome", model: "claude-cli:claude-sonnet-5-5", status: :success)
+    assert_equal 0, p.instance_variable_get(:@dead_streak)
+    refute p.instance_variable_get(:@promote_pending),
+           "a success ends the current run of consecutive failures"
+
+    2.times do
+      p.observe("llm:send", model: "nvidia/nemotron:free")
+      p.observe("llm:provider_outcome", model: "nvidia/nemotron:free", status: :failure)
+    end
+    refute p.instance_variable_get(:@promote_pending),
+           "two failures before a success and two after it are not three failures in a row"
+  end
+
+  def test_three_paid_provider_failures_do_not_trigger_free_floor_promotion
+    p = pulse
+    3.times do
+      p.observe("llm:send", model: "claude-cli:claude-opus-5-5")
+      p.observe("llm:provider_outcome", model: "claude-cli:claude-opus-5-5", status: :failure)
+    end
+    assert_equal 0, p.instance_variable_get(:@dead_streak)
+    refute p.instance_variable_get(:@promote_pending)
+  end
+
+  def test_free_floor_promotion_stays_pending_until_a_proven_savior_exists
+    p = pulse
+    Master::Io::LaneSelection.watch_free_class!
+    p.instance_variable_set(:@promote_pending, true)
+    Master::Io::LaneSelection.stub(:live_savior, nil) { p.send(:promote_live_lane) }
+
+    assert p.instance_variable_get(:@promote_pending)
+    assert_nil p.instance_variable_get(:@promoted_live)
+    refute_predicate Master::Io::LaneSelection, :free_floor_suspended?
+  ensure
+    Master::Io::LaneSelection.watch_free_class!(false)
+  end
+
   def test_the_wrapper_ends_a_run_on_the_no_yield_line_and_on_nothing_else_new
     line = "fix0: STALLED no yield: 0 fixed after 22m, 7 attempts\n"
 
