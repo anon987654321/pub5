@@ -277,11 +277,11 @@ require_relative "motion_process"
 # This wrapper deliberately uses the same in-process chain as a one-shot still.
 # Re-entering postpro.rb for every frame was the defect that made the previous
 # video attempt roughly an hour per minute of 1080p.
-def postpro_video_grade_frame(bytes, width, height, target, preset_name, frame_seed)
+def postpro_video_grade_frame(bytes, width, height, target, preset_name, frame_seed, frame_context = nil)
   $postpro_seed = frame_seed
   image = Vips::Image.new_from_memory(bytes, width, height, 3, :uchar)
                       .copy(interpretation: :srgb).copy_memory
-  processed = preset(image, preset_name)
+  processed = preset(image, preset_name, frame_context:)
   processed = anchor_tones(processed)
   processed = apply_finishing_grain(processed, preset_name, grained: nil)
   rgb_bands(processed).write_to_file(target, compression: 6)
@@ -309,9 +309,9 @@ def postpro_video_mode
   seed = Integer(ENV.fetch("POSTPRO_SEED", "0"), exception: false) || 0
   Postpro::Motion.grade(
     source, output, preset: preset_name, seed:, grain:
-  ) do |bytes, width, height, target, frame_seed|
+  ) do |bytes, width, height, target, frame_seed, frame_context|
     postpro_video_grade_frame(
-      bytes, width, height, target, preset_name, frame_seed
+      bytes, width, height, target, preset_name, frame_seed, frame_context
     )
   end
   0
