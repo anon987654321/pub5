@@ -1,5 +1,17 @@
 {
   "comment": "Recovered Dilla/artist material is kept distinct from the engine's own progressions. Artist rows below restore the historical pub4 ARTIST_VERIFIED_PROGRESSIONS table with source notes and aliases deduplicated; engine_modules are studies, not track transcriptions. Melody motifs are only the measured/legacy pitch material actually retained by that source, not complete note-for-note song melodies. Published chart references (including Flying Lotus Never Catch Me) have their own source tier and are not mislabeled as the narrower artist_verified corpus.",
+  "evidence_policy": {
+    "version": 1,
+    "source_status": {
+      "restored_legacy_unverified": "Restored from the earlier pub4 table. This describes repository provenance only; it does not certify the musical transcription independently."
+    },
+    "timing_status": {
+      "published_form": "A cited source explicitly describes the section or chord durations represented by chord_bars.",
+      "source_loop_length_only": "A source describes the loop length, but individual chord onsets have not been digitized; chord_bars are the engine's even-slot approximation.",
+      "engine_grid_assumption": "Chord durations are evenly allocated for rendering; they are not claimed to reproduce source onset timing."
+    },
+    "melody_policy": "A melody is source material only when an explicit source-backed MIDI contour is present. Generated melody is an engine interpretation, not a recovered transcription."
+  },
   "provenance": {
     "transcription_sources": [
       "https://jdillabasslines.wordpress.com/fantastic-vol-2/",
@@ -386,13 +398,30 @@
         65
       ],
       "melody_status": "historical measured sample/chop contour; not a complete note-for-note lead transcription",
-      "source_status": "historical_verified_table",
+      "source_status": "restored_legacy_unverified",
       "sources": [
         "Hooktheory: Ab IV–iii–vi–ii (Dbmaj7–Cm7–Fm7–Bbm7)",
         "RG-69 researched Donuts symbols",
-        "Historical pub4 INLINE_SONIC_PROFILES.dilla_timeless: melody_chop_hz [659.25, 587.33, 523.25, 440.0, 392.0, 349.23]"
+        "Historical pub4 INLINE_SONIC_PROFILES.dilla_timeless: melody_chop_hz [659.25, 587.33, 523.25, 440.0, 392.0, 349.23]",
+        "Hooktheory TheoryTab (community-maintained): https://www.hooktheory.com/theorytab/view/j-dilla/time---the-donut-of-the-heart (reports 95 BPM; tempo differs from this engine profile)"
       ],
-      "bars": 4
+      "bars": 4,
+      "chord_bars": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "chord_timing_status": "engine_grid_assumption",
+      "chord_timing_note": "Equal chord slots are a rendering model. Individual source onset times have not been independently digitized.",
+      "tempo_evidence": {
+        "status": "conflicting_secondary_reference",
+        "render_bpm": 86,
+        "reported_bpm": 95,
+        "source": "Hooktheory community-maintained TheoryTab",
+        "url": "https://www.hooktheory.com/theorytab/view/j-dilla/time---the-donut-of-the-heart",
+        "note": "Keep 86 BPM as the existing render setting pending direct audio measurement; do not treat it as a source-verified tempo."
+      }
     },
     {
       "id": "fall_in_love",
@@ -415,13 +444,22 @@
         "melody": "sweet_soul",
         "swing": 54
       },
-      "source_status": "historical_verified_table",
+      "source_status": "restored_legacy_unverified",
       "sources": [
         "r/jdilla: “chords for Fall in Love?” — sample identification: Gap Mangione, Diana in the Autumn Wind",
         "ChordU Ebm7/Bbm7 loop transcription",
         "Historical pub4 extended chord voicings: Ebm7fil and Bbm7fil"
       ],
-      "bars": 4
+      "bars": 4,
+      "chord_bars": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "chord_timing_status": "engine_grid_assumption",
+      "chord_timing_note": "Equal chord slots are a rendering model. Individual source onset times have not been independently digitized.",
+      "melody_status": "not_transcribed"
     },
     {
       "id": "get_dis_money",
@@ -447,12 +485,23 @@
         "melody": "dorian_moan",
         "swing": 56
       },
-      "source_status": "historical_verified_table",
+      "source_status": "restored_legacy_unverified",
       "sources": [
         "Ethan Hein, 2022 transcription: https://ethanhein.com/wp/2022/get-dis-money/",
         "D/E = E9sus4; then Db/E, C/E, Bm/E, Bbm/E and Am/E over the E pedal"
       ],
-      "bars": 7
+      "bars": 7,
+      "chord_bars": [
+        1.16666667,
+        1.16666667,
+        1.16666667,
+        1.16666667,
+        1.16666667,
+        1.16666667
+      ],
+      "chord_timing_status": "source_loop_length_only",
+      "chord_timing_note": "The cited analysis documents a seven-bar loop and chord transcription, but individual chord onsets have not been imported. Equal 7/6-bar slots are an engine approximation only.",
+      "melody_status": "not_transcribed"
     },
     {
       "id": "climax_slum_village",
@@ -474,12 +523,21 @@
         "melody": "sweet_soul",
         "swing": 53
       },
-      "source_status": "historical_verified_table",
+      "source_status": "restored_legacy_unverified",
       "sources": [
         "ChordU Climax transcription",
         "Historical pub4 extended chord voicings: Emaj7 and E7climax"
       ],
-      "bars": 4
+      "bars": 4,
+      "chord_bars": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "chord_timing_status": "engine_grid_assumption",
+      "chord_timing_note": "Equal chord slots are a rendering model. Individual source onset times have not been independently digitized.",
+      "melody_status": "not_transcribed"
     },
     {
       "id": "pavanne_jamal",
@@ -499,12 +557,19 @@
         "melody": "music_box",
         "swing": 50
       },
-      "source_status": "historical_verified_table",
+      "source_status": "restored_legacy_unverified",
       "sources": [
         "Stuart Nicholson, The Ahmad Jamal Live Performances 1958–62: Dm7 vamp followed by Ebm7 vamp",
         "Miles Davis, 1958: “All my inspiration today comes from the Chicago pianist Ahmad Jamal”"
       ],
-      "bars": 8
+      "bars": 8,
+      "chord_bars": [
+        4,
+        4
+      ],
+      "chord_timing_status": "engine_grid_assumption",
+      "chord_timing_note": "Equal chord slots are a rendering model. Individual source onset times have not been independently digitized.",
+      "melody_status": "not_transcribed"
     },
     {
       "id": "so_what_miles",
@@ -529,12 +594,15 @@
         "melody": "music_box",
         "swing": 50
       },
-      "source_status": "historical_verified_table",
+      "source_status": "restored_legacy_unverified",
       "sources": [
         "Kind of Blue (1959), 32-bar AABA: Dm7 for 16 bars, Ebm7 for 8, Dm7 for 8",
         "Coltrane's Impressions (1961) reuses the form and harmony"
       ],
-      "bars": 32
+      "bars": 32,
+      "chord_timing_status": "published_form",
+      "chord_timing_note": "The cited 32-bar form is explicitly represented as 16 + 8 + 8 bars.",
+      "melody_status": "not_transcribed"
     },
     {
       "id": "untitled_dangelo_add9",
@@ -559,11 +627,24 @@
         "melody": "sweet_soul",
         "swing": 54
       },
-      "source_status": "historical_verified_table",
+      "source_status": "restored_legacy_unverified",
       "sources": [
         "ChordU / Voodoo published chord analysis"
       ],
-      "bars": 8
+      "bars": 8,
+      "chord_bars": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "chord_timing_status": "engine_grid_assumption",
+      "chord_timing_note": "Equal chord slots are a rendering model. Individual source onset times have not been independently digitized.",
+      "melody_status": "not_transcribed"
     },
     {
       "id": "untitled_dangelo_mixo",
@@ -588,12 +669,22 @@
         "swing": 54
       },
       "rendering_note": "The source meter is retained as metadata; the current sequencer's bar clock is 4/4.",
-      "source_status": "historical_verified_table",
+      "source_status": "restored_legacy_unverified",
       "sources": [
         "Hooktheory theorytab: https://www.hooktheory.com/theorytab/view/dangelo/untitled-how-does-it-feel",
         "Play Like the Greats: note-for-note tabs for Untitled (How Does It Feel)"
       ],
-      "bars": 5
+      "bars": 5,
+      "chord_bars": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "chord_timing_status": "engine_grid_assumption",
+      "chord_timing_note": "Equal chord slots are a rendering model. Individual source onset times have not been independently digitized.",
+      "melody_status": "not_transcribed"
     },
     {
       "id": "brown_sugar_dangelo",
@@ -615,12 +706,21 @@
         "melody": "sweet_soul",
         "swing": 54
       },
-      "source_status": "historical_verified_table",
+      "source_status": "restored_legacy_unverified",
       "sources": [
         "Open Studio / youllhearit.com Brown Sugar episode: chords and gospel lineage",
         "TalkBass Brown Sugar discussion: F13 tritone-sub approach"
       ],
-      "bars": 4
+      "bars": 4,
+      "chord_bars": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "chord_timing_status": "engine_grid_assumption",
+      "chord_timing_note": "Equal chord slots are a rendering model. Individual source onset times have not been independently digitized.",
+      "melody_status": "not_transcribed"
     },
     {
       "id": "spanish_joint_dangelo",
@@ -646,12 +746,25 @@
         "melody": "sweet_soul",
         "swing": 54
       },
-      "source_status": "historical_verified_table",
+      "source_status": "restored_legacy_unverified",
       "sources": [
         "James L. Salter transcription: jameslsalter.co.uk/transcriptions/dangelospanishjoint",
         "Guitar World, D'Angelo's Voodoo at Twenty-Five (Charlie Hunter); Brown Sugar charts at guitartabs.cc"
       ],
-      "bars": 8
+      "bars": 8,
+      "chord_bars": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "chord_timing_status": "engine_grid_assumption",
+      "chord_timing_note": "Equal chord slots are a rendering model. Individual source onset times have not been independently digitized.",
+      "melody_status": "not_transcribed"
     },
     {
       "id": "really_love_dangelo",
@@ -674,12 +787,22 @@
         "melody": "sweet_soul",
         "swing": 54
       },
-      "source_status": "historical_verified_table",
+      "source_status": "restored_legacy_unverified",
       "sources": [
         "Ethan Hein professor breakdown, via MusicRadar: lopsided phrasing",
         "Hooktheory theorytab: dangelo/really-love"
       ],
-      "bars": 5
+      "bars": 5,
+      "chord_bars": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "chord_timing_status": "engine_grid_assumption",
+      "chord_timing_note": "Equal chord slots are a rendering model. Individual source onset times have not been independently digitized.",
+      "melody_status": "not_transcribed"
     },
     {
       "id": "the_root_dangelo",
@@ -705,11 +828,24 @@
         "melody": "sweet_soul",
         "swing": 54
       },
-      "source_status": "historical_verified_table",
+      "source_status": "restored_legacy_unverified",
       "sources": [
         "Nathan the Composer, Voodoo chord analysis (YouTube); songbpm.com/the-root"
       ],
-      "bars": 8
+      "bars": 8,
+      "chord_bars": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "chord_timing_status": "engine_grid_assumption",
+      "chord_timing_note": "Equal chord slots are a rendering model. Individual source onset times have not been independently digitized.",
+      "melody_status": "not_transcribed"
     },
     {
       "id": "send_it_on_dangelo",
@@ -734,12 +870,22 @@
         "swing": 54
       },
       "rendering_note": "The source meter is retained as metadata; the current sequencer's bar clock is 4/4.",
-      "source_status": "historical_verified_table",
+      "source_status": "restored_legacy_unverified",
       "sources": [
         "Hooktheory theorytab: dangelo/send-it-on (Sea of Tranquility interpolation)",
         "Jeff Schneider intro-swell analysis; freebasstranscriptions.com/send-it-on-live"
       ],
-      "bars": 5
+      "bars": 5,
+      "chord_bars": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "chord_timing_status": "engine_grid_assumption",
+      "chord_timing_note": "Equal chord slots are a rendering model. Individual source onset times have not been independently digitized.",
+      "melody_status": "not_transcribed"
     },
     {
       "id": "another_life_dangelo",
@@ -766,11 +912,25 @@
         "melody": "sweet_soul",
         "swing": 54
       },
-      "source_status": "historical_verified_table",
+      "source_status": "restored_legacy_unverified",
       "sources": [
         "Wikichords Another Life; tutorial: https://www.youtube.com/watch?v=cO6hZzVpTQU"
       ],
-      "bars": 9
+      "bars": 9,
+      "chord_bars": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "chord_timing_status": "engine_grid_assumption",
+      "chord_timing_note": "Equal chord slots are a rendering model. Individual source onset times have not been independently digitized.",
+      "melody_status": "not_transcribed"
     },
     {
       "id": "sugah_daddy_dangelo",
@@ -792,12 +952,21 @@
         "melody": "horn_stabs",
         "swing": 54
       },
-      "source_status": "historical_verified_table",
+      "source_status": "restored_legacy_unverified",
       "sources": [
         "Ethan Hein, flypaper.soundfly.com: How D'Angelo uses funky dominant sevenths in Sugah Daddy",
         "Piano Couture: d'angelo-sugah-daddy-lick (root–3rd–b7 shell)"
       ],
-      "bars": 4
+      "bars": 4,
+      "chord_bars": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "chord_timing_status": "engine_grid_assumption",
+      "chord_timing_note": "Equal chord slots are a rendering model. Individual source onset times have not been independently digitized.",
+      "melody_status": "not_transcribed"
     },
     {
       "id": "left_and_right_dangelo",
@@ -818,11 +987,19 @@
         "melody": "sweet_soul",
         "swing": 54
       },
-      "source_status": "historical_verified_table",
+      "source_status": "restored_legacy_unverified",
       "sources": [
         "songbpm.com D'Angelo / Method Man Left & Right; Meters sample documented"
       ],
-      "bars": 3
+      "bars": 3,
+      "chord_bars": [
+        1,
+        1,
+        1
+      ],
+      "chord_timing_status": "engine_grid_assumption",
+      "chord_timing_note": "Equal chord slots are a rendering model. Individual source onset times have not been independently digitized.",
+      "melody_status": "not_transcribed"
     }
   ],
   "engine_modules": [
