@@ -318,7 +318,11 @@ class TestVoiceNarrator < Minitest::Test
     def runner.capture3(*cmd, **opts) = ["Said plainly.", "", Struct.new(:ok) { def success? = ok }.new(true)].tap { @cmd = cmd }
     writer = Narrator::LaneWriter.new({ "lane_tier" => "fast", "model_timeout_s" => 5 }, lanes:, runner:)
     assert_equal "claude-cli:sonnet", writer.pick
-    assert_equal "Said plainly.", writer.call(system: "s", prompt: "p", max_tokens: 90)
+    healthy = nil
+    Master::Io::LaneSilence.stub(:record, ->(answered, lane) { healthy = [answered, lane]; true }) do
+      assert_equal "Said plainly.", writer.call(system: "s", prompt: "p", max_tokens: 90)
+    end
+    assert_equal [true, "claude-cli"], healthy
     assert_equal "fast", lanes.instance_variable_get(:@asked)
   end
 
