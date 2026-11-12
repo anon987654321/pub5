@@ -550,4 +550,179 @@ class TestTaskContract < Minitest::Test
   end
 
 
+
+  def openbsd_preflight_fixture(scope: ["OPENBSD/**"], release: "7.8", source_path: "OPENBSD/RUNBOOK.md",
+                                interfaces: ["rcctl(8)"])
+    source = File.binread(File.join(Master::REPO_ROOT, source_path))
+    manuals = interfaces.map do |identifier|
+      page, section = identifier.match(/\A(.+)\(([1-9])\)\z/).captures
+      content = "#{page.upcase}(#{section})\nNAME\n  #{page} - fixture manual text\nSYNOPSIS\n  #{page} [options]\nDESCRIPTION\n  Complete fixture body for the receipt validation test.\nSEE ALSO\n  operator(8)\n"
+      {
+        page:, section:,
+        source: "https://man.openbsd.org/OpenBSD-#{release}/#{page}.#{section}",
+        content:, complete: true
+      }
+    end
+    {
+      hostname: "vm23", os_release: release, architecture: "amd64", scope:,
+      source_reads: [{ path: source_path, content: source, complete: true }],
+      native_interfaces: interfaces, manual_pages: manuals
+    }
+  end
+
+  def openbsd_task_contract(receipt = openbsd_preflight_fixture)
+    CONTRACT.build(
+      intent: "functional_change", scope: ["OPENBSD/**"], preserve: [], proof: [],
+      openbsd_preflight: receipt
+    )
+  end
+
+  def test_openbsd_preflight_binds_full_source_and_release_matched_manual_content
+    contract = openbsd_task_contract
+    receipt = contract.openbsd_preflight
+
+    assert_equal "vm23", receipt.fetch("hostname")
+    assert_equal "7.8", receipt.fetch("os_release")
+    assert_equal "amd64", receipt.fetch("architecture")
+    assert_equal ["rcctl(8)"], receipt.fetch("native_interfaces")
+    assert_equal File.binread(File.join(Master::REPO_ROOT, "OPENBSD/RUNBOOK.md")),
+                 receipt.fetch("source_reads").first.fetch("content")
+    manual = receipt.fetch("manual_pages").first
+    assert_equal "rcctl(8)", "#{manual.fetch("page")}(#{manual.fetch("section")})"
+    assert_equal Digest::SHA256.hexdigest(manual.fetch("content").b), manual.fetch("sha256")
+    assert contract.frozen?
+    assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_path(
+      path: File.join(Master::REPO_ROOT, "OPENBSD/RUNBOOK.md"), contract:
+    )
+  end
+
+  def test_openbsd_preflight_rejects_wrong_release_missing_manual_and_false_page_title
+    wrong_release = openbsd_preflight_fixture
+    wrong_release[:manual_pages].first[:source] = "https://man.openbsd.org/OpenBSD-7.7/rcctl.8"
+    assert_raises(CONTRACT::Invalid) { openbsd_task_contract(wrong_release) }
+
+    no_manual = openbsd_preflight_fixture
+    no_manual[:manual_pages] = []
+    assert_raises(CONTRACT::Invalid) { openbsd_task_contract(no_manual) }
+
+    wrong_title = openbsd_preflight_fixture
+    wrong_title[:manual_pages].first[:content] = "RCCTL(1)\nNAME\n  not the requested section\nDESCRIPTION\n  still too short\n"
+    assert_raises(CONTRACT::Invalid) { openbsd_task_contract(wrong_title) }
+  end
+
+  def test_openbsd_command_admission_requires_the_specific_manual
+    contract = openbsd_task_contract
+    assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "ssh -o BatchMode=yes dev@brgen.no 'rcctl restart master'", contract:
+    )
+    reason = Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "ssh -o BatchMode=yes dev@brgen.no 'pfctl -nf /etc/pf.conf'", contract:
+    )
+    assert_match(/pfctl\(8\)/, reason)
+  end
+
+  def test_saved_openbsd_preflight_is_revision_and_time_bound
+    contract = CONTRACT.build(
+      intent: "functional_change", scope: ["OPENBSD/**"], preserve: [], proof: []
+    )
+    root = Master::REPO_ROOT
+    Dir.mktmpdir("openbsd-preflight", File.join(root, "MASTER")) do |directory|
+      path = File.join(directory, "receipt.json")
+      payload = {
+        head_sha: Master::Fix::OpenBSDManualPreflight.repository_head(root:),
+        created_at: Time.now.utc.iso8601,
+        openbsd_preflight: openbsd_preflight_fixture
+      }
+      File.write(path, JSON.generate(payload))
+
+      attached = Master::Fix::OpenBSDManualPreflight.contract_with_saved_preflight(
+        contract:, repo_root: root, receipt_path: path
+      )
+      assert_equal ["rcctl(8)"], attached.openbsd_preflight.fetch("native_interfaces")
+      CONTRACT.with_current(contract) do
+        assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_path(
+          path: File.join(root, "OPENBSD/RUNBOOK.md"), repo_root: root, receipt_path: path
+        )
+      end
+
+      payload[:head_sha] = "0" * 40
+      File.write(path, JSON.generate(payload))
+      error = assert_raises(CONTRACT::Invalid) do
+        Master::Fix::OpenBSDManualPreflight.contract_with_saved_preflight(
+          contract:, repo_root: root, receipt_path: path
+        )
+      end
+      assert_match(/another checkout revision/, error.message)
+    end
+  end
+
+  def test_saved_openbsd_preflight_rejects_expired_receipts
+    contract = CONTRACT.build(
+      intent: "functional_change", scope: ["OPENBSD/**"], preserve: [], proof: []
+    )
+    root = Master::REPO_ROOT
+    Dir.mktmpdir("openbsd-preflight", File.join(root, "MASTER")) do |directory|
+      path = File.join(directory, "receipt.json")
+      File.write(path, JSON.generate(
+        head_sha: Master::Fix::OpenBSDManualPreflight.repository_head(root:),
+        created_at: (Time.now.utc - 7_200).iso8601,
+        openbsd_preflight: openbsd_preflight_fixture
+      ))
+      error = assert_raises(CONTRACT::Invalid) do
+        Master::Fix::OpenBSDManualPreflight.contract_with_saved_preflight(
+          contract:, repo_root: root, receipt_path: path
+        )
+      end
+      assert_match(/expired/, error.message)
+    end
+  end
+
+
+  def test_manual_reader_remains_available_to_refresh_an_expired_saved_receipt
+    Dir.mktmpdir("openbsd-preflight-stale", File.join(Master::REPO_ROOT, "MASTER")) do |directory|
+      path = File.join(directory, "expired.json")
+      File.write(path, JSON.generate(
+        head_sha: "0" * 40,
+        created_at: (Time.now.utc - 7_200).iso8601,
+        openbsd_preflight: openbsd_preflight_fixture
+      ))
+      assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+        command: "ssh -o BatchMode=yes dev@brgen.no 'man 8 rcctl'",
+        repo_root: Master::REPO_ROOT, receipt_path: path
+      )
+      assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+        command: "ssh -o BatchMode=yes dev@brgen.no 'uname -srm'",
+        repo_root: Master::REPO_ROOT, receipt_path: path
+      )
+    end
+  end
+
+
+  def test_openbsd_preflight_requires_source_reads_inside_the_declared_scope
+    receipt = openbsd_preflight_fixture(source_path: "MASTER/README.md")
+    error = assert_raises(CONTRACT::Invalid) { openbsd_task_contract(receipt) }
+    assert_match(/no source read inside scope/, error.message)
+  end
+
+  def test_openbsd_source_receipt_expires_when_the_reviewed_target_changes
+    Dir.mktmpdir("openbsd-preflight-source", File.join(Master::REPO_ROOT, "OPENBSD")) do |directory|
+      target = File.join(directory, "preflight-fixture.conf")
+      File.write(target, "rcctl_flags=YES\n")
+      relative = target.delete_prefix(Master::REPO_ROOT + File::SEPARATOR)
+      contract = openbsd_task_contract(openbsd_preflight_fixture(source_path: relative))
+      assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_path(path: target, contract:)
+
+      File.write(target, "rcctl_flags=NO\n")
+      reason = Master::Fix::OpenBSDManualPreflight.refusal_for_path(path: target, contract:)
+      assert_match(/source receipt is stale/, reason)
+    end
+  end
+
+  def test_shell_redirection_is_allowed_only_after_the_openbsd_receipt_is_valid
+    contract = openbsd_task_contract
+    assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "printf '%s' value > OPENBSD/RUNBOOK.md", contract:
+    )
+  end
+
 end

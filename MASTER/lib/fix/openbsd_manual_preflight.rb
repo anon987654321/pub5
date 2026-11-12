@@ -1,7 +1,10 @@
 # frozen_string_literal: true
 
 require "digest"
+require "json"
+require "open3"
 require "shellwords"
+require "time"
 
 module Master
   module Fix
@@ -12,6 +15,9 @@ module Master
       MAX_BYTES = 32 * 1024 * 1024
       MAX_SOURCE_READS = 96
       MAX_MANUAL_PAGES = 80
+      RECEIPT_RELATIVE_PATH = "MASTER/.master/openbsd_preflight.json".freeze
+      MAX_RECEIPT_FILE_BYTES = 68 * 1024 * 1024
+      MAX_RECEIPT_AGE_SECONDS = 3_600
 
       COMMAND_MANUALS = {
         "pfctl" => "pfctl(8)", "rcctl" => "rcctl(8)", "doas" => "doas(1)",
@@ -95,6 +101,13 @@ module Master
           }.freeze
         end
 
+        uncovered_scope = scope.reject do |entry|
+          source_paths.any? { |path| TaskContract.covers?(path, scope: [entry]) }
+        end
+        unless uncovered_scope.empty?
+          raise TaskContract::Invalid, "OpenBSD preflight has no source read inside scope: #{uncovered_scope.join(', ')}"
+        end
+
         interfaces = Array(attributes.fetch("native_interfaces")).map do |entry|
           page_id = entry.to_s.strip.downcase
           unless page_id.match?(/\A[a-z0-9_.+-]+\([1-9]\)\z/)
@@ -126,11 +139,16 @@ module Master
           content = item.fetch("content").to_s
           raise TaskContract::Invalid, "OpenBSD manual receipt is not marked complete: #{page_id}" unless item.fetch("complete") == true
           title = content.lines.first(8).join
-          unless title.match?(/#{Regexp.escape(page)}\\s*\\(#{Regexp.escape(section)}\\)/i)
+          unless title.match?(/#{Regexp.escape(page)}\s*\(#{Regexp.escape(section)}\)/i)
             raise TaskContract::Invalid, "OpenBSD manual content does not identify #{page_id} in its opening lines"
           end
-          if content.bytesize < 64 || content.lines.length < 3
+          if content.bytesize < 128 || content.lines.length < 7
             raise TaskContract::Invalid, "OpenBSD manual content is too short to be a complete read: #{page_id}"
+          end
+          headings = content.lines.map(&:strip)
+          missing_headings = %w[NAME SYNOPSIS DESCRIPTION].reject { |heading| headings.include?(heading) }
+          unless missing_headings.empty?
+            raise TaskContract::Invalid, "OpenBSD manual content is missing full-page sections for #{page_id}: #{missing_headings.join(', ')}"
           end
           manual_total += content.bytesize
           raise TaskContract::Invalid, "OpenBSD manual content exceeds #{MAX_BYTES} bytes" if manual_total > MAX_BYTES
@@ -144,7 +162,9 @@ module Master
             "bytes" => bytes, "lines" => lines
           }.freeze
         end
-        manual_ids = manual_pages.map { |page| "#{page.fetch("page")}(#{page.fetch("section")})" }.uniq
+        all_manual_ids = manual_pages.map { |page| "#{page.fetch("page")}(#{page.fetch("section")})" }
+        raise TaskContract::Invalid, "duplicate OpenBSD manual-page receipts" unless all_manual_ids.uniq == all_manual_ids
+        manual_ids = all_manual_ids
         missing_manuals = interfaces - manual_ids
         unless missing_manuals.empty?
           raise TaskContract::Invalid, "native interfaces lack full manual receipts: #{missing_manuals.join(', ')}"
@@ -232,9 +252,82 @@ module Master
         require_relative "task_contract" unless defined?(Master::Fix::TaskContract)
       end
 
-      def refusal_for_path(path:, contract: nil, repo_root: Master::REPO_ROOT)
+      # A receipt is written only after the agent has completed the read-only
+      # discovery step. It lives in ignored runtime state, is bound to the exact
+      # checkout HEAD, and is revalidated against live source bytes at admission.
+      # This avoids constructing an impossible receipt before /fix has had a
+      # chance to read its target and exact-release manuals.
+      def contract_with_saved_preflight(contract:, repo_root: Master::REPO_ROOT, receipt_path: nil)
+        return contract unless contract
+        return contract if contract.openbsd_preflight
+        return contract unless contract.scope.any? { |entry| entry == "OPENBSD" || entry.start_with?("OPENBSD/") }
+
+        root = File.realpath(repo_root)
+        path = receipt_path || File.join(root, RECEIPT_RELATIVE_PATH)
+        return contract unless File.exist?(path) || File.symlink?(path)
+
+        relative = repository_relative(path, root:)
+        raise TaskContract::Invalid, "saved OpenBSD preflight must live inside the repository" unless relative
+        relative_parent = File.dirname(relative)
+        cursor = root
+        relative_parent.split("/").each do |segment|
+          cursor = File.join(cursor, segment)
+          stat = File.lstat(cursor)
+          raise TaskContract::Invalid, "saved OpenBSD preflight path contains a symlink" if stat.symlink?
+          raise TaskContract::Invalid, "saved OpenBSD preflight parent is not a directory" unless stat.directory?
+        end
+        stat = File.lstat(path)
+        raise TaskContract::Invalid, "saved OpenBSD preflight must be a regular file" unless stat.file?
+        raise TaskContract::Invalid, "saved OpenBSD preflight must not be hard-linked" unless stat.nlink == 1
+        raise TaskContract::Invalid, "saved OpenBSD preflight exceeds #{MAX_RECEIPT_FILE_BYTES} bytes" if stat.size > MAX_RECEIPT_FILE_BYTES
+
+        payload = JSON.parse(File.binread(path))
+        raise TaskContract::Invalid, "saved OpenBSD preflight must be a mapping" unless payload.is_a?(Hash)
+        attributes = payload.to_h.transform_keys(&:to_s)
+        required = %w[head_sha created_at openbsd_preflight]
+        unknown = attributes.keys - required
+        missing = required - attributes.keys
+        raise TaskContract::Invalid, "saved OpenBSD preflight is missing: #{missing.join(', ')}" unless missing.empty?
+        raise TaskContract::Invalid, "saved OpenBSD preflight has unknown fields: #{unknown.join(', ')}" unless unknown.empty?
+
+        head = attributes.fetch("head_sha").to_s
+        raise TaskContract::Invalid, "saved OpenBSD preflight HEAD is invalid" unless head.match?(/\A[0-9a-f]{40,64}\z/)
+        actual_head = repository_head(root:)
+        raise TaskContract::Invalid, "saved OpenBSD preflight belongs to another checkout revision" unless actual_head == head
+
+        created_at = Time.iso8601(attributes.fetch("created_at").to_s)
+        age = Time.now.utc - created_at
+        if age < -300 || age > MAX_RECEIPT_AGE_SECONDS
+          raise TaskContract::Invalid, "saved OpenBSD preflight expired; re-read target identity and manuals"
+        end
+
+        task_attributes = contract.to_h.reject { |key, _value| key == "schema" }
+        task_attributes["openbsd_preflight"] = attributes.fetch("openbsd_preflight")
+        TaskContract.build(task_attributes)
+      rescue JSON::ParserError, KeyError, ArgumentError => error
+        raise TaskContract::Invalid, "saved OpenBSD preflight is invalid: #{error.message}"
+      rescue Errno::ENOENT, Errno::EACCES, Errno::ELOOP => error
+        raise TaskContract::Invalid, "saved OpenBSD preflight cannot be read safely: #{error.class}"
+      end
+
+      def repository_head(root: Master::REPO_ROOT)
+        output, status = Open3.capture2e("git", "-C", root, "rev-parse", "HEAD")
+        raise TaskContract::Invalid, "cannot establish current repository HEAD" unless status.success?
+        value = output.to_s.strip
+        raise TaskContract::Invalid, "current repository HEAD is invalid" unless value.match?(/\A[0-9a-f]{40,64}\z/)
+        value
+      rescue SystemCallError => error
+        raise TaskContract::Invalid, "cannot establish current repository HEAD: #{error.class}"
+      end
+
+      def refusal_for_path(path:, contract: nil, repo_root: Master::REPO_ROOT, receipt_path: nil)
         ensure_task_contract_loaded!
         contract ||= TaskContract.current
+        begin
+          contract = contract_with_saved_preflight(contract:, repo_root:, receipt_path:)
+        rescue TaskContract::Invalid => error
+          return "RTFM_FIRST blocked: #{error.message}"
+        end
         relative = repository_relative(path, root: repo_root)
         return unless relative == "OPENBSD" || relative&.start_with?("OPENBSD/")
         return "RTFM_FIRST requires an active TaskContract with openbsd_preflight" unless contract
@@ -251,11 +344,16 @@ module Master
         source_staleness(preflight, root: repo_root)
       end
 
-      def refusal_for_command(command:, contract: nil, repo_root: Master::REPO_ROOT)
+      def refusal_for_command(command:, contract: nil, repo_root: Master::REPO_ROOT, receipt_path: nil)
         ensure_task_contract_loaded!
         contract ||= TaskContract.current
         text = command.to_s.strip
         return if text.empty? || bootstrap_command?(text)
+        begin
+          contract = contract_with_saved_preflight(contract:, repo_root:, receipt_path:)
+        rescue TaskContract::Invalid => error
+          return "RTFM_FIRST blocked: #{error.message}"
+        end
 
         argv = Shellwords.shellsplit(text)
         tokens = argv.flat_map { |token| token.include?(" ") ? Shellwords.shellsplit(token) : [token] }

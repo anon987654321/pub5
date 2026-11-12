@@ -220,6 +220,48 @@ for any reviewed source they change; rebuild the preflight before proceeding.
 The only bootstrap commands are the manual reader and the minimum read-only
 identity probe. This is an admission requirement, not a claim that a remote
 host has been inspected when no host evidence was supplied.
+
+**Receipt hand-off for an interactive /fix.** The first contract is created
+before the agent has read the target, so it deliberately contains no preflight.
+The agent may read source and manuals without write permission. After completing
+that read, it writes MASTER/.master/openbsd_preflight.json (ignored runtime
+state, never committed) with this envelope:
+
+```json
+{
+  "head_sha": "the exact 40-character output of git rev-parse HEAD",
+  "created_at": "UTC ISO-8601 timestamp",
+  "openbsd_preflight": {
+    "hostname": "vm23",
+    "os_release": "7.8",
+    "architecture": "amd64",
+    "scope": ["OPENBSD/**"],
+    "source_reads": [
+      {"path": "OPENBSD/etc/rc.conf", "content": "complete exact file content", "complete": true}
+    ],
+    "native_interfaces": ["rcctl(8)", "rc.conf(5)", "rc.d(8)"],
+    "manual_pages": [
+      {
+        "page": "rcctl",
+        "section": "8",
+        "source": "https://man.openbsd.org/OpenBSD-7.8/rcctl.8",
+        "content": "complete manual output, not synopsis or excerpt",
+        "complete": true
+      }
+    ]
+  }
+}
+```
+
+Include every target/dependency source file and every applicable command,
+configuration-format, owning-daemon, lifecycle, validation and recovery manual.
+Use the exact target release in every versioned manual URL; the title in the
+first eight lines must identify the requested page and section. The runtime
+hydrates this receipt into the active TaskContract only when HEAD matches and
+the receipt is no more than one hour old. Every source is re-hashed at admission.
+If the file is absent, malformed, stale or outside scope, the operation remains
+BLOCKED. Rebuild it after a source edit or a target release/architecture change.
+
 For example, a PF change requires the full target-release `pfctl(8)` and
 `pf.conf(5)` pages plus relevant network/anchor pages; an NSD change needs
 the relevant `nsd(8)`, `nsd.conf(5)`, zone-format and reload pages; a package
