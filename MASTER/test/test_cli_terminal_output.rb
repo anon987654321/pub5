@@ -61,6 +61,9 @@ class TestCLITerminalOutput < Minitest::Test
     Reline.stub(:line_buffer, "") do
       expected = Master::CLI::Session::QUICK_COMMAND_COMPLETIONS.map { |command| "#{command} " }
       assert_equal expected, completion.call("")
+      assert_includes expected, "/review "
+      assert_includes expected, "/critique "
+      assert_includes expected, "/doctor "
     end
     Reline.stub(:line_buffer, "/") do
       expected = Master::CLI::CommandRegistry.slash_commands.reject { |command| %w[/exit /quit].include?(command) }
