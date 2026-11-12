@@ -1,7 +1,7 @@
 # STUDIO
 
 **The media tools live here, each with one physical home and no second tree.**
-STUDIO holds Dilla, photograph and the Replicate client. MASTER's runtime may
+STUDIO holds Dilla, Postpro, photograph, Replicate and the private LoRA tools. MASTER's runtime may
 call into these tools through compatibility symlinks under `MASTER/tools/`,
 but the implementation is owned here.
 
@@ -11,7 +11,8 @@ but the implementation is owned here.
   spectral reference analyzer, and Ableton Live Set recovery tools. The renderer
   remains owned by `dilla/dilla.rb`; the stdlib-only `dilla/lib/als*.rb` tools
   recover composition archives and MIDI from `.als` files. The unified
-  `bin/studio` CLI exposes `dilla`, `postpro` and `ableton inventory|export|midi`.
+  `bin/studio` CLI exposes `dilla`, `postpro`, `lora` validation and
+  `ableton inventory|export|midi`.
   Rendered output is replaceable:
   a new run may delete and replace it, and no rendered-sound default moves on
   one person's judgement.
@@ -19,8 +20,12 @@ but the implementation is owned here.
 - `photograph.rb` and `photograph/idea_picture.rb` — the image-generation
   entrypoint and its IdeaPicture implementation.
 - `replicate/client.rb` — the Studio-owned Replicate provider client
-  (`Studio::ReplicateClient`), with its own upload and download helpers.
-  MASTER has its own client and runtime policies; this one is STUDIO's.
+  (`Studio::ReplicateClient`), with version-aware input-schema reads, bounded
+  transfers and explicit provider errors. MASTER has its own client and runtime
+  policies; this one is STUDIO's.
+- `lora/` — subject descriptors and private training plans. `bin/studio lora`
+  runs a read-only validator; Merethe's preparation step builds in a private
+  staging directory and preserves the last known-good dataset if a build fails.
 
 ## Shared surfaces
 
@@ -31,10 +36,11 @@ but the implementation is owned here.
 
 ## Checks
 
-`Rakefile` is the tree's check surface: `rake check` loads every entrypoint
-and proves the contracts answer, `rake test` runs `test/` (the Dilla and
-IdeaPicture suites), and `rake` runs both. The suite runs without network
-access and without the Replicate API.
+`Rakefile` is the tree's check surface: `rake check` syntax-checks entrypoints
+and audits the LoRA profiles, `rake test` runs the Dilla, Postpro motion,
+Replicate, IdeaPicture, LoRA and private-preparation regressions, and `rake`
+runs both. The test suite uses stubs and local temporary data; it does not need
+a Replicate token or start paid training.
 
 The FETAT writing project and its proposal moved to `BIZ/fetat/`; it was
 writing output, not policy, and never part of this check surface.
