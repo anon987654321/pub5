@@ -144,6 +144,8 @@ module Master
           failures = raw.fetch(:failures, 0).to_i
           latency = raw.fetch(:latency_ms, 0).to_f
           latency = nil unless latency.finite? && latency.positive? && successes.positive?
+          first_token = raw.fetch(:first_token_ms, 0).to_f
+          first_token = nil unless first_token.finite? && first_token.positive? && successes.positive?
           {
             id: id.to_s,
             calls:,
@@ -151,6 +153,7 @@ module Master
             failures:,
             rate: successes.fdiv(calls),
             latency_ms: latency,
+            first_token_ms: first_token,
           }
         end
         return "model health: no recorded calls yet; /model compute lists reachable lanes" if measured.empty?
@@ -165,8 +168,9 @@ module Master
         ]
         measured.sort_by { |row| [-row[:failures], -row[:calls], row[:id]] }.first(30).each do |row|
           average = row[:latency_ms] ? "#{row[:latency_ms].round}ms" : "n/a"
+          first_token = " ttft=#{row[:first_token_ms].round}ms" if row[:first_token_ms]
           lines << "  #{row[:id]}  calls=#{row[:calls]} ok=#{row[:successes]} " \
-                   "fail=#{row[:failures]} success=#{(row[:rate] * 100).round(1)}% avg_ok=#{average}"
+                   "fail=#{row[:failures]} success=#{(row[:rate] * 100).round(1)}% avg_ok=#{average}#{first_token}"
         end
         hidden = measured.size - 30
         lines << "  ... #{hidden} more models" if hidden.positive?
@@ -196,7 +200,9 @@ module Master
           calls = row[:calls].to_i
           latency = row[:latency_ms].to_f
           average = latency.finite? && latency.positive? ? "avg_ok=#{latency.round}ms" : "avg_ok=n/a"
-          "#{row[:rank]}. #{row[:id]}  #{row[:lane]}  #{quota}  #{rate} calls=#{calls} #{average}"
+          first_token = row[:first_token_ms].to_f
+          ttft = "ttft=#{first_token.round}ms" if first_token.finite? && first_token.positive?
+          "#{row[:rank]}. #{row[:id]}  #{row[:lane]}  #{quota}  #{rate} calls=#{calls} #{average}#{ttft ? " #{ttft}" : ""}"
         end.join("\n")
       end
 
