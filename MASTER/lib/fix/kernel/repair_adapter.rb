@@ -295,8 +295,10 @@ module Master
               law: violation[:law] || @law.id, file: violation[:file],
               reason:, attempts:, last_outcome: outcome,
             )
+            # The reason is the whole line here; a Gap object would append its
+            # own clause. nil keeps gap() from formatting one.
             Master::Trace::Dmesg.gap(
-              "fix0", "#{File.basename(violation[:file].to_s)} #{@law.id}: #{reason}", reason
+              "fix0", "#{File.basename(violation[:file].to_s)} #{@law.id}: #{reason}", nil
             )
             outcome = :needs_person
           end
