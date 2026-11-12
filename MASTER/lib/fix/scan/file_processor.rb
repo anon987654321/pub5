@@ -435,7 +435,7 @@ module Master
         end
 
         def semantic_inconclusive?(error)
-          error.message.to_s.include?("semantic assessment INCONCLUSIVE")
+          error.is_a?(Review::Scan::Detector::SemanticAssessmentInconclusive)
         end
 
         def record_semantic_inconclusive(path:, law:, error:)
