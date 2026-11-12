@@ -647,6 +647,7 @@ module Master
           when "llm:send" then llm_send(payload)
           when "llm:call_complete" then remember_usage(payload)
           when "llm:provider_outcome" then llm_outcome(payload)
+          when "llm:call_finished" then llm_finished(payload)
           when "tool:call" then tool_call(payload)
           when "tool:return" then tool_return(payload)
           when "fold:risk" then parent("fold0", "master0", "risk #{payload[:risk]}")
@@ -720,6 +721,17 @@ module Master
           end
 
           ["#{unit}: #{[tokens(usage), seconds(payload[:latency_ms]), cents(usage)].compact.join(', ')}"]
+        end
+
+        # MASTER-side faults intentionally emit no provider-health outcome.
+        # Close the terminal unit from the dispatcher's unconditional completion
+        # event, but do not invent a provider status or penalize its health.
+        def llm_finished(payload)
+          key = llm_key(payload)
+          unit = @open.delete(key)
+          @llm_parent.delete(key)
+          Dmesg.clear_detail_unit("llm")
+          unit ? ["#{unit}: call ended without provider outcome"] : []
         end
 
         def llm_tally(parent)
