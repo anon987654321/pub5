@@ -120,7 +120,7 @@ module Studio
         end
 
         result(subject, directory, errors)
-      rescue Psych::Exception, SystemCallError, IOError, EncodingError => error
+      rescue Error, Psych::Exception, SystemCallError, IOError, EncodingError => error
         result(subject, directory, ["cannot read consent record: #{error.class}: #{error.message}"])
       end
 
