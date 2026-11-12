@@ -522,6 +522,7 @@ module Master
       end
 
       include ThinkingIndicator
+      MILESTONE = ThinkingIndicator::MILESTONE
     end
   end
 end
