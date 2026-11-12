@@ -1,5 +1,8 @@
 <% content_for :title, t("playlist.home_title") %>
 
+<%# The tunnel is the visual surface; this heading names the page in the document outline. %>
+<%= tag.h1 t("playlist.home_title"), class: "visually-hidden" %>
+
 <%# The archived Radio Bergen tunnel is rendered from the Playlist engine and
     remains the primary visualizer/player. Its library drawer opens the existing
     Playlist model; browsing all hosted tracks remains one click away. Playback
