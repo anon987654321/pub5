@@ -50,16 +50,26 @@ module Master
         Dir.glob(File.join(dir, "**", "*.rb")).sort.flat_map { |file| audit_file(file) }
       end
 
+      # A small source-side sensor, not rendered terminal proof. Remember the
+      # emission line across a short multiline call so the message literal is
+      # measured even when it sits on the next line.
       def audit_file(file)
         relative = file.delete_prefix("#{@root}/")
-        File.readlines(file, chomp: true).each_with_index.filter_map do |line, index|
+        lines = File.readlines(file, chomp: true)
+        output_context = {}
+        lines.each_with_index do |source_line, index|
+          next unless source_line.match?(OUTPUT_CALL)
+
+          (index..[index + 4, lines.size - 1].min).each { |line_index| output_context[line_index] = true }
+        end
+        lines.each_with_index.filter_map do |line, index|
           next if line.strip.start_with?("#")
           next if EXEMPT_MARKERS.any? { |marker| line.include?(marker) }
 
           text = line.scan(STRING_LITERAL).map(&:first).join(" ")
           next if text.empty?
 
-          kind = violation_kind(text, line, relative)
+          kind = violation_kind(text, line, relative, output_call: output_context[index] == true)
           next unless kind
 
           Finding.new(file: relative, line: index + 1, kind:, snippet: text[0, 80])
@@ -68,12 +78,12 @@ module Master
         []
       end
 
-      def violation_kind(text, line, relative)
+      def violation_kind(text, line, relative, output_call:)
         terminal_copy = PUNCTUATION_SCOPE.any? { |scope| relative.start_with?(scope + "/") } ||
-          (relative.start_with?("lib/fix/") && line.match?(OUTPUT_CALL))
+          (relative.start_with?("lib/fix/") && output_call)
         return "non_ascii_punctuation" if terminal_copy && text.match?(TERMINAL_MARK)
         return "prose_double_dash" if terminal_copy && text.match?(PROSE_DOUBLE_DASH)
-        return "terminal_measure" if line.match?(OUTPUT_CALL) && text.length > TERMINAL_LINE_LIMIT
+        return "terminal_measure" if output_call && text.length > TERMINAL_LINE_LIMIT
 
         nil
       end

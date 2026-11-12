@@ -47,7 +47,10 @@ class TestFixTypographyAudit < Minitest::Test
     Dir.mktmpdir do |dir|
       write_cli_file(dir, 'lib/fix/fixture.rb', <<~RUBY)
         module Fixture
-          Master::Trace::Dmesg.status("fix0", "This terminal status sentence is deliberately much too long for the operator display and should wrap naturally.")
+          Master::Trace::Dmesg.status(
+          "fix0",
+          "This terminal status sentence is deliberately much too long for the operator display and should wrap naturally."
+        )
         end
       RUBY
 
