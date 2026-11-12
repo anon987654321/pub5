@@ -705,21 +705,26 @@ module Master
         end
       end
 
-      def stop_interactive_queue
+      def stop_interactive_queue(reason: "stop")
         @turn_queue_mutex.synchronize do
           @turn_queue_paused = true
           @turn_cancel_requested = true
         end
         turn = @pipeline_thread
-        if turn&.alive?
+        active_turn = turn&.alive?
+        if active_turn
           # Use the same cancellation policy as Ctrl-C: Fold-owned work stops
           # at a safe boundary; only non-Fold work takes the immediate kill path.
-          canceler = Thread.new { request_or_interrupt_turn(turn, @turn_children, reason: "stop") }
+          canceler = Thread.new { request_or_interrupt_turn(turn, @turn_children, reason:) }
           canceler.join(2)
           turn.join(1) unless Thread.current == turn
         end
         count = interactive_queue_count
-        status = turn&.alive? ? "cancellation requested" : (turn ? "current turn cancelled" : "queue paused; pending turn will not start")
+        status = if active_turn
+                   reason.to_s == "ctrl_c" ? "Ctrl-C cancellation requested" : "/stop cancellation requested"
+                 else
+                   "queue paused; pending turn will not start"
+                 end
         terminal_puts("queue0: #{status}; #{count} queued, /resume to continue")
         nil
       end
