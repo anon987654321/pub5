@@ -100,7 +100,8 @@ module Master
         promote_pending = false
         @lock.synchronize do
           promote_pending = @promote_pending
-          parts = ["fix0: pass #{@pass}/#{@max_passes}", run_part, @unit, phase_part, files_part, fixes_part,
+          progress = @max_passes.positive? ? "pass #{@pass}/#{@max_passes}" : "read-only"
+          parts = ["fix0: #{progress}", run_part, @unit, phase_part, files_part, fixes_part,
                    lane_part(elapsed), "tokens = #{tokens} (#{self.class.human_count(tokens)})",
                    "elapsed = #{elapsed.round}s (#{self.class.human_time(elapsed)})", pass_eta(eta),
                    "load #{format("%.1f", @load.call)}"]
