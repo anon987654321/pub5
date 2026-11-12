@@ -207,6 +207,29 @@ class TestGroundTruth < Minitest::Test
     end
   end
 
+  def test_owned_write_receipt_is_not_mislabeled_as_a_read
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "source.rb")
+      File.write(path, "written by this turn\n")
+      events = []
+      bus = Object.new
+      bus.define_singleton_method(:publish) { |event, **| events << event }
+      truth = Master::Ground::Truth.new(event_bus: bus)
+
+      truth.record_written!(path)
+
+      assert_equal ["ground_truth:written"], events
+      assert_empty truth.instance_variable_get(:@reads)
+      assert truth.fresh_in_current_turn?(path), "an owned write is known in the current turn"
+      refute truth.fresh?(path), "an owned write must not satisfy a source-read proof"
+      assert truth.recorded_unchanged?(path)
+
+      File.write(path, "changed by another writer\n")
+      assert truth.changed_since_read?(path)
+      refute truth.recorded_unchanged?(path)
+    end
+  end
+
   def test_stale_without_read
     Dir.mktmpdir do |dir|
       path = File.join(dir, "sample.rb")

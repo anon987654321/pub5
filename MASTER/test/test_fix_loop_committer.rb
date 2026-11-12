@@ -244,6 +244,30 @@ class TestFixLoopCommitter < Minitest::Test
     refute(bus.events.any? { |event, _| event == "ops:commit" })
   end
 
+  def test_house_lint_scopes_files_to_the_target_git_root
+    captured = nil
+    captured_root = nil
+    status = Object.new
+    status.define_singleton_method(:success?) { true }
+    run = lambda do |files, root:|
+      captured = files
+      captured_root = root
+      ["", "", status]
+    end
+
+    Master::Fix::FixLoop::HouseLint.stub(:repository_root, ->(_root) { @dir }) do
+      Master::Fix::FixLoop::HouseLint.stub(:run, run) do
+        result = Master::Fix::FixLoop::HouseLint.findings(
+          ["app/page.rb", "../outside.rb"], root: @dir
+        )
+        assert_empty result
+      end
+    end
+
+    assert_equal [File.join(@dir, "app/page.rb")], captured
+    assert_equal @dir, captured_root
+  end
+
 # The freshness check wants a recorded read of what is on disk; only the ReadFile tool made
 # one, so a repair the run wrote itself was blocked as stale. Attesting its own verified write
 # clears it, and a file changed afterwards is stale again.

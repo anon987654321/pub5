@@ -23,11 +23,16 @@ module Master
         # The lint0 findings, or [] when clean. A lint that fails without naming one is still a
         # finding, and its last lines of output are the reason.
         def findings(paths, root:)
-          files = paths.map { |path| File.expand_path(path, root) }
-          files = files.select { |path| path.start_with?("#{Master::REPO_ROOT}/") }
+          target_root = File.expand_path(root)
+          repo_root = repository_root(target_root)
+          return [] unless repo_root && (target_root == repo_root || target_root.start_with?("#{repo_root}/"))
+
+          prefix = "#{target_root}#{File::SEPARATOR}"
+          files = paths.map { |path| File.expand_path(path, target_root) }
+                       .select { |path| path.start_with?(prefix) }
           return [] if files.empty?
 
-          out, err, status = run(files)
+          out, err, status = run(files, root: repo_root)
           return [] if status.success?
 
           named = out.lines.grep(/\Alint0: \S+:\d+/).map(&:strip)
@@ -37,11 +42,21 @@ module Master
           ["bin/operator lint failed: #{said.empty? ? "no output, exit #{status.exitstatus.inspect}" : said[0, 300]}"]
         end
 
-        def run(files)
+        def repository_root(root)
+          output, status = Master::Io::Exec.capture2e(
+            "git", "-C", root, "rev-parse", "--show-toplevel", timeout: 5
+          )
+          status.success? ? File.realpath(output.to_s.strip) : nil
+        rescue StandardError
+          nil
+        end
+
+        def run(files, root:)
           operator = File.join(Master::ROOT, "bin", "operator")
           Master::Io::Exec.capture3(RbConfig.ruby, operator, "lint", "--changed-lines", *files,
-                                    chdir: Master::ROOT, timeout: TIMEOUT_SECONDS)
+                                    chdir: root, timeout: TIMEOUT_SECONDS)
         end
+
       end
 
       # Commits and publishes each explicitly requested, validated repair
@@ -166,7 +181,15 @@ module Master
           observe_own_writes(files)
           return unless @ground_truth
 
-          files.each { |path| @ground_truth.record_read!(path) if File.file?(path) }
+          files.each do |path|
+            next unless File.file?(path)
+
+            if @ground_truth.respond_to?(:record_written!)
+              @ground_truth.record_written!(path)
+            else
+              @ground_truth.record_read!(path)
+            end
+          end
         end
 
         # A write /fix makes during a pass is recorded with the pass transaction, so a crash rolls it

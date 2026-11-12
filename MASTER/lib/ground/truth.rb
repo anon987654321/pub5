@@ -14,28 +14,27 @@ module Master
         @max_age = max_age_seconds || DEFAULT_MAX_AGE_SECONDS
         @bus = event_bus
         @reads = {}
+        @writes = {}
         @turn_id = 0
         @contents = Io::ContentCache.new
         @mutex = Mutex.new
       end
 
       def record_read!(path, content: nil)
-        resolved = File.expand_path(path)
-        body = content || File.read(resolved)
-        entry = @mutex.synchronize do
-          Entry.new(
-            path: resolved,
-            sha256: Digest::SHA256.hexdigest(body),
-            read_at: Time.now.to_f,
-            turn_id: @turn_id,
-          ).tap { |record| @reads[resolved] = record }
-        end
-        @contents.record(resolved, entry.sha256)
-        @bus&.publish("ground_truth:read", path: resolved, sha256: entry.sha256, turn_id: entry.turn_id)
-        entry
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "ground_truth.record_read", path:)
-        nil
+        record_observation!(
+          path, content:, collection: @reads, event: "ground_truth:read",
+          context: "ground_truth.record_read"
+        )
+      end
+
+      # An owned write is known state, but it is not evidence that the source
+      # was read. Keep the provenance separate while allowing same-turn follow-up
+      # writes and commit freshness checks to recognize the bytes this process owns.
+      def record_written!(path, content: nil)
+        record_observation!(
+          path, content:, collection: @writes, event: "ground_truth:written",
+          context: "ground_truth.record_written"
+        )
       end
 
       # Begin one user-visible turn. Reads made by earlier turns remain useful
@@ -59,7 +58,7 @@ module Master
 
       def fresh_in_current_turn?(path, content: nil)
         resolved = File.expand_path(path)
-        entry, turn_id = @mutex.synchronize { [@reads[resolved], @turn_id] }
+        entry, turn_id = @mutex.synchronize { [latest_entry_locked(resolved), @turn_id] }
         return false unless entry && entry.turn_id == turn_id
 
         fresh_entry?(resolved, entry, content:)
@@ -79,19 +78,19 @@ module Master
         end
       end
 
-      # A file this session recorded and whose bytes have not changed since: /fix's own write,
-      # and no one else's save after it.
+      # A file this session read or wrote and whose bytes have not changed since.
+      # The receipt retains its original kind, so an owned write never masquerades as a read.
       def recorded_unchanged?(path)
         resolved = File.expand_path(path)
-        @mutex.synchronize { @reads.key?(resolved) } && !changed_since_read?(resolved)
+        entry = @mutex.synchronize { latest_entry_locked(resolved) }
+        entry && File.exist?(resolved) && @contents.digest(resolved) == entry.sha256
       end
 
-      # True only for a file this session read whose bytes differ now. No age
-      # limit, unlike fresh?: a read an hour old is still the version a whole
-      # overwrite was composed against. A file never read answers false.
+      # True when the latest state observed here (by read or owned write) differs now.
+      # A file never observed answers false.
       def changed_since_read?(path)
         resolved = File.expand_path(path)
-        entry = @mutex.synchronize { @reads[resolved] }
+        entry = @mutex.synchronize { latest_entry_locked(resolved) }
         return false unless entry
         return true unless File.exist?(resolved)
 
@@ -106,9 +105,38 @@ module Master
       end
 
       def reset!
-        @mutex.synchronize { @reads.clear }
+        @mutex.synchronize do
+          @reads.clear
+          @writes.clear
+        end
         @contents.clear
       end
+
+      private
+
+      def latest_entry_locked(path)
+        [@reads[path], @writes[path]].compact.max_by(&:read_at)
+      end
+
+      def record_observation!(path, content:, collection:, event:, context:)
+        resolved = File.expand_path(path)
+        body = content || File.read(resolved)
+        entry = @mutex.synchronize do
+          Entry.new(
+            path: resolved,
+            sha256: Digest::SHA256.hexdigest(body),
+            read_at: Time.now.to_f,
+            turn_id: @turn_id,
+          ).tap { |record| collection[resolved] = record }
+        end
+        @contents.record(resolved, entry.sha256)
+        @bus&.publish(event, path: resolved, sha256: entry.sha256, turn_id: entry.turn_id)
+        entry
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context:, path:)
+        nil
+      end
+
     end
   end
 end
