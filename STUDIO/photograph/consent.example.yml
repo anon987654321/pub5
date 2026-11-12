@@ -24,4 +24,7 @@ source_rights:
   #   granted_by: "..."
   #   granted_on: "YYYY-MM-DD"
   #   covers: "generation_use, provider_processing"
-  #   stored_at: "..."
+  #   stored_at: "evidence/me2-permission.pdf"
+  #
+  # Store every referenced record under this subject's ignored evidence/
+  # directory; do not point to public URLs, consent.yml itself, or symlinks.
