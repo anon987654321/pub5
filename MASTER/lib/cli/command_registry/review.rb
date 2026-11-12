@@ -14,6 +14,7 @@ require "digest"
 require "json"
 require "time"
 require_relative "../../io/exec"
+require_relative "../../fix/structural_recipes"
 
 module Master
   module CLI
@@ -199,9 +200,49 @@ module Master
         [apply, critique, only, effective]
       end
 
+      def dispatch_structural_recipe(raw, deliberation:)
+        tokens = raw.to_s.split(/\\s+/)
+        recipes = Master::Fix::StructuralRecipes.new(repo_root: Master.repo_root)
+
+        if tokens == ["--list-recipes"]
+          return recipes.list.map { |name, description| "#{name}  #{description}" }.join("\\n")
+        end
+
+        unless tokens.length == 3 && tokens[0] == "--recipe" && tokens[1].match?(/\\A[a-z][a-z0-9_]*\\z/) &&
+               %w[--dry-run --apply].include?(tokens[2])
+          return "recipe0: usage: /fix --list-recipes | /fix --recipe NAME --dry-run | /fix --recipe NAME --apply"
+        end
+
+        name = tokens[1]
+        case tokens[2]
+        when "--dry-run"
+          result = recipes.preview(name)
+          return "recipe0: BLOCKED: #{result.message}" unless result.ok?
+
+          value = result.value!
+          state = value.fetch(:already_applied) ? "already applied; no diff" : "dry-run; no files changed"
+          diff = value.fetch(:diff).to_s
+          suffix = diff.empty? ? "" : "\\n#{diff}"
+          "recipe0: #{name}, #{state}; operation=#{value.fetch(:operations).join(",")}; paths=#{value.fetch(:paths).join(", ")}#{suffix}"
+        when "--apply"
+          result = recipes.apply(name, agent: deliberation&.agent)
+          return "recipe0: BLOCKED: #{result.message}" unless result.ok?
+
+          value = result.value!
+          state = value.fetch(:state, :delivered)
+          detail = state == :already_applied ? value.fetch(:message) : "committed and pushed"
+          "recipe0: #{name}, #{detail}"
+        end
+      rescue Master::Fix::StructuralRecipes::Invalid, KeyError, ArgumentError => error
+        "recipe0: REFUSED: #{error.message}"
+      rescue StandardError => error
+        "recipe0: INCONCLUSIVE: #{error.class}: #{error.message}"
+      end
+
       def dispatch_fix(scanner:, fix_loop:, deliberation:, root:, bus:, ctx: nil, swarm: nil)
         raw = lane_flag_joined(arg_for(ctx).to_s.strip)
         return convergence_read(raw, root:) if convergence_read?(raw)
+        return dispatch_structural_recipe(raw, deliberation:) if raw == "--list-recipes" || raw.start_with?("--recipe")
         mode, raw, mode_error = extract_fix_mode(raw)
         return Master::Result.err("fix: #{mode_error}", category: :validation) if mode_error
 
