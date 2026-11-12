@@ -256,7 +256,7 @@ class TestDillaHistoricalMaterial < Minitest::Test
     )
   end
 
-  def test_historical_artist_corpus_is_a_separate_first_class_source
+  def test_restored_artist_corpus_is_a_separate_first_class_source
     rows = Dilla.progressions.select { |row| row["source"] == "artist_verified" }
     assert_equal 16, rows.length
     assert_equal rows.length, rows.map { |row| row["id"] }.uniq.length
@@ -277,6 +277,11 @@ class TestDillaHistoricalMaterial < Minitest::Test
   end
 
   def test_archived_corpus_chord_timing_is_explicit_and_loop_complete
+    policy = Dilla.recovered.fetch("evidence_policy")
+    assert_equal 1, policy.fetch("version")
+    assert_match(/does not certify/, policy.dig("source_status", "restored_legacy_unverified"))
+    assert_match(/not a recovered transcription/, policy.fetch("melody_policy"))
+
     rows = Dilla.progressions.select { |row| row["source"] == "artist_verified" }
 
     rows.each do |row|
