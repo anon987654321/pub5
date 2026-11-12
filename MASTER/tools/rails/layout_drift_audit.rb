@@ -275,7 +275,7 @@ module Operator
 
       market_path = pages.fetch("marketplace").first
       market_view = read(market_path)
-      market_css_path = "RAILS/brgen/app/assets/stylesheets/_brgen_marketplace.scss"
+      market_css_path = "RAILS/brgen/app/assets/stylesheets/_brgen_shared_overrides.scss"
       market_css = read(market_css_path)
       %w[bol-market-hero bol-market-hero-copy bol-market-hero-media bol-market-kicker
          bol-market-hero-price bol-primary bol-kind-tabs bol-catalog-layout
