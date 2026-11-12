@@ -66,6 +66,53 @@ class TestStructuralRecipes < Minitest::Test
     assert_includes detail, "/fix --recipe NAME --apply"
   end
 
+  def test_recipe_proof_refuses_a_symlink_outside_the_rails_app
+    require "fileutils"
+    require "tmpdir"
+    require "yaml"
+
+    Dir.mktmpdir do |root|
+      app_root = File.join(root, "RAILS", "brgen")
+      test_dir = File.join(app_root, "test")
+      FileUtils.mkdir_p(test_dir)
+      File.write(File.join(root, "RAILS", "apps.yml"), { "apps" => { "brgen" => { "deploy_root" => "RAILS/brgen" } } }.to_yaml)
+      File.write(File.join(app_root, "dummy.rb"), "# frozen_string_literal: true\n")
+      outside = File.join(root, "outside_test.rb")
+      File.write(outside, "raise 'outside proof executed'\n")
+      File.symlink(outside, File.join(test_dir, "symlink_test.rb"))
+
+      plan = <<~PLAN
+        SUMMARY: Refuse symlinked recipe proof
+        OPERATIONS: merge
+        === WRITE RAILS/brgen/dummy.rb
+        class Dummy; end
+        === END
+      PLAN
+      recipe = {
+        "schema" => 1,
+        "recipes" => {
+          "unsafe_proof" => {
+            "description" => "Refuse proof paths outside the app",
+            "tree" => "RAILS",
+            "operation" => "merge",
+            "summary" => "Refuse symlinked recipe proof",
+            "plan" => plan,
+            "proofs" => [{ "kind" => "rails_test", "app" => "brgen", "path" => "test/symlink_test.rb" }],
+          },
+        },
+      }
+      catalogue_path = File.join(root, "recipes.yml")
+      File.write(catalogue_path, recipe.to_yaml)
+
+      error = assert_raises(Master::Fix::StructuralRecipes::Invalid) do
+        Master::Fix::StructuralRecipes.new(repo_root: root, catalogue_path:).list
+      end
+
+      assert_includes error.message, "symlinked path"
+      assert_equal "raise 'outside proof executed'\n", File.read(outside)
+    end
+  end
+
   def test_unknown_recipe_is_refused_without_mutation
     output = Master::CLI::CommandRegistry.dispatch_structural_recipe(
       "--recipe not_a_recipe --dry-run", deliberation: nil
