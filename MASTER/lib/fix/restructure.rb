@@ -198,6 +198,7 @@ module Master
       end
 
       def apply(plan)
+        @applied_states = {}
         plan.writes.each do |path, content|
           absolute = full(path)
           refusal = TaskContract.new_path_refusal(absolute, repo_root: @root, declared: plan.writes.keys)
@@ -205,26 +206,51 @@ module Master
 
           FileUtils.mkdir_p(File.dirname(absolute))
           write_atomic(absolute, content)
+          @applied_states[path] = Digest::SHA256.hexdigest(content.to_s.b)
         end
         plan.deletes.each do |path|
           raise "restructure delete refused: symlinked path #{path}" if symlinked_path?(path)
 
           File.delete(full(path))
+          @applied_states[path] = :absent
         end
       end
 
+      # Undo only bytes this restructure still owns. A human edit that lands
+      # during review is left in place and named; it is never silently replaced
+      # with the pre-plan snapshot.
       def undo(originals, failure)
+        conflicts = []
         originals.each do |path, content|
+          next unless @applied_states&.key?(path)
+
+          expected = @applied_states.fetch(path)
+          if symlinked_path?(path) || current_file_state(path) != expected
+            conflicts << path
+            next
+          end
+
           if content
             FileUtils.mkdir_p(File.dirname(full(path)))
             raise "restructure rollback refused: symlinked path #{path}" if symlinked_path?(path)
 
             write_atomic(full(path), content)
-          elsif File.exist?(full(path))
+          elsif expected != :absent
             File.delete(full(path))
           end
         end
-        Result.err("restructure undone: #{failure}", category: :validation)
+        detail = conflicts.empty? ? "" : "; concurrent modification preserved: #{conflicts.join(", ")}"
+        Result.err("restructure undone: #{failure}#{detail}", category: :validation)
+      end
+
+      def current_file_state(path)
+        return :symlink if symlinked_path?(path)
+
+        absolute = full(path)
+        return :absent unless File.exist?(absolute)
+        return :other unless File.file?(absolute)
+
+        Digest::SHA256.hexdigest(File.binread(absolute))
       end
 
       def preservation_evidence(plan, originals, before:)
