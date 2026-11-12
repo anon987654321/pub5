@@ -365,12 +365,26 @@ if on_box
     rescue ArgumentError # a uid with no passwd entry is reported by number
       stat.uid.to_s
     end
+    group = begin
+      Etc.getgrgid(stat.gid).name
+    rescue ArgumentError # a gid with no group entry is reported by number
+      stat.gid.to_s
+    end
 
-    { path:, mode: stat.mode, owner: }
+    { path:, mode: stat.mode, owner:, group: }
+  end
+  secrets = Dir.glob("/etc/*.env").map do |path|
+    stat_entry.call(path).merge(
+      expected_owner: "root",
+      expected_group: File.basename(path, ".env")
+    )
+  end
+  private_dirs = Dir.glob("/home/*/app/storage").map do |path|
+    app = File.basename(File.dirname(File.dirname(path)))
+    stat_entry.call(path).merge(expected_owner: app)
   end
   failures.concat(Deploy::PermissionAudit.failures(
-    secrets: Dir.glob("/etc/*.env").map(&stat_entry),
-    private_dirs: Dir.glob("/home/*/app/storage").map(&stat_entry),
+    secrets:, private_dirs:,
     daemon_logs: Dir.glob("/home/dev/pub5/MASTER/.master/tts-worker-*.log").map(&stat_entry),
     daemon_user: "master"
   ))
