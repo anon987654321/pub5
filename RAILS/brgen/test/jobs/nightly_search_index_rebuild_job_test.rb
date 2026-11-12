@@ -6,7 +6,7 @@ require "test_helper"
 class NightlySearchIndexRebuildJobTest < ActiveSupport::TestCase
   def connection_with(fts:, &on_execute)
     connection = Object.new
-    connection.define_singleton_method(:data_source_exists?) { |name| fts && name == "posts_fts" }
+    connection.define_singleton_method(:tables) { fts ? ["posts_fts"] : [] }
     connection.define_singleton_method(:execute) { |sql| on_execute&.call(sql) || true }
     connection
   end
