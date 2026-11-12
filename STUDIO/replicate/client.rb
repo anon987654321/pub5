@@ -119,6 +119,14 @@ module Studio
           version: nil
         )
           timeout = operation_timeout!(timeout, "training timeout")
+          photos_zip_url = training_zip_url!(photos_zip_url)
+          trigger_word = training_trigger!(trigger_word)
+          steps = positive_integer!(steps, "steps") unless steps.nil?
+          lora_rank = positive_integer!(lora_rank, "lora_rank") unless lora_rank.nil?
+          extra_input = normalize_training_input!(extra_input)
+          raise ArgumentError, "wait must be true or false" unless wait == true || wait == false
+          resource_id!(version || trainer_version, "trainer version")
+
           owner, name, pinned = model_reference!(destination)
           raise ArgumentError, "training destination must be owner/name without a version" if pinned
           destination = "#{owner}/#{name}"
@@ -165,6 +173,45 @@ module Studio
         end
 
         private
+
+        def training_zip_url!(value)
+          uri = URI.parse(value.to_s)
+          valid = uri.is_a?(URI::HTTPS) && !uri.host.to_s.empty? && uri.userinfo.nil? && uri.fragment.nil?
+          raise ArgumentError, "training ZIP URL must be an HTTPS URL without credentials or a fragment" unless valid
+
+          uri.to_s
+        rescue URI::InvalidURIError
+          raise ArgumentError, "training ZIP URL must be a valid HTTPS URL"
+        end
+
+        def training_trigger!(value)
+          trigger = value.to_s
+          raise ArgumentError, "trigger_word must be a simple 1-64 character token" unless trigger.match?(/\\A[A-Za-z][A-Za-z0-9_-]{0,63}\\z/)
+
+          trigger
+        end
+
+        def positive_integer!(value, label)
+          raise ArgumentError, "#{label} must be a positive Integer" unless value.is_a?(Integer) && value.positive?
+
+          value
+        end
+
+        def normalize_training_input!(value)
+          raise ArgumentError, "extra_input must be a Hash" unless value.is_a?(Hash)
+
+          protected = %w[input_images trigger_word steps lora_rank]
+          normalized = {}
+          value.each do |key, item|
+            name = key.to_s
+            raise ArgumentError, "invalid trainer input key #{name.inspect}" unless name.match?(/\\A[a-z][a-z0-9_]*\\z/)
+            raise ArgumentError, "extra_input cannot override #{name}" if protected.include?(name)
+            raise ArgumentError, "duplicate trainer input key #{name}" if normalized.key?(name)
+
+            normalized[name] = item
+          end
+          normalized.transform_keys(&:to_sym)
+        end
 
         def build_training_request(photos_zip_url, destination, trigger_word:, steps:, lora_rank:, webhook:, webhook_events_filter:, extra_input:, version: nil)
           trainer_owner, trainer_name, = model_reference!(LORA_TRAINER)
@@ -468,11 +515,15 @@ module Studio
       # the table against itself, and the drift shows up as a 422 in production
       # or, worse, as a setting silently dropped.
       def input_keys(model_id)
-        owner, name, = model_reference!(model_id)
-
-        model = get(URI("#{BASE}/models/#{owner}/#{name}"))
-        schema = model.dig("latest_version", "openapi_schema",
-                           "components", "schemas", "Input", "properties")
+        owner, name, pinned = model_reference!(model_id)
+        if pinned
+          version = get(URI("#{BASE}/models/#{owner}/#{name}/versions/#{pinned}"))
+          schema = version.dig("openapi_schema", "components", "schemas", "Input", "properties")
+        else
+          model = get(URI("#{BASE}/models/#{owner}/#{name}"))
+          schema = model.dig("latest_version", "openapi_schema",
+                             "components", "schemas", "Input", "properties")
+        end
         Array(schema&.keys)
       end
 
