@@ -377,6 +377,49 @@ more. An unreached-file sweep must include the repo-root `bin/` and filter by no
 extension — `test/test_entrypoint_requires.rb` holds the case that broke
 `bin/operator` for six days.
 
+**A script the tree executes directly needs its executable bit committed.**
+`MASTER/bin/operator` and `MASTER/bin/fix-here` both shipped as mode `100644`
+while every sibling was `755`. The launcher boots the rendered checks with a
+direct `system("MASTER/bin/operator", "triangle", "up")`, so the missing bit
+failed the whole boot *silently*: the triangle log stayed empty and `/fix`
+reported "the apps did not all boot; layout evidence will be partial" with no
+further hint. Before trusting a "did not boot" line, check
+`git ls-files -s <script>` against its siblings and `head -1` for a shebang —
+a `100644` on a shebang file is the bug, not the boot. A file is only runnable
+if its mode is committed, so fix it with
+`chmod +x <script> && git update-index --chmod=+x <script>`.
+
+**`/fix` is a moving target while it runs, and so is `origin/main`.** A live
+run commits and pushes its own MASTER autofix commits, and
+`MASTER/lib/fix/code_watch.rb` rebases the checkout onto `origin/main` and
+`exec`s the run again when new commits land. A `git push` from your session can
+therefore be rejected mid-flight; fetch, rebase and retry rather than treating
+it as an error. Before rebasing, prove there is no conflict risk with
+`git log --oneline <your-base>..origin/main -- <your paths>` — an empty result
+means your paths are untouched.
+
+**Screenshots are per-run evidence and must never be reused.** `VisualPass`
+already renders fresh into a `Dir.mktmpdir` per pass, but two other paths could
+hand a *previous* run's render to review: `ReviewSet#publish!` used to keep the
+old set when a sweep captured nothing (a stale shot then sits at
+`RAILS/screenshot_*.png` under the current run's name), and
+`SweepEvidence#manifest_for` fell back to the newest manifest anywhere in tmp.
+Both now refuse anything older than the run. When touching visual review, keep
+that rule: delete the old set first, always, and never let a fallback reach back
+past the process. A failed sweep should leave *no* review set, not last run's
+pictures.
+
+**A live `/fix` holds hundreds of Chrome processes, so browser tests flake.**
+`test_work_lane.rb`'s CDP timeouts during a run are contention, not regressions:
+`ps aux | grep -c chrome` showed 645. Run browser-touching tests when no
+sweep is active, or expect `Timeout::ExitException` from `cdp_framing.rb`.
+
+**The committed PNGs are documentation; the review set is not.** `RAILS/docs/screenshots/`
+and the per-engine `screenshots/` dirs are static docs (only
+`test_visual_sheets.rb` names one). `RAILS/screenshot_*.png` and `RAILS/sweep-*/`
+are git-ignored run artifacts. Neither the review path nor the critic reads the
+committed docs; both read what the current sweep rendered.
+
 ## Judging your own work
 
 The task as given is the deliverable, but it is not the whole job. Reason about
