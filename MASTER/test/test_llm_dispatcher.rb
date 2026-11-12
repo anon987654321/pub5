@@ -1182,6 +1182,19 @@ class TestLLMDispatcher < Minitest::Test
     assert_match(/Retry-After: 30/, limited.message)
   end
 
+  def test_web_chat_process_timeout_reaches_dispatcher_as_timeout
+    dispatcher, = build_dispatcher
+    error_class = Class.new(StandardError)
+    error_class.define_singleton_method(:name) { "Ferrum::ProcessTimeoutError" }
+    error = error_class.new("Browser did not produce websocket url within 45 seconds")
+    messages = [{ role: "user", content: "hello" }]
+
+    Master::Io::WebChat.stub(:call, ->(**_kwargs) { raise error }) do
+      result = dispatcher.send(:send_web_chat, "kimi", messages, sys: nil)
+      assert_equal :timeout, result.category
+    end
+  end
+
   def test_web_chat_dispatch_preserves_non_retryable_profile_failures
     dispatcher, = build_dispatcher
     messages = [{ role: "user", content: "hello" }]
