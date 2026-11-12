@@ -76,6 +76,13 @@ class OperatorIntentTest < Minitest::Test
       assert_equal "all", result.target
       assert_equal %w[control_web city_app wardrobe_app private_service], result.selected
       assert_empty agent.calls, "the repository alias is deterministic"
+
+      intent = Master::CLI::OperatorIntent.new(root:, agent: Object.new)
+      inventory = Master::Deploy::Inventory.new(root:)
+      refute intent.send(:repository_wide_deployment?, "deploy pub5 to staging", inventory),
+             "explicit non-production environments must not become vm23 deployments"
+      refute intent.send(:repository_wide_deployment?, "deploy city_app from pub5 to vm23", inventory),
+             "an explicit app target must be left to the inventory classifier"
     end
   end
 
