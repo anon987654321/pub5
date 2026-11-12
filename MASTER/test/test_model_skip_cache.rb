@@ -16,6 +16,7 @@ class TestModelSkipCache < Minitest::Test
 
   def test_default_clock_uses_monotonic_time_but_reset_parser_uses_realtime
     cache = Master::Io::ModelSkipCache
+    cache.clock = nil
     monotonic = 12_345.678
     realtime = 1_800_000_000.0
     parsed_times = []
@@ -36,6 +37,7 @@ class TestModelSkipCache < Minitest::Test
     assert_equal (monotonic * 1000).round + cache.transient_skip_ttl_ms,
       cache.skipped_until_ms("m1")
   ensure
+    cache.clock = nil
     cache.clear!
   end
 
