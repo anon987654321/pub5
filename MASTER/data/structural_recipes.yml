@@ -1,0 +1,55 @@
+# Named structural recipes. Each recipe is a bounded input to the existing
+# Fix::Restructure path: one transformation, scoped file writes, hostile review,
+# a Rails-tree proof and the existing rollback/delivery boundary. No shell steps.
+schema: 1
+recipes:
+  slugged_vertical_base:
+    description: Share slug-or-id lookup across Marketplace, Takeaway, TV and Playlist while preserving PlaylistHelper.
+    tree: RAILS
+    operation: merge
+    summary: Share slug lookup across vertical engines
+    plan: |
+      SUMMARY: Share slug lookup across vertical engines
+      OPERATIONS: merge
+      === WRITE RAILS/__shared/app/controllers/shared/slugged_vertical_controller.rb
+      # frozen_string_literal: true
+
+      module Shared
+        # Common parent for vertical controllers whose public records use slug URLs
+        # while older numeric links remain supported. Keep vertical-specific helpers,
+        # callbacks and product policy in each engine's own base controller.
+        class SluggedVerticalController < ApplicationController
+          include Shared::FindableBySlug
+        end
+      end
+      === WRITE RAILS/brgen/engines/marketplace/app/controllers/marketplace/base_controller.rb
+      # frozen_string_literal: true
+
+      # The namespace entry point retains the public Marketplace controller ancestry.
+      class Marketplace::BaseController < Shared::SluggedVerticalController
+      end
+      === WRITE RAILS/brgen/engines/marketplace/engines/takeaway/app/controllers/takeaway/base_controller.rb
+      # frozen_string_literal: true
+
+      # Keep the Takeaway namespace and compatibility mount while sharing slug lookup.
+      class Takeaway::BaseController < Shared::SluggedVerticalController
+      end
+      === WRITE RAILS/brgen/engines/radio/tv/app/controllers/tv/base_controller.rb
+      # frozen_string_literal: true
+
+      # Videos, channels and shows retain slug-or-id resolution through the shared base.
+      class Tv::BaseController < Shared::SluggedVerticalController
+      end
+      === WRITE RAILS/brgen/engines/radio/playlist/app/controllers/playlist/base_controller.rb
+      # frozen_string_literal: true
+
+      # The engine-local helper is required because isolated engines do not fold it
+      # into controllers inheriting the host ApplicationController.
+      class Playlist::BaseController < Shared::SluggedVerticalController
+        helper PlaylistHelper
+      end
+      === END
+    proofs:
+      - kind: rails_test
+        app: brgen
+        path: test/controllers/vertical_base_controller_test.rb
