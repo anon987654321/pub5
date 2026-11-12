@@ -58,6 +58,20 @@ class LikeCountStreamTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "voting a post replaces only the reader's vote rail" do
+    record = @user.posts.create!(body: "Ny kåpe")
+    target = ActionView::RecordIdentifier.dom_id(record, :vote_rail)
+
+    post post_vote_path(record), params: { vote: { value: 1 } }, headers: TURBO
+
+    assert_response :success
+    assert_select "turbo-stream[action=replace][target=?]", target do
+      assert_select "template div##{target}.post-vote-rail"
+      assert_select "template .post-vote-score", "1"
+    end
+    assert_select "turbo-stream[action=replace][target=?]", ActionView::RecordIdentifier.dom_id(record), 0
+  end
+
   test "liking a post without Turbo still redirects and busts the cached card" do
     record = @user.posts.create!(body: "Ny kåpe")
     before = record.updated_at
