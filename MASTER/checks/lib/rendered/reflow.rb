@@ -166,11 +166,17 @@ module Deploy
     private
 
     def pick_surfaces
+      priority = GeometryProbe.config.fetch("reflow_priority", {})
       GeometryProbe.surfaces
                    .select { |s| s.viewport == "mobile" }
                    .uniq { |s| "#{s.app}/#{s.label}" }
                    .group_by(&:app)
-                   .flat_map { |_app, rows| rows.first(3) }
+                   .flat_map do |app, rows|
+        preferred = Array(priority[app]).filter_map do |label|
+          rows.find { |surface| surface.label == label }
+        end
+        (preferred + rows).uniq { |surface| "#{surface.app}/#{surface.label}" }.first(3)
+      end
     end
 
     def sweep(cdp, surface, widths)
