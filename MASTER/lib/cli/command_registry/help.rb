@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../stages/route"
+
 module Master
   module CLI
     module CommandRegistry
@@ -376,6 +378,7 @@ module Master
         return help_summary if key.empty?
         return "/#{key} - leave the current MASTER session." if %w[exit quit].include?(key)
 
+        key = Stages::Route::SPELLINGS.fetch(key, key)
         # scan and the other pipeline words rewrite to /fix, so their help is the
         # /fix page rather than "unknown command".
         spellings = defined?(Master::CLI::TurnRouter) ? Master::CLI::TurnRouter::PIPELINE_SLASH : []
@@ -386,12 +389,14 @@ module Master
         (["/#{key} - #{topic[:summary]}"] + topic[:detail]).join("\n")
       end
 
-      # The surface is closed, so a name with no topic is not a documented
-      # command missing its page — it is not a command. Say which is which,
-      # rather than leaving a reader to look for a page nobody wrote.
+      # The surface stays closed. A near miss gets one suggestion from the
+      # same route matcher as the REPL; distant words get the ordinary /help
+      # direction. A suggestion is never executed or treated as an alias.
       def unknown_command_text(key)
-        "help: unknown command /#{key} - the slash surface is #{slash_commands.size} commands " \
-          "and closed. /help lists them; everything else is said in a sentence."
+        names = slash_commands.map { |name| name.delete_prefix("/") }
+        suggestion = Stages::Route.suggestion_for(key, names)
+        suffix = suggestion ? " - did you mean /#{suggestion}?" : " - /help lists the surface"
+        "help: unknown command /#{key}#{suffix}"
       end
 
       def slash_commands
