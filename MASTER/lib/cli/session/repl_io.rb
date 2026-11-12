@@ -9,12 +9,9 @@ module Master
 
       private
 
-
       # Terminal output and prompt editing share one protocol. Dmesg owns
-
-      # the lock; this boundary keeps Reline's draft-safe redraw beside
-
-      # the ordinary terminal writers used by every session lane.
+      # the lock; this boundary keeps Reline's draft-safe redraw beside the
+      # ordinary terminal writers used by every session lane.
 
       # All operator-facing writes share Dmesg's mutex and Dmesg runs the draft
       # guard this session registers: a write from any lane clears the draft's
