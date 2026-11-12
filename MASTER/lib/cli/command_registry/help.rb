@@ -276,6 +276,7 @@ module Master
             "/privacy grant calendar_read or /privacy revoke calendar_read - enable or immediately disable access to the paired subject's imported local calendar.",
             "/privacy memory show or /privacy memory export - inspect the paired subject's complete USER.md profile and MEMORY.md, within a bounded export size.",
             "/privacy memory forget --confirm - clear durable memory while preserving USER.md. The exact confirmation command is required.",
+            "Local notifications are default-deny: enable storage with /privacy grant notifications --confirm \"GRANT notifications\"; revoke immediately with /privacy revoke notifications. Content stays in the owner-only local inbox.",
             "Voice input is default-deny: grant microphone with /privacy grant microphone --confirm \"GRANT microphone\" and recognition with /privacy grant speech_recognition --confirm \"GRANT speech_recognition\". Grants expire after one hour; Android OS microphone permission is also required.",
           ],
         },
