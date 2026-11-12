@@ -58,6 +58,17 @@ class TestStudioReplicateClientPaths < Minitest::Test
     end
   end
 
+  class MissingTrainerFieldClient < StubClient
+    def get(uri)
+      @requests << [:get, uri]
+      schema = {
+        "properties" => { "input_images" => {}, "prompt" => {} },
+        "required" => ["input_images"]
+      }
+      { "openapi_schema" => { "components" => { "schemas" => { "Input" => schema } } } }
+    end
+  end
+
   class ReadTimeoutClient < StubClient
     def attempt_request(_request, _uri)
       raise Net::ReadTimeout, "simulated read timeout"
@@ -211,6 +222,19 @@ class TestStudioReplicateClientPaths < Minitest::Test
     method, uri = client.requests.fetch(0)
     assert_equal :get, method
     assert_equal "/v1/models/owner/model/versions/#{version}", uri.path
+  end
+
+  def test_training_schema_is_checked_before_destination_model_creation
+    client = MissingTrainerFieldClient.new
+    error = assert_raises(ArgumentError) do
+      client.train_lora(
+        "https://files.replicate.delivery/photos.zip", "owner/model", wait: false
+      )
+    end
+
+    assert_match(/unsupported inputs.*trigger_word/, error.message)
+    assert_equal [:get], client.requests.map(&:first)
+    assert_match(%r{/versions/}, client.requests.first.fetch(1).path)
   end
 
   def test_training_input_cannot_override_dataset_trigger_or_numeric_controls
