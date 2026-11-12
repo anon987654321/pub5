@@ -201,7 +201,7 @@ class LogoContractTest < ActionView::TestCase
       assert_equal generated_svg, public_svg, "#{public_name} drifted from the generated cut"
       assert_includes public_svg, "transparent ground"
       body = public_svg.sub(/\A<svg\b[^>]*>/, "").sub(%r{</svg>\z}, "")
-      body = body.sub(/\A<defs>.*?</defs>/m, "")
+      body = body.sub(%r{\A<defs>.*?</defs>}m, "")
       refute_match(/\A\s*<rect\b/, body, "#{public_name} must not paint a background")
     end
   end
