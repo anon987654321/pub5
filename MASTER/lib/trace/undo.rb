@@ -17,22 +17,28 @@ module Master
       include ::Master::Io::AtomicWrite
 
       MAX_JOURNAL = 50
+      LOCK_SUFFIX = ".lock".freeze
 
       def initialize(session:, event_bus: nil, root: Dir.pwd)
         @session = session
         @bus = event_bus
-        @root = root
-        @journal = File.join(root, ".master", "undo_journal.jsonl")
-        @stack = load_journal
+        @root = File.expand_path(root)
+        @journal = File.join(@root, ".master", "undo_journal.jsonl")
+        @stack = with_journal_lock { load_journal }
       end
 
       def snapshot(path)
         @bus&.publish("voice:catchphrase", phrase: "Backing up first.", path:)
         content = File.exist?(path) ? File.read(path) : nil
         @session.snapshot(path, content)
-        @stack << { "path" => path, "content" => content, "ts" => Time.now.to_i }
-        @stack.shift while @stack.size > MAX_JOURNAL
-        persist_journal
+        with_journal_lock do
+          # A second MASTER process may have written since this object was
+          # initialized. Reload under the shared lock before appending.
+          @stack = load_journal
+          @stack << { "path" => path, "content" => content, "ts" => Time.now.to_i }
+          @stack.shift while @stack.size > MAX_JOURNAL
+          persist_journal
+        end
         Result.ok(path)
       rescue StandardError => e
         Result.err("undo snapshot: #{e.message}", category: :unknown)
@@ -40,8 +46,23 @@ module Master
 
       def undo!(steps: 1) = replay(@stack, "undo", steps)
 
+      # The heartbeat uses the same lock and atomic writer as snapshot/undo.
+      # Entries contain their snapshot bytes inline, so pruning has no external
+      # blob files to reclaim or references to guess at.
+      def prune!
+        with_journal_lock do
+          @stack = load_journal
+          before = @stack.size
+          @stack = @stack.last(MAX_JOURNAL)
+          removed = before - @stack.size
+          persist_journal if removed.positive?
+          removed
+        end
+      end
+
       def history(limit: 10)
-        @stack.last(limit).reverse.map.with_index(1) do |entry, i|
+        entries = with_journal_lock { @stack = load_journal }
+        entries.last(limit).reverse.map.with_index(1) do |entry, i|
           time = entry["ts"] ? Time.at(entry["ts"]).strftime("%H:%M:%S") : "?"
           "#{i}. #{entry["path"]} (#{time})"
         end
@@ -50,19 +71,24 @@ module Master
       private
 
       # Pop the file's previous content off the stack and put it back.
-      def replay(from, verb, steps)
-        return Result.err("nothing to #{verb}", category: :validation) if from.empty?
+      def replay(_from, verb, steps)
+        with_journal_lock do
+          @stack = load_journal
+          return Result.err("nothing to #{verb}", category: :validation) if @stack.empty?
 
-        paths = []
-        [steps, from.size].min.times do
-          entry = from.pop
-          restore(entry["path"], entry["content"])
-          paths << entry["path"]
-          @bus&.publish("#{verb}:applied", path: paths.last)
+          paths = []
+          [Integer(steps), @stack.size].min.times do
+            entry = @stack.pop
+            restore(entry["path"], entry["content"])
+            paths << entry["path"]
+            @bus&.publish("#{verb}:applied", path: paths.last)
+          end
+
+          persist_journal
+          Result.ok(paths.size == 1 ? paths.first : paths)
         end
-
-        persist_journal
-        Result.ok(paths.size == 1 ? paths.first : paths)
+      rescue ArgumentError, TypeError => e
+        Result.err("undo steps: #{e.message}", category: :validation)
       end
 
       def restore(path, content)
@@ -77,7 +103,11 @@ module Master
       end
 
       def load_journal
-        return [] unless File.exist?(@journal)
+        return [] unless File.exist?(@journal) || File.symlink?(@journal)
+
+        stat = File.lstat(@journal)
+        raise IOError, "undo journal is not a singly linked regular file" unless stat.file? && !stat.symlink? && stat.nlink == 1
+
         File.readlines(@journal).filter_map do |line|
           JSON.parse(line.strip)
         rescue JSON::ParserError => e
@@ -86,6 +116,8 @@ module Master
         end
       rescue StandardError => e
         @bus&.publish("undo:read_error", error: e.message) if defined?(@bus)
+        raise if e.is_a?(IOError)
+
         []
       end
 
@@ -96,6 +128,34 @@ module Master
       rescue StandardError => e
         delete_tmp_file(tmp_path) if defined?(tmp_path)
         raise
+      end
+
+      def with_journal_lock
+        directory = File.dirname(@journal)
+        FileUtils.mkdir_p(directory, mode: 0o700)
+        directory_stat = File.lstat(directory)
+        raise IOError, "undo journal directory is not a real directory" unless directory_stat.directory? && !directory_stat.symlink?
+
+        lock_path = "#{@journal}#{LOCK_SUFFIX}"
+        flags = File::RDWR | File::CREAT
+        flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW, false)
+        File.open(lock_path, flags, 0o600) do |lock|
+          lock_stat = File.lstat(lock_path)
+          opened_stat = lock.stat
+          unless lock_stat.file? && !lock_stat.symlink? &&
+                 lock_stat.dev == opened_stat.dev && lock_stat.ino == opened_stat.ino
+            raise IOError, "undo journal lock is not a stable regular file"
+          end
+          lock.chmod(0o600)
+          lock.flock(File::LOCK_EX)
+
+          current_directory = File.lstat(directory)
+          unless current_directory.directory? && !current_directory.symlink? &&
+                 current_directory.dev == directory_stat.dev && current_directory.ino == directory_stat.ino
+            raise IOError, "undo journal directory changed while locking"
+          end
+          yield
+        end
       end
 
       def delete_tmp_file(path)
