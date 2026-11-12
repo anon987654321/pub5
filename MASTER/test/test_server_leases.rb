@@ -80,7 +80,15 @@ class TestServerLeases < Minitest::Test
 
       assert_empty Leases.reap_orphans!(run_dir, alive: ->(_owner) { false }, killer:)
       assert_equal "222 61352\n", File.read(owner_path)
+      assert_equal "61352\n", File.read(pid_path), "a replacement owner must retain its PID record"
     end
+  end
+
+  def test_process_group_stop_refuses_the_callers_own_group
+    group = Process.getpgrp
+
+    refute Leases.stop_process_group(group, term_grace: 0, kill_grace: 0)
+    assert_equal 0, Process.kill(0, Process.pid)
   end
 
   def test_process_group_stop_escalates_and_waits_for_the_group_to_disappear
