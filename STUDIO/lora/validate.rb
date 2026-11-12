@@ -86,7 +86,7 @@ module Studio
         report["training_ready"] = report["state"] == "PASS" && report["blockers"].empty?
         report["training_readiness"] = report["training_ready"] ? "READY_FOR_OPERATOR_REVIEW" : "BLOCKED"
         report
-      rescue Psych::Exception, JSON::ParserError, SystemCallError, IOError, ArgumentError => error
+      rescue Psych::Exception, JSON::ParserError, SystemCallError, IOError, ArgumentError, TypeError => error
         {
           "subject" => subject,
           "state" => "FAIL",
