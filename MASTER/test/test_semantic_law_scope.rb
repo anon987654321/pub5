@@ -14,7 +14,9 @@ class TestSemanticLawScope < Minitest::Test
   def test_missing_model_agent_is_inconclusive_not_clean
     semantic = Master::Review::Scan::Laws::SemanticLaw.new(agent: nil)
 
-    error = assert_raises(RuntimeError) { semantic.check("def foo; end", path: "foo.rb") }
+    error = assert_raises(Master::Review::Scan::Detector::SemanticAssessmentInconclusive) do
+      semantic.check("def foo; end", path: "foo.rb")
+    end
     assert_match(/INCONCLUSIVE.*no model agent configured/, error.message)
   end
 
@@ -25,7 +27,9 @@ class TestSemanticLawScope < Minitest::Test
     end
     semantic = Master::Review::Scan::Laws::SemanticLaw.new(agent:)
 
-    error = assert_raises(RuntimeError) { semantic.check("def foo; end", path: "foo.rb") }
+    error = assert_raises(Master::Review::Scan::Detector::SemanticAssessmentInconclusive) do
+      semantic.check("def foo; end", path: "foo.rb")
+    end
     assert_match(/INCONCLUSIVE.*provider capability/, error.message)
   end
 
@@ -110,7 +114,7 @@ class TestSemanticLawScope < Minitest::Test
 
   def test_malformed_or_unrequested_law_output_is_inconclusive
     laws = rule.send(:laws_for, "css")
-    error = assert_raises(RuntimeError) do
+    error = assert_raises(Master::Review::Scan::Detector::SemanticAssessmentInconclusive) do
       rule.send(:parse_findings, "UNKNOWN_LAW:1:hallucinated finding\n", laws)
     end
 
