@@ -2,12 +2,12 @@
 <%# The cuisines are the category shortcut rail: a white square well with the
     cuisine's initial above its name, "Alle" first. %>
 <nav class="deal-cats" aria-label="<%= t("actions.all_cuisines") %>">
-  <%= link_to restaurants_path, class: "deal-cat#{" active" if params[:cuisine].blank?}", aria: { current: (params[:cuisine].blank? ? "page" : nil) } do %>
+  <%= link_to restaurants_path(q: params[:q].presence, sort: @sort), class: "deal-cat#{" active" if params[:cuisine].blank?}", aria: { current: (params[:cuisine].blank? ? "page" : nil) } do %>
     <span class="store-shortcut-well" aria-hidden="true"><%= icon :layers, size: 32 %></span>
     <%= t("actions.all_cuisines") %>
   <% end %>
   <% Takeaway::Restaurant::CUISINE_TYPES.each do |cuisine| %>
-    <%= link_to restaurants_path(cuisine:), class: "deal-cat#{" active" if params[:cuisine] == cuisine}", aria: { current: (params[:cuisine] == cuisine ? "page" : nil) } do %>
+    <%= link_to restaurants_path(q: params[:q].presence, cuisine:, sort: @sort), class: "deal-cat#{" active" if params[:cuisine] == cuisine}", aria: { current: (params[:cuisine] == cuisine ? "page" : nil) } do %>
       <span class="store-shortcut-well" aria-hidden="true"><%= cuisine.first %></span>
       <%= cuisine %>
     <% end %>
@@ -17,6 +17,14 @@
 <section aria-labelledby="takeaway-restaurants-heading">
   <%= tag.h2 (live_search_query.present? ? t("takeaway.restaurant_results") : t("takeaway.top_rated_heading", city: city_name)),
              id: "takeaway-restaurants-heading", class: "store-heading" %>
+  <nav class="store-pills" aria-label="<%= t("takeaway.sort_label") %>">
+    <% Takeaway::Restaurant::SORTS.each do |sort_key| %>
+      <%= link_to t("takeaway.sorts.#{sort_key}"),
+            restaurants_path(q: params[:q].presence, cuisine: params[:cuisine].presence, sort: sort_key),
+            class: "deal-cat#{" active" if @sort == sort_key}",
+            aria: { current: (@sort == sort_key ? "page" : nil) } %>
+    <% end %>
+  </nav>
   <% if @restaurants.any? %>
     <div class="deal-grid" role="list" id="takeaway-restaurants-grid">
       <% @restaurants.each do |r| %>
@@ -41,5 +49,6 @@
            reflex: "RestaurantsInfiniteScrollReflex#load_more",
            sentinel_id: "takeaway-restaurants-sentinel",
            q: params[:q],
-           cuisine: params[:cuisine] %>
+           cuisine: params[:cuisine],
+           sort: @sort %>
 <% end %>
