@@ -22,7 +22,7 @@ module Master
       PNG_SIGNATURE = "\x89PNG\r\n\x1a\n".b.freeze
       PROFILE_CLEANUP_WAIT_S = 0.25
       PROFILE_MUTEX = Mutex.new
-      PROFILE_CLEANUP = { thread: nil }
+      PROFILE_CLEANUP = { thread: nil, failed: nil }
 
       DisabledError = Class.new(StandardError)
       ProviderError = Class.new(StandardError)
@@ -142,13 +142,18 @@ module Master
         # Ferrum >= 0.19.1 can kill Chrome asynchronously itself and returns
         # the cleanup thread. Older locked versions have only synchronous
         # #quit, so put that call on one worker instead.
-        worker = if async_quit_supported?(browser)
-                   browser.quit(wait: false)
-                 else
-                   Thread.new { browser.quit }
-                 end
-        return unless worker.is_a?(Thread)
+        raw_worker = if async_quit_supported?(browser)
+                       browser.quit(wait: false)
+                     else
+                       Thread.new { browser.quit }
+                     end
+        raise ProviderError, "#{@provider}: browser cleanup did not return a worker" unless raw_worker.is_a?(Thread)
 
+        # Observe both Ferrum's native worker and the compatibility worker.
+        # Thread#join does not surface an exception; #value does. Keep a small
+        # watcher as the profile lease and remember a failed teardown forever
+        # in this process rather than risk opening a second Chrome on that profile.
+        worker = Thread.new { observe_browser_cleanup(raw_worker) }
         PROFILE_CLEANUP[:thread] = worker
         return if worker.join(PROFILE_CLEANUP_WAIT_S)
 
@@ -156,7 +161,15 @@ module Master
           "web0", "#{@provider}: browser cleanup continues; shared profile temporarily unavailable"
         )
       rescue StandardError => e
+        PROFILE_CLEANUP[:failed] ||= e.class.name
         Master::Ground::Swallow.log(e, context: "WebChat.browser_cleanup_start", provider: @provider)
+      end
+
+      def observe_browser_cleanup(worker)
+        worker.value
+      rescue StandardError => e
+        PROFILE_CLEANUP[:failed] ||= e.class.name
+        Master::Ground::Swallow.log(e, context: "WebChat.browser_cleanup", provider: @provider)
       end
 
       def async_quit_supported?(browser)
@@ -168,6 +181,9 @@ module Master
       end
 
       def refuse_if_cleanup_pending!
+        failure = PROFILE_CLEANUP[:failed]
+        raise ProviderError, "#{@provider}: prior browser cleanup failed (#{failure}); shared profile is unavailable until restart" if failure
+
         worker = PROFILE_CLEANUP[:thread]
         raise ProviderError, "#{@provider}: prior browser cleanup is still running; shared profile is unavailable" if worker&.alive?
 
