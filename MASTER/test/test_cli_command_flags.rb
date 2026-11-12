@@ -85,6 +85,26 @@ class TestCliCommandFlags < Minitest::Test
     refute_match(/option error/, err + out)
   end
 
+  def test_structural_recipe_value_and_mode_survive_into_the_message
+    argv = ["/fix", "--recipe", "slugged_vertical_base", "--dry-run"]
+
+    assert_equal "/fix --recipe slugged_vertical_base --dry-run",
+                 @host.initial_message_from_argv(argv)
+  end
+
+  def test_structural_recipe_list_flag_survives_into_the_message
+    argv = ["/fix", "--list-recipes"]
+
+    assert_equal "/fix --list-recipes", @host.initial_message_from_argv(argv)
+  end
+
+  def test_structural_recipe_apply_flag_survives_into_the_message
+    argv = ["/fix", "--recipe", "slugged_vertical_base", "--apply"]
+
+    assert_equal "/fix --recipe slugged_vertical_base --apply",
+                 @host.initial_message_from_argv(argv)
+  end
+
   def test_other_unknown_flags_are_still_dropped
     assert_equal "/fix RAILS --autofix=off", @host.send(:initial_message_from_argv, ["/fix", "RAILS", "--bogus", "--autofix=off"])
   end
