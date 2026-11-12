@@ -186,44 +186,45 @@ module Operator
       trees = trees_for_target(target)
       key = baseline_key(target)
       cached = read_baseline(key)
-      if cached
-        Master::Trace::Dmesg.status("baseline0", "read-only pre-repair proof reused for #{key[0, 12]}, no ladder rerun")
-        return cached
-      end
-      # The target cache key fingerprints untracked files only in its scope.
-      # Preflight promises the entire shared checkout will remain read-only,
-      # including dirty/untracked paths from other trees, so the whole checkout's
-      # working bytes bracket the measurement.
-      checkout_before = checkout_snapshot
+      return reuse_baseline(key, cached) if cached
 
+      status, changed = measure_pre_repair_baseline(selected:, trees:)
+      persist_pre_repair_baseline(key:, selected:, status:, changed:)
+    end
+
+    def reuse_baseline(key, cached)
+      Master::Trace::Dmesg.status("baseline0", "read-only pre-repair proof reused for #{key[0, 12]}, no ladder rerun")
+      cached
+    end
+
+    def measure_pre_repair_baseline(selected:, trees:)
+      checkout_before = checkout_snapshot
       Master::Trace::Dmesg.status(
         "baseline0",
         "read-only pre-repair proof starting, trees=#{trees.join(", ")}, stages=#{selected.map(&:name).join(", ")}; repair follows",
       )
       status, changed = report(selected, scan_only: true, trees:, return_results: true)
-      # Stage attribution excludes pre-existing dirty paths so /fix never claims
-      # another session's edits. That means it cannot, alone, detect a read-only
-      # stage overwriting one of those files. Fingerprint the checkout again
-      # before saving any baseline; it includes tracked diffs and non-ignored
-      # untracked files even when their paths were already dirty at stage start.
       moved = checkout_changes(checkout_before)
-      # The stages measure `trees`; a change in another tree is another writer's in the shared
-      # checkout, not a read-only stage's write. A STUDIO edit made during a MASTER baseline
-      # blocked the whole run, so those are named and the baseline stands.
       changed, moved = [changed, moved].map { |paths| inside_trees(paths, trees) }
-      if changed.any? || moved.any?
-        paths = (changed + moved).uniq
-        details = paths.first(12).join(", ")
-        more = paths.size > 12 ? " and #{paths.size - 12} more" : ""
-        message = if changed.any?
-                    "read-only pre-repair proof changed #{changed.size} attributed path(s): #{details}#{more}"
-                  else
-                    "read-only pre-repair proof changed checkout state; visible path(s): #{details}#{more}"
-                  end
-        Master::Trace::Dmesg.status("baseline0", "BLOCKED - #{message}")
-        raise BaselineMutation, message
-      end
+      raise_baseline_mutation(changed, moved) if changed.any? || moved.any?
 
+      [status, changed]
+    end
+
+    def raise_baseline_mutation(changed, moved)
+      paths = (changed + moved).uniq
+      details = paths.first(12).join(", ")
+      more = paths.size > 12 ? " and #{paths.size - 12} more" : ""
+      message = if changed.any?
+                  "read-only pre-repair proof changed #{changed.size} attributed path(s): #{details}#{more}"
+                else
+                  "read-only pre-repair proof changed checkout state; visible path(s): #{details}#{more}"
+                end
+      Master::Trace::Dmesg.status("baseline0", "BLOCKED - #{message}")
+      raise BaselineMutation, message
+    end
+
+    def persist_pre_repair_baseline(key:, selected:, status:, changed:)
       snapshot = CheckRegression.snapshot(@last_results)
       write_baseline(key, snapshot)
       outcome = case status
