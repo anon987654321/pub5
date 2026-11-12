@@ -56,7 +56,7 @@ module Master
           # Both compact and verbose boots use the same evidence-backed status.
           voice = voice_output_status
           [
-            d("master0 at mainbus0: MASTER #{release_version} ##{context[:build]}, model #{model}"),
+            d("master0 at mainbus0: MASTER #{release_version} ##{context[:build]}, configured model #{model}"),
             d("host0 at mainbus0: #{context[:user]}@#{context[:host]}:#{@config['root'] || Dir.pwd}"),
             d("voice0 at mainbus0: #{voice}"),
             d("web0 at mainbus0: #{web}"),
