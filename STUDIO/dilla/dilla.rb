@@ -427,8 +427,20 @@ module Dilla
 
       # These spellings belong to the historical record charts. Keep their
       # labels on the chord event, while resolving them to usable harmony.
-      aliases = { "m7fil" => "m9", "7climax" => "9" }
-      return [aliases.fetch(rest), [], bass] if aliases.key?(rest)
+      aliases = {
+        "m7fil" => ["m9", []],
+        "7climax" => ["9", []],
+        "m11nc" => ["m11", []],
+        "7nc" => ["7", []],
+        "maj9nc" => ["maj9", []],
+        "Maj13s11" => ["maj13", ["#11"]],
+        "Maj7overG" => ["maj7", []]
+      }
+      if aliases.key?(rest)
+        quality, legacy_modifiers = aliases.fetch(rest)
+        bass ||= "G" if rest == "Maj7overG"
+        return [quality, legacy_modifiers, bass]
+      end
       return ["7alt", [], bass] if rest == "7alt"
 
       modifiers = []
