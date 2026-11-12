@@ -51,11 +51,12 @@ module Master
       def self.failure_category(error)
         message = error.message.to_s
         # Ferrum::ProcessTimeoutError says the browser did not produce a
-        # websocket URL "within N seconds"; it is not Timeout::Error and its
-        # message does not contain "timed out". Treat it as a hard timeout or
-        # the fallback chain retries the same browser profile after 30/60s.
+        # websocket URL "within N seconds"; PendingConnectionsError likewise
+        # marks a page that failed to go idle at its deadline. Neither is a
+        # Timeout::Error with a "timed out" message. Treat both as hard timeouts
+        # or the fallback chain retries the same browser profile after 30/60s.
         timeout_class = error.class.ancestors.any? do |ancestor|
-          ancestor.name.to_s.match?(/\A(?:Ferrum::)?(?:Process)?TimeoutError\z/)
+          ancestor.name.to_s.match?(/\A(?:Ferrum::)?(?:(?:Process)?TimeoutError|PendingConnectionsError)\z/)
         end
         return :timeout if timeout_class || error.is_a?(Timeout::Error) || message.match?(/timed out/i)
         return :offline if error.is_a?(SystemCallError)
