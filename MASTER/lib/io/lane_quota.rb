@@ -40,12 +40,14 @@ module Master
       PROBE_LADDER_S = [30, 60, 300, PROBE_EVERY_S].freeze
       REASON_TEXT = {
         "quota" => "quota spent",
+        "billing" => "billing hold",
         "unreachable" => "unreachable",
         "login" => "login or credential rejected",
         "guessed" => "quota spent, wait guessed",
       }.freeze
       REMEDIATION_TEXT = {
         "quota" => "wait for the provider reset; retrying this lane early will not help",
+        "billing" => "resolve the provider account's past-due balance; this lane is held for six hours, without rapid quota probes",
         "unreachable" => "check DNS/network or start the local provider, then probe again",
         "login" => "refresh this provider's CLI login or configured API credential, then probe again",
         "guessed" => "the provider stated no reset time; wait for the next bounded probe",
@@ -131,6 +133,7 @@ module Master
       # Why the lane died: the kind of reply, or a guessed wait for a spent one.
       def reason_of(verdict)
         case verdict.kind
+        when :billing then "billing"
         when :unreachable then "unreachable"
         when :auth then "login"
         else verdict.unknown ? "guessed" : "quota"

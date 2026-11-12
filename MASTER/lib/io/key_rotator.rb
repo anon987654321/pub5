@@ -81,10 +81,11 @@ module Master
         populated = Array(vars).uniq.select do |var|
           ENV[var].to_s.length >= Master::MIN_API_KEY_LENGTH_HEURISTIC
         end
-        return true if populated.size <= 1
+        credentials = populated.map { |var| ENV[var].to_s }.uniq
+        return true if credentials.size <= 1
 
         raise ArgumentError,
-              "provider #{provider} has multiple populated credentials (#{populated.join(', ')}); configure one key only"
+              "provider #{provider} has multiple distinct populated credentials (#{populated.join(', ')}); configure one key only"
       end
     end
   end

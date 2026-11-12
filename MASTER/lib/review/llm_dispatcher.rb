@@ -672,7 +672,6 @@ module Master
           model:, status:, latency_ms:,
           **Master::Execution::Contract.diagnostic_fields(error)
         )
-        Io::KeyRotator.rotate_for(model) if %i[rate_limit quota_exceeded].include?(status)
       rescue StandardError => e
         @bus&.publish(
           "provider_health:record_error",

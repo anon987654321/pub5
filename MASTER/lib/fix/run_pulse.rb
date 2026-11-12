@@ -167,26 +167,17 @@ module Master
       end
 
       # Called from the heartbeat, never from an event handler: finishing a
-      # call happens inside the dispatcher that already holds runtime locks
-      # (the fresh run of 2026-11-07 raised deadlock; recursive locking while
-      # this ran inside llm:provider_outcome), so the handler only sets state
-      # and the heartbeat does the lane scan and the one status line. Three
-      # dead provider outcomes in a row with no success between them: the run
-      # stops preferring a floor that answers nothing and names the live lane
-      # that takes the work (2026-11-07, the MASTER crawl the aborts never
-      # saw). Once per run; a success does not lift it — the floor died once
-      # today, and one working call after an hour is not a floor.
+      # call happens inside the dispatcher that already holds runtime locks.
+      # Three consecutive provider failures may promote the free floor, but
+      # the replacement must have a successful completion in this watched run.
+      # A successful provider completion resets this consecutive-call streak;
+      # LaneSelection separately requires a free success to prove floor recovery.
       def promote_live_lane
         return unless @promote_pending && @promoted_live.nil?
 
-        # The savior has to be able to answer, not merely be alive: live_lanes
-        # walks past the hand-kept dead list, and 2026-11-07's run promoted
-        # gemini-2.5-flash - dead by hand in data/lanes.yml - as the lane that
-        # "takes the work". LaneState.usable? reads every refusing store.
-        live = Master::Io::LaneSelection.live_lanes.find do |id|
-          !Master::Io::LaneSelection::FREE_CLASS_KINDS.include?(Master::Io::LaneSelection.kind(id)) &&
-            Master::Io::LaneState.usable?(id)
-        end
+        live = Master::Io::LaneSelection.live_savior
+        return unless live
+
         @promoted_live = live
         @promote_pending = false
         Master::Io::LaneSelection.suspend_free_floor!(live)
@@ -309,7 +300,11 @@ module Master
         # dead outcome. Three dead calls in a row without one success is also
         # the evidence the free floor is not answering today; the heartbeat
         # promotes the live lane off that evidence.
-        return if payload[:status] == :success
+        if payload[:status] == :success
+          @dead_streak = 0
+          @promote_pending = false
+          return
+        end
 
         @dead_streak += 1
         @promote_pending = true if @dead_streak >= DEAD_STREAK_LIMIT && @promoted_live.nil?

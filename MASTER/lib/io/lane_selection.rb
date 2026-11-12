@@ -35,6 +35,7 @@ module Master
       # ModelRouter#fallback_rank hands it, so the per-call chain and the
       # selection order agree that every answering class goes first.
       FLOOR_SUSPENDED_RANK = 9
+      FLOOR_LOCK = Mutex.new
       NOT_SUBSCRIPTION = 10_000
       NEUTRAL_LATENCY_S = 45
       UNMEASURED_TIMEOUT_S = 60
@@ -498,10 +499,14 @@ module Master
       # while a subscription or API lane is live is the defect that spent hours
       # on a free model. One warning per lane.
       def watch_free_class!(on = true)
-        @watching = on
-        @warned = {}
-        @floor_suspended = false
-        @floor_dead_count = 0
+        FLOOR_LOCK.synchronize do
+          @watching = on
+          @warned = {}
+          @floor_suspended = false
+          @floor_dead_count = 0
+          @floor_notice = nil
+          @successful_live_saviors = {}
+        end
       end
 
       # The free floor proved dead after consecutive zero-success outcomes
@@ -512,65 +517,67 @@ module Master
       # so nobody ever has to emit a trace line from inside an event handler
       # or another lock's footprint.
       def suspend_free_floor!(live = nil)
-        return if @floor_suspended
+        id = live.to_s
+        return if id.empty? || !LaneState.usable?(id)
 
-        @floor_suspended = true
-        @floor_notice = "free floor suspended for this run: " \
-                        "#{live || "the live non-free lane"} takes the work while it answers"
-        true
+        FLOOR_LOCK.synchronize do
+          return if @floor_suspended
+          return unless @successful_live_saviors&.key?(id)
+
+          @floor_suspended = true
+          @floor_notice = "free floor suspended for this run: #{id} takes the work while it answers"
+          true
+        end
       end
 
       # Exactly one status line, printed by whichever ticker thread asks first.
       def announce_free_floor_suspension
-        return unless @floor_notice
+        notice = FLOOR_LOCK.synchronize { @floor_notice }
+        return unless notice
 
-        Master::Trace::Dmesg.status("fix0", @floor_notice)
+        Master::Trace::Dmesg.status("fix0", notice)
       ensure
-        @floor_notice = nil
+        FLOOR_LOCK.synchronize { @floor_notice = nil }
       end
 
-      def free_floor_suspended? = @floor_suspended == true
+      def free_floor_suspended? = FLOOR_LOCK.synchronize { @floor_suspended == true }
 
       FLOOR_DEAD_LIMIT = 3
 
-      # The dispatcher funnels every provider outcome in this process through
-      # note_provider_outcome — parent and pass-0 child alike. RunPulse listens
-      # on the bus, but a child's bus events never reach the parent's pulse, so
-      # the walk that spends hours on a dead free floor is exactly the walk no
-      # pulse can see. This counter is process-local, so the process that is
-      # suffering counts for itself: dead free-class answers raise the count,
-      # and at three with no free-class success anywhere in the run, a live
-      # non-free lane takes the floor — suspended in THIS process, which is the
-      # only suspension that matters to the calls this process still makes.
+      # A candidate becomes the free floor's replacement only after a real
+      # completion in this watched run. Availability alone is not proof.
       def note_provider_outcome(model, status, cfg: config, alive: method(:alive?))
         id = model.to_s
+        result = status.to_sym
         free = FREE_CLASS_KINDS.include?(kind(id))
-        @floor_dead_count ||= 0
-        if status.to_sym == :success
-          # A free-class success is the floor actually working; only that lifts it.
-          @floor_dead_count = 0 if free
-          return
-        end
-        unless free
-          Master::Trace::Dmesg.status("fix0", "floor debug: paid death not counted #{id}") if ENV["MASTER_FLOOR_DEBUG"] == "1"
-          return
-        end
-        @floor_dead_count += 1
-        if ENV["MASTER_FLOOR_DEBUG"] == "1"
-          Master::Trace::Dmesg.status("fix0", "floor debug: dead #{id}, count #{@floor_dead_count}/#{FLOOR_DEAD_LIMIT}")
-          Master::Trace::Dmesg.status("fix0", "floor debug: branch state count=#{@floor_dead_count.inspect} limit=#{FLOOR_DEAD_LIMIT.inspect} suspended=#{@floor_suspended.inspect} watching=#{@watching.inspect}")
-        end
-        return unless @floor_dead_count >= FLOOR_DEAD_LIMIT
-        return if @floor_suspended
 
-        Master::Trace::Dmesg.status("fix0", "floor debug: entering suspend branch, scanning live lanes") if ENV["MASTER_FLOOR_DEBUG"] == "1"
+        dead_count, suspended = FLOOR_LOCK.synchronize do
+          @successful_live_saviors ||= {}
+          if result == :success
+            if free
+              @floor_dead_count = 0
+            else
+              @successful_live_saviors[id] = true
+            end
+          elsif free
+            @floor_dead_count = (@floor_dead_count || 0) + 1
+          else
+            @successful_live_saviors.delete(id)
+          end
+          [@floor_dead_count.to_i, @floor_suspended == true]
+        end
+
+        return if result == :success && free
+        return if result != :success && !free
+        return if dead_count < FLOOR_DEAD_LIMIT || suspended
+
         live = live_savior(cfg:, alive:)
-        suspend_free_floor!(live)
-        Master::Trace::Dmesg.status("fix0", "floor debug: suspending, live=#{live.inspect}") if ENV["MASTER_FLOOR_DEBUG"] == "1"
-        announce_free_floor_suspension
+        return unless live
+
+        if suspend_free_floor!(live)
+          announce_free_floor_suspension
+        end
       rescue StandardError => e
-        # A count that dies in silence is not a count; the debug instrument
-        # names its own failure so a swallowed exception cannot hide it.
         if ENV["MASTER_FLOOR_DEBUG"] == "1"
           Master::Trace::Dmesg.status("fix0", "floor debug: counter crashed #{e.class}: #{e.message}")
           raise if ENV["MASTER_FLOOR_DEBUG_STRICT"] == "1"
@@ -578,16 +585,14 @@ module Master
         nil
       end
 
-      # The free floor's replacement: the first live non-free lane that can
-      # actually answer. live_lanes walks past the hand-kept dead list (alive?
-      # never reads it), so 2026-11-07's walk announced "gemini-2.5-flash is
-      # live" thirty times over while data/lanes.yml held it dead by hand and
-      # every dead free slug still cost the wheel its call anyway. LaneState
-      # is the one question that reads every store that may refuse - dead by
-      # hand or quota, silent in its cool-off, parked, spent.
+      # The free floor's replacement must be both usable by every refusal store
+      # and proven by a successful provider completion in this run.
       def live_savior(cfg: config, alive: method(:alive?))
+        successful = FLOOR_LOCK.synchronize { (@successful_live_saviors || {}).keys }
         live_lanes(cfg:, alive:).find do |candidate|
-          !FREE_CLASS_KINDS.include?(kind(candidate)) && LaneState.usable?(candidate)
+          successful.include?(candidate) &&
+            !FREE_CLASS_KINDS.include?(kind(candidate)) &&
+            LaneState.usable?(candidate)
         end
       end
 

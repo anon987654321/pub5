@@ -40,9 +40,9 @@ module Master
         end
 
         def build_chat_session(selected_model, messages, sys:, image:, temperature: nil, format: nil)
-          # A context copies the configuration, so the key this call sends is the key
-          # it started with. KeyRotator swaps the global key under rule groups that
-          # run in threads, and a shared config handed that swap to calls in flight.
+          # A context copies the configuration so the call retains the one
+          # configured credential for its provider. Quota or rate-limit outcomes
+          # never switch identities; failover moves across eligible providers.
           chat_session = RubyLLM.context.chat(model: selected_model)
           apply_system_instructions(chat_session, selected_model, sys)
           chat_session.with_temperature(temperature) if temperature && chat_session.respond_to?(:with_temperature)
@@ -372,8 +372,9 @@ module Master
         OFFLINE_RE = Regexp.new(OFFLINE_SIGNS.map { |sign| Regexp.escape(sign) }.join("|"), Regexp::IGNORECASE)
         # A spent subscription reads as a spent balance: codex answers "You've
         # hit your usage limit" until its plan resets, and no retry cures that.
-        BILLING_SIGNS = ["insufficient credits", "credit balance", "payment required", "402", "billing",
-                         "usage limit", "quota reached", "quota exceeded"].freeze
+        BILLING_SIGNS = ["insufficient credits", "credit balance", "payment required", "payment past due",
+                         "payment is past due", "402", "billing", "usage limit", "quota reached",
+                         "quota exceeded"].freeze
         BILLING_RE = Regexp.union(BILLING_SIGNS.map { |sign| /\b#{Regexp.escape(sign)}/i }).freeze
         # An overloaded upstream is a rate limit in all but name: the free
         # nemotron answered "Service temporarily overloaded", and retrying it in
