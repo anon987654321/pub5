@@ -298,4 +298,26 @@ class Takeaway::OrderTest < ActiveSupport::TestCase
       assert created.courier_distance_km < 1.0
     end
   end
+
+test "a stale delivery attempt cannot repeat the status notification" do
+    ActsAsTenant.with_tenant(@city) do
+      restaurant = Takeaway::Restaurant.create!(
+        user: @owner, name: "Serialized Kitchen", address: "Marken 18",
+        cuisine_type: "Norwegian", city: @city
+      )
+      order = ticket!(restaurant, delivery_address: "Nordnesveien 8")
+      assert order.confirm!
+      assert order.prepare!
+      assert order.dispatch!
+
+      current = Takeaway::Order.find(order.id)
+      stale = Takeaway::Order.find(order.id)
+      before = Notification.where(user: @buyer, kind: "order").count
+
+      assert current.deliver!
+      assert_not stale.deliver!
+      assert_equal "delivered", order.reload.status
+      assert_equal before + 1, Notification.where(user: @buyer, kind: "order").count
+    end
+  end
 end
