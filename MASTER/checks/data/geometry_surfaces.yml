@@ -234,6 +234,13 @@ settle_images:
   - selector: "[data-lazy-image-src-value]"
     attribute: "data-lazy-image-src-value"
 
+# Representative pages for the bounded width sweep. Keep a product's most
+# geometry-sensitive surfaces in the sweep instead of relying on YAML row order.
+reflow_priority:
+  brgen: [messenger, core, markedsplass_marketplace_listings_index]
+  amber: [home, wardrobe, outfits]
+  bsdports: [home, ports_index, search_results]
+
 # State matrix (BackstopJS's scenario list, read by Deploy::StateMatrix): each
 # component is captured in its declared states and at each width, one cropped
 # shot per cell, tiled into one image per component. Cells run mobile first
