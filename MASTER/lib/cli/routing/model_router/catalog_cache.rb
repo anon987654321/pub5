@@ -72,7 +72,7 @@ module Master
           rescue StandardError => e
             # A cache write must never cost a turn: the live answer is already
             # in hand, the snapshot is a courtesy to the next offline start.
-            Master::Ground::Swallow.log(e, context: "ModelRouter::CatalogCache.store", path: path)
+            Master::Ground::Swallow.log(e, context: "ModelRouter::CatalogCache.store", path:)
             false
           end
 
@@ -90,7 +90,7 @@ module Master
             parsed = JSON.parse(File.read(path))
             parsed.is_a?(Hash) && parsed["endpoints"].is_a?(Hash) ? parsed : { "version" => 1, "endpoints" => {} }
           rescue JSON::ParserError, EncodingError, SystemCallError => e
-            Master::Ground::Swallow.log(e, context: "ModelRouter::CatalogCache.read", path: path)
+            Master::Ground::Swallow.log(e, context: "ModelRouter::CatalogCache.read", path:)
             { "version" => 1, "endpoints" => {} }
           end
         end

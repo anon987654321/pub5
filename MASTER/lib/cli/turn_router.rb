@@ -136,7 +136,6 @@ module Master
       FIX_SUBJECT = /\b(?:bugs?|violations?|lint|tests?|specs?|errors?|failures?|code|build|checks?)\b/i
       FIX_COMMAND = /\A\s*fix(?:\s*[.!]?\s*\z|#{FIX_TARGET}|\b(?=.*#{FIX_SUBJECT}))/i
 
-
       # A sentence that is exactly a registry word, "status" or "help", runs that
       # command without a model's inference. Below the visitor check, as every route
       # to the registry is: a visitor typing "status" gets a conversation.

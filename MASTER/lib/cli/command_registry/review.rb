@@ -122,7 +122,7 @@ module Master
         words = raw.to_s.strip.split(/\s+/)
         words.shift if words.first == "size"
         value = words.join(" ")
-        return nil if value.empty?
+        return if value.empty?
 
         mode = Master::CLI::Face::Sizing.parse(value)
         return "face0: size is auto, small, large or WxH" unless mode
