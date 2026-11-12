@@ -61,13 +61,21 @@ class TestRenderer < Minitest::Test
     assert_match(/tasks0 at mainbus0: .*; \/help by task/, text)
   end
 
-  def test_compact_splash_reports_web_configuration_without_claiming_readiness
+  def test_compact_splash_reports_web_configuration_as_unverified
     renderer = FakeRenderer.new(config: {})
 
     renderer.stub(:splash_web_url, "https://master.example.invalid") do
       text = strip_ansi(renderer.splash("model"))
 
-      assert_includes text, "web0 at mainbus0: configured"
+      assert_includes text, "web0 at mainbus0: configured, unverified"
+      refute_includes text, "web0 at mainbus0: ready"
+    end
+
+    authenticated = FakeRenderer.new(config: { "web_token" => "present" })
+    authenticated.stub(:splash_web_url, "https://master.example.invalid") do
+      text = strip_ansi(authenticated.splash("model"))
+
+      assert_includes text, "web0 at mainbus0: configured, token set, unverified"
       refute_includes text, "web0 at mainbus0: ready"
     end
   end
