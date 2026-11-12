@@ -37,6 +37,7 @@ module Master
       ROLLBACK_WAIT_SECONDS = 30
 
       WATCHING_LOCK = Mutex.new
+      RUN_LOCK = Mutex.new
 
       class << self
         attr_reader :current
@@ -50,20 +51,56 @@ module Master
         def unwatch!(run) = WATCHING_LOCK.synchronize { (@watching ||= []).delete(run) }
 
         def begin_run(root:, max_passes:, bus: nil, target: nil)
-          # Nested tree passes and check re-entries belong to the command's one
-          # budget. Do not restart its clock, watchdog, lane failures, or ledger.
-          return @current if (@shared_depth || 0).to_i.positive? && @current
+          # Nesting belongs to the caller's fiber, never to the process-wide run.
+          # A watcher or second interactive caller must not inherit another run.
+          if Thread.current[:master_fix_shared_depth].to_i.positive?
+            run = @current
+            return run if run && Thread.current[:master_fix_shared_run].equal?(run)
 
-          finish_run
-          # A run finish_run did not end (a raise in its report, or a stub) still has a watchdog
-          # beating; replaced unstopped, nothing could reach it again, and its stall rule later
-          # sent TERM to this process. test_fix_convergence stubbed finish_run and left one so.
+            raise "RunBudget shared scope lost its owned run"
+          end
+
+          current, owner, starting = RUN_LOCK.synchronize { [@current, @run_owner, @starting] }
+          if starting || (current && owner && !owner.equal?(Fiber.current))
+            raise "RunBudget is already active in another fiber"
+          end
+
+          finish_run if current
           @current&.stop!
-          ToolBreaker.reset!
-          RunLedger.begin_run!
-          Refusals.begin_run!
-          Master::Review::LLMDispatcher::PassClock.cap_calls!(call_cap_s)
-          @current = new(root:, max_passes:).start!.tap { |run| run.announce(target:, bus:) }
+
+          RUN_LOCK.synchronize do
+            if @starting || (@current && @run_owner && !@run_owner.equal?(Fiber.current))
+              raise "RunBudget is already active in another fiber"
+            end
+            @current = nil
+            @starting = true
+            @run_owner = Fiber.current
+          end
+
+          run = nil
+          begin
+            ToolBreaker.reset!
+            RunLedger.begin_run!
+            Refusals.begin_run!
+            Master::Review::LLMDispatcher::PassClock.cap_calls!(call_cap_s)
+            run = new(root:, max_passes:).start!
+            run.announce(target:, bus:)
+            RUN_LOCK.synchronize do
+              @current = run
+              @starting = false
+            end
+            run
+          rescue StandardError
+            run&.stop!
+            RUN_LOCK.synchronize do
+              if @run_owner.equal?(Fiber.current)
+                @current = nil if @starting
+                @starting = false
+                @run_owner = nil if @current.nil?
+              end
+            end
+            raise
+          end
         end
 
         # Every model call of a run ends inside a file's repair budget, and that budget inside the
@@ -71,28 +108,40 @@ module Master
         def call_cap_s = [RunLedger.file_budget_s, RunPulse::FINISH_WINDOW_SECONDS * 4 / 5].min
 
         def with_shared_run(root:, max_passes:, bus: nil, target: nil)
-          outer = (@shared_depth || 0).to_i.zero?
-          begin_run(root:, max_passes:, bus:, target:) if outer
-          @shared_depth = (@shared_depth || 0).to_i + 1
+          depth = Thread.current[:master_fix_shared_depth].to_i
+          outer = depth.zero?
+          started = false
+
+          if outer
+            run = begin_run(root:, max_passes:, bus:, target:)
+            Thread.current[:master_fix_shared_run] = run
+            started = true
+          else
+            run = Thread.current[:master_fix_shared_run]
+            raise "RunBudget nested scope does not own the active run" unless run && @current.equal?(run)
+          end
+
+          Thread.current[:master_fix_shared_depth] = depth + 1
           # A startup disk/protected-path abort is already a terminal safety
           # decision. Do not run trace, research, checks, or model work afterwards.
-          result = if @current&.stopping
-                     Master::Result.err(@current.stopping, category: @current.stop_category)
-                   else
-                     yield
-                   end
-          result
+          if run&.stopping
+            Master::Result.err(run.stopping, category: run.stop_category)
+          else
+            yield
+          end
         ensure
           if outer
-            @shared_depth = 0
-            @shared_finishing = true
-            begin
-              finish_run(reason: "command scope ended")
-            ensure
-              @shared_finishing = false
+            if started
+              Thread.current[:master_fix_shared_depth] = 0
+              begin
+                finish_run(reason: "command scope ended")
+              ensure
+                Thread.current[:master_fix_shared_run] = nil
+                Thread.current[:master_fix_shared_depth] = 0
+              end
             end
           else
-            @shared_depth = [(@shared_depth || 0).to_i - 1, 0].max
+            Thread.current[:master_fix_shared_depth] = depth
           end
         end
 
@@ -110,16 +159,25 @@ module Master
         end
 
         def finish_run(reason: "completed")
-          return @current if (@shared_depth || 0).to_i.positive? && !@shared_finishing
+          return @current if Thread.current[:master_fix_shared_depth].to_i.positive?
 
-          run = @current
+          run, owner, starting = RUN_LOCK.synchronize { [@current, @run_owner, @starting] }
+          return run if starting && owner && !owner.equal?(Fiber.current)
+          return run if run && owner && !owner.equal?(Fiber.current)
+
           begin
             run&.finish!(reason)
           ensure
             # Reporting is part of finalization and can itself fail (for
-            # example, a full log filesystem). Never leave a dead budget as
-            # the current run after its watchdog has been stopped.
-            @current = nil if @current.equal?(run)
+            # example, a full log filesystem). Never leave a dead budget current.
+            RUN_LOCK.synchronize do
+              if @current.equal?(run) && !@starting
+                @current = nil
+                @run_owner = nil
+              elsif @current.nil? && !@starting
+                @run_owner = nil
+              end
+            end
             Master::Review::LLMDispatcher::PassClock.cap_calls!(nil) unless @current
           end
         end

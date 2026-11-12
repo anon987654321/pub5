@@ -198,12 +198,15 @@ Minitest::Test.class_eval do
 
     runs = Master::Fix::RunBudget.watching
     runs |= [Master::Fix::RunBudget.current].compact
-    return if runs.empty?
-
-    STDERR.puts "test0: #{self.class}##{name} left #{runs.size} RunBudget run(s) open; stopped their watchdogs"
-    runs.each(&:stop!)
+    unless runs.empty?
+      STDERR.puts "test0: #{self.class}##{name} left #{runs.size} RunBudget run(s) open; stopped their watchdogs"
+      runs.each(&:stop!)
+    end
     Master::Fix::RunBudget.instance_variable_set(:@current, nil)
-    Master::Fix::RunBudget.instance_variable_set(:@shared_depth, 0)
+    Master::Fix::RunBudget.instance_variable_set(:@run_owner, nil)
+    Master::Fix::RunBudget.instance_variable_set(:@starting, false)
+    Thread.current[:master_fix_shared_depth] = 0
+    Thread.current[:master_fix_shared_run] = nil
     Master::Review::LLMDispatcher::PassClock.cap_calls!(nil) if defined?(Master::Review::LLMDispatcher::PassClock)
   end
 

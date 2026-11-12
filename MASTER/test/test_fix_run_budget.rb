@@ -211,8 +211,8 @@ class TestFixRunBudget < Minitest::Test
     assert_includes result.message, "disk pressure"
     assert_nil Budget.current
   ensure
-    Budget.instance_variable_set(:@shared_depth, 0)
-    Budget.instance_variable_set(:@shared_finishing, false)
+    Thread.current[:master_fix_shared_depth] = 0
+    Thread.current[:master_fix_shared_run] = nil
     Budget.finish_run
     Master::Fix::RunLedger.reset!
   end
@@ -426,6 +426,33 @@ class TestFixRunBudget < Minitest::Test
     refute(lines.any? { |line| line.start_with?("bsdports0") })
   end
 
+  def test_a_concurrent_fiber_cannot_take_over_a_live_run
+    active = Object.new
+    Budget.instance_variable_set(:@current, active)
+    Budget.instance_variable_set(:@run_owner, Fiber.current)
+    outcome = Queue.new
+
+    worker = Thread.new do
+      begin
+        Budget.with_shared_run(root: @root, max_passes: 1) { outcome << :ran }
+      rescue StandardError => error
+        outcome << error
+      end
+    end
+
+    result = outcome.pop
+    worker.join
+
+    assert_instance_of RuntimeError, result
+    assert_match(/already active in another fiber/, result.message)
+    assert_same active, Budget.current, "the existing run must remain owned by its caller"
+  ensure
+    worker&.kill
+    Budget.instance_variable_set(:@current, nil)
+    Budget.instance_variable_set(:@run_owner, nil)
+    Budget.instance_variable_set(:@starting, false)
+  end
+
   def test_nested_fix_scopes_share_one_command_budget
     first_run = nil
 
@@ -457,7 +484,7 @@ class TestFixRunBudget < Minitest::Test
 
     assert_equal :command_complete, result
     assert_nil Budget.current
-    assert_equal 0, Budget.instance_variable_get(:@shared_depth)
+    assert_equal 0, Thread.current[:master_fix_shared_depth].to_i
   ensure
     Budget.finish_run
     Master::Fix::RunLedger.reset!
@@ -499,13 +526,13 @@ class TestFixRunBudget < Minitest::Test
     end
 
     assert_equal "simulated finish failure", error.message
-    assert_equal false, Budget.instance_variable_get(:@shared_finishing)
-    assert_equal 0, Budget.instance_variable_get(:@shared_depth)
+    refute Thread.current[:master_fix_shared_run]
+    assert_equal 0, Thread.current[:master_fix_shared_depth].to_i
   ensure
     Budget.finish_run
     Master::Fix::RunLedger.reset!
-    Budget.instance_variable_set(:@shared_finishing, false)
-    Budget.instance_variable_set(:@shared_depth, 0)
+    Thread.current[:master_fix_shared_run] = nil
+    Thread.current[:master_fix_shared_depth] = 0
   end
 
   def test_shared_budget_is_finalized_when_a_nested_pass_raises
@@ -523,7 +550,7 @@ class TestFixRunBudget < Minitest::Test
     assert_equal "simulated pass failure", error.message
     refute_nil started
     assert_nil Budget.current
-    assert_equal 0, Budget.instance_variable_get(:@shared_depth)
+    assert_equal 0, Thread.current[:master_fix_shared_depth].to_i
   ensure
     Budget.finish_run
   end
