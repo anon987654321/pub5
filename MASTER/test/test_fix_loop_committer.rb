@@ -576,6 +576,25 @@ end
     assert_includes seen, "exec"
   end
 
+  def test_lint_timeout_is_reported_as_a_timeout_not_a_missing_binary
+    write_file("Gemfile", "source 'https://rubygems.org'\n")
+    write_file("lib/ok.rb", "OK = 1\n")
+    git = FakeGit.new([], ["lib/ok.rb"])
+    bus = FakeBus.new
+    timeout = Master::Io::Exec::TimeoutError.new("process timed out after 120s")
+    seen = nil
+
+    Master::Io::Exec.stub(:capture3, ->(*_cmd, **kwargs) { seen = kwargs; raise timeout }) do
+      run_committer(git, bus, OK_MESSAGE)
+    end
+
+    assert_equal 120, seen.fetch(:timeout)
+    refute_empty git.commits
+    event = bus.events.find { |name, payload| name == "fix_loop:commit_blocked" && payload[:reason] == "rubocop_timeout" }
+    refute_nil event
+    refute_equal "rubocop_unavailable", event.last[:reason]
+  end
+
   def test_lint_command_exception_blocks_the_commit
     write_file("Gemfile", "source 'https://rubygems.org'\n")
     write_file("lib/ok.rb", "OK = 1\n")
