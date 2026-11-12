@@ -940,7 +940,8 @@ module Dilla
       style = (@progress["feel"] || {}).fetch("bass", "dub")
       start_bar = slot[:start_bar]
       span_s = slot[:bars] * @groove.bar_s
-      root_midi = 24 + chord[:root] # low register
+      bass_pc = chord[:bass] || chord[:root]
+      root_midi = 24 + bass_pc # honour slash-bass inversions in the low register
       root_midi += 12 while root_midi < 33
       events = []
       case style
@@ -960,7 +961,7 @@ module Dilla
           midi = if b.zero?
                    root_midi
                  elsif b == beats - 1
-                   approach(next_chord[:root])
+                   approach(next_chord[:bass] || next_chord[:root])
                  else
                    [root_midi, root_midi + 7, root_midi + 5].fetch(@rng.rand(3))
                  end
