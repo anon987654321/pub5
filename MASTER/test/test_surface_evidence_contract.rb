@@ -73,4 +73,32 @@ class TestSurfaceEvidenceContract < Minitest::Test
     refute compact.to_s.include?("private.invalid")
     refute compact.to_s.include?("secret")
   end
+  def test_runtime_probe_routes_each_language_to_its_parser_without_shell_interpolation
+    instance = evidence
+    source_class = Struct.new(:path)
+    instance.instance_variable_set(:@root, Dir.pwd)
+    instance.instance_variable_set(:@plan, Struct.new(:sources).new(
+      %w[app.rb app.erb app.js app.ts app.sh app.ksh app.zsh].map { |path| source_class.new(path) }
+    ))
+    instance.define_singleton_method(:deadline_remaining) { |_deadline| 30 }
+    instance.define_singleton_method(:executable_path) { |name| "/usr/bin/#{name}" }
+    instance.define_singleton_method(:execute_command) do |*_args, **_options|
+      { "status" => "passed" }
+    end
+    instance.define_singleton_method(:rails_runtime_probes) do |_deadline|
+      { failures: [], unavailable: [], checked: [] }
+    end
+
+    result = instance.send(:runtime_probe_outcomes, 60)
+
+    assert_equal 1, result.dig(:checked, "ruby")
+    assert_equal 1, result.dig(:checked, "erb")
+    assert_equal 1, result.dig(:checked, "javascript")
+    assert_equal 1, result.dig(:checked, "sh")
+    assert_equal 1, result.dig(:checked, "ksh")
+    assert_equal 1, result.dig(:checked, "zsh")
+    assert_empty result.fetch(:failures)
+    assert_match(/TypeScript\/JSX/, result.fetch(:unavailable).first)
+  end
+
 end
