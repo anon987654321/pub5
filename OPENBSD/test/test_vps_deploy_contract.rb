@@ -859,10 +859,10 @@ class VpsDeployContractTest < Minitest::Test
   end
 
 
-def test_each_rails_deploy_proves_app_health_after_its_restart
+  def test_each_rails_deploy_proves_app_health_after_its_restart
     service = File.read(File.join(ROOT, "RAILS", "_service.sh"), encoding: "UTF-8")
     deploy = File.read(File.join(ROOT, "RAILS", "_deploy.sh"), encoding: "UTF-8")
-    probe = service[/post_restart_probe\(\) \{.*?^\}/m]
+    probe = service[/post_restart_probe\\(\\) \\{.*?^\\}/m]
     refute_nil probe
     assert_includes probe, 'http://127.0.0.1:${app_port}/up'
     assert_includes deploy, 'post_restart_probe "$APP_NAME" "$APP_PORT"'
@@ -873,4 +873,5 @@ def test_each_rails_deploy_proves_app_health_after_its_restart
     assert_operator restart, :<, health
     assert_operator health, :<, done
   end
+
 end
