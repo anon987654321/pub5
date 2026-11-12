@@ -28,17 +28,20 @@ class TestCandidateThreads < Minitest::Test
     end
   end
 
-  def test_candidate_thread_clears_an_inherited_last_answer_model
-    previous = Thread.current[:master_llm_answer_model]
+  def test_candidate_thread_clears_inherited_answer_and_selected_writer_models
+    previous_answer = Thread.current[:master_llm_answer_model]
+    previous_authors = Thread.current[:master_fix_candidate_author_models]
     Thread.current[:master_llm_answer_model] = "stale-planner-model"
+    Thread.current[:master_fix_candidate_author_models] = ["stale-writer-model"]
 
     rows = repair.send(:candidate_threads, 2, violation: {}, event: "test") do |_index|
-      Thread.current[:master_llm_answer_model]
+      [Thread.current[:master_llm_answer_model], Thread.current[:master_fix_candidate_author_models]]
     end
 
-    assert_equal [nil, nil], rows
+    assert_equal [[nil, []], [nil, []]], rows
   ensure
-    Thread.current[:master_llm_answer_model] = previous
+    Thread.current[:master_llm_answer_model] = previous_answer
+    Thread.current[:master_fix_candidate_author_models] = previous_authors
   end
 
   def test_partial_candidate_startup_is_killed_when_a_later_thread_creation_fails
