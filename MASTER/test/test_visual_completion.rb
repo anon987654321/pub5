@@ -31,7 +31,7 @@ class TestVisualCompletion < Minitest::Test
   end
 
   def test_reflow_check_covers_core_mobile_tablet_and_desktop_widths
-    required = [320, 360, 375, 390, 430, 480, 640, 768, 1024, 1280]
+    required = [320, 360, 375, 390, 430, 480, 640, 768, 1024, 1279, 1280, 1281]
 
     assert_empty required - Deploy::GeometryProbe.reflow_widths
   end
