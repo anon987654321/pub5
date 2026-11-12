@@ -407,10 +407,18 @@ module Dilla
       rest = m[3]
       quality, modifiers, bass = split_quality(rest)
       table = theory.fetch("qualities")
-      intervals = table.fetch(quality) { table.fetch("7") }
+      intervals = table[quality]
+      unless intervals.is_a?(Array) && !intervals.empty?
+        raise ArgumentError,
+              "unknown chord quality #{quality.inspect} in #{symbol.inspect}; supported: #{table.keys.sort.join(', ')}"
+      end
       intervals = apply_modifiers(intervals, modifiers)
       root_pc = theory.fetch("keys").fetch(root_name) { raise ArgumentError, "unknown root #{root_name}" }
-      bass_pc = bass && theory.fetch("keys")[bass]
+      bass_pc = if bass
+                  theory.fetch("keys").fetch(bass) do
+                    raise ArgumentError, "unknown slash-bass note #{bass.inspect} in #{symbol.inspect}"
+                  end
+                end
       named_voicing = theory.fetch("named_voicings", {}).fetch(symbol, nil)
       {
         root: root_pc, intervals: intervals.uniq.sort, quality: quality,
@@ -600,10 +608,36 @@ module Dilla
       build.call([], tone_set)
     end
 
+    # Match voices one-to-one, not independently to the nearest old note.
+    # The previous check let several new notes claim the same pitch and called
+    # that voice-leading even when the other voices had disappeared.
     def within_lead?(stack, previous)
       return true unless previous
 
-      stack.all? { |note| previous.map { |p| (p - note).abs }.min <= MAX_LEAD }
+      current = stack.map(&:to_i)
+      prior = previous.map(&:to_i)
+      return false if current.empty? || prior.empty?
+
+      smaller, larger = current.length <= prior.length ? [current, prior] : [prior, current]
+      candidates = smaller.map do |note|
+        larger.each_index.select { |index| (larger[index] - note).abs <= MAX_LEAD }
+      end
+      return false if candidates.any?(&:empty?)
+
+      order = (0...smaller.length).sort_by { |index| candidates[index].length }
+      assign = lambda do |position, used|
+        return true if position == order.length
+
+        candidates.fetch(order.fetch(position)).any? do |candidate|
+          next false if used[candidate]
+
+          used[candidate] = true
+          matched = assign.call(position + 1, used)
+          used[candidate] = false
+          matched
+        end
+      end
+      assign.call(0, Array.new(larger.length, false))
     end
 
     def singing_top?(stack)
