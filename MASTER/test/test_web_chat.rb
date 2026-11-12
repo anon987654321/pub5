@@ -199,6 +199,17 @@ class TestWebChat < Minitest::Test
     assert_raises(Master::Io::WebChat::ProviderError) { chat.ask(prompt: "ping") }
   end
 
+  def test_provider_browser_deadlines_fit_inside_the_free_lane_deadline
+    providers = Master.models_config.dig("ferrum_web_chat", "providers")
+    limit = Master::Io::LaneSelection.free_call_timeout_s
+
+    refute_empty providers
+    providers.each do |name, config|
+      assert_operator config.fetch("timeout").to_i, :<=, limit,
+                      "#{name} browser timeout must not outlive the dispatcher call ceiling"
+    end
+  end
+
   def test_ferrum_timeout_is_below_the_dispatcher_free_lane_ceiling
     chat = build_chat
     assert_equal 3, chat.send(:ferrum_timeout_s), "a provider-specific shorter limit remains authoritative"
