@@ -54,7 +54,8 @@ class PostsController < ApplicationController
   end
 
   def like
-    @post.like!(Current.user)
+    liked = @post.like!(Current.user)
+    @post.broadcast_live_counts if liked
     @post.record_activity!("AmberPostLiked", source_vertical: "amber")
     respond_to do |format|
       format.turbo_stream do
