@@ -203,7 +203,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
 
     assert_match(/unsupported inputs/, error.message)
     assert_equal [:get], @client.requests.map(&:first)
-    assert_match(%r{/versions/#{version}\\z}, @client.requests.first.fetch(1).path)
+    assert_match(%r{/versions/#{version}\z}, @client.requests.first.fetch(1).path)
   end
 
   def test_predictions_require_schema_mandatory_fields_before_submission
