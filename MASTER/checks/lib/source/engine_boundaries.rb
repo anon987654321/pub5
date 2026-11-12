@@ -24,8 +24,23 @@ module Deploy
     # Engine package => { relative path => engines it may name }. The courier
     # layer on the maps page plots the viewer's own takeaway orders that are out
     # for delivery, which is a read of another vertical's data by design.
+    #
+    # Takeaway is nested inside marketplace and pays through its host's payment
+    # stack: Marketplace::KronerFields lives in the marketplace engine, and the
+    # Vipps services (Payments::VippsCheckout, ::ProviderError, ::NotConfigured)
+    # live in the host app under the Marketplace:: namespace because payment
+    # credentials, webhooks and currency formatting are one system. Moving the
+    # stack under __shared would be a restructure pass with its own proof, not a
+    # repair edit; until then these reads are declared, per row.
     EXEMPT = {
       "brgen/engines/maps" => { "app/controllers/maps/home_controller.rb" => %w[Takeaway] },
+      "brgen/engines/marketplace/engines/takeaway" => {
+        "app/controllers/takeaway/orders_controller.rb" => %w[Marketplace],
+        "app/models/takeaway/order.rb" => %w[Marketplace],
+        "app/models/takeaway/order/payment.rb" => %w[Marketplace],
+        "app/views/takeaway/orders/new.html.erb" => %w[Marketplace],
+        "app/views/takeaway/orders/show.html.erb" => %w[Marketplace],
+      },
     }.freeze
 
     def self.run(root: ROOT, exempt: EXEMPT)

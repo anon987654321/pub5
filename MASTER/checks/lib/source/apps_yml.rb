@@ -8,7 +8,11 @@ module Deploy
     REPO_ROOT = File.expand_path("../../../..", __dir__)
     ROOT = File.join(REPO_ROOT, "RAILS")
     APPS_YML = File.join(ROOT, "apps.yml")
-    VALID_STATUSES = %w[done planned].freeze
+    # `port` is feature truth: a feature ported from another tree whose tests are
+    # authored but not yet verified here (apps.yml notes say so explicitly). It is
+    # neither done nor merely planned, and the two brgen rows carrying it are the
+    # reason the vocabulary grew.
+    VALID_STATUSES = %w[done planned port].freeze
 
     def self.run
       new.run
@@ -109,7 +113,7 @@ module Deploy
           status = feat["status"]
           next if VALID_STATUSES.include?(status.to_s)
 
-          @result.fail("#{name}: feature '#{feat['name']}' has invalid status '#{status}' (expected done|planned)")
+          @result.fail("#{name}: feature '#{feat['name']}' has invalid status '#{status}' (expected done|planned|port)")
         end
       end
     end
