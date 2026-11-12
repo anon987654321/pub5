@@ -42,6 +42,7 @@ module Operator
       findings.clear
       audit_authority
       audit_shared_post_cards
+      audit_vertical_front_pages
       audit_feed_lists
       audit_playlist_empty_state
       audit_master_face
@@ -196,6 +197,58 @@ module Operator
       restyled = read(amber_css_path).to_s.match?(/\.feed-card[^{,]*\.post-reading-title/)
       add(restyled ? "FAIL" : "PASS", "post_card.amber_detail_type", amber_css_path,
           "Amber must keep the shared feed card's title face; its post page h1 is visually hidden.")
+
+      vote_path = "RAILS/__shared/app/views/shared/_post_vote_rail.html.erb"
+      expect("post_card.vote_rail_target", vote_path, read(vote_path), "dom_id(post, :vote_rail)",
+             "The reader-specific vote rail needs a stable replacement target.")
+      like_path = "RAILS/amber/app/views/posts/_like_button.html.erb"
+      expect("post_card.amber_like_count_target", like_path, read(like_path), "data-post-like-count",
+             "Amber's like count must be independently replaceable.")
+      show_path = "RAILS/amber/app/views/posts/show.html.erb"
+      expect("post_card.amber_comment_count_target", show_path, read(show_path), "data-post-comment-count",
+             "Amber's post detail must expose a live comment-count target.")
+      vote_stream_path = "RAILS/amber/app/views/votes/create.turbo_stream.erb"
+      expect("post_card.amber_vote_only_replace", vote_stream_path, read(vote_stream_path),
+             "dom_id(@post, :vote_rail)",
+             "A vote must replace only the current reader's vote rail, not the whole post.")
+      amber_model_path = "RAILS/amber/app/models/post.rb"
+      amber_model = read(amber_model_path)
+      expect("post_card.amber_live_counts", amber_model_path, amber_model, "def broadcast_live_counts",
+             "Amber must publish score, like and comment counts as targeted stream updates.")
+      expect("post_card.amber_touch_only", amber_model_path, amber_model, "TOUCH_ONLY_COLUMNS",
+             "Counter-only touches must not trigger a full-page feed refresh.")
+    end
+
+    def audit_vertical_front_pages
+      pages = {
+        "brgen" => ["RAILS/brgen/app/views/home/index.html.erb", ["feed-pending", "feed-updates"]],
+        "amber" => ["RAILS/amber/app/views/home/index.html.erb", ["render \"looks\"", "render \"frontpage_posts\""]],
+        "marketplace" => ["RAILS/brgen/engines/marketplace/app/views/marketplace/listings/index.html.erb",
+                          ["bol-market-hero", "listing-kinds"]],
+        "dating" => ["RAILS/brgen/engines/dating/app/views/dating/home/index.html.erb",
+                     ["dating-discover-panel", "data-controller=\"swipe\""]],
+        "tv" => ["RAILS/brgen/engines/radio/tv/app/views/tv/home/index.html.erb",
+                 ["tv/live_streams_label", "tv/home/trending_videos"]],
+        "maps" => ["RAILS/brgen/engines/maps/app/views/maps/home/index.html.erb",
+                   ["map-morph-guard", "map-point-list"]],
+        "takeaway" => ["RAILS/brgen/engines/marketplace/engines/takeaway/app/views/takeaway/restaurants/index.html.erb",
+                       ["shared/promotional_art", "takeaway-restaurants"]],
+        "bsdports" => ["RAILS/bsdports/app/views/ports/index.html.erb",
+                       ["live_search_index", "auto_discovery_link_tag"]],
+        "mrdamascy" => ["RAILS/mrdamascy/app/views/orders/index.html.erb", ["order-card", "state_chip(order)"]]
+      }
+
+      pages.each do |name, (path, markers)|
+        source = read(path)
+        markers.each do |marker|
+          expect("vertical.#{name}.#{marker}", path, source, marker,
+                 "#{name} must retain its own front-page or primary-surface interaction.")
+        end
+        add(source&.include?("shared/post_card") ? "FAIL" : "PASS",
+            "vertical.#{name}.not_a_social_post", path,
+            "Only Brgen and Amber social posts use the shared social post card.",
+            source:, needle: "shared/post_card")
+      end
     end
 
     def audit_feed_lists
