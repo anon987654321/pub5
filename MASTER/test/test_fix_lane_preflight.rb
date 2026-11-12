@@ -210,6 +210,25 @@ class TestFixLanePreflight < Minitest::Test
     assert_empty lines
   end
 
+  def test_probe_uses_lane_selection_order_for_suspended_floor_ranking
+    free = "nvidia/nemotron:free"
+    live = "grok-cli:auto"
+    candidates = [free, live]
+    ranked = [live, free]
+    observed = []
+    selected = nil
+
+    Master::Io::LaneSelection.stub(:order, lambda { |ids, **_options|
+      observed << ids
+      ranked
+    }) do
+      selected = Master::Fix::LaneProbe.pick(candidates, 12)
+    end
+
+    assert_equal [candidates], observed
+    assert_equal ranked, selected
+  end
+
   def test_probe_reserves_capacity_for_all_discovered_keyless_providers
     premium = (1..10).map { |index| "premium#{index}:model" }
     keyless = %w[

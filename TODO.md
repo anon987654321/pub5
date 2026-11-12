@@ -719,11 +719,15 @@ Gemini free tier hides its numbers; Hugging Face free monthly credits are gone.
   successful non-free provider receipt and `LaneState.usable?`; configured
   binaries/keys are not proof. The `RunPulse` consecutive-death streak resets
   on success and counts free/local failures only; the process-local floor
-  counter resets only on a free/local success. Still open: whether the pass-0
-  walk's own wheel reads `order()` ranking and the suspension, or still pays
-  every dead `:free` slug its call. Verify by rerunning an instrumented walk
-  before routing anything. `lane probe` stays on free rows on purpose so the
-  probe can detect the death.
+  counter resets only on a free/local success. Source review (2026-11-12)
+  confirms that `PassRunner#probe_lanes_once` uses `LaneProbe.run`, and
+  `LaneProbe.pick` calls `LaneSelection.order`: dead/parked lanes are filtered
+  by lane-state checks, and a suspended free/local floor inherits class rank 9.
+  Existing tests cover the rank and probe capacity separately; a new
+  cross-boundary regression pins the handoff. The instrumented pass-0 runtime
+  walk remains NOT_RUN, so do not claim runtime acceptance or change the
+  reservation policy from source inspection alone. The probe deliberately
+  retains a bounded free/keyless reservation so it can detect floor recovery.
 - [ ] Rank free-load selection by latency: the live-`:free` spread with
   per-model quota buckets landed 2026-11-06, but the catalog carries no
   `free_latency` field, so ranking stays pool order until one exists.
