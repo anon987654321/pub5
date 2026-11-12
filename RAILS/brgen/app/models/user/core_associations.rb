@@ -38,6 +38,8 @@ class User
       has_many :moderation_flags, dependent: :destroy
       has_many :moderation_reports, dependent: :destroy
       has_many :notifications, dependent: :destroy
+      has_many :notifications_as_actor, class_name: "Notification", foreign_key: :actor_id,
+               dependent: :nullify, inverse_of: :actor
       has_many :posts, dependent: :destroy
       has_many :push_subscriptions, dependent: :destroy
       has_many :native_push_tokens, dependent: :destroy
