@@ -204,6 +204,20 @@ class MediaIntentSpec < Minitest::Test
     end
   end
 
+  def test_play_live_music_refuses_to_start_without_a_rendered_wav
+    with_clean_player do
+      with_player do |played|
+        with_dispatch_stub(->(**_kwargs) { Master::Result.ok("renderer completed") }) do
+          result = MediaIntent.play_live_music("")
+
+          refute result.ok?
+          assert_match(/without writing a non-empty WAV/, result.message)
+          assert_empty played
+        end
+      end
+    end
+  end
+
   def test_dilla_render_paths_add_suffixes_instead_of_reusing_existing_takes
     Dir.mktmpdir do |home|
       saved = ENV["XDG_DATA_HOME"]
