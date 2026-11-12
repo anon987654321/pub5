@@ -36,7 +36,7 @@ module Studio
         # Streamed under a byte cap, so a response that misstates its size cannot
         # fill the disk; the default is the largest thing a run fetches, a trainer
         # tar. A failed fetch leaves no partial file.
-        def download_url(url, path, max_bytes: MAX_DOWNLOAD_BYTES)
+        def download_url(url, path, max_bytes: MAX_DOWNLOAD_BYTES, timeout: 600)
           uri = URI(url.to_s)
           raise ArgumentError, "refusing non-https download url" unless uri.is_a?(URI::HTTPS) && uri.port == 443
           raise ArgumentError, "refusing download URL credentials" unless uri.userinfo.nil?
@@ -45,15 +45,24 @@ module Studio
 
           max_bytes = Integer(max_bytes)
           raise ArgumentError, "download byte limit must be positive" unless max_bytes.positive?
+          timeout = operation_timeout!(timeout, "download timeout")
+          deadline = monotonic_now + timeout
 
-          target = File.expand_path(path)
+          target = File.expand_path(path.to_s)
+          basename = File.basename(target)
+          raise ArgumentError, "download target must name a file" if basename.empty? || basename == File::SEPARATOR
+
           directory = File.dirname(target)
           FileUtils.mkdir_p(directory)
+          directory = File.realpath(directory)
+          target = File.join(directory, basename)
+          raise ArgumentError, "refusing to replace a symlink download target" if File.symlink?(target)
+          raise ArgumentError, "download target exists and is not a regular file" if File.exist?(target) && !File.file?(target)
           mode = File.file?(target) ? File.stat(target).mode & 0o7777 : 0o640
 
           # Keep the old output intact until the entire response has passed its
-          # status and byte-limit checks. The temporary lives beside the target
-          # so the final rename is atomic on the same filesystem.
+          # status, byte-limit and monotonic-deadline checks. The temporary lives
+          # beside the canonical target so the final rename stays atomic.
           Tempfile.create(["replicate-download-", ".part"], directory, binmode: true) do |file|
             Net::HTTP.start(
               uri.host, uri.port, use_ssl: true,
@@ -64,9 +73,13 @@ module Studio
                 raise "download failed #{res.code}" unless res.code.to_i.between?(200, 299)
                 raise "download over #{max_bytes} bytes" if res["content-length"].to_s.to_i > max_bytes
 
-                write_capped(res, file, max_bytes)
+                write_capped(res, file, max_bytes, deadline:)
               end
             end
+            raise IOError, "Replicate download exceeded its #{timeout}s deadline" if monotonic_now >= deadline
+            raise ArgumentError, "refusing to replace a symlink download target" if File.symlink?(target)
+            raise ArgumentError, "download target became a non-regular file" if File.exist?(target) && !File.file?(target)
+
             file.flush
             file.fsync
             File.chmod(mode, file.path)
@@ -79,9 +92,11 @@ module Studio
 
         private
 
-        def write_capped(res, file, max_bytes)
+        def write_capped(res, file, max_bytes, deadline:)
           written = 0
           res.read_body do |chunk|
+            raise IOError, "Replicate download exceeded its monotonic deadline" if monotonic_now >= deadline
+
             written += chunk.bytesize
             raise "download over #{max_bytes} bytes" if written > max_bytes
 
