@@ -31,7 +31,8 @@
         upvoted: upvoted, downvoted: downvoted %>
 <% end %>
 <% card = capture do %>
-    <%= tag.article id: article_id, class: "feed-card post-reading-card" do %>
+    <%= tag.article id: article_id, class: "feed-card post-reading-card",
+                       data: { post_card: true, post_id: post.id } do %>
       <div class="post-reading-layout"><%= vote_rail if show_votes %><div class="post-reading-main post-reading-main--card">
         <%# The byline is a flex row, so the line breaks here render as nothing. %>
         <%= tag.header class: "feed-card-header feed-card-byline" do %>
