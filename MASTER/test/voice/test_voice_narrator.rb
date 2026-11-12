@@ -330,6 +330,15 @@ class TestVoiceNarrator < Minitest::Test
     assert_raises(Narrator::LaneWriter::Unavailable) { writer.call(system: "s", prompt: "p", max_tokens: 9) }
   end
 
+  def test_claude_session_limit_reply_parses_the_stated_reset_before_exit_status
+    reply = "You've hit your session limit - resets in 3h\\nsubscription limit"
+    verdict = Master::Io::LaneReply.read(reply, now: 1_000)
+
+    assert_equal :spent, verdict.kind
+    assert_equal 10_800, verdict.wait
+    refute verdict.unknown
+  end
+
   def test_lane_writer_records_quota_before_reporting_a_nonzero_cli_exit
     lanes = Object.new
     def lanes.tier(_name) = ["claude-cli:sonnet"]
