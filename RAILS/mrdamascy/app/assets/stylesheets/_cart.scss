@@ -2,7 +2,7 @@
 // Lines are cards inside .cart-lines — the view's grid gap separates them.
 .cart-line {
   display: grid;
-  grid-template-columns: 44px 1fr auto;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
   gap: var(--space-12);
 }
 
@@ -24,6 +24,18 @@
   border-radius: var(--radius-small);
   object-fit: cover;
   background: var(--mint-100);
+}
+
+// The photo and price are stable columns; the text column must be allowed to
+// shrink between them on narrow phones instead of imposing its min-content width.
+.line-body {
+  min-width: 0;
+}
+
+.line-body h2,
+.line-options,
+.line-note {
+  overflow-wrap: anywhere;
 }
 
 .line-body h2 {
