@@ -122,6 +122,7 @@ module Master
       end
 
       def dispatch_one(event, payload, conversation, already_persisted: false)
+        previous_conversation = Fiber[:master_conversation]
         ts = elapsed_ms
         # One process-wide bus. ChatService (and anything else that writes a
         # visitor's SSE from a handler) must be able to ignore another
@@ -137,7 +138,6 @@ module Master
 
         persist_event(event, enriched) unless already_persisted
 
-        previous_conversation = Fiber[:master_conversation]
         Fiber[:master_conversation] = conversation
         # No per-subscriber deadline. Ruby bounds a handler only by raising into
         # it at whatever line it reached, and the handlers are inline writers of
