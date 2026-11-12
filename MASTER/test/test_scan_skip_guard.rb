@@ -132,7 +132,8 @@ class TestScanSkipGuard < Minitest::Test
     semantic = Object.new
     semantic.define_singleton_method(:id) { "semantic" }
     semantic.define_singleton_method(:check) do |_code, path:|
-      raise "semantic assessment INCONCLUSIVE: provider spend/quota limit reached for #{path}"
+      raise Master::Review::Scan::Detector::SemanticAssessmentInconclusive,
+            "semantic assessment INCONCLUSIVE: provider spend/quota limit reached for #{path}"
     end
 
     findings = processor.send(
@@ -146,5 +147,26 @@ class TestScanSkipGuard < Minitest::Test
     assert_equal ["TEST_MECHANICAL"], findings.map { |finding| finding[:law] }
     assert_equal 1, processor.semantic_gaps.size
     assert_match(/provider spend\/quota limit reached/, processor.semantic_gaps.values.first)
+  end
+  def test_untyped_runtime_error_with_the_same_message_is_not_swallowed
+    processor = Master::Fix::Scan::FileProcessor.new
+    semantic = Object.new
+    semantic.define_singleton_method(:id) { "semantic" }
+    semantic.define_singleton_method(:check) do |_code, path:|
+      raise "semantic assessment INCONCLUSIVE: unrelated runtime fault for #{path}"
+    end
+
+    error = assert_raises(RuntimeError) do
+      processor.send(
+        :apply_laws,
+        code: "value = 1\n",
+        ast: nil,
+        path: "tmp/runtime_fault.rb",
+        law_set: [semantic],
+      )
+    end
+
+    assert_match(/unrelated runtime fault/, error.message)
+    assert_empty processor.semantic_gaps
   end
 end
