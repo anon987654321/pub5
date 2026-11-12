@@ -49,16 +49,52 @@ class Post < ApplicationRecord
 
   after_commit :broadcast_live_refresh
 
+  # Send only reader-independent counters across open feeds. The vote rail and
+  # like button carry each reader's own pressed state, so a counter tick must
+  # never replace either control for somebody else.
+  def broadcast_live_counts
+    score, likes_count = self.class.unscoped.where(id:).pick(:score, :likes_count)
+    comments_count = comments.count
+    key = ActionView::RecordIdentifier.dom_id(self)
+    content = [
+      live_count_update(%([data-post-score="#{key}"]), score.to_i.to_s),
+      live_count_update(%([data-post-like-count="#{key}"]), likes_count.to_i.to_s),
+      live_count_update(%([data-post-comment-count="#{key}"]), comments_count.positive? ? comments_count.to_s : "")
+    ].join
+
+    ["posts", self].each do |stream|
+      Turbo::StreamsChannel.broadcast_stream_to(stream, content:)
+    end
+  rescue StandardError => e
+    Rails.logger.warn("amber_post_live_counts #{id}: #{e.class}: #{e.message}")
+  end
+
   def to_markdown
     body.to_s
   end
 
-  # touch: posts/_post is fragment-cached on the post, and a counter update
-  # alone leaves updated_at, so the card kept its old count.
   private
 
+  # Vote, comment and counter writes touch the post. Re-rendering the whole
+  # feed on those writes interrupts reading and redraws viewer-specific state;
+  # send the counters instead. Content/visibility changes still refresh the
+  # page so every reader sees the new card. Creates and deletes also retain the
+  # established refresh behaviour until Amber has a staged-arrival surface.
+  TOUCH_ONLY_COLUMNS = %w[updated_at lock_version].freeze
+
   def broadcast_live_refresh
+    changed = saved_changes.keys.map(&:to_s)
+    touch_only = changed.any? && (changed - TOUCH_ONLY_COLUMNS).empty?
+    if !destroyed? && !previously_new_record? && touch_only
+      broadcast_live_counts
+      return
+    end
+
     broadcast_refresh_to "posts"
     broadcast_refresh_to self
+  end
+
+  def live_count_update(targets, value)
+    Turbo::StreamsChannel.turbo_stream_action_tag(:update, targets:, template: value.to_s)
   end
 end
