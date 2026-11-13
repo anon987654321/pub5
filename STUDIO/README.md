@@ -14,7 +14,7 @@ but the implementation is owned here.
   not presented as complete transcriptions. The renderer remains owned by
   `dilla/dilla.rb`; the stdlib-only `dilla/lib/als*.rb` tools
   recover composition archives and MIDI from `.als` files. The unified
-  `bin/studio` CLI exposes `dilla`, `postpro`, `lora` validation and
+  `bin/studio` CLI exposes `dilla`, `postpro`, `lora` validation, `promo` and
   `ableton inventory|export|midi`.
   Rendered output is replaceable:
   a new run may delete and replace it, and no rendered-sound default moves on
@@ -31,6 +31,12 @@ but the implementation is owned here.
 - `lora/` — subject descriptors and private training plans. `bin/studio lora`
   runs a read-only validator. Merethe's preparation step builds in a private
   staging directory and preserves the last known-good dataset if a build fails.
+- `promo.rb` — cut a subject's stills into one vertical motion-graphics clip
+  with a soundtrack. A slow push on each still, a crossfade between stills, one
+  film look over the whole piece and the dilla render underneath. It composes
+  ffmpeg directly rather than the per-frame in-process grade, which is the right
+  tool for a shot clip but measured minutes for a four-second 1080p one. A
+  render writes the MP4 plus a `.promo.json` sidecar naming every input.
 
 ## Shared surfaces
 

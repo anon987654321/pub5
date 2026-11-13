@@ -9,6 +9,7 @@
 #   bin/studio ableton inventory DIRECTORY [--export-all]
 #   bin/studio ableton export SET.als [--json PATH] [--ruby PATH]
 #   bin/studio ableton midi SET.als [--out PATH] [--wav PATH --soundfont FILE]
+#   bin/studio promo --subject NAME --audio TRACK --out FILE.mp4
 #   bin/studio --list          # the tools this CLI reaches
 #
 # It is a dispatcher, not a second interface: every argument after the tool
@@ -24,6 +25,7 @@ TOOLS = {
   "dilla" => File.join(STUDIO_ROOT, "dilla", "dilla.rb"),
   "postpro" => File.join(STUDIO_ROOT, "postpro", "postpro.rb"),
   "lora" => File.join(STUDIO_ROOT, "lora", "validate.rb"),
+  "promo" => File.join(STUDIO_ROOT, "promo.rb"),
 }.freeze
 
 ABLETON_TOOLS = {
@@ -33,12 +35,13 @@ ABLETON_TOOLS = {
 }.freeze
 
 def usage
-  warn "usage: bin/studio <dilla|postpro|lora> [args...]"
+  warn "usage: bin/studio <dilla|postpro|lora|promo> [args...]"
   warn "       bin/studio ableton <inventory|export|midi> [args...]"
   warn "       bin/studio --list"
   warn "  dilla     the beat engine — see STUDIO/dilla/README.md"
   warn "  postpro   the film grade — see STUDIO/postpro/README.md"
   warn "  lora      read-only private LoRA profile audit — --help for options"
+  warn "  promo     cut stills into one vertical clip with a soundtrack"
   warn "  ableton   Live Set inventory, composition export and MIDI recovery"
 end
 

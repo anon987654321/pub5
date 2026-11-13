@@ -1,0 +1,88 @@
+---
+job: extension
+config:
+  name: merethe
+  process:
+  - type: sd_trainer
+    training_folder:
+    device: mps
+    trigger_word: MERETHE
+    network:
+      type: lora
+      linear: 16
+      linear_alpha: 16
+    save:
+      dtype: float16
+      save_every: 250
+      max_step_saves_to_keep: 4
+      push_to_hub: false
+    datasets:
+    - folder_path:
+      caption_ext: txt
+      caption_dropout_rate: 0.08
+      shuffle_tokens: false
+      cache_latents_to_disk: true
+      resolution:
+      - 512
+      - 768
+      - 1024
+    train:
+      batch_size: 1
+      steps: 1600
+      skip_first_sample: true
+      gradient_accumulation_steps: 1
+      train_unet: true
+      train_text_encoder: false
+      gradient_checkpointing: true
+      noise_scheduler: flowmatch
+      optimizer: adamw8bit
+      lr: 0.0001
+      # linear, against ai-toolkit's default of sigmoid: linear spreads the
+      # budget evenly and spends more of it at the low-noise end where identity
+      # is resolved. Same lever the other subjects use.
+      timestep_type: linear
+      ema_config:
+        use_ema: true
+        ema_decay: 0.995
+      dtype: bf16
+    model:
+      name_or_path: black-forest-labs/FLUX.1-dev
+      is_flux: true
+      quantize: true
+      low_vram: true
+    sample:
+      sampler: flowmatch
+      sample_every: 250
+      width: 1024
+      height: 1024
+      seed: 42
+      walk_seed: true
+      guidance_scale: 3.5
+      sample_steps: 20
+      prompts:
+      - MERETHE, Norwegian woman, long wavy ash-blonde hair, blue eyes, editorial
+        portrait in open shade, huge soft north light, neutral grey backdrop, clean
+        catchlights, natural skin texture, Hasselblad medium format, 100mm
+      - MERETHE, Norwegian woman, long wavy ash-blonde hair, blue eyes, coastal
+        Norway at golden hour, low sun raking across the cheekbone, warm rim light
+        through blowing hair, Kodak Gold 200, 50mm
+      - MERETHE, Norwegian woman, long wavy ash-blonde hair, blue eyes, candlelit
+        room, single flame just off frame, extreme low key, warm falloff into black,
+        heavy grain, 50mm wide open
+      - MERETHE, Norwegian woman, long wavy ash-blonde hair, blue eyes, high key
+        commercial portrait, white cyclorama, near shadowless wraparound light,
+        crisp clean colour, 105mm
+      - MERETHE, Norwegian woman, long wavy ash-blonde hair, blue eyes, hard midday
+        sun, black and white, Kodak Tri-X 400 pushed, deep contrast, real skin
+        texture and pores, 35mm
+      - MERETHE, Norwegian woman, long wavy ash-blonde hair, blue eyes, backlit by
+        a bright window, strong rim separating hair from haze, face in soft bounced
+        shadow, dreamy diffusion, 85mm
+      neg: plastic skin, waxy face, over-smoothed, airbrushed, doll, uncanny,
+        deformed eyes, extra teeth, bad hands, harsh HDR, oversaturated, anime,
+        illustration, CGI, face swap artifacts, beauty filter, heavy makeup, identity
+        drift, different woman
+    meta:
+      name: merethe
+      version: '1.0'
+      master_trigger: MERETHE

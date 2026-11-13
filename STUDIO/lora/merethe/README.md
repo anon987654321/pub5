@@ -86,19 +86,34 @@ trainer's dataset guidance.
 - Trainer: \`ostris/flux-dev-lora-trainer\`
 - Pinned trainer version: \`26dce37af90b9d997eeb970d92e47de3064d46c300504ae376c75bef6a9022d2\`
 - Trigger: \`MERETHE\`
-- Initial steps: \`1000\`
+- Initial steps: \`1600\`
 - LoRA rank: \`16\`
-- Destination: a private Replicate model selected by the operator; do not guess
-  the account name.
+- Destination: \`anon987654321/merethe-flux\` (the account's private model).
+- Plan: \`train.yaml\`, mirroring the other subjects; 18 captioned images now
+  build (\`prepare.rb\` reports \`READY_FOR_OPERATOR_REVIEW\`).
 
-The version pin matches \`STUDIO/replicate/client.rb\`. The current trainer README
-recommends 12–18 varied subject images, and its training form documents caption
-sidecars, 1,000–3,000 typical steps and rank 16–32. The initial 1,000 / rank 16
-plan is deliberately conservative. Reassess captions and sample outputs before
-any second run.
+The version pin matches \`STUDIO/replicate/client.rb\`. The trainer README
+recommends 12–18 varied subject images, caption sidecars, 1,000–3,000 steps and
+rank 16–32; the plan is conservative. Reassess captions and sample outputs
+before any second run.
 
-A separate explicit approval is required before uploading the ZIP or starting
-paid training. No provider call is made by \`prepare.rb\`.
+Uploading the ZIP and starting paid training need a \`REPLICATE_API_TOKEN\` and
+a separate explicit go-ahead. No provider call is made by \`prepare.rb\`.
+
+## Promo video
+
+Once the LoRA renders a selfie series, cut it into the piece the subject
+watches:
+
+\`\`\`sh
+ruby STUDIO/dilla/dilla.rb industrial-techno --bars 8 --out dilla.wav
+ruby STUDIO/promo.rb --subject merethe --audio dilla.wav --out merethe-promo.mp4
+\`\`\`
+
+\`promo.rb\` pushes each still, crossfades them, lays the \`dilla_heavy\` film
+look over the whole piece and sets the dilla render underneath; it writes
+\`merethe-promo.mp4\` and a \`.promo.json\` sidecar. This is the assembly step
+after generation and training, not a substitute for either.
 
 ## Subject environment
 
