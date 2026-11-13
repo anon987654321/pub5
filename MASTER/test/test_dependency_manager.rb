@@ -387,7 +387,49 @@ class TestDependencyManager < Minitest::Test
     )
 
     refute ok
-    assert_match(/process group killed after 0.35s deadline/, stderr)
+    assert_match(/process group stop confirmed after 0.35s deadline/, stderr)
+  end
+
+  def test_capture_confirms_descendant_group_exit_before_returning
+    manager = MANAGER.new(root: @root, env: { "PATH" => ENV.fetch("PATH", "") }, out: StringIO.new, home: @root)
+    parent_file = File.join(@root, "parent.pid")
+    child_file = File.join(@root, "child.pid")
+    child_code = "Signal.trap('TERM', 'IGNORE'); File.write(#{child_file.dump}, Process.pid.to_s); sleep 30"
+    parent_code = "File.write(#{parent_file.dump}, Process.pid.to_s); Process.spawn(RbConfig.ruby, '-e', #{child_code.dump}); sleep 30"
+
+    ok, _stdout, stderr = manager.send(
+      :capture, [RbConfig.ruby, "-e", parent_code],
+      chdir: @root, env: {}, deadline_seconds: 0.35
+    )
+
+    refute ok
+    assert_match(/process group stop confirmed/, stderr)
+    group = Integer(File.read(parent_file))
+    child = Integer(File.read(child_file))
+    assert_equal group, Process.getpgid(child) unless process_group_gone?(group)
+    assert process_group_gone?(group), "capture returned while a descendant still occupied the process group"
+  end
+
+  def test_capture_reports_unconfirmed_group_stop_instead_of_claiming_success
+    manager = MANAGER.new(root: @root, env: {}, out: StringIO.new, home: @root)
+    signals = []
+    manager.define_singleton_method(:capture_group_alive?) { |_group| true }
+    manager.define_singleton_method(:signal_capture_group) { |signal, _group| signals << signal; true }
+    manager.define_singleton_method(:wait_capture_group_exit) { |_group, _timeout| false }
+
+    result = manager.send(:kill_capture_group, 12_345)
+
+    assert_equal :unconfirmed, result
+    assert_equal %w[TERM KILL], signals
+  end
+
+  def process_group_gone?(group)
+    Process.kill(0, -group)
+    false
+  rescue Errno::ESRCH
+    true
+  rescue Errno::EPERM
+    false
   end
 
   def test_dependency_lock_wait_is_bounded
