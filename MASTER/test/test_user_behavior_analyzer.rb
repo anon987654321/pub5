@@ -83,4 +83,16 @@ class TestUserBehaviorAnalyzer < Minitest::Test
     assert result.err?
     assert_equal :validation, result.category
   end
+  def test_numeric_string_config_is_normalized_before_analysis
+    analyzer = Master::Ground::UserBehaviorAnalyzer.new(
+      root: @dir,
+      config: { analysis_window_hours: "24", message_frequency_threshold: "1" },
+      clock: -> { @now },
+    )
+    result = analyzer.analyze(messages: messages("Hello"), platform: "web", user_id: "user-1")
+    assert result.ok?, result.message
+    assert_equal 1, result.value![:messages]
+    assert_equal "NORMAL", result.value![:recommendation]
+  end
+
 end
