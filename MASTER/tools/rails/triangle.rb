@@ -106,12 +106,18 @@ module Deploy
     def self.reap_sibling(app, found)
       return false unless found[:cwd].match?(SIBLING_WORKTREE)
 
-      warn "triangle: #{app[:name]} port #{app[:port]} was held by pid #{found[:pid]} from #{found[:cwd]}; stopping it"
-      Process.kill("TERM", found[:pid])
-      sleep 2
-      true
-    rescue Errno::ESRCH, Errno::EPERM
-      true
+      pid = Integer(found[:pid])
+      return false unless pid.positive?
+      # Triangle boots each Rails process as a dedicated process-group leader.
+      # A listener inside a sibling checkout is not enough authority to kill a
+      # numeric PID; refuse if the group identity cannot be proved.
+      return false unless Process.getpgid(pid) == pid
+
+      warn "triangle: #{app[:name]} port #{app[:port]} was held by pid #{pid} from #{found[:cwd]}; stopping its owned process group"
+      Master::Fix::ServerLeases.stop_process_group(pid)
+    rescue StandardError => e
+      warn "triangle: sibling server shutdown unconfirmed for pid #{found[:pid]} (#{e.class})"
+      false
     end
 
     # An empty development database makes db:prepare run the seeds, which attach
