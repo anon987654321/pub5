@@ -436,6 +436,12 @@ body.vertical-marketplace {
   --bol-muted: #666666;
   --bol-rule: #d9d9d9;
   --bol-price: #c91f2c;
+  /* The partner brand's fixed white: ink on --bol-blue and the white surface
+     fill of its controls, constant in both themes; --bol-hero-media is the
+     media placeholder grey behind the market hero. Named here because the
+     use-sites restated the hex (css_constitution magic_hex). */
+  --bol-white: #ffffff;
+  --bol-hero-media: #f6f6f6;
   --bol-max: 1248px;
   --bol-gutter: 16px;
   --bol-header-height: 56px;
@@ -471,7 +477,7 @@ body.vertical-marketplace #navBar.storefront-nav--bol {
   position: relative;
   z-index: var(--z-nav);
   margin-inline: calc(50% - 50vw);
-  color: #fff;
+  color: var(--bol-white);
   border: 0;
   box-shadow: none;
 }
@@ -565,7 +571,7 @@ body.vertical-marketplace .bol-market-hero-media {
   display: grid;
   place-items: center;
   overflow: hidden;
-  background: #f6f6f6;
+  background: var(--bol-hero-media);
 }
 
 body.vertical-marketplace .bol-market-hero-media img {
@@ -597,14 +603,14 @@ body.vertical-marketplace .bol-primary {
   padding: 0 24px;
   border-radius: 4px;
   background: var(--bol-blue);
-  color: #fff;
+  color: var(--bol-white);
   font-size: 16px;
   font-weight: var(--weight-bold);
   text-decoration: none;
 }
 
 body.vertical-marketplace .bol-primary:hover {
-  color: #fff;
+  color: var(--bol-white);
   text-decoration: none;
 }
 
@@ -709,7 +715,7 @@ body.vertical-marketplace .listing-filter-controls input {
   min-height: var(--tap-min);
   border: 1px solid var(--bol-rule);
   border-radius: var(--radius-medium);
-  background: #fff;
+  background: var(--bol-white);
   padding: 0 12px;
   color: var(--bol-ink);
   /* 16px: below it iOS Safari zooms the page on focus. */
@@ -796,7 +802,7 @@ body.vertical-marketplace .search-form input[type="search"] {
 
 body.vertical-marketplace .deal-fav svg {
   padding: 8px;
-  background: #fff;
+  background: var(--bol-white);
 }
 
 body.vertical-marketplace .deal-card-body {
@@ -878,7 +884,7 @@ body.vertical-marketplace .store-pdp-info h1 {
 body.vertical-marketplace .store-buybox {
 
   border: 0;
-  background: #fff;
+  background: var(--bol-white);
   padding: 24px;
 }
 
@@ -1190,7 +1196,7 @@ body.vertical-marketplace .storefront-bol-brand {
   position: static;
   min-height: var(--bol-brand-row-block);
   min-width: 0;
-  color: #fff;
+  color: var(--bol-white);
   font-size: var(--store-text-brand-compact);
 }
 
@@ -1199,7 +1205,7 @@ body.vertical-marketplace .storefront-bol-deliver {
   align-items: center;
   gap: 8px;
   min-height: var(--tap-min);
-  color: #fff;
+  color: var(--bol-white);
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;
@@ -1207,7 +1213,7 @@ body.vertical-marketplace .storefront-bol-deliver {
 }
 
 body.vertical-marketplace .storefront-bol-deliver:hover {
-  color: #fff;
+  color: var(--bol-white);
   text-decoration: underline;
 }
 
@@ -1230,7 +1236,7 @@ body.vertical-marketplace .storefront-bol-search .nav-search-input {
   height: var(--bol-search-control-block);
   border: 0;
   border-radius: var(--radius-medium) 0 0 var(--radius-medium);
-  background: #fff;
+  background: var(--bol-white);
   color: var(--bol-ink);
   padding-inline: 16px;
   font-size: 16px;
@@ -1242,7 +1248,7 @@ body.vertical-marketplace .storefront-bol-search .nav-search-submit {
   border: 0;
   border-radius: 0 var(--radius-medium) var(--radius-medium) 0;
   background: var(--bol-blue-dark);
-  color: #fff;
+  color: var(--bol-white);
 }
 
 body.vertical-marketplace .storefront-bol-account {
@@ -1259,7 +1265,7 @@ body.vertical-marketplace .storefront-bol-account .nav-block {
   gap: 8px;
   min-width: var(--tap-min);
   min-height: var(--tap-min);
-  color: #fff;
+  color: var(--bol-white);
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;

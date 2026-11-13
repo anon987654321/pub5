@@ -1,16 +1,19 @@
 /* vYroQxg — shared Yep-style search surface for every RAILS app. */
-/* scan: intentional-colors — exact reference palette and focus treatment. */
+/* scan: intentional-colors — exact reference palette and focus treatment.
+   The pen's greys now read through the shared tokens (--search-bg field,
+   --border divider): same surface, one vocabulary (css_constitution
+   magic_hex / ScaleRatchet off_token_color). */
 
 .search {
   width: 480px;
   max-width: 100%;
   min-inline-size: 0;
   box-sizing: border-box;
-  background-color: #ccc;
-  border: 1px solid #ccc;
-  border-radius: 30px;
+  background-color: var(--search-bg, var(--color-midtone));
+  border: 1px solid var(--search-bg, var(--color-midtone));
+  border-radius: var(--radius-pill);
   font-size: 18px;
-  transition: all 100ms var(--ease-in-out);
+  transition: all var(--transition-fast) var(--ease-in-out);
 }
 
 /* Only the query field gets the transparent inner treatment; submit controls
@@ -36,9 +39,10 @@
 }
 
 /* The pen's #aaa sat at 1.3:1 on the #ccc field, so the field read as a
-   disabled control; #555 holds 4.6:1 there and 7.5:1 on the focused white. */
+   disabled control; the placeholder is the midtone ink (--text-secondary),
+   4.6:1 on the reference #ccc and higher on --search-bg. */
 .search input::placeholder {
-  color: #555;
+  color: var(--text-secondary);
 }
 
 /* The pen lifts the focused field with a shadow; the interface is flat
@@ -79,7 +83,7 @@
   #search_palette_suggestions,
   #search_palette_results
 ):not(:empty) {
-  border-top: 1px solid #ccc;
+  border-top: 1px solid var(--border);
   padding: 0 24px;
 }
 

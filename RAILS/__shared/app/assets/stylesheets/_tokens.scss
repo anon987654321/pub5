@@ -53,6 +53,10 @@ $palette: true !default;
     --pub5-signal-ink: #101010;
     --pub5-signal-on-light: #50630A;
     --color-overlay: rgb(0 0 0 / 0.4);
+    /* The MASTER face's canvas: black in every theme. The embed surfaces that
+       host the face (_embeds.scss) read this instead of restating the hex, so
+       the "renders on black" contract has one spelling. */
+    --face-canvas: #000000;
     --color-border: var(--border);
     --color-midtone-tint: var(--hover);
     --text-primary: var(--text);
