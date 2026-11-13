@@ -556,11 +556,10 @@ end
     assert_nil result
   end
 
-  # The foreign-write protocol: an operator-facing write from any lane clears
-  # the draft's row, steps below it, and the redisplay rebuilds the editable
-  # line at the payload's end. Without the repaint Reline's differential
-  # render paints nothing its cache still matches, and the prompt stays gone
-  # after the first message.
+  # The foreign-write protocol: replace the transient draft row with the
+  # event, then redraw the editable line beneath it. Repeated events must not
+  # advance past an empty prompt row. Without repaint Reline's differential
+  # render paints nothing its cache still matches, and the prompt stays gone.
   DraftIO = Class.new do
     def initialize
       @buffer = +""
