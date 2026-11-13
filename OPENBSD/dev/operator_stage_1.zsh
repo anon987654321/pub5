@@ -20,7 +20,7 @@ stage_1() {
   # which is the worst failure shape. See the old backlog "Host TTS Binaries".
   pkg_add -U ldns-utils ruby%3.4 zsh fish neovim tmux fontconfig fzf ripgrep fd espeak ffmpeg 2>/var/log/pkg_add.log \
     || { log ERROR "pkg_add failed. See /var/log/pkg_add.log"; exit 1 }
-  install_static bin/zap /usr/local/bin/zap
+  install_static bin/zap.rb /usr/local/bin/zap
   chmod 755 /usr/local/bin/zap
 
   [[ -f /etc/rc.conf.local && $(<"/etc/rc.conf.local") == *"pf=NO"* ]] && log WARN "pf disabled in rc.conf.local"
