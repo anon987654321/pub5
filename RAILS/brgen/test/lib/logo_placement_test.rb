@@ -108,17 +108,19 @@ class LogoPlacementTest < ActiveSupport::TestCase
     assert_includes controller, "this.#staticEndState()"
   end
 
-  def test_dating_reuses_the_historical_hjerterom_heart
+  def test_dating_splash_carries_both_hearts
     splash = Rails.root.join("engines/dating/app/views/dating/home/splash.html.erb").read
     logo = Rails.root.join("engines/dating/app/views/dating/home/_hjerterom_logo.html.erb").read
-    controller = Rails.root.join("engines/dating/app/javascript/controllers/dating_splash_controller.js").read
-    stylesheet = Rails.root.join("app/assets/stylesheets/_brgen_dating.scss").read
 
+    # Two different hearts stand on the first screen and both are kept: the
+    # operator's css-doodle heart, and the Hjerterom lockup beside it.
+    assert_includes splash, "<css-doodle"
+    assert_includes splash, "@shape: heart"
+    assert_includes splash, "@pd(#e94e77, #d68189, #c6a49a, #c6e5d9, #f4ead5)"
+    assert_includes splash, "dating-splash-heart-path"
     assert_includes splash, 'render "dating/home/hjerterom_logo"'
     assert_includes splash, 'label: "Hjerterom"'
     refute_includes splash, "compact: true"
-    refute_includes splash, "<css-doodle"
-    refute_includes splash, "dating-splash-heart-path"
 
     # Provenance and geometry are pinned to the old Hjerterom partial in pub4.
     assert_includes logo, "0f586be5715f91b15ce3b0f0621506726ccef4e2"
@@ -128,9 +130,17 @@ class LogoPlacementTest < ActiveSupport::TestCase
     assert_equal 14, logo.scan("<path ").size
     assert_equal 60, logo.scan(/<animate(?:Transform)?\b/).size
     assert_includes logo, 'data-dating-splash-target="hjerterom"'
+    assert_includes logo, "<%= label.downcase %>"
+  end
 
-    # Reduced motion pauses the original SMIL artwork at its initial frame;
-    # changing the preference back resumes it without another logo asset.
+  # The doodle library is fetched on this screen only, and not at all when
+  # motion is unwelcome; the Hjerterom SMIL artwork pauses at its first frame
+  # and resumes when the preference changes, without another logo asset.
+  def test_dating_splash_hearts_respect_the_motion_preference
+    controller = Rails.root.join("engines/dating/app/javascript/controllers/dating_splash_controller.js").read
+    stylesheet = Rails.root.join("app/assets/stylesheets/_brgen_dating.scss").read
+
+    assert_includes controller, 'import("css-doodle")'
     assert_includes controller, 'window.matchMedia("(prefers-reduced-motion: reduce)")'
     assert_includes controller, "setCurrentTime?.(0)"
     assert_includes controller, "pauseAnimations?.()"
@@ -138,9 +148,9 @@ class LogoPlacementTest < ActiveSupport::TestCase
     assert_includes controller, 'addEventListener("change"'
     assert_includes controller, "removeEventListener"
 
-    assert_includes logo, "<%= label.downcase %>"
+    assert_includes stylesheet, ".dating-splash-doodle"
     assert_includes stylesheet, ".dating-hjerterom-logo"
-    assert_includes stylesheet, "aspect-ratio: 4 / 3"
+    assert_includes stylesheet, "aspect-ratio: 1"
     assert_includes stylesheet, "fill: currentColor"
   end
 

@@ -368,21 +368,67 @@ body.vertical-dating {
   position: relative;
   align-self: center;
   display: grid;
-  place-items: center;
+  justify-items: center;
+  gap: var(--space-6);
   width: min(80vw, 420px);
-  aspect-ratio: 4 / 3;
 }
 
+/* The operator's css-doodle heart, square and alone in its box so the grid
+   fills it. The still SVG stands in until the element is defined: no script,
+   reduced motion, or the library still on its way. Its program text never
+   shows, and the doodle is not shown at all under reduced motion, where the
+   still heart is the whole mark. */
+.dating-splash-doodle-box {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.dating-splash-doodle,
+.dating-splash-still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.dating-splash-doodle:not(:defined) {
+  visibility: hidden;
+}
+
+.dating-splash-doodle-box:has(.dating-splash-doodle:defined) .dating-splash-still {
+  display: none;
+}
+
+.dating-splash-still use {
+  fill: none;
+  stroke: var(--dating-accent);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+
+.dating-splash-still use + use {
+  stroke: var(--danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dating-splash-doodle {
+    display: none;
+  }
+}
+
+/* A second, different heart: the Hjerterom lockup, smaller and below the
+   doodle. The historical wordmark was black on Hjerterom's light ground; re-ink
+   only that text for Dating's dark splash, the heart paths and animation stay
+   exact. */
 .dating-hjerterom-logo {
   display: block;
-  width: 100%;
+  width: min(60%, 240px);
   height: auto;
   overflow: visible;
   color: var(--dating-splash-ink);
 }
 
-/* The historical wordmark was black on Hjerterom's light ground. Re-ink only
-   that text for Dating's dark splash; the heart paths and animation stay exact. */
 .dating-hjerterom-logo text {
   fill: currentColor;
 }

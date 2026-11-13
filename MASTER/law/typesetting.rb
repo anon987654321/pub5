@@ -28,7 +28,7 @@ module Law
     KEY_LINE = /\A(?<indent>\s*)(?:-\s+)?(?<key>[\w.-]+|"[^"]+"|'[^']+'):(?:\s+(?<value>.*))?\z/
 
     CHROME_KEYS = %w[nav buttons actions empty flash notices errors auth search onboarding].freeze
-    SKIP_BLOCK = %r{<(script|style|pre|code)\b}i
+    SKIP_BLOCK = %r{<(script|style|pre|code|css-doodle)\b}i
     BLOCK_SCALAR = /\A[|>][-+]?\s*\z/
     READERS = { /\.yml\z/ => :locale_values, /\.html(?:\.erb)?\z/ => :erb_text, /\.md\z/ => :markdown_text }.freeze
     QUOTES = { "'" => ["''", "'"], '"' => ['\\"', '"'] }.freeze

@@ -1,8 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 
 // Dating's first screen: "sveip for å begynne". A swipe in any direction, or the
-// link itself, opens the deck; without script the link alone does. The Hjerterom
-// SVG stays self-contained and its original SMIL motion pauses for reduced motion.
+// link itself, opens the deck; without script the link alone does. Two hearts
+// stand here: the operator's css-doodle heart, whose library is fetched on this
+// screen only and not at all when motion is unwelcome, and the Hjerterom SVG,
+// whose original SMIL motion pauses for reduced motion.
 export default class extends Controller {
   static values = { url: String }
   static targets = ["hjerterom"]
@@ -13,6 +15,10 @@ export default class extends Controller {
     this.motionChange = () => this.#syncMotion()
     this.motionQuery.addEventListener("change", this.motionChange)
     this.#syncMotion()
+
+    if (this.motionQuery.matches) return
+
+    import("css-doodle").catch(() => {})
   }
 
   disconnect() {

@@ -992,4 +992,29 @@ class TestScanRuleFalsePositives < Minitest::Test
     assert_empty findings(:HTML_HEADING_HIERARCHY, bad, path: "lib/example.rb")
   end
 
+  # A css-doodle program is code, not copy. Its palette holds raw hex colours —
+  # #d68189 is a five-digit run once the `#` is dropped — and NUMBER_GROUPED read
+  # it as a Norwegian number of five digits, while QUOTES read the program's
+  # apostrophes. The erb reader already skips script/style/pre/code; a custom
+  # element that carries a program belongs in the same set. Both directions: the
+  # program stays quiet, a real ungrouped number in visible copy still fires.
+  def test_typography_rules_read_a_css_doodle_program_as_code_not_copy
+    program = <<~ERB
+      <div class="dating-splash-heart">
+        <css-doodle>
+          :before {
+            background: conic-gradient(#e94e77, #d68189, transparent 0);
+            content: '';
+          }
+        </css-doodle>
+        <p>Sveip for å begynne</p>
+      </div>
+    ERB
+    number = "<p>Prisen er 12500 kr</p>\n"
+
+    assert_empty findings(:NUMBER_GROUPED_IN_THOUSANDS, program, path: VIEW)
+    assert_empty findings(:QUOTES_BY_LOCALE, program, path: VIEW)
+    refute_empty findings(:NUMBER_GROUPED_IN_THOUSANDS, number, path: VIEW)
+  end
+
 end
