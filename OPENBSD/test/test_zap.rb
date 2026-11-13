@@ -4,7 +4,7 @@ require "minitest/autorun"
 require "open3"
 require "rbconfig"
 require "stringio"
-require_relative "../bin/zap"
+require_relative "../bin/zap.rb"
 
 class ZapTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
@@ -22,11 +22,32 @@ class ZapTest < Minitest::Test
     assert_includes output, "Linux/Android use /proc"
   end
 
-  def test_missing_pattern_is_rejected
-    output, status = run_zap
+  def test_no_pattern_prompts_for_each_visible_process
+    output = StringIO.new
+    errors = StringIO.new
+    sent = []
+    zap = Zap.new(
+      [],
+      out: output,
+      err: errors,
+      input: StringIO.new("n\\n"),
+      process_provider: -> { [process(209, "worker --serve")] },
+      signaler: ->(signal, pid) { sent << [signal, pid] },
+      platform: "linux"
+    )
 
-    refute status.success?
-    assert_includes output, "expected one search pattern"
+    assert_equal 0, zap.run, errors.string
+    assert_includes output.string, "209 worker --serve? [y/N]"
+    assert_empty sent
+  end
+
+  def test_force_requires_a_search_pattern
+    output = StringIO.new
+    errors = StringIO.new
+    zap = Zap.new(["-f"], out: output, err: errors)
+
+    assert_equal 2, zap.run
+    assert_includes errors.string, "force mode requires an explicit search pattern"
   end
 
   def test_unmatched_pattern_is_a_clean_noop
