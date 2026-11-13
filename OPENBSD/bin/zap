@@ -44,6 +44,9 @@ class Zap
   rescue SystemCallError => e
     @err.puts "zap: #{e.message}"
     1
+  rescue StandardError => e
+    @err.puts "zap: #{e.message}"
+    1
   end
 
   private
