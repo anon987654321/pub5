@@ -73,6 +73,37 @@ class TestSurfaceEvidenceContract < Minitest::Test
     refute compact.to_s.include?("private.invalid")
     refute compact.to_s.include?("secret")
   end
+  def test_process_group_signal_never_falls_back_to_the_numeric_leader_pid
+    calls = []
+    Process.stub(:kill, lambda { |signal, target|
+      calls << [signal, target]
+      raise Errno::EPERM
+    }) do
+      refute evidence.send(:signal_group, "TERM", 1234)
+    end
+
+    assert_equal [["TERM", -1234]], calls
+  end
+
+  def test_missing_owned_process_group_is_already_stopped_without_pid_fallback
+    calls = []
+    Process.stub(:kill, lambda { |signal, target|
+      calls << [signal, target]
+      raise Errno::ESRCH
+    }) do
+      assert evidence.send(:signal_group, "TERM", 1234)
+    end
+
+    assert_equal [["TERM", -1234]], calls
+  end
+
+  def test_process_group_stop_refuses_the_callers_own_group
+    group = Process.getpgrp
+
+    refute evidence.send(:stop_process_group, group, term_grace: 0, kill_grace: 0)
+    assert_equal group, Process.getpgrp
+  end
+
   def test_runtime_probe_routes_each_language_to_its_parser_without_shell_interpolation
     instance = evidence
     source_class = Struct.new(:path)
