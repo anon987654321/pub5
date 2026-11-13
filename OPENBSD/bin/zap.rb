@@ -231,9 +231,12 @@ class Zap
   end
 
   def ps_processes
-    output, status = run_ps(
-      "-ax", "-ww", "-o", "pid=", "-o", "ppid=", "-o", "start=", "-o", "command="
-    )
+    arguments = if android?
+                   ["-A", "-o", "PID,PPID,STIME:19,ARGS", "-w"]
+                 else
+                   ["-ax", "-ww", "-o", "pid=", "-o", "ppid=", "-o", "lstart=", "-o", "command="]
+                 end
+    output, status = run_ps(*arguments)
     raise "ps failed (#{status.exitstatus || "unknown status"})" unless status.success?
 
     output.each_line.filter_map do |line|
@@ -246,9 +249,12 @@ class Zap
   end
 
   def ps_process(pid)
-    output, status = run_ps(
-      "-p", pid.to_s, "-ww", "-o", "pid=", "-o", "ppid=", "-o", "start=", "-o", "command="
-    )
+    arguments = if android?
+                   ["-p", pid.to_s, "-o", "PID,PPID,STIME:19,ARGS", "-w"]
+                 else
+                   ["-p", pid.to_s, "-ww", "-o", "pid=", "-o", "ppid=", "-o", "lstart=", "-o", "command="]
+                 end
+    output, status = run_ps(*arguments)
     return unless status.success?
 
     output.each_line.filter_map { |line| parse_ps_line(line) }.first
@@ -260,17 +266,43 @@ class Zap
   end
 
   def parse_ps_line(line)
-    fields = line.strip.split(/\s+/, 4)
-    return unless fields.length == 4
+    android? ? parse_android_ps_line(line) : parse_bsd_ps_line(line)
+  end
+
+  # Toybox exposes STIME as a 19-column timestamp on Android. The two-part
+  # date is parsed before the remaining command line; no shell or external
+  # parser is involved.
+  def parse_android_ps_line(line)
+    match = line.match(/\A\s*(\d+)\s+(\d+)\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(.+)\z/)
+    return unless match
+
+    pid = Integer(match[1], 10)
+    ppid = Integer(match[2], 10)
+    start = match[3]
+    command = match[4].strip
+    return if command.empty?
+
+    { pid: pid, command: command, identity: [:ps, ppid, start, command] }
+  end
+
+  # BSD/macOS lstart is an exact, human-readable start timestamp. It avoids
+  # the minute-resolution PID-reuse ambiguity of ps's short "start" field.
+  def parse_bsd_ps_line(line)
+    fields = line.strip.split(/\s+/, 8)
+    return unless fields.length == 8
     return unless fields[0].match?(/\A[0-9]+\z/) && fields[1].match?(/\A[0-9]+\z/)
 
     pid = Integer(fields[0], 10)
     ppid = Integer(fields[1], 10)
-    start = fields[2]
-    command = fields[3].strip
+    start = fields[2, 5].join(" ")
+    command = fields[7].to_s.strip
     return if command.empty?
 
     { pid: pid, command: command, identity: [:ps, ppid, start, command] }
+  end
+
+  def android?
+    @platform.match?(/android/i)
   end
 
   def ps_binary
