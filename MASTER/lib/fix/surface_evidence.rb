@@ -1126,6 +1126,7 @@ module Master
             # numeric PID after ESRCH or after the wait handle has completed.
             kill_owned_child(wait_thr) if wait_thr.alive?
             wait_thr.join(2) if wait_thr.alive?
+            termination_confirmed &&= !wait_thr.alive? && !process_group_alive?(wait_thr.pid)
             [ [out, stdout_reader], [err, stderr_reader] ].each do |io, reader|
               reader.join(0.2)
               next unless reader.alive?
