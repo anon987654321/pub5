@@ -3,6 +3,7 @@
 require_relative "test_helper"
 require "tmpdir"
 require "json"
+require "digest"
 require "socket"
 require "rbconfig"
 require "timeout"
