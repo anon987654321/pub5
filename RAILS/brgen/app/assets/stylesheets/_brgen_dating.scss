@@ -373,18 +373,25 @@ body.vertical-dating {
   aspect-ratio: 4 / 3;
 }
 
-.dating-hjerterom-logo {
+/* The first screen draws the historical heart as a css-doodle shape over the
+   stage's red bloom. The element fills the heart box; the pulse is the only
+   motion and is off under prefers-reduced-motion. */
+.dating-splash-heart css-doodle {
   display: block;
-  width: 100%;
+  width: min(64vw, 320px);
   height: auto;
-  overflow: visible;
-  color: var(--dating-splash-ink);
+  aspect-ratio: 1;
 }
 
-/* The historical wordmark was black on Hjerterom's light ground. Re-ink only
-   that text for Dating's dark splash; the heart paths and animation stay exact. */
-.dating-hjerterom-logo text {
-  fill: currentColor;
+@media (prefers-reduced-motion: no-preference) {
+  .dating-splash-heart css-doodle {
+    animation: dating-heart-pulse 2.6s ease-in-out infinite;
+  }
+}
+
+@keyframes dating-heart-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.045); }
 }
 
 .dating-splash-title {

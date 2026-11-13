@@ -108,40 +108,29 @@ class LogoPlacementTest < ActiveSupport::TestCase
     assert_includes controller, "this.#staticEndState()"
   end
 
-  def test_dating_reuses_the_historical_hjerterom_heart
+  def test_dating_draws_its_heart_with_css_doodle
     splash = Rails.root.join("engines/dating/app/views/dating/home/splash.html.erb").read
-    logo = Rails.root.join("engines/dating/app/views/dating/home/_hjerterom_logo.html.erb").read
     controller = Rails.root.join("engines/dating/app/javascript/controllers/dating_splash_controller.js").read
     stylesheet = Rails.root.join("app/assets/stylesheets/_brgen_dating.scss").read
 
-    assert_includes splash, 'render "dating/home/hjerterom_logo"'
-    assert_includes splash, 'label: "Hjerterom"'
-    refute_includes splash, "compact: true"
-    refute_includes splash, "<css-doodle"
-    refute_includes splash, "dating-splash-heart-path"
+    # The reference the operator could not find: a css-doodle heart over a red
+    # bloom. css-doodle 0.60.0 is vendored and pinned (config/importmap.rb); the
+    # element is only upgraded, and the mark only drawn, once the controller
+    # imports that build on this one screen.
+    assert_includes splash, "<css-doodle>"
+    assert_includes splash, "@shape: heart"
+    assert_includes splash, 'data-dating-splash-target="heart"'
+    refute_includes splash, "dating/home/hjerterom_logo"
 
-    # Provenance and geometry are pinned to the old Hjerterom partial in pub4.
-    assert_includes logo, "0f586be5715f91b15ce3b0f0621506726ccef4e2"
-    assert_includes logo, 'M100,26.79625 c-4.9725,-13.4975,-30,-11.4925'
-    assert_includes logo, 'fill="#DC143C"'
-    assert_includes logo, 'id="heartClip-<%= svg_uid %>"'
-    assert_equal 14, logo.scan("<path ").size
-    assert_equal 60, logo.scan(/<animate(?:Transform)?\b/).size
-    assert_includes logo, 'data-dating-splash-target="hjerterom"'
+    importmap = Rails.root.join("config/importmap.rb").read
+    assert_includes importmap, 'pin "css-doodle"'
+    assert_includes controller, 'import("css-doodle")'
 
-    # Reduced motion pauses the original SMIL artwork at its initial frame;
-    # changing the preference back resumes it without another logo asset.
-    assert_includes controller, 'window.matchMedia("(prefers-reduced-motion: reduce)")'
-    assert_includes controller, "setCurrentTime?.(0)"
-    assert_includes controller, "pauseAnimations?.()"
-    assert_includes controller, "unpauseAnimations?.()"
-    assert_includes controller, 'addEventListener("change"'
-    assert_includes controller, "removeEventListener"
-
-    assert_includes logo, "<%= label.downcase %>"
-    assert_includes stylesheet, ".dating-hjerterom-logo"
-    assert_includes stylesheet, "aspect-ratio: 4 / 3"
-    assert_includes stylesheet, "fill: currentColor"
+    # The heart is a shape, so it is static on its own; the only motion is the
+    # CSS pulse, and it is off unless motion is welcome.
+    assert_includes stylesheet, ".dating-splash-heart css-doodle"
+    assert_includes stylesheet, "@media (prefers-reduced-motion: no-preference)"
+    assert_includes stylesheet, "animation: dating-heart-pulse"
   end
 
   def test_playlist_tunnel_has_its_own_decorative_wave_mark

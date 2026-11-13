@@ -1,34 +1,31 @@
 import { Controller } from "@hotwired/stimulus"
 
+// css-doodle 0.60.0, the vendored official build (importmap pin "css-doodle"),
+// is the library brgen sponsors and the source of the reference the operator
+// could not find: a css-doodle heart over a red bloom, dating's first screen.
+// The build is an IIFE that defines the <css-doodle> custom element, so a
+// dynamic import is what upgrades the element and draws the mark; it runs on
+// this one screen. The heart is a shape, not a timeline, so it is static by
+// itself and reduced motion needs no separate path — the gentle pulse under
+// motion is CSS, scoped to the container in _brgen_dating.scss.
+let doodlePromise = null
+
+function loadDoodle() {
+  if (doodlePromise) return doodlePromise
+  doodlePromise = import("css-doodle").catch(() => null)
+  return doodlePromise
+}
+
 // Dating's first screen: "sveip for å begynne". A swipe in any direction, or the
-// link itself, opens the deck; without script the link alone does. The Hjerterom
-// SVG stays self-contained and its original SMIL motion pauses for reduced motion.
+// link itself, opens the deck; without script the link alone does.
 export default class extends Controller {
   static values = { url: String }
-  static targets = ["hjerterom"]
+  static targets = ["heart"]
 
   connect() {
-    this.origin = null
-    this.motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
-    this.motionChange = () => this.#syncMotion()
-    this.motionQuery.addEventListener("change", this.motionChange)
-    this.#syncMotion()
-  }
-
-  disconnect() {
-    this.motionQuery?.removeEventListener("change", this.motionChange)
-  }
-
-  #syncMotion() {
-    if (!this.hasHjerteromTarget) return
-
-    const svg = this.hjerteromTarget
-    if (this.motionQuery.matches) {
-      svg.setCurrentTime?.(0)
-      svg.pauseAnimations?.()
-    } else {
-      svg.unpauseAnimations?.()
-    }
+    // Draw the heart. The library only defines the element; nothing animates
+    // until the CSS pulse is allowed by the media query.
+    loadDoodle()
   }
 
   pointerDown(event) {
