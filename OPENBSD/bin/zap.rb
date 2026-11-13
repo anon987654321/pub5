@@ -36,7 +36,7 @@ class Zap
       return 0
     end
 
-    if openbsd? && @force && matches.any? { |process| command_name(process[:command]) == "vmd" }
+    if openbsd? && @force && matches.any? { |process| vmd_process?(process) }
       @err.puts "zap: refusing forced vmd termination; use 'vmctl stop <vm>' for a guest or 'rcctl stop vmd' for the daemon"
       return 2
     end
@@ -230,6 +230,11 @@ class Zap
 
   def command_name(command)
     File.basename(command.to_s.split.first.to_s)
+  end
+
+  def vmd_process?(process)
+    name = command_name(process[:command])
+    name == "vmd" || name.start_with?("vmd:")
   end
 
   def confirm?(process)
