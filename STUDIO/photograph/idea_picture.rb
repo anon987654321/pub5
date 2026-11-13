@@ -6,6 +6,7 @@ require "rbconfig"
 require "securerandom"
 require_relative "../output_paths"
 require_relative "../replicate/client"
+require_relative "../replicate/models"
 require_relative "../subprocess"
 require_relative "../lora/consent"
 require_relative "../lora/lora"
@@ -29,7 +30,8 @@ module Studio
         client: nil,
         directory: SUBJECTS,
         subject: ENV.fetch("STUDIO_PHOTOGRAPH_SUBJECT", "ragnhild"),
-        model_manifest: nil
+        model_manifest: nil,
+        engine: nil
       )
         @client = client
         @directory = directory
@@ -38,6 +40,7 @@ module Studio
 
         @subject_directory = File.join(SUBJECTS, @subject)
         @model_manifest = model_manifest || default_model_manifest
+        @engine = engine&.to_s
       end
 
       def write(words, film: true, duration: 5, output_stem: nil, grade_seed: nil)
@@ -71,18 +74,30 @@ module Studio
       end
 
       def validate_model!
+        # A subject rendered only from reference photographs may have no trained
+        # LoRA yet; the render itself validates whatever engine it reaches. When
+        # a LoRA is configured, preflight it exactly as before.
+        return engine unless lora_configured?
+
         model = still_model
         return model if @validated_still_model == model
 
         names = client.input_names(model)
         raise "Replicate model is unavailable or has no readable input schema: #{model}" if names.empty?
 
-        required = still_input("").keys.map(&:to_s)
+        required = lora_input("").keys.map(&:to_s)
         missing = required - names
         raise "Replicate model #{model} is missing inputs used by the still renderer: #{missing.join(", ")}" unless missing.empty?
 
         @validated_still_model = model
         model
+      end
+
+      def lora_configured?
+        still_model
+        true
+      rescue StandardError
+        false
       end
 
       def validate_film_model!
@@ -118,23 +133,71 @@ module Studio
         path = File.join(@directory, "#{safe_stem(stem)}.jpg")
         raise "refusing to replace an existing still: #{path}" if File.exist?(path)
 
-        output = client.predict(still_model, still_input(words), timeout: 600)
+        output = render_with_fallback(words)
         client.download_url(first_url(output), path)
         graded = grade(path, seed: grade_seed)
         File.delete(path) if graded != path && File.file?(path)
         graded
       end
 
-      def render_film(words, still, stamp, duration)
-        path = File.join(@directory, "#{safe_stem(stamp)}.mp4")
-        raise "refusing to replace an existing film: #{path}" if File.exist?(path)
+      # STUDIO must render on Replicate, and must not stop for want of a credit.
+      # Try the chosen engine, then the catalogue's fallback chain, which ends in
+      # Replicate's free tier. Each engine gets the input shape it declares; a
+      # reference model is handed the subject's own photographs, a text model
+      # only the prompt, and the subject's LoRA its trained version.
+      def render_with_fallback(words, timeout: 600)
+        chain = render_chain
+        failures = []
+        chain.each_with_index do |candidate, index|
+          model = resolve_engine(candidate)
+          begin
+            return client.predict(model, still_input(words, candidate), timeout:)
+          rescue StandardError => error
+            failures << "#{candidate} (#{error.message})"
+            warn "STUDIO: #{candidate} failed, falling back" unless index == chain.length - 1
+          end
+        end
 
-        output = client.predict(FILM, film_input(words, still, duration), timeout: 600)
-        client.download_url(first_url(output), path)
-        path
+        raise "every engine failed: #{failures.join('; ')}"
       end
 
-      def still_input(words)
+      # The chain to try, with the reference engines removed when the subject has
+      # no reference photographs — otherwise every render would spend three
+      # failures before reaching an engine that can actually run.
+      def render_chain
+        chain = Studio::ReplicateClient::Models.chain_for(engine)
+        return chain if references_available?
+
+        chain.reject { |name| reference_engine?(name) }
+      end
+
+      def reference_engine?(name)
+        Studio::ReplicateClient::Models.engines.dig(name, "likeness") == "reference"
+      end
+
+      def references_available? = reference_files.any?
+
+      def resolve_engine(name)
+        name == "$subject_lora" ? still_model : name
+      end
+
+      # The engine this render reaches for first: the catalogue's primary
+      # likeness model unless --engine named another.
+      def engine = @engine || Studio::ReplicateClient::Models.default_engine
+
+      # The input for one engine, shaped to what that engine declares.
+      def still_input(words, engine_name = nil)
+        engine_name ||= engine
+        spec = Studio::ReplicateClient::Models.engines[engine_name]
+        case
+        when engine_name == "$subject_lora" then lora_input(words)
+        when spec && spec["likeness"] == "reference" then reference_input(words, engine_name)
+        else text_input(words, engine_name)
+        end
+      end
+
+      # The subject's trained LoRA: the input shape its FLUX base declares.
+      def lora_input(words)
         {
           prompt: photographic(words),
           model: "dev",
@@ -147,6 +210,67 @@ module Studio
           go_fast: false,
           lora_scale: 1.0,
         }
+      end
+
+      # A reference model keeps the face from the subject's own photographs. Send
+      # only the keys the model declares (models.yml), so a model with `images`
+      # rather than `image_input`, or without output_quality, gets a schema it
+      # accepts.
+      def reference_input(words, engine_name = engine)
+        desired = {
+          "prompt" => photographic(words),
+          "image_input" => reference_urls,
+          "images" => reference_urls,
+          "input_images" => reference_urls,
+          "max_images" => 1,
+          "aspect_ratio" => "2:3",
+          "output_format" => "jpg",
+          "output_quality" => 95,
+        }
+        allowed = Studio::ReplicateClient::Models.inputs_for(engine_name).map(&:to_s)
+        desired.select { |key, _| allowed.include?(key) }
+      end
+
+      # A text model has only the prompt; the descriptor carries what likeness it
+      # can. This is the free tier, reached only when the better engines failed.
+      def text_input(words, engine_name = engine)
+        desired = {
+          "prompt" => photographic(words),
+          "aspect_ratio" => "2:3",
+          "num_outputs" => 1,
+          "guidance" => 3.5,
+          "num_inference_steps" => 28,
+          "output_format" => "jpg",
+          "output_quality" => 95,
+          "go_fast" => true,
+        }
+        allowed = Studio::ReplicateClient::Models.inputs_for(engine_name).map(&:to_s)
+        desired.select { |key, _| allowed.include?(key) }
+      end
+
+      # The subject's own reference photographs, uploaded once and reused for
+      # every frame of a series. Required, because a reference engine with no
+      # references is a text prompt wearing a likeness model's name — the raise
+      # here sends the render on to the next engine in the chain instead.
+      def reference_urls
+        @reference_urls ||= reference_files.map { |file| client.upload_file(file, subject: @subject) }.tap do |urls|
+          raise "no reference photographs for #{@subject} in #{references_directory}" if urls.empty?
+        end
+      end
+
+      def reference_files
+        Dir[File.join(references_directory, "*.{jpg,jpeg,png,webp}")].reject { |f| File.symlink?(f) }.sort
+      end
+
+      def references_directory = File.join(@subject_directory, "references")
+
+      def render_film(words, still, stamp, duration)
+        path = File.join(@directory, "#{safe_stem(stamp)}.mp4")
+        raise "refusing to replace an existing film: #{path}" if File.exist?(path)
+
+        output = client.predict(FILM, film_input(words, still, duration), timeout: 600)
+        client.download_url(first_url(output), path)
+        path
       end
 
       def film_input(words, still, duration)

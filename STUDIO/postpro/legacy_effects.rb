@@ -34,7 +34,7 @@ module Postpro
       else
         inner = frame
       end
-      safe_cast(inner.composite2(image, "over", x: border, y: border))
+      safe_cast(inner.composite2(image, "over", x: border, y: border).copy(interpretation: image.interpretation))
     end
 
     def tape_degradation(image, intensity = 0.6, _mode = "professional")
@@ -88,7 +88,7 @@ module Postpro
       bars = Vips::Image.black(image.width, image.height, bands: image.bands)
       bars = bars.draw_rect([0] * image.bands, 0, 0, image.width, bar, fill: true)
       bars = bars.draw_rect([0] * image.bands, 0, image.height - bar, image.width, bar, fill: true)
-      safe_cast(bars.composite2(image, "over"))
+      safe_cast(bars.composite2(image, "over").copy(interpretation: image.interpretation))
     end
 
     def halftone_print(image, intensity = 0.6, _mode = "professional")
@@ -134,7 +134,7 @@ module Postpro
         frame = frame.draw_rect([0] * image.bands, 0, y, border, border, fill: true)
         frame = frame.draw_rect([0] * image.bands, frame.width - border, y, border, border, fill: true)
       end
-      safe_cast(frame.composite2(image, "over", x: border, y: 0))
+      safe_cast(frame.composite2(image, "over", x: border, y: 0).copy(interpretation: image.interpretation))
     end
 
     def lens_flare(image, intensity = 0.5, _mode = "professional")

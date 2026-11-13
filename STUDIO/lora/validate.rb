@@ -327,14 +327,27 @@ end
 
 if $PROGRAM_NAME == __FILE__
   require "optparse"
+  require_relative "../interactive"
 
   options = {}
-  OptionParser.new do |parser|
-    parser.banner = "Usage: ruby STUDIO/lora/validate.rb [--subject NAME] [--json]"
-    parser.on("--subject NAME", "Validate one subject directory") { |value| options[:subject] = value }
-    parser.on("--json", "Print the complete machine-readable report") { options[:json] = true }
-    parser.on("-h", "--help", "Show this help") { puts parser; exit 0 }
-  end.parse!
+  wizard = Studio::Interactive.new
+  if ARGV.empty? && wizard.tty?
+    # No arguments in a terminal: ask, rather than require a remembered flag.
+    subjects = Dir.children(Studio::Lora::Validator::ROOT).select do |name|
+      Studio::Lora::Validator::SUBJECT_NAME.match?(name) &&
+        File.directory?(File.join(Studio::Lora::Validator::ROOT, name))
+    end.sort
+    choice = wizard.choose("Which subject?", [["All subjects", :all], *subjects.map { |s| [s, s] }])
+    options[:subject] = choice unless choice == :all
+    options[:json] = wizard.confirm("Print the full JSON report?", default: false)
+  else
+    OptionParser.new do |parser|
+      parser.banner = "Usage: ruby STUDIO/lora/validate.rb [--subject NAME] [--json]"
+      parser.on("--subject NAME", "Validate one subject directory") { |value| options[:subject] = value }
+      parser.on("--json", "Print the complete machine-readable report") { options[:json] = true }
+      parser.on("-h", "--help", "Show this help") { puts parser; exit 0 }
+    end.parse!
+  end
 
   validator = Studio::Lora::Validator.new
   report = options[:subject] ? {

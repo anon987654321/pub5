@@ -21,7 +21,7 @@ module Studio
 
       IMAGE_EXTENSIONS = %w[jpg jpeg png webp].freeze
 
-      def initialize(subject:, client: nil, directory: nil, scenes: SCENES, ledger_path: nil)
+      def initialize(subject:, client: nil, directory: nil, scenes: SCENES, ledger_path: nil, engine: nil)
         @subject = subject.to_s
         raise ArgumentError, "subject must be a simple directory name" unless @subject.match?(/\A[a-zA-Z0-9_-]+\z/)
         @scenes = Array(scenes)
@@ -30,12 +30,12 @@ module Studio
         @directory = File.expand_path(directory || IdeaPicture::SUBJECTS)
         @subject_directory = File.join(IdeaPicture::SUBJECTS, @subject)
         @series = IdeaPicture.new(
-          subject: @subject, directory: @directory, client:
+          subject: @subject, directory: @directory, client:, engine:
         )
         @ledger_path = ledger_path || File.join(IdeaPicture::SUBJECTS, @subject, "ledger.jsonl")
       end
 
-      def run(count: 12, replace: true)
+      def run(count: 12, replace: false)
         total = Integer(count)
         raise ArgumentError, "count must be between 1 and #{LIMIT}" unless total.between?(1, LIMIT)
 
@@ -56,7 +56,8 @@ module Studio
           begin
             stem = "#{@subject}_selfie_#{format("%02d", index + 1)}"
             path = @series.write(
-              scene, film: false, output_stem: stem, grade_seed: Studio::Lora::Selfie.grade_seed(index + 1)
+              scene, film: false, output_stem: stem,
+              grade_seed: Studio::Lora::Selfie.grade_seed(index + 1, @subject)
             ).fetch("still")
             record("render", index: index, scene: scene, path: path)
             rendered << path

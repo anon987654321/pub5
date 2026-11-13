@@ -133,8 +133,18 @@ HEAVY_LANE_DEAL = %i[
 ].freeze
 
 def heavy_mode? = ENV.fetch("POSTPRO_HEAVY", "0") == "1"
+# The maximal emulation stack, asked for by name. It is not a default and must
+# never become one: this file's whole argument above is that a chain has a
+# subject, and this mode deliberately refuses that argument because the
+# operator asked to hear every effect at once. --rough admits the wear shelf;
+# --all-effects admits the wear shelf, the softening and artefact shelves, and
+# lifts the step cap, so one take runs the full effect vocabulary in physical
+# stage order with a single grain pass last.
+def all_effects_mode? = ENV.fetch("POSTPRO_ALL_EFFECTS", "0") == "1" || ARGV.include?("--all-effects")
 # Two marks of wear is a print that has been handled. Five is a prop.
+# --all-effects is the one caller that wants the prop shelf whole.
 RANDOM_WEAR_CEILING = 2
+def wear_ceiling = all_effects_mode? ? Float::INFINITY : RANDOM_WEAR_CEILING
 # A repeat is a second pass, not a second effect: halation twice at different
 # radii is what a bright window through a thick base does, and it only means
 # anything when the first pass was one of the leads.
@@ -176,6 +186,8 @@ def random_pool(lane = nil)
   allowed = lane ? RANDOM_LANES.fetch(lane).fetch(:effects) : RECIPE_ALLOWED - [RANDOM_ALWAYS] - RANDOM_SHAPES
   allowed &= RECIPE_ALLOWED
   allowed -= RANDOM_SHAPES
+  return allowed if all_effects_mode?
+
   ARGV.include?("--rough") ? allowed : allowed - RANDOM_UNCLEAN
 end
 

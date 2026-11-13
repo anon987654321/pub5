@@ -14,9 +14,15 @@ def run_one_shot
     exit 1
   end
 
-  if ARGV.include?("--tiff16")
-    output_path = output_path.sub(/\.(jpg|jpeg|png|webp)$/i, ".tif")
-  end
+  grade_one_shot(input_path, output_path, preset_name)
+end
+
+# Grade one frame through one named preset and write it. Returns the paths and
+# the sidecar so the CLI can print them and the API can return them as JSON;
+# the two callers share this body rather than a second grade path.
+def grade_one_shot(input_path, output_path, preset_name)
+  tiff16 = ARGV.include?("--tiff16") || output_path.to_s.end_with?(".tif", ".tiff")
+  output_path = output_path.sub(/\.(jpg|jpeg|png|webp)$/i, ".tif") if tiff16
   Postpro::Constitution.verify_distinct_source!(input_path:, output_path:)
 
   image = load_image(input_path)
@@ -42,7 +48,7 @@ def run_one_shot
   # explicit output path -- quietly wrote 8-bit JPEG when asked for 16-bit TIFF.
   # A grading tool silently halving its bit depth is the kind of thing you find
   # much later, in the file.
-  if ARGV.include?("--tiff16") || output_path.end_with?(".tif", ".tiff")
+  if tiff16
     output_path = output_path.sub(/\.(jpg|jpeg|png|webp)$/i, ".tif")
     processed.cast("ushort").write_to_file(output_path)
   else
@@ -52,6 +58,8 @@ def run_one_shot
   sidecar = write_grade_sidecar(input_path, output_path, preset_name, image, processed)
   sidecar[:quality][:warnings].each { |warning| $cli_logger.info "warn #{warning}" }
   $cli_logger.info "ok preset=#{preset_name} out=#{output_path}"
+  { "input" => input_path, "output" => output_path, "preset" => preset_name.to_s,
+    "sidecar" => "#{output_path}.json" }
 end
 
 def watch_mode?

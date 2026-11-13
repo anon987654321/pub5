@@ -25,6 +25,117 @@ require "yaml"
 
 module Studio
   module Lora
+    # The LoRA CLI: run `ruby STUDIO/lora/lora.rb` with no arguments and it asks
+    # what to do, then hands off to the owning tool. Flags are not the interface;
+    # this is the one place a person starts from.
+    module CLI
+      module_function
+
+      def run(argv)
+        require_relative "../api"
+        return Studio::Api.respond(api_actions, argv:) if Studio::Api.requested?(argv)
+
+        require_relative "../interactive"
+        wizard = Studio::Interactive.new
+        return run_flags(argv) unless argv.empty? || !wizard.tty?
+
+        choice = wizard.choose("What would you like to do with a LoRA subject?", [
+          ["Validate a subject's training plan", :validate],
+          ["Render a selfie series", :selfie],
+        ])
+        case choice
+        when :validate then validate
+        when :selfie then selfie(wizard)
+        end
+      end
+
+      # The API actions MASTER reaches over the subprocess boundary: read-only
+      # validation and the render hand-off, with no prompt in sight.
+      def api_actions
+        {
+          "validate" => ->(request) { validate_report(request) },
+          "subjects" => ->(_request) { subjects },
+          "craft" => ->(_request) { craft },
+          "selfie" => ->(request) { selfie_render(request) },
+        }
+      end
+
+      def validate_report(request)
+        require_relative "validate"
+        validator = Studio::Lora::Validator.new
+        subject = request["subject"].to_s
+        if subject.empty?
+          validator.validate_all
+        else
+          {
+            "schema" => "studio.lora.validation.v1",
+            "read_only" => true,
+            "provider_calls" => 0,
+            "subject_count" => 1,
+            "subjects" => [validator.validate_subject(subject)]
+          }
+        end
+      end
+
+      def subjects
+        require_relative "validate"
+        root = Studio::Lora::Validator::ROOT
+        Dir.children(root).select do |name|
+          Studio::Lora::Validator::SUBJECT_NAME.match?(name) && File.directory?(File.join(root, name))
+        end.sort
+      end
+
+      # The subject craft vocabulary, so MASTER can describe what STUDIO renders.
+      def craft
+        {
+          "geometry" => Studio::Lora::Craft::GEOMETRY,
+          "scenes" => Studio::Lora::Selfie::SCENES,
+        }
+      end
+
+      def selfie_render(request)
+        require_relative "../photograph/selfie_series"
+        subject = request.fetch("subject", "ragnhild")
+        count = request.fetch("count", 10).to_i.clamp(1, 24)
+        engine = request["engine"]
+        series = Studio::Visual::SelfieSeries.new(subject:, engine:)
+        { "subject" => subject, "rendered" => series.run(count:, replace: request.fetch("replace", true)) }
+      end
+
+      def run_flags(argv)
+        case argv.first
+        when "validate" then validate
+        when "selfie" then selfie(Studio::Interactive.new(input: $stdin, output: $stdout, tty: false))
+        when "-h", "--help", nil then puts help
+        else abort "lora: unknown command #{argv.first.inspect} (see --help)"
+        end
+      end
+
+      def validate
+        load File.expand_path("validate.rb", __dir__)
+      end
+
+      def selfie(wizard)
+        require_relative "../replicate/models"
+        subject = wizard.ask("Subject", default: "ragnhild")
+        count = wizard.number("How many sittings", default: 10, range: 1..24)
+        engine = wizard.ask("Engine", default: Studio::ReplicateClient::Models.default_engine)
+        system(RbConfig.ruby, File.expand_path("../photograph.rb", __dir__),
+               "--selfie-series", "--subject", subject, "--count", count.to_s, "--engine", engine)
+      end
+
+      def help
+        <<~TEXT
+          lora - the STUDIO likeness subject tool
+          usage:
+            ruby STUDIO/lora/lora.rb                 ask what to do (interactive)
+            ruby STUDIO/lora/lora.rb validate        audit every subject's training plan
+            ruby STUDIO/lora/lora.rb selfie          render a selfie series
+          The subject craft itself (scenes, prompting rules, grades) lives in
+          this file as Studio::Lora::Craft and Studio::Lora::Selfie.
+        TEXT
+      end
+    end
     module Craft
       # The arm's length framing with a three-metre portrait's proportion.
       GEOMETRY = "held at arm's length in framing and eye contact but with the " \
@@ -211,11 +322,13 @@ module Studio
         SCENES[(Integer(number) - 1) % SCENES.size]
       end
 
-      # A distinct postpro heavy look per frame: postpro deals its named looks
-      # through Random.new(POSTPRO_SEED), so a fixed seed per sitting gives each
-      # frame a different look rather than the same one re-rolled.
-      def self.grade_seed(number)
-        10_000 + (Integer(number) * 977)
+      # A distinct postpro heavy look per frame, and per subject. postpro deals
+      # its named looks through Random.new(POSTPRO_SEED), so the seed decides the
+      # look. The subject offset matters: seeded by frame number alone, two
+      # subjects landed on the same ten looks in the same order, which is what
+      # made the first run read as one set repeated rather than two sittings.
+      def self.grade_seed(number, subject)
+        (subject.to_s.bytes.sum * 101) + (Integer(number) * 977)
       end
     end
 
@@ -236,4 +349,9 @@ module Studio
       def self.calibration = load.fetch("calibration")
     end
   end
+end
+
+if $PROGRAM_NAME == __FILE__
+  status = Studio::Lora::CLI.run(ARGV)
+  exit(status.is_a?(Integer) ? status : 0)
 end

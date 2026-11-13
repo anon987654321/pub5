@@ -10,6 +10,10 @@ BOOT_TIME = Time.now.freeze
 
 module PostproBootstrap
   def self.dmesg(msg)
+    # The API writes exactly one JSON line to stdout; the boot banner and every
+    # progress line would corrupt it. Silence the chatter on that path only.
+    return if defined?(ARGV) && ARGV.first == "api"
+
     elapsed = defined?(BOOT_TIME) ? " +%.3fs" % (Time.now - BOOT_TIME) : ""
     # FATAL is in this list because it was not, and the one message that uses
     # it — libvips unavailable, on the line before `exit 1` — printed as

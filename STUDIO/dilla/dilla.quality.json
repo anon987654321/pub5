@@ -1,0 +1,19 @@
+{
+  "engine": "dilla 4.2.0",
+  "duration_s": 47.25,
+  "peak_dbfs": -3.64,
+  "rms_dbfs": -10.79,
+  "crest_db": 7.16,
+  "lufs_estimate": -9.5,
+  "stem_energy_share": {
+    "drums": 0.2,
+    "sub": 0.019,
+    "bass": 0.512,
+    "chords": 0.185,
+    "melody": 0.084,
+    "foley": 0.0,
+    "sample": 0.0
+  },
+  "sonitex": "subtle",
+  "swing": 58.0
+}

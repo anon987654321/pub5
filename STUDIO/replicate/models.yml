@@ -1,0 +1,183 @@
+# STUDIO/replicate/models.yml
+#
+# What Replicate can do, refit from its public catalogue (github.com/replicate/
+# all-the-public-replicate-models and the /v1/collections API) so STUDIO can
+# choose a current model rather than the one it happened to learn first.
+#
+# Every entry was read live from the Replicate API on 2026-11-13: owner/name
+# exist and the `inputs` listed are the ones the model's own schema declares, so
+# a caller can pass them without a rejected-key surprise. Run counts are the
+# catalogue's at that date and are a popularity hint, not a quality claim.
+#
+# `likeness` is the field that matters for a selfie of a real person:
+#   reference  the model takes the subject's own photographs as input and keeps
+#              the face from them — no training run, and the strongest likeness
+#              route Replicate offers now.
+#   lora       the model runs a trained LoRA (what STUDIO/lora trains).
+#   text       the prompt alone; a likeness has to be described, so it drifts.
+#
+# Studio::Replicate::Models.load reads this; `--engine` on photograph.rb selects
+# from it. Keep this list to models worth reaching for, not every row Replicate
+# has ever published.
+
+verified_on: "2026-11-13"
+
+# The engine the pipeline reaches for first, and the order it falls back
+# through when one fails. The primary is the strongest current likeness model;
+# the chain ends in Replicate's free tier, so a render never dies for want of
+# credit. "$subject_lora" is the subject's own trained model (lora/<subject>),
+# the one engine that is about this person rather than people in general.
+default_engine: google/nano-banana
+fallback_chain:
+  - bytedance/seedream-4.5
+  - black-forest-labs/flux-2-klein-4b
+  - "$subject_lora"
+  - black-forest-labs/flux-dev
+  - black-forest-labs/flux-schnell
+
+# Free to run on Replicate (its "try for free" tier). A fallback, never the
+# first choice: they do not keep a likeness, but they keep a series alive. Only
+# the two that render from a prompt alone are in the chain; flux-kontext-pro is
+# free too but needs an input_image, so it belongs to image_to_image, not here.
+free_models:
+  - black-forest-labs/flux-dev
+  - black-forest-labs/flux-schnell
+
+# Still photographs of a person. The selfie pipeline picks from here.
+text_to_image:
+  google/nano-banana:
+    likeness: reference
+    inputs: [prompt, image_input, aspect_ratio, output_format]
+    note: >-
+      Gemini image model. Takes up to several reference photographs and holds a
+      face across a new scene better than a prompt or a light LoRA does; the
+      strongest likeness route in the catalogue (123M+ runs). aspect_ratio may
+      be match_input_image to inherit the reference's crop.
+  bytedance/seedream-4.5:
+    likeness: reference
+    inputs: [prompt, image_input, aspect_ratio, size, max_images, sequential_image_generation]
+    note: "Reference-photo generation up to 2K/4K; image_input is a list."
+  black-forest-labs/flux-2-klein-4b:
+    likeness: reference
+    inputs: [prompt, images, aspect_ratio, seed, output_format, output_megapixels, output_quality]
+    note: "FLUX 2, small and fast; `images` carries reference frames."
+  black-forest-labs/flux-dev-lora:
+    likeness: lora
+    inputs: [prompt, aspect_ratio, guidance, num_inference_steps, lora_scale, extra_lora, seed, go_fast, output_format, output_quality]
+    note: "The LoRA route STUDIO already trains against (ragnhild-flux, johann-flux)."
+  openai/gpt-image-2:
+    likeness: reference
+    inputs: [prompt, input_images, aspect_ratio, quality, output_format]
+  bytedance/seedream-4:
+    likeness: reference
+    inputs: [prompt, image_input, aspect_ratio, size]
+  black-forest-labs/flux-dev:
+    likeness: text
+    free: true
+    inputs: [prompt, aspect_ratio, guidance, num_inference_steps, seed, go_fast, output_format, output_quality, num_outputs, image]
+    note: "Free tier. The base a face LoRA is trained against; strong prompt fidelity, no likeness memory."
+  black-forest-labs/flux-schnell:
+    likeness: text
+    free: true
+    inputs: [prompt, aspect_ratio, num_inference_steps, seed, go_fast, output_format, output_quality, num_outputs]
+    note: "Free tier and the fastest FLUX (701M runs); the last resort that still renders."
+  prunaai/flux-fast:
+    likeness: text
+    inputs: [prompt, aspect_ratio, seed]
+    note: "Cheap and fast; useful for comps before a real render."
+  prunaai/z-image-turbo:
+    likeness: text
+    inputs: [prompt, aspect_ratio, seed]
+    note: "Fast text-to-image (59M runs)."
+
+# Take one photograph and make a better or different one.
+image_to_image:
+  black-forest-labs/flux-kontext-max:
+    inputs: [prompt, input_image, aspect_ratio, output_format, seed]
+    note: "Instruction editing that keeps the subject; the max tier of the Kontext family."
+  black-forest-labs/flux-kontext-pro:
+    inputs: [prompt, input_image, aspect_ratio, output_format, seed]
+  google/nano-banana:
+    inputs: [prompt, image_input, aspect_ratio]
+    note: "Also the best multi-reference identity model, so it doubles here."
+  fofr/color-matcher:
+    inputs: [image, reference]
+    note: "Match one frame's grade to another; a deterministic grade without a look roll."
+
+# Likeness from a face alone, when there is one photograph and no training set.
+identity:
+  grandlineai/instant-id-photorealistic:
+    inputs: [image, prompt, negative_prompt, width, height, num_inference_steps, guidance_scale]
+    note: "InstantID: one face photograph, no training run. Weaker than a reference model across many frames."
+
+# Make a small render usable.
+upscale_and_restore:
+  philz1337x/clarity-pro-upscaler:
+    inputs: [image, prompt, upscale_factor]
+    note: "Face-aware upscaler; the usual last step before delivery."
+  recraft-ai/recraft-crisp-upscale:
+    inputs: [image]
+  zsxkib/bsrgan:
+    inputs: [image, scale]
+  lucataco/codeformer:
+    inputs: [image, upscale, face_upsample, background_enhance]
+    note: "Restores faces in a soft or damaged frame."
+  flux-kontext-apps/restore-image:
+    inputs: [input_image, prompt]
+  topazlabs/dust-and-scratch-v2:
+    inputs: [image]
+
+# Motion from a still — the selfie series' short film.
+image_to_video:
+  kwaivgi/kling-v4-flash:
+    inputs: [image, prompt, duration, aspect_ratio, mode]
+    note: "Kling v4 flash: fast image-to-video with a short prompt."
+  wan-video/wan-2.7-i2v:
+    inputs: [image, prompt, resolution, num_frames, seed, go_fast]
+  wan-video/wan-2.2-i2v-a14b:
+    inputs: [image, prompt, resolution, num_frames, seed]
+  google/gemini-omni-1.2-flash:
+    inputs: [prompt, image]
+  pixverse/pixverse-v4:
+    inputs: [image, prompt, duration, quality]
+
+# Sound, which STUDIO also needs (dilla) — the same catalogue carries it.
+text_to_speech:
+  minimax/voice-cloning:
+    inputs: [text, voice_file, speed, volume]
+    note: "Clone a voice from a sample; consent applies exactly as for a face."
+  resemble-ai/chatterbox-pro:
+    inputs: [text, audio_prompt, exaggeration, cfg_weight]
+  google/gemini-3.8-flash-tts:
+    inputs: [text, voice, prompt]
+  x-lance/f5-tts:
+    inputs: [gen_text, ref_audio, ref_text]
+
+music:
+  google/lyria-3.5:
+    inputs: [prompt, duration]
+  stability-ai/stable-audio-2.5:
+    inputs: [prompt, duration, seed]
+  elevenlabs/music:
+    inputs: [prompt, music_length_ms]
+  minimax/music-1.5:
+    inputs: [prompt, lyrics, duration]
+  lucataco/ace-step:
+    inputs: [prompt, lyrics, duration, seed]
+
+lipsync:
+  sync/lipsync-2-pro:
+    inputs: [video, audio]
+  heygen/lipsync-speed:
+    inputs: [video, audio]
+  pixverse/lipsync:
+    inputs: [video, audio]
+
+# The training route, when a subject's own LoRA is the goal.
+training:
+  replicate/train-rvc-model:
+    inputs: [dataset_zip, model_name]
+    note: "Voice model training, the audio counterpart of a face LoRA."
+  black-forest-labs/flux-dev:
+    inputs: [prompt, aspect_ratio, guidance, num_inference_steps, seed]
+    note: "The base a face LoRA is trained against."

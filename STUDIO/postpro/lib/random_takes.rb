@@ -41,7 +41,7 @@ def random_draw(rng, lane:)
   while picked.length < target
     admissible = (pool - picked).select do |candidate|
       next false if RANDOM_WEAR.include?(candidate) &&
-                    (picked & RANDOM_WEAR).length >= RANDOM_WEAR_CEILING
+                    (picked & RANDOM_WEAR).length >= wear_ceiling
 
       picked.all? { |held| random_affinity[[candidate, held].sort].positive? }
     end
@@ -162,15 +162,33 @@ def look_led_chain(rng, look:, avoid: [], lane: nil)
   base = clean_look_steps(look)
   taken = base.map(&:first)
   drawn = random_chain(rng, avoid:, lane:).reject { |fx, _| taken.include?(fx) || fx == RANDOM_ALWAYS }
-  # One step of the cap is always the closing grain pass.
-  tail = strongest_steps(drawn, HEAVY_MAX_STEPS - 1 - base.count { |fx, _| fx != RANDOM_ALWAYS })
-
   stock = (PRESETS.fetch(look.to_sym)[:stock] || :kodak_portra).to_s
   grain = base.find { |fx, _| fx == RANDOM_ALWAYS } || [RANDOM_ALWAYS, { "intensity" => 0.6, "stock" => stock }]
   rank = random_stage_rank
+  # --all-effects carries the whole vocabulary: the look's own steps at the
+  # look's strength, then every remaining effect once at support strength, in
+  # physical stage order, with the single grain pass last. No cap: the operator
+  # asked to hear the whole shelf, so the strongest-few cap that keeps a normal
+  # take coherent is exactly what this mode is asked not to apply.
+  tail = if all_effects_mode?
+           all_effect_tail(taken, stock, rng)
+         else
+           strongest_steps(drawn, HEAVY_MAX_STEPS - 1 - base.count { |fx, _| fx != RANDOM_ALWAYS })
+         end
   body = (base.reject { |fx, _| fx == RANDOM_ALWAYS } + tail)
          .each_with_index.sort_by { |(fx, _), index| [rank.fetch(fx, 0.85), index] }.map(&:first)
   body << grain
+end
+
+# Every recipe effect the look did not already carry, once, at an audible
+# support strength, in stage order. Grain is excluded because the caller appends
+# the one closing pass.
+ALL_EFFECTS_SUPPORT = (0.18..0.4)
+def all_effect_tail(taken, stock, rng)
+  (RECIPE_ALLOWED - [RANDOM_ALWAYS] - taken).uniq.map do |fx|
+    [fx, { "intensity" => (ALL_EFFECTS_SUPPORT.first + rng.rand * (ALL_EFFECTS_SUPPORT.last - ALL_EFFECTS_SUPPORT.first)).round(2),
+           "stock" => stock }]
+  end
 end
 
 # The `room` strongest steps of a drawn chain, in their drawn order.
