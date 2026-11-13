@@ -62,6 +62,9 @@ module Deploy
       %w[passwords edit] => { path: "/passwords/:token/edit", persona: "guest", needs_id: true },
       # bsdports keeps the social routes behind BSDPORTS_SOCIAL=1.
       %w[notifications index] => { path: "/notifications", persona: "auth", apps: %w[brgen amber] },
+      # The dating wait page: brgen and amber draw GET /encounters/waiting
+      # (as: :waiting_encounters); bsdports has no encounters routes at all.
+      %w[encounters waiting] => { path: "/encounters/waiting", persona: "auth", apps: %w[brgen amber] },
       %w[pages privacy] => { path: "/privacy", persona: "guest" }, %w[pages terms] => { path: "/terms", persona: "guest" }, %w[pages cookies] => { path: "/cookies", persona: "guest" },
       %w[pages safety] => { path: "/safety", persona: "guest" },
       %w[pages rules] => { path: "/rules", persona: "guest" },

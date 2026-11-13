@@ -1,10 +1,12 @@
 # frozen_string_literal: true
 
+require "erb"
+
 require_relative "../../support/check_result"
 require_relative "../../support/fleet"
 
 module Deploy
-  # PWA-100 and BRGEN-115. Three manifests, and nothing checked that what they
+  # PWA-100 and BRGEN-115. Five manifests, and nothing checked that what they
   # declare exists or that what they call the app matches what the page does.
   #
   # The icon check is the reason this is a check rather than a test, and it is
@@ -51,15 +53,82 @@ module Deploy
         return
       end
 
-      source = File.read(manifest)
-      check_keys(app, source)
-      check_icons(app, source)
+      source, rendered = manifest_sources(manifest)
+      check_keys(app, rendered)
+      check_icons(app, rendered)
       check_service_worker(app)
     end
 
+    # master's face lives at MASTER/web (apps.yml deploy_root), not RAILS/master;
+    # every app root comes from Fleet.app_dir so the manifest, the worker and the
+    # icon roots all resolve against the tree the app actually deploys from.
     def manifest_path(app)
       candidates = %w[app/views/pwa/manifest.json app/views/pwa/manifest.json.erb]
-      candidates.map { |path| File.join(rails_root, app, path) }.find { |path| File.file?(path) }
+      candidates.map { |path| File.join(app_root(app), path) }.find { |path| File.file?(path) }
+    end
+
+    # A manifest may be a static JSON document or a .json.erb the app renders per
+    # request (brgen resolves the city per host; mrdamascy reads design tokens).
+    # The requirement is about the manifest the browser receives, so the keys and
+    # the icons are measured against the rendered JSON; the raw source stays
+    # available for the brand check, which must see city_name before rendering.
+    # The rendered pass evaluates the template with the helper names the apps
+    # bind, stubbed to neutral values -- it measures shape, not copy.
+    def manifest_sources(path)
+      source = File.read(path)
+      return [source, source] unless path.end_with?(".erb")
+
+      [source, render_manifest_erb(source)]
+    end
+
+    def render_manifest_erb(source)
+      sandbox = manifest_sandbox
+      _erbout = +""
+      sandbox.module_eval(ERB.new(source).src, "(manifest render)")
+      _erbout
+    end
+
+    # The stubs live on a sandbox module, not on Object: module_eval's cref
+    # is the sandbox, so `Master`, `Current` and `I18n` resolve inside it and
+    # never touch (or collide with) the real constants the check process has
+    # loaded. Method calls resolve on the module for the same reason.
+    def manifest_sandbox
+      sandbox = Module.new
+      define_manifest_text_helpers(sandbox)
+      define_manifest_context_constants(sandbox)
+      # asset_path returns the plain public path so the icon-resolution pass
+      # measures the file that ships, not a build-time digest.
+      sandbox.define_singleton_method(:asset_path) { |name| "/#{name}" }
+      sandbox
+    end
+
+    def define_manifest_text_helpers(sandbox)
+      sandbox.define_singleton_method(:t) { |_key, **opts| opts[:default].to_s }
+      sandbox.define_singleton_method(:city_name) { "Bergen" }
+      sandbox.define_singleton_method(:design_token) { |_name| "" }
+      sandbox.define_singleton_method(:raw) { |value| value }
+      sandbox.define_singleton_method(:current_city) { "Bergen" }
+    end
+
+    def define_manifest_context_constants(sandbox)
+      # master reads the face token for theme/background colour; a neutral
+      # value keeps the shape check independent of the live token file.
+      master = Module.new
+      master.define_singleton_method(:tokens) do
+        { "face_root" => { "face_bg" => "#101014" } }
+      end
+      sandbox.const_set(:Master, master)
+      current = Object.new
+      current.define_singleton_method(:subapp) { "" }
+      current.define_singleton_method(:locale) do
+        blank = Object.new
+        blank.define_singleton_method(:presence) { nil }
+        blank
+      end
+      sandbox.const_set(:Current, current)
+      i18n = Module.new
+      i18n.define_singleton_method(:locale) { :en }
+      sandbox.const_set(:I18n, i18n)
     end
 
     def check_keys(app, source)
@@ -128,10 +197,15 @@ module Deploy
 
     def check_service_worker(app)
       @result.checked!
-      worker = File.join(rails_root, app, "app/views/pwa/service-worker.js")
-      return if File.file?(worker)
+      root = app_root(app)
+      # A worker may ship as a static file (amber, bsdports, master's public/sw.js)
+      # or as a .js.erb the app renders per request (mrdamascy's PwaController#service_worker
+      # stamps the cache version from the asset digests). Both are a service worker.
+      worker = File.join(root, "app/views/pwa/service-worker.js")
+      worker_erb = File.join(root, "app/views/pwa/service-worker.js.erb")
+      return if File.file?(worker) || File.file?(worker_erb)
       # master serves a static worker from public/sw.js, which AuthTier lists as public.
-      return if File.file?(File.join(rails_root, app, "public", "sw.js"))
+      return if File.file?(File.join(root, "public", "sw.js"))
 
       @result.fail("pwa_installable: #{app} has no service worker at #{rel(worker)}")
     end
@@ -166,8 +240,12 @@ module Deploy
 
     def resolves?(app, src)
       path = src.sub(%r{\A/}, "")
-      File.file?(File.join(rails_root, app, "public", path)) ||
+      File.file?(File.join(app_root(app), "public", path)) ||
         File.file?(File.join(rails_root, "__shared", "public", path))
+    end
+
+    def app_root(app)
+      Fleet.app_dir(app)
     end
 
     def rails_root = File.join(ROOT, "RAILS")
