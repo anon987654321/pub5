@@ -155,6 +155,19 @@ class TestTraceSupport < Minitest::Test
     def emit(pattern, payload) = @handlers[pattern].each { |h| h.call(payload) }
   end
 
+  def test_retry_attempt_events_are_silent_until_trace
+    console = Master::Trace::Dmesg::Console.new
+    payload = {
+      event: "llm:retry_attempt", model: "google/gemini-2.5-flash", attempt: 1, max: 2
+    }
+
+    verbose = Master::Trace::Dmesg.with_verbosity("verbose") { console.lines(payload) }
+    assert_empty verbose
+
+    traced = Master::Trace::Dmesg.with_verbosity("trace") { console.lines(payload) }
+    assert_equal ["model0: attempt 1/2 on google/gemini-2.5-flash"], traced
+  end
+
   # Verbose remains available explicitly: every model send/outcome is visible.
   def test_provider_outcome_console_never_prints_raw_error_text
     console = Master::Trace::Dmesg::Console.new
