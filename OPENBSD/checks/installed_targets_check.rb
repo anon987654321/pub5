@@ -22,7 +22,7 @@
 # /usr/local/libexec/stale_ci_cleanup.ksh, and a script is as much a referrer as
 # a crontab line. It pulls out each /usr/local/{bin,libexec} path they name and
 # asks whether the repo provides it — either as a tracked file under
-# OPENBSD/usr/local/ (install_root_configs copies the tree) or through an
+# OPENBSD/mirror/usr/local/ (install_root_configs copies the tree) or through an
 # explicit `install` line in OPERATOR.sh.
 #
 #   ruby OPENBSD/checks/installed_targets_check.rb
@@ -124,7 +124,7 @@ module Deploy
       missing.each do |target, where|
         warn "installed-targets: /usr/local/#{target} is named by #{where.join(', ')} and nothing installs it"
       end
-      warn "installed-targets: add it to OPENBSD/usr/local/ (copied wholesale) or an install line in OPERATOR.sh"
+      warn "installed-targets: add it to OPENBSD/mirror/usr/local/ (copied wholesale) or an install line in OPERATOR.sh"
       warn "installed-targets: a guard on a target that does not exist fails OPEN, into silence"
       false
     end

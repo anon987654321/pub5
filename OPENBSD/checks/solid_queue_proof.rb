@@ -103,7 +103,7 @@ module SolidQueueProof
     end
   end
 
-# The bundler that belongs to the Ruby running this check: OPENBSD/lib/ruby_select.sh
+# The bundler that belongs to the Ruby running this check: OPENBSD/mirror/lib/ruby_select.sh
 # chose that Ruby, and its install name (ruby34, ruby40) carries the suffix.
 def bundle_command
   suffix = RbConfig::CONFIG["ruby_install_name"].to_s.delete_prefix("ruby")

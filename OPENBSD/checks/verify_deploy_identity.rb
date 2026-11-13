@@ -7,8 +7,8 @@
 
 require "open3"
 require "yaml"
-require_relative "../lib/utf8"
-require_relative "../lib/deploy_inventory"
+require_relative "../mirror/lib/utf8"
+require_relative "../mirror/lib/deploy_inventory"
 
 # The functions every app's deploy script reaches through _deploy.sh.
 SHARED_FUNCTIONS = %w[deploy_tracked_app need_cmd bundle_install_as_app install_rcd relayd_add_relay].freeze
@@ -40,7 +40,7 @@ SHARED_DEPLOY = File.join(RAILS_ROOT, "_deploy.sh")
 SHARED_BUNDLE = File.join(RAILS_ROOT, "_bundle.sh")
 
 # The production bundle runs as the app user, so its flags live in the root-owned task helper.
-RAILS_TASK = File.join(ROOT, "OPENBSD", "usr", "local", "libexec", "rails-task.ksh")
+RAILS_TASK = File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "rails-task.ksh")
 # An argument names another library to source, so a test can hand the function
 # check one that defines nothing and watch the run fail.
 FUNCTION_LIBRARY = ARGV.fetch(0, SHARED_DEPLOY)

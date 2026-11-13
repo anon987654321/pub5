@@ -33,8 +33,8 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 
 # One definition of the lock path; it moved out of world-writable /var/tmp.
-. "${ROOT}/OPENBSD/lib/ci_lock.sh"
-. "${ROOT}/OPENBSD/lib/ruby_select.sh"
+. "${ROOT}/OPENBSD/mirror/lib/ci_lock.sh"
+. "${ROOT}/OPENBSD/mirror/lib/ruby_select.sh"
 LOCK=$(pub5_ci_lock_path)
 
 # Probe the flock with-ci-lock and CiGuard take, rather than asking fuser(1):

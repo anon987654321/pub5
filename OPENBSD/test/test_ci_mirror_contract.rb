@@ -11,7 +11,7 @@ require "minitest/autorun"
 class CiMirrorContractTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
   CI = File.read(File.join(ROOT, "RAILS", "__shared", "config", "ci.rb"), encoding: "UTF-8")
-  SYNC = File.read(File.join(ROOT, "OPENBSD", "usr", "local", "libexec", "ci-sync.ksh"), encoding: "UTF-8")
+  SYNC = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "ci-sync.ksh"), encoding: "UTF-8")
   LITERAL = /^\s*require_relative\s+["']([^"'#]+)["']/
 
   # Whole directories the sync archives, plus the files it names one by one.

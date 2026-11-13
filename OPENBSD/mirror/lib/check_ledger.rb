@@ -34,7 +34,7 @@ module Deploy
   # it is machine-and-operator state like `.constitutional_costs.jsonl`, and a
   # committed version would conflict on every run in a shared checkout.
   class CheckLedger
-    DEFAULT_PATH = File.expand_path("../../.check_ledger.jsonl", __dir__)
+    DEFAULT_PATH = File.expand_path("../../../.check_ledger.jsonl", __dir__)
 
     # Keep the file bounded without a cron job. Trimming on read rather than on
     # write means a run never pays for it, and the reader is the only thing that
@@ -199,6 +199,6 @@ module Deploy
         row[:earlier_ms] >= 1_000 && row[:recent_ms] >= row[:earlier_ms] * 2
     end
 
-    def display_path = @path.sub("#{File.expand_path('../..', __dir__)}/", "")
+    def display_path = @path.sub("#{File.expand_path('../../..', __dir__)}/", "")
   end
 end

@@ -9,7 +9,7 @@ require "tmpdir"
 # service whose process is already gone exits 0 and says nothing, a daemon that
 # survives TERM gets a group KILL, and a port that never frees fails the stop.
 class RcMasterStopTest < Minitest::Test
-  RC = File.read(File.expand_path("../etc/rc.d/master", __dir__), encoding: "UTF-8")
+  RC = File.read(File.expand_path("../mirror/etc/rc.d/master", __dir__), encoding: "UTF-8")
   HELPERS = RC[/^# --- stop path.*?^# --- end stop path ---$/m]
   # rc_post KILLs the fstat holders too, so their helpers come along.
   HOLDERS = RC[/^# port holders: begin$.*?^# port holders: end$/m]

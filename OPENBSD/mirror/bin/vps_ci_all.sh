@@ -1,18 +1,18 @@
 #!/usr/bin/env zsh
 # Run all active Rails app CIs serially on vm23 — never parallel.
-# Usage: zsh OPENBSD/bin/vps_ci_all.sh      (PUB4_CI_MAX_LOAD=4 waits while load is higher)
+# Usage: zsh OPENBSD/mirror/bin/vps_ci_all.sh      (PUB4_CI_MAX_LOAD=4 waits while load is higher)
 set -euo pipefail
 
 if [[ ${1:-} == -h || ${1:-} == --help ]]; then
-  print "usage: zsh OPENBSD/bin/vps_ci_all.sh - vps_ci.sh for every app in RAILS/apps.yml, serially"
+  print "usage: zsh OPENBSD/mirror/bin/vps_ci_all.sh - vps_ci.sh for every app in RAILS/apps.yml, serially"
   exit 0
 fi
 
 repo=${PUB5_ROOT:-/home/dev/pub5}
-script=${repo}/OPENBSD/bin/vps_ci.sh
-source "${repo}/OPENBSD/lib/ruby_select.sh"
+script=${repo}/OPENBSD/mirror/bin/vps_ci.sh
+source "${repo}/OPENBSD/mirror/lib/ruby_select.sh"
 # Every app in the RAILS deploy_root namespace participates automatically.
-apps=(${(f)"$("$RUBY" -r"${repo}/OPENBSD/lib/deploy_inventory" \
+apps=(${(f)"$("$RUBY" -r"${repo}/OPENBSD/mirror/lib/deploy_inventory" \
   -e 'puts Deploy::Inventory.new(root: ARGV[0]).ordered_apps(group: "rails").map(&:name)' "$repo")"})
 (( ${#apps} )) || { print -u2 "vps_ci_all: no apps read from ${repo}/RAILS/apps.yml"; exit 1 }
 max_load=${PUB4_CI_MAX_LOAD:-4}

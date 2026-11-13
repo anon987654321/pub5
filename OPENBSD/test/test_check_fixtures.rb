@@ -4,7 +4,7 @@ require "minitest/autorun"
 require "tmpdir"
 require "fileutils"
 require "open3"
-require_relative "../lib/utf8"
+require_relative "../mirror/lib/utf8"
 require_relative "../checks/installed_targets_check"
 
 # Every OPENBSD check beside the defect it exists to catch.
@@ -281,7 +281,7 @@ class ShellSyntaxFixtureTest < Minitest::Test
 
     refute ok
     assert_includes out, "1 of 2 scripts do not parse"
-    assert_includes out, "zsh -n OPENBSD/bin/broken"
+    assert_includes out, "zsh -n OPENBSD/mirror/bin/broken"
   end
 
   # The shebang picks the parser: `set -A` is ksh and a syntax error to nothing
@@ -365,7 +365,7 @@ class DeploySmokeFixtureTest < Minitest::Test
 
     assert_empty failures
     assert_operator scripts.size, :>, 100, "the scan read almost nothing, so its silence is not a finding"
-    assert_includes scripts, "OPENBSD/etc/rc.d/master"
+    assert_includes scripts, "OPENBSD/mirror/etc/rc.d/master"
   end
 
   def test_the_committed_start_block_passes_against_the_real_middleware

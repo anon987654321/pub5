@@ -3,7 +3,7 @@
 require "minitest/autorun"
 require "open3"
 require "yaml"
-require_relative "../bin/render_dns"
+require_relative "../mirror/bin/render_dns"
 
 # Four DNS facts were written down twice: data/dns.yml declares them, OPERATOR.sh
 # restates them as shell literals, and checks/dns_zones.rb had its own third copy
@@ -73,7 +73,7 @@ end
 
 require_relative "../checks/dns_zones"
 require_relative "../checks/domain_alignment"
-require_relative "../bin/domain_watch"
+require_relative "../mirror/bin/domain_watch"
 
 # domain_watch asks the registry about every zone the policy declares, including
 # one not yet rendered into nsd.conf.

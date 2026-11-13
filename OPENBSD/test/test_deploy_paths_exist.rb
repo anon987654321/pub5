@@ -10,10 +10,10 @@ class TestDeployPathsExist < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
 
   SCRIPT_GLOBS = %w[
-    OPENBSD/bin/*
-    OPENBSD/lib/*
+    OPENBSD/mirror/bin/*
+    OPENBSD/mirror/lib/*
     OPENBSD/OPERATOR.sh
-    OPENBSD/etc/rc.d/*
+    OPENBSD/mirror/etc/rc.d/*
     RAILS/_*.sh
     RAILS/deploy.sh
     RAILS/*/*.sh

@@ -6,7 +6,7 @@ require_relative "../lib/check_runner"
 require_relative "../lib/ruby_runner"
 require_relative "../lib/environment"
 
-ROOT = File.expand_path("../..", __dir__)
+ROOT = File.expand_path("../../..", __dir__)
 RUBY = Deploy::RubyRunner.check_ruby
 STEP_TIMEOUT = Integer(ENV.fetch("DEPLOY_CHECK_TIMEOUT", "240"))
 profile = "operator"

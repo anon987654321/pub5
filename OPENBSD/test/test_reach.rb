@@ -3,8 +3,8 @@
 require "minitest/autorun"
 require "tmpdir"
 require "fileutils"
-require_relative "../lib/utf8"
-load File.expand_path("../bin/reach", __dir__)
+require_relative "../mirror/lib/utf8"
+load File.expand_path("../mirror/bin/reach", __dir__)
 
 # Every check here is shown failing before it is trusted passing. A probe nobody
 # has watched fire is the same shape as the drift it looks for: complete,
@@ -21,12 +21,12 @@ class ReachTest < Minitest::Test
 
   def setup
     @tmp = Dir.mktmpdir("reach")
-    %w[etc/rc.d var/nsd/etc var/nsd/zones/master usr/local/bin bin].each do |d|
+    %w[mirror/etc/rc.d mirror/var/nsd/etc mirror/var/nsd/zones/master mirror/usr/local/bin mirror/bin].each do |d|
       FileUtils.mkdir_p(File.join(@tmp, d))
     end
-    write("etc/crontab.vm23", "PATH=/bin:/usr/local/bin\n")
+    write("mirror/etc/crontab.vm23", "PATH=/bin:/usr/local/bin\n")
     write("OPERATOR.sh", "#!/bin/ksh\n")
-    write("var/nsd/etc/nsd.conf", "server:\n")
+    write("mirror/var/nsd/etc/nsd.conf", "server:\n")
     R.root = @tmp
   end
 
@@ -46,21 +46,21 @@ class ReachTest < Minitest::Test
   # ---- cron -----------------------------------------------------------------
 
   def test_a_scheduled_command_that_is_tracked_reaches
-    write("etc/crontab.vm23", "PATH=/bin:/usr/local/bin\n*/5 * * * * /usr/local/bin/thing.sh\n")
-    write("usr/local/bin/thing.sh", "#!/bin/ksh\n")
+    write("mirror/etc/crontab.vm23", "PATH=/bin:/usr/local/bin\n*/5 * * * * /usr/local/bin/thing.sh\n")
+    write("mirror/usr/local/bin/thing.sh", "#!/bin/ksh\n")
 
     assert_empty checks("cron")
   end
 
   def test_a_scheduled_command_that_is_nowhere_is_reported
-    write("etc/crontab.vm23", "PATH=/bin:/usr/local/bin\n*/5 * * * * /usr/local/bin/ghost.sh\n")
+    write("mirror/etc/crontab.vm23", "PATH=/bin:/usr/local/bin\n*/5 * * * * /usr/local/bin/ghost.sh\n")
 
     assert_equal ["/usr/local/bin/ghost.sh"], checks("cron").map(&:subject)
   end
 
   # The resource_guard.sh shape: tracked somewhere else, installed into place.
   def test_a_command_installed_by_operator_reaches_from_anywhere
-    write("etc/crontab.vm23", "PATH=/bin:/usr/local/bin\n*/5 * * * * /usr/local/bin/guard.sh\n")
+    write("mirror/etc/crontab.vm23", "PATH=/bin:/usr/local/bin\n*/5 * * * * /usr/local/bin/guard.sh\n")
     write("guard.sh", "#!/bin/ksh\n")
     write("OPERATOR.sh", %(install -m 755 "${SCRIPT_DIR}/guard.sh" /usr/local/bin/guard.sh\n))
 
@@ -70,7 +70,7 @@ class ReachTest < Minitest::Test
   # cron's own PATH excludes /usr/local/bin, where every env-shebang interpreter
   # lives. Four of five jobs had never run for exactly this.
   def test_a_command_outside_the_declared_path_is_reported
-    write("etc/crontab.vm23", "PATH=/bin\n*/5 * * * * /opt/thing.sh\n")
+    write("mirror/etc/crontab.vm23", "PATH=/bin\n*/5 * * * * /opt/thing.sh\n")
     write("opt/thing.sh", "#!/bin/ksh\n")
 
     assert_includes checks("cron").map(&:subject), "/opt"
@@ -81,16 +81,16 @@ class ReachTest < Minitest::Test
   # here from reach's side.
   def test_an_environment_prefix_is_not_mistaken_for_the_command
     line = "*/5 * * * * ALLOW_X=1 /usr/local/bin/b.sh >> /var/log/b.log 2>&1"
-    write("etc/crontab.vm23", "PATH=/bin:/usr/local/bin\n#{line}\n")
-    write("usr/local/bin/b.sh", "#!/bin/ksh\n")
+    write("mirror/etc/crontab.vm23", "PATH=/bin:/usr/local/bin\n#{line}\n")
+    write("mirror/usr/local/bin/b.sh", "#!/bin/ksh\n")
 
     assert_equal ["/usr/local/bin/b.sh"], R.cron_commands
     assert_empty checks("cron")
   end
 
   def test_redirections_are_not_mistaken_for_the_command
-    write("etc/crontab.vm23", "PATH=/bin:/usr/local/bin\n0 2 * * 1 /usr/local/bin/a.sh >> /var/log/a.log 2>&1\n")
-    write("usr/local/bin/a.sh", "#!/bin/ksh\n")
+    write("mirror/etc/crontab.vm23", "PATH=/bin:/usr/local/bin\n0 2 * * 1 /usr/local/bin/a.sh >> /var/log/a.log 2>&1\n")
+    write("mirror/usr/local/bin/a.sh", "#!/bin/ksh\n")
 
     assert_empty checks("cron")
   end
@@ -98,21 +98,21 @@ class ReachTest < Minitest::Test
   # ---- rc.d -----------------------------------------------------------------
 
   def test_a_service_a_starter_enables_reaches
-    write("etc/rc.d/thing", "#!/bin/ksh\n")
+    write("mirror/etc/rc.d/thing", "#!/bin/ksh\n")
     write("start_all.sh", "rcctl enable thing\n")
 
     assert_empty checks("rcd")
   end
 
   def test_a_service_nothing_starts_and_nothing_explains_is_reported
-    write("etc/rc.d/orphan", "#!/bin/ksh\ndaemon=/usr/local/bin/orphan\n")
+    write("mirror/etc/rc.d/orphan", "#!/bin/ksh\ndaemon=/usr/local/bin/orphan\n")
 
     assert_equal ["orphan"], checks("rcd").map(&:subject)
   end
 
   # The *_jobs shape: deliberately off, with the rcctl lines in its own footer.
   def test_a_service_that_declares_itself_off_by_default_reaches
-    write("etc/rc.d/thing_jobs", "#!/bin/ksh\n# Solid Queue worker. NOT enabled by default - see the footer.\n")
+    write("mirror/etc/rc.d/thing_jobs", "#!/bin/ksh\n# Solid Queue worker. NOT enabled by default - see the footer.\n")
 
     assert_empty checks("rcd")
   end
@@ -120,8 +120,8 @@ class ReachTest < Minitest::Test
   # ---- boot list ------------------------------------------------------------
 
   def test_a_boot_name_with_a_shipped_script_reaches
-    write("etc/rc.d/thing", "#!/bin/ksh\n# not enabled by default\n")
-    write("etc/rc.conf.local", "pf=YES\npkg_scripts=thing\n")
+    write("mirror/etc/rc.d/thing", "#!/bin/ksh\n# not enabled by default\n")
+    write("mirror/etc/rc.conf.local", "pf=YES\npkg_scripts=thing\n")
 
     assert_empty checks("boot")
   end
@@ -129,8 +129,8 @@ class ReachTest < Minitest::Test
   # litestream's config may ship; the service may not boot, because there is no
   # script and no binary to run.
   def test_a_boot_name_with_no_script_is_reported
-    write("etc/litestream.yml", "dbs: []\n")
-    write("etc/rc.conf.local", "pkg_scripts=litestream\n")
+    write("mirror/etc/litestream.yml", "dbs: []\n")
+    write("mirror/etc/rc.conf.local", "pkg_scripts=litestream\n")
 
     assert_equal ["litestream"], checks("boot").map(&:subject)
   end
@@ -138,14 +138,14 @@ class ReachTest < Minitest::Test
   # ---- zones ----------------------------------------------------------------
 
   def test_a_zone_named_and_present_reaches
-    write("var/nsd/zones/master/example.no.zone", "$ORIGIN example.no.\n")
-    write("var/nsd/etc/nsd.conf", %(zone:\n  name: "example.no"\n))
+    write("mirror/var/nsd/zones/master/example.no.zone", "$ORIGIN example.no.\n")
+    write("mirror/var/nsd/etc/nsd.conf", %(zone:\n  name: "example.no"\n))
 
     assert_empty checks("zones")
   end
 
   def test_a_zone_file_nsd_does_not_name_is_reported
-    write("var/nsd/zones/master/lonely.no.zone", "$ORIGIN lonely.no.\n")
+    write("mirror/var/nsd/zones/master/lonely.no.zone", "$ORIGIN lonely.no.\n")
 
     assert_equal ["lonely.no"], checks("zones").map(&:subject)
   end
@@ -153,7 +153,7 @@ class ReachTest < Minitest::Test
   # nsd refuses to start over a zone whose file is missing, so this direction is
   # the one that takes DNS down rather than merely leaving a domain unserved.
   def test_a_named_zone_with_no_file_is_reported
-    write("var/nsd/etc/nsd.conf", %(zone:\n  name: "ghost.no"\n))
+    write("mirror/var/nsd/etc/nsd.conf", %(zone:\n  name: "ghost.no"\n))
 
     assert_equal ["ghost.no"], checks("zones").map(&:subject)
   end
@@ -179,7 +179,7 @@ class ReachTest < Minitest::Test
   def test_litestream_config_ships_and_litestream_does_not_boot
     R.root = R::DEFAULT_ROOT
 
-    assert File.file?(File.join(R.root, "etc", "litestream.yml"))
+    assert File.file?(File.join(R.root, "mirror", "etc", "litestream.yml"))
     refute_includes R.boot_names, "litestream"
   end
 end

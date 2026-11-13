@@ -18,31 +18,32 @@ class VpsSafetyCheckTest < Minitest::Test
   def with_fixture
     Dir.mktmpdir do |dir|
       openbsd = File.join(dir, "OPENBSD")
-      FileUtils.mkdir_p(File.join(openbsd, "etc"))
-      FileUtils.cp_r(File.join(ROOT, "etc", "rc.d"), File.join(openbsd, "etc"))
-      FileUtils.cp(File.join(ROOT, "etc", "doas.conf"), File.join(openbsd, "etc"))
-      FileUtils.mkdir_p(File.join(openbsd, "usr", "local", "sbin"))
-      FileUtils.cp(File.join(ROOT, "usr", "local", "sbin", "pub5-admin"),
-                   File.join(openbsd, "usr", "local", "sbin", "pub5-admin"))
-      FileUtils.mkdir_p(File.join(openbsd, "usr", "local", "libexec"))
-      FileUtils.cp(File.join(ROOT, "usr", "local", "libexec", "ci-prepare.ksh"),
-                   File.join(openbsd, "usr", "local", "libexec", "ci-prepare.ksh"))
-      FileUtils.cp(File.join(ROOT, "usr", "local", "libexec", "ci-run.ksh"),
-                   File.join(openbsd, "usr", "local", "libexec", "ci-run.ksh"))
-      FileUtils.cp(File.join(ROOT, "usr", "local", "libexec", "ci-sync.ksh"),
-                   File.join(openbsd, "usr", "local", "libexec", "ci-sync.ksh"))
-      FileUtils.cp(File.join(ROOT, "usr", "local", "libexec", "rails-task.ksh"),
-                   File.join(openbsd, "usr", "local", "libexec", "rails-task.ksh"))
-      FileUtils.cp(File.join(ROOT, "usr", "local", "libexec", "rails-sync.ksh"),
-                   File.join(openbsd, "usr", "local", "libexec", "rails-sync.ksh"))
-      FileUtils.mkdir_p(File.join(openbsd, "usr", "local", "bin"))
-      FileUtils.cp(File.join(ROOT, "usr", "local", "bin", "emergency_cpu.sh"),
-                   File.join(openbsd, "usr", "local", "bin", "emergency_cpu.sh"))
+      mirror = File.join(openbsd, "mirror")
+      FileUtils.mkdir_p(File.join(mirror, "etc"))
+      FileUtils.cp_r(File.join(ROOT, "mirror", "etc", "rc.d"), File.join(mirror, "etc"))
+      FileUtils.cp(File.join(ROOT, "mirror", "etc", "doas.conf"), File.join(mirror, "etc"))
+      FileUtils.mkdir_p(File.join(mirror, "usr", "local", "sbin"))
+      FileUtils.cp(File.join(ROOT, "mirror", "usr", "local", "sbin", "pub5-admin"),
+                   File.join(mirror, "usr", "local", "sbin", "pub5-admin"))
+      FileUtils.mkdir_p(File.join(mirror, "usr", "local", "libexec"))
+      FileUtils.cp(File.join(ROOT, "mirror", "usr", "local", "libexec", "ci-prepare.ksh"),
+                   File.join(mirror, "usr", "local", "libexec", "ci-prepare.ksh"))
+      FileUtils.cp(File.join(ROOT, "mirror", "usr", "local", "libexec", "ci-run.ksh"),
+                   File.join(mirror, "usr", "local", "libexec", "ci-run.ksh"))
+      FileUtils.cp(File.join(ROOT, "mirror", "usr", "local", "libexec", "ci-sync.ksh"),
+                   File.join(mirror, "usr", "local", "libexec", "ci-sync.ksh"))
+      FileUtils.cp(File.join(ROOT, "mirror", "usr", "local", "libexec", "rails-task.ksh"),
+                   File.join(mirror, "usr", "local", "libexec", "rails-task.ksh"))
+      FileUtils.cp(File.join(ROOT, "mirror", "usr", "local", "libexec", "rails-sync.ksh"),
+                   File.join(mirror, "usr", "local", "libexec", "rails-sync.ksh"))
+      FileUtils.mkdir_p(File.join(mirror, "usr", "local", "bin"))
+      FileUtils.cp(File.join(ROOT, "mirror", "usr", "local", "bin", "emergency_cpu.sh"),
+                   File.join(mirror, "usr", "local", "bin", "emergency_cpu.sh"))
       FileUtils.cp(File.join(ROOT, "emergency_cpu.sh"), File.join(openbsd, "emergency_cpu.sh"))
-      FileUtils.cp(File.join(ROOT, "usr", "local", "bin", "resource_guard.sh"),
-                   File.join(openbsd, "usr", "local", "bin", "resource_guard.sh"))
-      FileUtils.mkdir_p(File.join(openbsd, "bin"))
-      FileUtils.cp(File.join(ROOT, "bin", "resource_guard.sh"), File.join(openbsd, "bin", "resource_guard.sh"))
+      FileUtils.cp(File.join(ROOT, "mirror", "usr", "local", "bin", "resource_guard.sh"),
+                   File.join(mirror, "usr", "local", "bin", "resource_guard.sh"))
+      FileUtils.mkdir_p(File.join(mirror, "bin"))
+      FileUtils.cp(File.join(ROOT, "mirror", "bin", "resource_guard.sh"), File.join(mirror, "bin", "resource_guard.sh"))
       FileUtils.cp(File.join(ROOT, "OPERATOR.sh"), File.join(openbsd, "OPERATOR.sh"))
       FileUtils.mkdir_p(File.join(dir, "RAILS", "mrdamascy"))
       %w[Gemfile Gemfile.lock falcon.rb preload.rb].each do |name|
@@ -57,20 +58,19 @@ class VpsSafetyCheckTest < Minitest::Test
       %w[_service.sh _sync.sh _deploy.sh].each do |name|
         FileUtils.cp(File.join(ROOT, "..", "RAILS", name), File.join(dir, "RAILS", name))
       end
-      FileUtils.mkdir_p(File.join(openbsd, "bin"))
-      FileUtils.cp(File.join(ROOT, "bin", "vps-state"), File.join(openbsd, "bin", "vps-state"))
-      FileUtils.cp(File.join(ROOT, "bin", "restore_litestream.sh"), File.join(openbsd, "bin", "restore_litestream.sh"))
-      FileUtils.cp(File.join(ROOT, "bin", "start_all_apps.sh"), File.join(openbsd, "bin", "start_all_apps.sh"))
-      (Dir.glob(File.join(ROOT, "bin", "*.exp")) + [File.join(ROOT, "bin", "validate_doas.ksh"), File.join(ROOT, "bin", "deploy_all.sh"), File.join(ROOT, "bin", "vps-deploy"), File.join(ROOT, "bin", "vps_deploy_master.sh"), File.join(ROOT, "bin", "vps_install_all.sh"), File.join(ROOT, "bin", "deploy-smoke.sh"), File.join(ROOT, "bin", "manual_master_deploy.ksh")]).each do |path|
-        FileUtils.cp(path, File.join(openbsd, "bin"))
+      FileUtils.cp(File.join(ROOT, "mirror", "bin", "vps-state"), File.join(mirror, "bin", "vps-state"))
+      FileUtils.cp(File.join(ROOT, "mirror", "bin", "restore_litestream.sh"), File.join(mirror, "bin", "restore_litestream.sh"))
+      FileUtils.cp(File.join(ROOT, "mirror", "bin", "start_all_apps.sh"), File.join(mirror, "bin", "start_all_apps.sh"))
+      (Dir.glob(File.join(ROOT, "mirror", "bin", "*.exp")) + [File.join(ROOT, "mirror", "bin", "validate_doas.ksh"), File.join(ROOT, "mirror", "bin", "deploy_all.sh"), File.join(ROOT, "mirror", "bin", "vps-deploy"), File.join(ROOT, "mirror", "bin", "vps_deploy_master.sh"), File.join(ROOT, "mirror", "bin", "vps_install_all.sh"), File.join(ROOT, "mirror", "bin", "deploy-smoke.sh"), File.join(ROOT, "mirror", "bin", "manual_master_deploy.ksh")]).each do |path|
+        FileUtils.cp(path, File.join(mirror, "bin"))
       end
-      yield dir, File.join(openbsd, "etc", "doas.conf")
+      yield dir, File.join(mirror, "etc", "doas.conf")
     end
   end
 
   def test_packaged_ruby_shebang_requires_a_real_newline
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub5-admin")
+      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")
       File.write(path, File.read(path).sub("#!/usr/local/bin/ruby", "#!/usr/bin/env ruby"))
       out, status = run_check(dir)
 
@@ -93,7 +93,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_mrdamascy_production_service_must_use_falcon_host
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
+      path = File.join(dir, "OPENBSD", "mirror", "etc", "rc.d", "mrdamascy")
       text = File.read(path).sub("falcon host", "falcon serve")
       File.write(path, text)
       out, status = run_check(dir)
@@ -105,7 +105,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_mrdamascy_secret_is_not_loaded_by_the_root_rc_script
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
+      path = File.join(dir, "OPENBSD", "mirror", "etc", "rc.d", "mrdamascy")
       text = File.read(path).sub(
         '[[ -r /etc/mrdamascy.env ]] || { logger -t mrdamascy "missing /etc/mrdamascy.env"; exit 1; }',
         '[[ -r /etc/mrdamascy.env ]] && . /etc/mrdamascy.env'
@@ -120,7 +120,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_mrdamascy_secret_is_checked_inside_the_app_user_command
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
+      path = File.join(dir, "OPENBSD", "mirror", "etc", "rc.d", "mrdamascy")
       text = File.read(path).sub("SECRET_KEY_BASE:?missing", "SECRET_KEY_BASE missing")
       File.write(path, text)
       out, status = run_check(dir)
@@ -144,7 +144,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_mrdamascy_rc_d_process_match_uses_the_live_endpoint
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
+      path = File.join(dir, "OPENBSD", "mirror", "etc", "rc.d", "mrdamascy")
       text = File.read(path).sub('pexp=".*127\\\\.0\\\\.0\\\\.1:47314.*"',
                                 'pexp=".*127\\\\.0\\\\.0\\\\.1:47315.*"')
       File.write(path, text)
@@ -157,7 +157,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_mrdamascy_rc_d_port_and_host_default_stay_aligned
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
+      path = File.join(dir, "OPENBSD", "mirror", "etc", "rc.d", "mrdamascy")
       text = File.read(path).sub("PORT=47314", "PORT=47315")
       File.write(path, text)
       out, status = run_check(dir)
@@ -169,7 +169,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_mrdamascy_rc_d_stop_pattern_uses_the_live_endpoint
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
+      path = File.join(dir, "OPENBSD", "mirror", "etc", "rc.d", "mrdamascy")
       text = File.read(path).sub('pkill -f "127\\\\.0\\\\.0\\\\.1:47314"',
                                 'pkill -f "127\\\\.0\\\\.0\\\\.1:47315"')
       File.write(path, text)
@@ -217,7 +217,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_rails_task_rejects_trailing_text_after_privileged_exec
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "libexec", "rails-task.ksh")
+      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "libexec", "rails-task.ksh")
       File.open(path, "a") { |file| file.write("\nEOF_KEY\n") }
       out, status = run_check(dir)
 
@@ -228,7 +228,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_broker_sources_must_not_be_symlinks
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub5-admin")
+      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")
       File.unlink(path)
       File.symlink("/tmp/pub5-admin", path)
       out, status = run_check(dir)
@@ -257,7 +257,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_master_web_broker_requires_exact_no_path_verbs
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub5-admin")
+      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")
       text = File.read(path).sub('args == ["master-web-assets-reset"]', 'args.first == "master-web-assets-reset"')
       File.write(path, text)
       out, status = run_check(dir)
@@ -268,7 +268,7 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_checkout_resource_guard_refuses_root_and_delegates_to_runner
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "bin", "resource_guard.sh")
+      path = File.join(dir, "OPENBSD", "mirror", "bin", "resource_guard.sh")
       text = File.read(path).sub('if [ "$(id -u)" -eq 0 ]; then', 'if [ "$(id -u)" -eq 1 ]; then')
       File.write(path, text)
       out, status = run_check(dir)
@@ -280,7 +280,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_root_resource_guard_must_not_source_checkout_helper
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "bin", "resource_guard.sh")
+      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "bin", "resource_guard.sh")
       text = File.read(path) + "\nGUARD_REPO=/home/dev/pub5\n"
       File.write(path, text)
       out, status = run_check(dir)
@@ -303,7 +303,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_emergency_cpu_runner_must_not_source_checkout_helper
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "bin", "emergency_cpu.sh")
+      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "bin", "emergency_cpu.sh")
       text = File.read(path) + "\nGUARD_REPO=/home/dev/pub5\n"
       File.write(path, text)
       out, status = run_check(dir)
@@ -327,7 +327,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_start_all_apps_refuses_root_and_delegates_to_broker
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "bin", "start_all_apps.sh")
+      path = File.join(dir, "OPENBSD", "mirror", "bin", "start_all_apps.sh")
       text = File.read(path).sub('if [ "$(id -u)" -eq 0 ]; then', 'if [ "$(id -u)" -eq 1 ]; then')
       File.write(path, text)
       out, status = run_check(dir)
@@ -339,7 +339,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_start_all_apps_broker_verb_requires_exact_arguments
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub5-admin")
+      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")
       text = File.read(path).sub('args == ["start-all-apps"]', 'args.first == "start-all-apps"')
       File.write(path, text)
       out, status = run_check(dir)
@@ -350,7 +350,7 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_vps_state_must_not_execute_rcctl_directly
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "bin", "vps-state")
+      path = File.join(dir, "OPENBSD", "mirror", "bin", "vps-state")
       text = File.read(path).sub('"doas", "-n", broker, "service", "check", service', '"doas", "-n", "/usr/sbin/rcctl", "check", service')
       File.write(path, text)
       out, status = run_check(dir)
@@ -362,7 +362,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_litestream_recovery_must_not_execute_rcctl_directly
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "bin", "restore_litestream.sh")
+      path = File.join(dir, "OPENBSD", "mirror", "bin", "restore_litestream.sh")
       text = File.read(path).sub('doas /usr/local/sbin/pub5-admin service stop "$app"', 'doas rcctl stop "$app"')
       File.write(path, text)
       out, status = run_check(dir)
@@ -373,7 +373,7 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_manual_master_recovery_must_not_call_rcctl_directly
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "bin", "manual_master_deploy.ksh")
+      path = File.join(dir, "OPENBSD", "mirror", "bin", "manual_master_deploy.ksh")
       text = File.read(path).sub("pub5-admin service restart relayd", "rcctl restart relayd")
       File.write(path, text)
       out, status = run_check(dir)
@@ -384,7 +384,7 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_deploy_smoke_service_checks_are_broker_first
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "bin", "deploy-smoke.sh")
+      path = File.join(dir, "OPENBSD", "mirror", "bin", "deploy-smoke.sh")
       text = File.read(path).sub('doas /usr/local/sbin/pub5-admin service check "$svc"', 'doas rcctl check "$svc"')
       File.write(path, text)
       out, status = run_check(dir)
@@ -395,7 +395,7 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_vps_install_all_service_control_is_broker_first
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "bin", "vps_install_all.sh")
+      path = File.join(dir, "OPENBSD", "mirror", "bin", "vps_install_all.sh")
       text = File.read(path).sub('doas /usr/local/sbin/pub5-admin service "$action" "$service"', 'doas rcctl "$action" "$service"')
       File.write(path, text)
       out, status = run_check(dir)
@@ -406,7 +406,7 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_master_web_deploy_must_use_fixed_broker_verbs
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "bin", "vps_deploy_master.sh")
+      path = File.join(dir, "OPENBSD", "mirror", "bin", "vps_deploy_master.sh")
       text = File.read(path).sub("pub5-admin master-web-assets-reset", "doas rm -rf public/assets")
       File.write(path, text)
       out, status = run_check(dir)
@@ -417,7 +417,7 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_vps_deploy_must_not_recommend_generic_privileged_du
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "bin", "vps-deploy")
+      path = File.join(dir, "OPENBSD", "mirror", "bin", "vps-deploy")
       text = File.read(path).sub("pub5-admin disk-usage $mount_point", "doas du -xk $mount_point")
       File.write(path, text)
       out, status = run_check(dir)
@@ -453,7 +453,7 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_ci_prepare_path_validation_is_required
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "libexec", "ci-prepare.ksh")
+      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "libexec", "ci-prepare.ksh")
       File.write(path, File.read(path).sub('[ ! -L "$app_dir" ]', '[ -d "$app_dir" ]'))
       out, status = run_check(dir)
 
@@ -464,7 +464,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_ci_runner_must_keep_its_timeout_bounded
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "libexec", "ci-run.ksh")
+      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "libexec", "ci-run.ksh")
       File.write(path, File.read(path).sub('[ "$timeout" -le 7200 ]', '[ "$timeout" -le 7201 ]'))
       out, status = run_check(dir)
 
@@ -487,7 +487,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_relayd_broker_must_not_modify_root_routing_policy
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub5-admin")
+      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")
       text = File.read(path).sub(
         '    puts "relayd0: verified root-approved route #{domain} -> #{app}:#{requested_port}"',
         "    File.rename(temporary, RELAYD_CONFIG)"
@@ -512,7 +512,7 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_broker_must_keep_legacy_retirement_fixed
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub5-admin")
+      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")
       text = File.read(path).sub('return nil unless RAILS_APPS.include?(app)', 'return nil unless APPS.include?(app)')
       File.write(path, text)
       out, status = run_check(dir)
@@ -524,7 +524,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_broker_must_keep_ci_spawn_fixed_and_supervised
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub5-admin")
+      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")
       text = File.read(path).sub("Process.spawn(", 'Process.spawn("sh", "-c", "unsafe", ')
       File.write(path, text)
       out, status = run_check(dir)
@@ -547,7 +547,7 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_bundle_cache_broker_requires_fixed_actions_and_ruby_keys
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub5-admin")
+      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")
       text = File.read(path).sub("valid_ruby_cache_key?(ruby_key)", "ruby_key.to_s")
       File.write(path, text)
       out, status = run_check(dir)
@@ -558,7 +558,7 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_broker_must_keep_ci_lock_fixed_and_symlink_safe
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub5-admin")
+      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")
       File.write(path, File.read(path).sub('return ensure_ci_lock if args == ["ci-lock"]', "return ensure_ci_lock if args.first == \"ci-lock\""))
       out, status = run_check(dir)
 
@@ -617,7 +617,7 @@ class VpsSafetyCheckTest < Minitest::Test
     skip "expect not installed" unless expect
 
     env = { "I_UNDERSTAND_CONSOLE_RISK" => nil }
-    out, status = Open3.capture2e(env, expect, "-f", File.join(ROOT, "bin", "vps_console.exp"), "short")
+    out, status = Open3.capture2e(env, expect, "-f", File.join(ROOT, "mirror", "bin", "vps_console.exp"), "short")
     assert_equal 1, status.exitstatus
     assert_includes out, "REFUSING"
   end
@@ -625,7 +625,7 @@ class VpsSafetyCheckTest < Minitest::Test
   # A second console script would reach vmctl without passing the ack.
   def test_a_second_console_script_is_refused
     with_fixture do |dir, _|
-      File.write(File.join(dir, "OPENBSD", "bin", "vps_console_short.exp"), "#!/usr/bin/expect -f\nspawn ssh vm23\n")
+      File.write(File.join(dir, "OPENBSD", "mirror", "bin", "vps_console_short.exp"), "#!/usr/bin/expect -f\nspawn ssh vm23\n")
       out, status = run_check(dir)
       refute status.success?
       assert_includes out, "vps_console_short.exp: console automation belongs in vps_console.exp"
@@ -634,7 +634,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_console_scripts_live_in_openbsd_bin
     %w[validate_doas.ksh vps_console.exp].each do |name|
-      assert File.file?(File.join(ROOT, "bin", name)), "missing #{name} in OPENBSD/bin"
+      assert File.file?(File.join(ROOT, "mirror", "bin", name)), "missing #{name} in OPENBSD/mirror/bin"
     end
   end
 end

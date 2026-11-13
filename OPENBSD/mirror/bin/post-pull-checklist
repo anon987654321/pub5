@@ -13,10 +13,10 @@ From your Mac (preferred - one command, waits, canary):
   MASTER/bin/redeploy
 
 Already on this box as dev:
-  zsh OPENBSD/bin/redeploy          # or: zsh OPENBSD/bin/vps-deploy all
+  zsh OPENBSD/mirror/bin/redeploy          # or: zsh OPENBSD/mirror/bin/vps-deploy all
 
 Then optional:
-  ruby OPENBSD/bin/vps-state
+  ruby OPENBSD/mirror/bin/vps-state
   ruby OPENBSD/checks/health_check.rb --public --all-ready-apps
 
 Copy-paste recipes: OPENBSD/data/operator.yml.

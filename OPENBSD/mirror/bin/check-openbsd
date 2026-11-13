@@ -5,7 +5,7 @@ require_relative "../lib/check_runner"
 require_relative "../lib/environment"
 require_relative "../lib/ruby_runner"
 
-ROOT = File.expand_path("../..", __dir__)
+ROOT = File.expand_path("../../..", __dir__)
 RUBY = Deploy::RubyRunner.check_ruby
 STEP_TIMEOUT = Integer(ENV.fetch("DEPLOY_CHECK_TIMEOUT", "240"))
 runner = Deploy::CheckRunner.new(prefix: "deploy-openbsd", root: ROOT, timeout: STEP_TIMEOUT)
@@ -22,20 +22,20 @@ failures << "identity" unless runner.run("identity", RUBY, "OPENBSD/checks/verif
 failures << "installed targets" unless runner.run("installed targets", RUBY, "OPENBSD/checks/installed_targets_check.rb")
 # The other half of the same question: every cron line, rc.d service and nsd
 # zone reaches a file the tree ships.
-failures << "reach" unless runner.run("reach", RUBY, "OPENBSD/bin/reach")
+failures << "reach" unless runner.run("reach", RUBY, "OPENBSD/mirror/bin/reach")
 failures << "ports" unless runner.run("ports", RUBY, "MASTER/checks/runner.rb", "port_inventory")
 # The generator's own --check first, so a DNS edit is judged without the Rails
 # check registry; dns_zones then adds the live query to our own nameserver.
-failures << "dns render" unless runner.run("dns render", RUBY, "OPENBSD/bin/render_dns.rb", "--check")
+failures << "dns render" unless runner.run("dns render", RUBY, "OPENBSD/mirror/bin/render_dns.rb", "--check")
 # dns_zones is registered in MASTER/checks/checks.yml. It belongs here rather than
-# in check-rails: what it compares is OPENBSD/var/nsd/zones against what
+# in check-rails: what it compares is OPENBSD/mirror/var/nsd/zones against what
 # bin/render_dns.rb generates, plus a live query to our own nameserver.
 failures << "dns_zones" unless runner.run("dns zones", RUBY, "MASTER/checks/runner.rb", "dns_zones", env: LIVE_ENV)
 failures << "deploy_smoke" unless runner.run("deploy smoke", RUBY, "OPENBSD/checks/deploy_smoke_check.rb")
 # The shed ladder decides which site goes down under memory pressure.
 failures << "resource guard" unless runner.run("resource guard", "ksh",
                                                "OPENBSD/test/resource_guard_test.sh",
-                                               "OPENBSD/usr/local/bin/resource_guard.sh")
+                                               "OPENBSD/mirror/usr/local/bin/resource_guard.sh")
 # shell_syntax_check reads each script's shebang, so the set is the tree and the
 # parser is the one that file declares.
 failures << "shell syntax" unless runner.run("shell syntax", RUBY, "OPENBSD/checks/shell_syntax_check.rb")

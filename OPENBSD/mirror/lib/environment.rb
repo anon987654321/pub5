@@ -14,8 +14,8 @@ module Deploy
     SUPPORTED_RUBY_MIN = Gem::Version.new("3.3.0")
 
     def repo_root(from: __dir__)
-      # OPENBSD/lib -> OPENBSD -> the repository root.
-      File.expand_path("../..", from)
+      # OPENBSD/mirror/lib -> OPENBSD -> the repository root.
+      File.expand_path("../../..", from)
     end
 
     def on_vps?
@@ -89,15 +89,15 @@ module Deploy
     def next_command_for(mode = self.mode)
       case mode
       when :vps_operator
-        "zsh OPENBSD/bin/vps-deploy <app>"
+        "zsh OPENBSD/mirror/bin/vps-deploy <app>"
       when :local_contributor
         if ruby_version_ok?
-          "OPENBSD/bin/check && cd MASTER && bin/check --profile=contributor"
+          "OPENBSD/mirror/bin/check && cd MASTER && bin/check --profile=contributor"
         else
-          "MASTER/bin/ruby OPENBSD/bin/check"
+          "MASTER/bin/ruby OPENBSD/mirror/bin/check"
         end
       else
-        "OPENBSD/bin/check --profile=full"
+        "OPENBSD/mirror/bin/check --profile=full"
       end
     end
   end

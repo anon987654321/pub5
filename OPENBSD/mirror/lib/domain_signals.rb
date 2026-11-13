@@ -15,7 +15,7 @@ module DomainSignals
     root = File.expand_path(root)
     inv_path = File.join(root, "OPENBSD/data/domain_inventory.yml")
     apps_path = File.join(root, "RAILS/apps.yml")
-    relayd_path = File.join(root, "OPENBSD/etc/relayd.conf")
+    relayd_path = File.join(root, "OPENBSD/mirror/etc/relayd.conf")
 
     inv = load_yaml_hash(inv_path)
     apps = load_yaml_hash(apps_path)

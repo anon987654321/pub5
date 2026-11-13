@@ -192,7 +192,7 @@ module Pub4Admin
     protocol = original[protocol_start..protocol_end]
     route_pattern = /^\s*match request header \"Host\" value \"#{escaped_domain}\" forward to <([a-z0-9_]+)>\s*$/
     existing_routes = protocol.lines.filter_map { |line| (match = line.match(route_pattern)) && match[1] }.uniq
-    raise "no operator-approved Host route for #{domain}; update OPENBSD/etc/relayd.conf and run OPERATOR.sh first" if existing_routes.empty?
+    raise "no operator-approved Host route for #{domain}; update OPENBSD/mirror/etc/relayd.conf and run OPERATOR.sh first" if existing_routes.empty?
     raise "#{domain} routes to #{existing_routes.join(', ')}, not #{app}" unless existing_routes == [app]
 
     puts "relayd0: verified root-approved route #{domain} -> #{app}:#{requested_port}"

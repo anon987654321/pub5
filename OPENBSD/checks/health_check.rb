@@ -5,12 +5,12 @@ require "json"
 require "open3"
 require "optparse"
 require "yaml"
-require_relative "../lib/utf8"
-require_relative "../lib/guard_state"
-require_relative "../lib/permission_audit"
-require_relative "../lib/disk_usage"
-require_relative "../lib/deploy_stamp"
-require_relative "../lib/deploy_inventory"
+require_relative "../mirror/lib/utf8"
+require_relative "../mirror/lib/guard_state"
+require_relative "../mirror/lib/permission_audit"
+require_relative "../mirror/lib/disk_usage"
+require_relative "../mirror/lib/deploy_stamp"
+require_relative "../mirror/lib/deploy_inventory"
 
 ROOT = File.expand_path("../..", __dir__)
 APPS_YML = File.join(ROOT, "RAILS", "apps.yml")
@@ -32,7 +32,7 @@ OptionParser.new do |parser|
 
   # Everything else in this file needs rcctl, pfctl, /etc/relayd.conf and localhost
   # ports -- i.e. vm23. --public-only is the subset an external checker can actually
-  # answer, and it exists so OPENBSD/bin/uptime-check.sh can be a wrapper over this
+  # answer, and it exists so OPENBSD/mirror/bin/uptime-check.sh can be a wrapper over this
   # file instead of a second, hardcoded list of hosts: that copy named four domains
   # and would have gone on naming four after a fifth app shipped.
   parser.on("--public-only", "Only public HTTPS endpoints (runs anywhere, no vm23 tools)") do
@@ -339,7 +339,7 @@ if on_box
     # nothing wrong with it, which is how a check becomes a line people skip.
     if pending.positive? && workers.zero?
       failures << "#{name} queue: #{pending} job(s) due and no registered Solid Queue process " \
-                  "- see OPENBSD/etc/rc.d/#{name}_jobs"
+                  "- see OPENBSD/mirror/etc/rc.d/#{name}_jobs"
     end
   end
 end

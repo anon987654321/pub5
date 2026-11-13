@@ -6,7 +6,7 @@ require "fileutils"
 require "json"
 require "stringio"
 require "tmpdir"
-load File.expand_path("../usr/local/sbin/pub5-admin", __dir__)
+load File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__)
 
 class Pub5AdminTest < Minitest::Test
   ADMIN = Pub5Admin
@@ -57,7 +57,7 @@ class Pub5AdminTest < Minitest::Test
   end
 
   def test_deploy_status_is_a_fixed_atomic_app_record
-    source = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
     core = File.read(File.expand_path("../../RAILS/_core.sh", __dir__))
 
     assert_includes source, 'args.length == 4 && args[0] == "deploy-status"'
@@ -141,7 +141,7 @@ class Pub5AdminTest < Minitest::Test
   end
 
   def test_ci_lock_is_a_fixed_broker_verb
-    source = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
 
     assert_includes source, 'return ensure_ci_lock if args == ["ci-lock"]'
     assert_includes source, 'path = File.join(STAMP_DIR, "ci.lock")'
@@ -149,7 +149,7 @@ class Pub5AdminTest < Minitest::Test
   end
 
   def test_ensure_secret_is_an_atomic_fixed_app_operation
-    source = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
     assert_includes source, 'args[0] == "ensure-secret" && APPS.include?(args[1])'
     assert_includes source, "def ensure_app_secret(app, emit: true)"
     assert_includes source, "File.lstat(path)"
@@ -160,10 +160,13 @@ class Pub5AdminTest < Minitest::Test
     assert_includes source, "File.chmod(0o640, temporary)"
   end
   def test_bundle_cache_broker_accepts_only_fixed_actions_versions_and_paths
-    source = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
     assert_includes source, 'args.length == 4 && args[0] == "bundle-cache"'
     assert_includes source, "def bundle_cache(app, action, ruby_key)"
-    assert_includes source, 'BUNDLE_CACHE_BASE = "/var/cache/pub5/bundle"'
+    # The gem CAS stays on the installed pub4 path: pub4-admin captured the
+    # objects and rails-task.ksh hydrates from the same root (see the broker
+    # source comment and MIGRATION.md).
+    assert_includes source, 'BUNDLE_CACHE_BASE = "/var/cache/pub4/bundle"'
     assert_includes source, "%w[prepare import capture].include?(action)"
     assert_includes source, "File.link(temporary, target)"
     assert_includes source, "File::CREAT | File::EXCL"
@@ -171,7 +174,7 @@ class Pub5AdminTest < Minitest::Test
     assert_includes source, "bundle cache import exceeds 500 files"
   end
   def test_master_web_preparation_is_fixed_path_and_symlink_safe
-    source = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
     assert_includes source, 'MASTER_WEB_ROOT = "/home/dev/pub5/MASTER/web"'
     assert_includes source, 'args == ["master-web-assets-reset"]'
     assert_includes source, 'args == ["master-web-runtime-dirs"]'
@@ -185,7 +188,7 @@ class Pub5AdminTest < Minitest::Test
     assert_includes source, "File.chown(dev.uid, master.gid, entry)"
   end
   def test_ci_timeout_is_a_real_process_group_deadline
-    source = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
 
     assert_includes source, "def valid_ci_timeout?(value)"
     assert_includes source, "def run_ci(app, duration)"
@@ -197,7 +200,7 @@ class Pub5AdminTest < Minitest::Test
   end
 
   def test_relayd_broker_only_verifies_root_approved_routes
-    source = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
     assert_includes source, 'args.length == 4 && args[0] == "relayd-check"'
     assert_includes source, "def relayd_check(app, domain, requested_port)"
     assert_includes source, "File.lstat(RELAYD_CONFIG)"
@@ -207,7 +210,7 @@ class Pub5AdminTest < Minitest::Test
     refute_includes source, "File.rename(temporary, RELAYD_CONFIG)"
   end
   def test_first_deploy_secret_does_not_replace_a_racing_secret
-    source = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
     method = source[/def ensure_app_secret\(app, emit: true\).*?^  end/m]
     refute_nil method
     assert_includes method, "File.link(temporary, target)"
@@ -215,35 +218,35 @@ class Pub5AdminTest < Minitest::Test
     assert_includes method, "rescue Errno::EEXIST"
   end
   def test_rails_task_bootstraps_missing_secret_without_printing_it
-    source = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
     assert_includes source, "ensure_app_secret(app, emit: false)"
     assert_includes source, 'rescue RuntimeError => error'
     assert_includes source, 'raise unless error.message == "no valid SECRET_KEY_BASE for #{app}"'
     assert_includes source, "puts secret if emit"
   end
   def test_rails_secret_is_passed_in_environment_not_command_text
-    broker = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
-    helper = File.read(File.expand_path("../usr/local/libexec/rails-task.ksh", __dir__))
+    broker = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
+    helper = File.read(File.expand_path("../mirror/usr/local/libexec/rails-task.ksh", __dir__))
     assert_includes broker, 'environment["SECRET_KEY_BASE"] = environment_secret if environment_secret'
     assert_includes broker, "environment_secret = app_secret_value(app)"
     assert_includes helper, "export SECRET_KEY_BASE"
     refute_includes helper, 'command="SECRET_KEY_BASE=$secret'
   end
   def test_rails_sync_stages_only_git_tracked_head
-    helper = File.read(File.expand_path("../usr/local/libexec/rails-sync.ksh", __dir__))
+    helper = File.read(File.expand_path("../mirror/usr/local/libexec/rails-sync.ksh", __dir__))
     assert_includes helper, 'git -c safe.directory="$repo" -C "$repo" archive HEAD "RAILS/$source_rel"'
     assert_includes helper, 'archive_tracked_tree "$source_dir" "$stage"'
     refute_includes helper, 'tar cf - -C "$source_dir" .'
     assert_includes helper, 'source_rel=${source_dir#"$rails_root"/}'
   end
   def test_rails_task_uses_its_own_app_allowlist
-    source = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
     assert_includes source, "known_apps = helper == RAILS_TASK ? RAILS_TASK_APPS : RAILS_APPS"
     assert_includes source, "RAILS_TASK_APPS = %w[master brgen amber bsdports mrdamascy].freeze"
   end
   def test_npm_cache_task_is_app_owned_and_symlink_safe
-    broker = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
-    helper = File.read(File.expand_path("../usr/local/libexec/rails-task.ksh", __dir__))
+    broker = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
+    helper = File.read(File.expand_path("../mirror/usr/local/libexec/rails-task.ksh", __dir__))
     assert_includes broker, "npm-cache"
     assert_includes helper, "npm-cache)"
     assert_includes helper, 'for cache_dir in "$app_home/.npm" "$app_home/.cache" "$app_home/.bundle"; do'
@@ -251,13 +254,13 @@ class Pub5AdminTest < Minitest::Test
     assert_includes helper, 'command="mkdir -p /home/$app/.npm /home/$app/.cache"'
   end
   def test_rails_task_refuses_symlinked_database_ancestors
-    helper = File.read(File.expand_path("../usr/local/libexec/rails-task.ksh", __dir__))
+    helper = File.read(File.expand_path("../mirror/usr/local/libexec/rails-task.ksh", __dir__))
     assert_includes helper, '[ ! -L "$app_dir/db" ]'
     assert_includes helper, '[ ! -L "$app_dir/storage" ]'
     assert_includes helper, '[ "$(stat -f %u "$app_dir/storage")" = "$app_uid" ]'
   end
   def test_bundle_cas_hydration_copies_root_objects_as_the_app
-    helper = File.read(File.expand_path("../usr/local/libexec/rails-task.ksh", __dir__))
+    helper = File.read(File.expand_path("../mirror/usr/local/libexec/rails-task.ksh", __dir__))
     runtime = File.read(File.expand_path("../../RAILS/_runtime_check.sh", __dir__))
     bundle = File.read(File.expand_path("../../RAILS/_bundle.sh", __dir__))
     assert_includes helper, "bundle-cas-hydrate)"
@@ -291,7 +294,7 @@ class Pub5AdminTest < Minitest::Test
       assert_equal 64, ADMIN.run_rails_task("brgen", "shell")
       assert_equal 64, ADMIN.run_rails_task("brgen", "schema-load", "/etc/passwd")
       assert_equal 64, ADMIN.run_rails_task("bsdports", "demo-seed")
-      assert_equal 64, ADMIN.run_rails_task("brgen", "bundle-cas-hydrate", "../../etc")
+      assert_equal 64, ADMIN.run_rails_task("brgen", "bundle-cas-hydrate", "../../mirror/etc")
       assert_equal 0, ADMIN.run_rails_task("brgen", "bundle-check")
       assert_equal 0, ADMIN.run_rails_task("master", "bundle-check")
     end
@@ -302,8 +305,8 @@ class Pub5AdminTest < Minitest::Test
     ], calls
   end
   def test_rails_task_accepts_only_closed_app_task_arguments
-    source = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
-    helper = File.read(File.expand_path("../usr/local/libexec/rails-task.ksh", __dir__))
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
+    helper = File.read(File.expand_path("../mirror/usr/local/libexec/rails-task.ksh", __dir__))
     assert_includes source, 'args[0] == "rails-task" && RAILS_TASK_APPS.include?(args[1])'
     assert_includes source, 'args[0] == "ensure-secret" && APPS.include?(args[1])'
     assert_includes source, "RAILS_TASK_APPS = %w[master brgen amber bsdports mrdamascy].freeze"
@@ -324,8 +327,8 @@ class Pub5AdminTest < Minitest::Test
     refute_includes helper, "sh -c \"$command\""
   end
   def test_ci_run_accepts_only_fixed_apps_and_bounded_timeouts
-    source = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
-    helper = File.read(File.expand_path("../usr/local/libexec/ci-run.ksh", __dir__))
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
+    helper = File.read(File.expand_path("../mirror/usr/local/libexec/ci-run.ksh", __dir__))
 
     assert_includes source, 'args[0] == "ci-run" && RAILS_APPS.include?(args[1])'
     assert_includes source, "supervised_helper(CI_RUN, app, duration)"
@@ -341,10 +344,10 @@ class Pub5AdminTest < Minitest::Test
 
   def test_shell_syntax_check_covers_privileged_libexec_helpers
     source = File.read(File.expand_path("../checks/shell_syntax_check.rb", __dir__))
-    assert_includes source, 'Dir.glob("OPENBSD/usr/local/libexec/**/*.ksh")'
+    assert_includes source, 'Dir.glob("OPENBSD/mirror/usr/local/libexec/**/*.ksh")'
   end
   def test_ci_sync_pins_git_safe_directory
-    helper = File.read(File.expand_path("../usr/local/libexec/ci-sync.ksh", __dir__))
+    helper = File.read(File.expand_path("../mirror/usr/local/libexec/ci-sync.ksh", __dir__))
 
     assert_operator helper.scan('git -c safe.directory="$repo" -C "$repo"').length, :>=, 3
     refute_includes helper, 'git -C "$repo"'
@@ -353,8 +356,8 @@ class Pub5AdminTest < Minitest::Test
   end
 
   def test_bundle_cache_preparation_is_app_owned_and_fixed
-    broker = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
-    helper = File.read(File.expand_path("../usr/local/libexec/rails-task.ksh", __dir__))
+    broker = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
+    helper = File.read(File.expand_path("../mirror/usr/local/libexec/rails-task.ksh", __dir__))
     deploy = File.read(File.expand_path("../../RAILS/_deploy.sh", __dir__))
     runtime = File.read(File.expand_path("../../RAILS/_runtime_check.sh", __dir__))
 
@@ -370,8 +373,8 @@ class Pub5AdminTest < Minitest::Test
   end
 
   def test_production_bundle_uses_the_fixed_rails_task
-    source = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
-    helper = File.read(File.expand_path("../usr/local/libexec/rails-task.ksh", __dir__))
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
+    helper = File.read(File.expand_path("../mirror/usr/local/libexec/rails-task.ksh", __dir__))
 
     assert_includes source, 'args[0] == "rails-task" && RAILS_TASK_APPS.include?(args[1])'
     assert_includes source, "run_rails_task(args[1], args[2])"
@@ -386,8 +389,8 @@ class Pub5AdminTest < Minitest::Test
   end
 
   def test_shared_overlays_are_app_user_fixed_tasks
-    source = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
-    helper = File.read(File.expand_path("../usr/local/libexec/rails-task.ksh", __dir__))
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
+    helper = File.read(File.expand_path("../mirror/usr/local/libexec/rails-task.ksh", __dir__))
     runtime = File.read(File.expand_path("../../RAILS/_runtime_check.sh", __dir__))
     sync = File.read(File.expand_path("../../RAILS/_sync.sh", __dir__))
 
@@ -402,8 +405,8 @@ class Pub5AdminTest < Minitest::Test
   end
 
   def test_ci_sync_runs_only_as_the_selected_app
-    source = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
-    helper = File.read(File.expand_path("../usr/local/libexec/ci-sync.ksh", __dir__))
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
+    helper = File.read(File.expand_path("../mirror/usr/local/libexec/ci-sync.ksh", __dir__))
 
     assert_includes source, 'args[0] == "ci-sync" && RAILS_APPS.include?(args[1])'
     assert_includes source, "supervised_helper(CI_SYNC, app, 900)"
@@ -416,7 +419,7 @@ class Pub5AdminTest < Minitest::Test
   end
 
   def test_ci_prepare_validates_app_ancestors_before_storage_chmod
-    helper = File.read(File.expand_path("../usr/local/libexec/ci-prepare.ksh", __dir__))
+    helper = File.read(File.expand_path("../mirror/usr/local/libexec/ci-prepare.ksh", __dir__))
 
     assert_includes helper, 'app_uid=$(/usr/bin/id -u "$app")'
     assert_includes helper, '[ ! -L "$app_home" ]'
@@ -426,7 +429,7 @@ class Pub5AdminTest < Minitest::Test
   end
 
   def test_ci_prepare_creates_group_before_changing_checkout_parent
-    helper = File.read(File.expand_path("../usr/local/libexec/ci-prepare.ksh", __dir__))
+    helper = File.read(File.expand_path("../mirror/usr/local/libexec/ci-prepare.ksh", __dir__))
     group_create_at = helper.index("/usr/sbin/groupadd _pub5ci")
     usermod_at = helper.index("/usr/sbin/usermod -G _pub5ci \"$app\"")
     chgrp_at = helper.index("/bin/chgrp _pub5ci /home/dev")
@@ -435,8 +438,8 @@ class Pub5AdminTest < Minitest::Test
     assert_operator usermod_at, :<, chgrp_at
   end
   def test_ci_prepare_is_one_fixed_app_scoped_operation
-    source = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
-    helper = File.read(File.expand_path("../usr/local/libexec/ci-prepare.ksh", __dir__))
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
+    helper = File.read(File.expand_path("../mirror/usr/local/libexec/ci-prepare.ksh", __dir__))
 
     assert_includes source, 'args[0] == "ci-prepare" && RAILS_APPS.include?(args[1])'
     assert_includes source, 'trusted_script!(CI_PREPARE)'
@@ -476,7 +479,7 @@ class Pub5AdminTest < Minitest::Test
   end
 
   def test_root_script_does_not_evaluate_shell_command_strings
-    source = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
 
     refute_match(/system\s*\(|Open3\.|%x/, source)
     assert_equal 1, source.scan("Process.spawn").length
@@ -491,7 +494,7 @@ class Pub5AdminTest < Minitest::Test
   end
 
   def test_privileged_helpers_must_be_root_owned_and_non_writable
-    source = File.read(File.expand_path("../usr/local/sbin/pub5-admin", __dir__))
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
 
     assert_includes source, "stat.symlink? || !stat.uid.zero? || (stat.mode & 0o022).positive?"
     assert_includes source, "File.lstat(current)"

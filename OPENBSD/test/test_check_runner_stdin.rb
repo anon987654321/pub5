@@ -2,7 +2,7 @@
 
 require "minitest/autorun"
 require "rbconfig"
-require_relative "../lib/check_runner"
+require_relative "../mirror/lib/check_runner"
 
 class TestCheckRunnerStdin < Minitest::Test
   def test_timeout_preserves_partial_output_and_reports_failure

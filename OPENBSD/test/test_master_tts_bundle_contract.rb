@@ -16,8 +16,8 @@ require "fileutils"
 # hand-off to the same spelling.
 class MasterTtsBundleContractTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
-  DEPLOY = File.read(File.join(ROOT, "OPENBSD/bin/vps_deploy_master.sh"))
-  RC_D = File.read(File.join(ROOT, "OPENBSD/etc/rc.d/master"))
+  DEPLOY = File.read(File.join(ROOT, "OPENBSD/mirror/bin/vps_deploy_master.sh"))
+  RC_D = File.read(File.join(ROOT, "OPENBSD/mirror/etc/rc.d/master"))
   MANAGER = File.read(File.join(ROOT, "MASTER/lib/boot/dependency_manager.rb"))
 
   def test_the_deploy_records_the_bundle_path_in_masters_own_bundle_config

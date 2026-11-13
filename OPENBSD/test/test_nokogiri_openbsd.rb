@@ -4,7 +4,7 @@ require "minitest/autorun"
 require "digest"
 require "tmpdir"
 
-load File.expand_path("../bin/nokogiri-openbsd", __dir__)
+load File.expand_path("../mirror/bin/nokogiri-openbsd", __dir__)
 
 # The tool that builds nokogiri on vm23. On 2026-11-03 its `gem fetch` filled the
 # box's swap and stopped every app; it now downloads the one file, checks it, and

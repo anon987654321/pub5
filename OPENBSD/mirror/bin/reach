@@ -13,8 +13,8 @@
 # box's crontab nor its filesystem, because the merge loop skipped the line
 # correctly and silently.
 #
-#   ruby OPENBSD/bin/reach
-#   ruby OPENBSD/bin/reach --json
+#   ruby OPENBSD/mirror/bin/reach
+#   ruby OPENBSD/mirror/bin/reach --json
 #
 # Three questions, each about the tree rather than the box. Box state is
 # health_check.rb's job; this is what a fresh OPERATOR.sh run would produce.
@@ -24,11 +24,11 @@ require_relative "../lib/utf8"
 # For scheduled_commands, the one cron-line parser: its fixtures live in
 # test/test_config_drift_check.rb, and test_tracked_crontab.rb reads through it too.
 # The check returns before running anything when it is required rather than run.
-require_relative "../checks/config_drift_check"
+require_relative "../../checks/config_drift_check"
 
 module Operator
   module OpenbsdReach
-    DEFAULT_ROOT = File.expand_path("..", __dir__)
+    DEFAULT_ROOT = File.expand_path("../..", __dir__)
 
     # Overridable so the checks can be shown to fire. A probe nobody has watched
     # fail is the same shape as the drift it is looking for.
@@ -53,12 +53,12 @@ module Operator
     # installs it there from somewhere else — resource_guard.sh is tracked at the
     # OPENBSD root and installed into /usr/local/bin, which reads as missing to
     # anything that only checks the path.
-    def cron_commands = scheduled_commands(read("etc", "crontab.vm23"))
+    def cron_commands = scheduled_commands(read("mirror", "etc", "crontab.vm23"))
 
     def cron_findings
       operator = read("OPERATOR.sh")
       cron_commands.filter_map do |cmd|
-        next if File.exist?(File.join(root, cmd.sub(%r{\A/}, "")))
+        next if File.exist?(File.join(root, "mirror", cmd.sub(%r{\A/}, "")))
         next if operator.match?(/install\b[^\n]*#{Regexp.escape(cmd)}/)
 
         Finding.new(check: "cron", subject: cmd,
@@ -70,7 +70,7 @@ module Operator
     # /usr/local/bin, which is where every env-shebang interpreter lives. Four of
     # five jobs had never run for that reason.
     def cron_path_findings
-      declared = read("etc", "crontab.vm23")[/^PATH=(.+)$/, 1].to_s.split(":")
+      declared = read("mirror", "etc", "crontab.vm23")[/^PATH=(.+)$/, 1].to_s.split(":")
       dirs = cron_commands.select { |c| c.start_with?("/") }.map { |c| File.dirname(c) }.uniq
       (dirs - declared).map do |dir|
         Finding.new(check: "cron", subject: dir, detail: "a scheduled command lives here and PATH= does not list it")
@@ -84,7 +84,7 @@ module Operator
     # *_jobs workers and irc_gateway take the second route and document the
     # rcctl lines to run by hand, which is a decision rather than a gap.
     def starters
-      (Dir.glob(File.join(root, "*.sh")) + Dir.glob(File.join(root, "bin", "*")))
+      (Dir.glob(File.join(root, "*.sh")) + Dir.glob(File.join(root, "mirror", "bin", "*")))
         .select { |f| File.file?(f) }
         .map { |f| File.read(f, encoding: "UTF-8") rescue "" }
         .join("\n")
@@ -92,7 +92,7 @@ module Operator
 
     def rcd_findings
       enabling = starters
-      Dir.glob(File.join(root, "etc", "rc.d", "*")).sort.filter_map do |path|
+      Dir.glob(File.join(root, "mirror", "etc", "rc.d", "*")).sort.filter_map do |path|
         name = File.basename(path)
         next if enabling.match?(/\b#{Regexp.escape(name)}\b/)
         next if File.read(path, encoding: "UTF-8").match?(/not enabled by default|disabled by default/i)
@@ -108,12 +108,12 @@ module Operator
     # script does not, and it is off the boot list. Every name today is a tracked
     # script; a package's own rc.d script would be the first exception.
     def boot_names
-      read("etc", "rc.conf.local")[/^pkg_scripts=(.*)$/, 1].to_s.split
+      read("mirror", "etc", "rc.conf.local")[/^pkg_scripts=(.*)$/, 1].to_s.split
     end
 
     def boot_findings
       boot_names.filter_map do |name|
-        next if File.file?(File.join(root, "etc", "rc.d", name))
+        next if File.file?(File.join(root, "mirror", "etc", "rc.d", name))
 
         Finding.new(check: "boot", subject: name, detail: "pkg_scripts starts it and etc/rc.d ships no script for it")
       end
@@ -126,8 +126,8 @@ module Operator
     # are generated from render_dns.rb, so a drift here means someone hand-edited
     # one side.
     def zone_findings
-      conf = read("var", "nsd", "etc", "nsd.conf")
-      files = Dir.glob(File.join(root, "var", "nsd", "zones", "master", "*.zone"))
+      conf = read("mirror", "var", "nsd", "etc", "nsd.conf")
+      files = Dir.glob(File.join(root, "mirror", "var", "nsd", "zones", "master", "*.zone"))
                  .map { |f| File.basename(f, ".zone") }
       named = conf.scan(/name:\s*"?([a-z0-9.\-]+)"?/).flatten.uniq
 
@@ -143,9 +143,9 @@ module Operator
 
     def counts
       { "cron" => cron_commands.size,
-        "rcd" => Dir.glob(File.join(root, "etc", "rc.d", "*")).size,
+        "rcd" => Dir.glob(File.join(root, "mirror", "etc", "rc.d", "*")).size,
         "boot" => boot_names.size,
-        "zones" => Dir.glob(File.join(root, "var", "nsd", "zones", "master", "*.zone")).size }
+        "zones" => Dir.glob(File.join(root, "mirror", "var", "nsd", "zones", "master", "*.zone")).size }
     end
 
     def run(json: false)

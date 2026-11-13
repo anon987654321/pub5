@@ -3,7 +3,7 @@
 require "minitest/autorun"
 
 class SshVm23ContractTest < Minitest::Test
-  SOURCE = File.read(File.expand_path("../lib/ssh_vm23.sh", __dir__), encoding: "UTF-8")
+  SOURCE = File.read(File.expand_path("../mirror/lib/ssh_vm23.sh", __dir__), encoding: "UTF-8")
 
   def test_tmux_session_name_is_shell_quoted_before_remote_execution
     assert_includes SOURCE, "typeset quoted_session=${(q)session}"

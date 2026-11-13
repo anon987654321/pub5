@@ -2,7 +2,7 @@
 
 require "minitest/autorun"
 require "openssl"
-require_relative "../bin/domain_watch"
+require_relative "../mirror/bin/domain_watch"
 
 # The offline half of `domain_watch.rb --tls`: which hosts it probes and how it
 # decides a certificate covers one. The network half is run by hand on the day.

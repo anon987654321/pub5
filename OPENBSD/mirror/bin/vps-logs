@@ -11,7 +11,7 @@
 require "optparse"
 require "open3"
 
-ROOT = File.expand_path("../..", __dir__)
+ROOT = File.expand_path("../../..", __dir__)
 require_relative "../lib/environment"
 
 DAEMON_LOG = "/var/log/daemon"

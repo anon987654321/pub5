@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../lib/disk_usage"
+require_relative "../mirror/lib/disk_usage"
 
 class TestDiskUsage < Minitest::Test
   OPENBSD = <<~DF

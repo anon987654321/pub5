@@ -11,12 +11,12 @@
 # It does not boot Rails or run the suite; that is the box's rails_test step, and
 # the failures that survive this rehearsal are the real ones.
 #
-# Usage: OPENBSD/bin/rehearse   (exit 0 only when every check passes)
+# Usage: OPENBSD/mirror/bin/rehearse   (exit 0 only when every check passes)
 
 require "open3"
 require "rbconfig"
 
-ROOT = File.expand_path("../..", __dir__)
+ROOT = File.expand_path("../../..", __dir__)
 RUBY = RbConfig.ruby
 
 LINTS = %w[

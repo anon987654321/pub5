@@ -42,10 +42,10 @@ class PfPolicyCheckTest < Minitest::Test
 
   def test_symlinked_pf_config_is_rejected
     Dir.mktmpdir("pf-policy-symlink") do |root|
-      path = File.join(root, "OPENBSD", "etc", "pf.conf")
+      path = File.join(root, "OPENBSD", "mirror", "etc", "pf.conf")
       target = File.join(root, "external-pf.conf")
       FileUtils.mkdir_p(File.dirname(path))
-      File.write(target, File.read(File.join(ROOT, "OPENBSD", "etc", "pf.conf")))
+      File.write(target, File.read(File.join(ROOT, "OPENBSD", "mirror", "etc", "pf.conf")))
       File.symlink(target, path)
 
       result = Deploy::PfPolicyCheck.run(root:)
@@ -55,11 +55,11 @@ class PfPolicyCheckTest < Minitest::Test
 
   def test_symlinked_pf_parent_directory_is_rejected
     Dir.mktmpdir("pf-policy-parent-symlink") do |root|
-      shared = File.join(root, "OPENBSD")
+      shared = File.join(root, "OPENBSD", "mirror")
       outside = File.join(root, "external-openbsd")
       FileUtils.mkdir_p(File.join(shared, "etc"))
       FileUtils.mkdir_p(File.join(outside, "etc"))
-      FileUtils.cp(File.join(ROOT, "OPENBSD", "etc", "pf.conf"),
+      FileUtils.cp(File.join(ROOT, "OPENBSD", "mirror", "etc", "pf.conf"),
                    File.join(outside, "etc", "pf.conf"))
       FileUtils.rm_rf(shared)
       File.symlink(outside, shared)
@@ -71,7 +71,7 @@ class PfPolicyCheckTest < Minitest::Test
 
   def test_invalid_utf8_pf_config_is_rejected
     Dir.mktmpdir("pf-policy-invalid-utf8") do |root|
-      path = File.join(root, "OPENBSD", "etc", "pf.conf")
+      path = File.join(root, "OPENBSD", "mirror", "etc", "pf.conf")
       FileUtils.mkdir_p(File.dirname(path))
       File.binwrite(path, [0xFF].pack("C"))
 
@@ -98,7 +98,7 @@ class PfPolicyCheckTest < Minitest::Test
 
   def check_content(source)
     Dir.mktmpdir("pf-policy-test") do |dir|
-      target = File.join(dir, "OPENBSD", "etc", "pf.conf")
+      target = File.join(dir, "OPENBSD", "mirror", "etc", "pf.conf")
       FileUtils.mkdir_p(File.dirname(target))
       File.write(target, source)
       return Deploy::PfPolicyCheck.run(root: dir)

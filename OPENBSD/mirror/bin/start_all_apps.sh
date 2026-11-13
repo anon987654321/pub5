@@ -4,7 +4,7 @@ set -eu
 
 case ${1:-} in
   -h|--help)
-    echo "usage: ksh OPENBSD/bin/start_all_apps.sh - start the fixed pub4 fleet and pin it against resource_guard shedding"
+    echo "usage: ksh OPENBSD/mirror/bin/start_all_apps.sh - start the fixed pub4 fleet and pin it against resource_guard shedding"
     exit 0
     ;;
   "") ;;
@@ -25,6 +25,6 @@ broker=/usr/local/sbin/pub5-admin
 doas "$broker" start-all-apps
 
 ROOT=/home/dev/pub5
-. "$ROOT/OPENBSD/lib/ruby_select.sh"
+. "$ROOT/OPENBSD/mirror/lib/ruby_select.sh"
 "$RUBY" "$ROOT/OPENBSD/checks/health_check.rb" --all-ready-apps
 echo "all apps up (resource_guard shedding disabled via /var/db/pub4_all_apps)"

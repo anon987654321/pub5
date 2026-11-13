@@ -13,7 +13,7 @@ require "tmpdir"
 # refuses the start, and relayd's connections to the port are never taken for a
 # holder.
 class RcPortHoldersTest < Minitest::Test
-  RC_D = File.expand_path("../etc/rc.d", __dir__)
+  RC_D = File.expand_path("../mirror/etc/rc.d", __dir__)
   APPS = %w[brgen amber bsdports master].freeze
   MARKERS = /^# port holders: begin$.*?^# port holders: end$/m
   PORT = 38_182

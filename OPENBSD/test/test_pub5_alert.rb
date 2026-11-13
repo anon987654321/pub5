@@ -9,7 +9,7 @@ require "tmpdir"
 # in. Every external read (df, swapctl, rcctl) is a fake first on PATH, and the
 # log, state and marker are scratch paths, so nothing here touches the machine.
 class TestPub5Alert < Minitest::Test
-  SCRIPT = File.expand_path("../usr/local/bin/pub5-alert", __dir__)
+  SCRIPT = File.expand_path("../mirror/usr/local/bin/pub5-alert", __dir__)
 
   def fake(dir, name, body)
     FileUtils.mkdir_p(File.join(dir, "fake"))

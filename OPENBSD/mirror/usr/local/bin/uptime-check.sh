@@ -5,7 +5,7 @@
 # The list is derived, not written here. RAILS/apps.yml is the feature truth,
 # and a copy of it in this file names whatever the fleet held on the day it was
 # typed — a fifth app ships and this keeps checking four, with nothing to say
-# so. OPENBSD/bin/uptime-check.sh answers the same question by running
+# so. OPENBSD/mirror/bin/uptime-check.sh answers the same question by running
 # health_check.rb, and it is not what cron gets: root would be executing a file
 # the dev user can rewrite, which is the escalation this installed copy exists
 # to close. Reading is the half that is safe, so this reads apps.yml as data

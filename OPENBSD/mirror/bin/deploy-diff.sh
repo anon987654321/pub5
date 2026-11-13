@@ -2,8 +2,8 @@
 # deploy-diff.sh — how vm23 differs from OPENBSD/, read-only, from a workstation.
 #
 # Usage:
-#   zsh OPENBSD/bin/deploy-diff.sh
-#   SSH_HOST=dev@brgen.no SSH_KEY=~/.ssh/id_ed25519_brgen zsh OPENBSD/bin/deploy-diff.sh
+#   zsh OPENBSD/mirror/bin/deploy-diff.sh
+#   SSH_HOST=dev@brgen.no SSH_KEY=~/.ssh/id_ed25519_brgen zsh OPENBSD/mirror/bin/deploy-diff.sh
 #
 # A wrapper over config_drift_check.rb --remote, which byte-compares every
 # verbatim-installed /etc and /usr/local/bin file and root's crontab in one ssh
@@ -13,13 +13,13 @@
 # back into the repo; this changes nothing in either direction.
 #
 # SSH_HOST here is login@host in one string, which is how config_drift_check.rb
-# reads it too. OPENBSD/lib/ssh_vm23.sh gives the same name the opposite meaning
+# reads it too. OPENBSD/mirror/lib/ssh_vm23.sh gives the same name the opposite meaning
 # — host alone, with SSH_USER beside it — so never export one for the other.
 
 set -euo pipefail
 
 if [[ ${1:-} == -h || ${1:-} == --help ]]; then
-  print "usage: zsh OPENBSD/bin/deploy-diff.sh   (SSH_HOST=login@host SSH_KEY=path)"
+  print "usage: zsh OPENBSD/mirror/bin/deploy-diff.sh   (SSH_HOST=login@host SSH_KEY=path)"
   exit 0
 fi
 
@@ -34,7 +34,7 @@ print "=== verbatim configs and root crontab (config_drift_check --remote) ==="
 ruby "${ROOT}/OPENBSD/checks/config_drift_check.rb" --remote || drift=1
 
 print "\n=== relayd.conf (excluded from the check; diffed here) ==="
-diff -u "${ROOT}/OPENBSD/etc/relayd.conf" <(ssh "${SSH_OPTS[@]}" "$SSH_HOST" "cat /etc/relayd.conf") || drift=1
+diff -u "${ROOT}/OPENBSD/mirror/etc/relayd.conf" <(ssh "${SSH_OPTS[@]}" "$SSH_HOST" "cat /etc/relayd.conf") || drift=1
 
 print "\n=== rcctl check (remote) ==="
 ssh "${SSH_OPTS[@]}" "$SSH_HOST" 'for s in nsd httpd relayd smtpd master brgen amber bsdports; do

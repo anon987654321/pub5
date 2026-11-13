@@ -2,8 +2,8 @@
 
 require "English"
 require "yaml"
-require_relative "../../OPENBSD/lib/deploy_inventory"
-require_relative "../../OPENBSD/lib/check_result"
+require_relative "../../OPENBSD/mirror/lib/deploy_inventory"
+require_relative "../../OPENBSD/mirror/lib/check_result"
 
 module Deploy
   class PortInventoryCheck
@@ -14,7 +14,7 @@ module Deploy
     APPS_YML = File.join(ROOT, "RAILS", "apps.yml")
     RAILS_README = File.join(ROOT, "RAILS", "README.md")
     PWA_BUILDER = File.join(ROOT, "MASTER", "tools", "rails", "build_workbox.mjs")
-    RELAYD_CONF = File.join(ROOT, "OPENBSD", "etc", "relayd.conf")
+    RELAYD_CONF = File.join(ROOT, "OPENBSD", "mirror", "etc", "relayd.conf")
     CRAWL_MANIFEST = File.join(ROOT, "RAILS", "crawl_manifest.yml")
 
     # Health probes that name a loopback port. They must never probe a port no
@@ -22,12 +22,12 @@ module Deploy
     # app down forever, or reports a different app's health under this app's
     # name once the number is reused.
     SMOKE_SCRIPTS = [
-      "OPENBSD/bin/deploy-smoke.sh",
+      "OPENBSD/mirror/bin/deploy-smoke.sh",
       # keep-warm pairs a host with a port on one line and runs on
       # a timer against production, so a number that stops being true here does
       # not fail -- it quietly warms nothing, which is the same shape as a probe
       # reporting an app healthy on a port it no longer listens on.
-      "OPENBSD/usr/local/bin/keep-warm.sh",
+      "OPENBSD/mirror/usr/local/bin/keep-warm.sh",
     ].freeze
 
     # Every file that states two or more app ports, and why it is allowed to.
@@ -48,11 +48,11 @@ module Deploy
       "RAILS/apps.yml" => "source of truth",
       "OPENBSD/deploy_inventory.json" => "checked: check_master_json",
       "OPENBSD/OPERATOR.sh" => "checked: check_openbsd_ports",
-      "OPENBSD/etc/relayd.conf" => "checked: check_relayd_ports",
+      "OPENBSD/mirror/etc/relayd.conf" => "checked: check_relayd_ports",
       "RAILS/crawl_manifest.yml" => "checked: check_crawl_manifest",
       "RAILS/README.md" => "checked: check_readmes",
-      "OPENBSD/bin/deploy-smoke.sh" => "checked: check_smoke_probes",
-      "OPENBSD/usr/local/bin/keep-warm.sh" => "checked: check_smoke_probes",
+      "OPENBSD/mirror/bin/deploy-smoke.sh" => "checked: check_smoke_probes",
+      "OPENBSD/mirror/usr/local/bin/keep-warm.sh" => "checked: check_smoke_probes",
       "RAILS/test/deploy_smoke_contract_test.rb" => "asserts the smoke scripts' own content",
       "CLAUDE.md" => "prose: the shed-vs-outage triage note, trap 3",
       "RAILS/CLAUDE.md" => "prose: the shed-vs-outage triage note",
@@ -67,7 +67,7 @@ module Deploy
       "MASTER/test/test_deploy_preflight.rb" => "fixture: a fake apps.yml hash (example.test domains and a fictional " \
                                                 "future_service) driven through the preflight rehearsal; " \
                                                 "no fleet agreement is asserted from these literals",
-      "OPENBSD/usr/local/bin/emergency_cpu.sh" => "unchecked: root runs it from /usr/local/bin with no checkout " \
+      "OPENBSD/mirror/usr/local/bin/emergency_cpu.sh" => "unchecked: root runs it from /usr/local/bin with no checkout " \
                                                   "to read, and it names only master and brgen, the two it restarts",
     }.freeze
 
@@ -85,17 +85,17 @@ module Deploy
     # both certificate symlinks, both DNS zones, and blognet in litestream.yml.
     # The config half of this list is where those leftovers lived.
     SCANNED_FOR_RETIRED_NAMES = [
-      "OPENBSD/bin/vps_console.exp",
-      "OPENBSD/usr/local/bin/relayd-watchdog",
+      "OPENBSD/mirror/bin/vps_console.exp",
+      "OPENBSD/mirror/usr/local/bin/relayd-watchdog",
       "RAILS/env.sample",
       "MASTER/tools/rails/build_workbox.mjs",
-      "OPENBSD/etc/rc.conf.local",
-      "OPENBSD/etc/login.conf",
-      "OPENBSD/etc/litestream.yml",
-      "OPENBSD/etc/relayd.conf",
-      "OPENBSD/etc/acme-client.conf",
+      "OPENBSD/mirror/etc/rc.conf.local",
+      "OPENBSD/mirror/etc/login.conf",
+      "OPENBSD/mirror/etc/litestream.yml",
+      "OPENBSD/mirror/etc/relayd.conf",
+      "OPENBSD/mirror/etc/acme-client.conf",
       "OPENBSD/data/dns.yml",
-      "OPENBSD/var/nsd/etc/nsd.conf",
+      "OPENBSD/mirror/var/nsd/etc/nsd.conf",
     ].freeze
 
     RETIRED_APP_NAMES = %w[baibl blognet hjerterom].freeze
@@ -141,7 +141,7 @@ module Deploy
     # app running, and the site serves 502 from the one file no check read.
     def check_relayd_ports(result, apps)
       unless File.file?(RELAYD_CONF)
-        result.fail("missing OPENBSD/etc/relayd.conf")
+        result.fail("missing OPENBSD/mirror/etc/relayd.conf")
         return
       end
 
@@ -334,10 +334,10 @@ module Deploy
     # place, and the PORT= in that rc.d script is what falcon binds and what
     # relayd's <master> table reaches, so that line is master's mirror.
     def check_master_rc_port(result, app)
-      rc = File.join(ROOT, "OPENBSD", "etc", "rc.d", "master")
+      rc = File.join(ROOT, "OPENBSD", "mirror", "etc", "rc.d", "master")
       return if File.file?(rc) && File.read(rc).match?(/^PORT=#{app.port}$/)
 
-      result.fail("master: OPENBSD/etc/rc.d/master PORT must mirror apps.yml #{app.port}")
+      result.fail("master: OPENBSD/mirror/etc/rc.d/master PORT must mirror apps.yml #{app.port}")
     end
 
     def openbsd_ports

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../lib/secret_redaction"
+require_relative "../mirror/lib/secret_redaction"
 
 # sync.rb's redaction is fail-open no longer. Watched failing before this file
 # was trusted: the patterns pinned `_KEY=` values to the sk- prefix, so

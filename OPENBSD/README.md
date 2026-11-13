@@ -38,14 +38,14 @@ Hands-off path: local preflight, pin SHA, tmux on vm23, `vps-deploy` as root
 (git as `dev`), stream progress until finished, then `vps-state` + public canary.
 Log: `/home/dev/vps-deploy.log`. Session: `pub5-deploy`.
 
-`/usr/local/bin/zap` is installed from `OPENBSD/bin/zap.rb`, a standard-library Ruby port of OpenBSD's interactive process killer. It searches command lines, asks before each signal, defaults to `SIGTERM`, and supports `-f`, `-s SIGNAL`, the classic `-SIGNAL` form and `--dry-run`. On OpenBSD it refuses to signal `vmd`, `vmctl` or `cu`; use the documented VM controls and recovery path instead.
+`/usr/local/bin/zap` is installed from `OPENBSD/mirror/bin/zap.rb`, a standard-library Ruby port of OpenBSD's interactive process killer. It searches command lines, asks before each signal, defaults to `SIGTERM`, and supports `-f`, `-s SIGNAL`, the classic `-SIGNAL` form and `--dry-run`. On OpenBSD it refuses to signal `vmd`, `vmctl` or `cu`; use the documented VM controls and recovery path instead.
 
 The commands live in one place. `data/operator.yml` is the source of the command
 recipes, so do not write another catalogue. From the repository root, the operator
 reaches the box with `MASTER/bin/operator vps state` and `MASTER/bin/operator vps
 deploy`. In this tree `bin/check` is the local check, `bin/check-vps` checks vm23,
 and `bin/vps-deploy` deploys. It resolves apps and groups from `RAILS/apps.yml` through
-`OPENBSD/lib/deploy_inventory.rb`. Group membership comes from the namespace
+`OPENBSD/mirror/lib/deploy_inventory.rb`. Group membership comes from the namespace
 segment of each `deploy_root`; `deploy_order` controls the serial pass. Under
 degraded memory/health evidence, the MASTER namespace moves last. Services that
 are shed by deployment remain at the end of their configured order so restoration
@@ -57,7 +57,7 @@ different copy-tree layout.
 
 ## Privilege boundary
 
-`OPENBSD/usr/local/sbin/pub4-admin` is the fixed-path root broker. It exposes
+`OPENBSD/mirror/usr/local/sbin/pub4-admin` is the fixed-path root broker. It exposes
 allowlisted service actions, atomic deploy receipts/secrets, a fixed CI lock, and
 bounded Rails/CI task and sync verbs. CI and production Rails tree replacement run
 with the selected app account; the CI runner has a wall-clock process-group deadline.
@@ -101,8 +101,8 @@ The deploy and privileged-broker references are under `man/man8/`. From the
 repository root, render the complete local pages without an interactive pager:
 
 ```zsh
-MANPATH="$PWD/OPENBSD/man" man -P cat 8 vps-deploy
-MANPATH="$PWD/OPENBSD/man" man -P cat 8 pub5-admin
+MANPATH="$PWD/OPENBSD/mirror/man" man -P cat 8 vps-deploy
+MANPATH="$PWD/OPENBSD/mirror/man" man -P cat 8 pub5-admin
 ```
 
 These local pages document pub5 tools only. Every edit under `OPENBSD/`

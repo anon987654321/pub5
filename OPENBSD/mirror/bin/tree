@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# OPENBSD/bin/tree
+# OPENBSD/mirror/bin/tree
 #
 # Constitution-aware project tree for pub4.
 # Respects skip_dirs from MASTER/data/laws.yml + aggressive pruning for overview.
@@ -14,7 +14,7 @@ class ProjectTree
   DEFAULT_SKIP = %w[
     .git vendor tmp var node_modules .bundle coverage log dist
     knowledge github_repos
-    OPENBSD/var RAILS
+    OPENBSD/mirror/var RAILS
   ].freeze
 
   NOISE_SEGMENTS = %w[
@@ -193,7 +193,7 @@ class ProjectTree
     puts
     puts "OPENBSD alignment (far-away, measured):"
 
-    rc_dir = File.join(repo, "OPENBSD", "etc", "rc.d")
+    rc_dir = File.join(repo, "OPENBSD", "mirror", "etc", "rc.d")
     services = ["master", *rails_apps(repo)]
     missing = services.reject { |service| File.exist?(File.join(rc_dir, service)) }
     line(drift_or_ok(missing.empty?), "etc/rc.d: #{services.size - missing.size} of #{services.size} services (#{services.join(' ')}) " \
@@ -205,7 +205,7 @@ class ProjectTree
     horizon = File.exist?(File.join(repo, "RAILS", "apps.horizon.yml"))
     line(:drift, "RAILS/apps.horizon.yml - agent-ignore; keep out of contributor path") if horizon
 
-    puts "  -> Checks: OPENBSD/bin/check --profile=full | check-rails --profile=contributor"
+    puts "  -> Checks: OPENBSD/mirror/bin/check --profile=full | check-rails --profile=contributor"
   end
 
   def breakdown_lib(lib_root)
@@ -308,7 +308,7 @@ class ProjectTree
     return 1 if rel.match?(%r{^RAILS/[^/]+$}) && !rel.end_with?("/shared")
     return 1 if rel == "MASTER/data" || rel.start_with?("MASTER/data/runtime")
     return 2 if rel == "MASTER/lib"
-    return 1 if rel == "OPENBSD/etc"
+    return 1 if rel == "OPENBSD/mirror/etc"
 
     @max_depth
   end
@@ -369,7 +369,7 @@ if __FILE__ == $PROGRAM_NAME
   # The named views resolve from this file, not from the shell: run from OPENBSD/
   # or MASTER/, a Dir.pwd root named a directory that does not exist, and walk
   # printed an empty tree as if the target held nothing.
-  repo = File.expand_path("../..", __dir__)
+  repo = File.expand_path("../../..", __dir__)
   options = { max_depth: 4, summary: false, root: nil, focus: nil, overview: false, pillar: nil }
 
   OptionParser.new do |opts|

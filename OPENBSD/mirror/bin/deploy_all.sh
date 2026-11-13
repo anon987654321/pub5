@@ -8,8 +8,8 @@
 # Canonical app list: OPENBSD/deploy_inventory.json (active Rails apps).
 #
 # Usage:
-#   zsh OPENBSD/bin/deploy_all.sh
-#   zsh OPENBSD/bin/deploy_all.sh --per-app   # also run the canonical vps-deploy once per app
+#   zsh OPENBSD/mirror/bin/deploy_all.sh
+#   zsh OPENBSD/mirror/bin/deploy_all.sh --per-app   # also run the canonical vps-deploy once per app
 #
 # Host, login and key come from lib/ssh_vm23.sh, the one copy of them:
 # SSH_HOST is the host alone and SSH_USER the login, so `SSH_HOST=dev@…` yields
@@ -23,7 +23,7 @@ SCRIPT_DIR=${0:a:h}
 DEPLOY_ROOT=${SCRIPT_DIR:h}
 
 : "${USE_GIT_PULL:=1}"
-# Empty: the box picks its own Ruby through OPENBSD/lib/ruby_select.sh. Set it
+# Empty: the box picks its own Ruby through OPENBSD/mirror/lib/ruby_select.sh. Set it
 # to a path on the box to force one.
 : "${REMOTE_RUBY:=}"
 : "${RUN_REMOTE_HEALTH:=1}"
@@ -38,7 +38,7 @@ vssh() { vm23_ssh "$@" }
 
 # The Ruby is resolved on the box, never here: this machine's Ruby is not its.
 remote_ruby() {
-  print -r -- "${REMOTE_RUBY:+RUBY=${(q)REMOTE_RUBY} }sh -c '. OPENBSD/lib/ruby_select.sh && exec \"\$RUBY\" \"\$@\"' sh $*"
+  print -r -- "${REMOTE_RUBY:+RUBY=${(q)REMOTE_RUBY} }sh -c '. OPENBSD/mirror/lib/ruby_select.sh && exec \"\$RUBY\" \"\$@\"' sh $*"
 }
 
 typeset run_per_app=0
@@ -81,10 +81,10 @@ fi
 if (( run_per_app )); then
   log "Optional canonical per-app vps-deploy runs..."
   for app in $APPS; do
-    typeset script="${REMOTE_PUB4}/OPENBSD/bin/vps-deploy"
+    typeset script="${REMOTE_PUB4}/OPENBSD/mirror/bin/vps-deploy"
     log "  ${app}..."
     vssh "test -f ${script}" || { log "WARN: missing ${script}"; continue; }
-    vssh "cd ${REMOTE_PUB4} && zsh OPENBSD/bin/vps-deploy ${app} 2>&1 | tee /tmp/${app}_deploy.log" \
+    vssh "cd ${REMOTE_PUB4} && zsh OPENBSD/mirror/bin/vps-deploy ${app} 2>&1 | tee /tmp/${app}_deploy.log" \
       || log "WARN: ${app} - see /tmp/${app}_deploy.log"
   done
 fi

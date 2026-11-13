@@ -3,13 +3,13 @@
 
 require "json"
 require "yaml"
-require_relative "../lib/utf8"
-require_relative "../lib/token_echo"
+require_relative "../mirror/lib/utf8"
+require_relative "../mirror/lib/token_echo"
 
 ROOT = File.expand_path("../..", __dir__)
 RAILS_ROOT = File.join(ROOT, "RAILS")
-RELAYD = File.join(ROOT, "OPENBSD", "etc", "relayd.conf")
-HTTPD = File.join(ROOT, "OPENBSD", "etc", "httpd.conf")
+RELAYD = File.join(ROOT, "OPENBSD", "mirror", "etc", "relayd.conf")
+HTTPD = File.join(ROOT, "OPENBSD", "mirror", "etc", "httpd.conf")
 APPS_YML = File.join(RAILS_ROOT, "apps.yml")
 
 # The apps vm23 serves. A deployed: false app (apps.yml) lives in the tree with
@@ -62,7 +62,7 @@ def check_httpd(failures)
   end
 end
 
-MASTER_RC = File.join(ROOT, "OPENBSD", "etc", "rc.d", "master")
+MASTER_RC = File.join(ROOT, "OPENBSD", "mirror", "etc", "rc.d", "master")
 AUTH_TIER = File.join(ROOT, "MASTER", "web", "app", "middleware", "auth_tier.rb")
 
 # Every path rc.d/master's post-start block asks the local Falcon for, with the

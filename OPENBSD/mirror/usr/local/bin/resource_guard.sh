@@ -279,7 +279,7 @@ fi
 # Nothing here reads from a user-writable tree.
 # Hardcoded, not ${GUARD_LIBEXEC:-...}: an environment-overridable path to a
 # file root dot-sources is the exact shape of the hole this replaced. Ships from
-# OPENBSD/usr/local/libexec/ via OPERATOR.sh install_root_configs.
+# OPENBSD/mirror/usr/local/libexec/ via OPERATOR.sh install_root_configs.
 GUARD_HELPER=/usr/local/libexec/stale_ci_cleanup.ksh
 helper_loaded=0
 if [[ -f $GUARD_HELPER && ! -L $GUARD_HELPER ]]; then
@@ -358,7 +358,7 @@ fi
 # calm baseline) -- recalibrating them again by guesswork would repeat the
 # same mistake. This gives a real dataset (`awk '{print $4}' | sort -n` etc.)
 # to recalibrate from once enough ticks have accumulated. One line/5min ==
-# ~2000 lines/week; rotated weekly via newsyslog (OPENBSD/etc/newsyslog.conf).
+# ~2000 lines/week; rotated weekly via newsyslog (OPENBSD/mirror/etc/newsyslog.conf).
 #
 # The box-wide figures say pressure exists, not who made it, so each daemon
 # user's resident memory follows them: every app runs as its own daemon_user,

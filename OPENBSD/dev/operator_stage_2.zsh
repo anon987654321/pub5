@@ -308,7 +308,7 @@ stage_2() {
   _master_secret_lines=("${(@f)$(RAILS_ENV=production bundle exec rails secret 2>/dev/null)}")
   master_secret=${_master_secret_lines[-1]}
   [[ ${#master_secret} -ge 64 ]] || { log ERROR "master: secret capture failed (got ${#master_secret} chars)"; exit 1 }
-  [[ -f ${CONFIG_ROOT}/etc/rc.d/master ]] || { log ERROR "missing OPENBSD/etc/rc.d/master"; exit 1 }
+  [[ -f ${CONFIG_ROOT}/etc/rc.d/master ]] || { log ERROR "missing OPENBSD/mirror/etc/rc.d/master"; exit 1 }
   cp "${CONFIG_ROOT}/etc/rc.d/master" /etc/rc.d/master
   chmod 555 /etc/rc.d/master
   [[ -f $m3dir/data/soul.yml ]] && chmod 0444 "$m3dir/data/soul.yml"

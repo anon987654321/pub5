@@ -5,4 +5,4 @@ set -euo pipefail
 cd "${PUB5_ROOT:-/home/dev/pub5}"
 app=${1:-all}
 shift || true
-exec zsh OPENBSD/bin/vps-deploy "$app" "$@"
+exec zsh OPENBSD/mirror/bin/vps-deploy "$app" "$@"

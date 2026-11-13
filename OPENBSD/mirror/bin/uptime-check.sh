@@ -3,9 +3,9 @@
 # Runs from a laptop or vm23.
 #
 # Usage:
-#   sh OPENBSD/bin/uptime-check.sh
-#   CURL=/usr/local/bin/curl sh OPENBSD/bin/uptime-check.sh
-#   UPTIME_CHECK_TIMEOUT=40 sh OPENBSD/bin/uptime-check.sh
+#   sh OPENBSD/mirror/bin/uptime-check.sh
+#   CURL=/usr/local/bin/curl sh OPENBSD/mirror/bin/uptime-check.sh
+#   UPTIME_CHECK_TIMEOUT=40 sh OPENBSD/mirror/bin/uptime-check.sh
 #
 # Exit 0 only when every endpoint returns HTTP 2xx/3xx.
 #
@@ -20,7 +20,7 @@
 set -eu
 
 ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
-. "${ROOT}/OPENBSD/lib/ruby_select.sh"
+. "${ROOT}/OPENBSD/mirror/lib/ruby_select.sh"
 
 # Same names this script has always documented, mapped onto health_check.rb's.
 HEALTH_CHECK_TIMEOUT=${UPTIME_CHECK_TIMEOUT:-20}

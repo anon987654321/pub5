@@ -5,7 +5,7 @@ require "minitest/autorun"
 require "open3"
 require "rbconfig"
 require "yaml"
-require_relative "../lib/deploy_inventory"
+require_relative "../mirror/lib/deploy_inventory"
 
 # Four places name the fleet: RAILS/apps.yml (the truth), deploy_inventory.json,
 # the DNS zones and relayd's routes. The first is edited; the rest are generated or
@@ -19,20 +19,20 @@ class TestInventoriesAgree < Minitest::Test
   end
 
   def test_deploy_inventory_is_what_apps_yml_generates
-    out, status = run_tool("OPENBSD/bin/sync_deploy_inventory.rb", "--check")
+    out, status = run_tool("OPENBSD/mirror/bin/sync_deploy_inventory.rb", "--check")
 
     assert_equal 0, status, out
   end
 
   def test_dns_zones_are_what_the_policy_renders
-    out, status = run_tool("OPENBSD/bin/render_dns.rb", "--check")
+    out, status = run_tool("OPENBSD/mirror/bin/render_dns.rb", "--check")
 
     assert_equal 0, status, out
   end
 
   def test_every_apps_yml_domain_has_a_relayd_keypair
     apps = Deploy::Inventory.new(root: ROOT).apps
-    relayd = File.read(File.join(ROOT, "OPENBSD", "etc", "relayd.conf"), encoding: "UTF-8")
+    relayd = File.read(File.join(ROOT, "OPENBSD", "mirror", "etc", "relayd.conf"), encoding: "UTF-8")
     keypairs = relayd.scan(/tls keypair "([^"]+)"/).flatten
 
     missing = apps.map(&:domain).reject { |domain| keypairs.include?(domain) }

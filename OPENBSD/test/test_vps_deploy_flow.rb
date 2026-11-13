@@ -11,8 +11,8 @@ require "open3"
 # throwaway git remote standing in for github. Nothing reaches vm23.
 class VpsDeployFlowTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
-  SOURCE = File.read(File.join(ROOT, "OPENBSD", "bin", "vps-deploy"), encoding: "UTF-8")
-  MASTER_SH = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
+  SOURCE = File.read(File.join(ROOT, "OPENBSD", "mirror", "bin", "vps-deploy"), encoding: "UTF-8")
+  MASTER_SH = File.read(File.join(ROOT, "OPENBSD", "mirror", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
   PIN_BLOCK = SOURCE[/^deploy_refuse\(\).*?^fi$/m]
   FINISH_BLOCK = SOURCE[/^deploy_stage=start$.*?^trap 'exit 143' TERM$/m]
   ORDER_BLOCK = SOURCE[/^DEPLOY_ALL=.*?^choose_deploy_order\(\) \{.*?^\}$/m]
@@ -52,9 +52,9 @@ class VpsDeployFlowTest < Minitest::Test
       git.call("init", "-q", "--bare", "-b", "main", "origin.git")
       git.call("clone", "-q", "origin.git", "work")
       work = File.join(dir, "work")
-      FileUtils.mkdir_p(File.join(work, "OPENBSD/lib"))
+      FileUtils.mkdir_p(File.join(work, "OPENBSD/mirror/lib"))
       FileUtils.mkdir_p(File.join(work, "MASTER/lib/operator"))
-      FileUtils.cp(File.join(ROOT, "OPENBSD/lib/ruby_select.sh"), File.join(work, "OPENBSD/lib/"))
+      FileUtils.cp(File.join(ROOT, "OPENBSD/mirror/lib/ruby_select.sh"), File.join(work, "OPENBSD/mirror/lib/"))
       File.write(File.join(work, "MASTER/lib/operator/canary.rb"),
                  "exit(File.exist?(File.join(File.expand_path('../../..', __dir__), 'BOOM')) ? 1 : 0)\n")
       File.write(File.join(work, "a"), "1")
@@ -399,7 +399,7 @@ class VpsDeployFlowTest < Minitest::Test
   # the rest of the sequence
 
   def test_memory_heavy_steps_wait_for_booting_apps_and_flows_run_per_app
-    assert_operator SOURCE.index("settle_boots\n  jobs_service"), :<, SOURCE.index("OPENBSD/bin/vps_ci.sh")
+    assert_operator SOURCE.index("settle_boots\n  jobs_service"), :<, SOURCE.index("OPENBSD/mirror/bin/vps_ci.sh")
     assert_operator SOURCE.index("(assets precompile)\"\nsettle_boots"), :<, SOURCE.index("rails_assets_precompile_as_app")
     assert_includes SOURCE, 'FLOW_APP="$app" MASTER_STRICT=deploy CHECK_AUTOFIX=0 "$RUBY"'
     assert_includes SOURCE, "FLOW_APP=master MASTER_STRICT=deploy"

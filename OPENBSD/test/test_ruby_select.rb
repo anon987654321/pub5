@@ -5,12 +5,12 @@ require "tmpdir"
 require "fileutils"
 require "open3"
 
-# OPENBSD/lib/ruby_select.sh is the one place the deploy path picks a Ruby, so
+# OPENBSD/mirror/lib/ruby_select.sh is the one place the deploy path picks a Ruby, so
 # these run it under sh and zsh against a throwaway PATH holding fake
 # generic and versioned interpreters; the selector must not depend on a
 # hard-coded release list.
 class TestRubySelect < Minitest::Test
-  LIB = File.expand_path("../lib/ruby_select.sh", __dir__)
+  LIB = File.expand_path("../mirror/lib/ruby_select.sh", __dir__)
 
   def with_path(*names)
     Dir.mktmpdir do |dir|

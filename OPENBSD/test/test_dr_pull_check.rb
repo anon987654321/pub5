@@ -8,7 +8,7 @@ require "rbconfig"
 require "tmpdir"
 
 class TestDrPullCheck < Minitest::Test
-  SCRIPT = File.expand_path("../bin/dr-pull", __dir__)
+  SCRIPT = File.expand_path("../mirror/bin/dr-pull", __dir__)
 
   def setup
     _version, status = Open3.capture2("sqlite3", "--version")
@@ -134,7 +134,7 @@ class TestDrPullCheck < Minitest::Test
     refute_nil binary_transport
     assert_operator preflight, :<, text_transport
     assert_operator preflight, :<, binary_transport
-    assert_includes source, '"--source", File.join(REPO_ROOT, "OPENBSD/bin/dr-pull")'
+    assert_includes source, '"--source", File.join(REPO_ROOT, "OPENBSD/mirror/bin/dr-pull")'
     assert_includes source, 'exit 78'
   end
 

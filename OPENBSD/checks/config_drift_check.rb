@@ -45,10 +45,10 @@ Encoding.default_external = Encoding::UTF_8
 # closed. PUB5_ROOT first so a worktree or a test can point it somewhere else.
 DRIFT_ROOT = [ENV["PUB5_ROOT"], File.expand_path("../..", __dir__), "/home/dev/pub5"]
        .compact
-       .find { |dir| File.file?(File.join(dir, "OPENBSD", "etc", "doas.conf")) } ||
+       .find { |dir| File.file?(File.join(dir, "OPENBSD", "mirror", "etc", "doas.conf")) } ||
        File.expand_path("../..", __dir__)
 
-MIRROR = File.join(DRIFT_ROOT, "OPENBSD")
+MIRROR = File.join(DRIFT_ROOT, "OPENBSD", "mirror")
 OPERATOR = File.join(DRIFT_ROOT, "MASTER", "bin", "operator")
 SOURCE_PATH = File.join(DRIFT_ROOT, "OPENBSD", "checks", "config_drift_check.rb")
 
@@ -211,7 +211,9 @@ def verbatim_report(live_map, mirror: MIRROR)
   report = { drift: {}, missing: [], compared: [], unfound: [] }
 
   VERBATIM.each do |repo_rel, live_path|
-    repo_path = File.join(mirror, repo_rel)
+    # checks/ stayed at the OPENBSD root through the mirror reorganization;
+    # every other VERBATIM key lives inside OPENBSD/mirror.
+    repo_path = repo_rel.start_with?("checks/") ? File.join(File.dirname(mirror), repo_rel) : File.join(mirror, repo_rel)
     # Counted, not skipped: a check that cannot find the repo compares nothing,
     # and nothing compared must not exit 0.
     next report[:unfound] << repo_rel unless File.file?(repo_path)

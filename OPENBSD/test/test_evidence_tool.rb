@@ -9,7 +9,7 @@ require "tmpdir"
 require "fileutils"
 
 class TestEvidenceTool < Minitest::Test
-  SCRIPT = File.expand_path("../bin/evidence", __dir__)
+  SCRIPT = File.expand_path("../mirror/bin/evidence", __dir__)
 
   def setup
     @root = Dir.mktmpdir("evidence-tool-")

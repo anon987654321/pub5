@@ -4,14 +4,14 @@ require "minitest/autorun"
 
 class TestOperatorPromptContract < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
-  CANONICAL = File.join(ROOT, "OPENBSD", "lib", "zshrc.shared")
-  ZSHRC = File.join(ROOT, "OPENBSD", "etc", ".zshrc")
+  CANONICAL = File.join(ROOT, "OPENBSD", "mirror", "lib", "zshrc.shared")
+  ZSHRC = File.join(ROOT, "OPENBSD", "mirror", "etc", ".zshrc")
 
   def test_shell_entrypoint_uses_the_canonical_prompt_without_compatibility_tree
     refute_path_exists File.join(ROOT, "FUN"), "retired FUN compatibility tree must stay removed"
     assert File.file?(CANONICAL)
     source = File.read(ZSHRC)
-    assert_includes source, 'source "${PUB5_ROOT}/OPENBSD/lib/zshrc.shared"'
+    assert_includes source, 'source "${PUB5_ROOT}/OPENBSD/mirror/lib/zshrc.shared"'
     refute_includes source, "FUN/zshrc.shared"
   end
 

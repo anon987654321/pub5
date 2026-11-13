@@ -41,7 +41,7 @@ pub5_ci_lock_path() {
 # second holder open a fresh inode and run concurrently — the one thing a mutex
 # exists to prevent.
 #
-# The lock itself is taken by OPENBSD/bin/with-ci-lock and Operator::CiGuard, both
+# The lock itself is taken by OPENBSD/mirror/bin/with-ci-lock and Operator::CiGuard, both
 # flock(2). OpenBSD has neither lockf(1) nor flock(1), so no shell script here can
 # take the lock with a command; vps_master_scan.sh once tried and never ran.
 #

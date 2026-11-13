@@ -10,7 +10,7 @@ require "tmpdir"
 # See test_restore_scripts.rb: the weekly integrity run on vm23 invokes these
 # under a C locale, where Ruby reads files as US-ASCII and every read of this
 # UTF-8 source raises "invalid byte sequence".
-require_relative "../lib/utf8"
+require_relative "../mirror/lib/utf8"
 require_relative "../checks/config_drift_check"
 
 # etc/crontab.vm23 is the tracked half of root's crontab, and OPERATOR.sh's
@@ -26,7 +26,7 @@ require_relative "../checks/config_drift_check"
 # silently, so the skip taught nobody anything.
 class TrackedCrontabTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  TRACKED = File.join(ROOT, "etc", "crontab.vm23")
+  TRACKED = File.join(ROOT, "mirror", "etc", "crontab.vm23")
   OPERATOR = File.join(ROOT, "OPERATOR.sh")
 
   def crontab_source = @crontab_source ||= File.read(TRACKED)
@@ -58,7 +58,7 @@ class TrackedCrontabTest < Minitest::Test
                                .select { |source, _| File.file?(File.join(ROOT, source)) }
                                .map(&:last)
     missing = scheduled.reject do |command|
-      File.file?(File.join(ROOT, "usr", "local", "bin", File.basename(command))) || installed.include?(command)
+      File.file?(File.join(ROOT, "mirror", "usr", "local", "bin", File.basename(command))) || installed.include?(command)
     end
 
     assert_empty missing,
@@ -71,7 +71,7 @@ class TrackedCrontabTest < Minitest::Test
   def test_shipped_cron_wrappers_are_executable_in_the_repo
     not_executable = scheduled.filter_map do |command|
       base = File.basename(command)
-      path = [File.join(ROOT, "usr", "local", "bin", base), File.join(ROOT, base)].find { |p| File.file?(p) }
+      path = [File.join(ROOT, "mirror", "usr", "local", "bin", base), File.join(ROOT, "mirror", "bin", base), File.join(ROOT, base)].find { |p| File.file?(p) }
       path if path && !File.executable?(path)
     end
 
@@ -125,7 +125,7 @@ end
 # is run only where it cannot touch a real box: rcctl present means vm23, and a
 # test there would reach the certificates and the zones.
 class ScheduledJobsTest < Minitest::Test
-  BIN = File.expand_path("../usr/local/bin", __dir__)
+  BIN = File.expand_path("../mirror/usr/local/bin", __dir__)
 
   def setup
     skip "on an OpenBSD box these would act on live state" if File.executable?("/usr/sbin/rcctl")

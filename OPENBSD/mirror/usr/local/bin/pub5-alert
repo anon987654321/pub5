@@ -171,14 +171,14 @@ watch_services() {
 watch_backup() {
   t=$(now)
   if [[ ! -f $BACKUP_MARKER ]]; then
-    raise backup-unreported "no pull has reported to $BACKUP_MARKER - run ruby OPENBSD/bin/dr-pull on the operator Mac and check ~/pub5-dr/dr-pull.log"
+    raise backup-unreported "no pull has reported to $BACKUP_MARKER - run ruby OPENBSD/mirror/bin/dr-pull on the operator Mac and check ~/pub5-dr/dr-pull.log"
     return 0
   fi
   read last < "$BACKUP_MARKER"
   case $last in *[!0-9]*|'') last=0 ;; esac
   age=$(( t - last ))
   if (( age > BACKUP_MAX_AGE )); then
-    raise backup-stale "the newest dr-pull reported $(( age / 3600 )) hours ago (limit $(( BACKUP_MAX_AGE / 3600 ))) - on the operator Mac: ruby OPENBSD/bin/dr-pull, then read ~/pub5-dr/dr-pull.log; launchd job no.brgen.pub5-dr"
+    raise backup-stale "the newest dr-pull reported $(( age / 3600 )) hours ago (limit $(( BACKUP_MAX_AGE / 3600 ))) - on the operator Mac: ruby OPENBSD/mirror/bin/dr-pull, then read ~/pub5-dr/dr-pull.log; launchd job no.brgen.pub5-dr"
   fi
 }
 

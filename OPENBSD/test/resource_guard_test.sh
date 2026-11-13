@@ -5,7 +5,7 @@
 #
 # The ladder is two services, bsdports then amber. It was three, and this file
 # asserted litestream went first long after the guard stopped shedding it, which
-# nothing noticed because nothing ran this file. OPENBSD/bin/check-openbsd runs
+# nothing noticed because nothing ran this file. OPENBSD/mirror/bin/check-openbsd runs
 # it now.
 #
 # The sandbox copies are built by a case-per-line rewrite, not sed —

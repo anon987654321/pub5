@@ -10,7 +10,7 @@ require "tmpdir"
 # alert must both show in it. DEPLOY_ASSUME_VPS=1 runs the box path on any host;
 # the service reads degrade to "unknown" without doas.
 class TestVpsState < Minitest::Test
-  SCRIPT = File.expand_path("../bin/vps-state", __dir__)
+  SCRIPT = File.expand_path("../mirror/bin/vps-state", __dir__)
 
   def state(dir)
     env = { "DEPLOY_ASSUME_VPS" => "1", "PUB4_STAMP_DIR" => dir, "PUB4_ALERT_LOG" => File.join(dir, "alerts.log") }

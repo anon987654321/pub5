@@ -10,7 +10,7 @@
 # This reads the committed snapshot rather than the network, so it is fast and
 # offline-safe. Refresh the snapshot with:
 #
-#   ruby OPENBSD/bin/domain_watch.rb --update
+#   ruby OPENBSD/mirror/bin/domain_watch.rb --update
 #
 # It fails on a domain past expiry or inside the warning window, and on a domain
 # whose creation date moved — that is what "someone else registered it" looks
@@ -19,7 +19,7 @@
 require "minitest/autorun"
 require "yaml"
 require "date"
-require_relative "../bin/domain_watch"
+require_relative "../mirror/bin/domain_watch"
 
 class TestDomainExpiry < Minitest::Test
   SNAPSHOT = File.expand_path("../data/domain_inventory.yml", __dir__)
@@ -67,7 +67,7 @@ class TestDomainExpiry < Minitest::Test
 
     assert_empty missing,
                  "renewable owned domains absent from the expiry check; refresh using " \
-                 "OPENBSD/bin/domain_watch.rb --update and verify the registrar results:\n  " \
+                 "OPENBSD/mirror/bin/domain_watch.rb --update and verify the registrar results:\n  " \
                  "#{missing.join("\n  ")}"
   end
 
@@ -81,7 +81,7 @@ class TestDomainExpiry < Minitest::Test
 
     assert_empty expired,
                  "domains past their expiry date. Renew at the registrar and refresh the " \
-                 "snapshot with OPENBSD/bin/domain_watch.rb --update, or record the decision to " \
+                 "snapshot with OPENBSD/mirror/bin/domain_watch.rb --update, or record the decision to " \
                  "let one go in OPENBSD/data/domain_released.yml. Editing this test is neither:" \
                  "\n  #{expired.join("\n  ")}"
   end
@@ -116,7 +116,7 @@ class TestDomainExpiry < Minitest::Test
   # actually killed. The second runs a real process, because a timeout that
   # never fires looks exactly like a fast network.
   def test_a_lookup_is_bounded_and_never_goes_through_a_shell
-    source = File.read(File.expand_path("../bin/domain_watch.rb", __dir__))
+    source = File.read(File.expand_path("../mirror/bin/domain_watch.rb", __dir__))
     # Code only. The first draft of this matched a backtick inside the comment
     # explaining why backticks are wrong — the instrument reading its own
     # documentation and reporting it as the defect.

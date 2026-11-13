@@ -8,7 +8,7 @@ require "open3"
 # out of the script itself and run under ksh, so the verdict is the shell's and
 # not a reading of its source.
 class TestCoreReclaim < Minitest::Test
-  SCRIPT = File.expand_path("../usr/local/bin/core-reclaim.sh", __dir__)
+  SCRIPT = File.expand_path("../mirror/usr/local/bin/core-reclaim.sh", __dir__)
   KSH = %w[/bin/ksh /usr/bin/ksh].find { |path| File.executable?(path) }
   # Both sides of LOAD_MAX, loads over ten, a bare integer, a bare fraction, and
   # the 08 and 09 fractions ksh would read as bad octal without a base.

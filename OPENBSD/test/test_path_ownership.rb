@@ -2,7 +2,7 @@
 
 require "minitest/autorun"
 require "yaml"
-require_relative "../lib/utf8"
+require_relative "../mirror/lib/utf8"
 
 # PATH_OWNERSHIP.yml had no reader, and so it named `openbsd/sh/vps_ci.sh`, an
 # `archive/` that does not exist and lowercase `rails/` paths for months while

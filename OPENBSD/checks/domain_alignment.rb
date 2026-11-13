@@ -3,9 +3,9 @@
 require "json"
 require "pathname"
 require "yaml"
-require_relative "../../OPENBSD/lib/deploy_inventory"
-require_relative "../../OPENBSD/lib/check_result"
-require_relative "../../OPENBSD/bin/render_dns"
+require_relative "../../OPENBSD/mirror/lib/deploy_inventory"
+require_relative "../../OPENBSD/mirror/lib/check_result"
+require_relative "../../OPENBSD/mirror/bin/render_dns"
 
 module Deploy
   class DomainAlignmentCheck
@@ -13,7 +13,7 @@ module Deploy
     REGISTRY = ROOT.join("RAILS", "brgen", "lib", "brgen", "domain_registry.rb")
     CITY_CATALOGUE = ROOT.join("RAILS", "brgen", "config", "cities.yml")
     DEPLOY_INVENTORY = ROOT.join("OPENBSD", "deploy_inventory.json")
-    RELAYD = ROOT.join("OPENBSD", "etc", "relayd.conf")
+    RELAYD = ROOT.join("OPENBSD", "mirror", "etc", "relayd.conf")
     COMMON_SUBAPPS = %w[radio dating tv takeaway maps messenger].freeze
     MASTER_ONLY_SUBAPPS = %w[ai].freeze
 

@@ -3,7 +3,7 @@
 require "minitest/autorun"
 
 class VpsRunRemoteContractTest < Minitest::Test
-  SOURCE = File.read(File.expand_path("../bin/vps_run_remote.sh", __dir__), encoding: "UTF-8")
+  SOURCE = File.read(File.expand_path("../mirror/bin/vps_run_remote.sh", __dir__), encoding: "UTF-8")
 
   def test_nested_vm_target_is_shell_quoted
     assert_includes SOURCE, "quoted_vm=${(q)VM}"

@@ -4,8 +4,8 @@
 # OPENBSD integrity chain — production, phantom FK, frontend, relayd, domain, crawl inventory.
 
 require "open3"
-require_relative "../lib/utf8"
-require_relative "../lib/check_environment"
+require_relative "../mirror/lib/utf8"
+require_relative "../mirror/lib/check_environment"
 
 INTEGRITY_ROOT = File.expand_path("../..", __dir__)
 

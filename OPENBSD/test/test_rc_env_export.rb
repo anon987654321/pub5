@@ -18,7 +18,7 @@ require "minitest/autorun"
 #
 # Text, not execution: these run as root on OpenBSD and this asserts their shape.
 class RcEnvExportTest < Minitest::Test
-  RC_D = File.expand_path("../etc/rc.d", __dir__)
+  RC_D = File.expand_path("../mirror/etc/rc.d", __dir__)
 
   # A new app's script is generated from rc.d/brgen by OPERATOR.sh, so holding
   # brgen to the rule holds every app made from it.
@@ -80,8 +80,8 @@ end
 # whose openfiles-cur is 128 against the rails class's 2048.
 # A script cannot name its class, so the class has to exist under its name.
 class RcLoginClassTest < Minitest::Test
-  RC_D = File.expand_path("../etc/rc.d", __dir__)
-  LOGIN_CONF = File.read(File.expand_path("../etc/login.conf", __dir__))
+  RC_D = File.expand_path("../mirror/etc/rc.d", __dir__)
+  LOGIN_CONF = File.read(File.expand_path("../mirror/etc/login.conf", __dir__))
   APP_USERS = %w[brgen amber bsdports].freeze
 
   def app_scripts
@@ -113,7 +113,7 @@ class RcLoginClassTest < Minitest::Test
   # One supervisor process per app instead of four: see the note in each script.
   def test_each_job_worker_runs_solid_queue_in_one_process
     %w[brgen amber bsdports].each do |app|
-      flags = File.read(File.expand_path("../etc/rc.d/#{app}_jobs", __dir__))[/^daemon_flags=.*/]
+      flags = File.read(File.expand_path("../mirror/etc/rc.d/#{app}_jobs", __dir__))[/^daemon_flags=.*/]
 
       assert_includes flags, "SOLID_QUEUE_SUPERVISOR_MODE=async", "#{app}_jobs forks a process per worker"
     end

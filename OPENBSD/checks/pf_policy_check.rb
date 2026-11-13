@@ -12,7 +12,7 @@ module Deploy
   # repository's current policy and leave full syntax validation to pfctl -nf.
   class PfPolicyCheck
     ROOT = File.expand_path("../..", __dir__)
-    CONFIG = File.join("OPENBSD", "etc", "pf.conf")
+    CONFIG = File.join("OPENBSD", "mirror", "etc", "pf.conf")
     Rule = Struct.new(:line, :action, :text, keyword_init: true)
 
     def self.run(root: ROOT)
@@ -66,7 +66,7 @@ module Deploy
 
     def read_config(path, result)
       unless File.exist?(path) || File.symlink?(path)
-        result.fail("pf_policy: tracked OPENBSD/etc/pf.conf is missing")
+        result.fail("pf_policy: tracked OPENBSD/mirror/etc/pf.conf is missing")
         return nil
       end
 

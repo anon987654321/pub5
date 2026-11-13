@@ -4,11 +4,11 @@
 # deploy — the one Ruby deploy entrypoint for the vm23 tree (the pub5 port's
 # Phase 2 seam: "one Ruby deploy tool"). It validates the target the way the
 # shell entrypoint does and hands off to the proven serial stages in
-# OPENBSD/bin/vps-deploy (sync, CI, restart, health, deploy stamp). The stages
+# OPENBSD/mirror/bin/vps-deploy (sync, CI, restart, health, deploy stamp). The stages
 # themselves are carried from pub4 unchanged; rewriting live deploy zsh
 # without a host to run it on would have been a claim, not a port.
 #
-#   OPENBSD/bin/deploy [all|brgen|amber|bsdports|mrdamascy|master] [--follow|--detach]
+#   OPENBSD/mirror/bin/deploy [all|brgen|amber|bsdports|mrdamascy|master] [--follow|--detach]
 #
 # Workstation one-command deploys use MASTER/bin/redeploy, which routes
 # through MASTER/bin/operator; this entrypoint names the same stages directly.
@@ -16,7 +16,7 @@
 APPS = %w[all brgen amber bsdports mrdamascy master].freeze
 
 def usage
-  warn "usage: OPENBSD/bin/deploy [#{APPS.join('|')}] [--follow|--detach]"
+  warn "usage: OPENBSD/mirror/bin/deploy [#{APPS.join('|')}] [--follow|--detach]"
 end
 
 app = "all"

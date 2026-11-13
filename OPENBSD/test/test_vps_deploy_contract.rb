@@ -4,7 +4,7 @@ require "minitest/autorun"
 require "tmpdir"
 require "socket"
 require "yaml"
-require_relative "../lib/deploy_inventory"
+require_relative "../mirror/lib/deploy_inventory"
 require "open3"
 
 # vps-deploy is the entrypoint for every production deploy and had no test.
@@ -16,10 +16,10 @@ require "open3"
 # root rather than dying at `git pull` with a message about host keys.
 class VpsDeployContractTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
-  SOURCE = File.read(File.join(ROOT, "OPENBSD", "bin", "vps-deploy"), encoding: "UTF-8")
-  CI_SOURCE = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_ci.sh"), encoding: "UTF-8")
+  SOURCE = File.read(File.join(ROOT, "OPENBSD", "mirror", "bin", "vps-deploy"), encoding: "UTF-8")
+  CI_SOURCE = File.read(File.join(ROOT, "OPENBSD", "mirror", "bin", "vps_ci.sh"), encoding: "UTF-8")
   APPS = Deploy::Inventory.new(root: ROOT).app_names
-  MASTER_DEPLOY = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
+  MASTER_DEPLOY = File.read(File.join(ROOT, "OPENBSD", "mirror", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
 
   def test_deploy_scope_and_order_are_derived_from_inventory
     inventory = Deploy::Inventory.new(root: ROOT)
@@ -62,17 +62,17 @@ class VpsDeployContractTest < Minitest::Test
   end
 
   def test_master_deploy_refuses_root_override
-    source = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
+    source = File.read(File.join(ROOT, "OPENBSD", "mirror", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
     assert_includes source, 'if [ "$ROOT" != "/home/dev/pub5" ]; then'
     assert_includes source, 'pub5-admin master-web-assets-reset'
     assert_includes source, 'pub5-admin master-web-runtime-dirs'
     refute_includes source, 'doas rm -rf public/assets'
     refute_includes source, 'doas chown -R dev:dev public'
-    refute_includes source, 'doas cp "$ROOT/OPENBSD/etc/rc.d/master" /etc/rc.d/master'
+    refute_includes source, 'doas cp "$ROOT/OPENBSD/mirror/etc/rc.d/master" /etc/rc.d/master'
   end
   def test_workstation_per_app_mode_uses_canonical_unprivileged_supervisor
-    script = File.read(File.join(ROOT, "OPENBSD", "bin", "deploy_all.sh"), encoding: "UTF-8")
-    assert_includes script, 'zsh OPENBSD/bin/vps-deploy ${app}'
+    script = File.read(File.join(ROOT, "OPENBSD", "mirror", "bin", "deploy_all.sh"), encoding: "UTF-8")
+    assert_includes script, 'zsh OPENBSD/mirror/bin/vps-deploy ${app}'
     refute_includes script, 'doas zsh ${script}'
     refute_includes script, 'RAILS/${app}/${app}.sh'
   end
@@ -115,7 +115,7 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes SOURCE, '[[ -f /usr/local/sbin/pub5-admin && -x /usr/local/sbin/pub5-admin && ! -L /usr/local/sbin/pub5-admin ]]'
     refute_match(/^\s*doas\s+rcctl\b/, SOURCE)
     refute_match(/^\s*doas\s+(?:tee|chmod|mkdir)\b/, SOURCE)
-    refute_includes SOURCE, 'doas ksh "$repo/OPENBSD/bin/resource_guard.sh"'
+    refute_includes SOURCE, 'doas ksh "$repo/OPENBSD/mirror/bin/resource_guard.sh"'
     refute_includes SOURCE, 'doas "$RUBY" "$repo/OPENBSD/checks/solid_queue_proof.rb"'
     refute_includes SOURCE, 'doas tee "$file"'
   end
@@ -191,7 +191,7 @@ class VpsDeployContractTest < Minitest::Test
 
   def test_rails_bundle_cache_setup_is_app_owned
     deploy = File.read(File.join(ROOT, "RAILS", "_deploy.sh"), encoding: "UTF-8")
-    helper = File.read(File.join(ROOT, "OPENBSD", "usr", "local", "libexec", "rails-task.ksh"), encoding: "UTF-8")
+    helper = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "rails-task.ksh"), encoding: "UTF-8")
 
     assert_includes deploy, 'run_rails_as_app "$app_name" "$APP_DIR" "bundle-cache-prepare"'
     refute_includes deploy, 'doas mkdir -p "$bundle_home"'
@@ -313,7 +313,7 @@ class VpsDeployContractTest < Minitest::Test
     legacy = File.read(File.join(ROOT, "RAILS", "deploy.sh"), encoding: "UTF-8")
 
     assert_includes legacy, 'if [[ $(id -u) -eq 0 ]]'
-    assert_includes legacy, 'exec zsh "${REPO_ROOT}/OPENBSD/bin/vps-deploy" "$app"'
+    assert_includes legacy, 'exec zsh "${REPO_ROOT}/OPENBSD/mirror/bin/vps-deploy" "$app"'
     refute_includes legacy, 'doas zsh "$script"'
   end
 
@@ -355,7 +355,7 @@ class VpsDeployContractTest < Minitest::Test
     refute_includes CI_SOURCE, "sync_from_repo_legacy"
   end
   def test_ci_runner_uses_the_fixed_broker_and_bounded_timeout
-    runner = File.read(File.join(ROOT, "OPENBSD", "usr", "local", "libexec", "ci-run.ksh"), encoding: "UTF-8")
+    runner = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "ci-run.ksh"), encoding: "UTF-8")
     assert_includes CI_SOURCE, 'doas /usr/local/sbin/pub5-admin ci-run "$app" "$ci_timeout"'
     assert_includes CI_SOURCE, 'ci_timeout=${PUB4_CI_TIMEOUT:-7200}'
     assert_includes runner, 'exec /usr/bin/su -m "$app" -c "$script"'
@@ -390,7 +390,7 @@ class VpsDeployContractTest < Minitest::Test
   def test_the_ci_stamp_names_how_the_commit_was_tested
     %w[ci_stamp=ci_ok ci_stamp=ci_attested ci_stamp=ci_skipped].each { |line| assert_includes CI_SOURCE, line }
     assert_includes CI_SOURCE, %q{doas /usr/local/sbin/pub5-admin stamp "$app" "$sha" "$ci_stamp"}
-    admin = File.read(File.join(ROOT, "OPENBSD", "usr", "local", "sbin", "pub4-admin"), encoding: "UTF-8")
+    admin = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "sbin", "pub4-admin"), encoding: "UTF-8")
     assert_includes admin, "%w[ok failed ci_ok ci_attested ci_skipped].include?(status)"
   end
 
@@ -417,7 +417,7 @@ class VpsDeployContractTest < Minitest::Test
                  "SKIP_CI=1 must still run the app script, which is what reaches rails_runtime_check")
   end
 
-  GUARD = File.read(File.join(ROOT, "OPENBSD", "usr", "local", "bin", "resource_guard.sh"), encoding: "UTF-8")
+  GUARD = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "bin", "resource_guard.sh"), encoding: "UTF-8")
 
   def flag_block
     SOURCE[/^deploy_flag=.*?^trap 'exit 143' TERM$/m]
@@ -444,7 +444,7 @@ class VpsDeployContractTest < Minitest::Test
              "#{flag} is not a name resource_guard's #{guard_glob} reads"
       refute File.exist?(flag), "the flag outlived the script, so shedding stays off for 30 minutes"
 
-      rcd_flag = File.read(File.join(ROOT, "OPENBSD", "etc", "rc.d", "bsdports"), encoding: "UTF-8")[%r{touch \S+/(\.deploying\S*)}, 1]
+      rcd_flag = File.read(File.join(ROOT, "OPENBSD", "mirror", "etc", "rc.d", "bsdports"), encoding: "UTF-8")[%r{touch \S+/(\.deploying\S*)}, 1]
       refute_equal rcd_flag, File.basename(flag),
                    "rc.d removes its own flag after /up, so sharing its name drops the hold mid-deploy"
     end
@@ -596,7 +596,7 @@ class VpsDeployContractTest < Minitest::Test
   end
 
   def test_the_flag_is_taken_before_ci_and_the_app_is_checked_before_ok
-    assert_operator SOURCE.index("\nkeep_deploy_flag\n"), :<, SOURCE.index("OPENBSD/bin/vps_ci.sh")
+    assert_operator SOURCE.index("\nkeep_deploy_flag\n"), :<, SOURCE.index("OPENBSD/mirror/bin/vps_ci.sh")
     assert_operator SOURCE.index("kill $flag_keeper"), :<, SOURCE.index(%(rm -f -- "$deploy_flag"))
     assert_operator SOURCE.rindex(%(admin_service check "$app")), :>, SOURCE.index(%(CHECK_AUTOFIX=0 "$RUBY" "$repo/MASTER/checks/runner.rb"))
   end
@@ -614,8 +614,8 @@ class VpsDeployContractTest < Minitest::Test
   # inside brgen as engines/) and the CI mirror kept building the old one until
   # a deploy died on "The path /home/brgen/__shared does not exist".
   def test_ci_mirror_syncs_every_path_gem_the_gemfiles_name
-    ci = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_ci.sh"), encoding: "UTF-8")
-    sync = File.read(File.join(ROOT, "OPENBSD", "usr", "local", "libexec", "ci-sync.ksh"), encoding: "UTF-8")
+    ci = File.read(File.join(ROOT, "OPENBSD", "mirror", "bin", "vps_ci.sh"), encoding: "UTF-8")
+    sync = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "ci-sync.ksh"), encoding: "UTF-8")
     assert_includes sync, "shared_dir=$app_home/__shared"
     # The engines ride the brgen app-tree copy: the rel list must carry engines/.
     assert_includes sync, "for rel in test app lib config bin db engines public vendor/javascript"
@@ -786,7 +786,7 @@ class VpsDeployContractTest < Minitest::Test
       assert_equal 1, status
       assert_includes out, "/home has 195 MB free, the floor is 1024 MB"
       assert_includes out, "Nothing was stopped"
-      assert_includes out, "zsh OPENBSD/bin/vps-deploy brgen"
+      assert_includes out, "zsh OPENBSD/mirror/bin/vps-deploy brgen"
       refute_includes out, "passed"
     end
   end

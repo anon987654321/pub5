@@ -40,7 +40,7 @@ PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
 
 # uptime-check — public /up on every apps.yml host, plus the master face.
 # Installed to /usr/local/bin so root cron does not exec the checkout; it
-# reads apps.yml as data instead. Source: OPENBSD/usr/local/bin/uptime-check.sh.
+# reads apps.yml as data instead. Source: OPENBSD/mirror/usr/local/bin/uptime-check.sh.
 #
 # ALLOW_BSDPORTS_DOWN=1 while bsdports.org is delegated to the registrar's
 # parking nameservers. The check asks https://bsdports.org/up, parking

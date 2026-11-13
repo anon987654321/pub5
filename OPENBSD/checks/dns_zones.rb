@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 require "resolv"
-require_relative "../../OPENBSD/lib/check_result"
-require_relative "../../OPENBSD/bin/render_dns"
+require_relative "../../OPENBSD/mirror/lib/check_result"
+require_relative "../../OPENBSD/mirror/bin/render_dns"
 
 module Deploy
   # The DNS the repo describes has to be the DNS the box serves.
@@ -123,7 +123,7 @@ module Deploy
         @result.checked!(RenderDns.zones.size + 2)
       else
         @result.fail("dns_zones: #{stale.size} generated file(s) differ from what data/dns.yml renders " \
-                     "(#{stale.sort.first(5).join(', ')}) - run `ruby OPENBSD/bin/render_dns.rb`")
+                     "(#{stale.sort.first(5).join(', ')}) - run `ruby OPENBSD/mirror/bin/render_dns.rb`")
       end
     end
 

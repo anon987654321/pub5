@@ -8,13 +8,13 @@ require "tmpdir"
 # weekly integrity run invokes these on vm23 -- Ruby defaults file reads to
 # US-ASCII and each one raises "invalid byte sequence". Same require, same
 # reason, as MASTER/checks/runner.rb.
-require_relative "../lib/utf8"
+require_relative "../mirror/lib/utf8"
 
 class RestoreScriptsTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
 
   def test_restore_litestream_is_litestream_restore
-    source = File.read(File.join(ROOT, "bin", "restore_litestream.sh"))
+    source = File.read(File.join(ROOT, "mirror", "bin", "restore_litestream.sh"))
     assert_includes source, "litestream restore"
     refute_includes source, "MASTER/RAILS"
   end
@@ -24,14 +24,14 @@ class RestoreScriptsTest < Minitest::Test
   # restored none and exited 0. A restore that reports success having restored
   # nothing is read as evidence the backups work.
   def test_restore_litestream_uses_brokered_service_control
-    source = File.read(File.join(ROOT, "bin", "restore_litestream.sh"))
-    assert_includes source, 'doas /usr/local/sbin/pub4-admin service stop "$app"'
-    assert_includes source, 'doas /usr/local/sbin/pub4-admin service start "$app"'
-    assert_includes source, 'doas /usr/local/sbin/pub4-admin service check "$app"'
+    source = File.read(File.join(ROOT, "mirror", "bin", "restore_litestream.sh"))
+    assert_includes source, 'doas /usr/local/sbin/pub5-admin service stop "$app"'
+    assert_includes source, 'doas /usr/local/sbin/pub5-admin service start "$app"'
+    assert_includes source, 'doas /usr/local/sbin/pub5-admin service check "$app"'
     refute_match(/doas rcctl (?:stop|start|check)/, source)
   end
   def test_restore_litestream_fails_rather_than_skipping
-    source = File.read(File.join(ROOT, "bin", "restore_litestream.sh"))
+    source = File.read(File.join(ROOT, "mirror", "bin", "restore_litestream.sh"))
     assert_includes source, "require_litestream", "no check that the binary exists"
     refute_match(/log "skip \$app/, source, "a missing replica must fail, not skip")
     assert_match(/missing replica \$replica"; exit 1/, source)
@@ -42,7 +42,7 @@ class RestoreScriptsTest < Minitest::Test
   # it as an app name and failed later on "/home/[restore] missing…/app/storage".
   def test_a_dry_run_with_no_config_fails_on_the_config
     env = { "DRY_RUN" => "1", "LITESTREAM_CONFIG" => File.join(Dir.tmpdir, "no-such-litestream.yml") }
-    out, err, status = Open3.capture3(env, "zsh", File.join(ROOT, "bin", "restore_litestream.sh"))
+    out, err, status = Open3.capture3(env, "zsh", File.join(ROOT, "mirror", "bin", "restore_litestream.sh"))
 
     assert_equal 1, status.exitstatus
     assert_includes err, "missing litestream config"
@@ -55,7 +55,7 @@ class RestoreScriptsTest < Minitest::Test
       config = File.join(dir, "litestream.yml")
       File.write(config, "dbs:\n  - path: /home/ghostapp/app/storage/production.sqlite3\n")
       out, _, status = Open3.capture3({ "DRY_RUN" => "1", "LITESTREAM_CONFIG" => config },
-                                      "zsh", File.join(ROOT, "bin", "restore_litestream.sh"))
+                                      "zsh", File.join(ROOT, "mirror", "bin", "restore_litestream.sh"))
 
       assert_equal 1, status.exitstatus, "the app has no storage here, so the plan must fail rather than skip"
       assert_includes out, "FAIL ghostapp - missing /home/ghostapp/app/storage"
@@ -63,7 +63,7 @@ class RestoreScriptsTest < Minitest::Test
   end
 
   def test_vps_deploy_stamps_head_after_the_work
-    source = File.read(File.join(ROOT, "bin/vps-deploy"))
+    source = File.read(File.join(ROOT, "mirror/bin/vps-deploy"))
     assert_includes source, "write_stamp()"
     # The deploy runs as root and reads the checkout as the deploy user, in $repo.
     assert_includes source, "sha=$(git_as_deploy_user rev-parse --short HEAD)"
@@ -76,13 +76,13 @@ class RestoreScriptsTest < Minitest::Test
     # The pin moves the checkout (merge --ff-only of the pinned SHA); a hand run of
     # vps_deploy_master.sh without a pin still pulls.
     assert_includes source, %q{merge -q --ff-only "$pin"}
-    assert_includes File.read(File.join(ROOT, "bin/vps_deploy_master.sh")), "pull --ff-only origin main"
+    assert_includes File.read(File.join(ROOT, "mirror/bin/vps_deploy_master.sh")), "pull --ff-only origin main"
     assert_includes source, 'write_stamp master failed'
     assert_includes source, 'write_stamp "$app" failed'
   end
 
   def test_vps_ci_mirrors_the_tracked_tree_not_vendor
-    source = File.read(File.join(ROOT, "usr", "local", "libexec", "ci-sync.ksh"))
+    source = File.read(File.join(ROOT, "mirror", "usr", "local", "libexec", "ci-sync.ksh"))
     assert_includes source, "archive HEAD RAILS"
     refute_includes source, 'doas tar cf - -C "$repo" RAILS'
     assert_includes source, "vendor/javascript"
@@ -95,7 +95,7 @@ class RestoreScriptsTest < Minitest::Test
   # left the new code live with no assets: brgen served every page with a 404ing
   # <link> on 2026-08-14 while /up, rcctl check and the TLS probe all passed.
   def test_vps_ci_keeps_compiled_assets_across_the_prune
-    source = File.read(File.join(ROOT, "usr", "local", "libexec", "ci-sync.ksh"))
+    source = File.read(File.join(ROOT, "mirror", "usr", "local", "libexec", "ci-sync.ksh"))
     prune = source[/for dir_rel in test app lib config bin db engines public.*?done/m]
     assert prune, "the prune loop moved - re-read this before trusting the assertions below"
     assert_includes prune, "public/assets", "the prune must special-case the one directory git does not carry"
@@ -108,7 +108,7 @@ class RestoreScriptsTest < Minitest::Test
   # the Host that owns it — a bare-IP request 403s on these apps, which would
   # pass by finding no link at all.
   def test_vps_deploy_verifies_the_page_stylesheet_resolves
-    source = File.read(File.join(ROOT, "bin/vps-deploy"))
+    source = File.read(File.join(ROOT, "mirror/bin/vps-deploy"))
     assert_includes source, "css_href", "no stylesheet verification after restart"
     # The reader is run rather than matched: what matters is the href it finds
     # on a page that links one, and nothing, not a failure, on a page that does
@@ -171,7 +171,7 @@ class RestoreScriptsTest < Minitest::Test
   end
 
   def dr_pull(env, *args)
-    Open3.capture3(env, RbConfig.ruby, File.join(ROOT, "bin", "dr-pull"), *args)
+    Open3.capture3(env, RbConfig.ruby, File.join(ROOT, "mirror", "bin", "dr-pull"), *args)
   end
 
   def test_dr_pull_records_vm23s_checksums_and_the_drill_reads_the_pull_back

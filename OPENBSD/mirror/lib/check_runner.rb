@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../../MASTER/lib/io/exec"
+require_relative "../../../MASTER/lib/io/exec"
 require_relative "dmesg"
 
 module Deploy

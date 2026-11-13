@@ -26,9 +26,9 @@
 # What this does not hold, and the operator must restore from elsewhere: see
 # RUNBOOK.md, Backups, "Restored separately".
 #
-# Install nightly:   ruby OPENBSD/bin/dr-pull --install-launchd
-# Run once:          ruby OPENBSD/bin/dr-pull
-# Restore drill:     ruby OPENBSD/bin/dr-pull --drill
+# Install nightly:   ruby OPENBSD/mirror/bin/dr-pull --install-launchd
+# Run once:          ruby OPENBSD/mirror/bin/dr-pull
+# Restore drill:     ruby OPENBSD/mirror/bin/dr-pull --drill
 #                    copies the newest pull to a scratch directory, checks it against
 #                    SHA256SUMS, runs integrity_check and reads the app's own tables.
 #
@@ -48,7 +48,7 @@ KEY = File.expand_path(ENV.fetch("PUB4_SSH_KEY", "~/.ssh/id_ed25519_brgen"))
 DEST = File.expand_path(ENV.fetch("PUB4_DR_DIR", "~/pub5-dr"))
 KEEP = Integer(ENV.fetch("PUB4_DR_KEEP", "14"))
 APPS = %w[brgen amber bsdports].freeze
-REPO_ROOT = File.expand_path("../..", __dir__).freeze
+REPO_ROOT = File.expand_path("../../..", __dir__).freeze
 OPERATOR = File.join(REPO_ROOT, "MASTER", "bin", "operator").freeze
 
 STALE_AFTER_DAYS = Integer(ENV.fetch("PUB4_DR_STALE_DAYS", "2"))
@@ -56,10 +56,10 @@ STALE_AFTER_DAYS = Integer(ENV.fetch("PUB4_DR_STALE_DAYS", "2"))
 # Asked before anything else, because a bare run is the pull itself.
 if ARGV.intersect?(%w[-h --help])
   puts <<~USAGE
-    usage: ruby OPENBSD/bin/dr-pull                     pull and verify a snapshot of every production db
-           ruby OPENBSD/bin/dr-pull --check             exit 1 when the newest pull is over #{STALE_AFTER_DAYS} days old
-           ruby OPENBSD/bin/dr-pull --drill             restore the newest pull into a scratch directory and read it back
-           ruby OPENBSD/bin/dr-pull --install-launchd   schedule the pull nightly under launchd
+    usage: ruby OPENBSD/mirror/bin/dr-pull                     pull and verify a snapshot of every production db
+           ruby OPENBSD/mirror/bin/dr-pull --check             exit 1 when the newest pull is over #{STALE_AFTER_DAYS} days old
+           ruby OPENBSD/mirror/bin/dr-pull --drill             restore the newest pull into a scratch directory and read it back
+           ruby OPENBSD/mirror/bin/dr-pull --install-launchd   schedule the pull nightly under launchd
   USAGE
   exit 0
 end
@@ -67,7 +67,7 @@ end
 def ssh_preflight(cmd)
   Open3.capture2e(
     OPERATOR, "rtfm", "--host", HOST, "--key", KEY,
-    "--source", File.join(REPO_ROOT, "OPENBSD/bin/dr-pull"), "--", cmd
+    "--source", File.join(REPO_ROOT, "OPENBSD/mirror/bin/dr-pull"), "--", cmd
   )
 rescue Errno::ENOENT => error
   warn "dr-pull: BLOCKED - local operator preflight is unavailable (#{error.class})"
@@ -130,7 +130,7 @@ if ARGV.include?("--check")
   age_days = ((Time.now - File.mtime(source)) / 86_400).floor
   if age_days > STALE_AFTER_DAYS
     warn "dr-pull: FAIL - newest pull #{newest} is #{age_days} days old, over #{STALE_AFTER_DAYS}. " \
-         "Run ruby OPENBSD/bin/dr-pull and read #{DEST}/dr-pull.log for why it stopped."
+         "Run ruby OPENBSD/mirror/bin/dr-pull and read #{DEST}/dr-pull.log for why it stopped."
     exit 1
   end
 

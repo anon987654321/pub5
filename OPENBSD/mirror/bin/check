@@ -5,21 +5,21 @@ require "optparse"
 require_relative "../lib/check_runner"
 require_relative "../lib/ruby_runner"
 
-ROOT = File.expand_path("../..", __dir__)
+ROOT = File.expand_path("../../..", __dir__)
 RUBY = Deploy::RubyRunner.check_ruby
 STEP_TIMEOUT = Integer(ENV.fetch("DEPLOY_CHECK_TIMEOUT", "240"))
 profile = "operator"
 OptionParser.new do |parser|
   parser.banner = <<~BANNER
-    Usage: OPENBSD/bin/check [--profile=operator|contributor|full]
+    Usage: OPENBSD/mirror/bin/check [--profile=operator|contributor|full]
 
     Local deploy checks, no box required:
-      openbsd              OPENBSD/bin/check-openbsd (identity, installed targets, ports,
+      openbsd              OPENBSD/mirror/bin/check-openbsd (identity, installed targets, ports,
                            dns zones, deploy smoke, resource guard, shell syntax, vps safety)
       production           MASTER/checks/runner.rb production
       phantom fk           MASTER/checks/runner.rb phantom_foreign_keys
       domain align         MASTER/checks/runner.rb domain_alignment
-      dr freshness         OPENBSD/bin/dr-pull --check (skips off the operator Mac)
+      dr freshness         OPENBSD/mirror/bin/dr-pull --check (skips off the operator Mac)
       openbsd contracts    OPENBSD/test/run_all.rb, one process per file
 
     Operator runs the deployment floor; contributor runs that floor without release checks; full adds release integrity checks.
@@ -32,7 +32,7 @@ runner = Deploy::CheckRunner.new(prefix: "deploy-check", root: ROOT, timeout: ST
 failures = []
 # check-openbsd owns identity and the deploy smoke check, and brings installed
 # targets, dns zones and vps safety into the one command most people type.
-failures << "openbsd" unless runner.run("openbsd", RUBY, "OPENBSD/bin/check-openbsd")
+failures << "openbsd" unless runner.run("openbsd", RUBY, "OPENBSD/mirror/bin/check-openbsd")
 failures << "production" unless runner.run("production", RUBY, "MASTER/checks/runner.rb", "production")
 failures << "phantom_fk" unless runner.run("phantom fk", RUBY, "MASTER/checks/runner.rb", "phantom_foreign_keys")
 failures << "domain_align" unless runner.run("domain align", RUBY, "MASTER/checks/runner.rb", "domain_alignment")
@@ -41,7 +41,7 @@ failures << "domain_align" unless runner.run("domain align", RUBY, "MASTER/check
 # for seven nights without anything noticing. This asks how old the newest pull
 # is; it skips on any machine without the directory, so it costs nothing
 # anywhere but the operator's Mac, which is the one place it can be true.
-failures << "dr_freshness" unless runner.run("dr freshness", RUBY, "OPENBSD/bin/dr-pull", "--check")
+failures << "dr_freshness" unless runner.run("dr freshness", RUBY, "OPENBSD/mirror/bin/dr-pull", "--check")
 
 failures << "openbsd_contracts" unless runner.run("openbsd contracts", RUBY, "OPENBSD/test/run_all.rb")
 

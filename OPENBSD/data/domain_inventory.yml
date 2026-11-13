@@ -1,4 +1,4 @@
-# Written by OPENBSD/bin/domain_watch.rb --update. Committed so a domain
+# Written by OPENBSD/mirror/bin/domain_watch.rb --update. Committed so a domain
 # changing hands is a reviewable diff rather than a surprise outage.
 ---
 amberapp.art:

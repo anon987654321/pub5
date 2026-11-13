@@ -1,13 +1,13 @@
 #!/usr/bin/env zsh
 # Serial VPS deploy entrypoint — sync, CI, restart, health, deploy stamp.
-# Usage: zsh OPENBSD/bin/vps-deploy all|GROUP|APP
+# Usage: zsh OPENBSD/mirror/bin/vps-deploy all|GROUP|APP
 set -euo pipefail
 
 # SSH executes this as a non-login shell on vm23; pin the OpenBSD package path.
 export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 
 usage() {
-  print -r -- "usage: zsh OPENBSD/bin/vps-deploy all|GROUP|APP   (runs as root; re-execs via doas)
+  print -r -- "usage: zsh OPENBSD/mirror/bin/vps-deploy all|GROUP|APP   (runs as root; re-execs via doas)
 
   all          every active registered surface, including MASTER web
   GROUP        every registered app whose deploy_root belongs to that namespace
@@ -62,7 +62,7 @@ if [[ $(id -u) -ne 0 ]]; then
     exec doas -n /usr/bin/env "${deploy_env[@]}" zsh "$self" "$@"
   fi
   print -u2 "vps-deploy: must run as root (or with passwordless doas)"
-  print -u2 "            try: doas zsh OPENBSD/bin/vps-deploy ${1:-all}"
+  print -u2 "            try: doas zsh OPENBSD/mirror/bin/vps-deploy ${1:-all}"
   exit 2
 fi
 
@@ -70,14 +70,14 @@ fi
 DEPLOY_USER=${VPS_DEPLOY_USER:-dev}
 DEPLOY_HOME=${VPS_DEPLOY_HOME:-/home/$DEPLOY_USER}
 repo=${PUB5_ROOT:-/home/dev/pub5}
-source "$repo/OPENBSD/lib/ruby_select.sh"
+source "$repo/OPENBSD/mirror/lib/ruby_select.sh"
 inventory_target_kind() {
-  "$RUBY" -r"$repo/OPENBSD/lib/deploy_inventory" -e \
+  "$RUBY" -r"$repo/OPENBSD/mirror/lib/deploy_inventory" -e \
     'print Deploy::Inventory.new(root: ARGV[0]).target_kind(ARGV[1])' "$repo" "$1"
 }
 
 inventory_app_group() {
-  "$RUBY" -r"$repo/OPENBSD/lib/deploy_inventory" -e '
+  "$RUBY" -r"$repo/OPENBSD/mirror/lib/deploy_inventory" -e '
     app = Deploy::Inventory.new(root: ARGV[0]).apps.find { |row| row.name == ARGV[1] }
     print app&.deploy_group
   ' "$repo" "$1"
@@ -85,7 +85,7 @@ inventory_app_group() {
 
 inventory_names() {
   local target=$1 degraded=${2:-0}
-  "$RUBY" -r"$repo/OPENBSD/lib/deploy_inventory" -e '
+  "$RUBY" -r"$repo/OPENBSD/mirror/lib/deploy_inventory" -e '
     inventory = Deploy::Inventory.new(root: ARGV[0])
     rows = ARGV[1] == "all" ? inventory.ordered_apps(degraded: ARGV[2] == "1") :
                               inventory.ordered_apps(group: ARGV[1])
@@ -383,7 +383,7 @@ admin_service_retry() {
 }
 
 rotate_deploy_log() {
-  # Safety net only. Canonical rotation is newsyslog (OPENBSD/etc/newsyslog.conf).
+  # Safety net only. Canonical rotation is newsyslog (OPENBSD/mirror/etc/newsyslog.conf).
   # This fires if the log grew past the size limit between newsyslog runs.
   local max_bytes=${VPS_DEPLOY_LOG_MAX_BYTES:-10485760}
   [[ -f $deploy_log ]] || return 0
@@ -502,7 +502,7 @@ load_deploy_ports() {
   (( $#deploy_ports )) && return 0
   local line
   local -a rows
-  rows=(${(f)"$("$RUBY" -r"$repo/OPENBSD/lib/deploy_inventory" \
+  rows=(${(f)"$("$RUBY" -r"$repo/OPENBSD/mirror/lib/deploy_inventory" \
     -e 'Deploy::Inventory.new(root: ARGV[0]).apps.each { |a| puts "#{a.name} #{a.port}" }' "$repo" 2>/dev/null)"})
   for line in $rows; do
     deploy_ports[${line%% *}]=${line##* }
@@ -639,10 +639,10 @@ finish() {
     print -u2 "vps-deploy: $app FAILED at stage \"$deploy_stage\" (exit $rc)"
     if (( app_stopped )); then
       print -u2 "vps-deploy: $app was stopped for this deploy and is DOWN - read /var/log/daemon, then"
-      print -u2 "            /usr/local/sbin/pub5-admin service start $app   (or rerun: doas zsh OPENBSD/bin/vps-deploy $app)"
+      print -u2 "            /usr/local/sbin/pub5-admin service start $app   (or rerun: doas zsh OPENBSD/mirror/bin/vps-deploy $app)"
     else
       print -u2 "vps-deploy: $app was not stopped; the previous release is still serving. Fix the cause and rerun:"
-      print -u2 "            doas zsh OPENBSD/bin/vps-deploy $app"
+      print -u2 "            doas zsh OPENBSD/mirror/bin/vps-deploy $app"
     fi
     local other
     for other in $DEPLOY_RAILS; do
@@ -832,7 +832,7 @@ if [[ $deploy_app_group == master ]]; then
   # deploy=0 through a 30-minute master deploy and shed amber and bsdports twice.
   keep_deploy_flag
   settle_boots
-  if zsh "$repo/OPENBSD/bin/vps_deploy_master.sh"; then
+  if zsh "$repo/OPENBSD/mirror/bin/vps_deploy_master.sh"; then
     # The loopback journeys that need no browser, for this app only.
     set_stage master-flows
     hold_deploy_flag
@@ -880,13 +880,13 @@ for mount_point in /home /var; do
   if [[ $free_kb != <-> ]]; then
     print -u2 "vps-deploy: $app refused - free-space measurement for $mount_point is unavailable."
     print -u2 "            Nothing was stopped. Check the filesystem and measurement command, then rerun:"
-    print -u2 "            doas zsh OPENBSD/bin/vps-deploy $app"
+    print -u2 "            doas zsh OPENBSD/mirror/bin/vps-deploy $app"
     exit 1
   fi
   if (( free_kb < min_free_kb )); then
     print -u2 "vps-deploy: $app refused - $mount_point has $(( free_kb / 1024 )) MB free, the floor is $(( min_free_kb / 1024 )) MB."
     print -u2 "            Nothing was stopped. Inspect usage with: doas /usr/local/sbin/pub5-admin disk-usage $mount_point ; clear old"
-    print -u2 "            logs or bundles, then rerun: doas zsh OPENBSD/bin/vps-deploy $app"
+    print -u2 "            logs or bundles, then rerun: doas zsh OPENBSD/mirror/bin/vps-deploy $app"
     exit 1
   fi
 done
@@ -899,7 +899,7 @@ keep_deploy_flag
 
 # What is about to be deployed, against what is actually running.
 #
-# The check compares OPENBSD/etc byte-for-byte with live /etc and root's crontab
+# The check compares OPENBSD/mirror/etc byte-for-byte with live /etc and root's crontab
 # with etc/crontab.vm23. A deploy is exactly when that matters — it is the moment
 # the repo becomes the box.
 #
@@ -969,7 +969,7 @@ else
     free_swap_mb=$(( swap_blocks * 512 / 1048576 ))
     print -u2 "vps-deploy: $app refused - $free_swap_mb MB of swap free, the floor is $min_swap_mb MB."
     print -u2 "            The app's jobs service is back up; nothing else was stopped. Free memory (stop another"
-    print -u2 "            app's *_jobs service), then rerun: doas zsh OPENBSD/bin/vps-deploy $app"
+    print -u2 "            app's *_jobs service), then rerun: doas zsh OPENBSD/mirror/bin/vps-deploy $app"
     exit 1
   fi
 
@@ -982,7 +982,7 @@ else
   # draining. A command followed by `||` is exempt from errexit, which is what
   # makes the status capture reachable at all.
   ci_status=0
-  zsh "$repo/OPENBSD/bin/vps_ci.sh" "$app" || ci_status=$?
+  zsh "$repo/OPENBSD/mirror/bin/vps_ci.sh" "$app" || ci_status=$?
 
   if (( jobs_was_up )); then
     admin_service start "$jobs_service" >/dev/null 2>&1 \
@@ -1170,7 +1170,7 @@ if ! admin_service check "$app" >/dev/null 2>&1; then
 fi
 
 # PUB5_DEPLOY_CANARY=1 runs the post-deploy canary, report-only, until it has been reviewed.
-[[ -z ${PUB5_DEPLOY_CANARY:-} ]] || "$RUBY" "$repo/OPENBSD/bin/canary" --local --app "$app" || true
+[[ -z ${PUB5_DEPLOY_CANARY:-} ]] || "$RUBY" "$repo/OPENBSD/mirror/bin/canary" --local --app "$app" || true
 
 print "vps-deploy: $app ok"
 write_stamp "$app" ok

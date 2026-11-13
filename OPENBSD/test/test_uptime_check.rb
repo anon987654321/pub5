@@ -9,7 +9,7 @@ require "tmpdir"
 # durable pub4-alert record once it persists. Fake curl, ruby and logger go first
 # on PATH; the alert is a recording stub, so nothing leaves the scratch directory.
 class TestUptimeCheck < Minitest::Test
-  SCRIPT = File.expand_path("../usr/local/bin/uptime-check.sh", __dir__)
+  SCRIPT = File.expand_path("../mirror/usr/local/bin/uptime-check.sh", __dir__)
 
   def setup
     @dir = Dir.mktmpdir("uptime-test")

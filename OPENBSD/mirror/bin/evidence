@@ -25,7 +25,7 @@ module EvidenceCapture
     command = argv.drop(separator + 1)
     options = { timeout: DEFAULT_TIMEOUT, verdict: nil, attachments: [], notes: [] }
     parser = OptionParser.new do |opts|
-      opts.banner = "Usage: OPENBSD/bin/evidence [options] LABEL -- COMMAND [ARG...]"
+      opts.banner = "Usage: OPENBSD/mirror/bin/evidence [options] LABEL -- COMMAND [ARG...]"
       opts.on("--timeout SECONDS", Float, "Terminate the command process group after SECONDS (default #{DEFAULT_TIMEOUT.to_i})") do |value|
         options[:timeout] = value
       end

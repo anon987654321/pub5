@@ -3,7 +3,7 @@
 require "minitest/autorun"
 require "fileutils"
 require "tmpdir"
-require_relative "../lib/permission_audit"
+require_relative "../mirror/lib/permission_audit"
 
 class TestPermissionAudit < Minitest::Test
   def audit(secrets: [], private_dirs: [], daemon_logs: [])

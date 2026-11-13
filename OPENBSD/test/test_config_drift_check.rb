@@ -5,7 +5,7 @@ require "tmpdir"
 # See test_restore_scripts.rb: the weekly integrity run on vm23 invokes these
 # under a C locale, where Ruby reads files as US-ASCII and every read of this
 # UTF-8 source raises "invalid byte sequence".
-require_relative "../lib/utf8"
+require_relative "../mirror/lib/utf8"
 require_relative "../checks/config_drift_check"
 
 # The crontab half of the drift check, with the shape it must flag and the shape
@@ -105,7 +105,7 @@ class ConfigDriftCheckCrontabTest < Minitest::Test
   # The check is only as good as its mirror. If crontab.vm23 stops parsing, every
   # comparison below it silently compares nothing.
   def test_the_real_tracked_crontab_parses
-    tracked = File.join(File.expand_path("..", __dir__), "etc", "crontab.vm23")
+    tracked = File.join(File.expand_path("..", __dir__), "mirror", "etc", "crontab.vm23")
     commands = scheduled_commands(File.read(tracked))
 
     refute_empty commands, "etc/crontab.vm23 parsed to no commands - the check would pass having measured nothing"
@@ -118,7 +118,11 @@ end
 class ConfigDriftCheckVerbatimTest < Minitest::Test
   # The box exactly as the repo describes it.
   def matching_box
-    VERBATIM.to_h { |repo_rel, live_path| [live_path, File.read(File.join(MIRROR, repo_rel))] }
+    VERBATIM.to_h do |repo_rel, live_path|
+      # checks/ stayed at the OPENBSD root through the mirror reorganization.
+      base = repo_rel.start_with?("checks/") ? File.dirname(MIRROR) : MIRROR
+      [live_path, File.read(File.join(base, repo_rel))]
+    end
   end
 
   def test_the_mirror_is_found_and_matches_itself

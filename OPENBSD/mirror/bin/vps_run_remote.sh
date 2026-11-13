@@ -8,7 +8,7 @@
 set -euo pipefail
 
 if [[ ${1:-} == -h || ${1:-} == --help ]]; then
-  print "usage: zsh OPENBSD/bin/vps_run_remote.sh"
+  print "usage: zsh OPENBSD/mirror/bin/vps_run_remote.sh"
   print "  upload vps_install_all.sh through the server4 hypervisor jump and start it under nohup"
   exit 0
 fi

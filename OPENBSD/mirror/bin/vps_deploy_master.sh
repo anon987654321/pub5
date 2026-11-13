@@ -8,13 +8,13 @@
 # is only right when vps-deploy itself is what is broken.
 #
 # Usage (from dev laptop):
-#   zsh OPENBSD/lib/ssh_vm23.sh exec 'zsh /home/dev/pub5/OPENBSD/bin/vps_deploy_master.sh'
-#   zsh OPENBSD/bin/vps_deploy_master.sh --from-laptop
+#   zsh OPENBSD/mirror/lib/ssh_vm23.sh exec 'zsh /home/dev/pub5/OPENBSD/mirror/bin/vps_deploy_master.sh'
+#   zsh OPENBSD/mirror/bin/vps_deploy_master.sh --from-laptop
 
 if [ "${1:-}" = "--from-laptop" ]; then
   shift
   _lib="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)/lib/ssh_vm23.sh"
-  exec zsh "$_lib" exec "zsh /home/dev/pub5/OPENBSD/bin/vps_deploy_master.sh" "$@"
+  exec zsh "$_lib" exec "zsh /home/dev/pub5/OPENBSD/mirror/bin/vps_deploy_master.sh" "$@"
 fi
 
 set -eo pipefail
@@ -25,7 +25,7 @@ if [ "$ROOT" != "/home/dev/pub5" ]; then
   echo "vps_deploy_master: ROOT override refused; pub5-admin mutates the fixed /home/dev/pub5/MASTER/web tree" >&2
   exit 2
 fi
-. "$ROOT/OPENBSD/lib/ruby_select.sh"
+. "$ROOT/OPENBSD/mirror/lib/ruby_select.sh"
 WEB="$ROOT/MASTER/web"
 
 # vps-deploy pins one SHA and moves the checkout to it before any step runs; this
@@ -115,8 +115,8 @@ else
 fi
 
 echo "==> sync rc.d master"
-if [ -f "$ROOT/OPENBSD/etc/rc.d/master" ]; then
-  if ! cmp -s "$ROOT/OPENBSD/etc/rc.d/master" /etc/rc.d/master; then
+if [ -f "$ROOT/OPENBSD/mirror/etc/rc.d/master" ]; then
+  if ! cmp -s "$ROOT/OPENBSD/mirror/etc/rc.d/master" /etc/rc.d/master; then
     echo "installed /etc/rc.d/master differs; run the reviewed OPERATOR.sh sync before deploying" >&2
     exit 1
   fi

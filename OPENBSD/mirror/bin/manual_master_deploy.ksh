@@ -6,13 +6,13 @@
 # which is the operator's call.
 #
 # Manual MASTER deploy — use when vps_deploy_master.sh stalls.
-# Run on VPS: tmux new-session -d -s masterdeploy /home/dev/pub5/OPENBSD/bin/manual_master_deploy.ksh
+# Run on VPS: tmux new-session -d -s masterdeploy /home/dev/pub5/OPENBSD/mirror/bin/manual_master_deploy.ksh
 # Watch: tail -f /tmp/master_manual.log
 # FORCE_PRECOMPILE=1 precompiles even when a manifest exists.
 
 case ${1:-} in
 -h|--help)
-  echo "usage: ksh OPENBSD/bin/manual_master_deploy.ksh   (FORCE_PRECOMPILE=1; output goes to /tmp/master_manual.log)"
+  echo "usage: ksh OPENBSD/mirror/bin/manual_master_deploy.ksh   (FORCE_PRECOMPILE=1; output goes to /tmp/master_manual.log)"
   exit 0
   ;;
 esac
@@ -28,7 +28,7 @@ if [[ -L /usr/local/sbin/pub5-admin || ! -x /usr/local/sbin/pub5-admin ]]; then
   echo "pub5-admin missing or symlinked; run the reviewed OPERATOR.sh sync first" >&2
   exit 2
 fi
-. /home/dev/pub5/OPENBSD/lib/ruby_select.sh
+. /home/dev/pub5/OPENBSD/mirror/lib/ruby_select.sh
 set -x
 _fail=0
 echo "START $(date -u)"

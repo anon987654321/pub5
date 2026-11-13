@@ -1,6 +1,6 @@
 #!/bin/ksh
 # Root-owned, fixed-target preparation for one Rails app's CI run.
-# This file is installed from OPENBSD/usr/local/libexec by OPERATOR.sh.
+# This file is installed from OPENBSD/mirror/usr/local/libexec by OPERATOR.sh.
 set -eu
 PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 export PATH

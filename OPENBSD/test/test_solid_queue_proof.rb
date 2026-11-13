@@ -3,7 +3,7 @@
 require "minitest/autorun"
 require "tmpdir"
 require "time"
-require_relative "../lib/utf8"
+require_relative "../mirror/lib/utf8"
 require_relative "../checks/solid_queue_proof"
 
 # The check exists so an app whose jobs never run cannot deploy green. It used to

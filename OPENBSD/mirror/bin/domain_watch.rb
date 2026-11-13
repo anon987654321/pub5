@@ -13,10 +13,10 @@
 # This asks each registry whether we still hold the name, and diffs the answer against a committed snapshot so a domain
 # changing hands shows up as a reviewable diff instead of an outage.
 #
-#   ruby OPENBSD/bin/domain_watch.rb            # report against the snapshot
-#   ruby OPENBSD/bin/domain_watch.rb --update   # rewrite the snapshot (OpenBSD/Linux)
-#   ruby OPENBSD/bin/domain_watch.rb --json
-#   ruby OPENBSD/bin/domain_watch.rb --tls      # what the public sees at every relayd host
+#   ruby OPENBSD/mirror/bin/domain_watch.rb            # report against the snapshot
+#   ruby OPENBSD/mirror/bin/domain_watch.rb --update   # rewrite the snapshot (OpenBSD/Linux)
+#   ruby OPENBSD/mirror/bin/domain_watch.rb --json
+#   ruby OPENBSD/mirror/bin/domain_watch.rb --tls      # what the public sees at every relayd host
 #
 # Every lookup is bounded in Ruby rather than by /usr/bin/timeout, which does
 # not exist on macOS — so --update ran only on vm23, and the snapshot went
@@ -40,7 +40,7 @@ require_relative "render_dns"
 
 module Deploy
   module DomainWatch
-    ROOT = File.expand_path("../..", __dir__)
+    ROOT = File.expand_path("../../..", __dir__)
     SNAPSHOT = File.join(ROOT, "OPENBSD/data/domain_inventory.yml")
     RAILS_APPS = File.join(ROOT, "RAILS/apps.yml")
 
@@ -236,7 +236,7 @@ module Deploy
     # HTTPS status. Reads only; every external call is bounded. A host that does not
     # answer is reported as that, never as healthy.
     TLS_VERTICALS = %w[markedsplass dating radio takeaway tv messenger maps].freeze
-    RELAYD_CONF = File.join(ROOT, "OPENBSD/etc/relayd.conf")
+    RELAYD_CONF = File.join(ROOT, "OPENBSD/mirror/etc/relayd.conf")
 
     def tls_hosts
       keypairs = File.read(RELAYD_CONF, encoding: "UTF-8").scan(/tls keypair "([^"]+)"/).flatten.uniq
@@ -387,7 +387,7 @@ end
 if $PROGRAM_NAME == __FILE__
   # Before the scan, which queries whois for every zone.
   if ARGV.intersect?(%w[-h --help])
-    puts "usage: ruby OPENBSD/bin/domain_watch.rb [--update|--json]"
+    puts "usage: ruby OPENBSD/mirror/bin/domain_watch.rb [--update|--json]"
     puts "  whois every served or owned domain and diff the answers against data/domain_inventory.yml"
     exit 0
   end
@@ -413,7 +413,7 @@ if $PROGRAM_NAME == __FILE__
 
   if ARGV.include?("--update")
     File.write(Deploy::DomainWatch::SNAPSHOT,
-               "# Written by OPENBSD/bin/domain_watch.rb --update. Committed so a domain\n" \
+               "# Written by OPENBSD/mirror/bin/domain_watch.rb --update. Committed so a domain\n" \
                "# changing hands is a reviewable diff rather than a surprise outage.\n" +
                YAML.dump(current))
     puts "snapshot written: #{current.size} domains"

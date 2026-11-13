@@ -1,16 +1,16 @@
 #!/usr/bin/env zsh
 # Run ON the VPS (vm23) as dev — installs MASTER web + each Rails app deploy script.
 # The one bootstrap-on-box script: vps_on_vm_install.sh execs this file.
-# Usage: zsh OPENBSD/bin/vps_install_all.sh     (LOG=/path to choose the log file)
+# Usage: zsh OPENBSD/mirror/bin/vps_install_all.sh     (LOG=/path to choose the log file)
 set -euo pipefail
 
 if [[ ${1:-} == -h || ${1:-} == --help ]]; then
-  print "usage: zsh OPENBSD/bin/vps_install_all.sh - bundle and precompile MASTER, then every apps.yml app's deploy script"
+  print "usage: zsh OPENBSD/mirror/bin/vps_install_all.sh - bundle and precompile MASTER, then every apps.yml app's deploy script"
   exit 0
 fi
 
 PUB4=${PUB4:-/home/dev/pub5}
-. "${PUB4}/OPENBSD/lib/ruby_select.sh"
+. "${PUB4}/OPENBSD/mirror/lib/ruby_select.sh"
 LOG=${LOG:-/tmp/pub4_install_$(date +%Y%m%d_%H%M%S).log}
 
 exec > >(tee -a "$LOG") 2>&1
@@ -66,7 +66,7 @@ admin_service restart master 2>/dev/null || admin_service start master
 admin_service check master || { log "WARN: master not ok"; failed=$((failed + 1)); }
 
 typeset -a APPS
-APPS=(${(f)"$("$RUBY" -r"${PUB4}/OPENBSD/lib/deploy_inventory" \
+APPS=(${(f)"$("$RUBY" -r"${PUB4}/OPENBSD/mirror/lib/deploy_inventory" \
   -e 'puts Deploy::Inventory.new(root: ARGV[0]).app_names' "$PUB4")"})
 (( ${#APPS} )) || { log "ERR: no apps read from ${PUB4}/RAILS/apps.yml"; exit 1 }
 

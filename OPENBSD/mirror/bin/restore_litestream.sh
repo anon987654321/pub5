@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# NOT the disaster-recovery script — use OPENBSD/bin/dr-pull for that.
+# NOT the disaster-recovery script — use OPENBSD/mirror/bin/dr-pull for that.
 #
 # Restore Rails SQLite databases from on-disk Litestream replicas (vm23).
 # Stops app services, runs litestream restore, restarts services. It was called
@@ -8,15 +8,15 @@
 # promised recovery the file cannot deliver. The name is the architecture.
 #
 # Usage (on vm23):
-#   DRY_RUN=1 zsh OPENBSD/bin/restore_litestream.sh          # print plan only
-#   zsh OPENBSD/bin/restore_litestream.sh brgen              # one app
-#   zsh OPENBSD/bin/restore_litestream.sh                    # all apps in etc/litestream.yml
+#   DRY_RUN=1 zsh OPENBSD/mirror/bin/restore_litestream.sh          # print plan only
+#   zsh OPENBSD/mirror/bin/restore_litestream.sh brgen              # one app
+#   zsh OPENBSD/mirror/bin/restore_litestream.sh                    # all apps in etc/litestream.yml
 #
 # Every precondition below is a hard failure, not a skip. On vm23 litestream is
 # absent and /var/backups/litestream/ is empty, so a skipping restore walked all
 # three apps, restored none of them and printed "done" — a disaster-recovery
 # script that reports success is worse than one that is missing, because it is
-# read as evidence. The working backup is OPENBSD/bin/dr-pull, whose snapshots
+# read as evidence. The working backup is OPENBSD/mirror/bin/dr-pull, whose snapshots
 # live on the operator Mac; see RUNBOOK.md, "Backups".
 
 set -euo pipefail
@@ -49,7 +49,7 @@ require_litestream() {
   whence litestream >/dev/null 2>&1 && return 0
   log "FAIL - no litestream binary on this host, so nothing here can restore anything."
   log "       litestream is not in OpenBSD ports; /var/backups/litestream/ is empty."
-  log "       Restore from a dr-pull snapshot instead: ruby OPENBSD/bin/dr-pull --check"
+  log "       Restore from a dr-pull snapshot instead: ruby OPENBSD/mirror/bin/dr-pull --check"
   exit 1
 }
 

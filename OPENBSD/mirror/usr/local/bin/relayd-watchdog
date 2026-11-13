@@ -7,7 +7,7 @@
 require "open3"
 
 # The doas.conf "heal" that used to live here ran, as root every 5 minutes,
-#   ksh /home/dev/pub5/OPENBSD/validate_doas.ksh install /home/dev/pub5/OPENBSD/etc/doas.conf
+#   ksh /home/dev/pub5/OPENBSD/validate_doas.ksh install /home/dev/pub5/OPENBSD/mirror/etc/doas.conf
 # — root executing a script AND installing a doas.conf from a dev-owned git
 # checkout, i.e. root code execution on the next tick for anyone who can write
 # either file, plus a silent revert of any hand-hardening of /etc/doas.conf.

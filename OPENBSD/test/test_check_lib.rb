@@ -4,8 +4,8 @@ require "minitest/autorun"
 require "fileutils"
 require "stringio"
 require "tmpdir"
-require_relative "../lib/check_result"
-require_relative "../lib/check_environment"
+require_relative "../mirror/lib/check_result"
+require_relative "../mirror/lib/check_environment"
 require_relative "../checks/integrity_check"
 
 class CheckLibTest < Minitest::Test

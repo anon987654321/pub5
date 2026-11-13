@@ -3,13 +3,13 @@ set -euo pipefail
 # Shared SSH helper for vm23 (dev@brgen.no).
 #
 # Source from deploy scripts:
-#   source OPENBSD/lib/ssh_vm23.sh
+#   source OPENBSD/mirror/lib/ssh_vm23.sh
 #   vm23_ssh 'uname -a'
 #   vm23_tmux deploy "doas zsh OPENBSD/OPERATOR.sh 2>&1 | tee /tmp/deploy.log"
 #
 # Direct invocation:
-#   zsh OPENBSD/lib/ssh_vm23.sh 'cd /home/dev/pub5 && git pull'
-#   zsh OPENBSD/lib/ssh_vm23.sh tmux deploy 'doas zsh OPENBSD/OPERATOR.sh'
+#   zsh OPENBSD/mirror/lib/ssh_vm23.sh 'cd /home/dev/pub5 && git pull'
+#   zsh OPENBSD/mirror/lib/ssh_vm23.sh tmux deploy 'doas zsh OPENBSD/OPERATOR.sh'
 #
 # Env: SSH_USER SSH_HOST SSH_KEY REMOTE_PUB4
 #
@@ -35,7 +35,7 @@ vm23_rtfm() {
     return 78
   }
   "$SSH_VM23_OPERATOR" rtfm --host "${SSH_USER}@${SSH_HOST}" --key "$SSH_KEY" \
-    --source "$SSH_VM23_REPO_ROOT/OPENBSD/lib/ssh_vm23.sh" -- "$*"
+    --source "$SSH_VM23_REPO_ROOT/OPENBSD/mirror/lib/ssh_vm23.sh" -- "$*"
 }
 
 # One copy of the usage, above the functions rather than in the dispatch at the

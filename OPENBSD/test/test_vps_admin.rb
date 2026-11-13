@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-load File.expand_path("../bin/vps-admin", __dir__)
+load File.expand_path("../mirror/bin/vps-admin", __dir__)
 
 class VpsAdminTest < Minitest::Test
   def test_read_only_commands_are_named

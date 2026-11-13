@@ -1,9 +1,9 @@
 #!/usr/bin/env zsh
 # Run one Rails app CI on vm23 with mutex + load check (serial operator entrypoint).
-# Usage: zsh OPENBSD/bin/vps_ci.sh brgen
+# Usage: zsh OPENBSD/mirror/bin/vps_ci.sh brgen
 set -euo pipefail
 
-usage="usage: zsh OPENBSD/bin/vps_ci.sh APP - sync APP's copy-tree, then run its bin/ci under the CI lock"
+usage="usage: zsh OPENBSD/mirror/bin/vps_ci.sh APP - sync APP's copy-tree, then run its bin/ci under the CI lock"
 if [[ ${1:-} == -h || ${1:-} == --help ]]; then
   print -r -- "$usage"
   exit 0
@@ -35,9 +35,9 @@ command -v deploy_status >/dev/null 2>&1 || deploy_status() { :; }
 export PUB4_CI_GUARD=1
 export PUB5_RAILS_ROOT=${PUB5_RAILS_ROOT:-$repo/RAILS}
 
-# Path and safe creation live in OPENBSD/lib/ci_lock.sh — the lock moved out of
+# Path and safe creation live in OPENBSD/mirror/lib/ci_lock.sh — the lock moved out of
 # world-writable /var/tmp, where root was chmod'ing a caller-chosen, symlinkable path.
-. "${repo}/OPENBSD/lib/ci_lock.sh"
+. "${repo}/OPENBSD/mirror/lib/ci_lock.sh"
 
 # Names every tracked entry at the app root that is neither synced nor kept
 # local. Warns rather than fails: this list is discovered from git at deploy

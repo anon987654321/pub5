@@ -27,7 +27,7 @@ export MASTER_BRUTALIST=1
 export MASTER_STARSHIP=0
 
 typeset -g PUB5_ROOT="${HOME}/pub5"
-source "${PUB5_ROOT}/OPENBSD/lib/zshrc.shared"
+source "${PUB5_ROOT}/OPENBSD/mirror/lib/zshrc.shared"
 
 # Non-interactive shells (SSH `cmd`, scp): env only, no auto-launch.
 [[ -o interactive && -t 0 && -t 1 ]] || return
@@ -36,5 +36,5 @@ source "${PUB5_ROOT}/OPENBSD/lib/zshrc.shared"
 [[ -n $MASTER_NOAUTOSTART ]] && return
 
 (cd ~/pub5 && RUBYOPT=-W0 git pull -q 2>/dev/null)
-source "${PUB5_ROOT}/OPENBSD/lib/ruby_select.sh"
+source "${PUB5_ROOT}/OPENBSD/mirror/lib/ruby_select.sh"
 cd ~/pub5/MASTER && exec "$BUNDLE" exec "$RUBY" bin/master

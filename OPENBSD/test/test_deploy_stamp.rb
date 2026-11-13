@@ -2,7 +2,7 @@
 
 require "minitest/autorun"
 require "tmpdir"
-require_relative "../lib/deploy_stamp"
+require_relative "../mirror/lib/deploy_stamp"
 
 class TestDeployStamp < Minitest::Test
   def with_stamp(body)

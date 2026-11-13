@@ -7,7 +7,7 @@ require "open3"
 require "yaml"
 require_relative "../lib/dmesg"
 
-ROOT = File.expand_path("../..", __dir__)
+ROOT = File.expand_path("../../..", __dir__)
 require_relative "../lib/environment"
 require_relative "../lib/pid_probe"
 
@@ -186,7 +186,7 @@ def print_deploy_in_progress(status)
 end
 
 if ARGV.intersect?(%w[-h --help])
-  puts "usage: ruby OPENBSD/bin/vps-state [--json]"
+  puts "usage: ruby OPENBSD/mirror/bin/vps-state [--json]"
   puts "  master and every apps.yml app: service, port, deployed SHA and last deploy stamp"
   exit 0
 end

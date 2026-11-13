@@ -15,7 +15,7 @@
 # prune_guests.rb gets it for free because PruneGuestUsersJob happens to
 # require it; nothing here does that incidentally, so it needs its own
 # require.
-require_relative "../../../lib/load_average"
+require_relative "../../../mirror/lib/load_average"
 
 started = Time.now
 overdue_before = DeclutterChallenge.overdue.count

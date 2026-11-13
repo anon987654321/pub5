@@ -18,7 +18,7 @@
 # cold against 0.40s warm. On a low-traffic site nearly every visitor is the cold
 # case.
 #
-# Install: doas cp OPENBSD/usr/local/bin/core-reclaim.sh /usr/local/bin/ &&
+# Install: doas cp OPENBSD/mirror/usr/local/bin/core-reclaim.sh /usr/local/bin/ &&
 #          doas chmod 755 /usr/local/bin/core-reclaim.sh
 # Cron (root): 40 * * * * /usr/local/bin/core-reclaim.sh >> /var/log/core-reclaim.log 2>&1
 

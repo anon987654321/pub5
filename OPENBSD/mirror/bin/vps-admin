@@ -13,7 +13,7 @@ module OpenBSDAdmin
 
   def usage
     <<~TEXT
-      usage: OPENBSD/bin/vps-admin <command>
+      usage: OPENBSD/mirror/bin/vps-admin <command>
 
       status
       services [failed|on|off]

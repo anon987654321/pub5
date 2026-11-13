@@ -13,7 +13,7 @@
 # invisible as load: two page renders per ten minutes against a box that idles at
 # 84%.
 #
-# Install: doas cp OPENBSD/usr/local/bin/keep-warm.sh /usr/local/bin/ &&
+# Install: doas cp OPENBSD/mirror/usr/local/bin/keep-warm.sh /usr/local/bin/ &&
 #          doas chmod 755 /usr/local/bin/keep-warm.sh
 # Cron (root): */10 * * * * /usr/local/bin/keep-warm.sh >> /var/log/keep-warm.log 2>&1
 

@@ -97,7 +97,7 @@ stage_1() {
   # DS records are derived from the signed zone by bin/ds-records, never written
   # to a .ds file here. A cached DS goes stale the moment a key rotates, and a DS
   # naming a key the zone no longer publishes takes the zone down.
-  log INFO "DS records: doas ruby34 ${REPO_ROOT}/OPENBSD/bin/ds-records"
+  log INFO "DS records: doas ruby34 ${REPO_ROOT}/OPENBSD/mirror/bin/ds-records"
 
   [[ ! -f /var/nsd/etc/nsd_server.pem ]] && {
     log INFO "Generating NSD control certificates"
@@ -170,7 +170,7 @@ stage_1() {
   install_tracked_crontab || exit 1
 
   log INFO "Stage 1 complete. ns.brgen.no ($BRGEN_IP) authoritative with DNSSEC."
-  log INFO "DS records: doas ruby34 ${REPO_ROOT}/OPENBSD/bin/ds-records - submit each to your registrar (Domeneshop: domain settings -> DNSSEC)."
+  log INFO "DS records: doas ruby34 ${REPO_ROOT}/OPENBSD/mirror/bin/ds-records - submit each to your registrar (Domeneshop: domain settings -> DNSSEC)."
   log INFO "Only for domains the registrar has actually delegated to ns.brgen.no. A DS on a domain we do not serve takes it down."
   log INFO "After submitting DS records, wait 24-48h for propagation, then press Enter to continue."
   log INFO "Verify with: dig DS brgen.no +short"

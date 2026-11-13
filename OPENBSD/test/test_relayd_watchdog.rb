@@ -10,7 +10,7 @@ ENV["PUB4_WATCHDOG_STATE"] = File.join(SCRATCH, "restarts")
 ENV["PUB4_ALERT"] = "pub4-alert-under-test"
 Minitest.after_run { FileUtils.rm_rf(SCRATCH) }
 require "fileutils"
-load File.expand_path("../usr/local/bin/relayd-watchdog", __dir__)
+load File.expand_path("../mirror/usr/local/bin/relayd-watchdog", __dir__)
 
 class TestRelaydWatchdog < Minitest::Test
   COMMANDS = []
