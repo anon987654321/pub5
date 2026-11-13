@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "rbconfig"
+require "tmpdir"
 
 class ImagePresenterTest < ActiveSupport::TestCase
   PNG = "\x89PNG\r\n\x1A\n".b + ("\0".b * 64)
