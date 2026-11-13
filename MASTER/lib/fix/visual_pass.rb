@@ -236,12 +236,16 @@ module Master
               captures << resting
               captures.concat(DeadCssCoverage.around(cdp, surface) { VisualStress.captures(cdp, surface, dir: @dir, pass:, limit: MAX_COMPOSITION_STATES) })
             end
+            # The sweep finishes no source file, so the run pulse needs this to
+            # tell a working browser sweep from a hang (see RunPulse#visual_advancing?).
+            @bus&.publish("fix_loop:visual_progress", pass:, index:, total: surfaces.size, surface: surface.id)
           end
 
           # All app captures are complete before we navigate this browser to
           # local evidence pages. One CDP session serves the entire sweep.
           captures.each_with_index do |capture, index|
             capture[:visual_evidence] = VisualSurfaceBudget.evidence(cdp, capture, index, captures.size) { @ghost_stack.capture(capture, pass:, cdp:) }
+            @bus&.publish("fix_loop:visual_progress", pass:, index:, total: captures.size, surface: capture.fetch(:surface).id)
           end
           cross_page_overlay.capture(captures, cdp:).tap { CrossAppConsistency.write_for(captures) }
         end

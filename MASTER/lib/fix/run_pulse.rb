@@ -236,12 +236,21 @@ module Master
       end
 
       # ModelGate waiting out a lane's cool-off or a loaded host is the run pacing itself, not a stall.
-      def advancing?(now) = scan_advancing?(now) || waiting?(now)
+      def advancing?(now) = scan_advancing?(now) || visual_advancing?(now) || waiting?(now)
 
       def waiting?(now) = !@waited_at.nil? && now - @waited_at <= finish_window
 
       def scan_advancing?(now)
         !@scan_completed_at.nil? && now - @scan_completed_at <= finish_window
+      end
+
+      # The rendered-visual stage is a browser sweep: a surface at a time, each
+      # a navigation, screenshots and composition states. It finishes no source
+      # file, so the file window alone read a working sweep as a stall and cut a
+      # RAILS run at surface 241 of 296. The sweep reports each surface it lands
+      # as fix_loop:visual_progress, and that is progress like a finished scan.
+      def visual_advancing?(now)
+        !@visual_at.nil? && now - @visual_at <= finish_window
       end
 
       # One file may spend its whole budget before it finishes, so the window is never shorter
@@ -281,6 +290,7 @@ module Master
         when "council:progress" then @council = [payload[:answered].to_i, payload[:total].to_i]
         when "scan:progress" then scanned(payload)
         when "scan:complete" then @scan_completed_at = @clock.call
+        when "fix_loop:visual_progress" then @visual_at = @clock.call
         when "fix_loop:model_wait" then @waited_at = @clock.call
         when "fix_loop:rule_result", "repair_loop:pass" then ruled(payload)
         when "fix_loop:skip_breakdown" then skipped(payload)
@@ -356,6 +366,7 @@ module Master
         @listed = Hash.new(0)
         @commits_at_start = 0
         @scan_completed_at = nil
+        @visual_at = nil
       end
 
       def scanned(payload)

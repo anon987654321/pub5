@@ -181,6 +181,30 @@ class TestFixWatchdog < Minitest::Test
     assert_match(/0 files attempted/, p.stall(@now)[:line])
   end
 
+  # The rendered-visual stage is a browser sweep of hundreds of surfaces that
+  # finishes no source file. The 2026-11-12 RAILS run was cut at surface 241 of
+  # 296 as "pass 1 phase evidence for 24m, 0 files finished"; a sweep that keeps
+  # landing surfaces is working, not hung.
+  def test_a_visual_sweep_that_keeps_capturing_surfaces_is_not_a_stall
+    p = pulse
+    p.observe("fix_loop:phase", stage: :evidence)
+    @now = Master::Fix::FixTime.stall_s + 1
+    p.observe("fix_loop:visual_progress", pass: 1, index: 40, total: 296, surface: "brgen/core/mobile")
+    @now += 60
+
+    assert_nil p.stall(@now), "a sweep landing a surface a minute is progress, not a hang"
+  end
+
+  def test_a_visual_sweep_that_stopped_capturing_stalls_again
+    p = pulse
+    p.observe("fix_loop:phase", stage: :evidence)
+    @now = Master::Fix::FixTime.stall_s + 1
+    p.observe("fix_loop:visual_progress", pass: 1, index: 40, total: 296, surface: "brgen/core/mobile")
+    @now += Pulse::FINISH_WINDOW_SECONDS + 1
+
+    assert_match(/0 files attempted/, p.stall(@now)[:line])
+  end
+
   def test_an_advisory_pass_stall_is_skipped_instead_of_aborting_the_run
     p = pulse
     p.observe("fix_loop:phase", stage: :council)
