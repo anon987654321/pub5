@@ -65,9 +65,16 @@
 # them) bought ten paths into two new directories; ls-files and ls-tree agree
 # on 7297 files and the growth instrument reads 889 directories. No path
 # added by this session; the count follows what HEAD already contains.
+# 2026-11-13 (3): the sandbox bootstrap was not repository tooling. Remove its
+# nine temporary files and the obsolete PROGRESS ledger. The resulting Git
+# tree contains 7561 regular tracked files and 894 tracked directories. The
+# intervening additions were 209 curated RAILS visual-review captures, 54
+# MASTER code/test/skeleton files and 8 STUDIO LoRA/runtime files. Keep the
+# lone_dirs ceiling at 37: the agent skeleton's two single-file eval/test
+# namespaces are visible growth, not a reason to silently raise the allowance.
 lone_dirs: 37
 stutter: 0
 vague_names: 0
-tracked_files: 7297
-tracked_directories: 889
+tracked_files: 7561
+tracked_directories: 894
 corpus: 4127
