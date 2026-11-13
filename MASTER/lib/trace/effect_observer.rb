@@ -67,7 +67,7 @@ module Master
       # callers still reconcile uncertain external effects before retrying.
       def publish_before(identity, payload)
         with_durable_lifecycle_lock do
-          refresh_lifecycle_history! if @bus.respond_to?(:effect_history)
+          restore_lifecycle_history! if @bus.respond_to?(:effect_history)
           key = effect_key(identity)
           @lifecycle_mutex.synchronize do
             if @pending_effects.key?(key) || @completed_effects.key?(key)
@@ -85,7 +85,7 @@ module Master
 
         elapsed_ms = checked_elapsed_ms(elapsed_ms)
         with_durable_lifecycle_lock do
-          refresh_lifecycle_history! if @bus.respond_to?(:effect_history)
+          restore_lifecycle_history! if @bus.respond_to?(:effect_history)
           key = effect_key(identity)
           @lifecycle_mutex.synchronize do
             expected = @pending_effects[key]
