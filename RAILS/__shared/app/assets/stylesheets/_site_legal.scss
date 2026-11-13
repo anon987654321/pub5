@@ -29,7 +29,8 @@
 }
 
 .site-legal .site-verify strong {
-  font-weight: 700;
+  /* the dialect ladder holds 400/600/800; 700 sat invisibly between bold and heavy */
+  font-weight: var(--weight-bold);
 }
 
  .legal-prose {
