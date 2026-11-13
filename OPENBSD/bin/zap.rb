@@ -76,7 +76,7 @@ class Zap
     # Keep the classic zap spelling: zap -TERM pattern and zap -9 pattern,
     # whether the signal appears before or after -f.
     signal_index = args.index do |arg|
-      arg.match?(/\A-(?:[0-9]+|[A-Za-z][A-Za-z0-9]*)\z/) && arg != "-f"
+      arg.match?(/\A-(?:[0-9]+|[A-Za-z][A-Za-z0-9]*)\z/) && !%w[-f -s -h].include?(arg)
     end
     set_signal(args.delete_at(signal_index).delete_prefix("-")) if signal_index
 
