@@ -43,7 +43,7 @@ class ZapTest < Minitest::Test
     assert_equal 0, zap.run
     assert_equal [[9, 210], [9, 212]], sent
     assert_includes output.string, "killed -9 210 ruby3.4"
-    assert_includes output.string, "killed 2 process(es)"
+    assert_includes output.string, "sent SIGKILL to 2 process(es)"
   end
 
   def test_keyword_does_not_match_arguments
@@ -123,7 +123,7 @@ class ZapTest < Minitest::Test
 
     assert_equal 412, parsed[:pid]
     assert_equal "nsd: worker", parsed[:name]
-    assert_equal [:ps, 1, "00:03:14", "nsd: worker"], parsed[:identity]
+    assert_equal [:ps, 1, "nsd: worker"], parsed[:identity]
   end
 
   def test_vmd_is_matched_by_its_process_name_like_any_other_process
