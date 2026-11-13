@@ -142,6 +142,29 @@ module Master
         build(attributes, path:)
       end
 
+      # Build a conservative contract for older programmatic /fix callers
+      # that still enter through FixLoop#run without an explicit user contract.
+      # The target itself defines the entire scope; no new paths are declared.
+      # Interactive and backlog callers should continue to supply their reviewed
+      # contract rather than relying on this compatibility default.
+      def for_target(target:, root:, intent: "functional_change", proof: [])
+        base = File.expand_path(root.to_s)
+        absolute = File.expand_path(target.to_s, base)
+        unless absolute == base || absolute.start_with?(base + File::SEPARATOR)
+          raise Invalid, "fix target escapes task-contract root"
+        end
+
+        relative = absolute == base ? nil : absolute.delete_prefix(base + File::SEPARATOR)
+        scope = if relative.nil?
+                  ["**/*", "*"]
+                elsif File.directory?(absolute)
+                  ["#{relative}/**"]
+                else
+                  [relative]
+                end
+        build(intent:, scope:, preserve: [], proof:)
+      end
+
       # The active contract is scoped to the synchronous Fix call. Nested calls
       # restore their caller's contract, and exceptions never leak it to later work.
       def current
