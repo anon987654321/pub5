@@ -38,13 +38,20 @@ module Master
         "a.next",
       ].freeze
 
-      Session = Struct.new(:browser, :page, :mutex, :host, :headless, keyword_init: true)
+      Session = Struct.new(:browser, :page, :mutex, :host, :headless, :lease_id, keyword_init: true)
 
-      def initialize(root:, governor:, event_bus: nil, **_opts)
+      # `broker:` is the Core-owned BrowserBroker. When present it owns the
+      # Chromium process and this adapter only attaches to the lease's CDP
+      # endpoint, so a session this tool opens is the same kind of session the
+      # fold opens and one shutdown path reaps both. Without a broker the
+      # adapter falls back to its own driver, which is what the focused tests
+      # and any boot that has not built a broker still exercise.
+      def initialize(root:, governor:, event_bus: nil, broker: nil, **_opts)
         @root = File.expand_path(root)
         @governor = governor
         @bus = event_bus
-        @transport = WebBrowse.new(governor:, event_bus:)
+        @broker = broker
+        @transport = WebBrowse.new(governor:, event_bus:, broker:)
         @sessions = {}
         @mutex = Mutex.new
         @capture_mutex = Mutex.new
@@ -286,19 +293,29 @@ module Master
           raise ArgumentError, "browser session limit reached (#{MAX_SESSIONS})" if @sessions.size >= MAX_SESSIONS
 
           ferrum!
-          browser = Ferrum::Browser.new(
-            headless:,
-            timeout: WebBrowse::TIMEOUT,
-            process_timeout: WebBrowse::TIMEOUT,
-            browser_options: WebBrowse::BROWSER_OPTIONS,
-          )
+          lease = @broker&.open(host: host.to_s.downcase, url: nil)
+          browser = Ferrum::Browser.new(**driver_options(lease, headless:))
           page = browser.create_page
           @transport.secure_page(page, allowed_host: host.to_s.downcase)
-          @sessions[key] = Session.new(browser:, page:, mutex: Mutex.new, host: host.to_s.downcase, headless:)
+          @sessions[key] = Session.new(browser:, page:, mutex: Mutex.new, host: host.to_s.downcase,
+                                       headless:, lease_id: lease&.id)
         rescue StandardError
           browser&.quit
+          @broker&.close(lease.id) if lease
           raise
         end
+      end
+
+      # With a broker, the CDP endpoint is the broker's and Ferrum must attach
+      # rather than spawn — a ws_url makes Ferrum's Process#start return early,
+      # so the broker keeps sole ownership of the process and its profile. The
+      # adapter still owns the page and the transport's request guard. Without a
+      # broker this is the driver the adapter has always started itself.
+      def driver_options(lease, headless:)
+        return { headless:, timeout: WebBrowse::TIMEOUT, process_timeout: WebBrowse::TIMEOUT,
+                 browser_options: WebBrowse::BROWSER_OPTIONS } unless lease
+
+        { ws_url: lease.cdp_url, timeout: WebBrowse::TIMEOUT, process_timeout: WebBrowse::TIMEOUT }
       end
 
       def ferrum!
@@ -335,6 +352,10 @@ module Master
         return Result.ok("browser session already closed: #{key}") unless state
 
         state.mutex.synchronize { state.browser.quit }
+        # Release the lease so the broker reaps the process group it owns. A
+        # lease-backed session's browser was only ever attached to that process,
+        # so quitting the driver leaves the browser running until this call.
+        @broker&.close(state.lease_id) if state.lease_id
         Result.ok("browser session closed: #{key}")
       end
 

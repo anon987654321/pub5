@@ -308,9 +308,14 @@ module Master::Core
       # fetch it. Writing and executing stay out.
       observe: %i[stdio read probe network],
       plan: %i[stdio read probe model network],
-      fix: %i[stdio read probe write create execute network],
-      repair: %i[stdio read probe write create execute network],
-      deploy: %i[stdio read probe write create execute network deploy],
+      # `browser` is the brokered Chromium session: a bounded, host-bound lease
+      # over a process Core owns. It rides beside `network` for the same reason —
+      # reading a page is observing — but stays out of observe/plan, because a
+      # browser session outlives one request and costs a process, so only a
+      # context that already mutates may hold one.
+      fix: %i[stdio read probe write create execute network browser],
+      repair: %i[stdio read probe write create execute network browser],
+      deploy: %i[stdio read probe write create execute network deploy browser],
       device: %i[stdio read device],
       world: %i[stdio read world],
     }.freeze

@@ -1,4 +1,46 @@
 nb:
-  hello: "Hei"
   app:
-    name: "BSDports"
+    name: "MyToonz"
+    description: "Gjør ideene dine om til tegneseriestriper."
+  nav:
+    primary: "Hovedmeny"
+    gallery: "Galleri"
+    sign_in: "Logg inn"
+    sign_out: "Logg ut"
+    skip_to_content: "Hopp til hovedinnhold"
+  comic_strips:
+    index:
+      title: "Tegneseriestriper"
+      tagline: "Gjør dagen om til en tegneserie."
+      generate_heading: "Lag en tegneserie"
+      prompt_placeholder: "Hva skal tegneserien handle om?"
+      provider_consent: "Jeg godtar at teksten sendes til Replicate for å lage bilder. Replicate behandler forespørselen etter sine egne vilkår og regler for lagring."
+      generate: "Generer tegneserie"
+      sign_in_to_generate: "for å lage dine egne tegneserier."
+      search_placeholder: "Søk i tegneserier …"
+      search_label: "Søk i tegneserier"
+      results_label: "Tegneserieliste"
+      no_exact_matches: "Ingen nøyaktige treff. Prøv:"
+    create:
+      provider_consent_required: "Du må samtykke før teksten sendes til Replicate."
+      started: "Tegneserien blir laget."
+    show:
+      style: "Stil"
+      status: "Status"
+      generated_images: "Genererte bilder"
+      panel_alt: "Generert tegneseriepanel"
+      in_progress: "Tegneserien lages."
+      refresh: "Oppdater status"
+      failed: "Tegneserien kunne ikke lages. Prøv igjen senere."
+    statuses:
+      pending: "Venter"
+      processing: "Behandles"
+      completed: "Ferdig"
+      failed: "Mislyktes"
+    styles:
+      comic: "Tegneserie"
+      anime: "Anime"
+      cartoon: "Tegnefilm"
+      noir: "Noir"
+      manga: "Manga"
+      retro: "Retro"

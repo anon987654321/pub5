@@ -20,11 +20,9 @@ autoload:
     - cli/session/background_scan.rb
     - cli/session/bridge_run.rb
     - cli/session/command_ops.rb
-    - cli/session/repl_flow.rb
     - cli/session/repl_io.rb
     - cli/session/result_display.rb
     - cli/session/signals.rb
-    - cli/session/thinking_indicator.rb
     - cli/session/greeting.rb
     - cli/session/reminders.rb
     # Master::CLI::CommandRegistry -- one file per verb or pipeline stage.

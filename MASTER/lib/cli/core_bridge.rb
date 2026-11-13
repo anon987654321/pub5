@@ -109,7 +109,9 @@ module Master
             model_tier: mode_spec[:model_tier],
             council_required: mode_spec[:council],
           )
-          world = build_world(root: workspace_root, container:, capabilities:, network: network_client(container), probe: probe_policy)
+          world = build_world(root: workspace_root, container:, capabilities:, network: network_client(container), probe: probe_policy,
+                              browser: browser_broker(container, capabilities:))
+          browser = world.browser
           mission.transition!(:execute)
           effect_observer = build_effect_observer(
             bus: lifecycle_bus, mission_id: mission.id, attempt_id: mission_attempt_id(mission),
@@ -125,6 +127,13 @@ module Master
         rescue StandardError => e
           defer_mission_on_error(mission, e)
           raise
+        ensure
+          # Every browser session this conversation opened is stopped here, on
+          # the success path, the error path and a cancellation alike. A fold
+          # that ends mid-navigation must not leave a Chromium process group
+          # behind; the broker owns the process and this is where it is told the
+          # conversation is over.
+          browser&.close_all
         end
       end
 
@@ -164,10 +173,34 @@ module Master
       end
 
       # Only the interactive session sets an asker; see Session#terminal_ask.
-      def build_world(root:, container:, capabilities: Master::Core::Capabilities.for(:fix), network: nil, probe: nil)
+      def build_world(root:, container:, capabilities: Master::Core::Capabilities.for(:fix), network: nil, probe: nil, browser: nil)
         critique_runner = container ? CouncilCrit.runner_for(container) : nil
         Master::Core::World.new(root:, ask: Fiber[:master_terminal_ask], critique_runner:,
-                                undo: container&.fetch(:undo, nil), capabilities:, network:, probe:)
+                                undo: container&.fetch(:undo, nil), capabilities:, network:, probe:, browser:)
+      end
+
+      # The brokered Chromium session, or nil. A browser process is only ever
+      # started for a context whose table allows `:browser`, and the broker
+      # re-checks that capability on every call — so a refused profile gets nil
+      # here and a refusal there. The destination check is the same SSRF guard
+      # the http verb uses, applied before any process starts.
+      def browser_broker(container, capabilities:)
+        return nil unless capabilities.allow?(:browser)
+        return nil unless Master::Io::BrowserBroker::ChromeEngine.available?
+
+        Master::Io::BrowserBroker.new(
+          capabilities:,
+          destination_check: ->(url) { browser_destination_refusal(url) },
+        )
+      end
+
+      def browser_destination_refusal(url)
+        uri = URI(url.to_s)
+        return "only public http(s) URLs are allowed" unless %w[http https].include?(uri.scheme)
+
+        Master::Io::SsrfGuard.pinned_address(uri) ? nil : "refused internal/reserved address"
+      rescue StandardError => e
+        "unreadable destination: #{e.class}"
       end
 
       # MASTER/ is the runtime's own root; the tree the fold edits is the repository

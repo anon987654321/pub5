@@ -72,35 +72,39 @@ module Master
     # Compatibility projection for the nine invariant Law nodes. Their
     # internal order is derived from the node rows in laws.yml. This is not
     # the cross-source authority order, which is owned by soul.yml.
-    # Read directly: this file loads below the boot floor (write_guard ->
-    # mechanical_autofix) before lib/master exists, so Master.laws_document
-    # cannot answer yet. The projection is byte-identical either way.
-    PRECEDENCE_GRAPH = begin
-      laws_path = File.join(ROOT, "data", "laws.yml")
-      document = File.file?(laws_path) ? YAML.safe_load_file(laws_path, aliases: true) : {}
-      nodes = document.filter_map do |_id, row|
-        row["node"].to_s if row.is_a?(Hash) && row["node"]
-      end
-      unless nodes.size == 9 && nodes.uniq == nodes
-        raise IntegrityError, "laws.yml must declare exactly nine unique constitutional nodes"
+    # Derived lazily through invariant_order and Master.laws_document, the one
+    # accessor every other reader routes through: this file loads below the
+    # boot floor (write_guard -> mechanical_autofix) before lib/master exists,
+    # so the graph cannot be a load-time constant. First use is always runtime,
+    # where the accessor is up; the projection is byte-identical either way.
+    class << self
+      def precedence_graph
+        @precedence_graph ||= begin
+          nodes = invariant_order
+          nodes.each_with_index.to_h do |node, index|
+            successor = nodes[index + 1]
+            [node, successor ? [successor].freeze : [].freeze]
+          end.freeze
+        end
       end
 
-      nodes.each_with_index.to_h do |node, index|
-        successor = nodes[index + 1]
-        [node, successor ? [successor].freeze : [].freeze]
-      end.freeze
+      # Canonical machine-readable body. The YAML manifest records body_sha256;
+      # this output is the only place that computes it.
+      def canonical_body
+        @canonical_body ||= JSON.generate(
+          "identity" => IDENTITY,
+          "values" => VALUES,
+          "voice" => VOICE,
+          "judgment" => JUDGMENT,
+          "boundaries" => BOUNDARIES,
+          "precedence_graph" => precedence_graph
+        ).freeze
+      end
+
+      def body_sha256
+        @body_sha256 ||= Digest::SHA256.hexdigest(canonical_body).freeze
+      end
     end
-
-    CANONICAL_BODY = JSON.generate(
-      "identity" => IDENTITY,
-      "values" => VALUES,
-      "voice" => VOICE,
-      "judgment" => JUDGMENT,
-      "boundaries" => BOUNDARIES,
-      "precedence_graph" => PRECEDENCE_GRAPH
-    ).freeze
-
-    BODY_SHA256 = Digest::SHA256.hexdigest(CANONICAL_BODY).freeze
 
     class << self
       # Canonical machine-readable representation. The YAML manifest records
@@ -108,8 +112,8 @@ module Master
       def print(root: ROOT)
         {
           "version" => VERSION,
-          "body" => CANONICAL_BODY,
-          "body_sha256" => BODY_SHA256,
+          "body" => canonical_body,
+          "body_sha256" => body_sha256,
           "precedence" => invariant_order(root:)
         }.freeze
       end
@@ -310,10 +314,10 @@ module Master
         unless manifest.is_a?(Hash) &&
                manifest["schema"] == 1 &&
                manifest["version"] == VERSION &&
-               secure_digest_match?(manifest["body_sha256"], BODY_SHA256)
+               secure_digest_match?(manifest["body_sha256"], body_sha256)
           actual = manifest.is_a?(Hash) ? manifest["body_sha256"].to_s : "missing"
           raise IntegrityError,
-                "soul manifest mismatch: #{path}; expected #{BODY_SHA256}, found #{actual}"
+                "soul manifest mismatch: #{path}; expected #{body_sha256}, found #{actual}"
         end
 
         validate_authority_order!(manifest["authority_order"])

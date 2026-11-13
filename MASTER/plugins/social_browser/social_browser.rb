@@ -200,12 +200,14 @@ module Master
         run_dir = File.join(account_dir, "runs", timestamp_slug)
         FileUtils.mkdir_p(run_dir, mode: 0o700)
 
-        browser = Ferrum::Browser.new(
-          headless:,
-          timeout: 20,
-          window_size: [1280, 900],
-          browser_options: { "user-data-dir" => account_dir },
-        )
+        # The broker owns the process when one was threaded in; the account dir is
+        # this plugin's signed-in profile and stays. The lease is bound to the
+        # provider host the site policy already allowed, so a redirect off that
+        # host is a visible refusal rather than a silent widen. Without a broker
+        # the plugin starts its own driver, as before.
+        lease = broker&.open(host: URI(url.to_s).host, url:, profile: account_dir,
+                             persistent: true, headless:)
+        browser = Ferrum::Browser.new(**driver_options(lease, account_dir, headless))
         page = browser.create_page
         page.go_to(url)
         yield(page, run_dir)
@@ -215,6 +217,16 @@ module Master
         raise Error, "social_browser: navigation failed on #{site}: #{e.message}"
       ensure
         browser&.quit
+        broker&.close(lease.id) if lease
+      end
+
+      def broker = service(:browser_broker)
+
+      def driver_options(lease, account_dir, headless)
+        return { headless:, timeout: 20, window_size: [1280, 900],
+                 browser_options: { "user-data-dir" => account_dir } } unless lease
+
+        { ws_url: lease.cdp_url, timeout: 20, window_size: [1280, 900] }
       end
 
       def resolve_runtime(value)

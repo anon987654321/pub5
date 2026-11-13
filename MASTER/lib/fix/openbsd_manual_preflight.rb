@@ -165,13 +165,11 @@ module Master
           raise TaskContract::Invalid, "OpenBSD preflight has no source read inside scope: #{uncovered_scope.join(', ')}"
         end
 
-        interfaces = Array(attributes.fetch("native_interfaces")).map do |entry|
-          page_id = entry.to_s.strip.downcase
-          unless page_id.match?(/\A[a-z0-9_.+-]+\([1-9]\)\z/)
-            raise TaskContract::Invalid, "invalid OpenBSD native interface page: #{entry.inspect}"
-          end
-          page_id
-        end.uniq.sort
+        # Canonicalize spelling and drop duplicates, but preserve the declared
+        # order: the receipt's evidence reads framework-first (rcctl(8) then the
+        # rc startup chain it invokes, shell last), and an alphabetical sort
+        # scrambles that semantic order into ksh(1)-first.
+        interfaces = Array(attributes.fetch("native_interfaces")).map { |entry| canonical_interface_id(entry) }.uniq
 
         manual_rows = Array(attributes.fetch("manual_pages"))
         raise TaskContract::Invalid, "too many OpenBSD manual-page receipts" if manual_rows.size > MAX_MANUAL_PAGES
@@ -453,7 +451,10 @@ module Master
         return "RTFM_FIRST requires an active TaskContract with openbsd_preflight before native use" unless contract
 
         preflight = contract.openbsd_preflight
-        return "RTFM_FIRST requires complete target-release manuals before this native operation" unless preflight
+        unless preflight
+          return "RTFM_FIRST requires complete target-release manuals in " \
+                 "openbsd_preflight before this native operation"
+        end
         if remote
           target_host = ssh_destination(argv)
           accepted_hosts = [preflight.fetch("hostname").to_s.downcase]
@@ -489,10 +490,26 @@ module Master
         argv = Array(ssh_argv).map(&:to_s)
         raise TaskContract::Invalid, "SSH preflight requires ssh as argv[0]" unless File.basename(argv.first.to_s) == "ssh"
 
+        # The operator adapter is bound to the OpenBSD endpoint, but the same
+        # boundary carries unrelated SSH (git remotes, arbitrary hosts). Forcing
+        # remote for every destination reclassified github.com as OpenBSD work;
+        # force it only for a destination that names the operator target: the
+        # canonical hosts, an alias the receipt declares, or an openbsd-named
+        # private alias. Everything else keeps the plain command semantics.
+        return unless operator_ssh_target?(argv, contract)
+
         refusal_for_command(
           command: Shellwords.join(argv + [remote_command.to_s]),
           contract:, repo_root:, receipt_path:, force_remote: true
         )
+      end
+
+      def operator_ssh_target?(argv, contract)
+        destination = ssh_destination(argv).to_s.downcase
+        return true if openbsd_ssh_command?(argv) || destination.match?(/openbsd/)
+
+        declared = Array(contract&.openbsd_preflight&.fetch("ssh_aliases", [])) + HOST_IDENTITY_ALIASES.values.flatten
+        declared.any? { |entry| entry.to_s.downcase == destination }
       end
 
       def ssh_remote_command_tokens(argv)
@@ -792,30 +809,71 @@ module Master
 
       def openbsd_write_target(command, argv)
         tokens = Array(argv).map(&:to_s)
-        redirects = []
-        tokens.each_with_index do |token, index|
-          if %w[> >> >| >&].include?(token)
-            redirects << tokens[index + 1].to_s
-          elsif token.match?(/\A\d*(?:>>?|>\|)/)
-            target = token.sub(/\A\d*(?:>>?|>\|)/, "")
-            redirects << target unless target.empty?
-          elsif token.match?(/\A&>>?/)
-            target = token.sub(/\A&>>?/, "")
-            redirects << target unless target.empty?
-          end
-        end
-        redirect = redirects.find { |target| target.include?("OPENBSD/") }
+        redirect = openbsd_redirect_targets(tokens).find { |target| target.include?("OPENBSD/") }
         return redirect if redirect
 
         mentions = command.to_s.scan(
           %r{(?<![A-Za-z0-9_])(?:/[^\s"';&|()]+)?OPENBSD/[^\s"';&|)]+}
         ).map { |path| path.sub(/[),;]+\z/, "") }.uniq
         return if mentions.empty?
-        return mentions.first if tokens.any? { |token| WRITE_OPENBSD_COMMANDS.include?(File.basename(token)) }
-        return mentions.first if tokens.any? { |token| token == "-i" || token.start_with?("-i") && token.length > 2 }
+        target = mentions.first
+        return target if tokens.any? { |token| write_or_inplace_option?(token) }
 
         return if openbsd_read_only_command?(tokens)
-        mentions.first
+        # Executing a tracked script through an interpreter is a source-read
+        # case, not an edit: the script flow below demands the receipt for the
+        # script's own path ("OpenBSD path"), so an interpreter's script
+        # argument must not short-circuit this method into the write refusal.
+        return if interpreter_script_argument?(tokens, target)
+        target
+      end
+
+      def write_or_inplace_option?(token)
+        WRITE_OPENBSD_COMMANDS.include?(File.basename(token)) ||
+          token == "-i" || token.start_with?("-i") && token.length > 2
+      end
+
+      # The remote command arrives as one quoted SSH token, so shellsplit every
+      # token before matching an interpreter against its script argument.
+      def interpreter_script_argument?(tokens, target)
+        interpreters = %w[zsh ksh sh bash ruby]
+        words = tokens.flat_map { |token| remote_command_words(token) }
+        words.each_cons(2).any? do |pair|
+          interpreters.include?(File.basename(pair.first)) && pair.last == target
+        end
+      end
+
+      def remote_command_words(token)
+        text = token.to_s
+        Shellwords.shellsplit(text)
+      rescue StandardError
+        [text]
+      end
+
+      # Canonicalize one declared interface to its manual-page id, refusing
+      # anything outside the page(section) shape.
+      def canonical_interface_id(entry)
+        page_id = entry.to_s.strip.downcase
+        return page_id if page_id.match?(/\A[a-z0-9_.+-]+\([1-9]\)\z/)
+
+        raise TaskContract::Invalid, "invalid OpenBSD native interface page: #{entry.inspect}"
+      end
+
+      def openbsd_redirect_targets(tokens)
+        tokens.each_index.filter_map { |index| redirect_from(tokens, index) }
+      end
+
+      def redirect_from(tokens, index)
+        token = tokens[index].to_s
+        return tokens[index + 1].to_s if %w[> >> >| >&].include?(token)
+
+        redirect_stem(token)
+      end
+
+      def redirect_stem(token)
+        match = token.match(/\A(?:\d*(?:>>?|>\|)|&>>?)/)
+        stem = match&.post_match
+        stem unless stem.is_a?(String) && stem.empty?
       end
 
       def openbsd_read_only_command?(tokens)

@@ -334,22 +334,35 @@ module Master
         end
       end
 
+      # The broker owns the Chromium process when one was threaded in, so this
+      # plugin attaches to the lease's CDP endpoint instead of starting its own
+      # browser. The persistent profile directory stays this plugin's, because a
+      # signed-in session's storage is the plugin's contract; only the process
+      # and its lifecycle move to the broker. Without a broker the plugin keeps
+      # its own driver, which is what its focused tests exercise.
       def with_browser(directory, host, headless:)
         require_ferrum!
         profile = File.join(directory, "profile")
         secure_directory(profile)
-        options = Master::Io::WebBrowse::BROWSER_OPTIONS.merge("user-data-dir" => profile)
-        browser = Ferrum::Browser.new(
-          headless:,
-          timeout: Master::Io::WebBrowse::TIMEOUT,
-          process_timeout: Master::Io::WebBrowse::TIMEOUT,
-          browser_options: options,
-        )
+        lease = broker&.open(host: host.to_s.downcase, url: nil)
+        browser = Ferrum::Browser.new(**driver_options(lease, profile:, headless:))
         page = browser.create_page
         transport.secure_page(page, allowed_host: host)
         yield page
       ensure
         browser&.quit
+        broker&.close(lease.id) if lease
+      end
+
+      def broker = service(:browser_broker)
+
+      def driver_options(lease, profile:, headless:)
+        return { headless:, timeout: Master::Io::WebBrowse::TIMEOUT,
+                 process_timeout: Master::Io::WebBrowse::TIMEOUT,
+                 browser_options: Master::Io::WebBrowse::BROWSER_OPTIONS.merge("user-data-dir" => profile) } unless lease
+
+        { ws_url: lease.cdp_url, timeout: Master::Io::WebBrowse::TIMEOUT,
+          process_timeout: Master::Io::WebBrowse::TIMEOUT }
       end
 
       def navigate(page, uri)

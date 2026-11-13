@@ -97,6 +97,23 @@ exponentially; `permanent` fails fast; `ambiguous` stops and asks a human. A hel
 its holder — wait, stop that run, or let `bin/cleanup` sweep stale `.lock` files. A stopped run
 stays resumable from its journal and is never reported as a successful one. An incompatible Ruby is reported with its actual version before any other repair; no upper version bound is imposed. A skipped instrument stays INCONCLUSIVE, never PASS.
 
+## OpenBSD Amsterdam hosting boundary
+
+OpenBSD Amsterdam is the VPS provider for production. The live topology has two distinct machines:
+
+- **Hypervisor host: `server4.openbsd.amsterdam`.** This is the provider-side VMM host. SSH to it on TCP port `31415` as `dev`; this is the management and recovery route. Host-side `vmctl` controls the guest.
+- **Production guest: `vm23`.** This is the OpenBSD VM that runs the applications and services. Normal SSH, deploys, service work and application operations belong on this guest, using the aliases and access path in [OPENBSD/RUNBOOK.md](../OPENBSD/RUNBOOK.md).
+
+These names are not interchangeable: `server4` is the machine that hosts the virtual machine; `vm23` is the virtual machine itself. Do not describe the hypervisor as the production guest or run application workloads on the hypervisor.
+
+**Choose the access path by the guest's condition.** When `vm23` boots and accepts SSH, connect to the guest and use the normal runbook. When `vm23` is down, unreachable, or cannot complete boot, connect to `server4` on port `31415` and use the host-side `vmctl` and console recovery procedures for `vm23`. That host path exists precisely because guest SSH is unavailable during a VM failure. Console, stop, start and reboot operations can disrupt production; follow the runbook's recovery-only gates and obtain the required human approval. Never attempt to solve a failed guest boot by treating `vm23` as the host, and never assume guest-side `vmctl` can manage the hypervisor.
+
+The provider's 2025-09-27 onboarding email records an earlier allocation: `vm08` on `server27.openbsd.amsterdam`. That is historical provisioning information, not the current pub5 topology or a valid recovery target. Current host topology, SSH aliases, console procedures and VM identity are owned by [OPENBSD/RUNBOOK.md](../OPENBSD/RUNBOOK.md) and the checked-in deployment configuration.
+
+The provider's onboarding instructions describe guest SSH separately from hypervisor SSH on TCP port `31415`, using the same operator account and SSH key, with `vmctl` available on the hypervisor for VM management. The provider explicitly warned that it cannot start a VM after full-disk encryption (FDE) is enabled. Treat FDE as a recovery-design decision, not a routine hardening toggle: before enabling it, verify the provider's current boot and console capabilities, document an operator-controlled unlock and recovery path, and prove recovery after a stop or host restart. Without that proof, mark the operation BLOCKED.
+
+The onboarding email also supplied an initial dual-stack address allocation and payment instructions. Those are not copied here: network assignments must be checked against the live host and DNS, while billing links, personal contact details and credentials do not belong in repository policy. Backup, reverse-DNS and onboarding procedures are provider-specific; use the provider's current [onboarding](https://openbsd.amsterdam/onboard.html), [backup](https://openbsd.amsterdam/backup.html) and [PTR](https://openbsd.amsterdam/ptr.html) documentation, then verify the actual result. A provider backup feature is not a substitute for an independently held, checksummed backup and a tested restore.
+
 ## External assessment and business direction
 
 MASTER's competition is not another model; it is the ungoverned script. Coding agents write fast and prove little: changes land without evidence, failures stay silent, and history is a log, not a constitution. Vendor-bound assistants inherit one model's limits and one vendor's roadmap. The scarce asset is not intelligence but trustworthy delivery — work that names its authority, measures before it declares done, and stops when the evidence is against it.

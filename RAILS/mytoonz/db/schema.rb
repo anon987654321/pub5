@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_09_120000) do
+ActiveRecord::Schema[8.2].define(version: 2026_11_13_123000) do
   create_table "comic_strips", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.json "image_urls"
     t.text "prompt", null: false
+    t.datetime "provider_consent_at"
     t.string "prediction_id"
     t.string "status", default: "pending", null: false
     t.string "style", default: "comic", null: false

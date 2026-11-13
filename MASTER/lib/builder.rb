@@ -58,15 +58,17 @@ module Master
       "WebFetch" => ->(r, i) { Io::WebFetch.new(governor: i[:governor], event_bus: i[:bus]) },
       "WebSearch" => ->(r, i) { Io::WebSearch.new(governor: i[:governor], event_bus: i[:bus]) },
       "HostFiles" => ->(_r, i) { Io::HostFiles.new(governor: i[:governor], event_bus: i[:bus]) },
-      "WebBrowse" => ->(_r, i) { Io::WebBrowse.new(governor: i[:governor], event_bus: i[:bus]) },
+      "WebBrowse" => ->(_r, i) { Io::WebBrowse.new(governor: i[:governor], event_bus: i[:bus], broker: i[:browser_broker]) },
       "ExternalAudit" => ->(r, i) {
-        browser = Io::BrowserAgent.new(root: i.fetch(:workspace_root, r), governor: i[:governor], event_bus: i[:bus])
+        browser = Io::BrowserAgent.new(root: i.fetch(:workspace_root, r), governor: i[:governor], event_bus: i[:bus],
+                                       broker: i[:browser_broker])
         Io::ExternalAudit.new(governor: i[:governor], event_bus: i[:bus], browser:)
       },
       "VulCheck" => ->(_r, i) { Io::VulCheck.new(governor: i[:governor], event_bus: i[:bus]) },
       "Nmap" => ->(r, i) { Io::Nmap.new(root: i.fetch(:workspace_root, r), governor: i[:governor], event_bus: i[:bus]) },
       "Browser" => ->(r, i) {
-        Io::BrowserAgent.new(root: i.fetch(:workspace_root, r), governor: i[:governor], event_bus: i[:bus])
+        Io::BrowserAgent.new(root: i.fetch(:workspace_root, r), governor: i[:governor], event_bus: i[:bus],
+                             broker: i[:browser_broker])
       },
       "Lovdata" => ->(_r, i) { Io::Lovdata.new(governor: i[:governor], event_bus: i[:bus]) },
       "Linguist" => ->(_r, i) { Io::Linguist.new(governor: i[:governor], event_bus: i[:bus]) },
@@ -75,7 +77,7 @@ module Master
       "YouTubeTranscript" => ->(_r, i) { Io::YoutubeTranscript.new(governor: i[:governor], event_bus: i[:bus]) },
       "GitHubRepoMiner" => ->(_r, i) { Io::GitHubRepoMiner.new(governor: i[:governor], event_bus: i[:bus]) },
       "ArxivResearch" => ->(_r, i) { Io::ArxivResearch.new(governor: i[:governor], event_bus: i[:bus]) },
-      "PluginObserve" => ->(_r, i) { Io::PluginObserve.new(governor: i[:governor], event_bus: i[:bus]) },
+      "PluginObserve" => ->(_r, i) { Io::PluginObserve.new(governor: i[:governor], event_bus: i[:bus], broker: i[:browser_broker]) },
       "AssistantTasks" => ->(r, i) { Io::AssistantTasks.new(root: r, governor: i[:governor], event_bus: i[:bus]) },
       "CapabilityCatalog" => ->(r, i) { Io::CapabilityCatalog.new(root: r, governor: i[:governor], event_bus: i[:bus]) },
       "Clean" => ->(r, i) { Io::Clean.new(root: i.fetch(:workspace_root, r), governor: i[:governor], event_bus: i[:bus]) },
@@ -140,7 +142,20 @@ module Master
       ecology = Review::RepoEcology.new(root: workspace, event_bus: bus, code_index:)
       subscribe_ecology_reindex(bus:, ecology:)
       diag = Trace::Diag.new(homeostat: loop_c[:homeostat], breaker: reach[:breaker], logging: trace[:logging], event_bus: bus)
-      { renderer:, output_check:, output_guard:, code_index:, reference_graph:, ecology:, diag:, workspace_root: workspace }
+      { renderer:, output_check:, output_guard:, code_index:, reference_graph:, ecology:, diag:, workspace_root: workspace,
+        browser_broker: build_browser_broker(workspace) }
+    end
+
+    # One broker per boot, so the tool path and the fold path lease from the same
+    # owner and a session opened by either is reaped by the same shutdown. The
+    # broker defaults to the SSRF destination guard, so a tool-path lease cannot
+    # reach an internal address even though the tool catalogue, not Core's
+    # capability table, is what enabled the Browser row. The Governor still
+    # requires fresh consent per action.
+    def build_browser_broker(_root)
+      return nil unless Io::BrowserBroker::ChromeEngine.available?
+
+      Io::BrowserBroker.new(capabilities: Master::Core::Capabilities.for(:fix))
     end
 
     def subscribe_ecology_reindex(bus:, ecology:)

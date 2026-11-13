@@ -28,6 +28,7 @@ module Master
       def initialize(...)
         super
         @browsers = {}
+        @session_hosts = {}
       end
 
       def call(action:, **args)
@@ -75,7 +76,7 @@ module Master
 
       def open(session:, url:, headless: false, **)
         validate_url!(url)
-        with_browser(session:, headless:) do |page, run_dir|
+        with_browser(session:, headless:, url:) do |page, run_dir|
           page.go_to(url.to_s)
           wait_for_idle(page)
           stop_on_challenge!(page)
@@ -193,19 +194,20 @@ module Master
         end
       end
 
-      def with_browser(session:, headless:)
+      def with_browser(session:, headless:, url: nil)
         require_ferrum!
         name = safe_session_name(session)
         dir = File.join(session_root, name)
         run_dir = File.join(dir, "runs", timestamp_slug)
         FileUtils.mkdir_p(run_dir, mode: 0o700)
 
-        browser = Ferrum::Browser.new(
-          headless:,
-          timeout: 30,
-          window_size: [1440, 1000],
-          browser_options: { "user-data-dir" => dir },
-        )
+        # The broker owns the process when one was threaded in and the session has
+        # a destination host (recorded by the last validated URL). The session
+        # profile dir is this plugin's signed-in storage and stays. A session with
+        # no known host — the pre-navigation login/fill/click flows — falls back to
+        # this plugin's own driver, as before.
+        lease = broker&.open(host: session_host(session, url), profile: dir, persistent: true, headless:) if host_known?(session, url)
+        browser = Ferrum::Browser.new(**driver_options(lease, dir:, headless:))
         page = browser.create_page
         yield(page, run_dir)
       rescue Ferrum::TimeoutError => e
@@ -214,6 +216,28 @@ module Master
         raise Error, "travel_browser: browser navigation failed: #{e.message}"
       ensure
         browser&.quit
+        broker&.close(lease.id) if lease
+      end
+
+      def broker = service(:browser_broker)
+
+      # Travel sessions have no fixed provider host; the lease binds to the host
+      # of the last URL this plugin validated for the session. `@session_hosts`
+      # records that per session, so a booking flow that moves hosts is a visible
+      # change rather than a silent widen.
+      def host_known?(session, url) = !(url || @session_hosts[session.to_s]).to_s.empty?
+
+      def session_host(session, url)
+        host = url ? URI(url.to_s).host : @session_hosts[session.to_s]
+        @session_hosts[session.to_s] = host
+        host.to_s
+      end
+
+      def driver_options(lease, dir:, headless:)
+        return { headless:, timeout: 30, window_size: [1440, 1000],
+                 browser_options: { "user-data-dir" => dir } } unless lease
+
+        { ws_url: lease.cdp_url, timeout: 30, window_size: [1440, 1000] }
       end
 
       def validate_url!(value)

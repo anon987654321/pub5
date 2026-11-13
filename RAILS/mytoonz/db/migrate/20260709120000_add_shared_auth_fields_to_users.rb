@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class AddSharedAuthFieldsToUsers < ActiveRecord::Migration[8.1]
+class AddSharedAuthFieldsToUsers < ActiveRecord::Migration[8.2]
   def change
     add_column :users, :remember_token, :string unless column_exists?(:users, :remember_token)
     add_column :users, :remember_token_expires_at, :datetime unless column_exists?(:users, :remember_token_expires_at)

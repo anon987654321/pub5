@@ -40,7 +40,7 @@ module Master::Core
     # pops that journal's newest entry, so a fold write that records nothing
     # leaves /undo reverting an older write instead. Injected, because core
     # reaches nothing in lib/.
-    def initialize(root:, ask: nil, critique_runner: nil, undo: nil, capabilities: Capabilities.for(:fix), network: nil, probe: nil)
+    def initialize(root:, ask: nil, critique_runner: nil, undo: nil, capabilities: Capabilities.for(:fix), network: nil, probe: nil, browser: nil)
       @root = File.expand_path(root)
       @ask = ask
       @critique_runner = critique_runner
@@ -48,6 +48,18 @@ module Master::Core
       @capabilities = capabilities
       @network = network
       @probe = probe
+      @browser = browser
+    end
+
+    # The Core-owned browser broker, or nil. Injected for the same reason
+    # `network` is: Core reaches nothing in lib/, so the process owner arrives
+    # from outside and only a context whose table allows `:browser` is handed
+    # one. An adapter asks here; it never constructs a browser itself.
+    attr_reader :browser
+
+    # True when a brokered browser session can be opened in this context.
+    def browser?
+      @capabilities.allow?(:browser) && !@browser.nil?
     end
 
     # The model only sees effects this context can actually attempt. The

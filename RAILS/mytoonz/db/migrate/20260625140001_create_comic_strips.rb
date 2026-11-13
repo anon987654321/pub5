@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class CreateComicStrips < ActiveRecord::Migration[8.1]
+class CreateComicStrips < ActiveRecord::Migration[8.2]
   def change
     create_table :comic_strips do |t|
       t.references :user, null: false, foreign_key: true

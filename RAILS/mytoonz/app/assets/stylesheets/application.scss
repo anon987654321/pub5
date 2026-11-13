@@ -51,6 +51,17 @@ nav a[aria-current="page"] {
   border-color: var(--accent);
 }
 
+.provider-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  line-height: 1.45;
+}
+
+.provider-consent input {
+  margin-top: 0.2rem;
+}
+
 .comic-grid {
   display: grid;
   gap: 1.5rem;

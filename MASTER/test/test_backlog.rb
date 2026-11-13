@@ -264,12 +264,12 @@ class TestBacklog < Minitest::Test
     assert_equal "focused_tests", focused.fetch(:proof_type)
     assert_equal "MASTER", focused.fetch(:cwd_relative)
     assert_equal "1", focused.fetch(:env).fetch("MASTER_TEST_JOBS")
-    assert_equal "ruby_bundle", focused.fetch(:launcher)
+    assert_equal :ruby_bundle, focused.fetch(:launcher)
     assert_includes focused.fetch(:argv), File.join(Backlog::MASTER_ROOT, "test/test_fix_kernel.rb")
 
     full = map.execution_spec("rake test", tree: "MASTER", repo_root: repository)
     assert_equal "full_suite", full.fetch(:proof_type)
-    assert_equal "bundle", full.fetch(:launcher)
+    assert_equal :bundle, full.fetch(:launcher)
     assert_equal ["rake", "test"], full.fetch(:argv)
 
     check = map.execution_spec(
@@ -277,7 +277,7 @@ class TestBacklog < Minitest::Test
       tree: "MASTER", repo_root: repository
     )
     assert_equal "law_assessment", check.fetch(:proof_type)
-    assert_equal "ruby_bundle", check.fetch(:launcher)
+    assert_equal :ruby_bundle, check.fetch(:launcher)
 
     refute map.execution_spec(
       "MASTER/bin/operator check --tree=MASTER", tree: "MASTER", repo_root: repository
