@@ -111,6 +111,19 @@ class ZapTest < Minitest::Test
     end
   end
 
+  def test_force_mode_refuses_to_kill_openbsd_vmd
+    output = StringIO.new
+    errors = StringIO.new
+    zap = Zap.new(["-f", "vmd"], out: output, err: errors)
+    zap.define_singleton_method(:openbsd?) { true }
+    zap.define_singleton_method(:processes) do
+      [{ pid: 123_456, command: "/usr/sbin/vmd -f /etc/vm.conf", identity: nil }]
+    end
+
+    assert_equal 2, zap.run
+    assert_includes errors.string, "vmctl stop <vm>"
+  end
+
   def test_classic_signal_spelling_is_supported
     marker = "zap-worker-#{Process.pid}-#{object_id}"
     child = Process.spawn(RbConfig.ruby, "-e", "sleep 30 # #{marker}")
