@@ -5,6 +5,8 @@ require "tmpdir"
 require "json"
 require "open3"
 require "rbconfig"
+require "thread"
+require "timeout"
 
 class TestRunJournalLifecycle < Minitest::Test
   class RecordingBus
@@ -66,6 +68,86 @@ class TestRunJournalLifecycle < Minitest::Test
 
       File.write(path, "tampered\n")
       assert_equal "checksum_mismatch", Master::Fix::RunJournal.new(root:, bus:).verify_architecture_report(run.fetch("id")).fetch("status")
+    end
+  end
+
+  def test_architecture_report_cannot_be_pruned_between_write_and_receipt_indexing
+    Dir.mktmpdir("master-architecture-prune-race") do |root|
+      bus = RecordingBus.new
+      journal = Master::Fix::RunJournal.new(root:, bus:)
+      run = start_journal(root, bus)
+      report = {
+        "schema_version" => 2, "target" => "MASTER", "status" => "RUNNING",
+        "targets" => [{ "tree" => "MASTER", "status" => "COMPLETE", "accepted" => 0, "candidates" => [] }],
+        "brief" => "Publication remains recoverable."
+      }
+      provenance = { "source_digest" => "a" * 64, "scope_digest" => "b" * 64,
+                     "law_digest" => "c" * 64, "identity_digest" => "d" * 64 }
+      artifact_written = Queue.new
+      continue_writer = Queue.new
+      original_writer = journal.method(:write_atomic)
+      journal.define_singleton_method(:write_atomic) do |file_path, payload, **options|
+        result = original_writer.call(file_path, payload, **options)
+        if file_path.to_s.include?(File.join(".master", "fix_architecture"))
+          artifact_written << true
+          continue_writer.pop
+        end
+        result
+      end
+
+      writer = Thread.new do
+        journal.persist_architecture_report(
+          run.fetch("id"), target: File.join(root, "MASTER"), report:, provenance:
+        )
+      end
+      Timeout.timeout(5) { artifact_written.pop }
+
+      pruner_started = Queue.new
+      pruner = Thread.new do
+        pruner_started << true
+        journal.prune_architecture_reports!
+      end
+      pruner_started.pop
+      assert_nil pruner.join(0.1), "pruner passed the journal lock while publication was incomplete"
+
+      continue_writer << true
+      receipt = writer.value
+      pruner.value
+
+      assert File.file?(File.join(root, receipt.fetch("path")))
+      assert_equal "verified", journal.verify_architecture_report(run.fetch("id")).fetch("status")
+    ensure
+      continue_writer << true if continue_writer && writer&.alive?
+      writer&.join(5)
+      pruner&.join(5)
+    end
+  end
+
+  def test_assessment_pruner_keeps_current_receipts_even_with_stale_keep_ids
+    Dir.mktmpdir("master-assessment-stale-prune") do |root|
+      bus = RecordingBus.new
+      journal = Master::Fix::RunJournal.new(root:, bus:)
+      run = start_journal(root, bus)
+      report = {
+        "status" => "complete",
+        "ledger" => { "summary" => { "expected_cells" => 0 }, "cells" => [] },
+        "cells" => [],
+        "dimensions" => {},
+      }
+      receipt = journal.persist_assessment_report(
+        run.fetch("id"), target: File.join(root, "MASTER"), report:
+      )
+      current_path = File.join(root, receipt.fetch("path"))
+      orphan_id = "f" * 20
+      orphan_path = File.join(root, ".master", "fix_assessments", "#{orphan_id}.json")
+      File.write(orphan_path, "{}\\n")
+      File.chmod(0o600, orphan_path)
+
+      journal.prune_assessment_reports!(keep_ids: [])
+
+      assert File.file?(current_path), "a stale keep_ids argument must not delete a currently indexed receipt"
+      refute File.exist?(orphan_path), "unreferenced generated artifacts should still be reclaimed"
+      assert_equal "verified", journal.verify_assessment_report(run.fetch("id")).fetch("status")
     end
   end
 
