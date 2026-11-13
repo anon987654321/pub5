@@ -9,6 +9,41 @@ require_relative "../lib/fix/transaction"
 class TestTaskContract < Minitest::Test
   CONTRACT = Master::Fix::TaskContract
 
+  def test_compatibility_contract_is_bounded_to_the_requested_directory
+    Dir.mktmpdir do |root|
+      FileUtils.mkdir_p(File.join(root, "RAILS", "amber"))
+      contract = CONTRACT.for_target(
+        target: File.join(root, "RAILS", "amber"),
+        root:
+      )
+
+      assert_equal ["RAILS/amber/**"], contract.scope
+      assert CONTRACT.covers?("RAILS/amber/app/models/item.rb", scope: contract.scope)
+      refute CONTRACT.covers?("RAILS/brgen/app/models/item.rb", scope: contract.scope)
+      assert_empty contract.new_paths
+      assert_includes contract.preserve, "visual_identity"
+    end
+  end
+
+  def test_compatibility_root_contract_covers_shallow_and_nested_files
+    Dir.mktmpdir do |root|
+      contract = CONTRACT.for_target(target: root, root:)
+
+      assert CONTRACT.covers?("README.md", scope: contract.scope)
+      assert CONTRACT.covers?("MASTER/lib/fix/kernel.rb", scope: contract.scope)
+      assert_empty contract.new_paths
+    end
+  end
+
+  def test_compatibility_contract_refuses_targets_outside_its_root
+    Dir.mktmpdir do |root|
+      outside = File.expand_path("../outside.rb", root)
+      assert_raises(CONTRACT::Invalid) do
+        CONTRACT.for_target(target: outside, root:)
+      end
+    end
+  end
+
   def test_current_contract_is_nested_and_restored_after_exceptions
     first = CONTRACT.build(intent: "content_only", scope: ["one.txt"], preserve: [], proof: [])
     second = CONTRACT.build(intent: "content_only", scope: ["two.txt"], preserve: [], proof: [])
