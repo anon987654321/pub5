@@ -3,6 +3,7 @@
 require_relative "test_helper"
 require "open3"
 require_relative "../lib/operator/ruby_runner"
+require_relative "../tools/backlog"
 
 class MasterBootTest < Minitest::Test
   def test_boot_loader_requires_all_modules
@@ -79,7 +80,10 @@ class MasterBootTest < Minitest::Test
         end
         fake_git = Object.new
         fake_git.define_singleton_method(:push_target) { ["origin", "HEAD:main"] }
-        status = Object.new.tap { |value| value.define_singleton_method(:success?) { true } }
+        status = Object.new.tap do |value|
+          value.define_singleton_method(:success?) { true }
+          value.define_singleton_method(:exitstatus) { 0 }
+        end
         acceptance_commands = []
         capture = lambda do |*args, **|
           argv = args.reject { |argument| argument.is_a?(Hash) }
@@ -107,7 +111,7 @@ class MasterBootTest < Minitest::Test
                   root: mission_root, container: { commands: { "fix" => command } },
                   mission: queued.record, repo_root:
                 )
-                assert result.ok?, result.message
+                assert result.ok?, -> { result.message }
               end
             end
           end
@@ -207,7 +211,10 @@ class MasterBootTest < Minitest::Test
         command.define_singleton_method(:call) { |*| "fix done - proof: no proof ran - hard red 0 - soft red 0" }
         fake_git = Object.new
         fake_git.define_singleton_method(:push_target) { ["origin", "HEAD:main"] }
-        status = Object.new.tap { |value| value.define_singleton_method(:success?) { true } }
+        status = Object.new.tap do |value|
+          value.define_singleton_method(:success?) { true }
+          value.define_singleton_method(:exitstatus) { 0 }
+        end
         capture = ->(*, **){ ["git@github.com:owner/pub5.git\n", status] }
 
         Master::Io::GitOperations.stub(:new, ->(_root) { fake_git }) do

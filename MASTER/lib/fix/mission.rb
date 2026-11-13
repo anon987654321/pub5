@@ -517,7 +517,7 @@ module Master
         text = report.to_s
         return false unless status.to_s == "pass"
         return false unless text.match?(/\bfix done\b/i)
-        return false unless text.match?(/\bproof:\s*(?!no proof ran)/i)
+        return false unless text.match?(/\bproof:\s*(?!\s*no proof ran\b)/i)
         return false unless text.match?(/hard red 0\b/i)
         return false if text.match?(/unmeasured [1-9]\d*\b/i)
         return false if text.match?(/review\d+:\s*(?:incomplete|complete with open findings)\b/i)

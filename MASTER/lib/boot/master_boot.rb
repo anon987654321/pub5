@@ -182,7 +182,7 @@ module Master
       text = report.to_s
       return false if text.empty? || text.match?(/DELIVERY_FAILED|FIX_FAILED|fix (?:partial|failed|incomplete)\b/i)
       return false unless text.match?(/\bfix done\b/i)
-      return false unless text.match?(/\bproof:\s*(?!no proof ran)/i)
+      return false unless text.match?(/\bproof:\s*(?!\s*no proof ran\b)/i)
       return false unless text.match?(/hard red 0\b/i)
       return false unless text.match?(/soft red 0\b/i)
       return false if text.match?(/unmeasured [1-9]\d*\b/i)

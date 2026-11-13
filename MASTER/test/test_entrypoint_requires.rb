@@ -211,15 +211,21 @@ class TestEntrypointRequires < Minitest::Test
   def gitignored(paths)
     return Set.new if paths.empty?
 
+    # A directory-only pattern (`.constitutional_locks/`) matches the directory
+    # itself only when the query carries a trailing slash; the bare name git
+    # also ignores matches nothing. Ask both ways so a runtime directory is not
+    # reported as a missing literal.
+    queries = paths.flat_map { |path| [path, "#{path}/"] }
     out, status = Open3.capture2e("git", "check-ignore", "--stdin", chdir: REPO_ROOT,
-                                                                    stdin_data: paths.join("\n"))
+                                                                    stdin_data: queries.join("\n"))
     # 0 = some ignored, 1 = none ignored; anything else means git could not answer
     # and this filter must not silently pass the whole list.
     raise "git check-ignore failed: #{out}" unless [0, 1].include?(status.exitstatus)
 
     # check-ignore echoes each path back in the form it was given, and it is
-    # given absolute ones. expand_path against the root leaves those alone and
-    # still resolves a relative answer, so the set matches either way.
+    # given absolute ones. expand_path against the root leaves those alone,
+    # strips the trailing slash, and still resolves a relative answer, so the
+    # set matches either way.
     out.split("\n").map { |path| File.expand_path(path.strip, REPO_ROOT) }.to_set
   end
 
