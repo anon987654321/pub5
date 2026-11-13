@@ -180,8 +180,16 @@ module Master
         # ReadFile tool made one, so every commit of a /fix repair or a RuboCop autocorrect was
         # blocked as stale. A file changed by someone else after this still fails the check.
         def attest_written!(*paths)
+          @commit_mutex.synchronize { attest_written_locked!(paths) }
+        end
+
+        # The caller owns @commit_mutex. written_here runs under it and reaches here
+        # through attest_autofix, so this must not re-enter: a second synchronize on
+        # the same Mutex in one thread raised "deadlock; recursive locking" and failed
+        # the whole delivery as DELIVERY_FAILED whenever an autofix had written a file.
+        def attest_written_locked!(paths)
           files = paths.flatten
-          observe_own_writes(files)
+          observe_own_writes_locked(files)
           return unless @ground_truth
 
           files.each do |path|
@@ -234,7 +242,7 @@ module Master
         def attest_autofix(paths)
           files = paths.map { |path| File.expand_path(path, @root) }
           ours = files.select { |file| AutofixGuard.still_as_written?(file) && !written_unchanged?(file) }
-          attest_written!(ours) unless ours.empty?
+          attest_written_locked!(ours) unless ours.empty?
         end
 
         # Visual refinement may promote structural snapshots only after the

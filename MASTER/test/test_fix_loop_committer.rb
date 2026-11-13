@@ -387,6 +387,22 @@ def autofixed_agents_pass(paths)
   [committer, git]
 end
 
+# attest_autofix runs inside written_here, which finish_transaction already holds @commit_mutex.
+# It reached attest_written!, which synchronized the same Mutex again and raised "deadlock;
+# recursive locking"; finish_transaction turned that into DELIVERY_FAILED and delivered nothing.
+# The 2026-11-13 RAILS run delivered 0 commits this way after its scan autofixed 50 files.
+def test_attesting_an_autofix_write_under_the_commit_mutex_does_not_deadlock
+  paths = %w[lib/ok.rb AGENTS.md]
+  committer, git = autofixed_agents_pass(paths)
+
+  out, = capture_io { committer.finish_transaction(OK_MESSAGE, owned_paths: paths) }
+
+  refute_match(/recursive locking/, out)
+  assert_equal paths.sort, git.commits.flat_map(&:last).sort
+ensure
+  Master::Fix::AutofixGuard.reset!
+end
+
 # A rollback refused over another writer's edit ends the pass's transaction. The committer
 # kept it, and every later fix in the pass failed "transaction not active" uncommitted.
 def test_a_fix_after_the_transaction_ended_still_commits
