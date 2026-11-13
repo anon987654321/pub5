@@ -2,6 +2,9 @@
 
 require "fileutils"
 require "json"
+require "securerandom"
+require_relative "../io/exec"
+require_relative "transaction"
 require_relative "design_edit"
 require_relative "design_prompts"
 require_relative "layout_score_store"
@@ -49,6 +52,7 @@ module Master
       end
 
       def run
+        recover_design_transactions!
         @state = measured(@plan.surfaces)
         survey
         stalls = 0
@@ -214,29 +218,140 @@ module Master
         Array(row[:payload]["elements"]).flat_map { |element| element["key"].to_s.scan(/[.#][\w-]+/) }.uniq
       end
 
-      # Applies the edit, re-renders, judges, and always puts the file back.
+      # Every temporary source mutation is a durable transaction. A process
+      # exit during measurement leaves an open manifest that the next design
+      # run or /fix can recover, rather than an unowned candidate in the tree.
       def trial(edit)
-        original = edit.apply!
-        return unless rebuild(edit)
-
-        after = measured(@fresh.map { |row| row[:surface] })
-        verdict = judge(@fresh, after)
-        @say.call("#{@target[:surface].id}: #{edit.why} -> #{verdict[:text]}")
-        return { edit:, gain: verdict[:gain], after: } if verdict[:ok]
-
-        @rejected << edit.key
-        @undone << "#{edit.why} (#{verdict[:text]})"
-        nil
-      rescue DesignEdit::Refused => e
-        @say.call("#{@target[:surface].id}: edit refused, #{e.message}")
-        nil
-      ensure
-        restore(edit, original) if original
+        transaction = nil
+        candidate = nil
+        begin
+          transaction = begin_candidate_transaction(edit)
+          original = edit.apply!
+          observe_candidate_write!(transaction, edit, original)
+          if rebuild(edit)
+            after = measured(@fresh.map { |row| row[:surface] })
+            verdict = judge(@fresh, after)
+            @say.call("#{@target[:surface].id}: #{edit.why} -> #{verdict[:text]}")
+            if verdict[:ok]
+              candidate = { edit:, gain: verdict[:gain], after: }
+            else
+              @rejected << edit.key
+              @undone << "#{edit.why} (#{verdict[:text]})"
+            end
+          end
+        rescue DesignEdit::Refused => e
+          @say.call("#{@target[:surface].id}: edit refused, #{e.message}")
+        ensure
+          if transaction
+            cleanup = restore_candidate_transaction(transaction, edit)
+            candidate = nil unless cleanup == :restored
+            raise "design candidate rollback or rebuild failed; inspect the transaction before retrying" if cleanup == :failed
+            @say.call("#{@target[:surface].id}: candidate left untouched after a concurrent source change") if cleanup == :conflict
+          end
+        end
+        candidate
       end
 
-      def restore(edit, original)
-        edit.restore(original)
-        rebuild(edit)
+      def begin_candidate_transaction(edit)
+        transaction = Transaction.new(
+          root: @plan.root, paths: [edit.file], id: "design-#{SecureRandom.hex(10)}"
+        )
+        transaction.begin!
+        return transaction if transaction.observed_current?(edit.file)
+
+        transaction.release_conflicts!
+        result = transaction.rollback!
+        raise result.message unless result.ok?
+
+        raise DesignEdit::Refused, "source changed before the candidate was applied"
+      rescue StandardError
+        transaction&.close! if transaction&.active?
+        raise
+      end
+
+      # The text read by DesignEdit#apply! must still be the transaction's
+      # snapshot. Otherwise a concurrent edit arrived between snapshot and
+      # proposal application; restore that exact text and leave it unclaimed.
+      def observe_candidate_write!(transaction, edit, original)
+        expected = transaction.snapshot_content_hash(edit.file)
+        actual = Digest::SHA256.hexdigest(original)
+        unless expected && expected == actual
+          edit.restore(original)
+          transaction.release_conflicts!
+          raise DesignEdit::Refused, "source changed while the candidate was being prepared"
+        end
+
+        result = transaction.observe_paths!([edit.file])
+        raise result.message unless result.ok?
+        raise "candidate write could not be verified by its transaction" unless transaction.observed_current?(edit.file)
+      end
+
+      # A delivery that has a recorded commit must be reconciled, never overwritten.
+      # An open or definitely-uncommitted candidate is rolled back from its snapshot.
+      def restore_candidate_transaction(transaction, edit)
+        return :restored unless transaction&.active?
+
+        if transaction.state == "delivering" && transaction.delivery.pending?
+          transaction.delivery.preserve!
+          return :pending
+        end
+
+        conflict = !transaction.observed_current?(edit.file)
+        transaction.release_conflicts! if conflict
+        result = transaction.rollback!
+        unless result.ok?
+          transaction.close!
+          return :failed
+        end
+
+        return :conflict if conflict
+        rebuild(edit) ? :restored : :failed
+      rescue StandardError => e
+        transaction.close! if transaction&.active?
+        @say.call("#{edit.why}: transaction cleanup failed (#{e.class})")
+        :failed
+      end
+
+      # An interrupted delivery may have committed before the caller received its
+      # result. Reconcile only design-owned manifests; unrelated /fix transactions
+      # remain under FixLoop's lifecycle owner.
+      def recover_design_transactions!
+        directory = File.join(@plan.root, Transaction::ROOT_DIR)
+        return unless File.directory?(directory)
+        raise "design transaction directory is a symlink" if File.symlink?(directory)
+
+        Dir.children(directory).sort.each do |id|
+          next unless id.match?(/\\Adesign-[a-f0-9]{20}\\z/)
+          next unless Transaction::Recovery.persisted?(root: @plan.root, id:)
+
+          result = Transaction::Recovery.recover!(
+            root: @plan.root, id:, release_conflicts: true
+          )
+          raise result.message unless result.ok?
+
+          value = result.value!
+          next unless value.is_a?(Hash) && value[:state] == :delivery_pending
+
+          transaction = Transaction::Recovery.load_persisted(root: @plan.root, id:)
+          head = design_git_head
+          unless head == value[:commit]
+            transaction.close!
+            raise "design delivery #{id} is committed at #{value[:commit]} but HEAD is #{head}; manual review required"
+          end
+
+          finalized = transaction.delivery.finalize!(head:)
+          raise finalized.message unless finalized.ok?
+        end
+      end
+
+      def design_git_head
+        output, status = Master::Io::Exec.capture2e(
+          "git", "-C", @plan.root, "rev-parse", "HEAD", timeout: 5
+        )
+        head = output.to_s.strip
+        raise "design recovery could not verify Git HEAD" unless status.success? && head.match?(/\\A[0-9a-f]{40}\\z/)
+
+        head
       end
 
       # The target plus a few others spread across the set: a stylesheet edit is
@@ -308,43 +423,55 @@ module Master
 
       def keep(number, best)
         edit = best[:edit]
-        original = edit.apply!
-        unless rebuild(edit)
-          @rejected << edit.key
-          restored = restore(edit, original)
-          @say.call(
-            restored ? "#{edit.why}: CSS rebuild failed; the candidate was restored" :
-              "#{edit.why}: source was restored but its CSS rebuild also failed"
-          )
-          outcome = restored ? :failed : :delivery_failed
-          return round(number:, why: edit.why, outcome:, after: @target[:score])
-        end
-
+        transaction = nil
         after = @target[:score] + best[:gain]
-        committed = begin
-          @world.commit_file.call(edit.file, commit_message(edit, after))
+        begin
+          transaction = begin_candidate_transaction(edit)
+          original = edit.apply!
+          observe_candidate_write!(transaction, edit, original)
+          unless rebuild(edit)
+            @rejected << edit.key
+            cleanup = restore_candidate_transaction(transaction, edit)
+            outcome = cleanup == :restored ? :failed : :delivery_failed
+            @say.call("#{edit.why}: CSS rebuild failed; candidate cleanup=#{cleanup}")
+            return round(number:, why: edit.why, outcome:, after: @target[:score])
+          end
+
+          unless transaction.observed_current?(edit.file)
+            cleanup = restore_candidate_transaction(transaction, edit)
+            @say.call("#{edit.why}: source changed before delivery; candidate cleanup=#{cleanup}")
+            return round(number:, why: edit.why, outcome: :failed, after: @target[:score])
+          end
+
+          committed = @world.commit_file.call(edit.file, commit_message(edit, after), transaction)
+          unless committed && transaction.state == "committed" && !transaction.active?
+            @rejected << edit.key
+            @undone << "#{edit.why} (commit refused or missing transaction receipt)"
+            cleanup = restore_candidate_transaction(transaction, edit)
+            @say.call("#{edit.why}: commit did not produce a terminal transaction receipt; cleanup=#{cleanup}")
+            outcome = cleanup == :restored ? :failed : :delivery_failed
+            return round(number:, why: edit.why, outcome:, after: @target[:score])
+          end
+
+          merge(best[:after])
+          round(number:, why: edit.why, outcome: :kept, after:)
         rescue StandardError => e
-          # The commit may have reached Git before its caller failed. Keep the
-          # candidate intact and report ambiguity; restoring now could make the
-          # worktree disagree with a commit that actually landed.
-          @say.call("#{edit.why}: delivery outcome unknown (#{e.class}); inspect Git before retrying")
-          return round(number:, why: edit.why, outcome: :delivery_failed, after:)
+          if transaction&.active? && transaction.state == "delivering" && transaction.delivery.pending?
+            transaction.delivery.preserve!
+            @say.call("#{edit.why}: delivery outcome unknown (#{e.class}); transaction retained for recovery")
+            round(number:, why: edit.why, outcome: :delivery_failed, after:)
+          else
+            cleanup = restore_candidate_transaction(transaction, edit)
+            @say.call("#{edit.why}: candidate delivery failed (#{e.class}); cleanup=#{cleanup}")
+            outcome = cleanup == :restored ? :failed : :delivery_failed
+            round(number:, why: edit.why, outcome:, after: @target[:score])
+          end
+        ensure
+          if transaction&.active?
+            cleanup = restore_candidate_transaction(transaction, edit)
+            @say.call("#{edit.why}: transaction retained after cleanup=#{cleanup}") unless cleanup == :restored
+          end
         end
-
-        unless committed
-          @rejected << edit.key
-          @undone << "#{edit.why} (commit refused)"
-          restored = restore(edit, original)
-          @say.call(
-            restored ? "#{edit.why}: commit refused; the candidate was restored" :
-              "#{edit.why}: commit refused; source restored but CSS rebuild failed"
-          )
-          outcome = restored ? :failed : :delivery_failed
-          return round(number:, why: edit.why, outcome:, after: @target[:score])
-        end
-
-        merge(best[:after])
-        round(number:, why: edit.why, outcome: :kept, after:)
       end
 
       # MASTER's commit shape (data/commit_format.yml), which the commit-msg hook
