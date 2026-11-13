@@ -135,6 +135,43 @@ class TestTriangleOwnership < Minitest::Test
     false
   end
 
+  def test_sibling_reaper_stops_only_a_verified_group_leader
+    Dir.mktmpdir("pub5-agent") do |dir|
+      app_dir = File.join(dir, "RAILS", "brgen")
+      FileUtils.mkdir_p(app_dir)
+      pid = Process.spawn(
+        RbConfig.ruby, "-e", "Signal.trap('TERM', 'IGNORE'); sleep 30",
+        chdir: app_dir, pgroup: true, out: File::NULL, err: File::NULL
+      )
+      waiter = Process.detach(pid)
+      found = { pid:, cwd: app_dir }
+
+      assert Deploy::Triangle.reap_sibling({ name: "brgen", port: 38_182 }, found)
+      refute waiter.alive?
+      refute process_group_alive?(pid)
+    ensure
+      Process.kill("KILL", -pid) rescue nil if defined?(pid) && pid
+      waiter&.join(1) if defined?(waiter)
+    end
+  end
+
+  def test_sibling_reaper_refuses_a_listener_outside_its_own_group
+    Dir.mktmpdir("pub5-agent") do |dir|
+      app_dir = File.join(dir, "RAILS", "brgen")
+      FileUtils.mkdir_p(app_dir)
+      pid = Process.spawn(RbConfig.ruby, "-e", "sleep 30", chdir: app_dir, out: File::NULL, err: File::NULL)
+      waiter = Process.detach(pid)
+
+      refute Deploy::Triangle.reap_sibling(
+        { name: "brgen", port: 38_182 }, { pid:, cwd: app_dir }
+      )
+      assert waiter.alive?, "a non-leader sibling listener must not be signalled"
+    ensure
+      Process.kill("TERM", pid) rescue nil if defined?(pid) && pid
+      waiter&.join(1) if defined?(waiter)
+    end
+  end
+
   def test_only_sibling_agent_worktrees_are_reaped
     sibling = Deploy::Triangle::SIBLING_WORKTREE
 
