@@ -186,8 +186,8 @@ module Master
         Master::Result.err("run interrupted by an elapsed timeout", category: :timeout)
       end
 
-      # Installing the token is where this adapter starts honouring it, so it activates the token
-      # here as well as in Kernel#run_fix_loop; a caller scoping the adapter directly gets the same.
+      # Installing the token is where this adapter starts honouring it. Kernel#run activates
+      # it inside the shared receipt boundary; a caller scoping the adapter directly gets the same.
       def with_cancellation(token)
         previous = @cancellation
         @cancellation = token
