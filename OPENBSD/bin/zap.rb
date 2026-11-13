@@ -124,10 +124,11 @@ class Zap
     args = parser.parse(args)
     return if @help
 
-    raise ArgumentError, "expected one search pattern" unless args.length == 1
+    raise ArgumentError, "expected at most one search pattern" if args.length > 1
 
     @pattern = args.first
-    if @pattern.empty? || @pattern.match?(/[\x00-\x1f\x7f]/)
+    raise ArgumentError, "force mode requires an explicit search pattern" if @force && @pattern.nil?
+    if @pattern && (@pattern.empty? || @pattern.match?(/[\x00-\x1f\x7f]/))
       raise ArgumentError, "search pattern must be non-empty and contain no control characters"
     end
   end
