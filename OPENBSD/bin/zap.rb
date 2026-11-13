@@ -41,7 +41,7 @@ class Zap
       return 2
     end
 
-    if openbsd? && matches.any? { |process| command_name(process[:command]) == "vmd" }
+    if openbsd? && matches.any? { |process| vmd_process?(process) }
       @err.puts "zap: vmd manages virtual machines; use vmctl to stop a guest cleanly"
     end
 
