@@ -464,7 +464,6 @@ module Master
       sections
     end
 
-
     # The typographic law's audit half: the marks the operator-facing
     # strings actually wear. It reads, never writes — a mark set wrong is
     # named so a repair can set it right.
@@ -628,7 +627,6 @@ module Master
       changes == "nothing changed" || (@repair_before && nothing_delivered?(@repair_before))
     end
 
-
     # A crashed repair proves nothing, so the observation's autofix bytes it would have carried go back.
     def discard_unproven_writes = [REPAIR_CRASHED, *put_back_autofix].join("\n")
 
@@ -654,7 +652,6 @@ module Master
     end
 
     def repo_top = Master::REPO_ROOT
-
 
     # In the shared checkout the working tree always holds someone's changes, so "nothing changed"
     # rarely reads true; what this run delivered is its commits and its autofix writes.

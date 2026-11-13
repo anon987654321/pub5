@@ -99,7 +99,6 @@ module Master
         terminal_write(io:, guard:) { |target| target.print(text); target.flush }
       end
 
-
       def run_help(command = nil)
         arg = command.to_s.strip
         text = arg.empty? ? Master::CLI::CommandRegistry.help_summary : Master::CLI::CommandRegistry.help_text(arg)

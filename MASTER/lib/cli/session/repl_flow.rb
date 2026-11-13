@@ -38,7 +38,6 @@ module Master
       module ReplFlow
         private
 
-
         def set_visitor_mode_if_unauthenticated
           # Visitor is a web-request flag, set per request on ai.brgen.no.
           # The local CLI is the operator surface: treating a missing web_token

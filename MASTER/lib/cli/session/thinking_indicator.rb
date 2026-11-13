@@ -31,7 +31,6 @@ module Master
       module ThinkingIndicator
         private
 
-
         # One line that repaints while a turn runs, and above it the turn as a
         # dmesg: each model call, file, command and request the turn makes, as a
         # unit attached to its parent. Routine bus events stay in the event log;
