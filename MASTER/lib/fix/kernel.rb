@@ -8,6 +8,7 @@ require "time"
 require_relative "kernel/lifecycle_journal"
 require_relative "kernel/lifecycle"
 require_relative "task_contract"
+require_relative "terminal_receipt"
 
 module Master
   module Fix
@@ -165,6 +166,51 @@ module Master
             requested:, cancellation:
           )
         end
+      end
+
+      # Return the verified terminal projection for one completed attempt.
+      # A missing terminal row means the run has not finished; callers must not
+      # manufacture a success receipt from an open or interrupted run.
+      def terminal_receipt(run_id:, attempt_id: nil)
+        identifier = run_id.to_s
+        raise ArgumentError, "terminal receipt requires a run ID" if identifier.empty?
+
+        events = verify_log!
+        terminal = events.reverse.find do |row|
+          next false unless row["kind"] == "coordinator_terminal" && row["run_id"] == identifier
+
+          attempt_id.nil? || row.dig("payload", "attempt_id").to_s == attempt_id.to_s
+        end
+        return unless terminal
+
+        selected_attempt = terminal.dig("payload", "attempt_id").to_s
+        started = events.find do |row|
+          row["kind"] == "coordinator_started" &&
+            row["run_id"] == identifier &&
+            row.dig("payload", "attempt_id").to_s == selected_attempt
+        end
+        raise LedgerCorruption, "terminal event has no matching coordinator start" unless started
+
+        repairs = events.select do |row|
+          row["kind"] == "repair_pass" &&
+            row["run_id"] == identifier &&
+            row.dig("payload", "attempt_id").to_s == selected_attempt
+        end
+
+        journal_run = lifecycle_journal.history.find { |row| row["id"] == identifier }
+        assessment = if journal_run && journal_run["assessment_receipt"].is_a?(Hash)
+                       lifecycle_journal.verify_assessment_report(identifier)
+                     else
+                       { "status" => "receipt_missing" }
+                     end
+
+        TerminalReceipt.build(
+          start_event: started,
+          terminal_event: terminal,
+          repair_events: repairs,
+          journal_run:,
+          assessment:
+        )
       end
 
       def verify_log!
