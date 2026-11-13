@@ -1,21 +1,29 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Portable, interactive process killer. Match process command lines, ask for
-# each PID separately, then signal only the processes the operator selects.
-# Linux/Android use /proc; BSD/macOS use ps. No gem or shell interpolation.
+# Ruby port of OpenBSD sysutils/zap: find command lines by substring, ask
+# before signalling each process, and keep process discovery shell-free.
+# Standard library only. Linux uses /proc; OpenBSD and other BSDs use ps.
 
 require "optparse"
 
 class Zap
-  DEFAULT_SIGNAL = "KILL"
+  DEFAULT_SIGNAL = "TERM"
   PROTECTED_PIDS = [0, 1].freeze
+  # These are host-control processes, not ordinary application daemons.
+  # Manage VM guests with vmctl; never terminate the VMM/control console here.
+  OPENBSD_PROTECTED_COMMANDS = %w[vmd vmctl cu].freeze
 
-  def initialize(argv, out: $stdout, err: $stderr, input: $stdin)
+  def initialize(argv, out: $stdout, err: $stderr, input: $stdin,
+                 process_provider: nil, signaler: nil, platform: RUBY_PLATFORM)
     @out = out
     @err = err
     @input = input
+    @process_provider = process_provider
+    @signaler = signaler
+    @platform = platform
     @force = false
+    @dry_run = false
     @help = false
     @signal = Signal.list.fetch(DEFAULT_SIGNAL)
     @signal_label = "SIG#{DEFAULT_SIGNAL}"
@@ -36,17 +44,19 @@ class Zap
       return 0
     end
 
-    if openbsd? && @force && matches.any? { |process| vmd_process?(process) }
-      @err.puts "zap: refusing forced vmd termination; use 'vmctl stop <vm>' for a guest or 'rcctl stop vmd' for the daemon"
-      return 2
-    end
-
-    if openbsd? && matches.any? { |process| vmd_process?(process) }
-      @err.puts "zap: vmd manages virtual machines; use vmctl to stop a guest cleanly"
-    end
-
     failed = false
     matches.each do |process|
+      if protected_process?(process)
+        @err.puts "zap: refusing to signal #{command_name(process[:command])}; use vmctl or the approved VMM recovery procedure"
+        failed = true
+        next
+      end
+
+      if @dry_run
+        @out.puts "zap: would send #{@signal_label} to PID #{process[:pid]} #{process[:command]}"
+        next
+      end
+
       next unless @force || confirm?(process)
 
       unless same_process?(process)
@@ -74,19 +84,21 @@ class Zap
   def parse(argv)
     args = argv.dup
 
-    # Keep the classic zap spelling: zap -TERM pattern and zap -9 pattern,
+    # Keep the classic spelling: zap -TERM pattern and zap -9 pattern,
     # whether the signal appears before or after -f.
     signal_index = args.index do |arg|
-      arg.match?(/\A-(?:[0-9]+|[A-Za-z][A-Za-z0-9]*)\z/) && !%w[-f -s -h].include?(arg)
+      arg.match?(/\A-(?:[0-9]+|[A-Za-z][A-Za-z0-9]*)\z/) &&
+        !%w[-f -s -h].include?(arg)
     end
     set_signal(args.delete_at(signal_index).delete_prefix("-")) if signal_index
 
     parser = OptionParser.new do |opts|
-      opts.banner = "usage: zap [-f] [-s SIGNAL] pattern"
+      opts.banner = "usage: zap [-f] [-s SIGNAL] [--dry-run] pattern"
       opts.on("-f", "--force", "Do not ask; signal every matching process") { @force = true }
-      opts.on("-s SIGNAL", "--signal=SIGNAL", "Signal name or number (default: KILL)") do |value|
+      opts.on("-s SIGNAL", "--signal=SIGNAL", "Signal name or number (default: TERM)") do |value|
         set_signal(value)
       end
+      opts.on("--dry-run", "List matches without signalling") { @dry_run = true }
       opts.on("-h", "--help", "Show this help") { @help = true }
     end
 
@@ -117,31 +129,34 @@ class Zap
 
   def help_text
     <<~HELP
-      usage: zap [-f] [-s SIGNAL] pattern
+      usage: zap [-f] [-s SIGNAL] [--dry-run] pattern
 
       Find process command lines containing pattern and ask about each PID.
-      -f, --force       Skip questions and signal every match.
-      -s, --signal NAME Signal name or number (default: KILL).
-      -h, --help        Show this help.
+      -f, --force        Skip questions and signal every non-protected match.
+      -s SIGNAL          Signal name or number (default: TERM).
+      --dry-run          List matches without sending signals.
+      -h, --help         Show this help.
 
       The classic -SIGNAL spelling is also accepted, for example: zap -TERM ruby.
-      Linux/Android use /proc; OpenBSD, other BSDs and macOS use ps.
-      Uses Ruby's standard library only.
+      Linux uses /proc; OpenBSD and other BSDs use ps. Standard library only.
+      On OpenBSD, vmd, vmctl and cu are protected; use VM recovery controls.
     HELP
   end
 
   def openbsd?
-    RUBY_PLATFORM.include?("openbsd")
+    @platform.include?("openbsd")
   end
 
   def linux_procfs?
-    RUBY_PLATFORM.include?("linux") && File.directory?("/proc/self") &&
+    @platform.include?("linux") && File.directory?("/proc/self") &&
       File.readable?("/proc/self/comm")
   rescue SystemCallError
     false
   end
 
   def processes
+    return @process_provider.call if @process_provider
+
     linux_procfs? ? procfs_processes : ps_processes
   rescue SystemCallError
     ps_processes
@@ -158,7 +173,12 @@ class Zap
       command = proc_command(directory)
       next if command.empty?
 
-      { pid: pid, command: command, identity: proc_start_ticks(directory) }
+      start_ticks = proc_start_ticks(directory)
+      {
+        pid: pid,
+        command: command,
+        identity: start_ticks && [:procfs, start_ticks]
+      }
     rescue Errno::ENOENT, Errno::EACCES, Errno::ESRCH
       nil
     end
@@ -184,8 +204,10 @@ class Zap
   end
 
   def ps_processes
-    output, status = IO.popen([ps_binary, "-ax", "-ww", "-o", "pid=", "-o", "command="], &:read), $?
-    raise "ps failed (#{status&.exitstatus || "unknown status"})" unless status&.success?
+    output, status = run_ps(
+      "-ax", "-ww", "-o", "pid=", "-o", "ppid=", "-o", "start=", "-o", "command="
+    )
+    raise "ps failed (#{status.exitstatus || "unknown status"})" unless status.success?
 
     output.each_line.filter_map do |line|
       process = parse_ps_line(line)
@@ -197,23 +219,31 @@ class Zap
   end
 
   def ps_process(pid)
-    output, status = IO.popen(
-      [ps_binary, "-p", pid.to_s, "-ww", "-o", "pid=", "-o", "command="], &:read
-    ), $?
-    return unless status&.success?
+    output, status = run_ps(
+      "-p", pid.to_s, "-ww", "-o", "pid=", "-o", "ppid=", "-o", "start=", "-o", "command="
+    )
+    return unless status.success?
 
     output.each_line.filter_map { |line| parse_ps_line(line) }.first
   end
 
-  def parse_ps_line(line)
-    match = line.match(/\A\s*([0-9]+)\s+(.+?)\s*\z/)
-    return unless match
+  def run_ps(*arguments)
+    output = IO.popen([ps_binary, *arguments], &:read)
+    [output, $CHILD_STATUS || $?]
+  end
 
-    pid = Integer(match[1], 10)
-    command = match[2].strip
+  def parse_ps_line(line)
+    fields = line.strip.split(/\s+/, 4)
+    return unless fields.length == 4
+    return unless fields[0].match?(/\A[0-9]+\z/) && fields[1].match?(/\A[0-9]+\z/)
+
+    pid = Integer(fields[0], 10)
+    ppid = Integer(fields[1], 10)
+    start = fields[2]
+    command = fields[3].strip
     return if command.empty?
 
-    { pid: pid, command: command, identity: nil }
+    { pid: pid, command: command, identity: [:ps, ppid, start, command] }
   end
 
   def ps_binary
@@ -232,12 +262,12 @@ class Zap
   end
 
   def command_name(command)
-    File.basename(command.to_s.split.first.to_s)
+    token = command.to_s.lstrip.split(/\s+/, 2).first.to_s
+    File.basename(token).sub(/:\z/, "")
   end
 
-  def vmd_process?(process)
-    name = command_name(process[:command])
-    name == "vmd" || name.start_with?("vmd:")
+  def protected_process?(process)
+    openbsd? && OPENBSD_PROTECTED_COMMANDS.include?(command_name(process[:command]))
   end
 
   def confirm?(process)
@@ -247,31 +277,40 @@ class Zap
   end
 
   def same_process?(original)
+    identity = original[:identity]
+    return false unless identity
+
     pid = original.fetch(:pid)
-
-    if linux_procfs? && original[:identity]
+    case identity.first
+    when :procfs
       directory = File.join("/proc", pid.to_s)
-      current_identity = proc_start_ticks(directory)
-      return false unless current_identity
-
-      current_identity == original[:identity]
-    else
+      current_ticks = proc_start_ticks(directory)
+      current_command = proc_command(directory)
+      current_ticks == identity[1] && current_command == original[:command]
+    when :ps
       current = ps_process(pid)
-      current && current[:command] == original[:command]
+      current && current[:identity] == identity
+    else
+      false
     end
   rescue Errno::ESRCH, Errno::ENOENT
     false
   end
 
   def signal_process(process)
-    Process.kill(@signal, process.fetch(:pid))
-    @out.puts "zap: sent #{@signal_label} to PID #{process[:pid]}"
+    pid = process.fetch(:pid)
+    if @signaler
+      @signaler.call(@signal, pid)
+    else
+      Process.kill(@signal, pid)
+    end
+    @out.puts "zap: sent #{@signal_label} to PID #{pid}"
     true
   rescue Errno::ESRCH
-    @out.puts "zap: PID #{process[:pid]} already exited"
+    @out.puts "zap: PID #{pid} already exited"
     true
   rescue Errno::EPERM => e
-    @err.puts "zap: cannot signal PID #{process[:pid]}: #{e.message}"
+    @err.puts "zap: cannot signal PID #{pid}: #{e.message}"
     false
   end
 end
