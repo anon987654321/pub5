@@ -1,0 +1,107 @@
+# STUDIO/lora/guides.yml
+#
+# The recovered pub4 photography notes as runtime data, so the knowledge a
+# renderer or judge needs is loadable rather than prose in a markdown file.
+# Studio::Lora::Guides.load reads this; lora.rb owns the craft vocabularies
+# beside it. Sources: STUDIO/PHOTOGRAPHY.md (2026-08-25), lora/guides/
+# photography.md (2026-10-19), lora/guides/prompting.md (2026-10-10).
+#
+# The one fact the whole file turns on: a portrait fails in four independent
+# layers, and a grade can only reach the last of them. Get geometry, light
+# direction and expression right at generation; leave the optical signature to
+# postpro, which is the tool built for exactly that failure.
+
+# Which layer a failure lives in, and whether the grade can fix it.
+layers:
+  geometry:
+    decided_at: generation
+    grade_can_fix: false
+    rule: >-
+      Focal length does not distort a face; distance does. An 85mm lens is
+      flattering because filling the frame with a head puts the camera 2-3 m
+      back, where the nose is not meaningfully nearer the sensor than the ears.
+      A selfie is an arm's length, roughly 40-70 cm, which is the distortion
+      range, and no grade removes a projection.
+    portrait_distance_m: [2, 3]
+    selfie_distance_cm: [40, 70]
+    opportunity: >-
+      A generated image has no camera in it, so it can keep a selfie's framing
+      and held gaze at a portrait's distance. Ask for the distance, not the lens.
+  light:
+    decided_at: generation
+    grade_can_fix: partial
+    rule: A grade can deepen or lift what the light did; it cannot put a shadow on the other side of a nose.
+    patterns: [butterfly, loop, rembrandt, split]
+    side: { short: slims, broad: widens, even: neutral }
+    catchlights: needed   # a frame without one reads dead
+  expression:
+    decided_at: generation
+    grade_can_fix: false
+    rule: >-
+      People detect a manufactured expression reliably; shoot just after a
+      laugh as the face settles. A LoRA trained on held smiles generates held
+      smiles, so this is a dataset selection rule as much as a prompt one.
+  optical_signature:
+    decided_at: postpro
+    grade_can_fix: true
+    rule: >-
+      Models learn from retouched photography and have no account of subsurface
+      scattering, so skin is too clean and speculars are uniform. Grain,
+      halation and an H&D curve are the opposite of what a diffusion model
+      omits, which is why the grade is the right tool for this layer.
+    ai_tells: [clean_skin, uniform_speculars, perfect_eye_reflections]
+
+# Per-model prompting. A negative prompt does nothing on a guidance-distilled
+# model: state what is wanted, never what to avoid.
+prompting:
+  flux_dev_lora:
+    order: [who, what_they_look_like, where, how_lit, how_shot]
+    guidance: 2.5
+    guidance_range: [2.5, 3.5]
+    steps: [28, 50]
+    steps_final: 45
+    lora_scale: 1.0
+    lora_scale_range: [0.7, 1.3]
+    aspect_ratios: ["4:5", "2:3", "3:4"]
+    go_fast: false            # fp8 is non-deterministic even with a seed
+    negatives: false
+    output: png               # for masters; output_quality is ignored for png
+    skin_terms: "visible pores, natural skin texture, soft window light"
+  wan_i2v_fast:
+    note: The image fixes the look; the prompt names only what moves.
+    order: [subject_action, camera, pace]
+    max_tokens: 512
+    words: [40, 80]
+    motion: "one action and one camera move; a blink, a slight smile, a small head turn"
+    frames: 81               # about 5 s
+    draft: "480p, go_fast on, set a seed"
+  veo_3_1_fast:
+    elements: [subject, action, scene, camera_movement, lens, light, mood]
+    durations: [4, 6, 8]
+    resolution_1080_needs_seconds: 8
+    note: "describe motion and camera, not looks; the image carries identity"
+  kling_v2_1:
+    formula: subject plus movement, optionally background plus movement
+    durations: [5, 10]
+    note: one gesture per clip; keep the movement physically plausible
+    seed: false
+
+# The checks a render has to pass. Identity and expression the operator judges;
+# the rest a tool can.
+checks:
+  identity: a render passes only when its face similarity clears a threshold set from the subject's own references
+  light: the prompt names a direction and a source, and the frame shows catchlights
+  lens: the prompt names a focal length between 50 and 85 mm and a distance
+  grade: exposure and white balance first, skin on the vectorscope, one grade for the whole piece
+  spend: one test frame, reviewed full size, before any batch
+  review: the operator reviews survivors at full size, never on a contact sheet
+
+# How the measurable checks were calibrated, so they can be regenerated.
+calibration:
+  tool: STUDIO/lora/judge.rb
+  regenerate: "ruby STUDIO/lora/judge.rb --calibrate <reference dir>"
+  envelope: >-
+    Floors are the reference minimum and ceilings the reference maximum: the
+    question is "is this worse than any real photograph of her", not "is this
+    better than average". Floors round down and ceilings round up, so the
+    envelope can only grow by less than a millionth.

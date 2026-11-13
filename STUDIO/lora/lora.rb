@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "yaml"
+
 # Consolidated LoRA craft: what a photograph of a subject can be asked for, in
 # words a FLUX.1-dev person LoRA acts on, plus the selfie sittings the series
 # renders. Recovered from the 2026-08/10/19 STUDIO notes (PHOTOGRAPHY.md,
@@ -215,6 +217,23 @@ module Studio
       def self.grade_seed(number)
         10_000 + (Integer(number) * 977)
       end
+    end
+
+    # The recovered photography notes as runtime data (lora/guides.yml): which
+    # layer of a portrait a failure lives in and whether a grade can reach it,
+    # the per-model prompting rules, the checks a render has to pass, and how the
+    # measurable ones were calibrated.
+    module Guides
+      PATH = File.join(__dir__, "guides.yml")
+
+      def self.load
+        @load ||= YAML.safe_load_file(PATH)
+      end
+
+      def self.layers = load.fetch("layers")
+      def self.prompting = load.fetch("prompting")
+      def self.checks = load.fetch("checks")
+      def self.calibration = load.fetch("calibration")
     end
   end
 end
