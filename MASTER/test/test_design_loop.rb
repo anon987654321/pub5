@@ -252,13 +252,13 @@ class TestDesignLoop < Minitest::Test
   def test_interrupted_design_candidate_is_recovered_before_the_next_run
     Dir.mktmpdir do |root|
       path = File.join(root, "app.scss")
-      original = ".card {\\n  padding: 4px;\\n  color: #111;\\n}\\n"
+      original = ".card {\n  padding: 4px;\n  color: #111;\n}\n"
       File.write(path, original)
       transaction = Master::Fix::Transaction.new(
         root:, paths: [path], id: "design-#{'a' * 20}"
       )
       transaction.begin!
-      File.write(path, ".card {\\n  padding: 16px;\\n  color: #111;\\n}\\n")
+      File.write(path, ".card {\n  padding: 16px;\n  color: #111;\n}\n")
       assert transaction.observe_paths!([path]).ok?
       transaction.close! # Simulate the process exiting while the candidate is still open.
 
@@ -298,7 +298,7 @@ class TestDesignLoop < Minitest::Test
     with_sheet do |path|
       stub_scoring do
         world = world_for(path, committed: []).with(
-          commit_file: ->(_file, _message) { false }
+          commit_file: ->(_file, _message, _transaction) { false }
         )
         plan = LOOP::Plan.new(surfaces: HOME_AND_FEED, root: File.dirname(path), rounds: 1, candidates: 1)
         rounds = LOOP.new(plan:, world:).run
