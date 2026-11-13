@@ -46,6 +46,11 @@ module Master
 
         def routed_chain(message, task_type:)
           task = normalize_task_type(task_type || @config.task_type)
+          if message && @model_router
+            task = :chitchat if @model_router.respond_to?(:chitchat_greeting?) &&
+                                @model_router.chitchat_greeting?(message)
+            task = @model_router.classify_intent(message) if task == :general
+          end
           return [] if task == :nsfw && !@model_router
 
           unless @model_router
