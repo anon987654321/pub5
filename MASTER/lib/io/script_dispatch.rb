@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "open3"
+require "json"
 require "shellwords"
 require "rbconfig"
 require "bundler"
@@ -30,6 +31,18 @@ module Master
         "llm_trajectory" => File.join("research", "llm_trajectory.rb"),
       }.freeze
 
+      # The STUDIO tools each expose `api '<json>'`: one request in, one JSON
+      # response out. These are their CLI entrypoints (the file that answers
+      # "api"), which differ from the render entrypoint in TOOL_ENTRYPOINTS for
+      # lora and replicate.
+      API_ENTRYPOINTS = {
+        "dilla" => File.join("dilla", "dilla.rb"),
+        "postpro" => File.join("postpro", "postpro.rb"),
+        "lora" => File.join("lora", "lora.rb"),
+        "replicate" => File.join("replicate", "replicate.rb"),
+        "photograph" => "photograph.rb",
+      }.freeze
+
       def run(root:, tool:, arg: "", env: {})
         name = tool.to_s
         requested_root = File.expand_path(root.to_s.empty? ? Dir.pwd : root)
@@ -46,6 +59,61 @@ module Master
         Result.err("#{tool}: bad arguments: #{e.message}", category: :validation)
       rescue StandardError => e
         Result.err("#{tool}: #{e.class}: #{e.message}", category: :infrastructure)
+      end
+
+      # Call a STUDIO tool's JSON API and return its result. This is the typed
+      # boundary: MASTER passes an action and its arguments and reads a Hash
+      # back, rather than composing flags and parsing human output.
+      #
+      #   ScriptDispatch.call(tool: "lora", action: "subjects")
+      #   ScriptDispatch.call(tool: "postpro", action: "grade",
+      #                       params: { "input" => src, "output" => dst, "preset" => "cinematic" })
+      #
+      # The request travels on stdin, so a large prompt needs no shell quoting.
+      # A non-ok response, a missing entrypoint, a failed parse and a non-zero
+      # exit are each an Err, so a caller checks ok? exactly as with run.
+      def call(tool:, action:, params: {}, root: MasterPaths.repo, timeout: nil)
+        name = tool.to_s
+        script = api_script_path(File.expand_path(root.to_s.empty? ? Dir.pwd : root), name)
+        return Result.err("#{tool}: missing API entrypoint", category: :validation) unless script && File.file?(script)
+
+        request = JSON.generate(params.merge("action" => action.to_s))
+        options = { chdir: working_directory(File.expand_path(root.to_s), script), stdin_data: request }
+        options[:timeout] = timeout if timeout
+        out, status = Master::Io::Exec.capture2e(RbConfig.ruby, script, "api", **options)
+        parse_api_response(tool, out, status)
+      rescue ArgumentError => e
+        Result.err("#{tool}: bad arguments: #{e.message}", category: :validation)
+      rescue StandardError => e
+        Result.err("#{tool}: #{e.class}: #{e.message}", category: :infrastructure)
+      end
+
+      def api_script_path(requested_root, tool)
+        relative = API_ENTRYPOINTS[tool]
+        roots = [requested_root, MasterPaths.repo, MasterPaths.root].uniq
+        candidates = roots.flat_map do |candidate|
+          if relative
+            [File.join(candidate, "STUDIO", relative)]
+          else
+            # An unlisted tool answers the API from its conventional entrypoint.
+            [File.join(candidate, "STUDIO", tool, "#{tool}.rb"), File.join(candidate, "STUDIO", "#{tool}.rb")]
+          end
+        end
+        candidates.find { |path| File.file?(path) }
+      end
+
+      # The tool prints exactly one JSON object; boot chatter, if any, rides
+      # under "output" inside it. A line that does not parse means the boundary
+      # broke, and that is an Err rather than a silent pass.
+      def parse_api_response(tool, out, status)
+        line = out.to_s.lines.map(&:strip).reject(&:empty?).last
+        payload = line && JSON.parse(line)
+        return Result.err("#{tool}: no JSON response (#{failure_detail(status)})", category: :infrastructure) unless payload.is_a?(Hash)
+        return Result.ok(payload["result"]) if payload["ok"]
+
+        Result.err("#{tool}: #{payload['error']}", category: :validation)
+      rescue JSON::ParserError
+        Result.err("#{tool}: unparseable API response: #{out.to_s.strip[0, 300]}", category: :infrastructure)
       end
 
       def failure_detail(status)

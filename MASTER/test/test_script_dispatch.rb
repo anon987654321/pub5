@@ -74,6 +74,66 @@ class TestScriptDispatch < Minitest::Test
     end
   end
 
+  # ScriptDispatch.call speaks each STUDIO tool's JSON API over the subprocess
+  # boundary. These use a stub tool under a temp STUDIO root so the dispatch,
+  # the stdin request and the response parse are proved without a provider.
+  def with_stub_studio(tool, body)
+    Dir.mktmpdir("master-studio-api") do |root|
+      dir = File.join(root, "STUDIO", tool)
+      FileUtils.mkdir_p(dir)
+      File.write(File.join(dir, "#{tool}.rb"), body)
+      yield root
+    end
+  end
+
+  def test_call_returns_the_result_hash_from_an_ok_response
+    with_stub_studio("probe", <<~'RUBY') do |root|
+      require "json"
+      request = JSON.parse($stdin.read)
+      puts JSON.generate("ok" => true, "result" => { "action" => request["action"], "word" => request["word"] })
+    RUBY
+      result = Master::Io::ScriptDispatch.call(root:, tool: "probe", action: "echo", params: { "word" => "hei" })
+
+      assert result.ok?, -> { result.message.to_s }
+      assert_equal({ "action" => "echo", "word" => "hei" }, result.value!)
+    end
+  end
+
+  def test_call_turns_a_non_ok_response_into_an_error
+    with_stub_studio("probe", <<~'RUBY') do |root|
+      require "json"
+      puts JSON.generate("ok" => false, "error" => "nope")
+    RUBY
+      result = Master::Io::ScriptDispatch.call(root:, tool: "probe", action: "boom")
+
+      refute result.ok?
+      assert_match(/probe: nope/, result.message)
+    end
+  end
+
+  def test_call_refuses_a_tool_with_no_api_entrypoint
+    result = Master::Io::ScriptDispatch.call(root: Dir.pwd, tool: "nosuch", action: "x")
+
+    refute result.ok?
+    assert_match(/missing API entrypoint/, result.message)
+  end
+
+  def test_call_turns_unparseable_output_into_an_error
+    with_stub_studio("probe", "puts 'not json'\n") do |root|
+      result = Master::Io::ScriptDispatch.call(root:, tool: "probe", action: "x")
+
+      refute result.ok?
+      assert_match(/unparseable API response/, result.message)
+    end
+  end
+
+  def test_call_reaches_the_real_lora_api
+    result = Master::Io::ScriptDispatch.call(tool: "lora", action: "subjects")
+
+    assert result.ok?, -> { result.message.to_s }
+    assert_includes result.value!, "ragnhild"
+  end
+
   def test_tool_child_inherits_master_bundle_environment
     Dir.mktmpdir("master-tool-dispatch") do |root|
       tool_dir = File.join(root, "tools", "probe")
