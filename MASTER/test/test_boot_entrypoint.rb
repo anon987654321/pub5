@@ -43,10 +43,13 @@ class TestBootEntrypoint < Minitest::Test
   def test_supported_ruby_floor_has_no_artificial_upper_bound
     env = Operator::Environment
 
-    %w[3.3.8 3.4.9 4.0.5 4.0.7 4.1.0 4.2.0].each do |version|
+    %w[3.2.0 3.2.6 3.3.8 3.4.9 4.0.5 4.0.7 4.1.0 4.2.0].each do |version|
       assert env::SUPPORTED_RUBY_MIN <= Gem::Version.new(version), version
     end
-    refute env::SUPPORTED_RUBY_MIN <= Gem::Version.new("3.2.9")
+    # e47deade lowered the floor to 3.2 for sandbox and constrained hosts
+    # (Ubuntu 24.04 ships 3.2); 3.1 stays below it.
+    assert env::SUPPORTED_RUBY_MIN <= Gem::Version.new("3.2.0")
+    refute env::SUPPORTED_RUBY_MIN <= Gem::Version.new("3.1.9")
   end
 
   def test_inline_program_does_not_reexec_when_the_selected_ruby_version_matches
