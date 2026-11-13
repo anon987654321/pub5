@@ -39,4 +39,14 @@ class TestContentModerator < Minitest::Test
     result = @moderator.analyze(content: { text: "idiot" }).value!
     assert_equal({ abusive: 1 }, result[:evidence])
   end
+  def test_numeric_string_config_is_normalized_before_analysis
+    moderator = Master::Ground::ContentModerator.new(
+      config: { review_threshold: "5", repeat_offender_multiplier: "2.0" },
+    )
+    result = moderator.analyze(content: { text: "idiot" }, prior_violations: 1)
+    assert result.ok?, result.message
+    assert_equal 16, result.value![:weighted_score]
+    assert_equal "REVIEW", result.value![:recommendation]
+  end
+
 end
