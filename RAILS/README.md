@@ -9,6 +9,12 @@ on SQLite behind Falcon, on one box called vm23, and
 Brgen, Amber and BSDPorts share one engine so that a fix made once is made
 everywhere; MASTER/web and mrdamascy stand alone and mount none of it.
 
+Hjerterom is restored separately at `RAILS/hjerterom` as an archived
+source tree from pub4. It is not one of the active Rails apps and is not in
+the deploy matrix; its vm23 service, DNS, certificate and relayd route remain
+retired. The production database remains in the historical backup at
+`/var/backups/pub4/hjerterom-20260812` on vm23 and has not been restored.
+
 This README is the entry to the tree. Feature truth is `apps.yml`, which also
 holds the ports, the domains and the stack versions, so nothing here restates
 them. Planned work that is not yet real sits in `apps.horizon.yml` and is
