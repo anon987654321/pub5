@@ -430,9 +430,22 @@ measure is already owned by the Bymorgen item above.
   puts its child in an isolated process group and applies one monotonic deadline
   to both process exit and output-pipe EOF; timeout escalates TERM to KILL and
   checks group disappearance. A regression covers an exited leader with a
-  descendant holding the pipe open; authored but NOT_RUN. MASTER's Replicate API URL validator also
-  rejects dot, escaped and backslash path segments before attaching its bearer
-  token. Focused regressions are authored/extended but NOT_RUN.
+  descendant holding the pipe open; authored but NOT_RUN. The Rails visual
+  server sibling-worktree reaper now requires a verified process-group leader
+  and uses the bounded lease stop rather than direct-PID TERM/sleep; live-group
+  and non-leader refusal regressions are authored but NOT_RUN. The source-
+  evidence runner now applies its deadline to child exit and both output pipes,
+  refuses unsafe numeric-PID fallback on process-group ESRCH/EPERM, and reports
+  whether group termination was actually confirmed. A descendant-held-pipe
+  regression and signal-boundary tests are authored but NOT_RUN. Photo
+  post-processing likewise covers the child and inherited output pipe under
+  one deadline, with bounded group termination and a real descendant regression
+  (NOT_RUN). The check ladder now delegates to the sanctioned
+  Master::Io::Exec.capture2e rather than maintaining an unbounded reader join;
+  its source contract and inherited-pipe executor regression are authored but
+  NOT_RUN. MASTER's Replicate API URL validator also rejects dot, escaped and
+  backslash path segments before attaching its bearer token. Focused
+  regressions are authored/extended but NOT_RUN.
   H6 is partial: `.zshrc` checks operator-file ownership and group/other mode
   bits; `PermissionAudit` checks `/etc/<app>.env` as `root:<app>`, storage owner
   as `<app>`, daemon-log owner and symlinks in every protected path component.
