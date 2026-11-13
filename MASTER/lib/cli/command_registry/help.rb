@@ -166,7 +166,7 @@ module Master
           detail: ["/model",
                    "/model pick - choose a reachable model with ↑/↓ and Enter; type to filter, Ctrl-C to cancel.",
                    "/model <name> - choose a reachable lane from data/models.yml and the live pool.",
-                   "/model list - list the reachable pool and the next steps to grow it.",
+                   "/model list - list the reachable pool; /models is the same list.",
                    "/model status and /model current - show the selected route and primary live lane without changing it.",
                    "/model health - calls, success rate, failures and measured response time from recorded outcomes.",
                    "Optional gateway: set MASTER_LLM_GATEWAY_URL to a local OpenAI-compatible /v1 URL; remote gateways require HTTPS.",
@@ -192,18 +192,8 @@ module Master
           detail: ["/capabilities - list registered tools and plugin observation actions.",
                    "/capabilities search <words> - search names and descriptions.",
                    "/capabilities describe <tool|plugin|plugin:id:action> - inspect metadata without running it.",
+                   "/tools is a compatibility spelling for /capabilities.",
                    "The inventory is not a live health check. Plugins expose only declared read-only observations here; their own policy still governs execution."],
-        },
-        "tools" => {
-          summary: "list, search and describe registered built-in tools and read-only plugin observations",
-          detail: ["/tools lists the canonical capability catalogue.",
-                   "/tools search <words> and /tools describe <name> inspect registered metadata without running a tool.",
-                   "Registration is not proof of reachability or permission to execute."],
-        },
-        "models" => {
-          summary: "list currently reachable model routes; alias for /model list",
-          detail: ["/models lists the same reachable pool as /model list.",
-                   "Use /model <id> to select a route, /model health for measured outcomes, or /model compute for the ranked inventory."],
         },
         "mcp" => {
           summary: "inspect configured MCP servers and their boot-time connection state",
@@ -438,7 +428,7 @@ module Master
       COMMAND_CATEGORIES = {
         "fix" => "fix", "status" => "health", "doctor" => "health",
         "session" => "session", "pair" => "session", "clear" => "session", "undo" => "session",
-        "model" => "model", "models" => "model", "tools" => "model", "mcp" => "model",
+        "model" => "model", "mcp" => "model",
         "plugin" => "model", "screen" => "session", "wake" => "model",
         "privacy" => "constitution", "preferences" => "interface", "agenda" => "session", "task" => "session", "skill" => "constitution", "capabilities" => "model",
         "laws" => "review",
@@ -492,6 +482,24 @@ module Master
         "tasks0 at mainbus0: #{ordered.join(" ")}; /help by task"
       end
 
+      def help_category_lines(category, commands, width: 76)
+        prefix = "#{category}0 at master0: "
+        lines = []
+        current = prefix
+        commands.each do |command|
+          label = command == "/fix" ? "/fix [path]" : command
+          candidate = current == prefix ? "#{current}#{label}" : "#{current} #{label}"
+          if candidate.length > width && current != prefix
+            lines << current
+            current = "  #{label}"
+          else
+            current = candidate
+          end
+        end
+        lines << current unless current == prefix
+        lines
+      end
+
       def help_summary
         lines = [
           "input0 at master0: describe work in plain language; slash commands are optional.",
@@ -509,10 +517,7 @@ module Master
           commands = commands.map { |command| command == "/fix" ? "/fix [path]" : command }
           commands = commands.reject { |command| command == "/help" } if category == "help"
           commands.unshift("/help [command]") if category == "help"
-          commands.each_slice(5).with_index.map do |group, index|
-            prefix = index.zero? ? "#{category}0 at master0: " : "  "
-            "#{prefix}#{group.join(' ')}"
-          end
+          help_category_lines(category, commands)
         end)
         lines << shell_cap_line
         lines.join("\n")

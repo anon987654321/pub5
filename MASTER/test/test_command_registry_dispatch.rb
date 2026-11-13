@@ -221,6 +221,7 @@ class TestCommandRegistryDispatch < Minitest::Test
 
     assert_operator session_lines.length, :>=, 2
     assert session_lines.all? { |line| line.chomp.length <= 76 }, "session help should not become a wide command ribbon"
+    assert_empty summary.lines.grep(/^\s*$/), "the command overview should not insert spacer rows"
     Registry::HELP_TOPICS.each_key { |name| assert_includes summary, "/#{name}" }
   end
 
@@ -238,6 +239,18 @@ class TestCommandRegistryDispatch < Minitest::Test
   def test_help_resolves_route_aliases_to_the_canonical_topic
     assert_equal Registry.help_text("voice"), Registry.help_text("tts")
     assert_equal Registry.help_text("reload"), Registry.help_text("restart")
+    assert_equal Registry.help_text("model"), Registry.help_text("models")
+    assert_equal Registry.help_text("capabilities"), Registry.help_text("tools")
+  end
+
+  def test_merged_command_aliases_rewrite_to_their_single_owner
+    route = Master::CLI::Stages::Route
+
+    assert_equal "/model list", route.rewrite_spelling("/models")
+    assert_equal "/model health", route.rewrite_spelling("/models health")
+    assert_equal "/capabilities", route.rewrite_spelling("/tools")
+    assert_equal "/capabilities search browser", route.rewrite_spelling("/tools search browser")
+    assert_equal "/doctor tools", route.rewrite_spelling("/doctor tools")
   end
 
   def test_help_suggests_a_nearby_command_without_executing_it
@@ -278,14 +291,16 @@ class TestCommandRegistryDispatch < Minitest::Test
   def test_task_and_capability_commands_are_registered_and_documented
     assert_equal :dispatch_task, built.fetch("task").method_name
     assert_equal :dispatch_capabilities, built.fetch("capabilities").method_name
-    assert built.key?("tools")
+    refute built.key?("tools"), "/tools is an alias, not a second registry command"
     assert built.key?("mcp")
-    assert built.key?("models")
+    refute built.key?("models"), "/models is an alias, not a second registry command"
     assert_includes Registry.help_text("task"), "/task verify-step"
     assert_includes Registry.help_text("capabilities"), "/capabilities describe"
-    assert_includes Registry.help_text("tools"), "/tools search"
+    assert_includes Registry.help_text("capabilities"), "/tools is a compatibility spelling"
     assert_includes Registry.help_text("mcp"), "read-only"
-    assert_includes Registry.help_text("models"), "/model list"
+    assert_includes Registry.help_text("model"), "/models is the same list"
+    assert Registry.respond_to?(:dispatch_doctor_tools)
+    refute Registry.respond_to?(:dispatch_tools)
   end
 
   def test_mcp_status_command_is_a_passive_snapshot
@@ -452,6 +467,8 @@ class TestCommandRegistryDispatch < Minitest::Test
       assert_includes listed, "no background notifications are sent"
       described = Registry.dispatch_capabilities(Master::ROOT, ctx: { args: "search browser" })
       assert_match(/core_tool Browser|plugin session_browser/, described)
+      detail = Registry.dispatch_capabilities(Master::ROOT, ctx: { args: "describe Browser" })
+      assert_match(/"status": "found"/, detail)
     end
   ensure
     Fiber[:master_pair_subject] = old_subject

@@ -494,13 +494,6 @@ module Master
         lines.join("\n")
       end
 
-      # /tools is a concise alias for the canonical capability catalogue.
-      # It describes registration and policy; it does not invoke tools.
-      def dispatch_tools(root, ctx: nil)
-        result = dispatch_capabilities(root, ctx:)
-        result.to_s.gsub(/^capabilities(?=[:0])/, "tools").gsub("/capabilities", "/tools")
-      end
-
       # /mcp reports only what the boot-time coordinator already knows. This
       # path is passive: it never connects, restarts or invokes a server.
       def dispatch_mcp(coordinator, root, ctx: nil)
@@ -697,7 +690,7 @@ module Master
       def dispatch_doctor(root, ctx: nil)
         word, rest = subcommand(ctx)
         return dispatch_device(root, ctx: rest) if word == "device"
-        return dispatch_tools(root, ctx: rest) if word == "tools"
+        return dispatch_doctor_tools(root, ctx: rest) if word == "tools"
         return dispatch_keyless_probe(root) if word == "keyless"
 
         script = File.join(root, "bin", "doctor")
@@ -725,7 +718,7 @@ module Master
       # /doctor tools lists the tool calls whose outcome nobody knows: each one
       # blocks a repeat with the same arguments. `/doctor tools reconcile <id>
       # <outcome> <evidence>` records what the operator verified and lifts it.
-      def dispatch_tools(root, ctx: nil)
+      def dispatch_doctor_tools(root, ctx: nil)
         bus = Master::Trace::EventBus.new(event_log: Master::Trace::Log::Event.new(root:),
                                           evidence_log: Master::Trace::Log::Evidence.new(root:))
         observer = Master::Trace::ToolObserver.new(bus:)

@@ -46,10 +46,11 @@ module Master
       def render(content, mode: :plain)
         context = output_context(mode)
         text = output_guard.sanitize(beautify(content.to_s), context:)
-        # Conversational output only: strip the padding a terse reply does not
-        # need, leaving diagnostic and dmesg output whole. MASTER_BREVITY=0 opts
-        # out if the strip ever eats something that mattered.
-        text = StrunkPass.brevity(text) if context == :routine && ENV["MASTER_BREVITY"] != "0"
+        # Keep errors concise even when routine-output brevity is disabled.
+        # StrunkPass preserves code fences and deliberate line breaks.
+        if mode == :error || (context == :routine && ENV["MASTER_BREVITY"] != "0")
+          text = StrunkPass.brevity(text)
+        end
         case mode
         when :error then @p.red("err: #{text}")
         when :success then @p.bright_red("ok: #{text}")

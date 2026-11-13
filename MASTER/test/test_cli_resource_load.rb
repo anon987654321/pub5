@@ -76,24 +76,24 @@ class TestCliResourceLoad < Minitest::Test
     session = Master::CLI::Session.allocate
     frames = Master::CLI::Session::SPINNER_FRAMES
 
-    assert_equal ["*", "**", "***", "**"], frames
-    assert frames.all? { |frame| frame.match?(/\A\*+\z/) }
+    assert_equal ["*", "+", "x", "+"], frames
+    assert frames.all? { |frame| frame.match?(/\A[*+x]\z/) }
     assert_equal 0.18, Master::CLI::Session::TICK_SECONDS
-    assert_equal 0.04, Master::CLI::Session::FAST_TICK_SECONDS
+    assert_equal 0.10, Master::CLI::Session::FAST_TICK_SECONDS
     assert_equal 0.18, session.send(:spin_pause, 0.0)
-    assert_equal 0.04, session.send(:spin_pause, 1.0)
+    assert_equal 0.10, session.send(:spin_pause, 1.0)
     assert_equal 0.18, session.send(:spin_pause, -1.0)
-    assert_equal 0.04, session.send(:spin_pause, 2.0)
+    assert_equal 0.10, session.send(:spin_pause, 2.0)
     assert_operator session.send(:spin_pause, 0.9), :<, session.send(:spin_pause, 0.3)
   end
 
-  def test_spinner_hides_the_internal_intake_label
+  def test_spinner_shows_only_a_fixed_ascii_frame_and_queue_count
     session = Master::CLI::Session.allocate
-    session.define_singleton_method(:spin_suffix) { "" }
+    session.define_singleton_method(:spin_suffix) { " - 2 queued" }
 
-    line = session.send(:spin_line, "intake", "*")
-    assert_equal %q{* \_}, line
-    refute_includes line, "intake"
+    assert_equal "* - 2 queued", session.send(:spin_line, "intake", "*")
+    assert_equal "+ - 2 queued", session.send(:spin_line, "waiting", "+")
+    refute_match(/intake|waiting|\b\d+s\b/, session.send(:spin_line, "intake", "*"))
   end
 
   def test_spinner_tint_tracks_cpu_load_from_light_to_dark_red
@@ -105,8 +105,8 @@ class TestCliResourceLoad < Minitest::Test
     high = session.send(:spinner_tint, 0.75)
     assert_equal "\e[38;2;227;93;93m", low
     assert_equal "\e[38;2;171;42;42m", high
-    painted = session.send(:spin_tinted, "** working", 1.0)
-    assert_match(/\A\e\[38;2;143;16;16m\*\*\e\[0m working\z/, painted)
+    painted = session.send(:spin_tinted, "x - 2 queued", 1.0)
+    assert_match(/\A\e\[38;2;143;16;16mx\e\[0m - 2 queued\z/, painted)
     refute_includes painted, "255;255;255"
   end
 
@@ -140,7 +140,7 @@ class TestCliResourceLoad < Minitest::Test
     Master::CLI::Session::ResourceLoad.stub(:cpu_load, nil) do
       intensity, = session.send(:probe_intensity, nil, 0.0)
       assert_nil intensity
-      assert_equal "** working", session.send(:spin_tinted, "** working", intensity)
+      assert_equal "*", session.send(:spin_tinted, "*", intensity)
       assert_equal Master::CLI::Session::TICK_SECONDS, session.send(:spin_pause, intensity)
     end
   end

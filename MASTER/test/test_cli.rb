@@ -1137,6 +1137,14 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     assert_equal "err0: unknown command: /dmesg\n", out
   end
 
+  def test_error_receipts_use_strunk_brevity
+    out, = capture_io do
+      @cli.send(:print_error, Master::Result.err("Sure. The provider timed out.", category: :infrastructure))
+    end
+
+    assert_equal "err0: The provider timed out.\n", out
+  end
+
   def test_a_cancelled_turn_reports_only_after_abort_is_confirmed
     token = Master::Core::CancellationToken.new
     token.cancel!(reason: "/stop requested cancellation")

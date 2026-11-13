@@ -2,6 +2,7 @@
 
 require_relative "../capability_stamp"
 require_relative "../../voice/typography"
+require_relative "../../voice/strunk_pass"
 
 module Master
   module CLI
@@ -55,7 +56,8 @@ module Master
       REPORT_UNIT = /\A([a-z][a-z0-9_]*\d+):\s/
 
       def print_error(err)
-        text = err.message.to_s
+        text = Master::Voice::StrunkPass.brevity(err.message.to_s)
+        text = "operation failed" if text.strip.empty?
         return Master::Trace::Dmesg.status("err0", bounded_line(text)) if text.lines.one?
 
         unit = text[REPORT_UNIT, 1]

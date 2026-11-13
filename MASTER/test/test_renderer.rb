@@ -194,7 +194,7 @@ class TestRenderer < Minitest::Test
 
     assert_match(/\bno model, /, strip_ansi(state))
     refute_match(/\n|\r/, strip_ansi(prompt))
-    assert_match(/\Apub5\/MASTER llm@master\$ \z/, strip_ansi(prompt))
+    assert_match(/\Apub5\/MASTER master\$ \z/, strip_ansi(prompt))
   end
 
   def test_phase_prompt_uses_the_plain_openbsd_operator_words
@@ -298,7 +298,7 @@ class TestRenderer < Minitest::Test
     Dir.stub(:pwd, File.join(Dir.home, "pub5")) do
       _state, prompt = renderer.prompt_line("model", "discover", tokens: 10)
 
-      assert_equal "~/pub5 model@master$ ", strip_ansi(prompt)
+      assert_equal "~/pub5 master$ ", strip_ansi(prompt)
     end
   end
 
@@ -309,7 +309,7 @@ class TestRenderer < Minitest::Test
       Dir.stub(:pwd, File.join(Master.repo_root, "MASTER")) do
         _state, prompt = renderer.prompt_line(nil, "discover", tokens: 10)
 
-        assert_equal "pub5/MASTER llm@master$ ", strip_ansi(prompt)
+        assert_equal "pub5/MASTER master$ ", strip_ansi(prompt)
       end
     end
   end
@@ -320,7 +320,7 @@ class TestRenderer < Minitest::Test
 
     clean = strip_ansi(prompt)
     assert_equal 1, clean.lines.size
-    assert_match(/\A.+@master\$ \z/, clean)
+    assert_match(/\A.+ master\$ \z/, clean)
     refute_match(/@[^ ]+\./, clean, "no host segment: the prompt is not a shell login")
     refute_match(/\e\[/, prompt, "the ksh-console prompt does not need ANSI segment styling")
     assert_operator clean.chomp.length, :<=, Master::Voice::Renderer::PromptComponents::PROMPT_MAX_CHARS
@@ -536,6 +536,17 @@ class TestRenderer < Minitest::Test
     assert_includes rendered, "| name | value |"
     assert_includes rendered, "key=value"
     assert_includes rendered, "    answer = 42"
+  end
+
+  def test_error_rendering_uses_strunk_brevity_when_routine_brevity_is_disabled
+    previous = ENV["MASTER_BREVITY"]
+    ENV["MASTER_BREVITY"] = "0"
+
+    rendered = strip_ansi(FakeRenderer.new(config: {}).render("Sure. The provider timed out.", mode: :error))
+
+    assert_equal "err: The provider timed out.", rendered
+  ensure
+    previous.nil? ? ENV.delete("MASTER_BREVITY") : ENV["MASTER_BREVITY"] = previous
   end
 
   def strip_ansi(text)

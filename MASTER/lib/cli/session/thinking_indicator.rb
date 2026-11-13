@@ -10,9 +10,9 @@ module Master
   module CLI
     class Session
       TICK_SECONDS = 0.18
-      FAST_TICK_SECONDS = 0.04
-      # The spinner remains an ASCII asterisk, breathing by adding/removing stars.
-      SPINNER_FRAMES = ["*", "**", "***", "**"].freeze
+      FAST_TICK_SECONDS = 0.10
+      # Fixed-width ASCII frames keep the spinner on one terminal cell.
+      SPINNER_FRAMES = ["*", "+", "x", "+"].freeze
       SPIN_PROBE_SECONDS = 0.5
       ACTIVITY_REARM_IDLE_S = 0.45
       STAGE_EVENTS = {
@@ -111,12 +111,9 @@ module Master
           target.flush
         end
 
-        # The spinner's line: frame, stage word, elapsed time and any queue.
-        def spin_line(stage, name)
-          stage = "working" if stage.empty?
-          detail = stage == "intake" ? %q{ \_} : " #{elapsed_seconds}s"
-          label = stage == "intake" ? "" : " #{stage}"
-          "#{name}#{label}#{detail}#{spin_suffix}"
+        # The spinner is motion, not a second status report.
+        def spin_line(_stage, frame)
+          "#{frame}#{spin_suffix}"
         end
 
         def spin_tinted(line, intensity)
@@ -125,7 +122,7 @@ module Master
           tint = spinner_tint(intensity)
           return line unless tint
 
-          glyph = line[/\A\*+/]
+          glyph = line[/\A[*+x]/]
           return line unless glyph
 
           "#{tint}#{glyph}\e[0m#{line.delete_prefix(glyph)}"
@@ -510,10 +507,6 @@ module Master
           Master::Voice::Typography.ellipsis(text, width)
         rescue StandardError
           text
-        end
-
-        def elapsed_seconds
-          (Process.clock_gettime(Process::CLOCK_MONOTONIC) - @think_t0.to_f).floor
         end
 
         def build_stream_handler(buffer, &on_text)

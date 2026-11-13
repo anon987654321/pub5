@@ -2,6 +2,7 @@
 
 require "shellwords"
 require_relative "../io/media_intent"
+require_relative "stages/route"
 require_relative "operator_intent"
 
 module Master
@@ -221,7 +222,7 @@ module Master
       def normalize_inferred_command(command)
         return "fix" if PIPELINE_WORDS.include?(command)
 
-        command
+        Stages::Route::SPELLINGS.fetch(command, command)
       end
 
       # Preview remains an explicit read; legacy mode aliases already carry a preset.
@@ -400,6 +401,7 @@ module Master
       READING_FLAGS = "--dry-run --critique --only critique,map"
 
       def rewrite_slash(input)
+        input = Stages::Route.rewrite_spelling(input)
         name, rest = input.sub(%r{\A/}, "").split(/\s+/, 2)
         name = name.to_s.downcase
         return input unless PIPELINE_SLASH.include?(name)

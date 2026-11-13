@@ -91,21 +91,16 @@ module Master
           end
         end
 
-        # Reserve one line above Reline's editable row only while a queued turn is
-        # active. The spinner may paint that row, never the line being edited.
+        # Start the quiet interval for a queued turn, but do not insert an
+        # empty terminal row. ThinkingIndicator reserves and paints one only
+        # after the event stream has settled.
         def reserve_activity_row
           return unless $stdin.tty? && $stdout.tty?
 
           busy = @turn_queue_mutex.synchronize do
             @turn_worker&.alive? && !@turn_queue_paused && !@closed
           end
-          return unless busy
-
-          Master::Trace::Dmesg.terminal_write(guard: false) do |target|
-            target.puts
-            target.flush
-            @activity_row_reserved = true
-          end
+          @last_foreign_write_at = Process.clock_gettime(Process::CLOCK_MONOTONIC) if busy
         rescue StandardError => e
           @activity_row_reserved = false
           Master::Ground::Swallow.log(e, context: "cli.activity_row.reserve", event_bus: @refs.bus)
@@ -276,7 +271,7 @@ module Master
           return :unhandled unless match
 
           original = match[:name].downcase
-          name = original == "tts" ? "voice" : original
+          name = Stages::Route::SPELLINGS.fetch(original, original)
           args = match[:args].to_s
           return :unhandled unless BUSY_TURN_CONTROLS.include?(name)
           # Mid-turn, the model verbs answer read-only questions only: a model
@@ -349,6 +344,7 @@ module Master
         # stale natural-language media behavior. Direct registered dispatch keeps
         # the CLI faithful to its command surface.
         def dispatch_registered_slash_command(stripped)
+          stripped = Stages::Route.rewrite_spelling(stripped)
           match = stripped.match(%r{\A/(?<name>[a-z][a-z0-9_-]*)(?:\s+(?<args>.*))?\z}i)
           return :unhandled unless match
 

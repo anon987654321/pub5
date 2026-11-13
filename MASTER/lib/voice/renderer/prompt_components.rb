@@ -139,21 +139,12 @@ module Master
           "unknown"
         end
 
-        # One stable ksh input prompt; changing context is announced separately
-        # only when it changes, so the editable line stays familiar. The model
-        # signs the line: the REPL is <tree> <model>@master$, and surfaces with
-        # no model to name fall back to the bare tree ksh shape.
-        def shell_prompt(_phase, _last_ok, model: nil, **)
-          suffix = [git_prompt_segment, "#{llm_name(model)}@master$"].reject(&:empty?).join(" ")
+        # The state line carries model and context. Keep the editable prompt
+        # to checkout, meaningful Git state and the input token.
+        def shell_prompt(_phase, _last_ok, **)
+          suffix = [git_prompt_segment, "master$"].reject(&:empty?).join(" ")
           path = prompt_path(suffix_length: suffix.length + 1)
           "#{path} #{suffix} "
-        end
-
-        def llm_name(model)
-          name = short_model(model).to_s.strip
-          return name unless name.empty?
-
-          "llm"
         end
 
         def operator_state(phase, last_ok, destination:, focused:)

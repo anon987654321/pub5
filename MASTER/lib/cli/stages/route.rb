@@ -19,11 +19,27 @@ module Master
         # 2026-11-08).
         SPELLINGS = {
           "tts" => "voice",
+          "models" => "model",
+          "tools" => "capabilities",
           "restart" => "reload",
           "respawn" => "reload",
           "hot-reload" => "reload",
           "hotreload" => "reload",
         }.freeze
+
+        # Compatibility spellings are input rewrites, not extra public verbs.
+        # Bare /models means /model list; other arguments pass to the owner.
+        def self.rewrite_spelling(input)
+          source = input.to_s
+          return source unless source.start_with?("/")
+
+          name, rest = source.delete_prefix("/").split(/\s+/, 2)
+          name = name.to_s.downcase
+          rest = rest.to_s.strip
+          target = SPELLINGS.fetch(name, name)
+          rest = "list" if name == "models" && rest.empty?
+          ["/#{target}", rest].reject(&:empty?).join(" ")
+        end
 
         def initialize(commands:, agent:, bus: nil)
           @commands = commands

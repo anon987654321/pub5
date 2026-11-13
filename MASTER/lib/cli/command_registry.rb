@@ -46,10 +46,6 @@ module Master
           "commit" => command(:dispatch_commit, ai[:agent], root, review_check: true),
           "deploy" => command(:dispatch_deploy, root, review_check: true),
           "model" => command(:dispatch_model, d[:agent], d[:config], d[:metrics], droot),
-          "models" => Command.new do |_ctx|
-            dispatch_model(agent: d[:agent], config: d[:config], metrics: d[:metrics], root: droot, arg: "list")
-          end,
-          "tools" => Command.new { |ctx| dispatch_tools(root, ctx:) },
           "mcp" => Command.new { |ctx| dispatch_mcp(infra[:mcp], droot, ctx:) },
           "plugin" => command(:dispatch_plugin),
           "play" => command(:dispatch_play, droot),
