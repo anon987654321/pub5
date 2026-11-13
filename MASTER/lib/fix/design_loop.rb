@@ -37,7 +37,7 @@ module Master
       Plan = Data.define(:surfaces, :root, :rounds, :candidates)
 
       # Everything outside: measure ->(surfaces) { [[surface, payload, shot], ...] };
-      # ask ->(prompt, image) { reply }; build ->(app) { ok }; commit_file ->(path, message) { ok };
+      # ask ->(prompt, image) { reply }; build ->(app) { ok }; commit_file ->(path, message, transaction) { delivered };
       # sources_for ->(surface) { [stylesheet paths] }; guard ->(path, new_text) { refusal or nil }.
       World = Data.define(:measure, :ask, :build, :commit_file, :sources_for, :guard)
 
@@ -304,8 +304,11 @@ module Master
           return :failed
         end
 
+        rebuilt = rebuild(edit)
+        return :failed unless rebuilt
         return :conflict if conflict
-        rebuild(edit) ? :restored : :failed
+
+        :restored
       rescue StandardError => e
         transaction.close! if transaction&.active?
         @say.call("#{edit.why}: transaction cleanup failed (#{e.class})")
@@ -330,6 +333,10 @@ module Master
           raise result.message unless result.ok?
 
           value = result.value!
+          if value.is_a?(Array)
+            rebuild_recovered_paths(value)
+            next
+          end
           next unless value.is_a?(Hash) && value[:state] == :delivery_pending
 
           transaction = Transaction::Recovery.load_persisted(root: @plan.root, id:)
@@ -341,6 +348,27 @@ module Master
 
           finalized = transaction.delivery.finalize!(head:)
           raise finalized.message unless finalized.ok?
+        end
+      end
+
+      # Rollback restores SCSS/ERB source, not compiled assets. Rebuild only
+      # the app bundles whose tracked source was actually restored.
+      def rebuild_recovered_paths(paths)
+        return if paths.empty? || !@world&.build
+
+        shared = paths.any? { |path| path.to_s.start_with?("RAILS/__shared/") }
+        rails = File.join(@plan.root, "RAILS")
+        apps = if shared
+                 Dir.children(rails).select { |name| File.directory?(File.join(rails, name, "app")) }.sort
+               else
+                 paths.filter_map do |path|
+                   match = path.to_s.match(%r{\\ARAILS/([^/]+)/})
+                   app = match && match[1]
+                   app if app && File.directory?(File.join(rails, app, "app"))
+                 end.uniq.sort
+               end
+        apps.each do |app|
+          raise "design recovery restored #{app} source but its CSS rebuild failed" unless @world.build.call(app)
         end
       end
 
