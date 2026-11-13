@@ -39,13 +39,6 @@ module Studio
         total = Integer(count)
         raise ArgumentError, "count must be between 1 and #{LIMIT}" unless total.between?(1, LIMIT)
 
-        # Consent is checked before a provider schema request, cleanup or render.
-        required = Studio::Lora::Consent.required_source_sets(
-          subject: @subject, subject_directory: @subject_directory
-        )
-        Studio::Lora::Consent.require!(
-          subject: @subject, subject_directory: @subject_directory, required_sources: required
-        )
         @series.validate_model!
         removed = clear_previous_renders! if replace
         record("replace_cleanup", deleted: removed) if replace

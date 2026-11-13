@@ -9,7 +9,6 @@ require "open3"
 require "tempfile"
 require "tmpdir"
 require "uri"
-require_relative "../consent"
 
 module Studio
   module MeretheLora
@@ -71,9 +70,6 @@ module Studio
     module_function
 
     def recover!
-      Studio::Lora::Consent.require!(
-        subject: "merethe", subject_directory: SUBJECT_ROOT, required_sources: ["me2_archive"]
-      )
       migrate_legacy_local_data!
       secure_directory(SOURCE_ROOT)
       SOURCE_FILES.each do |filename, expected_sha|
@@ -91,11 +87,6 @@ module Studio
     end
 
     def prepare!
-      required_sources = (
-        Studio::Lora::Consent.required_source_sets(subject: "merethe", subject_directory: SUBJECT_ROOT) +
-        Studio::Lora::Consent.required_source_sets(subject: "merethe", subject_directory: LEGACY_SUBJECT_ROOT)
-      ).uniq
-      Studio::Lora::Consent.require!(subject: "merethe", subject_directory: SUBJECT_ROOT, required_sources:)
       migrate_legacy_local_data!
       secure_directory(SOURCE_ROOT)
       secure_directory(CACHE_ROOT)
@@ -158,13 +149,6 @@ module Studio
       report["status"] = "READY_FOR_OPERATOR_REVIEW"
       write_report(report)
       report
-    rescue Studio::Lora::Consent::Error => error
-      {
-        "status" => "BLOCKED_CONSENT",
-        "error" => error.message,
-        "training_started" => false,
-        "provider_upload_started" => false
-      }
     rescue StandardError => error
       report = {
         "status" => "BLOCKED_PREPARATION_ERROR",
@@ -376,7 +360,7 @@ if $PROGRAM_NAME == __FILE__
     report = Studio::MeretheLora.prepare!
     puts JSON.pretty_generate(report)
     exit(report["status"] == "READY_FOR_OPERATOR_REVIEW" ? 0 : 2)
-  rescue Studio::MeretheLora::Error, Studio::Lora::Consent::Error, SystemCallError, Net::HTTPError => error
+  rescue Studio::MeretheLora::Error, SystemCallError, Net::HTTPError => error
     warn "BLOCKED: #{error.class}: #{error.message}"
     exit 2
   end

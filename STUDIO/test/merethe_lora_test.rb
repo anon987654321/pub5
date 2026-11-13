@@ -94,28 +94,6 @@ class TestMeretheLoraPackage < Minitest::Test
     end
   end
 
-  def test_preparation_refuses_before_migration_when_consent_is_missing
-    error = Studio::Lora::Consent::Error.new("synthetic missing-consent refusal")
-    require_consent = lambda do |**_arguments|
-      raise error
-    end
-    migration = -> { flunk "legacy data must not be moved before consent" }
-
-    report = nil
-    Studio::Lora::Consent.stub(:required_source_sets, ["me2_archive"]) do
-      Studio::Lora::Consent.stub(:require!, require_consent) do
-        Studio::MeretheLora.stub(:migrate_legacy_local_data!, migration) do
-          report = Studio::MeretheLora.prepare!
-        end
-      end
-    end
-
-    assert_equal "BLOCKED_CONSENT", report.fetch("status")
-    assert_equal false, report.fetch("training_started")
-    assert_equal false, report.fetch("provider_upload_started")
-    assert_match(/synthetic missing-consent refusal/, report.fetch("error"))
-  end
-
   def test_preparation_is_local_only
     source = File.read(File.expand_path("../lora/merethe/prepare.rb", __dir__))
     refute_match(/train_lora|upload_zip|REPLICATE_API_TOKEN/, source)

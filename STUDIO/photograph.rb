@@ -152,9 +152,6 @@ if $PROGRAM_NAME == __FILE__
         prompt, film: options[:film], duration: options[:duration]
       )
     end
-  rescue Studio::Lora::Consent::Error => error
-    warn "BLOCKED: #{error.message}"
-    exit 2
   end
   puts JSON.generate(result)
 end

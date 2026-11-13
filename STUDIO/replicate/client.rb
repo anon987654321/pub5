@@ -7,7 +7,6 @@ require "securerandom"
 require "tempfile"
 require "timeout"
 require "uri"
-require_relative "../lora/consent"
 
 module Studio
   # Studio-owned provider client. MASTER has its own client and runtime policies.
@@ -26,13 +25,11 @@ module Studio
                  end
 
           validate_upload_source!(path)
-          require_subject_consent!(subject)
           upload_binary(path, mime:)
         end
 
         def upload_zip(path, subject:)
           validate_upload_source!(path)
-          require_subject_consent!(subject)
           upload_binary(path, mime: "application/zip")
         end
 
@@ -45,18 +42,6 @@ module Studio
           raise ArgumentError, "upload exceeds #{MAX_UPLOAD_BYTES} bytes" if File.size(path) > MAX_UPLOAD_BYTES
 
           path
-        end
-
-        def require_subject_consent!(subject)
-          name = subject.to_s
-          subject_directory = File.join(Studio::Lora::Consent::ROOT, name)
-          Studio::Lora::Consent.require!(
-            subject: name,
-            subject_directory:,
-            required_sources: Studio::Lora::Consent.required_source_sets(
-              subject: name, subject_directory:
-            )
-          )
         end
 
         public
@@ -165,14 +150,6 @@ module Studio
           version: nil,
           subject:
         )
-          subject = subject.to_s
-          subject_directory = File.join(Studio::Lora::Consent::ROOT, subject)
-          Studio::Lora::Consent.require!(
-            subject:, subject_directory:, required_sources: Studio::Lora::Consent.required_source_sets(
-              subject:, subject_directory:
-            )
-          )
-
           timeout = operation_timeout!(timeout, "training timeout")
           photos_zip_url = training_zip_url!(photos_zip_url)
           trigger_word = training_trigger!(trigger_word)

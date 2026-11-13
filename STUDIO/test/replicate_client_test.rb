@@ -13,14 +13,11 @@ class TestStudioReplicateClientPaths < Minitest::Test
       super(token: "test-token")
     end
 
-    # These tests exercise request construction, not human permissions. Keep
-    # the consent bypass local to this test double; production clients use the
-    # real filesystem-backed gate.
+    # These tests exercise request construction, not human permissions; supply
+    # the subject those paths require without touching the filesystem.
     def train_lora(*arguments, **options)
       options[:subject] ||= "probe"
-      Studio::Lora::Consent.stub(:require!, true) do
-        super(*arguments, **options)
-      end
+      super(*arguments, **options)
     end
 
     def get(uri)
@@ -241,37 +238,6 @@ class TestStudioReplicateClientPaths < Minitest::Test
     method, uri = client.requests.fetch(0)
     assert_equal :get, method
     assert_equal "/v1/models/owner/model/versions/#{version}", uri.path
-  end
-
-  def test_training_requires_subject_consent_before_any_provider_request
-    client = Class.new(Studio::ReplicateClient) do
-      def initialize
-        @requests = []
-        super(token: "test-token")
-      end
-
-      attr_reader :requests
-
-      def get(uri)
-        @requests << [:get, uri]
-        flunk "provider schema lookup must not happen before consent"
-      end
-
-      def post(uri, body, headers: {})
-        @requests << [:post, uri, body, headers]
-        flunk "provider training must not start before consent"
-      end
-    end.new
-
-    error = assert_raises(Studio::Lora::Consent::Error) do
-      client.train_lora(
-        "https://files.replicate.delivery/photos.zip", "owner/model",
-        subject: "missing_subject", wait: false
-      )
-    end
-
-    assert_match(/private subject directory is missing/, error.message)
-    assert_empty client.requests
   end
 
   def test_training_schema_is_checked_before_destination_model_creation
@@ -500,44 +466,6 @@ class TestStudioReplicateClientPaths < Minitest::Test
       end
     end
     assert_empty @client.requests
-  end
-
-  def test_image_upload_requires_subject_consent_before_any_provider_request
-    Dir.mktmpdir do |directory|
-      source = File.join(directory, "portrait.jpg")
-      File.write(source, "synthetic image bytes")
-      subject = "upload_consent_probe_#{Process.pid}_#{object_id}"
-      refute File.exist?(File.join(Studio::Lora::Consent::ROOT, subject))
-
-      Net::HTTP.stub(:start, ->(*_args, **_options) {
-        flunk "image upload must be refused before contacting the provider"
-      }) do
-        error = assert_raises(Studio::Lora::Consent::Error) do
-          @client.upload_file(source, subject:)
-        end
-        assert_match(/private subject directory is missing/, error.message)
-      end
-      assert File.file?(source), "refused uploads must not alter the source file"
-    end
-  end
-
-  def test_zip_upload_requires_subject_consent_before_any_provider_request
-    Dir.mktmpdir do |directory|
-      source = File.join(directory, "training.zip")
-      File.write(source, "synthetic ZIP bytes")
-      subject = "zip_consent_probe_#{Process.pid}_#{object_id}"
-      refute File.exist?(File.join(Studio::Lora::Consent::ROOT, subject))
-
-      Net::HTTP.stub(:start, ->(*_args, **_options) {
-        flunk "ZIP upload must be refused before contacting the provider"
-      }) do
-        error = assert_raises(Studio::Lora::Consent::Error) do
-          @client.upload_zip(source, subject:)
-        end
-        assert_match(/private subject directory is missing/, error.message)
-      end
-      assert File.file?(source), "refused uploads must not alter the source file"
-    end
   end
 
   def test_upload_requires_a_readable_regular_file

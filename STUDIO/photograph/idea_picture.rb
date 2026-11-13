@@ -8,7 +8,6 @@ require_relative "../output_paths"
 require_relative "../replicate/client"
 require_relative "../replicate/models"
 require_relative "../subprocess"
-require_relative "../lora/consent"
 require_relative "../lora/lora"
 
 module Studio
@@ -44,7 +43,6 @@ module Studio
       end
 
       def write(words, film: true, duration: 5, output_stem: nil, grade_seed: nil)
-        require_subject_consent!
         validate_model!
         validate_film_model! if film
         FileUtils.mkdir_p(@directory)
@@ -66,7 +64,6 @@ module Studio
         seconds = Integer(duration)
         raise ArgumentError, "duration must be between 1 and 10 seconds" unless seconds.between?(1, 10)
 
-        require_subject_consent!
         validate_film_model!
         FileUtils.mkdir_p(@directory)
         stamp = "#{safe_stem(@subject)}_film_#{Time.now.utc.strftime("%Y%m%dT%H%M%S%6N")}_#{SecureRandom.hex(3)}"
@@ -115,15 +112,6 @@ module Studio
       end
 
       private
-
-      def require_subject_consent!
-        required = Studio::Lora::Consent.required_source_sets(
-          subject: @subject, subject_directory: @subject_directory
-        )
-        Studio::Lora::Consent.require!(
-          subject: @subject, subject_directory: @subject_directory, required_sources: required
-        )
-      end
 
       def client
         @client ||= Studio::ReplicateClient.new

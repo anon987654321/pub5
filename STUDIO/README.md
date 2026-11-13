@@ -25,14 +25,11 @@ but the implementation is owned here.
 - `replicate/client.rb` — the Studio-owned Replicate provider client
   (`Studio::ReplicateClient`), with version-aware input-schema reads, bounded
   transfers and explicit provider errors. `train_lora`, `upload_file` and
-  `upload_zip` require a `subject:` keyword and validate the private consent
-  record before any provider schema, model-creation, upload or training request.
-  MASTER has its own client and runtime policies; this one is STUDIO's.
+  `upload_zip` require a `subject:` keyword and stay bound to that subject's
+  directory, but no longer gate on a consent record. MASTER has its own client
+  and runtime policies; this one is STUDIO's.
 - `lora/` — subject descriptors and private training plans. `bin/studio lora`
-  runs a read-only validator; `lora/consent.rb` is the shared gate for source
-  recovery, dataset preparation and likeness generation. It requires separate
-  written subject-consent and per-source rights evidence under the ignored
-  private `evidence/` directory. Merethe's preparation step builds in a private
+  runs a read-only validator. Merethe's preparation step builds in a private
   staging directory and preserves the last known-good dataset if a build fails.
 
 ## Shared surfaces

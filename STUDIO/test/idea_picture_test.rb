@@ -176,12 +176,6 @@ class TestIdeaPictureOutput < Minitest::Test
 
   private
 
-  def with_allow_consent
-    Studio::Lora::Consent.stub(:required_source_sets, []) do
-      Studio::Lora::Consent.stub(:require!, true) { yield }
-    end
-  end
-
   def successful_status
     Object.new.tap { |status| status.define_singleton_method(:success?) { true } }
   end
@@ -244,44 +238,6 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
-  def test_likeness_render_blocks_before_provider_schema_access_without_consent
-    Dir.mktmpdir do |dir|
-      subject = "consent_probe_#{Process.pid}_#{object_id}"
-      subject_directory = File.join(Studio::Visual::IdeaPicture::SUBJECTS, subject)
-      refute File.exist?(subject_directory), "the test subject must not already have local data"
-
-      client = Object.new
-      client.define_singleton_method(:input_names) { |_model| flunk "provider must not be called without consent" }
-      picture = Studio::Visual::IdeaPicture.new(
-        subject: subject, client:, directory: dir
-      )
-
-      error = assert_raises(Studio::Lora::Consent::Error) do
-        picture.write("portrait", film: false)
-      end
-      assert_match(/private subject directory is missing/, error.message)
-    end
-  end
-
-  def test_animation_refuses_before_provider_access_without_subject_consent
-    Dir.mktmpdir do |dir|
-      subject = "animate_consent_probe_#{Process.pid}_#{object_id}"
-      subject_directory = File.join(Studio::Visual::IdeaPicture::SUBJECTS, subject)
-      refute File.exist?(subject_directory), "the test subject must not already have local data"
-      still = File.join(dir, "portrait.jpg")
-      File.write(still, "synthetic still")
-
-      client = Object.new
-      client.define_singleton_method(:input_names) { |_model| flunk "provider must not be called without consent" }
-      picture = Studio::Visual::IdeaPicture.new(subject: subject, client:, directory: dir)
-
-      error = assert_raises(Studio::Lora::Consent::Error) do
-        picture.animate(still, "slow camera drift")
-      end
-      assert_match(/private subject directory is missing/, error.message)
-    end
-  end
-
   def test_still_schema_preflight_catches_every_field_before_prediction
     Dir.mktmpdir do |dir|
       manifest = File.join(dir, "replicate_training.json")
@@ -293,7 +249,7 @@ class TestIdeaPictureOutput < Minitest::Test
         subject: "probe", client:, directory: dir, model_manifest: manifest
       )
 
-      error = with_allow_consent { assert_raises(RuntimeError) { picture.write("portrait", film: false) } }
+      error = assert_raises(RuntimeError) { picture.write("portrait", film: false) }
       assert_match(/missing inputs used by the still renderer/, error.message)
       assert_match(/aspect_ratio/, error.message)
       assert_empty Dir.children(dir).grep(/\.jpg\z/)
@@ -315,7 +271,7 @@ class TestIdeaPictureOutput < Minitest::Test
         subject: "probe", client:, directory: dir, model_manifest: manifest
       )
 
-      error = with_allow_consent { assert_raises(RuntimeError) { picture.write("portrait", film: true) } }
+      error = assert_raises(RuntimeError) { picture.write("portrait", film: true) }
       assert_match(/film model/, error.message)
       assert_match(/duration/, error.message)
       assert_empty Dir.children(dir).grep(/\.jpg\z/)

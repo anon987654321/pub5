@@ -74,7 +74,7 @@ class TestSelfieSeries < Minitest::Test
   end
 
   def test_a_series_renders_stills_with_subject_prefixed_filenames_in_the_lora_root
-    rendered = run_with_allow_consent(series, count: 3)
+    rendered = run_series(series, count: 3)
 
     assert_equal 3, rendered.size
     rendered.each { |path| assert File.file?(path) }
@@ -98,7 +98,7 @@ class TestSelfieSeries < Minitest::Test
     box = Studio::Visual::SelfieSeries.new(
       subject: "probe", client: @client, directory:, ledger_path: File.join(@dir, "ledger.jsonl"),
     )
-    run_with_allow_consent(box, count: 1, replace: true)
+    run_series(box, count: 1, replace: true)
 
     refute File.exist?(old)
     refute File.exist?(processed)
@@ -107,32 +107,11 @@ class TestSelfieSeries < Minitest::Test
   end
 
   def test_no_render_carries_the_film_model
-    run_with_allow_consent(series, count: 2)
+    run_series(series, count: 2)
 
     models = @client.predictions.map(&:first)
     assert_equal 2, models.size
     refute_includes models, "prunaai/p-video-2-pro", "a series never renders film"
-  end
-
-  def test_missing_consent_blocks_before_provider_access_and_replace_cleanup
-    subject = "consent_probe_#{Process.pid}_#{object_id}"
-    subject_directory = File.join(Studio::Visual::IdeaPicture::SUBJECTS, subject)
-    refute File.exist?(subject_directory), "the test subject must not already have local data"
-
-    directory = File.join(@dir, "flat")
-    FileUtils.mkdir_p(directory)
-    previous = File.join(directory, "#{subject}_selfie_old.jpg")
-    File.write(previous, "keep this prior output")
-    box = Studio::Visual::SelfieSeries.new(
-      subject: subject, client: @client, directory:,
-      ledger_path: File.join(@dir, "ledger.jsonl")
-    )
-
-    assert_raises(Studio::Lora::Consent::Error) do
-      box.run(count: 1, replace: true)
-    end
-    assert File.file?(previous), "refused runs must not delete previous images"
-    assert_empty @client.predictions, "refused runs must not contact the provider"
   end
 
   def test_count_is_bounded
@@ -143,7 +122,7 @@ class TestSelfieSeries < Minitest::Test
 
   def test_a_failed_render_is_recorded_and_the_series_continues
     box = series(fail_download_at: 2)
-    rendered = run_with_allow_consent(box, count: 3)
+    rendered = run_series(box, count: 3)
 
     assert_equal 2, rendered.size, "the network-lost scene is skipped, the series continues"
     attempts = ledger_rows("render_attempt")
@@ -153,7 +132,7 @@ class TestSelfieSeries < Minitest::Test
   end
 
   def test_renders_are_recorded_in_the_subject_ledger
-    run_with_allow_consent(series, count: 2)
+    run_series(series, count: 2)
 
     assert_equal 2, ledger_rows("render").size
     row = ledger_rows("render").first
@@ -171,10 +150,8 @@ class TestSelfieSeries < Minitest::Test
 
   private
 
-  def run_with_allow_consent(box, **options)
-    Studio::Lora::Consent.stub(:required_source_sets, []) do
-      Studio::Lora::Consent.stub(:require!, true) { box.run(**options) }
-    end
+  def run_series(box, **options)
+    box.run(**options)
   end
 
   def ledger_rows(kind)

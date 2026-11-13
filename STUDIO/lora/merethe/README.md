@@ -15,29 +15,15 @@ This package does not upload images, create a Replicate training, or generate
 images. Those are separate operator actions. Keep the destination model private
 unless the subject separately agrees to publication and distribution.
 
-## Consent and source rights
+## Source rights
 
-Before `--recover` or dataset preparation, the subject directory must contain a
-private `consent.yml` copied from `STUDIO/photograph/consent.example.yml`.
-The record must name the exact subject, explicitly approve likeness generation
-and provider processing, and name each source set with who granted permission,
-the date, the rights covered, and a local evidence-file path under
-`evidence/`. Keep the record and evidence files owner-only (0600), and keep the
-`evidence/` directory owner-only (0700); the tracked subject directory may
-retain normal checkout permissions. The whole `evidence/` directory is ignored
-by Git.
-
-The shared `STUDIO/lora/consent.rb` gate checks the record and evidence without
-creating, editing or inferring permission. A separate written subject-consent
-document is mandatory; the two boolean flags alone do not establish consent.
-Each source set also needs its own rights-evidence entry. It runs before source
-recovery, dataset construction and likeness generation. Merethe's archived ME2
-material requires a `me2_archive` evidence entry; any additional photographs
-also require an `additional_images` entry. Missing, mismatched, public,
-symlinked or incomplete records block the operation.
-
-This is not approval to upload a ZIP, start paid training, publish a model or
-distribute generated images. Those remain separate, explicit decisions.
+This package does not upload images, create a Replicate training, or generate
+images. Those are separate operator actions, and keeping the destination model
+private unless the subject separately agrees to publication and distribution
+remains the operator's responsibility. There is no longer a consent record or
+gate in the repository: a written subject-consent document and per-source
+rights evidence are still worth keeping, but they are the operator's private
+records, not a tracked file the code checks.
 
 ## Recover and prepare
 

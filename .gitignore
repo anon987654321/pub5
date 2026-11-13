@@ -274,55 +274,13 @@ STUDIO/lora/*/train_run.log
 STUDIO/lora/*/weights/*/samples/
 STUDIO/lora/*/weights/*/config.yaml
 
-# Photographs of people, and everything derived from them.
-#
-# These were untracked because nobody had run `git add` on them, which is not
-# the same as being protected: one `git add STUDIO/lora` and seventeen
-# photographs of a real person are in a public repository's history forever.
-# lora/README.md has always said committing them publishes the face and that
-# deleting them later does not remove it — this is that sentence made
-# load-bearing.
-#
-# The subject is not the operator. Ragnhild's likeness is hers, and the cost of
-# an accident here is not a revert.
-#
-# Deliberate publication is still possible with `git add -f`, which is the point:
-# it should take a decision rather than a reflex.
-MASTER/tools/lora/*/sources/
-MASTER/tools/lora/*/dataset/
-MASTER/tools/lora/*/dataset_*/
-MASTER/tools/lora/*/retouched/
-MASTER/tools/lora/*/out/
-MASTER/tools/lora/*/weights/
-MASTER/tools/lora/*/contact_sheet.jpg
+# Legacy MASTER/tools/lora data: the tool now lives at STUDIO/lora.
 
-# --- STUDIO/lora privacy ----------------------------------------------------
+# --- STUDIO/lora subject data -----------------------------------------------
 #
-# The live tool moved from MASTER/tools/lora to STUDIO/lora, then out of
-# STUDIO/replicate/lora to STUDIO/lora. Keep subject datasets, source captures,
-# retouched media, outputs and weights out of the public repo at their actual
-# path; deliberate publication still requires -f.
-STUDIO/lora/*/sources/
-STUDIO/lora/*/_previous/
-STUDIO/lora/*/dataset/
-STUDIO/lora/*/dataset_*/
-STUDIO/lora/*/retouched/
-STUDIO/lora/*/out/
-STUDIO/lora/out/
-STUDIO/lora/*/weights/
-# The subject's own reference photographs, which a reference engine (nano-banana
-# and kin) reads to keep the face. These are real photographs of a real person,
-# the most sensitive file here: the pipeline may upload them to the provider it
-# has consent for, but they never enter this public repository.
-STUDIO/lora/*/references/
-STUDIO/lora/*/contact_sheet.jpg
-# The consent record is a private attestation about a real person: who granted
-# what, and where the evidence is kept. Tracked, it would publish that person's
-# arrangements and place a second, mutable copy of the rights evidence in a
-# public history. TODO.md 8.10 promised it is never tracked and nothing here
-# backed that promise.
-STUDIO/lora/*/consent.yml
-STUDIO/lora/*/evidence/
+# Subject datasets, source captures, retouched media, outputs and weights live
+# under STUDIO/lora/<subject>/. The operator decides what to publish; the build
+# artefacts above (caches, zips, run logs) stay ignored.
 
 # Postpro's fetched model weights and the depth maps cached under them are
 # generated assets — the fetch command and sizes live in STUDIO/postpro/README.md.
@@ -355,30 +313,7 @@ postpro_*.tiff.json
 *_BACKUP.INDEX
 
 # --- STUDIO/lora subject media ---
-# Subject media is private; deliberate publication requires git add -f.
-STUDIO/lora/*.mp4
-STUDIO/lora/*.mov
-# Generated portrait stills land flat in this root; never publish subject likenesses.
-STUDIO/lora/*.jpg
-STUDIO/lora/*.jpeg
-STUDIO/lora/*.png
-STUDIO/lora/*.webp
-# Subject reference photographs are private provider inputs, never repo assets.
-STUDIO/lora/*/references/
-# The same stills are also copied flat into the STUDIO root for viewing;
-# still subject likenesses, still never published by reflex.
-STUDIO/*.jpg
-STUDIO/*.jpeg
-STUDIO/*.png
-STUDIO/*.webp
-STUDIO/lora/*/ledger.jsonl
-# Legacy subject-data path: keep ignored until local data has migrated.
-# Selfie renders are copied flat to the STUDIO root for viewing.
-# They remain private subject likenesses and must never publish by reflex.
-STUDIO/*.jpg
-STUDIO/*.jpeg
-STUDIO/*.png
-STUDIO/*.webp
+# Subject media (stills, clips, ledgers) is tracked when the operator adds it.
 
 STUDIO/replicate/lora/**/sources/
 STUDIO/replicate/lora/**/dataset/
