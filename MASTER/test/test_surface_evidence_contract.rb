@@ -104,6 +104,29 @@ class TestSurfaceEvidenceContract < Minitest::Test
     assert_equal group, Process.getpgrp
   end
 
+  def test_source_evidence_deadline_covers_a_descendant_holding_stdout_after_parent_exit
+    Dir.mktmpdir("surface-evidence-pipe") do |dir|
+      child_file = File.join(dir, "child.txt")
+      child_code = "Signal.trap('TERM', 'IGNORE'); File.write(#{child_file.dump}, [Process.pid, Process.getpgrp].join(' ')); sleep 30"
+      parent_code = "Process.spawn(#{RbConfig.ruby.dump}, '-e', #{child_code.dump}); puts 'parent exited'; STDOUT.flush; exit 0"
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      result = evidence.send(
+        :execute_command, [RbConfig.ruby, "-e", parent_code],
+        chdir: dir,
+        deadline: started + 0.2
+      )
+      elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+      _child, group = File.read(child_file).split.map { |value| Integer(value, 10) }
+
+      assert_equal "inconclusive", result.fetch("status")
+      assert_equal true, result.fetch("timed_out")
+      assert_equal true, result.fetch("termination_confirmed")
+      assert_includes result.fetch("message"), "process group stopped"
+      assert_operator elapsed, :<, 5.0
+      refute evidence.send(:process_group_alive?, group)
+    end
+  end
+
   def test_runtime_probe_routes_each_language_to_its_parser_without_shell_interpolation
     instance = evidence
     source_class = Struct.new(:path)
