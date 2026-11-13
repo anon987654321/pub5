@@ -370,3 +370,15 @@ The standalone visual DesignRun remains separate from automatic /fix application
 Regression coverage is authored for crash recovery, restored CSS rebuild, source changes after measurement, final-render refusal, missing terminal delivery receipts, definite commit refusal, successful manifest cleanup, and partial-run exit status. The original DesignRun test now creates actual Transaction instances and uses the private-index delivery implementation. These tests are NOT_RUN. This is not a fully isolated candidate representation: temporary candidates are visible in the worktree to readers that do not honor the transaction lock. The full-run post-commit rollback/compensation question remains open, and DesignRun is not admitted as an automatic /fix adapter.
 
 For R10, the canonical Undo journal stores snapshot contents inline, keeps the last MAX_JOURNAL entries under one exclusive lock, and writes the compacted ledger through AtomicWrite. There are no separate snapshot blob references to infer or reclaim. The .master directory now must be a real owner-only 0700 directory and is re-checked by device/inode after securing it; tests cover legacy permissive mode, exact retained contents and snapshots appended by another instance. Fix lifecycle evidence artifacts now serialize write/read-back/receipt/prune/verify under the same RunJournal lock, preventing cleanup from deleting an artifact between publication and receipt indexing. All added regressions remain NOT_RUN.
+
+## 2026-11-13 follow-on — boot process-group confirmation
+
+DependencyManagerProcessCapture previously sent TERM, slept for a fixed interval,
+sent KILL, and returned a generic "process group killed" message without checking
+whether a descendant still held an inherited pipe or whether shutdown could be
+confirmed. It now polls process-group existence under bounded TERM and KILL grace
+periods. Capture reports "process group stop confirmed" only after the group has
+disappeared; otherwise it reports "termination UNCONFIRMED". Timeout and output
+drain failures are distinguished. Regression coverage includes a real descendant
+that ignores TERM while holding the inherited pipes and a simulated unconfirmed
+stop. Tests are authored but NOT_RUN.
