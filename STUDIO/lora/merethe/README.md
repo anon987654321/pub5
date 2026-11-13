@@ -118,6 +118,6 @@ after generation and training, not a substitute for either.
 ## Subject environment
 
 Copy \`subject.env.example\` to the ignored local \`subject.env\` if you want
-\`STUDIO/photograph.rb --subject merethe\` to resolve the subject descriptor after
+\`STUDIO/lora/photograph.rb --subject merethe\` to resolve the subject descriptor after
 a private training manifest exists under \`weights/merethe/replicate_training.json\`.
 Do not put API tokens in this file.

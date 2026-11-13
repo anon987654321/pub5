@@ -160,7 +160,7 @@ if $PROGRAM_NAME == __FILE__
       )
     elsif options[:animate]
       prompt = options[:prompt].to_s.strip
-      abort "usage: ruby STUDIO/photograph.rb --animate SOURCE --subject NAME --prompt 'MOTION' [--duration 5] [--soundtrack dilla.wav]" if prompt.empty?
+      abort "usage: ruby STUDIO/lora/photograph.rb --animate SOURCE --subject NAME --prompt 'MOTION' [--duration 5] [--soundtrack dilla.wav]" if prompt.empty?
 
       picture = Studio::Visual::IdeaPicture.new(subject: options[:subject], film_engine: options[:film_engine])
       result = picture.animate(options[:animate], prompt, duration: options[:duration])
@@ -168,7 +168,7 @@ if $PROGRAM_NAME == __FILE__
       result
     else
       prompt = ARGV.join(" ").strip
-      abort "usage: ruby STUDIO/photograph.rb [--subject NAME] [--film] PROMPT" if prompt.empty?
+      abort "usage: ruby STUDIO/lora/photograph.rb [--subject NAME] [--film] PROMPT" if prompt.empty?
 
       Studio::Visual::IdeaPicture.new(subject: options[:subject], film_engine: options[:film_engine]).write(
         prompt, film: options[:film], duration: options[:duration]

@@ -37,11 +37,11 @@
     <p>This gallery reads <code>lora/selfies-manifest.js</code>, which
       <code>photograph/selfies_gallery.rb</code> writes from the renders in
       <code>lora/</code>. Render a series first, then rebuild the manifest:</p>
-    <pre><code>ruby STUDIO/photograph.rb --selfie-series --subject ragnhild
-ruby STUDIO/photograph/selfies_gallery.rb</code></pre>
+    <pre><code>ruby STUDIO/lora/photograph.rb --selfie-series --subject ragnhild
+ruby STUDIO/lora/selfies_gallery.rb</code></pre>
     <p>Animate a still into a film with the first-frame image-to-video engine,
       and lay the soundtrack under it in the same pass:</p>
-    <pre><code>ruby STUDIO/photograph.rb --animate lora/&lt;still&gt;.jpg --subject ragnhild \
+    <pre><code>ruby STUDIO/lora/photograph.rb --animate lora/&lt;still&gt;.jpg --subject ragnhild \
   --prompt "she turns to the lens and smiles" --soundtrack lora/selfies-dilla.mp3</code></pre>
   </section>
 
