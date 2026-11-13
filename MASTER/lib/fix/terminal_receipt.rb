@@ -148,7 +148,7 @@ module Master
       def normalize_contract(value)
         return {}.freeze unless value.is_a?(Hash)
 
-        keys = %w[schema intent scope preserve proof]
+        keys = %w[schema intent scope preserve proof new_paths]
         value.each_with_object({}) do |(key, child), output|
           name = key.to_s
           output[name] = json_copy(child) if keys.include?(name)
