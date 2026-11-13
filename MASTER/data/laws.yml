@@ -5432,7 +5432,16 @@ law_map:
   # The debt may only fall from here: close a row when a real principle
   # exists, or keep the Law enforced and leave the number standing. Do not
   # fill these `law_ids` to make the count drop.
-  law_trace_ceiling: 87
+  #
+  # 2026-11-13: raised 87 -> 88. TERMINAL_OUTPUT_TYPOGRAPHY (MASTER/law/typesetting.rb)
+  # was registered without a map row: it holds operator-facing strings to an ASCII,
+  # 72-character terminal measure, from Bringhurst's measure and the operator terminal
+  # profile. The map's `typographic_marks` row is about MARKS (dashes, quotes) in copy,
+  # not the measure of terminal output, so pointing this Law at it would be the same
+  # false name-coverage this ceiling exists to avoid. PREDICATE_SIDE_EFFECTS was closed
+  # to `command_query_separation` in the same change: its own source is command-query
+  # separation and its requirement is that row's ("separate actions from queries").
+  law_trace_ceiling: 88
   version: v110.0-restored
   source: merged master.yml fossil -> MASTER runtime law_map
   clusters:
@@ -5808,8 +5817,8 @@ law_map:
       "operation": "simplify", "severity": "medium", "law_ids": [], "status": "gap", "tags": ["visual_design"],
       "source": "master.yml@30dad7ead"}
     command_query_separation: {"meaning": "separate actions from queries", "detects": "mixed_concerns",
-      "severity": "medium", "confidence": 0.75, "operation": "separate", "law_ids": ["CQS"], "status": "covered",
-      "root": "one_responsibility", "tags": ["code"]}
+      "severity": "medium", "confidence": 0.75, "operation": "separate", "law_ids": ["CQS", "PREDICATE_SIDE_EFFECTS"],
+      "status": "covered", "root": "one_responsibility", "tags": ["code"]}
     complexity_budget: {"meaning": "cyclomatic complexity under 10 per function", "detects": "high_complexity",
       "severity": "high", "confidence": 0.9, "operation": "simplify", "law_ids": ["CYCLOMATIC_COMPLEXITY"],
       "status": "covered", "root": "bounded_load", "tags": ["code"]}
