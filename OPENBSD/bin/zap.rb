@@ -48,6 +48,7 @@ class Zap
     end
 
     failures = 0
+    signalled = 0
     matches.each do |process|
       if @dry_run
         @out.puts "zap: would kill -9 #{process[:pid]} #{process[:name]}"
@@ -59,10 +60,12 @@ class Zap
         next
       end
 
-      failures += 1 unless kill_process(process)
+      result = kill_process(process)
+      signalled += 1 if result == :sent
+      failures += 1 if result == :failed
     end
 
-    @out.puts "zap: killed #{matches.length - failures} process(es) matching #{@keyword.inspect}" unless @dry_run
+    @out.puts "zap: sent SIGKILL to #{signalled} process(es) matching #{@keyword.inspect}" unless @dry_run
     failures.zero? ? 0 : 1
   rescue SystemCallError, IOError => e
     @err.puts "zap: #{e.message}"
@@ -235,7 +238,7 @@ class Zap
     name = fields[3].strip
     return if name.empty?
 
-    { pid: pid, name: name, identity: [:ps, ppid, elapsed, name] }
+    { pid: pid, name: name, identity: [:ps, ppid, name] }
   end
 
   def ps_binary
@@ -278,13 +281,13 @@ class Zap
       Process.kill(SIGNAL, pid)
     end
     @out.puts "zap: killed -9 #{pid} #{process[:name]}"
-    true
+    :sent
   rescue Errno::ESRCH
     @out.puts "zap: PID #{pid} already exited"
-    true
+    :gone
   rescue Errno::EPERM => e
     @err.puts "zap: cannot kill PID #{pid}: #{e.message}"
-    false
+    :failed
   end
 end
 
