@@ -1,0 +1,308 @@
+
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "optparse"
+
+class Zap
+  SIGNAL = 9
+  PROTECTED_PIDS = [0, 1].freeze
+
+  def initialize(argv)
+    @dry_run = false
+    @keyword = nil
+    @help = false
+    @parse_error = nil
+
+    begin
+      parse(argv)
+    rescue ArgumentError, OptionParser::ParseError => error
+      @parse_error = error
+    end
+  end
+
+  def run
+    if @parse_error
+      warn "zap: #{@parse_error.message}"
+      warn usage
+      return 2
+    end
+
+    if @help
+      puts usage
+      return 0
+    end
+
+    matches = processes.select do |process|
+      process[:name].include?(@keyword)
+    end
+
+    if matches.empty?
+      puts "zap: no process name matches #{@keyword.inspect}"
+      return 0
+    end
+
+    failures = 0
+    killed = 0
+
+    matches.each do |process|
+      unless same_process?(process)
+        puts "zap: PID #{process[:pid]} changed or exited; skipped"
+        next
+      end
+
+      if @dry_run
+        puts "Would kill -9 #{process[:pid]}: #{process[:name]}"
+        next
+      end
+
+      begin
+        Process.kill(SIGNAL, process[:pid])
+        puts "Killed -9 #{process[:pid]}: #{process[:name]}"
+        killed += 1
+      rescue Errno::ESRCH
+        puts "Process #{process[:pid]} already exited"
+      rescue Errno::EPERM => error
+        warn "Cannot kill #{process[:pid]}: #{error.message}"
+        failures += 1
+      end
+    end
+
+    puts "zap: killed #{killed} process(es)" unless @dry_run
+    failures.zero? ? 0 : 1
+  rescue SystemCallError, IOError => error
+    warn "zap: #{error.message}"
+    1
+  end
+
+  private
+
+  def parse(argv)
+    options = OptionParser.new do |opts|
+      opts.banner = "usage: zap [--dry-run] keyword"
+      opts.on("--dry-run", "Show matches without killing them") { @dry_run = true }
+      opts.on("-h", "--help", "Show this help") { @help = true }
+    end
+
+    args = options.parse(argv.dup)
+    return if @help
+
+    raise ArgumentError, "expected one process-name keyword" unless args.length == 1
+
+    @keyword = args.first
+
+    if @keyword.empty? || @keyword.match?(/[\x00-\x1f\x7f]/)
+      raise ArgumentError, "invalid process-name keyword"
+    end
+  end
+
+  def usage
+    <<~HELP
+      usage: zap [--dry-run] keyword
+
+      Kill processes whose process name contains keyword.
+      Signal: SIGKILL (9). No confirmation.
+
+      --dry-run  List matches without killing them.
+      -h, --help Show this help.
+    HELP
+  end
+
+  def linux?
+    RUBY_PLATFORM.include?("linux") && File.directory?("/proc/self")
+  end
+
+  def android?
+    RUBY_PLATFORM.include?("android")
+  end
+
+  def processes
+    linux? ? proc_processes : ps_processes
+  end
+
+  def proc_processes
+    Dir.children("/proc").filter_map do |entry|
+      next unless entry.match?(/\A[0-9]+\z/)
+
+      pid = Integer(entry, 10)
+      next if protected_pid?(pid)
+
+      directory = File.join("/proc", entry)
+      name = File.read(File.join(directory, "comm")).chomp
+      next if name.empty?
+
+      start_ticks = process_start_ticks(directory)
+      next unless start_ticks
+
+      {
+        pid: pid,
+        name: name,
+        identity: [:proc, start_ticks, name]
+      }
+    rescue Errno::ENOENT, Errno::EACCES, Errno::ESRCH
+      nil
+    end
+  end
+
+  def process_start_ticks(directory)
+    stat = File.read(File.join(directory, "stat"))
+    tail = stat[(stat.rindex(")") + 2)..]
+    tail&.split&.fetch(19, nil)
+  rescue SystemCallError
+    nil
+  end
+
+  def ps_processes
+    output, status = run_ps(*ps_list_arguments)
+    raise "ps failed" unless status.success?
+
+    output.each_line.filter_map do |line|
+      process = parse_ps_line(line)
+      next unless process
+      next if protected_pid?(process[:pid])
+
+      process
+    end
+  end
+
+  def ps_process(pid)
+    output, status = run_ps(*ps_pid_arguments(pid))
+    return unless status.success?
+
+    output.each_line.filter_map do |line|
+      parse_ps_line(line)
+    end.first
+  end
+
+  def ps_list_arguments
+    if android?
+      ["-A", "-o", "PID,PPID,NAME"]
+    else
+      name_field = linux? ? "comm=" : "ucomm="
+
+      [
+        "-A",
+        "-o", "pid=",
+        "-o", "ppid=",
+        "-o", "etime=",
+        "-o", name_field
+      ]
+    end
+  end
+
+  def ps_pid_arguments(pid)
+    if android?
+      ["-p", pid.to_s, "-o", "PID,PPID,NAME"]
+    else
+      name_field = linux? ? "comm=" : "ucomm="
+
+      [
+        "-p", pid.to_s,
+        "-o", "pid=",
+        "-o", "ppid=",
+        "-o", "etime=",
+        "-o", name_field
+      ]
+    end
+  end
+
+  def run_ps(*arguments)
+    output = IO.popen(
+      { "LC_ALL" => "C" },
+      [ps_binary, *arguments],
+      &:read
+    )
+
+    [output, $?]
+  end
+
+  def ps_binary
+    candidates = [
+      "/bin/ps",
+      "/usr/bin/ps",
+      "/system/bin/ps"
+    ]
+
+    candidates.concat(
+      ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).map do |directory|
+        File.join(directory, "ps")
+      end
+    )
+
+    candidates.uniq.find do |path|
+      File.file?(path) && File.executable?(path)
+    end || raise("ps not found")
+  end
+
+  def parse_ps_line(line)
+    android? ? parse_android_ps_line(line) : parse_unix_ps_line(line)
+  end
+
+  def parse_android_ps_line(line)
+    fields = line.strip.split(/\s+/, 3)
+    return unless fields.length == 3
+    return unless fields[0].match?(/\A[0-9]+\z/)
+    return unless fields[1].match?(/\A[0-9]+\z/)
+
+    pid = Integer(fields[0], 10)
+    ppid = Integer(fields[1], 10)
+    name = fields[2].strip
+    return if name.empty?
+
+    {
+      pid: pid,
+      name: name,
+      identity: [:ps, ppid, name]
+    }
+  end
+
+  def parse_unix_ps_line(line)
+    fields = line.strip.split(/\s+/, 4)
+    return unless fields.length == 4
+    return unless fields[0].match?(/\A[0-9]+\z/)
+    return unless fields[1].match?(/\A[0-9]+\z/)
+
+    pid = Integer(fields[0], 10)
+    ppid = Integer(fields[1], 10)
+    name = fields[3].strip
+    return if name.empty?
+
+    {
+      pid: pid,
+      name: name,
+      identity: [:ps, ppid, name]
+    }
+  end
+
+  def protected_pid?(pid)
+    PROTECTED_PIDS.include?(pid) ||
+      pid == Process.pid ||
+      pid == Process.ppid
+  end
+
+  def same_process?(original)
+    identity = original[:identity]
+
+    current =
+      if identity.first == :proc
+        directory = File.join("/proc", original[:pid].to_s)
+        ticks = process_start_ticks(directory)
+        name = File.read(File.join(directory, "comm")).chomp
+
+        ticks && { identity: [:proc, ticks, name] }
+      else
+        ps_process(original[:pid])
+      end
+
+    current && current[:identity] == identity
+  rescue Errno::ESRCH, Errno::ENOENT, Errno::EACCES
+    false
+  end
+end
+
+begin
+  exit Zap.new(ARGV).run
+rescue Interrupt
+  warn "\nzap: interrupted"
+  exit 130
+end
