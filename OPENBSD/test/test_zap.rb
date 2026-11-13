@@ -160,6 +160,57 @@ class ZapTest < Minitest::Test
     assert_equal [[Signal.list.fetch("TERM"), 216]], sent
   end
 
+  def test_android_toybox_ps_parser_reads_stime_and_arguments
+    zap = Zap.new(["--help"], platform: "android")
+    process = zap.send(:parse_android_ps_line, "412 1 2026-11-13 16:41:22 ruby worker.rb --port 3000")
+
+    assert_equal 412, process[:pid]
+    assert_equal "ruby worker.rb --port 3000", process[:command]
+    assert_equal [:ps, 1, "2026-11-13 16:41:22", "ruby worker.rb --port 3000"], process[:identity]
+  end
+
+  def test_bsd_ps_parser_preserves_full_start_timestamp
+    zap = Zap.new(["--help"], platform: "openbsd")
+    process = zap.send(:parse_bsd_ps_line, "412 1 Fri Nov 13 16:41:22 2026 ruby worker.rb --port 3000")
+
+    assert_equal 412, process[:pid]
+    assert_equal "ruby worker.rb --port 3000", process[:command]
+    assert_equal [:ps, 1, "Fri Nov 13 16:41:22 2026", "ruby worker.rb --port 3000"], process[:identity]
+  end
+
+  def test_changed_pid_identity_is_skipped_before_signalling
+    zap, output, _errors, sent = build_zap(
+      ["-f", "worker"], processes: [process(218, "worker")]
+    )
+    zap.define_singleton_method(:same_process?) { |_process| false }
+
+    assert_equal 0, zap.run
+    assert_empty sent
+    assert_includes output.string, "changed or exited; skipped"
+  end
+
+  def test_no_pattern_skips_vmd_but_keeps_other_processes_interactive
+    output = StringIO.new
+    errors = StringIO.new
+    sent = []
+    zap = Zap.new(
+      [],
+      out: output,
+      err: errors,
+      input: StringIO.new("n\\n"),
+      process_provider: -> {
+        [process(219, "/usr/sbin/vmd: guest"), process(220, "worker --serve")]
+      },
+      signaler: ->(signal, pid) { sent << [signal, pid] },
+      platform: "openbsd"
+    )
+
+    assert_equal 0, zap.run
+    assert_empty sent
+    assert_includes errors.string, "refusing to signal vmd"
+    assert_includes output.string, "220 worker --serve? [y/N]"
+  end
+
   def test_invalid_signal_fails_before_signalling
     zap, _output, errors, sent = build_zap(
       ["-NOSUCH", "worker"], processes: [process(217, "worker")]
