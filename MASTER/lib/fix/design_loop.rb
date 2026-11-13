@@ -226,14 +226,28 @@ module Master
         candidate = nil
         begin
           transaction = begin_candidate_transaction(edit)
+          unless transaction.snapshot_content_hash(edit.file) == best[:source_hash]
+            cleanup = restore_candidate_transaction(transaction, edit)
+            @say.call("#{edit.why}: source changed after measurement; cleanup=#{cleanup}")
+            return round(number:, why: edit.why, outcome: :failed, after: @target[:score])
+          end
           original = edit.apply!
           observe_candidate_write!(transaction, edit, original)
+          unless transaction.observed_content_hash(edit.file) == best[:candidate_hash]
+            cleanup = restore_candidate_transaction(transaction, edit)
+            @say.call("#{edit.why}: candidate bytes changed after measurement; cleanup=#{cleanup}")
+            return round(number:, why: edit.why, outcome: :failed, after: @target[:score])
+          end
           if rebuild(edit)
             after = measured(@fresh.map { |row| row[:surface] })
             verdict = judge(@fresh, after)
             @say.call("#{@target[:surface].id}: #{edit.why} -> #{verdict[:text]}")
             if verdict[:ok]
-              candidate = { edit:, gain: verdict[:gain], after: }
+              candidate = {
+                edit:, gain: verdict[:gain], after:,
+                source_hash: transaction.snapshot_content_hash(edit.file),
+                candidate_hash: transaction.observed_content_hash(edit.file),
+              }
             else
               @rejected << edit.key
               @undone << "#{edit.why} (#{verdict[:text]})"
