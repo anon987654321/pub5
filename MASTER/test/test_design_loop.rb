@@ -270,6 +270,38 @@ class TestDesignLoop < Minitest::Test
     end
   end
 
+  def test_interrupted_design_rollback_rebuilds_the_restored_apps_css
+    Dir.mktmpdir do |root|
+      path = File.join(root, "RAILS", "brgen", "app", "assets", "stylesheets", "app.scss")
+      FileUtils.mkdir_p(File.dirname(path))
+      original = ".card {\\n  padding: 4px;\\n}\\n"
+      File.write(path, original)
+      transaction = Master::Fix::Transaction.new(
+        root:, paths: [path], id: "design-#{'b' * 20}"
+      )
+      transaction.begin!
+      File.write(path, ".card {\\n  padding: 16px;\\n}\\n")
+      assert transaction.observe_paths!([path]).ok?
+      transaction.close!
+
+      built = []
+      world = LOOP::World.new(
+        measure: ->(_surfaces) { [] },
+        ask: ->(_prompt, _images) { "" },
+        build: ->(app) { built << app; true },
+        commit_file: ->(_file, _message, _transaction) { false },
+        sources_for: ->(_surface) { [] },
+        guard: nil
+      )
+      plan = LOOP::Plan.new(surfaces: [], root:, rounds: 1, candidates: 1)
+      assert_empty LOOP.new(plan:, world:).run
+
+      assert_equal original, File.read(path)
+      assert_equal ["brgen"], built
+      refute Master::Fix::Transaction::Recovery.persisted?(root:, id: transaction.id)
+    end
+  end
+
   def test_a_delivery_without_a_terminal_transaction_receipt_is_not_kept
     with_sheet do |path|
       root = File.dirname(path)
