@@ -1,14 +1,14 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Portable process terminator. Uses /proc on Linux/Android and ps on BSD/macOS.
-# It uses only Ruby's standard library and never interpolates shell commands.
+# Portable, interactive process killer. Match process command lines, ask for
+# each PID separately, then signal only the processes the operator selects.
+# Linux/Android use /proc; BSD/macOS use ps. No gem or shell interpolation.
 
 require "optparse"
 
 class Zap
-  GRACE_SECONDS = 2.0
-  POLL_SECONDS = 0.05
+  DEFAULT_SIGNAL = "KILL"
   PROTECTED_PIDS = [0, 1].freeze
 
   def initialize(argv, out: $stdout, err: $stderr, input: $stdin)
@@ -17,7 +17,9 @@ class Zap
     @input = input
     @force = false
     @help = false
-    @name = nil
+    @signal = Signal.list.fetch(DEFAULT_SIGNAL)
+    @signal_label = "SIG#{DEFAULT_SIGNAL}"
+    @pattern = nil
     @ps_path = nil
     parse(argv)
   end
@@ -28,23 +30,32 @@ class Zap
       return 0
     end
 
-    if openbsd? && @name == "vmd"
-      @err.puts "zap: refusing to signal vmd; use 'vmctl stop <vm>' for a guest or 'rcctl stop vmd' for the daemon"
-      return 2
-    end
-
-    matches = processes.select { |process| matches_name?(process[:name]) }
+    matches = processes.select { |process| process[:command].include?(@pattern) }
     if matches.empty?
-      @out.puts "zap: no process named #{@name}"
+      @out.puts "zap: no processes match #{@pattern.inspect}"
       return 0
     end
 
-    matches.each { |process| @out.puts "#{process[:pid]}  #{process[:name]}" }
-    return 1 unless @force || confirm?
+    if openbsd? && @force && matches.any? { |process| command_name(process[:command]) == "vmd" }
+      @err.puts "zap: refusing forced vmd termination; use 'vmctl stop <vm>' for a guest or 'rcctl stop vmd' for the daemon"
+      return 2
+    end
 
-    failures = matches.filter_map { |process| stop(process) }
-    failures.each { |message| @err.puts "zap: #{message}" }
-    failures.empty? ? 0 : 1
+    if openbsd? && matches.any? { |process| command_name(process[:command]) == "vmd" }
+      @err.puts "zap: vmd manages virtual machines; use vmctl to stop a guest cleanly"
+    end
+
+    matches.each do |process|
+      next unless @force || confirm?(process)
+
+      unless same_process?(process)
+        @out.puts "zap: PID #{process[:pid]} changed or exited; skipped"
+        next
+      end
+
+      signal_process(process)
+    end
+    0
   rescue OptionParser::ParseError, ArgumentError => e
     @err.puts "zap: #{e.message}"
     @err.puts help_text
@@ -60,33 +71,59 @@ class Zap
   private
 
   def parse(argv)
+    args = argv.dup
+
+    # Keep the classic zap spelling: zap -TERM pattern and zap -9 pattern.
+    if args.first&.match?(/\A-(?:[0-9]+|[A-Za-z][A-Za-z0-9]*)\z/) && args.first != "-f"
+      set_signal(args.shift.delete_prefix("-"))
+    end
+
     parser = OptionParser.new do |opts|
-      opts.banner = "usage: ruby zap.rb [-f|--force] process-name"
-      opts.on("-f", "--force", "Skip confirmation; still try TERM before KILL") { @force = true }
+      opts.banner = "usage: zap [-f] [-s SIGNAL] pattern"
+      opts.on("-f", "--force", "Do not ask; signal every matching process") { @force = true }
+      opts.on("-s SIGNAL", "--signal=SIGNAL", "Signal name or number (default: KILL)") do |value|
+        set_signal(value)
+      end
       opts.on("-h", "--help", "Show this help") { @help = true }
     end
 
-    args = parser.parse(argv.dup)
+    args = parser.parse(args)
     return if @help
 
-    raise ArgumentError, "expected one process name" unless args.length == 1
+    raise ArgumentError, "expected one search pattern" unless args.length == 1
 
-    @name = args.first
-    unless @name.match?(/\A[A-Za-z0-9_.:-]{1,128}\z/)
-      raise ArgumentError, "invalid process name"
+    @pattern = args.first
+    if @pattern.empty? || @pattern.match?(/[\x00-\x1f\x7f]/)
+      raise ArgumentError, "search pattern must be non-empty and contain no control characters"
     end
+  end
+
+  def set_signal(value)
+    token = value.to_s.sub(/\ASIG/i, "").upcase
+    number = if token.match?(/\A[0-9]+\z/)
+               Integer(token, 10)
+             else
+               Signal.list[token]
+             end
+    raise ArgumentError, "unknown signal: #{value}" unless number && Signal.list.value?(number)
+
+    @signal = number
+    name = Signal.list.find { |_, signal_number| signal_number == number }&.first
+    @signal_label = name ? "SIG#{name}" : "signal #{number}"
   end
 
   def help_text
     <<~HELP
-      usage: ruby zap.rb [-f|--force] process-name
+      usage: zap [-f] [-s SIGNAL] pattern
 
-      Stop processes whose command name matches process-name.
-      -f, --force  Skip confirmation; send TERM, then KILL after #{GRACE_SECONDS.to_i} seconds if needed.
-      -h, --help   Show this help.
+      Find process command lines containing pattern and ask about each PID.
+      -f, --force       Skip questions and signal every match.
+      -s, --signal NAME Signal name or number (default: KILL).
+      -h, --help        Show this help.
 
-      Linux and Android use /proc. BSD and macOS use ps.
-      No package, gem, root privilege or shell is required.
+      The classic -SIGNAL spelling is also accepted, for example: zap -TERM ruby.
+      Linux/Android use /proc; OpenBSD, other BSDs and macOS use ps.
+      Uses Ruby's standard library only.
     HELP
   end
 
@@ -103,6 +140,8 @@ class Zap
 
   def processes
     linux_procfs? ? procfs_processes : ps_processes
+  rescue SystemCallError
+    ps_processes
   end
 
   def procfs_processes
@@ -113,17 +152,26 @@ class Zap
       next if protected_pid?(pid)
 
       directory = File.join("/proc", entry)
-      name = File.read(File.join(directory, "comm")).strip
-      next if name.empty?
+      command = proc_command(directory)
+      next if command.empty?
 
-      { pid: pid, name: name, identity: proc_start_ticks(directory) }
+      { pid: pid, command: command, identity: proc_start_ticks(directory) }
     rescue Errno::ENOENT, Errno::EACCES, Errno::ESRCH
       nil
     end
   end
 
-  # /proc/PID/stat field 22 is the process start time in clock ticks. Compare it
-  # before escalation so a recycled PID is never mistaken for the original task.
+  def proc_command(directory)
+    raw = File.binread(File.join(directory, "cmdline"))
+    command = raw.split("\0").reject(&:empty?).join(" ")
+    return command unless command.empty?
+
+    File.read(File.join(directory, "comm")).strip
+  rescue SystemCallError
+    ""
+  end
+
+  # Linux /proc/PID/stat field 22 prevents a recycled PID being signalled.
   def proc_start_ticks(directory)
     stat = File.read(File.join(directory, "stat"))
     tail = stat[(stat.rindex(")") + 2)..]
@@ -133,16 +181,25 @@ class Zap
   end
 
   def ps_processes
-    output, status = IO.popen([ps_binary, "-ax", "-o", "pid=", "-o", "comm="], &:read), $?
+    output, status = IO.popen([ps_binary, "-ax", "-ww", "-o", "pid=", "-o", "command="], &:read), $?
     raise "ps failed (#{status&.exitstatus || "unknown status"})" unless status&.success?
 
     output.each_line.filter_map do |line|
-      record = parse_ps_line(line)
-      next unless record
-      next if protected_pid?(record[:pid])
+      process = parse_ps_line(line)
+      next unless process
+      next if protected_pid?(process[:pid])
 
-      record
+      process
     end
+  end
+
+  def ps_process(pid)
+    output, status = IO.popen(
+      [ps_binary, "-p", pid.to_s, "-ww", "-o", "pid=", "-o", "command="], &:read
+    ), $?
+    return unless status&.success?
+
+    output.each_line.filter_map { |line| parse_ps_line(line) }.first
   end
 
   def parse_ps_line(line)
@@ -150,10 +207,10 @@ class Zap
     return unless match
 
     pid = Integer(match[1], 10)
-    name = File.basename(match[2])
-    return if name.empty?
+    command = match[2].strip
+    return if command.empty?
 
-    { pid: pid, name: name, identity: nil }
+    { pid: pid, command: command, identity: nil }
   end
 
   def ps_binary
@@ -171,35 +228,14 @@ class Zap
     PROTECTED_PIDS.include?(pid) || pid == Process.pid || pid == Process.ppid
   end
 
-  def matches_name?(name)
-    name == @name || name.start_with?("#{@name}:")
+  def command_name(command)
+    File.basename(command.to_s.split.first.to_s)
   end
 
-  def confirm?
-    @out.print "Terminate #{@name}? [y/N] "
+  def confirm?(process)
+    @out.print "#{process[:pid]} #{process[:command]}? [y/N] "
     answer = @input.gets
     answer && answer.strip.match?(/\A(?:y|yes)\z/i)
-  end
-
-  def stop(process)
-    pid = process.fetch(:pid)
-    Process.kill("TERM", pid)
-
-    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + GRACE_SECONDS
-    while Process.clock_gettime(Process::CLOCK_MONOTONIC) < deadline
-      return nil unless same_process?(process)
-
-      sleep POLL_SECONDS
-    end
-
-    return nil unless same_process?(process)
-
-    Process.kill("KILL", pid)
-    nil
-  rescue Errno::ESRCH
-    nil
-  rescue Errno::EPERM => e
-    "cannot signal pid #{pid}: #{e.message}; run as the process owner or an authorised administrator"
   end
 
   def same_process?(original)
@@ -207,23 +243,25 @@ class Zap
 
     if linux_procfs? && original[:identity]
       directory = File.join("/proc", pid.to_s)
-      current = proc_start_ticks(directory)
-      return false unless current
+      current_identity = proc_start_ticks(directory)
+      return false unless current_identity
 
-      current == original[:identity]
+      current_identity == original[:identity]
     else
       current = ps_process(pid)
-      current && matches_name?(current[:name])
+      current && current[:command] == original[:command]
     end
   rescue Errno::ESRCH, Errno::ENOENT
     false
   end
 
-  def ps_process(pid)
-    output, status = IO.popen([ps_binary, "-p", pid.to_s, "-o", "pid=", "-o", "comm="], &:read), $?
-    return unless status&.success?
-
-    output.each_line.filter_map { |line| parse_ps_line(line) }.first
+  def signal_process(process)
+    Process.kill(@signal, process.fetch(:pid))
+    @out.puts "zap: sent #{@signal_label} to PID #{process[:pid]}"
+  rescue Errno::ESRCH
+    @out.puts "zap: PID #{process[:pid]} already exited"
+  rescue Errno::EPERM => e
+    @err.puts "zap: cannot signal PID #{process[:pid]}: #{e.message}"
   end
 end
 
