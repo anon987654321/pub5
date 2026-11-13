@@ -25,6 +25,16 @@ gate in the repository: a written subject-consent document and per-source
 rights evidence are still worth keeping, but they are the operator's private
 records, not a tracked file the code checks.
 
+## Additional portraits
+
+`sources/additional/` holds fourteen further portraits of Merethe grabbed from
+her public site, https://www.tommervik.no. Each was selected with OpenCV YuNet
+face detection and an SFace identity match against her own reference photos, so
+every kept image has exactly one detected face that matches her; `SOURCES.md`
+records the source URL and caption for each. Captions name the `MERETHE` trigger
+and the pair `tommervik-NN.jpg` + `tommervik-NN.txt` is what the dataset builder
+reads.
+
 ## Recover and prepare
 
 From the repository root:

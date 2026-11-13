@@ -261,6 +261,8 @@ MASTER/tools/dilla/venv-librosa/
 # <subject>/.cache/ is every lane's scratch: dataset zips, downloaded trainer
 # tars, staged Kaggle payloads.
 STUDIO/lora/**/.cache/
+STUDIO/lora/*/dataset/
+STUDIO/lora/*/dataset_*/
 STUDIO/lora/**/_frames/
 STUDIO/lora/**/_latent_cache/
 STUDIO/lora/**/.aitk_size.json
