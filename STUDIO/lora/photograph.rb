@@ -3,10 +3,10 @@
 
 require "json"
 require "optparse"
-require_relative "api"
-require_relative "interactive"
-require_relative "photograph/idea_picture"
-require_relative "photograph/selfie_series"
+require_relative "../api"
+require_relative "../interactive"
+require_relative "idea_picture"
+require_relative "selfie_series"
 
 # The API actions MASTER reaches over the subprocess boundary. Same classes the
 # CLI uses, no prompt, one JSON response.

@@ -65,7 +65,7 @@ task :check do
   end
 
   %w[
-    bin/studio photograph.rb photograph/idea_picture.rb photograph/selfies_gallery.rb replicate/client.rb lora/validate.rb subprocess.rb test_runner.rb promo.rb
+    bin/studio lora/photograph.rb lora/idea_picture.rb lora/selfies_gallery.rb replicate/client.rb lora/validate.rb subprocess.rb test_runner.rb promo.rb
     dilla/lib/als.rb dilla/lib/als_export.rb dilla/lib/als_to_midi.rb dilla/lib/reference_analyzer.rb
     analog_core.rb postpro/postpro.rb postpro/motion.rb postpro/motion_process.rb
     postpro/lib/effects_print.rb postpro/lib/sidecars.rb lora/merethe/prepare.rb

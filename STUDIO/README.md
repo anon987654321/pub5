@@ -25,10 +25,10 @@ but the implementation is owned here.
   version-pinned in `vendor/swiper/`) of a subject's stills and films over the
   dilla bed, built from the generated `lora/selfies-manifest.js` and captioned
   for a screen reader. Films are muted inline loops with a poster-first frame;
-  the bed never autoplays. `photograph/selfies_gallery.rb` scans `lora/` and
+  the bed never autoplays. `lora/selfies_gallery.rb` scans `lora/` and
   writes that manifest — it reads only, and renders and private media stay out
   of git.
-- `photograph.rb` and `photograph/idea_picture.rb` — the image-generation
+- `lora/photograph.rb` and `lora/idea_picture.rb` — the image-generation
   entrypoint and its IdeaPicture implementation. A still renders from an engine
   chosen with `--engine`; a film animates it from an engine chosen with
   `--film-engine`, defaulting to MiniMax H3 Lite and offering the rest of

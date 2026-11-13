@@ -720,7 +720,7 @@ Ordered, and each step is gated by the one before it:
 - [ ] **Dataset adequacy.** Reach the 12–18 image band with rights-cleared, face-led adult photographs before preparing a training ZIP. Four archived portraits are a starting subset, not a dataset.
 - [ ] **Subject scaffold.** Add `wenche/subject.env` (trigger, descriptor, model) and a preparation script following the Merethe pattern: digest-verified recovery, caption set and the shared consent gate's required per-source evidence. No subject data or provider processing before a valid record exists.
 - [ ] **Train.** Separate explicit paid-training decision on Replicate via `ostris/flux-dev-lora-trainer`; record job IDs, versions, costs and weights in the private subject directory. This is `lora_source_refresh_and_paid_training` (provider) in §8.5.
-- [ ] **Render, grade, review.** `ruby STUDIO/photograph.rb --selfie-series --subject wenche` for stills through postpro. The subject reviews and accepts the likeness; a completed series is not an approval.
+- [ ] **Render, grade, review.** `ruby STUDIO/lora/photograph.rb --selfie-series --subject wenche` for stills through postpro. The subject reviews and accepts the likeness; a completed series is not an approval.
 - [ ] **Promo.** Only after likeness acceptance: assemble the promo with `STUDIO/dilla/dilla.rb` as the music bed and postpro heavy passes for the grade, outside the checkout under the `output_paths.rb` contract. Publish only with a recorded publication decision.
 
 ---

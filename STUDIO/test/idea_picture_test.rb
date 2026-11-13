@@ -5,7 +5,7 @@ require_relative "minitest_helper"
 require "open3"
 require "tmpdir"
 require_relative "../output_paths"
-require_relative "../photograph/idea_picture"
+require_relative "../lora/idea_picture"
 
 class TestStudioOutputPaths < Minitest::Test
   def test_relative_xdg_data_home_uses_an_absolute_fallback_from_any_directory
@@ -123,7 +123,7 @@ end
 class TestIdeaPictureOutput < Minitest::Test
   def test_idea_picture_has_one_canonical_implementation
     root = File.expand_path("..", __dir__)
-    canonical = File.join(root, "photograph", "idea_picture.rb")
+    canonical = File.join(root, "lora", "idea_picture.rb")
     duplicate = File.join(root, "generators", "idea_picture.rb")
 
     assert File.file?(canonical)

@@ -884,7 +884,7 @@ pub5_source_ceilings:
   # 2026-11-07: STUDIO joins the per-tree ratchet with its measured population
   # first, the way a ceiling should: 64 tracked non-test source files, read
   # through the growth row's own git walk, then +1 for the one authored file
-  # this raise pays for -- STUDIO/photograph/selfie_series.rb, the committed
+  # this raise pays for -- STUDIO/lora/selfie_series.rb, the committed
   # runner for the selfie chain (photograph.rb --selfie-series). Its scene list,
   # 12-scene default and 24-scene cap are data in the file, not sprawl.
   #

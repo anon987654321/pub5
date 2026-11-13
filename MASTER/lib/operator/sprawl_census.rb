@@ -70,7 +70,7 @@ module Operator
       # replicate/lora/lora.rb, which the GLM port deleted. Both made
       # test_base_tree_contracts_are_present fail for a shape the tree had
       # already left, so the front door is named as it actually stands.
-      "STUDIO" => %w[README.md postpro/postpro.rb replicate/client.rb photograph.rb dilla/dilla.rb],
+      "STUDIO" => %w[README.md postpro/postpro.rb replicate/client.rb lora/photograph.rb dilla/dilla.rb],
     }.freeze
 
     # Defined below module_function: a def above it is a private instance

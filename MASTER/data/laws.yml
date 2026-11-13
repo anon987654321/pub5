@@ -5168,8 +5168,9 @@ architecture:
     studio:
       path: STUDIO
       # b5acc93bc flattened the photograph tree; the public entry it preserved
-      # is the photograph loader, guarded by STUDIO/test/idea_picture_test.rb.
-      entry: STUDIO/photograph.rb
+      # is the photograph loader, now under lora/ after the sprawl fold, guarded
+      # by STUDIO/test/idea_picture_test.rb.
+      entry: STUDIO/lora/photograph.rb
       owner: studio
       depends_on: []
       check: cd STUDIO && ruby -Itest test/idea_picture_test.rb

@@ -94,7 +94,7 @@ module Studio
       end
 
       def selfie_render(request)
-        require_relative "../photograph/selfie_series"
+        require_relative "selfie_series"
         subject = request.fetch("subject", "ragnhild")
         count = request.fetch("count", 10).to_i.clamp(1, 24)
         engine = request["engine"]

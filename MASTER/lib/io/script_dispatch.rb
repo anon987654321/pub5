@@ -22,7 +22,7 @@ module Master
       # nested below their family directory; the legacy root shims are gone.
       TOOL_ENTRYPOINTS = {
         "replicate" => File.join("replicate", "client.rb"),
-        "lora" => "photograph.rb",
+        "lora" => File.join("lora", "photograph.rb"),
         "runs" => File.join("repo", "runs.rb"),
         "repo_inventory" => File.join("repo", "repo_inventory.rb"),
         "sprawl_plan" => File.join("repo", "sprawl_plan.rb"),
@@ -40,7 +40,7 @@ module Master
         "postpro" => File.join("postpro", "postpro.rb"),
         "lora" => File.join("lora", "lora.rb"),
         "replicate" => File.join("replicate", "replicate.rb"),
-        "photograph" => "photograph.rb",
+        "photograph" => File.join("lora", "photograph.rb"),
       }.freeze
 
       def run(root:, tool:, arg: "", env: {})
