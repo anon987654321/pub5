@@ -274,6 +274,42 @@ let drumTube,kickComp,vintageSat,phaserFX,lofiNoise,lofiComp,tapeWS,padsLFO,kick
 const fxPool=['AutoWah','AutoFilter','AutoPanner','BitCrusher','Chebyshev','Chorus','Distortion','FeedbackDelay','Freeverb','FrequencyShifter','JCReverb','Phaser','PingPongDelay','PitchShift','Tremolo','Vibrato','StereoWidener'];
 let drumFX=[],bassFX=[],keysFX=[],padsFX=[],masterFX=[];
 
+// The boot chain is fixed. A person meets RG-69 through its defaults, so the
+// panel must ship one musical, repeatable instrument; the seventeen-effect
+// pool is an explicit choice (the "randomize" button), never applied at load.
+// Every parameter here is a single literal, so two loads are identical.
+function createDefaultFX(){
+const drum=[],bass=[],keys=[],pads=[];
+const add=(arr,eff,wet)=>{if(eff){eff.wet.value=wet;arr.push(eff);}return arr;};
+try{add(drum,new Tone.Distortion(0.12),0.12);}catch(e){log('FX default: '+e.message,'w');}
+try{add(drum,new Tone.StereoWidener(0.3),0.35);}catch(e){log('FX default: '+e.message,'w');}
+try{add(bass,new Tone.Chorus(1.8,3.5,0.4).start(),0.12);}catch(e){log('FX default: '+e.message,'w');}
+try{add(keys,new Tone.Chorus(1.6,2.5,0.5).start(),0.2);}catch(e){log('FX default: '+e.message,'w');}
+try{add(keys,new Tone.FeedbackDelay(Tone.Time('8n.').toSeconds(),0.26),0.14);}catch(e){log('FX default: '+e.message,'w');}
+try{add(pads,new Tone.Chorus(0.9,3.5,0.6).start(),0.28);}catch(e){log('FX default: '+e.message,'w');}
+try{add(pads,new Tone.Freeverb(0.55),0.22);}catch(e){log('FX default: '+e.message,'w');}
+try{add(pads,new Tone.StereoWidener(0.45),0.4);}catch(e){log('FX default: '+e.message,'w');}
+return {drum,bass,keys,pads};
+}
+function installDefaultFX(){
+const {drum,bass,keys,pads}=createDefaultFX();
+const chain=(g,fx,target)=>{
+g.disconnect();
+if(!fx.length){g.connect(target);g.connect(revSend);g.connect(dlySend);return;}
+let last=g;
+fx.forEach(f=>{last.connect(f);last=f;});
+last.connect(target);
+g.connect(revSend);
+g.connect(dlySend);
+};
+chain(drumG,drum,masterG);
+chain(bassG,bass,masterG);
+chain(keysG,keys,masterG);
+chain(padsG,pads,masterG);
+drumFX=drum;bassFX=bass;keysFX=keys;padsFX=pads;masterFX=[];
+log('FX default chain (fixed)','k');
+}
+
 const layouts=Array.from({length:50},(_,i)=>({id:i+1,gap:4+(i%7),pp:6+(i%5),bh:54+(i%5)*3,sh:46+(i%6)*2,ac:24+i}));
 const finalBlend={id:"final",gap:8,pp:8,bh:60,sh:52,ac:35};
 
@@ -507,7 +543,7 @@ const padsSat=new Tone.Chebyshev(2);padsSat.wet.value=0.2;
 padsG.connect(padsBW);padsBW.connect(padsSat);padsSat.connect(masterG);padsSat.connect(revSend);padsSat.connect(dlySend);
 // route remaining tracks
 [drumG,bassG].forEach(g=>{g.connect(masterG);g.connect(revSend);g.connect(dlySend);});
-randomizeFX();
+installDefaultFX();
 log("audio engine init (analog++)","k");
 }
 

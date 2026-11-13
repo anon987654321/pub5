@@ -60,6 +60,33 @@ class TestRg69Defaults < Minitest::Test
     end
   end
 
+  # The bug this holds still: initAudio() ended with randomizeFX(), so every
+  # load rolled 2–5 effects per bus plus 3–8 on the master from a pool that
+  # reaches Chebyshev 30, Distortion 0.8, BitCrusher 2 bits and PitchShift ±12
+  # — at wet. A bad roll produced a crushed, detuned master, which read as
+  # "unusable and inaudible". The boot must now install one fixed chain.
+  def test_boot_installs_a_fixed_chain_and_never_randomizes
+    init = js[/async function initAudio\(\).*?(?=\n(?:async )?function )/m] or raise "no initAudio"
+    assert_includes init, "installDefaultFX()"
+    refute_includes init, "randomizeFX()",
+                    "initAudio must not randomize the effect chain at boot"
+
+    # The only remaining call to randomizeFX is the explicit randomize() action.
+    assert_equal 1, js.scan(/randomizeFX\(\);/).size,
+                 "randomizeFX must be reachable only from the explicit randomize() action"
+  end
+
+  def test_every_default_fx_parameter_is_a_literal_so_boots_are_repeatable
+    body = js[/function createDefaultFX\(\)\{(.*?)\n\}/m, 1] or raise "no createDefaultFX"
+    refute_includes body, "Math.random", "a default effect parameter must be fixed, not rolled"
+    refute_match(/\brnd\(/, body, "a default effect parameter must be fixed, not rolled")
+
+    # The curated chain still uses real effects, not an empty passthrough.
+    %w[Tone.Chorus Tone.Distortion Tone.Freeverb Tone.FeedbackDelay Tone.StereoWidener].each do |fx|
+      assert_includes body, fx, "the fixed chain should include #{fx}"
+    end
+  end
+
   private
 
   def boot_aud
