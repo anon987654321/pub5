@@ -306,6 +306,11 @@ STUDIO/lora/*/retouched/
 STUDIO/lora/*/out/
 STUDIO/lora/out/
 STUDIO/lora/*/weights/
+# The subject's own reference photographs, which a reference engine (nano-banana
+# and kin) reads to keep the face. These are real photographs of a real person,
+# the most sensitive file here: the pipeline may upload them to the provider it
+# has consent for, but they never enter this public repository.
+STUDIO/lora/*/references/
 STUDIO/lora/*/contact_sheet.jpg
 # The consent record is a private attestation about a real person: who granted
 # what, and where the evidence is kept. Tracked, it would publish that person's

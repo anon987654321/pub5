@@ -4,6 +4,7 @@ require "json"
 require "fileutils"
 require "time"
 require_relative "idea_picture"
+require_relative "../lora/lora"
 
 module Studio
   module Visual
@@ -13,22 +14,14 @@ module Studio
     class SelfieSeries
       LIMIT = 24
 
-      SCENES = [
-        "an arm's-length smartphone selfie at a bright cafe window, relaxed candid expression",
-        "a city-walk selfie in soft morning light, an understated everyday outfit",
-        "a close portrait selfie outdoors in open shade, leafy background softly blurred",
-        "a mirror selfie in a tidy, naturally lit hallway, casual jacket",
-        "a sunny waterfront selfie with the harbour softly out of focus",
-        "a warm kitchen selfie while making coffee, window light from the side",
-        "a winter street selfie in soft overcast light, coat collar visible",
-        "a rooftop selfie at golden hour, distant skyline softly blurred",
-        "a weekend market selfie with natural candid expression and gentle background detail",
-        "a quiet home-window selfie in late afternoon light, simple neutral clothing",
-      ].freeze
+      # The sittings live in lora/lora.rb with the rest of the craft: ten
+      # radically different environments and moments, each stating its own crop,
+      # lens and light.
+      SCENES = Studio::Lora::Selfie::SCENES
 
       IMAGE_EXTENSIONS = %w[jpg jpeg png webp].freeze
 
-      def initialize(subject:, client: nil, directory: nil, scenes: SCENES, ledger_path: nil)
+      def initialize(subject:, client: nil, directory: nil, scenes: SCENES, ledger_path: nil, engine: nil)
         @subject = subject.to_s
         raise ArgumentError, "subject must be a simple directory name" unless @subject.match?(/\A[a-zA-Z0-9_-]+\z/)
         @scenes = Array(scenes)
@@ -37,7 +30,7 @@ module Studio
         @directory = File.expand_path(directory || IdeaPicture::SUBJECTS)
         @subject_directory = File.join(IdeaPicture::SUBJECTS, @subject)
         @series = IdeaPicture.new(
-          subject: @subject, directory: @directory, client:
+          subject: @subject, directory: @directory, client:, engine:
         )
         @ledger_path = ledger_path || File.join(IdeaPicture::SUBJECTS, @subject, "ledger.jsonl")
       end
@@ -62,7 +55,10 @@ module Studio
           scene = @scenes[index % @scenes.size]
           begin
             stem = "#{@subject}_selfie_#{format("%02d", index + 1)}"
-            path = @series.write(scene, film: false, output_stem: stem).fetch("still")
+            path = @series.write(
+              scene, film: false, output_stem: stem,
+              grade_seed: Studio::Lora::Selfie.grade_seed(index + 1, @subject)
+            ).fetch("still")
             record("render", index: index, scene: scene, path: path)
             rendered << path
           rescue StandardError => error
