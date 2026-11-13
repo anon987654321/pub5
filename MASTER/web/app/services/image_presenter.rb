@@ -173,14 +173,22 @@ class ImagePresenter
       reader_finished = reader.join([deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC), 0].max)
       unless process_finished && reader_finished
         group_stopped = stop_postpro_group(waiter.pid)
-        leader_reaped = waiter.join(1)
+        leader_reaped = !waiter.join(1).nil?
+        unless leader_reaped
+          # This is the exact child returned by Open3, not a PID rediscovered
+          # from the system. Keep Open3's ensure from waiting forever if group
+          # signalling was denied, while still reporting descendants separately.
+          Process.kill("KILL", waiter.pid) if waiter.alive?
+          leader_reaped = !waiter.join(1).nil? unless waiter.alive? == false
+        end
+        group_gone = !postpro_group_alive?(waiter.pid)
         reader.join(0.2)
         if reader.alive?
           output.close rescue nil
           reader.kill
           reader.join(0.2)
         end
-        detail = group_stopped && leader_reaped && !reader.alive? ? "process group stopped" : "shutdown unverified"
+        detail = group_stopped && leader_reaped && group_gone && !reader.alive? ? "process group stopped" : "shutdown unverified"
         @logger.warn("postpro exceeded #{timeout_s}s; #{detail}")
         next [captured, nil]
       end
