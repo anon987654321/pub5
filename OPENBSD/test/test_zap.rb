@@ -197,7 +197,7 @@ class ZapTest < Minitest::Test
       [],
       out: output,
       err: errors,
-      input: StringIO.new("n\\n"),
+      input: StringIO.new("n\n"),
       process_provider: -> {
         [process(219, "/usr/sbin/vmd: guest"), process(220, "worker --serve")]
       },
