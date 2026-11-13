@@ -113,7 +113,7 @@ class LogoContractTest < ActionView::TestCase
 
     assert_equal 9, canonical.size
     plates = Dir.glob(Rails.root.join("__logo/plates/[0-9][0-9]_*.svg").to_s)
-    assert_equal 10, plates.size
+    assert_equal 11, plates.size
 
     plates.each do |path|
       svg = File.read(path)
@@ -205,13 +205,39 @@ class LogoContractTest < ActionView::TestCase
       refute_match(/\A\s*<rect\b/, body, "#{public_name} must not paint a background")
     end
   end
+  test "the intro plate condenses carriers into the mark and honours reduced motion" do
+    intro = Rails.root.join("__logo/plates/11_intro_condense.svg").read
+    source = Rails.root.join("app/views/shared/_logo.html.erb").read
+    canonical = source.scan(/<path stroke="#FFFFFF" stroke-width="([\d.]+)" stroke-opacity="1\.0" fill="none" d="([^"]+)"\/>/)
+
+    # Many carriers, one accent colour, and the canonical swoosh inside the clip.
+    assert_operator intro.scan('class="ic"').size, :>=, 1000
+    assert_equal 12, intro.scan('class="ia"').size
+    assert_equal canonical, intro.scan(/<path stroke="#FFFFFF" stroke-width="([\d.]+)" stroke-opacity="1\.0" fill="none" d="([^"]+)"\/>/)
+    assert_includes intro, "#C8F55F", "the one signal accent must be the token signal colour"
+    assert_operator intro.index(%(<g clip-path="url(#pl11-text)">)), :<, intro.index('<path stroke="#FFFFFF"')
+
+    # The assembled mark is the base state, so a disabled animation still reads,
+    # and prefers-reduced-motion pins it assembled instead of leaving it scattered.
+    assert_includes intro, "animation:icondense"
+    assert_includes intro, "@media (prefers-reduced-motion:reduce)"
+    assert_match(/prefers-reduced-motion:reduce\)\{[^}]*animation:none/, intro)
+
+    # Monochrome ink only, per tokens.yml: colour is a sparse semantic accent,
+    # never the substance, so no bright carrier field is allowed.
+    fills = intro.scan(/fill="#([0-9a-fA-F]{6})"/).flatten.uniq
+    assert_equal %w[0B0B0B 7C7C84 C8F55F E8E8E6], fills.sort,
+                 "carriers must be monochrome ink with the one signal accent"
+  end
+
+
 
   test "logo study gallery paths and plate descriptions stay in sync" do
     root = Rails.root.join("__logo")
     html = root.join("all-plates.html").read
     images = html.scan(/<img\b[^>]*\bsrc="([^"]+)"/).flatten
 
-    assert_equal 20, images.size
+    assert_equal 21, images.size
     images.each do |asset|
       assert File.file?(root.join(asset)), "missing gallery asset: #{asset}"
     end

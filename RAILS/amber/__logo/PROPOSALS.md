@@ -1,12 +1,12 @@
-# PROPOSALS — plur1bus plates: ten directions for the amber® mark
+# PROPOSALS — plur1bus plates: eleven directions for the amber® mark
 
-Open `all-plates.html` in a browser: all ten plates render on one page with the
+Open `all-plates.html` in a browser: all eleven plates render on one page with the
 canonical reference on top and the avatar cuts underneath. Regenerate with
 `node generate.mjs` (deterministic, seeded; the glyph outlines and the nine
 hairlines are extracted live from `RAILS/amber/app/views/shared/_logo.html.erb`,
 so the wordmark and the swoosh geometry cannot drift from the shipped mark).
 
-The brief: ten radically different plates — bit-reduction, motion graphics,
+The brief: eleven radically different plates — bit-reduction, motion graphics,
 color grading, sparkle pizzazz — with the operator's constraint that the
 **original font (outlined Caprasimo glyphs) and the swoosh style and lines
 (nine-hairline family + carrier curve) stay on every plate**, and every
@@ -40,7 +40,7 @@ visible area stays inside the letters. No path is re-drawn or restyled.
 - The original stacking order: ink below, swoosh above. Study plates add
   only the glyph clip that limits where the swoosh is visible.
 
-## The ten plates
+## The eleven plates
 
 | # | Plate | Direction | Inside the letters | Law/token mapping |
 |---|---|---|---|---|
@@ -54,6 +54,7 @@ visible area stays inside the letters. No path is re-drawn or restyled.
 | 08 | `prism_rainbow` | Sparkle pizzazz | The candy rainbow poured into the letters — prism ink, canonical white swoosh | Rainbow ask, cropped to the law: the prism ramp lives in the ink and nowhere else |
 | 09 | `grade_teal_amber` | Explicit cinematic grade | Amber ink (warm vertical ramp) on a deep teal ground; canonical white swoosh | Color-grading brief; the grade is the ground/ink pair, documented in the plate title |
 | 10 | `duotone_riso` | Riso misregistration | Two ink passes a hair out of register — orange beneath, navy above — both clipped to the glyphs (navy double-clipped, inner clip shifted −3,−2), so the orange rims only the right/bottom edges *inside* the letter silhouettes; canonical white swoosh; signal-green registration dots | Print-grit trend; the mark stays in fixed values; misregistration without bleeding |
+| 11 | `intro_condense` | **Animated intro** — many become one | A field of ~3 000 monochrome carriers drifts in and condenses into the wordmark (2.9 s), a deterministic ~16 % keeping a dimmer identity as residual individuality; the nine hairlines fade up once the mark has formed; a dozen lime carriers are the sole signal accent; canonical white swoosh clipped inside the glyphs | MASTER `face_interface.stipple` — the `face_dotfield` prototype and `stipple_vocabulary` in `tokens.yml`: density is belonging, luminosity is attention, residual individuality survives, motion is a state change not decoration; `motion.reduced_motion_must_preserve_meaning` pins the assembled mark under `prefers-reduced-motion`; the assembled mark is the base state, so a still frame reads |
 
 ## Avatar cuts (sprite-workflow deliverable)
 
@@ -115,10 +116,10 @@ the source partial.
 ```
 RAILS/amber/__logo/
   generate.mjs         generator — extracts glyphs/hairlines from the live partial
-  all-plates.html      all ten plates + reference + avatar cuts on one page
+  all-plates.html      all eleven plates + reference + avatar cuts on one page
   RESEARCH.md          online research with sources
   PROPOSALS.md         this file
-  plates/*.svg         10 plates + reference-original.svg
+  plates/*.svg         11 plates + reference-original.svg
   plates/avatars/*.svg 3 alpha-transparent avatar cuts
 ```
 

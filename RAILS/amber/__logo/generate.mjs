@@ -1,4 +1,4 @@
-// plur1bus plates — the amber® mark, ten directions.
+// plur1bus plates — the amber® mark, eleven directions.
 //
 // One law, taken straight from the shipped mark: the ink is clipped to the
 // glyph mask, and the nine swoosh hairlines ride ON TOP of the ink — clipped
@@ -82,6 +82,66 @@ function pathPoints(d) {
   }
   return pts;
 }
+
+// ---------- glyph rasterisation (for sampling carriers inside the letters) ----------
+// Flatten every glyph outline to polygons in stage space so carriers can be
+// placed only where ink is: the same M/L/Q/C/V/H/Z subset the font uses.
+function flattenGlyph(d, m, steps = 18) {
+  const rings = [];
+  let cur = null, cx = 0, cy = 0, sx = 0, sy = 0;
+  const push = (x, y) => cur.push(ap(m, x, y));
+  const num = s => (s.match(/-?\d*\.?\d+(?:e-?\d+)?/g) || []).map(Number);
+  const re = /([MQCLVHZ])([^MQCLVHZ]*)/gi;
+  let t;
+  while ((t = re.exec(d))) {
+    const cmd = t[1].toUpperCase(), n = num(t[2]);
+    if (cmd === "M") {
+      for (let i = 0; i < n.length; i += 2) {
+        cx = n[i]; cy = n[i + 1];
+        if (i === 0) { cur = [ap(m, cx, cy)]; rings.push(cur); sx = cx; sy = cy; }
+        else push(cx, cy);
+      }
+    } else if (cmd === "L") {
+      for (let i = 0; i < n.length; i += 2) { cx = n[i]; cy = n[i + 1]; push(cx, cy); }
+    } else if (cmd === "Q") {
+      for (let i = 0; i + 3 < n.length; i += 4) {
+        const x1 = n[i], y1 = n[i + 1], x2 = n[i + 2], y2 = n[i + 3];
+        for (let s = 1; s <= steps; s++) {
+          const u = s / steps, v = 1 - u;
+          push(v * v * cx + 2 * v * u * x1 + u * u * x2, v * v * cy + 2 * v * u * y1 + u * u * y2);
+        }
+        cx = x2; cy = y2;
+      }
+    } else if (cmd === "C") {
+      for (let i = 0; i + 5 < n.length; i += 6) {
+        const x1 = n[i], y1 = n[i + 1], x2 = n[i + 2], y2 = n[i + 3], x3 = n[i + 4], y3 = n[i + 5];
+        for (let s = 1; s <= steps; s++) {
+          const u = s / steps, v = 1 - u;
+          push(v * v * v * cx + 3 * v * v * u * x1 + 3 * v * u * u * x2 + u * u * u * x3,
+               v * v * v * cy + 3 * v * v * u * y1 + 3 * v * u * u * y2 + u * u * u * y3);
+        }
+        cx = x3; cy = y3;
+      }
+    } else if (cmd === "V") { cy = n[0]; push(cx, cy); }
+    else if (cmd === "H") { cx = n[0]; push(cx, cy); }
+    else if (cmd === "Z") { if (cur) push(sx, sy); }
+  }
+  return rings;
+}
+// Nonzero winding, matching the default SVG fill rule the glyphs rely on.
+function winding(px, py, ring) {
+  let w = 0;
+  for (let i = 0; i < ring.length; i++) {
+    const [x1, y1] = ring[i], [x2, y2] = ring[(i + 1) % ring.length];
+    const cross = (x2 - x1) * (py - y1) - (px - x1) * (y2 - y1);
+    if (y1 <= py) { if (y2 > py && cross > 0) w++; }
+    else if (y2 <= py && cross < 0) w--;
+  }
+  return w;
+}
+const GLYPH_RINGS = Object.fromEntries(Object.entries(GLYPHS).map(([g, d]) => [g, flattenGlyph(d, parseTransform(TRANSFORMS[g]))]));
+const insideGlyph = (g, x, y) => GLYPH_RINGS[g].reduce((s, ring) => s + winding(x, y, ring), 0) !== 0;
+const insideMark = (x, y) => Object.keys(GLYPH_RINGS).some(g => insideGlyph(g, x, y));
 
 // wordmark bounding box on the canvas
 const LOCK = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9 };
@@ -353,6 +413,73 @@ function p10() {
   plate(10, "duotone_riso", "riso duotone — misregistration inside the glyphs; canonical white swoosh", out);
 }
 
+// ---------- 11 intro — many carriers condense into the one readable mark ----------
+// The amber® intro, in the language MASTER's web face already speaks (the
+// dotfield prototype and stipple_vocabulary in tokens.yml): a field of small
+// carriers drifts, then settles into the wordmark; density is belonging,
+// luminosity is attention, one signal accent marks the moment, and a
+// deterministic minority keeps a dimmer identity so individuality survives the
+// collective. Monochrome ink only; the single lime accent is the signal. The
+// base state is the assembled mark, so a still frame or a disabled animation
+// still reads; prefers-reduced-motion pins it assembled. Geometry is the same
+// live glyph extraction every other plate uses, so it cannot drift from the
+// shipped mark.
+function p11() {
+  const id = "pl11", r = rng(5711);
+  const W_INK = "#E8E8E6", W_DIM = "#7C7C84", SIGNAL = "#C8F55F";
+  const step = 2.4;
+  const carriers = [];
+  for (let x = LOCK.x0 - 2; x <= LOCK.x1 + 2; x += step) {
+    for (let y = LOCK.y0 - 2; y <= LOCK.y1 + 2; y += step) {
+      const px = x + (r() - 0.5) * step, py = y + (r() - 0.5) * step;
+      if (!insideMark(px, py)) continue;
+      const residual = r() < 0.16;
+      const rim = r() < 0.22;
+      carriers.push({
+        x: px, y: py,
+        rad: (rim ? 1.05 : 0.62) + r() * 0.55,
+        ink: residual ? W_DIM : W_INK,
+        op: residual ? 0.42 + r() * 0.2 : 0.72 + r() * 0.26,
+        dx: (r() - 0.5) * 240, dy: (r() - 0.5) * 190,
+        delay: (r() * 1.1).toFixed(2),
+      });
+    }
+  }
+  // A sparse signal accent: a few carriers in the one meaningful colour.
+  const accents = [];
+  for (let i = 0; i < 12; i++) {
+    const a = carriers[Math.floor(r() * carriers.length)];
+    accents.push({ x: a.x + (r() - 0.5) * 6, y: a.y + (r() - 0.5) * 6, rad: 0.8 + r() * 0.6, delay: (r() * 1.1).toFixed(2) });
+  }
+  const body = carriers.map(c =>
+    `<circle class="ic" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${c.rad.toFixed(2)}" fill="${c.ink}" opacity="${c.op.toFixed(2)}" ` +
+    `style="--dx:${c.dx.toFixed(0)}px;--dy:${c.dy.toFixed(0)}px;animation-delay:${c.delay}s"/>`).join("") +
+    accents.map(c =>
+      `<circle class="ia" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${c.rad.toFixed(2)}" fill="${SIGNAL}" ` +
+      `style="--dx:${(c.x - LOCK.x0 - 200).toFixed(0)}px;--dy:-160px;animation-delay:${c.delay}s"/>`).join("");
+  const style =
+    `<style>` +
+    `@keyframes icondense{from{transform:translate(var(--dx),var(--dy));opacity:0.06}` +
+    `60%{opacity:0.8}to{transform:translate(0,0);opacity:1}}` +
+    `@keyframes iacc{from{transform:translate(var(--dx),var(--dy));opacity:0}to{transform:translate(0,0);opacity:1}}` +
+    `@keyframes iline{from{opacity:0}to{opacity:1}}` +
+    `.ic{transform-box:fill-box;transform-origin:center;animation:icondense 2.9s cubic-bezier(.16,.72,.2,1) both}` +
+    `.ia{transform-box:fill-box;transform-origin:center;animation:iacc 2.9s cubic-bezier(.16,.72,.2,1) both}` +
+    `.il{animation:iline 1.2s ease-out 2.1s both}` +
+    `@media (prefers-reduced-motion:reduce){.ic,.ia{animation:none;transform:none;opacity:1}.il{animation:none;opacity:1}}` +
+    `</style>`;
+  const lines = `<g class="il">${canonicalHairlines()}</g>`;
+  const out = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${VB}" role="img" ` +
+    `aria-label="amber mark assembling from a particle field">` +
+    `<title>amber mark — a field of carriers condenses into the one readable mark</title>` +
+    defs(id) + style +
+    `<rect x="${SX}" y="${SY}" width="${W}" height="${H}" fill="#0B0B0B"/>` +
+    body + `<g clip-path="url(#${id}-text)">${lines}</g>` +
+    `</svg>`;
+  plate(11, "intro_condense", "motion — a carrier field condenses into the mark; monochrome ink with one lime signal accent; reduced-motion pins the assembled mark", out);
+}
+
+
 // ---------- reference (canonical mark, tight stage) ----------
 function pref() {
   const out = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 500" role="img" aria-label="canonical amber mark">` +
@@ -416,7 +543,7 @@ function page() {
     `<figcaption>${String(pl.num).padStart(2, "0")} · ${pl.slug.replaceAll("_", " ")} — ${pl.note}</figcaption></figure>`).join("");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width, initial-scale=1">` +
-    `<title>plur1bus plates — the amber mark, ten directions</title>` +
+    `<title>plur1bus plates — the amber mark, eleven directions</title>` +
     `<style>
       body { margin:0; background:#141416; color:#C9C9CF; font:14px/1.5 Helvetica, Arial, sans-serif; padding:28px 30px 44px; }
       h1 { font-size:15px; letter-spacing:.04em; color:#ECECF2; margin:0 0 4px; font-weight:600; }
@@ -437,7 +564,7 @@ function page() {
         .grid, .avatars { grid-template-columns:1fr; }
       }
     </style></head><body>` +
-    `<h1>plur1bus plates — the amber&reg; mark, ten directions</h1>` +
+    `<h1>plur1bus plates — the amber&reg; mark, eleven directions</h1>` +
     `<p class="sub">Every study keeps the original Caprasimo glyphs and nine white swoosh paths, widths and opacity. Only the ink treatment changes. Study plates clip the visible swoosh to the letter interiors; the reference preserves the original full-width swoosh.</p>` +
     `<figure class="ref"><img src="plates/reference-original.svg" alt="canonical amber mark, cropped">` +
     `<figcaption>00 · reference — production mark, original full-width swoosh</figcaption></figure>` +
@@ -459,7 +586,7 @@ function page() {
 
 mkdirSync(OUT, { recursive: true });
 for (const f of readdirSync(OUT)) rmSync(join(OUT, f), { recursive: true });
-p01(); p02(); p03(); p04(); p05(); p06(); p07(); p08(); p09(); p10();
+p01(); p02(); p03(); p04(); p05(); p06(); p07(); p08(); p09(); p10(); p11();
 pref();
 avatars();
 writeFileSync(join(DIR, "all-plates.html"), page());
