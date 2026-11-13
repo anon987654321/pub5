@@ -7,25 +7,29 @@ class ComicStripsController < ApplicationController
   before_action :set_comic_strip, only: %i[show]
 
   def index
-    scope = ComicStrip.includes(:user).order(created_at: :desc)
+    scope = ComicStrip.includes(:user).newest_first
     scope = apply_live_search(scope, columns: %w[prompt style status], vertical: "comic_strips") if live_search_query.present?
     @pagy, @comic_strips = pagy(scope)
     finish_live_search(partial: "comic_strips/live_search_results")
   end
 
   def show
-    @comic_strip.refresh_status!
   end
 
   def create
-    require_authentication
+    unless ActiveModel::Type::Boolean.new.cast(params[:provider_consent])
+      redirect_to root_path, alert: t("comic_strips.create.provider_consent_required"), status: :see_other
+      return
+    end
+
     @comic_strip = Current.user.comic_strips.build(comic_strip_params)
+    @comic_strip.provider_consent_at = Time.current
 
     if @comic_strip.save
       GenerateComicStripJob.perform_later(@comic_strip.id)
-      redirect_to @comic_strip, notice: "Generating your comic strip…"
+      redirect_to @comic_strip, notice: t("comic_strips.create.started"), status: :see_other
     else
-      redirect_to root_path, alert: "Could not start generation."
+      redirect_to root_path, alert: @comic_strip.errors.full_messages.to_sentence, status: :see_other
     end
   end
 

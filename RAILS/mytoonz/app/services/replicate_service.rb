@@ -9,6 +9,14 @@ class ReplicateService
   MODEL_VERSION = "db21e45d3f7023abc2a46ee38a23973f6dce16bb082a930b0c49861f96d1e5bf"
   MAX_RESPONSE_BYTES = 256_000
   PREDICTION_ID = /\A[a-zA-Z0-9_-]{1,128}\z/
+  OUTPUT_HOST = /\A(?:[a-z0-9-]+\.)*replicate\.delivery\z/i
+
+  def self.safe_output_url?(value)
+    uri = URI.parse(value.to_s)
+    uri.is_a?(URI::HTTPS) && uri.host.to_s.match?(OUTPUT_HOST)
+  rescue URI::InvalidURIError
+    false
+  end
 
   def initialize(api_token: ENV["REPLICATE_API_TOKEN"])
     @api_token = api_token.to_s.strip
@@ -88,7 +96,10 @@ class ReplicateService
     modifiers = {
       "comic" => "comic book style, vibrant colors, bold lines",
       "anime" => "anime art style, manga",
-      "cartoon" => "cartoon style, colorful, fun"
+      "cartoon" => "cartoon style, colorful, fun",
+      "noir" => "noir comic art, dramatic monochrome lighting",
+      "manga" => "manga illustration, expressive ink work",
+      "retro" => "retro comic illustration, halftone print texture"
     }
     modifier = modifiers.fetch(style.to_s, modifiers.fetch("comic"))
     "#{modifier}, #{user_prompt}, high quality, detailed"

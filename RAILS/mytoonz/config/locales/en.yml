@@ -1,4 +1,46 @@
 en:
-  hello: "Hello"
   app:
-    name: "BSDports"
+    name: "MyToonz"
+    description: "Turn your ideas into comic strips."
+  nav:
+    primary: "Primary navigation"
+    gallery: "Gallery"
+    sign_in: "Sign in"
+    sign_out: "Sign out"
+    skip_to_content: "Skip to main content"
+  comic_strips:
+    index:
+      title: "Comic strips"
+      tagline: "Turn your day into a comic strip."
+      generate_heading: "Create a comic strip"
+      prompt_placeholder: "What should the comic strip be about?"
+      provider_consent: "I agree that this prompt will be sent to Replicate to generate images. Replicate processes the request under its own terms and retention policies."
+      generate: "Generate comic"
+      sign_in_to_generate: "to create your own comic strips."
+      search_placeholder: "Search comic strips…"
+      search_label: "Comic strip search"
+      results_label: "Comic strip list"
+      no_exact_matches: "No exact matches. Try:"
+    create:
+      provider_consent_required: "You must consent before the prompt is sent to Replicate."
+      started: "Your comic strip is being generated."
+    show:
+      style: "Style"
+      status: "Status"
+      generated_images: "Generated images"
+      panel_alt: "Generated comic panel"
+      in_progress: "Your comic strip is being generated."
+      refresh: "Refresh status"
+      failed: "The comic strip could not be generated. Please try again later."
+    statuses:
+      pending: "Pending"
+      processing: "Processing"
+      completed: "Completed"
+      failed: "Failed"
+    styles:
+      comic: "Comic"
+      anime: "Anime"
+      cartoon: "Cartoon"
+      noir: "Noir"
+      manga: "Manga"
+      retro: "Retro"

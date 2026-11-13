@@ -1,20 +1,25 @@
-<% content_for :title, "Comic Strips" %>
+<% content_for :title, t(".title") %>
 
-<header class="page-header" role="banner" aria-label="Mytoonz header">
-  <h1>MyToonz</h1>
+<header class="page-header">
+  <h1><%= t("app.name") %></h1>
 </header>
-<p class="dim">Turn your day into a comic strip</p>
+<p class="dim"><%= t(".tagline") %></p>
 
 <% if authenticated? %>
-  <section aria-label="Generate comic strip">
-    <%= form_with model: ComicStrip.new, url: comic_strips_path, local: true, html: { class: "comic-form" } do |f| %>
-      <%= f.text_area :prompt, placeholder: "How was your day?", required: true, rows: 3 %>
-      <%= f.select :style, [["Comic", "comic"], ["Anime", "anime"], ["Cartoon", "cartoon"]], {}, required: true %>
-      <%= f.submit "Generate Comic" %>
+  <section aria-labelledby="generate-comic-heading">
+    <h2 id="generate-comic-heading"><%= t(".generate_heading") %></h2>
+    <%= form_with model: ComicStrip.new, url: comic_strips_path, class: "comic-form" do |form| %>
+      <%= form.text_area :prompt, placeholder: t(".prompt_placeholder"), required: true, rows: 3, maxlength: 4_000 %>
+      <%= form.select :style, ComicStrip::STYLES.map { |style| [t("comic_strips.styles.#{style}"), style] }, {}, required: true %>
+      <div class="provider-consent">
+        <%= check_box_tag :provider_consent, "1", false, required: true %>
+        <%= label_tag :provider_consent, t(".provider_consent") %>
+      </div>
+      <%= form.submit t(".generate") %>
     <% end %>
   </section>
 <% else %>
-  <p><%= link_to "Sign in", new_session_path %> to generate comic strips.</p>
+  <p><%= link_to t("nav.sign_in"), new_session_path %> <%= t(".sign_in_to_generate") %></p>
 <% end %>
 
-<%= live_search_index url: comic_strips_path, results_partial: "comic_strips/live_search_results", placeholder: "Search comic strips…", label: "Comic strip search", frame_id: "mytoonz-comics" %>
+<%= live_search_index url: comic_strips_path, results_partial: "comic_strips/live_search_results", placeholder: t(".search_placeholder"), label: t(".search_label"), frame_id: "mytoonz-comics" %>

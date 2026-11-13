@@ -1,21 +1,20 @@
 <% content_for :title, @comic_strip.prompt.truncate(60) %>
 
-<article role="article" aria-label="Comic strip details">
+<article aria-labelledby="comic-strip-title">
   <header>
-    <h1><%= @comic_strip.prompt %></h1>
-    <p>Style: <%= @comic_strip.style %> · Status: <%= @comic_strip.status %></p>
-    <small>by <%= @comic_strip.user.email_address %></small>
+    <h1 id="comic-strip-title"><%= @comic_strip.prompt %></h1>
+    <p><%= t("comic_strips.show.style") %>: <%= t("comic_strips.styles.#{@comic_strip.style}") %> · <%= t("comic_strips.show.status") %>: <%= t("comic_strips.statuses.#{@comic_strip.status}") %></p>
   </header>
 
-  <% if @comic_strip.status == "completed" && @comic_strip.image_urls.present? %>
-    <section aria-label="Generated images" class="comic-grid">
-      <% Array(@comic_strip.image_urls).each do |url| %>
-        <%= image_tag url, alt: "Generated comic panel", loading: "lazy", style: "max-width: 100%; margin-bottom: 1rem;" %>
+  <% if @comic_strip.status == "completed" && @comic_strip.safe_image_urls.any? %>
+    <section aria-label="<%= t('comic_strips.show.generated_images') %>" class="comic-grid">
+      <% @comic_strip.safe_image_urls.each do |url| %>
+        <%= image_tag url, alt: t("comic_strips.show.panel_alt"), loading: "lazy" %>
       <% end %>
     </section>
   <% elsif @comic_strip.status.in?(%w[pending processing]) %>
-    <p>Generation in progress… <%= link_to "Refresh", comic_strip_path(@comic_strip) %></p>
+    <p><%= t("comic_strips.show.in_progress") %> <%= link_to t("comic_strips.show.refresh"), comic_strip_path(@comic_strip) %></p>
   <% elsif @comic_strip.status == "failed" %>
-    <p>Generation failed. Please try again.</p>
+    <p role="status"><%= t("comic_strips.show.failed") %></p>
   <% end %>
 </article>

@@ -532,13 +532,16 @@ archived_subsystems:
       generator prototype and demo in anon987654321/pub3 at commit
       09663f79041452c48c5925998725d44719f59e67.
     notes: >-
-      Source restored 2026-11-13 as an archived, source-only Rails app.
-      It remains outside apps:, deploy helpers and production health checks.
-      Historical port 10008 and its deployment script are not active in pub5.
-      No service, database, token, DNS, certificate or relayd route was
-      restored. Explicit provider consent, retention review, fresh credentials
-      and an operator-approved OpenBSD deployment plan are required before
-      production reactivation.
+      Source restored 2026-11-13 and aligned with the fleet's pinned
+      Rails 8.2.0.alpha source, Ruby baseline, pub5-shared engine, CI shape,
+      Norwegian locale and app-level tests. Provider submission is gated by a
+      recorded consent timestamp; generated image URLs are allowlisted and
+      prediction polling runs through bounded background jobs. It remains
+      outside apps:, deploy helpers and production health checks. Historical
+      port 10008 is not active. No production database, provider token, service,
+      DNS, certificate or relayd route was restored. Privacy/retention review,
+      fresh credentials, capacity and an operator-approved OpenBSD deployment
+      plan are required before production reactivation.
 
   aight_production_ai:
     recovery_source: MASTER/lib/io/

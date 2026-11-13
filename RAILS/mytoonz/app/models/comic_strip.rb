@@ -5,24 +5,16 @@ class ComicStrip < ApplicationRecord
 
   belongs_to :user
 
-  validates :prompt, presence: true
-  validates :style, presence: true
-  validates :status, presence: true
-
   STATUSES = %w[pending processing completed failed].freeze
+  STYLES = %w[comic anime cartoon noir manga retro].freeze
 
-  def refresh_status!
-    return if status.in?(%w[completed failed])
-    return if prediction_id.blank?
+  validates :prompt, presence: true, length: { maximum: 4_000 }
+  validates :style, presence: true, inclusion: { in: STYLES }
+  validates :status, presence: true, inclusion: { in: STATUSES }
 
-    result = ReplicateService.new.get_prediction(prediction_id)
-    case result["status"]
-    when "succeeded"
-      update!(status: "completed", image_urls: result["output"])
-    when "failed"
-      update!(status: "failed")
-    when "processing", "starting"
-      update!(status: "processing")
-    end
+  scope :newest_first, -> { order(created_at: :desc) }
+
+  def safe_image_urls
+    Array(image_urls).select { |url| ReplicateService.safe_output_url?(url) }
   end
 end

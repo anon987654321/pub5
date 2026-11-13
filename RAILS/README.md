@@ -15,10 +15,13 @@ the deploy matrix; its vm23 service, DNS, certificate and relayd route remain
 retired. The production database remains in the historical backup at
 `/var/backups/pub4/hjerterom-20260812` on vm23 and has not been restored.
 
-MyToonz is restored separately at `RAILS/mytoonz` as archived source from
-pub4, with its earlier generator and demo traced to pub3. It is not in the
-active app inventory; its historical port 10008 and deployment script are not
-active. No provider token, production database or live routing was restored.
+MyToonz is a standalone Rails 8.2.0.alpha app under `RAILS/mytoonz`, pinned
+to the fleet's Rails source revision and local `pub5-shared` engine. Its
+provider consent, bounded prediction polling, tests and Norwegian copy follow
+the same application conventions as the active apps. It remains in the
+recovered inventory, not the active deploy matrix: historical port 10008,
+production database, provider token, service, DNS, certificate and relayd
+route are not active or restored.
 
 This README is the entry to the tree. Feature truth is `apps.yml`, which also
 holds the ports, the domains and the stack versions, so nothing here restates
