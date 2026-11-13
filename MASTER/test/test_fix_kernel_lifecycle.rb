@@ -180,10 +180,29 @@ class TestFixKernelLifecycle < Minitest::Test
       expected_contract = Master::Fix::TaskContract.coerce(task_contract(root))
       expected_digest = Digest::SHA256.hexdigest(JSON.generate(expected_contract.to_h))
       assert_equal expected_digest, start.dig("payload", "task_contract_digest")
+      assert_equal "functional_change", start.dig("payload", "task_contract", "intent")
+      assert_equal expected_contract.scope, start.dig("payload", "task_contract", "scope")
       assert_equal "done", terminal.dig("payload", "state")
       assert_equal "ok", terminal.dig("payload", "result")
       assert_equal 1, repair.dig("payload", "fixed")
       assert_equal 1, repair.dig("payload", "breakdown", "applied")
+
+      receipt = kernel.terminal_receipt(
+        run_id: start.fetch("run_id"),
+        attempt_id: start.dig("payload", "attempt_id")
+      )
+      assert_instance_of Master::Fix::TerminalReceipt, receipt
+      assert_equal "fixture-run", receipt.run_id
+      assert_equal "functional_change", receipt.task_contract.fetch("intent")
+      assert_equal "done", receipt.terminal_state
+      assert receipt.measured
+      assert_equal 1, receipt.changed
+      assert_empty receipt.rejected
+      assert_includes receipt.outcomes, Master::Fix::Outcome::MEASURED
+      assert_includes receipt.outcomes, Master::Fix::Outcome::CHANGED
+      assert_includes receipt.outcomes, Master::Fix::Outcome::INCONCLUSIVE
+      assert_same receipt, receipt.verify!(log_path: kernel.log_path)
+      assert_nil kernel.terminal_receipt(run_id: "not-a-run")
       assert_nil adapter.instance_variable_get(:@cancellation)
       assert_nil kernel.instance_variable_get(:@current_run_id)
     end
