@@ -437,8 +437,11 @@ measure is already owned by the Bymorgen item above.
   NOT_RUN. Triangle's sibling-worktree reaper is source-fixed: it refuses
   non-sibling paths and non-leader listeners, then uses the bounded shared
   process-group stop; live-group and non-leader refusal regressions are authored
-  but NOT_RUN. The broader process-kill census and provider-boundary audits
-  remain open. The constitutional scan runner now
+  but NOT_RUN. Dependency-manager boot capture now applies bounded TERM/KILL
+  and verifies the whole child process group has disappeared; when it cannot
+  prove exit it reports termination UNCONFIRMED. Descendant-held-pipe and
+  unconfirmed-stop regressions are authored but NOT_RUN. The broader
+  process-kill census and provider-boundary audits remain open. The constitutional scan runner now
   puts its child in an isolated process group and applies one monotonic deadline
   to both process exit and output-pipe EOF; timeout escalates TERM to KILL and
   checks group disappearance. A regression covers an exited leader with a
