@@ -360,7 +360,7 @@ class TestDesignLoop < Minitest::Test
       committed = []
       calls = 0
       stub_scoring do
-        world = world_for(path, committed: [])
+        world = world_for(path, committed:)
         original = world.measure
         measure = lambda do |surfaces|
           calls += 1
@@ -371,7 +371,8 @@ class TestDesignLoop < Minitest::Test
             surface.id == "brgen/home" ? [surface, payload.merge("score" => 30.0), shot] : [surface, payload, shot]
           end
         end
-        rounds = loop_for(path, committed:).tap { |loop| loop.instance_variable_set(:@world, world.with(measure:)) }.run
+        plan = LOOP::Plan.new(surfaces: HOME_AND_FEED, root: File.dirname(path), rounds: 1, candidates: 1)
+        rounds = LOOP.new(plan:, world: world.with(measure:)).run
 
         assert_equal :failed, rounds.first.outcome
         assert_empty committed
