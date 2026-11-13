@@ -485,6 +485,18 @@ module Master
             return round(number:, why: edit.why, outcome: :failed, after: @target[:score])
           end
 
+          verified = measured(@fresh.map { |row| row[:surface] })
+          verification = judge(@fresh, verified)
+          unless verification[:ok]
+            @rejected << edit.key
+            @undone << "#{edit.why} (final verification: #{verification[:text]})"
+            cleanup = restore_candidate_transaction(transaction, edit)
+            @say.call("#{edit.why}: final verification refused the commit; cleanup=#{cleanup}")
+            outcome = cleanup == :restored ? :failed : :delivery_failed
+            return round(number:, why: edit.why, outcome:, after: @target[:score])
+          end
+          after = @target[:score] + verification[:gain]
+
           committed = @world.commit_file.call(edit.file, commit_message(edit, after), transaction)
           unless committed && transaction.state == "committed" && !transaction.active?
             @rejected << edit.key
@@ -500,7 +512,7 @@ module Master
             return round(number:, why: edit.why, outcome:, after: @target[:score])
           end
 
-          merge(best[:after])
+          merge(verified)
           round(number:, why: edit.why, outcome: :kept, after:)
         rescue StandardError => e
           if transaction&.state == "delivering"
