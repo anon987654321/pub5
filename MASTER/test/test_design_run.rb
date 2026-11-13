@@ -28,6 +28,14 @@ class TestDesignRun < Minitest::Test
     assert_empty said([Round.new(:kept)], [Surface.new("amber/feed/desktop", false)])
   end
 
+  def transaction(root, path, id:)
+    Master::Fix::Transaction.new(root:, paths: [path], id:).tap(&:begin!)
+  end
+
+  def head(root)
+    IO.popen(["git", "-C", root, "rev-parse", "HEAD"], &:read).strip
+  end
+
   def git(root, *args) = system("git", "-C", root, *args, out: File::NULL, err: File::NULL)
 
   def write_all(root, files) = files.each { |rel, text| File.write(File.join(root, rel), text) }
@@ -47,19 +55,44 @@ class TestDesignRun < Minitest::Test
     write_all(root, "MASTER/data/laws.yml" => "a: 2\n", "app.css" => "b {}\n")
   end
 
-  # A design run commits unattended, so it goes through git! and a sacred path is refused there.
-  def test_commit_refuses_a_sacred_path_and_commits_an_ordinary_one
+  # A design run commits through the transaction receipt and private-index path.
+  def test_commit_refuses_a_sacred_path_and_delivers_an_ordinary_one
     Dir.mktmpdir do |root|
       edited_checkout(root)
       lines = []
+      sacred_path = File.join(root, "MASTER", "data", "laws.yml")
+      sacred = transaction(root, sacred_path, id: "design-#{'a' * 20}")
+      ordinary_path = File.join(root, "app.css")
+      ordinary = transaction(root, ordinary_path, id: "design-#{'b' * 20}")
 
       RUN.stub(:say, ->(text) { lines << text }) do
-        refute RUN.commit(File.join(root, "MASTER", "data", "laws.yml"), "design: laws", root:)
-        assert RUN.commit(File.join(root, "app.css"), "design: css", root:)
+        refute RUN.commit(sacred_path, "design: laws", root:, transaction: sacred)
+        assert sacred.rollback!.ok?
+        assert RUN.commit(ordinary_path, "design: css", root:, transaction: ordinary)
       end
 
       assert_match(/data\/laws\.yml is sacred/, lines.first)
       assert_equal "design: css\nbase\n", IO.popen(["git", "-C", root, "log", "--format=%s"], &:read)
+      refute ordinary.active?
+    end
+  end
+
+  def test_report_returns_failure_when_a_partial_run_has_delivery_errors
+    Dir.mktmpdir do |root|
+      edited_checkout(root)
+      result = Struct.new(:outcome, :number, :surface, :why, :before, :after)
+      results = [
+        result.new(:kept, 1, "brgen/home", "more room", 40.0, 60.0),
+        Round.new(:delivery_failed),
+      ]
+      lines = []
+      status = RUN.stub(:say, ->(text) { lines << text }) do
+        RUN.report(results, root:, before: head(root), surfaces: [])
+      end
+
+      assert_equal 1, status
+      assert_match(/design run incomplete: delivery_failed/, lines.join("\n"))
+      assert_match(/1 edit\(s\) kept in 2 round\(s\)/, lines.join("\n"))
     end
   end
 end
