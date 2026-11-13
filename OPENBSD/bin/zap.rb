@@ -45,6 +45,7 @@ class Zap
       @err.puts "zap: vmd manages virtual machines; use vmctl to stop a guest cleanly"
     end
 
+    failed = false
     matches.each do |process|
       next unless @force || confirm?(process)
 
@@ -53,9 +54,9 @@ class Zap
         next
       end
 
-      signal_process(process)
+      failed = true unless signal_process(process)
     end
-    0
+    failed ? 1 : 0
   rescue OptionParser::ParseError, ArgumentError => e
     @err.puts "zap: #{e.message}"
     @err.puts help_text
@@ -265,10 +266,13 @@ class Zap
   def signal_process(process)
     Process.kill(@signal, process.fetch(:pid))
     @out.puts "zap: sent #{@signal_label} to PID #{process[:pid]}"
+    true
   rescue Errno::ESRCH
     @out.puts "zap: PID #{process[:pid]} already exited"
+    true
   rescue Errno::EPERM => e
     @err.puts "zap: cannot signal PID #{process[:pid]}: #{e.message}"
+    false
   end
 end
 
