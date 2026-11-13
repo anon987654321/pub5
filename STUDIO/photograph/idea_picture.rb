@@ -8,6 +8,7 @@ require_relative "../output_paths"
 require_relative "../replicate/client"
 require_relative "../subprocess"
 require_relative "../lora/consent"
+require_relative "../lora/lora"
 
 module Studio
   module Visual
@@ -19,14 +20,10 @@ module Studio
       # Lora subjects, the output-path safety rails — pointed outside the tree.
       ROOT = File.expand_path("..", __dir__)
       SUBJECTS = File.join(ROOT, "lora").freeze
-      # The photography craft appended to every still prompt. The first selfie
-      # series rendered every scene dead-centre with the subject's head cropped
-      # at the frame edge and flat frontal light: the scene words carried light
-      # but nothing carried framing, camera position or a lens. These fix the
-      # framing and let the light read as a decision.
-      PHOTOGRAPHIC_CRAFT = "well-framed, the whole head in frame with headroom, " \
-                           "subject slightly off centre, directional light with real shadows, " \
-                           "shot on a 35mm prime, sharp eyes, no text in the frame"
+      # The photography craft appended to every still prompt lives in
+      # lora/lora.rb as Studio::Lora::Craft: geometry, light direction and
+      # expression are decided here, where a grade cannot add them.
+      PHOTOGRAPHIC_CRAFT = Studio::Lora::Craft::PHOTOGRAPHIC_CRAFT
 
       def initialize(
         client: nil,
@@ -43,14 +40,14 @@ module Studio
         @model_manifest = model_manifest || default_model_manifest
       end
 
-      def write(words, film: true, duration: 5, output_stem: nil)
+      def write(words, film: true, duration: 5, output_stem: nil, grade_seed: nil)
         require_subject_consent!
         validate_model!
         validate_film_model! if film
         FileUtils.mkdir_p(@directory)
         stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S%6N")
         stem = [safe_stem(output_stem || @subject), stamp, SecureRandom.hex(3)].join("_")
-        still = render_still(words, stem)
+        still = render_still(words, stem, grade_seed:)
         return { "still" => still } unless film
 
         { "still" => still, "clip" => render_film(words, still, stem, duration) }
@@ -117,13 +114,13 @@ module Studio
         @client ||= Studio::ReplicateClient.new
       end
 
-      def render_still(words, stem)
+      def render_still(words, stem, grade_seed: nil)
         path = File.join(@directory, "#{safe_stem(stem)}.jpg")
         raise "refusing to replace an existing still: #{path}" if File.exist?(path)
 
         output = client.predict(still_model, still_input(words), timeout: 600)
         client.download_url(first_url(output), path)
-        graded = grade(path)
+        graded = grade(path, seed: grade_seed)
         File.delete(path) if graded != path && File.file?(path)
         graded
       end
@@ -143,8 +140,8 @@ module Studio
           model: "dev",
           aspect_ratio: "2:3",
           num_outputs: 1,
-          guidance_scale: 3.0,
-          num_inference_steps: 28,
+          guidance_scale: 2.5,
+          num_inference_steps: 45,
           output_format: "jpg",
           output_quality: 95,
           go_fast: false,
@@ -216,22 +213,28 @@ module Studio
       end
 
       # postpro writes its grade beside the still it was given.
-      def grade(path)
-        run_postpro(path)
+      def grade(path, seed: nil)
+        run_postpro(path, seed:)
         graded = Dir[graded_pattern(path)].max_by { |file| File.mtime(file) }
         raise "postpro succeeded but produced no graded still under #{File.dirname(path)}" unless graded
 
         graded
       end
 
-      def run_postpro(path)
+      def run_postpro(path, seed: nil)
         script = File.join(ROOT, "postpro", "postpro.rb")
-        # --rough alone let every still draw one whisper-quiet chain: the first
+        # --heavy alone let every still draw one whisper-quiet chain: the first
         # selfie series came back looking ungraded. Heavy mode anchors each
         # take in a named look and deals the lane subtle to bleeding edge, so
         # the grade is a photographic decision, not a nudge.
+        #
+        # postpro deals those looks through Random.new(POSTPRO_SEED), so a seed
+        # of nil re-rolls per run and two frames of one series can land on the
+        # same look. A caller that wants each frame graded differently passes a
+        # distinct seed; without one the environment decides, as before.
+        env = seed ? { "POSTPRO_SEED" => seed.to_s } : {}
         stdout, stderr, status = Studio::Subprocess.capture3(
-          {}, RbConfig.ruby, script, "--heavy", "--count", "1", path, timeout: 600
+          env, RbConfig.ruby, script, "--heavy", "--count", "1", path, timeout: 600
         )
         return if status.success?
 

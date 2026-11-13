@@ -43,7 +43,7 @@ class TestSelfieSeries < Minitest::Test
     @client = FakeClient.new
     Studio::Visual::IdeaPicture.class_eval do
       alias_method :grade_without_stub, :grade
-      define_method(:grade) { |path| path }
+      define_method(:grade) { |path, **| path }
       alias_method :still_model_without_stub, :still_model
       define_method(:still_model) { "owner/model:version-123" }
     end
