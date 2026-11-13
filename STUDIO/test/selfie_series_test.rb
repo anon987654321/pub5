@@ -103,7 +103,9 @@ class TestSelfieSeries < Minitest::Test
     refute File.exist?(old)
     refute File.exist?(processed)
     assert File.exist?(other)
-    assert_equal 1, ledger_rows("replace_cleanup").first.fetch("deleted")
+    # A replace deletes the subject's own still and its postpro grade — both
+    # match the cleanup patterns — and nothing belonging to another subject.
+    assert_equal 2, ledger_rows("replace_cleanup").first.fetch("deleted")
   end
 
   def test_no_render_carries_the_film_model
@@ -111,7 +113,7 @@ class TestSelfieSeries < Minitest::Test
 
     models = @client.predictions.map(&:first)
     assert_equal 2, models.size
-    refute_includes models, "prunaai/p-video-2-pro", "a series never renders film"
+    refute_includes models, Studio::Visual::IdeaPicture::FILM, "a series never renders film"
   end
 
   def test_count_is_bounded

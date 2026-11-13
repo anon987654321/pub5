@@ -293,7 +293,7 @@ class TestIdeaPictureOutput < Minitest::Test
       )
       error = assert_raises(RuntimeError) { blocked.send(:still_model) }
       assert_includes error.message, missing
-      assert_includes error.message, "approved training run"
+      assert_includes error.message, "REPLICATE_MODEL in probe/subject.env"
     end
   end
 
@@ -315,5 +315,58 @@ class TestIdeaPictureOutput < Minitest::Test
       Studio::Visual::IdeaPicture.new(subject: "../elsewhere")
     end
     assert_match(/simple directory name/, error.message)
+  end
+
+  # The film engine is MiniMax H3 Lite, which takes a first frame and a
+  # 4-15s duration, not the old model's `image`/`mode`/`aspect_ratio` shape.
+  def test_film_engine_is_h3_lite_and_takes_a_first_frame
+    assert_equal "minimax/h3-lite", Studio::Visual::IdeaPicture::FILM
+    assert_equal %w[prompt first_frame_image duration resolution],
+                 Studio::Visual::IdeaPicture::FILM_INPUT_KEYS.fetch("minimax/h3-lite")
+  end
+
+  def test_film_input_uses_the_first_frame_and_clamps_duration_to_h3_bounds
+    Dir.mktmpdir do |dir|
+      still = File.join(dir, "still.jpg")
+      File.write(still, "image")
+      client = Object.new
+      client.define_singleton_method(:upload_file) { |path, subject:| "https://example.test/#{File.basename(path)}?s=#{subject}" }
+      picture = Studio::Visual::IdeaPicture.new(subject: "probe", client:, directory: dir)
+
+      input = picture.send(:film_input, "slow turn", still, 2)
+      assert_equal "https://example.test/still.jpg?s=probe", input[:first_frame_image]
+      assert_equal 4, input[:duration], "H3 Lite's floor is 4s; 2s would be rejected"
+      refute input.key?(:image), "h3-lite takes first_frame_image, not image"
+      assert_equal "768P", input[:resolution]
+
+      assert_equal 15, picture.send(:film_input, "turn", still, 30)[:duration]
+      assert_equal 8, picture.send(:film_input, "turn", still, 8)[:duration]
+    end
+  end
+
+  def test_add_soundtrack_muxes_real_audio_and_keeps_the_silent_original
+    skip "ffmpeg is not on PATH" unless system("ffmpeg", "-version", out: File::NULL, err: File::NULL)
+
+    Dir.mktmpdir do |dir|
+      clip = File.join(dir, "film.mp4")
+      wav = File.join(dir, "dilla.wav")
+      Open3.capture2e("ffmpeg", "-v", "error", "-y", "-f", "lavfi",
+                      "-i", "color=c=black:s=64x64:d=2", "-c:v", "libx264", "-pix_fmt", "yuv420p", clip)
+      Open3.capture2e("ffmpeg", "-v", "error", "-y", "-f", "lavfi",
+                      "-i", "sine=frequency=200:duration=4", wav)
+
+      picture = Studio::Visual::IdeaPicture.new(subject: "probe", directory: dir)
+      scored = picture.add_soundtrack(clip, wav)
+
+      assert_equal File.join(dir, "film_audio.mp4"), scored
+      assert File.file?(clip), "the silent provider clip is left in place"
+      probe, = Open3.capture2e("ffprobe", "-v", "error", "-show_entries",
+                               "stream=codec_type", "-of", "csv=p=0", scored)
+      assert_includes probe, "video"
+      assert_includes probe, "audio"
+
+      error = assert_raises(RuntimeError) { picture.add_soundtrack(clip, wav) }
+      assert_match(/refusing to replace/, error.message)
+    end
   end
 end

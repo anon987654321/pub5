@@ -99,14 +99,14 @@ class TestAbletonLiveSetRecovery < Minitest::Test
       assert_equal "session", project.fetch("title")
       assert_equal 93.5, project.fetch("tempo_bpm")
       assert_equal({ "numerator" => 4, "denominator" => 4 }, project.fetch("time_signature"))
-      assert_equal %w[Drums Rhodes Sample chops], project.fetch("tracks").map { |track| track.fetch("name") }
+      assert_equal ["Drums", "Rhodes", "Sample chops"], project.fetch("tracks").map { |track| track.fetch("name") }
       drum_clip = project.fetch("tracks").first.fetch("clips").first
       assert_equal 4.0, drum_clip.fetch("start_beats")
       assert_equal 8.0, drum_clip.fetch("length_beats")
       assert_equal true, drum_clip.fetch("loop_enabled")
       assert_equal [36, 36, 36], drum_clip.fetch("notes").map { |note| note.fetch("pitch") }
       assert_equal [127.0, 89.0, 100.0], drum_clip.fetch("notes").map { |note| note.fetch("velocity_raw") }
-      assert_in_delta 89.0 / 127.0, drum_clip.fetch("notes").last.fetch("velocity"), 1e-9
+      assert_in_delta 100.0 / 127.0, drum_clip.fetch("notes").last.fetch("velocity"), 1e-9
       assert_equal false, drum_clip.fetch("notes")[1].fetch("enabled")
       assert_in_delta 89.0 / 127.0, drum_clip.fetch("notes")[1].fetch("velocity"), 1e-9
       assert_equal 64.0, drum_clip.fetch("notes").first.fetch("release_velocity")
@@ -173,7 +173,7 @@ class TestAbletonLiveSetRecovery < Minitest::Test
       assert_equal 960, bytes[12, 2].unpack1("n")
       assert_equal 1, bytes.scan([0x99, 36, 127].pack("C*")).length # pickup before loop start plays once
       assert_equal 2, bytes.scan([0x99, 36, 100].pack("C*")).length # note inside loop is repeated
-      assert_includes bytes, [0x81, 60, 104].pack("C*") # Rhodes on channel 2, original Ableton velocity preserved
+      assert_includes bytes, [0x91, 60, 104].pack("C*") # Rhodes note-on, channel 2, original Ableton velocity preserved
       assert_includes bytes, [0x81, 60, 64].pack("C*")
       refute_includes bytes, [0x99, 36, 89].pack("C*") # disabled note is excluded
     end

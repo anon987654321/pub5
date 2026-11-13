@@ -13,7 +13,17 @@ require_relative "../lora/lora"
 module Studio
   module Visual
     class IdeaPicture
-      FILM = "prunaai/p-video-2-pro"
+      # The default film engine. MiniMax H3 Lite drives the selfie series' short
+      # film from a first frame at 480P/768P, 4-15s. The other image_to_video
+      # models in models.yml stay selectable; each declares the input keys it
+      # needs, and film_input builds the matching shape.
+      FILM = "minimax/h3-lite"
+      # Which keys each film engine must accept, so a schema preflight can run
+      # before any upload. Keys are the ones film_input actually sends.
+      FILM_INPUT_KEYS = {
+        "minimax/h3-lite" => %w[prompt first_frame_image duration resolution],
+      }.freeze
+      FILM_DEFAULT_KEYS = %w[prompt image duration mode aspect_ratio resolution].freeze
       # The module root is STUDIO. The flatten (b5acc93bc) moved this file one
       # level up out of photograph/generators/ but left the two-step climb, so
       # ROOT answered the repository root and every path built from it — the
@@ -103,13 +113,47 @@ module Studio
         names = client.input_names(FILM)
         raise "Replicate film model is unavailable or has no readable input schema: #{FILM}" if names.empty?
 
-        required = %w[prompt image duration mode aspect_ratio resolution]
-        missing = required - names
+        missing = film_input_keys - names
         raise "Replicate film model #{FILM} is missing inputs used by the animation renderer: #{missing.join(", ")}" unless missing.empty?
 
         @validated_film_model = FILM
         FILM
       end
+
+      # The input keys the selected film engine is required to accept. H3 Lite
+      # takes a first frame plus a prompt; the fallback models take an `image`.
+      def film_input_keys
+        FILM_INPUT_KEYS.fetch(FILM, FILM_DEFAULT_KEYS)
+      end
+
+      # Lay a music bed under a rendered clip. The clip keeps its own video and
+      # is re-encoded with the audio track; the silent original is left in place
+      # and the muxed file is written beside it with an `_audio` suffix, so the
+      # provider output is never overwritten. `audio` must be a readable local
+      # path or a URL ffmpeg can open.
+      def add_soundtrack(clip, audio)
+        source = File.expand_path(clip.to_s)
+        raise ArgumentError, "clip is missing: #{source}" unless File.file?(source) && !File.symlink?(source)
+        raise ArgumentError, "audio source is missing: #{audio}" if audio.to_s.empty?
+        raise "ffmpeg is not on PATH" unless ffmpeg?
+
+        path = source.sub(/(\.mp4)\z/i, "_audio\\1")
+        path = "#{source}_audio.mp4" if path == source
+        raise "refusing to replace an existing film: #{path}" if File.exist?(path)
+
+        _out, err, status = Studio::Subprocess.capture3(
+          "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
+          "-i", source, "-i", audio.to_s,
+          "-map", "0:v:0", "-map", "1:a:0",
+          "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+          "-shortest", "-movflags", "+faststart", path,
+          timeout: 300
+        )
+        raise "ffmpeg failed to lay the soundtrack: #{err}" unless status.success? && File.file?(path)
+
+        path
+      end
+
 
       private
 
@@ -261,15 +305,43 @@ module Studio
         path
       end
 
+      def ffmpeg?
+        @ffmpeg_checked ||= begin
+          _, _, status = Studio::Subprocess.capture3("ffmpeg", "-version", timeout: 30)
+          status.success?
+        rescue StandardError
+          false
+        end
+      end
+
       def film_input(words, still, duration)
+        prompt = "The same photograph, held, one slow motion. #{words}"
+        if FILM == "minimax/h3-lite"
+          # H3 Lite takes a first frame, not `image`; image-to-video ignores
+          # ratio and keeps the still's own aspect ratio.
+          return {
+            prompt:,
+            first_frame_image: client.upload_file(still, subject: @subject),
+            duration: h3_duration(duration),
+            resolution: "768P",
+          }
+        end
+
         {
-          prompt: "The same photograph, held, one slow motion. #{words}",
+          prompt:,
           image: client.upload_file(still, subject: @subject),
           duration:,
           mode: "quality",
           aspect_ratio: "2:3",
           resolution: "768p",
         }
+      end
+
+      # H3 Lite accepts 4-15s only; the renderer's own 1-10s range would fail
+      # below 4, so clamp up to the model's floor.
+      def h3_duration(seconds)
+        seconds = Integer(seconds)
+        seconds.clamp(4, 15)
       end
 
       def photographic(words)

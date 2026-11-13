@@ -439,8 +439,14 @@ class TestDillaHistoricalMaterial < Minitest::Test
   end
 
   def test_float_melody_steps_are_not_mistaken_for_integer_sixteenths
-    groove = Dilla::Groove.new(bpm: 86, swing: 58, profile: {}, performer: {})
     seq = sequencer({})
+    # The helper builds its groove from dilla_shadow (swing 54); assert against
+    # that same groove rather than a hand-built one with a different swing.
+    groove = Dilla::Groove.new(
+      bpm: 86, swing: 54,
+      profile: Dilla.catalogue.fetch("groove_profiles").fetch("dilla_shadow"),
+      performer: Dilla.catalogue.fetch("performers").first
+    )
     straight = groove.sixteenth_s
     assert_in_delta 1.5 * straight, seq.send(:step_time, 0, 1.5, "melody"), 1e-12
     assert_in_delta straight + groove.swing_delay_s("melody"),

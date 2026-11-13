@@ -39,9 +39,11 @@ def studio_photograph_actions
       prompt = request["prompt"].to_s
       raise ArgumentError, "animate needs a source and a prompt" if source.empty? || prompt.empty?
 
-      Studio::Visual::IdeaPicture.new(subject: request.fetch("subject", "ragnhild")).animate(
-        source, prompt, duration: request.fetch("duration", 5)
-      )
+      picture = Studio::Visual::IdeaPicture.new(subject: request.fetch("subject", "ragnhild"))
+      result = picture.animate(source, prompt, duration: request.fetch("duration", 5))
+      soundtrack = request["soundtrack"].to_s
+      result["scored"] = picture.add_soundtrack(result["clip"], soundtrack) unless soundtrack.empty?
+      result
     end,
     "check_model" => lambda do |request|
       { "subject" => request.fetch("subject", "ragnhild"),
@@ -79,6 +81,7 @@ if $PROGRAM_NAME == __FILE__
       parser.on("--animate SOURCE", "animate an existing LoRA still into a short clip") { |value| options[:animate] = value }
       parser.on("--prompt TEXT", "motion direction for --animate") { |value| options[:prompt] = value }
       parser.on("--duration N", Integer, "film duration in seconds (1..10)") { |value| options[:duration] = value }
+      parser.on("--soundtrack PATH", "lay a music bed under the film (e.g. dilla.wav)") { |value| options[:soundtrack] = value }
       parser.on("--subject NAME", "subject directory under STUDIO/lora (default ragnhild)") { |value| options[:subject] = value }
       parser.on("--selfie-series", "render a bounded selfie series for --subject") { options[:series] = true }
       parser.on("--count N", Integer, "series length, 1..24 (default 10)") { |value| options[:count] = value }
@@ -139,11 +142,12 @@ if $PROGRAM_NAME == __FILE__
       )
     elsif options[:animate]
       prompt = options[:prompt].to_s.strip
-      abort "usage: ruby STUDIO/photograph.rb --animate SOURCE --subject NAME --prompt 'MOTION' [--duration 5]" if prompt.empty?
+      abort "usage: ruby STUDIO/photograph.rb --animate SOURCE --subject NAME --prompt 'MOTION' [--duration 5] [--soundtrack dilla.wav]" if prompt.empty?
 
-      Studio::Visual::IdeaPicture.new(subject: options[:subject]).animate(
-        options[:animate], prompt, duration: options[:duration]
-      )
+      picture = Studio::Visual::IdeaPicture.new(subject: options[:subject])
+      result = picture.animate(options[:animate], prompt, duration: options[:duration])
+      result["scored"] = picture.add_soundtrack(result["clip"], options[:soundtrack]) if options[:soundtrack]
+      result
     else
       prompt = ARGV.join(" ").strip
       abort "usage: ruby STUDIO/photograph.rb [--subject NAME] [--film] PROMPT" if prompt.empty?

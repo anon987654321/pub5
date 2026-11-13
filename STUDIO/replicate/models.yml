@@ -129,6 +129,9 @@ upscale_and_restore:
 
 # Motion from a still — the selfie series' short film.
 image_to_video:
+  minimax/h3-lite:
+    inputs: [prompt, first_frame_image, last_frame_image, reference_image_urls, reference_video_urls, reference_audio_urls, duration, resolution, ratio]
+    note: "MiniMax H3 Lite: first/last-frame image-to-video, 4-15s, 480P or 768P. Image-to-video ignores ratio and uses the input image's aspect ratio."
   kwaivgi/kling-v4-flash:
     inputs: [image, prompt, duration, aspect_ratio, mode]
     note: "Kling v4 flash: fast image-to-video with a short prompt."
