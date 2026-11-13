@@ -141,7 +141,7 @@ class ZapTest < Minitest::Test
 
   def test_invalid_signal_fails_before_signalling
     zap, _output, errors, sent = build_zap(
-      ["-NOT_A_SIGNAL", "worker"], processes: [process(217, "worker")]
+      ["-NOSUCH", "worker"], processes: [process(217, "worker")]
     )
 
     assert_equal 2, zap.run
