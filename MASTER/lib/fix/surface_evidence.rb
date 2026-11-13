@@ -1106,26 +1106,37 @@ module Master
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         timeout = [DEFAULT_COMMAND_TIMEOUT, deadline_remaining(deadline)].min
         timed_out = false
-        stdout = ""
-        stderr = ""
+        termination_confirmed = true
+        stdout = +""
+        stderr = +""
         status = nil
 
         Open3.popen3(Master::Io::ProcessSpawn.environment(ENV.to_h.merge(env.transform_keys(&:to_s).transform_values(&:to_s))), *command, chdir:, pgroup: true) do |stdin, out, err, wait_thr|
           stdin.close
-          stdout_reader = Thread.new { drain_output(out) }
-          stderr_reader = Thread.new { drain_output(err) }
+          stdout_reader = Thread.new { drain_output(out, stdout) }
+          stderr_reader = Thread.new { drain_output(err, stderr) }
           until wait_thr.join(0.05)
             next if Process.clock_gettime(Process::CLOCK_MONOTONIC) - started < timeout
 
             timed_out = true
-            terminate_group(wait_thr.pid)
+            termination_confirmed = stop_process_group(wait_thr.pid)
             wait_thr.join(2)
-            terminate_group(wait_thr.pid, signal: "KILL") if wait_thr.alive?
+            # wait_thr is the direct child this method spawned. If group signalling
+            # was denied, KILL that exact still-owned child; never fall back to a
+            # numeric PID after ESRCH or after the wait handle has completed.
+            kill_owned_child(wait_thr) if wait_thr.alive?
+            wait_thr.join(2) if wait_thr.alive?
+            [ [out, stdout_reader], [err, stderr_reader] ].each do |io, reader|
+              reader.join(0.2)
+              next unless reader.alive?
+
+              io.close rescue nil
+              reader.kill
+              reader.join(0.2)
+            end
             break
           end
           status = wait_thr.value unless wait_thr.alive?
-          stdout = stdout_reader.value
-          stderr = stderr_reader.value
         end
 
         elapsed = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
@@ -1138,7 +1149,8 @@ module Master
                     "failed"
                   end
         message = if timed_out
-                    "command timed out after #{timeout.round(1)}s"
+                    suffix = termination_confirmed ? "process group stopped" : "process-group shutdown unverified"
+                    "command timed out after #{timeout.round(1)}s; #{suffix}"
                   elsif code != 0
                     safe_text((stderr.empty? ? stdout : stderr).lines.last(3).join(" ").strip, 220)
                   end
@@ -1146,6 +1158,7 @@ module Master
           "status" => outcome,
           "exit_status" => code,
           "timed_out" => timed_out,
+          "termination_confirmed" => termination_confirmed,
           "duration_ms" => elapsed,
           "stdout_sha256" => Digest::SHA256.hexdigest(stdout),
           "stderr_sha256" => Digest::SHA256.hexdigest(stderr),
@@ -1158,8 +1171,7 @@ module Master
         { "status" => "inconclusive", "message" => "command runner failed: #{error_text(e)}" }
       end
 
-      def drain_output(io)
-        buffer = +""
+      def drain_output(io, buffer = +"")
         loop do
           chunk = io.readpartial(4096)
           buffer << chunk if buffer.bytesize < MAX_PROCESS_OUTPUT
@@ -1168,12 +1180,58 @@ module Master
         buffer
       end
 
-      def terminate_group(pid, signal: "TERM")
-        Process.kill(signal, -pid)
-      rescue Errno::ESRCH, Errno::EPERM
-        Process.kill(signal, pid)
-      rescue StandardError
-        nil
+      def stop_process_group(pid, term_grace: 0.25, kill_grace: 2.0)
+        group = Integer(pid)
+        return false unless group.positive?
+        return false if group == Process.getpgrp
+        return true unless process_group_alive?(group)
+
+        signal_group("TERM", group)
+        return true if wait_for_group_exit(group, term_grace)
+
+        signal_group("KILL", group)
+        wait_for_group_exit(group, kill_grace)
+      rescue ArgumentError, TypeError
+        false
+      end
+
+      def signal_group(signal, group)
+        Process.kill(signal, -group)
+        true
+      rescue Errno::ESRCH
+        true
+      rescue Errno::EPERM
+        false
+      end
+
+      def wait_for_group_exit(group, timeout)
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+        loop do
+          return true unless process_group_alive?(group)
+          return false if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+          sleep 0.025
+        end
+      end
+
+      def process_group_alive?(group)
+        Process.kill(0, -group)
+        true
+      rescue Errno::ESRCH
+        false
+      rescue Errno::EPERM
+        true
+      end
+
+      def kill_owned_child(wait_thr)
+        return false unless wait_thr.alive?
+
+        Process.kill("KILL", wait_thr.pid)
+        true
+      rescue Errno::ESRCH
+        true
+      rescue Errno::EPERM
+        false
       end
 
       def command_deadline(limit)
