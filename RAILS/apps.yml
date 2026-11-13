@@ -525,6 +525,21 @@ archived_subsystems:
       until capacity, credentials, DB recovery, routing and a separate deploy
       plan are proved.
 
+  mytoonz:
+    recovery_source: >-
+      RAILS/mytoonz restored from anon987654321/pub4 commit
+      c11f9e7d91258044658e1320c3030a1d51f9fd5d (2026-07-12); earlier
+      generator prototype and demo in anon987654321/pub3 at commit
+      09663f79041452c48c5925998725d44719f59e67.
+    notes: >-
+      Source restored 2026-11-13 as an archived, source-only Rails app.
+      It remains outside apps:, deploy helpers and production health checks.
+      Historical port 10008 and its deployment script are not active in pub5.
+      No service, database, token, DNS, certificate or relayd route was
+      restored. Explicit provider consent, retention review, fresh credentials
+      and an operator-approved OpenBSD deployment plan are required before
+      production reactivation.
+
   aight_production_ai:
     recovery_source: MASTER/lib/io/
     notes: Absorbed — semantic cache + scrape in MASTER io; shared Scrape service in pub5-shared.

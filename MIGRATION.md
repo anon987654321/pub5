@@ -443,9 +443,10 @@ The counts reconcile exactly: 4,975 unchanged at path + 1,121 changed at path
 Amber legacy manifest still accurately marks ML garment segmentation /
 background removal and AI-generated closet tips as missing; the current
 silhouette renderer and rule-based `ClosetOrganization` do not claim either
-capability. The archived `pub_attorney` and `mytoonz` entries still require
-an owner restore/retire decision. Neither omission was silently promoted to
-an implementation.
+capability. MyToonz's Rails source is recovered at `RAILS/mytoonz` as an archived app;
+its production reactivation remains an owner decision. The archived
+`pub_attorney` entry still requires a restore/retire decision. Neither omission
+was silently promoted to a live deployment.
 
 The comparison does not change the acceptance status above. Focused tests
 were added for the Mr Damascy secret privilege boundary, all documented

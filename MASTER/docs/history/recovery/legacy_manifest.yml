@@ -168,8 +168,8 @@ active_app_decisions:
     decision_needed: restore_or_retire
   mytoonz:
     legacy_state: archived_or_external
-    pub5_state: archived_port
-    decision_needed: restore_or_retire
+    pub5_state: archived
+    decision_needed: production_reactivation_only
 
 archive_inventory:
   audited: "2026-10-03"
