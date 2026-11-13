@@ -65,9 +65,9 @@ RAILS 1,800–2,200, OPENBSD 100–150, STUDIO 40–50).
   `bin/render_dns.rb` generates the unsigned zones and `nsd.conf` from
   `data/dns.yml`, and the signed artifacts remain untracked by design, as in
   pub4.
-- `OPENBSD/bin/deploy` is the one Ruby deploy entrypoint: it validates the
+- `OPENBSD/mirror/bin/deploy` is the one Ruby deploy entrypoint: it validates the
   app argument and hands off to the proven serial stages in
-  `OPENBSD/bin/vps-deploy` (sync → CI → restart → health → stamp). The
+  `OPENBSD/mirror/bin/vps-deploy` (sync → CI → restart → health → stamp). The
   stages themselves are carried unchanged; rewriting 1,100 lines of live
   deploy zsh without a host to run it on would have been a claim, not a
   port.
