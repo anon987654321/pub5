@@ -859,7 +859,8 @@ class TestRG69BrowserContract < Minitest::Test
     assert_match(/<meta\s+charset=["']?utf-8/i, html)
     assert_includes html, 'href="rg69.css"'
     assert_includes html, 'src="rg69.js"'
-    assert_includes html, "tone/14.8.49/Tone.min.js"
+    assert_includes html, "vendor/tone/Tone.min.js"
+    refute_match(%r{https?://[^"']*Tone\.min\.js}i, html, "Tone.js must be vendored, not fetched from a CDN")
     assert_includes html, 'href="#main-content"'
     assert_includes html, 'id="main-content"'
     refute_match(/<style\b|<script(?![^>]*\bsrc=)/i, html)

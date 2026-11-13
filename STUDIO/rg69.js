@@ -14,7 +14,7 @@ if(!window.Tone){
   const warning=document.createElement("p");
   warning.className="engine-error";
   warning.setAttribute("role","alert");
-  warning.textContent="The RG-69 audio engine (Tone.js 14.8.49) did not load. Check your connection and reload.";
+  warning.textContent="The RG-69 audio engine (Tone.js 14.8.49) did not load from vendor/tone/Tone.min.js. Reinstall that file and reload.";
   document.body.prepend(warning);
   throw new Error("RG-69 audio engine unavailable");
 }
@@ -267,7 +267,8 @@ let seq_={};
 ['b','keys','p'].forEach(t=>{seq_[t]=Array(16).fill(0).map(()=>({v:0.85+rnd(0,0.15),t:rnd(-15,15),p:100,r:1}))});
 
 let kickN,kickSub,kickClk,kickBody,snareN,snareRng,clapN,hatN,openN,bassN,bassSub,keysN,keysChorus,padsN,padsFlt,padsShift;
-let drumG,bassG,keysG,padsG,masterG,limiter,vinylNoise,crackleNoise,wobbLFO,flutterLFO,driftLFO,analyser;
+let drumG,bassG,keysG,padsG,masterG,limiter,vinylNoise,crackleNoise,driftLFO,analyser;
+let wobPhase=0;
 let fxRev,fxDly,fxFlt,tapeSat,compPar,sslComp,widener,kickSat,keySat,drumSat,outSat,bitCrush,revSend,dlySend;
 let drumTube,kickComp,vintageSat,phaserFX,lofiNoise,lofiComp,tapeWS,padsLFO,kickClkBP,snareRngBP,keysTrem,keysCrush;
 
@@ -513,9 +514,11 @@ crackFlt.Q.value=5;
 crackleNoise.connect(crackFlt);
 vinylFlt.connect(compPar);
 crackFlt.connect(compPar);
-wobbLFO=new Tone.LFO(0.05,0.98,1.02).start();
-flutterLFO=new Tone.LFO(3,0.995,1.005).start();
-wobbLFO.connect(Tone.Transport.bpm);
+// Tape wobble is a slow drift of the tempo around the set bpm. Tone 14.8.49
+// cannot take an LFO on Tone.Transport.bpm: the connection pins the tempo at 0
+// and freezes the transport, which also makes Tone.Time('8n.') return Infinity
+// and breaks the delay nodes. The drift is applied on a scheduled tick instead.
+wobPhase=0;
 driftLFO.connect(kickN.oscillator.detune);
 driftLFO.connect(snareRng.detune);
 [kickN,kickSub,kickClkBP,kickBody].forEach(s=>s.connect(kickSat));
@@ -548,6 +551,7 @@ log("audio engine init (analog++)","k");
 }
 
 function applyFX(){
+Tone.Transport.bpm.value=aud_.bpm;
 if(drumG)drumG.gain.value=mix_.drum/100;
 if(bassG)bassG.gain.value=mix_.bass/100;
 if(keysG)keysG.gain.value=mix_.keys/100;
@@ -563,7 +567,6 @@ if(compPar)compPar.ratio.value=1+aud_.comp/100*PARAMS.COMP_RATIO_MAX;
 if(widener)widener.width.value=aud_.width/100;
 if(vinylNoise)vinylNoise.volume.value=-60+aud_.vinyl/100*20;
 if(crackleNoise)crackleNoise.volume.value=-65+aud_.crackle/100*20;
-if(wobbLFO){wobbLFO.frequency.value=.05+aud_.wobble/100*PARAMS.WOBB_FREQ_MAX;wobbLFO.min=1-aud_.wobble/100*.04;wobbLFO.max=1+aud_.wobble/100*.04;}
 if(bitCrush)bitCrush.wet.value=(100-aud_.drive)/400;
 if(driftLFO)driftLFO.frequency.value=.05+aud_.drift*.15;
 }
@@ -624,8 +627,20 @@ synths.pads.triggerAttackRelease(pad,'2n',baseTime+seq_.p[stepIdx].t/1000,seq_.p
 }
 }
 
+// Tape wobble: a slow sinusoidal drift of the tempo around the set bpm. It is
+// stepped from the transport's own 16th-note tick rather than an LFO wired to
+// Tone.Transport.bpm (see initAudio). Depth and rate follow the wobble control.
+function applyWobble(){
+if(!st_.playing)return;
+const depth=aud_.wobble/100*PARAMS.WOBB_DEPTH_MAX;
+const rate=(0.05+aud_.wobble/100*PARAMS.WOBB_FREQ_MAX)/4;
+wobPhase=(wobPhase+rate)%1;
+Tone.Transport.bpm.value=aud_.bpm*(1+Math.sin(wobPhase*2*Math.PI)*depth);
+}
+
 function scheduleLoop(){
 st_.idx=(st_.idx+1)%st_.stepCount;
+applyWobble();
 // beat pulse on every quarter note
 if(st_.idx%4===0){const posEl=$id('pos-display');posEl.classList.remove('beat-active');void posEl.offsetWidth;posEl.classList.add('beat-active');}
 // update bar/beat display
