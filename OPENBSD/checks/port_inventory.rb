@@ -64,6 +64,9 @@ module Deploy
       "MASTER/test/test_relayd.rb" => "fixture: a relayd.conf excerpt for the parser under test",
       "MASTER/test/test_golden_screenshots.rb" => "fixture: TARGET construction inputs for slug, host-map and contract tests; " \
                                                   "no fleet agreement is asserted from these literals",
+      "MASTER/test/test_deploy_preflight.rb" => "fixture: a fake apps.yml hash (example.test domains and a fictional " \
+                                                "future_service) driven through the preflight rehearsal; " \
+                                                "no fleet agreement is asserted from these literals",
       "OPENBSD/usr/local/bin/emergency_cpu.sh" => "unchecked: root runs it from /usr/local/bin with no checkout " \
                                                   "to read, and it names only master and brgen, the two it restarts",
     }.freeze

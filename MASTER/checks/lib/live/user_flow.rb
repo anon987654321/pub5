@@ -113,9 +113,12 @@ module Deploy
       "amber" => {
         "jox chrome" => [["app/assets/stylesheets/application.scss", /\.jox-logo\b/]],
       },
-      "bsdports" => {
-        "jox chrome" => [["app/assets/stylesheets/application.scss", /\.jox-logo\b/]],
-      },
+      # bsdports carries no jox chrome by design: the logo was markup no view
+      # rendered, the dead-CSS sweep removed it, and bsdports' own
+      # test/stylesheet_tidy_test.rb asserts its absence. A marker here would
+      # demand CSS the app deletes on sight, so the row is gone rather than
+      # updated.
+      "bsdports" => {},
     }.freeze
 
     private

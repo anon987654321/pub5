@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "set"
+
 require_relative "../../../tools/master_design"
 require_relative "../../support/check_result"
 require_relative "../../../tools/scss"
@@ -128,12 +130,15 @@ module Deploy
 
     # Each app's dialect is what its own stylesheet puts on :root. brgen wears
     # brgen_old, and the proof is a :root rule that includes those tokens rather
-    # than the name appearing somewhere in the file.
+    # than the name appearing somewhere in the file. The 2026-10-28 palette
+    # rework moved brgen's :root rules out of application.scss into the partials
+    # it @uses (_section_04.scss holds them now), so the proof reads the app's
+    # whole @use graph, not the entry file alone.
     def check_dialect_roots
       brgen = app_stylesheet("brgen")
 
       if brgen
-        roots = Operator::ScssRules.rules(File.read(brgen)).select { |rule| rule.selector.start_with?(":root") }
+        roots = brgen_use_graph_roots(brgen)
         @result.fail("dialect_purity: brgen's :root does not include the brgen-old tokens") unless roots.any? { |rule| rule.body.match?(/brgen-old/) }
       else
         @result.fail("dialect_purity: brgen has no application.scss")
@@ -158,6 +163,35 @@ module Deploy
     def app_stylesheet(app)
       path = File.join(@rails, app, "app/assets/stylesheets/application.scss")
       File.file?(path) ? path : nil
+    end
+
+    # :root rules from the entry stylesheet and every partial its @use graph
+    # reaches, following one level per file so a rule in a used partial's own
+    # partial still proves the dialect. A partial that never loads cannot prove
+    # anything, so the walk starts at application.scss, never at the directory.
+    def brgen_use_graph_roots(entry)
+      seen = Set.new
+      queue = [entry]
+      rules = []
+
+      until queue.empty?
+        path = queue.shift
+        next unless File.file?(path) && seen.add?(File.expand_path(path))
+
+        source = File.read(path)
+        rules.concat(Operator::ScssRules.rules(source).select { |rule| rule.selector.start_with?(":root") })
+        queue.concat(used_partials(path, source))
+      end
+
+      rules
+    end
+
+    # The partials one file @uses, as the two on-disk spellings Sass accepts.
+    def used_partials(path, source)
+      dir = File.dirname(path)
+      source.scan(/^\s*@use\s+"([^"]+)"(?:\s+as\s+\w+)?\s*;/).flat_map do |(name)|
+        [File.join(dir, "#{name}.scss"), File.join(dir, "_#{name}.scss")]
+      end
     end
 
     def app_feature_stylesheet(app, name)

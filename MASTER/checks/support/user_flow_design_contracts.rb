@@ -75,8 +75,10 @@ module Deploy
             meaning: "Sticky buy bar CTAs declare min-height 44px",
             # The rule styling the CTA has to carry the floor itself. A sheet that
             # merely mentions the class, or declares 44px for something else,
-            # satisfied the file-scoped version of this contract.
-            paths: %w[brgen/app/assets/stylesheets/application.scss],
+            # satisfied the file-scoped version of this contract. The rule lives
+            # in the vertical-surfaces partial, not the entry stylesheet -- a
+            # stylesheet marker names the file that owns the rule.
+            paths: %w[brgen/app/assets/stylesheets/_brgen_vertical_surfaces.scss],
             required_rule: [/\.listing-buy-bar-cta\b/, /min-height:\s*(?:44px|var\(--tap-min\))/],
           },
         ]
