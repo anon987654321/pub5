@@ -445,10 +445,7 @@ measure is already owned by the Bymorgen item above.
   puts its child in an isolated process group and applies one monotonic deadline
   to both process exit and output-pipe EOF; timeout escalates TERM to KILL and
   checks group disappearance. A regression covers an exited leader with a
-  descendant holding the pipe open; authored but NOT_RUN. The Rails visual
-  server sibling-worktree reaper now requires a verified process-group leader
-  and uses the bounded lease stop rather than direct-PID TERM/sleep; live-group
-  and non-leader refusal regressions are authored but NOT_RUN. The source-
+  descendant holding the pipe open; authored but NOT_RUN. The source-
   evidence runner now applies its deadline to child exit and both output pipes,
   refuses unsafe numeric-PID fallback on process-group ESRCH/EPERM, and reports
   whether group termination was actually confirmed. A descendant-held-pipe
