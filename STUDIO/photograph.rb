@@ -23,7 +23,7 @@ def studio_photograph_actions
       prompt = request["prompt"].to_s
       raise ArgumentError, "render needs a prompt" if prompt.empty?
 
-      Studio::Visual::IdeaPicture.new(subject: request.fetch("subject", "ragnhild"), engine: request["engine"]).write(
+      Studio::Visual::IdeaPicture.new(subject: request.fetch("subject", "ragnhild"), engine: request["engine"], film_engine: request["film_engine"]).write(
         prompt, film: request.fetch("film", false), duration: request.fetch("duration", 5)
       )
     end,
@@ -39,7 +39,7 @@ def studio_photograph_actions
       prompt = request["prompt"].to_s
       raise ArgumentError, "animate needs a source and a prompt" if source.empty? || prompt.empty?
 
-      picture = Studio::Visual::IdeaPicture.new(subject: request.fetch("subject", "ragnhild"))
+      picture = Studio::Visual::IdeaPicture.new(subject: request.fetch("subject", "ragnhild"), film_engine: request["film_engine"])
       result = picture.animate(source, prompt, duration: request.fetch("duration", 5))
       soundtrack = request["soundtrack"].to_s
       result["scored"] = picture.add_soundtrack(result["clip"], soundtrack) unless soundtrack.empty?
@@ -66,6 +66,18 @@ def studio_engine_choice(wizard)
   wizard.choose("Which Replicate engine?", options, default: default)
 end
 
+# The film-engine question, shared by the animate wizard branch. The default is
+# MiniMax H3 Lite; the rest of the image_to_video catalogue is offered so the
+# operator can reach for Kling v3 Omni or another engine without a flag.
+def studio_film_engine_choice(wizard)
+  catalogue = Studio::ReplicateClient::Models.film_engines
+  default = Studio::Visual::IdeaPicture::FILM
+  options = catalogue.map do |name, spec|
+    ["#{name}#{name == default ? ' (default)' : ''}", name]
+  end
+  wizard.choose("Which film engine?", options, default: default)
+end
+
 if $PROGRAM_NAME == __FILE__
   if Studio::Api.requested?(ARGV)
     exit Studio::Api.respond(studio_photograph_actions, argv: ARGV)
@@ -87,6 +99,7 @@ if $PROGRAM_NAME == __FILE__
       parser.on("--count N", Integer, "series length, 1..24 (default 10)") { |value| options[:count] = value }
       parser.on("--keep", "keep this subject's earlier generated stills instead of replacing them") { options[:keep] = true }
       parser.on("--engine NAME", "render with a model from STUDIO/replicate/models.yml") { |value| options[:engine] = value }
+      parser.on("--film-engine NAME", "animate with a film model from models.yml image_to_video (default minimax/h3-lite)") { |value| options[:film_engine] = value }
       parser.on("--free", "stay inside Replicate's free tier (flux-dev, flux-schnell)") { options[:engine] = "black-forest-labs/flux-dev" }
       parser.on("--models", "list the Replicate engines and exit") { options[:models] = true }
       parser.on("--check-model", "verify the subject's local manifest or private Replicate model") { options[:check_model] = true }
@@ -114,7 +127,12 @@ if $PROGRAM_NAME == __FILE__
       options[:animate] = wizard.ask("Path to the still to animate")
       options[:prompt] = wizard.ask("Motion direction")
       options[:duration] = wizard.number("Duration in seconds", default: 5, range: 1..10)
+      options[:film_engine] = studio_film_engine_choice(wizard)
     end
+  end
+
+  if options[:film_engine]
+    Studio::ReplicateClient::Models.film_engine(options[:film_engine])
   end
 
   result = begin
@@ -144,7 +162,7 @@ if $PROGRAM_NAME == __FILE__
       prompt = options[:prompt].to_s.strip
       abort "usage: ruby STUDIO/photograph.rb --animate SOURCE --subject NAME --prompt 'MOTION' [--duration 5] [--soundtrack dilla.wav]" if prompt.empty?
 
-      picture = Studio::Visual::IdeaPicture.new(subject: options[:subject])
+      picture = Studio::Visual::IdeaPicture.new(subject: options[:subject], film_engine: options[:film_engine])
       result = picture.animate(options[:animate], prompt, duration: options[:duration])
       result["scored"] = picture.add_soundtrack(result["clip"], options[:soundtrack]) if options[:soundtrack]
       result
@@ -152,7 +170,7 @@ if $PROGRAM_NAME == __FILE__
       prompt = ARGV.join(" ").strip
       abort "usage: ruby STUDIO/photograph.rb [--subject NAME] [--film] PROMPT" if prompt.empty?
 
-      Studio::Visual::IdeaPicture.new(subject: options[:subject]).write(
+      Studio::Visual::IdeaPicture.new(subject: options[:subject], film_engine: options[:film_engine]).write(
         prompt, film: options[:film], duration: options[:duration]
       )
     end

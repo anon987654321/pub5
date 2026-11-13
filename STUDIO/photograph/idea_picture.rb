@@ -22,6 +22,7 @@ module Studio
       # before any upload. Keys are the ones film_input actually sends.
       FILM_INPUT_KEYS = {
         "minimax/h3-lite" => %w[prompt first_frame_image duration resolution],
+        "kwaivgi/kling-v3-omni-video" => %w[prompt start_image duration mode generate_audio],
       }.freeze
       FILM_DEFAULT_KEYS = %w[prompt image duration mode aspect_ratio resolution].freeze
       # The module root is STUDIO. The flatten (b5acc93bc) moved this file one
@@ -40,7 +41,8 @@ module Studio
         directory: SUBJECTS,
         subject: ENV.fetch("STUDIO_PHOTOGRAPH_SUBJECT", "ragnhild"),
         model_manifest: nil,
-        engine: nil
+        engine: nil,
+        film_engine: nil
       )
         @client = client
         @directory = directory
@@ -50,6 +52,7 @@ module Studio
         @subject_directory = File.join(SUBJECTS, @subject)
         @model_manifest = model_manifest || default_model_manifest
         @engine = engine&.to_s
+        @film_engine = film_engine&.to_s
       end
 
       def write(words, film: true, duration: 5, output_stem: nil, grade_seed: nil)
@@ -108,22 +111,30 @@ module Studio
       end
 
       def validate_film_model!
-        return FILM if @validated_film_model
+        return film_engine if @validated_film_model
 
-        names = client.input_names(FILM)
-        raise "Replicate film model is unavailable or has no readable input schema: #{FILM}" if names.empty?
+        names = client.input_names(film_engine)
+        raise "Replicate film model is unavailable or has no readable input schema: #{film_engine}" if names.empty?
 
         missing = film_input_keys - names
-        raise "Replicate film model #{FILM} is missing inputs used by the animation renderer: #{missing.join(", ")}" unless missing.empty?
+        raise "Replicate film model #{film_engine} is missing inputs used by the animation renderer: #{missing.join(", ")}" unless missing.empty?
 
-        @validated_film_model = FILM
-        FILM
+        @validated_film_model = film_engine
+        film_engine
+      end
+
+      # The film engine in use: the class default, or the one --film-engine
+      # selected. It stays a catalogue name so the preflight above can check the
+      # model's own schema before any upload.
+      def film_engine
+        @film_engine || FILM
       end
 
       # The input keys the selected film engine is required to accept. H3 Lite
-      # takes a first frame plus a prompt; the fallback models take an `image`.
+      # takes a first frame plus a prompt; Kling v3 Omni takes start_image; the
+      # remaining fallback models take an `image`.
       def film_input_keys
-        FILM_INPUT_KEYS.fetch(FILM, FILM_DEFAULT_KEYS)
+        FILM_INPUT_KEYS.fetch(film_engine, FILM_DEFAULT_KEYS)
       end
 
       # Lay a music bed under a rendered clip. The clip keeps its own video and
@@ -300,7 +311,7 @@ module Studio
         path = File.join(@directory, "#{safe_stem(stamp)}.mp4")
         raise "refusing to replace an existing film: #{path}" if File.exist?(path)
 
-        output = client.predict(FILM, film_input(words, still, duration), timeout: 600)
+        output = client.predict(film_engine, film_input(words, still, duration), timeout: 600)
         client.download_url(first_url(output), path)
         path
       end
@@ -316,7 +327,8 @@ module Studio
 
       def film_input(words, still, duration)
         prompt = "The same photograph, held, one slow motion. #{words}"
-        if FILM == "minimax/h3-lite"
+        case film_engine
+        when "minimax/h3-lite"
           # H3 Lite takes a first frame, not `image`; image-to-video ignores
           # ratio and keeps the still's own aspect ratio.
           return {
@@ -324,6 +336,17 @@ module Studio
             first_frame_image: client.upload_file(still, subject: @subject),
             duration: h3_duration(duration),
             resolution: "768P",
+          }
+        when "kwaivgi/kling-v3-omni-video"
+          # Kling v3 Omni takes start_image, and its duration window is 3-15s.
+          # Native audio stays off: STUDIO lays the dilla bed under the cut in
+          # add_soundtrack, so a provider track would fight it.
+          return {
+            prompt:,
+            start_image: client.upload_file(still, subject: @subject),
+            duration: kling_duration(duration),
+            mode: "pro",
+            generate_audio: false,
           }
         end
 
@@ -342,6 +365,11 @@ module Studio
       def h3_duration(seconds)
         seconds = Integer(seconds)
         seconds.clamp(4, 15)
+      end
+
+      # Kling v3 Omni accepts 3-15s.
+      def kling_duration(seconds)
+        Integer(seconds).clamp(3, 15)
       end
 
       def photographic(words)

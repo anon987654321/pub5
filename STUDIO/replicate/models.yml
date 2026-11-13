@@ -135,6 +135,9 @@ image_to_video:
   kwaivgi/kling-v4-flash:
     inputs: [image, prompt, duration, aspect_ratio, mode]
     note: "Kling v4 flash: fast image-to-video with a short prompt."
+  kwaivgi/kling-v3-omni-video:
+    inputs: [prompt, start_image, end_image, duration, mode, aspect_ratio, generate_audio, multi_prompt, reference_images, reference_video, keep_original_sound, video_reference_type]
+    note: "Kling v3 Omni: unified multimodal video with a first frame (start_image), 3-15s, standard/pro/4k. Select with --film-engine. generate_audio stays off; STUDIO lays the dilla bed under the cut itself."
   wan-video/wan-2.7-i2v:
     inputs: [image, prompt, resolution, num_frames, seed, go_fast]
   wan-video/wan-2.2-i2v-a14b:

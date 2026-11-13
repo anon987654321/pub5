@@ -344,6 +344,48 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
+  # Kling v3 Omni is the second selectable film engine. It takes start_image and
+  # a 3-15s duration, and its native audio stays off because STUDIO lays the
+  # dilla bed under the cut itself.
+  def test_kling_v3_omni_is_selectable_and_takes_start_image
+    Dir.mktmpdir do |dir|
+      still = File.join(dir, "still.jpg")
+      File.write(still, "image")
+      client = Object.new
+      client.define_singleton_method(:upload_file) { |path, subject:| "https://example.test/#{File.basename(path)}?s=#{subject}" }
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: dir, film_engine: "kwaivgi/kling-v3-omni-video"
+      )
+
+      input = picture.send(:film_input, "slow turn", still, 2)
+      assert_equal "https://example.test/still.jpg?s=probe", input[:start_image]
+      assert_equal 3, input[:duration], "Kling's floor is 3s"
+      assert_equal false, input[:generate_audio], "STUDIO scores the cut; the provider track would fight the bed"
+      refute input.key?(:image), "Kling takes start_image, not image"
+      refute input.key?(:first_frame_image)
+
+      assert_equal 15, picture.send(:film_input, "turn", still, 30)[:duration]
+      assert_equal %w[prompt start_image duration mode generate_audio],
+                   Studio::Visual::IdeaPicture::FILM_INPUT_KEYS.fetch("kwaivgi/kling-v3-omni-video")
+    end
+  end
+
+  def test_the_film_engine_defaults_to_h3_lite_when_not_selected
+    picture = Studio::Visual::IdeaPicture.new(subject: "probe", directory: Dir.pwd)
+    assert_equal "minimax/h3-lite", picture.film_engine
+  end
+
+  def test_the_catalogue_rejects_an_unknown_film_engine
+    models = Studio::ReplicateClient::Models
+    spec = models.film_engine("kwaivgi/kling-v3-omni-video")
+    assert_includes spec.fetch("inputs"), "start_image"
+    assert_equal "minimax/h3-lite", Studio::Visual::IdeaPicture::FILM
+    assert_includes models.film_engines.keys, Studio::Visual::IdeaPicture::FILM
+
+    error = assert_raises(ArgumentError) { models.film_engine("bogus/nope") }
+    assert_match(/unknown film engine/, error.message)
+  end
+
   def test_add_soundtrack_muxes_real_audio_and_keeps_the_silent_original
     skip "ffmpeg is not on PATH" unless system("ffmpeg", "-version", out: File::NULL, err: File::NULL)
 

@@ -19,6 +19,17 @@ module Studio
 
       def engines = catalogue.fetch("text_to_image")
 
+      # The motion catalogue: image-to-video models the film renderer can drive.
+      # Each declares the input keys it takes, and the film engine the renderer
+      # selects by default is Studio::Visual::IdeaPicture::FILM.
+      def film_engines = catalogue.fetch("image_to_video")
+
+      def film_engine(name)
+        film_engines.fetch(name.to_s) do
+          raise ArgumentError, "unknown film engine #{name}; try one of #{film_engines.keys.join(", ")}"
+        end
+      end
+
       def default_engine = catalogue.fetch("default_engine")
 
       def free_models = Array(catalogue["free_models"])
