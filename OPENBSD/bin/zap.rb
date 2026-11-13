@@ -29,10 +29,21 @@ class Zap
     @signal_label = "SIG#{DEFAULT_SIGNAL}"
     @pattern = nil
     @ps_path = nil
-    parse(argv)
+    @parse_error = nil
+    begin
+      parse(argv)
+    rescue OptionParser::ParseError, ArgumentError => e
+      @parse_error = e
+    end
   end
 
   def run
+    if @parse_error
+      @err.puts "zap: #{@parse_error.message}"
+      @err.puts help_text
+      return 2
+    end
+
     if @help
       @out.puts help_text
       return 0
