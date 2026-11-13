@@ -3,6 +3,8 @@
 require "minitest/autorun"
 require "open3"
 require "rbconfig"
+require "stringio"
+require_relative "../bin/zap"
 
 class ZapTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
@@ -43,6 +45,56 @@ class ZapTest < Minitest::Test
 
     assert status.success?, output
     assert_includes output, "sent SIGTERM to PID #{child}"
+    Process.wait(child)
+  ensure
+    if child
+      begin
+        Process.kill("KILL", child)
+      rescue Errno::ESRCH
+        nil
+      end
+      begin
+        Process.wait(child)
+      rescue Errno::ECHILD
+        nil
+      end
+    end
+  end
+
+  def test_prompt_can_skip_a_matching_process
+    marker = "zap-worker-#{Process.pid}-#{object_id}"
+    child = Process.spawn(RbConfig.ruby, "-e", "sleep 30 # #{marker}")
+
+    output, status = run_zap(marker, stdin: "n\\n")
+
+    assert status.success?, output
+    assert_includes output, "#{child} "
+    assert Process.kill(0, child)
+  ensure
+    if child
+      begin
+        Process.kill("KILL", child)
+      rescue Errno::ESRCH
+        nil
+      end
+      begin
+        Process.wait(child)
+      rescue Errno::ECHILD
+        nil
+      end
+    end
+  end
+
+  def test_ps_fallback_works_without_procfs
+    marker = "zap-ps-worker-#{Process.pid}-#{object_id}"
+    child = Process.spawn(RbConfig.ruby, "-e", "sleep 30 # #{marker}")
+    output = StringIO.new
+    errors = StringIO.new
+    zap = Zap.new(["-f", "-s", "TERM", marker], out: output, err: errors)
+    zap.define_singleton_method(:linux_procfs?) { false }
+
+    assert_equal 0, zap.run, errors.string
+    assert_includes output.string, "sent SIGTERM to PID #{child}"
     Process.wait(child)
   ensure
     if child
