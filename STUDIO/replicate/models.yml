@@ -127,11 +127,24 @@ upscale_and_restore:
   topazlabs/dust-and-scratch-v2:
     inputs: [image]
 
-# Motion from a still — the selfie series' short film.
+# Motion from a still — the selfie series' short film. An image-to-video model
+# names its still differently (start_image, first_frame_image, image), so each
+# entry lists the keys its own schema declares; the caller passes the ones it has.
 image_to_video:
+  kwaivgi/kling-v3-omni-video:
+    inputs: [prompt, start_image, end_image, duration, aspect_ratio, mode, multi_prompt, generate_audio, reference_video, reference_images, keep_original_sound, video_reference_type]
+    note: >-
+      Kling v3 omni: 720p/1080p/4K from a prompt, a start frame or a reference
+      video (mode standard|pro|4k, 3-15s). Carries native audio, reference
+      images and multi-shot prompts.
   kwaivgi/kling-v4-flash:
-    inputs: [image, prompt, duration, aspect_ratio, mode]
-    note: "Kling v4 flash: fast image-to-video with a short prompt."
+    inputs: [prompt, start_image, duration, aspect_ratio, reference_images, reference_videos]
+    note: "Kling v4 flash: fast image-to-video from a start frame; base_video turns it into an editor."
+  minimax/h3-lite:
+    inputs: [prompt, first_frame_image, last_frame_image, duration, resolution, ratio, reference_image_urls, reference_video_urls, reference_audio_urls]
+    note: >-
+      MiniMax H3 lite: prompt or first frame, 480P/768P, 4-15s. Takes reference
+      image, video and audio URLs, so it is the lightest multi-modal motion route.
   wan-video/wan-2.7-i2v:
     inputs: [image, prompt, resolution, num_frames, seed, go_fast]
   wan-video/wan-2.2-i2v-a14b:

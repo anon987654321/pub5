@@ -24,6 +24,7 @@ TOOLS = {
   "dilla" => File.join(STUDIO_ROOT, "dilla", "dilla.rb"),
   "postpro" => File.join(STUDIO_ROOT, "postpro", "postpro.rb"),
   "lora" => File.join(STUDIO_ROOT, "lora", "validate.rb"),
+  "logo" => File.join(STUDIO_ROOT, "particle_logo.rb"),
 }.freeze
 
 ABLETON_TOOLS = {
@@ -39,6 +40,7 @@ def usage
   warn "  dilla     the beat engine — see STUDIO/dilla/README.md"
   warn "  postpro   the film grade — see STUDIO/postpro/README.md"
   warn "  lora      read-only private LoRA profile audit — --help for options"
+  warn "  logo      the plur1bus particle mark — --demo|--film|--still|--homes, --help"
   warn "  ableton   Live Set inventory, composition export and MIDI recovery"
 end
 
