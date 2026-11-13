@@ -140,6 +140,12 @@ end
 # Light is the default; --heavy opts one invocation into the named-look takes,
 # even when POSTPRO_HEAVY=0 is inherited from the environment.
 ENV["POSTPRO_HEAVY"] = "1" if ARGV.include?("--heavy")
+# --all-effects asks for the maximal emulation stack: every effect the recipe
+# vocabulary allows, in physical stage order, one grain pass last. It implies
+# the named-look routing (each take still anchors on a look) and is never a
+# default.
+ENV["POSTPRO_HEAVY"] = "1" if ARGV.include?("--all-effects")
+ENV["POSTPRO_ALL_EFFECTS"] = "1" if ARGV.include?("--all-effects")
 
 # --rescue, --set and --measure: each runs and exits straight after boot.
 require_relative "lib/early_modes"
@@ -211,9 +217,35 @@ POSTPRO_LIB.each { |name| require_relative "lib/#{name}" }
 # reads that abort as a failed grade. A run that loaded the depth model leaves
 # by exit!, with the status it was about to return; any other run exits as usual.
 
+# The postpro API MASTER reaches over the subprocess boundary. One JSON request
+# in, one JSON response out, with the tool's own progress captured rather than
+# mixed into the wire.
+def postpro_api
+  actions = {
+    "presets" => ->(_request) { PRESETS.keys.map(&:to_s) },
+    "stocks" => ->(_request) { STOCKS.keys.map(&:to_s) },
+    "lenses" => ->(_request) { list_lenses.to_s.split(/[,\s]+/).reject(&:empty?) },
+    "capabilities" => ->(_request) { Studio::AnalogCapabilities.report(:postpro).to_s },
+    "grade" => lambda do |request|
+      input = request["input"].to_s
+      output = request["output"].to_s
+      preset = request["preset"].to_s
+      raise ArgumentError, "grade needs input, output and preset" if input.empty? || output.empty? || preset.empty?
+      raise ArgumentError, "unknown preset #{preset.inspect}; known: #{PRESETS.keys.join(', ')}" unless PRESETS.key?(preset.to_sym)
+      raise ArgumentError, "input not found: #{input}" unless File.exist?(input)
+
+      grade_one_shot(input, output, preset.to_sym)
+    end,
+  }
+  Studio::Api.respond(actions, argv: ARGV)
+end
+
 if __FILE__ == $0
   status = begin
-    if ARGV.include?("--video")
+    if ARGV.first == "api"
+      require_relative "../api"
+      postpro_api
+    elsif ARGV.include?("--video")
       require_relative "motion"
       postpro_video_mode
     else
