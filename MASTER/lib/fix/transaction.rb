@@ -184,6 +184,14 @@ module Master
         value.delete_prefix("file:") if value&.start_with?("file:")
       end
 
+      def snapshot_content_hash(path)
+        relative = normalize(path)
+        return unless relative && @paths.include?(relative)
+
+        value = @snapshot_fingerprints[relative]
+        value.delete_prefix("file:") if value&.start_with?("file:")
+      end
+
       # The delivering state machine lives in Delivery, reached through this
       # accessor. Delivery keeps no state: it changes this transaction only
       # through the delivery door below, so the manifest format and every event
