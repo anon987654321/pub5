@@ -179,7 +179,7 @@ class ImagePresenter
           # from the system. Keep Open3's ensure from waiting forever if group
           # signalling was denied, while still reporting descendants separately.
           Process.kill("KILL", waiter.pid) if waiter.alive?
-          leader_reaped = !waiter.join(1).nil? unless waiter.alive? == false
+          leader_reaped = !waiter.join(1).nil?
         end
         group_gone = !postpro_group_alive?(waiter.pid)
         reader.join(0.2)
