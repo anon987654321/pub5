@@ -21,6 +21,9 @@ class FixConvergenceWiringTest < Minitest::Test
     assert_includes loop_source, 'require_relative "../visual_pass"'
     assert_includes compatibility_entrypoint, 'require_relative "kernel/convergence_adapter"'
     assert_includes loop_source, "class ConvergenceAdapter"
+    assert_includes loop_source, "@kernel.run("
+    assert_includes loop_source, "TaskContract.for_target"
+    refute_includes loop_source, "@kernel.run_fix_loop("
     assert_includes loop_source, 'require_relative "../opportunity_pass"'
     assert_includes builder_source, "visual_pass:"
     assert_includes builder_source, "opportunity_pass:"
@@ -41,7 +44,7 @@ class FixConvergenceWiringTest < Minitest::Test
     assert_includes pass_source, "continue_with_wishlist"
     assert_includes pass_source, "WISHLIST_MAX_ROUNDS"
     assert_includes lifecycle_source, "verify_incremental_scope"
-    # Kernel#run_fix_loop owns the run boundary, so it scopes the adapter's cancellation token.
+    # Kernel#run is the public validated door; its lifecycle keeps cancellation inside the receipt boundary.
     assert_includes kernel_lifecycle_source, "adapter.with_cancellation(cancellation)"
     [lifecycle_source, kernel_lifecycle_source].each do |source|
       refute_includes source, "instance_variable_get(:@cancellation)"
