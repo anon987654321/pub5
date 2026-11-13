@@ -179,6 +179,7 @@ class TestDesignLoop < Minitest::Test
     built = options.fetch(:built, [])
     seen = options.fetch(:seen, [])
     prompts = options.fetch(:prompts, [])
+    on_build = options.fetch(:on_build, ->(_app) {})
     elements = options.fetch(:classes, FILLER + [".card"]).map { |key| { "key" => "body>main>#{key}" } }
     measure = lambda do |surfaces|
       seen << surfaces.map(&:id)
@@ -191,7 +192,7 @@ class TestDesignLoop < Minitest::Test
     edit = reply(path, find: "padding: 4px;", replace: "padding: 16px;")
     LOOP::World.new(
       measure:, ask: ->(prompt, _images) { (prompts << prompt) && prompt.include?("Two renders") ? vision : edit },
-      build: ->(app) { built << app && true },
+      build: ->(app) { built << app; on_build.call(app); true },
       commit_file: lambda do |file, message, transaction|
         transaction.delivery.begin!(head_before: "a" * 40, paths: transaction.enlisted_paths)
         transaction.delivery.record_commit!(head_after: "b" * 40)
@@ -322,6 +323,25 @@ class TestDesignLoop < Minitest::Test
         refute_nil id
         manifest = File.join(root, Master::Fix::Transaction::ROOT_DIR, id, Master::Fix::Transaction::MANIFEST)
         assert_equal "delivering", JSON.parse(File.read(manifest)).fetch("state")
+      end
+    end
+  end
+
+  def test_candidate_is_not_committed_when_source_changes_after_its_measurement
+    with_sheet do |path|
+      committed = []
+      builds = 0
+      on_build = lambda do |_app|
+        builds += 1
+        File.write(path, ".card {\n  padding: 4px;\n  color: #111;\n}\n/* another writer */\n") if builds == 2
+      end
+      stub_scoring do
+        rounds = loop_for(path, committed:, on_build:).run
+
+        assert_equal :failed, rounds.first.outcome
+        assert_empty committed
+        assert_includes File.read(path), "another writer"
+        refute_includes File.read(path), "padding: 16px;"
       end
     end
   end
