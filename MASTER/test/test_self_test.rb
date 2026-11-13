@@ -35,7 +35,8 @@ class TestSelfTest < Minitest::Test
       assert_equal %w[LAW_INTEGRITY ROBUSTNESS SINGULARITY LINEARITY PROXIMITY ABSTRACTION DENSITY KERNEL_ADHERENCE LAW_MAP], laws
       assert result.value!.violation_count.positive?
       assert_includes bus.events.map(&:first), "self_test:complete"
-      assert_includes bus.events.map(&:first), "self_violation"
+      refute_includes bus.events.map(&:first), "self_violation",
+        "a diagnostic self-test must not trip the self-mutation halt"
     end
   end
 
