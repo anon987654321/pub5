@@ -230,7 +230,7 @@ module Master
         lines = collapse_blank_lines(text).scrub.delete("\r").lines(chomp: true)
         lines.each_with_index do |line, index|
           body = line.strip
-          next emit("", io:) if body.empty?
+          next if body.empty?
 
           if index.zero?
             status(unit, body, io:)
