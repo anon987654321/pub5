@@ -9,7 +9,7 @@ require_relative "../../../MASTER/checks/support/geometry_autofix"
 require_relative "../../../MASTER/checks/lib/check_mutation"
 require_relative "../../../MASTER/checks/support/geometry_probe"
 require_relative "../../../MASTER/checks/support/geometry_type"
-require_relative "../../../OPENBSD/lib/check_result"
+require_relative "../../../OPENBSD/mirror/lib/check_result"
 
 # Unit coverage for the pure logic behind the browser-backed checks. Nothing
 # here launches Chrome or needs a booted app — the CDP-dependent paths are

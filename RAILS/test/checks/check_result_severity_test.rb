@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../../../OPENBSD/lib/check_result"
+require_relative "../../../OPENBSD/mirror/lib/check_result"
 
 class CheckResultSeverityTest < Minitest::Test
   def test_hard_fail_blocks

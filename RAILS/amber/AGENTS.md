@@ -5,7 +5,7 @@
 - **Inventory:** `apps.yml` (active); wardrobe horizon items in
   `apps.horizon.yml` (ignore).
 - **Operations:** `RAILS/amber/README.md` (deployment, queue and backup contract).
-- **Golden checks:** `OPENBSD/bin/check-rails --profile=contributor`.
+- **Golden checks:** `OPENBSD/mirror/bin/check-rails --profile=contributor`.
 - **VPS:** `MASTER/bin/operator vps deploy amber --remote`.
 - **Honesty:** photo polish ≠ ML segment/matting; fingerprint ≠ embedding; tips
   = rules; live_streams = style sessions (no video).

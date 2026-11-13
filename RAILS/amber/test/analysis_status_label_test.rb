@@ -4,8 +4,8 @@ require "test_helper"
 require "minitest/mock"
 
 # Amber's jobs use bounded hourly drains on vm23 rather than a resident
-# supervisor; see OPENBSD/etc/crontab.vm23 and
-# OPENBSD/usr/local/bin/drain-jobs.sh. The status label distinguishes an active
+# supervisor; see OPENBSD/mirror/etc/crontab.vm23 and
+# OPENBSD/mirror/usr/local/bin/drain-jobs.sh. The status label distinguishes an active
 # worker, work waiting for a scheduled drain, and an unreadable queue status.
 #
 # Three of these need solid_queue_processes, and no app in this tree has that

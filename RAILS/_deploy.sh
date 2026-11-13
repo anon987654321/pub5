@@ -3,12 +3,12 @@
 # sibling _*.sh helper file, then exposes deploy_tracked_app as the single
 # entry point each app's <app>.sh script calls.
 #
-# Requires: zsh, a Ruby and bundler (OPENBSD/lib/ruby_select.sh picks them), rails, doas
+# Requires: zsh, a Ruby and bundler (OPENBSD/mirror/lib/ruby_select.sh picks them), rails, doas
 set -euo pipefail
 
 typeset _deploy_sh_dir=${${(%):-%x}:A:h}
 
-. "${_deploy_sh_dir:h}/OPENBSD/lib/ruby_select.sh"
+. "${_deploy_sh_dir:h}/OPENBSD/mirror/lib/ruby_select.sh"
 
 . "${_deploy_sh_dir}/_core.sh"
 . "${_deploy_sh_dir}/_bundle.sh"

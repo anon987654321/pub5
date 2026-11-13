@@ -80,7 +80,7 @@ Local development uses `falcon serve`; production uses the tracked
 demo at `https://mrd.brgen.no`: one Falcon worker on
 `127.0.0.1:47314` behind relayd, with a three-connection Active Record pool
 and payments in mock mode. Puma is retained only for Capybara system tests. On vm23, as dev,
-`VPS_DEPLOY_SHA=<sha> zsh OPENBSD/bin/vps-deploy mrdamascy` deploys it and
+`VPS_DEPLOY_SHA=<sha> zsh OPENBSD/mirror/bin/vps-deploy mrdamascy` deploys it and
 `curl -fsS http://127.0.0.1:47314/up` answers once it is up. No deploy seeds:
 the menu was loaded once, and `db/seeds.rb` destroys every row before it
 recreates the menu. Stopping the demo, and removing its route, is

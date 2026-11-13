@@ -3,7 +3,7 @@
 require "minitest/autorun"
 require_relative "../../../MASTER/checks/support/geometry_type"
 require_relative "../../../MASTER/checks/support/geometry_probe"
-require_relative "../../../OPENBSD/lib/check_result"
+require_relative "../../../OPENBSD/mirror/lib/check_result"
 
 class GeometryTypographyTest < Minitest::Test
   Surface = Data.define(:id, :label, :path, :width)

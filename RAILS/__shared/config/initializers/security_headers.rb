@@ -22,7 +22,7 @@ Rails.application.config.action_dispatch.default_headers.merge!(
   #
   # In production this header never reaches the browser: relayd does
   # `match response header set "Permissions-Policy"`, which overwrites it for
-  # every backend. Keep the two in agreement — OPENBSD/etc/relayd.conf is the
+  # every backend. Keep the two in agreement — OPENBSD/mirror/etc/relayd.conf is the
   # one that decides.
   "Permissions-Policy" => "accelerometer=(self), browsing-topics=(), camera=(), geolocation=(self), gyroscope=(self), microphone=(self), payment=(), usb=()",
   "X-XSS-Protection" => "0",

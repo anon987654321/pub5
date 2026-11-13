@@ -5,8 +5,8 @@ require "open3"
 require "rbconfig"
 require "tmpdir"
 require "json"
-require_relative "../../OPENBSD/lib/check_result"
-require_relative "../../OPENBSD/lib/check_ledger"
+require_relative "../../OPENBSD/mirror/lib/check_result"
+require_relative "../../OPENBSD/mirror/lib/check_ledger"
 
 # A crashing check remains a distinct error outcome, but it cannot
 # contribute to a successful run. The runner must continue through the registry,

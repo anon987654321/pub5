@@ -219,7 +219,7 @@ protocol.
 The socket server polls web-side messages every two seconds and relays them to
 joined IRC clients. It binds to `127.0.0.1:6667` by default and starts only
 when `bin/irc-gateway` is invoked. To expose it, the operator enables
-`irc_gateway` in `rc.conf.local` using `OPENBSD/etc/rc.d/irc_gateway`,
+`irc_gateway` in `rc.conf.local` using `OPENBSD/mirror/etc/rc.d/irc_gateway`,
 then either terminates TLS on 6697 in relayd and forwards to the local port,
 or opens 6667 in pf with `IRC_HOST` set (cleartext). DNS for
 `irc.brgen.no` is a separate step.

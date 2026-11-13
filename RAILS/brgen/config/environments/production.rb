@@ -17,7 +17,7 @@ Rails.application.configure do
   # written twice. At :info that is each request, each fragment-cache read and
   # each enqueued job — measured 2026-08-08 as 1.9G in each of those two files,
   # with /var at 106% and the CI test step dying mid-deploy because it could not
-  # write. Rotation is the real guard and is now restored (OPENBSD/etc/
+  # write. Rotation is the real guard and is now restored (OPENBSD/mirror/etc/
   # newsyslog.conf, which had lost every base rule), but a production app has no
   # business narrating cache reads to the system log twice over.
   config.log_level = ENV.fetch("RAILS_LOG_LEVEL", "warn").to_sym

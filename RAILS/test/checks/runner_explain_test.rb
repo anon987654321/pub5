@@ -44,7 +44,7 @@ class RunnerExplainTest < Minitest::Test
   # A switch named in --explain that no file reads is documentation of nothing.
   def test_every_documented_switch_has_a_reader
     sources = Dir.glob(File.expand_path("../../../MASTER/checks/**/*.{rb,yml}", __dir__)) +
-              Dir.glob(File.expand_path("../../../OPENBSD/lib/**/*.rb", __dir__))
+              Dir.glob(File.expand_path("../../../OPENBSD/mirror/lib/**/*.rb", __dir__))
     body = sources.map { |path| File.read(path) }.join("\n")
     documented = explain.scan(/^  (CHECKS?_[A-Z_]+|VISUAL_[A-Z_]+)\s/).flatten
     assert_operator documented.size, :>=, 8, "the switch list was not parsed"

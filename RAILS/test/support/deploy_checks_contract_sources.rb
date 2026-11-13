@@ -22,7 +22,7 @@ module DeployChecksContractSources
   #
   # A count would have said 47 checks and meant 46. This asks the question the
   # count cannot.
-  CALLER_GLOBS = %w[OPENBSD/bin/* OPENBSD/*.sh OPENBSD/*.rb OPENBSD/lib/*.rb
+  CALLER_GLOBS = %w[OPENBSD/mirror/bin/* OPENBSD/*.sh OPENBSD/*.rb OPENBSD/mirror/lib/*.rb
                     RAILS/*.sh MASTER/bin/* MASTER/lib/operator/*.rb bin/*].freeze
 
   # Comment lines are stripped first, and that is not tidiness. Written without

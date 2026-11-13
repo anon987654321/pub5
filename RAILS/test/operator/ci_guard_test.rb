@@ -20,7 +20,7 @@ class CiGuardTest < Minitest::Test
 
   # The lock lives in root-owned /var/db/pub4, with the shell side.
   #
-  # It used to be /var/tmp/pub4-ci.lock while OPENBSD/lib/ci_lock.sh called
+  # It used to be /var/tmp/pub4-ci.lock while OPENBSD/mirror/lib/ci_lock.sh called
   # itself "the one definition of the pub4 CI mutex path" and pointed three
   # shell scripts at /var/db/pub4/ci.lock. Two lock files that excluded nothing
   # in each other, and the one that was actually being locked -- this one -- was

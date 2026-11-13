@@ -293,8 +293,8 @@ domain is amberapp.art; apps.yml carries the registration expiry and renewal fla
 there rather than here before pointing anyone at the name.
 
 The Litestream config is inert by decision, because OpenBSD has no binary for it. The backup is
-a nightly pull from the operator's Mac with OPENBSD/bin/dr-pull, which checks each database
-before it keeps the copy. When a Solid Queue backlog builds, OPENBSD/bin/amber_queue_sweep.sh
+a nightly pull from the operator's Mac with OPENBSD/mirror/bin/dr-pull, which checks each database
+before it keeps the copy. When a Solid Queue backlog builds, OPENBSD/mirror/bin/amber_queue_sweep.sh
 clears it with sqlite3, without booting Rails.
 
 ## Bringing it up

@@ -60,7 +60,7 @@ class ConstitutionalScanTargetsTest < Minitest::Test
 
   # A tree selects on its own name, an app on RAILS/<app>.
   def test_a_change_in_a_tree_selects_that_tree
-    check = build(changed: ["OPENBSD/lib/check_result.rb"])
+    check = build(changed: ["OPENBSD/mirror/lib/check_result.rb"])
 
     assert_equal %w[OPENBSD], names(check.targets)
   end

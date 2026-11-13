@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "shared/contracts"
-require File.join(Shared::Contracts.root, "OPENBSD", "lib", "load_average")
+require File.join(Shared::Contracts.root, "OPENBSD", "mirror", "lib", "load_average")
 
 module Shared
   # Delete guest rows nobody is behind any more.

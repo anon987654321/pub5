@@ -252,7 +252,7 @@ module Shared
     # written 102,778 throwaway guest rows". The rows kept being written and the
     # count has doubled since.
     #
-    # OPENBSD/etc/daily.local prunes about 20,000 a night against 10,000
+    # OPENBSD/mirror/etc/daily.local prunes about 20,000 a night against 10,000
     # arriving, so the table stays bounded. That is the mitigation. This is the
     # fix: nothing is written until something is on the other end.
     #

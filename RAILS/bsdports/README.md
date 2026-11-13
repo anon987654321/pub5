@@ -37,7 +37,7 @@ until the migrations land. Conditional GET is on for a port page and a maintaine
 the viewer, because those pages carry a watch button and a comment form. The shared README
 gives the reasons.
 
-A deploy runs through `OPENBSD/bin/vps-deploy bsdports`, which runs `bsdports.sh` on vm23 and
+A deploy runs through `OPENBSD/mirror/bin/vps-deploy bsdports`, which runs `bsdports.sh` on vm23 and
 copies the tree to `/home/bsdports/app`. The shared engine sits beside it at
 `/home/bsdports/__shared`. Every deploy sheds amber and bsdports together, and relayd keeps
 answering TLS while their ports are closed, so a site that looks alive from outside can be

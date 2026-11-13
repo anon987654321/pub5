@@ -338,7 +338,7 @@ apps:
     # restarts it in place under /home/dev/pub5/MASTER/web, so deploy_root
     # names the tree that runs rather than a copy source, and vps-deploy and
     # vps_install_all.sh deploy it through that script, never the brgen way.
-    deploy_script: OPENBSD/bin/vps_deploy_master.sh
+    deploy_script: OPENBSD/mirror/bin/vps_deploy_master.sh
     deploy_root: MASTER/web
     public: true
     features:

@@ -66,8 +66,8 @@ module ApplicationHelper
 # "Pending media" describes queued work, not immediate completion.
 #
 # vm23 runs Amber's Solid Queue jobs in bounded hourly drains rather than a
-# resident supervisor; see OPENBSD/etc/crontab.vm23 and
-# OPENBSD/usr/local/bin/drain-jobs.sh. A heartbeat means a worker is active now.
+# resident supervisor; see OPENBSD/mirror/etc/crontab.vm23 and
+# OPENBSD/mirror/usr/local/bin/drain-jobs.sh. A heartbeat means a worker is active now.
 # No heartbeat means work awaits a later drain; a failed status query means the
 # state is unknown. Keep those cases distinct in the interface.
 def analysis_status_label(status)

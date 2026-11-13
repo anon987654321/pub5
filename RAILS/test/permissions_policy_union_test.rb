@@ -12,7 +12,7 @@ class PermissionsPolicyUnionTest < Minitest::Test
 
   def test_rails_permissions_policy_matches_relayd_sensor_union
     rails = File.read(File.join(ROOT, "__shared/config/initializers/security_headers.rb"))
-    relayd = File.read(File.join(REPO, "OPENBSD/etc/relayd.conf"))
+    relayd = File.read(File.join(REPO, "OPENBSD/mirror/etc/relayd.conf"))
 
     rails_header = rails[/Permissions-Policy" => "([^"]+)"/, 1]
     relayd_header = relayd[/Permissions-Policy" value "([^"]+)"/, 1]

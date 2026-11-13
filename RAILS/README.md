@@ -47,7 +47,7 @@ loads it by local path. On the box, the copy-tree deploy puts each app at
 a sibling and never a subdirectory. Syncing to the wrong one makes the asset
 precompile a silent no-op. `__shared/README.md` describes what the engine owns.
 master does not mount the engine and is not copied: it runs in place under
-`/home/dev/pub5/MASTER/web`, deployed by `OPENBSD/bin/vps_deploy_master.sh`,
+`/home/dev/pub5/MASTER/web`, deployed by `OPENBSD/mirror/bin/vps_deploy_master.sh`,
 and its own `CLAUDE.md` governs it.
 
 Everything that builds, tests or probes these apps now lives under MASTER. The

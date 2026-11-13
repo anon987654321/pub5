@@ -24,7 +24,7 @@ class DeploySmokeContractTest < Minitest::Test
 
   def smoke_body
     @smoke_body ||= begin
-      assert File.file?(SMOKE), "missing OPENBSD/bin/deploy-smoke.sh"
+      assert File.file?(SMOKE), "missing OPENBSD/mirror/bin/deploy-smoke.sh"
       File.read(SMOKE)
     end
   end

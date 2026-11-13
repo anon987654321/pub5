@@ -2,7 +2,7 @@
 
 require "minitest/autorun"
 require_relative "../../../MASTER/checks/support/dom_surface_schema"
-require_relative "../../../OPENBSD/lib/check_result"
+require_relative "../../../OPENBSD/mirror/lib/check_result"
 
 class DomSurfaceSchemaTest < Minitest::Test
   FIXTURES = File.expand_path("../../../MASTER/checks/fixtures/surfaces", __dir__)

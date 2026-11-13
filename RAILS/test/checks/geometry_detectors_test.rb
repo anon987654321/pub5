@@ -2,7 +2,7 @@
 
 require "minitest/autorun"
 require_relative "../../../MASTER/checks/lib/rendered/rendered_geometry"
-require_relative "../../../OPENBSD/lib/check_result"
+require_relative "../../../OPENBSD/mirror/lib/check_result"
 require_relative "check_probe_harness"
 
 # The rendered-geometry detectors that read the probe's element list, proved on

@@ -24,4 +24,4 @@ case ${1:-brgen} in
     ;;
 esac
 
-exec zsh "${REPO_ROOT}/OPENBSD/bin/vps-deploy" "$app"
+exec zsh "${REPO_ROOT}/OPENBSD/mirror/bin/vps-deploy" "$app"

@@ -17,7 +17,7 @@
 # Bare minitest, no Rails: RAILS/test/*.rb run under plain ruby.
 
 require "minitest/autorun"
-require_relative "../../OPENBSD/lib/load_average"
+require_relative "../../OPENBSD/mirror/lib/load_average"
 
 ROOT = File.expand_path("..", __dir__)
 

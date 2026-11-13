@@ -163,7 +163,7 @@ end
   end
 
   def test_the_check_is_wired_into_check_rails
-    source = File.read(File.expand_path("../../OPENBSD/bin/check-rails", __dir__))
+    source = File.read(File.expand_path("../../OPENBSD/mirror/bin/check-rails", __dir__))
 
     assert_includes source, "constitutional_scan"
     assert_includes source, "DEPLOY_DEEP_CHECK_TIMEOUT"

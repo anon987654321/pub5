@@ -6,7 +6,7 @@ class RecoveryContractTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
 
   def test_restic_backup_requires_explicit_repository_and_password_source
-    source = File.read(File.join(ROOT, "OPENBSD/bin/dr-backup"))
+    source = File.read(File.join(ROOT, "OPENBSD/mirror/bin/dr-backup"))
     assert_includes source, 'ENV["RESTIC_REPOSITORY"]'
     assert_includes source, 'ENV["RESTIC_PASSWORD_FILE"]'
     assert_includes source, 'ENV["PUB4_DB_PATHS"]'

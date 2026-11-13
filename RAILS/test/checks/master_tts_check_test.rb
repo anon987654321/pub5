@@ -78,10 +78,10 @@ class MasterTtsCheckTest < Minitest::Test
 
   def test_a_missing_file_is_named_once_rather_than_once_per_needle
     with_tree do |root|
-      FileUtils.rm(File.join(root, "OPENBSD", "etc", "rc.d", "master"))
+      FileUtils.rm(File.join(root, "OPENBSD", "mirror", "etc", "rc.d", "master"))
       failures = run_against(root).failures
 
-      assert_equal ["missing OPENBSD/etc/rc.d/master"], failures.grep(%r{rc\.d/master})
+      assert_equal ["missing OPENBSD/mirror/etc/rc.d/master"], failures.grep(%r{rc\.d/master})
     end
   end
 

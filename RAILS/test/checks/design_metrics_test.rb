@@ -3,7 +3,7 @@
 require "minitest/autorun"
 require_relative "../../../MASTER/checks/support/design_metrics"
 require_relative "../../../MASTER/checks/lib/research/design_metrics"
-require_relative "../../../OPENBSD/lib/check_result"
+require_relative "../../../OPENBSD/mirror/lib/check_result"
 
 class DesignMetricsTest < Minitest::Test
   def test_contrast_black_white

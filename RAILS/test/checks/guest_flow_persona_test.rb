@@ -2,7 +2,7 @@
 
 require "minitest/autorun"
 require_relative "../../../MASTER/checks/support/guest_flow_persona"
-require_relative "../../../OPENBSD/lib/check_result"
+require_relative "../../../OPENBSD/mirror/lib/check_result"
 
 class GuestFlowPersonaTest < Minitest::Test
   def setup

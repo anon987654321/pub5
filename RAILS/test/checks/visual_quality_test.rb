@@ -4,7 +4,7 @@ require "minitest/autorun"
 require_relative "../../../MASTER/checks/support/exemplar_structure"
 require_relative "../../../MASTER/checks/support/visual_quality"
 require_relative "../../../MASTER/checks/lib/research/visual_quality"
-require_relative "../../../OPENBSD/lib/check_result"
+require_relative "../../../OPENBSD/mirror/lib/check_result"
 
 class VisualQualityTest < Minitest::Test
   FIX = File.expand_path("../../../MASTER/checks/fixtures/exemplars", __dir__)
