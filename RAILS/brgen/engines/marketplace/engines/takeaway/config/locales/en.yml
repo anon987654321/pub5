@@ -15,10 +15,6 @@ en:
       popular: "Best rated"
       delivery_fee: "Lowest delivery fee"
       minimum_order: "Lowest minimum order"
-    sort_headings:
-      popular: "Top rated in %{city}"
-      delivery_fee: "Lowest delivery fee in %{city}"
-      minimum_order: "Lowest minimum order in %{city}"
     opening_hours_heading: "Opening hours"
     closed_all_day: "Closed"
     tip_line: "Tip: %{amount}"

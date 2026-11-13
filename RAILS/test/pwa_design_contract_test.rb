@@ -121,7 +121,7 @@ class PwaDesignContractTest < Minitest::Test
   def test_offline_replay_queue_is_bounded_and_same_origin
     # One queue (shared-031): pwa_offline_store.js writes into pwa_runtime's.
     store = read(SHARED_ROOT, "frontend/pwa_offline_store.js")
-    assert_includes store, 'import { enqueueRecord } from "pub4/pwa_runtime"'
+    assert_includes store, 'import { enqueueRecord } from "pub5/pwa_runtime"'
     refute_includes store, "localStorage.setItem"
     source = read(SHARED_ROOT, "frontend/pwa_runtime.js")
     assert_includes source, "MAX_QUEUE_SIZE = 100"
@@ -129,7 +129,7 @@ class PwaDesignContractTest < Minitest::Test
     assert_includes source, "return null"
   end
 
-  def test_all_apps_register_service_worker_via_pub4_hotwire
+  def test_all_apps_register_service_worker_via_pub5_hotwire
     hotwire = read(SHARED_ROOT, "frontend/hotwire.js")
     assert_match(/serviceWorker\.register/, hotwire)
     assert_includes hotwire, "/service-worker"
@@ -139,7 +139,7 @@ class PwaDesignContractTest < Minitest::Test
       javascript = read(root, "app/javascript/application.js", optional: true)
       assert_match(/get ["']offline["']/, routes)
       assert_match(/get ["']service-worker["']/, routes)
-      assert_includes javascript, "pub4/hotwire"
+      assert_includes javascript, "pub5/hotwire"
     end
   end
 
