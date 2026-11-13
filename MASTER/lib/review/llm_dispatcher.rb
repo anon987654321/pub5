@@ -140,6 +140,7 @@ module Master
         @model_router = deps.model_router
         @availability = Master::CLI::Routing::AvailabilityPolicy.new(root: Master::ROOT)
         @session = deps.session
+        @browser_broker = deps.respond_to?(:browser_broker) ? deps.browser_broker : nil
         @tool_registry = load_tool_registry
       end
 
@@ -606,7 +607,8 @@ module Master
       end
 
       def send_web_chat(provider, messages, sys:)
-        Result.ok(Io::WebChat.call(provider:, prompt: text_prompt_for(messages), system: sys))
+        Result.ok(Io::WebChat.call(provider:, prompt: text_prompt_for(messages), system: sys,
+                                   broker: @browser_broker))
       rescue StandardError => e
         category = Io::WebChat.failure_category(e)
         Result.err("web-chat: #{e.message}", category:)

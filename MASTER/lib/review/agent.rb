@@ -22,16 +22,16 @@ module Master
       Dependencies = Data.define(
         :config, :session, :tools, :circuit_breaker, :cache, :bus,
         :model_router, :reasoning_modes, :memory, :personality,
-        :code_index, :context_window, :homeostat
+        :code_index, :context_window, :homeostat, :browser_broker
       ) do
         def self.from_kwargs(config:, session:, tools:, circuit_breaker:, cache:,
                              event_bus: nil, model_router: nil, reasoning_modes: nil,
                              memory: nil, personality: nil, code_index: nil,
-                             context_window: nil, homeostat: nil)
+                             context_window: nil, homeostat: nil, browser_broker: nil)
           new(
             config:, session:, tools:, circuit_breaker:, cache:, bus: event_bus,
             model_router:, reasoning_modes:, memory:, personality:,
-            code_index:, context_window:, homeostat:
+            code_index:, context_window:, homeostat:, browser_broker:
           )
         end
       end

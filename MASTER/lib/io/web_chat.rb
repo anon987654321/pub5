@@ -3,6 +3,7 @@
 require "timeout"
 require "fileutils"
 require "digest"
+require "uri"
 
 module Master
   module Io
@@ -28,8 +29,8 @@ module Master
       ProviderError = Class.new(StandardError)
       RequestTimeout = Class.new(StandardError)
 
-      def self.call(provider:, prompt:, system: nil)
-        new(provider:).ask(prompt:, system:)
+      def self.call(provider:, prompt:, system: nil, broker: nil)
+        new(provider:, broker:).ask(prompt:, system:)
       end
 
       # Browser-mediated accounts are a keyless fallback, not a default
@@ -68,9 +69,10 @@ module Master
         :provider_error
       end
 
-      def initialize(provider:)
+      def initialize(provider:, broker: nil)
         @provider = provider.to_s
         @config = provider_config(@provider)
+        @broker = broker
       end
 
       def ask(prompt:, system: nil)
@@ -119,21 +121,35 @@ module Master
         PROFILE_MUTEX.synchronize do
           refuse_if_cleanup_pending!
           browser = nil
+          lease = nil
           begin
             FileUtils.mkdir_p(profile_path, mode: 0o700)
             File.chmod(0o700, profile_path)
-            browser = Ferrum::Browser.new(
-              headless: ENV[HEADFUL_ENV] != "1",
-              timeout: ferrum_timeout_s,
-              process_timeout: ferrum_timeout_s,
-              browser_options: { "user-data-dir" => profile_path },
-            )
+            lease = @broker&.open(host: provider_host, url: @config.fetch("url"),
+                                  profile: profile_path, persistent: true,
+                                  headless: ENV[HEADFUL_ENV] != "1")
+            browser = Ferrum::Browser.new(**driver_options(lease))
             yield browser.create_page
           ensure
             cleanup_browser(browser) if browser
+            # The broker stops the process group; the signed-in profile dir stays,
+            # because the next keyless call reuses the same sign-in state.
+            @broker&.close(lease.id) if lease
           end
         end
       end
+
+      # With a broker the CDP endpoint belongs to it and Ferrum attaches instead
+      # of spawning; without one this is the driver WebChat has always started.
+      def driver_options(lease)
+        return { headless: ENV[HEADFUL_ENV] != "1", timeout: ferrum_timeout_s,
+                 process_timeout: ferrum_timeout_s,
+                 browser_options: { "user-data-dir" => profile_path } } unless lease
+
+        { ws_url: lease.cdp_url, timeout: ferrum_timeout_s, process_timeout: ferrum_timeout_s }
+      end
+
+      def provider_host = URI(@config.fetch("url")).host
 
       # Ferrum 0.17.1's quit is synchronous. When the dispatcher deadline fires,
       # waiting for teardown here defeats that deadline. Finish teardown off-thread;

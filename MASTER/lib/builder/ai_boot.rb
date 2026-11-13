@@ -64,7 +64,8 @@ module Master
         model_router: CLI::Routing::ModelRouter.new(config: infra[:config]),
         reasoning_modes: Review::Modes.new,
         memory: infra[:memory], personality: infra[:personality],
-        code_index: infra[:code_index], homeostat: infra[:homeostat]
+        code_index: infra[:code_index], homeostat: infra[:homeostat],
+        browser_broker: infra[:browser_broker]
       )
       agent = Review::Agent.new(deps:)
       soul_doc = Voice::Soul.new(root:, agent:)

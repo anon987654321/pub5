@@ -14,8 +14,9 @@ module Master
     class Base
       attr_reader :manifest
 
-      def initialize(manifest:)
+      def initialize(manifest:, services: {})
         @manifest = manifest
+        @services = services.freeze
       end
 
       def call(action:, **)
@@ -23,6 +24,10 @@ module Master
       end
 
       private
+
+      # Runtime services the loader threaded in, e.g. the Core-owned browser
+      # broker. A plugin asks here; it never constructs a process owner itself.
+      def service(key) = @services[key]
 
       def law_admission! = Master::Ground::LawHandshake::Admission.require!
       def policy = Master::Plugin.policy(manifest.id)
@@ -64,7 +69,11 @@ module Master
 
     def info(id) = load(id).manifest
 
-    def load(id)
+    # `services:` carries runtime collaborators a plugin may need but must not
+    # build itself — today the Core-owned browser broker. Threaded explicitly
+    # through load/run/observe so a plugin never reaches a process owner on its
+    # own; absent services leave the plugin at its closed-by-default behaviour.
+    def load(id, services: {})
       manifest = find_manifest(id.to_s)
       enforce_external_policy!(manifest.path)
       require_entrypoint!(manifest)
@@ -76,19 +85,19 @@ module Master
         raise ManifestError, "#{manifest.id}: #{constant} must inherit Master::Plugin::Base"
       end
 
-      klass.new(manifest:)
+      klass.new(manifest:, services:)
     rescue NameError => e
       raise ManifestError, "#{id}: #{e.message}"
     end
 
-    def run(id, action:, **args)
+    def run(id, action:, services: {}, **args)
       Ground::LawHandshake::Admission.require!
-      load(id).call(action:, **args)
+      load(id, services:).call(action:, **args)
     end
 
-    def observe(id, action:, **args)
+    def observe(id, action:, services: {}, **args)
       Ground::LawHandshake::Admission.require!
-      plugin = load(id)
+      plugin = load(id, services:)
       action_name = action.to_s
       unless plugin.manifest.observe_actions.include?(action_name)
         raise PolicyError, "#{id}: action #{action_name} is not declared observable"

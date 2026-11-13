@@ -103,9 +103,10 @@ module Master
         })()
       JS
 
-      def initialize(governor:, event_bus: nil)
+      def initialize(governor:, event_bus: nil, broker: nil)
         @governor = governor
         @bus = event_bus
+        @broker = broker
       end
 
       # wait: seconds to let the page's scripts settle before reading it.
@@ -157,8 +158,8 @@ module Master
       def render(uri, wait)
         require "ferrum"
         require "json"
-        browser = Ferrum::Browser.new(headless: true, timeout: TIMEOUT, process_timeout: TIMEOUT,
-                                      browser_options: BROWSER_OPTIONS)
+        lease = @broker&.open(host: uri.host, url: uri.to_s)
+        browser = Ferrum::Browser.new(**driver_options(lease))
         page = browser.create_page
         secure_page(page)
         page.go_to(uri.to_s)
@@ -166,6 +167,17 @@ module Master
         JSON.parse(page.evaluate(SCRIPT))
       ensure
         browser&.quit
+        @broker&.close(lease.id) if lease
+      end
+
+      # With a broker the CDP endpoint belongs to it, so Ferrum attaches instead
+      # of spawning; without one this is the single-shot driver the transport has
+      # always started. The request guard and SSRF checks are unchanged either way.
+      def driver_options(lease)
+        return { headless: true, timeout: TIMEOUT, process_timeout: TIMEOUT,
+                 browser_options: BROWSER_OPTIONS } unless lease
+
+        { ws_url: lease.cdp_url, timeout: TIMEOUT, process_timeout: TIMEOUT }
       end
 
       def new_budget
