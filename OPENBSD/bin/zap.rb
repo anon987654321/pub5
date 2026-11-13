@@ -261,7 +261,7 @@ class Zap
   end
 
   def run_ps(*arguments)
-    output = IO.popen([ps_binary, *arguments], &:read)
+    output = IO.popen({ "LC_ALL" => "C" }, [ps_binary, *arguments], &:read)
     [output, $?]
   end
 
