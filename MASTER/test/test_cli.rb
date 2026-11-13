@@ -594,9 +594,10 @@ end
 
     with_redisplay_counter do |counter|
       @cli.send(:terminal_write, io:) { |target| target.puts("turn0: reply row") }
+      @cli.send(:terminal_write, io:) { |target| target.puts("model0: next event") }
 
-      assert_equal "\r\e[K\r\nturn0: reply row\n", io.buffer
-      assert_equal [1], counter
+      assert_equal "\r\e[Kturn0: reply row\n\r\e[Kmodel0: next event\n", io.buffer
+      assert_equal [1, 1], counter
       assert_kind_of Numeric, @cli.instance_variable_get(:@last_foreign_write_at)
     end
   end
