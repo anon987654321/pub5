@@ -98,7 +98,10 @@ const DRUM_PATTERNS={
 'dusty1':tpP({k:[1,0,0,.3,0,0,.5,0,0,1,0,0,.4,0,0,0],s:[0,0,0,0,.8,0,0,.2,0,0,0,0,.9,0,0,.3],c:[0,0,.2,0,0,0,.3,0,0,0,0,0,.2,0,0,0],h:[.4,.2,.3,.2,.4,.2,.3,.2,.4,.2,.3,.2,.4,.2,.3,.2],o:[0,0,0,0,0,0,0,.2,0,0,0,0,0,0,0,.3]}),
 'wonky1':tpP({k:[1,0,0,0,0,0,.6,0,1,0,0,.4,0,0,0,0],s:[0,0,0,0,1,0,0,0,0,0,.3,0,.8,0,0,0],c:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],h:[.5,.3,.4,.2,.5,.3,.4,.2,.5,.3,.4,.2,.5,.3,.4,.2],o:[0,0,0,0,0,0,0,.3,0,0,0,0,0,0,0,.2]}),
 // Mirrors dilla's dilla_shadow_full (Blue Hour): boom-bap kick/snare with swung ghosts.
-'bluehour':tpP({k:[1,0,0,0,0,0,.82,0,0,0,.9,0,0,.4,0,0],s:[0,0,0,0,.98,0,0,0,0,0,0,0,1,0,0,0],c:[0,0,0,0,.3,0,0,0,0,0,0,0,.34,0,0,0],h:[.58,0,.46,0,.58,0,.46,.32,.62,0,.46,0,.56,0,.46,.3],o:[0,0,0,0,0,0,0,.42,0,0,0,0,0,0,.3,0]})
+// Blue Hour, played as industrial techno: straight 4-on-floor kick, clap on
+// 2 and 4, offbeat open hats and a driving closed-hat layer over the dilla
+// Fm material, so the tune is dilla's and the treatment is the machine.
+'bluehour':tpP({k:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],s:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],c:[0,0,0,0,.32,0,0,0,0,0,0,0,.36,0,0,0],h:[.5,0,.34,0,.5,0,.34,.24,.5,0,.34,0,.5,0,.34,.24],o:[0,0,.44,0,0,0,.44,0,0,0,.44,0,0,0,.44,.32]})
 };
 const BASS_PATS={
 'ethiobass':'C2,,Eb2,,G2,,Ab2,,G2,,Eb2,,C2,,,',
@@ -193,7 +196,10 @@ const PAD_PATS={
 const STYLES=[
 // Blue Hour mirrors the dilla engine's default session: Fm, 86 BPM, 58% swing,
 // the Fm9 - Ab13 - Dbmaj9#11 - C7b9 loop and the dilla_shadow_full kit.
-{n:'Blue Hour',m:['Dark','Smoky'],d:'bluehour',b:'bluehourbass',k:'bluehourkeys',p:'bluehourwash',bpm:[86,86],sw:[58,58],dr:[40,40],tm:[60,60]},
+// Blue Hour mirrors the dilla engine's default session (Fm, the Fm9 - Ab13 -
+// Dbmaj9#11 - C7b9 loop, the dilla bass and pad) played as industrial techno:
+// driving kit, low swing, dark drive and filter.
+{n:'Blue Hour',m:['Dark','Industrial'],d:'bluehour',b:'bluehourbass',k:'bluehourkeys',p:'bluehourwash',bpm:[92,100],sw:[6,12],dr:[62,80],tm:[18,28]},
 {n:'Analog Haze',m:['Lush','Magical'],d:'dusty1',b:'dustybass1',k:'neosoul',p:'ambientwash',bpm:[72,88],sw:[28,44],dr:[35,55],tm:[45,70]},
 {n:'Ethio-Jazz',m:['Joyful','Mysterious'],d:'eth-mulatu',b:'ethiobass',k:'tizita',p:'ethiodrone',bpm:[85,110],sw:[15,35],dr:[20,40],tm:[5,15]},
 {n:'Ethio-Funk',m:['Groovy','Joyful'],d:'eth-funk',b:'ethiovamp',k:'bati',p:'ethiowash',bpm:[100,120],sw:[20,35],dr:[25,45],tm:[5,15]},
@@ -237,8 +243,8 @@ const M={
 'soulwalk':{d:'dusty1',b:'dustybass1',k:'soulwalk',p:'souldrone',bpm:[76,92],sw:[25,40]},
 'tender':{d:'ambient-click',b:'ambientbass',k:'tender',p:'tenderwash',bpm:[60,75],sw:[15,30]},
  'wonder':{d:'dusty1',b:'dustybass1',k:'wonder',p:'souldrone',bpm:[80,96],sw:[22,38]},
- // Blue Hour mirrors the dilla engine default session.
- 'bluehour':{d:'bluehour',b:'bluehourbass',k:'bluehourkeys',p:'bluehourwash',bpm:[86,86],sw:[58,58]}
+ // Blue Hour: the dilla engine's material, played as industrial techno.
+ 'bluehour':{d:'bluehour',b:'bluehourbass',k:'bluehourkeys',p:'bluehourwash',bpm:[92,100],sw:[6,12]}
 };
 
 function applyMood(m){
@@ -253,7 +259,7 @@ log('mood applied','k');
 
 
 let st_={started:false,playing:false,idx:-1,timer:null,layoutIdx:49,heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,theme:'dark',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0}};
-let aud_={bpm:86,swing:58,drive:40,tape:60,comp:72,width:58,reverb:58,delay:34,filter:72,wobble:16,vinyl:22,crackle:14,drift:0.05};
+let aud_={bpm:96,swing:8,drive:72,tape:44,comp:78,width:52,reverb:34,delay:26,filter:62,wobble:8,vinyl:12,crackle:8,drift:0.05};
 let mix_={drum:80,bass:70,keys:60,pads:50,master:75};
 let pat_={d:'bluehour',b:'bluehourbass',k:'bluehourkeys',p:'bluehourwash'};
 let seq_={};
