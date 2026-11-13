@@ -139,7 +139,10 @@ terminal row is still present. This is not a second journal, hash chain or
 writer. The start row carries the task-contract digest plus the reconstructable
 intent, scope, preservation dimensions and proof names. Large OpenBSD manual
 and source-read payloads remain in their dedicated evidence store, not copied
-into the coordinator log.
+into the coordinator log. The receipt's `changed` count is explicitly limited
+to `repair_pass.fixed` summaries; it is not a fabricated total across the
+separate DesignLoop and Restructure mutation contracts. Those paths retain
+their own transaction and delivery evidence.
 
 Models and lanes are instruments inside the adapter, not Kernel owners.
 `data/models.yml` orders candidates; `LaneSelection` filters/orders them
