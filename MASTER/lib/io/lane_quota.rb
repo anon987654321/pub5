@@ -43,6 +43,7 @@ module Master
         "billing" => "billing hold",
         "unreachable" => "unreachable",
         "login" => "login or credential rejected",
+        "gateway_auth" => "OpenRouter credential rejected",
         "guessed" => "quota spent, wait guessed",
       }.freeze
       REMEDIATION_TEXT = {
@@ -50,8 +51,11 @@ module Master
         "billing" => "resolve the provider account's past-due balance; this lane is held for six hours, without rapid quota probes",
         "unreachable" => "check DNS/network or start the local provider, then probe again",
         "login" => "refresh this provider's CLI login or configured API credential, then probe again",
+        "gateway_auth" => "replace OPENROUTER_API_KEY with a valid key, then let the bounded canary verify it",
         "guessed" => "the provider stated no reset time; wait for the next bounded probe",
       }.freeze
+      OPENROUTER_AUTH_LANE = "openrouter"
+      OPENROUTER_AUTH_FAILURE = /\bUser not found\b/i.freeze
       DATA = File.expand_path("../../data/lanes.yml", __dir__)
 
       @mutex = Mutex.new
@@ -83,10 +87,25 @@ module Master
         id.split("-", 2).first.to_s
       end
 
-      # OpenRouter's free daily-pool refusal applies to every :free model.
-      # Other 429s can be vendor-specific, so they stay on the model's ordinary lane.
+      # Owner/model IDs are sent through one OPENROUTER_API_KEY, even though
+      # ordinary quota failures remain scoped to the upstream vendor. The exact
+      # "User not found." response is an OpenRouter credential rejection, not a
+      # collection of independent Gemini/Cohere/OpenAI/xAI failures.
+      def openrouter_model?(model)
+        id = model.to_s
+        slash = id.index("/")
+        colon = id.index(":")
+        !!slash && (!colon || slash < colon)
+      end
+
+      def credential_lane_of(model)
+        openrouter_model?(model) ? OPENROUTER_AUTH_LANE : lane_of(model)
+      end
+
       def quota_lane_of(model, reply)
         text = reply.to_s
+        return OPENROUTER_AUTH_LANE if openrouter_model?(model) && OPENROUTER_AUTH_FAILURE.match?(text)
+
         free_pool = model.to_s.end_with?(":free") &&
           text.match?(/free-models-per-day/i)
         free_pool ? "openrouter-free" : lane_of(model)
@@ -111,7 +130,11 @@ module Master
           rows = raw
           rows[lane] = deadline
           rows.delete(UNKNOWN_PREFIX + lane)
-          rows[REASON_PREFIX + lane] = reason_of(verdict)
+          rows[REASON_PREFIX + lane] = if lane == OPENROUTER_AUTH_LANE
+            "gateway_auth"
+          else
+            reason_of(verdict)
+          end
           if verdict.unknown
             rows[UNKNOWN_PREFIX + lane] = deadline
             past = rows[PROBE_PREFIX + lane]
@@ -241,8 +264,9 @@ module Master
 
         deadlines = @mutex.synchronize { table }
         local = deadlines[lane]
+        shared_auth = deadlines[OPENROUTER_AUTH_LANE] if openrouter_model?(model)
         shared_free = deadlines["openrouter-free"] if model.to_s.end_with?(":free")
-        [local, shared_free].compact.max
+        [local, shared_auth, shared_free].compact.max
       end
 
       # lane => deadline, expired rows dropped; the file is the shared truth.
@@ -254,8 +278,9 @@ module Master
       # free-pool limit covers every :free model; other failures remain vendor-scoped.
       def report_for(model)
         rows = report
-        shared = rows.find { |row| row.start_with?("openrouter-free: ") } if model.to_s.end_with?(":free")
-        shared || rows.find { |row| row.start_with?("#{lane_of(model)}: ") } ||
+        shared_auth = rows.find { |row| row.start_with?("#{OPENROUTER_AUTH_LANE}: ") } if openrouter_model?(model)
+        shared_free = rows.find { |row| row.start_with?("openrouter-free: ") } if model.to_s.end_with?(":free")
+        shared_auth || shared_free || rows.find { |row| row.start_with?("#{lane_of(model)}: ") } ||
           rows.find { |row| (key = row[/\A\S+(?=: )/]) && model.to_s.start_with?(key) }
       end
 
