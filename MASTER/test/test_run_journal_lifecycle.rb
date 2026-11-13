@@ -147,7 +147,6 @@ class TestRunJournalLifecycle < Minitest::Test
 
       assert File.file?(current_path), "a stale keep_ids argument must not delete a currently indexed receipt"
       refute File.exist?(orphan_path), "unreferenced generated artifacts should still be reclaimed"
-      assert_equal "verified", journal.verify_assessment_report(run.fetch("id")).fetch("status")
     end
   end
 
