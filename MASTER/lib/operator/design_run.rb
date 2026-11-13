@@ -147,7 +147,7 @@ module Operator
 
     def commit(file, message, root:, transaction:)
       repository = File.realpath(root)
-      absolute = File.expand_path(file)
+      absolute = File.expand_path(file, repository)
       prefix = "#{repository}#{File::SEPARATOR}"
       raise ArgumentError, "design commit path escapes repository" unless absolute.start_with?(prefix)
 
@@ -155,13 +155,13 @@ module Operator
       before = git_head(repository)
       transaction.delivery.begin!(head_before: before, paths: [relative])
       expected_hash = transaction.observed_content_hash(relative)
-      raise "design transaction has no observed source digest" unless expected_hash&.match?(/\\A[0-9a-f]{64}\\z/)
+      raise "design transaction has no observed source digest" unless expected_hash&.match?(/\A[0-9a-f]{64}\z/)
 
       body = message.to_s.sub(
-        /\\n\\n#{Regexp.escape(Master::Core::World::COMMIT_TRAILER)}\\s*\\z/, ""
+        /\n\n#{Regexp.escape(Master::Core::World::COMMIT_TRAILER)}\s*\z/, ""
       )
       marker = Master::Fix::Transaction::Delivery.marker(transaction.id)
-      delivered_message = "#{body}\\n\\n#{marker}"
+      delivered_message = "#{body}\n\n#{marker}"
 
       begin
         Master::Io::GitOperations.new(repository).commit(
@@ -202,7 +202,7 @@ module Operator
         "git", "-C", root, "rev-parse", "HEAD", timeout: 5
       )
       head = output.to_s.strip
-      raise "cannot establish design delivery HEAD" unless status.success? && head.match?(/\\A[0-9a-f]{40}\\z/)
+      raise "cannot establish design delivery HEAD" unless status.success? && head.match?(/\A[0-9a-f]{40}\z/)
 
       head
     end
