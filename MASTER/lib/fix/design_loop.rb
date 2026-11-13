@@ -358,15 +358,17 @@ module Master
       # Rollback restores SCSS/ERB source, not compiled assets. Rebuild only
       # the app bundles whose tracked source was actually restored.
       def rebuild_recovered_paths(paths)
-        return if paths.empty? || !@world&.build
+        rails_paths = paths.map(&:to_s).select { |path| path.start_with?("RAILS/") }
+        return if rails_paths.empty?
+        raise "cannot rebuild recovered Rails source: build capability is unavailable" unless @world&.build
 
-        shared = paths.any? { |path| path.to_s.start_with?("RAILS/__shared/") }
+        shared = rails_paths.any? { |path| path.start_with?("RAILS/__shared/") }
         rails = File.join(@plan.root, "RAILS")
         apps = if shared
                  Dir.children(rails).select { |name| File.directory?(File.join(rails, name, "app")) }.sort
                else
-                 paths.filter_map do |path|
-                   match = path.to_s.match(%r{\ARAILS/([^/]+)/})
+                 rails_paths.filter_map do |path|
+                   match = path.match(%r{\ARAILS/([^/]+)/})
                    app = match && match[1]
                    app if app && File.directory?(File.join(rails, app, "app"))
                  end.uniq.sort
