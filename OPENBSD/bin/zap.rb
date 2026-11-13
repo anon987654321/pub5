@@ -8,7 +8,7 @@ require "optparse"
 
 class Zap
   SIGNAL = 9
-  PROTECTED_PIDS = [0, 1].freeze
+  PROTECTED_PIDS = [0, 1, Process.ppid].freeze
 
   def initialize(argv, out: $stdout, err: $stderr, process_provider: nil, signaler: nil,
                  platform: RUBY_PLATFORM)
