@@ -276,6 +276,32 @@ STUDIO/lora/*/train_run.log
 STUDIO/lora/*/weights/*/samples/
 STUDIO/lora/*/weights/*/config.yaml
 
+# Generated subject renders: the raw selfie still, its animation, and the
+# scored cut. A render is replaceable output, not operator-added source, so it
+# stays out of git the way the postpro grade beside it (postpro_*.jpg) already
+# does. The operator publishes a series deliberately; nothing here is tracked
+# by default, which is why these names are specific and never a bare *.
+STUDIO/lora/*_selfie_*.jpg
+STUDIO/lora/*_selfie_*.jpeg
+STUDIO/lora/*_selfie_*.png
+STUDIO/lora/*_selfie_*.webp
+STUDIO/lora/*_film_*.mp4
+STUDIO/lora/*_film_*.webm
+STUDIO/lora/*_film_*.mov
+
+# The selfies gallery manifest is generated from those renders by
+# photograph/selfies_gallery.rb. The page names it; the render step writes it;
+# a fresh checkout shows the page's empty state instead of a stale list.
+STUDIO/selfies/manifest.js
+
+# The dilla bed the gallery plays, rendered with:
+#   ruby STUDIO/dilla/dilla.rb --progression 20 --bars 8 --out STUDIO/selfies/dilla.mp3
+# Generated audio is not tracked (the rule above the dilla section states it),
+# so the bed is rebuilt rather than committed. The name is specific, never a
+# bare *.mp3.
+STUDIO/selfies/dilla.mp3
+STUDIO/selfies/dilla.wav
+
 # Legacy MASTER/tools/lora data: the tool now lives at STUDIO/lora.
 
 # --- STUDIO/lora subject data -----------------------------------------------

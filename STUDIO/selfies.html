@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0c0c0c">
+<meta name="description" content="LoRA selfie series — the stills and films of a trained subject, over the dilla bed.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📷</text></svg>">
+<title>Selfies | STUDIO</title>
+<link rel="stylesheet" href="vendor/swiper/swiper-bundle.min.css">
+<link rel="stylesheet" href="selfies.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to gallery</a>
+
+<header>
+  <h1>Selfies</h1>
+  <p class="tagline">The stills and films of a trained subject, cut to the dilla bed</p>
+</header>
+
+<main id="main-content">
+  <p class="status" data-selfies-status role="status" aria-live="polite">Loading the series…</p>
+
+  <section class="gallery" data-selfies hidden aria-label="Selfie series">
+    <div class="swiper" data-selfies-swiper>
+      <div class="swiper-wrapper" data-selfies-wrapper></div>
+      <button type="button" class="swiper-button-prev" data-selfies-prev aria-label="Previous"></button>
+      <button type="button" class="swiper-button-next" data-selfies-next aria-label="Next"></button>
+      <div class="swiper-pagination" data-selfies-pagination></div>
+    </div>
+    <p class="counter"><span data-selfies-position>1</span> / <span data-selfies-total>0</span></p>
+  </section>
+
+  <section class="empty" data-selfies-empty hidden aria-label="No series yet">
+    <h2>No series yet</h2>
+    <p>This gallery reads <code>selfies/manifest.js</code>, which
+      <code>photograph/selfies_gallery.rb</code> writes from the renders in
+      <code>lora/</code>. Render a series first, then rebuild the manifest:</p>
+    <pre><code>ruby STUDIO/photograph.rb --selfie-series --subject ragnhild
+ruby STUDIO/photograph/selfies_gallery.rb</code></pre>
+    <p>Animate a still into a film with the first-frame image-to-video engine,
+      and lay the soundtrack under it in the same pass:</p>
+    <pre><code>ruby STUDIO/photograph.rb --animate lora/&lt;still&gt;.jpg --subject ragnhild \
+  --prompt "she turns to the lens and smiles" --soundtrack selfies/dilla.mp3</code></pre>
+  </section>
+
+  <section class="soundtrack" data-selfies-soundtrack hidden aria-label="Soundtrack">
+    <button type="button" data-selfies-audio-toggle aria-pressed="false">Play the dilla bed</button>
+    <audio data-selfies-audio loop preload="none"></audio>
+  </section>
+</main>
+
+<footer>
+  <p>STUDIO — private subject media. Renders are not tracked; the manifest is generated.</p>
+</footer>
+
+<script src="selfies/manifest.js" defer></script>
+<script src="vendor/swiper/swiper-bundle.min.js" defer></script>
+<script src="selfies.js" defer></script>
+</body>
+</html>

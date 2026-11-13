@@ -31,6 +31,18 @@ task :check do
   raise "RG-69 Tone.js dependency is not version-pinned" unless rg69_html.include?("tone/14.8.49/Tone.min.js")
   raise "RG-69 has no keyboard focus indicator" unless File.read(rg69_files.fetch(1)).include?(":focus-visible")
 
+  selfies_files = %w[selfies.html selfies.css selfies.js].map { |name| File.join(STUDIO_ROOT, name) }
+  missing_selfies = selfies_files.reject { |path| File.file?(path) }
+  raise "Selfies assets missing: #{missing_selfies.map { |path| File.basename(path) }.join(', ')}" unless missing_selfies.empty?
+  selfies_html = File.read(selfies_files.fetch(0))
+  raise "Selfies retains an inline style or script block" if selfies_html.match?(/<style\b|<script(?![^>]*\bsrc=)/i)
+  raise "Selfies references a missing local stylesheet" unless selfies_html.include?('href="selfies.css"')
+  raise "Selfies references a missing local application script" unless selfies_html.include?('src="selfies.js"')
+  raise "Selfies references a missing generated manifest" unless selfies_html.include?('src="selfies/manifest.js"')
+  raise "Selfies has no keyboard focus indicator" unless File.read(selfies_files.fetch(1)).include?(":focus-visible")
+  raise "Selfies carousel library is not vendored" unless File.file?(File.join(STUDIO_ROOT, "vendor", "swiper", "swiper-bundle.min.js"))
+  raise "Selfies application script sets innerHTML" if File.read(selfies_files.fetch(2)).match?(/\.innerHTML\b/)
+
   dilla = File.join(STUDIO_ROOT, "dilla", "dilla.rb")
   raise "dilla/dilla.rb is missing" unless File.file?(dilla)
 
@@ -53,7 +65,7 @@ task :check do
   end
 
   %w[
-    bin/studio photograph.rb photograph/idea_picture.rb replicate/client.rb lora/validate.rb subprocess.rb test_runner.rb promo.rb
+    bin/studio photograph.rb photograph/idea_picture.rb photograph/selfies_gallery.rb replicate/client.rb lora/validate.rb subprocess.rb test_runner.rb promo.rb
     dilla/lib/als.rb dilla/lib/als_export.rb dilla/lib/als_to_midi.rb dilla/lib/reference_analyzer.rb
     analog_core.rb postpro/postpro.rb postpro/motion.rb postpro/motion_process.rb
     postpro/lib/effects_print.rb postpro/lib/sidecars.rb lora/merethe/prepare.rb
