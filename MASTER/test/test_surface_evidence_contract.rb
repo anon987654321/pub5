@@ -2,6 +2,8 @@
 
 require_relative "test_helper"
 require "json"
+require "rbconfig"
+require "tmpdir"
 require "yaml"
 require_relative "../lib/fix/surface_evidence"
 
@@ -108,7 +110,7 @@ class TestSurfaceEvidenceContract < Minitest::Test
     Dir.mktmpdir("surface-evidence-pipe") do |dir|
       child_file = File.join(dir, "child.txt")
       child_code = "Signal.trap('TERM', 'IGNORE'); File.write(#{child_file.dump}, [Process.pid, Process.getpgrp].join(' ')); sleep 30"
-      parent_code = "Process.spawn(#{RbConfig.ruby.dump}, '-e', #{child_code.dump}); puts 'parent exited'; STDOUT.flush; exit 0"
+      parent_code = "Process.spawn(#{RbConfig.ruby.dump}, '-e', #{child_code.dump}); until File.file?(#{child_file.dump}); sleep 0.005; end; puts 'parent exited'; STDOUT.flush; exit 0"
       started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       result = evidence.send(
         :execute_command, [RbConfig.ruby, "-e", parent_code],
