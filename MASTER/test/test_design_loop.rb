@@ -191,7 +191,15 @@ class TestDesignLoop < Minitest::Test
     edit = reply(path, find: "padding: 4px;", replace: "padding: 16px;")
     LOOP::World.new(
       measure:, ask: ->(prompt, _images) { (prompts << prompt) && prompt.include?("Two renders") ? vision : edit },
-      build: ->(app) { built << app && true }, commit_file: ->(file, message) { committed << [file, message] },
+      build: ->(app) { built << app && true },
+      commit_file: lambda do |file, message, transaction|
+        transaction.delivery.begin!(head_before: "a" * 40, paths: transaction.enlisted_paths)
+        transaction.delivery.record_commit!(head_after: "b" * 40)
+        finalized = transaction.delivery.finalize!(head: "b" * 40)
+        raise finalized.message unless finalized.ok?
+        committed << [file, message]
+        true
+      end,
       sources_for: ->(_surface) { [path] }, guard: nil
     )
   end
@@ -199,9 +207,9 @@ class TestDesignLoop < Minitest::Test
   HOME_AND_FEED = [Surface.new("brgen/home", "brgen"), Surface.new("brgen/feed", "brgen")].freeze
 
   # world: what world_for takes, and surfaces (the surfaces the run measures).
-  def loop_for(path, committed:, **world)
+  def loop_for(path, committed:, root: File.dirname(path), **world)
     surfaces = world.delete(:surfaces) || HOME_AND_FEED
-    plan = LOOP::Plan.new(surfaces:, root: Dir.pwd, rounds: 3, candidates: 1)
+    plan = LOOP::Plan.new(surfaces:, root:, rounds: 3, candidates: 1)
     LOOP.new(plan:, world: world_for(path, committed:, **world))
   end
 
@@ -227,13 +235,72 @@ class TestDesignLoop < Minitest::Test
     end
   end
 
+  def test_successful_design_candidate_cleans_up_its_transaction
+    with_sheet do |path|
+      committed = []
+      root = File.dirname(path)
+      stub_scoring do
+        rounds = loop_for(path, committed:, root:).run
+
+        assert_equal :kept, rounds.first.outcome
+        transaction_root = File.join(root, Master::Fix::Transaction::ROOT_DIR)
+        assert_empty Dir.children(transaction_root)
+      end
+    end
+  end
+
+  def test_interrupted_design_candidate_is_recovered_before_the_next_run
+    Dir.mktmpdir do |root|
+      path = File.join(root, "app.scss")
+      original = ".card {\\n  padding: 4px;\\n  color: #111;\\n}\\n"
+      File.write(path, original)
+      transaction = Master::Fix::Transaction.new(
+        root:, paths: [path], id: "design-#{'a' * 20}"
+      )
+      transaction.begin!
+      File.write(path, ".card {\\n  padding: 16px;\\n  color: #111;\\n}\\n")
+      assert transaction.observe_paths!([path]).ok?
+      transaction.close! # Simulate the process exiting while the candidate is still open.
+
+      plan = LOOP::Plan.new(surfaces: [], root:, rounds: 1, candidates: 1)
+      assert_empty LOOP.new(plan:, world: nil).run
+
+      assert_equal original, File.read(path)
+      refute Master::Fix::Transaction::Recovery.persisted?(root:, id: transaction.id)
+    end
+  end
+
+  def test_a_delivery_without_a_terminal_transaction_receipt_is_not_kept
+    with_sheet do |path|
+      root = File.dirname(path)
+      world = world_for(path, committed: []).with(
+        commit_file: lambda do |_file, _message, transaction|
+          transaction.delivery.begin!(head_before: "a" * 40, paths: transaction.enlisted_paths)
+          transaction.delivery.record_commit!(head_after: "b" * 40)
+          true
+        end
+      )
+      plan = LOOP::Plan.new(surfaces: HOME_AND_FEED, root:, rounds: 1, candidates: 1)
+
+      stub_scoring do
+        rounds = LOOP.new(plan:, world:).run
+        assert_equal :delivery_failed, rounds.first.outcome
+        assert_includes File.read(path), "padding: 16px;"
+        id = Dir.children(File.join(root, Master::Fix::Transaction::ROOT_DIR)).find { |name| name.start_with?("design-") }
+        refute_nil id
+        manifest = File.join(root, Master::Fix::Transaction::ROOT_DIR, id, Master::Fix::Transaction::MANIFEST)
+        assert_equal "delivering", JSON.parse(File.read(manifest)).fetch("state")
+      end
+    end
+  end
+
   def test_a_refused_commit_restores_the_candidate_and_is_not_reported_as_kept
     with_sheet do |path|
       stub_scoring do
         world = world_for(path, committed: []).with(
           commit_file: ->(_file, _message) { false }
         )
-        plan = LOOP::Plan.new(surfaces: HOME_AND_FEED, root: Dir.pwd, rounds: 1, candidates: 1)
+        plan = LOOP::Plan.new(surfaces: HOME_AND_FEED, root: File.dirname(path), rounds: 1, candidates: 1)
         rounds = LOOP.new(plan:, world:).run
 
         assert_equal :failed, rounds.first.outcome
@@ -307,7 +374,7 @@ class TestDesignLoop < Minitest::Test
           rows = inner.call(surfaces)
           calls == 3 ? rows.map { |s, payload, shot| [s, payload.merge("score" => payload["score"] + 15), shot] } : rows
         end
-        plan = LOOP::Plan.new(surfaces: [Surface.new("brgen/home", "brgen")], root: Dir.pwd, rounds: 1, candidates: 1)
+        plan = LOOP::Plan.new(surfaces: [Surface.new("brgen/home", "brgen")], root: File.dirname(path), rounds: 1, candidates: 1)
         rounds = LOOP.new(plan:, world: world.with(measure: noisy)).run
 
         assert_empty rounds.select { |round| round.outcome == :kept }
@@ -367,7 +434,7 @@ class TestDesignLoop < Minitest::Test
       FileUtils.mkdir_p(File.join(dir, "RAILS", "__shared"))
       path = File.join(dir, "RAILS", "__shared", "app.scss")
       File.write(path, ".card {\n  padding: 4px;\n  color: #111;\n}\n")
-      yield path
+      yield path, dir
     end
   end
 
@@ -391,7 +458,7 @@ class TestDesignLoop < Minitest::Test
       built = []
       surfaces = [Surface.new("brgen/home", "brgen"), Surface.new("amber/home", "amber")]
       stub_scoring do
-        rounds = loop_for(path, committed:, surfaces:, built:).run
+        rounds = loop_for(path, committed:, root:, surfaces:, built:).run
 
         assert_equal :kept, rounds.first.outcome
         assert_equal %w[amber brgen], built.uniq.sort
