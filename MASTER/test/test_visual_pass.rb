@@ -83,6 +83,29 @@ class VisualPassContractTest < Minitest::Test
     refute defined?(::Selenium::WebDriver), "the visual pass drives CDP through GeometryProbe, not Selenium"
   end
 
+  # Every capture opens the browser through with_browser, which settles consent
+  # on the first document. The banner's own cookie name is asserted here so a
+  # rename in the app breaks this rather than silently re-covering every shot.
+  def test_with_browser_settles_consent_before_the_page_loads
+    cdp = Object.new
+    cdp.define_singleton_method(:on_new_document) { |js| (@scripts ||= []) << js }
+    cdp.define_singleton_method(:scripts) { @scripts }
+    captured = nil
+
+    Probe.stub(:warm_surfaces, []) do
+      Deploy::CdpSession.stub(:open, ->(**, &blk) { blk.call(cdp) }) do
+        Deploy::GeometryProbe.stub(:host_map, {}) { Probe.with_browser(warm: []) { |c| captured = c } }
+      end
+    end
+
+    assert_same cdp, captured, "with_browser yields the opened session"
+    scripts = cdp.scripts
+    assert_equal 2, scripts.size, "determinism then consent, before any page script"
+    assert_includes scripts.last, "pub4_consent"
+    assert_includes scripts.last, "pub4:welcome-onboarding:"
+    refute_includes scripts.join, "pub5_consent", "the app reads pub4_consent, not pub5_consent"
+  end
+
   def test_visual_measurement_inconclusive_is_not_a_plateau
     runner = Master::Fix::FixLoop::PassRunner.allocate
     committer = Object.new

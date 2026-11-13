@@ -55,6 +55,12 @@ class TestDesignRun < Minitest::Test
     write_all(root, "MASTER/data/laws.yml" => "a: 2\n", "app.css" => "b {}\n")
   end
 
+  # Consent is settled once in GeometryProbe.with_browser, which this run opens
+  # the browser through, so the loop carries no consent script of its own.
+  def test_the_run_carries_no_consent_script_of_its_own
+    refute RUN.const_defined?(:DECIDED_CONSENT), "consent lives in GeometryProbe, not here"
+  end
+
   # A design run commits through the transaction receipt and private-index path.
   def test_commit_refuses_a_sacred_path_and_delivers_an_ordinary_one
     Dir.mktmpdir do |root|

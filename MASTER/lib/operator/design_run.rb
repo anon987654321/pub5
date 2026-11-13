@@ -33,15 +33,6 @@ module Operator
     end
 
     CSS_BUILDERS = { "master" => "build_face_css.rb" }.freeze
-    # The consent banner and the welcome modal cover the page and skew the score, so the loop
-    # measures it as a visitor who has already answered both (no purposes granted).
-    DECIDED_CONSENT = <<~JS.gsub(/\s+/, " ").freeze
-      document.cookie = "pub5_consent=v1%7C2026-01-01T00:00:00Z%7C; path=/; max-age=86400";
-      const read = Storage.prototype.getItem;
-      Storage.prototype.getItem = function (key) {
-        return String(key).startsWith("pub5:welcome-onboarding:") ? "1" : read.call(this, key);
-      };
-    JS
     SOURCE = /\.(?:s?css|erb)\z/
     NOT_SOURCE = %r{/(?:vendor|builds|node_modules)/|\.min\.}
 
@@ -114,7 +105,6 @@ module Operator
       require_relative "../../checks/support/surface_probes"
       rows = []
       Deploy::GeometryProbe.with_browser(root:, warm: surfaces) do |cdp|
-        cdp.on_new_document(DECIDED_CONSENT)
         surfaces.each { |surface| (row = capture(cdp, surface, dir:)) && rows << row }
       end
       rows

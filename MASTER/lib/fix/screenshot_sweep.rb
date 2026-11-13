@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "cgi"
+require "digest"
 require "erb"
 require "fileutils"
 require "json"
@@ -127,8 +128,8 @@ module Master
           "unresolved" => unresolved, "rows" => rows.map(&:to_h)
         )
         File.write(File.join(@dir, "index.json"), JSON.pretty_generate(summary))
-        File.write(File.join(@dir, "index.html"), Gallery.new(summary).render)
-        FileUtils.cp(Gallery::STYLESHEET, File.join(@dir, "gallery.css"))
+        File.write(File.join(@dir, "index.html"), Gallery.new(summary, dir: @dir).render)
+        File.write(File.join(@dir, "manifest.json"), JSON.pretty_generate(Gallery::MANIFEST))
         refresh_review_set(rows) if @standing && error.nil?
         @bus&.publish("fix_loop:screenshot_sweep", dir: @dir, **totals(rows).transform_keys(&:to_sym))
         summary
@@ -146,7 +147,9 @@ module Master
       def refresh_review_set(rows)
         review = ReviewSet.new(root: @root, sweep_dir: @dir)
         copied = review.publish!(rows)
-        warn("shots0: review set RAILS/screenshot_*.png, #{copied} pages; pruned #{review.prune!} old sweeps")
+        pages = Gallery.publish_review_page(root: @root)
+        warn("shots0: review set RAILS/screenshot_*.png, #{copied} pages; #{pages} in RAILS/#{Gallery::REVIEW_PAGE}; " \
+             "pruned #{review.prune!} old sweeps")
       end
 
       def totals(rows)
@@ -164,24 +167,82 @@ module Master
         slug.empty? ? "root" : slug
       end
 
-      # One static page over the index: per app, per page, every width and
-      # every captured dialog. It loads nothing from the network; the markup
-      # is screenshot_sweep/gallery.html.erb.
+      # One self-contained page over the index: per app, per page, a swipeable
+      # strip of every width and every captured dialog. It loads nothing from the
+      # network; the markup is screenshot_sweep/gallery.html.erb, and its
+      # stylesheet and script are inlined so the single index.html can be opened
+      # or sent on its own. Gallery.publish_review_page renders the same page
+      # over the tracked RAILS/ set as RAILS/screenshots.html. Only a standing
+      # sweep's folder carries an install manifest beside its index.html.
       class Gallery
         TEMPLATE = ERB.new(File.read(File.join(__dir__, "screenshot_sweep", "gallery.html.erb")), trim_mode: "<>")
         STYLESHEET = File.join(__dir__, "screenshot_sweep", "gallery.css")
+        SCRIPT = File.join(__dir__, "screenshot_sweep", "gallery.js")
+        MANIFEST = {
+          "name" => "Screenshot sweep", "short_name" => "Sweep",
+          "start_url" => "index.html", "display" => "standalone",
+          "background_color" => "#111111", "theme_color" => "#111111",
+        }.freeze
+        # What ReviewSet publishes, and the only identity the published set
+        # carries: screenshot_<app>_<page>.png.
+        REVIEW_SHOT = /\Ascreenshot_(?<app>[A-Za-z0-9]+)_(?<page>.+)\.png\z/
+        REVIEW_PAGE = "screenshots.html"
+
+        # Render the published gallery over the tracked shots in RAILS/. This is
+        # the single file the operator opens or sends: it inlines its own CSS and
+        # script, so it needs only the sibling PNGs and nothing else.
+        def self.publish_review_page(root:, at: Time.now.utc.iso8601)
+          rails = File.join(root, "RAILS")
+          names = Dir.children(rails).grep(REVIEW_SHOT).sort
+          rows = names.map { |name| row_for_review_shot(name) }
+          summary = {
+            "generated_at" => at, "pages" => rows.size, "screenshots" => rows.size,
+            "dialogs" => 0, "failed" => 0, "skipped" => 0, "widths" => [ReviewSet::WIDTH],
+            "error" => nil, "unresolved" => {}, "rows" => rows
+          }
+          File.write(File.join(rails, REVIEW_PAGE), new(summary, dir: rails, manifest: false).render)
+          names.size
+        end
+
+        def self.row_for_review_shot(name)
+          match = REVIEW_SHOT.match(name)
+          page = match ? match[:page] : File.basename(name, ".png")
+          { app: match ? match[:app] : "unknown", host: nil, path: "/#{page.tr('_', '/')}",
+            route: page, status: nil, shots: { ReviewSet::WIDTH.to_s => name }, dialogs: [], note: nil }
+        end
 
         attr_reader :summary
 
-        def initialize(summary)
+        def initialize(summary, dir: nil, manifest: true)
           @summary = summary
+          @dir = dir
+          @manifest = manifest
         end
 
         def render = TEMPLATE.result(binding)
 
+        def manifest_href = @manifest ? "manifest.json" : nil
+
+        def stylesheet = File.read(STYLESHEET)
+
+        def script = File.read(SCRIPT)
+
         def rows = Array(summary["rows"])
 
         def unresolved = Hash(summary["unresolved"]).reject { |_app, routes| Array(routes).empty? }
+
+        # One entry per page with its figures already collapsed against every
+        # other page: a shot byte-identical to one shown earlier is dropped and
+        # its page named on the copy that stays, so near-identical states do not
+        # pad the strips. A page left with no unique shot keeps its heading and
+        # says so.
+        def pages
+          @pages ||= build_pages
+        end
+
+        def escape(value) = CGI.escapeHTML(value.to_s)
+
+        private
 
         # [file, caption] pairs: widths first, then the dialogs.
         def figures(row)
@@ -189,7 +250,35 @@ module Master
           widths + row.fetch(:dialogs).map { |file| [file, File.basename(file, ".png")] }
         end
 
-        def escape(value) = CGI.escapeHTML(value.to_s)
+        def build_pages
+          seen = {}
+          rows.map do |row|
+            unique = figures(row).filter_map do |file, caption|
+              digest = digest_of(file)
+              if digest && seen.key?(digest)
+                seen.fetch(digest)[:aliases] << identity(row, caption)
+                nil
+              else
+                entry = { file:, caption:, aliases: [] }
+                seen[digest] = entry if digest
+                entry
+              end
+            end
+            { app: row[:app], host: row[:host], path: row[:path], route: row[:route],
+              status: row[:status], note: row[:note], figures: unique }
+          end
+        end
+
+        def identity(row, caption) = "#{row[:app]} #{row[:host]}#{row[:path]} #{caption}"
+
+        def digest_of(file)
+          return unless @dir
+
+          path = File.join(@dir, file)
+          return unless File.file?(path)
+
+          Digest::SHA256.file(path).hexdigest
+        end
       end
     end
   end
