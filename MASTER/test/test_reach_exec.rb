@@ -154,7 +154,7 @@ class TestReachExec < Minitest::Test
     Dir.mktmpdir("exec-inherited-pipe") do |dir|
       child_pid_file = File.join(dir, "descendant.pid")
       child_code = "Signal.trap('TERM', 'IGNORE'); File.write(#{child_pid_file.dump}, [Process.pid, Process.getpgrp].join(' ')); sleep 30"
-      parent_code = "Process.spawn(#{RbConfig.ruby.dump}, '-e', #{child_code.dump}); puts 'parent exited'; STDOUT.flush; exit 0"
+      parent_code = "Process.spawn(#{RbConfig.ruby.dump}, '-e', #{child_code.dump}); until File.file?(#{child_pid_file.dump}); sleep 0.005; end; puts 'parent exited'; STDOUT.flush; exit 0"
       started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
       error = assert_raises(E::TimeoutError) do
