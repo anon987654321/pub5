@@ -96,6 +96,72 @@ module Deploy
       raise InvalidPng, "invalid PNG data: #{e.class}: #{e.message}"
     end
 
+    # A coarse, resize-invariant view of an image: FINGERPRINT_CELLS squared
+    # box-sampled grayscale cells on the 0-255 scale. Two captures of the same
+    # state land within a cell or two of each other; two different pages do not.
+    # Byte comparison cannot see that -- a single anti-aliased glyph or a stray
+    # count is a different file with the same surface underneath, and a review
+    # that shows both reads as an overlap.
+    FINGERPRINT_CELLS = 32
+    # Per-cell mean absolute difference under which two fingerprints are the
+    # same surface. Measured on the 2026-11-13 review set: same-state captures
+    # sit at <= 0.02, different pages at >= 4.3, so 1.0 separates them with an
+    # order of magnitude of margin on both sides.
+    FINGERPRINT_TOLERANCE = 1.0
+
+    # One fingerprint: its dimensions and its cells. Two fingerprints compare
+    # equal only when the dimensions agree, so a short and a tall capture of the
+    # same route never collapse into one slide.
+    Fingerprint = Data.define(:width, :height, :grid) do
+      def distance(other)
+        return Float::INFINITY unless width == other.width && height == other.height
+
+        grid.each_with_index.sum { |cell, index| (cell - other.grid[index]).abs }.to_f / grid.size
+      end
+
+      def similar?(other, tolerance: PngDiff::FINGERPRINT_TOLERANCE)
+        distance(other) <= tolerance
+      end
+    end
+
+    # The fingerprint of a PNG's bytes. Raises InvalidPng for a format the
+    # decoder will not guess at, so a caller decides whether to skip or fail.
+    def fingerprint(bytes)
+      image = decode(bytes)
+      width = image[:width]
+      height = image[:height]
+      channels = image[:channels]
+      cells = FINGERPRINT_CELLS
+      grid = Array.new(cells * cells, 0)
+      previous = Array.new(width * channels, 0)
+
+      cells.times do |cell_row|
+        first_row = cell_row * height / cells
+        last_row = [((cell_row + 1) * height / cells) - 1, first_row].max
+        row = nil
+        first_row.upto(last_row) do |y|
+          scanline = image[:raw].byteslice(y * (width * channels + 1), width * channels + 1)
+          row = unfilter_row(scanline, previous:, channels:)
+          previous = row
+        end
+
+        cells.times do |cell_column|
+          first_column = cell_column * width / cells
+          last_column = [((cell_column + 1) * width / cells) - 1, first_column].max
+          total = 0
+          count = 0
+          first_column.upto(last_column) do |x|
+            index = x * channels
+            total += (row[index] * 299 + row[index + 1] * 587 + row[index + 2] * 114) / 1000
+            count += 1
+          end
+          grid[cell_row * cells + cell_column] = count.zero? ? 0 : total / count
+        end
+      end
+
+      Fingerprint.new(width:, height:, grid:)
+    end
+
     # Used by the comparator for its red/transparent overlay and by tiny unit
     # fixtures. Input is packed RGBA pixels, four bytes per pixel, row-major.
     def encode_rgba(width, height, rgba)

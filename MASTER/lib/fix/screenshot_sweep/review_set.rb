@@ -6,8 +6,10 @@ module Master
   module Fix
     class ScreenshotSweep
       # The operator's review set: one phone-width shot per page, at
-      # RAILS/screenshot_<app>_<page>.png (ignored by git), replaced whole by
-      # each sweep that captured something. Old sweep folders are pruned to the
+      # RAILS/screenshot_<n>_<app>_<page>.png (tracked), replaced whole by
+      # each sweep that captured something. The leading number is the page's
+      # position in the sweep, so the set reads in the order it was captured and
+      # a reader can name a shot in one word. Old sweep folders are pruned to the
       # newest KEEP_SWEEPS; renders are replaceable, and eleven of them had grown
       # to 414 MB by 2026-11-04.
       class ReviewSet
@@ -16,6 +18,8 @@ module Master
         PATTERN = "screenshot_*.png"
         # What a review shot and a sweep folder are named; nothing else is
         # deleted here (NEVER_BATCH_DELETE: one named, confirmed path per call).
+        # Matches both the numbered name and any pre-numbering name a stale sweep
+        # left, so a re-publish clears the old set rather than doubling it.
         SHOT_NAME = /\Ascreenshot_[A-Za-z0-9_-]+\.png\z/
         SWEEP_NAME = /\Asweep-\d{8}T\d{6}Z\z/
 
@@ -29,7 +33,11 @@ module Master
         # did not render. A sweep that captured nothing therefore leaves no
         # review set rather than last run's pictures under this run's name.
         def publish!(rows)
-          picks = rows.filter_map { |row| pick(row) }
+          picks = []
+          rows.each do |row|
+            pick = pick(row, picks.size + 1)
+            picks << pick if pick
+          end
           Dir.glob(File.join(@rails, PATTERN)).each do |old|
             remove_shot(old)
           end
@@ -61,14 +69,23 @@ module Master
           name.match?(SWEEP_NAME) && File.directory?(File.join(parent, name))
         end
 
-        def pick(row)
+        def pick(row, number)
           shot = row.shots[WIDTH.to_s] || row.shots[WIDTH]
           return unless shot
 
           source = File.join(@sweep_dir, shot)
           return unless File.file?(source)
 
-          [source, "screenshot_#{row.app}_#{File.basename(File.dirname(shot))}.png"]
+          [source, "screenshot_#{number}_#{row.app}_#{page_name(row, shot)}.png"]
+        end
+
+        # The page's slug for the shot name. An app's own front page is
+        # "frontpage" rather than the host slug a root route otherwise produces
+        # ("root" on loopback, "brgen_no" on the brgen apex); a vertical's root
+        # keeps its host, so dating.brgen.no's front page stays distinct.
+        def page_name(row, shot)
+          slug = File.basename(File.dirname(shot))
+          slug == "root" || slug == "#{row.app}_no" ? "frontpage" : slug
         end
       end
     end

@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "cgi"
-require "digest"
 require "erb"
 require "fileutils"
 require "json"
@@ -13,6 +12,7 @@ require_relative "screenshot_sweep/camera"
 require_relative "screenshot_sweep/review_set"
 require_relative "visual_runtime"
 require_relative "../../checks/support/deploy_inventory"
+require_relative "../../checks/support/png_diff"
 
 module Master
   module Fix
@@ -177,9 +177,10 @@ module Master
         TEMPLATE = ERB.new(File.read(File.join(__dir__, "screenshot_sweep", "gallery.html.erb")), trim_mode: "<>")
         STYLESHEET = File.join(__dir__, "screenshot_sweep", "gallery.css")
         SCRIPT = File.join(__dir__, "screenshot_sweep", "gallery.js")
-        # What ReviewSet publishes, and the only identity the published set
-        # carries: screenshot_<app>_<page>.png.
-        REVIEW_SHOT = /\Ascreenshot_(?<app>[A-Za-z0-9]+)_(?<page>.+)\.png\z/
+        # What ReviewSet publishes, and the identity the published set carries:
+        # screenshot_<n>_<app>_<page>.png. The number orders the set as captured;
+        # the app and page are what the gallery groups and labels by.
+        REVIEW_SHOT = /\Ascreenshot_(?<number>\d+)_(?<app>[A-Za-z0-9]+)_(?<page>.+)\.png\z/
         REVIEW_PAGE = "screenshots.html"
 
         # Render the published gallery over the tracked shots in RAILS/. This is
@@ -187,7 +188,7 @@ module Master
         # script, so it needs only the sibling PNGs and nothing else.
         def self.publish_review_page(root:, at: Time.now.utc.iso8601)
           rails = File.join(root, "RAILS")
-          names = Dir.children(rails).grep(REVIEW_SHOT).sort
+          names = Dir.children(rails).grep(REVIEW_SHOT).sort_by { |name| review_order(name) }
           grouped = names.group_by { |name| REVIEW_SHOT.match(name)&.[](:app) || "unknown" }
           rows = grouped.sort_by(&:first).map do |app, files|
             {
@@ -223,10 +224,13 @@ module Master
         def unresolved = Hash(summary["unresolved"]).reject { |_app, routes| Array(routes).empty? }
 
         # One entry per page with its figures already collapsed against every
-        # other page: a shot byte-identical to one shown earlier is dropped and
-        # its page named on the copy that stays, so near-identical states do not
-        # pad the strips. A page left with no unique shot keeps its heading and
-        # says so.
+        # other page: a shot that shows the same surface as one shown earlier is
+        # dropped and its page named on the copy that stays, so near-identical
+        # states do not pad the strips. "Same surface" is a perceptual
+        # fingerprint, not a byte digest: two captures of one page differ by a
+        # stray count or a single anti-aliased glyph and are a different file
+        # with the same surface underneath. A page left with no unique shot keeps
+        # its heading and says so.
         def pages
           @pages ||= build_pages
         end
@@ -238,20 +242,31 @@ module Master
         # [file, caption] pairs: widths first, then the dialogs.
         def figures(row)
           widths = row.fetch(:shots).map { |width, file| [file, "#{width}px"] }
-          widths + row.fetch(:dialogs).map { |file| [file, File.basename(file, ".png").delete_prefix("screenshot_")] }
+          widths + row.fetch(:dialogs).map { |file| [file, caption_for(file)] }
+        end
+
+        # The numbered review shot reads as "3 · brgen no rules"; a raw sweep
+        # dialog keeps its file identity.
+        def caption_for(file)
+          name = File.basename(file, ".png")
+          match = REVIEW_SHOT.match("#{name}.png")
+          return name.delete_prefix("screenshot_") unless match
+
+          "#{match[:number]} · #{match[:app]} #{match[:page].tr('_', ' ')}"
         end
 
         def build_pages
-          seen = {}
+          seen = []
           rows.map do |row|
             unique = figures(row).filter_map do |file, caption|
-              digest = digest_of(file)
-              if digest && seen.key?(digest)
-                seen.fetch(digest)[:aliases] << identity(row, caption)
+              fingerprint = fingerprint_of(file)
+              twin = fingerprint && seen.find { |known, _entry| known.similar?(fingerprint) }
+              if twin
+                twin.last[:aliases] << identity(row, caption)
                 nil
               else
                 entry = { file:, caption:, aliases: [] }
-                seen[digest] = entry if digest
+                seen << [fingerprint, entry] if fingerprint
                 entry
               end
             end
@@ -262,13 +277,23 @@ module Master
 
         def identity(row, caption) = "#{row[:app]} #{row[:host]}#{row[:path]} #{caption}"
 
-        def digest_of(file)
+        # A file's perceptual fingerprint, or nil when it cannot be read as a PNG
+        # this repo's decoder proves -- an unreadable figure is shown, not dropped.
+        def fingerprint_of(file)
           return unless @dir
 
           path = File.join(@dir, file)
           return unless File.file?(path)
 
-          Digest::SHA256.file(path).hexdigest
+          Deploy::PngDiff.fingerprint(File.binread(path))
+        rescue Deploy::PngDiff::InvalidPng, Errno::ENOENT, Errno::EACCES
+          nil
+        end
+
+        # Sort key for the published set: the leading capture number, then name.
+        def self.review_order(name)
+          match = REVIEW_SHOT.match(name)
+          [match ? match[:number].to_i : Float::INFINITY, name]
         end
       end
     end

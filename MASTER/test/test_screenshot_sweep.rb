@@ -130,6 +130,14 @@ class TestScreenshotSweep < Minitest::Test
 
   Gallery = Master::Fix::ScreenshotSweep::Gallery
 
+  # A real 2x2 PNG of one grayscale value: two shots of the same value are the
+  # same surface, a different value is not. The gallery fingerprints pixels, so
+  # a text fixture would only prove the unreadable-figure path.
+  def png(path, gray)
+    rgba = ([gray, gray, gray, 255] * 4).pack("C*")
+    File.binwrite(path, Deploy::PngDiff.encode_rgba(2, 2, rgba))
+  end
+
   def gallery_row(app:, path:, shots:, dialogs: [], status: 200)
     { app:, host: nil, path:, route: "#{path}#index", status:, shots:, dialogs:, note: nil }
   end
@@ -144,8 +152,8 @@ class TestScreenshotSweep < Minitest::Test
   # scroll-snap rail per page, arrows and dots, and nothing fetched from the net.
   def test_gallery_renders_a_swipeable_carousel_with_no_network_asset
     Dir.mktmpdir do |dir|
-      File.binwrite(File.join(dir, "a.png"), "same")
-      File.binwrite(File.join(dir, "b.png"), "other")
+      png(File.join(dir, "a.png"), 10)
+      png(File.join(dir, "b.png"), 200)
       rows = [gallery_row(app: "amber", path: "/a", shots: { "390" => "a.png", "980" => "b.png" })]
       html = Gallery.new(gallery_summary(rows), dir:).render
 
@@ -161,13 +169,15 @@ class TestScreenshotSweep < Minitest::Test
     end
   end
 
-  # Byte-identical shots collapse to one slide; the other page is named on it so
-  # the review can see it was captured, without padding every strip.
+  # Shots of the same surface collapse to one slide; the other page is named on it
+  # so the review can see it was captured, without padding every strip. The
+  # collapse is perceptual: two captures of one page differ by a stray count and
+  # are a different file with the same surface underneath.
   def test_gallery_collapses_identical_shots_and_names_the_alias
     Dir.mktmpdir do |dir|
-      File.binwrite(File.join(dir, "a.png"), "same")
-      File.binwrite(File.join(dir, "b.png"), "same")
-      File.binwrite(File.join(dir, "c.png"), "other")
+      png(File.join(dir, "a.png"), 10)
+      png(File.join(dir, "b.png"), 10)
+      png(File.join(dir, "c.png"), 200)
       rows = [
         gallery_row(app: "amber", path: "/a", shots: { "390" => "a.png" }),
         gallery_row(app: "brgen", path: "/b", shots: { "390" => "b.png", "980" => "c.png" }),
@@ -180,10 +190,28 @@ class TestScreenshotSweep < Minitest::Test
     end
   end
 
+  # A shot one pixel off is still the same surface: the fingerprint tolerates the
+  # anti-aliased glyph or stray count that made it a different file.
+  def test_gallery_collapses_a_near_identical_shot
+    Dir.mktmpdir do |dir|
+      png(File.join(dir, "a.png"), 100)
+      rgba = ([100, 100, 100, 255] * 3 + [101, 101, 101, 255]).pack("C*")
+      File.binwrite(File.join(dir, "b.png"), Deploy::PngDiff.encode_rgba(2, 2, rgba))
+      rows = [
+        gallery_row(app: "amber", path: "/a", shots: { "390" => "a.png" }),
+        gallery_row(app: "brgen", path: "/b", shots: { "390" => "b.png" }),
+      ]
+      html = Gallery.new(gallery_summary(rows), dir:).render
+
+      assert_equal 1, html.scan(%(class="slide")).size, "one pixel of difference is the same surface"
+      assert_includes html, "identical on"
+    end
+  end
+
   def test_gallery_marks_a_page_whose_every_shot_is_a_duplicate
     Dir.mktmpdir do |dir|
-      File.binwrite(File.join(dir, "a.png"), "same")
-      File.binwrite(File.join(dir, "b.png"), "same")
+      png(File.join(dir, "a.png"), 10)
+      png(File.join(dir, "b.png"), 10)
       rows = [
         gallery_row(app: "amber", path: "/a", shots: { "390" => "a.png" }),
         gallery_row(app: "brgen", path: "/b", shots: { "390" => "b.png" }),
@@ -196,24 +224,25 @@ class TestScreenshotSweep < Minitest::Test
   end
 
   # The operator's record is one file beside the tracked shots: RAILS/screenshots.html
-  # inlines its own CSS and script and reads only its sibling PNGs.
+  # inlines its own CSS and script and reads only its sibling PNGs. The published
+  # set is numbered and read in capture order.
   def test_publish_review_page_writes_a_self_contained_page_over_the_tracked_shots
     Dir.mktmpdir do |root|
       rails = File.join(root, "RAILS")
       FileUtils.mkdir_p(rails)
-      { "screenshot_amber_account.png" => "amber",
-        "screenshot_amber_orders.png" => "amber orders",
-        "screenshot_brgen_brgen_no_groups_new.png" => "brgen" }.each do |name, body|
-        File.binwrite(File.join(rails, name), body)
+      { "screenshot_1_amber_account.png" => 10,
+        "screenshot_2_amber_orders.png" => 20,
+        "screenshot_3_brgen_brgen_no_groups_new.png" => 200 }.each do |name, gray|
+        png(File.join(rails, name), gray)
       end
       File.binwrite(File.join(rails, "keep_me.png"), "not a shot")
 
       assert_equal 3, Gallery.publish_review_page(root:, at: "2026-11-13T00:00:00Z")
       html = File.read(File.join(rails, "screenshots.html"))
 
-      assert_includes html, "screenshot_amber_account.png"
-      assert_includes html, "screenshot_brgen_brgen_no_groups_new.png"
-      assert_includes html, "screenshot_amber_orders.png"
+      assert_includes html, "screenshot_1_amber_account.png"
+      assert_includes html, "screenshot_3_brgen_brgen_no_groups_new.png"
+      assert_includes html, "screenshot_2_amber_orders.png"
       refute_includes html, "keep_me.png", "only the tracked review shots are listed"
       refute_match(%r{(?:src|href)="https?://}, html)
       refute_includes html, %(rel="manifest"), "the published page needs nothing beside it"
@@ -221,6 +250,8 @@ class TestScreenshotSweep < Minitest::Test
       assert_includes html, "<script>"
       assert_equal 3, html.scan(%(class="slide")).size
       assert_equal 2, html.scan(%(class="strip")).size, "one carousel per app groups the review set"
+      assert_operator html.index("1 · amber account"), :<, html.index("2 · amber orders"),
+                      "the numbered set reads in capture order"
     end
   end
 end
