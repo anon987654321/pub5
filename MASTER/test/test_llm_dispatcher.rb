@@ -292,6 +292,28 @@ class TestLLMDispatcher < Minitest::Test
     refute classified.retriable?
   end
 
+  def test_provider_quota_vocabulary_is_a_budget_not_a_retriable_call_failure
+    dispatcher, = build_dispatcher
+    messages = [
+      "RESOURCE_EXHAUSTED",
+      "provider quota exhausted",
+      "out of quota for this model",
+    ]
+
+    messages.each do |message|
+      rescued = dispatcher.send(:classified_call_failure, StandardError.new(message))
+      breaker = dispatcher.send(
+        :reclassify_provider_error,
+        Master::Result.err(message, category: :provider_error),
+      )
+
+      assert_equal :budget, rescued.category, message
+      assert_equal :budget, breaker.category, message
+      assert rescued.permanent?, message
+      assert breaker.permanent?, message
+    end
+  end
+
   def test_empty_successes_become_llm_failures_unless_stream_bytes_were_delivered
     dispatcher, = build_dispatcher
     empty = dispatcher.send(:classify_empty_reply, Master::Result.ok(" \n"), streamed_bytes: 0)

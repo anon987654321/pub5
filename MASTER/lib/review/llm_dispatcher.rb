@@ -355,6 +355,8 @@ module Master
         return Result.err(redact_secrets(err.message.to_s), category: :budget) if billing_error?(err)
         return Result.err(redact_secrets(err.message.to_s), category: :rate_limit) if rate_limit_error?(err)
         return Result.err(redact_secrets(err.message.to_s), category: :invalid_request) if invalid_request_error?(err)
+        return Result.err(redact_secrets(err.message.to_s), category: :budget) if
+          Io::LaneReply.read(err.message)&.kind == :spent
 
         Result.err(redact_secrets(err.message.to_s), category: :llm_call_failure)
       end
@@ -512,6 +514,8 @@ module Master
         return Master::Result.err(result.message, category: :budget) if billing_error?(result)
         return Master::Result.err(result.message, category: :rate_limit) if rate_limit_error?(result)
         return Master::Result.err(result.message, category: :invalid_request) if invalid_request_error?(result)
+        return Master::Result.err(result.message, category: :budget) if
+          Io::LaneReply.read(result.message)&.kind == :spent
 
         result
       end
