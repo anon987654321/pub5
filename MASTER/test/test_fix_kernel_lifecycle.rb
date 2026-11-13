@@ -39,6 +39,10 @@ class TestFixKernelLifecycle < Minitest::Test
     end
   end
 
+  def task_contract(root)
+    Master::Fix::TaskContract.for_target(target: root, root:)
+  end
+
   def test_convergence_adapter_restores_the_previous_cancellation_token_after_exception
     adapter = K::ConvergenceAdapter.allocate
     token_class = Class.new do
@@ -92,6 +96,24 @@ class TestFixKernelLifecycle < Minitest::Test
     [holder, contender].compact.each { |thread| thread.join(2) }
   end
 
+  def test_kernel_refuses_a_missing_task_contract_before_lock_or_receipt
+    with_workspace do |root|
+      kernel = K.new(root:)
+      adapter = cancellation_protocol(Object.new)
+      adapter.define_singleton_method(:last_terminal_state) { nil }
+      error = assert_raises(Master::Fix::TaskContract::Invalid) do
+        kernel.run(
+          adapter:, contract: nil, target: root, max_passes: 2, budget_seconds: 60,
+          incremental: false, requested: true
+        )
+      end
+
+      assert_match(/requires a TaskContract/, error.message)
+      refute File.exist?(File.join(root, ".master", "fix-execution.lock"))
+      assert_empty kernel.verify_log!
+    end
+  end
+
   def test_kernel_activation_error_is_recorded_as_unknown_outcome
     with_workspace do |root|
       kernel = K.new(root:)
@@ -104,8 +126,7 @@ class TestFixKernelLifecycle < Minitest::Test
       token.define_singleton_method(:activate!) { raise IOError, "activation failed" }
 
       error = assert_raises(IOError) do
-        kernel.run_fix_loop(
-          adapter, target: root, max_passes: 2, budget_seconds: 60,
+        kernel.run(adapter:, contract: task_contract(root), target: root, max_passes: 2, budget_seconds: 60,
           incremental: false, requested: true, cancellation: token
         )
       end
@@ -142,8 +163,7 @@ class TestFixKernelLifecycle < Minitest::Test
         Master::Result.ok("DONE: fixture")
       end
 
-      result = kernel.run_fix_loop(
-        adapter, target: root, max_passes: 2, budget_seconds: 60,
+      result = kernel.run(adapter:, contract: task_contract(root), target: root, max_passes: 2, budget_seconds: 60,
         incremental: false, requested: true
       )
 
@@ -156,6 +176,9 @@ class TestFixKernelLifecycle < Minitest::Test
       repair = events.find { |row| row["kind"] == "repair_pass" }
       assert_equal start.fetch("run_id"), terminal.fetch("run_id")
       assert_equal start.fetch("run_id"), repair.fetch("run_id")
+      expected_contract = Master::Fix::TaskContract.coerce(task_contract(root))
+      expected_digest = Digest::SHA256.hexdigest(JSON.generate(expected_contract.to_h))
+      assert_equal expected_digest, start.dig("payload", "task_contract_digest")
       assert_equal "done", terminal.dig("payload", "state")
       assert_equal "ok", terminal.dig("payload", "result")
       assert_equal 1, repair.dig("payload", "fixed")
@@ -175,8 +198,7 @@ class TestFixKernelLifecycle < Minitest::Test
       end
 
       error = assert_raises(IOError) do
-        kernel.run_fix_loop(
-          adapter, target: root, max_passes: 2, budget_seconds: 60,
+        kernel.run(adapter:, contract: task_contract(root), target: root, max_passes: 2, budget_seconds: 60,
           incremental: false, requested: true
         )
       end
@@ -334,8 +356,7 @@ class TestFixKernelLifecycle < Minitest::Test
       end
 
       first_thread = Thread.new do
-        first.run_fix_loop(
-          first_adapter, target: root, max_passes: 2, budget_seconds: 60,
+        first.run(adapter: first_adapter, contract: task_contract(root), target: root, max_passes: 2, budget_seconds: 60,
           incremental: false, requested: true
         )
       end
@@ -344,8 +365,7 @@ class TestFixKernelLifecycle < Minitest::Test
         assert_equal :entered, Timeout.timeout(5) { first_entered.pop }
         second_thread = Thread.new do
           second_attempting << :attempting
-          second.run_fix_loop(
-            second_adapter, target: root, max_passes: 2, budget_seconds: 60,
+          second.run(adapter: second_adapter, contract: task_contract(root), target: root, max_passes: 2, budget_seconds: 60,
             incremental: false, requested: true
           )
         end
