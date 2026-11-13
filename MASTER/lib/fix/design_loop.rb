@@ -447,17 +447,22 @@ module Master
           unless committed && transaction.state == "committed" && !transaction.active?
             @rejected << edit.key
             @undone << "#{edit.why} (commit refused or missing transaction receipt)"
-            cleanup = restore_candidate_transaction(transaction, edit)
+            if transaction.state == "delivering"
+              transaction.delivery.preserve! if transaction.active?
+              cleanup = :pending
+            else
+              cleanup = restore_candidate_transaction(transaction, edit)
+            end
             @say.call("#{edit.why}: commit did not produce a terminal transaction receipt; cleanup=#{cleanup}")
-            outcome = cleanup == :restored ? :failed : :delivery_failed
+            outcome = cleanup == :failed || cleanup == :pending ? :delivery_failed : :failed
             return round(number:, why: edit.why, outcome:, after: @target[:score])
           end
 
           merge(best[:after])
           round(number:, why: edit.why, outcome: :kept, after:)
         rescue StandardError => e
-          if transaction&.active? && transaction.state == "delivering" && transaction.delivery.pending?
-            transaction.delivery.preserve!
+          if transaction&.state == "delivering"
+            transaction.delivery.preserve! if transaction.active?
             @say.call("#{edit.why}: delivery outcome unknown (#{e.class}); transaction retained for recovery")
             round(number:, why: edit.why, outcome: :delivery_failed, after:)
           else
