@@ -140,7 +140,7 @@ module Master
         relative = repo_relative(target)
         if relative == "MASTER"
           paths.concat(Dir.glob(File.join(repo_root, "MASTER", "lib", "**", "*.rb")))
-          paths.concat(Dir.glob(File.join(repo_root, "{MASTER,RAILS,OPENBSD}", "**", "test*", "**", "*_test.rb")))
+          paths.concat(Dir.glob(File.join(repo_root, "{MASTER,RAILS,OPENBSD,STUDIO,BIZ}", "**", "test*", "**", "*_test.rb")))
           paths.concat(Dir.glob(File.join(repo_root, "MASTER", "test", "test_*.rb")))
           paths.concat(Dir.glob(File.join(repo_root, "MASTER", "tools", "*.rb")))
           paths.concat([

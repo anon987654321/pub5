@@ -73,7 +73,7 @@ module Master
 
       # A test that mostly asserts on the text of source files breaks when code moves and proves little.
       def spelling_tests(repo_root:)
-        tests = Dir.glob(File.join(repo_root, "{MASTER,RAILS,OPENBSD}", "**", "test*", "**", "*_test.rb")) +
+        tests = Dir.glob(File.join(repo_root, "{MASTER,RAILS,OPENBSD,STUDIO,BIZ}", "**", "test*", "**", "*_test.rb")) +
                 Dir.glob(File.join(repo_root, "MASTER", "test", "test_*.rb"))
         tests.uniq.filter_map { |path| spelling_row(path) }.first(8)
       end

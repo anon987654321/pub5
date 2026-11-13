@@ -20,8 +20,7 @@
 # Fields
 #   require     path under MASTER/checks/, loaded before the class is named
 #   class       Deploy::* constant answering .run and returning a CheckResult
-#   pass        success line; %{apps} / %{schemas} / %{assets} resolve via
-#               runner.rb's COUNTERS
+#   pass        success line (printed verbatim; no placeholder interpolation)
 #   covered_by  the composite that already runs this check as a leaf, so --all
 #               does not run it twice
 #   script      set instead of require/class for checks that stay subprocesses
@@ -37,10 +36,8 @@
 # because four such tables drifted from each other. The failure a cost field is
 # meant to catch is a check that DOUBLES — constitutional_scan at 48 minutes on
 # brgen, rendered_suite at an hour on a Mac — and a declaration can never show a
-# doubling; only a history can. The ledger already records duration_ms per check
-# per run, so runner.rb prints each check's measured median before it starts and
-# says "unmeasured here" for the ones this machine has never run. A check whose
-# median moves is visible in `runner.rb --ledger`.
+# doubling; only a history can. The ledger records duration_ms per check per run
+# (`.check_ledger.jsonl`), so a check whose median moves is visible there.
 #
 # A check is named for what it measures, never for the criterion near it, and owns
 # one assertion. Two checks asserting one property are two places for it to rot,
@@ -464,6 +461,7 @@ occlusion:
 web_vitals_budget:
   require: lib/rendered/web_vitals_budget
   class: Deploy::WebVitalsBudget
+  needs: [browser]
   pass: "ok: LCP and CLS within budget, field collection intact"
 
 # Three manifests: the icons they declare must exist and brgen's name must

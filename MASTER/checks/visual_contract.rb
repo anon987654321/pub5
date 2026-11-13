@@ -302,7 +302,7 @@ rescue VisualContractCheck::CannotMeasure => e
   warn "visual_contract: nothing measured, so nothing is claimed"
   exit 3
 end
-path = File.join(output, "#{app}-manifest.json")
+path = File.join(ENV.fetch("VISUAL_CONTRACT_OUTPUT", DEFAULT_OUTPUT), "#{app}-manifest.json")
 File.write(path, JSON.pretty_generate(generated_at: Time.now.utc.iso8601, results:) + "\n")
 
 # This used to end at `puts "ok: captured …"` with exit 0 no matter what the

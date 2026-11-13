@@ -35,7 +35,9 @@ module Operator
     CEILINGS = File.join(MASTER, "data", "reader_singularity.yml")
 
     # First-party Ruby that may legitimately read MASTER's data.
-    TREES = ["MASTER/lib", "MASTER/tools", "OPENBSD/tools"].freeze
+    # OPENBSD/tools was deleted in 6e09c6919; the census walks first-party
+    # Ruby that reads MASTER's data.
+    TREES = ["MASTER/lib", "MASTER/tools"].freeze
 
     LOAD = /(?:YAML\.(?:safe_)?load_file|YAML\.(?:safe_)?load\b|load_yaml\s*\(|safe_load_file)/
 
