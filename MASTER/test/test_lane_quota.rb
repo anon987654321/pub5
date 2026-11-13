@@ -217,6 +217,31 @@ class TestLaneQuota < Minitest::Test
     assert_equal %w[claude-cli:claude-sonnet-5-5], hops
   end
 
+  def test_openrouter_user_not_found_rejects_the_shared_key_not_each_vendor
+    Quota.note("google/gemini-2.5-flash", "User not found.")
+
+    assert_equal "google", Quota.lane_of("google/gemini-2.5-flash"),
+                 "ordinary vendor quota remains vendor-scoped"
+    assert_equal "openrouter", Quota.credential_lane_of("google/gemini-2.5-flash")
+    assert_equal "openrouter", Quota.quota_lane_of("google/gemini-2.5-flash", "User not found.")
+    %w[
+      cohere/command-r-plus-08-2024
+      openai/gpt-4o
+      x-ai/grok-4.3
+      z-ai/glm-4.5
+    ].each { |model| assert Quota.dead?(model), "#{model} shares the rejected OpenRouter key" }
+    refute Quota.dead?("deepseek-chat"), "the bare DeepSeek model uses its own credential"
+    refute Quota.openrouter_model?("gateway:openhands_Default")
+    assert_match(/\\Aopenrouter: OpenRouter credential rejected/, Quota.report_for("x-ai/grok-4.3"))
+    assert_includes Quota.report_for("x-ai/grok-4.3"), "replace OPENROUTER_API_KEY"
+
+    canary_model = Health.model_for_lane("openrouter")
+    assert Quota.openrouter_model?(canary_model), "the shared credential lane must have a real canary target"
+
+    Quota.revive("openrouter")
+    refute Quota.dead?("cohere/command-r-plus-08-2024"), "a successful canary can release the shared key hold"
+  end
+
   def test_openrouter_free_pool_quota_is_shared_across_vendor_prefixed_models
     reply = "rate_limit: Rate limit exceeded: free-models-per-day-high-balance."
     Quota.note("nvidia/nemotron-3-super-120b-a12b:free", reply)
