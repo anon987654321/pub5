@@ -232,7 +232,7 @@ class TestLaneQuota < Minitest::Test
     ].each { |model| assert Quota.dead?(model), "#{model} shares the rejected OpenRouter key" }
     refute Quota.dead?("deepseek-chat"), "the bare DeepSeek model uses its own credential"
     refute Quota.openrouter_model?("gateway:openhands_Default")
-    assert_match(/\\Aopenrouter: OpenRouter credential rejected/, Quota.report_for("x-ai/grok-4.3"))
+    assert_match(/\Aopenrouter: OpenRouter credential rejected/, Quota.report_for("x-ai/grok-4.3"))
     assert_includes Quota.report_for("x-ai/grok-4.3"), "replace OPENROUTER_API_KEY"
 
     canary_model = Health.model_for_lane("openrouter")
