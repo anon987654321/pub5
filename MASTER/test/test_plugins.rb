@@ -192,4 +192,115 @@ class TestPlugins < Minitest::Test
 
     assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 10
   end
+
+  # The Core broker must reach every adapter that used to launch Chromium itself,
+  # so no plugin keeps a private process path once a broker is threaded in. A fake
+  # broker records the open/close pair and returns a lease whose CDP URL is never
+  # dialled, because the assertions are about ownership, not navigation.
+  class FakeBroker
+    Lease = Data.define(:id, :host, :cdp_url)
+    attr_reader :opened, :closed
+
+    def initialize
+      @opened = []
+      @closed = []
+    end
+
+    def open(host:, url: nil, ttl_seconds: nil, profile: nil, persistent: false, headless: true)
+      id = "lease-#{@opened.size + 1}"
+      @opened << { host:, url:, profile:, persistent:, headless: }
+      Lease.new(id:, host:, cdp_url: "ws://127.0.0.1:9/#{id}")
+    end
+
+    def close(id)
+      @closed << id
+      true
+    end
+  end
+
+  # A stand-in for Ferrum::Browser that spawns nothing and answers the two calls a
+  # plugin's with_browser makes: create_page and quit.
+  def fake_browser
+    page = Object.new
+    page.define_singleton_method(:go_to) { |_| }
+    browser = Object.new
+    browser.define_singleton_method(:create_page) { page }
+    browser.define_singleton_method(:quit) { true }
+    browser
+  end
+
+  # Ferrum is an optional dependency; these tests stub its constructor, so load it
+  # (and its error classes) only when present, then swap the constant.
+  def with_fake_ferrum_browser(browser)
+    require "ferrum"
+    fake = Object.new
+    fake.define_singleton_method(:new) { |**| browser }
+    original = Ferrum::Browser
+    Ferrum.send(:remove_const, :Browser)
+    Ferrum.const_set(:Browser, fake)
+    yield
+  ensure
+    Ferrum.send(:remove_const, :Browser)
+    Ferrum.const_set(:Browser, original)
+  end
+
+  def test_session_browser_leases_its_process_from_the_injected_broker
+    broker = FakeBroker.new
+    plugin = Master::Plugin.load("session_browser", services: { browser_broker: broker })
+    plugin.define_singleton_method(:require_ferrum!) { true }
+    plugin.define_singleton_method(:transport) do
+      Object.new.tap { |t| t.define_singleton_method(:secure_page) { |*, **| true } }
+    end
+
+    with_fake_ferrum_browser(fake_browser) do
+      plugin.send(:with_browser, Dir.mktmpdir, "example.com", headless: true) { |_| }
+    end
+
+    assert_equal "example.com", broker.opened.first[:host]
+    assert_equal ["lease-1"], broker.closed
+  end
+
+  def test_travel_browser_leases_from_the_broker_once_it_has_a_host
+    broker = FakeBroker.new
+    plugin = Master::Plugin.load("travel_browser", services: { browser_broker: broker })
+    plugin.define_singleton_method(:require_ferrum!) { true }
+    plugin.define_singleton_method(:session_root) { Dir.mktmpdir }
+
+    with_fake_ferrum_browser(fake_browser) do
+      plugin.send(:with_browser, session: "trip", headless: false, url: "https://example.com/book") { |_| }
+    end
+
+    assert_equal "example.com", broker.opened.first[:host]
+    assert_equal ["lease-1"], broker.closed
+  end
+
+  def test_travel_browser_does_not_lease_a_session_with_no_known_host
+    broker = FakeBroker.new
+    plugin = Master::Plugin.load("travel_browser", services: { browser_broker: broker })
+    plugin.define_singleton_method(:require_ferrum!) { true }
+    plugin.define_singleton_method(:session_root) { Dir.mktmpdir }
+
+    with_fake_ferrum_browser(fake_browser) do
+      plugin.send(:with_browser, session: "trip", headless: false) { |_| }
+    end
+
+    assert_empty broker.opened
+    assert_empty broker.closed
+  end
+
+  def test_social_browser_leases_the_provider_host_from_the_broker
+    broker = FakeBroker.new
+    plugin = Master::Plugin.load("social_browser", services: { browser_broker: broker })
+    plugin.define_singleton_method(:require_ferrum!) { true }
+    plugin.define_singleton_method(:resolve_runtime) { |_| "linux" }
+    plugin.define_singleton_method(:account_root) { Dir.mktmpdir }
+
+    with_fake_ferrum_browser(fake_browser) do
+      plugin.send(:with_browser, site: "fetlife", account: "me",
+                                 url: "https://fetlife.com/home", headless: true, runtime: "linux") { |_| }
+    end
+
+    assert_equal "fetlife.com", broker.opened.first[:host]
+    assert_equal ["lease-1"], broker.closed
+  end
 end
