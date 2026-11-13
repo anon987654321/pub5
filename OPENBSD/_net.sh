@@ -15,7 +15,7 @@ cleanup_nsd() {
   log INFO "Cleaning nsd(8)"
   [[ -d /var/nsd ]] || { log ERROR "/var/nsd missing"; exit 1 }
   /usr/bin/timeout 5 /usr/sbin/rcctl stop nsd || log WARN "/usr/sbin/rcctl stop nsd failed"
-  /usr/bin/timeout 5 /usr/local/bin/zap -f nsd || log WARN "zap -f nsd failed"
+  /usr/bin/timeout 5 /usr/local/bin/zap nsd || log WARN "zap nsd failed"
   sleep 2
   typeset _out; _out=$(/usr/bin/netstat -an -p udp)
   [[ $_out == *"$BRGEN_IP.53"* ]] && { log ERROR "Port 53 in use"; exit 1 }
