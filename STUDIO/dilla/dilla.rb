@@ -36,6 +36,7 @@ require "tmpdir"
 require "tempfile"
 require_relative "../subprocess"
 require_relative "../analog_core"
+require_relative "../api"
 require_relative "lib/reference_analyzer"
 
 module Dilla
@@ -252,7 +253,16 @@ module Dilla
   end
 
   def run(argv)
+    return Studio::Api.respond(api_actions, argv:) if Studio::Api.requested?(argv)
+
+    argv = interactive_argv if argv.empty? && interactive_wizard&.tty?
     opts = parse_cli(argv)
+    dispatch(opts)
+  end
+
+  # The same dispatch the CLI uses, returned rather than only printed, so the
+  # API and the command line share one behaviour.
+  def dispatch(opts)
     case opts.mode
     when :help then puts help_text
     when :output_path then output_path(opts)
@@ -264,6 +274,82 @@ module Dilla
     when :showcase then render_showcase(opts)
     else render(opts)
     end
+  end
+
+  # The API actions MASTER reaches over the subprocess boundary. `args` mirrors
+  # the CLI argv, so one grammar serves both; "list" returns the catalogue as
+  # data instead of the printed table.
+  def api_actions
+    {
+      "list" => ->(_request) { api_catalogue },
+      "render" => ->(request) { dispatch(parse_cli(Array(request["args"]).map(&:to_s))) },
+      "reference" => ->(request) { dispatch(parse_cli(["reference", *Array(request["args"]).map(&:to_s)])) },
+      "output_path" => ->(request) { api_output_path(request) },
+    }
+  end
+
+  def api_catalogue
+    {
+      "progressions" => progressions.map { |p| p["id"] },
+      "drum_patterns" => catalogue.fetch("drum_patterns").keys.reject { |k| k == "comment" },
+      "groove_profiles" => catalogue.fetch("groove_profiles").keys.reject { |k| k == "comment" },
+      "kits" => catalogue.fetch("kits").keys.reject { |k| k == "comment" },
+      "voices" => catalogue.fetch("voices").keys,
+      "rigs" => catalogue.fetch("rigs").keys.reject { |k| k == "comment" },
+      "styles" => %w[j_dilla flying_lotus jazz_soul funk ambient drum_and_bass noise_sound_design royksopp industrial_techno],
+    }
+  end
+
+  def api_output_path(request)
+    kind = request["kind"].to_s
+    opts = Options.new
+    opts.mode = :output_path
+    opts.source = kind
+    opts.output_at = Time.iso8601(request["at"]) if request["at"]
+    # output_path prints a bare path; capture it as the API's string result.
+    require "stringio"
+    buffer = StringIO.new
+    original = $stdout
+    $stdout = buffer
+    output_path(opts)
+    $stdout = original
+    buffer.string.strip
+  end
+
+  # The STUDIO tools are interactive CLIs: run with no arguments and the tool
+  # asks. The answers are turned back into the argv parse_cli already
+  # understands, so the flag path stays the single source of behaviour.
+  def interactive_wizard
+    return @interactive_wizard if defined?(@interactive_wizard)
+
+    require_relative "../interactive"
+    @interactive_wizard = Studio::Interactive.new
+  rescue LoadError
+    @interactive_wizard = nil
+  end
+
+  def interactive_argv
+    wizard = interactive_wizard
+    styles = %w[j_dilla flying_lotus jazz_soul funk ambient drum_and_bass noise_sound_design royksopp industrial_techno]
+    style = wizard.choose("Which style?", styles, default: "j_dilla")
+    out = wizard.ask("Write the render to", default: default_render_directory)
+    argv = ["--style", style, "--out", out]
+    if style == "industrial_techno"
+      argv = ["industrial-techno", "--out", out]
+    elsif wizard.confirm("Pick a progression for me?", default: true)
+      argv << "--random"
+    end
+    argv << "--bars" << wizard.number("Bars", default: 24, range: 1..256).to_s
+    argv << "--mp3" if wizard.confirm("Render an mp3?", default: true)
+    argv << "--midi" if wizard.confirm("Render a MIDI score?", default: false)
+    argv
+  end
+
+  def default_render_directory
+    require_relative "../output_paths"
+    Studio::OutputPaths.dilla_render_directory
+  rescue StandardError
+    "."
   end
 
   def output_path(opts)
@@ -3051,4 +3137,7 @@ end
 
 # ---------------------------------------------------------------- entry point
 
-Dilla.run(ARGV) if $PROGRAM_NAME == __FILE__
+if $PROGRAM_NAME == __FILE__
+  status = Dilla.run(ARGV)
+  exit(status.is_a?(Integer) ? status : 0)
+end
