@@ -2,7 +2,10 @@
 
 require "fileutils"
 require "optparse"
+require "pathname"
 require "time"
+require_relative "../io/git_operations"
+require_relative "../fix/transaction"
 require_relative "visual_review_triangle"
 
 module Operator
@@ -88,7 +91,7 @@ module Operator
         measure: ->(rows) { shoot(rows, root:, dir:) },
         ask: ->(prompt, images) { ask(agent, prompt:, images:) },
         build: ->(app) { build_css(app, root:) },
-        commit_file: ->(file, message) { commit(file, message, root:) },
+        commit_file: ->(file, message, transaction) { commit(file, message, root:, transaction:) },
         sources_for: ->(surface) { sources(graph, surface) },
         guard: method(:law_refusal),
       )
@@ -142,16 +145,76 @@ module Operator
       status.success?
     end
 
-    def commit(file, message, root:)
-      relative = file.to_s.delete_prefix("#{root}/")
-      # Through git!, where every runtime commit refuses a sacred path.
-      Master::Io::GitOperations.new(root).git!("commit", "-q", "-m", message, "--", relative)
+    def commit(file, message, root:, transaction:)
+      repository = File.realpath(root)
+      absolute = File.expand_path(file)
+      prefix = "#{repository}#{File::SEPARATOR}"
+      raise ArgumentError, "design commit path escapes repository" unless absolute.start_with?(prefix)
+
+      relative = Pathname.new(absolute).relative_path_from(Pathname.new(repository)).to_s
+      before = git_head(repository)
+      transaction.delivery.begin!(head_before: before, paths: [relative])
+      expected_hash = transaction.observed_content_hash(relative)
+      raise "design transaction has no observed source digest" unless expected_hash&.match?(/\\A[0-9a-f]{64}\\z/)
+
+      body = message.to_s.sub(
+        /\\n\\n#{Regexp.escape(Master::Core::World::COMMIT_TRAILER)}\\s*\\z/, ""
+      )
+      marker = Master::Fix::Transaction::Delivery.marker(transaction.id)
+      delivered_message = "#{body}\\n\\n#{marker}"
+
+      begin
+        Master::Io::GitOperations.new(repository).commit(
+          delivered_message, paths: [relative], expected_hashes: { relative => expected_hash }
+        )
+      rescue StandardError => error
+        landed = marked_design_commit(repository, before, marker)
+        return false if landed.nil? && git_head(repository) == before
+
+        raise error unless landed
+        current = git_head(repository)
+        unless current == landed
+          transaction.delivery.preserve! if transaction.active?
+          raise "design commit #{landed} is not HEAD #{current}; manual review required"
+        end
+      end
+
+      current = git_head(repository)
+      landed = marked_design_commit(repository, before, marker)
+      unless landed && landed == current
+        transaction.delivery.preserve! if transaction.active?
+        raise "design commit receipt could not prove the candidate at HEAD"
+      end
+
+      transaction.delivery.record_commit!(head_after: landed)
+      finalized = transaction.delivery.finalize!(head: current)
+      raise finalized.message unless finalized.ok?
+
       true
-    rescue RuntimeError => e
-      # The pre-commit hook's "leaving uncommitted" list comes first and filled the
-      # old 200-character cut, hiding the refusal itself; its last lines say why.
+    rescue StandardError => e
+      transaction.delivery.preserve! if transaction&.active? && transaction.state == "delivering"
       say("not committed: #{e.message.lines.map(&:strip).reject(&:empty?).last(4).join(' / ')[0, 400]}")
-      false
+      raise
+    end
+
+    def git_head(root)
+      output, status = Master::Io::Exec.capture2e(
+        "git", "-C", root, "rev-parse", "HEAD", timeout: 5
+      )
+      head = output.to_s.strip
+      raise "cannot establish design delivery HEAD" unless status.success? && head.match?(/\\A[0-9a-f]{40}\\z/)
+
+      head
+    end
+
+    def marked_design_commit(root, before, marker)
+      output, status = Master::Io::Exec.capture2e(
+        "git", "-C", root, "log", "--format=%H", "--fixed-strings",
+        "--grep=#{marker}", "#{before}..HEAD", timeout: 5
+      )
+      return unless status.success?
+
+      output.to_s.lines.first&.strip
     end
 
     # A kept edit moves pixels on the surfaces it touched. Baseline approval is the operator's
