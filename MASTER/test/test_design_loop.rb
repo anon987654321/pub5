@@ -274,13 +274,13 @@ class TestDesignLoop < Minitest::Test
     Dir.mktmpdir do |root|
       path = File.join(root, "RAILS", "brgen", "app", "assets", "stylesheets", "app.scss")
       FileUtils.mkdir_p(File.dirname(path))
-      original = ".card {\\n  padding: 4px;\\n}\\n"
+      original = ".card {\n  padding: 4px;\n}\n"
       File.write(path, original)
       transaction = Master::Fix::Transaction.new(
         root:, paths: [path], id: "design-#{'b' * 20}"
       )
       transaction.begin!
-      File.write(path, ".card {\\n  padding: 16px;\\n}\\n")
+      File.write(path, ".card {\n  padding: 16px;\n}\n")
       assert transaction.observe_paths!([path]).ok?
       transaction.close!
 
