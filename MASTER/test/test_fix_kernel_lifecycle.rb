@@ -194,6 +194,7 @@ class TestFixKernelLifecycle < Minitest::Test
       assert_equal expected_digest, start.dig("payload", "task_contract_digest")
       assert_equal "functional_change", start.dig("payload", "task_contract", "intent")
       assert_equal expected_contract.scope, start.dig("payload", "task_contract", "scope")
+      assert_equal expected_contract.new_paths, start.dig("payload", "task_contract", "new_paths")
       assert_equal "done", terminal.dig("payload", "state")
       assert_equal "ok", terminal.dig("payload", "result")
       assert_equal 1, repair.dig("payload", "fixed")
