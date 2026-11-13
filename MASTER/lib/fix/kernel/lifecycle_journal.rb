@@ -144,266 +144,249 @@ module Master
         end
 
         # Persist the full Law × stream × surface ledger as an independent audit
-        # artifact. Run history retains only this checksum-addressed receipt.
+        # artifact. The artifact write, journal receipt and reclamation share the
+        # journal lock: cleanup cannot mistake an in-flight publication for an orphan.
         def persist_assessment_report(run_id, target:, report:)
           id = run_id.to_s
-          raise ArgumentError, "invalid fix run id" unless id.match?(/\A[a-f0-9]{20}\z/)
+          raise ArgumentError, "invalid fix run id" unless id.match?(/\\A[a-f0-9]{20}\\z/)
           raise ArgumentError, "assessment report must be a hash" unless report.is_a?(Hash)
 
-          assessment_dir = File.join(@root, ASSESSMENT_DIR)
-          prepare_artifact_directory!(assessment_dir)
-          path = File.join(assessment_dir, "#{id}.json")
-          refuse_unsafe_artifact_slot!(path, label: "assessment report")
-          envelope = {
-            "schema_version" => 1,
-            "run_id" => id,
-            "target" => relative(target),
-            "created_at" => Time.now.utc.iso8601,
-            "report" => json_safe_value(report),
-          }
-          payload = JSON.pretty_generate(envelope) + "\n"
-          write_atomic(path, payload, mode: 0o600)
-          stored_payload = read_private_artifact(path, label: "assessment report")
-          digest = Digest::SHA256.hexdigest(payload)
-          raise "assessment artifact read-back mismatch" unless stored_payload == payload
-          raise "assessment artifact checksum mismatch after write" unless Digest::SHA256.hexdigest(stored_payload) == digest
+          with_lock do
+            data = load
+            run = Array(data["runs"]).find { |entry| entry["id"] == id }
+            raise "fix run disappeared before assessment report was written" unless run
 
-          ledger = report[:ledger] || report["ledger"]
-          summary = ledger && (ledger[:summary] || ledger["summary"])
-          cells = ledger && (ledger[:cells] || ledger["cells"])
-          receipt = {
-            "status" => "persisted",
-            "readback_verified" => true,
-            "path" => relative(path),
-            "sha256" => digest,
-            "bytes" => stored_payload.bytesize,
-            "matrix_status" => (report[:status] || report["status"]).to_s,
-            "quality_status" => begin
-              quality = report[:quality_contract] || report["quality_contract"] || {}
-              (quality[:overall_status] || quality["overall_status"]).to_s
-            end,
-            "compliance_status" => begin
-              quality = report[:quality_contract] || report["quality_contract"] || {}
-              (quality[:compliance_status] || quality["compliance_status"]).to_s
-            end,
-            "cells" => Array(cells).size,
-            "readings" => Array(cells).sum do |cell|
-              Array(cell[:readings] || cell["readings"]).size
-            end,
-          }
-          %w[plan_digest identity_digest scope_digest source_digest law_digest law_source_digest authority_digest toolchain_digest exclusion_digest adapter_digest].each do |key|
-            value = report[key.to_sym] || report[key]
-            receipt[key] = json_safe_value(value) unless value.nil?
+            assessment_dir = File.join(@root, ASSESSMENT_DIR)
+            prepare_artifact_directory!(assessment_dir)
+            path = File.join(assessment_dir, "#{id}.json")
+            refuse_unsafe_artifact_slot!(path, label: "assessment report")
+            envelope = {
+              "schema_version" => 1,
+              "run_id" => id,
+              "target" => relative(target),
+              "created_at" => Time.now.utc.iso8601,
+              "report" => json_safe_value(report),
+            }
+            payload = JSON.pretty_generate(envelope) + "\\n"
+            write_atomic(path, payload, mode: 0o600)
+            stored_payload = read_private_artifact(path, label: "assessment report")
+            digest = Digest::SHA256.hexdigest(payload)
+            raise "assessment artifact read-back mismatch" unless stored_payload == payload
+            raise "assessment artifact checksum mismatch after write" unless Digest::SHA256.hexdigest(stored_payload) == digest
+
+            ledger = report[:ledger] || report["ledger"]
+            summary = ledger && (ledger[:summary] || ledger["summary"])
+            cells = ledger && (ledger[:cells] || ledger["cells"])
+            receipt = {
+              "status" => "persisted",
+              "readback_verified" => true,
+              "path" => relative(path),
+              "sha256" => digest,
+              "bytes" => stored_payload.bytesize,
+              "matrix_status" => (report[:status] || report["status"]).to_s,
+              "quality_status" => begin
+                quality = report[:quality_contract] || report["quality_contract"] || {}
+                (quality[:overall_status] || quality["overall_status"]).to_s
+              end,
+              "compliance_status" => begin
+                quality = report[:quality_contract] || report["quality_contract"] || {}
+                (quality[:compliance_status] || quality["compliance_status"]).to_s
+              end,
+              "cells" => Array(cells).size,
+              "readings" => Array(cells).sum do |cell|
+                Array(cell[:readings] || cell["readings"]).size
+              end,
+            }
+            %w[plan_digest identity_digest scope_digest source_digest law_digest law_source_digest authority_digest toolchain_digest exclusion_digest adapter_digest].each do |key|
+              value = report[key.to_sym] || report[key]
+              receipt[key] = json_safe_value(value) unless value.nil?
+            end
+            receipt["expected_cells"] = summary[:expected_cells] || summary["expected_cells"] if summary
+            receipt["generation"] = summary[:generation] || summary["generation"] if summary
+
+            run["assessment_receipt"] = receipt
+            persist(data, run_id: id)
+            emit(
+              "fix:assessment_receipt_persisted",
+              run_id: id, path: receipt["path"], sha256: receipt["sha256"],
+              cells: receipt["cells"], readings: receipt["readings"], status: receipt["matrix_status"],
+              quality_status: receipt["quality_status"], compliance_status: receipt["compliance_status"]
+            )
+            retained_ids = Array(data["runs"]).last(MAX_RUNS).map { |entry| entry["id"] }.to_set
+            prune_assessment_reports_locked!(retained_ids)
+            receipt
           end
-          receipt["expected_cells"] = summary[:expected_cells] || summary["expected_cells"] if summary
-          receipt["generation"] = summary[:generation] || summary["generation"] if summary
-
-          updated = update(id) { |run| run["assessment_receipt"] = receipt }
-          raise "fix run disappeared before assessment receipt was indexed" unless updated
-
-          emit(
-            "fix:assessment_receipt_persisted",
-            run_id: id, path: receipt["path"], sha256: receipt["sha256"],
-            cells: receipt["cells"], readings: receipt["readings"], status: receipt["matrix_status"],
-            quality_status: receipt["quality_status"], compliance_status: receipt["compliance_status"]
-          )
-          prune_assessment_reports!(keep_ids: history(limit: MAX_RUNS).map { |entry| entry["id"] })
-          receipt
         end
 
         # Persist every stage of the architecture tournament, including its complete accepted
-        # candidate population. Each revision is immutable until its checksum receipt is indexed;
-        # after the journal points to the new revision, older revisions may be pruned safely.
+        # candidate population. Keep publication, receipt indexing and pruning under
+        # one lock so an unindexed in-flight revision cannot be reclaimed.
         def persist_architecture_report(run_id, target:, report:, provenance:)
           id = run_id.to_s
-          raise ArgumentError, "invalid fix run id" unless id.match?(/\A[a-f0-9]{20}\z/)
+          raise ArgumentError, "invalid fix run id" unless id.match?(/\\A[a-f0-9]{20}\\z/)
           raise ArgumentError, "architecture report must be a hash" unless report.is_a?(Hash)
           raise ArgumentError, "architecture provenance must be a hash" unless provenance.is_a?(Hash)
 
-          directory = File.join(@root, ARCHITECTURE_DIR)
-          prepare_artifact_directory!(directory)
+          with_lock do
+            data = load
+            run = Array(data["runs"]).find { |entry| entry["id"] == id }
+            raise "fix run disappeared before architecture report was written" unless run
 
-          safe_provenance = json_safe_value(provenance)
-          provenance_digest = Digest::SHA256.hexdigest(JSON.generate(safe_provenance.sort.to_h))
-          revision = SecureRandom.hex(6)
-          name = "#{id}-#{provenance_digest[0, 12]}-#{revision}.json"
-          path = File.join(directory, name)
-          refuse_unsafe_artifact_slot!(path, label: "architecture report")
+            directory = File.join(@root, ARCHITECTURE_DIR)
+            prepare_artifact_directory!(directory)
 
-          envelope = {
-            "schema_version" => 1,
-            "run_id" => id,
-            "target" => relative(target),
-            "created_at" => Time.now.utc.iso8601,
-            "provenance" => safe_provenance,
-            "report" => json_safe_value(report),
-          }
-          payload = JSON.pretty_generate(envelope) + "\n"
-          @lifecycle_observer.mutate(operation: "persist_architecture_report",
-                                     item_count: Array(envelope.dig("report", "targets")).size) do
-            write_atomic(path, payload, mode: 0o600)
-          end
-          stored_payload = read_private_artifact(path, label: "architecture report")
-          digest = Digest::SHA256.hexdigest(payload)
-          raise "architecture report read-back mismatch" unless stored_payload == payload
-          raise "architecture report checksum mismatch after write" unless Digest::SHA256.hexdigest(stored_payload) == digest
-          file_mode = File.stat(path).mode & 0o777
-          raise "architecture report permissions are not private" unless (file_mode & 0o077).zero?
+            safe_provenance = json_safe_value(provenance)
+            provenance_digest = Digest::SHA256.hexdigest(JSON.generate(safe_provenance.sort.to_h))
+            revision = SecureRandom.hex(6)
+            name = "#{id}-#{provenance_digest[0, 12]}-#{revision}.json"
+            path = File.join(directory, name)
+            refuse_unsafe_artifact_slot!(path, label: "architecture report")
 
-          targets = Array(envelope.dig("report", "targets"))
-          receipt = {
-            "status" => "persisted",
-            "readback_verified" => true,
-            "path" => relative(path),
-            "sha256" => digest,
-            "bytes" => stored_payload.bytesize,
-            "target" => envelope["target"],
-            "report_status" => envelope.dig("report", "status").to_s,
-            "target_count" => targets.size,
-            "accepted_candidates" => targets.sum { |row| row.is_a?(Hash) ? row["accepted"].to_i : 0 },
-            "provenance_digest" => provenance_digest[0, 12],
-            "updated_at" => Time.now.utc.iso8601,
-          }
-          updated = update(id) do |run|
+            envelope = {
+              "schema_version" => 1,
+              "run_id" => id,
+              "target" => relative(target),
+              "created_at" => Time.now.utc.iso8601,
+              "provenance" => safe_provenance,
+              "report" => json_safe_value(report),
+            }
+            payload = JSON.pretty_generate(envelope) + "\\n"
+            @lifecycle_observer.mutate(operation: "persist_architecture_report",
+                                       item_count: Array(envelope.dig("report", "targets")).size) do
+              write_atomic(path, payload, mode: 0o600)
+            end
+            stored_payload = read_private_artifact(path, label: "architecture report")
+            digest = Digest::SHA256.hexdigest(payload)
+            raise "architecture report read-back mismatch" unless stored_payload == payload
+            raise "architecture report checksum mismatch after write" unless Digest::SHA256.hexdigest(stored_payload) == digest
+            file_mode = File.stat(path).mode & 0o777
+            raise "architecture report permissions are not private" unless (file_mode & 0o077).zero?
+
+            targets = Array(envelope.dig("report", "targets"))
+            receipt = {
+              "status" => "persisted",
+              "readback_verified" => true,
+              "path" => relative(path),
+              "sha256" => digest,
+              "bytes" => stored_payload.bytesize,
+              "target" => envelope["target"],
+              "report_status" => envelope.dig("report", "status").to_s,
+              "target_count" => targets.size,
+              "accepted_candidates" => targets.sum { |row| row.is_a?(Hash) ? row["accepted"].to_i : 0 },
+              "provenance_digest" => provenance_digest[0, 12],
+              "updated_at" => Time.now.utc.iso8601,
+            }
             run["architecture_receipt"] = receipt
+            persist(data, run_id: id)
+            emit("fix:architecture_receipt_persisted",
+                 run_id: id, path: receipt["path"], sha256: digest,
+                 status: receipt["report_status"], targets: receipt["target_count"],
+                 accepted_candidates: receipt["accepted_candidates"])
+            prune_architecture_reports_locked!(data)
             receipt
           end
-          raise "fix run disappeared before architecture receipt was indexed" unless updated
-
-          emit("fix:architecture_receipt_persisted",
-               run_id: id, path: receipt["path"], sha256: digest,
-               status: receipt["report_status"], targets: receipt["target_count"],
-               accepted_candidates: receipt["accepted_candidates"])
-          prune_architecture_reports!
-          receipt
         end
 
         # The tournament may be resumed only from an indexed artifact whose path, permissions,
-        # checksum, target, schema and provenance digest all still agree.
+        # checksum, target, schema and provenance digest all still agree. The journal lock
+        # keeps the indexed receipt and its file stable for the complete verification.
         def verify_architecture_report(run_id)
-          id = run_id.to_s
-          return { "status" => "invalid_run_id" } unless id.match?(/\A[a-f0-9]{20}\z/)
+          with_lock do
+            id = run_id.to_s
+            return { "status" => "invalid_run_id" } unless id.match?(/\\A[a-f0-9]{20}\\z/)
 
-          master_dir = File.join(@root, ".master")
-          directory = File.join(@root, ARCHITECTURE_DIR)
-          return { "status" => "journal_directory_symlink" } if File.symlink?(master_dir)
-          return { "status" => "architecture_directory_symlink" } if File.symlink?(directory)
+            master_dir = File.join(@root, ".master")
+            directory = File.join(@root, ARCHITECTURE_DIR)
+            return { "status" => "journal_directory_symlink" } if File.symlink?(master_dir)
+            return { "status" => "architecture_directory_symlink" } if File.symlink?(directory)
 
-          run = history(limit: MAX_RUNS).find { |entry| entry["id"] == id }
-          return { "status" => "run_not_found" } unless run
-          receipt = run["architecture_receipt"]
-          return { "status" => "receipt_missing" } unless receipt.is_a?(Hash)
+            run = history(limit: MAX_RUNS).find { |entry| entry["id"] == id }
+            return { "status" => "run_not_found" } unless run
+            receipt = run["architecture_receipt"]
+            return { "status" => "receipt_missing" } unless receipt.is_a?(Hash)
 
-          relative_path = receipt["path"].to_s
-          name = File.basename(relative_path)
-          match = name.match(/\A#{Regexp.escape(id)}-([a-f0-9]{12})-([a-f0-9]{12})\.json\z/)
-          return { "status" => "receipt_path_mismatch" } unless match
-          expected_path = File.join(directory, name)
-          return { "status" => "receipt_path_mismatch" } unless relative(expected_path) == relative_path
-          begin
-            payload = read_private_artifact(expected_path, label: "architecture report")
-          rescue ArtifactReadError => error
-            return { "status" => error.status }.merge(error.details)
+            relative_path = receipt["path"].to_s
+            name = File.basename(relative_path)
+            match = name.match(/\\A#{Regexp.escape(id)}-([a-f0-9]{12})-([a-f0-9]{12})\\.json\\z/)
+            return { "status" => "receipt_path_mismatch" } unless match
+            expected_path = File.join(directory, name)
+            return { "status" => "receipt_path_mismatch" } unless relative(expected_path) == relative_path
+            begin
+              payload = read_private_artifact(expected_path, label: "architecture report")
+            rescue ArtifactReadError => error
+              return { "status" => error.status }.merge(error.details)
+            end
+            actual_digest = Digest::SHA256.hexdigest(payload)
+            return { "status" => "checksum_mismatch" } unless actual_digest == receipt["sha256"]
+
+            envelope = JSON.parse(payload)
+            return { "status" => "schema_unsupported" } unless envelope["schema_version"].to_i == 1
+            return { "status" => "artifact_run_mismatch" } unless envelope["run_id"] == id
+            return { "status" => "target_mismatch" } unless envelope["target"] == run["target"]
+            provenance = envelope["provenance"]
+            return { "status" => "provenance_malformed" } unless provenance.is_a?(Hash)
+            fingerprint = Digest::SHA256.hexdigest(JSON.generate(provenance.sort.to_h))
+            return { "status" => "provenance_digest_mismatch" } unless fingerprint[0, 12] == match[1]
+            return { "status" => "receipt_provenance_mismatch" } unless receipt["provenance_digest"] == match[1]
+
+            report = envelope["report"]
+            return { "status" => "report_malformed" } unless report.is_a?(Hash)
+            return { "status" => "report_status_mismatch" } unless report["status"].to_s == receipt["report_status"].to_s
+            return { "status" => "report_target_mismatch" } unless Array(report["targets"]).all? do |row|
+              row.is_a?(Hash) && !row["tree"].to_s.empty?
+            end
+
+            { "status" => "verified", "path" => relative_path, "sha256" => actual_digest,
+              "target" => envelope["target"], "provenance" => provenance, "report" => report }
           end
-          actual_digest = Digest::SHA256.hexdigest(payload)
-          return { "status" => "checksum_mismatch" } unless actual_digest == receipt["sha256"]
-
-          envelope = JSON.parse(payload)
-          return { "status" => "schema_unsupported" } unless envelope["schema_version"].to_i == 1
-          return { "status" => "artifact_run_mismatch" } unless envelope["run_id"] == id
-          return { "status" => "target_mismatch" } unless envelope["target"] == run["target"]
-          provenance = envelope["provenance"]
-          return { "status" => "provenance_malformed" } unless provenance.is_a?(Hash)
-          fingerprint = Digest::SHA256.hexdigest(JSON.generate(provenance.sort.to_h))
-          return { "status" => "provenance_digest_mismatch" } unless fingerprint[0, 12] == match[1]
-          return { "status" => "receipt_provenance_mismatch" } unless receipt["provenance_digest"] == match[1]
-
-          report = envelope["report"]
-          return { "status" => "report_malformed" } unless report.is_a?(Hash)
-          return { "status" => "report_status_mismatch" } unless report["status"].to_s == receipt["report_status"].to_s
-          return { "status" => "report_target_mismatch" } unless Array(report["targets"]).all? do |row|
-            row.is_a?(Hash) && !row["tree"].to_s.empty?
-          end
-
-          { "status" => "verified", "path" => relative_path, "sha256" => actual_digest,
-            "target" => envelope["target"], "provenance" => provenance, "report" => report }
         rescue JSON::ParserError => e
           { "status" => "invalid_json", "message" => e.message.to_s[0, 180] }
         rescue StandardError => e
           { "status" => "verification_failed", "error_class" => e.class.name, "message" => e.message.to_s[0, 180] }
         end
 
-        # Retain only the latest indexed artifact for each retained run. Superseded and
-        # unindexed orphan revisions are removed by exact generated filename shape.
+        # Retain only the latest indexed artifact for each retained run. Pruning
+        # shares the run-journal lock with publication, receipt indexing and verification.
         def prune_architecture_reports!
-          master_dir = File.join(@root, ".master")
-          directory = File.join(@root, ARCHITECTURE_DIR)
-          return if File.symlink?(master_dir) || File.symlink?(directory) || !File.directory?(directory)
-
-          retained_paths = history(limit: MAX_RUNS).filter_map do |run|
-            receipt = run["architecture_receipt"]
-            receipt["path"].to_s if receipt.is_a?(Hash)
-          end.to_set
-          removed = 0
-          Dir.children(directory).each do |name|
-            next unless name.match?(/\A[a-f0-9]{20}-[a-f0-9]{12}-[a-f0-9]{12}\.json\z/)
-
-            path = File.join(directory, name)
-            next if File.symlink?(path) || !File.file?(path)
-            next if retained_paths.include?(relative(path))
-
-            File.delete(path)
-            removed += 1
-          rescue SystemCallError => e
-            emit("fix:architecture_prune_entry_failed", path: name, error: e.message.to_s[0, 160])
-          end
-          emit("fix:architecture_reports_pruned", removed:) if removed.positive?
+          with_lock { prune_architecture_reports_locked!(load) }
         rescue StandardError => e
           emit("fix:architecture_prune_failed", error_class: e.class.name, message: e.message.to_s[0, 160])
+          nil
         end
 
-        # Keep evidence storage aligned with the bounded run journal. Only
-        # delete old, owned report files with the exact generated filename shape.
+        # Keep evidence storage aligned with the bounded run journal. A stale caller's
+        # keep_ids may preserve extra files, but can never make it delete a newly indexed report.
         def prune_assessment_reports!(keep_ids:)
-          master_dir = File.join(@root, ".master")
-          directory = File.join(@root, ASSESSMENT_DIR)
-          return if File.symlink?(master_dir) || File.symlink?(directory) || !File.directory?(directory)
-
-          retained = Array(keep_ids).map(&:to_s).to_set
-          removed = 0
-          Dir.children(directory).each do |name|
-            match = name.match(/\A([a-f0-9]{20})\.json\z/)
-            next unless match && !retained.include?(match[1])
-
-            path = File.join(directory, name)
-            next if File.symlink?(path) || !File.file?(path)
-
-            File.delete(path)
-            removed += 1
-          rescue SystemCallError => e
-            emit("fix:assessment_prune_entry_failed", path: name, error: e.message.to_s[0, 160])
+          with_lock do
+            data = load
+            retained = Array(keep_ids).map(&:to_s) |
+                       Array(data["runs"]).last(MAX_RUNS).map { |entry| entry["id"].to_s }
+            prune_assessment_reports_locked!(retained.to_set)
           end
-          emit("fix:assessment_reports_pruned", removed:) if removed.positive?
         rescue StandardError => e
           emit("fix:assessment_prune_failed", error_class: e.class.name, message: e.message.to_s[0, 160])
+          nil
         end
 
         # Re-check a saved receipt whenever a later tool needs to rely on it.
         def verify_assessment_report(run_id)
-          context, failure = assessment_report_receipt_context(run_id.to_s)
-          return failure if failure
+          with_lock do
+            context, failure = assessment_report_receipt_context(run_id.to_s)
+            return failure if failure
 
-          artifact, failure = assessment_report_payload(context)
-          return failure if failure
+            artifact, failure = assessment_report_payload(context)
+            return failure if failure
 
-          document = JSON.parse(artifact[:payload])
-          report, failure = assessment_report_identity(document, context)
-          return failure if failure
+            document = JSON.parse(artifact[:payload])
+            report, failure = assessment_report_identity(document, context)
+            return failure if failure
 
-          failure = assessment_report_provenance_failure(report, context)
-          return failure if failure
+            failure = assessment_report_provenance_failure(report, context)
+            return failure if failure
 
-          assessment_report_verified_summary(report, context, artifact)
+            assessment_report_verified_summary(report, context, artifact)
+
+          end
         rescue JSON::ParserError => e
           { "status" => "invalid_json", "message" => e.message.to_s[0, 180] }
         rescue StandardError => e
@@ -668,6 +651,57 @@ module Master
         end
 
         private
+
+        def prune_architecture_reports_locked!(data)
+          master_dir = File.join(@root, ".master")
+          directory = File.join(@root, ARCHITECTURE_DIR)
+          return 0 if File.symlink?(master_dir) || File.symlink?(directory) || !File.directory?(directory)
+
+          retained_paths = Array(data["runs"]).last(MAX_RUNS).filter_map do |run|
+            receipt = run["architecture_receipt"]
+            receipt["path"].to_s if receipt.is_a?(Hash)
+          end.to_set
+          removed = 0
+          Dir.children(directory).each do |name|
+            next unless name.match?(/\\A[a-f0-9]{20}-[a-f0-9]{12}-[a-f0-9]{12}\\.json\\z/)
+
+            path = File.join(directory, name)
+            next if retained_paths.include?(relative(path))
+
+            stat = File.lstat(path)
+            next unless stat.file? && !stat.symlink? && stat.nlink == 1
+
+            File.delete(path)
+            removed += 1
+          rescue SystemCallError => e
+            emit("fix:architecture_prune_entry_failed", path: name, error: e.message.to_s[0, 160])
+          end
+          emit("fix:architecture_reports_pruned", removed:) if removed.positive?
+          removed
+        end
+
+        def prune_assessment_reports_locked!(retained)
+          master_dir = File.join(@root, ".master")
+          directory = File.join(@root, ASSESSMENT_DIR)
+          return 0 if File.symlink?(master_dir) || File.symlink?(directory) || !File.directory?(directory)
+
+          removed = 0
+          Dir.children(directory).each do |name|
+            match = name.match(/\\A([a-f0-9]{20})\\.json\\z/)
+            next unless match && !retained.include?(match[1])
+
+            path = File.join(directory, name)
+            stat = File.lstat(path)
+            next unless stat.file? && !stat.symlink? && stat.nlink == 1
+
+            File.delete(path)
+            removed += 1
+          rescue SystemCallError => e
+            emit("fix:assessment_prune_entry_failed", path: name, error: e.message.to_s[0, 160])
+          end
+          emit("fix:assessment_reports_pruned", removed:) if removed.positive?
+          removed
+        end
 
         def validate_surface_coverage_report(report, required:)
           surface = report["surface_coverage"]
