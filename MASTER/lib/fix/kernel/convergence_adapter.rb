@@ -171,11 +171,15 @@ module Master
       # while a single violation stood, so "fix and commit" scanned and stopped.
       def run(target = @root, max_passes: max_passes_default, budget_seconds: FixTime.run_s,
               incremental: @incremental, requested: false, cancellation: nil, task_contract: nil)
-        TaskContract.with_current(task_contract) do
-          @kernel.run_fix_loop(
-            self, target:, max_passes:, budget_seconds:, incremental:, requested:, cancellation:
-          )
-        end
+        # The interactive pipeline supplies its reviewed contract. Older
+        # supervisors/watchers and direct callers get a conservative contract
+        # scoped to this exact target; it never declares new paths.
+        contract = task_contract || TaskContract.current ||
+          TaskContract.for_target(target:, root: @root)
+        @kernel.run(
+          adapter: self, contract:, target:, max_passes:, budget_seconds:,
+          incremental:, requested:, cancellation:
+        )
       rescue Timeout::ExitException
         # A nested timer whose token escaped its own boundary must end the run truthfully
         # as a timeout, not as a crash in whatever frame the watcher interrupted.
