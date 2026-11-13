@@ -117,7 +117,7 @@ class CritiqueImplementationAmberTest < Minitest::Test
       "items.life_phases" => {
         "current" => ["Current", "Nåværende"], "past_self" => ["Past self", "Tidligere meg"],
         "aspirational" => ["Aspirational", "Ønsket meg"]
-      }
+      },
     }.each do |scope, translations|
       en_values = scope.split(".").reduce(en) { |node, key| node.fetch(key) }
       nb_values = scope.split(".").reduce(nb) { |node, key| node.fetch(key) }

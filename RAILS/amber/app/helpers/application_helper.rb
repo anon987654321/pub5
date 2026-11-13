@@ -12,7 +12,7 @@ module ApplicationHelper
   IMAGE_PRESETS = {
     thumb: [ [ :thumb, 240 ] ],
     card: [ [ :thumb, 240 ], [ :card, 720 ] ],
-    detail: [ [ :thumb, 240 ], [ :card, 720 ] ]
+    detail: [ [ :thumb, 240 ], [ :card, 720 ] ],
   }.freeze
 
   # aria-current for a nav link: "page" on the link's own page, "true" anywhere

@@ -114,7 +114,7 @@ def test_amber_feature_styles_are_loaded_at_their_original_boundaries
     ["amber_dressing_room", ".viz-rows"],
     ["amber_looks", ".amber-looks"],
     ["amber_jox_logo", ".jox-logo"],
-    ["amber_editorial_feed", ".feed-post"]
+    ["amber_editorial_feed", ".feed-post"],
   ]
   expected_rules.each do |name, selector|
     assert_includes stylesheet_module("amber", name), selector, "#{name} lost its feature rule"

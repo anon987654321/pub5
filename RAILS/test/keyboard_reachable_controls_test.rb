@@ -59,7 +59,7 @@ class KeyboardReachableControlsTest < Minitest::Test
   # someone's deliberate pass. Left alone, on purpose, and named here so the next
   # reader inherits the reasoning rather than the count.
   ALLOWED_ROLE_WITHOUT_TABINDEX = [
-    "bsdports/app/views/ports/_dependency_tree.html.erb"
+    "bsdports/app/views/ports/_dependency_tree.html.erb",
   ].freeze
 
   # Pointer-only gestures on a container. A swipe is not made keyboard-operable by

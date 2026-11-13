@@ -28,32 +28,32 @@ class VerticalFrontPageContractTest < Minitest::Test
     contracts = {
       "marketplace" => [
         "brgen/engines/marketplace/app/views/marketplace/listings/index.html.erb",
-        ["bol-market-hero", "listing-kinds"]
+        ["bol-market-hero", "listing-kinds"],
       ],
       "dating" => [
         "brgen/engines/dating/app/views/dating/home/index.html.erb",
-        ["dating-discover-panel", 'data-controller="swipe"']
+        ["dating-discover-panel", 'data-controller="swipe"'],
       ],
       "tv" => [
         "brgen/engines/radio/tv/app/views/tv/home/index.html.erb",
-        ["tv/live_streams_label", "tv/home/trending_videos"]
+        ["tv/live_streams_label", "tv/home/trending_videos"],
       ],
       "maps" => [
         "brgen/engines/maps/app/views/maps/home/index.html.erb",
-        ["map-morph-guard", "map-point-list"]
+        ["map-morph-guard", "map-point-list"],
       ],
       "takeaway" => [
         "brgen/engines/marketplace/engines/takeaway/app/views/takeaway/restaurants/index.html.erb",
-        ["shared/promotional_art", "takeaway-restaurants"]
+        ["shared/promotional_art", "takeaway-restaurants"],
       ],
       "bsdports" => [
         "bsdports/app/views/ports/index.html.erb",
-        ["live_search_index", "auto_discovery_link_tag"]
+        ["live_search_index", "auto_discovery_link_tag"],
       ],
       "mrdamascy" => [
         "mrdamascy/app/views/orders/index.html.erb",
-        ["order-card", "state_chip(order)"]
-      ]
+        ["order-card", "state_chip(order)"],
+      ],
     }
 
     contracts.each do |vertical, (path, markers)|

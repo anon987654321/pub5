@@ -11,7 +11,7 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
       user: {
         email_address: "new-person@example.com",
         password: "long-enough-pass",
-        password_confirmation: "does-not-match"
+        password_confirmation: "does-not-match",
       }
     }
 

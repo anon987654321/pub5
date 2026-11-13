@@ -8,7 +8,7 @@ class SharedEmptyStateTest < ActionView::TestCase
            locals: {
              title: "Nothing here",
              body: "Start by adding an item.",
-             action: { label: "Browse items", path: "/items" }
+             action: { label: "Browse items", path: "/items" },
            }
 
     assert_select "section.empty-state[role=status]"

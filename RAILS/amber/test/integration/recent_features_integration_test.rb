@@ -63,7 +63,7 @@ class RecentFeaturesIntegrationTest < ActionDispatch::IntegrationTest
         display_name: "Showcase Creator",
         bio: "Capsule wardrobe",
         public: true,
-      }
+      },
     }
     assert_redirected_to creator_profile_path("showcase_creator")
 

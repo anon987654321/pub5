@@ -62,7 +62,7 @@ def test_brgen_feature_styles_are_loaded_at_their_original_boundaries
     ["brgen_share_media", ".media-actions"],
     ["brgen_dating", ".swipe-card"],
     ["brgen_vertical_shell", "body[class*=\"vertical-\"] .feed-header"],
-    ["brgen_city_surfaces", ".profile-header"]
+    ["brgen_city_surfaces", ".profile-header"],
   ]
   expected_rules.each do |name, selector|
     assert_includes stylesheet_module("brgen", name), selector, "#{name} lost its representative feature rule"

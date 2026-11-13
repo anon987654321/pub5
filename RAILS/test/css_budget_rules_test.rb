@@ -157,7 +157,7 @@ class CssBudgetRulesTest < Minitest::Test
       "design_metrics contrast" => Deploy::DesignMetricsCheck.new.send(:contrast_budget),
       "css_constitution rules" => Deploy::CssConstitutionCheck.new.send(:budgets),
       "css_constitution weight" => Deploy::CssConstitutionCheck.new.send(:weight_ceilings),
-      "constitutional_scan targets" => Deploy::ConstitutionalScanCheck.new.send(:budget)
+      "constitutional_scan targets" => Deploy::ConstitutionalScanCheck.new.send(:budget),
     }
 
     readers.each do |name, values|

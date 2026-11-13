@@ -27,12 +27,12 @@ class CdpNetworkDiagnosticsTest < Minitest::Test
                                       "mimeType" => "text/html" } } },
       { "method" => "Network.responseReceived",
         "params" => { "requestId" => "b", "type" => "Document",
-                      "response" => { "status" => 200, "url" => "http://127.0.0.1/" } } }
+                      "response" => { "status" => 200, "url" => "http://127.0.0.1/" } } },
     ])
 
     assert_equal [
       { status: 404, status_text: "Not Found", url: "http://127.0.0.1/assets/app.js",
-        resource_type: "Script", mime_type: "text/html" }
+        resource_type: "Script", mime_type: "text/html" },
     ], probe.http_failures
   end
 
@@ -47,12 +47,12 @@ class CdpNetworkDiagnosticsTest < Minitest::Test
         "params" => { "requestId" => "b", "type" => "Image",
                       "request" => { "url" => "http://127.0.0.1/canceled.png" } } },
       { "method" => "Network.loadingFailed",
-        "params" => { "requestId" => "b", "errorText" => "net::ERR_ABORTED", "canceled" => true } }
+        "params" => { "requestId" => "b", "errorText" => "net::ERR_ABORTED", "canceled" => true } },
     ])
 
     assert_equal [
       { url: "http://127.0.0.1/assets/app.js", resource_type: "Script",
-        error: "net::ERR_CONNECTION_RESET", blocked_reason: "", canceled: false }
+        error: "net::ERR_CONNECTION_RESET", blocked_reason: "", canceled: false },
     ], probe.request_failures
   end
 
@@ -60,7 +60,7 @@ class CdpNetworkDiagnosticsTest < Minitest::Test
     repeated = {
       "method" => "Network.responseReceived",
       "params" => { "type" => "Image",
-                    "response" => { "status" => 404, "url" => "http://127.0.0.1/missing.png" } }
+                    "response" => { "status" => 404, "url" => "http://127.0.0.1/missing.png" } },
     }
 
     assert_equal 1, client([repeated, repeated]).http_failures.length

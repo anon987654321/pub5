@@ -30,7 +30,7 @@ class InteractionCampaignRunnerTest < Minitest::Test
           "--name", "\\Atest_RI_001_valid_signup_persists_unverified_account\\z"
         ],
         chdir: File.join(ROOT, "RAILS", "brgen"),
-        timeout: Runner::DEFAULT_TIMEOUT
+        timeout: Runner::DEFAULT_TIMEOUT,
       }], calls
       results_path = Dir.glob(File.join(evidence_root, "**", "results.json")).first
       row = JSON.parse(File.read(results_path)).fetch("results").fetch(0)
@@ -58,7 +58,7 @@ class InteractionCampaignRunnerTest < Minitest::Test
           "--name", "\\Atest_RI_003_malformed_email_is_rejected_without_account\\z"
         ],
         chdir: File.join(ROOT, "RAILS", "brgen"),
-        timeout: Runner::DEFAULT_TIMEOUT
+        timeout: Runner::DEFAULT_TIMEOUT,
       }], calls
       results_path = Dir.glob(File.join(evidence_root, "**", "results.json")).first
       row = JSON.parse(File.read(results_path)).fetch("results").fetch(0)
@@ -86,7 +86,7 @@ class InteractionCampaignRunnerTest < Minitest::Test
           "--name", "\\Atest_RI_010_unauthorized_actor_cannot_open_protected_community\\z"
         ],
         chdir: File.join(ROOT, "RAILS", "brgen"),
-        timeout: Runner::DEFAULT_TIMEOUT
+        timeout: Runner::DEFAULT_TIMEOUT,
       }], calls
       results_path = Dir.glob(File.join(evidence_root, "**", "results.json")).first
       row = JSON.parse(File.read(results_path)).fetch("results").fetch(0)

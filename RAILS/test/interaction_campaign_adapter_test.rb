@@ -17,7 +17,7 @@ class InteractionCampaignAdapterTest < Minitest::Test
       "api_key=api-secret-value",
       "Authorization: Bearer bearer-secret-value",
       "Cookie: session=private-cookie-value",
-      "github token ghp_abcdefghijklmnopqrstuvwxyz1234567890"
+      "github token ghp_abcdefghijklmnopqrstuvwxyz1234567890",
     ].join("\n")
     redacted = runner.send(:redact_output, output)
 
@@ -71,7 +71,7 @@ class InteractionCampaignAdapterTest < Minitest::Test
       adapter: {
         "runner" => "ruby_minitest",
         "path" => "MASTER/test/test_repair_loop_policy.rb",
-        "name" => "test_RI_341_fix_repairs_known_small_defect_and_verifies"
+        "name" => "test_RI_341_fix_repairs_known_small_defect_and_verifies",
       },
       output: "1 runs, 1 assertions, 0 failures, 0 errors, 0 skips\n",
       expected_command: ["ruby", "-Itest", "test_repair_loop_policy.rb", "--name",
@@ -88,7 +88,7 @@ class InteractionCampaignAdapterTest < Minitest::Test
       adapter: {
         "runner" => "node_test",
         "path" => "MASTER/web/test/campaign_case.test.mjs",
-        "name" => "test_RI_281_face_boot_ready_fallback"
+        "name" => "test_RI_281_face_boot_ready_fallback",
       },
       output: "TAP version 13\n# Subtest: test_RI_281_face_boot_ready_fallback\n    ok 1 - boot fallback exists\n    1..1\nok 1 - test_RI_281_face_boot_ready_fallback\n1..1\n# tests 1\n# suites 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n",
       expected_command: ["node", "--test", "--test-reporter=tap", "--test-name-pattern",
@@ -105,7 +105,7 @@ class InteractionCampaignAdapterTest < Minitest::Test
       adapter: {
         "runner" => "node_test",
         "path" => "RAILS/test/pwa_offline_store.test.mjs",
-        "name" => "test_RI_361_pwa_manifest_contract"
+        "name" => "test_RI_361_pwa_manifest_contract",
       },
       output: "TAP version 13\n# Subtest: test_RI_361_pwa_manifest_contract\n    ok 1 - manifest contract\n    1..1\nok 1 - test_RI_361_pwa_manifest_contract\n1..1\n# tests 1\n# suites 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n",
       expected_command: ["node", "--test", "--test-reporter=tap", "--test-name-pattern",

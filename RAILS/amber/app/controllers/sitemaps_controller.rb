@@ -17,7 +17,7 @@ class SitemapsController < ApplicationController
         entry(posts_url, changefreq: "daily", priority: "0.6"),
         *demo_entries,
         *creator_entries,
-        *post_entries
+        *post_entries,
       ]
     end
   end

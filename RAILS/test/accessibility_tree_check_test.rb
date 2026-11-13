@@ -11,14 +11,14 @@ class AccessibilityTreeCheckTest < Minitest::Test
       { "nodeId" => "image-1", "ignored" => false, "role" => { "value" => "image" },
         "name" => { "value" => "  " } },
       { "nodeId" => "link-1", "ignored" => false, "role" => { "value" => "link" },
-        "name" => { "value" => "Open marketplace" } }
+        "name" => { "value" => "Open marketplace" } },
     ]
 
     missing = Deploy::AccessibilityTreeCheck.unnamed_nodes(nodes)
 
     assert_equal [
       { "role" => "button", "node_id" => "button-1" },
-      { "role" => "image", "node_id" => "image-1" }
+      { "role" => "image", "node_id" => "image-1" },
     ], missing
   end
 
@@ -27,7 +27,7 @@ class AccessibilityTreeCheckTest < Minitest::Test
       { "nodeId" => "decorative-1", "ignored" => true, "role" => { "value" => "image" },
         "name" => { "value" => "" } },
       { "nodeId" => "generic-1", "ignored" => false, "role" => { "value" => "generic" },
-        "name" => { "value" => "" } }
+        "name" => { "value" => "" } },
     ]
 
     assert_empty Deploy::AccessibilityTreeCheck.unnamed_nodes(nodes)

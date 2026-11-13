@@ -23,7 +23,7 @@ class LayoutContractSurfacesTest < Minitest::Test
   def test_collapsed_mobile_navigation_remains_in_the_accessibility_tree
     sources = [
       File.read(File.join(ROOT, "brgen", "app", "views", "shared", "_mobile_chrome.html.erb")),
-      File.read(LAYOUTS.fetch("amber"))
+      File.read(LAYOUTS.fetch("amber")),
     ]
 
     sources.each do |source|
