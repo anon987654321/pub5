@@ -126,9 +126,7 @@ module Master
           current = @data["blocks"].find { |row| row["target_id"] == id }
           if current
             outcomes.each { |platform, status| current["platform_status"][platform] = status }
-            @data["blocks"].reject! do |row|
-              row["target_id"] == id && row.fetch("platform_status", {}).values.none? { |status| status == "SYNCED" }
-            end
+            @data["blocks"].reject! { |row| row["target_id"] == id } if failures.empty?
             persist
           end
         end
