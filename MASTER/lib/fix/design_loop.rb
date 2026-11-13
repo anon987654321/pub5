@@ -475,7 +475,7 @@ module Master
           unless committed && transaction.state == "committed" && !transaction.active?
             @rejected << edit.key
             @undone << "#{edit.why} (commit refused or missing transaction receipt)"
-            if transaction.state == "delivering"
+            if transaction.state == "delivering" && transaction.delivery.pending?
               transaction.delivery.preserve! if transaction.active?
               cleanup = :pending
             else
