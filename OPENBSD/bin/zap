@@ -23,7 +23,9 @@ class Zap
       return 1
     end
 
-    matches = processes.select { |process| process[:name] == @name }
+    matches = processes.select do |process|
+      process[:name] == @name || process[:name].start_with?("#{@name}:")
+    end
     if matches.empty?
       @out.puts "zap: no process named #{@name}"
       return 0
