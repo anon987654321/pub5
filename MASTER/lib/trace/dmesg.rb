@@ -217,8 +217,17 @@ module Master
       # unit. The fold's evidence read as one 200-character ribbon when this
       # did not exist; flattened by emit, then truncated again by the caller,
       # twice destroyed.
+      # A run of blank lines reads as a dropped line, not a paragraph break,
+      # in an append-only dmesg log: one newline separates facts. Two or more
+      # consecutive line breaks collapse to the first, so no console write can
+      # open a blank row. A lone "\r\n" (a cursor move, not a blank line) is
+      # left as written.
+      def collapse_blank_lines(text)
+        text.to_s.gsub(/(?:\r\n|\n){2,}/) { |run| run.start_with?("\r\n") ? "\r\n" : "\n" }
+      end
+
       def block(unit, text, io: $stdout)
-        lines = text.to_s.scrub.delete("\r").lines(chomp: true)
+        lines = collapse_blank_lines(text).scrub.delete("\r").lines(chomp: true)
         lines.each_with_index do |line, index|
           body = line.strip
           next emit("", io:) if body.empty?
@@ -291,7 +300,7 @@ module Master
         end
 
         def print(command, text, parent: "master0", io: $stdout)
-          rendered = render(unit: command_unit(command), parent:, text:)
+          rendered = Dmesg.collapse_blank_lines(render(unit: command_unit(command), parent:, text:))
           rendered.lines.each do |line|
             line = line.chomp
             if line.empty?
@@ -353,10 +362,74 @@ module Master
           hooks = guard && @draft_guard ? @draft_guard : nil
           hooks&.first&.call(io)
           begin
-            yield io
+            yield collapse_writer(io)
           ensure
             hooks&.last&.call(io)
           end
+        end
+      end
+
+      # Every console write lands through one writer that never opens a second
+      # consecutive newline: a blank row in an append-only log reads as a
+      # dropped line. A run of line breaks — "\n", "\n\n", "\r\n\r\n" — collapses
+      # to the first, and the tail is tracked across writes so a run split
+      # between two writes still collapses. A cursor move with no line break
+      # ("\r\e[K") passes untouched; "\r\n" is treated as one line break.
+      def collapse_writer(io)
+        @collapse_writers ||= {}
+        @collapse_writers[io] ||= CollapseWriter.new(io)
+      end
+
+      class CollapseWriter
+        def initialize(io)
+          @io = io
+          @last_newline = false
+        end
+
+        def write(text)
+          text = text.to_s
+          text.empty? ? @io.write(text) : @io.write(collapse(text))
+        end
+
+        def puts(*args)
+          return write("\n") if args.empty?
+
+          args.each { |arg| arg.is_a?(Array) ? puts(*arg) : write("#{arg}\n") }
+          nil
+        end
+
+        def print(*args)
+          args.each { |arg| write(arg.to_s) }
+          nil
+        end
+
+        def <<(text) = (write(text); self)
+
+        def flush = (@io.flush if @io.respond_to?(:flush))
+        def tty? = (@io.respond_to?(:tty?) && @io.tty?)
+        def respond_to_missing?(name, include_private = false) = @io.respond_to?(name, include_private)
+        def method_missing(name, *args, &block) = @io.public_send(name, *args, &block)
+
+        private
+
+        def collapse(text)
+          out = +""
+          index = 0
+          while index < text.length
+            char = text[index]
+            if char == "\n" || (char == "\r" && text[index + 1] == "\n")
+              unless @last_newline
+                out << (char == "\r" ? "\r\n" : "\n")
+                @last_newline = true
+              end
+              index += (char == "\r" ? 2 : 1)
+            else
+              out << char
+              @last_newline = false
+              index += 1
+            end
+          end
+          out
         end
       end
 

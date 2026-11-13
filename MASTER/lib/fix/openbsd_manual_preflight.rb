@@ -441,7 +441,7 @@ module Master
 
         command_entries = remote_command_entries(tokens)
         command_manuals, manual_error = command_manual_requirements(
-          command_entries, contract&.openbsd_preflight, openbsd_sources, repo_root:
+          command_entries, contract&.openbsd_preflight, openbsd_sources, root: repo_root
         )
         return manual_error if manual_error
         shell_page = remote && declared_shell_manual(contract&.openbsd_preflight)

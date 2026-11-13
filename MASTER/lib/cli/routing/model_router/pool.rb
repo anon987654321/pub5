@@ -381,7 +381,14 @@ module Master
             key = ENV["OPENROUTER_API_KEY"].to_s
             return if key.empty?
 
-            data = JSON.parse(get_json(CREDITS_URL, headers: { "Authorization" => "Bearer #{key}" }).to_s)
+            body = get_json(CREDITS_URL, headers: { "Authorization" => "Bearer #{key}" }).to_s
+            return if body.strip.empty? # a blank reply says nothing about credit, and is not a parse error
+
+            begin
+              data = JSON.parse(body)
+            rescue JSON::ParserError
+              return # a malformed reply is not evidence that the balance is gone
+            end
             data = data["data"] if data.is_a?(Hash)
             # A reply in another shape says nothing about credit; it is not a TypeError.
             return unless data.is_a?(Hash)

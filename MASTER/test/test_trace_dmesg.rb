@@ -18,8 +18,31 @@ class TraceDmesgTest < Minitest::Test
     assert_equal "err0: first line\nerr0: second line\n", block_output("first line\nsecond line\n")
   end
 
-  def test_dmesg_block_preserves_an_intentional_blank_line_between_paragraphs
-    assert_equal "err0: first line\n\nerr0: second line\n", block_output("first line\n\nsecond line\n")
+  def test_dmesg_block_never_opens_a_blank_row
+    # An append-only dmesg log has no blank rows: a run of line breaks
+    # collapses to one, whether it arrives between paragraphs or as a trailing
+    # run (operator, 2026-11-13).
+    assert_equal "err0: first line\nerr0: second line\n", block_output("first line\n\nsecond line\n")
+    assert_equal "err0: first line\nerr0: second line\n", block_output("first line\n\n\n\nsecond line\n\n\n")
+  end
+
+  def test_collapse_writer_never_writes_two_consecutive_newlines
+    io = StringIO.new
+    Master::Trace::Dmesg.terminal_write(io:) do |target|
+      target.puts "a"
+      target.puts ""
+      target.puts ""
+      target.puts "b"
+      target.print "x"
+      target.print "\n"
+      target.print "\n"
+      target.print "y"
+      target.print "\r\n" # a cursor move, not a blank line
+      target.puts "c"
+    end
+
+    refute_match(/(?:\r\n|\n){2,}/, io.string)
+    assert_equal "a\nb\nx\ny\r\nc\n", io.string
   end
 
   def test_dmesg_unit_is_defined_when_logging_is_loaded
