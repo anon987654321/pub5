@@ -376,7 +376,7 @@ module Master
                  Dir.children(rails).select { |name| File.directory?(File.join(rails, name, "app")) }.sort
                else
                  paths.filter_map do |path|
-                   match = path.to_s.match(%r{\\ARAILS/([^/]+)/})
+                   match = path.to_s.match(%r{\ARAILS/([^/]+)/})
                    app = match && match[1]
                    app if app && File.directory?(File.join(rails, app, "app"))
                  end.uniq.sort
