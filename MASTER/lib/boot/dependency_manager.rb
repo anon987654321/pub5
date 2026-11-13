@@ -863,6 +863,9 @@ module Master
       CAPTURE_DEADLINE_SECONDS = DependencyManager::CAPTURE_DEADLINE_SECONDS
       CAPTURE_POLL_SECONDS = DependencyManager::CAPTURE_POLL_SECONDS
       CAPTURE_DRAIN_SECONDS = DependencyManager::CAPTURE_DRAIN_SECONDS
+      CAPTURE_TERM_GRACE_SECONDS = 0.25
+      CAPTURE_KILL_GRACE_SECONDS = 1.0
+      CAPTURE_GROUP_POLL_SECONDS = 0.02
       private
 
       def with_lock(wait_seconds: LOCK_WAIT_SECONDS)
@@ -892,6 +895,8 @@ module Master
         stderr_thread = Thread.new { stderr_r.read rescue "" }
         deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + [deadline_seconds.to_f, 0.01].max
         killed = false
+        stop_result = nil
+        stop_reason = "deadline"
         status = nil
 
         loop do
@@ -902,7 +907,7 @@ module Master
           end
           remaining = deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)
           if remaining <= 0
-            kill_capture_group(pid)
+            stop_result = kill_capture_group(pid)
             _waited, status = Process.waitpid2(pid, 0)
             killed = true
             break
@@ -917,7 +922,8 @@ module Master
           stdout_thread.join(CAPTURE_DRAIN_SECONDS) &&
           stderr_thread.join(CAPTURE_DRAIN_SECONDS)
         unless drained
-          kill_capture_group(pid)
+          stop_reason = "output pipe drain"
+          stop_result = kill_capture_group(pid)
           killed = true
           [stdout_r, stderr_r].each { |io| io.close unless io.closed? }
           [stdout_thread, stderr_thread].each do |thread|
@@ -928,7 +934,11 @@ module Master
 
         stdout = stdout_thread.alive? ? "" : stdout_thread.value.to_s
         stderr = stderr_thread.alive? ? "" : stderr_thread.value.to_s
-        stderr = join_output(stderr, "#{argv.first} process group killed after #{deadline_seconds}s deadline") if killed
+        if killed
+          detail = %i[stopped already_gone].include?(stop_result) ?
+            "process group stop confirmed" : "process group termination UNCONFIRMED"
+          stderr = join_output(stderr, "#{argv.first} #{detail} after #{deadline_seconds}s #{stop_reason}")
+        end
         [!killed && status&.success? == true, stdout, stderr]
       ensure
         [stdout_r, stdout_w, stderr_r, stderr_w].compact.each do |io|
@@ -937,11 +947,46 @@ module Master
       end
 
       def kill_capture_group(pid)
-        Process.kill("TERM", -pid)
-        sleep 0.2
-        Process.kill("KILL", -pid)
-      rescue Errno::ESRCH, Errno::EPERM
+        group = Integer(pid)
+        return :already_gone unless capture_group_alive?(group)
+
+        signal_capture_group("TERM", group)
+        return :stopped if wait_capture_group_exit(group, CAPTURE_TERM_GRACE_SECONDS)
+
+        signal_capture_group("KILL", group)
+        return :stopped if wait_capture_group_exit(group, CAPTURE_KILL_GRACE_SECONDS)
+
+        :unconfirmed
+      rescue ArgumentError, TypeError
+        :unconfirmed
+      end
+
+      def signal_capture_group(signal, group)
+        Process.kill(signal, -group)
+        true
+      rescue Errno::ESRCH
+        false
+      rescue Errno::EPERM
         nil
+      end
+
+      def capture_group_alive?(group)
+        Process.kill(0, -group)
+        true
+      rescue Errno::ESRCH
+        false
+      rescue Errno::EPERM
+        true
+      end
+
+      def wait_capture_group_exit(group, timeout)
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+        loop do
+          return true unless capture_group_alive?(group)
+          return false if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+          sleep CAPTURE_GROUP_POLL_SECONDS
+        end
       end
 
       # Not Io::Exec.which: Exec loads Swallow, which loads json, and this runs
