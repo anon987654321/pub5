@@ -405,8 +405,7 @@ class TestDependencyManager < Minitest::Test
     refute ok
     assert_match(/process group stop confirmed/, stderr)
     group = Integer(File.read(parent_file))
-    child = Integer(File.read(child_file))
-    assert_equal group, Process.getpgid(child) unless process_group_gone?(group)
+    assert File.file?(child_file), "the descendant never started"
     assert process_group_gone?(group), "capture returned while a descendant still occupied the process group"
   end
 
