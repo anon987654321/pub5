@@ -44,14 +44,22 @@ class Zap
       return 0
     end
 
+    protected_matches = matches.select { |process| protected_process?(process) }
+    unless protected_matches.empty?
+      protected_matches.each do |process|
+        name = command_name(process[:command])
+        message = if name == "vmd"
+                    "use 'vmctl stop <vm>' for a guest or 'rcctl stop vmd' for the daemon"
+                  else
+                    "VMM console control is recovery-only; use the approved vmctl procedure"
+                  end
+        @err.puts "zap: refusing to signal #{name}; #{message}"
+      end
+      return 2
+    end
+
     failed = false
     matches.each do |process|
-      if protected_process?(process)
-        @err.puts "zap: refusing to signal #{command_name(process[:command])}; use vmctl or the approved VMM recovery procedure"
-        failed = true
-        next
-      end
-
       if @dry_run
         @out.puts "zap: would send #{@signal_label} to PID #{process[:pid]} #{process[:command]}"
         next
@@ -132,13 +140,14 @@ class Zap
       usage: zap [-f] [-s SIGNAL] [--dry-run] pattern
 
       Find process command lines containing pattern and ask about each PID.
-      -f, --force        Skip questions and signal every non-protected match.
+      -f, --force        Skip questions and signal every matching process.
       -s SIGNAL          Signal name or number (default: TERM).
       --dry-run          List matches without sending signals.
       -h, --help         Show this help.
 
       The classic -SIGNAL spelling is also accepted, for example: zap -TERM ruby.
-      Linux uses /proc; OpenBSD and other BSDs use ps. Standard library only.
+      Linux/Android use /proc; OpenBSD, other BSDs and macOS use ps.
+      Uses Ruby's standard library only.
       On OpenBSD, vmd, vmctl and cu are protected; use VM recovery controls.
     HELP
   end
@@ -229,7 +238,7 @@ class Zap
 
   def run_ps(*arguments)
     output = IO.popen([ps_binary, *arguments], &:read)
-    [output, $CHILD_STATUS || $?]
+    [output, $?]
   end
 
   def parse_ps_line(line)
