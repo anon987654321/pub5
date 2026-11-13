@@ -126,6 +126,15 @@ screenshot count or previous revision.
   Verify interruption, rollback, durable mission resumption, orphaned
   Kernel-receipt recovery and checkpoint survival. Then exercise budget and
   collapse behavior, zero-repair ledger honesty and adapter receipt parity.
+  Source refinement: `Kernel#run(adapter:, contract:, ...)` is now the public
+  validated gateway; the convergence adapter supplies a conservative,
+  target-scoped compatibility contract only for older callers, and the
+  coordinator start receipt records its contract digest. The existing
+  `OutcomePolicy`, `Execution::Contract`, `LifecycleJournal` and assessment
+  artifacts remain canonical; no parallel six-term enum or TerminalReceipt
+  hash chain was added. Council violation and improvement critique budgets are
+  clamped to the actual remaining pass deadline. Focused gateway, contract and
+  Council regressions are authored but NOT_RUN.
 - [ ] Run one genuine repository-wide `/fix` over MASTER, RAILS, OPENBSD, STUDIO and
   BIZ. Preserve four independent reports, grounded candidates, revision,
   receipts and truthful terminal states (DONE, PLATEAU, HUMAN_DECISION,
