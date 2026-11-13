@@ -215,6 +215,26 @@ class TestFixKernelLifecycle < Minitest::Test
       assert_includes receipt.outcomes, Master::Fix::Outcome::CHANGED
       assert_includes receipt.outcomes, Master::Fix::Outcome::INCONCLUSIVE
       assert_same receipt, receipt.verify!(log_path: kernel.log_path)
+
+      # A stale writer may append a row later, but a terminal receipt is bound
+      # to the ledger prefix ending at its own terminal event.
+      kernel.append_event(
+        "repair_pass",
+        {
+          law: "LATE_REPAIR", status: :fixed, fixed: 9,
+          breakdown: { applied: 9 },
+          attempt_id: start.dig("payload", "attempt_id")
+        },
+        run_id: start.fetch("run_id")
+      )
+      stable_receipt = kernel.terminal_receipt(
+        run_id: start.fetch("run_id"),
+        attempt_id: start.dig("payload", "attempt_id")
+      )
+      assert_equal 1, stable_receipt.changed
+      assert_equal ["TEST_REPAIR"], stable_receipt.repair_passes.map { |row| row.fetch("law") }
+      assert_same stable_receipt, stable_receipt.verify!(log_path: kernel.log_path)
+
       assert_nil kernel.terminal_receipt(run_id: "not-a-run")
       assert_nil adapter.instance_variable_get(:@cancellation)
       assert_nil kernel.instance_variable_get(:@current_run_id)
