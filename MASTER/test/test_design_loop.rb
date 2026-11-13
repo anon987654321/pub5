@@ -280,6 +280,29 @@ class TestDesignLoop < Minitest::Test
     end
   end
 
+  def test_interrupted_rails_recovery_fails_closed_without_a_css_builder
+    Dir.mktmpdir do |root|
+      path = File.join(root, "RAILS", "brgen", "app", "assets", "stylesheets", "app.scss")
+      FileUtils.mkdir_p(File.dirname(path))
+      original = ".card {\n  padding: 4px;\n}\n"
+      File.write(path, original)
+      transaction = Master::Fix::Transaction.new(
+        root:, paths: [path], id: "design-#{'c' * 20}"
+      )
+      transaction.begin!
+      File.write(path, ".card {\n  padding: 16px;\n}\n")
+      assert transaction.observe_paths!([path]).ok?
+      transaction.close!
+
+      plan = LOOP::Plan.new(surfaces: [], root:, rounds: 1, candidates: 1)
+      error = assert_raises(RuntimeError) { LOOP.new(plan:, world: nil).run }
+
+      assert_match(/build capability is unavailable/, error.message)
+      assert_equal original, File.read(path)
+      refute Master::Fix::Transaction::Recovery.persisted?(root:, id: transaction.id)
+    end
+  end
+
   def test_interrupted_design_rollback_rebuilds_the_restored_apps_css
     Dir.mktmpdir do |root|
       path = File.join(root, "RAILS", "brgen", "app", "assets", "stylesheets", "app.scss")
