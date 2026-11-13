@@ -63,7 +63,7 @@ module Operator
     BASE_TREE_ANCHORS = {
       "MASTER" => %w[AGENTS.md data/soul.yml data/laws.yml bin/operator bin/check],
       "RAILS" => %w[CLAUDE.md __shared/README.md __shared/design_tokens.yml apps.yml],
-      "OPENBSD" => %w[CLAUDE.md PATH_OWNERSHIP.yml data/operator.yml bin/check],
+      "OPENBSD" => %w[CLAUDE.md PATH_OWNERSHIP.yml data/operator.yml mirror/bin/check],
       # A tree's anchors are files a reader can open today, not the ones an
       # earlier layout once held. STUDIO's two replicate entries named
       # replicate/replicate.rb, which never existed on any branch, and

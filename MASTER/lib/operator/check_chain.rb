@@ -563,9 +563,9 @@ module Operator
 
       Stage.new(
         name: "rehearse",
-        purpose: "the deploy rehearsal: CI lints and the static deploy contracts (OPENBSD/bin/rehearse)",
+        purpose: "the deploy rehearsal: CI lints and the static deploy contracts (OPENBSD/mirror/bin/rehearse)",
         mutates: false,
-        run: -> { capture(RUBY, File.join(ROOT, "OPENBSD", "bin", "rehearse"), chdir: ROOT) },
+        run: -> { capture(RUBY, File.join(ROOT, "OPENBSD", "mirror", "bin", "rehearse"), chdir: ROOT) },
       )
     end
 
@@ -718,7 +718,7 @@ module Operator
     end
 
     def openbsd_checks
-      capture(RUBY, File.join(ROOT, "OPENBSD", "bin", "check-openbsd"),
+      capture(RUBY, File.join(ROOT, "OPENBSD", "mirror", "bin", "check-openbsd"),
               chdir: ROOT, env: strict_env)
     end
 

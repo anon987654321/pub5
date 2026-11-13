@@ -44,7 +44,7 @@ class DeployPreflightTest < Minitest::Test
     result = Pre.run(root: dir, runner: ->(argv, chdir) { calls << [argv.last, chdir.delete_prefix(dir)]; ["", true] })
     assert_equal ["syntax", "law files", "boot smoke", "rehearse"], result.map(&:name)
     assert(result.all?(&:ok))
-    assert_equal ["test/test_law_files_load.rb", "tools/boot_smoke.rb", "OPENBSD/bin/rehearse"], calls.map(&:first)
+    assert_equal ["test/test_law_files_load.rb", "tools/boot_smoke.rb", "OPENBSD/mirror/bin/rehearse"], calls.map(&:first)
   ensure
     FileUtils.rm_rf(dir)
   end
@@ -142,7 +142,7 @@ class DeployPreflightTest < Minitest::Test
     assert ok
     assert_equal ["brgen"], ran
     assert_equal "cd /home/dev/pub5 && VPS_DEPLOY_SHA=#{SHA} VPS_DEPLOY_PREFLIGHT_SHA=#{SHA} " \
-                 "VPS_DEPLOY_CI_SHA=#{SHA} zsh OPENBSD/bin/vps-deploy brgen", command
+                 "VPS_DEPLOY_CI_SHA=#{SHA} zsh OPENBSD/mirror/bin/vps-deploy brgen", command
   end
 
   def test_a_red_local_ci_sends_nothing
@@ -180,7 +180,7 @@ class DeployPreflightTest < Minitest::Test
   def test_remote_command_pins_the_sha_and_attests_the_preflight
     ok, command = remote
     assert ok
-    assert_equal "cd /home/dev/pub5 && VPS_DEPLOY_SHA=#{SHA} VPS_DEPLOY_PREFLIGHT_SHA=#{SHA} zsh OPENBSD/bin/vps-deploy all", command
+    assert_equal "cd /home/dev/pub5 && VPS_DEPLOY_SHA=#{SHA} VPS_DEPLOY_PREFLIGHT_SHA=#{SHA} zsh OPENBSD/mirror/bin/vps-deploy all", command
   end
 
   def test_remote_command_refuses_a_failed_preflight_and_sends_nothing

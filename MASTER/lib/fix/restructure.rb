@@ -34,7 +34,7 @@ module Master
       MAX_DELETES = 32
       MAX_WRITES = 24
       REVIEW_DIFF_LINES = 800
-      # Paths that mean something outside the tree. OPENBSD/etc, var, usr, home
+      # Paths that mean something outside the tree. OPENBSD/mirror/etc, var, usr, home
       # and dotfiles mirror the box file for file; RAILS migrations and schema
       # are history the database has already run; MASTER/tools data is read by name.
       OFF_LIMITS = %r{\A(?:OPENBSD/(?:etc|var|usr|home|dotfiles)/|RAILS/.+/db/(?:migrate|schema))}x

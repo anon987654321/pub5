@@ -235,7 +235,7 @@ class TestWebUI < Minitest::Test
   end
 
   def test_rc_d_master_digest_covers_every_manifest_asset
-    rc = File.read(File.expand_path("../../OPENBSD/etc/rc.d/master", __dir__))
+    rc = File.read(File.expand_path("../../OPENBSD/mirror/etc/rc.d/master", __dir__))
 
     # Regression: the precompile-skip digest named its inputs by hand, so
     # editing a face asset it did not list silently skipped precompile on

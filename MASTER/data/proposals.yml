@@ -180,9 +180,9 @@ proposals:
   - id: openbsd-lib-check-family
     tree: OPENBSD
     state: refuted
-    claim: "OPENBSD/lib has check_environment.rb, check_ledger.rb and check_result.rb wanting lib/check/"
+    claim: "OPENBSD/mirror/lib has check_environment.rb, check_ledger.rb and check_result.rb wanting lib/check/"
     reason: >
-      Three findings, and the first one alone settles it. OPENBSD/lib holds six
+      Three findings, and the first one alone settles it. OPENBSD/mirror/lib holds six
       Ruby files; a three-file family is cohesion's MIN_FAMILY exactly, which is
       the floor rather than a signal. Half a directory is not a drawer.
       Second, the shelf would cost 69 files and 101 constant references across a
@@ -191,7 +191,7 @@ proposals:
       so it wants a PUB5_CROSS_TREE commit to tidy a directory that is not untidy.
       Third, this ledger row said it waits on a boundary decision. That decision was
       already made and closed on 2026-08-13, and its argument is the comment atop
-      OPENBSD/lib/check_result.rb, with the old backlog recording that a
+      OPENBSD/mirror/lib/check_result.rb, with the old backlog recording that a
       repo-level shared kernel was considered and rejected. Revisit when a fifth
       consumer appears, which is the trigger that entry names - not before, and not
       for a rename.
@@ -316,7 +316,7 @@ proposals:
       for. /home/brgen, /home/brgen/app and /home/brgen/app/storage are all 755
       and production.sqlite3 is 644 brgen:brgen; amber and bsdports are the same.
       Nothing on the path is restricted. The fix is two parts: the mode
-      change on vm23, and the guard in OPENBSD/bin/vps_ci.sh that keeps a deploy
+      change on vm23, and the guard in OPENBSD/mirror/bin/vps_ci.sh that keeps a deploy
       from widening it again.
       Proven rather than inferred: as dev - uid 1000, not brgen, not in group
       brgen - sqlite3 returned 17748 rows from brgen's users table and an email

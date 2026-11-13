@@ -4,7 +4,7 @@
 # Not an entrypoint; bin/master is the only one. This file is the one documented
 # exception to removing old names, kept because deleting it breaks the running box:
 # vm23's /home/dev/.zshrc has no installer (OPENBSD/sync.rb only mirrors it into
-# OPENBSD/etc/.zshrc), and on every interactive login it pulls this checkout and
+# OPENBSD/mirror/etc/.zshrc), and on every interactive login it pulls this checkout and
 # then execs `bundle exec ruby bin/cli`. Without this file that exec fails and the
 # login shell exits. Delete it once /home/dev/.zshrc on vm23 execs bin/master.
 load File.expand_path("master", __dir__)

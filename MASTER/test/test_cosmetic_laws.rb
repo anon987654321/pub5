@@ -13,9 +13,9 @@ class TestCosmeticRules < Minitest::Test
   def test_tab_character_spares_tab_delimited_data
     row = "name\tdomain\n"
     assert_empty rule("TAB_CHARACTER").check(row, path: "STUDIO/dilla/demo_manifest.tsv")
-    assert_empty rule("TAB_CHARACTER").check(row, path: "OPENBSD/etc/login.conf")
-    assert_empty rule("TAB_CHARACTER").check(row, path: "OPENBSD/etc/newsyslog.conf")
-    refute_empty rule("TAB_CHARACTER").check("f() {\n\tprint hi\n}\n", path: "OPENBSD/usr/local/bin/uptime-check.sh")
+    assert_empty rule("TAB_CHARACTER").check(row, path: "OPENBSD/mirror/etc/login.conf")
+    assert_empty rule("TAB_CHARACTER").check(row, path: "OPENBSD/mirror/etc/newsyslog.conf")
+    refute_empty rule("TAB_CHARACTER").check("f() {\n\tprint hi\n}\n", path: "OPENBSD/mirror/usr/local/bin/uptime-check.sh")
   end
 
   def test_en_dash_range_flags_hyphen_range_in_prose
@@ -67,7 +67,7 @@ class TestCosmeticRules < Minitest::Test
     range = rule("EN_DASH_RANGE")
     line = "Ideal line length is 45-75 characters.\n"
     assert_empty range.check(line, path: "MASTER/data/council.yml")
-    assert_empty range.check(line, path: "OPENBSD/bin/check")
+    assert_empty range.check(line, path: "OPENBSD/mirror/bin/check")
     refute_empty range.check(line, path: "OPENBSD/README.md")
 
     excellence = rule("TYPOGRAPHIC_EXCELLENCE")

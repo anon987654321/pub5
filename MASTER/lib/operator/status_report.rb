@@ -8,7 +8,7 @@ require_relative "environment"
 # runtime, so the standalone contract above holds.
 require_relative "../operator/operator_docs"
 # Domain skew reads the deployment data, but its reader stays inside this
-# tree: the boundary contract refuses a runtime require into OPENBSD/lib.
+# tree: the boundary contract refuses a runtime require into OPENBSD/mirror/lib.
 require_relative "domain_signals"
 
 module Operator

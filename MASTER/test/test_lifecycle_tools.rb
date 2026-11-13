@@ -62,7 +62,7 @@ class LifecycleToolsSpec < Minitest::Test
     require File.join(ROOT, "checks", "support", "deploy_inventory")
 
     actual = File.expand_path(Deploy::Inventory.instance_method(:load_apps).source_location.first)
-    expected = File.expand_path("../OPENBSD/lib/deploy_inventory.rb", ROOT)
+    expected = File.expand_path("../OPENBSD/mirror/lib/deploy_inventory.rb", ROOT)
 
     assert_equal expected, actual
   end

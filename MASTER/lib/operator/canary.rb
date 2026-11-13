@@ -9,7 +9,7 @@ require "yaml"
 require_relative "../fix/routes_manifest"
 require_relative "../io/exec"
 require_relative "ruby_runner"
-require_relative "../../../OPENBSD/lib/deploy_inventory"
+require_relative "../../../OPENBSD/mirror/lib/deploy_inventory"
 
 module Operator
   # The post-deploy canary. It answers one question after vps-deploy: is the box
@@ -24,7 +24,7 @@ module Operator
   #              no "translation missing" in the body.
   #   flows      the HTTP-only user journeys in checks/data/flows.yml (local mode only:
   #              they read the apps on 127.0.0.1), one result per journey.
-  #   smoke      OPENBSD/bin/deploy-smoke.sh, the rehearsal subset that needs only
+  #   smoke      OPENBSD/mirror/bin/deploy-smoke.sh, the rehearsal subset that needs only
   #              the box itself.
   #
   # It reads and reports. Rolling back is a human decision, so on failure it
@@ -197,7 +197,7 @@ module Operator
       end
 
       def smoke_check
-        script = File.join(@root, "OPENBSD", "bin", "deploy-smoke.sh")
+        script = File.join(@root, "OPENBSD", "mirror", "bin", "deploy-smoke.sh")
         return [] unless File.file?(script)
 
         out, status = @shell.call("sh", script, @mode == :local ? "--local" : "--public")
@@ -234,7 +234,7 @@ module Operator
   #                compiles (one process, no per-file ruby -c)
   #   law files    MASTER/test/test_law_files_load.rb, each law file in its own process
   #   boot smoke   MASTER/tools/boot_smoke.rb, which builds the FixLoop
-  #   rehearse     OPENBSD/bin/rehearse, the static deploy contracts (the Mac only:
+  #   rehearse     OPENBSD/mirror/bin/rehearse, the static deploy contracts (the Mac only:
   #                it loads RAILS tests the box has no reason to carry)
   module DeployPreflight
     Result = Struct.new(:name, :ok, :detail, keyword_init: true)
@@ -273,7 +273,7 @@ module Operator
         "law files" => -> { shell(runner, [ruby, "-Itest", "test/test_law_files_load.rb"], File.join(root, "MASTER")) },
         "boot smoke" => -> { shell(runner, [ruby, "tools/boot_smoke.rb"], File.join(root, "MASTER")) },
       }
-      list["rehearse"] = -> { shell(runner, [ruby, "OPENBSD/bin/rehearse"], root) } if rehearse
+      list["rehearse"] = -> { shell(runner, [ruby, "OPENBSD/mirror/bin/rehearse"], root) } if rehearse
       list
     end
 
@@ -327,7 +327,7 @@ module Operator
       return [false, "commit these first:\n#{dirty.lines.first(5).join}"] unless dirty.empty?
 
       lead = "cd /home/dev/pub5 && VPS_DEPLOY_SHA=#{sha}"
-      tail = "zsh OPENBSD/bin/vps-deploy #{app}"
+      tail = "zsh OPENBSD/mirror/bin/vps-deploy #{app}"
       if env["VPS_DEPLOY_SKIP_PREFLIGHT"] == "1"
         return [false, "VPS_DEPLOY_SKIP_PREFLIGHT=1 needs the human-only I_UNDERSTAND_FAST_DEPLOY=1"] unless env["I_UNDERSTAND_FAST_DEPLOY"] == "1"
 

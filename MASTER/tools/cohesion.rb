@@ -385,7 +385,7 @@ module Operator
       RAILS/brgen/app RAILS/brgen/lib RAILS/amber/app RAILS/amber/lib
       RAILS/bsdports/app RAILS/bsdports/lib
       STUDIO/replicate
-      OPENBSD/lib
+      OPENBSD/mirror/lib
     ].freeze
 
     SKIP = %r{/(vendor|node_modules|tmp|log|\.git|fixtures|dummy)/}

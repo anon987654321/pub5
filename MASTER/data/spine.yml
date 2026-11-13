@@ -1118,7 +1118,7 @@ name_candidates: 24
 # UNIT CHANGED 2026-09-16: bin/ and the tree's own root, not bin/ alone.
 #
 # The old reading measured a directory rather than a tree, and a move proved it.
-# f754501d1 carried 27 operator scripts from OPENBSD's root into OPENBSD/bin and
+# f754501d1 carried 27 operator scripts from OPENBSD's root into OPENBSD/mirror/bin and
 # this row went 16 to 43 without a script being written. Those 27 had always been
 # doors; the census had never opened the directory they sat in. OPENBSD's root
 # held 33 executables at that commit, so the honest count before the move was 49
@@ -1131,7 +1131,7 @@ name_candidates: 24
 # root the whole time. MASTER and STUDIO are unchanged, having nothing at theirs.
 #
 # Still only those two levels. An app's generated bin/rails, a tool's own bin/
-# and OPENBSD/usr/local/bin — a mirror of what is installed on vm23 rather than
+# and OPENBSD/mirror/usr/local/bin — a mirror of what is installed on vm23 rather than
 # anything run from the checkout — are not surfaces the tree offers.
 #
 # MASTER 26 -> 20, locked 2026-09-23. Seven doors folded by their own commits

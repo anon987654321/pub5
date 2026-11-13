@@ -799,7 +799,7 @@ end
     {
       "MASTER/lib" => File.join(Master::ROOT, "lib"),
       "RAILS/__shared" => File.join(Master::RAILS_ROOT, "__shared"),
-      "OPENBSD/etc" => File.join(Master::REPO_ROOT, "OPENBSD", "etc"),
+      "OPENBSD/mirror/etc" => File.join(Master::REPO_ROOT, "OPENBSD", "mirror", "etc"),
       "STUDIO/lora" => File.join(Master::REPO_ROOT, "STUDIO", "lora"),
     }.each do |target, expected_root|
       request = Master::CLI::Scan::Request.new(scanner: nil, root: Master::ROOT, arg: target)

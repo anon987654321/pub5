@@ -608,7 +608,7 @@ class TestRestructure < Minitest::Test
   # The box's mirrored paths and the database's history mean something outside
   # the tree, so no restructure moves them.
   def test_paths_that_mirror_the_box_or_the_database_are_refused
-    box = Restructure::Plan.parse("OPERATIONS: relocate\n=== WRITE OPENBSD/etc/relayd.conf\nx\n=== END\n")
+    box = Restructure::Plan.parse("OPERATIONS: relocate\n=== WRITE OPENBSD/mirror/etc/relayd.conf\nx\n=== END\n")
     migration = Restructure::Plan.parse("OPERATIONS: remove\n=== DELETE RAILS/brgen/db/migrate/1_x.rb\n=== END\n")
 
     assert_includes Restructure.new(repo_root: @repo, tree: "OPENBSD", proof: Proof.new)

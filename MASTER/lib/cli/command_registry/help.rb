@@ -68,7 +68,7 @@ module Master
             "/deploy all --confirm - deploy every active registered surface, including MASTER web.",
             "App IDs, aliases, deployment groups and ordering are resolved from the live inventory, not router lists.",
             "Deployment is always remote and review-gated. The command delegates to bin/operator",
-            "and OPENBSD/bin/vps-deploy; it does not create a second deploy implementation.",
+            "and OPENBSD/mirror/bin/vps-deploy; it does not create a second deploy implementation.",
           ],
         },
         "documents" => {

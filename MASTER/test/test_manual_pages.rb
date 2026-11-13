@@ -9,8 +9,8 @@ class TestManualPages < Minitest::Test
     MASTER/man/man1/master.1
     MASTER/man/man1/operator.1
     MASTER/man/man1/master-fix.1
-    OPENBSD/man/man8/vps-deploy.8
-    OPENBSD/man/man8/pub5-admin.8
+    OPENBSD/mirror/man/man8/vps-deploy.8
+    OPENBSD/mirror/man/man8/pub5-admin.8
   ].freeze
 
   BASE_SYSTEM_PAGES = %w[doas rcctl relayd].freeze
@@ -75,6 +75,6 @@ class TestManualPages < Minitest::Test
     openbsd = File.read(File.join(REPO, "OPENBSD/README.md"))
 
     assert_includes master, 'MANPATH="$PWD/MASTER/man" man master'
-    assert_includes openbsd, 'MANPATH="$PWD/OPENBSD/man" man vps-deploy'
+    assert_includes openbsd, 'MANPATH="$PWD/OPENBSD/mirror/man" man vps-deploy'
   end
 end

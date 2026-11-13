@@ -17,7 +17,7 @@ class TestDiffRoutes < Minitest::Test
     "lib/" => { "purpose" => "library", "risk" => "medium", "check" => "bin/check" },
     "lib/cognition/" => { "purpose" => "cognition layer", "risk" => "high", "check" => "bin/check --profile=agent" },
     "loop*.gif" => { "purpose" => "loop animation", "risk" => "low", "check" => "bin/check" },
-    "../OPENBSD/lib/zshrc.shared" => { "purpose" => "prompt contract", "risk" => "low", "check" => "ruby OPENBSD/test/test_operator_prompt_contract.rb" },
+    "../OPENBSD/mirror/lib/zshrc.shared" => { "purpose" => "prompt contract", "risk" => "low", "check" => "ruby OPENBSD/test/test_operator_prompt_contract.rb" },
     "MASTER/web/" => { "purpose" => "master face", "risk" => "critical", "check" => "bin/check --profile=web" },
   }.freeze
 
@@ -58,7 +58,7 @@ class TestDiffRoutes < Minitest::Test
   end
 
   def test_sibling_tree_row_matches_through_dotdot
-    out = routes("../OPENBSD/lib/zshrc.shared")
+    out = routes("../OPENBSD/mirror/lib/zshrc.shared")
 
     assert_includes out, "prompt contract"
   end

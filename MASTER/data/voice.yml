@@ -3,7 +3,7 @@
 # CLI speech is on in interactive TTY sessions unless MASTER_CLI_SPEAK=0 or /voice off.
 # CI, pipes and MASTER_SKIP_TTS=1 stay silent; the web TTS route remains independent.
 # Persona registries (personas.yml, soul.yml) affect LLM text/style only when persona_affects_text_only is true.
-# Engine chain / transcendent mode: data/tts.yml (not used by web TtsJob). VPS env: OPENBSD/etc/rc.d/master.
+# Engine chain / transcendent mode: data/tts.yml (not used by web TtsJob). VPS env: OPENBSD/mirror/etc/rc.d/master.
 tts:
   # English defaults to en-US-ChristopherNeural (operator order 2026-10-12).
   # Norwegian speech is a separate declared language route and MUST use

@@ -53,8 +53,8 @@ class TestScanPathFilter < Minitest::Test
   def test_openbsd_var_configuration_is_scanned_from_every_root
     root = Master::REPO_ROOT
     paths = %w[
-      OPENBSD/var/nsd/etc/nsd.conf
-      OPENBSD/var/nsd/zones/master/brgen.no.zone
+      OPENBSD/mirror/var/nsd/etc/nsd.conf
+      OPENBSD/mirror/var/nsd/zones/master/brgen.no.zone
     ]
 
     paths.each do |relative|

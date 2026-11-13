@@ -188,7 +188,7 @@ class TestAstFixerTransforms < Minitest::Test
   # 0644.
   def test_fixer_leaves_verbatim_openbsd_mirrors_alone
     conf = "#\tcomment with tab\ndefault:\\\n\t:path=/usr/bin:\\\n\t:umask=022:\n"
-    result = fix("OPENBSD/etc/login.conf", conf)
+    result = fix("OPENBSD/mirror/etc/login.conf", conf)
 
     assert_equal conf, result[:content]
     assert_empty result[:transforms]

@@ -36,7 +36,7 @@ class TestRuntimeOneSource < Minitest::Test
     require_relative "../lib/operator/ruby_runner"
     assert_equal ["ruby"], Operator::RubyRunner::RUBY_NAMES
     wrapper = read("bin/ruby")
-    openbsd = read("../OPENBSD/lib/ruby_select.sh")
+    openbsd = read("../OPENBSD/mirror/lib/ruby_select.sh")
     assert_includes wrapper, 'GENERIC_RUBY=$(command -v ruby'
     assert_includes wrapper, 'for ruby_path in "$directory"/ruby[0-9]*'
     assert_includes openbsd, '_rs_find ruby'

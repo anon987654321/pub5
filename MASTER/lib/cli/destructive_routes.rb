@@ -4,11 +4,20 @@ module Master
   module CLI
     # Destructive slash commands and configurable blocking review (security.yml).
     module DestructiveRoutes
-      SECURITY_PATH = Master.data_path("security.yml").freeze
-      PATTERNS_PATH = Master.data_path("patterns.yml").freeze
       FALLBACK = %w[clear rebuild resync shell rollback].freeze
 
       module_function
+
+      # Resolved on first use, not at require time: this file is requirable
+      # before lib/master.rb (the command-palette contract test requires the
+      # route stage directly), and Master.data_path does not exist yet then.
+      def security_path
+        @security_path ||= Master.data_path("security.yml").freeze
+      end
+
+      def patterns_path
+        @patterns_path ||= Master.data_path("patterns.yml").freeze
+      end
 
       def destructive_commands
         @destructive_commands ||= load_destructive_commands
@@ -28,16 +37,16 @@ module Master
       def blocking_review?
         return false if ENV["MASTER_BLOCKING_REVIEW"] == "0"
 
-        defaults = Master.load_yaml(SECURITY_PATH) || {}
+        defaults = Master.load_yaml(security_path) || {}
         defaults.dig("tools", "custom", "require_review_for_destructive") != false
       end
 
       def load_destructive_commands
-        return FALLBACK unless File.exist?(PATTERNS_PATH)
+        return FALLBACK unless File.exist?(patterns_path)
 
         data = Master.patterns_config
         list = Array(data&.dig("infer", "destructive")).map(&:to_s).reject(&:empty?)
-        raise "destructive command policy is empty: #{PATTERNS_PATH}" if list.empty?
+        raise "destructive command policy is empty: #{patterns_path}" if list.empty?
 
         list.freeze
       rescue StandardError => e

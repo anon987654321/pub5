@@ -2,7 +2,7 @@
 
 require "fileutils"
 require "timeout"
-require File.join(ENV.fetch("PUB5_ROOT", File.expand_path("../../../../", __dir__)), "OPENBSD", "lib", "load_average")
+require File.join(ENV.fetch("PUB5_ROOT", File.expand_path("../../../../", __dir__)), "OPENBSD", "mirror", "lib", "load_average")
 
 module Operator
   # VPS-only mutex + load check for Rails bin/ci (prevents parallel CI pile-ups on vm23).
@@ -10,7 +10,7 @@ module Operator
     # The one CI lock, shared with the shell side.
     #
     # One path, because two do not exclude each other. /var/tmp/pub5-ci.lock sat
-    # here while OPENBSD/lib/ci_lock.sh called
+    # here while OPENBSD/mirror/lib/ci_lock.sh called
     # itself "the one definition of the pub5 CI mutex path" and pointed three
     # shell scripts at /var/db/pub5/ci.lock. Two files, no mutual exclusion
     # between them — and the half that was actually being locked was the half
@@ -169,7 +169,7 @@ module Operator
     # umask so it was applied explicitly; only an owner may chmod, so the next
     # app hit EPERM and crashed (bsdports, same incident); and the result was a
     # world-writable file in a world-writable directory, which is the symlink
-    # hazard OPENBSD/lib/ci_lock.sh was written to remove.
+    # hazard OPENBSD/mirror/lib/ci_lock.sh was written to remove.
     #
     # Opening read-only deletes that entire chain. The file can be 0644 and
     # owned by whoever created it; every app can still take the lock.

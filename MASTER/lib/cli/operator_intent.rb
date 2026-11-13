@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
-require_relative "../../../OPENBSD/lib/deploy_inventory"
+require_relative "../../../OPENBSD/mirror/lib/deploy_inventory"
 
 module Master
   module CLI

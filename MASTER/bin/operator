@@ -99,7 +99,7 @@ def usage
       bin/operator law-weight           MASTER/law/*.rb line counts
 
     Profiles (passed through to check scripts):
-      OPENBSD/bin/check --profile=contributor
+      OPENBSD/mirror/bin/check --profile=contributor
       cd MASTER && bin/check --profile=contributor
   HELP
 end
@@ -127,9 +127,9 @@ rescue StandardError => e
 end
 
 # A command for the box that runs a Ruby script with whatever Ruby the box has.
-# The resolution happens there, through OPENBSD/lib/ruby_select.sh, never here.
+# The resolution happens there, through OPENBSD/mirror/lib/ruby_select.sh, never here.
 def remote_ruby(*argv)
-  resolver = %q(. OPENBSD/lib/ruby_select.sh && exec "$RUBY" "$@")
+  resolver = %q(. OPENBSD/mirror/lib/ruby_select.sh && exec "$RUBY" "$@")
   "cd /home/dev/pub5 && #{Shellwords.join(["sh", "-c", resolver, "sh", *argv])}"
 end
 
@@ -1028,7 +1028,7 @@ when "vps"
     end
   when "state"
     if ARGV.delete("--remote")
-      ssh_run(remote_ruby("OPENBSD/bin/vps-state", *ARGV))
+      ssh_run(remote_ruby("OPENBSD/mirror/bin/vps-state", *ARGV))
     else
       exec(File.join(OPENBSD_OPS, "bin", "vps-state"), *ARGV)
     end
@@ -1114,11 +1114,11 @@ when "vps"
           print "vps-deploy: finished exit=$ec"
           # Hands-off closeout: state + public canary when the deploy itself succeeded.
           if (( ec == 0 )); then
-            . OPENBSD/lib/ruby_select.sh
+            . OPENBSD/mirror/lib/ruby_select.sh
             print "vps-deploy: post-check state"
-            "$RUBY" OPENBSD/bin/vps-state 2>/dev/null || true
+            "$RUBY" OPENBSD/mirror/bin/vps-state 2>/dev/null || true
             print "vps-deploy: post-check public canary"
-            "$RUBY" OPENBSD/bin/canary --public 2>/dev/null || print -u2 "vps-deploy: public canary reported failures (deploy stamps still ok)"
+            "$RUBY" OPENBSD/mirror/bin/canary --public 2>/dev/null || print -u2 "vps-deploy: public canary reported failures (deploy stamps still ok)"
           fi
           exit "$ec"
           ;;
@@ -1133,13 +1133,13 @@ when "vps"
     args = ARGV.dup
     die("vps", "usage, bin/operator vps admin <status|services|service|pf|disk|memory|swap|dmesg|packages|updates|upgrade|reboot> [args] [--remote]", 64) if args.empty?
     if remote
-      ssh_run(remote_ruby("OPENBSD/bin/vps-admin", *args))
+      ssh_run(remote_ruby("OPENBSD/mirror/bin/vps-admin", *args))
     else
       exec(File.join(OPENBSD_OPS, "bin", "vps-admin"), *args)
     end
   when "canary"
     if ARGV.delete("--remote")
-      ssh_run(remote_ruby("OPENBSD/bin/canary", "--local", *ARGV))
+      ssh_run(remote_ruby("OPENBSD/mirror/bin/canary", "--local", *ARGV))
     else
       exec(File.join(OPENBSD_OPS, "bin", "canary"), "--public", *ARGV)
     end
@@ -1157,7 +1157,7 @@ when "vps"
     app = ARGV.shift
     die("vps", "usage, bin/operator vps logs <app> [--lines N] [--remote]", 64) if app.to_s.empty?
     if ARGV.delete("--remote")
-      ssh_run(remote_ruby("OPENBSD/bin/vps-logs", app, *ARGV))
+      ssh_run(remote_ruby("OPENBSD/mirror/bin/vps-logs", app, *ARGV))
     else
       exec(File.join(OPENBSD_OPS, "bin", "vps-logs"), app, *ARGV)
     end

@@ -12,7 +12,7 @@
 # port inventory), and a bare path for the RAILS checks, which are most of them.
 #
 # The runner stays single: three runners would be three ideas of what a check
-# result is, which is the shape OPENBSD/lib/check_result.rb exists to prevent.
+# result is, which is the shape OPENBSD/mirror/lib/check_result.rb exists to prevent.
 #
 # One row is the whole declaration: file, class, pass line and composite live
 # together, so no second table has to agree with this one.

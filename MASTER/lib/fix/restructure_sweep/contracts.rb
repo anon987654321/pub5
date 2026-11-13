@@ -35,7 +35,7 @@ module Master
           TEXT
           "OPENBSD" => <<~TEXT,
             OPENBSD, the deploy pipeline and runbook for one OpenBSD VPS.
-            - OPENBSD/etc, var, usr, home and dotfiles mirror the box path for path
+            - OPENBSD/mirror/etc, var, usr, home and dotfiles mirror the box path for path
               and never move. An rc.d script's name is its service's name.
             - Scripts are zsh or POSIX sh with OpenBSD base tools; no GNU-only flags.
           TEXT

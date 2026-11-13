@@ -63,10 +63,10 @@ class TestAstFixerSafety < Minitest::Test
     policy = Master::Fix::Scan::AstFixer.transformation_policy
     assert_equal 5000, policy.fetch(:generated_line_length)
     assert_equal 2, policy.fetch(:protected_path_patterns).size
-    assert policy.fetch(:protected_path_patterns).first.match?("/repo/OPENBSD/etc/rc.conf")
+    assert policy.fetch(:protected_path_patterns).first.match?("/repo/OPENBSD/mirror/etc/rc.conf")
     assert policy.fetch(:protected_path_patterns).last.match?("/repo/law/squint_test.rb")
 
-    openbsd = Master::Fix::Scan::AstFixer.propose("/repo/OPENBSD/etc/rc.conf", "X = 1")
+    openbsd = Master::Fix::Scan::AstFixer.propose("/repo/OPENBSD/mirror/etc/rc.conf", "X = 1")
     law_fixture = Master::Fix::Scan::AstFixer.propose("/repo/law/squint_test.rb", "X = 1")
     generated = Master::Fix::Scan::AstFixer.propose("bundle.js", "x" * 5001)
     makefile = Master::Fix::Scan::AstFixer.propose("Makefile", "\tall:\n\t@echo ok\n")

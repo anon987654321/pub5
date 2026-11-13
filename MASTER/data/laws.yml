@@ -5155,7 +5155,7 @@ architecture:
       check: MASTER/checks/runner.rb --all
     openbsd:
       path: OPENBSD
-      entry: OPENBSD/bin/vps-deploy
+      entry: OPENBSD/mirror/bin/vps-deploy
       host: www.openbsd.amsterdam
       ssh_alias: vm23
       deploy_root: /home/dev/pub5
@@ -5164,7 +5164,7 @@ architecture:
       depends_on:
         - master
         - rails
-      check: OPENBSD/bin/check
+      check: OPENBSD/mirror/bin/check
     studio:
       path: STUDIO
       # b5acc93bc flattened the photograph tree; the public entry it preserved

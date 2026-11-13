@@ -26,7 +26,7 @@ ownership:
       operational recipes live in ../OPENBSD/data/operator.yml
     risk: medium
     check: MASTER/bin/operator status
-  ../OPENBSD/lib/zshrc.shared:
+  ../OPENBSD/mirror/lib/zshrc.shared:
     purpose: canonical host:path$ prompt shared by operator zsh sessions
     risk: low
     check: ruby OPENBSD/test/test_operator_prompt_contract.rb

@@ -14,7 +14,7 @@ module Deploy
     SHARED_HEADERS = "RAILS/__shared/config/initializers/security_headers.rb"
     SHARED_CSP = "RAILS/__shared/config/initializers/content_security_policy.rb"
     MASTER_CSP = "MASTER/web/config/initializers/content_security_policy.rb"
-    RELAYD = "OPENBSD/etc/relayd.conf"
+    RELAYD = "OPENBSD/mirror/etc/relayd.conf"
 
     SHARED_HEADER_FRAGMENTS = [
       '"X-Content-Type-Options" => "nosniff"',

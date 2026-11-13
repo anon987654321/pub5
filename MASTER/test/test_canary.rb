@@ -187,7 +187,7 @@ FLOW_OUTPUT = <<~OUT
   end
 
   def test_smoke_script_failure_is_reported_with_its_fail_lines
-    write("OPENBSD/bin/deploy-smoke.sh", "#!/bin/sh\n")
+    write("OPENBSD/mirror/bin/deploy-smoke.sh", "#!/bin/sh\n")
     shell = ->(*argv) { argv.first == "sh" ? ["FAIL amber_local\nok x\n", Ok.new(false)] : ["", Ok.new(true)] }
     r = Canary::Runner.new(root: @root, apps: %w[demo], smoke: true, shell:, connect: ->(*) { true },
                            http: ->(*) { Canary::Reply.new(status: 200, headers: {}, body: "", elapsed_ms: 1) }).run.last
@@ -241,7 +241,7 @@ FLOW_OUTPUT = <<~OUT
     File.chmod(0o755, File.join(bin, "ssh"))
     out, st = operator_run({ "PATH" => "#{bin}:#{ENV['PATH']}", "PUB5_SSH_HOST" => "dev@example.invalid" }, "vps", "canary", "--remote", "--app", "amber")
     assert st.success?, out
-    assert_match(%r{SSH .*dev@example\.invalid .*OPENBSD/bin/canary --local --app amber}, out)
+    assert_match(%r{SSH .*dev@example\.invalid .*OPENBSD/mirror/bin/canary --local --app amber}, out)
   ensure
     FileUtils.rm_rf(bin)
   end

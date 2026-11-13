@@ -16,7 +16,7 @@ require "uri"
 # the files it read.
 module FleetPanel
   APPS_YML = "RAILS/apps.yml"
-  GUARD_SCRIPT = "OPENBSD/usr/local/bin/resource_guard.sh"
+  GUARD_SCRIPT = "OPENBSD/mirror/usr/local/bin/resource_guard.sh"
   # The siblings sharing vm23 with this dashboard. master is the dashboard's
   # own app; the guard's OPTIONAL list, not this constant, owns the shed order.
   SIBLINGS = %w[brgen amber bsdports mrdamascy].freeze

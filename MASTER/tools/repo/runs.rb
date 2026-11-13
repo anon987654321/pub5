@@ -32,10 +32,10 @@ module Operator
       MASTER/bin/check
       MASTER/bin/ci
       MASTER/web/bin/ci
-      OPENBSD/bin/check
-      OPENBSD/bin/check-rails
-      OPENBSD/bin/check-openbsd
-      OPENBSD/bin/check-vps
+      OPENBSD/mirror/bin/check
+      OPENBSD/mirror/bin/check-rails
+      OPENBSD/mirror/bin/check-openbsd
+      OPENBSD/mirror/bin/check-vps
       OPENBSD/test/run_all.rb
       RAILS/test/run_all.rb
       RAILS/package.json

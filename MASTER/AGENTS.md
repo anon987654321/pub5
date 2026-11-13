@@ -690,7 +690,7 @@ Touch-map: `data/agent_map.yml`. Law sections live in `data/laws.yml`. Work is a
 
 ## Checks
 
-Run the smallest proof: `bin/check` for ordinary code, `bin/check --profile=agent` for law, scanners and the loop, `bin/check --profile=web` for the face, `OPENBSD/bin/check-rails --profile=contributor` for deploy and Rails, and `MASTER/bin/operator check` for the whole ladder. On failure: `bin/check --profile=agent --format=brief`.
+Run the smallest proof: `bin/check` for ordinary code, `bin/check --profile=agent` for law, scanners and the loop, `bin/check --profile=web` for the face, `OPENBSD/mirror/bin/check-rails --profile=contributor` for deploy and Rails, and `MASTER/bin/operator check` for the whole ladder. On failure: `bin/check --profile=agent --format=brief`.
 
 `--profile=agent` may fail on known debt tagged `agent-ignore`.
 Do not chase scan noise on unrelated patches.

@@ -654,7 +654,7 @@ class TestTaskContract < Minitest::Test
 
   def test_openbsd_command_admission_requires_the_specific_manual
     contract = openbsd_task_contract(
-      openbsd_preflight_fixture(source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/etc/rc.d/master", "OPENBSD/etc/pf.conf"]),
+      openbsd_preflight_fixture(source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/mirror/etc/rc.d/master", "OPENBSD/mirror/etc/pf.conf"]),
     )
     assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
       command: "ssh -o BatchMode=yes dev@brgen.no 'rcctl restart master'", contract:
@@ -668,7 +668,7 @@ class TestTaskContract < Minitest::Test
   def test_rcctl_restart_requires_the_rc_framework_not_only_rcctl_manual
     contract = openbsd_task_contract(
       openbsd_preflight_fixture(
-        source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/etc/rc.d/master"],
+        source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/mirror/etc/rc.d/master"],
         interfaces: ["rcctl(8)"],
       ),
     )
@@ -681,7 +681,7 @@ class TestTaskContract < Minitest::Test
   end
 
   def test_unmapped_openbsd_native_paths_fail_closed
-    relative = "OPENBSD/etc/litestream.yml"
+    relative = "OPENBSD/mirror/etc/litestream.yml"
     contract = openbsd_task_contract(
       openbsd_preflight_fixture(source_paths: [relative], interfaces: ["nsd(8)"]),
     )
@@ -695,11 +695,11 @@ class TestTaskContract < Minitest::Test
 
   def test_openbsd_native_configuration_edits_require_their_format_and_daemon_manuals
     cases = [
-      ["OPENBSD/etc/pf.conf", "pfctl(8)", "pf.conf(5)"],
-      ["OPENBSD/etc/httpd.conf", "httpd(8)", "httpd.conf(5)"],
-      ["OPENBSD/etc/doas.conf", "doas(1)", "doas.conf(5)"],
-      ["OPENBSD/var/nsd/etc/nsd.conf", "nsd(8)", "nsd.conf(5)"],
-      ["OPENBSD/var/nsd/zones/master/brgen.no.zone", "nsd(8)", "nsd-checkzone(8)"]
+      ["OPENBSD/mirror/etc/pf.conf", "pfctl(8)", "pf.conf(5)"],
+      ["OPENBSD/mirror/etc/httpd.conf", "httpd(8)", "httpd.conf(5)"],
+      ["OPENBSD/mirror/etc/doas.conf", "doas(1)", "doas.conf(5)"],
+      ["OPENBSD/mirror/var/nsd/etc/nsd.conf", "nsd(8)", "nsd.conf(5)"],
+      ["OPENBSD/mirror/var/nsd/zones/master/brgen.no.zone", "nsd(8)", "nsd-checkzone(8)"]
     ]
 
     cases.each do |relative, available_page, required_page|
@@ -717,12 +717,12 @@ class TestTaskContract < Minitest::Test
   def test_rc_service_file_edits_require_rc_framework_manuals
     contract = openbsd_task_contract(
       openbsd_preflight_fixture(
-        source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/etc/rc.d/master"],
+        source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/mirror/etc/rc.d/master"],
         interfaces: ["rcctl(8)"],
       ),
     )
     reason = Master::Fix::OpenBSDManualPreflight.refusal_for_path(
-      path: File.join(Master::REPO_ROOT, "OPENBSD/etc/rc.d/master"), contract:
+      path: File.join(Master::REPO_ROOT, "OPENBSD/mirror/etc/rc.d/master"), contract:
     )
 
     assert_match(/rc\.d\(8\)/, reason)
@@ -736,13 +736,13 @@ class TestTaskContract < Minitest::Test
       command: "ssh -o BatchMode=yes dev@brgen.no 'pfctl -nf /etc/pf.conf'", contract:
     )
 
-    assert_match(/source-read receipt for existing target OPENBSD\/etc\/pf\.conf/, reason)
+    assert_match(/source-read receipt for existing target OPENBSD\/mirror\/etc\/pf\.conf/, reason)
   end
 
   def test_remote_absolute_openbsd_config_paths_pass_with_source_and_manual_receipts
     contract = openbsd_task_contract(
       openbsd_preflight_fixture(
-        source_paths: ["OPENBSD/etc/pf.conf"],
+        source_paths: ["OPENBSD/mirror/etc/pf.conf"],
         interfaces: %w[pf(4) pf.conf(5) pfctl(8) ksh(1)],
       ),
     )
@@ -798,18 +798,18 @@ class TestTaskContract < Minitest::Test
   def test_openbsd_script_execution_requires_a_complete_source_read
     contract = openbsd_task_contract(openbsd_preflight_fixture(interfaces: %w[rcctl(8) rc(8) rc.conf(8) rc.d(8) rc.subr(8) ksh(1) zsh(1)]))
     reason = Master::Fix::OpenBSDManualPreflight.refusal_for_command(
-      command: "ssh -o BatchMode=yes dev@brgen.no 'zsh OPENBSD/bin/vps-deploy all'", contract:
+      command: "ssh -o BatchMode=yes dev@brgen.no 'zsh OPENBSD/mirror/bin/vps-deploy all'", contract:
     )
 
-    assert_match(/source-read receipt for OpenBSD path OPENBSD\/bin\/vps-deploy/, reason)
+    assert_match(/source-read receipt for OpenBSD path OPENBSD\/mirror\/bin\/vps-deploy/, reason)
   end
 
   def test_openbsd_script_execution_accepts_a_complete_source_read
     contract = openbsd_task_contract(
-      openbsd_preflight_fixture(source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/bin/vps-deploy"], interfaces: %w[rcctl(8) rc(8) rc.conf(8) rc.d(8) rc.subr(8) ksh(1) zsh(1)]),
+      openbsd_preflight_fixture(source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/mirror/bin/vps-deploy"], interfaces: %w[rcctl(8) rc(8) rc.conf(8) rc.d(8) rc.subr(8) ksh(1) zsh(1)]),
     )
     assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
-      command: "ssh -o BatchMode=yes dev@brgen.no 'zsh OPENBSD/bin/vps-deploy all'", contract:
+      command: "ssh -o BatchMode=yes dev@brgen.no 'zsh OPENBSD/mirror/bin/vps-deploy all'", contract:
     )
   end
 
@@ -819,7 +819,7 @@ class TestTaskContract < Minitest::Test
       command: "ssh -o BatchMode=yes dev@brgen.no 'rcctl restart master'", contract:
     )
 
-    assert_match(/source-read receipt for controlled service OPENBSD\/etc\/rc\.d\/master/, reason)
+    assert_match(/source-read receipt for controlled service OPENBSD\/mirror\/etc\/rc\.d\/master/, reason)
   end
 
   def test_saved_openbsd_preflight_is_revision_and_time_bound

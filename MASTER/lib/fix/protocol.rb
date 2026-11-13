@@ -470,7 +470,7 @@ end
           verify the relevant boundary before repairing it.
 
           DEPLOYMENT
-          OPENBSD/bin/vps-deploy is the canonical serial deploy path for MASTER
+          OPENBSD/mirror/bin/vps-deploy is the canonical serial deploy path for MASTER
           and the RAILS apps. Its production endpoint is www.openbsd.amsterdam
           (vm23, /home/dev/pub5). From a workstation, use bin/operator vps deploy
           <app> --remote; do not invent a second deploy path.

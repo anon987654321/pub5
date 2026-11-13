@@ -695,26 +695,26 @@ module Master
       # addition to the command page that edits or controls them.
       def required_path_manuals(relative)
         path = relative.to_s.tr("\\", "/")
-        return RC_FRAMEWORK_MANUALS if path.match?(%r{\AOPENBSD/etc/rc\.d/[^/]+\z})
-        return %w[rc(8) rc.conf(8) rc.d(8) rcctl(8)] if path.match?(%r{\AOPENBSD/etc/rc\.conf(?:\.local)?\z})
-        return %w[pf(4) pf.conf(5) pfctl(8)] if path.match?(%r{\AOPENBSD/etc/pf(?:\.stage1)?\.conf\z})
-        return %w[relayd.conf(5) relayd(8) relayctl(8) pf(4)] if path == "OPENBSD/etc/relayd.conf"
-        return %w[httpd.conf(5) httpd(8) slowcgi(8)] if path == "OPENBSD/etc/httpd.conf"
-        return %w[acme-client.conf(5) acme-client(1)] if path == "OPENBSD/etc/acme-client.conf"
-        return %w[doas.conf(5) doas(1)] if path == "OPENBSD/etc/doas.conf"
-        return %w[login.conf(5) login(1)] if path == "OPENBSD/etc/login.conf"
-        return %w[smtpd.conf(5) smtpd(8) smtpctl(8)] if path == "OPENBSD/etc/mail/smtpd.conf"
-        return %w[smtpd.conf(5) table(5) smtpd(8) makemap(8)] if %w[OPENBSD/etc/mail/domains OPENBSD/etc/mail/virtuals].include?(path)
-        return %w[newsyslog(8)] if path == "OPENBSD/etc/newsyslog.conf"
-        return %w[daily(8) cron(8) ksh(1)] if %w[OPENBSD/etc/daily.local OPENBSD/etc/weekly.local].include?(path)
-        return %w[crontab(5) cron(8) ksh(1) zsh(1) ruby(1)] if path == "OPENBSD/etc/crontab.vm23"
-        return %w[zsh(1)] if path == "OPENBSD/etc/.zshrc"
-        return %w[sshd_config(5) sshd(8) ssh(1)] if path == "OPENBSD/etc/ssh/sshd_config"
-        return %w[nsd.conf(5) nsd(8) nsd-checkconf(8) nsd-control(8)] if path == "OPENBSD/var/nsd/etc/nsd.conf"
-        if path.match?(%r{\AOPENBSD/var/nsd/zones/master/[^/]+\.zone\z})
+        return RC_FRAMEWORK_MANUALS if path.match?(%r{\AOPENBSD/mirror/etc/rc\.d/[^/]+\z})
+        return %w[rc(8) rc.conf(8) rc.d(8) rcctl(8)] if path.match?(%r{\AOPENBSD/mirror/etc/rc\.conf(?:\.local)?\z})
+        return %w[pf(4) pf.conf(5) pfctl(8)] if path.match?(%r{\AOPENBSD/mirror/etc/pf(?:\.stage1)?\.conf\z})
+        return %w[relayd.conf(5) relayd(8) relayctl(8) pf(4)] if path == "OPENBSD/mirror/etc/relayd.conf"
+        return %w[httpd.conf(5) httpd(8) slowcgi(8)] if path == "OPENBSD/mirror/etc/httpd.conf"
+        return %w[acme-client.conf(5) acme-client(1)] if path == "OPENBSD/mirror/etc/acme-client.conf"
+        return %w[doas.conf(5) doas(1)] if path == "OPENBSD/mirror/etc/doas.conf"
+        return %w[login.conf(5) login(1)] if path == "OPENBSD/mirror/etc/login.conf"
+        return %w[smtpd.conf(5) smtpd(8) smtpctl(8)] if path == "OPENBSD/mirror/etc/mail/smtpd.conf"
+        return %w[smtpd.conf(5) table(5) smtpd(8) makemap(8)] if %w[OPENBSD/mirror/etc/mail/domains OPENBSD/mirror/etc/mail/virtuals].include?(path)
+        return %w[newsyslog(8)] if path == "OPENBSD/mirror/etc/newsyslog.conf"
+        return %w[daily(8) cron(8) ksh(1)] if %w[OPENBSD/mirror/etc/daily.local OPENBSD/mirror/etc/weekly.local].include?(path)
+        return %w[crontab(5) cron(8) ksh(1) zsh(1) ruby(1)] if path == "OPENBSD/mirror/etc/crontab.vm23"
+        return %w[zsh(1)] if path == "OPENBSD/mirror/etc/.zshrc"
+        return %w[sshd_config(5) sshd(8) ssh(1)] if path == "OPENBSD/mirror/etc/ssh/sshd_config"
+        return %w[nsd.conf(5) nsd(8) nsd-checkconf(8) nsd-control(8)] if path == "OPENBSD/mirror/var/nsd/etc/nsd.conf"
+        if path.match?(%r{\AOPENBSD/mirror/var/nsd/zones/master/[^/]+\.zone\z})
           return %w[nsd.conf(5) nsd(8) nsd-checkzone(8) nsd-control(8)]
         end
-        return nil if path.start_with?("OPENBSD/etc/", "OPENBSD/var/")
+        return nil if path.start_with?("OPENBSD/mirror/etc/", "OPENBSD/mirror/var/")
 
         []
       end
@@ -733,12 +733,12 @@ module Master
             next if service.start_with?("-")
             break unless service.match?(RC_SERVICE_NAME)
 
-            paths << "OPENBSD/etc/rc.d/#{service}"
+            paths << "OPENBSD/mirror/etc/rc.d/#{service}"
           end
         end
         tokens.each do |token|
           match = token.match(%r{(?:\A|/)etc/rc\.d/([^/]+)\z})
-          paths << "OPENBSD/etc/rc.d/#{match[1]}" if match
+          paths << "OPENBSD/mirror/etc/rc.d/#{match[1]}" if match
         end
         paths.uniq
       end
@@ -747,11 +747,11 @@ module Master
         Array(tokens).filter_map do |token|
           path = token.to_s
           if (match = path.match(%r{\A/etc/(.+)\z}))
-            "OPENBSD/etc/#{match[1]}"
+            "OPENBSD/mirror/etc/#{match[1]}"
           elsif (match = path.match(%r{\A/var/nsd/(.+)\z}))
-            "OPENBSD/var/nsd/#{match[1]}"
+            "OPENBSD/mirror/var/nsd/#{match[1]}"
           elsif (match = path.match(%r{\A/usr/local/(bin|sbin)/(.+)\z}))
-            "OPENBSD/usr/local/#{match[1]}/#{match[2]}"
+            "OPENBSD/mirror/usr/local/#{match[1]}/#{match[2]}"
           end
         end.uniq
       end

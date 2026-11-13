@@ -454,12 +454,12 @@ end
     #
     # bin/ and the tree's own root, because a door is a door wherever it is
     # parked. Reading bin/ alone read a directory rather than a tree: f754501d1
-    # moved 27 operator scripts from OPENBSD's root into OPENBSD/bin and this
+    # moved 27 operator scripts from OPENBSD's root into OPENBSD/mirror/bin and this
     # row went 16 -> 43 without a script being written, while 33 executables had
     # been sitting at that root unseen. It still misses RAILS/deploy.sh.
     #
     # Only those two levels. An app's generated bin/rails, a tool's own bin/ and
-    # OPENBSD/usr/local/bin — a mirror of what is installed on vm23, not
+    # OPENBSD/mirror/usr/local/bin — a mirror of what is installed on vm23, not
     # something anyone runs from the checkout — are not surfaces of the tree.
     def entrypoints(tree)
       out, status = Master::Io::Exec.capture2e("git", "-C", ROOT, "ls-files", "-z", tree)

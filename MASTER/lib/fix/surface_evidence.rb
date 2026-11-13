@@ -734,8 +734,8 @@ module Master
           else
             problems << "OPENBSD/deploy_inventory.json is missing or symlinked"
           end
-          vps_script = File.join(@root, "OPENBSD", "bin", "vps-deploy")
-          problems << "OPENBSD/bin/vps-deploy is missing or not executable" unless File.file?(vps_script) && !File.symlink?(vps_script) && File.executable?(vps_script)
+          vps_script = File.join(@root, "OPENBSD", "mirror", "bin", "vps-deploy")
+          problems << "OPENBSD/mirror/bin/vps-deploy is missing or not executable" unless File.file?(vps_script) && !File.symlink?(vps_script) && File.executable?(vps_script)
         end
 
         if @target_label == "MASTER/web" || @target_label.start_with?("MASTER/web/")
@@ -751,8 +751,8 @@ module Master
           else
             problems << "OPENBSD/deploy_inventory.json is missing or symlinked"
           end
-          vps_script = File.join(@root, "OPENBSD", "bin", "vps-deploy")
-          problems << "OPENBSD/bin/vps-deploy is missing or not executable" unless File.file?(vps_script) && !File.symlink?(vps_script) && File.executable?(vps_script)
+          vps_script = File.join(@root, "OPENBSD", "mirror", "bin", "vps-deploy")
+          problems << "OPENBSD/mirror/bin/vps-deploy is missing or not executable" unless File.file?(vps_script) && !File.symlink?(vps_script) && File.executable?(vps_script)
         end
 
         if problems.any?

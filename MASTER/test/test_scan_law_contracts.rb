@@ -252,7 +252,7 @@ class TestScanLawContracts < Minitest::Test
   def test_strict_mode_zsh_spares_shebang_flag_rc_subr_and_sourced_locals
     assert_empty law_findings("STRICT_MODE_ZSH", "#!/bin/bash -e\nexec \"$@\"\n", path: "docker-entrypoint.sh")
     assert_empty law_findings("STRICT_MODE_ZSH", "#!/bin/ksh\ndaemon=x\n. /etc/rc.d/rc.subr\nrc_cmd $1\n", path: "etc/rc.d/app.sh")
-    assert_empty law_findings("STRICT_MODE_ZSH", "#!/bin/sh\nPATH=/bin\n", path: "OPENBSD/etc/daily.local")
+    assert_empty law_findings("STRICT_MODE_ZSH", "#!/bin/sh\nPATH=/bin\n", path: "OPENBSD/mirror/etc/daily.local")
     refute_empty law_findings("STRICT_MODE_ZSH", "#!/bin/ksh\n. /etc/app.env\nrun\n", path: "bin/tool.sh")
   end
 

@@ -20,7 +20,7 @@ class TestCheckChain < Minitest::Test
     missing = %w[bin/operator bin/check bin/master lib/operator/sprawl_census.rb tools/audit/dup_census.rb lib/operator/check_ladder.rb]
               .reject { |path| File.file?(File.join(G::MASTER, path)) }
     missing << "MASTER/checks/runner.rb" unless File.file?(File.join(G::ROOT, "MASTER", "checks", "runner.rb"))
-    missing << "OPENBSD/bin/check-openbsd" unless File.file?(File.join(G::ROOT, "OPENBSD", "bin", "check-openbsd"))
+    missing << "OPENBSD/mirror/bin/check-openbsd" unless File.file?(File.join(G::ROOT, "OPENBSD", "mirror", "bin", "check-openbsd"))
 
     assert_empty missing, "the chain invokes these and they are not on disk"
   end

@@ -16,13 +16,13 @@ topics:
       - MASTER/web/app/controllers/health_controller.rb
       - MASTER/web/public/face_speech_runtime.js
       - MASTER/web/public/face.part5.txt
-      - OPENBSD/etc/rc.d/master
+      - OPENBSD/mirror/etc/rc.d/master
     tests:
       - test/test_speech.rb
       - test/test_yaml_registries.rb
       - MASTER/web/test/controllers/health_controller_test.rb
       - MASTER/web/test/face_boot.test.mjs
-    deploy: zsh /home/dev/pub5/OPENBSD/bin/vps_deploy_master.sh
+    deploy: zsh /home/dev/pub5/OPENBSD/mirror/bin/vps_deploy_master.sh
     playbook: master_web_single_voice_defaults
     proof: curl -fsS http://127.0.0.1:53187/health | jq '{status, checks, deploy}'
 
@@ -39,12 +39,12 @@ topics:
       - MASTER/web/public/face.runtime.js
       - MASTER/web/public/container_check.js
       - MASTER/web/public/boot_fsm.js
-      - OPENBSD/etc/rc.d/master
+      - OPENBSD/mirror/etc/rc.d/master
     tests:
       - MASTER/web/test/face_boot.test.mjs
       - bin/check --profile=web
       - MASTER/web/script/probe_http
-    deploy: zsh /home/dev/pub5/OPENBSD/bin/vps_deploy_master.sh
+    deploy: zsh /home/dev/pub5/OPENBSD/mirror/bin/vps_deploy_master.sh
     playbook: master_web_single_voice_defaults
     note: No WebGL before primer tap. Rebuild face.runtime.js after editing face.part* or speech modules.
 
@@ -76,13 +76,13 @@ topics:
 
   deploy:
     files:
-      - OPENBSD/bin/vps_deploy_master.sh
-      - OPENBSD/etc/rc.d/master
+      - OPENBSD/mirror/bin/vps_deploy_master.sh
+      - OPENBSD/mirror/etc/rc.d/master
       - MASTER/lib/operator/checks.rb
-      - OPENBSD/bin/vps-deploy
+      - OPENBSD/mirror/bin/vps-deploy
     tests:
       - MASTER/web/script/probe_http
-    command: ssh dev@46.23.89.226 'zsh /home/dev/pub5/OPENBSD/bin/vps_deploy_master.sh'
+    command: ssh dev@46.23.89.226 'zsh /home/dev/pub5/OPENBSD/mirror/bin/vps_deploy_master.sh'
     playbook: post_sync_vps_proof
 
   persona:
@@ -231,9 +231,9 @@ patch_briefs:
     tests: [MASTER/web/test/face_boot.test.mjs]
     deploy: vps-deploy master
     post: ruby MASTER/tools/rails/generate_face_root_css.rb
-  OPENBSD/etc/rc.d/master:
+  OPENBSD/mirror/etc/rc.d/master:
     check: MASTER/bin/operator status
     topic: deploy
     tests: []
-    deploy: doas cp OPENBSD/etc/rc.d/master /etc/rc.d/master
+    deploy: doas cp OPENBSD/mirror/etc/rc.d/master /etc/rc.d/master
     playbook: relayd_after_master_restart

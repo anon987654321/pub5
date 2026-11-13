@@ -2,6 +2,10 @@
 
 source "https://rubygems.org"
 
+# One supported-range rule with OPENBSD/mirror/lib/environment.rb and the
+# boot floor: the shared floor is Ruby 3.3.
+ruby ">= 3.3"
+
 gem "fiddle"
 gem "psych"
 gem "yaml"

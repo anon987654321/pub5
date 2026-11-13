@@ -13,7 +13,7 @@ duplicate_members:
 - MASTER/checks/data/route_screenshots/amber/up__loopback__1280.png | MASTER/checks/data/route_screenshots/brgen/up__loopback__1280.png | MASTER/checks/data/route_screenshots/bsdports/up__loopback__1280.png
 - MASTER/checks/data/route_screenshots/amber/up__loopback__390.png | MASTER/checks/data/route_screenshots/brgen/up__loopback__390.png | MASTER/checks/data/route_screenshots/bsdports/up__loopback__390.png
 - MASTER/checks/data/route_screenshots/amber/up__loopback__768.png | MASTER/checks/data/route_screenshots/brgen/up__loopback__768.png | MASTER/checks/data/route_screenshots/bsdports/up__loopback__768.png
-- MASTER/lib/operator/domain_signals.rb | OPENBSD/lib/domain_signals.rb
+- MASTER/lib/operator/domain_signals.rb | OPENBSD/mirror/lib/domain_signals.rb
 - MASTER/web/Rakefile | RAILS/amber/Rakefile | RAILS/bsdports/Rakefile | RAILS/mrdamascy/Rakefile
 - RAILS/__shared/app/assets/images/vipps/vipps-wordmark.svg | RAILS/mrdamascy/app/assets/images/vipps/vipps-wordmark.svg
 - RAILS/__shared/config/storage.yml | RAILS/amber/config/storage.yml | RAILS/brgen/config/storage.yml | RAILS/bsdports/config/storage.yml

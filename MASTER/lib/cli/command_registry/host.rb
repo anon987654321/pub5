@@ -10,7 +10,7 @@ require_relative "../../ground/personal_calendar"
 require_relative "../../ground/assistant_tasks"
 require_relative "../../ground/capability_catalog"
 require_relative "../../io/mcp_coordinator"
-require_relative "../../../../OPENBSD/lib/deploy_inventory"
+require_relative "../../../../OPENBSD/mirror/lib/deploy_inventory"
 
 module Master
   module CLI

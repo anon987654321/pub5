@@ -97,7 +97,7 @@ Brgen `engines/` subtree.
 **Checks are declared once.** Every check is a row in
 `MASTER/checks/checks.yml` carrying its `require`, `Deploy::*` class, pass
 line, and parent composite; `runner.rb` and
-`OPENBSD/lib/check_environment.rb` both read that file by check name. Adding
+`OPENBSD/mirror/lib/check_environment.rb` both read that file by check name. Adding
 a check is one row — not a new script. Most run in-process returning a
 `Deploy::CheckResult`; only `release`, `rails_runtime` and `visual_contract`
 subprocess.
@@ -534,7 +534,7 @@ you the truth — don't work around it, find out what's actually missing.
 
 - `RAILS/apps.yml` registers master beside brgen, amber and bsdports, with
   its port and domain. It is not a copy-tree app:
-  `zsh OPENBSD/bin/vps-deploy master` runs `OPENBSD/bin/vps_deploy_master.sh`,
+  `zsh OPENBSD/mirror/bin/vps-deploy master` runs `OPENBSD/mirror/bin/vps_deploy_master.sh`,
   which pulls and restarts it in place under `/home/dev/pub5/MASTER/web`.
 - `rcctl restart master` runs a real `rc_pre()`: kills stale processes,
   regenerates the face bundles if missing, precompiles assets if a content
@@ -546,8 +546,8 @@ you the truth — don't work around it, find out what's actually missing.
   state is stable if you're debugging remotely while a restart might be in
   flight.
 - **The canonical source for every `/etc/rc.d/<app>` script and
-  `resource_guard.sh` is this repo** (`OPENBSD/etc/rc.d/*`,
-  `OPENBSD/bin/resource_guard.sh`) — not whatever is live on the VPS. If you
+  `resource_guard.sh` is this repo** (`OPENBSD/mirror/etc/rc.d/*`,
+  `OPENBSD/mirror/bin/resource_guard.sh`) — not whatever is live on the VPS. If you
   edit the live file directly (as happened during tonight's incident
   response), **mirror the change back into the repo file**, or the next sync
   from repo → server will silently revert your fix.
@@ -722,7 +722,7 @@ What to write, so both layouts work:
   (it is `RAILS/__shared`).
 
 Three static guards enforce this without a Rails boot, and
-`ruby OPENBSD/bin/rehearse` runs them in seconds before any deploy:
+`ruby OPENBSD/mirror/bin/rehearse` runs them in seconds before any deploy:
 `test_deploy_paths_exist.rb` (every repo path a deploy script names exists),
 `RAILS/test/test_path_idioms_test.rb` (the walk-up and `brgen/` idioms), and
 `RAILS/test/require_relative_targets_test.rb`. Run it before `vps-deploy`;

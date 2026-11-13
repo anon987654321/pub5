@@ -10,7 +10,7 @@ family_members:
 - MASTER/lib/review/council#deliberation
 - MASTER/lib/review/scan#rule
 - MASTER/tools#rule
-- OPENBSD/lib#check
+- OPENBSD/mirror/lib#check
 - RAILS/amber/app/models#declutter
 - RAILS/amber/app/models#item
 - RAILS/amber/app/services#declutter

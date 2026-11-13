@@ -19,7 +19,7 @@ module Master
       include ::Master::Io::AtomicWrite
 
       DEFAULT_INTERVAL = 30
-      DEFAULT_DEPLOY = File.join("OPENBSD", "bin", "vps-deploy").freeze
+      DEFAULT_DEPLOY = File.join("OPENBSD", "mirror", "bin", "vps-deploy").freeze
 
       def self.start!(root: Master::ROOT, interval: nil, out: $stderr)
         new(root:, interval:, out:).start!

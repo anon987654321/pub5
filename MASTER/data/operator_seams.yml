@@ -160,7 +160,7 @@ seams:
     tree: OPENBSD
     needs: console
     evidence: >-
-      zsh OPENBSD/bin/vps-deploy all ends with all ok and four ok stamps, with target commits, ~/vps-deploy.log,
+      zsh OPENBSD/mirror/bin/vps-deploy all ends with all ok and four ok stamps, with target commits, ~/vps-deploy.log,
       vps-state, relayd, app ports and services recorded.
   - id: deploy_failure_trap_window
     tree: OPENBSD
@@ -178,7 +178,7 @@ seams:
     tree: OPENBSD
     needs: registrar
     evidence: >-
-      Current DS records from doas ruby OPENBSD/bin/ds-records published at each registrar, dig +short DS
+      Current DS records from doas ruby OPENBSD/mirror/bin/ds-records published at each registrar, dig +short DS
       answering, and domain_watch --tls reporting ds=1.
   - id: monitoring_and_crontab_on_vm23
     tree: OPENBSD
@@ -202,7 +202,7 @@ seams:
     tree: OPENBSD
     needs: console
     evidence: >-
-      ruby OPENBSD/bin/check --profile=full after a watched deploy, with no skipped check counted as a pass.
+      ruby OPENBSD/mirror/bin/check --profile=full after a watched deploy, with no skipped check counted as a pass.
   - id: privilege_migration_on_vm23
     tree: OPENBSD
     needs: console

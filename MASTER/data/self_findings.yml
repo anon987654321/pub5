@@ -485,13 +485,13 @@ finding_members:
   - ABC_SIZE MASTER/web/app/services/chat_service.rb:136
   - ABC_SIZE MASTER/web/app/services/chat_service.rb:544
   - ABC_SIZE MASTER/web/app/services/copy_review_check.rb:36
-  - ABC_SIZE OPENBSD/bin/render_dns.rb:83
+  - ABC_SIZE OPENBSD/mirror/bin/render_dns.rb:83
   - ABC_SIZE OPENBSD/checks/deploy_smoke_check.rb:140
   - ABC_SIZE OPENBSD/checks/domain_alignment.rb:22
   - ABC_SIZE OPENBSD/checks/integrity_check.rb:26
   - ABC_SIZE OPENBSD/checks/pf_policy_check.rb:67
-  - ABC_SIZE OPENBSD/lib/check_ledger.rb:99
-  - ABC_SIZE OPENBSD/lib/domain_signals.rb:14
+  - ABC_SIZE OPENBSD/mirror/lib/check_ledger.rb:99
+  - ABC_SIZE OPENBSD/mirror/lib/domain_signals.rb:14
   - ABC_SIZE OPENBSD/test/test_restore_scripts.rb:177
   - ABC_SIZE OPENBSD/test/test_vps_safety_check.rb:18
   - ABC_SIZE RAILS/__shared/app/controllers/omniauth_callbacks_controller.rb:61
@@ -657,7 +657,7 @@ finding_members:
   - CONFIGURATION_SHAPE MASTER/web/config/locales/nb.yml:1
   - CONFIGURATION_SHAPE MASTER/web/public/face_music_packs.json:1
   - CONFIGURATION_SHAPE OPENBSD/data/domain_inventory.yml:1
-  - CONFIGURATION_SHAPE OPENBSD/etc/litestream.yml:1
+  - CONFIGURATION_SHAPE OPENBSD/mirror/etc/litestream.yml:1
   - CONFIGURATION_SHAPE RAILS/__shared/config/demo_link_embeds.yml:1
   - CONFIGURATION_SHAPE RAILS/__shared/config/emoji_shortcodes.yml:1
   - CONFIGURATION_SHAPE RAILS/__shared/config/locales/account_security.en.yml:1
@@ -2654,7 +2654,7 @@ finding_members:
   - CONSECUTIVE_BLANK_LINES OPENBSD/test/test_vps_deploy_flow.rb:86
   - CONSECUTIVE_BLANK_LINES OPENBSD/test/test_vps_deploy_flow.rb:87
   - CONSECUTIVE_BLANK_LINES OPENBSD/test/test_vps_deploy_flow.rb:88
-  - CONSECUTIVE_BLANK_LINES OPENBSD/usr/local/libexec/stale_ci_cleanup.ksh:9
+  - CONSECUTIVE_BLANK_LINES OPENBSD/mirror/usr/local/libexec/stale_ci_cleanup.ksh:9
   - CONSECUTIVE_BLANK_LINES RAILS/__shared/app/assets/stylesheets/_affiliate_feed_unit.scss:274
   - CONSECUTIVE_BLANK_LINES RAILS/__shared/app/assets/stylesheets/_affiliate_feed_unit.scss:275
   - CONSECUTIVE_BLANK_LINES RAILS/__shared/app/controllers/concerns/shared/pwa_serving.rb:100
@@ -3733,179 +3733,179 @@ finding_members:
   - DOUBLE_BRACKET MASTER/tools/device/termux/install.sh:14
   - DOUBLE_BRACKET MASTER/tools/device/termux/install.sh:20
   - DOUBLE_BRACKET MASTER/tools/device/termux/install.sh:23
-  - DOUBLE_BRACKET OPENBSD/bin/resource_guard.sh:14
-  - DOUBLE_BRACKET OPENBSD/bin/resource_guard.sh:20
-  - DOUBLE_BRACKET OPENBSD/bin/start_all_apps.sh:14
-  - DOUBLE_BRACKET OPENBSD/bin/start_all_apps.sh:20
-  - DOUBLE_BRACKET OPENBSD/bin/vps_deploy_master.sh:108
-  - DOUBLE_BRACKET OPENBSD/bin/vps_deploy_master.sh:118
-  - DOUBLE_BRACKET OPENBSD/bin/vps_deploy_master.sh:138
-  - DOUBLE_BRACKET OPENBSD/bin/vps_deploy_master.sh:14
-  - DOUBLE_BRACKET OPENBSD/bin/vps_deploy_master.sh:146
-  - DOUBLE_BRACKET OPENBSD/bin/vps_deploy_master.sh:24
-  - DOUBLE_BRACKET OPENBSD/bin/vps_deploy_master.sh:35
-  - DOUBLE_BRACKET OPENBSD/bin/vps_deploy_master.sh:37
+  - DOUBLE_BRACKET OPENBSD/mirror/bin/resource_guard.sh:14
+  - DOUBLE_BRACKET OPENBSD/mirror/bin/resource_guard.sh:20
+  - DOUBLE_BRACKET OPENBSD/mirror/bin/start_all_apps.sh:14
+  - DOUBLE_BRACKET OPENBSD/mirror/bin/start_all_apps.sh:20
+  - DOUBLE_BRACKET OPENBSD/mirror/bin/vps_deploy_master.sh:108
+  - DOUBLE_BRACKET OPENBSD/mirror/bin/vps_deploy_master.sh:118
+  - DOUBLE_BRACKET OPENBSD/mirror/bin/vps_deploy_master.sh:138
+  - DOUBLE_BRACKET OPENBSD/mirror/bin/vps_deploy_master.sh:14
+  - DOUBLE_BRACKET OPENBSD/mirror/bin/vps_deploy_master.sh:146
+  - DOUBLE_BRACKET OPENBSD/mirror/bin/vps_deploy_master.sh:24
+  - DOUBLE_BRACKET OPENBSD/mirror/bin/vps_deploy_master.sh:35
+  - DOUBLE_BRACKET OPENBSD/mirror/bin/vps_deploy_master.sh:37
   - DOUBLE_BRACKET OPENBSD/emergency_cpu.sh:14
   - DOUBLE_BRACKET OPENBSD/emergency_cpu.sh:20
-  - DOUBLE_BRACKET OPENBSD/usr/local/bin/emergency_cpu.sh:38
-  - DOUBLE_BRACKET OPENBSD/usr/local/bin/resource_guard.sh:325
-  - DOUBLE_BRACKET OPENBSD/usr/local/bin/resource_guard.sh:327
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-prepare.ksh:14
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-prepare.ksh:22
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-prepare.ksh:23
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-prepare.ksh:27
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-prepare.ksh:28
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-prepare.ksh:33
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-prepare.ksh:38
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-prepare.ksh:39
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-prepare.ksh:40
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-prepare.ksh:60
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-run.ksh:16
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-run.ksh:20
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-run.ksh:28
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-run.ksh:33
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-run.ksh:37
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-run.ksh:38
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:108
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:111
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:115
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:120
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:126
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:130
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:131
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:132
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:15
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:150
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:21
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:32
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:33
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:34
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:35
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:36
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:42
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:46
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:47
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:48
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:65
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:70
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:89
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:90
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:94
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/ci-sync.ksh:95
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:104
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:109
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:11
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:110
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:116
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:119
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:120
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:121
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:127
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:128
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:129
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:133
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:134
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:135
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:155
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:160
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:162
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:163
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:165
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:171
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:172
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:178
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:179
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:183
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:184
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:185
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:186
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:192
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:193
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:195
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:196
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:20
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:203
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:204
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:215
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:219
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:220
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:221
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:227
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:23
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:30
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:31
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:32
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:33
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:37
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:60
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:71
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:77
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-sync.ksh:95
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:107
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:112
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:118
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:119
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:126
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:131
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:132
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:136
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:149
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:150
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:151
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:160
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:161
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:162
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:17
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:174
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:175
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:176
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:179
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:182
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:19
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:191
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:192
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:193
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:196
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:199
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:216
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:22
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:227
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:228
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:229
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:23
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:230
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:235
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:241
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:242
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:243
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:248
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:252
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:259
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:260
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:261
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:266
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:27
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:274
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:275
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:30
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:36
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:40
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:45
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:46
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:47
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:53
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:54
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:55
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:64
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:65
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:66
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:71
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:72
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:73
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:82
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:87
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:91
-  - DOUBLE_BRACKET OPENBSD/usr/local/libexec/rails-task.ksh:92
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/bin/emergency_cpu.sh:38
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/bin/resource_guard.sh:325
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/bin/resource_guard.sh:327
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-prepare.ksh:14
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-prepare.ksh:22
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-prepare.ksh:23
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-prepare.ksh:27
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-prepare.ksh:28
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-prepare.ksh:33
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-prepare.ksh:38
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-prepare.ksh:39
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-prepare.ksh:40
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-prepare.ksh:60
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-run.ksh:16
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-run.ksh:20
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-run.ksh:28
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-run.ksh:33
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-run.ksh:37
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-run.ksh:38
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:108
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:111
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:115
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:120
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:126
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:130
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:131
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:132
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:15
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:150
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:21
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:32
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:33
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:34
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:35
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:36
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:42
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:46
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:47
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:48
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:65
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:70
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:89
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:90
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:94
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/ci-sync.ksh:95
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:104
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:109
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:11
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:110
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:116
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:119
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:120
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:121
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:127
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:128
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:129
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:133
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:134
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:135
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:155
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:160
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:162
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:163
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:165
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:171
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:172
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:178
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:179
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:183
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:184
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:185
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:186
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:192
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:193
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:195
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:196
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:20
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:203
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:204
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:215
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:219
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:220
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:221
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:227
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:23
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:30
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:31
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:32
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:33
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:37
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:60
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:71
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:77
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:95
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:107
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:112
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:118
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:119
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:126
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:131
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:132
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:136
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:149
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:150
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:151
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:160
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:161
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:162
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:17
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:174
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:175
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:176
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:179
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:182
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:19
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:191
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:192
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:193
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:196
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:199
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:216
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:22
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:227
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:228
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:229
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:23
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:230
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:235
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:241
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:242
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:243
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:248
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:252
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:259
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:260
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:261
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:266
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:27
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:274
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:275
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:30
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:36
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:40
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:45
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:46
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:47
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:53
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:54
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:55
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:64
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:65
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:66
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:71
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:72
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:73
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:82
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:87
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:91
+  - DOUBLE_BRACKET OPENBSD/mirror/usr/local/libexec/rails-task.ksh:92
   - DOUBLE_QUOTES_RUBY MASTER/web/lib/tasks/face_runtime.rake:32
   - DOUBLE_QUOTES_RUBY OPENBSD/checks/vps_safety_check.rb:105
   - DOUBLE_QUOTES_RUBY OPENBSD/checks/vps_safety_check.rb:106
@@ -4835,9 +4835,9 @@ finding_members:
   - FEW_ARGUMENTS OPENBSD/checks/vps_safety_check.rb:332
   - FEW_ARGUMENTS OPENBSD/checks/vps_safety_check.rb:336
   - FEW_ARGUMENTS OPENBSD/checks/vps_safety_check.rb:354
-  - FEW_ARGUMENTS OPENBSD/lib/check_runner.rb:53
-  - FEW_ARGUMENTS OPENBSD/lib/dmesg.rb:176
-  - FEW_ARGUMENTS OPENBSD/lib/dmesg.rb:23
+  - FEW_ARGUMENTS OPENBSD/mirror/lib/check_runner.rb:53
+  - FEW_ARGUMENTS OPENBSD/mirror/lib/dmesg.rb:176
+  - FEW_ARGUMENTS OPENBSD/mirror/lib/dmesg.rb:23
   - FEW_ARGUMENTS OPENBSD/test/test_dns_facts_agree.rb:118
   - FEW_ARGUMENTS OPENBSD/test/test_githooks.rb:73
   - FEW_ARGUMENTS OPENBSD/test/test_pub4_admin.rb:167
@@ -7994,29 +7994,29 @@ finding_members:
   - LONG_LINE OPENBSD/PATH_OWNERSHIP.yml:139
   - LONG_LINE OPENBSD/_net.sh:54
   - LONG_LINE OPENBSD/_net.sh:80
-  - LONG_LINE OPENBSD/bin/deploy_all.sh:41
-  - LONG_LINE OPENBSD/bin/deploy_all.sh:61
-  - LONG_LINE OPENBSD/bin/domain_watch.rb:200
-  - LONG_LINE OPENBSD/bin/domain_watch.rb:252
-  - LONG_LINE OPENBSD/bin/domain_watch.rb:287
-  - LONG_LINE OPENBSD/bin/domain_watch.rb:319
-  - LONG_LINE OPENBSD/bin/domain_watch.rb:402
-  - LONG_LINE OPENBSD/bin/domain_watch.rb:404
-  - LONG_LINE OPENBSD/bin/domain_watch.rb:406
-  - LONG_LINE OPENBSD/bin/manual_master_deploy.ksh:57
-  - LONG_LINE OPENBSD/bin/start_all_apps.sh:7
-  - LONG_LINE OPENBSD/bin/sync_deploy_inventory.rb:14
-  - LONG_LINE OPENBSD/bin/sync_deploy_inventory.rb:37
-  - LONG_LINE OPENBSD/bin/vps_ci.sh:27
-  - LONG_LINE OPENBSD/bin/vps_deploy_master.sh:139
-  - LONG_LINE OPENBSD/bin/vps_deploy_master.sh:37
-  - LONG_LINE OPENBSD/bin/vps_deploy_master.sh:94
-  - LONG_LINE OPENBSD/bin/vps_install_all.sh:41
-  - LONG_LINE OPENBSD/bin/vps_install_all.sh:8
-  - LONG_LINE OPENBSD/bin/vps_master_scan.sh:23
-  - LONG_LINE OPENBSD/bin/vps_production_push.sh:21
-  - LONG_LINE OPENBSD/bin/vps_run_remote.sh:38
-  - LONG_LINE OPENBSD/bin/vps_weekly_integrity.sh:43
+  - LONG_LINE OPENBSD/mirror/bin/deploy_all.sh:41
+  - LONG_LINE OPENBSD/mirror/bin/deploy_all.sh:61
+  - LONG_LINE OPENBSD/mirror/bin/domain_watch.rb:200
+  - LONG_LINE OPENBSD/mirror/bin/domain_watch.rb:252
+  - LONG_LINE OPENBSD/mirror/bin/domain_watch.rb:287
+  - LONG_LINE OPENBSD/mirror/bin/domain_watch.rb:319
+  - LONG_LINE OPENBSD/mirror/bin/domain_watch.rb:402
+  - LONG_LINE OPENBSD/mirror/bin/domain_watch.rb:404
+  - LONG_LINE OPENBSD/mirror/bin/domain_watch.rb:406
+  - LONG_LINE OPENBSD/mirror/bin/manual_master_deploy.ksh:57
+  - LONG_LINE OPENBSD/mirror/bin/start_all_apps.sh:7
+  - LONG_LINE OPENBSD/mirror/bin/sync_deploy_inventory.rb:14
+  - LONG_LINE OPENBSD/mirror/bin/sync_deploy_inventory.rb:37
+  - LONG_LINE OPENBSD/mirror/bin/vps_ci.sh:27
+  - LONG_LINE OPENBSD/mirror/bin/vps_deploy_master.sh:139
+  - LONG_LINE OPENBSD/mirror/bin/vps_deploy_master.sh:37
+  - LONG_LINE OPENBSD/mirror/bin/vps_deploy_master.sh:94
+  - LONG_LINE OPENBSD/mirror/bin/vps_install_all.sh:41
+  - LONG_LINE OPENBSD/mirror/bin/vps_install_all.sh:8
+  - LONG_LINE OPENBSD/mirror/bin/vps_master_scan.sh:23
+  - LONG_LINE OPENBSD/mirror/bin/vps_production_push.sh:21
+  - LONG_LINE OPENBSD/mirror/bin/vps_run_remote.sh:38
+  - LONG_LINE OPENBSD/mirror/bin/vps_weekly_integrity.sh:43
   - LONG_LINE OPENBSD/checks/config_drift_check.rb:237
   - LONG_LINE OPENBSD/checks/config_drift_check.rb:258
   - LONG_LINE OPENBSD/checks/deploy_smoke_check.rb:150
@@ -8082,10 +8082,10 @@ finding_members:
   - LONG_LINE OPENBSD/dev/operator_stage_1.zsh:172
   - LONG_LINE OPENBSD/dev/operator_stage_1.zsh:21
   - LONG_LINE OPENBSD/dev/operator_stage_2.zsh:99
-  - LONG_LINE OPENBSD/lib/check_runner.rb:47
-  - LONG_LINE OPENBSD/lib/deploy_inventory.rb:10
-  - LONG_LINE OPENBSD/lib/environment.rb:92
-  - LONG_LINE OPENBSD/lib/environment.rb:94
+  - LONG_LINE OPENBSD/mirror/lib/check_runner.rb:47
+  - LONG_LINE OPENBSD/mirror/lib/deploy_inventory.rb:10
+  - LONG_LINE OPENBSD/mirror/lib/environment.rb:92
+  - LONG_LINE OPENBSD/mirror/lib/environment.rb:94
   - LONG_LINE OPENBSD/ptr_openbsd_amsterdam.rb:36
   - LONG_LINE OPENBSD/ptr_openbsd_amsterdam.rb:59
   - LONG_LINE OPENBSD/test/test_check_fixtures.rb:239
@@ -8145,20 +8145,20 @@ finding_members:
   - LONG_LINE OPENBSD/test/test_vps_safety_check.rb:64
   - LONG_LINE OPENBSD/test/test_vps_state.rb:24
   - LONG_LINE OPENBSD/test/test_vps_state.rb:56
-  - LONG_LINE OPENBSD/usr/local/bin/declutter-hygiene.sh:58
-  - LONG_LINE OPENBSD/usr/local/bin/drain-jobs.sh:143
-  - LONG_LINE OPENBSD/usr/local/bin/ports-import.sh:58
-  - LONG_LINE OPENBSD/usr/local/bin/prune-guests.sh:91
-  - LONG_LINE OPENBSD/usr/local/bin/purge-deleted-users.sh:64
-  - LONG_LINE OPENBSD/usr/local/bin/renew-certs.sh:75
-  - LONG_LINE OPENBSD/usr/local/bin/uptime-check.sh:99
-  - LONG_LINE OPENBSD/usr/local/libexec/rails-sync.ksh:32
-  - LONG_LINE OPENBSD/usr/local/libexec/rails-task.ksh:111
-  - LONG_LINE OPENBSD/usr/local/libexec/rails-task.ksh:17
-  - LONG_LINE OPENBSD/usr/local/libexec/rails-task.ksh:217
-  - LONG_LINE OPENBSD/usr/local/libexec/rails-task.ksh:23
-  - LONG_LINE OPENBSD/usr/local/libexec/rails-task.ksh:81
-  - LONG_LINE OPENBSD/usr/local/libexec/rails-task.ksh:98
+  - LONG_LINE OPENBSD/mirror/usr/local/bin/declutter-hygiene.sh:58
+  - LONG_LINE OPENBSD/mirror/usr/local/bin/drain-jobs.sh:143
+  - LONG_LINE OPENBSD/mirror/usr/local/bin/ports-import.sh:58
+  - LONG_LINE OPENBSD/mirror/usr/local/bin/prune-guests.sh:91
+  - LONG_LINE OPENBSD/mirror/usr/local/bin/purge-deleted-users.sh:64
+  - LONG_LINE OPENBSD/mirror/usr/local/bin/renew-certs.sh:75
+  - LONG_LINE OPENBSD/mirror/usr/local/bin/uptime-check.sh:99
+  - LONG_LINE OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:32
+  - LONG_LINE OPENBSD/mirror/usr/local/libexec/rails-task.ksh:111
+  - LONG_LINE OPENBSD/mirror/usr/local/libexec/rails-task.ksh:17
+  - LONG_LINE OPENBSD/mirror/usr/local/libexec/rails-task.ksh:217
+  - LONG_LINE OPENBSD/mirror/usr/local/libexec/rails-task.ksh:23
+  - LONG_LINE OPENBSD/mirror/usr/local/libexec/rails-task.ksh:81
+  - LONG_LINE OPENBSD/mirror/usr/local/libexec/rails-task.ksh:98
   - LONG_LINE RAILS/__shared/app/assets/stylesheets/_dialect_tokens.scss:84
   - LONG_LINE RAILS/__shared/app/assets/stylesheets/_minimal.scss:555
   - LONG_LINE RAILS/__shared/app/assets/stylesheets/_minimal.scss:565
@@ -10152,12 +10152,12 @@ finding_members:
   - LONG_PARAMETER_LIST MASTER/tools/visual/browserless_measurements.rb:527
   - LONG_PARAMETER_LIST MASTER/web/app/services/image_presenter.rb:107
   - LONG_PARAMETER_LIST MASTER/web/script/screenshot_calibrate.rb:68
-  - LONG_PARAMETER_LIST OPENBSD/bin/render_dns.rb:310
+  - LONG_PARAMETER_LIST OPENBSD/mirror/bin/render_dns.rb:310
   - LONG_PARAMETER_LIST OPENBSD/checks/config_drift_check.rb:222
   - LONG_PARAMETER_LIST OPENBSD/checks/deploy_smoke_check.rb:21
   - LONG_PARAMETER_LIST OPENBSD/checks/integrity_check.rb:26
-  - LONG_PARAMETER_LIST OPENBSD/lib/check_environment.rb:9
-  - LONG_PARAMETER_LIST OPENBSD/lib/check_ledger.rb:54
+  - LONG_PARAMETER_LIST OPENBSD/mirror/lib/check_environment.rb:9
+  - LONG_PARAMETER_LIST OPENBSD/mirror/lib/check_ledger.rb:54
   - LONG_PARAMETER_LIST OPENBSD/test/test_rc_master_stop.rb:23
   - LONG_PARAMETER_LIST OPENBSD/test/test_vps_deploy_flow.rb:191
   - LONG_PARAMETER_LIST RAILS/__shared/app/helpers/shared/search_helper.rb:48
@@ -10410,7 +10410,7 @@ finding_members:
   - MODIFIER_SILENT_RESCUE MASTER/tools/dead_link_census.rb:49
   - MODIFIER_SILENT_RESCUE MASTER/web/app/middleware/auth_tier.rb:127
   - MODIFIER_SILENT_RESCUE MASTER/web/app/middleware/auth_tier.rb:166
-  - MODIFIER_SILENT_RESCUE OPENBSD/bin/domain_watch.rb:218
+  - MODIFIER_SILENT_RESCUE OPENBSD/mirror/bin/domain_watch.rb:218
   - MONKEY_PATCH_CORE MASTER/lib/fix/kernel.rb:17
   - MONKEY_PATCH_CORE MASTER/lib/fix/kernel/convergence_adapter.rb:60
   - MONKEY_PATCH_CORE MASTER/lib/fix/kernel/lifecycle.rb:8
@@ -10555,12 +10555,12 @@ finding_members:
   - NARROW_SILENT_RESCUE MASTER/web/app/controllers/events_controller.rb:140
   - NARROW_SILENT_RESCUE MASTER/web/app/controllers/ingress_controller.rb:95
   - NARROW_SILENT_RESCUE MASTER/web/app/services/tts_job.rb:239
-  - NARROW_SILENT_RESCUE OPENBSD/bin/domain_watch.rb:105
-  - NARROW_SILENT_RESCUE OPENBSD/bin/domain_watch.rb:363
+  - NARROW_SILENT_RESCUE OPENBSD/mirror/bin/domain_watch.rb:105
+  - NARROW_SILENT_RESCUE OPENBSD/mirror/bin/domain_watch.rb:363
   - NARROW_SILENT_RESCUE OPENBSD/checks/dns_zones.rb:111
   - NARROW_SILENT_RESCUE OPENBSD/checks/shell_syntax_check.rb:34
-  - NARROW_SILENT_RESCUE OPENBSD/lib/check_ledger.rb:90
-  - NARROW_SILENT_RESCUE OPENBSD/lib/deploy_stamp.rb:27
+  - NARROW_SILENT_RESCUE OPENBSD/mirror/lib/check_ledger.rb:90
+  - NARROW_SILENT_RESCUE OPENBSD/mirror/lib/deploy_stamp.rb:27
   - NARROW_SILENT_RESCUE OPENBSD/test/test_domain_expiry.rb:44
   - NARROW_SILENT_RESCUE RAILS/__shared/app/models/shared/outbound_click.rb:34
   - NARROW_SILENT_RESCUE RAILS/__shared/app/services/shared/link_embed.rb:196
@@ -10695,13 +10695,13 @@ finding_members:
   - NESTING_DEPTH MASTER/tools/visual/browserless_measurements.rb:415
   - NESTING_DEPTH MASTER/tools/visual/browserless_measurements.rb:425
   - NESTING_DEPTH MASTER/web/config/initializers/master_container.rb:123
-  - NESTING_DEPTH OPENBSD/bin/domain_watch.rb:403
-  - NESTING_DEPTH OPENBSD/bin/domain_watch.rb:450
-  - NESTING_DEPTH OPENBSD/bin/domain_watch.rb:453
+  - NESTING_DEPTH OPENBSD/mirror/bin/domain_watch.rb:403
+  - NESTING_DEPTH OPENBSD/mirror/bin/domain_watch.rb:450
+  - NESTING_DEPTH OPENBSD/mirror/bin/domain_watch.rb:453
   - NESTING_DEPTH OPENBSD/checks/health_check.rb:205
   - NESTING_DEPTH OPENBSD/checks/integrity_check.rb:60
   - NESTING_DEPTH OPENBSD/checks/integrity_check.rb:63
-  - NESTING_DEPTH OPENBSD/lib/check_ledger.rb:158
+  - NESTING_DEPTH OPENBSD/mirror/lib/check_ledger.rb:158
   - NESTING_DEPTH RAILS/__shared/lib/operator/scss.rb:119
   - NESTING_DEPTH RAILS/__shared/lib/operator/scss.rb:122
   - NESTING_DEPTH RAILS/__shared/lib/operator/scss.rb:125
@@ -10777,7 +10777,7 @@ finding_members:
   - NEVER_BATCH_DELETE MASTER/lib/voice/engines.rb:482
   - NEVER_BATCH_DELETE MASTER/lib/voice/human.rb:130
   - NEVER_BATCH_DELETE MASTER/web/test/controllers/tts_controller_test.rb:24
-  - NEVER_BATCH_DELETE OPENBSD/usr/local/libexec/rails-sync.ksh:149
+  - NEVER_BATCH_DELETE OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:149
   - NO_ABBREVIATED_IDENTIFIERS MASTER/law/semantic.rb:628
   - NO_ABBREVIATED_IDENTIFIERS MASTER/law/semantic.rb:633
   - NO_ABBREVIATED_IDENTIFIERS MASTER/lib/cli/command_registry.rb:107
@@ -11287,11 +11287,11 @@ finding_members:
   - NO_CHANGELOG_COMMENT MASTER/web/test/face_boot.test.mjs:597
   - NO_CHANGELOG_COMMENT MASTER/web/test/face_boot.test.mjs:952
   - NO_CHANGELOG_COMMENT MASTER/web/test/master_interface_contract.test.mjs:13
-  - NO_CHANGELOG_COMMENT OPENBSD/bin/vps_ci.sh:38
-  - NO_CHANGELOG_COMMENT OPENBSD/bin/vps_weekly_integrity.sh:35
+  - NO_CHANGELOG_COMMENT OPENBSD/mirror/bin/vps_ci.sh:38
+  - NO_CHANGELOG_COMMENT OPENBSD/mirror/bin/vps_weekly_integrity.sh:35
   - NO_CHANGELOG_COMMENT OPENBSD/checks/vps_safety_check.rb:59
   - NO_CHANGELOG_COMMENT OPENBSD/dev/operator_stage_2.zsh:83
-  - NO_CHANGELOG_COMMENT OPENBSD/lib/deploy_inventory.rb:33
+  - NO_CHANGELOG_COMMENT OPENBSD/mirror/lib/deploy_inventory.rb:33
   - NO_CHANGELOG_COMMENT RAILS/__shared/app/assets/stylesheets/_animations.scss:5
   - NO_CHANGELOG_COMMENT RAILS/__shared/app/assets/stylesheets/_modal.scss:1
   - NO_CHANGELOG_COMMENT RAILS/__shared/app/assets/stylesheets/_nearby_chat_widget.scss:4
@@ -12138,8 +12138,8 @@ finding_members:
   - OMIT_NEEDLESS_WORDS MASTER/tools/rails/generate_face_root_css.rb:7
   - OMIT_NEEDLESS_WORDS MASTER/tools/rails/operator/model_contract_lint.rb:27
   - OMIT_NEEDLESS_WORDS MASTER/tools/reader_singularity.rb:18
-  - OMIT_NEEDLESS_WORDS OPENBSD/lib/ci_lock.sh:48
-  - OMIT_NEEDLESS_WORDS OPENBSD/usr/local/libexec/rails-sync.ksh:88
+  - OMIT_NEEDLESS_WORDS OPENBSD/mirror/lib/ci_lock.sh:48
+  - OMIT_NEEDLESS_WORDS OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:88
   - OMIT_NEEDLESS_WORDS RAILS/__shared/app/controllers/omniauth_callbacks_controller.rb:12
   - OMIT_NEEDLESS_WORDS RAILS/__shared/app/models/shared/audit_event.rb:47
   - OMIT_NEEDLESS_WORDS RAILS/__shared/app/services/shared/amazon_associates.rb:103
@@ -15034,26 +15034,26 @@ finding_members:
   - QUOTE_VARIABLES OPENBSD/test/resource_guard_test.sh:181
   - QUOTE_VARIABLES OPENBSD/test/resource_guard_test.sh:225
   - QUOTE_VARIABLES OPENBSD/test/resource_guard_test.sh:228
-  - QUOTE_VARIABLES OPENBSD/usr/local/bin/resource_guard.sh:224
-  - QUOTE_VARIABLES OPENBSD/usr/local/bin/resource_guard.sh:225
-  - QUOTE_VARIABLES OPENBSD/usr/local/libexec/ci-run.ksh:33
-  - QUOTE_VARIABLES OPENBSD/usr/local/libexec/rails-sync.ksh:110
-  - QUOTE_VARIABLES OPENBSD/usr/local/libexec/rails-sync.ksh:121
-  - QUOTE_VARIABLES OPENBSD/usr/local/libexec/rails-sync.ksh:129
-  - QUOTE_VARIABLES OPENBSD/usr/local/libexec/rails-sync.ksh:135
-  - QUOTE_VARIABLES OPENBSD/usr/local/libexec/rails-sync.ksh:33
-  - QUOTE_VARIABLES OPENBSD/usr/local/libexec/rails-sync.ksh:37
-  - QUOTE_VARIABLES OPENBSD/usr/local/libexec/rails-task.ksh:175
-  - QUOTE_VARIABLES OPENBSD/usr/local/libexec/rails-task.ksh:230
-  - QUOTE_VARIABLES OPENBSD/usr/local/libexec/rails-task.ksh:243
-  - QUOTE_VARIABLES OPENBSD/usr/local/libexec/rails-task.ksh:261
-  - QUOTE_VARIABLES OPENBSD/usr/local/libexec/rails-task.ksh:36
-  - QUOTE_VARIABLES OPENBSD/usr/local/libexec/rails-task.ksh:40
-  - QUOTE_VARIABLES OPENBSD/usr/local/libexec/rails-task.ksh:47
-  - QUOTE_VARIABLES OPENBSD/usr/local/libexec/rails-task.ksh:55
-  - QUOTE_VARIABLES OPENBSD/usr/local/libexec/rails-task.ksh:66
-  - QUOTE_VARIABLES OPENBSD/usr/local/libexec/rails-task.ksh:73
-  - QUOTE_VARIABLES OPENBSD/usr/local/libexec/rails-task.ksh:87
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/bin/resource_guard.sh:224
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/bin/resource_guard.sh:225
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/libexec/ci-run.ksh:33
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:110
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:121
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:129
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:135
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:33
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/libexec/rails-sync.ksh:37
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/libexec/rails-task.ksh:175
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/libexec/rails-task.ksh:230
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/libexec/rails-task.ksh:243
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/libexec/rails-task.ksh:261
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/libexec/rails-task.ksh:36
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/libexec/rails-task.ksh:40
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/libexec/rails-task.ksh:47
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/libexec/rails-task.ksh:55
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/libexec/rails-task.ksh:66
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/libexec/rails-task.ksh:73
+  - QUOTE_VARIABLES OPENBSD/mirror/usr/local/libexec/rails-task.ksh:87
   - RAMS_HONEST RAILS/brgen/app/views/conversations/show.html.erb:24
   - RAMS_HONEST RAILS/brgen/engines/radio/playlist/app/views/playlist/playlists/show.html.erb:50
   - RAMS_THOROUGH MASTER/web/prototypes/face_dotfield/index.html:1
@@ -15571,8 +15571,8 @@ finding_members:
   - SMALL_FILES MASTER/web/styles/face/30_conversation.css:1
   - SMALL_FILES MASTER/web/styles/face/43_face_chrome.css:1
   - SMALL_FILES OPENBSD/OPERATOR.sh:1
-  - SMALL_FILES OPENBSD/bin/domain_watch.rb:1
-  - SMALL_FILES OPENBSD/bin/render_dns.rb:1
+  - SMALL_FILES OPENBSD/mirror/bin/domain_watch.rb:1
+  - SMALL_FILES OPENBSD/mirror/bin/render_dns.rb:1
   - SMALL_FILES OPENBSD/checks/config_drift_check.rb:1
   - SMALL_FILES OPENBSD/checks/health_check.rb:1
   - SMALL_FILES OPENBSD/checks/port_inventory.rb:1
@@ -15585,7 +15585,7 @@ finding_members:
   - SMALL_FILES OPENBSD/test/test_vps_deploy_contract.rb:1
   - SMALL_FILES OPENBSD/test/test_vps_deploy_flow.rb:1
   - SMALL_FILES OPENBSD/test/test_vps_safety_check.rb:1
-  - SMALL_FILES OPENBSD/usr/local/bin/resource_guard.sh:1
+  - SMALL_FILES OPENBSD/mirror/usr/local/bin/resource_guard.sh:1
   - SMALL_FILES RAILS/__shared/app/assets/stylesheets/_affiliate_feed_unit.scss:1
   - SMALL_FILES RAILS/__shared/app/assets/stylesheets/_layout_chrome.scss:1
   - SMALL_FILES RAILS/__shared/app/assets/stylesheets/_minimal.scss:1
@@ -16280,12 +16280,12 @@ finding_members:
   - SMALL_FUNCTIONS MASTER/web/app/services/copy_review_check.rb:36
   - SMALL_FUNCTIONS MASTER/web/app/services/tts_job.rb:367
   - SMALL_FUNCTIONS MASTER/web/app/services/tts_job.rb:39
-  - SMALL_FUNCTIONS OPENBSD/bin/domain_watch.rb:119
-  - SMALL_FUNCTIONS OPENBSD/bin/render_dns.rb:187
-  - SMALL_FUNCTIONS OPENBSD/bin/render_dns.rb:220
-  - SMALL_FUNCTIONS OPENBSD/bin/render_dns.rb:267
-  - SMALL_FUNCTIONS OPENBSD/bin/render_dns.rb:329
-  - SMALL_FUNCTIONS OPENBSD/bin/render_dns.rb:83
+  - SMALL_FUNCTIONS OPENBSD/mirror/bin/domain_watch.rb:119
+  - SMALL_FUNCTIONS OPENBSD/mirror/bin/render_dns.rb:187
+  - SMALL_FUNCTIONS OPENBSD/mirror/bin/render_dns.rb:220
+  - SMALL_FUNCTIONS OPENBSD/mirror/bin/render_dns.rb:267
+  - SMALL_FUNCTIONS OPENBSD/mirror/bin/render_dns.rb:329
+  - SMALL_FUNCTIONS OPENBSD/mirror/bin/render_dns.rb:83
   - SMALL_FUNCTIONS OPENBSD/checks/config_drift_check.rb:222
   - SMALL_FUNCTIONS OPENBSD/checks/deploy_smoke_check.rb:140
   - SMALL_FUNCTIONS OPENBSD/checks/domain_alignment.rb:22
@@ -16296,8 +16296,8 @@ finding_members:
   - SMALL_FUNCTIONS OPENBSD/checks/pf_policy_check.rb:67
   - SMALL_FUNCTIONS OPENBSD/checks/port_inventory.rb:139
   - SMALL_FUNCTIONS OPENBSD/checks/solid_queue_proof.rb:114
-  - SMALL_FUNCTIONS OPENBSD/lib/check_ledger.rb:99
-  - SMALL_FUNCTIONS OPENBSD/lib/domain_signals.rb:14
+  - SMALL_FUNCTIONS OPENBSD/mirror/lib/check_ledger.rb:99
+  - SMALL_FUNCTIONS OPENBSD/mirror/lib/domain_signals.rb:14
   - SMALL_FUNCTIONS OPENBSD/test/test_restore_scripts.rb:177
   - SMALL_FUNCTIONS OPENBSD/test/test_vps_deploy_contract.rb:511
   - SMALL_FUNCTIONS OPENBSD/test/test_vps_deploy_flow.rb:319
@@ -16514,19 +16514,19 @@ finding_members:
   - STIMULUS_PROGRESSIVE RAILS/bsdports/app/views/comments/_form.html.erb:1
   - STIMULUS_PROGRESSIVE RAILS/bsdports/app/views/comments/new.html.erb:1
   - STIMULUS_PROGRESSIVE RAILS/bsdports/app/views/layouts/application.html.erb:1
-  - STRICT_MODE_ZSH OPENBSD/usr/local/bin/declutter-hygiene.sh:1
-  - STRICT_MODE_ZSH OPENBSD/usr/local/bin/ports-import.sh:1
-  - STRICT_MODE_ZSH OPENBSD/usr/local/bin/purge-deleted-users.sh:1
-  - STRICT_MODE_ZSH OPENBSD/usr/local/libexec/stale_ci_cleanup.ksh:1
-  - TAB_CHARACTER OPENBSD/usr/local/bin/uptime-check.sh:100
-  - TAB_CHARACTER OPENBSD/usr/local/bin/uptime-check.sh:102
-  - TAB_CHARACTER OPENBSD/usr/local/bin/uptime-check.sh:93
-  - TAB_CHARACTER OPENBSD/usr/local/bin/uptime-check.sh:94
-  - TAB_CHARACTER OPENBSD/usr/local/bin/uptime-check.sh:95
-  - TAB_CHARACTER OPENBSD/usr/local/bin/uptime-check.sh:96
-  - TAB_CHARACTER OPENBSD/usr/local/bin/uptime-check.sh:97
-  - TAB_CHARACTER OPENBSD/usr/local/bin/uptime-check.sh:98
-  - TAB_CHARACTER OPENBSD/usr/local/bin/uptime-check.sh:99
+  - STRICT_MODE_ZSH OPENBSD/mirror/usr/local/bin/declutter-hygiene.sh:1
+  - STRICT_MODE_ZSH OPENBSD/mirror/usr/local/bin/ports-import.sh:1
+  - STRICT_MODE_ZSH OPENBSD/mirror/usr/local/bin/purge-deleted-users.sh:1
+  - STRICT_MODE_ZSH OPENBSD/mirror/usr/local/libexec/stale_ci_cleanup.ksh:1
+  - TAB_CHARACTER OPENBSD/mirror/usr/local/bin/uptime-check.sh:100
+  - TAB_CHARACTER OPENBSD/mirror/usr/local/bin/uptime-check.sh:102
+  - TAB_CHARACTER OPENBSD/mirror/usr/local/bin/uptime-check.sh:93
+  - TAB_CHARACTER OPENBSD/mirror/usr/local/bin/uptime-check.sh:94
+  - TAB_CHARACTER OPENBSD/mirror/usr/local/bin/uptime-check.sh:95
+  - TAB_CHARACTER OPENBSD/mirror/usr/local/bin/uptime-check.sh:96
+  - TAB_CHARACTER OPENBSD/mirror/usr/local/bin/uptime-check.sh:97
+  - TAB_CHARACTER OPENBSD/mirror/usr/local/bin/uptime-check.sh:98
+  - TAB_CHARACTER OPENBSD/mirror/usr/local/bin/uptime-check.sh:99
   - TEMPLATE_LITERALS MASTER/web/test/master_interface_contract.test.mjs:142
   - THIN_CONTROLLER MASTER/web/app/controllers/api/v1/copy_reviews_controller.rb:15
   - THIN_CONTROLLER MASTER/web/app/controllers/events_controller.rb:64
@@ -16692,14 +16692,14 @@ finding_members:
   - TRAILING_COMMENT OPENBSD/RUNBOOK.md:789
   - TRAILING_COMMENT OPENBSD/RUNBOOK.md:792
   - TRAILING_COMMENT OPENBSD/backup_priv.sh:40
-  - TRAILING_COMMENT OPENBSD/bin/sync_deploy_inventory.rb:14
-  - TRAILING_COMMENT OPENBSD/bin/validate_doas.ksh:21
-  - TRAILING_COMMENT OPENBSD/bin/validate_doas.ksh:22
-  - TRAILING_COMMENT OPENBSD/bin/vps_deploy_master.sh:71
+  - TRAILING_COMMENT OPENBSD/mirror/bin/sync_deploy_inventory.rb:14
+  - TRAILING_COMMENT OPENBSD/mirror/bin/validate_doas.ksh:21
+  - TRAILING_COMMENT OPENBSD/mirror/bin/validate_doas.ksh:22
+  - TRAILING_COMMENT OPENBSD/mirror/bin/vps_deploy_master.sh:71
   - TRAILING_COMMENT OPENBSD/checks/health_check.rb:365
   - TRAILING_COMMENT OPENBSD/checks/installed_targets_check.rb:85
   - TRAILING_COMMENT OPENBSD/dev/operator_usage.zsh:15
-  - TRAILING_COMMENT OPENBSD/lib/pid_probe.rb:19
+  - TRAILING_COMMENT OPENBSD/mirror/lib/pid_probe.rb:19
   - TRAILING_COMMENT OPENBSD/test/resource_guard_test.sh:88
   - TRAILING_COMMENT RAILS/__shared/app/services/shared/amazon_associates.rb:35
   - TRAILING_COMMENT RAILS/__shared/app/services/shared/amazon_associates.rb:36
@@ -18998,7 +18998,7 @@ finding_members:
   - TYPE_IN_NAME OPENBSD/checks/health_check.rb:350
   - TYPE_IN_NAME OPENBSD/checks/vps_safety_check.rb:101
   - TYPE_IN_NAME OPENBSD/checks/vps_safety_check.rb:72
-  - TYPE_IN_NAME OPENBSD/lib/domain_signals.rb:85
+  - TYPE_IN_NAME OPENBSD/mirror/lib/domain_signals.rb:85
   - TYPE_IN_NAME RAILS/__shared/app/models/concerns/shared/taggable.rb:14
   - TYPE_IN_NAME RAILS/__shared/app/models/shared/affiliate_conversion.rb:77
   - TYPE_IN_NAME RAILS/__shared/lib/operator/scss.rb:110
@@ -22416,7 +22416,7 @@ finding_members:
   - VERTICAL_BREATH MASTER/web/test/viseme_plan.test.mjs:24
   - VERTICAL_BREATH MASTER/web/test/visual_limits.test.mjs:14
   - VERTICAL_BREATH MASTER/web/test/voice_chain.test.mjs:39
-  - VERTICAL_BREATH OPENBSD/bin/domain_watch.rb:141
+  - VERTICAL_BREATH OPENBSD/mirror/bin/domain_watch.rb:141
   - VERTICAL_BREATH OPENBSD/checks/config_drift_check.rb:52
   - VERTICAL_BREATH OPENBSD/checks/deploy_smoke_check.rb:170
   - VERTICAL_BREATH OPENBSD/checks/health_check.rb:4
@@ -22429,12 +22429,12 @@ finding_members:
   - VERTICAL_BREATH OPENBSD/checks/vps_safety_check.rb:596
   - VERTICAL_BREATH OPENBSD/checks/vps_safety_check.rb:614
   - VERTICAL_BREATH OPENBSD/checks/vps_safety_check.rb:85
-  - VERTICAL_BREATH OPENBSD/lib/check_ledger.rb:107
-  - VERTICAL_BREATH OPENBSD/lib/check_ledger.rb:150
-  - VERTICAL_BREATH OPENBSD/lib/check_ledger.rb:57
-  - VERTICAL_BREATH OPENBSD/lib/domain_signals.rb:45
-  - VERTICAL_BREATH OPENBSD/lib/domain_signals.rb:66
-  - VERTICAL_BREATH OPENBSD/lib/environment.rb:98
+  - VERTICAL_BREATH OPENBSD/mirror/lib/check_ledger.rb:107
+  - VERTICAL_BREATH OPENBSD/mirror/lib/check_ledger.rb:150
+  - VERTICAL_BREATH OPENBSD/mirror/lib/check_ledger.rb:57
+  - VERTICAL_BREATH OPENBSD/mirror/lib/domain_signals.rb:45
+  - VERTICAL_BREATH OPENBSD/mirror/lib/domain_signals.rb:66
+  - VERTICAL_BREATH OPENBSD/mirror/lib/environment.rb:98
   - VERTICAL_BREATH OPENBSD/relayd_prune_keypairs.rb:19
   - VERTICAL_BREATH OPENBSD/sync.rb:41
   - VERTICAL_BREATH OPENBSD/test/run_all.rb:74
@@ -26249,9 +26249,9 @@ finding_members:
   - reek MASTER/web/config/initializers/master_container.rb:95
   - reek MASTER/web/test/locale_contract_test.rb:72
   - reek MASTER/web/test/locale_contract_test.rb:81
-  - reek OPENBSD/bin/domain_watch.rb:378
-  - reek OPENBSD/bin/domain_watch.rb:378
-  - reek OPENBSD/bin/domain_watch.rb:382
+  - reek OPENBSD/mirror/bin/domain_watch.rb:378
+  - reek OPENBSD/mirror/bin/domain_watch.rb:378
+  - reek OPENBSD/mirror/bin/domain_watch.rb:382
   - reek OPENBSD/checks/installed_targets_check.rb:107
   - reek OPENBSD/checks/installed_targets_check.rb:40
   - reek OPENBSD/checks/integrity_check.rb:29
@@ -26286,19 +26286,19 @@ finding_members:
   - reek OPENBSD/checks/port_inventory.rb:414
   - reek OPENBSD/checks/port_inventory.rb:421
   - reek OPENBSD/checks/port_inventory.rb:9
-  - reek OPENBSD/lib/check_ledger.rb:148
-  - reek OPENBSD/lib/check_ledger.rb:151
-  - reek OPENBSD/lib/check_ledger.rb:151
-  - reek OPENBSD/lib/check_ledger.rb:154
-  - reek OPENBSD/lib/check_ledger.rb:154
-  - reek OPENBSD/lib/check_ledger.rb:156
-  - reek OPENBSD/lib/check_ledger.rb:157
-  - reek OPENBSD/lib/check_ledger.rb:157
-  - reek OPENBSD/lib/check_ledger.rb:159
-  - reek OPENBSD/lib/dmesg.rb:68
-  - reek OPENBSD/lib/domain_signals.rb:24
-  - reek OPENBSD/lib/domain_signals.rb:25
-  - reek OPENBSD/lib/ruby_runner.rb:103
+  - reek OPENBSD/mirror/lib/check_ledger.rb:148
+  - reek OPENBSD/mirror/lib/check_ledger.rb:151
+  - reek OPENBSD/mirror/lib/check_ledger.rb:151
+  - reek OPENBSD/mirror/lib/check_ledger.rb:154
+  - reek OPENBSD/mirror/lib/check_ledger.rb:154
+  - reek OPENBSD/mirror/lib/check_ledger.rb:156
+  - reek OPENBSD/mirror/lib/check_ledger.rb:157
+  - reek OPENBSD/mirror/lib/check_ledger.rb:157
+  - reek OPENBSD/mirror/lib/check_ledger.rb:159
+  - reek OPENBSD/mirror/lib/dmesg.rb:68
+  - reek OPENBSD/mirror/lib/domain_signals.rb:24
+  - reek OPENBSD/mirror/lib/domain_signals.rb:25
+  - reek OPENBSD/mirror/lib/ruby_runner.rb:103
   - reek OPENBSD/test/test_check_lib.rb:137
   - reek OPENBSD/test/test_deploy_paths_exist.rb:47
   - reek OPENBSD/test/test_domain_expiry.rb:105
@@ -29919,31 +29919,31 @@ finding_members:
   - rubocop MASTER/web/test/test_helper.rb:50
   - rubocop MASTER/web/test/test_helper.rb:59
   - rubocop MASTER/web/test/test_helper.rb:69
-  - rubocop OPENBSD/bin/domain_watch.rb:119
-  - rubocop OPENBSD/bin/domain_watch.rb:119
-  - rubocop OPENBSD/bin/domain_watch.rb:207
-  - rubocop OPENBSD/bin/domain_watch.rb:207
-  - rubocop OPENBSD/bin/domain_watch.rb:209
-  - rubocop OPENBSD/bin/domain_watch.rb:216
-  - rubocop OPENBSD/bin/domain_watch.rb:219
-  - rubocop OPENBSD/bin/domain_watch.rb:279
-  - rubocop OPENBSD/bin/domain_watch.rb:325
-  - rubocop OPENBSD/bin/domain_watch.rb:359
-  - rubocop OPENBSD/bin/domain_watch.rb:424
-  - rubocop OPENBSD/bin/domain_watch.rb:96
-  - rubocop OPENBSD/bin/render_dns.rb:187
-  - rubocop OPENBSD/bin/render_dns.rb:220
-  - rubocop OPENBSD/bin/render_dns.rb:267
-  - rubocop OPENBSD/bin/render_dns.rb:329
-  - rubocop OPENBSD/bin/render_dns.rb:342
-  - rubocop OPENBSD/bin/render_dns.rb:344
-  - rubocop OPENBSD/bin/render_dns.rb:344
-  - rubocop OPENBSD/bin/render_dns.rb:344
-  - rubocop OPENBSD/bin/render_dns.rb:345
-  - rubocop OPENBSD/bin/render_dns.rb:345
-  - rubocop OPENBSD/bin/render_dns.rb:345
-  - rubocop OPENBSD/bin/render_dns.rb:65
-  - rubocop OPENBSD/bin/render_dns.rb:83
+  - rubocop OPENBSD/mirror/bin/domain_watch.rb:119
+  - rubocop OPENBSD/mirror/bin/domain_watch.rb:119
+  - rubocop OPENBSD/mirror/bin/domain_watch.rb:207
+  - rubocop OPENBSD/mirror/bin/domain_watch.rb:207
+  - rubocop OPENBSD/mirror/bin/domain_watch.rb:209
+  - rubocop OPENBSD/mirror/bin/domain_watch.rb:216
+  - rubocop OPENBSD/mirror/bin/domain_watch.rb:219
+  - rubocop OPENBSD/mirror/bin/domain_watch.rb:279
+  - rubocop OPENBSD/mirror/bin/domain_watch.rb:325
+  - rubocop OPENBSD/mirror/bin/domain_watch.rb:359
+  - rubocop OPENBSD/mirror/bin/domain_watch.rb:424
+  - rubocop OPENBSD/mirror/bin/domain_watch.rb:96
+  - rubocop OPENBSD/mirror/bin/render_dns.rb:187
+  - rubocop OPENBSD/mirror/bin/render_dns.rb:220
+  - rubocop OPENBSD/mirror/bin/render_dns.rb:267
+  - rubocop OPENBSD/mirror/bin/render_dns.rb:329
+  - rubocop OPENBSD/mirror/bin/render_dns.rb:342
+  - rubocop OPENBSD/mirror/bin/render_dns.rb:344
+  - rubocop OPENBSD/mirror/bin/render_dns.rb:344
+  - rubocop OPENBSD/mirror/bin/render_dns.rb:344
+  - rubocop OPENBSD/mirror/bin/render_dns.rb:345
+  - rubocop OPENBSD/mirror/bin/render_dns.rb:345
+  - rubocop OPENBSD/mirror/bin/render_dns.rb:345
+  - rubocop OPENBSD/mirror/bin/render_dns.rb:65
+  - rubocop OPENBSD/mirror/bin/render_dns.rb:83
   - rubocop OPENBSD/checks/config_drift_check.rb:147
   - rubocop OPENBSD/checks/config_drift_check.rb:158
   - rubocop OPENBSD/checks/config_drift_check.rb:183
@@ -29992,34 +29992,34 @@ finding_members:
   - rubocop OPENBSD/checks/vps_safety_check.rb:292
   - rubocop OPENBSD/checks/vps_safety_check.rb:321
   - rubocop OPENBSD/checks/vps_safety_check.rb:491
-  - rubocop OPENBSD/lib/check_ledger.rb:108
-  - rubocop OPENBSD/lib/check_ledger.rb:137
-  - rubocop OPENBSD/lib/check_ledger.rb:146
-  - rubocop OPENBSD/lib/check_ledger.rb:165
-  - rubocop OPENBSD/lib/check_ledger.rb:60
-  - rubocop OPENBSD/lib/check_ledger.rb:62
-  - rubocop OPENBSD/lib/check_ledger.rb:63
-  - rubocop OPENBSD/lib/check_ledger.rb:64
-  - rubocop OPENBSD/lib/check_ledger.rb:65
-  - rubocop OPENBSD/lib/check_ledger.rb:99
-  - rubocop OPENBSD/lib/deploy_stamp.rb:23
-  - rubocop OPENBSD/lib/deploy_stamp.rb:37
-  - rubocop OPENBSD/lib/disk_usage.rb:20
-  - rubocop OPENBSD/lib/disk_usage.rb:20
-  - rubocop OPENBSD/lib/dmesg.rb:39
-  - rubocop OPENBSD/lib/domain_signals.rb:14
-  - rubocop OPENBSD/lib/domain_signals.rb:14
-  - rubocop OPENBSD/lib/domain_signals.rb:46
-  - rubocop OPENBSD/lib/domain_signals.rb:47
-  - rubocop OPENBSD/lib/domain_signals.rb:48
-  - rubocop OPENBSD/lib/domain_signals.rb:50
-  - rubocop OPENBSD/lib/domain_signals.rb:51
-  - rubocop OPENBSD/lib/domain_signals.rb:52
-  - rubocop OPENBSD/lib/guard_state.rb:39
-  - rubocop OPENBSD/lib/guard_state.rb:42
-  - rubocop OPENBSD/lib/load_average.rb:28
-  - rubocop OPENBSD/lib/ruby_runner.rb:34
-  - rubocop OPENBSD/lib/ruby_runner.rb:75
+  - rubocop OPENBSD/mirror/lib/check_ledger.rb:108
+  - rubocop OPENBSD/mirror/lib/check_ledger.rb:137
+  - rubocop OPENBSD/mirror/lib/check_ledger.rb:146
+  - rubocop OPENBSD/mirror/lib/check_ledger.rb:165
+  - rubocop OPENBSD/mirror/lib/check_ledger.rb:60
+  - rubocop OPENBSD/mirror/lib/check_ledger.rb:62
+  - rubocop OPENBSD/mirror/lib/check_ledger.rb:63
+  - rubocop OPENBSD/mirror/lib/check_ledger.rb:64
+  - rubocop OPENBSD/mirror/lib/check_ledger.rb:65
+  - rubocop OPENBSD/mirror/lib/check_ledger.rb:99
+  - rubocop OPENBSD/mirror/lib/deploy_stamp.rb:23
+  - rubocop OPENBSD/mirror/lib/deploy_stamp.rb:37
+  - rubocop OPENBSD/mirror/lib/disk_usage.rb:20
+  - rubocop OPENBSD/mirror/lib/disk_usage.rb:20
+  - rubocop OPENBSD/mirror/lib/dmesg.rb:39
+  - rubocop OPENBSD/mirror/lib/domain_signals.rb:14
+  - rubocop OPENBSD/mirror/lib/domain_signals.rb:14
+  - rubocop OPENBSD/mirror/lib/domain_signals.rb:46
+  - rubocop OPENBSD/mirror/lib/domain_signals.rb:47
+  - rubocop OPENBSD/mirror/lib/domain_signals.rb:48
+  - rubocop OPENBSD/mirror/lib/domain_signals.rb:50
+  - rubocop OPENBSD/mirror/lib/domain_signals.rb:51
+  - rubocop OPENBSD/mirror/lib/domain_signals.rb:52
+  - rubocop OPENBSD/mirror/lib/guard_state.rb:39
+  - rubocop OPENBSD/mirror/lib/guard_state.rb:42
+  - rubocop OPENBSD/mirror/lib/load_average.rb:28
+  - rubocop OPENBSD/mirror/lib/ruby_runner.rb:34
+  - rubocop OPENBSD/mirror/lib/ruby_runner.rb:75
   - rubocop OPENBSD/ptr_openbsd_amsterdam.rb:14
   - rubocop OPENBSD/ptr_openbsd_amsterdam.rb:20
   - rubocop OPENBSD/ptr_openbsd_amsterdam.rb:27
@@ -31731,8 +31731,8 @@ finding_members:
   - veto_patterns MASTER/tools/rails/visual_seed.rb:114
   - veto_patterns MASTER/tools/security_sweep.rb:18
   - veto_patterns OPENBSD/checks/port_inventory.rb:153
-  - veto_patterns OPENBSD/lib/deploy_stamp.rb:40
-  - veto_patterns OPENBSD/lib/guard_state.rb:45
+  - veto_patterns OPENBSD/mirror/lib/deploy_stamp.rb:40
+  - veto_patterns OPENBSD/mirror/lib/guard_state.rb:45
   - veto_patterns RAILS/__shared/app/jobs/shared/database_snapshot_job.rb:27
   - veto_patterns RAILS/amber/db/migrate/20261102160000_remove_affiliate_visitor_identifiers.rb:36
   - veto_patterns RAILS/brgen/db/migrate/20260824120000_boolean_defaults_for_nilable_flags.rb:35
@@ -31785,7 +31785,7 @@ registry_finding_members:
   - NO_ASCII_ART_OUTSIDE_FACE MASTER/tools/typography_lint.rb:16
   - NO_ASCII_ART_OUTSIDE_FACE MASTER/web/public/face_speech_runtime.js:1383
   - NO_ASCII_ART_OUTSIDE_FACE MASTER/web/test/visual_bridge_topics.test.mjs:55
-  - NO_ASCII_ART_OUTSIDE_FACE OPENBSD/lib/secret_redaction.rb:21
+  - NO_ASCII_ART_OUTSIDE_FACE OPENBSD/mirror/lib/secret_redaction.rb:21
   - NO_ASCII_ART_OUTSIDE_FACE OPENBSD/test/test_config_drift_check.rb:69
   - NO_ASCII_ART_OUTSIDE_FACE RAILS/__shared/app/services/shared/strunk_white_pass.rb:29
   - NO_ASCII_ART_OUTSIDE_FACE RAILS/__shared/app/services/shared/strunk_white_pass.rb:9

@@ -6,7 +6,7 @@ module Master
     # the required patterns that are missing and the warnings that apply.
     #
     # Its caller is test_openbsd_config.rb, which validates every config under
-    # OPENBSD/etc the table knows, so a deployed file that drops a required
+    # OPENBSD/mirror/etc the table knows, so a deployed file that drops a required
     # pattern fails the MASTER suite rather than surfacing on the box.
     class OpenbsdConfig
       # One validation result line. severity: :missing (a required pattern is

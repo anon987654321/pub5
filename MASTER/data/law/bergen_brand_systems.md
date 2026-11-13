@@ -150,4 +150,4 @@ the operator-owned scheme, not drift. `/fix` must not repaint them.
 8. Register the tree in `apps.yml` (or restore the `static_exports`
    convention) and its relay/httpd config before first deploy — the
    2026-10-28 retirement of the sommerseth/alfa blocks in
-   `OPENBSD/etc/{httpd,relayd,acme-client}.conf` is the shape to re-create.
+   `OPENBSD/mirror/etc/{httpd,relayd,acme-client}.conf` is the shape to re-create.

@@ -33,7 +33,7 @@ class TreeContractTest < Minitest::Test
     MASTER/data
     MASTER/law
     MASTER/tools/test
-    OPENBSD/var/nsd
+    OPENBSD/mirror/var/nsd
     RAILS/brgen/engines
     STUDIO
     STUDIO/dilla

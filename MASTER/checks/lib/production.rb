@@ -259,9 +259,9 @@ module Deploy
     # operator decision (vm23 is 1 GB — see the old backlog multi_app_ram); this check
     # reads the tree, so it asserts the script, not the rcctl state.
     def check_job_supervisor(app_failures, name)
-      web_rcd = File.join(ROOT, "OPENBSD", "etc", "rc.d", name)
+      web_rcd = File.join(ROOT, "OPENBSD", "mirror", "etc", "rc.d", name)
 
-      jobs_rcd = File.join(ROOT, "OPENBSD", "etc", "rc.d", "#{name}_jobs")
+      jobs_rcd = File.join(ROOT, "OPENBSD", "mirror", "etc", "rc.d", "#{name}_jobs")
 
       web_code = uncommented(web_rcd)
       if web_code.match?(/SOLID_QUEUE_IN_PUMA\s*=/)
@@ -269,7 +269,7 @@ module Deploy
       end
 
       unless File.file?(jobs_rcd)
-        fail_app!(app_failures, "Solid Queue is the queue adapter but OPENBSD/etc/rc.d/#{name}_jobs does not exist")
+        fail_app!(app_failures, "Solid Queue is the queue adapter but OPENBSD/mirror/etc/rc.d/#{name}_jobs does not exist")
         return
       end
 

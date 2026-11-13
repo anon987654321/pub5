@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# MASTER/checks/support owns the check kernel. OPENBSD/lib/check_result.rb is a
+# MASTER/checks/support owns the check kernel. OPENBSD/mirror/lib/check_result.rb is a
 # compatibility path. Every check in the repo returns this
 # type: RAILS/checks, MASTER/checks, OPENBSD/checks and MASTER/tools/check.rb require it
 # across the tree boundary and add nothing to it, so adding an outcome is a
@@ -135,7 +135,7 @@ module Deploy
     #
     # gap: is a Master::Gap (duck-typed: anything with #clause) saying whether
     # the check resolves alone, what it costs, and whose call it is. This file
-    # does not load it: OPENBSD/lib carries a copy and must not reach into MASTER.
+    # does not load it: OPENBSD/mirror/lib carries a copy and must not reach into MASTER.
     def inconclusive!(reason, gap: nil)
       @unchecked << reason
 

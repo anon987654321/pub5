@@ -89,7 +89,7 @@ class TestRuns < Minitest::Test
       "MASTER/web/test/face_boot.test.mjs" => "MASTER/bin/check",
       "RAILS/test/pwa_offline_store.test.mjs" => "MASTER/tools/rails/premerge.rb",
       "RAILS/test/stimulus_components_runtime_contract.test.mjs" => "MASTER/tools/rails/premerge.rb",
-      "OPENBSD/test/resource_guard_test.sh" => "OPENBSD/bin/check-openbsd",
+      "OPENBSD/test/resource_guard_test.sh" => "OPENBSD/mirror/bin/check-openbsd",
     }
 
     targets.each do |path, runner|

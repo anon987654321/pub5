@@ -158,7 +158,7 @@ module Master
         "coupling=shared engine + sibling copy-tree affects every Rails app; " +
         "deployed_copy=/home/<app>/app + /home/<app>/__shared, master in place at /home/dev/pub5/MASTER/web; " +
         "proof=MASTER/checks/checks.yml+MASTER/bin/operator triangle+<app>/bin/ci; " +
-        "live=OPENBSD/bin/check-vps+OPENBSD/bin/vps-state; " +
+        "live=OPENBSD/mirror/bin/check-vps+OPENBSD/mirror/bin/vps-state; " +
         "rendered=Chrome/CDP via rendered_suite; " +
         "visual_graph=MASTER/lib/fix/rails_visual_graph.rb; active_apps=#{rows.join(", ")}"
       end
@@ -211,13 +211,13 @@ module Master
 
       def openbsd_atlas_summary(apps)
         "openbsd: deploy_identity=OPENBSD/deploy_inventory.json; " +
-        "recipes=OPENBSD/data/operator.yml; runbook=OPENBSD/RUNBOOK.md; configs=OPENBSD/etc; " +
+        "recipes=OPENBSD/data/operator.yml; runbook=OPENBSD/RUNBOOK.md; configs=OPENBSD/mirror/etc; " +
         "service_lifecycle=rcctl; privilege_boundary=doas; sandbox_model=MASTER/lib/ground/pledge.rb; " +
         "edge=pf->relayd->loopback; " +
         "runtime=Falcon+SQLite+Solid Queue/Cache; secrets=/etc/*.env; " +
-        "dns_tls=httpd/acme-client/nsd; proof=OPENBSD/bin/check-openbsd+check-vps+vps-state; " +
+        "dns_tls=httpd/acme-client/nsd; proof=OPENBSD/mirror/bin/check-openbsd+check-vps+vps-state; " +
         "live=target host diagnostics and public health; " +
-        "recovery=tmux+vps-deploy; resource_guard=OPENBSD/bin/resource_guard.sh; " +
+        "recovery=tmux+vps-deploy; resource_guard=OPENBSD/mirror/bin/resource_guard.sh; " +
         "apps=#{apps.join(", ")}"
       end
 

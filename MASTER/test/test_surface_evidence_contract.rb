@@ -63,7 +63,7 @@ class TestSurfaceEvidenceContract < Minitest::Test
     master = inventory.fetch("apps").find { |row| row.fetch("name") == "master" }
     assert_equal rails.dig("apps", "master", "port"), master.fetch("port")
     assert_equal "MASTER/web", rails.dig("apps", "master", "deploy_root")
-    assert File.executable?(File.join(root, "OPENBSD", "bin", "vps-deploy"))
+    assert File.executable?(File.join(root, "OPENBSD", "mirror", "bin", "vps-deploy"))
   end
 
   def test_compact_visual_evidence_keeps_geometry_receipt_without_page_content

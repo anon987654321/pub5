@@ -392,7 +392,7 @@ module Deploy
         "EventMachine SSL support unavailable",
         "unsetenv_others: true",
       ],
-      "OPENBSD/etc/rc.d/master" => [
+      "OPENBSD/mirror/etc/rc.d/master" => [
         "Master::Voice::TtsSupervisor.ensure_daemon!",
         "MASTER_TTS_TIMEOUT=45",
       ],
@@ -470,13 +470,13 @@ module Deploy
     # builds nothing itself: rc.d/master precompiles when its input digest moved
     # and runs this check before it lets the start proceed, so the script inherits
     # both. check_rc_d_master holds that claim.
-    RC_D_MASTER = "OPENBSD/etc/rc.d/master"
+    RC_D_MASTER = "OPENBSD/mirror/etc/rc.d/master"
     DEPLOY_SCRIPTS = {
       "OPENBSD/OPERATOR.sh" => :via_rc_d,
       # vps_on_vm_install.sh is not listed: it only execs vps_install_all.sh.
-      "OPENBSD/bin/vps_install_all.sh" => :start_or_restart,
-      "OPENBSD/bin/vps_console.exp" => :restart,
-      "OPENBSD/bin/vps_deploy_master.sh" => :restart,
+      "OPENBSD/mirror/bin/vps_install_all.sh" => :start_or_restart,
+      "OPENBSD/mirror/bin/vps_console.exp" => :restart,
+      "OPENBSD/mirror/bin/vps_deploy_master.sh" => :restart,
     }.freeze
 
     def self.run
