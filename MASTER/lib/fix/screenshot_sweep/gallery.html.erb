@@ -2,40 +2,71 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#111111">
   <title>Screenshot sweep <%= escape(summary["generated_at"]) %></title>
-  <link rel="stylesheet" href="gallery.css">
+  <style><%= stylesheet %></style>
 </head>
 <body>
-  <h1>Screenshot sweep</h1>
-  <p><%= summary["pages"] %> pages, <%= summary["screenshots"] %> screenshots,
-    <%= summary["dialogs"] %> dialog states, <%= summary["failed"] %> pages failed,
-    <%= summary["skipped"] %> skipped (not HTML).
-    Widths: <%= Array(summary["widths"]).join(", ") %>.</p>
-  <% if summary["error"] %><p class="bad"><%= escape(summary["error"]) %></p><% end %>
+  <header class="topbar">
+    <h1>Screenshot sweep</h1>
+    <p class="tally">
+      <%= summary["pages"] %> pages &middot; <%= summary["screenshots"] %> screenshots &middot;
+      <%= summary["dialogs"] %> dialog states &middot; <%= summary["failed"] %> failed &middot;
+      <%= summary["skipped"] %> skipped (not HTML)
+    </p>
+    <p class="mut">Widths: <%= Array(summary["widths"]).join(", ") %> &middot; <%= escape(summary["generated_at"]) %></p>
+  </header>
+
+  <% if summary["error"] %><p class="bad" role="alert"><%= escape(summary["error"]) %></p><% end %>
+
   <% unless unresolved.empty? %>
-    <h2>Routes no visited page linked to (not captured)</h2>
-    <ul>
-      <% unresolved.each do |app, routes| %>
-        <li><%= escape(app) %>: <%= routes.map { |route| escape(route) }.join(", ") %></li>
-      <% end %>
-    </ul>
-  <% end %>
-  <% rows.each do |row| %>
-    <section>
-      <h2><%= escape(row[:app]) %> <%= escape(row[:host]) %><%= escape(row[:path]) %></h2>
-      <p>route <%= escape(row[:route]) %> - HTTP <%= escape(row.fetch(:status) || "?") %></p>
-      <% if row[:note] %><p class="bad"><%= escape(row[:note]) %></p><% end %>
-      <div class="shots">
-        <% figures(row).each do |file, caption| %>
-          <figure>
-            <a href="<%= escape(file) %>">
-              <img loading="lazy" src="<%= escape(file) %>" alt="<%= escape(caption) %>">
-            </a>
-            <figcaption><%= escape(caption) %></figcaption>
-          </figure>
+    <details class="unresolved">
+      <summary>Routes no visited page linked to (not captured)</summary>
+      <ul>
+        <% unresolved.each do |app, routes| %>
+          <li><%= escape(app) %>: <%= routes.map { |route| escape(route) }.join(", ") %></li>
         <% end %>
-      </div>
-    </section>
+      </ul>
+    </details>
   <% end %>
+
+  <main class="pages">
+    <% pages.each_with_index do |page, index| %>
+      <article class="page">
+        <h2><span class="index" aria-hidden="true"><%= index + 1 %></span> <%= escape(page[:app]) %> <%= escape(page[:host]) %><%= escape(page[:path]) %></h2>
+        <p class="route">route <%= escape(page[:route]) %> &middot; HTTP <%= escape(page[:status] || "?") %></p>
+        <% if page[:note] %><p class="bad"><%= escape(page[:note]) %></p><% end %>
+
+        <% if page[:figures].empty? %>
+          <p class="mut">No unique shot: every capture here is identical to one already shown.</p>
+        <% else %>
+          <div class="strip">
+            <button class="nav prev" type="button" data-step="-1" aria-label="Previous screenshot">&lsaquo;</button>
+            <div class="rail" tabindex="0" role="group"
+                 aria-label="<%= escape(page[:app]) %><%= escape(page[:path]) %> screenshots"
+                 data-strip>
+              <% page[:figures].each do |figure| %>
+                <figure class="slide">
+                  <a href="<%= escape(figure[:file]) %>">
+                    <img loading="lazy" decoding="async" src="<%= escape(figure[:file]) %>" alt="<%= escape(figure[:caption]) %>">
+                  </a>
+                  <figcaption><%= escape(figure[:caption]) %></figcaption>
+                  <% unless figure[:aliases].empty? %>
+                    <p class="aliases">identical on <%= figure[:aliases].map { |alias_name| escape(alias_name) }.join("; ") %></p>
+                  <% end %>
+                </figure>
+              <% end %>
+            </div>
+            <button class="nav next" type="button" data-step="1" aria-label="Next screenshot">&rsaquo;</button>
+            <div class="dots" data-dots></div>
+            <p class="position" data-position aria-live="polite"></p>
+          </div>
+        <% end %>
+      </article>
+    <% end %>
+  </main>
+  <script><%= script %></script>
 </body>
 </html>

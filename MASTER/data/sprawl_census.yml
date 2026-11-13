@@ -72,9 +72,11 @@
 # MASTER code/test/skeleton files and 8 STUDIO LoRA/runtime files. Keep the
 # lone_dirs ceiling at 37: the agent skeleton's two single-file eval/test
 # namespaces are visible growth, not a reason to silently raise the allowance.
+# 2026-11-13 (4): the consent prelude and carousel controller add two source
+# files inside existing support directories; no new directory is introduced.
 lone_dirs: 37
 stutter: 0
 vague_names: 0
-tracked_files: 7561
+tracked_files: 7563
 tracked_directories: 894
 corpus: 4127

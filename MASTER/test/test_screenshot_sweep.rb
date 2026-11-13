@@ -127,4 +127,100 @@ class TestScreenshotSweep < Minitest::Test
       assert_includes File.read(File.join(out, "index.html")), "port 47312 closed"
     end
   end
+
+  Gallery = Master::Fix::ScreenshotSweep::Gallery
+
+  def gallery_row(app:, path:, shots:, dialogs: [], status: 200)
+    { app:, host: nil, path:, route: "#{path}#index", status:, shots:, dialogs:, note: nil }
+  end
+
+  def gallery_summary(rows)
+    { "generated_at" => "2026-11-13T00:00:00Z", "pages" => rows.size, "screenshots" => 0,
+      "dialogs" => 0, "failed" => 0, "skipped" => 0, "widths" => [390], "error" => nil,
+      "unresolved" => {}, "rows" => rows }
+  end
+
+  # The gallery is a mobile-first carousel, not a wall of full-height images: one
+  # scroll-snap rail per page, arrows and dots, and nothing fetched from the net.
+  def test_gallery_renders_a_swipeable_carousel_with_no_network_asset
+    Dir.mktmpdir do |dir|
+      File.binwrite(File.join(dir, "a.png"), "same")
+      File.binwrite(File.join(dir, "b.png"), "other")
+      rows = [gallery_row(app: "amber", path: "/a", shots: { "390" => "a.png", "980" => "b.png" })]
+      html = Gallery.new(gallery_summary(rows), dir:).render
+
+      assert_includes html, %(name="viewport")
+      assert_includes html, "data-strip", "each page carries a scroll-snap rail"
+      assert_includes html, %(data-step="-1")
+      assert_includes html, "data-dots"
+      assert_includes html, "data-position"
+      assert_includes html, "<style>"
+      assert_includes html, "<script>"
+      assert_includes html, 'loading="lazy"'
+      refute_match(%r{(?:src|href)="https?://}, html, "the gallery loads nothing from the network")
+    end
+  end
+
+  # Byte-identical shots collapse to one slide; the other page is named on it so
+  # the review can see it was captured, without padding every strip.
+  def test_gallery_collapses_identical_shots_and_names_the_alias
+    Dir.mktmpdir do |dir|
+      File.binwrite(File.join(dir, "a.png"), "same")
+      File.binwrite(File.join(dir, "b.png"), "same")
+      File.binwrite(File.join(dir, "c.png"), "other")
+      rows = [
+        gallery_row(app: "amber", path: "/a", shots: { "390" => "a.png" }),
+        gallery_row(app: "brgen", path: "/b", shots: { "390" => "b.png", "980" => "c.png" }),
+      ]
+      html = Gallery.new(gallery_summary(rows), dir:).render
+
+      assert_equal 2, html.scan(%(class="slide")).size, "three figures collapse to two unique slides"
+      assert_includes html, "identical on", "the dropped shot is named on the one that stays"
+      assert_includes html, "brgen /b 390px"
+    end
+  end
+
+  def test_gallery_marks_a_page_whose_every_shot_is_a_duplicate
+    Dir.mktmpdir do |dir|
+      File.binwrite(File.join(dir, "a.png"), "same")
+      File.binwrite(File.join(dir, "b.png"), "same")
+      rows = [
+        gallery_row(app: "amber", path: "/a", shots: { "390" => "a.png" }),
+        gallery_row(app: "brgen", path: "/b", shots: { "390" => "b.png" }),
+      ]
+      html = Gallery.new(gallery_summary(rows), dir:).render
+
+      assert_equal 1, html.scan(%(class="slide")).size
+      assert_includes html, "No unique shot"
+    end
+  end
+
+  # The operator's record is one file beside the tracked shots: RAILS/screenshots.html
+  # inlines its own CSS and script and reads only its sibling PNGs.
+  def test_publish_review_page_writes_a_self_contained_page_over_the_tracked_shots
+    Dir.mktmpdir do |root|
+      rails = File.join(root, "RAILS")
+      FileUtils.mkdir_p(rails)
+      { "screenshot_amber_account.png" => "amber",
+        "screenshot_amber_orders.png" => "amber orders",
+        "screenshot_brgen_brgen_no_groups_new.png" => "brgen" }.each do |name, body|
+        File.binwrite(File.join(rails, name), body)
+      end
+      File.binwrite(File.join(rails, "keep_me.png"), "not a shot")
+
+      assert_equal 3, Gallery.publish_review_page(root:, at: "2026-11-13T00:00:00Z")
+      html = File.read(File.join(rails, "screenshots.html"))
+
+      assert_includes html, "screenshot_amber_account.png"
+      assert_includes html, "screenshot_brgen_brgen_no_groups_new.png"
+      assert_includes html, "screenshot_amber_orders.png"
+      refute_includes html, "keep_me.png", "only the tracked review shots are listed"
+      refute_match(%r{(?:src|href)="https?://}, html)
+      refute_includes html, %(rel="manifest"), "the published page needs nothing beside it"
+      assert_includes html, "<style>"
+      assert_includes html, "<script>"
+      assert_equal 3, html.scan(%(class="slide")).size
+      assert_equal 2, html.scan(%(class="strip")).size, "one carousel per app groups the review set"
+    end
+  end
 end

@@ -82,6 +82,8 @@ RAILS/visual_contract/*.png
 # pattern stays only to ignore a stale sweep folder a previous build left here.
 RAILS/sweep-*/
 RAILS/visual-review-*/
+# The combined gallery is generated from the tracked review set; do not commit output.
+RAILS/screenshots.html
 # RAILS/screenshot_*.png is deliberately NOT ignored (Johann 2026-11-13): the
 # curated review set at RAILS/ is the operator-visible record of what rendered,
 # and it is published to GitHub so it can be read without a local sweep. Raw

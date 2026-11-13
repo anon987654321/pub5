@@ -1,37 +1,155 @@
-/* Screenshot sweep gallery. System colours only: it is a local record, not a product surface. */
+/* Screenshot sweep gallery. System colours only: it is a local record, not a
+   product surface. Mobile first: one slide per screen, swiped with the thumb;
+   a mouse gets the arrow buttons, a keyboard the arrows on a focused rail. */
+:root {
+  --gap: 12px;
+  --slide-h: min(70vh, 720px);
+  --ink: CanvasText;
+  --mut: GrayText;
+  --line: GrayText;
+  --bg: Canvas;
+  --card: color-mix(in srgb, CanvasText 6%, Canvas);
+}
+
+* { box-sizing: border-box; }
+
 body {
-  margin: 24px;
-  background: Canvas;
-  color: CanvasText;
-  font: 14px/1.4 "Helvetica Neue", Arial, sans-serif;
-}
-
-section {
-  padding: 12px 0;
-  border-top: 1px solid GrayText;
-}
-
-.shots {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: flex-start;
-}
-
-figure {
   margin: 0;
+  padding: 0 0 env(safe-area-inset-bottom);
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.4 "Helvetica Neue", Arial, sans-serif;
 }
 
-img {
-  width: 120px;
-  border: 1px solid GrayText;
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 12px 16px;
+  background: color-mix(in srgb, Canvas 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
 }
 
-figcaption {
-  color: GrayText;
-  font-size: 12px;
+.topbar h1 { margin: 0; font-size: 1.15rem; }
+.tally { margin: .25rem 0 0; font-size: .8125rem; }
+.mut { color: var(--mut); }
+.bad { color: #b00020; font-weight: bold; }
+@media (prefers-color-scheme: dark) { .bad { color: #ff6b81; } }
+
+.unresolved { margin: 12px 16px; font-size: .8125rem; }
+
+.pages { display: block; }
+
+.page {
+  padding: 16px;
+  border-top: 1px solid var(--line);
 }
 
-.bad {
-  font-weight: bold;
+.page h2 { margin: 0; font-size: 1rem; word-break: break-word; }
+.page .index {
+  display: inline-block;
+  min-width: 1.6em;
+  color: var(--mut);
+  font-variant-numeric: tabular-nums;
 }
+.route { margin: .25rem 0 .75rem; color: var(--mut); font-size: .8125rem; }
+
+/* The carousel: one scroll-snap rail per page, with the buttons and dots on a
+   second row so a thumb never fights them. */
+.strip { position: relative; }
+
+.rail {
+  display: flex;
+  gap: var(--gap);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+.rail::-webkit-scrollbar { display: none; }
+.rail:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.slide {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  margin: 0;
+  min-width: 0;
+}
+
+.slide a { display: block; }
+
+/* A tall page is scaled to the box, never cropped: the whole shot stays
+   visible, which is the point of a review. */
+.slide img {
+  display: block;
+  width: 100%;
+  height: var(--slide-h);
+  object-fit: contain;
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+
+.slide figcaption {
+  margin-top: .5rem;
+  color: var(--mut);
+  font-size: .8125rem;
+}
+.slide .aliases { margin: .125rem 0 0; color: var(--mut); font-size: .75rem; }
+.position {
+  margin: .35rem 0 0;
+  color: var(--mut);
+  font-size: .8125rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* Buttons and dots: shown once the script marks the strip scripted, so a
+   no-JS reader keeps a working scroll-snap rail rather than dead controls. */
+.nav, .dots { display: none; }
+.strip[data-scripted] .nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: calc((var(--slide-h) - 44px) / 2);
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, Canvas 80%, transparent);
+  color: var(--ink);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.strip[data-scripted] .nav:disabled { opacity: .3; cursor: default; }
+.nav.prev { left: 4px; }
+.nav.next { right: 4px; }
+
+.strip[data-scripted] .dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.dots button {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--line);
+  cursor: pointer;
+}
+.dots:empty { display: none !important; }
+.dots button[aria-current="true"] { background: var(--ink); }
+
+@media (min-width: 640px) {
+  :root { --slide-h: min(78vh, 900px); }
+  .rail { gap: 16px; }
+}
+
+

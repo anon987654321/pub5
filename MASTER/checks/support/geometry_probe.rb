@@ -136,6 +136,13 @@ module Deploy
     # Seeding Math.random is safe and removes the main source of render noise.
     DETERMINISM = File.read(File.join(__dir__, "geometry_probe/determinism.js")).freeze
 
+    # A capture records the settled page, not the consent interstitial covering
+    # it. Answers the app's own consent cookie (pub4_consent, read by
+    # RAILS/__shared/frontend/cookie_consent.js) and the welcome modal's storage
+    # key before any page script runs. Every browser-backed capture goes through
+    # with_browser, so this and DETERMINISM are the one place consent is settled.
+    CONSENT_DECIDED = File.read(File.join(__dir__, "geometry_probe/consent.js")).freeze
+
     # The DOM walk. Returns a plain object; keep it self-contained so it can be
     # run against any page without helper injection.
     WALK = File.read(File.join(__dir__, "geometry_probe/walk.js")).freeze
@@ -165,6 +172,7 @@ module Deploy
 
       CdpSession.open(host_map: host_map(root:)) do |cdp|
         cdp.on_new_document(DETERMINISM)
+        cdp.on_new_document(CONSENT_DECIDED)
         yield cdp
       end
     end
