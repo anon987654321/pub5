@@ -339,8 +339,13 @@ on disk, and only releases the PID/owner files after verified group exit.
 Triangle down uses the same bounded group stop, preserves PID/owner markers
 when shutdown cannot be proved, returns a failing app list to the CLI, and
 requires a no-PID listener to be both in the app directory and the leader of
-its own process group. Its sibling-worktree reaper is still a separate direct
-PID TERM/fixed-sleep path and remains open for review.
+its own process group. The sibling-worktree reaper now follows the same
+ownership boundary: it accepts only the named sibling worktree pattern, proves
+the listener is its own process-group leader, and delegates bounded TERM/KILL
+and group-disappearance verification to ServerLeases.stop_process_group.
+Tests cover a TERM-ignoring real group, the refusal of a non-leader, and the
+sibling-path filter; all are authored but NOT_RUN. This closes that source-level
+reaper gap, not the broader process-kill census.
 
 Regressions now cover TERM-ignoring leader/renderer processes, escalation to
 KILL, direct-child wait completion, unconfirmed-stop retry, replaced owner
