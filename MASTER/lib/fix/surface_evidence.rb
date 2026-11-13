@@ -1115,10 +1115,24 @@ module Master
           stdin.close
           stdout_reader = Thread.new { drain_output(out, stdout) }
           stderr_reader = Thread.new { drain_output(err, stderr) }
-          until wait_thr.join(0.05)
-            next if Process.clock_gettime(Process::CLOCK_MONOTONIC) - started < timeout
+          deadline = started + timeout
+          loop do
+            break unless wait_thr.alive? || stdout_reader.alive? || stderr_reader.alive?
 
-            timed_out = true
+            remaining = deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)
+            if remaining <= 0
+              timed_out = true
+              break
+            end
+
+            if wait_thr.alive?
+              wait_thr.join([remaining, 0.05].min)
+            else
+              sleep([remaining, 0.01].min)
+            end
+          end
+
+          if timed_out
             termination_confirmed = stop_process_group(wait_thr.pid)
             wait_thr.join(2)
             # wait_thr is the direct child this method spawned. If group signalling
@@ -1127,7 +1141,7 @@ module Master
             kill_owned_child(wait_thr) if wait_thr.alive?
             wait_thr.join(2) if wait_thr.alive?
             termination_confirmed &&= !wait_thr.alive? && !process_group_alive?(wait_thr.pid)
-            [ [out, stdout_reader], [err, stderr_reader] ].each do |io, reader|
+            [[out, stdout_reader], [err, stderr_reader]].each do |io, reader|
               reader.join(0.2)
               next unless reader.alive?
 
@@ -1135,7 +1149,7 @@ module Master
               reader.kill
               reader.join(0.2)
             end
-            break
+            termination_confirmed &&= !stdout_reader.alive? && !stderr_reader.alive?
           end
           status = wait_thr.value unless wait_thr.alive?
         end
