@@ -74,10 +74,10 @@ module Master
         @plan_digest = plan_digest&.to_s&.freeze
         @assessment = normalize_assessment(assessment)
         @repair_passes = normalize_repairs(repair_events)
-        @measured = !@repair_passes.empty? || @assessment["status"] == "verified"
+        @measured = @repair_passes.any? { |row| row.fetch("status") != "error" } || @assessment["status"] == "verified"
         @changed = @repair_passes.sum { |row| row.fetch("fixed") }
         @rejected = refusal_rows(@repair_passes)
-        @inconclusive = inconclusive_reasons(@assessment, @task_contract)
+        @inconclusive = inconclusive_reasons(@assessment, @task_contract, @repair_passes)
         @terminal_state = terminal_payload.fetch("state", "unknown_outcome").to_s.freeze
         @result = terminal_payload["result"]&.to_s&.freeze
         @category = terminal_payload["category"]&.to_s&.freeze
@@ -192,9 +192,11 @@ module Master
         end.then { |items| deep_freeze(items) }
       end
 
-      def inconclusive_reasons(assessment, contract)
+      def inconclusive_reasons(assessment, contract, repairs)
         reasons = []
         reasons << "task_contract:summary_unavailable" if contract.empty?
+        failed_repairs = repairs.count { |row| row.fetch("status") == "error" }
+        reasons << "repair_passes:#{failed_repairs}_measurement_errors" if failed_repairs.positive?
 
         unless assessment["status"] == "verified"
           reasons << "assessment:#{assessment["status"]}"
