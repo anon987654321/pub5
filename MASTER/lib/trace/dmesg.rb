@@ -718,6 +718,7 @@ module Master
           track(payload)
           case payload[:event].to_s
           when "llm:send" then llm_send(payload)
+          when "llm:retry_attempt" then retry_attempt(payload)
           when "llm:call_complete" then remember_usage(payload)
           when "llm:provider_outcome" then llm_outcome(payload)
           when "llm:call_finished" then llm_finished(payload)
@@ -756,6 +757,24 @@ module Master
         BURST_AFTER = 1
         ROLLUP_EVERY = 50
         ROLLUP_SECONDS = 60
+
+        # Retry events are control-plane noise in ordinary output. Keep them
+        # in the event ledger; explicit trace gets a useful count, not the
+        # internal event name.
+        def retry_attempt(payload)
+          return [] unless Dmesg.trace?
+
+          model = model_name(payload[:model])
+          attempt = Integer(payload[:attempt], exception: false)
+          maximum = Integer(payload[:max], exception: false)
+          detail = if attempt&.positive? && maximum&.positive?
+            "attempt #{attempt}/#{maximum}"
+          else
+            "attempt"
+          end
+          detail = "#{detail} on #{model}" unless model.empty?
+          ["model0: #{detail}"]
+        end
 
         def llm_send(payload)
           parent = Fiber[:master_unit] || "master0"
