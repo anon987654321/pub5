@@ -36,6 +36,7 @@ class TestScreenshotReviewSet < Minitest::Test
   def test_the_published_number_follows_capture_order_across_pages
     Dir.mktmpdir do |root|
       sweep = File.join(root, "sweep-20261104T000000Z")
+      FileUtils.mkdir_p(File.join(root, "RAILS"))
       # amber answers on loopback (slug "root"); brgen's apex slugs as "brgen_no".
       %w[amber/root brgen/brgen_no].each { |dir| png(File.join(sweep, dir, "w390.png")) }
       rows = %w[amber/root brgen/brgen_no].map { |dir| Row.new(app: dir.split("/").first, shots: { "390" => "#{dir}/w390.png" }) }
@@ -51,6 +52,7 @@ class TestScreenshotReviewSet < Minitest::Test
   def test_only_the_apps_own_front_page_is_named_frontpage
     Dir.mktmpdir do |root|
       sweep = File.join(root, "sweep-20261104T000000Z")
+      FileUtils.mkdir_p(File.join(root, "RAILS"))
       %w[brgen/brgen_no brgen/dating_brgen_no].each { |dir| png(File.join(sweep, dir, "w390.png")) }
       rows = [{ "390" => "brgen/brgen_no/w390.png" }, { "390" => "brgen/dating_brgen_no/w390.png" }]
                     .map { |shots| Row.new(app: "brgen", shots:) }
