@@ -395,7 +395,7 @@ class TestDependencyManager < Minitest::Test
     parent_file = File.join(@root, "parent.pid")
     child_file = File.join(@root, "child.pid")
     child_code = "Signal.trap('TERM', 'IGNORE'); File.write(#{child_file.dump}, Process.pid.to_s); sleep 30"
-    parent_code = "File.write(#{parent_file.dump}, Process.pid.to_s); Process.spawn(RbConfig.ruby, '-e', #{child_code.dump}); sleep 30"
+    parent_code = "File.write(#{parent_file.dump}, Process.pid.to_s); Process.spawn(#{RbConfig.ruby.dump}, '-e', #{child_code.dump}); sleep 30"
 
     ok, _stdout, stderr = manager.send(
       :capture, [RbConfig.ruby, "-e", parent_code],
