@@ -65,7 +65,7 @@ class ZapTest < Minitest::Test
     marker = "zap-worker-#{Process.pid}-#{object_id}"
     child = Process.spawn(RbConfig.ruby, "-e", "sleep 30 # #{marker}")
 
-    output, status = run_zap(marker, stdin: "n\\n")
+    output, status = run_zap(marker, stdin: "n\n")
 
     assert status.success?, output
     assert_includes output, "#{child} "
