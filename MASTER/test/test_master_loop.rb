@@ -157,7 +157,7 @@ class TestMasterLoop < Minitest::Test
       Master::Builder.publish_self_test(bus, Master::Result.ok(summary))
     end
 
-    assert_includes lines.map(&:last).join("\\n"), "first=lib/example.rb:7 too nested"
+    assert_includes lines.map(&:last).join(" "), "first=lib/example.rb:7 too nested"
     event = events.find { |name, _payload| name == "builder:self_test" }
     refute_nil event
     assert_equal ["LINEARITY=1"], event.last.fetch(:by_law)
