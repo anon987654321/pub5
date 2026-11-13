@@ -19,6 +19,23 @@ module Studio
 
       def engines = catalogue.fetch("text_to_image")
 
+      def default_engine = catalogue.fetch("default_engine")
+
+      def free_models = Array(catalogue["free_models"])
+
+      def free?(name) = free_models.include?(name.to_s)
+
+      # The order to try for one render: the primary engine first, then the
+      # fallback chain, which ends in Replicate's free tier so a render never
+      # dies for want of credit. When the primary is itself free, stay inside the
+      # free tier so --free never spends on a paid model. "$subject_lora" stays
+      # as written; the pipeline resolves it to the subject's own trained model.
+      def chain_for(primary)
+        return ([primary] + free_models).uniq if free?(primary)
+
+        [primary, *Array(catalogue["fallback_chain"])].compact.reject(&:empty?).uniq
+      end
+
       # How a model reaches a likeness: "reference" (the subject's own
       # photographs are input), "lora" (a trained adapter) or "text" (described).
       def engine(name)

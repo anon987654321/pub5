@@ -22,6 +22,27 @@
 
 verified_on: "2026-11-13"
 
+# The engine the pipeline reaches for first, and the order it falls back
+# through when one fails. The primary is the strongest current likeness model;
+# the chain ends in Replicate's free tier, so a render never dies for want of
+# credit. "$subject_lora" is the subject's own trained model (lora/<subject>),
+# the one engine that is about this person rather than people in general.
+default_engine: google/nano-banana
+fallback_chain:
+  - bytedance/seedream-4.5
+  - black-forest-labs/flux-2-klein-4b
+  - "$subject_lora"
+  - black-forest-labs/flux-dev
+  - black-forest-labs/flux-schnell
+
+# Free to run on Replicate (its "try for free" tier). A fallback, never the
+# first choice: they do not keep a likeness, but they keep a series alive. Only
+# the two that render from a prompt alone are in the chain; flux-kontext-pro is
+# free too but needs an input_image, so it belongs to image_to_image, not here.
+free_models:
+  - black-forest-labs/flux-dev
+  - black-forest-labs/flux-schnell
+
 # Still photographs of a person. The selfie pipeline picks from here.
 text_to_image:
   google/nano-banana:
@@ -50,6 +71,16 @@ text_to_image:
   bytedance/seedream-4:
     likeness: reference
     inputs: [prompt, image_input, aspect_ratio, size]
+  black-forest-labs/flux-dev:
+    likeness: text
+    free: true
+    inputs: [prompt, aspect_ratio, guidance, num_inference_steps, seed, go_fast, output_format, output_quality, num_outputs, image]
+    note: "Free tier. The base a face LoRA is trained against; strong prompt fidelity, no likeness memory."
+  black-forest-labs/flux-schnell:
+    likeness: text
+    free: true
+    inputs: [prompt, aspect_ratio, num_inference_steps, seed, go_fast, output_format, output_quality, num_outputs]
+    note: "Free tier and the fastest FLUX (701M runs); the last resort that still renders."
   prunaai/flux-fast:
     likeness: text
     inputs: [prompt, aspect_ratio, seed]
