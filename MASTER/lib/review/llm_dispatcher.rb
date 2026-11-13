@@ -684,6 +684,9 @@ module Master
           record_free_catalog_latency(model, latency_ms)
           Io::QuotaCheck.clear!
           Io::ModelSkipCache.succeeded!(model)
+          # A verified OpenRouter answer proves the shared credential works
+          # again; clear only its credential hold, never vendor quota state.
+          Io::LaneQuota.revive(Io::LaneQuota::OPENROUTER_AUTH_LANE) if Io::LaneQuota.openrouter_model?(model)
         else
           Io::ModelSkipCache.skip!(model, reason: error || status.to_s, category: status)
         end

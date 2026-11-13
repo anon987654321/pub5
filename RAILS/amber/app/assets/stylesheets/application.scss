@@ -585,7 +585,7 @@ h2 {
   block-size: 5px;
   background: var(--amber-magic-peach);
   outline: 2px solid var(--amber-magic-outline);
-  animation: amber-petal-drift 12s ease-in-out infinite;
+  animation: amber-petal-drift 12s var(--ease-in-out) infinite;
 }
 
 .amber-magic-sakura::before,

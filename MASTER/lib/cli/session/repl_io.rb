@@ -13,17 +13,12 @@ module Master
       # the lock; this boundary keeps Reline's draft-safe redraw beside the
       # ordinary terminal writers used by every session lane.
 
-      # All operator-facing writes share Dmesg's mutex and Dmesg runs the draft
-      # guard this session registers: a write from any lane clears the draft's
-      # row, claims a row of its own below the cursor, and the redisplay
-      # afterwards rebuilds the editable line — zsh's own rule. Before this
-      # guard, a write that shared the draft's row printed its text after the
-      # prompt glyphs ("master$ Welcome back."), and one that cleared it left
-      # the prompt gone, because Reline's differential render repaints nothing
-      # its cache still matches (the disappearing prompt after the first
-      # message). Writes that are part of the draft's own machinery — the
-      # spinner row, the reserved activity row, the read-end bookkeeping — pass
-      # guard: false and manage their rows alone.
+      # All operator-facing writes share Dmesg's mutex and the draft guard.
+      # A background event replaces the transient prompt row, then Reline
+      # redraws the editable line beneath it. Advancing before the event left
+      # an empty row between every pair of background messages. Writes that
+      # belong to the draft machinery — spinner, activity row and read-end
+      # bookkeeping — pass guard: false and manage their rows alone.
       def terminal_write(io: $stdout, guard: true, &block)
         Master::Trace::Dmesg.terminal_write(io:, guard:, &block)
       end
@@ -37,16 +32,16 @@ module Master
         false
       end
 
-      # Called under Dmesg's mutex, before the payload. The reserved activity
-      # row is given up, the draft's row is cleared and the cursor steps to a
-      # fresh row below it: the payload never mixes with the prompt glyphs and
-      # never lands on the row Reline is editing.
+      # Called under Dmesg's mutex, before the payload. The prompt is a
+      # redrawable draft, not a permanent row: clear it in place, let the
+      # payload occupy that row, then redraw the draft beneath the message.
+      # Do not emit CRLF here; it creates a blank row before every later event.
       def foreign_write_begin(target)
         return unless tty_target?(target)
 
         if @reading_input
           clear_reserved_activity_row(target) if @activity_row_reserved
-          target.print("\r\e[K\r\n")
+          target.print("\r\e[K")
         elsif @spinner_row_visible
           # A queued turn paints the star on the current blank row. Clear only
           # that row before a log event writes there; never move the cursor.

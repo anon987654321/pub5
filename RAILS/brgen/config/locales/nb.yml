@@ -2192,13 +2192,13 @@ nb:
       copyright: Brudd på opphavsrett
       other: Noe annet
 
-growth:
-  referral_share: "Del en 30-dagers Pro-invitasjon"
-  referral_title: "En bemerkelsesverdig kuratering"
-  referral_badge: "BEMERKELSESVERDIG KURATOR // VERIFISERT"
-  referral_headline: "Rytmen er autonom. Ta eierskap til strømmen."
-  referral_description: "Del invitasjonen og gi kuratoren som inviterte deg 30 dager med Brgen %{vertical} Pro."
-  referral_copy: "Kopier invitasjon"
-  referral_claim: "Godta invitasjon"
-  referral_redeemed: "Invitasjonen er godtatt. Kuratorens 30-dagers Pro-kreditt er aktiv."
-  referral_invalid: "Invitasjonen er ugyldig, utløpt eller allerede brukt."
+  growth:
+    referral_share: "Del en 30-dagers Pro-invitasjon"
+    referral_title: "En bemerkelsesverdig kuratering"
+    referral_badge: "BEMERKELSESVERDIG KURATOR // VERIFISERT"
+    referral_headline: "Rytmen er autonom. Ta eierskap til strømmen."
+    referral_description: "Del invitasjonen og gi kuratoren som inviterte deg 30 dager med Brgen %{vertical} Pro."
+    referral_copy: "Kopier invitasjon"
+    referral_claim: "Godta invitasjon"
+    referral_redeemed: "Invitasjonen er godtatt. Kuratorens 30-dagers Pro-kreditt er aktiv."
+    referral_invalid: "Invitasjonen er ugyldig, utløpt eller allerede brukt."

@@ -75,7 +75,7 @@ checks:
   - {id: comments.row_body, in: __shared/app/views/comments/_comment.html.erb, has: [comment-body, comment-author]}
   - {id: comments.row_replies, in: __shared/app/views/comments/_comment.html.erb, has: [comment-replies, ":replies"]}
   - {id: comments.guest_form, in: brgen/app/views/posts/show.html.erb, has: ["authenticated? || guest?"]}
-  - {id: votes.stream, in: brgen/app/views/votes/create.turbo_stream.erb, has: [posts/post, comments/comment]}
+  - {id: votes.stream, in: brgen/app/views/votes/create.turbo_stream.erb, has: [shared/post_vote_rail, comments/comment]}
   # --- communities / events / stories ---
   - {id: communities.index, in: brgen/app/views/communities/index.html.erb, has: [live_search]}
   - {id: communities.show, in: brgen/app/views/communities/show.html.erb, has: [community]}
@@ -105,11 +105,11 @@ checks:
   # guard is the one 5753e79fd fixed -- a "Sign up" label pointing at sign-in.
   - {id: auth.sign_in_nav,
      in: brgen/app/views/shared/_mobile_chrome.html.erb,
-     has: ["nav.sign_in", "main_app.new_session_path"], lack: ["sign up\", main_app.new_session_path"]}
+     has: ["nav.sign_in", "main_app.new_session_path"], lack: ['"Sign up", main_app.new_session_path']}
   - {id: auth.create_account_from_sign_in, in: brgen/app/views/sessions/new.html.erb, has: [new_user_path]}
   - {id: auth.verified_email_check,
      in: __shared/app/controllers/concerns/shared/authentication.rb,
-     has: ["def require_verified_email", guest?]}
+     has: ["def require_verified_email", "guest?"]}
   - {id: auth.passwords, in: __shared/app/views/passwords/new.html.erb, has: [email]}
   # --- dating ---
   - {id: dating.home_deck,

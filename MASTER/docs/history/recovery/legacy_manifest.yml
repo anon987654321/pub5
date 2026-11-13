@@ -137,8 +137,11 @@ rails_restore_debt:
     state: retired
     missing: []
     reason: >
-      Retired from the active stack on 2026-08-12. Old source and databases are
-      recovery-only context; its former feature backlog is not active restore debt.
+      Retired from production on 2026-08-12. Source was recovered to
+      RAILS/hjerterom on 2026-11-13 from pub4 commit
+      c11f9e7d91258044658e1320c3030a1d51f9fd5d and remains archived, not part
+      of the active deploy matrix. The database backup remains recovery-only;
+      no service, credentials, relayd, certificate or DNS state was restored.
 
 active_app_decisions:
   # Decided 2026-09-06, after four months at archived_port. The fleet is three

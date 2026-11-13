@@ -24,6 +24,7 @@ class TraceDmesgTest < Minitest::Test
     # run (operator, 2026-11-13).
     assert_equal "err0: first line\nerr0: second line\n", block_output("first line\n\nsecond line\n")
     assert_equal "err0: first line\nerr0: second line\n", block_output("first line\n\n\n\nsecond line\n\n\n")
+    assert_equal "err0: first line\nerr0: second line\n", block_output("\nfirst line\n\nsecond line\n")
   end
 
   def test_collapse_writer_never_writes_two_consecutive_newlines

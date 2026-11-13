@@ -71,4 +71,4 @@ checks:
   - {id: live.categories, live: {path: /categories, status: 200, has: [categor]}}
   - {id: live.maintainers, live: {path: /maintainers, status: 200, has: [maintain]}}
   - {id: live.sign_in, live: {path: /session/new, status: 200, has: [session]}}
-  - {id: live.search_empty, live: {path: /ports?q=zzz-no-such-port-exists, status: 200, has: [port]}}
+  - {id: live.search_empty, live: {path: '/ports?q=zzz-no-such-port-exists', status: 200, has: [port]}}

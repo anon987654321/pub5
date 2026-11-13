@@ -556,11 +556,10 @@ end
     assert_nil result
   end
 
-  # The foreign-write protocol: an operator-facing write from any lane clears
-  # the draft's row, steps below it, and the redisplay rebuilds the editable
-  # line at the payload's end. Without the repaint Reline's differential
-  # render paints nothing its cache still matches, and the prompt stays gone
-  # after the first message.
+  # The foreign-write protocol: replace the transient draft row with the
+  # event, then redraw the editable line beneath it. Repeated events must not
+  # advance past an empty prompt row. Without repaint Reline's differential
+  # render paints nothing its cache still matches, and the prompt stays gone.
   DraftIO = Class.new do
     def initialize
       @buffer = +""
@@ -594,9 +593,10 @@ end
 
     with_redisplay_counter do |counter|
       @cli.send(:terminal_write, io:) { |target| target.puts("turn0: reply row") }
+      @cli.send(:terminal_write, io:) { |target| target.puts("model0: next event") }
 
-      assert_equal "\r\e[K\r\nturn0: reply row\n", io.buffer
-      assert_equal [1], counter
+      assert_equal "\r\e[Kturn0: reply row\n\r\e[Kmodel0: next event\n", io.buffer
+      assert_equal [1, 1], counter
       assert_kind_of Numeric, @cli.instance_variable_get(:@last_foreign_write_at)
     end
   end

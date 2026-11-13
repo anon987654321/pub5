@@ -167,7 +167,9 @@ module Master
           models.concat(Array(spec["models"]).map { |model| "#{name}:#{model}" })
         end
         models.uniq.find do |model|
-          LaneQuota.lane_of(model) == lane || model.start_with?(lane.to_s)
+          LaneQuota.lane_of(model) == lane ||
+            LaneQuota.credential_lane_of(model) == lane ||
+            model.start_with?(lane.to_s)
         end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "LaneHealth.model_for_lane", lane:)

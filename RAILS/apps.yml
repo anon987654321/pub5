@@ -512,13 +512,18 @@ archived_subsystems:
     notes: "Retired from active stack; the former OPENBSD/archive/recovery/references/build_blognet.rb path is absent from pub5. The manifest records provenance, not restored app code."
 
   hjerterom:
-    recovery_source: git history — deleted 2026-08-12; databases at /var/backups/pub5/hjerterom-20260812 on vm23.
+    recovery_source: >-
+      RAILS/hjerterom restored from anon987654321/pub4 commit
+      c11f9e7d91258044658e1320c3030a1d51f9fd5d (2026-07-12); database backup
+      remains at /var/backups/pub4/hjerterom-20260812 on vm23.
     notes: >-
-      Retired with baibl and blognet. All three were recorded as removed in
-      the repo two months before vm23 actually lost them: the users,
-      homes (1.6GB between them), rc.d scripts, /etc/*.env files, login classes,
-      certificate symlinks and DNS zones were all still there on 2026-08-12.
-      port_inventory now scans the config files where that residue lives.
+      Source restored 2026-11-13 for recovery and continued development. It
+      remains archived and is not a production deploy target. The live VPS
+      service, user/home, rc.d entry, env, relayd route, certificate and DNS
+      were removed 2026-08-12; restoring repository source does not recreate
+      them. Keep it out of apps:, deploy helpers and production health checks
+      until capacity, credentials, DB recovery, routing and a separate deploy
+      plan are proved.
 
   aight_production_ai:
     recovery_source: MASTER/lib/io/
