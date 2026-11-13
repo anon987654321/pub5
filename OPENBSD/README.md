@@ -38,6 +38,8 @@ Hands-off path: local preflight, pin SHA, tmux on vm23, `vps-deploy` as root
 (git as `dev`), stream progress until finished, then `vps-state` + public canary.
 Log: `/home/dev/vps-deploy.log`. Session: `pub5-deploy`.
 
+`/usr/local/bin/zap` is installed from `OPENBSD/bin/zap.rb`, a standard-library Ruby port of OpenBSD's interactive process killer. It searches command lines, asks before each signal, defaults to `SIGTERM`, and supports `-f`, `-s SIGNAL`, the classic `-SIGNAL` form and `--dry-run`. On OpenBSD it refuses to signal `vmd`, `vmctl` or `cu`; use the documented VM controls and recovery path instead.
+
 The commands live in one place. `data/operator.yml` is the source of the command
 recipes, so do not write another catalogue. From the repository root, the operator
 reaches the box with `MASTER/bin/operator vps state` and `MASTER/bin/operator vps
