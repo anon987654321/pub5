@@ -268,6 +268,35 @@ class TestCouncilDeadline < Minitest::Test
     end
   end
 
+  def test_council_budget_never_exceeds_the_time_left_in_the_pass
+    round = Master::Fix::FixLoop::CouncilRound.new(agent: Object.new, root: Master::ROOT)
+    round.define_singleton_method(:before_fixes_budget) { 120 }
+    now = Time.utc(2026, 11, 13, 12, 0, 0)
+
+    assert_equal 7, round.send(:budget_for, now + 7, now:)
+    assert_equal 1, round.send(:budget_for, now + 1, now:)
+    assert_equal 0, round.send(:budget_for, now, now:)
+    assert_equal 0, round.send(:budget_for, now - 1, now:)
+  end
+
+  def test_both_violation_and_improvement_councils_receive_the_remaining_budget
+    round = Master::Fix::FixLoop::CouncilRound.new(agent: Object.new, root: Master::ROOT)
+    round.define_singleton_method(:before_fixes_budget) { 120 }
+    budgets = []
+    round.define_singleton_method(:critique) do |_files, budget:|
+      budgets << budget
+      Master::Result.ok(feedback: [], issues: [], cherry_picks: [], ideas: [], mode: :general)
+    end
+
+    round.run(files: [__FILE__], pass: 1, deadline: Time.now + 8)
+    round.improve(files: [__FILE__], pass: 2, deadline: Time.now + 6)
+
+    assert_equal 2, budgets.size
+    assert budgets.all?(&:positive?)
+    assert_operator budgets[0], :<=, 8
+    assert_operator budgets[1], :<=, 6
+  end
+
   def test_the_council_before_the_fixes_gets_two_minutes
     round = Master::Fix::FixLoop::CouncilRound.new(agent: Object.new, root: Master::ROOT)
     assert_equal 120, round.send(:before_fixes_budget)
