@@ -202,6 +202,18 @@ module Master
             attempt_id:
           }
           payload[:task_contract_digest] = contract_digest if contract_digest
+          if contract
+            # Keep the reconstructable execution boundary, not the complete
+            # contract payload: OpenBSD preflight receipts can contain full
+            # manual/source reads and belong in their dedicated evidence store.
+            payload[:task_contract] = {
+              schema: contract.schema,
+              intent: contract.intent,
+              scope: contract.scope,
+              preserve: contract.preserve,
+              proof: contract.proof,
+            }
+          end
           append_event("coordinator_started", payload, run_id:)
           run_id
         end
