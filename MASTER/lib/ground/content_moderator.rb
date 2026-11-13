@@ -16,6 +16,8 @@ module Master
         multiplier = Float(@config.fetch(:repeat_offender_multiplier))
         raise ArgumentError, "review_threshold must be positive" unless threshold.positive?
         raise ArgumentError, "repeat_offender_multiplier must be finite and >= 1" unless multiplier.finite? && multiplier >= 1
+        @config[:review_threshold] = threshold
+        @config[:repeat_offender_multiplier] = multiplier
       end
 
       def analyze(content:, prior_violations: 0)
