@@ -106,6 +106,7 @@ module Master
           "measured" => measured,
           "assessment" => assessment,
           "changed" => changed,
+          "change_coverage" => "per_law_repair_summaries_only",
           "repair_passes" => repair_passes,
           "rejected" => rejected,
           "inconclusive" => inconclusive,
