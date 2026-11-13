@@ -192,9 +192,14 @@ module Operator
 
       true
     rescue StandardError => e
-      transaction.delivery.preserve! if transaction&.active? && transaction.state == "delivering"
+      if transaction&.active? && transaction.state == "delivering"
+        transaction.delivery.preserve!
+        say("delivery outcome unknown; transaction retained: #{e.message.lines.map(&:strip).reject(&:empty?).last(4).join(' / ')[0, 400]}")
+        raise
+      end
+
       say("not committed: #{e.message.lines.map(&:strip).reject(&:empty?).last(4).join(' / ')[0, 400]}")
-      raise
+      false
     end
 
     def git_head(root)
@@ -237,13 +242,15 @@ module Operator
 
     def report(results, root:, before:, surfaces: [])
       kept = results.select { |r| r.outcome == :kept }
+      failed = results.select { |r| %i[failed delivery_failed].include?(r.outcome) }
       kept.each { |r| say("kept ##{r.number} #{r.surface}: #{r.why} (#{r.before.round(1)} -> #{r.after.round(1)})") }
       say("#{kept.size} edit(s) kept in #{results.size} round(s)")
+      say("design run incomplete: #{failed.map(&:outcome).join(', ')}") unless failed.empty?
       ahead = Master::Io::Exec.capture2e("git", "-C", root, "log", "--oneline", "#{before}..HEAD").first
       ahead.each_line { |line| say("committed #{line.strip}") }
       say("not pushed: review `git log origin/main..HEAD`, then push main")
       baselines_note(kept, surfaces)
-      kept.empty? ? 1 : 0
+      kept.empty? || failed.any? ? 1 : 0
     end
   end
 end
