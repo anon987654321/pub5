@@ -73,10 +73,12 @@ class Zap
   def parse(argv)
     args = argv.dup
 
-    # Keep the classic zap spelling: zap -TERM pattern and zap -9 pattern.
-    if args.first&.match?(/\A-(?:[0-9]+|[A-Za-z][A-Za-z0-9]*)\z/) && args.first != "-f"
-      set_signal(args.shift.delete_prefix("-"))
+    # Keep the classic zap spelling: zap -TERM pattern and zap -9 pattern,
+    # whether the signal appears before or after -f.
+    signal_index = args.index do |arg|
+      arg.match?(/\A-(?:[0-9]+|[A-Za-z][A-Za-z0-9]*)\z/) && arg != "-f"
     end
+    set_signal(args.delete_at(signal_index).delete_prefix("-")) if signal_index
 
     parser = OptionParser.new do |opts|
       opts.banner = "usage: zap [-f] [-s SIGNAL] pattern"
