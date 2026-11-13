@@ -191,10 +191,16 @@ module Master
         end
         raise LedgerCorruption, "terminal event has no matching coordinator start" unless started
 
+        # Only evidence inside the completed attempt's ledger prefix belongs
+        # to its receipt. A later row carrying a stale run ID must not rewrite
+        # the meaning of an already-terminal attempt.
         repairs = events.select do |row|
+          sequence = row.fetch("seq").to_i
           row["kind"] == "repair_pass" &&
             row["run_id"] == identifier &&
-            row.dig("payload", "attempt_id").to_s == selected_attempt
+            row.dig("payload", "attempt_id").to_s == selected_attempt &&
+            sequence > started.fetch("seq").to_i &&
+            sequence < terminal.fetch("seq").to_i
         end
 
         journal_run = lifecycle_journal.history.find { |row| row["id"] == identifier }
