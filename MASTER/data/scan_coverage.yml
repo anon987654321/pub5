@@ -82,3 +82,13 @@ scan_coverage:
       reads web/tmp/ (5,960 total with it), which is gitignored runtime state by
       web/.gitignore:3 and is not source at all. Closing this properly means a
       Rails-aware profile, not one more list entry.
+    agent-skeleton: >-
+      A standalone skeleton application, not MASTER runtime source: it carries
+      its own Gemfile (faraday, nokogiri), its own bin/ entrypoints (master,
+      master-evals) and its own lib/master namespace, so Zeitwerk never loads it
+      and the runtime constitution's subjects are not its subjects. Its
+      governance surface is its own: test/smoke_test.rb and evals/cases.rb.
+      Scanning it under MASTER's runtime style would repeat the web/ mistake -
+      scaffold code judged by laws built for the live runtime - and roots would
+      assert a coverage Fix::SelfCheck has no reason to deliver here. Closing
+      this properly means a skeleton-aware profile, not one more list entry.
