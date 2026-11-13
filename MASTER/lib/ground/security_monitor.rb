@@ -54,9 +54,11 @@ module Master
           next if key == :analysis_window_hours
           number = Integer(value)
           raise ArgumentError, "#{key} must be 1..100000" unless number.between?(1, 100_000)
+          @config[key] = number
         end
         hours = Float(@config.fetch(:analysis_window_hours))
         raise ArgumentError, "analysis_window_hours must be 1..168" unless hours.finite? && hours.between?(1, 168)
+        @config[:analysis_window_hours] = hours
       end
 
       def normalize(events, start, finish)
