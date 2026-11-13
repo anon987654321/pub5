@@ -28,17 +28,17 @@ task :check do
   raise "RG-69 retains an inline style or script block" if rg69_html.match?(/<style\b|<script(?![^>]*\bsrc=)/i)
   raise "RG-69 references a missing local stylesheet" unless rg69_html.include?('href="rg69.css"')
   raise "RG-69 references a missing local application script" unless rg69_html.include?('src="rg69.js"')
-  raise "RG-69 Tone.js dependency is not version-pinned" unless rg69_html.include?("tone/14.8.49/Tone.min.js")
+  raise "RG-69 Tone.js dependency is not vendored" unless rg69_html.include?("vendor/tone/Tone.min.js")
   raise "RG-69 has no keyboard focus indicator" unless File.read(rg69_files.fetch(1)).include?(":focus-visible")
 
-  selfies_files = %w[selfies.html selfies.css selfies.js].map { |name| File.join(STUDIO_ROOT, name) }
+  selfies_files = %w[selfies.html selfies.css selfies.js].map { |name| File.join(STUDIO_ROOT, "lora", name) }
   missing_selfies = selfies_files.reject { |path| File.file?(path) }
   raise "Selfies assets missing: #{missing_selfies.map { |path| File.basename(path) }.join(', ')}" unless missing_selfies.empty?
   selfies_html = File.read(selfies_files.fetch(0))
   raise "Selfies retains an inline style or script block" if selfies_html.match?(/<style\b|<script(?![^>]*\bsrc=)/i)
   raise "Selfies references a missing local stylesheet" unless selfies_html.include?('href="selfies.css"')
   raise "Selfies references a missing local application script" unless selfies_html.include?('src="selfies.js"')
-  raise "Selfies references a missing generated manifest" unless selfies_html.include?('src="selfies/manifest.js"')
+  raise "Selfies references a missing generated manifest" unless selfies_html.include?('src="selfies-manifest.js"')
   raise "Selfies has no keyboard focus indicator" unless File.read(selfies_files.fetch(1)).include?(":focus-visible")
   raise "Selfies carousel library is not vendored" unless File.file?(File.join(STUDIO_ROOT, "vendor", "swiper", "swiper-bundle.min.js"))
   raise "Selfies application script sets innerHTML" if File.read(selfies_files.fetch(2)).match?(/\.innerHTML\b/)

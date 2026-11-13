@@ -3,14 +3,15 @@
 
 # selfies_gallery — build the manifest the selfies page reads.
 #
-# The gallery (STUDIO/selfies.html) shows a subject's stills and films over the
-# dilla bed. The renders live in STUDIO/lora/ and are not tracked; this tool
-# scans them and writes STUDIO/selfies/manifest.js, the one generated file the
-# page needs, so the page stays static and the media stays private and out of
-# git.
+# The gallery (STUDIO/lora/selfies.html) shows a subject's stills and films over
+# the dilla bed. The renders live in STUDIO/lora/ and are not tracked; this tool
+# scans them and writes STUDIO/lora/selfies-manifest.js, the one generated file
+# the page needs, so the page stays static and the media stays private and out
+# of git. The page, its manifest and the renders share a directory, so every
+# media path in the manifest is written relative to that directory.
 #
 #   ruby STUDIO/photograph/selfies_gallery.rb
-#   ruby STUDIO/photograph/selfies_gallery.rb --subject ragnhild --soundtrack selfies/dilla.mp3
+#   ruby STUDIO/photograph/selfies_gallery.rb --subject ragnhild --soundtrack selfies-dilla.mp3
 #   ruby STUDIO/photograph/selfies_gallery.rb api '{"action":"build"}'
 #
 # It reads only; it never renders, uploads or deletes. A film is a still that
@@ -20,6 +21,7 @@
 require "json"
 require "optparse"
 require "fileutils"
+require "pathname"
 require_relative "../api"
 
 module Studio
@@ -27,8 +29,8 @@ module Studio
     class SelfiesGallery
       ROOT = File.expand_path("..", __dir__).freeze
       LORA = File.join(ROOT, "lora").freeze
-      DEFAULT_OUT = File.join(ROOT, "selfies", "manifest.js").freeze
-      DEFAULT_SOUNDTRACK = "selfies/dilla.mp3".freeze
+      DEFAULT_OUT = File.join(LORA, "selfies-manifest.js").freeze
+      DEFAULT_SOUNDTRACK = "selfies-dilla.mp3".freeze
 
       STILL_EXTENSIONS = %w[jpg jpeg png webp].freeze
       FILM_EXTENSIONS = %w[mp4 webm mov].freeze
@@ -131,15 +133,16 @@ module Studio
       end
 
       def relative(path)
-        path.delete_prefix("#{ROOT}/")
+        Pathname.new(path).relative_path_from(Pathname.new(File.dirname(@out))).to_s
       end
 
       # Only record a soundtrack that exists; a missing bed is not an error, the
-      # page simply omits the control.
+      # page simply omits the control. The path is read relative to the manifest
+      # (the page directory) and written back the same way.
       def soundtrack_path
         return nil if @soundtrack.nil? || @soundtrack.empty?
 
-        candidate = File.expand_path(@soundtrack, ROOT)
+        candidate = File.expand_path(@soundtrack, File.dirname(@out))
         File.file?(candidate) ? relative(candidate) : @soundtrack
       end
 
@@ -165,7 +168,7 @@ module Studio
           parser.banner = "usage: ruby STUDIO/photograph/selfies_gallery.rb [options]"
           parser.on("--subject NAME", "limit to one subject") { |value| options[:subject] = value }
           parser.on("--out PATH", "manifest path") { |value| options[:out] = value }
-          parser.on("--soundtrack PATH", "recorded bed, relative to STUDIO/") { |value| options[:soundtrack] = value }
+          parser.on("--soundtrack PATH", "recorded bed, relative to the manifest directory") { |value| options[:soundtrack] = value }
         end.parse!(argv)
 
         manifest = SelfiesGallery.new(out: options[:out], subject: options[:subject],

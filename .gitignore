@@ -292,15 +292,15 @@ STUDIO/lora/*_film_*.mov
 # The selfies gallery manifest is generated from those renders by
 # photograph/selfies_gallery.rb. The page names it; the render step writes it;
 # a fresh checkout shows the page's empty state instead of a stale list.
-STUDIO/selfies/manifest.js
+STUDIO/lora/selfies-manifest.js
 
 # The dilla bed the gallery plays, rendered with:
-#   ruby STUDIO/dilla/dilla.rb --progression 20 --bars 8 --out STUDIO/selfies/dilla.mp3
+#   ruby STUDIO/dilla/dilla.rb --progression 20 --bars 8 --out STUDIO/lora/selfies-dilla.mp3
 # Generated audio is not tracked (the rule above the dilla section states it),
 # so the bed is rebuilt rather than committed. The name is specific, never a
 # bare *.mp3.
-STUDIO/selfies/dilla.mp3
-STUDIO/selfies/dilla.wav
+STUDIO/lora/selfies-dilla.mp3
+STUDIO/lora/selfies-dilla.wav
 
 # Legacy MASTER/tools/lora data: the tool now lives at STUDIO/lora.
 

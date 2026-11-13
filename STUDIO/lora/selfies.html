@@ -8,7 +8,7 @@
 <meta name="description" content="LoRA selfie series — the stills and films of a trained subject, over the dilla bed.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📷</text></svg>">
 <title>Selfies | STUDIO</title>
-<link rel="stylesheet" href="vendor/swiper/swiper-bundle.min.css">
+<link rel="stylesheet" href="../vendor/swiper/swiper-bundle.min.css">
 <link rel="stylesheet" href="selfies.css">
 </head>
 <body>
@@ -34,7 +34,7 @@
 
   <section class="empty" data-selfies-empty hidden aria-label="No series yet">
     <h2>No series yet</h2>
-    <p>This gallery reads <code>selfies/manifest.js</code>, which
+    <p>This gallery reads <code>lora/selfies-manifest.js</code>, which
       <code>photograph/selfies_gallery.rb</code> writes from the renders in
       <code>lora/</code>. Render a series first, then rebuild the manifest:</p>
     <pre><code>ruby STUDIO/photograph.rb --selfie-series --subject ragnhild
@@ -42,7 +42,7 @@ ruby STUDIO/photograph/selfies_gallery.rb</code></pre>
     <p>Animate a still into a film with the first-frame image-to-video engine,
       and lay the soundtrack under it in the same pass:</p>
     <pre><code>ruby STUDIO/photograph.rb --animate lora/&lt;still&gt;.jpg --subject ragnhild \
-  --prompt "she turns to the lens and smiles" --soundtrack selfies/dilla.mp3</code></pre>
+  --prompt "she turns to the lens and smiles" --soundtrack lora/selfies-dilla.mp3</code></pre>
   </section>
 
   <section class="soundtrack" data-selfies-soundtrack hidden aria-label="Soundtrack">
@@ -55,8 +55,8 @@ ruby STUDIO/photograph/selfies_gallery.rb</code></pre>
   <p>STUDIO — private subject media. Renders are not tracked; the manifest is generated.</p>
 </footer>
 
-<script src="selfies/manifest.js" defer></script>
-<script src="vendor/swiper/swiper-bundle.min.js" defer></script>
+<script src="selfies-manifest.js" defer></script>
+<script src="../vendor/swiper/swiper-bundle.min.js" defer></script>
 <script src="selfies.js" defer></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 // The selfies gallery: a Swiper rail of a subject's stills and films, over the
-// dilla bed. The manifest is generated (selfies/manifest.js) and lists what
+// dilla bed. The manifest is generated (lora/selfies-manifest.js) and lists what
 // exists; nothing here reads the network on its own. No innerHTML, no eval —
 // every node is built with createElement and textContent, the same rule rg69.js
 // follows. If Swiper or the manifest is missing, the page says so plainly

@@ -19,14 +19,15 @@ but the implementation is owned here.
   Rendered output is replaceable:
   a new run may delete and replace it, and no rendered-sound default moves on
   one person's judgement.
-- `rg69.html`, `rg69.css` and `rg69.js` — the RG-69 browser beat machine. Its page, styles and application code are separate assets under MASTER's HTML Laws; Tone.js 14.8.49 is loaded from a version-pinned CDN and failure is reported visibly.
-- `selfies.html`, `selfies.css` and `selfies.js` — the selfie gallery. A Swiper
-  rail (vendored and version-pinned in `vendor/swiper/`) of a subject's stills
-  and films over the dilla bed, built from the generated `selfies/manifest.js`
-  and captioned for a screen reader. Films are muted inline loops with a
-  poster-first frame; the bed never autoplays. `photograph/selfies_gallery.rb`
-  scans `lora/` and writes that manifest — it reads only, and renders and
-  private media stay out of git.
+- `rg69.html`, `rg69.css` and `rg69.js` — the RG-69 browser beat machine. Its page, styles and application code are separate assets under MASTER's HTML Laws; Tone.js 14.8.49 is vendored and version-pinned in `vendor/tone/` and failure is reported visibly.
+- `lora/selfies.html`, `lora/selfies.css` and `lora/selfies.js` — the selfie
+  gallery, kept beside the subject renders it shows. A Swiper rail (vendored and
+  version-pinned in `vendor/swiper/`) of a subject's stills and films over the
+  dilla bed, built from the generated `lora/selfies-manifest.js` and captioned
+  for a screen reader. Films are muted inline loops with a poster-first frame;
+  the bed never autoplays. `photograph/selfies_gallery.rb` scans `lora/` and
+  writes that manifest — it reads only, and renders and private media stay out
+  of git.
 - `photograph.rb` and `photograph/idea_picture.rb` — the image-generation
   entrypoint and its IdeaPicture implementation. A still renders from an engine
   chosen with `--engine`; a film animates it from an engine chosen with

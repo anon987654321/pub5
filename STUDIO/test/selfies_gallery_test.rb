@@ -13,9 +13,8 @@ class TestSelfiesGallery < Minitest::Test
   def setup
     @dir = Dir.mktmpdir
     @lora = File.join(@dir, "lora")
-    @out = File.join(@dir, "selfies", "manifest.js")
+    @out = File.join(@dir, "lora", "selfies-manifest.js")
     FileUtils.mkdir_p(@lora)
-    FileUtils.mkdir_p(File.dirname(@out))
   end
 
   def teardown
@@ -111,13 +110,12 @@ class TestSelfiesGallery < Minitest::Test
 
   def test_the_soundtrack_is_recorded_only_when_it_exists
     touch("ragnhild_selfie_01.jpg")
-    FileUtils.mkdir_p(File.join(@dir, "selfies"))
-    File.write(File.join(@dir, "selfies", "dilla.mp3"), "x")
+    touch("selfies-dilla.mp3")
 
-    # A soundtrack path relative to STUDIO/ is passed through; the file lives
-    # beside the page, not in the temp tree, so the recorded value is the path.
-    manifest = build(soundtrack: "selfies/dilla.mp3")
-    assert_equal "selfies/dilla.mp3", manifest.fetch("soundtrack")
+    # The bed sits beside the manifest, so it is recorded by its bare name; the
+    # page and the bed share the lora/ directory.
+    manifest = build(soundtrack: "selfies-dilla.mp3")
+    assert_equal "selfies-dilla.mp3", manifest.fetch("soundtrack")
   end
 end
 
@@ -131,9 +129,9 @@ class TestSelfiesBrowserContract < Minitest::Test
   end
 
   def test_selfies_assets_are_separate_and_resolve
-    html_path = File.join(studio_root, "selfies.html")
-    css_path = File.join(studio_root, "selfies.css")
-    js_path = File.join(studio_root, "selfies.js")
+    html_path = File.join(studio_root, "lora", "selfies.html")
+    css_path = File.join(studio_root, "lora", "selfies.css")
+    js_path = File.join(studio_root, "lora", "selfies.js")
     [html_path, css_path, js_path].each { |path| assert File.file?(path), "missing #{path}" }
 
     html = File.read(html_path)
@@ -162,14 +160,14 @@ class TestSelfiesBrowserContract < Minitest::Test
     assert_match(/Swiper 11\.\d+\.\d+/, File.read(js))
     assert_match(/Swiper 11\.\d+\.\d+/, File.read(css))
 
-    html = File.read(File.join(studio_root, "selfies.html"))
-    assert_includes html, "vendor/swiper/swiper-bundle.min.js"
-    assert_includes html, "vendor/swiper/swiper-bundle.min.css"
+    html = File.read(File.join(studio_root, "lora", "selfies.html"))
+    assert_includes html, "../vendor/swiper/swiper-bundle.min.js"
+    assert_includes html, "../vendor/swiper/swiper-bundle.min.css"
   end
 
   def test_the_page_names_the_generated_manifest_and_bed
-    html = File.read(File.join(studio_root, "selfies.html"))
-    assert_includes html, 'src="selfies/manifest.js"'
-    assert_includes html, "selfies/dilla.mp3"
+    html = File.read(File.join(studio_root, "lora", "selfies.html"))
+    assert_includes html, 'src="selfies-manifest.js"'
+    assert_includes html, "selfies-dilla.mp3"
   end
 end
