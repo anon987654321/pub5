@@ -42,6 +42,9 @@ log "ruby now: $(ruby -v 2>&1 | head -1)"
 python3 agent_work/fetch_gems.py MASTER/Gemfile.lock MASTER/vendor/cache || { log FAIL_GEM_FETCH; exit 1; }
 gem install --local --no-document MASTER/vendor/cache/bundler-*.gem 2>/dev/null || true
 cd MASTER
+# DependencyManager ignores exported BUNDLE_PATH and only adopts an existing
+# external bundle through this local config. Keep bootstrap and boot on one store.
+bundle config set --local path "$ROOT/MASTER/vendor/bundle"
 bundle config set --local frozen true
 bundle install --local && log BUNDLE_INSTALL_OK || { log FAIL_BUNDLE_INSTALL; exit 1; }
 bundle check && log BUNDLE_CHECK_OK
