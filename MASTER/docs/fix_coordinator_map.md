@@ -115,27 +115,31 @@ programmatic callers that omit one receive a compatibility contract derived
 from the requested target; it preserves the intent's mandatory dimensions and
 declares no new paths. New callers should pass the explicit contract.
 
-There is no new six-word terminal enum. `OutcomePolicy` and
-`Execution::Contract::TERMINAL_STATES` already own the workflow vocabulary:
-`done`, `plateau`, `blocked`, `human_decision`, `inconclusive`,
+There is no six-word workflow terminal enum. `OutcomePolicy` and
+`Execution::Contract::TERMINAL_STATES` remain the owners of detailed run
+endings: `done`, `plateau`, `blocked`, `human_decision`, `inconclusive`,
 `validation_failed`, `delivery_failed`, `timeout`, `cancelled`,
-`unknown_outcome`, `recovery_failed` and the other declared terminal states.
-The assessment adapter separately reports verification states such as
-`pass`, `fail`, `partial`, `inconclusive`, `unavailable` and `error`.
-Do not map a successful measurement to workflow success, or a failed check to
-"rejected": measurement, repair acceptance and run termination are different
-facts. Only the canonical `done` state can claim completion, and only after
-the evidence and preservation gates pass.
+`unknown_outcome`, `recovery_failed` and the other declared states.
+A separate `Fix::Outcome` vocabulary describes evidence and actions in a
+receipt: `measured`, `changed`, `rejected`, `inconclusive`, `blocked`
+and `resumed`. It does not replace terminal states or the assessment
+adapter's `pass`, `fail`, `partial`, `unavailable` and `error` states.
+There is deliberately no context-free `from_legacy` conversion: a failed
+measurement is not necessarily a rejected proposal, and a measurement that
+ran is not proof that the run is done. Only canonical `done` can claim
+completion, after the evidence and preservation gates pass.
 
-A second `TerminalReceipt` file or hash chain would duplicate existing owners.
-The durable result is linked by run ID across three existing artifacts:
-the hash-chained coordinator ledger at `.master/log.jsonl` (start, bounded
-repair summaries and terminal state), `LifecycleJournal` at
-`.master/fix_runs.json` (plan, pass/resume state and assessment receipt), and
-the checksum-verified assessment/outcome artifacts. The coordinator start row
-also carries the validated task-contract digest. The run journal remains the
-source for the complete assessment evidence; the hash chain is its correlated
-operational history, not a replacement for it.
+`Kernel#terminal_receipt(run_id:, attempt_id:)` returns a read-only
+`TerminalReceipt` projection for a completed coordinator attempt. It joins
+the matching start and terminal rows, bounded repair summaries, the
+LifecycleJournal plan/resume state and the checksum-verified assessment
+summary. Its `hash` and `prev_hash` are the existing coordinator ledger
+values; `verify!` rereads and validates that hash chain and confirms the
+terminal row is still present. This is not a second journal, hash chain or
+writer. The start row carries the task-contract digest plus the reconstructable
+intent, scope, preservation dimensions and proof names. Large OpenBSD manual
+and source-read payloads remain in their dedicated evidence store, not copied
+into the coordinator log.
 
 Models and lanes are instruments inside the adapter, not Kernel owners.
 `data/models.yml` orders candidates; `LaneSelection` filters/orders them
@@ -156,12 +160,19 @@ still goes through normal Law and preservation checks, then
 `RepairAdapter`/`Transaction`. Multi-file `Restructure` remains the
 explicit second mutation path with its separate snapshot/undo/delivery contract.
 
-Planning work is not the same as "pure" code in the functional sense: architecture
-exploration, research and wishlist stages may persist bounded reports or
-proposal metadata. Their output can inform the next decision but cannot authorize
-source writes. Ordinary source mutation remains behind `Transaction`; structural
-mutation remains behind `Restructure`. Do not add a `Propose` namespace or
-banner comments as a substitute for an executable write boundary.
+Planning work is not the same as "pure" code in the functional sense:
+architecture exploration, research and wishlist stages may persist bounded
+reports or proposal metadata. Their output can inform the next decision but
+cannot authorize source writes. `CouncilRound` returns cherry-picks and
+improvement findings as repair context; prose alone has no effect. The rendered
+`DesignLoop` is not a planning-only module: it now snapshots candidate source
+through `Transaction`, verifies the candidate against fresh measurements,
+and requires a committed transaction receipt before retaining the edit. Its
+rollback and interrupted-delivery recovery remain part of that transaction
+contract. Ordinary repair and rendered-design mutation therefore have explicit
+transaction boundaries; structural mutation remains behind `Restructure`.
+Do not add a `Propose` namespace or banner comments as a substitute for an
+executable write boundary.
 
 Ordinary per-file repairs mutate through `FixLoop` / `Fix::Transaction`.
 Multi-file structural changes are the explicit second path: `FixLoop` owns the
