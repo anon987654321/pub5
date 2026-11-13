@@ -135,6 +135,8 @@ module Master
           end
         end
 
+        private :run_fix_loop
+
         # Link the receipt lifecycle to the durable RunJournal identity as soon
         # as it exists, before the pass runner can mutate source files.
         def bind_fix_run(adapter:, run_id:, target:, max_passes:, budget_seconds:, requested:)
@@ -191,12 +193,16 @@ module Master
                          else
                            "(external target)"
                          end
-          append_event("coordinator_started", {
+          contract = TaskContract.current
+          contract_digest = contract && Digest::SHA256.hexdigest(JSON.generate(contract.to_h))
+          payload = {
             actor: @actor, target: target_label, max_passes: Integer(max_passes),
             budget_seconds: Integer(budget_seconds), requested: requested == true,
             host: Socket.gethostname, pid: Process.pid, process_token: kernel_process_token,
             attempt_id:
-          }, run_id:)
+          }
+          payload[:task_contract_digest] = contract_digest if contract_digest
+          append_event("coordinator_started", payload, run_id:)
           run_id
         end
 
