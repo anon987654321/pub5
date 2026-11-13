@@ -115,7 +115,9 @@ module Master
         end
         first = summary.checks.lazy.flat_map(&:findings).first
         detail = if first
-          relative = first[:path].to_s.delete_prefix("#{File.expand_path(root)}/")
+          path = first[:path].to_s
+          root_prefix = "#{File.expand_path(Master::ROOT)}#{File::SEPARATOR}"
+          relative = path.start_with?(root_prefix) ? path.delete_prefix(root_prefix) : path
           " first=#{relative}:#{first[:line]} #{first[:message]}"
         else
           ""

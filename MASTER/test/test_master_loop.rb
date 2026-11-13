@@ -141,6 +141,29 @@ class TestMasterLoop < Minitest::Test
     end
   end
 
+  def test_publish_self_test_reports_the_first_finding_without_a_root_argument
+    finding = { path: File.join(Master::ROOT, "lib", "example.rb"), line: 7, message: "too nested" }
+    check = Struct.new(:law, :findings).new("LINEARITY", [finding])
+    summary_class = Struct.new(:checks, :violation_count) do
+      def ok? = violation_count.zero?
+    end
+    summary = summary_class.new([check], 1)
+    bus = Object.new
+    events = []
+    bus.define_singleton_method(:publish) { |event, **payload| events << [event, payload] }
+    lines = []
+
+    Master::Trace::Dmesg.stub(:status, ->(unit, message, **) { lines << [unit, message] }) do
+      Master::Builder.publish_self_test(bus, Master::Result.ok(summary))
+    end
+
+    assert_includes lines.map(&:last).join("\\n"), "first=lib/example.rb:7 too nested"
+    event = events.find { |name, _payload| name == "builder:self_test" }
+    refute_nil event
+    assert_equal ["LINEARITY=1"], event.last.fetch(:by_law)
+    assert_equal finding, event.last.fetch(:first_finding)
+  end
+
   def test_fix_loop_builder_contract_has_no_retired_rollback_dependency
     parameters = Master::Fix::FixLoop.instance_method(:build_pass_runner).parameters
     assert_empty parameters.select { |kind, name| kind == :keyreq && name == :rollback }
