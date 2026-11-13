@@ -227,8 +227,9 @@ module Master
           summary = Summary.new(checks: build_checks(laws:))
           # This is a diagnostic census, including at boot. Its findings are
           # reported to observers but do not assert that a repair mutated MASTER.
-          # The self-mutation guards (SelfCheck and SelfScan) own self_violation;
-          # publishing it here made any pre-existing debt halt every /fix run.
+          # The self-mutation guards (SelfCheck and explicit autofix SelfScan)
+          # own self_violation; publishing it here made any pre-existing debt
+          # halt every /fix run.
           @bus&.publish("self_test:complete", violations: summary.violation_count, checks: summary.to_h)
           Result.ok(summary)
         rescue StandardError => e

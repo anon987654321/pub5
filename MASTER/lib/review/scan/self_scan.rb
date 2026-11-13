@@ -35,7 +35,7 @@ module Master
             targets: @targets,
             autofixes:,
           )
-          publish(summary)
+          publish(summary, autofix:)
           Result.ok(summary)
         rescue StandardError => e
           @bus&.publish("self_scan:error", error: e.message)
@@ -87,10 +87,13 @@ module Master
           end
         end
 
-        def publish(summary)
+        def publish(summary, autofix:)
           @bus&.publish("self_scan:complete", laws: summary.law_count,
             violations: summary.violation_count, autofixes: summary.autofixes)
-          return if summary.violation_count.zero?
+          # The boot scan is a read-only diagnostic. Its existing debt must not
+          # trip FixLoop#halt! and block the very /fix command that can repair it.
+          # Only an explicit autofix scan is a repair gate.
+          return unless autofix && summary.violation_count.positive?
 
           @bus&.publish("self_violation", laws: summary.law_count, violations: summary.violation_count)
         end

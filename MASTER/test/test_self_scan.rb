@@ -42,7 +42,24 @@ class TestSelfScan < Minitest::Test
     assert result.ok?
     assert_equal "judge: lib/ 2 laws, 2 violations", result.value!.line
     assert_includes bus.events.map(&:first), "self_scan:complete"
-    assert_includes bus.events.map(&:first), "self_violation"
+    refute_includes bus.events.map(&:first), "self_violation",
+      "a read-only scan reports existing debt but does not halt the repair loop"
+  end
+
+  def test_explicit_autofix_scan_keeps_the_violation_gate
+    scanner = FakeScanner.new([finding("NO_PUTS")])
+    bus = FakeBus.new
+    fixer = Object.new
+    fixer.define_singleton_method(:apply) { |_pairs| [] }
+
+    Master::Fix::Scan::MechanicalAutofix.stub(:new, fixer) do
+      result = Master::Review::Scan::SelfScan.new(scanner:, root: "/tmp/master", event_bus: bus)
+        .call(autofix: true)
+
+      assert result.ok?
+      assert_equal 1, result.value!.violation_count
+      assert_includes bus.events.map(&:first), "self_violation"
+    end
   end
 
   def test_clean_scan_does_not_publish_self_violation
