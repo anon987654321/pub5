@@ -17,6 +17,8 @@
   border: 0;
   background: var(--surface);
   color: var(--text);
+  /* A floating consent layer over page content: the one tokenised elevation. */
+  box-shadow: var(--overlay-shadow);
 }
 
 .cookie-banner[hidden] {

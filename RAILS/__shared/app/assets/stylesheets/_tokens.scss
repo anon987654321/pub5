@@ -200,6 +200,15 @@ $palette: true !default;
        65-72 --scrim-deep at 0.8. */
     --scrim: rgb(0 0 0 / var(--opacity-strong));
     --scrim-deep: rgb(0 0 0 / var(--opacity-heavy));
+    /* The one elevation shadow in the system, and the only place a shadow is
+       allowed: a floating layer (a dialog, a sheet, the consent banner, a toast)
+       that sits over page content needs the depth cue a 1px border cannot give
+       it. This is pixel_perfection.exception_policy's "one named element whose
+       flatness would remove its only legible depth cue", spelled once as a token
+       so no stylesheet types its own. NO_DECORATIVE_FX and css_constitution
+       FLAT_PATTERN permit box-shadow only in this exact form; every literal
+       shadow is still ornamental and still fails. */
+    --overlay-shadow: 0 8px 24px rgb(0 0 0 / var(--opacity-medium));
     /* The ladder is one source. It was two: --z-brand lived in _layout_chrome
        and --z-chrome-toggle nowhere at all, so three tiers existed above
        --z-overlay that this list did not know about, and a reader sizing a new

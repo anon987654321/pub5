@@ -110,7 +110,8 @@ tokens:
     desktop: 1024
     wide: 1265
     xl: 1280
-  # Shared motion + elevation (borders, never box-shadow) — export via CSS vars in apps.
+  # Shared motion + elevation (borders, never box-shadow, except the one
+  # --overlay-shadow token a floating layer may read) — export via CSS vars in apps.
   # Layout chrome is the family contract across MASTER face + RAILS apps (dialects may
   # restyle surfaces; they must not invent a second z-scale, tap floor, or skip-link).
   shared_chrome:

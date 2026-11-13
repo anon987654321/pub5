@@ -40,7 +40,12 @@ module Deploy
     # today, which is why this never showed: the first stylesheet to turn an
     # effect off explicitly would have been the one penalised for it, and that
     # stylesheet was MASTER's face.
-    FLAT_PATTERN = /box-shadow\s*:(?!\s*none\b)|text-shadow\s*:(?!\s*none\b)|backdrop-filter\s*:(?!\s*none\b)|filter\s*:[^;]*\bblur\(/i
+    #
+    # box-shadow also excludes the one tokenised elevation a floating layer may
+    # read (var(--overlay-shadow)), the single exception pixel_perfection
+    # .exception_policy allows. The value must be exactly that token: a literal
+    # shadow, including one that merely mentions the token, still fails.
+    FLAT_PATTERN = /box-shadow\s*:(?!\s*none\b)(?!\s*var\(\s*--overlay-shadow\s*\)\s*;)|text-shadow\s*:(?!\s*none\b)|backdrop-filter\s*:(?!\s*none\b)|filter\s*:[^;]*\bblur\(/i
 
     TWITTER_BLUE = /#1d9bf0|#1DA1F2/i
 

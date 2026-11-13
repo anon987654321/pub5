@@ -74,6 +74,8 @@
   /* Square, like the tab. The widget is one surface and it now has one
      treatment: nothing in it is rounded. */
   border: 0;
+  /* A panel floating over page content: the one tokenised elevation. */
+  box-shadow: var(--overlay-shadow);
   overflow: hidden;
   animation: nearby-widget-in 180ms cubic-bezier(.34, 1.56, .64, 1) both;
 }

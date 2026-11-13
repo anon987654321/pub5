@@ -73,6 +73,13 @@ module Master
               # 2026-08-07. Match the whole value instead of its first token.
               next if line.match?(/box-shadow\s*:\s*(none|0(?:\s+0)*(?:\s+0)?)\s*(?:!important)?\s*;/i)
               next if line.match?(/text-shadow\s*:\s*(none|0(?:\s+0)*(?:\s+0)?)\s*(?:!important)?\s*;/i)
+              # Allow the one tokenised elevation a floating layer reads for its
+              # depth cue (pixel_perfection.exception_policy: a named element whose
+              # flatness would remove its only legible depth). The value must be
+              # exactly var(--overlay-shadow): a hand-typed shadow is still
+              # ornamental, so a stylesheet cannot reach the exception by writing
+              # its own.
+              next if line.match?(/box-shadow\s*:\s*var\(\s*--overlay-shadow\s*\)\s*(?:!important)?\s*;/i)
 
               if line.match?(/box-shadow\s*:/i) || line.match?(/text-shadow\s*:/i)
                 findings << finding(line: num, message: "ornamental shadow - flat UI: use border/contrast, not glow (design_rules pixel_perfection)")

@@ -200,7 +200,7 @@ module Deploy
         prefer_title_type_token(body)
       else
         # Proactive: if failure mentions path and body has known issues, apply all safe fixers
-        body = strip_flat_violations(body) if body.match?(/box-shadow\s*:\s*(?!none\b)|text-shadow\s*:|backdrop-filter\s*:|filter\s*:[^;]*\bblur\(/i)
+        body = strip_flat_violations(body) if body.match?(/box-shadow\s*:\s*(?!none\b)(?!var\(\s*--overlay-shadow\s*\))|text-shadow\s*:|backdrop-filter\s*:|filter\s*:[^;]*\bblur\(/i)
 
         body = replace_twitter_blue(body) if body.match?(/#1d9bf0|#1DA1F2/i)
         body = prefer_title_type_token(body) if body.match?(/font-size\s*:\s*20px/i)
@@ -216,7 +216,7 @@ module Deploy
 
     def strip_flat_violations(body)
       body
-        .gsub(/box-shadow\s*:\s*(?!none\b)[^;]+;/i, "/* autofix: removed box-shadow (flat UI) */")
+        .gsub(/box-shadow\s*:\s*(?!none\b)(?!var\(\s*--overlay-shadow\s*\))[^;]+;/i, "/* autofix: removed box-shadow (flat UI) */")
         .gsub(/text-shadow\s*:[^;]+;/i, "/* autofix: removed text-shadow (flat UI) */")
         .gsub(/backdrop-filter\s*:[^;]+;/i, "/* autofix: removed backdrop-filter (flat UI) */")
         .gsub(/filter\s*:[^;]*\bblur\([^)]*\)[^;]*;/i, "/* autofix: removed filter blur (flat UI) */")

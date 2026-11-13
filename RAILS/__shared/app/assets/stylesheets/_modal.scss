@@ -8,6 +8,8 @@
   max-width: min(560px, 90vw);
   max-height: 90dvh;
   overflow: auto;
+  /* A modal over a dimmed backdrop: the one tokenised elevation. */
+  box-shadow: var(--overlay-shadow);
 }
 
 .dialog::backdrop {
@@ -40,6 +42,8 @@
   background: var(--bg);
   border-radius: 0;
   border-top: 0;
+  /* A sheet over page content: the one tokenised elevation. */
+  box-shadow: var(--overlay-shadow);
   transform: translateY(100%);
   /* Off-screen is not hidden. Parked at translateY(100%) the sheet still sat in
      the tab order and the accessibility tree, so tabbing the front page walked

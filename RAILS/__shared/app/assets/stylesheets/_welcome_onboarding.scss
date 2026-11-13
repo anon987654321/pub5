@@ -1,4 +1,5 @@
-/* Editorial first-run cover: image-led, quiet and readable. No gradients or shadows. */
+/* Editorial first-run cover: image-led, quiet and readable. No gradients; the
+   card carries the one tokenised elevation, because it floats over the page. */
 .welcome-onboarding {
   position: fixed;
   inset: 0;
@@ -23,6 +24,8 @@
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
+  /* A first-run card over the whole page: the one tokenised elevation. */
+  box-shadow: var(--overlay-shadow);
 }
 
 .welcome-onboarding-art {
