@@ -96,7 +96,9 @@ const DRUM_PATTERNS={
 'ambient-click':tpP({k:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],s:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],c:[.2,0,0,0,0,0,0,0,0,0,0,0,0,0,.15,0],h:[0,0,.15,0,0,0,0,0,.1,0,0,0,0,0,0,0],o:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}),
 'basic':tpP({k:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],s:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],c:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],h:[0,.3,0,.3,0,.3,0,.3,0,.3,0,.3,0,.3,0,.3],o:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}),
 'dusty1':tpP({k:[1,0,0,.3,0,0,.5,0,0,1,0,0,.4,0,0,0],s:[0,0,0,0,.8,0,0,.2,0,0,0,0,.9,0,0,.3],c:[0,0,.2,0,0,0,.3,0,0,0,0,0,.2,0,0,0],h:[.4,.2,.3,.2,.4,.2,.3,.2,.4,.2,.3,.2,.4,.2,.3,.2],o:[0,0,0,0,0,0,0,.2,0,0,0,0,0,0,0,.3]}),
-'wonky1':tpP({k:[1,0,0,0,0,0,.6,0,1,0,0,.4,0,0,0,0],s:[0,0,0,0,1,0,0,0,0,0,.3,0,.8,0,0,0],c:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],h:[.5,.3,.4,.2,.5,.3,.4,.2,.5,.3,.4,.2,.5,.3,.4,.2],o:[0,0,0,0,0,0,0,.3,0,0,0,0,0,0,0,.2]})
+'wonky1':tpP({k:[1,0,0,0,0,0,.6,0,1,0,0,.4,0,0,0,0],s:[0,0,0,0,1,0,0,0,0,0,.3,0,.8,0,0,0],c:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],h:[.5,.3,.4,.2,.5,.3,.4,.2,.5,.3,.4,.2,.5,.3,.4,.2],o:[0,0,0,0,0,0,0,.3,0,0,0,0,0,0,0,.2]}),
+// Mirrors dilla's dilla_shadow_full (Blue Hour): boom-bap kick/snare with swung ghosts.
+'bluehour':tpP({k:[1,0,0,0,0,0,.82,0,0,0,.9,0,0,.4,0,0],s:[0,0,0,0,.98,0,0,0,0,0,0,0,1,0,0,0],c:[0,0,0,0,.3,0,0,0,0,0,0,0,.34,0,0,0],h:[.58,0,.46,0,.58,0,.46,.32,.62,0,.46,0,.56,0,.46,.3],o:[0,0,0,0,0,0,0,.42,0,0,0,0,0,0,.3,0]})
 };
 const BASS_PATS={
 'ethiobass':'C2,,Eb2,,G2,,Ab2,,G2,,Eb2,,C2,,,',
@@ -113,7 +115,9 @@ const BASS_PATS={
 'brokenbass':'C2,,G2,,,,Eb2,,F2,,,,C2,,G2,,',
 'basic':'C2,,,,G2,,,,C2,,,,Eb2,,,',
 'dustybass1':'C2,,G2,,Eb2,,,F2,,C2,,G2,,,Eb2,',
-'wonkybass1':'C2,,,G2,,,,Eb2,C2,,,G2,,,,'
+'wonkybass1':'C2,,,G2,,,,Eb2,C2,,,G2,,,,',
+// Blue Hour dub bass in Fm: F pedal with Ab + C colour.
+'bluehourbass':'F1,,,C2,,Ab1,,,,F1,,,,Eb2,,,'
 };
 const KEYS_PATS={
 // PR #250
@@ -163,7 +167,9 @@ const KEYS_PATS={
 'hathaway':[['C4','E4','G4','B4'],0,0,0,['B3','D4','F4','A4'],0,0,0,['A3','C4','E4','G4'],0,0,0,['G3','B3','D4','F4'],0,0,0],
 'marvin':[['C4','E4','G4'],0,0,0,['E3','G3','B3'],0,0,0,['F3','A3','C4'],0,0,0,['F3','Ab3','C4'],0,0,0],
 'tender':[['C4','Eb4','G4','Bb4','D5'],0,0,0,0,0,0,0,['Ab3','C4','Eb4','G4','Bb4'],0,0,0,0,0,0,0],
-'wonder':[['C4','E4','G4','A4','D5'],0,0,0,['F3','A3','C4','E4','G4'],0,0,0,['G3','B3','D4','F4','A4'],0,0,0,['C4','E4','G4','B4'],0,0,0]
+'wonder':[['C4','E4','G4','A4','D5'],0,0,0,['F3','A3','C4','E4','G4'],0,0,0,['G3','B3','D4','F4','A4'],0,0,0,['C4','E4','G4','B4'],0,0,0],
+// Blue Hour (Fm) - one bar of the dilla 4-bar loop: Fm9 Ab13 Dbmaj9#11 C7b9.
+'bluehourkeys':[['F3','Ab3','C4','Eb4','G4'],0,0,0,['Ab3','C4','Eb4','Gb4','F4'],0,0,0,['Db3','F3','Ab3','C4','Eb4','G4'],0,0,0,['C3','E3','G3','Bb3','Db4'],0,0,0]
 }
 const PAD_PATS={
 'none':[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -180,9 +186,14 @@ const PAD_PATS={
 'choir':[['C3','E3','G3','C4','E4'],0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 'souldrone':[['C3','Eb3','G3','Bb3','D4'],0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 'gospelwash':[['C3','E3','G3','B3'],0,0,0,['A2','C3','E3','G3'],0,0,0,['F2','A2','C3','E3'],0,0,0,['G2','B2','D3','F3'],0,0,0],
-'tenderwash':[['C3','Eb3','Bb3','D4'],0,0,0,0,0,0,0,['Ab2','C3','Eb3','G3'],0,0,0,0,0,0,0]
+'tenderwash':[['C3','Eb3','Bb3','D4'],0,0,0,0,0,0,0,['Ab2','C3','Eb3','G3'],0,0,0,0,0,0,0],
+// Blue Hour pad: low Fm9 wash under the loop.
+'bluehourwash':[['F2','C3','Ab3','Eb4'],0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 }
 const STYLES=[
+// Blue Hour mirrors the dilla engine's default session: Fm, 86 BPM, 58% swing,
+// the Fm9 - Ab13 - Dbmaj9#11 - C7b9 loop and the dilla_shadow_full kit.
+{n:'Blue Hour',m:['Dark','Smoky'],d:'bluehour',b:'bluehourbass',k:'bluehourkeys',p:'bluehourwash',bpm:[86,86],sw:[58,58],dr:[40,40],tm:[60,60]},
 {n:'Analog Haze',m:['Lush','Magical'],d:'dusty1',b:'dustybass1',k:'neosoul',p:'ambientwash',bpm:[72,88],sw:[28,44],dr:[35,55],tm:[45,70]},
 {n:'Ethio-Jazz',m:['Joyful','Mysterious'],d:'eth-mulatu',b:'ethiobass',k:'tizita',p:'ethiodrone',bpm:[85,110],sw:[15,35],dr:[20,40],tm:[5,15]},
 {n:'Ethio-Funk',m:['Groovy','Joyful'],d:'eth-funk',b:'ethiovamp',k:'bati',p:'ethiowash',bpm:[100,120],sw:[20,35],dr:[25,45],tm:[5,15]},
@@ -225,7 +236,9 @@ const M={
 'gospel':{d:'dusty1',b:'dustybass1',k:'gospel',p:'gospelwash',bpm:[72,88],sw:[20,35]},
 'soulwalk':{d:'dusty1',b:'dustybass1',k:'soulwalk',p:'souldrone',bpm:[76,92],sw:[25,40]},
 'tender':{d:'ambient-click',b:'ambientbass',k:'tender',p:'tenderwash',bpm:[60,75],sw:[15,30]},
-'wonder':{d:'dusty1',b:'dustybass1',k:'wonder',p:'souldrone',bpm:[80,96],sw:[22,38]}
+ 'wonder':{d:'dusty1',b:'dustybass1',k:'wonder',p:'souldrone',bpm:[80,96],sw:[22,38]},
+ // Blue Hour mirrors the dilla engine default session.
+ 'bluehour':{d:'bluehour',b:'bluehourbass',k:'bluehourkeys',p:'bluehourwash',bpm:[86,86],sw:[58,58]}
 };
 
 function applyMood(m){
@@ -240,9 +253,9 @@ log('mood applied','k');
 
 
 let st_={started:false,playing:false,idx:-1,timer:null,layoutIdx:49,heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,theme:'dark',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0}};
-let aud_={bpm:82,swing:36,drive:44,tape:58,comp:72,width:58,reverb:58,delay:34,filter:72,wobble:16,vinyl:22,crackle:14,drift:0.05};
+let aud_={bpm:86,swing:58,drive:40,tape:60,comp:72,width:58,reverb:58,delay:34,filter:72,wobble:16,vinyl:22,crackle:14,drift:0.05};
 let mix_={drum:80,bass:70,keys:60,pads:50,master:75};
-let pat_={d:'dusty1',b:'dustybass1',k:'neosoul',p:'ambientwash'};
+let pat_={d:'bluehour',b:'bluehourbass',k:'bluehourkeys',p:'bluehourwash'};
 let seq_={};
 ['k','s','c','h','o'].forEach(t=>{seq_[t]=Array(16).fill(0).map(()=>({v:0.85+rnd(0,0.15),t:rnd(-15,15),p:100,r:1}))});
 ['b','keys','p'].forEach(t=>{seq_[t]=Array(16).fill(0).map(()=>({v:0.85+rnd(0,0.15),t:rnd(-15,15),p:100,r:1}))});
@@ -357,7 +370,7 @@ Tone.getContext().rawContext.addEventListener('statechange',()=>{
     st_.playing=false;clearTimeout(st_.timer);st('suspended — tap to resume');log('⚠ audio suspended by browser','w');
   }
 });
-driftLFO=new Tone.LFO(rnd(0.05,0.2),0.9995,1.0005).start();
+driftLFO=new Tone.LFO(rnd(0.05,0.2),-4,4).start();
 kickN=new Tone.MembraneSynth({pitchDecay:.05,octaves:6,oscillator:{type:'sine'},envelope:{attack:.001*rnd(.97,1.03),decay:.4*rnd(.97,1.03),sustain:0,release:.1*rnd(.97,1.03)}});
 kickSub=new Tone.Synth({oscillator:{type:'sine'},envelope:{attack:.001,decay:.5,sustain:0,release:.1}});
 kickClk=new Tone.NoiseSynth({noise:{type:'white'},envelope:{attack:.001,decay:.02,sustain:0}});
@@ -461,8 +474,8 @@ crackFlt.connect(compPar);
 wobbLFO=new Tone.LFO(0.05,0.98,1.02).start();
 flutterLFO=new Tone.LFO(3,0.995,1.005).start();
 wobbLFO.connect(Tone.Transport.bpm);
-driftLFO.connect(kickN.oscillator.frequency);
-driftLFO.connect(snareN.noise.playbackRate);
+driftLFO.connect(kickN.oscillator.detune);
+driftLFO.connect(snareRng.detune);
 [kickN,kickSub,kickClkBP,kickBody].forEach(s=>s.connect(kickSat));
 kickSat.connect(kickComp);
 kickComp.connect(drumG);
@@ -580,6 +593,7 @@ if(st_.idx===0)st_.barCount=(st_.barCount||0)+16;
 const posEl=$id('pos-display');
 if(posEl)posEl.textContent=`${bar}.${beat}`;
 const now=Tone.now();
+const sixteenth=60/aud_.bpm/4;
 triggerNotes(st_.idx,now,{
 kick:kickN,
 kickSub:kickSub,
@@ -918,9 +932,9 @@ $id('record').textContent='● Record';
 function buildUI(){
 const sel_d=$id('drum-pat'),sel_b=$id('bass-pat'),sel_k=$id('keys-pat'),sel_p=$id('pads-pat');
 Object.keys(DRUM_PATTERNS).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;sel_d.appendChild(o)});
-Object.keys(B).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;sel_b.appendChild(o)});
-Object.keys(K).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;sel_k.appendChild(o)});
-Object.keys(P).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;sel_p.appendChild(o)});
+Object.keys(BASS_PATS).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;sel_b.appendChild(o)});
+Object.keys(KEYS_PATS).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;sel_k.appendChild(o)});
+Object.keys(PAD_PATS).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;sel_p.appendChild(o)});
 sel_d.value=pat_.d;sel_b.value=pat_.b;sel_k.value=pat_.k;sel_p.value=pat_.p;
 sel_d.addEventListener('change',e=>{pushHistory();pat_.d=e.target.value;log(`drum: ${pat_.d}`)});
 sel_b.addEventListener('change',e=>{pushHistory();pat_.b=e.target.value;log(`bass: ${pat_.b}`)});
@@ -960,7 +974,7 @@ log(`style: ${s.n}`,"k");
 });
 styles_c.appendChild(chip);
 });
-const defaultChip=[...styles_c.querySelectorAll('.style-chip')].find(c=>c.textContent==='Analog Haze');
+const defaultChip=[...styles_c.querySelectorAll('.style-chip')].find(c=>c.textContent==='Blue Hour');
 if(defaultChip)defaultChip.classList.add('active');
 const moods_c=$id('moods');
 Object.keys(M).forEach(name=>{
@@ -1190,22 +1204,13 @@ else if(k==='c'&&(e.ctrlKey||e.metaKey)){e.preventDefault();navigator.clipboard.
 else if(k==='v'&&(e.ctrlKey||e.metaKey)){e.preventDefault();navigator.clipboard.readText().then(t=>{try{const d=JSON.parse(t);if(d.pat&&d.seq){pushHistory();pat_=d.pat;seq_=d.seq;if(d.aud)aud_=d.aud;if(d.mix)mix_=d.mix;syncUIFromState();log('pasted from clipboard',"k")}}catch(err){log('paste failed: invalid data',"e")}});}
 }
 
-$id('welcome-start').addEventListener('click',async()=>{
-dismissWelcome();
-await initAudio();
-applyFX();
-st_.started=true;
-claimOwner();
-st_.heartbeat=setInterval(keepOwner,1800);
-st('ready');
-log('engine started via welcome gate','k');
-st_.rafId=requestAnimationFrame(updateVU);
-drawViz();
-pushHistory();
-});
-$id('play').addEventListener('click',async()=>{
+// One gesture is enough: boot the engine if it is not running yet, then start
+// the transport. The welcome gate and the play button both land here, so the
+// first click plays music instead of only arming the engine.
+async function startPlayback(){
 if(!st_.started){
-dismissWelcome();
+if(!st_.booting){
+st_.booting=(async()=>{
 await initAudio();
 applyFX();
 st_.started=true;
@@ -1213,11 +1218,17 @@ claimOwner();
 st_.heartbeat=setInterval(keepOwner,1800);
 st_.rafId=requestAnimationFrame(updateVU);
 drawViz();
-log('engine started','k');
 pushHistory();
+})();
 }
-st_.playing=!st_.playing;
-if(st_.playing){
+try{await st_.booting;}catch(e){st_.booting=null;throw e;}
+st_.booting=null;
+}else{
+// Called again inside a user gesture (the welcome gate after a blocked
+// autoplay): Tone.start() resumes the suspended context here.
+await Tone.start();
+}
+st_.playing=true;
 st_.idx=-1;
 Tone.Transport.bpm.value=aud_.bpm;
 if(!st_.transportId)st_.transportId=Tone.Transport.scheduleRepeat(scheduleLoop,"16n");
@@ -1225,8 +1236,19 @@ Tone.Transport.start();
 st('playing');
 $id('play').textContent='⏸ Pause';
 log('playback started','k');
+}
+
+$id('welcome-start').addEventListener('click',async()=>{
+dismissWelcome();
+await startPlayback();
+log('engine started via welcome gate','k');
+});
+$id('play').addEventListener('click',async()=>{
+if(!st_.playing){
+await startPlayback();
 }else{
 Tone.Transport.pause();
+st_.playing=false;
 st('paused');
 $id('play').textContent='▶ Play';
 log('playback paused');
@@ -1309,7 +1331,23 @@ document.documentElement.setAttribute('data-theme',st_.theme);
 
 applyLayout(finalBlend,'final blend');
 buildUI();
+// Reflect the boot default (Blue Hour) in the controls before the first paint.
+syncUIFromState();
 log("RG-69 ready — type <b>help</b> in terminal","k");
+
+// Best-effort autostart: play immediately where the browser permits audio
+// without a gesture. Most browsers block it, so when the context is not
+// already running we leave the welcome gate up and build nothing; the first
+// click (its ▶ play button) boots the engine inside that gesture.
+(async()=>{
+try{
+await Tone.start();
+if(Tone.getContext().rawContext.state!=='running')return;
+await startPlayback();
+dismissWelcome();
+log('autostart','k');
+}catch(e){st_.playing=false;}
+})();
 
 // ─── terminal ───────────────────────────────────────────────────────────────
 const TERM_CMDS=[
@@ -1381,7 +1419,7 @@ break;}
 case'ls':
 if(args[0]==='styles')log(STYLES.map(s=>s.n).join(' · '));
 else if(args[0]==='moods')log(Object.keys(M).join(' · '));
-else if(args[0]==='patterns'){log('drums: '+Object.keys(DRUM_PATTERNS).join(' '));log('bass: '+Object.keys(B).join(' '));log('keys: '+Object.keys(K).join(' '));log('pads: '+Object.keys(P).join(' '));}
+else if(args[0]==='patterns'){log('drums: '+Object.keys(DRUM_PATTERNS).join(' '));log('bass: '+Object.keys(BASS_PATS).join(' '));log('keys: '+Object.keys(KEYS_PATS).join(' '));log('pads: '+Object.keys(PAD_PATS).join(' '));}
 else log('ls [styles|moods|patterns]');
 break;
 case'status':case'info':
