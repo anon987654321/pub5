@@ -280,6 +280,7 @@ class TestCouncilDeadline < Minitest::Test
   end
 
   def test_both_violation_and_improvement_councils_receive_the_remaining_budget
+    ENV["MASTER_FIX_COUNCIL"] = "1"
     round = Master::Fix::FixLoop::CouncilRound.new(agent: Object.new, root: Master::ROOT)
     round.define_singleton_method(:before_fixes_budget) { 120 }
     budgets = []
