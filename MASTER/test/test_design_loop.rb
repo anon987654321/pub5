@@ -273,7 +273,15 @@ class TestDesignLoop < Minitest::Test
       transaction.close! # Simulate the process exiting while the candidate is still open.
 
       plan = LOOP::Plan.new(surfaces: [], root:, rounds: 1, candidates: 1)
-      assert_empty LOOP.new(plan:, world: nil).run
+      world = LOOP::World.new(
+        measure: ->(_surfaces) { [] },
+        ask: ->(_prompt, _images) { "" },
+        build: nil,
+        commit_file: ->(_file, _message, _transaction) { false },
+        sources_for: ->(_surface) { [] },
+        guard: nil
+      )
+      assert_empty LOOP.new(plan:, world:).run
 
       assert_equal original, File.read(path)
       refute Master::Fix::Transaction::Recovery.persisted?(root:, id: transaction.id)
