@@ -49,24 +49,30 @@ class Zap
       return 0
     end
 
-    matches = processes.select { |process| process[:command].include?(@pattern) }
-    if matches.empty?
-      @out.puts "zap: no processes match #{@pattern.inspect}"
-      return 0
+    matches = processes.select do |process|
+      @pattern.nil? || process[:command].include?(@pattern)
     end
 
+    # Do not let one protected VMM process prevent safe cleanup of unrelated
+    # matches (or the no-pattern interactive mode). Protected processes are
+    # reported and skipped; an all-protected selection is a refusal.
     protected_matches = matches.select { |process| protected_process?(process) }
-    unless protected_matches.empty?
-      protected_matches.each do |process|
-        name = command_name(process[:command])
-        message = if name == "vmd"
-                    "use 'vmctl stop <vm>' for a guest or 'rcctl stop vmd' for the daemon"
-                  else
-                    "VMM console control is recovery-only; use the approved vmctl procedure"
-                  end
-        @err.puts "zap: refusing to signal #{name}; #{message}"
-      end
-      return 2
+    protected_matches.each do |process|
+      name = command_name(process[:command])
+      message = if name == "vmd"
+                  "use 'vmctl stop <vm>' for a guest or 'rcctl stop vmd' for the daemon"
+                elsif name == "vmctl"
+                  "use vmctl deliberately to manage the guest"
+                else
+                  "leave the active VM console session to its operator"
+                end
+      @err.puts "zap: refusing to signal #{name}; #{message}"
+    end
+    matches -= protected_matches
+
+    if matches.empty?
+      @out.puts(@pattern ? "zap: no processes match #{@pattern.inspect}" : "zap: no signalable processes")
+      return protected_matches.empty? ? 0 : 2
     end
 
     failed = false
@@ -112,7 +118,7 @@ class Zap
     set_signal(args.delete_at(signal_index).delete_prefix("-")) if signal_index
 
     parser = OptionParser.new do |opts|
-      opts.banner = "usage: zap [-f] [-s SIGNAL] [--dry-run] pattern"
+      opts.banner = "usage: zap [-f] [-s SIGNAL] [--dry-run] [pattern]"
       opts.on("-f", "--force", "Do not ask; signal every matching process") { @force = true }
       opts.on("-s SIGNAL", "--signal=SIGNAL", "Signal name or number (default: TERM)") do |value|
         set_signal(value)
@@ -149,9 +155,9 @@ class Zap
 
   def help_text
     <<~HELP
-      usage: zap [-f] [-s SIGNAL] [--dry-run] pattern
+      usage: zap [-f] [-s SIGNAL] [--dry-run] [pattern]
 
-      Find process command lines containing pattern and ask about each PID.
+      Find all processes, or command lines containing pattern, and ask about each PID.
       -f, --force        Skip questions and signal every matching process.
       -s SIGNAL          Signal name or number (default: TERM).
       --dry-run          List matches without sending signals.
