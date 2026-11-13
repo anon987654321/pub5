@@ -440,10 +440,10 @@ class TestDesignLoop < Minitest::Test
 
   # A shared stylesheet reaches every app, so a run that measures one app cannot judge an edit to it.
   def test_a_shared_stylesheet_is_refused_when_the_run_measures_one_app
-    with_shared_sheet do |path|
+    with_shared_sheet do |path, root|
       committed = []
       stub_scoring do
-        rounds = loop_for(path, committed:).run
+        rounds = loop_for(path, committed:, root:).run
 
         assert_empty rounds.select { |round| round.outcome == :kept }
         assert_includes File.read(path), "padding: 4px;"
@@ -453,7 +453,7 @@ class TestDesignLoop < Minitest::Test
   end
 
   def test_a_shared_stylesheet_edit_is_rebuilt_for_every_measured_app
-    with_shared_sheet do |path|
+    with_shared_sheet do |path, root|
       committed = []
       built = []
       surfaces = [Surface.new("brgen/home", "brgen"), Surface.new("amber/home", "amber")]
