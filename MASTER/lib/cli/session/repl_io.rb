@@ -13,17 +13,12 @@ module Master
       # the lock; this boundary keeps Reline's draft-safe redraw beside the
       # ordinary terminal writers used by every session lane.
 
-      # All operator-facing writes share Dmesg's mutex and Dmesg runs the draft
-      # guard this session registers: a write from any lane clears the draft's
-      # row, claims a row of its own below the cursor, and the redisplay
-      # afterwards rebuilds the editable line — zsh's own rule. Before this
-      # guard, a write that shared the draft's row printed its text after the
-      # prompt glyphs ("master$ Welcome back."), and one that cleared it left
-      # the prompt gone, because Reline's differential render repaints nothing
-      # its cache still matches (the disappearing prompt after the first
-      # message). Writes that are part of the draft's own machinery — the
-      # spinner row, the reserved activity row, the read-end bookkeeping — pass
-      # guard: false and manage their rows alone.
+      # All operator-facing writes share Dmesg's mutex and the draft guard.
+      # A background event replaces the transient prompt row, then Reline
+      # redraws the editable line beneath it. Advancing before the event left
+      # an empty row between every pair of background messages. Writes that
+      # belong to the draft machinery — spinner, activity row and read-end
+      # bookkeeping — pass guard: false and manage their rows alone.
       def terminal_write(io: $stdout, guard: true, &block)
         Master::Trace::Dmesg.terminal_write(io:, guard:, &block)
       end
