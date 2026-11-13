@@ -356,8 +356,17 @@ STUDIO/lora/*.jpg
 STUDIO/lora/*.jpeg
 STUDIO/lora/*.png
 STUDIO/lora/*.webp
+# Subject reference photographs are private provider inputs, never repo assets.
+STUDIO/lora/*/references/
 STUDIO/lora/*/ledger.jsonl
 # Legacy subject-data path: keep ignored until local data has migrated.
+# Selfie renders are copied flat to the STUDIO root for viewing.
+# They remain private subject likenesses and must never publish by reflex.
+STUDIO/*.jpg
+STUDIO/*.jpeg
+STUDIO/*.png
+STUDIO/*.webp
+
 STUDIO/replicate/lora/**/sources/
 STUDIO/replicate/lora/**/dataset/
 STUDIO/replicate/lora/**/.cache/

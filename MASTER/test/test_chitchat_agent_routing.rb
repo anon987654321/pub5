@@ -27,6 +27,14 @@ class TestChitchatAgentRouting < Minitest::Test
     assert_equal @router.fallback_chain(task_type: :chitchat).first, models.first
   end
 
+  def test_question_mark_does_not_route_a_plain_greeting_as_qa
+    # CLI inference labels any trailing question mark :qa. The agent must
+    # recognise this exact greeting before accepting the broad QA label.
+    chain = @agent.send(:routed_chain, "hello?", task_type: :qa)
+
+    assert_equal @router.fallback_chain(task_type: :chitchat), chain
+  end
+
   def test_routed_models_honors_explicit_task_type
     models = @agent.send(:routed_models, "hello", task_type: :code_generation)
     refute_equal :chitchat, @router.classify_intent("please implement a fix")

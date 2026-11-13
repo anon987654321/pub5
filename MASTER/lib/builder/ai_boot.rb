@@ -110,7 +110,22 @@ module Master
         bus&.publish("builder:self_test", ok: false, error: self_test.message)
       elsif !self_test.value!.ok?
         summary = self_test.value!
-        bus&.publish("builder:self_test", ok: false, violations: summary.violation_count)
+        law_counts = summary.checks.filter_map do |check|
+          "#{check.law}=#{check.findings.size}" unless check.findings.empty?
+        end
+        first = summary.checks.lazy.flat_map(&:findings).first
+        detail = if first
+          relative = first[:path].to_s.delete_prefix("#{File.expand_path(root)}/")
+          " first=#{relative}:#{first[:line]} #{first[:message]}"
+        else
+          ""
+        end
+        Trace::Dmesg.status(
+          "boot0",
+          "builder self-test: #{summary.violation_count} violations [#{law_counts.join(' ')}]#{detail}"
+        )
+        bus&.publish("builder:self_test", ok: false, violations: summary.violation_count,
+          by_law: law_counts, first_finding: first)
         # A full self-test is a diagnostic, not a production-startup check.
         # MASTER_STRICT_BOOT=1 explicitly turns its findings into a boot failure.
         # Keeping strictness opt-in lets an operator inspect known debt without
