@@ -136,6 +136,18 @@ module Master
         directory_stat = File.lstat(directory)
         raise IOError, "undo journal directory is not a real directory" unless directory_stat.directory? && !directory_stat.symlink?
 
+        # The journal contains full pre-write file contents. A pre-existing
+        # permissive .master directory defeats the journal's 0600 file mode.
+        unless (directory_stat.mode & 0o7777) == 0o700
+          File.chmod(0o700, directory)
+          secured = File.lstat(directory)
+          unless secured.directory? && !secured.symlink? &&
+                 secured.dev == directory_stat.dev && secured.ino == directory_stat.ino &&
+                 (secured.mode & 0o7777) == 0o700
+            raise IOError, "undo journal directory could not be secured"
+          end
+        end
+
         lock_path = "#{@journal}#{LOCK_SUFFIX}"
         flags = File::RDWR | File::CREAT
         flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW, false)
