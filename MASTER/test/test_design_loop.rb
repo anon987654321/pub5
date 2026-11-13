@@ -191,7 +191,16 @@ class TestDesignLoop < Minitest::Test
     end
     edit = reply(path, find: "padding: 4px;", replace: "padding: 16px;")
     LOOP::World.new(
-      measure:, ask: ->(prompt, _images) { (prompts << prompt) && prompt.include?("Two renders") ? vision : edit },
+      measure:,
+      ask: lambda do |prompt, images|
+        prompts << prompt
+        next edit unless prompt.include?("Two renders")
+        next vision if images.first.to_s.end_with?(".before.png")
+
+        verdict = JSON.parse(vision)
+        verdict["better"] = { "A" => "B", "B" => "A" }.fetch(verdict["better"].to_s, verdict["better"])
+        JSON.generate(verdict)
+      end,
       build: ->(app) { built << app; on_build.call(app); true },
       commit_file: lambda do |file, message, transaction|
         transaction.delivery.begin!(head_before: "a" * 40, paths: transaction.enlisted_paths)
@@ -342,6 +351,31 @@ class TestDesignLoop < Minitest::Test
         assert_empty committed
         assert_includes File.read(path), "another writer"
         refute_includes File.read(path), "padding: 16px;"
+      end
+    end
+  end
+
+  def test_final_render_verification_can_refuse_a_previously_good_candidate
+    with_sheet do |path|
+      committed = []
+      calls = 0
+      stub_scoring do
+        world = world_for(path, committed: [])
+        original = world.measure
+        measure = lambda do |surfaces|
+          calls += 1
+          rows = original.call(surfaces)
+          next rows unless calls == 5
+
+          rows.map do |surface, payload, shot|
+            surface.id == "brgen/home" ? [surface, payload.merge("score" => 30.0), shot] : [surface, payload, shot]
+          end
+        end
+        rounds = loop_for(path, committed:).tap { |loop| loop.instance_variable_set(:@world, world.with(measure:)) }.run
+
+        assert_equal :failed, rounds.first.outcome
+        assert_empty committed
+        assert_includes File.read(path), "padding: 4px;"
       end
     end
   end
