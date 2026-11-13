@@ -321,7 +321,7 @@ module Master
         raise "design transaction directory is a symlink" if File.symlink?(directory)
 
         Dir.children(directory).sort.each do |id|
-          next unless id.match?(/\\Adesign-[a-f0-9]{20}\\z/)
+          next unless id.match?(/\Adesign-[a-f0-9]{20}\z/)
           next unless Transaction::Recovery.persisted?(root: @plan.root, id:)
 
           result = Transaction::Recovery.recover!(
@@ -349,7 +349,7 @@ module Master
           "git", "-C", @plan.root, "rev-parse", "HEAD", timeout: 5
         )
         head = output.to_s.strip
-        raise "design recovery could not verify Git HEAD" unless status.success? && head.match?(/\\A[0-9a-f]{40}\\z/)
+        raise "design recovery could not verify Git HEAD" unless status.success? && head.match?(/\A[0-9a-f]{40}\z/)
 
         head
       end
