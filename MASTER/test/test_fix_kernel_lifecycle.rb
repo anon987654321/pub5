@@ -44,6 +44,18 @@ class TestFixKernelLifecycle < Minitest::Test
     Master::Fix::TaskContract.for_target(target: root, root:)
   end
 
+  def test_evidence_outcomes_are_distinct_from_workflow_terminal_states
+    outcomes = Master::Fix::Outcome
+
+    assert_equal %i[measured changed rejected inconclusive blocked resumed], outcomes::ALL
+    assert outcomes.valid?(:measured)
+    assert outcomes.valid?("CHANGED")
+    refute outcomes.valid?(:done)
+    refute outcomes.valid?(:pass)
+    assert_equal :resumed, outcomes.coerce!("RESUMED")
+    assert_raises(ArgumentError) { outcomes.coerce!(:done) }
+  end
+
   def test_convergence_adapter_restores_the_previous_cancellation_token_after_exception
     adapter = K::ConvergenceAdapter.allocate
     token_class = Class.new do
