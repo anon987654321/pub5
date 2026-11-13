@@ -354,6 +354,12 @@ STUDIO/lora/*.jpg
 STUDIO/lora/*.jpeg
 STUDIO/lora/*.png
 STUDIO/lora/*.webp
+# The same stills are also copied flat into the STUDIO root for viewing;
+# still subject likenesses, still never published by reflex.
+STUDIO/*.jpg
+STUDIO/*.jpeg
+STUDIO/*.png
+STUDIO/*.webp
 STUDIO/lora/*/ledger.jsonl
 # Legacy subject-data path: keep ignored until local data has migrated.
 STUDIO/replicate/lora/**/sources/
