@@ -87,6 +87,82 @@ scope. The adapter installs and restores its token in an `ensure` boundary;
 Kernel activates the token inside its receipt/rescue boundary and never reads
 or writes adapter instance variables.
 
+## Public invocation, outcomes and model work
+
+`Kernel#run` is the validated execution gateway:
+
+```ruby
+kernel.run(
+  adapter: fix_loop,
+  contract: task_contract,
+  target:,
+  max_passes:,
+  budget_seconds:,
+  incremental:,
+  requested:,
+  cancellation:
+)
+```
+
+The adapter is injected deliberately. Boot owns construction of the live agent,
+scanner, Laws and provider services; a class method that silently rebuilt those
+dependencies would create a second composition root. `Kernel#run` coerces and
+validates the `TaskContract` before taking the process lock or writing a start
+receipt. The immutable `FixPlan` then proves that every collected source path is
+inside that contract's scope and binds the contract digest into plan identity.
+Interactive and backlog callers pass their reviewed contract. Historical
+programmatic callers that omit one receive a compatibility contract derived
+from the requested target; it preserves the intent's mandatory dimensions and
+declares no new paths. New callers should pass the explicit contract.
+
+There is no new six-word terminal enum. `OutcomePolicy` and
+`Execution::Contract::TERMINAL_STATES` already own the workflow vocabulary:
+`done`, `plateau`, `blocked`, `human_decision`, `inconclusive`,
+`validation_failed`, `delivery_failed`, `timeout`, `cancelled`,
+`unknown_outcome`, `recovery_failed` and the other declared terminal states.
+The assessment adapter separately reports verification states such as
+`pass`, `fail`, `partial`, `inconclusive`, `unavailable` and `error`.
+Do not map a successful measurement to workflow success, or a failed check to
+"rejected": measurement, repair acceptance and run termination are different
+facts. Only the canonical `done` state can claim completion, and only after
+the evidence and preservation gates pass.
+
+A second `TerminalReceipt` file or hash chain would duplicate existing owners.
+The durable result is linked by run ID across three existing artifacts:
+the hash-chained coordinator ledger at `.master/log.jsonl` (start, bounded
+repair summaries and terminal state), `LifecycleJournal` at
+`.master/fix_runs.json` (plan, pass/resume state and assessment receipt), and
+the checksum-verified assessment/outcome artifacts. The coordinator start row
+also carries the validated task-contract digest. The run journal remains the
+source for the complete assessment evidence; the hash chain is its correlated
+operational history, not a replacement for it.
+
+Models and lanes are instruments inside the adapter, not Kernel owners.
+`data/models.yml` orders candidates; `LaneSelection` filters/orders them
+against `LaneState`, `LaneQuota` and `LaneHealth`; the agent/LLM dispatcher
+performs the actual provider call and its deadline/retry handling. The
+`FixLoop::LlmRouter` blocks a repair stage only when every candidate available
+to that dispatch has an open breaker. A single dead free lane must not hide a
+healthy subscription, paid or local fallback. Provider identity and health
+belong in operational telemetry, never in Law identity or the task contract.
+
+`CouncilRound` is an advisory pass stage. Deterministic findings are the
+trigger; the panel reads at most 12 files and returns cherry-picks as repair
+context, never source edits. Its configured budget is now additionally clamped
+to the wall-clock time remaining in the pass for both violation critique and
+clean-streak improvement critique. Veto, skip and inconclusive outcomes remain
+visible; prose without a cherry-pick has no repair effect. Candidate selection
+still goes through normal Law and preservation checks, then
+`RepairAdapter`/`Transaction`. Multi-file `Restructure` remains the
+explicit second mutation path with its separate snapshot/undo/delivery contract.
+
+Planning work is not the same as "pure" code in the functional sense: architecture
+exploration, research and wishlist stages may persist bounded reports or
+proposal metadata. Their output can inform the next decision but cannot authorize
+source writes. Ordinary source mutation remains behind `Transaction`; structural
+mutation remains behind `Restructure`. Do not add a `Propose` namespace or
+banner comments as a substitute for an executable write boundary.
+
 Ordinary per-file repairs mutate through `FixLoop` / `Fix::Transaction`.
 Multi-file structural changes are the explicit second path: `FixLoop` owns the
 sweep, while `Fix::Restructure` uses a bounded snapshot, proof, undo and one
