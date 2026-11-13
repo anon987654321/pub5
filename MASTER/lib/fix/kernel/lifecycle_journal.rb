@@ -148,7 +148,7 @@ module Master
         # journal lock: cleanup cannot mistake an in-flight publication for an orphan.
         def persist_assessment_report(run_id, target:, report:)
           id = run_id.to_s
-          raise ArgumentError, "invalid fix run id" unless id.match?(/\\A[a-f0-9]{20}\\z/)
+          raise ArgumentError, "invalid fix run id" unless id.match?(/\A[a-f0-9]{20}\z/)
           raise ArgumentError, "assessment report must be a hash" unless report.is_a?(Hash)
 
           with_lock do
@@ -167,7 +167,7 @@ module Master
               "created_at" => Time.now.utc.iso8601,
               "report" => json_safe_value(report),
             }
-            payload = JSON.pretty_generate(envelope) + "\\n"
+            payload = JSON.pretty_generate(envelope) + "\n"
             write_atomic(path, payload, mode: 0o600)
             stored_payload = read_private_artifact(path, label: "assessment report")
             digest = Digest::SHA256.hexdigest(payload)
@@ -223,7 +223,7 @@ module Master
         # one lock so an unindexed in-flight revision cannot be reclaimed.
         def persist_architecture_report(run_id, target:, report:, provenance:)
           id = run_id.to_s
-          raise ArgumentError, "invalid fix run id" unless id.match?(/\\A[a-f0-9]{20}\\z/)
+          raise ArgumentError, "invalid fix run id" unless id.match?(/\A[a-f0-9]{20}\z/)
           raise ArgumentError, "architecture report must be a hash" unless report.is_a?(Hash)
           raise ArgumentError, "architecture provenance must be a hash" unless provenance.is_a?(Hash)
 
@@ -250,7 +250,7 @@ module Master
               "provenance" => safe_provenance,
               "report" => json_safe_value(report),
             }
-            payload = JSON.pretty_generate(envelope) + "\\n"
+            payload = JSON.pretty_generate(envelope) + "\n"
             @lifecycle_observer.mutate(operation: "persist_architecture_report",
                                        item_count: Array(envelope.dig("report", "targets")).size) do
               write_atomic(path, payload, mode: 0o600)
@@ -293,7 +293,7 @@ module Master
         def verify_architecture_report(run_id)
           with_lock do
             id = run_id.to_s
-            return { "status" => "invalid_run_id" } unless id.match?(/\\A[a-f0-9]{20}\\z/)
+            return { "status" => "invalid_run_id" } unless id.match?(/\A[a-f0-9]{20}\z/)
 
             master_dir = File.join(@root, ".master")
             directory = File.join(@root, ARCHITECTURE_DIR)
@@ -307,7 +307,7 @@ module Master
 
             relative_path = receipt["path"].to_s
             name = File.basename(relative_path)
-            match = name.match(/\\A#{Regexp.escape(id)}-([a-f0-9]{12})-([a-f0-9]{12})\\.json\\z/)
+            match = name.match(/\A#{Regexp.escape(id)}-([a-f0-9]{12})-([a-f0-9]{12})\.json\z/)
             return { "status" => "receipt_path_mismatch" } unless match
             expected_path = File.join(directory, name)
             return { "status" => "receipt_path_mismatch" } unless relative(expected_path) == relative_path
@@ -663,7 +663,7 @@ module Master
           end.to_set
           removed = 0
           Dir.children(directory).each do |name|
-            next unless name.match?(/\\A[a-f0-9]{20}-[a-f0-9]{12}-[a-f0-9]{12}\\.json\\z/)
+            next unless name.match?(/\A[a-f0-9]{20}-[a-f0-9]{12}-[a-f0-9]{12}\.json\z/)
 
             path = File.join(directory, name)
             next if retained_paths.include?(relative(path))
@@ -687,7 +687,7 @@ module Master
 
           removed = 0
           Dir.children(directory).each do |name|
-            match = name.match(/\\A([a-f0-9]{20})\\.json\\z/)
+            match = name.match(/\A([a-f0-9]{20})\.json\z/)
             next unless match && !retained.include?(match[1])
 
             path = File.join(directory, name)
