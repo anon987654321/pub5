@@ -73,6 +73,7 @@ class TestRunJournalLifecycle < Minitest::Test
 
   def test_architecture_report_cannot_be_pruned_between_write_and_receipt_indexing
     Dir.mktmpdir("master-architecture-prune-race") do |root|
+      begin
       bus = RecordingBus.new
       journal = Master::Fix::RunJournal.new(root:, bus:)
       run = start_journal(root, bus)
@@ -116,10 +117,11 @@ class TestRunJournalLifecycle < Minitest::Test
 
       assert File.file?(File.join(root, receipt.fetch("path")))
       assert_equal "verified", journal.verify_architecture_report(run.fetch("id")).fetch("status")
-    ensure
-      continue_writer << true if continue_writer && writer&.alive?
-      writer&.join(5)
-      pruner&.join(5)
+      ensure
+        continue_writer << true if continue_writer && writer&.alive?
+        writer&.join(5)
+        pruner&.join(5)
+      end
     end
   end
 
@@ -140,7 +142,7 @@ class TestRunJournalLifecycle < Minitest::Test
       current_path = File.join(root, receipt.fetch("path"))
       orphan_id = "f" * 20
       orphan_path = File.join(root, ".master", "fix_assessments", "#{orphan_id}.json")
-      File.write(orphan_path, "{}\\n")
+      File.write(orphan_path, "{}")
       File.chmod(0o600, orphan_path)
 
       journal.prune_assessment_reports!(keep_ids: [])
