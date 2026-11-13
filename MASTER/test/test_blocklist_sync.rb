@@ -93,4 +93,19 @@ class TestBlocklistSync < Minitest::Test
     assert_equal "CONFIRMED", result.value![:remote_sync]
     refute service.blocked?(target_id: "46", platform: "web")
   end
+  def test_unblock_retains_record_when_remote_adapter_raises
+    @web.define_singleton_method(:post) { |_path, body:| Master::Result.ok(body) }
+    service = Master::Ground::BlocklistSync.new(
+      rails_clients: { web: @web }, root: @dir, authorize: ->(**) { true },
+      unblocker: ->(**) { raise "remote timeout" },
+    )
+    assert service.block(target_id: "48", reason: "reviewed", platforms: ["web"]).ok?
+
+    result = service.unblock(target_id: "48")
+
+    assert result.err?
+    assert_equal :infrastructure, result.category
+    assert_equal 1, service.status.value![:blocks]
+  end
+
 end
