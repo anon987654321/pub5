@@ -62,13 +62,14 @@ module Master
         # nil when there is nothing to argue about or nobody to argue with, so
         # the caller can treat "no council" and "council said nothing" alike.
         def run(files:, pass:, deadline:)
-          reason = skip_reason(files:, deadline:)
+          budget = budget_for(deadline)
+          reason = skip_reason(files:, budget:)
           if reason
             @bus&.publish("fix_loop:council_skipped", pass:, trigger: "source_findings", reason:)
             return
           end
 
-          result = critique(files.first(FILES_PER_ROUND), budget: before_fixes_budget)
+          result = critique(files.first(FILES_PER_ROUND), budget:)
           return unless result&.ok?
 
           value = result.value!
@@ -85,14 +86,15 @@ module Master
         # Only the first clean streak pass asks, so the next pass can confirm the
         # result without paying for the same exploratory review twice.
         def improve(files:, pass:, deadline:)
-          reason = skip_reason(files:, deadline:)
+          budget = budget_for(deadline)
+          reason = skip_reason(files:, budget:)
           if reason
             @bus&.publish("fix_loop:improvement_council_skipped", pass:, trigger: "clean_streak", reason:)
             return
           end
 
           selected = rotating_files(files, pass)
-          result = critique(selected)
+          result = critique(selected, budget:)
           return unless result&.ok?
 
           value = result.value!
@@ -203,6 +205,19 @@ module Master
           [Master::Review::LLMDispatcher::PassClock.pass_budget_s, Integer(ENV.fetch("MASTER_COUNCIL_BEFORE_FIXES_S", "120"), exception: false) || 120].min
         end
 
+        # The configured cap is not the pass deadline. Clamp every hard and
+        # improvement critique to the wall-clock time that is actually left;
+        # otherwise an advisory panel can consume the repair stage's budget.
+        def budget_for(deadline, now: Time.now)
+          remaining = (deadline.to_f - now.to_f).floor
+          return 0 unless remaining.positive?
+
+          cap = before_fixes_budget.to_i
+          return 0 unless cap.positive?
+
+          [remaining, cap].min
+        end
+
         def critique(files, budget: nil)
           return Master::Result.ok(feedback: [], issues: [], cherry_picks: [], ideas: [], mode: :general) unless hard_critique_enabled?
 
@@ -278,12 +293,12 @@ module Master
           nil
         end
 
-        def skip_reason(files:, deadline:)
+        def skip_reason(files:, budget:)
           return :council_disabled unless council_enabled?
           return :hard_critique_disabled unless hard_critique_enabled?
           return :agent_unavailable unless @agent
           return :no_files if files.empty?
-          return :deadline_exhausted if Time.now >= deadline
+          return :deadline_exhausted unless budget.to_i.positive?
 
           nil
         end
