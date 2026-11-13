@@ -7,6 +7,7 @@ require "securerandom"
 require "time"
 require_relative "kernel/lifecycle_journal"
 require_relative "kernel/lifecycle"
+require_relative "task_contract"
 
 module Master
   module Fix
@@ -144,6 +145,27 @@ module Master
       end
 
       attr_reader :root, :workspace_root, :actor, :log_path, :execution_mutex
+
+      # The one validated execution door. The adapter is injected because boot
+      # owns the live agent/scanner/law dependencies; Kernel owns the contract
+      # scope, process lock and terminal lifecycle. Validation happens before
+      # acquiring the lock or starting a run receipt.
+      def run(adapter:, contract:, target:, max_passes:, budget_seconds:, incremental:,
+              requested:, cancellation: nil)
+        raise TaskContract::Invalid, "Kernel#run requires a TaskContract" if contract.nil?
+
+        validated = TaskContract.coerce(contract)
+        unless validated.instance_of?(TaskContract::Contract)
+          raise TaskContract::Invalid, "Kernel#run requires a validated TaskContract::Contract"
+        end
+
+        TaskContract.with_current(validated) do
+          run_fix_loop(
+            adapter, target:, max_passes:, budget_seconds:, incremental:,
+            requested:, cancellation:
+          )
+        end
+      end
 
       def verify_log!
         self.class.read_log(@log_path)
