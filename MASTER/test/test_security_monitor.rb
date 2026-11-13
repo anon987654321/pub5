@@ -59,4 +59,20 @@ class TestSecurityMonitor < Minitest::Test
     data = @monitor.analyze(events: events, since: @now, until_at: @now)
     assert data.err?
   end
+  def test_numeric_string_config_is_normalized_before_analysis
+    monitor = Master::Ground::SecurityMonitor.new(
+      config: {
+        failed_login_threshold: "5",
+        suspicious_session_threshold: "5",
+        unusual_api_threshold: "100",
+        analysis_window_hours: "24",
+      },
+      clock: -> { @now },
+    )
+    events = Array.new(6) { event("FAILED_LOGIN") }
+    result = monitor.analyze(events: events)
+    assert result.ok?, result.message
+    assert_equal 1, result.value![:findings][:failed_logins][:suspicious_user_count]
+  end
+
 end
