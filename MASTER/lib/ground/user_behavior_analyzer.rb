@@ -120,6 +120,8 @@ module Master
         unless hours.finite? && hours.positive? && hours <= 168 && threshold.finite? && threshold >= 0
           raise ArgumentError, "analysis window or frequency threshold is invalid"
         end
+        @config[:analysis_window_hours] = hours
+        @config[:message_frequency_threshold] = threshold
       end
 
       def normalize(messages)
