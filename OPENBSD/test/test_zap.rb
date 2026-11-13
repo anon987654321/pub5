@@ -10,224 +10,159 @@ class ZapTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
   ZAP = File.join(ROOT, "OPENBSD", "bin", "zap.rb")
 
-  def run_zap(*args, stdin: "")
-    Open3.capture2e(RbConfig.ruby, ZAP, *args, stdin_data: stdin)
+  def run_zap(*args)
+    Open3.capture2e(RbConfig.ruby, ZAP, *args)
   end
 
-  def test_help_is_available_without_a_package
+  def test_help_describes_exact_kill_by_name_contract
     output, status = run_zap("--help")
 
     assert status.success?, output
-    assert_includes output, "usage: zap"
-    assert_includes output, "Linux/Android use /proc"
+    assert_includes output, "process name contains keyword"
+    assert_includes output, "SIGKILL (9)"
+    assert_includes output, "--dry-run"
   end
 
-  def test_no_pattern_prompts_for_each_visible_process
-    output = StringIO.new
-    errors = StringIO.new
-    sent = []
-    zap = Zap.new(
-      [],
-      out: output,
-      err: errors,
-      input: StringIO.new("n\n"),
-      process_provider: -> { [process(209, "worker --serve")] },
-      signaler: ->(signal, pid) { sent << [signal, pid] },
-      platform: "linux"
-    )
+  def test_keyword_is_required
+    output, status = run_zap
 
-    assert_equal 0, zap.run, errors.string
-    assert_includes output.string, "209 worker --serve? [y/N]"
-    assert_empty sent
+    refute status.success?
+    assert_includes output, "expected one process-name keyword"
   end
 
-  def test_force_requires_a_search_pattern
-    output = StringIO.new
-    errors = StringIO.new
-    zap = Zap.new(["-f"], out: output, err: errors)
-
-    assert_equal 2, zap.run
-    assert_includes errors.string, "force mode requires an explicit search pattern"
-  end
-
-  def test_unmatched_pattern_is_a_clean_noop
-    marker = "zap-no-process-#{Process.pid}-#{object_id}"
-    output, status = run_zap(marker)
-
-    assert status.success?, output
-    assert_includes output, "no processes match"
-  end
-
-  def test_force_mode_signals_only_the_matching_process
-    marker = "zap-worker-#{Process.pid}-#{object_id}"
-    child = Process.spawn(RbConfig.ruby, "-e", "sleep 30 # #{marker}")
-
-    output, status = run_zap("-f", marker)
-
-    assert status.success?, output
-    assert_includes output, "sent SIGTERM to PID #{child}"
-    Process.wait(child)
-  ensure
-    reap_child(child)
-  end
-
-  def test_prompt_can_skip_a_matching_process
-    marker = "zap-worker-#{Process.pid}-#{object_id}"
-    child = Process.spawn(RbConfig.ruby, "-e", "sleep 30 # #{marker}")
-
-    output, status = run_zap(marker, stdin: "n\n")
-
-    assert status.success?, output
-    assert_includes output, "#{child} "
-    assert Process.kill(0, child)
-  ensure
-    reap_child(child)
-  end
-
-  def test_ps_fallback_works_without_procfs
-    marker = "zap-ps-worker-#{Process.pid}-#{object_id}"
-    child = Process.spawn(RbConfig.ruby, "-e", "sleep 30 # #{marker}")
-    output = StringIO.new
-    errors = StringIO.new
-    zap = Zap.new(["-f", marker], out: output, err: errors)
-    zap.define_singleton_method(:linux_procfs?) { false }
-
-    assert_equal 0, zap.run, errors.string
-    assert_includes output.string, "sent SIGTERM to PID #{child}"
-    Process.wait(child)
-  ensure
-    reap_child(child)
-  end
-
-  def test_default_signal_is_term
-    zap, output, _errors, sent = build_zap(["-f", "worker"], processes: [process(210, "worker --serve")])
-
-    assert_equal 0, zap.run
-    assert_equal [[Signal.list.fetch("TERM"), 210]], sent
-    assert_includes output.string, "sent SIGTERM to PID 210"
-  end
-
-  def test_classic_signal_spelling_is_supported
-    zap, _output, _errors, sent = build_zap(["-KILL", "-f", "worker"], processes: [process(211, "worker")])
-
-    assert_equal 0, zap.run
-    assert_equal [[Signal.list.fetch("KILL"), 211]], sent
-  end
-
-  def test_signal_option_accepts_signal_prefix
-    zap, _output, _errors, sent = build_zap(["-f", "-s", "SIGINT", "worker"], processes: [process(212, "worker")])
-
-    assert_equal 0, zap.run
-    assert_equal [[Signal.list.fetch("INT"), 212]], sent
-  end
-
-  def test_dry_run_lists_matches_without_signalling
-    zap, output, _errors, sent = build_zap(["--dry-run", "worker"], processes: [process(213, "worker")])
-
-    assert_equal 0, zap.run
-    assert_empty sent
-    assert_includes output.string, "would send SIGTERM to PID 213"
-  end
-
-  def test_openbsd_vmd_is_never_signalled_even_with_force
-    zap, _output, errors, sent = build_zap(
-      ["-f", "vmd"], processes: [process(214, "/usr/sbin/vmd -f /etc/vm.conf")]
-    )
-
-    assert_equal 2, zap.run
-    assert_empty sent
-    assert_includes errors.string, "vmctl stop <vm>"
-  end
-
-  def test_openbsd_vmctl_and_console_processes_are_protected
-    %w[/usr/sbin/vmctl cu].each do |command|
-      zap, _output, errors, sent = build_zap(
-        ["-f", File.basename(command)], processes: [process(215, command)]
-      )
-
-      assert_equal 2, zap.run
-      assert_empty sent
-      assert_includes errors.string, "refusing to signal"
-    end
-  end
-
-  def test_vmd_name_is_not_special_on_other_platforms
-    zap, _output, _errors, sent = build_zap(
-      ["-f", "vmd"], processes: [process(216, "vmd")], platform: "linux"
-    )
-
-    assert_equal 0, zap.run
-    assert_equal [[Signal.list.fetch("TERM"), 216]], sent
-  end
-
-  def test_android_toybox_ps_parser_reads_stime_and_arguments
-    zap = Zap.new(["--help"], platform: "android")
-    process = zap.send(:parse_android_ps_line, "412 1 2026-11-13 16:41:22 ruby worker.rb --port 3000")
-
-    assert_equal 412, process[:pid]
-    assert_equal "ruby worker.rb --port 3000", process[:command]
-    assert_equal [:ps, 1, "2026-11-13 16:41:22", "ruby worker.rb --port 3000"], process[:identity]
-  end
-
-  def test_bsd_ps_parser_preserves_full_start_timestamp
-    zap = Zap.new(["--help"], platform: "openbsd")
-    process = zap.send(:parse_bsd_ps_line, "412 1 Fri Nov 13 16:41:22 2026 ruby worker.rb --port 3000")
-
-    assert_equal 412, process[:pid]
-    assert_equal "ruby worker.rb --port 3000", process[:command]
-    assert_equal [:ps, 1, "Fri Nov 13 16:41:22 2026", "ruby worker.rb --port 3000"], process[:identity]
-  end
-
-  def test_changed_pid_identity_is_skipped_before_signalling
+  def test_keyword_matches_process_name_as_a_substring
     zap, output, _errors, sent = build_zap(
-      ["-f", "worker"], processes: [process(218, "worker")]
+      ["ruby"],
+      processes: [
+        process(210, "ruby3.4"),
+        process(211, "python"),
+        process(212, "worker-ruby-helper")
+      ]
     )
-    zap.define_singleton_method(:same_process?) { |_process| false }
+
+    assert_equal 0, zap.run
+    assert_equal [[9, 210], [9, 212]], sent
+    assert_includes output.string, "killed -9 210 ruby3.4"
+    assert_includes output.string, "killed 2 process(es)"
+  end
+
+  def test_keyword_does_not_match_arguments
+    zap, output, _errors, sent = build_zap(
+      ["secret"],
+      processes: [process(213, "ruby")]
+    )
+
+    assert_equal 0, zap.run
+    assert_empty sent
+    assert_includes output.string, "no process name matches"
+  end
+
+  def test_dry_run_never_signals
+    zap, output, _errors, sent = build_zap(
+      ["--dry-run", "ruby"],
+      processes: [process(214, "ruby-worker")]
+    )
+
+    assert_equal 0, zap.run
+    assert_empty sent
+    assert_includes output.string, "would kill -9 214 ruby-worker"
+  end
+
+  def test_unmatched_keyword_is_a_clean_noop
+    zap, output, _errors, sent = build_zap(
+      ["missing"],
+      processes: [process(215, "ruby")]
+    )
+
+    assert_equal 0, zap.run
+    assert_empty sent
+    assert_includes output.string, "no process name matches"
+  end
+
+  def test_changed_pid_identity_is_not_killed
+    zap, output, _errors, sent = build_zap(
+      ["worker"],
+      processes: [process(216, "worker")]
+    )
+    zap.define_singleton_method(:same_process?) { |_candidate| false }
 
     assert_equal 0, zap.run
     assert_empty sent
     assert_includes output.string, "changed or exited; skipped"
   end
 
-  def test_no_pattern_skips_vmd_but_keeps_other_processes_interactive
+  def test_permission_failure_is_reported
     output = StringIO.new
     errors = StringIO.new
-    sent = []
     zap = Zap.new(
-      [],
+      ["worker"],
       out: output,
       err: errors,
-      input: StringIO.new("n\n"),
-      process_provider: -> {
-        [process(219, "/usr/sbin/vmd: guest"), process(220, "worker --serve")]
-      },
-      signaler: ->(signal, pid) { sent << [signal, pid] },
-      platform: "openbsd"
+      process_provider: -> { [process(217, "worker")] },
+      signaler: ->(_signal, _pid) { raise Errno::EPERM },
+      platform: "linux"
+    )
+    zap.define_singleton_method(:same_process?) { |_candidate| true }
+
+    assert_equal 1, zap.run
+    assert_includes errors.string, "cannot kill PID 217"
+  end
+
+  def test_android_toybox_parser_reads_process_name_not_arguments
+    zap = Zap.new(["--help"], platform: "android")
+    parsed = zap.send(:parse_android_ps_line, "412 1 com.example.worker")
+
+    assert_equal 412, parsed[:pid]
+    assert_equal "com.example.worker", parsed[:name]
+    assert_equal [:ps_android, 1, "com.example.worker"], parsed[:identity]
+  end
+
+  def test_bsd_parser_reads_ucomm_not_command_line
+    zap = Zap.new(["--help"], platform: "openbsd")
+    parsed = zap.send(:parse_unix_ps_line, "412 1 00:03:14 nsd: worker")
+
+    assert_equal 412, parsed[:pid]
+    assert_equal "nsd: worker", parsed[:name]
+    assert_equal [:ps, 1, "00:03:14", "nsd: worker"], parsed[:identity]
+  end
+
+  def test_vmd_is_matched_by_its_process_name_like_any_other_process
+    zap, _output, _errors, sent = build_zap(
+      ["vmd"],
+      processes: [process(218, "vmd")]
     )
 
     assert_equal 0, zap.run
-    assert_empty sent
-    assert_includes errors.string, "refusing to signal vmd"
-    assert_includes output.string, "220 worker --serve? [y/N]"
+    assert_equal [[9, 218]], sent
   end
 
-  def test_invalid_signal_fails_before_signalling
-    zap, _output, errors, sent = build_zap(
-      ["-NOSUCH", "worker"], processes: [process(217, "worker")]
-    )
+  def test_linux_procfs_integration_sends_sigkill_to_matching_comm
+    skip "Linux /proc required" unless RUBY_PLATFORM.include?("linux") && File.writable?("/proc/self/comm")
 
-    assert_equal 2, zap.run
-    assert_empty sent
-    assert_includes errors.string, "unknown signal"
+    marker = "z#{Process.pid}q"
+    child_code = 'File.write("/proc/self/comm", ARGV.fetch(0)); sleep 30'
+    child = Process.spawn(RbConfig.ruby, "-e", child_code, marker)
+
+    wait_until do
+      File.read("/proc/#{child}/comm").chomp == marker
+    end
+
+    output, status = run_zap(marker)
+
+    assert status.success?, output
+    assert_includes output, "killed -9 #{child} #{marker}"
+    Process.wait(child)
+  ensure
+    reap_child(child)
   end
 
   private
 
-  def process(pid, command)
-    { pid: pid, command: command, identity: [:test, pid] }
+  def process(pid, name)
+    { pid: pid, name: name, identity: [:test, pid, name] }
   end
 
-  def build_zap(argv, processes:, platform: "openbsd")
+  def build_zap(argv, processes:, platform: "linux")
     output = StringIO.new
     errors = StringIO.new
     sent = []
@@ -235,13 +170,21 @@ class ZapTest < Minitest::Test
       argv,
       out: output,
       err: errors,
-      input: StringIO.new,
       process_provider: -> { processes },
       signaler: ->(signal, pid) { sent << [signal, pid] },
       platform: platform
     )
-    zap.define_singleton_method(:same_process?) { |_process| true }
+    zap.define_singleton_method(:same_process?) { |_candidate| true }
     [zap, output, errors, sent]
+  end
+
+  def wait_until
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 3
+    until yield
+      raise "timed out waiting for child process name" if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+      sleep 0.01
+    end
   end
 
   def reap_child(child)
