@@ -32,16 +32,16 @@ module Master
         false
       end
 
-      # Called under Dmesg's mutex, before the payload. The reserved activity
-      # row is given up, the draft's row is cleared and the cursor steps to a
-      # fresh row below it: the payload never mixes with the prompt glyphs and
-      # never lands on the row Reline is editing.
+      # Called under Dmesg's mutex, before the payload. The prompt is a
+      # redrawable draft, not a permanent row: clear it in place, let the
+      # payload occupy that row, then redraw the draft beneath the message.
+      # Do not emit CRLF here; it creates a blank row before every later event.
       def foreign_write_begin(target)
         return unless tty_target?(target)
 
         if @reading_input
           clear_reserved_activity_row(target) if @activity_row_reserved
-          target.print("\r\e[K\r\n")
+          target.print("\r\e[K")
         elsif @spinner_row_visible
           # A queued turn paints the star on the current blank row. Clear only
           # that row before a log event writes there; never move the cursor.
