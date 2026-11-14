@@ -492,6 +492,12 @@ test("stipple module boots and builds from the canonical idle profile", () => {
         }
       },
       stipple: {
+        expressions: {
+          enabled: true,
+          order: ["waterform", "architect", "forest_geometry", "monument"],
+          min_interval_ms: 9000, max_interval_ms: 16000,
+          transition_ms: 1800, strength: 0.78
+        },
         depth_response: { reference_distance: 5.0, scale_min: 0.75, scale_max: 1.25 },
         dial_modulation: {
           activity: { density: 0.05, ripple: 0.08, turbulence: 0.12, luminosity: 0.03, attract: 0.04 },
