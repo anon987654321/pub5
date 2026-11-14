@@ -108,13 +108,13 @@ figma:
 stripe_semantic_mapping:
   authority: "Reference mapping only; local product identity and MASTER Laws win."
   roles:
-    canvas: "color/surface/default"
-    cool_surface: "color/surface/subtle"
-    deep_ink: ["color/text/primary", "color/surface/inverse"]
-    accent: ["color/action/primary", "color/text/brand"]
-    muted_ink: ["color/text/secondary", "color/text/muted"]
-    separators: ["color/border/default", "color/border/subtle"]
-    spacing: ["space/stack/*", "space/inline/*", "space/inset/*", "space/gap/*"]
+    canvas: "surface/default"
+    cool_surface: "surface/subtle"
+    deep_ink: ["text/primary", "surface/inverse"]
+    accent: ["action/primary", "text/brand"]
+    muted_ink: ["text/secondary", "text/muted"]
+    separators: ["border/default", "border/subtle"]
+    spacing: ["stack/*", "inline/*", "inset/*", "gap/*"]
     radii: ["radius/control", "radius/container"]
   reject:
     - "Importing Stripe's exact palette, brand-purple, wordmark or proprietary artwork"
