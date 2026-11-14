@@ -72,7 +72,7 @@ module Master
 
       # An ABI-stale bundle is moved aside and reinstalled; only a toolchain or
       # header failure that survives that rebuild needs OS packages. A header
-      # failure with no ABI-stale line keeps its store and goes to OS packages directly.
+      # failure with no ABI-stale line keeps its store; OS packages require explicit approval.
       NATIVE_REPAIR_REFUSED = "native bundle repair refused (no ABI-stale evidence; gem store left intact)"
 
       SYSTEM_RECOVERY_MESSAGES = [
