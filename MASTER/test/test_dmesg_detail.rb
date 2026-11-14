@@ -110,7 +110,7 @@ class TestDmesgDetail < Minitest::Test
 
     body = output.string.lines.first.delete_prefix("read0: ").chomp
     assert_equal 12, body.length
-    assert body.end_with?("…")
+    assert body.end_with?("...")
   end
 
   def test_detail_drops_blank_rows_and_prefixes_every_retained_line
@@ -132,7 +132,7 @@ class TestDmesgDetail < Minitest::Test
 
     lines = output.string.lines
     assert_equal 9, lines.size
-    assert_equal "read0: … 42 more line(s)\n", lines.last
+    assert_equal "read0: ... 42 more line(s)\n", lines.last
   end
 
   def test_detail_uses_the_terminal_write_draft_guard

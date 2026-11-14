@@ -190,7 +190,7 @@ module Master
         settings = cfg
         maxch = Integer(settings.fetch("detail_max_chars", 240)).clamp(1, 4_000)
         maxln = Integer(settings.fetch("detail_max_lines", 8)).clamp(1, 100)
-        marker = settings.fetch("detail_truncate_marker", "…").to_s
+        marker = settings.fetch("detail_truncate_marker", "...").to_s
         subordinate(detail_unit(unit), text, io: target, maxch:, maxln:, marker:)
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "Trace::Dmesg.detail")

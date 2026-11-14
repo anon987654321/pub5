@@ -50,7 +50,10 @@ class TestConfigSections < Minitest::Test
   end
 
   def test_dmesg_does_not_configure_visual_log_indentation
-    refute load("console.yml").fetch("dmesg").key?("detail_indent")
+    dmesg = load("console.yml").fetch("dmesg")
+
+    refute dmesg.key?("detail_indent")
+    assert_equal "...", dmesg.fetch("detail_truncate_marker")
   end
 
   def test_each_file_satisfies_its_schema

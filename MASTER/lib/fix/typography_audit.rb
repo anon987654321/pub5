@@ -6,7 +6,7 @@ module Master
     #
     # laws.yml#typography sets the marks; Renderer#beautify sets them on the
     # way out; this audit reads the operator-facing strings that produce the
-    # rest. It scans the trees that speak to a person (cli, voice, trace) for
+    # rest. It scans the trees that speak to a person (cli, io, review, voice, trace) for
     # the mechanical lapses: a typographic mark in terminal output, which is
     # ASCII (operator, 2026-11-06: a dash is "-", an ellipsis "..."), and the
     # double-hyphen dash that stands in for a single hyphen in prose. Flags
