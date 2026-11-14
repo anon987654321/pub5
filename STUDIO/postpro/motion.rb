@@ -23,8 +23,10 @@ module Postpro
 
     # Immutable values for one decoded frame. Temporal effects receive this
     # explicitly; no render may borrow another render's frame state.
-    FrameContext = Struct.new(:index, :time_seconds, :gate_weave, keyword_init: true) do
-      def initialize(index:, time_seconds:, gate_weave: nil)
+    FrameContext = Struct.new(:index, :time_seconds, :gate_weave, :flicker_ev, keyword_init: true) do
+      MAX_FLICKER_EV = 0.25
+
+      def initialize(index:, time_seconds:, gate_weave: nil, flicker_ev: nil)
         frame_index = Integer(index)
         timestamp = Float(time_seconds)
         raise ArgumentError, "frame index must be non-negative" if frame_index.negative?
@@ -40,7 +42,16 @@ module Postpro
                       raise ArgumentError, "gate-weave offsets must be finite" unless values.values.all?(&:finite?)
                     end.freeze
                   end
-        super(index: frame_index, time_seconds: timestamp, gate_weave: offsets)
+        exposure = if flicker_ev.nil?
+                     nil
+                   else
+                     Float(flicker_ev).tap do |stops|
+                       unless stops.finite? && stops.abs <= MAX_FLICKER_EV
+                         raise ArgumentError, "flicker exposure must be finite and within +/-#{MAX_FLICKER_EV} EV"
+                       end
+                     end
+                   end
+        super(index: frame_index, time_seconds: timestamp, gate_weave: offsets, flicker_ev: exposure)
         freeze
       end
     end

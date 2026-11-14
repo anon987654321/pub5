@@ -51,6 +51,11 @@ remaining effects preserve the old creative affordance with bounded parameters.
 Named `legacy_*` presets restore the useful archival looks without changing the current
 `house` grade.
 
+`super8_flicker` is temporal, not a still-image texture: in the bounded video path it
+applies a seeded, low-frequency, frame-wide exposure variation in linear light. A still
+image has no time axis, so the effect is a no-op there. The former three blurred grey
+rectangles were not film flicker and have been removed.
+
 The old internal `apply_effects`, `apply_effects_from_recipe` and random driver
 functions are not restored because current postpro already has a safer recipe engine,
 measured random-chain generator, provenance, and validation.

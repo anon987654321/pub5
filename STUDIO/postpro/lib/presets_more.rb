@@ -123,7 +123,7 @@ PRESETS = PRESETS_FIRST_HALF.merge({
   legacy_polaroid: { fx: %w[spectral_temp film_curve faded_print polaroid_frame], stock: :polaroid_sx70,
                      temp: 5800, intensity: 0.82 },
 
-  legacy_super8: { fx: %w[spectral_temp film_curve super8_flicker film_scratches], stock: :kodak_vision3_50d,
+  legacy_super8: { fx: %w[spectral_temp super8_flicker film_curve film_scratches], stock: :kodak_vision3_50d,
                    temp: 5600, intensity: 0.78 },
 
   legacy_cinemascope: { fx: %w[spectral_temp halation film_curve print_film cinemascope_bars], stock: :kodak_vision3_500t,

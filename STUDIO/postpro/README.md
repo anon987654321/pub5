@@ -198,7 +198,9 @@ look missing. The focused motion tests include that side-data shape. Audio is co
 by default; `--grain-hold` pins it for a scanned-print texture. When a preset includes
 `gate_weave`, its frame-to-frame registration uses a seeded, bounded filtered-noise
 source shared with Dilla's tape-speed variation; still-image gate weave remains
-one deterministic offset. Work is bounded before decoding
+one deterministic offset. The `legacy_super8` preset also uses a separate bounded
+frame-wide exposure walk for Super 8 lamp/transport flicker; still-image flicker is a
+no-op rather than a fake spatial overlay. Work is bounded before decoding
 (600 frames, 500 million pixel-frames, a 300-second budget and a 1 GB graded-frame spool by
 default); `POSTPRO_VIDEO_MAX_FRAMES`, `POSTPRO_VIDEO_MAX_PIXELS`,
 `POSTPRO_VIDEO_MAX_SECONDS`, `POSTPRO_VIDEO_MAX_TEMP_BYTES` and

@@ -5,6 +5,24 @@ require_relative "../analog_core"
 
 module Postpro
   module Motion
+    FLICKER_RATE_HZ = 8.0
+    FLICKER_DEPTH_EV = 0.055
+    FLICKER_SEED_XOR = 0x46384C4B
+
+    # A separate, bounded exposure walk models lamp/transport instability.
+    # It is not projector shutter cadence and never changes frame timing.
+    def self.temporal_flicker_walk(seed:, sample_rate:)
+      fps = Float(sample_rate)
+      raise ArgumentError, "flicker sample rate must be finite and positive" unless fps.finite? && fps.positive?
+
+      AnalogCore::StochasticWalk.new(
+        rate_hz: [FLICKER_RATE_HZ, fps * 0.40].min,
+        depth: FLICKER_DEPTH_EV,
+        rng: Random.new(Integer(seed) ^ FLICKER_SEED_XOR),
+        sample_rate: fps
+      )
+    end
+
     def self.stream_and_grade(input, probe, graded, deadline, limits, seed, grain, io, grade_frame)
       frame_bytes = probe.width * probe.height * 3
       count = 0
@@ -19,6 +37,7 @@ module Postpro
         rate_hz: [0.47, probe.fps * 0.40].min, depth: 0.5,
         rng: Random.new(Integer(seed) ^ 0x475759), sample_rate: probe.fps
       )
+      flicker_walk = temporal_flicker_walk(seed:, sample_rate: probe.fps)
       command = [
         "ffmpeg", "-nostdin", "-v", "error", "-i", input,
         "-map", "0:v:0", "-an", "-sn", "-dn", "-vsync", "0",
@@ -48,7 +67,8 @@ module Postpro
                 frame_context = FrameContext.new(
                   index: count - 1,
                   time_seconds: (count - 1).to_f / probe.fps,
-                  gate_weave: { x: weave_x.next_value, y: weave_y.next_value }
+                  gate_weave: { x: weave_x.next_value, y: weave_y.next_value },
+                  flicker_ev: flicker_walk.next_value
                 )
                 begin
                   grade_frame.call(

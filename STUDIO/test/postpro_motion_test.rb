@@ -35,6 +35,32 @@ class TestPostproMotionFrameContext < Minitest::Test
     refute_respond_to Postpro::Motion, :gate_weave_offset=
   end
 
+  def test_context_carries_bounded_temporal_flicker_ev
+    context = Postpro::Motion::FrameContext.new(
+      index: 3,
+      time_seconds: 0.125,
+      flicker_ev: -0.12
+    )
+
+    assert_in_delta(-0.12, context.flicker_ev, 1e-12)
+    assert_predicate context, :frozen?
+    assert_raises(ArgumentError) do
+      Postpro::Motion::FrameContext.new(index: 4, time_seconds: 0.16, flicker_ev: Float::NAN)
+    end
+    assert_raises(ArgumentError) do
+      Postpro::Motion::FrameContext.new(index: 5, time_seconds: 0.20, flicker_ev: 0.251)
+    end
+  end
+
+  def test_temporal_flicker_walk_is_seeded_bounded_and_varies_over_time
+    first = Postpro::Motion.temporal_flicker_walk(seed: 91, sample_rate: 24.0).run(48)
+    second = Postpro::Motion.temporal_flicker_walk(seed: 91, sample_rate: 24.0).run(48)
+
+    assert_equal first, second
+    refute_equal [first.first] * first.length, first
+    assert first.all? { |value| value.finite? && value.abs <= Postpro::Motion::FLICKER_DEPTH_EV * 3.0 }
+  end
+
   def test_context_rejects_invalid_frame_coordinates_and_non_finite_offsets
     assert_raises(ArgumentError) do
       Postpro::Motion::FrameContext.new(index: -1, time_seconds: 0.0)

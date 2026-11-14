@@ -219,6 +219,12 @@ def vocab_check
              "#{quoted.minmax_by { |_, l| l }.map { |n, l| "#{n} #{l.round(1)}" }.join(" to ")}"
   end
 
+  unless source.include?('when "super8_flicker"') &&
+         source.include?("exposure_ev: frame_context&.flicker_ev") &&
+         source.include?("flicker_ev: flicker_walk.next_value")
+    problems << "super8_flicker is missing its seeded per-frame exposure path"
+  end
+
   camera_profiles = CAMERA_PROFILES.values.flat_map(&:values)
   camera_ready = camera_profiles.count { |profile| camera_profile_applicable?(profile) }
   if camera_ready < camera_profiles.length
@@ -231,9 +237,9 @@ def vocab_check
   # nobody can find the reader for.
   unless File.exist?(PostproBootstrap.master_config_path)
     notes << "no #{PostproBootstrap.master_config_path} - CONFIG is empty, so jpeg_quality, variations, " \
-             "default_preset and apply_camera_profile_first all take their built-in fallbacks " \
-             "(preset=house, and the camera-profile pass is ON: #{CAMERA_PROFILES.values.sum(&:size)} " \
-             "bodies across #{CAMERA_PROFILES.size} vendors)"
+             "and default_preset use built-in fallbacks (preset=house); the " \
+             "#{camera_ready}/#{camera_profiles.length} camera matrices meet the explicit " \
+             "#{CAMERA_PROFILE_MATRIX_CONTRACT} transform contract"
   end
 
   # One actual pixel, through actual chains.

@@ -57,21 +57,22 @@ module Postpro
       safe_cast(rotated.crop(x, y, image.width, image.height))
     end
 
-    def super8_flicker(image, intensity = 0.5, _mode = "professional")
-      i = intensity.to_f.clamp(0.0, 1.0)
-      flicker = Vips::Image.black(image.width, image.height, bands: image.bands)
-      count = 3
-      seed = (image.width * 31 + image.height * 17).abs
-      count.times do |n|
-        x = (seed * (n + 3) * 97) % [image.width, 1].max
-        y = (seed * (n + 5) * 53) % [image.height, 1].max
-        w = [8, (image.width * 0.08).round].max
-        h = [6, (image.height * 0.06).round].max
-        w = [w, image.width - x].min
-        h = [h, image.height - y].min
-        flicker = flicker.draw_rect([10 + (n * 3)] * image.bands, x, y, w, h, fill: true)
+    # Film/projector flicker is a frame-wide exposure change, not local dust or
+    # grey patches. It exists only when a temporal frame context supplies EV.
+    # A single still has no time axis, so this effect correctly leaves it alone.
+    def super8_flicker(image, intensity = 0.5, _mode = "professional", exposure_ev: nil)
+      return image if exposure_ev.nil?
+
+      level = Float(intensity).clamp(0.0, 1.0)
+      stops = Float(exposure_ev)
+      unless stops.finite? && stops.abs <= 0.25
+        raise ArgumentError, "Super 8 flicker exposure must be finite and within +/-0.25 EV"
       end
-      safe_cast(image.cast("float") + flicker.gaussblur([image.width / 160.0, 1.0].max) * i)
+      return image if level.zero? || stops.zero?
+
+      linear = image.colourspace("scrgb")
+      exposed = linear * (2.0**(stops * level))
+      safe_cast(exposed.colourspace("srgb"))
     end
   end
 end
