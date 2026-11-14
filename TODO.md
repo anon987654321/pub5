@@ -709,6 +709,18 @@ MASTER's `Fix::Wishlist` reads/writes the local runtime ledger `.master/fix_wish
 
 `BIZ/tools/fetat_proposal.md` is a substantive policy/project proposal, not a software task queue. Keep its research, legal questions and implementation blueprint in that document; only promote a specific, authorised and scoped software task into this register. Do not explode the proposal into speculative checkboxes.
 
+### 8.9a Public repository and subject-media history containment
+
+<badge>BLOCKED — operator action</badge>
+
+GitHub currently reports `pub5` as public. The current tree still tracks 29 JPEG source portraits under `STUDIO/lora/merethe/sources/` and three subject `subject.env` files. The new `.gitignore` rules protect future additions only; they do not untrack these files or remove earlier commits.
+
+- [ ] Decide whether public visibility is intentional. If not, change the repository to private in GitHub Settings before further subject-media work.
+- [ ] After visibility is contained, plan a coordinated Git-history rewrite to remove the subject photographs, descriptors and any other private derivatives from every affected ref. A deletion commit alone is not sufficient; account for forks and existing clones.
+- [ ] Re-scan the complete history and current tree for subject media, descriptors, derived datasets, weights and credentials. Keep the consent gate in place; do not treat repository privacy as a substitute for subject consent or source rights.
+
+This cannot be completed through the current GitHub connection because it exposes repository content and Git writes, not repository-visibility administration or a coordinated history purge.
+
 ### 8.10 `wenche` subject — gated on written consent
 
 BLOCKED (2026-11-07): the intended source is the ME2 face archive from pub4 commit `8e1955ae` plus photographs at `tommervik.com`. Neither may be downloaded, prepared or trained until the subject's written consent and the photographer's licence exist as local records. Nothing below runs before step 1; the repository rule is that a public URL is not a rights grant. The shared `STUDIO/lora/consent.rb` gate now requires a separate written subject-consent document plus per-source rights evidence, and checks the exact subject, permission scope, private `evidence/` paths and owner-only permissions before Merethe recovery/preparation and likeness generation. It does not create or infer consent. The consent and integration regressions are authored but NOT_RUN on the pinned Ruby; this subject remains blocked until the real consent and photographer-rights records exist locally.
