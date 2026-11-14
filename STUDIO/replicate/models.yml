@@ -21,6 +21,9 @@
 # has ever published.
 
 verified_on: "2026-11-13"
+# The 2026-11-14 rows (the fofr/kontext edits, the levelsio film looks and
+# the kontext trainer) carry their schema as read from each model's own
+# Replicate page: the declared inputs plus the pinned API example.
 
 # The engine the pipeline reaches for first, and the order it falls back
 # through when one fails. The primary is the strongest current likeness model;
@@ -103,6 +106,21 @@ image_to_image:
   fofr/color-matcher:
     inputs: [image, reference]
     note: "Match one frame's grade to another; a deterministic grade without a look roll."
+  fofr/kontext-make-person-real:
+    inputs: [prompt, input_image, aspect_ratio, guidance, num_inference_steps, seed, output_format, output_quality, lora_strength]
+    note: "Kontext edit that trades the plastic AI face for skin texture and pores; the realism pass after a selfie render."
+  fofr/kontext-old-and-damaged:
+    inputs: [prompt, input_image, aspect_ratio, guidance, num_inference_steps, seed, output_format, output_quality, lora_strength]
+    note: "Kontext edit: scratches, fade and age on a photograph; the damaged-print look postpro can grade toward."
+  fofr/kontext-ps1:
+    inputs: [prompt, input_image, aspect_ratio, guidance, num_inference_steps, seed, output_format, output_quality, lora_strength]
+    note: "Kontext edit to a PS1 game render without UI; a look, not a likeness route."
+  levelsio/disposable-camera:
+    inputs: [prompt, image, mask, aspect_ratio, prompt_strength, num_outputs, guidance_scale, seed, output_format, output_quality, go_fast, lora_scale, extra_lora, extra_lora_scale]
+    note: "Disposable-camera film look, trigger word STL in the prompt; extra_lora carries the subject's own adapter, so a styled selfie keeps the face."
+  levelsio/analog-film:
+    inputs: [prompt, image, mask, aspect_ratio, prompt_strength, num_outputs, guidance_scale, seed, output_format, output_quality, go_fast, lora_scale, extra_lora, extra_lora_scale]
+    note: "Analog film look, trigger word ANLG in the prompt; the same extra_lora route as disposable-camera."
 
 # Likeness from a face alone, when there is one photograph and no training set.
 identity:
@@ -187,3 +205,6 @@ training:
   black-forest-labs/flux-dev:
     inputs: [prompt, aspect_ratio, guidance, num_inference_steps, seed]
     note: "The base a face LoRA is trained against."
+  replicate/fast-flux-kontext-trainer:
+    inputs: [input_images, kontext_prompt_instruction, training_steps, seed, hf_repo_id, hf_token]
+    note: "Trains a Kontext edit LoRA from paired images (x_start.jpg/x_end.jpg, optional x.txt captions); kontext_prompt_instruction is the trigger when captions are absent, training_steps defaults to 1000. The destination model is set on the training call, not in inputs."
