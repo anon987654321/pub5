@@ -217,7 +217,7 @@
     if (!system.expressionCycle) {
       const initial = Math.floor(Math.random() * config.order.length);
       system.expressionCycle = {
-        from: initial, to: initial, startedAt: time, pausedAt: null,
+        from: initial, to: initial, startedAt: time - config.transition / 1000, pausedAt: null,
         nextAt: time + config.minInterval / 1000 +
           Math.random() * Math.max(0, config.maxInterval - config.minInterval) / 1000
       };
