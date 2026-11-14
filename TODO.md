@@ -857,15 +857,17 @@ back at the repository root:
   Unverified BKV 2027 dates from the archive were removed; NBK had not published
   confirmed 2027 project-support dates on 8 November 2026. Bergen's professional
   art/culture deadlines and the Fegerstens eligibility/cycle were checked
-  against primary pages. A PDF now exists at `BIZ/ragnhild/ragnhild.pdf`
-  (blob `955848cabb5d0e16ca6e5d054574f2a52ad0b0bc`), but its PDF page tree
-  reports 19 pages, not the five-page guide described here. Its PDF signature
-  and EOF marker are present; the binary structure was checked, but the file
-  has not been rendered or visually inspected on this revision because the
-  GitHub file connection cannot materialize local bytes. Re-render from the
-  restored HTML, verify the expected five-page output, links and text, and
-  visually inspect every page before marking complete. Historical note: no PDF
-  existed in pub4.
+  against primary pages. The guide source `BIZ/ragnhild/ragnhild_legater.html`
+  contains five explicit sheets (footers 1/5 through 5/5). The existing
+  `BIZ/ragnhild/ragnhild.pdf` is a separate 19-page artifact beside
+  `BIZ/ragnhild/ragnhild.html`, whose title is “Ragnhild – forretningsplan”;
+  it is not evidence that the grant guide has been rendered. No PDF for
+  `ragnhild_legater.html` has been identified. Render that exact source to a
+  separately named `ragnhild_legater.pdf`, verify page count, links and text,
+  and visually inspect every page before marking complete. The current
+  `BIZ/tools/bp_print.mjs` order does not include this standalone guide, so
+  either extend the print workflow with an explicit source/output mapping or
+  use a documented one-off render. Historical note: no PDF existed in pub4.
 - [x] **Merethe LoRA preparation restored at the canonical path.** The
   recovery/preflight package and its test now live under `STUDIO/lora/merethe/`.
   Its preparation command moves only known local, ignored subject data from the
