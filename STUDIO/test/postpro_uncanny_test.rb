@@ -5,7 +5,9 @@ require_relative "../postpro/uncanny"
 
 class TestPostproUncanny < Minitest::Test
   def luma(values)
-    Vips::Image.new_from_array(values, scale: 1.0).cast(:float)
+    # new_from_array takes scale/offset positionally; the default scale of 1
+    # is exactly what these fixtures want, so no second argument is passed.
+    Vips::Image.new_from_array(values).cast(:float)
   end
 
   def test_specular_spread_measures_only_variation_inside_highlights

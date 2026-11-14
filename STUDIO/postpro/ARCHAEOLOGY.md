@@ -123,7 +123,7 @@ obscure:
 | Recursive input patterns and multi-variation batches | Present-day batch/prompted entry points are the supported interface; output names, sidecars and family contact sheets are more explicit. |
 | Retry/error recovery, logs and statistics | Current per-variation failures and structured startup/output diagnostics avoid hiding a partial batch failure. Do not revive automatic dependency installation as part of retries. |
 | Camera profiles and stock-specific grain | Evolved to camera-profile data, measured stock tables, calibrated grain and `--fit-grain`; use those as the authority. |
-| Repligen handoff and post-generation film look | Current Replicate calls grade by default (portrait by default); `--no-postpro` is the intentional escape hatch. See [Replicate archaeology](../replicate/ARCHAEOLOGY.md). |
+| Repligen handoff and post-generation film look | Current Replicate calls grade by default (portrait by default); `--no-postpro` is the intentional escape hatch. See `../replicate/replicate.rb` and `../replicate/models.yml`. |
 | Video/frame-sequence grading | Recovered as `motion.rb` / `motion_process.rb` and `--video`: one Ruby process, ffmpeg raw-frame streaming, in-process Postpro, atomic final MP4, deterministic moving/held grain, and frame/pixel/time/temp-byte budgets. Constant-rate MP4 only; variable-rate inputs and mismatched frame counts are refused. The old per-frame subprocess path remains retired. |
 | The old `apply_effects` / `apply_effects_from_recipe` internals | Not restored: the shared recipe and grade dispatchers replace them. Keeping both would create two sources of truth. |
 
@@ -140,6 +140,28 @@ The implementation commit [9ac4b113](https://github.com/anon987654321/pub4/commi
 The removal commit [ec2cdf45](https://github.com/anon987654321/pub4/commit/ec2cdf458f6f571692fea1ea97e8335881b56135) explains why that implementation is not to be restored verbatim: it launched a fresh Ruby process per frame; measured render time was about an hour per minute of 1080p rather than the promised six minutes, and two tests timed out. Its own estimate was therefore not trustworthy.
 
 The replacement on this branch implements the central correction: ffmpeg streams packed RGB frames through one process, each frame is graded by the live Postpro methods in memory, and only compressed graded frames are spooled under a cumulative byte cap. It estimates work before decoding, enforces maximum frames/pixels and a runtime budget checked around every frame operation and subprocess (native libvips processing within a single frame is not forcibly interruptible), refuses frame-rate ambiguity and metadata/decoded-frame count mismatches, copies audio without re-encoding, assembles to a temporary MP4 and publishes the video plus checksum sidecar with same-directory atomic links only after successful grading. Tests cover fractional rates, seed modes, dimensions, audio, repeatability, held-vs-moving output and preservation of a pre-existing output on failure. The GitHub-only edit environment did not execute those tests; `cd STUDIO && rake test:motion` and the full `cd STUDIO && rake check test` remain required evidence before describing this path as verified on a real host.
+
+## AMBITION (the 168 proposals): provenance and as-built state
+
+The proposal menu "168 ways to get there" was written against pub4 (2026-08-25, preserved at
+[pub4@5c1529710](https://github.com/anon987654321/pub4/blob/5c15297107d131eef8881241f6e84190670a2225/STUDIO/AMBITION.md),
+read-only) and is not carried into this repository as a document: the register keeps backlog
+administration out of Markdown, and most of the menu is either built or obsolete here. The
+group-level disposition, so the recovered document stays legible from this tree:
+
+| § | Group | Disposition in pub5 |
+| --- | --- | --- |
+| A | Chain engine (1–24) | The repligen chain engine did not migrate; the generation lane is `../lora/` with `../replicate/`. Items 7 and 11 — per-shot provenance sidecars and the contact-sheet fan-out — are built (`lib/sidecars.rb`, `lib/contact_sheet.rb`, `lib/random_takes.rb`, `--heavy --random`). |
+| B | Chain vocabulary (25–46) | Not migrated as chains. Individual capabilities exist where a single tool needs them (`depth.rb`, `lib/relight.rb`). |
+| C | Geometry inversion (47–58) | Built as runtime data: `../lora/guides.yml` `layers.geometry` (`portrait_distance_m`, `selfie_distance_cm`, the ask-for-distance rule). |
+| D | Light (59–71) | `layers.light` carries the four patterns, short/broad and the catchlight rule; `lib/relight.rb` covers the one generative stage. |
+| E | Expression (72–81) | `layers.expression` carries the selection rule; dataset curation follows it in `../lora/`. |
+| F | Defeating the uncanny (82–98) | Built: `uncanny.rb` measures texture, tonal range, clipping and specular spread; `../lora/judge.rb` calibrates thresholds against private references and ratchets them (items 96–98). |
+| G | House look (99–116) | Portrait grade is the default with `--no-postpro` as the escape hatch; house preset in `lib/presets.rb`; sidecars publish the grade parameters (114). Contact-sheet mode is `lib/contact_sheet.rb` (110). LUT export (115) and golden-image perceptual fixtures (111–112) remain open — see `TODO.md`. |
+| H | Video (117–128) | Built as the in-process `motion.rb` / `motion_process.rb` path documented below. |
+| I | Rescue (129–140) | `rescue.rb`; the honest verdict rules travel with it. |
+| J | LoRA (141–155) | Consent gates, hash manifests and held-out evaluation are executable (`../lora/validate.rb`, `../lora/judge.rb`); checkpoint scoring uses the judge metrics (151). |
+| K | Knowing (156–168) | Partial: the selfies manifest and contact sheets are the gallery (156); the judge is the measurable proxy. Revisit tracking, cost-per-keeper and the monthly catalogue re-survey are not built. |
 
 ## Verification boundary
 

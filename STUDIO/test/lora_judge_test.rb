@@ -146,18 +146,18 @@ class TestStudioLoraJudge < Minitest::Test
   def test_private_threshold_override_rejects_checkout_and_symlink_paths
     private_file = File.join(@root, "private-thresholds.yml")
     File.write(private_file, "thresholds: {}\n")
-    ENV.stub("STUDIO_LORA_THRESHOLDS", private_file) do
+    with_environment("STUDIO_LORA_THRESHOLDS", private_file) do
       assert_equal private_file, Judge.thresholds_path
     end
 
     inside = File.join(Studio::OutputPaths::REPOSITORY_ROOT, "STUDIO", "lora", "missing-thresholds.yml")
-    ENV.stub("STUDIO_LORA_THRESHOLDS", inside) do
+    with_environment("STUDIO_LORA_THRESHOLDS", inside) do
       assert_raises(Judge::ThresholdError) { Judge.thresholds_path }
     end
 
     link = File.join(@root, "linked-thresholds.yml")
     File.symlink(private_file, link)
-    ENV.stub("STUDIO_LORA_THRESHOLDS", link) do
+    with_environment("STUDIO_LORA_THRESHOLDS", link) do
       assert_raises(Judge::ThresholdError) { Judge.thresholds_path }
     end
   end
@@ -168,5 +168,17 @@ class TestStudioLoraJudge < Minitest::Test
     assert_raises(Judge::CalibrationError) do
       Judge.write_calibration(File.join(repo, ".judge-test.yml"), "thresholds: {}")
     end
+  end
+
+  private
+
+  # minitest's Object#stub aliases an existing method, so it cannot stub an
+  # ENV key that is not already set. Use the tree's save/restore pattern.
+  def with_environment(name, value)
+    previous = ENV[name]
+    value.nil? ? ENV.delete(name) : ENV[name] = value
+    yield
+  ensure
+    previous.nil? ? ENV.delete(name) : ENV[name] = previous
   end
 end

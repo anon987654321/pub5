@@ -3,8 +3,10 @@
 # The recovered pub4 photography notes as runtime data, so the knowledge a
 # renderer or judge needs is loadable rather than prose in a markdown file.
 # Studio::Lora::Guides.load reads this; lora.rb owns the craft vocabularies
-# beside it. Sources: STUDIO/PHOTOGRAPHY.md (2026-08-25), lora/guides/
-# photography.md (2026-10-19), lora/guides/prompting.md (2026-10-10).
+# beside it. Sources: STUDIO/PHOTOGRAPHY.md (2026-08-25, restored verbatim
+# from pub4@5c1529710, read-only); the pub4-era lora/guides/photography.md
+# and lora/guides/prompting.md were distilled straight into this file and
+# never migrated as prose.
 #
 # The one fact the whole file turns on: a portrait fails in four independent
 # layers, and a grade can only reach the last of them. Get geometry, light
