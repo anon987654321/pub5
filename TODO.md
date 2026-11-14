@@ -658,13 +658,13 @@ The complete candidate records and rejected alternatives live in `MASTER/data/id
 - [ ] `dilla_corpus_measures` — sourced Dilla timing observations recorded without silently tuning generation.
 - [ ] `free_compute_design_of_record` — dated free-compute landscape and verified quota assumptions.
 
-**Missing — 2**
 - [ ] `brgen_feed_ranking_deterministic` — PARTIAL: source and `RAILS/test/feed_ranking_contract_test.rb` exist; installed-Ruby test and full feed verification remain NOT_RUN.
 - [ ] `amber_similarity_right_sized` — PARTIAL: source and `RAILS/amber/test/services/wears_well_with_test.rb` plus the bare-Ruby contract exist; installed-Ruby tests remain NOT_RUN.
 - [ ] `master_fleet_panel` — PARTIAL 2026-11-11: `FleetPanel`, dashboard wiring and `MASTER/test/test_dashboard_fleet_panel.rb` exist; unit execution and live vm23 health/render proof remain NOT_RUN.
 - [ ] `master_quota_facts` — PARTIAL 2026-11-11: quota/cache payload rendering and dashboard contract coverage exist in `MASTER/test/test_dashboard_fleet_panel.rb`; quota suite execution and rendered-browser proof remain NOT_RUN.
 - [ ] `inconclusive_aging` — PARTIAL 2026-11-11: receipt ageing/reopening logic and `MASTER/test/test_convergence_proof.rb` cases exist; run focused proof suite on the installed Ruby and inspect a real receipt, NOT_RUN here.
 - [ ] `constitution_self_budget` — PARTIAL 2026-11-11: `MASTER/checks/data/constitutional_budget.yml` carries the 6,717-line ceiling and `MASTER/test/test_constitutional_budget.rb` pins fit + down-only ratchet; run the tests on the installed compatible Ruby, NOT_RUN here.
+**Missing — 2**
 - [ ] `documentation_completeness` — public-contract changes carry documentation-review proof in the same task/commit.
 - [ ] `ops_alert_channel` — heartbeat failures reach one operator-owned relay with an allowlisted endpoint and secret held outside the tree.
 
