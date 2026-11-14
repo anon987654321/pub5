@@ -95,8 +95,20 @@ module Shared
       # Runtime cache names carry the worker revision, so activation can retire
       # every older pages/dynamic/assets/shell bucket instead of leaving one cache
       # per deployment on the device forever.
+      #
+      # The bundle is minified: MASTER/tools/rails/build_workbox.mjs inlines
+      # __APP_NAME__ (the app's directory name) and lets __CACHE_VERSION__ stand,
+      # so by the time this cleanup is appended the identifiers its cache names
+      # are built from no longer exist in the served script. They are defined
+      # here from the values the controller owns — Rails.root for the build-time
+      # APP_NAME, the derived version for CACHE_VERSION — because an IIFE that
+      # throws on a missing identifier kills worker evaluation, and a worker
+      # that never evaluates never installs (the browser logs the rejection and
+      # the page renders fine, so no deploy sees it).
       cleanup = <<~JAVASCRIPT
         ;(() => {
+          const APP_NAME = #{Rails.root.basename.to_s.to_json}
+          const CACHE_VERSION = #{version.to_json}
           const prefixes = ["pages", "dynamic", "assets", "shell"].map(kind => `${APP_NAME}-${kind}-`)
           self.addEventListener("activate", event => {
             event.waitUntil(

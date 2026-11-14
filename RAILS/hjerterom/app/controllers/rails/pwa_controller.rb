@@ -1,30 +1,17 @@
 # frozen_string_literal: true
 
 module Rails
+  # The actions live in Shared::PwaServing. Rails resolves this constant by bare
+  # name, so the class has to exist in each app; what belongs to the app is the
+  # copy on its offline page. The pub4 copy this replaced answered
+  # `render js:` without skip_forgery_protection, so /service-worker.js was
+  # refused by verify_same_origin_request (422) and the worker never installed.
   class PwaController < ApplicationController
-    CACHE_VERSION_PLACEHOLDER = "__CACHE_VERSION__"
-
-    def manifest
-      http_cache_forever(public: false) do
-        render template: "pwa/manifest", formats: :json
-      end
-    end
-
-    def service_worker
-      http_cache_forever(public: false) do
-        render js: service_worker_source, content_type: "application/javascript"
-      end
-    end
-
-    def offline
-      render partial: "shared/offline_page", locals: { app_name: "Hjerterom", storage_key: "hjerterom" }
-    end
+    include Shared::PwaServing
 
     private
 
-    def service_worker_source
-      render_to_string(template: "pwa/service-worker", layout: false)
-        .gsub(CACHE_VERSION_PLACEHOLDER, ENV.fetch("CACHE_VERSION", "v2"))
-    end
+    def pwa_app_name = "Hjerterom"
+    def pwa_storage_key = "hjerterom"
   end
 end

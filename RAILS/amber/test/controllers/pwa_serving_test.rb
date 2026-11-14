@@ -84,6 +84,15 @@ class PwaServingTest < ActionDispatch::IntegrationTest
     # amber ships a minified workbox bundle that builds `${APP}-pages-${version}`
     # at runtime, so the derived 12-hex digest is the only literal to look for.
     assert_match(/"[0-9a-f]{12}"/, body)
+    # The cleanup builds cache names from APP_NAME and CACHE_VERSION, but the
+    # bundle is minified — build_workbox.mjs inlines __APP_NAME__ at build
+    # time — so those identifiers exist only if the controller defines them.
+    # An IIFE that throws on a missing identifier kills worker evaluation, and
+    # a worker that never evaluates never installs. The text-include asserts
+    # below once passed while the definitions were missing, so the served
+    # worker must carry the definitions themselves.
+    assert_includes body, 'const APP_NAME = "amber"'
+    assert_match(/const CACHE_VERSION = "[0-9a-f]{12}"/, body)
     assert_includes body, "caches.keys().then(names => Promise.all("
     assert_includes body, "name !== `${APP_NAME}-pages-${CACHE_VERSION}`"
   ensure
