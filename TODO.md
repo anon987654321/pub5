@@ -857,9 +857,15 @@ back at the repository root:
   Unverified BKV 2027 dates from the archive were removed; NBK had not published
   confirmed 2027 project-support dates on 8 November 2026. Bergen's professional
   art/culture deadlines and the Fegerstens eligibility/cycle were checked
-  against primary pages. No PDF existed in pub4; render the restored HTML and
-  visually inspect pagination, links and text before declaring the deliverable
-  complete.
+  against primary pages. A PDF now exists at `BIZ/ragnhild/ragnhild.pdf`
+  (blob `955848cabb5d0e16ca6e5d054574f2a52ad0b0bc`), but its PDF page tree
+  reports 19 pages, not the five-page guide described here. Its PDF signature
+  and EOF marker are present; the binary structure was checked, but the file
+  has not been rendered or visually inspected on this revision because the
+  GitHub file connection cannot materialize local bytes. Re-render from the
+  restored HTML, verify the expected five-page output, links and text, and
+  visually inspect every page before marking complete. Historical note: no PDF
+  existed in pub4.
 - [x] **Merethe LoRA preparation restored at the canonical path.** The
   recovery/preflight package and its test now live under `STUDIO/lora/merethe/`.
   Its preparation command moves only known local, ignored subject data from the
