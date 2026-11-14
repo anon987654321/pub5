@@ -1,12 +1,15 @@
 # STUDIO/lora/thresholds.yml
 #
-# The envelope a render has to clear to be "at least as photographic as a real
-# photograph of the subject". Floors are the reference minimum and ceilings the
-# reference maximum: the question is "am I worse than any real photograph of
-# her", not "am I better than the average one". Regenerate against a better
-# reference set with:
+# The committed fallback envelope was recovered from a historical seven-frame
+# calibration. Keep new subject-specific calibration outputs outside the checkout.
 #
-#   ruby STUDIO/lora/judge.rb --calibrate <reference dir>
+# Calibrate from a private directory containing at least five regular image files:
+#   ruby STUDIO/lora/judge.rb --calibrate PRIVATE_REFERENCE_DIR
+#
+# The command prints aggregate YAML only. For a private mode-0600 file:
+#   ruby STUDIO/lora/judge.rb --calibrate PRIVATE_REFERENCE_DIR --output "$HOME/.local/share/studio/thresholds.yml"
+# Use that file with STUDIO_LORA_THRESHOLDS. Paths, filenames and image hashes
+# are deliberately absent from the calibration document.
 #
 # These values are the ones the recovered pub4 run produced from seven reference
 # frames. The full 108-frame set the values were drawn from lives in private

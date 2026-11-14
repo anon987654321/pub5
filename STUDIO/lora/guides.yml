@@ -94,12 +94,19 @@ checks:
   lens: the prompt names a focal length between 50 and 85 mm and a distance
   grade: exposure and white balance first, skin on the vectorscope, one grade for the whole piece
   spend: one test frame, reviewed full size, before any batch
-  review: the operator reviews survivors at full size, never on a contact sheet
+  review: >-
+    Use a contact sheet for pairwise triage, then inspect every finalist at full
+    size. A contact sheet cannot establish focus, texture, expression, likeness
+    or optical quality at 100%.
 
 # How the measurable checks were calibrated, so they can be regenerated.
 calibration:
   tool: STUDIO/lora/judge.rb
-  regenerate: "ruby STUDIO/lora/judge.rb --calibrate <reference dir>"
+  regenerate: "ruby STUDIO/lora/judge.rb --calibrate PRIVATE_REFERENCE_DIR"
+  minimum_images: 5
+  output: "stdout by default; --output writes a new mode-0600 file outside the checkout"
+  override: "STUDIO_LORA_THRESHOLDS points to a private threshold file"
+  privacy: "aggregate values only; source paths, filenames and image hashes are not stored"
   envelope: >-
     Floors are the reference minimum and ceilings the reference maximum: the
     question is "is this worse than any real photograph of her", not "is this
