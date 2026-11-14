@@ -2,6 +2,7 @@
 
 require "json"
 require "yaml"
+require_relative "consent"
 
 module Studio
   module Lora
@@ -60,6 +61,14 @@ module Studio
           "blockers" => [],
           "warnings" => []
         }
+
+        consent = Consent.validate(subject:, subject_directory: directory, action: :training)
+        report["consent_valid"] = consent.fetch("valid")
+        if consent.fetch("valid")
+          pass_check(report, "subject_consent", "Private written consent and per-source rights cover training and retention")
+        else
+          block(report, "subject_consent", consent.fetch("errors").join("; "))
+        end
 
         env_path = %w[subject.env subject.env.example].map { |name| File.join(directory, name) }
                                                     .find { |path| File.file?(path) && !File.symlink?(path) }

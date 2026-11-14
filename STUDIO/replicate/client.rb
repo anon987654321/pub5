@@ -7,6 +7,7 @@ require "securerandom"
 require "tempfile"
 require "timeout"
 require "uri"
+require_relative "../lora/consent"
 
 module Studio
   # Studio-owned provider client. MASTER has its own client and runtime policies.
@@ -15,6 +16,7 @@ module Studio
       # prediction/training/model-catalog API.
       module AssetTransfer
         def upload_file(path, subject:)
+          authorize_subject!(subject, action: :generation)
           mime = case File.extname(path).downcase
                  when ".jpg", ".jpeg" then "image/jpeg"
                  when ".png" then "image/png"
@@ -29,11 +31,21 @@ module Studio
         end
 
         def upload_zip(path, subject:)
+          authorize_subject!(subject, action: :training)
           validate_upload_source!(path)
           upload_binary(path, mime: "application/zip")
         end
 
         private
+
+        def authorize_subject!(subject, action:)
+          name = subject.to_s
+          raise ArgumentError, "subject must be a simple directory name" unless
+            name.match?(/\A[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}\z/)
+
+          subject_directory = File.join(File.expand_path("../lora", __dir__), name)
+          Studio::Lora::Consent.require!(subject: name, subject_directory:, action:)
+        end
 
         def validate_upload_source!(path)
           raise ArgumentError, "upload source must be a readable regular, non-symlink file" unless
@@ -150,6 +162,12 @@ module Studio
           version: nil,
           subject:
         )
+          name = subject.to_s
+          raise ArgumentError, "subject must be a simple directory name" unless
+            name.match?(/\A[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}\z/)
+          subject_directory = File.join(File.expand_path("../lora", __dir__), name)
+          Studio::Lora::Consent.require!(subject: name, subject_directory:, action: :training)
+
           timeout = operation_timeout!(timeout, "training timeout")
           photos_zip_url = training_zip_url!(photos_zip_url)
           trigger_word = training_trigger!(trigger_word)

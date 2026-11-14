@@ -4,7 +4,10 @@ require "fileutils"
 require "json"
 require "tmpdir"
 require_relative "minitest_helper"
-require_relative "../photograph/selfie_series"
+require_relative "../lora/selfie_series"
+
+# Synthetic subject authorization: real consent is tested separately.
+Studio::Lora::Consent.define_singleton_method(:require!) { |**| { "valid" => true } }
 
 class TestSelfieSeries < Minitest::Test
   # A stand-in for the Replicate predict/download round trip, in the shape

@@ -290,7 +290,7 @@ STUDIO/lora/*_film_*.webm
 STUDIO/lora/*_film_*.mov
 
 # The selfies gallery manifest is generated from those renders by
-# photograph/selfies_gallery.rb. The page names it; the render step writes it;
+# lora/selfies_gallery.rb. The page names it; the render step writes it;
 # a fresh checkout shows the page's empty state instead of a stale list.
 STUDIO/selfies/manifest.js
 
@@ -306,6 +306,21 @@ STUDIO/selfies/dilla.wav
 
 # --- STUDIO/lora subject data -----------------------------------------------
 #
+# Subject data is local by default: source photographs, reference images,
+# descriptors, consent and evidence must not be added by reflex. These rules
+# protect future files; they do NOT untrack the copies already in Git history.
+STUDIO/lora/*/sources/
+STUDIO/lora/*/references/
+STUDIO/lora/*/subject.env
+STUDIO/lora/*/consent.yml
+STUDIO/lora/*/evidence/
+STUDIO/lora/*/weights/
+STUDIO/lora/*/out/
+STUDIO/lora/*/retouched/
+STUDIO/lora/*/dataset/
+STUDIO/lora/*/dataset_*/
+STUDIO/lora/*/ledger.jsonl
+
 # Subject datasets, source captures, retouched media, outputs and weights live
 # under STUDIO/lora/<subject>/. The operator decides what to publish; the build
 # artefacts above (caches, zips, run logs) stay ignored.

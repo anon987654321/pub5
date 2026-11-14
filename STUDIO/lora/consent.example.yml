@@ -1,0 +1,35 @@
+# Copy to STUDIO/lora/<subject>/consent.yml and keep it private (0600).
+# Every referenced evidence file must be under evidence/ and mode 0600.
+# evidence/ itself must be owner-only (0700). Nothing is granted by default.
+schema: 1
+subject: REPLACE_WITH_SUBJECT_SLUG
+
+subject_consent:
+  likeness_generation: false
+  provider_processing: false
+  model_training: false
+  model_retention: false
+  model_publication: false
+  model_distribution: false
+  evidence:
+    granted_by: "REPLACE_WITH_SUBJECT"
+    granted_on: "YYYY-MM-DD"
+    covers: "likeness_generation, provider_processing"
+    stored_at: "evidence/subject-consent.pdf"
+
+source_rights:
+  generation_use: false
+  provider_processing: false
+  training_use: false
+  model_publication: false
+  model_distribution: false
+  evidence: {}
+  # Add a separate entry for every local source set. Example:
+  # reference_photographs:
+  #   granted_by: "..."
+  #   granted_on: "YYYY-MM-DD"
+  #   covers: "generation_use, provider_processing"
+  #   stored_at: "evidence/reference-rights.pdf"
+  #
+  # Merethe's recovered archive and additional photographs need separate
+  # entries named me2_archive and additional_images.

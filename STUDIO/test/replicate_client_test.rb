@@ -4,6 +4,11 @@ require_relative "minitest_helper"
 require "tmpdir"
 require_relative "../replicate/client"
 
+# Request-construction tests use a synthetic subject; the actual gate has its
+# own dedicated regression suite.
+Studio::Lora::Consent.define_singleton_method(:require!) { |**| { "valid" => true } }
+
+
 class TestStudioReplicateClientPaths < Minitest::Test
   class StubClient < Studio::ReplicateClient
     attr_reader :requests

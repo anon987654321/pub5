@@ -8,6 +8,7 @@ require_relative "../output_paths"
 require_relative "../replicate/client"
 require_relative "../replicate/models"
 require_relative "../subprocess"
+require_relative "consent"
 require_relative "../lora/lora"
 
 module Studio
@@ -69,6 +70,7 @@ module Studio
 
       # Animate an existing LoRA still; never regenerate or overwrite its source.
       def animate(still, words, duration: 5)
+        authorize_subject!
         source = File.expand_path(still.to_s)
         raise ArgumentError, "source still is missing" unless File.file?(source) && !File.symlink?(source)
         raise ArgumentError, "source still must be jpg, png or webp" unless %w[.jpg .jpeg .png .webp].include?(File.extname(source).downcase)
@@ -84,6 +86,7 @@ module Studio
       end
 
       def validate_model!
+        authorize_subject!
         # A subject rendered only from reference photographs may have no trained
         # LoRA yet; the render itself validates whatever engine it reaches. When
         # a LoRA is configured, preflight it exactly as before.
@@ -167,6 +170,12 @@ module Studio
 
 
       private
+
+      def authorize_subject!
+        Studio::Lora::Consent.require!(
+          subject: @subject, subject_directory: @subject_directory, action: :generation
+        )
+      end
 
       def client
         @client ||= Studio::ReplicateClient.new

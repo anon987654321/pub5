@@ -9,6 +9,7 @@ require "open3"
 require "tempfile"
 require "tmpdir"
 require "uri"
+require_relative "../consent"
 
 module Studio
   module MeretheLora
@@ -71,6 +72,7 @@ module Studio
 
     def recover!
       migrate_legacy_local_data!
+      require_training_consent!
       secure_directory(SOURCE_ROOT)
       SOURCE_FILES.each do |filename, expected_sha|
         uri = URI("#{SOURCE_BASE_URL}/#{filename}")
@@ -86,8 +88,19 @@ module Studio
       { "status" => "RECOVERED", "source_count" => SOURCE_FILES.length, "source_commit" => SOURCE_COMMIT }
     end
 
+    def require_training_consent!
+      required = Studio::Lora::Consent.required_source_sets(
+        subject: "merethe", subject_directory: SUBJECT_ROOT
+      )
+      Studio::Lora::Consent.require!(
+        subject: "merethe", subject_directory: SUBJECT_ROOT,
+        required_sources: required, action: :training
+      )
+    end
+
     def prepare!
       migrate_legacy_local_data!
+      require_training_consent!
       secure_directory(SOURCE_ROOT)
       secure_directory(CACHE_ROOT)
 
@@ -360,7 +373,7 @@ if $PROGRAM_NAME == __FILE__
     report = Studio::MeretheLora.prepare!
     puts JSON.pretty_generate(report)
     exit(report["status"] == "READY_FOR_OPERATOR_REVIEW" ? 0 : 2)
-  rescue Studio::MeretheLora::Error, SystemCallError, Net::HTTPError => error
+  rescue Studio::MeretheLora::Error, Studio::Lora::Consent::Error, SystemCallError, Net::HTTPError => error
     warn "BLOCKED: #{error.class}: #{error.message}"
     exit 2
   end

@@ -28,6 +28,7 @@ class TestStudioLoraValidator < Minitest::Test
         File.write(File.join(dataset, "photo-#{index}.txt"), "SAMPLE portrait #{index}")
       end
       write_training_plan(directory, dataset: "dataset")
+      write_valid_consent(directory)
 
       report = Studio::Lora::Validator.new(root:).validate_subject("sample")
 
@@ -126,6 +127,46 @@ class TestStudioLoraValidator < Minitest::Test
       FileUtils.mkdir_p(directory)
       yield root, directory
     end
+  end
+
+  def write_valid_consent(directory)
+    evidence = File.join(directory, "evidence")
+    FileUtils.mkdir_p(evidence, mode: 0o700)
+    File.chmod(0o700, evidence)
+    subject_file = File.join(evidence, "subject-consent.txt")
+    source_file = File.join(evidence, "dataset-rights.txt")
+    File.write(subject_file, "synthetic subject authority\n", mode: "w", perm: 0o600)
+    File.write(source_file, "synthetic dataset authority\n", mode: "w", perm: 0o600)
+    File.chmod(0o600, subject_file)
+    File.chmod(0o600, source_file)
+    record = {
+      "schema" => 1,
+      "subject" => "sample",
+      "subject_consent" => {
+        "likeness_generation" => true, "provider_processing" => true,
+        "model_training" => true, "model_retention" => true,
+        "evidence" => {
+          "granted_by" => "synthetic test authority",
+          "granted_on" => "2026-11-14",
+          "covers" => %w[likeness_generation provider_processing model_training model_retention],
+          "stored_at" => "evidence/subject-consent.txt"
+        }
+      },
+      "source_rights" => {
+        "generation_use" => true, "provider_processing" => true, "training_use" => true,
+        "evidence" => {
+          "training_dataset" => {
+            "granted_by" => "synthetic dataset authority",
+            "granted_on" => "2026-11-14",
+            "covers" => %w[generation_use provider_processing training_use],
+            "stored_at" => "evidence/dataset-rights.txt"
+          }
+        }
+      }
+    }
+    path = File.join(directory, "consent.yml")
+    File.write(path, YAML.dump(record), mode: "w", perm: 0o600)
+    File.chmod(0o600, path)
   end
 
   def write_descriptor(directory)

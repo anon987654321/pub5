@@ -5,7 +5,10 @@ require_relative "minitest_helper"
 require "open3"
 require "tmpdir"
 require_relative "../output_paths"
-require_relative "../photograph/idea_picture"
+require_relative "../lora/idea_picture"
+
+# Synthetic subject authorization: real consent is tested separately.
+Studio::Lora::Consent.define_singleton_method(:require!) { |**| { "valid" => true } }
 
 class TestStudioOutputPaths < Minitest::Test
   def test_relative_xdg_data_home_uses_an_absolute_fallback_from_any_directory
