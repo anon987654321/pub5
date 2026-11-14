@@ -67,6 +67,8 @@ class TestFixTypographyAudit < Minitest::Test
           Master::Trace::Dmesg.status("mov0", "init     /Users/Mac/Downloads")
           Master::Trace::Dmesg.status("disk0", "check    8.4GB available")
           puts format("%-8s %-9s %s", "disk0", "check", "8.4GB")
+          printf("%8.2f", 4.2)
+          Master::Trace::Dmesg.status("disk0", "count %8d")
           Master::Trace::Dmesg.status("mov0", "initializing /Users/Mac/Downloads")
         end
       RUBY

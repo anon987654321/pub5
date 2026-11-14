@@ -16,10 +16,11 @@ module Master
       SCOPE = %w[lib/cli lib/voice lib/trace lib/fix].freeze
       PUNCTUATION_SCOPE = %w[lib/cli lib/voice lib/trace].freeze
       TERMINAL_LINE_LIMIT = 72
-      OUTPUT_CALL = /(?:\.\s*(?:status|say|emit|puts|print|warn|dmesg)\b|\b(?:puts|print|warn|say)\b)/.freeze
+      OUTPUT_CALL = /(?:\.\s*(?:status|say|emit|puts|print|printf|pp|warn|dmesg|info|debug|error|fatal)\b|\b(?:puts|print|printf|pp|warn|say)\b)/.freeze
       # The marks proper typography sets in copy and a terminal does not print.
       TERMINAL_MARK = /[\u2014\u2013\u00B7\u2022\u2026\u201C\u201D\u2018\u2019\u2192\u2190\u00D7\u2265\u2264]/.freeze
-      TERMINAL_ALIGNMENT = /(?:\t|\\t|\A {2,}\S|(?<=\S) {2,}(?=\S)|%-?\d+s)/.freeze
+      TERMINAL_ALIGNMENT = /(?:\t|\\t|\A {2,}\S|(?<=\S) {2,}(?=\S))/.freeze
+      COLUMN_FORMAT = /(?<!%)%(?:\d+\$)?[-+ #0]*(?:\d+|\*)(?:\.(?:\d+|\*))?[diuoxXbBfFeEgGaAcsp]/.freeze
       PROSE_DOUBLE_DASH = /(?<=\s)--(?=\s)/.freeze
       STRING_LITERAL = /"([^"\n]{6,300})"/.freeze
       # Where a machine reads the line, the marks stay literal: fixtures that
@@ -96,7 +97,8 @@ module Master
         return "non_ascii_punctuation" if terminal_copy && text.match?(TERMINAL_MARK)
         return "prose_double_dash" if terminal_copy && text.match?(PROSE_DOUBLE_DASH)
         return "terminal_alignment" if output_call &&
-          (text.match?(TERMINAL_ALIGNMENT) || line.match?(/\.(?:ljust|rjust|center)\s*\(/))
+          (text.match?(TERMINAL_ALIGNMENT) || text.match?(COLUMN_FORMAT) ||
+           line.match?(/\.(?:ljust|rjust|center)\s*\(/))
         return "terminal_measure" if output_call && text.length > TERMINAL_LINE_LIMIT
 
         nil
