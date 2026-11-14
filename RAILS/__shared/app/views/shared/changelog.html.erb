@@ -7,6 +7,8 @@
     <p class="page-intro"><%= t("changelog.intro") %></p>
   </header>
 
+  <p class="page-back"><%= link_to t("changelog.back"), main_app.root_path %></p>
+
   <% entries.each do |entry| %>
     <article class="changelog-entry">
       <p class="meta"><%= entry.fetch("date") %></p>

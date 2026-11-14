@@ -528,6 +528,8 @@ nb:
     offline: Du er frakoblet. Meldingen sendes når du er på nett igjen.
   comments:
     heading_count: "Kommentarer (%{count})"
+    # comments/edit.html.erb: redigeringsrammen, alene eller i tråden.
+    edit_title: "Rediger kommentar"
     # Under the editor: comments/edit.html.erb, Comment::EDIT_WINDOW.
     editable_until: Kan endres til kl. %{time}
     # comments/_comment, for a moderator of the post's community.

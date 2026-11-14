@@ -57,7 +57,9 @@ class Message < ApplicationRecord
   # The composer accepts audio/* and image/*, and the server holds the same
   # line: a voice note or a photo, within the shared media size cap. Anything
   # else posted straight at the endpoint is refused before it reaches storage.
-  ATTACHMENT_TYPE = %r{\A(?:image/(?:jpeg|png|webp|heic|heif|gif)|audio/[\w.+-]+)\z}
+  # A document is a file, not a photo: application/pdf only, so the slot
+  # stays out of the arbitrary-file business the type family would invite.
+  ATTACHMENT_TYPE = %r{\A(?:image/(?:jpeg|png|webp|heic|heif|gif)|audio/[\w.+-]+|application/pdf)\z}
   validate :attachment_is_voice_or_photo, if: -> { attachment.attached? }
 
   include LiveDelivery
@@ -223,6 +225,7 @@ end
     content_type = attachment.blob.content_type.to_s
     self.message_type = "image" if content_type.start_with?("image/")
     self.message_type = "audio" if content_type.start_with?("audio/")
+    self.message_type = "file" if content_type == "application/pdf"
   end
 
   def attachment_is_voice_or_photo

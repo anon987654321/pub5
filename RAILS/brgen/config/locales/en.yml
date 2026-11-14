@@ -523,6 +523,8 @@ en:
     offline: You are offline. The message is sent when you are back online.
   comments:
     heading_count: "Comments (%{count})"
+    # comments/edit.html.erb: the editor frame, standalone or in the thread.
+    edit_title: "Edit comment"
     # Under the editor: comments/edit.html.erb, Comment::EDIT_WINDOW.
     editable_until: Can be changed until %{time}
     # comments/_comment, for a moderator of the post's community.

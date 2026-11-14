@@ -4,6 +4,7 @@ en:
   changelog:
     title: "What has changed"
     intro: "Published changes to the product and operations contracts."
+    back: "Back to the start page"
   actions:
     copy: "Copy"
     copied: "Copied"

@@ -53,7 +53,7 @@
     <% end %>
     <%# The recorder writes into this file field and flips the type to audio, so a
         voice note goes through the same create path as a photo. %>
-    <%= f.file_field :attachment, accept: "audio/*,image/*", class: "media-input-hidden",
+    <%= f.file_field :attachment, accept: "audio/*,image/*,application/pdf", class: "media-input-hidden",
                      data: { voice_recorder_target: "file", attachment_preview_target: "input",
                              action: "change->attachment-preview#show" } %>
     <%= f.hidden_field :message_type, value: "text", data: { voice_recorder_target: "type" } %>

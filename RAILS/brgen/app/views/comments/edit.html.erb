@@ -1,3 +1,4 @@
+<% content_for :title, t("comments.edit_title") %>
 <%# The author's rewrite, in the comment's own frame (comments/_comment wraps
     each comment in turbo_frame_tag dom_id(comment)). %>
 <%= turbo_frame_tag dom_id(@comment) do %>

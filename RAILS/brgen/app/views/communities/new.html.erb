@@ -1,3 +1,4 @@
+<% content_for :title, t("communities.new_community") %>
 <%= tag.h1 t("communities.new_community") %>
 <%= form_with model: @community do |f| %>
   <% if @community.errors.any? %>

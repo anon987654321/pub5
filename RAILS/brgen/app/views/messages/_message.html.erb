@@ -102,6 +102,14 @@
         <%= tag.time format("%d:%02d", *message.duration_seconds.to_i.divmod(60)),
               datetime: "PT#{message.duration_seconds.to_i}S", class: "msg-voice-duration" %>
       <% end %>
+    <% elsif message.message_type == "file" %>
+      <%# A document is a download, never an inline render: the filename
+          and size say what arrives, and nothing opens on this origin. %>
+      <%= link_to message.attachment, download: message.attachment.filename,
+                  class: "msg-file-chip" do %>
+        <span class="msg-file-name"><%= message.attachment.filename %></span>
+        <span class="msg-file-size"><%= number_to_human_size(message.attachment.byte_size) %></span>
+      <% end %>
     <% else %>
       <%= link_to message.attachment.filename, message.attachment %>
     <% end %>
