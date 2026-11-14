@@ -23,8 +23,8 @@ export default class extends Controller {
   static targets = ["heart"]
 
   connect() {
-    // Draw the heart. The library only defines the element; nothing animates
-    // until the CSS pulse is allowed by the media query.
+    // Draw the static heart shape. The library defines the element; no
+    // animation or pulse runs without an explicit pause control.
     loadDoodle()
   }
 

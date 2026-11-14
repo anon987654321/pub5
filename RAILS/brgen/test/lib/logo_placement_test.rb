@@ -111,7 +111,7 @@ class LogoPlacementTest < ActiveSupport::TestCase
   def test_dating_draws_its_heart_with_css_doodle
     splash = Rails.root.join("engines/dating/app/views/dating/home/splash.html.erb").read
     controller = Rails.root.join("engines/dating/app/javascript/controllers/dating_splash_controller.js").read
-    stylesheet = Rails.root.join("app/assets/stylesheets/_brgen_dating.scss").read
+    stylesheet = Rails.root.join("app/assets/stylesheets/_dating_splash.scss").read
 
     # The reference the operator could not find: a css-doodle heart over a red
     # bloom. css-doodle 0.60.0 is vendored and pinned (config/importmap.rb); the
@@ -126,11 +126,11 @@ class LogoPlacementTest < ActiveSupport::TestCase
     assert_includes importmap, 'pin "css-doodle"'
     assert_includes controller, 'import("css-doodle")'
 
-    # The heart is a shape, so it is static on its own; the only motion is the
-    # CSS pulse, and it is off unless motion is welcome.
+    # The heart is a shape, not a timeline. Keep it still until a real pause
+    # control exists; a forever-loop pulse on a decorative mark is not justified.
     assert_includes stylesheet, ".dating-splash-heart css-doodle"
-    assert_includes stylesheet, "@media (prefers-reduced-motion: no-preference)"
-    assert_includes stylesheet, "animation: dating-heart-pulse"
+    refute_includes stylesheet, "dating-heart-pulse"
+    refute_match(/animation\s*:/, stylesheet)
   end
 
   def test_playlist_tunnel_has_its_own_decorative_wave_mark
