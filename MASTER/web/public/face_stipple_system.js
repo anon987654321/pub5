@@ -223,7 +223,10 @@
       };
     }
     const cycle = system.expressionCycle;
-    if (reducedMotion) {
+    const subjectForm = String(document.documentElement?.dataset?.faceSubject || "face").toLowerCase();
+    const subjectSuppressed = subjectForm !== "face";
+    const rotationPaused = reducedMotion || subjectSuppressed;
+    if (rotationPaused) {
       if (cycle.pausedAt == null) cycle.pausedAt = time;
     } else if (cycle.pausedAt != null) {
       const pausedFor = Math.max(0, time - cycle.pausedAt);
@@ -231,7 +234,7 @@
       cycle.nextAt += pausedFor;
       cycle.pausedAt = null;
     }
-    if (!reducedMotion && time >= cycle.nextAt) {
+    if (!rotationPaused && time >= cycle.nextAt) {
       cycle.from = cycle.to;
       cycle.to = nextExpression(cycle.from, config.order.length);
       cycle.startedAt = time;
@@ -243,7 +246,7 @@
     uniforms.uExpressionFrom.value = cycle.from;
     uniforms.uExpressionTo.value = cycle.to;
     uniforms.uExpressionBlend.value = progress * progress * (3 - 2 * progress);
-    uniforms.uExpressionStrength.value = config.strength;
+    uniforms.uExpressionStrength.value = subjectSuppressed ? 0 : config.strength;
     system.expressionName = config.order[cycle.to];
     syncPrimaryExpressionUniforms(uniforms);
   }
@@ -878,6 +881,8 @@
     const primaryValues = Object.fromEntries(expressionNames.map((name) => [name, uniformValue(primaryUniforms, name)]));
     const primaryAvailable = expressionNames.every((name) => primaryValues[name] !== null);
     const expressionConfig = expressionConfiguration();
+    const subjectForm = String(document.documentElement?.dataset?.faceSubject || "face").toLowerCase();
+    const subjectSuppressed = subjectForm !== "face";
     const expressionIndexName = (raw) => {
       if (raw == null) return null;
       const index = Number(raw);
@@ -962,6 +967,8 @@
         to: expressionTo,
         blend: expressionBlend,
         transitioning: expressionBlend > 0 && expressionBlend < 1,
+        subjectForm,
+        subjectSuppressed,
         order: expressionConfig.order,
         minIntervalMs: expressionConfig.minInterval,
         maxIntervalMs: expressionConfig.maxInterval,
