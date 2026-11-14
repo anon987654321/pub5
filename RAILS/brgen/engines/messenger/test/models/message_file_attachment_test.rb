@@ -8,8 +8,8 @@ require "minitest/autorun"
 # source because the suite has no Rails boot for these controllers.
 class MessageFileAttachmentTest < Minitest::Test
   MODEL = File.expand_path("../../app/models/message.rb", __dir__)
-  THREAD_PARTIAL = File.expand_path("../../../../brgen/app/views/messages/_message.html.erb", __dir__)
-  COMPOSER = File.expand_path("../../../../brgen/app/views/conversations/_composer.html.erb", __dir__)
+  THREAD_PARTIAL = File.expand_path("../../../../../brgen/app/views/messages/_message.html.erb", __dir__)
+  COMPOSER = File.expand_path("../../../../../brgen/app/views/conversations/_composer.html.erb", __dir__)
 
   def test_a_pdf_is_an_allowed_attachment_type
     assert_includes File.read(MODEL, encoding: "UTF-8"), "application/pdf"
