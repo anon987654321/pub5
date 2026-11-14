@@ -565,6 +565,8 @@ test("stipple module boots and builds from the canonical idle profile", () => {
   assert.equal(window.MASTER_FACE_STIPPLE.profiles.idle.density, 0.44);
   assert.equal(window.MASTER_FACE_STIPPLE.snapshot().pointCeiling, 240);
   assert.equal(window.MASTER_FACE_STIPPLE.snapshot().context, "ready");
+  assert.equal(window.MASTER_FACE_STIPPLE.snapshot().expression.currentName, null);
+  assert.equal(window.MASTER_FACE_STIPPLE.snapshot().expression.primaryAvailable, true);
   const initialDiagnostics = window.MASTER_FACE_STIPPLE.snapshot();
   assert.equal(initialDiagnostics.semantic.force, "residual");
   assert.equal(initialDiagnostics.semantic.stillMode, true);

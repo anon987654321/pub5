@@ -879,6 +879,7 @@
     const primaryAvailable = expressionNames.every((name) => primaryValues[name] !== null);
     const expressionConfig = expressionConfiguration();
     const expressionIndexName = (raw) => {
+      if (raw == null) return null;
       const index = Number(raw);
       return Number.isInteger(index) ? expressionConfig.order[index] || null : null;
     };
