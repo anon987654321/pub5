@@ -171,11 +171,11 @@ module Postpro
         findings.each do |finding|
           tag = { unfixable: "CANNOT FIX", partly: "partly" }.fetch(finding.severity, "fixable")
           lines << "rescue: [#{tag}] #{finding.message}"
-          lines << "rescue:            #{finding.remedy}"
+          lines << "rescue: remedy: #{finding.remedy}"
         end
       end
       lines << "rescue: and beyond any grade -"
-      OUT_OF_REACH.each { |item| lines << "rescue:   #{item}" }
+      OUT_OF_REACH.each { |item| lines << "rescue: #{item}" }
       lines
     end
   end

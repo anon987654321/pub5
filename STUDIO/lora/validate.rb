@@ -15,6 +15,7 @@ module Studio
       ENV_KEYS = %w[SUBJECT MODEL TRIGGER DESCRIPTOR REPLICATE_MODEL].freeze
       IMAGE_EXTENSIONS = %w[.jpg .jpeg .png .webp].freeze
       MINIMUM_IMAGES = 10
+      MAX_CAPTION_BYTES = 16_384
       MAX_CONFIG_BYTES = 1_048_576
 
       def initialize(root: ROOT)
@@ -286,17 +287,45 @@ module Studio
           IMAGE_EXTENSIONS.include?(File.extname(name).downcase) &&
             File.file?(File.join(real, name)) && !File.symlink?(File.join(real, name))
         end
-        missing_captions = images.reject do |name|
+        caption_issues = images.filter_map do |name|
           caption = File.join(real, "#{File.basename(name, File.extname(name))}.txt")
-          File.file?(caption) && !File.symlink?(caption) && File.readable?(caption)
+          problem = caption_problem(caption, env["TRIGGER"])
+          [name, problem] if problem
         end
+        missing_captions = caption_issues.select { |_, problem| problem == :missing }
+        oversized_captions = caption_issues.select { |_, problem| problem == :too_large }
+        unreadable_captions = caption_issues.select { |_, problem| problem == :unreadable || problem == :invalid_encoding }
+        triggerless_captions = caption_issues.select { |_, problem| problem == :trigger_missing }
+
         if images.length < MINIMUM_IMAGES
           block(report, "dataset_image_count", "Dataset has #{images.length} readable images; at least #{MINIMUM_IMAGES} are required")
         elsif missing_captions.any?
-          block(report, "dataset_captions", "Missing readable .txt captions for: #{missing_captions.first(5).join(', ')}")
+          block(report, "dataset_captions", "Missing same-basename .txt captions for: #{missing_captions.first(5).map(&:first).join(', ')}")
+        elsif unreadable_captions.any?
+          block(report, "dataset_captions_unreadable", "Unreadable or invalid UTF-8 captions for: #{unreadable_captions.first(5).map(&:first).join(', ')}")
+        elsif oversized_captions.any?
+          block(report, "dataset_caption_size", "Captions exceed #{MAX_CAPTION_BYTES} bytes for: #{oversized_captions.first(5).map(&:first).join(', ')}")
+        elsif triggerless_captions.any?
+          block(report, "dataset_caption_trigger", "Captions must contain the exact subject trigger #{env["TRIGGER"].inspect}: #{triggerless_captions.first(5).map(&:first).join(', ')}")
         else
-          pass_check(report, "dataset_integrity", "#{images.length} images have readable same-basename captions")
+          pass_check(report, "dataset_integrity", "#{images.length} images have readable captions containing the subject trigger")
         end
+      end
+
+      def caption_problem(path, trigger)
+        return :missing unless File.file?(path) && !File.symlink?(path) && File.readable?(path)
+        return :too_large if File.size(path) > MAX_CAPTION_BYTES
+
+        caption = File.read(path, encoding: "UTF-8")
+        return :invalid_encoding unless caption.valid_encoding?
+
+        token = trigger.to_s
+        return :trigger_missing unless token.match?(/\A[A-Za-z][A-Za-z0-9_-]{0,63}\z/)
+
+        boundary = /(?:\A|[^A-Za-z0-9_-])#{Regexp.escape(token)}(?:\z|[^A-Za-z0-9_-])/i
+        caption.match?(boundary) ? nil : :trigger_missing
+      rescue SystemCallError, IOError, EncodingError
+        :unreadable
       end
 
       def positive_integer?(value)

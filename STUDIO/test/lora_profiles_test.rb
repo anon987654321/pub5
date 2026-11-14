@@ -23,10 +23,7 @@ class TestStudioLoraValidator < Minitest::Test
       write_descriptor(directory)
       dataset = File.join(directory, "dataset")
       FileUtils.mkdir_p(dataset)
-      10.times do |index|
-        File.write(File.join(dataset, "photo-#{index}.jpg"), "image")
-        File.write(File.join(dataset, "photo-#{index}.txt"), "SAMPLE portrait #{index}")
-      end
+      write_dataset(dataset, 10)
       write_training_plan(directory, dataset: "dataset")
       write_valid_consent(directory)
 
@@ -36,6 +33,37 @@ class TestStudioLoraValidator < Minitest::Test
       assert_equal true, report.fetch("training_ready")
       assert_equal "READY_FOR_OPERATOR_REVIEW", report.fetch("training_readiness")
       assert report.fetch("checks").any? { |item| item["id"] == "dataset_integrity" }
+    end
+  end
+
+  def test_dataset_captions_must_contain_the_exact_subject_trigger
+    with_subject do |root, directory|
+      write_descriptor(directory)
+      dataset = File.join(directory, "dataset")
+      write_dataset(dataset, 10, first_caption: "NOTSAMPLE portrait")
+      write_training_plan(directory, dataset: "dataset")
+      write_valid_consent(directory)
+
+      report = Studio::Lora::Validator.new(root:).validate_subject("sample")
+
+      assert_equal "PASS", report.fetch("state")
+      refute report.fetch("training_ready")
+      assert_includes report.fetch("blockers").map { |item| item["id"] }, "dataset_caption_trigger"
+    end
+  end
+
+  def test_oversized_caption_is_blocked_before_its_contents_are_read
+    with_subject do |root, directory|
+      write_descriptor(directory)
+      dataset = File.join(directory, "dataset")
+      write_dataset(dataset, 10, first_caption: "SAMPLE " + ("portrait " * 2_000))
+      write_training_plan(directory, dataset: "dataset")
+      write_valid_consent(directory)
+
+      report = Studio::Lora::Validator.new(root:).validate_subject("sample")
+
+      refute report.fetch("training_ready")
+      assert_includes report.fetch("blockers").map { |item| item["id"] }, "dataset_caption_size"
     end
   end
 
@@ -167,6 +195,15 @@ class TestStudioLoraValidator < Minitest::Test
     path = File.join(directory, "consent.yml")
     File.write(path, YAML.dump(record), mode: "w", perm: 0o600)
     File.chmod(0o600, path)
+  end
+
+  def write_dataset(directory, count, first_caption: nil)
+    FileUtils.mkdir_p(directory)
+    count.times do |index|
+      File.write(File.join(directory, "photo-#{index}.jpg"), "image")
+      caption = index.zero? && first_caption ? first_caption : "SAMPLE portrait #{index}"
+      File.write(File.join(directory, "photo-#{index}.txt"), caption)
+    end
   end
 
   def write_descriptor(directory)

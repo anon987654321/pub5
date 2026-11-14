@@ -60,6 +60,24 @@ class TestFixTypographyAudit < Minitest::Test
     end
   end
 
+  def test_rejects_indentation_padding_and_fixed_width_terminal_columns
+    Dir.mktmpdir do |dir|
+      write_cli_file(dir, "lib/cli/fixture.rb", <<~RUBY)
+        module Fixture
+          Master::Trace::Dmesg.status("mov0", "init     /Users/Mac/Downloads")
+          Master::Trace::Dmesg.status("disk0", "check    8.4GB available")
+          puts format("%-8s %-9s %s", "disk0", "check", "8.4GB")
+          Master::Trace::Dmesg.status("mov0", "initializing /Users/Mac/Downloads")
+        end
+      RUBY
+
+      report = Audit.new(root: dir).call
+
+      assert_match(/terminal_alignment/, report)
+      refute_match(/initializing \/Users/, report)
+    end
+  end
+
   def test_terminal_output_typography_is_a_canonical_executable_law
     require File.expand_path("../law/definition", __dir__) unless defined?(::Law::Definition)
     require File.expand_path("../law/typesetting", __dir__) unless defined?(::Law::Typesetting)
@@ -85,6 +103,22 @@ class TestFixTypographyAudit < Minitest::Test
       file: "MASTER/lib/cli/fixture.rb",
     )
     refute_empty punctuation, "terminal punctuation must be ASCII whether the scanner path is rooted at MASTER or the repository"
+    alignment = law.scan(
+      'Master::Trace::Dmesg.status("mov0", "init     /Users/Mac/Downloads")',
+      file: "MASTER/lib/cli/fixture.rb",
+    )
+    refute_empty alignment, "padded log fields must be rejected by the executable Law"
+    ordinary = law.scan(
+      'Master::Trace::Dmesg.status("mov0", "initializing /Users/Mac/Downloads")',
+      file: "MASTER/lib/cli/fixture.rb",
+    )
+    assert_empty ordinary, "ordinary single-space status text remains clean"
+    assert ::Law::Typesetting::TERMINAL_PATH.match?("STUDIO/postpro/rescue.rb")
+    studio_alignment = law.scan(
+      'PostproBootstrap.dmesg("init     /Users/Mac/Downloads")',
+      file: "STUDIO/postpro/bootstrap.rb",
+    )
+    refute_empty studio_alignment, "the same log rule covers STUDIO command output"
     assert_includes law.fix, "lowercase subsystem0:"
     assert_includes law.fix, "Never indent or pad fields to align records"
     assert_includes law.fix, "never use fixed-width or tabular columns"
