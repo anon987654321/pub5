@@ -855,9 +855,12 @@
     return wasInstalled;
   }
 
-  function snapshot() {
+  function snapshot(targetSystem = active) {
     const state = currentFaceState();
-    const uniforms = active?.material?.uniforms || {};
+    const system = targetSystem && typeof targetSystem === "object" ? targetSystem : null;
+    const uniforms = system?.material?.uniforms || {};
+    const primaryUniforms = window.MASTER_FACE?.faceMat?.uniforms || null;
+    const expressionNames = ["uExpressionFrom", "uExpressionTo", "uExpressionBlend", "uExpressionStrength"];
     const intervals = frameIntervals.filter((value) => Number.isFinite(value) && value > 0).sort((a, b) => a - b);
     const percentile = (fraction) => {
       if (!intervals.length) return null;
@@ -867,10 +870,17 @@
     const meanInterval = intervals.length
       ? Number((intervals.reduce((sum, value) => sum + value, 0) / intervals.length).toFixed(2))
       : null;
-    const value = (name) => {
-      const raw = uniforms[name]?.value;
+    const uniformValue = (table, name) => {
+      const raw = table?.[name]?.value;
       return Number.isFinite(Number(raw)) ? Number(raw) : null;
     };
+    const value = (name) => uniformValue(uniforms, name);
+    const primaryValues = Object.fromEntries(expressionNames.map((name) => [name, uniformValue(primaryUniforms, name)]));
+    const primaryAvailable = expressionNames.every((name) => primaryValues[name] !== null);
+    const primarySynchronized = primaryAvailable && expressionNames.every((name) => {
+      const current = value(name);
+      return current !== null && Math.abs(current - primaryValues[name]) <= 0.000001;
+    });
     const mode = String(state.mode || state.mood || "idle").toLowerCase();
     const faceContract = window.MASTER_FACE_CONTRACT || {};
     const force = faceContract.stipple_force?.[mode] || faceContract.stipple_force?.idle || "none";
@@ -881,7 +891,7 @@
     const residualStrength = Math.max(0, Number(residual.strength) || 0);
     const residualRetained = force === "residual" && residualStrength > 0;
     const residualActive = residualRetained && !motionSuppressed;
-    const carrierCount = Math.max(0, Math.floor(Number(active?.count) || 0));
+    const carrierCount = Math.max(0, Math.floor(Number(system?.count) || 0));
     let residualCarrierCount = 0;
     if (residualRetained) {
       for (let index = 0; index < carrierCount; index += 1) {
@@ -900,7 +910,7 @@
       swarmMode: canonicalSwarmMode(state),
       installing,
       installed: Boolean(wrappedRenderer && renderWrapper && wrappedRenderer.render === renderWrapper),
-      visible: Boolean(active?.points?.visible && !document.hidden && contextState !== "lost"),
+      visible: Boolean(system?.points?.visible && !document.hidden && contextState !== "lost"),
       hidden: Boolean(document.hidden),
       context: contextState,
       reducedMotion: reducedMotionEnabled(state),
@@ -933,10 +943,14 @@
           ? Number((1000 / lastRenderIntervalMs).toFixed(1)) : null
       },
       expression: {
-        name: active?.expressionName || null,
+        name: system?.expressionName || null,
         from: value("uExpressionFrom"),
         to: value("uExpressionTo"),
-        blend: value("uExpressionBlend")
+        blend: value("uExpressionBlend"),
+        strength: value("uExpressionStrength"),
+        primaryAvailable,
+        primarySynchronized,
+        primary: primaryValues
       },
       uniforms: {
         density: value("uDensity"), ripple: value("uRipple"), turbulence: value("uTurbulence"),

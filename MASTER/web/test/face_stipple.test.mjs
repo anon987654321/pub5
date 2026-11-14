@@ -635,6 +635,10 @@ test("stipple module boots and builds from the canonical idle profile", () => {
   assert.ok(stipple.material.uniforms.uExpressionBlend.value > frozenExpressionBlend);
   assert.ok(stipple.material.uniforms.uExpressionBlend.value < 1);
   assert.equal(primaryExpressionUniforms.uExpressionBlend.value, stipple.material.uniforms.uExpressionBlend.value);
+  const expressionDiagnostics = api.snapshot(stipple).expression;
+  assert.equal(expressionDiagnostics.primaryAvailable, true);
+  assert.equal(expressionDiagnostics.primarySynchronized, true);
+  assert.equal(expressionDiagnostics.primary.uExpressionStrength, expressionDiagnostics.strength);
   assert.equal(stipple.material.uniforms.uDepthFromRank.value, 1);
   assert.equal(stipple.material.uniforms.uDepthSteps.value, 6);
   assert.equal(stipple.material.uniforms.uDensity.value, 0.44);
