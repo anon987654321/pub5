@@ -27,7 +27,7 @@ class LifecycleToolsSpec < Minitest::Test
 
   def test_media_tool_compatibility_links_point_at_studio
     # Each compatibility link names its canonical STUDIO owner. LoRA is
-    # routed through STUDIO/photograph.rb; per-subject profiles and data live
+    # routed through STUDIO/lora/photograph.rb; per-subject profiles and data live
     # below STUDIO/lora and need no second MASTER/tools implementation.
     homes = { "dilla" => ["dilla", "dilla.rb"], "replicate" => ["replicate", "client.rb"] }
     homes.each do |tool, (home, entry_name)|

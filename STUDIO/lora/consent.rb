@@ -115,9 +115,11 @@ module Studio
 
         required = required_sources || required_source_sets(subject:, subject_directory: directory)
         Array(required).each do |source|
-          errors << "source-rights evidence is missing for #{source}" unless evidence.key?(source.to_s)
-        end
-        evidence.each do |source, entry|
+          entry = evidence[source.to_s]
+          unless entry
+            errors << "source-rights evidence is missing for #{source}"
+            next
+          end
           errors.concat(validate_evidence(source.to_s, entry, directory:, required_coverage: source_scopes))
         end
 
