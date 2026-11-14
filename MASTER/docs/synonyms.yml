@@ -14,8 +14,21 @@ terms:
   law:
     preferred: Law
     meaning: A normative requirement whose authority comes from the constitutional Law system.
-    related_terms: [rule, standard, convention, guideline, design principle, preference, heuristic]
-    caution: Related terms are context-sensitive; a suggestion or preference does not become binding merely by being called a Law.
+    synonyms: [rule, principle, convention, standard, guideline, heuristic, design principle, engineering principle, best practice, precept, tenet, canon, norm, doctrine, normative pattern]
+    related_terms: [policy, constraint, invariant, criterion, practice, philosophy, pattern, anti-pattern, smell, preference, recommendation]
+    caution: Synonyms normalize to Law only when they state a requirement. A title, suggestion, preference, reference system or descriptive pattern does not become binding merely by being called a Law; normative requirements have one identity in laws.yml.
+  philosophy:
+    preferred: philosophy
+    meaning: An umbrella worldview or body of reasoning that may contain several normative requirements.
+    caution: Preserve its historical and explanatory context; extract each binding requirement into laws.yml and link the philosophy as lineage rather than maintaining a second law list.
+  pattern:
+    preferred: pattern
+    meaning: A recurring observed structure or an implementation/inference pattern.
+    caution: A pattern is not automatically normative. Where it states a requirement, that requirement belongs to one Law ID; keep non-normative runtime recognition data in its actual pattern registry.
+  smell:
+    preferred: smell
+    meaning: A diagnostic signal that may indicate a design or code problem.
+    caution: A smell is evidence to investigate, not a complete requirement or verdict. Link it to the Law IDs it may violate and preserve false-positive context.
   check:
     preferred: check
     meaning: An instrument that inspects source or runtime state and reports evidence.

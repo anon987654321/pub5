@@ -35,8 +35,14 @@ module Master
       "style guide" => :synonym,
       "engineering principle" => :synonym,
       "engineering rule" => :synonym,
+      "engineering standard" => :synonym,
+      "coding standard" => :synonym,
+      "design standard" => :synonym,
+      "coding convention" => :synonym,
+      "architectural principle" => :synonym,
       "best practice" => :synonym,
       "best practices" => :synonym,
+      "normative pattern" => :synonym,
       "precept" => :synonym,
       "tenet" => :synonym,
       "canon" => :synonym,
@@ -47,6 +53,20 @@ module Master
       "invariant" => :related,
       "criterion" => :related,
       "practice" => :related,
+      "philosophy" => :related,
+      "philosophies" => :related,
+      "pattern" => :related,
+      "patterns" => :related,
+      "design pattern" => :related,
+      "anti-pattern" => :related,
+      "anti-patterns" => :related,
+      "smell" => :related,
+      "smells" => :related,
+      "code smell" => :related,
+      "code smells" => :related,
+      "preference" => :related,
+      "recommendation" => :related,
+      "recommendations" => :related,
     }.freeze
 
     NORMALIZE_KEY = lambda do |term|
@@ -84,9 +104,12 @@ module Master
 
     def prompt
       synonymous = aliases.sort.join(", ")
-      "#{CANONICAL} is MASTER's canonical term for normative guidance; " \
-        "synonyms include #{synonymous}. Policy, constraint, invariant, criterion " \
-        "and practice are related concepts and may need their native technical meaning."
+      "#{CANONICAL} is MASTER's canonical term for normative requirements; " \
+        "synonyms include #{synonymous}. A synonym applies only when the wording " \
+        "states a requirement. Policy, constraint, invariant, criterion, practice, " \
+        "philosophy, pattern, anti-pattern and smell are related concepts: they may " \
+        "describe a framework, context or observation rather than a requirement. " \
+        "Detectors and profiles reference Law IDs; they do not create parallel Laws."
     end
   end
 end

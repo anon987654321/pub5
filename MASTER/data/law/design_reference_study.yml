@@ -81,6 +81,48 @@ bol:
     - treating promotion as more important than product relevance
     - adding filters without category-specific evidence
 
+figma:
+  product_form: variable_driven_design_library
+  sources:
+    variables_collections_modes: https://help.figma.com/hc/en-us/articles/14506821864087-Overview-of-variables-collections-and-modes
+    variable_modes: https://help.figma.com/hc/en-us/articles/15343816063383-Modes-for-variables
+    descriptions: https://help.figma.com/hc/en-us/articles/7938814091287-Add-descriptions-to-styles-components-and-variables
+    code_connect: https://help.figma.com/hc/en-us/articles/23920389749655-Code-Connect
+  useful_patterns:
+    - typed_variables_for_reusable_values
+    - collections_for_related_variables
+    - semantic_modes_for_real_design_contexts
+    - aliasing_for_token_dependency
+    - component_properties_and_variants
+    - variable_and_component_descriptions
+    - code_connect_to_real_implementation_paths
+  apply_when:
+    - a published design library is being authored or maintained
+    - designers and implementation agents need a shared component contract
+  avoid:
+    - treating the pub5 three-tier collection proposal as a Figma-mandated standard
+    - creating a second token authority beside MASTER/data/tokens.yml
+    - adding modes or component tokens without a real context or use
+    - assuming Code Connect is required or that a mapping proves runtime behavior
+
+stripe_semantic_mapping:
+  authority: "Reference mapping only; local product identity and MASTER Laws win."
+  roles:
+    canvas: "color/surface/default"
+    cool_surface: "color/surface/subtle"
+    deep_ink: ["color/text/primary", "color/surface/inverse"]
+    accent: ["color/action/primary", "color/text/brand"]
+    muted_ink: ["color/text/secondary", "color/text/muted"]
+    separators: ["color/border/default", "color/border/subtle"]
+    spacing: ["space/stack/*", "space/inline/*", "space/inset/*", "space/gap/*"]
+    radii: ["radius/control", "radius/container"]
+  reject:
+    - "Importing Stripe's exact palette, brand-purple, wordmark or proprietary artwork"
+    - "Copying Söhne or another reference typeface as a pub5 requirement"
+    - "Transferring gradient meshes, blue-tinted shadows or ornamental elevation"
+    - "Replacing Brgen, Amber or bsdports' existing dialects with one Stripe-like theme"
+  implementation: "Resolve each semantic role against MASTER/data/tokens.yml and the consuming app's declared dialect; no raw value is copied merely because a reference uses it."
+
 shared_principles:
   - content_or_object_before_chrome
   - one_primary_action_per_surface

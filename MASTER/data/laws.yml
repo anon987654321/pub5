@@ -276,6 +276,20 @@ SINGULARITY_LAW_POLICY_HAS_ONE_OWNER:
   resolution: never
 
 
+SINGULARITY_NORMATIVE_GUIDANCE_HAS_ONE_LAW_IDENTITY:
+  parent: SINGULARITY
+  statement: >
+    Every normative requirement has one canonical Law identity and statement in
+    laws.yml, regardless of whether its source calls it a rule, principle,
+    convention, standard, guideline, heuristic, doctrine, philosophy, best
+    practice or normative pattern. A named pattern, smell, anti-pattern, example,
+    detector, audit profile or acceptance inventory is not a second Law
+    registry: it remains an instrument or evidence and references the Law IDs
+    whose requirements it measures. If it expresses a requirement, that
+    requirement belongs here once; descriptive signals keep their own data owner.
+  severity: error
+  resolution: never
+
 SINGULARITY_magic_color:
   parent: SINGULARITY
   statement: "A raw colour literal outside the token source."
@@ -767,6 +781,214 @@ BAYMARD_USER_AGENCY_OVER_CONVERSION:
   severity: error
   resolution: review
   source: https://baymard.com/research-articles/current-state-of-checkout-ux
+
+# Research-informed commerce requirements. The task profile measures journeys;
+# these rows own the normative requirements and remain subordinate to the local
+# product, its actual capabilities and observed user needs.
+BAYMARD_GUEST_CHECKOUT_IS_PRIMARY:
+  parent: BAYMARD_USER_AGENCY_OVER_CONVERSION
+  statement: >
+    Where guest purchase is supported, make guest checkout the clear primary
+    path. Sign-in and account creation may remain available, but must not obscure,
+    delay or coerce the guest path.
+  severity: error
+  resolution: review
+  source: https://baymard.com/research-articles/ecommerce-checkout-usability-report-and-benchmark
+
+BAYMARD_CHECKOUT_FIELDS_EARN_THEIR_PLACE:
+  parent: BAYMARD_USER_AGENCY_OVER_CONVERSION
+  statement: >
+    Ask only for information needed to complete the actual legal, fulfilment,
+    payment or safety task. State why sensitive or unexpected information is
+    needed; mark required and optional fields; progressively disclose optional
+    address, company and tax details; preserve browser autofill and sensible
+    autocomplete. Do not split one piece of information without a real regional
+    or provider requirement. Field count is measured evidence, not a universal
+    numeric ceiling.
+  severity: error
+  resolution: review
+  source: https://baymard.com/research-articles/ecommerce-checkout-usability-report-and-benchmark
+
+BAYMARD_CHECKOUT_ORIENTATION_AND_SUMMARY:
+  parent: CURRENT_LOCATION_MARKED
+  statement: >
+    A checkout makes the current step, remaining work and next action explicit.
+    The order summary and current total remain easy to inspect; returning to edit
+    an earlier choice preserves entered data and does not silently restart the
+    task. Mobile may collapse the summary only when it remains immediately
+    discoverable and operable.
+  severity: error
+  resolution: review
+  source: https://baymard.com/research-articles/ecommerce-checkout-usability-report-and-benchmark
+
+BAYMARD_FULFILMENT_CHOICES_ARE_TRANSPARENT:
+  parent: BAYMARD_CHECKOUT_COST_TRANSPARENCY
+  statement: >
+    Show every applicable fulfilment method in a comparable form, including
+    delivery or pickup, known cost, date or range, availability and genuine
+    cut-off conditions. Use delivery-date language when a date is known. Never
+    invent availability, countdowns, costs or delivery promises.
+  severity: error
+  resolution: review
+  source: https://baymard.com/research-articles/ecommerce-checkout-usability-report-and-benchmark
+
+BAYMARD_PAYMENT_OPTIONS_ARE_TRUTHFUL:
+  parent: BAYMARD_USER_AGENCY_OVER_CONVERSION
+  statement: >
+    Show only payment methods the service actually supports in the current
+    context. Explain material conditions before commitment, use appropriate
+    field formats and preserve recovery when payment details fail. Trust,
+    security and express-payment claims must describe verified capabilities,
+    not decorative reassurance or unavailable methods.
+  severity: error
+  resolution: review
+  source: https://baymard.com/research-articles/ecommerce-checkout-usability-report-and-benchmark
+
+BAYMARD_ADAPTIVE_VALIDATION_MESSAGES:
+  parent: BAYMARD_INLINE_VALIDATION_RECOVERY
+  statement: >
+    A field error names the specific failed condition and the action that will
+    resolve it, rather than asking the user to diagnose a generic invalid value.
+    Distinguish missing, incomplete, malformed, out-of-range and contextually
+    rejected values where those states differ. After a reasonable entry attempt,
+    show feedback close to the field; once shown, update or clear it as the user
+    corrects the value. For multiple errors, provide an accessible summary linked
+    to the affected fields as well as inline guidance. Use neutral, non-blaming
+    language and never rely on colour alone.
+  severity: error
+  resolution: review
+  source: https://baymard.com/research-articles/inline-form-validation
+
+BAYMARD_MOBILE_CHECKOUT_KEYBOARD_RESILIENCE:
+  parent: REACH
+  statement: >
+    A mobile checkout remains oriented and completable at narrow viewports with
+    the software keyboard open. Use suitable input types, input modes,
+    autocomplete tokens and correction settings; keep labels and purpose
+    discoverable; use a single primary content column; and keep the guest path,
+    order summary and primary action reachable without keyboard or sticky-chrome
+    obstruction. Prove this with a real keyboard-open browser/device check, not
+    source CSS alone.
+  severity: error
+  resolution: review
+  source: https://baymard.com/research-articles/mobile-checkout
+
+BAYMARD_ORDER_CONFIRMATION_IS_ACTIONABLE:
+  parent: BAYMARD_USER_AGENCY_OVER_CONVERSION
+  statement: >
+    After an order attempt, report its actual state and provide the information
+    needed for the next step: order reference where one exists, items and total,
+    fulfilment choice and known timing, and a clear support or return path.
+    Distinguish accepted, pending and completed payment or fulfilment. Offer
+    account creation after the order only as an optional, clearly explained
+    choice; never gate the confirmation or order status behind registration.
+  severity: error
+  resolution: review
+  source: https://baymard.com/research-articles/ecommerce-checkout-usability-report-and-benchmark
+
+# Figma is a design-library projection of the canonical token and Law systems.
+# These requirements govern a pub5 library if one is created; they are not claims
+# that Figma mandates this particular three-tier architecture.
+DESIGN_TOKEN_ARCHITECTURE_IS_SINGULAR:
+  parent: SINGULARITY
+  statement: >
+    MASTER/data/tokens.yml remains the sole design-token authoring authority.
+    A Figma library mirrors it; it does not create a competing palette or token
+    source. Organize variables into 01-Primitives for raw values, 02-Semantic
+    for role and intent, optional 03-Component for justified component aliases,
+    04-Motion for used timing and easing, and optional 05-Elevation only where
+    the product's surface Laws permit real elevation. If both themes are
+    supported, Light and Dark belong on 02-Semantic, not on raw primitives.
+    Use lower-case slash-hierarchies for semantic names such as surface/default,
+    text/primary, action/primary, border/default, status/success, gap/md,
+    stack/md, inset/md and radius/control. Do not create empty collections,
+    parallel type/spacing scales or duplicate existing token families.
+  severity: error
+  resolution: review
+
+DESIGN_COMPONENTS_CONSUME_SEMANTIC_TOKENS:
+  parent: DESIGN_TOKEN_ARCHITECTURE_IS_SINGULAR
+  statement: >
+    Reusable components bind to semantic roles, not raw primitive values.
+    Component-specific variables exist only for a demonstrated component
+    contract and alias the corresponding semantic variable, for example
+    button/primary/background -> action/primary and button/primary/text ->
+    action/on-primary. Primitive values remain internal foundations, not the
+    default component API; components do not carry loose duplicate hex, spacing
+    or radius literals.
+  severity: error
+  resolution: review
+
+DESIGN_MODES_REPRESENT_REAL_SEMANTIC_CONTEXTS:
+  parent: DESIGN_TOKEN_ARCHITECTURE_IS_SINGULAR
+  statement: >
+    Light and Dark, and any additional brand, density, language or platform
+    modes, represent real semantic contexts on the semantic collection.
+    Primitive collections have no modes by default. Do not add modes merely to
+    flatten distinct product identities: Brgen, Amber, bsdports and other
+    products retain their operator-owned visual dialects.
+  severity: warning
+  resolution: review
+
+DESIGN_COMPONENTS_USE_LAYOUT_AND_DECLARED_STATES:
+  parent: PROXIMITY
+  statement: >
+    Reusable interface components use Auto Layout and variants or component
+    properties for genuine differences in state and content. Each applicable
+    interactive component documents and represents default, hover, focus,
+    pressed, disabled and loading states; omit states that the interaction
+    cannot have. A freeform illustration may remain freeform when layout
+    constraints do not apply.
+  severity: warning
+  resolution: review
+
+DESIGN_VARIABLES_AND_COMPONENTS_ARE_DESCRIBED:
+  parent: TRUTHFUL_STATUS
+  statement: >
+    Every published design variable, reusable component and meaningful
+    component property has a description of its intent, valid use and
+    limitations. A name alone is not a sufficient usage contract for a human
+    or an agent.
+  severity: warning
+  resolution: review
+
+DESIGN_LIBRARY_HAS_STABLE_INFORMATION_ARCHITECTURE:
+  parent: PROXIMITY
+  statement: >
+    A published design library is navigable in a stable sequence: Cover and
+    Principles; Foundations - Primitives; Foundations - Semantic; Components;
+    Patterns; Icons; Motion; Guidelines and Governance; Changelog. Component
+    families are grouped by task, and each component records anatomy, variants,
+    applicable states, usage and accessibility. Use slash grouping for
+    semantic variable names. Publish only after descriptions, aliases,
+    component states and library content have been checked. Do not create a
+    page or component family without content that earns it.
+  severity: warning
+  resolution: review
+
+DESIGN_CODE_CONNECT_MAPS_REAL_IMPLEMENTATIONS:
+  parent: TRUTHFUL_STATUS
+  statement: >
+    When Figma Code Connect is used, each mapping points to a real published
+    design component and its current implementation path and API. Stale,
+    missing or inferred mappings remain unverified until checked against the
+    repository; Code Connect is optional and never a substitute for source
+    review or rendered proof.
+  severity: warning
+  resolution: review
+  source: https://help.figma.com/hc/en-us/articles/23920389749655-Code-Connect
+
+DESIGN_REFERENCE_MAPPINGS_PRESERVE_PRODUCT_IDENTITY:
+  parent: EXTERNAL_RESEARCH_IS_EVIDENCE_NOT_AUTHORITY
+  statement: >
+    External design systems such as Stripe may inform semantic role mapping,
+    not transfer their brand identity. Map reference concepts to local roles
+    such as surface, text, action, border, status, spacing and radius only when
+    the existing token source supports them. Do not import their exact palette,
+    wordmark, typeface, gradient, shadow treatment or radii into a product
+    without explicit operator ownership and local visual-law review.
+  severity: error
+  resolution: review
 
 # ---
 
