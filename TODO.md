@@ -1,8 +1,9 @@
 # pub5 — remaining work
 
-Audit baseline: 2026-11-11, source tree checked against `main@ff60792298f5d654cc7976fd9dfb3b8d4393d786` (complete tree `823a0dc917d01a4ffbb986de93fa27492e543b0d`).
-Snapshot: 169 unchecked register rows and 1 checked row (grouped rows are not
-atomic task counts). The tracked tree contains no `PLAN.md`; root `TODO.md` is
+Audit baseline: 2026-11-14, source tree checked against `main@bd23114ca49bfc3d05dccf31e232a03d857ea28d`.
+Snapshot: 165 active unchecked register rows and 1 checked row. Grouped rows
+are not atomic task counts; aspirational horizons remain visible but are not
+active checkboxes. The tracked tree contains no `PLAN.md`; root `TODO.md` is
 the sole cross-tree Markdown action register, with detailed state owned by the
 existing structured ledgers. No parallel plan or backlog file is needed.
 The register travels with the migration; source-owned status remains in the
@@ -623,7 +624,7 @@ The complete candidate records and rejected alternatives live in `MASTER/data/id
 
 ### 8.4 MASTER convergence wishlist — 36 unfinished workstreams
 
-`MASTER/convergence.yml` is the non-authoritative assistant wishlist and implementation/evidence map. It currently records 21 landed, 21 partial, 7 evidence-dependent and 8 missing workstreams (36 unresolved; 57 total). These IDs are proof/ownership cross-links to the sections above, not permission to create duplicate implementations. Close each only when its named implementation and proof are real.
+`MASTER/convergence.yml` is the non-authoritative assistant wishlist and implementation/evidence map. It currently records 21 landed, 27 partial, 7 evidence-dependent and 2 missing workstreams (36 unresolved; 57 total). These IDs are proof/ownership cross-links to the sections above, not permission to create duplicate implementations. Close each only when its named implementation and proof are real.
 
 **Evidence-dependent — 7**
 - [ ] `voice_local_first` — local-first speech ladder and real microphone proof.
@@ -657,7 +658,7 @@ The complete candidate records and rejected alternatives live in `MASTER/data/id
 - [ ] `dilla_corpus_measures` — sourced Dilla timing observations recorded without silently tuning generation.
 - [ ] `free_compute_design_of_record` — dated free-compute landscape and verified quota assumptions.
 
-**Missing — 8**
+**Missing — 2**
 - [ ] `brgen_feed_ranking_deterministic` — PARTIAL: source and `RAILS/test/feed_ranking_contract_test.rb` exist; installed-Ruby test and full feed verification remain NOT_RUN.
 - [ ] `amber_similarity_right_sized` — PARTIAL: source and `RAILS/amber/test/services/wears_well_with_test.rb` plus the bare-Ruby contract exist; installed-Ruby tests remain NOT_RUN.
 - [ ] `master_fleet_panel` — PARTIAL 2026-11-11: `FleetPanel`, dashboard wiring and `MASTER/test/test_dashboard_fleet_panel.rb` exist; unit execution and live vm23 health/render proof remain NOT_RUN.
@@ -682,15 +683,15 @@ These items require a real person, host console, device, registrar, provider cre
 
 The broader horizons that need to remain visible are:
 
-- [ ] **Messenger replacement threshold:** E2EE, delivered/read receipts, multi-device sessions and voice/video calls before claiming it can replace the operator circle's current messenger.
-- [ ] **Takeaway consolidation:** decide whether food becomes a Marketplace vertical on the shared commerce rail; no parallel payment stack or migration without an explicit decision and rollback plan.
-- [ ] **Marketplace catalogue scale:** shipping rates and labels, multi-currency, dispute/chargeback handling, catalogue-scale search and independently scalable heavy surfaces; bring the shelf, product page, buy box and checkout to one coherent standard.
-- [ ] **Playlist creator surface:** creator uploads, reposts, waveform comments and discography-like profiles to support the SoundCloud/Whyp positioning; preserve import provenance and rights boundaries.
-- [ ] **Shared commerce completion:** one ledger/campaign/entitlement source, seller credits, payment abstraction (refunds, invoices, VAT, reconciliation) and a revenue dashboard beyond the existing first slices; respect the liquidity-before-ads order.
-- [ ] **Solidus/Dintero evaluation:** the planned Solidus core mount, starter storefront, native marketplace features, Dintero split checkout and Amazon feature-parity map remain staging/evaluation work. Do not replace native Marketplace flows or enable live checkout before provider staging, migrations, cutover and rollback are proved.
-- [ ] **Amber media capabilities:** real garment matting/segmentation and richer try-on capabilities remain separate from the right-sized typed-attribute work; require real assets and a measurable consumer.
-- [ ] **BSDPorts expansion:** FreeBSD/NetBSD parsers, semantic search and knowledge-graph ambitions remain subordinate to the OpenBSD-only production scope and a demonstrated reader need.
-- [ ] **Own-domain horizon:** any planned domain/host work needs an actual zone, registrar decision, ACME configuration and host proof.
+- **Messenger replacement threshold:** E2EE, delivered/read receipts, multi-device sessions and voice/video calls before claiming it can replace the operator circle's current messenger.
+- **Takeaway consolidation:** decide whether food becomes a Marketplace vertical on the shared commerce rail; no parallel payment stack or migration without an explicit decision and rollback plan.
+- **Marketplace catalogue scale:** shipping rates and labels, multi-currency, dispute/chargeback handling, catalogue-scale search and independently scalable heavy surfaces; bring the shelf, product page, buy box and checkout to one coherent standard.
+- **Playlist creator surface:** creator uploads, reposts, waveform comments and discography-like profiles to support the SoundCloud/Whyp positioning; preserve import provenance and rights boundaries.
+- **Shared commerce completion:** one ledger/campaign/entitlement source, seller credits, payment abstraction (refunds, invoices, VAT, reconciliation) and a revenue dashboard beyond the existing first slices; respect the liquidity-before-ads order.
+- **Solidus/Dintero evaluation:** the planned Solidus core mount, starter storefront, native marketplace features, Dintero split checkout and Amazon feature-parity map remain staging/evaluation work. Do not replace native Marketplace flows or enable live checkout before provider staging, migrations, cutover and rollback are proved.
+- **Amber media capabilities:** real garment matting/segmentation and richer try-on capabilities remain separate from the right-sized typed-attribute work; require real assets and a measurable consumer.
+- **BSDPorts expansion:** FreeBSD/NetBSD parsers, semantic search and knowledge-graph ambitions remain subordinate to the OpenBSD-only production scope and a demonstrated reader need.
+- **Own-domain horizon:** any planned domain/host work needs an actual zone, registrar decision, ACME configuration and host proof.
 
 The authoritative feature/status detail is in `RAILS/apps.yml` and `RAILS/apps.horizon.yml`. Their planned rows are intentionally not to be confused with active implementation work.
 
