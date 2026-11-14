@@ -609,6 +609,7 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 - [ ] `bsdports_cli_sponsorship` — open; add optional pay-what-you-want support handoff only after a verified recipient and sponsor/payment URL exist; package search and CLI use remain free and unblocked.
 
 **MASTER and STUDIO**
+- [ ] `studio_perceptual_reference_suite` — open; calibrate Postpro against rights-cleared golden references using a real perceptual colour metric (for example CIEDE2000), explicit highlight/skin bounds and a separately measured specular-uniformity signal. Keep subject photographs and masks outside the public checkout; synthetic smoke fixtures are not calibration evidence, and human full-size review remains required.
 - [ ] `master_fleet_health` — PARTIAL 2026-11-10: `FleetPanel`, dashboard wiring and injected-probe contract landed; unit suite and live vm23 health/render proof remain NOT_RUN.
 - [ ] `master_dead_payload_facts` — PARTIAL 2026-11-10: provider quota, per-model forecasts and cache-measurement state now render; quota/dashboard suites and browser verification remain NOT_RUN.
 - [ ] `master_pair_admin_surface` — open; add an authenticated operator surface for pairing issue/list/destroy only if its permission boundary is proven.
