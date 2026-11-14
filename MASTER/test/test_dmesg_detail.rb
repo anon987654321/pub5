@@ -113,6 +113,18 @@ class TestDmesgDetail < Minitest::Test
     assert body.end_with?("...")
   end
 
+  def test_short_detail_limit_also_bounds_the_truncation_marker
+    enable_detail
+    Dmesg.instance_variable_set(:@cfg, Dmesg.cfg.merge("detail_max_chars" => 2))
+    output = StringIO.new
+
+    Dmesg.detail("read0", "long body", io: output)
+
+    body = output.string.lines.first.delete_prefix("read0: ").chomp
+    assert_equal "..", body
+    assert_equal 2, body.length
+  end
+
   def test_detail_drops_blank_rows_and_prefixes_every_retained_line
     enable_detail
     Dmesg.instance_variable_set(:@cfg, Dmesg.cfg.merge("detail_max_lines" => 8))

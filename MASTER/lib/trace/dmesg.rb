@@ -451,8 +451,9 @@ module Master
         rendered = source_lines.first(maxln).map do |line|
           flat = line
           if flat.length > maxch
-            keep = [maxch - marker.length, 0].max
-            flat = "#{flat[0, keep]}#{marker}"
+            suffix = marker[0, maxch]
+            keep = [maxch - suffix.length, 0].max
+            flat = "#{flat[0, keep]}#{suffix}"
           end
           "#{prefix}#{flat}"
         end
