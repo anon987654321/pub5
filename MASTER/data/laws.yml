@@ -864,8 +864,12 @@ BAYMARD_MOBILE_CHECKOUT_KEYBOARD_RESILIENCE:
   statement: >
     A mobile checkout remains oriented and completable at narrow viewports with
     the software keyboard open. Use suitable input types, input modes,
-    autocomplete tokens and correction settings; keep labels and purpose
-    discoverable; use a single primary content column; and keep the guest path,
+    autocomplete tokens and correction settings. Prefer persistent labels above
+    fields when side-by-side labels reduce usable input width or hide context;
+    keep field help adjacent and never rely on a disappearing inline label or
+    placeholder alone. A side label is acceptable only when it leaves sufficient
+    input width and full field context visible with the keyboard open. Use a
+    single primary content column; keep the guest path,
     order summary and primary action reachable without keyboard or sticky-chrome
     obstruction. Prove this with a real keyboard-open browser/device check, not
     source CSS alone.
