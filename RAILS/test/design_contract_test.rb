@@ -329,8 +329,10 @@ def test_brgen_old_dialect_outranks_the_social_stack
   end
 
   def test_dating_and_welcome_surfaces_keep_both_safe_area_insets
-    dating = File.read(File.join(ROOT, "brgen", "app", "assets", "stylesheets", "_brgen_dating.scss"))
-    splash = dating[/\.dating-splash\s*\{([^}]*)\}/m, 1]
+    stylesheets = File.join(ROOT, "brgen", "app", "assets", "stylesheets")
+    dating = File.read(File.join(stylesheets, "_brgen_dating.scss"))
+    splash_source = File.read(File.join(stylesheets, "_dating_splash.scss"))
+    splash = splash_source[/\.dating-splash\s*\{([^}]*)\}/m, 1]
     discover = dating[/\.dating-discover-panel\s*\{([^}]*)\}/m, 1]
     welcome = File.read(File.join(SHARED, "app", "assets", "stylesheets", "_welcome_onboarding.scss"))
     onboarding = welcome[/\.welcome-onboarding\s*\{([^}]*)\}/m, 1]
