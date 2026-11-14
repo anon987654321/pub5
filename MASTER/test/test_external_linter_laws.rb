@@ -137,88 +137,62 @@ class TestExternalLinterLaws < Minitest::Test
     end
   end
 
-  def test_reek_rejects_a_valid_json_value_that_is_not_a_report_array
-    status = Struct.new(:exitstatus).new(0)
+  # Runs a ReekLaw check under the triple stub every reek test needs: the linter
+  # is "available", the bundle is "bundle", and capture3 answers +report+.
+  def check_reek(report, exitstatus: 0, path: "sample.rb")
+    status = Struct.new(:exitstatus).new(exitstatus)
     rule = Master::Review::Scan::Laws::ReekLaw.new(root: Master::ROOT)
+
     rule.stub(:linter_available?, true) do
       Operator::RubyRunner.stub(:bundle_cmd, "bundle") do
-        Master::Io::Exec.stub(:capture3, ->(*_args, **_options) { ['{"issues":[]}', "", status] }) do
-          findings = rule.check("def sample; end\n", path: "sample.rb")
-
-          assert_equal 1, findings.size
-          assert_match(/invalid JSON report shape/, findings.first.message)
+        Master::Io::Exec.stub(:capture3, ->(*_args, **_options) { [report, "", status] }) do
+          return rule.check("def sample; end\n", path:)
         end
       end
     end
+  end
+
+  def test_reek_rejects_a_valid_json_value_that_is_not_a_report_array
+    findings = check_reek('{"issues":[]}')
+
+    assert_equal 1, findings.size
+    assert_match(/invalid JSON report shape/, findings.first.message)
   end
 
   def test_reek_rejects_array_entries_missing_the_fields_it_consumes
-    status = Struct.new(:exitstatus).new(0)
-    rule = Master::Review::Scan::Laws::ReekLaw.new(root: Master::ROOT)
-    rule.stub(:linter_available?, true) do
-      Operator::RubyRunner.stub(:bundle_cmd, "bundle") do
-        Master::Io::Exec.stub(:capture3, ->(*_args, **_options) { ["[{}]", "", status] }) do
-          findings = rule.check("def sample; end\n", path: "sample.rb")
+    findings = check_reek("[{}]")
 
-          assert_equal 1, findings.size
-          assert_match(/scan error/, findings.first.message)
-          assert_match(/invalid JSON report shape/, findings.first.message)
-        end
-      end
-    end
+    assert_equal 1, findings.size
+    assert_match(/scan error/, findings.first.message)
+    assert_match(/invalid JSON report shape/, findings.first.message)
   end
 
   def test_reek_rejects_non_positive_or_non_integer_line_numbers
-    status = Struct.new(:exitstatus).new(0)
-    rule = Master::Review::Scan::Laws::ReekLaw.new(root: Master::ROOT)
     report = JSON.generate([{ "smell_type" => "Example", "message" => "example", "lines" => [0, "2"] }])
-    rule.stub(:linter_available?, true) do
-      Operator::RubyRunner.stub(:bundle_cmd, "bundle") do
-        Master::Io::Exec.stub(:capture3, ->(*_args, **_options) { [report, "", status] }) do
-          findings = rule.check("def sample; end\n", path: "sample.rb")
 
-          assert_equal 1, findings.size
-          assert_match(/invalid JSON report shape/, findings.first.message)
-        end
-      end
-    end
+    findings = check_reek(report)
+
+    assert_equal 1, findings.size
+    assert_match(/invalid JSON report shape/, findings.first.message)
   end
 
   def test_reek_valid_smell_record_preserves_all_reported_lines
-    status = Struct.new(:exitstatus).new(2)
-    rule = Master::Review::Scan::Laws::ReekLaw.new(root: Master::ROOT)
-    report = JSON.generate([{
-      "smell_type" => "Example",
-      "message" => "example smell",
-      "lines" => [2, 4],
-    }])
-    rule.stub(:linter_available?, true) do
-      Operator::RubyRunner.stub(:bundle_cmd, "bundle") do
-        Master::Io::Exec.stub(:capture3, ->(*_args, **_options) { [report, "", status] }) do
-          findings = rule.check("def sample; end\n", path: "sample.rb")
+    report = JSON.generate([{ "smell_type" => "Example", "message" => "example smell", "lines" => [2, 4] }])
 
-          assert_equal [2, 4], findings.map(&:line)
-          assert findings.all? { |finding| finding.message.include?("Example") && finding.message.include?("example smell") }
-        end
-      end
-    end
+    findings = check_reek(report, exitstatus: 2)
+
+    assert_equal [2, 4], findings.map(&:line)
+    assert findings.all? { |finding| finding.message.include?("Example") && finding.message.include?("example smell") }
   end
 
   def test_reek_record_with_empty_lines_still_surfaces_the_smell
-    status = Struct.new(:exitstatus).new(0)
-    rule = Master::Review::Scan::Laws::ReekLaw.new(root: Master::ROOT)
     report = JSON.generate([{ "smell_type" => "Example", "message" => "example", "lines" => [] }])
-    rule.stub(:linter_available?, true) do
-      Operator::RubyRunner.stub(:bundle_cmd, "bundle") do
-        Master::Io::Exec.stub(:capture3, ->(*_args, **_options) { [report, "", status] }) do
-          findings = rule.check("def sample; end\n", path: "sample.rb")
 
-          assert_equal 1, findings.size
-          assert_equal 1, findings.first.line
-          assert_match(/Example/, findings.first.message)
-        end
-      end
-    end
+    findings = check_reek(report)
+
+    assert_equal 1, findings.size
+    assert_equal 1, findings.first.line
+    assert_match(/Example/, findings.first.message)
   end
 
   def test_valid_offense_report_survives_linter_exit_status_one
@@ -296,5 +270,27 @@ class TestExternalLinterLaws < Minitest::Test
     law.stub(:linter_available?, true) do
       Operator::RubyRunner.stub(:bundle_cmd, "bundle") { Master::Io::Exec.stub(:capture3, capture, &block) }
     end
+  end
+
+  # Reek finds its config by walking up from the working directory, and the scanner
+  # runs every linter from the checkout root, which holds no .reek.yml. Without an
+  # explicit --config, reek fell back to its built-in defaults and reported the
+  # smells MASTER turns off (TooManyStatements, NilCheck) as findings on every
+  # commit. Name MASTER's config, the way RubocopLaw names its own.
+  def test_every_file_is_judged_by_the_masters_reek_config
+    seen = nil
+    capture = lambda do |*args, **_options|
+      seen = args
+      ["[]", "", Struct.new(:exitstatus).new(0)]
+    end
+    rule = Master::Review::Scan::Laws::ReekLaw.new(root: Master::ROOT)
+
+    rule.stub(:linter_available?, true) do
+      Operator::RubyRunner.stub(:bundle_cmd, "bundle") do
+        Master::Io::Exec.stub(:capture3, capture) { rule.check("x = 1\n", path: "../OPENBSD/test/sample.rb") }
+      end
+    end
+
+    assert_equal File.join(Master::ROOT, ".reek.yml"), seen[seen.index("--config") + 1]
   end
 end

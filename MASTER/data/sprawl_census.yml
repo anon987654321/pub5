@@ -74,9 +74,17 @@
 # namespaces are visible growth, not a reason to silently raise the allowance.
 # 2026-11-13 (4): the consent prelude and carousel controller add two source
 # files inside existing support directories; no new directory is introduced.
+# 2026-11-13 (5): re-set to the checkout as it stands. HEAD holds 7,915 tracked
+# paths and the instrument reads 7,912 regular files and 979 directories, so the
+# recorded 7,563/894 priced a tree 349 files and 85 directories smaller than the
+# one carrying it and no path could commit. The growth is upstream content bought
+# before this clone: the OPENBSD mirror reorganization (+189), RAILS/mytoonz
+# (+89) and STUDIO/lora (+50). No path added by this session. lone_dirs stays at
+# 37 by policy below; stutter was a real repair (STUDIO/dilla/dilla.rb regained
+# its execute bit), not a ceiling change.
 lone_dirs: 37
 stutter: 0
 vague_names: 0
-tracked_files: 7563
-tracked_directories: 894
+tracked_files: 7912
+tracked_directories: 979
 corpus: 4127

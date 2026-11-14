@@ -64,9 +64,23 @@ module Operator
     # A step writes to .master/check/<name>.log as it runs, and StepWatch reads it while it does:
     # a buffered step said nothing until it ended, so a suite that died after 3,632 tests and one
     # that was still running looked the same for twenty minutes.
+    #
+    # A step is a fresh child that activates its own bundle. The booted parent's group selection must
+    # not follow it: a deploy bundle sets BUNDLE_WITHOUT=development:test, which hides the :test
+    # group, so every test step dies "minitest is not part of the bundle" before its first line. The
+    # step's own boot picks its groups (a test boot keeps :test). The rest of the bundle context is
+    # left alone on purpose: the child needs the parent's BUNDLE_PATH, GEM_HOME, GEM_PATH and
+    # BUNDLER_VERSION to reach the same bundle without re-installing or re-triggering Bundler's
+    # auto-switch.
+    CHILD_ENV_CLEARED = %w[BUNDLE_ONLY BUNDLE_WITH BUNDLE_WITHOUT].freeze
+
     def capture(env, *cmd)
       log = StepWatch.log_path(cmd.last(2).join(" "))
-      pid = Process.spawn(Master::Io::ProcessSpawn.environment(env), *cmd, chdir: @root, in: File::NULL, out: log, err: %i[child out], pgroup: true)
+      child_env = CHILD_ENV_CLEARED.to_h { |key| [key, nil] }.merge(env)
+      pid = Process.spawn(
+        Master::Io::ProcessSpawn.environment(child_env), *cmd,
+        chdir: @root, in: File::NULL, out: log, err: %i[child out], pgroup: true,
+      )
       watch = StepWatch.new(log, unit: "#{@prefix}#{@results.size + 1}") unless @quiet
 
       status = wait_bounded(pid)

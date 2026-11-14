@@ -262,9 +262,21 @@ module Master
 
           def linter_name = "reek"
 
-          def single_argv(path) = ["reek", "--format", "json", path]
+          # Reek finds its config by walking up from the working directory, and the
+          # scanner runs every linter from the checkout root: the repository that
+          # holds MASTER/, not MASTER/ itself. That root has no .reek.yml, so reek
+          # fell back to its built-in defaults and reported the very smells this
+          # tree turns off — TooManyStatements, NilCheck, BooleanParameter — as
+          # findings on every commit, from every tree. Name the config the way
+          # RubocopLaw does, so a root without one is still judged by MASTER's.
+          def config_path
+            local = File.join(@root, ".reek.yml")
+            File.file?(local) ? local : File.join(Master::ROOT, ".reek.yml")
+          end
 
-          def stdin_argv(path) = ["reek", "--format", "json", "--stdin-filename", path]
+          def single_argv(path) = ["reek", "--config", config_path, "--format", "json", path]
+
+          def stdin_argv(path) = ["reek", "--config", config_path, "--format", "json", "--stdin-filename", path]
 
           # The smells the batch found in this file; a file with none answers an empty list.
           def report_for(report, path) = Array(report).select { |smell| same_file?(smell["source"], path) }

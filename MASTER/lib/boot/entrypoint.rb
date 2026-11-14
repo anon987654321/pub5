@@ -95,20 +95,35 @@ module Master
           exit 78
         end
 
-        clean_env = env.to_h.dup
-        %w[RUBYOPT RUBYLIB].each { |key| clean_env.delete(key) }
-        %w[
-          BUNDLE_APP_CONFIG BUNDLE_BIN BUNDLE_DEPLOYMENT BUNDLE_FROZEN
-          BUNDLE_GEMFILE BUNDLE_IGNORE_CONFIG BUNDLE_JOBS BUNDLE_LOCKFILE
-          BUNDLE_ONLY BUNDLE_PATH BUNDLE_RETRY BUNDLE_USER_CONFIG
-          BUNDLE_USER_HOME BUNDLE_VERSION BUNDLE_WITH BUNDLE_WITHOUT
-        ].each { |key| clean_env.delete(key) }
-        clean_env["MASTER_BUNDLER_REEXEC_DONE"] = "1"
         Master::Trace::Dmesg.status("bundler0", "switching #{active} to #{lock_version}", io: out)
-        exec(clean_env, File.expand_path(program), *argv, unsetenv_others: true)
+        exec(clean_bundler_env(env), *reexec_command(program, argv), unsetenv_others: true)
       rescue Errno::ENOENT => e
         Master::Trace::Dmesg.status("bundler0", "cannot re-exec #{program}, #{e.message}", io: out)
         exit 78
+      end
+
+      # The variables that name the bundle being left, so the new process derives
+      # its own instead of inheriting the one Bundler already activated.
+      BUNDLER_ENV_KEYS = %w[
+        BUNDLE_APP_CONFIG BUNDLE_BIN BUNDLE_DEPLOYMENT BUNDLE_FROZEN
+        BUNDLE_GEMFILE BUNDLE_IGNORE_CONFIG BUNDLE_JOBS BUNDLE_LOCKFILE
+        BUNDLE_ONLY BUNDLE_PATH BUNDLE_RETRY BUNDLE_USER_CONFIG
+        BUNDLE_USER_HOME BUNDLE_VERSION BUNDLE_WITH BUNDLE_WITHOUT
+      ].freeze
+
+      def clean_bundler_env(env)
+        clean = env.to_h.dup
+        (%w[RUBYOPT RUBYLIB] + BUNDLER_ENV_KEYS).each { |key| clean.delete(key) }
+        clean["MASTER_BUNDLER_REEXEC_DONE"] = "1"
+        clean
+      end
+
+      # A tool run as `ruby tools/x.rb` has no executable bit; exec'ing it directly
+      # raises EACCES. Bundler's own restart prefixes the interpreter for exactly
+      # this case, so do the same.
+      def reexec_command(program, argv)
+        target = File.expand_path(program)
+        File.executable?(target) ? [target, *argv] : [RbConfig.ruby, target, *argv]
       end
 
       def activate_bundle!(root)
@@ -117,8 +132,25 @@ module Master
 
         ENV["BUNDLE_GEMFILE"] = gemfile
         activate_locked_bundler(locked_bundler_version(root))
+        pin_running_bundler_version!
         activate_locked_defaults!(root)
         require "bundler/setup"
+      end
+
+      # Bundler's auto-switch re-execs the program whenever the lock names a
+      # version other than the running one, and re-execs it on every boot when
+      # that version is not installed: an unbounded loop, not the "using the
+      # installed one" fallback activate_locked_bundler reports. Bundler reads
+      # BUNDLER_VERSION to decide whether to switch, so pin it to the version
+      # actually running before bundler/setup runs; its autoswitching_applies?
+      # then returns false and the fallback holds.
+      def pin_running_bundler_version!
+        return if ENV["BUNDLER_VERSION"].to_s != ""
+
+        require "bundler"
+        ENV["BUNDLER_VERSION"] = Bundler::VERSION
+      rescue LoadError => e
+        warn "boot0: cannot pin the running Bundler version, #{e.message}" if ENV["MASTER_BOOT_DEBUG"]
       end
 
       # Retry the locked default-gem pins now that the dependency manager has
