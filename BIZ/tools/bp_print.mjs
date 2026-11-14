@@ -93,10 +93,10 @@ for (const name of ORDER) {
     throw new Error(`${name}: expected ${pages} non-empty sequential page renders; found ${pageRasters.length}`);
   }
   const ppm = spawnSync('pdftoppm', ['-r', '96', '-png', '-f', '1', '-l', '1', pdf, `${outputDir}/${name}`], { encoding: 'utf8' });
-  if (ppm.status !== 0) throw new Error(`${name}: pdftoppm exited ${ppm.status}\\n${ppm.stderr}`);
+  if (ppm.status !== 0) throw new Error(`${name}: pdftoppm exited ${ppm.status}\n${ppm.stderr}`);
   // poppler zero-pads the page number to the document's page count
   // (syre-01.png on a 17-page plan, fetat-1.png on a 6-page one)
-  const raster = readdirSync(outputDir).find(f => new RegExp(`^${name}-\\\\d+\\\\.png$`).test(f));
+  const raster = readdirSync(outputDir).find(f => new RegExp(`^${name}-\\d+\\.png$`).test(f));
   if (!raster) throw new Error(`${name}: pdftoppm produced no front-page png`);
   renameSync(`${outputDir}/${raster}`, `${outputDir}/${name}.png`);
   console.log(`${name}: front page png ${name}.png; all ${pages} pages rasterized at 144 dpi in ${AUDIT_DIR} for visual inspection`);
