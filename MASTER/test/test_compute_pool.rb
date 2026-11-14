@@ -54,7 +54,7 @@ class TestComputePool < Minitest::Test
     assert_equal 1.0, @pool.send(:task_factor, candidate, :unknown_task)
   end
 
-  def test_ollama_is_operator_enabled_and_still_refusable
+  def test_ollama_is_disabled_by_default_and_operator_opt_in_is_refusable
     old_enabled = ENV.delete("MASTER_OLLAMA_ENABLED")
     old_no_ollama = ENV.delete("MASTER_NO_OLLAMA")
     policy = Master.load_yaml(File.join(Master::ROOT, "data", "models.yml"))
@@ -62,23 +62,24 @@ class TestComputePool < Minitest::Test
 
     assert_includes local_ids, "ollama:gemma3:4b"
     assert_includes local_ids, "llama-cli:gguf"
-    # The operator wired the local bed on 2026-11-08 ("yes wire ollama after
-    # deploy", models.yml): the declaration is enabled in data, the presence
-    # probe degrades safely where no daemon listens, and the explicit
-    # environment refusals still win over the data file.
-    assert_equal true, policy.fetch("ollama").fetch("enabled")
+    assert_equal false, policy.fetch("ollama").fetch("enabled")
+    assert_equal false, policy.fetch("ollama").fetch("probe")
+    refute Master::Io::LaneSelection.ollama_enabled?(cfg: policy),
+           "the local quota constraint keeps Ollama out of the default pool"
+    refute_includes Master::Io::LaneSelection.order_or_all(local_ids, cfg: policy), "ollama:gemma3:4b"
+
+    # An operator may deliberately restore the local lane for a verified
+    # machine/session; that opt-in never defeats the independent hard-off.
+    ENV["MASTER_OLLAMA_ENABLED"] = "1"
     assert Master::Io::LaneSelection.ollama_enabled?(cfg: policy)
+    assert_equal "ollama:gemma3:4b", Master::Io::LaneSelection.order_or_all(local_ids, cfg: policy).first
 
     ENV["MASTER_NO_OLLAMA"] = "1"
     refute Master::Io::LaneSelection.ollama_enabled?(cfg: policy),
-           "MASTER_NO_OLLAMA=1 must refuse the lane the data file enables"
+           "MASTER_NO_OLLAMA=1 must override the explicit opt-in"
     refute_includes Master::Io::LaneSelection.order_or_all(local_ids, cfg: policy), "ollama:gemma3:4b"
+
     ENV.delete("MASTER_NO_OLLAMA")
-
-    assert_equal "ollama:gemma3:4b", Master::Io::LaneSelection.order_or_all(local_ids, cfg: policy).first
-
-    # A tier may list ollama as a declaration; the constrained local lane leads
-    # only where the routing puts it, never by tier promotion alone.
     %w[default primary strong].each do |tier|
       ids = policy.fetch("models").fetch(tier).map { |row| row.fetch("id") }
       order = Master::Io::LaneSelection.order(ids, cfg: policy)
