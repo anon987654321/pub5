@@ -1096,20 +1096,24 @@ module Master
 
       # The flags whose value lives in the token: autofix mode, file budget,
       # blockers and the pinned task intent.
+      def flag_override(token)
+        match = AUTOFIX_FLAG.match(token)
+        return [:autofix_mode, match[1]] if match
+
+        match = MAX_FILES_FLAG.match(token)
+        return [:max_files, match[1]] if match
+
+        return [:blockers, true] if BLOCKERS_FLAG.match?(token)
+
+        match = TASK_INTENT_FLAG.match(token)
+        return [:task_intent, match[1]] if match
+      end
+
       def flag_overrides(raw)
-        overrides = {}
-        raw.split(/\s+/).each do |token|
-          if (match = AUTOFIX_FLAG.match(token))
-            overrides[:autofix_mode] = match[1]
-          elsif (match = MAX_FILES_FLAG.match(token))
-            overrides[:max_files] = match[1]
-          elsif BLOCKERS_FLAG.match?(token)
-            overrides[:blockers] = true
-          elsif (match = TASK_INTENT_FLAG.match(token))
-            overrides[:task_intent] = match[1]
-          end
+        raw.split(/\s+/).each_with_object({}) do |token, overrides|
+          pair = flag_override(token)
+          overrides[pair[0]] = pair[1] if pair
         end
-        overrides
       end
 
       def parse_pass_flags(raw)

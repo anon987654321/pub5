@@ -141,6 +141,10 @@ class TestWorkLaneWiring < Minitest::Test
     assert_equal "content_only", registry.execution_overrides("RAILS --intent=content_only")[:task_intent]
     assert_equal "RAILS", registry.parse_pass_flags("RAILS --intent=content_only").last
     assert_equal "not_a_contract", registry.execution_overrides("RAILS --intent=not_a_contract")[:task_intent]
+    assert_equal "dry", registry.execution_overrides("RAILS --autofix=dry")[:autofix_mode]
+    assert_equal "12", registry.execution_overrides("RAILS --max-files=12")[:max_files]
+    assert_equal true, registry.execution_overrides("RAILS --blockers")[:blockers]
+    assert_equal "on", registry.execution_overrides("RAILS --autofix=dry --autofix=on")[:autofix_mode]
   end
 
   def test_the_check_runner_is_told_the_lane
