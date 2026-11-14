@@ -6,8 +6,8 @@ import { Controller } from "@hotwired/stimulus"
 // The build is an IIFE that defines the <css-doodle> custom element, so a
 // dynamic import is what upgrades the element and draws the mark; it runs on
 // this one screen. The heart is a shape, not a timeline, so it is static by
-// itself and reduced motion needs no separate path — the gentle pulse under
-// motion is CSS, scoped to the container in _brgen_dating.scss.
+// itself and reduced motion needs no separate path — the mark holds still,
+// scoped in _dating_splash.scss.
 let doodlePromise = null
 
 function loadDoodle() {

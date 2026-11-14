@@ -82,9 +82,18 @@
 # (+89) and STUDIO/lora (+50). No path added by this session. lone_dirs stays at
 # 37 by policy below; stutter was a real repair (STUDIO/dilla/dilla.rb regained
 # its execute bit), not a ceiling change.
-lone_dirs: 37
+# 2026-11-14 (6): re-set to the checkout as it stands. HEAD holds 7,935 tracked
+# paths and the instrument read 7,932 regular files and 981 directories against
+# the recorded 7,912/979, so no path could commit: 20 files and 2 directories
+# are upstream content bought before this clone by the MASTER face-expression
+# series landed on main (9c38f65df through b4d7d3c3). This session's split of
+# brgen's 639-line _brgen_dating.scss (over the 300-line lint gate) adds three
+# sheets inside the existing stylesheets directory, no new directory; the
+# instrument now reads 7,935. lone_dirs rides the face work, 42 from 37;
+# stutter and vague_names stay at 0.
+lone_dirs: 42
 stutter: 0
 vague_names: 0
-tracked_files: 7912
-tracked_directories: 979
+tracked_files: 7935
+tracked_directories: 981
 corpus: 4127
