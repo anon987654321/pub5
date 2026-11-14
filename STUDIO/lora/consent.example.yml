@@ -4,6 +4,9 @@
 schema: 1
 subject: REPLACE_WITH_SUBJECT_SLUG
 
+# Generation needs likeness_generation + provider_processing.
+# Training also needs model_training + model_retention and those scopes in the
+# subject evidence covers list. Publication/distribution are separate opt-ins.
 subject_consent:
   likeness_generation: false
   provider_processing: false
@@ -24,6 +27,8 @@ source_rights:
   model_publication: false
   model_distribution: false
   evidence: {}
+  # Training also needs training_use: true and training_use in each source
+  # evidence covers list. Publication/distribution need their own source scope.
   # Add a separate entry for every local source set. Example:
   # reference_photographs:
   #   granted_by: "..."

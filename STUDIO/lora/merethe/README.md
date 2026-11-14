@@ -4,12 +4,13 @@ This subject lives beside the other trained identities at `STUDIO/lora/merethe/`
 
 ## Privacy
 
-The 15 source photographs are recovered into the local \`sources/\` directory.
-That directory, \`dataset/\`, \`.cache/\`, \`weights/\`, outputs and training artefacts
-are ignored by Git. Do not use \`git add -f\` for the photos, derived crops,
-dataset ZIP, captions attached to private photos, or trained weights. A subject's
-agreement to training is not a blanket decision to publish her photographs or
-weights.
+The 15 recovered archive photographs and the 14 additional portraits currently
+appear in the repository's existing Git history. New source copies, datasets,
+weights, consent records and evidence are ignored by Git. Ignore rules do not
+untrack existing files or remove earlier commits. Do not use \`git add -f\` for
+photos, derived crops, dataset ZIPs, captions attached to private photos or
+trained weights. Agreement to training is not blanket permission to publish
+photographs or weights.
 
 This package does not upload images, create a Replicate training, or generate
 images. Those are separate operator actions. Keep the destination model private

@@ -38,7 +38,7 @@ module Studio
           sources = File.join(directory, "sources")
           additional = File.join(sources, "additional")
           sets = []
-          sets << "me2_archive" if local_images?(sources, direct_only: true)
+          sets << "me2_archive" if local_images?(sources)
           sets << "additional_images" if local_images?(additional)
           return sets
         end
@@ -133,7 +133,7 @@ module Studio
         raise Error, "#{subject}: #{action} blocked: #{report.fetch('errors').join('; ')}"
       end
 
-      def local_images?(directory, direct_only: false)
+      def local_images?(directory)
         raise Error, "refusing symlink source directory: #{directory}" if File.symlink?(directory)
         return false unless File.directory?(directory)
 
