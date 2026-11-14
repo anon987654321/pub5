@@ -110,6 +110,8 @@ module Master
         |
         \A\s*(?:i\s+(?:want|need)\s+you\s+to|(?:can|could|will|would)\s+you)\s+
         (?:please\s+)?(?:run|execute|apply|start|resume|continue|complete|finish|pursue|perform)\b
+        |
+        \A\s*(?:be|stay|remain)\b(?=[\s\S]*\bpursu\w*\s+(?:completion|execution)\s+of\s+/fix\b)
       /ix.freeze
 
       def explicit_fix_request(text)

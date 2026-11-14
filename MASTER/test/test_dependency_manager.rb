@@ -679,8 +679,8 @@ class TestDependencyManager < Minitest::Test
     assert_equal ["install", "--jobs", "4", "--retry", "3"], @commands.last.first[1..]
   end
 
-  # A missing header carries no ABI-stale line, so the private store stays and
-  # the OS packages install straight after the failed bundle install.
+  # Permission errors are not compiler failures. Keep the shared bundle intact
+  # and fall back to a user-writable bundle store.
   def test_permission_failure_uses_user_bundle_path_before_native_repair
     bundle_key = [RbConfig::CONFIG.fetch("ruby_version", RUBY_VERSION), RUBY_PLATFORM].join("-")
     user_path = File.join(@root, ".local", "share", "master", "bundles", bundle_key)
@@ -742,6 +742,7 @@ class TestDependencyManager < Minitest::Test
     assert_includes result.output, "pkg_add: permission denied"
   end
 
+  # Package installation is an explicit opt-in; the approved path retries once.
   def test_native_build_failure_installs_system_packages_and_retries
     responses = [
       [false, "", "extconf failed: sqlite3.h not found"],
@@ -761,6 +762,38 @@ class TestDependencyManager < Minitest::Test
     refute_empty @commands
     assert result.success?
     assert @commands.any? { |row| row.first == ["pkg", "install", "-y", "sqlite"] }
+  end
+
+  def test_install_and_update_recovery_require_explicit_package_approval
+    bundle_failure = MANAGER::Result.new(
+      ok: false, changed: false, bundler: true, bundle: false, system: nil,
+      message: "bundle install failed", output: "extconf failed: missing headers",
+    )
+    bundler_ready = MANAGER::Result.new(
+      ok: true, changed: false, bundler: true, bundle: nil, system: nil,
+      message: "bundler ready", output: nil,
+    )
+    denied = {
+      ok: false, changed: false, command: nil,
+      output: "system build dependency installation requires explicit approval",
+    }
+    install_manager = fake_manager([])
+    install_manager.define_singleton_method(:ensure_bundler) { bundler_ready }
+    install_manager.define_singleton_method(:install_bundle) { bundle_failure }
+    install_manager.define_singleton_method(:install_system_packages_for_recovery) { denied }
+
+    install_result = install_manager.install!
+    refute install_result.success?
+    assert_includes install_result.output, "explicit approval"
+
+    update_manager = fake_manager([])
+    update_manager.define_singleton_method(:ensure_bundler) { bundler_ready }
+    update_manager.define_singleton_method(:run_bundle) { |*| [false, "", "extconf failed: missing headers"] }
+    update_manager.define_singleton_method(:install_system_packages_for_recovery) { denied }
+
+    update_result = update_manager.update!
+    refute update_result.success?
+    assert_includes update_result.output, "explicit approval"
   end
 
   def test_debian_runs_update_before_install

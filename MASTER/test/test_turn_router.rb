@@ -192,7 +192,7 @@ class TurnRouterTest < Minitest::Test
   end
 
   def test_an_explicit_fix_reference_routes_all_named_trees_before_operator_intent
-    message = "Pursue completion of /fix over RAILS MASTER OPENBSD STUDIO BIZ and push to pub5 main"
+    message = "Be more aggressive and ruthless in pursuing completion of /fix over RAILS MASTER OPENBSD STUDIO BIZ. Relax blockers and push to main"
     routed = nil
 
     Master::CLI::TurnRouter.stub(:dispatch_slash, lambda { |command, **|
