@@ -24,6 +24,12 @@ export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 # dot-sourcing from the dev-owned checkout makes repo write access equivalent to
 # root code execution. The repo path stays as a fallback for a laptop/dev run,
 # where the checkout is already the operator's own.
+# The guard's cron is what re-runs this relief when the load returns; if the
+# guard itself is missing from the box, today's manual relief is the last one
+# and nothing will say so. Check it instead of assuming it.
+GUARD_SCRIPT=/usr/local/bin/resource_guard.sh
+[[ -x $GUARD_SCRIPT ]] || echo "WARN: $GUARD_SCRIPT missing - cron will not run resource relief again" >&2
+
 GUARD_HELPER=/usr/local/libexec/stale_ci_cleanup.ksh
 if [[ -f $GUARD_HELPER && ! -L $GUARD_HELPER ]]; then
   . "$GUARD_HELPER"
