@@ -52,6 +52,8 @@ The documented core had Portra, Vision3, Velvia and Tri-X; camera-profile correc
 
 The present implementation lives under `STUDIO/postpro/`, with `lib/` holding the effect dispatch, presets, stocks, grain, random chains, recipe handling, pipeline, sidecars, audits and CLI. `motion.rb` owns the video grading contract and CLI, while `motion_process.rb` owns bounded frame IO, timestamp checks and subprocess lifecycles; `MASTER/tools/postpro` is a compatibility symlink.
 
+The camera archive has a separate lineage and should not be mistaken for film emulation. The 2019 `pub/postpro/cameras_lightroom_vsco.tgz` held 1,250 DCPs covering 121 camera bodies, ten stock labels and six VSCO tone variants. The recovery commit records that `ToneCurve`, `LookTable` and `HueSatDeltas` were empty in all 1,250 files; the same body's stock variants often shared one matrix (Portra 400 and Fuji 400H were byte-identical), with 22 distinct matrices observed among the 33 bodies carrying a given profile. The recovered 3×3 values are camera sensor-calibration data, not film stocks or emulsion looks. The original implementation applied them directly to an already rendered image; pub5 now preserves the evidence but refuses that path until the transform domain and direction are explicit and tested. Source: [pub4 DCP recovery commit](https://github.com/anon987654321/pub4/commit/d3b5107911818b7c51e06e540b68a73d56f36784).
+
 Current recovery anchors:
 - [LEGACY_RESTORE.md](./LEGACY_RESTORE.md)
 - [legacy_effects.rb](./legacy_effects.rb)

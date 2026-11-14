@@ -37,7 +37,7 @@ registration error. The file `uncanny.rb` measures whether a picture looks rende
 supplies a real depth map when its model is installed.
 
 The file `constitution.rb` is the boundary where MASTER's laws become image-generation
-invariants. `camera_profiles.json` preserves 121 VSCO-DCP-derived matrices across Canon,
+invariants. The original 2019 DCP archive held 1,250 profiles, but the recovery audit found empty `ToneCurve`, `LookTable` and `HueSatDeltas` tables; these are camera sensor-calibration matrices, not film-emulation data. See the [source recovery](https://github.com/anon987654321/pub4/commit/d3b5107911818b7c51e06e540b68a73d56f36784). `camera_profiles.json` preserves 121 VSCO-DCP-derived matrices across Canon,
 Fujifilm, Leica, Nikon, Olympus and Sony. EXIF lookup is exact by normalized model or
 make+model; an unknown body receives no borrowed manufacturer matrix. The source records
 do not declare matrix direction or input/output colour spaces, so the matrices are not
