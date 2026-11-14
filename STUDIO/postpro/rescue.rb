@@ -110,8 +110,7 @@ module Postpro
       if (cast = colour_cast(image))
         findings << Finding.new(
           code: :cast, severity: :fixable,
-          message: format("channel means %s are %.1f apart - a colour cast rather than a colour",
-                          cast[:means].map { |m| m.round(1) }.inspect, cast[:spread]),
+          message: colour_cast_summary(cast),
           remedy: "not corrected here: set white balance from something neutral in the frame. " \
                   "The portrait grade this rescue applies warms the picture; it does not neutralise a cast"
         )
@@ -126,6 +125,13 @@ module Postpro
       median = luma.percent(50) / 255.0
       highlight = luma.percent(98) / 255.0
       median < DARK_MEDIAN && highlight < DARK_HIGHLIGHT ? { median:, highlight: } : nil
+    end
+
+    # The channel-mean spread is a whole-frame heuristic, not proof of a
+    # white-balance error. Naturally coloured subjects and scenes can trigger it.
+    def self.colour_cast_summary(cast)
+      format("whole-frame RGB means %s differ by %.1f; possible cast or scene-colour imbalance",
+             cast[:means].map { |mean| mean.round(1) }.inspect, cast[:spread])
     end
 
     # Mixed lighting and wrong white balance both show as the channel means
