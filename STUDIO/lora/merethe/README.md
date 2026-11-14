@@ -16,15 +16,28 @@ This package does not upload images, create a Replicate training, or generate
 images. Those are separate operator actions. Keep the destination model private
 unless the subject separately agrees to publication and distribution.
 
-## Source rights
+## Consent and source rights
 
-This package does not upload images, create a Replicate training, or generate
-images. Those are separate operator actions, and keeping the destination model
-private unless the subject separately agrees to publication and distribution
-remains the operator's responsibility. There is no longer a consent record or
-gate in the repository: a written subject-consent document and per-source
-rights evidence are still worth keeping, but they are the operator's private
-records, not a tracked file the code checks.
+Likeness generation and each Replicate image upload require a private
+`consent.yml` with written subject permission for `likeness_generation` and
+`provider_processing`. Dataset preparation additionally requires explicit
+`model_training` and `model_retention` permission, plus `training_use` rights
+for every source set. Merethe's source evidence must cover `me2_archive` and
+`additional_images`; ZIP upload and model training additionally require a
+separate `training_dataset` rights entry. Model publication and distribution
+are independent permissions and default to false.
+
+Copy `STUDIO/lora/consent.example.yml` to the local
+`STUDIO/lora/merethe/consent.yml`. Record written subject permission in a
+private file under `evidence/`; use separate rights evidence for each source
+set. A public webpage is provenance, not permission to train or send
+photographs to a provider. The evidence directory must be mode 0700 and each
+record mode 0600. The gate reads but never creates or infers permission.
+
+The repository ignores new subject data, but the existing source photographs
+remain in Git history. Ignore rules do not untrack files or erase earlier
+commits. Repository visibility and history cleanup remain separate operator
+actions.
 
 ## Additional portraits
 

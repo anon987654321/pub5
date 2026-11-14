@@ -96,6 +96,11 @@ class TestLoraConsent < Minitest::Test
     sources = File.join(@subject_dir, "sources")
     FileUtils.mkdir_p(sources, mode: 0o700)
     File.write(File.join(sources, "photo.jpg"), "synthetic source image")
+    if training
+      dataset = File.join(@subject_dir, "dataset")
+      FileUtils.mkdir_p(dataset, mode: 0o700)
+      File.write(File.join(dataset, "training.jpg"), "synthetic training image")
+    end
     File.write(subject_file, "synthetic subject authority\n", mode: "w", perm: 0o600)
     File.write(source_file, "synthetic source authority\n", mode: "w", perm: 0o600)
     File.chmod(0o600, subject_file)
@@ -143,7 +148,15 @@ class TestLoraConsent < Minitest::Test
             "granted_on" => "2026-11-14",
             "covers" => source_scopes,
             "stored_at" => "evidence/source-rights.txt"
-          }
+          },
+          **(training ? {
+            "training_dataset" => {
+              "granted_by" => "synthetic dataset authority",
+              "granted_on" => "2026-11-14",
+              "covers" => source_scopes,
+              "stored_at" => "evidence/source-rights.txt"
+            }
+          } : {})
         }
       )
     }

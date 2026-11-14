@@ -32,21 +32,21 @@ module Studio
 
       module_function
 
-      def required_source_sets(subject:, subject_directory:)
+      def required_source_sets(subject:, subject_directory:, action: :generation)
         directory = File.expand_path(subject_directory.to_s)
-        if subject.to_s == "merethe"
-          sources = File.join(directory, "sources")
-          additional = File.join(sources, "additional")
-          sets = []
-          sets << "me2_archive" if local_images?(sources)
-          sets << "additional_images" if local_images?(additional)
-          return sets
-        end
-
-        sets = []
-        sets << "reference_photographs" if local_images?(File.join(directory, "references"))
-        sets << "subject_sources" if local_images?(File.join(directory, "sources"))
-        sets << "training_dataset" if local_images?(File.join(directory, "dataset"))
+        sets = if subject.to_s == "merethe"
+                 sources = File.join(directory, "sources")
+                 additional = File.join(sources, "additional")
+                 ["me2_archive"].tap do |required|
+                   required << "additional_images" if local_images?(additional)
+                 end
+               else
+                 [
+                   ("reference_photographs" if local_images?(File.join(directory, "references"))),
+                   ("subject_sources" if local_images?(File.join(directory, "sources")))
+                 ].compact
+               end
+        sets << "training_dataset" if action.to_sym == :training
         sets
       end
 
@@ -113,7 +113,7 @@ module Studio
         end
         evidence ||= {}
 
-        required = required_sources || required_source_sets(subject:, subject_directory: directory)
+        required = required_sources || required_source_sets(subject:, subject_directory: directory, action:)
         Array(required).each do |source|
           entry = evidence[source.to_s]
           unless entry

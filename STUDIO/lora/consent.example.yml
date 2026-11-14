@@ -27,8 +27,9 @@ source_rights:
   model_publication: false
   model_distribution: false
   evidence: {}
-  # Training also needs training_use: true and training_use in each source
-  # evidence covers list. Publication/distribution need their own source scope.
+  # Training needs training_use on every original source set AND a separate
+  # training_dataset evidence entry. Publication/distribution need their own
+  # scope on every affected source set.
   # Add a separate entry for every local source set. Example:
   # reference_photographs:
   #   granted_by: "..."
