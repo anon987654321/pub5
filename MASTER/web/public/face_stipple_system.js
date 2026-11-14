@@ -235,7 +235,7 @@
       cycle.from = cycle.to;
       cycle.to = nextExpression(cycle.from, config.order.length);
       cycle.startedAt = time;
-      cycle.nextAt = time + config.transition / 1000 + config.minInterval / 1000 +
+      cycle.nextAt = time + config.minInterval / 1000 +
         Math.random() * Math.max(0, config.maxInterval - config.minInterval) / 1000;
     }
     const progress = cycle.pausedAt != null ? Number(uniforms.uExpressionBlend.value) :

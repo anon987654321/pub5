@@ -88,9 +88,9 @@ test("MASTER randomly morphs among the four original abstract face expressions",
   assert.match(system, /updateExpressions\(system, time, reducedMotion\)/);
   assert.match(system, /expression: \{/);
   assert.match(faceSource, /uniform float uExpressionFrom;/);
-  assert.match(faceSource, /vec3 masterExpressionPoint\\(vec3 point, float expression\\)/);
-  assert.match(faceSource, /masterExpressionPoint\\(p, uExpressionTo\\)/);
-  assert.match(faceSource, /uExpressionFrom:\\{value:0\\}/);
+  assert.match(faceSource, /vec3 masterExpressionPoint\(vec3 point, float expression\)/);
+  assert.match(faceSource, /masterExpressionPoint\(p, uExpressionTo\)/);
+  assert.match(faceSource, /uExpressionFrom:\{value:0\}/);
 });
 
 
@@ -620,6 +620,7 @@ test("stipple module boots and builds from the canonical idle profile", () => {
   api.tick(stipple, { mode: "thinking", reducedMotion: false }, 1);
   assert.notEqual(stipple.material.uniforms.uExpressionFrom.value, stipple.material.uniforms.uExpressionTo.value);
   assert.equal(stipple.material.uniforms.uExpressionBlend.value, 0);
+  assert.ok(stipple.expressionCycle.nextAt >= 10 && stipple.expressionCycle.nextAt <= 17);
   assert.equal(primaryExpressionUniforms.uExpressionTo.value, stipple.material.uniforms.uExpressionTo.value);
   api.tick(stipple, { mode: "thinking", reducedMotion: false }, 2.8);
   assert.equal(stipple.material.uniforms.uExpressionBlend.value, 1);
