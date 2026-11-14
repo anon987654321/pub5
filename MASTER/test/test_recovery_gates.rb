@@ -93,7 +93,7 @@ module Master
           RUBY
 
           stdin, stdout, stderr, writer = Open3.popen3(
-            RbConfig.ruby, "-I", File.join(Master::ROOT, "lib"), "-e", child,
+            RbConfig.ruby, "-rbundler/setup", "-I", File.join(Master::ROOT, "lib"), "-e", child,
             root, scope, goal, chdir: Master::ROOT
           )
           stdin.close
@@ -310,13 +310,12 @@ module Master
       end
 
       def build_receipt_fixture(root)
-        FileUtils.mkdir_p(File.join(root, "MASTER"))
-        Dir.mkdir(File.join(root, ".git"))
+        FileUtils.mkdir_p([File.join(root, "MASTER"), File.join(root, ".git")])
         kernel = Master::Fix::Kernel.new(root: File.join(root, "MASTER"), actor: "receipt-parity")
         loop = Master::Fix::FixLoop.allocate
+        loop.instance_variable_set(:@root, kernel.root)
         loop.instance_variable_set(:@kernel, kernel)
         loop.instance_variable_set(:@run_journal, kernel.lifecycle_journal)
-        loop.instance_variable_set(:@bus, nil)
         loop.define_singleton_method(:run_unlocked) do |target, max_passes:, budget_seconds:, incremental:, requested:|
           journal = @run_journal.start_or_resume(
             target:, files: [], max_passes:, budget_seconds:,

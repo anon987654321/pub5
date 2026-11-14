@@ -60,7 +60,7 @@ class TestFindingCacheInputs < Minitest::Test
 
   def probe
     lib = File.join(Master::ROOT, "lib")
-    out, err, status = Open3.capture3(RbConfig.ruby, "-I", lib, "-e", PROBE, chdir: Master::ROOT)
+    out, err, status = Open3.capture3(RbConfig.ruby, "-rbundler/setup", "-I", lib, "-e", PROBE, chdir: Master::ROOT)
     assert status.success?, err
     JSON.parse(out.lines.last)
   end

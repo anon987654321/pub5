@@ -356,7 +356,7 @@ class TestFixKernelLifecycle < Minitest::Test
       begin
         kernel.execution_mutex.synchronize do
           child_pid = Process.spawn(
-            RbConfig.ruby, "-I", File.join(Master::ROOT, "lib"), "-e", child,
+            RbConfig.ruby, "-rbundler/setup", "-I", File.join(Master::ROOT, "lib"), "-e", child,
             root, ready, entered, chdir: Master::ROOT, out: File::NULL, err: File::NULL
           )
 

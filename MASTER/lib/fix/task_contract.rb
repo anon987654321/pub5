@@ -439,7 +439,7 @@ module Master
           next true if candidate == prefix
           next true if !pattern.match?(/[*?\[\]{}]/) && candidate.start_with?("#{prefix}/")
 
-          File.fnmatch?(pattern, candidate, File::FNM_PATHNAME | File::FNM_EXTGLOB)
+          File.fnmatch?(pattern, candidate, File::FNM_PATHNAME | File::FNM_EXTGLOB | File::FNM_DOTMATCH)
         end
       end
 

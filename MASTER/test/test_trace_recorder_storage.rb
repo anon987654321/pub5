@@ -143,7 +143,7 @@ class TestTraceRecorderStorage < Minitest::Test
 
       workers = 4.times.map do |worker|
         Process.spawn(
-          RbConfig.ruby, "-I", File.join(Master::ROOT, "lib"), "-e", worker_script,
+          RbConfig.ruby, "-rbundler/setup", "-I", File.join(Master::ROOT, "lib"), "-e", worker_script,
           root, worker.to_s, out: File::NULL, err: File::NULL
         )
       end

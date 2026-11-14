@@ -191,7 +191,7 @@ class TestRunJournalLifecycle < Minitest::Test
       RUBY
 
       output, status = Open3.capture2e(
-        RbConfig.ruby, "-I", File.join(Master::ROOT, "lib"), "-e", script, root,
+        RbConfig.ruby, "-rbundler/setup", "-I", File.join(Master::ROOT, "lib"), "-e", script, root,
         chdir: Master::ROOT
       )
       assert status.success?, "checkpoint writer process failed: #{output}"

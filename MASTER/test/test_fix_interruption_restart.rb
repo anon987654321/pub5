@@ -77,7 +77,7 @@ class TestFixInterruptionRestart < Minitest::Test
       RUBY
 
       pid = Process.spawn(
-        RbConfig.ruby, "-I", File.join(Master::ROOT, "lib"), "-e", child, root, marker,
+        RbConfig.ruby, "-rbundler/setup", "-I", File.join(Master::ROOT, "lib"), "-e", child, root, marker,
         out: File::NULL, err: File::NULL, chdir: Master::ROOT
       )
       begin
@@ -158,7 +158,7 @@ class TestFixInterruptionRestart < Minitest::Test
         )
       RUBY
       output, restart_status = Open3.capture2e(
-        RbConfig.ruby, "-I", File.join(Master::ROOT, "lib"), "-e", restart, root,
+        RbConfig.ruby, "-rbundler/setup", "-I", File.join(Master::ROOT, "lib"), "-e", restart, root,
         marker_record.fetch("coordinator_run_id"), marker_record.fetch("run_id"),
         marker_record.fetch("mission_id"), chdir: Master::ROOT
       )
@@ -331,7 +331,7 @@ class TestFixInterruptionRestart < Minitest::Test
       RUBY
 
       pid = Process.spawn(
-        RbConfig.ruby, "-I", File.join(Master::ROOT, "lib"), "-e", writer, root, marker,
+        RbConfig.ruby, "-rbundler/setup", "-I", File.join(Master::ROOT, "lib"), "-e", writer, root, marker,
         out: File::NULL, err: File::NULL, chdir: Master::ROOT
       )
       begin
@@ -401,7 +401,7 @@ class TestFixInterruptionRestart < Minitest::Test
         )
       RUBY
       output, restart_status = Open3.capture2e(
-        RbConfig.ruby, "-I", File.join(Master::ROOT, "lib"), "-e", restart, root,
+        RbConfig.ruby, "-rbundler/setup", "-I", File.join(Master::ROOT, "lib"), "-e", restart, root,
         marker_record.fetch("run_id"), marker_record.fetch("coordinator_run_id"),
         marker_record.fetch("transaction_id"), chdir: Master::ROOT
       )

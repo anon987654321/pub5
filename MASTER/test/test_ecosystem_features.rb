@@ -34,7 +34,7 @@ class TestEcosystemFeatures < Minitest::Test
     workers = 4.times.map do
       Process.spawn(
         { "MASTER_MODEL_QUOTA_PATH" => path },
-        RbConfig.ruby, "-I", File.join(Master::ROOT, "lib"), "-e", script,
+        RbConfig.ruby, "-rbundler/setup", "-I", File.join(Master::ROOT, "lib"), "-e", script,
         out: File::NULL, err: File::NULL
       )
     end
