@@ -864,10 +864,12 @@ back at the repository root:
   it is not evidence that the grant guide has been rendered. No PDF for
   `ragnhild_legater.html` has been identified. Render that exact source to a
   separately named `ragnhild_legater.pdf`, verify page count, links and text,
-  and visually inspect every page before marking complete. The current
-  `BIZ/tools/bp_print.mjs` order does not include this standalone guide, so
-  either extend the print workflow with an explicit source/output mapping or
-  use a documented one-off render. Historical note: no PDF existed in pub4.
+  and visually inspect every page before marking complete. The BIZ print
+  workflow now includes an explicit source mapping for this guide and writes
+  `ragnhild_legater.pdf` plus its front-page PNG beside the business-plan
+  output, without overwriting `ragnhild.pdf`. The workflow has not been run
+  here, so the PDF remains unrendered and visually unapproved. Historical note:
+  no PDF existed in pub4.
 - [x] **Merethe LoRA preparation restored at the canonical path.** The
   recovery/preflight package and its test now live under `STUDIO/lora/merethe/`.
   Its preparation command moves only known local, ignored subject data from the
