@@ -2,7 +2,7 @@
 // Import map + MASTER_ASSET_PATHS resolve tail module imports at runtime.
 const FACE_RUNTIME_SOURCES = [
   "face.part1.txt?v=d5e6972c5d",
-  "face.part2.txt?v=43072be478",
+  "face.part2.txt?v=56caf07bdb",
   "face.part3.txt?v=01005ed2e5",
   "face_speech_runtime.js?v=1d92dfa106",
   "face_speech_playback.js?v=e410f0afef",

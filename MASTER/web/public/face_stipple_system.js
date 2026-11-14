@@ -196,6 +196,14 @@
     return candidate >= current ? candidate + 1 : candidate;
   }
 
+  function syncPrimaryExpressionUniforms(source) {
+    const target = window.MASTER_FACE?.faceMat?.uniforms;
+    if (!target) return;
+    for (const name of ["uExpressionFrom", "uExpressionTo", "uExpressionBlend", "uExpressionStrength"]) {
+      if (target[name] && source[name]) target[name].value = source[name].value;
+    }
+  }
+
   function updateExpressions(system, time, reducedMotion) {
     const config = expressionConfiguration();
     const uniforms = system?.material?.uniforms;
@@ -203,17 +211,26 @@
     if (!config.enabled) {
       uniforms.uExpressionBlend.value = 0;
       uniforms.uExpressionStrength.value = 0;
+      syncPrimaryExpressionUniforms(uniforms);
       return;
     }
     if (!system.expressionCycle) {
       const initial = Math.floor(Math.random() * config.order.length);
       system.expressionCycle = {
-        from: initial, to: initial, startedAt: time,
+        from: initial, to: initial, startedAt: time, pausedAt: null,
         nextAt: time + config.minInterval / 1000 +
           Math.random() * Math.max(0, config.maxInterval - config.minInterval) / 1000
       };
     }
     const cycle = system.expressionCycle;
+    if (reducedMotion) {
+      if (cycle.pausedAt == null) cycle.pausedAt = time;
+    } else if (cycle.pausedAt != null) {
+      const pausedFor = Math.max(0, time - cycle.pausedAt);
+      cycle.startedAt += pausedFor;
+      cycle.nextAt += pausedFor;
+      cycle.pausedAt = null;
+    }
     if (!reducedMotion && time >= cycle.nextAt) {
       cycle.from = cycle.to;
       cycle.to = nextExpression(cycle.from, config.order.length);
@@ -221,13 +238,14 @@
       cycle.nextAt = time + config.transition / 1000 + config.minInterval / 1000 +
         Math.random() * Math.max(0, config.maxInterval - config.minInterval) / 1000;
     }
-    const progress = reducedMotion ? Number(uniforms.uExpressionBlend.value) :
+    const progress = cycle.pausedAt != null ? Number(uniforms.uExpressionBlend.value) :
       clamp((time - cycle.startedAt) / (config.transition / 1000), 1, 0, 1);
     uniforms.uExpressionFrom.value = cycle.from;
     uniforms.uExpressionTo.value = cycle.to;
     uniforms.uExpressionBlend.value = progress * progress * (3 - 2 * progress);
     uniforms.uExpressionStrength.value = config.strength;
     system.expressionName = config.order[cycle.to];
+    syncPrimaryExpressionUniforms(uniforms);
   }
 
   function samplesFromFaceGeometry(facePoints, count) {

@@ -87,7 +87,12 @@ test("MASTER randomly morphs among the four original abstract face expressions",
   assert.match(system, /F \/ Monument/);
   assert.match(system, /updateExpressions\(system, time, reducedMotion\)/);
   assert.match(system, /expression: \{/);
+  assert.match(faceSource, /uniform float uExpressionFrom;/);
+  assert.match(faceSource, /vec3 masterExpressionPoint\\(vec3 point, float expression\\)/);
+  assert.match(faceSource, /masterExpressionPoint\\(p, uExpressionTo\\)/);
+  assert.match(faceSource, /uExpressionFrom:\\{value:0\\}/);
 });
+
 
 test("stipple breath is luminance-only, survives idle stillness and freezes for reduced motion", () => {
   assert.match(system, /uBreathScale: \{ value: 0 \}/);
@@ -502,6 +507,12 @@ test("stipple module boots and builds from the canonical idle profile", () => {
       }
     },
     navigator: { get hardwareConcurrency() { return hardwareCores; } },
+    MASTER_FACE: {
+      faceMat: { uniforms: {
+        uExpressionFrom: { value: 0 }, uExpressionTo: { value: 0 },
+        uExpressionBlend: { value: 1 }, uExpressionStrength: { value: 0 }
+      } }
+    },
     MASTER_FACE_STATE: {
       snapshot: () => faceState,
       isStillMode: (mode) => ["idle"].includes(String(mode).toLowerCase()),
@@ -601,6 +612,28 @@ test("stipple module boots and builds from the canonical idle profile", () => {
   assert.equal(api.isFaceScene({ children: [{ type: "Group", children: [] }] }), false);
   const stipple = api.buildFromSamples(THREE, [{ x: 0, y: 0, z: 0, zone: 0, bias: 1 }]);
   assert.equal(stipple.count, 1);
+  const primaryExpressionUniforms = window.MASTER_FACE.faceMat.uniforms;
+  api.tick(stipple, { mode: "thinking", reducedMotion: false }, 0);
+  assert.equal(stipple.material.uniforms.uExpressionBlend.value, 1);
+  assert.equal(primaryExpressionUniforms.uExpressionFrom.value, stipple.material.uniforms.uExpressionFrom.value);
+  stipple.expressionCycle.nextAt = 1;
+  api.tick(stipple, { mode: "thinking", reducedMotion: false }, 1);
+  assert.notEqual(stipple.material.uniforms.uExpressionFrom.value, stipple.material.uniforms.uExpressionTo.value);
+  assert.equal(stipple.material.uniforms.uExpressionBlend.value, 0);
+  assert.equal(primaryExpressionUniforms.uExpressionTo.value, stipple.material.uniforms.uExpressionTo.value);
+  api.tick(stipple, { mode: "thinking", reducedMotion: false }, 2.8);
+  assert.equal(stipple.material.uniforms.uExpressionBlend.value, 1);
+  stipple.expressionCycle.nextAt = 3.8;
+  api.tick(stipple, { mode: "thinking", reducedMotion: false }, 4);
+  api.tick(stipple, { mode: "thinking", reducedMotion: false }, 4.5);
+  const frozenExpressionBlend = stipple.material.uniforms.uExpressionBlend.value;
+  api.tick(stipple, { mode: "thinking", reducedMotion: true }, 5);
+  api.tick(stipple, { mode: "thinking", reducedMotion: true }, 10);
+  assert.equal(stipple.material.uniforms.uExpressionBlend.value, frozenExpressionBlend);
+  api.tick(stipple, { mode: "thinking", reducedMotion: false }, 10.5);
+  assert.ok(stipple.material.uniforms.uExpressionBlend.value > frozenExpressionBlend);
+  assert.ok(stipple.material.uniforms.uExpressionBlend.value < 1);
+  assert.equal(primaryExpressionUniforms.uExpressionBlend.value, stipple.material.uniforms.uExpressionBlend.value);
   assert.equal(stipple.material.uniforms.uDepthFromRank.value, 1);
   assert.equal(stipple.material.uniforms.uDepthSteps.value, 6);
   assert.equal(stipple.material.uniforms.uDensity.value, 0.44);

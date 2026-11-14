@@ -108,6 +108,10 @@ uniform float uIdleDrift;
 uniform float uEyeClose;
 uniform float uExposure;
 uniform float uQuestion;
+uniform float uExpressionFrom;
+uniform float uExpressionTo;
+uniform float uExpressionBlend;
+uniform float uExpressionStrength;
 attribute vec3 scatter;
 attribute float semanticStage;
 attribute float seed;
@@ -118,6 +122,36 @@ varying float vAlpha;
 varying vec3 vColor;
 varying float vDepth;
 varying float vZoneVal;
+vec3 masterExpressionPoint(vec3 point, float expression) {
+  float side = point.x < 0.0 ? -1.0 : 1.0;
+  if (expression < 0.5) {
+    // C / Waterform: flowing lateral contours.
+    point.x += side * sin((point.y + 0.12) * 5.2) * 0.032;
+    point.y += sin(point.x * 4.1) * 0.014;
+    point.z += cos(point.y * 3.4) * 0.012;
+  } else if (expression < 1.5) {
+    // A / Architect: stepped planes and a cheek/bridge ridge.
+    float cheek = smoothstep(0.06, 0.52, abs(point.x)) *
+      (1.0 - smoothstep(-0.48, 0.02, point.y));
+    point.x += side * cheek * 0.052;
+    float steppedY = floor(point.y * 34.0 + 0.5) / 34.0;
+    point.y = mix(point.y, steppedY, 0.82);
+  } else if (expression < 2.5) {
+    // E / Forest Geometry: branching side contours.
+    float temple = exp(-pow((point.y - 0.12) * 5.0, 2.0));
+    float cheek = exp(-pow((point.y + 0.18) * 4.0, 2.0));
+    point.x += side * (temple * 0.045 + cheek * 0.026);
+    point.y += sin(point.x * 10.0) * 0.012 *
+      smoothstep(0.02, 0.5, abs(point.x));
+  } else {
+    // F / Monument: broad upper plane and a squared lower contour.
+    float jaw = 1.0 - smoothstep(-0.52, 0.12, point.y);
+    point.x *= 1.0 - jaw * 0.13;
+    point.x += side * jaw * 0.018;
+    point.y += smoothstep(0.12, 0.62, point.y) * 0.018;
+  }
+  return point;
+}
 void main(){
   float m=smoothstep(0.,1.,uMorph);
   float morphProgress = 1.0 - m;
@@ -218,6 +252,10 @@ void main(){
   }
   // FA20 pass bloom — brief outward radial spring then snap back
   if(uBloom > 0.0) p.xy += normalize(p.xy + vec2(0.001)) * uBloom * 0.30 * (1.0 - radial * 0.6);
+  vec3 expressionFrom = masterExpressionPoint(p, uExpressionFrom);
+  vec3 expressionTo = masterExpressionPoint(p, uExpressionTo);
+  p = mix(p, mix(expressionFrom, expressionTo, uExpressionBlend),
+    clamp(uExpressionStrength, 0.0, 1.0));
   vec4 mv=modelViewMatrix*vec4(p,1.);
   float depth=clamp(p.z/0.82,0.,1.);
   // Treat the point cloud as a shallow physical surface instead of a flat depth gradient.
@@ -321,6 +359,8 @@ if (_hasWebGL && THREE) {
       uRain:{value:0}, uModelSwitch:{value:0}, uEarPulse:{value:0}, uRipple:{value:0},
       uVowel:{value:0}, uMouthWide:{value:0}, uSurpriseY:{value:0},
       uFracture:{value:0}, uBloom:{value:0}, uIdleDrift:{value:0}, uEyeClose:{value:0}, uExposure:{value:1.0}, uQuestion:{value:0},
+      uExpressionFrom:{value:0}, uExpressionTo:{value:0},
+      uExpressionBlend:{value:1}, uExpressionStrength:{value:0},
       uFocusDim:{value:1.0}, uTime:{value:0}
     },
     // Normal (not additive) blending, so individual pixels stay crisp and
