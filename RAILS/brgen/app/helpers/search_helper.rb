@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
-# The global search page's two per-section extras: a way into each vertical's
-# own search, and the words around the match under a post.
+# The global search page's per-section navigation and matched-text presentation.
 module SearchHelper
   SNIPPET_RADIUS = 80
   SNIPPET_LENGTH = 160
@@ -36,11 +35,18 @@ module SearchHelper
 
   # The post's text around the first match, with the match marked. A post found
   # by its title alone shows its opening instead, so every row reads the same.
+  # Share one escaped, semantic highlight treatment between labels and excerpts.
+  def search_highlight(text, query)
+    highlight(text.to_s, query, highlighter: '<mark>\1</mark>')
+  end
+
+  # The post's text around the first match. A post found by its title alone
+  # shows the opening instead, so every row reads the same.
   def search_snippet(text, query)
     plain = strip_tags(text.to_s).squish
     return if plain.blank?
 
     shown = excerpt(plain, query, radius: SNIPPET_RADIUS) || truncate(plain, length: SNIPPET_LENGTH)
-    highlight(shown, query, highlighter: '<mark>\1</mark>')
+    search_highlight(shown, query)
   end
 end

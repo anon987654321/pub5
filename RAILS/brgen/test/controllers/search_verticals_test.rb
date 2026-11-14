@@ -60,6 +60,18 @@ class SearchVerticalsTest < ActionDispatch::IntegrationTest
     assert_nil @controller.view_context.search_section_href(:people, @word)
   end
 
+  test "a result title marks only the typed query" do
+    title = "Helg #{@word} i Bergen"
+    Post.create!(user: @author, city: @city, title:, content: "Ein roleg dag ved fjorden.")
+
+    get global_search_path(q: @word)
+
+    assert_response :success
+    assert_select "li a", text: title do |links|
+      assert_equal [ @word ], links.first.css("mark").map(&:text)
+    end
+  end
+
   test "a post result shows the text around the match with the match marked" do
     Post.create!(user: @author, city: @city, title: "Helg",
                  content: "Vi gikk langs fjorden og fikk se en #{@word} ved hytta i går kveld.")
