@@ -544,11 +544,13 @@ test("stipple module boots and builds from the canonical idle profile", () => {
     addEventListener() {},
     removeEventListener() {}
   };
+  const faceMath = Object.create(Math);
+  faceMath.random = () => 0;
   runInNewContext(system, {
     window,
     document,
     URLSearchParams,
-    Math,
+    Math: faceMath,
     Number,
     Object,
     Array,
@@ -626,6 +628,8 @@ test("stipple module boots and builds from the canonical idle profile", () => {
   assert.equal(primaryExpressionUniforms.uExpressionFrom.value, stipple.material.uniforms.uExpressionFrom.value);
   stipple.expressionCycle.nextAt = 1;
   api.tick(stipple, { mode: "thinking", reducedMotion: false }, 1);
+  assert.equal(stipple.material.uniforms.uExpressionFrom.value, 0);
+  assert.equal(stipple.material.uniforms.uExpressionTo.value, 1);
   assert.notEqual(stipple.material.uniforms.uExpressionFrom.value, stipple.material.uniforms.uExpressionTo.value);
   assert.equal(stipple.material.uniforms.uExpressionBlend.value, 0);
   assert.ok(stipple.expressionCycle.nextAt >= 10 && stipple.expressionCycle.nextAt <= 17);
