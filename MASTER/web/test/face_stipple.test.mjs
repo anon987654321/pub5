@@ -70,6 +70,25 @@ test("aliased face contours use bounded tokenised position quantisation without 
   assert.match(system, /gl_PointSize = 1\.0;/);
 });
 
+test("MASTER randomly morphs among the four original abstract face expressions", () => {
+  assert.match(tokens, /expressions:\s*\n\s+enabled: true\s*\n\s+order: \[waterform, architect, forest_geometry, monument\]/);
+  assert.match(tokens, /min_interval_ms: 9000/);
+  assert.match(tokens, /max_interval_ms: 16000/);
+  assert.match(system, /function expressionConfiguration\(\)/);
+  assert.match(system, /function updateExpressions\(system, time, reducedMotion\)/);
+  assert.match(system, /nextExpression\(cycle\.from, config\.order\.length\)/);
+  assert.match(system, /uExpressionFrom: \{ value: 0 \}/);
+  assert.match(system, /uExpressionTo: \{ value: 0 \}/);
+  assert.match(system, /uExpressionBlend: \{ value: 1 \}/);
+  assert.match(system, /vec3 expressionPoint\(vec3 point, float expression\)/);
+  assert.match(system, /C \/ Waterform/);
+  assert.match(system, /A \/ Architect/);
+  assert.match(system, /E \/ Forest Geometry/);
+  assert.match(system, /F \/ Monument/);
+  assert.match(system, /updateExpressions\(system, time, reducedMotion\)/);
+  assert.match(system, /expression: \{/);
+});
+
 test("stipple breath is luminance-only, survives idle stillness and freezes for reduced motion", () => {
   assert.match(system, /uBreathScale: \{ value: 0 \}/);
   assert.match(system, /uniform float uBreathScale;/);

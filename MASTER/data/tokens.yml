@@ -496,6 +496,14 @@ tokens:
         enabled: true
         grid: 0.012
         strength: 0.30
+      # Original abstract morphologies; no community-specific mask or spirit is reproduced.
+      expressions:
+        enabled: true
+        order: [waterform, architect, forest_geometry, monument]
+        min_interval_ms: 9000
+        max_interval_ms: 16000
+        transition_ms: 1800
+        strength: 0.78
       # Point sprites stay one pixel; camera depth changes brightness, never size.
       depth_response:
         reference_distance: 5.0

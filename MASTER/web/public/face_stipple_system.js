@@ -173,6 +173,60 @@
     };
   }
 
+  function expressionConfiguration() {
+    const config = window.MASTER_FACE_CONTRACT?.stipple?.expressions || {};
+    const allowed = ["waterform", "architect", "forest_geometry", "monument"];
+    const order = Array.isArray(config.order) ? config.order.filter((name) => allowed.includes(name)) : allowed;
+    return {
+      enabled: config.enabled !== false && order.length === 4,
+      order: order.length === 4 ? order : allowed,
+      minInterval: clamp(config.min_interval_ms, 9000, 3000, 60000),
+      maxInterval: clamp(config.max_interval_ms, 16000, 3000, 90000),
+      transition: clamp(config.transition_ms, 1800, 250, 8000),
+      strength: clamp(config.strength, 0.78, 0, 1)
+    };
+  }
+
+  function nextExpression(current, count) {
+    if (count < 2) return 0;
+    const candidate = Math.floor(Math.random() * (count - 1));
+    return candidate >= current ? candidate + 1 : candidate;
+  }
+
+  function updateExpressions(system, time, reducedMotion) {
+    const config = expressionConfiguration();
+    const uniforms = system?.material?.uniforms;
+    if (!uniforms?.uExpressionFrom) return;
+    if (!config.enabled) {
+      uniforms.uExpressionBlend.value = 0;
+      uniforms.uExpressionStrength.value = 0;
+      return;
+    }
+    if (!system.expressionCycle) {
+      const initial = Math.floor(Math.random() * config.order.length);
+      system.expressionCycle = {
+        from: initial, to: initial, startedAt: time,
+        nextAt: time + config.minInterval / 1000 +
+          Math.random() * Math.max(0, config.maxInterval - config.minInterval) / 1000
+      };
+    }
+    const cycle = system.expressionCycle;
+    if (!reducedMotion && time >= cycle.nextAt) {
+      cycle.from = cycle.to;
+      cycle.to = nextExpression(cycle.from, config.order.length);
+      cycle.startedAt = time;
+      cycle.nextAt = time + config.transition / 1000 + config.minInterval / 1000 +
+        Math.random() * Math.max(0, config.maxInterval - config.minInterval) / 1000;
+    }
+    const progress = reducedMotion ? Number(uniforms.uExpressionBlend.value) :
+      clamp((time - cycle.startedAt) / (config.transition / 1000), 1, 0, 1);
+    uniforms.uExpressionFrom.value = cycle.from;
+    uniforms.uExpressionTo.value = cycle.to;
+    uniforms.uExpressionBlend.value = progress * progress * (3 - 2 * progress);
+    uniforms.uExpressionStrength.value = config.strength;
+    system.expressionName = config.order[cycle.to];
+  }
+
   function samplesFromFaceGeometry(facePoints, count) {
     const positions = facePoints?.geometry?.attributes?.position?.array;
     if (!positions || positions.length < 3) return null;
@@ -252,6 +306,10 @@
         uAliasEnabled: { value: aliasing.enabled ? 1.0 : 0.0 },
         uAliasGrid: { value: aliasing.grid },
         uAliasStrength: { value: aliasing.strength },
+        uExpressionFrom: { value: 0 },
+        uExpressionTo: { value: 0 },
+        uExpressionBlend: { value: 1 },
+        uExpressionStrength: { value: 0 },
         uDepthFromRank: { value: swarmConfiguration().size_from_depth === true ? 1.0 : 0.0 },
         uDepthSteps: { value: Math.max(2, Array.isArray(swarmConfiguration().glyph_ramp) ? swarmConfiguration().glyph_ramp.length : 2) },
         uDensity: { value: idle.density },
@@ -279,6 +337,10 @@
         uniform float uAliasEnabled;
         uniform float uAliasGrid;
         uniform float uAliasStrength;
+        uniform float uExpressionFrom;
+        uniform float uExpressionTo;
+        uniform float uExpressionBlend;
+        uniform float uExpressionStrength;
         uniform float uDensity;
         uniform float uRipple;
         uniform float uTurbulence;
@@ -295,6 +357,34 @@
         varying float vZone;
         varying float vThreshold;
         varying float vDepthRank;
+        vec3 expressionPoint(vec3 point, float expression) {
+          float side = point.x < 0.0 ? -1.0 : 1.0;
+          if (expression < 0.5) {
+            // C / Waterform: soft, flowing lateral contours.
+            point.x += side * sin((point.y + 0.12) * 5.2) * 0.032;
+            point.y += sin(point.x * 4.1) * 0.014;
+            point.z += cos(point.y * 3.4) * 0.012;
+          } else if (expression < 1.5) {
+            // A / Architect: stepped planes and a restrained cheek/bridge ridge.
+            float cheek = smoothstep(0.06, 0.52, abs(point.x)) *
+              (1.0 - smoothstep(-0.48, 0.02, point.y));
+            point.x += side * cheek * 0.052;
+            point.y = floor(point.y * 34.0 + 0.5) / 34.0 * 0.94 + point.y * 0.06;
+          } else if (expression < 2.5) {
+            // E / Forest Geometry: branching side contours, kept inside the silhouette.
+            float temple = exp(-pow((point.y - 0.12) * 5.0, 2.0));
+            float cheek = exp(-pow((point.y + 0.18) * 4.0, 2.0));
+            point.x += side * (temple * 0.045 + cheek * 0.026);
+            point.y += sin(point.x * 10.0) * 0.012 * smoothstep(0.02, 0.5, abs(point.x));
+          } else {
+            // F / Monument: broad upper plane and a quiet, squared lower contour.
+            float jaw = 1.0 - smoothstep(-0.52, 0.12, point.y);
+            point.x *= 1.0 - jaw * 0.13;
+            point.x += side * jaw * 0.018;
+            point.y += smoothstep(0.12, 0.62, point.y) * 0.018;
+          }
+          return point;
+        }
         void main() {
           // A quiet radial signal crosses the dispersed field. Per-carrier thresholds
           // resolve the points in cohorts, so the face gathers rather than fades in.
@@ -308,6 +398,9 @@
           vec2 scatterDirection = normalize(aIntroScatter.xy + vec2(0.0001));
           p.xy += scatterDirection * waveFront * uIntroWaveStrength * waveEnvelope;
           p.z += waveFront * uIntroWaveStrength * 0.12 * waveEnvelope;
+          vec3 currentForm = expressionPoint(p, uExpressionFrom);
+          vec3 nextForm = expressionPoint(p, uExpressionTo);
+          p = mix(p, mix(currentForm, nextForm, uExpressionBlend), uExpressionStrength);
           // Quantise a controlled share of the face's position field. This creates
           // deliberate stepped contours without changing the one-pixel point budget.
           if (uAliasEnabled > 0.5 && uAliasStrength > 0.0) {
@@ -626,6 +719,7 @@
     const delta = previous == null ? 1 / 60 : clamp(time - previous, 0, 0, 0.05);
     if (system.swarm) system.swarm.lastTime = time;
     system.material.uniforms.uTime.value = reducedMotion ? 0 : time;
+    updateExpressions(system, time, reducedMotion);
     updateSwarm(system, state, delta, time);
     syncFromFaceState(system, state);
   }
@@ -816,6 +910,12 @@
         p95RenderIntervalMs: percentile(0.95),
         approximateRenderCallsPerSecond: lastRenderIntervalMs > 0
           ? Number((1000 / lastRenderIntervalMs).toFixed(1)) : null
+      },
+      expression: {
+        name: active?.expressionName || null,
+        from: value("uExpressionFrom"),
+        to: value("uExpressionTo"),
+        blend: value("uExpressionBlend")
       },
       uniforms: {
         density: value("uDensity"), ripple: value("uRipple"), turbulence: value("uTurbulence"),
