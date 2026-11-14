@@ -1,7 +1,9 @@
 # STUDIO/lora/thresholds.yml
 #
-# The committed fallback envelope was recovered from a historical seven-frame
-# calibration. Keep new subject-specific calibration outputs outside the checkout.
+# The committed fallback envelope retains the historical seven-frame
+# measurements below. The old specular ceiling was directionally wrong: the
+# metric measures variation among bright pixels, and low values indicate
+# clustered highlights. Its neutral 0.0 floor does not gate until recalibrated.
 #
 # Calibrate from a private directory containing at least five regular image files:
 #   ruby STUDIO/lora/judge.rb --calibrate PRIVATE_REFERENCE_DIR
@@ -11,12 +13,11 @@
 # Use that file with STUDIO_LORA_THRESHOLDS. Paths, filenames and image hashes
 # are deliberately absent from the calibration document.
 #
-# These values are the ones the recovered pub4 run produced from seven reference
-# frames. The full 108-frame set the values were drawn from lives in private
-# storage, not in this public repository, so the numbers travel with their
-# provenance and the tool that recomputes them rather than with the faces.
+# Texture, tonal-range and clipping retain the recovered pub4 seven-frame
+# envelope. The full 108-frame source set lives in private storage, not in this
+# public repository.
 thresholds:
   texture: 0.012552          # floor: below is waxy, over-smoothed skin
   tonal_range: 0.091482      # floor: below is flat and veiled, no real blacks
   clipping: 0.000000         # ceiling: above is blown highlights
-  specular_spread: 0.195470  # ceiling: above is a plastic sheen on the skin
+  specular_spread: 0.000000  # neutral floor until correctly directed calibration

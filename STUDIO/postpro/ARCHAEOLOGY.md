@@ -89,7 +89,7 @@ grain, halation and highlight shoulder) is the grade's proper scope.
 | Uncanny score before and after grade | Preset sidecars already record before/after readings. Chain sidecars now do too, together with input/output hashes and quality warnings. |
 | All rendered pathways use the same camera correction | This branch closes the old one-shot/watch/uplift/stock-sheet drift and adds a vocabulary audit that fails if one of those paths stops reaching `camera_corrected`. |
 | Golden references with perceptual ΔE and explicit skin/highlight bounds | Still a real gap: current quality warnings and smoke-pixel tests are not a substitute for calibrated reference-image tests. No claim is made that this item is complete. |
-| A measured specular-uniformity score and monotonically improving uncanny score | Still open: texture/clipping readings are proxies, not a facial-region/specular-scattering measurement. |
+| A measured specular-uniformity score and monotonically improving uncanny score | Still open: whole-frame highlight spread is only a proxy, not a facial-region/specular-scattering measurement; no monotonic quality target is calibrated. |
 | Video shutter angle, coherent bloom/halation, flicker, weave, gate-hair, telecine and still/video parity | The bounded CFR video pipeline restores the basic grade/audio/timing path. These video-specific optical effects and parity fixtures remain future work, not silently implemented features. |
 
 The 168 numbered ideas were a menu, not a mandate to ship every model name, price, or experimental stage

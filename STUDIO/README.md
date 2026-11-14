@@ -49,10 +49,13 @@ but the implementation is owned here.
   runs a read-only validator. Merethe's preparation step builds in a private
   staging directory and preserves the last known-good dataset if a build fails.
   lora/judge.rb audits whole-frame texture, highlight, clipping and tonal-range proxies.
-  Calibration requires at least five regular reference images outside the checkout;
-  it prints path-free aggregate YAML by default, or writes a new mode-0600 file
-  outside the checkout with --output. STUDIO_LORA_THRESHOLDS selects a private
-  override. These proxies do not replace full-size human review or perceptual ΔE fixtures.
+  Highlight spread is only assessed when a frame has highlight samples; the
+  committed fallback floor is neutral until recalibrated because the historical
+  ceiling used the wrong direction. Calibration requires at least five regular
+  reference images outside the checkout; it prints path-free aggregate YAML by
+  default, or writes a new mode-0600 file outside the checkout with --output.
+  STUDIO_LORA_THRESHOLDS selects a private override. These proxies do not replace
+  full-size human review or calibrated perceptual ΔE fixtures.
 - `promo.rb` — cut a subject's stills into one vertical motion-graphics clip
   with a soundtrack. A slow push on each still, a crossfade between stills, one
   film look over the whole piece and the dilla render underneath. It composes

@@ -2,7 +2,9 @@
 
 require "vips"
 
-# Four numbers that say whether a picture looks rendered.
+# Four readings that help describe whether a picture looks rendered. Texture,
+# clipping and tonal range are always numeric; highlight spread is unavailable
+# when the frame contains no pixels above the highlight floor.
 #
 # Generated skin is too clean and its specular response uniform, because
 # diffusion models learn from retouched photography and carry no account of
@@ -14,9 +16,9 @@ require "vips"
 #
 # Deliberately whole-image and deliberately without face detection. A metric
 # that needs a face model is a metric that fails on half the inputs and brings a
-# second dependency to disagree with; these four work on any image and move in
-# the right direction for the right reasons. They are proxies and are named as
-# proxies.
+# second dependency to disagree with. These measurements are proxies, not face
+# diagnoses or quality verdicts; highlight spread is assessed only when bright
+# pixels exist.
 #
 # Three more readings sit beside the four, outside Reading because the grade
 # calls read_image and has no use for them: finest_octave, squint_image and
@@ -31,8 +33,9 @@ module Postpro
       def to_h = { texture:, specular_spread:, clipping:, tonal_range: }
 
       def to_s
-        format("texture=%.4f specular_spread=%.4f clipping=%.4f%% tonal_range=%.4f",
-               texture, specular_spread, clipping, tonal_range)
+        specular = specular_spread ? format("%.4f", specular_spread) : "n/a"
+        format("texture=%.4f specular_spread=%s clipping=%.4f%% tonal_range=%.4f",
+               texture, specular, clipping, tonal_range)
       end
     end
 
@@ -93,21 +96,27 @@ module Postpro
       luma.conv(mask, precision: :float).abs.avg
     end
 
-    # How varied the highlights are.
+    # Standard deviation of luminance among highlight pixels only.
     #
     # Real skin is translucent and lit unevenly — an oily forehead throws a hard
-    # specular while a cheek stays matte, so the bright pixels have a spread.
-    # Rendered skin returns light uniformly, so its highlights cluster. Low is
-    # the tell.
+    # specular while a cheek stays matte. Rendered skin often returns highlights
+    # with nearly identical values. Low spread is therefore the warning, not
+    # high spread. Pixels below SPECULAR_FLOOR are excluded from both moments;
+    # including them as zero would make the score depend on background area.
     #
-    # Measured as the deviation WITHIN the highlight population rather than
-    # across the frame, or a dark background would dominate the answer.
+    # No highlight samples means this dimension is not observable, not a score
+    # of zero. A nil reading is carried through sidecars and skipped by the judge.
     def self.specular_spread(luma)
-      highlights = (luma >= SPECULAR_FLOOR).ifthenelse(luma, 0)
-      lit = highlights.avg
-      return 0.0 if lit.zero?
+      mask = luma >= SPECULAR_FLOOR
+      coverage = mask.avg / 255.0
+      return nil if coverage.zero?
 
-      highlights.deviate
+      selected = mask.ifthenelse(luma, 0)
+      selected_squares = mask.ifthenelse(luma * luma, 0)
+      mean = selected.avg / coverage
+      second_moment = selected_squares.avg / coverage
+      variance = [second_moment - mean * mean, 0.0].max
+      Math.sqrt(variance)
     end
 
     # Blown highlights, as a percentage. A real photograph rolls off; a render
@@ -209,7 +218,8 @@ module Postpro
         after:,
         texture_delta: after.texture - before.texture,
         clipping_delta: after.clipping - before.clipping,
-        specular_delta: after.specular_spread - before.specular_spread,
+        specular_delta: (after.specular_spread - before.specular_spread if
+          before.specular_spread && after.specular_spread),
       }
     end
 
@@ -227,6 +237,11 @@ module Postpro
                else
                  format("clipping %+.4f%% - the grade BLEW highlights that were intact before it",
                         comparison[:clipping_delta])
+               end
+      lines << if comparison[:specular_delta]
+                 format("highlight spread %+.4f - variation within bright pixels", comparison[:specular_delta])
+               else
+                 "highlight spread not assessed - one or both images had no highlight samples"
                end
       lines
     end

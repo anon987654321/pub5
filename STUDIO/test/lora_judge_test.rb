@@ -49,10 +49,20 @@ class TestStudioLoraJudge < Minitest::Test
       "specular_spread" => 0.1
     }
     faults = Judge.faults_for(
-      reading(texture: 0.05, tonal_range: 0.1, clipping: 2.0, specular_spread: 0.2),
+      reading(texture: 0.05, tonal_range: 0.1, clipping: 2.0, specular_spread: 0.05),
       limits
     )
     assert_equal %w[texture tonal_range clipping specular_spread], faults.map { |fault| fault.fetch(:metric) }
+  end
+
+  def test_missing_highlight_population_is_not_judged_as_plastic_skin
+    limits = {
+      "texture" => 0.1,
+      "tonal_range" => 0.2,
+      "clipping" => 1.0,
+      "specular_spread" => 0.1
+    }
+    assert_empty Judge.faults_for(reading(specular_spread: nil), limits)
   end
 
   def test_candidate_with_non_finite_reading_fails_closed
@@ -113,6 +123,8 @@ class TestStudioLoraJudge < Minitest::Test
     assert_equal 5, document.dig("calibration", "image_count")
     assert_equal 0.1, document.dig("thresholds", "texture")
     assert_equal 0.5, document.dig("thresholds", "clipping")
+    assert_equal 0.1, document.dig("thresholds", "specular_spread")
+    assert_equal 5, document.dig("calibration", "specular_spread_sample_count")
     refute_includes output, @references
     assert_equal original, File.read(Judge::THRESHOLDS_FILE)
   end

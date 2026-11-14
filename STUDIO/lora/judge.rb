@@ -55,9 +55,9 @@ module Studio
           remedy: "lower guidance_scale; compare with the calibrated reference ceiling"
         },
         "specular_spread" => {
-          direction: :ceiling,
-          fault: "plastic sheen — highlights pooling on the skin like wet vinyl",
-          remedy: "the 'glossy skin' and 'editorial beauty lighting' phrasings invite this"
+          direction: :floor,
+          fault: "plastic sheen — highlight values cluster instead of varying across the lit surface",
+          remedy: "check the source lighting and avoid glossy-skin or editorial-beauty phrasing"
         }
       }.freeze
 
@@ -174,6 +174,8 @@ module Studio
           end
 
           value = reading.public_send(metric)
+          next if metric == "specular_spread" && value.nil?
+
           range = METRIC_RANGES.fetch(metric)
           unless value.is_a?(Numeric) && value.to_f.finite? && range.cover?(value.to_f)
             raise CalibrationError, "#{context}: #{metric} is not a finite value in #{range.begin}..#{range.end}"
@@ -199,7 +201,12 @@ module Studio
         end
 
         thresholds = CHECKS.to_h do |metric, spec|
-          values = readings.map { |reading| reading.public_send(metric).to_f }
+          values = readings.filter_map { |reading| reading.public_send(metric)&.to_f }
+          # If no reference contains a highlight, keep this dimension neutral
+          # rather than calling the absence of highlights a plastic-skin signal.
+          next [metric, 0.0] if values.empty? && metric == "specular_spread"
+          raise CalibrationError, "no measurable #{metric} values in reference set" if values.empty?
+
           # Round outward, never to nearest: serialization can only grow the envelope.
           value = if spec[:direction] == :floor
                     (values.min * 1e6).floor / 1e6
@@ -210,7 +217,9 @@ module Studio
         end
         validate_thresholds!(thresholds)
 
-        document = calibration_document(thresholds, image_count: frames.length)
+        specular_samples = readings.count { |reading| !reading.specular_spread.nil? }
+        document = calibration_document(thresholds, image_count: frames.length,
+                                                       specular_samples:)
         if output
           path = write_calibration(output, document)
           puts "ok: calibrated #{frames.length} image(s) -> #{path}"
@@ -220,13 +229,14 @@ module Studio
         thresholds
       end
 
-      def calibration_document(thresholds, image_count:)
+      def calibration_document(thresholds, image_count:, specular_samples:)
         rows = thresholds.map { |metric, value| "  #{metric}: #{format('%.6f', value)}" }.join("\n")
         <<~YAML
           # Aggregate measurements only; no source paths, filenames or image hashes.
           calibration:
             image_count: #{Integer(image_count)}
-            method: "outward-rounded minimum/maximum envelope"
+            specular_spread_sample_count: #{Integer(specular_samples)}
+            method: "outward-rounded minimum/maximum envelope; specular spread is a floor"
           thresholds:
           #{rows}
         YAML
@@ -264,7 +274,10 @@ module Studio
         validate_reading!(reading, context: "candidate")
         CHECKS.filter_map do |metric, spec|
           limit = limits.fetch(metric)
-          value = reading.public_send(metric).to_f
+          raw_value = reading.public_send(metric)
+          next if metric == "specular_spread" && raw_value.nil?
+
+          value = raw_value.to_f
           breached = spec[:direction] == :floor ? value < limit : value > limit
           next unless breached
 
@@ -304,7 +317,11 @@ module Studio
 
         rejected = []
         frames.each do |path|
-          faults = faults_for(Postpro::Uncanny.read(path.to_s), thresholds)
+          reading = Postpro::Uncanny.read(path.to_s)
+          if reading.specular_spread.nil?
+            puts "INFO: #{path.basename} specular spread not assessed (no highlight samples)"
+          end
+          faults = faults_for(reading, thresholds)
           if faults.empty?
             puts "ok:   #{path.basename}"
             next
