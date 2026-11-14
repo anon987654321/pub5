@@ -38,4 +38,9 @@ source_rights:
   #   stored_at: "evidence/reference-rights.pdf"
   #
   # Merethe's recovered archive and additional photographs need separate
-  # entries named me2_archive and additional_images.
+  # entries named me2_archive and additional_images. Training also needs:
+  # training_dataset:
+  #   granted_by: "..."
+  #   granted_on: "YYYY-MM-DD"
+  #   covers: "generation_use, provider_processing, training_use"
+  #   stored_at: "evidence/training-dataset-rights.pdf"

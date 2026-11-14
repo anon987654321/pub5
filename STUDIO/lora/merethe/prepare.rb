@@ -90,7 +90,7 @@ module Studio
 
     def require_training_consent!
       required = Studio::Lora::Consent.required_source_sets(
-        subject: "merethe", subject_directory: SUBJECT_ROOT
+        subject: "merethe", subject_directory: SUBJECT_ROOT, action: :training
       )
       Studio::Lora::Consent.require!(
         subject: "merethe", subject_directory: SUBJECT_ROOT,

@@ -93,6 +93,7 @@ class TestLoraConsent < Minitest::Test
 
     subject_file = File.join(evidence, "subject-consent.txt")
     source_file = File.join(evidence, "source-rights.txt")
+    dataset_file = File.join(evidence, "dataset-rights.txt")
     sources = File.join(@subject_dir, "sources")
     FileUtils.mkdir_p(sources, mode: 0o700)
     File.write(File.join(sources, "photo.jpg"), "synthetic source image")
@@ -103,8 +104,10 @@ class TestLoraConsent < Minitest::Test
     end
     File.write(subject_file, "synthetic subject authority\n", mode: "w", perm: 0o600)
     File.write(source_file, "synthetic source authority\n", mode: "w", perm: 0o600)
+    File.write(dataset_file, "synthetic dataset authority\n", mode: "w", perm: 0o600)
     File.chmod(0o600, subject_file)
     File.chmod(0o600, source_file)
+    File.chmod(0o600, dataset_file)
 
     subject_scopes = %w[likeness_generation provider_processing]
     source_scopes = %w[generation_use provider_processing]
@@ -146,15 +149,15 @@ class TestLoraConsent < Minitest::Test
           "subject_sources" => {
             "granted_by" => "synthetic source-rights authority",
             "granted_on" => "2026-11-14",
-            "covers" => source_scopes,
+            "covers" => source_scopes.dup,
             "stored_at" => "evidence/source-rights.txt"
           },
           **(training ? {
             "training_dataset" => {
               "granted_by" => "synthetic dataset authority",
               "granted_on" => "2026-11-14",
-              "covers" => source_scopes,
-              "stored_at" => "evidence/source-rights.txt"
+              "covers" => source_scopes.dup,
+              "stored_at" => "evidence/dataset-rights.txt"
             }
           } : {})
         }
