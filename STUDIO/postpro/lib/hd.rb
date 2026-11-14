@@ -163,26 +163,45 @@ rescue StandardError => e
   nil
 end
 
+def normalize_camera_identifier(value)
+  value.to_s.downcase.gsub(/[^a-z0-9]+/, " ").strip
+end
+
+def camera_profile_brand(make)
+  value = normalize_camera_identifier(make)
+  return "canon" if value.include?("canon")
+  return "fujifilm" if value.include?("fujifilm") || value == "fuji"
+  return "leica" if value.include?("leica")
+  return "nikon" if value.include?("nikon")
+  return "olympus" if value.include?("olympus")
+  return "sony" if value.include?("sony")
+
+  nil
+end
+
 def get_camera_profile(image)
   return if CAMERA_PROFILES.empty?
 
   begin
-    make = image.get("exif-ifd0-Make")&.strip&.downcase
-    model = image.get("exif-ifd0-Model")&.strip&.downcase
+    make = image.get("exif-ifd0-Make")
+    model = image.get("exif-ifd0-Model")
+    normalized_model = normalize_camera_identifier(model)
+    return if normalized_model.empty?
 
-    return unless make && model
-
-    # Try exact model match first
-    CAMERA_PROFILES.each do |brand, profiles|
-      return profiles[model] if profiles[model]
+    # Some EXIF Model strings include the manufacturer; exact matching is safe
+    # across the catalogue. A make-only fallback is never safe for a matrix.
+    CAMERA_PROFILES.each_value do |profiles|
+      return profiles[normalized_model] if profiles.key?(normalized_model)
     end
 
-    # Try brand match
-    CAMERA_PROFILES.each do |brand, profiles|
-      return profiles.values.first if make.include?(brand) || brand.include?(make)
-    end
+    brand = camera_profile_brand(make)
+    return unless brand
 
-    nil
+    profiles = CAMERA_PROFILES[brand]
+    return unless profiles.is_a?(Hash)
+
+    combined = normalize_camera_identifier("#{brand} #{model}")
+    profiles[combined]
   rescue StandardError => e
     $logger.debug "EXIF read failed: #{e.message}"
     nil

@@ -148,12 +148,9 @@ module Studio
       LIGHT = "one clear light direction with a real shadow side, catchlights in " \
               "both eyes shaped by the source"
       FOCUS = "sharp focus on the nearest eye"
-      HOUSE_STOCK = "Kodak Portra 400 colour negative scan, fine grain, gentle highlight rolloff"
-
-      # The craft appended to a free-text still, after the scene words. No lens:
-      # a sitting states its own focal length, and two lenses in one prompt is a
-      # contradiction the model resolves by dropping one without saying which.
-      PHOTOGRAPHIC_CRAFT = [GEOMETRY, LIGHT, SKIN, FOCUS, HOUSE_STOCK, "no text in the frame"].join(", ")
+      # Shared craft contains capture technique only. Film stock is a per-shot
+      # decision, not a universal prompt fragment.
+      PHOTOGRAPHIC_CRAFT = [GEOMETRY, LIGHT, SKIN, FOCUS, "no text in the frame"].join(", ")
 
       def self.photographic(words)
         [words, PHOTOGRAPHIC_CRAFT].compact.join(", ")
@@ -317,9 +314,16 @@ module Studio
         "eyes on the lens, a wide real grin",
       ].freeze
 
+      # Each sitting gets its own stock, rather than inheriting one house look.
+      SCENE_STOCKS = %w[
+        portra ultramax cinestill fuji400h hp5 portra800 trix gold superia instax
+      ].freeze
+
       # A sitting, one-based like the scenario numbers the old toolkit used.
       def self.scene(number)
-        SCENES[(Integer(number) - 1) % SCENES.size]
+        index = (Integer(number) - 1) % SCENES.size
+        stock = Studio::Lora::Craft::STOCK.fetch(SCENE_STOCKS.fetch(index))
+        "#{SCENES.fetch(index)}, #{stock}"
       end
 
       # A distinct postpro heavy look per frame, and per subject. postpro deals

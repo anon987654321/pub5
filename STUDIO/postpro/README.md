@@ -36,14 +36,17 @@ registration error. The file `uncanny.rb` measures whether a picture looks rende
 `rescue.rb` diagnoses a bad photograph, `frame_set.rb` reads a folder as a set, and `depth.rb`
 supplies a real depth map when its model is installed.
 
-The file `constitution.rb` is the boundary where MASTER's laws
-become image-generation invariants, `analog_capabilities.rb` backs `--capabilities`, and
-`camera_profiles.json` carries the sensor data. Its 200 stable catalogue entries describe
-intended analogue directions. Entries remain `unverified` with a null `enabled` value until a
-concrete code path and regression test establish readiness; the report's `catalog_complete`
-means the inventory is present, while `complete` means all reported directions are verified
-and enabled. These are separate questions by design. A log file named `postpro.log` also sits
-in the folder; it is output, and git should not carry it.
+The file `constitution.rb` is the boundary where MASTER's laws become image-generation
+invariants. `camera_profiles.json` is a separate sensor-correction bank: 121 camera bodies
+across Canon, Fujifilm, Leica, Nikon, Olympus and Sony. A body matches by exact normalized
+model or exact make+model; an unknown body receives no borrowed manufacturer matrix.
+`baseline_exposure` remains catalogued but is not applied: its source convention is not yet
+established, so it must not be mistaken for an active exposure correction.
+`analog_capabilities.rb` backs `--capabilities` with a distinct 200-direction emulation
+inventory. Entries remain `unverified` with a null `enabled` value until a concrete code path
+and regression test establish readiness; `catalog_complete` means the inventory is present,
+while `complete` means all reported directions are verified and enabled. A log named
+`postpro.log` is output, and git should not carry it.
 
 ## Restored historical creative vocabulary
 

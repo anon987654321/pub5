@@ -45,7 +45,11 @@ module Studio
 
         rendered = []
         total.times do |index|
-          scene = @scenes[index % @scenes.size]
+          scene = if @scenes.equal?(SCENES)
+                    Studio::Lora::Selfie.scene(index + 1)
+                  else
+                    @scenes[index % @scenes.size]
+                  end
           begin
             stem = "#{@subject}_selfie_#{format("%02d", index + 1)}"
             path = @series.write(

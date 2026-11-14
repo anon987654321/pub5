@@ -9,7 +9,7 @@ module Master
     # MASTER-facing adapter for STUDIO photograph and LoRA work. MASTER owns
     # routing and result contracts; STUDIO owns provider calls and media files.
     class IdeaPicture
-      SCRIPT = File.expand_path("../../../STUDIO/photograph.rb", __dir__)
+      SCRIPT = File.expand_path("../../../STUDIO/lora/photograph.rb", __dir__)
 
       def initialize(script: SCRIPT)
         @script = script
