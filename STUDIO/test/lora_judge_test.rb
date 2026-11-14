@@ -131,6 +131,25 @@ class TestStudioLoraJudge < Minitest::Test
     refute_includes existing, @references
   end
 
+  def test_private_threshold_override_rejects_checkout_and_symlink_paths
+    private_file = File.join(@root, "private-thresholds.yml")
+    File.write(private_file, "thresholds: {}\n")
+    ENV.stub("STUDIO_LORA_THRESHOLDS", private_file) do
+      assert_equal private_file, Judge.thresholds_path
+    end
+
+    inside = File.join(Studio::OutputPaths::REPOSITORY_ROOT, "STUDIO", "lora", "missing-thresholds.yml")
+    ENV.stub("STUDIO_LORA_THRESHOLDS", inside) do
+      assert_raises(Judge::ThresholdError) { Judge.thresholds_path }
+    end
+
+    link = File.join(@root, "linked-thresholds.yml")
+    File.symlink(private_file, link)
+    ENV.stub("STUDIO_LORA_THRESHOLDS", link) do
+      assert_raises(Judge::ThresholdError) { Judge.thresholds_path }
+    end
+  end
+
   def test_calibration_refuses_reference_or_output_paths_inside_checkout
     repo = Studio::OutputPaths::REPOSITORY_ROOT
     assert_raises(Judge::CalibrationError) { Judge.reference_directory!(repo) }
