@@ -19,6 +19,7 @@ module Master
       OUTPUT_CALL = /(?:\.\s*(?:status|say|emit|puts|print|warn|dmesg)\b|\b(?:puts|print|warn|say)\b)/.freeze
       # The marks proper typography sets in copy and a terminal does not print.
       TERMINAL_MARK = /[\u2014\u2013\u00B7\u2022\u2026\u201C\u201D\u2018\u2019\u2192\u2190\u00D7\u2265\u2264]/.freeze
+      TERMINAL_ALIGNMENT = /(?:\t|\\t|\A {2,}\S|(?<=\S) {2,}(?=\S)|%-?\d+s)/.freeze
       PROSE_DOUBLE_DASH = /(?<=\s)--(?=\s)/.freeze
       STRING_LITERAL = /"([^"\n]{6,300})"/.freeze
       # Where a machine reads the line, the marks stay literal: fixtures that
@@ -94,6 +95,8 @@ module Master
         end || (normalized.match?(%r{(?:\A|/)(?:MASTER/)?lib/fix/}) && output_call)
         return "non_ascii_punctuation" if terminal_copy && text.match?(TERMINAL_MARK)
         return "prose_double_dash" if terminal_copy && text.match?(PROSE_DOUBLE_DASH)
+        return "terminal_alignment" if output_call &&
+          (text.match?(TERMINAL_ALIGNMENT) || line.match?(/\.(?:ljust|rjust|center)\s*\(/))
         return "terminal_measure" if output_call && text.length > TERMINAL_LINE_LIMIT
 
         nil
