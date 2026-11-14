@@ -563,7 +563,6 @@ module Master
           Master::Trace::Dmesg.detail("llm", "prompt:\n#{prompt}")
           Master::Trace::Dmesg.detail(
             "llm", "model=#{selected_model} stream=#{stream} temperature=#{temperature.inspect}",
-            style: :context,
           )
         end
         # Claude CLI is deliberately text-only (--tools "" and strict MCP config),
