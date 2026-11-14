@@ -3,7 +3,8 @@
 module Shared
   # Turning a TradeDoubler response into a Deal.
   #
-  # Split out of tradedoubler.rb when that file passed its file-length ceiling.
+  # Kept apart from tradedoubler.rb, which stays under its file-length ceiling
+  # without this half.
   # The seam is what the methods touch: nothing here makes a request or reads a
   # token — it takes a body that has already arrived and works out which of the
   # three shapes TradeDoubler answers in it happens to be (official nested

@@ -8,9 +8,8 @@
 # market as global so a feed that doesn't report one still renders.
 module Shared
   class AffiliateProduct < ApplicationRecord
-    # Namespaced into Shared when the affiliate stack moved out of brgen so
-    # amber could use it too. The table is not: it predates the move and both
-    # apps migrate it under its own name.
+    # Shared holds the affiliate stack for brgen and amber alike. The table
+    # name stays unnamespaced: both apps migrate it under its own name.
     self.table_name = "affiliate_products"
 
     SOURCES = %w[tradedoubler amazon].freeze

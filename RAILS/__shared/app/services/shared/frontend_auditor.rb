@@ -160,8 +160,8 @@ body)
     end
 
     # The checks that read a number out of the stylesheet and compare it to a
-    # budget, split from the plain pattern matches above only because the two
-    # together were over the method length ceiling.
+    # budget. They stay separate from the plain pattern matches above because
+    # one method holding both passes the method length ceiling.
     def scan_style_measurements(path, body)
       body.scan(/font-size:\s*(\d+(?:\.\d+)?)px/i).flatten.each do |size|
         add(:warning, path, :small_font, "Font size #{size}px is below 16px") if size.to_f < Shared::FrontendLawSet::TYPOGRAPHY[:body_font_px][:min]
