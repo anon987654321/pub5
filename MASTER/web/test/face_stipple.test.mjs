@@ -638,6 +638,11 @@ test("stipple module boots and builds from the canonical idle profile", () => {
   const expressionDiagnostics = api.snapshot(stipple).expression;
   assert.equal(expressionDiagnostics.primaryAvailable, true);
   assert.equal(expressionDiagnostics.primarySynchronized, true);
+  assert.deepEqual(Array.from(expressionDiagnostics.order), ["waterform", "architect", "forest_geometry", "monument"]);
+  assert.equal(expressionDiagnostics.fromName, expressionDiagnostics.toName);
+  assert.equal(expressionDiagnostics.transitionMs, 1800);
+  assert.equal(expressionDiagnostics.minIntervalMs, 9000);
+  assert.equal(expressionDiagnostics.maxIntervalMs, 16000);
   assert.equal(expressionDiagnostics.primary.uExpressionStrength, expressionDiagnostics.strength);
   assert.equal(stipple.material.uniforms.uDepthFromRank.value, 1);
   assert.equal(stipple.material.uniforms.uDepthSteps.value, 6);

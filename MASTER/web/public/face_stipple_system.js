@@ -877,6 +877,16 @@
     const value = (name) => uniformValue(uniforms, name);
     const primaryValues = Object.fromEntries(expressionNames.map((name) => [name, uniformValue(primaryUniforms, name)]));
     const primaryAvailable = expressionNames.every((name) => primaryValues[name] !== null);
+    const expressionConfig = expressionConfiguration();
+    const expressionIndexName = (raw) => {
+      const index = Number(raw);
+      return Number.isInteger(index) ? expressionConfig.order[index] || null : null;
+    };
+    const expressionFrom = value("uExpressionFrom");
+    const expressionTo = value("uExpressionTo");
+    const expressionBlend = value("uExpressionBlend");
+    const expressionFromName = expressionIndexName(expressionFrom);
+    const expressionToName = expressionIndexName(expressionTo);
     const primarySynchronized = primaryAvailable && expressionNames.every((name) => {
       const current = value(name);
       return current !== null && Math.abs(current - primaryValues[name]) <= 0.000001;
@@ -944,9 +954,17 @@
       },
       expression: {
         name: system?.expressionName || null,
-        from: value("uExpressionFrom"),
-        to: value("uExpressionTo"),
-        blend: value("uExpressionBlend"),
+        currentName: expressionBlend >= 0.5 ? expressionToName : expressionFromName,
+        fromName: expressionFromName,
+        toName: expressionToName,
+        from: expressionFrom,
+        to: expressionTo,
+        blend: expressionBlend,
+        transitioning: expressionBlend > 0 && expressionBlend < 1,
+        order: expressionConfig.order,
+        minIntervalMs: expressionConfig.minInterval,
+        maxIntervalMs: expressionConfig.maxInterval,
+        transitionMs: expressionConfig.transition,
         strength: value("uExpressionStrength"),
         primaryAvailable,
         primarySynchronized,
