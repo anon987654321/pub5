@@ -176,10 +176,13 @@
   function expressionConfiguration() {
     const config = window.MASTER_FACE_CONTRACT?.stipple?.expressions || {};
     const allowed = ["waterform", "architect", "forest_geometry", "monument"];
-    const order = Array.isArray(config.order) ? config.order.filter((name) => allowed.includes(name)) : allowed;
+    const requestedOrder = Array.isArray(config.order) ? config.order : allowed;
+    const validOrder = requestedOrder.length === allowed.length &&
+      allowed.every((name, index) => requestedOrder[index] === name);
+    const order = validOrder ? requestedOrder : allowed;
     return {
-      enabled: config.enabled !== false && order.length === 4,
-      order: order.length === 4 ? order : allowed,
+      enabled: config.enabled !== false && validOrder,
+      order,
       minInterval: clamp(config.min_interval_ms, 9000, 3000, 60000),
       maxInterval: clamp(config.max_interval_ms, 16000, 3000, 90000),
       transition: clamp(config.transition_ms, 1800, 250, 8000),
