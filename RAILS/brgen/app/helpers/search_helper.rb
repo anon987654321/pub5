@@ -33,9 +33,7 @@ module SearchHelper
     public_send(proxy).public_send(route, q: query, host: domain, subdomain: subdomain || marketplace_subdomain)
   end
 
-  # The post's text around the first match, with the match marked. A post found
-  # by its title alone shows its opening instead, so every row reads the same.
-  # Share one escaped, semantic highlight treatment between labels and excerpts.
+  # Mark the query consistently in result labels and excerpts.
   def search_highlight(text, query)
     highlight(text.to_s, query, highlighter: '<mark>\1</mark>')
   end
