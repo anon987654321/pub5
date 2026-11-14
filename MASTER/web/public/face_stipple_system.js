@@ -164,6 +164,15 @@
     };
   }
 
+  function aliasingConfiguration() {
+    const config = window.MASTER_FACE_CONTRACT?.stipple?.aliasing || {};
+    return {
+      enabled: config.enabled !== false,
+      grid: clamp(config.grid, 0.012, 0.004, 0.04),
+      strength: clamp(config.strength, 0.30, 0, 0.65)
+    };
+  }
+
   function samplesFromFaceGeometry(facePoints, count) {
     const positions = facePoints?.geometry?.attributes?.position?.array;
     if (!positions || positions.length < 3) return null;
@@ -227,6 +236,7 @@
     const idle = profiles().idle || IDLE_PROFILE;
     const depth = depthResponse();
     const fingerprint = fingerprintConfiguration();
+    const aliasing = aliasingConfiguration();
     const material = new THREE.ShaderMaterial({
       uniforms: {
         uDepthReferenceDistance: { value: clamp(depth.reference_distance, DEFAULT_DEPTH_RESPONSE.reference_distance, 1.0, 20.0) },
@@ -239,6 +249,9 @@
         uFingerprintCenterX: { value: fingerprint.centerX },
         uFingerprintCenterY: { value: fingerprint.centerY },
         uIntroWaveStrength: { value: fingerprint.introWaveStrength },
+        uAliasEnabled: { value: aliasing.enabled ? 1.0 : 0.0 },
+        uAliasGrid: { value: aliasing.grid },
+        uAliasStrength: { value: aliasing.strength },
         uDepthFromRank: { value: swarmConfiguration().size_from_depth === true ? 1.0 : 0.0 },
         uDepthSteps: { value: Math.max(2, Array.isArray(swarmConfiguration().glyph_ramp) ? swarmConfiguration().glyph_ramp.length : 2) },
         uDensity: { value: idle.density },
@@ -263,6 +276,9 @@
         uniform float uFingerprintCenterX;
         uniform float uFingerprintCenterY;
         uniform float uIntroWaveStrength;
+        uniform float uAliasEnabled;
+        uniform float uAliasGrid;
+        uniform float uAliasStrength;
         uniform float uDensity;
         uniform float uRipple;
         uniform float uTurbulence;
@@ -292,6 +308,12 @@
           vec2 scatterDirection = normalize(aIntroScatter.xy + vec2(0.0001));
           p.xy += scatterDirection * waveFront * uIntroWaveStrength * waveEnvelope;
           p.z += waveFront * uIntroWaveStrength * 0.12 * waveEnvelope;
+          // Quantise a controlled share of the face's position field. This creates
+          // deliberate stepped contours without changing the one-pixel point budget.
+          if (uAliasEnabled > 0.5 && uAliasStrength > 0.0) {
+            vec2 stepped = floor(p.xy / uAliasGrid + 0.5) * uAliasGrid;
+            p.xy = mix(p.xy, stepped, uAliasStrength);
+          }
 
           float zoneWeight = 0.72 + aZone * 0.035;
           float drift = sin(uTime * 0.72 + aPhase) * 0.008 * uTurbulence * uMotionScale;

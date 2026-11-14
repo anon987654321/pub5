@@ -491,6 +491,11 @@ tokens:
         strength: 0.28
         center: [0.08, 0.06]
         intro_wave_strength: 0.16
+      # Deliberate low-resolution contour stepping; subtle enough to preserve facial readability.
+      aliasing:
+        enabled: true
+        grid: 0.012
+        strength: 0.30
       # Point sprites stay one pixel; camera depth changes brightness, never size.
       depth_response:
         reference_distance: 5.0

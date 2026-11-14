@@ -60,6 +60,16 @@ test("fingerprint ridges and radial signal waves stay inside the bounded one-pix
   assert.doesNotMatch(system, /requestAnimationFrame/);
 });
 
+test("aliased face contours use bounded tokenised position quantisation without enlarging points", () => {
+  assert.match(tokens, /aliasing:\s*\n\s+enabled: true\s*\n\s+grid: 0\.012\s*\n\s+strength: 0\.30/);
+  assert.match(system, /function aliasingConfiguration\(\)/);
+  assert.match(system, /uAliasGrid: \{ value: aliasing\.grid \}/);
+  assert.match(system, /uniform float uAliasGrid;/);
+  assert.match(system, /floor\(p\.xy \/ uAliasGrid \+ 0\.5\) \* uAliasGrid/);
+  assert.match(system, /p\.xy = mix\(p\.xy, stepped, uAliasStrength\)/);
+  assert.match(system, /gl_PointSize = 1\.0;/);
+});
+
 test("stipple breath is luminance-only, survives idle stillness and freezes for reduced motion", () => {
   assert.match(system, /uBreathScale: \{ value: 0 \}/);
   assert.match(system, /uniform float uBreathScale;/);
