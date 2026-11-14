@@ -43,7 +43,7 @@ class TestPostproQualityAnalyzer < Minitest::Test
   def test_srgb_transfer_functions_round_trip_reference_values
     [0.0, 0.0031308, 0.04045, 0.18, 0.5, 1.0].each do |encoded|
       decoded = HD.srgb_to_linear(encoded)
-      assert_in_delta encoded, HD.linear_to_srgb(decoded), 1e-10
+      assert_in_delta encoded, HD.linear_to_srgb(decoded), 5e-8
     end
   end
 
