@@ -16,7 +16,10 @@ class TestRubySelect < Minitest::Test
     Dir.mktmpdir do |dir|
       names.each do |name|
         path = File.join(dir, name)
-        version = name[/\d+/] == "40" ? "40" : "34"
+        # The stub answers every invocation with its version, the way a real
+        # interpreter answers the RUBY_VERSION probe the selector's
+        # compatibility check and its RUBY_CACHE_KEY both read.
+        version = name[/\d+/] || "34"
         File.write(path, "#!/bin/sh\nprintf #{version}\n")
         FileUtils.chmod(0o755, path)
       end
@@ -39,7 +42,10 @@ class TestRubySelect < Minitest::Test
       shells.each do |shell|
         out, err, status = resolve(dir, shell: shell)
         assert status.success?, err
-        assert_equal [File.join(dir, "ruby"), "", File.join(dir, "bundle"), File.join(dir, "gem"), "ruby"], out.split("|")
+        # The cache key reads the interpreter's real minor version, so a
+        # generic ruby that upgrades in place still invalidates the caches.
+        expected = [File.join(dir, "ruby"), "", File.join(dir, "bundle"), File.join(dir, "gem"), "ruby34"]
+        assert_equal expected, out.split("|")
       end
     end
   end
