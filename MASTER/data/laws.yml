@@ -1513,7 +1513,7 @@ TERMINAL_OUTPUT_TYPOGRAPHY:
     prefixes. Never indent or pad fields to align records, and never use
     fixed-width or tabular columns. Terminal output remains ASCII, concise
     and measured; long status copy is split at meaningful boundaries.
-  severity: warning
+  severity: error
   resolution: review
 
 HEADING_WRAP_BALANCE:
@@ -4548,7 +4548,9 @@ law_catalogue:
       languages: [json]
     TERMINAL_OUTPUT_TYPOGRAPHY:
       definition_sources: [MASTER/law/typesetting.rb]
-      severity: warning
+      severity: error
+      lifecycle: trusted
+      autofix: never
       languages: [ruby]
       surfaces: [whole_file, lines]
     TACTILE_FEEDBACK:

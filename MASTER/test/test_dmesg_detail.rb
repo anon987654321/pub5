@@ -92,13 +92,13 @@ class TestDmesgDetail < Minitest::Test
     assert_empty output.string
   end
 
-  def test_detail_preserves_newlines_and_indents_under_its_unit
+  def test_detail_prefixes_each_line_without_visual_indentation
     enable_detail
     output = StringIO.new
 
     Dmesg.detail("llm0", "prompt:\nfirst line\nsecond line", io: output)
 
-    assert_equal "  llm0: prompt:\n  llm0: first line\n  llm0: second line\n", output.string
+    assert_equal "llm0: prompt:\nllm0: first line\nllm0: second line\n", output.string
   end
 
   def test_detail_truncates_a_long_line_at_the_configured_character_limit
@@ -108,9 +108,19 @@ class TestDmesgDetail < Minitest::Test
 
     Dmesg.detail("read0", "x" * 5_000, io: output)
 
-    body = output.string.lines.first.delete_prefix("  read0: ").chomp
+    body = output.string.lines.first.delete_prefix("read0: ").chomp
     assert_equal 12, body.length
     assert body.end_with?("…")
+  end
+
+  def test_detail_drops_blank_rows_and_prefixes_every_retained_line
+    enable_detail
+    Dmesg.instance_variable_set(:@cfg, Dmesg.cfg.merge("detail_max_lines" => 8))
+    output = StringIO.new
+
+    Dmesg.detail("read0", "line 1\n\nline 2\n", io: output)
+
+    assert_equal "read0: line 1\nread0: line 2\n", output.string
   end
 
   def test_detail_reports_omitted_lines_instead_of_implying_they_were_complete
@@ -122,7 +132,7 @@ class TestDmesgDetail < Minitest::Test
 
     lines = output.string.lines
     assert_equal 9, lines.size
-    assert_equal "  read0: … 42 more line(s)\n", lines.last
+    assert_equal "read0: … 42 more line(s)\n", lines.last
   end
 
   def test_detail_uses_the_terminal_write_draft_guard
@@ -138,13 +148,13 @@ class TestDmesgDetail < Minitest::Test
     assert_equal %i[begin end], calls
   end
 
-  def test_no_color_keeps_detail_plain_even_on_a_terminal
+  def test_detail_is_uncoloured_even_on_a_terminal
     enable_detail
-    ENV["NO_COLOR"] = "1"
     terminal = Class.new(StringIO) { def tty? = true }.new
 
-    Dmesg.detail("fix0", "diff", io: terminal, style: :add)
+    Dmesg.detail("fix0", "diff", io: terminal)
 
+    assert_equal "fix0: diff\n", terminal.string
     refute_match(/\e\[/, terminal.string)
   end
 
@@ -179,7 +189,7 @@ class TestDmesgDetail < Minitest::Test
 
     Dmesg.detail("read_file", "file content", io: output)
 
-    assert_equal "  read0: file content\n", output.string
+    assert_equal "read0: file content\n", output.string
   end
 
   def test_diff_head_contains_hunks_without_temporary_file_headers

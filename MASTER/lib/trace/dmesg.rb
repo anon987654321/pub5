@@ -181,18 +181,17 @@ module Master
       # A subordinate terminal-only channel for payloads that the event ledger
       # intentionally redacts. It is silent unless explicitly enabled; it never
       # publishes to the bus, ring buffer or JSONL. Detail is not narrated.
-      def detail(unit, text, io: nil, indent: nil, style: nil)
+      def detail(unit, text, io: nil)
         return unless detail_enabled? && enabled?
 
         target = detail_target(io)
         return unless target
 
         settings = cfg
-        indent = Integer(indent || settings.fetch("detail_indent", 2)).clamp(0, 16)
         maxch = Integer(settings.fetch("detail_max_chars", 240)).clamp(1, 4_000)
         maxln = Integer(settings.fetch("detail_max_lines", 8)).clamp(1, 100)
         marker = settings.fetch("detail_truncate_marker", "…").to_s
-        subordinate(detail_unit(unit), text, io: target, indent:, style:, maxch:, maxln:, marker:)
+        subordinate(detail_unit(unit), text, io: target, maxch:, maxln:, marker:)
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "Trace::Dmesg.detail")
         nil
@@ -438,60 +437,33 @@ module Master
         @draft_guard = pair
       end
 
-      # Unlike emit, subordinate lines retain newlines and leading spaces.
-      # A numbered-unit prefix on every line keeps their parent relationship
-      # searchable without changing normal console event grammar.
-      def subordinate(unit, text, io:, indent:, style:, maxch:, maxln:, marker:)
+      # Detail remains an append-only log: each nonblank source line gets its
+      # own searchable unit prefix. No visual gutters, field padding or colour
+      # wrappers are added by this renderer.
+      def subordinate(unit, text, io:, maxch:, maxln:, marker:)
         body = as_utf8_text(text.to_s).scrub.gsub(ANSI, "").delete("\r")
         body = body.gsub(/[[:cntrl:]&&[^\n\t]]/, "")
-        total_lines = body.count("\n")
-        total_lines += 1 unless body.empty? || body.end_with?("\n")
-        lines = []
-        body.each_line do |line|
-          break if lines.size >= maxln
+        source_lines = body.each_line.map(&:rstrip).reject(&:empty?)
+        return if source_lines.empty?
 
-          lines << line
-        end
-        return if lines.empty?
-
-        pad = " " * indent
+        total_lines = source_lines.length
         prefix = unit.to_s.empty? ? "" : "#{unit}: "
-        rendered = lines.map do |line|
-          flat = line.rstrip
+        rendered = source_lines.first(maxln).map do |line|
+          flat = line
           if flat.length > maxch
             keep = [maxch - marker.length, 0].max
             flat = "#{flat[0, keep]}#{marker}"
           end
-          "#{pad}#{prefix}#{flat}"
+          "#{prefix}#{flat}"
         end
         omitted = total_lines - rendered.size
-        rendered << "#{pad}#{prefix}#{marker} #{omitted} more line(s)" if omitted.positive?
+        rendered << "#{prefix}#{marker} #{omitted} more line(s)" if omitted.positive?
 
         terminal_write(io:, guard: true) do |target|
-          rendered.each { |line| target.puts(detail_style_line(line, style, target)) }
+          rendered.each { |line| target.puts(line) }
           target.flush if target.respond_to?(:flush)
         end
         nil
-      end
-
-      def detail_style_line(line, style, target)
-        return line unless ENV["NO_COLOR"].to_s.empty?
-        return line unless target.respond_to?(:tty?) && target.tty?
-
-        colour = case style
-                 when :context, :detail_hi then 244
-                 when :add then 32
-                 when :del then 31
-                 else 240
-                 end
-        supports_256 = ENV["TERM"].to_s.include?("256color") ||
-                       ENV["COLORTERM"].to_s.match?(/\A(?:truecolor|24bit)\z/i)
-        sgr = if colour >= 100
-          supports_256 ? "\e[38;5;#{colour}m" : "\e[90m"
-        else
-          "\e[#{colour}m"
-        end
-        "#{sgr}#{line}\e[0m"
       end
 
       # A line built from tool output can arrive as bytes. Written to a text IO under

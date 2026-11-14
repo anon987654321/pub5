@@ -215,7 +215,6 @@ module Master
           Master::Trace::Dmesg.detail("llm", "response: #{response}")
           Master::Trace::Dmesg.detail(
             "llm", "latency=#{elapsed_ms(started)}ms response_bytes=#{response.bytesize}",
-            style: :context,
           )
         end
         settled

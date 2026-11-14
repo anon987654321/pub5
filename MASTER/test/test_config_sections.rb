@@ -49,6 +49,10 @@ class TestConfigSections < Minitest::Test
     end
   end
 
+  def test_dmesg_does_not_configure_visual_log_indentation
+    refute load("console.yml").fetch("dmesg").key?("detail_indent")
+  end
+
   def test_each_file_satisfies_its_schema
     files.each do |file|
       assert_nil Guard.validate(path: path(file), content: File.read(path(file), encoding: "UTF-8")), file

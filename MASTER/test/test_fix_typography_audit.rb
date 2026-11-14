@@ -73,9 +73,14 @@ class TestFixTypographyAudit < Minitest::Test
         end
       RUBY
 
+      write_cli_file(dir, "lib/io/detail.rb", <<~RUBY)
+        Master::Trace::Dmesg.detail("disk0", "disk0     check 8.4GB")
+      RUBY
+
       report = Audit.new(root: dir).call
 
       assert_match(/terminal_alignment/, report)
+      assert_match(/lib\/io\/detail\.rb:1 terminal_alignment/, report)
       refute_match(/initializing \/Users/, report)
     end
   end
@@ -125,6 +130,17 @@ class TestFixTypographyAudit < Minitest::Test
     assert_includes law.fix, "Never indent or pad fields to align records"
     assert_includes law.fix, "never use fixed-width or tabular columns"
     assert_includes law.ask, "Do not treat a user-requested data table"
+    policy = ::Law.catalogue_entry("TERMINAL_OUTPUT_TYPOGRAPHY")
+    assert_equal "error", policy.fetch("severity")
+    assert_equal "trusted", policy.fetch("lifecycle")
+    assert_equal "never", policy.fetch("autofix")
+    io_alignment = law.scan(
+      'Master::Trace::Dmesg.detail("disk0", "disk0     check 8.4GB")',
+      file: "MASTER/lib/io/llm.rb",
+    )
+    refute_empty io_alignment, "detail output must obey the same terminal layout law"
+    assert ::Law::Typesetting::TERMINAL_PATH.match?("MASTER/lib/io/llm.rb")
+    assert ::Law::Typesetting::TERMINAL_PATH.match?("MASTER/lib/review/llm_dispatcher.rb")
   end
 
   def test_typesetting_reads_plain_business_html_and_markdown_readme

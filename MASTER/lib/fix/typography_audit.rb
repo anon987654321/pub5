@@ -13,10 +13,10 @@ module Master
     # ("--dry-run"), globs and paths are exempt by shape, so a finding is a
     # sentence that reached a person wearing the wrong mark.
     class TypographyAudit
-      SCOPE = %w[lib/cli lib/voice lib/trace lib/fix].freeze
+      SCOPE = %w[lib/cli lib/io lib/voice lib/trace lib/fix lib/review].freeze
       PUNCTUATION_SCOPE = %w[lib/cli lib/voice lib/trace].freeze
       TERMINAL_LINE_LIMIT = 72
-      OUTPUT_CALL = /(?:\.\s*(?:status|say|emit|puts|print|printf|pp|warn|dmesg|info|debug|error|fatal)\b|\b(?:puts|print|printf|pp|warn|say)\b)/.freeze
+      OUTPUT_CALL = /(?:\.\s*(?:status|detail|say|emit|puts|print|printf|pp|warn|dmesg|info|debug|error|fatal)\b|\b(?:puts|print|printf|pp|warn|say)\b)/.freeze
       # The marks proper typography sets in copy and a terminal does not print.
       TERMINAL_MARK = /[\u2014\u2013\u00B7\u2022\u2026\u201C\u201D\u2018\u2019\u2192\u2190\u00D7\u2265\u2264]/.freeze
       TERMINAL_ALIGNMENT = /(?:\t|\\t|\A {2,}\S|(?<=\S) {2,}(?=\S))/.freeze
@@ -91,9 +91,9 @@ module Master
 
       def violation_kind(text, line, relative, output_call:)
         normalized = relative.to_s.tr("\\", "/")
-        terminal_copy = PUNCTUATION_SCOPE.any? do |scope|
+        terminal_copy = output_call || PUNCTUATION_SCOPE.any? do |scope|
           normalized.match?(%r{(?:\A|/)(?:MASTER/)?#{Regexp.escape(scope)}/})
-        end || (normalized.match?(%r{(?:\A|/)(?:MASTER/)?lib/fix/}) && output_call)
+        end
         return "non_ascii_punctuation" if terminal_copy && text.match?(TERMINAL_MARK)
         return "prose_double_dash" if terminal_copy && text.match?(PROSE_DOUBLE_DASH)
         return "terminal_alignment" if output_call &&
