@@ -232,6 +232,50 @@ end
     assert_equal [0, 1, 2, 3, 4], calls
   end
 
+  def test_deadline_expiry_does_not_journal_a_pass_that_never_started
+    events = []
+    journal = Object.new
+    journal.define_singleton_method(:pass_start) { |*args, **kwargs| events << [args, kwargs] }
+
+    loop = Master::Fix::FixLoop.allocate
+    loop.instance_variable_set(:@run_journal, journal)
+    loop.define_singleton_method(:cancellation_requested?) { false }
+    deadline = Object.new
+    deadline.define_singleton_method(:expired?) { true }
+
+    result = loop.send(
+      :run_one_pass, 0, files: [], target: @root, deadline:, budget_seconds: 60,
+      state: {}, run_id: "expired-run", wishlist_proposals: [],
+    )
+
+    assert result.err?
+    assert_equal :timeout, result.category
+    assert_empty events
+  end
+
+  def test_spent_pass_budget_does_not_journal_a_pass_that_never_started
+    events = []
+    journal = Object.new
+    journal.define_singleton_method(:pass_start) { |*args, **kwargs| events << [args, kwargs] }
+
+    loop = Master::Fix::FixLoop.allocate
+    loop.instance_variable_set(:@run_journal, journal)
+    loop.define_singleton_method(:cancellation_requested?) { false }
+    deadline = Object.new
+    deadline.define_singleton_method(:expired?) { false }
+    exhausted = Master::Result.err("pass budget exhausted", category: :timeout)
+
+    Master::Fix::RunBudget.stub(:pass_boundary, ->(_pass) { exhausted }) do
+      result = loop.send(
+        :run_one_pass, 0, files: [], target: @root, deadline:, budget_seconds: 60,
+        state: {}, run_id: "budget-run", wishlist_proposals: [],
+      )
+      assert_same exhausted, result
+    end
+
+    assert_empty events
+  end
+
   def test_human_decision_is_a_terminal_pass_outcome
     loop = Master::Fix::FixLoop.allocate
     journal_events = []

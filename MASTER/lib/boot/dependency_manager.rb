@@ -15,7 +15,7 @@ module Master
     # 1. use the Ruby that launched MASTER;
     # 2. install the Bundler version recorded by Gemfile.lock when absent;
     # 3. ask Bundler whether the locked graph is installed;
-    # 4. install the smallest OS build tool set only after a native build failure;
+    # 4. require explicit operator approval before installing OS build tools;
     # 5. retry once, then report the real command and output.
     #
     # Nothing here updates a lockfile on a healthy bundle. Dependency changes remain
@@ -61,11 +61,8 @@ module Master
         native\ extension|
         make:\s.*not\ found|
         pkg-config|
-        permission\ denied|
-        not\ writable|
         linked\ to\ incompatible|
-        incompatible\ architecture|
-        EACCES
+        incompatible\ architecture
       /ix.freeze
 
       LOCK_WAIT_SECONDS = 60
@@ -151,8 +148,13 @@ module Master
 
           return bundle unless system_recovery_failure?(bundle)
 
-          system = install_system_packages
-          return bundle unless system[:ok]
+          system = install_system_packages_for_recovery
+          unless system[:ok]
+            return fail_result(
+              "bundle install failed; system build dependencies unavailable",
+              output: join_output(bundle.output, system[:output]),
+            )
+          end
 
           retry_bundle = ensure_bundle
           Result.new(
@@ -162,7 +164,7 @@ module Master
             bundle: retry_bundle.bundle,
             system:,
             message: retry_bundle.message,
-            output: retry_bundle.output,
+            output: join_output(bundle.output, system[:output], retry_bundle.output),
           )
         end
       rescue StandardError => e
@@ -183,8 +185,12 @@ module Master
           ok, stdout, stderr = run_bundle(*args)
           output = join_output(stdout, stderr)
           if !ok && native_build_failure?(output)
-            system = install_system_packages
-            return fail_result("bundle update failed; system dependencies unavailable", output:) unless system[:ok]
+            system = install_system_packages_for_recovery
+            unless system[:ok]
+              output = join_output(output, system[:output])
+              return fail_result("bundle update failed; system dependencies unavailable", output:)
+            end
+            output = join_output(output, system[:output])
 
             ok, stdout, stderr = run_bundle(*args)
             output = join_output(output, join_output(stdout, stderr))
@@ -210,19 +216,30 @@ module Master
           return bundler unless bundler.ok
 
           bundle = install_bundle
+          system = nil
           if !bundle.ok && native_build_failure?(bundle.output)
-            system = install_system_packages
-            return bundle unless system[:ok]
+            system = install_system_packages_for_recovery
+            unless system[:ok]
+              return fail_result(
+                "bundle install failed; system build dependencies unavailable",
+                output: join_output(bundle.output, system[:output]),
+              )
+            end
 
+            previous_output = bundle.output
             bundle = install_bundle
+            bundle = Result.new(**bundle.to_h.merge(
+              system:,
+              output: join_output(previous_output, system[:output], bundle.output),
+            ))
           end
 
           Result.new(
             ok: bundle.ok,
-            changed: bundler.changed || bundle.changed,
+            changed: bundler.changed || bundle.changed || system&.fetch(:changed, false) || false,
             bundler: bundler.bundler,
             bundle: bundle.bundle,
-            system: nil,
+            system: system || bundle.system,
             message: bundle.message,
             output: bundle.output,
           )
@@ -460,15 +477,17 @@ module Master
           ) if native_ok
 
           unless native_build_failure?(native_output)
-            return fail_result("bundle native probe failed",
-                               output: join_output(output, native_output))
+            combined_output = join_output(output, native_output)
+            return install_to_user_path(combined_output) if permission_failure?(native_output)
+
+            return fail_result("bundle native probe failed", output: combined_output)
           end
 
           repair_native_bundle(join_output(output, native_output))
-        elsif native_build_failure?(output)
-          repair_native_bundle(output)
         elsif permission_failure?(output)
           install_to_user_path(output)
+        elsif native_build_failure?(output)
+          repair_native_bundle(output)
         else
           message = dependency_conflict?(output) ?
             "bundle dependency constraints conflict; no automatic lockfile rewrite was attempted" :
@@ -789,6 +808,22 @@ module Master
 
       def bundle_key
         [RbConfig::CONFIG.fetch("ruby_version", RUBY_VERSION), RUBY_PLATFORM].join("-")
+      end
+
+      def install_system_packages_for_recovery
+        return install_system_packages if @env["MASTER_AUTO_SYSTEM_PACKAGES"] == "1"
+
+        packages = SYSTEM_PACKAGES.fetch(package_manager_name, [])
+        {
+          ok: false,
+          changed: false,
+          command: nil,
+          output: [
+            "system build dependency installation requires explicit approval",
+            "run `bin/deps system` after reviewing the package list, or set MASTER_AUTO_SYSTEM_PACKAGES=1",
+            "packages: #{packages.join(" ")}",
+          ].join("; "),
+        }
       end
 
       def install_system_packages

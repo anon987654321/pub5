@@ -191,6 +191,37 @@ class TurnRouterTest < Minitest::Test
     assert_equal :chat, reached
   end
 
+  def test_an_explicit_fix_reference_routes_all_named_trees_before_operator_intent
+    message = "Pursue completion of /fix over RAILS MASTER OPENBSD STUDIO BIZ and push to pub5 main"
+    routed = nil
+
+    Master::CLI::TurnRouter.stub(:dispatch_slash, lambda { |command, **|
+      routed = command
+      Master::Result.ok({ rendered: "captured" })
+    }) do
+      Master::CLI::TurnRouter.call(message:, container: build_container)
+    end
+
+    assert_equal "/fix --mode=all RAILS MASTER OPENBSD STUDIO BIZ", routed
+  end
+
+  def test_status_question_bypasses_unavailable_operator_intent
+    agent = Object.new
+    agent.define_singleton_method(:model) { "test-model" }
+    agent.define_singleton_method(:ask_once) { |*| raise "operator classifier must not run for questions" }
+    container = build_container(agent:)
+    reached = nil
+
+    Master::CLI::TurnRouter.stub(:casual_reply, ->(*, **) {
+      reached = :chat
+      Master::Result.ok({ rendered: "status answer" })
+    }) do
+      Master::CLI::TurnRouter.call(message: "What's the status?", container:)
+    end
+
+    assert_equal :chat, reached
+  end
+
   def test_a_file_read_is_not_casual_for_an_operator
     refute Master::CLI::TurnRouter.casual?("read CLAUDE.md")
   end

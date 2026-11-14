@@ -231,13 +231,13 @@ module Master
           return cancellation_terminal if cancellation_requested?
 
           pass = i + 1
-          transaction_id = "#{run_id}-pass-#{pass}"
-          @run_journal.pass_start(run_id, pass, transaction_id:)
-
-          @homeostat&.observe(:tool_call) # a pass is loop overhead distinct from the LLM call inside it
           return timed_out(i, pass, budget_seconds) if deadline.expired?
           over_budget = RunBudget.pass_boundary(pass)
           return over_budget if over_budget
+
+          transaction_id = "#{run_id}-pass-#{pass}"
+          @run_journal.pass_start(run_id, pass, transaction_id:)
+          @homeostat&.observe(:tool_call) # a pass is loop overhead distinct from the LLM call inside it
 
           result = @pass_runner.run_pass(
             files:, target:, pass:, deadline: deadline.at, transaction_id:,

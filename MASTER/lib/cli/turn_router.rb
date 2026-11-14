@@ -4,6 +4,7 @@ require "shellwords"
 require_relative "../io/media_intent"
 require_relative "stages/route"
 require_relative "operator_intent"
+require_relative "../boot/paths"
 
 module Master
   module CLI
@@ -41,6 +42,15 @@ module Master
         if text.match?(FIX_COMMAND)
           return dispatch_slash(rewrite_slash("/#{text}"), container:, felt_sense:, on_turn:, cancellation:)
         end
+        if (shorthand = imperative_shorthand(text))
+          return dispatch_slash(shorthand, container:, felt_sense:, on_turn:, cancellation:)
+        end
+        return casual_reply(text, container:, felt_sense:, on_chunk:, image:) if public_research_request?(text)
+        if (fix_request = explicit_fix_request(text))
+          return dispatch_slash(rewrite_slash(fix_request), container:, felt_sense:, on_turn:, cancellation:)
+        end
+        return casual_reply(text, container:, felt_sense:, on_chunk:, image:) if question?(text)
+
         proposal = OperatorIntent.new(
           root: (Master::REPO_ROOT if defined?(Master::REPO_ROOT)) || container.fetch(:root, Dir.pwd),
           agent: container[:agent],
@@ -58,20 +68,10 @@ module Master
         when :unsupported
           return Master::Result.ok({ rendered: proposal.message, output: proposal.message })
         end
-        if (shorthand = imperative_shorthand(text))
-          return dispatch_slash(shorthand, container:, felt_sense:, on_turn:, cancellation:)
-        end
-
         # bus: the media lane runs outside the pipeline stages; the stage:mov0
         # events it publishes are what move the spinner off "intake" and carry
         # the live download percentage.
         return Master::Io::MediaIntent.dispatch(text, root: container.fetch(:root, Dir.pwd), bus: container[:bus]) if Master::Io::MediaIntent.handles?(text)
-        return casual_reply(text, container:, felt_sense:, on_chunk:, image:) if public_research_request?(text)
-        # A question is for the agent, which has tools and this turn's evidence rule. Command
-        # inference reads a question's words as an operator command: a council review of the
-        # whole diff, or a shell lookup of "which file defines X".
-        return casual_reply(text, container:, felt_sense:, on_chunk:, image:) if question?(text)
-
         intercepted = deterministic_intercept(text, container:)
         return intercepted if intercepted
 
@@ -101,6 +101,33 @@ module Master
         path = match&.captures&.compact&.first
         path ||= value[/~?\/[A-Za-z0-9_.\/-]+/] if path.nil?
         Shellwords.escape(path.to_s.empty? ? "photos" : path)
+      end
+
+      # Route deliberate natural-language /fix requests before semantic operator
+      # classification. Use the canonical tree list, never a duplicate allowlist.
+      FIX_REQUEST_PREFIX = /
+        \A\s*(?:(?:please|go\ ahead\ and)\s+)?(?:run|execute|apply|start|resume|continue|complete|finish|pursue|perform)\b
+        |
+        \A\s*(?:i\s+(?:want|need)\s+you\s+to|(?:can|could|will|would)\s+you)\s+
+        (?:please\s+)?(?:run|execute|apply|start|resume|continue|complete|finish|pursue|perform)\b
+      /ix.freeze
+
+      def explicit_fix_request(text)
+        value = text.to_s.strip
+        return unless value.match?(%r{(?:\A|\s)/fix\b}i)
+        return unless value.match?(FIX_REQUEST_PREFIX)
+
+        trees = MasterPaths::TREES.filter_map do |tree|
+          index = value.index(/\b#{Regexp.escape(tree)}\b/i)
+          [index, tree] if index
+        end.sort_by(&:first).map(&:last)
+        return if trees.empty?
+
+        mode = value[/--mode(?:=|\s+)([a-z]+)/i, 1]
+        flags = value.scan(/--(?:dry-run|read-only|plan|no-autofix)\b/i).uniq
+        lane = value[/--lane(?:=|\s+)([a-z]+)/i, 1]
+        flags << "--lane=#{lane}" if lane
+        ["/fix", "--mode=#{mode || "all"}", trees.join(" "), *flags].join(" ")
       end
 
       # Bare words that are complete instructions, not conversation. "status?"

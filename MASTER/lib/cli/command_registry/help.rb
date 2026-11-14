@@ -382,7 +382,7 @@ module Master
                    "history N reads the ledger. It is a read: it reaches no repair pipeline."],
         },
         "explain" => {
-          summary: "the measured four-tree topology",
+          summary: "the measured five-tree topology",
           detail: ["/explain [MASTER|RAILS|OPENBSD|STUDIO|BIZ] measures the architecture topology",
                    "for the named tree or all of them. It is a read: it reaches no repair pipeline."],
         },

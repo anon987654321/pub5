@@ -681,6 +681,67 @@ class TestDependencyManager < Minitest::Test
 
   # A missing header carries no ABI-stale line, so the private store stays and
   # the OS packages install straight after the failed bundle install.
+  def test_permission_failure_uses_user_bundle_path_before_native_repair
+    bundle_key = [RbConfig::CONFIG.fetch("ruby_version", RUBY_VERSION), RUBY_PLATFORM].join("-")
+    user_path = File.join(@root, ".local", "share", "master", "bundles", bundle_key)
+    manager = fake_manager([
+      [false, "", "Permission denied writing /shared/bundle"],
+      [true, "", ""],
+      [true, "bundle installed", ""],
+    ])
+
+    result = manager.send(:install_bundle)
+
+    assert result.success?, result.message
+    assert_equal "bundle installed in user path", result.message
+    assert_equal ["/fake/bundle", "config", "set", "--local", "path", user_path], @commands[1].first
+    refute @commands.any? { |row| row.first.include?("pkg_add") }
+  end
+
+  def test_native_build_failure_requires_explicit_system_package_approval
+    manager = fake_manager([
+      [false, "", "extconf failed: sqlite3.h not found"],
+      [false, "", "extconf failed: sqlite3.h not found"],
+    ])
+    manager.define_singleton_method(:package_manager_name) { :openbsd }
+    manager.define_singleton_method(:package_commands) do
+      [[["doas", "-n", "pkg_add", "-I", "pkgconf", "gmake"], "pkg_add"]]
+    end
+
+    result = manager.ensure!
+
+    refute result.success?
+    assert_match(/explicit approval/, result.output)
+    assert_includes result.output, "pkgconf gmake sqlite3 libffi"
+    refute @commands.any? { |row| row.first.first == "doas" || row.first.first == "pkg_add" }
+  end
+
+  def test_system_package_failure_is_returned_with_its_diagnostic
+    manager = fake_manager([])
+    bundle = MANAGER::Result.new(
+      ok: false, changed: false, bundler: true, bundle: false, system: nil,
+      message: "bundle install failed", output: "extconf failed: missing headers",
+    )
+    manager.define_singleton_method(:ensure_bundler) do
+      MANAGER::Result.new(
+        ok: true, changed: false, bundler: true, bundle: nil, system: nil,
+        message: "bundler ready", output: nil,
+      )
+    end
+    manager.define_singleton_method(:ensure_bundle) { bundle }
+    manager.define_singleton_method(:system_recovery_failure?) { |_result| true }
+    manager.define_singleton_method(:install_system_packages_for_recovery) do
+      { ok: false, changed: false, command: nil, output: "pkg_add: permission denied" }
+    end
+
+    result = manager.ensure!
+
+    refute result.success?
+    assert_match(/system build dependencies unavailable/, result.message)
+    assert_includes result.output, "missing headers"
+    assert_includes result.output, "pkg_add: permission denied"
+  end
+
   def test_native_build_failure_installs_system_packages_and_retries
     responses = [
       [false, "", "extconf failed: sqlite3.h not found"],
@@ -693,6 +754,7 @@ class TestDependencyManager < Minitest::Test
     manager.define_singleton_method(:package_commands) do
       [[["pkg", "install", "-y", "sqlite"], "pkg"]]
     end
+    manager.instance_variable_get(:@env)["MASTER_AUTO_SYSTEM_PACKAGES"] = "1"
 
     result = manager.ensure!
 

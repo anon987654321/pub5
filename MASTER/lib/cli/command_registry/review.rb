@@ -45,7 +45,7 @@ module Master
 
       # The /fix reads that were standalone slash commands: --prove renders the
       # convergence proof with its durable receipts (the record /fix itself
-      # writes) and --explain the measured four-tree topology. Neither reaches
+      # writes) and --explain the measured five-tree topology. Neither reaches
       # the repair pipeline.
       CONVERGENCE_READ = /\A--(prove|explain)\b\s*(.*)\z/i.freeze
 
