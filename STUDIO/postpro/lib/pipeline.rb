@@ -15,24 +15,20 @@ end
 
 # The body's own colour response, before anything else touches the picture.
 #
-# ON BY DEFAULT, and set false only by someone who has a reason. It was
-# `if CONFIG["apply_camera_profile_first"]` against a CONFIG that is {} unless
-# a master.json exists, so the answer was nil on every invocation this file
-# has ever had — fifty lines of matching and matrix application that had never
-# run, aimed at a profiles directory that had never existed.
-#
-# Both halves are real now: camera_profiles.json holds 121 bodies across
-# six vendors, recovered from a VSCO DCP archive. A default of off would have
-# kept them as decorative as the code that reads them.
-#
-# It no-ops safely on anything without EXIF Make/Model, which is every
-# generated image — so a render is unaffected and a photograph is corrected.
+# Camera profiles are matched by exact EXIF make/model, but a 3x3 matrix is
+# not self-describing. DNG ColorMatrix1, for example, maps XYZ to camera-native
+# values; it is not a generic transform for an already rendered sRGB JPEG.
+# The VSCO-DCP catalogue does not record a verified input/output space or
+# direction, so its entries are retained for provenance and fail closed.
+# A future entry is applicable only with an explicit, tested
+# linear_srgb_to_linear_srgb matrix contract. The application below performs
+# that transform in linear light rather than multiplying gamma-encoded values.
 def camera_corrected(image, file)
   $postpro_stabilization_report = nil
   corrected = image
   unless CONFIG.fetch("apply_camera_profile_first", true) == false
     profile = get_camera_profile(image)
-    if profile
+    if profile && camera_profile_applicable?(profile)
       corrected = apply_camera_profile(image, profile)
       PostproBootstrap.dmesg "camera_profile src=#{File.basename(file)}"
     end

@@ -208,19 +208,28 @@ def get_camera_profile(image)
   end
 end
 
+CAMERA_PROFILE_MATRIX_CONTRACT = "linear_srgb_to_linear_srgb".freeze
+
+def camera_profile_applicable?(profile)
+  return false unless profile.is_a?(Hash)
+  return false unless profile["matrix_contract"] == CAMERA_PROFILE_MATRIX_CONTRACT
+
+  matrix = profile["color_matrix"]
+  matrix.is_a?(Array) && matrix.length == 9 &&
+    matrix.all? { |value| value.is_a?(Numeric) && value.finite? }
+end
+
 def apply_camera_profile(image, profile)
-  return image unless profile && profile["color_matrix"]
+  return image unless camera_profile_applicable?(profile)
 
   begin
     matrix = profile["color_matrix"]
-    return image unless matrix.length == 9
-
-    # Apply 3x3 color matrix
-    result = image.recomb([
+    linear = image.colourspace("scrgb")
+    result = linear.recomb([
       [matrix[0], matrix[1], matrix[2]],
       [matrix[3], matrix[4], matrix[5]],
       [matrix[6], matrix[7], matrix[8]],
-    ])
+    ]).colourspace("srgb")
 
     # Apply optional adjustments
     if profile["saturation"]

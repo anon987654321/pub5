@@ -219,6 +219,13 @@ def vocab_check
              "#{quoted.minmax_by { |_, l| l }.map { |n, l| "#{n} #{l.round(1)}" }.join(" to ")}"
   end
 
+  camera_profiles = CAMERA_PROFILES.values.flat_map(&:values)
+  camera_ready = camera_profiles.count { |profile| camera_profile_applicable?(profile) }
+  if camera_ready < camera_profiles.length
+    notes << "camera profile matrices: #{camera_ready}/#{camera_profiles.length} contract-ready; " \
+             "entries without #{CAMERA_PROFILE_MATRIX_CONTRACT} remain catalogued and are not applied"
+  end
+
   # CONFIG is empty unless a master.json sits beside this file, which is the
   # normal state. Saying so is the difference between a default and a setting
   # nobody can find the reader for.

@@ -42,9 +42,37 @@ class TestPostproCameraProfiles < Minitest::Test
     assert_nil get_camera_profile(ExifImage.new(make: "Canon", model: ""))
   end
 
-  def test_camera_catalogue_has_121_bodies_and_no_false_brand_fallback
+  def test_camera_catalogue_has_121_bodies_with_finite_matrices
     profiles = JSON.parse(File.read(File.expand_path("../postpro/camera_profiles.json", __dir__)))
     assert_equal 121, profiles.values.sum(&:size)
-    assert profiles.values.all? { |models| models.values.all? { |entry| entry.fetch("color_matrix").length == 9 } }
+    assert profiles.values.all? do |models|
+      models.values.all? do |entry|
+        matrix = entry.fetch("color_matrix")
+        matrix.length == 9 && matrix.all? { |value| value.is_a?(Numeric) && value.finite? }
+      end
+    end
+  end
+
+  def test_untyped_dcp_matrix_is_not_applied_to_rendered_srgb
+    image = Object.new
+    profile = {
+      "color_matrix" => [0.7, -0.16, -0.04, -0.36, 1.07, 0.33, -0.03, 0.11, 0.65],
+      "source" => "VSCO DCP, Kodak Portra 400 2C profile for this body"
+    }
+
+    refute camera_profile_applicable?(profile)
+    assert_same image, apply_camera_profile(image, profile)
+  end
+
+  def test_only_finite_three_by_three_linear_srgb_contract_is_applicable
+    profile = {
+      "matrix_contract" => "linear_srgb_to_linear_srgb",
+      "color_matrix" => [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+    }
+
+    assert camera_profile_applicable?(profile)
+    refute camera_profile_applicable?(profile.merge("matrix_contract" => "xyz_to_camera_native"))
+    refute camera_profile_applicable?(profile.merge("color_matrix" => [Float::NAN] + [0.0] * 8))
+    refute camera_profile_applicable?(profile.merge("color_matrix" => [1.0] * 8))
   end
 end

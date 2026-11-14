@@ -1508,7 +1508,11 @@ TABULAR_NUMERALS:
 
 TERMINAL_OUTPUT_TYPOGRAPHY:
   parent: BRINGHURST
-  statement: "Terminal output is ASCII, concise and measured; long status copy is split at meaningful boundaries."
+  statement: >
+    Operational logs are append-only factual lines with lowercase subsystem0:
+    prefixes. Never indent or pad fields to align records, and never use
+    fixed-width or tabular columns. Terminal output remains ASCII, concise
+    and measured; long status copy is split at meaningful boundaries.
   severity: warning
   resolution: review
 

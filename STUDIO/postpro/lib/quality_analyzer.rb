@@ -1,11 +1,13 @@
 # frozen_string_literal: true
 
 require "digest"
+require_relative "hd"
 
 module Postpro
   # Pixel-statistics diagnostics only. This deliberately does not claim to
   # assess composition, focus, intent, or semantic quality.
   module QualityAnalyzer
+    # `luminance` is linear-light 0..1, never gamma-encoded sRGB.
     def self.report(luminance:, rgb_samples: nil)
       values = Array(luminance).map { |value| Float(value) }.select(&:finite?).map { |v| v.clamp(0.0, 1.0) }
       raise ArgumentError, "luminance samples must not be empty" if values.empty?
@@ -58,13 +60,22 @@ module Postpro
       raise ArgumentError, "sample image contained no pixels" if bytes.empty? || (bytes.length % 3) != 0
 
       rgb = bytes.each_slice(3).map { |r, g, b| [r / 255.0, g / 255.0, b / 255.0] }
-      luminance = rgb.map { |r, g, b| 0.2126 * r + 0.7152 * g + 0.0722 * b }
+      luminance = linear_luminance(rgb)
       report(luminance:, rgb_samples: rgb).merge(
         dimensions: [image.width, image.height],
         sample_dimensions: [sample.width, sample.height],
-        sampling: "uniform thumbnail; encoded-sRGB luminance approximation",
+        sampling: "uniform thumbnail; decoded-sRGB linear-light CIE 1931 luminance",
       )
     end
+
+    def self.linear_luminance(samples)
+      samples.map do |red, green, blue|
+        0.2126 * HD.srgb_to_linear(red) +
+          0.7152 * HD.srgb_to_linear(green) +
+          0.0722 * HD.srgb_to_linear(blue)
+      end
+    end
+    private_class_method :linear_luminance
 
     def self.percentile(sorted, percent)
       return 0.0 if sorted.empty?

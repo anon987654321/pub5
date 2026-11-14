@@ -85,6 +85,10 @@ class TestFixTypographyAudit < Minitest::Test
       file: "MASTER/lib/cli/fixture.rb",
     )
     refute_empty punctuation, "terminal punctuation must be ASCII whether the scanner path is rooted at MASTER or the repository"
+    assert_includes law.fix, "lowercase subsystem0:"
+    assert_includes law.fix, "Never indent or pad fields to align records"
+    assert_includes law.fix, "never use fixed-width or tabular columns"
+    assert_includes law.ask, "Do not treat a user-requested data table"
   end
 
   def test_typesetting_reads_plain_business_html_and_markdown_readme

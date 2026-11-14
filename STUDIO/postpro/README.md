@@ -37,11 +37,14 @@ registration error. The file `uncanny.rb` measures whether a picture looks rende
 supplies a real depth map when its model is installed.
 
 The file `constitution.rb` is the boundary where MASTER's laws become image-generation
-invariants. `camera_profiles.json` is a separate sensor-correction bank: 121 camera bodies
-across Canon, Fujifilm, Leica, Nikon, Olympus and Sony. A body matches by exact normalized
-model or exact make+model; an unknown body receives no borrowed manufacturer matrix.
-`baseline_exposure` remains catalogued but is not applied: its source convention is not yet
-established, so it must not be mistaken for an active exposure correction.
+invariants. `camera_profiles.json` preserves 121 VSCO-DCP-derived matrices across Canon,
+Fujifilm, Leica, Nikon, Olympus and Sony. EXIF lookup is exact by normalized model or
+make+model; an unknown body receives no borrowed manufacturer matrix. The source records
+do not declare matrix direction or input/output colour spaces, so the matrices are not
+applied to rendered sRGB images. A profile becomes eligible only with the explicit
+`matrix_contract: linear_srgb_to_linear_srgb` contract and regression evidence; eligible
+matrices are applied in linear light. `baseline_exposure` remains catalogued but is not
+applied because its source convention is not established.
 `analog_capabilities.rb` backs `--capabilities` with a distinct 200-direction emulation
 inventory. Entries remain `unverified` with a null `enabled` value until a concrete code path
 and regression test establish readiness; `catalog_complete` means the inventory is present,
@@ -286,12 +289,13 @@ modelled here is the emulsion's statistics, its curve, its crosstalk and its bas
 
 Presets and defaults come from built-in tables unless `POSTPRO_CONFIG` or a `master.json`
 beside the script names more. There is no such file now, so every read takes its built-in
-fallback and the default preset is `house`. The camera-profile pass reads
-`camera_profiles.json`, which holds sensor matrices for bodies from Canon, Fujifilm, Leica,
-Nikon, Olympus and Sony, recovered from a VSCO archive. It matches on EXIF make and model, runs
-before anything else touches the picture, and does nothing to a file without EXIF, so
-generated images are unaffected. The archive's film entries carry no emulation data; the
-matrices are sensor calibration and not emulsion.
+fallback and the default preset is `house`. The camera-profile guard reads
+`camera_profiles.json` and matches exact EXIF make/model across six manufacturers. The
+current VSCO-DCP-derived records lack a declared matrix direction and colour-space contract,
+so the guard leaves rendered sRGB inputs unchanged. A future profile may be applied only
+when it declares `matrix_contract: linear_srgb_to_linear_srgb`; the matrix then runs in
+linear light. This avoids treating a DCP camera-native transform as an output-sRGB look.
+Generated images without EXIF also pass through unchanged.
 
 ## Who calls it
 
