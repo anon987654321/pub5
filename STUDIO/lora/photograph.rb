@@ -3,8 +3,8 @@
 
 require "json"
 require "optparse"
-require_relative "api"
-require_relative "interactive"
+require_relative "../api"
+require_relative "../interactive"
 require_relative "idea_picture"
 require_relative "selfie_series"
 

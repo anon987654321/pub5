@@ -126,11 +126,15 @@ end
 class TestIdeaPictureOutput < Minitest::Test
   def test_idea_picture_has_one_canonical_implementation
     root = File.expand_path("..", __dir__)
-    canonical = File.join(root, "photograph", "idea_picture.rb")
-    duplicate = File.join(root, "generators", "idea_picture.rb")
+    canonical = File.join(root, "lora", "idea_picture.rb")
+    duplicates = [File.join(root, "photograph", "idea_picture.rb"),
+                  File.join(root, "generators", "idea_picture.rb"),
+                  File.join(root, "lora", "photograph", "idea_picture.rb")]
 
     assert File.file?(canonical)
-    refute File.file?(duplicate), "keep the implementation beside its photograph entrypoint"
+    duplicates.each do |duplicate|
+      refute File.file?(duplicate), "keep the implementation in lora/ beside its siblings, not under #{duplicate}"
+    end
   end
   def test_grade_returns_the_render_beside_the_still_not_the_still_itself
     Dir.mktmpdir do |dir|

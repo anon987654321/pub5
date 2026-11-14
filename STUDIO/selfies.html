@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0c0c0c">
+<meta name="description" content="STUDIO selfie gallery. A subject's stills and films over the dilla bed, never autoplaying.">
+<title>STUDIO | Selfies</title>
+<link rel="stylesheet" href="vendor/swiper/swiper-bundle.min.css">
+<link rel="stylesheet" href="selfies.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to gallery</a>
+
+<header class="gallery-header">
+  <h1>STUDIO <span class="header-sub">selfies</span></h1>
+  <div class="controls">
+    <div id="subject-filter" class="subject-filter" role="group" aria-label="Filter by subject"></div>
+    <button id="fit-toggle" type="button" aria-pressed="false" data-fit="fit">fit</button>
+    <button id="bed-toggle" type="button" aria-pressed="false" data-bed-src="selfies/dilla.mp3">bed: off</button>
+  </div>
+  <p id="gallery-status" class="gallery-status" role="status" aria-live="polite"></p>
+</header>
+
+<main id="main-content" class="gallery-main">
+  <div id="gallery-rail" class="swiper no-swiper" aria-label="Selfie rail">
+    <div id="gallery-track" class="swiper-wrapper gallery-track"></div>
+  </div>
+  <div class="rail-nav">
+    <button id="rail-prev" type="button" aria-label="Previous item">&larr;</button>
+    <button id="rail-next" type="button" aria-label="Next item">&rarr;</button>
+  </div>
+  <p id="gallery-empty" class="gallery-empty" hidden>
+    No renders yet. Run <code>ruby STUDIO/lora/photograph.rb</code>, grade them with
+    <code>postpro.rb --heavy --random</code>, then build the manifest with
+    <code>ruby STUDIO/lora/selfies_gallery.rb</code>.
+  </p>
+</main>
+
+<footer class="gallery-footer">
+  <p>Stills and films stay out of git; the manifest is the one generated file the page reads. The bed never autoplays.</p>
+</footer>
+
+<script src="vendor/swiper/swiper-bundle.min.js" defer></script>
+<script src="selfies/manifest.js" defer></script>
+<script src="selfies.js" defer></script>
+</body>
+</html>

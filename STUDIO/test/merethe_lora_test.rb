@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
-require "minitest/autorun"
-require "minitest/mock"
 require "tmpdir"
 require "fileutils"
+require_relative "minitest_helper"
 require_relative "../lora/merethe/prepare"
 
 # Dataset mechanics use a synthetic authorization record; the actual consent

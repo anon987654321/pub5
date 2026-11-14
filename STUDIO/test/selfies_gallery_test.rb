@@ -4,7 +4,7 @@ require "fileutils"
 require "json"
 require "tmpdir"
 require_relative "minitest_helper"
-require_relative "../photograph/selfies_gallery"
+require_relative "../lora/selfies_gallery"
 
 # The gallery's manifest is the one generated file the page reads. These tests
 # exercise the real generator against real files on disk: what it scans, how it
