@@ -50,11 +50,14 @@ envelope and phoneme shape.
 ## Primary material: particle stipple
 
 The first-load introduction reuses this same field and renderer: deterministic
-seed-derived particles begin dispersed around the head and converge onto the
-real face points over the token-defined interval. It is an original many-to-one
-reveal, not a copy of another show's title treatment. The reveal shares the
-existing render clock and point budget; no second canvas, pool or animation loop
-is created. Reduced motion resolves directly to the completed portrait.
+seed-derived particles begin dispersed around the head, then an expanding signal
+front draws them onto the real face points over the token-defined interval.
+Per-carrier thresholds resolve the particles in small cohorts instead of one
+uniform fade. Once gathered, a restrained fingerprint-like contour field adds
+curved ridges through luminance alone; it does not alter the one-pixel point size
+or add a texture, geometry, canvas, pool or animation loop. This is an original
+many-to-one reveal, not a copy of another show's title treatment. Reduced motion
+resolves directly to the completed portrait.
 
 
 FaceWorld's material is greyscale particle stipple, named in `tokens.visual_identity.material`

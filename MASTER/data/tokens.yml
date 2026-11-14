@@ -484,6 +484,13 @@ tokens:
     # reads this through MASTER_FACE_CONTRACT and Ruby through Face::Contract.
     stipple:
       intro_duration_ms: 1200
+      # Curved contour ridges are a restrained tonal structure inside the same point field.
+      fingerprint:
+        enabled: true
+        spacing: 22.0
+        strength: 0.28
+        center: [0.08, 0.06]
+        intro_wave_strength: 0.16
       # Point sprites stay one pixel; camera depth changes brightness, never size.
       depth_response:
         reference_distance: 5.0

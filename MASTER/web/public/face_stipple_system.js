@@ -151,6 +151,19 @@
     return samples;
   }
 
+  function fingerprintConfiguration() {
+    const config = window.MASTER_FACE_CONTRACT?.stipple?.fingerprint || {};
+    const center = Array.isArray(config.center) ? config.center : [0.08, 0.06];
+    return {
+      enabled: config.enabled !== false,
+      spacing: clamp(config.spacing, 22, 6, 48),
+      strength: clamp(config.strength, 0.28, 0, 0.6),
+      centerX: clamp(center[0], 0.08, -0.8, 0.8),
+      centerY: clamp(center[1], 0.06, -0.8, 0.8),
+      introWaveStrength: clamp(config.intro_wave_strength, 0.16, 0, 0.35)
+    };
+  }
+
   function samplesFromFaceGeometry(facePoints, count) {
     const positions = facePoints?.geometry?.attributes?.position?.array;
     if (!positions || positions.length < 3) return null;
@@ -213,12 +226,19 @@
     geometry.setAttribute("aDepthRank", new THREE.BufferAttribute(depthRanks, 1));
     const idle = profiles().idle || IDLE_PROFILE;
     const depth = depthResponse();
+    const fingerprint = fingerprintConfiguration();
     const material = new THREE.ShaderMaterial({
       uniforms: {
         uDepthReferenceDistance: { value: clamp(depth.reference_distance, DEFAULT_DEPTH_RESPONSE.reference_distance, 1.0, 20.0) },
         uDepthScaleMin: { value: clamp(depth.scale_min, DEFAULT_DEPTH_RESPONSE.scale_min, 0.1, 2.0) },
         uDepthScaleMax: { value: clamp(depth.scale_max, DEFAULT_DEPTH_RESPONSE.scale_max, 0.1, 2.0) },
         uTime: { value: 0 }, uIntroProgress: { value: 0 },
+        uFingerprintEnabled: { value: fingerprint.enabled ? 1.0 : 0.0 },
+        uFingerprintSpacing: { value: fingerprint.spacing },
+        uFingerprintStrength: { value: fingerprint.strength },
+        uFingerprintCenterX: { value: fingerprint.centerX },
+        uFingerprintCenterY: { value: fingerprint.centerY },
+        uIntroWaveStrength: { value: fingerprint.introWaveStrength },
         uDepthFromRank: { value: swarmConfiguration().size_from_depth === true ? 1.0 : 0.0 },
         uDepthSteps: { value: Math.max(2, Array.isArray(swarmConfiguration().glyph_ramp) ? swarmConfiguration().glyph_ramp.length : 2) },
         uDensity: { value: idle.density },
@@ -237,6 +257,12 @@
         attribute vec3 aIntroScatter;
         uniform float uTime;
         uniform float uIntroProgress;
+        uniform float uFingerprintEnabled;
+        uniform float uFingerprintSpacing;
+        uniform float uFingerprintStrength;
+        uniform float uFingerprintCenterX;
+        uniform float uFingerprintCenterY;
+        uniform float uIntroWaveStrength;
         uniform float uDensity;
         uniform float uRipple;
         uniform float uTurbulence;
@@ -254,7 +280,19 @@
         varying float vThreshold;
         varying float vDepthRank;
         void main() {
-          vec3 p = mix(aIntroScatter, position, uIntroProgress);
+          // A quiet radial signal crosses the dispersed field. Per-carrier thresholds
+          // resolve the points in cohorts, so the face gathers rather than fades in.
+          float localProgress = smoothstep(aThreshold * 0.62,
+            min(1.0, aThreshold * 0.62 + 0.38), uIntroProgress);
+          vec3 p = mix(aIntroScatter, position, localProgress);
+          float scatterRadius = length(aIntroScatter.xy);
+          float waveRadius = uIntroProgress * 2.0;
+          float waveFront = exp(-abs(scatterRadius - waveRadius) * 7.0);
+          float waveEnvelope = (1.0 - smoothstep(0.72, 1.0, uIntroProgress)) * (1.0 - localProgress);
+          vec2 scatterDirection = normalize(aIntroScatter.xy + vec2(0.0001));
+          p.xy += scatterDirection * waveFront * uIntroWaveStrength * waveEnvelope;
+          p.z += waveFront * uIntroWaveStrength * 0.12 * waveEnvelope;
+
           float zoneWeight = 0.72 + aZone * 0.035;
           float drift = sin(uTime * 0.72 + aPhase) * 0.008 * uTurbulence * uMotionScale;
           p.x += drift * (aZone < 2.0 ? 0.6 : 1.0);
@@ -264,6 +302,20 @@
           // A beat draws the existing field inward; still/reduced-motion modes zero the warp.
           float audioInward = clamp(uAudioWarp * 0.035 * uMotionScale, 0.0, 0.035);
           p.xy *= 1.0 - audioInward;
+          // Fingerprint-like curved contours modulate luminance only. They do not
+          // change the canonical one-pixel point size or add another render pass.
+          float ridgeTone = 1.0;
+          if (uFingerprintEnabled > 0.5 && uFingerprintStrength > 0.0) {
+            vec2 ridgePoint = vec2(p.x * 0.92, p.y - 0.05) -
+              vec2(uFingerprintCenterX, uFingerprintCenterY);
+            float ridgeAngle = atan(ridgePoint.y, ridgePoint.x);
+            float ridgeRadius = length(ridgePoint);
+            float ridgeCoordinate = ridgeRadius +
+              0.045 * sin(ridgeAngle * 2.0) +
+              0.018 * sin(ridgeAngle * 5.0);
+            float ridgePattern = 0.5 + 0.5 * cos(ridgeCoordinate * uFingerprintSpacing * 6.2831853);
+            ridgeTone = mix(1.0 - uFingerprintStrength * 0.42, 1.0, ridgePattern);
+          }
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
           gl_Position = projectionMatrix * mv;
           // One point, one pixel: depth and bias belong in brightness (vAlpha
@@ -279,7 +331,7 @@
           gl_PointSize = 1.0;
           vThreshold = aThreshold;
           vDepthRank = aDepthRank;
-          vAlpha = clamp((0.34 + zoneWeight * 0.56) * aBias * uLuminosity * breath * (1.0 - uEntropy * 0.08) * depthScale, 0.0, 1.0);
+          vAlpha = clamp((0.34 + zoneWeight * 0.56) * aBias * uLuminosity * breath * (1.0 - uEntropy * 0.08) * depthScale * ridgeTone, 0.0, 1.0);
           vZone = aZone;
         }
       `,

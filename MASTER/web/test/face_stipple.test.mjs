@@ -47,6 +47,19 @@ test("particle introduction converges into the face on the shared render clock",
   assert.doesNotMatch(system, /requestAnimationFrame/);
 });
 
+test("fingerprint ridges and radial signal waves stay inside the bounded one-pixel field", () => {
+  assert.match(tokens, /fingerprint:\s*\n\s+enabled: true\s*\n\s+spacing: 22\.0/);
+  assert.match(system, /function fingerprintConfiguration\(\)/);
+  assert.match(system, /uniform float uFingerprintStrength;/);
+  assert.match(system, /float waveRadius = uIntroProgress \* 2\.0/);
+  assert.match(system, /float waveFront = exp\(-abs\(scatterRadius - waveRadius\) \* 7\.0\)/);
+  assert.match(system, /float ridgeCoordinate = ridgeRadius \+/);
+  assert.match(system, /float ridgePattern = 0\.5 \+ 0\.5 \* cos\(/);
+  assert.match(system, /ridgeTone, 0\.0, 1\.0\)/);
+  assert.match(system, /gl_PointSize = 1\.0;/);
+  assert.doesNotMatch(system, /requestAnimationFrame/);
+});
+
 test("stipple breath is luminance-only, survives idle stillness and freezes for reduced motion", () => {
   assert.match(system, /uBreathScale: \{ value: 0 \}/);
   assert.match(system, /uniform float uBreathScale;/);
