@@ -68,6 +68,129 @@ module Postpro
       )
     end
 
+    # CIEDE2000 colour difference for two CIELAB triples. Inputs must use
+    # the same observer and reference white; this method does not adapt whites.
+    def self.delta_e_2000(lab1, lab2)
+      left = Array(lab1)
+      right = Array(lab2)
+      valid_values = (left + right).all? do |value|
+        value.is_a?(Numeric) && !value.is_a?(Complex) && value.finite?
+      end
+      unless left.length == 3 && right.length == 3 && valid_values
+        raise ArgumentError, "CIEDE2000 needs two finite numeric CIELAB triples"
+      end
+
+      l1, a1, b1 = left.map(&:to_f)
+      l2, a2, b2 = right.map(&:to_f)
+      c1 = Math.hypot(a1, b1)
+      c2 = Math.hypot(a2, b2)
+      c_bar = (c1 + c2) / 2.0
+      c_bar7 = c_bar**7
+      g = 0.5 * (1.0 - Math.sqrt(c_bar7 / (c_bar7 + 25.0**7)))
+      a1p = (1.0 + g) * a1
+      a2p = (1.0 + g) * a2
+      c1p = Math.hypot(a1p, b1)
+      c2p = Math.hypot(a2p, b2)
+      hue = ->(a, b) { (Math.atan2(b, a) * 180.0 / Math::PI) % 360.0 }
+      h1p = c1p.zero? ? 0.0 : hue.call(a1p, b1)
+      h2p = c2p.zero? ? 0.0 : hue.call(a2p, b2)
+
+      delta_l = l2 - l1
+      delta_c = c2p - c1p
+      delta_h = if c1p * c2p == 0.0
+                  0.0
+                else
+                  difference = h2p - h1p
+                  difference -= 360.0 if difference > 180.0
+                  difference += 360.0 if difference < -180.0
+                  difference
+                end
+      delta_h_term = 2.0 * Math.sqrt(c1p * c2p) * Math.sin(delta_h * Math::PI / 360.0)
+
+      mean_l = (l1 + l2) / 2.0
+      mean_c = (c1p + c2p) / 2.0
+      mean_h = if c1p * c2p == 0.0
+                 h1p + h2p
+               elsif (h1p - h2p).abs <= 180.0
+                 (h1p + h2p) / 2.0
+               elsif (h1p + h2p) < 360.0
+                 (h1p + h2p + 360.0) / 2.0
+               else
+                 (h1p + h2p - 360.0) / 2.0
+               end
+
+      radians = Math::PI / 180.0
+      t = 1.0 - 0.17 * Math.cos((mean_h - 30.0) * radians) +
+        0.24 * Math.cos(2.0 * mean_h * radians) +
+        0.32 * Math.cos((3.0 * mean_h + 6.0) * radians) -
+        0.20 * Math.cos((4.0 * mean_h - 63.0) * radians)
+      delta_theta = 30.0 * Math.exp(-(((mean_h - 275.0) / 25.0)**2))
+      mean_c7 = mean_c**7
+      rotation_c = 2.0 * Math.sqrt(mean_c7 / (mean_c7 + 25.0**7))
+      scale_l = 1.0 + (0.015 * (mean_l - 50.0)**2) /
+        Math.sqrt(20.0 + (mean_l - 50.0)**2)
+      scale_c = 1.0 + 0.045 * mean_c
+      scale_h = 1.0 + 0.015 * mean_c * t
+      rotation_t = -Math.sin(2.0 * delta_theta * radians) * rotation_c
+
+      l_term = delta_l / scale_l
+      c_term = delta_c / scale_c
+      h_term = delta_h_term / scale_h
+      Math.sqrt(l_term**2 + c_term**2 + h_term**2 + rotation_t * c_term * h_term)
+    end
+
+    # Compare aligned images only. Different dimensions are refused rather
+    # than silently cropped or resampled into a false match. Both images pass
+    # through the same libvips sRGB-to-Lab conversion and uniform thumbnail.
+    def self.compare_images(reference, actual, max_dimension: 128)
+      unless reference.width == actual.width && reference.height == actual.height
+        raise ArgumentError, "reference and actual images must have identical dimensions"
+      end
+
+      size = Integer(max_dimension)
+      raise ArgumentError, "max_dimension must be between 8 and 512" unless size.between?(8, 512)
+      reference_lab = lab_thumbnail(reference, size)
+      actual_lab = lab_thumbnail(actual, size)
+      unless reference_lab.width == actual_lab.width && reference_lab.height == actual_lab.height
+        raise ArgumentError, "reference and actual thumbnails do not align"
+      end
+
+      reference_pixels = reference_lab.write_to_memory.unpack("f*").each_slice(3)
+      actual_pixels = actual_lab.write_to_memory.unpack("f*").each_slice(3)
+      differences = reference_pixels.zip(actual_pixels).map do |left, right|
+        delta_e_2000(left, right)
+      end
+      raise ArgumentError, "image comparison produced no colour samples" if differences.empty?
+
+      sorted = differences.sort
+      {
+        method: "CIEDE2000",
+        colour_space: "libvips CIELAB from sRGB",
+        sample_count: sorted.length,
+        mean_delta_e_2000: sorted.sum / sorted.length,
+        median_delta_e_2000: percentile(sorted, 50),
+        p95_delta_e_2000: percentile(sorted, 95),
+        max_delta_e_2000: sorted.last,
+        dimensions: [reference.width, reference.height],
+        sample_dimensions: [reference_lab.width, reference_lab.height],
+      }
+    end
+
+    def self.lab_thumbnail(image, max_dimension)
+      sample = image.thumbnail_image(max_dimension, height: max_dimension, size: :down)
+                     .colourspace("srgb").cast("uchar")
+      sample = if sample.bands <= 2
+                 grey = sample.extract_band(0)
+                 grey.bandjoin([grey, grey])
+               elsif sample.bands > 3
+                 sample.extract_band(0, n: 3)
+               else
+                 sample
+               end
+      sample.colourspace("lab").cast("float")
+    end
+    private_class_method :lab_thumbnail
+
     def self.linear_luminance(samples)
       samples.map do |red, green, blue|
         0.2126 * HD.srgb_to_linear(red) +

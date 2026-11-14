@@ -90,6 +90,14 @@ rendering entry point to `apply_finishing_grain`, then runs a tiny in-memory 8×
 representative colour, monochrome and print presets to catch failures that table inspection
 cannot see. A problem produces a non-zero result.
 
+`QualityAnalyzer.report_image` measures decoded-sRGB linear-light luminance. Its
+`delta_e_2000` implements the CIEDE2000 formula against published reference pairs, and
+`compare_images(reference, actual)` reports mean, median, 95th-percentile and maximum ΔE
+for same-dimension, aligned images. It refuses mismatched dimensions rather than silently
+cropping or resizing a false comparison. This is the comparison primitive for future
+calibrated golden photographs; synthetic colour patches alone do not establish photographic
+quality or skin/highlight preservation.
+
 These guards exist because table-driven failures rarely raise by themselves: an effect with no
 implementation once returned the input unchanged while the log reported the step as done, and a
 temperature that `--describe-preset` printed but no step applied was a lie and not a look. A
