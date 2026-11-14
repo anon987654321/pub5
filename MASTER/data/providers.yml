@@ -75,7 +75,14 @@ mistral:
 
 replicate:
   env: [REPLICATE_API_TOKEN, REPLICATE_API_KEY]
-  strengths: [image_generation, video_generation, tts, fast_inference, specialized_models, edge]
+  strengths: [image_generation, video_generation, tts, fast_inference, specialized_models, edge, hosted_llms]
+  # Replicate hosts large chat models beside its image and video models; the
+  # dispatcher reaches them as replicate:<owner>/<name> (data/models.yml
+  # replicate_chat, ReplicateSender#send_replicate_chat). Verified 2026-11-13
+  # from a cold sandbox: a keyed POST to each replicate_chat slug's
+  # /predictions answered, and each model's own schema declares a different key
+  # spelling for the token cap and system prompt, which send_replicate_chat now
+  # shapes from the schema (REPLICATE_CHAT_SHAPES).
   default_model: black-forest-labs/flux-2-pro
 
 # Z.ai (Zhipu GLM). Reached the openai_compatible way (models.yml), not through

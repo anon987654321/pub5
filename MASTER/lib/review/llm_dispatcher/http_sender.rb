@@ -4,6 +4,7 @@ require "json"
 require "net/http"
 require "timeout"
 require "uri"
+require_relative "replicate_sender"
 require_relative "../../io/provider_concurrency"
 
 module Master
@@ -20,21 +21,12 @@ module Master
       # that keeps delivering never trips it, so a token arriving every few
       # seconds reads for as long as the provider writes).
       module HttpSender
-        LOCAL_SERVER_TIMEOUT_S = 300
+        include ReplicateSender
+
         OPEN_TIMEOUT_S = 5
         READ_IDLE_TIMEOUT_S = 60
 
         private
-
-        REPLICATE_API = "https://api.replicate.com/v1"
-        REPLICATE_WAIT_S = 60
-        REPLICATE_MAX_POLLS = 240
-        REPLICATE_POLL_TIMEOUT_S = 240
-        REPLICATE_POLL_OPEN_TIMEOUT_S = 5
-        REPLICATE_POLL_READ_TIMEOUT_S = 10
-        REPLICATE_POLL_INTERVAL_S = 1
-        REPLICATE_API_HOST = "api.replicate.com"
-        REPLICATE_MAX_TOKENS = 4096
 
         # Tests substitute their own idle budget; no operator surface. An operator
         # may widen it for a slow gateway: MASTER_LLM_READ_IDLE_S.
@@ -44,7 +36,6 @@ module Master
 
         def local_server_model?(model_id) = model_id.to_s.start_with?("local:")
 
-        def replicate_chat_model?(model_id) = model_id.to_s.start_with?("replicate:")
 
         # The router found which server listed the model; the call goes there.
         def send_local_server(selected_model, messages, sys:, temperature: nil)
@@ -208,102 +199,6 @@ module Master
           content
         rescue JSON::ParserError => e
           Result.err("#{lane} sent a malformed stream: #{e.message}", category: :provider_error)
-        end
-
-        # Replicate answers inside the wait window or hands back a prediction to
-        # poll; either way the output is the reply's tokens as an array.
-        def send_replicate_chat(selected_model, messages, sys:)
-          headers = replicate_headers
-          return Result.err("replicate: missing API token", category: :no_api_key) unless headers
-
-          slug = selected_model.delete_prefix("replicate:")
-          input = { prompt: text_prompt_for(messages), max_tokens: REPLICATE_MAX_TOKENS }
-          input[:system_prompt] = sys unless sys.to_s.empty?
-          response = post_json("#{REPLICATE_API}/models/#{slug}/predictions", { input: }, headers:,
-                                                                                         timeout: REPLICATE_WAIT_S + 10)
-          return http_lane_error("replicate", response) unless response.is_a?(Net::HTTPSuccess)
-
-          replicate_output(JSON.parse(response.body), headers:)
-        rescue JSON::ParserError
-          Result.err("replicate: invalid prediction response", category: :provider_error)
-        end
-
-        def replicate_output(prediction, headers:)
-          deadline = monotonic_now + REPLICATE_POLL_TIMEOUT_S
-          REPLICATE_MAX_POLLS.times do
-            unless prediction.is_a?(Hash)
-              return Result.err("replicate: invalid prediction response", category: :provider_error)
-            end
-            return Result.ok(Array(prediction["output"]).join) if prediction["status"] == "succeeded"
-            if %w[failed canceled].include?(prediction["status"])
-              return Result.err("replicate: #{prediction['error'] || prediction['status']}", category: :provider_error)
-            end
-
-            remaining = deadline - monotonic_now
-            return Result.err("replicate: polling deadline exceeded", category: :timeout) unless remaining.positive?
-
-            sleep([REPLICATE_POLL_INTERVAL_S, remaining].min)
-            prediction = fetch_replicate_prediction(prediction, headers:, deadline:)
-            return prediction if prediction.is_a?(Result)
-          end
-          Result.err("replicate: no answer after #{REPLICATE_MAX_POLLS} polls", category: :timeout)
-        end
-
-        def fetch_replicate_prediction(prediction, headers:, deadline:)
-          uri = replicate_poll_uri(prediction)
-          remaining = deadline - monotonic_now
-          return Result.err("replicate: polling deadline exceeded", category: :timeout) unless remaining.positive?
-
-          request = Net::HTTP::Get.new(uri.request_uri, headers)
-          response = Net::HTTP.start(
-            uri.host, uri.port, use_ssl: true,
-            open_timeout: [REPLICATE_POLL_OPEN_TIMEOUT_S, remaining].min,
-            read_timeout: [REPLICATE_POLL_READ_TIMEOUT_S, remaining].min,
-          ) { |http| http.request(request) }
-          return http_lane_error("replicate", response) unless response.is_a?(Net::HTTPSuccess)
-
-          parsed = JSON.parse(response.body)
-          return parsed if parsed.is_a?(Hash)
-
-          Result.err("replicate: polling response was not an object", category: :provider_error)
-        rescue ArgumentError, TypeError, URI::InvalidURIError
-          Result.err("replicate: refused an invalid polling endpoint", category: :policy)
-        rescue Net::OpenTimeout, Net::ReadTimeout, Timeout::Error
-          Result.err("replicate: polling request timed out", category: :timeout)
-        rescue JSON::ParserError
-          Result.err("replicate: invalid polling response", category: :provider_error)
-        end
-
-        def replicate_poll_uri(prediction)
-          urls = prediction["urls"]
-          value = urls.is_a?(Hash) ? urls["get"].to_s : ""
-          uri = URI.parse(value)
-          allowed_path = %r{\A/v1/predictions/[A-Za-z0-9_-]+\z}
-          allowed = uri.is_a?(URI::HTTPS) && uri.host == REPLICATE_API_HOST && uri.port == 443 &&
-                    uri.userinfo.nil? && uri.query.nil? && uri.fragment.nil? && uri.path.match?(allowed_path)
-          raise ArgumentError, "poll URL is outside the Replicate API" unless allowed
-
-          uri
-        end
-
-        def replicate_headers
-          token = [ENV["REPLICATE_API_TOKEN"], ENV["REPLICATE_API_KEY"]]
-            .map { |key| key.to_s.strip }.find { |key| !key.empty? }
-          return if token.to_s.empty?
-
-          { "Authorization" => "Bearer #{token}", "Prefer" => "wait=#{REPLICATE_WAIT_S}" }
-        end
-
-        def monotonic_now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-
-        def post_json(url, body, headers: {}, timeout: LOCAL_SERVER_TIMEOUT_S)
-          uri = URI(url)
-          request = Net::HTTP::Post.new(uri.request_uri, headers.merge("Content-Type" => "application/json"))
-          request.body = JSON.generate(body)
-          Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https",
-                          open_timeout: OPEN_TIMEOUT_S, read_timeout: timeout) do |http|
-            http.request(request)
-          end
         end
 
         # A refused key, a spent balance and a busy host are three different

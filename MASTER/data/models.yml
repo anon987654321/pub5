@@ -703,12 +703,23 @@ openai_compatible:
 
 # Language models Replicate hosts, asked as replicate:<owner>/<name> with
 # REPLICATE_API_TOKEN. Paid per call, so they sit behind the free lanes.
+# Every slug was probed live on 2026-11-13 (a one-token POST to the model's
+# /predictions endpoint): each answered, and each declares the input keys the
+# dispatcher now shapes its request from — Anthropic max_tokens+system_prompt,
+# OpenAI gpt-5.x max_completion_tokens+system_prompt, Google
+# max_output_tokens+system_instruction, gpt-oss max_tokens only
+# (replicate_sender.rb REPLICATE_CHAT_SHAPES). Strongest first.
+# deepseek-ai/deepseek-v3.1 and moonshotai/kimi-k2.5 were here and Replicate has
+# since disabled both deployments, so a call to either failed 422; git history
+# holds the removal.
 replicate_chat:
+  - anthropic/claude-opus-5.5
+  - openai/gpt-5.2
+  - google/gemini-4-carbon
   - anthropic/claude-4.5-sonnet
   - openai/gpt-5
-  - deepseek-ai/deepseek-v3.1
   - google/gemini-2.5-flash
-  - moonshotai/kimi-k2.5
+  - openai/gpt-oss-120b
 
 # Tier-D is a dormant local Ollama fallback. It is disabled by default; when
 # explicitly enabled, the only eligible model is allowlisted Gemma 3 4B.
