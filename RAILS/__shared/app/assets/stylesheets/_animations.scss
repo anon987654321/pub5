@@ -1,10 +1,9 @@
-// The .animate-* utility classes were deleted 2026-08-22: zero markup ever
-// applied one (css_coverage census) — the flat contract made them dead on
-// arrival. What remains is what other sheets actually cite: slideInRight and
-// expandLayout (_components), the --delay stagger hook, and the reduced-motion
-// guarantee. The M3 spring and its 200ms duration were folded into
-// --ease-spring and --transition-fast (_tokens.scss): its 1.56 control point
-// overshot, so a pressed button bounced past its size, which is not flat.
+// Only what other sheets cite: slideInRight and expandLayout (_components),
+// the --delay stagger hook, and the reduced-motion guarantee. The M3 spring
+// lives in --ease-spring and --transition-fast (_tokens.scss); its 1.56
+// control point overshoots, so a pressed button bounces past its size, which
+// is not flat. The .animate-* utilities stay out: zero markup applies one
+// (css_coverage census), and the flat contract makes them dead on arrival.
 
 @keyframes slideInRight {
   from { opacity: 0; transform: translateX(0.75rem); }

@@ -1,10 +1,9 @@
 // The nearby/chat dock — the bar in the bottom-right corner, its panel, log,
 // composer, empty state and the sheet it becomes on a narrow screen.
 //
-// Split out of _shell_widgets.scss when that file passed its length ceiling.
-// It is 360 of those lines on its own and every selector under it carries the
-// .nearby-chat-widget prefix, so it was already a component living in a file
-// named after something else.
+// Kept apart from _shell_widgets.scss, which stays under its length ceiling
+// without these 360 lines. Every selector carries the .nearby-chat-widget
+// prefix: one component, one file.
 //
 // Loaded by _shell_widgets with @use, which emits it just before the rest of
 // that file. Nothing here shares a selector with anything there, so the move

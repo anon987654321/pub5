@@ -311,7 +311,7 @@ module Shared
     # photo, painting a blurhash first; responsive_image_tag below ships a webp
     # <picture> the browser chooses from. A `lazy:` switch on one of them would
     # be a selector argument choosing between two bodies (NO_SELECTOR_ARGUMENTS),
-    # so what they share is folded into reserved_image_options instead.
+    # so their shared options live in reserved_image_options instead.
     #
     # Here rather than in brgen's ApplicationHelper because the dating engine's
     # views call it, and an engine view should not depend on its host's helper.

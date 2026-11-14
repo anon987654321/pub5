@@ -1,10 +1,10 @@
 // The bottom tab bar and the chrome that belongs to it: the peel grip it
 // collapses to, the first-visit coach above that, and the tab items.
 //
-// Split out of _shell.scss when that file passed its length ceiling. It is a
-// component with one prefix — .tab-bar, .tab-bar-peel, .tab-bar-coach,
-// .tab-item — and 180 of that file's lines; what stays in _shell is the
-// page frame around it (skip link, app-shell, layout, the edge swipers).
+// Kept apart from _shell.scss, which holds its length ceiling without these
+// 180 lines. One component, one prefix — .tab-bar, .tab-bar-peel,
+// .tab-bar-coach, .tab-item; what stays in _shell is the page frame around it
+// (skip link, app-shell, layout, the edge swipers).
 //
 // Loaded by _shell with @use, which emits it just ahead of the rest of that
 // file. Proved not to change a computed style the way the chat-dock split was:
