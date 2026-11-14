@@ -87,6 +87,8 @@ test("MASTER randomly morphs among the four original abstract face expressions",
   assert.match(system, /F \/ Monument/);
   assert.match(system, /updateExpressions\(system, time, reducedMotion\)/);
   assert.match(system, /expression: \{/);
+  assert.match(system, /const rotationPaused = reducedMotion \|\| subjectSuppressed/);
+  assert.match(faceWorld, /document\.documentElement\.dataset\.faceSubject = form/);
   assert.match(faceSource, /uniform float uExpressionFrom;/);
   assert.match(faceSource, /vec3 masterExpressionPoint\(vec3 point, float expression\)/);
   assert.match(faceSource, /masterExpressionPoint\(p, uExpressionTo\)/);
@@ -668,11 +670,23 @@ test("stipple module boots and builds from the canonical idle profile", () => {
   assert.equal(expressionDiagnostics.primaryAvailable, true);
   assert.equal(expressionDiagnostics.primarySynchronized, true);
   assert.deepEqual(Array.from(expressionDiagnostics.order), ["waterform", "architect", "forest_geometry", "monument"]);
-  assert.equal(expressionDiagnostics.fromName, expressionDiagnostics.toName);
+  assert.notEqual(expressionDiagnostics.fromName, expressionDiagnostics.toName);
+  assert.equal(expressionDiagnostics.currentName, expressionDiagnostics.toName);
   assert.equal(expressionDiagnostics.transitionMs, 1800);
   assert.equal(expressionDiagnostics.minIntervalMs, 9000);
   assert.equal(expressionDiagnostics.maxIntervalMs, 16000);
   assert.equal(expressionDiagnostics.primary.uExpressionStrength, expressionDiagnostics.strength);
+  for (let current = 0; current < 4; current += 1) {
+    const at = 30 + current;
+    stipple.expressionCycle = {
+      from: current, to: current, startedAt: at - 1.8, pausedAt: null, nextAt: at
+    };
+    api.tick(stipple, { mode: "thinking", reducedMotion: false }, at);
+    assert.equal(stipple.material.uniforms.uExpressionFrom.value, current);
+    assert.notEqual(stipple.material.uniforms.uExpressionTo.value, current);
+  }
+  assert.equal(stipple.material.uniforms.uExpressionFrom.value, 3);
+  assert.equal(stipple.material.uniforms.uExpressionTo.value, 0);
   assert.equal(stipple.material.uniforms.uDepthFromRank.value, 1);
   assert.equal(stipple.material.uniforms.uDepthSteps.value, 6);
   assert.equal(stipple.material.uniforms.uDensity.value, 0.44);
