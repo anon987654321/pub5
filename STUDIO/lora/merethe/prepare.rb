@@ -17,7 +17,7 @@ module Studio
     # Move ignored subject data left at the former path; never follow symlinks
     # or overwrite a newer file in the canonical location.
     LEGACY_SUBJECT_ROOT = File.expand_path("../../replicate/lora/merethe", SUBJECT_ROOT).freeze
-    LEGACY_DATA_ENTRIES = %w[sources dataset .cache weights out subject.env consent.yml].freeze
+    LEGACY_DATA_ENTRIES = %w[sources dataset .cache weights out subject.env consent.yml evidence].freeze
     SOURCE_ROOT = File.join(SUBJECT_ROOT, "sources").freeze
     ADDITIONAL_ROOT = File.join(SOURCE_ROOT, "additional").freeze
     DATASET_ROOT = File.join(SUBJECT_ROOT, "dataset").freeze

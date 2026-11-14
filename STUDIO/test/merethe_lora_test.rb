@@ -16,6 +16,11 @@ class TestMeretheLoraPackage < Minitest::Test
     assert_equal File.expand_path("../lora/merethe", __dir__), Studio::MeretheLora::SUBJECT_ROOT
   end
 
+  def test_legacy_migration_carries_private_consent_evidence_with_its_record
+    assert_includes Studio::MeretheLora::LEGACY_DATA_ENTRIES, "consent.yml"
+    assert_includes Studio::MeretheLora::LEGACY_DATA_ENTRIES, "evidence"
+  end
+
   def test_historical_source_inventory_is_complete_and_pinned
     assert_equal 15, Studio::MeretheLora::SOURCE_FILES.size
     assert_equal "8e1955ae130592ab7c20ee266c024f061431c67e", Studio::MeretheLora::SOURCE_COMMIT
