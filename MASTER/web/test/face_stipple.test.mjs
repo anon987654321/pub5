@@ -85,6 +85,9 @@ test("MASTER randomly morphs among the four original abstract face expressions",
   assert.match(system, /A \/ Architect/);
   assert.match(system, /E \/ Forest Geometry/);
   assert.match(system, /F \/ Monument/);
+  const architectStep = /float steppedY = floor\(point\.y \* 34\.0 \+ 0\.5\) \/ 34\.0;\s*point\.y = mix\(point\.y, steppedY, 0\.82\);/;
+  assert.match(system, architectStep);
+  assert.match(faceSource, architectStep);
   assert.match(system, /updateExpressions\(system, time, reducedMotion\)/);
   assert.match(system, /expression: \{/);
   assert.match(system, /const rotationPaused = reducedMotion \|\| subjectSuppressed/);

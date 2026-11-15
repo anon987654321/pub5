@@ -393,7 +393,8 @@
             float cheek = smoothstep(0.06, 0.52, abs(point.x)) *
               (1.0 - smoothstep(-0.48, 0.02, point.y));
             point.x += side * cheek * 0.052;
-            point.y = floor(point.y * 34.0 + 0.5) / 34.0 * 0.94 + point.y * 0.06;
+            float steppedY = floor(point.y * 34.0 + 0.5) / 34.0;
+          point.y = mix(point.y, steppedY, 0.82);
           } else if (expression < 2.5) {
             // E / Forest Geometry: branching side contours, kept inside the silhouette.
             float temple = exp(-pow((point.y - 0.12) * 5.0, 2.0));
