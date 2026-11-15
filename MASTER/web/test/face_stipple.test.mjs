@@ -665,10 +665,14 @@ test("stipple module boots and builds from the canonical idle profile", () => {
   api.tick(stipple, { mode: "thinking", reducedMotion: false }, 4);
   api.tick(stipple, { mode: "thinking", reducedMotion: false }, 4.5);
   const frozenExpressionBlend = stipple.material.uniforms.uExpressionBlend.value;
+  const frozenExpressionProgress = stipple.expressionCycle.progress;
+  assert.ok(frozenExpressionProgress > 0 && frozenExpressionProgress < 1);
   api.tick(stipple, { mode: "thinking", reducedMotion: true }, 5);
   api.tick(stipple, { mode: "thinking", reducedMotion: true }, 10);
   assert.equal(stipple.material.uniforms.uExpressionBlend.value, frozenExpressionBlend);
+  assert.equal(stipple.expressionCycle.pausedProgress, frozenExpressionProgress);
   api.tick(stipple, { mode: "thinking", reducedMotion: false }, 10.5);
+  assert.equal(stipple.expressionCycle.pausedProgress, null);
   assert.ok(stipple.material.uniforms.uExpressionBlend.value > frozenExpressionBlend);
   assert.ok(stipple.material.uniforms.uExpressionBlend.value < 1);
   assert.equal(primaryExpressionUniforms.uExpressionBlend.value, stipple.material.uniforms.uExpressionBlend.value);
