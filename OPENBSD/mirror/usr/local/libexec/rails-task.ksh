@@ -171,7 +171,7 @@ for part in gems cache; do
     mkdir "$target"
   fi
 done
-# The current broker's contract is the PUB5_TASK_* set; the PUB4_TASK_* names
+# The current broker contract is the PUB5_TASK_* set; the PUB4_TASK_* names
 # remain exported as compatibility aliases for the installed legacy callers.
 ruby_version=$("$PUB5_TASK_RUBY" -e "print RUBY_VERSION.split(46.chr).first(2).join")
 shared="/var/cache/pub4/bundle/ruby$ruby_version"
