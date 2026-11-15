@@ -28,10 +28,21 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 ROOT=$(dirname -- "$SCRIPT_DIR")
 TOOLS="$ROOT/.tools"
 PREFIX="$TOOLS/ruby"
-YAML_PREFIX="$TOOLS/yaml"
+# The supporting libraries install into the Ruby's own prefix, not a sibling
+# directory. mkmf searches that prefix by default, so a later `bundle install`
+# can build fiddle (libffi), psych (libyaml) and friends without a pkg-config
+# path handed to it, and without any dev package from the host.
+YAML_PREFIX="$PREFIX"
+ZLIB_PREFIX="$PREFIX"
+OPENSSL_PREFIX="$PREFIX"
+OPENSSL_VER=3.0.15
+FFI_PREFIX="$PREFIX"
 MIN_MAJOR=3
 MIN_MINOR=3
-RUBY_VER=3.2.6
+# Must satisfy the Gemfile floor (`ruby ">= 3.3"`). A 3.2.x build here produced an
+# interpreter this script and Bundler both reject, so the no-root fallback could
+# never boot MASTER.
+RUBY_VER=3.3.6
 
 say() { printf 'dev-bootstrap: %s\n' "$*"; }
 
@@ -138,16 +149,63 @@ build() {
   fi
   say "libyaml ready at $YAML_PREFIX"
 
+  # zlib and OpenSSL are built from source for the same reason libyaml is: a
+  # container with no dev packages has no headers, and without OpenSSL the built
+  # Ruby's RubyGems cannot fetch a gem over HTTPS at all.
+  if [ ! -f zlib-1.3.1/.built ]; then
+    say "fetching zlib 1.3.1"
+    fetch https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz zlib.tar.gz
+    rm -rf zlib-1.3.1
+    tar xzf zlib.tar.gz
+    (cd zlib-1.3.1 && CC=${CC:-cc} ./configure --prefix="$ZLIB_PREFIX" >/dev/null \
+      && make -j2 >/dev/null && make install >/dev/null)
+    touch zlib-1.3.1/.built
+  fi
+  say "zlib ready at $ZLIB_PREFIX"
+
+  if [ ! -f "openssl-$OPENSSL_VER/.built" ]; then
+    say "fetching openssl $OPENSSL_VER"
+    fetch "https://www.openssl.org/source/openssl-$OPENSSL_VER.tar.gz" openssl.tar.gz
+    rm -rf "openssl-$OPENSSL_VER"
+    tar xzf openssl.tar.gz
+    (cd "openssl-$OPENSSL_VER" && CC=${CC:-cc} ./config --prefix="$OPENSSL_PREFIX" \
+      --libdir=lib no-shared no-tests >/dev/null \
+      && make -j2 >/dev/null && make install_sw >/dev/null)
+    touch "openssl-$OPENSSL_VER/.built"
+  fi
+  say "openssl ready at $OPENSSL_PREFIX"
+
+  # libffi is what the fiddle gem (a default gem Ruby rebuilds) needs to build.
+  # It must be shared: fiddle links it into a shared object, and a static-only
+  # archive without PIC cannot be linked there.
+  if [ ! -f libffi-3.4.6/.built ]; then
+    say "fetching libffi 3.4.6"
+    fetch https://github.com/libffi/libffi/releases/download/v3.4.6/libffi-3.4.6.tar.gz \
+      libffi.tar.gz
+    rm -rf libffi-3.4.6
+    tar xzf libffi.tar.gz
+    (cd libffi-3.4.6 && CC=${CC:-cc} ./configure --prefix="$FFI_PREFIX" >/dev/null \
+      && make -j2 >/dev/null && make install >/dev/null)
+    touch libffi-3.4.6/.built
+  fi
+  say "libffi ready at $FFI_PREFIX"
+
   if [ ! -f ruby-$RUBY_VER/.built ]; then
     say "fetching ruby $RUBY_VER (this is the long step; re-running resumes)"
     if [ ! -d ruby-$RUBY_VER ]; then
-      fetch "https://cache.ruby-lang.org/pub/ruby/3.2/ruby-$RUBY_VER.tar.gz" ruby.tar.gz
+      # The series directory tracks RUBY_VER; a hard-coded one fetched a tarball
+      # whose name never matched the version the build then looked for.
+      series=$(printf '%s' "$RUBY_VER" | cut -d. -f1,2)
+      fetch "https://cache.ruby-lang.org/pub/ruby/$series/ruby-$RUBY_VER.tar.gz" ruby.tar.gz
       tar xzf ruby.tar.gz
     fi
     (cd ruby-$RUBY_VER \
-      && CPPFLAGS="-I$YAML_PREFIX/include" LDFLAGS="-L$YAML_PREFIX/lib" \
+      && CPPFLAGS="-I$YAML_PREFIX/include -I$ZLIB_PREFIX/include -I$OPENSSL_PREFIX/include -I$FFI_PREFIX/include" \
+         LDFLAGS="-L$YAML_PREFIX/lib -L$ZLIB_PREFIX/lib -L$OPENSSL_PREFIX/lib -L$FFI_PREFIX/lib" \
          CC=${CC:-cc} ./configure --prefix="$PREFIX" --disable-install-doc \
-           --with-yaml-dir="$YAML_PREFIX" --without-gmp --enable-shared >/dev/null \
+           --with-yaml-dir="$YAML_PREFIX" --with-openssl-dir="$OPENSSL_PREFIX" \
+           --with-libffi-dir="$FFI_PREFIX" \
+           --without-gmp --enable-shared >/dev/null \
       && make -j2 >/dev/null && make install >/dev/null)
     touch ruby-$RUBY_VER/.built
   fi
@@ -166,11 +224,21 @@ if chosen=$(best_on_path) && [ -n "$chosen" ]; then
   exec "$chosen" "$@"
 fi
 
-# 3: a Ruby this script built before.
+# 3: a Ruby this script built before, when it still meets the floor. A build
+# left by an older RUBY_VER must not be trusted blind: a 3.2.x build answered
+# here and then failed Bundler's own `ruby ">= 3.3"` check.
 if [ -x "$PREFIX/bin/ruby" ]; then
-  LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-  export LD_LIBRARY_PATH
-  exec "$PREFIX/bin/ruby" "$@"
+  built=$("$PREFIX/bin/ruby" -e 'print RUBY_VERSION' 2>/dev/null || true)
+  stale=
+  case "$built" in
+    [0-9]*.[0-9]*.[0-9]*) version_key "$built" >/dev/null || stale=1 ;;
+  esac
+  if [ -z "$stale" ]; then
+    LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    export LD_LIBRARY_PATH
+    exec "$PREFIX/bin/ruby" "$@"
+  fi
+  say "ignoring $PREFIX/bin/ruby: $built is below Ruby $MIN_MAJOR.$MIN_MINOR"
 fi
 
 # 4: build one, then answer through it.
@@ -188,5 +256,6 @@ if [ "$#" -gt 0 ]; then
 fi
 
 say "receipt: $PREFIX/bin/ruby ($("$PREFIX/bin/ruby" -e 'print RUBY_VERSION'))"
-say "yaml: $YAML_PREFIX (static, private to this checkout)"
-say "use: bin/dev-bootstrap [args...] runs args on it; or export LD_LIBRARY_PATH=$PREFIX/lib and PATH=$PREFIX/bin:\$PATH"
+say "support libraries: $PREFIX (static, private to this checkout)"
+say "use: bin/dev-bootstrap [args...] runs args on it"
+say "  or: export LD_LIBRARY_PATH=$PREFIX/lib and PATH=$PREFIX/bin:\$PATH"

@@ -236,7 +236,7 @@ class TestBinScripts < Minitest::Test
     syntax, status = Open3.capture2e("sh", "-n", File.join(ROOT, "bin", "dev-bootstrap"))
 
     assert status.success?, "bin/dev-bootstrap is not valid POSIX sh: #{syntax}"
-    assert_includes source, "https://cache.ruby-lang.org/pub/ruby/3.3/"
+    assert_includes source, "cache.ruby-lang.org/pub/ruby/$series/ruby-$RUBY_VER.tar.gz"
     assert_includes source, "--with-yaml-dir"
     code = source.lines.reject { |line| line.strip.start_with?("#") }.join
     refute_includes code, "sudo", "the bootstrap must never need root"

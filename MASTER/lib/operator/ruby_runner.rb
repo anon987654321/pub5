@@ -62,6 +62,7 @@ module Operator
       return { path: current, version: current_version, current: true } if current_version && current_version >= Environment::SUPPORTED_RUBY_MIN
 
       candidates = Dir.glob(File.join(rbenv_root_for(root), "versions", "*", "bin", "ruby"))
+      candidates.concat(checkout_tools_rubies(root))
       candidates.concat(path_ruby_candidates)
       candidates.uniq.filter_map do |path|
         version = version_for(path)
@@ -97,6 +98,14 @@ module Operator
     def rbenv_root_for(_root)
       root = ENV["RBENV_ROOT"].to_s
       root.empty? ? File.expand_path("~/.rbenv") : root
+    end
+
+    # A Ruby bin/dev-bootstrap built for this checkout, under MASTER/.tools.
+    # Unlike a system Ruby installed into an ephemeral container root, this one
+    # lives on the checkout itself, so it survives a restart and lets a fresh
+    # container boot without rebuilding.
+    def checkout_tools_rubies(root)
+      [File.join(root, ".tools", "ruby", "bin", "ruby")].select { |path| File.executable?(path) }
     end
 
     RBENV_VERSION_DIR = %r{/versions/(\d+(?:\.\d+)+)/bin/ruby\z}

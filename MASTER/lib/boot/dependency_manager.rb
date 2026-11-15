@@ -120,7 +120,7 @@ module Master
         @out = out
         @runner = runner || method(:capture)
         @command_path = command_path || method(:which)
-        @home = home || File.expand_path("~")
+        @home = home || File.expand_path(@env.fetch("MASTER_DEPENDENCY_HOME", "~"))
       end
 
     end

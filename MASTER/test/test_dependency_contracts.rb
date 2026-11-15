@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "test_helper"
+require_relative "../lib/boot/dependency_manager"
 
 class TestDependencyContracts < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
@@ -40,6 +41,29 @@ class TestDependencyContracts < Minitest::Test
 
     [File.join(ROOT, "Gemfile.lock"), File.join(REPO, "MASTER", "web", "Gemfile.lock")].each do |lock|
       refute_match(/^RUBY VERSION\n/, File.read(lock), "#{lock} must not pin an interpreter")
+    end
+  end
+
+  # The default home is ephemeral under some roots (a container HOME is wiped on
+  # restart). MASTER_DEPENDENCY_HOME points the gem store at persistent storage
+  # without editing code; an explicit `home:` still wins.
+  def test_dependency_home_override_moves_the_gem_store
+    Dir.mktmpdir("master-deps-") do |dir|
+      manager = Master::Boot::DependencyManager.new(root: ROOT, out: StringIO.new,
+                                                    env: { "PATH" => ENV.fetch("PATH"),
+                                                           "MASTER_DEPENDENCY_HOME" => dir })
+
+      assert_match(/\A#{Regexp.escape(dir)}/, manager.send(:bundle_config_root).to_s)
+    end
+  end
+
+  def test_explicit_home_wins_over_the_dependency_home_override
+    Dir.mktmpdir("master-deps-") do |dir|
+      manager = Master::Boot::DependencyManager.new(root: ROOT, out: StringIO.new, home: dir,
+                                                    env: { "PATH" => ENV.fetch("PATH"),
+                                                           "MASTER_DEPENDENCY_HOME" => "/somewhere/else" })
+
+      assert_match(/\A#{Regexp.escape(dir)}/, manager.send(:bundle_config_root).to_s)
     end
   end
 

@@ -10,6 +10,7 @@ require_relative "../lib/operator/ruby_runner"
 # Whichever it picks, the line must run under it with its arguments intact.
 class TestBinRuby < Minitest::Test
   BIN = File.expand_path("../bin/ruby", __dir__)
+  MASTER = File.expand_path("..", __dir__)
 
   def test_supported_ruby_floor_has_no_artificial_upper_bound
     window = Operator::Environment
@@ -73,6 +74,40 @@ class TestBinRuby < Minitest::Test
     assert_operator selected.fetch(:version), :>=, Operator::Environment::SUPPORTED_RUBY_MIN
   end
 
+  # A Ruby bin/dev-bootstrap built for this checkout sits under MASTER/.tools. It
+  # lives on the checkout, unlike a system Ruby under an ephemeral root, so a
+  # fresh container with no PATH Ruby must still find it.
+  def test_wrapper_discovers_a_checkout_tools_ruby
+    Dir.mktmpdir do |dir|
+      master = staged_master_with_tools_ruby(dir, version: "3.3.6", marker: "TOOLS-PINNED")
+      FileUtils.cp(BIN, File.join(master, "bin", "ruby"))
+
+      out, status = Open3.capture2e({ "PATH" => "/usr/bin:/bin", "PUB5_RUBY" => nil, "HOME" => dir },
+                                    File.join(master, "bin", "ruby"), "go")
+
+      assert status.success?, out
+      assert_includes out, "TOOLS-PINNED"
+    end
+  end
+
+  # A build left by an older RUBY_VER must not be trusted blind: a 3.2.x build
+  # answered here and then failed Bundler's own `ruby ">= 3.3"` check.
+  def test_dev_bootstrap_ignores_a_prior_build_below_the_floor
+    Dir.mktmpdir do |dir|
+      master = staged_master_with_tools_ruby(dir, version: "3.2.6", marker: "STALE-BUILT")
+      FileUtils.cp(File.join(MASTER, "bin", "dev-bootstrap"), File.join(master, "bin", "dev-bootstrap"))
+
+      out, status = Open3.capture2e({ "PATH" => "/usr/bin:/bin", "PUB5_RUBY" => nil,
+                                      "MASTER_RUBY_CANDIDATES" => "",
+                                      "MASTER_DEV_BOOTSTRAP_BUILD" => "0" },
+                                    File.join(master, "bin", "dev-bootstrap"), "-v")
+
+      refute status.success?, "a 3.2 build is below the Gemfile floor and must be refused"
+      refute_includes out, "STALE-BUILT", "an out-of-range prior build was exec'd"
+      assert_includes out, "ignoring #{File.join(master, '.tools', 'ruby', 'bin', 'ruby')}"
+    end
+  end
+
   def test_a_failing_script_keeps_its_exit_status
     _, _, status = unbundled { Open3.capture3(BIN, "-e", "exit 7") }
 
@@ -91,6 +126,22 @@ class TestBinRuby < Minitest::Test
   end
 
   private
+
+  # A scratch <dir>/MASTER with bin/ and a .tools/ruby/bin/ruby that answers its
+  # own RUBY_VERSION probe with +version+ and anything else with +marker+.
+  def staged_master_with_tools_ruby(dir, version:, marker:)
+    master = File.join(dir, "MASTER")
+    tools_bin = File.join(master, ".tools", "ruby", "bin")
+    FileUtils.mkdir_p(File.join(master, "bin"))
+    FileUtils.mkdir_p(tools_bin)
+
+    File.write(File.join(tools_bin, "ruby"), <<~SH)
+      #!/bin/sh
+      case " $* " in *" print RUBY_VERSION "*) printf "#{version}" ;; *) echo #{marker} ;; esac
+    SH
+    File.chmod(0o755, File.join(tools_bin, "ruby"))
+    master
+  end
 
   def without_cli_verbosity
     keys = %w[MASTER_DMESG MASTER_VERBOSE MASTER_CLI_VERBOSE MASTER_CLI_TRACE MASTER_QUIET]

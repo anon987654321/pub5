@@ -98,6 +98,12 @@ for ruby in "$RBENV_ROOT"/versions/*/bin/ruby; do
   add_candidate "$ruby"
 done
 
+# A Ruby this checkout built for itself (bin/dev-bootstrap) sits under
+# MASTER/.tools. It lives on the persistent workspace, unlike a system Ruby
+# installed under an ephemeral root, so a fresh container still finds it.
+TOOLS_RUBY=$(CDPATH= cd -- "$(dirname -- "$0")/.." 2>/dev/null && pwd)/.tools/ruby/bin/ruby
+[ -x "$TOOLS_RUBY" ] && add_candidate "$TOOLS_RUBY"
+
 # Discover versioned package names from PATH. No static release list may
 # become an accidental upper bound as distributions add new package suffixes.
 OLD_IFS=$IFS
