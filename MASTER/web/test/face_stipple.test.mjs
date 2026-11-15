@@ -89,9 +89,10 @@ test("MASTER randomly morphs among the four original abstract face expressions",
   assert.match(system, architectStep);
   assert.match(faceSource, architectStep);
   const expressionBody = (source, name) => {
-    const declaration = source.indexOf(\`vec3 \${name}(\`);
-    assert.notEqual(declaration, -1, \`\${name} declaration is required\`);
+    const declaration = source.indexOf("vec3 " + name + "(");
+    assert.notEqual(declaration, -1, name + " declaration is required");
     const opening = source.indexOf("{", declaration);
+    assert.notEqual(opening, -1, name + " opening brace is required");
     let depth = 0;
     for (let index = opening; index < source.length; index += 1) {
       if (source[index] === "{") depth += 1;
@@ -100,7 +101,7 @@ test("MASTER randomly morphs among the four original abstract face expressions",
         if (depth === 0) return source.slice(opening + 1, index);
       }
     }
-    assert.fail(\`\${name} body is not closed\`);
+    assert.fail(name + " body is not closed");
   };
   const normalizeExpression = (body) => body.replace(/\/\/[^\n]*/g, "").replace(/\s+/g, "");
   assert.equal(
