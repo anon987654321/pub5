@@ -224,4 +224,7 @@ body[data-runtime-profile="crt"] #cognition-ecology {
   min-width: var(--tap-min);
   background: color-mix(in srgb, var(--face-fg) 35%, transparent);
 }
-
+/* Reduced motion removes the primer's pressed scale, not just its transition. */
+@media (prefers-reduced-motion: reduce) {
+  #primer:active .primer-title { transform: none; }
+}
