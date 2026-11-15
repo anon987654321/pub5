@@ -42,6 +42,18 @@ test "spacing takes the scale, not raw pixels" do
     assert_empty raw
   end
 
+
+  test "reduced motion keeps native buttons and the skip link still" do
+    block = PARTIALS.fetch("_base.scss")[/@media \(prefers-reduced-motion: reduce\) \{.*?\n\}/m]
+
+    assert block, "no reduced-motion block"
+    %w[.skip-link button .button].each do |selector|
+      assert_includes block, selector
+    end
+    assert_match(/button:active,\s*\.button:active/, block)
+    assert_includes block, "transition: none;"
+  end
+
   test "titles balance their lines and amounts use tabular figures" do
     assert_match(/\.page-title \{[^}]*text-wrap: balance;/, PARTIALS.fetch("_base.scss"))
     numerals = PARTIALS.fetch("_base.scss")[/((?:\.[\w-]+,\n)+\.[\w-]+) \{\n  font-variant-numeric: tabular-nums;/, 1]
