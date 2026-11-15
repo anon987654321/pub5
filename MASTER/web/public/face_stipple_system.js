@@ -1028,7 +1028,7 @@
   }
 
   window.MASTER_FACE_STIPPLE = Object.freeze({
-    createDefault, buildFromSamples, mount, configure, syncFromFaceState, tick, updateSwarm,
+    createDefault, buildFromSamples, mount, configure, syncFromFaceState, tick, updateExpressions, updateSwarm,
     glyphForDepth, pointBudget, canonicalSwarmMode, modeMultipliersFor, applyPalette,
     get profiles() { return profiles(); },
     get system() { return active; },
