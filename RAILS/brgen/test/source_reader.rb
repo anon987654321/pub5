@@ -8,7 +8,7 @@
 # month-old file contents instead of failing.
 module SourceReader
     ROOT = ENV.fetch("PUB5_RAILS_ROOT") do
-      app = ENV.fetch("PUB4_CI_APP", "brgen")
+      app = ENV.fetch("PUB5_CI_APP", "brgen")
       candidates = [
         # Canonical checkout first: per-app "pub4-rails" copies are leftovers from
         # older deploy schemes and can go stale relative to the real monorepo

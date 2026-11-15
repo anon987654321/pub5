@@ -22,9 +22,9 @@ master_rails_tools = "/home/dev/pub5/MASTER/tools/rails" unless File.directory?(
 require File.join(master_rails_tools, "operator", "ci_guard")
 require File.join(master_rails_tools, "operator", "dmesg")
 
-vps_host = ENV["PUB4_CI_GUARD"] == "1" || File.exist?("/var/db/pub4_vps") || File.exist?("/etc/relayd.conf")
+vps_host = ENV["PUB5_CI_GUARD"] == "1" || File.exist?("/var/db/pub4_vps") || File.exist?("/etc/relayd.conf")
 
-app = ENV["PUB4_CI_APP"].to_s
+app = ENV["PUB5_CI_APP"].to_s
 app = File.basename(Dir.getwd) if app.empty?
 # cwd is /home/brgen/app on the VPS, so basename is "app" and --app app
 # looks for RAILS/app, which is not a Rails app and has no ../shared gem.
@@ -169,9 +169,9 @@ Operator::CiGuard.run! do
     # 1-vCPU VPS check (see resource_guard.sh), but must run in local/dev CI.
     # This is also where axe-core accessibility checks live (see
     # test/application_system_test_case.rb's assert_accessible).
-    # PUB4_COVERAGE_PART: its own SimpleCov result, merged with rails_test's
+    # PUB5_COVERAGE_PART: its own SimpleCov result, merged with rails_test's
     # rather than replacing it (__shared/test/coverage.rb).
-    step("system_test", "env PUB4_COVERAGE_PART=system FULL_COVERAGE=1 bin/rails test:system") unless vps_host
+    step("system_test", "env PUB5_COVERAGE_PART=system FULL_COVERAGE=1 bin/rails test:system") unless vps_host
     seed_env = vps_host ? "env RAILS_ENV=test SKIP_BERGEN_DEMO=1" : "env RAILS_ENV=test"
     # bin/rake, not bin/rails.
     #

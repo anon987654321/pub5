@@ -7,13 +7,13 @@ require_relative "../../../MASTER/tools/rails/operator/ci_guard"
 
 class CiGuardTest < Minitest::Test
   def test_enabled_when_env_guard_set
-    with_env("PUB4_CI_GUARD" => "1") do
+    with_env("PUB5_CI_GUARD" => "1") do
       assert Operator::CiGuard.enabled?
     end
   end
 
   def test_disabled_when_env_guard_zero
-    with_env("PUB4_CI_GUARD" => "0") do
+    with_env("PUB5_CI_GUARD" => "0") do
       refute Operator::CiGuard.enabled?
     end
   end
@@ -26,7 +26,7 @@ class CiGuardTest < Minitest::Test
   # in each other, and the one that was actually being locked -- this one -- was
   # the one left in the world-writable directory that rewrite existed to escape.
   def test_lock_path_defaults_to_the_shared_root_owned_file
-    with_env("PUB4_CI_LOCK" => nil) do
+    with_env("PUB5_CI_LOCK" => nil) do
       assert_equal "/var/db/pub4/ci.lock", Operator::CiGuard.lock_path
       assert_equal "/var/db/pub4/ci.lock.holder", Operator::CiGuard.holder_path
     end
@@ -41,7 +41,7 @@ class CiGuardTest < Minitest::Test
       File.chmod(0o755, dir)
       path = File.join(dir, "ci.lock")
 
-      with_env("PUB4_CI_LOCK" => path) do
+      with_env("PUB5_CI_LOCK" => path) do
         assert_equal path, Operator::CiGuard.lock_path
       end
     end
@@ -52,14 +52,14 @@ class CiGuardTest < Minitest::Test
       File.chmod(0o777, dir)
       path = File.join(dir, "ci.lock")
 
-      with_env("PUB4_CI_LOCK" => path) do
+      with_env("PUB5_CI_LOCK" => path) do
         capture_stderr { assert_equal "/var/db/pub4/ci.lock", Operator::CiGuard.lock_path }
       end
     end
   end
 
   def test_override_pointing_nowhere_falls_back_to_the_default
-    with_env("PUB4_CI_LOCK" => "/no/such/directory/ci.lock") do
+    with_env("PUB5_CI_LOCK" => "/no/such/directory/ci.lock") do
       assert_equal "/var/db/pub4/ci.lock", Operator::CiGuard.lock_path
     end
   end
@@ -195,7 +195,7 @@ class CiGuardTest < Minitest::Test
   end
 
   def test_load_that_never_falls_gives_up_rather_than_waiting_forever
-    with_env("PUB4_CI_LOAD_WAIT" => "0") do
+    with_env("PUB5_CI_LOAD_WAIT" => "0") do
       with_load(9.0) do
         code = nil
         # SystemExit unwinds through capture_stderr, so the raise has to be caught
@@ -255,7 +255,7 @@ class CiGuardTest < Minitest::Test
       File.chmod(0o755, dir)
       path = File.join(dir, "ci.lock")
 
-      with_env("PUB4_CI_LOCK" => path) { yield(path) }
+      with_env("PUB5_CI_LOCK" => path) { yield(path) }
     end
   end
 

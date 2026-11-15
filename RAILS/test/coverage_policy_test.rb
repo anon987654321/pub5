@@ -124,7 +124,7 @@ class CoveragePolicyTest < Minitest::Test
   def test_the_minimum_applies_to_full_runs_and_strict_mode_keeps_the_old_target
     source = File.read(File.join(ROOT, "__shared/test/coverage.rb"))
     assert_includes source, 'ENV["PUB5_COVERAGE_STRICT"] == "1"'
-    assert_includes source, 'ENV["FULL_COVERAGE"] == "1" || ENV["PUB4_CI_GUARD"] == "1"'
+    assert_includes source, 'ENV["FULL_COVERAGE"] == "1" || ENV["PUB5_CI_GUARD"] == "1"'
     assert_includes source, "minimum 100, per: own_source"
   end
 
