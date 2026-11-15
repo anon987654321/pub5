@@ -459,7 +459,7 @@ sync_openbsd_apply() {
   # crontab.vm23 schedules the weekly integrity run, and install_tracked_crontab
   # refuses a command that is not on the box. root runs the installed copy for
   # the same reason daily.local does: the checkout is dev-writable.
-  if ! install -m 755 "${SCRIPT_DIR}/bin/vps_weekly_integrity.sh" /usr/local/bin/vps_weekly_integrity.sh; then
+  if ! install -m 755 "${SCRIPT_DIR}/mirror/bin/vps_weekly_integrity.sh" /usr/local/bin/vps_weekly_integrity.sh; then
     log ERROR "vps_weekly_integrity.sh install failed - the weekly integrity run would go unscheduled"
     return 1
   fi
