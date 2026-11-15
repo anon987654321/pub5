@@ -11,6 +11,7 @@ const manifest = readFileSync(join(root, "config", "face_assets.yml"), "utf8");
 const system = readFileSync(join(publicDir, "face_stipple_system.js"), "utf8");
 const playground = readFileSync(join(publicDir, "face_playground.js"), "utf8");
 const css = readFileSync(join(publicDir, "face.css"), "utf8");
+const faceMotionSource = readFileSync(join(root, "styles", "face", "40_accessibility_motion.css"), "utf8");
 const faceStateSource = readFileSync(join(publicDir, "face_state.js"), "utf8");
 const primaryFaceFrame = readFileSync(join(publicDir, "face.part3.txt"), "utf8");
 const faceSource = readFileSync(join(publicDir, "face.part2.txt"), "utf8");
@@ -20,6 +21,12 @@ const microInteractions = readFileSync(join(publicDir, "face_micro_interactions.
 const faceParticles = readFileSync(join(publicDir, "face_particles.js"), "utf8");
 const phosphorTrail = readFileSync(join(publicDir, "face_phosphor_trail.js"), "utf8");
 const tokens = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
+
+test("face primer press stays still when reduced motion is requested", () => {
+  const rule = /@media \\(prefers-reduced-motion: reduce\\) \\{\\s*#primer:active \\.primer-title \\{\\s*transform: none;\\s*\\}\\s*\\}/;
+  assert.match(faceMotionSource, rule);
+  assert.match(css, rule);
+});
 
 test("shared face budgets classify coarse pointers and declared reduced motion", () => {
   assert.match(faceStateSource, /mediaMatches\("\(pointer: coarse\)"\)/);
