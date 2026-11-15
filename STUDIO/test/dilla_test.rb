@@ -859,7 +859,14 @@ class TestRG69BrowserContract < Minitest::Test
     assert_match(/<meta\s+charset=["']?utf-8/i, html)
     assert_includes html, 'href="rg69.css"'
     assert_includes html, 'src="rg69.js"'
-    assert_includes html, "tone/14.8.49/Tone.min.js"
+    tone_path = File.join(studio_root, "vendor", "tone", "Tone.min.js")
+    license_path = File.join(studio_root, "vendor", "tone", "LICENSE.md")
+    assert File.file?(tone_path), "missing vendored Tone.js 14.8.49"
+    assert File.file?(license_path), "missing Tone.js license notice"
+    assert_includes html, 'src="vendor/tone/Tone.min.js"'
+    refute_match(%r{https?://[^"']*Tone\.min\.js}i, html, "Tone.js must be local, not fetched from a CDN")
+    assert_includes File.read(tone_path), "14.8.49"
+    assert_includes File.read(license_path), "MIT License"
     assert_includes html, 'href="#main-content"'
     assert_includes html, 'id="main-content"'
     refute_match(/<style\b|<script(?![^>]*\bsrc=)/i, html)
@@ -867,6 +874,10 @@ class TestRG69BrowserContract < Minitest::Test
 
     javascript = File.read(js_path)
     refute_match(/\.innerHTML\b|\beval\s*\(/, javascript)
+    refute_match(/wobbLFO\.connect\s*\(\s*Tone\.Transport\.bpm\s*\)/, javascript)
+    assert_match(/function applyWobble\(\)/, javascript)
+    assert_match(/function applyFX\(\)\{\s*Tone\.Transport\.bpm\.value=aud_\.bpm;/, javascript)
+    assert_match(/function scheduleLoop\(\)\{\s*st_\.idx=\(st_\.idx\+1\)%st_\.stepCount;\s*applyWobble\(\);/, javascript)
     assert_includes javascript, "document.createTextNode"
     assert_includes File.read(css_path), "prefers-reduced-motion"
     assert_includes File.read(css_path), ":focus-visible"

@@ -19,7 +19,7 @@ but the implementation is owned here.
   Rendered output is replaceable:
   a new run may delete and replace it, and no rendered-sound default moves on
   one person's judgement.
-- `rg69.html`, `rg69.css` and `rg69.js` — the RG-69 browser beat machine. Its page, styles and application code are separate assets under MASTER's HTML Laws; Tone.js 14.8.49 is loaded from a version-pinned CDN and failure is reported visibly.
+- `rg69.html`, `rg69.css` and `rg69.js` — the RG-69 browser beat machine. Its page, styles and application code are separate assets under MASTER's HTML Laws; Tone.js 14.8.49 is vendored in `vendor/tone/` with its MIT license and failure is reported visibly.
 - `selfies.html`, `selfies.css` and `selfies.js` — the selfie gallery. A Swiper
   rail (vendored and version-pinned in `vendor/swiper/`) of a subject's stills
   and films over the dilla bed, built from the generated `selfies/manifest.js`
