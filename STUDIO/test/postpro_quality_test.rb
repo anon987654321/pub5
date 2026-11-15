@@ -1,11 +1,23 @@
 # frozen_string_literal: true
 
-require "vips"
+begin
+  require "vips"
+  POSTPRO_VIPS_OK = true
+rescue LoadError
+  POSTPRO_VIPS_OK = false
+end
 require_relative "minitest_helper"
 require_relative "../postpro/lib/quality_analyzer"
 require_relative "../postpro/lib/spectral"
 
 class TestPostproQualityAnalyzer < Minitest::Test
+
+  # ruby-vips binds the system libvips at require time; without the
+  # library (a stripped checkout with no root to install it) the whole
+  # file skips as a named dependency, matching test_ruby_select's guard.
+  def setup
+    skip "system libvips absent - ruby-vips cannot bind; install libvips to run postpro" unless POSTPRO_VIPS_OK
+  end
   def report_pixel(red, green, blue)
     image = Vips::Image.new_from_memory(
       [red, green, blue].pack("C*"), 1, 1, 3, :uchar

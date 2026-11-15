@@ -1,9 +1,21 @@
 # frozen_string_literal: true
 
 require_relative "minitest_helper"
-require_relative "../postpro/uncanny"
+begin
+  require_relative "../postpro/uncanny"
+  POSTPRO_VIPS_OK = true
+rescue LoadError
+  POSTPRO_VIPS_OK = false
+end
 
 class TestPostproUncanny < Minitest::Test
+
+  # ruby-vips binds the system libvips at require time; without the
+  # library (a stripped checkout with no root to install it) the whole
+  # file skips as a named dependency, matching test_ruby_select's guard.
+  def setup
+    skip "system libvips absent - ruby-vips cannot bind; install libvips to run postpro" unless POSTPRO_VIPS_OK
+  end
   def luma(values)
     # new_from_array takes scale/offset positionally; the default scale of 1
     # is exactly what these fixtures want, so no second argument is passed.

@@ -1,9 +1,21 @@
 # frozen_string_literal: true
 
 require_relative "minitest_helper"
-require_relative "../postpro/rescue"
+begin
+  require_relative "../postpro/rescue"
+  POSTPRO_VIPS_OK = true
+rescue LoadError
+  POSTPRO_VIPS_OK = false
+end
 
 class TestPostproRescueReport < Minitest::Test
+
+  # ruby-vips binds the system libvips at require time; without the
+  # library (a stripped checkout with no root to install it) the whole
+  # file skips as a named dependency, matching test_ruby_select's guard.
+  def setup
+    skip "system libvips absent - ruby-vips cannot bind; install libvips to run postpro" unless POSTPRO_VIPS_OK
+  end
   def test_report_uses_labels_instead_of_indentation_for_secondary_lines
     finding = Postpro::Rescue::Finding.new(
       code: :plastic,

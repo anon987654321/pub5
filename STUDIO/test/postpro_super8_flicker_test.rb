@@ -1,6 +1,13 @@
 # frozen_string_literal: true
 
-require "vips"
+begin
+  require "vips"
+rescue LoadError
+  # fall through: the bind check below is the real verdict
+end
+# The gem can load without binding the system library until Vips::Image is
+# touched, so the verdict is the constant, not the require's success.
+POSTPRO_VIPS_OK = defined?(Vips::Image) ? true : false
 require_relative "minitest_helper"
 require_relative "../postpro/legacy_effects"
 
@@ -16,7 +23,9 @@ class PostproLegacyEffectHarness
 end
 
 class TestPostproSuper8Flicker < Minitest::Test
+
   def setup
+    skip "system libvips absent - ruby-vips cannot bind; install libvips to run postpro" unless POSTPRO_VIPS_OK
     @effects = PostproLegacyEffectHarness.new
   end
 

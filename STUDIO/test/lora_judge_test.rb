@@ -5,12 +5,19 @@ require "json"
 require "tmpdir"
 require "yaml"
 require_relative "minitest_helper"
-require_relative "../lora/judge"
+begin
+  require_relative "../lora/judge"
+  POSTPRO_VIPS_OK = true
+rescue LoadError
+  POSTPRO_VIPS_OK = false
+end
 
 class TestStudioLoraJudge < Minitest::Test
-  Judge = Studio::Lora::Judge
+
+  Judge = defined?(Studio::Lora::Judge) ? Studio::Lora::Judge : nil
 
   def setup
+    skip "system libvips absent - ruby-vips cannot bind; install libvips to run postpro" unless POSTPRO_VIPS_OK
     @root = Dir.mktmpdir("studio-lora-judge-")
     @references = File.join(@root, "references")
     FileUtils.mkdir_p(@references, mode: 0o700)
