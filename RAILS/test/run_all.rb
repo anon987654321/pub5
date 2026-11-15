@@ -123,7 +123,7 @@ module Operator
         end
         report(outcome)
       end
-      summarise(@outcomes)
+      summarise(@outcomes) unless @slice
       @outcomes.count { |outcome| outcome.status != :pass }.clamp(0, 255)
     end
 
@@ -315,22 +315,30 @@ if __FILE__ == $PROGRAM_NAME
       write_json.call(json_path, suite.outcomes, violations)
       (code + violations.size).clamp(0, 255)
     elsif jobs && jobs > 1 && slice.nil?
-      # Workers run slices of the file list; each streams its own ok/FAIL lines
-      # as they happen and hands the parent a JSON fragment. A hung worker
-      # cannot hide: the per-file timeout still applies inside it, and its
-      # output has already been streamed line by line while it ran.
+      # Workers run slices of the file list and hand the parent a JSON
+      # fragment. They spawn through Shared::Subprocess like every file run
+      # does — the parent's bound is a backstop; each worker still applies the
+      # per-file timeout to its own children. Worker output arrives per worker
+      # rather than live, which is the price of bounded capture, and a worker
+      # that exceeds it reports as failed rather than hanging the run.
       repo_root = File.expand_path("..", Operator::ContractSuite::RAILS_ROOT)
+      list = Operator::ContractSuite.new(filter:).files
+      slice_size = (list.size.to_f / jobs).ceil
       fragments = Array.new(jobs) { |index| File.join(Dir.tmpdir, "contracts-#{Process.pid}-#{index}.json") }
       workers = jobs.times.map do |index|
         child = [RbConfig.ruby, __FILE__]
         child << filter if filter
         child += ["--json", fragments[index], "--slice", index.to_s, jobs.to_s]
-        Open3.popen2e(*child, chdir: repo_root) do |_stdin, stream, waiter|
-          Thread.new { stream.each_line { |line| $stdout.write(line) } }
-          waiter.value
+        begin
+          out, status = Shared::Subprocess.capture2e(*child, timeout: (slice_size + 1) * Operator::ContractSuite::TIMEOUT, chdir: repo_root)
+          $stdout.write(out)
+          status
+        rescue Shared::Subprocess::TimeoutError => error
+          warn "contracts: worker #{index} exceeded its backstop and was killed: #{error.message}"
+          nil
         end
       end
-      statuses = workers.map(&:exitstatus)
+      statuses = workers.map { |w| w && w.success? }
       outcomes = fragments.filter_map { |path| File.file?(path) && JSON.parse(File.read(path))["outcomes"] }
                           .flatten
                           # JSON round-trips the status as a String; the runner's
@@ -341,7 +349,7 @@ if __FILE__ == $PROGRAM_NAME
       violations.each { |line| warn "contracts: #{line}" }
       write_json.call(json_path, outcomes, violations)
       red = outcomes.count { |o| o.status != :pass }
-      clean = statuses.count(&:zero?)
+      clean = statuses.count { |ok| ok == true }
       puts("contracts: #{outcomes.size} file(s) across #{jobs} workers, #{red} red, #{violations.size} ledger violation(s), #{clean}/#{jobs} workers clean")
       (red + violations.size).clamp(0, 255)
     else

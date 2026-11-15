@@ -8,10 +8,10 @@
 # register it, then fix it; the reason line is the work order.
 # Registered from a full run on main@79443a9e, 2026-11-15.
 ---
-test/plugins/commerce_dressing/newsletter_capture_contract_test.rb:
+plugins/commerce_dressing/newsletter_capture_contract_test.rb:
   reason: "standing red at registration; first failure: Error: NewsletterCaptureContractTest#test_newsletter_provider_is_called_replicate:"
   registered: "2026-11-15"
-test/plugins/install_and_battery/onboarding_prompt_order_test.rb:
+plugins/install_and_battery/onboarding_prompt_order_test.rb:
   reason: "standing red at registration; first failure: Error: OnboardingPromptOrderTest#test_welcome_is_first_and_later_prompts_wait:"
   registered: "2026-11-15"
 test/amber_architecture_coverage_test.rb:
