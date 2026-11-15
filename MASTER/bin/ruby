@@ -25,6 +25,26 @@ esac
 MIN_MAJOR=3
 MIN_MINOR=3
 
+# A Ruby this checkout built for itself (bin/dev-bootstrap) sits under
+# MASTER/.tools. Its OpenSSL trusts the bundle at its own openssldir, and a
+# container ships none there, so every HTTPS call it makes (RubyGems, a model
+# lane) fails verification even though the network is fine. Install the host
+# bundle beside it when missing, before any interpreter below is exec'd —
+# including the generic PATH Ruby, which is often a symlink into .tools.
+TOOLS_RUBY=$(CDPATH= cd -- "$(dirname -- "$0")/.." 2>/dev/null && pwd)/.tools/ruby/bin/ruby
+if [ -x "$TOOLS_RUBY" ]; then
+  SSL_DIR=$(CDPATH= cd -- "$(dirname -- "$TOOLS_RUBY")/../ssl" 2>/dev/null && pwd)
+  BUNDLE="$SSL_DIR/cert.pem"
+  if [ ! -s "$BUNDLE" ]; then
+    for host_bundle in /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt /etc/ssl/cert.pem; do
+      [ -s "$host_bundle" ] || continue
+      mkdir -p "$SSL_DIR"
+      cp "$host_bundle" "$BUNDLE"
+      break
+    done
+  fi
+fi
+
 BEST_KEY=-1
 BEST_RUBY=
 

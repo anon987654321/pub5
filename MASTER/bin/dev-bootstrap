@@ -133,6 +133,28 @@ fetch() {
   fi
 }
 
+# The OpenSSL built above trusts the bundle at its own openssldir, which is
+# $PREFIX/ssl/cert.pem (Ruby reads it as OpenSSL::X509::DEFAULT_CERT_FILE). A
+# container has no such file, so every HTTPS call the Ruby makes — RubyGems, a
+# model lane — fails certificate verification even though the network is fine.
+# Install the host bundle, or fetch Mozilla's with the host curl/wget.
+install_ca_bundle() {
+  bundle="$PREFIX/ssl/cert.pem"
+  if [ -s "$bundle" ]; then
+    return 0
+  fi
+  mkdir -p "$PREFIX/ssl"
+  for candidate in /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt /etc/ssl/cert.pem; do
+    if [ -s "$candidate" ]; then
+      cp "$candidate" "$bundle"
+      say "installed the host CA bundle at $bundle"
+      return 0
+    fi
+  done
+  say "fetching the Mozilla CA bundle for $bundle"
+  fetch https://curl.se/ca/cacert.pem "$bundle"
+}
+
 build() {
   say "no suitable Ruby found; building $RUBY_VER into $PREFIX (no root needed)"
   mkdir -p "$TOOLS"
@@ -174,6 +196,7 @@ build() {
     touch "openssl-$OPENSSL_VER/.built"
   fi
   say "openssl ready at $OPENSSL_PREFIX"
+  install_ca_bundle
 
   # libffi is what the fiddle gem (a default gem Ruby rebuilds) needs to build.
   # It must be shared: fiddle links it into a shared object, and a static-only
@@ -213,6 +236,10 @@ build() {
 }
 
 # 1 and 2: an explicit compatible override, or the generic/available host Ruby.
+# A build already in place keeps its own OpenSSL trust store current before any
+# exec path below (generic, prior build, or a fresh build) runs it.
+[ -x "$PREFIX/bin/ruby" ] && install_ca_bundle
+
 if [ -n "${PUB5_RUBY:-}" ]; then
   [ -x "$PUB5_RUBY" ] || { say "PUB5_RUBY is not executable: $PUB5_RUBY"; exit 1; }
   version=$("$PUB5_RUBY" -e 'print RUBY_VERSION' 2>/dev/null || true)
@@ -234,6 +261,7 @@ if [ -x "$PREFIX/bin/ruby" ]; then
     [0-9]*.[0-9]*.[0-9]*) version_key "$built" >/dev/null || stale=1 ;;
   esac
   if [ -z "$stale" ]; then
+    install_ca_bundle
     LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
     export LD_LIBRARY_PATH
     exec "$PREFIX/bin/ruby" "$@"
