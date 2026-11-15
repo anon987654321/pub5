@@ -1,0 +1,102 @@
+#!/bin/sh
+# Idempotent bootstrap for a checkout of this repository on a machine that has
+# neither Ruby 3.3+ nor the box's shell tools. Written for three audiences:
+# a new human on a laptop, a stripped CI sandbox, and the operator provisioning
+# the next box. Every step checks before it builds, so running this twice is
+# free, and nothing outside the checkout is written to.
+#
+#   sh bin/bootstrap              # all of it
+#   sh bin/bootstrap ruby         # just the interpreter
+#   sh bin/bootstrap shells       # just ksh and zsh
+#
+# What lands where:
+#   .tools/prefix/bin/ruby   the suite interpreter (built with a bundled libyaml)
+#   .tools/prefix/bin/ksh    PD ksh for the OPENBSD tests (PUB5_KSH points at it)
+#   .tools/prefix/bin/zsh    zsh for the OPENBSD tests (PUB5_ZSH points at it)
+#
+# The OPENBSD tests keep their box paths as the default; point the environment
+# at the bootstrap builds instead:
+#
+#   export PUB5_RUBY="$PWD/.tools/prefix/bin/ruby"
+#   export PUB5_KSH="$PWD/.tools/prefix/bin/ksh"
+#   export PUB5_ZSH="$PWD/.tools/prefix/bin/zsh"
+#
+# That triple is the whole difference between "the suite is red here" and "the
+# suite runs here"; ARCHITECTURE.md has the context.
+
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+PREFIX="$ROOT/.tools/prefix"
+SRC="$ROOT/.tools/src"
+JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 2)
+TARGET=${1:-all}
+
+mkdir -p "$PREFIX" "$SRC"
+
+have() { command -v "$1" >/dev/null 2>&1; }
+
+ruby_ok() {
+  [ -x "$PREFIX/bin/ruby" ] || return 1
+  "$PREFIX/bin/ruby" -e 'exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3") ? 1 : 0)' >/dev/null 2>&1
+}
+
+build_ruby() {
+  if ruby_ok; then
+    echo "bootstrap: ruby already present at $PREFIX/bin/ruby ($("$PREFIX/bin/ruby" -v | cut -d' ' -f1-2))"
+    return 0
+  fi
+  # libyaml first, statically, so Psych never depends on a system copy.
+  if [ ! -f "$PREFIX/lib/libyaml.a" ]; then
+    echo "bootstrap: building libyaml"
+    [ -f "$SRC/yaml-0.2.5.tar.gz" ] || curl -fsSL -o "$SRC/yaml-0.2.5.tar.gz" https://pyyaml.org/download/libyaml/yaml-0.2.5.tar.gz
+    rm -rf "$SRC/yaml-0.2.5"
+    tar -C "$SRC" -xzf "$SRC/yaml-0.2.5.tar.gz"
+    (cd "$SRC/yaml-0.2.5" && ./configure --prefix="$PREFIX" --disable-shared >/dev/null && make -j"$JOBS" >/dev/null && make install >/dev/null)
+  fi
+  echo "bootstrap: building ruby 3.4.6 (a few minutes; the log is .tools/src/ruby_make.log)"
+  [ -d "$SRC/ruby-3.4.6" ] || {
+    [ -f "$SRC/ruby-3.4.6.tar.gz" ] || curl -fsSL -o "$SRC/ruby-3.4.6.tar.gz" https://cache.ruby-lang.org/pub/ruby/3.4/ruby-3.4.6.tar.gz
+    tar -C "$SRC" -xzf "$SRC/ruby-3.4.6.tar.gz"
+  }
+  (cd "$SRC/ruby-3.4.6" &&
+    ./configure --prefix="$PREFIX" --disable-install-doc --with-libyaml-dir="$PREFIX" --enable-shared >/dev/null &&
+    make -j"$JOBS" >"$SRC/ruby_make.log" 2>&1 &&
+    make install >"$SRC/ruby_install.log" 2>&1)
+  ruby_ok || { echo "bootstrap: ruby build did not produce a working 3.3+ interpreter; see $SRC/ruby_make.log" >&2; exit 1; }
+  echo "bootstrap: ruby ready — $("$PREFIX/bin/ruby" -v | cut -d' ' -f1-2)"
+}
+
+build_shells() {
+  if [ -x "$PREFIX/bin/ksh" ]; then
+    echo "bootstrap: ksh already present"
+  else
+    echo "bootstrap: building oksh as ksh"
+    VER=oksh-7.8
+    [ -f "$SRC/$VER.tar.gz" ] || curl -fsSL -o "$SRC/$VER.tar.gz" "https://github.com/ibara/oksh/releases/download/$VER/$VER.tar.gz" ||
+      curl -fsSL -o "$SRC/$VER.tar.gz" "https://github.com/ibara/oksh/archive/refs/tags/oksh-7.7.tar.gz"
+    rm -rf "$SRC/$VER" "$SRC/oksh-7.7"
+    tar -C "$SRC" -xzf "$SRC/$VER.tar.gz"
+    DIR="$SRC/$VER"
+    [ -d "$DIR" ] || DIR="$SRC/oksh-7.7"
+    (cd "$DIR" && ./configure --prefix="$PREFIX" >/dev/null && make -j"$JOBS" >/dev/null && cp oksh "$PREFIX/bin/ksh")
+  fi
+  if [ -x "$PREFIX/bin/zsh" ]; then
+    echo "bootstrap: zsh already present"
+  elif have apt-get && have dpkg; then
+    echo "bootstrap: extracting zsh from the distribution package"
+    mkdir -p "$SRC/zsh-deb"
+    (cd "$SRC/zsh-deb" && apt-get download zsh >/dev/null 2>&1 && dpkg -x zsh_*.deb . &&
+      cp usr/bin/zsh "$PREFIX/bin/" 2>/dev/null && cp -r usr/lib/* "$PREFIX/lib/" 2>/dev/null) || true
+  fi
+  [ -x "$PREFIX/bin/zsh" ] || echo "bootstrap: no zsh — the renew-certs tests will need PUB5_ZSH set by hand"
+  echo "bootstrap: shells ready"
+}
+
+case "$TARGET" in
+ruby) build_ruby ;;
+shells) build_shells ;;
+all) build_ruby; build_shells ;;
+*) echo "usage: sh bin/bootstrap [ruby|shells|all]" >&2; exit 2 ;;
+esac
+
+echo "bootstrap: done. Export PUB5_RUBY/PUB5_KSH/PUB5_ZSH to point the OPENBSD tests here."
