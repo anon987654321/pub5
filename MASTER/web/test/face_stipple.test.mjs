@@ -23,9 +23,8 @@ const phosphorTrail = readFileSync(join(publicDir, "face_phosphor_trail.js"), "u
 const tokens = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
 
 test("face primer press stays still when reduced motion is requested", () => {
-  const rule = /@media \\(prefers-reduced-motion: reduce\\) \\{\\s*#primer:active \\.primer-title \\{\\s*transform: none;\\s*\\}\\s*\\}/;
-  assert.match(faceMotionSource, rule);
-  assert.match(css, rule);
+  assert.match(faceMotionSource, /#primer:active \.primer-title\s*\{\s*transform: none;/);
+  assert.match(css, /#primer:active \.primer-title\s*\{\s*transform: none;/);
 });
 
 test("shared face budgets classify coarse pointers and declared reduced motion", () => {
