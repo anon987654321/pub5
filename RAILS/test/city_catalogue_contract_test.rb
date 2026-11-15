@@ -11,7 +11,7 @@ class CityCatalogueContractTest < Minitest::Test
   CITY_SEED = File.join(BRGEN_ROOT, "lib", "brgen", "city_seed.rb")
 
   FIELDS = %w[
-    city country currency domain latitude longitude locale marketplace_subdomain time_zone
+    city country currency domain latitude locale longitude marketplace_subdomain time_zone
   ].freeze
 
   def records
