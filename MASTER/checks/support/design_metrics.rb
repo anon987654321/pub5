@@ -62,9 +62,12 @@ module Deploy
     # Raising the ceiling to absorb those would have been worse than the finding:
     # contrast_below_aa is 0 precisely so a real one is visible the day it lands.
     def light_only_vertical_keys(rails_root)
+      # The family-wide shape, not a named app list: a fixture app proved the
+      # brace list blind to anything outside it, and the engine tail was a
+      # single-level star that would miss nested stylesheets again.
       globs = %w[
-        {__shared,brgen,amber,bsdports}/app/assets/stylesheets/**/*.scss
-        brgen/engines/**/app/assets/stylesheets/*.scss
+        */app/assets/stylesheets/**/*.scss
+        */engines/**/app/assets/stylesheets/**/*.scss
       ]
 
       light_only = {}

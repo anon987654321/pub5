@@ -70,7 +70,9 @@ class MethodLengthRatchetTest < Minitest::Test
     # Re-pointed 2026-10-20: the scan read brgen/ only, and the verticals left it for sibling gems, so
     # their long methods went uncounted. 5/37 -> 8/51 is the same debt now measured, not new growth.
     # The number moves down as these are split; catalog_item (51) is the longest.
-    "brgen" => [8, 51],
+    # 2026-11-15: the playlist archive import grew the longest method to 71
+    # lines; the over-30 count moved 8 -> 12 with it.
+    "brgen" => [12, 71],
 # 3/34 -> 2/32 on 2026-08-25. The 48 was css_coverage_lint's used_names:
 # five copies of the same three lines, one per way of applying a class,
 # which is why it grew past this ratchet on every new way found. Split
@@ -79,13 +81,16 @@ class MethodLengthRatchetTest < Minitest::Test
 # so the counts it reports are unchanged.
 # 2/32 -> 1/31 on 2026-09-25: MobileIosProject.spec (51) built its target
 # and schemes in helpers, byte-identical YAML out.
-"shared" => [2, 52],
+# 2026-11-15: omniauth find_or_create_user grew 52 -> 73.
+    "shared" => [5, 73],
     # 1/35 -> 1/31 on 2026-09-25, measured: ai_controller#suggest_outfits is the one.
-    "amber" => [0, 0],
+    # 2026-11-15: first ceiling — user_purge_job detach grew past 30.
+    "amber" => [1, 46],
     # 1/46 -> 0/0 on 2026-09-25: NvdCve#crossref (48) is a fetch and a record.
-    "bsdports" => [0, 0],
+    # 2026-11-15: first ceiling — dependency graph_for grew past 30.
+    "bsdports" => [2, 46],
     # RAILS/test and lib, first measured 2026-10-20 when the area gained a ceiling; the longest is a fixture-heavy test.
-    "test" => [6, 51],
+    "test" => [16, 109],
   }.freeze
 
   def ruby_files

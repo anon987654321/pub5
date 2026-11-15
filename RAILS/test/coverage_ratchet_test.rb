@@ -45,7 +45,8 @@ class CoverageRatchetTest < Minitest::Test
     # controllers 2 -> 4: the ratchet found two tested controllers above the floor.
     # controllers 5 -> 6 and models 10 -> 11 on 2026-11-07: the ratchet found
     # a sixth tested controller and an eleventh tested model above the floors.
-    "amber" => { "controllers" => 6, "models" => 11 },
+    # 2026-11-15: models 11 -> 13, the floor following the tree up.
+    "amber" => { "controllers" => 6, "models" => 13 },
     # models raised 10 -> 11 on 2026-08-03; the ratchet asked for it.
     # 11 -> 13 on 2026-08-12: engines/playlist got its first tests, covering
     # Playlist::Playlist and Playlist::ListeningParty. It was the only one of the

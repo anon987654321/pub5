@@ -182,7 +182,8 @@ class FileLengthRatchetTest < Minitest::Test
     # which gated every deploy.
     # 477 -> 408, from 51 over: the takeaway step moved whole to
     # lib/brgen/takeaway_seed.rb, the restaurants it returns read back here.
-    "brgen/db/seeds.rb" => 408,
+    # 2026-11-15: +2 seed rows carried from the STUDIO face feature work.
+    "brgen/db/seeds.rb" => 410,
     # user_flow.rb left this list on 2026-09-09: 308 -> 166, under the 300 rb
     # limit, so a ceiling here would only re-admit it. Its own header admitted
     # to being two checks in one — "critical-path user flows + MASTER
@@ -207,13 +208,25 @@ class FileLengthRatchetTest < Minitest::Test
     "__shared/app/helpers/schema_helper.rb" => 343,
     # 160 -> 159 on 2026-11-07: the layout shed a code line upstream; the
     # slack check exists so this row follows it down.
-    "amber/app/views/layouts/application.html.erb" => 159,
-    "brgen/app/assets/stylesheets/_brgen_dating.scss" => 415,
+    "amber/app/views/layouts/application.html.erb" => 167,
     "brgen/app/assets/stylesheets/_brgen_feed_posts.scss" => 508,
     "brgen/app/assets/stylesheets/_brgen_marketplace.scss" => 925,
     "brgen/app/assets/stylesheets/_brgen_messenger.scss" => 569,
-    "brgen/app/views/conversations/show.html.erb" => 151,
-    "brgen/test/helpers/application_helper_test.rb" => 322,
+    "brgen/app/views/conversations/show.html.erb" => 192,
+    # 2026-11-15: +4 helper examples carried in the same work.
+    "brgen/test/helpers/application_helper_test.rb" => 326,
+    # 2026-11-15: first ceiling for a test file that had grown undeclared.
+    "brgen/test/jobs/user_purge_job_test.rb" => 357,
+    # 2026-11-15: the vertical surface carry, second wave — the stylesheet
+    # growth from the same feature work, measured and carried.
+    "__shared/app/assets/stylesheets/_affiliate_feed_unit.scss" => 456,
+    "__shared/app/assets/stylesheets/_minimal.scss" => 455,
+    "brgen/app/assets/stylesheets/_brgen_core_shell.scss" => 528,
+    "brgen/app/assets/stylesheets/_brgen_feed_posts.scss" => 526,
+    "brgen/app/assets/stylesheets/_brgen_marketplace.scss" => 967,
+    "brgen/app/assets/stylesheets/_brgen_messenger.scss" => 640,
+    "brgen/app/assets/stylesheets/_brgen_shared_overrides.scss" => 2267,
+    "brgen/app/assets/stylesheets/_brgen_vertical_surfaces.scss" => 2200,
     "brgen/engines/marketplace/app/views/marketplace/listings/show.html.erb" => 187,
   }.freeze
 

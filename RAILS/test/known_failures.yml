@@ -8,10 +8,10 @@
 # register it, then fix it; the reason line is the work order.
 # Registered from a full run on main@79443a9e, 2026-11-15.
 ---
-plugins/commerce_dressing/newsletter_capture_contract_test.rb:
+plugins/commerce_dressing/test/newsletter_capture_contract_test.rb:
   reason: "standing red at registration; first failure: Error: NewsletterCaptureContractTest#test_newsletter_provider_is_called_replicate:"
   registered: "2026-11-15"
-plugins/install_and_battery/onboarding_prompt_order_test.rb:
+plugins/install_and_battery/test/onboarding_prompt_order_test.rb:
   reason: "standing red at registration; first failure: Error: OnboardingPromptOrderTest#test_welcome_is_first_and_later_prompts_wait:"
   registered: "2026-11-15"
 test/amber_architecture_coverage_test.rb:
@@ -34,9 +34,6 @@ test/check_requires_resolve_test.rb:
   registered: "2026-11-15"
 test/checks/deploy_drift_check_test.rb:
   reason: "standing red at registration; first failure: Failure: DeployDriftCheckTest#test_a_deployed_sha_this_checkout_does_not_hold_is_inconclusive_not_a_failure [test/checks/deploy_drift_check_test.rb:97]:"
-  registered: "2026-11-15"
-test/checks/page_simulation_check_test.rb:
-  reason: "standing red at registration; first failure: Failure: PageSimulationCheckTest#test_unprobed_guest_pages_explain_why_the_record_is_not_resolvable [test/checks/page_simulation_check_test.rb:207]:"
   registered: "2026-11-15"
 test/checks/pwa_installable_check_test.rb:
   reason: "standing red at registration; first failure: Failure: PwaInstallableCheckTest#test_a_manifest_with_only_maskable_icons_at_a_required_size_is_named [test/checks/pwa_installable_check_test.rb:92]:"

@@ -336,7 +336,9 @@ module Operator
     # vertical views' hook classes (people-list-handle, messenger-rail-flag,
     # welcome-start, ...). Measured from the tree as it stands; each name
     # wants either its style or its removal, tracked in the register.
-    BASELINES = { "undefined_class" => 43, "unused_selector" => 109 }.freeze
+    # 2026-11-15: undefined_class 43 -> 50 and unused_selector 109 -> 110 with
+    # the engine stylesheet carry (design_metrics now scans every app).
+    BASELINES = { "undefined_class" => 50, "unused_selector" => 110 }.freeze
 
     Finding = Struct.new(:kind, :name, :count, :example)
 

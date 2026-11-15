@@ -171,6 +171,11 @@ identity, authentication, tenancy, media processing and social integration.
   target, not a counter), `Follow` (follower to followee), `Connection`
   (requester to addressee) and `LiveStream` carry the social surface through
   the shared engine's delivery.
+- **Linktree, Vipps payments and access:** `LinktreePage`, `LinktreeLink` and
+  `LinktreeEvent` record a creator's external link surface;
+  `VippsAgreement` and `VippsPayment` carry the Norwegian payment rail;
+  `LiveStreamAccess` gates a stream; `WearsWellWith` records pairings the
+  wardrobe suggests.
 - **Stranger pairing:** `Encounter` is one random-pairing ask; a posted row
   becomes a wait or a match, and a match opens a message thread.
 - **Declutter loop:** `DeclutterChallenge`, `DeclutterOutcome` and
