@@ -27,19 +27,36 @@
 # directory have been found red on main -- not because nobody ran them, but
 # because running them cost a deploy check.
 #
-#   ruby RAILS/test/run_all.rb              # all of them
-#   ruby RAILS/test/run_all.rb scale        # only files matching /scale/
+#   ruby RAILS/test/run_all.rb                    # all of them
+#   ruby RAILS/test/run_all.rb scale              # only files matching /scale/
+#   ruby RAILS/test/run_all.rb --jobs 4           # four workers, one process per file each
+#   ruby RAILS/test/run_all.rb --json out.json    # machine results alongside the text
+#   ruby RAILS/test/run_all.rb --failed-from out.json   # rerun only what was red there
 #
-# Exit status is the number of failing files, capped at 255.
+# The red ledger. RAILS/test/known_failures.yml registers every file the suite
+# may legitimately leave red, with a reason and the environments it applies to.
+# A red file without a ledger entry is a regression nobody accepted, and a
+# ledger entry whose file went green is a lie the tree tells about itself:
+# both fail the run, they are not footnotes. Forty-six standing reds taught
+# the tree to ignore red; the ledger is what makes a standing red visible
+# again. PUB5_LEDGER=off escapes for an exploratory run. PUB5_SUITE_ENV names
+# the environment (default "default", a stripped sandbox "sandbox"): entries
+# scoped with envs: apply only where listed, entries without envs everywhere.
+#
+# Exit status is the number of failing files plus ledger violations, capped at 255.
 
 require "digest"
+require "json"
 require "rbconfig"
+require "tmpdir"
+require "yaml"
 require_relative "../__shared/lib/shared/subprocess"
 
 module Operator
   class ContractSuite
     TEST_DIR = __dir__
     RAILS_ROOT = File.expand_path("..", __dir__)
+    LEDGER = File.join(TEST_DIR, "known_failures.yml")
 
     # Per file. These read source and assert; a second is generous. The bound is
     # high because four of them shell out to the check runner, which is slow and
@@ -49,9 +66,18 @@ module Operator
 
     Outcome = Struct.new(:file, :status, :runs, :assertions, :failures, :output)
 
-    def initialize(filter: nil, io: $stdout)
+    attr_reader :outcomes
+
+    # paths: overrides discovery entirely (the --failed-from rerun). slice:
+    # [index, of] runs every of-th file, for --jobs workers; a slice is an
+    # internal shape and never checks the ledger, because only a run that saw
+    # every file can call a red unregistered.
+    def initialize(filter: nil, paths: nil, slice: nil, io: $stdout)
       @filter = filter
+      @paths = paths
+      @slice = slice
       @io = io
+      @outcomes = []
     end
 
     def files
@@ -60,21 +86,24 @@ module Operator
       # Written from the repository root so MASTER/tools/repo/runs.rb reads the glob
       # and counts every file it selects as run. The plugins carry source
       # contracts of their own, so their test trees join the suite here.
-      all = (
-        Dir.glob(File.join(RAILS_ROOT, "..", "RAILS/test/**/*_test.rb")) +
-        Dir.glob(File.join(RAILS_ROOT, "..", "RAILS/plugins/*/test/**/*_test.rb"))
-      ).map { |path| File.expand_path(path) }.uniq.sort
-      @filter ? all.select { |path| path.include?(@filter) } : all
+      all = @paths ||
+            (Dir.glob(File.join(RAILS_ROOT, "..", "RAILS/test/**/*_test.rb")) +
+             Dir.glob(File.join(RAILS_ROOT, "..", "RAILS/plugins/*/test/**/*_test.rb")))
+                 .map { |path| File.expand_path(path) }.uniq.sort
+      all = all.select { |path| path.include?(@filter) } if @filter
+      all = all.each_with_index.select { |_, index| index % @slice[1] == @slice[0] }.map(&:first) if @slice
+      all
     end
 
     def run
       list = files
       if list.empty?
-        @io.puts("contracts: no test files#{@filter ? " matching #{@filter.inspect}" : ""}")
+        @io.puts("contracts: no test files#{describe_selection}")
+        @outcomes = []
         return 1
       end
 
-      outcomes = list.map do |path|
+      @outcomes = list.map do |path|
         outcome = execute(path, seed: replay_seed(path, 0))
         if outcome.status == :pass && REPLAY.positive?
           REPLAY.times do |index|
@@ -94,13 +123,20 @@ module Operator
         end
         report(outcome)
       end
-      summarise(outcomes)
-      outcomes.count { |outcome| outcome.status != :pass }.clamp(0, 255)
+      summarise(@outcomes)
+      @outcomes.count { |outcome| outcome.status != :pass }.clamp(0, 255)
     end
 
     private
 
     def rel(path) = path.sub("#{RAILS_ROOT}/", "")
+
+    def describe_selection
+      parts = []
+      parts << " matching #{@filter.inspect}" if @filter
+      parts << " in slice #{@slice[0]}/#{@slice[1]}" if @slice
+      parts.join
+    end
 
     # MT_NO_PLUGINS so a globally installed Minitest plugin cannot change what
     # this observes; -I so a file can require_relative its subject the way the
@@ -178,8 +214,143 @@ module Operator
 
       @io.puts("contracts: #{red.map { |o| o.file.sub("test/", "") }.join(', ')}")
     end
+  end
 
+  # The ledger check stands apart from the runner because it needs none of its
+  # machinery: it reads the outcomes and the register and says what changed
+  # hands. Two failure shapes and no others — an unregistered red, and a stale
+  # entry — so a malformed ledger shows up as an entry that simply does not
+  # match, which the next human fixes by rereading the file.
+  module RedLedger
+    LEDGER = ContractSuite::LEDGER
+
+    module_function
+
+    def environment = ENV.fetch("PUB5_SUITE_ENV", "default")
+
+    def load
+      return {} unless File.file?(LEDGER)
+
+      YAML.safe_load_file(LEDGER, aliases: false).then { |raw| (raw || {}).select { |_, spec| spec.is_a?(Hash) } }
+    end
+
+    def applies?(spec, env)
+      spec["envs"].nil? || Array(spec["envs"]).include?(env)
+    end
+
+    def violations(outcomes)
+      return [] if ENV.fetch("PUB5_LEDGER", "") == "off"
+
+      entries = load
+      env = environment
+      lines = []
+      outcomes.reject { |o| o.status == :pass }.each do |outcome|
+        spec = entries[outcome.file]
+        next if spec && applies?(spec, env)
+
+        lines << if spec
+                   "UNREGISTERED HERE #{outcome.file} — the entry is scoped to #{Array(spec["envs"]).join(", ")}; this run is #{env}"
+                 else
+                   "UNREGISTERED RED #{outcome.file} — register it in RAILS/test/known_failures.yml with a reason, or fix it"
+                 end
+      end
+      outcomes.select { |o| o.status == :pass }.each do |outcome|
+        spec = entries[outcome.file]
+        next unless spec && applies?(spec, env)
+
+        lines << "STALE LEDGER ENTRY #{outcome.file} — green in #{env}; delete the entry or rescope its envs"
+      end
+      lines
+    end
   end
 end
 
-exit(Operator::ContractSuite.new(filter: ARGV.first).run) if __FILE__ == $PROGRAM_NAME
+if __FILE__ == $PROGRAM_NAME
+  # Positional filter stays first-class (`run_all.rb scale`); flags mix freely.
+  filter = nil
+  json_path = nil
+  failed_from = nil
+  jobs = nil
+  slice = nil
+  argv = ARGV.dup
+  while (arg = argv.shift)
+    case arg
+    when "--json" then json_path = argv.shift
+    when "--failed-from" then failed_from = argv.shift
+    when "--jobs" then jobs = Integer(argv.shift)
+    when "--slice" then slice = [Integer(argv.shift), Integer(argv.shift)] # internal: --jobs workers
+    else filter = arg
+    end
+  end
+
+  write_json = lambda do |path, outcomes, violations|
+    next unless path
+
+    File.write(path, JSON.pretty_generate(
+                       run_at: Time.now.utc.iso8601,
+                       environment: Operator::RedLedger.environment,
+                       outcomes: outcomes.map { |o| { file: o.file, status: o.status.to_s, runs: o.runs, assertions: o.assertions, failures: o.failures } },
+                       ledger_violations: violations
+                     ))
+  end
+
+  exit_code =
+    if failed_from
+      # Rerun only what a previous JSON marked red. The JSON carries repo-relative
+      # paths exactly as the ledger and the summary print them, so the selection
+      # is by exact path, not by substring hoping.
+      previous = JSON.parse(File.read(failed_from))
+      red_paths = Array(previous["outcomes"]).select { |o| o["status"] != "pass" }
+                                             .map { |o| File.join(Operator::ContractSuite::RAILS_ROOT, o["file"]) }
+                                             .select { |path| File.file?(path) }
+      if red_paths.empty?
+        warn "contracts: nothing red in #{failed_from}"
+        exit 0
+      end
+      warn "contracts: rerunning #{red_paths.size} red file(s) from #{failed_from}"
+      suite = Operator::ContractSuite.new(paths: red_paths)
+      code = suite.run
+      violations = Operator::RedLedger.violations(suite.outcomes)
+      violations.each { |line| warn "contracts: #{line}" }
+      write_json.call(json_path, suite.outcomes, violations)
+      (code + violations.size).clamp(0, 255)
+    elsif jobs && jobs > 1 && slice.nil?
+      # Workers run slices of the file list; each streams its own ok/FAIL lines
+      # as they happen and hands the parent a JSON fragment. A hung worker
+      # cannot hide: the per-file timeout still applies inside it, and its
+      # output has already been streamed line by line while it ran.
+      repo_root = File.expand_path("..", Operator::ContractSuite::RAILS_ROOT)
+      fragments = Array.new(jobs) { |index| File.join(Dir.tmpdir, "contracts-#{Process.pid}-#{index}.json") }
+      workers = jobs.times.map do |index|
+        child = [RbConfig.ruby, __FILE__]
+        child << filter if filter
+        child += ["--json", fragments[index], "--slice", index.to_s, jobs.to_s]
+        Open3.popen2e(*child, chdir: repo_root) do |_stdin, stream, waiter|
+          Thread.new { stream.each_line { |line| $stdout.write(line) } }
+          waiter.value
+        end
+      end
+      statuses = workers.map(&:exitstatus)
+      outcomes = fragments.filter_map { |path| File.file?(path) && JSON.parse(File.read(path))["outcomes"] }
+                          .flatten
+                          # JSON round-trips the status as a String; the runner's
+                          # marks and the ledger both compare Symbols.
+                          .map { |o| Operator::ContractSuite::Outcome.new(o["file"], o["status"].to_sym, o["runs"], o["assertions"], o["failures"], "") }
+      fragments.each { |path| File.delete(path) if File.file?(path) }
+      violations = Operator::RedLedger.violations(outcomes)
+      violations.each { |line| warn "contracts: #{line}" }
+      write_json.call(json_path, outcomes, violations)
+      red = outcomes.count { |o| o.status != :pass }
+      clean = statuses.count(&:zero?)
+      puts("contracts: #{outcomes.size} file(s) across #{jobs} workers, #{red} red, #{violations.size} ledger violation(s), #{clean}/#{jobs} workers clean")
+      (red + violations.size).clamp(0, 255)
+    else
+      suite = Operator::ContractSuite.new(filter:, slice:)
+      code = suite.run
+      violations = slice ? [] : Operator::RedLedger.violations(suite.outcomes)
+      violations.each { |line| warn "contracts: #{line}" }
+      write_json.call(json_path, suite.outcomes, violations)
+      (code + violations.size).clamp(0, 255)
+    end
+  exit(exit_code)
+end
