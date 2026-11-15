@@ -196,7 +196,7 @@ test("face expression cycle preserves its exact blend across reduced motion and 
   assert.equal(faceSystem.material.uniforms.uExpressionBlend.value, subjectPausedBlend);
 
   document.documentElement.dataset.faceSubject = "face";
-  update(faceSystem, 61, false);
+  update(faceSystem, 61.5, false);
   assert.equal(faceSystem.material.uniforms.uExpressionStrength.value, 0.78);
   assert.equal(faceSystem.expressionCycle.from, pausedTarget);
   assert.ok(faceSystem.material.uniforms.uExpressionBlend.value > subjectPausedBlend);
