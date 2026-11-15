@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "tty-screen"
-require_relative "../../face"
 require_relative "resource_load"
 require_relative "../stream_accumulator"
 require_relative "../../voice/typography"
@@ -115,10 +114,8 @@ module Master
           "#{frame}#{spin_suffix}"
         end
 
-        def spin_tinted(line, intensity)
-          return line if intensity.nil?
-
-          tint = spinner_tint(intensity)
+        def spin_tinted(line, _intensity)
+          tint = spinner_tint(nil)
           return line unless tint
 
           glyph = line[/\A[*+x]/]
@@ -170,8 +167,8 @@ module Master
           queued.to_i.positive? ? " - #{queued} queued" : ""
         end
 
-        # One host load-average sample per SPIN_PROBE_SECONDS; between samples
-        # the normalized CPU load sets the star's cadence and red intensity.
+        # One host load-average sample per SPIN_PROBE_SECONDS; the normalized
+        # CPU load sets cadence only. The glyph colour is invariant.
         def probe_intensity(intensity, probe_at)
           now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
           return intensity, probe_at if now < probe_at
@@ -180,29 +177,19 @@ module Master
         end
 
         # Higher CPU load spins the star faster: slow at idle, fast at saturation.
-        # Its red tint runs independently from light red to deep red over 0..1.
+        # Colour is intentionally not coupled to resource pressure.
         def spin_pause(intensity)
           normalized = Float(intensity || 0.0).clamp(0.0, 1.0)
           span = TICK_SECONDS - FAST_TICK_SECONDS
           FAST_TICK_SECONDS + span * (1.0 - normalized)
         end
 
-        # Light red at idle, deep red at maximum normalized host CPU load.
-        # The shared face token owns both stops; malformed values degrade to
-        # plain ASCII instead of raising in the spinner's paint path.
-        def spinner_tint(intensity)
+        # Fixed white keeps the ASCII glyph legible without making telemetry
+        # look like an alert. CPU intensity is deliberately ignored.
+        def spinner_tint(_intensity)
           return if !ENV["NO_COLOR"].to_s.empty? || ENV["TERM"].to_s.casecmp("dumb").zero?
 
-          stops = Master::Face::Contract.spinner_tint || {}
-          from = Master::Face::Contract.rgb_channels(stops["from"])
-          to = Master::Face::Contract.rgb_channels(stops["to"])
-          return unless from && to
-
-          ramp = Float(intensity).clamp(0.0, 1.0)
-          channels = from.zip(to).map { |a, b| (a + (b - a) * ramp).round }
-          "\e[38;2;#{channels.join(';')}m"
-        rescue ArgumentError, TypeError
-          nil
+          "\e[38;2;255;255;255m"
         end
 
         def init_thinking_state!

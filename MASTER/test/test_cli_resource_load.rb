@@ -96,18 +96,22 @@ class TestCliResourceLoad < Minitest::Test
     refute_match(/intake|waiting|\b\d+s\b/, session.send(:spin_line, "intake", "*"))
   end
 
-  def test_spinner_tint_tracks_cpu_load_from_light_to_dark_red
+  def test_spinner_glyph_stays_fixed_white_across_cpu_load
     session = Master::CLI::Session.allocate
+    no_color = ENV["NO_COLOR"]
+    term = ENV["TERM"]
+    ENV.delete("NO_COLOR")
+    ENV["TERM"] = "xterm-256color"
 
-    assert_equal "\e[38;2;255;119;119m", session.send(:spinner_tint, 0.0)
-    assert_equal "\e[38;2;143;16;16m", session.send(:spinner_tint, 1.0)
-    low = session.send(:spinner_tint, 0.25)
-    high = session.send(:spinner_tint, 0.75)
-    assert_equal "\e[38;2;227;93;93m", low
-    assert_equal "\e[38;2;171;42;42m", high
-    painted = session.send(:spin_tinted, "x - 2 queued", 1.0)
-    assert_match(/\A\e\[38;2;143;16;16mx\e\[0m - 2 queued\z/, painted)
-    refute_includes painted, "255;255;255"
+    white = "\e[38;2;255;255;255m"
+    [0.0, 0.25, 0.75, 1.0, nil].each do |intensity|
+      assert_equal white, session.send(:spinner_tint, intensity)
+      assert_equal "#{white}x\e[0m - 2 queued",
+                   session.send(:spin_tinted, "x - 2 queued", intensity)
+    end
+  ensure
+    no_color.nil? ? ENV.delete("NO_COLOR") : ENV["NO_COLOR"] = no_color
+    term.nil? ? ENV.delete("TERM") : ENV["TERM"] = term
   end
 
   def test_spinner_respects_no_color_and_dumb_terminals
@@ -134,15 +138,22 @@ class TestCliResourceLoad < Minitest::Test
     end
   end
 
-  def test_spinner_stays_uncoloured_when_cpu_load_is_unavailable
+  def test_spinner_stays_white_when_cpu_load_is_unavailable
     session = Master::CLI::Session.allocate
+    no_color = ENV["NO_COLOR"]
+    term = ENV["TERM"]
+    ENV.delete("NO_COLOR")
+    ENV["TERM"] = "xterm-256color"
 
     Master::CLI::Session::ResourceLoad.stub(:cpu_load, nil) do
       intensity, = session.send(:probe_intensity, nil, 0.0)
       assert_nil intensity
-      assert_equal "*", session.send(:spin_tinted, "*", intensity)
+      assert_equal "\e[38;2;255;255;255m*\e[0m", session.send(:spin_tinted, "*", intensity)
       assert_equal Master::CLI::Session::TICK_SECONDS, session.send(:spin_pause, intensity)
     end
+  ensure
+    no_color.nil? ? ENV.delete("NO_COLOR") : ENV["NO_COLOR"] = no_color
+    term.nil? ? ENV.delete("TERM") : ENV["TERM"] = term
   end
 
   def test_spinner_probe_uses_cpu_load_not_process_pressure
