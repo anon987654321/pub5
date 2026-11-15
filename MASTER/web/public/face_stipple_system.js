@@ -218,7 +218,7 @@
       const initial = Math.floor(Math.random() * config.order.length);
       system.expressionCycle = {
         from: initial, to: initial, startedAt: time - config.transition / 1000,
-        pausedAt: null, pausedProgress: null, progress: 1,
+        pausedAt: null, pausedProgress: null, progress: 1, updatedAt: time,
         nextAt: time + config.minInterval / 1000 +
           Math.random() * Math.max(0, config.maxInterval - config.minInterval) / 1000
       };
@@ -229,7 +229,7 @@
     const rotationPaused = reducedMotion || subjectSuppressed;
     if (rotationPaused) {
       if (cycle.pausedAt == null) {
-        cycle.pausedAt = time;
+        cycle.pausedAt = Number.isFinite(cycle.updatedAt) ? cycle.updatedAt : time;
         // Keep the last raw transition progress. The uniform is already eased;
         // feeding it back through smoothstep on every paused frame would drift.
         cycle.pausedProgress = Number.isFinite(cycle.progress)
@@ -254,7 +254,10 @@
     const progress = cycle.pausedAt != null
       ? clamp(cycle.pausedProgress, 1, 0, 1)
       : clamp((time - cycle.startedAt) / (config.transition / 1000), 1, 0, 1);
-    if (cycle.pausedAt == null) cycle.progress = progress;
+    if (cycle.pausedAt == null) {
+      cycle.progress = progress;
+      cycle.updatedAt = time;
+    }
     uniforms.uExpressionFrom.value = cycle.from;
     uniforms.uExpressionTo.value = cycle.to;
     uniforms.uExpressionBlend.value = progress * progress * (3 - 2 * progress);
