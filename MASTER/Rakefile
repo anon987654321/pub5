@@ -939,10 +939,6 @@ end
         "one Law id in two groupings with different jobs: law_map routing for the design-book detector versus membership of the scan.yml aesthetic scan profile",
       "- SMALLEST_EFFECTIVE_DIFFERENCE" =>
         "one Law id in two groupings with different jobs: law_map routing for the design-book detector versus membership of the scan.yml aesthetic scan profile",
-      "- MASTER/web/public/face.runtime.js" =>
-        "one path in two registries with different jobs: agent_map's runtime file " \
-        "inventory versus the face-work backlog row's exact task scope",
-
       # The nineteen visual/ad law-line exemptions were removed the same way:
       # upstream collapsed the migration block, so no cross-file duplicate
       # remains for them to name.
