@@ -120,6 +120,89 @@ test("MASTER randomly morphs among the four original abstract face expressions",
 });
 
 
+test("face expression cycle preserves its exact blend across reduced motion and subject suppression", () => {
+  const listeners = new Map();
+  const window = {
+    location: { search: "" },
+    MASTER_FACE_CONTRACT: {
+      stipple: {
+        expressions: {
+          enabled: true,
+          order: ["waterform", "architect", "forest_geometry", "monument"],
+          min_interval_ms: 9000,
+          max_interval_ms: 9000,
+          transition_ms: 1800,
+          strength: 0.78
+        }
+      }
+    },
+    addEventListener(name, callback) {
+      if (!listeners.has(name)) listeners.set(name, []);
+      listeners.get(name).push(callback);
+    }
+  };
+  const document = {
+    body: { classList: { contains: () => false } },
+    documentElement: { dataset: { faceSubject: "face" } },
+    hidden: false
+  };
+  const deterministicMath = Object.create(Math);
+  deterministicMath.random = () => 0.25;
+  runInNewContext(system, {
+    window, document, Math: deterministicMath, URLSearchParams,
+    performance: { now: () => 0 }, navigator: { hardwareConcurrency: 8 }
+  });
+
+  const uniform = () => ({ value: 0 });
+  const faceSystem = {
+    material: {
+      uniforms: {
+        uExpressionFrom: uniform(),
+        uExpressionTo: uniform(),
+        uExpressionBlend: uniform(),
+        uExpressionStrength: uniform()
+      }
+    }
+  };
+  const update = window.MASTER_FACE_STIPPLE.updateExpressions;
+  assert.equal(typeof update, "function");
+
+  update(faceSystem, 0, false);
+  const first = faceSystem.expressionCycle.to;
+  update(faceSystem, 9.1, false);
+  assert.notEqual(faceSystem.expressionCycle.from, faceSystem.expressionCycle.to);
+  assert.equal(faceSystem.expressionCycle.from, first);
+  update(faceSystem, 9.7, false);
+  const blendBeforePause = faceSystem.material.uniforms.uExpressionBlend.value;
+  assert.ok(blendBeforePause > 0 && blendBeforePause < 1);
+
+  update(faceSystem, 11, true);
+  const pausedBlend = faceSystem.material.uniforms.uExpressionBlend.value;
+  const pausedTarget = faceSystem.expressionCycle.to;
+  update(faceSystem, 50, true);
+  assert.equal(faceSystem.material.uniforms.uExpressionBlend.value, pausedBlend);
+  assert.equal(faceSystem.expressionCycle.to, pausedTarget);
+
+  update(faceSystem, 51, false);
+  assert.equal(faceSystem.material.uniforms.uExpressionBlend.value, pausedBlend);
+  update(faceSystem, 51.3, false);
+  assert.ok(faceSystem.material.uniforms.uExpressionBlend.value > pausedBlend);
+
+  document.documentElement.dataset.faceSubject = "profile";
+  update(faceSystem, 51.4, false);
+  assert.equal(faceSystem.material.uniforms.uExpressionStrength.value, 0);
+  const subjectPausedBlend = faceSystem.material.uniforms.uExpressionBlend.value;
+  update(faceSystem, 60, false);
+  assert.equal(faceSystem.material.uniforms.uExpressionBlend.value, subjectPausedBlend);
+
+  document.documentElement.dataset.faceSubject = "face";
+  update(faceSystem, 61, false);
+  assert.equal(faceSystem.material.uniforms.uExpressionStrength.value, 0.78);
+  assert.equal(faceSystem.expressionCycle.from, pausedTarget);
+  assert.ok(faceSystem.material.uniforms.uExpressionBlend.value > subjectPausedBlend);
+});
+
+
 test("stipple breath is luminance-only, survives idle stillness and freezes for reduced motion", () => {
   assert.match(system, /uBreathScale: \{ value: 0 \}/);
   assert.match(system, /uniform float uBreathScale;/);
