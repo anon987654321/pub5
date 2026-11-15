@@ -88,6 +88,25 @@ test("MASTER randomly morphs among the four original abstract face expressions",
   const architectStep = /float steppedY = floor\(point\.y \* 34\.0 \+ 0\.5\) \/ 34\.0;\s*point\.y = mix\(point\.y, steppedY, 0\.82\);/;
   assert.match(system, architectStep);
   assert.match(faceSource, architectStep);
+  const expressionBody = (source, name) => {
+    const declaration = source.indexOf(\`vec3 \${name}(\`);
+    assert.notEqual(declaration, -1, \`\${name} declaration is required\`);
+    const opening = source.indexOf("{", declaration);
+    let depth = 0;
+    for (let index = opening; index < source.length; index += 1) {
+      if (source[index] === "{") depth += 1;
+      if (source[index] === "}") {
+        depth -= 1;
+        if (depth === 0) return source.slice(opening + 1, index);
+      }
+    }
+    assert.fail(\`\${name} body is not closed\`);
+  };
+  const normalizeExpression = (body) => body.replace(/\/\/[^\n]*/g, "").replace(/\s+/g, "");
+  assert.equal(
+    normalizeExpression(expressionBody(system, "expressionPoint")),
+    normalizeExpression(expressionBody(faceSource, "masterExpressionPoint"))
+  );
   assert.match(system, /updateExpressions\(system, time, reducedMotion\)/);
   assert.match(system, /expression: \{/);
   assert.match(system, /const rotationPaused = reducedMotion \|\| subjectSuppressed/);
