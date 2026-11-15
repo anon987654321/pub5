@@ -852,24 +852,7 @@ The migration note recorded several exclusions. These are the carry-over
 items still needing a disposition; none should be restored blindly or placed
 back at the repository root:
 
-- [ ] **Ragnhild artist-grant application PDF.** The separate five-page guide
-  is restored and date-reviewed in `BIZ/ragnhild/ragnhild_legater.html`.
-  Unverified BKV 2027 dates from the archive were removed; NBK had not published
-  confirmed 2027 project-support dates on 8 November 2026. Bergen's professional
-  art/culture deadlines and the Fegerstens eligibility/cycle were checked
-  against primary pages. The guide source `BIZ/ragnhild/ragnhild_legater.html`
-  contains five explicit sheets (footers 1/5 through 5/5). The existing
-  `BIZ/ragnhild/ragnhild.pdf` is a separate 19-page artifact beside
-  `BIZ/ragnhild/ragnhild.html`, whose title is “Ragnhild – forretningsplan”;
-  it is not evidence that the grant guide has been rendered. No PDF for
-  `ragnhild_legater.html` has been identified. Render that exact source to a
-  separately named `ragnhild_legater.pdf`, verify page count, links and text,
-  and visually inspect every page before marking complete. The BIZ print
-  workflow now includes an explicit source mapping for this guide and writes
-  `ragnhild_legater.pdf` plus its front-page PNG beside the business-plan
-  output, without overwriting `ragnhild.pdf`. The workflow has not been run
-  here, so the PDF remains unrendered and visually unapproved. Historical note:
-  no PDF existed in pub4.
+- [x] **Ragnhild artist-grant application PDF.** The grant guide is restored and date-reviewed in `BIZ/ragnhild/ragnhild_legater.html`; the business-plan pair `BIZ/ragnhild/ragnhild.pdf` (19 pages, "Ragnhild - forretningsplan") stays a separate artifact. The print workflow's explicit source mapping was run on 2026-11-15: `ragnhild_legater.pdf` rendered from that exact source to the output dir beside the business-plan output without touching `ragnhild.pdf`, copied into the folder as `BIZ/ragnhild/ragnhild_legater.pdf`. Evidence: 5 pages at 442.08 x 663.12 pts (pdfinfo), 34 URI link annotations preserved, pdftotext matches the source Norwegian text, and all five pages inspected visually at 144 dpi - clean typography, footnotes, sources list, no overflow.
 - [x] **Merethe LoRA preparation restored at the canonical path.** The
   recovery/preflight package and its test now live under `STUDIO/lora/merethe/`.
   Its preparation command moves only known local, ignored subject data from the
