@@ -384,6 +384,28 @@ uses the neutral pressure value, so it does not silently alter a mode's canonica
 density. Reduced motion freezes time and removes ripple and turbulence while
 retaining the still-state profile.
 
+The portrait's expression cycle is defined once in
+`MASTER/data/tokens.yml#face_interface.stipple.expressions`. It starts on a
+settled random expression and rotates among four original abstract geometry
+transforms: `waterform`, `architect`, `forest_geometry` and `monument`.
+These are formal contour variations, not reproductions of specific ceremonial
+or community-owned forms. A transition lasts 1,800 ms; transition starts are
+separated by 9–16 seconds, and an expression is never immediately repeated.
+
+The primary face transform (`masterExpressionPoint` in `face.part2.txt`) and
+the stipple transform (`expressionPoint` in `face_stipple_system.js`) must
+remain identical. The focused stipple test compares their complete function
+bodies after removing comments and whitespace. The stipple adapter copies its
+four expression uniforms to the primary face, keeping both layers on the same
+from/to/blend/strength values.
+
+The cycle pauses at its last rendered progress when canonical reduced motion
+is active or a non-face semantic subject is displayed. A semantic subject also
+suppresses expression strength so the portrait transform cannot compete with
+the subject. On resume, the cycle continues from the preserved frame and
+does not count paused time toward its cadence. This is a source-level motion
+contract; browser/GPU acceptance remains separate.
+
 This is a stipple/point-sprite shader, not a Gaussian-splat renderer. The latter
 uses anisotropic Gaussian primitives, density control, and visibility-aware
 splatting; its costs and visual quality cannot be inferred from this overlay.
