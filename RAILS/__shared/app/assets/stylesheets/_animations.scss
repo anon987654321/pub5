@@ -36,6 +36,15 @@
     transition: none !important;
     scroll-behavior: auto !important;
   }
+  .button:active,
+  button:active,
+  .interaction-press:active,
+  .deal-card:active,
+  .swipe-action:active {
+    // These transforms apply immediately on :active; disabling transitions alone
+    // does not suppress them. Keep the press semantic, not spatial, under reduce.
+    transform: none !important;
+  }
 }
 
 // The print guarantee, beside the reduced-motion one for the same reason both
