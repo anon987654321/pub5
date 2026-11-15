@@ -2,7 +2,7 @@
 <h1>Shifts</h1>
 <% if @shifts.any? %>
   <%= turbo_stream_from "hjerterom:shifts" %>
-  <ul id="shifts" aria-label="Upcoming volunteer shifts">
+  <ul id="shifts" aria-label="<%= t("a11y.upcoming_shifts") %>">
     <%= render @shifts %>
   </ul>
 <% else %>

@@ -2,7 +2,7 @@
 <h1>Volunteers</h1>
 <% if @volunteers.any? %>
   <%= turbo_stream_from "hjerterom:volunteers" %>
-  <ul id="volunteers" role="list" aria-label="Active volunteers">
+  <ul id="volunteers" role="list" aria-label="<%= t("a11y.active_volunteers") %>">
     <%= render @volunteers %>
   </ul>
 <% else %>

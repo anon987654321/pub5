@@ -25,9 +25,9 @@ class BeneficiariesController < ApplicationController
   def claim
     @item = FoodItem.available.find(params[:item_id])
     if @item.update(beneficiary: @beneficiary, status: "claimed")
-      redirect_to beneficiary_path(@beneficiary), notice: "Claimed!"
+      redirect_to beneficiary_path(@beneficiary), notice: t("flash.claimed")
     else
-      redirect_to match_beneficiary_path(@beneficiary), alert: "Could not claim item"
+      redirect_to match_beneficiary_path(@beneficiary), alert: t("flash.claim_failed")
     end
   end
 

@@ -24,7 +24,7 @@ class CommunityController < ApplicationController
     @post = Current.user.posts.build(post_params)
     if @post.save
       @post.record_activity!("CommunityPostCreated", source_vertical: "hjerterom")
-      redirect_to(community_show_path(@post), notice: "Posted")
+      redirect_to(community_show_path(@post), notice: t("flash.posted"))
     else
       render(:new, status: :unprocessable_entity)
     end

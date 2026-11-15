@@ -1,6 +1,6 @@
 <% content_for :title, @user.email_address.split("@").first %>
 
-<header class="profile-header" role="banner" aria-label="Volunteer profile">
+<header class="profile-header" role="banner" aria-label="<%= t("a11y.volunteer_profile") %>">
   <h1><%= @user.email_address.split("@").first %></h1>
   <% if @volunteer %>
     <p class="dim">Volunteer · <%= @volunteer.availability.presence || "availability not set" %></p>

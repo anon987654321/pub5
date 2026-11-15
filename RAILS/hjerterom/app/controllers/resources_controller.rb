@@ -29,7 +29,7 @@ class ResourcesController < ApplicationController
     @resource = Current.user.resources.build(resource_params)
     if @resource.save
       @resource.record_activity!("ResourceCreated", source_vertical: "hjerterom")
-      redirect_to(@resource, notice: "Resource submitted for review")
+      redirect_to(@resource, notice: t("flash.resource_submitted"))
     else
       render(:new, status: :unprocessable_entity)
     end
@@ -40,7 +40,7 @@ class ResourcesController < ApplicationController
   def update
     if @resource.update(resource_params)
       @resource.record_activity!("ResourceUpdated", source_vertical: "hjerterom")
-      redirect_to(@resource, notice: "Updated")
+      redirect_to(@resource, notice: t("flash.updated"))
     else
       render(:edit, status: :unprocessable_entity)
     end
@@ -49,14 +49,14 @@ class ResourcesController < ApplicationController
   def destroy
     @resource.record_activity!("ResourceRemoved", source_vertical: "hjerterom")
     @resource.destroy
-    redirect_to resources_path, notice: "Removed"
+    redirect_to resources_path, notice: t("flash.removed")
   end
 
   private
 
   def set_resource  = @resource = Resource.find(params[:id])
   def authorize!
-    redirect_to(resources_path, alert: "Unauthorized") unless @resource.user == Current.user
+    redirect_to(resources_path, alert: t("flash.unauthorized")) unless @resource.user == Current.user
   end
 
   def resource_params

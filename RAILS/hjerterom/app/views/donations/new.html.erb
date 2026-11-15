@@ -1,11 +1,11 @@
 <% content_for :title, "New donation" %>
 
-<div class="page-header" role="banner" aria-label="New donation header">
+<div class="page-header" role="banner" aria-label="<%= t("a11y.donation_new_header") %>">
   <div>
     <p class="dim">Donation intake</p>
     <h1>New donation</h1>
   </div>
-  <nav role="navigation" aria-label="Donation nav">
+  <nav role="navigation" aria-label="<%= t("a11y.donation_nav") %>">
     <%= link_to "All donations", donations_path, class: "btn btn-ghost" %>
   </nav>
 </div>

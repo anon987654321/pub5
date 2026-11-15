@@ -2,3 +2,59 @@ nb:
   hello: "Hei"
   app:
     name: "Hjerterom Åsane"
+  a11y:
+    box_edit_header: Rediger boks – sidehode
+    box_new_header: Ny boks – sidehode
+    box_show_header: Boksdetaljer – sidehode
+    donations_header: Donasjoner – sidehode
+    donation_actions: Donasjonsvalg
+    donations_list: Donasjonsliste
+    donation_edit_header: Rediger donasjon – sidehode
+    donation_new_header: Ny donasjon – sidehode
+    donation_nav: Donasjonsnavigasjon
+    donation_show_header: Donasjonsdetaljer – sidehode
+    food_listing: Matlisting
+    food_listings_header: Matlistinger – sidehode
+    food_actions: Matvalg
+    food_listing_details: Detaljer for matlisting
+    food_search_label: Søk i matlistinger
+    resource_search_label: Søk i ressurser
+    home_map: Kart over Hjerterom Åsane
+    home_wordmark: Hjerterom Åsane
+    quick_links: Hurtigvalg
+    wordmark: Hjerterom
+    primary_navigation: Hovednavigasjon
+    sidebar_widgets: Sidekolonne-moduler
+    mobile_navigation: Mobilnavigasjon
+    tab_home: Hjem
+    tab_food: Mat
+    tab_resources: Ressurser
+    tab_community: Fellesskap
+    operator_dashboard: Operatørdashbord
+    todays_shifts: Dagens vakter
+    open_requests: Åpne forespørsler
+    reuse_inventory: Gjenbrukslager
+    route_status: Rutestatus
+    notification_failures: Varslingsfeil
+    resources_header: Ressurser – sidehode
+    resource_actions: Ressursvalg
+    logo_wordmark: Hjerterom
+    upcoming_shifts: Kommende volontærvakter
+    volunteer_profile: Volontærprofil
+    active_volunteers: Aktive volontører
+  flash:
+    claimed: Hentet!
+    claim_failed: Kunne ikke hente gjenstanden
+    comment_added: Kommentar lagt til
+    comment_removed: Kommentar fjernet
+    posted: Lagt ut
+    food_listing_created: Matlisting opprettet
+    updated: Oppdatert
+    listing_removed: Listing fjernet
+    unauthorized: Ingen tilgang
+    request_sent: Forespørsel sendt
+    resource_submitted: Ressurs sendt til gjennomgang
+    removed: Fjernet
+  search:
+    food_listings: Søk i matlistinger…
+    resources: Søk i ressurser…

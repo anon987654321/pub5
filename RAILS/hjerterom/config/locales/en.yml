@@ -2,3 +2,59 @@ en:
   hello: "Hello"
   app:
     name: "Hjerterom Åsane"
+  a11y:
+    box_edit_header: Edit box header
+    box_new_header: New box header
+    box_show_header: Box details header
+    donations_header: Donations header
+    donation_actions: Donation actions
+    donations_list: Donations list
+    donation_edit_header: Edit donation header
+    donation_new_header: New donation header
+    donation_nav: Donation nav
+    donation_show_header: Donation details header
+    food_listing: Food listing
+    food_listings_header: Food listings header
+    food_actions: Food actions
+    food_listing_details: Food listing details
+    food_search_label: Food listing search
+    resource_search_label: Resource search
+    home_map: Map of Hjerterom Åsane
+    home_wordmark: Hjerterom Åsane
+    quick_links: Quick links
+    wordmark: Hjerterom
+    primary_navigation: Primary navigation
+    sidebar_widgets: Sidebar widgets
+    mobile_navigation: Mobile navigation
+    tab_home: Home
+    tab_food: Food
+    tab_resources: Resources
+    tab_community: Community
+    operator_dashboard: Operator dashboard
+    todays_shifts: Today's shifts
+    open_requests: Open requests
+    reuse_inventory: Reuse inventory
+    route_status: Route status
+    notification_failures: Notification failures
+    resources_header: Resources header
+    resource_actions: Resource actions
+    logo_wordmark: Hjerterom
+    upcoming_shifts: Upcoming volunteer shifts
+    volunteer_profile: Volunteer profile
+    active_volunteers: Active volunteers
+  flash:
+    claimed: Claimed!
+    claim_failed: Could not claim item
+    comment_added: Comment added
+    comment_removed: Comment removed
+    posted: Posted
+    food_listing_created: Food listing created
+    updated: Updated
+    listing_removed: Listing removed
+    unauthorized: Unauthorized
+    request_sent: Request sent
+    resource_submitted: Resource submitted for review
+    removed: Removed
+  search:
+    food_listings: Search food listings…
+    resources: Search resources…

@@ -1,9 +1,9 @@
 <% content_for :title, "Food" %>
-<header class="page-header" role="banner" aria-label="Food listings header">
+<header class="page-header" role="banner" aria-label="<%= t("a11y.food_listings_header") %>">
   <h1>Available food</h1>
-  <nav role="navigation" aria-label="Food actions">
+  <nav role="navigation" aria-label="<%= t("a11y.food_actions") %>">
     <% if authenticated? %><%= link_to "List food", new_food_listing_path %><% end %>
   </nav>
 </header>
 
-<%= live_search_index url: food_listings_path, results_partial: "food_listings/live_search_results", placeholder: "Search food listings…", label: "Food listing search", frame_id: "hjerterom-food-listings" %>
+<%= live_search_index url: food_listings_path, results_partial: "food_listings/live_search_results", placeholder: t("search.food_listings"), label: t("a11y.food_search_label"), frame_id: "hjerterom-food-listings" %>

@@ -9,7 +9,7 @@ class FoodRequestsController < ApplicationController
     if @request.save
       @request.record_activity!("FoodRequestCreated", source_vertical: "hjerterom")
       respond_to do |format|
-        format.html { redirect_to(@listing, notice: "Request sent") }
+        format.html { redirect_to(@listing, notice: t("flash.request_sent")) }
         format.turbo_stream
       end
     else
@@ -31,7 +31,7 @@ class FoodRequestsController < ApplicationController
   private
 
   def authorize_owner!
-    redirect_to(root_path, alert: "Unauthorized") unless @request.food_listing.user == Current.user
+    redirect_to(root_path, alert: t("flash.unauthorized")) unless @request.food_listing.user == Current.user
   end
 
   def request_params = params.require(:food_request).permit(:message, :pickup_time)

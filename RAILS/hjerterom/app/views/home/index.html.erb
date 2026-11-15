@@ -21,13 +21,13 @@
 >
   <template id="hjerterom-logo-template"><%= render "shared/logo", compact: true, svg_uid: "tpl" %></template>
 
-  <div id="hjerterom-map" class="map-home-canvas" data-map-target="canvas" aria-label="Kart over Hjerterom Åsane"></div>
+  <div id="hjerterom-map" class="map-home-canvas" data-map-target="canvas" aria-label="<%= t("a11y.home_map") %>"></div>
 
-  <%= link_to root_path, class: "map-home-logo", aria: { label: "Hjerterom Åsane" } do %>
+  <%= link_to root_path, class: "map-home-logo", aria: { label: t("a11y.home_wordmark") } do %>
     <%= render "shared/logo", compact: true, svg_uid: "corner" %>
   <% end %>
 
-  <nav class="map-home-nav" aria-label="Hurtigvalg">
+  <nav class="map-home-nav" aria-label="<%= t("a11y.quick_links") %>">
     <%= link_to "Mat", food_listings_path %>
     <%= link_to "Ressurser", resources_path %>
     <%= link_to "Fellesskap", community_path %>

@@ -1,17 +1,17 @@
 <% content_for :title, "Donations" %>
 
-<div class="page-header" role="banner" aria-label="Donations header">
+<div class="page-header" role="banner" aria-label="<%= t("a11y.donations_header") %>">
   <div>
     <p class="dim">Hjerterom intake</p>
     <h1>Donations</h1>
   </div>
-  <nav role="navigation" aria-label="Donation actions">
+  <nav role="navigation" aria-label="<%= t("a11y.donation_actions") %>">
     <%= link_to "New donation", new_donation_path, class: "btn btn-primary" %>
   </nav>
 </div>
 
 <%= turbo_stream_from "hjerterom:donations" if @donations.any? %>
-<div id="donations" role="region" aria-label="Donations list">
+<div id="donations" role="region" aria-label="<%= t("a11y.donations_list") %>">
   <% if @donations.any? %>
     <%= render partial: "donations/donation", collection: @donations %>
   <% else %>

@@ -8,7 +8,7 @@ class CommentsController < ApplicationController
     @comment = @post.comments.build(comment_params.merge(user: Current.user))
     if @comment.save
       @comment.record_activity!("CommunityCommentCreated", source_vertical: "hjerterom")
-      redirect_to community_show_path(@post), notice: "Comment added"
+      redirect_to community_show_path(@post), notice: t("flash.comment_added")
     else
       redirect_to community_show_path(@post), alert: @comment.errors.full_messages.to_sentence
     end
@@ -17,7 +17,7 @@ class CommentsController < ApplicationController
   def destroy
     @comment = @post.comments.find(params[:id])
     @comment.destroy! if @comment.user == Current.user
-    redirect_to community_show_path(@post), notice: "Comment removed"
+    redirect_to community_show_path(@post), notice: t("flash.comment_removed")
   end
 
   private

@@ -39,10 +39,10 @@
 <div class="app-shell">
   <div class="layout">
     <aside class="sidebar" data-turbo-permanent>
-      <%= link_to root_path, class: "brand brand-wordmark", aria: { label: "Hjerterom" } do %>
+      <%= link_to root_path, class: "brand brand-wordmark", aria: { label: t("a11y.wordmark") } do %>
         <span class="brand-text">hjerte</span>
       <% end %>
-      <nav role="navigation" aria-label="Primary navigation">
+      <nav role="navigation" aria-label="<%= t("a11y.primary_navigation") %>">
         <%= render "shared/sidebar_nav" %>
       </nav>
     </aside>
@@ -53,22 +53,22 @@
       <%= yield %>
     </main>
 
-    <aside class="widgets" aria-label="Sidebar widgets">
+    <aside class="widgets" aria-label="<%= t("a11y.sidebar_widgets") %>">
       <%= render "shared/widgets" %>
     </aside>
   </div>
 
-  <nav role="navigation" class="tab-bar" aria-label="Mobile navigation" data-turbo-permanent>
-    <%= link_to root_path, class: "tab-item", aria: { label: "Hjem" } do %>
+  <nav role="navigation" class="tab-bar" aria-label="<%= t("a11y.mobile_navigation") %>" data-turbo-permanent>
+    <%= link_to root_path, class: "tab-item", aria: { label: t("a11y.tab_home") } do %>
       <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M12 1.696L.622 8.807l1.06 1.696L3 9.679V19.5C3 20.881 4.119 22 5.5 22h4a1 1 0 001-1v-6h3v6a1 1 0 001 1h4c1.381 0 2.5-1.119 2.5-2.5V9.679l1.318.824 1.06-1.696L12 1.696z"/></svg>
     <% end %>
-    <%= link_to food_listings_path, class: "tab-item", aria: { label: "Mat" } do %>
+    <%= link_to food_listings_path, class: "tab-item", aria: { label: t("a11y.tab_food") } do %>
       <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7z"/></svg>
     <% end %>
-    <%= link_to resources_path, class: "tab-item", aria: { label: "Ressurser" } do %>
+    <%= link_to resources_path, class: "tab-item", aria: { label: t("a11y.tab_resources") } do %>
       <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M6 2c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6H6z"/></svg>
     <% end %>
-    <%= link_to community_path, class: "tab-item", aria: { label: "Fellesskap" } do %>
+    <%= link_to community_path, class: "tab-item", aria: { label: t("a11y.tab_community") } do %>
       <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3z"/></svg>
     <% end %>
   </nav>
