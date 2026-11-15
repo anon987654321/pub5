@@ -39,6 +39,24 @@ class TestRailsInteractionCraft < Minitest::Test
     refute_match(/backdrop-filter\s*:/, css)
   end
 
+
+  def test_reduced_motion_suppresses_immediate_press_transforms
+    css = File.read(File.join(SHARED, "app", "assets", "stylesheets", "_animations.scss"))
+    reduced_motion = css.split("@media (prefers-reduced-motion: reduce) {", 2).last
+                      .split("\n}\n\n// The print guarantee", 2).first
+
+    %w[
+      .button:active
+      button:active
+      .interaction-press:active
+      .deal-card:active
+      .swipe-action:active
+    ].each do |selector|
+      assert_includes reduced_motion, selector
+    end
+    assert_includes reduced_motion, "transform: none !important;"
+  end
+
   def test_buttons_use_early_physical_feedback_tokens
     css = File.read(BUTTONS)
     assert_includes css, "touch-action: manipulation;"
