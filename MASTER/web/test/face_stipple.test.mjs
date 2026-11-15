@@ -13,6 +13,7 @@ const playground = readFileSync(join(publicDir, "face_playground.js"), "utf8");
 const css = readFileSync(join(publicDir, "face.css"), "utf8");
 const faceStateSource = readFileSync(join(publicDir, "face_state.js"), "utf8");
 const primaryFaceFrame = readFileSync(join(publicDir, "face.part3.txt"), "utf8");
+const faceSource = readFileSync(join(publicDir, "face.part2.txt"), "utf8");
 const faceWorld = readFileSync(join(publicDir, "face_world.js"), "utf8");
 const sparseField = readFileSync(join(publicDir, "face_sparse_field.js"), "utf8");
 const microInteractions = readFileSync(join(publicDir, "face_micro_interactions.js"), "utf8");
