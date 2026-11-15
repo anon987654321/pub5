@@ -42,7 +42,7 @@ class RestoreScriptsTest < Minitest::Test
   # it as an app name and failed later on "/home/[restore] missing…/app/storage".
   def test_a_dry_run_with_no_config_fails_on_the_config
     env = { "DRY_RUN" => "1", "LITESTREAM_CONFIG" => File.join(Dir.tmpdir, "no-such-litestream.yml") }
-    out, err, status = Open3.capture3(env, "zsh", File.join(ROOT, "mirror", "bin", "restore_litestream.sh"))
+    out, err, status = Open3.capture3(env, ENV.fetch("PUB5_ZSH", "zsh"), File.join(ROOT, "mirror", "bin", "restore_litestream.sh"))
 
     assert_equal 1, status.exitstatus
     assert_includes err, "missing litestream config"
@@ -55,7 +55,7 @@ class RestoreScriptsTest < Minitest::Test
       config = File.join(dir, "litestream.yml")
       File.write(config, "dbs:\n  - path: /home/ghostapp/app/storage/production.sqlite3\n")
       out, _, status = Open3.capture3({ "DRY_RUN" => "1", "LITESTREAM_CONFIG" => config },
-                                      "zsh", File.join(ROOT, "mirror", "bin", "restore_litestream.sh"))
+                                      ENV.fetch("PUB5_ZSH", "zsh"), File.join(ROOT, "mirror", "bin", "restore_litestream.sh"))
 
       assert_equal 1, status.exitstatus, "the app has no storage here, so the plan must fail rather than skip"
       assert_includes out, "FAIL ghostapp - missing /home/ghostapp/app/storage"
@@ -77,7 +77,13 @@ class RestoreScriptsTest < Minitest::Test
     # vps_deploy_master.sh without a pin still pulls.
     assert_includes source, %q{merge -q --ff-only "$pin"}
     assert_includes File.read(File.join(ROOT, "mirror/bin/vps_deploy_master.sh")), "pull --ff-only origin main"
-    assert_includes source, 'write_stamp master failed'
+    # Master deploys through the generic app loop since the mirror
+    # reorganization: the failure contract is that the branch which runs
+    # vps_deploy_master.sh stamps the app itself, so last_deploy_master.json
+    # cannot keep saying ok through a failed deploy.
+    master_branch = source[/if zsh "\$repo\/OPENBSD\/mirror\/bin\/vps_deploy_master\.sh".*?^fi$/m].to_s
+    assert master_branch.include?('write_stamp "$app" failed'),
+           "the master deploy branch does not stamp failure; last_deploy_master.json would keep saying ok"
     assert_includes source, 'write_stamp "$app" failed'
   end
 

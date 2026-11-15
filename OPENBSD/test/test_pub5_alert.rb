@@ -29,7 +29,7 @@ class TestPub5Alert < Minitest::Test
   end
 
   def run_alert(dir, *args, **extra)
-    out, err, status = Open3.capture3(env(dir, extra), "ksh", SCRIPT, *args)
+    out, err, status = Open3.capture3(env(dir, extra), ENV.fetch("PUB5_KSH", "ksh"), SCRIPT, *args)
     [out + err, status.exitstatus]
   end
 

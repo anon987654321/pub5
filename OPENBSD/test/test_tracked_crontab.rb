@@ -192,7 +192,7 @@ class ScheduledJobsTest < Minitest::Test
 
   def renew(conf)
     env = { "RENEW_CERTS_ACME_CONF" => write("acme-client.conf", conf), "RENEW_CERTS_SSL_DIR" => File.join(@tmp, "ssl") }
-    Open3.capture3(env, "zsh", File.join(BIN, "renew-certs.sh"))
+    Open3.capture3(env, ENV.fetch("PUB5_ZSH", "zsh"), File.join(BIN, "renew-certs.sh"))
   end
 
   # CONFIGURED ∩ HELD: a held name acme-client cannot renew is skipped, a
@@ -271,7 +271,7 @@ class ScheduledJobsTest < Minitest::Test
   def test_keep_warm_skips_a_target_that_is_not_listening
     ports = [38_182, 61_352]
     skip "an app is listening locally" if ports.any? { |port| (TCPSocket.new("127.0.0.1", port).close || true) rescue false }
-    out, status = Open3.capture2e("ksh", File.join(BIN, "keep-warm.sh"))
+    out, status = Open3.capture2e(ENV.fetch("PUB5_KSH", "ksh"), File.join(BIN, "keep-warm.sh"))
 
     assert status.success?, out
     assert_empty out.strip

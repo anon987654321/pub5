@@ -72,7 +72,7 @@ class RcPortHoldersTest < Minitest::Test
       #{helpers(app)}
       free_port; echo "exit=$?"
     SH
-    out = IO.popen(["ksh", "-c", script, { err: %i[child out] }], &:read)
+    out = IO.popen([ENV.fetch("PUB5_KSH", "ksh"), "-c", script, { err: %i[child out] }], &:read)
     calls_file = File.join(dir, "calls")
     [out, File.exist?(calls_file) ? File.read(calls_file) : ""]
   end

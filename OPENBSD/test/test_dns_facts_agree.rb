@@ -51,7 +51,7 @@ class DnsFactsAgreeTest < Minitest::Test
     block = OPERATOR[/^ALL_DOMAINS=\(\n.*?\n\)$/m]
     refute_nil block, "no ALL_DOMAINS block in OPERATOR.sh"
 
-    out, status = Open3.capture2("zsh", "-f", "-c", "#{block}\nprint -rl -- $ALL_DOMAINS")
+    out, status = Open3.capture2(ENV.fetch("PUB5_ZSH", "zsh"), "-f", "-c", "#{block}\nprint -rl -- $ALL_DOMAINS")
     assert status.success?, "zsh could not evaluate the ALL_DOMAINS block"
     expanded = out.lines.to_h do |entry|
       domain, subs = entry.chomp.split(":", 2)
@@ -272,7 +272,7 @@ class OwnedDomainFactsAgreeTest < Minitest::Test
     operator = File.read(OPERATOR, encoding: "UTF-8")
     block = operator[/^OWNED_DOMAINS=\(\n.*?\n\)$/m]
     refute_nil block, "no OWNED_DOMAINS block in OPERATOR.sh"
-    out, status = Open3.capture2("zsh", "-f", "-c", "#{block}\nprint -rl -- $OWNED_DOMAINS")
+    out, status = Open3.capture2(ENV.fetch("PUB5_ZSH", "zsh"), "-f", "-c", "#{block}\nprint -rl -- $OWNED_DOMAINS")
     assert status.success?, "zsh could not evaluate OWNED_DOMAINS"
     assert_equal YAML.safe_load_file(RAILS_APPS).fetch("owned_domains"), out.lines.map(&:chomp)
   end

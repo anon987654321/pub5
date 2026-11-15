@@ -14,7 +14,10 @@ export PATH
 
 # This installed helper cannot source the checkout's selector. Prefer
 # generic packaged Ruby, then discover any versioned package dynamically.
-RUBY=/usr/local/bin/ruby
+# A portable checkout can name its Ruby here; the box below keeps its pin.
+RUBY=${PUB5_RUBY:-}
+if [ -z "$RUBY" ]; then
+  RUBY=/usr/local/bin/ruby
 if [ ! -x "$RUBY" ] || ! "$RUBY" -e 'require "rubygems"; exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3") ? 1 : 0)' >/dev/null 2>&1; then
   RUBY=
   for _r in /usr/local/bin/ruby[0-9]*; do
@@ -24,6 +27,7 @@ if [ ! -x "$RUBY" ] || ! "$RUBY" -e 'require "rubygems"; exit(Gem::Version.new(R
       break
     fi
   done
+fi
 fi
 [ -n "$RUBY" ] || { echo "installed helper: Ruby >= 3.3 is required" >&2; exit 1; }
 
