@@ -1,7 +1,7 @@
 # pub5 — remaining work
 
 Last full register audit: 2026-11-14, source tree checked against `main@bd23114ca49bfc3d05dccf31e232a03d857ea28d`.
-Current checkbox inventory at `main@1bf0389bd0439221732692cddcf6b56d538d47c3`: 164 active unchecked register rows and 2 checked rows. This is a count refresh, not a new full acceptance audit. Grouped rows
+Current checkbox inventory verified at `main@5da92e344b07b85739cc0671571bfccef35848d7`: 164 active unchecked register rows and 2 checked rows. This is a count refresh, not a new full acceptance audit. Grouped rows
 are not atomic task counts; aspirational horizons remain visible but are not
 active checkboxes. The tracked tree contains no `PLAN.md`; root `TODO.md` is
 the sole cross-tree Markdown action register, with detailed state owned by the
