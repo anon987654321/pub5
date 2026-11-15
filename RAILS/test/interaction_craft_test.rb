@@ -42,6 +42,10 @@ class TestRailsInteractionCraft < Minitest::Test
 
   def test_reduced_motion_suppresses_immediate_press_transforms
     css = File.read(File.join(SHARED, "app", "assets", "stylesheets", "_animations.scss"))
+    %w[_stack.scss _stack_brgen.scss].each do |stack_name|
+      stack = File.read(File.join(SHARED, "app", "assets", "stylesheets", stack_name))
+      assert_includes stack, '@forward "animations";', "#{stack_name} must carry the reduced-motion contract"
+    end
     reduced_motion = css.split("@media (prefers-reduced-motion: reduce) {", 2).last
                       .split("\n}\n\n// The print guarantee", 2).first
 
