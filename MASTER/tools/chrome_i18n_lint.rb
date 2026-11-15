@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "../lib/operator/baseline_ratchet"
+require_relative "../checks/support/brgen_vertical_surfaces"
 
 module Operator
   # Ratchet: empty-state titles and live-search placeholders must go through
@@ -296,6 +297,25 @@ module Operator
       offenders.first(30).each { |f| puts "  #{f.file}:#{f.line} [#{f.kind}]" }
       puts "  ..." if offenders.size > 30
 
+      if ARGV.include?("--propose")
+        # The ratchet ritual, mechanized. The baseline history records the
+        # failure mode: ratchets went down twice in two days on a moving tree,
+        # and the next measurement failed against someone else's low. A
+        # proposal is only ever printed, never taken, and only for a kind that
+        # is UNDER its baseline on this run; taking it is still a human-sized
+        # edit to BASELINES with its own dated comment, on a settled tree.
+        counts(findings).each do |kind, count|
+          baseline = BASELINES.fetch(kind)
+          next unless count < baseline
+
+          puts "chrome_i18n_lint: propose #{kind} #{baseline} -> #{count}:"
+          puts "  \"#{kind}\" => #{count},"
+        end
+        under = counts(findings).count { |kind, count| count < BASELINES.fetch(kind) }
+        puts "chrome_i18n_lint: no baseline can move on this run" if under.zero?
+        puts "chrome_i18n_lint: settle first — ratchet once, at the end of a session, on a quiet tree"
+      end
+
       return true if exceeded.empty?
 
       warn "chrome_i18n_lint: exceeds baseline - #{exceeded.join("; ")}"
@@ -311,15 +331,15 @@ module Operator
     # glob never matched. The aria_label count fell 169 -> 89 on the extraction and
     # read as an 80-finding improvement; it was the lint going blind to 57 views.
     def view_paths
-      Dir.glob(File.join(rails_root, "*/app/views/**/*.erb")) +
-        Dir.glob(File.join(rails_root, "*/engines/*/app/views/**/*.erb"))
+      # EngineRoots owns the traversal; a local copy of the engine glob is how
+      # the nested takeaway engine went unseen once already.
+      EngineRoots.app_view_paths(rails_root)
     end
 
     # Controllers, for CONTROLLER_FLASH. Same two-level shape as view_paths, and
     # for the same reason: a single-level glob goes blind to the five engines.
     def controller_paths
-      Dir.glob(File.join(rails_root, "*/app/controllers/**/*.rb")) +
-        Dir.glob(File.join(rails_root, "*/engines/*/app/controllers/**/*.rb"))
+      EngineRoots.app_controller_paths(rails_root)
     end
 
     VIEW_RULES = { "empty_title" => EMPTY_TITLE, "search_placeholder" => SEARCH_PLACEHOLDER,

@@ -251,4 +251,38 @@ module EngineRoots
 
     Dir.glob(File.join(rails_root, GLOB, rest))
   end
+
+  # The one traversal answer for the family's app-shaped trees — every app's
+  # own views, then engines at any depth. This exists because the depth has
+  # already bitten twice: a single-level glob went blind to all five engines
+  # when they moved under engines/<name>/, and a bare trailing ** matches one
+  # level in a Ruby glob, so when takeaway nested at
+  # engines/marketplace/engines/ the same blindness came back and the flash
+  # contract reported its locale keys as unresolvable while the mounted engine
+  # served them fine. ** followed by a path segment recurses; keep every
+  # traversal here so the third copy never gets written.
+  def self.app_view_paths(rails_root)
+    Dir.glob(File.join(rails_root, "*/app/views/**/*.erb")) +
+      Dir.glob(File.join(rails_root, "*/engines/**/app/views/**/*.erb"))
+  end
+
+  def self.app_controller_paths(rails_root)
+    Dir.glob(File.join(rails_root, "*/app/controllers/**/*.rb")) +
+      Dir.glob(File.join(rails_root, "*/engines/**/app/controllers/**/*.rb"))
+  end
+
+  def self.app_locale_dirs(rails_root)
+    (Dir.glob(File.join(rails_root, "*/config/locales")) +
+     Dir.glob(File.join(rails_root, "*/engines/**/config/locales"))).uniq
+  end
+
+  # Locale dirs for one app's engines, in the shape self.glob already uses:
+  # brgen hosts every engine, so anything else gets an empty answer. A tree's
+  # flash keys merge its own locales with its engines' locales and nothing
+  # else — amber's flash block must not leak into brgen's declared set.
+  def self.engine_locale_dirs(rails_root, app)
+    return [] unless app == "brgen"
+
+    Dir.glob(File.join(rails_root, "brgen/engines/**/config/locales"))
+  end
 end

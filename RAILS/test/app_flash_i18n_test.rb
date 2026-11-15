@@ -60,11 +60,7 @@ class AppFlashI18nTest < Minitest::Test
 
   def merged_locale(tree, locale)
     dirs = LOCALES.fetch(tree).map { |f| File.dirname(File.join(ROOT, f)) }.uniq
-    # "engines/**" without a trailing slash matches one level in a Ruby glob, so
-    # nested engines (takeaway lives at engines/marketplace/engines/) never
-    # reached the merge. Glob the locale dirs through the same recursive shape
-    # the runtime engine loading uses.
-    globs = tree == "brgen" ? dirs + Dir.glob(File.join(ROOT, EngineRoots::GLOB, "config", "locales")) : dirs
+    globs = dirs + EngineRoots.engine_locale_dirs(ROOT, tree)
     globs.flat_map { |dir| Dir.glob(File.join(dir, "#{locale}.yml")) + Dir.glob(File.join(dir, "*.#{locale}.yml")) }
          .sort
          .reduce({}) { |acc, file| deep_merge(acc, YAML.safe_load_file(file).fetch(locale, {})) }
