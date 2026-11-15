@@ -282,6 +282,8 @@ body.act-item main.shell {
     scroll-behavior: auto;
   }
 
+  .skip-link,
+  button,
   .button,
   .tab,
   .step-star,
@@ -293,6 +295,9 @@ body.act-item main.shell {
     animation: none;
   }
 
+  // The base button selector is :where(button, .button), so the type selector
+  // here deliberately wins its zero-specificity active transform as well.
+  button:active,
   .button:active {
     transform: none;
   }
