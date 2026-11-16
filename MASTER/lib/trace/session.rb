@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "../cli/context_layers"
+require_relative "../boot/paths"
 require "json"
 require "fileutils"
 require "securerandom"
@@ -295,7 +296,7 @@ module Master
         @last_inferred_command = nil
         @last_inferred_args = nil
         @path = File.join(root, ".master", "session.json")
-        @costs_path = File.join(root, ".master", "costs.jsonl")
+        @costs_path = File.join(MasterPaths.fix_state(root: root), "costs.jsonl")
         Dir.mkdir(File.join(root, ".master")) unless Dir.exist?(File.join(root, ".master"))
       end
 
@@ -343,6 +344,7 @@ module Master
       # the one routed, and says when the amount is a guess: a model the
       # price registry does not carry is billed at a flat rate.
       def record_cost(amount, model:, tokens:, approximate: false)
+        ensure_cost_state!
         entry = nil
         @mutex.synchronize do
           @cost += amount
@@ -368,6 +370,16 @@ module Master
       end
 
       private
+
+      def ensure_cost_state!
+        return true if @cost_state_prepared
+
+        require_relative "../fix/kernel" unless defined?(Master::Fix::Kernel::LifecycleJournal)
+        Master::Fix::Kernel.new(root: File.dirname(@path), actor: "session-costs")
+          .lifecycle_journal.prepare_state!
+        FileUtils.mkdir_p(File.dirname(@costs_path), mode: 0o700)
+        @cost_state_prepared = true
+      end
 
       # Always call inside @mutex. Created on read rather than up front, so a key
       # that has never spoken costs nothing.
