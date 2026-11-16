@@ -413,8 +413,8 @@ module Master
           end.uniq
           failures = Array(snapshot[:analysis_failures])
           lines = [
-            "Repository reference graph: nodes=#{snapshot[:nodes].size}, edges=#{snapshot[:edges].size}, " \\
-            "unresolved_imports=#{metrics[:unresolved_local_imports]}, unresolved_ruby=#{metrics[:unresolved_ruby_references]}, " \\
+            "Repository reference graph: nodes=#{snapshot[:nodes].size}, edges=#{snapshot[:edges].size}, " \
+            "unresolved_imports=#{metrics[:unresolved_local_imports]}, unresolved_ruby=#{metrics[:unresolved_ruby_references]}, " \
             "dynamic_sites=#{metrics[:dynamic_sites]}, analysis_failures=#{failures.size}.",
             "Resolved inbound edges: #{inbound.empty? ? "none observed" : inbound.first(20).join("; ")}",
             "Resolved outbound edges: #{outbound.empty? ? "none observed" : outbound.first(20).join("; ")}",
