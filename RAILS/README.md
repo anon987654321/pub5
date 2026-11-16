@@ -53,9 +53,10 @@ and its own `CLAUDE.md` governs it.
 Everything that builds, tests or probes these apps now lives under MASTER. The
 legacy RAILS `bin` command suite is gone; `bin/cities` remains as a read-only
 inventory helper. Build, test and probe work lives in `MASTER/tools/rails`,
-reached through the operator: `triangle` boots brgen, amber, bsdports and the
-face on the ports the live checks probe, `premerge` runs the premerge proof, `ci`
-runs each app's own `bin/ci`, and `coverage` runs the full coverage pass. Each app
+reached through the operator: `triangle` reads `apps.yml` and boots every live
+entry (Brgen, Amber, BSDPorts, Mr Damascy and the MASTER face) on its declared
+port; `premerge` runs the premerge proof, `ci` runs each app's own `bin/ci`,
+and `coverage` runs the full coverage pass. Each app
 also keeps its own `bin/ci` for RuboCop, Brakeman, bundler-audit and the tests.
 The design tokens come from `MASTER/data/tokens.yml`, and the shared engine's
 `design_tokens.yml` is a file generated from it, not a second source.
