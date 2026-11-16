@@ -171,6 +171,20 @@ module Studio
             "Git index could not be inspected; #{index_error.to_s.lines.last.to_s.strip}")
       end
 
+      shallow_output, shallow_error, shallow_status = Subprocess.capture3(
+        "git", "-C", @repository_root, "rev-parse", "--is-shallow-repository",
+        timeout: 10
+      )
+      unless shallow_status.success? && shallow_output.strip == "false"
+        detail = if shallow_status.success? && shallow_output.strip == "true"
+                   "Local repository is shallow; reachable Git history is incomplete"
+                 else
+                   "Shallow-repository status could not be verified; #{shallow_error.to_s.lines.last.to_s.strip}"
+                 end
+        add(checks, "private_subject_history", "INCONCLUSIVE", detail)
+        return
+      end
+
       history_output, history_error, history_status = Subprocess.capture3(
         "git", "-C", @repository_root, "log", "--all", "--format=", "--name-only", "--",
         *PRIVATE_PATHSPECS,
