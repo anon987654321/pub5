@@ -370,13 +370,11 @@ module Master
       # Each implements check_ast(ast, code, path:) for scanner integration.
       # All also implement check(code, path:) as fallback for non-Ruby files.
 
-      # B01 SMALL_FILES — files over 300 lines (detect_structural: file_silhouette).
-      #
-      # The fix it names is a split at module boundaries, so it reads files that
-      # have modules. A locale, a layout snapshot, a lockfile, a notebook or a
-      # document has no such boundary, and its length is its content. JavaScript
-      # is JS_MODULE_SIZE's, which asks the same question with the vendored
-      # bundles set aside, so reading it here reported every long script twice.
+      # Historical SMALL_FILES detector — retired 2026-11-16. Its 300-line
+      # threshold treated file length as a defect and proposed cross-file splits
+      # without evidence of mixed responsibility. JavaScript had a parallel
+      # JS_MODULE_SIZE rule, retired with it for the same reason. The definitions
+      # and fixtures remain so the decision is auditable; neither enters scans.
         class SmallFilesLaw < Detector
           LIMIT = 300
 
