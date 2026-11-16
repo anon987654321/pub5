@@ -19,9 +19,9 @@ module Operator
 
     def rails_apps(parts)
       selected = Array(parts).map(&:to_s)
-      apps = APP_SUITES.select { |app| selected.include?(app) }
-      apps |= SHARED_APPS if selected.include?("__shared")
-      apps
+      APP_SUITES.select do |app|
+        selected.include?(app) || (selected.include?("__shared") && SHARED_APPS.include?(app))
+      end
     end
 
     def app_environment(root:, app:, inherited_env: ENV)
