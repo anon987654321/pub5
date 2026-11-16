@@ -3,7 +3,6 @@
 require "ruby_llm"
 require "digest"
 require "json"
-require "open3"
 require "timeout"
 require_relative "../execution/contract"
 require_relative "llm_dispatcher/cli_sender"
