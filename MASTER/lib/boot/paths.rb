@@ -43,11 +43,11 @@ module MasterPaths
   # MASTER_STATE_ID is an explicit stable namespace for repositories without
   # an origin remote.
   def fix_state(root:)
-    repository = File.expand_path(root)
-    repository = File.dirname(repository) if File.basename(repository) == "MASTER"
+    input_root = File.expand_path(root)
+    repository = File.basename(input_root) == "MASTER" ? File.dirname(input_root) : input_root
     explicit = ENV["MASTER_STATE_ID"].to_s.strip
     identity = explicit.empty? ? remote_identity(repository) : state_identity(explicit)
-    return File.join(repository, ".master") unless identity
+    return File.join(input_root, ".master") unless identity
 
     File.join(state_base, "repositories", identity, "fix")
   end
