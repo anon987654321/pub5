@@ -27,21 +27,31 @@ class TestStudioDoctor < Minitest::Test
     assert report.fetch("checks").all? { |check| check.keys.sort == %w[detail id state] }
   end
 
-  def test_private_subject_finding_never_prints_the_subject_or_path
+  def test_private_index_and_history_findings_hide_subject_names_and_paths
     doctor = Studio::Doctor.new
     checks = []
-    tracked = "STUDIO/lora/merethe/sources/01.jpg\0STUDIO/lora/ragnhild/subject.env\0"
+    history = "STUDIO/lora/merethe/sources/01.jpg\nSTUDIO/lora/ragnhild/subject.env\n"
     status = Struct.new(:success?).new(true)
 
-    Studio::Subprocess.stub(:capture3, ->(*_arguments, timeout:) {
-      assert_equal 10, timeout
-      [tracked, "", status]
+    Studio::Subprocess.stub(:capture3, ->(*arguments, timeout:) {
+      if arguments.include?("ls-files")
+        assert_equal 10, timeout
+        ["", "", status]
+      else
+        assert_includes arguments, "--all"
+        assert_includes arguments, ":(glob)STUDIO/lora/*/sources/**"
+        assert_equal 45, timeout
+        [history, "", status]
+      end
     }) do
       doctor.send(:private_media_check, checks)
     end
 
-    assert_equal "BLOCKED", checks.fetch(0).fetch("state")
-    assert_includes checks.fetch(0).fetch("detail"), "2 subject-private path(s)"
+    index_check = checks.find { |check| check.fetch("id") == "private_subject_index" }
+    history_check = checks.find { |check| check.fetch("id") == "private_subject_history" }
+    assert_equal "PASS", index_check.fetch("state")
+    assert_equal "BLOCKED", history_check.fetch("state")
+    assert_includes history_check.fetch("detail"), "2 subject-private path(s)"
     serialized = JSON.generate(checks)
     refute_includes serialized, "merethe"
     refute_includes serialized, "ragnhild"
