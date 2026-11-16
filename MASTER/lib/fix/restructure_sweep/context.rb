@@ -206,8 +206,16 @@ module Master
         end
         def self.structural_laws(target)
           tree = Master::Review::Scan::LawTree
-          [tree.find(:NO_GOD_CLASS), tree.find(:SMALL_FILES), tree.find(:FILE_SPRAWL, root: target),
-           tree.find(:JS_MODULE_SIZE)].compact
+          candidates = [
+            [:NO_GOD_CLASS, {}],
+            [:FILE_SPRAWL, { root: target }],
+            [:JS_MODULE_SIZE, {}],
+          ]
+
+          candidates.filter_map do |id, options|
+            definition = tree.definitions.find { |law| law.id.to_s.casecmp?(id.to_s) }
+            tree.find(id, **options) if definition&.enforceable?
+          end
         end
 
         def self.repository_files(root)
