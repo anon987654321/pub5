@@ -176,9 +176,9 @@ class VisualSystemContractTest < Minitest::Test
   end
 
   def test_shared_importmap_and_social_boot_register_the_field
-    assert_includes IMPORTMAP.read, 'pin "pub4/visual_field", to: "visual_field.js"'
-    assert_includes IMPORTMAP.read, 'pin "pub4/visual_surface", to: "visual_surface_controller.js"'
-    assert_includes SOCIAL_BOOT.read, 'import VisualSurface from "pub4/visual_surface"'
+    assert_includes IMPORTMAP.read, 'pin "pub5/visual_field", to: "visual_field.js"'
+    assert_includes IMPORTMAP.read, 'pin "pub5/visual_surface", to: "visual_surface_controller.js"'
+    assert_includes SOCIAL_BOOT.read, 'import VisualSurface from "pub5/visual_surface"'
     assert_includes SOCIAL_BOOT.read, 'application.register("visual-field", VisualSurface)'
   end
 
@@ -190,7 +190,7 @@ class VisualSystemContractTest < Minitest::Test
   def test_radio_publishes_into_the_shared_visual_contract
     # Each module that publishes imports the function itself.
     [RADIO, RADIO_AUDIO].each do |path|
-      assert_includes path.read, 'import { publishVisual } from "pub4/visual_field"', path.basename.to_s
+      assert_includes path.read, 'import { publishVisual } from "pub5/visual_field"', path.basename.to_s
     end
     assert_includes RADIO.read, 'publishVisual("radio:audio"'
     assert_includes RADIO_AUDIO.read, 'publishVisual("radio:track"'

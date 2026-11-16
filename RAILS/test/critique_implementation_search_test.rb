@@ -14,7 +14,7 @@ class CritiqueImplementationSearchTest < Minitest::Test
     brgen_css = brgen_css_source
 
     assert_includes search, "width: 480px;"
-    assert_includes search, "border-radius: 30px;"
+    assert_includes search, "border-radius: var(--radius-pill);"
     assert_includes search, "box-shadow: none;"
     refute_match(/box-shadow:(?!\s*none\b)/, search)
     assert_includes affiliate, 'data-controller="parallax-tilt"'

@@ -16,7 +16,7 @@ class DeviceAwarenessTest < Minitest::Test
   def test_importmap_pins_the_four_controllers
     baseline = File.read(File.join(SHARED, "config/importmap_baseline.rb"))
     CONTROLLERS.each_key do |name|
-      assert_includes baseline, %(pin "pub4/#{name}"), "missing pin for pub4/#{name}"
+      assert_includes baseline, %(pin "pub5/#{name}"), "missing pin for pub5/#{name}"
       assert_includes baseline, "#{name}_controller.js"
     end
   end

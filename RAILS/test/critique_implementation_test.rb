@@ -65,7 +65,7 @@ class CritiqueImplementationTest < Minitest::Test
     assert_includes feed, "AFFILIATE_EVERY = 2"
     # The operator's collage (2026-10-31): six deals a band, each band the next six.
     assert_includes affiliate, "visible_deals.rotate(band * 6).first(6) if brgen_surface"
-    assert_includes home_feed, "band: position / Brgen::HomeFeed::AFFILIATE_EVERY"
+    assert_includes home_feed, "(position % Brgen::HomeFeed::AFFILIATE_EVERY).zero?"
     assert_includes affiliate, "affiliate_feed_unit--brgen"
     assert_includes home_feed, 'surface: "brgen"'
   end
@@ -97,7 +97,7 @@ class CritiqueImplementationTest < Minitest::Test
     assert show.index('render "shared/post_vote_rail"') < show.index("<%= tag.h1 @post.title %>")
     assert_includes partial, "post-vote-button"
     assert_includes partial, "post-vote-score"
-    assert_includes stream, 'frame.start_with?("post-vote-")'
+    assert_includes stream, 'turbo_stream.replace dom_id(@votable, :vote_rail)'
     assert_includes stream, 'render "shared/post_vote_rail"'
   end
 
@@ -185,9 +185,9 @@ class CritiqueImplementationTest < Minitest::Test
     assert_includes form, 'post_progressive_target: "mediaInput"'
     assert_includes css, ".post-media-secondary"
     assert_includes form, "post-publishing"
-    assert_includes boot, 'import PostProgressive from "pub4/post_progressive"'
+    assert_includes boot, 'import PostProgressive from "pub5/post_progressive"'
     assert_includes boot, 'application.register("post-progressive", PostProgressive)'
-    assert_includes importmap, 'pin "pub4/post_progressive"'
+    assert_includes importmap, 'pin "pub5/post_progressive"'
   end
 
   def test_brgen_home_feed_frame_does_not_share_the_feed_list_id

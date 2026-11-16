@@ -32,7 +32,11 @@ class CritiqueImplementationAmberTest < Minitest::Test
     icons = read("__shared/app/views/shared/_feed_icon.html.erb")
 
     assert_includes button, 'class: "feed-action"'
-    assert_includes button, 'aria: { label: t("post.like_count", count: post.likes_count),'
+    # The count moved out of the aria label into aria-describedby on the
+    # visible count span (post.like_count is gone from the locale), so the
+    # label pins the name and the description pins the count.
+    assert_includes button, 'label: t("post.like")'
+    assert_includes button, 'describedby: dom_id(post, :like_count)'
     assert_includes button, 'form_class: "feed-action-form"'
     assert_includes button, 'name: "like"'
     assert_includes button, 'post.likes_count.to_i.positive? ? post.likes_count : ""'
@@ -60,8 +64,8 @@ class CritiqueImplementationAmberTest < Minitest::Test
     refute_includes brgen_feed, "avatar_url:"
     refute_includes brgen_feed, 'class: "feed-card"'
     shared_post_css = read("__shared/app/assets/stylesheets/_post_voting.scss")
-    assert_includes shared_post_css, ".feed-card.post-reading-card {\n  margin: 0;\n  padding: var(--space-4) var(--space-3);"
-    assert_match(/@media \(min-width: 480px\) \{\s*\.feed-card\.post-reading-card \{\s*padding: var\(--space-5\) var\(--space-4\);/m, shared_post_css)
+    assert_includes shared_post_css, ".post-reading-card.feed-card {\n  display: block;\n  margin: 0;\n  padding: var(--space-4) var(--space-3);"
+    assert_match(/@media \(min-width: 480px\) \{\s*\.post-reading-card\.feed-card \{\s*padding: var\(--space-5\) var\(--space-4\);/m, shared_post_css)
     assert_includes shared_post_css, ".feed-card.post-reading-card .feed-card-actions {"
     assert_match(/@media \(min-width: 640px\) \{\s*\.feed-card\.post-reading-card \.feed-card-actions \{\s*width: auto;/m, shared_post_css)
     assert_includes shared_post_css, "border-radius: var(--radius-pill);"
@@ -97,7 +101,7 @@ class CritiqueImplementationAmberTest < Minitest::Test
 
     assert_includes helper, "def amber_enum_options(values, scope:)"
     assert_includes helper, 'values.map do |value|'
-    assert_includes helper, '[t("#{scope}.#{key}"), value]'
+    assert_includes helper, '[ t("#{scope}.#{key}"), value ]'
     {
       "outfits.seasons" => {
         "spring" => ["Spring", "Vår"], "summer" => ["Summer", "Sommer"],
