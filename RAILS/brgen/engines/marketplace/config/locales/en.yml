@@ -15,6 +15,8 @@ en:
       sold: Sold
       reserved: Reserved
       removed: Removed
+    verticals:
+      restaurants: "Restaurants and takeaway"
     stores:
       no_listings: Nothing for sale here right now
       no_listings_body: This shop has no live listings. Look again later, or browse the marketplace.
@@ -161,6 +163,7 @@ en:
     alerts_turn_off: Turn alerts off
     partner_program: Partner program
     store_created: Store created
+    restaurant_store_created: "Store created. Complete its restaurant profile next."
     store_updated: Store updated
     store_deleted: Store removed
     store_not_allowed: Only the owner can change this store
