@@ -74,6 +74,16 @@ module Studio
       raise ArgumentError, "video grade catalogue is invalid: #{error.message}"
     end
 
+    # Preserve the public constant for existing callers, but derive it from
+    # the canonical YAML once. The constant is an alias, never a second table.
+    LOOKS = parse_video_presets(
+      File.read(File.join(__dir__, "postpro", "video.yml"), encoding: "UTF-8")
+    )
+
+    def looks
+      LOOKS
+    end
+
     # The ffmpeg argument vector for one cut. Pure: no filesystem writes, so a
     # test can assert the whole graph without rendering.
     def build_args(stills:, audio:, out:, size: DEFAULT_SIZE, fps: DEFAULT_FPS,

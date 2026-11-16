@@ -41,6 +41,7 @@ class TestPromo < Minitest::Test
 
   def test_the_look_is_read_from_video_yml
     looks = Studio::Promo.looks
+    assert_same Studio::Promo::LOOKS, looks, "the compatibility constant must alias the canonical catalogue"
     assert_includes looks.keys, "dilla_heavy"
     assert_includes looks["dmt_bled"].join(" "), "tblend"
     assert_empty looks["none"]
