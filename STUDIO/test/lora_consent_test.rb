@@ -89,7 +89,7 @@ class TestLoraConsent < Minitest::Test
     ]
     output, error, status = Open3.capture3(
       "git", "check-ignore", "--no-index", "--stdin",
-      chdir: REPOSITORY_ROOT, stdin_data: "#{paths.join("\\n")}\\n"
+      chdir: REPOSITORY_ROOT, stdin_data: "#{paths.join("\n")}\n"
     )
 
     assert status.success?, "git check-ignore failed: #{error}"

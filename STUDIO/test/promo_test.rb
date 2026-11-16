@@ -49,7 +49,7 @@ class TestPromo < Minitest::Test
 
   def test_video_catalogue_rejects_an_unknown_schema_and_non_string_filters
     error = assert_raises(ArgumentError) do
-      Studio::Promo.parse_video_presets("schema: other\\npresets: {}\\n")
+      Studio::Promo.parse_video_presets("schema: other\npresets: {}\n")
     end
     assert_match(/unsupported video grade schema/, error.message)
 
