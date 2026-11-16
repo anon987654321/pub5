@@ -536,7 +536,7 @@ class TestRepairLoopPolicy < Minitest::Test
   # verifier is told the visible change is intended, and other findings are judged as before.
   def test_a_scale_finding_may_snap_to_its_nearest_token
     loop = build_loop(root: Dir.pwd, bus: FakeBus.new, scanner: Scanner.new, agent: ScriptedAgent.new("SAFE"))
-    scale = { law: "LINE_HEIGHT_ON_SCALE+SMALL_FILES", line: 4, message: "line-height 1.35 off scale" }
+    scale = { law: "LINE_HEIGHT_ON_SCALE+NO_GOD_CLASS", line: 4, message: "line-height 1.35 off scale" }
     other = { law: "FEW_ARGUMENTS", line: 4, message: "three positional" }
 
     assert_includes loop.send(:reflexion_prompt, scale, "a\n", "b\n"), "do not refuse it for altering rendering"
