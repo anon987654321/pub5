@@ -1,4 +1,4 @@
-# Model routing profile — Claude Code CLI (opus) primary, with automatic API/local/free fallback.
+# Model routing profile — GLM-first, with API, hosted, and free fallbacks; Claude CLI is opt-in.
 
 schema: 1
 routing:
@@ -540,9 +540,10 @@ three_mirror_redundancy:
 # names a file the CLI writes its answer to, and a prompt with no %{prompt}
 # goes in on stdin. A model named auto passes no model flag, so the CLI uses
 # its own default. `login` is the command the pool names when signed out.
-# The signed-in subscription CLIs lead the remote class, in this order: a
-# flat-rate lane is spent before a metered API key is, and before any free or
-# local model is asked to edit code. Io::LaneSelection reads it.
+# Signed-in subscription CLIs lead the remote class when available. Claude CLI
+# remains catalogued for explicit opt-in only: the runtime defaults
+# MASTER_NO_CLAUDE_CLI=1, and MASTER_NO_CLAUDE_CLI=0 opts into that subprocess.
+# Other subscription lanes retain their normal availability and ranking.
 subscription_lanes: [claude-cli, grok-cli, codex-cli, agy]
 
 cli_lanes:
