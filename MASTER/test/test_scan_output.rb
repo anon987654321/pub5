@@ -127,4 +127,44 @@ class TestScanOutput < Minitest::Test
     assert_includes long.split, clipped.delete_suffix("...").split.last, "the cut landed mid-word"
     assert_equal long, report.send(:clipped, long, limit: 500)
   end
+
+  # One unreadable file must not kill the whole observe phase, and must not be
+  # dropped silently either: the report names the file and the reason, so a
+  # partial scan can never render as a clean tree. data/self_findings.yml past
+  # its line ceiling was the live crash: one RuntimeError took out every
+  # whole-MASTER scan.
+  def test_a_failed_read_is_named_unmeasured_instead_of_raising
+    pairs = [
+      ["/tmp/measured.rb", Master::Result.ok([finding("LONG_LINE", line: 1)])],
+      ["/tmp/self_findings.yml", Master::Result.err("file too long: /tmp/self_findings.yml", category: :validation)],
+    ]
+    report = Master::CLI::Scan::Report.new(pairs:, profile: nil, rule_filter: nil)
+
+    text = report.render
+    assert_includes text, "1 total violations"
+    assert_includes text, "unmeasured: /tmp/self_findings.yml (file too long"
+    refute_includes text, "clean - no violations"
+  end
+
+  def test_an_unmeasured_file_keeps_a_zero_finding_scan_from_reading_as_clean
+    pairs = [["/tmp/gone.rb", Master::Result.err("file too long: /tmp/gone.rb", category: :validation)]]
+    report = Master::CLI::Scan::Report.new(pairs:, profile: nil, rule_filter: nil)
+
+    text = report.render
+    assert_includes text, "no violations in measured files; 1 unmeasured"
+    assert_includes text, "unmeasured: /tmp/gone.rb"
+
+    brief = report.brief
+    assert_includes brief, "clean"
+    assert_includes brief, "unmeasured 1 file"
+  end
+
+  def test_a_corpus_of_failed_reads_is_bounded_on_one_screen
+    pairs = (1..7).map { |n| ["/tmp/f#{n}.rb", Master::Result.err("file too long: /tmp/f#{n}.rb", category: :validation)] }
+    report = Master::CLI::Scan::Report.new(pairs:, profile: nil, rule_filter: nil)
+
+    text = report.render
+    assert_includes text, "unmeasured: 3 more files omitted"
+    assert_equal 7, report.send(:failed_reads).size
+  end
 end

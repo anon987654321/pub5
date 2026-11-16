@@ -68,8 +68,21 @@ module Master
           MASTER/web/public/three.face.module.js MASTER/web/public/face.runtime.js
           MASTER/web/public/face.modules.bundle.js MASTER/web/public/face_vision.bundle.js
         ].freeze
+
+        # The self-findings ratchet ceiling is written atomically by
+        # Operator::SelfFindings.record, and its member blocks are one line per
+        # finding: the recorded baseline holds 31,585 law members, so the file
+        # passes STRUCTURED_DATA_MAX_LINES in file_processor and every whole-tree
+        # observe of MASTER either crashed the scan report or carried the file as
+        # a failed read. The census's readers (ratchets, the drift test) parse
+        # the YAML directly and never through the scanner, so a finding here
+        # would be a finding against the writer — the same loop that made
+        # db/schema.rb a suffix skip. Both spellings, for the same dual-root
+        # reason the face bundles carry theirs.
+        SELF_FINDINGS_CEILING = %w[data/self_findings.yml MASTER/data/self_findings.yml].freeze
         MASTER_LOCAL_PATHS = %w[.master runtime].flat_map { |path| [path, "MASTER/#{path}"] }.freeze
-        SKIP_RELATIVE_PATHS = (MASTER_LOCAL_PATHS + AGENT_WORKTREES + GENERATED_FACE_BUNDLES + %w[
+        SKIP_RELATIVE_PATHS = (MASTER_LOCAL_PATHS + AGENT_WORKTREES + GENERATED_FACE_BUNDLES +
+                               SELF_FINDINGS_CEILING + %w[
           MASTER/web/public/assets MASTER/web/script/three_build
           MASTER/web/node_modules MASTER/web/tmp MASTER/web/log
         ]).freeze

@@ -22,6 +22,27 @@ class TestScanPathFilter < Minitest::Test
     end
   end
 
+  # The self-findings ratchet ceiling is written by Operator::SelfFindings.record
+  # and its member blocks are one line per finding, so the recorded baseline
+  # passes the scanner's structured-data line ceiling and every whole-MASTER
+  # observe carried it as a failed read. It is generated evidence read directly
+  # by its consumers, never through the scanner.
+  def test_the_self_findings_ceiling_is_skipped_from_every_root
+    roots = [Master::ROOT, Master::REPO_ROOT]
+    Master::Fix::Scan::PathFilter::SELF_FINDINGS_CEILING.each do |relative|
+      path = roots.filter_map { |root| File.join(root, relative) }.find { |candidate| File.file?(candidate) }
+      assert_path_exists path, "#{relative} must name a real file while the exemption exists"
+      [File.join(Master::ROOT, "data"), Master::ROOT, Master::REPO_ROOT].each do |root|
+        assert Scanner.skip_path?(path, root:), "#{relative} is scanned from #{root}"
+      end
+    end
+  end
+
+  def test_sibling_data_files_are_still_scanned
+    refute Scanner.skip_path?(File.join(Master::ROOT, "data", "laws.yml"), root: Master::ROOT)
+    refute Scanner.skip_path?(File.join(Master::REPO_ROOT, "MASTER", "data", "soul.yml"), root: Master::REPO_ROOT)
+  end
+
   def test_compiled_assets_are_skipped_from_the_face_root
     assert Scanner.skip_path?(File.join(PUBLIC, "assets", "face-abc123.js"), root: PUBLIC)
   end
@@ -104,7 +125,10 @@ class TestScanPathFilter < Minitest::Test
 
   # Every tracked file with a language is linted unless a rule says why not, and the rules are all about files
   # nobody authored: vendored code, deliberately bad fixtures, generated bundles and schemas.
-  UNAUTHORED = %r{/vendor/|/fixtures/|/public/|db/schema\.rb|service-worker\.js|\.min\.|/db/structure\.sql}
+  # app/assets/builds/ is what dartsass compiles the tracked _*.scss into (SKIP_PATH_FRAGMENTS names it);
+  # MASTER/data/self_findings.yml is written atomically by Operator::SelfFindings.record and its member
+  # blocks are one line per finding, which is why the scanner skips it.
+  UNAUTHORED = %r{/vendor/|/fixtures/|/public/|db/schema\.rb|service-worker\.js|\.min\.|/db/structure\.sql|app/assets/builds/|MASTER/data/self_findings\.yml}
 
   def test_no_authored_tracked_file_with_a_language_is_skipped_without_a_reason
     root = Master::REPO_ROOT

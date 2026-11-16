@@ -6,6 +6,10 @@ module Master
   module CLI
     module Scan
       class Report
+        # One unreadable file is named, not hidden: the report lists the files it
+        # could not measure, bounded so a corpus of bad reads stays one screen.
+        UNMEASURED_DISPLAY_LIMIT = 4
+
         def initialize(pairs:, profile:, rule_filter:, severity_filter: nil, dry_run: false, autofixes: [],
                        phase: nil, prior_total: nil, conflicts: nil)
           @pairs = pairs
@@ -26,6 +30,7 @@ module Master
           lines = []
           lines << phase_line if phase_line
           lines << "#{prefix}#{header}#{total} total violations#{grouped}#{suffix}"
+          lines.concat(unmeasured_lines)
           lines << delta_line if delta_line
           lines << autofix_line if autofix_line
           cross_file_line = cross_file_drifts_line
@@ -42,8 +47,10 @@ module Master
         # One dmesg line: "12 violations; top LONG_LINE 5, DEAD_CODE 2".
         def brief
           top = ranked.first(8).map { |rule, vs| "#{rule} #{vs.size}" }.join(", ")
-          parts = [total.zero? ? "#{prefix}#{header}clean#{suffix}" : "#{prefix}#{header}#{total} violations#{grouped}"]
+          clean = total.zero?
+          parts = [clean ? "#{prefix}#{header}clean#{suffix}" : "#{prefix}#{header}#{total} violations#{grouped}"]
           parts << "top #{top}" unless top.empty?
+          parts << unmeasured_brief if failed_reads.any?
           parts << autofix_line
           parts << delta_line
           parts.compact.join("; ")
@@ -61,7 +68,14 @@ module Master
         def render_clean
           lines = []
           lines << phase_line if phase_line
-          lines << "#{prefix}#{header}clean - no violations#{suffix}"
+          if failed_reads.empty?
+            lines << "#{prefix}#{header}clean - no violations#{suffix}"
+          else
+            # A partial scan is not a clean tree: name the unmeasured files so
+            # tri-state evidence stays tri-state.
+            lines << "#{prefix}#{header}no violations in measured files; #{failed_reads.size} unmeasured#{suffix}"
+            lines.concat(unmeasured_lines)
+          end
           lines << delta_line if delta_line
           lines << autofix_line if autofix_line
           lines.join("\n")
@@ -128,13 +142,41 @@ module Master
           end
         end
 
+        # A file whose read failed contributes no violations and one piece of
+        # evidence: its name and the reason. Raising here meant one unreadable
+        # file -- data/self_findings.yml past its line ceiling was the live one --
+        # killed every whole-tree observe with a RuntimeError, and a scan that
+        # renders nothing is a failure of proof reported as a crash rather than
+        # as the INCONCLUSIVE measurement it is. The unmeasured lines keep the
+        # failure visible so no caller can mistake a partial scan for a clean
+        # one.
+        def failed_reads
+          @failed_reads ||= []
+        end
+
         def raw_violations
-          pairs.flat_map do |(file, file_result)|
+          @raw_violations ||= pairs.flat_map do |(file, file_result)|
             result = Result.wrap(file_result)
-            raise "scan report cannot render failed result for #{file}: #{result.message}" unless result.ok?
+            unless result.ok?
+              failed_reads << [file.to_s, result.message.to_s]
+              next []
+            end
 
             result.value!.map { |violation| violation.merge(file:) }
           end
+        end
+
+        def unmeasured_lines
+          shown = failed_reads.first(UNMEASURED_DISPLAY_LIMIT).map do |path, message|
+            "unmeasured: #{path} (#{clipped(message)})"
+          end
+          hidden = failed_reads.size - shown.size
+          shown << "unmeasured: #{hidden} more file#{'s' unless hidden == 1} omitted" if hidden.positive?
+          shown
+        end
+
+        def unmeasured_brief
+          "unmeasured #{failed_reads.size} file#{'s' unless failed_reads.size == 1}"
         end
 
         def symbolize_keys(finding)
