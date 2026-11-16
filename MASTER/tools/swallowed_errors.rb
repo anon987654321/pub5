@@ -13,8 +13,7 @@
 # thrown into a file nobody opened.
 #
 # Measured on 2026-08-25 the first time anything asked: 5,037 load-bearing
-# entries, of which 4,663 are CommentDriftRule failing with "claude-cli: No such
-# file or directory - claude". A rule MASTER marks load-bearing had failed four
+# entries, of which 4,663 are CommentDriftRule failing with "optional provider CLI: executable not found/". A rule MASTER marks load-bearing had failed four
 # and a half thousand times while every scan it belonged to reported clean.
 #
 # This runs against LOCAL runtime state, not the repo, so it is an operator
