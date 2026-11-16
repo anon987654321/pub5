@@ -512,6 +512,18 @@ cli_lanes:
     model_flag: --model
     models: [auto]
     login: grok login
+  zai-cli:
+    # The operator's configured z-ai SDK CLI reached through bin/zai-chat, a
+    # wrapper that moves the stdin prompt into the CLI's -p argument and
+    # unwraps its JSON answer file to plain text. Session-scoped reroute
+    # (operator, 2026-11-16): a MASTER_MODEL=zai-cli:auto pin makes this the
+    # primary #1 /fix lane; the key stays inside the CLI's own configuration.
+    binary: zai-chat
+    signed_in: { args: [probe], match: ok }
+    ask: [--stdin]
+    model_flag: --model
+    models: [auto]
+    login: the z-ai CLI is preconfigured by the operator; no login command exists
   llama-cli:
     binary: llama-cli
     kind: local

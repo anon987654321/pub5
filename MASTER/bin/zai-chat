@@ -1,0 +1,48 @@
+#!/bin/sh
+# zai-chat — MASTER cli-lane bridge to the operator's configured z-ai SDK CLI.
+#
+# Session-scoped reroute (operator request, 2026-11-16): /fix model calls ride
+# the same z-ai account the agent CLI already uses. The key stays inside the
+# z-ai CLI's own configuration; nothing is copied into any file here.
+#
+# Usage:
+#   zai-chat --stdin   prompt arrives on stdin, plain-text reply on stdout
+#   zai-chat probe     one tiny live call; prints "zai-chat ok" on success
+#
+# The z-ai CLI takes the prompt only as an argv value and answers with a JSON
+# object (stdout, or a file with --output), so the wrapper moves stdin into a
+# temp file, requests --output, and prints only the message content. A failed
+# request or an empty reply exits non-zero so the lane reports an error and
+# the chain walks on.
+set -eu
+
+TMPDIR=${TMPDIR:-/tmp}
+prompt_file=$(mktemp "$TMPDIR/zai-chat-prompt.XXXXXX")
+reply_file=$(mktemp "$TMPDIR/zai-chat-reply.XXXXXX")
+trap 'rm -f "$prompt_file" "$reply_file"' EXIT
+
+case "${1:-}" in
+  --stdin) cat > "$prompt_file" ;;
+  probe)   printf 'Reply with the single word: ok\n' > "$prompt_file" ;;
+  *) echo "usage: zai-chat --stdin|probe" >&2; exit 2 ;;
+esac
+
+if ! z-ai chat -p "$(cat "$prompt_file")" -o "$reply_file" >/dev/null 2>&1; then
+  echo "zai-chat: z-ai chat request failed" >&2
+  exit 1
+fi
+
+node -e '
+const fs = require("fs");
+let doc;
+try { doc = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); }
+catch { process.exit(1); }
+const content = doc && doc.choices && doc.choices[0] && doc.choices[0].message &&
+  doc.choices[0].message.content;
+if (typeof content !== "string" || !content.trim()) process.exit(1);
+process.stdout.write(content);
+' "$reply_file" || { echo "zai-chat: empty or unreadable reply" >&2; exit 1; }
+
+if [ "${1:-}" = "probe" ]; then
+  printf '\n'
+fi
