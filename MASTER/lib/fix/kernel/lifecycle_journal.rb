@@ -1728,7 +1728,6 @@ module Master
 
         def load
           ensure_state_directory!
-          migrate_legacy_state!
           directory = File.expand_path(@state_root)
           path = File.join(directory, PATH)
           unless File.exist?(directory) || File.symlink?(directory)
@@ -1875,6 +1874,7 @@ module Master
                      current_stat.dev == opened_stat.dev && current_stat.ino == opened_stat.ino
                 raise IOError, "journal lock path changed while waiting for its lock"
               end
+              migrate_legacy_state!
               yield
             ensure
               io.flock(File::LOCK_UN)
