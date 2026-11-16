@@ -2442,7 +2442,8 @@ laws:
     status: test
     proof: test/test_lib_root_discipline_law.rb
   SMALL_FILES:
-    status: test
+    status: retired
+    file: /repo/lib/example.rb
     proof: test/test_scan_law_contracts.rb
   SMALL_FUNCTIONS:
     status: test
