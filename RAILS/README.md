@@ -140,7 +140,8 @@ single-app change selects that app's suite plus the root Rails contracts.
 
 Use the live app fleet only when a check actually needs running servers or a
 browser. `triangle up brgen` starts one app; `triangle status` reports ports;
-`triangle down brgen` stops only what that invocation started. A full
+`triangle down brgen` stops only a process proved to belong to this checkout
+and to an isolated process group, refusing foreign or unverified listeners. A full
 `triangle up` is for cross-app rendered checks, not a prerequisite for source
 tests.
 
