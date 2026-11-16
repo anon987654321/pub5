@@ -4,6 +4,7 @@ require "json"
 require "fileutils"
 require_relative "../io/exec"
 require_relative "../ground/personal_permissions"
+require_relative "../mobile/env"
 require "tempfile"
 require_relative "../trace/dmesg"
 
@@ -188,8 +189,10 @@ module Master
         Master::Trace::Dmesg.status("wake0", text, io: @out)
       end
 
+      # command -v belongs to a shell; argv-form system() looks for an
+      # executable named "command". Use the shared PATH walk instead.
       def command?(command)
-        system("command", "-v", command, out: File::NULL, err: File::NULL)
+        Master::Mobile::Env.on_path?(command)
       end
     end
   end

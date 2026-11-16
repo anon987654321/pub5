@@ -43,6 +43,24 @@ class TestDeviceWakeWord < Minitest::Test
     permissions
   end
 
+  def test_default_command_probe_uses_the_shared_path_resolver
+    Dir.mktmpdir("wake-word") do |root|
+      wake = Master::Device::WakeWord.new(root:)
+      calls = []
+      resolver = lambda do |name|
+        calls << name
+        name == "termux-microphone-record"
+      end
+
+      Master::Mobile::Env.stub(:on_path?, resolver) do
+        error = assert_raises(RuntimeError) { wake.run_forever }
+        assert_match(/whisper-cli/, error.message)
+      end
+
+      assert_equal %w[termux-microphone-record whisper-cli], calls
+    end
+  end
+
   def test_disabled_listener_does_not_require_microphone
     Dir.mktmpdir("wake-word") do |root|
       wake = Master::Device::WakeWord.new(root:, which: ->(_cmd) { true })
