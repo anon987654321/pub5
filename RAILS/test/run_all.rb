@@ -48,6 +48,7 @@
 require "digest"
 require "json"
 require "rbconfig"
+require "time"
 require "tmpdir"
 require "yaml"
 require_relative "../__shared/lib/shared/subprocess"
