@@ -159,6 +159,7 @@ nb:
     planned_body: "Velg en dato og et antrekk over for å planlegge uken."
     outfits_start: "Start med en kapsel, en anledning, en sesong eller et humør."
     no_matches: "Ingen treff"
+    no_matches_body: "Ingen plagg traff det søket. Legg det til i garderoben, eller prøv et annet ord."
     no_phase_items: "Ingen plagg i denne fasen"
     no_wear_history: "Ingen bruks-historikk ennå"
     no_showcase_body: "Legg til et plagg med skjemaet under."

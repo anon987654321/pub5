@@ -160,6 +160,7 @@ en:
     planned_body: "Pick a date and an outfit above to plan your week."
     outfits_start: "Start with a capsule, event, season, or mood."
     no_matches: "No matches found"
+    no_matches_body: "No wardrobe piece matched that search. Add it to your wardrobe, or try another word."
     no_phase_items: "No items in this phase"
     no_wear_history: "No wear history yet"
     no_showcase_body: "Add a wardrobe piece with the form below."
