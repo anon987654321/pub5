@@ -6,9 +6,13 @@
 every page a visitor can reach is whole, honest and in the right language,
 checked before anyone has to notice it is not.**
 
-The checks judge the three Rails apps, brgen, amber and bsdports, together with
-the MASTER web face. One runner, `runner.rb`, executes them. The registry,
-`checks.yml`, declares them, and the runner adds no Law authority. A registry
+The checks judge the three shared-engine Rails apps, Brgen, Amber and
+BSDPorts, together with the MASTER web face. Mr Damascy is a separate standalone
+app: its own `RAILS/mrdamascy/bin/ci` is included by
+`MASTER/bin/operator premerge` and `MASTER/bin/operator ci`, not by this
+shared-engine surface map. One runner, `runner.rb`, executes the checks
+described here. The registry, `checks.yml`, declares them, and the runner
+adds no Law authority. A registry
 row names a class to run, or a script, and the line to print when the check
 passes. The registry also records which checks are covered by a composite, so
 `--all` skips those leaves rather than running the same work twice. Before any
