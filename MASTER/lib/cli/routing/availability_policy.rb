@@ -29,9 +29,9 @@ module Master
           positive_integer(@config["health_freshness_s"], DEFAULTS["health_freshness_s"])
         end
 
-        # Evidence says the current Claude CLI path needs materially more than
-        # the proposed 90s ceiling on the development machine. 300s preserves
-        # the measured sender bound while allowing the operator to tighten it.
+        # Provider calls have materially exceeded the proposed 90s ceiling on
+        # the development machine. Keep the established 300s sender bound until
+        # the current pool is re-measured; the operator may still tighten it.
         def dispatch_deadline_s
           env = ENV["MASTER_DISPATCH_DEADLINE_S"].to_s.strip
           return positive_integer(env, DEFAULTS["dispatch_deadline_s"]) unless env.empty?
