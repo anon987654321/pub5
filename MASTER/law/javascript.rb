@@ -264,6 +264,9 @@ module Master
         # NO_VAR lives once, in law/javascript.rb — fixtures attached, any narrowing
         # this version had learned ported there (2026-08-21 twin retirement).
 
+        # Retired 2026-11-16 with SMALL_FILES. The same arbitrary 300-line
+        # threshold flagged generated bundles and third-party modules as well
+        # as authored source; keep its examples for historical fixture proof.
         ::Law.define(:JS_MODULE_SIZE) do
           tags %i[SMALL_PARTS]
           fix "JS files over 300 lines - split at module boundaries"
