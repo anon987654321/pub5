@@ -3,7 +3,10 @@
 module Master
   # Provider selection, model limits, and safe process defaults for Master.*.
   module MasterRuntime
+    # Claude CLI stays available for explicit opt-in, but never runs by default.
+    # Set MASTER_NO_CLAUDE_CLI=0 before boot only when that subprocess is wanted.
     PROCESS_DEFAULTS = {
+      "MASTER_NO_CLAUDE_CLI" => "1",
       "MASTER_SAFE_MODE" => "1", "MASTER_BACKGROUND" => "0", "MASTER_AUTOFIX" => "0",
       "MASTER_WATCH" => "0", "MASTER_WATCHER" => "0", "MASTER_HEARTBEAT" => "0", "MASTER_DRIFT" => "0"
     }.freeze
