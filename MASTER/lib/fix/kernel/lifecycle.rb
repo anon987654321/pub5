@@ -46,8 +46,6 @@ module Master
           require_relative "../run_journal"
           @lifecycle_mutex.synchronize do
             @lifecycle_journal ||= LifecycleJournal.new(root: @root, bus: @bus)
-            @lifecycle_journal.prepare_state!
-            @lifecycle_journal
           end
         end
 
@@ -74,6 +72,10 @@ module Master
           end
 
           Master::Fix::Kernel.with_settings_lock do
+            # The first writable entry performs the one-time, locked import of
+            # checkout-local journal state. Read-only status construction stays
+            # side-effect free and can still inspect the legacy location.
+            lifecycle_journal.prepare_state!
             @execution_mutex.synchronize do
               previous_run_id = @current_run_id
               previous_attempt_id = @current_attempt_id
