@@ -7,7 +7,7 @@ class DeploySmokeContractTest < Minitest::Test
   OPENBSD_ROOT = File.expand_path("../../OPENBSD", __dir__)
   APPS = %w[amber brgen bsdports].freeze
   RAILS_APPS = APPS
-  SMOKE = File.join(OPENBSD_ROOT, "bin", "deploy-smoke.sh")
+  SMOKE = File.join(OPENBSD_ROOT, "mirror", "bin", "deploy-smoke.sh")
 
   # Every app's local port and public URL, and the rcctl service name. bsdports had
   # neither local check when this list was only strings.
@@ -110,7 +110,7 @@ class DeploySmokeContractTest < Minitest::Test
 
   def test_all_deployed_apps_have_rc_d_scripts_in_repo
     APPS.each do |app|
-      script = File.join(OPENBSD_ROOT, "etc/rc.d", app)
+      script = File.join(OPENBSD_ROOT, "mirror/etc/rc.d", app)
       assert File.file?(script), "missing #{script}"
       body = File.read(script)
       assert_match(/daemon_execdir=/, body, "#{app} rc.d should set daemon_execdir")
@@ -119,7 +119,7 @@ class DeploySmokeContractTest < Minitest::Test
   end
 
   def test_master_rc_precompile_guard_present
-    master = File.read(File.join(OPENBSD_ROOT, "etc/rc.d/master"))
+    master = File.read(File.join(OPENBSD_ROOT, "mirror/etc/rc.d/master"))
     assert_includes master, "public/assets/assets"
     assert_includes master, "assets:precompile"
     # The container warm-up GETs the face page; a chat turn is POST only.

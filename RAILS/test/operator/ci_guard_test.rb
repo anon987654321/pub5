@@ -18,7 +18,7 @@ class CiGuardTest < Minitest::Test
     end
   end
 
-  # The lock lives in root-owned /var/db/pub4, with the shell side.
+  # The lock lives in root-owned /var/db/pub5, with the shell side.
   #
   # It used to be /var/tmp/pub4-ci.lock while OPENBSD/mirror/lib/ci_lock.sh called
   # itself "the one definition of the pub4 CI mutex path" and pointed three
@@ -27,8 +27,8 @@ class CiGuardTest < Minitest::Test
   # the one left in the world-writable directory that rewrite existed to escape.
   def test_lock_path_defaults_to_the_shared_root_owned_file
     with_env("PUB5_CI_LOCK" => nil) do
-      assert_equal "/var/db/pub4/ci.lock", Operator::CiGuard.lock_path
-      assert_equal "/var/db/pub4/ci.lock.holder", Operator::CiGuard.holder_path
+      assert_equal "/var/db/pub5/ci.lock", Operator::CiGuard.lock_path
+      assert_equal "/var/db/pub5/ci.lock.holder", Operator::CiGuard.holder_path
     end
   end
 
@@ -53,14 +53,14 @@ class CiGuardTest < Minitest::Test
       path = File.join(dir, "ci.lock")
 
       with_env("PUB5_CI_LOCK" => path) do
-        capture_stderr { assert_equal "/var/db/pub4/ci.lock", Operator::CiGuard.lock_path }
+        capture_stderr { assert_equal "/var/db/pub5/ci.lock", Operator::CiGuard.lock_path }
       end
     end
   end
 
   def test_override_pointing_nowhere_falls_back_to_the_default
     with_env("PUB5_CI_LOCK" => "/no/such/directory/ci.lock") do
-      assert_equal "/var/db/pub4/ci.lock", Operator::CiGuard.lock_path
+      assert_equal "/var/db/pub5/ci.lock", Operator::CiGuard.lock_path
     end
   end
 

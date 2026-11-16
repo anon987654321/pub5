@@ -99,7 +99,7 @@ class DeployChecksContractTest < Minitest::Test
   end
 
   def test_check_rails_wires_herb_check_for_every_rails_surface
-    source = File.read(File.join(OPENBSD_ROOT, "bin", "check-rails"))
+    source = File.read(File.join(OPENBSD_MIRROR, "bin", "check-rails"))
 
     assert_includes source, "herb:check"
     assert_includes source, 'File.join("RAILS", app)'
@@ -108,7 +108,7 @@ class DeployChecksContractTest < Minitest::Test
   end
 
   def test_check_rails_wires_checks_by_name
-    source = File.read(File.join(OPENBSD_ROOT, "bin", "check-rails"))
+    source = File.read(File.join(OPENBSD_MIRROR, "bin", "check-rails"))
     assert_includes source, "MASTER/checks/runner.rb"
     %w[schema_migration generated_asset port_inventory production].each do |check|
       assert_match(/"#{check}"/, source, "check-rails should run the #{check} check")
@@ -134,7 +134,7 @@ class DeployChecksContractTest < Minitest::Test
   # The deploy-time integrity chain names checks instead of pointing at scripts,
   # so it cannot outlive a file the way it did when the shims moved.
   def test_integrity_chain_names_checks_that_exist
-    source = File.read(File.join(OPENBSD_ROOT, "lib", "check_environment.rb"))
+    source = File.read(File.join(OPENBSD_MIRROR, "lib", "check_environment.rb"))
     assert_includes source, "MASTER/checks/runner.rb"
     source.scan(/RAILS_CHECKS, args: %w\[(\w+)\]/).flatten.each do |check|
       assert CHECKS.key?(check), "integrity chain runs #{check}, which is not in checks.yml"
@@ -142,7 +142,7 @@ class DeployChecksContractTest < Minitest::Test
   end
 
   def test_check_runs_repository_contract_tests
-    source = File.read(File.join(OPENBSD_ROOT, "bin", "check"))
+    source = File.read(File.join(OPENBSD_MIRROR, "bin", "check"))
 
     assert_includes source, 'runner.run("rails contracts"'
     # Was an inline Dir[...].each { require } that loaded all sixty-nine files

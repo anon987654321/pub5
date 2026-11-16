@@ -123,7 +123,7 @@ runtime = ARGV.include?("--runtime")
 # their bundles checked, their routes proved against real controllers and their
 # bin/ci green — none of which this run touched.
 unless runtime
-  warn "rails_runtime: static half only - pass --runtime to boot each app " \
+  warn "rails_runtime: static half only — pass --runtime to boot each app " \
        "(bundle check, db:prepare, dead routes, bin/ci)"
 end
 

@@ -107,7 +107,7 @@ export default class extends Controller {
     if (!prompt || !prompt.hidden || !(this.webAskable || this.nativeAskable)) return
     if (localStorage.getItem(ASKED_KEY)) return
     // Consent first, and never on top of the install prompt.
-    if (!mayPrompt("push_context")) return
+    if (!mayPrompt("push")) return
 
     prompt.hidden = false
   }

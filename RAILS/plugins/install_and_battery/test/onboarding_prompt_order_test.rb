@@ -16,7 +16,11 @@ class OnboardingPromptOrderTest < Minitest::Test
   # Overridable so this test can be run against a mutated copy of the five files
   # it reads, and shown to fail. Checking it in place would mean writing to
   # source in a checkout several agents share. Unset in every normal run.
-  ROOT = ENV.fetch("ONBOARDING_TEST_ROOT", File.expand_path("..", __dir__))
+  #
+  # ROOT is the RAILS root: the shared engine lives beside the apps at
+  # RAILS/__shared, and this plugin is parked two levels further down under
+  # RAILS/plugins (see RAILS/plugins/README.md and plugin.yml).
+  ROOT = ENV.fetch("ONBOARDING_TEST_ROOT", File.expand_path("../../..", __dir__))
   QUEUE = File.join(ROOT, "__shared/frontend/onboarding_queue.js")
   BASELINE = File.join(ROOT, "__shared/config/importmap_baseline.rb")
 
@@ -30,7 +34,7 @@ class OnboardingPromptOrderTest < Minitest::Test
     "push" => "brgen/app/javascript/controllers/push_controller.js",
   }.freeze
 
-  INSTALL = "__shared/frontend/install_prompt_controller.js"
+  INSTALL = "plugins/install_and_battery/frontend/install_prompt_controller.js"
   WELCOME = "__shared/frontend/welcome_onboarding_controller.js"
   WELCOME_VIEW = "__shared/app/views/shared/_welcome_onboarding.html.erb"
   ARTWORK = "__shared/app/services/shared/onboarding_artwork.rb"
@@ -39,8 +43,11 @@ class OnboardingPromptOrderTest < Minitest::Test
 
   def test_the_queue_is_pinned_or_no_caller_can_import_it
     assert_path_exists QUEUE
-    assert_includes File.read(BASELINE), %(pin "pub4/onboarding", to: "onboarding_queue.js"),
-                    "pub4/onboarding must be pinned in the shared baseline, or every import of it 404s"
+    # The live frontend was renamed pub4/* to pub5/* (commit 6e969ad9); the
+    # parked install prompt controller below keeps its pub4 naming, but the
+    # shared baseline pins the queue under the pub5 namespace.
+    assert_includes File.read(BASELINE), %(pin "pub5/onboarding", to: "onboarding_queue.js"),
+                    "pub5/onboarding must be pinned in the shared baseline, or every import of it 404s"
   end
 
   def test_welcome_is_first_and_later_prompts_wait
@@ -58,7 +65,7 @@ class OnboardingPromptOrderTest < Minitest::Test
   def test_every_deferred_prompt_asks_the_queue_first
     PROMPTS.each do |kind, relative|
       body = File.read(File.join(ROOT, relative))
-      assert_includes body, %(from "pub4/onboarding"), "#{relative} does not import the queue"
+      assert_includes body, %(from "pub5/onboarding"), "#{relative} does not import the queue"
       assert_includes body, %(mayPrompt("#{kind}")),
                       "#{relative} must check on mayPrompt(\"#{kind}\") before revealing"
     end

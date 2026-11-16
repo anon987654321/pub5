@@ -4,7 +4,7 @@ require "minitest/autorun"
 require "open3"
 require "rbconfig"
 require "stringio"
-require_relative "../mirror/bin/zap.rb"
+require_relative "../mirror/bin/zap"
 
 class ZapTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)

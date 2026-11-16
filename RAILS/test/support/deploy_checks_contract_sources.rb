@@ -6,6 +6,9 @@ module DeployChecksContractSources
   ROOT = File.expand_path("../..", __dir__)
   REPO_ROOT = File.expand_path("../../..", __dir__)
   OPENBSD_ROOT = File.join(REPO_ROOT, "OPENBSD")
+  # de989e24 ("Reorganize OPENBSD") moved the host tree — bin, etc, lib, var —
+  # under mirror/; checks/ and data/ stayed at the top level.
+  OPENBSD_MIRROR = File.join(OPENBSD_ROOT, "mirror")
   MASTER_CHECKS = File.join(REPO_ROOT, "MASTER", "checks")
 
   CHECKS = YAML.safe_load_file(File.join(MASTER_CHECKS, "checks.yml")).freeze

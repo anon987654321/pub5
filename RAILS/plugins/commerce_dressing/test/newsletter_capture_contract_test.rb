@@ -3,9 +3,13 @@
 require "minitest/autorun"
 
 class NewsletterCaptureContractTest < Minitest::Test
-  ROOT = File.expand_path("../..", __dir__)
-  CONTROLLER = File.join(ROOT, "__shared/frontend/newsletter_capture_controller.js")
-  VIEW = File.join(ROOT, "__shared/app/views/shared/_newsletter_signup_popup.html.erb")
+  # RAILS root: the shared engine lives beside the apps at RAILS/__shared, and
+  # this plugin is parked two levels further down under RAILS/plugins (see
+  # RAILS/plugins/README.md and plugin.yml, parked_on 2026-11-01).
+  ROOT = File.expand_path("../../..", __dir__)
+  PLUGIN = File.expand_path("..", __dir__)
+  CONTROLLER = File.join(PLUGIN, "frontend/newsletter_capture_controller.js")
+  VIEW = File.join(PLUGIN, "views/_newsletter_signup_popup.html.erb")
   CTA = File.join(ROOT, "__shared/app/views/shared/_newsletter_cta.html.erb")
   IMPORTMAP = File.join(ROOT, "__shared/config/importmap_baseline.rb")
   BOOT = File.join(ROOT, "__shared/frontend/stimulus_boot.js")
@@ -13,7 +17,7 @@ class NewsletterCaptureContractTest < Minitest::Test
   VISUALS = File.join(ROOT, "__shared/app/services/shared/newsletter_visuals.rb")
   COMPOSER = File.join(ROOT, "__shared/app/services/shared/newsletter_composer.rb")
   EDITION = File.join(ROOT, "__shared/app/views/shared/newsletter/_edition.html.erb")
-  MODEL = File.join(File.expand_path("../..", __dir__), "brgen/app/models/newsletter_edition.rb")
+  MODEL = File.join(ROOT, "brgen/app/models/newsletter_edition.rb")
 
 # brgen's tree beside __shared exists only in the repo checkout; brgen's own CI
 # on vm23 sees /home/brgen/app, so the brgen half of the contract skips there.
@@ -40,16 +44,27 @@ def test_popup_is_shared_and_time_capped
     assert_includes controller, "showModal()"
   end
 
-  def test_popup_is_wired_once_through_shared_boot
-    assert_includes File.read(IMPORTMAP), %(pin "pub4/newsletter_capture")
-    assert_includes File.read(BOOT), %(import NewsletterCapture from "pub4/newsletter_capture")
-    assert_includes File.read(BOOT), %(application.register("newsletter-capture", NewsletterCapture))
+  # Parked 2026-11-01 (plugin.yml): "Render removed from _site_legal_footer;
+  # stimulus import/registration and importmap pin removed". The popup renders
+  # nowhere, so nothing may half-wire it back in while the plugin stays parked.
+  def test_parked_popup_is_not_wired_into_the_shared_boot
+    refute_includes File.read(IMPORTMAP), %(newsletter_capture),
+                    "the parked popup must not be pinned in the shared baseline"
+    refute_includes File.read(BOOT), %(newsletter_capture),
+                    "the parked popup must not be imported by the shared boot"
+    refute_includes File.read(BOOT), %(newsletter-capture),
+                    "the parked popup must not be registered by the shared boot"
   end
 
-  def test_brgen_home_mounts_existing_subscription_endpoint
+  # Parked 2026-11-01 (plugin.yml): the popup render came out of the legal
+  # footer. The live subscribe surface is the shared CTA partial, which still
+  # posts to the brgen endpoint.
+  def test_parked_popup_stays_out_of_the_footer_while_the_live_cta_keeps_the_endpoint
     footer = File.read(FOOTER)
-    assert_includes footer, %(render "shared/newsletter_signup_popup")
-    assert_includes footer, "email_subscriptions_path"
+    refute_includes footer, %(render "shared/newsletter_signup_popup"),
+                    "the parked popup must not render from the legal footer"
+    refute_includes footer, %(newsletter_signup_popup)
+    assert_includes File.read(CTA), "email_subscriptions_path"
   end
 
   def test_newsletters_carry_replicate_artwork

@@ -8,12 +8,6 @@
 # register it, then fix it; the reason line is the work order.
 # Registered from a full run on main@79443a9e, 2026-11-15.
 ---
-plugins/commerce_dressing/test/newsletter_capture_contract_test.rb:
-  reason: "standing red at registration; first failure: Error: NewsletterCaptureContractTest#test_newsletter_provider_is_called_replicate:"
-  registered: "2026-11-15"
-plugins/install_and_battery/test/onboarding_prompt_order_test.rb:
-  reason: "standing red at registration; first failure: Error: OnboardingPromptOrderTest#test_welcome_is_first_and_later_prompts_wait:"
-  registered: "2026-11-15"
 test/amber_architecture_coverage_test.rb:
   reason: "standing red at registration; first failure: Failure: AmberArchitectureCoverageTest#test_every_component_is_named_in_the_architecture_document [test/amber_architecture_coverage_test.rb:27]:"
   registered: "2026-11-15"
@@ -26,20 +20,11 @@ test/breakpoint_lint_test.rb:
 test/brgen_agent_notes_test.rb:
   reason: "standing red at registration; first failure: Failure: BrgenAgentNotesTest#test_it_says_one_process_and_names_the_engine_layout [test/brgen_agent_notes_test.rb:20]:"
   registered: "2026-11-15"
-test/browser_diagnostics_check_test.rb:
-  reason: "standing red at registration; first failure: Failure: BrowserDiagnosticsCheckTest#test_browser_artifacts_are_external_to_the_repository [test/browser_diagnostics_check_test.rb:354]:"
-  registered: "2026-11-15"
-test/check_requires_resolve_test.rb:
-  reason: "standing red at registration; first failure: Failure: CheckRequiresResolveTest#test_every_check_require_relative_resolves [test/check_requires_resolve_test.rb:84]:"
-  registered: "2026-11-15"
 test/checks/deploy_drift_check_test.rb:
   reason: "standing red at registration; first failure: Failure: DeployDriftCheckTest#test_a_deployed_sha_this_checkout_does_not_hold_is_inconclusive_not_a_failure [test/checks/deploy_drift_check_test.rb:97]:"
   registered: "2026-11-15"
 test/checks/pwa_installable_check_test.rb:
   reason: "standing red at registration; first failure: Failure: PwaInstallableCheckTest#test_a_manifest_with_only_maskable_icons_at_a_required_size_is_named [test/checks/pwa_installable_check_test.rb:92]:"
-  registered: "2026-11-15"
-test/checks/rails_runtime_check_test.rb:
-  reason: "standing red at registration; first failure: Failure: RailsRuntimeCheckTest#test_a_run_without_the_runtime_flag_says_which_half_it_ran [test/checks/rails_runtime_check_test.rb:46]:"
   registered: "2026-11-15"
 test/coverage_policy_test.rb:
   reason: "standing red at registration; first failure: Failure: CoveragePolicyTest#test_full_coverage_runner_exists_and_collates_the_apps_inventory [test/coverage_policy_test.rb:66]:"
@@ -62,15 +47,6 @@ test/css_budget_rules_test.rb:
 test/css_coverage_lint_test.rb:
   reason: "standing red at registration; first failure: Failure: CssCoverageLintTest#test_baselines_are_not_stale [test/css_coverage_lint_test.rb:26]:"
   registered: "2026-11-15"
-test/deploy_checks_contract_test.rb:
-  reason: "standing red at registration; the runner captured no failure detail — read the file"
-  registered: "2026-11-15"
-test/deploy_checks_runtime_test.rb:
-  reason: "standing red at registration; the runner captured no failure detail — read the file"
-  registered: "2026-11-15"
-test/deploy_smoke_contract_test.rb:
-  reason: "standing red at registration; first failure: Failure: DeploySmokeContractTest#test_all_deployed_apps_have_rc_d_scripts_in_repo [test/deploy_smoke_contract_test.rb:114]:"
-  registered: "2026-11-15"
 test/device_awareness_test.rb:
   reason: "standing red at registration; first failure: Failure: DeviceAwarenessTest#test_importmap_pins_the_four_controllers [test/device_awareness_test.rb:19]:"
   registered: "2026-11-15"
@@ -87,9 +63,10 @@ test/file_length_ratchet_test.rb:
 test/importmap_integrity_contract_test.rb:
   reason: "standing red at registration; first failure: Failure: ImportmapIntegrityContractTest#test_the_shared_importmap_stays_the_single_pin_source_for_framework_modules [test/importmap_integrity_contract_test.rb:47]:"
   registered: "2026-11-15"
-test/interaction_campaign_contract_test.rb:
-  reason: "standing red at registration; first failure: Failure: InteractionCampaignContractTest#test_evidence_paths_are_repository_relative_and_exist [test/interaction_campaign_contract_test.rb:117]:"
-  registered: "2026-11-15"
+test/integrity_locale_test.rb:
+  reason: "the integrity chain runs OPENBSD/checks/verify_deploy_identity.rb, which verifies the operator deploy identity; a stripped sandbox holds none, so the chain exits on deploy_identity fail before the locale assertion can pass. Green where the operator identity exists."
+  registered: "2026-11-16"
+  envs: [sandbox]
 test/layout_check_enforcement_contract_test.rb:
   reason: "standing red at registration; first failure: Failure: LayoutCheckEnforcementContractTest#test_auto_repeat_tile_grids_can_shrink_below_their_preferred_tile_width [test/layout_check_enforcement_contract_test.rb:115]:"
   registered: "2026-11-15"
@@ -101,9 +78,6 @@ test/marketplace_bol_visual_contract_test.rb:
   registered: "2026-11-15"
 test/method_length_ratchet_test.rb:
   reason: "standing red at registration; first failure: Failure: MethodLengthRatchetTest#test_no_area_exceeds_its_ceiling [test/method_length_ratchet_test.rb:183]:"
-  registered: "2026-11-15"
-test/operator/ci_guard_test.rb:
-  reason: "standing red at registration; the runner captured no failure detail — read the file"
   registered: "2026-11-15"
 test/pwa_runtime_contract_test.rb:
   reason: "standing red at registration; first failure: Failure: PwaRuntimeContractTest#test_hotwire_activates_the_queue_once [test/pwa_runtime_contract_test.rb:22]:"
@@ -122,9 +96,6 @@ test/scale_lint_test.rb:
   registered: "2026-11-15"
 test/scroll_chrome_current_tab_test.rb:
   reason: "standing red at registration; first failure: Failure: ScrollChromeCurrentTabTest#test_a_focused_hidden_tab_bar_stays_in_the_accessibility_tree_and_reveals [test/scroll_chrome_current_tab_test.rb:51]:"
-  registered: "2026-11-15"
-test/studio_contract_test.rb:
-  reason: "standing red at registration; first failure: Error: StudioContractTest#test_photograph_contract_reads_structured_result:"
   registered: "2026-11-15"
 test/swipe_controller_commit_test.rb:
   reason: "standing red at registration; first failure: Failure: SwipeControllerCommitTest#test_a_refused_drag_keeps_the_card_and_queues_nothing [test/swipe_controller_commit_test.rb:54]:"

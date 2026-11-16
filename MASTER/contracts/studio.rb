@@ -28,7 +28,7 @@ module Contracts
     end
 
     def dilla_script = first_file("dilla/dilla.rb")
-    def photograph_script = first_file("photograph.rb")
+    def photograph_script = first_file("lora/photograph.rb")
     def postpro_script = first_file("postpro/postpro.rb")
     def replicate_script = first_file("replicate/client.rb")
 

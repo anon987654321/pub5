@@ -67,6 +67,11 @@ class CheckRequiresResolveTest < Minitest::Test
           end
           next if heredoc
           next if line.lstrip.start_with?("#")
+          # A require_relative named inside a string the file asserts about
+          # (e.g. a check holding another file's expected source in .include?)
+          # is not a claim this file's own directory must satisfy; the file
+          # that really makes the require is scanned in its own tree.
+          next if line =~ /include\?\(\s*['"][^'"]*require_relative\s+["']/
           next unless (match = line.match(/require_relative\s+["']([^"'#]+)["']/))
 
           yield(label, file, index + 1, match[1], dir)

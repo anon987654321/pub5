@@ -1379,7 +1379,7 @@
       "expected_cases": 20,
       "evidence_paths": [
         "MASTER/bin/smoke-web",
-        "TREE_CONTRACTS.md",
+        "MASTER/data/law/TREE_CONTRACTS.md",
         "MASTER/test/test_bin_scripts.rb"
       ],
       "actions": [
@@ -1477,7 +1477,7 @@
       "expected_cases": 20,
       "evidence_paths": [
         "MASTER/bin/smoke-web",
-        "TREE_CONTRACTS.md",
+        "MASTER/data/law/TREE_CONTRACTS.md",
         "MASTER/web/public/master_interaction_state.js"
       ],
       "actions": [

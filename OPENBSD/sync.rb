@@ -5,7 +5,7 @@
 
 require "fileutils"
 require_relative "checks/config_drift_check"
-require_relative "lib/secret_redaction"
+require_relative "mirror/lib/secret_redaction"
 
 # The files come from the drift check, so the return leg copies exactly what the
 # check compares plus what it skips as templated. A file the check reports drifted
