@@ -11,7 +11,11 @@ class Takeaway::OrdersController < Takeaway::BaseController
   before_action :set_restaurant, only: %i[new create]
 
   def index
-    @pagy, @orders = pagy(Current.user.takeaway_orders.recent.includes(:restaurant))
+    incoming = Takeaway::Order.where(restaurant_id: Current.user.takeaway_restaurants.select(:id))
+    mine = Takeaway::Order.where(user_id: Current.user.id)
+    scope = mine.or(incoming).includes(:user, restaurant: :user).recent
+    @pagy, @orders = pagy(scope)
+    @incoming_order_ids = @orders.filter_map { |order| order.id if order.restaurant.user_id == Current.user.id }.to_set
   end
 
   def show
