@@ -422,15 +422,19 @@ class TestRestructure < Minitest::Test
     assert_includes evidence, "Production references:"
   end
 
-  def test_retired_small_files_is_not_a_structural_restructure_candidate
-    definition = Master::Review::Scan::LawTree.definitions.find { |law| law.id.to_s == "SMALL_FILES" }
+  def test_retired_size_only_laws_are_not_structural_restructure_candidates
+    definitions = Master::Review::Scan::LawTree.definitions
+    %w[SMALL_FILES JS_MODULE_SIZE].each do |id|
+      definition = definitions.find { |law| law.id.to_s == id }
 
-    refute_nil definition
-    assert_equal :retired, definition.lifecycle
-    refute definition.enforceable?
+      refute_nil definition
+      assert_equal :retired, definition.lifecycle
+      refute definition.enforceable?
+    end
 
     laws = Master::Fix::RestructureSweep::Context.structural_laws(File.join(@repo, "MASTER"))
     refute_includes laws.map { |law| law.id.to_s }, "SMALL_FILES"
+    refute_includes laws.map { |law| law.id.to_s }, "JS_MODULE_SIZE"
   end
 
   def test_context_includes_resolved_edges_from_the_repository_reference_graph
