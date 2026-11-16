@@ -28,7 +28,11 @@ task :check do
   raise "RG-69 retains an inline style or script block" if rg69_html.match?(/<style\b|<script(?![^>]*\bsrc=)/i)
   raise "RG-69 references a missing local stylesheet" unless rg69_html.include?('href="rg69.css"')
   raise "RG-69 references a missing local application script" unless rg69_html.include?('src="rg69.js"')
-  raise "RG-69 Tone.js dependency is not version-pinned" unless rg69_html.include?("tone/14.8.49/Tone.min.js")
+  # The dependency is vendored (5da92e34), which is the version pin: the file
+  # must still declare 14.8.49 and the page must load it locally, so no CDN
+  # drift or silent vendor swap can slip through.
+  raise "RG-69 Tone.js dependency is not version-pinned" unless File.read(File.join(STUDIO_ROOT, "vendor", "tone", "Tone.min.js")).include?("14.8.49")
+  raise "RG-69 does not load the vendored Tone.js" unless rg69_html.include?('src="vendor/tone/Tone.min.js"')
   raise "RG-69 has no keyboard focus indicator" unless File.read(rg69_files.fetch(1)).include?(":focus-visible")
 
   selfies_files = %w[selfies.html selfies.css selfies.js].map { |name| File.join(STUDIO_ROOT, name) }

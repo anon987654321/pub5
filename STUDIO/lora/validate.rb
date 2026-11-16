@@ -74,7 +74,11 @@ module Studio
         env_path = %w[subject.env subject.env.example].map { |name| File.join(directory, name) }
                                                     .find { |path| File.file?(path) && !File.symlink?(path) }
         unless env_path
-          fail_check(report, "subject_descriptor", "No subject.env or subject.env.example file exists")
+          # A subject with no descriptor is not configured yet — the public
+          # checkout ships none, by design: consent and subject.env are private,
+          # owner-only files. FAIL is for an artifact that exists and violates
+          # its schema; absence is a blocker, the same class as missing consent.
+          block(report, "subject_descriptor", "No subject.env or subject.env.example file exists")
           return report
         end
 

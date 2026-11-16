@@ -199,7 +199,7 @@ class TestIdeaPictureOutput < Minitest::Test
         TRIGGER=ragnhild
       ENV
       picture = Studio::Visual::IdeaPicture.new(
-        subject: "ragnhild", directory: dir,
+        subject: "ragnhild", directory: dir, subjects_root: dir,
         model_manifest: File.join(subject, "weights", "ragnhild", "replicate_training.json")
       )
       assert_equal "anon987654321/ragnhild-flux", picture.send(:still_model)

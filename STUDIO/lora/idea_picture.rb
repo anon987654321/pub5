@@ -43,14 +43,17 @@ module Studio
         subject: ENV.fetch("STUDIO_PHOTOGRAPH_SUBJECT", "ragnhild"),
         model_manifest: nil,
         engine: nil,
-        film_engine: nil
+        film_engine: nil,
+        subjects_root: SUBJECTS
       )
         @client = client
         @directory = directory
         @subject = subject.to_s
         raise ArgumentError, "subject must be a simple directory name" unless @subject.match?(/\A[a-zA-Z0-9_-]+\z/)
 
-        @subject_directory = File.join(SUBJECTS, @subject)
+        # Subject data defaults to the checkout's own private lora tree; tests
+        # inject a subjects_root rather than writing into that tree.
+        @subject_directory = File.join(subjects_root, @subject)
         @model_manifest = model_manifest || default_model_manifest
         @engine = engine&.to_s
         @film_engine = film_engine&.to_s

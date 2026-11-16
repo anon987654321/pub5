@@ -47,6 +47,26 @@ class TestSelfiesGallery < Minitest::Test
     File.write(evidence_path, "Synthetic publication authority for tests.\\n", mode: "w", perm: 0o600)
     File.chmod(0o600, evidence_path)
 
+    # The gate discovers each subject's required source sets itself (merethe
+    # always carries me2_archive); the synthetic grant covers whatever it asks
+    # for with one evidence file per source, exactly the shape it validates.
+    scopes = Studio::Lora::Consent::SOURCE_PERMISSIONS.fetch(:publication)
+    sources = Array(Studio::Lora::Consent.required_source_sets(
+      subject:, subject_directory: directory, action: :publication
+    ))
+    source_evidence = sources.each_with_object({}) do |source, acc|
+      stored_at = "evidence/#{source}-permission.txt"
+      File.write(File.join(evidence, "#{source}-permission.txt"),
+                 "Synthetic source authority for tests.\\n", mode: "w", perm: 0o600)
+      File.chmod(0o600, File.join(evidence, "#{source}-permission.txt"))
+      acc[source] = {
+        "granted_by" => "synthetic test authority",
+        "granted_on" => "2026-11-16",
+        "covers" => scopes,
+        "stored_at" => stored_at,
+      }
+    end
+
     record = {
       "schema" => 1,
       "subject" => subject,
@@ -61,7 +81,7 @@ class TestSelfiesGallery < Minitest::Test
       },
       "source_rights" => {
         "model_publication" => true,
-        "evidence" => {},
+        "evidence" => source_evidence,
       },
     }
     consent_path = File.join(directory, "consent.yml")
