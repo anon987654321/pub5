@@ -85,11 +85,9 @@ bundle, hooks, worktrees, Git state, model lanes, stray processes and `.master/`
 writability; add `--remote` for vm23. `OK` means fine, `warn` means it works
 but is about to cost you, and `FAIL` stops work and carries the fix on the same line.
 
-There are two intentionally different doctors. `MASTER/bin/doctor` is the
-MASTER runtime doctor (boot, provider/model, voice and face capability);
-`MASTER/bin/operator doctor [--remote]` checks checkout/host readiness
-(disk, Ruby, bundle, hooks, Git, worktrees and optionally vm23). The interactive
-`/doctor` runs the runtime report with security and capability context. Neither
+`MASTER/bin/doctor` is the runtime report (boot, provider/model, voice
+and face capability); the interactive `/doctor` adds security and capability
+context. This is separate from the checkout/host doctor above. Neither doctor
 is the repair command.
 
 For ordinary work, start `bin/master` and enter `/fix [TREE]`. That command
