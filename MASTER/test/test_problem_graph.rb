@@ -26,7 +26,7 @@ class TestProblemGraph < Minitest::Test
 
   def test_correlated_signals_become_one_multi_signal_problem
     rows = [
-      finding("MASTER/lib/a.rb", "SMALL_FILES", "tiny owner", ["MASTER/lib/b.rb"]),
+      finding("MASTER/lib/a.rb", "NO_GOD_CLASS", "tiny owner", ["MASTER/lib/b.rb"]),
       finding("MASTER/lib/b.rb", "FILE_SPRAWL", "scattered files", ["MASTER/lib/a.rb"]),
     ]
 
@@ -42,7 +42,7 @@ class TestProblemGraph < Minitest::Test
 
   def test_unrelated_findings_stay_separate
     rows = [
-      finding("MASTER/lib/a.rb", "SMALL_FILES"),
+      finding("MASTER/lib/a.rb", "NO_GOD_CLASS"),
       finding("MASTER/lib/z.rb", "FILE_SPRAWL"),
     ]
 
@@ -66,7 +66,7 @@ class TestProblemGraph < Minitest::Test
   end
 
   def test_problem_is_bounded
-    rows = 25.times.map { |index| finding("MASTER/lib/#{index}.rb", "SMALL_FILES") }
+    rows = 25.times.map { |index| finding("MASTER/lib/#{index}.rb", "NO_GOD_CLASS") }
     problems = @graph.call(rows)
 
     assert_equal 25, problems.sum(&:size)
@@ -74,10 +74,14 @@ class TestProblemGraph < Minitest::Test
     assert problems.all? { |problem| problem.files.size <= Master::Fix::ProblemGraph::MAX_FILES }
   end
 
+  def test_retired_small_files_has_no_structural_operation
+    refute Master::Fix::ProblemGraph::LAW_OPERATIONS.key?("SMALL_FILES")
+  end
+
   def test_problem_identity_is_stable_for_same_observations
     rows = [
-      finding("MASTER/lib/a.rb", "SMALL_FILES", "tiny"),
-      finding("MASTER/lib/b.rb", "SMALL_FILES", "tiny"),
+      finding("MASTER/lib/a.rb", "NO_GOD_CLASS", "tiny"),
+      finding("MASTER/lib/b.rb", "NO_GOD_CLASS", "tiny"),
     ]
 
     assert_equal @graph.call(rows).first.id, @graph.call(rows).first.id
