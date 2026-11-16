@@ -98,7 +98,7 @@ module Master
 
       def validate_cli_lane(name, row, errors)
         label = "models.yml cli_lanes.#{name}"
-        strict_fields(row, %w[binary signed_in ask model_flag models login kind model_path_env], label, errors)
+        strict_fields(row, %w[binary signed_in ask model_flag models login kind model_path_env slots], label, errors)
         return unless row.is_a?(Hash)
 
         %w[binary login].each do |field|
@@ -126,6 +126,10 @@ module Master
         if row.key?("model_path_env")
           errors << "#{label}.model_path_env must be non-empty text" unless
             row["model_path_env"].is_a?(String) && !row["model_path_env"].strip.empty?
+        end
+        if row.key?("slots")
+          errors << "#{label}.slots must be a positive integer" unless
+            row["slots"].is_a?(Integer) && row["slots"].positive?
         end
       end
 
