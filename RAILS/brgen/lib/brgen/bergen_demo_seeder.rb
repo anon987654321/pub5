@@ -248,7 +248,15 @@ module Brgen
       return unless defined?(Place) && Place.table_exists?
 
       PLACES.each do |row|
-        next if Place.exists?(city: @city, slug: row[:slug])
+        existing = Place.find_by(city: @city, slug: row[:slug])
+        if existing
+          # Repair the one known placeholder typo from the old demo catalogue,
+          # but leave any later operator correction untouched.
+          if row[:slug] == "vilvite" && existing.address == "Thormøhlens check 51"
+            existing.update!(address: row[:address])
+          end
+          next
+        end
 
         place = Place.create!(
           city: @city,
