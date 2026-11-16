@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "fileutils"
+require "time"
 require_relative "../io/exec"
 require_relative "../trace/dmesg"
 
@@ -11,14 +13,16 @@ module Operator
       def initialize = super(false)
     end
 
-    attr_reader :results
+    attr_reader :results, :log_path
 
-    def initialize(prefix:, root:, timeout:, quiet: false)
+    def initialize(prefix:, root:, timeout:, quiet: false, log_path: nil)
       @prefix = prefix
       @root = root
       @timeout = timeout
       @quiet = quiet
       @results = []
+      @log_path = log_path && File.expand_path(log_path, @root)
+      prepare_run_log if @log_path
     end
 
     # The timeout is a hang guard, not a performance budget — a hung step is
@@ -42,12 +46,52 @@ module Operator
       elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
       ok = status.success?
       @results << Result.new(name:, success: ok, output: out)
+      record_run_step(name, ok, elapsed, out)
       report(unit, name, ok, elapsed)
       Master::Trace::Dmesg::Report.print(unit, out, parent: "#{@prefix}0") if !out.empty? && (!ok || ENV["CHECK_VERBOSE"] == "1")
       ok
     end
 
     private
+
+    # One private, stable artifact for the whole invocation. Per-step logs remain
+    # beside it for live StepWatch; this file makes a failed run easy to attach.
+    def prepare_run_log
+      directory = File.dirname(@log_path)
+      raise IOError, "check log directory is a symlink" if File.symlink?(directory)
+
+      FileUtils.mkdir_p(directory, mode: 0o700)
+      File.chmod(0o700, directory)
+      raise IOError, "check log is a symlink" if File.symlink?(@log_path)
+
+      File.open(@log_path, File::WRONLY | File::CREAT | File::TRUNC, 0o600) do |file|
+        File.chmod(0o600, @log_path)
+        file.write("MASTER check log\nstarted_at: #{Time.now.utc.iso8601}\nroot: #{@root}\nprefix: #{@prefix}\n\n")
+        file.flush
+        file.fsync
+      end
+    rescue StandardError => e
+      @log_error = "#{e.class}: #{e.message}"
+      Master::Trace::Dmesg.status("checklog0", "cannot create combined log, #{@log_error}") unless @quiet
+    end
+
+    def record_run_step(name, ok, elapsed, output)
+      return unless @log_path
+      raise IOError, "check log is a symlink" if File.symlink?(@log_path)
+
+      File.open(@log_path, File::WRONLY | File::APPEND | File::CREAT, 0o600) do |file|
+        File.chmod(0o600, @log_path)
+        file.write("=== #{name} | #{ok ? "PASS" : "FAIL"} | #{elapsed.round(2)}s ===\n")
+        file.write(output.to_s)
+        file.write("\n") unless output.to_s.empty? || output.to_s.end_with?("\n")
+        file.write("\n")
+        file.flush
+        file.fsync
+      end
+    rescue StandardError => e
+      @log_error ||= "#{e.class}: #{e.message}"
+      Master::Trace::Dmesg.status("checklog0", "combined log incomplete, #{@log_error}") unless @quiet
+    end
 
     def report(unit, name, ok, elapsed)
       return if @quiet
