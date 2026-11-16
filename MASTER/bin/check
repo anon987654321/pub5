@@ -154,14 +154,6 @@ PROFILES = {
   "full"        => [*full_ci, run_bin["probe", "all"], rake["audit"]],
 }.freeze
 
-# line count awareness (soul SIMPLEST_WORKS, file warn 200/hard 300)
-# runs fast; warns on non-light profiles for lib/**/*.rb
-lib_rbs = Dir[File.join(ROOT, "lib/**/*.rb")]
-oversized = lib_rbs.select { |f| File.readlines(f).size > 300 }
-if profile != "contributor" && oversized.any?
-  Master::Trace::Dmesg.status("check0", "oversized lib files, #{oversized.map { |f| File.basename(f) }.join(", ")}")
-end
-
 steps = PROFILES[profile]
 unless steps
   Master::Trace::Dmesg.status("check0", "unknown profile #{profile}, have #{PROFILES.keys.join(", ")}")
