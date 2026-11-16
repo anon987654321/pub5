@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_11_07_100000) do
+ActiveRecord::Schema[8.2].define(version: 2026_11_17_110000) do
   create_table "account_merges", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "guest_user_id", null: false
@@ -1739,6 +1739,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_100000) do
 
   create_table "takeaway_menu_items", force: :cascade do |t|
     t.text "allergens"
+    t.text "metadata"
     t.boolean "available", default: true, null: false
     t.datetime "created_at", null: false
     t.text "description"
@@ -1811,6 +1812,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_100000) do
 
   create_table "takeaway_restaurants", force: :cascade do |t|
     t.boolean "active", default: false, null: false
+    t.integer "marketplace_store_id"
     t.string "address"
     t.string "city"
     t.integer "city_id"
@@ -1834,6 +1836,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_100000) do
     t.boolean "verified", default: false, null: false
     t.index ["city_id", "slug"], name: "index_takeaway_restaurants_on_city_and_slug", unique: true
     t.index ["city_id"], name: "index_takeaway_restaurants_on_city_id"
+    t.index ["marketplace_store_id"], name: "index_takeaway_restaurants_on_marketplace_store_id", unique: true
     t.index ["latitude", "longitude"], name: "index_takeaway_restaurants_on_latitude_and_longitude"
     t.index ["place_id"], name: "index_takeaway_restaurants_on_place_id"
     t.index ["user_id"], name: "index_takeaway_restaurants_on_user_id"
@@ -2301,6 +2304,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_100000) do
   add_foreign_key "takeaway_orders", "takeaway_delivery_drivers", column: "delivery_driver_id"
   add_foreign_key "takeaway_orders", "takeaway_restaurants", column: "restaurant_id"
   add_foreign_key "takeaway_orders", "users"
+  add_foreign_key "takeaway_restaurants", "marketplace_stores", column: "marketplace_store_id"
   add_foreign_key "takeaway_restaurants", "cities"
   add_foreign_key "takeaway_restaurants", "places"
   add_foreign_key "takeaway_restaurants", "users"
