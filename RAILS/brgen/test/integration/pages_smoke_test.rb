@@ -15,6 +15,20 @@ class PagesSmokeTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "footer.site-legal a[href=?]", "/privacy"
   end
+
+  test "the Brgen footer identifies PubHealthcare and its Bergen address in both locales" do
+    { "brgen.no" => :nb, "lsangeles.com" => :en }.each do |host, locale|
+      host! host
+      get "/"
+
+      assert_response :success
+      assert_select "footer.site-legal .site-footer-company" do
+        assert_select "p.site-footer-head", "PubHealthcare"
+        assert_select "p", I18n.t("legal.company_owner", locale:)
+        assert_select "address", I18n.t("legal.company_address", locale:)
+      end
+    end
+  end
   # /offline is what the service worker serves with no connection. It answered
   # 500 in all three apps, because `render partial: "shared/offline_page",
   # layout: "application"` asks for a partial layout none of them has. The
