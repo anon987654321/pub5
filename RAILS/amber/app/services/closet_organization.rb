@@ -79,7 +79,7 @@ class ClosetOrganization
     {
       tips: tips.map(&:to_h),
       by_register: grouped.transform_values { |group| group.map(&:to_h) },
-      source: "rules"
+      source: "rules",
     }
   end
 
@@ -91,7 +91,7 @@ class ClosetOrganization
       tip(:repair, :care, count_of(:repair)),
       tip(:tailor, :care, count_of(:tailor)),
       tip(:condition, :care, WardrobeItem.where(user: user).needs_attention.count),
-      *material_care_tips
+      *material_care_tips,
     ].compact
   end
 
@@ -101,7 +101,7 @@ class ClosetOrganization
       tip(:fold, :storage, material_count(FOLD_MATERIALS)),
       tip(:hang, :storage, material_count(HANG_MATERIALS)),
       breathe_tip,
-      tip(:archived_stale, :storage, count_of(:seasonal_archive))
+      tip(:archived_stale, :storage, count_of(:seasonal_archive)),
     ].compact
   end
 
@@ -110,7 +110,7 @@ class ClosetOrganization
       tip(:prime_reach, :zoning, active.count { |item| item.times_worn.to_i >= PRIME_REACH_WEARS }),
       tip(:deep_storage, :zoning, active.count { |item| item.times_worn.to_i.zero? && item.spark_joy? }),
       category_zone_tip,
-      color_run_tip
+      color_run_tip,
     ].compact
   end
 
@@ -119,7 +119,7 @@ class ClosetOrganization
       density_tip,
       duplicate_tip,
       one_in_one_out_tip,
-      negative_space_tip
+      negative_space_tip,
     ].compact
   end
 

@@ -224,7 +224,7 @@ class StyleAssistant
     [
       (:weatherproof if zone == :outer && layer?),
       (:light_fabric if warm? && item.material.to_s.match?(LIGHT_MATERIALS)),
-      *ranker.explain(item)
+      *ranker.explain(item),
     ].compact.first(3)
   end
 
@@ -234,7 +234,7 @@ class StyleAssistant
     [
       (:layering if layer?),
       (:no_outerwear if warm?),
-      (:resting if rested_anything?)
+      (:resting if rested_anything?),
     ].compact
   end
 

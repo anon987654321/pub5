@@ -200,7 +200,10 @@ module Deploy
 
       @result.checked!
       url = "http://127.0.0.1:#{app.port}#{surface[:path]}"
-      res = CrawlSupport.fetch(url, host: surface[:host])
+      # fetch_following, not fetch: an auth gate's 302 has a zero-byte body,
+      # and measuring it measured nothing (the dating profile_new failures of
+      # 2026-11-16 were the landing page, which carries every needle).
+      res = CrawlSupport.fetch_following(url, host: surface[:host])
       code = res.code.to_i
       unless code.between?(200, 399)
         @result.fail("first_screen: #{label} HTTP #{code}")

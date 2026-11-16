@@ -16,7 +16,7 @@ class DuplicateDetector
         count: items.size,
         keeper: best_keeper(items),
         candidates: release_candidates(items),
-        reason: reason_for(items)
+        reason: reason_for(items),
       }
     end.sort_by { |group| -group[:count] }
   end

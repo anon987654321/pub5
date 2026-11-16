@@ -60,12 +60,42 @@ screenshot count or previous revision.
   and current migrations; fix confirmed defects rather than suppressing
   findings or raising ceilings.
   2026-11-16, sandbox: `run_all.rb` runs green on the checkout's vendored
-  Ruby 3.3.6 at main@dbb65cb9+ — 214 files, every former red fixed at the
-  source (see the ledger purge in the same commits) except
-  `integrity_locale_test.rb`, ledgered sandbox-scoped (operator identity).
-  The suites' own runner crashed mid-run before that session and is fixed
-  (`require "time"`). Still NOT_RUN on this revision: per-app `bin/ci` and
-  `MASTER/checks/runner.rb --all`.
+  Ruby 3.3.6 — 214 files, every former red fixed at the source (see the
+  ledger purge in the same commits) except `integrity_locale_test.rb`,
+  ledgered sandbox-scoped (operator identity). The ledger holds exactly the
+  accepted debt, verified by `MASTER/bin/ledger-reconcile` (exit 0).
+  Same day, `MASTER/checks/runner.rb --all` on this revision with the fleet
+  live and Chrome on PATH: 18 pass, 3 fail, 3 inconclusive. The three
+  inconclusive are the sanctioned third states (deploy stamps on the deploy
+  host, operator-approval visual contract, web-vitals cost). Of the three
+  fails, one was the check's own blind spot and is fixed:
+  FirstScreenCheck stopped at a 302 and measured a zero-byte body
+  (brgen/vertical_dating_profile_new); CrawlSupport#fetch_following now
+  follows same-host redirects, and the landing page carries every needle.
+  The other two fails are named open work, see below.
+  Per-app `bin/ci`: amber runs **17 of 17 steps, exit 0** (2026-11-16,
+  sandbox) after this session's fixes: rubocop TargetRubyVersion 3.3 for the
+  RAILS family (the 2.7 default parse reported a syntax error on 3.1
+  shorthand kwargs and 300+ cascading offenses); puma 8.0.2 -> 8.1.1 across
+  brgen amber bsdports mrdamascy for the four puma advisories (floor 8.0.3),
+  which turns bundler_audit green; hjerterom empty states via
+  shared/empty_state with empty.* keys in en and nb (empty_state_lint,
+  adhoc_empty_lint and chrome_i18n_lint all back to baseline 0); and the
+  system_test env, which needed a chromedriver matched to the headless shell
+  plus a PATH entry literally named `chrome` for chromedriver to find the
+  browser — both now installed and symlinked by sandbox-bootstrap.
+  Open work named by the runner, one CDP session each (2026-11-16):
+  - brgen/brgen_vote_up_down_toggles (14 steps: /posts/new -> /posts ->
+    $post_path/vote)
+  - brgen/brgen_search_then_open_result (5 steps: fails on the empty-result
+    arm /search?q=zzqxv-ingenting-slikt)
+  - brgen/brgen_marketplace_list_then_buy (6 steps: /listings/new -> /cart ->
+    /listings/$other/orders)
+  - brgen/brgen_dating_like_leaves_the_deck (3 steps: /next -> /likes)
+  - amber/amber_post_vote_like_comment (13 steps: vote/like/comment chain)
+  Also: amber bin/ci system_test needs the caching caveat (StimulusReflex)
+  and a chromedriver-matched browser; the matching chromedriver is now part
+  of sandbox-bootstrap.
 - [ ] **RAILS focused gaps.** Run billing, API-key/API-lint, dating identity,
   Radio manifest/TrackImport, share and job-concurrency, Amber account-merge,
   Marketplace filter/card/mutation, Takeaway model/migration, empty-state,
@@ -254,7 +284,14 @@ the first outfit card. The layout ships the home page deliberately without
 nav rails ("the logo, the four looks and the footer"); the row is the fixed
 tab bar painting at its viewport position inside the stitched full-page shot.
 Before treating any fixed-chrome position in a full-page capture as a defect,
-reproduce it in a viewport-sized capture of the same surface.
+reproduce it in a viewport-sized capture of the same surface. 2026-11-16, later
+the same day: the rule is now a tool, not a habit. CdpSession#screenshot takes
+pin_fixed:, which docks position:fixed chrome to the document for the stitched
+shot and restores the inline styles before returning; the sweep camera opts in
+on both full-page paths, dialog captures keep their overlays. Evidence pair
+committed beside the review set (amber_tabbar_capture_artifact.png vs
+amber_tabbar_capture_pinned.png): the mid-flow tab bar leaves the content flow
+and docks at the document's end.
 
 
 These are targeted findings from the committed RAILS desktop/mobile and

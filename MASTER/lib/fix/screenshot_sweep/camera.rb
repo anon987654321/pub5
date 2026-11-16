@@ -75,7 +75,11 @@ module Master
 
         def shoot(page_dir, width)
           file = File.join(page_dir, "w#{width}.png")
-          @cdp.screenshot(file, capture_beyond_viewport: true)
+          # pin_fixed docks position:fixed chrome to the document for the
+          # stitched shot; the artifact it fixes is on TODO's review-set note
+          # (amber's tab bar mid-flow, 2026-11-16). Dialog captures below do
+          # not pin: their overlays are fixed on purpose.
+          @cdp.screenshot(file, capture_beyond_viewport: true, pin_fixed: true)
         rescue CdpSession::Error => e
           raise unless e.message.include?("too large")
 
@@ -85,7 +89,7 @@ module Master
         def shoot_top(page_dir, width)
           file = File.join(page_dir, "w#{width}_top#{MAX_CAPTURE_HEIGHT}px.png")
           clip = { x: 0, y: 0, width:, height: MAX_CAPTURE_HEIGHT }
-          @cdp.screenshot(file, capture_beyond_viewport: true, clip:)
+          @cdp.screenshot(file, capture_beyond_viewport: true, clip:, pin_fixed: true)
         end
 
         # CompositionProbe clicks each control that changes state and records

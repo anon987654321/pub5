@@ -181,7 +181,7 @@ class WardrobeAi
       "mood_effect" => item.mood_effect.presence || "neutral",
       "life_phase" => item.life_phase.presence || "current",
       "reason" => "Heuristic default (OpenRouter not configured).",
-      "source" => "heuristic"
+      "source" => "heuristic",
     }
   end
 
@@ -229,7 +229,7 @@ class WardrobeAi
         { "name" => "Day #{index + 1}", "items" => slice.map(&:title), "item_ids" => slice.map(&:id) }
       end,
       "tips" => "Rule-based pack from active wardrobe (#{duration} days, #{climate}).",
-      "source" => "heuristic"
+      "source" => "heuristic",
     }
   end
 

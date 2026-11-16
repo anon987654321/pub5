@@ -58,3 +58,17 @@ nb:
   search:
     food_listings: Søk i matlistinger…
     resources: Søk i ressurser…
+  empty:
+    no_beneficiaries_yet: "Ingen minneårer ennå"
+    no_beneficiaries_body: "Folk du velger å huske havner her. Legg til den første for å starte listen."
+    no_matches_right_now: "Ingen treff akkurat nå"
+    no_matches_body: "Ingenting i inventaret passer denne minneåren i dag. Sjekk igjen etter neste lageroppdatering."
+    no_requests_yet: "Ingen henteforespørsler ennå"
+    no_requests_body: "Når noen reserverer denne oppføringen, vises forespørselen her."
+    no_community_posts_yet: "Ingen innlegg i fellesskapet ennå"
+    no_community_body: "Innlegg denne personen deler med fellesskapet vises her."
+    no_food_listings_yet: "Ingen mattilbud ennå"
+    no_food_body: "Mattilbud denne personen deler med naboene vises her."
+    community_new_post: "Nytt innlegg"
+    community_quiet: "Ingenting er delt ennå"
+    community_quiet_body: "Fellesskapsstrømmen er stille. Vær den første til å publisere noe."

@@ -196,7 +196,7 @@ module Amber
       earrings: ->(fill) {
         %(<circle cx="128" cy="270" r="44" fill="none" stroke="#{fill}" stroke-width="16"/>) +
           %(<circle cx="272" cy="270" r="44" fill="none" stroke="#{fill}" stroke-width="16"/>)
-      }
+      },
     }.freeze
   end
 end

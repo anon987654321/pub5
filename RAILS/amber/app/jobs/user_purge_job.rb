@@ -190,7 +190,7 @@ class UserPurgeJob < ApplicationJob
       remember_token_expires_at: nil,
       otp_secret: nil,
       two_factor_enabled: false,
-      updated_at: Time.current
+      updated_at: Time.current,
     }
     attrs.select! { |column, _value| user.has_attribute?(column) }
     user.update_columns(attrs)

@@ -45,7 +45,7 @@ class LastChanceOutfit
     {
       item_ids: items.map(&:id),
       titles: items.map(&:title),
-      reason: "Last-chance outfit for #{@item.title}: test whether it still has a role in your real wardrobe."
+      reason: "Last-chance outfit for #{@item.title}: test whether it still has a role in your real wardrobe.",
     }
   end
 end

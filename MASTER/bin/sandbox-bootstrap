@@ -117,12 +117,47 @@ else
   fetch_deb libe/libexif      'libexif12_[^"]*amd64\.deb'
 fi
 
-# 5. Chrome for Testing (user-scoped, writes CHROME_PATH to ~/.config/master/env)
+# 5. Chrome for Testing headless shell (user-scoped; chrome_install writes
+#    CHROME_PATH to ~/.config/master/env) and the matching chromedriver,
+#    which the apps' system tests need on PATH (Selenium::SessionNotCreated,
+#    amber bin/ci system_test, 2026-11-16). Version-matched to the shell.
 if [ -n "${CHROME_PATH:-}" ] && [ -x "${CHROME_PATH:-}" ]; then
   say "chrome ok: $CHROME_PATH"
 else
   say "installing Chrome for Testing headless shell"
   run env PATH="$GEM_HOME_BIN:$PATH" "$RUBY" "$MASTER/tools/chrome_install.rb"
+fi
+# chromedriver searches PATH for a binary literally named `chrome`; the
+# headless shell's own name is not one of them ("cannot find Chrome binary",
+# amber bin/ci system_test, 2026-11-16), so expose it under the name it wants.
+CHROME_BIN_DIR=/home/z/.cache/pub5/chrome-bin
+if [ "$DRY" = 1 ]; then
+  say "would expose the shell as chrome-bin/chrome for chromedriver"
+elif [ -x "$CHROME_BIN_DIR/chrome" ] || [ -n "${CHROME_PATH:-}" ]; then
+  mkdir -p "$CHROME_BIN_DIR"
+  ln -sf "${CHROME_PATH:-$(find /home/z/.cache/pub5 -name chrome-headless-shell -type f 2>/dev/null | sort | tail -1)}" "$CHROME_BIN_DIR/chrome"
+  say "chrome binary exposed: $CHROME_BIN_DIR/chrome"
+fi
+CHROMEDRIVER=/home/z/.cache/pub5/chromedriver-linux64/chromedriver
+if [ -x "$CHROMEDRIVER" ]; then
+  say "chromedriver ok: $CHROMEDRIVER"
+else
+  say "fetching the chromedriver matching the installed shell"
+  if [ "$DRY" = 1 ]; then
+    say "would download chromedriver-linux64 for the shell's version"
+  else
+    version=$(basename "$(dirname "$(find /home/z/.cache/pub5 -name chrome-headless-shell -type f 2>/dev/null | sort | tail -1)")" 2>/dev/null)
+    version=$(echo "$version" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')
+    if [ -n "$version" ]; then
+      mkdir -p /home/z/.cache/pub5
+      curl -s -o /home/z/.cache/pub5/chromedriver.zip \
+        "https://storage.googleapis.com/chrome-for-testing-public/$version/linux64/chromedriver-linux64.zip" &&
+      unzip -o -q /home/z/.cache/pub5/chromedriver.zip -d /home/z/.cache/pub5/ &&
+      say "chromedriver installed for $version"
+    else
+      say "no chrome version found yet; chromedriver skipped until the shell exists"
+    fi
+  fi
 fi
 
 # 6. the two gems the bare-ruby contract suite needs outside any bundle

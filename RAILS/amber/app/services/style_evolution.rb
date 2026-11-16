@@ -30,7 +30,7 @@ class StyleEvolution
         phase:,
         label: phase_label(phase),
         count: grouped.size,
-        items: grouped.map { |item| item_snapshot(item) }
+        items: grouped.map { |item| item_snapshot(item) },
       }
     end
   end
@@ -49,7 +49,7 @@ class StyleEvolution
           # Outfit has a name, not a title: this raised NoMethodError, and the
           # timeline 500ed, as soon as one wear was logged with an outfit.
           outfit_title: log.outfit&.name,
-          context: log.context
+          context: log.context,
         }
       end
   end
@@ -61,7 +61,7 @@ class StyleEvolution
       total_items: items.size,
       phased_items: items.count { |item| item.life_phase.present? },
       dominant_phase: dominant,
-      unphased_items: items.count { |item| item.life_phase.blank? }
+      unphased_items: items.count { |item| item.life_phase.blank? },
     }
   end
 
@@ -73,7 +73,7 @@ class StyleEvolution
       mood_effect: item.mood_effect,
       times_worn: item.times_worn.to_i,
       purchase_date: item.purchase_date,
-      created_at: item.created_at&.to_date
+      created_at: item.created_at&.to_date,
     }
   end
 
@@ -81,7 +81,7 @@ class StyleEvolution
     {
       "current" => "Current self",
       "past-self" => "Past self",
-      "aspirational" => "Aspirational"
+      "aspirational" => "Aspirational",
     }.fetch(phase, phase.humanize)
   end
 end

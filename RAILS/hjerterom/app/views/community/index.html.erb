@@ -4,6 +4,12 @@
   <% if authenticated? %><%= link_to "New post", new_community_post_path %><% end %>
 </header>
 <section id="community_posts">
+  <% if @posts.blank? %>
+    <%= render "shared/empty_state",
+               title: t("empty.community_quiet"),
+               body: t("empty.community_quiet_body"),
+               action: authenticated? ? { label: t("empty.community_new_post"), path: new_community_post_path } : nil %>
+  <% end %>
   <% @posts.each do |post| %>
     <article>
       <%= link_to post.title, community_show_path(post) %>

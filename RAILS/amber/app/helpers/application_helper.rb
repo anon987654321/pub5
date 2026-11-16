@@ -120,7 +120,7 @@ end
     "lines" => [ "minimal clean lines", "bold patterns and colors" ],
     "timeless" => [ "classic timeless pieces", "trendy current styles" ],
     "colors" => [ "neutrals and basics", "vibrant pops of color" ],
-    "fit" => [ "tailored structured fits", "loose comfortable layers" ]
+    "fit" => [ "tailored structured fits", "loose comfortable layers" ],
   }.freeze
 
   # [label, value] pairs for a style-profile question. The value is the
@@ -208,7 +208,7 @@ end
     [ /rust|terracotta/, "#c96b4b", "#111111" ],
     [ /camel|tan|gold/, "#d4a574", "#111111" ],
     [ /nude/, "#e8d2c5", "#111111" ],
-    [ /tortoise/, "#8b5e3c", "#ffffff" ]
+    [ /tortoise/, "#8b5e3c", "#ffffff" ],
   ].freeze
 
   WARDROBE_SWATCH_DEFAULT = [ "#e8eaed", "#111111" ].freeze

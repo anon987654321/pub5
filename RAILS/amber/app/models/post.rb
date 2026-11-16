@@ -79,7 +79,7 @@ class Post < ApplicationRecord
       live_count_update(
         %([data-post-comment-count="#{key}"]),
         comments_count.positive? ? comments_count.to_s : ""
-      )
+      ),
     ].join
 
     streams.each do |stream|

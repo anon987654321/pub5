@@ -24,6 +24,20 @@ if [ -d "$VIPS_LIB" ]; then
   esac
 fi
 
+# Selenium (bin/ci system tests) finds chromedriver on PATH, and
+# chromedriver finds the browser as a PATH entry named `chrome`.
+DRIVER_DIR=/home/z/.cache/pub5/chromedriver-linux64
+CHROME_BIN_DIR=/home/z/.cache/pub5/chrome-bin
+for dir in "$DRIVER_DIR" "$CHROME_BIN_DIR"; do
+  if [ -x "$dir/chromedriver" ] || [ -x "$dir/chrome" ]; then
+    case ":$PATH:" in
+      *":$dir:"*) ;;
+      *) PATH="$dir:$PATH" ;;
+    esac
+  fi
+done
+unset DRIVER_DIR CHROME_BIN_DIR
+
 if [ -x "$MASTER/.tools/ruby/bin/ruby" ]; then
   case ":$PATH:" in
     *":$MASTER/.tools/ruby/bin:"*) ;;

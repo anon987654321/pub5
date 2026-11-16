@@ -19,7 +19,8 @@
       <% end %>
     </ul>
   <% else %>
-    <p class="dim">No community posts yet.</p>
+    <%# empty_state: no-action-ok %>
+  <%= render "shared/empty_state", title: t("empty.no_community_posts_yet"), body: t("empty.no_community_body") %>
   <% end %>
 </section>
 
@@ -35,6 +36,7 @@
       <% end %>
     </ul>
   <% else %>
-    <p class="dim">No food listings yet.</p>
+    <%# empty_state: no-action-ok %>
+  <%= render "shared/empty_state", title: t("empty.no_food_listings_yet"), body: t("empty.no_food_body") %>
   <% end %>
 </section>

@@ -58,3 +58,17 @@ en:
   search:
     food_listings: Search food listings…
     resources: Search resources…
+  empty:
+    no_beneficiaries_yet: "No beneficiaries yet"
+    no_beneficiaries_body: "People you choose to remember go here. Add the first one to start the list."
+    no_matches_right_now: "No matches right now"
+    no_matches_body: "Nothing in the inventory fits this beneficiary today. Check back after the next listing update."
+    no_requests_yet: "No pickup requests yet"
+    no_requests_body: "When someone claims this listing, their request appears here."
+    no_community_posts_yet: "No community posts yet"
+    no_community_body: "Posts this person shares with the community will appear here."
+    no_food_listings_yet: "No food listings yet"
+    no_food_body: "Listings this person shares with neighbours will appear here."
+    community_new_post: "New post"
+    community_quiet: "Nothing has been shared yet"
+    community_quiet_body: "The community feed is quiet. Be the first to post something."

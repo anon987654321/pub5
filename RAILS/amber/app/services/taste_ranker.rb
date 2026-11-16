@@ -94,7 +94,7 @@ class TasteRanker
       (t("recent") if days_since_worn(item)&.<(RECENT_WEAR_DAYS)),
       declared_reason(item),
       (t("aspirational") if item.life_phase == "aspirational"),
-      (t("past_self") if item.life_phase == "past-self")
+      (t("past_self") if item.life_phase == "past-self"),
     ].compact
   end
 

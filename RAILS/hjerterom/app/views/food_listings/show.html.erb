@@ -26,7 +26,8 @@
       <% if @requests&.any? %>
         <%= render partial: "food_listings/food_request", collection: @requests, as: :request, locals: { owner: true } %>
       <% else %>
-        <p class="dim">No requests yet.</p>
+        <%# empty_state: no-action-ok %>
+  <%= render "shared/empty_state", title: t("empty.no_requests_yet"), body: t("empty.no_requests_body") %>
       <% end %>
     </section>
     <%= link_to "Edit", edit_food_listing_path(@listing) %>

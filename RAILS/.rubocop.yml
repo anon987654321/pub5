@@ -1,6 +1,13 @@
 # Omakase Ruby styling for Rails (pub4 family)
 inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 
+# The fleet runs on the vendored Ruby 3.3 and its code uses 3.1 shorthand
+# kwargs (amber's ai_controller find_or_create_by!(item:) { ... }). Without a
+# target, rubocop parses with its 2.7 default, reports a syntax error on the
+# shorthand and 300+ cascading offenses with it (amber bin/ci 2026-11-16).
+AllCops:
+  TargetRubyVersion: 3.3
+
 # Large apps exceed omakase Metrics thresholds; check style without blocking deploy CI.
 Metrics:
   Enabled: false

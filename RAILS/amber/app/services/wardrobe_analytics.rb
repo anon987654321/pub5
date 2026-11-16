@@ -73,7 +73,7 @@ class WardrobeAnalytics
       (t("repair") if state_count("repair").positive?),
       (t("underused") if underused.positive?),
       (t("declutter_box", count: declutter_box) if declutter_box.positive?),
-      (t("overdue", count: overdue_challenges) if overdue_challenges.positive?)
+      (t("overdue", count: overdue_challenges) if overdue_challenges.positive?),
     ].compact
   end
 

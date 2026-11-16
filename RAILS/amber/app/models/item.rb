@@ -35,7 +35,7 @@ class Item < ApplicationRecord
   # list/show helpers hit preprocessed digests instead of inventing new sizes.
   PHOTO_VARIANTS = {
     thumb: { resize_to_limit: [ 240, 240 ] },
-    card: { resize_to_limit: [ 720, 960 ] }
+    card: { resize_to_limit: [ 720, 960 ] },
   }.freeze
 
   has_many_attached :photos do |attachable|

@@ -64,7 +64,7 @@ class GarmentTaxonomy
       item.brand,
       weather_fit(item),
       "formality:#{formality_score(item)}",
-      *item.occasions
+      *item.occasions,
     ].compact.map(&:to_s).reject(&:blank?).uniq
   end
 end

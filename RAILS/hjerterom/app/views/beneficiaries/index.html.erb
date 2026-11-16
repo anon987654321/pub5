@@ -5,6 +5,12 @@
 </header>
 
 <ul id="beneficiaries-list" class="beneficiary-list">
+  <% if @beneficiaries.blank? %>
+    <%# empty_state: no-action-ok %>
+    <%= render "shared/empty_state",
+               title: t("empty.no_beneficiaries_yet"),
+               body: t("empty.no_beneficiaries_body") %>
+  <% end %>
   <% @beneficiaries.each do |beneficiary| %>
     <%= render "beneficiaries/row", beneficiary: %>
   <% end %>

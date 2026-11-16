@@ -287,15 +287,46 @@ module Deploy
     # clip crops in Chrome, in CSS pixels, which is cheaper than encoding a full
     # frame and cropping it afterwards — and jpeg matters when the caller is
     # taking thousands of these rather than one.
-    def screenshot(path, format: "png", quality: nil, clip: nil, capture_beyond_viewport: false)
+    #
+    # pin_fixed serves the full-page shot. Chrome paints position:fixed
+    # elements once, at the scroll offset the capture stitches from, so a
+    # bottom tab bar shows up mid-document in a stitched page — the artifact
+    # the 2026-11-16 review set caught on amber's root. With pin_fixed, fixed
+    # elements become absolute for the capture, which docks them to the
+    # document they decorate, and the original inline styles come back before
+    # the call returns; dialog passes keep fixed overlays fixed.
+    def screenshot(path, format: "png", quality: nil, clip: nil, capture_beyond_viewport: false,
+                   pin_fixed: false)
       params = { format:, captureBeyondViewport: capture_beyond_viewport }
       params[:quality] = quality if quality && format == "jpeg"
 
       params[:clip] = clip.merge(scale: clip.fetch(:scale, 1)) if clip
+      pinned = pin_fixed ? evaluate(PIN_FIXED_JS) : nil
       res = send_cmd("Page.captureScreenshot", **params)
       File.binwrite(path, Base64.decode64(res.fetch("data")))
       path
+    ensure
+      # Not `if pinned`: zero fixed elements still leaves an empty registry to clear.
+      evaluate("window.__pub5_fixed_swap = undefined") unless pinned.nil?
     end
+
+    # Swaps every fixed element to absolute, remembering the inline cssText in
+    # a page-side registry; restore reads the same registry, so nothing but a
+    # count crosses the CDP boundary. Sticky is left alone: at scroll 0 it
+    # already paints at its document position.
+    PIN_FIXED_JS = <<~JS
+      (() => {
+        const touched = [];
+        for (const el of document.body.querySelectorAll('*')) {
+          if (getComputedStyle(el).position === 'fixed') {
+            touched.push([el, el.style.cssText]);
+            el.style.position = 'absolute';
+          }
+        }
+        window.__pub5_fixed_swap = touched;
+        return touched.length;
+      })()
+    JS
 
     # Force pseudo-classes on the first element a selector matches, the way the
     # DevTools element-state toggles do: :active cannot be reached by script, and

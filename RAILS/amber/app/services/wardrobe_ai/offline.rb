@@ -71,7 +71,7 @@ class WardrobeAi
         "harmonious" => colors.first(5),
         "clashing" => [],
         "suggestions" => [ "Enable OpenRouter for seasonal colour analysis.", "Add hex/color tags when uploading photos." ],
-        "source" => "heuristic"
+        "source" => "heuristic",
       }
     end
 
@@ -87,7 +87,7 @@ class WardrobeAi
       {
         "item_ids" => matched.map(&:id),
         "explanation" => "Local keyword match (#{matched.size} items). OpenRouter improves natural language.",
-        "source" => "heuristic"
+        "source" => "heuristic",
       }
     end
 
@@ -98,7 +98,7 @@ class WardrobeAi
       picks = [
         grouped["Tops"]&.first || grouped["Dresses"]&.first,
         grouped["Bottoms"]&.first,
-        grouped["Shoes"]&.first
+        grouped["Shoes"]&.first,
       ].compact
       return [] if picks.size < 2
 
@@ -107,7 +107,7 @@ class WardrobeAi
         "items" => picks.map(&:title),
         "item_ids" => picks.map(&:id),
         "description" => "Rule-based from your active wardrobe (AI key not configured or model returned empty).",
-        "source" => "rule"
+        "source" => "rule",
       } ]
     end
   end
