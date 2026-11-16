@@ -349,10 +349,10 @@ the lock is poisoned on every boot, even when the resolution is unchanged.
 file loads.** `Rules::AstOmissionRule` raises NameError cold. `require
 "review/scan/rule_dsl"` is the load that defines them.
 
-**A council pass looks exactly like a hang.** On a dev Mac the provider is the
-`claude` CLI, which buffers when stdout is not a TTY, so `/fix --dry-run --critique master` sits
-at 0% CPU with an empty pipe for up to sixteen minutes while personas think.
-Count the `claude --print` subprocesses in `ps` before killing it.
+**A council pass can look idle while provider calls are in flight.** Inspect the
+selected lane, the bounded child-process list and the run's event/log output
+before interrupting it. A quiet terminal is not evidence that the council is
+stuck or that a provider is healthy.
 
 **A check that passes bare and fails under `bin/check` is an environment leak.**
 `bin/check` runs rake under `bundle exec`, and a child that inherits MASTER's
