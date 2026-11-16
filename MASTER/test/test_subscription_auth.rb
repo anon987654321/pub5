@@ -15,9 +15,10 @@ class TestSubscriptionAuth < Minitest::Test
     assert profiles.all? { |lane| lane["auth"] == "subscription" }
   end
 
-  def test_find_accepts_public_provider_name
-    lane = Master::Ground::SubscriptionAuth.find("claude")
-    assert_equal "claude", lane["name"] if lane
+  def test_find_accepts_configured_provider_names_and_rejects_unconfigured_names
+    assert_equal "chatgpt", Master::Ground::SubscriptionAuth.find("chatgpt").fetch("name")
+    assert_equal "grok", Master::Ground::SubscriptionAuth.find("grok").fetch("name")
+    assert_nil Master::Ground::SubscriptionAuth.find("claude")
   end
 
   def test_unknown_provider_is_safe
@@ -42,12 +43,16 @@ class TestSubscriptionAuth < Minitest::Test
     end
   end
 
-  def test_provider_without_device_flow_keeps_browser_login
-    lane = Master::Ground::SubscriptionAuth.find("claude")
+  def test_provider_without_device_flow_keeps_its_browser_login_arguments
+    lane = { "name" => "test-provider", "command" => "test-provider", "login_args" => %w[auth login] }
     assert_equal %w[auth login],
                  Master::Ground::SubscriptionAuth.login_arguments(lane, device_auth: nil)
-    assert_match(/no device-code login/,
-                 Master::Ground::SubscriptionAuth.login("claude", device_auth: true))
+    Master::Ground::SubscriptionAuth.stub(:find, lane) do
+      Master::Ground::SubscriptionAuth.stub(:cli_binary, "test-provider") do
+        assert_match(/no device-code login/,
+                     Master::Ground::SubscriptionAuth.login("test-provider", device_auth: true))
+      end
+    end
   end
 
   def test_status_requires_a_configured_match_and_rejects_refusal_text
