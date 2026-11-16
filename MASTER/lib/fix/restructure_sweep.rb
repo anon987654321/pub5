@@ -378,7 +378,7 @@ module Master
           [key.to_s.strip, value.to_s.strip]
         end
         uncertain = %w[dynamic external].select do |key|
-          fields.fetch(key, "").match?(/\\binconclusive\\b/i)
+          fields.fetch(key, "").match?(/\binconclusive\b/i)
         end
         return "destructive restructure refused: #{uncertain.join(" and ")} reachability is INCONCLUSIVE" if uncertain.any?
 
