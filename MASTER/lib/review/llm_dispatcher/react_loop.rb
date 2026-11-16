@@ -114,9 +114,8 @@ module Master
           [result, false]
         end
 
-        # Resolve each ReAct step through the configured provider adapter. The
-        # text-only Claude CLI has no native tools, so calling send_ruby_llm here
-        # loses its authenticated lane and bypasses the subscription transport.
+        # Resolve each ReAct step through the configured provider adapter so
+        # routing, authentication and provider-specific transport remain intact.
         # Suppress a nested ReAct loop while retaining that lane's normal sender.
         def react_completion(selected_model, messages, react_sys:, stream:, image:, &blk)
           previous = Fiber[:master_no_tools]
