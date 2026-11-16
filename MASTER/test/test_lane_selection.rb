@@ -17,6 +17,7 @@ class TestLaneSelection < Minitest::Test
   ANTHROPIC_OPUS = "claude-opus-5-5"
   ANTHROPIC_SONNET = "claude-sonnet-5-5"
   GLM = "glm-5.3"
+  GLM_FLASH = "glm-5.3-flash"
   GROK = "grok-cli:auto"
   AGY = "agy:auto"
   LOCAL = "ollama:gemma3:4b"
@@ -195,7 +196,7 @@ class TestLaneSelection < Minitest::Test
 
   def test_the_real_default_tier_keeps_subscription_lead_and_glm_lists_first
     tier = Selection.tier("default")
-    assert_equal GLM, tier.first, "models.yml lists glm-5.3 first in the default tier (operator, 2026-11-09)"
+    assert_equal GLM_FLASH, tier.first, "models.yml lists glm-5.3-flash first in the default tier (operator, 2026-11-16)"
     # The selection sort is a contract of its own: a live subscription lane
     # leads whatever the file order came in as, and a metered-API lane with
     # no key on the host drops out of the live list entirely.
@@ -210,7 +211,8 @@ class TestLaneSelection < Minitest::Test
     assert_includes ordered, ANTHROPIC_OPUS
 
     primary = Selection.tier("primary")
-    assert_equal GLM, primary.first, "the primary /fix lane stays glm-5.3 (operator, 2026-11-09)"
+    assert_equal GLM_FLASH, primary.first, "the primary /fix lane stays glm-5.3-flash (operator, 2026-11-16)"
+    assert_equal GLM, primary[1], "glm-5.3 follows as the same-provider fallback (operator, 2026-11-16)"
   end
 
   def test_free_models_come_last_whatever_the_given_order

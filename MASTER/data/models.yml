@@ -132,6 +132,14 @@ model_defs:
     id: glm-5.3
     <<: *model_defaults
     score: { quality: 0.95, speed: 0.80, cost: 0.85 }
+  # glm-5.3-flash routed primary-first by operator request (2026-11-16): the
+  # same Z.ai open-platform lane (providers.yml zai block, ZAI_API_KEY) with
+  # the provider's own default_model as the chain head. It also carries the
+  # vision_families reads_images grant the blind pattern already excepts.
+  glm_5_3_flash: &glm_5_3_flash
+    id: glm-5.3-flash
+    <<: *model_defaults
+    score: { quality: 0.93, speed: 0.97, cost: 1.0 }
   # The OpenHands sandbox's own agent-server endpoint, discovered as
   # gateway:openhands_Default (Ground::OpenhandsSandbox wires
   # MASTER_LLM_GATEWAY_URL from OH_INTERNAL_SERVER_URL at boot). It costs
@@ -219,6 +227,7 @@ models:
     - *web_chat_kimi
     - *web_chat_gemini
   default:
+    - *glm_5_3_flash
     - *glm_5_3
     - *sandbox_gateway
     - *claude_opus_api
@@ -232,9 +241,12 @@ models:
     - *ollama_gemma
     - *llama_cli_gguf
   primary:
-    # GLM-5.3 leads every /fix run as the primary #1 lane (operator, 2026-11-09);
-    # without ZAI_API_KEY it falls through exactly like any dead lane. The
-    # sandbox gateway follows it so a keyless OpenHands run answers next.
+    # glm-5.3-flash leads every /fix run as the primary #1 lane (operator,
+    # 2026-11-16); without ZAI_API_KEY it falls through exactly like any dead
+    # lane. glm-5.3 follows so a flashed-out or absent flash key still reaches
+    # the same provider, and the sandbox gateway follows so a keyless OpenHands
+    # run answers next.
+    - *glm_5_3_flash
     - *glm_5_3
     - *sandbox_gateway
     - *claude_opus_api
@@ -244,6 +256,7 @@ models:
     - *ollama_gemma
     - *llama_cli_gguf
   strong:
+    - *glm_5_3_flash
     - *glm_5_3
     - *sandbox_gateway
     - *claude_opus_api

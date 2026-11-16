@@ -4,7 +4,7 @@ require_relative "test_helper"
 require_relative "support_fake_config"
 
 class TestFixFreshCheckoutModels < Minitest::Test
-  PRIMARY = "glm-5.3"
+  PRIMARY = "glm-5.3-flash"
 
   def setup
     @env_keys = %w[
@@ -32,7 +32,7 @@ class TestFixFreshCheckoutModels < Minitest::Test
   def test_glm_is_the_first_model_in_the_live_fix_tiers
     models = Master.models_config(root: Master::ROOT).fetch("models")
     %w[default primary strong].each do |tier|
-      assert_equal PRIMARY, models.fetch(tier).first.fetch("id"), "#{tier} tier must keep GLM-5.3 first"
+      assert_equal PRIMARY, models.fetch(tier).first.fetch("id"), "#{tier} tier must keep glm-5.3-flash first"
     end
   end
 
