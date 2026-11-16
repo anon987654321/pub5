@@ -111,12 +111,12 @@ module Master
 
       def on_path?(name, **) = !name.to_s.include?(File::SEPARATOR) && !which(name, **).nil?
 
-      # Where a user-installed CLI lands when PATH does not name it: the Claude Code installer puts claude in
-      # ~/.local/bin. A /fix launched from a script whose PATH left that out found "no claude on PATH" on every
-      # call, skipped MASTER's first lane, and ran on the next one without saying why.
+      # User-installed command-line clients commonly live in ~/.local/bin, which
+      # may be absent from a non-login script's PATH. Include it in the one
+      # sanctioned executable lookup so a provider lane is not skipped silently.
       USER_BINS = [File.expand_path("~/.local/bin")].freeze
 
-      # A subscription CLI (claude, grok) by full path: PATH first, then USER_BINS and HOMEBREW_BINS.
+      # Resolve configured provider CLIs by full path: PATH, then USER_BINS and HOMEBREW_BINS.
       def cli_binary(name, user_bins: USER_BINS)
         which(name, path: [ENV.fetch("PATH", ""), *user_bins, *HOMEBREW_BINS].join(File::PATH_SEPARATOR))
       end
@@ -205,7 +205,7 @@ module Master
 
       # An outer deadline (Timeout.timeout around a model call, a file's repair budget) interrupts the
       # wait from outside, and popen's ensure then joins the child with no bound: a /fix pass sat 711s
-      # on a claude call whose 240s budget had already fired. The child goes with the wait.
+      # on a provider call whose 240s budget had already fired. The child goes with the wait.
       def stop_child(wait_thr, readers)
         kill_group(wait_thr.pid)
         readers.each(&:kill)
