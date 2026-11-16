@@ -174,7 +174,7 @@ module Master
                    "/model benchmark - benchmark reachable Ollama models; /model benchmark all includes every reachable lane.",
                    "/model lab - summarize recorded trajectory quality by model.",
                    "/model auth - show subscription lanes and their authentication state.",
-                   "/model auth login claude|chatgpt|grok - run the provider's official browser sign-in flow.",
+                   "/model auth login chatgpt|grok - run the configured provider's official sign-in flow.",
                    "MASTER never receives or stores your password, OAuth code, cookies or session credentials."],
         },
         "android" => {
