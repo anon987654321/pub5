@@ -119,9 +119,9 @@ patch_briefs:
     deploy: vps-deploy master
     playbook: master_web_single_voice_defaults
   bin/:
-    check: bin/check
+    check: /fix (scope-aware proof)
     tests: [bin/check]
-    note: executable entry points - run bin/check after edits
+    note: /fix owns repair and proof; bin/check is supplemental verification for executable entrypoint changes
   lib/master.rb:
     check: bin/check --profile=full
     tests: [bin/check --profile=full, rake test:core]
