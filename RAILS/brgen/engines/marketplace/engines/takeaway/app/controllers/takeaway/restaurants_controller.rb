@@ -8,6 +8,7 @@ class Takeaway::RestaurantsController < Takeaway::BaseController
   before_action :set_restaurant, only: %i[show edit update destroy]
   before_action :authorize_owner!, only: %i[edit update destroy]
   before_action :load_city_places, only: %i[new create edit update]
+  before_action :load_marketplace_store, only: %i[new create]
 
   def index
     # :city as well as :user — the card renders restaurant.city, which was one
@@ -40,18 +41,28 @@ class Takeaway::RestaurantsController < Takeaway::BaseController
   end
 
   def create
-    @restaurant = Current.user.takeaway_restaurants.build(restaurant_params)
-    @restaurant.save ?
-      redirect_to(restaurant_path(@restaurant), notice: t("flash.takeaway.restaurant_created")) :
-      render(:new, status: :unprocessable_entity)
+    result = Takeaway::Provisioner.create_restaurant!(
+      owner: Current.user,
+      attributes: restaurant_params,
+      marketplace_store: @marketplace_store,
+    )
+    @restaurant = result.restaurant
+    redirect_to restaurant_path(@restaurant), notice: t("flash.takeaway.restaurant_created")
+  rescue ActiveRecord::RecordInvalid => error
+    @restaurant = error.record if error.record.is_a?(Takeaway::Restaurant)
+    @restaurant ||= Takeaway::Restaurant.new(restaurant_params)
+    render :new, status: :unprocessable_entity
   end
 
   def edit; end
 
   def update
-    @restaurant.update(restaurant_params) ?
-      redirect_to(restaurant_path(@restaurant)) :
-      render(:edit, status: :unprocessable_entity)
+    if @restaurant.update(restaurant_params)
+      @restaurant.marketplace_store&.update!(active: @restaurant.active?)
+      redirect_to restaurant_path(@restaurant)
+    else
+      render :edit, status: :unprocessable_entity
+    end
   end
 
   def destroy
@@ -59,9 +70,12 @@ class Takeaway::RestaurantsController < Takeaway::BaseController
       # A closed kitchen may stop trading, but its orders are the customer's
       # receipt and must outlive the restaurant's public listing.
       @restaurant.update!(active: false)
+      @restaurant.marketplace_store&.update!(active: false)
       redirect_to restaurants_path, notice: t("flash.takeaway.restaurant_archived")
     else
+      store = @restaurant.marketplace_store
       @restaurant.destroy!
+      store&.update!(active: false)
       redirect_to restaurants_path
     end
   end
@@ -72,7 +86,16 @@ class Takeaway::RestaurantsController < Takeaway::BaseController
   def open_status = (@open_status ||= Takeaway::OpeningHour.status_for(@restaurants.to_a.map(&:id)))
   helper_method :open_status
 
-  def set_restaurant = (@restaurant = find_by_slug_or_id(Takeaway::Restaurant.publicly_visible, params[:id]))
+  def set_restaurant
+    scope = Takeaway::Restaurant.publicly_visible
+    scope = scope.or(Takeaway::Restaurant.where(user_id: Current.user.id)) if Current.user
+    @restaurant = find_by_slug_or_id(scope, params[:id])
+  end
+
+  def load_marketplace_store
+    store_id = params[:marketplace_store_id].presence
+    @marketplace_store = Current.user.marketplace_stores.find_by!(id: store_id, vertical: "restaurants") if store_id
+  end
 
   def authorize_owner!
     redirect_to(restaurants_path, alert: t("flash.takeaway.not_the_owner")) unless @restaurant.owner?(Current.user)
