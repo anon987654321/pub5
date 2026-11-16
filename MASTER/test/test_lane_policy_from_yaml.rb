@@ -50,4 +50,45 @@ class TestLanePolicyFromYaml < Minitest::Test
 
     refute_includes config.fetch("openai_compatible").keys, "perplexity"
   end
+
+  # Reachability for a signed-in subscription CLI is prefix-based: a lane that
+  # joins the catalogue without its prefix in KEYLESS_LANE_PREFIXES is refused
+  # at refusal_before_send on any host with no API key ("No API keys
+  # configured"), the lane probe records it dead, and /fix drops its primary
+  # lane for the whole run. zai-cli did exactly that (2026-11-17).
+  def test_every_remote_cli_lane_is_reachable_without_a_key
+    prefixes = Master::MasterRuntime::KEYLESS_LANE_PREFIXES
+
+    Master.cli_lanes.each do |name, lane|
+      next if lane["kind"] == "local"
+
+      assert_includes prefixes, "#{name}:",
+        "#{name} is a signed-in subscription lane; its prefix must ride KEYLESS_LANE_PREFIXES"
+    end
+  end
+
+  # The fix pipeline's availability gate refuses a run whose routing pick is
+  # free-class while a subscription lane is live, so the router's tier chains
+  # must carry every remote subscription lane the catalogue offers -- unless
+  # the lane is deliberately dead by hand in data/lanes.yml (codex-cli today:
+  # excluded from automatic selection until a bounded execution probe proves
+  # a live response). A reachable, chain-less, non-dead lane gets its run
+  # refused as "routing disagrees with provider availability" before the
+  # first file.
+  def test_every_remote_cli_lane_appears_in_a_tier_chain_or_is_dead_by_hand
+    tier_ids = Master.models_config(root: Master::ROOT).fetch("models").values
+                   .flatten.filter_map { |row| row.is_a?(Hash) ? row["id"] : nil }
+    dead = Master.load_yaml(Master.data_path("../data/lanes.yml")).fetch("dead", [])
+           .map { |name| "#{name}:" }
+
+    Master.cli_lanes.each do |name, lane|
+      next if lane["kind"] == "local"
+
+      carried = tier_ids.any? { |id| id.to_s.start_with?("#{name}:") }
+      assert(
+        carried || dead.include?("#{name}:"),
+        "#{name} is a subscription lane no tier chain carries and data/lanes.yml does not declare dead"
+      )
+    end
+  end
 end

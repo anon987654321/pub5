@@ -112,7 +112,7 @@ module Master
 
         def with_cli_slot(name = nil)
           lane = name && cli_lanes[name]
-          slots = lane && lane["kind"] == "local" ? LOCAL_CLI_SLOTS : CLI_SLOTS
+          slots = lane && lane["kind"] == "local" ? LOCAL_CLI_SLOTS : lane_slots(name)
           slots.pop
           yield
         ensure
@@ -175,6 +175,22 @@ module Master
 
         CLI_SLOTS = Integer(ENV.fetch("MASTER_CLI_SLOTS", 2)).then { |n| SizedQueue.new(n).tap { |queue| n.times { queue << true } } }
         LOCAL_CLI_SLOTS = SizedQueue.new(1).tap { |queue| queue << true }
+        LANE_SLOTS_MUTEX = Mutex.new
+        LANE_SLOTS = {}
+
+        # A lane may declare `slots:` in models.yml cli_lanes to hold its own
+        # concurrency ceiling. Three stream workers plus the lane probe and
+        # the consensus jury pushed the z-ai gateway into 429s twice in one
+        # session (2026-11-17); the lane, not the operator, knows what its
+        # provider tolerates. An undeclared lane rides the shared CLI_SLOTS.
+        def lane_slots(name)
+          declared = Integer(cli_lanes.dig(name, "slots").to_s, exception: false)
+          return CLI_SLOTS unless declared&.positive?
+
+          LANE_SLOTS_MUTEX.synchronize do
+            LANE_SLOTS[name] ||= SizedQueue.new(declared).tap { |queue| declared.times { queue << true } }
+          end
+        end
 
         # The sanctioned runner owns stream draining, child tracking and
         # process-group cleanup.

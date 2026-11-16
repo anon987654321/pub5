@@ -562,11 +562,15 @@ cli_lanes:
     login: grok login
   zai-cli:
     # The operator's configured z-ai SDK CLI reached through bin/zai-chat, a
-    # wrapper that moves the stdin prompt into the CLI's -p argument and
-    # unwraps its JSON answer file to plain text. Session-scoped reroute
-    # (operator, 2026-11-16): a MASTER_MODEL=zai-cli:auto pin makes this the
-    # primary #1 /fix lane; the key stays inside the CLI's own configuration.
+    # wrapper that reads the prompt from stdin (no argv ceiling) and posts
+    # through the same SDK the CLI uses. Session-scoped reroute (operator,
+    # 2026-11-16): a MASTER_MODEL=zai-cli:auto pin makes this the primary #1
+    # /fix lane; the key stays inside the SDK's own configuration.
+    # slots: 1 — three stream workers plus the lane probe and the consensus
+    # jury pushed this gateway into 429s twice on 2026-11-17; one call at a
+    # time is what the provider tolerates, declared on the lane itself.
     binary: zai-chat
+    slots: 1
     signed_in: { args: [probe], match: ok }
     ask: [--stdin]
     model_flag: --model

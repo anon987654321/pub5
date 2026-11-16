@@ -138,3 +138,84 @@ This page records wishes and their evidence. A landed row names code
 and tests on main, not a delivered claim; no row is scheduled by this
 page, and none of it overrides soul.yml, laws.yml or the tree
 contracts.
+
+## GLM agent wish list (2026-11-17)
+
+Provenance: written by the GLM session that cloned pub5 into a keyless
+Debian sandbox, built a Ruby 3.3.13 userland toolchain, wired the
+zai-cli lane as the primary /fix gateway, and ran governed /fix
+segments against all five trees. Same standing as the page above: an
+experience record, not policy; state on main names the commit that
+carried each row.
+
+1. A CLI-lane bridge must never pass the prompt as one argv value.
+   Evidence: the first zai-chat bridge shelled out to
+   `z-ai chat -p "$(cat file)"`; one argv cannot exceed the kernel's
+   MAX_ARG_STRLEN (~128 KiB), so every repair-sized prompt died with
+   E2BIG before leaving the machine, the lane parked itself, and the
+   run crawled the free floor. State on main: landed — bin/zai-chat
+   reads stdin with no ceiling and posts through the operator's SDK
+   (18104b12); a 150 KiB prompt answers in ~14s, measured.
+
+2. When a lane joins a class, the class's gates must learn it the same
+   day. Evidence: zai-cli joined the subscription-CLI class on
+   2026-11-16; KEYLESS_LANE_PREFIXES, LaneSelection::CLI_BINARIES and
+   the tier chains all still lacked it, so a keyless host refused the
+   pinned lane, the probe recorded it dead, and the router's
+   availability gate then refused the run as "routing disagrees with
+   provider availability". State on main: landed — prefix, binary map,
+   subscription list and default/primary/strong chain rows
+   (088c5127, 0b4628fb, d70ff415), with two guard tests in
+   test_lane_policy_from_yaml.rb so the next lane cannot land half in.
+
+3. A verifier must compare against its own baseline. Evidence: the
+   focused-test verifier refused every repair whose mapped suite came
+   back red, including suites red before the run started — four
+   environment failures in test_lane_selection.rb vetoed all work on
+   files the suite touches, all run long. State on main: landed —
+   AutofixGuard captures the pre-repair verdict and refuses only a
+   raised failure/error count (10486829).
+
+4. A consensus jury must be seatable on the hosts that run /fix.
+   Evidence: the pool named claude-sonnet-5-5, grok-cli:auto and
+   moonshotai/kimi-k2 — no key on the current hosts reached any of
+   them, so every error/critical repair failed closed for want of a
+   quorum. State on main: landed — the jury rides zai-cli:auto,
+   ovh:gpt-oss-120b and kilo:nvidia/nemotron-3.5-lightning:free, each
+   answered live on 2026-11-17, spanning three families so the
+   author-family exclusion always leaves two independent voters
+   (088c5127). Open wish: a doctor check that probes the jury and
+   reports UNSEATABLE before a run spends its budget.
+
+5. A fresh clone must be runnable as cloned. Evidence: five files in
+   MASTER/bin shipped mode 100644 — including the zai-chat bridge — so
+   the lane died with permission denied on any fresh checkout.
+   State on main: landed — exec bits fixed in the index (088c5127).
+
+6. Landscape tests must not assert live third-party listings.
+   Evidence: test_keyless_routing expects "grok-4.3" and the OpenRouter
+   free_latest head, and the discovered keyless catalogue now serves
+   llm7:DeepSeek-V4-Flash-0731; the suite fails in any keyless sandbox
+   and will fail on the operator's desk the next time llm7 rotates its
+   turbo tier. State on main: open — the fix is to stub the discovered
+   catalogue in those tests, not to chase the rotation.
+
+7. One boot without re-loaded law files. Evidence: every boot prints
+   two screens of "already initialized constant" warnings from
+   law/brand.rb and law/cosmetic.rb — the files are evaluated twice,
+   which costs startup time on every run and every test. State on
+   main: open — needs the loader's double require found and fenced.
+
+8. Run journals that survive the checkout. Evidence: the sandbox
+   recycled mid-session and took .master/ with it; a resumable run is
+   only as durable as the directory holding it. State on main: open —
+   a relocatable MASTER_STATE_DIR (or the like) is wanted; the shim's
+   .tools/ruby path already shows the pattern for Ruby itself.
+
+9. Rate-limit pacing belongs to the run, not to the operator's wrist.
+   Evidence: three stream workers plus lane probes plus the consensus
+   jury pushed the z-ai gateway into 429s twice in one session; the
+   lane has no declared concurrency ceiling, so nothing in the pipeline
+   backed off before the provider said so. State on main: open — a
+   per-lane concurrency ceiling in models.yml cli_lanes, read where
+   CLI_SLOTS is read today, is the smallest honest shape.
