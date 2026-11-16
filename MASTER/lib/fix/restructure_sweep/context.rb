@@ -209,7 +209,6 @@ module Master
           candidates = [
             [:NO_GOD_CLASS, {}],
             [:FILE_SPRAWL, { root: target }],
-            [:JS_MODULE_SIZE, {}],
           ]
 
           candidates.filter_map do |id, options|
