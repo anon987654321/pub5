@@ -1,0 +1,99 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# ledger-reconcile — turn one run_all JSON into the two work lists the suite's
+# summary can't give you: which reds are unregistered, and which ledger rows
+# have gone stale. Optionally apply the stale half.
+#
+# The 2026-11-16 session did this by hand with ad-hoc parsing and got it wrong
+# twice in a row — once by reading the violation string's filename from the
+# wrong token (the message ends in "… rescope its envs", so last is not the
+# name), once by matching ledger rows with two-space indentation they do not
+# have (the rows sit flush-left). The parsing this once cost two bugs is
+# exactly the parsing that belongs in a named, rerunnable tool.
+#
+# Usage:
+#   MASTER/bin/ledger-reconcile RAILS/.rails-suite.json     # report only
+#   MASTER/bin/ledger-reconcile <json> --apply              # purge stale rows
+#   run_all.rb --json <path> | MASTER/bin/ledger-reconcile - # report from stdin
+#
+# Exit status: 0 when the ledger holds exactly the debt the tree has accepted
+# (no unregistered reds, no stale rows), 1 otherwise — so a CI lane or an
+# agent turn can run report-only and fail on drift without touching the file.
+
+require "json"
+require "optparse"
+require "set"
+
+apply = false
+OptionParser.new do |o|
+  o.on("--apply", "remove stale rows from RAILS/test/known_failures.yml") { apply = true }
+end.parse(ARGV)
+
+path = ARGV[0]
+unless path && (path == "-" || File.file?(path))
+  warn "usage: ledger-reconcile <run_all --json path|-> [--apply]"
+  exit 2
+end
+
+raw = path == "-" ? $stdin.read : File.read(path)
+data = JSON.parse(raw)
+
+reds = data.fetch("outcomes", []).select { |o| o["status"] == "fail" }
+violations = data.fetch("ledger_violations", [])
+
+# The violation strings come from the runner, not from this script; the
+# filename is the fourth whitespace token in both shapes:
+#   "UNREGISTERED RED test/foo_test.rb — register it …"
+#   "STALE LEDGER ENTRY test/foo_test.rb — green in sandbox …"
+def violation_file(line)
+  line.split[3]
+end
+
+unregistered = violations.select { |v| v.start_with?("UNREGISTERED") }
+stale = violations.select { |v| v.start_with?("STALE") }.map { |v| violation_file(v) }.compact.uniq
+
+puts "== red files (#{reds.size}) =="
+reds.each do |o|
+  puts "  RED  #{o['file']}  (#{o['runs']} runs, #{o['failures']} failures)"
+end
+puts "== unregistered (#{unregistered.size}) =="
+unregistered.each { |v| puts "  #{v}" }
+puts "== stale rows (#{stale.size}) =="
+stale.each { |name| puts "  STALE #{name}" }
+
+if stale.empty? || !apply
+  clean = unregistered.empty? && stale.empty?
+  puts clean ? "ledger holds exactly the accepted debt" : "drift: report only (pass --apply to purge stale rows)"
+  exit clean ? 0 : 1
+end
+
+# Stale purge. Rows are flush-left ("test/foo_test.rb:"), the body indented
+# two spaces; the entry ends at the next flush-left row or a blank line that
+# precedes one. Only the named stale files leave; everything else stands.
+ledger = "RAILS/test/known_failures.yml"
+stale_set = Set.new(stale)
+
+lines = File.readlines(ledger, chomp: true)
+out = []
+removed = []
+i = 0
+while i < lines.size
+  if (m = lines[i].match(/\A(test\/\S+?):\s*\z/)) && stale_set.include?(m[1])
+    removed << m[1]
+    i += 1
+    i += 1 while i < lines.size && (lines[i].start_with?("  ") || lines[i].strip.empty?)
+    next
+  end
+  out << lines[i]
+  i += 1
+end
+
+if removed.empty?
+  puts "nothing to remove — the stale rows are not in #{ledger} under those names"
+  exit 1
+end
+
+File.write(ledger, out.join("\n") + "\n")
+removed.each { |name| puts "removed: #{name}" }
+puts "#{removed.size} row(s) removed from #{ledger}"

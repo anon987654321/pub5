@@ -40,6 +40,16 @@ provenance and lifecycle state. Do not create another backlog file.
 
 ## First hour
 
+In a container with no Ruby, no Chrome, no libvips and no root — a sandbox,
+a CI image, a fresh machine — do not improvise the setup: run
+`MASTER/bin/sandbox-bootstrap`, which builds the vendored Ruby, installs
+every tree's bundle, extracts the libvips `.deb` closure, installs Chrome
+for Testing and the two gems the bare-ruby suites need, then strips the
+interpreter pin bundler writes into the lockfiles. Source
+`MASTER/bin/sandbox-env` in the shell that follows it. `--dry-run` prints
+what it would do without doing it. On a machine that already has the
+stack, skip it.
+
 Use an installed Ruby 3.3 or newer and run `bundle install` in
 `MASTER/`. Keep API keys in the environment, never in Git. Run `MASTER/bin/doctor` and read its
 one-line reports. Then take one narrow dry run from `MASTER/`:
