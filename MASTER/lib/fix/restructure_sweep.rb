@@ -95,7 +95,7 @@ module Master
         Decommission evidence and simplification report (mandatory):
         Before selecting any operation, state the candidate's purpose and owner; list exact inbound references, runtime activation paths, dynamic dispatch/reflection/glob paths, config and dependency-manifest readers, external/deploy consumers, tests, retained data and revival conditions. Separate proven absence from an unsearched or dynamic path. If evidence is incomplete, KEEP or HUMAN_DECISION; do not infer deletion from age, naming, a parked label or a zero-result grep.
 
-        The response must include one machine-readable, single-line AUDIT record with every field below. Use an exact repository path for each claimed reference or the word none; use INCONCLUSIVE when a path was not proved. A missing, empty or partial field is a refusal, not a harmless omission:
+        The response must include one machine-readable, single-line AUDIT record with every field below. Use an exact repository path for each claimed reference or the word none; use INCONCLUSIVE when a path was not proved. Do not use semicolons inside values; semicolons separate fields. A missing, empty or partial field is a refusal, not a harmless omission:
         purpose=...; owner=...; inbound=...; runtime=...; dynamic=...; config=...; external=...; tests=...; data=...; revival=...
 
         The tree, and the contracts to keep:
@@ -377,8 +377,8 @@ module Master
           key, value = entry.strip.split("=", 2)
           [key.to_s.strip, value.to_s.strip]
         end
-        uncertain = %w[dynamic external].select do |key|
-          fields.fetch(key, "").match?(/\binconclusive\b/i)
+        uncertain = fields.filter_map do |key, value|
+          key if value.match?(/\binconclusive\b/i)
         end
         return "destructive restructure refused: #{uncertain.join(" and ")} reachability is INCONCLUSIVE" if uncertain.any?
 
