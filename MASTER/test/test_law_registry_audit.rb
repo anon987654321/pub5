@@ -165,6 +165,7 @@ class TestLawRegistryAudit < Minitest::Test
     refute_nil definition
     assert_equal :retired, definition.lifecycle
     refute definition.enforceable?
+    refute_includes Master::Fix::Scanner.build(root: Master::ROOT).laws.map { |law| law.id.to_s }, "SMALL_FILES"
     refute_includes report.registry_ids, "small_files"
     refute_includes report.mechanical.map { |law| law["id"] }, "SMALL_FILES"
   end
