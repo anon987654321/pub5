@@ -34,7 +34,7 @@ class HomeController < ApplicationController
         subtitle: [ listing.city, listing.available_until&.strftime("%b %-d") ].compact.join(" · "),
         url: food_listing_path(listing),
         lat: lat,
-        lng: lng
+        lng: lng,
       }
     end
   end
@@ -49,7 +49,7 @@ class HomeController < ApplicationController
         subtitle: [ resource.resource_type&.humanize, resource.city ].compact.join(" · "),
         url: resource_path(resource),
         lat: lat,
-        lng: lng
+        lng: lng,
       }
     end
   end

@@ -39,8 +39,8 @@ class ReplicateService
           negative_prompt: "blurry, bad quality, distorted, ugly",
           width: 1024,
           height: 576,
-          num_outputs: 4
-        }
+          num_outputs: 4,
+        },
       }
     )
   end
@@ -60,7 +60,7 @@ class ReplicateService
     uri = URI.join(API_BASE.to_s, path)
     headers = {
       "Authorization" => "Bearer #{@api_token}",
-      "Accept" => "application/json"
+      "Accept" => "application/json",
     }
     body = nil
     if payload
@@ -99,7 +99,7 @@ class ReplicateService
       "cartoon" => "cartoon style, colorful, fun",
       "noir" => "noir comic art, dramatic monochrome lighting",
       "manga" => "manga illustration, expressive ink work",
-      "retro" => "retro comic illustration, halftone print texture"
+      "retro" => "retro comic illustration, halftone print texture",
     }
     modifier = modifiers.fetch(style.to_s, modifiers.fetch("comic"))
     "#{modifier}, #{user_prompt}, high quality, detailed"

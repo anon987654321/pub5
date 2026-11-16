@@ -39,7 +39,6 @@ class TestRailsInteractionCraft < Minitest::Test
     refute_match(/backdrop-filter\s*:/, css)
   end
 
-
   def test_reduced_motion_suppresses_immediate_press_transforms
     css = File.read(File.join(SHARED, "app", "assets", "stylesheets", "_animations.scss"))
     %w[_stack.scss _stack_brgen.scss].each do |stack_name|

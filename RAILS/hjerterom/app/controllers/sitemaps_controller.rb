@@ -9,7 +9,7 @@ class SitemapsController < ApplicationController
     entries = [
       Shared::SitemapBuilder::Entry.new(loc: root_url, changefreq: "daily", priority: "1.0"),
       Shared::SitemapBuilder::Entry.new(loc: resources_url, changefreq: "daily", priority: "0.8"),
-      Shared::SitemapBuilder::Entry.new(loc: food_listings_url, changefreq: "daily", priority: "0.9")
+      Shared::SitemapBuilder::Entry.new(loc: food_listings_url, changefreq: "daily", priority: "0.9"),
     ]
 
     FoodListing.available.order(updated_at: :desc).limit(2_000).each do |listing|

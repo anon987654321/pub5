@@ -22,8 +22,8 @@ class PollComicStripJobTest < ActiveJob::TestCase
         "status" => "succeeded",
         "output" => [
           "https://replicate.delivery/panel.png",
-          "https://example.test/not-provider.png"
-        ]
+          "https://example.test/not-provider.png",
+        ],
       },
       "prediction_123"
     )

@@ -42,7 +42,6 @@ test "spacing takes the scale, not raw pixels" do
     assert_empty raw
   end
 
-
   test "reduced motion keeps native buttons and the skip link still" do
     block = PARTIALS.fetch("_base.scss")[/@media \(prefers-reduced-motion: reduce\) \{.*?\n\}/m]
 

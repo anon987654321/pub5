@@ -34,7 +34,7 @@ class ComicStripTest < ActiveSupport::TestCase
     strip = build_strip(image_urls: [
       "https://replicate.delivery/panel.png",
       "http://replicate.delivery/insecure.png",
-      "https://example.test/remote.png"
+      "https://example.test/remote.png",
     ])
 
     assert_equal ["https://replicate.delivery/panel.png"], strip.safe_image_urls
@@ -47,7 +47,7 @@ class ComicStripTest < ActiveSupport::TestCase
       user: @user,
       prompt: "A friendly comic about a rainy Bergen afternoon.",
       style: "comic",
-      status: "pending"
+      status: "pending",
     }.merge(overrides))
   end
 end

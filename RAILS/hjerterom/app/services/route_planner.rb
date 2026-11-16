@@ -39,7 +39,7 @@ class RoutePlanner
         label: "Pickup #{donation.source_name}",
         latitude: donor.latitude,
         longitude: donor.longitude,
-        reference: donation
+        reference: donation,
       }
     end + Beneficiary.where(active: true).filter_map do |beneficiary|
       next unless beneficiary.latitude && beneficiary.longitude
@@ -49,7 +49,7 @@ class RoutePlanner
         label: "Dropoff #{beneficiary.name}",
         latitude: beneficiary.latitude,
         longitude: beneficiary.longitude,
-        reference: beneficiary
+        reference: beneficiary,
       }
     end
   end

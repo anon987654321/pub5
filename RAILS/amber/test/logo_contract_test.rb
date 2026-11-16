@@ -230,8 +230,6 @@ class LogoContractTest < ActionView::TestCase
                  "carriers must be monochrome ink with the one signal accent"
   end
 
-
-
   test "logo study gallery paths and plate descriptions stay in sync" do
     root = Rails.root.join("__logo")
     html = root.join("all-plates.html").read

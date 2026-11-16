@@ -479,7 +479,6 @@ function p11() {
   plate(11, "intro_condense", "motion — a carrier field condenses into the mark; monochrome ink with one lime signal accent; reduced-motion pins the assembled mark", out);
 }
 
-
 // ---------- reference (canonical mark, tight stage) ----------
 function pref() {
   const out = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 500" role="img" aria-label="canonical amber mark">` +

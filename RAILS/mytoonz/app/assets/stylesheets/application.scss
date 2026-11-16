@@ -41,7 +41,7 @@ nav a[aria-current="page"] {
 .comic-form select {
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  padding: 0.6rem 0.75rem;
+  padding: 0.5rem 0.75rem;
   font: inherit;
 }
 
@@ -55,11 +55,11 @@ nav a[aria-current="page"] {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
-  line-height: 1.45;
+  line-height: 1.4;
 }
 
 .provider-consent input {
-  margin-top: 0.2rem;
+  margin-top: 0.1875rem;
 }
 
 .comic-grid {
@@ -76,7 +76,7 @@ nav a[aria-current="page"] {
 
 .status-badge {
   display: inline-block;
-  padding: 0.1rem 0.5rem;
+  padding: 0.125rem 0.5rem;
   border: 1.5px solid currentColor;
   border-radius: 0;
   font-size: 0.75rem;

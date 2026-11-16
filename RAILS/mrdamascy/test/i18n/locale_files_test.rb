@@ -15,7 +15,6 @@ class LocaleFilesTest < ActiveSupport::TestCase
     assert_empty en - nb, "missing in nb.yml"
   end
 
-
   test "courier gratuity copy uses clear Bokmål wording" do
     keys = %w[tip_line tip_none tip_title tip_refused tip_unpaid]
     copy = keys.map { |key| I18n.t("orders.#{key}", locale: :nb) }
