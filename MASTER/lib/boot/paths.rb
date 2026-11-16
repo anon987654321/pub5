@@ -47,7 +47,7 @@ module MasterPaths
     repository = File.basename(input_root) == "MASTER" ? File.dirname(input_root) : input_root
     explicit = ENV["MASTER_STATE_ID"].to_s.strip
     identity = explicit.empty? ? remote_identity(repository) : state_identity(explicit)
-    return File.join(input_root, ".master") unless identity
+    return File.join(repository, ".master") unless identity
 
     File.join(state_base, "repositories", identity, "fix")
   end
