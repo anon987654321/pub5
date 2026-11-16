@@ -3,12 +3,10 @@
 require_relative "test_helper"
 require_relative "../lib/review/scan/law_tree"
 
-# Active one-file examples below use canonical structural Laws; the multi-file
-# routing case is a synthetic finding so it does not depend on retired size rules.
-# RepairLoop asks for one corrected file per answer. Splitting a 1,018-line
-# Rakefile needs new files, so Opus answered UNCHANGED twice after an
-# architecture plan, three model calls for nothing on every oversized file.
-# A finding whose repair spans files says so, and waits for a person.
+# FileRepair can deliver one corrected file per answer. A change whose
+# blast radius spans multiple files is not a one-file repair and must wait for
+# structural review by a person. Active one-file examples use canonical Laws;
+# the multi-file routing fixture is synthetic, not a retired size-rule finding.
 class TestSplitFindingsNeedAPerson < Minitest::Test
   Laws = Master::Review::Scan::Laws
 
