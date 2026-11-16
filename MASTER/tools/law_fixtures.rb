@@ -57,18 +57,21 @@ module LawFixtures
   end
 
   def row(law)
-    if law.proved_by
+    if law.lifecycle == :retired
+      # A retired Law may keep its old named test and examples for archaeology.
+      # Record both, but the target runner checks presence only for this status.
+      spec = { "status" => "retired", "file" => law.proof_file }
+      spec["proof"] = law.proved_by.to_s if law.proved_by
+      spec["bad"] = law.bad.to_s if law.bad
+      spec["good"] = law.good.to_s if law.good
+      spec
+    elsif law.proved_by
       spec = { "status" => "test", "proof" => law.proved_by.to_s }
       spec["bad"] = law.bad.to_s if law.bad
       spec["good"] = law.good.to_s if law.good
       spec
     elsif !law.bad || law.bad.to_s.empty? || !law.main_detector?
       { "status" => "docs" }
-    elsif law.lifecycle == :retired
-      spec = { "status" => "retired", "file" => law.proof_file }
-      spec["bad"] = law.bad.to_s
-      spec["good"] = law.good.to_s
-      spec
     else
       { "status" => "fixture", "file" => law.proof_file, "bad" => law.bad.to_s, "good" => law.good.to_s }
     end
