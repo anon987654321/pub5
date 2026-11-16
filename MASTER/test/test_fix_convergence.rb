@@ -2646,7 +2646,7 @@ end
   def test_the_repair_preview_reads_as_lines
     pass = Master::CLI::Pipeline::Pass.allocate
     counts = { "FEW_ARGUMENTS" => 28, "magic_number" => 26, "FEATURE_ENVY" => 14,
-               "CQS" => 9, "SMALL_FILES" => 6, "COUPLER_SMELLS" => 5, "duplicate_code" => 4 }
+               "CQS" => 9, "NO_GOD_CLASS" => 6, "COUPLER_SMELLS" => 5, "duplicate_code" => 4 }
     lines = pass.preview_lines(total: 107, laws: counts, files: { "lib/voice/engines.rb" => 20 })
 
     assert_equal "preview: 107 findings at warning or above to repair", lines.lines.first.chomp
