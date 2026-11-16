@@ -403,10 +403,10 @@ class TestRestructure < Minitest::Test
 
   def test_context_finds_reverse_references_in_manifests_and_lockfiles
     source = "MASTER/lib/retired_component.rb"
-    write(source, "class RetiredComponent; end\\n")
-    write("MASTER/Gemfile", "gem \"retired-component\" # RetiredComponent\\n")
-    write("MASTER/Gemfile.lock", "retired-component (1.0.0) # RetiredComponent\\n")
-    write("RAILS/config/worker.yml", "job_class: RetiredComponent\\n")
+    write(source, "class RetiredComponent; end\n")
+    write("MASTER/Gemfile", "gem \"retired-component\" # RetiredComponent\n")
+    write("MASTER/Gemfile.lock", "retired-component (1.0.0) # RetiredComponent\n")
+    write("RAILS/config/worker.yml", "job_class: RetiredComponent\n")
     sh("git", "add", "-A", chdir: @repo)
 
     context = Master::Fix::RestructureSweep::Context.new(
