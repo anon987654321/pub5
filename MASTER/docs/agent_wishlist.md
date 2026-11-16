@@ -204,18 +204,34 @@ carried each row.
    catalogue fixture and still exercises Master.llm_reachable?; the
    remaining llm7 rows in that file are explicit local fixtures, not live
    listings.
-7. One boot without re-loaded law files. Evidence: every boot prints
-   two screens of "already initialized constant" warnings from
-   law/brand.rb and law/cosmetic.rb — the files are evaluated twice,
-   which costs startup time on every run and every test. State on
-   main: open — needs the loader's double require found and fenced.
-
+7. One boot without re-loaded law files. Evidence: the reported duplicate
+   constant warnings named law/brand.rb and law/cosmetic.rb. Static trace
+   found that Law.load_all already skips reload when the sorted source set,
+   size/inode/mtime stamps and registered definition IDs are unchanged;
+   LawTree.load! calls it unconditionally, but that call should hit the
+   existing no-op path. State on main: open; no safe code change yet. The
+   warning therefore points to an actual source-stamp change, registry
+   invalidation, or a second law root being loaded in the same process.
+   Next step: capture reload reason, directory and changed source paths at
+   Law.reload's existing boundary, then reproduce before changing semantics.
+   Do not hide the warning with constant guards or disable reload globally.
 8. Run journals that survive the checkout. Evidence: the sandbox
    recycled mid-session and took .master/ with it; a resumable run is
    only as durable as the directory holding it. State on main: open —
    a relocatable MASTER_STATE_DIR (or the like) is wanted; the shim's
    .tools/ruby path already shows the pattern for Ruby itself.
-
+8. Run journals that survive the checkout. Evidence: the sandbox
+   recycled mid-session and took .master/ with it; a resumable run is
+   only as durable as the directory holding it. State on main: open.
+   Static trace shows the lifecycle state is a family, not one file:
+   fix_runs.json, its lock and pending marker, assessment reports and
+   architecture reports all live below the workspace's .master directory.
+   Receipts store paths relative to the workspace, and the readers/writers
+   validate parent identity, permissions, links and containment. Moving
+   only the main JSON would leave evidence unresolvable or weaken those
+   checks. A safe change must relocate the whole state family, define
+   stable receipt path semantics, and preserve atomic writes, locking,
+   observer boundaries and restart recovery.
 9. Rate-limit pacing belongs to the run, not to the operator's wrist.
    Evidence: three stream workers plus lane probes plus the consensus
    jury pushed the z-ai gateway into 429s twice in one session; the
