@@ -234,9 +234,10 @@ seams:
     tree: STUDIO
     needs: rights
     evidence: >-
-      A publication or removal decision for the 36 tracked IMG_* captures and the 12.4 MB LoRA weight file, a
-      history audit across mirrors, branches and tags, and any rewrite coordinated with clone owners. No
-      deletion by size alone.
+      A rights decision and complete history/reachable-ref audit for the previously reported IMG_* captures
+      and LoRA weight blob, plus the 29 Merethe source JPEGs, 14 training-caption sidecars and three subject
+      descriptors now removed from current pub5 main; cover pub4/pub5 mirrors, branches, tags, forks and clones.
+      Coordinate any rewrite with clone owners. No deletion by size alone.
   - id: person_renders_and_duet_video
     tree: STUDIO
     needs: material

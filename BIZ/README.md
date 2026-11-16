@@ -23,8 +23,9 @@ followed the same day's order to model a healthcare OS on OpenBSD,
 Rails/Rhoda and the MASTER trees. Both carry their source-of-truth proposal
 in `tools/<plan>_proposal.md`, after the fetat setup.
 
-`fetat/fetat.html + fetat.pdf` (Familieetaten) shares the folder layout; its
-proposal, build and trace live in `tools/` under the `fetat_` prefix.
+`fetat/fetat.html + fetat.pdf` (Familieetaten) shares the folder layout. Its
+publishable proposal source, build and trace live in `tools/` under the `fetat_`
+prefix; `fetat/research.md` is the supplementary source-history and evidence audit.
 `ai3/` is preserved from the pub3/pub5 archives and is not in the keep-list
 for this restoration. `__templates/` keeps the original bob, bob2 and bob3
 correspondence in HTML and PDF form — historical source material, not

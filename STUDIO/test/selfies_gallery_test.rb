@@ -6,6 +6,9 @@ require "tmpdir"
 require_relative "minitest_helper"
 require_relative "../lora/selfies_gallery"
 
+# These tests cover manifest shape; real publication denial is tested separately.
+Studio::Lora::Consent.define_singleton_method(:require!) { |**| { "valid" => true } }
+
 # The gallery's manifest is the one generated file the page reads. These tests
 # exercise the real generator against real files on disk: what it scans, how it
 # pairs a still with its animation, and the shape the page depends on.

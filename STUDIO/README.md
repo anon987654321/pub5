@@ -15,8 +15,8 @@ but the implementation is owned here.
   `dilla/dilla.rb`; the stdlib-only `dilla/lib/als*.rb` tools
   recover composition archives and MIDI from `.als` files. The unified
   `bin/studio` CLI exposes `dilla`, `postpro`, `lora` validation,
-  `photograph` generation, the `gallery` manifest builder, `promo`, and
-  `ableton inventory|export|midi`.
+  consent-gated `photograph` generation, publication-gated `gallery`, `promo`,
+  and `ableton inventory|export|midi`.
   Rendered output is replaceable:
   a new run may delete and replace it, and no rendered-sound default moves on
   one person's judgement.
@@ -26,9 +26,10 @@ but the implementation is owned here.
   and films over the dilla bed, built from the generated `selfies/manifest.js`
   and captioned for a screen reader. Films are muted inline loops with a
   poster-first frame; the bed never autoplays. `lora/selfies_gallery.rb`
-  scans `lora/` and writes that manifest — it reads only, and renders and
-  generated renders are ignored going forward; source photographs already in
-  history require separate repository-visibility and history cleanup.
+  scans generated renders under `lora/` and writes that manifest — it reads
+  only, and requires separate publication consent plus source-rights evidence
+  for every included subject. Renders and source media stay local-only; older
+  public Git objects still need separate repository-visibility and history cleanup.
 - `lora/photograph.rb` and `lora/idea_picture.rb` — the image-generation
   entrypoint and its IdeaPicture implementation. A still renders from an engine
   chosen with `--engine`; a film animates it from an engine chosen with
@@ -79,5 +80,5 @@ Replicate, IdeaPicture, LoRA and private-preparation regressions, and `rake`
 runs both. The test suite uses stubs and local temporary data; it does not need
 a Replicate token or start paid training.
 
-The FETAT writing project and its proposal moved to `BIZ/fetat/`; it was
-writing output, not policy, and never part of this check surface.
+The FETAT writing project lives under `BIZ/fetat/`; its publishable proposal
+source and renderer are BIZ-owned, not STUDIO policy or part of this check surface.

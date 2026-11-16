@@ -13,7 +13,8 @@
 #   ruby STUDIO/lora/selfies_gallery.rb --subject ragnhild --soundtrack selfies/dilla.mp3
 #   ruby STUDIO/lora/selfies_gallery.rb api '{"action":"build"}'
 #
-# It reads only; it never renders, uploads or deletes. A film is a still that
+# It reads only; it never renders, uploads or deletes. Each included subject
+# must separately approve publication and source rights. A film is a still that
 # has an animation beside it: the animate step writes <stem>.mp4 and, when a
 # soundtrack is laid under it, <stem>_audio.mp4. The scored cut is preferred.
 
@@ -21,6 +22,7 @@ require "json"
 require "optparse"
 require "fileutils"
 require_relative "../api"
+require_relative "consent"
 
 module Studio
   module Visual
@@ -36,11 +38,12 @@ module Studio
       # prefixes its graded still, so the leading token is what names the subject.
       SUBJECT = /\A(?:(?:postpro_)?(?<subject>[a-zA-Z0-9_-]+?))_(?:selfie|film)_/i.freeze
 
-      def initialize(root: LORA, out: DEFAULT_OUT, subject: nil, soundtrack: DEFAULT_SOUNDTRACK)
+      def initialize(root: LORA, out: DEFAULT_OUT, subject: nil, soundtrack: DEFAULT_SOUNDTRACK, consent_root: nil)
         @root = File.expand_path(root)
         @out = File.expand_path(out)
         @subject = subject&.to_s
         @soundtrack = soundtrack&.to_s
+        @consent_root = File.expand_path(consent_root || root)
       end
 
       def build
@@ -48,6 +51,13 @@ module Studio
 
         stills = files(STILL_EXTENSIONS)
         films = files(FILM_EXTENSIONS)
+        publication_subjects = (stills + films).filter_map { |path| subject_of(path) }.uniq
+        publication_subjects.select! { |name| name == @subject } if @subject
+        publication_subjects.each do |name|
+          Studio::Lora::Consent.require!(
+            subject: name, subject_directory: File.join(@consent_root, name), action: :publication
+          )
+        end
         scored = films.select { |path| File.basename(path, ".*").end_with?("_audio") }
 
         items = []

@@ -715,10 +715,10 @@ MASTER's `Fix::Wishlist` reads/writes the local runtime ledger `.master/fix_wish
 
 <badge>BLOCKED — operator action</badge>
 
-GitHub currently reports `pub5` as public. The current tree still tracks 29 JPEG source portraits under `STUDIO/lora/merethe/sources/` and three subject `subject.env` files. The new `.gitignore` rules protect future additions only; they do not untrack these files or remove earlier commits.
+GitHub currently reports `pub5` as public. This cleanup removes the 29 Merethe source JPEGs, 14 training-caption sidecars, three subject `subject.env` descriptors, the personal subject example and the stale STUDIO-owned FETAT research copy from the current default-branch tree. The existing `.gitignore` rules protect future additions; earlier pub5 commits and the archived pub4 source commit remain reachable.
 
 - [ ] Decide whether public visibility is intentional. If not, change the repository to private in GitHub Settings before further subject-media work.
-- [ ] After visibility is contained, plan a coordinated Git-history rewrite to remove the subject photographs, descriptors and any other private derivatives from every affected ref. A deletion commit alone is not sufficient; account for forks and existing clones.
+- [ ] After visibility is contained, plan a coordinated Git-history rewrite to remove the subject photographs, training captions, descriptors and any other private derivatives from every affected pub4/pub5 ref, mirror, branch and tag. A deletion commit alone is not sufficient; account for forks and existing clones.
 - [ ] Re-scan the complete history and current tree for subject media, descriptors, derived datasets, weights and credentials. Keep the consent gate in place; do not treat repository privacy as a substitute for subject consent or source rights.
 
 This cannot be completed through the current GitHub connection because it exposes repository content and Git writes, not repository-visibility administration or a coordinated history purge.

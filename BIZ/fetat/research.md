@@ -3,7 +3,8 @@
 
 **Status:** Working master document; not government policy, legal advice, or proof of individual allegations.  
 **Prepared:** 29 October 2026  
-**Canonical destination:** `anon987654321/pub4/STUDIO/docs/fetat/proposal.md`  
+**Supplementary research and evidence record:** `anon987654321/pub5/BIZ/fetat/research.md`  
+**Publishable proposal source:** `anon987654321/pub5/BIZ/tools/fetat_proposal.md`  
 **Project source:** https://fetat.no/  
 **Related source repository:** https://github.com/anon987654321/pub  
 **Historical source period:** principally October 2024–January 2025.

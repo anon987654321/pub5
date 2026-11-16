@@ -4,13 +4,14 @@ This subject lives beside the other trained identities at `STUDIO/lora/merethe/`
 
 ## Privacy
 
-The 15 recovered archive photographs and the 14 additional portraits currently
-appear in the repository's existing Git history. New source copies, datasets,
-weights, consent records and evidence are ignored by Git. Ignore rules do not
-untrack existing files or remove earlier commits. Do not use \`git add -f\` for
-photos, derived crops, dataset ZIPs, captions attached to private photos or
-trained weights. Agreement to training is not blanket permission to publish
-photographs or weights.
+The 15 recovered archive photographs, 14 additional portraits, their 14
+training-caption sidecars and the three tracked subject descriptors have been
+removed from the current public default-branch tree. Earlier pub5 commits and
+the archived pub4 source commit remain reachable until a separate coordinated
+history cleanup. Source copies, captions, datasets, weights, subject.env,
+consent records and evidence are local-only. Ignore rules do not erase history.
+Do not force-add private media or subject configuration. Agreement to training
+is not blanket permission to publish photographs or weights.
 
 This package does not upload images, create a Replicate training, or generate
 images. Those are separate operator actions. Keep the destination model private
@@ -41,13 +42,13 @@ actions.
 
 ## Additional portraits
 
-`sources/additional/` holds fourteen further portraits of Merethe grabbed from
-her public site, https://www.tommervik.no. Each was selected with OpenCV YuNet
-face detection and an SFace identity match against her own reference photos, so
-every kept image has exactly one detected face that matches her; `SOURCES.md`
-records the source URL and caption for each. Captions name the `MERETHE` trigger
-and the pair `tommervik-NN.jpg` + `tommervik-NN.txt` is what the dataset builder
-reads.
+The previous public source copies, per-image captions and face-match notes
+have been removed from this tree. Any future material must be supplied and
+reviewed locally, with written subject permission and separate photographer or
+source-rights evidence before generation, provider processing or training. A
+public webpage URL is provenance, not permission. Keep approved local material
+under `sources/additional/`; each image needs a same-basename `.txt` caption
+containing the `MERETHE` trigger.
 
 ## Recover and prepare
 
@@ -131,7 +132,8 @@ after generation and training, not a substitute for either.
 
 ## Subject environment
 
-Copy \`subject.env.example\` to the ignored local \`subject.env\` if you want
-\`STUDIO/lora/photograph.rb --subject merethe\` to resolve the subject descriptor after
-a private training manifest exists under \`weights/merethe/replicate_training.json\`.
+Copy \`STUDIO/lora/subject.env.example\` to the ignored local
+\`STUDIO/lora/merethe/subject.env\` when private subject configuration is
+needed. Keep the descriptor and model settings outside Git. A private training
+manifest may live under \`weights/merethe/replicate_training.json\`.
 Do not put API tokens in this file.
