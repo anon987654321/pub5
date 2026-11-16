@@ -13,8 +13,8 @@ class TestOperatorTestScope < Minitest::Test
     registered_rails_apps = inventory.select { |_name, directory| directory.start_with?("RAILS/") }.keys
     shared_consumers = Master::Fix::RailsApp.engine_apps(repo_root: Master::ROOT)
 
-    assert_equal registered_rails_apps, Operator::TestScope.rails_apps(%w[RAILS])
-    assert_equal shared_consumers, Operator::TestScope.rails_apps(%w[__shared])
+    assert_equal registered_rails_apps.sort, Operator::TestScope.rails_apps(%w[RAILS]).sort
+    assert_equal shared_consumers.sort, Operator::TestScope.rails_apps(%w[__shared]).sort
   end
 
   def test_shared_engine_routes_to_every_dependent_app_suite
