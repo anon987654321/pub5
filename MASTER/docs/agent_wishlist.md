@@ -217,11 +217,6 @@ carried each row.
    Do not hide the warning with constant guards or disable reload globally.
 8. Run journals that survive the checkout. Evidence: the sandbox
    recycled mid-session and took .master/ with it; a resumable run is
-   only as durable as the directory holding it. State on main: open —
-   a relocatable MASTER_STATE_DIR (or the like) is wanted; the shim's
-   .tools/ruby path already shows the pattern for Ruby itself.
-8. Run journals that survive the checkout. Evidence: the sandbox
-   recycled mid-session and took .master/ with it; a resumable run is
    only as durable as the directory holding it. State on main: open.
    Static trace shows the lifecycle state is a family, not one file:
    fix_runs.json, its lock and pending marker, assessment reports and
