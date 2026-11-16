@@ -724,7 +724,7 @@ laws:
       #!/bin/zsh
       if [[ -f x ]]; then echo y; fi
   JS_MODULE_SIZE:
-    status: fixture
+    status: retired
     file: "/repo/app/javascript/controllers/example_controller.js"
     bad: |
       // line
