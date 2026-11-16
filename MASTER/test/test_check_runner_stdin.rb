@@ -71,7 +71,7 @@ class TestCheckRunnerStdin < Minitest::Test
   def test_check_show_log_reads_a_bounded_tail_without_booting_master
     Dir.mktmpdir("check-log-cli") do |dir|
       log = File.join(dir, "latest.log")
-      File.write(log, "one\n two\nthree\n")
+      File.write(log, "one\ntwo\nthree\n")
       script = File.expand_path("../bin/check", __dir__)
       out, status = Open3.capture2e(
         { "MASTER_CHECK_RUN_LOG" => log },
