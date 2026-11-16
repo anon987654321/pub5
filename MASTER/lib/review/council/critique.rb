@@ -239,10 +239,10 @@ module Master
           localize_panel(panel)
         end
 
-        # CLI-lane sizing (see Deliberation.local_posture?): a full 26-persona
-        # panel cannot be heard inside the budget on the claude CLI, so local
-        # runs take council.yml's local_panel, veto roles and the Maintainer
-        # surviving the cut first.
+        # Local-capacity sizing (see Deliberation.local_posture?): the full
+        # 26-persona panel has exceeded the local review budget in measurement.
+        # Local runs take council.yml's local_panel, with veto roles and the
+        # Maintainer surviving the cut first. Re-measure before raising the cap.
         def localize_panel(panel)
           return panel unless Deliberation.local_posture?
 
