@@ -8,7 +8,7 @@ _operator() {
     'affiliate:permissioned Tradedoubler Claims API read, prepare and confirmed submit'
     'branches:classify branches against main and report merge/delete candidates'
     'brief:the authority chain, the mechanical guards and the top-ranked Laws, before the first edit'
-    'check:every declared check in the repo, fixing as it goes'
+    'check:repo-wide maintenance ladder; writes fixes unless --scan-only (not bin/check)'
     'ci:every RAILS app'\''s bin/ci'
     'cities:the RAILS city pages, from the local source'
     'coverage:the RAILS coverage run'
