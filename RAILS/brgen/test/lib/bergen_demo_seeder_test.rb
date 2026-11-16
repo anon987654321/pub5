@@ -168,8 +168,18 @@ class BergenDemoSeederTest < ActiveSupport::TestCase
     ActsAsTenant.with_tenant(@city) { seeder.seed! }
     post_count = Post.where(city: @city).count
     playlist_track_count = Playlist::Playlist.find_by!(city: @city, name: Brgen::BergenDemoSeeder::RADIO_BERGEN_PLAYLIST).tracks.count
+    vilvite = Place.find_by!(city: @city, slug: "vilvite")
 
+    # A re-seed repairs only the exact placeholder address from the previous
+    # catalogue. A later operator edit is not treated as seed drift.
+    vilvite.update!(address: "Thormøhlens check 51")
     ActsAsTenant.with_tenant(@city) { seeder.seed! }
+    assert_equal "Thormøhlens gate 51", vilvite.reload.address
+
+    vilvite.update!(address: "Operator supplied address")
+    ActsAsTenant.with_tenant(@city) { seeder.seed! }
+    assert_equal "Operator supplied address", vilvite.reload.address
+
     assert_equal post_count, Post.where(city: @city).count
     assert_equal playlist_track_count,
                  Playlist::Playlist.find_by!(city: @city, name: Brgen::BergenDemoSeeder::RADIO_BERGEN_PLAYLIST).tracks.count
