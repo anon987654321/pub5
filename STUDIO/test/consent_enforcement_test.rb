@@ -77,7 +77,7 @@ class TestStudioConsentEnforcement < Minitest::Test
       subject: "probe", client: @provider, directory: lora_root,
       ledger_path: File.join(@root, "ledger.jsonl")
     )
-    series.instance_variable_set(:@subject_directory, directory)
+    series.instance_variable_get(:@series).instance_variable_set(:@subject_directory, directory)
 
     error = assert_raises(Studio::Lora::Consent::Error) do
       series.run(count: 1, replace: true)
