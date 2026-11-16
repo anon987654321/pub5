@@ -187,6 +187,25 @@ screenshot count or previous revision.
   regression file previously ran 24/24; the full report remains unverified.
   Keep unmeasurable surfaces INCONCLUSIVE and reuse existing Law identities.
 
+2026-11-16, sandbox: the `runner.rb --all` wedge is diagnosed and fixed at
+source (commit eb2a9d27, rebased as 0d2c7611 on push). Root cause: the
+cross-host branch of `CrawlSupport.fetch_following` used `next res`, and next
+inside a while body jumps back to the condition, which re-reads the same
+Location forever — a 100% CPU spin in the runner's own process (inline class
+checks), immune to every timeout. Watchdog stack samples (43 samples, 7 min)
+pinned it to `crawl_support.rb:43` → `URI.parse` → RFC3986 backtracking, with
+sibling samples in `Net::HTTP::Header#[]` join and `set_userinfo`: the loop
+re-ran join+parse each iteration. brgen redirects authenticated paths to
+`http://brgen.no/...` while the checks' origin is `127.0.0.1`, so any 302
+wedged the sweep. Fixed as a `return res`; the relative-Location path
+(`request_uri` missing on this uri gem for Rails' usual relative redirects)
+composes path+query directly. Two regression tests in
+`MASTER/test/test_crawl_support.rb` pin both shapes: 8 runs, 27 assertions,
+0 failures. `runner.rb first_screen` completed in 2.8s post-fix; its two
+remaining failures are content needles on brgen/vertical_dating_profile_new
+(skip-link/main landmark missing on that page — app-level, honest). The full
+`--all` sweep after the fix is the next acceptance run.
+
 ## 2. MASTER /fix convergence and recovery
 
 - [ ] Run `MASTER/test/test_fix_interruption_restart.rb` on the installed compatible Ruby.
