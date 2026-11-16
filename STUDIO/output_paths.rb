@@ -47,11 +47,10 @@ module Studio
       expanded
     end
 
-    # Operator directive, 2026-11-07: every render — photo, video or audio —
-    # goes straight into the data home with no kind or date subfolders.
-    # Filenames keep their millisecond stamps, so same-second collisions are
-    # the only naming concern, and the kind-level environment override stays
-    # the one knob that can move a render lane elsewhere.
+    # The flat render lanes (photography and Postpro) write directly into the
+    # data home. Dilla deliberately layers a UTC-day directory on this base in
+    # dilla_render_directory(at:), as documented by its output contract.
+    # A lane-specific environment override remains the one way to move a lane.
     def flat_directory(override:)
       configured = override ? ENV.fetch(override, "").to_s : ""
       unless configured.empty?

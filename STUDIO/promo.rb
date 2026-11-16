@@ -23,6 +23,7 @@ require "optparse"
 require "fileutils"
 require "open3"
 require "time"
+require "yaml"
 require_relative "api"
 require_relative "output_paths"
 
@@ -35,58 +36,42 @@ module Studio
     DEFAULT_CROSSFADE = 1.0
     LOUDNESS_TARGET = -14.0
 
-    # The film looks, mirroring STUDIO/postpro/video.yml so a cut and a graded
-    # still agree on what the look is. Read from that file when it is present;
-    # this table is the fallback when the file is not.
-    LOOKS = {
-      "dilla_heavy" => [
-        "gblur=sigma=0.32",
-        "tmix=frames=3:weights=1 1 1",
-        "eq=contrast=1.16:saturation=1.24:gamma=0.96",
-        "rgbashift=rh=3:rv=-1:gh=-2:gv=1:bh=1:bv=2",
-        "chromashift=cbh=2:crh=-2",
-        "noise=alls=6:allf=t+u",
-        "unsharp=5:5:0.42:5:5:0",
-        "vignette=PI/5",
-      ],
-      "architectural_clean" => [
-        "eq=contrast=1.05:saturation=1.06:gamma=0.98",
-        "vignette=PI/5",
-      ],
-      "none" => [],
-    }.freeze
-
+    # The video-grade catalogue is the one authority for looks shared by
+    # Promo, Postpro and Dilla. A missing or malformed catalogue is a defect,
+    # not a reason to silently render with a second, stale table.
     module_function
 
     def looks
       path = File.join(__dir__, "postpro", "video.yml")
-      return LOOKS unless File.file?(path)
+      raise ArgumentError, "video grade catalogue is missing: #{path}" unless File.file?(path)
 
-      presets = parse_video_presets(File.read(path, encoding: "UTF-8"))
-      presets.empty? ? LOOKS : LOOKS.merge(presets)
+      parse_video_presets(File.read(path, encoding: "UTF-8"))
     end
 
-    # Minimal reader for the `presets:` block of video.yml: a preset name, then
-    # its `filters:` list of ffmpeg filter strings. Keeps the one definition in
-    # video.yml authoritative without a YAML dependency at this boundary.
     def parse_video_presets(text)
-      presets = {}
-      name = nil
-      in_filters = false
-      text.each_line do |line|
-        if (match = line.match(/\A  ([a-z0-9_]+):\s*\z/))
-          name = match[1]
-          presets[name] ||= []
-          in_filters = false
-        elsif name && line.match?(/\A    filters:\s*\z/)
-          in_filters = true
-        elsif in_filters && (match = line.match(/\A      - (.+?)\s*\z/))
-          presets[name] << match[1]
-        elsif line.match?(/\A    [a-z]/)
-          in_filters = false
+      document = YAML.safe_load(
+        text, permitted_classes: [], permitted_symbols: [], aliases: false
+      )
+      raise ArgumentError, "video grade catalogue must be a mapping" unless document.is_a?(Hash)
+      raise ArgumentError, "unsupported video grade schema" unless document["schema"] == "postpro.video.v1"
+
+      presets = document["presets"]
+      raise ArgumentError, "video grade catalogue needs a presets mapping" unless presets.is_a?(Hash) && !presets.empty?
+
+      presets.each_with_object({}) do |(name, spec), result|
+        unless name.is_a?(String) && name.match?(/\A[a-z0-9_]+\z/) && spec.is_a?(Hash)
+          raise ArgumentError, "invalid video preset entry: #{name.inspect}"
         end
-      end
-      presets.reject { |_, filters| filters.empty? }
+
+        filters = spec["filters"]
+        unless filters.is_a?(Array) && filters.all? { |filter| filter.is_a?(String) && !filter.strip.empty? }
+          raise ArgumentError, "video preset #{name.inspect} needs a list of non-empty filter strings"
+        end
+
+        result[name] = filters.freeze
+      end.freeze
+    rescue Psych::Exception => error
+      raise ArgumentError, "video grade catalogue is invalid: #{error.message}"
     end
 
     # The ffmpeg argument vector for one cut. Pure: no filesystem writes, so a

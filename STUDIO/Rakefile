@@ -54,6 +54,8 @@ task :check do
   raise "studio --list failed:\n#{cli_out}" unless cli_status.success?
   raise "studio --list does not expose Ableton recovery" unless cli_out.include?("ableton")
   raise "studio --list does not expose LoRA validation" unless cli_out.include?("lora")
+  raise "studio --list does not expose photograph generation" unless cli_out.include?("photograph")
+  raise "studio --list does not expose the selfie gallery" unless cli_out.include?("gallery")
   raise "studio --list does not expose the promo cut" unless cli_out.include?("promo")
 
   python_sources = Dir.glob(File.join(STUDIO_ROOT, "**", "*.py"))

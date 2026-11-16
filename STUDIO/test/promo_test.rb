@@ -47,6 +47,23 @@ class TestPromo < Minitest::Test
     assert_raises(ArgumentError) { Studio::Promo.look_filters("no_such_look") }
   end
 
+  def test_video_catalogue_rejects_an_unknown_schema_and_non_string_filters
+    error = assert_raises(ArgumentError) do
+      Studio::Promo.parse_video_presets("schema: other\\npresets: {}\\n")
+    end
+    assert_match(/unsupported video grade schema/, error.message)
+
+    error = assert_raises(ArgumentError) do
+      Studio::Promo.parse_video_presets(<<~YAML)
+        schema: postpro.video.v1
+        presets:
+          broken:
+            filters: nope
+      YAML
+    end
+    assert_match(/needs a list of non-empty filter strings/, error.message)
+  end
+
   def test_look_filters_reach_the_graph
     heavy = Studio::Promo.build_args(stills: stills(1), audio: "a.wav", out: "o.mp4", look: "dilla_heavy")
     plain = Studio::Promo.build_args(stills: stills(1), audio: "a.wav", out: "o.mp4", look: "none")

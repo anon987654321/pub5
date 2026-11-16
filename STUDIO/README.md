@@ -14,7 +14,8 @@ but the implementation is owned here.
   not presented as complete transcriptions. The renderer remains owned by
   `dilla/dilla.rb`; the stdlib-only `dilla/lib/als*.rb` tools
   recover composition archives and MIDI from `.als` files. The unified
-  `bin/studio` CLI exposes `dilla`, `postpro`, `lora` validation, `promo` and
+  `bin/studio` CLI exposes `dilla`, `postpro`, `lora` validation,
+  `photograph` generation, the `gallery` manifest builder, `promo`, and
   `ableton inventory|export|midi`.
   Rendered output is replaceable:
   a new run may delete and replace it, and no rendered-sound default moves on

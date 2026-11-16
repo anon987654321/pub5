@@ -21,6 +21,9 @@ presets:
       - noise=alls=6:allf=t+u
       - unsharp=5:5:0.42:5:5:0
       - vignette=PI/5
+  none:
+    description: no post-capture look filters
+    filters: []
   dmt_bled:
     description: bleeding-edge geometric trip; controlled temporal smear and chromatic fracture
     filters:

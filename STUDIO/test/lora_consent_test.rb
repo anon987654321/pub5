@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "open3"
 require "tmpdir"
 require "yaml"
 require_relative "minitest_helper"
@@ -8,6 +9,7 @@ require_relative "../lora/consent"
 
 class TestLoraConsent < Minitest::Test
   Consent = Studio::Lora::Consent
+  REPOSITORY_ROOT = File.expand_path("../..", __dir__)
 
   def setup
     @root = Dir.mktmpdir("studio-lora-consent-")
@@ -69,6 +71,30 @@ class TestLoraConsent < Minitest::Test
     File.write(outside, "outside evidence", mode: "w", perm: 0o600)
     File.symlink(outside, path)
     refute Consent.validate(subject: "probe", subject_directory: @subject_dir).fetch("valid")
+  end
+
+  def test_subject_media_and_permission_records_are_ignored_for_new_files
+    paths = %w[
+      STUDIO/lora/probe/sources/photo.jpg
+      STUDIO/lora/probe/references/reference.jpg
+      STUDIO/lora/probe/subject.env
+      STUDIO/lora/probe/consent.yml
+      STUDIO/lora/probe/evidence/permission.pdf
+      STUDIO/lora/probe/weights/adapter.safetensors
+      STUDIO/lora/probe/out/render.jpg
+      STUDIO/lora/probe/retouched/photo.jpg
+      STUDIO/lora/probe/dataset/photo.jpg
+      STUDIO/lora/probe/dataset_first/photo.jpg
+      STUDIO/lora/probe/ledger.jsonl
+    ]
+    output, error, status = Open3.capture3(
+      "git", "check-ignore", "--no-index", "--stdin",
+      chdir: REPOSITORY_ROOT, stdin_data: "#{paths.join("\\n")}\\n"
+    )
+
+    assert status.success?, "git check-ignore failed: #{error}"
+    assert_equal paths.sort, output.lines.map(&:strip).sort,
+                 "new subject material must stay local by default"
   end
 
   def test_merethe_archive_and_additional_photos_are_distinct_source_sets
