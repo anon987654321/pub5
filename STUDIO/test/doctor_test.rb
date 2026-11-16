@@ -60,6 +60,8 @@ class TestStudioDoctor < Minitest::Test
     refute_includes serialized, "ragnhild"
     refute_includes serialized, "sources/01.jpg"
     refute_includes serialized, "subject.env"
+  end
+
   def test_shallow_checkout_does_not_report_private_history_clean
     doctor = Studio::Doctor.new
     checks = []
@@ -80,6 +82,5 @@ class TestStudioDoctor < Minitest::Test
     history_check = checks.find { |check| check.fetch("id") == "private_subject_history" }
     assert_equal "INCONCLUSIVE", history_check.fetch("state")
     assert_includes history_check.fetch("detail"), "repository is shallow"
-  end
   end
 end
