@@ -1,0 +1,141 @@
+#!/bin/sh
+# sandbox-bootstrap — take a bare Linux container from nothing to a working
+# pub5 checkout, in one command, without root.
+#
+# This is the path the 2026-11-16 container run walked by hand: no system
+# Ruby, no Chrome, no libvips, five app bundles missing, and two bare-ruby
+# suites needing gems nobody had declared. Each step is idempotent; a step
+# that already succeeded is skipped, so re-running after a failure resumes.
+#
+# Usage:
+#   MASTER/bin/sandbox-bootstrap            # everything, in dependency order
+#   MASTER/bin/sandbox-bootstrap -n         # print what it would do, do nothing
+#
+# What it does, in order:
+#   1. a Ruby >= 3.3 (bin/dev-bootstrap builds the vendored one, no root)
+#   2. MASTER's bundle (bin/master, bin/operator, the checks)
+#   3. every active RAILS app's bundle (brgen amber bsdports mrdamascy, MASTER/web)
+#   4. libvips.so.42 and its friends, extracted from Debian pool .debs into
+#      /home/z/my-project/.libs — ruby-vips needs the C ABI, which the host's
+#      sharp npm tree does not ship and apt cannot reach without root
+#   5. Chrome for Testing headless shell (tools/chrome_install.rb), which
+#      writes CHROME_PATH into ~/.config/master/env
+#   6. the two gems the bare-ruby contract suites require outside any bundle:
+#      zeitwerk and activesupport
+#   7. prints the env to export (or source MASTER/bin/sandbox-env)
+set -eu
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+MASTER=$(dirname -- "$SCRIPT_DIR")
+ROOT=$(dirname -- "$MASTER")
+LIBS=/home/z/my-project/.libs
+VIPS_LIB="$LIBS/extracted/usr/lib/x86_64-linux-gnu"
+POOL=http://deb.debian.org/debian/pool/main
+
+DRY=0
+[ "${1:-}" = "-n" ] && DRY=1
+
+say() { printf 'sandbox-bootstrap: %s\n' "$*"; }
+run() { if [ "$DRY" = 1 ]; then say "would run: $*"; else "$@"; fi; }
+
+# 1. Ruby
+if [ -x "$MASTER/.tools/ruby/bin/ruby" ] && "$MASTER/.tools/ruby/bin/ruby" -e 'exit 0' 2>/dev/null; then
+  say "ruby ok: $MASTER/.tools/ruby/bin/ruby"
+else
+  say "building the vendored ruby (this compiles; minutes)"
+  run "$MASTER/bin/dev-bootstrap"
+fi
+RUBY="$MASTER/.tools/ruby/bin/ruby"
+GEM_HOME_BIN="$MASTER/.tools/ruby/bin"
+BUNDLE="$GEM_HOME_BIN/bundle"
+
+# 2. MASTER's bundle
+if "$RUBY" -e 'begin; require "ruby_llm"; exit 0; rescue LoadError; exit 1; end' 2>/dev/null; then
+  say "MASTER bundle ok"
+else
+  say "bundle install MASTER"
+  (cd "$MASTER" && run env PATH="$GEM_HOME_BIN:$PATH" "$BUNDLE" install --jobs 4)
+fi
+
+# 3. RAILS app bundles (serial: one shared gem home, parallel installs race).
+#    Detection runs `bundle install --local`, not a bare `require "rails"`:
+#    the fleet pins rails to a git source, and git-sourced gems resolve only
+#    through Bundler's setup, so a plain require cannot see a finished bundle.
+#    --local is offline-safe and exits in seconds when the bundle is satisfied.
+for app in brgen amber bsdports mrdamascy; do
+  gemfile="$ROOT/RAILS/$app/Gemfile"
+  [ -f "$gemfile" ] || continue
+  say "bundle check RAILS/$app"
+  (cd "$ROOT/RAILS/$app" && run env PATH="$GEM_HOME_BIN:$PATH" BUNDLE_GEMFILE="$gemfile" "$BUNDLE" install --local --quiet) || \
+    (cd "$ROOT/RAILS/$app" && run env PATH="$GEM_HOME_BIN:$PATH" BUNDLE_GEMFILE="$gemfile" "$BUNDLE" install --jobs 4)
+done
+if [ -f "$ROOT/MASTER/web/Gemfile" ]; then
+  say "bundle check MASTER/web"
+  (cd "$ROOT/MASTER/web" && run env PATH="$GEM_HOME_BIN:$PATH" "$BUNDLE" install --local --quiet) || \
+    (cd "$ROOT/MASTER/web" && run env PATH="$GEM_HOME_BIN:$PATH" "$BUNDLE" install --jobs 4)
+fi
+
+# 4. libvips for ruby-vips, from Debian pool debs, extracted without root.
+#    The set is the bookworm libvips42 closure the trixie host lacks: the
+#    loader walks one soname at a time, so the list is every library that
+#    was MISSING on the 2026-11-16 run, plus the real (not transitional)
+#    hdf5 and matio packages.
+fetch_deb() { # fetch_deb <pool-dir> <pattern>
+  subdir=$1; pattern=$2
+  [ -d "$VIPS_LIB" ] || mkdir -p "$VIPS_LIB"
+  url=$(curl -s "$POOL/$subdir/" | grep -oE "$pattern" | sort -u | tail -1)
+  [ -n "$url" ] || { say "MISSING deb: $subdir/$pattern"; return 0; }
+  [ -f "$LIBS/$url" ] || (cd "$LIBS" && curl -sO "$POOL/$subdir/$url")
+  dpkg-deb -x "$LIBS/$url" "$LIBS/extracted/"
+  say "libvips dep: $url"
+}
+if [ -f "$VIPS_LIB/libvips.so.42" ] && LD_LIBRARY_PATH="$VIPS_LIB" "$RUBY" -e 'require "ffi"; exit 0' 2>/dev/null && \
+   LD_LIBRARY_PATH="$VIPS_LIB" "$RUBY" -rffi -e 'FFI::Library' -e 'exit 0' 2>/dev/null; then
+  say "libvips tree ok: $VIPS_LIB"
+else
+  say "fetching the libvips42 closure from the Debian pool"
+  [ "$DRY" = 1 ] || mkdir -p "$LIBS"
+  fetch_deb v/vips            'libvips42_[^"]*deb12u3_amd64\.deb'
+  fetch_deb libg/libgsf       'libgsf-1-114_[^"]*amd64\.deb'
+  fetch_deb libj/libjpeg-turbo 'libjpeg62-turbo_[^"]*amd64\.deb'
+  fetch_deb libi/libimagequant 'libimagequant0_[^"]*amd64\.deb'
+  fetch_deb libw/libwebp      'libwebp7_[^"]*amd64\.deb'
+  fetch_deb libw/libwebpdemux 'libwebpdemux2_[^"]*amd64\.deb'
+  fetch_deb libw/libwebpmux   'libwebpmux3_[^"]*amd64\.deb'
+  fetch_deb libc/libcgif      'libcgif0_[^"]*amd64\.deb'
+  fetch_deb libp/libpoppler-glib 'libpoppler-glib8_[^"]*amd64\.deb'
+  fetch_deb libm/libmatio     'libmatio11_[^"]*amd64\.deb'
+  fetch_deb h/hdf5            'libhdf5-103-1_[^"]*amd64\.deb'
+  fetch_deb libl/liblcms2     'liblcms2-2_[^"]*amd64\.deb'
+  fetch_deb libe/libexif      'libexif12_[^"]*amd64\.deb'
+fi
+
+# 5. Chrome for Testing (user-scoped, writes CHROME_PATH to ~/.config/master/env)
+if [ -n "${CHROME_PATH:-}" ] && [ -x "${CHROME_PATH:-}" ]; then
+  say "chrome ok: $CHROME_PATH"
+else
+  say "installing Chrome for Testing headless shell"
+  run env PATH="$GEM_HOME_BIN:$PATH" "$RUBY" "$MASTER/tools/chrome_install.rb"
+fi
+
+# 6. the two gems the bare-ruby contract suite needs outside any bundle
+for gem in zeitwerk activesupport; do
+  if "$RUBY" -e "begin; require '$gem'; exit 0; rescue LoadError; exit 1; end" 2>/dev/null; then
+    say "bare-ruby gem ok: $gem"
+  else
+    say "gem install $gem"
+    run env PATH="$GEM_HOME_BIN:$PATH" "$GEM_HOME_BIN/gem" install "$gem" --no-document
+  fi
+done
+
+# 7. bundler writes a RUBY VERSION interpreter pin into every lock it touches;
+#    the stack contract forbids it. Remove it after any bundle work.
+if [ "$DRY" = 1 ]; then
+  say "would run: $SCRIPT_DIR/strip-ruby-version"
+else
+  "$SCRIPT_DIR/strip-ruby-version" >/dev/null
+  say "lockfiles free of the interpreter pin"
+fi
+
+say "done. export the env with:"
+say '  . MASTER/bin/sandbox-env'

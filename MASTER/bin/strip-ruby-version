@@ -1,0 +1,43 @@
+#!/bin/sh
+# strip-ruby-version — remove the RUBY VERSION interpreter pin bundler writes
+# into every Gemfile.lock it touches.
+#
+# The stack contract (RAILS/test/rails_stack_contract_test.rb) forbids the pin:
+# the fleet boots on any Ruby >= 3.3, and a lock that names 3.3.6 (this
+# sandbox's vendored build) or 3.3.8 (the operator's) lies about that the next
+# time the other interpreter runs `bundle install`. Bundler 4 appends the
+# section on every lockfile write, satisfied or not, so the contract and the
+# tool cannot both hold unless the section is removed after installs. This is
+# that removal, as a named tool: sandbox-bootstrap runs it after bundle work,
+# and a human whose `bundle install` just turned the stack contract red runs
+# it for the same reason.
+#
+# Usage: MASTER/bin/strip-ruby-version [Gemfile.lock ...]
+#        no arguments = every lockfile under RAILS/ and MASTER/web
+set -eu
+
+strip() {
+  file=$1
+  [ -f "$file" ] || return 0
+  awk '
+    /^RUBY VERSION$/ { skip=1; next }
+    skip==1 && /^$/ { skip=2; next }
+    skip==2 && /^[A-Z]/ { skip=0; print; next }
+    skip==0 { print }
+    skip==2 { next }
+  ' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+  grep -q "^RUBY VERSION$" "$file" || printf 'stripped: %s\n' "$file"
+}
+
+if [ "$#" -gt 0 ]; then
+  for file in "$@"; do strip "$file"; done
+  exit 0
+fi
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+MASTER=$(dirname -- "$SCRIPT_DIR")
+ROOT=$(dirname -- "$MASTER")
+
+for lock in "$ROOT"/RAILS/*/Gemfile.lock "$ROOT"/MASTER/web/Gemfile.lock; do
+  strip "$lock"
+done

@@ -1,0 +1,41 @@
+#!/bin/sh
+# sandbox-env — the environment the pub5 tooling needs on a bare Linux
+# container. Source it; do not execute it:
+#
+#   . MASTER/bin/sandbox-env
+#
+# Three things, each discovered rather than assumed:
+#   PATH       the checkout's vendored ruby leads, so bin/ruby, bundle and
+#              gem resolve to one interpreter everywhere
+#   LD_LIBRARY_PATH  the libvips closure sandbox-bootstrap extracted (ruby-vips
+#              needs the C ABI the host does not ship); empty and harmless
+#              when the tree is absent
+#   CHROME_PATH the headless shell tools/chrome_install.rb installed, for the
+#              CDP-based rendered checks; empty and harmless when missing
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+MASTER=$(dirname -- "$SCRIPT_DIR")
+ROOT=$(dirname -- "$MASTER")
+
+VIPS_LIB=/home/z/my-project/.libs/extracted/usr/lib/x86_64-linux-gnu
+if [ -d "$VIPS_LIB" ]; then
+  case ":${LD_LIBRARY_PATH:-}:" in
+    *":$VIPS_LIB:"*) ;;
+    *) LD_LIBRARY_PATH="$VIPS_LIB${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" ;;
+  esac
+fi
+
+if [ -x "$MASTER/.tools/ruby/bin/ruby" ]; then
+  case ":$PATH:" in
+    *":$MASTER/.tools/ruby/bin:"*) ;;
+    *) PATH="$MASTER/.tools/ruby/bin:$PATH" ;;
+  esac
+fi
+
+if [ -z "${CHROME_PATH:-}" ] && [ -n "${HOME:-}" ]; then
+  found=$(find "$HOME/.cache/pub5" -name chrome-headless-shell -type f 2>/dev/null | sort | tail -1)
+  [ -n "$found" ] && CHROME_PATH="$found"
+fi
+
+export PATH LD_LIBRARY_PATH
+[ -n "${CHROME_PATH:-}" ] && export CHROME_PATH
+unset SCRIPT_DIR MASTER ROOT VIPS_LIB found
