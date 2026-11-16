@@ -1,4 +1,4 @@
-# Model routing profile — GLM-first, with API, hosted, and free fallbacks; Claude CLI is opt-in.
+# Model routing profile — GLM-first, with API, hosted, and free fallbacks.
 
 schema: 1
 routing:
