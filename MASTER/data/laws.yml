@@ -4450,9 +4450,15 @@ law_catalogue:
       severity: warning
       languages: [html]
       path_exclude: 'mailer'
+    # Retired by the operator (2026-11-16): the 300-line ceiling kept
+    # generating split proposals that delayed and stalled /fix runs instead of
+    # letting them repair real defects. A file's length is not a defect while
+    # its content still has module boundaries; SMALL_FUNCTIONS and
+    # CYCLOMATIC_COMPLEXITY keep judging what the code actually does.
     SMALL_FILES:
       definition_sources: [MASTER/law/structural.rb]
       severity: warning
+      lifecycle: retired
     SMALL_FUNCTIONS:
       definition_sources: [MASTER/law/structural.rb]
       severity: warning
