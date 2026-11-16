@@ -234,3 +234,99 @@ carried each row.
    backed off before the provider said so. State on main: open — a
    per-lane concurrency ceiling in models.yml cli_lanes, read where
    CLI_SLOTS is read today, is the smallest honest shape.
+
+## External agent session, 2026-11-17
+
+Provenance: written 2026-11-17 by an external agent that cloned pub5 into
+a bounded Linux container, extracted the full Law catalogue (800
+identities: 532 executable, 257 statement-only), ran source-level probes
+against the checkout, and landed the OPENBSD cron-table and strict-mode
+exemption fix at 9946314. The container held no Ruby >= 3.3 and recycled
+repeatedly, so every suite and the constitutional scanner are NOT_RUN
+here; the findings below are source-read and probe-measured, not
+scanner-adjudicated. Like the page above, this is an experience record,
+not policy and not backlog administration: it creates no Law identity,
+nothing loads it, and root TODO.md and the structured ledgers keep owning
+action state. Every row is open and proposed; none is landed. The two
+horizon lists at the end are aspiration, not implementation authority.
+
+### Concrete proposals
+
+1. A zero-dependency proof tier. Evidence: the scanner could not run
+   here (no Ruby >= 3.3, no bundle, no Chrome, recycling host), so the
+   audit approximated thirty-odd laws with text probes and adjudicated
+   the exemptions by fetching detector source by hand. State on main:
+   open - a stdlib-only `bin/master scan --bare PATH` running the
+   detect-regex laws under any Ruby >= 3.3 with no bundle, emitting JSON
+   findings, would let an agent get real findings in seconds; the
+   bare-ruby contract suites already prove the shape.
+
+2. A per-law lookup. Evidence: learning that NO_PUTS exempts
+   /cli/session, that TIME_ZONE_UNSAFE spares .utc/.to_i, and that
+   PATH_PURPOSE judges MASTER only took separate source fetches per law.
+   State on main: open - a generated index (id to statement, severity,
+   mode, lifecycle, languages, surfaces, path scope, exemptions,
+   fixtures, proved_by) exposed as `bin/master laws --json ID`;
+   agent_context.rb gives a brief, not a dictionary.
+
+3. A fast self-consistency gate on every landing. Evidence: the
+   constitution stood 958 lines over its own 6717-line budget, carried a
+   32nd bin door past a ceiling of 31, and let the RUNBOOK cron table
+   drift from fourteen jobs to eleven - all cheap mechanical breaches.
+   State on main: open - a seconds-long selfcheck on every commit plus
+   hooks that install on clone (core.hooksPath was unset in a fresh
+   clone, so the guards never fired).
+
+4. A receipt format an outside agent can hand back. Evidence: the
+   session proved things (sh -n exit 0, a comment-only diff, fourteen
+   jobs named) but could only write them into a commit message. State on
+   main: open - let an agent emit structured evidence against a law for
+   TaskContract to validate, and name the cheapest next measurement that
+   would turn INCONCLUSIVE into PASS.
+
+5. Tiered OPENBSD admission. Evidence: the full manual-receipt gate is
+   right for a behavior change and heavy for a reasoned comment; the
+   principle (a prose file with no native interface needs source review,
+   not invented manuals) already exists in the gate's own text. State on
+   main: open - make the tier mechanical so an agent knows which gate it
+   is in without guessing.
+
+6. One status view across the ledgers. Evidence: the session read
+   TODO.md, operator_seams.yml, gaps.yml, convergence.yml,
+   refinements.yml, ux_refinements.yml and proposals.yml to learn what
+   was open. State on main: open - a generated `bin/master status
+   --agent` unioning them into actionable-now / needs-proof /
+   needs-operator / refused, each pointing at its owning file; keep the
+   one-backlog rule, give one read.
+
+7. Exemptions as kinds, not hardcoded paths. Evidence: the NO_PUTS
+   detector comment records a rename re-arming a law on its own
+   exempted subject. State on main: open - move path exemptions into the
+   kind registry and catalogue globs so a relocation cannot silently
+   turn a clean file red.
+
+8. An ownership query. Evidence: cross-tree ownership was rebuilt with
+   greps despite ARCHITECTURE.md. State on main: open - `bin/master owns
+   PATH` naming the owning law, check, test, callers and PATH_OWNERSHIP
+   entry; surface reference_graph and code_index as a question.
+
+### Horizon, not authority
+
+Two further lists were drawn as aspiration once the above land. They are
+recorded so the direction is visible, not as tasks: a standing
+falsification harness for the governed-delivery hypothesis; prediction
+of regressions before the gate; recency-weighted coverage so a
+green-that-measured-nothing cannot display as green; a portable law kit
+for an external pilot; an accumulating, conflict-detecting record of
+operator taste; continuous cross-source drift healing; law retirement by
+measured value; explainable refusals and a first hour that is one proof
+loop. Beyond those, a shared common law with precedent and dissent;
+portable, verifiable agent reputation and a treaty layer between
+governed peers; a court for genuine value conflicts; a casebook linking
+each law to its originating failure; a pedagogy that runs both ways;
+capability-monotonic governance from the 1 GB box to a phone; and a
+runtime mature enough to retire a ceremony - including its own - when
+less governance would serve the work better. None of these is a Law, a
+task, or a claim; they are the direction an agent wished for after
+working the tree, and the structured ledgers remain the only owners of
+action state.
