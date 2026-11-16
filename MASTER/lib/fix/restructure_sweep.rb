@@ -370,11 +370,16 @@ module Master
         payload = line.delete_prefix("AUDIT:").strip
         return if payload.length < 80
 
-        complete = AUDIT_FIELDS.all? do |field|
-          match = payload.match(/(?:\\A|;\\s*)#{Regexp.escape(field)}\\s*([^;]+)/)
-          match && !match[1].strip.empty?
+        entries = payload.split(";").map do |entry|
+          key, value = entry.strip.split("=", 2)
+          [key.to_s.strip, value.to_s.strip]
         end
-        payload if complete
+        required = AUDIT_FIELDS.map { |field| field.delete_suffix("=") }
+        keys = entries.map(&:first)
+        return unless keys.uniq.size == keys.size && keys.sort == required.sort
+        return if entries.any? { |_key, value| value.empty? }
+
+        payload
       end
 
       def proposal(tree, problem, scorecard: nil, candidate_map: "")
