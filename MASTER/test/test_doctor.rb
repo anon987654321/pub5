@@ -19,6 +19,16 @@ class TestDoctor < Minitest::Test
     Open3.capture2e(env, RbConfig.ruby, DOCTOR, chdir: ROOT)
   end
 
+  def test_runtime_doctor_help_is_boot_free_and_names_the_host_doctor
+    out, status = Open3.capture2e(RbConfig.ruby, DOCTOR, "--help", chdir: ROOT)
+
+    assert status.success?, out
+    assert_includes out, "Runtime doctor:"
+    assert_includes out, "MASTER/bin/operator doctor [--remote]"
+    assert_includes out, "Help does not boot MASTER"
+    refute_includes out, "MASTER doctor,"
+  end
+
   def test_doctor_runs_and_reports_every_check
     out, = run_doctor
     assert_match(/^doctor0 at master0: MASTER doctor, \d+ checks$/, out)
