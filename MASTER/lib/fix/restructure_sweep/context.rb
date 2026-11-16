@@ -449,7 +449,7 @@ module Master
         # { path => [[line_number, text]] } for files that name the stem or a constant.
         def production_references
           @production_references ||= Context.reference_files(@root)
-            .reject { |path| path == @path || test_path?(path) }
+            .reject { |path| path == @path || test_path?(path) || PROSE_EXTENSIONS.include?(File.extname(path).downcase) }
             .to_h do |path|
               [path, File.foreach(path, encoding: "UTF-8").with_index(1).select { |text, _n| text.match?(needle) }.map(&:reverse)]
             rescue ArgumentError
