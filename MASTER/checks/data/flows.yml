@@ -833,7 +833,7 @@ flows:
       - name: score_start
         get: $post_path
         expect_status: [200]
-        number: [{ pattern: 'post-vote-score">\s*(-?\d+)', as: s0 }]
+        number: [{ pattern: 'post-vote-score[^>]*>\s*(-?\d+)', as: s0 }]
       - name: upvote
         post: $post_path/vote
         params: { vote: { value: 1 } }
@@ -841,7 +841,7 @@ flows:
       - name: score_after_up
         get: $post_path
         expect_status: [200]
-        number: [{ pattern: 'post-vote-score">\s*(-?\d+)', as: s_up }]
+        number: [{ pattern: 'post-vote-score[^>]*>\s*(-?\d+)', as: s_up }]
       - name: upvote_again_withdraws
         post: $post_path/vote
         params: { vote: { value: 1 } }
@@ -849,7 +849,7 @@ flows:
       - name: score_after_undo
         get: $post_path
         expect_status: [200]
-        number: [{ pattern: 'post-vote-score">\s*(-?\d+)', as: s_undo_up }]
+        number: [{ pattern: 'post-vote-score[^>]*>\s*(-?\d+)', as: s_undo_up }]
       - name: downvote
         post: $post_path/vote
         params: { vote: { value: -1 } }
@@ -857,7 +857,7 @@ flows:
       - name: score_after_down
         get: $post_path
         expect_status: [200]
-        number: [{ pattern: 'post-vote-score">\s*(-?\d+)', as: s_down }]
+        number: [{ pattern: 'post-vote-score[^>]*>\s*(-?\d+)', as: s_down }]
       - name: downvote_again_withdraws
         post: $post_path/vote
         params: { vote: { value: -1 } }
@@ -865,7 +865,7 @@ flows:
       - name: score_after_undo_down
         get: $post_path
         expect_status: [200]
-        number: [{ pattern: 'post-vote-score">\s*(-?\d+)', as: s_undo_down }]
+        number: [{ pattern: 'post-vote-score[^>]*>\s*(-?\d+)', as: s_undo_down }]
       - name: upvote_then_flip
         post: $post_path/vote
         params: { vote: { value: 1 } }
@@ -877,7 +877,7 @@ flows:
       - name: score_after_flip
         get: $post_path
         expect_status: [200]
-        number: [{ pattern: 'post-vote-score">\s*(-?\d+)', as: s_flip }]
+        number: [{ pattern: 'post-vote-score[^>]*>\s*(-?\d+)', as: s_flip }]
     assert:
       - { left: s0, op: "==", right: 0, why: "a new post starts at zero" }
       - { left: s_up, op: "==", right: s0, delta: 1, why: "an upvote adds one" }
@@ -930,7 +930,11 @@ flows:
       - name: search
         get: /search?q=$unique
         expect_status: [200]
-        expect_body: ['Sokeflow $unique']
+        # The HTML result highlights the matched term with <mark>, which
+        # splits the title: "Sokeflow <mark>dbgtoly7l</mark>". The needle
+        # predates highlighting and demanded the contiguous string; the
+        # highlight is the feature, so the pattern crosses it.
+        expect_body: ['Sokeflow ?(<mark>)?$unique']
         capture: [{ pattern: 'href="(/posts/[a-z0-9-]*$unique[a-z0-9-]*)"', as: result_path }]
       - name: open_the_result
         get: $result_path
@@ -975,14 +979,22 @@ flows:
     mutates: true
     host: markedsplass.brgen.no
     description: List an item for sale, find it on the marketplace, then put someone else's listing in the cart and find it there.
+    # The category select is fed by Marketplace::Category.all, and the sandbox
+    # database has zero categories (2026-11-16): the form renders with only a
+    # blank option, the flow's capture would bind a stray option value from
+    # another select and the create would die 422 "Category association is
+    # invalid". With no categories the journey is the named inconclusive, not
+    # a product failure; seeded, every step runs as before.
+    requires_data: [category]
     steps:
       - name: sell_form
         get: /listings/new
         expect_status: [200]
         capture:
-          - { pattern: '(?m)name="listing\[category_id\]".*?<option value="(\d+)"', as: category }
+          - { pattern: '(?m)name="listing\[category_id\]"[^>]*>\s*<option[^>]*value="(\d+)"', as: category, optional: true }
       - name: list_it
         post: /listings
+        needs: [category]
         params:
           listing:
             title: "Flowsofa $unique"
@@ -1011,10 +1023,12 @@ flows:
         count: { pattern: 'href="/listings/$other"', as: before }
       - name: add_to_cart
         post: /listings/$other/orders
+        needs: [other]
         params: { order: { message: "Er den ledig? $unique" } }
         expect_status: [200]
       - name: cart_has_it
         get: /cart
+        needs: [other]
         expect_status: [200]
         count: { pattern: 'href="/listings/$other"', as: after }
     assert:
@@ -1056,10 +1070,16 @@ flows:
     mutates: true
     host: dating.brgen.no
     description: Like a profile from the deck and see that profile leave the deck.
+    # An empty deck is the app's honest 204 (home_controller#next heads
+    # :no_content when no candidate is left), not a product defect. The
+    # sandbox database has zero dating profiles (2026-11-16), so the journey
+    # downgrades to the named inconclusive until the deck is seeded; with a
+    # profile in it, all three steps run as before.
+    requires_data: [person]
     steps:
       - name: deck
         get: /next
-        expect_status: [200]
+        expect_status: [200, 204]
         capture: [{ pattern: '/users/(\d+)/block', as: person, optional: true }]
       - name: like
         post: /likes?user_id=$person
@@ -1067,6 +1087,7 @@ flows:
         expect_status: [200]
       - name: deck_again
         get: /next
+        needs: [person]
         expect_status: [200]
         forbid_body: ['/users/$person/block']
 
@@ -1271,7 +1292,7 @@ flows:
         get: /posts/$post_id
         expect_status: [200]
         expect_body: ['Amberinnlegg $unique']
-        number: [{ pattern: 'post-vote-score">\s*(-?\d+)', as: s0 }]
+        number: [{ pattern: 'post-vote-score[^>]*>\s*(-?\d+)', as: s0 }]
       - name: upvote
         post: /posts/$post_id/vote
         params: { vote: { value: 1 } }
@@ -1279,7 +1300,7 @@ flows:
       - name: score_after_up
         get: /posts/$post_id
         expect_status: [200]
-        number: [{ pattern: 'post-vote-score">\s*(-?\d+)', as: s_up }]
+        number: [{ pattern: 'post-vote-score[^>]*>\s*(-?\d+)', as: s_up }]
       - name: upvote_again_withdraws
         post: /posts/$post_id/vote
         params: { vote: { value: 1 } }
@@ -1287,7 +1308,7 @@ flows:
       - name: score_after_undo
         get: /posts/$post_id
         expect_status: [200]
-        number: [{ pattern: 'post-vote-score">\s*(-?\d+)', as: s_undo }]
+        number: [{ pattern: 'post-vote-score[^>]*>\s*(-?\d+)', as: s_undo }]
       - name: downvote
         post: /posts/$post_id/vote
         params: { vote: { value: -1 } }
@@ -1295,7 +1316,7 @@ flows:
       - name: score_after_down
         get: /posts/$post_id
         expect_status: [200]
-        number: [{ pattern: 'post-vote-score">\s*(-?\d+)', as: s_down }]
+        number: [{ pattern: 'post-vote-score[^>]*>\s*(-?\d+)', as: s_down }]
       - name: like
         post: /posts/$post_id/like
         expect_status: [200]

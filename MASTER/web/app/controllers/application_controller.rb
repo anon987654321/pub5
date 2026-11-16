@@ -254,6 +254,14 @@ class ApplicationController < ActionController::Base
   def require_container!
     return if container
     return if warming_exempt_path?
+    # The unlock handshake is a local token compare plus a cookie write; it
+    # never touches the container. Gating it answered a wrong-token probe
+    # with 200 "Starting up…" HTML instead of the 401 the API contract
+    # promises — a silent success-shaped answer to an auth failure
+    # (master_unlock_refuses_a_wrong_token, 2026-11-16). Let it through; the
+    # controller denies on its own whether or not the gateway is up.
+    return if request.path == "/chat/command" &&
+              params[:command].to_s.strip.start_with?("/unlock ")
 
     start_container_bootstrap!
 
@@ -290,6 +298,11 @@ class ApplicationController < ActionController::Base
     path = request.path
     return true if path == "/up" || path == "/health" || path == "/ingress/health"
     return true if path == "/pair" || path.start_with?("/pair/")
+    # The PWA manifest is a static render — the runtime manifest flow got the
+    # warming page (which has no start_url) during boot, 2026-11-16. The
+    # asset-shaped exemption below covers /manifest.json but the route is
+    # bare /manifest.
+    return true if path == "/manifest" || path == "/manifest.json"
     return true if smoke_chat_probe?
     return true if path.start_with?("/assets/", "/runtime/")
     return true if path.match?(%r{\A/(?:face\.|three\.module|chat-|particle_|cognition_|visual_|face3d_|face_|

@@ -84,18 +84,47 @@ screenshot count or previous revision.
   system_test env, which needed a chromedriver matched to the headless shell
   plus a PATH entry literally named `chrome` for chromedriver to find the
   browser — both now installed and symlinked by sandbox-bootstrap.
-  Open work named by the runner, one CDP session each (2026-11-16):
-  - brgen/brgen_vote_up_down_toggles (14 steps: /posts/new -> /posts ->
-    $post_path/vote)
-  - brgen/brgen_search_then_open_result (5 steps: fails on the empty-result
-    arm /search?q=zzqxv-ingenting-slikt)
-  - brgen/brgen_marketplace_list_then_buy (6 steps: /listings/new -> /cart ->
-    /listings/$other/orders)
-  - brgen/brgen_dating_like_leaves_the_deck (3 steps: /next -> /likes)
-  - amber/amber_post_vote_like_comment (13 steps: vote/like/comment chain)
-  Also: amber bin/ci system_test needs the caching caveat (StimulusReflex)
-  and a chromedriver-matched browser; the matching chromedriver is now part
-  of sandbox-bootstrap.
+  Open work named by the runner, dispositioned the same day (2026-11-16,
+  each reproduced at the step level before touching anything):
+  - master_unlock_refuses_a_wrong_token — REAL, and the worst of the lot:
+    the warming gate answered a wrong-token probe with 200 "Starting up…"
+    HTML, an auth failure dressed as success. The unlock handshake is a
+    local token compare that never touches the gateway, so require_container!
+    now lets it through; verified 401 "unlock denied" against a live boot.
+  - master_runtime_endpoints_answer/manifest — same gate: the PWA manifest
+    (a static render) sat behind warming and served HTML without start_url.
+    Exempted next to its /manifest.json twin; verified live.
+  - brgen/brgen_vote_up_down_toggles + amber/amber_post_vote_like_comment —
+    stale flow regex: post-vote-score"> predates the data-post-score
+    attribute the shared rail grew for live updates, so the pattern could
+    never match. 10 patterns loosened to tolerate attributes between the
+    class and the value.
+  - brgen/brgen_dating_like_leaves_the_deck — unseeded dataset, honest app:
+    the deck has zero dating profiles and /next answers 204 No Content.
+    The flow now accepts the empty-deck state and downgrades to the named
+    inconclusive (requires_data) until the deck is seeded.
+  - brgen/brgen_marketplace_list_then_buy — unseeded dataset again: zero
+    marketplace_categories, the category select renders only a blank
+    option, and the flow's capture bound a stray option value from another
+    select, so the create died 422 "Category association is invalid". The
+    capture now binds inside the select, the create needs the capture, and
+    the flow carries requires_data.
+  - brgen/brgen_search_then_open_result — REAL, and a lesson in reproducing
+    with the check's own client, not curl: the HTML result highlights the
+    matched term with <mark>, splitting the title the flow demanded as one
+    contiguous string ("Sokeflow <mark>dbgtoly7l</mark>"). Curl never saw it
+    because content negotiation hands curl the JSON answer, which has no
+    highlight. The needle now crosses the mark; flow_journey replays green.
+  Verdict after the fixes, both checks standalone with the fleet live:
+  FlowJourneyCheck — zero failures; PageSimulationCheck — zero failures
+  across the 226-page inventory. The full `runner.rb --all` wedged twice
+  mid-run with Chrome on PATH (log stalls inside the stylesheet compile
+  block, survives its own timeout, has to be killed) while both wedged
+  checks complete clean standalone — diagnosing that hang is open work
+  before the next full sweep; until then the standalone checks are the
+  journey verdict of record.
+  Also: amber bin/ci system_test runs green (7 runs, 82 assertions) with
+  the chromedriver + chrome symlink from sandbox-bootstrap.
 - [ ] **RAILS focused gaps.** Run billing, API-key/API-lint, dating identity,
   Radio manifest/TrackImport, share and job-concurrency, Amber account-merge,
   Marketplace filter/card/mutation, Takeaway model/migration, empty-state,
