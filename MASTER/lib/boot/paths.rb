@@ -60,11 +60,11 @@ module MasterPaths
     value = remote.to_s.strip
     return if value.empty?
 
-    value = value.sub(%r{\\A(?:https?|ssh)://}, "").sub(/\\Agit@/, "")
-    value = value.sub(/\\A[^\\/@]+@/, "")
-    value = value.sub(/\\A([^:/]+):/, "\\1/")
-    value = value.sub(/\\.git\\z/i, "").downcase
-    segments = value.split(/[\\/:]/).reject(&:empty?)
+    value = value.sub(%r{\A(?:https?|ssh)://}, "").sub(/\Agit@/, "")
+    value = value.sub(/\A[^\/@]+@/, "")
+    value = value.sub(/\A([^:\/]+):/, "\\1/")
+    value = value.sub(/\.git\z/i, "").downcase
+    segments = value.split(/[\/:]/).reject(&:empty?)
     return unless segments.size >= 3
 
     slug = segments.last(2).map { |part| part.gsub(/[^a-z0-9._-]/, "-") }.join("-")
@@ -75,12 +75,11 @@ module MasterPaths
   end
 
   def state_identity(value)
-    normalized = value.downcase.gsub(/[^a-z0-9._-]+/, "-").gsub(/\\A-+|-+\\z/, "")
+    normalized = value.downcase.gsub(/[^a-z0-9._-]+/, "-").gsub(/\A-+|-+\z/, "")
     return if normalized.empty?
 
     "#{normalized[0, 48]}-#{Digest::SHA256.hexdigest(normalized)[0, 12]}"
   end
-
   # The mode a private state directory is tightened to: others never keep access,
   # and the owner always has it. A directory handed to a group other than the
   # caller's own keeps that group's bits, because the hand-off is deliberate: on
