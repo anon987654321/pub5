@@ -24,7 +24,6 @@ module Operator
   # --staged judges what the commit will hold, and --changed-lines only what
   # the diff changed; each is explained where it is read below.
   class Lint
-    FILE_SIZE_LAWS = %w[JS_MODULE_SIZE].freeze
     BASE = "HEAD"
 
     # +root+ is the git checkout; +scanner+ answers scan(path, depth:).
@@ -87,10 +86,9 @@ module Operator
     end
 
     # --changed-lines keeps what the diff changed, read through Fix::ChangeScope as
-    # /fix's own per-fix checks read it. A file-size finding counts when the diff
-    # made the file longer; a finding on a `def` line counts when the diff touches
-    # that method and the method is worse than at HEAD (Fix::MethodDebt); any other
-    # finding counts when its line is one the diff changed.
+    # /fix's own per-fix checks read it. A finding on a `def` line counts when the
+    # diff touches that method and the method is worse than at HEAD
+    # (Fix::MethodDebt); any other finding counts when its line changed.
     def in_diff(path, rows, source:)
       scope = scope_of(path, source)
       text = source || File.read(path, encoding: "UTF-8")
@@ -98,7 +96,6 @@ module Operator
       methods = methods_of(path, text)
       rows.select do |finding|
         method = methods[finding[:line].to_i]
-        next scope.grew? if FILE_SIZE_LAWS.include?(finding[:law].to_s)
         next scope.covers?(finding) unless method
 
         scope.touches?(method.range) && method_debt(path, text).worse?(finding)
