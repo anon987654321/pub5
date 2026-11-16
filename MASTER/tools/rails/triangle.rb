@@ -1,18 +1,19 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Boots brgen, amber, bsdports and the MASTER face on the ports every check
-# probes, so the live half of the suite measures something.
+# Boots every live apps.yml entry on the ports the checks probe: brgen,
+# amber, bsdports, mrdamascy and the MASTER face. Inventory owns the fleet;
+# this runner does not maintain a second list of app names.
 #
 #   bin/operator triangle up      boot, migrate, wait for /up, print status
 #   bin/operator triangle up bsdports   the same, for the named surfaces only
 #   bin/operator triangle status  which ports answer
 #   bin/operator triangle down    stop what this script started
 #
-# Why this exists: the browser and live-HTTP checks belong on the deploy host,
-# and vm23 has no headroom to run them (the old backlog item 2). So they ran nowhere,
-# and every check whose live half was skipped still printed PASSED. None of the
-# three apps ships bin/dev, so this is the one way to boot them together.
+# Why this exists: the browser and live-HTTP checks need the same declared
+# app processes as the deploy host. Brgen, Amber and BSDPorts have no bin/dev;
+# this runner also brings up standalone Mr Damascy and the MASTER face from
+# their actual deploy_root and port records.
 #
 # Pending migrations are the usual reason a booted app answers 500 rather than
 # 200, so `up` migrates before it waits.
