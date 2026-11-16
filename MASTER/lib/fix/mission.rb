@@ -8,6 +8,7 @@ require "securerandom"
 require "socket"
 require "time"
 require_relative "../io/atomic_write"
+require_relative "../boot/paths"
 require_relative "task_contract"
 
 module Master
@@ -74,23 +75,25 @@ module Master
 
       def self.record_path(root:, namespace: current_namespace)
         suffix = normalize_namespace(namespace)
-        relative = suffix ? ".master/mission-#{suffix}.json" : REL_PATH
-        File.join(File.expand_path(root), relative)
+        relative = suffix ? "mission-#{suffix}.json" : "mission.json"
+        File.join(MasterPaths.fix_state(root: root), relative)
       end
 
       def self.lock_file_path(root:, namespace: current_namespace)
         suffix = normalize_namespace(namespace)
-        relative = suffix ? ".master/mission-#{suffix}.lock" : LOCK_PATH
-        File.join(File.expand_path(root), relative)
+        relative = suffix ? "mission-#{suffix}.lock" : "mission.lock"
+        File.join(MasterPaths.fix_state(root: root), relative)
       end
 
       def initialize(root: Master::ROOT, bus: nil, checkpoint: nil, namespace: self.class.current_namespace)
         @root = File.expand_path(root)
+        @state_root = MasterPaths.fix_state(root: @root)
         @namespace = self.class.normalize_namespace(namespace)
         @bus = bus
         @checkpoint = checkpoint
         @id = nil
         @record = nil
+        prepare_shared_state!
       end
 
       def start!(goal:, scope: @root, model: nil, effort: "medium", plan: nil, origin: "unknown", auto_continue: false,
@@ -985,14 +988,42 @@ module Master
         write_atomic(path, JSON.pretty_generate(record) + "\n", mode: 0o600)
       end
 
+      def prepare_shared_state!
+        return true if @state_prepared
+
+        require_relative "kernel" unless defined?(Master::Fix::Kernel::LifecycleJournal)
+        Master::Fix::Kernel.new(root: @root, actor: "mission-state")
+          .lifecycle_journal.prepare_state!
+        @state_prepared = true
+      end
+
       def with_lock
+        prepare_shared_state!
         lock_path = self.class.lock_file_path(root: @root, namespace: @namespace)
         FileUtils.mkdir_p(File.dirname(lock_path), mode: 0o700)
-        File.open(lock_path, File::RDWR | File::CREAT, 0o600) do |io|
-          io.flock(File::LOCK_EX)
-          yield
-        ensure
-          io&.flock(File::LOCK_UN)
+        raise IOError, "refusing symlinked mission lock" if File.symlink?(lock_path)
+
+        flags = File::RDWR | File::CREAT
+        flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+        File.open(lock_path, flags, 0o600) do |io|
+          opened = io.stat
+          current = File.lstat(lock_path)
+          unless opened.file? && opened.nlink == 1 && !current.symlink? &&
+                 current.dev == opened.dev && current.ino == opened.ino &&
+                 (opened.mode & 0o077).zero?
+            raise IOError, "mission lock must be a private, singly linked regular file"
+          end
+          raise IOError, "could not acquire mission lock" unless io.flock(File::LOCK_EX)
+          begin
+            current = File.lstat(lock_path)
+            unless current.file? && !current.symlink? &&
+                   current.dev == opened.dev && current.ino == opened.ino
+              raise IOError, "mission lock path changed while waiting"
+            end
+            yield
+          ensure
+            io.flock(File::LOCK_UN)
+          end
         end
       end
 
