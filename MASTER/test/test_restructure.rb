@@ -492,7 +492,7 @@ class TestRestructure < Minitest::Test
       "external=no deployment or external scripts reference it",
       "tests=only retired tests remain",
       "data=required persisted data retained",
-      "revival=none; no supported revival condition",
+      "revival=none (no supported revival condition)",
     ].join("; ")
 
     assert_nil sweep.send(:decommission_audit, incomplete)
