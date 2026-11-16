@@ -18,6 +18,50 @@ class TestLawContract < Minitest::Test
     Law.define_singleton_method(:catalogue_entry, original)
   end
 
+  def test_symlink_alias_of_the_same_law_tree_is_a_no_op
+    Dir.mktmpdir("law-source-alias") do |dir|
+      canonical = File.realpath(File.expand_path("../law", __dir__))
+      alias_path = File.join(dir, "law")
+      File.symlink(canonical, alias_path)
+
+      stdout, stderr = capture_io do
+        assert_same Law.definitions, Law.load_all(alias_path)
+      end
+
+      assert_empty stdout
+      assert_empty stderr
+      assert_equal "unchanged", Law.last_reload_report.fetch(:status)
+      assert_equal canonical, Law.last_reload_report.fetch(:root)
+    end
+  end
+
+  def test_law_reload_report_names_a_changed_source_root_before_reloading
+    with_catalogued(:RELOAD_DIAGNOSTIC_PROBE) do
+      Dir.mktmpdir("law-reload-diagnostic") do |dir|
+        File.write(File.join(dir, "probe.rb"), <<~RUBY)
+          Law.define(:RELOAD_DIAGNOSTIC_PROBE) do
+            source "test"
+            practice "diagnostic"
+            fix "keep it"
+            bad "bad"
+            good "good"
+          end
+        RUBY
+
+        _stdout, stderr = capture_io { Law.load_all(dir) }
+        report = Law.last_reload_report
+
+        assert_equal "reloaded", report.fetch(:status)
+        assert_equal File.realpath(dir), report.fetch(:root)
+        assert report.fetch(:reasons).any? { |row| row[:reason] == "source_root_changed" }
+        assert_includes stderr, "law_loader: re-evaluating"
+        assert_includes stderr, "source_root_changed"
+      ensure
+        Law.load_all(File.join(Master::ROOT, "law"))
+      end
+    end
+  end
+
   def test_concurrent_law_loads_share_one_registry
     dir = File.expand_path("../law", __dir__)
     threads = 8.times.map { Thread.new { Law.load_all(dir) } }
