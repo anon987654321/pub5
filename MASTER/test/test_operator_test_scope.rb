@@ -8,6 +8,15 @@ class TestOperatorTestScope < Minitest::Test
     assert_equal %w[brgen amber bsdports mrdamascy], Operator::TestScope.rails_apps(%w[RAILS])
   end
 
+  def test_suite_scope_tracks_registered_rails_apps_and_shared_engine_gemfiles
+    inventory = Master::Fix::RailsApp.app_paths(repo_root: Master::ROOT)
+    registered_rails_apps = inventory.select { |_name, directory| directory.start_with?("RAILS/") }.keys
+    shared_consumers = Master::Fix::RailsApp.engine_apps(repo_root: Master::ROOT)
+
+    assert_equal registered_rails_apps, Operator::TestScope.rails_apps(%w[RAILS])
+    assert_equal shared_consumers, Operator::TestScope.rails_apps(%w[__shared])
+  end
+
   def test_shared_engine_routes_to_every_dependent_app_suite
     assert_equal %w[brgen amber bsdports], Operator::TestScope.rails_apps(%w[__shared])
   end
