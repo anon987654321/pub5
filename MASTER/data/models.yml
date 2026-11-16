@@ -240,7 +240,6 @@ models:
     - *claude_opus_api
     - *claude_sonnet
     - *agy_auto
-    - *claude_opus_api
     - *nemotron_super
     - *ollama_gemma
     - *llama_cli_gguf
@@ -249,11 +248,9 @@ models:
     - *sandbox_gateway
     - *claude_opus_api
     - *claude_sonnet
-    - *claude_opus_api
     - *deepseek_reasoner
     - *deepseek_chat
     - *mistral_large
-    - *claude_sonnet
     - *gpt_4o
     - *gemini_flash
     - *command_r_plus

@@ -57,4 +57,12 @@ class TestFixFreshCheckoutModels < Minitest::Test
     assert definitions.values.any? { |row| row["id"] == "claude-opus-5-5" }
     assert definitions.values.any? { |row| row["id"] == "claude-sonnet-5-5" }
   end
+
+  def test_routing_tiers_do_not_repeat_model_ids
+    models = Master.models_config(root: Master::ROOT).fetch("models")
+    models.each do |tier, rows|
+      ids = rows.map { |row| row.fetch("id") }
+      assert_equal ids.uniq, ids, "#{tier} tier repeats a model"
+    end
+  end
 end
