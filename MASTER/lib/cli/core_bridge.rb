@@ -312,7 +312,7 @@ module Master
 
       def start_mission(goal, root:, bus:, model:, mode:, risk:, intent:, auto_continue:)
         checkpoint = lambda do |id:, root:, files:|
-          Master::Fix::Checkpoint.new(root:, dir: File.join(root, ".master", "checkpoints")).create(
+          Master::Fix::Checkpoint.new(root:).create(
             label: "mission-#{id}", files:,
           )
         end
