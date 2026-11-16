@@ -332,11 +332,11 @@ nb:
     subtotal: Delsum
     tip_20: +20 kr
     tip_40: +40 kr
-    tip_line: Drikkegis (ikke betalt i appen)
-    tip_none: Uten drikkegis
-    tip_title: Drikkegis til kureren?
-    tip_refused: Drikkegis kan gis én gang, når bestillingen er levert.
-    tip_unpaid: Drikkegisen trekkes ikke i appen — den kommer ikke med i betalingen.
+    tip_line: Tips (ikke betalt i appen)
+    tip_none: Uten tips
+    tip_title: Vil du gi tips til kureren?
+    tip_refused: Tips kan gis én gang, når bestillingen er levert.
+    tip_unpaid: Tipset trekkes ikke i appen — det kommer ikke med i betalingen.
     total: Totalt
     track: Spor bestillingen
     receipt_title: Kvittering
@@ -475,7 +475,7 @@ nb:
     signed_in: Ahlan, %{name}!
     order_placed: Bestillingen er i gang — godkjenn med Vipps
     vipps_cancelled: Betalingen ble avbrutt — kurven venter på deg
-    tip_thanks: Tusen takk for drikkepengene!
+    tip_thanks: Tusen takk for tipset!
     review_thanks: Takk! Det betyr alt for et lite kjøkken
     reordered: Alt fra sist ligger i kurven
     reordered_partly: "Noen retter fra sist er ikke på menyen i dag — resten ligger i kurven"
