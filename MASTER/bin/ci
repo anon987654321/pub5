@@ -9,6 +9,8 @@
 # shelling out to this file and so paying for selftest and core_smoke twice.
 # One registry now: this resolves to bin/check --profile=ci, and
 # MASTER_CI_FULL, MASTER_CI_WEB and MASTER_CI_BROWSER still widen it exactly as before.
+# This shim deliberately does not boot MASTER: bin/check owns the one boot and
+# its profile runner, so the compatibility path cannot initialise the runtime twice.
 #
 # Kept as a script rather than folded away because those callers are outside the
 # runtime's reach: the zsh preflight, vm23 runbook and operator muscle memory.
