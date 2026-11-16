@@ -327,9 +327,22 @@ module Deploy
       Process.clock_gettime(Process::CLOCK_MONOTONIC)
     end
 
+    HANDSHAKE_HEADER_LIMIT = 16 * 1024
+
     def connect(ws_url)
       uri = URI(ws_url)
-      @socket = TCPSocket.new(uri.host, uri.port)
+      deadline = [monotonic + @timeout.to_f, @budget_deadline].compact.min
+      remaining = deadline - monotonic
+      raise Timeout, "websocket connect timeout" unless remaining.positive?
+
+      # Discovery, TCP establishment and the HTTP upgrade are one operation:
+      # a stalled upgrade must not escape a surface's tighter nested budget.
+      @last_method = "WebSocket handshake"
+      @socket = Socket.tcp(
+        uri.host, uri.port,
+        connect_timeout: remaining,
+        resolv_timeout: remaining,
+      )
       key = Base64.strict_encode64(SecureRandom.bytes(16))
 
       request = [
@@ -345,12 +358,29 @@ module Deploy
       @socket.write(request)
 
       header = +""
-      header << @socket.readpartial(1) until header.end_with?("\r\n\r\n")
+      until header.end_with?("\r\n\r\n")
+        remaining = deadline - monotonic
+        raise Timeout, "websocket handshake timeout" unless remaining.positive?
+        raise Timeout, "websocket handshake timeout" unless IO.select([@socket], nil, nil, remaining)
+
+        byte = @socket.read_nonblock(1, exception: false)
+        next if byte == :wait_readable
+        raise Error, "websocket closed during handshake" if byte.nil?
+
+        header << byte
+        if header.bytesize > HANDSHAKE_HEADER_LIMIT
+          raise Error, "websocket handshake headers exceed #{HANDSHAKE_HEADER_LIMIT} bytes"
+        end
+      end
+
       raise Error, "websocket handshake failed: #{header.lines.first}" unless header.start_with?("HTTP/1.1 101")
 
       expected = Base64.strict_encode64(Digest::SHA1.digest(key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"))
       accept = header[/Sec-WebSocket-Accept:\s*(\S+)/i, 1]
       raise Error, "websocket accept mismatch" unless accept == expected
+      raise Timeout, "websocket handshake timeout" if monotonic > deadline
+    rescue Errno::ETIMEDOUT
+      raise Timeout, "websocket connect timeout"
     end
 
     def enable_domains

@@ -2,6 +2,7 @@
 
 require_relative "test_helper"
 require "stringio"
+require "socket"
 require File.expand_path("../checks/support/cdp_session", __dir__)
 require File.expand_path("../lib/trace/dmesg", __dir__)
 require File.expand_path("../lib/fix/visual_surface_budget", __dir__)
@@ -46,6 +47,65 @@ class TestCdpBudget < Minitest::Test
   def test_within_budget_returns_the_block_value
     io = StringIO.new
     assert_equal :done, Master::Fix::VisualSurfaceBudget.run(session, Surface.new("a/b/c"), 0, 1, seconds: 5, io:) { :done }
+  end
+end
+
+
+class TestCdpHandshakeBudget < Minitest::Test
+  def test_websocket_upgrade_is_bounded_by_the_active_surface_deadline
+    server = TCPServer.new("127.0.0.1", 0)
+    accepted = Queue.new
+    server_thread = Thread.new do
+      peer = server.accept
+      request = +""
+      request << peer.readpartial(1) until request.end_with?("\r\n\r\n")
+      accepted << true
+      sleep 0.25
+    ensure
+      peer&.close
+    end
+    cdp = Deploy::CdpSession.new(timeout: 2)
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+    error = assert_raises(Deploy::CdpBudget::Exceeded) do
+      cdp.with_budget(0.05, "master/face/mobile") do
+        cdp.send(:connect, "ws://127.0.0.1:#{server.addr[1]}/devtools/page/stalled")
+      end
+    end
+
+    elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+    assert accepted.pop, "the server must receive the upgrade request before stalling"
+    assert_match(/WebSocket handshake/, error.message)
+    assert_operator elapsed, :<, 0.8, "the HTTP upgrade must not outlive the surface budget"
+  ensure
+    cdp&.instance_variable_get(:@socket)&.close rescue nil
+    server_thread&.kill
+    server_thread&.join(1)
+    server&.close
+  end
+
+  def test_websocket_upgrade_rejects_an_oversized_header
+    server = TCPServer.new("127.0.0.1", 0)
+    server_thread = Thread.new do
+      peer = server.accept
+      request = +""
+      request << peer.readpartial(1) until request.end_with?("\r\n\r\n")
+      peer.write("HTTP/1.1 101 Switching Protocols\r\nX-Fill: #{"x" * (Deploy::CdpSession::HANDSHAKE_HEADER_LIMIT + 1)}")
+    ensure
+      peer&.close
+    end
+    cdp = Deploy::CdpSession.new(timeout: 2)
+
+    error = assert_raises(Deploy::CdpSession::Error) do
+      cdp.send(:connect, "ws://127.0.0.1:#{server.addr[1]}/devtools/page/oversized")
+    end
+
+    assert_match(/headers exceed 16384 bytes/, error.message)
+  ensure
+    cdp&.instance_variable_get(:@socket)&.close rescue nil
+    server_thread&.kill
+    server_thread&.join(1)
+    server&.close
   end
 end
 
