@@ -211,7 +211,7 @@ module Master
 
         def mission_for(target:, requested: false)
           checkpoint = lambda do |id:, root:, files:|
-            Checkpoint.new(root:, dir: File.join(root, ".master", "checkpoints")).create(
+            Checkpoint.new(root:).create(
               label: "mission-#{id}", files:,
             )
           end
