@@ -22,21 +22,21 @@ candidates:
     tree: OPENBSD
     status: implemented
     spec: >
-      bin/deploy-story - structured vps-deploy log lines (stage=) as a timeline.
+      OPENBSD/mirror/bin/deploy-story, exposed as operator deploy-story - structured vps-deploy log lines (stage=) as a timeline.
     cost: S
     reversibility: high
   - id: cities
     tree: RAILS
     status: implemented
     spec: >
-      RAILS/bin/cities (and MASTER/bin/cities) - owned_domains from apps.yml without Rails boot.
+      RAILS/bin/cities, exposed as operator cities - owned_domains from apps.yml without Rails boot.
     cost: S
     reversibility: high
   - id: domain_ghosts
     tree: OPENBSD
     status: implemented
     spec: >
-      domain-ghosts - available inventory names, owned/inventory skew, residual relayd Hosts.
+      OPENBSD/mirror/bin/domain-ghosts, exposed as operator domain-ghosts - available inventory names, owned/inventory skew, residual relayd Hosts.
     cost: S
     reversibility: high
   - id: tree_weight

@@ -633,11 +633,11 @@ when "snapshot"
   # Lives in MASTER/tools so it is one implementation, reachable from here.
   exec(RbConfig.ruby, File.join(ROOT, "MASTER", "tools", "snapshot.rb"), *ARGV)
 when "cities"
-  exec(File.join(__dir__, "cities"), *ARGV)
+  exec(RUBY, File.join(ROOT, "RAILS", "bin", "cities"), *ARGV)
 when "domain-ghosts"
-  exec(File.join(__dir__, "domain-ghosts"), *ARGV)
+  exec(RUBY, File.join(OPENBSD_OPS, "mirror", "bin", "domain-ghosts"), *ARGV)
 when "deploy-story"
-  exec(File.join(__dir__, "deploy-story"), *ARGV)
+  exec("/bin/sh", File.join(OPENBSD_OPS, "mirror", "bin", "deploy-story"), *ARGV)
 when "tree-weight"
   exec(File.join(__dir__, "tree-weight"), *ARGV)
 when "law-weight"
