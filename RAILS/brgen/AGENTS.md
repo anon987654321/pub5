@@ -64,8 +64,8 @@ Full Rails 8 app in this directory. `brgen.sh` copy-tree deploys to
 - VPS: `MASTER/bin/operator vps deploy brgen --remote` (serial — never parallel with
   other apps).
 - Do not: enable `force_ssl` behind relayd; edit `OPENBSD/deploy_inventory.json`
-  without updating `apps.yml`; add a fourth public Rails app
-  (`OPENBSD/CLAUDE.md`, "Refused, and why").
+  without updating `apps.yml`; add a fourth public Brgen city-network app.
+  Mr Damascy is a separate standalone product, not a Brgen vertical.
 
 ## BergenDemoSeeder stays one class
 
