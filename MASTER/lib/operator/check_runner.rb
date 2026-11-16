@@ -58,7 +58,11 @@ module Operator
     # beside it for live StepWatch; this file makes a failed run easy to attach.
     def prepare_run_log
       directory = File.dirname(@log_path)
-      raise IOError, "check log directory is a symlink" if File.symlink?(directory)
+      cursor = directory
+      while cursor != File.dirname(cursor)
+        raise IOError, "check log path crosses a symlink: #{cursor}" if File.symlink?(cursor)
+        cursor = File.dirname(cursor)
+      end
 
       FileUtils.mkdir_p(directory, mode: 0o700)
       File.chmod(0o700, directory)
@@ -72,6 +76,7 @@ module Operator
       end
     rescue StandardError => e
       @log_error = "#{e.class}: #{e.message}"
+      @log_path = nil
       Master::Trace::Dmesg.status("checklog0", "cannot create combined log, #{@log_error}") unless @quiet
     end
 
@@ -90,6 +95,7 @@ module Operator
       end
     rescue StandardError => e
       @log_error ||= "#{e.class}: #{e.message}"
+      @log_path = nil
       Master::Trace::Dmesg.status("checklog0", "combined log incomplete, #{@log_error}") unless @quiet
     end
 
