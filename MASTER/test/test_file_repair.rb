@@ -32,7 +32,7 @@ class TestFileRepair < Minitest::Test
   def findings(path)
     [{ law: "FEW_ARGUMENTS", line: 1, message: "3+ positional args", file: path, severity: :warning },
      { law: "CQS", line: 2, message: "query mutates", file: path, severity: :warning },
-     { law: "SMALL_FILES", line: 1, message: "split", file: path, severity: :warning,
+     { law: "NO_GOD_CLASS", line: 1, message: "split", file: path, severity: :warning,
        blast_radius: { files_touched: 2 } }]
   end
 
@@ -55,7 +55,7 @@ class TestFileRepair < Minitest::Test
       assert_equal 1, fixes.size, "one fix call, no architecture plan, one candidate"
       assert_includes fixes.first, "FEW_ARGUMENTS"
       assert_includes fixes.first, "CQS"
-      refute_includes fixes.first, "SMALL_FILES", "a split waits for a person"
+      refute_includes fixes.first, "NO_GOD_CLASS", "a multi-file split waits for a person"
       assert_includes fixes.first, "Complete source, all 250 lines, no excerpts or omissions"
       assert_includes fixes.first, "LAST_SOURCE_LINE = :seen", "the complete target source must reach the model"
       assert_includes fixes.first, Digest::SHA256.hexdigest(source)
