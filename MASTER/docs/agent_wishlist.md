@@ -184,8 +184,13 @@ carried each row.
    ovh:gpt-oss-120b and kilo:nvidia/nemotron-3.5-lightning:free, each
    answered live on 2026-11-17, spanning three families so the
    author-family exclusion always leaves two independent voters
-   (088c5127). Open wish: a doctor check that probes the jury and
-   reports UNSEATABLE before a run spends its budget.
+   (088c5127). The doctor check landed as a report-only runtime probe
+   (eef87efa, c43916fd, af0f5add): each configured juror is checked through
+   ModelRouter's live lane diagnosis, and quorum plus the independent-family
+   floor must survive exclusion of every possible author family. A timed-out
+   provider probe is UNMEASURED, not PASS. Remaining work: make /fix consume
+   this readiness result as a preflight before spending its repair budget;
+   the current check does not impose that admission gate.
 
 5. A fresh clone must be runnable as cloned. Evidence: five files in
    MASTER/bin shipped mode 100644 — including the zai-chat bridge — so
@@ -193,13 +198,12 @@ carried each row.
    State on main: landed — exec bits fixed in the index (088c5127).
 
 6. Landscape tests must not assert live third-party listings.
-   Evidence: test_keyless_routing expects "grok-4.3" and the OpenRouter
-   free_latest head, and the discovered keyless catalogue now serves
-   llm7:DeepSeek-V4-Flash-0731; the suite fails in any keyless sandbox
-   and will fail on the operator's desk the next time llm7 rotates its
-   turbo tier. State on main: open — the fix is to stub the discovered
-   catalogue in those tests, not to chase the rotation.
-
+   Evidence: test_keyless_routing previously pinned a currently listed
+   llm7 model, which rotates without a repository change. State on main:
+   landed at 01c617c — the reachability test now injects a fixed hosted
+   catalogue fixture and still exercises Master.llm_reachable?; the
+   remaining llm7 rows in that file are explicit local fixtures, not live
+   listings.
 7. One boot without re-loaded law files. Evidence: every boot prints
    two screens of "already initialized constant" warnings from
    law/brand.rb and law/cosmetic.rb — the files are evaluated twice,
