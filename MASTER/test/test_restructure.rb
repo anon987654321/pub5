@@ -401,6 +401,26 @@ class TestRestructure < Minitest::Test
     assert_includes text, "Related file, MASTER/lib/user_policy.rb:"
   end
 
+  def test_context_finds_reverse_references_in_manifests_and_lockfiles
+    source = "MASTER/lib/retired_component.rb"
+    write(source, "class RetiredComponent; end\\n")
+    write("MASTER/Gemfile", "gem \"retired-component\" # RetiredComponent\\n")
+    write("MASTER/Gemfile.lock", "retired-component (1.0.0) # RetiredComponent\\n")
+    write("RAILS/config/worker.yml", "job_class: RetiredComponent\\n")
+    sh("git", "add", "-A", chdir: @repo)
+
+    context = Master::Fix::RestructureSweep::Context.new(
+      @repo,
+      File.join(@repo, source),
+    )
+    evidence = context.to_s
+
+    assert_includes evidence, "MASTER/Gemfile:"
+    assert_includes evidence, "MASTER/Gemfile.lock:"
+    assert_includes evidence, "RAILS/config/worker.yml:"
+    assert_includes evidence, "Production references:"
+  end
+
   def test_restructure_exit_reports_done_after_a_fresh_empty_scan
     events = []
     bus = Object.new
