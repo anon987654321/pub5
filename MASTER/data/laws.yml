@@ -5441,10 +5441,10 @@ law_deps:
   DEFRAG:
     after: [DEAD_CODE, SPECULATIVE_GENERALITY]
 
-  # Fix small-files violations before feature_envy — moving a method to
-  # its right class only makes sense when both files are well-sized.
+  # Fix long-method findings before feature_envy so a moved method's
+  # responsibility is clear at its destination.
   FEATURE_ENVY:
-    after: [SMALL_FILES, SMALL_FUNCTIONS]
+    after: [SMALL_FUNCTIONS]
 
   # Remove data clumps before primitive obsession — bundling into objects
   # subsumes the primitive check.
