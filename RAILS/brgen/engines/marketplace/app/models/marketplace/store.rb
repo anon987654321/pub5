@@ -13,13 +13,14 @@ module Marketplace
     self.table_name = "marketplace_stores"
 
     VERTICALS = %w[
-      groceries homewares furniture electronics fashion beauty sports toys
+      restaurants groceries homewares furniture electronics fashion beauty sports toys
       garden automotive pets books health local_services other
     ].freeze
 
     belongs_to :owner, class_name: "User"
     belongs_to :place, optional: true
     has_many :listings, class_name: "Marketplace::Listing", dependent: :nullify
+    has_one :takeaway_restaurant, class_name: "Takeaway::Restaurant", dependent: :nullify
     has_many :payouts, class_name: "Marketplace::Payout", dependent: :restrict_with_error
 
     validates :name, presence: true, length: { maximum: 160 }
