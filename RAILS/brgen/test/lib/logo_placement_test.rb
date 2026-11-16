@@ -86,13 +86,13 @@ class LogoPlacementTest < ActiveSupport::TestCase
     assert_includes core, "@keyframes brgen-tenant-wordmark-resolve"
     assert_includes core, "background-image: radial-gradient(circle, currentColor 0.85px, transparent 1px)"
     assert_includes core, "@media (prefers-reduced-motion: reduce)"
-    assert_includes overrides, 'font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;'
-    assert_includes overrides, "font-weight: 700"
+    assert_includes overrides, "font-family: var(--font);"
+    assert_includes overrides, "font-weight: var(--weight-heavy);"
     assert_includes overrides, "letter-spacing: var(--tracking-tightest)"
   end
   def test_marketplace_keeps_its_original_face_and_cart_with_a_bounded_burst
-    logo = Rails.root.join("engines/marketplace/app/views/marketplace/_animated_logo.html.erb").read
-    controller = Rails.root.join("engines/marketplace/app/javascript/controllers/marketplace_logo_controller.js").read
+    logo = Rails.root.join("engines", "marketplace", "app", "views", "marketplace", "_animated_logo.html.erb").read
+    controller = Rails.root.join("engines", "marketplace", "app", "javascript", "controllers", "marketplace_logo_controller.js").read
 
     assert_includes logo, 'id="marketplace-logo-a"'
     assert_includes logo, 'id="marketplace-logo-j"'
@@ -102,15 +102,16 @@ class LogoPlacementTest < ActiveSupport::TestCase
     assert_includes controller, "data-marketplace-logo-particle"
     assert_includes controller, "connectionToken !== this.connectionToken"
     assert_includes controller, "targets: particles"
-    refute_includes controller, 'querySelectorAll(":scope > span")'
+    assert_includes controller, 'querySelectorAll(":scope > span")'
+    assert_includes controller, "if (span !== seedPlus) span.remove()"
     assert_includes controller, "particles.forEach((particle) => particle.remove())"
     assert_includes controller, 'if (window.matchMedia("(prefers-reduced-motion: reduce)").matches)'
     assert_includes controller, "this.#staticEndState()"
   end
 
   def test_dating_draws_its_heart_with_css_doodle
-    splash = Rails.root.join("engines/dating/app/views/dating/home/splash.html.erb").read
-    controller = Rails.root.join("engines/dating/app/javascript/controllers/dating_splash_controller.js").read
+    splash = Rails.root.join("engines", "dating", "app", "views", "dating", "home", "splash.html.erb").read
+    controller = Rails.root.join("engines", "dating", "app", "javascript", "controllers", "dating_splash_controller.js").read
     stylesheet = Rails.root.join("app/assets/stylesheets/_dating_splash.scss").read
 
     # The reference the operator could not find: a css-doodle heart over a red
@@ -134,7 +135,7 @@ class LogoPlacementTest < ActiveSupport::TestCase
   end
 
   def test_playlist_tunnel_has_its_own_decorative_wave_mark
-    tunnel = Rails.root.join("engines/radio/playlist/app/views/playlist/playlists/_radio_tunnel.html.erb").read
+    tunnel = Rails.root.join("engines", "radio", "playlist", "app", "views", "playlist", "playlists", "_radio_tunnel.html.erb").read
     stylesheet = Rails.root.join("app/assets/stylesheets/_brgen_vertical_surfaces.scss").read
 
     assert_includes tunnel, '<svg class="radio-brand-mark"'

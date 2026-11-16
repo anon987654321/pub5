@@ -44,10 +44,10 @@ module Operator
     # Zero findings are permitted for both viewport-edge drift and collisions.
     # Container queries are excluded because their thresholds describe component
     # width rather than the viewport scale.
-    # 2026-11-15: ambiguous_edge 0 -> 13 with the vertical surface carry; the
-    # both-ways 640px finding is registered separately in the suite ledger —
-    # choosing which block owns 640 is a design decision, not a lint edit.
-    BASELINES = { "unknown_edge" => 0, "ambiguous_edge" => 13 }.freeze
+    # 2026-11-15: ambiguous_edge 0 -> 13 with the vertical surface carry. Back to
+    # 0 on 2026-11-16: the one ceiling at the md edge (hjerterom's map chrome)
+    # moved to edge - 1px like every other max bound, so 640 is only a floor.
+    BASELINES = { "unknown_edge" => 0, "ambiguous_edge" => 0 }.freeze
 
     Finding = Struct.new(:file, :line, :kind, :value)
 

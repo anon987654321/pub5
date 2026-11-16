@@ -51,7 +51,13 @@ export default class extends Controller {
     this.animations?.forEach((animation) => animation.pause?.())
     this.animations = []
     if (this.hasBannerTarget) {
-      this.bannerTarget.querySelectorAll("[data-marketplace-logo-particle]").forEach((particle) => particle.remove())
+      // Burst spans share the .banner > span positioning rule, so the sweep
+      // takes every direct child span the burst could have added; the logo's
+      // permanent seed-plus is markup, not burst output, and stays.
+      const seedPlus = this.hasSeedPlusTarget ? this.seedPlusTarget : null
+      this.bannerTarget.querySelectorAll(":scope > span").forEach((span) => {
+        if (span !== seedPlus) span.remove()
+      })
     }
     if (this.hasNumberTarget) {
       this.numberTarget.querySelectorAll(".marketplace-logo-count-plus").forEach((node) => node.remove())
@@ -175,7 +181,7 @@ export default class extends Controller {
     for (let i = 1; i <= 16; i++) {
       const span = document.createElement("span")
       span.textContent = "+"
-      span.dataset.marketplaceLogoParticle = "true"
+      span.setAttribute("data-marketplace-logo-particle", "true")
       particles.push(span)
       this.bannerTarget.appendChild(span)
     }

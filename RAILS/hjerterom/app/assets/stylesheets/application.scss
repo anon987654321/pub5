@@ -22,6 +22,9 @@
   --heart-accent-light: #fb7185;
   --accent: var(--app-accent);
   --panel: var(--bg);
+  // The pin-card caption ink: the scheme's one dim text tone, so it follows
+  // the theme like every other map-home caption.
+  --text-dim: var(--text-secondary);
   // The one keyboard focus indicator, from design_tokens shared_chrome.focus_ring;
   // the global :focus-visible rule that consumes it comes from _focus_ring.scss.
   --focus-ring: 2px solid var(--app-accent);
@@ -316,7 +319,7 @@ body.map-home-page {
 
 .home-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   gap: 1.5rem;
 }
 
@@ -362,7 +365,7 @@ h2 {
   margin-bottom: 0.5rem;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 639px) {
   .map-home-nav {
     top: 4.75rem;
     inset-inline: 0.85rem;

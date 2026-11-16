@@ -504,7 +504,7 @@ body.vertical-marketplace .storefront-bol-brand {
   inset-inline-start: max(var(--bol-gutter), calc((100vw - var(--bol-max)) / 2));
   display: inline-flex;
   align-items: center;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: var(--font);
   /* wordmark weight snapped onto the dialect ladder (400/600/800) */
   font-weight: var(--weight-heavy);
   letter-spacing: var(--tracking-tightest);

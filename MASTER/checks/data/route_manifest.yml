@@ -2,7 +2,7 @@
 schema: 1
 apps:
   amber:
-    digest: 1d12024a57b8d404
+    digest: abc01b8132f99e50
     routes:
       shared/changelog#show:
       - "/changelog"
@@ -110,6 +110,8 @@ apps:
       - "/wardrobe_items/:id"
       connections#index:
       - "/connections"
+      live_streams#access:
+      - "/live_streams/:id/access"
       live_streams#index:
       - "/live_streams"
       live_streams#show:
@@ -120,6 +122,10 @@ apps:
       - "/messages/widget"
       encounters#waiting:
       - "/encounters/waiting"
+      encounters#video:
+      - "/encounters/video"
+      encounters#turn:
+      - "/encounters/turn"
       posts#feed:
       - "/posts/feed"
       posts#index:
@@ -136,6 +142,11 @@ apps:
       - "/creator_profile/new"
       creator_profiles#edit:
       - "/creator_profile/edit"
+      linktree_pages#show:
+      - "/@:slug"
+      - "/linktree/:slug"
+      linktree_links#show:
+      - "/links/:id"
       declutter#review:
       - "/declutter/:id/review"
       declutter#last_chance:
@@ -203,7 +214,7 @@ apps:
       active_storage/disk#show:
       - "/rails/active_storage/disk/:encoded_key/*filename"
   brgen:
-    digest: dacbdf0e5fe57d66
+    digest: 7819a8a1fcc5507b
     routes:
       shared/changelog#show:
       - "/changelog"

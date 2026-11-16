@@ -15,6 +15,7 @@
 </div>
 
 <% if @live.any? %>
+  <%# surface: tv/live_streams_label %>
   <section role="region" aria-label="<%= t("tv.live_streams_label") %>">
     <%= tag.h2 t("tv.live_now") %>
     <% @live.each do |b| %>
