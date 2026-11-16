@@ -37,6 +37,9 @@ class TestStudioDoctor < Minitest::Test
       if arguments.include?("ls-files")
         assert_equal 10, timeout
         ["", "", status]
+      elsif arguments.include?("rev-parse")
+        assert_equal 10, timeout
+        ["false", "", status]
       else
         assert_includes arguments, "--all"
         assert_includes arguments, ":(glob)STUDIO/lora/*/sources/**"
@@ -57,5 +60,26 @@ class TestStudioDoctor < Minitest::Test
     refute_includes serialized, "ragnhild"
     refute_includes serialized, "sources/01.jpg"
     refute_includes serialized, "subject.env"
+  def test_shallow_checkout_does_not_report_private_history_clean
+    doctor = Studio::Doctor.new
+    checks = []
+    status = Struct.new(:success?).new(true)
+
+    Studio::Subprocess.stub(:capture3, ->(*arguments, timeout:) {
+      if arguments.include?("ls-files")
+        ["", "", status]
+      elsif arguments.include?("rev-parse")
+        ["true", "", status]
+      else
+        flunk "a shallow checkout must not run a partial history scan"
+      end
+    }) do
+      doctor.send(:private_media_check, checks)
+    end
+
+    history_check = checks.find { |check| check.fetch("id") == "private_subject_history" }
+    assert_equal "INCONCLUSIVE", history_check.fetch("state")
+    assert_includes history_check.fetch("detail"), "repository is shallow"
+  end
   end
 end
