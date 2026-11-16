@@ -85,6 +85,15 @@ hooks, worktrees, git state, model lanes, stray processes and `.master/` writabi
 `--remote` for the vm23 checkout and deploy lock. `ok` means fine, `warn` means it works but is
 about to cost you, and `FAIL` stops work and carries the fix on the same line.
 
+For ordinary work, start `bin/master` and enter `/fix [TREE]`. That command
+owns repair and scope-aware proof; do not append a full verification profile
+after every run. `bin/fix-here TREE` is an optional terminal wrapper, not a
+requirement. `bin/check --help` explains the supplemental profiles,
+`bin/check --list --profile=operator` previews their steps, and
+`bin/check --show-log --tail=120` retrieves the latest diagnostic log without
+booting MASTER. While a repair is active, `bin/operator fix status` and
+`bin/operator fix tail` expose its progress and transcript.
+
 First hour on a new host: use the installed compatible Ruby (3.3 or newer; no upper bound), run `bundle install` in
 `MASTER/`, keep keys in the environment, run `bin/doctor`, then take one narrow dry run,
 `bin/master '/fix --dry-run --critique --only critique,map MASTER/lib/cli'`, and read it before
