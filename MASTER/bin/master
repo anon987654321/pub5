@@ -560,9 +560,19 @@ else
   $stdout.sync = true
   # Pipe mode used to ignore ARGV, so `bin/master /scan RAILS` with no TTY
   # printed nothing and exited 0. Honor the argument, then stdin.
+  #
+  # An argv one-shot now ends the process after the command completes. The
+  # previous form drained $stdin after the argv turn, and a caller that keeps
+  # the pipe open (an agent harness, a supervisor) held the CLI there forever:
+  # the run finished, then the CLI sat waiting for lines that never come and
+  # consumed the harness's own plumbing as turns. A caller that wants argv
+  # plus stdin lines can still have it by passing the command through stdin.
   message = initial_message_from_argv(ARGV)
-  cli.pipe(message) unless message.empty?
-  $stdin.each_line { |line| cli.pipe(line) }
+  if message.empty?
+    $stdin.each_line { |line| cli.pipe(line) }
+  else
+    cli.pipe(message)
+  end
   stop_control_plane_safely(control_plane)
   stop_cli_background_loop_safely(cli)
   save_cli_session_safely(cli)
