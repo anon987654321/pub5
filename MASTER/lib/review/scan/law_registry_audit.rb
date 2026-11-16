@@ -239,7 +239,7 @@ module Master
           ::Law.load_all(File.join(@root, "law")) if ::Law.definitions.empty?
           # Callers hand in the downcased key every population compares on; Law ids are upper case.
           law = ::Law.definitions[id.to_s.upcase.to_sym] || ::Law.definitions[id.to_sym]
-          law&.scannable?
+          law&.enforceable? && law.scannable?
         end
 
         # Asked of the loaded registry, not of the source text: law/prose.rb
@@ -329,6 +329,7 @@ module Master
         # where a loaded registry said 115) has no second population to come from.
         def build_registry_ids
           Review::Scan::LawTree.definitions
+            .select(&:enforceable?)
             .select { |law| law.check || law.detector }
             .reject { |law| law.detector && !shipped?(law.detector) }
             .map { |law| law.id.to_s.downcase }
