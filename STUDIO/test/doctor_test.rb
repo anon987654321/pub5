@@ -15,7 +15,7 @@ class TestStudioDoctor < Minitest::Test
     refute Studio::Doctor.ready?([{ "state" => "BLOCKED" }])
     refute Studio::Doctor.ready?([{ "state" => "FAIL" }])
     assert Studio::Doctor.ready?([{ "state" => "PASS" }, { "state" => "OPTIONAL_MISSING" }])
-    assert Studio::Doctor.ready?([{ "state" => "INCONCLUSIVE" }])
+    refute Studio::Doctor.ready?([{ "state" => "INCONCLUSIVE" }])
   end
 
   def test_report_is_explicitly_read_only_and_never_calls_a_provider
@@ -30,10 +30,22 @@ class TestStudioDoctor < Minitest::Test
   def test_private_subject_finding_never_prints_the_subject_or_path
     doctor = Studio::Doctor.new
     checks = []
-    doctor.send(:add, checks, "private_subject_history", "BLOCKED",
-                "3 subject-private path(s) are tracked; operator review is required")
+    tracked = "STUDIO/lora/merethe/sources/01.jpg\0STUDIO/lora/ragnhild/subject.env\0"
+    status = Struct.new(:success?).new(true)
 
+    Studio::Subprocess.stub(:capture3, ->(*_arguments, timeout:) {
+      assert_equal 10, timeout
+      [tracked, "", status]
+    }) do
+      doctor.send(:private_media_check, checks)
+    end
+
+    assert_equal "BLOCKED", checks.fetch(0).fetch("state")
+    assert_includes checks.fetch(0).fetch("detail"), "2 subject-private path(s)"
     serialized = JSON.generate(checks)
-    refute_match(/merethe|ragnhild|johann|sources\\/|consent\\.yml/, serialized)
+    refute_includes serialized, "merethe"
+    refute_includes serialized, "ragnhild"
+    refute_includes serialized, "sources/01.jpg"
+    refute_includes serialized, "subject.env"
   end
 end

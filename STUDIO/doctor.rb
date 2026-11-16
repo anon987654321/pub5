@@ -45,7 +45,7 @@ module Studio
     end
 
     def self.ready?(checks)
-      checks.none? { |check| %w[FAIL BLOCKED].include?(check.fetch("state")) }
+      checks.none? { |check| %w[FAIL BLOCKED INCONCLUSIVE].include?(check.fetch("state")) }
     end
 
     def initialize(root: File.expand_path(__dir__), ruby_version: RUBY_VERSION)
