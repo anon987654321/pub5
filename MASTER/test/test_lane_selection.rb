@@ -290,6 +290,14 @@ class TestLaneSelection < Minitest::Test
     refute_equal Selection.provider("web-chat:grok"), Selection.provider("web-chat:chatgpt")
   end
 
+  def test_anthropic_models_remain_api_lanes_not_subscription_cli_lanes
+    [ANTHROPIC_OPUS, ANTHROPIC_SONNET].each do |model|
+      assert_equal "claude", Selection.provider(model)
+      assert_equal :remote, Selection.kind(model)
+      refute Selection.subscription?(model)
+    end
+  end
+
   def test_the_boot_choice_is_the_first_live_lane_and_names_its_source
     assert_equal [GROK, "availability"], Selection.boot_choice(env: {}, saved: nil, alive: ALL)
     assert_equal [AGY, "MASTER_MODEL"], Selection.boot_choice(env: { "MASTER_MODEL" => AGY }, saved: nil, alive: ALL)
