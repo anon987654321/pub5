@@ -44,6 +44,8 @@ nb:
       event: "%-d. %b kl. %H:%M"
   legal:
     site_id_label: TradeDoubler nettsted-ID
+    company_owner: Brgen eies av PubHealthcare.
+    company_address: Kanalveien 10, 5068 Bergen, Norge
   app:
     name: Brgen
   demo_mode:
