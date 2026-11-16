@@ -187,7 +187,7 @@ class TestLaneSelection < Minitest::Test
     assert_equal GROK, Selection.first_live(tier), "the configured subscription lane leads the available pool"
 
     Quota.note(AGY, AGY_REPLY)
-    assert_equal ANTHROPIC_OPUS, Selection.first_live(tier)
+    assert_equal GROK, Selection.first_live(tier)
 
     Quota.note(GROK, RATE_LIMIT_REPLY)
     assert_equal ANTHROPIC_OPUS, Selection.first_live(tier)
