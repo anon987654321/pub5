@@ -59,7 +59,6 @@ module Operator
       "magic_number" => "name the number as a constant where it is used more than once",
       "NO_ABBREVIATED_IDENTIFIERS" => "spell the identifier out",
       "SMALL_FUNCTIONS" => "extract the middle of the method and name it",
-      "SMALL_FILES" => "the file is under the floor - fold it into its one caller, or leave it and record why",
       "LAZY_CLASS" => "the class carries one method - fold it into its caller",
       "FEW_ARGUMENTS" => "group the arguments that travel together into one object",
       "LONG_PARAMETER_LIST" => "same edit as FEW_ARGUMENTS",
