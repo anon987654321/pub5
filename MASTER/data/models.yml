@@ -164,8 +164,8 @@ model_defs:
   # ordinary selection until a bounded `codex exec` probe proves it can answer.
   # `codex login status` succeeds instantly, but `codex exec` -- the configured
   # ask command below -- hung past 250s with no reply on five attempts, with and
-  # without --sandbox/--ephemeral, with an explicit model, and with this session's
-  # CLAUDECODE environment stripped. CLI login health is not execution health;
+  # without --sandbox/--ephemeral, with an explicit model, and with inherited
+  # session environment variables stripped. CLI login health is not execution health;
   # the dispatcher timeout is 300s. Revisit the exclusion after a successful,
   # bounded execution probe and an end-to-end fallback test.
   gemma_2_27b: &gemma_2_27b
