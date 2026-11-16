@@ -1439,7 +1439,7 @@ module Master
         LEGACY_FILES = %w[
           fix_runs.json .fix_runs.pending log.jsonl mission.json costs.jsonl
         ].freeze
-        LEGACY_GLOBS = %w[mission-*.json fix-*.log].freeze
+        LEGACY_GLOBS = %w[mission-*.json fix-*.log triangle-*.log].freeze
         LEGACY_DIRECTORIES = %w[
           fix_assessments fix_architecture checkpoints fix_transcripts
         ].freeze
@@ -1654,7 +1654,10 @@ module Master
           unless stat.file? && stat.nlink == 1
             raise IOError, "legacy /fix artifact must be a singly linked regular file: #{source}"
           end
-          raise IOError, "legacy /fix artifact permissions are not private: #{source}" if (stat.mode & 0o077).positive?
+          # Older fix-here logs inherited the process umask and may be 0644.
+          # The destination is always private (0600 under a 0700 state root);
+          # preserve evidence without carrying the source's broad mode forward.
+          source_mode = format("%04o", stat.mode & 0o777)
 
           payload = read_legacy_state_file(source, stat)
           digest = Digest::SHA256.hexdigest(payload)
@@ -1675,6 +1678,7 @@ module Master
             "path" => state_relative(destination),
             "sha256" => digest,
             "bytes" => payload.bytesize,
+            "source_mode" => source_mode,
           }]
         rescue SystemCallError => error
           raise IOError, "cannot import legacy /fix artifact #{source}: #{error.class}: #{error.message}"
