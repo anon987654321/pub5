@@ -269,12 +269,12 @@ end
     assert Operator::Cohesion.mergeable?(Dir.glob(File.join(@tmp, "thing_*.rb")), [])
   end
 
-  # The counterbalance needs a bound or it is not a counterbalance. dilla's six
-  # proposals produced files of 1076 to 2925 lines against a SMALL_FILES
-  # threshold of 300 — and the three dilla_* headers say they were "split out of
-  # dilla.rb", so the proposal was to undo a deliberate split and recreate the
-  # file under the name of the file it came from.
-  def test_a_merge_that_would_breach_small_files_is_refused
+  # This planner-specific ceiling limits the size of one proposed merge; it
+  # does not judge existing files or create a repository-wide split requirement.
+  # The two scanner Laws that did that were retired on 2026-11-16. The bound
+  # still prevents the planner from recreating dilla.rb from deliberately split
+  # dilla_* modules, a regression measured at 1076 to 2925 lines.
+  def test_a_merge_that_would_exceed_the_planner_bound_is_refused
     3.times { |n| write("big_#{n}.rb", "def big_#{n} = big_#{(n + 1) % 3}\n" + ("# pad\n" * 120)) }
 
     refute Operator::Cohesion.mergeable?(Dir.glob(File.join(@tmp, "big_*.rb")), [])
