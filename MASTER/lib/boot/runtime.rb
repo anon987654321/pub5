@@ -172,8 +172,15 @@ module Master
     # or the user-owned gateway whose URL itself is the opt-in and whose key
     # is optional. Refusing those for want of a key sent a keyless laptop
     # with Ollama running to "no key".
+    #
+    # zai-cli joined the subscription CLI class on 2026-11-16 and the prefix
+    # list was not updated with it: a host with no API key then refused the
+    # pinned zai-cli:auto lane at refusal_before_send ("No API keys
+    # configured"), the lane probe recorded it dead, and /fix dropped its
+    # primary lane for the whole run. Reachability follows the class, so the
+    # prefix rides with the catalogue.
     KEYLESS_LANE_PREFIXES =
-      %w[ollama: ollama/ local_uncensored: local:  codex-cli: grok-cli: agy: web-chat: gateway:].freeze
+      %w[ollama: ollama/ local_uncensored: local:  codex-cli: grok-cli: agy: zai-cli: web-chat: gateway:].freeze
 
     def llm_reachable?(model = nil)
       ids = [model, ENV["MASTER_MODEL"]].map { |id| id.to_s.strip }.reject(&:empty?)
