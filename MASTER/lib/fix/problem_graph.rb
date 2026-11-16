@@ -21,7 +21,6 @@ module Master
         "CYCLIC_DEPENDENCY" => "decouple",
         "FILE_SPRAWL" => "flatten",
         "NO_GOD_CLASS" => "split",
-        "JS_MODULE_SIZE" => "split",
         "STALE_PATH_REFERENCE" => "rename",
         "PROSE_DUPLICATION" => "merge",
         "COMMAND_SURFACE_DUPLICATION" => "merge",
