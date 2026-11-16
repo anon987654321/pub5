@@ -9,6 +9,13 @@ class TestBootEntrypoint < Minitest::Test
   GEMFILE = File.read(File.expand_path("../Gemfile", __dir__))
   LOCKFILE = File.read(File.expand_path("../Gemfile.lock", __dir__))
 
+  def test_ci_compatibility_entrypoint_delegates_boot_to_bin_check_once
+    source = File.read(File.expand_path("../bin/ci", __dir__))
+
+    refute_includes source, "Boot::Entrypoint.prepare!"
+    assert_match(/exec\(RbConfig\.ruby, File\.join\(__dir__, "check"\), "--profile=ci"/, source)
+  end
+
   def test_json_uses_the_bundle_resolution_not_a_ruby_release_pin
     refute GEMFILE.lines.any? { |line| line.start_with?('gem "json", "=') }
     refute LOCKFILE.lines.any? { |line| line.start_with?("  json (=") }
