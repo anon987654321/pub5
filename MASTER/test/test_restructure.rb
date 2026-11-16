@@ -4,6 +4,7 @@ require_relative "test_helper"
 require "tmpdir"
 require "fileutils"
 require "open3"
+require_relative "../lib/review/reference_graph"
 
 # The multi-file restructure /fix runs after its repair passes. Every case runs
 # in a throwaway repository with its own bare remote, never this checkout.
@@ -421,6 +422,26 @@ class TestRestructure < Minitest::Test
     assert_includes evidence, "Production references:"
   end
 
+  def test_context_includes_resolved_edges_from_the_repository_reference_graph
+    source = "MASTER/lib/referenced.rb"
+    consumer = "MASTER/lib/referencer.rb"
+    write(source, "class Referenced; end\\n")
+    write(consumer, "require_relative \"referenced\"\\nReferenced.new\\n")
+    sh("git", "add", "-A", chdir: @repo)
+
+    graph = Master::Review::ReferenceGraph.new(root: @repo)
+    context = Master::Fix::RestructureSweep::Context.new(
+      @repo,
+      File.join(@repo, source),
+      reference_graph: graph,
+    )
+    evidence = context.to_s
+
+    assert_includes evidence, "Repository reference graph:"
+    assert_match(/Resolved inbound edges: .*MASTER\\/lib\\/referencer\\.rb -> MASTER\\/lib\\/referenced\\.rb/, evidence)
+    assert_includes evidence, "analysis_failures=0"
+  end
+
   def test_restructure_exit_reports_done_after_a_fresh_empty_scan
     events = []
     bus = Object.new
@@ -476,6 +497,41 @@ class TestRestructure < Minitest::Test
 
     assert_nil sweep.send(:decommission_audit, incomplete)
     assert_equal complete, sweep.send(:decommission_audit, "AUDIT: #{complete}")
+  end
+
+  def test_destructive_restructure_refuses_inconclusive_or_live_dynamic_references
+    plan = Struct.new(:operations).new(["remove"])
+    problem = Struct.new(:files).new([File.join(@repo, "MASTER/lib/big.rb")])
+    complete = [
+      "purpose=obsolete helper with no current runtime role",
+      "owner=MASTER subsystem owner",
+      "inbound=none after repository-wide reference search",
+      "runtime=not registered in boot or command entrypoints",
+      "dynamic=constants reflection and path globs checked",
+      "config=manifests and lockfiles checked",
+      "external=no deployment or external scripts reference it",
+      "tests=only retired tests remain",
+      "data=required persisted data retained",
+      "revival=none; no supported revival condition",
+    ].join("; ")
+    sweep = Master::Fix::RestructureSweep.new(agent: nil, repo_root: @repo)
+
+    assert_match(/dynamic reachability is INCONCLUSIVE/,
+                 sweep.send(:decommission_blocker, problem, plan, complete.sub("dynamic=constants reflection and path globs checked", "dynamic=INCONCLUSIVE")))
+    assert_match(/reference graph unavailable/,
+                 sweep.send(:decommission_blocker, problem, plan, complete))
+
+    graph = Object.new
+    graph.define_singleton_method(:build) { { analysis_failures: [] } }
+    graph.define_singleton_method(:includes_path?) { |_path| true }
+    graph.define_singleton_method(:dynamic_for) { |_path| [] }
+    graph.define_singleton_method(:unresolved_for) { |_path| [] }
+    safe = Master::Fix::RestructureSweep.new(agent: nil, repo_root: @repo, reference_graph: graph)
+    assert_nil safe.send(:decommission_blocker, problem, plan, complete)
+
+    graph.define_singleton_method(:dynamic_for) { |_path| [{ name: "send", line: 12 }] }
+    assert_match(/dynamic lookup site/,
+                 safe.send(:decommission_blocker, problem, plan, complete))
   end
 
   def test_restructure_review_rejects_bare_approval
