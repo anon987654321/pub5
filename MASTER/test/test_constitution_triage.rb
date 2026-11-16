@@ -30,6 +30,10 @@ class TestConstitutionTriage < Minitest::Test
   # Three registries, because a rule id can come from any of them: the scanner's
   # own registry, data/laws.yml (where the lowercase ids live, as `- id:` rows
   # rather than keys), and law/.
+  def test_retired_size_law_is_not_classified_as_rule_retune
+    refute_includes Master::Review::Scan::ConstitutionTriage::RULE_RETUNE_IDS, "SMALL_FILES"
+  end
+
   def test_every_retune_id_still_names_a_live_rule
     dead = Master::Review::Scan::ConstitutionTriage::RULE_RETUNE_IDS - live_rule_ids.to_a
 
