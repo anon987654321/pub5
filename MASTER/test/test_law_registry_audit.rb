@@ -166,7 +166,7 @@ class TestLawRegistryAudit < Minitest::Test
     assert_equal :retired, definition.lifecycle
     refute definition.enforceable?
     refute_includes report.registry_ids, "small_files"
-    refute_includes report.mechanical, "SMALL_FILES"
+    refute_includes report.mechanical.map { |law| law["id"] }, "SMALL_FILES"
   end
 
   def test_the_shipped_laws_are_still_counted
