@@ -20,6 +20,7 @@ class Takeaway::MenuItem < ApplicationRecord
     gluten crustaceans eggs fish peanuts soybeans milk nuts celery mustard sesame sulphites lupin molluscs
   ].freeze
   serialize :allergens, coder: JSON
+  serialize :metadata, coder: JSON
 
   validates :name, :price_cents, presence: true
   validate :allergens_are_the_fourteen
@@ -36,6 +37,10 @@ class Takeaway::MenuItem < ApplicationRecord
   # OrderItem validates through this on a dish a controller found by id, with
   # no restaurant preloaded; a plain read raised before the order was saved.
   def available_for_order? = available? && strict_safe(:restaurant)&.active?
+
+  def metadata_value(key) = (metadata || {}).fetch(key.to_s, nil)
+
+  def badges = Array(metadata_value("badges"))
 
   def allergens_stated? = !allergens.nil?
 
