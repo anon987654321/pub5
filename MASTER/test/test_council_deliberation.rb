@@ -67,9 +67,9 @@ class TestCouncilDeliberation < Minitest::Test
     assert_match(/veto/i, result.message)
   end
 
-  # The CLI-lane posture: a dev Mac cannot hear 26 personas inside the budget
-  # (the file writes the arithmetic down), so local runs take one round of a
-  # capped panel, veto roles surviving the cut first. vm23 hears everyone.
+  # The local-capacity posture: a dev Mac cannot hear 26 personas inside the
+  # measured budget, so local runs take one round of a capped panel with veto
+  # roles surviving the cut first. vm23 retains the full panel.
   def test_local_posture_caps_the_panel_and_rounds
     old = ENV["MASTER_COUNCIL_LOCAL"]
     ENV["MASTER_COUNCIL_LOCAL"] = "1"
