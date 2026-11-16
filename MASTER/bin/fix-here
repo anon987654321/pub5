@@ -21,6 +21,7 @@ exec "$(dirname "$0")/ruby" -x "$0" "$@"
 require "open3"
 require "fileutils"
 require "optparse"
+require_relative "../lib/boot/paths"
 
 ROOT = File.expand_path("../..", __dir__)
 MASTER = File.join(ROOT, "MASTER")
@@ -149,7 +150,7 @@ if model_flag == "none"
 elsif model
   env["MASTER_MODEL"] = model
 end
-log = File.join(MASTER, ".master", "fix-#{File.basename(tree)}.log")
+log = File.join(MasterPaths.fix_state(root: MASTER), "fix-#{File.basename(tree)}.log")
 
 puts "fix0 at fix-here: tree=#{tree} root=#{ROOT}"
 puts "fix0 at fix-here: disk=#{format('%.1f', free)} GiB free, model=#{model || 'pool (none forced)'}, log=#{log}"
@@ -157,6 +158,14 @@ if dry
   puts "fix0 at fix-here: --dry, would run MASTER/bin/master /fix #{tree}"
   exit 0
 end
+
+# Reconcile old checkout-local state before opening a new log in the shared
+# store. Otherwise the newly created empty log could collide with the legacy
+# log during the copy-verified cutover.
+$LOAD_PATH.unshift(File.join(MASTER, "lib")) unless $LOAD_PATH.include?(File.join(MASTER, "lib"))
+require "fix/kernel"
+Master::Fix::Kernel.new(root: MASTER, actor: "fix-here-state").lifecycle_journal.prepare_state!
+FileUtils.mkdir_p(File.dirname(log), mode: 0o700)
 
 # 3b. A file that does not parse stops the runtime before any model is asked, and the lane
 # check below then fails for a reason that looks like a lane. Say the real one, in seconds.
