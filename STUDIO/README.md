@@ -77,11 +77,12 @@ but the implementation is owned here.
 `bin/studio doctor` gives a read-only local readiness report. Add `--json` for
 machine-readable output. It checks the Ruby baseline, required entrypoints,
 output-path safety, local LoRA profile structure, optional media executables,
-the current Git index and private paths in reachable local branches/tags. It
-makes no provider calls, does not upload, render, modify consent, or rewrite
-Git history. Other clones and remote mirrors remain outside a local check. A
-private-media finding remains BLOCKED until the separate operator rights/history
-decision is resolved; it is not silently converted into a pass.
+the current Git index and private paths in reachable local branches/tags.
+A shallow clone is INCONCLUSIVE rather than reported clean. It makes no
+provider calls, does not upload, render, modify consent, or rewrite Git history.
+Other clones and remote mirrors remain outside a local check. A private-media
+finding remains BLOCKED until the separate operator rights/history decision is
+resolved; it is not silently converted into a pass.
 
 The regular verification path is:
 
