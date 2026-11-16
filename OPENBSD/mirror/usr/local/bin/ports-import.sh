@@ -9,6 +9,9 @@
 # drain-jobs.sh never has a reason to start one. Same load-check shape as
 # prune-guests.sh, next door.
 
+# scan: intentional - no set -e: this wrapper captures the runner's exit status
+# (status=$?) and greps its output to drive the explicit failure report below;
+# strict mode would abort at the first non-zero capture and skip the logger alert.
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
 export PATH
 

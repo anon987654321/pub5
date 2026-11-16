@@ -745,11 +745,16 @@ Tracked mirror: `OPENBSD/mirror/etc/crontab.vm23` (installed idempotently by
 | `keep-warm.sh` | `*/10 * * * *` | `/var/log/keep-warm.log` — brgen and amber only |
 | `prune-guests.sh` | `20 4 * * *` | `/var/log/prune-guests.log` |
 | `renew-certs.sh` | `0 2 * * 1` | `/var/log/cert-renewal.log` |
+| `declutter-hygiene.sh` | `0 6 * * *` | `/var/log/declutter-hygiene.log` — nightly amber `DeclutterHygieneJob` by load-gated `rails runner`; its recurring schedule has no resident scheduler, so the wrapper is the only trigger |
+| `ports-import.sh` | `0 3 * * *` | `/var/log/ports-import.log` — nightly bsdports `PortsImportJob`, same load-gated shape |
+| `purge-deleted-users.sh` | `55 3 * * *` | `/var/log/purge-deleted-users.log` — nightly amber GDPR Art. 17 erasure (`UserPurgeJob`); five minutes after the documented 3:50 slot so a future resident scheduler cannot race it |
 | `vps_weekly_integrity.sh` | `30 3 * * 0` | **tracked and never installed** — absent from root's live crontab and from `/usr/local/bin`, measured 2026-09-12. See TODO 1060. |
 
-Eleven rows because `etc/crontab.vm23` schedules eleven jobs. This table listed four
+Fourteen rows because `etc/crontab.vm23` schedules fourteen jobs. This table listed four
 for long enough that six self-healing jobs existed only in the file nobody
-reads next to the one they do.
+reads next to the one they do; the three recurring-schedule hygiene wrappers
+(`declutter-hygiene.sh`, `ports-import.sh`, `purge-deleted-users.sh`) joined the
+crontab after the last table audit and are now named here too.
 
 A healer that works hides the fault that makes it run. `relayd-watchdog` stamps
 each restart in `/var/db/pub4/relayd-watchdog.restarts` and raises a

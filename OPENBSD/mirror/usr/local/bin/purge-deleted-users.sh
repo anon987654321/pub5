@@ -15,6 +15,9 @@
 # runs is a compliance violation no red check currently catches. If this
 # script is failing, fix it before anything else in the queue.
 
+# scan: intentional - no set -e: this wrapper captures the runner's exit status
+# (status=$?) and greps its output to drive the explicit failure report below;
+# strict mode would abort at the first non-zero capture and skip the logger alert.
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
 export PATH
 
