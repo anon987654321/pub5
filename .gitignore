@@ -58,6 +58,7 @@ memory/*.jsonl
 # by every check run, so a committed copy would conflict in a shared checkout.
 .check_ledger.jsonl
 .master/
+MASTER/reports/
 MASTER/.constitutional_locks/
 MASTER/output/
 MASTER/web/script/three_build/
