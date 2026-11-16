@@ -430,8 +430,9 @@ pub5_source_ceilings:
   # left holding is gone.
   # 1055 -> 1052 folds lib/io/antigravity/ into antigravity.rb. The parent was
   # a nine-line namespace holder with three requires; json_config, discovery and
-  # skills nest inside it and total 231 code lines, under the 300 SMALL_FILES and
-  # NO_GOD_CLASS enforce, so the directory was buying nesting nothing needed.
+  # skills nest inside it and total 231 code lines. At the time, this also sat
+  # under the then-active 300-line SMALL_FILES ceiling; that ceiling was retired
+  # on 2026-11-16 and is not a current design requirement.
   # One file, no shelf, and its twenty tests unchanged.
   # 1052 -> 1026, twenty-six files gone by folding ten directories into the one
   # file each of their constants already named. orders, ops, swarm/workers,
