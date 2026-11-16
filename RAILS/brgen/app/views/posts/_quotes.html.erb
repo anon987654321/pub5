@@ -1,0 +1,27 @@
+<%# The quotes — reposts that arrived with a comment — and the form that asks
+    for the next one. Its own partial because posts/show carries a length
+    ceiling (RAILS/test/file_length_ratchet_test.rb). %>
+<section id="quotes" class="post-quotes">
+  <%= tag.h2 t("post.quotes") %>
+  <%= form_with url: post_repost_path(post), method: :post, class: "feed-quote-form" do %>
+    <%= text_area_tag :comment, quote_comment, maxlength: Repost::COMMENT_MAX, required: true,
+          rows: 3, placeholder: t("post.quote_placeholder"),
+          aria: { label: t("post.quote") } %>
+    <%= submit_tag t("post.quote"), class: "button" %>
+  <% end %>
+  <% if quotes.any? %>
+    <ul>
+      <% quotes.each do |repost| %>
+        <li>
+          <blockquote>
+            <%= tag.p repost.comment %>
+            <% quoter = repost.user %>
+            <%= tag.cite quoter.guest? ? quoter.display_name : link_to(quoter.display_name, user_path(quoter)) %>
+            <%= tag.time time_ago(repost.created_at), datetime: repost.created_at.iso8601,
+                         title: l(repost.created_at, format: :long) %>
+          </blockquote>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</section>

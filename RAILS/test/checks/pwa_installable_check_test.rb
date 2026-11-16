@@ -45,9 +45,12 @@ class PwaInstallableCheckTest < Minitest::Test
   # only in the engine's, which is the arrangement that fooled the hand check.
   def plant(root, manifest: MANIFEST)
     CHECK::APPS.each do |app|
-      write(File.join(root, app, "app/views/pwa/manifest.json.erb"), manifest)
-      write(File.join(root, app, "app/views/pwa/service-worker.js"), "self.addEventListener")
-      write(File.join(root, app, "public/icon-192.png"), "png")
+      # master's face deploys from MASTER/web (apps.yml deploy_root), so the
+      # fixture mirrors the real layout the check resolves through Fleet.
+      app_root = app == "master" ? File.expand_path("../MASTER/web", root) : File.join(root, app)
+      write(File.join(app_root, "app/views/pwa/manifest.json.erb"), manifest)
+      write(File.join(app_root, "app/views/pwa/service-worker.js"), "self.addEventListener")
+      write(File.join(app_root, "public/icon-192.png"), "png")
     end
     write(File.join(root, "__shared/public/icon-512.png"), "png")
     write(File.join(root, "__shared/public/icon-mask.png"), "png")

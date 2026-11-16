@@ -303,7 +303,7 @@ body.vertical-playlist input[type="range"] {
 
 .flash-alert {
   background: rgb(from var(--danger) r g b / var(--opacity-soft));
-  border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 20%, transparent);
 }
 
 /* The city-interconnection surfaces are the same shape as a sidebar card — a

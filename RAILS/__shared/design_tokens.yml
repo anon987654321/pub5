@@ -1477,17 +1477,17 @@ scale:
   - 300
   baselines:
     apps:
-      off_scale_space: 35
-      off_scale_line_height: 21
+      off_scale_space: 0
+      off_scale_line_height: 0
       absolute_line_height: 0
       off_scale_radius: 19
       off_scale_font_weight: 0
       off_scale_tracking: 6
       off_scale_opacity: 20
-      off_scale_duration: 16
+      off_scale_duration: 14
       off_token_color: 23
     face:
-      off_scale_space: 17
+      off_scale_space: 0
       off_scale_radius: 0
       off_scale_line_height: 3
       absolute_line_height: 0

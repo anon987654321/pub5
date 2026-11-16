@@ -133,49 +133,8 @@
     <audio data-playlist-player-target="audio" preload="metadata"></audio>
   <% end %>
 
-  <section class="playlist-queue" aria-label="<%= t("playlist.queue") %>">
-    <h2 class="playlist-queue-heading"><%= t("playlist.queue") %></h2>
-    <% rows.each_with_index do |track, index| %>
-      <% track_src = track.audio_file.attached? ? main_app.url_for(track.audio_file) : (track.source_type == "direct" ? track.source_url : nil) %>
-      <% track_embed = track.external_embed_url %>
-      <% track_art = track.artwork.attached? ? main_app.url_for(track.artwork) : nil %>
-      <button
-        type="button"
-        class="playlist-queue-item<%= " is-active" if track == active %>"
-        data-playlist-player-target="queueItem"
-        data-action="playlist-player#load"
-        data-playlist-player-src-param="<%= track_src %>"
-        data-playlist-player-embed-param="<%= track_embed %>"
-        data-playlist-player-title-param="<%= track.title %>"
-        data-playlist-player-artist-param="<%= track.artist %>"
-        data-playlist-player-artwork-param="<%= track_art %>"
-        data-playlist-player-track-id-param="<%= track.id %>"
-        data-playlist-player-comments-param="<%= (local_assigns[:track_comments] && local_assigns[:track_comments][track.id] || local_assigns[:comments] || []).to_json %>"
-        <%= "disabled" unless track_src || track_embed %>
-        itemprop="track"
-        itemscope
-        itemtype="https://schema.org/MusicRecording"
-      >
-        <span class="playlist-queue-index"><%= index + 1 %></span>
-        <span class="playlist-queue-art" aria-hidden="true">
-          <% if track_art %>
-            <%= image_tag track_art, alt: track.title, width: 48, height: 48 %>
-          <% end %>
-        </span>
-        <span class="playlist-queue-meta">
-          <strong itemprop="name"><%= track.title %></strong>
-          <%# Only a named artist is marked up as byArtist; "unknown artist" is copy for the reader, not a fact about the track. %>
-          <span><%= tag.span track.artist.presence || t("playlist.unknown_artist"), itemprop: ("byArtist" if track.artist.present?) %> · <%= track.duration_formatted %></span>
-        </span>
-      </button>
-    <% end %>
-    <% if tracks.empty? %>
-      <%= render "shared/empty_state",
-            title: t("empty.no_tracks"),
-            body: t("playlist.no_tracks_body"),
-            action: { label: t("playlist.library"), path: root_path } %>
-    <% end %>
-  </section>
+  <%= render "playlist/playlists/player_queue", rows: rows, tracks: tracks, active: active,
+        track_comments: local_assigns[:track_comments], comments: local_assigns[:comments] %>
 
   <%= render "playlist/playlists/comments", active: active, comments: local_assigns[:comments] %>
 

@@ -245,7 +245,9 @@ module Deploy
     end
 
     def app_root(app)
-      Fleet.app_dir(app)
+      # root: carries this check's ROOT so a fixture tree (the tests swap the
+      # constant) resolves beside it instead of the real checkout.
+      Fleet.app_dir(app, root: ROOT)
     end
 
     def rails_root = File.join(ROOT, "RAILS")

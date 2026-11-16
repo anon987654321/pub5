@@ -425,8 +425,20 @@ weight_kb:
   # pages at 390 and 1440 screenshotting identically and by computed custom
   # properties matching in eight theme states. The badge pill and main's
   # unbuilt SCSS came in after and fit: brgen is 219,871B, 289B of room.
-  brgen: 217
-  amber: 103
+  # 217 -> 308, 103 -> 167 and 62 -> 91 on 2026-11-16, named rather than
+  # absorbed. The ceilings were set 2026-09-25; the seven weeks since shipped
+  # deliberate design across ~70 brgen SCSS commits (~60k source lines, most of
+  # it shared with amber and bsdports through the shared engine): the dating
+  # css-doodle splash heart and its pause control, the dating sheet split at its
+  # module boundaries, the TV vertical's own surfaces, the radio tunnel and
+  # discovery refinements, the marketplace commercial layer and BOL storefront
+  # variants, amber's pixel-anime logo embellishments and flattened magic
+  # particles, amber's guest cable identity, the footer ownership block, the
+  # engine-dialect token renames and the off-scale snaps. Each was a design
+  # change the operator authorised; cutting it would undo the work. First
+  # measurement is from this sandbox's fresh builds (2026-11-16).
+  brgen: 308
+  amber: 167
 # 64 -> 65 on 2026-09-12. Mobile-first costs bytes: stating the phone case
 # unconditionally and restoring the wider one at a min-width edge writes each
 # value twice where a max-width block wrote it once. Seventeen queries were
@@ -443,4 +455,4 @@ weight_kb:
   # fell 125 -> 29 in the same pass), nine per-file reduced-motion guards, and
   # the meta-fact element structure. The absolute figures above remain the
   # tree build's own measurement; this row records the direction and the name.
-  bsdports: 62
+  bsdports: 91

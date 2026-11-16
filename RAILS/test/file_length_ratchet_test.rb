@@ -227,7 +227,6 @@ class FileLengthRatchetTest < Minitest::Test
     "brgen/app/assets/stylesheets/_brgen_messenger.scss" => 640,
     "brgen/app/assets/stylesheets/_brgen_shared_overrides.scss" => 2267,
     "brgen/app/assets/stylesheets/_brgen_vertical_surfaces.scss" => 2200,
-    "brgen/engines/marketplace/app/views/marketplace/listings/show.html.erb" => 187,
   }.freeze
 
 # Each app's one stylesheet, long by decision. The operator's standing rule

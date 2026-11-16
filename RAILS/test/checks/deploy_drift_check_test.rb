@@ -12,7 +12,7 @@ require "tmpdir"
 # time the check reads it.
 DRIFT_STAMPS = Dir.mktmpdir("deploy-drift-stamps")
 Minitest.after_run { FileUtils.remove_entry(DRIFT_STAMPS) if File.directory?(DRIFT_STAMPS) }
-ENV["PUB4_STAMP_DIR"] = DRIFT_STAMPS
+ENV["PUB5_STAMP_DIR"] = DRIFT_STAMPS
 
 require_relative "../../../MASTER/checks/lib/live/deploy_drift"
 

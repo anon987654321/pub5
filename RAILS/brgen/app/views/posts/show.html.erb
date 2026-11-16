@@ -65,30 +65,7 @@
 
       <%= render "posts/crosspost", post: @post, targets: @crosspost_targets, crossposts: @crossposts %>
 
-      <section id="quotes" class="post-quotes">
-        <%= tag.h2 t("post.quotes") %>
-        <%= form_with url: post_repost_path(@post), method: :post, class: "feed-quote-form" do %>
-          <%= text_area_tag :comment, @quote_comment, maxlength: Repost::COMMENT_MAX, required: true,
-                rows: 3, placeholder: t("post.quote_placeholder"),
-                aria: { label: t("post.quote") } %>
-          <%= submit_tag t("post.quote"), class: "button" %>
-        <% end %>
-        <% if @quotes.any? %>
-          <ul>
-            <% @quotes.each do |repost| %>
-              <li>
-                <blockquote>
-                  <%= tag.p repost.comment %>
-                  <% quoter = repost.user %>
-                  <%= tag.cite quoter.guest? ? quoter.display_name : link_to(quoter.display_name, user_path(quoter)) %>
-                  <%= tag.time time_ago(repost.created_at), datetime: repost.created_at.iso8601,
-                               title: l(repost.created_at, format: :long) %>
-                </blockquote>
-              </li>
-            <% end %>
-          </ul>
-        <% end %>
-      </section>
+      <%= render "posts/quotes", post: @post, quote_comment: @quote_comment, quotes: @quotes %>
 
       <div class="feed-post-actions">
         <%= link_to post_path(@post, anchor: "comments-section"), class: "feed-action",

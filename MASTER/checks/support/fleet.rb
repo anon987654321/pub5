@@ -46,10 +46,13 @@ module Fleet
   end
 
   # An app's tree: apps.yml's deploy_root (master's is MASTER/web), else RAILS/<name>.
-  def app_dir(name)
+  # root: overrides the checkout root for probes that measure a fixture tree
+  # (the check swaps its own ROOT constant; without this keyword Fleet would
+  # still join the real checkout and the fixture would be invisible).
+  def app_dir(name, root: nil)
     meta = YAML.safe_load_file(APPS_YML, permitted_classes: [Symbol]).fetch("apps", {})[name.to_s]
-    root = meta.is_a?(Hash) ? meta["deploy_root"].to_s : ""
-    File.join(ROOT, root.empty? ? "RAILS/#{name}" : root)
+    base = meta.is_a?(Hash) ? meta["deploy_root"].to_s : ""
+    File.join(root || ROOT, base.empty? ? "RAILS/#{name}" : base)
   end
 
   # The apps whose Gemfile mounts pub5-shared, so they carry its views, its
