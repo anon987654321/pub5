@@ -140,6 +140,18 @@ model_defs:
     id: glm-5.3-flash
     <<: *model_defaults
     score: { quality: 0.93, speed: 0.97, cost: 1.0 }
+  # The zai-cli subscription lane rides bin/zai-chat, the operator's configured
+  # z-ai SDK bridge; it asks for glm-5.3-flash (ZAI_CHAT_MODEL default) with the
+  # key inside the CLI's own configuration, so it is the GLM-class lane on any
+  # host with no ZAI_API_KEY. It joined the subscription-CLI class on
+  # 2026-11-16; without a chain row the router's availability gate refused a
+  # pinned run as "routing disagrees with provider availability" (2026-11-17),
+  # so the lane now follows the direct glm-5.3-flash API lane in every tier
+  # that already carries agy:auto.
+  zai_cli_auto: &zai_cli_auto
+    id: zai-cli:auto
+    <<: *model_defaults
+    score: { quality: 0.92, speed: 0.85, cost: 0.9 }
   # The OpenHands sandbox's own agent-server endpoint, discovered as
   # gateway:openhands_Default (Ground::OpenhandsSandbox wires
   # MASTER_LLM_GATEWAY_URL from OH_INTERNAL_SERVER_URL at boot). It costs
@@ -228,6 +240,7 @@ models:
     - *web_chat_gemini
   default:
     - *glm_5_3_flash
+    - *zai_cli_auto
     - *glm_5_3
     - *sandbox_gateway
     - *claude_opus_api
@@ -248,10 +261,12 @@ models:
   primary:
     # glm-5.3-flash leads every /fix run as the primary #1 lane (operator,
     # 2026-11-16); without ZAI_API_KEY it falls through exactly like any dead
-    # lane. glm-5.3 follows so a flashed-out or absent flash key still reaches
-    # the same provider, and the sandbox gateway follows so a keyless OpenHands
-    # run answers next.
+    # lane. zai-cli:auto follows so a keyless host still rides the GLM class
+    # through the operator's configured CLI, and glm-5.3 follows so a flashed-
+    # out or absent flash key still reaches the same provider, and the sandbox
+    # gateway follows so a keyless OpenHands run answers next.
     - *glm_5_3_flash
+    - *zai_cli_auto
     - *glm_5_3
     - *sandbox_gateway
     - *deepseek_reasoner
@@ -264,6 +279,7 @@ models:
     - *llama_cli_gguf
   strong:
     - *glm_5_3_flash
+    - *zai_cli_auto
     - *glm_5_3
     - *sandbox_gateway
     - *claude_opus_api
