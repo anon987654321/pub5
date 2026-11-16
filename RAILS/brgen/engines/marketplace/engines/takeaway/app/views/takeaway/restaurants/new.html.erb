@@ -4,6 +4,8 @@
 
 <div class="form-wrap">
   <%= form_with model: @restaurant, url: restaurants_path do |f| %>
+    <%= hidden_field_tag :marketplace_store_id, @marketplace_store.id if @marketplace_store %>
+    <%= tag.p t("takeaway.setup_store_linked"), class: "form-help" if @marketplace_store %>
     <%= render "shared/errors", object: @restaurant %>
     <div class="field"><%= f.label :name %><%= f.text_field :name %></div>
     <div class="field"><%= f.label :description %><div data-controller="character-counter" data-character-counter-countdown-value="true">
@@ -27,7 +29,7 @@
     <div class="field"><%= f.label :delivery_fee_cents, t("takeaway.delivery_fee") %><%= f.number_field :delivery_fee_cents, inputmode: "numeric" %></div>
     <div class="field"><%= f.label :min_order_cents, t("takeaway.min_order") %><%= f.number_field :min_order_cents, inputmode: "numeric" %></div>
     <div class="field"><%= f.label :delivery_radius_km, t("takeaway.delivery_radius") %><%= f.number_field :delivery_radius_km, min: 1, max: Takeaway::Restaurant::MAX_DELIVERY_RADIUS_KM, inputmode: "numeric" %></div>
-    <div class="field field--check"><%= f.check_box :active %><%= f.label :active, t("takeaway.active") %></div>
+    <%= tag.p t("takeaway.setup_draft_hint"), class: "form-help" %>
     <%= render "takeaway/restaurants/place_field", f: f %>
     <div class="field"><%= f.submit t("takeaway.save"), class: "button button-primary" %></div>
   <% end %>
