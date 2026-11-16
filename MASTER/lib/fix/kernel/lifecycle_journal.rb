@@ -5,6 +5,7 @@ require "digest"
 require "json"
 require "set"
 require "securerandom"
+require "socket"
 require "time"
 require_relative "../../io/atomic_write"
 require_relative "../../boot/paths"
@@ -654,6 +655,14 @@ module Master
 
         def history(limit: MAX_RUNS)
           load["runs"].last(limit)
+        end
+
+        # Called by Kernel before /fix status or execution first reads the
+        # journal. Migration is serialized with all journal writers and has a
+        # stable receipt, so later reads are cheap.
+        def prepare_state!
+          with_lock { load }
+          true
         end
 
         private
@@ -1438,13 +1447,15 @@ module Master
           fix-execution.lock fix_runs.lock mission.lock
         ].freeze
 
+        # Receipt paths retain the historical workspace-relative .master
+        # namespace even when the bytes live outside the checkout.
         def state_relative(path)
           full = File.expand_path(path.to_s)
           root = File.expand_path(@state_root)
-          return "." if full == root
+          return ".master" if full == root
           return path.to_s unless full.start_with?(root + File::SEPARATOR)
 
-          full.delete_prefix(root + File::SEPARATOR).tr(File::SEPARATOR, "/")
+          ".master/#{full.delete_prefix(root + File::SEPARATOR).tr(File::SEPARATOR, "/")}"
         rescue ArgumentError
           nil
         end
@@ -1496,7 +1507,7 @@ module Master
         # or an unexpired mission is a hard stop: two state roots must never
         # become concurrent writers for the same repository.
         def migrate_legacy_state!
-          return if @local_state_root || @migration_complete
+          return if @migration_complete
 
           marker_path = File.join(@state_root, MIGRATION_MARKER)
           if File.exist?(marker_path) || File.symlink?(marker_path)
