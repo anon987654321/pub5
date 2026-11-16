@@ -74,8 +74,10 @@ class TestProblemGraph < Minitest::Test
     assert problems.all? { |problem| problem.files.size <= Master::Fix::ProblemGraph::MAX_FILES }
   end
 
-  def test_retired_small_files_has_no_structural_operation
-    refute Master::Fix::ProblemGraph::LAW_OPERATIONS.key?("SMALL_FILES")
+  def test_retired_size_only_laws_have_no_structural_operation
+    %w[SMALL_FILES JS_MODULE_SIZE].each do |id|
+      refute Master::Fix::ProblemGraph::LAW_OPERATIONS.key?(id)
+    end
   end
 
   def test_problem_identity_is_stable_for_same_observations
