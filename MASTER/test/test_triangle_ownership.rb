@@ -11,6 +11,17 @@ class TestTriangleOwnership < Minitest::Test
     assert_equal Operator::RubyRunner.bundle_cmd, Deploy::Triangle::BUNDLE
   end
 
+  def test_triangle_tracks_every_live_app_inventory_entry
+    registry = YAML.safe_load_file(File.join(Deploy::Triangle::RAILS_ROOT, "apps.yml")).fetch("apps")
+    apps = Deploy::Triangle.apps
+
+    assert_equal registry.keys.sort, apps.map { |app| app.fetch(:name) }.sort
+    standalone = apps.find { |app| app.fetch(:name) == "mrdamascy" }
+    face = apps.find { |app| app.fetch(:name) == "master" }
+    assert_equal File.join(Deploy::Triangle::ROOT, "RAILS", "mrdamascy"), standalone.fetch(:dir)
+    assert_equal File.join(Deploy::Triangle::ROOT, "MASTER", "web"), face.fetch(:dir)
+  end
+
   # A server left behind by a killed /fix run answers /up like a live one. The
   # triangle has to know whose tree it was started in before trusting it.
   def test_listener_reports_the_directory_the_server_was_started_in
