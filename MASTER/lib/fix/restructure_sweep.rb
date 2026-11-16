@@ -141,10 +141,11 @@ module Master
       TEXT
 
       def initialize(agent:, repo_root:, bus: nil, restructure: nil, transformation_plan: nil,
-                     ground_truth: nil, preserve_user_intent: nil)
+                     ground_truth: nil, preserve_user_intent: nil, reference_graph: nil)
         @agent = agent
         @root = repo_root
         @bus = bus
+        @reference_graph = reference_graph
         @transformation_plan = transformation_plan || TransformationPlan.new(root: Master::ROOT)
         @ground_truth = ground_truth
         @preserve_user_intent = preserve_user_intent
@@ -412,7 +413,8 @@ module Master
           candidate_map:,
           context: Context.new(
             @root, problem.files.first, related: problem.files.drop(1), scorecard:,
-            co_change_window: @transformation_plan.scorecard_policy.fetch("history_window_commits")
+            co_change_window: @transformation_plan.scorecard_policy.fetch("history_window_commits"),
+            reference_graph: @reference_graph,
           ).to_s,
         )
       end
