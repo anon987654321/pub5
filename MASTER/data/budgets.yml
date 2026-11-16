@@ -37,6 +37,16 @@ fix_time:
       # a pinned run had (2026-11-12: "no model provider answered after 4
       # readiness checks") and the run ended before its first file.
       probe_s: 90
+    # The Z.ai open-platform lane (bare glm- ids: glm-5.3-flash, glm-5.3) leads
+    # the primary /fix chain since 2026-11-16. Its budget mirrors the gateway
+    # lane's: the base defaults were written for metered short turns and the
+    # same readiness-timeout stall hit this lane when it anchored whole-tree
+    # runs. LaneQuota.lane_of names it "glm" (first dash before the version).
+    glm:
+      file_s: 900
+      run_s: 7200
+      stall_s: 900
+      probe_s: 90
 
 governor:
   # Calls a minute per tool tier; a ceiling against a runaway loop. Absent means no limit.
