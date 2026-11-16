@@ -415,7 +415,7 @@ module Master
             "Dynamic lookup sites in affected files: #{dynamic.empty? ? "none observed" : dynamic.first(20).join("; ")}",
             (failures.empty? ? nil : "Analysis failures: #{failures.first(10).map { |row| "#{row[:path]}: #{row[:error]}" }.join("; ")}"),
           ]
-          lines.compact.join("\\n")
+          lines.compact.join("\n")
         rescue StandardError => e
           "Reference graph: INCONCLUSIVE (#{e.class}: #{e.message.to_s[0, 180]})."
         end
