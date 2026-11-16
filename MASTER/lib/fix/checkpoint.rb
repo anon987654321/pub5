@@ -6,6 +6,7 @@ require "json"
 require "time"
 require "securerandom"
 require_relative "../io/atomic_write"
+require_relative "../boot/paths"
 
 module Master
   module Fix
@@ -21,12 +22,12 @@ module Master
       def initialize(root: Master::ROOT, dir: nil)
         input_root = File.expand_path(root)
         @root = File.realpath(input_root)
-        input_dir = File.expand_path(dir || File.join(input_root, ".master", "checkpoints"), input_root)
-        @dir = if input_dir.start_with?(input_root + File::SEPARATOR)
-                 File.join(@root, input_dir.delete_prefix(input_root + File::SEPARATOR))
-               else
-                 input_dir
-               end
+        @state_root = File.expand_path(MasterPaths.fix_state(root: @root))
+        legacy_dir = File.expand_path(File.join(input_root, ".master", "checkpoints"))
+        input_dir = dir ? File.expand_path(dir, input_root) : File.join(@state_root, "checkpoints")
+        # Older callers named the checkout-local location explicitly. Keep that
+        # call shape, but resolve it to the repository's shared state store.
+        @dir = input_dir == legacy_dir ? File.join(@state_root, "checkpoints") : input_dir
       end
 
       def create(label:, files: [])
@@ -184,10 +185,11 @@ module Master
       # a symlink in any parent component) turns a repo-local checkpoint write
       # into an arbitrary filesystem write. Refuse it before create/list/restore.
       def storage_directory(create:)
-        canonical_root = File.realpath(root)
+        prepare_shared_state!
+        canonical_root = File.realpath(@state_root)
         path = File.expand_path(dir, canonical_root)
         unless path.start_with?(canonical_root + File::SEPARATOR)
-          raise ArgumentError, "checkpoint store escapes root: #{dir}"
+          raise ArgumentError, "checkpoint store escapes shared state root: #{dir}"
         end
 
         relative = path.delete_prefix(canonical_root + File::SEPARATOR)
@@ -197,9 +199,6 @@ module Master
           raise ArgumentError, "checkpoint store traverses symlink: #{current}" if File.symlink?(current)
         end
 
-        # The journal's own gate refuses a group/world-writable .master, so the
-        # store must not create one whose permissions depend on the host umask:
-        # a 0002 umask leaves 0775 behind and the journal correctly refuses it.
         FileUtils.mkdir_p(path, mode: 0o700) if create
         return path unless File.exist?(path) || File.symlink?(path)
 
@@ -207,9 +206,18 @@ module Master
 
         real_path = File.realpath(path)
         unless real_path.start_with?(canonical_root + File::SEPARATOR)
-          raise ArgumentError, "checkpoint store escapes root: #{path}"
+          raise ArgumentError, "checkpoint store escapes shared state root: #{path}"
         end
         real_path
+      end
+
+      def prepare_shared_state!
+        return true if @state_prepared
+
+        require_relative "kernel" unless defined?(Master::Fix::Kernel::LifecycleJournal)
+        Master::Fix::Kernel.new(root: @root, actor: "checkpoint-state")
+          .lifecycle_journal.prepare_state!
+        @state_prepared = true
       end
 
       def copy_files(files, from:, to:)
