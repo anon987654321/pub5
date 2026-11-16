@@ -22,6 +22,7 @@ module Master
       ATTEMPTS = Integer(ENV.fetch("MASTER_FIX_RESTRUCTURE_ATTEMPTS", 4))
       ROUNDS = Integer(ENV.fetch("MASTER_FIX_RESTRUCTURE_ROUNDS", 4))
       KEEPS = 3
+      AUDIT_FIELDS = %w[purpose= owner= inbound= runtime= dynamic= config= external= tests= data= revival=].freeze
       FIRST_ATTEMPTS = 1
       FIRST_ROUNDS = 1
       FIRST_KEEPS = 1
@@ -39,7 +40,7 @@ module Master
         Autonomous surgery rules:
         - Read the archaeology below before deciding that a file is dead or should move.
         - Run a decommission and simplification audit over the affected subsystem before choosing an operation.
-        - Inventory runtime registrations, manifests, boot hooks, config readers, require/load/import sites, autoloads, reflection, command entrypoints, external scripts, deployment paths, tests and documented public contracts.
+        - Inventory runtime registrations, dependency manifests and lockfiles, package declarations, boot hooks, config readers, require/load/import sites, autoloads, reflection, command entrypoints, external scripts, deployment paths, tests and documented public contracts.
         - Search reverse references across the repository, not only the supplied excerpts. A missing direct text match is not proof when dispatch, constants, globbing, registries or generated paths can reach the component.
         - Classify each candidate KEEP, CONSOLIDATE, DECOMMISSION or HUMAN_DECISION; cite exact evidence paths and every known live consumer.
         - DECOMMISSION only when source, runtime, dynamic and external reachability are disproved, the purpose is obsolete, required data is preserved, and regression coverage proves the surviving path.
@@ -92,7 +93,10 @@ module Master
         %<automatic_vetoes>s
 
         Decommission evidence and simplification report (mandatory):
-        State the candidate's purpose and owner; list exact inbound references, runtime activation paths, config/manifest readers, external/deploy consumers, tests, retained data and revival conditions. Separate proven absence from an unsearched or dynamic path. If evidence is incomplete, KEEP or HUMAN_DECISION; do not infer deletion from age, naming, a parked label or a zero-result grep.
+        Before selecting any operation, state the candidate's purpose and owner; list exact inbound references, runtime activation paths, dynamic dispatch/reflection/glob paths, config and dependency-manifest readers, external/deploy consumers, tests, retained data and revival conditions. Separate proven absence from an unsearched or dynamic path. If evidence is incomplete, KEEP or HUMAN_DECISION; do not infer deletion from age, naming, a parked label or a zero-result grep.
+
+        The response must include one machine-readable, single-line AUDIT record with every field below. Use an exact repository path for each claimed reference or the word none; use INCONCLUSIVE when a path was not proved. A missing, empty or partial field is a refusal, not a harmless omission:
+        purpose=...; owner=...; inbound=...; runtime=...; dynamic=...; config=...; external=...; tests=...; data=...; revival=...
 
         The tree, and the contracts to keep:
         %<contracts>s
@@ -101,7 +105,8 @@ module Master
         The context below numbers each line for reference; never copy the numbers.
         Otherwise answer in exactly this format, whole file contents, no code fences:
         SUMMARY: <one line: what moved where, and why>
-        OPERATIONS: <one or more candidate transformation names, comma-separated, in constitutional order>
+        OPERATIONS: <one candidate transformation name, in constitutional order>
+        AUDIT: purpose=...; owner=...; inbound=...; runtime=...; dynamic=...; config=...; external=...; tests=...; data=...; revival=...
         === WRITE <path from the repository root, e.g. MASTER/lib/fix/x.rb>
         <complete file content>
         === DELETE <path from the repository root>
@@ -115,7 +120,10 @@ module Master
         operations: %<operations>s
         %<summary>s
 
-        Attack it. Verify the decommission report independently: inspect reverse references and dynamic entrypoints; challenge every claim that a component is unused; confirm retained data and external consumers. Does it change behaviour, break a caller, a require, load order,
+        Decommission audit supplied by the proposal:
+        %<audit>s
+
+        Attack it. Verify every audit field independently: inspect reverse references and dynamic entrypoints; challenge every claim that a component is unused; inspect dependency manifests/lockfiles, registrations, generated paths and external/deploy consumers; confirm retained data and revival conditions. An INCONCLUSIVE dynamic or external path forbids deletion. Does it change behaviour, break a caller, a require, load order,
         or a Zeitwerk path and constant pair? Does it only move complexity around,
         or leave the tree harder to find one's way in? Does it merge code that only
         looks alike, whose units change for different reasons, or abstract fewer
@@ -339,17 +347,34 @@ module Master
         answer = ask(proposal(tree, problem, scorecard: baseline_scorecard, candidate_map:))
         return if answer.strip == "KEEP"
 
+        audit = decommission_audit(answer)
+        return report(problem, nil, "mandatory decommission audit missing or incomplete") unless audit
+
         plan = Restructure::Plan.parse(answer)
         return report(problem, nil, "the answer held no plan") if plan.empty?
 
-        review = ->(diff) { verdict(problem, plan, diff, scorecard_before: baseline_scorecard) }
+        review = ->(diff) { verdict(problem, plan, diff, scorecard_before: baseline_scorecard, audit:) }
         result = @restructures[tree].call(
           plan,
           message: commit_message(problem, plan),
           review:,
           allowed_operations: problem.candidate_operations,
         )
-        report(problem, plan, result)
+        report(problem, plan, result, audit:)
+      end
+
+      def decommission_audit(answer)
+        line = answer.to_s.lines.find { |row| row.start_with?("AUDIT:") }
+        return unless line
+
+        payload = line.delete_prefix("AUDIT:").strip
+        return if payload.length < 80
+
+        complete = AUDIT_FIELDS.all? do |field|
+          match = payload.match(/(?:\\A|;\\s*)#{Regexp.escape(field)}\\s*([^;]+)/)
+          match && !match[1].strip.empty?
+        end
+        payload if complete
       end
 
       def proposal(tree, problem, scorecard: nil, candidate_map: "")
@@ -393,7 +418,7 @@ module Master
         @transformation_plan.refactoring_playbook.fetch(section).map(&).join("\n")
       end
 
-      def verdict(problem, plan, diff, scorecard_before: {})
+      def verdict(problem, plan, diff, scorecard_before: {}, audit: "INCONCLUSIVE: no audit supplied")
         tree = relative(problem.files.first).split("/").first
         scorecard_after = Restructure::Proof.for(tree, @root).scorecard(extra_paths: plan.paths)
         numeric_delta = scorecard_before.filter_map do |name, value|
@@ -410,6 +435,7 @@ module Master
             path: relative(problem.files.first),
             operations: plan.operations.join(", "),
             summary: plan.summary,
+            audit: audit.to_s,
             scorecard: scorecard_text,
             diff:,
           ),
@@ -427,7 +453,7 @@ module Master
         [CommitMessage.fit(title), body, CommitMessage::MARKER].join("\n\n")
       end
 
-      def report(problem, plan, result)
+      def report(problem, plan, result, audit: nil)
         ok = result.is_a?(Result) && result.ok?
         text = if ok then "kept: #{plan.summary}"
                elsif result.is_a?(Result) then result.message
@@ -453,6 +479,7 @@ module Master
           ok:,
           message: text[0, 300],
           evidence:,
+          decommission_audit: audit&.slice(0, 1_200),
         )
         result.is_a?(Result) ? result : nil
       end
