@@ -23,10 +23,9 @@ module Operator
   # string of governed trees runs in the order it was typed.
   class FixStatus
     TREES = MasterPaths::TREES
-    JOURNAL = "MASTER/.master/fix_runs.json"
-    # FixLoop keeps /fix's mission at the repository root (FixLoop#mission_root).
-    MISSION = ".master/mission.json"
-    LOG_GLOB = "MASTER/.master/fix-*.log"
+    JOURNAL = "fix_runs.json"
+    MISSION = "mission.json"
+    LOG_GLOB = "fix-*.log"
     HEARTBEAT = %r{\Afix0: pass \d+/\d+ }
     HEARTBEAT_WINDOW = 65_536
     TEMP_WORKTREE = /pub5-master-fix-/
@@ -36,6 +35,13 @@ module Operator
       @trees = trees.map(&:to_s)
       @now = now
       @read_errors = {}
+      @state_root = MasterPaths.fix_state(root: File.join(@root, "MASTER"))
+      @legacy_state_roots = [
+        File.join(@root, "MASTER", ".master"),
+        File.join(@root, ".master"),
+      ].map { |path| File.expand_path(path) }.uniq
+      @state_migration_pending = !File.file?(File.join(@state_root, ".legacy-migration.json")) &&
+                                 legacy_state_present?
       @kernel = Master::Fix::Kernel.new(root: File.join(@root, "MASTER"), actor: "fix-status")
       @run_journal = @kernel.lifecycle_journal
     end
@@ -212,6 +218,7 @@ module Operator
     def assessment_proof_details(run)
       receipt = run["assessment_receipt"]
       return { "status" => "not_recorded" } unless receipt.is_a?(Hash)
+      return { "status" => "legacy_state_not_migrated" } if @state_migration_pending
 
       @run_journal.verify_assessment_report(run["id"])
     rescue StandardError => e
@@ -275,7 +282,7 @@ module Operator
     end
 
     def log_rows
-      Dir.glob(File.join(@root, LOG_GLOB)).filter_map do |path|
+      state_roots.flat_map { |directory| Dir.glob(File.join(directory, LOG_GLOB)) }.uniq.filter_map do |path|
         tree = File.basename(path)[/\Afix-(.+)\.log\z/, 1]
         next unless @trees.empty? || @trees.include?(tree)
 
@@ -285,7 +292,8 @@ module Operator
 
     # The newest RunPulse line in any tree's log: the run's own account of where it is.
     def heartbeat_line
-      Dir.glob(File.join(@root, LOG_GLOB)).sort_by { |path| -File.mtime(path).to_f }.each do |path|
+      state_roots.flat_map { |directory| Dir.glob(File.join(directory, LOG_GLOB)) }.uniq
+        .sort_by { |path| -File.mtime(path).to_f }.each do |path|
         tail = File.open(path, "rb") { |file| file.seek([File.size(path) - HEARTBEAT_WINDOW, 0].max) && file.read }.to_s
         line = tail.force_encoding("UTF-8").scrub.lines.reverse.find { |row| row.match?(HEARTBEAT) }
         return line.strip if line
@@ -361,8 +369,26 @@ module Operator
       false
     end
 
+    def state_roots
+      [@state_root, *@legacy_state_roots].map { |path| File.expand_path(path) }.uniq
+    end
+
+    def legacy_state_present?
+      @legacy_state_roots.any? do |directory|
+        next false if File.expand_path(directory) == File.expand_path(@state_root)
+
+        %w[fix_runs.json mission.json].any? do |name|
+          path = File.join(directory, name)
+          File.exist?(path) || File.symlink?(path)
+        end || %w[fix_assessments fix_architecture checkpoints fix_transcripts].any? do |name|
+          File.directory?(File.join(directory, name))
+        end
+      end
+    end
+
     def read_json(relative_path)
-      path = File.join(@root, relative_path)
+      candidates = state_roots.map { |directory| File.join(directory, relative_path) }
+      path = candidates.find { |candidate| File.exist?(candidate) || File.symlink?(candidate) } || candidates.first
       if File.symlink?(path)
         @read_errors[relative_path] = "refusing symlink"
         return
