@@ -21,6 +21,23 @@ class TestOperatorTestScope < Minitest::Test
     assert_equal %w[amber], Operator::TestScope.rails_apps(%w[amber])
   end
 
+  def test_app_environment_selects_the_app_gemfile_and_clears_master_bundle_state
+    parent = {
+      "BUNDLE_GEMFILE" => "/repo/MASTER/Gemfile",
+      "BUNDLE_PATH" => "/repo/MASTER/.bundle",
+      "BUNDLE_WITHOUT" => "test",
+      "BUNDLER_ORIG_GEM_HOME" => "/old/gems",
+      "RUBYOPT" => "-rbundler/setup",
+    }
+
+    env = Operator::TestScope.app_environment(root: "/repo", app: "brgen", inherited_env: parent)
+
+    assert_equal "/repo/RAILS/brgen/Gemfile", env.fetch("BUNDLE_GEMFILE")
+    %w[BUNDLE_PATH BUNDLE_WITHOUT BUNDLER_ORIG_GEM_HOME RUBYOPT].each do |key|
+      assert_nil env.fetch(key), "#{key} leaked from MASTER into the Rails test child"
+    end
+  end
+
   def test_unrelated_rails_paths_do_not_claim_an_app_suite
     assert_empty Operator::TestScope.rails_apps(%w[test checks])
   end
