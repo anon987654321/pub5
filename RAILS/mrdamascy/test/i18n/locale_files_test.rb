@@ -15,6 +15,19 @@ class LocaleFilesTest < ActiveSupport::TestCase
     assert_empty en - nb, "missing in nb.yml"
   end
 
+
+  test "courier gratuity copy uses clear Bokmål wording" do
+    keys = %w[tip_line tip_none tip_title tip_refused tip_unpaid]
+    copy = keys.map { |key| I18n.t("orders.#{key}", locale: :nb) }
+    copy << I18n.t("flash.tip_thanks", locale: :nb)
+
+    assert_equal "Tips (ikke betalt i appen)", copy[0]
+    assert_equal "Uten tips", copy[1]
+    assert_equal "Vil du gi tips til kureren?", copy[2]
+    assert_equal "Tusen takk for tipset!", copy.last
+    refute_match(/drikkegis/i, copy.join(" "))
+  end
+
   test "every static key used in app/ exists" do
     keys = locale_keys("nb")
     used = Rails.root.glob("app/**/*.{rb,erb}").flat_map { |path| path.read.scan(/\bt\(\s*["']([a-z_][\w.]*)["']/) }
