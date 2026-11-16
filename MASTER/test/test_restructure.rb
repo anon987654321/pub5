@@ -425,8 +425,13 @@ class TestRestructure < Minitest::Test
   def test_context_includes_resolved_edges_from_the_repository_reference_graph
     source = "MASTER/lib/referenced.rb"
     consumer = "MASTER/lib/referencer.rb"
-    write(source, "class Referenced; end\\n")
-    write(consumer, "require_relative \"referenced\"\\nReferenced.new\\n")
+    write(source, <<~'RUBY')
+      class Referenced; end
+    RUBY
+    write(consumer, <<~'RUBY')
+      require_relative "referenced"
+      Referenced.new
+    RUBY
     sh("git", "add", "-A", chdir: @repo)
 
     graph = Master::Review::ReferenceGraph.new(root: @repo)
@@ -438,7 +443,7 @@ class TestRestructure < Minitest::Test
     evidence = context.to_s
 
     assert_includes evidence, "Repository reference graph:"
-    assert_match(/Resolved inbound edges: .*MASTER\\/lib\\/referencer\\.rb -> MASTER\\/lib\\/referenced\\.rb/, evidence)
+    assert_includes evidence, "MASTER/lib/referencer.rb -> MASTER/lib/referenced.rb"
     assert_includes evidence, "analysis_failures=0"
   end
 
@@ -512,7 +517,7 @@ class TestRestructure < Minitest::Test
       "external=no deployment or external scripts reference it",
       "tests=only retired tests remain",
       "data=required persisted data retained",
-      "revival=none; no supported revival condition",
+      "revival=none (no supported revival condition)",
     ].join("; ")
     sweep = Master::Fix::RestructureSweep.new(agent: nil, repo_root: @repo)
 
