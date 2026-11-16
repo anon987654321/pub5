@@ -96,6 +96,7 @@ def usage
       bin/operator cities               owned_domains from apps.yml
       bin/operator domain-ghosts        inventory vs owned vs residual relayd Hosts
       bin/operator deploy-story [log]   stage timeline from deploy log
+      bin/operator zap [--dry-run] <keyword>  SIGKILL processes whose names contain keyword (no confirmation)
       bin/operator tree-weight          tracked file counts per tree
       bin/operator law-weight           MASTER/law/*.rb line counts
 
@@ -638,6 +639,8 @@ when "domain-ghosts"
   exec(RUBY, File.join(OPENBSD_OPS, "mirror", "bin", "domain-ghosts"), *ARGV)
 when "deploy-story"
   exec("/bin/sh", File.join(OPENBSD_OPS, "mirror", "bin", "deploy-story"), *ARGV)
+when "zap"
+  exec(RUBY, File.join(OPENBSD_OPS, "mirror", "bin", "zap.rb"), *ARGV)
 when "tree-weight"
   exec(File.join(__dir__, "tree-weight"), *ARGV)
 when "law-weight"
