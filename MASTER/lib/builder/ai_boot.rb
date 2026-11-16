@@ -118,7 +118,7 @@ module Master
         "status" => self_test.err? ? "ERROR" : (result.ok? ? "PASS" : "FAIL"),
         "violation_count" => result&.violation_count || 0,
         "checks" => result&.to_h || {},
-        "error" => self_test.message if self_test.err?,
+        "error" => (self_test.message if self_test.err?),
       }.compact
 
       directory = File.dirname(path)
