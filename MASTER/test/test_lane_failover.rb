@@ -4,7 +4,6 @@ require_relative "test_helper"
 require "minitest/mock"
 require "open3"
 require "tmpdir"
-require "open3"
 require "rbconfig"
 
 # Provider failover is tested with Ollama explicitly opted in because its local
@@ -16,7 +15,7 @@ class TestLaneFailover < Minitest::Test
   Silence = Master::Io::LaneSilence
   Selection = Master::Io::LaneSelection
 
-  CLAUDE = "You've hit your session limit - resets 5pm (Europe/Oslo)"
+  SESSION_LIMIT = "Session limit reached - resets 5pm (Europe/Oslo)"
   AGY = "agy: error: Individual quota reached. Please upgrade your subscription to increase your limits. Resets in 165h22m49s."
   GROK = "Error: rate limit exceeded, try again in 20 minutes"
   HTTP429 = "HTTP 429 Too Many Requests"
@@ -48,9 +47,8 @@ class TestLaneFailover < Minitest::Test
 
   def spelling(model)
     case Quota.lane_of(model)
-    when "grok-cli" then CLAUDE
-    when "agy" then AGY
     when "grok-cli" then GROK
+    when "agy" then AGY
     when "ollama" then REFUSED
     else HTTP429
     end
@@ -162,7 +160,7 @@ class TestLaneFailover < Minitest::Test
       result = ask(agent, door, models)
       assert_equal :offline, result.category
       assert_match(/\Aoffline: no lane answers; .*ollama: unreachable/, result.message)
-      assert_match(/grok-cli: quota spent, back in 3h/, result.message)
+      assert_match(/grok-cli: quota spent, back in 20m/, result.message)
       assert_match(/gap: resolves alone in \d+m, checking costs minutes, a fact\z/, result.message)
       assert_kind_of Master::Gap, result.gap
       raised = assert_raises(Health::Offline) { agent.send(:raise_failure, result) }
@@ -182,15 +180,15 @@ class TestLaneFailover < Minitest::Test
   end
 
   def test_the_soonest_revival_is_the_horizon
-    Quota.note("grok-cli:x", CLAUDE)
+    Quota.note("grok-cli:x", GROK)
     Quota.note("deepseek-chat", HTTP429)
-    assert_equal 3600, Health.gap_for(["grok-cli:x", "deepseek-chat"]).horizon
+    assert_equal 20 * 60, Health.gap_for(["grok-cli:x", "deepseek-chat"]).horizon
   end
 
   def test_the_real_spellings_are_read
-    assert_equal 3 * 3600, Quota.wait_in(CLAUDE)
+    assert_equal 3 * 3600, Quota.wait_in(SESSION_LIMIT)
     assert_equal 20 * 60, Quota.wait_in(GROK)
-    assert_equal NOON + 3 * 3600, Quota.note("grok-cli:x", CLAUDE)
+    assert_equal NOON + 3 * 3600, Quota.note("grok-cli:x", SESSION_LIMIT)
     assert_equal NOON + 60, Quota.note("ollama:x", REFUSED)
     assert_equal NOON + 3600, Quota.note("deepseek-chat", HTTP429)
     assert_equal NOON + 3600, Quota.note("grok-cli:auto", "401 Unauthorized, please run /login")
@@ -208,7 +206,7 @@ class TestLaneFailover < Minitest::Test
 
   def test_a_bare_limit_is_probed_again_and_a_stated_one_is_not
     Quota.note("agy:auto", HTTP429)
-    Quota.note("grok-cli:x", CLAUDE)
+    Quota.note("grok-cli:x", SESSION_LIMIT)
     assert_empty Quota.due_probes
     @now += 700
     assert_equal ["agy"], Quota.due_probes
@@ -233,7 +231,7 @@ class TestLaneFailover < Minitest::Test
 
   def test_state_survives_a_fresh_process
     Quota.clock = -> { Time.now.to_f }
-    Quota.note("grok-cli:x", AGY)
+    Quota.note("grok-cli:x", GROK)
     ruby = 'require "./lib/master"; Master::Io::LaneQuota.path = ARGV[0]; print Master::Io::LaneQuota.dead?("grok-cli:opus")'
     out, = Open3.capture2e(RbConfig.ruby, "-e", ruby, Quota.path, chdir: File.expand_path("..", __dir__))
     assert_equal "true", out.lines.last.to_s.strip
