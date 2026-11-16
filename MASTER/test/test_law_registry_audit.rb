@@ -158,16 +158,21 @@ class TestLawRegistryAudit < Minitest::Test
 
   # The counterweight: excluding tests must not exclude the shipped rules, which
   # is how a census gets quiet instead of correct.
-  def test_retired_laws_remain_defined_but_are_not_in_live_registry_or_mechanical_coverage
+  def test_file_size_laws_remain_defined_but_are_not_in_live_scanner_coverage
     report = audit.call
-    definition = Master::Review::Scan::LawTree.definitions.find { |law| law.id.to_s == "SMALL_FILES" }
+    definitions = Master::Review::Scan::LawTree.definitions
+    live_ids = Master::Fix::Scanner.build(root: Master::ROOT).laws.map { |law| law.id.to_s }
 
-    refute_nil definition
-    assert_equal :retired, definition.lifecycle
-    refute definition.enforceable?
-    refute_includes Master::Fix::Scanner.build(root: Master::ROOT).laws.map { |law| law.id.to_s }, "SMALL_FILES"
-    refute_includes report.registry_ids, "small_files"
-    refute_includes report.mechanical.map { |law| law["id"] }, "SMALL_FILES"
+    %w[SMALL_FILES JS_MODULE_SIZE].each do |id|
+      definition = definitions.find { |law| law.id.to_s == id }
+
+      refute_nil definition, "#{id} remains in the historical registry"
+      assert_equal :retired, definition.lifecycle, "#{id} must stay retired"
+      refute definition.enforceable?, "#{id} must not enforce"
+      refute_includes live_ids, id, "#{id} must not enter the Fix scanner"
+      refute_includes report.registry_ids, id.downcase
+      refute_includes report.mechanical.map { |law| law["id"] }, id
+    end
   end
 
   def test_the_shipped_laws_are_still_counted
