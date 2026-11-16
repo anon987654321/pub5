@@ -84,7 +84,7 @@ class InstalledTargetsCheckFixtureTest < Minitest::Test
 
     # Named by the guard itself, not by any file that mentions the path: a comment
     # elsewhere naming it would keep the key present with the guard unread.
-    assert_includes CHECK.referenced.fetch("bin/emergency_cpu.sh", []), "usr/local/bin/resource_guard.sh",
+    assert_includes CHECK.referenced.fetch("bin/emergency_cpu.sh", []), "mirror/usr/local/bin/resource_guard.sh",
                     "resource_guard.sh's crisis path is no longer read, so a missing install would pass"
     assert_includes CHECK.referenced.keys, "libexec/stale_ci_cleanup.ksh"
     assert_empty CHECK.orphans
@@ -276,7 +276,7 @@ class ShellSyntaxFixtureTest < Minitest::Test
   end
 
   def test_a_script_that_does_not_parse_fails_and_is_named
-    ok, out = scan("bin/broken" => "#!/usr/bin/env zsh\nif [[ -n x ]]; then\n  print hi\n",
+    ok, out = scan("mirror/bin/broken" => "#!/usr/bin/env zsh\nif [[ -n x ]]; then\n  print hi\n",
                    "fine.sh" => "#!/bin/sh\necho ok\n")
 
     refute ok
@@ -287,7 +287,7 @@ class ShellSyntaxFixtureTest < Minitest::Test
   # The shebang picks the parser: `set -A` is ksh and a syntax error to nothing
   # else that matters here, so a ksh script must not be read by sh.
   def test_each_script_is_parsed_by_its_own_shebang
-    ok, out = scan("usr/local/bin/warm.sh" => "#!/bin/ksh\nset -A T a b\nfor t in \"${T[@]}\"; do print $t; done\n")
+    ok, out = scan("mirror/usr/local/bin/warm.sh" => "#!/bin/ksh\nset -A T a b\nfor t in \"${T[@]}\"; do print $t; done\n")
 
     assert ok, out
     assert_includes out, "1 scripts parse"

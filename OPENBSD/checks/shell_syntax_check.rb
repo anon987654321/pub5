@@ -27,6 +27,12 @@ SHEBANG = %r{\A\#!\s*(?:/usr/bin/env\s+)?(?:\S*/)?(#{INTERPRETERS.join('|')})\b}
 # ksh -n on OpenBSD warns about `[[ -gt ]]` in scripts that are otherwise valid.
 # The check is about parse errors, not about a style the tree has settled on.
 STYLE_WARNING = /obsolete/
+# A relocated zsh (Debian package extracted without root, as a sandbox does)
+# cannot serve its compiled module path, so `-n` prints "failed to load
+# module `zsh/watch'" for scripts that name `log` — the module provides that
+# builtin and `-n` still resolves command words. The parse verdict is the
+# exit status; this noise names the environment, never the script.
+MODULE_NOISE = /failed to load module/
 
 def shebang_interpreter(path)
   first = File.open(path, &:readline)
@@ -49,7 +55,7 @@ scripts.each do |path|
   checked += 1
   output = IO.popen([interpreter, "-n", path], err: [:child, :out], &:read)
   parsed = $?.success?
-  complaints = output.lines.reject { |line| line.match?(STYLE_WARNING) }.join.strip
+  complaints = output.lines.reject { |line| line.match?(STYLE_WARNING) || line.match?(MODULE_NOISE) }.join.strip
   next if parsed && complaints.empty?
 
   failures << "#{interpreter} -n #{path}\n#{complaints.empty? ? '  exited nonzero with no message' : complaints}"

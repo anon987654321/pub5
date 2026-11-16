@@ -40,8 +40,11 @@ module Deploy
       attr_accessor :root
     end
 
-    CONFIG_GLOBS = ["etc/crontab*", "etc/*.local", "etc/rc.d/*"].freeze
-    SHIPPED_GLOB = "usr/local/{bin,libexec}/*"
+    CONFIG_GLOBS = ["etc/crontab*", "etc/*.local", "etc/rc.d/*",
+                    "mirror/etc/crontab*", "mirror/etc/*.local", "mirror/etc/rc.d/*"].freeze
+    # The mirror reorganization moved the installed tree under mirror/; the
+    # root layout remains a valid fixture surface, so both are scanned.
+    SHIPPED_GLOBS = ["usr/local/{bin,libexec}/*", "mirror/usr/local/{bin,libexec}/*"].freeze
     # A name that runs on into a slash is a directory named in prose — the
     # /usr/local/bin/lib/ that config_drift_check.rb explains away — not a target.
     TARGET = %r{/usr/local/(bin|libexec)/([A-Za-z0-9_.-]+)(?![A-Za-z0-9_./-])}
@@ -73,7 +76,7 @@ module Deploy
     def referrers
       config = CONFIG_GLOBS.flat_map { |glob| Dir.glob(File.join(root, glob)) }
       installed = operator.scan(INSTALL_SOURCE).flatten.map { |name| File.join(root, name) }
-      (config + Dir.glob(File.join(root, SHIPPED_GLOB)) + installed).select { |f| File.file?(f) }.uniq.sort
+      (config + SHIPPED_GLOBS.flat_map { |glob| Dir.glob(File.join(root, glob)) } + installed).select { |f| File.file?(f) }.uniq.sort
     end
 
     # Every /usr/local/{bin,libexec}/<name> a referrer names, keyed "bin/<name>",
@@ -90,7 +93,9 @@ module Deploy
     end
 
     def shipped
-      Dir.glob(File.join(root, SHIPPED_GLOB)).map { |f| f.delete_prefix("#{root}/usr/local/") }
+      Dir.glob(SHIPPED_GLOBS.flat_map { |glob| File.join(root, glob) }).map do |f|
+        f.delete_prefix("#{root}/mirror/usr/local/").delete_prefix("#{root}/usr/local/")
+      end
     end
 
     def explicitly_installed

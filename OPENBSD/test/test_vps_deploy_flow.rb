@@ -15,7 +15,12 @@ class VpsDeployFlowTest < Minitest::Test
   MASTER_SH = File.read(File.join(ROOT, "OPENBSD", "mirror", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
   PIN_BLOCK = SOURCE[/^deploy_refuse\(\).*?^fi$/m]
   FINISH_BLOCK = SOURCE[/^deploy_stage=start$.*?^trap 'exit 143' TERM$/m]
-  ORDER_BLOCK = SOURCE[/^DEPLOY_ALL=.*?^choose_deploy_order\(\) \{.*?^\}$/m]
+  # The sequence's own inventory read sits at a two-space indent inside the
+  # target dispatch, after the pin; the restore-order hint arrays near the top
+  # of the file are flush-left `DEPLOY_ALL=` lines that must not be captured
+  # here, or the block would drag the pub5-admin broker gate and the lock
+  # setup into a harness that stubs neither.
+  ORDER_BLOCK = SOURCE[/^  DEPLOY_ALL=\(.*?^choose_deploy_order\(\) \{.*?^\}$/m]
   # The script runs as root and does git as DEPLOY_USER through su; it records
   # stages, logs and retries through its own helpers. The blocks above call them,
   # so they come from the same source rather than being stubbed. Without its own
@@ -93,6 +98,7 @@ class VpsDeployFlowTest < Minitest::Test
     refute_nil PIN_BLOCK, "the pin and preflight block is gone, the scan broke, or the block did"
     refute_nil DEPLOY_USER_LINES, "DEPLOY_USER and DEPLOY_HOME are no longer set where the harness reads them"
     HELPERS.each { |name, body| refute_nil body, "#{name}() is gone from vps-deploy" }
+    refute_nil ORDER_BLOCK, "the sequence's inventory read and choose_deploy_order drifted; the order harness lost its block"
   end
 
   def test_git_in_the_pin_runs_as_the_deploy_user
@@ -181,7 +187,7 @@ class VpsDeployFlowTest < Minitest::Test
     refute_match(/git -C "\$repo" pull/, SOURCE)
     assert_match(/rev-parse HEAD\) == "\$VPS_DEPLOY_SHA"/, SOURCE)
     assert_includes MASTER_SH, '[ "$(git rev-parse HEAD)" = "$VPS_DEPLOY_SHA" ]'
-    assert_operator SOURCE.index("deploy_refuse()"), :<, SOURCE.index("DEPLOY_ALL=("), "the pin comes before any deploy"
+    assert_operator SOURCE.index("deploy_refuse()"), :<, SOURCE.index(ORDER_BLOCK), "the pin comes before any deploy"
   end
 
   # the restore
@@ -366,6 +372,14 @@ class VpsDeployFlowTest < Minitest::Test
       typeset -A deploy_ports; deploy_ports=(master 41004 brgen 41001 amber 41002 bsdports 41003)
       load_deploy_ports() { return 0 }
       wait_up() { #{apps_up ? 'return 0' : 'return 1'} }
+      # The block reads the pinned checkout's inventory; this harness has none,
+      # so it stands in with the order apps.yml produces today.
+      inventory_names() {
+        [[ $1 == all ]] || { print "brgen mrdamascy amber bsdports"; return 0 }
+        [[ ${2:-0} == 1 ]] && { print "brgen mrdamascy amber bsdports master"; return 0 }
+        print "master brgen mrdamascy amber bsdports"
+      }
+      deploy_refuse() { print -u2 "refused: $1"; exit 1 }
       typeset -a deploy_order
       #{ORDER_BLOCK}
       choose_deploy_order
@@ -402,7 +416,9 @@ class VpsDeployFlowTest < Minitest::Test
     assert_operator SOURCE.index("settle_boots\n  jobs_service"), :<, SOURCE.index("OPENBSD/mirror/bin/vps_ci.sh")
     assert_operator SOURCE.index("(assets precompile)\"\nsettle_boots"), :<, SOURCE.index("rails_assets_precompile_as_app")
     assert_includes SOURCE, 'FLOW_APP="$app" MASTER_STRICT=deploy CHECK_AUTOFIX=0 "$RUBY"'
-    assert_includes SOURCE, "FLOW_APP=master MASTER_STRICT=deploy"
+    # The master flow journeys live inside the deploy_app_group == master branch;
+    # the literal FLOW_APP=master was generalized to $app when that branch took over.
+    assert_includes SOURCE, 'FLOW_APP="$app" MASTER_STRICT=deploy CHECK_AUTOFIX=0 CHECK_REQUIRE_LIVE=1 "$RUBY" "$repo/MASTER/checks/runner.rb" flow_journey'
   end
 
   def test_settle_boots_waits_only_for_running_services
