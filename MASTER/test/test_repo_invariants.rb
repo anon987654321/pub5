@@ -2,6 +2,7 @@
 
 require_relative "test_helper"
 require "fileutils"
+require "tmpdir"
 require "master"
 
 class MasterPathsTest < Minitest::Test
@@ -10,6 +11,43 @@ class MasterPathsTest < Minitest::Test
     assert_equal File.expand_path("..", MasterPaths.root), MasterPaths.repo
     assert MasterPaths.data("laws.yml").end_with?("/MASTER/data/laws.yml")
     assert MasterPaths.state("provider_catalog.sqlite3").include?(".master")
+  end
+
+  def test_fix_state_is_shared_by_https_and_ssh_clones_of_the_same_remote
+    Dir.mktmpdir("master-fix-state") do |repo|
+      FileUtils.mkdir_p(File.join(repo, "MASTER"))
+      assert system("git", "-C", repo, "init", "-q")
+      assert system("git", "-C", repo, "config", "user.name", "State Test")
+      assert system("git", "-C", repo, "config", "user.email", "state@example.test")
+      assert system("git", "-C", repo, "remote", "add", "origin", "https://github.com/anon987654321/pub5.git")
+      base = File.join(repo, "shared-state")
+      previous_base = ENV["MASTER_STATE_DIR"]
+      previous_id = ENV["MASTER_STATE_ID"]
+      ENV["MASTER_STATE_DIR"] = base
+      ENV.delete("MASTER_STATE_ID")
+
+      https_path = MasterPaths.fix_state(root: File.join(repo, "MASTER"))
+      assert_match(%r{/repositories/anon987654321-pub5-[a-f0-9]{12}/fix\z}, https_path)
+      assert system("git", "-C", repo, "config", "--replace-all", "remote.origin.url", "git@github.com:anon987654321/pub5.git")
+      ssh_path = MasterPaths.fix_state(root: repo)
+
+      assert_equal https_path, ssh_path
+      refute_equal File.join(repo, ".master"), https_path
+    ensure
+      previous_base.nil? ? ENV.delete("MASTER_STATE_DIR") : ENV["MASTER_STATE_DIR"] = previous_base
+      previous_id.nil? ? ENV.delete("MASTER_STATE_ID") : ENV["MASTER_STATE_ID"] = previous_id
+    end
+  end
+
+  def test_non_git_temporary_roots_keep_an_isolated_local_state_directory
+    Dir.mktmpdir("master-fix-state-local") do |repo|
+      previous_id = ENV["MASTER_STATE_ID"]
+      ENV.delete("MASTER_STATE_ID")
+
+      assert_equal File.join(repo, ".master"), MasterPaths.fix_state(root: repo)
+    ensure
+      previous_id.nil? ? ENV.delete("MASTER_STATE_ID") : ENV["MASTER_STATE_ID"] = previous_id
+    end
   end
 end
 
