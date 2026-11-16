@@ -23,6 +23,7 @@ repo_master_lib = File.join(ROOT, "MASTER", "lib")
 $LOAD_PATH.unshift(repo_master_lib) if File.directory?(repo_master_lib) && !$LOAD_PATH.include?(repo_master_lib)
 
 require "operator/environment"
+require "operator/test_scope"
 require "operator/ruby_runner"
 require "operator/status_report"
 require "operator/strict_mode"
