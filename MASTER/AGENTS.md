@@ -709,7 +709,7 @@ compatibility entrypoint for `bin/check --profile=ci`.
 maintenance ladder. It writes fixes by default; use `--scan-only` when only
 measuring. It is not an alias for `bin/check`.
 
-Run the smallest proof: `bin/check` for ordinary code, `bin/check --profile=agent` for law, scanners and the loop, `bin/check --profile=web` for the face, `OPENBSD/mirror/bin/check-rails --profile=contributor` for deploy and Rails, and `MASTER/bin/operator check` for the whole ladder. On failure: `bin/check --profile=agent --format=brief`.
+For work performed outside `/fix`, or for supplemental verification, run the smallest matching check: `bin/check` for ordinary code, `bin/check --profile=agent` for law, scanners and the loop, `bin/check --profile=web` for the face, `OPENBSD/mirror/bin/check-rails --profile=contributor` for deploy and Rails, and `MASTER/bin/operator check` when the whole maintenance ladder is intended. On failure: `bin/check --profile=agent --format=brief`.
 
 `--profile=agent` may fail on known debt tagged `agent-ignore`.
 Do not chase scan noise on unrelated patches.
