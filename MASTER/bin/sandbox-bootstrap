@@ -9,7 +9,8 @@
 #
 # Usage:
 #   MASTER/bin/sandbox-bootstrap            # everything, in dependency order
-#   MASTER/bin/sandbox-bootstrap -n         # print what it would do, do nothing
+#   MASTER/bin/sandbox-bootstrap --dry-run   # print the plan, no network or writes
+#   MASTER/bin/sandbox-bootstrap -n           # short alias
 #
 # What it does, in order:
 #   1. a Ruby >= 3.3 (bin/dev-bootstrap builds the vendored one, no root)
@@ -33,7 +34,9 @@ VIPS_LIB="$LIBS/extracted/usr/lib/x86_64-linux-gnu"
 POOL=http://deb.debian.org/debian/pool/main
 
 DRY=0
-[ "${1:-}" = "-n" ] && DRY=1
+case "${1:-}" in
+  -n|--dry-run) DRY=1; shift ;;
+esac
 
 say() { printf 'sandbox-bootstrap: %s\n' "$*"; }
 run() { if [ "$DRY" = 1 ]; then say "would run: $*"; else "$@"; fi; }
@@ -82,6 +85,10 @@ fi
 #    hdf5 and matio packages.
 fetch_deb() { # fetch_deb <pool-dir> <pattern>
   subdir=$1; pattern=$2
+  if [ "$DRY" = 1 ]; then
+    say "would fetch and extract $subdir/$pattern"
+    return 0
+  fi
   [ -d "$VIPS_LIB" ] || mkdir -p "$VIPS_LIB"
   url=$(curl -s "$POOL/$subdir/" | grep -oE "$pattern" | sort -u | tail -1)
   [ -n "$url" ] || { say "MISSING deb: $subdir/$pattern"; return 0; }
