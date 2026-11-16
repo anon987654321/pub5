@@ -120,11 +120,42 @@ engine: `Shared::Tradedoubler`, `AffiliateProduct`, `AffiliateVoucher` and
 
 ## Running it
 
-```zsh
-ruby MASTER/checks/runner.rb --list
-ruby MASTER/checks/runner.rb --all
-MASTER/bin/operator triangle up
+For ordinary edits, use the repository's one repair path:
+
+```text
+/fix RAILS
+```
+
+It selects source and rendered proof for the changed scope; do not follow every
+run with the whole Rails suite. Outside /fix, ask the operator for the smallest
+complete proof for the changed paths:
+
+```sh
+MASTER/bin/operator test RAILS/brgen/app/views
+MASTER/bin/operator test RAILS/__shared
+```
+
+A shared-engine change intentionally selects all dependent app suites. A
+single-app change selects that app's suite plus the root Rails contracts.
+
+Use the live app fleet only when a check actually needs running servers or a
+browser. `triangle up brgen` starts one app; `triangle status` reports ports;
+`triangle down brgen` stops only what that invocation started. A full
+`triangle up` is for cross-app rendered checks, not a prerequisite for source
+tests.
+
+To inspect broader Rails verification before launching it:
+
+```sh
 MASTER/bin/operator premerge --list
+ruby MASTER/checks/runner.rb --list
+```
+
+The broad local acceptance commands remain:
+
+```sh
+MASTER/bin/operator premerge
+ruby MASTER/checks/runner.rb --all
 cd RAILS/brgen && bin/ci
 ```
 
