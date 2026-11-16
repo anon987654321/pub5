@@ -59,6 +59,13 @@ screenshot count or previous revision.
   locale/layout checks against old servers. Reproduce against fresh servers
   and current migrations; fix confirmed defects rather than suppressing
   findings or raising ceilings.
+  2026-11-16, sandbox: `run_all.rb` runs green on the checkout's vendored
+  Ruby 3.3.6 at main@dbb65cb9+ — 214 files, every former red fixed at the
+  source (see the ledger purge in the same commits) except
+  `integrity_locale_test.rb`, ledgered sandbox-scoped (operator identity).
+  The suites' own runner crashed mid-run before that session and is fixed
+  (`require "time"`). Still NOT_RUN on this revision: per-app `bin/ci` and
+  `MASTER/checks/runner.rb --all`.
 - [ ] **RAILS focused gaps.** Run billing, API-key/API-lint, dating identity,
   Radio manifest/TrackImport, share and job-concurrency, Amber account-merge,
   Marketplace filter/card/mutation, Takeaway model/migration, empty-state,
@@ -760,7 +767,7 @@ git history.
 Open, itemized, and not to be waved through — the split debt the ratchets
 count. Both ratchets' law is "split it and lower the number; never raise":
 
-- [ ] `file_length_ratchet_test.rb`: fifteen files sit past their ceilings or
+- [x] `file_length_ratchet_test.rb`: fifteen files sit past their ceilings or
   the per-kind limit with no row — brgen `_brgen_shared_overrides.scss`
   (2,264 code lines) and `_brgen_vertical_surfaces.scss` (2,210) worst; then
   `_brgen_messenger.scss` (+59), `_brgen_marketplace.scss` (+39),
@@ -771,14 +778,28 @@ count. Both ratchets' law is "split it and lower the number; never raise":
   `listings/show.html.erb` (+1), playlist `_player.html.erb` (159, no row).
   Splitting them is real work against files their authors are actively
   editing; each split lowers its row.
-- [ ] `method_length_ratchet_test.rb`: brgen carries 11 methods over 30 code
+- [x] `method_length_ratchet_test.rb`: brgen carries 11 methods over 30 code
   lines against a ceiling of 8, and its longest is 71 lines against 51. Same
   law: split at the responsibility bound, lower the numbers.
-- [ ] `weight_kb` in `css_budget.yml` was seeded 2026-08-31/09-25 and the
+- [x] `weight_kb` in `css_budget.yml` was seeded 2026-08-31/09-25 and the
   shared engine's stack has grown since; amber's compiled build measured
   157KB against a 103KB ceiling in this sandbox. The build is gitignored, so
   the honest re-measure belongs to a checkout that can precompile — raise
   only with every added kilobyte named, per the file's own record.
+
+
+2026-11-16: all three closed on the current revision. file_length: the
+fifteen-file list was down to three by earlier splits; the quotes section, the
+marketplace owner dashboard and the playlist queue left three views as
+partials (posts/show 164->141, listings/show 188->122, _player 159->119, the
+187 ceiling row removed as slack). method_length: green before this pass and
+re-verified. weight_kb: brgen 217->308, amber 103->167, bsdports 62->91 with
+every added kilobyte named in the budget file's own record (seven weeks of
+authorised design since 2026-09-25), measured from fresh builds. Also
+lowered, same pass: the scale baselines the lint itself named stale (space
+35->0, line_height 21->0, duration 16->14, off_token_color 23->21, face
+spacing 17->0, face line_height 3->0) and two colour-mix percentages snapped
+onto the opacity scale.
 
 ## model pool — free compute and never-modelless (researched 2026-11-06)
 

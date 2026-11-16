@@ -1378,26 +1378,27 @@ tokens:
     # (ScaleSnap, operator-approved), and each snap lowers its row here.
     baselines:
       apps:
-        off_scale_space: 35
+        off_scale_space: 0
         # line_height 23 -> 22 and opacity 21 -> 20 measured 2026-11-03; tracking
         # 7 -> 6 when amber's luxury and post titles snapped -0.015em to -0.02em.
         # line_height 22 -> 21 measured 2026-11-05, the first count taken in an
         # export since ScaleLint stopped skipping every path under /tmp/.
-        off_scale_line_height: 21
+        off_scale_line_height: 0
         absolute_line_height: 0
         off_scale_radius: 19
         off_scale_font_weight: 0
         off_scale_tracking: 6
         off_scale_opacity: 20
-        off_scale_duration: 16
+        off_scale_duration: 14
         # Literal colours in colour properties that tokens.yml does not declare
         # (ScaleLint off_token_color), first counted 2026-11-06 on origin.
         # 24 -> 23 (2026-11-07): one literal left the token set.
-        off_token_color: 23
+        # 23 -> 21 (2026-11-16): two colour-mix literals snapped onto the opacity scale.
+        off_token_color: 21
       face:
-        off_scale_space: 17
+        off_scale_space: 0
         off_scale_radius: 0
-        off_scale_line_height: 3
+        off_scale_line_height: 0
         absolute_line_height: 0
         off_scale_font_weight: 0
         off_scale_tracking: 12

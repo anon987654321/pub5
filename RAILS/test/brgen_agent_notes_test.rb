@@ -17,7 +17,8 @@ class BrgenAgentNotesTest < Minitest::Test
 
   def test_it_says_one_process_and_names_the_engine_layout
     assert_includes notes, "One Rails process"
-    assert_includes notes, "../brgen/engines/marketplace"
+    assert_includes notes, "Engine paths are under this directory's"
+    assert_includes notes, "`engines/` subtree"
     assert_includes notes, "ENTRIES"
     assert_includes notes, "vowel"
   end
