@@ -133,6 +133,7 @@ complete proof for the changed paths:
 ```sh
 MASTER/bin/operator test RAILS/brgen/app/views
 MASTER/bin/operator test RAILS/__shared
+MASTER/bin/operator test RAILS/mrdamascy
 ```
 
 A shared-engine change intentionally selects all dependent app suites. A
