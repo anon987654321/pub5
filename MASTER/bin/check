@@ -1,6 +1,8 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+require "shellwords"
+
 # Read-only help and log retrieval stay available even when the MASTER runtime
 # itself cannot boot. This command verifies; /fix is the canonical repair loop.
 CHECK_HELP = <<~HELP.freeze
