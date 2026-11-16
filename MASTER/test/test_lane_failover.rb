@@ -222,7 +222,7 @@ class TestLaneFailover < Minitest::Test
   end
 
   def test_a_dead_lane_revives_at_its_deadline_without_the_operator
-    Quota.note("grok-cli:x", CLAUDE)
+    Quota.note("grok-cli:x", SESSION_LIMIT)
     @now += 3 * 3600 - 1
     assert Quota.dead?("grok-cli:x")
     @now += 2
@@ -240,7 +240,7 @@ class TestLaneFailover < Minitest::Test
   # Instrument check: the selection reads the live tiers and lands on the local tail.
   def test_selection_lands_on_the_local_tail_when_every_remote_lane_is_dead
     models = Selection.catalogue
-    models.map { |m| Quota.lane_of(m) }.uniq.reject { |l| l == "ollama" }.each { |lane| Quota.note("#{lane}:x", CLAUDE) }
+    models.map { |m| Quota.lane_of(m) }.uniq.reject { |l| l == "ollama" }.each { |lane| Quota.note("#{lane}:x", SESSION_LIMIT) }
 
     live = Selection.order(models)
     assert Health.local_model?(live.first), "a local model leads: #{live}"
