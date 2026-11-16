@@ -5,9 +5,9 @@ require "tmpdir"
 require "fileutils"
 require_relative "../tools/cohesion"
 
-# The rule MASTER did not have. SMALL_FILES, NO_GOD_CLASS and INTEGRATED_SYSTEMS
-# all say "split further"; nothing said "these are one thing", so no scan ever
-# proposed a merge. What it must not do is fire on files that merely read alike.
+# A structural planner should find evidence that several files share one
+# responsibility, rather than grouping files merely because their names look alike.
+# The planner proposes a reviewable move and never edits on its own.
 class CohesionTest < Minitest::Test
   def setup = @tmp = Dir.mktmpdir("cohesion")
   def teardown = FileUtils.remove_entry(@tmp)
