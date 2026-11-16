@@ -4,7 +4,7 @@ require_relative "test_helper"
 require "minitest/mock"
 require_relative "../lib/fix/fix_loop"
 
-# The 2026-11-05 RAILS run asked for MOBILE_FIRST+NO_ASCII_LINE_ART+SMALL_FILES+LINE_HEIGHT_ON_SCALE+
+# The 2026-11-05 RAILS run asked for MOBILE_FIRST+NO_ASCII_LINE_ART+whole-file-signal+LINE_HEIGHT_ON_SCALE+
 # TOUCH_TARGET_MIN in one proposal over a 2,800-line stylesheet, and the verifier refused the diff.
 class TestProposalScope < Minitest::Test
   Scope = Master::Fix::ProposalScope
@@ -13,7 +13,7 @@ class TestProposalScope < Minitest::Test
 
   # The laws and lines the run bundled, from its scan of _brgen_shared_overrides.scss.
   def bundled
-    [finding("NO_ASCII_LINE_ART", 6), finding("NO_ASCII_LINE_ART", 8), finding("SMALL_FILES", 1),
+    [finding("NO_ASCII_LINE_ART", 6), finding("NO_ASCII_LINE_ART", 8), finding("WHOLE_FILE_SIGNAL", 1),
      finding("LINE_HEIGHT_ON_SCALE", 541), finding("TOUCH_TARGET_MIN", 681), finding("LINE_HEIGHT_ON_SCALE", 865),
      finding("MOBILE_FIRST", 913), finding("MOBILE_FIRST", 1083), finding("TOUCH_TARGET_MIN", 1671),
      finding("MOBILE_FIRST", 1815), finding("LINE_HEIGHT_ON_SCALE", 1950), finding("LINE_HEIGHT_ON_SCALE", 1956)]
@@ -24,7 +24,7 @@ class TestProposalScope < Minitest::Test
 
     lines = taken.map { |row| row[:line] }
     assert_operator lines.max - lines.min, :<=, Scope::WINDOW
-    refute_includes taken.map { |row| row[:law] }, "SMALL_FILES"
+    refute_includes taken.map { |row| row[:law] }, "WHOLE_FILE_SIGNAL"
     assert_equal bundled.size, taken.size + deferred.size
   end
 
@@ -38,10 +38,10 @@ class TestProposalScope < Minitest::Test
   end
 
   def test_a_whole_file_law_goes_alone_after_the_windows
-    groups = Scope.groups([finding("SMALL_FILES", 1), finding("SQUINT_TEST", 1), finding("MOBILE_FIRST", 3)])
+    groups = Scope.groups([finding("WHOLE_FILE_SIGNAL", 1), finding("SQUINT_TEST", 1), finding("MOBILE_FIRST", 3)])
 
     laws = groups.map { |group| group.map { |row| row[:law] } }
-    assert_equal [["MOBILE_FIRST"], ["SMALL_FILES"], ["SQUINT_TEST"]], laws
+    assert_equal [["MOBILE_FIRST"], ["WHOLE_FILE_SIGNAL"], ["SQUINT_TEST"]], laws
   end
 
   # The stream's FileRepair is handed the window only.
