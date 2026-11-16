@@ -214,7 +214,9 @@ def print_master_help
   help = [
     HELP_USAGE,
     initial_message_parser({}).to_s,
-    "Checks: MASTER/bin/check --profile=contributor|agent|full",
+    "Repair: start MASTER/bin/master and enter /fix [TREE]; /fix runs scope-aware proof.",
+    "Checks: MASTER/bin/check --help | --list --profile=operator | --show-log (supplemental only).",
+    "Operator ladder: MASTER/bin/operator check [--scan-only] is separate and writes by default.",
     "Offline: MASTER_LOCAL_ONLY=1",
     "VPS: auto-skips TTS, boot-scan and web; scope scans to a path",
   ].join("\n")
