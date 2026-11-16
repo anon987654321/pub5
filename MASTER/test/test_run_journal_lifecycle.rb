@@ -38,6 +38,41 @@ class TestRunJournalLifecycle < Minitest::Test
     )
   end
 
+  def test_first_run_imports_the_legacy_MASTER_state_and_keeps_rollback_sources
+    Dir.mktmpdir("master-fix-state-cutover") do |root|
+      master_root = File.join(root, "MASTER")
+      legacy = File.join(master_root, ".master")
+      legacy_assessments = File.join(legacy, "fix_assessments")
+      FileUtils.mkdir_p(legacy_assessments, mode: 0o700)
+      File.chmod(0o700, legacy)
+      legacy_journal = File.join(legacy, "fix_runs.json")
+      legacy_bytes = JSON.pretty_generate("version" => 1, "runs" => []) + "\n"
+      File.write(legacy_journal, legacy_bytes, mode: "wb")
+      File.chmod(0o600, legacy_journal)
+
+      run_id = "a" * 20
+      legacy_report = File.join(legacy_assessments, "#{run_id}.json")
+      report_bytes = "{\"legacy\":true}\n"
+      File.write(legacy_report, report_bytes, mode: "wb")
+      File.chmod(0o600, legacy_report)
+
+      journal = Master::Fix::RunJournal.new(root: master_root, bus: RecordingBus.new)
+      run = journal.start_or_resume(
+        target: master_root, files: [], max_passes: 1, budget_seconds: 60,
+      )
+
+      destination = File.join(root, ".master")
+      assert File.file?(File.join(destination, "fix_runs.json"))
+      assert File.file?(File.join(destination, "fix_assessments", "#{run_id}.json"))
+      assert_equal report_bytes, File.binread(File.join(destination, "fix_assessments", "#{run_id}.json"))
+      assert File.file?(File.join(destination, ".legacy-migration.json"))
+      assert File.file?(legacy_journal), "the old journal remains available for rollback"
+      assert_equal legacy_bytes, File.binread(legacy_journal)
+      assert File.file?(legacy_report), "the old evidence artifact remains available for rollback"
+      assert_equal run.fetch("id"), journal.history.last.fetch("id")
+    end
+  end
+
   def test_architecture_tournament_report_survives_journal_reconstruction_and_is_checksum_verified
     Dir.mktmpdir("master-architecture-journal") do |root|
       bus = RecordingBus.new
