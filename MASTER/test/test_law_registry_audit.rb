@@ -158,6 +158,17 @@ class TestLawRegistryAudit < Minitest::Test
 
   # The counterweight: excluding tests must not exclude the shipped rules, which
   # is how a census gets quiet instead of correct.
+  def test_retired_laws_remain_defined_but_are_not_in_live_registry_or_mechanical_coverage
+    report = audit.call
+    definition = Master::Review::Scan::LawTree.definitions.find { |law| law.id.to_s == "SMALL_FILES" }
+
+    refute_nil definition
+    assert_equal :retired, definition.lifecycle
+    refute definition.enforceable?
+    refute_includes report.registry_ids, "small_files"
+    refute_includes report.mechanical, "SMALL_FILES"
+  end
+
   def test_the_shipped_laws_are_still_counted
     ids = audit.call.registry_ids
 
