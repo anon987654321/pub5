@@ -2,10 +2,10 @@
 
 # Files that are one concept wearing several names.
 #
-# Every structural rule in data/laws.yml points one way: SMALL_FILES,
-# NO_GOD_CLASS and INTEGRATED_SYSTEMS all say "split further". None says "these
-# three are one thing", so no scan proposes a merge, and one concept spread over
-# three files that reference each other in both directions stays that way.
+# Structural detectors identify boundaries and dependency problems; they
+# should not decide that every long file must be split. This planner looks for
+# independently evidenced families that may be one concept spread across
+# several files, and proposes a reviewable merge or regroup rather than editing.
 #
 #   ruby MASTER/tools/cohesion.rb STUDIO/dilla
 #   ruby MASTER/tools/cohesion.rb --json RAILS/__shared/lib
@@ -48,16 +48,10 @@ module Operator
   module Cohesion
     MIN_FAMILY = 3
 
-    # SMALL_FILES flags a file over 300 lines, and this tool exists to
-    # counterbalance it — its own header says so: "SMALL_FILES, NO_GOD_CLASS and
-    # INTEGRATED_SYSTEMS all say split further. None says these three are one
-    # thing." A counterbalance with no upper bound is not a counterbalance.
-    #
-    # It had none. Run against STUDIO/dilla it proposed six merges producing
-    # files of 1076 to 2925 lines — up to ten times the threshold the same tree
-    # enforces — and the three dilla_* files say in their own headers that they
-    # were "split out of dilla.rb". The proposal was to undo a deliberate split
-    # and recreate the file, under the name of the file it came from.
+    # This optional planner refuses a single merge that would create an
+    # exceptionally large combined file. It is a local safety bound on this
+    # proposed operation, not a repository-wide file-size law or a reason to
+    # split an otherwise coherent file.
     MAX_MERGED_LINES = 300
 
     # Exact Ruby method-shape candidates complement the file-family census. They
