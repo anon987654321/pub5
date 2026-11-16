@@ -595,10 +595,25 @@ module Master
       end
 
       # Signed-in command-line lanes are quota-metered rather than billed per API call.
+      # Keyless, free-tier and local lanes bill nothing per call either, so the
+      # token-dollar guess is real only for metered remote lanes. Guessing $1.15
+      # against a $0 lane parked kilo and ovh on 2026-11-16 ("single call
+      # $1.1541 exceeds max_per_file $1.0") while no keyed lane existed, and the
+      # /fix model phase stalled with every lane "offline" although the free
+      # lanes were healthy. The session budget keeps metering what spends money;
+      # max_per_file still refuses outsized calls on metered lanes.
       def estimate_cost(prompt, model = nil)
         return 0.0 if model && cli_lane_model?(model)
+        return 0.0 if model && unmetered_lane?(model)
 
         Master::Trace::Session.estimate_tokens(prompt) * COST_PER_TOKEN
+      end
+
+      # A lane the dollar estimate does not describe: local compute, a keyless
+      # gateway, a free-tier id or the local-uncensored lane. Io::LaneSelection
+      # owns the classification; the dispatcher does not keep a second list.
+      def unmetered_lane?(model)
+        !%i[remote paid_tail].include?(Io::LaneSelection.kind(model))
       end
 
       def elapsed_ms(started)
