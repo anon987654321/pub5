@@ -705,6 +705,11 @@ command: default `operator`, `ci` for the CI floor, and `full` for broad/release
 verification (`ci` plus all probes and the full audit). `MASTER/bin/ci` is the
 compatibility entrypoint for `bin/check --profile=ci`.
 
+When a check fails, its combined run log is `MASTER/.master/check/latest.log`;
+individual step logs are in `MASTER/.master/check/`. A terminal `fix-here`
+run writes `MASTER/.master/fix-TREE.log`. These are local diagnostic artifacts;
+review and redact credentials or private data before sharing them.
+
 `MASTER/bin/operator check` is a different, repo-wide `Operator::CheckChain`
 maintenance ladder. It writes fixes by default; use `--scan-only` when only
 measuring. It is not an alias for `bin/check`.
