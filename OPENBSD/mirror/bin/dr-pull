@@ -49,7 +49,9 @@ DEST = File.expand_path(ENV.fetch("PUB4_DR_DIR", "~/pub5-dr"))
 KEEP = Integer(ENV.fetch("PUB4_DR_KEEP", "14"))
 APPS = %w[brgen amber bsdports].freeze
 REPO_ROOT = File.expand_path("../../..", __dir__).freeze
-OPERATOR = File.join(REPO_ROOT, "MASTER", "bin", "operator").freeze
+# The admission gate runs from a checkout, but a restored deploy copy has no
+# MASTER tree beside it; deployments and drills point PUB4_OPERATOR at their own.
+OPERATOR = ENV.fetch("PUB4_OPERATOR", File.join(REPO_ROOT, "MASTER", "bin", "operator")).freeze
 
 STALE_AFTER_DAYS = Integer(ENV.fetch("PUB4_DR_STALE_DAYS", "2"))
 

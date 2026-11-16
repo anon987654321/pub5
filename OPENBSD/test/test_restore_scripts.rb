@@ -172,8 +172,13 @@ class RestoreScriptsTest < Minitest::Test
     FileUtils.mkdir_p(bin)
     File.write(File.join(bin, "ssh"), FAKE_SSH)
     File.chmod(0o755, File.join(bin, "ssh"))
+    # The fixture has no MASTER tree, so the RTFM admission gate has no operator
+    # to ask; the drill flow is exercised with a stub that approves, the way a
+    # restored deploy points PUB4_OPERATOR at its own preflighted operator.
+    File.write(File.join(bin, "approve-operator"), "#!/usr/bin/env ruby\nexit 0\n")
+    File.chmod(0o755, File.join(bin, "approve-operator"))
     { "PATH" => "#{bin}:#{ENV['PATH']}", "FAKE_VM23" => File.join(dir, "vm23"), "FAKE_VM23_BLOBS" => File.join(dir, "vm23blobs"),
-      "PUB4_DR_DIR" => File.join(dir, "dr"), "PUB4_SSH_KEY" => File.join(dir, "key") }
+      "PUB4_DR_DIR" => File.join(dir, "dr"), "PUB4_SSH_KEY" => File.join(dir, "key"), "PUB4_OPERATOR" => File.join(bin, "approve-operator") }
   end
 
   def dr_pull(env, *args)
