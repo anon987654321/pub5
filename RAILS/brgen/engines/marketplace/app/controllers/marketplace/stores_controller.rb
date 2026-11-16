@@ -43,8 +43,14 @@ module Marketplace
       @store = Marketplace::Store.new(store_params)
       @store.owner = Current.user
 
+      @store.active = false if @store.vertical == "restaurants"
       if @store.save
-        redirect_to shop_path(@store.slug), notice: t("marketplace.store_created")
+        if @store.vertical == "restaurants"
+          redirect_to marketplace_food.new_restaurant_path(marketplace_store_id: @store.id),
+                      notice: t("marketplace.restaurant_store_created")
+        else
+          redirect_to shop_path(@store.slug), notice: t("marketplace.store_created")
+        end
       else
         render :new, status: :unprocessable_entity
       end
