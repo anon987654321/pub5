@@ -438,6 +438,26 @@ class TestRestructure < Minitest::Test
     assert_equal "LIMIT_REACHED", exit_event.last.fetch(:state)
   end
 
+  def test_a_restructure_plan_requires_every_decommission_audit_field
+    sweep = Master::Fix::RestructureSweep.new(agent: nil, repo_root: @repo)
+    incomplete = "AUDIT: purpose=obsolete helper; owner=MASTER; inbound=none"
+    complete = [
+      "purpose=obsolete helper with no current runtime role",
+      "owner=MASTER subsystem owner",
+      "inbound=none after repository-wide reference search",
+      "runtime=not registered in boot or command entrypoints",
+      "dynamic=constants reflection and path globs checked",
+      "config=manifests and lockfiles checked",
+      "external=no deployment or external scripts reference it",
+      "tests=only retired tests remain",
+      "data=required persisted data retained",
+      "revival=none; no supported revival condition",
+    ].join("; ")
+
+    assert_nil sweep.send(:decommission_audit, incomplete)
+    assert_equal complete, sweep.send(:decommission_audit, "AUDIT: #{complete}")
+  end
+
   def test_restructure_review_rejects_bare_approval
     problem_class = Struct.new(:id, :findings, :files, :laws, :reason, :confidence, :candidate_operations, keyword_init: true)
     path = File.join(@repo, "MASTER/lib/big.rb")
@@ -527,6 +547,9 @@ class TestRestructure < Minitest::Test
     assert_includes prompt, "HUMAN_DECISION"
     assert_includes prompt, "Parked is not the same as dead"
     assert_includes prompt, "external/deploy consumers"
+    assert_includes prompt, "dependency manifests and lockfiles"
+    assert_includes prompt, "AUDIT: purpose="
+    assert_includes prompt, "dynamic="
   end
 
   def test_each_tree_is_proved_its_own_way
