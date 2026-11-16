@@ -270,7 +270,7 @@ module Master
       end
 
       def auth_usage
-        "model auth  model auth status  model auth login <claude|chatgpt|grok> [--device-auth|--browser]"
+        "model auth  model auth status  model auth login <chatgpt|grok> [--device-auth|--browser]"
       end
 
       def auth_status_lines
