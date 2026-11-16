@@ -710,6 +710,18 @@ individual step logs are in `MASTER/.master/check/`. A terminal `fix-here`
 run writes `MASTER/.master/fix-TREE.log`. These are local diagnostic artifacts;
 review and redact credentials or private data before sharing them.
 
+The check runner explains itself without running a suite:
+`MASTER/bin/check --help` lists profiles, `MASTER/bin/check --list --profile=NAME`
+shows the exact steps for one profile, and
+`MASTER/bin/check --show-log --tail=120` retrieves the latest combined log
+without booting MASTER. Each recorded step includes its command, working
+directory, exit state and output.
+
+While /fix runs, use `MASTER/bin/operator fix status` for the read-only
+run/queue/commit view, or `MASTER/bin/operator fix tail` to follow its log
+and transcript. For an isolated path proof outside /fix, use
+`MASTER/bin/operator test PATH`.
+
 `MASTER/bin/operator check` is a different, repo-wide `Operator::CheckChain`
 maintenance ladder. It writes fixes by default; use `--scan-only` when only
 measuring. It is not an alias for `bin/check`.
