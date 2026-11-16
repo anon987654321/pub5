@@ -86,6 +86,20 @@ class TestCheckRunnerStdin < Minitest::Test
     end
   end
 
+  def test_check_list_shows_profile_steps_without_running_them
+    script = File.expand_path("../bin/check", __dir__)
+    out, status = Open3.capture2e(
+      RbConfig.ruby, script, "--profile=agent", "--list",
+      chdir: File.expand_path("..", __dir__),
+    )
+
+    assert status.success?, out
+    assert_includes out, "profile: agent"
+    assert_includes out, "law syntax"
+    assert_includes out, "tools"
+    assert_includes out, "No checks executed"
+  end
+
   def test_check_show_log_refuses_missing_files_and_symlinks
     Dir.mktmpdir("check-log-cli") do |dir|
       script = File.expand_path("../bin/check", __dir__)
