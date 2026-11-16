@@ -85,6 +85,12 @@ module Master
         File.join(MasterPaths.fix_state(root: root), relative)
       end
 
+      def self.prepare_state!(root:)
+        require_relative "kernel" unless defined?(Master::Fix::Kernel::LifecycleJournal)
+        Master::Fix::Kernel.new(root: root, actor: "mission-state")
+          .lifecycle_journal.prepare_state!
+      end
+
       def initialize(root: Master::ROOT, bus: nil, checkpoint: nil, namespace: self.class.current_namespace)
         @root = File.expand_path(root)
         @state_root = MasterPaths.fix_state(root: @root)
@@ -634,6 +640,7 @@ module Master
       end
 
       def self.current(root: Master::ROOT, namespace: current_namespace)
+        prepare_state!(root:)
         path = record_path(root:, namespace:)
         return unless File.file?(path)
 
@@ -991,9 +998,7 @@ module Master
       def prepare_shared_state!
         return true if @state_prepared
 
-        require_relative "kernel" unless defined?(Master::Fix::Kernel::LifecycleJournal)
-        Master::Fix::Kernel.new(root: @root, actor: "mission-state")
-          .lifecycle_journal.prepare_state!
+        self.class.prepare_state!(root: @root)
         @state_prepared = true
       end
 
