@@ -23,7 +23,7 @@ class TestLaneProbeBudget < Minitest::Test
   end
 
   def test_an_unlisted_lane_gets_the_default
-    assert_equal 20, Probe.budget_s(model: "llm7:codestral-latest")
+    assert_equal 60, Probe.budget_s(model: "llm7:codestral-latest")
   end
 
   def test_the_environment_overrides_one_run
@@ -54,6 +54,6 @@ class TestLaneProbeBudget < Minitest::Test
 
     assert rows.all? { |row| row.status == :ok }
     assert_equal 90, seen[GATEWAY]
-    assert_equal 20, seen["llm7:codestral-latest"]
+    assert_equal 60, seen["llm7:codestral-latest"]
   end
 end

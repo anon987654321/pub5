@@ -29,6 +29,9 @@ class TestFixWatchdog < Minitest::Test
     Pulse.new(max_passes: 8, clock: -> { @now }, load: -> { 0.0 }).tap { |p| p.observe("fix_loop:pass_start", pass: 1, file_count: 100) }
   end
 
+  # The window a finished file stays "recent" in, which the pulse derives from the file budget.
+  def finish_window = [Pulse::FINISH_WINDOW_SECONDS, Master::Fix::RunLedger.file_budget_s + 60].max
+
   # A grace of 0 kills on a stall at once; the graceful stop has its own test.
   def budget(resource_budget: nil, grace: "0")
     resource_budget ||= fake_resource_budget(free_gb: 100.0)
@@ -111,7 +114,8 @@ class TestFixWatchdog < Minitest::Test
 
     stalled = p.stall(@now)
 
-    assert_match(/STALLED pass 1 phase scan \+ stream fixes for 10m, 0 files attempted/, stalled[:line])
+    minutes = Master::Fix::FixTime.stall_s / 60
+    assert_match(/STALLED pass 1 phase scan \+ stream fixes for #{minutes}m, 0 files attempted/, stalled[:line])
     refute stalled[:skippable]
     assert stalled[:abort], "direct CLI runs must not rely on the outer wrapper watchdog"
   end
@@ -169,7 +173,7 @@ class TestFixWatchdog < Minitest::Test
     p.observe("fix_loop:phase", stage: :stream)
     @now = Master::Fix::FixTime.stall_s + 1
     p.observe("scan:complete", path: "app/models/post.rb", count: 0)
-    @now += Pulse::FINISH_WINDOW_SECONDS + 1
+    @now += finish_window + 1
 
     assert_match(/0 files attempted/, p.stall(@now)[:line])
   end
@@ -190,7 +194,7 @@ class TestFixWatchdog < Minitest::Test
     p.observe("fix_loop:phase", stage: :evidence)
     @now = Master::Fix::FixTime.stall_s + 1
     p.observe("fix_loop:visual_progress", pass: 1, index: 40, total: 296, surface: "brgen/core/mobile")
-    @now += Pulse::FINISH_WINDOW_SECONDS + 1
+    @now += finish_window + 1
 
     assert_match(/0 files attempted/, p.stall(@now)[:line])
   end

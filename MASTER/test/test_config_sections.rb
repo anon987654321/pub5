@@ -79,6 +79,19 @@ class TestConfigSections < Minitest::Test
     assert_match(/scan_profiles\.full\.laws must be '\*' or reference a declared law group/, reason)
   end
 
+  # A fix_time lane names only the times it changes and falls back to the default
+  # for the rest, so a partial row is valid; a value it does name is still checked.
+  def test_a_fix_time_lane_may_name_one_field_and_must_still_be_a_positive_number
+    partial = load("budgets.yml")
+    partial.fetch("fix_time").fetch("lanes")["sparse"] = { "probe_s" => 45 }
+    assert_nil Guard.validate(path: path("budgets.yml"), content: YAML.dump(partial))
+
+    bad = load("budgets.yml")
+    bad.fetch("fix_time").fetch("lanes")["gateway"]["probe_s"] = "soon"
+    reason = Guard.validate(path: path("budgets.yml"), content: YAML.dump(bad))
+    assert_match(/fix_time\.lanes\.gateway\.probe_s must be a positive number of seconds/, reason)
+  end
+
   def test_host_specific_resource_thresholds_are_checked_as_rows
     data = load("budgets.yml")
     data.fetch("process").fetch("resources").fetch("process_count").fetch("darwin")["warn"] = "too high"

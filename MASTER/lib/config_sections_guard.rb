@@ -235,22 +235,25 @@ module Master
       return unless value.is_a?(Hash)
 
       strict_keys(value, %w[default lanes], "fix_time", errors)
-      validate_time_row(value["default"], "fix_time.default", errors)
+      validate_time_row(value["default"], "fix_time.default", errors, complete: true)
       lanes = value["lanes"]
       unless lanes.is_a?(Hash) && !lanes.empty?
         errors << "fix_time.lanes must be a non-empty mapping"
         return
       end
+      # A lane entry names only the times it changes; FixTime falls back to the
+      # default for the rest, so a lane that differs in one field is not made to
+      # repeat the other three.
       lanes.each { |name, row| validate_time_row(row, "fix_time.lanes.#{name}", errors) }
     end
 
-    def validate_time_row(value, label, errors)
+    def validate_time_row(value, label, errors, complete: false)
       unless value.is_a?(Hash)
         errors << "#{label} must be a mapping"
         return
       end
       strict_keys(value, TIME_FIELDS, label, errors)
-      TIME_FIELDS.each do |field|
+      (complete ? TIME_FIELDS : TIME_FIELDS & value.keys).each do |field|
         number = value[field]
         errors << "#{label}.#{field} must be a positive number of seconds" unless
           number.is_a?(Numeric) && number.positive?

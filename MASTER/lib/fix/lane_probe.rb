@@ -12,7 +12,6 @@ module Master
     # slowly to repair anything.
     module LaneProbe
       PROMPT = "Reply with the single word OK."
-      BUDGET_S = 20
       # Keep the ranked front while reserving four places for independent free/keyless providers.
       MAX_LANES = 12
 

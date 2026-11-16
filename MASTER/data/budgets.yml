@@ -17,35 +17,35 @@ fix_budget:
 # How long a /fix run, one file in it, and a pass with nothing attempted may take, in seconds.
 # Reader: Master::Fix::FixTime. A lane entry (keyed as LaneQuota.lane_of names it) replaces the
 # default for a run pinned to that lane; MASTER_FIX_FILE_BUDGET_S / _RUN_BUDGET_S / _STALL_S
-# override one run.
+# override one run. A repair is a proposal, a retry and a verifier call: three or four model
+# calls that each take one to four minutes on a strong paid lane (Opus, DeepSeek reasoner,
+# Replicate's claude-opus). The default file budget is that repair, not one call, and the run
+# budget is the repair phase's own clock under MASTER_FIX_MAX_MINUTES. The old 240 s file /
+# 1800 s run defaults timed out every such lane - Opus on 2026-10-27, then the same shape on
+# any lane without a named entry - so a paid host could not finish a repair the free floor was
+# merely slow at. Defaults below match those lanes; a free lane stays bounded by its 60 s call
+# timeout (free_tier.call_timeout_s) regardless.
 fix_time:
   default:
-    file_s: 240
-    run_s: 1800
-    stall_s: 600
-    probe_s: 20
+    file_s: 900
+    run_s: 7200
+    stall_s: 900
+    # A readiness probe on a one-word prompt must still give a cold paid lane
+    # room to load: a Replicate model cold-starts for 30-60 s, so a 20 s default
+    # dropped the very lane the run was pinned to and fell through to the free
+    # floor. A lane that cannot answer one word in a minute is genuinely unusable.
+    probe_s: 60
+  # A lane entry names only the fields it changes; FixTime falls back to the
+  # default for the rest, so a lane is not made to repeat times it shares.
   lanes:
-    # The hosted gateway lane (model ids like gateway:glm-5.3) answers a
-    # repair can require longer than the base deadline; the defaults above
-    # timed out readiness and left the lane silent mid-run.
+    # The hosted gateway lane (model ids like gateway:glm-5.3) and the Z.ai
+    # open-platform lane (bare glm- ids: glm-5.3-flash, glm-5.3, named "glm" by
+    # LaneQuota.lane_of) carry a full system prompt, so a cold readiness answer
+    # takes 18-30 s; they raise the probe above the default. Their other times
+    # match the default and so are not repeated here.
     gateway:
-      file_s: 900
-      run_s: 7200
-      stall_s: 900
-      # The readiness probe carries the lane's full system prompt, so a cold
-      # gateway answer takes 18-30 s. The default's 20 s dropped the only lane
-      # a pinned run had (2026-11-12: "no model provider answered after 4
-      # readiness checks") and the run ended before its first file.
       probe_s: 90
-    # The Z.ai open-platform lane (bare glm- ids: glm-5.3-flash, glm-5.3) leads
-    # the primary /fix chain since 2026-11-16. Its budget mirrors the gateway
-    # lane's: the base defaults were written for metered short turns and the
-    # same readiness-timeout stall hit this lane when it anchored whole-tree
-    # runs. LaneQuota.lane_of names it "glm" (first dash before the version).
     glm:
-      file_s: 900
-      run_s: 7200
-      stall_s: 900
       probe_s: 90
 
 governor:
