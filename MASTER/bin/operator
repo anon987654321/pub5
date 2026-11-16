@@ -926,12 +926,13 @@ when "test"
   # are). Complete means whole suites — a green over hand-picked tests is
   # unmeasured. The mapping that lived in CLAUDE.md prose and session
   # memory, made executable:
-  #   MASTER/**        -> MASTER rake test (+ dogfood when law/ moved)
-  #   RAILS/__shared/**  -> all three app suites (shared lands in three apps)
-  #   RAILS/<app>/**   -> that app suite
-  #   RAILS/test       -> the standalone contract suite
-  #   OPENBSD/**       -> its local minitests (box-side proof stays on vm23)
-  #   MASTER/tools/**        -> MASTER tool suite
+  #   MASTER/**         -> MASTER rake test (+ dogfood when law/ moved)
+  #   RAILS/             -> every registered RAILS app suite + RAILS contracts
+  #   RAILS/__shared/**  -> every app whose Gemfile mounts pub5-shared
+  #   RAILS/<app>/**     -> that registered app suite + RAILS contracts
+  #   RAILS/test         -> the standalone contract suite
+  #   OPENBSD/**         -> its local minitests (box-side proof stays on vm23)
+  #   MASTER/tools/**    -> MASTER tool suite
   paths = ARGV.dup
   if paths.empty?
     listing, status = Master::Io::Exec.capture2("git", "status", "--porcelain", "-z", chdir: ROOT)
