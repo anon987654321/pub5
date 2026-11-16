@@ -124,21 +124,21 @@ module Master
           end
           MAX_DEPLOY_FILE_BYTES = 24_000
 
-          def deploy_small_files_findings
+          def deploy_file_size_findings
             deploy_paths.filter_map do |path|
               next if DEPLOY_SIZE_EXEMPT_EXTENSIONS.include?(File.extname(path).downcase)
 
               size = begin
                 File.size(path)
               rescue StandardError => e
-                Master::Ground::Swallow.log(e, context: "SelfTest.deploy_small_files", severity: :load_bearing)
+                Master::Ground::Swallow.log(e, context: "SelfTest.deploy_file_size", severity: :load_bearing)
                 nil
               end
               next finding(path:, line: 1, message: "unreadable deploy file - DENSITY unmeasured, not clean") if size.nil?
               next unless size > MAX_DEPLOY_FILE_BYTES
 
               finding(path:, line: 1,
-                message: "OpenBSD deploy file exceeds #{MAX_DEPLOY_FILE_BYTES} bytes (violates DENSITY/SMALL_FILES)")
+                message: "OpenBSD deploy file exceeds #{MAX_DEPLOY_FILE_BYTES} bytes (violates DENSITY)")
             end
           end
 
@@ -268,7 +268,7 @@ module Master
             ["LINEARITY", lambda { structural_findings(Laws::NestingDepthLaw.new) + deploy_nesting_findings }],
             ["PROXIMITY", lambda { law_test_proximity_findings }],
             ["ABSTRACTION", lambda { structural_findings(Laws::GodClassLaw.new) + deploy_god_class_findings }],
-            ["DENSITY", lambda { structural_findings(Laws::SmallFunctionsLaw.new) + deploy_small_functions_findings + deploy_small_files_findings + face_pool_findings }],
+            ["DENSITY", lambda { structural_findings(Laws::SmallFunctionsLaw.new) + deploy_small_functions_findings + deploy_file_size_findings + face_pool_findings }],
             ["KERNEL_ADHERENCE", lambda { kernel_wiring_findings }],
             ["LAW_MAP", lambda { law_map_findings }],
           ]
