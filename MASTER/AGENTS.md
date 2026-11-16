@@ -690,6 +690,25 @@ Touch-map: `data/agent_map.yml`. Law sections live in `data/laws.yml`. Work is a
 
 ## Checks
 
+`/fix [path]` is the canonical repair and verification loop. It observes, repairs,
+re-observes and runs proof selected for the changed scope: focused affected tests
+when reliable, otherwise the target tree's registered suite or Rails source/rendered
+proof. Do not prescribe `bin/check --profile=full` after every /fix.
+
+`MASTER/bin/fix-here TREE` is an optional terminal wrapper around that same /fix
+runtime. It adds disk and parse preflight, provider preflight, a per-tree log,
+stall handling and RAILS app lifecycle. `--dry` checks readiness only;
+`--dry-run` runs /fix's read-only preview; `--no-publish` holds commits locally.
+
+`MASTER/bin/check` is a separate profile-based verification runner, not a repair
+command: default `operator`, `ci` for the CI floor, and `full` for broad/release
+verification (`ci` plus all probes and the full audit). `MASTER/bin/ci` is the
+compatibility entrypoint for `bin/check --profile=ci`.
+
+`MASTER/bin/operator check` is a different, repo-wide `Operator::CheckChain`
+maintenance ladder. It writes fixes by default; use `--scan-only` when only
+measuring. It is not an alias for `bin/check`.
+
 Run the smallest proof: `bin/check` for ordinary code, `bin/check --profile=agent` for law, scanners and the loop, `bin/check --profile=web` for the face, `OPENBSD/mirror/bin/check-rails --profile=contributor` for deploy and Rails, and `MASTER/bin/operator check` for the whole ladder. On failure: `bin/check --profile=agent --format=brief`.
 
 `--profile=agent` may fail on known debt tagged `agent-ignore`.
