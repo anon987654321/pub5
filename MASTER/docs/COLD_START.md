@@ -117,6 +117,57 @@ For a read-only source-plus-rendered review, use
 `MASTER/bin/operator style-sweep --app brgen,amber`. For source checks only,
 add `--source-only`.
 
+## 6. The normal working day
+
+Start MASTER once:
+
+```sh
+MASTER/bin/master
+```
+
+Then use the repair command directly:
+
+```text
+/fix MASTER
+```
+
+That run observes, repairs, re-observes and selects its own scope-aware proof.
+There is no mandatory second `bin/check --profile=full` step. For another tree,
+start a separate `/fix RAILS`, `/fix OPENBSD`, `/fix STUDIO` or `/fix BIZ`
+when that is the work being done.
+
+The terminal wrapper is optional, not a prerequisite:
+
+```sh
+MASTER/bin/fix-here RAILS
+```
+
+It adds terminal preflight, per-tree logging and RAILS app lifecycle around
+the same /fix runtime. Keep it for supervised terminal runs; use interactive
+`/fix` for the ordinary path.
+
+To see what a supplemental check would do before running it:
+
+```sh
+MASTER/bin/check --help
+MASTER/bin/check --list --profile=operator
+```
+
+After a failed check, retrieve the last 120 lines without restarting MASTER:
+
+```sh
+MASTER/bin/check --show-log --tail=120
+```
+
+For a live repair, `MASTER/bin/operator fix status` shows its process, queue,
+phase, commit state and retained work; `MASTER/bin/operator fix tail` follows
+the log and transcript. For a path-specific proof outside /fix,
+`MASTER/bin/operator test PATH` selects the mapped suites.
+
+Do not confuse the similarly named `MASTER/bin/operator check`: that is a
+separate repo-wide maintenance ladder which writes fixes by default;
+`--scan-only` makes it read-only. It is not needed after ordinary /fix.
+
 ## Status vocabulary
 
 `PASS` requires the check's own evidence. `FAIL` means it measured a defect.
