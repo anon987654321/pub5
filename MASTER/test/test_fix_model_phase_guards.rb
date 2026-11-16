@@ -622,7 +622,7 @@ end
           missed => { state: :failed, reason: "decoder failed" },
         },
         findings: {
-          ["SMALL_FILES", :lexical_violations] => [{ "file" => finding, "law" => "SMALL_FILES" }],
+          ["NO_GOD_CLASS", :lexical_violations] => [{ "file" => finding, "law" => "NO_GOD_CLASS" }],
         },
         finding_counts: { scanned => 0, finding => 2, missed => 0 },
         unclassified_findings: [
@@ -640,8 +640,8 @@ end
       assert_equal "scanned", rows.fetch("finding.rb").fetch(:status)
       assert_equal 2, rows.fetch("finding.rb").fetch(:finding_count)
       # The docket sorts law names bytewise (assessment_matrix's compact.uniq.sort):
-      # "SMALL_FILES" precedes "[missing]".
-      assert_equal ["SMALL_FILES", "[missing]"], rows.fetch("finding.rb").fetch(:laws)
+      # "NO_GOD_CLASS" precedes "[missing]".
+      assert_equal ["NO_GOD_CLASS", "[missing]"], rows.fetch("finding.rb").fetch(:laws)
       assert_equal "unmeasured", rows.fetch("missed.rb").fetch(:status)
       assert_equal "failed", rows.fetch("missed.rb").fetch(:disposition)
       assert_equal "decoder failed", rows.fetch("missed.rb").fetch(:reason)
