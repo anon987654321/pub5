@@ -130,6 +130,8 @@ class BergenDemoSeederTest < ActiveSupport::TestCase
 
     assert Place.exists?(city: @city, slug: "bryggen")
     assert Place.exists?(city: @city, slug: "floybanen")
+    vilvite = Place.find_by!(city: @city, slug: "vilvite")
+    assert_equal "Thormøhlens gate 51", vilvite.address
     assert Neighborhood.exists?(city: @city, slug: "nordnes")
 
     assert Takeaway::Restaurant.exists?(name: "Colonialen")
