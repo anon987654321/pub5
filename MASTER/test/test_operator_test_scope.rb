@@ -43,11 +43,16 @@ class TestOperatorTestScope < Minitest::Test
       "RUBYOPT" => "-rbundler/setup",
     }
 
-    env = Operator::TestScope.app_environment(root: "/repo", app: "brgen", inherited_env: parent)
+    root = Master::ROOT
+    env = Operator::TestScope.app_environment(root:, app: "brgen", inherited_env: parent)
+    expected = File.join(Master::Fix::RailsApp.app_dir("brgen", repo_root: root), "Gemfile")
 
-    assert_equal "/repo/RAILS/brgen/Gemfile", env.fetch("BUNDLE_GEMFILE")
+    assert_equal expected, env.fetch("BUNDLE_GEMFILE")
     %w[BUNDLE_PATH BUNDLE_WITHOUT BUNDLER_ORIG_GEM_HOME RUBYOPT].each do |key|
       assert_nil env.fetch(key), "#{key} leaked from MASTER into the Rails test child"
+    end
+    assert_raises(ArgumentError) do
+      Operator::TestScope.app_environment(root:, app: "master", inherited_env: parent)
     end
   end
 
