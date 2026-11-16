@@ -80,10 +80,10 @@ Do not copy their values into code, prompts or documentation when a reader can u
 
 ## Doctor, first hour and failures
 
-`bin/doctor` checks the host and reports one line per area: disk, ruby, bundle, boot, parse,
-hooks, worktrees, git state, model lanes, stray processes and `.master/` writability; add
-`--remote` for the vm23 checkout and deploy lock. `ok` means fine, `warn` means it works but is
-about to cost you, and `FAIL` stops work and carries the fix on the same line.
+`bin/operator doctor` checks the checkout/host and reports one line per area: disk, Ruby,
+bundle, hooks, worktrees, Git state, model lanes, stray processes and `.master/`
+writability; add `--remote` for vm23. `OK` means fine, `warn` means it works
+but is about to cost you, and `FAIL` stops work and carries the fix on the same line.
 
 There are two intentionally different doctors. `MASTER/bin/doctor` is the
 MASTER runtime doctor (boot, provider/model, voice and face capability);
