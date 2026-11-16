@@ -188,6 +188,7 @@ aside:not([class]) > h2 {
 .site-legal a { color: inherit; text-decoration: none; }
 .site-legal a:hover { color: var(--text); }
 .site-footer-head { margin: 0; color: var(--text); }
+.site-footer-company address { margin: 0; font-style: normal; }
 .site-legal .affiliate-fine { grid-column: 1 / -1; margin: 0; }
 
 /* G · a11y floor + touch targets */
