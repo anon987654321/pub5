@@ -3,11 +3,9 @@
 require "fileutils"
 require "json"
 require "tmpdir"
+require "yaml"
 require_relative "minitest_helper"
 require_relative "../lora/selfies_gallery"
-
-# These tests cover manifest shape; real publication denial is tested separately.
-Studio::Lora::Consent.define_singleton_method(:require!) { |**| { "valid" => true } }
 
 # The gallery's manifest is the one generated file the page reads. These tests
 # exercise the real generator against real files on disk: what it scans, how it
@@ -33,7 +31,50 @@ class TestSelfiesGallery < Minitest::Test
     path = File.join(@lora, name)
     FileUtils.mkdir_p(File.dirname(path))
     File.write(path, body)
+    match = Studio::Visual::SelfiesGallery::SUBJECT.match(File.basename(name))
+    grant_publication(match[:subject]) if match
     path
+  end
+
+  def grant_publication(subject)
+    directory = File.join(@lora, subject)
+    evidence = File.join(directory, "evidence")
+    FileUtils.mkdir_p(evidence, mode: 0o700)
+    File.chmod(0o700, directory)
+    File.chmod(0o700, evidence)
+
+    evidence_path = File.join(evidence, "subject-permission.txt")
+    File.write(evidence_path, "Synthetic publication authority for tests.\\n", mode: "w", perm: 0o600)
+    File.chmod(0o600, evidence_path)
+
+    record = {
+      "schema" => 1,
+      "subject" => subject,
+      "subject_consent" => {
+        "model_publication" => true,
+        "evidence" => {
+          "granted_by" => "synthetic test authority",
+          "granted_on" => "2026-11-16",
+          "covers" => ["model_publication"],
+          "stored_at" => "evidence/subject-permission.txt"
+        }
+      },
+      "source_rights" => {
+        "model_publication" => true,
+        "evidence" => {}
+      }
+    }
+    consent_path = File.join(directory, "consent.yml")
+    File.write(consent_path, YAML.dump(record), mode: "w", perm: 0o600)
+    File.chmod(0o600, consent_path)
+  end
+
+  def test_an_unapproved_subject_cannot_enter_a_publication_manifest
+    File.write(File.join(@lora, "unapproved_selfie_01.jpg"), "private render")
+
+    error = assert_raises(Studio::Lora::Consent::Error) { build }
+    assert_match(/publication blocked/, error.message)
+    refute File.exist?(@out), "a denied subject must not leave a manifest behind"
   end
 
   def test_a_still_becomes_an_item_named_for_its_subject

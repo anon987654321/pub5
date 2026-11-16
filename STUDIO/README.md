@@ -72,6 +72,27 @@ but the implementation is owned here.
 - `subprocess.rb` — the one child-process helper the tools share.
 - `analog_core.rb` — a seeded, bounded filtered-noise source shared by Dilla tape-speed variation and Postpro's frame-to-frame gate weave; no added gem or native dependency.
 
+## Operator workflow
+
+`bin/studio doctor` gives a read-only local readiness report. Add `--json` for
+machine-readable output. It checks the Ruby baseline, required entrypoints,
+output-path safety, local LoRA profile structure, optional media executables
+and the Git index for subject-private files. It makes no provider calls, does
+not upload, render, modify consent, or rewrite Git history. A private-media
+finding remains BLOCKED until the separate operator rights/history decision is
+resolved; it is not silently converted into a pass.
+
+The regular verification path is:
+
+```sh
+bin/studio doctor --json
+cd STUDIO && rake check test
+```
+
+Neither command substitutes for listening to a Dilla render, testing browser
+interactions in a real browser, supplying real Ableton sets, or proving a live
+provider transaction.
+
 ## Checks
 
 `Rakefile` is the tree's check surface: `rake check` syntax-checks entrypoints

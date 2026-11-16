@@ -56,6 +56,7 @@ task :check do
   raise "studio --list does not expose LoRA validation" unless cli_out.include?("lora")
   raise "studio --list does not expose photograph generation" unless cli_out.include?("photograph")
   raise "studio --list does not expose the selfie gallery" unless cli_out.include?("gallery")
+  raise "studio --list does not expose the read-only doctor" unless cli_out.include?("doctor")
   raise "studio --list does not expose the promo cut" unless cli_out.include?("promo")
 
   python_sources = Dir.glob(File.join(STUDIO_ROOT, "**", "*.py"))
@@ -67,7 +68,7 @@ task :check do
   end
 
   %w[
-    bin/studio lora/photograph.rb lora/idea_picture.rb lora/selfie_series.rb lora/selfies_gallery.rb
+    bin/studio doctor.rb lora/photograph.rb lora/idea_picture.rb lora/selfie_series.rb lora/selfies_gallery.rb
     replicate/client.rb lora/consent.rb lora/validate.rb lora/judge.rb subprocess.rb test_runner.rb promo.rb
     dilla/lib/als.rb dilla/lib/als_export.rb dilla/lib/als_to_midi.rb dilla/lib/reference_analyzer.rb
     analog_core.rb postpro/postpro.rb postpro/uncanny.rb postpro/motion.rb postpro/motion_process.rb
