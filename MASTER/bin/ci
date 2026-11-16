@@ -1,9 +1,6 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require_relative "../lib/boot/entrypoint"
-Master::Boot::Entrypoint.prepare!(root: File.expand_path("..", __dir__))
-
 # The local preflight and vm23 runbook invoke this stable entrypoint; the step list
 # itself lives in bin/check.
 #
