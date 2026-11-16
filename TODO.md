@@ -245,6 +245,18 @@ second push path or duplicate orchestration to make TODO.md machine-readable.
 
 ### Screenshot-led micro-refinements (reviewed 2026-11-06 at `main@3fb7dbc`)
 
+2026-11-16 recapture: the review set is rebuilt from a full sweep at
+`main@63970191^2` (brgen 95 pages, one unresolved: conversations/1 timed out
+on a websocket read mid-capture). One candidate finding from the fresh
+captures is a capture artifact, not a source defect, and is recorded so it is
+not re-raised: amber's root at 390px shows the mobile tab bar mid-flow under
+the first outfit card. The layout ships the home page deliberately without
+nav rails ("the logo, the four looks and the footer"); the row is the fixed
+tab bar painting at its viewport position inside the stitched full-page shot.
+Before treating any fixed-chrome position in a full-page capture as a defect,
+reproduce it in a viewport-sized capture of the same surface.
+
+
 These are targeted findings from the committed RAILS desktop/mobile and
 Mr. Damascy flow captures, not proof of the current live render. Reproduce
 each in the existing Chrome/CDP suite before changing source; distinguish
