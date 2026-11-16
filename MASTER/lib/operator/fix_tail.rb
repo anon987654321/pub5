@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require_relative "../boot/paths"
 require_relative "../trace/dmesg"
 
 module Operator
@@ -45,13 +46,30 @@ module Operator
 
     def sources(roots, transcript_only)
       found = []
-      newest = roots.flat_map { |root| Dir.glob(File.join(root, ".master", "fix_transcripts", "*")) }.select { |p| File.directory?(p) }.max_by { |p| File.mtime(p) }
+      directories = state_roots(roots)
+      newest = directories.flat_map { |root| Dir.glob(File.join(root, "fix_transcripts", "*")) }
+                          .select { |path| File.directory?(path) }.max_by { |path| File.mtime(path) }
       found.concat(Dir.glob(File.join(newest, "*.ndjson")).sort) if newest
       unless transcript_only
-        log = roots.flat_map { |root| Dir.glob(File.join(root, ".master", "fix-*.log")) }.max_by { |p| File.mtime(p) }
+        log = directories.flat_map { |root| Dir.glob(File.join(root, "fix-*.log")) }
+                          .max_by { |path| File.mtime(path) }
         found.unshift(log) if log
       end
       found
+    end
+
+    # New state is preferred, while legacy locations remain readable until the
+    # first writable /fix invocation completes its copy-verified cutover.
+    def state_roots(roots)
+      roots.flat_map do |root|
+        workspace = File.basename(File.expand_path(root)) == "MASTER" ? File.dirname(File.expand_path(root)) : File.expand_path(root)
+        [
+          MasterPaths.fix_state(root: root),
+          File.join(workspace, ".master"),
+          File.join(workspace, "MASTER", ".master"),
+          File.join(root, ".master"),
+        ]
+      end.map { |path| File.expand_path(path) }.uniq
     end
 
     def print_history(path, limit, offsets, io)
