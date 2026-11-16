@@ -175,7 +175,8 @@ Master::Trace::Dmesg.status("web0", "live web checks skipped, set MASTER_WEB_LIV
 # as failing unit tests. CheckRunner now warns on a *passing* step that eats
 # most of its allowance, which is the signal that was missing.
 timeout = Integer(ENV.fetch("MASTER_CHECK_TIMEOUT", profile == "full" ? "1200" : "900"))
-runner = Operator::CheckRunner.new(prefix: "check:#{profile}", root: ROOT, timeout:, quiet: format == "brief")
+run_log = ENV.fetch("MASTER_CHECK_RUN_LOG", File.join(ROOT, ".master", "check", "latest.log"))
+runner = Operator::CheckRunner.new(prefix: "check:#{profile}", root: ROOT, timeout:, quiet: format == "brief", log_path: run_log)
 
 steps.each { |step| runner.run(*step) }
 failures = runner.results.reject { |r| r.success }.map(&:name)
@@ -187,4 +188,5 @@ body = if format == "brief"
          "#{failures.size} failure(s), #{failures.join(", ")}"
        end
 Master::Trace::Dmesg::Report.print("check0", body, parent: "master0")
+Master::Trace::Dmesg.status("check0", "combined log: #{runner.log_path}") if runner.log_path
 exit(failures.empty? ? 0 : 1)
