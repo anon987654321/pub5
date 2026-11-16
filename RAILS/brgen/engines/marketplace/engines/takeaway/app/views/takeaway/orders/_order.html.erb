@@ -1,5 +1,6 @@
+<% incoming = order.restaurant.user_id == Current.user&.id && order.user_id != Current.user&.id %>
 <%= render "shared/feed_card",
-  name: order.restaurant.name,
+  name: incoming ? t("takeaway.incoming_order_from", name: order.user.display_name.presence || order.user.email_address) : order.restaurant.name,
   meta: [t("takeaway.statuses.#{order.status}"), order.total_display, l(order.created_at.to_date, format: :default)],
   url: order_path(order),
-  class: "takeaway" %>
+  class: incoming ? "takeaway takeaway--incoming" : "takeaway" %>
