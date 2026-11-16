@@ -18,6 +18,7 @@ class Takeaway::Restaurant < ApplicationRecord
   tracks_activity created: "TakeawayRestaurantCreated", updated: "TakeawayRestaurantUpdated", source_vertical: "takeaway", actor: :user
 
   belongs_to :user
+  belongs_to :marketplace_store, class_name: "Marketplace::Store", optional: true
   belongs_to :place, optional: true
   has_one_attached :cover
   process_media_variants :cover, variants: {
@@ -136,6 +137,18 @@ class Takeaway::Restaurant < ApplicationRecord
   def owner?(account)
     user_id == account&.id
   end
+
+  def setup_checklist
+    {
+      profile: name.present? && address.present? && cuisine_type.present?,
+      menu: menu_items.available.exists?,
+      hours: hours_known?,
+      cover: cover.attached?,
+      storefront: marketplace_store.present?,
+    }
+  end
+
+  def setup_complete? = setup_checklist.values.all?
 
   # This is the one table carrying both a `city` string column and a `city_id`.
   # CityTenantable's belongs_to shadows the column reader, so `restaurant.city`
