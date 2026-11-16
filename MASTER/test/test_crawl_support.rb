@@ -43,4 +43,41 @@ class CrawlSupportTest < Minitest::Test
 
     assert_same error, reported
   end
+
+  # The 2026-11-16 runner --all wedge lived here: the cross-host branch used
+  # `next res`, and next inside a while body jumps back to the condition, which
+  # re-reads the same Location forever — a 100% CPU spin in the runner's own
+  # process, immune to every timeout. The branch must return the response.
+  FakeResponse = Struct.new(:code, :headers) do
+    def [](key) = headers[key.downcase]
+
+    def body = "redirect body"
+  end
+
+  def test_fetch_following_returns_a_cross_host_redirect_unfollowed
+    redirect = FakeResponse.new("302", { "location" => "http://brgen.no/nearby" })
+    fetches = []
+    CrawlSupport.stub :fetch, ->(url, **opts) { fetches << url; redirect } do
+      result = CrawlSupport.fetch_following("http://127.0.0.1:38182/nearby")
+
+      assert_same redirect, result
+      assert_equal ["http://127.0.0.1:38182/nearby"], fetches
+    end
+  end
+
+  def test_fetch_following_replays_a_relative_redirect_on_the_loopback_origin
+    redirect = FakeResponse.new("302", { "location" => "/session/new" })
+    landed = FakeResponse.new("200", { "location" => nil })
+    fetches = []
+    CrawlSupport.stub :fetch, lambda { |url, **opts|
+      fetches << url
+      fetches.size == 1 ? redirect : landed
+    } do
+      result = CrawlSupport.fetch_following("http://127.0.0.1:61352/", host: "amber.brgen.no")
+
+      assert_same landed, result
+      assert_equal 2, fetches.size
+      assert_equal "http://127.0.0.1:61352/session/new", fetches.last
+    end
+  end
 end

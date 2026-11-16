@@ -41,10 +41,22 @@ module CrawlSupport
     while res.code.to_i.between?(301, 399) && hops < limit &&
           (location = res["location"])
       target = URI(location)
-      next res if target.host && target.host != origin.host
+      # `next` here would jump back to the while condition — ruby semantics:
+      # inside a while body next is not a return — and the condition re-reads
+      # the same Location forever. That was the runner --all wedge of
+      # 2026-11-16: a 100% CPU spin immune to every timeout, because the loop
+      # lives in the runner's own process for inline class checks. A
+      # cross-host redirect is a routing decision to report, so the hop chain
+      # ends here, in a return.
+      return res if target.host && target.host != origin.host
 
+      # A relative Location ("/session/new" — what Rails emits for most
+      # redirects) parses to a URI::Generic with no request_uri, so the path
+      # and query are composed directly; the same expression covers absolute
+      # same-host Locations.
+      target_path = target.query ? "#{target.path}?#{target.query}" : target.path.to_s
       res = fetch(format("%s://%s:%s%s", target.scheme || origin.scheme,
-                         origin.host, origin.port, target.request_uri), **opts)
+                         origin.host, origin.port, target_path), **opts)
       hops += 1
     end
     res
