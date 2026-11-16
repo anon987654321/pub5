@@ -41,13 +41,6 @@ module Studio
     # not a reason to silently render with a second, stale table.
     module_function
 
-    def looks
-      path = File.join(__dir__, "postpro", "video.yml")
-      raise ArgumentError, "video grade catalogue is missing: #{path}" unless File.file?(path)
-
-      parse_video_presets(File.read(path, encoding: "UTF-8"))
-    end
-
     def parse_video_presets(text)
       document = YAML.safe_load(
         text, permitted_classes: [], permitted_symbols: [], aliases: false
