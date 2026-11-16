@@ -29,8 +29,8 @@ class TestLawProofFixtures < Minitest::Test
                              main_detector?: false, lifecycle: :active, proof_file: "-"),
       ASKED: FixtureLaw.new(bad: nil, good: nil, proved_by: nil, main_detector?: false,
                             lifecycle: :trusted, proof_file: "-"),
-      OLD: FixtureLaw.new(bad: "bad", good: "good", proved_by: nil, main_detector?: true,
-                          lifecycle: :retired, proof_file: "-"),
+      OLD: FixtureLaw.new(bad: "bad", good: "good", proved_by: "test/old_test.rb", main_detector?: true,
+                          lifecycle: :retired, proof_file: "example.rb"),
     }
 
     with_definitions(laws) do
@@ -42,6 +42,8 @@ class TestLawProofFixtures < Minitest::Test
       assert_equal "test/shaped_test.rb", rows.fetch("SHAPED").fetch("proof")
       assert_equal "docs", rows.fetch("ASKED").fetch("status")
       assert_equal "retired", rows.fetch("OLD").fetch("status")
+      assert_equal "example.rb", rows.fetch("OLD").fetch("file")
+      assert_equal "test/old_test.rb", rows.fetch("OLD").fetch("proof")
       assert_equal "bad", rows.fetch("OLD").fetch("bad")
     end
   end
