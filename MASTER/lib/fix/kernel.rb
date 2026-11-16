@@ -6,6 +6,7 @@ require "json"
 require "securerandom"
 require "time"
 require_relative "kernel/lifecycle_journal"
+require_relative "../boot/paths"
 require_relative "kernel/lifecycle"
 require_relative "task_contract"
 require_relative "terminal_receipt"
@@ -54,18 +55,17 @@ module Master
 
         attr_reader :path
 
-        def initialize(root:)
+        def initialize(root:, state_root: nil)
           workspace = File.expand_path(root)
-          @directory = File.join(workspace, ".master")
-          @path = File.join(workspace, RELATIVE_PATH)
+          @state_root = File.expand_path(state_root || MasterPaths.fix_state(root: workspace))
+          @directory = @state_root
+          @path = File.join(@state_root, File.basename(RELATIVE_PATH))
           @mutex = Mutex.new
         end
 
         def synchronize
           @mutex.synchronize do
-            raise IOError, "refusing symlinked .master directory" if File.symlink?(@directory)
-
-            FileUtils.mkdir_p(@directory, mode: 0o700)
+            ensure_state_directory!
             directory_stat = File.lstat(@directory)
             unless directory_stat.directory? && !directory_stat.symlink?
               raise IOError, "refusing non-directory or symlinked .master path"
@@ -107,6 +107,35 @@ module Master
         end
         private
 
+        def ensure_state_directory!
+          missing = []
+          cursor = @directory
+          until File.exist?(cursor) || File.symlink?(cursor)
+            missing.unshift(cursor)
+            parent = File.dirname(cursor)
+            raise IOError, "fix state has no existing parent directory" if parent == cursor
+
+            cursor = parent
+          end
+          parent_stat = File.lstat(cursor)
+          raise IOError, "refusing symlinked or non-directory fix state parent" unless parent_stat.directory? && !parent_stat.symlink?
+
+          missing.each do |directory|
+            Dir.mkdir(directory, 0o700)
+            stat = File.lstat(directory)
+            raise IOError, "new fix state directory is not private" unless stat.directory? && !stat.symlink? && (stat.mode & 0o077).zero?
+          end
+          stat = File.lstat(@directory)
+          unless stat.directory? && !stat.symlink? && (stat.mode & 0o022).zero?
+            raise IOError, "refusing unsafe fix state directory"
+          end
+          if (stat.mode & 0o077).positive?
+            raise IOError, "fix state directory permissions must be private"
+          end
+        rescue SystemCallError => error
+          raise IOError, "cannot prepare fix state directory: #{error.class}: #{error.message}"
+        end
+
         def validate_lock_identity!(file, original_directory_stat)
           current_directory = File.lstat(@directory)
           unless current_directory.directory? && !current_directory.symlink? &&
@@ -137,11 +166,12 @@ module Master
         @workspace_root = self.class.send(:locate_workspace, @root)
         @actor = actor.to_s
         @bus = bus
-        @log_path = File.expand_path(log_path || File.join(@workspace_root, LOG_RELATIVE_PATH))
+        @state_root = MasterPaths.fix_state(root: @workspace_root)
+        @log_path = File.expand_path(log_path || File.join(@state_root, File.basename(LOG_RELATIVE_PATH)))
         @log_head = nil
         @lifecycle_journal = lifecycle_journal
         @lifecycle_mutex = Mutex.new
-        @execution_mutex = ExecutionLock.new(root: @workspace_root)
+        @execution_mutex = ExecutionLock.new(root: @workspace_root, state_root: @state_root)
         @append_mutex = Mutex.new
       end
 
@@ -324,7 +354,8 @@ module Master
         number = Integer(seq)
         raise ArgumentError, "sequence must be a positive integer" unless number.positive?
 
-        path = File.join(locate_workspace(File.expand_path(root)), LOG_RELATIVE_PATH)
+        workspace = locate_workspace(File.expand_path(root))
+        path = File.join(MasterPaths.fix_state(root: workspace), File.basename(LOG_RELATIVE_PATH))
         events = read_log(path)
         selected = events.find { |row| row.fetch("seq") == number }
         return unless selected
