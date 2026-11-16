@@ -104,8 +104,11 @@ class TestLawProofFixtures < Minitest::Test
     assert_equal 541, recorded.size, "re-record after any Law lands, the file must name every id"
     assert_operator recorded.count { |_id, spec| spec.fetch("status") == "fixture" }, :>=, 250,
                    "the runnable half stopped being recorded"
-    assert_equal "retired", recorded.fetch("JS_MODULE_SIZE").fetch("status"),
-                 "the JS-only 300-line detector remains historical, not executable fixture coverage"
+    %w[SMALL_FILES JS_MODULE_SIZE].each do |id|
+      assert_equal "retired", recorded.fetch(id).fetch("status"),
+                   "#{id} remains historical, not executable fixture coverage"
+    end
+    assert_equal "test/test_scan_law_contracts.rb", recorded.fetch("SMALL_FILES").fetch("proof")
 
     recorded.each do |id, spec|
       next unless spec.fetch("status") == "fixture"
