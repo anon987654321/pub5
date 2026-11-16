@@ -14,8 +14,8 @@ class TestLaneSelection < Minitest::Test
   Selection = Master::Io::LaneSelection
   Quota = Master::Io::LaneQuota
 
-  OPUS = "claude-cli:claude-opus-5-5"
-  SONNET = "claude-cli:claude-sonnet-5-5"
+  ANTHROPIC_OPUS = "claude-opus-5-5"
+  ANTHROPIC_SONNET = "claude-sonnet-5-5"
   GLM = "glm-5.3"
   GROK = "grok-cli:auto"
   AGY = "agy:auto"
@@ -27,7 +27,7 @@ class TestLaneSelection < Minitest::Test
   DEEPSEEK = "deepseek-chat"
   AGY_REPLY = "agy: error: Individual quota reached. Please upgrade your subscription to increase your limits. Resets in 165h22m49s."
   GLM_REPLY = "glm: error: Individual quota reached. Please upgrade your subscription to increase your limits. Resets in 49h10m05s."
-  CLAUDE_REPLY = "You've hit your session limit - resets 5pm (Europe/Oslo)"
+  RATE_LIMIT_REPLY = "HTTP 429: rate limit exceeded"
   ALL = ->(_model) { true }
   NOON = Time.utc(2026, 10, 11, 12, 0, 0).to_f
 
@@ -183,14 +183,14 @@ class TestLaneSelection < Minitest::Test
   end
 
   def test_first_live_of_the_tier_skips_a_quota_dead_lane
-    tier = [AGY, OPUS, GROK, NEMOTRON]
-    assert_equal OPUS, Selection.first_live(tier), "claude-cli leads the subscription lanes whatever order the list came in"
+    tier = [AGY, ANTHROPIC_OPUS, GROK, NEMOTRON]
+    assert_equal GROK, Selection.first_live(tier), "the configured subscription lane leads the available pool"
 
     Quota.note(AGY, AGY_REPLY)
-    assert_equal OPUS, Selection.first_live(tier)
+    assert_equal ANTHROPIC_OPUS, Selection.first_live(tier)
 
-    Quota.note(OPUS, CLAUDE_REPLY)
-    assert_equal GROK, Selection.first_live(tier)
+    Quota.note(GROK, RATE_LIMIT_REPLY)
+    assert_equal ANTHROPIC_OPUS, Selection.first_live(tier)
   end
 
   def test_the_real_default_tier_keeps_subscription_lead_and_glm_lists_first
@@ -199,14 +199,15 @@ class TestLaneSelection < Minitest::Test
     # The selection sort is a contract of its own: a live subscription lane
     # leads whatever the file order came in as, and a metered-API lane with
     # no key on the host drops out of the live list entirely.
-    assert_equal OPUS, Selection.first_live(tier)
+    assert_equal GROK, Selection.first_live(tier)
 
-    Quota.note(OPUS, CLAUDE_REPLY)
-    assert_equal AGY, Selection.first_live(tier), "the claude-cli lane is dead as a whole, sonnet with opus"
+    Quota.note(GROK, RATE_LIMIT_REPLY)
+    assert_equal AGY, Selection.first_live(tier), "a dead subscription lane is skipped"
     ordered = Selection.order(tier)
     kinds = ordered.map { |id| Selection.kind(id) }
     assert_equal kinds.sort_by { |k| Selection::KIND_RANK.fetch(k) }, kinds, "remote, then local, then free"
-    refute_includes ordered, OPUS
+    refute_includes ordered, GROK
+    assert_includes ordered, ANTHROPIC_OPUS
 
     primary = Selection.tier("primary")
     assert_equal GLM, primary.first, "the primary /fix lane stays glm-5.3 (operator, 2026-11-09)"
@@ -226,8 +227,8 @@ class TestLaneSelection < Minitest::Test
   end
 
   def test_vision_review_order_uses_human_preference_after_capability_filtering
-    models = ["gpt-6.1-sol", "gemini-3.7-flash", "qwen3.8-max", OPUS, "text-only"]
-    expected = [OPUS, "qwen3.8-max", "gemini-3.7-flash", "gpt-6.1-sol"]
+    models = ["gpt-6.1-sol", "gemini-3.7-flash", "qwen3.8-max", ANTHROPIC_OPUS, "text-only"]
+    expected = [ANTHROPIC_OPUS, "qwen3.8-max", "gemini-3.7-flash", "gpt-6.1-sol"]
     Selection.stub(:vision?, ->(id) { id != "text-only" }) do
       Master::Io::LaneQuota.stub(:dead?, ->(*_args, **_kwargs) { false }) do
         Master::Io::LaneState.stub(:usable?, ->(*_args, **_kwargs) { true }) do
@@ -258,8 +259,8 @@ class TestLaneSelection < Minitest::Test
 
   def test_llama_cpp_cli_is_local_and_stays_after_remote_lanes
     assert_equal :local, Selection.kind(LLAMA_LOCAL)
-    assert_equal [OPUS, DEEPSEEK, LLAMA_LOCAL, NEMOTRON],
-                 Selection.order([NEMOTRON, LLAMA_LOCAL, DEEPSEEK, OPUS])
+    assert_equal [DEEPSEEK, ANTHROPIC_OPUS, LLAMA_LOCAL, NEMOTRON],
+                 Selection.order([NEMOTRON, LLAMA_LOCAL, DEEPSEEK, ANTHROPIC_OPUS])
   end
 
   def test_llama_cpp_cli_requires_a_readable_explicit_model_file
@@ -276,11 +277,11 @@ class TestLaneSelection < Minitest::Test
   end
 
   def test_an_explicit_measured_lead_is_preserved_inside_the_subscription_tier
-    assert_equal [GROK, OPUS], Selection.order_or_all([OPUS, GROK], lead: [GROK, OPUS])
+    assert_equal [GROK, ANTHROPIC_OPUS], Selection.order_or_all([ANTHROPIC_OPUS, GROK], lead: [GROK, ANTHROPIC_OPUS])
   end
 
-  def test_subscription_lanes_lead_in_claude_grok_agy_order_ahead_of_api_keys
-    assert_equal [OPUS, GROK, AGY, DEEPSEEK, LOCAL, NEMOTRON], Selection.order([NEMOTRON, DEEPSEEK, AGY, GROK, LOCAL, OPUS])
+  def test_subscription_lanes_lead_in_grok_agy_order_ahead_of_api_keys
+    assert_equal [GROK, AGY, DEEPSEEK, ANTHROPIC_OPUS, LOCAL, NEMOTRON], Selection.order([NEMOTRON, DEEPSEEK, AGY, GROK, LOCAL, ANTHROPIC_OPUS])
   end
 
   def test_browser_websites_have_independent_provider_identity
@@ -290,21 +291,21 @@ class TestLaneSelection < Minitest::Test
   end
 
   def test_the_boot_choice_is_the_first_live_lane_and_names_its_source
-    assert_equal [OPUS, "availability"], Selection.boot_choice(env: {}, saved: nil, alive: ALL)
+    assert_equal [GROK, "availability"], Selection.boot_choice(env: {}, saved: nil, alive: ALL)
     assert_equal [AGY, "MASTER_MODEL"], Selection.boot_choice(env: { "MASTER_MODEL" => AGY }, saved: nil, alive: ALL)
 
-    sonnet = "claude-cli:claude-sonnet-5-5"
+    sonnet = ANTHROPIC_SONNET
     assert_equal [sonnet, "saved preference"], Selection.boot_choice(env: {}, saved: sonnet, alive: ALL)
-    assert_equal [OPUS, "availability"], Selection.boot_choice(env: {}, saved: NEMOTRON, alive: ALL), "a saved free model never leads a live subscription"
+    assert_equal [GROK, "availability"], Selection.boot_choice(env: {}, saved: NEMOTRON, alive: ALL), "a saved free model never leads a live subscription"
 
-    Quota.note(OPUS, CLAUDE_REPLY)
-    assert_equal [GROK, "availability"], Selection.boot_choice(env: {}, saved: sonnet, alive: ALL), "a dead preference is not tried"
+    Quota.note(GROK, RATE_LIMIT_REPLY)
+    assert_equal [AGY, "availability"], Selection.boot_choice(env: {}, saved: sonnet, alive: ALL), "a dead subscription lane is skipped"
   end
 
   def test_announce_lists_only_lanes_available_on_this_machine
     cfg = {
       "models" => {
-        "default" => [{ "id" => OPUS }, { "id" => GROK }],
+        "default" => [{ "id" => ANTHROPIC_OPUS }, { "id" => GROK }],
         "strong" => [],
         "local" => [],
       },
@@ -319,12 +320,12 @@ class TestLaneSelection < Minitest::Test
     selection_line = messages.find { |unit, message| unit == "lane0" && message.start_with?("selection order:") }
     refute_nil selection_line
     assert_includes selection_line.last, GROK
-    refute_includes selection_line.last, OPUS
+    refute_includes selection_line.last, ANTHROPIC_OPUS
   end
 
   def test_the_primary_report_names_the_lane_and_why
     Quota.note(AGY, AGY_REPLY)
-    assert_match(/\Aprimary: #{Regexp.escape(OPUS)} \(first live lane by availability.*; dead: agy/, Selection.primary_report(env: {}, alive: ALL))
+    assert_match(/\Aprimary: #{Regexp.escape(GROK)} \(first live lane by availability.*; dead: agy/, Selection.primary_report(env: {}, alive: ALL))
     assert_match(/pinned \(MASTER_MODEL\), no failover/,
                  Selection.primary_report(env: { "MASTER_MODEL" => GROK }, alive: ALL))
     assert_match(/pinned \(MASTER_MODEL\), failover on/,
@@ -333,11 +334,11 @@ class TestLaneSelection < Minitest::Test
 
   def test_a_free_class_lane_warns_once_while_a_live_lane_exists
     Selection.watch_free_class!
-    Selection.note_provider_outcome(OPUS, :success, alive: ALL)
+    Selection.note_provider_outcome(ANTHROPIC_OPUS, :success, alive: ALL)
     warning = Selection.free_class_warning(NEMOTRON, :file_write, alive: ALL)
-    assert_match(/WARNING free-class lane #{Regexp.escape(NEMOTRON)} used for file_write while claude-cli:claude-opus-5-5 is live/, warning)
+    assert_match(/WARNING free-class lane #{Regexp.escape(NEMOTRON)} used for file_write while #{Regexp.escape(ANTHROPIC_OPUS)} is live/, warning)
     assert_nil Selection.free_class_warning(NEMOTRON, :file_write, alive: ALL), "once per lane"
-    assert_nil Selection.free_class_warning(OPUS, :file_write, alive: ALL), "a subscription lane never warns"
+    assert_nil Selection.free_class_warning(GROK, :file_write, alive: ALL), "a subscription lane never warns"
   ensure
     Selection.watch_free_class!(false)
   end
@@ -350,10 +351,10 @@ class TestLaneSelection < Minitest::Test
     Selection.watch_free_class!
     assert_nil Selection.free_class_warning(NEMOTRON, :file_write, alive: ALL),
                "configuration and a visible CLI binary are not successful-completion evidence"
-    Selection.note_provider_outcome(OPUS, :success, alive: ALL)
+    Selection.note_provider_outcome(ANTHROPIC_OPUS, :success, alive: ALL)
     warning = Selection.free_class_warning(NEMOTRON, :file_write, alive: ALL).to_s
     refute_match(/gemini/, warning, "a hand-dead lane is never named as the lane that takes the work")
-    assert_match(/while claude-cli:claude-opus-5-5 is live/, warning, "the savior must have answered this run and remain usable")
+    assert_match(/while #{Regexp.escape(ANTHROPIC_OPUS)} is live/, warning, "the savior must have answered this run and remain usable")
   ensure
     Selection.watch_free_class!(false)
   end
@@ -364,18 +365,18 @@ class TestLaneSelection < Minitest::Test
     3.times { Selection.note_provider_outcome(NEMOTRON, :failure, alive: ALL) }
 
     refute_predicate Selection, :free_floor_suspended?, "a configured alternate has not proved it can answer"
-    Selection.note_provider_outcome(OPUS, :success, alive: ALL)
+    Selection.note_provider_outcome(ANTHROPIC_OPUS, :success, alive: ALL)
 
     assert_predicate Selection, :free_floor_suspended?, "a real non-free completion can carry the floor"
     chosen = Selection.live_savior(alive: ALL)
-    assert_equal OPUS, chosen, "the suspension names a lane no store refuses"
+    assert_equal ANTHROPIC_OPUS, chosen, "the suspension names a lane no store refuses"
   ensure
     Selection.watch_free_class!(false)
   end
 
   def test_a_lane_probe_on_a_free_lane_is_not_a_warning
     Selection.watch_free_class!
-    Selection.note_provider_outcome(OPUS, :success, alive: ALL)
+    Selection.note_provider_outcome(ANTHROPIC_OPUS, :success, alive: ALL)
 
     assert_nil Selection.free_class_warning(NEMOTRON, :lane_probe, alive: ALL)
     refute_nil Selection.free_class_warning(NEMOTRON, :structural_review, alive: ALL), "the probe used up no warning"
@@ -384,21 +385,21 @@ class TestLaneSelection < Minitest::Test
   end
 
   def test_when_every_lane_is_dead_the_list_comes_back_for_the_typed_offline
-    lanes = [AGY, OPUS]
+    lanes = [AGY, ANTHROPIC_OPUS]
     Quota.note(AGY, AGY_REPLY)
-    Quota.note(OPUS, CLAUDE_REPLY)
+    Quota.note(ANTHROPIC_OPUS, RATE_LIMIT_REPLY)
     assert_empty Selection.order(lanes)
     assert_nil Selection.first_live(lanes)
     # The refusal list is ranked, not the given order: a walk that must try
     # something anyway, or name why it cannot, walks the class ranks and not
     # the file order that let dead :free slugs burn a queue (2026-11-07).
     assert_equal Selection.ranked_order(lanes), Selection.order_or_all(lanes)
-    assert_equal [OPUS, AGY], Selection.order_or_all(lanes), "subscription claude-cli ranks ahead of agy"
+    assert_equal [AGY, ANTHROPIC_OPUS], Selection.order_or_all(lanes), "the configured subscription order ranks AGY ahead of ordinary API lanes"
   end
 
   def test_the_always_online_tail_answers_when_every_remote_lane_is_dead
     models = Selection.catalogue
-    models.map { |m| Quota.lane_of(m) }.uniq.reject { |lane| lane == "ollama" }.each { |lane| Quota.note("#{lane}:x", CLAUDE_REPLY) }
+    models.map { |m| Quota.lane_of(m) }.uniq.reject { |lane| lane == "ollama" }.each { |lane| Quota.note("#{lane}:x", RATE_LIMIT_REPLY) }
 
     live = Selection.order(models)
     refute_empty live
@@ -409,18 +410,18 @@ class TestLaneSelection < Minitest::Test
 
   def test_personas_spread_across_live_providers_and_never_to_free_while_a_lane_lives
     Quota.note(AGY, AGY_REPLY)
-    candidates = [AGY, NEMOTRON, OPUS, SONNET, NANO, GROK, DEEPSEEK, LOCAL]
+    candidates = [AGY, NEMOTRON, ANTHROPIC_OPUS, ANTHROPIC_SONNET, NANO, GROK, DEEPSEEK, LOCAL]
     names = %w[A B C D E F]
 
     lanes = Selection.spread(names, candidates)
 
-    assert_equal [OPUS, GROK, OPUS, GROK, OPUS, GROK], lanes.values
+    assert_equal Array.new(6, GROK), lanes.values
     assert(lanes.values.none? { |m| Selection.kind(m) == :free }, "no free model while a live lane exists")
     refute_includes lanes.values, AGY
   end
 
   def test_one_live_provider_is_reused_and_free_is_the_last_resort
-    assert_equal({ "A" => OPUS, "B" => OPUS }, Selection.spread(%w[A B], [OPUS, SONNET, NEMOTRON]))
+    assert_equal({ "A" => ANTHROPIC_OPUS, "B" => ANTHROPIC_OPUS }, Selection.spread(%w[A B], [ANTHROPIC_OPUS, ANTHROPIC_SONNET, NEMOTRON]))
     assert_equal({ "A" => NEMOTRON, "B" => NEMOTRON }, Selection.spread(%w[A B], [NEMOTRON, NANO]))
     assert_equal({ "A" => nil }, Selection.spread(%w[A], []))
   end
@@ -461,7 +462,7 @@ class TestLaneSelection < Minitest::Test
 
   def test_the_council_reaches_the_selection_and_skips_dead_and_free_lanes
     Quota.note(AGY, AGY_REPLY)
-    agent = CountingAgent.new([AGY, NEMOTRON, OPUS, GROK, NANO, LOCAL])
+    agent = CountingAgent.new([AGY, NEMOTRON, ANTHROPIC_OPUS, GROK, NANO, LOCAL])
     personas = Array.new(4) { |i| Persona.new(name: "P#{i}", role: "r", bias: "b", prompt: "p") }
     delib = Master::Review::Council::Deliberation.new(personas:, agent:, judge_enabled: false)
 
@@ -470,14 +471,14 @@ class TestLaneSelection < Minitest::Test
       refute_empty calls, "ask_persona never reached LaneSelection.spread"
     end
 
-    assert_equal [OPUS, GROK, OPUS, GROK], agent.asked
+    assert_equal Array.new(4, GROK), agent.asked
     assert_equal :review, agent.task
     assert_equal 1, agent.candidate_calls, "the lane list is read once per council"
   end
 
   def test_a_critique_panel_reaches_the_selection
     Quota.note(AGY, AGY_REPLY)
-    agent = CountingAgent.new([AGY, OPUS, NEMOTRON, GROK])
+    agent = CountingAgent.new([AGY, ANTHROPIC_OPUS, NEMOTRON, GROK])
     critique = Master::Review::Council::Critique.new(mode: :general, agent:, files: [__FILE__])
 
     counting(:spread) do |calls|
@@ -493,7 +494,7 @@ class TestLaneSelection < Minitest::Test
     refute_empty agent.asked
     named = agent.asked.compact - [:routed]
     refute_empty named, "no persona was given a lane"
-    assert(named.all? { |m| [OPUS, GROK].include?(m) }, "asked: #{agent.asked.tally}")
+    assert(named.all? { |m| [ANTHROPIC_OPUS, GROK].include?(m) }, "asked: #{agent.asked.tally}")
   end
 
   # A real router with its probes and telemetry replaced by pass-throughs, so the
@@ -519,22 +520,22 @@ class TestLaneSelection < Minitest::Test
 
   def test_the_router_chain_and_preferred_pass_through_the_selection
     Quota.note(AGY, AGY_REPLY)
-    chain = [NEMOTRON, AGY, NANO, OPUS, GROK]
-    router = router_over(chain, [NEMOTRON, AGY, OPUS])
+    chain = [NEMOTRON, AGY, NANO, ANTHROPIC_OPUS, GROK]
+    router = router_over(chain, [NEMOTRON, AGY, ANTHROPIC_OPUS])
 
     counting(:order_or_all) do |calls|
-      assert_equal [OPUS, GROK, NEMOTRON, NANO], router.fallback_chain(task_type: :code_generation)
+      assert_equal [GROK, ANTHROPIC_OPUS, NEMOTRON, NANO], router.fallback_chain(task_type: :code_generation)
       refute_empty calls, "fallback_chain never reached LaneSelection"
     end
     counting(:best_class) do |calls|
-      assert_equal OPUS, router.preferred(task_type: :code_generation)
+      assert_equal GROK, router.preferred(task_type: :code_generation)
       refute_empty calls, "preferred never reached LaneSelection"
     end
   end
 
   def test_a_free_route_keeps_free_candidates_ahead_of_paid_fallbacks
-    router = router_over([NEMOTRON, OPUS], [NEMOTRON, OPUS])
-    assert_equal [NEMOTRON, OPUS], router.fallback_chain(task_type: :exploration)
+    router = router_over([NEMOTRON, ANTHROPIC_OPUS], [NEMOTRON, ANTHROPIC_OPUS])
+    assert_equal [NEMOTRON, ANTHROPIC_OPUS], router.fallback_chain(task_type: :exploration)
     assert_equal NEMOTRON, router.preferred(task_type: :exploration)
   end
 
@@ -574,14 +575,14 @@ class TestLaneSelection < Minitest::Test
   # request was addressed to, in the real provider spellings.
   def test_the_repair_loop_request_reaches_the_selection_and_lands_on_the_first_live_lane
     Quota.note(AGY, AGY_REPLY)
-    router = router_over([NEMOTRON, AGY, OPUS, GROK, NANO], [NEMOTRON, AGY, OPUS])
+    router = router_over([NEMOTRON, AGY, ANTHROPIC_OPUS, GROK, NANO], [NEMOTRON, AGY, ANTHROPIC_OPUS])
     sent = []
     dispatcher = Object.new
     dispatcher.define_singleton_method(:send_with_cache) { |model, *_a, **_k| sent << model; Master::Result.ok("fixed") }
     agent = Master::Review::Agent.allocate
     agent.instance_variable_set(:@model_router, router)
     agent.instance_variable_set(:@dispatcher, dispatcher)
-    agent.instance_variable_set(:@config, Config.new(task_type: "code_generation", model: OPUS))
+    agent.instance_variable_set(:@config, Config.new(task_type: "code_generation", model: ANTHROPIC_OPUS))
     agent.instance_variable_set(:@bus, nil)
     law = Struct.new(:id, :severity).new("TEST_RULE", :warning)
     loop = Master::Fix::RepairLoop.new(law:, agent:, scanner: Object.new, root: Master::ROOT, bus: nil)
@@ -591,7 +592,7 @@ class TestLaneSelection < Minitest::Test
       refute_empty calls, "the repair loop's ask never reached LaneSelection"
     end
 
-    assert_equal [OPUS], sent, "the first live lane of the tier, not the dead agy and not a free nemotron"
+    assert_equal [GROK], sent, "the first live subscription lane of the tier, not the dead agy and not a free nemotron"
   end
 
   def test_a_recent_provider_failure_changes_the_next_router_selection
@@ -599,27 +600,27 @@ class TestLaneSelection < Minitest::Test
       path: File.join(@dir, "provider-health.ndjson"),
       now: -> { Time.at(NOON).utc },
     )
-    health.record(model: OPUS, status: :provider_error, at: Time.at(NOON).utc)
+    health.record(model: GROK, status: :provider_error, at: Time.at(NOON).utc)
 
-    router = router_over([OPUS, GROK], [OPUS, GROK])
+    router = router_over([ANTHROPIC_OPUS, GROK], [ANTHROPIC_OPUS, GROK])
     router.instance_variable_set(:@provider_health, health)
     router.define_singleton_method(:recently_failed?) do |model_id|
       health.recently_failed?(model_id, max_age_s: 900)
     end
 
-    assert_equal [GROK], router.fallback_chain(task_type: :code_generation)
+    assert_equal [ANTHROPIC_OPUS], router.fallback_chain(task_type: :code_generation)
   end
 
-  # A launch script whose PATH leaves out ~/.local/bin, where the installer puts claude, still finds it there.
-  def test_claude_outside_path_is_found_in_the_user_bin
+  # A launch script whose PATH omits ~/.local/bin still finds the configured Grok binary there.
+  def test_grok_outside_path_is_found_in_the_user_bin
     Dir.mktmpdir do |bin|
-      File.write(File.join(bin, "claude"), "#!/bin/sh\n")
-      File.chmod(0o755, File.join(bin, "claude"))
+      File.write(File.join(bin, "grok"), "#!/bin/sh\n")
+      File.chmod(0o755, File.join(bin, "grok"))
       found, missing = with_path("/usr/bin:/bin") do
-        [Master::Io::Exec.cli_binary("claude", user_bins: [bin]), Master::Io::Exec.cli_binary("claude", user_bins: [])]
+        [Master::Io::Exec.cli_binary("grok", user_bins: [bin]), Master::Io::Exec.cli_binary("grok", user_bins: [])]
       end
 
-      assert_equal [File.join(bin, "claude"), nil], [found, missing]
+      assert_equal [File.join(bin, "grok"), nil], [found, missing]
     end
   end
 
@@ -712,7 +713,7 @@ class TestLaneSelection < Minitest::Test
     refute_predicate Selection, :free_floor_suspended?,
                      "three free failures cannot promote a paid lane that has only been configured"
     assert_empty notices
-    Selection.note_provider_outcome(OPUS, :success, alive: ALL)
+    Selection.note_provider_outcome(ANTHROPIC_OPUS, :success, alive: ALL)
 
     assert_predicate Selection, :free_floor_suspended?,
                      "a successful non-free completion is the evidence needed to suspend the floor"
@@ -733,7 +734,7 @@ class TestLaneSelection < Minitest::Test
     Selection.watch_free_class!
 
     # Paid deaths are the wrong room's grief; the free floor ignores them.
-    3.times { Selection.note_provider_outcome(OPUS, :failure, alive: ALL) }
+    3.times { Selection.note_provider_outcome(ANTHROPIC_OPUS, :failure, alive: ALL) }
     refute_predicate Selection, :free_floor_suspended?,
                      "a dead paid lane is not a dead floor"
 
@@ -757,12 +758,12 @@ class TestLaneSelection < Minitest::Test
     Selection.watch_free_class!
     # Suspension is justified only after a non-free lane has actually answered
     # and remains usable. Model that external health evidence deterministically.
-    Selection.stub(:live_savior, ->(**) { OPUS }) do
-      Master::Io::LaneState.stub(:usable?, ->(id, **_kwargs) { id == OPUS }) do
-        Selection.note_provider_outcome(OPUS, :success, alive: ALL)
+    Selection.stub(:live_savior, ->(**) { ANTHROPIC_OPUS }) do
+      Master::Io::LaneState.stub(:usable?, ->(id, **_kwargs) { id == ANTHROPIC_OPUS }) do
+        Selection.note_provider_outcome(ANTHROPIC_OPUS, :success, alive: ALL)
         3.times { Selection.note_provider_outcome(NANO, :timeout, alive: ALL) }
         assert_predicate Selection, :free_floor_suspended?
-        assert_nil Selection.suspend_free_floor!(OPUS),
+        assert_nil Selection.suspend_free_floor!(ANTHROPIC_OPUS),
                    "the guard refuses a second suspension; the first verdict holds"
 
         # A new /fix turn re-arms the watch and clears the suspension with the count.
@@ -784,8 +785,8 @@ class TestLaneSelection < Minitest::Test
     assert_equal [GROK, DEEPSEEK, LOCAL, NEMOTRON], Selection.order(mixed), "free stays last while the floor stands"
 
     Selection.watch_free_class!
-    Selection.note_provider_outcome(OPUS, :success, alive: ALL)
-    Selection.suspend_free_floor!(OPUS)
+    Selection.note_provider_outcome(ANTHROPIC_OPUS, :success, alive: ALL)
+    Selection.suspend_free_floor!(ANTHROPIC_OPUS)
     assert_equal [GROK, DEEPSEEK, LOCAL, NEMOTRON], Selection.order(mixed),
                  "free and local stay in the list, never-modelless keeps them, but every remote goes first"
     assert_equal [LOCAL, NEMOTRON], Selection.order([NEMOTRON, LOCAL]),
@@ -807,8 +808,8 @@ class TestLaneSelection < Minitest::Test
   def test_a_suspended_floor_is_ranked_last_even_in_the_all_dead_fallback
     mixed = [NEMOTRON, DEEPSEEK, GROK]
     Selection.watch_free_class!
-    Selection.note_provider_outcome(OPUS, :success, alive: ALL)
-    Selection.suspend_free_floor!(OPUS)
+    Selection.note_provider_outcome(ANTHROPIC_OPUS, :success, alive: ALL)
+    Selection.suspend_free_floor!(ANTHROPIC_OPUS)
     Selection.stub(:order, ->(_models, **_kw) { [] }) do
       assert_equal [GROK, DEEPSEEK, NEMOTRON], Selection.order_or_all(mixed),
                    "the suspended free slug cannot jump a dead remote just because it was listed first"
