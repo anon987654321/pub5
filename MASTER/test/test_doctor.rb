@@ -19,6 +19,72 @@ class TestDoctor < Minitest::Test
     Open3.capture2e(env, RbConfig.ruby, DOCTOR, chdir: ROOT)
   end
 
+  def consensus_jury_check_host
+    definition = File.read(DOCTOR)[/^def check_consensus_jury.*?^end/m]
+    refute_nil definition, "check_consensus_jury moved; this test exercises its verdict"
+    host = Object.new
+    host.singleton_class.const_set(
+      :Check, Struct.new(:name, :state, :detail, keyword_init: true),
+    )
+    host.singleton_class.const_set(:ROOT, ROOT)
+    host.singleton_class.class_eval(definition)
+    host
+  end
+
+  def consensus_jury_models
+    %w[zai-cli:auto ovh:gpt-oss-120b kilo:nvidia/nemotron-3.5-lightning:free]
+  end
+
+  def test_consensus_jury_is_seatable_after_any_author_family_is_excluded
+    router = Object.new
+    router.define_singleton_method(:unreachable_reason) { |_model, wait:| nil }
+    host = consensus_jury_check_host
+
+    check = Master::Review::Consensus.stub(:default_models, consensus_jury_models) do
+      Master::Review::Consensus.stub(:default_quorum, 2) do
+        host.check_consensus_jury(router:)
+      end
+    end
+
+    assert_equal :pass, check.state
+    assert_includes check.detail, "survive every author-family exclusion"
+  end
+
+  def test_consensus_jury_fails_when_an_unavailable_lane_breaks_author_exclusion
+    router = Object.new
+    router.define_singleton_method(:unreachable_reason) do |model, wait:|
+      model == "ovh:gpt-oss-120b" ? "set OPENROUTER_API_KEY" : nil
+    end
+    host = consensus_jury_check_host
+
+    check = Master::Review::Consensus.stub(:default_models, consensus_jury_models) do
+      Master::Review::Consensus.stub(:default_quorum, 2) do
+        host.check_consensus_jury(router:)
+      end
+    end
+
+    assert_equal :fail, check.state
+    assert_includes check.detail, "zhipu author leaves 1/2 voters"
+    assert_includes check.detail, "set OPENROUTER_API_KEY"
+  end
+
+  def test_consensus_jury_reports_a_timed_out_probe_as_unmeasured
+    router = Object.new
+    router.define_singleton_method(:unreachable_reason) do |model, wait:|
+      model == "zai-cli:auto" ? "checking whether zai-chat is available" : nil
+    end
+    host = consensus_jury_check_host
+
+    check = Master::Review::Consensus.stub(:default_models, consensus_jury_models) do
+      Master::Review::Consensus.stub(:default_quorum, 2) do
+        host.check_consensus_jury(router:)
+      end
+    end
+
+    assert_equal :unmeasured, check.state
+    assert_includes check.detail, "provider probe did not finish"
+  end
+
   def test_runtime_doctor_help_is_boot_free_and_names_the_host_doctor
     out, status = Open3.capture2e(RbConfig.ruby, DOCTOR, "--help", chdir: ROOT)
 
@@ -33,7 +99,7 @@ class TestDoctor < Minitest::Test
     out, = run_doctor
     assert_match(/^doctor0 at master0: MASTER doctor, \d+ checks$/, out)
     %w[content-dedup api-keys tts-socket voice-utterance web-token key-rotator
-       model-quota cache-efficiency provider-catalog].each do |name|
+       model-quota cache-efficiency provider-catalog consensus-jury].each do |name|
       assert_match(/^doctor\d+ at doctor0: #{Regexp.escape(name)}, (ok|fail|skip)$/, out,
                    "doctor did not report #{name}")
     end
