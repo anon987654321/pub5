@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "base64"
 require "json"
 require "net/http"
 require "timeout"
@@ -67,7 +68,7 @@ module Master
         # openai_compatible; the key rides along only when one is set.
         def hosted_lane?(model_id) = !@model_router&.hosted_endpoint_for(model_id).nil?
 
-        def send_hosted(selected_model, messages, sys:, temperature: nil, sensitivity: :normal)
+        def send_hosted(selected_model, messages, sys:, temperature: nil, image: nil, sensitivity: :normal)
           endpoint = @model_router.hosted_endpoint_for(selected_model)
           name, model = selected_model.split(":", 2)
           # A request tagged :sensitive rides only lanes whose declared
@@ -94,7 +95,7 @@ module Master
           messages = fit_to_window(selected_model, messages)
           request = lambda do
             openai_chat(endpoint[:base], model, messages, sys:, temperature:, headers:,
-                        lane: name, fold_system: endpoint[:fold_system] == true)
+                        lane: name, fold_system: endpoint[:fold_system] == true, image:)
           end
           return request.call unless endpoint[:max_concurrency]
 
@@ -119,9 +120,10 @@ module Master
           [{ role: "user", content: head[:content].to_s }] + rows.drop(1)
         end
 
-        def openai_chat(base, model, messages, sys:, temperature:, lane:, headers: {}, fold_system: false)
+        def openai_chat(base, model, messages, sys:, temperature:, lane:, headers: {}, fold_system: false, image: nil)
           rows = ollama_messages(messages, sys)
           rows = fold_long_system(rows) if fold_system
+          rows = with_hosted_image_rows(rows, image) if image
           body = { model:, messages: rows, stream: true }
           body[:temperature] = temperature if temperature
           request = Net::HTTP::Post.new(URI("#{base.chomp('/')}/chat/completions").request_uri,
@@ -133,6 +135,38 @@ module Master
           Result.ok(reply)
         rescue Errno::ECONNREFUSED, Errno::EHOSTUNREACH, SocketError => e
           Result.err("#{lane} unreachable at #{base}: #{e.message}", category: :provider_error)
+        end
+
+        # A hosted lane carries a vision ask the way the OpenAI-compatible
+        # shape does: one trailing user row whose content is a typed part
+        # array. answering_model swaps in a vision-capable lane before this
+        # point, so a lane that cannot read images never receives one. The
+        # primary image rides first and its :extra list follows it, matching
+        # the attachment order RubyLLMSender and the CLI lane send.
+        def with_hosted_image_rows(rows, image)
+          images = [image, *Array(image[:extra]).reject(&:nil?)]
+          parts = images.each_with_index.flat_map do |one, index|
+            [{ type: "text", text: index.zero? ? IMAGE_LEAD : IMAGE_EXTRA_LEAD },
+             { type: "image_url", image_url: { url: hosted_image_data_uri(one) } }]
+          end
+          row = { role: "user", content: parts }
+          last = rows.last
+          last.is_a?(Hash) && last[:role] == "user" ? rows[...-1] + [row] : rows + [row]
+        end
+
+        IMAGE_LEAD = "The image attached to this request belongs to the question above.".freeze
+        IMAGE_EXTRA_LEAD = "An additional image attached to this request.".freeze
+
+        def hosted_image_data_uri(image)
+          mime = image[:mime].to_s.empty? ? "image/jpeg" : image[:mime]
+          data = if !image[:path].to_s.empty? && File.file?(image[:path])
+                   Base64.strict_encode64(File.binread(image[:path]))
+                 else
+                   image[:data].to_s
+                 end
+          raise ArgumentError, "hosted vision ask has neither an image path nor data" if data.empty?
+
+          "data:#{mime};base64,#{data}"
         end
 
         # One lane call with its deadlines split: a short handshake budget

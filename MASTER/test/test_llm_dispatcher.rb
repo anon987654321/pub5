@@ -1169,6 +1169,64 @@ class TestLLMDispatcher < Minitest::Test
   ensure
     Net::HTTP.define_singleton_method(:start, original) if original
   end
+
+  # A hosted lane carries a vision ask as one trailing typed-part user row:
+  # the primary image first, then its :extra list, matching the attachment
+  # order RubyLLMSender and the CLI lane send.
+  def test_send_hosted_threads_the_image_into_openai_chat
+    dispatcher, = build_dispatcher
+    router = Object.new
+    router.define_singleton_method(:hosted_endpoint_for) { |_model|
+      { base: "https://provider.example/v1", key: nil, posture: :unknown }
+    }
+    dispatcher.instance_variable_set(:@model_router, router)
+    dispatcher.define_singleton_method(:refuses_sensitive?) { |_endpoint, _sensitivity| false }
+    dispatcher.define_singleton_method(:fit_to_window) { |_model, messages| messages }
+    seen = {}
+    dispatcher.define_singleton_method(:openai_chat) do |_base, _model, _messages, **kwargs|
+      seen[:image] = kwargs[:image]
+      Master::Result.ok("ok")
+    end
+
+    image = { path: "/tmp/never-read.png", mime: "image/png", data: "ZmFrZQ==" }
+    dispatcher.send(:send_hosted, "test-provider:model-a", [{ role: "user", content: "hi" }],
+                    sys: nil, image:)
+
+    assert_equal image, seen.fetch(:image)
+  end
+
+  def test_hosted_image_rows_replace_the_trailing_user_row_with_typed_parts
+    dispatcher, = build_dispatcher
+    Dir.mktmpdir do |dir|
+      png = File.join(dir, "shot.png")
+      File.binwrite(png, "PNGBYTES")
+      rows = dispatcher.send(:with_hosted_image_rows,
+                             [{ role: "system", content: "s" }, { role: "user", content: "look" }],
+                             { path: png, mime: "image/png" })
+
+      assert_equal 2, rows.size
+      row = rows.last
+      assert_equal "user", row.fetch(:role)
+      parts = row.fetch(:content)
+      assert_equal 2, parts.size
+      assert_equal "image_url", parts.last.fetch(:type)
+      url = parts.last.fetch(:image_url).fetch(:url)
+      assert_equal "data:image/png;base64,#{[ "PNGBYTES" ].pack("m0")}", url
+      assert_equal({ type: "text" }, { type: parts.first.fetch(:type) })
+    end
+  end
+
+  def test_hosted_image_rows_append_when_history_ends_non_user
+    dispatcher, = build_dispatcher
+    rows = dispatcher.send(:with_hosted_image_rows,
+                           [{ role: "user", content: "one" }, { role: "assistant", content: "two" }],
+                           { data: "ZmFrZQ==", mime: "image/jpeg" })
+
+    assert_equal 3, rows.size
+    parts = rows.last.fetch(:content)
+    url = parts.last.fetch(:image_url).fetch(:url)
+    assert_equal "data:image/jpeg;base64,ZmFrZQ==", url
+  end
 end
 
 class TestCliLaneComplaint < Minitest::Test
