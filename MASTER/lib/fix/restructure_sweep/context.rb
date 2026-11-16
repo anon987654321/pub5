@@ -16,6 +16,8 @@ module Master
         COMMAND_EXTENSIONS = %w[.rb .rake .sh .zsh].freeze
         COMMAND_ROOTS = %w[bin tools].freeze
         CONFIG_EXTENSIONS = %w[.rb .rake .yml .yaml .json].freeze
+        REFERENCE_EXTENSIONS = (SOURCE_EXT + CONFIG_EXTENSIONS + %w[.lock .gemspec .toml .xml]).uniq.freeze
+        REFERENCE_BASENAMES = %w[Gemfile Gemfile.lock Rakefile package.json package-lock.json pnpm-lock.yaml yarn.lock].freeze
         STALE_PATHS = %w[RAILS/shared RAILS/mobile RAILS/visual_contract RAILS/contracts RAILS/brgen/engines].freeze
 
         # [path, law_id, message, related_paths] for every actionable structural finding.
@@ -214,6 +216,16 @@ module Master
           out.lines.map { |line| File.join(root.to_s, line.strip) }.select { |path| File.file?(path) }
         end
 
+        # Reverse-reference audits include dependency manifests and lockfiles,
+        # not just executable source. A component can stay live through a YAML
+        # registration, package manifest, gemspec or deploy configuration.
+        def self.reference_files(root)
+          repository_files(root).select do |path|
+            REFERENCE_EXTENSIONS.include?(File.extname(path).downcase) ||
+              REFERENCE_BASENAMES.include?(File.basename(path))
+          end
+        end
+
         def self.production_files(root)
           repository_files(root).select do |path|
             SOURCE_EXT.include?(File.extname(path)) &&
@@ -393,7 +405,7 @@ module Master
 
         # { path => [[line_number, text]] } for files that name the stem or a constant.
         def production_references
-          @production_references ||= Context.production_files(@root)
+          @production_references ||= Context.reference_files(@root)
             .reject { |path| path == @path || test_path?(path) }
             .to_h do |path|
               [path, File.foreach(path, encoding: "UTF-8").with_index(1).select { |text, _n| text.match?(needle) }.map(&:reverse)]
@@ -403,7 +415,7 @@ module Master
         end
 
         def references
-          @references ||= Context.tracked(@tree).reject { |path| path == @path }.to_h do |path|
+          @references ||= Context.reference_files(@root).reject { |path| path == @path }.to_h do |path|
             [path, File.foreach(path, encoding: "UTF-8").with_index(1).select { |text, _n| text.match?(needle) }.map(&:reverse)]
           rescue ArgumentError
             [path, []]
