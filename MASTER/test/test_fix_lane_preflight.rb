@@ -145,6 +145,23 @@ class TestFixLanePreflight < Minitest::Test
     Master::Io::ModelSkipCache.clear!
   end
 
+  def test_a_run_whose_every_operation_is_free_class_is_refused_before_it_starts
+    result, = check({ tree: GEMMA, structural_review: GEMMA, file_write: GEMMA, code_generation: GEMMA },
+                    live: [GEMMA])
+
+    assert_kind_of Master::Result::Err, result
+    assert_match(/every operation would run on a free-class lane/, result.message)
+    assert_includes result.message, "MASTER_FIX_FREE_OK=1"
+    assert_equal :human_decision, result.category
+  end
+
+  def test_a_free_only_fleet_the_operator_accepted_is_not_refused
+    result, = check({ tree: GEMMA, structural_review: GEMMA, file_write: GEMMA, code_generation: GEMMA },
+                    live: [GEMMA], env: { "MASTER_FIX_FREE_OK" => "1" })
+
+    assert_nil result
+  end
+
   def test_a_free_lane_is_accepted_when_nothing_better_is_live
     result, = check({ tree: GEMMA, file_write: GEMMA }, live: [GEMMA])
 

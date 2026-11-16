@@ -36,22 +36,33 @@ module Master
 
         rows = routes(agent)
         explain_skipped
-        conflict = nil
+        return probe_refusal(agent) if env["MASTER_FIX_FREE_OK"] == "1"
+
+        conflict = free_conflict(agent, rows)
+        if conflict
+          mark_probed!
+          return refuse(*conflict)
+        end
+        # Every operation would run on a free-class lane: no subscription,
+        # direct-API or gateway lane answered for any of them. That is the
+        # shape that froze a whole-tree run - thousands of files at free-lane
+        # pace - so it is refused before the run spends its budget.
+        return probe_refusal(agent) unless rows.all? { |row| free_class?(row.model) }
+
+        mark_probed!
+        refuse_free_only(rows)
+      end
+
+      # The first free-class operation a better lane could replace, with that
+      # lane; nil when every free-class row has no better alternative.
+      def free_conflict(agent, rows)
         rows.each do |row|
           next unless free_class?(row.model)
 
           better = better_model(agent, row.operation)
-          next unless better
-
-          conflict = [row, better]
-          break
+          return [row, better] if better
         end
-        if conflict && env["MASTER_FIX_FREE_OK"] != "1"
-          mark_probed!
-          return refuse(*conflict)
-        end
-
-        probe_refusal(agent)
+        nil
       end
 
       def routes(agent)
@@ -77,6 +88,22 @@ module Master
       def refuse(weak, better)
         message = "fix: #{weak.operation} would run on #{weak.model} (#{weak.kind}) while #{better} is live; " \
                   "routing disagrees with provider availability. Inspect /model list; no files were changed."
+        say(message)
+        Master::Result.err(message, category: :human_decision)
+      end
+
+      # A run whose every operation lands on a free-class lane has no paid,
+      # subscription or gateway lane to answer: it would crawl the whole tree at
+      # free pace, where a whole-tree /fix read about two files a minute and the
+      # 2,630-file tree was a day long. Refused before the run spends its budget,
+      # so a keyless fleet is a refusal the operator sees, never a silent stall.
+      # MASTER_FIX_FREE_OK=1 is the deliberate opt-in to free pace.
+      def refuse_free_only(rows)
+        lanes = rows.map(&:model).uniq.join(", ")
+        message = "fix: every operation would run on a free-class lane (#{lanes}); no paid, subscription or " \
+                  "gateway lane is live. A free-only fleet crawls the whole tree, so it is refused before it " \
+                  "starts. Set MASTER_MODEL to a live paid lane, or MASTER_FIX_FREE_OK=1 to accept free pace; " \
+                  "no files were changed."
         say(message)
         Master::Result.err(message, category: :human_decision)
       end

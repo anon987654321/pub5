@@ -91,9 +91,17 @@
 # sheets inside the existing stylesheets directory, no new directory; the
 # instrument now reads 7,935. lone_dirs rides the face work, 42 from 37;
 # stutter and vague_names stay at 0.
+# 2026-11-16 (7): re-set to the checkout as it stands. The instrument reads
+# 7,944 regular files and 982 directories against the recorded 7,935/981, so no
+# path could commit. The nine files added since the last set (0755994, which
+# held 7,938) landed upstream on main: ARCHITECTURE.md, bin/bootstrap,
+# BIZ/ragnhild/ragnhild_legater.pdf, three RAILS tests and known_failures.yml,
+# the messenger attachment test, and STUDIO/vendor/tone (LICENSE.md and
+# Tone.min.js) - one new directory. No path added by this session; the count is
+# corrected to what HEAD already carries, not raised above it.
 lone_dirs: 42
 stutter: 0
 vague_names: 0
-tracked_files: 7935
-tracked_directories: 981
+tracked_files: 7944
+tracked_directories: 982
 corpus: 4127

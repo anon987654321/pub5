@@ -13,10 +13,8 @@ require_relative "../review/llm_dispatcher/pass_clock"
 
 module Master
   module Fix
-    # What one /fix run has spent: model dollars and tokens (read from the
-    # costs ledger the session writes), wall time per dmesg unit, and an ETA
-    # from the passes already finished. It speaks at every pass boundary, prints
-    # a RunPulse line every HEARTBEAT_SECONDS so the run is never quiet, and it stops the run, loudly, past either limit.
+    # What one /fix run has spent: dollars, tokens, wall time per dmesg unit and an ETA. It
+    # prints a RunPulse line every HEARTBEAT_SECONDS and stops the run past either limit.
     # ResourceBudget measures the host; this measures the run.
     class RunBudget
       DEFAULT_MAX_COST = 50.0
@@ -30,8 +28,8 @@ module Master
       DEFAULT_LAW_SHARE = 0.10
       DEFAULT_RUN_TOKENS = 10_000_000
       COSTS = File.join(".master", "costs.jsonl")
-      # A stalled run is asked to stop and prove what it did; it is killed only if it has not
-      # wound down after this many seconds (MASTER_FIX_STOP_GRACE_S; 0 kills at once).
+      # A stalled run is asked to stop and prove what it did; killed only if it has not wound
+      # down after this many seconds (MASTER_FIX_STOP_GRACE_S; 0 kills at once).
       STOP_GRACE_SECONDS = 300
       # How long an abort waits on the committer to roll back the open pass before its TERM.
       ROLLBACK_WAIT_SECONDS = 30
@@ -247,9 +245,8 @@ module Master
         @last_beat = @started
         @last_machine_beat = @started
         @last_guard_check = @started
-        # Check the disk before the first model call or stream event can fill
-        # the journal. Resource pressure cannot wait for the 30-second cadence
-        # when the filesystem is already below its hard floor.
+        # Check the disk before the first model call or stream event can fill the journal:
+        # resource pressure cannot wait for the 30-second cadence below the hard floor.
         @last_resource_check = @started - RESOURCE_CHECK_SECONDS
         @last_unit = nil
         @last_text = nil
@@ -275,9 +272,8 @@ module Master
         watchdog = @watchdog
         @watchdog = nil
         self.class.unwatch!(self)
-        # A stall or disk abort can be discovered by the watchdog itself.
-        # Killing Thread.current here would interrupt finish!/killer before the
-        # final report or hard safety stop had a chance to run.
+        # A stall or disk abort can be discovered by the watchdog itself. Killing
+        # Thread.current here would interrupt finish!/killer before its final report.
         watchdog.kill if watchdog&.alive? && watchdog != Thread.current
       end
 
@@ -339,9 +335,8 @@ module Master
         end
       end
 
-      # A law may spend its share of the run's dollars or of its token budget:
-      # subscription lanes bill $0.00 and still burn tokens (342191 tokens at
-      # $0.00 in one measured run), so dollars alone would never trip.
+      # A law may spend its share of the run's dollars or token budget: subscription
+      # lanes bill $0.00 and still burn tokens, so dollars alone would never trip.
       def law_limit_exceeded?(law_id)
         usd, tokens = @lock.synchronize { @law_spend[law_id.to_s] }
         share = law_share(law_id)
@@ -397,9 +392,8 @@ module Master
         lines.each { |text| @say.call(text) }
       end
 
-      # The watchdog calls this; a test drives it without a thread. One line
-      # per HEARTBEAT_SECONDS whatever else was said, so a run is never quiet
-      # for longer than that.
+      # The watchdog calls this; a test drives it without a thread. One line per
+      # HEARTBEAT_SECONDS, so a run is never quiet for longer than that.
       def beat
         now = @clock.call
         return if now - @last_beat < @beat_every
@@ -424,9 +418,8 @@ module Master
         return unless stalled[:abort]
 
         reason = stalled[:line].sub(/\Afix0: STALLED /, "stalled, ")
-        # A non-advisory no-progress stall is a safety stop, not a preference. The run is asked to
-        # stop first, so its proof and scorecard still say what it did; a run that does not wind
-        # down within the grace is killed, so an unattended deadlock never waits another hour.
+        # A non-advisory no-progress stall is a safety stop: the run stops first so its proof
+        # still says what it did, and a run that will not wind down is killed after the grace.
         stop_gracefully!(reason)
       end
 
@@ -464,10 +457,8 @@ module Master
         @say.call("fix0: not landed so far, #{reasons}") if reasons
       end
 
-      # The watchdog runs in the mission-owning process. Mission#heartbeat!
-      # checks lease_owner before extending the durable lease, so this cannot
-      # keep another worker's lease alive. Long model calls need this: commits
-      # alone are too sparse to renew a five-minute lease safely.
+      # Mission#heartbeat! checks lease_owner before extending the durable lease, so this
+      # cannot keep another worker's lease alive; long model calls need the renewal.
       def renew_owned_mission_lease
         return unless File.file?(Mission.record_path(root: @root, namespace: @mission_namespace))
 
@@ -477,8 +468,7 @@ module Master
         @say.call("fix0: mission heartbeat warning #{error.class}: #{error.message.to_s[0, 120]}")
       end
 
-      # Safety monitor: measure disk pressure every 30 seconds and stop before
-      # exhaustion; compare protected paths every five minutes and stop on drift.
+      # Safety monitor: disk every 30 seconds, protected paths every five minutes.
       # Only stall aborts honor MASTER_FIX_ABORT_ON_STALL=0.
       def guard_check(now)
         if now - (@last_resource_check || @started || now) >= RESOURCE_CHECK_SECONDS
@@ -491,11 +481,23 @@ module Master
           end
         end
 
+        # The wall budget was checked only between passes, so a pass that ran
+        # long could overrun the run before the next boundary looked. Checked
+        # here on the watchdog's cadence, the run winds down inside its pass.
+        wall_overrun!(now)
+
         return unless @protected_baseline && now - (@last_guard_check || 0) >= GUARD_CHECK_SECONDS
 
         @last_guard_check = now
         fresh = new_protected_changes
         abort_run!("protected path changed: #{fresh.first(3).join(", ")}", force: true) unless fresh.empty?
+      end
+
+      def wall_overrun!(now)
+        return unless @started && !stopping && now - @started > @max_minutes * 60
+
+        stop_gracefully!("budget exhausted: #{(elapsed_seconds / 60).round} minutes over the " \
+                         "#{@max_minutes.round}-minute limit (MASTER_FIX_MAX_MINUTES); stopping inside the pass")
       end
 
       def new_protected_changes
@@ -532,9 +534,8 @@ module Master
         @killer.call(reason)
       end
 
-      # The pass in flight goes back first: the MASTER abort of 2026-10-23 left a model's half-applied
-      # edit to bin/loops in the tree. A file another writer changed since stays (Committer#roll_back_own).
-      # A commit holding the committer's lock past the wait is left to the next run's recovery.
+      # The pass in flight goes back first (a MASTER abort once left a model's half-applied
+      # edit in the tree). A file another writer changed since stays; a held lock waits.
       def roll_back_open_pass
         owner = self.class.pass_owner
         return unless owner
@@ -557,10 +558,9 @@ module Master
         Master::Ground::Swallow.log(e, context: "RunBudget.discard_unproven_writes")
       end
 
-      # Spelled from @root, as the autofix recorded its writes: --show-toplevel answers with symlinks
-      # resolved (/private/var for /var), and no path would match. Scratch roots
-      # used by browserless /fix tests are not Git checkouts; treat their absent
-      # index as an empty rollback set without leaking Git's usage text to stderr.
+      # Spelled from @root, as the autofix recorded its writes (--show-toplevel resolves
+      # symlinks). Scratch roots in browserless /fix tests are not Git checkouts; their
+      # absent index is an empty rollback set, without leaking Git's usage text.
       def uncommitted_paths
         up, root_status = Master::Io::Exec.capture2e(
           "git", "-C", @root, "rev-parse", "--show-cdup", timeout: 15

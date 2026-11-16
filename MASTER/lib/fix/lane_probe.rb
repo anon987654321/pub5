@@ -25,7 +25,11 @@ module Master
         return override if override&.positive?
 
         lane = model.to_s.empty? ? nil : Master::Io::LaneState.lane_of(model)
-        Integer(config.dig("lanes", lane, "probe_s") || config.fetch("default").fetch("probe_s"))
+        probe = Integer(config.dig("lanes", lane, "probe_s") || config.fetch("default").fetch("probe_s"))
+        # A probe is a readiness check on a tiny prompt; it must never outwait the
+        # per-repair budget the lane gets, or a misconfigured probe_s would stall
+        # the run longer than the repair it is qualifying.
+        [probe, FixTime.file_s(model:)].min
       end
 
       # Read on every call for the same reason FixTime does: a test that writes

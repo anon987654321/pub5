@@ -32,6 +32,17 @@ class TestLaneProbeBudget < Minitest::Test
     assert_equal 7, Probe.budget_s(model: GATEWAY)
   end
 
+  # A probe must never outwait the repair it qualifies: a lane configured with a
+  # probe_s above its file_s would stall the run on the readiness check alone.
+  def test_a_probe_never_outwaits_the_lanes_file_budget
+    over = Marshal.load(Marshal.dump(Probe.config))
+    over["lanes"]["gateway"]["probe_s"] = 100_000
+
+    Probe.stub(:config, over) do
+      assert_equal Master::Fix::FixTime.file_s(model: GATEWAY), Probe.budget_s(model: GATEWAY)
+    end
+  end
+
   def test_a_run_probes_each_lane_under_its_own_budget
     seen = {}
     ask = lambda do |model|

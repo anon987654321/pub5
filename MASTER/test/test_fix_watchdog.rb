@@ -5,10 +5,7 @@ require "tmpdir"
 require_relative "../lib/fix/run_budget"
 require_relative "../lib/operator/stall_watch"
 
-# The watchdog and heartbeat of /fix. The 2026-10-12 run failed a file every few
-# minutes for an hour and the old watchdog, which only watched for zero files
-# attempted, never spoke; the operator's filter also missed the `fix0 phase`
-# lines. Driven with a fake clock and a fake killer: nothing is signalled.
+# The watchdog and heartbeat of /fix, driven with a fake clock and a fake killer.
 class TestFixWatchdog < Minitest::Test
   Pulse = Master::Fix::RunPulse
   Budget = Master::Fix::RunBudget
@@ -32,7 +29,7 @@ class TestFixWatchdog < Minitest::Test
     Pulse.new(max_passes: 8, clock: -> { @now }, load: -> { 0.0 }).tap { |p| p.observe("fix_loop:pass_start", pass: 1, file_count: 100) }
   end
 
-  # A grace of 0 kills on a stall at once, as these tests assert; the graceful stop has its own test.
+  # A grace of 0 kills on a stall at once; the graceful stop has its own test.
   def budget(resource_budget: nil, grace: "0")
     resource_budget ||= fake_resource_budget(free_gb: 100.0)
     env = { "MASTER_FIX_STOP_GRACE_S" => grace }
@@ -70,8 +67,7 @@ class TestFixWatchdog < Minitest::Test
     probe
   end
 
-  # A run that keeps attempting and never fixes: files keep finishing, so the pass-stall rule
-  # (nothing finished in five minutes) stays quiet, and the no-yield rule ends it at twenty.
+  # Files keep finishing, so the pass-stall rule stays quiet; the no-yield rule ends it at twenty.
   def test_no_fix_after_twenty_minutes_of_attempts_is_a_stall_that_aborts
     p = pulse
     20.times do |i|
@@ -120,8 +116,7 @@ class TestFixWatchdog < Minitest::Test
     assert stalled[:abort], "direct CLI runs must not rely on the outer wrapper watchdog"
   end
 
-  # A four-tree /fix shares one pulse. OPENBSD's pass crashed mid-call on 2026-10-26, and its
-  # pass, phase and unanswered call kept reading as a stall until the watchdog stopped STUDIO.
+  # A four-tree /fix shares one pulse; a crashed pass must not read as a stall for another tree.
   def test_a_tree_that_ended_leaves_no_pass_or_call_to_stall_the_next
     p = pulse
     p.observe("fix_loop:phase", stage: :stream)
@@ -143,8 +138,7 @@ class TestFixWatchdog < Minitest::Test
     assert_nil p.stall(@now), "one clean file a minute is a slow semantic scan, not a hang"
   end
 
-  # The pass's budgeted semantic reads follow its first repairs. Opus took two minutes a file,
-  # and the third MASTER run of 2026-10-27 was cut as "0 files finished in 5m" mid-read.
+  # The pass's budgeted semantic reads follow its first repairs, so a slow read is not a stall.
   def test_a_scan_still_finishing_files_after_the_first_repairs_is_not_a_stall
     p = pulse
     p.observe("fix_loop:phase", stage: :stream)
@@ -156,8 +150,7 @@ class TestFixWatchdog < Minitest::Test
     assert_nil p.stall(@now)
   end
 
-  # Opus needs minutes a call, so a run gives each file 900 s; a five-minute finish window
-  # would cut a repair still inside its own budget.
+  # A run gives each file 900 s; the finish window must not cut a repair still in budget.
   def test_the_finish_window_is_never_shorter_than_a_files_budget
     ENV["MASTER_FIX_FILE_BUDGET_S"] = "900"
     p = pulse
@@ -181,10 +174,7 @@ class TestFixWatchdog < Minitest::Test
     assert_match(/0 files attempted/, p.stall(@now)[:line])
   end
 
-  # The rendered-visual stage is a browser sweep of hundreds of surfaces that
-  # finishes no source file. The 2026-11-12 RAILS run was cut at surface 241 of
-  # 296 as "pass 1 phase evidence for 24m, 0 files finished"; a sweep that keeps
-  # landing surfaces is working, not hung.
+  # The rendered-visual stage is a browser sweep that finishes no source file; landing surfaces means working.
   def test_a_visual_sweep_that_keeps_capturing_surfaces_is_not_a_stall
     p = pulse
     p.observe("fix_loop:phase", stage: :evidence)
@@ -383,6 +373,16 @@ class TestFixWatchdog < Minitest::Test
     assert(@said.any? { |line| line.include?("self-check") })
   end
 
+  def test_the_wall_budget_is_enforced_inside_a_pass
+    run = budget(grace: "600")
+    @now = (Budget::DEFAULT_MAX_MINUTES * 60) + 60
+    run.send(:guard_check, @now)
+    assert_match(/budget exhausted: \d+ minutes over the \d+-minute limit.*stopping inside the pass/, run.stopping)
+    assert(@said.any? { |line| line.start_with?("fix0: STOPPING") })
+    @now = (Budget::DEFAULT_MAX_MINUTES * 60) - 60
+    assert_nil budget.tap { |b| b.send(:guard_check, @now) }.stopping
+  end
+
   def test_hard_safety_abort_supersedes_a_report_only_stall
     ENV["MASTER_FIX_ABORT_ON_STALL"] = "0"
     run = budget
@@ -454,8 +454,7 @@ class TestFixWatchdog < Minitest::Test
     refute File.exist?(other)
   end
 
-  # Another writer's edit to STUDIO/postpro stopped a RAILS run fifty minutes in. A run's
-  # guard watches the tree it can write; a protected change elsewhere is someone else's.
+  # Another writer's edit to STUDIO/postpro stopped a RAILS run fifty minutes in; the guard watches only its tree.
   def test_a_protected_change_outside_the_runs_tree_does_not_stop_it
     git("init", "-q")
     tokens = File.join(@root, "MASTER", "data", "tokens.yml")

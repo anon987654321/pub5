@@ -21,6 +21,18 @@ class TestLanePolicyFromYaml < Minitest::Test
     assert_equal %w[grok-cli codex-cli agy], Selection.subscription_lanes
   end
 
+  # Operator, 2026-11-16: a /fix run reaches the paid DeepSeek API and the
+  # all-hands gateway before the free floor, so a host with only DEEPSEEK_API_KEY
+  # answers on it rather than crawling the free tier.
+  def test_the_default_and_primary_tiers_lead_the_paid_deepseek_lane
+    %w[default primary].each do |name|
+      tier = Selection.tier(name)
+      deepseek = tier.index { |id| id.start_with?("deepseek") }
+      refute_nil deepseek, "#{name} lists a deepseek lane"
+      assert_operator deepseek, :<, tier.index { |id| Selection.kind(id) == :free } || tier.size
+    end
+  end
+
   # An owner/name id goes through OpenRouter, a bare id through its vendor.
   def test_api_key_routing_comes_from_providers_yml
     envs = ->(id) { Selection.api_keys.find { |pattern, _envs| pattern.match?(id) }&.last }

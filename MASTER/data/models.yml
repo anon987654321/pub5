@@ -232,6 +232,11 @@ models:
     - *sandbox_gateway
     - *claude_opus_api
     - *claude_sonnet
+    # The paid DeepSeek API leads the default chain beside the all-hands gateway
+    # (operator, 2026-11-16): a /fix run on a host with only DEEPSEEK_API_KEY set
+    # must answer on it, not fall through the free floor. Free lanes stay last.
+    - *deepseek_reasoner
+    - *deepseek_chat
     - *agy_auto
     - *grok_cli_auto
     - *nemotron_super
@@ -249,6 +254,8 @@ models:
     - *glm_5_3_flash
     - *glm_5_3
     - *sandbox_gateway
+    - *deepseek_reasoner
+    - *deepseek_chat
     - *claude_opus_api
     - *claude_sonnet
     - *agy_auto
