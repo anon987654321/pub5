@@ -63,11 +63,18 @@ class TestKeylessRouting < Minitest::Test
     assert Master.keyless_llm_enabled?
   end
 
-  def test_llm7_is_reachable_without_an_api_key
-    assert Master.keyless_llm_enabled?
-    # Reachability itself is lane-level, but the id must still be a live
-    # listing row: the turbo tier rotates, so pin to a model present today.
-    assert Master.llm_reachable?("llm7:gpt-oss:20b")
+  def test_discovered_keyless_hosted_lane_is_reachable_without_an_api_key
+    resolver = Object.new
+    resolver.define_singleton_method(:hosted_models) { ["fixture:public-model"] }
+    resolver.define_singleton_method(:hosted_model?) { |id| id == "fixture:public-model" }
+    resolver.define_singleton_method(:hosted_endpoint_for) do |id|
+      id == "fixture:public-model" ? { key: nil } : nil
+    end
+
+    Master::CLI::Routing::ModelRouter.stub(:hosted_resolver, resolver) do
+      assert Master.keyless_llm_enabled?
+      assert Master.llm_reachable?("fixture:public-model")
+    end
   end
 
   def test_other_declared_keyless_hosted_providers_are_reachable_without_an_api_key
