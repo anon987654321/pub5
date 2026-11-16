@@ -1,6 +1,75 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+# Read-only help and log retrieval stay available even when the MASTER runtime
+# itself cannot boot. This command verifies; /fix is the canonical repair loop.
+CHECK_HELP = <<~HELP.freeze
+  usage: bin/check [--profile operator|contributor|agent|web|ci|full] [--list] [--format human|brief]
+         bin/check --show-log [--tail=N]
+
+  Profiles:
+    operator     local operator suite, security sweep and core checks (default)
+    contributor  contributor suite and deterministic checks
+    agent        agent/Law tooling and registry checks
+    web          browser-facing tests and static web contracts
+    ci           canonical CI floor; MASTER_CI_* may widen it
+    full         CI plus all probes and the full audit
+
+  Options:
+    --list             show the exact steps for the selected profile; run nothing
+    --show-log         print the saved combined log without booting MASTER
+    --tail=N           with --show-log, print only the final N lines (default 120)
+    --help             show this help without booting MASTER
+
+  Repair:
+    Start MASTER/bin/master and enter /fix [TREE]. /fix repairs and runs
+    scope-aware proof. bin/check is supplemental verification, not a required
+    post-/fix step. bin/operator check is a separate repo-wide maintenance
+    ladder and writes fixes unless --scan-only is supplied.
+HELP
+
+def show_check_log(argv)
+  args = argv.dup
+  args.delete("--show-log")
+  tail = 120
+  if (index = args.index("--tail"))
+    value = args[index + 1]
+    raise ArgumentError, "--tail requires a positive line count" unless value
+    args.slice!(index, 2)
+    tail = Integer(value, 10)
+  elsif (value = args.find { |arg| arg.start_with?("--tail=") })
+    args.delete(value)
+    tail = Integer(value.delete_prefix("--tail="), 10)
+  end
+  raise ArgumentError, "--tail must be between 1 and 10000" unless (1..10_000).cover?(tail)
+  raise ArgumentError, "unexpected log option(s): #{args.join(" ")}" unless args.empty?
+
+  root = File.expand_path("..", __dir__)
+  path = File.expand_path(ENV.fetch("MASTER_CHECK_RUN_LOG", File.join(root, ".master", "check", "latest.log")))
+  raise IOError, "refusing a symlinked check log: #{path}" if File.symlink?(path)
+  raise Errno::ENOENT, path unless File.file?(path)
+
+  # Bound memory when a check has accumulated a very large compiler/test log.
+  File.open(path, "rb") do |file|
+    truncated = file.size > 4 * 1024 * 1024
+    file.seek([file.size - 4 * 1024 * 1024, 0].max)
+    content = file.read.to_s.force_encoding(Encoding::UTF_8).scrub
+    content = content.sub(/\A.*?\n/, "") if truncated
+    puts "log: #{path} (last #{tail} lines#{truncated ? ", bounded to 4 MiB" : ""})"
+    print content.lines.last(tail).join
+  end
+  0
+rescue ArgumentError, IOError, SystemCallError => error
+  warn "check-log0: #{error.class}: #{error.message}"
+  1
+end
+
+if ARGV.include?("--help") || ARGV.include?("-h")
+  puts CHECK_HELP
+  exit 0
+end
+exit(show_check_log(ARGV)) if ARGV.include?("--show-log")
+
 require_relative "../lib/boot/entrypoint"
 Master::Boot::Entrypoint.prepare!(root: File.expand_path("..", __dir__))
 
@@ -41,10 +110,12 @@ BUNDLE = Operator::RubyRunner.bundle_cmd
 
 profile = "operator"
 format = "human"
+list = false
 OptionParser.new do |parser|
-  parser.banner = "usage: bin/check [--profile operator|contributor|agent|web|ci|full] [--format human|brief]"
+  parser.banner = "usage: bin/check [--profile operator|contributor|agent|web|ci|full] [--list] [--format human|brief]"
   parser.on("--profile=NAME") { |value| profile = value }
   parser.on("--format=NAME") { |value| format = value }
+  parser.on("--list", "show the selected profile steps without running them") { list = true }
 end.parse!
 unless %w[human brief].include?(format)
   Master::Trace::Dmesg.status("check0", "unknown format #{format}, have human or brief")
@@ -160,6 +231,14 @@ unless steps
   exit 64
 end
 Master::Trace::Dmesg.status("web0", "live web checks skipped, set MASTER_WEB_LIVE=1") if profile == "web" && !web_live
+
+if list
+  puts "profile: #{profile}"
+  puts "steps:"
+  steps.each_with_index { |step, index| puts format("%2d. %s", index + 1, step.first) }
+  puts "No checks executed. Use /fix [TREE] for repair and scope-aware proof."
+  exit 0
+end
 
 # Hang guard, not a performance budget — see CheckRunner::SLOW_STEP_FRACTION.
 # 360 was under `rake test`'s real cost the moment anything else used the CPU
