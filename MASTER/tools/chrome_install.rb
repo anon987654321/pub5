@@ -93,7 +93,9 @@ module Operator
       install_root = File.join(@home, ".cache", "pub5", "chrome-headless-shell")
       FileUtils.mkdir_p(install_root, mode: 0o700)
       final_dir = File.join(install_root, version)
-      binary_path = File.join(final_dir, folder, "chrome-headless-shell")
+      # install_archive renames the archive's top folder onto final_dir, so the
+      # binary sits directly in the version directory after the rename.
+      binary_path = File.join(final_dir, "chrome-headless-shell")
 
       unless File.executable?(binary_path)
         raise Failure, "refusing to replace an existing incomplete install: #{final_dir}" if File.exist?(final_dir) || File.symlink?(final_dir)
