@@ -649,7 +649,8 @@ module Master
                       expanded_root
                     end
         restructure = RestructureSweep.new(
-          agent:, repo_root:, bus:, transformation_plan: @transformation_plan, ground_truth:, preserve_user_intent:,
+          agent:, repo_root:, bus:, transformation_plan: @transformation_plan, ground_truth:,
+          preserve_user_intent:, reference_graph: @reference_graph,
         )
         [restructure, RenameSweep.new(agent:, repo_root:, bus:, ground_truth:, preserve_user_intent:)]
       end
