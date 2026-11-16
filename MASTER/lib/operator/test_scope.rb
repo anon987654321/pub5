@@ -20,7 +20,8 @@ module Operator
     def rails_apps(parts)
       selected = Array(parts).map(&:to_s)
       APP_SUITES.select do |app|
-        selected.include?(app) || (selected.include?("__shared") && SHARED_APPS.include?(app))
+        selected.include?("RAILS") || selected.include?(app) ||
+          (selected.include?("__shared") && SHARED_APPS.include?(app))
       end
     end
 
