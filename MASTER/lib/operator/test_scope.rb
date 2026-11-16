@@ -30,8 +30,11 @@ module Operator
     end
 
     def app_environment(root:, app:, inherited_env: ENV)
+      relative = Master::Fix::RailsApp.app_paths(repo_root: root)[app.to_s]
+      raise ArgumentError, "#{app.inspect} is not a registered RAILS app" unless relative&.start_with?("RAILS/")
+
       env = BUNDLE_CONTEXT.to_h { |key| [key, nil] }
-      env["BUNDLE_GEMFILE"] = File.join(root, "RAILS", app, "Gemfile")
+      env["BUNDLE_GEMFILE"] = File.join(root, relative, "Gemfile")
       inherited_env.each_key { |key| env[key] = nil if key.start_with?("BUNDLER_ORIG_") }
       env
     end
