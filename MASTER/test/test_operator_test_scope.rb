@@ -4,6 +4,10 @@ require_relative "test_helper"
 require_relative "../lib/operator/test_scope"
 
 class TestOperatorTestScope < Minitest::Test
+  def test_explicit_rails_root_routes_to_every_active_app_suite
+    assert_equal %w[brgen amber bsdports mrdamascy], Operator::TestScope.rails_apps(%w[RAILS])
+  end
+
   def test_shared_engine_routes_to_every_dependent_app_suite
     assert_equal %w[brgen amber bsdports], Operator::TestScope.rails_apps(%w[__shared])
   end
