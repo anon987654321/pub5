@@ -1,6 +1,26 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+# Runtime/provider diagnostics. Checkout and host readiness belong to
+# bin/operator doctor; the interactive /doctor adds security and capability context.
+if ARGV.include?("--help") || ARGV.include?("-h")
+  puts <<~HELP
+    usage: MASTER/bin/doctor [--keyless | --fix]
+
+    Runtime doctor:
+      no arguments   boot, provider/model, voice, face and runtime capability checks
+      --keyless      make a small real anonymous hosted-model completion probe
+      --fix          remove dangling Law-map references from laws.yml (writes)
+
+    The interactive /doctor runs this report with security and capability context.
+    Checkout/host readiness (disk, Ruby, bundle, hooks, Git, worktrees, vm23):
+      MASTER/bin/operator doctor [--remote]
+
+    Help does not boot MASTER and makes no changes.
+  HELP
+  exit 0
+end
+
 require_relative "../lib/boot/entrypoint"
 
 ROOT = File.expand_path("..", __dir__)
