@@ -5638,13 +5638,13 @@ law_map:
   # Law.define points a row at a neighbour that shares a word, which is false
   # coverage; a gap closes when a real detector for that law exists.
   #
-  # Two rows were repointed from a target whose requirement they did not state:
-  # `complexity_budget` says "cyclomatic complexity under 10 per function" but
-  # named SMALL_FUNCTIONS, which counts method lines; `no_god_files` says "split
-  # monolithic files into focused modules" but named NO_GOD_CLASS, which counts a
-  # class's public methods and code lines. CYCLOMATIC_COMPLEXITY and SMALL_FILES
-  # are the Laws whose own `fix` carries those exact requirements, and NO_GOD_CLASS
-  # keeps its three other rows. Trace debt fell 90 -> 87.
+  # `complexity_budget` says "cyclomatic complexity under 10 per function";
+  # it is covered by CYCLOMATIC_COMPLEXITY, not SMALL_FUNCTIONS (which counts
+  # method lines). `no_god_files` was formerly linked to SMALL_FILES, but that
+  # 300-line ceiling was retired on 2026-11-16: file length alone does not prove
+  # that responsibilities are mixed. Keep this principle as an explicit gap
+  # until a responsibility-based detector earns the mapping. NO_GOD_CLASS stays
+  # scoped to class responsibility.
   # `law_trace_ceiling` ratchets DOWN only. `rake lint:law_trace` aborts while
   # registered Laws trace to no principle, and `RATCHET=1` records a new low.
   #
@@ -6498,8 +6498,9 @@ law_map:
       "severity": "medium", "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap",
       "tags": ["architecture"], "source": "master.yml@30dad7ead"}
     no_god_files: {"meaning": "split monolithic files into focused modules", "detects": "god_file",
-      "severity": "critical", "confidence": 0.95, "operation": "split", "law_ids": ["SMALL_FILES"],
-      "status": "covered", "root": "one_responsibility", "tags": ["code"]}
+      "severity": "critical", "confidence": 0.95, "operation": "split", "law_ids": [],
+      "status": "gap", "root": "one_responsibility", "tags": ["code"],
+      "source": "SMALL_FILES retired 2026-11-16; line count alone is not evidence of mixed responsibility"}
     no_privilege_escalation: {"meaning": "prevent unauthorized elevation of access", "detects": "privilege_escalation",
       "severity": "critical", "confidence": 0.95, "operation": "add_guards", "law_ids": [], "status": "unmapped",
       "root": "least_authority", "tags": ["code"]}
