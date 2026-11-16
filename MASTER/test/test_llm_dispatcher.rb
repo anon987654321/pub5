@@ -74,24 +74,11 @@ class TestLLMDispatcher < Minitest::Test
     door::SILENT_AFTER.times { door.record(false, "agy", reason: "Individual quota reached") }
 
     assert door.silent?("agy")
-    refute door.silent?("claude-cli"), "agy's quota must not refuse claude-cli"
-    assert_equal "claude-cli", door.lane_of("claude-cli:claude-opus-5-5")
+    refute door.silent?("grok-cli"), "one lane's quota must not silence another"
+    assert_equal "grok-cli", door.lane_of("grok-cli:auto")
   ensure
     door.record(true, "agy")
   end
-
-  # `claude --print` from inside a session can hang and be killed, which is exit
-  # 124 and two empty streams; the error must say so rather than "claude-cli:".
-  def test_a_cli_that_dies_silently_says_what_it_did
-    dispatcher, = build_dispatcher
-    killed = Struct.new(:success?, :exitstatus).new(false, 124)
-    dispatcher.define_singleton_method(:capture3_with_timeout) { |*_a, **_k| ["", "", killed] }
-
-    result = dispatcher.send(:claude_cli_call, "claude-sonnet-4-6", [{ role: "user", content: "hi" }], nil)
-
-    assert_equal "claude-cli: exited 124 with nothing on either stream", result.message
-  end
-
   def test_preflight_error_event_redacts_raw_exception_text
     dispatcher, _session, bus = build_dispatcher
     private_error = "preflight failed at https://private.example/?token=preflight-secret"
@@ -426,32 +413,6 @@ class TestLLMDispatcher < Minitest::Test
     end
   end
 
-  def test_send_claude_cli_returns_timeout_error
-    dispatcher, _session, _bus = build_dispatcher
-    # The timeout contract is the sender's, not the machine's: probe presence
-    # so the run measures it where no claude binary is installed.
-    dispatcher.define_singleton_method(:claude_on_path?) { true }
-    def dispatcher.capture3_with_timeout(_timeout_s, *_args, **)
-      raise Timeout::Error
-    end
-    result = dispatcher.send(:send_claude_cli, "claude-sonnet-4-6", [{ role: "user", content: "hi" }], sys: nil)
-    assert_instance_of Master::Result::Err, result
-    assert_equal :timeout, result.category
-    # The message reports the configured timeout, whatever its value;
-    # test_claude_cli_timeout_reads_env_override covers where the number comes from.
-    expected = Master::Review::LLMDispatcher.const_get(:CLAUDE_CLI_TIMEOUT_S)
-    assert_match(/timed out after #{expected}s/, result.message)
-  end
-
-  def test_claude_cli_timeout_reads_env_override
-    dispatcher, _session, _bus = build_dispatcher
-    old = ENV["MASTER_CLAUDE_CLI_TIMEOUT"]
-    ENV["MASTER_CLAUDE_CLI_TIMEOUT"] = "12"
-    assert_equal 12, dispatcher.send(:claude_cli_timeout_s)
-  ensure
-    old.nil? ? ENV.delete("MASTER_CLAUDE_CLI_TIMEOUT") : ENV["MASTER_CLAUDE_CLI_TIMEOUT"] = old
-  end
-
   def test_master_fault_still_closes_the_run_pulse_call
     dispatcher, _session, bus = build_dispatcher
     cache = Object.new
@@ -570,36 +531,12 @@ class TestLLMDispatcher < Minitest::Test
 
   # Two claude subprocesses at once, process-wide: four-way contention doubles
   # per-call latency and CLI calls die empty-stderr under it.
-  def test_claude_cli_concurrency_is_capped_at_two
-    dispatcher, = build_dispatcher
-    require "monitor"
-    lock = Monitor.new
-    state = { live: 0, max: 0 }
-    ok_status = Struct.new(:success?).new(true)
-    probe = lambda do
-      lock.synchronize { state[:live] += 1; state[:max] = [state[:max], state[:live]].max }
-      sleep 0.05
-      lock.synchronize { state[:live] -= 1 }
-      ["ok", "", ok_status]
-    end
-    dispatcher.define_singleton_method(:claude_on_path?) { true }
-    dispatcher.define_singleton_method(:capture3_with_timeout) { |_t, *_a, **_k| probe.call }
-
-    threads = 4.times.map do
-      Thread.new { dispatcher.send(:send_claude_cli, "claude-sonnet-4-6", [{ role: "user", content: "hi" }], sys: nil) }
-    end
-    threads.each(&:join)
-
-    assert_operator state[:max], :<=, 2, "expected at most 2 concurrent CLI calls, saw #{state[:max]}"
-    assert_operator state[:max], :>=, 2, "stub never overlapped - the probe is not measuring concurrency"
-  end
-
   def test_agy_model_predicate
     dispatcher, = build_dispatcher
     assert dispatcher.agy_model?("agy:auto")
     assert dispatcher.agy_model?("agy:gemini-2.5-pro")
     assert dispatcher.agy_model?("agy")
-    refute dispatcher.agy_model?("claude-cli:claude-opus-4-8")
+    refute dispatcher.agy_model?("grok-cli:auto")
     refute dispatcher.agy_model?("openai/gpt-4o")
   end
 
@@ -646,86 +583,6 @@ class TestLLMDispatcher < Minitest::Test
     assert_includes captured_args, "--model"
     assert_includes captured_args, "gemini-2.5-pro"
   end
-
-  # With its tools, `claude --print` can commit inside the /fix checkout past
-  # every check /fix makes. The lane answers in text only.
-  def test_the_claude_cli_lane_runs_without_tools
-    dispatcher, = build_dispatcher
-    ok_status = Struct.new(:success?).new(true)
-    captured_args = nil
-    dispatcher.define_singleton_method(:capture3_with_timeout) do |_t, *args, **|
-      captured_args = args
-      ["pong", "", ok_status]
-    end
-    dispatcher.send(:claude_cli_call, "claude-opus-5-5", [{ role: "user", content: "ping" }], nil)
-
-    tools = captured_args.index("--tools")
-    refute_nil tools, "the lane must pass --tools"
-    assert_equal "", captured_args[tools + 1], "and pass it no tool"
-    assert_includes captured_args, "--strict-mcp-config"
-    settings = captured_args[captured_args.index("--settings") + 1]
-    assert JSON.parse(settings)["disableAllHooks"], "the operator's Claude Code hooks must not run on MASTER's calls"
-  end
-
-  # A screenshot given to the claude lane must reach the model, or it judges a
-  # layout from numbers. Images ride stream-json.
-  def test_the_claude_cli_lane_carries_images_as_stream_json_content_blocks
-    dispatcher, = build_dispatcher
-    ok_status = Struct.new(:success?).new(true)
-    captured = nil
-    reply = JSON.generate(type: "result", is_error: false, result: "a black square")
-    dispatcher.define_singleton_method(:capture3_with_timeout) do |_t, *args, stdin_data: nil, **|
-      captured = [args, stdin_data]
-      [reply + "\n", "", ok_status]
-    end
-    Dir.mktmpdir do |dir|
-      path = File.join(dir, "shot.png")
-      File.binwrite(path, "\x89PNG fake")
-      result = dispatcher.send(:claude_cli_call, "claude-sonnet-5-5", [{ role: "user", content: "look" }], nil,
-                               { path:, extra: [{ path: }] })
-
-      assert_equal "a black square", result.value!
-    end
-    args, stdin = captured
-    assert_includes args, "stream-json"
-    content = JSON.parse(stdin).dig("message", "content")
-    assert_equal %w[image image text], content.map { |block| block["type"] }
-    assert_equal "image/png", content.first.dig("source", "media_type")
-    assert_includes args, "--strict-mcp-config"
-  end
-
-  # `claude` prefers ANTHROPIC_API_KEY to its subscription login. MASTER loads that key for
-  # its API lanes, so the keyless CLI lane has to start without it or it fails on a spent key.
-  def test_the_claude_cli_lane_starts_without_api_keys_so_the_login_answers
-    dispatcher, = build_dispatcher
-    ok_status = Struct.new(:success?).new(true)
-    captured_env = nil
-    dispatcher.define_singleton_method(:capture3_with_timeout) do |_t, *_args, env: {}, **|
-      captured_env = env
-      ["pong", "", ok_status]
-    end
-    dispatcher.send(:claude_cli_call, "claude-opus-5-5", [{ role: "user", content: "ping" }], nil)
-
-    %w[ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN CLAUDECODE CLAUDE_CODE_ENTRYPOINT].each do |name|
-      assert captured_env.key?(name) && captured_env[name].nil?, "#{name} must be unset for the lane"
-    end
-    refute captured_env.key?("CLAUDE_CODE_OAUTH_TOKEN"), "the OAuth token can carry the login"
-  end
-
-  # Exit 0 with the limit on stdout is a quota, not the model's answer.
-  def test_a_subscription_limit_is_a_quota_not_an_answer
-    dispatcher, = build_dispatcher
-    ok_status = Struct.new(:success?).new(true)
-    dispatcher.define_singleton_method(:capture3_with_timeout) do |*_a, **_k|
-      ["You've hit your session limit - resets 4:30pm (Europe/Oslo)\n", "", ok_status]
-    end
-    result = dispatcher.send(:claude_cli_call, "claude-opus-5-5", [{ role: "user", content: "fix" }], nil)
-
-    assert result.err?
-    assert_equal :exhausted, result.category
-    assert_equal :quota_exceeded, dispatcher.send(:failure_status, result)
-  end
-
   def test_agy_cli_timeout_reads_env_override
     dispatcher, = build_dispatcher
     old = ENV["MASTER_AGY_CLI_TIMEOUT"]
@@ -755,50 +612,6 @@ class TestLLMDispatcher < Minitest::Test
       chat.end_message(ToolCallMessage.new(true))
     end
   end
-
-  # Claude CLI explicitly disables native tools and MCP. The dispatcher must
-  # keep the authenticated CLI transport while MASTER drives its own guarded
-  # ReAct loop; sending this lane through RubyLLM loses the subscription.
-  def test_claude_cli_uses_the_guarded_react_tool_loop
-    dispatcher, = build_dispatcher
-    dispatcher.instance_variable_set(:@tools, [Object.new])
-    replies = [
-      '<tool_call>{"name":"Browser","args":{"action":"status"}}</tool_call>',
-      "The browser returned page evidence.",
-    ]
-    turns = []
-    tool_calls = []
-
-    dispatcher.define_singleton_method(:build_react_system) do |base|
-      "#{base}\nAvailable tools: Browser"
-    end
-    dispatcher.define_singleton_method(:send_claude_cli) do |model_alias, messages, sys:, image: nil|
-      turns << { model_alias:, messages: messages.map(&:dup), system: sys }
-      Master::Result.ok(replies.shift)
-    end
-    dispatcher.define_singleton_method(:execute_react_tool) do |name, args|
-      tool_calls << { name:, args: }
-      "<tool_result name=\"#{name}\">browser ready</tool_result>"
-    end
-
-    result = dispatcher.send(
-      :send_llm_request,
-      "claude-cli:claude-sonnet-5-5",
-      [{ role: "user", content: "Read the public news page." }],
-      system: "Base instructions",
-      stream: false,
-    )
-
-    assert_predicate result, :ok?
-    assert_equal "The browser returned page evidence.", result.value!
-    assert_equal 2, turns.length
-    assert_equal "claude-sonnet-5-5", turns.first[:model_alias]
-    assert_includes turns.first[:system], "Available tools: Browser"
-    assert_includes turns.last[:messages].last[:content], "<tool_result name=\"Browser\">"
-    assert_equal "Browser", tool_calls.first[:name]
-    assert_equal "status", tool_calls.first[:args]["action"]
-  end
-
   def test_react_tool_metadata_uses_ruby_llm_declared_parameters
     dispatcher, = build_dispatcher
 
@@ -873,14 +686,14 @@ class TestLLMDispatcher < Minitest::Test
   def test_an_answer_names_the_model_the_door_actually_asked
     dispatcher, asked = recording_dispatcher
     saved = ENV["MASTER_MODEL"]
-    ENV["MASTER_MODEL"] = "claude-cli:claude-opus-4-8"
+    ENV["MASTER_MODEL"] = "anthropic/claude-opus-5-5"
     result = Master.stub(:any_api_key_present?, true) do
       dispatcher.send_with_cache("routed-model", [{ role: "user", content: "hi" }])
     end
 
     assert_equal "hi", result.value!
-    assert_equal ["claude-cli:claude-opus-4-8"], asked
-    assert_equal "claude-cli:claude-opus-4-8", result.model
+    assert_equal ["anthropic/claude-opus-5-5"], asked
+    assert_equal "anthropic/claude-opus-5-5", result.model
   ensure
     ENV["MASTER_MODEL"] = saved
   end
@@ -889,7 +702,7 @@ class TestLLMDispatcher < Minitest::Test
   def test_a_pin_is_asked_even_when_its_lane_is_parked_unless_failover_is_asked_for
     dispatcher, asked = recording_dispatcher
     saved = %w[MASTER_MODEL MASTER_MODEL_STRICT].to_h { |key| [key, ENV.fetch(key, nil)] }
-    ENV["MASTER_MODEL"] = "claude-cli:claude-opus-4-8"
+    ENV["MASTER_MODEL"] = "anthropic/claude-opus-5-5"
     ask = -> { dispatcher.send_with_cache("routed-model", [{ role: "user", content: "hi" }]) }
 
     Master.stub(:any_api_key_present?, true) do
@@ -900,7 +713,7 @@ class TestLLMDispatcher < Minitest::Test
       end
     end
 
-    assert_equal ["claude-cli:claude-opus-4-8", "routed-model"], asked
+    assert_equal ["anthropic/claude-opus-5-5", "routed-model"], asked
   ensure
     saved.each { |key, value| ENV[key] = value }
   end
@@ -1031,21 +844,6 @@ class TestLLMDispatcher < Minitest::Test
 
   # A CLI lane without its binary must refuse permanently: a retriable ENOENT
   # would make a chain sleep through backoff on it once per file of a scan.
-  def test_a_cli_lane_without_its_binary_refuses_permanently
-    dispatcher, = build_dispatcher
-    previous = ENV["MASTER_NO_CLAUDE_CLI"]
-    ENV["MASTER_NO_CLAUDE_CLI"] = "1"
-    result = dispatcher.send(:send_claude_cli, "claude-sonnet-4-6", [{ role: "user", content: "hei" }], sys: nil)
-
-    assert_predicate result, :err?
-    assert_predicate result, :permanent?
-    assert_includes result.message, "no claude on PATH"
-  ensure
-    ENV["MASTER_NO_CLAUDE_CLI"] = previous
-  end
-
-  # A reasoning model sends its working beside its answer; appended, every
-  # reader would have to strip it.
   def test_a_reasoning_replys_working_stays_out_of_its_answer
     dispatcher, = build_dispatcher
     thinking = Struct.new(:text).new("the user asked who I am, so I introduce myself")
@@ -1374,9 +1172,7 @@ class TestLLMDispatcher < Minitest::Test
 end
 
 class TestCliLaneComplaint < Minitest::Test
-  # A dead claude-cli reported this as its reason, cut to 90 chars on the way
-  # out: a fragment of a stream-json event, naming nothing. stdout speaks json
-  # on that lane, and a json line is not a complaint.
+  # Signed-in CLI tools can emit structured JSON events; extract the error text, not the JSON fragment.
   def self.dispatcher
     Master::Review::LLMDispatcher.allocate
   end
@@ -1412,16 +1208,7 @@ class TestCliLaneComplaint < Minitest::Test
 
     assert_nil self.class.dispatcher.send(:cli_lane_complaint, out, "")
 
-    status = Struct.new(:exitstatus).new(1)
-    result = self.class.dispatcher.send(:claude_cli_failure, out, "", status:)
-    assert_equal "claude-cli: exited 1 and named no error in its stream", result.message
   end
 
   # Two empty streams keep the older, plainer wording.
-  def test_two_empty_streams_say_nothing_was_on_either
-    status = Struct.new(:exitstatus).new(124)
-
-    assert_equal "claude-cli: exited 124 with nothing on either stream",
-                 self.class.dispatcher.send(:claude_cli_failure, "", "", status:).message
-  end
 end

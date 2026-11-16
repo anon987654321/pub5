@@ -43,7 +43,7 @@ class TestBootModelPin < Minitest::Test
     router = Master::CLI::Routing::ModelRouter.allocate
     router.instance_variable_set(:@rules, { "openai_compatible" => {} })
     chain = [
-      "claude-cli:claude-sonnet-5-5",
+      "grok-cli:sonnet",
       "openrouter/free-model:free",
       "web-chat:grok",
       "ollama:gemma3:4b",
@@ -74,7 +74,7 @@ class TestBootModelPin < Minitest::Test
       def initialize(router:, homeostat:)
         @model_router = router
         @homeostat = homeostat
-        @config = { "model" => "claude-cli:claude-sonnet-5-5" }
+        @config = { "model" => "grok-cli:sonnet" }
       end
 
       public :routed_chain
@@ -84,13 +84,13 @@ class TestBootModelPin < Minitest::Test
   end
 
   def test_a_saved_model_leads_the_chain_without_the_session
-    agent = FakeAgent.new(saved: "claude-cli:claude-sonnet-5-5", router: FakeRouter.new(reachable: true))
+    agent = FakeAgent.new(saved: "grok-cli:sonnet", router: FakeRouter.new(reachable: true))
 
-    assert_equal %w[claude-cli:claude-sonnet-5-5 free/a free/b], agent.routed_models
+    assert_equal %w[grok-cli:sonnet free/a free/b], agent.routed_models
   end
 
   def test_an_unreachable_saved_model_leaves_the_pool_order_alone
-    agent = FakeAgent.new(saved: "claude-cli:claude-sonnet-5-5", router: FakeRouter.new(reachable: false))
+    agent = FakeAgent.new(saved: "grok-cli:sonnet", router: FakeRouter.new(reachable: false))
 
     assert_equal %w[free/a free/b], agent.routed_models
   end
@@ -100,27 +100,27 @@ class TestBootModelPin < Minitest::Test
   # operation's own constraint choose the lane, so a saved sonnet never forces every
   # /fix call onto sonnet.
   def test_an_operation_call_is_chosen_by_availability_not_the_saved_model
-    agent = FakeAgent.new(saved: "claude-cli:claude-sonnet-5-5", router: FakeRouter.new(reachable: true))
+    agent = FakeAgent.new(saved: "grok-cli:sonnet", router: FakeRouter.new(reachable: true))
 
     assert_equal "agy:gemini-3.8-flash-medium", agent.model_for(operation: :semantic_law)
   end
 
   def test_an_explicit_model_choice_pins_the_operation_call
-    agent = FakeAgent.new(saved: "claude-cli:claude-sonnet-5-5", router: FakeRouter.new(reachable: true))
-    agent.model = "claude-cli:claude-opus-5-5"
+    agent = FakeAgent.new(saved: "grok-cli:sonnet", router: FakeRouter.new(reachable: true))
+    agent.model = "grok-cli:opus"
 
-    assert_equal "claude-cli:claude-opus-5-5", agent.model_for(operation: :semantic_law)
+    assert_equal "grok-cli:opus", agent.model_for(operation: :semantic_law)
   end
 
   def test_a_saved_free_model_never_leads_a_live_subscription_chain
     agent = FakeAgent.new(saved: "nvidia/nemotron-3-super-120b-a12b:free", router: FakeRouter.new(reachable: true))
-    agent.chain = %w[claude-cli:claude-opus-5-5 deepseek-chat]
+    agent.chain = %w[grok-cli:opus deepseek-chat]
 
-    assert_equal %w[claude-cli:claude-opus-5-5 deepseek-chat], agent.routed_models
+    assert_equal %w[grok-cli:opus deepseek-chat], agent.routed_models
   end
 
   def test_a_saved_cloud_model_is_never_pinned_in_local_only_mode
-    agent = FakeAgent.new(saved: "claude-cli:claude-sonnet-5-5", router: FakeRouter.new(reachable: true))
+    agent = FakeAgent.new(saved: "grok-cli:sonnet", router: FakeRouter.new(reachable: true))
     agent.local_only = true
 
     assert_equal %w[free/a free/b], agent.routed_models
@@ -129,7 +129,7 @@ class TestBootModelPin < Minitest::Test
 
   def test_the_reachability_probe_runs_once_per_agent
     router = FakeRouter.new(reachable: false)
-    agent = FakeAgent.new(saved: "claude-cli:claude-sonnet-5-5", router:)
+    agent = FakeAgent.new(saved: "grok-cli:sonnet", router:)
     3.times { agent.routed_models }
 
     assert_equal 1, router.probes
@@ -174,7 +174,7 @@ class TestBootModelPin < Minitest::Test
     agent.instance_variable_set(:@runtime_model, "grok-cli:auto")
     agent.instance_variable_set(:@model_router, router)
     agent.instance_variable_set(:@bus, nil)
-    agent.define_singleton_method(:routed_models) { ["claude-cli:claude-opus-5-5"] }
+    agent.define_singleton_method(:routed_models) { ["grok-cli:opus"] }
 
     assert_equal "grok-cli:auto", agent.model
     status = Master::CLI::CommandRegistry.dispatch_model(
@@ -185,7 +185,7 @@ class TestBootModelPin < Minitest::Test
     assert_includes state, "grok-cli:auto"
 
     router.reachable = false
-    assert_equal "claude-cli:claude-opus-5-5", agent.model
+    assert_equal "grok-cli:opus", agent.model
     assert_nil agent.instance_variable_get(:@runtime_model)
   end
 

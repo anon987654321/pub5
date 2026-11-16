@@ -11,7 +11,7 @@ module Master
         # Only genuinely blocked if *every* model this dispatch could fall
         # back to has an open breaker -- an unrelated free-tier model at
         # the front of the chain being down must not skip the whole LLM
-        # stage while a healthy fallback (e.g. claude-cli) is still usable.
+        # stage while a healthy fallback is still usable.
         def circuit_open?
           !open_breakers.empty?
         end

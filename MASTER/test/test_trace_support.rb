@@ -236,13 +236,13 @@ class TestTraceSupport < Minitest::Test
     Fiber[:master_unit] = "scan0"
     printed = Master::Trace::Dmesg.with_verbosity("verbose") do
       8.times.flat_map do |i|
-        console.lines(event: "llm:send", model: i.even? ? "claude-cli:claude-opus-4-8" : "ollama:gemma3:4b") +
+        console.lines(event: "llm:send", model: i.even? ? "grok-cli:auto" : "ollama:gemma3:4b") +
           console.lines(event: "llm:provider_outcome", model: "x", status: :success, latency_ms: 10)
       end
     end
 
     assert_equal 16, printed.size
-    assert_equal "llm0 at scan0: claude-cli:claude-opus-4-8", printed.first
+    assert_equal "llm0 at scan0: grok-cli:auto", printed.first
     assert_match(/llm0: .*0\.0s/, printed[1])
   ensure
     Fiber[:master_unit] = nil
@@ -253,7 +253,7 @@ class TestTraceSupport < Minitest::Test
       console = Master::Trace::Dmesg::Console.new
       Fiber[:master_unit] = "scan0"
       printed = 60.times.flat_map do |i|
-        console.lines(event: "llm:send", model: i.even? ? "claude-cli:claude-opus-4-8" : "ollama:gemma3:4b") +
+        console.lines(event: "llm:send", model: i.even? ? "grok-cli:auto" : "ollama:gemma3:4b") +
           console.lines(event: "llm:provider_outcome", model: "x", status: :success, latency_ms: 10)
       end
 

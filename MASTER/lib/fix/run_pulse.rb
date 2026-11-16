@@ -493,7 +493,7 @@ module Master
           "real mem = #{bytes} (#{bytes / BYTES_PER_MB}MB)"
         end
 
-        # "claude-cli: live" attaches; any other state is a lane that is not configured.
+        # "provider: live" attaches; any other state is a lane that is not configured.
         def lane_lines(states)
           index = -1
           states.map do |state|

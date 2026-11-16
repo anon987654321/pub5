@@ -75,7 +75,7 @@ module Master
             return "free" if id.end_with?(":free", ":cloud", "-cloud") || id.start_with?("web-chat:")
             return "local" if lane_of(id) == :cli_lane && cli_lane(id)["kind"] == "local"
 
-            { claude_cli: "subscription", agy: "subscription", cli_lane: "subscription", ollama: "local",
+            { agy: "subscription", cli_lane: "subscription", ollama: "local",
               local_server: "local", hosted: "free", replicate: "paid", api: "paid" }.fetch(lane_of(id))
           end
 
@@ -127,7 +127,6 @@ module Master
           # before walking on — 90s of a web turn on ai.brgen.no, 2026-09-15.
           def binary_lane_problem(id)
             present, fix = case lane_of(id)
-                           when :claude_cli then [claude_cli_available?, "install Claude Code"]
                            when :agy then [agy_cli_available?, "install the Antigravity CLI"]
                            when :web_chat then [web_chat_enabled?, "browser chat is excluded by local-only mode or explicit browser opt-out"]
                            when :local_server
@@ -139,7 +138,6 @@ module Master
           end
 
           def lane_of(id)
-            return :claude_cli if id.start_with?("claude-cli:")
             return :agy if id.start_with?("agy:") || id == "agy"
             return :web_chat if id.start_with?("web-chat:")
             return :ollama if id.start_with?("ollama:", "ollama/")

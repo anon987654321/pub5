@@ -6,7 +6,7 @@ require "digest"
 
 class ProviderCanaryTest < Minitest::Test
   class Router
-    def pool(wait:) = wait ? [] : %w[claude-cli:opus ollama:qwen3 openai:gpt-4.1 claude-cli:sonnet]
+    def pool(wait:) = wait ? [] : %w[grok-cli:opus ollama:qwen3 openai:gpt-4.1 grok-cli:sonnet]
     def api_provider_for(model) = model.start_with?("openai:") ? "openai" : nil
   end
 
@@ -71,7 +71,7 @@ class ProviderCanaryTest < Minitest::Test
       max_providers: 3,
     )
 
-    assert_equal %w[claude-cli:opus ollama:qwen3 openai:gpt-4.1], canary.candidates
+    assert_equal %w[grok-cli:opus ollama:qwen3 openai:gpt-4.1], canary.candidates
   end
 
   def test_malformed_canary_response_is_recorded_as_health_failure
@@ -90,7 +90,7 @@ class ProviderCanaryTest < Minitest::Test
       )
 
       assert_equal "0/1 canaries passed", canary.run
-      assert_equal :canary_validation_failure, health.latest_event("claude-cli:opus")["status"].to_sym
+      assert_equal :canary_validation_failure, health.latest_event("grok-cli:opus")["status"].to_sym
     end
   end
 
@@ -109,11 +109,11 @@ class ProviderCanaryTest < Minitest::Test
       )
 
       assert_equal "2/2 canaries passed", canary.run
-      assert_equal [["claude-cli:opus", false, false], ["ollama:qwen3", false, false]], agent.models
+      assert_equal [["grok-cli:opus", false, false], ["ollama:qwen3", false, false]], agent.models
       assert bus.events.any? { |name, payload| name == "provider:canary" && payload[:status] == :success }
       assert bus.events.any? { |name, _| name == "provider:canary_summary" }
-      assert_equal :success, health.latest_event("claude-cli:opus")["status"].to_sym
-      assert_operator health.score("claude-cli:opus"), :>, 1.0
+      assert_equal :success, health.latest_event("grok-cli:opus")["status"].to_sym
+      assert_operator health.score("grok-cli:opus"), :>, 1.0
     end
   end
 
@@ -152,8 +152,8 @@ class ProviderCanaryTest < Minitest::Test
       )
 
       assert_equal "0/1 canaries passed", canary.run
-      assert_equal :canary_failure, health.latest_event("claude-cli:opus")["status"].to_sym
-      assert_operator health.score("claude-cli:opus"), :<, 1.0
+      assert_equal :canary_failure, health.latest_event("grok-cli:opus")["status"].to_sym
+      assert_operator health.score("grok-cli:opus"), :<, 1.0
     end
   end
 
@@ -172,10 +172,10 @@ class ProviderCanaryTest < Minitest::Test
 
       assert_equal "0/1 canaries passed", canary.run
       outcome = router.outcomes.fetch(0)
-      assert_equal "claude-cli:opus", outcome.fetch(:model)
+      assert_equal "grok-cli:opus", outcome.fetch(:model)
       assert_equal :canary_failure, outcome.fetch(:status)
       assert_equal "provider unavailable", outcome.fetch(:error)
-      assert_nil health.latest_event("claude-cli:opus"),
+      assert_nil health.latest_event("grok-cli:opus"),
                  "router-owned health should not be double-recorded by the canary adapter"
     end
   end

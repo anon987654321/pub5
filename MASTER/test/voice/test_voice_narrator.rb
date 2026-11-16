@@ -309,193 +309,42 @@ class TestVoiceNarrator < Minitest::Test
     assert_match(/turned up|problem/i, @spoken.last)
   end
 
-  def test_lane_writer_uses_the_tier_and_skips_unsupported_lanes
+
+  def test_lane_writer_uses_the_tier_and_speaks_via_ruby_llm
     lanes = Object.new
-    def lanes.tier(name) = ["grok-cli:auto", "claude-cli:sonnet"].tap { @asked = name }
+    def lanes.tier(name) = ["anthropic/claude-sonnet-5-5", "grok-cli:auto"].tap { @asked = name }
     def lanes.order(ids) = ids
     def lanes.alive?(_id) = true
-    runner = Object.new
-    def runner.capture3(*cmd, **opts) = ["Said plainly.", "", Struct.new(:ok) { def success? = ok }.new(true)].tap { @cmd = cmd }
-    writer = Narrator::LaneWriter.new({ "lane_tier" => "fast", "model_timeout_s" => 5 }, lanes:, runner:)
-    assert_equal "claude-cli:sonnet", writer.pick
-    healthy = nil
-    Master::Io::LaneSilence.stub(:record, ->(answered, lane) { healthy = [answered, lane]; true }) do
+    writer = Narrator::LaneWriter.new({ "lane_tier" => "fast" }, lanes:)
+    assert_equal "anthropic/claude-sonnet-5-5", writer.pick
+
+    reply = Struct.new(:content).new("Said plainly.")
+    chat = Object.new
+    chat.define_singleton_method(:with_instructions) { |_text| self }
+    chat.define_singleton_method(:with_params) { |**_params| self }
+    chat.define_singleton_method(:ask) { |_prompt| reply }
+
+    RubyLLM.stub(:chat, ->(model:) { assert_equal "anthropic/claude-sonnet-5-5", model; chat }) do
       assert_equal "Said plainly.", writer.call(system: "s", prompt: "p", max_tokens: 90)
     end
-    assert_equal [true, "claude-cli"], healthy
     assert_equal "fast", lanes.instance_variable_get(:@asked)
   end
 
   def test_lane_writer_raises_when_no_lane_is_live
     lanes = Object.new
-    def lanes.tier(_name) = ["claude-cli:sonnet"]
+    def lanes.tier(_name) = ["anthropic/claude-sonnet-5-5"]
     def lanes.order(_ids) = []
     writer = Narrator::LaneWriter.new({ "lane_tier" => "fast" }, lanes:)
     assert_raises(Narrator::LaneWriter::Unavailable) { writer.call(system: "s", prompt: "p", max_tokens: 9) }
   end
 
-  def test_claude_session_limit_reply_parses_the_stated_reset_before_exit_status
+  def test_subscription_session_limit_reply_parses_the_stated_reset_before_exit_status
     reply = "You've hit your session limit - resets in 3h\nsubscription limit"
     verdict = Master::Io::LaneReply.read(reply, now: 1_000)
 
     assert_equal :spent, verdict.kind
     assert_equal 10_800, verdict.wait
     refute verdict.unknown
-  end
-
-  def test_lane_writer_records_quota_before_reporting_a_nonzero_cli_exit
-    lanes = Object.new
-    def lanes.tier(_name) = ["claude-cli:sonnet"]
-    def lanes.order(ids) = ids
-    def lanes.alive?(_id) = true
-    status = Struct.new(:ok, :exitstatus) { def success? = ok }.new(false, 1)
-    runner = Object.new
-    runner.define_singleton_method(:capture3) do |*_args, **_kwargs|
-      ["You've hit your session limit - resets in 3h", "subscription limit", status]
-    end
-    writer = Narrator::LaneWriter.new({ "lane_tier" => "fast", "model_timeout_s" => 5 }, lanes:, runner:)
-    noted = nil
-
-    Master::Io::LaneQuota.stub(:note, ->(model, reply) { noted = [model, reply]; 123.0 }) do
-      Master::Io::LaneQuota.stub(:report_for, ->(_model) { "claude-cli: quota spent, back in 3h" }) do
-        Master::Io::LaneSilence.stub(:record, ->(*) { flunk "quota refusals are not generic silence" }) do
-          error = assert_raises(Narrator::LaneWriter::Unavailable) do
-            writer.call(system: "s", prompt: "p", max_tokens: 90)
-          end
-          assert_match(/quota spent, back in 3h/, error.message)
-        end
-      end
-    end
-
-    assert_equal "claude-cli:sonnet", noted.first
-    assert_includes noted.last, "You've hit your session limit"
-    assert_includes noted.last, "subscription limit"
-  end
-
-  def test_lane_writer_does_not_mark_empty_cli_reply_as_healthy
-    lanes = Object.new
-    def lanes.tier(_name) = ["claude-cli:sonnet"]
-    def lanes.order(ids) = ids
-    def lanes.alive?(_id) = true
-    status = Struct.new(:ok, :exitstatus) { def success? = ok }.new(true, 0)
-    runner = Object.new
-    runner.define_singleton_method(:capture3) { |*_args, **_kwargs| ["  \n", "", status] }
-    writer = Narrator::LaneWriter.new({ "lane_tier" => "fast", "model_timeout_s" => 5 }, lanes:, runner:)
-
-    recorded = nil
-    Master::Io::LaneSilence.stub(:record, ->(answered, lane, reason:) {
-      recorded = [answered, lane, reason]
-      true
-    }) do
-      Master::Trace::Dmesg.stub(:once, ->(*) {}) do
-        error = assert_raises(Narrator::LaneWriter::Unavailable) do
-          writer.call(system: "s", prompt: "p", max_tokens: 90)
-        end
-        assert_match(/answered nothing/, error.message)
-      end
-    end
-
-    assert_equal false, recorded[0]
-    assert_equal "claude-cli", recorded[1]
-    assert_match(/empty reply/, recorded[2])
-  end
-
-  def test_lane_writer_detects_exit_zero_subscription_refusal
-    lanes = Object.new
-    def lanes.tier(_name) = ["claude-cli:sonnet"]
-    def lanes.order(ids) = ids
-    def lanes.alive?(_id) = true
-    status = Struct.new(:ok, :exitstatus) { def success? = ok }.new(true, 0)
-    runner = Object.new
-    runner.define_singleton_method(:capture3) do |*_args, **_kwargs|
-      ["You've hit your session limit - resets in 3h", "", status]
-    end
-    writer = Narrator::LaneWriter.new({ "lane_tier" => "fast", "model_timeout_s" => 5 }, lanes:, runner:)
-
-    Master::Io::LaneQuota.stub(:note, ->(_model, reply) { assert_match(/session limit/, reply); 123.0 }) do
-      Master::Io::LaneQuota.stub(:report_for, ->(_model) { "claude-cli: quota spent, back in 3h" }) do
-        error = assert_raises(Narrator::LaneWriter::Unavailable) do
-          writer.call(system: "s", prompt: "p", max_tokens: 90)
-        end
-        assert_match(/quota spent, back in 3h/, error.message)
-      end
-    end
-  end
-
-  def test_successful_narration_that_quotes_a_quota_phrase_is_not_marked_dead
-    lanes = Object.new
-    def lanes.tier(_name) = ["claude-cli:sonnet"]
-    def lanes.order(ids) = ids
-    def lanes.alive?(_id) = true
-    status = Struct.new(:ok, :exitstatus) { def success? = ok }.new(true, 0)
-    runner = Object.new
-    answer = "The log says: You've hit your session limit - resets in 3h. The provider recovered."
-    runner.define_singleton_method(:capture3) { |*_args, **_kwargs| [answer, "", status] }
-    writer = Narrator::LaneWriter.new({ "lane_tier" => "fast", "model_timeout_s" => 5 }, lanes:, runner:)
-
-    Master::Io::LaneQuota.stub(:note, ->(*) { flunk "quoted words in a successful narration are not a provider refusal" }) do
-      Master::Io::LaneSilence.stub(:record, ->(*) { true }) do
-        assert_equal answer, writer.call(system: "s", prompt: "p", max_tokens: 90)
-      end
-    end
-  end
-
-  def test_lane_writer_silences_a_timed_out_claude_cli_immediately
-    lanes = Object.new
-    def lanes.tier(_name) = ["claude-cli:sonnet"]
-    def lanes.order(ids) = ids
-    def lanes.alive?(_id) = true
-    runner = Object.new
-    runner.define_singleton_method(:capture3) { |*_args, **_kwargs| raise Timeout::Error }
-    writer = Narrator::LaneWriter.new({ "lane_tier" => "fast", "model_timeout_s" => 5 }, lanes:, runner:)
-    silenced = nil
-
-    Master::Io::LaneSilence.stub(:silence, ->(lane, reason:) { silenced = [lane, reason] }) do
-      Master::Io::LaneSilence.stub(:message, ->(_lane) { "claude-cli quiet" }) do
-        Master::Trace::Dmesg.stub(:once, ->(*) {}) do
-          error = assert_raises(Narrator::LaneWriter::Unavailable) do
-            writer.call(system: "s", prompt: "p", max_tokens: 90)
-          end
-          assert_match(/timed out after 5s/, error.message)
-          assert_match(/5 minutes/, error.message)
-        end
-      end
-    end
-
-    assert_equal "claude-cli", silenced.first
-    assert_match(/timed out after 5s/, silenced.last)
-  end
-
-  def test_lane_writer_keeps_nonzero_exit_diagnostic_bounded_and_silences_repeated_failure
-    lanes = Object.new
-    def lanes.tier(_name) = ["claude-cli:sonnet"]
-    def lanes.order(ids) = ids
-    def lanes.alive?(_id) = true
-    status = Struct.new(:ok, :exitstatus) { def success? = ok }.new(false, 1)
-    runner = Object.new
-    runner.define_singleton_method(:capture3) { |*_args, **_kwargs| ["", "private upstream detail", status] }
-    writer = Narrator::LaneWriter.new({ "lane_tier" => "fast", "model_timeout_s" => 5 }, lanes:, runner:)
-    recorded = nil
-
-    Master::Io::LaneQuota.stub(:note, nil) do
-      Master::Io::LaneQuota.stub(:report_for, nil) do
-        Master::Io::LaneSilence.stub(
-          :record, ->(answered, lane, reason:) { recorded = [answered, lane, reason]; true }
-        ) do
-          Master::Trace::Dmesg.stub(:once, ->(*) {}) do
-            error = assert_raises(Narrator::LaneWriter::Unavailable) do
-              writer.call(system: "s", prompt: "p", max_tokens: 90)
-            end
-            assert_match(/exited 1; diagnostic [0-9a-f]{12} \(23 bytes\)/, error.message)
-            refute_includes error.message, "private upstream detail"
-          end
-        end
-      end
-    end
-
-    assert_equal false, recorded[0]
-    assert_equal "claude-cli", recorded[1]
-    assert_match(/diagnostic [0-9a-f]{12}/, recorded[2])
   end
 
   def test_facade_is_quiet_without_a_speaker

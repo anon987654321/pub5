@@ -42,7 +42,6 @@ module Master
 
         def provider_domain(model)
           id = model.to_s
-          return "claude-cli" if id.start_with?("claude-cli:")
           return "agy" if id.start_with?("agy:")
           return "web-chat" if id.start_with?("web-chat:")
           return "ollama" if id.start_with?("ollama:")

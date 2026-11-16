@@ -521,6 +521,12 @@ class TestRestructure < Minitest::Test
     assert_includes prompt, "Choose exactly one transformation"
     assert_includes prompt, "Evidence-backed candidates"
     assert_includes prompt, "No source has changed during this phase"
+    assert_includes prompt, "decommission and simplification audit"
+    assert_includes prompt, "runtime registrations"
+    assert_includes prompt, "reverse references"
+    assert_includes prompt, "HUMAN_DECISION"
+    assert_includes prompt, "Parked is not the same as dead"
+    assert_includes prompt, "external/deploy consumers"
   end
 
   def test_each_tree_is_proved_its_own_way

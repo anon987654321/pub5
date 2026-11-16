@@ -51,9 +51,9 @@ class TestLaneQuota < Minitest::Test
 
     assert Quota.dead?("agy:auto")
     assert Quota.dead?("agy:other"), "the lane is dead, not the model"
-    refute Quota.dead?("claude-cli:claude-opus-5-5")
+    refute Quota.dead?("grok-cli:opus")
     assert Silence.refuses?("agy:auto")
-    refute Silence.refuses?("claude-cli:claude-opus-5-5")
+    refute Silence.refuses?("grok-cli:opus")
     assert_match(/\Aagy: quota spent, back in 165h/, Silence.refusal("agy:auto"))
   end
 
@@ -79,13 +79,13 @@ class TestLaneQuota < Minitest::Test
   def test_report_names_why_each_lane_died_and_the_file_keeps_it
     Quota.note("agy:auto", AGY_REPLY)
     Quota.note("lmstudio:qwen", "ollama unreachable at http://localhost:11434: Connection refused")
-    Quota.note("claude-cli:x", "Please run /login")
+    Quota.note("grok-cli:x", "Please run /login")
     Quota.note("deepseek:chat", "HTTP 429")
 
     rows = Quota.report.to_h { |row| row.split(": ", 2) }
     assert_match(/\Aquota spent, back in 165h/, rows.fetch("agy"))
     assert_match(/\Aunreachable, back in/, rows.fetch("lmstudio"))
-    assert_match(/\Alogin or credential rejected, back in/, rows.fetch("claude-cli"))
+    assert_match(/\Alogin or credential rejected, back in/, rows.fetch("grok-cli"))
     assert_match(/\Aquota spent, wait guessed, back in/, rows.fetch("deepseek"))
     assert_equal "unreachable", YAML.safe_load_file(Quota.path).fetch("reason:lmstudio")
 
@@ -97,20 +97,20 @@ class TestLaneQuota < Minitest::Test
   def test_claude_past_due_billing_is_a_shared_six_hour_hold_without_probe_ladder
     reply = "Error: payment is past due for this account"
     assert_equal :billing, Master::Io::LaneReply.read(reply).kind
-    deadline = Quota.note("claude-cli:claude-opus-5-5", reply)
+    deadline = Quota.note("grok-cli:opus", reply)
 
     assert_equal @now + 6 * 3600, deadline
-    assert Quota.dead?("claude-cli:claude-sonnet-5-5"),
-           "Opus and Sonnet share the same Claude CLI billing boundary"
-    assert_equal "billing", Quota.raw.fetch("reason:claude-cli")
-    refute Quota.raw.key?("unknown:claude-cli"), "billing is not an unknown quota guess"
-    refute Quota.raw.key?("probe:claude-cli"), "billing must not enter the rapid probe ladder"
-    report = Quota.report.find { |row| row.start_with?("claude-cli:") }
+    assert Quota.dead?("grok-cli:sonnet"),
+           "Opus and Sonnet share the same signed-in CLI billing boundary"
+    assert_equal "billing", Quota.raw.fetch("reason:grok-cli")
+    refute Quota.raw.key?("unknown:grok-cli"), "billing is not an unknown quota guess"
+    refute Quota.raw.key?("probe:grok-cli"), "billing must not enter the rapid probe ladder"
+    report = Quota.report.find { |row| row.start_with?("grok-cli:") }
     assert_match(/billing hold/, report)
     assert_match(/resolve the provider account's past-due balance/, report)
 
     @now += 6 * 3600 + 1
-    refute Quota.dead?("claude-cli:claude-sonnet-5-5"), "the bounded hold expires for a fresh operator/provider check"
+    refute Quota.dead?("grok-cli:sonnet"), "the bounded hold expires for a fresh operator/provider check"
   end
 
   def test_expiry_revives_the_lane
@@ -129,17 +129,17 @@ class TestLaneQuota < Minitest::Test
     assert Quota.dead?("grok-cli:auto", manual:)
     Quota.note("agy:auto", AGY_REPLY)
     assert Quota.dead?("agy:auto", manual:)
-    refute Quota.dead?("claude-cli:x", manual:)
+    refute Quota.dead?("grok-cli:x", manual:)
     assert_equal :manual, Quota.until_for("ollama:glm-4", manual:)
   end
 
   def test_selection_skips_a_quota_dead_lane_without_a_hand_entry
-    models = %w[agy:auto claude-cli:claude-sonnet-5-5]
-    assert_equal "claude-cli:claude-sonnet-5-5", Master::Io::LaneSelection.first_live(models), "claude-cli leads agy"
+    models = %w[agy:auto grok-cli:sonnet]
+    assert_equal "grok-cli:sonnet", Master::Io::LaneSelection.first_live(models), "grok-cli leads agy"
     assert_equal "agy:auto", Master::Io::LaneSelection.first_live(%w[agy:auto deepseek-chat])
 
     Quota.note("agy:auto", AGY_REPLY)
-    assert_equal "claude-cli:claude-sonnet-5-5", Master::Io::LaneSelection.first_live(models)
+    assert_equal "grok-cli:sonnet", Master::Io::LaneSelection.first_live(models)
   end
 
   def test_the_real_data_file_names_dead_lanes_as_strings
@@ -195,9 +195,9 @@ class TestLaneQuota < Minitest::Test
     assert_empty calls, "a dead lane must not be called"
 
     pinned = Master::Review::LLMDispatcher::ModelPin.with("agy:auto") do
-      dispatcher.send(:answering_model, "claude-cli:claude-opus-5-5", nil)
+      dispatcher.send(:answering_model, "grok-cli:opus", nil)
     end
-    assert_equal "claude-cli:claude-opus-5-5", pinned, "a pinned dead lane yields to the live one"
+    assert_equal "grok-cli:opus", pinned, "a pinned dead lane yields to the live one"
     refute Silence.refuses?(pinned)
   end
 
@@ -209,12 +209,12 @@ class TestLaneQuota < Minitest::Test
       d.define_singleton_method(:send_with_cache) { |model, *_a, **_k| hops << model; Master::Result.ok("ok") }
     end)
     agent.instance_variable_set(:@bus, nil)
-    agent.define_singleton_method(:single_call_fallback_models) { %w[agy:auto claude-cli:claude-sonnet-5-5] }
+    agent.define_singleton_method(:single_call_fallback_models) { %w[agy:auto grok-cli:sonnet] }
     agent.define_singleton_method(:record_single_call_substitution) { |_f, _t, result, **| result }
 
     agent.send(:retry_on_broke_lane, Master::Result.err("boom", category: :provider_error), "x:y", [{ role: "user", content: "hi" }])
 
-    assert_equal %w[claude-cli:claude-sonnet-5-5], hops
+    assert_equal %w[grok-cli:sonnet], hops
   end
 
   def test_openrouter_user_not_found_rejects_the_shared_key_not_each_vendor
@@ -269,7 +269,7 @@ class TestLaneQuota < Minitest::Test
   end
 
   def test_lane_normalization_preserves_hyphenated_cli_provider_names
-    assert_equal "claude-cli", Quota.lane_of("claude-cli:claude-opus-5-5")
+    assert_equal "grok-cli", Quota.lane_of("grok-cli:opus")
     assert_equal "grok-cli", Quota.lane_of("grok-cli:auto")
     assert_equal "deepseek", Quota.lane_of("deepseek-chat")
     assert_equal "google", Quota.lane_of("google/gemini-2.5-flash")

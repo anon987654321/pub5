@@ -8,7 +8,7 @@ module Master
   module Fix
     # Paces a model repair before its call. Two things burned files on 2026-11-05:
     #
-    # A run pinned to one lane (claude-cli, no failover) met LaneSilence's five-minute cool-off,
+    # A run pinned to one lane with no failover met LaneSilence's five-minute cool-off,
     # and every file in it failed at once, "offline: no lane answers". A lane whose cool-off holds
     # every candidate is now waited out, polling, so the next file meets an answering lane.
     #

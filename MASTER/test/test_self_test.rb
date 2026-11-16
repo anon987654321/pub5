@@ -2,6 +2,9 @@
 
 require_relative "test_helper"
 require "fileutils"
+require "json"
+require "tmpdir"
+require_relative "../lib/builder/ai_boot"
 
 class TestSelfTest < Minitest::Test
   class FakeBus
@@ -13,6 +16,64 @@ class TestSelfTest < Minitest::Test
 
     def publish(event, payload = {})
       @events << [event, payload]
+    end
+  end
+
+  def test_boot_self_test_writes_the_full_private_machine_readable_report
+    summary = Class.new do
+      def ok? = false
+      def violation_count = 1
+      def to_h
+        {
+          "LINEARITY" => {
+            ok: false,
+            findings: [{ path: "MASTER/lib/example.rb", line: 12, message: "line too long" }],
+          },
+        }
+      end
+    end.new
+
+    Dir.mktmpdir do |root|
+      directory = File.join(root, ".master")
+      FileUtils.mkdir_p(directory)
+      File.chmod(0o755, directory)
+      path = File.join(directory, "self-test.json")
+
+      assert_equal path, Master::Builder.persist_self_test_report(Master::Result.ok(summary), path:)
+
+      report = JSON.parse(File.read(path))
+      assert_equal "FAIL", report.fetch("status")
+      assert_equal 1, report.fetch("violation_count")
+      finding = report.dig("checks", "LINEARITY", "findings").first
+      assert_equal "MASTER/lib/example.rb", finding.fetch("path")
+      assert_equal 12, finding.fetch("line")
+      assert_equal 0o700, File.stat(directory).mode & 0o777
+      assert_equal 0o600, File.stat(path).mode & 0o777
+      assert_match(/\A\d{4}-\d\d-\d\dT/, report.fetch("generated_at"))
+    end
+  end
+
+  def test_boot_self_test_report_records_a_real_error_state
+    result = Master::Result.err("self-test could not read the tree", category: :offline)
+    Dir.mktmpdir do |root|
+      path = File.join(root, ".master", "self-test.json")
+      Master::Builder.persist_self_test_report(result, path:)
+      report = JSON.parse(File.read(path))
+      assert_equal "ERROR", report.fetch("status")
+      assert_equal "self-test could not read the tree", report.fetch("error")
+    end
+  end
+
+  def test_boot_self_test_report_refuses_a_symlinked_state_directory
+    Dir.mktmpdir do |root|
+      outside = File.join(root, "outside")
+      FileUtils.mkdir_p(outside)
+      File.symlink(outside, File.join(root, ".master"))
+
+      assert_raises(IOError) do
+        Master::Builder.persist_self_test_report(Master::Result.ok(Object.new),
+          path: File.join(root, ".master", "self-test.json"))
+      end
     end
   end
 

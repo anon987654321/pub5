@@ -65,7 +65,7 @@ class TestRoutePolicy < Minitest::Test
 
     Master::Io::ModelQuota.stub(:forecast, quota_error) do
       assert router.send(:unhealthy?, "google/gemma-4-31b-it:free")
-      refute router.send(:unhealthy?, "claude-cli:claude-sonnet-5-5")
+      refute router.send(:unhealthy?, "grok-cli:sonnet")
     end
   end
 

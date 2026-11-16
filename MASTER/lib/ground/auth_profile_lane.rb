@@ -31,7 +31,6 @@ module Master
       def cli_lane_available?(lane)
         cmd = lane.fetch("command", lane["binary"]).to_s
         return false if cmd.empty?
-        return false if cmd == "claude" && ENV["MASTER_NO_CLAUDE_CLI"] == "1"
         return false if cmd == "agy" && ENV["MASTER_NO_AGY_CLI"] == "1"
 
         if cmd == "agy"

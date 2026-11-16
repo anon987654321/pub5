@@ -125,7 +125,7 @@ class TestFixWatchdog < Minitest::Test
   def test_a_tree_that_ended_leaves_no_pass_or_call_to_stall_the_next
     p = pulse
     p.observe("fix_loop:phase", stage: :stream)
-    p.observe("llm:send", model: "claude-cli:claude-sonnet-5-5")
+    p.observe("llm:send", model: "grok-cli:sonnet")
     p.observe("fix_loop:terminal", state: :crash, target: "OPENBSD")
     @now = Master::Fix::FixTime.stall_s * 2
 
@@ -482,8 +482,8 @@ class TestFixWatchdog < Minitest::Test
     end
     assert_equal 2, p.instance_variable_get(:@dead_streak)
 
-    p.observe("llm:send", model: "claude-cli:claude-sonnet-5-5")
-    p.observe("llm:provider_outcome", model: "claude-cli:claude-sonnet-5-5", status: :success)
+    p.observe("llm:send", model: "grok-cli:sonnet")
+    p.observe("llm:provider_outcome", model: "grok-cli:sonnet", status: :success)
     assert_equal 0, p.instance_variable_get(:@dead_streak)
     refute p.instance_variable_get(:@promote_pending),
            "a success ends the current run of consecutive failures"
@@ -499,8 +499,8 @@ class TestFixWatchdog < Minitest::Test
   def test_three_paid_provider_failures_do_not_trigger_free_floor_promotion
     p = pulse
     3.times do
-      p.observe("llm:send", model: "claude-cli:claude-opus-5-5")
-      p.observe("llm:provider_outcome", model: "claude-cli:claude-opus-5-5", status: :failure)
+      p.observe("llm:send", model: "grok-cli:opus")
+      p.observe("llm:provider_outcome", model: "grok-cli:opus", status: :failure)
     end
     assert_equal 0, p.instance_variable_get(:@dead_streak)
     refute p.instance_variable_get(:@promote_pending)

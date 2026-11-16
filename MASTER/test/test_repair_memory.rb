@@ -183,14 +183,14 @@ class TestVerifierModelOverride < Minitest::Test
 
   def test_the_override_wins_inside_the_block_only
     previous = ENV["MASTER_MODEL"]
-    ENV["MASTER_MODEL"] = "claude-cli:claude-opus-5-5"
+    ENV["MASTER_MODEL"] = "anthropic/claude-opus-5-5"
     with_live_lanes do
-      inside = Master::Review::LLMDispatcher::ModelPin.with("claude-cli:claude-sonnet-5") do
+      inside = Master::Review::LLMDispatcher::ModelPin.with("anthropic/claude-sonnet-5") do
         dispatcher.send(:answering_model, "x", nil)
       end
 
-      assert_equal "claude-cli:claude-sonnet-5", inside
-      assert_equal "claude-cli:claude-opus-5-5", dispatcher.send(:answering_model, "x", nil)
+      assert_equal "anthropic/claude-sonnet-5", inside
+      assert_equal "anthropic/claude-opus-5-5", dispatcher.send(:answering_model, "x", nil)
     end
   ensure
     previous.nil? ? ENV.delete("MASTER_MODEL") : ENV["MASTER_MODEL"] = previous
@@ -198,9 +198,9 @@ class TestVerifierModelOverride < Minitest::Test
 
   def test_no_override_leaves_the_forced_model
     previous = ENV["MASTER_MODEL"]
-    ENV["MASTER_MODEL"] = "claude-cli:claude-opus-5-5"
+    ENV["MASTER_MODEL"] = "anthropic/claude-opus-5-5"
     with_live_lanes do
-      assert_equal "claude-cli:claude-opus-5-5",
+      assert_equal "anthropic/claude-opus-5-5",
                    Master::Review::LLMDispatcher::ModelPin.with("") { dispatcher.send(:answering_model, "x", nil) }
     end
   ensure

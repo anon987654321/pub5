@@ -141,9 +141,6 @@ def lanes
   pin = File.file?(config) ? File.read(config)[/^model:\s*(\S+)/, 1] : nil
   say(pin ? :ok : :warn, "model", pin ? "saved model #{pin}" : "no saved model in MASTER/.master/config.yml: a fresh worktree has none; copy it or set MASTER_MODEL")
 
-  claude = File.executable?(File.join(Dir.home, ".local", "bin", "claude")) || system("which claude", out: File::NULL, err: File::NULL)
-  say(claude ? :ok : :warn, "claude", claude ? "claude CLI found (the claude-cli lanes)" : "claude CLI not found: the claude-cli lanes are unreachable")
-
   tags, ok = run("curl", "-s", "-m", "3", "http://127.0.0.1:11434/api/tags")
   models = ok ? JSON.parse(tags)["models"].to_a.map { |m| m["name"] } : []
   say(models.empty? ? :warn : :ok, "ollama", models.empty? ? "not answering on 11434: no local lane" : "#{models.size} models: #{models.first(4).join(', ')}")

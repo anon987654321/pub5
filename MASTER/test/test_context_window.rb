@@ -132,7 +132,7 @@ end
 
   def test_models_yml_states_a_window_and_the_registry_fills_the_rest
     assert_equal 64_000, Master.context_window("deepseek-chat")
-    assert_equal 200_000, Master.context_window("claude-cli:claude-opus-5-5"), "a CLI lane keeps its stated window"
+    assert_equal 200_000, Master.context_window("claude-opus-5-5"), "Anthropic API model keeps its stated window"
     assert_equal RubyLLM.models.find("x-ai/grok-4.3").context_window, Master.context_window("x-ai/grok-4.3")
     assert_equal Master::DEFAULT_CONTEXT_WINDOW, Master.context_window("nobody/never-listed")
   end

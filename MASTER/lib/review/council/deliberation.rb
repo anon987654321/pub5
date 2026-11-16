@@ -92,11 +92,8 @@ module Master
           validate_dependencies!
         end
 
-        # The CLI-lane posture: on a dev Mac the council speaks through the
-        # claude CLI, and the arithmetic above says 26 personas need ~1421s
-        # against a 600s budget — so local runs take one round of a panel
-        # council.yml sizes (local_panel), and vm23 hears everyone.
-        # MASTER_COUNCIL_LOCAL overrides in either direction.
+        # On development Macs, use the compact local panel; full deployments
+        # use the complete council panel. MASTER_COUNCIL_LOCAL overrides either default.
         def self.local_posture?
           return true if ENV["MASTER_LOCAL_ONLY"] == "1"
           ENV.fetch("MASTER_COUNCIL_LOCAL") { RUBY_PLATFORM.include?("darwin") ? "1" : "0" } == "1"
@@ -451,7 +448,6 @@ module Master
           case message
           when /insufficient credits/i then "insufficient_credits"
           when /not wired to any LLM/i then "no_provider_reached"
-          when /claude-cli/i then "claude_cli_error"
           when /timed out|timeout/i then "timeout"
           when /rate.?limit/i then "rate_limited"
           else "error"

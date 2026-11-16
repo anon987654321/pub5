@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "fileutils"
+require "json"
+require "time"
 require_relative "../fix/kernel"
 
 module Master
@@ -105,10 +108,52 @@ module Master
       ENV.fetch("MASTER_STRICT_BOOT", "0") == "1"
     end
 
+    # Persist the full builder diagnostic separately from boot output.
+    # The report contains source paths and findings, but no provider credentials.
+    def persist_self_test_report(self_test, path: File.join(Master::ROOT, ".master", "self-test.json"))
+      result = self_test.err? ? nil : self_test.value!
+      payload = {
+        "schema_version" => 1,
+        "generated_at" => Time.now.utc.iso8601(6),
+        "status" => self_test.err? ? "ERROR" : (result.ok? ? "PASS" : "FAIL"),
+        "violation_count" => result&.violation_count || 0,
+        "checks" => result&.to_h || {},
+        "error" => self_test.message if self_test.err?,
+      }.compact
+
+      directory = File.dirname(path)
+      raise IOError, "self-test report directory is a symlink" if File.symlink?(directory)
+      FileUtils.mkdir_p(directory, mode: 0o700)
+      stat = File.lstat(directory)
+      raise IOError, "self-test report directory is not owned by this user" unless stat.uid == Process.uid
+      raise IOError, "self-test report directory is not a directory" unless stat.directory? && !stat.symlink?
+      File.chmod(0o700, directory)
+
+      temporary = "#{path}.tmp-#{Process.pid}"
+      File.open(temporary, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
+        file.write(JSON.pretty_generate(payload))
+        file.write("\n")
+        file.flush
+        file.fsync
+      end
+      File.rename(temporary, path)
+      path
+    ensure
+      File.delete(temporary) if temporary && File.file?(temporary)
+    end
+
     def publish_self_test(bus, self_test)
+      report_path = begin
+        persist_self_test_report(self_test) unless defined?(Minitest)
+      rescue StandardError => error
+        Trace::Dmesg.status("boot0", "self-test report unavailable, #{error.class}: #{error.message}")
+        nil
+      end
+      report_label = report_path ? " report=#{report_path.sub("#{Master::ROOT}/", "")}" : ""
+
       if self_test.err?
-        Trace::Dmesg.status("boot0", "builder self-test failed, #{self_test.message}")
-        bus&.publish("builder:self_test", ok: false, error: self_test.message)
+        Trace::Dmesg.status("boot0", "builder self-test failed, #{self_test.message}#{report_label}")
+        bus&.publish("builder:self_test", ok: false, error: self_test.message, report_path:)
       elsif !self_test.value!.ok?
         summary = self_test.value!
         law_counts = summary.checks.filter_map do |check|
@@ -125,10 +170,10 @@ module Master
         end
         Trace::Dmesg.status(
           "boot0",
-          "builder self-test: #{summary.violation_count} violations [#{law_counts.join(' ')}]#{detail}"
+          "builder self-test: #{summary.violation_count} violations [#{law_counts.join(' ')}]#{detail}#{report_label}"
         )
         bus&.publish("builder:self_test", ok: false, violations: summary.violation_count,
-          by_law: law_counts, first_finding: first)
+          by_law: law_counts, first_finding: first, report_path:)
         # A full self-test is a diagnostic, not a production-startup check.
         # MASTER_STRICT_BOOT=1 explicitly turns its findings into a boot failure.
         # Keeping strictness opt-in lets an operator inspect known debt without
@@ -150,6 +195,9 @@ module Master
           end
           raise "builder: self_test failed with #{summary.violation_count} violation(s) [#{law_counts}]#{detail}"
         end
+      else
+        Trace::Dmesg.status("boot0", "builder self-test: 0 violations#{report_label}")
+        bus&.publish("builder:self_test", ok: true, violations: 0, report_path:)
       end
     end
 

@@ -27,28 +27,6 @@ module Master
       CACHE_WINDOW = 4
       REACT_MAX_STEPS = 8
       MS_PER_SECOND = 1000
-      # 60 was below the floor for the work the council does — not tight, but
-      # unreachable. Measured 2026-07-31 on this machine, `claude --print
-      # --model sonnet` against a 5KB code-review prompt (a SMALL one by council
-      # standards, 120 lines and no persona system prompt):
-      #
-      #   one call, nothing else running   134s, 115s, 114s
-      #   two concurrent                   118s, both finished
-      #   four concurrent (MAX_CONCURRENT) 203s wall, one call still unfinished
-      #                                    when a 200s outer timeout killed it
-      #
-      # A single persona could not answer inside 60s with the machine otherwise
-      # idle, so whichever two personas the scheduler happened to favour decided
-      # every council. That is what "quorum not reached (2/26)" was: not
-      # disagreement, not an outage, a stopwatch set below the length of the
-      # task.
-      #
-      # 300 covers the four-concurrent case with headroom. MASTER_CLAUDE_CLI_TIMEOUT
-      # still overrides it. Note the shape of those numbers if this needs tuning
-      # again: going from two concurrent to four roughly doubles per-call
-      # latency for the same total throughput, so MAX_CONCURRENT buys nothing
-      # here and costs margin.
-      CLAUDE_CLI_TIMEOUT_S = 300
       AGY_CLI_TIMEOUT_S = 300
       CLAUDE_RE = /\Aclaude-|anthropic\/claude/i.freeze
       # Capability by id pattern, not ruby_llm's Model::Info#supports_vision? or
@@ -259,7 +237,6 @@ module Master
       end
 
       def agy_model?(model_id) = model_id.to_s.start_with?("agy:") || model_id.to_s == "agy"
-      def claude_cli_model?(model_id) = model_id.to_s.start_with?("claude-cli:")
       def web_chat_model?(model_id) = model_id.to_s.start_with?("web-chat:")
       def tool_capable?(model_id) = TOOL_CAPABLE_RE.match?(model_id.to_s.downcase)
       def claude_model?(model_id) = CLAUDE_RE.match?(model_id.to_s)
@@ -296,12 +273,6 @@ module Master
       # choice is overridden at the single door every request passes through —
       # cheap, default, strong, vision, the council's personas and the fix
       # loop's consensus alike.
-      #
-      # It exists for the case where the machine running MASTER has credit with
-      # one provider and not another. On vm23 and ai.brgen.no it is unset and
-      # routing is unchanged; from a workstation with a Claude subscription,
-      # `MASTER_MODEL=claude-cli:claude-opus-4-8` sends everything through the
-      # local claude binary instead of OpenRouter.
       #
       # Deliberately not a config key: a setting that silently redirects every
       # model call belongs to a shell session, not to a file that deploys.
@@ -565,19 +536,13 @@ module Master
             "llm", "model=#{selected_model} stream=#{stream} temperature=#{temperature.inspect}",
           )
         end
-        # Claude CLI is deliberately text-only (--tools "" and strict MCP config),
-        # even when its underlying model supports native tools. Give it MASTER's
-        # guarded ReAct loop before the provider-specific early return.
         if format.nil? && !Fiber[:master_no_tools] && @tools.any? &&
            !Io::LaneSelection.nsfw_model?(selected_model) &&
-           (claude_cli_model?(selected_model) || !tool_capable?(selected_model))
+           !tool_capable?(selected_model)
           return react_tool_loop(selected_model, messages, sys:, stream:, image:, &blk)
         end
 
         return send_agy_cli(selected_model.delete_prefix("agy:"), messages, sys:, stream:, &blk) if agy_model?(selected_model)
-        if claude_cli_model?(selected_model)
-          return send_claude_cli(selected_model.delete_prefix("claude-cli:"), messages, sys:, image:, &(blk if stream))
-        end
         return send_web_chat(selected_model.delete_prefix("web-chat:"), messages, sys:) if web_chat_model?(selected_model)
         return send_cli_lane(selected_model, messages, sys:) if cli_lane_model?(selected_model)
         return send_local_server(selected_model, messages, sys:, temperature:) if local_server_model?(selected_model)
@@ -630,12 +595,9 @@ module Master
         Digest::SHA256.hexdigest("#{parts}\n#{window}")
       end
 
-      # A subscription CLI lane (claude-cli, codex, grok, agy) is paid for by
-      # the subscription, not by the call. Priced like an API call, a /fix run
-      # forced through claude-cli reached the $10 session budget and refused
-      # every repair after it, though no call had cost anything.
+      # Signed-in command-line lanes are quota-metered rather than billed per API call.
       def estimate_cost(prompt, model = nil)
-        return 0.0 if model && (claude_cli_model?(model) || cli_lane_model?(model))
+        return 0.0 if model && cli_lane_model?(model)
 
         Master::Trace::Session.estimate_tokens(prompt) * COST_PER_TOKEN
       end

@@ -38,7 +38,13 @@ module Master
 
         Autonomous surgery rules:
         - Read the archaeology below before deciding that a file is dead or should move.
-        - A pure deletion is valid only when surviving production code has no reference to its path or defined constants.
+        - Run a decommission and simplification audit over the affected subsystem before choosing an operation.
+        - Inventory runtime registrations, manifests, boot hooks, config readers, require/load/import sites, autoloads, reflection, command entrypoints, external scripts, deployment paths, tests and documented public contracts.
+        - Search reverse references across the repository, not only the supplied excerpts. A missing direct text match is not proof when dispatch, constants, globbing, registries or generated paths can reach the component.
+        - Classify each candidate KEEP, CONSOLIDATE, DECOMMISSION or HUMAN_DECISION; cite exact evidence paths and every known live consumer.
+        - DECOMMISSION only when source, runtime, dynamic and external reachability are disproved, the purpose is obsolete, required data is preserved, and regression coverage proves the surviving path.
+        - Parked is not the same as dead. Preserve parked capabilities with a real revival condition; remove stale activation hooks and duplicated policy only when every reader is accounted for.
+        - Prefer deleting a whole duplicate mechanism over preserving a compatibility layer for a dead consumer. Do not remove a capability merely because it is currently disabled.
         - Tests are evidence, not production callers. If a deleted test is the only consumer, say so in SUMMARY.
         - Recalculate the recursive tree census after every kept restructure; hidden nested growth is not free.
         - Reconcile the structural ratchet when the measured core gets smaller. Keep the recorded ceiling honest.
@@ -85,6 +91,9 @@ module Master
         Automatic vetoes:
         %<automatic_vetoes>s
 
+        Decommission evidence and simplification report (mandatory):
+        State the candidate's purpose and owner; list exact inbound references, runtime activation paths, config/manifest readers, external/deploy consumers, tests, retained data and revival conditions. Separate proven absence from an unsearched or dynamic path. If evidence is incomplete, KEEP or HUMAN_DECISION; do not infer deletion from age, naming, a parked label or a zero-result grep.
+
         The tree, and the contracts to keep:
         %<contracts>s
 
@@ -106,7 +115,7 @@ module Master
         operations: %<operations>s
         %<summary>s
 
-        Attack it. Does it change behaviour, break a caller, a require, load order,
+        Attack it. Verify the decommission report independently: inspect reverse references and dynamic entrypoints; challenge every claim that a component is unused; confirm retained data and external consumers. Does it change behaviour, break a caller, a require, load order,
         or a Zeitwerk path and constant pair? Does it only move complexity around,
         or leave the tree harder to find one's way in? Does it merge code that only
         looks alike, whose units change for different reasons, or abstract fewer

@@ -28,7 +28,7 @@ class TestQuotaCheck < Minitest::Test
     Check.trip!(source: "council persona P0", message: CREDITS, model: "openrouter:nvidia/nemotron:free")
 
     assert Check.blocked?("openrouter:nvidia/nemotron:free")
-    refute Check.blocked?("claude-cli:claude-sonnet-5-5")
+    refute Check.blocked?("grok-cli:sonnet")
     assert Check.blocked?, "asked without a model, the tier still reads as blocked"
   end
 
@@ -36,13 +36,13 @@ class TestQuotaCheck < Minitest::Test
     Check.trip!(source: "council persona P0", message: CREDITS)
 
     assert Check.blocked?("openrouter:nvidia/nemotron:free")
-    refute Check.blocked?("claude-cli:claude-sonnet-5-5")
+    refute Check.blocked?("grok-cli:sonnet")
   end
 
   def test_a_trip_without_a_model_closes_every_lane
     Check.trip!(source: "semantic Law X", message: "Individual quota reached")
 
-    assert Check.blocked?("claude-cli:claude-sonnet-5-5")
+    assert Check.blocked?("grok-cli:sonnet")
   end
 
   # The whole point of the class: a spend limit and a throttle want opposite
@@ -171,11 +171,11 @@ class TestQuotaCheck < Minitest::Test
   # same way twice; the swap belongs in the record.
   def test_substitutions_are_recorded
     assert_nil Check.substitution_note
-    Check.substituted(from: "openrouter/free", to: "claude-cli:sonnet")
-    Check.substituted(from: "openrouter/free", to: "claude-cli:sonnet")
+    Check.substituted(from: "openrouter/free", to: "grok-cli:sonnet")
+    Check.substituted(from: "openrouter/free", to: "grok-cli:sonnet")
 
     assert_equal 1, Check.substitutions.size
-    assert_match(/openrouter\/free -> claude-cli:sonnet/, Check.substitution_note)
+    assert_match(/openrouter\/free -> grok-cli:sonnet/, Check.substitution_note)
   end
 
   # The other half of the defect: MASTER/law's 122 rules are all lexical, so

@@ -201,7 +201,6 @@ module Master
           models = Array(candidates).empty? ? [@config.model] : candidates
           primary = models.first
           modes = if (@dispatcher.respond_to?(:agy_model?) && @dispatcher.agy_model?(primary)) ||
-                     (@dispatcher.respond_to?(:claude_cli_model?) && @dispatcher.claude_cli_model?(primary)) ||
                      @dispatcher.tool_capable?(primary)
                     [@config.reasoning_mode.to_s, "code_agent", "react"]
                   else

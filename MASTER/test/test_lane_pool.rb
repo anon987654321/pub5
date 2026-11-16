@@ -13,7 +13,7 @@ class TestLanePool < Minitest::Test
   Tail = Master::Io::PaidTail
   Quota = Master::Io::LaneQuota
 
-  OPUS = "claude-cli:claude-opus-5-5"
+  OPUS = "grok-cli:opus"
   GROK = "grok-cli:auto"
   DEEPSEEK = "deepseek-chat"
   LOCAL = "ollama:gemma3:4b"

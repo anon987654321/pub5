@@ -295,8 +295,8 @@ class TestFixRunBudget < Minitest::Test
     say.call("scan:progress", done: 812, total: 2638, path: "lib/fix/run_pulse.rb", violations: 1)
     say.call("repair_loop:fix_applied", law: "X", file: "a.rb")
     say.call("repair_loop:fix_rejected", law: "X", file: "b.rb", reason: "lint")
-    say.call("llm:send", model: "claude-cli:claude-opus-5-5")
-    say.call("llm:provider_outcome", model: "claude-cli:claude-opus-5-5", status: "success")
+    say.call("llm:send", model: "grok-cli:opus")
+    say.call("llm:provider_outcome", model: "grok-cli:opus", status: "success")
     @now = 2412.0
     line = run.beat
 
@@ -308,7 +308,7 @@ class TestFixRunBudget < Minitest::Test
     assert_equal [line, "fix0: #{stalled}", stopping], @said
     assert line.start_with?("fix0: pass 2/8 run >=16% scan0 phase scan files 812/2638 (31%) " \
                             "run_pulse.rb fixes 1 ok 1 failed "), line
-    assert_includes line, "lane claude-cli:claude-opus-5-5 last call 2412s ago"
+    assert_includes line, "lane grok-cli:opus last call 2412s ago"
     assert_includes line, "tokens = 342191 (342K) elapsed = 2412s (40m12s)"
     assert_match(/ eta (~\d+m|unknown) load \d+\.\d\z/, line)
     assert_operator line.length, :<, 215 # long lane ids, a six-digit token count and a named phase are the worst case
@@ -350,14 +350,14 @@ class TestFixRunBudget < Minitest::Test
     _bus, say = pulse_bus
     run.announce(target: "MASTER", bus: _bus)
     @now = 10.0
-    say.call("llm:send", model: "claude-cli:claude-opus-5-5")
+    say.call("llm:send", model: "grok-cli:opus")
     @now = 12.0
-    say.call("llm:call_finished", model: "claude-cli:claude-opus-5-5", status: :crash,
+    say.call("llm:call_finished", model: "grok-cli:opus", status: :crash,
                                                error_digest: "a" * 64, error_bytes: 12)
 
     assert_equal 1, run.counts.fetch(:failed)
     assert_equal 1, run.counts.fetch(:attempts)
-    refute_match(/waiting on claude-cli/, run.beat)
+    refute_match(/waiting on grok-cli/, run.beat)
   end
 
   def test_pass_summary_block_counts_before_after_fixes_skips_and_commits
@@ -396,13 +396,13 @@ class TestFixRunBudget < Minitest::Test
     lines = Master::Trace::Dmesg.stub(:verbose?, false) do
       Master::Fix::RunPulse::Banner.lines(
         root: "/r/MASTER", target: "RAILS", max_passes: 8, limits: "budget $50.0 / 480m",
-        probes: { choice: ["claude-cli:claude-opus-5-5", "availability"] }
+        probes: { choice: ["grok-cli:opus", "availability"] }
       )
     end
 
     assert_equal 2, lines.size
     assert_match(/\Afix0 at mainbus0: target RAILS, passes 8, budget \$50\.0 \/ 480m\z/, lines[0])
-    assert_match(/\Amodel0 at fix0: claude-cli:claude-opus-5-5/, lines[1])
+    assert_match(/\Amodel0 at fix0: grok-cli:opus/, lines[1])
     refute(lines.any? { |line| line.match?(/real mem|ncpu|lane\d|triangle0/) })
   end
 
@@ -411,16 +411,16 @@ class TestFixRunBudget < Minitest::Test
       Master::Fix::RunPulse::Banner.lines(
         root: "/r/MASTER", target: "RAILS", max_passes: 8, limits: "budget $50.0 / 480m", now: Time.at(0).utc,
         probes: { sha: "abc1234", mem: 17_179_869_184,
-                  states: ["claude-cli: live", "agy: quota spent, back in 140h44m (2026-10-17 04:12)"],
+                  states: ["grok-cli: live", "agy: quota spent, back in 140h44m (2026-10-17 04:12)"],
                   ports: { "amber" => false, "bsdports" => true },
-                  choice: ["claude-cli:claude-opus-5-5", "availability"] }
+                  choice: ["grok-cli:opus", "availability"] }
       )
     end
 
     assert_match(/\AMASTER \S+ \(FIX\) #abc1234: /, lines[0])
     assert_match(/\A    \S+@\S+:\/r\/MASTER\z/, lines[1])
     assert_equal "real mem = 17179869184 (16384MB)", lines[2]
-    assert_includes lines, "lane0 at fix0: claude-cli"
+    assert_includes lines, "lane0 at fix0: grok-cli"
     assert_includes lines, "agy at fix0: not configured, quota spent, back in 140h44m (2026-10-17 04:12)"
     assert_includes lines, "amber0 at triangle0: not configured, port 61352 not answering"
     refute(lines.any? { |line| line.start_with?("bsdports0") })

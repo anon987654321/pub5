@@ -5,16 +5,12 @@ require "json"
 require "tempfile"
 require "timeout"
 require_relative "../../io/exec"
-require_relative "claude_stream"
 require_relative "cli_usage"
 
 module Master
   module Review
     class LLMDispatcher
-      # The lanes that answer through a signed-in command-line client rather
-      # than an HTTP API: agy, claude, and the ones models.yml cli_lanes
-      # declares (codex, grok). Each is asked one question in a subprocess and
-      # answers with text.
+      # Signed-in command-line clients declared by MASTER's CLI lane catalogue.
       module CliSender
         include CliUsage
 
@@ -82,11 +78,8 @@ module Master
           Result.err("#{name}: #{said}", category: :provider_error)
         end
 
-        # Why a lane failed, in words. stderr carries the program's own complaint; stdout
-        # carries events when the lane speaks json, and a json line is not a reason. A dead
-        # claude-cli once reported "{"type":"assistant","message":{"diagnostics":null," —
-        # a fragment of an event, cut at 90 chars further out, that named nothing.
-        # nil means neither stream said anything in words; the caller words that itself.
+        # Prefer stderr diagnostics; otherwise extract a textual error from
+        # structured stdout or use the final plain-text lines.
         def cli_lane_complaint(out, err)
           out = out.to_s.strip
           said = err.to_s.strip
@@ -181,165 +174,11 @@ module Master
           AGY_CLI_TIMEOUT_S
         end
 
-        # At most two claude subprocesses at once, process-wide. The latency
-        # table above CLAUDE_CLI_TIMEOUT_S measured it: two concurrent finish
-        # together, four roughly double per-call latency for the same total
-        # throughput — and the fix loop runs rule groups in threads, so the
-        # 2026-08-20 proof run showed CLI calls dying empty-stderr under
-        # four-way contention, opening the circuit. Callers block for a slot;
-        # waiting beats thrashing.
         CLI_SLOTS = Integer(ENV.fetch("MASTER_CLI_SLOTS", 2)).then { |n| SizedQueue.new(n).tap { |queue| n.times { queue << true } } }
         LOCAL_CLI_SLOTS = SizedQueue.new(1).tap { |queue| queue << true }
 
-        # With a block the reply streams: its text reaches the block as the model writes it (see ClaudeStream), and
-        # the result is still the whole reply.
-        def send_claude_cli(model_alias, messages, **request, &on_text)
-          return Result.err("claude-cli: no claude on PATH", category: :no_api_key) unless claude_on_path?
-
-          run = claude_request(model_alias, messages, **request)
-          run = run.streaming(&on_text) if on_text
-          with_cli_slot { claude_execute(run, model: "claude-cli:#{model_alias}") }
-        end
-
-        # The images a request carries, as the content blocks `claude --print` takes on
-        # stream-json input: the primary image (a path or base64 data) then image[:extra].
-        # The plain-text lane drops images, and a vision model that never saw the
-        # screenshot judges a layout from numbers alone.
-        def claude_image_blocks(image)
-          return [] unless image.respond_to?(:[])
-
-          entries = [image, *Array(image[:extra])]
-          entries.filter_map do |entry|
-            path = entry[:path].to_s
-            data = if !path.empty? && File.file?(path)
-              Base64.strict_encode64(File.binread(path))
-            elsif !entry[:data].to_s.empty?
-              entry[:data].to_s
-            end
-            next unless data
-
-            mime = entry[:mime].to_s
-            mime = { ".png" => "image/png", ".webp" => "image/webp", ".gif" => "image/gif" }.fetch(File.extname(path).downcase, "image/jpeg") if mime.empty?
-            { type: "image", source: { type: "base64", media_type: mime, data: } }
-          end
-        end
-
-        # The same reading of PATH that ModelRouter uses to keep an absent lane
-        # out of a chain, here so a dispatch reached any other way refuses too.
-        # MASTER_NO_CLAUDE_CLI=1 takes the lane out on a box that has the binary.
-        def claude_on_path?
-          return false if ENV["MASTER_NO_CLAUDE_CLI"] == "1"
-          return @claude_on_path unless @claude_on_path.nil?
-
-          @claude_on_path = !claude_binary.nil?
-        end
-
-        def claude_binary = (@claude_binary ||= Master::Io::Exec.cli_binary("claude"))
-
-        # The first two mark the parent as a Claude Code session, and a `claude --print`
-        # that inherits them from one hangs until killed. The second two are keys MASTER
-        # loads for its API lanes: `claude` prefers a key to its own subscription login
-        # and exits 1 when the key has no credit, so this keyless lane starts without
-        # them. CLAUDE_CODE_OAUTH_TOKEN and the other CLAUDE_* names can carry the
-        # login, so they stay.
-        CLAUDE_SESSION_ENV = {
-          "CLAUDECODE" => nil, "CLAUDE_CODE_ENTRYPOINT" => nil,
-          "ANTHROPIC_API_KEY" => nil, "ANTHROPIC_AUTH_TOKEN" => nil
-        }.freeze
-
-        # A lane answers in text and nothing else. Left its tools, `claude --print`
-        # edited files and ran git inside the /fix worktree on its own: it committed
-        # twice there, past the verifier, the proof and the pass transaction. No
-        # built-in tool and no MCP server; the dispatcher's caller does the writing.
-        # The operator's Claude Code hooks are not MASTER's: in the 2026-10-22 trial a user Stop hook demanding
-        # evidence of vps-deploy fired on every lane call, and each reply to a personal question opened by
-        # explaining that no deploy had run.
-        CLAUDE_CLI_TEXT_ONLY = ["--tools", "", "--strict-mcp-config", "--settings", '{"disableAllHooks":true}'].freeze
-
-        # The subscription's own limit answers on stdout and exits 0. Taken as the
-        # model's reply, "You've hit your session limit · resets 4:30pm" was proposed
-        # as a fix or a verdict two hundred times in one /fix run, until someone read
-        # the recordings. It is a quota, and the lane stands down like one.
-        CLAUDE_CLI_LIMIT = /\A\s*(?:You've hit your \w*\s*limit|Claude (?:AI )?usage limit reached)/i
-
-        def claude_cli_call(model_alias, messages, sys, image = nil)
-          claude_execute(claude_request(model_alias, messages, sys:, image:), model: "claude-cli:#{model_alias}")
-        end
-
-        CLAUDE_IMAGE_FLAGS = ["--input-format", "stream-json", "--output-format", "stream-json", "--verbose"].freeze
-        CLAUDE_STREAM_FLAGS = ["--output-format", "stream-json", "--verbose", "--include-partial-messages"].freeze
-        # A plain run asks for the one json result, which carries the run's usage and cost beside the reply.
-        CLAUDE_JSON_FLAGS = ["--output-format", "json"].freeze
-
-        # One `claude --print` run: its arguments, its stdin, the stream reader when it streams, and whether its
-        # stdout is stream-json events rather than the reply itself.
-        ClaudeRun = Data.define(:args, :stdin, :stream, :json) do
-          # The same run, its reply passed to the block as it is written. An image run already speaks stream-json
-          # on stdin and is left whole.
-          def streaming(&on_text)
-            return self if json
-
-            with(args: args + CLAUDE_STREAM_FLAGS, stream: ClaudeStream.new(&on_text), json: true)
-          end
-        end
-
-        def claude_execute(run, model: "claude-cli")
-          run = run.with(args: run.args + CLAUDE_JSON_FLAGS, json: true) unless run.json
-          out, err, status = claude_capture(run)
-          return claude_cli_failure(out, err, status:) unless status.success?
-
-          run.stream&.finish
-          claude_answer(out, model)
-        rescue Timeout::Error
-          Result.err("claude-cli: timed out after #{PassClock.call_deadline(claude_cli_timeout_s)}s", category: :timeout)
-        rescue StandardError => e
-          Result.err("claude-cli: #{e.message}", category: :provider_error)
-        end
-
-        def claude_capture(run)
-          capture3_with_timeout(claude_cli_timeout_s, *run.args, stdin_data: run.stdin, env: CLAUDE_SESSION_ENV,
-                                                                 on_stdout: run.stream&.method(:feed))
-        end
-
-        # Images ride stream-json input; plain text goes on stdin as it is.
-        def claude_request(model_alias, messages, sys: nil, image: nil)
-          args = [claude_binary || "claude", "--print", "--model", model_alias, *CLAUDE_CLI_TEXT_ONLY]
-          args += ["--system-prompt", sys] if sys && !sys.empty?
-          text = text_prompt_for(messages)
-          blocks = claude_image_blocks(image)
-          return ClaudeRun.new(args:, stdin: text, stream: nil, json: false) if blocks.empty?
-
-          content = [*blocks, { type: "text", text: }]
-          stdin = "#{JSON.generate(type: "user", message: { role: "user", content: })}\n"
-          ClaudeRun.new(args: args + CLAUDE_IMAGE_FLAGS, stdin:, stream: nil, json: true)
-        end
-
-        # A CLI that dies with nothing on either stream taught the operator nothing:
-        # the 2026-09-16 /fix printed "claude-cli:" and a blank a hundred and
-        # seventy-eight times. `claude --print` from inside a session hangs and is
-        # killed, which is exit 124 and two empty streams.
-        def claude_cli_failure(out, err, status:)
-          said = cli_lane_complaint(out, err) ||
-                 (json_stream?(out.to_s) ? "exited #{status.exitstatus} and named no error in its stream" \
-                                         : "exited #{status.exitstatus} with nothing on either stream")
-          Result.err("claude-cli: #{said}", category: :provider_error)
-        end
-
-        def claude_cli_reply(out, json:)
-          reply = out.strip
-          return Result.err("claude-cli: #{reply.lines.first.strip}", category: :exhausted) if reply.match?(CLAUDE_CLI_LIMIT)
-          return Result.err("claude-cli: no reply on stream-json output", category: :provider_error) if json && reply.empty?
-
-          Result.ok(reply)
-        end
-
-        # The lane's own bound, under a /fix run's call cap (PassClock.call_deadline): the child dies by
-        # its own bounded wait, and the call fails as a timeout before the stall window closes.
-
-        # Keep the dispatcher-specific timeout contract, but let the sanctioned
-        # runner own stream draining, child tracking and process-group cleanup.
-        # Exec reads the pipes as bytes. A lane replies in UTF-8 text, and left BINARY its reply broke the
-        # first regex that met a non-ASCII letter: the "å" of a Norwegian greeting killed the CLI turn.
+        # The sanctioned runner owns stream draining, child tracking and
+        # process-group cleanup.
         def capture3_with_timeout(timeout_s, *cmd, env: {}, **opts)
           opts.delete(:on_stdout) if opts[:on_stdout].nil?
           timeout_s = PassClock.call_deadline(timeout_s)
@@ -349,11 +188,6 @@ module Master
           raise Timeout::Error
         end
 
-        def claude_cli_timeout_s
-          Integer(ENV.fetch("MASTER_CLAUDE_CLI_TIMEOUT", CLAUDE_CLI_TIMEOUT_S.to_s))
-        rescue ArgumentError
-          CLAUDE_CLI_TIMEOUT_S
-        end
       end
     end
   end

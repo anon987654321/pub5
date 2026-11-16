@@ -11,7 +11,7 @@ class TestLaneState < Minitest::Test
   def teardown = Master::Io::ModelSkipCache.clear!
 
   def test_a_model_no_store_refuses_is_usable
-    verdict = State.verdict("claude-cli:claude-opus-5-5")
+    verdict = State.verdict("grok-cli:opus")
 
     assert verdict.usable?
     assert_nil verdict.reason
@@ -41,8 +41,8 @@ class TestLaneState < Minitest::Test
   end
 # The services' vocabulary: ready only after a call succeeded.
 def test_health_reads_in_the_one_vocabulary
-  assert_equal "configured: not asked yet", State.health("claude-cli:claude-opus-5-5")
-  assert_equal "ready", State.health("claude-cli:claude-opus-5-5", succeeded: true)
+  assert_equal "configured: not asked yet", State.health("grok-cli:opus")
+  assert_equal "ready", State.health("grok-cli:opus", succeeded: true)
 
   Master::Io::ModelSkipCache.skip!("x-ai/grok-4.3", reason: "HTTP 429", category: :rate_limit)
   assert_match(/\Adegraded: parked/, State.health("x-ai/grok-4.3", succeeded: true))

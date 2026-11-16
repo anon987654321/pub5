@@ -2428,7 +2428,7 @@ routing_architecture:
     fix: routes explanation/exploration/fallback_default point at free tier
   - id: opus_missing
     issue: Opus 4.8 not encoded as primary when funded
-    fix: primary tier with claude-cli and anthropic opus paths
+    fix: primary tier with the configured GLM and Anthropic API paths
   - id: vision_broken
     issue: images routed to text-only glm model
     fix: vision_model_for uses vision tier via router
@@ -2449,9 +2449,8 @@ routing_architecture:
     fix: LaneQuota cooldowns and one distinct credential per provider; fallback crosses providers
   budget_aware_ladder:
   - tier: S
-    name: Opus 4.8 primary when funded
+    name: Anthropic Opus API when funded
     models:
-    - claude-cli:claude-opus-4-8
     - anthropic/claude-opus-4.1
     entry: affordable and available
   - tier: A

@@ -10,7 +10,7 @@ class AgentEscalationTest < Minitest::Test
     attr_reader :models
     def initialize = @models = []
     def send_with_cache(model, *) = ResultOk.new("ok-from-#{model}").tap { @models << model }
-    def claude_cli_model?(_) = false
+    def grok_cli_model?(_) = false
     def tool_capable?(_)     = false
   end
 

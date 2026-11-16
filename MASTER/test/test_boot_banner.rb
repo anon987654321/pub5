@@ -60,7 +60,7 @@ class TestBootBanner < Minitest::Test
 
   def boot_status_splash
     ENV["MASTER_BOOT_STATUS"] = "1"
-    Master::Voice::Renderer.new(config: {}).splash("claude-cli:claude-opus-5-5").lines(chomp: true)
+    Master::Voice::Renderer.new(config: {}).splash("grok-cli:opus").lines(chomp: true)
   ensure
     ENV.delete("MASTER_BOOT_STATUS")
   end

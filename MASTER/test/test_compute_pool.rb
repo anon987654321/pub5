@@ -155,7 +155,7 @@ class TestComputePool < Minitest::Test
   end
 
   def test_recent_success_out_ranks_a_repeatedly_failing_subscription
-    opus = "claude-cli:claude-opus-5-5"
+    opus = "grok-cli:opus"
     grok = "grok-cli:auto"
     now = Time.utc(2026, 11, 12, 12).to_f
     @pool.instance_variable_set(:@clock, -> { now })

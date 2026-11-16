@@ -13,12 +13,11 @@ module Master
         private
 
         def short_model(model)
-          model.to_s.sub(/\Aclaude-cli:/, "").sub(/\Aweb-chat:/, "").split("/").last.to_s.sub(/:free$/, "")
+          model.to_s.sub(/\Aweb-chat:/, "").split("/").last.to_s.sub(/:free$/, "")
         end
 
         def provider_for(model)
           m = model.to_s
-          return "claude-cli" if m.start_with?("claude-cli:")
           return "web-chat"   if m.start_with?("web-chat:")
           return "ollama"     if m.start_with?("ollama:", "ollama/")
           return "openrouter" if m.include?("/")

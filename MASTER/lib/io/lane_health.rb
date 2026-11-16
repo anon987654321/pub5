@@ -186,7 +186,7 @@ module Master
         Master::Io::LaneQuota.dead?(model)
       end
 
-      # "claude-cli: quota spent, back in 2h3m (..); ollama: live" for each lane once.
+      # "provider: quota spent, back in 2h3m (..); ollama: live" for each lane once.
       def states(models, refuses: ->(model) { dead?(model) })
         lanes = Array(models).uniq { |model| LaneQuota.report_for(model) || LaneQuota.lane_of(model) }
         lanes.map do |model|

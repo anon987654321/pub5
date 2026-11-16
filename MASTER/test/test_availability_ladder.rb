@@ -26,7 +26,7 @@ class AvailabilityLadderTest < Minitest::Test
   def test_model_levels_do_not_call_cloud_ollama_local
     subject = policy
 
-    assert_equal "L4", subject.level_for("claude-cli:opus")
+    assert_equal "L4", subject.level_for("grok-cli:opus")
     assert_equal "L3", subject.level_for("web-chat:grok")
     assert_equal "L3", subject.level_for("ollama:qwen3-cloud")
     assert_equal "L2", subject.level_for("ollama:qwen3")

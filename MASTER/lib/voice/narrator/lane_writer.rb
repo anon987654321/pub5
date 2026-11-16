@@ -17,10 +17,9 @@ module Master
         UNSUPPORTED_LANES = %w[grok-cli codex-cli agy web-chat].freeze
         REFUSAL_PREFIX = /\A(?:you['’]ve hit your (?:session|usage|weekly|daily|message) limit|you exceeded your current quota|individual quota (?:reached|exceeded)|quota (?:reached|exceeded|exhausted)|rate limit exceeded|HTTP\s*429|(?:401|403)\s+unauthori[sz]ed|unauthori[sz]ed|invalid api[ _-]?key|authentication (?:failed|required)|please run \/login)/i.freeze
 
-        def initialize(config, lanes: Master::Io::LaneSelection, runner: Master::Io::Exec)
+        def initialize(config, lanes: Master::Io::LaneSelection)
           @config = config
           @lanes = lanes
-          @runner = runner
         end
 
         def call(system:, prompt:, max_tokens:)

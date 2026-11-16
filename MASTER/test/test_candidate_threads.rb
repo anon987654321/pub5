@@ -16,7 +16,7 @@ class TestCandidateThreads < Minitest::Test
 
   def test_each_candidate_sees_the_retry_note_and_the_model_pin
     rows = Ledger.retrying("the diff touched line 900") do
-      Pin.with("claude-cli:claude-opus-5-5") do
+      Pin.with("grok-cli:opus") do
         repair.send(:candidate_threads, 3, violation: {}, event: "test") { |_index| [Ledger.retry_note, Pin.current] }
       end
     end
@@ -24,7 +24,7 @@ class TestCandidateThreads < Minitest::Test
     assert_equal 3, rows.size
     rows.each do |note, pin|
       assert_includes note, "the diff touched line 900"
-      assert_equal "claude-cli:claude-opus-5-5", pin
+      assert_equal "grok-cli:opus", pin
     end
   end
 

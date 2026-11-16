@@ -28,10 +28,6 @@ class RuntimeHardeningTest < Minitest::Test
     end
   end
 
-  def test_claude_cli_is_opt_in_in_safe_process_defaults
-    assert_equal "1", Master::MasterRuntime::PROCESS_DEFAULTS.fetch("MASTER_NO_CLAUDE_CLI")
-  end
-
   def test_execute_propagates_handler_error
     stage = Master::CLI::Stages::Execute.new
     err = Master::Result.err("boom", category: :provider_error)
@@ -106,7 +102,7 @@ class RuntimeHardeningTest < Minitest::Test
       calls = 0
       first = cache.fetch("prompt", "model") do
         calls += 1
-        Master::Result.err("claude-cli: timed out after 60s", category: :timeout)
+        Master::Result.err("grok-cli: timed out after 60s", category: :timeout)
       end
       second = cache.fetch("prompt", "model") do
         calls += 1

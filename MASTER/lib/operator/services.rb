@@ -15,7 +15,7 @@ module Master
     # colon. memory and device read "ready" from a literal before, which is the false
     # ready CAPABILITY_STATUS_MUST_BE_TRUTHFUL forbids.
     HEALTH = %w[ready configured degraded failed unavailable not_tested].freeze
-    MODEL_CLIS = %w[claude codex grok gemini].freeze
+    MODEL_CLIS = %w[codex grok gemini].freeze
 
     module_function
 

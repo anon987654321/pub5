@@ -20,7 +20,7 @@ class TestCouncilDeadline < Minitest::Test
   def teardown
     @saved.each { |k, v| v.nil? ? ENV.delete(k) : ENV[k] = v }
     Clock.reset_cancel!
-    Silence.record(true, "claude-cli")
+    Silence.record(true, "grok-cli")
   end
 
   def test_defaults_are_two_minutes_per_call_and_ten_per_council
@@ -92,16 +92,16 @@ class TestCouncilDeadline < Minitest::Test
     msg = [{ role: "user", content: "hi" }]
 
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    first = Master.stub(:llm_reachable?, true) { Clock.within(60) { dispatcher.send_with_cache("claude-cli:claude-opus-5-5", msg) } }
+    first = Master.stub(:llm_reachable?, true) { Clock.within(60) { dispatcher.send_with_cache("grok-cli:opus", msg) } }
     took = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
 
     assert_operator took, :<, 5, "the call was waited out instead of interrupted"
     assert_equal :timeout, first.category
-    assert Silence.silent?("claude-cli"), "the lane that blew its deadline is silent"
+    assert Silence.silent?("grok-cli"), "the lane that blew its deadline is silent"
 
-    second = Master.stub(:llm_reachable?, true) { Clock.within(60) { dispatcher.send_with_cache("claude-cli:claude-sonnet-5-5", msg) } }
+    second = Master.stub(:llm_reachable?, true) { Clock.within(60) { dispatcher.send_with_cache("grok-cli:sonnet", msg) } }
     assert second.err?
-    assert_equal ["claude-cli:claude-opus-5-5"], calls, "a silent lane is never asked again this run"
+    assert_equal ["grok-cli:opus"], calls, "a silent lane is never asked again this run"
   end
 
   def test_calls_are_refused_once_the_council_budget_is_spent

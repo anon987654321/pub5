@@ -18,7 +18,7 @@ class TestLanePolicyFromYaml < Minitest::Test
   end
 
   def test_subscription_lanes_come_from_models_yml
-    assert_equal %w[claude-cli grok-cli codex-cli agy], Selection.subscription_lanes
+    assert_equal %w[grok-cli codex-cli agy], Selection.subscription_lanes
   end
 
   # An owner/name id goes through OpenRouter, a bare id through its vendor.

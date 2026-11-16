@@ -21,8 +21,6 @@ class TestFallbackChain < Minitest::Test
       response = @responses[model] || @responses[:default]
       response.call
     end
-
-    def claude_cli_model?(model_id) = model_id.to_s.start_with?("claude-cli:")
     def tool_capable?(_) = false
   end
 
@@ -89,12 +87,12 @@ class TestFallbackChain < Minitest::Test
 
   def test_timeout_skips_retries_and_later_modes_for_same_model
     dispatcher = CountingDispatcher.new(
-      "claude-cli:claude-opus-4-8" => -> { Master::Result.err("timed out", category: :timeout) },
+      "grok-cli:opus" => -> { Master::Result.err("timed out", category: :timeout) },
       "z-ai/glm-4.5-air:free" => -> { Master::Result.ok("fallback ok") },
       :default => -> { Master::Result.err("unexpected", category: :provider_error) },
     )
     agent = build_agent(dispatcher)
-    models = %w[claude-cli:claude-opus-4-8 z-ai/glm-4.5-air:free]
+    models = %w[grok-cli:opus z-ai/glm-4.5-air:free]
 
     response = agent.send(
       :attempt_chat_with_fallbacks,
@@ -107,14 +105,14 @@ class TestFallbackChain < Minitest::Test
     assert_instance_of Master::Result::Ok, response
     assert_equal "fallback ok", response.value!
     assert_equal 2, dispatcher.calls.size
-    assert_equal "claude-cli:claude-opus-4-8", dispatcher.calls[0]
+    assert_equal "grok-cli:opus", dispatcher.calls[0]
     assert_equal "z-ai/glm-4.5-air:free", dispatcher.calls[1]
   end
 
   def test_browser_profile_refusal_skips_same_model_and_moves_to_next_candidate
     dispatcher = CountingDispatcher.new(
       "web-chat:grok" => -> { Master::Result.err("login required", category: :auth_error) },
-      "claude-cli:sonnet" => -> { Master::Result.ok("fallback answered") },
+      "grok-cli:sonnet" => -> { Master::Result.ok("fallback answered") },
       :default => -> { Master::Result.err("unexpected retry", category: :provider_error) },
     )
     agent = build_agent(dispatcher)
@@ -124,14 +122,14 @@ class TestFallbackChain < Minitest::Test
 
     response = agent.send(
       :attempt_chat_with_fallbacks,
-      candidate_models: %w[web-chat:grok claude-cli:sonnet],
+      candidate_models: %w[web-chat:grok grok-cli:sonnet],
       prompt: "inspect the project",
       context: [],
       stream: false,
     )
 
     assert_equal "fallback answered", response.value!
-    assert_equal %w[web-chat:grok claude-cli:sonnet], dispatcher.calls
+    assert_equal %w[web-chat:grok grok-cli:sonnet], dispatcher.calls
   ensure
     Master::Io::ModelSkipCache.clear!
   end

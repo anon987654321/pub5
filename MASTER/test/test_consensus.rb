@@ -77,7 +77,7 @@ class TestConsensus < Minitest::Test
     approved = consensus.approve_fix?(
       prompt: "test", candidate: "safe",
       violation: { law: "TEST", severity: :error, file: "a.rb", line: 1, message: "fix" },
-      author_models: ["claude-cli:claude-opus-5-5"]
+      author_models: ["anthropic/claude-opus-5-5"]
     )
 
     assert approved
@@ -99,7 +99,7 @@ class TestConsensus < Minitest::Test
     refute consensus.approve_fix?(
       prompt: "test", candidate: "safe",
       violation: { law: "TEST", severity: :error, file: "a.rb", line: 1, message: "fix" },
-      author_models: ["claude-cli:claude-opus-5-5"]
+      author_models: ["anthropic/claude-opus-5-5"]
     )
     assert_empty agent.calls
     blocked = bus.events.find { |event, _payload| event == "consensus:blocked" }
@@ -108,7 +108,7 @@ class TestConsensus < Minitest::Test
   end
 
   def test_model_family_tracks_the_model_across_provider_aliases
-    assert_equal "anthropic", Master::Review::Consensus.model_family("claude-cli:claude-opus-5-5")
+    assert_equal "anthropic", Master::Review::Consensus.model_family("anthropic/claude-opus-5-5")
     assert_equal "anthropic", Master::Review::Consensus.model_family("openrouter:anthropic/claude-sonnet-5-5")
     assert_equal "moonshot", Master::Review::Consensus.model_family("moonshotai/kimi-k2")
     assert_equal "openai", Master::Review::Consensus.model_family("openrouter:openai/o3")

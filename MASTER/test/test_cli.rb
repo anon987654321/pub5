@@ -1009,16 +1009,16 @@ def publish_a_call_and_a_fetch(bus)
 end
 
 def test_spinner_names_the_provider_actually_waiting_or_streaming
-  assert_equal "waiting claude-cli",
-               @cli.send(:stage_for, "llm:send", model: "claude-cli:claude-opus-5-5")
+  assert_equal "waiting grok-cli",
+               @cli.send(:stage_for, "llm:send", model: "grok-cli:opus")
   assert_equal "streaming grok-cli",
                @cli.send(:stage_for, "llm:stream_started", model: "grok-cli:auto")
   assert_equal "stopping", @cli.send(:stage_for, "user:interrupt", reason: "stop")
 end
 
 def test_spinner_names_provider_timeout_and_success_outcomes
-  assert_equal "timeout claude-cli",
-               @cli.send(:stage_for, "llm:provider_outcome", model: "claude-cli:claude-opus-5-5", status: :timeout)
+  assert_equal "timeout grok-cli",
+               @cli.send(:stage_for, "llm:provider_outcome", model: "grok-cli:opus", status: :timeout)
   assert_equal "received grok-cli",
                @cli.send(:stage_for, "llm:provider_outcome", model: "grok-cli:auto", status: :success)
   assert_equal "rate limit agy",
@@ -1041,8 +1041,8 @@ def test_spinner_moves_from_timed_out_provider_to_the_fallback_provider
   @cli.instance_variable_set(:@think_mutex, Mutex.new)
   @cli.instance_variable_set(:@think_stopping, false)
 
-  @cli.send(:update_think_stage, event: "llm:provider_outcome", model: "claude-cli:claude-opus-5-5", status: :timeout)
-  assert_equal "timeout claude-cli", @cli.instance_variable_get(:@think_stage)
+  @cli.send(:update_think_stage, event: "llm:provider_outcome", model: "grok-cli:opus", status: :timeout)
+  assert_equal "timeout grok-cli", @cli.instance_variable_get(:@think_stage)
 
   @cli.send(:update_think_stage, event: "llm:send", model: "agy:gemini-3.1-pro-high")
   assert_equal "waiting agy", @cli.instance_variable_get(:@think_stage)
@@ -1050,11 +1050,11 @@ end
 
 def test_spinner_provider_changes_when_a_fallback_lane_is_sent
   stages = [
-    @cli.send(:stage_for, "llm:send", model: "claude-cli:claude-opus-5-5"),
+    @cli.send(:stage_for, "llm:send", model: "grok-cli:opus"),
     @cli.send(:stage_for, "llm:send", model: "agy:gemini-3.1-pro-high"),
   ]
 
-  assert_equal ["waiting claude-cli", "waiting agy"], stages
+  assert_equal ["waiting grok-cli", "waiting agy"], stages
 end
 
 def test_spinner_provider_label_drops_terminal_control_characters

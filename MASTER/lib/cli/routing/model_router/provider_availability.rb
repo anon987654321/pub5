@@ -10,17 +10,10 @@ module Master
   module CLI
     module Routing
       class ModelRouter
-        # Which provider lanes are reachable right now (Grok API key, claude
-        # CLI binary, keyless web-chat, live free-tier catalog) — separate
-        # from ModelRouter's own preference/escalation/failover logic.
+        # Which API, AGY CLI and browser-chat lanes are reachable right now.
         module ProviderAvailability
-          # Grok/OpenRouter API when a key is present; then the agy CLI when its
-          # binary exists; subscription Opus when claude binary exists; browser
-          # web-chat when keyless. A configured API key leads because it is a
-          # paid, health-checked lane — the agy CLI answers "quota reached" when
-          # its subscription is spent, so prepending it made agy:auto the active
-          # model and stalled every LLM-backed rule. Paid APIs stay in flattened
-          # tiers for escalation.
+          # Configured APIs lead when available; AGY CLI and browser-chat are
+          # independent fallback lanes.
           def primary_models
             models = []
             models.concat(grok_api_models) if grok_api_available?
@@ -29,12 +22,6 @@ module Master
                 .select { |id| id.to_s.start_with?("agy:") || id.to_s == "agy" }
               agy_ids << "agy:auto" if agy_ids.empty?
               models.concat(agy_ids)
-            end
-            if claude_cli_available?
-              models.concat(
-                Array(@rules.dig("models", "primary")).filter_map { |m| m["id"] }
-                  .select { |id| id.to_s.start_with?("claude-cli:") },
-              )
             end
             models.uniq
           end
@@ -72,12 +59,6 @@ module Master
             return true if ENV["MASTER_KEYLESS"].to_s != ""
             return true if auto_keyless? && !Master.any_api_key_present?
             false
-          end
-
-          def claude_cli_available?
-            return false if ENV["MASTER_NO_CLAUDE_CLI"] == "1"
-            return @claude_cli_available unless @claude_cli_available.nil?
-            @claude_cli_available = !Master::Io::Exec.cli_binary("claude").nil?
           end
 
           # API-backed free models remain ahead of browser-mediated free chat.

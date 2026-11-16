@@ -69,8 +69,8 @@ class ModelQuotaForecastTest < Minitest::Test
   end
 
   def test_non_trackable_model_has_no_forecast
-    refute Check.forecast("claude-cli:opus")
-    refute Check.burn_risk?("claude-cli:opus")
+    refute Check.forecast("grok-cli:opus")
+    refute Check.burn_risk?("grok-cli:opus")
   end
 
   # The provider's own answer outranks the burn forecast: the key endpoint
@@ -148,7 +148,7 @@ class ModelQuotaForecastTest < Minitest::Test
       day => {
         "qwen/qwen3-coder:free" => 30,
         "meta-llama/llama-3.3-70b-instruct:free" => 25,
-        "claude-cli:opus" => 900,
+        "grok-cli:opus" => 900,
       },
     }
 

@@ -341,10 +341,10 @@ class TestRepairLoopPolicy < Minitest::Test
       path = File.join(root, "sample.rb")
       File.write(path, "violation\n")
       loop = build_loop(root:, bus: FakeBus.new, scanner: RecordingScanner.new, agent: Agent.new)
-      proposal = loop.send(:candidate_proposal, "clean\n", "claude-cli:claude-opus-5-5")
+      proposal = loop.send(:candidate_proposal, "clean\n", "anthropic/claude-opus-5-5")
 
       assert_equal "clean\n", loop.send(:best_candidate, [proposal], path, original: "violation\n")
-      assert_equal ["claude-cli:claude-opus-5-5"], Thread.current[:master_fix_candidate_author_models]
+      assert_equal ["anthropic/claude-opus-5-5"], Thread.current[:master_fix_candidate_author_models]
     end
   ensure
     Thread.current[:master_fix_candidate_author_models] = nil
@@ -718,10 +718,10 @@ class TestRepairLoopPolicy < Minitest::Test
       agent.define_singleton_method(:consensus) { consensus }
       loop = build_loop(root:, bus: FakeBus.new, scanner: Scanner.new, agent:)
       violation = { file: File.join(root, "sample.rb"), law: "TEST_RULE", severity: :error }
-      Thread.current[:master_fix_candidate_author_models] = ["claude-cli:claude-opus-5-5"]
+      Thread.current[:master_fix_candidate_author_models] = ["anthropic/claude-opus-5-5"]
 
       assert loop.send(:consensus_approves?, violation, "safe candidate")
-      assert_equal ["claude-cli:claude-opus-5-5"], seen.fetch(:author_models)
+      assert_equal ["anthropic/claude-opus-5-5"], seen.fetch(:author_models)
     end
   ensure
     Thread.current[:master_fix_candidate_author_models] = nil

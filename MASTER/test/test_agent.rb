@@ -575,10 +575,10 @@ end
   # circuit check reads the pin plus every lane it could fail over to.
   def test_candidate_models_lead_with_the_forced_model_and_keep_the_chain_behind_it
     previous = ENV["MASTER_MODEL"]
-    ENV["MASTER_MODEL"] = "claude-cli:claude-opus-5-5"
+    ENV["MASTER_MODEL"] = "claude-opus-5-5"
 
     candidates = @agent.candidate_models
-    assert_equal "claude-cli:claude-opus-5-5", candidates.first
+    assert_equal "claude-opus-5-5", candidates.first
     assert_equal candidates.uniq, candidates
   ensure
     ENV["MASTER_MODEL"] = previous

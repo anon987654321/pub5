@@ -5,7 +5,7 @@ require_relative "../lib/fix/lane_preflight"
 
 class TestFixLanePreflight < Minitest::Test
   Preflight = Master::Fix::LanePreflight
-  OPUS = "claude-cli:claude-opus-5-5"
+  OPUS = "grok-cli:opus"
   GROK = "grok-cli:auto"
   GEMMA = "ollama:gemma3:4b"
 

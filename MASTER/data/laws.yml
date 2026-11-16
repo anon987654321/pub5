@@ -5534,10 +5534,6 @@ plugins:
     scope: parked_instrument_on_demand
     boot_load: never
     external_write: never
-  design_calibration:
-    scope: parked_instrument_on_demand
-    boot_load: never
-    external_write: never
   tts_dsp:
     scope: parked_instrument_on_demand
     boot_load: never

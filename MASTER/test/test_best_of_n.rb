@@ -118,11 +118,11 @@ class BestOfNTest < Minitest::Test
     bad = ".a { margin: 3px; } /* kind-bad */\n"
     good = ".a { margin: 16px; } /* kind-good */\n"
     loop = FakeLoop.new([bad, good], models: ["grok-cli:auto", "moonshotai/kimi-k2"])
-    Thread.current[:master_fix_candidate_author_models] = ["claude-cli:claude-opus-5-5"]
+    Thread.current[:master_fix_candidate_author_models] = ["anthropic/claude-opus-5-5"]
 
     assert_equal good, B.pick(loop, { law: B::LAW_ID, file: @path },
                               ".a { margin: 12px; } /* kind-mid */\n", custody:, root: @root, measurer:)
-    assert_equal ["claude-cli:claude-opus-5-5", "moonshotai/kimi-k2"],
+    assert_equal ["anthropic/claude-opus-5-5", "moonshotai/kimi-k2"],
                  Thread.current[:master_fix_candidate_author_models]
   ensure
     ENV.delete("MASTER_FIX_BEST_OF")

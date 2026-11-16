@@ -48,7 +48,7 @@ class TestLaneFailover < Minitest::Test
 
   def spelling(model)
     case Quota.lane_of(model)
-    when "claude-cli" then CLAUDE
+    when "grok-cli" then CLAUDE
     when "agy" then AGY
     when "grok-cli" then GROK
     when "ollama" then REFUSED
@@ -162,7 +162,7 @@ class TestLaneFailover < Minitest::Test
       result = ask(agent, door, models)
       assert_equal :offline, result.category
       assert_match(/\Aoffline: no lane answers; .*ollama: unreachable/, result.message)
-      assert_match(/claude-cli: quota spent, back in 3h/, result.message)
+      assert_match(/grok-cli: quota spent, back in 3h/, result.message)
       assert_match(/gap: resolves alone in \d+m, checking costs minutes, a fact\z/, result.message)
       assert_kind_of Master::Gap, result.gap
       raised = assert_raises(Health::Offline) { agent.send(:raise_failure, result) }
@@ -182,15 +182,15 @@ class TestLaneFailover < Minitest::Test
   end
 
   def test_the_soonest_revival_is_the_horizon
-    Quota.note("claude-cli:x", CLAUDE)
+    Quota.note("grok-cli:x", CLAUDE)
     Quota.note("deepseek-chat", HTTP429)
-    assert_equal 3600, Health.gap_for(["claude-cli:x", "deepseek-chat"]).horizon
+    assert_equal 3600, Health.gap_for(["grok-cli:x", "deepseek-chat"]).horizon
   end
 
   def test_the_real_spellings_are_read
     assert_equal 3 * 3600, Quota.wait_in(CLAUDE)
     assert_equal 20 * 60, Quota.wait_in(GROK)
-    assert_equal NOON + 3 * 3600, Quota.note("claude-cli:x", CLAUDE)
+    assert_equal NOON + 3 * 3600, Quota.note("grok-cli:x", CLAUDE)
     assert_equal NOON + 60, Quota.note("ollama:x", REFUSED)
     assert_equal NOON + 3600, Quota.note("deepseek-chat", HTTP429)
     assert_equal NOON + 3600, Quota.note("grok-cli:auto", "401 Unauthorized, please run /login")
@@ -208,7 +208,7 @@ class TestLaneFailover < Minitest::Test
 
   def test_a_bare_limit_is_probed_again_and_a_stated_one_is_not
     Quota.note("agy:auto", HTTP429)
-    Quota.note("claude-cli:x", CLAUDE)
+    Quota.note("grok-cli:x", CLAUDE)
     assert_empty Quota.due_probes
     @now += 700
     assert_equal ["agy"], Quota.due_probes
@@ -220,21 +220,21 @@ class TestLaneFailover < Minitest::Test
 
     assert_equal 1, probed.size
     refute Quota.dead?("agy:auto"), "the canary revived the lane"
-    assert Quota.dead?("claude-cli:x")
+    assert Quota.dead?("grok-cli:x")
   end
 
   def test_a_dead_lane_revives_at_its_deadline_without_the_operator
-    Quota.note("claude-cli:x", CLAUDE)
+    Quota.note("grok-cli:x", CLAUDE)
     @now += 3 * 3600 - 1
-    assert Quota.dead?("claude-cli:x")
+    assert Quota.dead?("grok-cli:x")
     @now += 2
-    refute Quota.dead?("claude-cli:x")
+    refute Quota.dead?("grok-cli:x")
   end
 
   def test_state_survives_a_fresh_process
     Quota.clock = -> { Time.now.to_f }
-    Quota.note("claude-cli:x", AGY)
-    ruby = 'require "./lib/master"; Master::Io::LaneQuota.path = ARGV[0]; print Master::Io::LaneQuota.dead?("claude-cli:opus")'
+    Quota.note("grok-cli:x", AGY)
+    ruby = 'require "./lib/master"; Master::Io::LaneQuota.path = ARGV[0]; print Master::Io::LaneQuota.dead?("grok-cli:opus")'
     out, = Open3.capture2e(RbConfig.ruby, "-e", ruby, Quota.path, chdir: File.expand_path("..", __dir__))
     assert_equal "true", out.lines.last.to_s.strip
   end
@@ -388,7 +388,7 @@ class TestLaneFailover < Minitest::Test
       end
     end)
     agent.instance_variable_set(:@bus, nil)
-    agent.define_singleton_method(:single_call_fallback_models) { %w[openrouter/dead claude-cli:live] }
+    agent.define_singleton_method(:single_call_fallback_models) { %w[openrouter/dead grok-cli:live] }
     agent.define_singleton_method(:record_single_call_substitution) { |_from, _to, result, **| result }
 
     result = agent.send(:retry_on_broke_lane,
@@ -396,7 +396,7 @@ class TestLaneFailover < Minitest::Test
       "primary", [{ role: "user", content: "hi" }])
 
     assert result.ok?
-    assert_equal ["claude-cli:live"], calls
+    assert_equal ["grok-cli:live"], calls
   ensure
     skip_cache&.clear!
   end
@@ -415,7 +415,7 @@ class TestLaneFailover < Minitest::Test
       end
     end)
     agent.instance_variable_set(:@bus, nil)
-    agent.define_singleton_method(:single_call_fallback_models) { %w[openrouter/flaky claude-cli:live] }
+    agent.define_singleton_method(:single_call_fallback_models) { %w[openrouter/flaky grok-cli:live] }
     agent.define_singleton_method(:record_single_call_substitution) { |_from, _to, result, **| result }
 
     first = agent.send(:retry_on_broke_lane,
@@ -428,7 +428,7 @@ class TestLaneFailover < Minitest::Test
     assert first.ok?
     assert second.ok?
     assert skip_cache.skipped?("openrouter/flaky")
-    assert_equal ["openrouter/flaky", "claude-cli:live", "claude-cli:live"], calls
+    assert_equal ["openrouter/flaky", "grok-cli:live", "grok-cli:live"], calls
   ensure
     skip_cache&.clear!
   end

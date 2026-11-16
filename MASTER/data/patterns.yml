@@ -830,16 +830,6 @@ auth_profiles:
         - agy:gemini-3.1-pro-high
         - agy:gemini-3.8-flash-medium
         - agy:gemini-3.8-flash-high
-    - id: claude_subscription
-      name: claude
-      auth: subscription
-      kind: cli
-      command: claude
-      login_args: [auth, login]
-      status_args: [auth, status]
-      priority: 1
-      models:
-        - claude-cli:claude-opus-5-5
     - id: codex_subscription
       name: chatgpt
       auth: subscription

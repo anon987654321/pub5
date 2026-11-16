@@ -6,7 +6,7 @@ require "fileutils"
 require "time"
 
 class CapabilityStampTest < Minitest::Test
-  def health_at(dir, at:, status: :success, model: "claude-cli:opus")
+  def health_at(dir, at:, status: :success, model: "grok-cli:opus")
     health = Master::CLI::Routing::ProviderHealth.new(
       path: File.join(dir, "runtime", "telemetry", "provider_health.ndjson"),
       now: -> { at },
@@ -18,13 +18,13 @@ class CapabilityStampTest < Minitest::Test
   def test_stamp_reports_fresh_cloud_model
     Dir.mktmpdir do |dir|
       now = Time.utc(2026, 9, 28, 13, 0, 0)
-      recorded = health_at(dir, at: now - 41, model: "claude-cli:opus")
+      recorded = health_at(dir, at: now - 41, model: "grok-cli:opus")
       health = Master::CLI::Routing::ProviderHealth.new(path: recorded.path, now: -> { now })
       policy = Master::CLI::Routing::AvailabilityPolicy.new(root: dir)
 
       assert_equal(
-        "model0 at master0: served claude-cli:opus, level L4, health fresh 41s, degraded no",
-        Master::CLI::CapabilityStamp.render(model: "claude-cli:opus", root: dir, provider_health: health, policy:),
+        "model0 at master0: served grok-cli:opus, level L4, health fresh 41s, degraded no",
+        Master::CLI::CapabilityStamp.render(model: "grok-cli:opus", root: dir, provider_health: health, policy:),
       )
     end
   end
