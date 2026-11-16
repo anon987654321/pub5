@@ -2,6 +2,7 @@
 
 require "fileutils"
 require "time"
+require "shellwords"
 require_relative "../io/exec"
 require_relative "../trace/dmesg"
 
@@ -46,7 +47,7 @@ module Operator
       elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
       ok = status.success?
       @results << Result.new(name:, success: ok, output: out)
-      record_run_step(name, ok, elapsed, out)
+      record_run_step(name, ok, elapsed, out, cmd, status)
       report(unit, name, ok, elapsed)
       Master::Trace::Dmesg::Report.print(unit, out, parent: "#{@prefix}0") if !out.empty? && (!ok || ENV["CHECK_VERBOSE"] == "1")
       ok
@@ -78,13 +79,24 @@ module Operator
       Master::Trace::Dmesg.status("checklog0", "cannot create combined log, #{@log_error}")
     end
 
-    def record_run_step(name, ok, elapsed, output)
+    def record_run_step(name, ok, elapsed, output, command, status)
       return unless @log_path
       raise IOError, "check log is a symlink" if File.symlink?(@log_path)
 
+      exit_detail = if !status.respond_to?(:exitstatus)
+                      "timeout"
+                    elsif status.exited?
+                      "exit=#{status.exitstatus}"
+                    elsif status.signaled?
+                      "signal=#{status.termsig}"
+                    else
+                      "unknown"
+                    end
       File.open(@log_path, File::WRONLY | File::APPEND | File::CREAT, 0o600) do |file|
         File.chmod(0o600, @log_path)
-        file.write("=== #{name} | #{ok ? "PASS" : "FAIL"} | #{elapsed.round(2)}s ===\n")
+        file.write("=== #{name} | #{ok ? "PASS" : "FAIL"} | #{elapsed.round(2)}s | #{exit_detail} ===\n")
+        file.write("command: #{Shellwords.join(command)}\n")
+        file.write("cwd: #{@root}\n")
         file.write(output.to_s)
         file.write("\n") unless output.to_s.empty? || output.to_s.end_with?("\n")
         file.write("\n")
