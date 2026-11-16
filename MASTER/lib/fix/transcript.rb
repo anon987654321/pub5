@@ -5,6 +5,7 @@ require "fileutils"
 require "json"
 require "time"
 require_relative "../ground/redactor"
+require_relative "../boot/paths"
 
 module Master
   module Fix
@@ -28,7 +29,7 @@ module Master
       attr_reader :dir
 
       def initialize(root:, run_id:, max_bytes: MAX_BYTES, keep: KEEP_RUNS)
-        @base = File.join(root, DIR)
+        @base = File.join(MasterPaths.fix_state(root: root), "fix_transcripts")
         @dir = File.join(@base, run_id.to_s.gsub(/[^A-Za-z0-9._-]/, "_"))
         @max_bytes = max_bytes
         @keep = keep
