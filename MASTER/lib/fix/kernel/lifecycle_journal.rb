@@ -7,6 +7,7 @@ require "set"
 require "securerandom"
 require "time"
 require_relative "../../io/atomic_write"
+require_relative "../../boot/paths"
 require_relative "../../trace/mutation_observer"
 require_relative "../outcome_policy"
 
@@ -24,11 +25,13 @@ module Master
         include ::Master::Io::AtomicWrite
 
         VERSION = 1
-        PATH = ".master/fix_runs.json"
-        LOCK = ".master/fix_runs.lock"
+        PATH = "fix_runs.json"
+        LOCK = "fix_runs.lock"
+        PENDING_MARKER = ".fix_runs.pending"
+        MIGRATION_MARKER = ".legacy-migration.json"
         MAX_RUNS = 24
-        ASSESSMENT_DIR = ".master/fix_assessments"
-        ARCHITECTURE_DIR = ".master/fix_architecture"
+        ASSESSMENT_DIR = "fix_assessments"
+        ARCHITECTURE_DIR = "fix_architecture"
         SURFACE_COVERAGE_SURFACES = %w[
           repository_tree directories file_names paths cross_file media_assets compiled_assets
           rendered_ui interactive_behavior tests runtime deployment
@@ -53,8 +56,13 @@ module Master
           @instance_id = "#{Process.pid}:#{SecureRandom.hex(8)}"
         end
 
-        def initialize(root:, bus: nil)
-          @root = root
+        def initialize(root:, bus: nil, state_root: nil)
+          @root = File.expand_path(root)
+          workspace = File.basename(@root) == "MASTER" ? File.dirname(@root) : @root
+          @legacy_state_roots = [File.join(@root, ".master"), File.join(workspace, ".master"),
+                                 File.join(workspace, "MASTER", ".master")].uniq
+          @state_root = File.expand_path(state_root || MasterPaths.fix_state(root: @root))
+          @local_state_root = @legacy_state_roots.include?(@state_root)
           @bus = bus
           @lifecycle_observer = Master::Trace::MutationObserver.new(
             root: @root, namespace: "fix:journal_lifecycle",
@@ -156,7 +164,7 @@ module Master
             run = Array(data["runs"]).find { |entry| entry["id"] == id }
             raise "fix run disappeared before assessment report was written" unless run
 
-            assessment_dir = File.join(@root, ASSESSMENT_DIR)
+            assessment_dir = File.join(@state_root, ASSESSMENT_DIR)
             prepare_artifact_directory!(assessment_dir)
             path = File.join(assessment_dir, "#{id}.json")
             refuse_unsafe_artifact_slot!(path, label: "assessment report")
@@ -180,7 +188,7 @@ module Master
             receipt = {
               "status" => "persisted",
               "readback_verified" => true,
-              "path" => relative(path),
+              "path" => state_relative(path),
               "sha256" => digest,
               "bytes" => stored_payload.bytesize,
               "matrix_status" => (report[:status] || report["status"]).to_s,
@@ -232,7 +240,7 @@ module Master
             run = Array(data["runs"]).find { |entry| entry["id"] == id }
             raise "fix run disappeared before architecture report was written" unless run
 
-            directory = File.join(@root, ARCHITECTURE_DIR)
+            directory = File.join(@state_root, ARCHITECTURE_DIR)
             prepare_artifact_directory!(directory)
 
             safe_provenance = json_safe_value(provenance)
@@ -295,9 +303,8 @@ module Master
             id = run_id.to_s
             return { "status" => "invalid_run_id" } unless id.match?(/\A[a-f0-9]{20}\z/)
 
-            master_dir = File.join(@root, ".master")
-            directory = File.join(@root, ARCHITECTURE_DIR)
-            return { "status" => "journal_directory_symlink" } if File.symlink?(master_dir)
+            directory = File.join(@state_root, ARCHITECTURE_DIR)
+            return { "status" => "journal_directory_symlink" } if File.symlink?(@state_root)
             return { "status" => "architecture_directory_symlink" } if File.symlink?(directory)
 
             run = history(limit: MAX_RUNS).find { |entry| entry["id"] == id }
@@ -310,7 +317,7 @@ module Master
             match = name.match(/\A#{Regexp.escape(id)}-([a-f0-9]{12})-([a-f0-9]{12})\.json\z/)
             return { "status" => "receipt_path_mismatch" } unless match
             expected_path = File.join(directory, name)
-            return { "status" => "receipt_path_mismatch" } unless relative(expected_path) == relative_path
+            return { "status" => "receipt_path_mismatch" } unless state_relative(expected_path) == relative_path
             begin
               payload = read_private_artifact(expected_path, label: "architecture report")
             rescue ArtifactReadError => error
@@ -396,9 +403,8 @@ module Master
         def assessment_report_receipt_context(id)
           return [nil, { "status" => "invalid_run_id" }] unless id.match?(/\A[a-f0-9]{20}\z/)
 
-          master_dir = File.join(@root, ".master")
-          assessment_dir = File.join(@root, ASSESSMENT_DIR)
-          return [nil, { "status" => "journal_directory_symlink" }] if File.symlink?(master_dir)
+          assessment_dir = File.join(@state_root, ASSESSMENT_DIR)
+          return [nil, { "status" => "journal_directory_symlink" }] if File.symlink?(@state_root)
           return [nil, { "status" => "assessment_directory_symlink" }] if File.symlink?(assessment_dir)
 
           run = history(limit: MAX_RUNS).find { |entry| entry["id"] == id }
@@ -408,7 +414,7 @@ module Master
           return [nil, { "status" => "receipt_missing" }] unless receipt.is_a?(Hash)
 
           expected_path = File.join(assessment_dir, "#{id}.json")
-          relative_path = relative(expected_path)
+          relative_path = state_relative(expected_path)
           return [nil, { "status" => "receipt_path_mismatch" }] unless receipt["path"] == relative_path
 
           [{ id:, run:, receipt:, expected_path:, relative_path: }, nil]
@@ -653,9 +659,8 @@ module Master
         private
 
         def prune_architecture_reports_locked!(data)
-          master_dir = File.join(@root, ".master")
-          directory = File.join(@root, ARCHITECTURE_DIR)
-          return 0 if File.symlink?(master_dir) || File.symlink?(directory) || !File.directory?(directory)
+          directory = File.join(@state_root, ARCHITECTURE_DIR)
+          return 0 if File.symlink?(@state_root) || File.symlink?(directory) || !File.directory?(directory)
 
           retained_paths = Array(data["runs"]).last(MAX_RUNS).filter_map do |run|
             receipt = run["architecture_receipt"]
@@ -666,7 +671,7 @@ module Master
             next unless name.match?(/\A[a-f0-9]{20}-[a-f0-9]{12}-[a-f0-9]{12}\.json\z/)
 
             path = File.join(directory, name)
-            next if retained_paths.include?(relative(path))
+            next if retained_paths.include?(state_relative(path))
 
             stat = File.lstat(path)
             next unless stat.file? && !stat.symlink? && stat.nlink == 1
@@ -681,9 +686,8 @@ module Master
         end
 
         def prune_assessment_reports_locked!(retained)
-          master_dir = File.join(@root, ".master")
-          directory = File.join(@root, ASSESSMENT_DIR)
-          return 0 if File.symlink?(master_dir) || File.symlink?(directory) || !File.directory?(directory)
+          directory = File.join(@state_root, ASSESSMENT_DIR)
+          return 0 if File.symlink?(@state_root) || File.symlink?(directory) || !File.directory?(directory)
 
           removed = 0
           Dir.children(directory).each do |name|
@@ -1303,26 +1307,14 @@ module Master
         end
 
         def prepare_artifact_directory!(directory)
-          root = File.expand_path(@root)
-          root_stat = File.lstat(root)
-          unless root_stat.directory? && !root_stat.symlink?
-            raise IOError, "refusing non-directory or symlinked artifact workspace"
-          end
-
-          expected_prefix = "#{root}#{File::SEPARATOR}"
+          root = File.expand_path(@state_root)
           full_directory = File.expand_path(directory)
+          expected_prefix = "#{root}#{File::SEPARATOR}"
           unless full_directory.start_with?(expected_prefix)
-            raise IOError, "artifact directory escapes journal workspace"
+            raise IOError, "artifact directory escapes persistent fix state"
           end
 
-          master_dir = File.join(root, ".master")
-          raise IOError, "refusing symlinked .master directory" if File.symlink?(master_dir)
-          FileUtils.mkdir_p(master_dir, mode: 0o700)
-          master_stat = File.lstat(master_dir)
-          unless master_stat.directory? && !master_stat.symlink? && (master_stat.mode & 0o022).zero?
-            raise IOError, "journal state directory is unsafe"
-          end
-
+          ensure_state_directory!
           FileUtils.mkdir_p(full_directory, mode: 0o700)
           directory_stat = File.lstat(full_directory)
           unless directory_stat.directory? && !directory_stat.symlink?
@@ -1339,8 +1331,8 @@ module Master
 
         def refuse_unsafe_artifact_slot!(path, label:)
           parent = File.dirname(File.expand_path(path))
-          unless parent == File.expand_path(File.join(@root, ASSESSMENT_DIR)) ||
-                 parent == File.expand_path(File.join(@root, ARCHITECTURE_DIR))
+          unless parent == File.expand_path(File.join(@state_root, ASSESSMENT_DIR)) ||
+                 parent == File.expand_path(File.join(@state_root, ARCHITECTURE_DIR))
             raise IOError, "#{label} path is outside its dedicated artifact directory"
           end
 
@@ -1355,16 +1347,19 @@ module Master
         end
 
         def read_private_artifact(path, label:)
-          root = File.expand_path(@root)
+          root = File.expand_path(@state_root)
           expanded = File.expand_path(path)
           root_prefix = "#{root}#{File::SEPARATOR}"
           unless expanded.start_with?(root_prefix)
-            raise ArtifactReadError.new("artifact_path_unsafe", "#{label} escapes workspace")
+            raise ArtifactReadError.new("artifact_path_unsafe", "#{label} escapes persistent fix state")
           end
 
           root_stat = File.lstat(root)
           unless root_stat.directory? && !root_stat.symlink?
-            raise ArtifactReadError.new("artifact_directory_unsafe", "#{label} workspace is not a real directory")
+            raise ArtifactReadError.new("artifact_directory_unsafe", "#{label} state root is not a real directory")
+          end
+          if (root_stat.mode & 0o022).positive?
+            raise ArtifactReadError.new("artifact_directory_unsafe", "#{label} state root is group/world writable")
           end
 
           relative_parent = File.dirname(expanded).delete_prefix(root + File::SEPARATOR)
@@ -1375,7 +1370,7 @@ module Master
             unless stat.directory? && !stat.symlink?
               raise ArtifactReadError.new("artifact_directory_unsafe", "#{label} parent is not a real directory")
             end
-            if component == ".master" && (stat.mode & 0o022).positive?
+            if (stat.mode & 0o022).positive?
               raise ArtifactReadError.new("artifact_directory_unsafe", "#{label} state directory is group/world writable")
             end
             if cursor == File.dirname(expanded) && (stat.mode & 0o077).positive?
@@ -1429,14 +1424,8 @@ module Master
         end
 
         def load
-          workspace = File.expand_path(@root)
-          root_stat = File.lstat(workspace)
-          unless root_stat.directory? && !root_stat.symlink?
-            raise IOError, "refusing non-directory or symlinked journal workspace"
-          end
-
-          directory = File.join(workspace, ".master")
-          path = File.join(workspace, PATH)
+          directory = File.expand_path(@state_root)
+          path = File.join(directory, PATH)
           unless File.exist?(directory) || File.symlink?(directory)
             return { "version" => VERSION, "runs" => [] } unless File.exist?(path) || File.symlink?(path)
 
@@ -1504,8 +1493,8 @@ module Master
         def persist(data, run_id: active_run_id(data))
           resolve_pending_marker!
 
-          path = File.join(@root, PATH)
-          FileUtils.mkdir_p(File.dirname(path))
+          path = File.join(@state_root, PATH)
+          ensure_state_directory!
           @lifecycle_observer.mutate(operation: "persist", item_count: Array(data["runs"]).size) do
             create_pending_marker!(run_id)
             write_atomic(path, JSON.pretty_generate(data) + "\n", mode: 0o600)
@@ -1514,7 +1503,7 @@ module Master
           end
         end
 
-        def pending_marker_path = File.join(@root, ".master", ".fix_runs.pending")
+        def pending_marker_path = File.join(@state_root, PENDING_MARKER)
 
         def active_run_id(data)
           Array(data["runs"]).reverse.find { |run| run["state"] == "active" }&.fetch("id", nil)
@@ -1549,12 +1538,9 @@ module Master
         end
 
         def with_lock
-          workspace = File.expand_path(@root)
-          directory = File.join(workspace, ".master")
-          lock_path = File.join(workspace, LOCK)
-          raise IOError, "refusing symlinked journal state directory" if File.symlink?(directory)
-
-          FileUtils.mkdir_p(directory, mode: 0o700)
+          directory = File.expand_path(@state_root)
+          lock_path = File.join(directory, LOCK)
+          ensure_state_directory!
           directory_stat = File.lstat(directory)
           unless directory_stat.directory? && !directory_stat.symlink?
             raise IOError, "refusing non-directory or symlinked journal state path"
