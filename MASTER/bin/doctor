@@ -278,7 +278,7 @@ def check_consensus_jury(router: nil)
     config: Master::Ground::Config.new(ROOT), root: ROOT,
   )
   reasons = models.to_h { |model| [model, router.unreachable_reason(model, wait: true)] }
-  pending = reasons.select { |_model, reason| reason.to_s.match?(/\\Achecking\\b/) }
+  pending = reasons.select { |_model, reason| reason.to_s.start_with?("checking ") }
   unless pending.empty?
     detail = pending.map { |model, reason| "#{model}: #{reason}" }.join("; ")
     return Check.new(name: "consensus-jury", state: :unmeasured, detail: "provider probe did not finish: #{detail}")
