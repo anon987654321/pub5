@@ -37,6 +37,30 @@ module Studio
         (?:consent\.yml|subject\.env|ledger\.jsonl)\z
       )
     }x.freeze
+    PRIVATE_RENDER_PATH = %r{\ASTUDIO/lora/[^/]+_(?:selfie|film)_}
+    PRIVATE_POSTPRO_SOURCE = %r{\ASTUDIO/postpro/IMG_}
+    PRIVATE_LEGACY_SUBJECT_PATH = %r{\ASTUDIO/replicate/lora/.*/(?:sources|dataset|weights|out)(?:/|\z)}
+
+    PRIVATE_PATHSPECS = %w[
+      :(glob)STUDIO/lora/*/sources/**
+      :(glob)STUDIO/lora/*/references/**
+      :(glob)STUDIO/lora/*/evidence/**
+      :(glob)STUDIO/lora/*/weights/**
+      :(glob)STUDIO/lora/*/out/**
+      :(glob)STUDIO/lora/*/retouched/**
+      :(glob)STUDIO/lora/*/dataset/**
+      :(glob)STUDIO/lora/*/dataset_*/**
+      :(glob)STUDIO/lora/*/consent.yml
+      :(glob)STUDIO/lora/*/subject.env
+      :(glob)STUDIO/lora/*/ledger.jsonl
+      :(glob)STUDIO/lora/*_selfie_*
+      :(glob)STUDIO/lora/*_film_*
+      :(glob)STUDIO/postpro/IMG_*
+      :(glob)STUDIO/replicate/lora/**/sources/**
+      :(glob)STUDIO/replicate/lora/**/dataset/**
+      :(glob)STUDIO/replicate/lora/**/weights/**
+      :(glob)STUDIO/replicate/lora/**/out/**
+    ].freeze
 
     def self.ruby_supported?(version)
       Gem::Version.new(version.to_s) >= MINIMUM_RUBY
@@ -133,27 +157,45 @@ module Studio
     end
 
     def private_media_check(checks)
-      output, error, status = Subprocess.capture3(
+      index_output, index_error, index_status = Subprocess.capture3(
         "git", "-C", @repository_root, "ls-files", "-z",
         timeout: 10
       )
-      unless status.success?
-        add(checks, "private_subject_history", "INCONCLUSIVE",
-            "Git index could not be inspected; #{error.to_s.lines.last.to_s.strip}")
-        return
+      if index_status.success?
+        indexed = index_output.split("\0").count { |path| private_path?(path) }
+        add(checks, "private_subject_index", indexed.zero? ? "PASS" : "BLOCKED",
+            indexed.zero? ? "No subject-private paths are tracked in the current index" :
+              "#{indexed} subject-private path(s) are tracked in the current index")
+      else
+        add(checks, "private_subject_index", "INCONCLUSIVE",
+            "Git index could not be inspected; #{index_error.to_s.lines.last.to_s.strip}")
       end
 
-      offenders = output.split("\0").grep(PRIVATE_SUBJECT_PATH)
-      if offenders.empty?
-        add(checks, "private_subject_history", "PASS",
-            "No subject-private data paths are tracked in the current Git index")
+      history_output, history_error, history_status = Subprocess.capture3(
+        "git", "-C", @repository_root, "log", "--all", "--format=", "--name-only", "--",
+        *PRIVATE_PATHSPECS,
+        timeout: 45
+      )
+      if history_status.success?
+        historical = history_output.lines.map(&:strip).reject(&:empty?).uniq
+        add(checks, "private_subject_history", historical.empty? ? "PASS" : "BLOCKED",
+            historical.empty? ?
+              "No subject-private paths found in reachable local branches or tags; other clones and remote mirrors are not assessed" :
+              "#{historical.length} subject-private path(s) remain in reachable local Git history; other clones and remote mirrors are not assessed")
       else
-        add(checks, "private_subject_history", "BLOCKED",
-            "#{offenders.length} subject-private path(s) are tracked; rights and reachable Git history need operator review")
+        add(checks, "private_subject_history", "INCONCLUSIVE",
+            "Reachable local Git history could not be inspected; #{history_error.to_s.lines.last.to_s.strip}")
       end
     rescue StandardError => error
       add(checks, "private_subject_history", "INCONCLUSIVE",
-          "Git index could not be inspected: #{error.class}: #{error.message}")
+          "Private-media history could not be inspected: #{error.class}: #{error.message}")
+    end
+
+    def private_path?(path)
+      path.match?(PRIVATE_SUBJECT_PATH) ||
+        path.match?(PRIVATE_RENDER_PATH) ||
+        path.match?(PRIVATE_POSTPRO_SOURCE) ||
+        path.match?(PRIVATE_LEGACY_SUBJECT_PATH)
     end
   end
 end
