@@ -1004,10 +1004,10 @@ module Law
         missing_ids = previous_ids.reject { |id| staged.key?(id) }
         next if stamps[source] == stamp && missing_ids.empty?
 
-        changed = if previous_stamp.nil?
-                    "new_source"
-                  elsif previous_root && previous_root != real_root
+        changed = if previous_root && previous_root != real_root
                     "source_root_changed"
+                  elsif previous_stamp.nil?
+                    "new_source"
                   elsif !missing_ids.empty?
                     "registered_law_missing"
                   else
