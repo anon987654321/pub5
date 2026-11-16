@@ -5,14 +5,14 @@ require_relative "../trace/dmesg"
 module Master
   module Fix
     # The findings one file repair proposes a fix for. FileRepair asked for every finding a file held in
-    # one prompt, so a 2,800-line stylesheet became one proposal for MOBILE_FIRST, NO_ASCII_LINE_ART,
-    # SMALL_FILES, LINE_HEIGHT_ON_SCALE and TOUCH_TARGET_MIN at once, its diff spanning the file; the
-    # verifier refused 5 of the 7 RAILS proposals of the 2026-11-05 run, the big ones.
+    # one prompt, so a 2,800-line stylesheet bundled unrelated visual and structural findings
+    # into one proposal whose diff spanned the file; the verifier refused 5 of the 7 RAILS proposals
+    # of the 2026-11-05 run, the big ones.
     #
     # A proposal now takes the findings inside one scope window (WINDOW lines from the first), the
     # window holding the most of them, so adjacent findings still share one call. A whole-file finding
-    # (a law whose every finding in the file sits on line 1, such as SMALL_FILES) touches the whole
-    # file, so it goes alone, one law per proposal, after the windows. The findings left out wait for
+    # (a file-scope finding whose records all sit on line 1) touches the whole file, so it goes
+    # alone, one signal type per proposal, after the windows. The findings left out wait for
     # the next pass, which scans the repaired file again.
     module ProposalScope
       # Twice FileBudget's SCOPE_PAD: a window's changes then stay inside the range its own guard allows.
