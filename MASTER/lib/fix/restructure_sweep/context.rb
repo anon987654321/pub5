@@ -243,19 +243,20 @@ module Master
           end
         end
 
-        def initialize(repo_root, path, related: [], scorecard: nil, co_change_window: 200)
+        def initialize(repo_root, path, related: [], scorecard: nil, co_change_window: 200, reference_graph: nil)
           @root = repo_root
           @path = path
           @related = Array(related)
           @scorecard = scorecard
           @co_change_window = Integer(co_change_window)
+          @reference_graph = reference_graph
           @tree = File.join(repo_root, relative(path).split("/").first)
         end
 
         def to_s
           [surface_section, inventory_section, history_section, co_change_section, scorecard_section, file_section,
            related_section, directory_section, owner_section, reference_section, production_reference_section,
-           requirer_section].compact.join("\n\n")
+           requirer_section, reference_graph_section].compact.join("\n\n")
         end
 
         private
@@ -376,6 +377,47 @@ module Master
           return if owners.empty?
 
           owners.map { |path| "Possible owner, #{relative(path)}:\n#{numbered(path)}" }.join("\n\n")
+        end
+
+        # The shared graph covers every eligible readable text file, not only
+        # suffix-selected source/config files. It also names unresolved and
+        # dynamic sites explicitly, so a zero grep is never presented as proof.
+        def reference_graph_section
+          return "Reference graph: INCONCLUSIVE; no repository graph was supplied." unless @reference_graph
+
+          snapshot = @reference_graph.build
+          metrics = snapshot.fetch(:metrics)
+          targets = [@path, *@related].uniq
+          inbound = targets.flat_map do |path|
+            @reference_graph.blast_radius(path).fetch(:inbound).map { |from| "#{from} -> #{relative(path)}" }
+          end.uniq
+          outbound = targets.flat_map do |path|
+            @reference_graph.blast_radius(path).fetch(:outbound).map { |to| "#{relative(path)} -> #{to}" }
+          end.uniq
+          unresolved = targets.flat_map do |path|
+            @reference_graph.unresolved_for(path).map do |row|
+              "#{row[:from_file]}:#{row[:line]} #{row[:kind]} #{row[:name]} (#{row[:reason]})"
+            end
+          end.uniq
+          dynamic = targets.flat_map do |path|
+            @reference_graph.dynamic_for(path).map do |row|
+              "#{row[:file]}:#{row[:line]} #{row[:name]} (#{row[:reason]})"
+            end
+          end.uniq
+          failures = Array(snapshot[:analysis_failures])
+          lines = [
+            "Repository reference graph: nodes=#{snapshot[:nodes].size}, edges=#{snapshot[:edges].size}, " \\
+            "unresolved_imports=#{metrics[:unresolved_local_imports]}, unresolved_ruby=#{metrics[:unresolved_ruby_references]}, " \\
+            "dynamic_sites=#{metrics[:dynamic_sites]}, analysis_failures=#{failures.size}.",
+            "Resolved inbound edges: #{inbound.empty? ? "none observed" : inbound.first(20).join("; ")}",
+            "Resolved outbound edges: #{outbound.empty? ? "none observed" : outbound.first(20).join("; ")}",
+            "Relevant unresolved references: #{unresolved.empty? ? "none observed" : unresolved.first(20).join("; ")}",
+            "Dynamic lookup sites in affected files: #{dynamic.empty? ? "none observed" : dynamic.first(20).join("; ")}",
+            (failures.empty? ? nil : "Analysis failures: #{failures.first(10).map { |row| "#{row[:path]}: #{row[:error]}" }.join("; ")}"),
+          ]
+          lines.compact.join("\\n")
+        rescue StandardError => e
+          "Reference graph: INCONCLUSIVE (#{e.class}: #{e.message.to_s[0, 180]})."
         end
 
         def production_reference_section
