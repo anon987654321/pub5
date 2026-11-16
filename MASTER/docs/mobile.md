@@ -28,14 +28,13 @@ The Ubuntu or Debian guest is the supported runtime for the normal text CLI. Ter
 
 ## Provider sign-in
 
-MASTER delegates sign-in to each provider's own CLI; it never copies OAuth tokens or session files into its own store. From the normal interactive prompt:
+MASTER delegates subscription sign-in to the configured provider CLIs; it never copies OAuth tokens or session files into its own store. From the normal interactive prompt:
 
     /model auth
-    /model auth login claude
     /model auth login chatgpt
     /model auth login grok
 
-Claude uses its browser sign-in. On mobile or a headless terminal, Codex and Grok use their device-code flow when the installed CLI/account supports it. Use `--browser` to force the provider's regular browser flow, or `--device-auth` to request device code explicitly. `/model auth status` asks each provider CLI for its own status; installed is not reported as authenticated when the CLI cannot prove sign-in.
+Anthropic is an API-key provider, not a subscription CLI lane; set `ANTHROPIC_API_KEY` in the host environment when using Anthropic API models. On mobile or a headless terminal, Codex and Grok use their device-code flow when the installed CLI/account supports it. Use `--browser` to force the provider's regular browser flow, or `--device-auth` to request device code explicitly. `/model auth status` reports only configured subscription providers; an installed binary is not reported as authenticated when its CLI cannot prove sign-in.
 
 
 ## Optional local model fallback
