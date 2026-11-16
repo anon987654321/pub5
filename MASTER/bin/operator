@@ -956,8 +956,9 @@ when "test"
   end
   app_suites = rails_parts.include?("shared") ? %w[brgen amber bsdports] : (rails_parts & %w[brgen amber bsdports])
   app_suites.each do |app|
+    env = Operator::TestScope.app_environment(root: ROOT, app:)
     jobs << ["#{app} suite", [BUNDLE, "exec", RUBY, "bin/rails", "test"],
-             File.join(ROOT, "RAILS", app), {}]
+             File.join(ROOT, "RAILS", app), env]
   end
   if rails_parts.any? { |part| %w[checks test].include?(part) } || !app_suites.empty?
     jobs << ["RAILS contracts", [RUBY, "test/run_all.rb"], File.join(ROOT, "RAILS"), {}]
