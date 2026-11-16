@@ -54,7 +54,6 @@ module Master
           RUBY_TERNARY_NOT_NESTED
           SIMULATION
           SINGLE_PRIVATE_SECTION
-          SMALL_FILES
           SMALL_FUNCTIONS
           TRAILING_COMMAS
           TRAILING_COMMENT
