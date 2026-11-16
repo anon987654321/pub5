@@ -7,13 +7,13 @@ require_relative "../lib/fix/scan/ast_fixer"
 class TestScanLawContracts < Minitest::Test
   Laws = Master::Review::Scan::Laws
 
-  def test_small_files_rule_flags_files_over_limit
+  def test_retired_small_files_detector_retains_its_historical_fixture
     code = Array.new(Laws::SmallFilesLaw::LIMIT + 1, "puts :x").join("\n")
 
     assert_finding Laws::SmallFilesLaw.new, code, "large.rb", "file"
   end
 
-  def test_small_files_rule_reads_code_with_modules_and_leaves_data_and_javascript
+  def test_retired_small_files_fixture_distinguishes_code_from_data
     long = Array.new(Laws::SmallFilesLaw::LIMIT + 1, "x").join("\n")
     %w[bin/operator app.scss deploy.sh].each do |path|
       refute_empty Laws::SmallFilesLaw.new.check(long, path:), path
