@@ -805,10 +805,12 @@ Each of these went through a proposal and a measurement against the tree. A
 reason tied to one file sits in a comment on that file; these have no single
 file to sit on.
 
-- **No fourth public Rails app** beyond brgen, amber and bsdports. Brgen's
-  high-churn verticals are mountable engines inside the Brgen app; money and
-  identity primitives live in `RAILS/__shared`, and CI runs the layout suite
-  and `/up` smoke for all three public apps. Horizon ideas wait in
+- **No fourth Brgen city-network app** beyond brgen, amber and bsdports.
+  Brgen's high-churn verticals are mountable engines inside the Brgen app;
+  money and identity primitives live in `RAILS/__shared`, consumed by those
+  three apps. Mr Damascy is a separate standalone public app with its own
+  Gemfile and CI; it does not consume `__shared` and is not a Brgen vertical.
+  Keep the two architectures distinct. Other city-network ideas wait in
   `RAILS/apps.horizon.yml`.
 - **No staging environment.** vm23 is one vCPU and 1 GB and already sheds
   apps under load. A staging copy arrives with a second box, not as a second
