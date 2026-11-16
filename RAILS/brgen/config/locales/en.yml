@@ -44,6 +44,8 @@ en:
       event: "%b %-d at %H:%M"
   legal:
     site_id_label: TradeDoubler Site ID
+    company_owner: Brgen is owned by PubHealthcare.
+    company_address: Kanalveien 10, 5068 Bergen, Norway
   app:
     name: Brgen
   demo_mode:
