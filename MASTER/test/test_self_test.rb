@@ -153,7 +153,7 @@ class TestSelfTest < Minitest::Test
         raise Errno::EACCES, candidate if candidate == path
         original_size.call(candidate)
       }) do
-        size_findings = audit.send(:deploy_small_files_findings)
+        size_findings = audit.send(:deploy_file_size_findings)
         assert size_findings.any? { |finding| finding[:path] == path && finding[:message].include?("DENSITY unmeasured") }
       end
     end
@@ -259,7 +259,7 @@ class TestSelfTest < Minitest::Test
       File.write(config, "x" * 24_001)
       File.write(runbook, "x" * 60_000)
 
-      findings = Master::Review::Scan::SelfTest.new(root:).send(:deploy_small_files_findings)
+      findings = Master::Review::Scan::SelfTest.new(root:).send(:deploy_file_size_findings)
 
       assert_equal 1, findings.size
       assert_equal config, findings.first[:path]
