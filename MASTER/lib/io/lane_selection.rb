@@ -28,7 +28,7 @@ module Master
       extend self
 
       MODELS = File.expand_path("../../data/models.yml", __dir__)
-      CLI_BINARIES = { "grok-cli" => "grok", "llama-cli" => "llama-cli" }.freeze
+      CLI_BINARIES = { "grok-cli" => "grok", "llama-cli" => "llama-cli", "zai-cli" => "zai-chat" }.freeze
       KIND_RANK = { remote: 0, paid_tail: 1, nsfw: 2, local: 2, free: 3 }.freeze
       FREE_CLASS_KINDS = %i[free local].freeze
       # Where a suspended floor rides in the selection sort: the same rank

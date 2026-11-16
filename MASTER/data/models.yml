@@ -503,7 +503,19 @@ three_mirror_redundancy:
   # Fix::RepairLoop#consensus_required? (error and critical findings, or
   # MASTER_CONSENSUS_FIXES=1), and a fix short of quorum is refused with the
   # dissent published on consensus:result.
-  pool:          ["claude-sonnet-5-5", "grok-cli:auto", "moonshotai/kimi-k2"]
+  #
+  # The pool must be jurors that can actually answer where /fix runs, across
+  # three independent model families, so the author-family exclusion always
+  # leaves at least MIN_INDEPENDENT_FAMILIES voters. The previous pool
+  # (claude-sonnet-5-5, grok-cli:auto, moonshotai/kimi-k2) named lanes no key
+  # on the current hosts reached: every error/critical repair then failed
+  # closed with a broken quorum and /fix refused real repairs all run long
+  # (2026-11-17). The current jurors were each answered live on 2026-11-17:
+  # zai-cli:auto through bin/zai-chat, ovh:gpt-oss-120b keyless (POST 200),
+  # and kilo:nvidia/nemotron-3.5-lightning:free keyless (POST 200, JSON vote
+  # honoured). zhipu + openai + nvidia: whichever family authors a candidate,
+  # two independent families remain to vote.
+  pool:          ["zai-cli:auto", "ovh:gpt-oss-120b", "kilo:nvidia/nemotron-3.5-lightning:free"]
   quorum:        2
 
 # Subscription CLIs, signed in once through the browser. The pool offers a
@@ -514,8 +526,8 @@ three_mirror_redundancy:
 # goes in on stdin. A model named auto passes no model flag, so the CLI uses
 # its own default. `login` is the command the pool names when signed out.
 # Signed-in subscription CLIs lead the remote class when available.
-# The generic CLI runner owns Grok, Codex and AGY; Anthropic remains an API provider.
-subscription_lanes: [grok-cli, codex-cli, agy]
+# The generic CLI runner owns Grok, Codex, AGY and zai-chat; Anthropic remains an API provider.
+subscription_lanes: [grok-cli, codex-cli, agy, zai-cli]
 
 cli_lanes:
   codex-cli:
