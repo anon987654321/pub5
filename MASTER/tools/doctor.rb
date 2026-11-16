@@ -1,8 +1,10 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# bin/operator doctor: the environment traps this repo has cost sessions hours,
-# checked in seconds and reported one line each. Read-only; it changes nothing.
+# bin/operator doctor: checkout and host readiness, separate from the
+# MASTER runtime doctor at bin/doctor and the interactive /doctor. It reports
+# environment traps this repo has cost sessions hours, one line each.
+# Read-only; it changes nothing.
 #
 #   ok    the thing is fine
 #   warn  works, but is about to cost you
