@@ -38,6 +38,14 @@ class TestOperatorTestScope < Minitest::Test
     end
   end
 
+  def test_operator_test_command_uses_the_canonical_scope_and_app_environment
+    source = File.read(File.join(Master::ROOT, "bin", "operator"))
+
+    assert_includes source, "Operator::TestScope.rails_apps(rails_parts)"
+    assert_includes source, "Operator::TestScope.app_environment(root: ROOT, app:)"
+    refute_includes source, 'rails_parts.include?("shared")'
+  end
+
   def test_unrelated_rails_paths_do_not_claim_an_app_suite
     assert_empty Operator::TestScope.rails_apps(%w[test checks])
   end
