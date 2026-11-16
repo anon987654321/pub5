@@ -112,7 +112,8 @@ class VpsDeployContractTest < Minitest::Test
   end
 
   def test_vps_deploy_fails_closed_without_root_fallbacks
-    assert_includes SOURCE, '[[ -f /usr/local/sbin/pub5-admin && -x /usr/local/sbin/pub5-admin && ! -L /usr/local/sbin/pub5-admin ]]'
+    assert_includes SOURCE, ': "${PUB5_ADMIN:=/usr/local/sbin/pub5-admin}"'
+    assert_includes SOURCE, '[[ -f "$PUB5_ADMIN" && -x "$PUB5_ADMIN" && ! -L "$PUB5_ADMIN" ]]'
     refute_match(/^\s*doas\s+rcctl\b/, SOURCE)
     refute_match(/^\s*doas\s+(?:tee|chmod|mkdir)\b/, SOURCE)
     refute_includes SOURCE, 'doas ksh "$repo/OPENBSD/mirror/bin/resource_guard.sh"'
@@ -120,7 +121,7 @@ class VpsDeployContractTest < Minitest::Test
     refute_includes SOURCE, 'doas tee "$file"'
   end
   def test_deploy_uses_the_fixed_root_broker_when_installed
-    assert_includes SOURCE, '/usr/local/sbin/pub5-admin service "$action" "$@"'
+    assert_includes SOURCE, '"$PUB5_ADMIN" service "$action" "$@"'
     assert_includes SOURCE, 'admin_request stamp "$name" "$sha" "$stamp_status"'
     assert_includes SOURCE, "admin_request resource-guard"
     assert_includes SOURCE, 'admin_request solid-queue-proof "$app"'
@@ -226,8 +227,8 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes service, 'pub5-admin relayd-check "$app" "$domain" "$port"'
     assert_includes deploy, 'relayd_add_relay "$APP_NAME" "$APP_DOMAIN" "$APP_PORT"'
     probe = service[/post_restart_probe\(\) \{.*?^\}/m]
-    refute_nil health_probe
-    refute_match(/\$\{_PRIV\}.*\$RUBY/m, health_probe)
+    refute_nil probe
+    refute_match(/\$\{_PRIV\}.*\$RUBY/m, probe)
   end
   def test_app_secret_path_fails_closed_without_the_broker
     database = File.read(File.join(ROOT, "RAILS", "_database.sh"), encoding: "UTF-8")
@@ -602,9 +603,12 @@ class VpsDeployContractTest < Minitest::Test
   end
 
   def test_a_master_deploy_holds_the_flag_before_its_build
-    master_branch = SOURCE[/^if \[\[ \$app == master \]\]; then\n.*?^fi$/m]
+    flag_call = SOURCE.index("\n  keep_deploy_flag\n")
+    build_call = SOURCE.index('if zsh "$repo/OPENBSD/mirror/bin/vps_deploy_master.sh"')
 
-    assert_operator master_branch.index("keep_deploy_flag"), :<, master_branch.index("vps_deploy_master.sh")
+    refute_nil flag_call
+    refute_nil build_call
+    assert_operator flag_call, :<, build_call, "master's build runs before its deploy flag is kept"
   end
 
   # The copy-tree on vm23 keeps path gems where the Gemfiles name them: __shared
@@ -651,7 +655,8 @@ class VpsDeployContractTest < Minitest::Test
   def finish_run(dir, body, down: "amber")
     log = File.join(dir, "deploy.log")
     script = <<~ZSH
-      app=brgen; repo=#{dir}; deploy_log=#{log}; deploy_flag=#{dir}/.flag; lock_owner=0
+      app=brgen; repo=#{dir}; deploy_log=#{log}; deploy_flag=#{dir}/.flag; lock_owner=1; DEPLOY_RAILS=(brgen amber bsdports)
+      restore_started() { print restoring; }
       release_deploy_lock() { print released; }
       write_stamp() { stamp_written=1; print "stamp $1 $2"; }
       doas() { [[ $1 == rcctl && $2 == check && $3 == #{down} ]] && return 1; return 0; }
@@ -720,7 +725,7 @@ class VpsDeployContractTest < Minitest::Test
   # `all` exits from its own loop; a trap installed after that branch never ran for
   # the parent, so every full deploy left its lock to the stale reaper.
   def test_the_terminal_trap_is_installed_before_the_all_branch_can_exit
-    assert SOURCE.index("trap finish EXIT") < SOURCE.index("if [[ $app == all ]]; then\n  typeset"),
+    assert SOURCE.index("trap finish EXIT") < SOURCE.index("if [[ $deploy_target_kind == all ]]; then"),
            "the parent of `vps-deploy all` exits without releasing its lock"
   end
 
@@ -861,7 +866,7 @@ class VpsDeployContractTest < Minitest::Test
   def test_each_rails_deploy_proves_app_health_after_its_restart
     service = File.read(File.join(ROOT, "RAILS", "_service.sh"), encoding: "UTF-8")
     deploy = File.read(File.join(ROOT, "RAILS", "_deploy.sh"), encoding: "UTF-8")
-    probe = service[/post_restart_probe\\(\\) \\{.*?^\\}/m]
+    probe = service[/post_restart_probe\(\) \{.*?^\}/m]
     refute_nil probe
     assert_includes probe, 'http://127.0.0.1:${app_port}/up'
     assert_includes deploy, 'post_restart_probe "$APP_NAME" "$APP_PORT"'

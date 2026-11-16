@@ -152,7 +152,8 @@ validate_deploy_setting VPS_DEPLOY_POLL "${VPS_DEPLOY_POLL:-3}" 1 60 || exit 2
 validate_deploy_setting VPS_DEPLOY_SETTLE_WAIT "${VPS_DEPLOY_SETTLE_WAIT:-240}" 1 3600 || exit 2
 validate_deploy_setting VPS_DEPLOY_MASTER_MIN_AVAIL "${VPS_DEPLOY_MASTER_MIN_AVAIL:-10}" 0 100 || exit 2
 validate_deploy_setting VPS_DEPLOY_MIN_FREE_KB "${VPS_DEPLOY_MIN_FREE_KB:-1048576}" 0 1000000000 || exit 2
-[[ -f /usr/local/sbin/pub5-admin && -x /usr/local/sbin/pub5-admin && ! -L /usr/local/sbin/pub5-admin ]] || {
+: "${PUB5_ADMIN:=/usr/local/sbin/pub5-admin}"
+[[ -f "$PUB5_ADMIN" && -x "$PUB5_ADMIN" && ! -L "$PUB5_ADMIN" ]] || {
   print -u2 "vps-deploy: pub5-admin missing; run reviewed OPENBSD/OPERATOR.sh first"
   exit 1
 }
@@ -429,18 +430,18 @@ admin_service() {
   local action=${1:-}
   shift || true
   if [[ $action == list-started ]]; then
-    /usr/local/sbin/pub5-admin service list-started
+    "$PUB5_ADMIN" service list-started
   else
-    /usr/local/sbin/pub5-admin service "$action" "$@"
+    "$PUB5_ADMIN" service "$action" "$@"
   fi
 }
 
 admin_request() {
-  [[ -x /usr/local/sbin/pub5-admin ]] || {
+  [[ -x "$PUB5_ADMIN" ]] || {
     print -u2 "vps-deploy: pub5-admin is not installed; run the reviewed OPERATOR sync first"
     return 127
   }
-  /usr/local/sbin/pub5-admin "$@"
+  "$PUB5_ADMIN" "$@"
 }
 
 # The guard's deploy flag, held for the whole deploy and not only the restart.
