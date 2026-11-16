@@ -8,7 +8,7 @@
 #   bin/operator triangle up      boot, migrate, wait for /up, print status
 #   bin/operator triangle up bsdports   the same, for the named surfaces only
 #   bin/operator triangle status  which ports answer
-#   bin/operator triangle down    stop what this script started
+#   bin/operator triangle down    stop only a verified checkout-owned process group
 #
 # Why this exists: the browser and live-HTTP checks need the same declared
 # app processes as the deploy host. Brgen, Amber and BSDPorts have no bin/dev;
