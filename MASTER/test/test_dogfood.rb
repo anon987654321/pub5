@@ -54,9 +54,10 @@ class DogfoodSpec < Minitest::Test
   # Self-application. Law files are Ruby; every ruby-scoped `detect` law runs
   # over law/ and must find nothing (declarations and fixtures excepted —
   # Law.conduct). The `check` and class Laws that joined Law.definitions when the
-  # Law systems merged (VERTICAL_BREATH, LONG_LINE, SMALL_FILES, ...) find 308
-  # style breaches in law/ on 2026-10-30; held out until /fix clears them, which
-  # AstFixer's LAW_DIR_RE refuses to do unattended in a fixture-bearing file.
+  # Law systems merged (VERTICAL_BREATH, LONG_LINE, SMALL_FILES, ...) found 308
+  # style breaches in law/ on 2026-10-30. This is an archived pre-retirement
+  # measurement: SMALL_FILES was retired on 2026-11-16 and is not a current gate.
+  # AstFixer's LAW_DIR_RE also refuses unattended edits in fixture-bearing files.
   def test_law_applies_to_itself
     detect_laws = Law.definitions.values.select(&:detect)
     findings = Dir[File.join(DOGFOOD_ROOT, "law", "*.rb")].flat_map do |file|
