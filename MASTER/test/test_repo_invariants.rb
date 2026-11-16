@@ -39,14 +39,20 @@ class MasterPathsTest < Minitest::Test
     end
   end
 
-  def test_non_git_temporary_roots_keep_an_isolated_local_state_directory
+  def test_non_git_temporary_roots_keep_one_local_state_directory_from_either_tree_root
     Dir.mktmpdir("master-fix-state-local") do |repo|
+      FileUtils.mkdir_p(File.join(repo, "MASTER"))
       previous_id = ENV["MASTER_STATE_ID"]
+      previous_base = ENV["MASTER_STATE_DIR"]
       ENV.delete("MASTER_STATE_ID")
+      ENV.delete("MASTER_STATE_DIR")
 
-      assert_equal File.join(repo, ".master"), MasterPaths.fix_state(root: repo)
+      expected = File.join(repo, ".master")
+      assert_equal expected, MasterPaths.fix_state(root: repo)
+      assert_equal expected, MasterPaths.fix_state(root: File.join(repo, "MASTER"))
     ensure
       previous_id.nil? ? ENV.delete("MASTER_STATE_ID") : ENV["MASTER_STATE_ID"] = previous_id
+      previous_base.nil? ? ENV.delete("MASTER_STATE_DIR") : ENV["MASTER_STATE_DIR"] = previous_base
     end
   end
 end
