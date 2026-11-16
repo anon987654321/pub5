@@ -282,7 +282,7 @@ module Master
       attr_accessor :topic, :last_inferred_command, :last_inferred_args
 
       def initialize(root: Dir.pwd, budget_max: 10.0, req_max: 1.0)
-        @root = root
+        @root = File.expand_path(root)
         @budget_max = budget_max
         @req_max = req_max
         @mutex = Mutex.new
@@ -295,9 +295,9 @@ module Master
         @topic = nil
         @last_inferred_command = nil
         @last_inferred_args = nil
-        @path = File.join(root, ".master", "session.json")
-        @costs_path = File.join(MasterPaths.fix_state(root: root), "costs.jsonl")
-        Dir.mkdir(File.join(root, ".master")) unless Dir.exist?(File.join(root, ".master"))
+        @path = File.join(@root, ".master", "session.json")
+        @costs_path = File.join(MasterPaths.fix_state(root: @root), "costs.jsonl")
+        Dir.mkdir(File.join(@root, ".master")) unless Dir.exist?(File.join(@root, ".master"))
       end
 
       # The current conversation's transcript. Returned by reference, not
@@ -375,7 +375,7 @@ module Master
         return true if @cost_state_prepared
 
         require_relative "../fix/kernel" unless defined?(Master::Fix::Kernel::LifecycleJournal)
-        Master::Fix::Kernel.new(root: File.dirname(@path), actor: "session-costs")
+        Master::Fix::Kernel.new(root: @root, actor: "session-costs")
           .lifecycle_journal.prepare_state!
         FileUtils.mkdir_p(File.dirname(@costs_path), mode: 0o700)
         @cost_state_prepared = true
