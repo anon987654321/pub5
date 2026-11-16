@@ -150,7 +150,7 @@ module Brgen
       { slug: "nordnesparken", name: "Nordnesparken", kind: "park", neighborhood: "nordnes",
         latitude: 60.3998, longitude: 5.3078, address: "Nordnes", image: "bergen-place-nordnesparken" },
       { slug: "vilvite", name: "VilVite", kind: "museum", neighborhood: "sentrum",
-        latitude: 60.3814, longitude: 5.3321, address: "Thormøhlens check 51", image: "bergen-place-vilvite" },
+        latitude: 60.3814, longitude: 5.3321, address: "Thormøhlens gate 51", image: "bergen-place-vilvite" },
     ].freeze
 
     RESTAURANTS = [
