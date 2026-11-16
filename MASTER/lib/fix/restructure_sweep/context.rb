@@ -16,7 +16,8 @@ module Master
         COMMAND_EXTENSIONS = %w[.rb .rake .sh .zsh].freeze
         COMMAND_ROOTS = %w[bin tools].freeze
         CONFIG_EXTENSIONS = %w[.rb .rake .yml .yaml .json].freeze
-        REFERENCE_EXTENSIONS = (SOURCE_EXT + CONFIG_EXTENSIONS + %w[.lock .gemspec .toml .xml]).uniq.freeze
+        REFERENCE_EXTENSIONS = (SOURCE_EXT + CONFIG_EXTENSIONS +
+          %w[.lock .gemspec .toml .xml .sh .zsh .md .mdx .txt .conf .ini .service .plist .properties .gradle]).uniq.freeze
         REFERENCE_BASENAMES = %w[Gemfile Gemfile.lock Rakefile package.json package-lock.json pnpm-lock.yaml yarn.lock].freeze
         STALE_PATHS = %w[RAILS/shared RAILS/mobile RAILS/visual_contract RAILS/contracts RAILS/brgen/engines].freeze
 
