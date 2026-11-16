@@ -130,7 +130,7 @@ module Master
             return reason if reason
             return if guard.mode == "dry"
 
-            guard.test_reason(path)
+            guard.test_regression_reason(path)
           end
 
           def rubocop_run(files, root)

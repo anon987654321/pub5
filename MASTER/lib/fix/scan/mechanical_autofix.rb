@@ -50,6 +50,10 @@ module Master
             return Rewrite.new(status: :unchanged, content: source, transforms: [], reason: why)
           end
 
+          # The mapped suite's pre-repair verdict belongs to the original
+          # bytes, so it is captured before any candidate is written.
+          AutofixGuard.note_test_baseline(path)
+
           candidate = AstFixer.propose(path, source, event_bus: @bus)
           return Rewrite.new(status: :unchanged, content: source, transforms: []) unless candidate&.changed
 
@@ -70,10 +74,11 @@ module Master
 
         private
 
-        # The write, then the file's own test; a red test puts the bytes back.
+        # The write, then the file's own test; a red test puts the bytes back
+        # unless the suite was red at baseline with no worse counts.
         def write_checked(path, source, candidate)
           AstFixer.write(path, candidate.content, event_bus: @bus, transforms: candidate.transforms)
-          if (why = AutofixGuard.test_reason(path))
+          if (why = AutofixGuard.test_regression_reason(path))
             AstFixer.write(path, source, event_bus: @bus, transforms: [])
             AutofixGuard.note_refused(path, why)
             return Rewrite.new(status: :refused, content: source, transforms: [], reason: why)

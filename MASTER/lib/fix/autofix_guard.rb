@@ -58,6 +58,7 @@ module Master
       @refused = []
       @capped = []
       @patch = nil
+      @test_baselines = {}
 
       class << self
         # off, dry or on. A flag (--autofix=) sets it; the environment is the default.
@@ -95,6 +96,7 @@ module Master
             @refused = []
             @capped = []
             @patch = nil
+            @test_baselines = {}
           end
         end
 
@@ -154,6 +156,58 @@ module Master
           status&.success? ? nil : "#{File.basename(test)} failed: #{out.to_s.lines.last(3).join.strip}"
         rescue StandardError => e
           "#{File.basename(test.to_s)} could not run: #{e.class}: #{e.message[0, 120]}"
+        end
+
+        # The mapped suite's pre-repair verdict, captured once while the tree
+        # still holds the original bytes. A suite that was red before the run
+        # is red for reasons no repair caused; without this baseline the red
+        # refused every write to a file it touched, all run long (2026-11-17:
+        # lane_selection.rb refused because four environment failures predated
+        # the run and outlived it).
+        def note_test_baseline(path)
+          test = mapped_test(path)
+          return if test.nil?
+          return if @mutex.synchronize { @test_baselines.key?(test) }
+
+          reason = test_reason(path)
+          @mutex.synchronize { @test_baselines[test] = reason }
+          nil
+        end
+
+        # nil when a written file may stand, else the refusal reason. A suite
+        # green at baseline refuses any red it shows after the write. A suite
+        # red at baseline refuses only a write that raised its failure or
+        # error counts; the pre-existing red is this run's inherited state,
+        # named in the receipt, not the candidate's fault. The first judged
+        # candidate for a mapped test is its own baseline when no caller
+        # captured one pre-write, so its verdict stays the conservative one.
+        def test_regression_reason(path)
+          test = mapped_test(path)
+          current = test_reason(path)
+          return nil if current.nil?
+          return current if test.nil?
+
+          baseline = @mutex.synchronize { @test_baselines[test] }
+          if baseline.nil?
+            @mutex.synchronize { @test_baselines[test] = current }
+            return current
+          end
+
+          base = suite_counts(baseline)
+          now = suite_counts(current)
+          return current if base.nil? || now.nil?
+
+          (now[:failures] > base[:failures] || now[:errors] > base[:errors]) ? current : nil
+        end
+
+        # "51 runs, 190 assertions, 4 failures, 0 errors" from the captured
+        # summary lines. nil when the failure text carries no parseable
+        # summary, which keeps that case on the conservative refusal.
+        def suite_counts(reason)
+          match = reason.to_s.match(/(\d+) failures?, (\d+) errors?/)
+          return nil unless match
+
+          { failures: match[1].to_i, errors: match[2].to_i }
         end
 
         def mapped_test(path)
