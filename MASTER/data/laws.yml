@@ -3401,10 +3401,14 @@ law_catalogue:
     INVERTED_PYRAMID:
       definition_sources: [MASTER/law/practice.rb]
       severity: warning
+    # Retired 2026-11-16 with SMALL_FILES: this was the same 300-line
+    # split rule limited to JavaScript. It also flagged generated face bundles
+    # and the vendored three-face module, not just cohesive source modules.
     JS_MODULE_SIZE:
       definition_sources: [MASTER/law/javascript.rb]
       severity: warning
-      autofix: automatic
+      lifecycle: retired
+      autofix: never
       languages: [javascript]
     KERNEL_COERCION:
       definition_sources: [MASTER/law/ruby.rb]
