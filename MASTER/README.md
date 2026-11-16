@@ -102,7 +102,7 @@ booting MASTER. While a repair is active, `bin/operator fix status` and
 `bin/operator fix tail` expose its progress and transcript.
 
 First hour on a new host: use the installed compatible Ruby (3.3 or newer; no upper bound), run `bundle install` in
-`MASTER/`, keep keys in the environment, run `bin/doctor`, then take one narrow dry run,
+`MASTER/`, keep keys in the environment, run `bin/operator doctor` for the host and `bin/doctor` for the runtime, then take one narrow dry run,
 `bin/master '/fix --dry-run --critique --only critique,map MASTER/lib/cli'`, and read it before
 widening scope.
 
