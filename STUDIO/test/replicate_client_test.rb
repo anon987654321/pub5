@@ -8,7 +8,6 @@ require_relative "../replicate/client"
 # own dedicated regression suite.
 Studio::Lora::Consent.define_singleton_method(:require!) { |**| { "valid" => true } }
 
-
 class TestStudioReplicateClientPaths < Minitest::Test
   class StubClient < Studio::ReplicateClient
     attr_reader :requests

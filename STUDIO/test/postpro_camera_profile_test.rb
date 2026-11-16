@@ -6,10 +6,10 @@ require_relative "minitest_helper"
 Object.const_set(:CAMERA_PROFILES, {
   "canon" => {
     "canon eos 100d" => { "color_matrix" => [1] * 9, "source" => "fixture" },
-    "canon eos 1200d" => { "color_matrix" => [2] * 9, "source" => "fixture" }
+    "canon eos 1200d" => { "color_matrix" => [2] * 9, "source" => "fixture" },
   },
   "fujifilm" => {
-    "fujifilm x100s" => { "color_matrix" => [3] * 9, "source" => "fixture" }
+    "fujifilm x100s" => { "color_matrix" => [3] * 9, "source" => "fixture" },
   }
 }) unless Object.const_defined?(:CAMERA_PROFILES)
 

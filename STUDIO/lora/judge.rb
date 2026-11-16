@@ -31,7 +31,7 @@ module Studio
         "texture" => 0.0..4.0,
         "tonal_range" => 0.0..0.5,
         "clipping" => 0.0..100.0,
-        "specular_spread" => 0.0..0.5
+        "specular_spread" => 0.0..0.5,
       }.freeze
 
       class Error < StandardError; end
@@ -42,23 +42,23 @@ module Studio
         "texture" => {
           direction: :floor,
           fault: "waxy, over-smoothed skin — the model rendered a face with no pores",
-          remedy: "lower guidance_scale, or add grain in postpro; the negative prompt already asks against it"
+          remedy: "lower guidance_scale, or add grain in postpro; the negative prompt already asks against it",
         },
         "tonal_range" => {
           direction: :floor,
           fault: "flat and veiled — no real blacks, the whole frame sits in the midtones",
-          remedy: "a grade may have lifted the shadows; check postpro before blaming the render"
+          remedy: "a grade may have lifted the shadows; check postpro before blaming the render",
         },
         "clipping" => {
           direction: :ceiling,
           fault: "blown highlights — detail destroyed rather than rolled off",
-          remedy: "lower guidance_scale; compare with the calibrated reference ceiling"
+          remedy: "lower guidance_scale; compare with the calibrated reference ceiling",
         },
         "specular_spread" => {
           direction: :floor,
           fault: "plastic sheen — highlight values cluster instead of varying across the lit surface",
-          remedy: "check the source lighting and avoid glossy-skin or editorial-beauty phrasing"
-        }
+          remedy: "check the source lighting and avoid glossy-skin or editorial-beauty phrasing",
+        },
       }.freeze
 
       module_function

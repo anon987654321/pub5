@@ -168,7 +168,6 @@ module Studio
         path
       end
 
-
       private
 
       def authorize_subject!

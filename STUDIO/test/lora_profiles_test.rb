@@ -177,7 +177,7 @@ class TestStudioLoraValidator < Minitest::Test
           "granted_by" => "synthetic test authority",
           "granted_on" => "2026-11-14",
           "covers" => %w[likeness_generation provider_processing model_training model_retention],
-          "stored_at" => "evidence/subject-consent.txt"
+          "stored_at" => "evidence/subject-consent.txt",
         }
       },
       "source_rights" => {
@@ -187,8 +187,8 @@ class TestStudioLoraValidator < Minitest::Test
             "granted_by" => "synthetic dataset authority",
             "granted_on" => "2026-11-14",
             "covers" => %w[generation_use provider_processing training_use],
-            "stored_at" => "evidence/dataset-rights.txt"
-          }
+            "stored_at" => "evidence/dataset-rights.txt",
+          },
         }
       }
     }
@@ -226,9 +226,9 @@ class TestStudioLoraValidator < Minitest::Test
             "network" => { "type" => "lora", "linear" => 16 },
             "save" => { "push_to_hub" => push_to_hub },
             "train" => { "steps" => 1_000 },
-            "datasets" => [{ "folder_path" => dataset }]
-          }
-        ]
+            "datasets" => [{ "folder_path" => dataset }],
+          },
+        ],
       }
     }
     File.write(File.join(directory, "train.yaml"), YAML.dump(document))

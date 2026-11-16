@@ -842,7 +842,6 @@ class TestDillaRoyksoppProfile < Minitest::Test
   end
 end
 
-
 class TestRG69BrowserContract < Minitest::Test
   def studio_root
     File.expand_path("..", __dir__)
@@ -902,7 +901,7 @@ class TestDillaSeedReproducibility < Minitest::Test
         snare: drums.snare(0.82),
         hat: drums.hat(0.55),
         ride: drums.ride(0.4),
-        perc: drums.perc(0.35)
+        perc: drums.perc(0.35),
       }
     end
 

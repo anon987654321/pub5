@@ -189,7 +189,6 @@ class TestIdeaPictureOutput < Minitest::Test
 
   public
 
-
   def test_private_replicate_model_name_is_a_supported_fallback_without_a_manifest
     Dir.mktmpdir do |dir|
       subject = File.join(dir, "ragnhild")
@@ -224,7 +223,6 @@ class TestIdeaPictureOutput < Minitest::Test
       assert_match(/source still is missing/, error.message)
     end
   end
-
 
   def test_validate_model_checks_that_the_private_provider_model_is_reachable
     Dir.mktmpdir do |dir|

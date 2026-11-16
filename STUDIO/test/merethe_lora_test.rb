@@ -9,7 +9,6 @@ require_relative "../lora/merethe/prepare"
 # gate is exercised by lora_consent_test.rb.
 Studio::Lora::Consent.define_singleton_method(:require!) { |**| { "valid" => true } }
 
-
 class TestMeretheLoraPackage < Minitest::Test
   def test_merethe_lora_uses_the_canonical_subject_root
     assert_equal File.expand_path("../lora/merethe", __dir__), Studio::MeretheLora::SUBJECT_ROOT

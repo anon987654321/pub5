@@ -39,7 +39,7 @@ module Studio
           "read_only" => true,
           "provider_calls" => 0,
           "subject_count" => subjects.length,
-          "subjects" => subjects
+          "subjects" => subjects,
         }
       end
 
@@ -60,7 +60,7 @@ module Studio
           "trigger" => nil,
           "checks" => [],
           "blockers" => [],
-          "warnings" => []
+          "warnings" => [],
         }
 
         consent = Consent.validate(subject:, subject_directory: directory, action: :training)

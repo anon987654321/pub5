@@ -167,7 +167,7 @@ class TestLoraConsent < Minitest::Test
           "granted_by" => "synthetic test authority",
           "granted_on" => "2026-11-14",
           "covers" => subject_scopes,
-          "stored_at" => "evidence/subject-consent.txt"
+          "stored_at" => "evidence/subject-consent.txt",
         }
       ),
       "source_rights" => source_permissions.merge(
@@ -176,16 +176,16 @@ class TestLoraConsent < Minitest::Test
             "granted_by" => "synthetic source-rights authority",
             "granted_on" => "2026-11-14",
             "covers" => source_scopes.dup,
-            "stored_at" => "evidence/source-rights.txt"
+            "stored_at" => "evidence/source-rights.txt",
           },
           **(training ? {
             "training_dataset" => {
               "granted_by" => "synthetic dataset authority",
               "granted_on" => "2026-11-14",
               "covers" => source_scopes.dup,
-              "stored_at" => "evidence/dataset-rights.txt"
-            }
-          } : {})
+              "stored_at" => "evidence/dataset-rights.txt",
+            },
+          } : {}),
         }
       )
     }

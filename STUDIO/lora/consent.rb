@@ -18,14 +18,14 @@ module Studio
         generation: %w[likeness_generation provider_processing].freeze,
         training: %w[likeness_generation provider_processing model_training model_retention].freeze,
         publication: %w[model_publication].freeze,
-        distribution: %w[model_distribution].freeze
+        distribution: %w[model_distribution].freeze,
       }.freeze
 
       SOURCE_PERMISSIONS = {
         generation: %w[generation_use provider_processing].freeze,
         training: %w[generation_use provider_processing training_use].freeze,
         publication: %w[model_publication].freeze,
-        distribution: %w[model_distribution].freeze
+        distribution: %w[model_distribution].freeze,
       }.freeze
 
       class Error < StandardError; end
@@ -43,7 +43,7 @@ module Studio
                else
                  [
                    ("reference_photographs" if local_images?(File.join(directory, "references"))),
-                   ("subject_sources" if local_images?(File.join(directory, "sources")))
+                   ("subject_sources" if local_images?(File.join(directory, "sources"))),
                  ].compact
                end
         sets << "training_dataset" if action.to_sym == :training

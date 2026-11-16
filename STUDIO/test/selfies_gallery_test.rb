@@ -56,13 +56,13 @@ class TestSelfiesGallery < Minitest::Test
           "granted_by" => "synthetic test authority",
           "granted_on" => "2026-11-16",
           "covers" => ["model_publication"],
-          "stored_at" => "evidence/subject-permission.txt"
-        }
+          "stored_at" => "evidence/subject-permission.txt",
+        },
       },
       "source_rights" => {
         "model_publication" => true,
-        "evidence" => {}
-      }
+        "evidence" => {},
+      },
     }
     consent_path = File.join(directory, "consent.yml")
     File.write(consent_path, YAML.dump(record), mode: "w", perm: 0o600)

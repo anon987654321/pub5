@@ -72,7 +72,7 @@ module Studio
             "read_only" => true,
             "provider_calls" => 0,
             "subject_count" => 1,
-            "subjects" => [validator.validate_subject(subject)]
+            "subjects" => [validator.validate_subject(subject)],
           }
         end
       end
