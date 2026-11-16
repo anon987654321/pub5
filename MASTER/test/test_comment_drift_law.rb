@@ -117,7 +117,7 @@ class TestCommentDriftRule < Minitest::Test
   # on every file. It must still produce no findings — an unreachable model is
   # never evidence of a clean file.
   def test_an_absent_model_binary_yields_no_findings
-    assert_empty flags(FakeAgent.new(raises: Errno::ENOENT.new("claude")))
+    assert_empty flags(FakeAgent.new(raises: Errno::ENOENT.new("missing-provider-cli")))
   end
 
   # A model that is present and misbehaving is a different case and also must
