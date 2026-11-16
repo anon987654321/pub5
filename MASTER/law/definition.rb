@@ -937,8 +937,10 @@ module Law
   @definitions = {}
   @law_sources = {}
   @law_stamps = {}
+  @law_root = nil
+  @last_reload_report = nil
   class << self
-    attr_reader :definitions
+    attr_reader :definitions, :last_reload_report
 
     def define(id, &block)
       b = Builder.new(id)
@@ -958,35 +960,64 @@ module Law
     end
 
     def reload(dir)
-      files = law_files(dir)
-      # Nothing to do when every file is as it was loaded and its Laws are still
-      # registered. Preflight re-read every law file and the catalogue on each
-      # call (0.28 s), and LawTree.find calls this once per Law, so
-      # TestLawFixtures spent 30 s per test in preflight alone and timed out.
-      return @definitions if loaded?(files)
+      requested_root = File.expand_path(dir)
+      real_root = File.realpath(requested_root)
+      files = law_files(real_root)
+      previous_root = @law_root
 
-      preflight!(dir) if File.expand_path(dir) == File.expand_path(__dir__)
+      # No-op when the same canonical source files still have their recorded
+      # stamps and every definition remains registered. Symlink aliases used
+      # to look like a new tree because the cache compared path strings only.
+      if loaded?(files)
+        @last_reload_report = {
+          status: "unchanged", root: real_root, requested_root:,
+          previous_root:,
+        }.freeze
+        return @definitions
+      end
 
+      preflight!(real_root) if real_root == File.realpath(__dir__)
+
+      original_sources = @law_sources.dup
+      original_stamps = @law_stamps.dup
       staged = @definitions.dup
       sources = @law_sources.dup
       stamps = @law_stamps.dup
+      reasons = []
 
-      changed = false
       (sources.keys - files).each do |source|
-        changed = true
-        sources.delete(source).each { |id| staged.delete(id) }
+        changed_ids = sources.delete(source).to_a
+        staged_ids = changed_ids.select { |id| staged.key?(id) }
+        staged_ids.each { |id| staged.delete(id) }
         stamps.delete(source)
+        reasons << {
+          path: source, reason: "source_removed", removed_law_ids: changed_ids.map(&:to_s).sort,
+        }
       end
 
       Thread.current[:law_staging] = staged
       files.each do |source|
         stat = File.stat(source)
-        stamp = [stat.size, stat.ino, stat.mtime.to_r]
-        # A stamp says the file is unchanged, not that its laws are still registered:
-        # a cleared registry must reload them, or every caller after the clear sees none.
-        next if stamps[source] == stamp && sources[source].to_a.all? { |id| staged.key?(id) }
+        stamp = [stat.size, stat.dev, stat.ino, stat.mtime.to_r]
+        previous_stamp = original_stamps[source]
+        previous_ids = original_sources[source].to_a
+        missing_ids = previous_ids.reject { |id| staged.key?(id) }
+        next if stamps[source] == stamp && missing_ids.empty?
 
-        changed = true
+        changed = if previous_stamp.nil?
+                    "new_source"
+                  elsif previous_root && previous_root != real_root
+                    "source_root_changed"
+                  elsif !missing_ids.empty?
+                    "registered_law_missing"
+                  else
+                    changed_stamp_fields(previous_stamp, stamp)
+                  end
+        reasons << {
+          path: source, reason: changed, previous_stamp: previous_stamp,
+          current_stamp: stamp, missing_law_ids: missing_ids.map(&:to_s).sort,
+        }
+
         sources[source].to_a.each { |id| staged.delete(id) }
         before_ids = staged.keys
         load source
@@ -994,18 +1025,49 @@ module Law
         stamps[source] = stamp
       end
 
-      return @definitions unless changed
+      if reasons.empty?
+        @last_reload_report = {
+          status: "unchanged", root: real_root, requested_root:,
+          previous_root:,
+        }.freeze
+        return @definitions
+      end
 
       @definitions = staged
       @law_sources = sources
       @law_stamps = stamps
+      @law_root = real_root
       # A reloaded Law is a new Definition object, so detector_for rebuilds it on
       # demand; this only drops the ids a reload removed, so a deleted Law does not
       # keep its detector alive for the life of the process.
       DETECTOR_MUTEX.synchronize { @detectors.select! { |id, _| staged.key?(id) } }
+      @last_reload_report = {
+        status: "reloaded", root: real_root, requested_root:,
+        previous_root:, reasons: reasons.freeze,
+      }.freeze
+
+      # When a previously loaded source is evaluated again, say exactly why
+      # before Ruby emits any "already initialized constant" warning. This line
+      # is intentionally diagnostic rather than a green/red verdict: a genuine
+      # source change is a valid reload; a root or registration change deserves
+      # investigation at the caller.
+      repeated = reasons.reject { |row| row[:reason] == "new_source" }
+      if repeated.any?
+        detail = repeated.map do |row|
+          changed = row[:reason].is_a?(Array) ? row[:reason].join(",") : row[:reason]
+          "#{File.basename(row[:path])}=#{changed}"
+        end.join("; ")
+        warn "law_loader: re-evaluating #{repeated.size} previously loaded file(s); " \
+             "root=#{real_root}; requested=#{requested_root}; previous_root=#{previous_root || "none"}; #{detail}"
+      end
       staged
     ensure
       Thread.current[:law_staging] = nil
+    end
+
+    def changed_stamp_fields(previous, current)
+      labels = %w[size device inode mtime]
+      labels.zip(previous, current).filter_map { |name, before, after| name if before != after }
     end
 
     def loaded?(files)
@@ -1013,16 +1075,22 @@ module Law
 
       files.all? do |source|
         stat = File.stat(source)
-        @law_stamps[source] == [stat.size, stat.ino, stat.mtime.to_r] &&
+        @law_stamps[source] == [stat.size, stat.dev, stat.ino, stat.mtime.to_r] &&
           @law_sources[source].all? { |id| @definitions.key?(id) }
       end
     end
 
-    # One flat law/: every file but this one holds Laws.
+    # One flat law/: every file but this one holds Laws. Resolve symlinks once,
+    # so the same physical source cannot enter the process registry under two
+    # different absolute path spellings.
     def law_files(dir)
-      Dir.glob(File.join(dir, "*.rb")).sort.map { |file| File.expand_path(file) } - [File.expand_path(__FILE__)]
+      real_dir = File.realpath(dir)
+      Dir.glob(File.join(real_dir, "*.rb")).sort.filter_map do |file|
+        File.realpath(file)
+      rescue Errno::ENOENT, Errno::ELOOP
+        nil
+      end - [File.realpath(__FILE__)]
     end
-
     def preflight!(dir)
       generated = Master.load_laws(root: Master::ROOT).fetch("prose").values.flat_map do |language|
         language.fetch("ids", {}).values.map { |id| { id: id.to_s, source: "MASTER/law/prose.rb", line: 1 } }
