@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "digest"
+
 # sprawl: deliberate — standalone-load contract. Four lib files require this
 # with no boot order (Swallow's standalone use from MASTER/tools depends on it, see
 # data/spine.yml 2026-08-11 +2); folding it into a boot file would make every
@@ -24,7 +26,60 @@ module MasterPaths
   def repo = REPO
   def data(*parts) = File.join(DATA, *parts)
   def reports(*parts) = File.join(REPORTS, *parts)
-  def state(*parts) = File.join(STATE, *parts)
+  # MASTER_STATE_DIR relocates the private state base without changing the
+  # checkout's source/config paths. Read it at call time so an operator can
+  # configure it before constructing a store in this process.
+  def state_base
+    configured = ENV["MASTER_STATE_DIR"].to_s.strip
+    configured.empty? ? STATE : File.expand_path(configured)
+  end
+
+  def state(*parts) = File.join(state_base, *parts)
+
+  # One private /fix state family per canonical Git remote. Worktrees and
+  # relocated clones of the same repository therefore share one lock and
+  # journal, while unrelated repositories do not collide. A non-Git temporary
+  # root retains its local .master store, which keeps isolated tests isolated.
+  # MASTER_STATE_ID is an explicit stable namespace for repositories without
+  # an origin remote.
+  def fix_state(root:)
+    repository = File.expand_path(root)
+    repository = File.dirname(repository) if File.basename(repository) == "MASTER"
+    explicit = ENV["MASTER_STATE_ID"].to_s.strip
+    identity = explicit.empty? ? remote_identity(repository) : state_identity(explicit)
+    return File.join(repository, ".master") unless identity
+
+    File.join(state_base, "repositories", identity, "fix")
+  end
+
+  def remote_identity(repository)
+    require "open3"
+    remote, status = Open3.capture2("git", "-C", repository, "config", "--get", "remote.origin.url")
+    return unless status.success?
+
+    value = remote.to_s.strip
+    return if value.empty?
+
+    value = value.sub(%r{\\A(?:https?|ssh)://}, "").sub(/\\Agit@/, "")
+    value = value.sub(/\\A[^\\/@]+@/, "")
+    value = value.sub(/\\A([^:/]+):/, "\\1/")
+    value = value.sub(/\\.git\\z/i, "").downcase
+    segments = value.split(/[\\/:]/).reject(&:empty?)
+    return unless segments.size >= 3
+
+    slug = segments.last(2).map { |part| part.gsub(/[^a-z0-9._-]/, "-") }.join("-")
+    digest = Digest::SHA256.hexdigest(value)[0, 12]
+    "#{slug}-#{digest}"
+  rescue StandardError
+    nil
+  end
+
+  def state_identity(value)
+    normalized = value.downcase.gsub(/[^a-z0-9._-]+/, "-").gsub(/\\A-+|-+\\z/, "")
+    return if normalized.empty?
+
+    "#{normalized[0, 48]}-#{Digest::SHA256.hexdigest(normalized)[0, 12]}"
+  end
 
   # The mode a private state directory is tightened to: others never keep access,
   # and the owner always has it. A directory handed to a group other than the
