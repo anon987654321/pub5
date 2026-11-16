@@ -44,7 +44,7 @@ def usage
     operator - repo-wide operator surface
 
     Usage:
-      bin/operator check [--scan-only] [--only=a,b] [--tree=T] [--list] [--release]  every declared check in the repo, fixing as it goes
+      bin/operator check [--scan-only] [--only=a,b] [--tree=T] [--list] [--release]  repo-wide maintenance ladder; writes fixes by default (not bin/check)
       bin/operator check --fix-proof [--tree=T]  internal /fix final proof against a verified candidate baseline
       bin/operator status [--json]
       bin/operator rtfm [--host USER@HOST] [--key PATH] [--source PATH] [--receipt PATH] [--local] -- <native command>  read-only OpenBSD admission check
@@ -206,12 +206,12 @@ end
 command = ARGV.shift
 case command
 when "check"
-  # The whole ladder, autofixing, in one invocation — the default way to find
-  # out whether this repo is conformant. The stages and the reasoning behind
-  # their order live in lib/operator/check_chain.rb.
+  # The repo-wide maintenance ladder. This is not MASTER/bin/check's profile
+  # runner and not the everyday /fix repair command; it combines scanners,
+  # autofix stages, tree checks and ratchets in one separate operator pass.
+  # The stages and their order live in lib/operator/check_chain.rb.
   #
-  # It writes by default, because a scanner that finds a fixable defect and
-  # leaves it is a scanner whose findings someone has to walk back to later.
+  # It writes by default; --scan-only measures without writing.
   # --scan-only measures and writes nothing; every stage says which files it
   # changed, under its own name, so a bad fix is attributable to the stage that
   # made it rather than to the diff as a whole.
