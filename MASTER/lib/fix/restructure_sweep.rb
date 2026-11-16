@@ -354,6 +354,9 @@ module Master
         plan = Restructure::Plan.parse(answer)
         return report(problem, nil, "the answer held no plan") if plan.empty?
 
+        blocker = decommission_blocker(problem, plan, audit)
+        return report(problem, plan, blocker, audit:) if blocker
+
         review = ->(diff) { verdict(problem, plan, diff, scorecard_before: baseline_scorecard, audit:) }
         result = @restructures[tree].call(
           plan,
@@ -362,6 +365,41 @@ module Master
           allowed_operations: problem.candidate_operations,
         )
         report(problem, plan, result, audit:)
+      end
+
+      DESTRUCTIVE_OPERATIONS = %w[remove rename relocate merge split flatten hoist defragment decouple].freeze
+
+      def decommission_blocker(problem, plan, audit)
+        operations = Array(plan.operations).map(&:to_s)
+        return if (operations & DESTRUCTIVE_OPERATIONS).empty?
+
+        fields = audit.to_s.split(";").to_h do |entry|
+          key, value = entry.strip.split("=", 2)
+          [key.to_s.strip, value.to_s.strip]
+        end
+        uncertain = %w[dynamic external].select do |key|
+          fields.fetch(key, "").match?(/\\binconclusive\\b/i)
+        end
+        return "destructive restructure refused: #{uncertain.join(" and ")} reachability is INCONCLUSIVE" if uncertain.any?
+
+        graph = @reference_graph
+        return "destructive restructure refused: repository reference graph unavailable" unless graph
+
+        snapshot = graph.build
+        failures = Array(snapshot[:analysis_failures])
+        return "destructive restructure refused: reference graph has #{failures.size} analysis failure(s)" unless failures.empty?
+
+        missing = problem.files.reject { |path| graph.includes_path?(path) }
+        return "destructive restructure refused: files absent from the reference graph: #{missing.map { |path| relative(path) }.join(", ")}" if missing.any?
+
+        dynamic = problem.files.flat_map { |path| graph.dynamic_for(path) }
+        unresolved = problem.files.flat_map { |path| graph.unresolved_for(path) }
+        return "destructive restructure refused: #{dynamic.size} dynamic lookup site(s) remain in affected files" if dynamic.any?
+        return "destructive restructure refused: #{unresolved.size} unresolved reference(s) remain in affected files" if unresolved.any?
+
+        nil
+      rescue StandardError => e
+        "destructive restructure refused: reference evidence failed closed (#{e.class}: #{e.message.to_s[0, 120]})"
       end
 
       def decommission_audit(answer)
