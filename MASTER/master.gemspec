@@ -8,11 +8,9 @@ Gem::Specification.new do |spec|
   spec.authors = ["dev"]
   spec.summary = "Constitutional AI agent"
 
-  # kernel/ and LETTER_TO_AUTHOR.md do not exist in this tree; Dir[] on a
-  # missing path silently contributes nothing; and no Rakefile or CI task
-  # actually builds or installs this gemspec, but a package built from a
-  # correct list is worth more than one that quietly ships fewer files than
-  # it claims to.
+  # The gem:build_proof task builds this gemspec and checks the package
+  # manifest. Keep the file list scoped to paths this tree actually owns;
+  # Dir[] silently omits paths that are missing.
   spec.files         = Dir["lib/**/*.rb", "bin/*", "data/**/*", "plugins/**/*"]
   spec.require_paths = ["lib"]
   spec.bindir        = "bin"
