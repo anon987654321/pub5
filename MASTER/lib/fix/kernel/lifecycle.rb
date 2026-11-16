@@ -46,6 +46,8 @@ module Master
           require_relative "../run_journal"
           @lifecycle_mutex.synchronize do
             @lifecycle_journal ||= LifecycleJournal.new(root: @root, bus: @bus)
+            @lifecycle_journal.prepare_state!
+            @lifecycle_journal
           end
         end
 
