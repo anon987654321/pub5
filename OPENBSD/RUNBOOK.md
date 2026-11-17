@@ -724,6 +724,7 @@ before using the new deployer; do not rely on `vps-deploy all` to bootstrap this
 version transition because its receipt preflight runs before its normal mirror apply:
 
 ```sh
+cd /home/dev/pub5 && git pull --ff-only
 doas zsh OPENBSD/OPERATOR.sh --plan
 doas zsh OPENBSD/OPERATOR.sh --apply
 doas zsh OPENBSD/OPERATOR.sh --verify
