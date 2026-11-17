@@ -14,15 +14,14 @@ require_relative "../lora/lora"
 module Studio
   module Visual
     class IdeaPicture
-      # The default film engine. MiniMax H3 Lite drives the selfie series' short
-      # film from a first frame at 480P/768P, 4-15s. The other image_to_video
-      # models in models.yml stay selectable; each declares the input keys it
-      # needs, and film_input builds the matching shape.
-      FILM = "minimax/h3-lite"
+      # Highspeed is the default everyday 768P film engine. H3 Lite remains the
+      # lower-cost drafting option at 480P or 768P; both accept 4-15 seconds.
+      FILM = "minimax/h3-highspeed"
       # Which keys each film engine must accept, so a schema preflight can run
       # before any upload. Keys are the ones film_input actually sends.
       FILM_INPUT_KEYS = {
         "minimax/h3-lite" => %w[prompt first_frame_image duration resolution],
+        "minimax/h3-highspeed" => %w[prompt first_frame_image duration],
         "kwaivgi/kling-v3-omni-video" => %w[prompt start_image duration mode generate_audio],
       }.freeze
       FILM_DEFAULT_KEYS = %w[prompt image duration mode aspect_ratio resolution].freeze
@@ -44,6 +43,7 @@ module Studio
         model_manifest: nil,
         engine: nil,
         film_engine: nil,
+        film_resolution: nil,
         subjects_root: SUBJECTS
       )
         @client = client
@@ -57,6 +57,7 @@ module Studio
         @model_manifest = model_manifest || default_model_manifest
         @engine = engine&.to_s
         @film_engine = film_engine&.to_s
+        @film_resolution = film_resolution&.to_s
       end
 
       def write(words, film: true, duration: 5, output_stem: nil, grade_seed: nil)
@@ -141,6 +142,17 @@ module Studio
       # remaining fallback models take an `image`.
       def film_input_keys
         FILM_INPUT_KEYS.fetch(film_engine, FILM_DEFAULT_KEYS)
+      end
+
+      # Lite defaults to its cheapest 480P output; callers may select 768P.
+      # Highspeed is fixed at 768P and does not accept a resolution input.
+      def film_resolution
+        return unless film_engine == "minimax/h3-lite"
+
+        resolution = (@film_resolution || "480P").upcase
+        raise ArgumentError, "H3 Lite resolution must be 480P or 768P" unless %w[480P 768P].include?(resolution)
+
+        resolution
       end
 
       # Lay a music bed under a rendered clip. The clip keeps its own video and
@@ -339,15 +351,17 @@ module Studio
       def film_input(words, still, duration)
         prompt = "The same photograph, held, one slow motion. #{words}"
         case film_engine
-        when "minimax/h3-lite"
-          # H3 Lite takes a first frame, not `image`; image-to-video ignores
-          # ratio and keeps the still's own aspect ratio.
-          return {
+        when "minimax/h3-lite", "minimax/h3-highspeed"
+          # Both H3 engines take first_frame_image; Lite additionally requires
+          # its selectable output resolution. Image-to-video inherits the
+          # still's aspect ratio.
+          input = {
             prompt:,
             first_frame_image: client.upload_file(still, subject: @subject),
             duration: h3_duration(duration),
-            resolution: "768P",
           }
+          input[:resolution] = film_resolution if film_engine == "minimax/h3-lite"
+          return input
         when "kwaivgi/kling-v3-omni-video"
           # Kling v3 Omni takes start_image, and its duration window is 3-15s.
           # Native audio stays off: STUDIO lays the dilla bed under the cut in
