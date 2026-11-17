@@ -450,7 +450,7 @@ module Pub5Admin
     base_stat = File.lstat(base)
     raise "#{base} must be a real directory" unless base_stat.directory? && !base_stat.symlink?
     raise "#{base} must be root-owned and not group/other writable" if
-      verify_root && (!base_stat.uid.zero? || (base_stat.mode & 0o022).positive?
+      verify_root && (!base_stat.uid.zero? || (base_stat.mode & 0o022).positive?)
 
     directory = File.join(base, "deploy_runs")
     raise "#{directory} is a symlink; refusing deploy-run access" if File.symlink?(directory)
@@ -1061,6 +1061,16 @@ end
     if args.length == 2 && args[0] == "deploy-status-read"
       return read_deploy_status(args[1])
     end
+
+    if args.length == 3 && args[0] == "deploy-run-write"
+      return write_deploy_run(args[1], args[2])
+    end
+
+    if args.length == 2 && args[0] == "deploy-run-read"
+      return read_deploy_run(args[1])
+    end
+
+    return list_deploy_runs if args == ["deploy-run-list"]
 
     if args.length == 4 && args[0] == "stamp"
       return write_stamp(*args.drop(1))
