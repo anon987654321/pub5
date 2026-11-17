@@ -90,9 +90,16 @@ class CheckContractSpec < Minitest::Test
     refute_includes source, "RUBY_PLATFORM.include?(\"openbsd\")"
   end
 
+  def test_release_uses_the_shared_executable_lookup_instead_of_a_shell_builtin
+    release = File.read(File.join(ROOT, "checks", "release.rb"))
+
+    assert_includes release, "Master::Io::Exec.which(cmd)"
+    refute_includes release, 'system("command", "-v", cmd'
+  end
+
   def test_ruby_runtime_contract_uses_the_installed_interpreter
     environment = File.read(File.join(ROOT, "lib", "operator", "environment.rb"))
-    deploy_environment = File.read(File.join(ROOT, "../OPENBSD/mirror/lib", "environment.rb"))
+    deploy_environment = File.read(File.join(ROOT, "../OPENBSD/lib", "environment.rb"))
     entrypoint = File.read(File.join(ROOT, "lib", "boot", "entrypoint.rb"))
     wrapper = File.read(File.join(ROOT, "bin", "ruby"))
     gemfile = File.read(File.join(ROOT, "Gemfile"))

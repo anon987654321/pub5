@@ -62,7 +62,7 @@ FAILURES = [] # scan: intentional — this script's accumulator, appended to by 
 STEP_TIMEOUT = Integer(ENV.fetch("RELEASE_CHECK_STEP_TIMEOUT", "180"))
 
 def command_available?(cmd)
-  system("command", "-v", cmd, out: File::NULL, err: File::NULL)
+  !Master::Io::Exec.which(cmd).to_s.empty?
 end
 
 def ruby_cmd
