@@ -334,6 +334,8 @@ acquire_deploy_lock() {
         exit 1
       fi
       export VPS_DEPLOY_LOCK_HELD=1
+      export VPS_DEPLOY_LOCK_PID=${$}
+      export VPS_DEPLOY_LOCK_IDENTITY=$identity
       lock_owner=1
       return 0
     fi
