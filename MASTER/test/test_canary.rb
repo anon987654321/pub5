@@ -140,11 +140,27 @@ FLOW_OUTPUT = <<~OUT
     assert got["flow demo/demo_browse"].ok
     refute got["flow demo/demo_search"].ok
     assert_match(/invariant broken: hits\(0\) > 0/, got["flow demo/demo_search"].detail)
-    assert got["flow demo/demo_signed_in"].ok, "an unmeasured journey is named, not failed"
+    assert got["flow demo/demo_signed_in"].ok, "an unmeasured journey is non-blocking"\n    assert_equal "INCONCLUSIVE", got["flow demo/demo_signed_in"].state
     assert_equal "inconclusive", got["flow demo/demo_signed_in"].detail
     call = asked.find { |a| a.include?("flow_journey") }
     assert_includes call, "FLOW_APP=demo"
     assert_includes call, "CHECK_AUTOFIX=0"
+  end
+
+  def test_missing_flow_runner_is_a_named_failure_instead_of_a_silent_skip
+    got = by_name(runner.run)
+    refute got["flows"].ok
+    assert_equal "FAIL", got["flows"].state
+    assert_equal "missing MASTER/checks/runner.rb", got["flows"].detail
+  end
+
+  def test_inconclusive_flow_state_is_visible_in_rendered_canary_output
+    write("MASTER/checks/runner.rb", "")
+    out = StringIO.new
+    shell = ->(*_) { [FLOW_OUTPUT, Ok.new(false)] }
+    results = runner(shell:).run
+    text = Canary.render(results, @root)
+    assert_match(/^INCONCLUSIVE flow demo\/demo_signed_in - inconclusive$/, text)
   end
 
   def test_a_crashed_flow_runner_is_one_failed_result_and_no_flows_skips_it
