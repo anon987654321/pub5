@@ -552,7 +552,7 @@ module Master
                     end
                     current.drop(overlap || 0)
                   end
-          [added.join("\\n"), fallback.to_s].reject { |part| part.strip.empty? }.join("\\n\\n")
+          [added.join("\n"), fallback.to_s].reject { |part| part.strip.empty? }.join("\n\n")
         rescue StandardError
           fallback.to_s
         end
