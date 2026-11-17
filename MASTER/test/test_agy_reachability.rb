@@ -71,8 +71,9 @@ class TestAgyReachability < Minitest::Test
     r
   end
 
-  # The availability contract is tested on code generation, where a live
-  # subscription lane should lead. Exploration is explicitly a free route.
+  # The availability contract is tested on code generation, where the
+  # first reachable entry in the configured task tier should lead.
+  # Exploration is explicitly a free route.
   def chain
     router.fallback_chain(task_type: :code_generation)
   end
@@ -127,11 +128,11 @@ class TestAgyReachability < Minitest::Test
 
   # API routes remain available beside and ahead of AGY according to their
   # declared tier position; AGY availability never replaces a configured head.
-  def test_api_routes_remain_available_behind_agy
+  def test_api_routes_remain_available_alongside_agy
     ENV["OPENROUTER_API_KEY"] = OPENROUTER_KEY
     with_agy(true) do
       refute_empty chain.reject { |id| id.match?(AGY) },
-                   "API/local/free fallbacks disappeared behind agy"
+                   "API/local/free fallback lanes disappeared"
     end
   end
 
