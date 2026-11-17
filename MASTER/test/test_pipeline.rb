@@ -70,7 +70,7 @@ class TestPipeline < Minitest::Test
     def terminal.tty? = true
     $stdout = terminal
 
-    assert_equal "+added\\n", pass.send(:colour_patch, "+added\\n")
+    assert_equal "+added\n", pass.send(:colour_patch, "+added\n")
   ensure
     $stdout = original_stdout
   end

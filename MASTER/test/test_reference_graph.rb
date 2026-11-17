@@ -12,8 +12,8 @@ class TestReferenceGraph < Minitest::Test
       alias_root = File.join(parent, "alias")
       FileUtils.mkdir_p(File.join(real_root, "RAILS", "brgen", "db"))
       path = File.join(real_root, "RAILS", "brgen", "db", "seeds.rb")
-      File.write(path, "module BrgenSeeds; end\\n")
-      File.write(File.join(real_root, "README.md"), "the dependency graph must traverse the full checkout\\n")
+      File.write(path, "module BrgenSeeds; end\n")
+      File.write(File.join(real_root, "README.md"), "the dependency graph must traverse the full checkout\n")
       File.symlink(real_root, alias_root)
 
       graph = Master::Review::ReferenceGraph.new(root: alias_root)

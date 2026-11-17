@@ -160,9 +160,9 @@ class SchemaMigrationCheckTest < Minitest::Test
     repo = File.expand_path("../../..", __dir__)
     migration = File.join(repo, "RAILS/brgen/db/migrate/20261117120000_create_marketplace_wholesale_enquiries.rb")
     migrations = Dir.glob(File.join(repo, "RAILS/brgen/db/migrate/*.rb"))
-    latest = migrations.filter_map { |path| File.basename(path)[/\\A\\d+/] }.max
+    latest = migrations.filter_map { |path| File.basename(path)[/\A\d+/] }.max
     schema = File.read(File.join(repo, "RAILS/brgen/db/schema.rb"))
-    version = schema[/define\\(version:\\s*([\\d_]+)\\)/, 1]&.delete("_")
+    version = schema[/define\(version:\s*([\d_]+)\)/, 1]&.delete("_")
 
     assert_path_exists migration
     assert_equal "20261117120000", latest
