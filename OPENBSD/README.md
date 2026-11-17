@@ -102,7 +102,7 @@ durable fault transitions in `/var/log/pub4-alerts.log`; its minute CPU watcher
 samples five one-second `vmstat` intervals, alerts on sustained 80% CPU (or
 critical 95%), and writes a heartbeat that the five-minute watch checks. That
 same watch records a uniquely keyed alert when a fleet deploy receipt remains
-pending after its owner PID disappears. `bin/vps-state --json` includes the
+pending after its owner exits or its PID is reused. `bin/vps-state --json` includes the
 pending receipt IDs, stage, pinned SHA, original service snapshot and log path;
 plain output shows the owner PID state and directs the operator to
 `vps-deploy recover --plan`. Recovery itself remains explicit and operator-driven.
