@@ -16,7 +16,7 @@ duplicate_members:
 - MASTER/lib/operator/domain_signals.rb | OPENBSD/lib/domain_signals.rb
 - MASTER/web/Rakefile | RAILS/amber/Rakefile | RAILS/bsdports/Rakefile | RAILS/mrdamascy/Rakefile
 - RAILS/__shared/app/assets/images/vipps/vipps-wordmark.svg | RAILS/mrdamascy/app/assets/images/vipps/vipps-wordmark.svg
-- RAILS/__shared/config/storage.yml | RAILS/amber/config/storage.yml | RAILS/brgen/config/storage.yml | RAILS/bsdports/config/storage.yml
+- RAILS/amber/config/storage.yml | RAILS/brgen/config/storage.yml | RAILS/bsdports/config/storage.yml
 - RAILS/__shared/db/migrate/20260625140000_create_anonymous_post_quotas.rb | RAILS/brgen/db/migrate/20260625140000_create_anonymous_post_quotas.rb
 - RAILS/amber/app/views/encounters/waiting.html.erb | RAILS/brgen/app/views/encounters/waiting.html.erb
 - RAILS/amber/config.ru | RAILS/bsdports/config.ru | RAILS/mrdamascy/config.ru
