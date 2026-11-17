@@ -1054,7 +1054,8 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes SOURCE, 'VPS_DEPLOY_RUN_ID="$(date -u'
     assert_includes SOURCE, "VPS_DEPLOY_RECEIPT_SNAPSHOT_RECORDED=1"
 
-    created = SOURCE.index('write_deploy_run_receipt || {')
+    receipt_setup = SOURCE.index("# One durable receipt belongs to the lock-owning parent.")
+    created = SOURCE.index('write_deploy_run_receipt || {', receipt_setup)
     snapshot = SOURCE.index("VPS_DEPLOY_RECEIPT_SNAPSHOT_RECORDED=1")
     first_stop = SOURCE.index('admin_service stop "$jobs_service"')
     refute_nil created
