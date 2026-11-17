@@ -185,8 +185,10 @@ module Operator
 
         out, status = @shell.call("env", "CHECK_AUTOFIX=0", "FLOW_APP=#{@apps.keys.join(',')}", RbConfig.ruby, script, "flow_journey")
         rows = out.to_s.lines.filter_map { |line| FLOW_LINE.match(line) }
-        if rows.empty? && !status.success?
-          return [Result.new(name: "flows", ok: false, state: "FAIL", detail: out.to_s.lines.last(3).join.strip)]
+        if rows.empty?
+          detail = out.to_s.lines.last(3).join.strip
+          detail = "runner returned no flow results#{status.success? ? "" : " and exited unsuccessfully"}#{detail.empty? ? "" : ": #{detail}"}"
+          return [Result.new(name: "flows", ok: false, state: "FAIL", detail: detail)]
         end
 
         problems = out.to_s.lines.filter_map { |line| FLOW_PROBLEM.match(line) }.to_h { |m| [m[:id], m[:why].strip] }
