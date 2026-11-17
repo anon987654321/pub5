@@ -798,7 +798,7 @@ class TestTaskContract < Minitest::Test
   def test_openbsd_script_execution_requires_a_complete_source_read
     contract = openbsd_task_contract(openbsd_preflight_fixture(interfaces: %w[rcctl(8) rc(8) rc.conf(8) rc.d(8) rc.subr(8) ksh(1) zsh(1)]))
     reason = Master::Fix::OpenBSDManualPreflight.refusal_for_command(
-      command: "ssh -o BatchMode=yes dev@brgen.no 'zsh OPENBSD/mirror/bin/vps-deploy all'", contract:
+      command: "ssh -o BatchMode=yes dev@brgen.no 'zsh OPENBSD/bin/vps-deploy all'", contract:
     )
 
     assert_match(/source-read receipt for OpenBSD path OPENBSD\/mirror\/bin\/vps-deploy/, reason)
@@ -806,10 +806,10 @@ class TestTaskContract < Minitest::Test
 
   def test_openbsd_script_execution_accepts_a_complete_source_read
     contract = openbsd_task_contract(
-      openbsd_preflight_fixture(source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/mirror/bin/vps-deploy"], interfaces: %w[rcctl(8) rc(8) rc.conf(8) rc.d(8) rc.subr(8) ksh(1) zsh(1)]),
+      openbsd_preflight_fixture(source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/bin/vps-deploy"], interfaces: %w[rcctl(8) rc(8) rc.conf(8) rc.d(8) rc.subr(8) ksh(1) zsh(1)]),
     )
     assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
-      command: "ssh -o BatchMode=yes dev@brgen.no 'zsh OPENBSD/mirror/bin/vps-deploy all'", contract:
+      command: "ssh -o BatchMode=yes dev@brgen.no 'zsh OPENBSD/bin/vps-deploy all'", contract:
     )
   end
 
