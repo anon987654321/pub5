@@ -108,6 +108,14 @@ class PortInventoryCheckTest < Minitest::Test
     FileUtils.rm_f(path)
   end
 
+  def test_crawl_transport_fixture_is_declared_without_becoming_a_second_port_authority
+    assert_equal(
+      "fixture: tests Brgen and Amber loopback redirect transport; not an independent deployment-port inventory",
+      CHECK::FLEET_INVENTORIES.fetch("MASTER/test/test_crawl_support.rb"),
+    )
+    assert_includes CHECK::FLEET_INVENTORIES.fetch("OPENBSD/BOOTSTRAP.sh"), "check_openbsd_ports"
+  end
+
   def test_bootstrap_app_ports_are_the_deployable_apps_inventory
     ports = CHECK.new.send(:openbsd_ports)
     expected = apps.to_h { |app| [app.name, app.port] }

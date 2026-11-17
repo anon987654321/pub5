@@ -56,6 +56,7 @@ module Deploy
       "OPENBSD/bin/deploy-smoke.sh" => "checked: check_smoke_probes",
       "OPENBSD/mirror/usr/local/bin/keep-warm.sh" => "checked: check_smoke_probes",
       "RAILS/test/deploy_smoke_contract_test.rb" => "asserts the smoke scripts' own content",
+      "MASTER/test/test_crawl_support.rb" => "fixture: tests Brgen and Amber loopback redirect transport; not an independent deployment-port inventory",
       "CLAUDE.md" => "prose: the shed-vs-outage triage note, trap 3",
       "RAILS/CLAUDE.md" => "prose: the shed-vs-outage triage note",
       "OPENBSD/CLAUDE.md" => "prose: same triage note",
