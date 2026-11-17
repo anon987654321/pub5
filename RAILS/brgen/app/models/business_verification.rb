@@ -65,6 +65,8 @@ class BusinessVerification < ApplicationRecord
       update!(status: status, reviewed_by: by, reviewed_at: Time.current, review_note: note.presence)
       business_scope.update_all(verified: status == "verified", updated_at: Time.current)
     end
+    Shared::Audit.record!(action: "business.verification.#{status}", actor: by, target: self,
+                          metadata: { business_type: business_type, business_id: business_id, note: note.presence })
   end
 
   def business_scope = business_type.constantize.unscoped.where(id: business_id)
