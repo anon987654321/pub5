@@ -77,6 +77,19 @@ class EngineBoundariesCheckTest < Minitest::Test
     assert_operator result.checks_ran, :>=, 6, "fewer engines than Brgen verticals — check the glob, not the tree"
   end
 
+  def test_marketplace_and_takeaway_storefront_contract_is_scoped_to_its_exact_files
+    allowed = CHECK::EXEMPT
+
+    assert_equal %w[Marketplace], allowed.fetch("brgen/engines/marketplace/engines/takeaway")
+                                   .fetch("app/controllers/takeaway/restaurants_controller.rb")
+    assert_equal %w[Marketplace], allowed.fetch("brgen/engines/marketplace/engines/takeaway")
+                                   .fetch("app/models/takeaway/restaurant.rb")
+    assert_equal %w[Marketplace], allowed.fetch("brgen/engines/marketplace/engines/takeaway")
+                                   .fetch("app/services/takeaway/provisioner.rb")
+    assert_equal %w[Takeaway], allowed.fetch("brgen/engines/marketplace")
+                                  .fetch("app/models/marketplace/store.rb")
+  end
+
   def test_nested_engine_is_scanned
     Dir.mktmpdir do |dir|
       plant(dir, "RAILS/brgen/engines/dating/lib/dating/engine.rb", "module Dating

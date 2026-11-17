@@ -32,14 +32,27 @@ module Deploy
     # credentials, webhooks and currency formatting are one system. Moving the
     # stack under __shared would be a restructure pass with its own proof, not a
     # repair edit; until then these reads are declared, per row.
+    #
+    # The restaurant/store relationship is also one cross-engine aggregate:
+    # Marketplace owns the public storefront, while Takeaway owns the kitchen,
+    # its hours and menu. The association is bidirectional, provisioning creates
+    # both within one transaction, and the restaurant controller toggles the
+    # owning storefront's visibility. These exact reads are the current contract;
+    # unrelated Marketplace or Takeaway references remain failures.
     EXEMPT = {
       "brgen/engines/maps" => { "app/controllers/maps/home_controller.rb" => %w[Takeaway] },
       "brgen/engines/marketplace/engines/takeaway" => {
         "app/controllers/takeaway/orders_controller.rb" => %w[Marketplace],
+        "app/controllers/takeaway/restaurants_controller.rb" => %w[Marketplace],
         "app/models/takeaway/order.rb" => %w[Marketplace],
         "app/models/takeaway/order/payment.rb" => %w[Marketplace],
+        "app/models/takeaway/restaurant.rb" => %w[Marketplace],
+        "app/services/takeaway/provisioner.rb" => %w[Marketplace],
         "app/views/takeaway/orders/new.html.erb" => %w[Marketplace],
         "app/views/takeaway/orders/show.html.erb" => %w[Marketplace],
+      },
+      "brgen/engines/marketplace" => {
+        "app/models/marketplace/store.rb" => %w[Takeaway],
       },
     }.freeze
 
