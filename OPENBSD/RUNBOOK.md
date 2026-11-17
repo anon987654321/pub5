@@ -19,12 +19,16 @@ Hands-off: local preflight → pin SHA → `tmux` session `pub5-deploy` on vm23 
 `vps-state` + public canary. Survives SSH disconnect. Logs: `/var/log/pub5/vps-deploy.log` (aggregate), `/var/log/pub5/runs/deploy-*.log` (per run), also `/home/dev/vps-deploy.log` and `vps-deploy-latest.log` symlinks.
 
 A direct natural-language instruction to deploy **OPENBSD + all RAILS apps + MASTER/web
-to vm23** is an explicit execution request; it does not require a separate written
-plan or a second confirmation prompt. The normal local preflight, pinned revision,
-mirror/manual admission gate, serial production rollout, health checks and canary
-remain mandatory. A plan-only request is conversational and cannot start a deploy.
-Partial or model-classified app/group requests retain the explicit `/deploy --confirm`
-review gate. Never run `/fix` on vm23.
+to vm23** is an explicit execution request; the equivalent shorthand **“redeploy
+everything on vm23”** resolves to every active registered deployment surface (the
+tracked OpenBSD mirror plus the complete app inventory, including MASTER/web). It
+does not mean every repository file or arbitrary host path. These explicit full-scope
+requests do not require a separate written plan or a second confirmation prompt.
+The normal local preflight, pinned revision, mirror/manual admission gate, serial
+production rollout, health checks and canary remain mandatory. A plan-only request
+is conversational and cannot start a deploy. Requests with explicit exclusions and
+partial or model-classified app/group requests retain the `/deploy --confirm` review
+gate. Never run `/fix` on vm23.
 Attach: `tmux attach -t pub5-deploy`.
 
 ## What a full deployment actually applies
