@@ -240,7 +240,7 @@ watch_cpu_heartbeat() {
 
 cpu_watch() {
   typeset sample busy user system idle stamp deploying state high critical clear
-  typeset previous_state new_state details threshold
+  typeset previous_state new_state details threshold pressure_tmp heartbeat_tmp
   mkdir -p "$STATE" || return 1
   sample=$(vmstat_cpu_sample) || {
     raise_transition cpu-watch-sample-failed "vmstat CPU sample failed; monitor has no valid measurement - inspect /var/log/daemon and /var/log/cpu-watch.log"
@@ -312,10 +312,13 @@ cpu_watch() {
   if [[ $new_state == clear ]]; then
     rm -f "$CPU_PRESSURE"
   else
-    ( umask 077; print -r -- "$stamp $busy" > "$CPU_PRESSURE" ) || {
+    pressure_tmp="$CPU_PRESSURE.tmp.$"
+    if ! ( umask 077; print -r -- "$stamp $busy" > "$pressure_tmp" ) ||
+       ! mv -f "$pressure_tmp" "$CPU_PRESSURE"; then
+      rm -f "$pressure_tmp"
       raise_transition cpu-watch-state-failed "could not write CPU pressure signal at $CPU_PRESSURE"
       return 1
-    }
+    fi
   fi
   print -r -- "$new_state $high $critical $clear" > "$CPU_STATE" || {
     raise_transition cpu-watch-state-failed "could not write CPU monitor state at $CPU_STATE"
@@ -325,10 +328,13 @@ cpu_watch() {
     raise_transition cpu-watch-log-failed "could not append CPU sample to $CPU_HISTORY"
     return 1
   }
-  print -r -- "$stamp" > "$CPU_HEARTBEAT" || {
+  heartbeat_tmp="$CPU_HEARTBEAT.tmp.$"
+  if ! print -r -- "$stamp" > "$heartbeat_tmp" ||
+     ! mv -f "$heartbeat_tmp" "$CPU_HEARTBEAT"; then
+    rm -f "$heartbeat_tmp"
     raise_transition cpu-watch-state-failed "could not write CPU monitor heartbeat at $CPU_HEARTBEAT"
     return 1
-  }
+  fi
 
   if [[ $previous_state == clear && $new_state == warning ]]; then
     details=$(cpu_top_processes)
