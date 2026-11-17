@@ -36,7 +36,7 @@ class RepoHygieneContractTest < Minitest::Test
   # found" every time, having taken no lock and run no scan. The failure is
   # silent in the sense that matters: the script's own output says it locked.
   #
-  # OPENBSD/mirror/bin/with-ci-lock is the same idea in Ruby, which this box has.
+  # OPENBSD/bin/with-ci-lock is the same idea in Ruby, which this box has.
   def test_no_script_reaches_for_a_locking_utility_openbsd_lacks
     scripts = Dir.glob("#{File.expand_path("../OPENBSD", ROOT)}/**/*.{sh,ksh,zsh}") +
               Dir.glob("#{ROOT}/**/*.sh").reject { |p| p.include?("/vendor/") }
@@ -52,7 +52,7 @@ class RepoHygieneContractTest < Minitest::Test
       end
     end
 
-    assert_empty offenders, "OpenBSD has no lockf(1)/flock(1) — use OPENBSD/mirror/bin/with-ci-lock"
+    assert_empty offenders, "OpenBSD has no lockf(1)/flock(1) — use OPENBSD/bin/with-ci-lock"
   end
 
   # `command -v flock` before the call is the sanctioned degrade: the script
@@ -72,7 +72,7 @@ class RepoHygieneContractTest < Minitest::Test
   # locked /var/tmp/pub5-ci.lock while ci_lock.sh pointed three scripts at
   # /var/db/pub5/ci.lock and called itself the single source.
   def test_the_ruby_and_shell_ci_locks_are_the_same_file
-    shell = File.read(File.expand_path("../OPENBSD/mirror/lib/ci_lock.sh", ROOT), encoding: "UTF-8")
+    shell = File.read(File.expand_path("../OPENBSD/lib/ci_lock.sh", ROOT), encoding: "UTF-8")
     ruby = File.read(File.join(REPO_ROOT, "MASTER/tools/rails/operator/ci_guard.rb"), encoding: "UTF-8")
 
     assert_includes shell, "PUB5_CI_LOCK_DIR=/var/db/pub5"
@@ -139,9 +139,9 @@ class RepoHygieneContractTest < Minitest::Test
     %w[
       OPENBSD/OPERATOR.sh
       OPENBSD/bin/check
-      OPENBSD/mirror/lib/check_environment.rb
+      OPENBSD/lib/check_environment.rb
       OPENBSD/checks/integrity_check.rb
-      OPENBSD/mirror/bin/vps_ci.sh
+      OPENBSD/bin/vps_ci.sh
     ].each do |rel|
       assert File.exist?(File.join(REPO_ROOT, rel)), "missing #{rel}"
     end

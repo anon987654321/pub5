@@ -19,7 +19,7 @@
 require "minitest/autorun"
 require "yaml"
 require "date"
-require_relative "../mirror/bin/domain_watch"
+require_relative "../bin/domain_watch"
 
 class TestDomainExpiry < Minitest::Test
   SNAPSHOT = File.expand_path("../data/domain_inventory.yml", __dir__)
@@ -116,7 +116,7 @@ class TestDomainExpiry < Minitest::Test
   # actually killed. The second runs a real process, because a timeout that
   # never fires looks exactly like a fast network.
   def test_a_lookup_is_bounded_and_never_goes_through_a_shell
-    source = File.read(File.expand_path("../mirror/bin/domain_watch.rb", __dir__))
+    source = File.read(File.expand_path("../bin/domain_watch.rb", __dir__))
     # Code only. The first draft of this matched a backtick inside the comment
     # explaining why backticks are wrong — the instrument reading its own
     # documentation and reporting it as the defect.
