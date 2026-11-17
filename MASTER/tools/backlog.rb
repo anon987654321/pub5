@@ -866,7 +866,7 @@ module Backlog
       planner = Master::Fix::AdaptiveJourney.new(history: verified_route_history)
       decision = planner.choose(
         routes:, verified_evidence: evidence.uniq { |item| item.fetch(:id) },
-        objective: "", satisfied_dependencies: completed_receipts, exploration: true
+        objective: MISSION_OBJECTIVE, satisfied_dependencies: completed_receipts, exploration: true
       )
       selected = rows.find { |row| item_digest(row) == decision.route.id }
       [selected, decision]
