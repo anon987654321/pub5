@@ -2,6 +2,8 @@
 
 require "fileutils"
 require "minitest/autorun"
+require "json"
+require "rbconfig"
 require "open3"
 require "tmpdir"
 
@@ -29,6 +31,8 @@ class TestPub4Alert < Minitest::Test
       "PUB4_CPU_PRESSURE" => File.join(dir, "cpu-pressure"),
       "PUB4_CPU_HEARTBEAT" => File.join(dir, "state", "cpu-watch.seen"),
       "PUB4_CPU_DEPLOY_FLAGS" => File.join(dir, "no-deploy-*"),
+      "PUB4_ALERT_ADMIN" => File.join(dir, "fake", "pub5-admin"),
+      "PUB4_ALERT_RUBY" => RbConfig.ruby,
     }.merge(extra)
   end
 
@@ -216,6 +220,97 @@ class TestPub4Alert < Minitest::Test
 
     assert_includes crontab, "* * * * * -s /usr/local/bin/pub4-alert cpu-watch >> /var/log/cpu-watch.log 2>&1"
     assert_includes newsyslog, "/var/log/cpu-watch.log                   root:wheel 640 12 250 $W0D0 Z"
+  end
+
+  def recovery_receipt(run_id:, pid:, status: "running", snapshot_recorded: true)
+    {
+      schema: 1,
+      run_id: run_id,
+      target: "all",
+      host: "vm23",
+      pid: pid,
+      owner_identity: "Tue_Nov_17_01_00_00_2026_123_456",
+      status: status,
+      recovery_state: "pending",
+      stage: "restart-brgen",
+      started_at: "2026-11-17T01:00:00Z",
+      updated_at: "2026-11-17T01:01:00Z",
+      pinned_sha: "a" * 40,
+      previous_sha: "b" * 40,
+      started_services: %w[master brgen],
+      ports: { "master" => 53187, "brgen" => 38182 },
+      restore_order: %w[brgen master],
+      run_log: "/var/log/pub5/runs/deploy-20261117-all-12345.log",
+      aggregate_log: "/var/log/pub5/vps-deploy.log",
+      snapshot_recorded: snapshot_recorded,
+    }
+  end
+
+  def fake_run_list(dir, records)
+    fake(dir, "pub5-admin", "printf '%s\\n' '#{JSON.generate(records)}'")
+  end
+
+  def test_watch_alerts_when_a_pending_deploy_owner_has_exited
+    Dir.mktmpdir do |dir|
+      quiet_box(dir)
+      run_id = "20261117T010000Z-all-12345"
+      fake_run_list(dir, [recovery_receipt(run_id:, pid: 2_000_000_000)])
+
+      _, status = run_alert(dir, "watch")
+
+      assert_equal 0, status
+      assert_includes log(dir), "deploy-recovery-#{run_id}"
+      assert_includes log(dir), "interrupted deploy #{run_id}"
+      assert_includes log(dir), "inspect with: zsh OPENBSD/bin/vps-deploy recover --plan"
+      assert_includes log(dir), "/var/log/pub5/runs/deploy-20261117-all-12345.log"
+    end
+  end
+
+  def test_watch_does_not_alert_while_the_receipt_owner_pid_is_alive
+    Dir.mktmpdir do |dir|
+      quiet_box(dir)
+      run_id = "20261117T010001Z-all-12346"
+      fake_run_list(dir, [recovery_receipt(run_id:, pid: Process.pid)])
+
+      _, status = run_alert(dir, "watch")
+
+      assert_equal 0, status
+      refute_includes log(dir), "deploy-recovery-#{run_id}"
+    end
+  end
+
+  def test_watch_alerts_for_an_incomplete_snapshot_without_claiming_it_is_recoverable
+    Dir.mktmpdir do |dir|
+      quiet_box(dir)
+      run_id = "20261117T010002Z-all-12347"
+      fake_run_list(dir, [recovery_receipt(run_id:, pid: 2_000_000_000, status: "failed", snapshot_recorded: false)])
+
+      run_alert(dir, "watch")
+
+      assert_includes log(dir), "snapshot=incomplete"
+      assert_includes log(dir), "recover --plan"
+    end
+  end
+
+  def test_watch_reports_an_unavailable_or_malformed_recovery_broker
+    Dir.mktmpdir do |dir|
+      quiet_box(dir)
+      fake(dir, "pub5-admin", "printf '{broken\\n'")
+      run_alert(dir, "watch")
+
+      assert_includes log(dir), "deploy-recovery-status-unavailable"
+      assert_includes log(dir), "cannot parse fleet deploy receipts"
+    end
+  end
+
+  def test_existing_five_minute_watch_covers_fleet_recovery_receipts
+    root = File.expand_path("../..", __dir__)
+    crontab = File.read(File.join(root, "OPENBSD", "data", "root.crontab"))
+    source = File.read(SCRIPT)
+
+    assert_includes crontab, "*/5 * * * * /usr/local/bin/pub4-alert watch"
+    assert_includes source, "watch_deploy_recovery"
+    assert_includes source, "watch_deploy_recovery"
   end
 
   def test_show_prints_the_last_alerts
