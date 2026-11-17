@@ -437,9 +437,8 @@ if [[ $shed -eq 1 ]]; then
   # every 5-minute tick, forcing every synthesis onto the slow cold-boot
   # oneshot path (fresh Ruby+Bundler+EventMachine+TLS handshake per request)
   # instead of a warm socket. TTS is core (see master's /health "tts is
-  # mandatory per operator"), not optional like amber/bsdports, and the two
-  # small idle tts-worker processes aren't what's driving load. Genuine
-  # crisis-tier cleanup (LOAD_CRIT) below still reaps and respawns them.
+  # mandatory per operator"), not optional like amber/bsdports. Core recovery
+  # is deliberately manual; the periodic guard never restarts MASTER or Brgen.
 fi
 
 log_tick
