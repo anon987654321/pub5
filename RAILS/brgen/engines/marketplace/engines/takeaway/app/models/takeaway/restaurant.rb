@@ -48,6 +48,7 @@ class Takeaway::Restaurant < ApplicationRecord
   COVER_CONTENT_TYPES = %w[image/jpeg image/png image/webp].freeze
 
   validates :name, :address, :cuisine_type, presence: true
+  validate :marketplace_store_belongs_to_owner
   validate :cover_must_be_a_supported_image
   validates :delivery_fee_cents, :min_order_cents,
             numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
@@ -174,6 +175,14 @@ class Takeaway::Restaurant < ApplicationRecord
   end
 
   private
+
+  def marketplace_store_belongs_to_owner
+    return unless marketplace_store
+
+    unless marketplace_store.owner_id == user_id && marketplace_store.vertical == "restaurants"
+      errors.add(:marketplace_store, :invalid)
+    end
+  end
 
   def cover_must_be_a_supported_image
     return unless cover.attached?
