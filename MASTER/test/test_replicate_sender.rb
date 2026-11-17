@@ -22,6 +22,15 @@ class TestReplicateSender < Minitest::Test
     def publish(name, payload = nil, **kwargs) = @events << [name, payload || kwargs]
   end
 
+  def setup
+    @budget_dispatcher = build_dispatcher
+    @budget_dispatcher.send(:reset_replicate_chat_budget!)
+  end
+
+  def teardown
+    @budget_dispatcher&.send(:reset_replicate_chat_budget!)
+  end
+
   def build_dispatcher
     dispatcher = Master::Review::LLMDispatcher.allocate
     dispatcher.instance_variable_set(:@session, FakeSession.new)
@@ -194,7 +203,7 @@ class TestReplicateSender < Minitest::Test
     dispatcher = build_dispatcher
     previous_run = ENV["MASTER_REPLICATE_BUDGET_USD"]
     previous_call = ENV["MASTER_REPLICATE_CALL_CAP_USD"]
-    ENV["MASTER_REPLICATE_BUDGET_USD"] = "0.05"
+    ENV["MASTER_REPLICATE_BUDGET_USD"] = "0.10"
     ENV["MASTER_REPLICATE_CALL_CAP_USD"] = "1.00"
     dispatcher.define_singleton_method(:text_prompt_for) { |_messages| "hi" }
     dispatcher.send(:reset_replicate_chat_budget!)
