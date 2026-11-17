@@ -385,8 +385,8 @@ module Studio
         }
       end
 
-      # H3 Lite accepts 4-15s only; the renderer's own 1-10s range would fail
-      # below 4, so clamp up to the model's floor.
+      # Both H3 models accept 4-15s; the renderer's own 1-10s range would fail
+      # below 4, so clamp up to the shared model floor.
       def h3_duration(seconds)
         seconds = Integer(seconds)
         seconds.clamp(4, 15)
