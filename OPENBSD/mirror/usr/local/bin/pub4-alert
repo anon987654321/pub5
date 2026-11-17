@@ -181,9 +181,9 @@ vmstat_cpu_sample() {
         rows=1
         continue
       fi
-      user_sum=$(( user_sum + a ))
-      system_sum=$(( system_sum + b ))
-      idle_sum=$(( idle_sum + c ))
+      user_sum=$(( user_sum + 10#$a ))
+      system_sum=$(( system_sum + 10#$b ))
+      idle_sum=$(( idle_sum + 10#$c ))
       samples=$(( samples + 1 ))
     done
     if (( samples != 5 )); then
