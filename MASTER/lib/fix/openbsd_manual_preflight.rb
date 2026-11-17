@@ -412,7 +412,15 @@ module Master
 
       def write_mirror_configuration_report(report, root: Master::REPO_ROOT)
         repository = File.realpath(root)
-        directory = File.join(repository, "MASTER", ".master")
+        master_directory = File.join(repository, "MASTER")
+        master_stat = File.lstat(master_directory)
+        raise TaskContract::Invalid, "MASTER runtime parent is not a real directory" unless master_stat.directory? && !master_stat.symlink?
+        directory = File.join(master_directory, ".master")
+        begin
+          Dir.mkdir(directory, 0o700)
+        rescue Errno::EEXIST
+          # Another local process created the runtime directory; verify it below.
+        end
         stat = File.lstat(directory)
         raise TaskContract::Invalid, "coverage report directory is not a real directory" unless stat.directory? && !stat.symlink?
         path = File.join(repository, MIRROR_COVERAGE_REPORT_RELATIVE_PATH)
@@ -441,6 +449,8 @@ module Master
         report["status"] = "BLOCKED" if stale
         write_mirror_configuration_report(report, root:)
         return "RTFM_FIRST blocked: #{report.fetch("error")}" if report.key?("error")
+      rescue TaskContract::Invalid => error
+        "RTFM_FIRST blocked: coverage report could not be verified or persisted (#{error.class})"
         return "RTFM_FIRST #{stale}" if stale
         return if report.fetch("status") == "PASS"
 
