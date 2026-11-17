@@ -9,5 +9,6 @@ class ProvisionTakeawayTenantsAndCatalogueMetadata < ActiveRecord::Migration[8.2
     # weights and item-option templates). The operational checkout continues
     # to use its own server-calculated prices and order items.
     add_column :takeaway_menu_items, :metadata, :text
+    add_column :takeaway_restaurants, :metadata, :text
   end
 end
