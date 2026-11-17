@@ -51,7 +51,7 @@ module Master
         record(tree:, proposals:, dropped:, persist:)
       rescue StandardError => e
         @bus&.publish("fix_loop:tree_error", target: target.to_s, error: "#{e.class}: #{e.message}")
-        result(:inconclusive, "tree reasoning inconclusive, #{e.class}")
+        result(:inconclusive, "tree reasoning inconclusive, #{e.class}: #{e.message}")
       end
 
       private
