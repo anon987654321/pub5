@@ -12,6 +12,8 @@ usage() {
   all          every active registered surface, including MASTER web
   GROUP        every registered app whose deploy_root belongs to that namespace
   APP          one exact app ID from RAILS/apps.yml
+  recover --plan              inspect interrupted-deploy recovery receipts
+  recover --apply <run-id>     restore only services recorded as up before that run
   VPS_DEPLOY_SHA=<sha>   deploy exactly this commit (default: origin/main, fetched once)
   VPS_DEPLOY_PREFLIGHT_SHA=<sha>   the operator's machine already proved this commit boots
   VPS_DEPLOY_CI_SHA=<sha>   the operator's machine ran the app's bin/ci green on this commit; the box skips its suite
@@ -111,12 +113,30 @@ git_as_deploy_user() {
 
 app=${1:-}
 [[ -n $app ]] || { usage >&2; exit 2 }
-
-# Restrict the log/path component to a safe identifier before inventory lookup.
-[[ $app != *[^A-Za-z0-9_-]* ]] || {
-  print -u2 "vps-deploy: invalid target identifier"
-  exit 2
-}
+recover_mode=
+recover_id=
+if [[ $app == recover ]]; then
+  case ${2:-} in
+    --plan)
+      [[ $# -eq 2 ]] || { usage >&2; exit 2 }
+      recover_mode=plan
+      ;;
+    --apply)
+      [[ $# -eq 3 ]] || { usage >&2; exit 2 }
+      recover_mode=apply
+      recover_id=$3
+      ;;
+    *) usage >&2; exit 2 ;;
+  esac
+  unset VPS_DEPLOY_RUN_ID VPS_DEPLOY_RUN_TARGET VPS_DEPLOY_RUN_STARTED_AT
+else
+  [[ $# -eq 1 ]] || { usage >&2; exit 2 }
+  # Restrict the log/path component to a safe identifier before inventory lookup.
+  [[ $app != *[^A-Za-z0-9_-]* ]] || {
+    print -u2 "vps-deploy: invalid target identifier"
+    exit 2
+  }
+fi
 # Until the pinned checkout is ready, the current inventory is only a
 # best-effort restore-order hint for services shed during preflight. These arrays
 # are refreshed from VPS_DEPLOY_SHA before target validation or deployment.
