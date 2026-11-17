@@ -40,7 +40,9 @@ but the implementation is owned here.
   generation. Their 50% Replicate promotion is modelled through December 31,
   2026; list pricing resumes automatically after that date. STUDIO reserves
   output and maximum reference-video cost against a $1 per-call and $5 per-run
-  video budget before a prediction starts. Each film engine declares the input
+  MiniMax H3 video budget before a prediction starts. `STUDIO_VIDEO_CALL_CAP_USD`
+  and `STUDIO_VIDEO_BUDGET_USD` can lower those ceilings, never raise them.
+  Each film engine declares the input
   keys it takes, and the renderer preflights the model's own schema before any
   upload, so a mismatched shape fails before a paid call. The provider's native
   audio stays off: STUDIO lays the dilla bed under the cut itself.
