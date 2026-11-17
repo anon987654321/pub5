@@ -259,7 +259,6 @@ module Master
 
       private_class_method :read_only_probe_refusal, :ruby_syntax_probe_command?, :ruby_syntax_probe_refusal
 
-
       # git diff --check reads the working tree against the index and names
       # whitespace-conflict lines; it writes nothing. --no-pager and
       # --no-ext-diff are the flags that keep it that way, accepted in the

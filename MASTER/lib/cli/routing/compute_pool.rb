@@ -162,7 +162,6 @@ module Master
         module PrivateOperations
           private
 
-
           def candidate(id)
             row = model_row(id)
             return unless row
@@ -411,7 +410,6 @@ module Master
             calls = stat.fetch(:calls, 0).to_i
             calls.zero? ? nil : stat.fetch(:successes, 0).to_f / calls
           end
-
 
           def quota_remaining(id)
             Master::Io::ModelQuota.remaining(id)
