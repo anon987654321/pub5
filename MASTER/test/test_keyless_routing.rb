@@ -13,6 +13,7 @@ class TestKeylessRouting < Minitest::Test
     @saved_env = %w[
       XAI_API_KEY OPENROUTER_API_KEY ANTHROPIC_API_KEY OPENAI_API_KEY
       DEEPSEEK_API_KEY GOOGLE_API_KEY GEMINI_API_KEY MISTRAL_API_KEY LLM7_API_KEY
+      ZAI_API_KEY REPLICATE_API_TOKEN REPLICATE_API_KEY MASTER_MODEL
       MASTER_KEYLESS MASTER_WEB_CHAT MASTER_NO_WEB_CHAT MASTER_LOCAL_ONLY MASTER_NO_GROK_CLI MASTER_NO_AGY_CLI MASTER_NO_OLLAMA MASTER_OLLAMA_ENABLED
       MASTER_NO_POOL_PROBES MASTER_NO_KEYLESS MASTER_LLM_GATEWAY_URL MASTER_LLM_GATEWAY_KEY FREELLMPOOL_PROXY_KEY
     ].to_h { |key| [key, ENV[key]] }
@@ -100,6 +101,26 @@ class TestKeylessRouting < Minitest::Test
     end
   end
 
+  def test_model_reachability_requires_its_own_provider_credential
+    ENV["OPENROUTER_API_KEY"] = "sk-or-v1-" + ("o" * 64)
+
+    assert Master.llm_reachable?("openai/gpt-4o")
+    refute Master.llm_reachable?("claude-sonnet-5-5")
+    refute Master.llm_reachable?("gemini-2.5-flash")
+    refute Master.llm_reachable?("glm-5.3-flash")
+    refute Master.llm_reachable?("replicate:anthropic/claude-opus-5.5")
+
+    ENV["ANTHROPIC_API_KEY"] = "sk-ant-usr-" + ("a" * 88)
+    ENV["GEMINI_API_KEY"] = "g" * 40
+    ENV["ZAI_API_KEY"] = "z" * 40
+    ENV["REPLICATE_API_KEY"] = "r" * 40
+
+    assert Master.llm_reachable?("claude-sonnet-5-5")
+    assert Master.llm_reachable?("gemini-2.5-flash")
+    assert Master.llm_reachable?("glm-5.3-flash")
+    assert Master.llm_reachable?("replicate:anthropic/claude-opus-5.5")
+  end
+
   def test_default_model_prefers_grok_api_with_xai_key
     ENV["XAI_API_KEY"] = "xai-" + ("a" * 32)
     assert_equal "grok-4.3", Master.default_model
@@ -116,7 +137,8 @@ class TestKeylessRouting < Minitest::Test
     assert_equal chain, router.send(:priority_fallback_order, chain)
     assert_includes chain, "web-chat:grok"
     assert_includes chain, "web-chat:chatgpt"
-    assert_includes chain, "web-chat:kimi"
+    refute_includes chain, "web-chat:kimi"
+    refute_includes chain, "web-chat:gemini"
   end
 
   def test_router_prefers_free_chain_when_openrouter_key_present
