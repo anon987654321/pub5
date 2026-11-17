@@ -98,7 +98,7 @@ class TestOpenbsdConfig < Minitest::Test
     preflight = { "hostname" => "vm23", "os_release" => "0.0", "architecture" => "amd64",
                   "source_reads" => [], "native_interfaces" => [], "manual_pages" => [] }
     refusal = nil
-    Master::Fix::OpenBSDManualPreflight.stub(:write_mirror_configuration_report, ->(*) {}) do
+    Master::Fix::OpenBSDManualPreflight.stub(:write_mirror_configuration_report, ->(*, **) {}) do
       refusal = Master::Fix::OpenBSDManualPreflight.mirror_configuration_refusal(
         preflight,
         root: Master::ROOT
