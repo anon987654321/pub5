@@ -163,8 +163,10 @@ module Master
       end
 
       def route_score(route, objective:)
-        objective_text = objective.to_s.downcase.strip
-        relevant = objective_text.empty? || route.actions.any? { |action| action.downcase.include?(objective_text) }
+        objective_tokens = objective.to_s.downcase.scan(/[a-z0-9]{4,}/).reject { |token| %w[then work with from that this].include?(token) }
+        relevant = objective_tokens.empty? || objective_tokens.any? do |token|
+          route.actions.any? { |action| action.downcase.include?(token) }
+        end
         relevance = relevant ? 1.0 : 0.8
         reversible = { "easy" => 1.0, "moderate" => 0.8, "hard" => 0.55 }.fetch(route.reversibility)
         evidence_quality = [route.evidence_ids.size / 3.0, 1.0].min
