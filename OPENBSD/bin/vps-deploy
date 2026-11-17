@@ -397,13 +397,53 @@ log() {
   print -r -- "$(log_ts) host=$(hostname -s) pid=$$ app=${app:-?} stage=${deploy_stage:-?} $*"
 }
 
-# Stage transitions are the recovery breadcrumbs. set_stage both mutates
-# deploy_stage and emits a log line so a grepped run log tells the story.
+# The fleet receipt is written only through the fixed root broker. Ruby's JSON
+# encoder keeps service names, paths and metadata out of shell-generated JSON.
+write_deploy_run_receipt() {
+  [[ -n ${VPS_DEPLOY_RUN_ID:-} ]] || return 0
+  local payload
+  payload=$("$RUBY" -rjson -e '
+    run_id, target, host, pid, owner_identity, status, recovery_state, stage,
+      started_at, pinned_sha, previous_sha, services, ports_csv, order_csv,
+      run_log, aggregate_log = ARGV
+    ports = {}
+    ports_csv.split(",").reject(&:empty?).each do |pair|
+      name, value = pair.split("=", 2)
+      abort "invalid port pair" unless name && value && value.match?(/\A[0-9]+\z/)
+      ports[name] = Integer(value, 10)
+    end
+    record = {
+      schema: 1, run_id: run_id, target: target, host: host, pid: Integer(pid, 10),
+      owner_identity: owner_identity, status: status, recovery_state: recovery_state,
+      stage: stage, started_at: started_at,
+      pinned_sha: pinned_sha.empty? ? nil : pinned_sha,
+      previous_sha: previous_sha.empty? ? nil : previous_sha,
+      started_services: services.empty? ? [] : services.split(" "),
+      ports: ports,
+      restore_order: order_csv.empty? ? [] : order_csv.split(","),
+      run_log: run_log, aggregate_log: aggregate_log
+    }
+    puts JSON.generate(record)
+  ' "${VPS_DEPLOY_RUN_ID}" "${VPS_DEPLOY_RUN_TARGET}" "$(hostname -s)" \
+    "${VPS_DEPLOY_LOCK_PID}" "${VPS_DEPLOY_LOCK_IDENTITY}" \
+    "${VPS_DEPLOY_RECEIPT_STATUS:-running}" "${VPS_DEPLOY_RECEIPT_RECOVERY:-none}" \
+    "${deploy_stage:-start}" "${VPS_DEPLOY_RUN_STARTED_AT}" \
+    "${VPS_DEPLOY_RECEIPT_PINNED_SHA:-}" "${VPS_DEPLOY_RECEIPT_PREVIOUS_SHA:-}" \
+    "${VPS_DEPLOY_RECEIPT_SERVICES:-}" "${VPS_DEPLOY_RECEIPT_PORTS:-}" \
+    "${VPS_DEPLOY_RECEIPT_ORDER:-}" "${VPS_DEPLOY_RUN_LOG}" "${VPS_DEPLOY_LOG}") || return 1
+  "$PUB5_ADMIN" deploy-run-write "$VPS_DEPLOY_RUN_ID" "$payload" >/dev/null
+}
+
+# Stage transitions persist the latest recovery breadcrumb before the next
+# stage may stop, replace, migrate or restart a production service.
 set_stage() {
   deploy_stage=$1
   log "enter"
+  write_deploy_run_receipt || {
+    print -u2 "vps-deploy: failed to persist recovery receipt at stage $deploy_stage"
+    return 1
+  }
 }
-
 # Retry a command with exponential backoff. Use only for transient failures
 # (network, service boot races). Do not wrap git merge conflicts or policy
 # refusals. Logs each attempt. Returns the last exit status.
