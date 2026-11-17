@@ -4,6 +4,10 @@ require "digest"
 require_relative "restructure"
 require_relative "restructure_sweep/context"
 require_relative "restructure_sweep/contracts"
+# The re-opened parts of this class, one responsibility each; every path is
+# listed in data/autoload.yml under autoload.reopens_a_constant_defined_elsewhere.
+require_relative "restructure_sweep/candidates"
+require_relative "restructure_sweep/verdicts"
 require_relative "transformation_plan"
 require_relative "problem_graph"
 require_relative "commit_message"
@@ -33,6 +37,7 @@ module Master
         "flatten" => 2, "reorder" => 2, "simplify" => 2, "reflow" => 1,
         "recommend" => 1
       }.freeze
+      DESTRUCTIVE_OPERATIONS = %w[remove rename relocate merge split flatten hoist defragment decouple].freeze
 
       PROPOSE = <<~TEXT
         Restructure one underlying problem in this tree rather than fixing its findings independently.
@@ -204,329 +209,69 @@ module Master
         rounds.times do |round|
           break if kept.size >= keeps
 
-          ranked = ranked_candidate_map(candidates(target, "#{run_id}-#{round}"))
-          if ranked.empty?
-            terminal = :done
-            break
-          end
-          problems = ranked.map { |row| row.fetch(:problem) }
-          candidate_map = render_candidate_map(ranked)
-
-          round_kept = []
-          vetoes = 0
-          problems.first(attempts).each do |problem|
-            break if kept.size + round_kept.size >= keeps
-
-            result = attempt(problem, candidate_map:)
-            round_kept << result.value! if result&.ok?
-            break if result&.ok?
-            vetoes += 1 if policy_veto?(result)
-          end
+          round_kept, terminal = run_round(target, "#{run_id}-#{round}", kept, attempts:, keeps:)
           kept.concat(round_kept)
-          if round_kept.empty?
-            terminal =
-              if problems.size > attempts
-                :limit_reached
-              elsif vetoes.positive? && vetoes == problems.size
-                :veto
-              else
-                :plateau
-              end
-            break
-          end
+          break if terminal
 
           Master::Trace::Dmesg.status("restructure0", "round #{round + 1}, kept #{round_kept.size}, total #{kept.size}")
           terminal = :limit_reached if kept.size >= keeps || round == rounds - 1
         end
-        if terminal == :limit_reached
-          terminal = :done if candidates(target, "#{run_id}-final").empty?
-        end
+        terminal = terminal_state(target, run_id, terminal, kept)
         Master::Trace::Dmesg.status("restructure0", "terminal=#{terminal} kept=#{kept.size}")
         @bus&.publish("fix_loop:restructure_exit", target: relative(target), state: terminal.to_s.upcase, kept: kept.size)
         kept
       end
 
-      def ranked_candidate_map(problems)
-        score_min, score_max = @transformation_plan.candidate_map_policy.fetch("score_range").map(&:to_i)
-        Array(problems).map do |problem|
-          signal_count = problem.findings.size + [problem.laws.size - 1, 0].max + [problem.files.size - 1, 0].max
-          payoff = [[signal_count, score_min].max, score_max].min
-          risk = (problem.candidate_operations.map { |operation| OPERATION_RISK.fetch(operation, score_max) }.max || score_max)
-            .clamp(score_min, score_max)
-          { problem:, payoff:, risk:, ratio: payoff.to_f / risk }
-        end.sort_by do |row|
-          [-row.fetch(:ratio), -row.fetch(:payoff), row.fetch(:risk), row.fetch(:problem).id]
-        end
-      end
-
-      # The map is evidence-backed, scored, and read-only. If the tree has fewer
-      # than the requested number of candidates, report the shortfall instead of
-      # inventing filler or repeating the same move under different names.
-      def render_candidate_map(rows)
-        wanted = Integer(@transformation_plan.candidate_map_policy.fetch("minimum_alternatives"))
-        min_paths = Integer(@transformation_plan.candidate_map_policy.fetch("minimum_distinct_target_paths"))
-        distinct_paths = rows.flat_map { |row| row.fetch(:problem).files }.uniq
-        score_max = @transformation_plan.candidate_map_policy.fetch("score_range").last.to_i
-        shown = rows.first(30).map do |row|
-          problem = row.fetch(:problem)
-          findings = problem.findings.map { |path, law, message, _related| "#{relative(path)} #{law} #{message}" }
-          format(
-            "  %s payoff=%d/%d risk=%d/%d ratio=%.2f operation=%s paths=%s evidence=%s",
-            problem.id, row.fetch(:payoff), score_max, row.fetch(:risk), score_max, row.fetch(:ratio),
-            problem.candidate_operations.join(","), problem.files.map { |path| relative(path) }.join(","),
-            findings.join(" | ")
-          )
-        end
-        shortfall = [wanted - rows.size, 0].max
-        path_shortfall = [min_paths - distinct_paths.size, 0].max
-        [
-          "Evidence-backed candidates: #{rows.size}; distinct target paths: #{distinct_paths.size}.",
-          "Requested minimums: #{wanted} candidates and #{min_paths} distinct target paths; shortfalls: #{shortfall} candidates and #{path_shortfall} paths.",
-          "Shortfalls are reported, never padded. Payoff/risk is a deterministic ranking aid, not an equivalence proof.",
-          *shown,
-          (rows.size > shown.size ? "  omitted #{rows.size - shown.size} lower-ranked candidates" : nil),
-        ].compact.join("\n")
-      end
-
-      def policy_veto?(result)
-        result.is_a?(Result) && !result.ok? &&
-          result.message.to_s.match?(/MIXED_COMMIT|BATCH_DELETE|UNALIASED_MOVE|restructure refused|immutable|off limits|outside .*policy|stale read required/i)
-      end
-
-      def sweep_targets(target)
-        expanded = File.expand_path(target.to_s, @root)
-        return TREES.filter_map do |tree|
-          path = File.join(@root, tree)
-          path if File.directory?(path)
-        end if expanded == File.expand_path(@root)
-
-        return [] unless TREES.include?(File.basename(expanded))
-        return [] unless File.dirname(expanded) == File.expand_path(@root)
-
-        [expanded]
-      end
-
-      # [path, law, message, related_paths] for each repository-surface finding, smallest moves first;
-      # within a rule the order rotates by run, so every finding comes up. Dead
-      # subtrees and cross-file architecture defects carry their evidence paths
-      # into the proposal rather than collapsing to one filename.
-      def candidates(target, run_id)
-        found = Context.structural_findings(target)
-        problems = ProblemGraph.new(plan: @transformation_plan).call(found)
-        return [] if problems.empty?
-
-        seed = Digest::SHA256.hexdigest(run_id.to_s)[0, 8].to_i(16)
-        rotated = problems.rotate(seed % problems.size)
-        multifinding = rotated.count { |problem| problem.size > 1 }
-        multisignal = rotated.count(&:multi_signal?)
-        candidate_count = rotated.sum { |problem| problem.candidate_operations.size }
-
-        Master::Trace::Dmesg.status(
-          "restructure0",
-          "#{found.size} finding(s) -> #{rotated.size} problem(s), " \
-          "#{multifinding} multi-finding, #{multisignal} multi-signal, " \
-          "#{candidate_count} candidate transformation(s)",
-        )
-        @bus&.publish(
-          "fix_loop:restructure_problems",
-          target: relative(target),
-          findings: found.size,
-          problems: rotated.size,
-          multi_finding: multifinding,
-          multi_signal: multisignal,
-          candidates: candidate_count,
-        )
-        rotated
-      end
-
       private
 
-      def attempt(problem, candidate_map: "")
-        path, = problem.findings.first
-        tree = relative(path).split("/").first
-        baseline_scorecard = Restructure::Proof.for(tree, @root).scorecard
-        answer = ask(proposal(tree, problem, scorecard: baseline_scorecard, candidate_map:))
-        return if answer.strip == "KEEP"
+      # One sweep round: rank the round's candidates, try the top problems, and
+      # return [round_kept, terminal]; terminal is nil while the sweep continues.
+      def run_round(target, run_id, kept, attempts:, keeps:)
+        ranked = ranked_candidate_map(candidates(target, run_id))
+        return [[], :done] if ranked.empty?
 
-        audit = decommission_audit(answer)
-        return report(problem, nil, "mandatory decommission audit missing or incomplete") unless audit
+        problems = ranked.map { |row| row.fetch(:problem) }
+        round_kept, vetoes = try_candidates(problems.first(attempts), kept, candidate_map: render_candidate_map(ranked), keeps:)
+        return [round_kept, round_terminal(problems, vetoes, attempts)] if round_kept.empty?
 
-        plan = Restructure::Plan.parse(answer)
-        return report(problem, nil, "the answer held no plan") if plan.empty?
-
-        blocker = decommission_blocker(problem, plan, audit)
-        return report(problem, plan, blocker, audit:) if blocker
-
-        review = ->(diff) { verdict(problem, plan, diff, scorecard_before: baseline_scorecard, audit:) }
-        result = @restructures[tree].call(
-          plan,
-          message: commit_message(problem, plan),
-          review:,
-          allowed_operations: problem.candidate_operations,
-        )
-        report(problem, plan, result, audit:)
+        [round_kept, nil]
       end
 
-      DESTRUCTIVE_OPERATIONS = %w[remove rename relocate merge split flatten hoist defragment decouple].freeze
+      # Try the ranked problems in order until one keeps or the keeps budget is
+      # reached; count policy vetoes for the round's terminal decision.
+      def try_candidates(problems, kept, candidate_map:, keeps:)
+        round_kept = []
+        vetoes = 0
+        problems.each do |problem|
+          break if kept.size + round_kept.size >= keeps
 
-      def decommission_blocker(problem, plan, audit)
-        operations = Array(plan.operations).map(&:to_s)
-        return if (operations & DESTRUCTIVE_OPERATIONS).empty?
-
-        fields = audit.to_s.split(";").to_h do |entry|
-          key, value = entry.strip.split("=", 2)
-          [key.to_s.strip, value.to_s.strip]
+          result = attempt(problem, candidate_map:)
+          round_kept << result.value! if result&.ok?
+          break if result&.ok?
+          vetoes += 1 if policy_veto?(result)
         end
-        uncertain = fields.filter_map do |key, value|
-          key if value.match?(/\binconclusive\b/i)
+        [round_kept, vetoes]
+      end
+
+      # A round that keeps nothing ends the sweep: more candidates than the
+      # attempt budget allows is a budget stop, unanimous vetoes are a veto,
+      # and anything else is a plateau.
+      def round_terminal(problems, vetoes, attempts)
+        if problems.size > attempts
+          :limit_reached
+        elsif vetoes.positive? && vetoes == problems.size
+          :veto
+        else
+          :plateau
         end
-        return "destructive restructure refused: #{uncertain.join(" and ")} reachability is INCONCLUSIVE" if uncertain.any?
-
-        graph = @reference_graph
-        return "destructive restructure refused: repository reference graph unavailable" unless graph
-
-        snapshot = graph.build
-        failures = Array(snapshot[:analysis_failures])
-        return "destructive restructure refused: reference graph has #{failures.size} analysis failure(s)" unless failures.empty?
-
-        missing = problem.files.reject { |path| graph.includes_path?(path) }
-        return "destructive restructure refused: files absent from the reference graph: #{missing.map { |path| relative(path) }.join(", ")}" if missing.any?
-
-        dynamic = problem.files.flat_map { |path| graph.dynamic_for(path) }
-        unresolved = problem.files.flat_map { |path| graph.unresolved_for(path) }
-        return "destructive restructure refused: #{dynamic.size} dynamic lookup site(s) remain in affected files" if dynamic.any?
-        return "destructive restructure refused: #{unresolved.size} unresolved reference(s) remain in affected files" if unresolved.any?
-
-        nil
-      rescue StandardError => e
-        "destructive restructure refused: reference evidence failed closed (#{e.class}: #{e.message.to_s[0, 120]})"
       end
 
-      def decommission_audit(answer)
-        line = answer.to_s.lines.find { |row| row.start_with?("AUDIT:") }
-        return unless line
+      # A sweep that stopped on its budget still ends cleanly when a final
+      # read-only scan finds nothing left to restructure.
+      def terminal_state(target, run_id, terminal, kept)
+        return :done if terminal == :limit_reached && candidates(target, "#{run_id}-final").empty?
 
-        payload = line.delete_prefix("AUDIT:").strip
-        return if payload.length < 80
-
-        entries = payload.split(";").map do |entry|
-          key, value = entry.strip.split("=", 2)
-          [key.to_s.strip, value.to_s.strip]
-        end
-        required = AUDIT_FIELDS.map { |field| field.delete_suffix("=") }
-        keys = entries.map(&:first)
-        return unless keys.uniq.size == keys.size && keys.sort == required.sort
-        return if entries.any? { |_key, value| value.empty? }
-
-        payload
-      end
-
-      def proposal(tree, problem, scorecard: nil, candidate_map: "")
-        scorecard ||= Restructure::Proof.for(tree, @root).scorecard
-        findings = problem.findings.map do |path, rule, message, related|
-          related = Array(related).map { |item| relative(item) }.reject { |item| item == relative(path) }
-          [
-            "#{relative(path)}: #{rule}: #{message}",
-            (related.empty? ? nil : "  related: #{related.first(8).join(", ")}"),
-          ].compact.join("\n")
-        end.join("\n")
-
-        format(
-          PROPOSE,
-          transformations: @transformation_plan.prompt,
-          preservation: @transformation_plan.preservation_contract.map { |key, value| "  #{key}: #{value}" }.join("\n"),
-          contracts: Contracts.for(tree).strip,
-          evidence_hierarchy: @transformation_plan.evidence_hierarchy.map { |entry| "  #{entry.fetch("id")}: #{entry.fetch("practice")}" }.join("\n"),
-          domain_profile: @transformation_plan.domain_adapters.map { |domain, adapter| "  #{domain}: #{adapter}; smells=#{@transformation_plan.smell_catalog.fetch(domain, []).join(", ")}" }.join("\n"),
-          refactoring_methods: playbook_lines("methods") { |entry| "  #{entry.fetch("id")}: #{entry.fetch("action")}" },
-          refactoring_playbook: playbook_lines("technique_by_domain") { |domain, techniques| "  #{domain}: #{techniques.join(", ")}" },
-          refactoring_checks: playbook_lines("checks") { |check| "  - #{check}" },
-          automatic_vetoes: @transformation_plan.automatic_vetoes.map { |veto| "  - #{veto}" }.join("\n"),
-          law: problem.laws.join(", "),
-          path: relative(problem.files.first),
-          message: "#{problem.reason}; confidence=#{problem.confidence}; problem=#{problem.id}",
-          problem_id: problem.id,
-          findings:,
-          candidate_operations: problem.candidate_operations.join(", "),
-          candidate_map:,
-          context: Context.new(
-            @root, problem.files.first, related: problem.files.drop(1), scorecard:,
-            co_change_window: @transformation_plan.scorecard_policy.fetch("history_window_commits"),
-            reference_graph: @reference_graph,
-          ).to_s,
-        )
-      end
-
-      # Methods and checks were validated at boot but never shown to the model;
-      # a declared method no prompt carries governs nothing.
-      def playbook_lines(section, &)
-        @transformation_plan.refactoring_playbook.fetch(section).map(&).join("\n")
-      end
-
-      def verdict(problem, plan, diff, scorecard_before: {}, audit: "INCONCLUSIVE: no audit supplied")
-        tree = relative(problem.files.first).split("/").first
-        scorecard_after = Restructure::Proof.for(tree, @root).scorecard(extra_paths: plan.paths)
-        numeric_delta = scorecard_before.filter_map do |name, value|
-          next unless value.is_a?(Numeric) && scorecard_after[name].is_a?(Numeric)
-
-          [name, scorecard_after[name] - value]
-        end.to_h
-        scorecard_text = "before: #{scorecard_before.inspect}\nafter: #{scorecard_after.inspect}\ndelta: #{numeric_delta.inspect}"
-        answer = ask(
-          format(
-            ATTACK,
-            problem_id: problem.id,
-            law: problem.laws.join(", "),
-            path: relative(problem.files.first),
-            operations: plan.operations.join(", "),
-            summary: plan.summary,
-            audit: audit.to_s,
-            scorecard: scorecard_text,
-            diff:,
-          ),
-        ).strip
-        approval = answer.match(/\AAPPROVE:\s+\S.{19,}\z/)
-        approval ? nil : "review: #{answer.lines.first.to_s.strip[0, 200]}"
-      end
-
-      def commit_message(problem, plan)
-        title = plan.summary.empty? ? "Restructure #{relative(problem.files.first)}" : plan.summary
-        body = [
-          "Address laws #{problem.laws.join(", ")} for problem #{problem.id}.",
-          "Verify the change with hostile review, parsing, eager load, boot self-test, and related tests.",
-        ].join("\n\n")
-        [CommitMessage.fit(title), body, CommitMessage::MARKER].join("\n\n")
-      end
-
-      def report(problem, plan, result, audit: nil)
-        ok = result.is_a?(Result) && result.ok?
-        text = if ok then "kept: #{plan.summary}"
-               elsif result.is_a?(Result) then result.message
-               else result.to_s
-               end
-        evidence = ok ? result.value!.fetch(:evidence, nil) : nil
-        operation = plan&.operations&.last || problem.primary_operation
-        Master::Trace::Dmesg.status(
-          "restructure0",
-          "#{operation} problem=#{problem.id} signals=#{problem.size} #{problem.laws.join(",")} #{relative(problem.files.first)}: #{text[0, 140]}",
-        )
-        @bus&.publish(
-          "fix_loop:restructure",
-          path: relative(problem.files.first),
-          law: problem.laws.join(","),
-          laws: problem.laws,
-          problem_id: problem.id,
-          operation:,
-          candidate_operations: problem.candidate_operations,
-          operations: plan&.operations || [],
-          confidence: problem.confidence,
-          findings: problem.size,
-          ok:,
-          message: text[0, 300],
-          evidence:,
-          decommission_audit: audit&.slice(0, 1_200),
-        )
-        result.is_a?(Result) ? result : nil
+        terminal
       end
 
       def ask(prompt)

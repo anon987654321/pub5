@@ -1,5 +1,10 @@
 # frozen_string_literal: true
 
+# The re-opened parts of this class, one responsibility each; every path is
+# listed in data/autoload.yml under autoload.reopens_a_constant_defined_elsewhere.
+require_relative "context/surfaces"
+require_relative "context/references"
+
 module Master
   module Fix
     class RestructureSweep
@@ -107,103 +112,8 @@ module Master
           []
         end
 
-        def self.surface_findings(target)
-          stale_reference_findings(target) + prose_findings(target) + command_surface_findings(target) + route_surface_findings(target) + config_surface_findings(target)
-        end
+        private_class_method :dead_subtree_findings, :cross_file_findings
 
-        def self.stale_reference_findings(target)
-          rows = repository_files(target).filter_map do |path|
-            text = File.read(path, encoding: "UTF-8")
-            matches = STALE_PATHS.select { |needle| text.include?(needle) }
-            matches.empty? ? nil : [path, matches]
-          rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "restructure.stale_reference", path:)
-            nil
-          end
-          rows.filter_map do |path, matches|
-            related = rows.select { |_other, other_matches| (matches & other_matches).any? }
-                        .map(&:first).reject { |other| other == path }.first(8)
-            [path, "STALE_PATH_REFERENCE", "#{matches.length} retired topology reference(s): #{matches.join(", ")}", related]
-          end
-        end
-
-        def self.prose_findings(target)
-          paragraphs = Hash.new { |hash, key| hash[key] = [] }
-          repository_files(target).select { |path| PROSE_EXTENSIONS.include?(File.extname(path).downcase) }.each do |path|
-            File.read(path, encoding: "UTF-8").split(/\n\s*\n+/).each do |block|
-              next if block.lstrip.start_with?("```") || block.include?("\n```")
-              normalized = block.lines.map(&:strip).reject(&:empty?).join(" ").downcase.gsub(/\s+/, " ").strip
-              next if normalized.length < 120 || normalized.split.length < 20
-              paragraphs[normalized] << path
-            end
-          rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "restructure.prose", path:)
-          end
-          paragraphs.filter_map do |_paragraph, paths|
-            paths = paths.uniq
-            next if paths.size < 2
-            paths.map do |path|
-              [path, "PROSE_DUPLICATION", "prose paragraph is duplicated across #{paths.size} files", paths.reject { |other| other == path }.first(8)]
-            end
-          end.flatten(1)
-        end
-
-        def self.route_surface_findings(target)
-          repository_files(target).select { |path| File.basename(path) == "routes.rb" }.filter_map do |path|
-            text = File.read(path, encoding: "UTF-8")
-            helpers = text.scan(/\bas:\s*:([a-z][a-z0-9_]*)/i).flatten
-            duplicates = helpers.tally.select { |_name, count| count > 1 }.keys
-            next if duplicates.empty?
-
-            [path, "ROUTE_SURFACE_DUPLICATION", "route helper(s) declared more than once: #{duplicates.join(", ")}", []]
-          rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "restructure.routes", path:)
-            nil
-          end
-        end
-
-        def self.config_surface_findings(target)
-          repository_files(target).filter_map do |path|
-            relative = relative_static(path, target)
-            next unless relative.split("/").include?("config") && CONFIG_EXTENSIONS.include?(File.extname(path).downcase)
-
-            text = File.read(path, encoding: "UTF-8")
-            keys = text.scan(/^\s*config\.x\.([A-Za-z0-9_]+)\s*=/).flatten
-            duplicates = keys.tally.select { |_name, count| count > 1 }.keys
-            next if duplicates.empty?
-
-            [path, "CONFIG_SURFACE_DUPLICATION", "config.x setting(s) assigned more than once: #{duplicates.join(", ")}", []]
-          rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "restructure.config", path:)
-            nil
-          end
-        end
-
-        def self.command_surface_findings(target)
-          signatures = repository_files(target).filter_map do |path|
-            relative = relative_static(path, target)
-            ext = File.extname(path).downcase
-            root = relative.split("/").first
-            next unless COMMAND_EXTENSIONS.include?(ext) && (COMMAND_ROOTS.include?(root) || relative.include?("/bin/"))
-
-            text = File.read(path, encoding: "UTF-8")
-            commands = []
-            text.scan(/^\s*when\s+["\x27]([a-z][a-z0-9_:-]*)["\x27]/i) { |match| commands << match.first.downcase }
-            text.scan(/\bCOMMANDS\s*=\s*%i\[([^\]]+)\]/) { |match| commands.concat(match.first.scan(/[a-z][a-z0-9_:-]*/i).map(&:downcase)) }
-            commands = commands.uniq.sort
-            next if commands.empty?
-            [path, commands]
-          rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "restructure.commands", path:)
-            nil
-          end
-          signatures.group_by { |_path, commands| commands }.values
-            .select { |group| group.size > 1 }.flat_map do |group|
-              group.map do |path, commands|
-                [path, "COMMAND_SURFACE_DUPLICATION", "command surface #{commands.join(", ")} is duplicated across #{group.size} executables", group.map(&:first).reject { |other| other == path }.first(8)]
-              end
-            end
-        end
         def self.structural_laws(target)
           tree = Master::Review::Scan::LawTree
           candidates = [
@@ -269,20 +179,27 @@ module Master
         private
 
         def surface_section
+          "Surface: #{surface_kind}; /fix may consolidate one concept across its filesystem, code, prose, route, command and configuration forms when evidence supports it."
+        end
+
+        # Prose, route, config and command surfaces each carry their own
+        # consolidation rules; everything else is ordinary code.
+        def surface_kind
           extension = File.extname(@path).downcase
-          relative = relative(@path)
-          kind = if PROSE_EXTENSIONS.include?(extension)
-                   "prose"
-                 elsif File.basename(@path) == "routes.rb"
-                   "route"
-                 elsif relative.split("/").include?("config") && CONFIG_EXTENSIONS.include?(extension)
-                   "config"
-                 elsif COMMAND_EXTENSIONS.include?(extension) && relative.split("/").any? { |part| COMMAND_ROOTS.include?(part) }
-                   "command"
-                 else
-                   "code"
-                 end
-          "Surface: #{kind}; /fix may consolidate one concept across its filesystem, code, prose, route, command and configuration forms when evidence supports it."
+          return "prose" if PROSE_EXTENSIONS.include?(extension)
+          return "route" if File.basename(@path) == "routes.rb"
+          return "config" if config_surface?(extension)
+          return "command" if command_surface?(extension)
+
+          "code"
+        end
+
+        def config_surface?(extension)
+          relative(@path).split("/").include?("config") && CONFIG_EXTENSIONS.include?(extension)
+        end
+
+        def command_surface?(extension)
+          COMMAND_EXTENSIONS.include?(extension) && relative(@path).split("/").any? { |part| COMMAND_ROOTS.include?(part) }
         end
 
         def inventory_section
@@ -310,17 +227,9 @@ module Master
 
         def co_change_section
           tree = File.basename(@tree)
-          out, status = Master::Io::Exec.capture2e(
-            "git", "-C", @root, "log", "--all", "--format=COMMIT:%H", "--name-only",
-            "-n", @co_change_window.to_s, "--", "#{tree}/"
-          )
-          return "Co-change evidence: INCONCLUSIVE; git history was unavailable." unless status.success?
+          commits = co_change_commits(tree)
+          return "Co-change evidence: INCONCLUSIVE; git history was unavailable." unless commits
 
-          commits = out.split(/^COMMIT:/).drop(1).map do |chunk|
-            rows = chunk.lines.map(&:strip).reject(&:empty?)
-            rows.shift
-            rows.select { |path| path.start_with?("#{tree}/") }.uniq
-          end.select { |files| files.size > 1 }
           focus = [relative(@path), *@related.map { |path| relative(path) }].uniq
           counts = Hash.new(0)
           commits.each do |files|
@@ -336,6 +245,22 @@ module Master
         rescue StandardError => e
           Master::Ground::Swallow.log(e, context: "restructure.co_change", path: @path)
           "Co-change evidence: INCONCLUSIVE (#{e.class})."
+        end
+
+        # Multi-file commits in the tree's recent history; nil when git history
+        # is unavailable, so the section can report inconclusive evidence.
+        def co_change_commits(tree)
+          out, status = Master::Io::Exec.capture2e(
+            "git", "-C", @root, "log", "--all", "--format=COMMIT:%H", "--name-only",
+            "-n", @co_change_window.to_s, "--", "#{tree}/"
+          )
+          return unless status.success?
+
+          out.split(/^COMMIT:/).drop(1).map do |chunk|
+            rows = chunk.lines.map(&:strip).reject(&:empty?)
+            rows.shift
+            rows.select { |path| path.start_with?("#{tree}/") }.uniq
+          end.select { |files| files.size > 1 }
         end
 
         def scorecard_section
@@ -393,14 +318,41 @@ module Master
           return "Reference graph: INCONCLUSIVE; no repository graph was supplied." unless @reference_graph
 
           snapshot = @reference_graph.build
-          metrics = snapshot.fetch(:metrics)
           targets = [@path, *@related].uniq
+          failures = Array(snapshot[:analysis_failures])
+          lines = [
+            graph_summary_line(snapshot, failures),
+            *graph_edge_lines(targets),
+            *graph_site_lines(targets),
+            (failures.empty? ? nil : "Analysis failures: #{failures.first(10).map { |row| "#{row[:path]}: #{row[:error]}" }.join("; ")}"),
+          ]
+          lines.compact.join("\n")
+        rescue StandardError => e
+          "Reference graph: INCONCLUSIVE (#{e.class}: #{e.message.to_s[0, 180]})."
+        end
+
+        def graph_summary_line(snapshot, failures)
+          metrics = snapshot.fetch(:metrics)
+          "Repository reference graph: nodes=#{snapshot[:nodes].size}, edges=#{snapshot[:edges].size}, " \
+            "unresolved_imports=#{metrics[:unresolved_local_imports]}, unresolved_ruby=#{metrics[:unresolved_ruby_references]}, " \
+            "dynamic_sites=#{metrics[:dynamic_sites]}, analysis_failures=#{failures.size}."
+        end
+
+        # Resolved graph edges touching the file and its related files.
+        def graph_edge_lines(targets)
           inbound = targets.flat_map do |path|
             @reference_graph.blast_radius(path).fetch(:inbound).map { |from| "#{from} -> #{relative(path)}" }
           end.uniq
           outbound = targets.flat_map do |path|
             @reference_graph.blast_radius(path).fetch(:outbound).map { |to| "#{relative(path)} -> #{to}" }
           end.uniq
+          [
+            "Resolved inbound edges: #{inbound.empty? ? "none observed" : inbound.first(20).join("; ")}",
+            "Resolved outbound edges: #{outbound.empty? ? "none observed" : outbound.first(20).join("; ")}",
+          ]
+        end
+
+        def graph_site_lines(targets)
           unresolved = targets.flat_map do |path|
             @reference_graph.unresolved_for(path).map do |row|
               "#{row[:from_file]}:#{row[:line]} #{row[:kind]} #{row[:name]} (#{row[:reason]})"
@@ -411,82 +363,10 @@ module Master
               "#{row[:file]}:#{row[:line]} #{row[:name]} (#{row[:reason]})"
             end
           end.uniq
-          failures = Array(snapshot[:analysis_failures])
-          lines = [
-            "Repository reference graph: nodes=#{snapshot[:nodes].size}, edges=#{snapshot[:edges].size}, " \
-            "unresolved_imports=#{metrics[:unresolved_local_imports]}, unresolved_ruby=#{metrics[:unresolved_ruby_references]}, " \
-            "dynamic_sites=#{metrics[:dynamic_sites]}, analysis_failures=#{failures.size}.",
-            "Resolved inbound edges: #{inbound.empty? ? "none observed" : inbound.first(20).join("; ")}",
-            "Resolved outbound edges: #{outbound.empty? ? "none observed" : outbound.first(20).join("; ")}",
+          [
             "Relevant unresolved references: #{unresolved.empty? ? "none observed" : unresolved.first(20).join("; ")}",
             "Dynamic lookup sites in affected files: #{dynamic.empty? ? "none observed" : dynamic.first(20).join("; ")}",
-            (failures.empty? ? nil : "Analysis failures: #{failures.first(10).map { |row| "#{row[:path]}: #{row[:error]}" }.join("; ")}"),
           ]
-          lines.compact.join("\n")
-        rescue StandardError => e
-          "Reference graph: INCONCLUSIVE (#{e.class}: #{e.message.to_s[0, 180]})."
-        end
-
-        def production_reference_section
-          hits = production_references.flat_map do |path, lines|
-            lines.map { |number, text| "#{relative(path)}:#{number}: #{text.strip[0, 160]}" }
-          end
-          return if hits.empty?
-
-          "Production references:\n#{hits.first(REFERENCE_LINES).join("\n")}"
-        end
-
-        def reference_section
-          hits = references.flat_map do |path, lines|
-            lines.map { |number, text| "#{relative(path)}:#{number}: #{text.strip[0, 160]}" }
-          end
-          return if hits.empty?
-
-          "Lines elsewhere that name it:\n#{hits.first(REFERENCE_LINES).join("\n")}"
-        end
-
-        def requirer_section
-          requirers = references.keys.select { |path| File.read(path, encoding: "UTF-8").match?(require_pattern) }
-                                .select { |path| File.foreach(path, encoding: "UTF-8").count <= SMALL }.first(REQUIRERS)
-          return if requirers.empty?
-
-          requirers.map { |path| "Requires it, in full, #{relative(path)}:\n#{numbered(path)}" }.join("\n\n")
-        end
-
-        # { path => [[line_number, text]] } for files that name the stem or a constant.
-        def production_references
-          @production_references ||= Context.reference_files(@root)
-            .reject { |path| path == @path || test_path?(path) || PROSE_EXTENSIONS.include?(File.extname(path).downcase) }
-            .to_h do |path|
-              [path, File.foreach(path, encoding: "UTF-8").with_index(1).select { |text, _n| text.match?(needle) }.map(&:reverse)]
-            rescue ArgumentError
-              [path, []]
-            end.reject { |_path, lines| lines.empty? }
-        end
-
-        def references
-          @references ||= Context.reference_files(@root).reject { |path| path == @path }.to_h do |path|
-            [path, File.foreach(path, encoding: "UTF-8").with_index(1).select { |text, _n| text.match?(needle) }.map(&:reverse)]
-          rescue ArgumentError
-            [path, []]
-          end.reject { |_path, lines| lines.empty? }
-        end
-
-        def needle
-          @needle ||= Regexp.union([require_pattern, *constants.map { |name| /\b#{name}\b/ }])
-        end
-
-        def require_pattern
-          stem = Regexp.escape(File.basename(@path, ".*"))
-          /require(?:_relative)?\s*\(?\s*["'][^"']*\b#{stem}["']/
-        end
-
-        def constants
-          File.read(@path, encoding: "UTF-8").scan(/^\s*(?:class|module)\s+([A-Z]\w+)/).flatten.uniq - Restructure.namespaces(@tree)
-        end
-
-        def test_path?(path)
-          path.split("/").any? { |part| %w[test spec fixtures].include?(part) }
         end
 
         def numbered(path) = File.foreach(path, encoding: "UTF-8").with_index(1).map { |line, n| format("%4d  %s", n, line) }.join
