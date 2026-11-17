@@ -143,8 +143,8 @@ watch_deploy_recovery() {
     return 0
   fi
 
-  runs=$("$DEPLOY_ADMIN" deploy-run-list 2>/dev/null) || {
-    raise deploy-recovery-status-unavailable "pub5-admin deploy-run-list failed - inspect the broker and /var/log/daemon"
+  runs=$("$DEPLOY_ADMIN" deploy-run-pending-list 2>/dev/null) || {
+    raise deploy-recovery-status-unavailable "pub5-admin deploy-run-pending-list failed - inspect the broker and /var/log/daemon"
     return 0
   }
 
@@ -170,8 +170,18 @@ watch_deploy_recovery() {
       "unknown"
     end
 
-    rows = JSON.parse(STDIN.read)
-    abort "deploy-run-list is not an array" unless rows.is_a?(Array)
+    document = JSON.parse(STDIN.read)
+    abort "deploy-run-pending-list is not an object" unless document.is_a?(Hash)
+    rows = document["pending"]
+    truncated = document["truncated"]
+    scanned = document["scanned"]
+    returned = document["returned"]
+    abort "invalid deploy-run-pending-list response" unless
+      rows.is_a?(Array) && [true, false].include?(truncated) &&
+      scanned.is_a?(Integer) && scanned >= 0 &&
+      returned.is_a?(Integer) && returned == rows.length && returned <= 100
+    puts ["__scan_truncated__", "fleet", "scan-window", 0, "failed",
+          "unknown", "unknown", "/var/db/pub5/deploy_runs", "truncated", scanned].join("|") if truncated
     rows.each do |r|
       abort "invalid deploy receipt" unless r.is_a?(Hash)
       next unless r["recovery_state"] == "pending" && %w[running failed].include?(r["status"])
@@ -191,7 +201,7 @@ watch_deploy_recovery() {
         stage.is_a?(String) && stage.match?(/\A[A-Za-z0-9_.:+\/-]{1,160}\z/) &&
         sha.to_s.match?(/\A(?:[0-9a-f]{7,40}|unknown)\z/i) &&
         log.is_a?(String) && log.match?(/\A\/[A-Za-z0-9_.\/-]{1,2048}\z/)
-      puts [id, target, stage, pid, r["status"], snapshot, sha, log, owner_state].join("|")
+      puts [id, target, stage, pid, r["status"], snapshot, sha, log, owner_state, scanned].join("|")
     end
   ') || {
     raise deploy-recovery-status-unavailable "cannot parse fleet deploy receipts - inspect /var/db/pub5/deploy_runs through pub5-admin"
@@ -199,8 +209,12 @@ watch_deploy_recovery() {
   }
 
   [[ -n $pending ]] || return 0
-  while IFS='|' read -r run_id target stage pid status snapshot sha run_log owner_state; do
+  while IFS='|' read -r run_id target stage pid status snapshot sha run_log owner_state scanned; do
     [[ -n $run_id ]] || continue
+    if [[ $run_id == __scan_truncated__ ]]; then
+      raise deploy-recovery-scan-truncated "fleet recovery monitor inspected a bounded window of up to 500 receipts / 100 pending runs (directory entries scanned: $scanned); some older pending receipts may be outside this view - run: zsh OPENBSD/bin/vps-deploy recover --plan"
+      continue
+    fi
     raise "deploy-recovery-$run_id" "interrupted deploy $run_id target=$target status=$status stage=$stage owner PID $pid is $owner_state, snapshot=$snapshot pinned=$sha - inspect with: zsh OPENBSD/bin/vps-deploy recover --plan; log: $run_log"
   done <<EOF
 $pending
