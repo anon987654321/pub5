@@ -62,7 +62,7 @@ module Master
 
         destination = request.match(DESTINATION_RE)&.captures&.first
         destination.to_s.downcase == "vm23" &&
-          full_inventory_scope?(request) &&
+          self.class.full_inventory_scope?(request) &&
           !request.match?(/\b(?:except|excluding|leave\s+out|but\s+not)\b/i)
       end
 
@@ -125,7 +125,7 @@ module Master
         return false if destination && !VM23_DESTINATIONS.include?(destination.downcase)
 
         complete_stack = complete_stack_components?(request)
-        full_inventory = full_inventory_scope?(request)
+        full_inventory = self.class.full_inventory_scope?(request)
         return false unless request.match?(REPOSITORY_TARGET_RE) || complete_stack
         return false if full_inventory && request.match?(/\b(?:except|excluding|leave\s+out|but\s+not)\b/i)
         return true if complete_stack || full_inventory
@@ -144,7 +144,7 @@ module Master
       # "Everything" means the active registered deployment inventory, not
       # arbitrary host files or every repository directory. Exclusions deliberately
       # fall back to semantic classification and retain the review gate.
-      def full_inventory_scope?(request)
+      def self.full_inventory_scope?(request)
         request.match?(/\b(?:everything|all(?:\s+(?:apps?|services?|stacks?|surfaces?))?|full\s+stack|entire\s+(?:stack|fleet))\b/i)
       end
 
