@@ -534,6 +534,19 @@ class VpsDeployContractTest < Minitest::Test
     [out, $?.exitstatus]
   end
 
+  def lock_process_identity(pid)
+    started, started_status = Open3.capture2("ps", "-p", pid.to_s, "-o", "lstart=")
+    command, command_status = Open3.capture2("ps", "-ww", "-p", pid.to_s, "-o", "command=")
+    return unless started_status.success? && command_status.success?
+
+    checksum, checksum_status = Open3.capture2("cksum", stdin_data: command.chomp)
+    return unless checksum_status.success?
+
+    normalized_start = started.strip.gsub(/[^A-Za-z0-9]/, "_")
+    normalized_checksum = checksum.split.join("_")
+    "#{normalized_start}_#{normalized_checksum}"
+  end
+
   def test_a_lock_records_its_owner_and_is_released_on_exit
     refute_nil lock_block, "the lock block is gone - the scan broke, or the lock did"
     Dir.mktmpdir do |dir|
@@ -546,6 +559,24 @@ class VpsDeployContractTest < Minitest::Test
       assert_in_delta Time.now.to_i, epoch.to_i, 30
       assert_match(/\A[A-Za-z0-9_]+\z/, identity)
       refute Dir.exist?(File.join(dir, "deploy.lock")), "release left the lock behind"
+    end
+  end
+
+  def test_a_matching_live_process_fingerprint_keeps_its_lock
+    identity = lock_process_identity(Process.pid)
+    skip "ps does not expose a process fingerprint here" unless identity
+
+    Dir.mktmpdir do |dir|
+      lock = File.join(dir, "deploy.lock")
+      Dir.mkdir(lock)
+      owner = "#{Process.pid} #{Socket.gethostname.split(".").first} #{Time.now.to_i - 9000} #{identity}\n"
+      File.write(File.join(lock, "owner"), owner)
+      out, status = lock_run(dir)
+
+      assert_equal 75, status
+      assert_includes out, "another deploy owns"
+      refute_includes out, "reaping stale lock"
+      assert_equal owner, File.read(File.join(lock, "owner"))
     end
   end
 
