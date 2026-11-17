@@ -358,6 +358,22 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
+  def test_h3_lite_rejects_invalid_resolution_before_upload
+    Dir.mktmpdir do |dir|
+      still = File.join(dir, "still.jpg")
+      File.write(still, "image")
+      client = Object.new
+      client.define_singleton_method(:upload_file) { |*| flunk "invalid resolution must fail before upload" }
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: dir, film_engine: "minimax/h3-lite",
+        film_resolution: "4K"
+      )
+
+      error = assert_raises(ArgumentError) { picture.send(:film_input, "slow turn", still, 5) }
+      assert_match(/resolution must be 480P or 768P/, error.message)
+    end
+  end
+
   # Kling v3 Omni is the second selectable film engine. It takes start_image and
   # a 3-15s duration, and its native audio stays off because STUDIO lays the
   # dilla bed under the cut itself.
