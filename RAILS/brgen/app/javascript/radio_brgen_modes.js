@@ -35,7 +35,7 @@ export const MODES = [
 { name: "Conformal Power Nave", twist: 0.92 }, { name: "Penrose Aperiodic", twist: 1.0 },
 { name: "Lissajous Nave", twist: 1.0 }, { name: "Superformula Bloom", twist: 0.92 },
 { name: "Hopf Fiber Arcade", twist: 1.05 }, { name: "Voronoi Drift", twist: 1.0 },
-{ name: "PI3DETR Edges", twist: 1.02 }, { name: "Seek-CAD Generative", twist: 0.98 }
+{ name: "PI3DETR Edges (arxiv:2509.03262)", twist: 1.02 }, { name: "Seek-CAD Generative (arxiv:2505.17702)", twist: 0.98 }
 ]
 
 // wrap a keyboard step around the available modes without exposing array mutation.
