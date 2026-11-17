@@ -8,6 +8,7 @@ require "tempfile"
 require "timeout"
 require "uri"
 require_relative "../lora/consent"
+require_relative "models"
 
 module Studio
   # Studio-owned provider client. MASTER has its own client and runtime policies.
@@ -302,6 +303,7 @@ module Studio
           owner, name, pinned = model_reference!(model_id)
           version = pinned || latest_version("#{owner}/#{name}")
           validate_input_schema!("#{owner}/#{name}:#{version}", input)
+          Models.reserve_video_spend!("#{owner}/#{name}", input)
           headers = {
             "Prefer" => "wait=#{[timeout, MAX_SYNC_WAIT].min}",
             "Cancel-After" => "#{timeout.clamp(CANCEL_AFTER_RANGE)}s",
