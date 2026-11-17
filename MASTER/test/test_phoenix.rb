@@ -11,6 +11,9 @@ class TestPhoenix < Minitest::Test
 
     assert report.clean, report.failures.join("\n")
     assert_equal %w[master rails openbsd studio], report.boundaries.map(&:name)
+    openbsd = report.boundaries.find { |boundary| boundary.name == "openbsd" }
+    assert_equal "OPENBSD/bin/vps-deploy", openbsd.entry
+    assert File.file?(File.join(Master::REPO_ROOT, openbsd.entry))
   end
 
   def test_boundary_lookup_under_master_root
