@@ -415,12 +415,14 @@ module Master
           # The commands' replies print here; the face transcript is gone with
           # the terminal face.
           print_terminal_output(text, mode: @last_ok ? :dim : :error) unless text.empty?
+          publish_operation_log(operation: stripped, status: @last_ok ? "success" : "failure", output: text)
           result
         rescue StandardError => e
           @last_ok = false
           @exit_code = 2
           text = "cmd0: /#{name} failed - #{e.class}: #{e.message}"
           print_terminal_output(text, mode: :error)
+          publish_operation_log(operation: stripped, status: "failure", output: text)
           nil
         end
 
@@ -501,6 +503,7 @@ module Master
           record_execution_output(command:, text:, status: result.ok? ? "success" : "failure")
 
           terminal_puts(@refs.renderer.render(text, mode: result.ok? ? :dim : :error))
+          publish_operation_log(operation: "!#{command}", status: result.ok? ? "success" : "failure", output: text)
         end
 
         # Terminal output is attached to the session as execution evidence. The model
@@ -525,6 +528,24 @@ module Master
           )
         rescue StandardError => e
           Master::Ground::Swallow.log(e, context: "cli.execution_output", event_bus: @refs.bus)
+        end
+
+        def publish_operation_log(operation:, status:, output:)
+          return unless Master::Ground::PastePublisher.operation_request?(operation)
+
+          outcome = Master::Ground::PastePublisher.new(root: Master::REPO_ROOT).publish(
+            operation:, status:, output:
+          )
+          if outcome.success?
+            terminal_puts("log0: published #{outcome.url} (#{outcome.service}; expires in 1 day)")
+          elsif !%i[disabled visitor].include?(outcome.error)
+            terminal_puts("log0: upload unavailable; operation result remains local")
+          end
+          outcome
+        rescue StandardError => e
+          bus = @refs.bus if @refs&.respond_to?(:bus)
+          Master::Ground::Swallow.log(e, context: "cli.operation_log.publish", event_bus: bus)
+          nil
         end
 
         def record_model_selector_output(args:, text:, success: true)
@@ -609,6 +630,7 @@ module Master
           # Like run_bang: the write shares Dmesg's mutex and rebuilds Reline's
           # draft, instead of appending at the cursor after the prompt glyphs.
           terminal_puts(@refs.renderer.render(text, mode: result.ok? ? :dim : :error))
+          publish_operation_log(operation: "!#{command}", status: result.ok? ? "success" : "failure", output: text)
         end
 
         def repeat_last
