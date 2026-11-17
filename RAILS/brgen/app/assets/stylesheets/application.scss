@@ -1,37 +1,46 @@
+// Brgen — entry stylesheet.
+//
+// Cascade architecture (MASTER/data/css_architecture.yml): this entry owns
+// the one @layer order statement. Partials contribute CSS through
+// meta.load-css inside their layer — a bare @use would emit unlayered CSS,
+// and unlayered rules beat every layered one. Modules that emit no CSS
+// (dialect_tokens, surface_chrome_endgame) are loaded by the partials that
+// reference them; the entry does not re-prime them.
 @use "sass:meta";
-@use "dialect_tokens" as x;
-@use "sass:list";
-@use "surface_chrome_endgame" as endgame;
 
-@use "post_gallery";
-@use "local_activity";
-@use "vertical_promo";
-@use "section_04";
-@use "brgen_core_shell";
-@use "section_05";
-@use "brgen_navigation";
-@use "brgen_messenger";
-@use "section_07";
-@use "brgen_composer";
-@use "brgen_compose_media";
-@use "section_08";
-@use "brgen_feed_posts";
-@use "brgen_comment_thread";
-@use "section_09";
-@use "brgen_marketplace";
-@use "section_10";
-@use "brgen_nearby_channels";
-@use "section_11";
-@use "brgen_share_media";
-@use "section_12";
-@use "brgen_dating";
-@use "section_13";
-@use "brgen_vertical_shell";
-@use "section_14";
-@use "brgen_vertical_surfaces";
-@use "section_15";
-@use "brgen_city_surfaces";
-@use "section_16";
-@use "brgen_shared_overrides";
-@use "brgen_cinema";
-@use "referral_splinter";
+@layer reset, tokens, base, components, utilities, autofix;
+
+@layer components {
+  @include meta.load-css("post_gallery");
+  @include meta.load-css("local_activity");
+  @include meta.load-css("vertical_promo");
+  @include meta.load-css("section_04");
+  @include meta.load-css("brgen_core_shell");
+  @include meta.load-css("section_05");
+  @include meta.load-css("brgen_navigation");
+  @include meta.load-css("brgen_messenger");
+  @include meta.load-css("section_07");
+  @include meta.load-css("brgen_composer");
+  @include meta.load-css("brgen_compose_media");
+  @include meta.load-css("section_08");
+  @include meta.load-css("brgen_feed_posts");
+  @include meta.load-css("brgen_comment_thread");
+  @include meta.load-css("section_09");
+  @include meta.load-css("brgen_marketplace");
+  @include meta.load-css("section_10");
+  @include meta.load-css("brgen_nearby_channels");
+  @include meta.load-css("section_11");
+  @include meta.load-css("brgen_share_media");
+  @include meta.load-css("section_12");
+  @include meta.load-css("brgen_dating");
+  @include meta.load-css("section_13");
+  @include meta.load-css("brgen_vertical_shell");
+  @include meta.load-css("section_14");
+  @include meta.load-css("brgen_vertical_surfaces");
+  @include meta.load-css("section_15");
+  @include meta.load-css("brgen_city_surfaces");
+  @include meta.load-css("section_16");
+  @include meta.load-css("brgen_shared_overrides");
+  @include meta.load-css("brgen_cinema");
+  @include meta.load-css("referral_splinter");
+}
