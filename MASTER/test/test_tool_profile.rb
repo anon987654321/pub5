@@ -87,6 +87,11 @@ class TestToolHabits < Minitest::Test
     assert_match(/SearchKnowledge/, note)
     assert_match(/AssistantTasks/, note)
     assert_match(/CapabilityCatalog/, note)
+    assert_match(/GitHubRepoMiner/, note)
+    assert_match(/Gist/, note)
+    assert_match(/CodePen/, note)
+    assert_match(/WebBrowse/, note)
+    assert_match(/Browser/, note)
     assert_match(/no background notifications/, note)
   end
 

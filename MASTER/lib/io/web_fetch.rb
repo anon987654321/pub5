@@ -7,6 +7,7 @@ module Master
   module Io
     # Fetches a URL, returns first ~16KB of content with HTML stripped to plain text.
     # Rewrites well-known sites to the most useful underlying URL:
+    #   github.com repository/issues/pulls/commits/releases → GitHub's public API
     #   github.com/.../blob/...     → raw.githubusercontent.com
     #   gist.github.com/<u>/<id>    → gist.githubusercontent.com/<u>/<id>/raw
     #   arxiv.org/abs|pdf/<id>      → ar5iv.labs.arxiv.org/html/<id>  (full text)
@@ -15,7 +16,7 @@ module Master
     class WebFetch
       TIER = :guarded
       NAME = "web_fetch".freeze
-      DESCRIPTION = "Fetch a URL -> plain text. Rewrites github/gist/arxiv/codepen URLs.".freeze
+      DESCRIPTION = "Fetch public pages and source. Rewrites GitHub repository objects, gist, arxiv and CodePen URLs.".freeze
       TIMEOUT = 15
       MAX_BYTES = 16_000
       MAX_FULL_BYTES = 4 * 1024 * 1024
@@ -30,6 +31,25 @@ module Master
       BLANK_RE = /\n{3,}/.freeze
 
       REWRITES = [
+        # Specific resources precede collection and repository fallbacks.
+        [%r{\Ahttps://github\.com/([^/]+)/([^/?#]+)/issues/(\d+)(?:[?#].*)?\z},
+         'https://api.github.com/repos/\1/\2/issues/\3'],
+        [%r{\Ahttps://github\.com/([^/]+)/([^/?#]+)/pull/(\d+)(?:[?#].*)?\z},
+         'https://api.github.com/repos/\1/\2/pulls/\3'],
+        [%r{\Ahttps://github\.com/([^/]+)/([^/?#]+)/commit/([0-9a-f]{7,40})(?:[?#].*)?\z},
+         'https://api.github.com/repos/\1/\2/commits/\3'],
+        [%r{\Ahttps://github\.com/([^/]+)/([^/?#]+)/releases/tag/([^/?#]+)(?:[?#].*)?\z},
+         'https://api.github.com/repos/\1/\2/releases/tags/\3'],
+        [%r{\Ahttps://github\.com/([^/]+)/([^/?#]+)/issues/?(?:[?#].*)?\z},
+         'https://api.github.com/repos/\1/\2/issues?state=all&per_page=20'],
+        [%r{\Ahttps://github\.com/([^/]+)/([^/?#]+)/pulls?/?(?:[?#].*)?\z},
+         'https://api.github.com/repos/\1/\2/pulls?state=all&per_page=20'],
+        [%r{\Ahttps://github\.com/([^/]+)/([^/?#]+)/commits?/?(?:[?#].*)?\z},
+         'https://api.github.com/repos/\1/\2/commits?per_page=20'],
+        [%r{\Ahttps://github\.com/([^/]+)/([^/?#]+)/releases?/?(?:[?#].*)?\z},
+         'https://api.github.com/repos/\1/\2/releases?per_page=20'],
+        [%r{\Ahttps://github\.com/([^/]+)/([^/?#]+)/?\z},
+         'https://api.github.com/repos/\1/\2'],
         [%r{\Ahttps://github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+)\z},
          'https://raw.githubusercontent.com/\1/\2/\3/\4'],
         [%r{\Ahttps://gist\.github\.com/([^/]+)/([0-9a-f]+)/?\z},

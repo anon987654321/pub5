@@ -33,7 +33,7 @@ module Master
         TEXT
 
         def react_tool_loop(selected_model, messages, sys:, stream:, image: nil, &blk)
-          react_sys = build_react_system(sys)
+          react_sys = build_react_system(sys, selected_model:)
           history = messages.dup
           empty_rounds = 0
           protocol_retries = 0
@@ -109,7 +109,7 @@ module Master
           end
           @bus&.publish("react:tool_calls", model: selected_model, step:, count: calls.size, tools: names)
           history << { role: "assistant", content: text }
-          tool_results = calls.map { |c| execute_react_tool(c["name"], c["args"] || {}) }
+          tool_results = calls.map { |c| execute_react_tool(c["name"], c["args"] || {}, selected_model:) }
           history << { role: TOOL_RESULT_ROLE, content: tool_results.join("\n\n") }
           [result, false]
         end
@@ -134,11 +134,43 @@ module Master
           Result.err("react: tools returned nothing twice in a row", category: :llm_failure)
         end
 
-        def build_react_system(base_sys)
+        # Match the native registry's profile, elevation, model-tier and
+        # file-type decisions. ReAct executes below, so the same predicate
+        # is repeated at execution time rather than trusting the model's schema.
+        def react_tool_available?(tool, selected_model: nil)
+          name = tool_registry_name(tool)
+          meta = tool_registry.fetch(name, {})
+          return false unless tool_available_for_context?(meta)
+
+          allowed = Ground::Tool::Profile.allowlist
+          model_id = selected_model || (@config.model if @config.respond_to?(:model))
+          tier = @model_router&.tier_for_model(model_id).to_s
+          runtime = tool.class.const_defined?(:NAME) ? tool.class::NAME.to_s : name
+          return false unless CLI::SubagentContext.permits?(name) && CLI::SubagentContext.permits?(runtime)
+
+          if tool.is_a?(::RubyLLM::Tool)
+            return false if allowed || !Fiber[:master_elevated] || tier == "cheap"
+
+            return true
+          end
+
+          elevated = meta.fetch("elevated", true) != false
+          return false if allowed && !allowed.include?(name)
+          return false if allowed.nil? && !Fiber[:master_elevated] && elevated
+          return false if tier == "cheap" && elevated
+
+          true
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "ReactLoop.tool_availability", tool: tool.class.name)
+          false
+        end
+
+        def build_react_system(base_sys, selected_model: nil)
           schema = @tools.filter_map do |t|
+            next unless react_tool_available?(t, selected_model:)
+
             name = tool_registry_name(t)
             meta = tool_registry.fetch(name, {})
-            next unless tool_available_for_context?(meta)
             desc = meta["description"] || name.gsub(/([A-Z])/, ' \1').strip
             rules = Array(meta["usage_rules"]).join(" ")
             "- #{name}#{param_signature(t)}: #{desc}#{rules.empty? ? "" : " Rules: #{rules}"}"
@@ -189,7 +221,7 @@ module Master
           end
         end
 
-        def execute_react_tool(requested, args)
+        def execute_react_tool(requested, args, selected_model: nil)
           tool = find_react_tool(requested)
           return unknown_tool_result(requested) unless tool
 
@@ -199,8 +231,8 @@ module Master
           unless CLI::SubagentContext.permits?(name) && CLI::SubagentContext.permits?(runtime)
             return "<tool_result name=\"#{name}\">error: tool denied for subagent #{CLI::SubagentContext.active_type}</tool_result>"
           end
-          unless Ground::Tool::Profile.allow?(name) && Ground::Tool::Profile.allow?(runtime)
-            return "<tool_result name=\"#{name}\">error: tool denied</tool_result>"
+          unless react_tool_available?(tool, selected_model:)
+            return "<tool_result name=\"#{name}\">error: tool withheld by current profile or elevation policy</tool_result>"
           end
 
           return "<tool_result name=\"#{name}\">error: args must be an object</tool_result>" unless args.is_a?(Hash)

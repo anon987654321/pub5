@@ -178,12 +178,19 @@ class TestPhantomRecovery < Minitest::Test
 
     NilTool = Class.new { def call(**) = nil }
     NonEmptyTool = Class.new { def call(**) = "tool returned evidence" }
+    class PrivilegedTool
+      def initialize(calls) = (@calls = calls)
+      def call(**)
+        @calls << :called
+        "privileged result"
+      end
+    end
 
     attr_reader :bus
 
     def initialize
       @tools = [NilTool.new]
-      @tool_registry = {}
+      @tool_registry = { "NilTool" => { "elevated" => false, "default" => true } }
       @bus = FakeBus.new
       @sends = 0
     end
@@ -317,6 +324,9 @@ class TestPhantomRecovery < Minitest::Test
       Master::Result.ok(%(<tool_call>{"name":"NonEmptyTool","args":{}}</tool_call>))
     end
 
+    harness.instance_variable_set(:@tool_registry, {
+      "NonEmptyTool" => { "elevated" => false, "default" => true },
+    })
     result = Master::CLI::SubagentContext.stub(:permits?, true) do
       Master::Ground::Tool::Profile.stub(:allow?, true) do
         harness.send(:react_tool_loop, "m", [{ role: "user", content: "inspect and report" }], sys: nil, stream: false)
@@ -330,10 +340,63 @@ class TestPhantomRecovery < Minitest::Test
     refute_includes result.message, "<tool_call>"
   end
 
+  def test_react_protocol_withholds_elevated_tools_until_the_session_is_elevated
+    calls = []
+    tool = ReactHarness::PrivilegedTool.new(calls)
+    harness = ReactHarness.new
+    harness.instance_variable_set(:@tools, [tool])
+    harness.instance_variable_set(:@tool_registry, {
+      "PrivilegedTool" => { "elevated" => true, "default" => true },
+    })
+    router = Object.new
+    router.define_singleton_method(:tier_for_model) { |id| id.to_s == "cheap/model" ? "cheap" : "strong" }
+    harness.instance_variable_set(:@model_router, router)
+
+    Fiber[:master_elevated] = false
+    prompt = Master::CLI::SubagentContext.stub(:permits?, true) do
+      harness.send(:build_react_system, "base", selected_model: "strong/model")
+    end
+    refute_includes prompt, "PrivilegedTool"
+    result = nil
+    Master::CLI::SubagentContext.stub(:permits?, true) do
+      result = harness.send(:execute_react_tool, "PrivilegedTool", {}, selected_model: "strong/model")
+    end
+    assert_match(/withheld by current profile or elevation policy/, result)
+    assert_empty calls
+
+    Fiber[:master_elevated] = true
+    cheap = Master::CLI::SubagentContext.stub(:permits?, true) do
+      harness.send(:build_react_system, "base", selected_model: "cheap/model")
+    end
+    refute_includes cheap, "PrivilegedTool"
+    result = nil
+    Master::CLI::SubagentContext.stub(:permits?, true) do
+      result = harness.send(:execute_react_tool, "PrivilegedTool", {}, selected_model: "cheap/model")
+    end
+    assert_match(/withheld by current profile or elevation policy/, result)
+    assert_empty calls
+
+    strong = Master::CLI::SubagentContext.stub(:permits?, true) do
+      harness.send(:build_react_system, "base", selected_model: "strong/model")
+    end
+    assert_includes strong, "PrivilegedTool"
+    result = nil
+    Master::CLI::SubagentContext.stub(:permits?, true) do
+      result = harness.send(:execute_react_tool, "PrivilegedTool", {}, selected_model: "strong/model")
+    end
+    assert_includes result, "privileged result"
+    assert_equal [:called], calls
+  ensure
+    Fiber[:master_elevated] = nil
+  end
+
   # The calls below are about parameters, so the turn has already oriented: source tools refuse to run
   # before a Tree or ListDir.
   def react_call(harness, tool, name, args)
     harness.instance_variable_set(:@tools, [tool])
+    harness.instance_variable_set(:@tool_registry, {
+      "SearchFiles" => { "elevated" => false, "default" => true },
+    })
     Fiber[:master_tree_seen] = true
 
     Master::CLI::SubagentContext.stub(:permits?, true) do

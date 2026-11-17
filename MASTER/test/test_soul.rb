@@ -176,11 +176,8 @@ class TestSoul < Minitest::Test
   end
 
   def test_agent_prompt_exposes_capability_catalog_only_when_handed_to_this_agent
-    catalog = Class.new
-    catalog.const_set(:NAME, "capability_catalog")
-    catalog.const_set(:DESCRIPTION, "Read-only capability discovery.")
     builder = Object.new.extend(Master::Review::Agent::PromptBuilder)
-    builder.instance_variable_set(:@tools, [catalog.new])
+    builder.instance_variable_set(:@tools, [Master::Io::CapabilityCatalog.allocate])
 
     section = builder.send(:runtime_capability_section)
     assert_includes section, "capability_catalog(action: list|search|describe)"
@@ -192,16 +189,34 @@ class TestSoul < Minitest::Test
     refute_includes section, "capability_catalog(action: list|search|describe)"
   end
 
-  def test_agent_prompt_reports_registered_runtime_tools_commands_and_voice_state
-    tool_class = Class.new
-    tool_class.const_set(:NAME, "test_probe")
-    tool_class.const_set(:DESCRIPTION, "Read-only test capability.")
+  def test_agent_prompt_lists_only_tools_available_under_current_profile_and_elevation
+    read_file = Master::Io::ReadFile.allocate
+    shell = Master::Io::Shell.allocate
     builder = Object.new.extend(Master::Review::Agent::PromptBuilder)
-    builder.instance_variable_set(:@tools, [tool_class.new])
+    builder.instance_variable_set(:@tools, [read_file, shell])
+    Fiber[:master_visitor] = false
+    Fiber[:master_elevated] = false
+
+    ordinary = builder.send(:runtime_capability_section)
+    assert_includes ordinary, "read_file:"
+    refute_match(/shell:/, ordinary)
+
+    Fiber[:master_elevated] = true
+    elevated = builder.send(:runtime_capability_section)
+    assert_match(/shell:/, elevated)
+  ensure
+    Fiber[:master_visitor] = nil
+    Fiber[:master_paired] = nil
+    Fiber[:master_elevated] = nil
+  end
+
+  def test_agent_prompt_reports_registered_runtime_tools_commands_and_voice_state
+    builder = Object.new.extend(Master::Review::Agent::PromptBuilder)
+    builder.instance_variable_set(:@tools, [Master::Io::ReadFile.allocate])
 
     section = builder.send(:runtime_capability_section)
 
-    assert_includes section, "test_probe: Read-only test capability."
+    assert_includes section, "read_file:"
     assert_includes section, "Registered operator commands:"
     assert_includes section, "/voice"
     assert_includes section, "Voice runtime:"

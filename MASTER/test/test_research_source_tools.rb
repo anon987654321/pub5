@@ -334,6 +334,32 @@ class TestResearchSourceTools < Minitest::Test
     FileUtils.rm_rf(root) if root
   end
 
+  def test_web_fetch_rewrites_public_github_objects_to_api_resources
+    tool = Master::Io::WebFetch.new(governor: allow)
+    cases = {
+      "https://github.com/rails/rails" =>
+        "https://api.github.com/repos/rails/rails",
+      "https://github.com/rails/rails/issues/123" =>
+        "https://api.github.com/repos/rails/rails/issues/123",
+      "https://github.com/rails/rails/pull/456" =>
+        "https://api.github.com/repos/rails/rails/pulls/456",
+      "https://github.com/rails/rails/commit/abc1234" =>
+        "https://api.github.com/repos/rails/rails/commits/abc1234",
+      "https://github.com/rails/rails/releases/tag/v8.0.0" =>
+        "https://api.github.com/repos/rails/rails/releases/tags/v8.0.0",
+      "https://github.com/rails/rails/issues" =>
+        "https://api.github.com/repos/rails/rails/issues?state=all&per_page=20",
+      "https://github.com/rails/rails/pulls" =>
+        "https://api.github.com/repos/rails/rails/pulls?state=all&per_page=20",
+      "https://github.com/rails/rails/blob/main/README.md" =>
+        "https://raw.githubusercontent.com/rails/rails/main/README.md",
+    }
+
+    cases.each do |source, expected|
+      assert_equal expected, tool.send(:rewrite, source), source
+    end
+  end
+
   def test_github_repo_miner_returns_bounded_ranked_metadata_without_running_code
     tool = Master::Io::GitHubRepoMiner.new(governor: allow)
     body = JSON.generate({
