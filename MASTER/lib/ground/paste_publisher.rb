@@ -28,6 +28,7 @@ module Master
       OPERATION_VERBS = /\A\s*(?:(?:please|can you|could you|would you|also|and|now|then|go on and|go ahead and|tolong)\s+)*(?:fix|repair|run|execute|check|test|deploy|redeploy|build|commit|push|audit|inspect|verify|scan|render|generate|create|update|remove|delete|migrate|restart|start|stop|publish|install|revert|rollback|preflight|finish|complete|implement|refactor|streamline|clean|optimize|analyse|analyze|assess|restore|continue|proceed|go on|carry on|jalankan|semak|baiki|uji|bina|kemas kini|padam)\b/i
       TECHNICAL_OUTPUT_VERBS = /\A\s*(?:(?:please|can you|could you|would you|also|and|now|then|go on and|go ahead and|tolong)\s+)*(?:fix|repair|run|execute|check|test|deploy|redeploy|build|commit|push|audit|inspect|verify|scan|migrate|restart|start|stop|preflight|finish|complete|implement|refactor|streamline|clean|optimize|restore|continue|proceed|go on|carry on)\b/i
 
+      NON_OPERATION_COMMANDS = %w[help capabilities laws model voice tts listen stop resume exit quit].freeze
       PRIVATE_COMMANDS = %w[
         documents memory read write ask chat email mail message forget pair
         draft letter proposal grant resume cv coverletter application
@@ -60,7 +61,7 @@ module Master
 
         if text.start_with?("/")
           name = text[/\A\/([a-z][a-z0-9_-]*)/i, 1].to_s.downcase
-          return false if name.empty? || PRIVATE_COMMANDS.include?(name)
+          return false if name.empty? || NON_OPERATION_COMMANDS.include?(name)
 
           return true
         end
@@ -68,7 +69,7 @@ module Master
         if text.start_with?("!")
           command = text.delete_prefix("!").strip
           executable = command[/\A(?:sudo\s+)?([A-Za-z0-9._\/-]+)/, 1].to_s
-          return false if executable.empty? || PRIVATE_SHELL_COMMANDS.include?(File.basename(executable))
+          return false if executable.empty?
 
           return true
         end
@@ -90,6 +91,7 @@ module Master
         if text.start_with?("!")
           command = text.delete_prefix("!").strip
           return false if command.match?(/\b(?:File\.read|File\.open|IO\.read|ENV(?:\[|\.fetch)|read_file|\.env)\b/i)
+          return false if command.match?(/\b(?:cat|less|more|head|tail|sed|awk|grep|rg|find|env|printenv|set|history)\b/i)
 
           executable = command[/\A(?:sudo\s+)?([A-Za-z0-9._\/-]+)/, 1].to_s
           return false if executable.empty? || PRIVATE_SHELL_COMMANDS.include?(File.basename(executable))

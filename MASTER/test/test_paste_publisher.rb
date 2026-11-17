@@ -150,6 +150,21 @@ class PastePublisherTest < Minitest::Test
     assert_includes report, "12 runs, 36 assertions"
   end
 
+  def test_private_commands_keep_their_receipt_without_content
+    publisher = Master::Ground::PastePublisher.new
+
+    report = publisher.build_report(
+      operation: "/write",
+      status: "success",
+      output: "private letter body",
+    )
+
+    assert_includes report, "operation: /write"
+    assert_includes report, "status: success"
+    assert_includes report, "[operation output withheld"
+    refute_includes report, "private letter body"
+  end
+
   def test_disabled_publishing_does_not_contact_a_provider
     called = false
     transport = ->(**) { called = true }
@@ -162,15 +177,18 @@ class PastePublisherTest < Minitest::Test
     refute called
   end
 
-  def test_content_bearing_commands_are_not_publicly_published
+  def test_content_bearing_commands_publish_receipts_without_their_output
     %w[/documents /memory /read /write /ask /chat /email /message /forget /pair].each do |command|
-      refute Master::Ground::PastePublisher.operation_request?(command), command
+      assert Master::Ground::PastePublisher.operation_request?(command), command
+      refute Master::Ground::PastePublisher.public_output_allowed?(command), command
     end
     assert Master::Ground::PastePublisher.operation_request?("/fix RAILS")
     assert Master::Ground::PastePublisher.operation_request?("please run the tests")
     assert Master::Ground::PastePublisher.operation_request?("also assess the Qwen proposal")
     assert Master::Ground::PastePublisher.operation_request?("go on")
     assert Master::Ground::PastePublisher.operation_request?("!zsh OPENBSD/bin/rehearse")
-    refute Master::Ground::PastePublisher.operation_request?("!cat secrets.env")
+    assert Master::Ground::PastePublisher.operation_request?("!cat secrets.env")
+    refute Master::Ground::PastePublisher.public_output_allowed?("!cat secrets.env")
+    refute Master::Ground::PastePublisher.public_output_allowed?("!zsh -c 'cat ~/.ssh/id_rsa'")
   end
 end
