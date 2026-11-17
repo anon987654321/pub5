@@ -14,6 +14,7 @@ class ReportsController < ApplicationController
       redirect_back fallback_location: root_path, alert: t("flash.content_unavailable")
       return
     end
+    raise ActiveRecord::RecordNotFound unless ModerationReport.reportable?(@target)
 
     @report = ModerationWorkflow.report!(
       reporter: Current.user,
