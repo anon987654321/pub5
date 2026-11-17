@@ -57,7 +57,7 @@ module Master
 
           slug = selected_model.delete_prefix("replicate:")
           reservation = reserve_replicate_chat_budget!(slug, messages:, sys:)
-          return reservation if reservation.is_a?(Result)
+          return reservation if reservation.respond_to?(:err?) && reservation.err?
 
           input = replicate_chat_input(slug, messages:, sys:)
           response = post_json("#{REPLICATE_API}/models/#{slug}/predictions", { input: }, headers:,
@@ -71,8 +71,6 @@ module Master
           Result.err("replicate: invalid prediction response", category: :provider_error)
         end
 
-        # The token-cap and system-prompt key names this model declares, by slug
-        # family; a model that declares neither keeps the Replicate default.
         # Reserve the maximum billable completion plus a safety-adjusted input
         # estimate before the provider sees the request. The shared process
         # budget is intentionally conservative: a timeout after POST may still
