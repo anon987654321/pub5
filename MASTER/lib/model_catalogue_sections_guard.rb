@@ -14,6 +14,7 @@ module Master
       validate_mirror_redundancy(data, errors)
       validate_cli_lanes(data, errors)
       validate_openai_compatible(data, errors)
+      validate_replicate_chat_budget(data, errors)
       validate_ollama(data, errors)
       validate_free_and_paid_tiers(data, errors)
       validate_media_lanes(data, errors)
@@ -216,6 +217,48 @@ module Master
         if value.key?("isFree")
           errors << "#{label}.keyless.isFree must be boolean" unless [true, false].include?(value["isFree"])
         end
+      end
+
+      def validate_replicate_chat_budget(data, errors)
+        rows = Array(data["replicate_chat"]).map(&:to_s)
+        budget = data["replicate_chat_budget"]
+        strict_fields(
+          budget,
+          %w[run_cap_usd call_cap_usd input_token_safety_factor prices_usd_per_million],
+          "models.yml replicate_chat_budget",
+          errors,
+        )
+        return unless budget.is_a?(Hash)
+
+        %w[run_cap_usd call_cap_usd input_token_safety_factor].each do |field|
+          value = budget[field]
+          errors << "models.yml replicate_chat_budget.#{field} must be positive" unless
+            value.is_a?(Numeric) && value.finite? && value.positive?
+        end
+        prices = budget["prices_usd_per_million"]
+        unless prices.is_a?(Hash)
+          errors << "models.yml replicate_chat_budget.prices_usd_per_million must be a mapping"
+          return
+        end
+        missing = rows - prices.keys.map(&:to_s)
+        errors << "models.yml replicate_chat_budget missing prices for #{missing.join(', ')}" unless missing.empty?
+        unknown = prices.keys.map(&:to_s) - rows
+        errors << "models.yml replicate_chat_budget has unlisted model prices: #{unknown.join(', ')}" unless unknown.empty?
+        prices.each do |model, price|
+          label = "models.yml replicate_chat_budget.prices_usd_per_million.#{model}"
+          strict_fields(price, %w[input output], label, errors)
+          next unless price.is_a?(Hash)
+
+          %w[input output].each do |direction|
+            value = price[direction]
+            errors << "#{label}.#{direction} must be positive" unless
+              value.is_a?(Numeric) && value.finite? && value.positive?
+          end
+        end
+        call_cap = budget["call_cap_usd"]
+        run_cap = budget["run_cap_usd"]
+        errors << "models.yml replicate_chat_budget.call_cap_usd must not exceed run_cap_usd" if
+          call_cap.is_a?(Numeric) && run_cap.is_a?(Numeric) && call_cap > run_cap
       end
 
       def validate_ollama(data, errors)
