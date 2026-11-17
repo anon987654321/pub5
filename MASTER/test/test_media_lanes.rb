@@ -92,6 +92,13 @@ class TestMediaLanes < Minitest::Test
     assert_in_delta 0.32, Lanes.send(:estimate, lite, "", seconds: 8, today: Date.new(2027, 1, 1)), 0.001
     assert_in_delta 0.24, Lanes.send(:estimate, fast, "", seconds: 8, today: Date.new(2026, 11, 17)), 0.001
     assert_in_delta 0.48, Lanes.send(:estimate, fast, "", seconds: 8, today: Date.new(2027, 1, 1)), 0.001
+    assert_in_delta 0.45, Lanes.send(
+      :estimate, fast, "", input: { "duration" => 15 }, today: Date.new(2026, 11, 17)
+    ), 0.001
+    assert_in_delta 0.90, Lanes.send(
+      :estimate, fast, "", input: { "duration" => 15, "reference_video_urls" => ["https://example.test/ref.mp4"] },
+      today: Date.new(2026, 11, 17)
+    ), 0.001
     assert_in_delta 0.69, Lanes.send(
       :estimate, fast, "", seconds: 8,
       input: { "reference_video_urls" => ["https://example.test/ref.mp4"] },
