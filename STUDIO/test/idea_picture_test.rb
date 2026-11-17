@@ -332,6 +332,22 @@ class TestIdeaPictureOutput < Minitest::Test
                  Studio::Visual::IdeaPicture::FILM_INPUT_KEYS.fetch("minimax/h3-highspeed")
   end
 
+  def test_h3_highspeed_film_input_uses_first_frame_without_resolution
+    Dir.mktmpdir do |dir|
+      still = File.join(dir, "still.jpg")
+      File.write(still, "image")
+      client = Object.new
+      client.define_singleton_method(:upload_file) { |path, subject:| "https://example.test/#{File.basename(path)}?s=#{subject}" }
+      picture = Studio::Visual::IdeaPicture.new(subject: "probe", client:, directory: dir)
+
+      input = picture.send(:film_input, "slow turn", still, 2)
+      assert_equal "https://example.test/still.jpg?s=probe", input[:first_frame_image]
+      assert_equal 4, input[:duration]
+      refute input.key?(:resolution), "Highspeed is fixed at 768P"
+      refute input.key?(:image), "H3 Highspeed takes first_frame_image"
+    end
+  end
+
   def test_film_input_uses_the_first_frame_and_clamps_duration_to_h3_bounds
     Dir.mktmpdir do |dir|
       still = File.join(dir, "still.jpg")
