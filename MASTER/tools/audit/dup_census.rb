@@ -21,7 +21,7 @@
 # answer byte-identical pixels by design. Those PNGs are distinct evidence per
 # host — collapsing them to one file would destroy the per-app baseline the
 # tool checks against — so they are priced here, not deduplicated. They account
-# for 13 of the 39 sets.
+# for 13 of the 43 sets.
 
 require "digest"
 require "yaml"
