@@ -27,6 +27,29 @@
     <div class="field"><%= f.label :delivery_fee_cents, t("takeaway.delivery_fee") %><%= f.number_field :delivery_fee_cents, inputmode: "numeric" %></div>
     <div class="field"><%= f.label :min_order_cents, t("takeaway.min_order") %><%= f.number_field :min_order_cents, inputmode: "numeric" %></div>
     <div class="field"><%= f.label :delivery_radius_km, t("takeaway.delivery_radius") %><%= f.number_field :delivery_radius_km, min: 1, max: Takeaway::Restaurant::MAX_DELIVERY_RADIUS_KM, inputmode: "numeric" %></div>
+
+    <fieldset class="field opening-hours-fields">
+      <legend><%= t("takeaway.opening_hours_heading") %></legend>
+      <% weekdays = [[1, :monday], [2, :tuesday], [3, :wednesday], [4, :thursday], [5, :friday], [6, :saturday], [0, :sunday]] %>
+      <% weekdays.each do |weekday, day_key| %>
+        <% hour = @opening_hours&.fetch(weekday, nil) %>
+        <% submitted = @opening_hours_input&.fetch(weekday.to_s, {}) || {} %>
+        <% opens_value = submitted["opens_at"].presence || (hour && format("%02d:%02d", hour.opens_minute / 60, hour.opens_minute % 60)) %>
+        <% closes_value = submitted["closes_at"].presence || (hour && format("%02d:%02d", (hour.closes_minute % Takeaway::OpeningHour::DAY_MINUTES) / 60, hour.closes_minute % 60)) %>
+        <% closed = submitted.key?("closed") ? ActiveModel::Type::Boolean.new.cast(submitted["closed"]) : hour.nil? %>
+        <% closed_id = "opening-hours-#{weekday}-closed" %>
+        <div class="opening-hours-row">
+          <span class="opening-hours-day"><%= t("takeaway.weekdays.#{day_key}") %></span>
+          <%= time_field_tag "opening_hours[#{weekday}][opens_at]", opens_value, aria: { label: t("takeaway.weekdays.#{day_key}") + " " + t("takeaway.opens_at") } %>
+          <%= time_field_tag "opening_hours[#{weekday}][closes_at]", closes_value, aria: { label: t("takeaway.weekdays.#{day_key}") + " " + t("takeaway.closes_at") } %>
+          <%= check_box_tag "opening_hours[#{weekday}][closed]", "1", closed, id: closed_id %>
+          <%= label_tag closed_id, t("takeaway.closed_all_day") %>
+        </div>
+      <% end %>
+      <% if @opening_hours_error.present? %>
+        <p class="form-error" role="alert"><%= @opening_hours_error %></p>
+      <% end %>
+    </fieldset>
     <div class="field field--check"><%= f.check_box :active %><%= f.label :active, t("takeaway.active") %></div>
     <%= render "takeaway/restaurants/place_field", f: f %>
     <div class="field"><%= f.submit t("takeaway.save"), class: "button button-primary" %></div>
