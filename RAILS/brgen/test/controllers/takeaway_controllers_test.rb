@@ -319,7 +319,7 @@ class TakeawayControllersTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_includes response.body, I18n.t("takeaway.opening_hours_invalid_time")
-    assert_empty draft.opening_hours
+    assert_equal 0, Takeaway::OpeningHour.where(restaurant_id: draft.id).count
   end
 
   test "a kitchen cannot publish until it has an available menu item and opening hours" do
