@@ -198,7 +198,15 @@ module Master
 
         def create_new_run(target:, files:, max_passes:, budget_seconds:, data:)
           now = Time.now.utc
-          run = {
+          run = new_run_record(target, files, max_passes, budget_seconds, now)
+          append_new_run(data, run)
+          persist(data)
+          emit("fix:start", run_id: run["id"], target: run["target"])
+          run.merge("resumed" => false, "remaining_seconds" => Integer(budget_seconds).to_f)
+        end
+
+        def new_run_record(target, files, max_passes, budget_seconds, now)
+          {
             "id" => SecureRandom.hex(10),
             "state" => "active",
             "target" => relative(target),
@@ -212,11 +220,11 @@ module Master
             "process_token" => self.class.instance_id,
             "passes" => [],
           }
+        end
+
+        def append_new_run(data, run)
           data["runs"] << run
           data["runs"] = data["runs"].last(MAX_RUNS)
-          persist(data)
-          emit("fix:start", run_id: run["id"], target: run["target"])
-          run.merge("resumed" => false, "remaining_seconds" => Integer(budget_seconds).to_f)
         end
 
         def active
