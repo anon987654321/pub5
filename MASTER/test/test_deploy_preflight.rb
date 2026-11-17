@@ -177,6 +177,15 @@ class DeployPreflightTest < Minitest::Test
     assert_includes command, "vps-deploy rails"
   end
 
+  def test_workstation_redeploy_accepts_inventory_derived_groups_without_a_second_allowlist
+    source = File.read(File.expand_path("../bin/redeploy", __dir__))
+
+    assert_includes source, "MASTER/bin/redeploy rails"
+    assert_includes source, "*[!a-z0-9_-]*"
+    assert_includes source, 'exec "$bin_dir/operator" vps deploy "$app" --remote'
+    refute_includes source, "all|master|brgen|amber|bsdports|mrdamascy"
+  end
+
   def test_remote_command_pins_the_sha_and_attests_the_preflight
     ok, command = remote
     assert ok

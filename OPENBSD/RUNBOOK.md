@@ -846,12 +846,17 @@ Rails; `rails_test` on the box is where the remaining failures live.
 
 ```zsh
 cd /home/dev/pub5 && git pull --ff-only
-zsh OPENBSD/bin/vps-deploy brgen       # canonical serial deploy
-zsh OPENBSD/bin/vps-deploy amber       # or: all
+zsh OPENBSD/bin/vps-deploy rails      # every active RAILS app, serially
+zsh OPENBSD/bin/vps-deploy brgen      # one app
+zsh OPENBSD/bin/vps-deploy all       # host mirror + MASTER + every active RAILS app
 ruby OPENBSD/checks/health_check.rb --public --all-ready-apps
 ```
 
-Use only `zsh OPENBSD/bin/vps-deploy <app|all>` for production deploys (runs as root; re-exec via doas from dev).
+Use only `zsh OPENBSD/bin/vps-deploy <app|group|all>` for production deploys
+(runs as root; re-exec via doas from dev). Group membership is derived from
+`deploy_root` in `RAILS/apps.yml`; the `rails` group excludes MASTER and
+does not apply the host mirror. The full `all` target applies the reviewed
+`OPENBSD/mirror/**` payload before the serial application deploy.
 The compatibility `zsh RAILS/deploy.sh` delegates to it and refuses UID 0.
 The individual `RAILS/<app>/<app>.sh` entrypoints also refuse root because they
 source code from the dev-writable checkout. Do not run them with `doas`.

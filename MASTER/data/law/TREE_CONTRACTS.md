@@ -36,12 +36,15 @@ rendered-check semantics, deploy blockers, subdomain map) and
 
 `RAILS/_*.sh` files (`_assets`, `_bundle`, `_core`, `_database`,
 `_deploy`, `_runtime_check`, `_service`) are libraries of sourced shell
-functions, not entrypoints. Each app's `deploy.sh` sources them; `MASTER/bin/redeploy` is the operator's workstation entry; `apps.yml` is the
-canonical matrix and `apps.horizon.yml` the planned one — the two must
-not drift without a session note. An app counts as first-class when it
-has an `apps.yml` entry, a `deploy_root` and (when it reaches the VPS) a
-`deploy_script`; `mrdamascy` is first-class as of 2026-11-02 with its
-deploy lane still pending.
+functions, not entrypoints. Each active app's named deploy script sources
+them. `MASTER/bin/redeploy` is the workstation entry: `all` selects the
+full production pass, while `rails` selects the inventory-derived RAILS
+namespace. Target validation belongs to the preflight and
+`Deploy::Inventory`, not a second allowlist in the wrapper. `apps.yml` is
+the canonical matrix and `apps.horizon.yml` the planned one — the two must
+not drift without a session note. An app counts as first-class when it has an
+`apps.yml` entry, a `deploy_root` and a `deploy_script`; `mrdamascy` now
+has a registered production deploy lane.
 
 ### Commands
 
@@ -52,7 +55,7 @@ ruby MASTER/checks/runner.rb production     # one check, or a composite
 ruby RAILS/test/<name>_test.rb            # one contract test — bare ruby, no bundle
 cd RAILS/<app> && bin/ci                  # per-app RuboCop, Brakeman, bundler-audit, tests
 cd RAILS/<app> && bin/rails test test/models/item_test.rb:42   # one app test
-MASTER/bin/operator triangle up                     # boot all 4 surfaces on the ports checks probe
+MASTER/bin/operator triangle up                     # boot all 5 active production surfaces
 npm ci && npm run build:pwa               # rebuild the Workbox service worker
 ```
 
@@ -532,8 +535,9 @@ you the truth — don't work around it, find out what's actually missing.
 
 ### Deploy state
 
-- `RAILS/apps.yml` registers master beside brgen, amber and bsdports, with
-  its port and domain. It is not a copy-tree app:
+- `RAILS/apps.yml` registers the active production targets master, brgen,
+  mrdamascy, amber and bsdports, with their ports and domains. MASTER is not
+  a copy-tree app:
   `zsh OPENBSD/bin/vps-deploy master` runs `OPENBSD/bin/vps_deploy_master.sh`,
   which pulls and restarts it in place under `/home/dev/pub5/MASTER/web`.
 - `rcctl restart master` runs a real `rc_pre()`: kills stale processes,
@@ -567,8 +571,9 @@ can.
 
 ### The VPS is genuinely small
 
-1 vCPU, ~1GB RAM, running `master`, `brgen`, `amber`, `bsdports`
-concurrently. A load average of 1.0 here means the single core is busy — not
+1 vCPU, ~1GB RAM. The production deploy inventory is `master`, `brgen`,
+`mrdamascy`, `amber` and `bsdports`. A load average of 1.0 here means the
+single core is busy — not
 distress. `resource_guard.sh` (cron, every 5 min) sheds `amber` then
 `bsdports` under sustained pressure and restores them when it clears. It is
 armed: the pause flag `/var/db/pub5_all_apps` is absent on vm23, and this
@@ -587,15 +592,21 @@ in `OPENBSD/data/operator.yml`. This section is the sharp edges that have
 burned agents in this repo — read it before touching the deploy pipeline,
 not after.
 
-### The fleet is four, and master is the one that gets dropped
+### The full deploy includes MASTER and every active RAILS app
 
-`bin/vps-deploy all` deploys `master brgen amber bsdports`, in that order,
-halting the pass on the first failure. Prefer it over four hand-typed runs.
+`bin/vps-deploy all` first applies the reviewed `OPENBSD/mirror/**` payload,
+then deploys every active entry from `RAILS/apps.yml` in its serial
+`deploy_order` (normally `master brgen mrdamascy amber bsdports`), halting
+the pass on the first failure. Prefer it over five hand-typed runs.
+`bin/vps-deploy rails` and `MASTER/bin/redeploy rails` select only the
+inventory-derived RAILS namespace; they deploy the active app roots and
+their shared engine where applicable, not every document, archive or planned
+project under `RAILS/`. The `rails` group does not apply the host mirror or
+include MASTER. Use `all` for the full production pass.
 
-Until it existed there was no way to say "deploy everything", so the set
-lived in whoever was typing — and master is not under `/home/*/app`, so an
-operator enumerating the Rails apps does not see it and leaves it behind. A
-pull moves the checkout for everything; only a deploy makes any of it live.
+A checkout pull moves source for everything; only the deploy pass makes the
+registered production targets live. The inventory is the authority for what
+is active, and `apps.horizon.yml` is not a deploy list.
 
 The order is load-bearing, not alphabetical. Every deploy sheds amber and
 bsdports: they land in `rcctl failed` with ports 61352/47312 closed while

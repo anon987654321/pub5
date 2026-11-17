@@ -26,11 +26,18 @@ own renderer.
 **Redeploy production (one command, from a clean `origin/main` checkout):**
 
 ```zsh
-MASTER/bin/redeploy                 # wait until done, then state + canary
+MASTER/bin/redeploy                 # full production deploy, wait + state + canary
+MASTER/bin/redeploy rails           # all active RAILS apps, serially
 MASTER/bin/redeploy brgen           # one app
 MASTER/bin/redeploy --follow        # attach to the box tmux session
 MASTER/bin/redeploy --detach        # start and return immediately
 ```
+
+The default `all` applies the reviewed `OPENBSD/mirror/**` payload, then deploys
+every active production entry registered in `RAILS/apps.yml`, including
+MASTER's in-place web app. The inventory-derived `rails` group deploys only
+active RAILS app roots (and their shared engine where applicable); it does not
+apply the host mirror or deploy MASTER.
 
 Hands-off path: local preflight, pin SHA, tmux on vm23, `vps-deploy` as root
 (git as `dev`), stream progress until finished, then `vps-state` + public canary.
