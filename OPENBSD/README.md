@@ -100,7 +100,12 @@ the uploaded files, and `bin/dr-pull --drill` restores the newest pull into a
 scratch directory and reads it back. A healed symptom must not stay quiet. `usr/local/bin/pub4-alert` records
 durable fault transitions in `/var/log/pub4-alerts.log`; its minute CPU watcher
 samples five one-second `vmstat` intervals, alerts on sustained 80% CPU (or
-critical 95%), and writes a heartbeat that the five-minute watch checks.
+critical 95%), and writes a heartbeat that the five-minute watch checks. That
+same watch records a uniquely keyed alert when a fleet deploy receipt remains
+pending after its owner PID disappears. `bin/vps-state --json` includes the
+pending receipt IDs, stage, pinned SHA, original service snapshot and log path;
+plain output shows the owner PID state and directs the operator to
+`vps-deploy recover --plan`. Recovery itself remains explicit and operator-driven.
 Sustained pressure enables the existing optional-app shedding ladder only;
 MASTER and Brgen are never automatically killed or restarted. `bin/vps-state`
 prints recent alerts next to each deploy stamp. `bin/domain_watch.rb` asks the registries which domains are still
