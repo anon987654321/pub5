@@ -96,6 +96,9 @@ class EngineRenderSmokeTest < ActionDispatch::IntegrationTest
     get "/"
     assert_response :success
     assert_select "div.radio-tunnel[data-controller='radio-tunnel']", 1
+    assert_select "canvas#radio-canvas[aria-label]", 1
+    assert_select ".radio-overlay:not([hidden])", 1
+    assert_select ".radio-now-playing [data-radio-tunnel-target='trackDisplay']", 1
     assert_select "button[data-action='click->radio-tunnel#openLibrary']", 1
     assert_select ".radio-nav a[href='/hosted_tracks']", 1
 
