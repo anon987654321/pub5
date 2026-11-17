@@ -17,6 +17,8 @@ en:
       removed: Removed
     verticals:
       restaurants: "Restaurants and takeaway"
+      groceries: "Grocery stores"
+      wholesale: "Wholesale and foodservice"
     stores:
       no_listings: Nothing for sale here right now
       no_listings_body: This shop has no live listings. Look again later, or browse the marketplace.
