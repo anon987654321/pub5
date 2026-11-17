@@ -39,11 +39,17 @@ class TestVisualConstitution < Minitest::Test
     law = Law.definitions.fetch(:OPENBSD_DMESG_CONSOLE_STYLE)
 
     assert_includes law.source, "xsa/openbsd-dmesgs"
-    assert_includes law.fix, "one concise factual line per event"
-    assert_includes law.ask, "Distinguish configured from observed health"
-    assert_includes law.ask, "the presence of a URL, token, executable or saved preference alone does not establish reachability or readiness"
+    assert_includes law.fix, "one concise chronological line per operational fact"
+    assert_includes law.ask, "every MASTER output surface"
+    %w[CLI REPL chat streamed tool voice web /fix persisted].each do |surface|
+      assert_includes law.ask, surface
+    end
+    assert_includes law.ask, "same event meaning and severity"
+    assert_includes law.ask, "Conversational prose is not forced into kernel syntax"
+    assert_includes law.ask, "a URL, token, executable or saved preference alone does not establish reachability or readiness"
+    assert_includes law.fix, "single operational vocabulary and source"
     assert_includes law.fix, "Report configured, discovered, reachable, selected and successful as distinct evidence states"
-    assert_includes law.fix, "Do not add another event, status or logging framework"
+    assert_includes law.fix, "do not create parallel status vocabularies or logging frameworks"
   end
 
   def test_visual_rubric_places_console_style_above_prompt_trends
