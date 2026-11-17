@@ -307,6 +307,9 @@ reap_stale_lock() {
     return 1
   fi
   rm -f -- "$retired_lock/owner"
+  # A process killed before the atomic owner rename can leave only this temp.
+  # Remove it with the quarantined lock so crash recovery does not leak dirs.
+  rm -f -- "$retired_lock"/owner.tmp.*(N)
   rmdir "$retired_lock/reaping" 2>/dev/null || true
   rmdir "$retired_lock" 2>/dev/null || true
   return 0
