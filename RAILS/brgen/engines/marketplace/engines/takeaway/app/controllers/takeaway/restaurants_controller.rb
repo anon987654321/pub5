@@ -142,7 +142,7 @@ class Takeaway::RestaurantsController < Takeaway::BaseController
   end
 
   def minute_from_time!(value)
-    match = value.match(/\\A([01]\\d|2[0-3]):([0-5]\\d)\\z/)
+    match = value.match(/\A([01]\d|2[0-3]):([0-5]\d)\z/)
     raise ArgumentError, t("takeaway.opening_hours_invalid_time") unless match
 
     match[1].to_i * 60 + match[2].to_i
