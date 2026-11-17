@@ -887,6 +887,18 @@ if (( lock_owner )) && [[ $app != recover ]]; then
   }
 fi
 
+# A parent can be killed while a child app deploy is still unwinding. The
+# receipt identifies the parent, so also refuse while another deployer process
+# is visible. Exclude this recovery command by its own PID.
+other_deploy_processes() {
+  local pid
+  local -a candidates
+  candidates=(${(f)"$(pgrep -f 'OPENBSD/bin/vps-deploy' 2>/dev/null || true)"})
+  for pid in $candidates; do
+    [[ $pid == "$" ]] || print -r -- "$pid"
+  done
+}
+
 # Operator-driven recovery is intentionally separate from deploy. It never pulls,
 # checks out code, runs migrations or replays a deploy; it restores only the
 # service set recorded as running before the interrupted run.
@@ -916,6 +928,12 @@ if [[ $app == recover ]]; then
       fi
       if [[ $snapshot_recorded != true ]]; then
         print "vps-deploy: INCOMPLETE $run_id target=$target stage=$stage - service snapshot is not complete; do not apply"
+        continue
+      fi
+      other_pids=$(other_deploy_processes)
+      if [[ -n $other_pids ]]; then
+        print "vps-deploy: AMBIGUOUS $run_id - another deployer process is still present; do not recover"
+        print -r -- "  other deployer PID(s): $other_pids"
         continue
       fi
       if ps -p "$owner_pid" >/dev/null 2>&1; then
@@ -962,6 +980,12 @@ if [[ $app == recover ]]; then
     print -u2 "vps-deploy: receipt belongs to $owner_host; recovery must run on that host"
     exit 1
   }
+  other_pids=$(other_deploy_processes)
+  [[ -z $other_pids ]] || {
+    print -u2 "vps-deploy: another deployer process is still present; refusing recovery"
+    print -u2 "  other deployer PID(s): $other_pids"
+    exit 75
+  }
   if ps -p "$owner_pid" >/dev/null 2>&1; then
     current_identity=$(lock_process_identity "$owner_pid") || {
       print -u2 "vps-deploy: owner PID exists but its identity cannot be checked; refusing recovery"
@@ -980,7 +1004,7 @@ if [[ $app == recover ]]; then
     IFS='|' read -r kind one two <<< "$recovery_lines[$i]"
     case $kind in
       SERVICES) VPS_DEPLOY_STARTED=$one ;;
-      ORDER) DEPLOY_ALL_DEGRADED=(${@=one}) ;;
+      ORDER) DEPLOY_ALL_DEGRADED=(${=one}) ;;
       PORT) deploy_ports[$one]=$two ;;
     esac
   done
