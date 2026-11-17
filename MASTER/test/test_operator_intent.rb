@@ -91,6 +91,12 @@ class OperatorIntentTest < Minitest::Test
              "an explicit production destination remains deterministic"
       assert intent.send(:repository_wide_deployment?, "redeploy OPENBSD, RAILS and MASTER/web to vm23", inventory),
              "the explicit three-part production stack is the canonical full release"
+      direct = Master::CLI::OperatorIntent.new(root:, agent: Object.new).call(
+        "redeploy OPENBSD, RAILS and MASTER/web to vm23"
+      )
+      assert_equal :deploy, direct.status
+      assert_equal "all", direct.target
+      assert_equal %w[control_web city_app wardrobe_app private_service], direct.selected
       refute intent.send(:repository_wide_deployment?, "redeploy OPENBSD and RAILS to vm23", inventory),
              "a partial stack must not expand into a full production release"
       refute intent.send(:repository_wide_deployment?, "redeploy OPENBSD, RAILS and MASTER/web to staging", inventory),
