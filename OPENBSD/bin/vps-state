@@ -217,7 +217,7 @@ def deploy_recovery_status
       status: record.fetch("status"),
       stage: record.fetch("stage"),
       pid: record.fetch("pid"),
-      owner_state: pid_alive?(record["pid"]) ? "present" : "gone",
+      pid_state: pid_alive?(record["pid"]) ? "present" : "gone",
       snapshot: record["snapshot_recorded"] ? "complete" : "incomplete",
       pinned_sha: record["pinned_sha"] || "unknown",
       run_log: record.fetch("run_log"),
@@ -360,7 +360,7 @@ else
       puts Deploy::Dmesg.line(
         "recovery0",
         run[:run_id],
-        "target=#{run[:target]} status=#{run[:status]} owner=#{run[:owner_state]} snapshot=#{run[:snapshot]} stage=#{run[:stage]} pid=#{run[:pid]} sha=#{run[:pinned_sha]}",
+        "target=#{run[:target]} status=#{run[:status]} owner_pid_state=#{run[:pid_state]} snapshot=#{run[:snapshot]} stage=#{run[:stage]} pid=#{run[:pid]} sha=#{run[:pinned_sha]}",
       )
       puts Deploy::Dmesg.line("recovery0", run[:run_id], "log=#{run[:run_log]} inspect=zsh OPENBSD/bin/vps-deploy recover --plan")
     end
