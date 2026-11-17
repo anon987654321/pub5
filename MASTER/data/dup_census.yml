@@ -1,42 +1,182 @@
 ---
-duplicate_sets: 43
+# Manually priced against main at 534ae0094af0 on 2026-11-18.
+# All tracked files remain in the census; no path exclusions were added.
+# These exact copies have distinct deployment or evidence owners:
+# - Brgen Takeaway and standalone Mr Damascy each need their own brand and
+#   menu assets because neither app release contains the other app's tree.
+# - MASTER route baselines and RAILS review screenshots retain app/page
+#   identity; the review gallery folds identical pixels into named aliases.
+# - Amber design plates are sources; matching app/assets and public files are
+#   the reviewed runtime/export forms.
+# - Rails app-local migrations, schemas, boot/config and tests execute against
+#   independent application/database roots. Shared migrations are inert under
+#   the one-migration-per-app contract.
+# - BIZ/tools HTML files are editable build bases; BIZ/<plan>/ HTML files are
+#   the reader-facing published copies or retained historical deliverables.
+# - The remaining MASTER/OPENBSD and RAILS copies preserve runtime boundaries
+#   or per-application contracts; they are not shared by a common deploy root.
+# This ceiling is not permission for further copies: any additional exact
+# duplicate group fails the existing ratchet until reviewed and reduced.
+duplicate_sets: 161
 duplicate_members:
-- MASTER/checks/data/route_screenshots/amber/recede_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/brgen/recede_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/bsdports/recede_historical_location__loopback__1280.png
-- MASTER/checks/data/route_screenshots/amber/recede_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/brgen/recede_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/bsdports/recede_historical_location__loopback__390.png
-- MASTER/checks/data/route_screenshots/amber/recede_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/brgen/recede_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/bsdports/recede_historical_location__loopback__768.png
-- MASTER/checks/data/route_screenshots/amber/refresh_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/brgen/refresh_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/bsdports/refresh_historical_location__loopback__1280.png
-- MASTER/checks/data/route_screenshots/amber/refresh_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/brgen/refresh_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/bsdports/refresh_historical_location__loopback__390.png
-- MASTER/checks/data/route_screenshots/amber/refresh_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/brgen/refresh_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/bsdports/refresh_historical_location__loopback__768.png
-- MASTER/checks/data/route_screenshots/amber/resume_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/brgen/resume_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/bsdports/resume_historical_location__loopback__1280.png
-- MASTER/checks/data/route_screenshots/amber/resume_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/brgen/resume_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/bsdports/resume_historical_location__loopback__390.png
-- MASTER/checks/data/route_screenshots/amber/resume_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/brgen/resume_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/bsdports/resume_historical_location__loopback__768.png
-- MASTER/checks/data/route_screenshots/amber/up__loopback__1280.png | MASTER/checks/data/route_screenshots/brgen/up__loopback__1280.png | MASTER/checks/data/route_screenshots/bsdports/up__loopback__1280.png
-- MASTER/checks/data/route_screenshots/amber/up__loopback__390.png | MASTER/checks/data/route_screenshots/brgen/up__loopback__390.png | MASTER/checks/data/route_screenshots/bsdports/up__loopback__390.png
-- MASTER/checks/data/route_screenshots/amber/up__loopback__768.png | MASTER/checks/data/route_screenshots/brgen/up__loopback__768.png | MASTER/checks/data/route_screenshots/bsdports/up__loopback__768.png
-- MASTER/lib/operator/domain_signals.rb | OPENBSD/lib/domain_signals.rb
-- MASTER/web/Rakefile | RAILS/amber/Rakefile | RAILS/bsdports/Rakefile | RAILS/mrdamascy/Rakefile
-- RAILS/__shared/app/assets/images/vipps/vipps-wordmark.svg | RAILS/mrdamascy/app/assets/images/vipps/vipps-wordmark.svg
-- RAILS/amber/config/storage.yml | RAILS/brgen/config/storage.yml | RAILS/bsdports/config/storage.yml
-- RAILS/__shared/db/migrate/20260625140000_create_anonymous_post_quotas.rb | RAILS/brgen/db/migrate/20260625140000_create_anonymous_post_quotas.rb
-- RAILS/amber/app/views/encounters/waiting.html.erb | RAILS/brgen/app/views/encounters/waiting.html.erb
-- RAILS/amber/config.ru | RAILS/bsdports/config.ru | RAILS/mrdamascy/config.ru
-- RAILS/amber/config/boot.rb | RAILS/brgen/config/boot.rb | RAILS/bsdports/config/boot.rb | RAILS/mrdamascy/config/boot.rb
-- RAILS/amber/config/cable.yml | RAILS/brgen/config/cable.yml | RAILS/mrdamascy/config/cable.yml
-- RAILS/amber/config/cache.yml | RAILS/brgen/config/cache.yml | RAILS/bsdports/config/cache.yml | RAILS/mrdamascy/config/cache.yml
-- RAILS/amber/config/queue.yml | RAILS/bsdports/config/queue.yml
-- RAILS/amber/db/migrate/20260504180350_create_users.rb | RAILS/brgen/db/migrate/20260311162114_create_users.rb | RAILS/bsdports/db/migrate/20260501020807_create_users.rb
-- RAILS/amber/db/migrate/20260504180352_create_sessions.rb | RAILS/brgen/db/migrate/20260311162121_create_sessions.rb | RAILS/bsdports/db/migrate/20260501020818_create_sessions.rb
-- RAILS/amber/db/migrate/20260709120000_add_shared_auth_fields_to_users.rb | RAILS/brgen/db/migrate/20260709120000_add_shared_auth_fields_to_users.rb | RAILS/bsdports/db/migrate/20260709120000_add_shared_auth_fields_to_users.rb
-- RAILS/amber/db/migrate/20260811120000_create_outbound_clicks.rb | RAILS/brgen/db/migrate/20260811120000_create_outbound_clicks.rb | RAILS/bsdports/db/migrate/20260811120000_create_outbound_clicks.rb
-- RAILS/amber/db/migrate/20260825121000_index_outbound_clicks_on_user.rb | RAILS/brgen/db/migrate/20260825121000_index_outbound_clicks_on_user.rb | RAILS/bsdports/db/migrate/20260825121000_index_outbound_clicks_on_user.rb
-- RAILS/amber/db/migrate/20260915120000_add_link_embed_to_posts.rb | RAILS/brgen/db/migrate/20260915120000_add_link_embed_to_posts.rb
-- RAILS/amber/db/migrate/20261031120000_create_billing_subscriptions.rb | RAILS/brgen/db/migrate/20261031120000_create_billing_subscriptions.rb
-- RAILS/amber/db/migrate/20261102160000_remove_affiliate_visitor_identifiers.rb | RAILS/brgen/db/migrate/20261102160000_remove_affiliate_visitor_identifiers.rb
-- RAILS/amber/test/importmap_external_hosts_test.rb | RAILS/brgen/test/importmap_external_hosts_test.rb | RAILS/bsdports/test/importmap_external_hosts_test.rb
-- RAILS/amber/test/models/destroy_cascade_test.rb | RAILS/bsdports/test/models/destroy_cascade_test.rb
-- RAILS/brgen/app/javascript/controllers/application.js | RAILS/bsdports/app/javascript/controllers/application.js
-- RAILS/brgen/config/queue.yml | RAILS/mrdamascy/config/queue.yml
-- RAILS/brgen/db/cable_schema.rb | RAILS/bsdports/db/cable_schema.rb
-- RAILS/brgen/db/cache_schema.rb | RAILS/bsdports/db/cache_schema.rb
-- RAILS/brgen/test/lib/asset_resolver_test.rb | RAILS/mrdamascy/test/asset_resolver_test.rb
-- RAILS/brgen/engines/radio/playlist/public/tunnel.html | RAILS/brgen/engines/radio/public/tunnel.html
+- "BIZ/future_healthcare_os/future_healthcare_os.html | BIZ/tools/future_healthcare_os.html"
+- "BIZ/future_nato_weapons/future_nato_weapons.html | BIZ/tools/future_nato_weapons.html"
+- "MASTER/checks/data/route_screenshots/amber/recede_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/brgen/recede_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/bsdports/recede_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/mrdamascy/recede_historical_location__loopback__1280.png"
+- "MASTER/checks/data/route_screenshots/amber/recede_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/brgen/recede_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/bsdports/recede_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/mrdamascy/recede_historical_location__loopback__390.png"
+- "MASTER/checks/data/route_screenshots/amber/recede_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/brgen/recede_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/bsdports/recede_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/mrdamascy/recede_historical_location__loopback__768.png"
+- "MASTER/checks/data/route_screenshots/amber/refresh_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/brgen/refresh_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/bsdports/refresh_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/mrdamascy/refresh_historical_location__loopback__1280.png"
+- "MASTER/checks/data/route_screenshots/amber/refresh_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/brgen/refresh_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/bsdports/refresh_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/mrdamascy/refresh_historical_location__loopback__390.png"
+- "MASTER/checks/data/route_screenshots/amber/refresh_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/brgen/refresh_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/bsdports/refresh_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/mrdamascy/refresh_historical_location__loopback__768.png"
+- "MASTER/checks/data/route_screenshots/amber/resume_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/brgen/resume_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/bsdports/resume_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/mrdamascy/resume_historical_location__loopback__1280.png"
+- "MASTER/checks/data/route_screenshots/amber/resume_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/brgen/resume_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/bsdports/resume_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/mrdamascy/resume_historical_location__loopback__390.png"
+- "MASTER/checks/data/route_screenshots/amber/resume_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/brgen/resume_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/bsdports/resume_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/mrdamascy/resume_historical_location__loopback__768.png"
+- "MASTER/checks/data/route_screenshots/amber/up__loopback__1280.png | MASTER/checks/data/route_screenshots/brgen/up__loopback__1280.png | MASTER/checks/data/route_screenshots/bsdports/up__loopback__1280.png | MASTER/checks/data/route_screenshots/master/up__loopback__1280.png | MASTER/checks/data/route_screenshots/mrdamascy/up__loopback__1280.png"
+- "MASTER/checks/data/route_screenshots/amber/up__loopback__390.png | MASTER/checks/data/route_screenshots/brgen/up__loopback__390.png | MASTER/checks/data/route_screenshots/bsdports/up__loopback__390.png | MASTER/checks/data/route_screenshots/master/up__loopback__390.png | MASTER/checks/data/route_screenshots/mrdamascy/up__loopback__390.png"
+- "MASTER/checks/data/route_screenshots/amber/up__loopback__768.png | MASTER/checks/data/route_screenshots/brgen/up__loopback__768.png | MASTER/checks/data/route_screenshots/bsdports/up__loopback__768.png | MASTER/checks/data/route_screenshots/master/up__loopback__768.png | MASTER/checks/data/route_screenshots/mrdamascy/up__loopback__768.png"
+- "MASTER/checks/data/route_screenshots/mrdamascy/__loopback__1280.png | MASTER/checks/data/route_screenshots/mrdamascy/menu__loopback__1280.png"
+- "MASTER/lib/operator/domain_signals.rb | OPENBSD/lib/domain_signals.rb"
+- "MASTER/web/Rakefile | RAILS/amber/Rakefile | RAILS/bsdports/Rakefile | RAILS/mrdamascy/Rakefile"
+- "RAILS/__shared/app/assets/images/vipps/vipps-wordmark.svg | RAILS/mrdamascy/app/assets/images/vipps/vipps-wordmark.svg"
+- "RAILS/__shared/db/migrate/20260625140000_create_anonymous_post_quotas.rb | RAILS/brgen/db/migrate/20260625140000_create_anonymous_post_quotas.rb"
+- "RAILS/amber/__logo/plates/03_dither4_press.svg | RAILS/amber/app/assets/images/amber/dither4-press.svg"
+- "RAILS/amber/__logo/plates/04_signal_orbit.svg | RAILS/amber/app/assets/images/amber/signal-orbit.svg"
+- "RAILS/amber/__logo/plates/05_hue_flow.svg | RAILS/amber/app/assets/images/amber/hue-flow.svg"
+- "RAILS/amber/__logo/plates/07_starlight.svg | RAILS/amber/app/assets/images/amber/starlight.svg"
+- "RAILS/amber/__logo/plates/09_grade_teal_amber.svg | RAILS/amber/app/assets/images/amber/grade-teal-amber.svg"
+- "RAILS/amber/__logo/plates/avatars/amber-bit8.svg | RAILS/amber/app/assets/images/amber/avatar-bit8.svg | RAILS/amber/public/amber-logo-avatar-bit8.svg"
+- "RAILS/amber/__logo/plates/avatars/amber-candy.svg | RAILS/amber/app/assets/images/amber/avatar-candy.svg | RAILS/amber/public/amber-logo-avatar-candy.svg"
+- "RAILS/amber/__logo/plates/avatars/amber-canon.svg | RAILS/amber/app/assets/images/amber/avatar-canon.svg | RAILS/amber/public/amber-logo-avatar-canon.svg"
+- "RAILS/amber/__logo/plates/reference-original.svg | RAILS/amber/app/assets/images/amber/reference.svg"
+- "RAILS/amber/config.ru | RAILS/bsdports/config.ru | RAILS/mrdamascy/config.ru"
+- "RAILS/amber/config/boot.rb | RAILS/brgen/config/boot.rb | RAILS/bsdports/config/boot.rb | RAILS/hjerterom/config/boot.rb | RAILS/mrdamascy/config/boot.rb | RAILS/mytoonz/config/boot.rb"
+- "RAILS/amber/config/cable.yml | RAILS/brgen/config/cable.yml | RAILS/mrdamascy/config/cable.yml"
+- "RAILS/amber/config/cache.yml | RAILS/brgen/config/cache.yml | RAILS/bsdports/config/cache.yml | RAILS/mrdamascy/config/cache.yml"
+- "RAILS/amber/config/queue.yml | RAILS/bsdports/config/queue.yml"
+- "RAILS/amber/db/cable_schema.rb | RAILS/mrdamascy/db/cable_schema.rb"
+- "RAILS/amber/db/cache_schema.rb | RAILS/mrdamascy/db/cache_schema.rb"
+- "RAILS/amber/db/migrate/20260504180350_create_users.rb | RAILS/brgen/db/migrate/20260311162114_create_users.rb | RAILS/bsdports/db/migrate/20260501020807_create_users.rb | RAILS/hjerterom/db/migrate/20260501020807_create_users.rb | RAILS/mytoonz/db/migrate/20260501020807_create_users.rb"
+- "RAILS/amber/db/migrate/20260504180352_create_sessions.rb | RAILS/brgen/db/migrate/20260311162121_create_sessions.rb | RAILS/bsdports/db/migrate/20260501020818_create_sessions.rb | RAILS/hjerterom/db/migrate/20260501020818_create_sessions.rb | RAILS/mytoonz/db/migrate/20260501020818_create_sessions.rb"
+- "RAILS/amber/db/migrate/20260709120000_add_shared_auth_fields_to_users.rb | RAILS/brgen/db/migrate/20260709120000_add_shared_auth_fields_to_users.rb | RAILS/bsdports/db/migrate/20260709120000_add_shared_auth_fields_to_users.rb | RAILS/hjerterom/db/migrate/20260709120000_add_shared_auth_fields_to_users.rb"
+- "RAILS/amber/db/migrate/20260811120000_create_outbound_clicks.rb | RAILS/brgen/db/migrate/20260811120000_create_outbound_clicks.rb | RAILS/bsdports/db/migrate/20260811120000_create_outbound_clicks.rb"
+- "RAILS/amber/db/migrate/20260825121000_index_outbound_clicks_on_user.rb | RAILS/brgen/db/migrate/20260825121000_index_outbound_clicks_on_user.rb | RAILS/bsdports/db/migrate/20260825121000_index_outbound_clicks_on_user.rb"
+- "RAILS/amber/db/migrate/20260915120000_add_link_embed_to_posts.rb | RAILS/brgen/db/migrate/20260915120000_add_link_embed_to_posts.rb"
+- "RAILS/amber/db/migrate/20261031120000_create_billing_subscriptions.rb | RAILS/brgen/db/migrate/20261031120000_create_billing_subscriptions.rb"
+- "RAILS/amber/db/migrate/20261102160000_remove_affiliate_visitor_identifiers.rb | RAILS/brgen/db/migrate/20261102160000_remove_affiliate_visitor_identifiers.rb"
+- "RAILS/amber/db/queue_schema.rb | RAILS/mrdamascy/db/queue_schema.rb"
+- "RAILS/amber/test/importmap_external_hosts_test.rb | RAILS/brgen/test/importmap_external_hosts_test.rb | RAILS/bsdports/test/importmap_external_hosts_test.rb"
+- "RAILS/amber/test/models/destroy_cascade_test.rb | RAILS/bsdports/test/models/destroy_cascade_test.rb"
+- "RAILS/brgen/app/javascript/controllers/application.js | RAILS/bsdports/app/javascript/controllers/application.js"
+- "RAILS/brgen/config/queue.yml | RAILS/mrdamascy/config/queue.yml"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/brand/apple-touch-icon.png | RAILS/mrdamascy/public/apple-touch-icon.png"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/brand/icon-192.png | RAILS/mrdamascy/public/icon-192.png"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/brand/icon-512.png | RAILS/mrdamascy/public/icon-512.png"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/brand/icon-maskable-192.png | RAILS/mrdamascy/public/icon-maskable-192.png"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/brand/icon-maskable-512.png | RAILS/mrdamascy/public/icon-maskable-512.png"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/brand/icon-maskable.svg | RAILS/mrdamascy/public/icon-maskable.svg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/brand/icon.svg | RAILS/mrdamascy/public/icon.svg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/brand/logo-transparent.svg | RAILS/mrdamascy/public/logo-transparent.svg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/brand/logo.svg | RAILS/mrdamascy/public/logo.svg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/brand/og-card.png | RAILS/mrdamascy/public/og-card.png"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/adana-sterk-durum-320.webp | RAILS/mrdamascy/app/assets/images/food/adana-sterk-durum-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/adana-sterk-durum-640.webp | RAILS/mrdamascy/app/assets/images/food/adana-sterk-durum-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/adana-sterk-durum.jpg | RAILS/mrdamascy/app/assets/images/food/adana-sterk-durum.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/ayran-320.webp | RAILS/mrdamascy/app/assets/images/food/ayran-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/ayran-640.webp | RAILS/mrdamascy/app/assets/images/food/ayran-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/ayran.jpg | RAILS/mrdamascy/app/assets/images/food/ayran.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/baklava-320.webp | RAILS/mrdamascy/app/assets/images/food/baklava-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/baklava-640.webp | RAILS/mrdamascy/app/assets/images/food/baklava-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/baklava.jpg | RAILS/mrdamascy/app/assets/images/food/baklava.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/beirut-lam-shawarma-320.webp | RAILS/mrdamascy/app/assets/images/food/beirut-lam-shawarma-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/beirut-lam-shawarma-640.webp | RAILS/mrdamascy/app/assets/images/food/beirut-lam-shawarma-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/beirut-lam-shawarma.jpg | RAILS/mrdamascy/app/assets/images/food/beirut-lam-shawarma.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/bergen-kebab-i-durum-320.webp | RAILS/mrdamascy/app/assets/images/food/bergen-kebab-i-durum-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/bergen-kebab-i-durum-640.webp | RAILS/mrdamascy/app/assets/images/food/bergen-kebab-i-durum-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/bergen-kebab-i-durum.jpg | RAILS/mrdamascy/app/assets/images/food/bergen-kebab-i-durum.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/berlin-gemuse-kebap-320.webp | RAILS/mrdamascy/app/assets/images/food/berlin-gemuse-kebap-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/berlin-gemuse-kebap-640.webp | RAILS/mrdamascy/app/assets/images/food/berlin-gemuse-kebap-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/berlin-gemuse-kebap.jpg | RAILS/mrdamascy/app/assets/images/food/berlin-gemuse-kebap.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/blomkal-pita-320.webp | RAILS/mrdamascy/app/assets/images/food/blomkal-pita-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/blomkal-pita-640.webp | RAILS/mrdamascy/app/assets/images/food/blomkal-pita-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/blomkal-pita.jpg | RAILS/mrdamascy/app/assets/images/food/blomkal-pita.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/bursa-iskender-320.webp | RAILS/mrdamascy/app/assets/images/food/bursa-iskender-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/bursa-iskender-640.webp | RAILS/mrdamascy/app/assets/images/food/bursa-iskender-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/bursa-iskender.jpg | RAILS/mrdamascy/app/assets/images/food/bursa-iskender.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/damascy-boss-boks-320.webp | RAILS/mrdamascy/app/assets/images/food/damascy-boss-boks-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/damascy-boss-boks-640.webp | RAILS/mrdamascy/app/assets/images/food/damascy-boss-boks-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/damascy-boss-boks.jpg | RAILS/mrdamascy/app/assets/images/food/damascy-boss-boks.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/damaskus-kylling-shawarma-320.webp | RAILS/mrdamascy/app/assets/images/food/damaskus-kylling-shawarma-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/damaskus-kylling-shawarma-640.webp | RAILS/mrdamascy/app/assets/images/food/damaskus-kylling-shawarma-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/damaskus-kylling-shawarma.jpg | RAILS/mrdamascy/app/assets/images/food/damaskus-kylling-shawarma.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/dubai-gatens-shawarma-320.webp | RAILS/mrdamascy/app/assets/images/food/dubai-gatens-shawarma-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/dubai-gatens-shawarma-640.webp | RAILS/mrdamascy/app/assets/images/food/dubai-gatens-shawarma-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/dubai-gatens-shawarma.jpg | RAILS/mrdamascy/app/assets/images/food/dubai-gatens-shawarma.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/familie-fest-mezze-320.webp | RAILS/mrdamascy/app/assets/images/food/familie-fest-mezze-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/familie-fest-mezze-640.webp | RAILS/mrdamascy/app/assets/images/food/familie-fest-mezze-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/familie-fest-mezze.jpg | RAILS/mrdamascy/app/assets/images/food/familie-fest-mezze.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/gaziantep-ali-nazik-320.webp | RAILS/mrdamascy/app/assets/images/food/gaziantep-ali-nazik-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/gaziantep-ali-nazik-640.webp | RAILS/mrdamascy/app/assets/images/food/gaziantep-ali-nazik-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/gaziantep-ali-nazik.jpg | RAILS/mrdamascy/app/assets/images/food/gaziantep-ali-nazik.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/halloumi-pommes-320.webp | RAILS/mrdamascy/app/assets/images/food/halloumi-pommes-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/halloumi-pommes-640.webp | RAILS/mrdamascy/app/assets/images/food/halloumi-pommes-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/halloumi-pommes.jpg | RAILS/mrdamascy/app/assets/images/food/halloumi-pommes.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/hvitloks-pommes-320.webp | RAILS/mrdamascy/app/assets/images/food/hvitloks-pommes-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/hvitloks-pommes-640.webp | RAILS/mrdamascy/app/assets/images/food/hvitloks-pommes-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/hvitloks-pommes.jpg | RAILS/mrdamascy/app/assets/images/food/hvitloks-pommes.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/jallab-320.webp | RAILS/mrdamascy/app/assets/images/food/jallab-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/jallab-640.webp | RAILS/mrdamascy/app/assets/images/food/jallab-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/jallab.jpg | RAILS/mrdamascy/app/assets/images/food/jallab.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/kisir-bulgursal-320.webp | RAILS/mrdamascy/app/assets/images/food/kisir-bulgursal-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/kisir-bulgursal-640.webp | RAILS/mrdamascy/app/assets/images/food/kisir-bulgursal-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/kisir-bulgursal.jpg | RAILS/mrdamascy/app/assets/images/food/kisir-bulgursal.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/knefeh-320.webp | RAILS/mrdamascy/app/assets/images/food/knefeh-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/knefeh-640.webp | RAILS/mrdamascy/app/assets/images/food/knefeh-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/knefeh.jpg | RAILS/mrdamascy/app/assets/images/food/knefeh.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/mamoul-320.webp | RAILS/mrdamascy/app/assets/images/food/mamoul-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/mamoul-640.webp | RAILS/mrdamascy/app/assets/images/food/mamoul-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/mamoul.jpg | RAILS/mrdamascy/app/assets/images/food/mamoul.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/myntesitronlimonade-320.webp | RAILS/mrdamascy/app/assets/images/food/myntesitronlimonade-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/myntesitronlimonade-640.webp | RAILS/mrdamascy/app/assets/images/food/myntesitronlimonade-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/myntesitronlimonade.jpg | RAILS/mrdamascy/app/assets/images/food/myntesitronlimonade.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/provenance.json | RAILS/mrdamascy/app/assets/images/food/provenance.json"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/salgam-320.webp | RAILS/mrdamascy/app/assets/images/food/salgam-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/salgam-640.webp | RAILS/mrdamascy/app/assets/images/food/salgam-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/salgam.jpg | RAILS/mrdamascy/app/assets/images/food/salgam.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/stockholm-kebabpizza-320.webp | RAILS/mrdamascy/app/assets/images/food/stockholm-kebabpizza-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/stockholm-kebabpizza-640.webp | RAILS/mrdamascy/app/assets/images/food/stockholm-kebabpizza-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/stockholm-kebabpizza.jpg | RAILS/mrdamascy/app/assets/images/food/stockholm-kebabpizza.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/sydney-snackpack-hsp-320.webp | RAILS/mrdamascy/app/assets/images/food/sydney-snackpack-hsp-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/sydney-snackpack-hsp-640.webp | RAILS/mrdamascy/app/assets/images/food/sydney-snackpack-hsp-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/sydney-snackpack-hsp.jpg | RAILS/mrdamascy/app/assets/images/food/sydney-snackpack-hsp.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/syltebolle-320.webp | RAILS/mrdamascy/app/assets/images/food/syltebolle-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/syltebolle-640.webp | RAILS/mrdamascy/app/assets/images/food/syltebolle-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/syltebolle.jpg | RAILS/mrdamascy/app/assets/images/food/syltebolle.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/tamarind-drikk-320.webp | RAILS/mrdamascy/app/assets/images/food/tamarind-drikk-320.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/tamarind-drikk-640.webp | RAILS/mrdamascy/app/assets/images/food/tamarind-drikk-640.webp"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food/tamarind-drikk.jpg | RAILS/mrdamascy/app/assets/images/food/tamarind-drikk.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/screenshots/menu.jpg | RAILS/mrdamascy/public/screenshots/menu.jpg"
+- "RAILS/brgen/engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/screenshots/tracking.jpg | RAILS/mrdamascy/public/screenshots/tracking.jpg"
+- "RAILS/brgen/test/lib/asset_resolver_test.rb | RAILS/mrdamascy/test/asset_resolver_test.rb"
+- "RAILS/bsdports/Gemfile | RAILS/mytoonz/Gemfile"
+- "RAILS/bsdports/db/queue_schema.rb | RAILS/hjerterom/db/queue_schema.rb"
+- "RAILS/hjerterom/Rakefile | RAILS/mytoonz/Rakefile"
+- "RAILS/hjerterom/app/.gitignore | RAILS/mytoonz/app/.gitignore"
+- "RAILS/hjerterom/app/javascript/controllers/application.js | RAILS/mytoonz/app/javascript/controllers/application.js"
+- "RAILS/hjerterom/app/javascript/controllers/index.js | RAILS/mytoonz/app/javascript/controllers/index.js"
+- "RAILS/hjerterom/app/views/passwords/edit.html.erb | RAILS/mytoonz/app/views/passwords/edit.html.erb"
+- "RAILS/hjerterom/app/views/passwords/new.html.erb | RAILS/mytoonz/app/views/passwords/new.html.erb"
+- "RAILS/hjerterom/app/views/sessions/new.html.erb | RAILS/mytoonz/app/views/sessions/new.html.erb"
+- "RAILS/hjerterom/bin/ci | RAILS/mytoonz/bin/ci"
+- "RAILS/hjerterom/bin/setup | RAILS/mytoonz/bin/setup"
+- "RAILS/hjerterom/config.ru | RAILS/mytoonz/config.ru"
+- "RAILS/hjerterom/config/database.yml | RAILS/mytoonz/config/database.yml"
+- "RAILS/screenshot_amber_ai_occasions.png | RAILS/screenshot_amber_ai_palette.png"
+- "RAILS/screenshot_amber_recede_historical_location.png | RAILS/screenshot_brgen_brgen_no_recede_historical_location.png | RAILS/screenshot_bsdports_recede_historical_location.png | RAILS/screenshot_mrdamascy_recede_historical_location.png"
+- "RAILS/screenshot_amber_refresh_historical_location.png | RAILS/screenshot_brgen_brgen_no_refresh_historical_location.png | RAILS/screenshot_bsdports_refresh_historical_location.png | RAILS/screenshot_mrdamascy_refresh_historical_location.png"
+- "RAILS/screenshot_amber_resume_historical_location.png | RAILS/screenshot_brgen_brgen_no_resume_historical_location.png | RAILS/screenshot_bsdports_resume_historical_location.png | RAILS/screenshot_mrdamascy_resume_historical_location.png"
+- "RAILS/screenshot_brgen_dating_brgen_no_picks.png | RAILS/screenshot_brgen_dating_brgen_no_profile.png | RAILS/screenshot_brgen_dating_brgen_no_profile_edit.png | RAILS/screenshot_brgen_dating_brgen_no_profile_new.png | RAILS/screenshot_brgen_dating_brgen_no_verifications_new.png"
+- "RAILS/screenshot_bsdports_account.png | RAILS/screenshot_bsdports_account_export.png | RAILS/screenshot_bsdports_two_factor_setup.png"
+- "RAILS/screenshot_bsdports_changelog.png | RAILS/screenshot_bsdports_rules.png"
+- "RAILS/screenshot_bsdports_ports.png | RAILS/screenshot_bsdports_root.png"
+- "RAILS/screenshot_master_canvas_topology.png | RAILS/screenshot_master_chat_enhance.png | RAILS/screenshot_master_chat_history.png | RAILS/screenshot_master_chat_research.png | RAILS/screenshot_master_chat_skills.png | RAILS/screenshot_master_chat_tts.png | RAILS/screenshot_master_chat_tts_phrases.png | RAILS/screenshot_master_chat_tts_status.png | RAILS/screenshot_master_chat_tts_stream.png | RAILS/screenshot_master_dashboard.png | RAILS/screenshot_master_dashboard_live.png | RAILS/screenshot_master_radio_bergen.png"
+- "RAILS/screenshot_mrdamascy_cart.png | RAILS/screenshot_mrdamascy_checkout.png"
+- "RAILS/screenshot_mrdamascy_session_vipps.png | RAILS/screenshot_mrdamascy_vipps_login_mock.png"
