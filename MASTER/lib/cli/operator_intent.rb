@@ -15,7 +15,7 @@ module Master
       # are not complete phrases, app names, or a command vocabulary.
       ACTION_CUES = /\b(?:deploy(?:ment)?|re[- ]?deploy|release|ship|publish|roll(?:\s+out)?|rollout|refresh|update|sync|synchroni[sz]e|push|promote|launch|bring|move|restart|start|stop|inspect|check|status|show|list|tail|backup|restore|health)\b/i.freeze
       CONFIDENCE_FLOOR = 0.72
-      REPOSITORY_TARGET_RE = /\b(?:pub5|repo(?:sitory)?|codebase|whole\s+(?:repo|repository)|entire\s+(?:repo|repository))\b/i.freeze
+      REPOSITORY_TARGET_RE = /\b(?:pub5|repo(?:sitory)?|codebase|whole\s+(?:repo|repository)|entire\s+(?:repo|repository)|everything|all(?:\s+(?:apps?|services?|stacks?|surfaces?))?|full\s+stack|entire\s+(?:stack|fleet))\b/i.freeze
       DIRECT_DEPLOY_REQUEST_RE = /\A\s*(?:(?:please|can you|could you|i need you to|i want you to|go ahead and)\s+)?(?:deploy|re[- ]?deploy|release|ship|publish)\b/i.freeze
       NON_PRODUCTION_ENV_RE = /\b(?:local|development|dev|test|staging|stage|preview)\b/i.freeze
       DESTINATION_RE = /\b(?:to|onto|on|at|for)\s+([a-z0-9][a-z0-9._-]*)/i.freeze
@@ -62,9 +62,8 @@ module Master
 
         destination = request.match(DESTINATION_RE)&.captures&.first
         destination.to_s.downcase == "vm23" &&
-          request.match?(/\bopenbsd\b/i) &&
-          request.match?(/\brails\b/i) &&
-          request.match?(/\bmaster\s*\/\s*web\b/i)
+          full_inventory_scope?(request) &&
+          !request.match?(/\b(?:except|excluding|leave\s+out|but\s+not)\b/i)
       end
 
       def self.candidate?(text)
@@ -126,8 +125,10 @@ module Master
         return false if destination && !VM23_DESTINATIONS.include?(destination.downcase)
 
         complete_stack = complete_stack_components?(request)
+        full_inventory = full_inventory_scope?(request)
         return false unless request.match?(REPOSITORY_TARGET_RE) || complete_stack
-        return true if complete_stack
+        return false if full_inventory && request.match?(/\b(?:except|excluding|leave\s+out|but\s+not)\b/i)
+        return true if complete_stack || full_inventory
 
         named_app = inventory.ordered_apps.any? do |app|
           [app.name, app.title, app.domain].any? do |value|
@@ -138,6 +139,13 @@ module Master
           request.match?(/\b#{Regexp.escape(name)}\b/i)
         end
         !named_app && !named_group
+      end
+
+      # "Everything" means the active registered deployment inventory, not
+      # arbitrary host files or every repository directory. Exclusions deliberately
+      # fall back to semantic classification and retain the review gate.
+      def full_inventory_scope?(request)
+        request.match?(/\b(?:everything|all(?:\s+(?:apps?|services?|stacks?|surfaces?))?|full\s+stack|entire\s+(?:stack|fleet))\b/i)
       end
 
       # OPENBSD + the RAILS fleet + MASTER/web is the canonical full release.
