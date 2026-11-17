@@ -111,7 +111,7 @@ class OperatorIntentTest < Minitest::Test
         "Prepare a deployment plan ONLY for redeploying OPENBSD, RAILS and MASTER/web to vm23"
       )
 
-      assert_equal :conversation, result.status
+      assert_equal :plan_only, result.status
     end
   end
 

@@ -65,7 +65,7 @@ module Master
 
       def call(text)
         return unless self.class.candidate?(text)
-        return Result.new(status: :conversation) if planning_request?(text)
+        return Result.new(status: :plan_only) if planning_request?(text)
 
         inventory = Deploy::Inventory.new(root: @root)
         return Result.new(status: :unavailable, message: "Deployment inventory is empty; no action was taken.") if inventory.apps.empty?

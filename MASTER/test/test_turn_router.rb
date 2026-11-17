@@ -205,6 +205,29 @@ class TurnRouterTest < Minitest::Test
     assert_equal "/fix --mode=all RAILS MASTER OPENBSD STUDIO BIZ", routed
   end
 
+  def test_plan_only_deployment_request_goes_to_chat_without_command_inference
+    proposal = Master::CLI::OperatorIntent::Result.new(status: :plan_only)
+    fake_intent = Object.new
+    fake_intent.define_singleton_method(:call) { |_text| proposal }
+    reached = nil
+
+    Master::CLI::OperatorIntent.stub(:new, fake_intent) do
+      Master::CLI::TurnRouter.stub(:casual_reply, ->(*, **) {
+        reached = :chat
+        Master::Result.ok({ rendered: "plan only" })
+      }) do
+        Master::CLI::TurnRouter.stub(:infer_operator_command, ->(*) { flunk "plan-only requests must not infer an action" }) do
+          Master::CLI::TurnRouter.call(
+            message: "Prepare a deployment plan ONLY for redeploying OPENBSD, RAILS and MASTER/web to vm23",
+            container: build_container,
+          )
+        end
+      end
+    end
+
+    assert_equal :chat, reached
+  end
+
   def test_status_question_bypasses_unavailable_operator_intent
     agent = Object.new
     agent.define_singleton_method(:model) { "test-model" }

@@ -67,6 +67,8 @@ module Master
           return Master::Result.err(proposal.message, category: :infrastructure)
         when :unsupported
           return Master::Result.ok({ rendered: proposal.message, output: proposal.message })
+        when :plan_only
+          return casual_reply(text, container:, felt_sense:, on_chunk:, image:)
         end
         # bus: the media lane runs outside the pipeline stages; the stage:mov0
         # events it publishes are what move the spinner off "intake" and carry
