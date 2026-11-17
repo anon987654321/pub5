@@ -313,6 +313,21 @@ class TestPub4Alert < Minitest::Test
     end
   end
 
+  def test_watch_alerts_when_a_live_pid_fingerprint_cannot_be_verified
+    Dir.mktmpdir do |dir|
+      quiet_box(dir)
+      fake(dir, "ps", "exit 1")
+      run_id = "20261117T010005Z-all-12355"
+      fake_run_list(dir, [recovery_receipt(run_id:, pid: Process.pid)])
+
+      _, status = run_alert(dir, "watch")
+
+      assert_equal 0, status
+      assert_includes log(dir), "deploy-recovery-owner-unknown-#{run_id}"
+      assert_includes log(dir), "could not verify the owner fingerprint"
+    end
+  end
+
   def test_watch_alerts_when_the_recorded_pid_is_reused_by_another_process
     Dir.mktmpdir do |dir|
       quiet_box(dir)
@@ -363,6 +378,7 @@ class TestPub4Alert < Minitest::Test
     assert_includes source, 'ps", "-ww", "-p", pid.to_s, "-o", "command="'
     assert_includes source, 'Open3.capture2("cksum", stdin_data: command)'
     assert_includes source, "deploy-recovery-scan-truncated"
+    assert_includes source, "deploy-recovery-owner-unknown"
   end
 
   def test_show_prints_the_last_alerts
