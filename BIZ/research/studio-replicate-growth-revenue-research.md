@@ -19,10 +19,14 @@ dilla stay operator-owned)?
   engine is `google/nano-banana` (reference-photo likeness, no training run) with a
   fallback chain ending on Replicate's free tier, so a render never dies for want of
   credit.
-- **Film**: `minimax/h3-lite` is the default film engine — first/last-frame
-  image-to-video, 4–15 s, 480P/768P — with Kling v3 Omni and the rest of the
-  `image_to_video` catalogue behind `--film-engine`. STUDIO lays its own dilla bed under
-  the cut rather than paying for model audio.
+- **Film**: `minimax/h3-highspeed` is the default everyday film engine at 768P;
+  `minimax/h3-lite` is the cheaper draft route at 480P or 768P. Both support
+  first/last-frame and reference-driven image-to-video for 4–15 s. The current
+  50% Replicate promotion expires December 31, 2026; STUDIO's separate video
+  budget prices it automatically at list rate after that date. Kling v3 Omni
+  and the rest of the `image_to_video` catalogue remain selectable through
+  `--film-engine`. STUDIO lays its own dilla bed under the cut rather than
+  paying for model audio.
 - **Style passes**: the four look models STUDIO catalogued are the purchasable looks —
   `levelsio/disposable-camera` (trigger STL), `levelsio/analog-film` (trigger ANLG),
   `fofr/kontext-ps1`, `fofr/kontext-old-and-damaged` (damaged print), plus
