@@ -135,7 +135,7 @@ module Deploy
     #
     # gap: is a Master::Gap (duck-typed: anything with #clause) saying whether
     # the check resolves alone, what it costs, and whose call it is. This file
-    # does not load it: OPENBSD/mirror/lib carries a copy and must not reach into MASTER.
+    # does not load it: the shared result kernel stays independent of Master::Gap and the wider runtime.
     def inconclusive!(reason, gap: nil)
       @unchecked << reason
 
