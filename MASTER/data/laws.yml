@@ -2999,14 +2999,6 @@ law_catalogue:
       severity: warning
       autofix: automatic
       languages: [css, scss]
-    CSS_LAYER_STACK:
-      definition_sources: [MASTER/checks/lib/source/css_layer_stack.rb]
-      severity: warning
-      languages: [css, scss]
-    CSS_SPECIFICITY_CEILING:
-      definition_sources: [MASTER/checks/lib/source/css_specificity_ceiling.rb]
-      severity: warning
-      languages: [css, scss]
     CURRENT_LOCATION_MARKED:
       definition_sources: [MASTER/law/rendered.rb]
       severity: error
