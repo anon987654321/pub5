@@ -62,7 +62,10 @@ module Studio
 
       def write(words, film: true, duration: 5, output_stem: nil, grade_seed: nil)
         validate_model!
-        validate_film_model! if film
+        if film
+          validate_film_model!
+          film_resolution if film_engine == "minimax/h3-lite"
+        end
         FileUtils.mkdir_p(@directory)
         stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S%6N")
         stem = [safe_stem(output_stem || @subject), stamp, SecureRandom.hex(3)].join("_")
