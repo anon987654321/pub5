@@ -49,7 +49,7 @@ class TestPub4Alert < Minitest::Test
     fake(dir, "df", %(echo "Filesystem 512-blocks Used Available Capacity Mounted on"; echo "/dev/sd0k 100 76 24 76% /home"))
     fake(dir, "swapctl", %(echo "total: 2588672 512-blocks allocated, 1000000 used, 1588672 available"))
     fake(dir, "rcctl", "exit 0")
-    fake(dir, "pub5-admin", "printf '[]\\n'")
+    fake(dir, "pub5-admin", "printf '%s\\n' '#{JSON.generate("pending" => [], "truncated" => false, "scanned" => 0, "returned" => 0)}'")
     FileUtils.mkdir_p(File.join(dir, "state"))
     File.write(File.join(dir, "state", "cpu-watch.seen"), Time.now.to_i.to_s)
     File.write(File.join(dir, "marker"), Time.now.to_i.to_s)
@@ -256,8 +256,28 @@ class TestPub4Alert < Minitest::Test
     }
   end
 
-  def fake_run_list(dir, records)
-    fake(dir, "pub5-admin", "printf '%s\\n' '#{JSON.generate(records)}'")
+  def fake_run_list(dir, records, truncated: false, scanned: records.length)
+    document = {
+      "pending" => records,
+      "truncated" => truncated,
+      "scanned" => scanned,
+      "returned" => records.length,
+    }
+    fake(dir, "pub5-admin", "printf '%s\\n' '#{JSON.generate(document)}'")
+  end
+
+  def test_watch_alerts_when_pending_receipt_scan_is_truncated
+    Dir.mktmpdir do |dir|
+      quiet_box(dir)
+      fake_run_list(dir, [], truncated: true, scanned: 501)
+
+      _, status = run_alert(dir, "watch")
+
+      assert_equal 0, status
+      assert_includes log(dir), "deploy-recovery-scan-truncated"
+      assert_includes log(dir), "bounded window"
+      assert_includes log(dir), "recover --plan"
+    end
   end
 
   def test_watch_alerts_when_a_pending_deploy_owner_has_exited
