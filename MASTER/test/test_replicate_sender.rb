@@ -12,7 +12,8 @@ class TestReplicateSender < Minitest::Test
   class FakeSession
     def initialize = @costs = []
 
-    def record_cost(amount, model:, tokens:) = @costs << { amount:, model:, tokens: }
+    def record_cost(amount, model:, tokens:, approximate: false) =
+      @costs << { amount:, model:, tokens:, approximate: }
   end
 
   class FakeBus
