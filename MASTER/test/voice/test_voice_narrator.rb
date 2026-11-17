@@ -150,15 +150,17 @@ class TestVoiceNarrator < Minitest::Test
     n.observe("scan0: reading 14 files")
     window(n)
     original = Object.const_defined?(:RubyLLM, false) ? Object.send(:remove_const, :RubyLLM) : nil
-    messages = []
+    logged = []
 
-    Master::Trace::Dmesg.stub(:once, ->(unit, message, **) { messages << [unit, message] }) do
+    Master::Ground::Swallow.stub(:log, ->(error, context:, **) { logged << [error, context] }) do
       assert_equal :spoken, n.tick
     end
 
     assert_match(/reading 14 files/, @spoken.join)
     assert_equal 1, n.instance_variable_get(:@model_failures)
-    assert_equal "ruby_llm is not installed", messages.empty? ? "" : messages.first.last
+    assert_instance_of LoadError, logged.first.first
+    assert_equal "ruby_llm is not installed", logged.first.first.message
+    assert_equal "Voice::Narrator.model", logged.first.last
   ensure
     Object.const_set(:RubyLLM, original) if original
   end
