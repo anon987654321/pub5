@@ -180,6 +180,37 @@ stores = num_stores.times.map do |i|
   )
 end
 
+# Real Bergen businesses are seeded as named storefront fixtures, not as
+# invented inventory. These run only in development/test: the production
+# branch exits before the synthetic seed section. Their demo owner is the local
+# admin account; real owners must register and claim their own tenant.
+featured_business_stores = [
+  {
+    slug: "matamat-bergen",
+    name: "Matamat",
+    vertical: "groceries",
+    description: "Bergen grocery store, formerly listed as Kurdistan Mat. Kurdish and Middle Eastern grocery assortment. Public directories place the customer-facing shop at Lyder Sagens gate 15, 5008 Bergen; confirm the current trading address with the owner before publishing location-specific details."
+  },
+  {
+    slug: "mandarinen-import-engros-bergen",
+    name: "Mandarinen Import & Engros AS",
+    vertical: "wholesale",
+    description: "Bergen-based importer and B2B wholesaler of Asian food products and professional kitchen supplies. Serves restaurants, cafés, hotels, catering companies, grocery stores and other food businesses. Business customers only; customer registration and trade terms apply. Øvre Kråkenes 67, 5152 Bønes, Bergen."
+  }
+].map do |attributes|
+  store = Marketplace::Store.find_or_initialize_by(slug: attributes.fetch(:slug))
+  store.assign_attributes(
+    owner: admin,
+    name: attributes.fetch(:name),
+    vertical: attributes.fetch(:vertical),
+    description: attributes.fetch(:description),
+    active: true
+  )
+  store.save!
+  store
+end
+puts "Named Bergen business fixtures: #{featured_business_stores.map(&:name).join(', ')} (no fabricated inventory)"
+
 listings_per = (5 * SEED_SCALE).clamp(1, 10)
 bergen_lat = seed_city&.latitude.to_f
 bergen_lng = seed_city&.longitude.to_f
