@@ -187,6 +187,56 @@ class LogoContractTest < ActionView::TestCase
     end
   end
 
+  test "reviewed alternative marks ship as propshaft assets and never drift from the plates" do
+    plates = {
+      "amber/dither4-press.svg" => "plates/03_dither4_press.svg",
+      "amber/signal-orbit.svg" => "plates/04_signal_orbit.svg",
+      "amber/hue-flow.svg" => "plates/05_hue_flow.svg",
+      "amber/starlight.svg" => "plates/07_starlight.svg",
+      "amber/grade-teal-amber.svg" => "plates/09_grade_teal_amber.svg",
+      "amber/reference.svg" => "plates/reference-original.svg",
+      "amber/avatar-canon.svg" => "plates/avatars/amber-canon.svg",
+      "amber/avatar-bit8.svg" => "plates/avatars/amber-bit8.svg",
+      "amber/avatar-candy.svg" => "plates/avatars/amber-candy.svg",
+    }
+    plates.each do |asset, source|
+      installed = Rails.root.join("app/assets/images", asset)
+      assert File.file?(installed), "missing propshaft logo asset: #{asset}"
+      assert_equal File.read(Rails.root.join("__logo", source)), installed.read,
+                   "#{asset} drifted from the reviewed plate it was copied from"
+    end
+  end
+
+  test "avatar cuts render at 128, 64 and 32 px with a transparent ground" do
+    %w[avatar-canon avatar-bit8 avatar-candy].each do |ink|
+      [128, 64, 32].each do |size|
+        path = Rails.root.join("app/assets/images/amber/cuts/#{ink}-#{size}.png")
+        assert File.file?(path), "missing avatar cut: #{path}"
+        assert File.size?(path).to_i.positive?, "empty avatar cut: #{path}"
+
+        # PNG IHDR: byte 25 holds the color type; 6 is truecolor-with-alpha,
+        # which is what omitBackground screenshots produce for a cut on
+        # transparent ground. A flattened cut loses its checkerboard-free edge.
+        header = File.binread(path, 26)
+        assert_equal "PNG", header[1, 3], "#{path} is not a PNG"
+        assert_equal 6, header.getbyte(25), "#{path} lost its alpha channel"
+      end
+    end
+  end
+
+  test "the nav mark keeps the canonical swoosh unless a variant is configured" do
+    layout = Rails.root.join("app/views/layouts/application.html.erb").read
+
+    # Default: the canonical inline mark, still rendered by the layout itself.
+    assert_includes layout, 'render "shared/logo"'
+    # The variant branch exists and reads the helper.
+    assert_includes layout, "amber_variant_logo_tag(amber_logo_variant)"
+
+    helper = Rails.root.join("app/helpers/amber_logo_helper.rb").read
+    assert_includes helper, "VARIANT_ASSETS"
+    assert_match(%r{"dither4-press" => "amber/dither4-press\.svg"}, helper)
+  end
+
   test "public avatar cuts are transparent generator-owned SVG exports" do
     root = Rails.root.join("public")
     source = Rails.root.join("__logo/plates/avatars")

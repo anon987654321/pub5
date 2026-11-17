@@ -538,10 +538,10 @@ function avatars() {
 // ---------- page ----------
 function page() {
   const cells = PLATES.map(pl =>
-    `<figure><img src="plates/${String(pl.num).padStart(2, "0")}_${pl.slug}.svg" alt="${pl.slug}">` +
+    `<figure><img loading="lazy" src="plates/${String(pl.num).padStart(2, "0")}_${pl.slug}.svg" alt="${pl.slug}">` +
     `<figcaption>${String(pl.num).padStart(2, "0")} · ${pl.slug.replaceAll("_", " ")} — ${pl.note}</figcaption></figure>`).join("");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">` +
-    `<meta name="viewport" content="width=device-width, initial-scale=1">` +
+    `<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">` +
     `<title>plur1bus plates — the amber mark, eleven directions</title>` +
     `<style>
       body { margin:0; background:#141416; color:#C9C9CF; font:14px/1.5 Helvetica, Arial, sans-serif; padding:28px 30px 44px; }
@@ -565,7 +565,7 @@ function page() {
     </style></head><body>` +
     `<h1>plur1bus plates — the amber&reg; mark, eleven directions</h1>` +
     `<p class="sub">Every study keeps the original Caprasimo glyphs and nine white swoosh paths, widths and opacity. Only the ink treatment changes. Study plates clip the visible swoosh to the letter interiors; the reference preserves the original full-width swoosh.</p>` +
-    `<figure class="ref"><img src="plates/reference-original.svg" alt="canonical amber mark, cropped">` +
+    `<figure class="ref"><img loading="lazy" src="plates/reference-original.svg" alt="canonical amber mark, cropped">` +
     `<figcaption>00 · reference — production mark, original full-width swoosh</figcaption></figure>` +
     `<div class="grid">${cells}</div>` +
     `<h2>avatar cuts — transparent ground</h2>` +
@@ -575,9 +575,9 @@ function page() {
     `<div class="avatars">` +
     ["amber-canon", "amber-bit8", "amber-candy"].map(n => {
       const cap = { "amber-canon": "canon radial ink", "amber-bit8": "bit8 pixel ink", "amber-candy": "candy prism ink" }[n];
-      return `<figure><div class="checker"><img src="plates/avatars/${n}.svg" style="width:128px" alt="${cap}"></div>` +
-        `<div class="figrow"><div class="checker"><img src="plates/avatars/${n}.svg" style="width:64px" alt=""></div>` +
-        `<div class="checker"><img src="plates/avatars/${n}.svg" style="width:32px" alt=""></div></div>` +
+      return `<figure><div class="checker"><img loading="lazy" src="plates/avatars/${n}.svg" style="width:128px" alt="${cap}"></div>` +
+        `<div class="figrow"><div class="checker"><img loading="lazy" src="plates/avatars/${n}.svg" style="width:64px" alt=""></div>` +
+        `<div class="checker"><img loading="lazy" src="plates/avatars/${n}.svg" style="width:32px" alt=""></div></div>` +
         `<figcaption>${cap} — 128 / 64 / 32 px</figcaption></figure>`;
     }).join("") +
     `</div></body></html>`;
@@ -588,5 +588,5 @@ for (const f of readdirSync(OUT)) rmSync(join(OUT, f), { recursive: true });
 p01(); p02(); p03(); p04(); p05(); p06(); p07(); p08(); p09(); p10(); p11();
 pref();
 avatars();
-writeFileSync(join(DIR, "all-plates.html"), page());
+writeFileSync(join(DIR, "all-plates.html"), page() + "\n");
 console.log(`wrote ${PLATES.length} plates + reference + page`);

@@ -93,7 +93,14 @@
     </div>
   <% end %>
   <%= link_to root_path, class: "amber-logo-home", aria: { label: t("nav.brand_home") } do %>
-    <%= render "shared/logo", id_prefix: "amber-nav", view_box: "58 105 410 108" %>
+    <%# The canonical Caprasimo swoosh unless a deploy asked for one of the
+        approved alternative marks (AMBER_LOGO_VARIANT -> AmberLogoHelper). %>
+    <% variant_mark = amber_variant_logo_tag(amber_logo_variant) %>
+    <% if variant_mark %>
+      <%= variant_mark %>
+    <% else %>
+      <%= render "shared/logo", id_prefix: "amber-nav", view_box: "58 105 410 108" %>
+    <% end %>
   <% end %>
 </header>
 

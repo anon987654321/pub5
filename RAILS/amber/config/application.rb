@@ -50,5 +50,11 @@ module App
     # <use> against it. One config value, read by Shared::UiHelper#icon_sprite?
     # and the layout, so both agree (brgen's arrangement, adopted 2026-08-21).
     config.x.icon_sprite = true
+
+    # The nav mark: empty keeps the canonical inline Caprasimo swoosh; a key
+    # from AmberLogoHelper::VARIANT_ASSETS dresses the shop in one of the
+    # reviewed alternative plates (dither4-press, signal-orbit, hue-flow,
+    # starlight, grade-teal-amber, reference).
+    config.x.amber_logo_variant = ENV["AMBER_LOGO_VARIANT"]
   end
 end

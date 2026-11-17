@@ -688,6 +688,14 @@ h2 {
   display: block;
 }
 
+/* An alternative mark (AmberLogoHelper) fills the same box the canonical
+   inline SVG does, so a variant swap changes ink, not geometry. */
+.amber-logo-home .amber-variant-logo {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 /* A magazine's footer: every section of amber in quiet columns, then the mark
    and the copyright line. A block rather than _minimal's footer row, so the
    column grid fits as many columns as the width holds and no more. */
