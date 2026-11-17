@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../mirror/lib/guard_state"
+require_relative "../lib/guard_state"
 
 # amber and bsdports get shed and stay down, and nothing says so.
 #
