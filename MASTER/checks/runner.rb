@@ -132,9 +132,27 @@ rescue SystemCallError
   nil
 end
 
+# Check output is useful diagnostics, but a child process may echo credentials
+# from a failed request. Apply the same redaction before writing the private log
+# as before rendering a failure summary.
+def redact_diagnostic_text(value)
+  text = value.to_s
+  text = text.gsub(
+    /\b([A-Z0-9_]*(?:API_KEY|ACCESS_TOKEN|REFRESH_TOKEN|TOKEN|SECRET|PASSWORD|AUTHORIZATION|COOKIE|CREDENTIAL)[A-Z0-9_]*\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/i,
+    '\\1[redacted]',
+  )
+  text = text.gsub(/\b(Bearer\s+)[A-Za-z0-9._~+\/-]+/i, '\\1[redacted]')
+  text = text.gsub(/\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9_-]{12,})\b/, "[redacted]")
+  text = text.gsub(/([?&](?:token|access_token|refresh_token|api_key|key|secret|password)=)[^&\s]+/i, '\\1[redacted]')
+  text.gsub(%r{(://[^/\s:@]+:)[^/@\s]+@}, '\\1[redacted]@')
+rescue StandardError
+  "[diagnostic redaction failed]"
+end
+
 def log_retired(line)
   path = File.join(File.dirname(LEDGER.path), ".check_output.log")
-  File.open(path, "a") { |io| io.puts(line) }
+  safe_line = redact_diagnostic_text(line)
+  File.open(path, "a") { |io| io.puts(safe_line) }
 rescue StandardError
   nil
 end
@@ -214,13 +232,7 @@ def failure_excerpt(output, max_lines: 6, max_bytes: 900)
   text = output.to_s.lines.last(max_lines).join
   return "" if text.strip.empty?
 
-  text = text.gsub(
-    /\b([A-Z0-9_]*(?:API_KEY|ACCESS_TOKEN|REFRESH_TOKEN|SECRET|PASSWORD|BEARER)[A-Z0-9_]*\s*[:=]\s*)[^\s,;]+/i,
-    '\\1[redacted]',
-  )
-  text = text.gsub(/\b(Bearer\s+)[A-Za-z0-9._~+\/-]+/i, '\\1[redacted]')
-  text = text.gsub(/\bsk-[A-Za-z0-9_-]{12,}\b/, "[redacted]")
-  text = text.gsub(/\s+/, " ").strip
+  text = redact_diagnostic_text(text).gsub(/\s+/, " ").strip
   text = text.byteslice(0, max_bytes).to_s
   text.force_encoding(Encoding::UTF_8).scrub
 rescue StandardError

@@ -21,7 +21,7 @@ class TestCheckRunnerRegistry < Minitest::Test
           "CHECK_AUTOFIX" => "0" },
         RbConfig.ruby, RUNNER, "--all", chdir: REPOSITORY_ROOT
       )
-      yield output, status
+      yield output, status, ledger_path
     end
   end
 
@@ -34,12 +34,17 @@ class TestCheckRunnerRegistry < Minitest::Test
       exit 7
     RUBY
 
-    run_registry("diagnostic" => { "script" => File.basename(fixture) }) do |output, status|
+    run_registry("diagnostic" => { "script" => File.basename(fixture) }) do |output, status, ledger_path|
       refute status.success?
       assert_includes output, "diagnostic-#{Process.pid}.rb exited 7"
       assert_includes output, "last diagnostic line"
       assert_includes output, "API_KEY=[redacted]"
       refute_includes output, "sk-abcdefghijklmnopqrstuvwxyz123456"
+
+      private_log = File.read(File.join(File.dirname(ledger_path), ".check_output.log"))
+      assert_includes private_log, "API_KEY=[redacted]"
+      refute_includes private_log, "sk-abcdefghijklmnopqrstuvwxyz123456",
+                      "the on-disk diagnostics log must receive the same redaction as terminal output"
     end
   ensure
     File.delete(fixture) if fixture && File.file?(fixture)
