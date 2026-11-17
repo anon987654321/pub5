@@ -36,6 +36,7 @@ module Master
         MASTER/lib/cli/routing/model_router/selection.rb
         MASTER/lib/io/lane_state.rb
         MASTER/lib/fix/fix_loop.rb
+        MASTER/lib/fix/adaptive_journey.rb
         MASTER/lib/fix/outcome_policy.rb
         MASTER/lib/fix/fix_loop/completion.rb
         MASTER/lib/fix/fix_loop/lifecycle.rb
