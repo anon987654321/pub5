@@ -20,6 +20,8 @@ nb:
       minimum_order: "Lavest minsteordre"
     opening_hours_heading: "Åpningstider"
     opening_hours_invalid_time: "Skriv åpningstid i 24-timersformatet TT:MM."
+    opens_at: "åpner"
+    closes_at: "stenger"
     publish_needs_menu_and_hours: "Legg inn minst én tilgjengelig rett og åpningstider før du publiserer."
     weekdays:
       monday: Mandag
