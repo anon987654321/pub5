@@ -170,7 +170,7 @@ module Brgen
     end
 
     # The city apexes that actually serve this app. Every other ENTRIES row is a
-    # domain we intend to run and have wired into OPERATOR.sh#ALL_DOMAINS, but
+    # domain we intend to run and have wired into BOOTSTRAP.sh#ALL_DOMAINS, but
     # relayd only answers for an apex whose certificate exists on disk — see the
     # old backlog "City vanity TLS". LIVE_DOMAINS stays deployment evidence, not
     # navigation data.

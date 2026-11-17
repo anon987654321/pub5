@@ -6,19 +6,15 @@
 #   ruby OPENBSD/bin/render_dns.rb            write zones, nsd.conf, acme-client.conf
 #   ruby OPENBSD/bin/render_dns.rb --check    exit 1 if what is on disk differs
 #
-# There were three descriptions of the same DNS and no two agreed. OPERATOR.sh's
-# ALL_DOMAINS listed 53 domains; /var/nsd/zones/master held 61 zone files;
-# nsd.conf declared 54 zones, so seven zone files reached no server and three
-# more pointed at a .signed file that did not exist. Only brgen.no had SPF, DMARC
-# or a www record. oshlo.no — live, certificated, serving real visitors — had
-# none of the three. Every zone advertised an MX for a mail server that does not
-# exist. The zone files were last edited by hand in May and had drifted from the
-# subdomain list the apps actually route.
+# The legacy bootstrap's ALL_DOMAINS list and the generated NSD files once drifted:
+# the list had 53 domains, the zone directory held 61 files, and nsd.conf declared
+# 54 zones. Some files had no served zone block; others pointed to missing signed
+# files. SPF, DMARC and www records were also inconsistent across city zones.
 #
-# The fix is not to correct 61 files. It is to stop hand-writing them: one domain
-# list (ALL_DOMAINS, which domain_alignment already binds to the Rails registry),
-# one policy file (data/dns.yml), and generated output committed to the repo so
-# `--check` can tell you the moment the box and the repo disagree.
+# The fleet list remains in OPENBSD/BOOTSTRAP.sh because the recovery/bootstrap
+# path still consumes it. data/dns.yml owns DNS policy; this generator reads both
+# sources and commits the rendered zone files, nsd.conf and acme-client.conf.
+# `--check` detects drift without changing records on disk.
 #
 # Serials only move when content moves. A zone whose body is unchanged keeps the
 # serial it has, so regenerating does not push 61 pointless AXFRs at Domeneshop.
@@ -27,7 +23,7 @@ require "yaml"
 require "date"
 require "fileutils"
 
-# UTF-8 explicitly on every read. The zone files are ASCII, but OPERATOR.sh and
+# UTF-8 explicitly on every read. The zone files are ASCII, but BOOTSTRAP.sh and
 # data/dns.yml carry em dashes in their comments, and vm23's cron and non-login
 # shells run with no LANG at all — so Ruby defaults external encoding to
 # US-ASCII and the first regex against a comment raises "invalid byte sequence

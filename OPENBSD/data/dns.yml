@@ -2,7 +2,7 @@
 # every zone file, nsd.conf and acme-client.conf from it. Do not hand-edit any of
 # those three: they are generated, and the generator will overwrite you.
 #
-# The domain list is NOT here. It is ALL_DOMAINS in OPERATOR.sh, which is already
+# The domain list is NOT here. It is ALL_DOMAINS in BOOTSTRAP.sh, which is already
 # the source domain_alignment binds Brgen::DomainRegistry to — a third list would
 # just be a third thing to drift. This file carries policy and the zones that are
 # not part of the city network.
@@ -23,7 +23,7 @@ nameserver:
 # as opposed to asking our own nameserver. Two, so one operator's blocked or
 # hijacked resolver is not a false finding, and neither of them is Google:
 # checks/dns_zones.rb picked these deliberately and wrote the reason down, while
-# OPERATOR.sh carried 8.8.8.8 at the head of its own copy with no argument for it.
+# BOOTSTRAP.sh carried 8.8.8.8 at the head of its own copy with no argument for it.
 resolvers:
   public:
     - 1.1.1.1
@@ -64,7 +64,7 @@ caa:
 # advertised sixty mail servers that do not exist and would accept nothing.
 mail_domain: brgen.no
 
-# Zones outside ALL_DOMAINS, and only those: a name already in ALL_DOMAINS gets
+# Zones outside the BOOTSTRAP.sh ALL_DOMAINS list, and only those: a name already in ALL_DOMAINS gets
 # its zone from there, and listing it here too changed nothing while reading as
 # if it did. Registered or not, nsd serves these, and the ones that are NXDOMAIN
 # today cost nothing to keep ready.
