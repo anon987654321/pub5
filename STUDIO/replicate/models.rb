@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "date"
 require "yaml"
 
 module Studio
@@ -10,6 +11,9 @@ module Studio
     # which is kept in step with Replicate's public catalogue.
     module Models
       PATH = File.join(__dir__, "models.yml").freeze
+      VIDEO_BUDGET_LOCK = Mutex.new
+      BudgetExceeded = Class.new(StandardError)
+      @video_spent_usd = 0.0
 
       module_function
 
@@ -28,6 +32,64 @@ module Studio
         film_engines.fetch(name.to_s) do
           raise ArgumentError, "unknown film engine #{name}; try one of #{film_engines.keys.join(", ")}"
         end
+      end
+
+      # A deterministic estimate for the selected MiniMax engine. Replicate
+      # bills output and reference-video input seconds; when source durations
+      # are not supplied, reserve the model's documented maximum of 15 seconds.
+      def video_cost_usd(name, input, today: Date.today)
+        spec = film_engine(name)
+        pricing = spec.fetch("pricing")
+        duration = Integer(input_value(input, "duration") || 5)
+        raise ArgumentError, "MiniMax video duration must be 4-15 seconds" unless duration.between?(4, 15)
+
+        rates = pricing.fetch("usd_per_second")
+        resolution = input_value(input, "resolution") || "768P"
+        list_rate = rates.is_a?(Hash) ? Float(rates.fetch(resolution.to_s)) : Float(rates)
+        promotion = Date.iso8601(pricing.fetch("promotion_until"))
+        rate = if today <= promotion
+                 promo = pricing.fetch("promotional_usd_per_second")
+                 promo.is_a?(Hash) ? Float(promo.fetch(resolution.to_s)) : Float(promo)
+               else
+                 list_rate
+               end
+
+        references = Array(input_value(input, "reference_video_urls"))
+        max_references = Integer(pricing.fetch("max_reference_videos", 3))
+        raise ArgumentError, "too many MiniMax reference videos (max #{max_references})" if references.length > max_references
+
+        reference_seconds = references.empty? ? 0 : Float(pricing.fetch("max_reference_video_seconds", 15))
+        (duration + reference_seconds) * rate
+      end
+
+      # Reserve before the paid request, under one lock, so concurrent STUDIO
+      # jobs cannot both observe the same remaining allowance and overspend it.
+      # An ambiguous network failure keeps its reservation: the provider may
+      # already have started a billable prediction.
+      def reserve_video_spend!(name, input, today: Date.today)
+        return unless film_engines.dig(name.to_s, "pricing")
+
+        cost = video_cost_usd(name, input, today:)
+        call_cap = video_budget_limit("call_usd", "STUDIO_VIDEO_CALL_CAP_USD")
+        run_budget = video_budget_limit("run_usd", "STUDIO_VIDEO_BUDGET_USD")
+        raise BudgetExceeded, format("video estimate $%.3f exceeds the $%.2f per-call cap", cost, call_cap) if cost > call_cap
+
+        VIDEO_BUDGET_LOCK.synchronize do
+          spent = @video_spent_usd.to_f
+          if spent + cost > run_budget
+            raise BudgetExceeded, format("video estimate $%.3f exceeds the $%.2f remaining run budget", cost, run_budget - spent)
+          end
+          @video_spent_usd = spent + cost
+        end
+        cost
+      end
+
+      def video_budget_spent
+        VIDEO_BUDGET_LOCK.synchronize { @video_spent_usd.to_f }
+      end
+
+      def reset_video_budget!
+        VIDEO_BUDGET_LOCK.synchronize { @video_spent_usd = 0.0 }
       end
 
       def default_engine = catalogue.fetch("default_engine")
