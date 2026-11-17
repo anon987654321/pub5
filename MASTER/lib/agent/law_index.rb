@@ -96,58 +96,84 @@ module Master
         def write_index!
           require_relative "bare_law_loader"
           require "prism"
+          inputs = law_index_inputs
+          rows = law_index_rows(inputs)
+          payload = law_index_payload(rows)
+          File.write(index_path, JSON.pretty_generate(payload))
+          @index = payload
+        end
+
+        def law_index_inputs
           corpus = Master::Agent::BareCorpus.new([File.expand_path("../../law/lexical.rb", __dir__)])
-          fixtures = load_yaml(File.expand_path("../../checks/data/law_fixtures.yml", __dir__))
-                    .fetch("laws", {})
-          statement_rows = laws_yml
-          kind_rows = File.file?(data_path("law_kinds.yml")) ? load_yaml(data_path("law_kinds.yml")).fetch("kinds", []) : []
-          incidents = File.file?(data_path("incidents.yml")) ? load_yaml(data_path("incidents.yml")).fetch("incidents", []) : []
-          incident_by_law = incidents.each_with_object({}) do |incident, map|
+          fixtures = load_yaml(File.expand_path("../../checks/data/law_fixtures.yml", __dir__)).fetch("laws", {})
+          kind_path = data_path("law_kinds.yml")
+          incident_path = data_path("incidents.yml")
+          kinds = File.file?(kind_path) ? load_yaml(kind_path).fetch("kinds", []) : []
+          incidents = File.file?(incident_path) ? load_yaml(incident_path).fetch("incidents", []) : []
+          {
+            corpus:, fixtures:, statements: laws_yml, kinds:, incidents:,
+            incident_by_law: incident_law_index(incidents),
+            defaults: catalogue.fetch("defaults", {}),
+          }
+        end
+
+        def incident_law_index(incidents)
+          incidents.each_with_object({}) do |incident, map|
             Array(incident["laws_governed"]).each { |law| (map[law] ||= []) << incident["id"] }
             Array(incident["laws_born"]).each { |law| (map[law] ||= []) << incident["id"] }
           end
+        end
 
-          rows = {}
-          catalogue_entries.each do |id, entry|
+        def law_index_rows(inputs)
+          catalogue_entries.each_with_object({}) do |(id, entry), rows|
             next unless entry.is_a?(Hash)
 
-            statement = statement_rows[id].is_a?(Hash) ? statement_rows[id] : {}
-            row = {
-              "id" => id,
-              "statement" => statement["statement"] ||
-                             (statement["parent"] && statement_rows[statement["parent"]].is_a?(Hash) &&
-                              statement_rows[statement["parent"]]["statement"]) || nil,
-              "parent" => statement["parent"],
-              "severity" => entry["severity"],
-              "mode" => entry["mode"] || catalogue.fetch("defaults", {})["mode"] || "violation",
-              "lifecycle" => entry["lifecycle"] || catalogue.fetch("defaults", {})["lifecycle"] || "active",
-              "autofix" => entry["autofix"] || catalogue.fetch("defaults", {})["autofix"] || "review",
-              "languages" => Array(entry["languages"]),
-              "surfaces" => Array(entry["surfaces"]),
-              "path_scope" => entry["path_scope"] || nil,
-              "exemptions" => {
-                "path_exclude" => Array(entry["path_exclude"]),
-                "kinds" => kind_rows.select { |k| (k["exemptions"] || {}).key?(id) }.map { |k| k["id"] },
-              },
-              "fixtures" => fixtures[id] || nil,
-              "proved_by" => statement["proved_by"] || entry["proved_by"],
-              "definition_sources" => Array(entry["definition_sources"]),
-              "bare_detector" => corpus.laws.key?(id) ? true : false,
-              "incidents" => incident_by_law[id],
-            }
-            row.delete_if { |_k, v| v.nil? }
-            rows[id] = row
+            rows[id] = law_index_row(id, entry, inputs)
           end
+        end
 
-          payload = {
+        def law_index_row(id, entry, inputs)
+          statement = inputs[:statements][id].is_a?(Hash) ? inputs[:statements][id] : {}
+          parent = statement["parent"]
+          parent_row = inputs[:statements][parent]
+          inherited = parent_row["statement"] if parent_row.is_a?(Hash)
+          row = {
+            "id" => id,
+            "statement" => statement["statement"] || inherited,
+            "parent" => parent,
+            "severity" => entry["severity"],
+            "mode" => entry["mode"] || inputs[:defaults]["mode"] || "violation",
+            "lifecycle" => entry["lifecycle"] || inputs[:defaults]["lifecycle"] || "active",
+            "autofix" => entry["autofix"] || inputs[:defaults]["autofix"] || "review",
+            "languages" => Array(entry["languages"]),
+            "surfaces" => Array(entry["surfaces"]),
+            "path_scope" => entry["path_scope"],
+            "exemptions" => law_index_exemptions(id, entry, inputs[:kinds]),
+            "fixtures" => inputs[:fixtures][id],
+            "proved_by" => statement["proved_by"] || entry["proved_by"],
+            "definition_sources" => Array(entry["definition_sources"]),
+            "bare_detector" => inputs[:corpus].laws.key?(id),
+            "incidents" => inputs[:incident_by_law][id],
+          }
+          row.delete_if { |_key, value| value.nil? }
+          row
+        end
+
+        def law_index_exemptions(id, entry, kinds)
+          {
+            "path_exclude" => Array(entry["path_exclude"]),
+            "kinds" => kinds.select { |kind| (kind["exemptions"] || {}).key?(id) }.map { |kind| kind["id"] },
+          }
+        end
+
+        def law_index_payload(rows)
+          {
             "schema" => 1,
             "generated_at" => Time.now.utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "revision" => revision,
             "law_count" => rows.size,
             "laws" => rows,
           }
-          File.write(index_path, JSON.pretty_generate(payload))
-          @index = payload
         end
       end
     end
