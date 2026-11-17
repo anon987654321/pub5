@@ -386,11 +386,9 @@ module Master
         return false if content.bytesize < 128 || content.lines.length < 7
 
         source = receipt.fetch("source").to_s
-        return false unless source.end_with?("/#{page}.#{section}")
-        versioned = source.start_with?("https://man.openbsd.org/OpenBSD-")
-        local = source.start_with?("target-local:/")
-        return false unless versioned || local
-        return false if versioned && release && !source.start_with?("https://man.openbsd.org/OpenBSD-#{release}/")
+        versioned = source == "https://man.openbsd.org/OpenBSD-#{release}/#{page}.#{section}"
+        target_local = source.match?(%r{\Atarget-local:/\S+/man#{section}/#{Regexp.escape(page)}\.#{section}\z})
+        return false unless versioned || target_local
 
         true
       rescue KeyError, TypeError
