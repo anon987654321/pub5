@@ -575,7 +575,7 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes lock_block, "current_identity == \"$lock_identity\""
 
     Dir.mktmpdir do |dir|
-      script = "export VPS_DEPLOY_LOCK_DIR=#{dir}/deploy.lock VPS_DEPLOY_LOCK_HELD=1\\n#{lock_block}\\nprint acquired\\n"
+      script = "export VPS_DEPLOY_LOCK_DIR=#{dir}/deploy.lock VPS_DEPLOY_LOCK_HELD=1\n#{lock_block}\nprint acquired\n"
       out = IO.popen(["zsh", "-c", script, { err: %i[child out] }], &:read)
       refute_equal 0, $?.exitstatus
       assert_includes out, "child invocation has no readable parent lock owner"
