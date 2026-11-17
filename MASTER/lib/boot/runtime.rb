@@ -93,11 +93,11 @@ module Master
       provider_config(root:).dig("openrouter", "default_model")
     end
 
-    # Head of models.grok_primary — the declared :free pool this runtime routes
-    # first when an OpenRouter key is present.
+    # Head of models.openrouter_primary — a free OpenRouter fallback,
+    # kept separate from signed-in CLI and direct-provider lanes.
     def free_primary_model(root: ROOT)
       Master.models_config(root:)
-            .dig("models", "grok_primary")&.first&.fetch("id")
+            .dig("models", "openrouter_primary")&.first&.fetch("id")
     end
 
     # models.yml three_mirror_redundancy.pool — the three models Review::Consensus
