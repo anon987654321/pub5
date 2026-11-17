@@ -322,12 +322,14 @@ class TestIdeaPictureOutput < Minitest::Test
     assert_match(/simple directory name/, error.message)
   end
 
-  # The film engine is MiniMax H3 Lite, which takes a first frame and a
-  # 4-15s duration, not the old model's `image`/`mode`/`aspect_ratio` shape.
-  def test_film_engine_is_h3_lite_and_takes_a_first_frame
-    assert_equal "minimax/h3-lite", Studio::Visual::IdeaPicture::FILM
+  # Both H3 models take a first frame and a 4-15s duration. Lite also takes
+  # an explicit resolution; Highspeed is fixed at 768P.
+  def test_h3_film_engines_have_their_own_input_contracts
+    assert_equal "minimax/h3-highspeed", Studio::Visual::IdeaPicture::FILM
     assert_equal %w[prompt first_frame_image duration resolution],
                  Studio::Visual::IdeaPicture::FILM_INPUT_KEYS.fetch("minimax/h3-lite")
+    assert_equal %w[prompt first_frame_image duration],
+                 Studio::Visual::IdeaPicture::FILM_INPUT_KEYS.fetch("minimax/h3-highspeed")
   end
 
   def test_film_input_uses_the_first_frame_and_clamps_duration_to_h3_bounds
@@ -336,14 +338,21 @@ class TestIdeaPictureOutput < Minitest::Test
       File.write(still, "image")
       client = Object.new
       client.define_singleton_method(:upload_file) { |path, subject:| "https://example.test/#{File.basename(path)}?s=#{subject}" }
-      picture = Studio::Visual::IdeaPicture.new(subject: "probe", client:, directory: dir)
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: dir, film_engine: "minimax/h3-lite"
+      )
 
       input = picture.send(:film_input, "slow turn", still, 2)
       assert_equal "https://example.test/still.jpg?s=probe", input[:first_frame_image]
       assert_equal 4, input[:duration], "H3 Lite's floor is 4s; 2s would be rejected"
-      refute input.key?(:image), "h3-lite takes first_frame_image, not image"
-      assert_equal "768P", input[:resolution]
+      refute input.key?(:image), "H3 Lite takes first_frame_image, not image"
+      assert_equal "480P", input[:resolution]
 
+      higher_resolution = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: dir, film_engine: "minimax/h3-lite",
+        film_resolution: "768P"
+      )
+      assert_equal "768P", higher_resolution.send(:film_input, "turn", still, 8)[:resolution]
       assert_equal 15, picture.send(:film_input, "turn", still, 30)[:duration]
       assert_equal 8, picture.send(:film_input, "turn", still, 8)[:duration]
     end
@@ -375,9 +384,9 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
-  def test_the_film_engine_defaults_to_h3_lite_when_not_selected
+  def test_the_film_engine_defaults_to_h3_highspeed_when_not_selected
     picture = Studio::Visual::IdeaPicture.new(subject: "probe", directory: Dir.pwd)
-    assert_equal "minimax/h3-lite", picture.film_engine
+    assert_equal "minimax/h3-highspeed", picture.film_engine
   end
 
   def test_the_catalogue_rejects_an_unknown_film_engine
@@ -389,6 +398,45 @@ class TestIdeaPictureOutput < Minitest::Test
 
     error = assert_raises(ArgumentError) { models.film_engine("bogus/nope") }
     assert_match(/unknown film engine/, error.message)
+  end
+
+  def test_minimax_video_prices_include_promotion_and_reference_video_billing
+    models = Studio::ReplicateClient::Models
+    today = Date.new(2026, 11, 17)
+    lite_480 = { "duration" => 10, "resolution" => "480P" }
+    lite_768 = { "duration" => 10, "resolution" => "768P" }
+    highspeed = { "duration" => 10 }
+
+    assert_in_delta 0.125, models.video_cost_usd("minimax/h3-lite", lite_480, today:), 0.001
+    assert_in_delta 0.20, models.video_cost_usd("minimax/h3-lite", lite_768, today:), 0.001
+    assert_in_delta 0.30, models.video_cost_usd("minimax/h3-highspeed", highspeed, today:), 0.001
+    assert_in_delta 0.60, models.video_cost_usd("minimax/h3-highspeed", highspeed, today: Date.new(2027, 1, 1)), 0.001
+
+    references = highspeed.merge("reference_video_urls" => %w[https://example.test/a.mp4 https://example.test/b.mp4])
+    assert_in_delta 0.75, models.video_cost_usd("minimax/h3-highspeed", references, today:), 0.001
+    assert_raises(ArgumentError) do
+      models.video_cost_usd("minimax/h3-highspeed",
+                           highspeed.merge("reference_video_urls" => %w[a b c d]), today:)
+    end
+  end
+
+  def test_minimax_budget_refuses_a_call_that_exceeds_the_run_ceiling
+    models = Studio::ReplicateClient::Models
+    previous_budget = ENV["STUDIO_VIDEO_BUDGET_USD"]
+    previous_cap = ENV["STUDIO_VIDEO_CALL_CAP_USD"]
+    ENV["STUDIO_VIDEO_BUDGET_USD"] = "0.25"
+    ENV["STUDIO_VIDEO_CALL_CAP_USD"] = "1.00"
+    models.reset_video_budget!
+
+    error = assert_raises(models::BudgetExceeded) do
+      models.reserve_video_spend!("minimax/h3-highspeed", { "duration" => 10 }, today: Date.new(2026, 11, 17))
+    end
+    assert_match(/remaining run budget/, error.message)
+    assert_in_delta 0.0, models.video_budget_spent, 0.001
+  ensure
+    previous_budget ? ENV["STUDIO_VIDEO_BUDGET_USD"] = previous_budget : ENV.delete("STUDIO_VIDEO_BUDGET_USD")
+    previous_cap ? ENV["STUDIO_VIDEO_CALL_CAP_USD"] = previous_cap : ENV.delete("STUDIO_VIDEO_CALL_CAP_USD")
+    Studio::ReplicateClient::Models.reset_video_budget!
   end
 
   def test_add_soundtrack_muxes_real_audio_and_keeps_the_silent_original
