@@ -130,6 +130,7 @@ if [[ $app == recover ]]; then
   esac
   unset VPS_DEPLOY_RUN_ID VPS_DEPLOY_RUN_TARGET VPS_DEPLOY_RUN_STARTED_AT
   unset VPS_DEPLOY_STARTED
+  unset VPS_DEPLOY_LOCK_HELD
 else
   [[ $# -eq 1 ]] || { usage >&2; exit 2 }
   # Restrict the log/path component to a safe identifier before inventory lookup.
