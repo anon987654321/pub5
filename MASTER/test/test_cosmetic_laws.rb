@@ -67,7 +67,7 @@ class TestCosmeticRules < Minitest::Test
     range = rule("EN_DASH_RANGE")
     line = "Ideal line length is 45-75 characters.\n"
     assert_empty range.check(line, path: "MASTER/data/council.yml")
-    assert_empty range.check(line, path: "OPENBSD/mirror/bin/check")
+    assert_empty range.check(line, path: "OPENBSD/bin/check")
     refute_empty range.check(line, path: "OPENBSD/README.md")
 
     excellence = rule("TYPOGRAPHIC_EXCELLENCE")
