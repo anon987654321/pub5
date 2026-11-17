@@ -628,8 +628,6 @@ finish() {
       (( rc == 0 )) && rc=1
     }
   fi
-  [[ -n $flag_keeper ]] && kill $flag_keeper 2>/dev/null
-  rm -f -- "$deploy_flag"
   if (( rc != 0 )) && [[ $deploy_target_kind == all || $deploy_target_kind == group ]]; then
     print -u2 "vps-deploy: $app FAILED at stage \"$deploy_stage\" (exit $rc)"
   fi
@@ -658,6 +656,11 @@ finish() {
   if (( rc != 0 )) && (( lock_owner )); then
     restore_started || print -u2 "vps-deploy: production is NOT fully restored - see the lines above"
   fi
+  # Keep resource_guard excluded until every service restored by this failure
+  # has answered, including slow boots; only then stop the heartbeat and remove
+  # this process's deploy flag.
+  [[ -n $flag_keeper ]] && kill $flag_keeper 2>/dev/null
+  rm -f -- "$deploy_flag"
   log "finished exit=$rc"
   # Write the verdict straight to the files as well: if the tee pipe died with
   # the ssh session the last structured line can still land on disk.
@@ -786,6 +789,9 @@ choose_deploy_order() {
 }
 
 if [[ $deploy_target_kind == all || $deploy_target_kind == group ]]; then
+  # The parent spans child deploys and cooldowns. Its own flag keeps the
+  # resource guard out until the whole batch (or its failure recovery) ends.
+  keep_deploy_flag
   typeset -i first=1
   typeset -a deploy_order
   if [[ $deploy_target_kind == all ]]; then
