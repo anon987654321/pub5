@@ -448,9 +448,62 @@ DENSITY_aesthetic_integrity:
 
 DENSITY_kanso:
   parent: DENSITY
-  statement: "Simplicity not achieved; clutter remains."
+  statement: >
+    Simplicity not achieved by subtraction. Non-essential elements,
+    visual noise, or structural clutter remain after the work that
+    should have cleared them.
+  severity: error
   resolution: review
+  mechanical: Master::Density#kanso
   lineage: "Japanese aesthetic of kanso"
+
+DENSITY_kanso_visual_noise:
+  parent: DENSITY_kanso
+  statement: >
+    Decorative chrome, non-data ink, ornamental shadows, glows, trailing
+    arrows, eyebrow labels, or competing visual treatments that do not carry
+    information, affordance, or required hierarchy.
+  severity: error
+  resolution: automatic
+  mechanical: Master::Density#kanso_visual_noise
+  proof: MASTER/test/test_kanso_laws.rb#test_visual_noise_flags_shadow_only_chrome
+
+DENSITY_kanso_structural_clutter:
+  parent: DENSITY_kanso
+  statement: >
+    Extra wrappers, nested containers, or layout regions that add no
+    hierarchy, no semantics, and no intentional spacing.
+  severity: error
+  resolution: automatic
+  mechanical: Master::Density#kanso_structural_clutter
+  proof: MASTER/test/test_kanso_laws.rb#test_structural_clutter_flags_wrapper_chain
+
+DENSITY_kanso_conceptual_duplication:
+  parent: DENSITY_kanso
+  statement: >
+    Near-identical components, repeated decisions, or parallel
+    implementations that should have been consolidated into one clear
+    concept.
+  severity: error
+  resolution: review
+
+DENSITY_kanso_space_not_earned:
+  parent: DENSITY_kanso
+  statement: >
+    Empty space that is residual leftover rather than intentional ma. Gaps
+    that break rhythm or exist only because clutter was not removed.
+  severity: error
+  resolution: review
+  mechanical: Master::Density#kanso_space_not_earned
+
+DENSITY_kanso_material_dishonesty:
+  parent: DENSITY_kanso
+  statement: >
+    Materials or treatments that pretend to be something they are not, or
+    that fight their own nature (synthetic wood, forced texture, decorative
+    lies).
+  severity: error
+  resolution: review
 
 DENSITY_ma:
   parent: DENSITY

@@ -349,6 +349,16 @@ viewport_spill:
   pass: "ok: nothing hangs off the right edge at 390px"
   covered_by: rendered_suite
 
+# Kanso proxies on the declared surfaces: decorative chrome, content-free
+# nesting, residual gaps, painted-area envelope. Findings are soft until the
+# proxies are calibrated on a real sweep (CHECK_STRICT_SOFT=1 promotes them).
+kanso_surface:
+  needs: [browser]
+  require: lib/rendered/kanso_surface
+  class: Deploy::KansoSurfaceCheck
+  pass: "ok: kanso proxies within envelope on measured surfaces"
+  covered_by: rendered_suite
+
 layout_snapshot:
   needs: [browser]
   require: lib/rendered/layout_snapshot

@@ -17,6 +17,7 @@ require_relative "rendered/mobile_flow"
 require_relative "rendered/cross_app"
 require_relative "rendered/webgl_surfaces"
 require_relative "rendered/viewport_spill"
+require_relative "rendered/kanso_surface"
 
 module Deploy
   # Composite for every check that measures a real browser.
@@ -43,6 +44,11 @@ module Deploy
       CrossAppEquivalenceCheck,
       LayoutSnapshotCheck,
       ViewportSpillCheck,
+      # After spill: kanso reads the same surfaces with the opposite question
+      # (what is painted or nested that carries nothing), and its findings
+      # stay soft until calibrated, so it must not reorder a WebGL leaf that
+      # wants its own GPU session.
+      KansoSurfaceCheck,
       # Last, because it is the only leaf that wants a GPU stack: it opens its
       # own session with SwiftShader rather than the shared --disable-gpu one.
       WebglSurfacesCheck,

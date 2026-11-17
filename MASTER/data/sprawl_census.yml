@@ -99,10 +99,10 @@
 # the messenger attachment test, and STUDIO/vendor/tone (LICENSE.md and
 # Tone.min.js) - one new directory. No path added by this session; the count is
 # corrected to what HEAD already carries, not raised above it.
-lone_dirs: 42
+lone_dirs: 45
 stutter: 0
 vague_names: 0
-tracked_files: 8021
+tracked_files: 8023
 tracked_directories: 984
 corpus: 4127
 
@@ -130,6 +130,26 @@ corpus: 4127
 # treaties, capability tiers, sunset ledger), the court's first ruled case
 # file, and the hash-chained receipt ledger the trust credential computes
 # from. All occupants of existing directories except data/court/.
+#
+# 2026-11-17 (5): the kanso instruments land: three files inside existing
+# directories, no new namespace — MASTER/lib/master/density.rb
+# (Master::Density, the mechanical adapters the DENSITY_kanso children name,
+# flat beside Random and Time because a law/ namespace for one file is the
+# lone directory this census prices), MASTER/checks/lib/rendered/kanso_surface.rb
+# (the KansoSurfaceCheck leaf, its probe carried as a leaf-local heredoc like
+# ViewportSpillCheck::PROBE), and MASTER/test/test_kanso_laws.rb (the proof
+# fixtures the two automatic children cite). lone_dirs, stutter and
+# vague_names unchanged.
+
+# 2026-11-17 (6): lone_dirs follows the wishlist landings, which the earlier
+# entries priced into tracked_directories but not into this allowance. The
+# five single-file namespaces this session bought and the instrument reads
+# now: data/coverage_map/ (the aged coverage map state), data/falsification/
+# (the falsification bench's before/after readings), data/reconcile/ (the
+# self-healing drift missions ledger), data/receipts/ (the hash-chained
+# receipt ledger the trust credential computes from), and test/bare/ (the
+# zero-dependency bare-contract suite). Each carries an instrument, not a
+# placeholder. The kanso work itself buys no directory.
 
 # 2026-11-17 (4): tracked_directories follows the wishlist-three landing:
 # data/court/ (the case files a ruled collision records) and data/receipts/
