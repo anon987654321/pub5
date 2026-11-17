@@ -58,14 +58,20 @@ class Dating::VerificationTest < ActiveSupport::TestCase
     assert_includes Dating::Profile.verified, @profile
   end
 
-  test "rejecting clears the profile's verified mark" do
+  test "rejecting clears verification but preserves location history" do
     @profile.update_column(:verified_at, Time.current)
+    ping = Dating::LocationPing.create!(city: @city, user: @owner, latitude: 60.39, longitude: 5.32,
+                                        expires_at: 1.hour.from_now)
 
     request!.reject!(by: @reviewer, note: "ikke samme person")
 
     assert_nil @profile.reload.verified_at
     assert_not_includes Dating::Profile.verified, @profile
     assert_equal "ikke samme person", Dating::Verification.last.review_note
+    assert Dating::LocationPing.exists?(ping.id), "a photo decision must not erase location history"
+    event = Shared::AuditEvent.find_by(action: "dating.verification.rejected", target_type: "Dating::Verification")
+    assert event
+    assert_equal @reviewer.id, event.actor_id
   end
 
   test "a rejected verification cannot later be approved" do
