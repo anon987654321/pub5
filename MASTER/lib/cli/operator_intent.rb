@@ -101,8 +101,9 @@ module Master
         resolve(parse_payload(raw), inventory)
       rescue StandardError => e
         log_unresolved(e)
-        detail = Master::Execution::Contract.diagnostic_fields(e.message).fetch(:diagnostic, nil)
-        suffix = detail.to_s.empty? ? "" : ": #{detail.to_s[0, 180]}"
+        diagnostic = Master::Execution::Contract.diagnostic_fields(e.message)
+        digest = diagnostic[:error_digest].to_s[0, 16]
+        suffix = digest.empty? ? "" : " [diagnostic #{digest}, #{diagnostic[:error_bytes]} bytes]"
         Result.new(
           status: :unavailable,
           message: "MASTER could not validate operator intent (#{e.class})#{suffix}; no action was taken.",
