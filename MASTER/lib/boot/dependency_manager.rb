@@ -1066,7 +1066,6 @@ module Master
     class DependencyManager
       include DependencyManagerLifecycle
       include DependencyManagerBundleDiscovery
-      include DependencyManagerBundleInstaller
       include DependencyManagerBundleEnvironment
       include DependencyManagerSystemPackages
       include DependencyManagerProcessCapture
