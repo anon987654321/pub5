@@ -1,5 +1,5 @@
 <% content_for :title, @restaurant.name %>
-<% content_for :head, robots_meta(index: false) if @restaurant.demo? %>
+<% content_for :head, robots_meta(index: false) if @restaurant.demo? || !@restaurant.active? %>
 <% content_for :description, meta_description_for(@restaurant) %>
 <% content_for :json_ld, json_ld_for(@restaurant, type: :local_business) %>
 <% content_for :json_ld, json_ld_script(breadcrumb_json_ld([
@@ -8,6 +8,24 @@
     ])) %>
 
 <%= render "takeaway/nav_bar", active: "restaurants" %>
+
+<% if authenticated? && @restaurant.owner?(Current.user) && !@restaurant.active? %>
+  <% checklist = @restaurant.setup_checklist %>
+  <section class="store-panel" aria-labelledby="restaurant-setup-heading">
+    <h2 id="restaurant-setup-heading"><%= t("takeaway.setup_heading") %></h2>
+    <p><%= t("takeaway.setup_private_notice") %></p>
+    <ul class="restaurant-setup-checklist">
+      <% checklist.each do |step, complete| %>
+        <li>
+          <span aria-hidden="true"><%= complete ? "✓" : "○" %></span>
+          <%= t("takeaway.setup_steps.#{step}") %>
+          <strong><%= complete ? t("takeaway.setup_done") : t("takeaway.setup_needed") %></strong>
+        </li>
+      <% end %>
+    </ul>
+    <%= link_to t("takeaway.edit_restaurant"), edit_restaurant_path(@restaurant), class: "button button-primary button-small" %>
+  </section>
+<% end %>
 
 <%# Kaufland.de's product page, measured at 1440 and 400, for a kitchen: the
     breadcrumb, a picture beside a white buy box, then the menu as the tile
