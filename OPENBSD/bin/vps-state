@@ -147,40 +147,19 @@ end
 
 # Fleet receipts are root-private under /var/db/pub5. On the real VPS read
 # them only through the fixed broker; custom stamp roots are local test/drill
-# fixtures and may be inspected directly without any privilege transition.
-def deploy_run_records
-  if Deploy::Environment.on_vps? && File.expand_path(STAMP_DIR) == "/var/db/pub4"
-    broker = "/usr/local/sbin/pub5-admin"
-    unless File.file?(broker) && !File.symlink?(broker) && File.executable?(broker)
-      return [nil, "pub5-admin missing or untrusted"]
-    end
+# fixtures and use the same bounded response contract.
+DEPLOY_RUN_SCAN_LIMIT = 500
+DEPLOY_RUN_PENDING_LIMIT = 100
 
-    output, result = Open3.capture2e("doas", "-n", broker, "deploy-run-list")
-    return [nil, "deploy-run-list broker failed (exit #{result.exitstatus})"] unless result.success?
-
-    records = JSON.parse(output)
-  else
-    directory = File.join(STAMP_DIR, "deploy_runs")
-    return [[], nil] unless File.exist?(directory) || File.symlink?(directory)
-    raise "corrupt deploy-run directory is a symlink: #{directory}" if File.symlink?(directory)
-    raise "#{directory} is not a directory" unless File.directory?(directory)
-
-    records = Dir.children(directory).grep(/\A\d{8}T\d{6}Z-[a-z0-9_-]{1,32}-\d+\.json\z/).map do |name|
-      path = File.join(directory, name)
-      raise "#{path} is a symlink; refusing deploy-run read" if File.symlink?(path)
-      raise "#{path} is not a regular file" unless File.file?(path)
-      JSON.parse(File.read(path))
-    end
-  end
-
-  raise "deploy-run-list did not return an array" unless records.is_a?(Array)
+def validate_pending_deploy_records!(records)
+  raise "deploy-run-pending-list pending field is not an array" unless records.is_a?(Array)
   records.each do |record|
     raise "invalid deploy-run record" unless record.is_a?(Hash)
     raise "invalid deploy-run ID" unless record["run_id"].is_a?(String) &&
       record["run_id"].match?(/\A\d{8}T\d{6}Z-[a-z0-9_-]{1,32}-\d+\z/)
     raise "invalid deploy-run target" unless %w[master brgen amber bsdports mrdamascy all rails].include?(record["target"])
-    raise "invalid deploy-run status" unless %w[running ok failed recovered].include?(record["status"])
-    raise "invalid deploy-run recovery state" unless %w[none pending complete].include?(record["recovery_state"])
+    raise "invalid deploy-run status" unless %w[running failed].include?(record["status"])
+    raise "invalid deploy-run recovery state" unless record["recovery_state"] == "pending"
     raise "invalid deploy-run PID" unless record["pid"].is_a?(Integer) && record["pid"].positive?
     raise "invalid deploy-run stage" unless record["stage"].is_a?(String) &&
       record["stage"].match?(/\A[A-Za-z0-9_.:+\/-]{1,160}\z/)
@@ -193,24 +172,68 @@ def deploy_run_records
     raise "invalid deploy-run log path" unless record["run_log"].is_a?(String) &&
       record["run_log"].match?(/\A\/[A-Za-z0-9_.\/-]{1,2048}\z/)
   end
-  [records, nil]
+  records
+end
+
+def deploy_run_records
+  if Deploy::Environment.on_vps? && File.expand_path(STAMP_DIR) == "/var/db/pub4"
+    broker = "/usr/local/sbin/pub5-admin"
+    unless File.file?(broker) && !File.symlink?(broker) && File.executable?(broker)
+      return [nil, "pub5-admin missing or untrusted", false, 0]
+    end
+
+    output, result = Open3.capture2e("doas", "-n", broker, "deploy-run-pending-list")
+    return [nil, "deploy-run-pending-list broker failed (exit #{result.exitstatus})", false, 0] unless result.success?
+    document = JSON.parse(output)
+  else
+    directory = File.join(STAMP_DIR, "deploy_runs")
+    return [[], nil, false, 0] unless File.exist?(directory) || File.symlink?(directory)
+    raise "corrupt deploy-run directory is a symlink: #{directory}" if File.symlink?(directory)
+    raise "#{directory} is not a directory" unless File.directory?(directory)
+
+    names = Dir.children(directory).grep(/\A\d{8}T\d{6}Z-[a-z0-9_-]{1,32}-\d+\.json\z/).sort.reverse
+    scanned = names.length
+    truncated = scanned > DEPLOY_RUN_SCAN_LIMIT
+    names = names.first(DEPLOY_RUN_SCAN_LIMIT)
+    records = names.map do |name|
+      path = File.join(directory, name)
+      raise "#{path} is a symlink; refusing deploy-run read" if File.symlink?(path)
+      raise "#{path} is not a regular file" unless File.file?(path)
+      JSON.parse(File.read(path))
+    end.select do |record|
+      record.is_a?(Hash) && record["recovery_state"] == "pending" && %w[running failed].include?(record["status"])
+    end
+    truncated = true if records.length > DEPLOY_RUN_PENDING_LIMIT
+    records = records.first(DEPLOY_RUN_PENDING_LIMIT)
+    return [validate_pending_deploy_records!(records), nil, truncated, scanned]
+  end
+
+  raise "deploy-run-pending-list response is not an object" unless document.is_a?(Hash)
+  raise "invalid deploy-run-pending-list truncated marker" unless [true, false].include?(document["truncated"])
+  scanned = document["scanned"]
+  returned = document["returned"]
+  raise "invalid deploy-run-pending-list counts" unless
+    scanned.is_a?(Integer) && scanned >= 0 &&
+    returned.is_a?(Integer) && returned >= 0 &&
+    returned <= DEPLOY_RUN_PENDING_LIMIT
+  records = validate_pending_deploy_records!(document["pending"])
+  raise "deploy-run-pending-list returned count mismatch" unless returned == records.length
+  [records, nil, document["truncated"], scanned]
 rescue JSON::ParserError => e
-  [nil, "CORRUPT: deploy-run receipt JSON (#{e.class})"]
+  [nil, "CORRUPT: deploy-run-pending-list JSON (#{e.class})", false, 0]
 rescue StandardError => e
-  category = e.message.match?(/\A(?:invalid deploy-run|deploy-run-list did not return|corrupt deploy-run|.*symlink; refusing deploy-run|.*is not a regular file)/) ? "CORRUPT" : "UNAVAILABLE"
-  [nil, "#{category}: #{e.class}: #{e.message}"]
+  category = e.message.match?(/\A(?:invalid deploy-run|deploy-run-pending-list response|deploy-run-pending-list pending|deploy-run-pending-list truncated|deploy-run-pending-list counts|deploy-run-pending-list returned|corrupt deploy-run|.*symlink; refusing deploy-run|.*is not a regular file)/) ? "CORRUPT" : "UNAVAILABLE"
+  [nil, "#{category}: #{e.class}: #{e.message}", false, 0]
 end
 
 def deploy_recovery_status
-  records, error = deploy_run_records
+  records, error, truncated, scanned = deploy_run_records
   if error
     state = error.start_with?("CORRUPT:") ? "corrupt" : "unavailable"
-    return { state: state, count: 0, pending: [], error: error }
+    return { state: state, count: 0, pending: [], truncated: false, scanned: scanned, error: error }
   end
 
-  pending = records.select do |record|
-    record["recovery_state"] == "pending" && %w[running failed].include?(record["status"])
-  end.sort_by { |record| record.fetch("started_at", "") }.reverse.map do |record|
+  pending = records.sort_by { |record| record.fetch("started_at", "") }.reverse.map do |record|
     {
       run_id: record.fetch("run_id"),
       target: record.fetch("target"),
@@ -225,7 +248,8 @@ def deploy_recovery_status
     }
   end
 
-  { state: pending.empty? ? "none" : "pending", count: pending.length, pending: pending }
+  { state: truncated ? "truncated" : (pending.empty? ? "none" : "pending"),
+    count: pending.length, pending: pending, truncated: truncated, scanned: scanned }
 end
 
 def app_row(name, port)
@@ -355,7 +379,8 @@ else
   if %w[unavailable corrupt].include?(recovery[:state])
     puts Deploy::Dmesg.line("recovery0", "fleet", "state=#{recovery[:state]} error=#{recovery[:error]}")
   else
-    puts Deploy::Dmesg.line("recovery0", "fleet", "state=#{recovery[:state]} pending=#{recovery[:count]}")
+    suffix = recovery[:truncated] ? " truncated=true scanned=#{recovery[:scanned]} (run recover --plan for complete list)" : ""
+    puts Deploy::Dmesg.line("recovery0", "fleet", "state=#{recovery[:state]} pending=#{recovery[:count]}#{suffix}")
     recovery[:pending].each do |run|
       puts Deploy::Dmesg.line(
         "recovery0",
