@@ -17,8 +17,8 @@
 # each line still says what to do. The record is /var/log/pub4-alerts.log
 # (rotated by newsyslog) plus one daemon.crit syslog line.
 #
-# watch is bounded: it runs four reads (df, swapctl, rcctl, one marker file) and
-# changes nothing. Run it from root's crontab.
+# watch is bounded: it runs five reads (df, swapctl, rcctl, backup marker and
+# CPU-monitor heartbeat) and changes nothing. Run it from root's crontab.
 # PUB4_ALERT_PATH_PREFIX lets the test put fake df, swapctl and rcctl first.
 PATH=${PUB4_ALERT_PATH_PREFIX:+$PUB4_ALERT_PATH_PREFIX:}/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
 
