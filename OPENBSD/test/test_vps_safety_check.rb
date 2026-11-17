@@ -427,6 +427,56 @@ class VpsSafetyCheckTest < Minitest::Test
       assert_includes out, "vps-deploy must not recommend generic privileged du"
     end
   end
+  def test_vps_deploy_restores_services_before_releasing_guard_flag
+    with_fixture do |dir, _|
+      path = File.join(dir, "OPENBSD", "bin", "vps-deploy")
+      original = File.read(path)
+      safe_order = <<~'SAFE'
+        if (( rc != 0 )) && (( lock_owner )); then
+          restore_started || print -u2 "vps-deploy: production is NOT fully restored - see the lines above"
+        fi
+        # Keep resource_guard excluded until every service restored by this failure
+        # has answered, including slow boots; only then stop the heartbeat and remove
+        # this process's deploy flag.
+        [[ -n $flag_keeper ]] && kill $flag_keeper 2>/dev/null
+        rm -f -- "$deploy_flag"
+      SAFE
+      unsafe_order = <<~'UNSAFE'
+        [[ -n $flag_keeper ]] && kill $flag_keeper 2>/dev/null
+        rm -f -- "$deploy_flag"
+        if (( rc != 0 )) && (( lock_owner )); then
+          restore_started || print -u2 "vps-deploy: production is NOT fully restored - see the lines above"
+        fi
+      UNSAFE
+      text = original.sub(safe_order, unsafe_order)
+      refute_equal original, text, "the safety mutation must match the current finish ordering"
+      File.write(path, text)
+      out, status = run_check(dir)
+
+      refute status.success?
+      assert_includes out, "vps-deploy must keep the resource-guard flag active through failure restoration"
+    end
+  end
+
+  def test_group_deploy_holds_resource_guard_exclusion_across_children
+    with_fixture do |dir, _|
+      path = File.join(dir, "OPENBSD", "bin", "vps-deploy")
+      original = File.read(path)
+      text = original.sub(
+        "  # The parent spans child deploys and cooldowns. Its own flag keeps the\n" \
+        "  # resource guard out until the whole batch (or its failure recovery) ends.\n" \
+        "  keep_deploy_flag\n",
+        ""
+      )
+      refute_equal original, text, "the safety mutation must remove the parent heartbeat"
+      File.write(path, text)
+      out, status = run_check(dir)
+
+      refute status.success?
+      assert_includes out, "vps-deploy group batches must hold a resource-guard exclusion across child deploys"
+    end
+  end
+
   def test_operator_install_refuses_symlinked_system_destinations
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "OPERATOR.sh")
