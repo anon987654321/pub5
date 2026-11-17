@@ -773,7 +773,7 @@ finish() {
   # Only the process that owns the lock restores: the children of `all` fail into
   # their parent, which knows the whole pass. Each restore result is printed.
   local restore_ok=1
-  if (( rc != 0 )) && (( lock_owner )); then
+  if (( rc != 0 )) && (( lock_owner )) && [[ ${VPS_DEPLOY_RESTORE_ATTEMPTED:-0} != 1 ]]; then
     restore_started || {
       restore_ok=0
       print -u2 "vps-deploy: production is NOT fully restored - see the lines above"
@@ -948,6 +948,7 @@ if [[ $app == recover ]]; then
   keep_deploy_flag
   set_stage recovery-restore
   recovery_failed=0
+  VPS_DEPLOY_RESTORE_ATTEMPTED=1
   restore_started || recovery_failed=1
   if (( ! recovery_failed )); then
     restore_wait=${VPS_DEPLOY_SETTLE_WAIT:-240}
