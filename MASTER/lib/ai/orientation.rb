@@ -217,7 +217,7 @@ module Master
         "runtime=Falcon+SQLite+Solid Queue/Cache; secrets=/etc/*.env; " +
         "dns_tls=httpd/acme-client/nsd; proof=OPENBSD/bin/check-openbsd+check-vps+vps-state; " +
         "live=target host diagnostics and public health; " +
-        "recovery=tmux+vps-deploy; resource_guard=OPENBSD/mirror/bin/resource_guard.sh; " +
+        "recovery=tmux+vps-deploy; resource_guard=OPENBSD/mirror/usr/local/bin/resource_guard.sh; " +
         "apps=#{apps.join(", ")}"
       end
 

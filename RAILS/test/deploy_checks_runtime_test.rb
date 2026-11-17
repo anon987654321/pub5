@@ -195,7 +195,8 @@ class DeployChecksRuntimeTest < Minitest::Test
 
   def test_integrity_check_wires_new_checks
     integrity = File.read(File.join(OPENBSD_ROOT, "checks", "integrity_check.rb"))
-    checks = File.read(File.join(OPENBSD_MIRROR, "lib", "check_environment.rb"))
+    # 6735acf1 moved check_environment.rb out of the mirror image into OPENBSD/lib.
+    checks = File.read(File.join(OPENBSD_ROOT, "lib", "check_environment.rb"))
     assert_includes integrity, "check_environment"
     assert_includes integrity, "CheckEnvironment::INTEGRITY_CHECKS"
     %w[schema_migration asset_freshness human_walkthrough vps_health].each do |check|
@@ -223,7 +224,7 @@ class DeployChecksRuntimeTest < Minitest::Test
   end
 
   def test_operator_surface_files_exist
-    %w[mirror/bin/vps-state mirror/bin/vps-deploy mirror/bin/vps-logs mirror/bin/post-pull-checklist mirror/lib/check_environment.rb].each do |rel|
+    %w[bin/vps-state bin/vps-deploy bin/vps-logs bin/post-pull-checklist lib/check_environment.rb].each do |rel|
       path = File.join(OPENBSD_ROOT, rel)
       assert File.exist?(path), "missing OPENBSD/#{rel}"
     end
