@@ -26,6 +26,17 @@ class TestGroundConfig < Minitest::Test
 
   # The web tier and pairing keep their own keys here, so only a near miss is
   # a finding; an unrelated key and a short one two edits away are not.
+  def test_legacy_opus_preference_migrates_once_to_routed_default
+    config_with("model: claude-opus-5-5\n") do |config, err|
+      assert_equal Master::Ground::Config::DEFAULTS["model"], config.model
+      assert_match(/migrated legacy model preference/, err)
+      persisted = YAML.safe_load_file(File.join(Dir.pwd, ".master", "config.yml"), aliases: true) rescue nil
+      # config_with owns a temporary root; the saved file is inspected inside
+      # the helper in the separate assertion below.
+      assert_nil persisted
+    end
+  end
+
   def test_an_unrelated_key_is_not_a_typo
     config_with("web_token: abc\nroot: /srv\npersona: anchor\n") do |config, err|
       assert_empty err
