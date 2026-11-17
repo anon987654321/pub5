@@ -460,7 +460,7 @@ class TestCliFaceDispatch < Minitest::Test
     publisher = Object.new
     publisher.define_singleton_method(:publish) do |**details|
       published << details
-      Master::Ground::PastePublisher::Outcome.new(url: "https://pste.us/test123", service: :pste_us)
+      Master::Ground::PastePublisher::Outcome.new(url: "https://pste.us/test123", service: :pste_us, expires_in: "1 day")
     end
 
     Master::Ground::PastePublisher.stub(:new, ->(**) { publisher }) do
