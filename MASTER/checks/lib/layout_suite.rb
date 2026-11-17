@@ -6,6 +6,9 @@ require_relative "source/css_constitution"
 require_relative "source/scale_ratchet"
 require_relative "source/css_brace_balance"
 require_relative "source/css_minify_integrity"
+require_relative "source/css_layer_stack"
+require_relative "source/css_no_important"
+require_relative "source/css_specificity_ceiling"
 
 require_relative "live/first_screen"
 require_relative "source/dialect_purity"
@@ -33,7 +36,14 @@ module Deploy
   class LayoutSuiteCheck
     LEAVES = [
       CssBraceBalanceCheck,
+      # Architecture before law: a stylesheet whose layer stack is wrong or
+      # missing makes every later CSS verdict read the wrong cascade, so the
+      # stack, the generated-region important ban and the specificity ceiling
+      # are measured before the constitution that presumes them.
+      CssLayerStackCheck,
       CssConstitutionCheck,
+      CssNoImportantCheck,
+      CssSpecificityCeilingCheck,
       ScaleRatchetCheck,
       CssMinifyIntegrityCheck,
       DialectPurityCheck,

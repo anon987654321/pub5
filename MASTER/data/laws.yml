@@ -987,6 +987,33 @@ DESIGN_MODES_REPRESENT_REAL_SEMANTIC_CONTEXTS:
   severity: warning
   resolution: review
 
+CSS_LAYER_STACK:
+  parent: SINGULARITY
+  statement: >
+    Each Rails app entry stylesheet declares exactly one ordered cascade
+    layer stack, taken from MASTER/data/css_architecture.yml, and places
+    author rules inside named layers. A partial never declares an order
+    statement - it contributes rules through a mixin or meta.load-css.
+    Generated autofix rules live only in the autofix layer, and only once
+    the entry declares the stack: while author CSS is unlayered the
+    generated region stays bare at end-of-file, because unlayered normal
+    declarations beat layered ones and a demoted fix is no fix.
+  severity: warning
+  resolution: review
+  mechanical: Deploy::CssLayerStackCheck
+
+CSS_SPECIFICITY_CEILING:
+  parent: LINEARITY
+  statement: >
+    Compiled selectors stay within the specificity ceiling declared in
+    MASTER/data/css_architecture.yml. Layers own precedence; a selector
+    past the ceiling is a specificity war this architecture exists to end.
+    Sass nesting only expands selectors, so depth is bounded for the same
+    reason. Measured post-compile, severity following the declared mode.
+  severity: warning
+  resolution: review
+  mechanical: Deploy::CssSpecificityCeilingCheck
+
 DESIGN_COMPONENTS_USE_LAYOUT_AND_DECLARED_STATES:
   parent: PROXIMITY
   statement: >
@@ -2971,6 +2998,14 @@ law_catalogue:
       definition_sources: [MASTER/law/css.rb]
       severity: warning
       autofix: automatic
+      languages: [css, scss]
+    CSS_LAYER_STACK:
+      definition_sources: [MASTER/checks/lib/source/css_layer_stack.rb]
+      severity: warning
+      languages: [css, scss]
+    CSS_SPECIFICITY_CEILING:
+      definition_sources: [MASTER/checks/lib/source/css_specificity_ceiling.rb]
+      severity: warning
       languages: [css, scss]
     CURRENT_LOCATION_MARKED:
       definition_sources: [MASTER/law/rendered.rb]

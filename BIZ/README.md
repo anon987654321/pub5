@@ -99,6 +99,22 @@ EB Garamond mark). The colophon of every plan names these facts; the old
 claim of an embedded EB Garamond, oldstyle prose figures and a #F7F2E9
 paper ground belongs to the retired archive generation.
 
+## Visual acceptance points at MASTER, not a second cascade
+
+The cascade architecture is owned once, in MASTER: `MASTER/data/css_architecture.yml`
+declares the layer order and the specificity ceiling, and the Laws
+CSS_LAYER_STACK, CSS_SPECIFICITY_CEILING, NO_IMPORTANT and
+DENSITY_kanso (with its instruments) state the requirements. BIZ accepts
+against those Law IDs and ships no layer list, ceiling or autofix of its own. In
+practice: no `!important` in any shipped HTML or print stylesheet (a
+reduced-motion or print override that must beat the author says
+`scan: intentional-important` at the top of its file, the same marker
+MASTER's NO_IMPORTANT reads); brand styling reaches the page through the
+bob2 token vocabulary, never through selector weight; and where a plan
+documents density acceptance, it names DENSITY_kanso, not a private rule.
+A BIZ package that grows a Rails app later inherits the RAILS entry pattern
+(`MASTER/docs/css_layer_stack_entry_template.scss`) unchanged.
+
 ## The folder law
 
 The folder carries only what the reader receives: the html, its svg mark

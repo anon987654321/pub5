@@ -177,6 +177,34 @@ css_constitution:
   pass: "CSS constitution check passed (all stylesheets)."
   covered_by: layout_suite
 
+# The cascade architecture, from data/css_architecture.yml: one ordered layer
+# stack per entry, author rules inside named layers, generated autofix only
+# in @layer autofix. Source leaves, so the lanes without a browser still
+# enforce it.
+css_layer_stack:
+  require: lib/source/css_layer_stack
+  class: Deploy::CssLayerStackCheck
+  pass: "ok: each RAILS app entry declares the MASTER cascade layer stack"
+  covered_by: layout_suite
+
+# NO_IMPORTANT for the sweep: a hit inside a generated autofix region is a
+# hard failure (layer order reverses for important declarations); author
+# hits stay owned by css_constitution's budget.
+css_no_important:
+  require: lib/source/css_no_important
+  class: Deploy::CssNoImportantCheck
+  pass: "ok: no !important in generated CSS"
+  covered_by: layout_suite
+
+# Post-compile CSS_SPECIFICITY_CEILING. Reads each app's build output; an app
+# without one is INCONCLUSIVE, not clean. Severity follows
+# css_architecture.yml#specificity.mode (warn until baselines ratchet).
+css_specificity_ceiling:
+  require: lib/source/css_specificity_ceiling
+  class: Deploy::CssSpecificityCeilingCheck
+  pass: "ok: compiled selectors within the MASTER specificity ceiling"
+  covered_by: layout_suite
+
 css_brace_balance:
   require: lib/source/css_brace_balance
   class: Deploy::CssBraceBalanceCheck

@@ -3,6 +3,7 @@
 require "fileutils"
 require "open3"
 require "rbconfig"
+require_relative "css_autofix_region"
 
 module Deploy
   # Mechanical fixes for rendered-geometry findings.
@@ -15,12 +16,19 @@ module Deploy
   # marker comments, always reviewable as a diff and always revertable by
   # deleting the block. It lives in the one stylesheet because each app has one
   # by the operator's decision; a second generated file would be a second.
+  #
+  # Region shape and layer placement are owned once, in CssAutofixRegion: the
+  # markers below are that module's constants, and the block wraps in
+  # @layer autofix exactly when the entry declares the cascade stack - before
+  # that, it stays bare at end-of-file, because unlayered author rules beat
+  # layered ones and the fix must out-rank the rule it corrects.
   module GeometryAutofix
-    RAILS_ROOT = File.expand_path("../..", __dir__)
+    ROOT = File.expand_path("../../..", __dir__)
+    RAILS_ROOT = File.join(ROOT, "RAILS")
 
-    OPEN = "// Deploy::GeometryAutofix begin - generated, do not hand-edit"
+    OPEN = CssAutofixRegion::GEOMETRY_OPEN
 
-    CLOSE = "// Deploy::GeometryAutofix end"
+    CLOSE = CssAutofixRegion::GEOMETRY_CLOSE
     HEADER = <<~SCSS
       // Each rule below corrects a violation measured in a real browser
       // (rendered box under the Fitts floor, or content spilling past the
@@ -60,7 +68,11 @@ module Deploy
 
         # Findings repeat per viewport and render() dedupes by selector, so
         # report what actually lands in the block, not the finding count.
-        count = block.lines.count { |line| line.include?("{") }
+        # The layer wrapper is not a rule: count braces below the wrapper, so
+        # an empty round still writes nothing (an empty @layer autofix block
+        # would read as an active fix layer holding nothing).
+        inner = CssAutofixRegion.unwrap(block)
+        count = inner.lines.count { |line| line.include?("{") }
 
         # A header and a list of comments is not a fix. On 2026-08-24 a run wrote
         # a generated layer containing no rules at all, resurrecting one that had
@@ -87,7 +99,8 @@ module Deploy
       written
     end
 
-    # The generated block, if the stylesheet carries one.
+    # The generated block, if the stylesheet carries one. Wrapped or bare -
+    # unwrap hands back the rule shape either way.
     def generated_block(source)
       source[/^#{Regexp.escape(OPEN)}\n.*?^#{Regexp.escape(CLOSE)}\n?/m]
     end
@@ -96,7 +109,7 @@ module Deploy
     # where it is the last word in the cascade. A @use has to precede every
     # rule, and the block adds no @use, so the end is always a legal place.
     def with_block(source, block)
-      wrapped = "#{OPEN}\n#{block}#{CLOSE}\n"
+      wrapped = "#{OPEN}\n#{CssAutofixRegion.wrap(block, source)}#{CLOSE}\n"
       existing = generated_block(source)
       return source.sub(existing) { wrapped } if existing
 
@@ -105,7 +118,8 @@ module Deploy
 
     # Rules already in the generated block, read back as rows so a merge is a
     # plain union rather than a text splice. The block only ever holds the two
-    # shapes render() emits, so parsing it is reading our own output.
+    # shapes render() emits, plus the layer wrapper a stack-declared entry
+    # carries - unwrap first, so both shapes parse the same.
     def existing_rows(source)
       block = generated_block(source)
       return [] unless block
@@ -115,10 +129,12 @@ module Deploy
 
       # chomp first: lines keeps the newline and \z is absolute end-of-string,
       # so /\A\/\/ (.+)\z/ silently never matched a detail comment.
-      block.lines(chomp: true).filter_map do |line|
+      CssAutofixRegion.unwrap(block).lines(chomp: true).filter_map do |line|
         case line
         when /\A\/\/ --- (\w+) ---/ then kind = Regexp.last_match(1).to_sym; next
-        when /\A\/\/ Deploy::GeometryAutofix/ then next
+        when /\A\/\/ Deploy::(Geometry|Kanso)Autofix/ then next
+        when /\A@layer\s+(\w+) \{/ then next
+        when /\A\}\s*\z/ then next
         when /\A\/\/ (.+)\z/        then detail = Regexp.last_match(1).strip; next
         when /\A(.+?) \{/
           selector = Regexp.last_match(1).strip
@@ -189,7 +205,7 @@ module Deploy
     # compiled. Say so loudly when we cannot rebuild rather than letting a
     # remeasure "fail" for a reason that has nothing to do with the fix.
     def rebuild_css(apps)
-      builder = File.join(RAILS_ROOT, "tools", "build_all_css.rb")
+      builder = File.join(ROOT, "MASTER", "tools", "rails", "build_all_css.rb")
       unless File.file?(builder)
         Kernel.warn "  [autofix] tools/build_all_css.rb missing - CSS patch will not be visible until rebuilt"
         return false
