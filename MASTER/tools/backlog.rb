@@ -557,6 +557,7 @@ module Backlog
       proof_types = ProofMap.types_for(item)
       journey = {
         "route_id" => decision.route.id,
+        "objective" => MISSION_OBJECTIVE,
         "phase" => mission_phase(item),
         "tree" => item.fetch(:tree),
         "priority" => decision.route.priority,
@@ -810,6 +811,7 @@ module Backlog
       return false unless journey.is_a?(Hash)
       return false unless journey["route_id"].to_s == row["item_digest"].to_s
       return false unless journey["tree"].to_s == source_item[:tree].to_s
+      return false unless journey["objective"].to_s == MISSION_OBJECTIVE
       return false unless journey["phase"].to_s == mission_phase(source_item)
       return false unless journey["priority"].is_a?(Numeric) && journey["priority"].between?(0.0, 1.0)
       return false unless journey["score"].is_a?(Numeric) && journey["score"].finite?
