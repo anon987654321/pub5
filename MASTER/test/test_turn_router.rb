@@ -167,6 +167,34 @@ class TurnRouterTest < Minitest::Test
     assert_equal "/deploy all --confirm", routed
   end
 
+  def test_everything_on_vm23_is_a_complete_inventory_deploy_and_explicit_confirmation
+    intent = Master::CLI::OperatorIntent
+    assert intent.direct_full_stack_confirmation?("Redeploy everything on vm23")
+    assert intent.direct_full_stack_confirmation?("Deploy all apps to vm23")
+    refute intent.direct_full_stack_confirmation?("Redeploy everything")
+    refute intent.direct_full_stack_confirmation?("Redeploy everything on staging")
+    refute intent.direct_full_stack_confirmation?("Redeploy everything except MASTER/web on vm23")
+    refute intent.direct_full_stack_confirmation?("Prepare a deployment plan to redeploy everything on vm23")
+
+    proposal = Master::CLI::OperatorIntent::Result.new(status: :deploy, target: "all")
+    fake_intent = Object.new
+    fake_intent.define_singleton_method(:call) { |_text| proposal }
+    routed = nil
+    Master::CLI::OperatorIntent.stub(:new, fake_intent) do
+      Master::CLI::TurnRouter.stub(:dispatch_slash, lambda { |command, **|
+        routed = command
+        Master::Result.ok({ rendered: "captured" })
+      }) do
+        Master::CLI::TurnRouter.call(
+          message: "Redeploy everything on vm23",
+          container: build_container,
+        )
+      end
+    end
+
+    assert_equal "/deploy all --confirm", routed
+  end
+
   def test_full_stack_direct_confirmation_requires_explicit_vm23_destination
     intent = Master::CLI::OperatorIntent
     assert intent.direct_full_stack_confirmation?("Redeploy OPENBSD, RAILS and MASTER/web to vm23")
