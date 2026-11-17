@@ -74,7 +74,8 @@ class CommentsController < ApplicationController
   # undone the way any resolved report is.
   def remove
     report = ModerationWorkflow.report!(reporter: Current.user, target: @comment, reason: "other")
-    ModerationWorkflow.transition!(report:, status: "resolved", decision_reason: "community_moderator")
+    ModerationWorkflow.transition!(report:, status: "resolved", decision_reason: "community_moderator",
+                                   actor: Current.user)
     respond_to do |format|
       format.turbo_stream { render turbo_stream: turbo_stream.remove(dom_id(@comment)) }
       format.html { redirect_back fallback_location: root_path }
