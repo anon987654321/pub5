@@ -466,9 +466,17 @@ module Master
         key_present_for?(id)
       end
 
-      # providers.yml model_pattern and env; any key answers for an unnamed vendor.
-      def api_keys = Master.provider_config(root: Master::ROOT).values.grep(Hash).select { |row| row["model_pattern"] }
-                           .map { |row| [Regexp.new(row["model_pattern"]), Array(row["env"])] }
+      # providers.yml model_pattern and env; specific route IDs win over broad
+      # owner/model matching so replicate:owner/model never borrows OpenRouter's key.
+      def api_keys
+        Master.provider_config(root: Master::ROOT).values.grep(Hash).select { |row| row["model_pattern"] }
+             .map { |row| [Regexp.new(row["model_pattern"]), Array(row["env"])] }
+             .sort_by { |pattern, _envs| -pattern.source.length }
+      end
+
+      def api_key_envs_for(id)
+        api_keys.find { |pattern, _envs| pattern.match?(id.to_s) }&.last
+      end
 
       def key_present_for?(id)
         # The user-owned gateway is the key boundary itself: the URL is the opt-in and its key is optional.
@@ -477,7 +485,7 @@ module Master
         # unrelated provider key and no gateway configured).
         return !ENV["MASTER_LLM_GATEWAY_URL"].to_s.strip.empty? if id.start_with?("gateway:")
 
-        _pattern, envs = api_keys.find { |pattern, _envs| pattern.match?(id) }
+        envs = api_key_envs_for(id)
         envs ? envs.any? { |env| Master.api_key_present?(env) } : Master.any_api_key_present?
       end
 
