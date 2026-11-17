@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "date"
+require "thread"
 require "yaml"
 
 module Studio
