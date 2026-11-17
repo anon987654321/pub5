@@ -254,27 +254,38 @@ module Master
       end
 
       def repair_finding(key, outcome, iteration, repairer)
-        unless repairer.respond_to?(:call)
-          record(**record_args(key, :inconclusive, iteration,
-            reason: "finding remains; no repairer is registered",
-            evidence: outcome[:evidence], findings: outcome[:findings]))
-          return false
-        end
+        return record_missing_repairer(key, outcome, iteration) unless repairer.respond_to?(:call)
 
-        repair = repairer.call(
+        repair = call_repairer(key, outcome, iteration, repairer)
+        return record_unchanged_repair(key, outcome, iteration, repair) unless repair_changed?(repair)
+
+        record_repair(key, outcome, iteration, repair)
+      end
+
+      def record_missing_repairer(key, outcome, iteration)
+        record(**record_args(key, :inconclusive, iteration,
+          reason: "finding remains; no repairer is registered",
+          evidence: outcome[:evidence], findings: outcome[:findings]))
+        false
+      end
+
+      def call_repairer(key, outcome, iteration, repairer)
+        repairer.call(
           law: key[0], stream: key[1], surface: key[2], status: outcome[:status],
           findings: Array(outcome[:findings]), evidence: Array(outcome[:evidence]), iteration:
         )
-        changed = repair == true || (repair.respond_to?(:[]) && repair[:changed] == true)
-        retryable = repair.respond_to?(:[]) && repair[:retryable] == true
-        unless changed
-          record(**record_args(key, :inconclusive, iteration,
-            reason: unchanged_repair_reason(repair, retryable),
-            evidence: outcome[:evidence], findings: outcome[:findings], repair:))
-          return false
-        end
+      end
 
-        record_repair(key, outcome, iteration, repair)
+      def repair_changed?(repair)
+        repair == true || (repair.respond_to?(:[]) && repair[:changed] == true)
+      end
+
+      def record_unchanged_repair(key, outcome, iteration, repair)
+        retryable = repair.respond_to?(:[]) && repair[:retryable] == true
+        record(**record_args(key, :inconclusive, iteration,
+          reason: unchanged_repair_reason(repair, retryable),
+          evidence: outcome[:evidence], findings: outcome[:findings], repair:))
+        false
       end
 
       def unchanged_repair_reason(repair, retryable)
