@@ -10,7 +10,7 @@
 # This reads the committed snapshot rather than the network, so it is fast and
 # offline-safe. Refresh the snapshot with:
 #
-#   ruby OPENBSD/mirror/bin/domain_watch.rb --update
+#   ruby OPENBSD/bin/domain_watch.rb --update
 #
 # It fails on a domain past expiry or inside the warning window, and on a domain
 # whose creation date moved — that is what "someone else registered it" looks
@@ -67,7 +67,7 @@ class TestDomainExpiry < Minitest::Test
 
     assert_empty missing,
                  "renewable owned domains absent from the expiry check; refresh using " \
-                 "OPENBSD/mirror/bin/domain_watch.rb --update and verify the registrar results:\n  " \
+                 "OPENBSD/bin/domain_watch.rb --update and verify the registrar results:\n  " \
                  "#{missing.join("\n  ")}"
   end
 
@@ -81,7 +81,7 @@ class TestDomainExpiry < Minitest::Test
 
     assert_empty expired,
                  "domains past their expiry date. Renew at the registrar and refresh the " \
-                 "snapshot with OPENBSD/mirror/bin/domain_watch.rb --update, or record the decision to " \
+                 "snapshot with OPENBSD/bin/domain_watch.rb --update, or record the decision to " \
                  "let one go in OPENBSD/data/domain_released.yml. Editing this test is neither:" \
                  "\n  #{expired.join("\n  ")}"
   end

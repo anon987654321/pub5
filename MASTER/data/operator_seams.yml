@@ -178,7 +178,7 @@ seams:
     tree: OPENBSD
     needs: registrar
     evidence: >-
-      Current DS records from doas ruby OPENBSD/mirror/bin/ds-records published at each registrar, dig +short DS
+      Current DS records from doas ruby OPENBSD/bin/ds-records published at each registrar, dig +short DS
       answering, and domain_watch --tls reporting ds=1.
   - id: monitoring_and_crontab_on_vm23
     tree: OPENBSD
