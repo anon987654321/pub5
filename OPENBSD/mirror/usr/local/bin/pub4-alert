@@ -312,7 +312,7 @@ cpu_watch() {
   if [[ $new_state == clear ]]; then
     rm -f "$CPU_PRESSURE"
   else
-    pressure_tmp="$CPU_PRESSURE.tmp.$"
+    pressure_tmp="$CPU_PRESSURE.tmp"
     if ! ( umask 077; print -r -- "$stamp $busy" > "$pressure_tmp" ) ||
        ! mv -f "$pressure_tmp" "$CPU_PRESSURE"; then
       rm -f "$pressure_tmp"
@@ -328,7 +328,7 @@ cpu_watch() {
     raise cpu-watch-log-failed "could not append CPU sample to $CPU_HISTORY"
     return 1
   }
-  heartbeat_tmp="$CPU_HEARTBEAT.tmp.$"
+  heartbeat_tmp="$CPU_HEARTBEAT.tmp"
   if ! print -r -- "$stamp" > "$heartbeat_tmp" ||
      ! mv -f "$heartbeat_tmp" "$CPU_HEARTBEAT"; then
     rm -f "$heartbeat_tmp"
