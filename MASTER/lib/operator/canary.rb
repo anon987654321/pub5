@@ -34,7 +34,7 @@ module Operator
     DEFAULT_BUDGET_MS = 3000
     SKIPPED_PREFIXES = %w[/internal /rails /cable /admin].freeze
     Reply = Struct.new(:status, :headers, :body, :elapsed_ms, keyword_init: true)
-    Result = Struct.new(:name, :ok, :detail, keyword_init: true)
+    Result = Struct.new(:name, :ok, :detail, :state, keyword_init: true)
 
     module_function
 
@@ -56,7 +56,7 @@ module Operator
     end
 
     def render(results, root)
-      lines = results.map { |r| "#{r.ok ? 'ok  ' : 'FAIL'} #{r.name}#{r.detail.to_s.empty? ? '' : " - #{r.detail}"}" }
+      lines = results.map { |r| "#{r.state || (r.ok ? 'PASS' : 'FAIL')} #{r.name}#{r.detail.to_s.empty? ? '' : " - #{r.detail}"}" }
       failed = results.reject(&:ok)
       lines << (failed.empty? ? "canary: #{results.size} checks passed" : "canary: #{failed.size} of #{results.size} checks FAILED")
       lines.concat(Rollback.advice(root:)) unless failed.empty?
@@ -181,7 +181,7 @@ module Operator
       # named as such rather than counted as passed.
       def flow_checks
         script = File.join(@root, "MASTER", "checks", "runner.rb")
-        return [] unless File.file?(script)
+        return [Result.new(name: "flows", ok: false, state: "FAIL", detail: "missing MASTER/checks/runner.rb")] unless File.file?(script)
 
         out, status = @shell.call("env", "CHECK_AUTOFIX=0", "FLOW_APP=#{@apps.keys.join(',')}", RbConfig.ruby, script, "flow_journey")
         rows = out.to_s.lines.filter_map { |line| FLOW_LINE.match(line) }
@@ -190,7 +190,7 @@ module Operator
         problems = out.to_s.lines.filter_map { |line| FLOW_PROBLEM.match(line) }.to_h { |m| [m[:id], m[:why].strip] }
         rows.map do |m|
           bad = %w[FAIL ERROR].include?(m[:state])
-          Result.new(name: "flow #{m[:app]}/#{m[:id]}", ok: !bad, detail: bad ? (problems[m[:id]] || m[:state]) : m[:state].downcase)
+          Result.new(name: "flow #{m[:app]}/#{m[:id]}", ok: !bad, state: m[:state], detail: bad ? (problems[m[:id]] || m[:state]) : m[:state].downcase)
         end
       rescue SystemCallError => e
         [Result.new(name: "flows", ok: false, detail: "#{e.class}: #{e.message}")]
