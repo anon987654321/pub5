@@ -229,6 +229,7 @@ class TestPub4Alert < Minitest::Test
     raise "could not read current process identity" unless start_status.success? && command_status.success?
     started = started.sub(/\n+\z/, "")
     command = command.sub(/\n+\z/, "")
+    raise "process identity output was empty" if started.empty? || command.empty?
     checksum, checksum_status = Open3.capture2("cksum", stdin_data: command)
     raise "could not checksum current process command" unless checksum_status.success?
     "#{started.gsub(/[^A-Za-z0-9]/, "_")}_#{checksum.strip.tr(" ", "_")}"
