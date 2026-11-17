@@ -17,6 +17,14 @@ MASTER/bin/operator vps deploy all --remote --follow
 Hands-off: local preflight → pin SHA → `tmux` session `pub5-deploy` on vm23 →
 `vps-deploy` as **root** (git still as `dev`) → streams the log until finished →
 `vps-state` + public canary. Survives SSH disconnect. Logs: `/var/log/pub5/vps-deploy.log` (aggregate), `/var/log/pub5/runs/deploy-*.log` (per run), also `/home/dev/vps-deploy.log` and `vps-deploy-latest.log` symlinks.
+
+A direct natural-language instruction to deploy **OPENBSD + all RAILS apps + MASTER/web
+to vm23** is an explicit execution request; it does not require a separate written
+plan or a second confirmation prompt. The normal local preflight, pinned revision,
+mirror/manual admission gate, serial production rollout, health checks and canary
+remain mandatory. A plan-only request is conversational and cannot start a deploy.
+Partial or model-classified app/group requests retain the explicit `/deploy --confirm`
+review gate. Never run `/fix` on vm23.
 Attach: `tmux attach -t pub5-deploy`.
 
 ## Log rotation
@@ -221,6 +229,15 @@ The same receipt is checked by Fix::WriteGuard, the Fold Constitution and the
 command Shell. Missing, stale, out-of-scope or incomplete evidence blocks the
 write or operation before it is performed. Source edits invalidate receipts
 for any reviewed source they change; rebuild the preflight before proceeding.
+
+For a full `vps-deploy all` operation, the admission gate also inventories every
+tracked configuration source in `OPENBSD/mirror/etc/`, `OPENBSD/mirror/var/nsd/`
+(including every zone file), and the mirrored mail-client dotfiles. It derives a
+per-file report joining source-read digests to the exact-release manual receipts
+for each mapped interface. Any unmapped format, missing source read, stale source,
+or missing manual receipt blocks the deploy. The intentionally inert
+`etc/litestream.yml` still requires a complete source read, but no fictitious
+OpenBSD manual is assigned to an uninstalled daemon.
 The only bootstrap commands are the manual reader and the minimum read-only
 identity probe. This is an admission requirement, not a claim that a remote
 host has been inspected when no host evidence was supplied.
