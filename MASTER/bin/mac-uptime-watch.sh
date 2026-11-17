@@ -1,9 +1,9 @@
 #!/bin/zsh
-# mac-uptime-watch -- an external vantage point for the public service surface.
+# mac-uptime-watch -- external public-service and vm23 CPU monitoring.
 #
 # One invocation is one tick. State persists under ~/.pub5; launchd or cron
-# may call this every five minutes. A wedged curl is bounded and stale locks
-# are recovered only after the owning process is confirmed gone.
+# may call this every five minutes. Curl and SSH probes are bounded; stale
+# locks are recovered only after the owning process is confirmed gone.
 
 umask 077
 
