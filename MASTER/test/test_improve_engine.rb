@@ -96,6 +96,16 @@ class TestImproveEngine < Minitest::Test
     assert_equal Master::Fix::Improve::Ideate::SCHEMA, data["schema"]
   end
 
+
+  def test_canonical_cross_tree_architecture_map_does_not_reappear_as_ideation
+    FileUtils.mkdir_p(File.join(@root, "MASTER/docs"))
+    path = write("MASTER/docs/ARCHITECTURE.md", "# Cross-tree map\n")
+
+    ideas = @engine.ideate(files: [path])
+
+    refute ideas.any? { |idea| idea.source == "persona.newcomer" }, ideas.inspect
+  end
+
   def test_restructure_proposals_name_both_endpoints_and_an_existing_source
     @engine = nil
     lib = File.join(@root, "lib")

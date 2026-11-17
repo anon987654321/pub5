@@ -144,6 +144,7 @@ class TestDocPaths < Minitest::Test
     MASTER/FACE_WORLD.md
     MASTER/data/principles/openbsd_kernel_philosophy.md
     MASTER/docs/execution-contracts.md
+    MASTER/docs/ARCHITECTURE.md
     MASTER/docs/fix_coordinator_map.md
     MASTER/docs/free_compute.md
     MASTER/docs/history/fix-review-log.md

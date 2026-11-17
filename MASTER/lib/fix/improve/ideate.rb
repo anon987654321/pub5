@@ -73,10 +73,17 @@ module Master
         def persona_ideas(files)
           names = files.map { |path| File.basename(path).downcase }
           out = []
-          out << Idea.new(
-            title: "No top-level ARCHITECTURE.md - a newcomer cannot see how MASTER, RAILS, OPENBSD and STUDIO relate",
-            source: "persona.newcomer", evidence: "missing docs/ARCHITECTURE.md", kind: :document
-          ) unless files.any? { |path| path =~ %r{\Adocs/ARCHITECTURE\.md\z} || path =~ %r{\AARCHITECTURE\.md\z} }
+          has_architecture_map = files.any? do |path|
+            normalized = path.to_s.tr("\\", "/")
+            normalized.match?(%r{(?:\A|/)(?:MASTER/)?docs/ARCHITECTURE\.md\z}) ||
+              normalized.match?(%r{(?:\A|/)ARCHITECTURE\.md\z})
+          end
+          unless has_architecture_map
+            out << Idea.new(
+              title: "No maintained cross-tree architecture map - a newcomer cannot see how the runtime trees relate",
+              source: "persona.newcomer", evidence: "missing MASTER/docs/ARCHITECTURE.md", kind: :document
+            )
+          end
           out << Idea.new(
             title: "A single 'make check' style entry: one command that runs MASTER and RAILS suites in order",
             source: "persona.operator", evidence: names.grep(/\bcheck\b/).first(3).join(", "), kind: :tooling

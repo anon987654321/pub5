@@ -33,8 +33,8 @@ proposals in `BIZ/tools/`. The canonical guide is `BIZ/README.md`.
 contract generated from `MASTER/AGENTS.md`. Gemini, GLM and Cursor have short
 generated pointers to it; Codex and Copilot read it directly. `CLAUDE.md` is
 the bootstrap pointer.
-`MASTER/data/law/TREE_CONTRACTS.md` is the shared runtime/tree contract; `BIZ/README.md`
-owns BIZ's document-production workflow. Root `TODO.md` is the one cross-tree
+`MASTER/docs/ARCHITECTURE.md` maps cross-tree structure and test surfaces; `MASTER/data/law/TREE_CONTRACTS.md`
+is the shared runtime/tree contract. `BIZ/README.md` owns BIZ's document-production workflow. Root `TODO.md` is the one cross-tree
 action list; structured YAML ledgers remain the owners of IDs, evidence receipts,
 provenance and lifecycle state. Do not create another backlog file.
 
