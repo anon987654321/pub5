@@ -19,6 +19,16 @@ en:
       delivery_fee: "Lowest delivery fee"
       minimum_order: "Lowest minimum order"
     opening_hours_heading: "Opening hours"
+    opening_hours_invalid_time: "Enter opening times in 24-hour HH:MM format."
+    publish_needs_menu_and_hours: "Add at least one available menu item and opening hours before publishing."
+    weekdays:
+      monday: Monday
+      tuesday: Tuesday
+      wednesday: Wednesday
+      thursday: Thursday
+      friday: Friday
+      saturday: Saturday
+      sunday: Sunday
     closed_all_day: "Closed"
     tip_line: "Tip: %{amount}"
     position: "Position"
