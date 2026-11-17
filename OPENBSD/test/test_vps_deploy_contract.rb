@@ -1093,6 +1093,7 @@ class VpsDeployContractTest < Minitest::Test
     refute_nil recovery
     assert_includes recovery, '[[ -n $VPS_DEPLOY_STARTED ]]'
     assert_includes recovery, "keep_deploy_flag"
+    assert_includes SOURCE, "VPS_DEPLOY_RESTORE_ATTEMPTED"
     assert_includes recovery, 'recovery_state: "pending"'
     assert_includes recovery, 'recovery_state: "complete"'
     assert_includes recovery, 'status: "recovered"'
