@@ -316,7 +316,7 @@ class TakeawayControllersTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_not draft.reload.active?
-    assert_select ".form-error", text: /opening hours|menu/i
+    assert_includes response.body, I18n.t("takeaway.publish_needs_menu_and_hours")
   end
 
   test "closing a restaurant with order history keeps receipts and blocks hard deletion" do
