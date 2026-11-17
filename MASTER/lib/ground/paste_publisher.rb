@@ -171,7 +171,7 @@ module Master
 
         request = Net::HTTP::Post.new(uri.request_uri, headers)
         request.body = body
-        http = Net::HTTP.new(uri.host, uri.port, nil)
+        http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = true
         http.open_timeout = OPEN_TIMEOUT
         http.read_timeout = READ_TIMEOUT
