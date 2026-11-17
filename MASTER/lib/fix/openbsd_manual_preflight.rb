@@ -348,7 +348,7 @@ module Master
         required = entry.fetch("manuals")
         source = reads[path]
         current = source && repository_content_digest(path, nil, root:) == source.fetch("sha256")
-        page_rows = mirror_manual_receipt_rows(required, receipts, declared)
+        page_rows = mirror_manual_receipt_rows(required, receipts, declared, release: nil)
         complete = !required.nil? && !source.nil? && current &&
                    page_rows.all? { |row| row.fetch("declared") && row.fetch("receipt_present") }
         mirror_file_row(path, required, source, current, page_rows, complete)
@@ -356,19 +356,42 @@ module Master
         blocked_mirror_file_row(path, required, source)
       end
 
-      def mirror_manual_receipt_rows(required, receipts, declared)
+      def mirror_manual_receipt_rows(required, receipts, declared, release: nil)
         Array(required).map do |page_id|
           receipt = receipts[page_id]
+          valid = manual_receipt_valid?(receipt, page_id, release:)
           {
             "page" => page_id,
             "declared" => declared.include?(page_id),
-            "receipt_present" => !receipt.nil?,
+            "receipt_present" => valid,
             "sha256" => receipt && receipt.fetch("sha256"),
             "bytes" => receipt && receipt.fetch("bytes"),
             "lines" => receipt && receipt.fetch("lines"),
             "source" => receipt && receipt.fetch("source")
           }
         end
+      end
+
+      def manual_receipt_valid?(receipt, page_id, release: nil)
+        return false unless receipt.is_a?(Hash) && receipt.fetch("complete") == true
+
+        page, section = page_id.match(/\A(.+)\(([1-9])\)\z/)&.captures
+        return false unless page && section && receipt.fetch("page").to_s == page &&
+                            receipt.fetch("section").to_s == section
+        content = receipt.fetch("content").to_s
+        digest = Digest::SHA256.hexdigest(content.b)
+        return false unless receipt.fetch("sha256") == digest &&
+                            receipt.fetch("bytes") == content.bytesize &&
+                            receipt.fetch("lines") == content.lines.length
+        return false if content.bytesize < 128 || content.lines.length < 7
+
+        source = receipt.fetch("source").to_s
+        return false unless source.end_with?("/#{page}.#{section}")
+        return false if release && !source.start_with?("https://man.openbsd.org/OpenBSD-#{release}/")
+
+        true
+      rescue KeyError, TypeError
+        false
       end
 
       def mirror_file_row(path, required, source, current, page_rows, complete)
