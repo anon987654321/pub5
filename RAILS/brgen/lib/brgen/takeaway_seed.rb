@@ -147,16 +147,24 @@ module Brgen
       store = result.store
 
       store.update!(active: true)
+      restaurant.menu_categories.where(name: Takeaway::Provisioner::DEFAULT_MENU_CATEGORIES).each do |category|
+        category.destroy! if category.menu_items.empty?
+      end
+
       restaurant.update!(
         active: true,
-        demo: true,
+        demo: false,
         metadata: {
+          "menu_sections" => MRDAMASCY_CATEGORIES.map do |key, name, name_en, emoji, position|
+            { "key" => key, "name" => name, "name_en" => name_en, "emoji" => emoji, "position" => position }
+          end,
           "seed_source" => "RAILS/mrdamascy",
           "seed_profile" => "mrdamascy-bergen",
           "opening_hours_text" => "Man–Fre 11–21 · Lør–Søn 14–21",
           "opening_hours_text_en" => "Mon–Fri 11am–9pm · Sat–Sun 2pm–9pm",
           "delivery_zones" => MRDAMASCY_DELIVERY_ZONES,
           "promotions" => MRDAMASCY_PROMOTIONS,
+          "features_not_yet_wired" => %w[postcode_delivery_zones promo_code_checkout configurable_item_options loyalty_stamps],
           "brand_assets" => {
             "logo" => "takeaway/mrdamascy/brand/logo-transparent.svg",
             "icon" => "takeaway/mrdamascy/brand/icon.svg",
