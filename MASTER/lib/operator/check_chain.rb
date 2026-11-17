@@ -565,7 +565,7 @@ module Operator
         name: "rehearse",
         purpose: "the deploy rehearsal: CI lints and the static deploy contracts (OPENBSD/bin/rehearse)",
         mutates: false,
-        run: -> { capture(RUBY, File.join(ROOT, "OPENBSD", "mirror", "bin", "rehearse"), chdir: ROOT) },
+        run: -> { capture(RUBY, File.join(ROOT, "OPENBSD", "bin", "rehearse"), chdir: ROOT) },
       )
     end
 

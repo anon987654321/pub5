@@ -241,6 +241,22 @@ class TestCheckChain < Minitest::Test
     assert_equal "complete test suites over MASTER, RAILS, OPENBSD", G.suite_purpose(%w[MASTER RAILS OPENBSD])
   end
 
+  def test_rehearse_stage_invokes_the_canonical_openbsd_script
+    stage = G.rehearse_stage(trees: %w[OPENBSD])
+    command = nil
+
+    G.stub(:capture, lambda { |*argv, chdir:, **|
+      command = [*argv, chdir]
+      [true, [], 0]
+    }) do
+      stage.run.call
+    end
+
+    assert_equal File.join(G::ROOT, "OPENBSD", "bin", "rehearse"), command[1]
+    assert_equal G::ROOT, command.last
+    assert File.file?(command[1])
+  end
+
   def test_openbsd_scope_has_a_check_stage
     scoped = G.stages(scan_only: true, trees: %w[OPENBSD]).map(&:name)
 
