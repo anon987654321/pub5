@@ -406,7 +406,7 @@ write_deploy_run_receipt() {
   payload=$("$RUBY" -rjson -e '
     run_id, target, host, pid, owner_identity, status, recovery_state, stage,
       started_at, pinned_sha, previous_sha, services, ports_csv, order_csv,
-      run_log, aggregate_log = ARGV
+      run_log, aggregate_log, snapshot_recorded = ARGV
     ports = {}
     ports_csv.split(",").reject(&:empty?).each do |pair|
       name, value = pair.split("=", 2)
@@ -422,7 +422,8 @@ write_deploy_run_receipt() {
       started_services: services.empty? ? [] : services.split(" "),
       ports: ports,
       restore_order: order_csv.empty? ? [] : order_csv.split(","),
-      run_log: run_log, aggregate_log: aggregate_log
+      run_log: run_log, aggregate_log: aggregate_log,
+      snapshot_recorded: snapshot_recorded == "1"
     }
     puts JSON.generate(record)
   ' "${VPS_DEPLOY_RUN_ID}" "${VPS_DEPLOY_RUN_TARGET}" "$(hostname -s)" \
@@ -431,7 +432,7 @@ write_deploy_run_receipt() {
     "${deploy_stage:-start}" "${VPS_DEPLOY_RUN_STARTED_AT}" \
     "${VPS_DEPLOY_RECEIPT_PINNED_SHA:-}" "${VPS_DEPLOY_RECEIPT_PREVIOUS_SHA:-}" \
     "${VPS_DEPLOY_RECEIPT_SERVICES:-}" "${VPS_DEPLOY_RECEIPT_PORTS:-}" \
-    "${VPS_DEPLOY_RECEIPT_ORDER:-}" "${VPS_DEPLOY_RUN_LOG}" "${VPS_DEPLOY_LOG}") || return 1
+    "${VPS_DEPLOY_RECEIPT_ORDER:-}" "${VPS_DEPLOY_RUN_LOG}" "${VPS_DEPLOY_LOG}"     "${VPS_DEPLOY_RECEIPT_SNAPSHOT_RECORDED:-0}") || return 1
   "$PUB5_ADMIN" deploy-run-write "$VPS_DEPLOY_RUN_ID" "$payload" >/dev/null
 }
 
@@ -829,6 +830,7 @@ if (( lock_owner )) && [[ $app != recover ]]; then
   unset VPS_DEPLOY_RECEIPT_STATUS VPS_DEPLOY_RECEIPT_RECOVERY
   unset VPS_DEPLOY_RECEIPT_PINNED_SHA VPS_DEPLOY_RECEIPT_PREVIOUS_SHA
   unset VPS_DEPLOY_RECEIPT_SERVICES VPS_DEPLOY_RECEIPT_PORTS VPS_DEPLOY_RECEIPT_ORDER
+  unset VPS_DEPLOY_RECEIPT_SNAPSHOT_RECORDED
   VPS_DEPLOY_RUN_ID="$(date -u '+%Y%m%dT%H%M%SZ')-$app-${$}"
   VPS_DEPLOY_RUN_TARGET=$app
   VPS_DEPLOY_RUN_STARTED_AT="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
@@ -839,6 +841,8 @@ if (( lock_owner )) && [[ $app != recover ]]; then
   VPS_DEPLOY_RECEIPT_SERVICES=
   VPS_DEPLOY_RECEIPT_PORTS=
   VPS_DEPLOY_RECEIPT_ORDER=
+  VPS_DEPLOY_RECEIPT_SNAPSHOT_RECORDED=0
+  export VPS_DEPLOY_RECEIPT_SNAPSHOT_RECORDED
   export VPS_DEPLOY_RUN_ID VPS_DEPLOY_RUN_TARGET VPS_DEPLOY_RUN_STARTED_AT
   export VPS_DEPLOY_RECEIPT_STATUS VPS_DEPLOY_RECEIPT_RECOVERY
   export VPS_DEPLOY_RECEIPT_PINNED_SHA VPS_DEPLOY_RECEIPT_PREVIOUS_SHA
@@ -1042,10 +1046,12 @@ if (( lock_owner )); then
   VPS_DEPLOY_RECEIPT_PREVIOUS_SHA=$head_before
   VPS_DEPLOY_RECEIPT_PINNED_SHA=$pin
   VPS_DEPLOY_RECEIPT_SERVICES=$VPS_DEPLOY_STARTED
+  VPS_DEPLOY_RECEIPT_SNAPSHOT_RECORDED=1
   VPS_DEPLOY_RECEIPT_RECOVERY=none
   [[ -z $VPS_DEPLOY_STARTED ]] || VPS_DEPLOY_RECEIPT_RECOVERY=pending
   export VPS_DEPLOY_RECEIPT_PREVIOUS_SHA VPS_DEPLOY_RECEIPT_PINNED_SHA
   export VPS_DEPLOY_RECEIPT_SERVICES VPS_DEPLOY_RECEIPT_RECOVERY
+  export VPS_DEPLOY_RECEIPT_SNAPSHOT_RECORDED
   print "vps-deploy: started before this deploy: $VPS_DEPLOY_STARTED"
   set_stage snapshot
 fi
