@@ -4,9 +4,9 @@ require_relative "test_helper"
 require_relative "support_fake_config"
 require "rbconfig"
 
-# agy is the only entry in the routing tables that is not an API model. It is
-# the Antigravity CLI, reached by executing a binary, and two things about it
-# have to stay true no matter how the tiers are ordered:
+# agy is a subscription CLI lane, reached by executing a binary rather
+# than an API request. Its authentication class must not let it leapfrog an
+# earlier model in the selected task tier, and two things must stay true:
 #
 #   1. It is never offered when the binary is not there. An id that can only be
 #      failed over is not a route.
@@ -25,7 +25,8 @@ class TestAgyReachability < Minitest::Test
   FakeConfig = Master::TestSupport::FakeConfig
   GUARDED = %w[
     XAI_API_KEY OPENROUTER_API_KEY ANTHROPIC_API_KEY OPENAI_API_KEY
-    DEEPSEEK_API_KEY GOOGLE_API_KEY GEMINI_API_KEY MISTRAL_API_KEY
+    DEEPSEEK_API_KEY GOOGLE_API_KEY GEMINI_API_KEY MISTRAL_API_KEY ZAI_API_KEY
+    REPLICATE_API_TOKEN REPLICATE_API_KEY MASTER_MODEL
     MASTER_KEYLESS MASTER_WEB_CHAT MASTER_NO_GROK_CLI MASTER_NO_AGY_CLI AGY_BIN
   ].freeze
   OPENROUTER_KEY = "sk-or-v1-#{"a" * 64}"
@@ -109,20 +110,24 @@ class TestAgyReachability < Minitest::Test
 
   # --- 2. present, but behind a configured key -----------------------------
 
-  def test_agy_is_the_default_when_it_is_there_and_no_key_is
+  def test_agy_is_available_when_its_binary_is_there_and_no_api_key_is_set
     with_agy(true) do
-      assert_match AGY, Master.default_model,
-                   "with no API key and the binary present, agy is the route that exists"
+      assert_includes chain, "agy:auto",
+                      "the binary-backed lane stays available at its declared tier position"
+      assert_match(/\A(?:agy|zai-cli|web-chat|nvidia|gateway|local|ollama|deepseek|claude|gemini)/,
+                   Master.default_model.to_s,
+                   "boot names an available configured lane, not an absent provider"
     end
   end
 
-  def test_agy_remains_available_after_the_declared_primary_when_an_api_key_is_configured
+  def test_agy_remains_a_fallback_after_the_declared_primary_when_an_api_key_is_configured
     ENV["OPENROUTER_API_KEY"] = OPENROUTER_KEY
     with_agy(true) do
-      assert_match AGY, Master.default_model,
-                   "AGY remains eligible without promoting itself over earlier configured tier entries"
-      assert_match AGY, chain.first,
-                   "AGY remains in the fallback chain when its binary is present"
+      offered = chain
+      assert_includes offered, "agy:auto",
+                      "AGY remains in the fallback chain when its binary is present"
+      refute_equal "agy:auto", offered.first,
+                   "AGY does not promote itself over the configured first reachable tier entry"
     end
   end
 
