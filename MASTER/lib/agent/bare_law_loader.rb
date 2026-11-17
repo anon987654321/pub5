@@ -90,6 +90,10 @@ module Master
         # Law files define module-level helpers beside their detectors. A
         # check block that calls one still runs bare: forward to the module
         # the loaded file reopened, exactly as the full runtime does.
+        private
+
+        # Ruby's dynamic-dispatch hooks are implementation details, not part
+        # of the detector-facing runner API.
         def method_missing(name, *args, **kwargs, &block)
           host = Master::Review::Scan::Laws if defined?(Master::Review::Scan::Laws)
           return host.public_send(name, *args, **kwargs, &block) if host.respond_to?(name)
@@ -189,24 +193,35 @@ module Master
       def initialize(paths)
         @laws = {}
         @skipped = {}
-        paths.each do |path|
-          Master::Agent::BareLawLoader.load_file(path).each do |id, builder|
-            entry = catalogue_entry(id)
-            if entry.nil?
-              @skipped[id] = "absent from law_catalogue"
-              next
-            elsif entry["lifecycle"] == "retired"
-              @skipped[id] = "lifecycle retired"
-              next
-            elsif builder.checks.empty? || builder.meta[:semantic] || builder.meta[:practice] ||
-                  builder.meta[:external_detector]
-              @skipped[id] = "no lexical detector"
-              next
-            end
+        paths.each { |path| load_path(path) }
+      end
 
-            @laws[id] = { builder:, entry: }
-          end
-        end
+      def load_path(path)
+        builders = Master::Agent::BareLawLoader.load_file(path)
+        builders.each { |id, builder| register_builder(id, builder) }
+      end
+
+      def register_builder(id, builder)
+        entry = catalogue_entry(id)
+        reason = skip_reason(entry, builder)
+        return @skipped[id] = reason if reason
+
+        @laws[id] = { builder:, entry: }
+      end
+
+      def skip_reason(entry, builder)
+        return "absent from law_catalogue" unless entry
+        return "lifecycle retired" if entry["lifecycle"] == "retired"
+        return "no lexical detector" unless lexical_detector?(builder)
+
+        nil
+      end
+
+      def lexical_detector?(builder)
+        builder.checks.any? &&
+          !builder.meta[:semantic] &&
+          !builder.meta[:practice] &&
+          !builder.meta[:external_detector]
       end
 
       def catalogue_entry(id)
