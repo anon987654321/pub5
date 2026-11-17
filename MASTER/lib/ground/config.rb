@@ -45,7 +45,7 @@ module Master
         # with or without an OpenRouter balance.
         "model" => "nvidia/nemotron-3-super-120b-a12b:free",
         "model_preference_migrated" => false,
-        "web_host => "127.0.0.1",
+        "web_host" => "127.0.0.1",
         "web_public_url" => "https://ai.brgen.no",
         "web_port" => DEFAULT_WEB_PORT,
         "budget_max" => BUDGET_MAX_DEFAULT,
