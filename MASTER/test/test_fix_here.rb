@@ -34,7 +34,7 @@ class TestFixHere < Minitest::Test
     end
   end
 
-def test_failed_disk_probe_is_reported_as_unreadable
+  def test_failed_disk_probe_is_reported_as_unreadable
     with_worktree do |_main, worker, tools_bin|
       df = File.join(tools_bin, "df")
       File.write(df, "#!/bin/sh\nexit 1\n")
