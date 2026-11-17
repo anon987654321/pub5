@@ -186,10 +186,15 @@ module Deploy
       rules
     end
 
-    # The partials one file @uses, as the two on-disk spellings Sass accepts.
+    # The partials one file pulls in, as the spellings the architecture
+    # accepts: a bare @use and the meta.load-css include an entry or partial
+    # uses to contribute CSS into a layer. Two on-disk names each, since Sass
+    # resolves both foo and _foo.
     def used_partials(path, source)
       dir = File.dirname(path)
-      source.scan(/^\s*@use\s+"([^"]+)"(?:\s+as\s+\w+)?\s*;/).flat_map do |(name)|
+      names = source.scan(/^\s*@use\s+"([^"]+)"(?:\s+as\s+\w+)?\s*;/).flatten +
+              source.scan(/^\s*@include\s+(?:[\w:]+\.)?meta\.load-css\(\s*"([^"]+)"/).flatten
+      names.flat_map do |name|
         [File.join(dir, "#{name}.scss"), File.join(dir, "_#{name}.scss")]
       end
     end
