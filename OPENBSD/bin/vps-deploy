@@ -122,7 +122,7 @@ if [[ $app == recover ]]; then
       recover_mode=plan
       ;;
     --apply)
-      [[ $# -eq 3 && ${3} =~ '^[0-9]{8}T[0-9]{6}Z-[a-z0-9_-]{1,32}-[0-9]+$' ]] || {
+      [[ $# -eq 3 ]] && "$RUBY" -e 'exit(ARGV.fetch(0).match?(/\\A[0-9]{8}T[0-9]{6}Z-[a-z0-9_-]{1,32}-[0-9]+\\z/) ? 0 : 1)' "$3" || {
         print -u2 "vps-deploy: recover --apply needs one exact run ID from --plan"
         exit 2
       }
@@ -461,7 +461,9 @@ write_deploy_run_receipt() {
     "${deploy_stage:-start}" "${VPS_DEPLOY_RUN_STARTED_AT}" \
     "${VPS_DEPLOY_RECEIPT_PINNED_SHA:-}" "${VPS_DEPLOY_RECEIPT_PREVIOUS_SHA:-}" \
     "${VPS_DEPLOY_RECEIPT_SERVICES:-}" "${VPS_DEPLOY_RECEIPT_PORTS:-}" \
-    "${VPS_DEPLOY_RECEIPT_ORDER:-}" "${VPS_DEPLOY_RUN_LOG}" "${VPS_DEPLOY_LOG}"     "${VPS_DEPLOY_RECEIPT_SNAPSHOT_RECORDED:-0}") || return 1
+    "${VPS_DEPLOY_RECEIPT_ORDER:-}" \
+    "${VPS_DEPLOY_RUN_LOG}" "${VPS_DEPLOY_LOG}" \
+    "${VPS_DEPLOY_RECEIPT_SNAPSHOT_RECORDED:-0}") || return 1
   "$PUB5_ADMIN" deploy-run-write "$VPS_DEPLOY_RUN_ID" "$payload" >/dev/null
 }
 
@@ -858,6 +860,7 @@ trap 'exit 143' TERM
 # inherit the ID, snapshot and owner identity and update only the current stage.
 if (( lock_owner )) && [[ $app != recover ]]; then
   unset VPS_DEPLOY_RUN_ID VPS_DEPLOY_RUN_TARGET VPS_DEPLOY_RUN_STARTED_AT
+  unset VPS_DEPLOY_STARTED
   unset VPS_DEPLOY_RECEIPT_STATUS VPS_DEPLOY_RECEIPT_RECOVERY
   unset VPS_DEPLOY_RECEIPT_PINNED_SHA VPS_DEPLOY_RECEIPT_PREVIOUS_SHA
   unset VPS_DEPLOY_RECEIPT_SERVICES VPS_DEPLOY_RECEIPT_PORTS VPS_DEPLOY_RECEIPT_ORDER
