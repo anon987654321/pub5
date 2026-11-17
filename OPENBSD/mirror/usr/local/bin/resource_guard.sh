@@ -36,8 +36,8 @@ SHED_STATE=/var/db/resource_guard_shed
 # first sample, because a genuine crisis should not wait.
 SHED_STRIKES=${GUARD_SHED_STRIKES:-2}
 STRIKE_STATE=/var/db/resource_guard_strikes
-CPU_PRESSURE_FILE=${GUARD_CPU_PRESSURE_FILE:-/var/db/pub4/cpu_pressure}
-CPU_PRESSURE_MAX_AGE=${GUARD_CPU_PRESSURE_MAX_AGE:-420}
+CPU_PRESSURE_FILE=/var/db/pub4/cpu_pressure
+CPU_PRESSURE_MAX_AGE=420
 CORE="master brgen"
 # Ordered cheapest-to-lose first, because shedding now takes one per tick.
 # bsdports is a low-traffic ports index and leads. amber is a real app with real
