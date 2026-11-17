@@ -28,6 +28,7 @@ class TestPub4Alert < Minitest::Test
       "PUB4_CPU_HISTORY" => File.join(dir, "cpu-watch.log"),
       "PUB4_CPU_PRESSURE" => File.join(dir, "cpu-pressure"),
       "PUB4_CPU_HEARTBEAT" => File.join(dir, "state", "cpu-watch.seen"),
+      "PUB4_CPU_DEPLOY_FLAGS" => File.join(dir, "no-deploy-*"),
     }.merge(extra)
   end
 
