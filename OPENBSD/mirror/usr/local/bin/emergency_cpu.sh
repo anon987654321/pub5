@@ -9,26 +9,24 @@ case ${1:-} in
   ;;
 esac
 
-# curl is a package (/usr/local/bin/curl) and resource_guard.sh calls this from
-# root's cron, whose PATH has no /usr/local/bin — so the /up wait below could
-# only ever time out on the path that actually matters, and every crisis
-# restart logged "still down after 75s" whether or not master had come back.
+# This is a manual operator recovery command, never a cron action. The periodic
+# resource guard sheds optional services and records critical load; it does not
+# restart MASTER or Brgen.
 export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 # Root-owned installed implementation for emergency CPU relief on vm23.
 # OPERATOR.sh installs this tracked file as /usr/local/bin/emergency_cpu.sh,
-# mode 0555. The checkout entrypoint refuses root and delegates here; root
-# cron's installed resource_guard calls this path without reading the checkout.
+# mode 0555. The checkout entrypoint refuses root and delegates here; an
+# operator must deliberately invoke this installed runner after inspecting load.
 # Typical cause: Falcon crash-loops, hung bundle install, assets:precompile on restart.
 
 # Prefer the root-owned installed copy; this script is run as root, and
 # dot-sourcing from the dev-owned checkout makes repo write access equivalent to
 # root code execution. The repo path stays as a fallback for a laptop/dev run,
 # where the checkout is already the operator's own.
-# The guard's cron is what re-runs this relief when the load returns; if the
-# guard itself is missing from the box, today's manual relief is the last one
-# and nothing will say so. Check it instead of assuming it.
+# The periodic guard intentionally does not call this script. It remains a
+# break-glass recovery path, not a self-healing restart loop.
 GUARD_SCRIPT=/usr/local/bin/resource_guard.sh
-[[ -x $GUARD_SCRIPT ]] || echo "WARN: $GUARD_SCRIPT missing - cron will not run resource relief again" >&2
+[[ -x $GUARD_SCRIPT ]] || echo "WARN: $GUARD_SCRIPT missing - automatic optional-service load shedding is unavailable" >&2
 
 GUARD_HELPER=/usr/local/libexec/stale_ci_cleanup.ksh
 if [[ -f $GUARD_HELPER && ! -L $GUARD_HELPER ]]; then
