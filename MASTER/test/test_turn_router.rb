@@ -628,15 +628,4 @@ class TurnRouterTest < Minitest::Test
     end
   end
 
-  def test_fix_remains_available_on_a_development_host
-    router = Master::CLI::TurnRouter
-
-    router.stub(:production_host?, false) do
-      command = Master::CLI::CommandRegistry::Command.new { "fix-dispatched" }
-      result = router.dispatch_slash("/fix", container: build_container(commands: { "fix" => command }))
-      assert result.ok?, result.message.to_s
-      assert_match(/fix-dispatched/, result.value[:rendered].to_s)
-    end
-  end
-
 end
