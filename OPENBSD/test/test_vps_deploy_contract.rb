@@ -1087,7 +1087,7 @@ class VpsDeployContractTest < Minitest::Test
   end
 
   def test_recovery_plan_is_explicit_and_never_deploys_or_checks_out_code
-    recovery = SOURCE[/# Recovery is separate from deployment\..*?(?=^# Done once, by the process that owns the lock)/m]
+    recovery = SOURCE[/# Operator-driven recovery is intentionally separate from deploy\..*?(?=^# Pin the commit, prove it boots, record what is running\.)/m]
     refute_nil recovery
     assert_includes SOURCE, "recover --plan"
     assert_includes SOURCE, "recover --apply <run-id>"
@@ -1104,8 +1104,18 @@ class VpsDeployContractTest < Minitest::Test
     refute_includes recovery, "git_as_deploy_user switch"
   end
 
+  def test_recovery_invocation_uses_a_fresh_lock_and_historical_ports
+    recovery = SOURCE[/# Operator-driven recovery is intentionally separate from deploy\..*?(?=^# Pin the commit, prove it boots, record what is running\.)/m]
+    refute_nil recovery
+    assert_includes SOURCE, "unset VPS_DEPLOY_STARTED VPS_DEPLOY_LOCK_HELD"
+    assert_includes SOURCE, "VPS_DEPLOY_RESTORE_PORTS_FROM_RECEIPT=1"
+    assert_includes SOURCE, 'if [[ ${VPS_DEPLOY_RESTORE_PORTS_FROM_RECEIPT:-0} != 1 ]]; then'
+    assert_includes SOURCE, '[[ $owner_host == "$(hostname -s)" ]]'
+    assert_includes recovery, "snapshot_recorded"
+  end
+
   def test_recovery_requires_a_durable_service_snapshot_and_keeps_resource_guard_excluded
-    recovery = SOURCE[/# Recovery is separate from deployment\..*?(?=^# Done once, by the process that owns the lock)/m]
+    recovery = SOURCE[/# Operator-driven recovery is intentionally separate from deploy\..*?(?=^# Pin the commit, prove it boots, record what is running\.)/m]
     refute_nil recovery
     assert_includes recovery, '[[ -n $VPS_DEPLOY_STARTED ]]'
     assert_includes recovery, "keep_deploy_flag"
