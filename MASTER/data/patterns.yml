@@ -1107,7 +1107,7 @@ operator_playbook:
 skills_registry:
   meta:
     source: runtime authority - edit this file directly; do not add data/skills/*.md
-    count: 21
+    count: 22
   skills:
   - name: algorithmic-art
     description: Make generative art from one seeded algorithm, reproducible and tunable.
@@ -1285,3 +1285,17 @@ skills_registry:
       The workflow skill runs MASTER's internal pipeline when the operator asks for a full pass without naming individual steps. Phrases such as run this through MASTER, full pass, or tribunal infer scan, fix dry-run, and council deliberation in sequence.
 
       No /triad or /workflow command is required unless debugging. MASTER orchestrates the stages internally; the operator only needs the natural-language trigger.
+  - name: amber-tenant-logo
+    description: Dress a brgen tenant or any logo request in the amber mark law — locked Caprasimo glyphs, nine hairlines, plates from the generator, never redrawn.
+    triggers:
+    - "\\bbrgen\\s+tenants?\\b"
+    - "\\bnew\\s+tenants?\\b"
+    - "\\btenants?\\s+(?:onboarding|logo|logos|mark|plates?)\\b"
+    - "\\b(?:city|cities)\\s+(?:onboarding|logo|logos)\\b"
+    - "\\bnew\\s+city\\b"
+    - "\\b(?:amber\\s+)?(?:logo|logos|favicons?|avatars?|plates?)\\b"
+    - "\\b(?:swoosh|amber\\s+mark)\\b"
+    body: |-
+      The amber-tenant-logo skill dresses a brgen tenant — a City row with name, slug, domain, locale (RAILS/brgen) — in the amber mark, and answers any logo, favicon or plate request with the same law. The mark is one artwork: the real Caprasimo glyph outlines for "amber®" and nine white hairline swoosh paths in one curve family, defined once in RAILS/amber/app/views/shared/_logo.html.erb. Nothing redraws, restyles or approximates them.
+
+      Every render derives from that partial. RAILS/amber/__logo/generate.mjs extracts the glyphs and hairlines live (it throws if the hairline count is not nine), wipes plates/ before each batch, and writes seeded, reproducible plates plus all-plates.html. A reviewed study ships by copying its plate byte-exact to RAILS/amber/app/assets/images/amber/, naming it in AmberLogoHelper::VARIANT_ASSETS, and cutting avatars at 128/64/32 into cuts/; a deploy selects it with AMBER_LOGO_VARIANT while the canonical inline mark stays the default. RAILS/amber/test/logo_contract_test.rb must pass after any change; it keeps installed assets from drifting off the plates. New studies belong in __logo/PROPOSALS.md and need review before install. A tenant gets the amber mark itself; the only per-tenant choice is which reviewed variant a deploy asks for. Never invent colours, fonts or a swoosh for one.
