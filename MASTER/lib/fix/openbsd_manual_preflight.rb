@@ -94,13 +94,34 @@ module Master
         raise TaskContract::Invalid, "openbsd_preflight must be a mapping" unless value.is_a?(Hash)
 
         attributes = value.to_h.transform_keys(&:to_s)
+        raise_on_unknown_fields!(attributes)
+        hostname, release, architecture = normalized_identity(attributes)
+        ssh_aliases = normalized_ssh_aliases(attributes)
+        scope = normalized_scope(attributes, task_scope:)
+        source_reads, source_paths = normalized_source_reads(attributes)
+        require_scope_source_coverage!(scope, source_paths)
+        interfaces = normalized_interfaces(attributes)
+        manual_pages = normalized_manual_pages(attributes, release)
+        require_manual_coverage!(interfaces, manual_pages)
+        no_native_reason = normalized_no_native_reason(attributes, interfaces)
+        normalized_preflight(hostname:, release:, architecture:, scope:, source_reads:,
+          interfaces:, manual_pages:, ssh_aliases:, no_native_reason:)
+      rescue KeyError => error
+        raise TaskContract::Invalid, "OpenBSD preflight receipt is incomplete: #{error.key}"
+      end
+
+      # Required fields first, then no unknown field may ride along.
+      def raise_on_unknown_fields!(attributes)
         required = %w[hostname os_release architecture scope source_reads native_interfaces manual_pages]
         optional = %w[no_native_interfaces_reason ssh_aliases]
         missing = required - attributes.keys
         unknown = attributes.keys - required - optional
         raise TaskContract::Invalid, "openbsd_preflight is missing: #{missing.join(', ')}" unless missing.empty?
         raise TaskContract::Invalid, "openbsd_preflight has unknown fields: #{unknown.join(', ')}" unless unknown.empty?
+      end
 
+      # Host identity fields must be present and shaped for an exact-release target.
+      def normalized_identity(attributes)
         hostname = attributes.fetch("hostname").to_s.strip
         release = attributes.fetch("os_release").to_s.strip
         architecture = attributes.fetch("architecture").to_s.strip
@@ -111,14 +132,21 @@ module Master
         unless architecture.match?(/\A[A-Za-z0-9_.-]+\z/)
           raise TaskContract::Invalid, "openbsd_preflight.architecture is required"
         end
+        [hostname, release, architecture]
+      end
 
-        ssh_aliases = Array(attributes.fetch("ssh_aliases", [])).map do |entry|
+      def normalized_ssh_aliases(attributes)
+        Array(attributes.fetch("ssh_aliases", [])).map do |entry|
           value = entry.to_s.strip.downcase
           unless value.match?(/\A[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\z/) && !value.include?("..")
             raise TaskContract::Invalid, "invalid OpenBSD SSH alias: #{entry.inspect}"
           end
           value
         end.uniq.sort
+      end
+
+      # Every scope entry must stay under OPENBSD/ and inside the task's own scope.
+      def normalized_scope(attributes, task_scope:)
         scope = Array(attributes.fetch("scope")).map { |path| TaskContract.safe_path(path) }.uniq.sort
         raise TaskContract::Invalid, "openbsd_preflight.scope must name an OPENBSD path" if scope.empty?
         scope.each do |entry|
@@ -130,112 +158,181 @@ module Master
             raise TaskContract::Invalid, "openbsd_preflight scope exceeds task scope: #{entry}"
           end
         end
+        scope
+      end
 
+      # One complete, content-verified receipt per read source; duplicates rejected.
+      def normalized_source_reads(attributes)
         source_rows = Array(attributes.fetch("source_reads"))
         raise TaskContract::Invalid, "openbsd_preflight.source_reads must include complete target/dependency reads" if source_rows.empty?
         raise TaskContract::Invalid, "too many OpenBSD source receipts" if source_rows.size > MAX_SOURCE_READS
-        source_total = 0
         source_paths = []
+        source_total = 0
         source_reads = source_rows.map do |row|
-          raise TaskContract::Invalid, "OpenBSD source receipt must be a mapping" unless row.is_a?(Hash)
-          item = row.to_h.transform_keys(&:to_s)
-          allowed = %w[path content complete sha256 bytes lines]
-          raise TaskContract::Invalid, "OpenBSD source receipt has unknown fields" unless (item.keys - allowed).empty?
-          path = TaskContract.safe_path(item.fetch("path"))
-          raise TaskContract::Invalid, "duplicate OpenBSD source receipt: #{path}" if source_paths.include?(path)
-          source_paths << path
-          content = item.fetch("content").to_s
-          raise TaskContract::Invalid, "OpenBSD source receipt is not marked complete: #{path}" unless item.fetch("complete") == true
-          raise TaskContract::Invalid, "OpenBSD source receipt is empty: #{path}" if content.empty?
-          source_total += content.bytesize
-          raise TaskContract::Invalid, "OpenBSD source content exceeds #{MAX_BYTES} bytes" if source_total > MAX_BYTES
-          digest = repository_content_digest(path, content, root: Master::REPO_ROOT)
-          bytes = content.bytesize
-          lines = content.lines.length
-          validate_measurements!(item, digest:, bytes:, lines:, label: path)
-          {
-            "path" => path.freeze, "content" => content.freeze, "complete" => true,
-            "sha256" => digest.freeze, "bytes" => bytes, "lines" => lines
-          }.freeze
+          row_hash, source_total = source_read_row(row, source_paths, source_total)
+          row_hash
         end
+        [source_reads, source_paths]
+      end
 
+      # One source receipt: safe path, unique, complete, bounded, digest-matched.
+      def source_read_row(row, source_paths, source_total)
+        raise TaskContract::Invalid, "OpenBSD source receipt must be a mapping" unless row.is_a?(Hash)
+        item = row.to_h.transform_keys(&:to_s)
+        allowed = %w[path content complete sha256 bytes lines]
+        raise TaskContract::Invalid, "OpenBSD source receipt has unknown fields" unless (item.keys - allowed).empty?
+        path = TaskContract.safe_path(item.fetch("path"))
+        raise TaskContract::Invalid, "duplicate OpenBSD source receipt: #{path}" if source_paths.include?(path)
+        source_paths << path
+        content = item.fetch("content").to_s
+        raise TaskContract::Invalid, "OpenBSD source receipt is not marked complete: #{path}" unless item.fetch("complete") == true
+        raise TaskContract::Invalid, "OpenBSD source receipt is empty: #{path}" if content.empty?
+        source_total += content.bytesize
+        raise TaskContract::Invalid, "OpenBSD source content exceeds #{MAX_BYTES} bytes" if source_total > MAX_BYTES
+        digest = repository_content_digest(path, content, root: Master::REPO_ROOT)
+        bytes = content.bytesize
+        lines = content.lines.length
+        validate_measurements!(item, digest:, bytes:, lines:, label: path)
+        [source_receipt(path, content, digest, bytes, lines), source_total]
+      end
+
+      def source_receipt(path, content, digest, bytes, lines)
+        {
+          "path" => path.freeze, "content" => content.freeze, "complete" => true,
+          "sha256" => digest.freeze, "bytes" => bytes, "lines" => lines
+        }.freeze
+      end
+
+      # Every declared scope entry must contain at least one read source.
+      def require_scope_source_coverage!(scope, source_paths)
         uncovered_scope = scope.reject do |entry|
           source_paths.any? { |path| TaskContract.covers?(path, scope: [entry]) }
         end
-        unless uncovered_scope.empty?
-          raise TaskContract::Invalid, "OpenBSD preflight has no source read inside scope: #{uncovered_scope.join(', ')}"
-        end
+        return if uncovered_scope.empty?
 
-        # Canonicalize spelling and drop duplicates, but preserve the declared
-        # order: the receipt's evidence reads framework-first (rcctl(8) then the
-        # rc startup chain it invokes, shell last), and an alphabetical sort
-        # scrambles that semantic order into ksh(1)-first.
-        interfaces = Array(attributes.fetch("native_interfaces")).map { |entry| canonical_interface_id(entry) }.uniq
+        raise TaskContract::Invalid, "OpenBSD preflight has no source read inside scope: #{uncovered_scope.join(', ')}"
+      end
 
+      # Canonicalize spelling and drop duplicates, but preserve the declared
+      # order: the receipt's evidence reads framework-first (rcctl(8) then the
+      # rc startup chain it invokes, shell last), and an alphabetical sort
+      # scrambles that semantic order into ksh(1)-first.
+      def normalized_interfaces(attributes)
+        Array(attributes.fetch("native_interfaces")).map { |entry| canonical_interface_id(entry) }.uniq
+      end
+
+      def normalized_manual_pages(attributes, release)
         manual_rows = Array(attributes.fetch("manual_pages"))
         raise TaskContract::Invalid, "too many OpenBSD manual-page receipts" if manual_rows.size > MAX_MANUAL_PAGES
         manual_total = 0
-        manual_pages = manual_rows.map do |row|
-          raise TaskContract::Invalid, "OpenBSD manual receipt must be a mapping" unless row.is_a?(Hash)
-          item = row.to_h.transform_keys(&:to_s)
-          allowed = %w[page section source content complete sha256 bytes lines]
-          raise TaskContract::Invalid, "OpenBSD manual receipt has unknown fields" unless (item.keys - allowed).empty?
-          page = item.fetch("page").to_s.strip.downcase
-          section = item.fetch("section").to_s.strip
-          page_id = "#{page}(#{section})"
-          unless page.match?(/\A[a-z0-9_.+-]+\z/) && section.match?(/\A[1-9]\z/)
-            raise TaskContract::Invalid, "invalid canonical OpenBSD manual page: #{page_id}"
-          end
-          source = item.fetch("source").to_s.strip
-          versioned_url = %r{\Ahttps://man\.openbsd\.org/OpenBSD-#{Regexp.escape(release)}/[A-Za-z0-9_.+-]+\.[1-9]\z}
-          local_page = %r{\Atarget-local:/\S+/man[1-9]/#{Regexp.escape(page)}\.#{Regexp.escape(section)}\z}
-          versioned_path = source.end_with?("/#{page}.#{section}")
-          unless (source.match?(versioned_url) && versioned_path) || source.match?(local_page)
-            raise TaskContract::Invalid, "OpenBSD manual source must identify #{page_id} on the exact target release"
-          end
-          content = item.fetch("content").to_s
-          raise TaskContract::Invalid, "OpenBSD manual receipt is not marked complete: #{page_id}" unless item.fetch("complete") == true
-          title = content.lines.first(8).join
-          unless title.match?(/#{Regexp.escape(page)}\s*\(#{Regexp.escape(section)}\)/i)
-            raise TaskContract::Invalid, "OpenBSD manual content does not identify #{page_id} in its opening lines"
-          end
-          if content.bytesize < 128 || content.lines.length < 7
-            raise TaskContract::Invalid, "OpenBSD manual content is too short to be a complete read: #{page_id}"
-          end
-          headings = content.lines.map(&:strip)
-          missing_headings = %w[NAME SYNOPSIS DESCRIPTION].reject { |heading| headings.include?(heading) }
-          unless missing_headings.empty?
-            raise TaskContract::Invalid, "OpenBSD manual content is missing full-page sections for #{page_id}: #{missing_headings.join(', ')}"
-          end
-          manual_total += content.bytesize
-          raise TaskContract::Invalid, "OpenBSD manual content exceeds #{MAX_BYTES} bytes" if manual_total > MAX_BYTES
-          digest = Digest::SHA256.hexdigest(content.b)
-          bytes = content.bytesize
-          lines = content.lines.length
-          validate_measurements!(item, digest:, bytes:, lines:, label: page_id)
-          {
-            "page" => page.freeze, "section" => section.freeze, "source" => source.freeze,
-            "content" => content.freeze, "complete" => true, "sha256" => digest.freeze,
-            "bytes" => bytes, "lines" => lines
-          }.freeze
+        manual_rows.map do |row|
+          row_hash = manual_page_row(row, release, manual_total)
+          manual_total += row_hash.fetch("bytes")
+          row_hash
         end
+      end
+
+      # One manual receipt: canonical page id, exact-release source, complete
+      # content that identifies itself and carries the full-page sections.
+      def manual_page_row(row, release, manual_total)
+        raise TaskContract::Invalid, "OpenBSD manual receipt must be a mapping" unless row.is_a?(Hash)
+        item = row.to_h.transform_keys(&:to_s)
+        allowed = %w[page section source content complete sha256 bytes lines]
+        raise TaskContract::Invalid, "OpenBSD manual receipt has unknown fields" unless (item.keys - allowed).empty?
+        page = item.fetch("page").to_s.strip.downcase
+        section = item.fetch("section").to_s.strip
+        page_id = "#{page}(#{section})"
+        validated_page_shape!(page, section, page_id)
+        source = validated_manual_source(item.fetch("source").to_s.strip, page:, section:, release:)
+        content = validated_manual_content(item, page:, section:, page_id:)
+        manual_total += content.bytesize
+        raise TaskContract::Invalid, "OpenBSD manual content exceeds #{MAX_BYTES} bytes" if manual_total > MAX_BYTES
+        digest, bytes, lines = manual_measurements(item, content, page_id)
+        manual_receipt(page:, section:, source:, content:, digest:, bytes:, lines:)
+      end
+
+      def validated_page_shape!(page, section, page_id)
+        return if page.match?(/\A[a-z0-9_.+-]+\z/) && section.match?(/\A[1-9]\z/)
+
+        raise TaskContract::Invalid, "invalid canonical OpenBSD manual page: #{page_id}"
+      end
+
+      # The source must identify the page on the exact target release: the
+      # versioned man.openbsd.org URL, or a local target-man* checkout path.
+      def validated_manual_source(source, page:, section:, release:)
+        versioned_url = %r{\Ahttps://man\.openbsd\.org/OpenBSD-#{Regexp.escape(release)}/[A-Za-z0-9_.+-]+\.[1-9]\z}
+        local_page = %r{\Atarget-local:/\S+/man[1-9]/#{Regexp.escape(page)}\.#{Regexp.escape(section)}\z}
+        versioned_path = source.end_with?("/#{page}.#{section}")
+        return source if (source.match?(versioned_url) && versioned_path) || source.match?(local_page)
+
+        raise TaskContract::Invalid, "OpenBSD manual source must identify #{page}(#{section}) on the exact target release"
+      end
+
+      # Complete, self-identifying, long enough, and carrying the full-page
+      # sections a complete manual read must include.
+      def validated_manual_content(item, page:, section:, page_id:)
+        raise TaskContract::Invalid, "OpenBSD manual receipt is not marked complete: #{page_id}" unless item.fetch("complete") == true
+        content = item.fetch("content").to_s
+        title = content.lines.first(8).join
+        unless title.match?(/#{Regexp.escape(page)}\s*\(#{Regexp.escape(section)}\)/i)
+          raise TaskContract::Invalid, "OpenBSD manual content does not identify #{page_id} in its opening lines"
+        end
+        if content.bytesize < 128 || content.lines.length < 7
+          raise TaskContract::Invalid, "OpenBSD manual content is too short to be a complete read: #{page_id}"
+        end
+        require_full_page_sections!(content, page_id)
+        content
+      end
+
+      def require_full_page_sections!(content, page_id)
+        headings = content.lines.map(&:strip)
+        missing_headings = %w[NAME SYNOPSIS DESCRIPTION].reject { |heading| headings.include?(heading) }
+        return if missing_headings.empty?
+
+        raise TaskContract::Invalid, "OpenBSD manual content is missing full-page sections for #{page_id}: #{missing_headings.join(', ')}"
+      end
+
+      def manual_measurements(item, content, label)
+        digest = Digest::SHA256.hexdigest(content.b)
+        bytes = content.bytesize
+        lines = content.lines.length
+        validate_measurements!(item, digest:, bytes:, lines:, label:)
+        [digest, bytes, lines]
+      end
+
+      def manual_receipt(page:, section:, source:, content:, digest:, bytes:, lines:)
+        {
+          "page" => page.freeze, "section" => section.freeze, "source" => source.freeze,
+          "content" => content.freeze, "complete" => true, "sha256" => digest.freeze,
+          "bytes" => bytes, "lines" => lines
+        }.freeze
+      end
+
+      # Duplicate page receipts are refused; every declared interface needs its
+      # exact-release full-page receipt.
+      def require_manual_coverage!(interfaces, manual_pages)
         all_manual_ids = manual_pages.map { |page| "#{page.fetch("page")}(#{page.fetch("section")})" }
         raise TaskContract::Invalid, "duplicate OpenBSD manual-page receipts" unless all_manual_ids.uniq == all_manual_ids
-        manual_ids = all_manual_ids
-        missing_manuals = interfaces - manual_ids
-        unless missing_manuals.empty?
-          raise TaskContract::Invalid, "native interfaces lack full manual receipts: #{missing_manuals.join(', ')}"
-        end
+        missing_manuals = interfaces - all_manual_ids
+        return if missing_manuals.empty?
 
+        raise TaskContract::Invalid, "native interfaces lack full manual receipts: #{missing_manuals.join(', ')}"
+      end
+
+      # An evidence-based reason is mandatory when no interface is declared, and
+      # the reason field must be absent when interfaces exist.
+      def normalized_no_native_reason(attributes, interfaces)
         no_native_reason = attributes["no_native_interfaces_reason"].to_s.strip
         if interfaces.empty?
-          if no_native_reason.length < 24
-            raise TaskContract::Invalid, "no-native-interface preflight needs an evidence-based reason"
-          end
+          raise TaskContract::Invalid, "no-native-interface preflight needs an evidence-based reason" if no_native_reason.length < 24
         elsif attributes.key?("no_native_interfaces_reason")
           raise TaskContract::Invalid, "no_native_interfaces_reason must be absent when native interfaces are declared"
         end
+        no_native_reason
+      end
 
+      def normalized_preflight(hostname:, release:, architecture:, scope:, source_reads:,
+                               interfaces:, manual_pages:, ssh_aliases:, no_native_reason:)
         {
           "hostname" => hostname.freeze, "os_release" => release.freeze,
           "architecture" => architecture.freeze, "scope" => scope.freeze,
@@ -244,8 +341,6 @@ module Master
           "ssh_aliases" => ssh_aliases.freeze,
           "no_native_interfaces_reason" => (no_native_reason.freeze unless no_native_reason.empty?)
         }.compact.freeze
-      rescue KeyError => error
-        raise TaskContract::Invalid, "OpenBSD preflight receipt is incomplete: #{error.key}"
       end
 
       def validate_measurements!(item, digest:, bytes:, lines:, label:)
@@ -263,21 +358,7 @@ module Master
         unless absolute.start_with?(repository + File::SEPARATOR)
           raise TaskContract::Invalid, "OpenBSD preflight source escapes repository: #{path}"
         end
-        cursor = repository
-        relative = absolute.delete_prefix(repository + File::SEPARATOR)
-        segments = relative.split(File::SEPARATOR)
-        segments.each_with_index do |segment, index|
-          cursor = File.join(cursor, segment)
-          stat = File.lstat(cursor)
-          raise TaskContract::Invalid, "OpenBSD preflight source contains a symlink: #{path}" if stat.symlink?
-          if index < segments.length - 1 && !stat.directory?
-            raise TaskContract::Invalid, "OpenBSD preflight source has a non-directory parent: #{path}"
-          end
-          if index == segments.length - 1
-            raise TaskContract::Invalid, "OpenBSD preflight source is not a regular file: #{path}" unless stat.file?
-            raise TaskContract::Invalid, "OpenBSD preflight source is hard-linked: #{path}" unless stat.nlink == 1
-          end
-        end
+        validate_repository_path!(absolute, path, repository)
         actual = File.binread(absolute)
         if expected_content && actual != expected_content.to_s.b
           raise TaskContract::Invalid, "OpenBSD source read is stale or incomplete: #{path}"
@@ -285,6 +366,26 @@ module Master
         Digest::SHA256.hexdigest(actual)
       rescue Errno::ENOENT, Errno::EACCES, Errno::ELOOP => error
         raise TaskContract::Invalid, "OpenBSD preflight source cannot be read completely: #{path} (#{error.class})"
+      end
+
+      # Walk every path segment under the real repository root: no symlink
+      # anywhere on the way, directories between, and a single-linked regular
+      # file at the end.
+      def validate_repository_path!(absolute, path, repository)
+        segments = absolute.delete_prefix(repository + File::SEPARATOR).split(File::SEPARATOR)
+        cursor = repository
+        segments.each_with_index do |segment, index|
+          cursor = File.join(cursor, segment)
+          stat = File.lstat(cursor)
+          raise TaskContract::Invalid, "OpenBSD preflight source contains a symlink: #{path}" if stat.symlink?
+          if index < segments.length - 1 && !stat.directory?
+            raise TaskContract::Invalid, "OpenBSD preflight source has a non-directory parent: #{path}"
+          end
+          next unless index == segments.length - 1
+
+          raise TaskContract::Invalid, "OpenBSD preflight source is not a regular file: #{path}" unless stat.file?
+          raise TaskContract::Invalid, "OpenBSD preflight source is hard-linked: #{path}" unless stat.nlink == 1
+        end
       end
 
       def repository_relative(path, root: Master::REPO_ROOT)
@@ -437,6 +538,17 @@ module Master
 
       def write_mirror_configuration_report(report, root: Master::REPO_ROOT)
         repository = File.realpath(root)
+        ensure_runtime_directory!(repository)
+        path = File.join(repository, MIRROR_COVERAGE_REPORT_RELATIVE_PATH)
+        raise TaskContract::Invalid, "coverage report target is a symlink" if File.symlink?(path)
+        write_report_atomically(report, path)
+      rescue SystemCallError => error
+        raise TaskContract::Invalid, "coverage report could not be written: #{error.class}"
+      end
+
+      # MASTER and its runtime directory must both be real directories; create
+      # .master only when another process has not already done so.
+      def ensure_runtime_directory!(repository)
         master_directory = File.join(repository, "MASTER")
         master_stat = File.lstat(master_directory)
         raise TaskContract::Invalid, "MASTER runtime parent is not a real directory" unless master_stat.directory? && !master_stat.symlink?
@@ -448,8 +560,9 @@ module Master
         end
         stat = File.lstat(directory)
         raise TaskContract::Invalid, "coverage report directory is not a real directory" unless stat.directory? && !stat.symlink?
-        path = File.join(repository, MIRROR_COVERAGE_REPORT_RELATIVE_PATH)
-        raise TaskContract::Invalid, "coverage report target is a symlink" if File.symlink?(path)
+      end
+
+      def write_report_atomically(report, path)
         temporary = "#{path}.#{Process.pid}.#{Thread.current.object_id}.tmp"
         flags = File::WRONLY | File::CREAT | File::EXCL
         flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
@@ -461,8 +574,6 @@ module Master
         end
         File.rename(temporary, path)
         path
-      rescue SystemCallError => error
-        raise TaskContract::Invalid, "coverage report could not be written: #{error.class}"
       ensure
         File.unlink(temporary) if defined?(temporary) && temporary && File.exist?(temporary)
       end
@@ -526,6 +637,21 @@ module Master
         path = receipt_path || File.join(root, RECEIPT_RELATIVE_PATH)
         return contract unless File.exist?(path) || File.symlink?(path)
 
+        validate_saved_receipt_path!(path, root)
+        payload = JSON.parse(File.binread(path))
+        raise TaskContract::Invalid, "saved OpenBSD preflight must be a mapping" unless payload.is_a?(Hash)
+        attributes = payload.to_h.transform_keys(&:to_s)
+        validate_saved_receipt_envelope!(attributes, root:)
+        merge_saved_preflight(contract, attributes.fetch("openbsd_preflight"))
+      rescue JSON::ParserError, KeyError, ArgumentError => error
+        raise TaskContract::Invalid, "saved OpenBSD preflight is invalid: #{error.message}"
+      rescue Errno::ENOENT, Errno::EACCES, Errno::ELOOP => error
+        raise TaskContract::Invalid, "saved OpenBSD preflight cannot be read safely: #{error.class}"
+      end
+
+      # The saved receipt must be a single-linked regular file whose parent
+      # chain inside the repository contains no symlink.
+      def validate_saved_receipt_path!(path, root)
         relative = repository_relative(path, root:)
         raise TaskContract::Invalid, "saved OpenBSD preflight must live inside the repository" unless relative
         relative_parent = File.dirname(relative)
@@ -540,34 +666,32 @@ module Master
         raise TaskContract::Invalid, "saved OpenBSD preflight must be a regular file" unless stat.file?
         raise TaskContract::Invalid, "saved OpenBSD preflight must not be hard-linked" unless stat.nlink == 1
         raise TaskContract::Invalid, "saved OpenBSD preflight exceeds #{MAX_RECEIPT_FILE_BYTES} bytes" if stat.size > MAX_RECEIPT_FILE_BYTES
+      end
 
-        payload = JSON.parse(File.binread(path))
-        raise TaskContract::Invalid, "saved OpenBSD preflight must be a mapping" unless payload.is_a?(Hash)
-        attributes = payload.to_h.transform_keys(&:to_s)
+      # Envelope fields, checkout identity and freshness of the saved receipt.
+      def validate_saved_receipt_envelope!(attributes, root:)
         required = %w[head_sha created_at openbsd_preflight]
         unknown = attributes.keys - required
         missing = required - attributes.keys
         raise TaskContract::Invalid, "saved OpenBSD preflight is missing: #{missing.join(', ')}" unless missing.empty?
         raise TaskContract::Invalid, "saved OpenBSD preflight has unknown fields: #{unknown.join(', ')}" unless unknown.empty?
-
         head = attributes.fetch("head_sha").to_s
         raise TaskContract::Invalid, "saved OpenBSD preflight HEAD is invalid" unless head.match?(/\A[0-9a-f]{40,64}\z/)
-        actual_head = repository_head(root:)
-        raise TaskContract::Invalid, "saved OpenBSD preflight belongs to another checkout revision" unless actual_head == head
+        raise TaskContract::Invalid, "saved OpenBSD preflight belongs to another checkout revision" unless repository_head(root:) == head
+        validate_saved_receipt_age!(attributes.fetch("created_at").to_s)
+      end
 
-        created_at = Time.iso8601(attributes.fetch("created_at").to_s)
-        age = Time.now.utc - created_at
-        if age < -300 || age > MAX_RECEIPT_AGE_SECONDS
-          raise TaskContract::Invalid, "saved OpenBSD preflight expired; re-read target identity and manuals"
-        end
+      def validate_saved_receipt_age!(created_at)
+        age = Time.now.utc - Time.iso8601(created_at)
+        return unless age < -300 || age > MAX_RECEIPT_AGE_SECONDS
 
+        raise TaskContract::Invalid, "saved OpenBSD preflight expired; re-read target identity and manuals"
+      end
+
+      def merge_saved_preflight(contract, saved_preflight)
         task_attributes = contract.to_h.reject { |key, _value| key == "schema" }
-        task_attributes["openbsd_preflight"] = attributes.fetch("openbsd_preflight")
+        task_attributes["openbsd_preflight"] = saved_preflight
         TaskContract.build(task_attributes)
-      rescue JSON::ParserError, KeyError, ArgumentError => error
-        raise TaskContract::Invalid, "saved OpenBSD preflight is invalid: #{error.message}"
-      rescue Errno::ENOENT, Errno::EACCES, Errno::ELOOP => error
-        raise TaskContract::Invalid, "saved OpenBSD preflight cannot be read safely: #{error.class}"
       end
 
       def repository_head(root: Master::REPO_ROOT)
@@ -590,6 +714,14 @@ module Master
         end
         relative = repository_relative(path, root: repo_root)
         return unless relative == "OPENBSD" || relative&.start_with?("OPENBSD/")
+
+        reason = openbsd_path_refusal(relative, path, contract, repo_root)
+        reason if reason
+      end
+
+      # Every OPENBSD edit needs a covering preflight: scope, a complete source
+      # read for existing files, and the manual map for the target's format.
+      def openbsd_path_refusal(relative, path, contract, repo_root)
         return "RTFM_FIRST requires an active TaskContract with openbsd_preflight" unless contract
 
         preflight = contract.openbsd_preflight
@@ -601,15 +733,15 @@ module Master
         if File.file?(absolute) && !preflight.fetch("source_reads").any? { |row| row.fetch("path") == relative }
           return "RTFM_FIRST requires a complete source-read receipt for existing target #{relative}"
         end
+        manual_map_refusal(relative, preflight) || source_staleness(preflight, root: repo_root)
+      end
+
+      def manual_map_refusal(relative, preflight)
         path_manuals = required_path_manuals(relative)
-        if path_manuals.nil?
-          return "RTFM_FIRST has no reviewed manual/schema map for native target #{relative}; identify its format, owner and validator before editing"
-        end
+        return "RTFM_FIRST has no reviewed manual/schema map for native target #{relative}; identify its format, owner and validator before editing" if path_manuals.nil?
         missing_manuals = path_manuals - Array(preflight.fetch("native_interfaces"))
-        unless missing_manuals.empty?
-          return "RTFM_FIRST missing required supporting manual page(s) for #{relative}: #{missing_manuals.join(', ')}"
-        end
-        source_staleness(preflight, root: repo_root)
+        return "RTFM_FIRST missing required supporting manual page(s) for #{relative}: #{missing_manuals.join(', ')}" unless missing_manuals.empty?
+        nil
       end
 
       def refusal_for_command(command:, contract: nil, repo_root: Master::REPO_ROOT, receipt_path: nil, force_remote: false)
@@ -623,24 +755,43 @@ module Master
           return "RTFM_FIRST blocked: #{error.message}"
         end
 
+        native_command_refusal(text, contract, repo_root:, force_remote:)
+      end
+
+      def native_command_refusal(text, contract, repo_root:, force_remote:)
         argv = Shellwords.shellsplit(text)
         remote = force_remote || openbsd_ssh_command?(argv)
         tokens = remote ? ssh_remote_command_tokens(argv) : argv
-        remote_targets = remote ? remote_openbsd_path_sources(tokens) : []
-        remote_targets.each do |relative|
-          reason = refusal_for_path(path: File.join(repo_root, relative), contract:, repo_root:)
-          return reason if reason
-        end
-        if (target = openbsd_write_target(text, argv))
-          reason = refusal_for_path(path: target, contract:, repo_root:)
-          return reason if reason
-        end
+        blocked = remote_target_refusal(tokens, text, argv, contract, repo_root, remote)
+        return blocked if blocked
 
         openbsd_sources = openbsd_source_paths(tokens)
         openbsd_script = tokens.any? { |token| token.match?(%r{(?:\A|/)OPENBSD/}) } && !openbsd_read_only_command?(tokens)
         local_openbsd = RUBY_PLATFORM.match?(/openbsd/i)
         return unless remote || openbsd_script || local_openbsd
 
+        manual_gate_refusal(tokens, argv, contract, repo_root:, remote:, openbsd_script:, openbsd_sources:)
+      rescue ArgumentError => error
+        "RTFM_FIRST cannot parse operation argv for manual preflight: #{error.message}"
+      end
+
+      # Remote path sources and an explicit OPENBSD write target reuse the
+      # path-level refusal, which carries the saved-preflight contract.
+      def remote_target_refusal(tokens, text, argv, contract, repo_root, remote)
+        remote_targets = remote ? remote_openbsd_path_sources(tokens) : []
+        remote_targets.each do |relative|
+          reason = refusal_for_path(path: File.join(repo_root, relative), contract:, repo_root:)
+          return reason if reason
+        end
+        return unless (target = openbsd_write_target(text, argv))
+
+        refusal_for_path(path: target, contract:, repo_root:)
+      end
+
+      # The declared manual set must cover every command the operation runs,
+      # the remote shell page, the operation's own supporting pages, and the
+      # sources and host the operation touches.
+      def manual_gate_refusal(tokens, argv, contract, repo_root:, remote:, openbsd_script:, openbsd_sources:)
         command_entries = remote_command_entries(tokens)
         command_manuals, manual_error = command_manual_requirements(
           command_entries, contract&.openbsd_preflight, openbsd_sources, root: repo_root
@@ -650,33 +801,45 @@ module Master
         command_manuals << shell_page if shell_page
         command_manuals.concat(command_entries.flat_map { |entry| COMMAND_SUPPORT_MANUALS.fetch(entry[:name], []) })
         command_manuals.uniq!
-
         service_sources = rc_service_source_paths(tokens)
-        return "RTFM_FIRST requires an active TaskContract with openbsd_preflight before native use" unless contract
+        preflight = require_gate_preflight(contract)
+        return preflight if preflight.is_a?(String)
 
-        preflight = contract.openbsd_preflight
-        unless preflight
-          return "RTFM_FIRST requires complete target-release manuals in " \
-                 "openbsd_preflight before this native operation"
-        end
-        if remote
-          target_host = ssh_destination(argv)
-          accepted_hosts = [preflight.fetch("hostname").to_s.downcase]
-          accepted_hosts.concat(HOST_IDENTITY_ALIASES.fetch(preflight.fetch("hostname").to_s.downcase, []))
-          accepted_hosts.concat(Array(preflight.fetch("ssh_aliases")))
-          unless accepted_hosts.include?(target_host.to_s.downcase)
-            return "RTFM_FIRST target identity mismatch: receipt is for #{preflight.fetch("hostname")}, SSH destination is #{target_host.inspect}; verify identity and declare the alias"
-          end
-        end
+        host = host_identity_refusal(argv, preflight) if remote
+        return host if host
+        gate_refusal(tokens, repo_root:, preflight:, remote:, openbsd_script:,
+          openbsd_sources:, service_sources:, command_manuals:, shell_page:)
+      end
+
+      def require_gate_preflight(contract)
+        return "RTFM_FIRST requires an active TaskContract with openbsd_preflight before native use" unless contract
+        return "RTFM_FIRST requires complete target-release manuals in " \
+               "openbsd_preflight before this native operation" unless contract.openbsd_preflight
+
+        contract.openbsd_preflight
+      end
+
+      # A remote operation must land on the host the receipt was read from, or
+      # on an alias the receipt itself declares.
+      def host_identity_refusal(argv, preflight)
+        target_host = ssh_destination(argv)
+        accepted_hosts = [preflight.fetch("hostname").to_s.downcase]
+        accepted_hosts.concat(HOST_IDENTITY_ALIASES.fetch(preflight.fetch("hostname").to_s.downcase, []))
+        accepted_hosts.concat(Array(preflight.fetch("ssh_aliases")))
+        return if accepted_hosts.include?(target_host.to_s.downcase)
+
+        "RTFM_FIRST target identity mismatch: receipt is for #{preflight.fetch("hostname")}, SSH destination is #{target_host.inspect}; verify identity and declare the alias"
+      end
+
+      def gate_refusal(tokens, repo_root:, preflight:, remote:, openbsd_script:,
+                       openbsd_sources:, service_sources:, command_manuals:, shell_page:)
         declared = Array(preflight.fetch("native_interfaces"))
         missing = command_manuals - declared
         return "RTFM_FIRST missing declared manual interface(s): #{missing.join(', ')}" unless missing.empty?
         if remote && !shell_page
           return "RTFM_FIRST requires openbsd_preflight with the declared target shell manual (ksh(1), sh(1), or zsh(1)) before remote command execution"
         end
-        if (remote || openbsd_script) && declared.empty?
-          return "RTFM_FIRST requires native interfaces and complete manuals to be enumerated"
-        end
+        return "RTFM_FIRST requires native interfaces and complete manuals to be enumerated" if (remote || openbsd_script) && declared.empty?
         missing_service_sources = service_source_refusals(service_sources, preflight, root: repo_root)
         return missing_service_sources.first unless missing_service_sources.empty?
         missing_openbsd_sources = source_read_refusals(openbsd_sources, preflight, root: repo_root)
@@ -686,8 +849,6 @@ module Master
           return mirror_refusal if mirror_refusal
         end
         source_staleness(preflight, root: repo_root)
-      rescue ArgumentError => error
-        "RTFM_FIRST cannot parse operation argv for manual preflight: #{error.message}"
       end
 
       # The operator's direct Open3/exec SSH boundary has the same target
@@ -838,37 +999,58 @@ module Master
         declared = Array(preflight&.fetch("native_interfaces", []))
         manuals = []
         entries.each do |entry|
-          name = entry.fetch(:name)
-          if SHELL_BUILTINS.include?(name)
-            shell = declared_shell_manual(preflight)
-            return [[], "RTFM_FIRST requires a verified shell manual for builtin #{name}"] unless shell
-            manuals << shell
-            next
-          end
+          page, error = command_manual_page(entry, declared, source_paths, root:)
+          return [[], error] if error
 
-          script = source_paths.find { |path| File.basename(path) == File.basename(entry.fetch(:token).to_s) }
-          if script
-            page = script_interpreter_manual(script, root:)
-            return [[], "RTFM_FIRST cannot identify the interpreter manual for #{script}"] unless page
-            manuals << page
-            next
-          end
-
-          page = COMMAND_MANUALS[name]
-          unless page
-            candidates = declared.grep(/\A#{Regexp.escape(name)}\([1-9]\)\z/)
-            return [[], "RTFM_FIRST has no canonical manual mapping for remote command #{name}; read and declare its exact target-release page"] if candidates.empty?
-            return [[], "RTFM_FIRST has ambiguous manual pages for remote command #{name}: #{candidates.join(', ')}"] if candidates.size > 1
-            page = candidates.first
-          end
           manuals << page
         end
         [manuals, nil]
       end
 
+      # Shell builtins need a declared shell manual, scripts their
+      # interpreter's page, and anything else a canonical page or a declared
+      # exact match. Returns [manual_page, refusal] — exactly one is nil.
+      def command_manual_page(entry, declared, source_paths, root:)
+        name = entry.fetch(:name)
+        return builtin_shell_requirement(name, declared) if SHELL_BUILTINS.include?(name)
+
+        script = source_paths.find { |path| File.basename(path) == File.basename(entry.fetch(:token).to_s) }
+        return script_interpreter_requirement(script, root:) if script
+
+        page = COMMAND_MANUALS[name]
+        return [page, nil] if page
+
+        declared_match(name, declared)
+      end
+
+      def builtin_shell_requirement(name, declared)
+        shell = declared_shell_manual_from(declared)
+        return [[], "RTFM_FIRST requires a verified shell manual for builtin #{name}"] unless shell
+
+        [shell, nil]
+      end
+
+      def script_interpreter_requirement(script, root:)
+        page = script_interpreter_manual(script, root:)
+        return [[], "RTFM_FIRST cannot identify the interpreter manual for #{script}"] unless page
+
+        [page, nil]
+      end
+
+      def declared_match(name, declared)
+        candidates = declared.grep(/\A#{Regexp.escape(name)}\([1-9]\)\z/)
+        return [[], "RTFM_FIRST has no canonical manual mapping for remote command #{name}; read and declare its exact target-release page"] if candidates.empty?
+        return [[], "RTFM_FIRST has ambiguous manual pages for remote command #{name}: #{candidates.join(', ')}"] if candidates.size > 1
+
+        [candidates.first, nil]
+      end
+
       def declared_shell_manual(preflight)
-        declared = Array(preflight&.fetch("native_interfaces", []))
-        SHELL_MANUAL_PAGES.find { |page| declared.include?(page) }
+        declared_shell_manual_from(Array(preflight&.fetch("native_interfaces", [])))
+      end
+
+      def declared_shell_manual_from(declared)
+        SHELL_MANUAL_PAGES.find { |page| Array(declared).include?(page) }
       end
 
       def script_interpreter_manual(relative, root:)
@@ -903,6 +1085,14 @@ module Master
       # addition to the command page that edits or controls them.
       def required_path_manuals(relative)
         path = relative.to_s.tr("\\", "/")
+        mapped = etc_path_manuals(path)
+        return mapped unless mapped.nil?
+        return nil if path.start_with?("OPENBSD/mirror/etc/", "OPENBSD/mirror/var/")
+
+        []
+      end
+
+      def etc_path_manuals(path)
         return RC_FRAMEWORK_MANUALS if path.match?(%r{\AOPENBSD/mirror/etc/rc\.d/[^/]+\z})
         return %w[rc(8) rc.conf(8) rc.d(8) rcctl(8)] if path.match?(%r{\AOPENBSD/mirror/etc/rc\.conf(?:\.local)?\z})
         return %w[pf(4) pf.conf(5) pfctl(8)] if path.match?(%r{\AOPENBSD/mirror/etc/pf(?:\.stage1)?\.conf\z})
@@ -914,6 +1104,11 @@ module Master
         return %w[smtpd.conf(5) smtpd(8) smtpctl(8)] if path == "OPENBSD/mirror/etc/mail/smtpd.conf"
         return %w[smtpd.conf(5) table(5) smtpd(8) makemap(8)] if %w[OPENBSD/mirror/etc/mail/domains OPENBSD/mirror/etc/mail/virtuals].include?(path)
         return %w[newsyslog(8)] if path == "OPENBSD/mirror/etc/newsyslog.conf"
+
+        home_and_var_manuals(path)
+      end
+
+      def home_and_var_manuals(path)
         # This tracked Litestream example is explicitly inert: the package is
         # absent from OpenBSD ports and no service is enabled in rc.conf.local.
         # Read and digest the file, but do not invent an OpenBSD manual page for
@@ -929,9 +1124,8 @@ module Master
         if path.match?(%r{\AOPENBSD/mirror/var/nsd/zones/master/[^/]+\.zone\z})
           return %w[nsd.conf(5) nsd(8) nsd-checkzone(8) nsd-control(8)]
         end
-        return nil if path.start_with?("OPENBSD/mirror/etc/", "OPENBSD/mirror/var/")
 
-        []
+        nil
       end
 
       def rc_service_source_paths(tokens)
@@ -1149,9 +1343,17 @@ module Master
         return true if File.basename(argv.first.to_s) == "man"
         return false unless File.basename(argv.first.to_s) == "ssh"
 
+        bootstrap_remote_command?(bootstrap_remote_words(argv))
+      rescue ArgumentError
+        false
+      end
+
+      # The remote command words after ssh's option stream; one quoted token is
+      # split again so "ssh host 'man ls'" reads as words.
+      def bootstrap_remote_words(argv)
         index = 1
         while index < argv.length
-          token = argv[index]
+          token = argv[index].to_s
           if token == "--"
             index += 1
             break
@@ -1164,13 +1366,15 @@ module Master
           end
         end
         remote = argv[(index + 1)..] || []
-        remote = Shellwords.shellsplit(remote.join(" ")) if remote.length == 1
+        remote.length == 1 ? Shellwords.shellsplit(remote.join(" ")) : remote
+      end
+
+      def bootstrap_remote_command?(remote)
         first = File.basename(remote.first.to_s)
         return true if first == "man"
         return true if first == "hostname" && remote.length == 1
+
         first == "uname" && (remote.include?("-srm") || remote.include?("-v") || remote.include?("-a"))
-      rescue ArgumentError
-        false
       end
     end
   end
