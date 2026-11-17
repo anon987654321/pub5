@@ -1152,7 +1152,7 @@ def spawn_as_account_helper(environment, helper, arguments, account, groups)
     Process::UID.change_privilege(account.uid)
     exec(environment, "/bin/ksh", helper, *arguments, unsetenv_others: true)
   rescue StandardError => error
-    warn "#{path.includes("pub4")?"pub4-admin":"pub5-admin"}: cannot start #{File.basename(helper)} as #{account.name}: #{error.class}"
+    warn "pub5-admin: cannot start #{File.basename(helper)} as #{account.name}: #{error.class}"
   ensure
     exit!(126)
   end
