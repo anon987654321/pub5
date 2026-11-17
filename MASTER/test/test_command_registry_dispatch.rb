@@ -728,6 +728,7 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_equal :dispatch_deploy, command.method_name
     assert_includes Registry.help_text("deploy"), "/deploy all --confirm"
     assert_includes Registry.help_text("deploy"), "/deploy rails --confirm"
+    assert_includes Registry.help_text("deploy"), "receipt preflight runs before the normal mirror apply"
     assert_match(/needs explicit confirmation/, command.call(Master::CLI::PipelineContext.new(user_message: "/deploy all")))
     assert_match(/needs explicit confirmation/, command.call(Master::CLI::PipelineContext.new(user_message: "/deploy rails")))
   end
