@@ -145,6 +145,24 @@ class TestVoiceNarrator < Minitest::Test
     assert_match(/no lane/, messages.first.last)
   end
 
+  def test_missing_optional_ruby_llm_constant_does_not_mask_writer_errors
+    n = build(writer: ->(**) { raise LoadError, "ruby_llm is not installed" })
+    n.observe("scan0: reading 14 files")
+    window(n)
+    original = Object.const_defined?(:RubyLLM, false) ? Object.send(:remove_const, :RubyLLM) : nil
+    messages = []
+
+    Master::Trace::Dmesg.stub(:once, ->(unit, message, **) { messages << [unit, message] }) do
+      assert_equal :spoken, n.tick
+    end
+
+    assert_match(/reading 14 files/, @spoken.join)
+    assert_equal 1, n.instance_variable_get(:@model_failures)
+    assert_equal "ruby_llm is not installed", messages.empty? ? "" : messages.first.last
+  ensure
+    Object.const_set(:RubyLLM, original) if original
+  end
+
   def test_provider_budget_refusal_uses_templates_and_has_a_long_backoff
     calls = 0
     n = build(writer: lambda { |**|
