@@ -135,9 +135,8 @@ watch_services() {
 }
 
 # Fleet receipts are root-private. Read them through the fixed broker and
-# alert only after the owner PID has disappeared. A live PID is deliberately
-# treated as in-flight (even if its identity may have changed); recover --plan
-# performs the stronger process fingerprint and child-process checks.
+# compare the saved OpenBSD process fingerprint before alerting. A vanished or
+# reused PID is stale; a matching owner or an ambiguous process read stays quiet.
 watch_deploy_recovery() {
   if [[ ! -x $DEPLOY_ADMIN || -L $DEPLOY_ADMIN ]]; then
     raise deploy-recovery-status-unavailable "pub5-admin missing or untrusted at $DEPLOY_ADMIN - install and verify the tracked mirror with doas zsh OPENBSD/OPERATOR.sh --verify"
@@ -150,6 +149,27 @@ watch_deploy_recovery() {
   }
 
   pending=$(print -r -- "$runs" | "$DEPLOY_RUN_RUBY" -rjson -e '
+    require "open3"
+    def receipt_owner_state(pid, expected)
+      begin
+        Process.kill(0, pid)
+      rescue Errno::ESRCH
+        return "gone"
+      rescue Errno::EPERM
+        return "unknown"
+      end
+      started, start_status = Open3.capture2({ "LC_ALL" => "C" }, "ps", "-p", pid.to_s, "-o", "lstart=")
+      command, command_status = Open3.capture2("ps", "-ww", "-p", pid.to_s, "-o", "command=")
+      return "unknown" unless start_status.success? && command_status.success? &&
+                              !started.strip.empty? && !command.strip.empty?
+      checksum, checksum_status = Open3.capture2("cksum", stdin_data: command.strip)
+      return "unknown" unless checksum_status.success? && !checksum.strip.empty?
+      identity = "#{started.strip.gsub(/[^A-Za-z0-9]/, "_")}_#{checksum.strip.tr(" ", "_")}"
+      identity == expected ? "live" : "reused"
+    rescue StandardError
+      "unknown"
+    end
+
     rows = JSON.parse(STDIN.read)
     abort "deploy-run-list is not an array" unless rows.is_a?(Array)
     rows.each do |r|
@@ -159,15 +179,8 @@ watch_deploy_recovery() {
       abort "invalid deploy receipt ID" unless id.is_a?(String) && id.match?(/\A\d{8}T\d{6}Z-[a-z0-9_-]{1,32}-\d+\z/)
       pid = r["pid"]
       abort "invalid deploy receipt PID" unless pid.is_a?(Integer) && pid.positive?
-      alive = begin
-        Process.kill(0, pid)
-        true
-      rescue Errno::EPERM
-        true
-      rescue Errno::ESRCH
-        false
-      end
-      next if alive
+      owner_state = receipt_owner_state(pid, r["owner_identity"])
+      next if owner_state == "live" || owner_state == "unknown"
       target = r["target"]
       stage = r["stage"]
       sha = r["pinned_sha"] || "unknown"
@@ -178,7 +191,7 @@ watch_deploy_recovery() {
         stage.is_a?(String) && stage.match?(/\A[A-Za-z0-9_.:+\/-]{1,160}\z/) &&
         sha.to_s.match?(/\A(?:[0-9a-f]{7,40}|unknown)\z/i) &&
         log.is_a?(String) && log.match?(/\A\/[A-Za-z0-9_.\/-]{1,2048}\z/)
-      puts [id, target, stage, pid, r["status"], snapshot, sha, log].join("|")
+      puts [id, target, stage, pid, r["status"], snapshot, sha, log, owner_state].join("|")
     end
   ') || {
     raise deploy-recovery-status-unavailable "cannot parse fleet deploy receipts - inspect /var/db/pub5/deploy_runs through pub5-admin"
@@ -186,9 +199,9 @@ watch_deploy_recovery() {
   }
 
   [[ -n $pending ]] || return 0
-  while IFS='|' read -r run_id target stage pid status snapshot sha run_log; do
+  while IFS='|' read -r run_id target stage pid status snapshot sha run_log owner_state; do
     [[ -n $run_id ]] || continue
-    raise "deploy-recovery-$run_id" "interrupted deploy $run_id target=$target status=$status stage=$stage owner PID $pid is gone, snapshot=$snapshot pinned=$sha - inspect with: zsh OPENBSD/bin/vps-deploy recover --plan; log: $run_log"
+    raise "deploy-recovery-$run_id" "interrupted deploy $run_id target=$target status=$status stage=$stage owner PID $pid is $owner_state, snapshot=$snapshot pinned=$sha - inspect with: zsh OPENBSD/bin/vps-deploy recover --plan; log: $run_log"
   done <<EOF
 $pending
 EOF
