@@ -635,15 +635,13 @@ module Pub5Admin
 
         scanned += 1
         names << name
-        if names.length > max_scan
-          names.sort!.reverse!
-          names.pop
-          truncated = true
-        end
       end
     end
+    names.sort!.reverse!
+    truncated = scanned > max_scan
+    names = names.first(max_scan)
 
-    records = names.sort.reverse.map do |name|
+    records = names.map do |name|
       deploy_run_record(name.delete_suffix(".json"), root:, verify_root:)
     end.compact.select do |record|
       record["recovery_state"] == "pending" && %w[running failed].include?(record["status"])
