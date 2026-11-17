@@ -240,11 +240,11 @@ module Pub5Admin
   end
 
   def ensure_app_account(app)
-    Etc.getpwnam(app)
-  rescue ArgumentError
     useradd = "/usr/sbin/useradd"
     raise "useradd is not a trusted system executable" unless trusted_executable?(useradd)
 
+    Etc.getpwnam(app)
+  rescue ArgumentError
     output = IO.popen([useradd, "-m", "-L", "daemon", "-s", "/bin/ksh", app], err: [:child, :out], &:read)
     raise "useradd failed for #{app}: #{output.to_s.strip}" unless $?.success?
 
