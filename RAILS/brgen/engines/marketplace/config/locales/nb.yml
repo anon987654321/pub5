@@ -181,8 +181,53 @@ nb:
     checkout_errors:
       not_configured: Betaling med %{provider} er ikke satt opp her ennå.
       provider_failed: "%{provider} svarte ikke som ventet. Ingenting er trukket — prøv igjen om litt."
+    wholesale_enquiries:
+      title: "Engrosforespørsel"
+      request_quote: "Be om engrostilbud"
+      sign_in_to_request: "Logg inn for å be om et engrostilbud"
+      manage: "Engrosforespørsler"
+      awaiting_count: "%{count} forespørsler venter på svar"
+      new: "Be om engrosvilkår"
+      inbox: "Engrosforespørsler"
+      inbox_intro: "Forespørsler fra bedriftskunder, samlet hos denne butikken."
+      empty: "Ingen engrosforespørsler ennå."
+      empty_body: "Nye bedriftsforespørsler vises her."
+      back_to_store: "Tilbake til butikken"
+      status:
+        submitted: "Venter på leverandør"
+        responded: "Leverandøren har svart"
+      company_name: "Registrert firmanavn"
+      organisation_number: "Norsk organisasjonsnummer"
+      contact_name: "Kontaktperson"
+      contact_email: "E-post for bedriften"
+      contact_phone: "Telefon (valgfritt)"
+      requested_items: "Produkter, varenummer og antall"
+      requested_items_hint: "Skriv hvilke produkter eller varenummer du trenger, med antall og relevante spesifikasjoner."
+      delivery_location: "Leveringsadresse eller postnummer"
+      wanted_at: "Ønsket leveringsdato (valgfritt)"
+      seller_response: "Svar fra leverandøren"
+      seller_response_hint: "Bekreft tilgjengelighet, priser, minsteordre, levering og betalingsvilkår her."
+      submit: "Send engrosforespørsel"
+      reply: "Send eller oppdater svar"
+      no_order_yet: "Dette er en forespørsel, ikke en bestilling eller betaling. Leverandøren må bekrefte tilgjengelighet, priser, minsteantall og vilkår før noe er avtalt."
+      submitted_notice: "Engrosforespørselen er sendt."
+      response_notice: "Svaret er sendt til bedriftskunden."
+      notification_title: "Ny engrosforespørsel"
+      notification_body: "En bedriftskunde har sendt en engrosforespørsel til %{store}."
+      buyer_notification_title: "Du har fått svar fra leverandøren"
+      buyer_notification_body: "Leverandøren har svart på engrosforespørselen din."
+      forbidden: "Du har ikke tilgang til denne engrosforespørselen."
+    store_delete_blocked: "Denne butikken har registrerte engrosforespørsler og kan ikke slettes. Kontakt kundestøtte hvis den må stenges."
   activerecord:
     attributes:
+      marketplace/wholesale_enquiry:
+        buyer_company_name: "Registrert firmanavn"
+        organisation_number: "Organisasjonsnummer"
+        contact_name: "Kontaktperson"
+        contact_email: "E-post for bedriften"
+        requested_items: "Produkter og antall"
+        delivery_location: "Leveringssted"
+        seller_response: "Svar fra leverandøren"
       marketplace/question:
         body: Spørsmål
         answer: Svar

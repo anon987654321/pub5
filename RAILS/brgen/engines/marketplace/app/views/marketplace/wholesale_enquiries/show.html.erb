@@ -1,0 +1,62 @@
+<% content_for :title, "#{t('marketplace.wholesale_enquiries.title')} · #{@store.name}" %>
+
+<%= tag.section class: "wholesale-enquiry" do %>
+  <header>
+    <h1><%= t("marketplace.wholesale_enquiries.title") %></h1>
+    <p><%= @store.name %></p>
+    <p><%= t("marketplace.wholesale_enquiries.status.#{@enquiry.status}") %></p>
+    <%= link_to t("marketplace.wholesale_enquiries.back_to_store"),
+          Current.user.id == @store.owner_id ? shop_wholesale_enquiries_path(@store) : shop_path(@store),
+          class: "button button-ghost button-small" %>
+  </header>
+
+  <dl>
+    <dt><%= t("marketplace.wholesale_enquiries.company_name") %></dt>
+    <dd><%= @enquiry.buyer_company_name %></dd>
+    <dt><%= t("marketplace.wholesale_enquiries.organisation_number") %></dt>
+    <dd><%= @enquiry.organisation_number %></dd>
+    <dt><%= t("marketplace.wholesale_enquiries.contact_name") %></dt>
+    <dd><%= @enquiry.contact_name %></dd>
+    <dt><%= t("marketplace.wholesale_enquiries.contact_email") %></dt>
+    <dd><%= mail_to @enquiry.contact_email %></dd>
+    <% if @enquiry.contact_phone.present? %>
+      <dt><%= t("marketplace.wholesale_enquiries.contact_phone") %></dt>
+      <dd><%= @enquiry.contact_phone %></dd>
+    <% end %>
+    <dt><%= t("marketplace.wholesale_enquiries.requested_items") %></dt>
+    <dd><pre><%= @enquiry.requested_items %></pre></dd>
+    <dt><%= t("marketplace.wholesale_enquiries.delivery_location") %></dt>
+    <dd><%= @enquiry.delivery_location %></dd>
+    <% if @enquiry.wanted_at.present? %>
+      <dt><%= t("marketplace.wholesale_enquiries.wanted_at") %></dt>
+      <dd><%= l(@enquiry.wanted_at) %></dd>
+    <% end %>
+  </dl>
+
+  <% if @enquiry.seller_response.present? %>
+    <section aria-labelledby="wholesale-enquiry-response">
+      <h2 id="wholesale-enquiry-response"><%= t("marketplace.wholesale_enquiries.seller_response") %></h2>
+      <pre><%= @enquiry.seller_response %></pre>
+      <% if @enquiry.responded_at.present? %>
+        <p><%= l(@enquiry.responded_at, format: :long) %></p>
+      <% end %>
+    </section>
+  <% end %>
+
+  <% if Current.user.id == @store.owner_id %>
+    <section aria-labelledby="wholesale-enquiry-reply">
+      <h2 id="wholesale-enquiry-reply"><%= t("marketplace.wholesale_enquiries.seller_response") %></h2>
+      <p><%= t("marketplace.wholesale_enquiries.seller_response_hint") %></p>
+      <%= form_with model: @enquiry,
+            url: shop_wholesale_enquiry_path(@store, @enquiry),
+            scope: :wholesale_enquiry, method: :patch do |form| %>
+        <%= render "shared/errors", object: @enquiry %>
+        <%= form.text_area :seller_response, rows: 8, maxlength: 6_000,
+              required: true, value: @enquiry.seller_response %>
+        <%= form.submit t("marketplace.wholesale_enquiries.reply") %>
+      <% end %>
+    </section>
+  <% end %>
+
+  <p><%= t("marketplace.wholesale_enquiries.no_order_yet") %></p>
+<% end %>

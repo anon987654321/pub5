@@ -9,6 +9,7 @@ Marketplace::Engine.routes.draw do
   get "merchant-feed.xml" => "merchant_feeds#show", as: :merchant_feed
   resources :shops, controller: "stores" do
     resources :payouts, only: :create
+    resources :wholesale_enquiries, only: %i[index new create show update]
   end
   resources :deals, only: %i[index show]
   resources :listings do

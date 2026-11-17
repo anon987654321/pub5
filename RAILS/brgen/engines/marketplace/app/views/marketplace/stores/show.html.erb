@@ -12,6 +12,23 @@
       <%= tag.p link_to(t("maps.on_the_map"), record_public_href(@store.place),
             class: "button button-ghost button-small") %>
     <% end %>
+    <% if @store.vertical == "wholesale" %>
+      <% if authenticated? && Current.user&.id == @store.owner_id %>
+        <%= link_to t("marketplace.wholesale_enquiries.manage"), shop_wholesale_enquiries_path(@store),
+              class: "button button-ghost button-small" %>
+        <% if @wholesale_enquiry_count.to_i.positive? %>
+          <%= tag.span @wholesale_enquiry_count, class: "wholesale-enquiry-count",
+                aria: { label: t("marketplace.wholesale_enquiries.awaiting_count", count: @wholesale_enquiry_count) } %>
+        <% end %>
+      <% elsif authenticated? %>
+        <%= link_to t("marketplace.wholesale_enquiries.request_quote"),
+              new_shop_wholesale_enquiry_path(@store), class: "button button-primary button-small" %>
+      <% else %>
+        <%= link_to t("marketplace.wholesale_enquiries.sign_in_to_request"),
+              main_app.new_session_path, class: "button button-primary button-small" %>
+      <% end %>
+    <% end %>
+
     <% if authenticated? && Current.user&.id == @store.owner_id %>
       <%= tag.nav class: "cluster" do %>
         <%= link_to t("marketplace.stores.edit"), edit_shop_path(@store.slug),

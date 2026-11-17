@@ -1,0 +1,28 @@
+<% content_for :title, t("marketplace.wholesale_enquiries.inbox") %>
+
+<%= tag.section class: "wholesale-enquiry-inbox" do %>
+  <header>
+    <h1><%= t("marketplace.wholesale_enquiries.inbox") %></h1>
+    <p><%= t("marketplace.wholesale_enquiries.inbox_intro") %></p>
+    <%= link_to t("marketplace.wholesale_enquiries.back_to_store"), shop_path(@store), class: "button button-ghost button-small" %>
+  </header>
+
+  <% if @enquiries.any? %>
+    <ul>
+      <% @enquiries.each do |enquiry| %>
+        <li>
+          <%= link_to shop_wholesale_enquiry_path(@store, enquiry) do %>
+            <strong><%= enquiry.buyer_company_name %></strong>
+            <span><%= t("marketplace.wholesale_enquiries.status.#{enquiry.status}") %></span>
+            <span><%= l(enquiry.created_at, format: :long) %></span>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <%= render "shared/empty_state",
+          title: t("marketplace.wholesale_enquiries.empty"),
+          body: t("marketplace.wholesale_enquiries.empty_body"),
+          live: false %>
+  <% end %>
+<% end %>

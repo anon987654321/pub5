@@ -26,6 +26,7 @@ module Marketplace
       if Current.user&.id == @store.owner_id
         @pagy_payouts, @payouts = pagy(@store.payouts.order(created_at: :desc), limit: 20)
         @seller_summary = Marketplace::SellerPerformance.new(@store).summary
+        @wholesale_enquiry_count = @store.wholesale_enquiries.where(status: "submitted").count if @store.vertical == "wholesale"
         @inventory_summary = {
           live: @store.listings.live.count,
           expiring: @store.listings.expiring_soon.count,
@@ -66,7 +67,11 @@ module Marketplace
     end
 
     def destroy
-      @store.destroy
+      unless @store.destroy
+        redirect_to shop_path(@store.slug), alert: t("marketplace.store_delete_blocked")
+        return
+      end
+
       redirect_to shops_path, notice: t("marketplace.store_deleted")
     end
 
