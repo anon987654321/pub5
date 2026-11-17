@@ -46,7 +46,12 @@ def run(label, *argv, chdir: ROOT)
   out, status = Open3.capture2e(*argv, chdir: chdir)
   secs = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
   puts format("%-4s %5.1fs  %s", status.success? ? "ok" : "FAIL", secs, label)
-  puts out.lines.last(12).map { |l| "       #{l.rstrip}" } unless status.success?
+  unless status.success?
+    lines = out.lines
+    omitted = [lines.size - 80, 0].max
+    puts "       ... #{omitted} earlier lines omitted" if omitted.positive?
+    lines.last(80).each { |line| puts "       #{line.rstrip}" }
+  end
   status.success?
 end
 
