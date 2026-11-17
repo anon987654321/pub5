@@ -232,17 +232,27 @@ module EvidenceCapture
       if hidden_next
         hidden_next = false
         "[REDACTED]"
-      elsif value.match?(/\A(?:--?(?:token|password|passwd|secret|api[-_]?key|authorization|cookie))\z/i)
+      elsif redact_flag_word?(value)
         hidden_next = true
         value
-      elsif value.match?(/\A--?(?:token|password|passwd|secret|api[-_]?key|authorization|cookie)=/i)
-        "#{value.split("=", 2).first}=[REDACTED]"
-      elsif value.match?(/\A(?:[A-Z0-9_]*(?:TOKEN|PASSWORD|SECRET|API_KEY|ACCESS_KEY|AUTHORIZATION)=).+/i)
+      elsif redact_equals_assignment?(value)
         "#{value.split("=", 2).first}=[REDACTED]"
       else
         value
       end
     end
+  end
+
+  # A flag whose NEXT word carries the secret: the word itself passes through
+  # verbatim and the follower is replaced.
+  def redact_flag_word?(value)
+    value.match?(/\A(?:--?(?:token|password|passwd|secret|api[-_]?key|authorization|cookie))\z/i)
+  end
+
+  # Secret already spelled into the same word: --token=X or ENV_VAR=X.
+  def redact_equals_assignment?(value)
+    value.match?(/\A--?(?:token|password|passwd|secret|api[-_]?key|authorization|cookie)=/i) ||
+      value.match?(/\A(?:[A-Z0-9_]*(?:TOKEN|PASSWORD|SECRET|API_KEY|ACCESS_KEY|AUTHORIZATION)=).+/i)
   end
 
   def git_root

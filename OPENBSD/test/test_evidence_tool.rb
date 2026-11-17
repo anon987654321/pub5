@@ -9,7 +9,9 @@ require "tmpdir"
 require "fileutils"
 
 class TestEvidenceTool < Minitest::Test
-  SCRIPT = File.expand_path("../mirror/bin/evidence", __dir__)
+  # 6735acf1 moved the tool out of the mirror image: evidence is an operator-side
+  # script at OPENBSD/bin/evidence, not a filesystem payload under the four roots.
+  SCRIPT = File.expand_path("../bin/evidence", __dir__)
 
   def setup
     @root = Dir.mktmpdir("evidence-tool-")
