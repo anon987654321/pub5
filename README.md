@@ -83,4 +83,5 @@ measurement is INCONCLUSIVE, never PASS.
 in `MASTER/data/laws.yml` is marked covered — the constitution lives
 in `MASTER/law/` and `MASTER/data/laws.yml`. The working master of the FETAT
 proposal (a document, not policy) lives at `BIZ/tools/fetat_proposal.md`.
-`MASTER/bin/redeploy` is the workstation deploy entrypoint.
+The workstation deploy interface is `MASTER/bin/operator vps deploy <app|group|all> --remote`;
+the on-box serial deployment engine is `OPENBSD/bin/vps-deploy`.

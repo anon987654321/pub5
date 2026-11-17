@@ -82,16 +82,16 @@ domain_ownership:
   snapshot: OPENBSD/data/domain_inventory.yml
 
 recipes:
-  - want: Redeploy production (the one command)
-    run: MASTER/bin/redeploy
+  - want: Deploy production
+    run: MASTER/bin/operator vps deploy all --remote
     expect: >-
       Hands-off: local preflight, pin origin/main SHA, deploy under tmux on vm23
       as root (git still as dev), wait until finished streaming the log, then
-      vps-state + public canary. Survives SSH drop. --follow attaches; --detach
-      starts and returns.
-  - want: Redeploy one app
-    run: MASTER/bin/redeploy brgen
-    expect: same path, single app
+      vps-state + public canary. Survives SSH drop. Add --follow to attach or
+      --detach to return after start.
+  - want: Deploy one app
+    run: MASTER/bin/operator vps deploy brgen --remote
+    expect: same preflight, pinning, tmux and canary path for one app
   - want: See where I am
     run: MASTER/bin/operator status
     expect: mode, ruby, ports, next command

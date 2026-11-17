@@ -97,13 +97,14 @@ class VpsDeployContractTest < Minitest::Test
     refute_includes source, 'doas chown -R dev:dev public'
     refute_includes source, 'doas cp "$ROOT/OPENBSD/mirror/etc/rc.d/master" /etc/rc.d/master'
   end
-  def test_legacy_deploy_all_aliases_the_canonical_unprivileged_supervisor
+  def test_legacy_deploy_all_calls_the_canonical_operator_directly
     script = File.read(File.join(ROOT, "OPENBSD", "bin", "deploy_all.sh"), encoding: "UTF-8")
-    assert_includes script, 'MASTER/bin/redeploy'
-    assert_includes script, 'exec "${REPO_ROOT}/MASTER/bin/redeploy" all'
+    assert_includes script, 'exec "${REPO_ROOT}/MASTER/bin/operator" vps deploy all --remote'
     refute_includes script, 'OPENBSD/bin/vps-deploy'
     refute_includes script, 'doas zsh'
     refute_includes script, 'RAILS/${app}/${app}.sh'
+    refute File.exist?(File.join(ROOT, "MASTER", "bin", "redeploy"))
+    refute File.exist?(File.join(ROOT, "OPENBSD", "bin", "redeploy"))
   end
   def test_ci_rejects_unknown_target_before_interpolating_a_path
     guard = CI_SOURCE[/^case \$app in\n.*?^esac$/m]

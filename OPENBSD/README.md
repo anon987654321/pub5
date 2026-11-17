@@ -23,14 +23,14 @@ own renderer.
 
 ## Command entry points
 
-**Redeploy production (one command, from a clean `origin/main` checkout):**
+**Production deploy (from a clean `origin/main` workstation checkout):**
 
 ```zsh
-MASTER/bin/redeploy                 # full production deploy, wait + state + canary
-MASTER/bin/redeploy rails           # all active RAILS apps, serially
-MASTER/bin/redeploy brgen           # one app
-MASTER/bin/redeploy --follow        # attach to the box tmux session
-MASTER/bin/redeploy --detach        # start and return immediately
+MASTER/bin/operator vps deploy all --remote           # full release: mirror + MASTER + active RAILS
+MASTER/bin/operator vps deploy rails --remote         # active RAILS apps only
+MASTER/bin/operator vps deploy brgen --remote         # one app
+MASTER/bin/operator vps deploy all --remote --follow  # attach to the box tmux session
+MASTER/bin/operator vps deploy all --remote --detach  # start and return
 ```
 
 The default `all` applies the reviewed `OPENBSD/mirror/**` payload, then deploys

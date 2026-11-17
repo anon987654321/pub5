@@ -4,12 +4,14 @@ Production runbook for pub5. Read this file before live work. Read `MASTER/READM
 VPS and deploy surface, the agent contract, and live-operation safety in one
 place.
 
-## Redeploy (one command)
+## Production deploy
 
 From a clean workstation checkout on `origin/main`:
 
 ```zsh
-MASTER/bin/redeploy
+MASTER/bin/operator vps deploy all --remote
+MASTER/bin/operator vps deploy rails --remote
+MASTER/bin/operator vps deploy all --remote --follow
 ```
 
 Hands-off: local preflight → pin SHA → `tmux` session `pub5-deploy` on vm23 →
@@ -66,7 +68,7 @@ Do not install a partial `newsyslog.conf`: a partial file previously wiped
 base rules and filled `/var`. Do not send deploy logs to remote syslog until
 `/var` headroom and the privacy of receipt lines have been reviewed.
 
-Already on the box: `zsh OPENBSD/bin/redeploy`.
+Already on the box as `dev`: `zsh OPENBSD/bin/vps-deploy all`.
 
 ## Repo layout
 
@@ -569,7 +571,7 @@ remaining gap and it needs an account.
 
 Always use tmux. `OPERATOR.sh` runs under `doas` because it installs `/etc`.
 `vps-deploy` runs as root (or re-execs via passwordless doas from `dev`); git
-still runs as `dev` (see *Agent contract*). Prefer `MASTER/bin/redeploy` from a
+still runs as `dev` (see *Agent contract*). Use `MASTER/bin/operator vps deploy <target> --remote` from a
 workstation.
 
 ```zsh

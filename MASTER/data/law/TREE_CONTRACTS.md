@@ -37,10 +37,11 @@ rendered-check semantics, deploy blockers, subdomain map) and
 `RAILS/_*.sh` files (`_assets`, `_bundle`, `_core`, `_database`,
 `_deploy`, `_runtime_check`, `_service`) are libraries of sourced shell
 functions, not entrypoints. Each active app's named deploy script sources
-them. `MASTER/bin/redeploy` is the workstation entry: `all` selects the
-full production pass, while `rails` selects the inventory-derived RAILS
-namespace. Target validation belongs to the preflight and
-`Deploy::Inventory`, not a second allowlist in the wrapper. `apps.yml` is
+them. The workstation entry is `MASTER/bin/operator vps deploy <target> --remote`;
+`all` selects the full production pass, while `rails` selects the
+inventory-derived RAILS namespace. Target validation belongs to the preflight and
+`Deploy::Inventory`; no extra redeploy wrapper or allowlist is maintained.
+`apps.yml` is
 the canonical matrix and `apps.horizon.yml` the planned one — the two must
 not drift without a session note. An app counts as first-class when it has an
 `apps.yml` entry, a `deploy_root` and a `deploy_script`; `mrdamascy` now
@@ -598,8 +599,9 @@ not after.
 then deploys every active entry from `RAILS/apps.yml` in its serial
 `deploy_order` (normally `master brgen mrdamascy amber bsdports`), halting
 the pass on the first failure. Prefer it over five hand-typed runs.
-`bin/vps-deploy rails` and `MASTER/bin/redeploy rails` select only the
-inventory-derived RAILS namespace; they deploy the active app roots and
+`bin/vps-deploy rails` and
+`MASTER/bin/operator vps deploy rails --remote` select only the inventory-derived
+RAILS namespace; they deploy the active app roots and
 their shared engine where applicable, not every document, archive or planned
 project under `RAILS/`. The `rails` group does not apply the host mirror or
 include MASTER. Use `all` for the full production pass.

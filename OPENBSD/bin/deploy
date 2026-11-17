@@ -10,8 +10,9 @@
 #
 #   OPENBSD/bin/deploy [all|brgen|amber|bsdports|mrdamascy|master] [--follow|--detach]
 #
-# Workstation one-command deploys use MASTER/bin/redeploy, which routes
-# through MASTER/bin/operator; this entrypoint names the same stages directly.
+# Workstation deploys use MASTER/bin/operator vps deploy <target> --remote,
+# which adds local preflight, SHA pinning, tmux supervision and canaries.
+# This on-box Ruby adapter is retained for callers that need its local stages.
 
 APPS = %w[all brgen amber bsdports mrdamascy master].freeze
 

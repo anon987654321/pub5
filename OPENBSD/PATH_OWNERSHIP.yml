@@ -60,7 +60,7 @@ ownership:
     risk: high
     check: ruby OPENBSD/checks/shell_syntax_check.rb
   bin/deploy_all.sh:
-    purpose: compatibility alias to MASTER/bin/redeploy all; no independent deploy pipeline
+    purpose: legacy workstation alias to MASTER/bin/operator vps deploy all --remote
     risk: critical
     check: ruby OPENBSD/checks/shell_syntax_check.rb
   bin/vps_ci.sh:

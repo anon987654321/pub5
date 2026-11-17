@@ -9,11 +9,11 @@ post-pull: source updated at ${ROOT}
 post-pull: deployed /home/<app>/app trees are NOT updated by git pull alone.
 post-pull: never git stash to force a pull through; a stashed Gemfile.lock took master down.
 
-From your Mac (preferred - one command, waits, canary):
-  MASTER/bin/redeploy
+From your Mac (local preflight, pinned remote deploy, waits, canary):
+  MASTER/bin/operator vps deploy all --remote
 
 Already on this box as dev:
-  zsh OPENBSD/bin/redeploy          # or: zsh OPENBSD/bin/vps-deploy all
+  zsh OPENBSD/bin/vps-deploy all
 
 Then optional:
   ruby OPENBSD/bin/vps-state
