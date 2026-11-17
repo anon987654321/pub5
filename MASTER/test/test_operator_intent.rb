@@ -105,6 +105,15 @@ class OperatorIntentTest < Minitest::Test
       assert_equal :deploy, direct.status
       assert_equal "all", direct.target
       assert_equal %w[control_web city_app wardrobe_app private_service], direct.selected
+      assert intent.send(:repository_wide_deployment?, "redeploy OPENBSD, RAILS apps and MASTER web to vm23", inventory),
+             "the spaced MASTER web name is the same canonical full release"
+      spaced = Master::CLI::OperatorIntent.new(root:, agent: Object.new).call(
+        "redeploy OPENBSD, RAILS apps and MASTER web to vm23"
+      )
+      assert_equal :deploy, spaced.status
+      assert_equal "all", spaced.target
+      refute intent.send(:repository_wide_deployment?, "redeploy OPENBSD, RAILS apps and MASTER web to staging", inventory),
+             "the spaced full-stack alias must still reject non-production"
       refute intent.send(:repository_wide_deployment?, "redeploy OPENBSD and RAILS to vm23", inventory),
              "a partial stack must not expand into a full production release"
       refute intent.send(:repository_wide_deployment?, "redeploy OPENBSD, RAILS and MASTER/web to staging", inventory),
