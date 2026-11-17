@@ -61,7 +61,7 @@ module Master
         return false if request.match?(NON_PRODUCTION_ENV_RE)
 
         destination = request.match(DESTINATION_RE)&.captures&.first
-        VM23_DESTINATIONS.include?(destination.to_s.downcase) &&
+        destination.to_s.downcase == "vm23" &&
           request.match?(/\bopenbsd\b/i) &&
           request.match?(/\brails\b/i) &&
           request.match?(/\bmaster\s*\/\s*web\b/i)

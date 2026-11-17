@@ -172,6 +172,7 @@ class TurnRouterTest < Minitest::Test
     assert intent.direct_full_stack_confirmation?("Redeploy OPENBSD, RAILS and MASTER/web to vm23")
     refute intent.direct_full_stack_confirmation?("Redeploy OPENBSD, RAILS and MASTER/web")
     refute intent.direct_full_stack_confirmation?("Redeploy OPENBSD, RAILS and MASTER/web to staging")
+    refute intent.direct_full_stack_confirmation?("Redeploy OPENBSD, RAILS and MASTER/web to production")
     refute intent.direct_full_stack_confirmation?("Prepare a deployment plan for OPENBSD, RAILS and MASTER/web to vm23")
   end
 
