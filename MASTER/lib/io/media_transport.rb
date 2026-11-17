@@ -184,7 +184,9 @@ module Master
         client = @replicate.call(key)
         input = { prompt: }.merge(opts.fetch(:input, {}))
         input[:aspect_ratio] = opts[:aspect_ratio] if opts[:aspect_ratio] && lane.kind == :image
-        input[:resolution] ||= lane.row["resolution"] if lane.kind == :video && lane.row["resolution"]
+        if lane.kind == :video && lane.row["resolution"] && !input.key?(:resolution) && !input.key?("resolution")
+          input[:resolution] = lane.row["resolution"]
+        end
         output = client.predict(lane.model, input, timeout: timeouts["video_total_s"])
         url = Array(output).first.to_s
         raise BadShape, "replicate: output has no url" unless url.start_with?("https://")
