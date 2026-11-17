@@ -66,6 +66,21 @@ autoload:
     # Master::Fix::FourStreamAssessment -- terminal renderings (summary, report,
     # evidence_report) split out of fix/four_stream_assessment.rb.
     - fix/four_stream_assessment/reporting.rb
+    # Master::Fix::Transaction -- the /fix pass transaction, split by concern.
+    # The defining file is fix/transaction.rb; validation.rb holds the durable
+    # manifest, the pending-marker audit and the contracts guarding both,
+    # observation.rb the write path's snapshots and enlistment, delivery_door.rb
+    # what Delivery reads. These re-open its class.
+    - fix/transaction/validation.rb
+    - fix/transaction/observation.rb
+    - fix/transaction/delivery_door.rb
+    # Master::Fix::Wishlist -- the durable next-work ledger, split by
+    # responsibility: fix/wishlist/claims.rb carries the row state machine
+    # (claimable, claim, attempt, delivery, verification, reflection intake)
+    # and fix/wishlist/rendering.rb the model-facing prompt/parse/normalize
+    # side plus pending-queue reporting. The defining file is fix/wishlist.rb.
+    - fix/wishlist/claims.rb
+    - fix/wishlist/rendering.rb
 
   # Declare a constant outside Master::, so the path cannot imply the name.
   defines_a_foreign_namespace:
