@@ -7,7 +7,7 @@ class DeploySmokeContractTest < Minitest::Test
   OPENBSD_ROOT = File.expand_path("../../OPENBSD", __dir__)
   APPS = %w[amber brgen bsdports].freeze
   RAILS_APPS = APPS
-  SMOKE = File.join(OPENBSD_ROOT, "mirror", "bin", "deploy-smoke.sh")
+  SMOKE = File.join(OPENBSD_ROOT, "bin", "deploy-smoke.sh")
 
   # Every app's local port and public URL, and the rcctl service name. bsdports had
   # neither local check when this list was only strings.
@@ -24,7 +24,7 @@ class DeploySmokeContractTest < Minitest::Test
 
   def smoke_body
     @smoke_body ||= begin
-      assert File.file?(SMOKE), "missing OPENBSD/mirror/bin/deploy-smoke.sh"
+      assert File.file?(SMOKE), "missing OPENBSD/bin/deploy-smoke.sh"
       File.read(SMOKE)
     end
   end
