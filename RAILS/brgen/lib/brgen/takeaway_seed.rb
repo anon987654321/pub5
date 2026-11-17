@@ -148,7 +148,7 @@ module Brgen
 
       store.update!(active: true)
       restaurant.menu_categories.where(name: Takeaway::Provisioner::DEFAULT_MENU_CATEGORIES).each do |category|
-        category.destroy! if category.menu_items.empty?
+        category.destroy! unless category.menu_items.exists?
       end
 
       restaurant.update!(
