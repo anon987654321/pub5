@@ -18,7 +18,7 @@ module Master
       REPOSITORY_TARGET_RE = /\b(?:pub5|repo(?:sitory)?|codebase|whole\s+(?:repo|repository)|entire\s+(?:repo|repository)|everything|all(?:\s+(?:apps?|services?|stacks?|surfaces?))?|full\s+stack|entire\s+(?:stack|fleet))\b/i.freeze
       DIRECT_DEPLOY_REQUEST_RE = /\A\s*(?:(?:please|can you|could you|i need you to|i want you to|go ahead and)\s+)?(?:deploy|re[- ]?deploy|release|ship|publish)\b/i.freeze
       NON_PRODUCTION_ENV_RE = /\b(?:local|development|dev|test|staging|stage|preview)\b/i.freeze
-      DESTINATION_RE = /\b(?:to|onto|on|at|for)\s+([a-z0-9][a-z0-9._-]*)/i.freeze
+      DESTINATION_RE = /\b(?:to|onto|on|at|for)\s+([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)/i.freeze
       VM23_DESTINATIONS = %w[vm23 production prod].freeze
       REQUIRED_KEYS = %w[intent operation environment target_type target exclude confidence reason].freeze
 
