@@ -119,9 +119,7 @@ class ConfigDriftCheckVerbatimTest < Minitest::Test
   # The box exactly as the repo describes it.
   def matching_box
     VERBATIM.to_h do |repo_rel, live_path|
-      # checks/ stayed at the OPENBSD root through the mirror reorganization.
-      base = repo_rel.start_with?("checks/") ? File.dirname(MIRROR) : MIRROR
-      [live_path, File.read(File.join(base, repo_rel))]
+      [live_path, File.read(File.join(MIRROR, repo_rel))]
     end
   end
 
@@ -161,15 +159,13 @@ class ConfigDriftCheckVerbatimTest < Minitest::Test
     assert_equal ["usr/local/bin/emergency_cpu.sh"], verbatim_report(box)[:missing]
   end
 
-  # The shape it must not flag: relayd.conf is installed from a template, so the
-  # live copy always differs, and comparing it would be a permanent false alarm.
-  def test_an_excluded_file_that_differs_on_the_box_is_not_drift
-    box = matching_box
-    EXCLUDED.each { |repo_rel| box["/#{repo_rel}"] = "templated on the box\n" }
-    report = verbatim_report(box)
-
-    assert_empty report[:drift]
-    assert_empty VERBATIM.keys & EXCLUDED, "a file cannot be both byte-compared and excluded"
+  # Files formerly excluded as templates are now literal filesystem payloads.
+  def test_configs_are_mirrored_and_compared_as_literal_files
+    %w[etc/relayd.conf etc/mail/smtpd.conf etc/litestream.yml etc/acme-client.conf].each do |path|
+      assert VERBATIM.key?(path), "#{path} must be part of the copy-ready mirror contract"
+    end
+    assert_empty EXCLUDED
+    assert_empty verbatim_report(matching_box)[:drift]
   end
   def test_local_and_remote_native_command_paths_require_operator_rtfm
     source = File.read(File.expand_path("../checks/config_drift_check.rb", __dir__))

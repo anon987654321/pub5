@@ -1053,13 +1053,12 @@ when "vps"
       # Default remote path is hands-off: tmux so disconnects cannot kill the
       # deploy, wait until the session ends, then print the log tail and exit
       # with the deploy's status. --follow attaches interactively; --detach
-      # starts and returns immediately. Canary runs inside vps-deploy unless
-      # PUB5_DEPLOY_CANARY=0.
+      # starts and returns immediately. Local and public canaries are mandatory.
       require "operator/canary"
       ok, command = Operator::DeployPreflight.remote_command(root: ROOT, app: Shellwords.escape(app))
       die("vps", "deploy refused, #{command}", 1) unless ok
-      canary_env = ENV.fetch("PUB5_DEPLOY_CANARY", "1") == "0" ? "" : "PUB5_DEPLOY_CANARY=1 "
-      command = "#{canary_env}#{command}"
+      # vps-deploy always runs local canaries; the waiter always runs the public
+      # canary after the tmux session succeeds. There is no silent skip switch.
       session = "pub5-deploy"
       # Marker files the waiter uses so SSH drops do not lose the exit status.
       marker = "$HOME/.pub5-deploy-last"
@@ -1073,8 +1072,8 @@ when "vps"
         session=#{session}
         marker=#{marker}
         if ! command -v tmux >/dev/null 2>&1; then
-          #{command}
-          exit $?
+          print -u2 "vps-deploy: BLOCKED - tmux is required for an unattended deployment; nothing was started"
+          exit 69
         fi
         if tmux has-session -t "$session" 2>/dev/null; then
           print -u2 "vps-deploy: session $session already running"
@@ -1124,7 +1123,10 @@ when "vps"
             print "vps-deploy: post-check state"
             "$RUBY" OPENBSD/bin/vps-state 2>/dev/null || true
             print "vps-deploy: post-check public canary"
-            "$RUBY" OPENBSD/bin/canary --public 2>/dev/null || print -u2 "vps-deploy: public canary reported failures (deploy stamps still ok)"
+            if ! "$RUBY" OPENBSD/bin/canary --public; then
+              print -u2 "vps-deploy: FAIL - public canary did not pass; investigate before another release"
+              ec=1
+            fi
           fi
           exit "$ec"
           ;;

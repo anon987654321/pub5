@@ -32,7 +32,6 @@ module Operator
   module Canary
     HEADER_LIMIT_BYTES = 8 * 1024
     DEFAULT_BUDGET_MS = 3000
-    SERVICES = %w[master brgen amber bsdports relayd].freeze
     SKIPPED_PREFIXES = %w[/internal /rails /cable /admin].freeze
     Reply = Struct.new(:status, :headers, :body, :elapsed_ms, keyword_init: true)
     Result = Struct.new(:name, :ok, :detail, keyword_init: true)
@@ -126,7 +125,8 @@ module Operator
       end
 
       def service_checks
-        SERVICES.map do |svc|
+        services = (@apps.keys + ["relayd"]).uniq
+        services.map do |svc|
           out, status = @shell.call("rcctl", "check", svc)
           Result.new(name: "rcctl #{svc}", ok: status.success?, detail: status.success? ? nil : out.to_s.strip.lines.last.to_s.strip)
         rescue SystemCallError => e

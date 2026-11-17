@@ -114,8 +114,10 @@ class CanaryTest < Minitest::Test
     assert_match(/closed/, got["port #{@server.port} (demo)"].detail)
     refute got["rcctl relayd"].ok
     assert_equal "relayd(failed)", got["rcctl relayd"].detail
-    assert got["rcctl brgen"].ok
-    assert_includes asked, %w[rcctl check amber]
+    assert got["rcctl demo"].ok
+    assert_includes asked, %w[rcctl check demo]
+    refute_includes asked, %w[rcctl check brgen]
+    refute_includes asked, %w[rcctl check amber]
   end
 
 FLOW_OUTPUT = <<~OUT

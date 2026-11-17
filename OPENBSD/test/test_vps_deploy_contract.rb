@@ -26,6 +26,28 @@ class VpsDeployContractTest < Minitest::Test
     assert_operator SOURCE.index('OPENBSD/OPERATOR.sh" --apply'), :<, SOURCE.index('for one in $deploy_order')
   end
 
+  def test_success_stamp_follows_a_blocking_local_canary_for_every_app
+    canary = SOURCE.index('if ! "$RUBY" "$repo/OPENBSD/bin/canary" --local --app "$app"')
+    refute_nil canary
+    ok_stamp = SOURCE.index('write_stamp "$app" ok', canary)
+    failed_stamp = SOURCE.index('write_stamp "$app" failed', canary)
+
+    refute_nil failed_stamp
+    refute_nil ok_stamp
+    assert_operator canary, :<, ok_stamp
+    refute_includes SOURCE[canary...ok_stamp], "|| true"
+  end
+
+  def test_master_has_a_blocking_local_canary_before_its_success_stamp
+    canary = SOURCE.index('master-canary')
+    ok_stamp = SOURCE.index('write_stamp "$app" ok', canary)
+
+    refute_nil canary
+    refute_nil ok_stamp
+    assert_operator canary, :<, ok_stamp
+    assert_includes SOURCE[canary...ok_stamp], 'canary" --local --app "$app" --no-flows'
+  end
+
   def test_deploy_scope_and_order_are_derived_from_inventory
     inventory = Deploy::Inventory.new(root: ROOT)
     all = inventory.ordered_apps
@@ -884,4 +906,30 @@ class VpsDeployContractTest < Minitest::Test
     assert_operator restart, :<, health
     assert_operator health, :<, done
   end
+
+  def test_master_restore_failure_is_stamped_failed_before_ok
+    master = SOURCE.index("set_stage master-canary")
+    restore = SOURCE.index("set_stage restore-shed", master)
+    failed = SOURCE.index('write_stamp "$app" failed', restore)
+    success = SOURCE.index('write_stamp "$app" ok', restore)
+
+    refute_nil restore
+    refute_nil failed
+    refute_nil success
+    assert_operator failed, :<, success
+  end
+
+  def test_rails_restore_failure_is_stamped_failed_before_ok
+    canary = SOURCE.index('if ! "$RUBY" "$repo/OPENBSD/bin/canary" --local --app "$app"')
+    restore = SOURCE.index("if (( restore_failed ))", canary)
+    failed = SOURCE.index('write_stamp "$app" failed', restore)
+    success = SOURCE.index('write_stamp "$app" ok', restore)
+
+    refute_nil canary
+    refute_nil restore
+    refute_nil failed
+    refute_nil success
+    assert_operator failed, :<, success
+  end
+
 end

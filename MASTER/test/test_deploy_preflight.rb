@@ -219,4 +219,14 @@ class DeployPreflightTest < Minitest::Test
     assert_includes deploy, "Operator::DeployPreflight.remote_command"
     assert_operator deploy.index("remote_command"), :<, deploy.index("ssh_run(")
   end
+
+  def test_remote_deploy_refuses_to_run_inline_when_tmux_is_missing
+    source = File.read(File.expand_path("../bin/operator", __dir__))
+    remote = source[/remote_script = <<~ZSH.*?^      ZSH$/m]
+    refute_nil remote
+    assert_includes remote, "tmux is required for an unattended deployment"
+    assert_includes remote, "exit 69"
+    refute_includes remote, '#{command}'
+  end
+
 end

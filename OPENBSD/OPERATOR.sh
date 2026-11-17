@@ -169,7 +169,16 @@ validate_payload() {
   [[ ! -f $MIRROR/etc/httpd.conf ]] || /usr/sbin/httpd -n -f "$MIRROR/etc/httpd.conf"
   [[ ! -f $MIRROR/etc/mail/smtpd.conf ]] || /usr/sbin/smtpd -n -f "$MIRROR/etc/mail/smtpd.conf"
   [[ ! -f $MIRROR/etc/ssh/sshd_config ]] || /usr/sbin/sshd -t -f "$MIRROR/etc/ssh/sshd_config"
-  [[ ! -f $MIRROR/var/nsd/etc/nsd.conf ]] || /usr/local/sbin/nsd-checkconf "$MIRROR/var/nsd/etc/nsd.conf"
+  if [[ -f $MIRROR/var/nsd/etc/nsd.conf ]]; then
+    /usr/local/sbin/nsd-checkconf "$MIRROR/var/nsd/etc/nsd.conf" || return 1
+    local zone
+    for zone in "$MIRROR"/var/nsd/zones/master/*.zone(N); do
+      /usr/local/sbin/nsd-checkzone "${zone:t:r}" "$zone" || {
+        print -u2 -- "OPERATOR: NSD zone validation failed: $zone"
+        return 1
+      }
+    done
+  fi
 }
 
 no_symlink_path() {
@@ -521,11 +530,27 @@ case "$ACTION" in
       if (( ${#SIGNED_BEFORE} )) || [[ -d $BACKUP_ROOT/$RUN_ID/nsd-signed ]]; then
         restore_signed_zones || { print -u2 -- "DELIVERY_FAILED: DNSSEC signature restoration failed"; exit 1; }
       fi
-      [[ ${CHANGED[(Ie)etc/pf.conf]} -gt 0 ]] && /sbin/pfctl -f /etc/pf.conf || :
-      [[ ${CHANGED[(Ie)etc/relayd.conf]} -gt 0 ]] && /usr/sbin/rcctl restart relayd || :
-      [[ ${CHANGED[(Ie)etc/httpd.conf]} -gt 0 ]] && /usr/sbin/rcctl restart httpd || :
-      [[ ${CHANGED[(Ie)etc/mail/smtpd.conf]} -gt 0 ]] && /usr/sbin/rcctl restart smtpd || :
-      [[ ${CHANGED[(Ie)var/nsd/etc/nsd.conf]} -gt 0 ]] && /usr/sbin/rcctl restart nsd || :
+      typeset -i recovery_failed=0
+      if (( ${CHANGED[(Ie)etc/pf.conf]} )); then
+        /sbin/pfctl -nf /etc/pf.conf && /sbin/pfctl -f /etc/pf.conf || recovery_failed=1
+      fi
+      if (( ${CHANGED[(Ie)etc/relayd.conf]} )); then
+        /usr/sbin/rcctl restart relayd && /usr/sbin/rcctl check relayd || recovery_failed=1
+      fi
+      if (( ${CHANGED[(Ie)etc/httpd.conf]} )); then
+        /usr/sbin/rcctl restart httpd && /usr/sbin/rcctl check httpd || recovery_failed=1
+      fi
+      if (( ${CHANGED[(Ie)etc/mail/smtpd.conf]} )); then
+        /usr/sbin/rcctl restart smtpd && /usr/sbin/rcctl check smtpd || recovery_failed=1
+      fi
+      if (( ${CHANGED[(Ie)var/nsd/etc/nsd.conf]} )); then
+        /usr/sbin/rcctl restart nsd && /usr/sbin/rcctl check nsd || recovery_failed=1
+      fi
+      if (( recovery_failed )); then
+        print -u2 -- "DELIVERY_FAILED: prior files were restored, but one or more services did not recover; inspect the backup and daemon logs"
+        exit 1
+      fi
+      print "RECOVERED prior tracked files and affected services"
       exit 1
     fi
     if (( DOAS_NEEDED )); then

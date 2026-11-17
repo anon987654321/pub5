@@ -12,10 +12,10 @@
 # live config, and when it is not, that is either an undeployed fix or a hand-edit
 # nobody copied back, and both are the bug this check names.
 #
-# Only VERBATIM-installed files are byte-compared. Templated installs and
-# generated files are listed as excluded rather than diffed, because a difference
-# there is expected, not drift.
-#
+# Every tracked mirror file is byte-compared with its literal live destination.
+# Root crontab and the redacted developer shell snapshot live in OPENBSD/data,
+# outside the filesystem image, and have their own explicit handling.
+
 # Run on vm23:              ruby34 OPENBSD/checks/config_drift_check.rb
 # Run from a laptop:        SSH_HOST=dev@brgen.no ruby OPENBSD/checks/config_drift_check.rb --remote
 # Off-VPS without --remote: skips cleanly.
@@ -63,39 +63,28 @@ SOURCE_PATH = File.join(DRIFT_ROOT, "OPENBSD", "checks", "config_drift_check.rb"
 # The key is a repo path rather than the live path with its slash stripped
 # because four of these ship from the tree root: OPERATOR.sh installs them with
 # `install` while the rest arrive as a `cp -R usr/. /usr/`.
-VERBATIM = {
-  "etc/doas.conf" => "/etc/doas.conf",
-  "etc/pf.conf" => "/etc/pf.conf",
-  "etc/httpd.conf" => "/etc/httpd.conf",
-  # rcctl enable/disable rewrites this file and sorts every line, so prose in it
-  # scrambles on the next rcctl write rather than on install, and a run straight
-  # after an install compares clean.
-  "etc/rc.conf.local" => "/etc/rc.conf.local",
-  "etc/login.conf" => "/etc/login.conf",
-  "etc/newsyslog.conf" => "/etc/newsyslog.conf",
-  "etc/ssh/sshd_config" => "/etc/ssh/sshd_config",
-  "etc/rc.d/master" => "/etc/rc.d/master",
-  "etc/rc.d/brgen" => "/etc/rc.d/brgen",
-  "etc/rc.d/amber" => "/etc/rc.d/amber",
-  "etc/rc.d/bsdports" => "/etc/rc.d/bsdports",
-  "usr/local/bin/config-drift-check" => "/usr/local/bin/config-drift-check",
-  "usr/local/bin/core-reclaim.sh" => "/usr/local/bin/core-reclaim.sh",
-  "usr/local/bin/drain-jobs.sh" => "/usr/local/bin/drain-jobs.sh",
-  "usr/local/bin/keep-warm.sh" => "/usr/local/bin/keep-warm.sh",
-  "usr/local/bin/nsd-resign" => "/usr/local/bin/nsd-resign",
-  "usr/local/bin/pub4-alert" => "/usr/local/bin/pub4-alert",
-  "usr/local/bin/prune-guests.sh" => "/usr/local/bin/prune-guests.sh",
-  "usr/local/bin/prune_guests.rb" => "/usr/local/bin/prune_guests.rb",
-  "usr/local/bin/relayd-watchdog" => "/usr/local/bin/relayd-watchdog",
-  "usr/local/bin/renew-certs.sh" => "/usr/local/bin/renew-certs.sh",
-  "usr/local/bin/uptime-check.sh" => "/usr/local/bin/uptime-check.sh",
-  "usr/local/bin/resource_guard.sh" => "/usr/local/bin/resource_guard.sh",
-  "usr/local/bin/emergency_cpu.sh" => "/usr/local/bin/emergency_cpu.sh",
-  "usr/local/bin/vps_weekly_integrity.sh" => "/usr/local/bin/vps_weekly_integrity.sh",
-}.freeze
+# Every tracked file beneath the literal filesystem image has one live destination.
+# The Git index is authoritative: untracked files are not promoted into production.
+def tracked_mirror_files(root: DRIFT_ROOT)
+  output, status = Open3.capture2(
+    "git", "-c", "safe.directory=#{root}", "-C", root,
+    "ls-files", "-z", "--", "OPENBSD/mirror"
+  )
+  raise "cannot read tracked OPENBSD/mirror paths from #{root} (exit #{status.exitstatus})" unless status.success?
 
-EXCLUDED = %w[etc/relayd.conf etc/mail/smtpd.conf etc/litestream.yml etc/acme-client.conf].freeze
+  output.split("\0").filter_map do |repo_path|
+    prefix = "OPENBSD/mirror/"
+    next unless repo_path.start_with?(prefix)
 
+    relative = repo_path.delete_prefix(prefix)
+    next if relative.empty?
+
+    [relative, "/#{relative}"]
+  end.sort.to_h.freeze
+end
+
+VERBATIM = tracked_mirror_files.freeze
+EXCLUDED = [].freeze
 # Root's crontab cannot join VERBATIM: OPERATOR.sh merges the tracked lines into
 # whatever is already there rather than overwriting the file, so a byte compare
 # would fail on every box someone has touched by hand. What is comparable
@@ -202,20 +191,15 @@ def scheduled_commands(text)
   end.uniq
 end
 
-# Every VERBATIM mirror under `mirror` byte-compared with its live copy in
-# `live_map` (live path => contents, nil when unreadable). Only VERBATIM is read,
-# so an EXCLUDED file that differs on the box, as a templated one always does, is
-# never drift.
+# Every tracked mirror path is byte-compared with its live copy in
+# `live_map` (live path => contents, nil when unreadable).
 def verbatim_report(live_map, mirror: MIRROR)
   report = { drift: {}, missing: [], compared: [], unfound: [] }
 
   VERBATIM.each do |repo_rel, live_path|
-    # checks/ stayed at the OPENBSD root through the mirror reorganization;
-    # every other VERBATIM key lives inside OPENBSD/mirror.
-    repo_path = repo_rel.start_with?("checks/") ? File.join(File.dirname(mirror), repo_rel) : File.join(mirror, repo_rel)
-    # Counted, not skipped: a check that cannot find the repo compares nothing,
-    # and nothing compared must not exit 0.
-    next report[:unfound] << repo_rel unless File.file?(repo_path)
+    repo_path = File.join(mirror, repo_rel)
+    # Counted, not skipped: a missing or symlinked source never reads as clean.
+    next report[:unfound] << repo_rel unless File.file?(repo_path) && !File.symlink?(repo_path)
 
     live = live_map[live_path]
     next report[:missing] << repo_rel if live.nil? || live.empty?
@@ -229,7 +213,6 @@ def verbatim_report(live_map, mirror: MIRROR)
   end
   report
 end
-
 def split_stream(out, paths)
   result = paths.to_h { |path| [path, nil] }
   out.split(MARKER)[1..].to_a.each do |chunk|
@@ -241,7 +224,6 @@ def split_stream(out, paths)
 end
 
 def report(drift, missing, compared, unfound, cron)
-  EXCLUDED.each { |name| puts "config-drift: #{name.ljust(34)} skip - templated or generated (not verbatim)" }
   compared.each { |name| puts "config-drift: #{name.ljust(34)} ok" }
   puts "config-drift: #{CRONTAB_MIRROR.ljust(34)} #{cron[:summary]}"
 
@@ -249,16 +231,16 @@ def report(drift, missing, compared, unfound, cron)
   # this tree that has ever passed having measured nothing: it reads identically
   # whether eleven files matched or the check could not find a single one.
   if drift.empty? && missing.empty? && unfound.empty? && cron[:ok]
-    puts "config-drift: clean (#{compared.size}/#{VERBATIM.size} verbatim files and " \
+    puts "config-drift: clean (#{compared.size}/#{VERBATIM.size} literal mirror files and " \
          "#{cron[:declared]} crontab command(s) match the live copy)"
     return
   end
 
   unfound.each { |name| warn "config-drift: #{name}: no repo mirror under #{MIRROR}" }
-  warn "config-drift: compared #{compared.size}/#{VERBATIM.size} - a check that compares nothing is not a passing check" if compared.empty?
+  warn "config-drift: compared #{compared.size}/#{VERBATIM.size} literal mirror files - a check that compares nothing is not a passing check" if compared.empty?
   missing.each { |name| warn "config-drift: #{name}: live file missing or unreadable on vm23" }
   drift.each do |name, detail|
-    warn "config-drift: #{name}: DRIFT - the live copy differs from OPENBSD/#{name}"
+    warn "config-drift: #{name}: DRIFT - the live copy differs from OPENBSD/mirror/#{name}"
     warn "  #{detail}"
   end
 
@@ -268,7 +250,7 @@ def report(drift, missing, compared, unfound, cron)
   cron[:extra].each do |command|
     warn "config-drift: #{CRONTAB_MIRROR}: DRIFT - root's crontab schedules #{command}, which the repo does not"
   end
-  warn "config-drift: sync (doas zsh OPENBSD/OPERATOR.sh --apply) or copy the live edit back into OPENBSD/"
+  warn "config-drift: sync (doas zsh OPENBSD/OPERATOR.sh --apply) or copy the live edit back into OPENBSD/mirror/"
 end
 
 # Nothing found and nothing missing are different answers. An unreadable crontab

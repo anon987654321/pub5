@@ -45,6 +45,16 @@ class TestDeployPathsExist < Minitest::Test
                  "OPENBSD/mirror is an installable filesystem image only; operator tools/data belong elsewhere"
   end
 
+  def test_openbsd_mirror_installer_is_native_and_validates_unsigned_dns_zones
+    source = File.read(File.join(ROOT, "OPENBSD", "OPERATOR.sh"), encoding: "UTF-8")
+    refute_match(/^ruby(?:$| )/, source)
+    refute_includes source, "bundle exec"
+    assert_includes source, "pfctl -nf"
+    assert_includes source, "relayd -n -f"
+    assert_includes source, "nsd-checkconf"
+    assert_includes source, "nsd-checkzone"
+  end
+
   def test_every_repo_path_a_deploy_script_names_exists
     refute_empty scripts
 

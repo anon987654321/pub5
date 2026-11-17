@@ -847,10 +847,24 @@ if [[ $deploy_app_group == master ]]; then
       print -u2 "vps-deploy: master flow journeys failed - see the per-flow lines above"
       exit 1
     fi
+    set_stage master-canary
+    if ! "$RUBY" "$repo/OPENBSD/bin/canary" --local --app "$app" --no-flows; then
+      write_stamp "$app" failed
+      print -u2 "vps-deploy: master local canary failed - see the failed checks above"
+      exit 1
+    fi
     set_stage restore-shed
-    restore_started && restore_ok=1 || restore_ok=0
+    if restore_started; then
+      restore_ok=1
+    else
+      restore_ok=0
+    fi
+    if (( ! restore_ok )); then
+      write_stamp "$app" failed
+      print -u2 "vps-deploy: master is not complete; a service that was running before is still down"
+      exit 1
+    fi
     write_stamp "$app" ok
-    (( restore_ok )) || { print -u2 "vps-deploy: master deployed, but a service that was running before is still down"; exit 1 }
     exit 0
   fi
   # A failed run stamps failed, or last_deploy_master.json keeps saying ok
@@ -1175,10 +1189,19 @@ if ! admin_service check "$app" >/dev/null 2>&1; then
   exit 1
 fi
 
-# PUB5_DEPLOY_CANARY=1 runs the post-deploy canary, report-only, until it has been reviewed.
-[[ -z ${PUB5_DEPLOY_CANARY:-} ]] || "$RUBY" "$repo/OPENBSD/bin/canary" --local --app "$app" || true
+# The local canary is a release gate, not an advisory log line.
+if ! "$RUBY" "$repo/OPENBSD/bin/canary" --local --app "$app"; then
+  write_stamp "$app" failed
+  print -u2 "vps-deploy: $app local canary failed - see the failed checks above"
+  exit 1
+fi
+
+if (( restore_failed )); then
+  write_stamp "$app" failed
+  print -u2 "vps-deploy: $app is not complete; a service that was running before is still down"
+  exit 1
+fi
 
 print "vps-deploy: $app ok"
 write_stamp "$app" ok
-(( restore_failed )) && { print -u2 "vps-deploy: $app deployed, but a service that was running before is still down"; exit 1 }
 exit 0
