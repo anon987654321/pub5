@@ -537,20 +537,31 @@ module Pub5Admin
 
   def deploy_run_directory(root: STAMP_DIR, create: false, verify_root: true)
     base = File.expand_path(root)
+    prepare_deploy_run_base!(base, create, verify_root)
+    return unless File.directory?(base)
+
+    prepare_deploy_run_subdirectory(base, create, verify_root)
+  end
+
+  def prepare_deploy_run_base!(base, create, verify_root)
     raise "#{base} is a symlink; refusing deploy-run access" if File.symlink?(base)
     unless File.exist?(base)
-      return nil unless create
+      return unless create
+
       FileUtils.mkdir_p(base, mode: 0o755)
     end
-    base_stat = File.lstat(base)
-    raise "#{base} must be a real directory" unless base_stat.directory? && !base_stat.symlink?
+    stat = File.lstat(base)
+    raise "#{base} must be a real directory" unless stat.directory? && !stat.symlink?
     raise "#{base} must be root-owned and not group/other writable" if
-      verify_root && (!base_stat.uid.zero? || (base_stat.mode & 0o022).positive?)
+      verify_root && (!stat.uid.zero? || (stat.mode & 0o022).positive?)
+  end
 
+  def prepare_deploy_run_subdirectory(base, create, verify_root)
     directory = File.join(base, "deploy_runs")
     raise "#{directory} is a symlink; refusing deploy-run access" if File.symlink?(directory)
     unless File.exist?(directory)
-      return nil unless create
+      return unless create
+
       Dir.mkdir(directory, 0o700)
       File.chown(0, -1, directory) if verify_root
     end
