@@ -638,6 +638,92 @@ preflight_active=0
 preflight_back_to=
 typeset -a preflight_back_flag own_stops
 
+finish() {
+  local rc=$?
+  trap - EXIT
+  if (( preflight_active )); then
+    restore_preflight_checkout || {
+      print -u2 "vps-deploy: checkout remains in preflight recovery state; restore ref $preflight_back_to before another deploy"
+      (( rc == 0 )) && rc=1
+    }
+  fi
+  if (( rc != 0 )) && [[ $deploy_target_kind == all || $deploy_target_kind == group ]]; then
+    print -u2 "vps-deploy: $app FAILED at stage \"$deploy_stage\" (exit $rc)"
+  fi
+  if (( rc != 0 )) && [[ $deploy_target_kind != all && $deploy_target_kind != group && $deploy_target_kind != unknown ]]; then
+    if (( ! stamp_written )) && (( $+functions[write_stamp] )); then
+      write_stamp "$app" failed || true
+    fi
+    print -u2 "vps-deploy: $app FAILED at stage \"$deploy_stage\" (exit $rc)"
+    if (( app_stopped )); then
+      print -u2 "vps-deploy: $app was stopped for this deploy and is DOWN - read /var/log/daemon, then"
+      print -u2 "            /usr/local/sbin/pub5-admin service start $app   (or rerun: doas zsh OPENBSD/bin/vps-deploy $app)"
+    else
+      print -u2 "vps-deploy: $app was not stopped; the previous release is still serving. Fix the cause and rerun:"
+      print -u2 "            doas zsh OPENBSD/bin/vps-deploy $app"
+    fi
+    local other
+    for other in $DEPLOY_RAILS; do
+      [[ $other == "$app" ]] && continue
+      admin_service get "$other" >/dev/null 2>&1 || continue
+      admin_service check "$other" >/dev/null 2>&1 \
+        || print -u2 "vps-deploy: $other is DOWN (shed or stopped) - /usr/local/sbin/pub5-admin service restart $other"
+    done
+  fi
+  # Only the process that owns the lock restores: the children of `all` fail into
+  # their parent, which knows the whole pass. Each restore result is printed.
+  local restore_ok=1
+  if (( rc != 0 )) && (( lock_owner )) && [[ ${VPS_DEPLOY_RESTORE_ATTEMPTED:-0} != 1 ]]; then
+    restore_started || {
+      restore_ok=0
+      print -u2 "vps-deploy: production is NOT fully restored - see the lines above"
+    }
+  fi
+  # A normal EXIT/TERM/HUP reaches this terminal update; SIGKILL/power loss
+  # leaves the last durable receipt pending for an explicit operator recovery.
+  if (( lock_owner )) && [[ -n ${VPS_DEPLOY_RUN_ID:-} ]]; then
+    VPS_DEPLOY_RECEIPT_STATUS=failed
+    (( rc == 0 )) && VPS_DEPLOY_RECEIPT_STATUS=ok
+    if [[ -n ${VPS_DEPLOY_STARTED:-} ]]; then
+      if (( rc == 0 || restore_ok )); then
+        VPS_DEPLOY_RECEIPT_RECOVERY=complete
+      else
+        VPS_DEPLOY_RECEIPT_RECOVERY=pending
+      fi
+    else
+      VPS_DEPLOY_RECEIPT_RECOVERY=none
+    fi
+    export VPS_DEPLOY_RECEIPT_STATUS VPS_DEPLOY_RECEIPT_RECOVERY
+    write_deploy_run_receipt || {
+      print -u2 "vps-deploy: FAILED to persist terminal recovery receipt"
+      (( rc == 0 )) && rc=1
+    }
+  fi
+  # Keep resource_guard excluded until every service restored by this failure
+  # has answered, including slow boots; only then stop the heartbeat and remove
+  # this process's deploy flag.
+  [[ -n $flag_keeper ]] && kill $flag_keeper 2>/dev/null
+  rm -f -- "$deploy_flag"
+  log "finished exit=$rc"
+  # Write the verdict straight to the files as well: if the tee pipe died with
+  # the ssh session the last structured line can still land on disk.
+  {
+    print -r -- "$(log_ts) host=$(hostname -s) pid=$$ app=$app stage=$deploy_stage finished exit=$rc"
+  } >> "${deploy_log:-/var/log/pub5/vps-deploy.log}" 2>/dev/null || true
+  if [[ -n ${deploy_run_log:-${VPS_DEPLOY_RUN_LOG:-}} ]]; then
+    print -r -- "$(log_ts) host=$(hostname -s) pid=$$ app=$app stage=$deploy_stage finished exit=$rc" \
+      >> "${deploy_run_log:-$VPS_DEPLOY_RUN_LOG}" 2>/dev/null || true
+  fi
+  release_deploy_lock
+  exit $rc
+}
+# zsh runs the EXIT trap for HUP but not for TERM or INT, so name all three: a
+# dropped ssh session or a kill is a failure with a recorded stage, not a silent end.
+trap finish EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 # Services the deploy needs to put back, and how it waits for them.
 #
 # On 2026-10-12 a halted `all` pass left brgen, amber and bsdports down for minutes
@@ -770,91 +856,6 @@ ensure_smart_turn_assets() {
   fi
 }
 
-finish() {
-  local rc=$?
-  trap - EXIT
-  if (( preflight_active )); then
-    restore_preflight_checkout || {
-      print -u2 "vps-deploy: checkout remains in preflight recovery state; restore ref $preflight_back_to before another deploy"
-      (( rc == 0 )) && rc=1
-    }
-  fi
-  if (( rc != 0 )) && [[ $deploy_target_kind == all || $deploy_target_kind == group ]]; then
-    print -u2 "vps-deploy: $app FAILED at stage \"$deploy_stage\" (exit $rc)"
-  fi
-  if (( rc != 0 )) && [[ $deploy_target_kind != all && $deploy_target_kind != group && $deploy_target_kind != unknown ]]; then
-    if (( ! stamp_written )) && (( $+functions[write_stamp] )); then
-      write_stamp "$app" failed || true
-    fi
-    print -u2 "vps-deploy: $app FAILED at stage \"$deploy_stage\" (exit $rc)"
-    if (( app_stopped )); then
-      print -u2 "vps-deploy: $app was stopped for this deploy and is DOWN - read /var/log/daemon, then"
-      print -u2 "            /usr/local/sbin/pub5-admin service start $app   (or rerun: doas zsh OPENBSD/bin/vps-deploy $app)"
-    else
-      print -u2 "vps-deploy: $app was not stopped; the previous release is still serving. Fix the cause and rerun:"
-      print -u2 "            doas zsh OPENBSD/bin/vps-deploy $app"
-    fi
-    local other
-    for other in $DEPLOY_RAILS; do
-      [[ $other == "$app" ]] && continue
-      admin_service get "$other" >/dev/null 2>&1 || continue
-      admin_service check "$other" >/dev/null 2>&1 \
-        || print -u2 "vps-deploy: $other is DOWN (shed or stopped) - /usr/local/sbin/pub5-admin service restart $other"
-    done
-  fi
-  # Only the process that owns the lock restores: the children of `all` fail into
-  # their parent, which knows the whole pass. Each restore result is printed.
-  local restore_ok=1
-  if (( rc != 0 )) && (( lock_owner )) && [[ ${VPS_DEPLOY_RESTORE_ATTEMPTED:-0} != 1 ]]; then
-    restore_started || {
-      restore_ok=0
-      print -u2 "vps-deploy: production is NOT fully restored - see the lines above"
-    }
-  fi
-  # A normal EXIT/TERM/HUP reaches this terminal update; SIGKILL/power loss
-  # leaves the last durable receipt pending for an explicit operator recovery.
-  if (( lock_owner )) && [[ -n ${VPS_DEPLOY_RUN_ID:-} ]]; then
-    VPS_DEPLOY_RECEIPT_STATUS=failed
-    (( rc == 0 )) && VPS_DEPLOY_RECEIPT_STATUS=ok
-    if [[ -n ${VPS_DEPLOY_STARTED:-} ]]; then
-      if (( rc == 0 || restore_ok )); then
-        VPS_DEPLOY_RECEIPT_RECOVERY=complete
-      else
-        VPS_DEPLOY_RECEIPT_RECOVERY=pending
-      fi
-    else
-      VPS_DEPLOY_RECEIPT_RECOVERY=none
-    fi
-    export VPS_DEPLOY_RECEIPT_STATUS VPS_DEPLOY_RECEIPT_RECOVERY
-    write_deploy_run_receipt || {
-      print -u2 "vps-deploy: FAILED to persist terminal recovery receipt"
-      (( rc == 0 )) && rc=1
-    }
-  fi
-  # Keep resource_guard excluded until every service restored by this failure
-  # has answered, including slow boots; only then stop the heartbeat and remove
-  # this process's deploy flag.
-  [[ -n $flag_keeper ]] && kill $flag_keeper 2>/dev/null
-  rm -f -- "$deploy_flag"
-  log "finished exit=$rc"
-  # Write the verdict straight to the files as well: if the tee pipe died with
-  # the ssh session the last structured line can still land on disk.
-  {
-    print -r -- "$(log_ts) host=$(hostname -s) pid=$$ app=$app stage=$deploy_stage finished exit=$rc"
-  } >> "${deploy_log:-/var/log/pub5/vps-deploy.log}" 2>/dev/null || true
-  if [[ -n ${deploy_run_log:-${VPS_DEPLOY_RUN_LOG:-}} ]]; then
-    print -r -- "$(log_ts) host=$(hostname -s) pid=$$ app=$app stage=$deploy_stage finished exit=$rc" \
-      >> "${deploy_run_log:-$VPS_DEPLOY_RUN_LOG}" 2>/dev/null || true
-  fi
-  release_deploy_lock
-  exit $rc
-}
-# zsh runs the EXIT trap for HUP but not for TERM or INT, so name all three: a
-# dropped ssh session or a kill is a failure with a recorded stage, not a silent end.
-trap finish EXIT
-trap 'exit 129' HUP
-trap 'exit 130' INT
-trap 'exit 143' TERM
 
 # One durable receipt belongs to the lock-owning parent. Child app deploys
 # inherit the ID, snapshot and owner identity and update only the current stage.
