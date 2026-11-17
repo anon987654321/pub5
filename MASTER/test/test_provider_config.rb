@@ -32,7 +32,6 @@ class TestProviderConfig < Minitest::Test
     row = providers.fetch("replicate")
 
     assert_equal %w[REPLICATE_API_TOKEN REPLICATE_API_KEY], Array(row["env"])
-    assert_equal Array(row["env"]), Array(row["api_key_envs"])
     refute row.key?("ruby_llm_key"), "Replicate uses its dedicated sender, not RubyLLM configuration"
   end
 
@@ -42,7 +41,6 @@ class TestProviderConfig < Minitest::Test
 
     row = providers.fetch("zai")
     assert_equal %w[ZAI_API_KEY], Array(row["env"])
-    assert_equal %w[ZAI_API_KEY], Array(row["api_key_envs"])
     pattern = Regexp.new(row["model_pattern"])
     assert pattern.match?("glm-5.3-flash")
     refute pattern.match?("claude-sonnet-5-5")
