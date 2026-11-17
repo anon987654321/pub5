@@ -428,7 +428,7 @@ class TestIdeaPictureOutput < Minitest::Test
     ENV["STUDIO_VIDEO_CALL_CAP_USD"] = "1.00"
     models.reset_video_budget!
 
-    error = assert_raises(models::BudgetExceeded) do
+    error = assert_raises(Studio::ReplicateClient::Models::BudgetExceeded) do
       models.reserve_video_spend!("minimax/h3-highspeed", { "duration" => 10 }, today: Date.new(2026, 11, 17))
     end
     assert_match(/remaining run budget/, error.message)
