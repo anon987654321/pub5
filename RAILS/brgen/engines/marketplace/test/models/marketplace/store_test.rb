@@ -52,6 +52,12 @@ class Marketplace::StoreTest < ActiveSupport::TestCase
     assert_not Marketplace::Store.new(vertical: "homewares").grocery?
   end
 
+  test "wholesale is a supported first-class store vertical" do
+    assert Marketplace::Store::VERTICALS.include?("wholesale")
+    assert Marketplace::Store.new(owner: @owner, name: "Engros", vertical: "wholesale").valid?
+    assert_not Marketplace::Store.new(owner: @owner, name: "Engros", vertical: "wholesaler").valid?
+  end
+
   test "active and by_vertical narrow the shop list" do
     ActsAsTenant.with_tenant(@city) do
       open = Marketplace::Store.create!(owner: @owner, name: "Åpen", vertical: "books", active: true)
