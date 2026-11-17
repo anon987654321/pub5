@@ -32,6 +32,12 @@ module Master
 
       BUDGET_MAX_DEFAULT = 10.0
       DEFAULT_WEB_PORT = 53_187
+      LEGACY_MODEL_PREFERENCES = {
+        # This was the prior automatic selection. The new catalogue declares
+        # Replicate GPT-5.2 as primary; a deliberate post-migration /model choice
+        # is kept because only this exact legacy value is migrated once.
+        "claude-opus-5-5" => "nvidia/nemotron-3-super-120b-a12b:free",
+      }.freeze
 
       DEFAULTS = {
         # The fallback model when routing is disabled and the last resort in
