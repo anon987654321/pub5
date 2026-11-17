@@ -227,9 +227,11 @@ class TestPub4Alert < Minitest::Test
     started, start_status = Open3.capture2({ "LC_ALL" => "C" }, "ps", "-p", pid.to_s, "-o", "lstart=")
     command, command_status = Open3.capture2("ps", "-ww", "-p", pid.to_s, "-o", "command=")
     raise "could not read current process identity" unless start_status.success? && command_status.success?
-    checksum, checksum_status = Open3.capture2("cksum", stdin_data: command.strip)
+    started = started.sub(/\\n+\\z/, "")
+    command = command.sub(/\\n+\\z/, "")
+    checksum, checksum_status = Open3.capture2("cksum", stdin_data: command)
     raise "could not checksum current process command" unless checksum_status.success?
-    "#{started.strip.gsub(/[^A-Za-z0-9]/, "_")}_#{checksum.strip.tr(" ", "_")}"
+    "#{started.gsub(/[^A-Za-z0-9]/, "_")}_#{checksum.strip.tr(" ", "_")}"
   end
 
   def recovery_receipt(run_id:, pid:, status: "running", snapshot_recorded: true, owner_identity: "Tue_Nov_17_01_00_00_2026_123_456")
