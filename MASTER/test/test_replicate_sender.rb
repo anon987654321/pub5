@@ -168,6 +168,20 @@ class TestReplicateSender < Minitest::Test
   # Replicate drops an input key the model does not declare, so the token cap
   # and system prompt must be spelled the way each family's schema declares
   # them or they are silently lost. This pins the family choice.
+  def test_replicate_api_key_alias_is_accepted
+    previous_token = ENV["REPLICATE_API_TOKEN"]
+    previous_key = ENV["REPLICATE_API_KEY"]
+    ENV.delete("REPLICATE_API_TOKEN")
+    ENV["REPLICATE_API_KEY"] = "test-replicate-key"
+
+    headers = build_dispatcher.send(:replicate_headers)
+
+    assert_equal "Bearer test-replicate-key", headers.fetch("Authorization")
+  ensure
+    previous_token.nil? ? ENV.delete("REPLICATE_API_TOKEN") : ENV["REPLICATE_API_TOKEN"] = previous_token
+    previous_key.nil? ? ENV.delete("REPLICATE_API_KEY") : ENV["REPLICATE_API_KEY"] = previous_key
+  end
+
   def test_replicate_chat_shapes_the_request_for_each_model_family
     dispatcher = build_dispatcher
     shape = ->(slug) { dispatcher.send(:replicate_chat_shape, slug) }
