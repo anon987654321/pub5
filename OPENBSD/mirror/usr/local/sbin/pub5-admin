@@ -631,7 +631,7 @@ module Pub5Admin
     truncated = false
     if directory
       Dir.each_child(directory) do |name|
-        next unless name.match?(/\\A\\d{8}T\\d{6}Z-[a-z0-9_-]{1,32}-\\d+\\.json\\z/)
+        next unless name.match?(/\A\d{8}T\d{6}Z-[a-z0-9_-]{1,32}-\d+\.json\z/)
 
         scanned += 1
         names << name
