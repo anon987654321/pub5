@@ -135,8 +135,8 @@ watch_services() {
 }
 
 # Fleet receipts are root-private. Read them through the fixed broker and
-# compare the saved OpenBSD process fingerprint before alerting. A vanished or
-# reused PID is stale; a matching owner or an ambiguous process read stays quiet.
+# compare the saved OpenBSD process fingerprint before alerting. Only a matching
+# owner is quiet; vanished/reused PIDs and unreadable identities raise distinct alerts.
 watch_deploy_recovery() {
   if [[ ! -x $DEPLOY_ADMIN || -L $DEPLOY_ADMIN ]]; then
     raise deploy-recovery-status-unavailable "pub5-admin missing or untrusted at $DEPLOY_ADMIN - install and verify the tracked mirror with doas zsh OPENBSD/OPERATOR.sh --verify"
@@ -193,7 +193,7 @@ watch_deploy_recovery() {
       pid = r["pid"]
       abort "invalid deploy receipt PID" unless pid.is_a?(Integer) && pid.positive?
       owner_state = receipt_owner_state(pid, r["owner_identity"])
-      next if owner_state == "live" || owner_state == "unknown"
+      next if owner_state == "live"
       target = r["target"]
       stage = r["stage"]
       sha = r["pinned_sha"] || "unknown"
@@ -216,6 +216,10 @@ watch_deploy_recovery() {
     [[ -n $run_id ]] || continue
     if [[ $run_id == __scan_truncated__ ]]; then
       raise deploy-recovery-scan-truncated "fleet recovery monitor inspected a bounded window of up to 500 receipts / 100 pending runs (directory entries scanned: $scanned); some older pending receipts may be outside this view - run: zsh OPENBSD/bin/vps-deploy recover --plan"
+      continue
+    fi
+    if [[ $owner_state == unknown ]]; then
+      raise "deploy-recovery-owner-unknown-$run_id" "could not verify the owner fingerprint for pending deploy $run_id (pid $pid); do not apply automatically - inspect with: zsh OPENBSD/bin/vps-deploy recover --plan; log: $run_log"
       continue
     fi
     raise "deploy-recovery-$run_id" "interrupted deploy $run_id target=$target status=$status stage=$stage owner PID $pid is $owner_state, snapshot=$snapshot pinned=$sha - inspect with: zsh OPENBSD/bin/vps-deploy recover --plan; log: $run_log"
