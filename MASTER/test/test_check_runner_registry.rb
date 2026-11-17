@@ -30,6 +30,8 @@ class TestCheckRunnerRegistry < Minitest::Test
     File.write(fixture, <<~RUBY)
       puts "first diagnostic line"
       warn "provider returned API_KEY=sk-abcdefghijklmnopqrstuvwxyz123456"
+      warn "Authorization: Bearer ghp_abcdefghijklmnopqrstuvwxyz123456"
+      warn "request https://user:supersecret@example.test/a?token=query-secret"
       warn "last diagnostic line"
       exit 7
     RUBY
@@ -39,17 +41,24 @@ class TestCheckRunnerRegistry < Minitest::Test
       assert_includes output, "diagnostic-#{Process.pid}.rb exited 7"
       assert_includes output, "last diagnostic line"
       assert_includes output, "API_KEY=[redacted]"
+      assert_includes output, "Authorization: [redacted]"
       refute_includes output, "sk-abcdefghijklmnopqrstuvwxyz123456"
+      refute_includes output, "ghp_abcdefghijklmnopqrstuvwxyz123456"
+      refute_includes output, "supersecret"
+      refute_includes output, "query-secret"
 
       private_log = File.read(File.join(File.dirname(ledger_path), ".check_output.log"))
       assert_includes private_log, "API_KEY=[redacted]"
-      refute_includes private_log, "sk-abcdefghijklmnopqrstuvwxyz123456",
+      assert_includes private_log, "Authorization: [redacted]"
+      refute_includes private_log, "sk-abcdefghijklmnopqrstuvwxyz123456"
+      refute_includes private_log, "ghp_abcdefghijklmnopqrstuvwxyz123456"
+      refute_includes private_log, "supersecret"
+      refute_includes private_log, "query-secret",
                       "the on-disk diagnostics log must receive the same redaction as terminal output"
     end
   ensure
     File.delete(fixture) if fixture && File.file?(fixture)
   end
-
   def test_registry_rejects_rows_that_declare_both_class_and_script
     run_registry(
       "ambiguous" => { "class" => "Deploy::CheckResult", "script" => "architecture.rb" },

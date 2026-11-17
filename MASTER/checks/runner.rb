@@ -138,10 +138,10 @@ end
 def redact_diagnostic_text(value)
   text = value.to_s
   text = text.gsub(
-    /\b([A-Z0-9_]*(?:API_KEY|ACCESS_TOKEN|REFRESH_TOKEN|TOKEN|SECRET|PASSWORD|AUTHORIZATION|COOKIE|CREDENTIAL)[A-Z0-9_]*\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/i,
+    /\b([A-Z0-9_]*(?:API_KEY|ACCESS_TOKEN|REFRESH_TOKEN|TOKEN|SECRET|PASSWORD|AUTHORIZATION|COOKIE|CREDENTIAL)[A-Z0-9_]*\s*[:=]\s*)(?:Bearer\s+[A-Za-z0-9._+\/-]+|"[^"]*"|'[^']*'|[^\s,;]+)/i,
     '\\1[redacted]',
   )
-  text = text.gsub(/\b(Bearer\s+)[A-Za-z0-9._~+\/-]+/i, '\\1[redacted]')
+  text = text.gsub(/\b(Bearer\s+)[A-Za-z0-9._+\/-]+/i, '\\1[redacted]')
   text = text.gsub(/\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9_-]{12,})\b/, "[redacted]")
   text = text.gsub(/([?&](?:token|access_token|refresh_token|api_key|key|secret|password)=)[^&\s]+/i, '\\1[redacted]')
   text.gsub(%r{(://[^/\s:@]+:)[^/@\s]+@}, '\\1[redacted]@')
