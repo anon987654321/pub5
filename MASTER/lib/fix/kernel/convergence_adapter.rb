@@ -420,7 +420,7 @@ module Master
       # graph node are explicit gaps, not permission to guess.
       def prepare_dependency_map!(files)
         graph = @reference_graph
-        snapshot = graph.build(refresh: true)
+        snapshot = graph.build(refresh: true, required_paths: files)
         failures = Array(snapshot[:analysis_failures])
         missing = Array(files).reject { |path| graph.includes_path?(path) }
         unless failures.empty? && missing.empty?

@@ -6,6 +6,24 @@ require_relative "test_helper"
 require_relative "../lib/review/reference_graph"
 
 class TestReferenceGraph < Minitest::Test
+  def test_requested_files_are_indexed_across_symlinked_checkout_spellings
+    Dir.mktmpdir("reference-graph") do |parent|
+      real_root = File.join(parent, "real")
+      alias_root = File.join(parent, "alias")
+      FileUtils.mkdir_p(File.join(real_root, "RAILS", "brgen", "db"))
+      path = File.join(real_root, "RAILS", "brgen", "db", "seeds.rb")
+      File.write(path, "module BrgenSeeds; end\\n")
+      File.symlink(real_root, alias_root)
+
+      graph = Master::Review::ReferenceGraph.new(root: alias_root)
+      result = graph.build(refresh: true, required_paths: [path])
+
+      assert_includes result[:nodes], "RAILS/brgen/db/seeds.rb"
+      assert graph.includes_path?(path)
+      assert_empty result[:analysis_failures]
+    end
+  end
+
   def test_resolves_require_relative_from_the_callers_directory
     Dir.mktmpdir("reference-graph") do |root|
       caller = File.join(root, "RAILS", "brgen", "config", "boot.rb")

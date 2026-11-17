@@ -250,9 +250,11 @@ module Master
       # One complete source read builds the graph before repair. Repeated callers
       # reuse it; an operator-requested /fix explicitly refreshes it so stale
       # references from a previous run cannot authorize an edit.
-      def build(refresh: false)
+      def build(refresh: false, required_paths: [])
+        required_paths = Array(required_paths)
         @build_lock.synchronize do
-          if refresh || !@built
+          missing_required = required_paths.reject { |path| @nodes.include?(relative(path)) }
+          if refresh || !@built || missing_required.any?
             @nodes.clear
             @edges.clear
             @analysis_failures.clear
@@ -263,7 +265,7 @@ module Master
             @dynamic_sites.clear
             @unresolved_references.clear
             @external_references = 0
-            files.each { |file| analyze(file) }
+            files(extra_paths: required_paths).each { |file| analyze(file) }
             resolve_ruby_references!
             @built = true
           end
@@ -328,7 +330,7 @@ module Master
 
       private
 
-      def files
+      def files(extra_paths: [])
         collected = []
         Find.find(@root) do |path|
           if File.directory?(path)
@@ -341,7 +343,31 @@ module Master
 
           collected << path
         end
-        collected
+
+        # FileCollector is the write-scope authority. A requested path that it
+        # has already admitted must also be represented in the dependency graph,
+        # even when the graph walk used a different spelling of the checkout
+        # root (for example a macOS /var -> /private/var path).
+        extra_paths.each do |candidate|
+          path = canonical_existing_path(candidate)
+          next unless path && under_root?(path)
+          next if File.symlink?(candidate) || !File.file?(path) || !text_file?(path)
+
+          collected << path
+        end
+        collected.uniq
+      end
+
+      def under_root?(path)
+        root = canonical_existing_path(@root) || File.expand_path(@root)
+        path == root || path.start_with?(root + File::SEPARATOR)
+      end
+
+      def canonical_existing_path(path)
+        expanded = File.expand_path(path.to_s)
+        File.exist?(expanded) ? File.realpath(expanded) : expanded
+      rescue SystemCallError
+        nil
       end
 
       # The fix corpus and the understanding graph must share path ownership.
@@ -699,8 +725,12 @@ module Master
       end
 
       def relative(path)
-        # The separator is part of the prefix: /a/pub5x must not shed /a/pub5.
-        File.expand_path(path).sub(%r{\A#{Regexp.escape(@root)}(?:/|\z)}, "")
+        # Compare canonical paths so a symlinked checkout spelling cannot make
+        # the collector's path look absent from a graph walked under another
+        # spelling of the same root.
+        expanded = canonical_existing_path(path) || File.expand_path(path)
+        root = canonical_existing_path(@root) || File.expand_path(@root)
+        expanded.sub(%r{\A#{Regexp.escape(root)}(?:/|\z)}, "")
       end
 
       public :relative
