@@ -45,6 +45,14 @@ class ReportPickerTest < ActionDispatch::IntegrationTest
     assert_equal "Hetsende kommentarer", report.details
   end
 
+  test "a signed GlobalID for an internal model is not a report target" do
+    assert_no_difference -> { ModerationReport.count } do
+      post reports_path, params: { target_gid: @city.to_signed_global_id.to_s, reason: "abuse" }
+    end
+
+    assert_response :not_found
+  end
+
   test "a reason outside the list files as other instead of failing" do
     post reports_path, params: { target_gid: @post.to_signed_global_id.to_s, reason: "nonsense" }
 
