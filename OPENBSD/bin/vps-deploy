@@ -891,11 +891,11 @@ fi
 # receipt identifies the parent, so also refuse while another deployer process
 # is visible. Exclude this recovery command by its own PID.
 other_deploy_processes() {
-  local pid
+  local pid exclude_pid=${1:-}
   local -a candidates
   candidates=(${(f)"$(pgrep -f 'OPENBSD/bin/vps-deploy' 2>/dev/null || true)"})
   for pid in $candidates; do
-    [[ $pid == "${$}" ]] || print -r -- "$pid"
+    [[ $pid == "${$}" || ( -n $exclude_pid && $pid == "$exclude_pid" ) ]] || print -r -- "$pid"
   done
 }
 
@@ -930,7 +930,7 @@ if [[ $app == recover ]]; then
         print "vps-deploy: INCOMPLETE $run_id target=$target stage=$stage - service snapshot is not complete; do not apply"
         continue
       fi
-      other_pids=$(other_deploy_processes)
+      other_pids=$(other_deploy_processes "$owner_pid")
       if [[ -n $other_pids ]]; then
         print "vps-deploy: AMBIGUOUS $run_id - another deployer process is still present; do not recover"
         print -r -- "  other deployer PID(s): $other_pids"
@@ -980,7 +980,7 @@ if [[ $app == recover ]]; then
     print -u2 "vps-deploy: receipt belongs to $owner_host; recovery must run on that host"
     exit 1
   }
-  other_pids=$(other_deploy_processes)
+  other_pids=$(other_deploy_processes "$owner_pid")
   [[ -z $other_pids ]] || {
     print -u2 "vps-deploy: another deployer process is still present; refusing recovery"
     print -u2 "  other deployer PID(s): $other_pids"
