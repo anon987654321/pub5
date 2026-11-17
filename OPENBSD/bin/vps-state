@@ -246,7 +246,7 @@ def deploy_recovery_status
     return { state: state, count: 0, pending: [], truncated: false, scanned: scanned, error: error }
   end
 
-  pending = records.sort_by { |record| record.fetch("started_at", "") }.reverse.map do |record|
+  pending = records.sort_by { |record| [record.fetch("started_at", ""), record.fetch("run_id", "")] }.reverse.map do |record|
     {
       run_id: record.fetch("run_id"),
       target: record.fetch("target"),
