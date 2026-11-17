@@ -193,23 +193,50 @@ file_identity() {
   stat -c '%d:%i' "$1" 2>/dev/null
 }
 
+# A PID can be reused after its original deploy exits. Pair it with the
+# process start time and a checksum of its command line, so an unrelated process
+# cannot keep an abandoned lock alive forever. OpenBSD ps(1) exposes lstart and
+# command; if either cannot be read, callers fail safe and keep the lock.
+lock_process_identity() {
+  local pid=$1 started command digest
+  started=$(ps -p "$pid" -o lstart= 2>/dev/null) || return 1
+  command=$(ps -ww -p "$pid" -o command= 2>/dev/null) || return 1
+  [[ -n $started && -n $command ]] || return 1
+  started=${started//[^A-Za-z0-9]/_}
+  digest=$(print -rn -- "$command" | cksum) || return 1
+  digest=${digest// /_}
+  print -r -- "${started}_${digest}"
+}
+
 lock_read_owner() {
-  lock_pid= lock_host= lock_epoch=
+  lock_pid= lock_host= lock_epoch= lock_identity=
   [[ -r $lock_dir/owner ]] || return 1
-  read -r lock_pid lock_host lock_epoch < "$lock_dir/owner" || true
-  [[ $lock_pid == <-> && $lock_epoch == <-> ]]
+  read -r lock_pid lock_host lock_epoch lock_identity < "$lock_dir/owner" || true
+  [[ $lock_pid == <-> && $lock_epoch == <-> && $lock_identity != *[^A-Za-z0-9_]* ]]
 }
 
 lock_stale_reason() {
-  local now=$(date +%s)
+  local now=$(date +%s) current_identity
   if lock_read_owner; then
     if [[ $lock_host == $(hostname -s) ]]; then
       if ! ps -p "$lock_pid" >/dev/null 2>&1; then
         print -r -- "owner pid $lock_pid is not running on $lock_host"
         return 0
       fi
-      # A live same-host owner is authoritative even after the TTL. Never
-      # overlap an active deploy just because a slow command exceeded its budget.
+      if [[ -n $lock_identity ]]; then
+        current_identity=$(lock_process_identity "$lock_pid") || {
+          # A visible PID whose full identity cannot be measured is ambiguous,
+          # not stale. Never steal its lock based on a partial observation.
+          return 1
+        }
+        if [[ $current_identity != $lock_identity ]]; then
+          print -r -- "owner pid $lock_pid process identity changed on $lock_host (PID reused)"
+          return 0
+        fi
+      fi
+      # Legacy three-field owners have no fingerprint: keep them protected while
+      # their PID exists. New owners are distinguished even after PID reuse.
+      # A live same-host owner is authoritative even after the TTL.
       return 1
     fi
     if (( now - lock_epoch > lock_ttl )); then
@@ -289,7 +316,20 @@ acquire_deploy_lock() {
   local -i attempt
   for attempt in 1 2; do
     if mkdir "$lock_dir" 2>/dev/null; then
-      print -r -- "$$ $(hostname -s) $(date +%s)" > "$lock_dir/owner"
+      local identity owner_tmp
+      identity=$(lock_process_identity "$") || {
+        print -u2 "vps-deploy: cannot identify the lock owner process; refusing an unverifiable deploy"
+        rmdir "$lock_dir" 2>/dev/null || true
+        exit 1
+      }
+      owner_tmp="$lock_dir/owner.tmp.$"
+      if ! print -r -- "$ $(hostname -s) $(date +%s) $identity" > "$owner_tmp" ||
+         ! mv "$owner_tmp" "$lock_dir/owner"; then
+        print -u2 "vps-deploy: cannot write the deploy lock owner record"
+        rm -f -- "$owner_tmp"
+        rmdir "$lock_dir" 2>/dev/null || true
+        exit 1
+      fi
       export VPS_DEPLOY_LOCK_HELD=1
       lock_owner=1
       return 0
