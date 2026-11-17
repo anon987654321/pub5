@@ -111,6 +111,9 @@ class TestLawPathReach < Minitest::Test
         MASTER/lib/voice/renderer/prompt.rb
         MASTER/lib/voice/renderer/prompt_components.rb
         MASTER/lib/trace/dmesg.rb
+        MASTER/lib/fix/conversation_probe.rb
+        MASTER/lib/operator/checks.rb
+        MASTER/web/public/face_vision_b.js
       ],
       CLI_PROMPT_COMPOSITION: %w[
         MASTER/lib/cli/session/repl_io.rb
