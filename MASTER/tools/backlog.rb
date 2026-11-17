@@ -657,6 +657,17 @@ module Backlog
         push.is_a?(Hash) && push["remote"] == "origin" && push["branch"] == "main" &&
           push["commit"].to_s.match?(/\A[0-9a-f]{40}\z/i)
       end
+      journey = plan["journey"]
+      if journey
+        return false unless journey.is_a?(Hash)
+        return false unless journey["route_id"].to_s == plan["item_digest"].to_s
+        return false unless journey["tree"].to_s == source_item[:tree].to_s
+        return false unless journey["objective"].to_s == MISSION_OBJECTIVE
+        return false unless journey["phase"].to_s == mission_phase(source_item)
+        return false unless journey["priority"].is_a?(Numeric) && journey["priority"] == journey_priority(source_item)
+        return false unless journey["score"].is_a?(Numeric) && journey["score"].finite? && journey["score"].between?(0.0, 100.0)
+        return false unless journey["alternatives"].is_a?(Array) && journey["alternatives"].size <= 5
+      end
       return true if completed_receipts.include?(plan["item_digest"])
 
       FileUtils.mkdir_p(File.join(@root, ".master"))
