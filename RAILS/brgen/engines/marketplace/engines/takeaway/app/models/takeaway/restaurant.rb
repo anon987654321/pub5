@@ -147,11 +147,12 @@ class Takeaway::Restaurant < ApplicationRecord
       menu: menu_items.available.exists?,
       hours: hours_known?,
       cover: cover.attached?,
-      storefront: marketplace_store.present?,
+      storefront: marketplace_store_id.present?,
     }
   end
 
-  def setup_complete? = setup_checklist.values.all?
+  # A cover is optional; profile, menu, stated hours and shared storefront are not.
+  def setup_complete? = setup_checklist.values_at(:profile, :menu, :hours, :storefront).all?
 
   # This is the one table carrying both a `city` string column and a `city_id`.
   # CityTenantable's belongs_to shadows the column reader, so `restaurant.city`
