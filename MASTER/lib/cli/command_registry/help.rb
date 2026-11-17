@@ -72,6 +72,9 @@ module Master
             "App IDs, aliases, deployment groups and ordering are resolved from the live inventory, not router lists.",
             "Deployment is always remote and review-gated. The command delegates to bin/operator",
             "and OPENBSD/bin/vps-deploy; it does not create a second deploy implementation.",
+            "First rollout of the fleet-receipt broker requires the checked-out vm23 tree to be current,",
+            "then OPERATOR.sh --plan, --apply and --verify once; /deploy all cannot bootstrap an old",
+            "pub5-admin because the durable receipt gate runs before the normal mirror apply.",
           ],
         },
         "documents" => {
