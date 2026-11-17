@@ -481,6 +481,7 @@ module Pub5Admin
     raise "invalid deploy-run recovery state" unless %w[none pending complete].include?(record["recovery_state"])
     raise "invalid deploy-run stage" unless record["stage"].is_a?(String) &&
       record["stage"].bytesize.between?(1, 160) && record["stage"].match?(/\A[A-Za-z0-9_.:+\/-]+\z/)
+    raise "invalid deploy-run snapshot marker" unless [true, false].include?(record["snapshot_recorded"])
     %w[started_at updated_at].each do |field|
       value = record[field]
       raise "invalid deploy-run #{field}" unless value.is_a?(String) && value.match?(/\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\z/)
@@ -504,7 +505,13 @@ module Pub5Admin
     %w[run_log aggregate_log].each do |field|
       value = record[field]
       raise "invalid deploy-run #{field}" unless value.is_a?(String) &&
-        value.bytesize.between?(1, 2048) && !value.include?("\0")
+        value.bytesize.between?(1, 2048) && value.match?(/\A\/[A-Za-z0-9_.\/-]+\z/)
+    end
+    if record.key?("recovered_at")
+      value = record["recovered_at"]
+      raise "invalid deploy-run recovered_at" unless value.is_a?(String) &&
+        value.match?(/\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\z/)
+      Time.iso8601(value)
     end
     record
   rescue ArgumentError
@@ -535,7 +542,7 @@ module Pub5Admin
     allowed = %w[
       schema run_id target host pid owner_identity status recovery_state stage
       started_at updated_at pinned_sha previous_sha started_services ports
-      restore_order run_log aggregate_log recovered_at
+      restore_order run_log aggregate_log recovered_at snapshot_recorded
     ]
     unknown = payload.keys - allowed
     raise "unknown deploy-run field(s): #{unknown.join(', ')}" unless unknown.empty?
@@ -544,15 +551,28 @@ module Pub5Admin
     target = File.join(directory, "#{run_id}.json")
     raise "#{target} is a symlink; refusing deploy-run write" if File.symlink?(target)
     previous = deploy_run_record(run_id, root:, verify_root:)
-    immutable = %w[schema run_id target host pid owner_identity started_at]
+    immutable = %w[schema run_id target host pid owner_identity started_at run_log aggregate_log]
     if previous
+      if %w[ok recovered].include?(previous["status"])
+        raise "terminal deploy-run receipt cannot be changed"
+      end
       immutable.each do |field|
         next unless payload.key?(field)
         raise "deploy-run identity field #{field} cannot change" unless payload[field] == previous[field]
       end
+      %w[pinned_sha previous_sha].each do |field|
+        next if previous[field].nil?
+        raise "deploy-run pinned field #{field} cannot change" if payload.key?(field) && payload[field] != previous[field]
+      end
+      if previous["snapshot_recorded"]
+        %w[started_services ports restore_order].each do |field|
+          raise "deploy-run snapshot field #{field} cannot change" if payload.key?(field) && payload[field] != previous[field]
+        end
+        raise "deploy-run snapshot marker cannot be cleared" if payload["snapshot_recorded"] == false
+      end
       record = previous.merge(payload)
     else
-      required = %w[schema run_id target host pid owner_identity status recovery_state stage started_at started_services ports restore_order run_log aggregate_log]
+      required = %w[schema run_id target host pid owner_identity status recovery_state stage started_at started_services ports restore_order run_log aggregate_log snapshot_recorded]
       missing = required - payload.keys
       raise "deploy-run creation missing field(s): #{missing.join(', ')}" unless missing.empty?
       record = payload
