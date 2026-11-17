@@ -580,6 +580,30 @@ class Pub5AdminTest < Minitest::Test
     end
   end
 
+  def test_newest_deploy_run_filename_heap_is_bounded_and_order_independent
+    limit = 37
+    entries = 1_000.times.map do |index|
+      format("20261117T%06dZ-all-%d.json", index, 20_000 + index)
+    end.shuffle(random: Random.new(17))
+    heap = []
+
+    entries.each do |name|
+      ADMIN.retain_newest_deploy_run_name(heap, name, limit)
+      assert_operator heap.length, :<=, limit
+    end
+
+    expected = entries.sort.last(limit)
+    assert_equal expected, heap.sort
+    assert_equal heap.min, heap.first
+
+    heap.each_index do |index|
+      left = index * 2 + 1
+      right = left + 1
+      assert_operator heap[index], :<=, heap[left] if left < heap.length
+      assert_operator heap[index], :<=, heap[right] if right < heap.length
+    end
+  end
+
   def test_pending_deploy_run_list_is_fixed_bounded_and_reports_truncation
     Dir.mktmpdir("pub5-admin-run-") do |root|
       run_ids = [
