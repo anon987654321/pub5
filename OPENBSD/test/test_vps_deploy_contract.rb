@@ -1096,6 +1096,10 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes recovery, "lock_process_identity"
     assert_includes SOURCE, "def other_deploy_processes"
     assert_includes SOURCE, "pgrep -f 'OPENBSD/bin/vps-deploy'"
+    scanner = SOURCE[/^other_deploy_processes\(\) \{.*?^\}/m]
+    refute_nil scanner
+    assert_includes scanner, "(( rc == 1 )) || return 1"
+    assert_includes recovery, "cannot verify the process table"
     assert_includes recovery, "LIVE"
     assert_includes recovery, "AMBIGUOUS"
     assert_includes recovery, "RECOVERY AVAILABLE"
