@@ -118,8 +118,11 @@ class AccountMergerAndModerationTest < ActiveSupport::TestCase
     assert flag, "reporting must flag the content"
     assert_equal "open", flag.status
 
-    ModerationWorkflow.transition!(report: report, status: "resolved", decision_reason: "spam policy")
+    ModerationWorkflow.transition!(report: report, status: "resolved", decision_reason: "spam policy", actor: @member)
     report.reload
+    audit = Shared::AuditEvent.find_by!(action: "moderation.report.resolved", target_type: "Post", target_id: post.id)
+    assert_equal @member.id, audit.actor_id
+    assert_equal report.id, audit.metadata["report_id"]
     assert_equal "resolved", report.status
     assert_equal "spam policy", report.decision_reason
     assert report.decided_at.present?
