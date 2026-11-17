@@ -361,6 +361,22 @@ class VpsSafetyCheckTest < Minitest::Test
     end
   end
 
+  def test_vps_state_fleet_recovery_must_use_the_privileged_broker
+    with_fixture do |dir, _|
+      path = File.join(dir, "OPENBSD", "bin", "vps-state")
+      text = File.read(path).sub(
+        'Open3.capture2e("doas", "-n", broker, "deploy-run-list")',
+        'File.read("/var/db/pub5/deploy_runs")'
+      )
+      refute_equal File.read(path), text
+      File.write(path, text)
+      out, status = run_check(dir)
+
+      refute status.success?
+      assert_includes out, "vps-state fleet recovery reads must use the fixed root broker"
+    end
+  end
+
   def test_litestream_recovery_must_not_execute_rcctl_directly
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "restore_litestream.sh")
