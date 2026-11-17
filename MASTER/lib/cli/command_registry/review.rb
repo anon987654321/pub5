@@ -281,6 +281,14 @@ module Master
         refusal = Master::CLI::Pipeline::TreeTarget.refusal(options[:target])
         return Master::Result.err("fix: #{refusal}", category: :validation) if refusal
 
+        # A leading-slash word naming one of this CLI's own verbs ("/play") is
+        # a command, not a path. It used to survive this check, announce, pick a
+        # lane and model, then crash the execution trace on "scope does not
+        # exist: \"/play\"" and leave tree reasoning inconclusive in the same
+        # run (2026-11-17). Refused by name here, before any of that spends.
+        refusal = command_target_refusal(options[:target])
+        return Master::Result.err("fix: #{refusal}", category: :validation) if refusal
+
         fix_dispatch_run(scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, options:)
       end
 
@@ -1109,6 +1117,21 @@ module Master
         return Master::CLI::Pipeline::TreeTarget.names(raw) if Master::CLI::Pipeline::TreeTarget.list?(raw)
 
         raw.split(/\s+/).map { |token| token.sub(%r{\A\.\./(?=[A-Z]+(?:/|\z))}, "") }
+      end
+
+      # The leading-slash spellings /fix refuses: a word that is one of this
+      # CLI's own verbs, optionally with its argument words. A real absolute
+      # path has more than one segment and never matches; an unknown /word
+      # keeps the execution trace's own scope refusal.
+      def command_target_refusal(target)
+        raw = target.to_s.strip
+        first = raw.split(/\s+/).first.to_s
+        return unless first.match?(%r{\A/[A-Za-z][\w-]*\z})
+        return unless Master::CLI::CommandRegistry.slash_commands.include?(first)
+
+        "#{first} is a command of this CLI, not a /fix target - a target is one path " \
+          "inside a governed tree or a list of governed trees (a command's implementation " \
+          "lives in MASTER/lib/cli or the MASTER/lib module it dispatches to)"
       end
 
       def fix_targets(target, root:)

@@ -693,6 +693,25 @@ end
     assert_nil Master::CLI::CommandRegistry.execution_trace_scopes("")
   end
 
+  def test_slash_command_target_is_refused_before_any_lane_or_trace_runs
+    # /fix /play used to announce, pick a lane and model, then crash the
+    # execution trace on "scope does not exist" and leave tree reasoning
+    # inconclusive in the same run (2026-11-17).
+    refusal = Master::CLI::CommandRegistry.command_target_refusal("/play")
+    assert_match(%r{\A/play is a command of this CLI, not a /fix target}, refusal)
+    assert_includes refusal, "one path inside a governed tree"
+
+    assert_nil Master::CLI::CommandRegistry.command_target_refusal("RAILS")
+    assert_nil Master::CLI::CommandRegistry.command_target_refusal("MASTER/lib/io")
+    assert_nil Master::CLI::CommandRegistry.command_target_refusal("RAILS/brgen")
+    # A multi-segment absolute path is a path spelling, never a command.
+    assert_nil Master::CLI::CommandRegistry.command_target_refusal("/tmp/elsewhere")
+    # Unknown slash words keep the execution trace's own scope refusal.
+    assert_nil Master::CLI::CommandRegistry.command_target_refusal("/notacommand")
+    # The argument words ride along in the refusal: "/fix /play shakira".
+    assert_match(%r{\A/play is a command}, Master::CLI::CommandRegistry.command_target_refusal("/play shakira"))
+  end
+
   def test_bare_fix_resolves_to_the_current_master_checkout
     resolver = Class.new do
       include Master::CLI::Pipeline::TargetResolver
