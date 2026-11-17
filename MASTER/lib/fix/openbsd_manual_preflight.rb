@@ -388,7 +388,7 @@ module Master
           "status" => blocked.zero? ? "PASS" : "BLOCKED",
           "files" => files
         }
-      rescue TaskContract::Invalid => error
+      rescue TaskContract::Invalid, KeyError => error
         {
           "status" => "BLOCKED",
           "total_files" => 0,

@@ -80,7 +80,8 @@ class TestOpenbsdConfig < Minitest::Test
   end
 
   def test_full_stack_manual_gate_requires_every_mirror_configuration_source_read
-    preflight = { "source_reads" => [], "native_interfaces" => [] }
+    preflight = { "hostname" => "vm23", "os_release" => "0.0", "architecture" => "amd64",
+                  "source_reads" => [], "native_interfaces" => [], "manual_pages" => [] }
     refusal = Master::Fix::OpenBSDManualPreflight.mirror_configuration_refusal(
       preflight,
       root: Master::ROOT
