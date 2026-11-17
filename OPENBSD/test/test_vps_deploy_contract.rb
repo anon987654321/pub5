@@ -364,8 +364,21 @@ class VpsDeployContractTest < Minitest::Test
 
   def test_ci_broker_paths_are_installed_and_used_before_sync
     operator = File.read(File.join(ROOT, "OPENBSD", "OPERATOR.sh"), encoding: "UTF-8")
-    assert_includes operator, 'cp -R "$src/$d"/. "/$d"/'
-    assert_includes operator, 'for f in /usr/local/libexec/*(N)'
+
+    # OPERATOR.sh installs every Git-tracked mirror file individually. The old
+    # recursive tree copy belonged to BOOTSTRAP.sh and bypassed per-file owner,
+    # mode, backup and read-back verification.
+    assert_includes operator, 'ls-files -z -- OPENBSD/mirror'
+    assert_includes operator, 'install_one "$rel"'
+    assert_includes operator, 'install -o "$owner" -g "$group" -m "$mode" "$source_file" "$tmp"'
+    refute_includes operator, 'cp -R "$src/$d"/. "/$d"/'
+
+    helpers = Dir.glob(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "*"))
+                   .map { |path| path.delete_prefix("#{ROOT}/") }.sort
+    tracked, status = Open3.capture2("git", "-C", ROOT, "ls-files", "--error-unmatch", *helpers)
+    assert status.success?, "OpenBSD libexec helpers must be tracked mirror files"
+    assert_equal helpers, tracked.lines.map(&:chomp).sort
+
     assert_includes CI_SOURCE, 'doas /usr/local/sbin/pub5-admin ci-sync "$app"'
     assert_operator CI_SOURCE.index('doas /usr/local/sbin/pub5-admin ci-prepare "$app"'),
                     :<, CI_SOURCE.index("sync_from_repo\n")
