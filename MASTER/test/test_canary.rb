@@ -148,6 +148,14 @@ FLOW_OUTPUT = <<~OUT
     assert_includes call, "CHECK_AUTOFIX=0"
   end
 
+  def test_flow_runner_with_success_exit_but_no_results_is_not_a_pass
+    write("MASTER/checks/runner.rb", "")
+    got = by_name(runner(shell: ->(*_) { ["checks complete\n", Ok.new(true)] }).run)
+    refute got["flows"].ok
+    assert_equal "FAIL", got["flows"].state
+    assert_match(/returned no flow results/, got["flows"].detail)
+  end
+
   def test_flow_runner_nonzero_exit_after_partial_output_is_a_failure
     write("MASTER/checks/runner.rb", "")
     partial = FLOW_OUTPUT.lines.reject { |line| line.include?("demo_search FAIL") || line.include?("flow:demo_search") }.join
