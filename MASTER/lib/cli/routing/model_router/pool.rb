@@ -52,8 +52,12 @@ module Master
           # Every reachable model, strongest lanes first: what /model list shows.
           def pool(wait: false)
             start_pool_probes
-            lanes = [primary_models, cli_lane_models(wait:), agy_catalog_models, tier_ids, Master::Io::PaidTail.models, continuity_models,
-                     hosted_models, live_catalog_models, browser_chat_models, local_server_models, replicate_models, local_models]
+            # /model list and /model pick display the same ordering contract as
+            # /fix: configured default/primary tiers first, discovered/auth lanes
+            # afterwards, and keyless/local recovery at the end.
+            lanes = [tier_ids, primary_models, cli_lane_models(wait:), agy_catalog_models, Master::Io::PaidTail.models,
+                     continuity_models, hosted_models, live_catalog_models, browser_chat_models,
+                     local_server_models, replicate_models, local_models]
             lanes.flatten.uniq.select { |id| unreachable_reason(id, wait:).nil? }
           end
 
@@ -149,7 +153,13 @@ module Master
           end
 
           def tier_ids
-            Array(@rules["models"]&.values).flatten.filter_map do |row|
+            tiers = @rules["models"].is_a?(Hash) ? @rules["models"] : {}
+            # Hash insertion order once put an OpenRouter free tier before
+            # default. Make the order deliberate: the task tiers are the source
+            # of primary order; supplementary pools cannot leapfrog them.
+            priority = %w[default primary strong]
+            names = priority.select { |name| tiers.key?(name) } + (tiers.keys - priority)
+            names.flat_map { |name| Array(tiers[name]) }.filter_map do |row|
               id = row["id"] if row.is_a?(Hash)
               id unless id.to_s.start_with?("web-chat:")
             end
