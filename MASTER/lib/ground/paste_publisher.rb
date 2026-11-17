@@ -24,6 +24,7 @@ module Master
       AUTH_LINE = /\b(AUTHORIZATION|COOKIE|SET-COOKIE)\s*:\s*[^\r\n]*/i
       QUERY_SECRET = /([?&](?:token|access_token|refresh_token|api_key|key|secret|password)=)[^&\s]+/i
       URL_CREDENTIAL = %r{(://[^/\s:@]+:)[^/@\s]+@}
+      EMAIL_ADDRESS = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i
       OPERATION_VERBS = /\A\s*(?:(?:please|can you|could you|would you|tolong)\s+)*(?:fix|repair|run|execute|check|test|deploy|redeploy|build|commit|push|audit|inspect|verify|scan|render|generate|create|update|remove|delete|migrate|restart|start|stop|publish|install|revert|rollback|preflight|finish|complete|implement|refactor|streamline|clean|optimize|analyse|analyze|assess|restore|jalankan|semak|baiki|uji|bina|kemas kini|padam)\b/i
       PRIVATE_COMMANDS = %w[documents memory read write ask chat email mail message forget pair].freeze
       PRIVATE_SHELL_COMMANDS = %w[cat less more head tail sed awk grep rg find env printenv set history].freeze
@@ -105,6 +106,7 @@ module Master
         text = text.gsub(/\b(Bearer\s+)[A-Za-z0-9._+\/-]+/i, '\1[REDACTED]')
         text = text.gsub(QUERY_SECRET, '\1[REDACTED]')
         text = text.gsub(URL_CREDENTIAL, '\1[REDACTED]@')
+        text = text.gsub(EMAIL_ADDRESS, "[EMAIL REDACTED]")
         text = Master::Ground::Redactor.text(text)
         text = text.gsub(@root, "$REPO") unless @root.empty?
         home = File.expand_path(Dir.home)
