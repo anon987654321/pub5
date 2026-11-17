@@ -564,53 +564,94 @@ module Pub5Admin
 
   def validate_deploy_run!(record, run_id)
     raise "invalid deploy-run record" unless record.is_a?(Hash)
+
+    validate_deploy_run_identity!(record, run_id)
+    validate_deploy_run_lifecycle!(record)
+    validate_deploy_run_timestamps!(record)
+    validate_deploy_run_shas!(record)
+    validate_deploy_run_snapshot!(record)
+    validate_deploy_run_logs!(record)
+    validate_deploy_run_recovered_at!(record)
+    record
+  rescue ArgumentError
+    raise "invalid deploy-run timestamp"
+  end
+
+  def validate_deploy_run_identity!(record, run_id)
     raise "invalid deploy-run schema" unless record["schema"] == 1 && record["run_id"] == run_id
-    raise "invalid deploy-run target" unless record["target"].is_a?(String) &&
-      (APPS + %w[all rails]).include?(record["target"])
+    raise "invalid deploy-run target" unless record["target"].is_a?(String) && (APPS + %w[all rails]).include?(record["target"])
     raise "invalid deploy-run host" unless record["host"].is_a?(String) &&
       record["host"].bytesize.between?(1, 255) && !record["host"].match?(/[\x00-\x1f]/)
     raise "invalid deploy-run pid" unless record["pid"].is_a?(Integer) && record["pid"].positive?
     raise "invalid deploy-run owner identity" unless record["owner_identity"].is_a?(String) &&
       record["owner_identity"].match?(/\A[A-Za-z0-9_]{1,220}\z/)
+  end
+
+  def validate_deploy_run_lifecycle!(record)
     raise "invalid deploy-run status" unless %w[running ok failed recovered].include?(record["status"])
     raise "invalid deploy-run recovery state" unless %w[none pending complete].include?(record["recovery_state"])
     raise "invalid deploy-run stage" unless record["stage"].is_a?(String) &&
       record["stage"].bytesize.between?(1, 160) && record["stage"].match?(/\A[A-Za-z0-9_.:+\/-]+\z/)
     raise "invalid deploy-run snapshot marker" unless [true, false].include?(record["snapshot_recorded"])
+  end
+
+  def validate_deploy_run_timestamps!(record)
     %w[started_at updated_at].each do |field|
       value = record[field]
-      raise "invalid deploy-run #{field}" unless value.is_a?(String) && value.match?(/\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\z/)
+      raise "invalid deploy-run #{field}" unless valid_deploy_run_timestamp?(value)
+
       Time.iso8601(value)
     end
+  end
+
+  def valid_deploy_run_timestamp?(value)
+    value.is_a?(String) && value.match?(/\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\z/)
+  end
+
+  def validate_deploy_run_shas!(record)
     %w[pinned_sha previous_sha].each do |field|
       value = record[field]
-      raise "invalid deploy-run #{field}" unless value.nil? || value == "unknown" ||
+      valid = value.nil? || value == "unknown" ||
         (value.is_a?(String) && value.match?(/\A[0-9a-f]{7,40}\z/i))
+      raise "invalid deploy-run #{field}" unless valid
     end
+  end
+
+  def validate_deploy_run_snapshot!(record)
     services = record["started_services"]
-    raise "invalid deploy-run service snapshot" unless services.is_a?(Array) &&
-      services.length <= SERVICES.length && services.uniq == services &&
-      services.all? { |service| SERVICES.include?(service) }
+    valid_services = services.is_a?(Array) && services.length <= SERVICES.length &&
+      services.uniq == services && services.all? { |service| SERVICES.include?(service) }
+    raise "invalid deploy-run service snapshot" unless valid_services
+
     ports = record["ports"]
-    raise "invalid deploy-run port map" unless ports.is_a?(Hash) &&
+    valid_ports = ports.is_a?(Hash) &&
       ports.all? { |service, port| APPS.include?(service) && port.is_a?(Integer) && (1..65_535).cover?(port) }
-    order = record["restore_order"]
-    raise "invalid deploy-run restore order" unless order.is_a?(Array) &&
-      order.length <= APPS.length && order.uniq == order && order.all? { |service| APPS.include?(service) }
+    raise "invalid deploy-run port map" unless valid_ports
+    validate_deploy_run_restore_order!(record["restore_order"])
+  end
+
+  def validate_deploy_run_restore_order!(order)
+    valid = order.is_a?(Array) && order.length <= APPS.length &&
+      order.uniq == order && order.all? { |service| APPS.include?(service) }
+    raise "invalid deploy-run restore order" unless valid
+  end
+
+  def validate_deploy_run_logs!(record)
     %w[run_log aggregate_log].each do |field|
       value = record[field]
-      raise "invalid deploy-run #{field}" unless value.is_a?(String) &&
-        value.bytesize.between?(1, 2048) && value.match?(/\A\/[A-Za-z0-9_.\/-]+\z/)
+      valid = value.is_a?(String) && value.bytesize.between?(1, 2048) &&
+        value.match?(/\A\/[A-Za-z0-9_.\/-]+\z/)
+      raise "invalid deploy-run #{field}" unless valid
     end
-    if record.key?("recovered_at")
-      value = record["recovered_at"]
-      raise "invalid deploy-run recovered_at" unless value.is_a?(String) &&
-        value.match?(/\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\z/)
-      Time.iso8601(value)
-    end
-    record
-  rescue ArgumentError
-    raise "invalid deploy-run timestamp"
+  end
+
+  def validate_deploy_run_recovered_at!(record)
+    return unless record.key?("recovered_at")
+
+    value = record["recovered_at"]
+    raise "invalid deploy-run recovered_at" unless valid_deploy_run_timestamp?(value)
+
+    Time.iso8601(value)
   end
 
   def deploy_run_record(run_id, root: STAMP_DIR, verify_root: true)
@@ -632,49 +673,83 @@ module Pub5Admin
 
   def write_deploy_run(run_id, payload_json, root: STAMP_DIR, verify_root: true, output: $stdout)
     raise "invalid deploy-run id" unless deploy_run_id?(run_id)
-    payload = JSON.parse(payload_json)
-    raise "deploy-run update must be a JSON object" unless payload.is_a?(Hash)
-    allowed = %w[
-      schema run_id target host pid owner_identity status recovery_state stage
-      started_at updated_at pinned_sha previous_sha started_services ports
-      restore_order run_log aggregate_log recovered_at snapshot_recorded
-    ]
-    unknown = payload.keys - allowed
-    raise "unknown deploy-run field(s): #{unknown.join(', ')}" unless unknown.empty?
 
+    payload = parse_deploy_run_payload(payload_json)
     directory = deploy_run_directory(root:, create: true, verify_root:)
     target = File.join(directory, "#{run_id}.json")
     raise "#{target} is a symlink; refusing deploy-run write" if File.symlink?(target)
     previous = deploy_run_record(run_id, root:, verify_root:)
-    immutable = %w[schema run_id target host pid owner_identity started_at run_log aggregate_log]
-    if previous
-      terminal = %w[ok recovered].include?(previous["status"]) ||
-                 (previous["status"] == "failed" && previous["recovery_state"] != "pending")
-      raise "terminal deploy-run receipt cannot be changed" if terminal
-      immutable.each do |field|
-        next unless payload.key?(field)
-        raise "deploy-run identity field #{field} cannot change" unless payload[field] == previous[field]
-      end
-      %w[pinned_sha previous_sha].each do |field|
-        next if previous[field].nil?
-        raise "deploy-run pinned field #{field} cannot change" if payload.key?(field) && payload[field] != previous[field]
-      end
-      if previous["snapshot_recorded"]
-        %w[started_services ports restore_order].each do |field|
-          raise "deploy-run snapshot field #{field} cannot change" if payload.key?(field) && payload[field] != previous[field]
-        end
-        raise "deploy-run snapshot marker cannot be cleared" if payload["snapshot_recorded"] == false
-      end
-      record = previous.merge(payload)
-    else
-      required = %w[schema run_id target host pid owner_identity status recovery_state stage started_at started_services ports restore_order run_log aggregate_log snapshot_recorded]
-      missing = required - payload.keys
-      raise "deploy-run creation missing field(s): #{missing.join(', ')}" unless missing.empty?
-      record = payload
-    end
+    record = merge_deploy_run_payload(payload, previous, run_id)
     record["updated_at"] = Time.now.utc.iso8601
     validate_deploy_run!(record, run_id)
+    write_deploy_run_record(directory, target, run_id, record, output)
+  end
 
+  def parse_deploy_run_payload(payload_json)
+    payload = JSON.parse(payload_json)
+    raise "deploy-run update must be a JSON object" unless payload.is_a?(Hash)
+
+    allowed = %w[schema run_id target host pid owner_identity status recovery_state stage
+      started_at updated_at pinned_sha previous_sha started_services ports restore_order
+      run_log aggregate_log recovered_at snapshot_recorded]
+    unknown = payload.keys - allowed
+    raise "unknown deploy-run field(s): #{unknown.join(', ')}" unless unknown.empty?
+    payload
+  end
+
+  def merge_deploy_run_payload(payload, previous, run_id)
+    return validate_deploy_run_creation!(payload, run_id) unless previous
+
+    validate_deploy_run_update!(payload, previous)
+    previous.merge(payload)
+  end
+
+  def validate_deploy_run_creation!(payload, run_id)
+    required = %w[schema run_id target host pid owner_identity status recovery_state stage started_at
+      started_services ports restore_order run_log aggregate_log snapshot_recorded]
+    missing = required - payload.keys
+    raise "deploy-run creation missing field(s): #{missing.join(', ')}" unless missing.empty?
+    payload
+  end
+
+  def validate_deploy_run_update!(payload, previous)
+    terminal = %w[ok recovered].include?(previous["status"]) ||
+      (previous["status"] == "failed" && previous["recovery_state"] != "pending")
+    raise "terminal deploy-run receipt cannot be changed" if terminal
+
+    validate_deploy_run_immutable_fields!(payload, previous)
+    validate_deploy_run_pinned_fields!(payload, previous)
+    validate_deploy_run_snapshot_fields!(payload, previous)
+  end
+
+  def validate_deploy_run_immutable_fields!(payload, previous)
+    fields = %w[schema run_id target host pid owner_identity started_at run_log aggregate_log]
+    fields.each do |field|
+      next unless payload.key?(field)
+
+      raise "deploy-run identity field #{field} cannot change" unless payload[field] == previous[field]
+    end
+  end
+
+  def validate_deploy_run_pinned_fields!(payload, previous)
+    %w[pinned_sha previous_sha].each do |field|
+      next if previous[field].nil?
+      next unless payload.key?(field)
+
+      raise "deploy-run pinned field #{field} cannot change" if payload[field] != previous[field]
+    end
+  end
+
+  def validate_deploy_run_snapshot_fields!(payload, previous)
+    return unless previous["snapshot_recorded"]
+
+    %w[started_services ports restore_order].each do |field|
+      raise "deploy-run snapshot field #{field} cannot change" if payload.key?(field) && payload[field] != previous[field]
+    end
+    raise "deploy-run snapshot marker cannot be cleared" if payload["snapshot_recorded"] == false
+  end
+
+  def write_deploy_run_record(directory, target, run_id, record, output)
     temporary = File.join(directory, ".#{run_id}.#{Process.pid}.#{SecureRandom.hex(6)}")
     begin
       File.open(temporary, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
@@ -716,21 +791,26 @@ module Pub5Admin
   def retain_newest_deploy_run_name(names, name, limit)
     if names.length < limit
       names << name
-      index = names.length - 1
-      while index.positive?
-        parent = (index - 1) / 2
-        break if names[parent] <= names[index]
-
-        names[parent], names[index] = names[index], names[parent]
-        index = parent
-      end
+      sift_deploy_run_heap_up(names, names.length - 1)
       return
     end
-
     return if name <= names[0]
 
     names[0] = name
-    index = 0
+    sift_deploy_run_heap_down(names, 0)
+  end
+
+  def sift_deploy_run_heap_up(names, index)
+    while index.positive?
+      parent = (index - 1) / 2
+      break if names[parent] <= names[index]
+
+      names[parent], names[index] = names[index], names[parent]
+      index = parent
+    end
+  end
+
+  def sift_deploy_run_heap_down(names, index)
     loop do
       left = index * 2 + 1
       break if left >= names.length
@@ -751,13 +831,22 @@ module Pub5Admin
   # and the final sort are bounded by max_scan. The full list remains diagnostic.
   def list_pending_deploy_runs(root: STAMP_DIR, verify_root: true, output: $stdout,
                                max_scan: DEPLOY_RUN_SCAN_LIMIT, max_pending: DEPLOY_RUN_PENDING_LIMIT)
+    validate_pending_deploy_run_limits!(max_scan, max_pending)
+    directory = deploy_run_directory(root:, create: false, verify_root:)
+    names, scanned = pending_deploy_run_names(directory, max_scan)
+    records = pending_deploy_run_records(names, root, verify_root, max_pending)
+    truncated = scanned > max_scan || records.length > max_pending
+    output_pending_deploy_runs(output, records.first(max_pending), truncated, scanned)
+  end
+
+  def validate_pending_deploy_run_limits!(max_scan, max_pending)
     raise "invalid deploy-run scan limit" unless max_scan.is_a?(Integer) && max_scan.positive?
     raise "invalid deploy-run pending limit" unless max_pending.is_a?(Integer) && max_pending.positive?
+  end
 
-    directory = deploy_run_directory(root:, create: false, verify_root:)
+  def pending_deploy_run_names(directory, max_scan)
     names = []
     scanned = 0
-    truncated = false
     if directory
       Dir.each_child(directory) do |name|
         next unless name.match?(/\A\d{8}T\d{6}Z-[a-z0-9_-]{1,32}-\d+\.json\z/)
@@ -766,18 +855,18 @@ module Pub5Admin
         retain_newest_deploy_run_name(names, name, max_scan)
       end
     end
-    truncated = scanned > max_scan
-    names.sort!.reverse!
+    [names.sort!.reverse!, scanned]
+  end
 
-    records = names.map do |name|
+  def pending_deploy_run_records(names, root, verify_root, max_pending)
+    names.map do |name|
       deploy_run_record(name.delete_suffix(".json"), root:, verify_root:)
     end.compact.select do |record|
       record["recovery_state"] == "pending" && %w[running failed].include?(record["status"])
-    end
-    if records.length > max_pending
-      truncated = true
-      records = records.first(max_pending)
-    end
+    end.first(max_pending + 1)
+  end
+
+  def output_pending_deploy_runs(output, records, truncated, scanned)
     output.puts(JSON.generate(
       pending: records,
       truncated: truncated,
