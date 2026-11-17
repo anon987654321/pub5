@@ -62,7 +62,7 @@ module Master
 
         destination = request.match(DESTINATION_RE)&.captures&.first
         destination.to_s.downcase == "vm23" &&
-          full_inventory_scope?(request) &&
+          (full_inventory_scope?(request) || complete_stack_components?(request)) &&
           !request.match?(/\b(?:except|excluding|leave\s+out|but\s+not)\b/i)
       end
 
@@ -124,7 +124,7 @@ module Master
         destination = request.match(DESTINATION_RE)&.captures&.first
         return false if destination && !VM23_DESTINATIONS.include?(destination.downcase)
 
-        complete_stack = complete_stack_components?(request)
+        complete_stack = self.class.complete_stack_components?(request)
         full_inventory = self.class.full_inventory_scope?(request)
         return false unless request.match?(REPOSITORY_TARGET_RE) || complete_stack
         return false if full_inventory && request.match?(/\b(?:except|excluding|leave\s+out|but\s+not)\b/i)
@@ -151,10 +151,10 @@ module Master
       # OPENBSD + the RAILS fleet + MASTER/web is the canonical full release.
       # Resolve this explicit three-part scope locally rather than asking a model
       # classifier that could omit the host mirror or web surface.
-      def complete_stack_components?(request)
+      def self.complete_stack_components?(request)
         request.match?(/\bopenbsd\b/i) &&
           request.match?(/\brails\b/i) &&
-          request.match?(/\bmaster\s*\/\s*web\b/i)
+          request.match?(/\bmaster\s*(?:\/\s*|\s+)web\b/i)
       end
 
       def repository_root(root)
