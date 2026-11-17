@@ -89,6 +89,14 @@ class OperatorIntentTest < Minitest::Test
              "an explicit third-party host must not be rewritten to vm23"
       assert intent.send(:repository_wide_deployment?, "please deploy pub5 to production", inventory),
              "an explicit production destination remains deterministic"
+      assert intent.send(:repository_wide_deployment?, "redeploy everything on vm23", inventory),
+             "everything means the complete registered deployment inventory"
+      refute intent.send(:repository_wide_deployment?, "redeploy everything except MASTER/web on vm23", inventory),
+             "an exclusion must never silently expand to the full inventory"
+      all = Master::CLI::OperatorIntent.new(root:, agent: Object.new).call("redeploy everything on vm23")
+      assert_equal :deploy, all.status
+      assert_equal "all", all.target
+      assert_equal %w[control_web city_app wardrobe_app private_service], all.selected
       assert intent.send(:repository_wide_deployment?, "redeploy OPENBSD, RAILS and MASTER/web to vm23", inventory),
              "the explicit three-part production stack is the canonical full release"
       direct = Master::CLI::OperatorIntent.new(root:, agent: Object.new).call(
