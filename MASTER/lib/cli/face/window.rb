@@ -56,50 +56,11 @@ module Master
         def initialize(turn:, ear: Ear.new, mouth: Mouth.new, input: $stdin, output: $stdout,
                        size: -> { Sizing.winsize }, event_bus: nil, size_mode: nil, prompt: nil,
                        cancel: nil)
-          @turn = turn
-          @cancel_turn = cancel
-          @ear = ear
-          @mouth = mouth
-          @input = input
-          @output = output
-          @size = size
-          @size_mode = size_mode
-          @prompt_provider = prompt
-          @prompt_at = nil
-          @prompt_text = nil
-          @prompt_error_reported = false
-          @lock = Mutex.new
-          @render_cv = ConditionVariable.new
-          @dirty = true
-          @painted_once = false
-          @last_render_state = nil
-          @next_frame_at = 0.0
-          @motion_until = nil
-          @settled = true
-          @reduced_motion = ENV["MASTER_REDUCED_MOTION"] == "1"
-          frame_budget = Master::Face::Contract.budget
-          @active_fps = Float(frame_budget.fetch("terminal_active_fps", 12)).clamp(1.0, 24.0)
-          @settle_fps = Float(frame_budget.fetch("terminal_settle_fps", 8)).clamp(1.0, 12.0)
-          @particle_budget = Integer(frame_budget.fetch("terminal_particles", 48)).clamp(0, 240)
-          @resize_poll = Float(frame_budget.fetch("terminal_resize_poll_ms", 500)).clamp(100.0, 1_000.0) / 1_000.0
-          @state = :idle
-          law_config = Master::Face::LawField.config
-          @law_field_visible = law_config.fetch("terminal_law_ring", true) != false
-          toggle = law_config.fetch("terminal_toggle_key", "ctrl-v").to_s
-          @law_toggle_key = toggle.casecmp("ctrl-v").zero? ? "\u0016" : toggle
-          @law_toggle_label = toggle.casecmp("ctrl-v").zero? ? "Ctrl+V" : toggle
-          @level = nil
-          @words = [ear.missing, mouth.missing].compact
-          @draft = +""
-          @closing = false
-          @retain_input_on_interrupt = false
-          @speech_interrupted = false
-          @motion = Motion.new(seed: ::Random.new_seed % 1_000_003)
-          @events = []
-          @jobs = []
-          @event_bus = event_bus
-          @event_unsubscribers = subscribe_to_bus(event_bus)
-          @opened = now
+          init_io(turn:, ear:, mouth:, input:, output:, size:, size_mode:, prompt:, cancel:)
+          init_paint_state
+          init_frame_budget
+          init_law_field
+          init_conversation(event_bus)
         end
 
         def run
@@ -113,91 +74,134 @@ module Master
           # Shutdown is a lifecycle boundary for every reader and painter.
           # Stop microphone capture cooperatively; then bound joins so a closed
           # tty cannot leave an orphaned thread behind.
-          @lock.synchronize do
-            @closing = true
-            @halt_ear = true
-            @render_cv.broadcast
-          end
-          hearing = @hearing
-          if hearing&.alive?
-            hearing.join(0.25)
-            hearing.kill if hearing.alive?
-            hearing.join(0.1)
-          end
-          if painter&.alive?
-            painter.join(0.25)
-            if painter.alive?
-              painter.kill
-              painter.join(0.1)
-            end
-          end
+          begin_shutdown
+          stop_hearing
+          stop_painter(painter)
           unsubscribe_from_bus
-          begin
-            @output.print("#{PLAIN}\e[?25h\e[?1049l")
-            @output.flush
-          rescue IOError, SystemCallError
-            # Terminal restoration is best-effort after its descriptor closes.
-            nil
-          end
+          restore_terminal
         end
 
         # One whole window as the escape sequences that draw it, t seconds
         # after the window opened. The events since the last frame go to the
         # face once.
         def screen(rows, cols, t)
-          state, level, jobs, words, draft, events = @lock.synchronize do
-            [@state, @level, @jobs.dup, @words.dup, @draft.dup, @events.slice!(0..)]
-          end
-
+          state, level, jobs, words, draft, events = snapshot_state
           transcript_rows = rows >= 20 ? 3 : 2
           content_rows = [rows - transcript_rows - 4, 1].max
           face_rows, face_cols = Sizing.fit(content_rows, cols, mode: @size_mode || Sizing.mode)
-          face = Face.frame(
-            state:,
-            rows: face_rows,
-            cols: face_cols,
-            t:,
-            level:,
-            events:,
-            motion: @motion,
-            swarm_budget: @particle_budget,
-            heard: user_speaking?(state),
-            viseme: current_viseme,
-            color: @output.respond_to?(:tty?) && @output.tty? && ENV["NO_COLOR"] != "1",
-            show_laws: @law_field_visible,
-          ).split("\n")
-
-          transcript = tail(column(jobs, words), transcript_rows, cols).map do |line|
-            line.empty? ? line : "#{DIM}#{line}#{PLAIN}"
-          end
-          color = @output.respond_to?(:tty?) && @output.tty? && ENV["NO_COLOR"] != "1"
-
-          body = [
-            heading(state, color:),
-            *stage(face, content_rows).map { |line| center_line(line, cols) },
-            *transcript,
-            "#{DIM}#{status(state)[0, cols]}#{PLAIN}",
-            prompt_line(draft, cols, color:),
-          ]
+          face = render_face(state, level, events, face_rows, face_cols, t)
+          body = body_lines(state, face, content_rows, transcript_lines(jobs, words, transcript_rows, cols),
+                            draft, cols, color?)
           # The cursor goes where the prompt was drawn; the body is a line short of
           # the window, so the prompt is not on the last row.
           prompt_row = [body.length, rows].min
           body = body.first(rows)
           body += Array.new(rows - body.length, "") if body.length < rows
 
-          painted = body.each_with_index.map do |line, i|
-            "\e[#{i + 1};1H#{line}\e[K"
-          end.join
+          painted = body.each_with_index.map { |line, i| "\e[#{i + 1};1H#{line}\e[K" }.join
           cursor_column = [draft.length + operator_prompt.length + 2, cols].min
           "\e[?25l#{painted}\e[#{prompt_row};#{cursor_column}H\e[?25h"
         end
 
         private
 
-        # Paint only when state/input changes, or while a semantic motion is
-        # active. Idle is one retained frame, not a 20 FPS screen saver.
-        # The reader and event callbacks only mark dirty and signal this loop;
-        # this remains the one owner of terminal painting.
+        # Boot is split into steps so initialize stays inside the density law;
+        # the calls run in the original assignment order.
+        def init_io(turn:, ear:, mouth:, input:, output:, size:, size_mode:, prompt:, cancel:)
+          @turn = turn
+          @cancel_turn = cancel
+          @ear = ear
+          @mouth = mouth
+          @input = input
+          @output = output
+          @size = size
+          @size_mode = size_mode
+          @prompt_provider = prompt
+          @prompt_at = nil
+          @prompt_text = nil
+          @prompt_error_reported = false
+        end
+
+        def init_paint_state
+          @lock = Mutex.new
+          @render_cv = ConditionVariable.new
+          @dirty = true
+          @painted_once = false
+          @last_render_state = nil
+          @next_frame_at = 0.0
+          @motion_until = nil
+          @settled = true
+          @reduced_motion = ENV["MASTER_REDUCED_MOTION"] == "1"
+        end
+
+        def init_frame_budget
+          frame_budget = Master::Face::Contract.budget
+          @active_fps = Float(frame_budget.fetch("terminal_active_fps", 12)).clamp(1.0, 24.0)
+          @settle_fps = Float(frame_budget.fetch("terminal_settle_fps", 8)).clamp(1.0, 12.0)
+          @particle_budget = Integer(frame_budget.fetch("terminal_particles", 48)).clamp(0, 240)
+          @resize_poll = Float(frame_budget.fetch("terminal_resize_poll_ms", 500)).clamp(100.0, 1_000.0) / 1_000.0
+        end
+
+        def init_law_field
+          law_config = Master::Face::LawField.config
+          @law_field_visible = law_config.fetch("terminal_law_ring", true) != false
+          toggle = law_config.fetch("terminal_toggle_key", "ctrl-v").to_s
+          @law_toggle_key = toggle.casecmp("ctrl-v").zero? ? "\u0016" : toggle
+          @law_toggle_label = toggle.casecmp("ctrl-v").zero? ? "Ctrl+V" : toggle
+        end
+
+        def init_conversation(event_bus)
+          @state = :idle
+          @level = nil
+          @words = [@ear.missing, @mouth.missing].compact
+          @draft = +""
+          @closing = false
+          @retain_input_on_interrupt = false
+          @speech_interrupted = false
+          @motion = Motion.new(seed: ::Random.new_seed % 1_000_003)
+          @events = []
+          @jobs = []
+          @event_bus = event_bus
+          @event_unsubscribers = subscribe_to_bus(event_bus)
+          @opened = now
+        end
+
+        # The bounded teardown steps of run, in order: cooperative capture
+        # stop, bounded joins, then terminal restoration.
+        def begin_shutdown
+          @lock.synchronize do
+            @closing = true
+            @halt_ear = true
+            @render_cv.broadcast
+          end
+        end
+
+        def stop_hearing
+          hearing = @hearing
+          return unless hearing&.alive?
+
+          hearing.join(0.25)
+          hearing.kill if hearing.alive?
+          hearing.join(0.1)
+        end
+
+        def stop_painter(painter)
+          return unless painter&.alive?
+
+          painter.join(0.25)
+          return unless painter.alive?
+
+          painter.kill
+          painter.join(0.1)
+        end
+
+        def restore_terminal
+          @output.print("#{PLAIN}\e[?25h\e[?1049l")
+          @output.flush
+        rescue IOError, SystemCallError
+          # Terminal restoration is best-effort after its descriptor closes.
+          nil
+        end
 
       end
 
@@ -205,57 +209,17 @@ module Master
         private
 
 
+        # Paint only when state/input changes, or while a semantic motion is
+        # active. Idle is one retained frame, not a 20 FPS screen saver.
+        # The reader and event callbacks only mark dirty and signal this loop;
+        # this remains the one owner of terminal painting.
         def paint_forever
           last_size = nil
           loop do
             rows, cols = @size.call
             size = [rows, cols]
             current = now
-            render = false
-            active = false
-            settling = false
-            frame_rate = nil
-
-            stopping = false
-            @lock.synchronize do
-              if @closing
-                stopping = true
-              else
-                active = !Master::Face::Contract.still_mode?(@state) && !@reduced_motion
-                settling = !active && !@reduced_motion && !@settled && !@motion_until.nil?
-                state_changed = @state != @last_render_state
-                size_changed = size != last_size
-                due = !@painted_once || size_changed
-
-                if active
-                  due ||= state_changed || current >= @next_frame_at
-                  frame_rate = @active_fps
-                elsif settling
-                  due ||= state_changed || current >= @next_frame_at || current >= @motion_until
-                  frame_rate = @settle_fps if current < @motion_until
-                else
-                  due ||= state_changed || (@dirty && current >= @next_frame_at)
-                end
-
-                if due
-                  render = true
-                  @dirty = false
-                  @painted_once = true
-                  @last_render_state = @state
-                  @settled = true if settling && current >= @motion_until
-                else
-                  deadline = if active
-                               @next_frame_at
-                             elsif settling
-                               [@next_frame_at, @motion_until].min
-                             else
-                               current + @resize_poll
-                             end
-                  wait_for = [[deadline - current, 0.01].max, @resize_poll].min
-                  @render_cv.wait(@lock, wait_for)
-                end
-              end
-            end
+            stopping, render, active, settling, frame_rate = plan_frame(size, last_size, current)
 
             break if stopping
             next unless render
@@ -268,10 +232,95 @@ module Master
             @next_frame_at = current if !frame_rate && !settling
           end
         rescue IOError, SystemCallError
+          halt_render_loop
+        end
+
+        # One painter tick under the lock: decide whether a frame is due, and
+        # when it is not, sleep on the render condition until the next
+        # deadline. Returns [stopping, render, active, settling, frame_rate].
+        def plan_frame(size, last_size, current)
+          @lock.synchronize do
+            if @closing
+              [true, false, false, false, nil]
+            else
+              plan_open_frame(size, last_size, current)
+            end
+          end
+        end
+
+        # The open-face branch of the frame plan; runs inside @lock and
+        # returns the same plan for the paint loop.
+        def plan_open_frame(size, last_size, current)
+          active = !Master::Face::Contract.still_mode?(@state) && !@reduced_motion
+          settling = !active && !@reduced_motion && !@settled && !@motion_until.nil?
+          frame_rate = frame_rate_for(active, settling, current)
+          if frame_due?(size, last_size, current, active, settling)
+            @dirty = false
+            @painted_once = true
+            @last_render_state = @state
+            @settled = true if settling && current >= @motion_until
+            [false, true, active, settling, frame_rate]
+          else
+            @render_cv.wait(@lock, frame_wait(active, settling, current))
+            [false, false, active, settling, frame_rate]
+          end
+        end
+
+        def frame_due?(size, last_size, current, active, settling)
+          due = !@painted_once || size != last_size
+          state_changed = @state != @last_render_state
+          if active
+            due || state_changed || current >= @next_frame_at
+          elsif settling
+            due || state_changed || current >= @next_frame_at || current >= @motion_until
+          else
+            due || state_changed || (@dirty && current >= @next_frame_at)
+          end
+        end
+
+        def frame_rate_for(active, settling, current)
+          if active
+            @active_fps
+          elsif settling && current < @motion_until
+            @settle_fps
+          end
+        end
+
+        def frame_wait(active, settling, current)
+          deadline = if active
+                       @next_frame_at
+                     elsif settling
+                       [@next_frame_at, @motion_until].min
+                     else
+                       current + @resize_poll
+                     end
+          [[deadline - current, 0.01].max, @resize_poll].min
+        end
+
+        def halt_render_loop
           @lock.synchronize do
             @closing = true
             @render_cv.broadcast
           end
+        end
+
+        # One face frame as lines: the state, the motion budget and the
+        # viseme go in, the drawn rows come out.
+        def render_face(state, level, events, rows, cols, t)
+          Face.frame(
+            state:,
+            rows:,
+            cols:,
+            t:,
+            level:,
+            events:,
+            motion: @motion,
+            swarm_budget: @particle_budget,
+            heard: user_speaking?(state),
+            viseme: current_viseme,
+            color: color?,
+            show_laws: @law_field_visible,
+          ).split("\n")
         end
 
         def now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -349,7 +398,7 @@ module Master
           heard = listen
           if heard && !@closing
             if @suppress_heard
-              message = @retain_input_on_interrupt ? "listening interrupted - typed input retained" : "listening interrupted"
+              message = interrupt_message
               set(:idle, [message])
             else
               answer(heard)
@@ -487,23 +536,39 @@ module Master
 
           set(:listening, ["listening - say stop or type to interrupt"])
           nudge(:listen)
-          heard = @ear.listen(
-            stop: -> { @halt_ear || @closing },
-            on_partial: ->(text) { @heard_at = Process.clock_gettime(Process::CLOCK_MONOTONIC); show(["heard: #{text}"]) }
-          )
+          heard = take_listen
           if @halt_ear && @suppress_heard
-            message = @retain_input_on_interrupt ? "listening interrupted - typed input retained" : "listening interrupted"
-            set(:idle, [message])
+            set(:idle, [interrupt_message])
             return
           end
 
+          normalize_heard(heard)
+        rescue StandardError => e
+          set(:idle, ["mic0: #{e.message}"])
+          nil
+        end
+
+        # The take itself; partials are shown as they arrive and stamp the
+        # heard clock for the echo-safe speaking check.
+        def take_listen
+          @ear.listen(
+            stop: -> { @halt_ear || @closing },
+            on_partial: ->(text) { @heard_at = Process.clock_gettime(Process::CLOCK_MONOTONIC); show(["heard: #{text}"]) }
+          )
+        end
+
+        # One message for both interrupted-take paths; the typed letter can
+        # be retained, and the words say so.
+        def interrupt_message
+          @retain_input_on_interrupt ? "listening interrupted - typed input retained" : "listening interrupted"
+        end
+
+        # A stripped transcript, or nil with the heard-nothing words.
+        def normalize_heard(heard)
           heard = heard.to_s.strip
           heard = nil if heard.empty?
           set(:idle, ["heard nothing"]) unless heard
           heard
-        rescue StandardError => e
-          set(:idle, ["mic0: #{e.message}"])
-          nil
         end
 
         def stop_key?
@@ -555,11 +620,7 @@ module Master
 
 
         def answer(text)
-          if EXIT_WORDS.include?(text.to_s.strip.downcase)
-            @exit_requested = true
-            @closing = true
-            return
-          end
+          return if exit_requested_by?(text)
 
           set(:thinking, ["you: #{text}"])
           result = think(text)
@@ -578,6 +639,22 @@ module Master
             return
           end
 
+          speak_reply(text, reply)
+        end
+
+        # An exit word leaves the face instead of asking the turn, as Ctrl-D
+        # does at the prompt.
+        def exit_requested_by?(text)
+          return false unless EXIT_WORDS.include?(text.to_s.strip.downcase)
+
+          @exit_requested = true
+          @closing = true
+          true
+        end
+
+        # The reply is spoken when the mouth can, with the viseme letters cut
+        # from the reply's syllable onsets; otherwise the text alone remains.
+        def speak_reply(text, reply)
           if @mouth.available?
             @speech_interrupted = false
             set(:speaking, [reply])
@@ -585,18 +662,7 @@ module Master
             spoken = @mouth.say(reply, on_level: ->(level) { change { @level = level; advance_viseme(level) } },
                                on_chunk: ->(part) { show([part]) }, stop: -> { stop_key? })
             unless spoken
-              message = if @closing
-                          "voice0: speech stopped while leaving face"
-                        elsif @speech_interrupted
-                          "voice0: speech interrupted - reply remains visible"
-                        else
-                          detail = (@mouth.last_error || "audio did not play").to_s.lines.first.to_s.strip
-                          detail = detail.sub(/\Avoice0:\s*/i, "")
-                          detail = "#{detail[0, 96]}..." if detail.length > 96
-                          "voice0: audio unavailable - reply remains visible as text (#{detail})"
-                        end
-              @speech_interrupted = false
-              set(:idle, [reply, message])
+              finish_speech(reply)
               return
             end
             @speech_interrupted = false
@@ -604,6 +670,28 @@ module Master
           set(:idle, [reply])
           nudge(:nod)
           picture(text) if text.to_s.split.size >= 4
+        end
+
+        # Speech stopped or failed: the reply remains visible, with the
+        # reason why no audio played.
+        def finish_speech(reply)
+          message = if @closing
+                      "voice0: speech stopped while leaving face"
+                    elsif @speech_interrupted
+                      "voice0: speech interrupted - reply remains visible"
+                    else
+                      detail = speech_failure_detail
+                      "voice0: audio unavailable - reply remains visible as text (#{detail})"
+                    end
+          @speech_interrupted = false
+          set(:idle, [reply, message])
+        end
+
+        def speech_failure_detail
+          detail = (@mouth.last_error || "audio did not play").to_s.lines.first.to_s.strip
+          detail = detail.sub(/\Avoice0:\s*/i, "")
+          detail = "#{detail[0, 96]}..." if detail.length > 96
+          detail
         end
 
         # The still is created only after a real reply, so a failed model turn
@@ -641,34 +729,43 @@ module Master
         end
 
         def cancel_worker(worker, children)
-          cooperative = false
-          if @cancel_turn
-            begin
-              cooperative = @cancel_turn.call(worker, children) == true
-            rescue StandardError => e
-              Master::Ground::Swallow.log(e, context: "face.cancel_turn", event_bus: @event_bus)
-            end
-          end
-          if cooperative
+          if cooperative_cancel?(worker, children)
             # The active Fold owns an admitted bounded transaction. Let its
             # cancellation checkpoint close that transaction before returning.
             set(:thinking, ["cancellation requested - finishing safe step"])
             worker.join
           else
-            worker.kill if worker.alive?
-            children.kill_all
-            unless @cancel_turn
-              @event_bus&.publish(
-                "user:interrupt", reason: "face", source: "face", children:
-              )
-            end
-            worker.join(1)
+            abandon_worker(worker, children)
           end
           if @closing
             Master::Result.err("face0: turn cancelled - leaving face", category: :timeout)
           else
             Master::Result.err("face0: turn interrupted - ready for input", category: :abort)
           end
+        end
+
+        # The turn hook cancels cooperatively when it answers true; a hook
+        # failure is logged and falls through to the hard stop.
+        def cooperative_cancel?(worker, children)
+          return false unless @cancel_turn
+
+          begin
+            @cancel_turn.call(worker, children) == true
+          rescue StandardError => e
+            Master::Ground::Swallow.log(e, context: "face.cancel_turn", event_bus: @event_bus)
+            false
+          end
+        end
+
+        def abandon_worker(worker, children)
+          worker.kill if worker.alive?
+          children.kill_all
+          unless @cancel_turn
+            @event_bus&.publish(
+              "user:interrupt", reason: "face", source: "face", children:
+            )
+          end
+          worker.join(1)
         end
 
         # turn answers with a Result, or with the text it streamed.
@@ -686,6 +783,14 @@ module Master
       module WindowStateAndEvents
         private
 
+
+        # One snapshot for a painted frame; the queued events leave exactly
+        # once, handed to the face from here.
+        def snapshot_state
+          @lock.synchronize do
+            [@state, @level, @jobs.dup, @words.dup, @draft.dup, @events.slice!(0..)]
+          end
+        end
 
         def set(state, words)
           change do
@@ -864,6 +969,30 @@ module Master
           text.split("\n").flat_map do |para|
             para.scan(/\S.{0,#{[cols - 1, 1].max}}(?=\s|\z)|\S{#{cols}}/).map(&:strip)
           end
+        end
+
+        # Colour is a tty fact: pipes and NO_COLOR=1 get the plain face.
+        def color?
+          @output.respond_to?(:tty?) && @output.tty? && ENV["NO_COLOR"] != "1"
+        end
+
+        # The transcript column under the stage, dimmed; blank lines stay bare.
+        def transcript_lines(jobs, words, rows, cols)
+          tail(column(jobs, words), rows, cols).map do |line|
+            line.empty? ? line : "#{DIM}#{line}#{PLAIN}"
+          end
+        end
+
+        # Head, stage, transcript, status and prompt in the row order the
+        # window paints them.
+        def body_lines(state, face, content_rows, transcript, draft, cols, color)
+          [
+            heading(state, color:),
+            *stage(face, content_rows).map { |line| center_line(line, cols) },
+            *transcript,
+            "#{DIM}#{status(state)[0, cols]}#{PLAIN}",
+            prompt_line(draft, cols, color:),
+          ]
         end
       end
 
