@@ -100,30 +100,39 @@ module Pub5Admin
   end
 
   def ensure_ci_lock
-    if File.symlink?(STAMP_DIR)
-      raise "#{STAMP_DIR} is a symlink; refusing root write"
-    end
+    ensure_ci_lock_directory!
+    path = File.join(STAMP_DIR, "ci.lock")
+    ensure_ci_lock_file!(path)
+    assign_ci_lock_owner!(path)
+    puts path
+    0
+  rescue ArgumentError
+    raise "account dev is missing; cannot establish CI lock ownership"
+  end
+
+  def ensure_ci_lock_directory!
+    raise "#{STAMP_DIR} is a symlink; refusing root write" if File.symlink?(STAMP_DIR)
+
     FileUtils.mkdir_p(STAMP_DIR, mode: 0o755)
     directory = File.lstat(STAMP_DIR)
-    raise "#{STAMP_DIR} is not a root-owned, non-writable directory" unless
-      directory.directory? && directory.uid.zero? && (directory.mode & 0o022).zero?
+    valid = directory.directory? && directory.uid.zero? && (directory.mode & 0o022).zero?
+    raise "#{STAMP_DIR} is not a root-owned, non-writable directory" unless valid
     File.chmod(0o755, STAMP_DIR) unless (directory.mode & 0o777) == 0o755
+  end
 
-    path = File.join(STAMP_DIR, "ci.lock")
+  def ensure_ci_lock_file!(path)
     if File.exist?(path) || File.symlink?(path)
       lock = File.lstat(path)
       raise "#{path} is not a regular file" unless lock.file? && !lock.symlink?
     else
       File.open(path, File::WRONLY | File::CREAT | File::EXCL, 0o644) {}
     end
+  end
 
+  def assign_ci_lock_owner!(path)
     dev = Etc.getpwnam("dev")
     File.chown(dev.uid, -1, path)
     File.chmod(0o644, path)
-    puts path
-    0
-  rescue ArgumentError
-    raise "account dev is missing; cannot establish CI lock ownership"
   end
 
   def write_stamp(app, sha, status)
