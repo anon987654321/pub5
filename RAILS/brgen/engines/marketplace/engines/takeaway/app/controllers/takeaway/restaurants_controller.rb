@@ -69,7 +69,7 @@ class Takeaway::RestaurantsController < Takeaway::BaseController
           raise ActiveRecord::RecordInvalid, @restaurant
         end
       end
-      @restaurant.marketplace_store&.update!(active: @restaurant.active?)
+      sync_marketplace_store!
     end
     redirect_to restaurant_path(@restaurant)
   rescue ActiveRecord::RecordInvalid => error
@@ -88,12 +88,12 @@ class Takeaway::RestaurantsController < Takeaway::BaseController
       # A closed kitchen may stop trading, but its orders are the customer's
       # receipt and must outlive the restaurant's public listing.
       @restaurant.update!(active: false)
-      @restaurant.marketplace_store&.update!(active: false)
+      sync_marketplace_store!(active: false)
       redirect_to restaurants_path, notice: t("flash.takeaway.restaurant_archived")
     else
-      store = @restaurant.marketplace_store
+      store_id = @restaurant.marketplace_store_id
       @restaurant.destroy!
-      store&.update!(active: false)
+      Marketplace::Store.where(id: store_id).update_all(active: false, updated_at: Time.current) if store_id
       redirect_to restaurants_path
     end
   end
@@ -113,6 +113,11 @@ class Takeaway::RestaurantsController < Takeaway::BaseController
   def load_marketplace_store
     store_id = params[:marketplace_store_id].presence
     @marketplace_store = Current.user.marketplace_stores.find_by!(id: store_id, vertical: "restaurants") if store_id
+  end
+
+  def sync_marketplace_store!(active: @restaurant.active?)
+    store_id = @restaurant.marketplace_store_id
+    Marketplace::Store.where(id: store_id).update_all(active:, updated_at: Time.current) if store_id
   end
 
   def save_opening_hours!
