@@ -1,114 +1,133 @@
-@use "stack" as *;
-@use "shell_widgets";
+// MyToonz — entry stylesheet.
+//
+// Cascade architecture (MASTER/data/css_architecture.yml): this entry owns
+// the one @layer order statement. The shared foundation sheets (stack,
+// shell_widgets) load into base; the dialect :root tokens deliberately
+// override shared palette defaults, so they sit in tokens — the layer after
+// base, which is exactly the "dialect beats shared default" precedence the
+// old unlayered source order gave them as the last :root in the file. Author
+// rules load into components.
+@use "sass:meta";
 @use "dialect_tokens" as xroot;
 
-:root {
-  @include xroot.app-root-tokens;
-  --turbo-progress-bar-color: var(--accent);
+@layer reset, tokens, base, components, utilities, autofix;
+
+@layer base {
+  @include meta.load-css("stack");
+  @include meta.load-css("shell_widgets");
 }
 
-nav .brand {
-  font-weight: 800;
-  letter-spacing: -0.02em;
+@layer tokens {
+  :root {
+    @include xroot.app-root-tokens;
+    --turbo-progress-bar-color: var(--accent);
+  }
 }
 
-nav a {
-  color: var(--text);
-  font-weight: 600;
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-  padding-bottom: 2px;
-  transition: border-color 120ms ease, color 120ms ease;
-}
+@layer components {
+  nav .brand {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
 
-nav a:hover {
-  border-bottom-color: var(--border);
-}
+  nav a {
+    color: var(--text);
+    font-weight: 600;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    padding-bottom: 2px;
+    transition: border-color 120ms ease, color 120ms ease;
+  }
 
-nav a[aria-current="page"] {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-}
+  nav a:hover {
+    border-bottom-color: var(--border);
+  }
 
-.comic-form {
-  display: grid;
-  gap: 0.75rem;
-  max-width: 520px;
-  margin-bottom: 1.5rem;
-}
+  nav a[aria-current="page"] {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
 
-.comic-form textarea,
-.comic-form select {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  padding: 0.5rem 0.75rem;
-  font: inherit;
-}
+  .comic-form {
+    display: grid;
+    gap: 0.75rem;
+    max-width: 520px;
+    margin-bottom: 1.5rem;
+  }
 
-.comic-form textarea:focus,
-.comic-form select:focus {
-  outline: none;
-  border-color: var(--accent);
-}
+  .comic-form textarea,
+  .comic-form select {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 0.5rem 0.75rem;
+    font: inherit;
+  }
 
-.provider-consent {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  line-height: 1.4;
-}
+  .comic-form textarea:focus,
+  .comic-form select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
 
-.provider-consent input {
-  margin-top: 0.1875rem;
-}
+  .provider-consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    line-height: 1.4;
+  }
 
-.comic-grid {
-  display: grid;
-  gap: 1.5rem;
-  width: min(720px, 100%);
-}
+  .provider-consent input {
+    margin-top: 0.1875rem;
+  }
 
-.comic-grid article {
-  padding: 1.25rem 1.5rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-}
+  .comic-grid {
+    display: grid;
+    gap: 1.5rem;
+    width: min(720px, 100%);
+  }
 
-.status-badge {
-  display: inline-block;
-  padding: 0.125rem 0.5rem;
-  border: 1.5px solid currentColor;
-  border-radius: 0;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
+  .comic-grid article {
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+  }
 
-.status-badge--pending,
-.status-badge--processing {
-  background: color-mix(in srgb, var(--color-warning) 22%, var(--bg));
-  color: var(--color-warning);
-}
+  .status-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border: 1.5px solid currentColor;
+    border-radius: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
 
-.status-badge--completed {
-  background: color-mix(in srgb, var(--color-success) 22%, var(--bg));
-  color: var(--color-success);
-}
+  .status-badge--pending,
+  .status-badge--processing {
+    background: color-mix(in srgb, var(--color-warning) 22%, var(--bg));
+    color: var(--color-warning);
+  }
 
-.status-badge--failed {
-  background: color-mix(in srgb, var(--color-danger) 22%, var(--bg));
-  color: var(--color-danger);
-}
+  .status-badge--completed {
+    background: color-mix(in srgb, var(--color-success) 22%, var(--bg));
+    color: var(--color-success);
+  }
 
-.comic-gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
-  gap: 1.25rem;
-}
+  .status-badge--failed {
+    background: color-mix(in srgb, var(--color-danger) 22%, var(--bg));
+    color: var(--color-danger);
+  }
 
-.comic-gallery img {
-  width: 100%;
-  display: block;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
+  .comic-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+    gap: 1.25rem;
+  }
+
+  .comic-gallery img {
+    width: 100%;
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+  }
 }
