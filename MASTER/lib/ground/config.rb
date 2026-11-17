@@ -44,7 +44,8 @@ module Master
         # ModelRouter#fallback_chain. It is a free model, so the repo works
         # with or without an OpenRouter balance.
         "model" => "nvidia/nemotron-3-super-120b-a12b:free",
-        "web_host" => "127.0.0.1",
+        "model_preference_migrated" => false,
+        "web_host => "127.0.0.1",
         "web_public_url" => "https://ai.brgen.no",
         "web_port" => DEFAULT_WEB_PORT,
         "budget_max" => BUDGET_MAX_DEFAULT,
@@ -103,6 +104,7 @@ module Master
         errors << "history_max must be >= 0" unless history_max >= 0
         errors << "cache_ttl must be >= 0" unless cache_ttl >= 0
         errors << "model must not be empty" if model.to_s.empty?
+        errors << "model_preference_migrated must be boolean" unless [true, false].include?(self["model_preference_migrated"])
         errors + misspelled_keys
       end
 
@@ -150,7 +152,17 @@ module Master
         raw = YAML.safe_load_file(@path, aliases: true)
         loaded = raw.is_a?(Hash) ? stringify_keys(raw) : {}
         misspelled_keys(loaded).each { |issue| warn "config: #{issue}" }
-        deep_merge(defaults, loaded)
+        migrated = LEGACY_MODEL_PREFERENCES[loaded["model"]]
+        if migrated && loaded["model_preference_migrated"] != true
+          loaded["model"] = migrated
+          loaded["model_preference_migrated"] = true
+          settings = deep_merge(defaults, loaded)
+          write_atomic(@path, settings.to_yaml, fsync: true, mode: 0o600)
+          warn "config: migrated legacy model preference to the current routed default"
+          settings
+        else
+          deep_merge(defaults, loaded)
+        end
       rescue Psych::Exception => e
         warn "config: failed to parse #{@path}: #{e.message}"
         defaults
