@@ -43,8 +43,12 @@ module Studio
 
         spec = film_engine(name)
         pricing = spec.fetch("pricing")
-        duration = Integer(input_value(input, "duration") || 5)
-        raise ArgumentError, "MiniMax video duration must be 4-15 seconds" unless duration.between?(4, 15)
+        raw_duration = input_value(input, "duration") || 5
+        valid_integer = raw_duration.is_a?(Integer) || raw_duration.to_s.match?(/\A\d+\z/)
+        raise ArgumentError, "MiniMax video duration must be an integer from 4 to 15 seconds" unless valid_integer
+
+        duration = Integer(raw_duration)
+        raise ArgumentError, "MiniMax video duration must be an integer from 4 to 15 seconds" unless duration.between?(4, 15)
 
         rates = pricing.fetch("usd_per_second")
         resolution = input_value(input, "resolution") || "768P"
