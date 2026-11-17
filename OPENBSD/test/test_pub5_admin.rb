@@ -605,6 +605,8 @@ class Pub5AdminTest < Minitest::Test
   end
 
   def test_pending_deploy_run_list_is_fixed_bounded_and_reports_truncation
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
+    assert_includes source, "retain_newest_deploy_run_name(names, name, max_scan)"
     Dir.mktmpdir("pub5-admin-run-") do |root|
       run_ids = [
         "20261117T010000Z-all-12360",
