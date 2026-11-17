@@ -37,6 +37,7 @@ class PastePublisherTest < Minitest::Test
     report = publisher.build_report(operation: "/check", status: "success", output: raw)
 
     assert_includes report, "status: success"
+    assert_includes report, "operation: /check"
     assert_includes report, "[PRIVATE KEY BLOCK REDACTED]"
     assert_includes report, "$REPO/MASTER/bin/check"
     %w[hunter2 master-secret db-secret secret one-time private-key-material].each { |secret| refute_includes report, secret }
@@ -130,6 +131,8 @@ class PastePublisherTest < Minitest::Test
     end
     assert Master::Ground::PastePublisher.operation_request?("/fix RAILS")
     assert Master::Ground::PastePublisher.operation_request?("please run the tests")
+    assert Master::Ground::PastePublisher.operation_request?("also assess the Qwen proposal")
+    assert Master::Ground::PastePublisher.operation_request?("go on")
     assert Master::Ground::PastePublisher.operation_request?("!zsh OPENBSD/bin/rehearse")
     refute Master::Ground::PastePublisher.operation_request?("!cat secrets.env")
   end
