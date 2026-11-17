@@ -10,6 +10,9 @@
 # Keys the host already carries are NOT copied here. Use them.
 en:
   takeaway:
+    setup_store_linked: "This restaurant will be connected to your Marketplace storefront."
+    setup_draft_hint: "Your restaurant starts as a private draft. Add your menu and opening hours, then publish it when it is ready."
+    incoming_order_from: "New order from %{name}"
     sort_label: "Sort restaurants"
     sorts:
       popular: "Best rated"
