@@ -1,0 +1,28 @@
+---
+id: case-20261117-005708
+opened_at: '2026-11-17T00:57:08Z'
+revision: d2e959b8
+status: ruled
+question: the split a size law proposes would move puts into new files
+sides:
+- law: SMALL_FILES
+  statement:
+  severity: warning
+  bare_detector: false
+  precedents_citing:
+  - P-001
+  - P-8
+  taste_rows_touching: []
+- law: NO_PUTS
+  statement:
+  severity: warning
+  bare_detector: true
+  precedents_citing:
+  - P-003
+  taste_rows_touching: []
+note: the court assembles the brief and waits; a collision of two living laws is the
+  operator's ruling to make
+ruling:
+  winner: SMALL_FILES
+  rationale: 'test collision: the move is real and the puts are interface'
+  ruled_at: '2026-11-17T00:57:08Z'
