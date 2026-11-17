@@ -89,7 +89,7 @@ if File.file?(guard_wrapper_path) && !File.symlink?(guard_wrapper_path) &&
                         !guard_impl.include?("GUARD_REPO") &&
                         !guard_impl.include?("/home/dev/pub5/OPENBSD/mirror/usr/local/libexec/stale_ci_cleanup.ksh") &&
                         guard_impl.include?("automatic core restart disabled") &&
-                        !guard_impl.match?(/^\\s*ksh\\s+\\$EMERGENCY\\b/m)
+                        !guard_impl.include?("ksh $EMERGENCY")
   failures << "root load guard must reject checkout helpers and never auto-restart core production services" unless guard_impl_contract
   operator = File.read(File.join(OPENBSD, "BOOTSTRAP.sh"))
   source_list = operator[/typeset -a privileged_sources=\(.*?^  \)/m].to_s
