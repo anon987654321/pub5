@@ -567,7 +567,7 @@ module Master
             operation:, status:, output: report_output
           )
           if outcome.success?
-            terminal_puts("log0: published #{outcome.url} (#{outcome.service}; expires in 1 day)")
+            terminal_puts("log0: published #{outcome.url} (#{outcome.service}; expires in #{outcome.expires_in})")
           elsif !%i[disabled visitor].include?(outcome.error)
             terminal_puts("log0: upload unavailable; operation result remains local")
           end
