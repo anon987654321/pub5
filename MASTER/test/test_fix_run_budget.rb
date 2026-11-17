@@ -335,11 +335,11 @@ class TestFixRunBudget < Minitest::Test
     _bus, say = pulse_bus
     run.announce(target: "MASTER", bus: _bus)
     @now = 10.0
-    say.call("llm:send", model: "web-chat:kimi")
+    say.call("llm:send", model: "web-chat:chatgpt")
     @now = 28.0
     assert_includes run.beat, "waiting on web-chat:kimi for 18s"
 
-    say.call("llm:call_finished", model: "web-chat:kimi")
+    say.call("llm:call_finished", model: "web-chat:chatgpt")
     @now = 56.0
     refute_match(/waiting on web-chat:kimi/, run.beat)
     assert_equal 0, run.counts.fetch(:attempts), "an ordinary completion without status is not a failed attempt"
