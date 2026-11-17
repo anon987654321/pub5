@@ -177,12 +177,27 @@ module Master
 
       attr_reader :root, :workspace_root, :actor, :log_path, :execution_mutex
 
+      # Defence in depth for every programmatic caller, including callers that
+      # bypass TurnRouter and the fix-here terminal wrapper.
+      def production_host?
+        return true if ENV["PUB5_PRODUCTION_HOST"] == "1"
+        return false unless RUBY_PLATFORM.match?(/openbsd/i)
+
+        File.file?("/etc/master.env") && File.directory?("/home/dev/pub5/MASTER")
+      rescue SystemCallError
+        false
+      end
+
       # The one validated execution door. The adapter is injected because boot
       # owns the live agent/scanner/law dependencies; Kernel owns the contract
       # scope, process lock and terminal lifecycle. Validation happens before
       # acquiring the lock or starting a run receipt.
       def run(adapter:, contract:, target:, max_passes:, budget_seconds:, incremental:,
               requested:, cancellation: nil)
+        if production_host?
+          raise TaskContract::Invalid,
+                "/fix is disabled on production vm23; run repairs, scans and tests on the development workstation"
+        end
         raise TaskContract::Invalid, "Kernel#run requires a TaskContract" if contract.nil?
 
         validated = TaskContract.coerce(contract)
