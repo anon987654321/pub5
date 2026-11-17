@@ -743,7 +743,7 @@ end
   end
 
   def stop_helper_group(pid, helper, duration)
-    warn "#{cfg.name}: helper #{File.basename(helper)} timed out after #{duration}s; stopping process group #{pid}"
+    warn "pub4-admin: helper #{File.basename(helper)} timed out after #{duration}s; stopping process group #{pid}"
     signal_helper_group("TERM", pid)
     grace_deadline = monotonic_now + 5
     leader_reaped = false
@@ -974,7 +974,7 @@ end
 
     dispatch_admin_command(Array(argv).map(&:to_s))
   rescue StandardError => e
-    warn "#{cfg.name}: refused or failed: #{e.class}: #{e.message}"
+    warn "pub4-admin: refused or failed: #{e.class}: #{e.message}"
     126
   end
 
