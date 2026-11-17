@@ -1013,8 +1013,17 @@ end
 
       sleep 0.1
     end
-    reap_helper(pid) unless leader_reaped
+    unless leader_reaped
+      leader_reaped = reap_helper(pid)
+      finish_reap_helper(pid) unless leader_reaped
+    end
     124
+  end
+
+  def finish_reap_helper(pid)
+    Process.waitpid(pid)
+  rescue Errno::ECHILD
+    nil
   end
 
   def signal_helper_group(signal, pid)
