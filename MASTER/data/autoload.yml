@@ -81,6 +81,20 @@ autoload:
     # side plus pending-queue reporting. The defining file is fix/wishlist.rb.
     - fix/wishlist/claims.rb
     - fix/wishlist/rendering.rb
+    # Master::Fix::Mission -- the durable objective, split by responsibility:
+    # schema.rb the record's shape, version migrations and disk round trip,
+    # lock.rb the inter-process mission lock, run_state.rb the
+    # start/queue/resume state machine, lease.rb lease custody and liveness,
+    # state.rb the attempt's progress surface, proof.rb the durable proof
+    # receipts, repository.rb the repository custody receipts. The defining
+    # file is fix/mission.rb; these re-open its class.
+    - fix/mission/schema.rb
+    - fix/mission/lock.rb
+    - fix/mission/run_state.rb
+    - fix/mission/lease.rb
+    - fix/mission/state.rb
+    - fix/mission/proof.rb
+    - fix/mission/repository.rb
 
   # Declare a constant outside Master::, so the path cannot imply the name.
   defines_a_foreign_namespace:
