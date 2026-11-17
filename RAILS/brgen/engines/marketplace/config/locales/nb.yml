@@ -17,6 +17,8 @@ nb:
       removed: Fjernet
     verticals:
       restaurants: "Restaurant og takeaway"
+      groceries: "Dagligvarebutikker"
+      wholesale: "Engros og storhusholdning"
     stores:
       no_listings: Ingenting til salgs her akkurat nå
       no_listings_body: Butikken har ingen aktive annonser. Se innom senere, eller bla i markedsplassen.
