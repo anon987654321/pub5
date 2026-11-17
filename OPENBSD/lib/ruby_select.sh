@@ -21,6 +21,20 @@ _rs_compatible() {
   "$1" -e 'require "rubygems"; exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3") ? 1 : 0)' >/dev/null 2>&1
 }
 
+# One PATH directory's scan: the first compatible versioned ruby in it.
+# Kept a function so the caller stays flat enough for the LINEARITY law.
+_rs_scan_dir() {
+  [ -d "$1" ] || return 1
+  for _rs_candidate in "$1"/ruby[0-9]*; do
+    [ -x "$_rs_candidate" ] || continue
+    if _rs_compatible "$_rs_candidate"; then
+      printf '%s\n' "$_rs_candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
 if [ -n "${RUBY:-}" ]; then
   _rs_compatible "$RUBY" || {
     echo "ruby_select: configured Ruby is not executable or is older than 3.3: $RUBY" >&2
@@ -36,15 +50,9 @@ else
     _rs_old_ifs=$IFS
     IFS=:
     for _rs_dir in $PATH; do
-      [ -d "$_rs_dir" ] || continue
-      for _rs_candidate in "$_rs_dir"/ruby[0-9]*; do
-        [ -x "$_rs_candidate" ] || continue
-        if _rs_compatible "$_rs_candidate"; then
-          RUBY=$_rs_candidate
-          break
-        fi
-      done
-      [ -n "$RUBY" ] && break
+      if RUBY=$(_rs_scan_dir "$_rs_dir"); then
+        break
+      fi
     done
     IFS=$_rs_old_ifs
   fi
