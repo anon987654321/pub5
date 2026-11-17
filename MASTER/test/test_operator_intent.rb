@@ -98,6 +98,19 @@ class OperatorIntentTest < Minitest::Test
     end
   end
 
+  def test_classifier_failure_reports_error_class_without_running_an_action
+    with_inventory do |root|
+      agent = Object.new
+      agent.define_singleton_method(:ask_once) { |*| raise JSON::ParserError, "provider payload detail" }
+      result = Master::CLI::OperatorIntent.new(root:, agent:).call("deploy the city application")
+
+      assert_equal :unavailable, result.status
+      assert_includes result.message, "JSON::ParserError"
+      refute_includes result.message, "provider payload detail"
+      assert_includes result.message, "no action was taken"
+    end
+  end
+
   def test_unregistered_app_id_is_rejected
     with_inventory do |root|
       reply = JSON.generate(
