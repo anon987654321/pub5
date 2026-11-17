@@ -87,8 +87,10 @@ if File.file?(guard_wrapper_path) && !File.symlink?(guard_wrapper_path) &&
   guard_impl_contract = guard_impl.include?('GUARD_HELPER=/usr/local/libexec/stale_ci_cleanup.ksh') &&
                         guard_impl.include?('[[ -f $GUARD_HELPER && ! -L $GUARD_HELPER ]]') &&
                         !guard_impl.include?("GUARD_REPO") &&
-                        !guard_impl.include?("/home/dev/pub5/OPENBSD/mirror/usr/local/libexec/stale_ci_cleanup.ksh")
-  failures << "root load guard must be separate from its checkout wrapper and reject symlinked helpers" unless guard_impl_contract
+                        !guard_impl.include?("/home/dev/pub5/OPENBSD/mirror/usr/local/libexec/stale_ci_cleanup.ksh") &&
+                        guard_impl.include?("automatic core restart disabled") &&
+                        !guard_impl.match?(/^\\s*ksh\\s+\\$EMERGENCY\\b/m)
+  failures << "root load guard must reject checkout helpers and never auto-restart core production services" unless guard_impl_contract
   operator = File.read(File.join(OPENBSD, "BOOTSTRAP.sh"))
   source_list = operator[/typeset -a privileged_sources=\(.*?^  \)/m].to_s
   guard_install_contract = source_list.include?("usr/local/bin/resource_guard.sh") &&
