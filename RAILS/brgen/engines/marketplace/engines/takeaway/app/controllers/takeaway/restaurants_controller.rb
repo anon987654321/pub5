@@ -75,10 +75,12 @@ class Takeaway::RestaurantsController < Takeaway::BaseController
   rescue ActiveRecord::RecordInvalid => error
     @restaurant = error.record if error.record.is_a?(Takeaway::Restaurant)
     @opening_hours_error = error.message
+    @opening_hours_input = params[:opening_hours]&.to_unsafe_h
     @opening_hours = @restaurant.opening_hours.index_by(&:weekday)
     render :edit, status: :unprocessable_entity
   rescue ArgumentError => error
     @opening_hours_error = error.message
+    @opening_hours_input = params[:opening_hours]&.to_unsafe_h
     @opening_hours = @restaurant.opening_hours.index_by(&:weekday)
     render :edit, status: :unprocessable_entity
   end
