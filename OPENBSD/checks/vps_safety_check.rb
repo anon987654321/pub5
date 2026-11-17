@@ -547,7 +547,7 @@ else
   failures << "missing OPENBSD/bin/manual_master_deploy.ksh"
 end
 
-master_deploy_path = File.join(OPENBSD, "mirror", "bin", "vps_deploy_master.sh")
+master_deploy_path = File.join(OPENBSD, "bin", "vps_deploy_master.sh")
 
 if File.file?(master_deploy_path)
   master_deploy = File.read(master_deploy_path)

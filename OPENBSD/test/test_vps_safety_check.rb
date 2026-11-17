@@ -43,6 +43,8 @@ class VpsSafetyCheckTest < Minitest::Test
       FileUtils.cp(File.join(ROOT, "mirror", "usr", "local", "bin", "resource_guard.sh"),
                    File.join(mirror, "usr", "local", "bin", "resource_guard.sh"))
       FileUtils.mkdir_p(File.join(mirror, "bin"))
+      FileUtils.mkdir_p(File.join(openbsd, "bin"))
+      FileUtils.cp(File.join(ROOT, "bin", "vps_deploy_master.sh"), File.join(openbsd, "bin", "vps_deploy_master.sh"))
       FileUtils.cp(File.join(ROOT, "mirror", "bin", "resource_guard.sh"), File.join(mirror, "bin", "resource_guard.sh"))
       FileUtils.cp(File.join(ROOT, "OPERATOR.sh"), File.join(openbsd, "OPERATOR.sh"))
       FileUtils.mkdir_p(File.join(dir, "RAILS", "mrdamascy"))
@@ -61,7 +63,7 @@ class VpsSafetyCheckTest < Minitest::Test
       FileUtils.cp(File.join(ROOT, "mirror", "bin", "vps-state"), File.join(mirror, "bin", "vps-state"))
       FileUtils.cp(File.join(ROOT, "mirror", "bin", "restore_litestream.sh"), File.join(mirror, "bin", "restore_litestream.sh"))
       FileUtils.cp(File.join(ROOT, "mirror", "bin", "start_all_apps.sh"), File.join(mirror, "bin", "start_all_apps.sh"))
-      (Dir.glob(File.join(ROOT, "mirror", "bin", "*.exp")) + [File.join(ROOT, "mirror", "bin", "validate_doas.ksh"), File.join(ROOT, "mirror", "bin", "deploy_all.sh"), File.join(ROOT, "mirror", "bin", "vps-deploy"), File.join(ROOT, "mirror", "bin", "vps_deploy_master.sh"), File.join(ROOT, "mirror", "bin", "vps_install_all.sh"), File.join(ROOT, "mirror", "bin", "deploy-smoke.sh"), File.join(ROOT, "mirror", "bin", "manual_master_deploy.ksh")]).each do |path|
+      (Dir.glob(File.join(ROOT, "mirror", "bin", "*.exp")) + [File.join(ROOT, "mirror", "bin", "validate_doas.ksh"), File.join(ROOT, "mirror", "bin", "deploy_all.sh"), File.join(ROOT, "mirror", "bin", "vps-deploy"), File.join(ROOT, "mirror", "bin", "vps_install_all.sh"), File.join(ROOT, "mirror", "bin", "deploy-smoke.sh"), File.join(ROOT, "mirror", "bin", "manual_master_deploy.ksh")]).each do |path|
         FileUtils.cp(path, File.join(mirror, "bin"))
       end
       yield dir, File.join(mirror, "etc", "doas.conf")
@@ -406,7 +408,7 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_master_web_deploy_must_use_fixed_broker_verbs
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "mirror", "bin", "vps_deploy_master.sh")
+      path = File.join(dir, "OPENBSD", "bin", "vps_deploy_master.sh")
       text = File.read(path).sub("pub5-admin master-web-assets-reset", "doas rm -rf public/assets")
       File.write(path, text)
       out, status = run_check(dir)

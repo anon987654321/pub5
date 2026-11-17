@@ -16,9 +16,19 @@ require "fileutils"
 # hand-off to the same spelling.
 class MasterTtsBundleContractTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
-  DEPLOY = File.read(File.join(ROOT, "OPENBSD/mirror/bin/vps_deploy_master.sh"))
+  DEPLOY = File.read(File.join(ROOT, "OPENBSD/bin/vps_deploy_master.sh"))
   RC_D = File.read(File.join(ROOT, "OPENBSD/mirror/etc/rc.d/master"))
   MANAGER = File.read(File.join(ROOT, "MASTER/lib/boot/dependency_manager.rb"))
+
+  def test_master_deploy_path_is_the_checkout_tool_not_a_mirror_payload
+    apps = File.read(File.join(ROOT, "RAILS/apps.yml"))
+    checks = File.read(File.join(ROOT, "MASTER/lib/operator/checks.rb"))
+
+    assert_includes apps, "deploy_script: OPENBSD/bin/vps_deploy_master.sh"
+    refute_includes apps, "OPENBSD/mirror/bin/vps_deploy_master.sh"
+    assert_includes checks, '"OPENBSD/bin/vps_deploy_master.sh" => :restart'
+    refute_includes checks, '"OPENBSD/OPERATOR.sh" => :via_rc_d'
+  end
 
   def test_the_deploy_records_the_bundle_path_in_masters_own_bundle_config
     assert_match(/bundle_config_once "\$ROOT\/MASTER" PATH "\$BUNDLE_PATH_DEV"/, DEPLOY)
