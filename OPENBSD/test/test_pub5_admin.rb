@@ -580,6 +580,55 @@ class Pub5AdminTest < Minitest::Test
     end
   end
 
+  def test_pending_deploy_run_list_is_fixed_bounded_and_reports_truncation
+    Dir.mktmpdir("pub5-admin-run-") do |root|
+      run_ids = [
+        "20261117T010000Z-all-12360",
+        "20261117T010001Z-all-12361",
+        "20261117T010002Z-all-12362",
+      ]
+      run_ids.each_with_index do |run_id, index|
+        payload = deploy_run_payload(run_id).merge(
+          "pid" => 12_360 + index,
+          "status" => "running",
+          "recovery_state" => "pending",
+        )
+        ADMIN.write_deploy_run(run_id, JSON.generate(payload),
+                               root:, verify_root: false, output: StringIO.new)
+      end
+      completed_id = "20261117T010003Z-brgen-12363"
+      completed = deploy_run_payload(completed_id).merge(
+        "target" => "brgen",
+        "pid" => 12_363,
+        "status" => "ok",
+        "recovery_state" => "complete",
+      )
+      ADMIN.write_deploy_run(completed_id, JSON.generate(completed),
+                             root:, verify_root: false, output: StringIO.new)
+
+      output = StringIO.new
+      assert_equal 0, ADMIN.list_pending_deploy_runs(
+        root:, verify_root: false, max_scan: 2, max_pending: 1, output:
+      )
+      response = JSON.parse(output.string)
+      assert_equal true, response.fetch("truncated")
+      assert_equal 4, response.fetch("scanned")
+      assert_equal 1, response.fetch("returned")
+      assert_equal [run_ids.last], response.fetch("pending").map { |row| row.fetch("run_id") }
+    end
+  end
+
+  def test_pending_deploy_run_list_reports_empty_without_truncation
+    Dir.mktmpdir("pub5-admin-run-") do |root|
+      output = StringIO.new
+      assert_equal 0, ADMIN.list_pending_deploy_runs(root:, verify_root: false, output:)
+      assert_equal(
+        { "pending" => [], "truncated" => false, "scanned" => 0, "returned" => 0 },
+        JSON.parse(output.string)
+      )
+    end
+  end
+
   def test_deploy_run_updates_preserve_identity_and_change_only_valid_state
     Dir.mktmpdir("pub5-admin-run-") do |root|
       run_id = "20261117T010001Z-brgen-12346"
@@ -648,6 +697,8 @@ class Pub5AdminTest < Minitest::Test
     assert_includes source, 'args.length == 3 && args[0] == "deploy-run-write"'
     assert_includes source, 'args.length == 2 && args[0] == "deploy-run-read"'
     assert_includes source, 'args == ["deploy-run-list"]'
+    assert_includes source, 'args == ["deploy-run-pending-list"]'
+    assert_includes source, 'return list_pending_deploy_runs'
     assert_includes source, 'return write_deploy_run(args[1], args[2])'
     refute_nil ADMIN.deploy_run_id?("20261117T010004Z-master-12349")
     refute ADMIN.deploy_run_id?("../20261117T010004Z-master-12349")
