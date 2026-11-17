@@ -11,6 +11,11 @@ require_relative "../trace/mutation_observer"
 require_relative "task_contract"
 require_relative "transaction/delivery"
 require_relative "transaction/recovery"
+# The class is split by concern; these three re-open Master::Fix::Transaction
+# and are registered in data/autoload.yml under reopens_a_constant_defined_elsewhere.
+require_relative "transaction/validation"
+require_relative "transaction/observation"
+require_relative "transaction/delivery_door"
 
 module Master
   module Fix
@@ -69,16 +74,7 @@ module Master
         lifecycle_mutation(:begin, item_count: @paths.size) do
           Dir.mkdir(@dir, 0o700)
           created_dir = true
-          @paths.each do |path|
-            @snapshots[path] = snapshot(path)
-            raise "transaction cannot safely track unsupported filesystem object" if @snapshots[path].kind == :other
-          end
-          @state = "open"
-          @active = true
-          observe!(verify_snapshot: true)
-          emit("fix:transaction_snapshot_summary", id: @id, tracked_paths: @paths.size)
-          emit("fix:transaction_start", id: @id, paths: @paths)
-          self
+          open_transaction!
         end
       rescue StandardError
         @active = false
@@ -91,153 +87,27 @@ module Master
         raise
       end
 
-      def observe!(verify_snapshot: false)
-        @paths.each do |path|
-          current = fingerprint(absolute(path))
-          if verify_snapshot && @snapshot_fingerprints.fetch(path) != current
-            raise "transaction source changed during initial snapshot: #{path}"
-          end
-          @seen[path] << current
-          @seen[path] = @seen[path].uniq.last(8)
-        end
-        persist! if @active
-        true
-      end
-
-      # Add a narrowly approved related artifact to this transaction before
-      # its first write, so rollback and interrupted-run recovery keep its bytes.
-      def enlist!(paths)
-        raise "transaction not active" unless @active
-
-        raw = Array(paths)
-        selected = raw.map { |path| normalize(path) }
-        raise "transaction enlistment contains an unsafe path" if selected.any?(&:nil?)
-        validate_task_contract_paths!(selected)
-
-        added = selected.uniq - @paths
-        staged = added.to_h { |path| [path, snapshot(path)] }
-        return Result.err("transaction source changed during enlistment", category: :policy) unless
-          added.all? { |path| snapshot_matches_fingerprint?(staged.fetch(path), fingerprint(absolute(path))) }
-
-        old = [@paths, @snapshots]
-        @snapshots = @snapshots.merge(staged)
-        @paths = (@paths + added).uniq
-        observed = observe_paths!(added) unless added.empty?
-        if observed&.err?
-          @paths, @snapshots = old unless persisted_state_matches?
-          return observed
-        end
-
-        emit("fix:transaction_paths_enlisted", id: @id, paths: added)
-        Result.ok(added)
-      rescue TaskContract::Invalid => e
-        emit("fix:transaction_enlist_failed", id: @id, error: e.message)
-        Result.err("transaction enlistment refused: #{e.message}", category: :policy)
-      rescue StandardError => e
-        emit("fix:transaction_enlist_failed", id: @id, error: e.message)
-        Result.err("transaction enlistment: #{e.message}", category: :infrastructure)
-      end
-
-      # Refresh only explicitly enlisted paths after the transaction's own
-      # verified write. Unrelated files retain their original concurrency guard.
-      def observe_paths!(paths)
-        raise "transaction not active" unless @active
-
-        selected = Array(paths).map { |path| normalize(path) }
-        raise "observation includes an unsafe path" if selected.any?(&:nil?)
-        selected = selected.uniq
-        raise "observation includes a path outside the transaction" unless (selected - @paths).empty?
-
-        old_seen = @seen
-        @seen = @seen.to_h.transform_values(&:dup).tap { |seen| seen.default_proc = ->(hash, path) { hash[path] = [] } }
-        selected.each do |path|
-          @seen[path] << fingerprint(absolute(path))
-          @seen[path] = @seen[path].uniq.last(8)
-        end
-        persist!
-        emit("fix:transaction_paths_observed", id: @id, paths: selected)
-        Result.ok(selected)
-      rescue StandardError => e
-        @seen = old_seen if defined?(old_seen) && !persisted_state_matches?
-        emit("fix:transaction_observe_failed", id: @id, error: e.message)
-        Result.err("transaction observation: #{e.message}", category: :infrastructure)
-      end
-
-      def observed_current?(path)
-        relative = normalize(path)
-        return false unless relative && @paths.include?(relative)
-
-        expected = @seen[relative].last
-        expected && expected == fingerprint(absolute(relative))
-      rescue StandardError
-        false
-      end
-
-      # A delivery caller can bind Git's private-index commit to the exact bytes
-      # this transaction last observed. A fresh digest of the worktree alone
-      # would bless a concurrent writer's replacement.
-      def observed_content_hash(path)
-        relative = normalize(path)
-        return unless relative && @paths.include?(relative)
-
-        value = @seen[relative].last
-        value.delete_prefix("file:") if value&.start_with?("file:")
-      end
-
-      def snapshot_content_hash(path)
-        relative = normalize(path)
-        return unless relative && @paths.include?(relative)
-
-        value = @snapshot_fingerprints[relative]
-        value.delete_prefix("file:") if value&.start_with?("file:")
-      end
-
-      # The delivering state machine lives in Delivery, reached through this
-      # accessor. Delivery keeps no state: it changes this transaction only
-      # through the delivery door below, so the manifest format and every event
-      # name stay this class's own.
-      def delivery
-        @delivery ||= Delivery.new(self)
-      end
-
       # Move the rollback floor after a commit has been pushed. The logical
       # pass transaction stays alive, but an interruption can no longer roll a
       # previously delivered checkpoint back to the pass-start snapshot.
       def checkpoint!(paths)
         raise "transaction not active" unless @active
 
-        selected = Array(paths).map { |path| normalize(path) }
-        raise "checkpoint includes an unsafe path" if selected.any?(&:nil?)
-        selected = selected.uniq
-        raise "checkpoint includes a path outside the transaction" unless (selected - @paths).empty?
-
+        selected = checkpoint_paths(paths)
         lifecycle_mutation(:checkpoint, item_count: selected.size) do
           staged = selected.to_h { |path| [path, snapshot(path, versioned: true)] }
-          if staged.values.any? { |item| item.kind == :other }
-            Result.err("checkpoint cannot safely capture a directory", category: :policy)
-          elsif !selected.all? { |path| snapshot_matches_fingerprint?(staged.fetch(path), fingerprint(absolute(path))) }
-            Result.err("transaction source changed while checkpointing", category: :policy)
-          else
+          verdict = checkpoint_verdict(selected, staged)
+          if verdict.nil?
             old = [@snapshots, @seen, @state, @delivery_head_before, @delivery_head_after, @delivery_marked]
-            old_stores = selected.filter_map { |path| @snapshots[path]&.store }
-            @snapshots = @snapshots.merge(staged)
-            @seen = @seen.to_h.transform_values(&:dup)
-            @seen.default_proc = ->(hash, path) { hash[path] = [] }
-            selected.each { |path| @seen[path] = [fingerprint(absolute(path))] }
-            @state = "open"
-            @delivery_head_before = @delivery_head_after = nil
-            persist!
-            old_stores.each { |store| File.delete(store) if store && !@snapshots.values.any? { |item| item.store == store } }
-            emit("fix:transaction_checkpoint", id: @id, paths: selected)
-            Result.ok(selected)
+            commit_checkpoint(selected, staged)
+          else
+            verdict
           end
         end
       rescue StandardError => e
         raise if @lifecycle_observer.failed?
 
-        if defined?(old) && !persisted_state_matches?
-          @snapshots, @seen, @state, @delivery_head_before, @delivery_head_after, @delivery_marked = old
-        end
+        undo_checkpoint(old) if defined?(old) && !persisted_state_matches?
         emit("fix:transaction_checkpoint_failed", id: @id, error: e.message)
         Result.err("transaction checkpoint: #{e.class}", category: :infrastructure)
       end
@@ -270,13 +140,108 @@ module Master
         raise "transaction not active" unless @active || persisted?
         return delivery.preserve! if @state == "delivering" && delivery.pending?
 
-        result = lifecycle_mutation(:rollback, item_count: @paths.size) do
-          @state = "open" if @state == "delivering"
-          @delivery_head_before = nil if @state == "open"
-          current_conflicts = conflicts()
-          current_conflicts.empty? ? restore_snapshots_and_roll_back : reject_rollback_conflict(current_conflicts)
-        end
+        result = lifecycle_mutation(:rollback, item_count: @paths.size) { settle_rollback }
+        finish_rollback(result)
+      rescue StandardError => e
+        emit("fix:transaction_rollback_failed", id: @id, error: e.message)
+        @active = false
+        release_lock
+        Result.err("transaction rollback: #{e.class}", category: :infrastructure)
+      end
 
+      # Releases the root lock, first removing the transaction directory when asked.
+      def close!(cleanup: false)
+        cleanup! if cleanup
+        release_lock
+      end
+
+      def id = @id
+      def root = @root
+      def state = @state
+      def active? = @active
+
+      private
+
+      # begin!'s mutation leg once the directory exists: snapshot every path,
+      # flip to open, and announce. Answers self, so begin! still returns it.
+      def open_transaction!
+        @paths.each do |path|
+          @snapshots[path] = snapshot(path)
+          raise "transaction cannot safely track unsupported filesystem object" if @snapshots[path].kind == :other
+        end
+        @state = "open"
+        @active = true
+        observe!(verify_snapshot: true)
+        emit("fix:transaction_snapshot_summary", id: @id, tracked_paths: @paths.size)
+        emit("fix:transaction_start", id: @id, paths: @paths)
+        self
+      end
+
+      # checkpoint!'s admission leg: canonical paths this transaction tracks.
+      def checkpoint_paths(paths)
+        selected = Array(paths).map { |path| normalize(path) }
+        raise "checkpoint includes an unsafe path" if selected.any?(&:nil?)
+        selected = selected.uniq
+        raise "checkpoint includes a path outside the transaction" unless (selected - @paths).empty?
+
+        selected
+      end
+
+      # checkpoint!'s verdict leg: an unsupported directory or a source that
+      # moved under the transaction refuses before anything is merged.
+      def checkpoint_verdict(selected, staged)
+        return Result.err("checkpoint cannot safely capture a directory", category: :policy) if staged.values.any? { |item| item.kind == :other }
+        return Result.err("transaction source changed while checkpointing", category: :policy) unless
+          selected.all? { |path| snapshot_matches_fingerprint?(staged.fetch(path), fingerprint(absolute(path))) }
+
+        nil
+      end
+
+      # checkpoint!'s commit leg: merge the versioned snapshots, reset the
+      # observation floor for the checked paths, persist, then drop stores no
+      # snapshot references any more.
+      def commit_checkpoint(selected, staged)
+        old_stores = selected.filter_map { |path| @snapshots[path]&.store }
+        @snapshots = @snapshots.merge(staged)
+        @seen = @seen.to_h.transform_values(&:dup)
+        @seen.default_proc = ->(hash, path) { hash[path] = [] }
+        selected.each { |path| @seen[path] = [fingerprint(absolute(path))] }
+        @state = "open"
+        @delivery_head_before = @delivery_head_after = nil
+        persist!
+        release_checkpoint_stores(old_stores)
+        emit("fix:transaction_checkpoint", id: @id, paths: selected)
+        Result.ok(selected)
+      end
+
+      # A replaced checkpoint orphans the previous store file; delete it once
+      # no snapshot still references it.
+      def release_checkpoint_stores(stores)
+        stores.each do |store|
+          next unless store
+
+          File.delete(store) unless @snapshots.values.any? { |item| item.store == store }
+        end
+      end
+
+      # A crash mid-commit rolls the memory image back to the pre-checkpoint
+      # floor unless the persisted manifest already matches it.
+      def undo_checkpoint(old)
+        @snapshots, @seen, @state, @delivery_head_before, @delivery_head_after, @delivery_marked = old
+      end
+
+      # rollback!'s mutation leg: a delivering pass reopens, then either
+      # restores every snapshot or refuses on a concurrent change.
+      def settle_rollback
+        @state = "open" if @state == "delivering"
+        @delivery_head_before = nil if @state == "open"
+        current_conflicts = conflicts()
+        current_conflicts.empty? ? restore_snapshots_and_roll_back : reject_rollback_conflict(current_conflicts)
+      end
+
+      # rollback!'s terminal bookkeeping: a rolled-back pass drops its
+      # directory and lock, a conflicted one keeps them for review.
+      def finish_rollback(result)
         if @state == "rolled_back"
           cleanup!
           @active = false
@@ -288,83 +253,7 @@ module Master
           emit("fix:transaction_conflict", id: @id, paths: @paths)
         end
         result
-      rescue StandardError => e
-        emit("fix:transaction_rollback_failed", id: @id, error: e.message)
-        @active = false
-        release_lock
-        Result.err("transaction rollback: #{e.class}", category: :infrastructure)
       end
-
-      # Stops tracking paths that changed under the pass without its write: they are neither
-      # delivered nor rolled back, so another writer's work stays as that writer left it.
-      def release!(paths)
-        released = Array(paths).filter_map { |path| normalize(path) } & @paths
-        return [] if released.empty?
-
-        lifecycle_mutation(:release, item_count: released.size) do
-          @paths -= released
-          released.each { |path| @snapshots.delete(path) && @seen.delete(path) }
-          persist!
-          emit("fix:transaction_release", id: @id, paths: released)
-          released
-        end
-      end
-
-      def conflicts
-        @paths.reject { |path| @seen.fetch(path, []).include?(fingerprint(absolute(path))) }
-      end
-
-      # Before a rollback of an open pass: another writer's edits leave the transaction, so the
-      # rollback restores the pass's own writes and leaves theirs. Answers the paths released.
-      def release_conflicts!
-        return [] unless @active && @state == "open"
-
-        release!(conflicts)
-      end
-
-      # The paths among these that this transaction tracks, in its own spelling.
-      def tracked(paths) = Array(paths).filter_map { |path| normalize(path) } & @paths
-
-      def id = @id
-      def root = @root
-      def state = @state
-      def active? = @active
-
-      # The delivery door: what Delivery reads and the steps by which it changes
-      # this transaction. Nothing else writes the delivery fields.
-      def enlisted_paths = @paths.dup
-      def delivery_head_before = @delivery_head_before
-      def delivery_head_after = @delivery_head_after
-      def delivery_marked? = @delivery_marked == true
-
-      # Sets the given DELIVERY_FIELDS and persists them, inside the named lifecycle
-      # mutation when one is given; persist: false changes memory only.
-      def update_delivery!(operation = nil, persist: true, **fields)
-        unknown = fields.keys - DELIVERY_FIELDS
-        raise ArgumentError, "unknown delivery field: #{unknown.join(", ")}" unless unknown.empty?
-
-        write = lambda do
-          @state = fields.fetch(:state, @state)
-          @active = fields.fetch(:active, @active)
-          @delivery_head_before = fields.fetch(:head_before, @delivery_head_before)
-          @delivery_head_after = fields.fetch(:head_after, @delivery_head_after)
-          @delivery_marked = fields.fetch(:marked, @delivery_marked)
-
-          persist! if persist
-          true
-        end
-        operation ? lifecycle_mutation(operation, item_count: @paths.size, &write) : write.call
-      end
-
-      def delivery_event(event, **payload) = emit(event, **payload)
-
-      # Releases the root lock, first removing the transaction directory when asked.
-      def close!(cleanup: false)
-        cleanup! if cleanup
-        release_lock
-      end
-
-      private
 
       def reject_rollback_conflict(conflicts)
         @state = "conflict"
@@ -379,64 +268,36 @@ module Master
         Result.ok(@paths)
       end
 
-      # Reached only via Recovery.recover! (load_persisted(...).send(:recover!))
-      # -- nothing else calls an instance's own recover! directly, confirmed
-      # by grepping every lib/ and test/ caller before making this private.
-      def recover!(release_conflicts: false)
-        return Result.err("transaction recovery refused: an active transaction holds the root lock", category: :infrastructure) unless acquire_lock(nonblock: true)
-        refusal = resolve_pending_marker!
-        return refusal if refusal
-
-        load_manifest!
-        recover_for_state(release_conflicts:)
-      rescue StandardError => e
-        emit("fix:transaction_recovery_failed", id: @id, error: e.message)
-        Result.err("transaction recovery: #{e.message}", category: :infrastructure)
-      ensure
-        release_lock
-      end
-
-      def recover_for_state(release_conflicts: false)
-        case @state
-        when "open" then recover_open_state(release_conflicts:)
-        when "delivering" then recover_delivering_state
-        when "committed", "rolled_back" then recover_terminal_state
-        when "conflict" then recover_error_state("transaction recovery found a concurrent edit", :policy)
-        when "trace_failed" then recover_error_state("transaction lifecycle audit failed; manual review required", :infrastructure)
-        else recover_error_state("unknown transaction state: #{@state}", :infrastructure)
+      def lifecycle_mutation(operation, item_count: nil)
+        @lifecycle_observer.mutate(operation:, item_count:) do
+          create_pending_marker!(operation)
+          yield
+        end.tap do
+          remove_pending_marker! if @pending_marker_owned
         end
+      rescue StandardError
+        recover_lifecycle_audit
+        raise
       end
 
-      def recover_delivering_state
-        outcome = delivery.recover!
-        outcome == :not_committed ? recover_open_state : outcome
-      end
-
-      # cleanup! runs for its side effect (removing the transaction directory)
-      # and answers nil when its symlink guard skips, so the Result stands alone.
-      def recover_terminal_state
-        cleanup!
-        Result.ok(@state.to_sym)
-      end
-
-      def recover_error_state(message, category) = Result.err(message, category:)
-
-      def recover_open_state(release_conflicts: false)
-        @active = true
-        name_released(release_conflicts!) if release_conflicts
-
-        result = rollback!
-        emit("fix:transaction_recovered", id: @id, result: result.to_s)
-        result
-      end
-
-      def name_released(paths)
-        return if paths.empty?
-
-        Master::Trace::Dmesg.status(
-          "fix0", "stranded transaction #{@id}: kept #{paths.size} file(s) another writer changed since: " \
-                  "#{paths.first(5).join(", ")}"
-        )
+      # lifecycle_mutation's failure leg: an audit failure marks the
+      # transaction trace_failed and persists that fact; otherwise the
+      # caller's pending marker is removed. Either way the error propagates.
+      def recover_lifecycle_audit
+        if @lifecycle_observer.failed?
+          @state = "trace_failed"
+          begin
+            persist! if persisted?
+          rescue StandardError
+            nil
+          end
+        elsif @pending_marker_owned
+          begin
+            remove_pending_marker!
+          rescue StandardError
+            nil
+          end
+        end
       end
 
       # Transaction events are diagnostic telemetry, not the durable manifest.
@@ -465,72 +326,6 @@ module Master
         nil
       end
 
-      def lifecycle_mutation(operation, item_count: nil)
-        @lifecycle_observer.mutate(operation:, item_count:) do
-          create_pending_marker!(operation)
-          yield
-        end.tap do
-          remove_pending_marker! if @pending_marker_owned
-        end
-      rescue StandardError
-        if @lifecycle_observer.failed?
-          @state = "trace_failed"
-          begin
-            persist! if persisted?
-          rescue StandardError
-            nil
-          end
-        elsif @pending_marker_owned
-          begin
-            remove_pending_marker!
-          rescue StandardError
-            nil
-          end
-        end
-        raise
-      end
-
-      def pending_marker_path = File.join(@root, ROOT_DIR, ".pending-#{@id}")
-
-      def pending_marker?
-        File.exist?(pending_marker_path) || File.symlink?(pending_marker_path)
-      rescue SystemCallError
-        true
-      end
-
-      MARKER_REFUSED = "transaction recovery refused: a lifecycle audit is incomplete; manual review required"
-
-      # Runs under the root lock, so no live transaction is mid-mutation. A marker
-      # whose writer is gone is resolved once the manifest loads and validates;
-      # one a live process holds, a symlink, or a manifest that does not load
-      # stays refused. Answers the refusal, or nil to proceed.
-      def resolve_pending_marker!
-        label = File.join(ROOT_DIR, File.basename(pending_marker_path))
-
-        refusal = Master::Trace::MutationObserver::PendingMarker.resolve(pending_marker_path, label:) do
-          load_manifest!
-          "transaction #{@id} manifest loads, state=#{@state}"
-        end
-
-        Result.err("#{MARKER_REFUSED}: #{refusal}", category: :infrastructure) if refusal
-      end
-
-      def create_pending_marker!(operation)
-        path = pending_marker_path
-        raise "transaction lifecycle marker is a symlink" if File.symlink?(path)
-        Master::Trace::MutationObserver::PendingMarker.write!(path, operation:, subject: @id)
-        @pending_marker_owned = true
-      end
-
-      def remove_pending_marker!
-        path = pending_marker_path
-        File.delete(path) if File.exist?(path)
-        @pending_marker_owned = false
-        true
-      end
-
-      def persisted? = File.file?(File.join(@dir, MANIFEST))
-
       def acquire_lock(nonblock: false)
         master_dir = File.join(@root, ".master")
         tx_root = File.join(@root, ROOT_DIR)
@@ -555,259 +350,6 @@ module Master
         @lock.close
         @lock = nil
       end
-
-      def validate_task_contract_paths!(paths)
-        contract = TaskContract.current
-        repo_root = File.expand_path(outer_root)
-        uncovered = if contract
-                      Array(paths).reject do |path|
-                        full = File.expand_path(path, @root)
-                        next false unless inside?(full, repo_root)
-
-                        relative = Pathname.new(full).relative_path_from(Pathname.new(repo_root)).to_s
-                        TaskContract.covers?(relative, scope: contract.scope)
-                      end
-                    else
-                      []
-                    end
-        unless uncovered.empty?
-          raise TaskContract::Invalid,
-                "transaction paths outside task-contract scope: #{uncovered.first(5).join(", ")}"
-        end
-
-        # "New tracked path" is a repository concept. `outer_root` is the
-        # transaction's own scope, which is a scratch directory whenever the root
-        # lies outside the repo; passing that as the repo root made every path in
-        # such a transaction look like an undeclared addition. Only judge paths
-        # that can actually be tracked.
-        repository = File.expand_path(
-          defined?(Master::REPO_ROOT) ? Master::REPO_ROOT : File.expand_path("../../", __dir__)
-        )
-        return unless inside?(File.expand_path(@root), repository)
-
-        unapproved = Array(paths).filter_map do |path|
-          full = File.expand_path(path, @root)
-          TaskContract.new_path_refusal(full, contract:, repo_root:)
-        end
-        return if unapproved.empty?
-
-        raise TaskContract::Invalid,
-              "transaction new paths need explicit task-contract.new_paths declarations: #{unapproved.first(3).join("; ")}"
-      end
-
-      def normalize(path)
-        value = path.to_s
-        return if value.empty?
-
-        full = File.expand_path(value, @root)
-        return unless inside?(full, File.expand_path(@root)) || inside?(full, outer_root)
-
-        Pathname.new(full).relative_path_from(File.expand_path(@root)).to_s
-      end
-
-      # A /fix run rooted in MASTER may repair a RAILS or OPENBSD file beside it: the transaction
-      # snapshots and restores any file in the repository MASTER sits in, named relative to MASTER.
-      def outer_root
-        return File.expand_path(@root) unless defined?(Master::REPO_ROOT)
-
-        repo = File.expand_path(Master::REPO_ROOT)
-        inside?(File.expand_path(@root), repo) ? repo : File.expand_path(@root)
-      end
-
-      def inside?(path, dir) = path == dir || path.start_with?(dir + File::SEPARATOR)
-
-      def absolute(path) = path_guard.within(File.join(@root, path))
-      def path_guard = (@path_guard ||= Master::Core::World.new(root: outer_root))
-
-      def snapshot(path, versioned: false)
-        abs = absolute(path)
-        unless File.exist?(abs) || File.symlink?(abs)
-          @snapshot_fingerprints[path] = "missing"
-          return Snapshot.new(path, false, :missing, nil, nil, nil)
-        end
-
-        stat = File.lstat(abs)
-        if stat.symlink?
-          link = File.readlink(abs)
-          @snapshot_fingerprints[path] = "symlink:#{stat.mode}:#{link}"
-          Snapshot.new(path, true, :symlink, stat.mode & 0o7777, link, nil)
-        elsif stat.file?
-          name = encoded(path)
-          name = "#{name}.#{SecureRandom.hex(8)}" if versioned
-          store = File.join(@dir, "files", name)
-          @snapshot_fingerprints[path] = snapshot_file(abs, store)
-          Snapshot.new(path, true, :file, stat.mode & 0o7777, nil, store)
-        else
-          @snapshot_fingerprints[path] = "other:#{stat.mode}:#{stat.size}"
-          Snapshot.new(path, true, :other, stat.mode & 0o7777, nil, nil)
-        end
-      end
-
-      def snapshot_file(source, destination)
-        raise "transaction snapshot storage is a symlink" if [File.join(@root, ".master"), File.join(@root, ROOT_DIR), @dir, File.join(@dir, "files")].any? { |path| File.symlink?(path) }
-        FileUtils.mkdir_p(File.dirname(destination))
-        temporary = "#{destination}.tmp.#{Process.pid}.#{SecureRandom.hex(4)}"
-        digest = Digest::SHA256.new
-        File.open(source, "rb") do |input|
-          File.open(temporary, "wb", 0o600) do |output|
-            while (chunk = input.read(1024 * 1024))
-              digest.update(chunk)
-              output.write(chunk)
-            end
-            output.flush
-            output.fsync
-          end
-        end
-        File.rename(temporary, destination)
-        "file:#{digest.hexdigest}"
-      ensure
-        File.delete(temporary) if defined?(temporary) && temporary && File.exist?(temporary)
-      end
-
-      def fingerprint(path)
-        return "missing" unless File.exist?(path) || File.symlink?(path)
-
-        stat = File.lstat(path)
-        return "symlink:#{stat.mode}:#{File.readlink(path)}" if stat.symlink?
-        return "other:#{stat.mode}:#{stat.size}" unless stat.file?
-
-        "file:#{Digest::SHA256.file(path)}"
-      rescue StandardError => e
-        "error:#{e.class}:#{e.message}"
-      end
-
-      def persist!
-        raise "transaction storage path is a symlink" if [File.join(@root, ".master"), File.join(@root, ROOT_DIR), @dir, File.join(@dir, "files"), File.join(@dir, MANIFEST)].any? { |path| File.symlink?(path) }
-        manifest = {
-          "version" => 1,
-          "id" => @id,
-          "state" => @state,
-          "delivery_head_before" => @delivery_head_before,
-          "delivery_head_after" => @delivery_head_after,
-          "delivery_marked" => @delivery_marked == true,
-          "paths" => @paths,
-          "seen" => @seen,
-          "snapshots" => @snapshots.transform_values(&:to_h),
-        }
-        write_atomic(File.join(@dir, MANIFEST), JSON.pretty_generate(manifest) + "\n", mode: 0o600)
-      end
-
-      def load_manifest!
-        raise "transaction recovery storage is a symlink" if [File.join(@root, ".master"), File.join(@root, ROOT_DIR), @dir, File.join(@dir, "files")].any? { |item| File.symlink?(item) }
-        path = File.join(@dir, MANIFEST)
-        raise "transaction manifest is a symlink" if File.symlink?(path)
-        raise "transaction manifest not found: #{@id}" unless File.file?(path)
-
-        data = JSON.parse(File.read(path, encoding: "UTF-8"))
-        validate_manifest!(data)
-        @state = data.fetch("state")
-        @delivery_head_before = data["delivery_head_before"]
-        @delivery_head_after = data["delivery_head_after"]
-        @delivery_marked = data["delivery_marked"] == true
-        @paths = data.fetch("paths")
-        @seen = Hash.new { |hash, key| hash[key] = [] }
-        data.fetch("seen").each { |key, values| @seen[key] = values }
-        @snapshots = data["snapshots"].to_h.transform_values do |raw|
-          Snapshot.new(raw["path"], raw["exists"], raw["kind"].to_sym, raw["mode"], raw["link"], raw["store"])
-        end
-        true
-      rescue JSON::ParserError => e
-        raise "transaction manifest is corrupt: #{e.message}"
-      end
-
-      def validate_manifest!(data)
-        raise "transaction manifest malformed" unless data.is_a?(Hash) && data["version"].to_i == 1 && data["id"] == @id
-        state, paths, snapshots, seen = data.values_at("state", "paths", "snapshots", "seen")
-        raise "transaction manifest state unsupported" unless %w[open delivering committed rolled_back conflict trace_failed].include?(state)
-        raise "transaction manifest delivery mark malformed" unless [nil, true, false].include?(data["delivery_marked"])
-        raise "transaction manifest delivery heads malformed" unless data.values_at("delivery_head_before", "delivery_head_after").all? { |head| head.nil? || head.is_a?(String) }
-        raise "transaction manifest paths malformed: unsafe or non-canonical path" unless paths.is_a?(Array) && paths.all? { |p| p.is_a?(String) && p != "." && normalize(p) == p }
-        raise "transaction manifest snapshot set mismatch" unless snapshots.is_a?(Hash) && snapshots.keys.sort == paths.sort
-
-        paths.each do |path|
-          item = snapshots[path]
-          valid = item.is_a?(Hash) && item["path"] == path && %w[missing file symlink].include?(item["kind"]) &&
-                  (item["kind"] == "missing" ? item["exists"] == false && item["mode"].nil? :
-                    item["exists"] == true && item["mode"].is_a?(Integer) && item["mode"].between?(0, 0o7777))
-          raise "transaction manifest snapshot invalid: #{path}" unless valid
-          if item["kind"] == "symlink"
-            raise "transaction manifest snapshot invalid: #{path}" unless symlink_snapshot_contained?(path, item)
-          elsif item["kind"] == "file"
-            store = item["store"].to_s
-            dir = File.expand_path(File.join(@dir, "files"))
-            valid = item["link"].nil? && File.dirname(File.expand_path(store)) == dir &&
-                    File.basename(store).match?(/\A#{Regexp.escape(encoded(path))}(?:\.[0-9a-f]{16})?\z/) &&
-                    !File.symlink?(store) && !File.directory?(store) && (!%w[open delivering].include?(state) || File.file?(store))
-            raise "transaction manifest snapshot invalid: #{path}" unless valid
-          else
-            raise "transaction manifest snapshot invalid: #{path}" if item["link"] || item["store"]
-          end
-        end
-        raise "transaction manifest fingerprints malformed" unless seen.is_a?(Hash) && seen.keys.sort == paths.sort && paths.all? { |p| seen[p].is_a?(Array) && seen[p].all? { |v| v.is_a?(String) } }
-      end
-
-      # A symlink snapshot is restorable only when its link resolves inside the sandbox.
-      def symlink_snapshot_contained?(path, item)
-        link = item["link"]
-        return false unless link.is_a?(String) && item["store"].nil?
-
-        target = File.expand_path(link, File.dirname(File.join(@root, path)))
-        path_guard.within(target) == target
-      end
-
-      def restore(path, snapshot)
-        abs = absolute(path)
-        case snapshot.kind
-        when :missing
-          remove(abs)
-        when :symlink
-          remove(abs)
-          FileUtils.mkdir_p(File.dirname(abs))
-          File.symlink(snapshot.link, abs)
-        when :file
-          FileUtils.mkdir_p(File.dirname(abs))
-          content = File.binread(snapshot.store)
-          write_atomic(abs, content, mode: snapshot.mode)
-        when :other
-          raise "cannot restore unsupported path type: #{path}"
-        end
-      end
-
-      def remove(path)
-        File.delete(path) if File.exist?(path) || File.symlink?(path)
-      end
-
-      def cleanup!
-        return if [File.join(@root, ".master"), File.join(@root, ROOT_DIR), @dir].any? { |path| File.symlink?(path) }
-        FileUtils.rm_rf(@dir)
-        parent = File.dirname(@dir)
-        FileUtils.rmdir(parent) if Dir.exist?(parent) && Dir.empty?(parent)
-      rescue SystemCallError
-        nil
-      end
-
-      def snapshot_matches_fingerprint?(snapshot, current)
-        return current == "missing" if snapshot.kind == :missing
-        return current == fingerprint(snapshot.store) if snapshot.kind == :file
-
-        snapshot.kind == :symlink && current.start_with?("symlink:") && current.split(":", 3).last == snapshot.link
-      rescue StandardError
-        false
-      end
-
-      def persisted_state_matches?
-        return false if [File.join(@root, ".master"), File.join(@root, ROOT_DIR), @dir, File.join(@dir, MANIFEST)].any? { |path| File.symlink?(path) }
-        data = JSON.parse(File.read(File.join(@dir, MANIFEST), encoding: "UTF-8"))
-        data["state"] == @state && data["paths"] == @paths && data["seen"] == @seen &&
-          data["delivery_head_before"] == @delivery_head_before &&
-          data["delivery_head_after"] == @delivery_head_after &&
-          data["delivery_marked"] == (@delivery_marked == true) &&
-          data["snapshots"] == JSON.parse(JSON.generate(@snapshots.transform_values(&:to_h)))
-      rescue StandardError
-        false
-      end
-
-      def encoded(path) = Digest::SHA256.hexdigest(path)[0, 24]
     end
   end
 end
