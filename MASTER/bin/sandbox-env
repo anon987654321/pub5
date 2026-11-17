@@ -12,8 +12,24 @@
 #              when the tree is absent
 #   CHROME_PATH the headless shell tools/chrome_install.rb installed, for the
 #              CDP-based rendered checks; empty and harmless when missing
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd)
 MASTER=$(dirname -- "$SCRIPT_DIR")
+# A sourced script sees the caller's $0, so the resolution above lands
+# outside this checkout and silently exports nothing (the documented
+# usage is `. MASTER/bin/sandbox-env`). Recover by walking up from the
+# working directory to the checkout that actually holds the vendored
+# Ruby; the executed-script path still wins when it resolves.
+if [ ! -x "$MASTER/.tools/ruby/bin/ruby" ]; then
+  MASTER=""
+  cursor=$PWD
+  while [ -n "$cursor" ] && [ "$cursor" != / ]; do
+    if [ -x "$cursor/MASTER/.tools/ruby/bin/ruby" ]; then
+      MASTER="$cursor/MASTER"
+      break
+    fi
+    cursor=$(dirname -- "$cursor")
+  done
+fi
 ROOT=$(dirname -- "$MASTER")
 
 VIPS_LIB=/home/z/my-project/.libs/extracted/usr/lib/x86_64-linux-gnu
