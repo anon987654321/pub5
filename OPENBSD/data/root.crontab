@@ -112,9 +112,10 @@ PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
 # overlapping samples; a stuck monitor is detected by pub4-alert watch.
 * * * * * -s /usr/local/bin/pub4-alert cpu-watch >> /var/log/cpu-watch.log 2>&1
 
-# pub4-alert watch checks disk, swap, failed services, backup freshness and the
-# CPU-watch heartbeat. Durable transitions are recorded in pub4-alerts.log.
-# relayd-watchdog and uptime-check raise their own alerts when a symptom recurs.
+# pub4-alert watch checks disk, swap, failed services, backup freshness, the
+# CPU-watch heartbeat and interrupted fleet deploy receipts. A pending receipt
+# alerts only after its owner PID disappears; durable transitions go to the
+# pub4-alerts log, which vps-state also displays.
 */5 * * * * /usr/local/bin/pub4-alert watch
 
 # weekly-integrity — integrity_check plus a public health pass, once a week.
