@@ -1,4 +1,4 @@
-# Model routing profile — GLM-first, with API, hosted, and free fallbacks.
+# Model routing profile — Replicate-first, with direct API, hosted, and free fallbacks.
 
 schema: 1
 routing:
@@ -6,7 +6,7 @@ routing:
   strategy: weighted
   escalation_enabled: true
   escalation_tier: strong
-  provider: agy
+  provider: replicate
 
 weights: &weights
   quality: 0.50
