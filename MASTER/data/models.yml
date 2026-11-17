@@ -238,10 +238,13 @@ models:
     - *web_chat_grok
     - *web_chat_chatgpt
   default:
-    - *replicate_gpt_5_2
-    - *replicate_claude_opus_5_5
+    # Session-scoped reroute (operator request, 2026-11-17): glm-5.3-flash
+    # leads every /fix-serving tier for this session. Revert this commit to
+    # restore the replicate-first ordering.
     - *glm_5_3_flash
     - *zai_cli_auto
+    - *replicate_gpt_5_2
+    - *replicate_claude_opus_5_5
     - *glm_5_3
     - *sandbox_gateway
     - *claude_opus_api
@@ -280,10 +283,10 @@ models:
     - *ollama_gemma
     - *llama_cli_gguf
   strong:
-    - *replicate_gpt_5_2
-    - *replicate_claude_opus_5_5
     - *glm_5_3_flash
     - *zai_cli_auto
+    - *replicate_gpt_5_2
+    - *replicate_claude_opus_5_5
     - *glm_5_3
     - *sandbox_gateway
     - *claude_opus_api
@@ -298,6 +301,7 @@ models:
     - *ollama_gemma
     - *llama_cli_gguf
   vision:
+    - *glm_5_3_flash
     - *gemini_flash
     - *claude_sonnet
   medium:
@@ -312,9 +316,11 @@ models:
     - *gemini_flash
     - *mistral_small
   # Short advisory calls (council personas, review, name and comment checks):
-  # sonnet leads on speed (quality .95, speed .85), then the fast live lanes.
-  # Edit and file-write operations route to default/strong, which lead with opus.
+  # glm-5.3-flash leads for this session (operator request, 2026-11-17);
+  # sonnet follows. Edit and file-write operations route to default/strong.
   fast:
+    - *glm_5_3_flash
+    - *zai_cli_auto
     - *claude_sonnet
     - *grok_cli_auto
     - *grok_4_3
