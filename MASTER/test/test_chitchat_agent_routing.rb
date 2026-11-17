@@ -21,8 +21,8 @@ class TestChitchatAgentRouting < Minitest::Test
   def test_routed_models_classifies_greeting_as_chitchat
     models = @agent.send(:routed_models, "hey, how are you?")
 
-    # The head is the chitchat chain's; a live subscription lane leads it when
-    # one is reachable (d1d8e1c8b), so the head is not always a free model.
+    # The route and its declared tier own the head; subscription status
+    # alone never promotes a later lane over that choice.
     assert_equal :chitchat, @router.classify_intent("hey, how are you?")
     assert_equal @router.fallback_chain(task_type: :chitchat).first, models.first
   end
