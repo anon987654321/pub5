@@ -47,10 +47,33 @@ class TestProviderKeyWiring < Minitest::Test
 
     ENV.delete("MASTER_TEST_ABSENT_KEY")
     Master.stub(:api_key_specs, stubbed_specs) do
-      Master.stub(:agy_cli_available?, false) do
-        refute Master.any_api_key_present?
+      Master.stub(:supplemental_api_key_envs, []) do
+        Master.stub(:agy_cli_available?, false) do
+          refute Master.any_api_key_present?
+        end
       end
     end
+  end
+
+  def test_any_api_key_present_counts_custom_sender_credentials
+    envs = Master.supplemental_api_key_envs
+    assert_includes envs, "REPLICATE_API_KEY"
+    assert_includes envs, "REPLICATE_API_TOKEN"
+    assert_includes envs, "ZAI_API_KEY"
+    previous = envs.to_h { |name| [name, ENV[name]] }
+
+    envs.each do |name|
+      envs.each { |key| ENV.delete(key) }
+      ENV[name] = "x" * 40
+
+      Master.stub(:api_key_specs, []) do
+        Master.stub(:agy_cli_available?, false) do
+          assert Master.any_api_key_present?, "#{name} must count as a configured API credential"
+        end
+      end
+    end
+  ensure
+    previous&.each { |name, value| value.nil? ? ENV.delete(name) : ENV[name] = value }
   end
 
   # A providers.yml row for a provider this gem version does not know must not
