@@ -813,8 +813,9 @@ module Backlog
       return false unless journey["tree"].to_s == source_item[:tree].to_s
       return false unless journey["objective"].to_s == MISSION_OBJECTIVE
       return false unless journey["phase"].to_s == mission_phase(source_item)
-      return false unless journey["priority"].is_a?(Numeric) && journey["priority"].between?(0.0, 1.0)
-      return false unless journey["score"].is_a?(Numeric) && journey["score"].finite?
+      return false unless journey["priority"].is_a?(Numeric) && journey["priority"] == journey_priority(source_item)
+      return false unless journey["score"].is_a?(Numeric) && journey["score"].finite? && journey["score"].between?(0.0, 100.0)
+      return false unless journey["alternatives"].is_a?(Array) && journey["alternatives"].size <= 5
 
       outcome = row["journey_outcome"].is_a?(Hash) ? row["journey_outcome"] : {}
       outcome["status"] == "PASS" && outcome["evidence_id"].to_s == proof["report_digest"].to_s
