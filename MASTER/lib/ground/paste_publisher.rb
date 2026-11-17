@@ -25,6 +25,8 @@ module Master
       QUERY_SECRET = /([?&](?:token|access_token|refresh_token|api_key|key|secret|password)=)[^&\s]+/i
       URL_CREDENTIAL = %r{(://[^/\s:@]+:)[^/@\s]+@}
       OPERATION_VERBS = /\A\s*(?:(?:please|can you|could you|would you|tolong)\s+)*(?:fix|repair|run|execute|check|test|deploy|redeploy|build|commit|push|audit|inspect|verify|scan|render|generate|create|update|remove|delete|migrate|restart|start|stop|publish|install|revert|rollback|preflight|jalankan|semak|baiki|uji|bina|kemas kini|padam)\b/i
+      PRIVATE_COMMANDS = %w[documents memory read write ask chat email mail message forget pair].freeze
+      PRIVATE_SHELL_COMMANDS = %w[cat less more head tail sed awk grep rg find env printenv set history].freeze
 
       Outcome = Struct.new(:url, :service, :error, keyword_init: true) do
         def success? = !url.to_s.empty?
@@ -37,8 +39,22 @@ module Master
       end
 
       def self.operation_request?(input)
-        text = input.to_s
-        text.start_with?("/") || text.match?(OPERATION_VERBS)
+        text = input.to_s.strip
+        if text.start_with?("/")
+          name = text[/\A\/([a-z][a-z0-9_-]*)/i, 1].to_s.downcase
+          return false if PRIVATE_COMMANDS.include?(name)
+
+          return true
+        end
+        if text.start_with?("!")
+          command = text.delete_prefix("!").strip
+          executable = command[/\A(?:sudo\s+)?([A-Za-z0-9._\/-]+)/, 1].to_s
+          return false if PRIVATE_SHELL_COMMANDS.include?(File.basename(executable))
+
+          return true
+        end
+
+        text.match?(OPERATION_VERBS)
       end
 
       def publish(operation:, status:, output:)
@@ -52,7 +68,6 @@ module Master
         [
           [:pste_us, method(:upload_pste_us)],
           [:dpaste_org, method(:upload_dpaste_org)],
-          [:paste_rs, method(:upload_paste_rs)],
         ].each do |service, upload|
           begin
             url = upload.call(report, safe_title(operation))
@@ -149,17 +164,6 @@ module Master
         candidate = response["location"].to_s.strip
         candidate = response.body.to_s.strip if candidate.empty?
         checked_url(candidate, "dpaste.org")
-      end
-
-      def upload_paste_rs(report, _title)
-        uri = URI("https://paste.rs/")
-        response = post(uri, report, {
-          "Content-Type" => "text/plain; charset=utf-8",
-          "Accept" => "text/plain",
-          "User-Agent" => "MASTER operation-log publisher",
-        })
-        require_success!(response)
-        checked_url(response.body.to_s.strip, "paste.rs")
       end
 
       def post(uri, body, headers)
