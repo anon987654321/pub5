@@ -81,7 +81,43 @@ class TestMediaLanes < Minitest::Test
     assert_operator order.index("media-gemini:gemini-3.1-flash-image"), :<, order.index("media-gemini:gemini-3-pro-image")
     assert_equal ["media-replicate:black-forest-labs/flux-2-pro"], ids(:image, env: ALL_KEYS.slice("REPLICATE_API_TOKEN")), "Replicate alone still answers"
     assert_equal "media-openrouter:google/gemini-2.5-flash-image", ids(:image, env: ALL_KEYS.slice("OPENROUTER_API_KEY")).first
-    assert_equal %w[media-gemini:veo-3.1-lite-generate-preview media-gemini:veo-3.1-fast-generate-preview media-replicate:google/veo-3.1-fast media-gemini:veo-3.1-generate-preview], ids(:video)
+    assert_equal %w[media-replicate:minimax/h3-lite media-replicate:minimax/h3-highspeed media-gemini:veo-3.1-lite-generate-preview media-gemini:veo-3.1-fast-generate-preview media-replicate:google/veo-3.1-fast media-gemini:veo-3.1-generate-preview], ids(:video)
+  end
+
+  def test_minimax_promotional_rates_expire_back_to_list_price
+    lite = Lanes.lanes(:video).find { |lane| lane.model == "minimax/h3-lite" }
+    fast = Lanes.lanes(:video).find { |lane| lane.model == "minimax/h3-highspeed" }
+
+    assert_in_delta 0.16, Lanes.send(:estimate, lite, "", seconds: 8, today: Date.new(2026, 11, 17)), 0.001
+    assert_in_delta 0.32, Lanes.send(:estimate, lite, "", seconds: 8, today: Date.new(2027, 1, 1)), 0.001
+    assert_in_delta 0.24, Lanes.send(:estimate, fast, "", seconds: 8, today: Date.new(2026, 11, 17)), 0.001
+    assert_in_delta 0.48, Lanes.send(:estimate, fast, "", seconds: 8, today: Date.new(2027, 1, 1)), 0.001
+    assert_in_delta 0.69, Lanes.send(
+      :estimate, fast, "", seconds: 8,
+      input: { "reference_video_urls" => ["https://example.test/ref.mp4"] },
+      today: Date.new(2026, 11, 17)
+    ), 0.001
+  end
+
+  def test_replicate_video_transport_applies_the_configured_resolution
+    lane = Lanes.lanes(:video).find { |candidate| candidate.model == "minimax/h3-lite" }
+    captured = nil
+    client = Object.new
+    client.define_singleton_method(:predict) do |model, input, timeout:|
+      captured = [model, input, timeout]
+      ["https://replicate.delivery/x/out.mp4"]
+    end
+    client.define_singleton_method(:download_url) { |_url, path| File.binwrite(path, MP4) }
+    Wire.replicate = ->(_token) { client }
+
+    artifact = Wire.replicate(lane, "harbour at dusk", key: "token", opts: { seconds: 8 },
+                              timeouts: Lanes.config.fetch("timeouts"))
+    assert_equal "minimax/h3-lite", captured[0]
+    assert_equal "768P", captured[1][:resolution]
+    assert_equal MP4, artifact.bytes
+    assert_equal "video/mp4", artifact.mime
+  ensure
+    Wire.replicate = ->(token) { Master::Io::ReplicateClient.new(token:) }
   end
 
   def test_a_catalog_price_reorders_the_lanes
