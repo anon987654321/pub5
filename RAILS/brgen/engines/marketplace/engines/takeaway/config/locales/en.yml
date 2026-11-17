@@ -20,6 +20,8 @@ en:
       minimum_order: "Lowest minimum order"
     opening_hours_heading: "Opening hours"
     opening_hours_invalid_time: "Enter opening times in 24-hour HH:MM format."
+    opens_at: "opens"
+    closes_at: "closes"
     publish_needs_menu_and_hours: "Add at least one available menu item and opening hours before publishing."
     weekdays:
       monday: Monday
