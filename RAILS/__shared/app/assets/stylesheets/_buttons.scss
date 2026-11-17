@@ -123,7 +123,11 @@ $legacy-small: false !default;
 
 $compact-list: null;
 @each $context in $compact-contexts {
-  $compact-list: if($compact-list == null, "#{$context} .button", "#{$compact-list}, #{$context} .button");
+  @if $compact-list == null {
+    $compact-list: "#{$context} .button";
+  } @else {
+    $compact-list: "#{$compact-list}, #{$context} .button";
+  }
 }
 
 @if $compact-list != null {

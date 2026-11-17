@@ -284,6 +284,10 @@ def test_brgen_old_dialect_outranks_the_social_stack
     buttons = File.read(File.join(SHARED, "app", "assets", "stylesheets", "_buttons.scss"), encoding: "UTF-8")
 
     assert_includes buttons, "$legacy-small: false !default;",
+    assert_includes buttons, "@if $compact-list == null {",
+                    "compact selector accumulation must use Sass control flow, not the deprecated if() function"
+    refute_includes buttons, "if($compact-list == null",
+                     "the shared button partial must not emit the deprecated Sass if() call"
                     "the legacy size class must stay off by default in the shared contract"
     # The one .button-small selector left in the shared partial sits behind the
     # opt-in guard; the compact builder lists contexts only.
