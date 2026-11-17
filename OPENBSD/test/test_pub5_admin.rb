@@ -550,6 +550,7 @@ class Pub5AdminTest < Minitest::Test
       "restore_order" => %w[master brgen amber bsdports mrdamascy],
       "run_log" => "/var/log/pub5/runs/deploy-20261117-all-12345.log",
       "aggregate_log" => "/var/log/pub5/vps-deploy.log",
+      "snapshot_recorded" => false,
     }
   end
 
@@ -650,6 +651,52 @@ class Pub5AdminTest < Minitest::Test
     assert_includes source, 'return write_deploy_run(args[1], args[2])'
     refute_nil ADMIN.deploy_run_id?("20261117T010004Z-master-12349")
     refute ADMIN.deploy_run_id?("../20261117T010004Z-master-12349")
+  end
+
+  def test_deploy_run_receipt_freezes_the_first_durable_service_snapshot
+    Dir.mktmpdir("pub5-admin-run-") do |root|
+      run_id = "20261117T010005Z-all-12350"
+      initial = deploy_run_payload(run_id)
+      ADMIN.write_deploy_run(run_id, JSON.generate(initial),
+                             root:, verify_root: false, output: StringIO.new)
+      snapshot = {
+        "snapshot_recorded" => true,
+        "pinned_sha" => "c" * 40,
+        "previous_sha" => "d" * 40,
+        "started_services" => %w[master brgen],
+        "ports" => { "master" => 53187, "brgen" => 38182 },
+        "restore_order" => %w[brgen amber bsdports mrdamascy master],
+      }
+      ADMIN.write_deploy_run(run_id, JSON.generate(snapshot),
+                             root:, verify_root: false, output: StringIO.new)
+
+      assert_raises(RuntimeError) do
+        ADMIN.write_deploy_run(run_id, JSON.generate("started_services" => ["amber"]),
+                               root:, verify_root: false, output: StringIO.new)
+      end
+      assert_raises(RuntimeError) do
+        ADMIN.write_deploy_run(run_id, JSON.generate("pinned_sha" => "e" * 40),
+                               root:, verify_root: false, output: StringIO.new)
+      end
+      assert_raises(RuntimeError) do
+        ADMIN.write_deploy_run(run_id, JSON.generate("snapshot_recorded" => false),
+                               root:, verify_root: false, output: StringIO.new)
+      end
+    end
+  end
+
+  def test_deploy_run_receipt_terminal_states_cannot_be_rewritten
+    Dir.mktmpdir("pub5-admin-run-") do |root|
+      run_id = "20261117T010006Z-all-12351"
+      ADMIN.write_deploy_run(run_id, JSON.generate(deploy_run_payload(run_id)),
+                             root:, verify_root: false, output: StringIO.new)
+      ADMIN.write_deploy_run(run_id, JSON.generate("status" => "ok", "recovery_state" => "complete"),
+                             root:, verify_root: false, output: StringIO.new)
+      assert_raises(RuntimeError) do
+        ADMIN.write_deploy_run(run_id, JSON.generate("status" => "failed"),
+                               root:, verify_root: false, output: StringIO.new)
+      end
+    end
   end
 
 end
