@@ -1101,11 +1101,23 @@ This is a deliberately narrow policy check, not a replacement for OpenBSD's pars
 
 ## Filesystem mirror and operator entrypoints
 
-`OPENBSD/mirror/` contains only installable filesystem payload. Paths map
-one-to-one to the vm23 root: `etc` to `/etc`, `home` to `/home`,
-`usr` to `/usr`, and `var` to `/var`. It contains no deploy tools,
-Ruby libraries or documentation sources. Those live under `OPENBSD/bin`
-and `OPENBSD/lib`.
+The deployment model remains deliberately simple: a filesystem tree maps onto
+`/`. Historically the host was updated with `cp -R etc/ var/ /`, followed by
+a reboot. The current mirror has grown beyond those two trees: its 119 tracked
+files span `etc/`, `home/`, `usr/` and `var/`. The mapping is still direct:
+`mirror/etc/x` → `/etc/x`, `mirror/usr/x` → `/usr/x`, and so on.
+
+`OPENBSD/OPERATOR.sh` is the controlled equivalent of that copy, not a new
+configuration-management layer. It copies only changed tracked files, applies
+the declared owner and mode, verifies read-back, and keeps a recoverable backup.
+It deliberately protects `sshd_config`; `doas.conf` has its own canary and
+rollback path. Root cron is merged separately, and NSD signed zones are backed
+up around re-signing. A blind recursive copy would bypass those safeguards and
+could replace access policy or overwrite generated state.
+
+A normal mirror apply does not reboot. It validates and activates only affected
+services. Reboot is reserved for changes that actually require one (for example
+a kernel/base-system patch), with a maintenance window and recovery path.
 
 Use the native, Ruby-free installer for routine host configuration:
 
