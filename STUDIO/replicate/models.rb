@@ -69,10 +69,11 @@ module Studio
         (duration + reference_seconds) * rate
       end
 
-      # Reserve before the paid request, under one lock, so concurrent STUDIO
-      # jobs cannot both observe the same remaining allowance and overspend it.
-      # An ambiguous network failure keeps its reservation: the provider may
-      # already have started a billable prediction.
+      # Reserve before the paid request under one process-wide lock, so
+      # concurrent threads in this STUDIO run cannot both observe the same
+      # remaining allowance and overspend it. A new CLI process starts a new
+      # run. An ambiguous network failure keeps its reservation: the provider
+      # may already have started a billable prediction.
       def reserve_video_spend!(name, input, today: Date.today)
         return unless film_engines.dig(name.to_s, "pricing")
 
