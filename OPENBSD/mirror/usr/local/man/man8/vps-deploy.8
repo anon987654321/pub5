@@ -117,8 +117,10 @@ adds the browser checks after restart.
 lists receipts whose service restoration is pending. It is serialized by the
 deploy lock, does not fetch or check out code, and does not start, stop or
 restart services. A receipt is reported as live when its owner PID and process
-fingerprint still match, ambiguous when that PID cannot be identified, and
-available only when the recorded process is gone or the PID has been reused.
+fingerprint still match. It is ambiguous when a visible PID cannot be identified,
+another deployer process may still be active, or the process-table scan fails.
+A receipt is available only when its owner is gone or its PID was reused, the
+service snapshot is complete, and no other deployer process is visible.
 .Pp
 .Cm recover --apply
 .Ar run-id
