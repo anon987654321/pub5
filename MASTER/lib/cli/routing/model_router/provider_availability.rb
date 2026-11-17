@@ -12,11 +12,11 @@ module Master
       class ModelRouter
         # Which API, AGY CLI and browser-chat lanes are reachable right now.
         module ProviderAvailability
-          # Configured APIs lead when available; AGY CLI and browser-chat are
-          # independent fallback lanes.
+          # Only a direct xAI key activates the direct Grok API model.
+          # OpenRouter credentials must not activate a subscription CLI or
+          # an unrelated free model through this provider-specific path.
           def primary_models
-            models = []
-            models.concat(grok_api_models) if grok_api_available?
+            models = grok_api_models
             if agy_cli_available?
               agy_ids = Array(@rules.dig("models", "primary")).filter_map { |m| m["id"] }
                 .select { |id| id.to_s.start_with?("agy:") || id.to_s == "agy" }
@@ -47,12 +47,13 @@ module Master
           end
 
           def grok_api_models
-            Array(@rules.dig("models", "grok_primary")).filter_map { |m| m["id"] }
+            return [] unless grok_api_available?
+
+            model = Master.provider_config(root: @root).dig("xai", "default_model")
+            model.to_s.empty? ? [] : [model]
           end
 
-          def grok_api_available?
-            Master.api_key_present?("XAI_API_KEY") || Master.api_key_present?("OPENROUTER_API_KEY")
-          end
+          def grok_api_available? = Master.api_key_present?("XAI_API_KEY", root: @root)
 
           def keyless_mode?
             return false unless ENV["MASTER_NO_KEYLESS"].to_s.empty?
