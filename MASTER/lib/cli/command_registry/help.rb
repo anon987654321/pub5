@@ -69,6 +69,7 @@ module Master
             "/deploy <group> --confirm - deploy every registered app whose deploy_root belongs to that group.",
             "/deploy <app> --confirm - deploy one app registered in RAILS/apps.yml.",
             "/deploy all --confirm - deploy every active registered surface, including MASTER web.",
+            "Plain language works: redeploy OPENBSD, RAILS apps and MASTER web to vm23.",
             "App IDs, aliases, deployment groups and ordering are resolved from the live inventory, not router lists.",
             "Deployment is always remote and review-gated. The command delegates to bin/operator",
             "and OPENBSD/bin/vps-deploy; it does not create a second deploy implementation.",
