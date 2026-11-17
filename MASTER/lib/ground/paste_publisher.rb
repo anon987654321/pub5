@@ -13,7 +13,7 @@ module Master
     # bounded and short-lived before any request leaves the machine.
     class PastePublisher
       MAX_BYTES = 96 * 1024
-      OPERATION_MAX_CHARS = 240
+      OPERATION_MAX_CHARS = 96
       OPEN_TIMEOUT = 2
       READ_TIMEOUT = 3
       WRITE_TIMEOUT = 3
@@ -25,7 +25,7 @@ module Master
       QUERY_SECRET = /([?&](?:token|access_token|refresh_token|api_key|key|secret|password)=)[^&\s]+/i
       URL_CREDENTIAL = %r{(://[^/\s:@]+:)[^/@\s]+@}
       EMAIL_ADDRESS = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i
-      OPERATION_VERBS = /\A\s*(?:(?:please|can you|could you|would you|tolong)\s+)*(?:fix|repair|run|execute|check|test|deploy|redeploy|build|commit|push|audit|inspect|verify|scan|render|generate|create|update|remove|delete|migrate|restart|start|stop|publish|install|revert|rollback|preflight|finish|complete|implement|refactor|streamline|clean|optimize|analyse|analyze|assess|restore|jalankan|semak|baiki|uji|bina|kemas kini|padam)\b/i
+      OPERATION_VERBS = /\A\s*(?:(?:please|can you|could you|would you|also|and|now|then|go on and|go ahead and|tolong)\s+)*(?:fix|repair|run|execute|check|test|deploy|redeploy|build|commit|push|audit|inspect|verify|scan|render|generate|create|update|remove|delete|migrate|restart|start|stop|publish|install|revert|rollback|preflight|finish|complete|implement|refactor|streamline|clean|optimize|analyse|analyze|assess|restore|continue|proceed|go on|carry on|jalankan|semak|baiki|uji|bina|kemas kini|padam)\b/i
       PRIVATE_COMMANDS = %w[documents memory read write ask chat email mail message forget pair].freeze
       PRIVATE_SHELL_COMMANDS = %w[cat less more head tail sed awk grep rg find env printenv set history].freeze
 
@@ -84,7 +84,7 @@ module Master
       end
 
       def build_report(operation:, status:, output:)
-        label = sanitize(operation.to_s)[0, OPERATION_MAX_CHARS]
+        label = operation_label(operation)
         outcome = %w[success failure changed inconclusive blocked cancelled].include?(status.to_s) ? status.to_s : "unknown"
         details = sanitize(output)
         report = [
@@ -124,8 +124,20 @@ module Master
 
       private
 
+      def operation_label(operation)
+        text = sanitize(operation.to_s).gsub(/\s+/, " ").strip
+        if text.start_with?("/")
+          text[/\A\/[a-z][a-z0-9_-]*/i] || text[0, OPERATION_MAX_CHARS]
+        elsif text.start_with?("!")
+          executable = text.delete_prefix("!").strip[/\A(?:sudo\s+)?([A-Za-z0-9._\/-]+)/, 1]
+          "!#{File.basename(executable.to_s)}"
+        else
+          text.split(" ").first(4).join(" ")[0, OPERATION_MAX_CHARS]
+        end
+      end
+
       def safe_title(operation)
-        label = sanitize(operation.to_s).gsub(/\s+/, " ").strip
+        label = operation_label(operation)
         "MASTER operation: #{label.empty? ? "completed" : label[0, 80]}"
       end
 
