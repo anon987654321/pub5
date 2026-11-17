@@ -40,7 +40,8 @@ gemini:
 
 openrouter:
   env: [OPENROUTER_API_KEY]
-  model_pattern: '/'
+  # Match owner/model IDs, not custom transport IDs such as replicate:owner/model.
+  model_pattern: '\A[^:]+\/'
   ruby_llm_key: openrouter_api_key
   min_key_length: 40
   strengths: [cheap, routing, free_tier]
@@ -75,6 +76,7 @@ mistral:
 
 replicate:
   env: [REPLICATE_API_TOKEN, REPLICATE_API_KEY]
+  model_pattern: '\Areplicate:'
   # Replicate uses its own sender, not a RubyLLM setter. These credentials
   # still count as configured API access for global reachability and keyless policy.
   api_key_envs: [REPLICATE_API_TOKEN, REPLICATE_API_KEY]
