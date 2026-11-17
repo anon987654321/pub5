@@ -244,6 +244,44 @@ module Brgen
       restaurant
     end
 
+    # Mandarinen — the wok & sushi restaurant arm of the house that runs the
+    # Mandarinen Import & Engros AS wholesale tenant (seeded as a named
+    # storefront in db/seeds.rb, vertical: wholesale; a storefront carries one
+    # vertical, so the restaurant arm provisions its own). Facts are
+    # web-verified 2026-11-17: Chinese cuisine, phone 55 36 01 01, house
+    # address Øvre Kråkenes 67, 5152 Bønes. Directories listing the restaurant
+    # arm give postal 5081 with no street, so the required address field
+    # carries the house's verified address and metadata records the conflict
+    # instead of papering over it. No menu is seeded: nothing online states
+    # the restaurant's actual dishes, and a dish the tree invents would be
+    # published as the restaurant's own offer. Delivery stays unconfigured.
+    def self.seed_mandarinen!(owner:, city:)
+      result = Takeaway::Provisioner.create_restaurant!(
+        owner:,
+        city:,
+        attributes: {
+          store_slug: "mandarinen-wok-sushi",
+          name: "Mandarinen Wok & Sushi",
+          description: "Kinesisk wok & sushi i Bergen — restaurantarmen i huset bak Mandarinen Import & Engros AS, «størst i norge på asiatiske varer til restauranter». Butikk og engros: Øvre Kråkenes 67, 5152 Bønes; også avdeling Håndverksveien 15, 1405 Langhus.",
+          address: "Øvre Kråkenes 67, 5152 Bønes",
+          cuisine_type: "Chinese",
+          phone: "55 36 01 01",
+        },
+      )
+      result.store.update!(active: true)
+
+      restaurant = result.restaurant
+      restaurant.update!(
+        active: true,
+        metadata: {
+          "seed_source" => "web research 2026-11-17: mandarinen.no, Yelp (Mandarinen Wok & Sushi, postal 5081, 55 36 01 01)",
+          "address_provenance" => "the address field is the wholesale house's verified address; directories list the wok & sushi arm at postal 5081 Bergen with no street — confirm with the owner before publishing location-specific copy",
+          "menu" => "not seeded — no verified menu; only the provisioner's empty default categories",
+        },
+      )
+      restaurant
+    end
+
     MRDAMASCY_CATEGORIES = [
       ["wraps", "Wraps & Ruller", "Wraps & Rolls", "🌯", 1],
       ["tallerker", "Tallerker", "Plates", "🍽️", 2],

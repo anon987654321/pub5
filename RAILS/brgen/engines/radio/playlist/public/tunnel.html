@@ -1,114 +1,59 @@
-<!DOCTYPE html>
-<html lang="en">
+<html lang="en" manifest="data:application/manifest+json;base64,eyJuYW1lIjoicmFkaW8uYnJnZW4ubm8iLCJzaG9ydF9uYW1lIjoicmFkaW8uYnJnZW4ubm8iLCJkZXNjcmlwdGlvbiI6Ik1pbmltYWwgYXVkaW8gdmlzdWFsaXplciIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImljb25zIjpbeyJzcmMiOiJkYXRhOmltYWdlL3BuZzt3aWR0aD0xOTI7aGVpZ2h0PTE5Mjt0eXBlPWltYWdlL3BuZyIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9wbmcifV19">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>radio.brgen.no — Wireframe Tunnel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>radio.brgen.no — Wireframe Tunnel (three‑tone gradient, 22 modes)</title>
   <meta name="theme-color" content="#000000" />
-  <meta name="description" content="Minimal wireframe audio tunnel. Space next track. M mute/unmute." />
+  <meta name="description" content="Minimal, fast wireframe audio tunnel with a three-color gradient and 22 distinct parametric modes. Arrows switch modes. Space/M control audio." />
   <style>
-    /* MASTER laws: AESTHETIC_FLAT_SEMANTIC, FLAT_UI, EIGHT_PX_RHYTHM,
-       PIXEL_EXACT, DENSITY, VISUAL_HIERARCHY, still-by-default.
-       Chrome sits on 8px steps. No shadow, blur, or glow. */
-    html, body {
-      margin: 0;
-      height: 100%;
-      background: #000;
-      color: #9aa;
-      font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-    canvas {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100vh;
-      display: block;
-      background: #000;
-      touch-action: none;
-    }
+    /* Flat, timeless */
+    html, body { margin: 0; height: 100%; background: #000; color: #9aa; font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; background: #000; touch-action: none; }
+    /* Branding top-left as h1 */
     h1.site {
-      position: fixed;
-      top: 16px;
-      left: 16px;
-      margin: 0;
-      color: #bbb;
-      letter-spacing: 0.02em;
-      pointer-events: none;
-      user-select: none;
-      font-weight: 700;
-      font-size: clamp(16px, 2.2vw, 24px);
-      line-height: 1.2;
+      position: fixed; top: 12px; left: 12px; margin: 0;
+      color: #bbb; letter-spacing: 0.02em; pointer-events: none; user-select: none;
+      font-weight: 700; font-size: clamp(18px, 2.4vw, 26px);
     }
+    /* Track + mode (right-bottom) */
     .ui {
-      position: fixed;
-      right: 16px;
-      bottom: 16px;
-      color: #7a90a0;
-      font-size: 12px;
-      line-height: 1.4;
-      opacity: 0.95;
-      white-space: nowrap;
-      pointer-events: none;
-      user-select: none;
-      text-align: right;
-      max-width: min(72vw, 800px);
-      overflow: hidden;
-      text-overflow: ellipsis;
+      position: fixed; right: 12px; bottom: 10px; color: #7a90a0; font-size: 12px; opacity: 0.95;
+      white-space: nowrap; pointer-events: none; user-select: none; text-align: right;
+      max-width: min(72vw, 800px); overflow: hidden; text-overflow: ellipsis;
     }
-    .overlay {
-      position: fixed;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      background: rgba(0, 0, 0, 0.92);
-      color: #9aa;
-      cursor: pointer;
-      user-select: none;
-      padding: 24px;
-      text-align: center;
-    }
+    /* Start overlay (autoplay gate) */
+    .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,0.9); color: #9aa; cursor: pointer; user-select: none; }
     .overlay[hidden] { display: none; }
-    .overlay p {
-      max-width: 36rem;
-      margin: 0;
-      line-height: 1.5;
-      font-size: 14px;
-    }
-    #player {
-      position: fixed;
-      top: -1000px;
-      left: -1000px;
-      width: 1px;
-      height: 1px;
-      opacity: 0;
-      pointer-events: none;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      canvas { opacity: 0.85; }
-    }
+    /* Off-screen Whyp player container */
+    #player { position: fixed; top: -1000px; left: -1000px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   </style>
 </head>
 <body>
   <h1 class="site" aria-hidden="true">radio.brgen.no</h1>
   <canvas id="canvas" aria-label="Minimal three-color gradient wireframe tunnel"></canvas>
   <div id="overlay" class="overlay" role="dialog" aria-labelledby="start-title" tabindex="0">
-    <h2 id="start-title" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Start</h2>
-    <p>Click / tap to start · Space next track · M mute/unmute · Mobile: tilt for parallax</p>
+    <h2 id="start-title" style="position:absolute;left:-9999px;">Start</h2>
+    <p>Click / tap to start · ← / → switch modes (22) · Space next track · M mute/unmute · Mobile: tilt for parallax</p>
   </div>
   <div class="ui" id="ui">Ready</div>
-  <iframe id="player" src="about:blank" title="Audio player" frameborder="0" allow="autoplay; encrypted-media; accelerometer; gyroscope"></iframe>
+  <iframe id="player" src="about:blank" frameborder="0" allow="autoplay; encrypted-media; accelerometer; gyroscope"></iframe>
   <script>
     "use strict";
-    // Single mode: Classic Tunnel. MASTER: AESTHETIC_FLAT_SEMANTIC, still-by-default.
-    const COLOR_A = { h: 210, s: 40, l: 16 };
-    const COLOR_B = { h: 190, s: 50, l: 38 };
-    const COLOR_C = { h: 180, s: 30, l: 28 };
+    // Three-color gradient — endpoints in HSL for calm minimalism
+    // Deep slate blue -> soft cyan-blue -> muted teal. Subtle motion with audio/time/mouse.
+    const COLOR_A = { h: 210, s: 40, l: 16 }; // dimmer deep slate blue
+    const COLOR_B = { h: 190, s: 50, l: 38 }; // dimmer soft cyan-blue
+    const COLOR_C = { h: 180, s: 30, l: 28 }; // muted teal
     const GRAD = {
-      phase: 0, speedBase: 0.08, mouseDelta: 0,
+      phase: 0,
+      speedBase: 0.08,
+      mouseDelta: 0,
       update(dt, audioAvg, mouseDx, mouseDy) {
         this.mouseDelta = Math.hypot(mouseDx || 0, mouseDy || 0) * 0.01;
         this.phase += dt * (this.speedBase + audioAvg * 0.12 + this.mouseDelta * 0.2);
       },
+      // gradient factor per ring (0..1), with time/audio/motion drift
       factor(depth, audioAvg) {
         let f = 1 - depth;
         f += 0.06 * Math.sin(this.phase + depth * 1.2);
@@ -117,6 +62,7 @@
         return Math.max(0, Math.min(1, f));
       }
     };
+    // Fast HSL -> RGB (0..255)
     function hslToRgb(h, s, l) {
       h = ((h % 360) + 360) % 360;
       s = Math.max(0, Math.min(100, s)) / 100;
@@ -124,16 +70,21 @@
       const c = (1 - Math.abs(2 * l - 1)) * s;
       const hp = h / 60;
       const x = c * (1 - Math.abs((hp % 2) - 1));
-      let r1 = 0, g1 = 0, b1 = 0;
-      if (0 <= hp && hp < 1) { r1 = c; g1 = x; }
-      else if (1 <= hp && hp < 2) { r1 = x; g1 = c; }
-      else if (2 <= hp && hp < 3) { g1 = c; b1 = x; }
-      else if (3 <= hp && hp < 4) { g1 = x; b1 = c; }
-      else if (4 <= hp && hp < 5) { r1 = x; b1 = c; }
-      else if (5 <= hp && hp < 6) { r1 = c; b1 = x; }
-      const m = l - c / 2;
-      return [Math.round((r1 + m) * 255) | 0, Math.round((g1 + m) * 255) | 0, Math.round((b1 + m) * 255) | 0];
+      let r1=0,g1=0,b1=0;
+      if (0<=hp && hp<1){ r1=c; g1=x; b1=0; }
+      else if (1<=hp && hp<2){ r1=x; g1=c; b1=0; }
+      else if (2<=hp && hp<3){ r1=0; g1=c; b1=x; }
+      else if (3<=hp && hp<4){ r1=0; g1=x; b1=c; }
+      else if (4<=hp && hp<5){ r1=x; g1=0; b1=c; }
+      else if (5<=hp && hp<6){ r1=c; g1=0; b1=x; }
+      const m = l - c/2;
+      return [
+        Math.round((r1 + m) * 255) | 0,
+        Math.round((g1 + m) * 255) | 0,
+        Math.round((b1 + m) * 255) | 0,
+      ];
     }
+    // Interpolate three HSL endpoints (A->B->C)
     function colorFor(depth, audioAvg) {
       const f = GRAD.factor(depth, audioAvg);
       let h, s, lBase;
@@ -148,9 +99,13 @@
         s = COLOR_B.s + (COLOR_C.s - COLOR_B.s) * t;
         lBase = COLOR_B.l + (COLOR_C.l - COLOR_B.l) * t;
       }
-      return hslToRgb(h, s, lBase + (audioAvg || 0) * 3);
+      const l = lBase + (audioAvg || 0) * 3; // subtler lift +0..3%
+      return hslToRgb(h, s, l);
     }
-    const WIRE_ALPHA = 200, FOV = 250, SPEED = 0.75, BASE_RADIUS = 75, SEGMENTS = 64, Z_STEP = 4, TAU = Math.PI * 2;
+    // Visual constants
+    const WIRE_ALPHA = 200; // subtle transparency
+    const FOV = 250, SPEED = 0.75, BASE_RADIUS = 75, SEGMENTS = 64, Z_STEP = 4;
+    // ------------------ Audio: Whyp embed IFrame ------------------
     const TRACKS = [
       { artist: "J Dilla", title: "Microphone Master", id: "9EGHwkDix78" },
       { artist: "AFTA-1", title: "Due Time", id: "WC09qDzU9y4" },
@@ -165,7 +120,7 @@
       { artist: "Slum Village", title: "Worlds Full of Sadness", id: "MU3nfxsz2XA" },
       { artist: "Black Loops", title: "Under the Sea", id: "U81xh9gJeYM" },
       { artist: "how", title: "J Dilla - Players (Second Version) (Unreleased)", id: "292777", token: "zaB8x" },
-      { artist: "how", title: "Black Loops - Under the Sea", id: "292774", token: "UTbNQ" },
+      { artist: "how", title: "Black Loops - Under the Sea [U81xh9gJeYM]", id: "292774", token: "UTbNQ" },
       { artist: "how", title: "amiga", id: "292741", token: "2Jh5p" },
       { artist: "how", title: "RADIO BERGEN #1", id: "292718", token: "1cr3I" },
       { artist: "how", title: "RAUINGAR", id: "230366", token: "zPfQp" },
@@ -180,44 +135,87 @@
     ];
     const UI = (() => {
       const el = document.getElementById("ui");
-      return { text(t) { if (el) el.textContent = t; } };
+      return { text: (t) => { if (el) el.textContent = t; } };
     })();
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let currentState = -1;
+    let currentDuration = 180; // Default 3 minutes in seconds
+    window.addEventListener('message', (event) => {
+      if (event.origin !== 'https://whyp.it') return;
+      let data;
+      try {
+        data = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+      // Assume similar to YouTube for state, but Whyp may not send messages; if not, use timeouts or synthetic
+      // For now, keep as is, assuming no messages, use synthetic timing
+    });
     class AudioEngine {
       constructor() {
         this.player = document.getElementById("player");
-        this.started = false; this.muted = false; this.track = 0;
-        this.startMs = 0; this.durationMs = 180000; this._advanceTimer = null;
+        this.started = false;
+        this.muted = false;
+        this.track = 0;
+        this.startMs = 0;
+        this.durationMs = 180000;
+        this._advanceTimer = null;
       }
-      start() { this.started = true; this.loadAndPlay(TRACKS[this.track]); }
-      loadAndPlay(track) {
+      sendMessage(message) {
+        if (!this.player || !this.player.contentWindow) return;
+        this.player.contentWindow.postMessage(JSON.stringify(message), '*');
+      }
+      sendCommand(func, args = []) {
+        this.sendMessage({ event: 'command', func, args });
+      }
+      start() {
+        this.started = true;
+        this.loadAndPlay(TRACKS[this.track].id, TRACKS[this.track].token);
+      }
+      loadAndPlay(id, token) {
         if (!this.player) return;
-        const token = track.token ? "&token=" + encodeURIComponent(track.token) : "";
-        this.player.src = "https://whyp.it/tracks/embed?id=" + encodeURIComponent(track.id) + token;
-        this.afterStart();
+        const qs = token ? `&token=${token}` : ""; // only signed tracks carry a token
+        this.player.src = `https://whyp.it/tracks/embed?id=${id}${qs}`;
+        currentState = -1; // Reset state
+        currentDuration = 180; // Reset duration, adjust if known
+        this.player.onload = () => {
+          // Assume autoplay might work, but click to start
+          // No specific API, so synthetic control
+          this.afterStart();
+          setTimeout(() => {
+            if (currentState !== 1) { // Not playing
+              this.muted = true;
+              UI.text(this.trackLabel() + " • muted (press M) • " + modeLabel());
+            }
+          }, 600);
+        };
       }
       afterStart() {
         this.startMs = performance.now();
         clearTimeout(this._advanceTimer);
-        this._advanceTimer = setTimeout(() => this.next(), this.durationMs);
-        UI.text(this.trackLabel());
+        this._advanceTimer = setTimeout(() => this.next(), currentDuration * 1000); // Use default or adjust
+        UI.text(this.trackLabel() + " • " + modeLabel());
       }
-      next() { this.track = (this.track + 1) % TRACKS.length; this.loadAndPlay(TRACKS[this.track]); }
+      next() {
+        this.track = (this.track + 1) % TRACKS.length;
+        this.loadAndPlay(TRACKS[this.track].id, TRACKS[this.track].token);
+      }
       toggleMute() {
         this.muted = !this.muted;
-        UI.text(this.trackLabel() + (this.muted ? " · muted" : ""));
+        UI.text(this.trackLabel() + (this.muted ? " • muted" : "") + " • " + modeLabel());
       }
-      trackLabel() { const t = TRACKS[this.track]; return t.artist + " — " + t.title; }
+      trackLabel() { const t = TRACKS[this.track]; return `${t.artist} — ${t.title}`; }
+      // Keep synthetic analysis since no API for real data
       data() {
-        if (prefersReducedMotion) return { bass: 0.35, mid: 0.35, high: 0.3, average: 0.33 };
         const t = (performance.now() - this.startMs) * 0.001;
         const swing = Math.sin(t * 0.7) * 0.1, pocket = Math.cos(t * 0.5) * 0.08;
         const bass = Math.min(1, Math.max(0, 0.45 + 0.45 * Math.sin(2.2 * t + pocket)));
         const mid = Math.min(1, Math.max(0, 0.40 + 0.35 * Math.sin(3.3 * t + swing)));
         const high = Math.min(1, Math.max(0, 0.30 + 0.35 * Math.sin(5.1 * t + pocket * 0.7)));
-        return { bass, mid, high, average: (bass + mid + high) / 3 };
+        const avg = (bass + mid + high) / 3;
+        return { bass, mid, high, average: avg };
       }
     }
+    // ------------------ Canvas + ImageData core ------------------
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d", { alpha: false });
     let w = 0, h = 0, imageData = null, data = null;
@@ -225,33 +223,38 @@
       w = window.innerWidth | 0; h = window.innerHeight | 0;
       canvas.width = w; canvas.height = h;
       ctx.fillStyle = "#000"; ctx.fillRect(0, 0, w, h);
-      imageData = ctx.getImageData(0, 0, w, h); data = imageData.data;
+      imageData = ctx.getImageData(0, 0, w, h);
+      data = imageData.data;
     }
     addEventListener("resize", resize);
-    function fadeImageData(fade) {
+    function fadeImageData(fade = 0.85) {
       for (let i = 0, n = data.length; i < n; i += 4) {
         data[i] *= fade; data[i+1] *= fade; data[i+2] *= fade; data[i+3] = 255;
       }
     }
     function drawLine(x1, y1, x2, y2, r, g, b, a) {
-      x1 = Math.max(0, Math.min(w-1, x1|0)); y1 = Math.max(0, Math.min(h-1, y1|0));
-      x2 = Math.max(0, Math.min(w-1, x2|0)); y2 = Math.max(0, Math.min(h-1, y2|0));
-      let dx = Math.abs(x2-x1), dy = Math.abs(y2-y1);
-      let sx = x1<x2?1:-1, sy = y1<y2?1:-1, err = dx-dy, x = x1, y = y1;
+      x1 = Math.max(0, Math.min(w-1, x1 | 0)); y1 = Math.max(0, Math.min(h-1, y1 | 0));
+      x2 = Math.max(0, Math.min(w-1, x2 | 0)); y2 = Math.max(0, Math.min(h-1, y2 | 0));
+      let dx = Math.abs(x2 - x1), dy = Math.abs(y2 - y1);
+      let sx = x1 < x2 ? 1 : -1, sy = y1 < y2 ? 1 : -1;
+      let err = dx - dy, x = x1, y = y1;
       for (;;) {
-        if (x>=0 && x<w && y>=0 && y<h) {
+        if (x >= 0 && x < w && y >= 0 && y < h) {
           const i = (x + y * w) * 4;
           data[i]=r; data[i+1]=g; data[i+2]=b; data[i+3]=a;
         }
-        if (x===x2 && y===y2) break;
+        if (x === x2 && y === y2) break;
         const e2 = err << 1;
         if (e2 > -dy) { err -= dy; x += sx; }
         if (e2 < dx) { err += dx; y += sy; }
       }
     }
-    let time = 0, mouseActive = false, mouseDown = false;
+    // ------------------ Field (rows of ring points) ------------------
+    let time = 0;
+    let mouseActive = false, mouseDown = false;
     let mouseX = 0, mouseY = 0, lastMouseX = 0, lastMouseY = 0;
-    let rows = [], centers = [];
+    let rows = []; // particles rows
+    let centers = []; // per-row parallax centers
     function initField() {
       rows = []; centers = [];
       let c = 0;
@@ -262,96 +265,239 @@
           row.push({ x:0, y:0, z, x2d:0, y2d:0, idx:i, segs:SEGMENTS, radius:BASE_RADIUS, radiusAudio:BASE_RADIUS });
         }
         rows.push(row);
-        centers.push({ x: ((w/2)-w1)*(c/15)+w/2, y: ((h/2)-h1)*(c/15)+h/2 });
+        centers.push({
+          x: ((w / 2) - w1) * (c / 15) + w / 2,
+          y: ((h / 2) - h1) * (c / 15) + h / 2
+        });
         c++;
       }
     }
-    function classicRing() { return 0; }
-    function projectAndAdvance(audio, dt, mouseDx, mouseDy) {
+    // ------------------ Modes (22 distinct, sorted by complexity) ------------------
+    const TAU = Math.PI * 2, PHI = (1 + Math.sqrt(5)) / 2;
+    const Modes = [
+      { name: "Classic Tunnel", ring: (th,i,p,a)=> 0, diagEvery: 1, twist: 1.0 },
+      { name: "Diagrid Tube", ring: (th,i,p,a)=>{
+          const diag = 8 + (a.high*8|0);
+          return (Math.cos(diag*th + time*0.3) + Math.cos((diag/2)*th - time*0.2)) * 8;
+        }, diagEvery: 1, twist: 1.00 },
+      { name: "Catenary Vaults", ring: (th,i,p,a)=>{
+          const k = 0.9 + a.bass*0.4;
+          return -Math.cosh(k*(th - Math.PI)) + Math.cosh(k*Math.PI);
+        }, diagEvery: 1, twist: 0.96 },
+      { name: "Ribbed Shell (Nervi)", ring: (th,i,p,a)=>{
+          const ribs = 12 + (a.mid*6|0);
+          return Math.max(0, Math.cos(ribs*th + i*0.03)) * 16 - 8;
+        }, diagEvery: 1, twist: 1.02 },
+      { name: "Hypar Ruled Surface", ring: (th,i,p,a)=>{
+          const u = Math.cos(th), v = Math.sin(th);
+          return (u * (i*0.01 - 0.6) - v * (i*0.01 - 0.6)) * 28;
+        }, diagEvery: 2, twist: 1.04 },
+      { name: "Lamella (Zollinger)", ring: (th,i,p,a)=>{
+          const s = Math.sign(Math.sin(th*6 + i*0.05));
+          return (s * Math.cos(th*3 + time*0.2)) * 14;
+        }, diagEvery: 2, twist: 0.98 },
+      { name: "Reciprocal Frame Helix", ring: (th,i,p,a)=>{
+          const beams = 7 + (a.mid*5|0);
+          return Math.cos(beams*th + i*0.07 + time*0.3) * 12;
+        }, diagEvery: 1, twist: 1.08 },
+      { name: "Girih Corridor", ring: (th,i,p,a)=>{
+          const n = 10; let s=0;
+          for (let m=0;m<n;m++){ s += Math.cos(th*(m+2) + (i*0.02) + time*0.15); }
+          return (s/n)*10;
+        }, diagEvery: 2, twist: 1.00 },
+      { name: "Superellipse Gallery", ring: (th,i,p,a)=>{
+          const n = 2.6 + a.bass*1.1;
+          const r = Math.pow(Math.abs(Math.cos(th)), n) + Math.pow(Math.abs(Math.sin(th)), n);
+          return (Math.pow(Math.max(r, 0.0001), -1/n) - 1) * 28;
+        }, diagEvery: 1, twist: 0.94 },
+      { name: "Schwarz‑P Slices", ring: (th,i,p,a)=>{
+          const x=th*0.8, y=i*0.06, z=time*0.6;
+          const v = Math.cos(x)+Math.cos(y)+Math.cos(z);
+          return v*6;
+        }, diagEvery: 2, twist: 0.96 },
+      { name: "Phyllotaxis Rib Vault", ring: (th,i,p,a)=>{
+          return (Math.sin(th*PHI*0.5 + i*0.11) + Math.sin(th + time*0.25))*6 + Math.sin(th*2)*4;
+        }, diagEvery: 2, twist: 1.04 },
+      { name: "Kresling Origami", ring: (th,i,p,a)=>{
+          const folds = 8 + (a.high*4|0);
+          return Math.sin(folds*th + i*0.05 + time*0.3) * Math.cos(th*2) * 14;
+        }, diagEvery: 1, twist: 1.06 },
+      { name: "Quasicrystal Moiré", ring: (th,i,p,a)=>{
+          const k=6; let s=0;
+          for (let n=0;n<k;n++){ const ang=TAU*n/k; s += Math.cos(Math.cos(ang)*th*3 + Math.sin(ang)*(time*0.22+i*0.01)); }
+          return (s/k)*12;
+        }, diagEvery: 2, twist: 1.01 },
+      { name: "Torus Knot Arcade", ring: (th,i,p,a)=>{
+          const pK = 2 + (a.mid*2|0), qK = 3 + (a.bass*2|0);
+          return Math.cos(qK*th + time*0.28)*12 + Math.sin(pK*th*0.5 + i*0.018)*4;
+        }, diagEvery: 1, twist: 0.97 },
+      { name: "Conformal Power Nave", ring: (th,i,p,a)=>{
+          const k = 0.9 + a.bass*0.6;
+          const base = 1 + 0.22*Math.sin(th*2 + time*0.18);
+          return (Math.pow(base, k)-1)*26;
+        }, diagEvery: 1, twist: 0.92 },
+      { name: "Penrose Aperiodic", ring: (th,i,p,a)=>{
+          const s = Math.sin(th*PHI*3)+Math.sin(th*PHI*5);
+          return (s*0.6 + Math.sign(Math.sin(th*PHI*2))*0.4) * 16;
+        }, diagEvery: 2, twist: 1.00 },
+      { name: "Lissajous Nave", ring: (th,i,p,a)=>{
+          const ax = 2 + (a.mid*3|0), by = 3 + (a.high*3|0);
+          return (Math.sin(ax*th + time*0.4) + Math.sin(by*th + time*0.24))*6;
+        }, diagEvery: 1, twist: 1.00 },
+      { name: "Superformula Bloom", ring: (th,i,p,a)=>{
+          const m = 7 + (a.high*5|0);
+          const a1=1,b1=1,n1=1.2,n2=0.7,n3=0.7;
+          const c1=Math.cos(m*th/4)/a1, s1=Math.sin(m*th/4)/b1;
+          const r=Math.pow(Math.abs(c1),n2)+Math.pow(Math.abs(s1),n3);
+          const R=Math.pow(Math.max(r,0.0001),-1/n1);
+          return (R-1) * 26;
+        }, diagEvery: 1, twist: 0.92 },
+      { name: "Hopf Fiber Arcade", ring: (th,i,p,a)=>{
+          const phi = time*0.28 + i*0.035;
+          return Math.sin(th + phi)*10 + Math.sin(2*th + phi*0.7)*6;
+        }, diagEvery: 1, twist: 1.05 },
+      { name: "Voronoi Drift", ring: (th,i,p,a)=>{
+          const cells = 10 + (a.mid*8|0);
+          const t = ((th % TAU) / TAU) * cells;
+          const cell = Math.floor(t);
+          const frac = t - cell;
+          const step = (cell & 1) ? 1 - frac : frac;
+          return (step - 0.5) * 18 + Math.sin(i*0.05 + time*0.2)*3;
+        }, diagEvery: 2, twist: 1.00 },
+      // New research-inspired modes
+      { name: "PI3DETR Edges (arxiv:2509.03262)", ring: (th,i,p,a)=>{
+          // Simulate parametric instance edges from point clouds
+          const edges = Math.cos(th * 5 + i * 0.02) + Math.sin((th + time * 0.1) * 3);
+          return edges * (10 + a.high * 8);
+        }, diagEvery: 1, twist: 1.02 },
+      { name: "Seek-CAD Generative (arxiv:2505.17702)", ring: (th,i,p,a)=>{
+          // Self-refined generative parametric with audio refinement
+          let r = Math.sin(th * PHI + i * 0.05 + time * 0.15) * 12;
+          r += (a.average > 0.5 ? Math.cos(th * 4) * 6 : 0); // conditional refinement
+          return r;
+        }, diagEvery: 2, twist: 0.98 }
+    ];
+    let currentMode = 0;
+    function modeLabel() { return `Mode ${currentMode+1}/${Modes.length}: ${Modes[currentMode].name}`; }
+    // ------------------ Project + advance (three-color gradient) ------------------
+    function projectAndAdvance(audio, ringShapeFn, diagEvery = 1, twist = 1.0, dt = 0.016, mouseDx, mouseDy) {
       const R = rows.length;
       let sortNeeded = false;
       GRAD.update(dt, audio.average || 0, mouseDx, mouseDy);
       for (let i = 0; i < R; i++) {
-        const row = rows[i], prevRow = i > 0 ? rows[i-1] : null, center = centers[i];
+        const row = rows[i];
+        const prevRow = i > 0 ? rows[i - 1] : null;
+        const center = centers[i];
+        // Mouse parallax or gentle recenter (stable easing)
         if (mouseActive) {
-          center.x = ((w/2)-mouseX)*((row[0].z-FOV)/500)+w/2;
-          center.y = ((h/2)-mouseY)*((row[0].z-FOV)/500)+h/2;
+          center.x = ((w / 2) - mouseX) * ((row[0].z - FOV) / 500) + w / 2;
+          center.y = ((h / 2) - mouseY) * ((row[0].z - FOV) / 500) + h / 2;
         } else {
-          center.x += ((w/2)-center.x)*0.015;
-          center.y += ((h/2)-center.y)*0.015;
+          center.x += ((w / 2) - center.x) * 0.015;
+          center.y += ((h / 2) - center.y) * 0.015;
         }
+        // Three-color gradient for this ring
         const depth = i / R;
         const [cr, cg, cb] = colorFor(depth, audio.average || 0);
+        const ca = WIRE_ALPHA;
         for (let j = 0, k = row.length; j < k; j++) {
           const p = row[j];
-          const theta = p.idx * (TAU / p.segs) + time;
-          p.radius = BASE_RADIUS + classicRing();
-          p.radiusAudio = p.radius + (audio ? audio.average * 6 : 0);
-          const rx = Math.cos(theta) * p.radiusAudio, ry = Math.sin(theta) * p.radiusAudio;
-          const scale = Math.max(0.001, Math.min(10, FOV / (FOV + p.z)));
-          p.x2d = rx * scale + center.x; p.y2d = ry * scale + center.y;
-          if (mouseDown) { p.z += SPEED; if (p.z > FOV) { p.z -= FOV * 2; sortNeeded = true; } }
-          else { p.z -= SPEED; if (p.z < -FOV) { p.z += FOV * 2; sortNeeded = true; } }
-          const prevIdx = (j - 1 + k) % k, prev = row[prevIdx];
-          drawLine(p.x2d, p.y2d, prev.x2d, prev.y2d, cr, cg, cb, WIRE_ALPHA);
-          if (prevRow) {
+          // Parametric ring radius
+          const theta = p.idx * (TAU / p.segs) + time * twist;
+          const rShape = ringShapeFn(theta, i, p, audio) || 0;
+          p.radius = BASE_RADIUS + rShape;
+          p.radiusAudio = p.radius + (audio ? (audio.average * 6) : 0);
+          const rx = Math.cos(theta) * p.radiusAudio;
+          const ry = Math.sin(theta) * p.radiusAudio;
+          // Projection
+          const scaleRaw = FOV / (FOV + p.z);
+          const scale = Math.max(0.001, Math.min(10, scaleRaw));
+          p.x2d = (rx * scale) + center.x;
+          p.y2d = (ry * scale) + center.y;
+          // Motion with smooth wrap
+          if (mouseDown) { p.z += SPEED; if (p.z > FOV) { p.z -= (FOV * 2); sortNeeded = true; } }
+          else { p.z -= SPEED; if (p.z < -FOV) { p.z += (FOV * 2); sortNeeded = true; } }
+          // Connect along ring (wrap)
+          const prevIdx = (j - 1 + k) % k;
+          const prev = row[prevIdx];
+          drawLine(p.x2d, p.y2d, prev.x2d, prev.y2d, cr, cg, cb, ca);
+          // Connect to previous row at cadence
+          if (prevRow && (i % diagEvery === 0)) {
             const prevInPrev = prevRow[prevIdx];
-            drawLine(p.x2d, p.y2d, prevInPrev.x2d, prevInPrev.y2d, cr, cg, cb, WIRE_ALPHA);
+            drawLine(p.x2d, p.y2d, prevInPrev.x2d, prevInPrev.y2d, cr, cg, cb, ca);
           }
         }
       }
       if (sortNeeded) {
+        // Pair rows with centers to avoid micro-glitches after sort
         const pairs = rows.map((row, idx) => ({ row, center: centers[idx] }));
         pairs.sort((a, b) => b.row[0].z - a.row[0].z);
-        rows = pairs.map(p => p.row); centers = pairs.map(p => p.center);
+        rows = pairs.map(p => p.row);
+        centers = pairs.map(p => p.center);
       }
-      if (!prefersReducedMotion) time += mouseDown ? -0.005 : 0.005;
+      time += mouseDown ? -0.005 : 0.005;
     }
+    // ------------------ Input + app wiring ------------------
     const overlay = document.getElementById("overlay");
     const audio = new AudioEngine();
+    // Prevent overlay click leaking to canvas
     overlay.addEventListener("mousedown", (e) => { e.stopPropagation(); e.preventDefault(); }, { capture: true });
     overlay.addEventListener("click", (e) => { e.stopPropagation(); e.preventDefault(); startApp(); });
-    overlay.addEventListener("keydown", (e) => {
-      if (e.code === "Enter" || e.code === "Space") { e.preventDefault(); startApp(); }
-    });
+    overlay.addEventListener("keydown", (e) => { if (e.code === "Enter" || e.code === "Space") { e.preventDefault(); startApp(); } });
+    // Canvas mouse
     canvas.addEventListener("mousedown", () => { mouseDown = true; });
     canvas.addEventListener("mouseup", () => { mouseDown = false; });
-    canvas.addEventListener("mouseenter", () => { mouseActive = true; });
-    canvas.addEventListener("mouseleave", () => { mouseActive = false; mouseDown = false; mouseX = w/2; mouseY = h/2; });
+    canvas.addEventListener("mouseenter",() => { mouseActive = true; });
+    canvas.addEventListener("mouseleave",() => { mouseActive = false; mouseDown = false; mouseX = w/2; mouseY = h/2; });
     canvas.addEventListener("mousemove", (e) => {
       const rect = canvas.getBoundingClientRect();
       lastMouseX = mouseX; lastMouseY = mouseY;
       mouseX = e.clientX - rect.left; mouseY = e.clientY - rect.top;
     }, { passive: true });
-    let orientationActive = false, beta = 0, gamma = 0;
+    // Mobile sensors for parallax
+    let orientationActive = false;
+    let alpha = 0, beta = 0, gamma = 0;
     if (window.DeviceOrientationEvent) {
       window.addEventListener("deviceorientation", (e) => {
-        beta = e.beta || 0; gamma = e.gamma || 0; orientationActive = true;
+        alpha = e.alpha || 0; beta = e.beta || 0; gamma = e.gamma || 0;
+        orientationActive = true;
       }, { passive: true });
     }
+    // Keys
     addEventListener("keydown", (e) => {
       if (e.code === "Space") { e.preventDefault(); if (audio.started) audio.next(); return; }
-      if (e.key && e.key.toLowerCase() === "m") { e.preventDefault(); if (audio.started) audio.toggleMute(); }
+      if (e.key?.toLowerCase() === "m") { e.preventDefault(); if (audio.started) audio.toggleMute(); return; }
+      if (e.code === "ArrowRight") { e.preventDefault(); currentMode = (currentMode + 1) % Modes.length; UI.text(audio.trackLabel() + " • " + modeLabel()); return; }
+      if (e.code === "ArrowLeft") { e.preventDefault(); currentMode = (currentMode - 1 + Modes.length) % Modes.length; UI.text(audio.trackLabel() + " • " + modeLabel()); return; }
     });
     function startApp() {
-      if (!audio.started) { audio.start(); UI.text(audio.trackLabel()); overlay.hidden = true; }
+      if (!audio.started) {
+        audio.start();
+        UI.text(audio.trackLabel() + " • " + modeLabel());
+        overlay.hidden = true;
+      }
     }
+    // Main loop
     let lastTs = performance.now();
     function animate(ts) {
-      const dt = Math.min(0.05, (ts - lastTs) / 1000); lastTs = ts;
-      fadeImageData(prefersReducedMotion ? 0.92 : 0.85);
+      const dt = Math.min(0.05, (ts - lastTs) / 1000);
+      lastTs = ts;
+      fadeImageData(0.85); // subtle trails for transparency
       const a = audio.data();
+      const m = Modes[currentMode];
       const mouseDx = mouseX - lastMouseX, mouseDy = mouseY - lastMouseY;
-      if (orientationActive && !prefersReducedMotion) {
-        mouseX = w/2 + gamma * (w/90); mouseY = h/2 + beta * (h/90); mouseActive = true;
+      // Mobile parallax override
+      if (orientationActive) {
+        mouseX = w / 2 + gamma * (w / 90);
+        mouseY = h / 2 + beta * (h / 90);
+        mouseActive = true;
       }
-      projectAndAdvance(a, dt, mouseDx, mouseDy);
+      projectAndAdvance(a, m.ring, m.diagEvery, m.twist, dt, mouseDx, mouseDy);
       ctx.putImageData(imageData, 0, 0);
       requestAnimationFrame(animate);
     }
-    function boot() {
-      resize(); initField(); UI.text("Ready · click to start"); requestAnimationFrame(animate);
-    }
+    // Boot
+    function boot() { resize(); initField(); UI.text("Ready · click to start • " + modeLabel()); requestAnimationFrame(animate); }
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
     else boot();
   </script>

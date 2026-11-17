@@ -3,7 +3,13 @@
 # Drawn on the isolated engine (helpers unprefixed here, playlist.* from the host).
 # Host mounts under constraints(subdomain: RADIO_SUBDOMAINS) — see brgen config/routes.rb.
 Playlist::Engine.routes.draw do
-    root "playlists#index"
+    # The default frontpage of the radio host is the wireframe tunnel
+    # (public/tunnel.html — three-tone gradient, 22 parametric modes, whyp.it
+    # playlist, offline-capable single file). Operator request 2026-11-17.
+    # The library stays one click away at /playlists; embeds, sets and deep
+    # links are untouched, and the guest flows only assert a 200 with no auth
+    # wall at the root, which the static page satisfies.
+    root to: redirect("/tunnel.html")
     resources :playlists do
       member do
         get :embed

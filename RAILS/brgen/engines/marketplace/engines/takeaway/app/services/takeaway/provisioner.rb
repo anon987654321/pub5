@@ -75,7 +75,13 @@ module Takeaway
     end
 
     def restaurant_attributes
-      @attributes.except(:active, :demo, :marketplace_store_id, :store_id, :slug)
+      # :store_slug names the storefront (find_or_create_store! reads it) and
+      # is a store attribute like :store_id and :slug — it must not reach the
+      # restaurant build, which has no such column. First caller to pass it
+      # was seed_mandarinen! (2026-11-17); the UnknownAttributeError it raised
+      # took the whole dev seed down, which is how the missing key in this
+      # except-list announced itself.
+      @attributes.except(:active, :demo, :marketplace_store_id, :store_id, :slug, :store_slug)
                  .except(:city)
                  .merge(active: false, demo: false)
     end
