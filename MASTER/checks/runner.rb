@@ -207,6 +207,26 @@ def declared_gap(row)
   spec && Master::Gap.new(**spec.to_h { |key, value| [key.to_sym, value.is_a?(String) ? value.to_sym : value] })
 end
 
+# A child check's exit code alone is not a diagnosis. Keep a short stderr/stdout
+# tail attached to the failure, but redact common credential-shaped values and
+# cap its size so one broken test cannot flood the operator's terminal.
+def failure_excerpt(output, max_lines: 6, max_bytes: 900)
+  text = output.to_s.lines.last(max_lines).join
+  return "" if text.strip.empty?
+
+  text = text.gsub(
+    /\b([A-Z0-9_]*(?:API_KEY|ACCESS_TOKEN|REFRESH_TOKEN|SECRET|PASSWORD|BEARER)[A-Z0-9_]*\s*[:=]\s*)[^\s,;]+/i,
+    '\\1[redacted]',
+  )
+  text = text.gsub(/\b(Bearer\s+)[A-Za-z0-9._~+\/-]+/i, '\\1[redacted]')
+  text = text.gsub(/\bsk-[A-Za-z0-9_-]{12,}\b/, "[redacted]")
+  text = text.gsub(/\s+/, " ").strip
+  text = text.byteslice(0, max_bytes).to_s
+  text.force_encoding(Encoding::UTF_8).scrub
+rescue StandardError
+  "child check failed; diagnostic excerpt unavailable"
+end
+
 def run_script(path, args, gap: nil, timeout: SCRIPT_TIMEOUT_S)
   command = [RbConfig.ruby, path, *args]
   begin
@@ -225,7 +245,9 @@ def run_script(path, args, gap: nil, timeout: SCRIPT_TIMEOUT_S)
   elsif status.success?
     result.checked!
   else
-    result.fail("#{File.basename(path)} exited #{status.exitstatus}")
+    excerpt = failure_excerpt(stdout)
+    detail = excerpt.empty? ? "" : ": #{excerpt}"
+    result.fail("#{File.basename(path)} exited #{status.exitstatus}#{detail}")
   end
 
   [result, stdout]

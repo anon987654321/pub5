@@ -25,6 +25,26 @@ class TestCheckRunnerRegistry < Minitest::Test
     end
   end
 
+  def test_failed_script_reports_a_bounded_redacted_output_excerpt
+    fixture = File.join(File.dirname(RUNNER), "diagnostic-#{Process.pid}.rb")
+    File.write(fixture, <<~RUBY)
+      puts "first diagnostic line"
+      warn "provider returned API_KEY=sk-abcdefghijklmnopqrstuvwxyz123456"
+      warn "last diagnostic line"
+      exit 7
+    RUBY
+
+    run_registry("diagnostic" => { "script" => File.basename(fixture) }) do |output, status|
+      refute status.success?
+      assert_includes output, "diagnostic-#{Process.pid}.rb exited 7"
+      assert_includes output, "last diagnostic line"
+      assert_includes output, "API_KEY=[redacted]"
+      refute_includes output, "sk-abcdefghijklmnopqrstuvwxyz123456"
+    end
+  ensure
+    File.delete(fixture) if fixture && File.file?(fixture)
+  end
+
   def test_registry_rejects_rows_that_declare_both_class_and_script
     run_registry(
       "ambiguous" => { "class" => "Deploy::CheckResult", "script" => "architecture.rb" },
