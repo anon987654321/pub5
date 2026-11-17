@@ -271,6 +271,54 @@ class TakeawayControllersTest < ActionDispatch::IntegrationTest
   ensure
     Rails.application.config.x.vapid = vapid_before
   end
+  test "restaurant owners can set opening hours before publishing a menu-ready kitchen" do
+    draft = Takeaway::Restaurant.create!(
+      user: @owner, name: "Draft kitchen #{SecureRandom.hex(2)}", address: "Torget 4",
+      cuisine_type: "Norwegian", city: @city, active: false, min_order_cents: 0
+    )
+    draft.menu_items.create!(name: "Dagens", price_cents: 12_000, available: true)
+    sign_in_as(@owner)
+
+    get takeaway.edit_restaurant_path(draft)
+    assert_response :success
+    assert_select 'input[name="opening_hours[1][opens_at]"]'
+    assert_select 'input[name="opening_hours[1][closes_at]"]'
+    assert_select 'input[name="opening_hours[1][closed]"]'
+
+    patch takeaway.restaurant_path(draft), params: {
+      restaurant: { active: "1" },
+      opening_hours: {
+        "1" => { opens_at: "11:00", closes_at: "02:00" },
+        "2" => { closed: "1" },
+        "3" => { closed: "1" },
+        "4" => { closed: "1" },
+        "5" => { closed: "1" },
+        "6" => { closed: "1" },
+        "0" => { closed: "1" }
+      }
+    }
+
+    assert_redirected_to takeaway.restaurant_path(draft)
+    assert_predicate draft.reload, :active?
+    monday = draft.opening_hours.find_by!(weekday: 1)
+    assert_equal 11 * 60, monday.opens_minute
+    assert_equal 26 * 60, monday.closes_minute
+  end
+
+  test "a kitchen cannot publish until it has an available menu item and opening hours" do
+    draft = Takeaway::Restaurant.create!(
+      user: @owner, name: "Empty draft #{SecureRandom.hex(2)}", address: "Torget 5",
+      cuisine_type: "Norwegian", city: @city, active: false, min_order_cents: 0
+    )
+    sign_in_as(@owner)
+
+    patch takeaway.restaurant_path(draft), params: { restaurant: { active: "1" } }
+
+    assert_response :unprocessable_entity
+    assert_not draft.reload.active?
+    assert_select ".form-error", text: /opening hours|menu/i
+  end
+
   test "closing a restaurant with order history keeps receipts and blocks hard deletion" do
     order = place_takeaway_order!(restaurant: @restaurant, user: @diner, item: @soup)
     sign_in_as(@owner)
