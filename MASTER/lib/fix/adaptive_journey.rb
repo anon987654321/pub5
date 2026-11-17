@@ -39,14 +39,36 @@ module Master
         raise ArgumentError, "no route has grounded evidence and valid constraints" if candidates.empty?
 
         satisfied = clean_list(satisfied_dependencies, 500).to_set
+        routes_by_id = candidates.to_h { |route| [route.id, route] }
         highest_priority = candidates.map(&:priority).max
-        mission_band = candidates.select { |route| route.priority >= highest_priority - @exploration_rate }
+        strategic_ids = candidates.select do |route|
+          route.priority >= highest_priority - @exploration_rate
+        end.map(&:id).to_set
+
+        # Pull in lower-priority routes only when they are explicit prerequisites
+        # of a strategic route. Their own prerequisites are expanded recursively.
+        prerequisite_ids = Set.new
+        pending_routes = strategic_ids.to_a
+        until pending_routes.empty?
+          route = routes_by_id.fetch(pending_routes.shift)
+          route.dependencies.each do |dependency|
+            next if satisfied.include?(dependency)
+            next unless routes_by_id.key?(dependency)
+            next unless prerequisite_ids.add?(dependency)
+
+            pending_routes << dependency
+          end
+        end
+
+        mission_band = candidates.select do |route|
+          strategic_ids.include?(route.id) || prerequisite_ids.include?(route.id)
+        end
         ready = mission_band.select do |route|
           route.dependencies.all? { |dependency| satisfied.include?(dependency) }
         end
         if ready.empty?
-          pending = mission_band.flat_map(&:dependencies).uniq - satisfied.to_a
-          raise ArgumentError, "highest-priority routes are blocked by unsatisfied dependencies: #{pending.sort.join(", ")}"
+          unresolved = mission_band.flat_map(&:dependencies).uniq - satisfied.to_a
+          raise ArgumentError, "highest-priority routes are blocked by unsatisfied dependencies: #{unresolved.sort.join(", ")}"
         end
 
         ranked = ready.map { |route| [route, route_score(route, objective:), route_explanation(route)] }
