@@ -103,9 +103,11 @@ samples five one-second `vmstat` intervals, alerts on sustained 80% CPU (or
 critical 95%), and writes a heartbeat that the five-minute watch checks. That
 same watch records a uniquely keyed alert when a fleet deploy receipt remains
 pending after its owner exits or its PID is reused. `bin/vps-state --json` includes the
-pending receipt IDs, stage, pinned SHA, original service snapshot and log path;
-plain output shows the owner PID state and directs the operator to
-`vps-deploy recover --plan`. Recovery itself remains explicit and operator-driven.
+pending receipt IDs, stage, pinned SHA, original service snapshot and log path.
+The monitoring view is capped at the 500 newest receipt files / 100 pending runs;
+`truncated: true` is surfaced as its own alert and in state output, never as a
+clean result. Plain output shows PID presence and directs the operator to
+`vps-deploy recover --plan`. Recovery remains explicit and operator-driven.
 Sustained pressure enables the existing optional-app shedding ladder only;
 MASTER and Brgen are never automatically killed or restarted. `bin/vps-state`
 prints recent alerts next to each deploy stamp. `bin/domain_watch.rb` asks the registries which domains are still
