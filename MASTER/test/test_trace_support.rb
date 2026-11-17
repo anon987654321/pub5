@@ -490,7 +490,7 @@ class TestTraceSupport < Minitest::Test
     Master::Trace::Dmesg.with_verbosity("normal") do
       bus.emit("**", { event: "test:done", ts: 2 })
     end
-    assert_equal ["boot0: ready", "test0: done"], logging.snapshot
+    assert_equal ["boot0: ready", "test0 at master0: done"], logging.snapshot
   end
 
   def test_logging_snapshot_is_a_copy_of_the_current_dmesg_buffer
