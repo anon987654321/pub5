@@ -393,7 +393,7 @@ class TestIdeaPictureOutput < Minitest::Test
     models = Studio::ReplicateClient::Models
     spec = models.film_engine("kwaivgi/kling-v3-omni-video")
     assert_includes spec.fetch("inputs"), "start_image"
-    assert_equal "minimax/h3-lite", Studio::Visual::IdeaPicture::FILM
+    assert_equal "minimax/h3-highspeed", Studio::Visual::IdeaPicture::FILM
     assert_includes models.film_engines.keys, Studio::Visual::IdeaPicture::FILM
 
     error = assert_raises(ArgumentError) { models.film_engine("bogus/nope") }
