@@ -128,6 +128,11 @@ module Master
         stop_thinking_indicator
         print_bridge_footer(result.value[:core], state:) if result.ok? && state[:streamed] && result.value[:core]
         display_result(result:, accumulated:, streamed: state[:streamed], units_console: state[:units_console])
+        publish_operation_log(
+          operation: input,
+          status: result.ok? ? "success" : "failure",
+          output: result.ok? ? success_text(result) : result.message.to_s,
+        )
         @last_repeatable_input = input if result.ok? && Master::Io::MediaIntent.repeatable?(input)
 
         result
