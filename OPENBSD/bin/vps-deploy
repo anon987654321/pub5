@@ -1560,46 +1560,6 @@ fi
 print "vps-deploy: $app ok"
 write_stamp "$app" ok
 exit 0
-\t' read -r run_id target sha stage status owner_pid owner_identity; do
-      [[ -n $run_id ]] || continue
-      if ps -p "$owner_pid" >/dev/null 2>&1; then
-        current_identity=$(lock_process_identity "$owner_pid") || {
-          print "vps-deploy: AMBIGUOUS $run_id - owner PID exists but its identity cannot be checked"
-          continue
-        }
-        if [[ $current_identity == "$owner_identity" ]]; then
-          print "vps-deploy: LIVE $run_id target=$target sha=$sha stage=$stage pid=$owner_pid - do not recover"
-          continue
-        fi
-      fi
-      print "vps-deploy: RECOVERY AVAILABLE $run_id target=$target sha=$sha stage=$stage"
-      print "  log=$($RUBY -rjson -e 'r=JSON.parse(STDIN.read); puts r.fetch("run_log")' <<< "$(admin_request deploy-run-read "$run_id")")"
-    done <<< "$report"
-    print "vps-deploy: inspect first, then run: zsh OPENBSD/bin/vps-deploy recover --apply <run-id>"
-    exit 0
-  fi
-
-  receipt_json=$(admin_request deploy-run-read "$recover_id") || exit 1
-  [[ $receipt_json != null ]] || {
-    print -u2 "vps-deploy: no recovery receipt found for $recover_id"
-    exit 1
-  }
-  details=$("$RUBY" -rjson -e '
-    r = JSON.parse(STDIN.read)
-    abort "receipt is not pending recovery" unless
-      r["recovery_state"] == "pending" && %w[running failed].include?(r["status"])
-    puts ["meta", r.fetch("pid"), r.fetch("owner_identity"), r.fetch("stage"),
-          r.fetch("target"), r["pinned_sha"] || "not-pinned"].join("\t")
-    puts "services\t#{r.fetch("started_services").join(" ")}"
-    puts "order\t#{r.fetch("restore_order").join(" ")}"
-    r.fetch("ports").sort.each { |service, port| puts "port\t#{service}\t#{port}" }
-  ' <<< "$receipt_json") || {
-    print -u2 "vps-deploy: receipt is corrupt or not eligible for recovery"
-    exit 1
-  }
-  typeset -a recovery_lines
-  recovery_lines=(${(f)details})
-  IFS=#
 # Done once, by the process that owns the lock, before any service is touched.
 #
 # The deploy used to pull origin/main at whatever instant each step reached its
@@ -2144,23 +2104,6 @@ fi
 print "vps-deploy: $app ok"
 write_stamp "$app" ok
 exit 0
-\t' read -r kind owner_pid owner_identity original_stage original_target original_sha <<< "$recovery_lines[1]"
-  if ps -p "$owner_pid" >/dev/null 2>&1; then
-    current_identity=$(lock_process_identity "$owner_pid") || {
-      print -u2 "vps-deploy: owner PID exists but its identity cannot be checked; refusing recovery"
-      exit 75
-    }
-    if [[ $current_identity == "$owner_identity" ]]; then
-      print -u2 "vps-deploy: original deploy $recover_id is still running; refusing recovery"
-      exit 75
-    fi
-  fi
-
-  VPS_DEPLOY_STARTED=
-  DEPLOY_ALL_DEGRADED=()
-  deploy_ports=()
-  for ((i=2; i<=${#recovery_lines}; i++)); do
-    IFS=#
 # Done once, by the process that owns the lock, before any service is touched.
 #
 # The deploy used to pull origin/main at whatever instant each step reached its
@@ -2705,57 +2648,6 @@ fi
 print "vps-deploy: $app ok"
 write_stamp "$app" ok
 exit 0
-\t' read -r kind one two <<< "$recovery_lines[$i]"
-    case $kind in
-      services) VPS_DEPLOY_STARTED=$one ;;
-      order) DEPLOY_ALL_DEGRADED=(${@=one}) ;;
-      port) deploy_ports[$one]=$two ;;
-    esac
-  done
-  [[ -n $VPS_DEPLOY_STARTED ]] || {
-    print -u2 "vps-deploy: receipt has no captured running services; refusing an inferred restore"
-    exit 1
-  }
-  export VPS_DEPLOY_STARTED
-
-  print "vps-deploy: recovery target=$original_target pinned=$original_sha failed_stage=$original_stage"
-  print "vps-deploy: only the recorded service snapshot will be restored"
-  keep_deploy_flag
-  set_stage recovery-restore
-  recovery_failed=0
-  restore_started || recovery_failed=1
-  if (( ! recovery_failed )); then
-    for svc in ${=VPS_DEPLOY_STARTED}; do
-      admin_service check "$svc" >/dev/null 2>&1 || {
-        print -u2 "vps-deploy: recovery verification failed for $svc (rcctl check)"
-        recovery_failed=1
-        break
-      }
-      port=${deploy_ports[$svc]:-}
-      if [[ -n $port ]] && ! wait_up "$port" "${VPS_DEPLOY_SETTLE_WAIT:-240}"; then
-        print -u2 "vps-deploy: recovery verification failed for $svc /up on port $port"
-        recovery_failed=1
-        break
-      fi
-    done
-  fi
-
-  if (( recovery_failed )); then
-    recovery_payload=$("$RUBY" -rjson -e 'puts JSON.generate(status: "failed", recovery_state: "pending", stage: "recovery-failed")')
-    admin_request deploy-run-write "$recover_id" "$recovery_payload" || true
-    print -u2 "vps-deploy: recovery remains pending; inspect /var/log/daemon before another attempt"
-    exit 1
-  fi
-
-  recovery_payload=$("$RUBY" -rjson -e 'puts JSON.generate(status: "recovered", recovery_state: "complete", stage: "recovered", recovered_at: Time.now.utc.iso8601)')
-  admin_request deploy-run-write "$recover_id" "$recovery_payload" || {
-    print -u2 "vps-deploy: services answered, but the recovery receipt could not be finalized"
-    exit 1
-  }
-  print "vps-deploy: recovered $recover_id target=$original_target pinned=$original_sha (previous stage=$original_stage)"
-  exit 0
-fi
-
 # Pin the commit, prove it boots, record what is running.
 #
 # Done once, by the process that owns the lock, before any service is touched.
