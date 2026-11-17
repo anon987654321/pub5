@@ -459,6 +459,17 @@ if [[ -z ${VPS_DEPLOY_LOGGING:-} ]]; then
     ln -sfn "$deploy_log" "$DEPLOY_HOME/vps-deploy.log" 2>/dev/null || true
     ln -sfn "$deploy_run_log" "$DEPLOY_HOME/vps-deploy-latest.log" 2>/dev/null || true
   fi
+  # Recovery depends on the per-run log retaining the pinned SHA, initial
+  # service snapshot and last entered stage. Do not begin a deploy when that
+  # durable record cannot be opened as a regular file.
+  if ! : >> "$deploy_run_log" || [[ ! -f "$deploy_run_log" || -L "$deploy_run_log" ]]; then
+    print -u2 "vps-deploy: cannot create a regular per-run recovery log at $deploy_run_log; refusing before any service is touched"
+    exit 1
+  fi
+  if ! : >> "$deploy_log" || [[ ! -f "$deploy_log" || -L "$deploy_log" ]]; then
+    print -u2 "vps-deploy: cannot create a regular aggregate log at $deploy_log; refusing before any service is touched"
+    exit 1
+  fi
   # Tee stdout/stderr into both the aggregate and the per-run log. process
   # substitution keeps a single stream so line order stays honest.
   exec > >(tee -a "$deploy_log" "$deploy_run_log") 2>&1
