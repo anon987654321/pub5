@@ -112,6 +112,25 @@ class TestWebChat < Minitest::Test
     previous&.each { |name, value| value.nil? ? ENV.delete(name) : ENV[name] = value }
   end
 
+  def test_replicate_api_key_suppresses_automatic_browser_fallback
+    names = %w[
+      MASTER_LOCAL_ONLY MASTER_NO_KEYLESS MASTER_NO_WEB_CHAT MASTER_WEB_CHAT MASTER_KEYLESS
+      REPLICATE_API_TOKEN REPLICATE_API_KEY ZAI_API_KEY
+    ]
+    previous = names.to_h { |name| [name, ENV[name]] }
+    names.each { |name| ENV.delete(name) }
+    ENV["REPLICATE_API_KEY"] = "r" * 40
+
+    Master.stub(:api_key_specs, []) do
+      Master.stub(:agy_cli_available?, false) do
+        refute Master::Io::WebChat.enabled?,
+               "a paid Replicate API key is not a keyless-browser-only configuration"
+      end
+    end
+  ensure
+    previous&.each { |name, value| value.nil? ? ENV.delete(name) : ENV[name] = value }
+  end
+
   def test_browser_chat_returns_the_new_answer_and_captures_each_visible_stage
     chat = build_chat
     page = FakePage.new
