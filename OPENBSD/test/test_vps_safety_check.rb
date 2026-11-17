@@ -365,7 +365,7 @@ class VpsSafetyCheckTest < Minitest::Test
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "vps-state")
       text = File.read(path).sub(
-        'Open3.capture2e("doas", "-n", broker, "deploy-run-list")',
+        'Open3.capture2e("doas", "-n", broker, "deploy-run-pending-list")',
         'File.read("/var/db/pub5/deploy_runs")'
       )
       refute_equal File.read(path), text
