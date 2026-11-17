@@ -228,7 +228,6 @@ class TestBacklog < Minitest::Test
     end
   end
 
-
   def test_proof_map_covers_explicit_test_lint_and_runtime_commands
     map = Backlog::ProofMap
 
@@ -545,7 +544,6 @@ class TestBacklog < Minitest::Test
       assert_equal "origin", receipt.dig("repository_pushes", 0, "remote")
     end
   end
-
 
   private
 

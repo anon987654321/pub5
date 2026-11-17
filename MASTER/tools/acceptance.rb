@@ -109,7 +109,6 @@ module Acceptance
                       .find { |candidate| File.directory?(candidate) }
   end
 
-
   def route_contracts(base)
     return Report.new("route contracts", "pending", "needs --base-url (a booted target)") unless base
 

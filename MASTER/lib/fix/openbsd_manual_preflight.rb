@@ -59,7 +59,7 @@ module Master
         "nsd" => %w[nsd.conf(5) nsd-checkconf(8) nsd-control(8)],
         "nsd-checkconf" => %w[nsd.conf(5) nsd(8) nsd-control(8)],
         "nsd-checkzone" => %w[nsd.conf(5) nsd(8) nsd-control(8)],
-        "nsd-control" => %w[nsd.conf(5) nsd(8) nsd-checkconf(8)]
+        "nsd-control" => %w[nsd.conf(5) nsd(8) nsd-checkconf(8)],
       }.freeze
       REMOTE_COMMAND_SEPARATORS = %w[&& || | & ;].freeze
       REMOTE_CONTROL_WORDS = %w[
@@ -77,7 +77,7 @@ module Master
         "env" => %w[-u -C],
         "nice" => %w[-n],
         "chroot" => %w[-u],
-        "su" => %w[-c -s]
+        "su" => %w[-c -s],
       }.freeze
       RC_SERVICE_ACTIONS = %w[check configtest reload restart start stop].freeze
       RC_SERVICE_NAME = /\A[A-Za-z0-9_][A-Za-z0-9_.-]*\z/.freeze

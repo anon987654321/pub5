@@ -1432,7 +1432,6 @@ module Master
                                       "#{label} cannot be read safely: #{error.class}: #{error.message}")
         end
 
-
         # Keep the private state root separate from the mutable checkout. A
         # relocated clone of the same origin resolves to this same directory,
         # so its journal lock, hash chain and recovery artifacts remain shared.
