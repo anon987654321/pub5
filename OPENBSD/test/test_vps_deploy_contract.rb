@@ -159,6 +159,26 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes operator, 'backup_root_crontab || {'
     assert_includes operator, 'verify_root_crontab || {'
   end
+  def test_durable_recovery_logs_are_opened_before_any_service_can_be_stopped
+    logging = SOURCE[/^if \[\[ -z \$\{VPS_DEPLOY_LOGGING:-\} \]\]; then.*?^fi$/m]
+    refute_nil logging, "the deploy log setup block is missing"
+
+    run_log = logging.index('if ! : >> "$deploy_run_log"')
+    aggregate_log = logging.index('if ! : >> "$deploy_log"')
+    tee = logging.index('exec > >(tee -a "$deploy_log" "$deploy_run_log")')
+    stop = SOURCE.index('admin_service stop "$app"')
+
+    refute_nil run_log
+    refute_nil aggregate_log
+    refute_nil tee
+    refute_nil stop
+    assert_operator run_log, :<, tee
+    assert_operator aggregate_log, :<, tee
+    assert_operator tee, :<, stop
+    assert_includes logging, '[[ ! -f "$deploy_run_log" || -L "$deploy_run_log" ]]'
+    assert_includes logging, "refusing before any service is touched"
+  end
+
   def test_disk_recovery_hint_uses_bounded_broker
     assert_includes SOURCE, "doas /usr/local/sbin/pub5-admin disk-usage $mount_point"
     refute_includes SOURCE, "doas du -xk $mount_point"
