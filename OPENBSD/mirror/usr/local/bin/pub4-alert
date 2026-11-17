@@ -162,9 +162,13 @@ watch_deploy_recovery() {
       command, command_status = Open3.capture2("ps", "-ww", "-p", pid.to_s, "-o", "command=")
       return "unknown" unless start_status.success? && command_status.success? &&
                               !started.strip.empty? && !command.strip.empty?
-      checksum, checksum_status = Open3.capture2("cksum", stdin_data: command.strip)
+      return "unknown" unless start_status.success? && command_status.success? &&
+                              !started.empty? && !command.empty?
+      started = started.sub(/\n+\z/, "")
+      command = command.sub(/\n+\z/, "")
+      checksum, checksum_status = Open3.capture2("cksum", stdin_data: command)
       return "unknown" unless checksum_status.success? && !checksum.strip.empty?
-      identity = "#{started.strip.gsub(/[^A-Za-z0-9]/, "_")}_#{checksum.strip.tr(" ", "_")}"
+      identity = "#{started.gsub(/[^A-Za-z0-9]/, "_")}_#{checksum.strip.tr(" ", "_")}"
       identity == expected ? "live" : "reused"
     rescue StandardError
       "unknown"
