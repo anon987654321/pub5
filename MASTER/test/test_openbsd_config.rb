@@ -47,6 +47,21 @@ class TestOpenbsdConfig < Minitest::Test
     assert(paths.any? { |path| path.end_with?(".zone") })
   end
 
+  def test_full_stack_report_is_per_file_and_names_target_identity
+    report = Master::Fix::OpenBSDManualPreflight.mirror_configuration_report(
+      { "hostname" => "vm23", "os_release" => "0.0", "architecture" => "amd64",
+        "source_reads" => [], "native_interfaces" => [], "manual_pages" => [] },
+      root: Master::ROOT
+    )
+
+    assert_equal "vm23", report.fetch("hostname")
+    assert_equal "BLOCKED", report.fetch("status")
+    assert_operator report.fetch("total_files"), :>, 0
+    assert_equal report.fetch("total_files"), report.fetch("files").length
+    assert(report.fetch("files").all? { |row| %w[PASS BLOCKED].include?(row.fetch("status")) })
+    assert(report.fetch("files").any? { |row| row.fetch("path") == "OPENBSD/mirror/etc/relayd.conf" })
+  end
+
   def test_inert_litestream_example_is_source_audited_without_fabricated_openbsd_manual
     manuals = Master::Fix::OpenBSDManualPreflight.required_path_manuals(
       "OPENBSD/mirror/etc/litestream.yml"

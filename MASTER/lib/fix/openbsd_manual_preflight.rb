@@ -319,29 +319,99 @@ module Master
         raise TaskContract::Invalid, "cannot enumerate OpenBSD mirror configuration paths: #{error.class}"
       end
 
-      def mirror_configuration_refusal(preflight, root: Master::REPO_ROOT)
+      # A machine-readable, per-file report. Manual receipts themselves are
+      # already content-bearing and exact-release validated by normalize;
+      # this joins them to every tracked mirror configuration source.
+      def mirror_configuration_report(preflight, root: Master::REPO_ROOT)
         inventory = mirror_configuration_inventory(root:)
-        reads = Array(preflight.fetch("source_reads")).map { |row| row.fetch("path") }
+        reads = Array(preflight.fetch("source_reads")).to_h { |row| [row.fetch("path"), row] }
+        manuals = Array(preflight.fetch("manual_pages")).to_h do |row|
+          ["#{row.fetch("page")}(#{row.fetch("section")})", row]
+        end
         declared = Array(preflight.fetch("native_interfaces"))
 
-        inventory.each do |entry|
+        files = inventory.map do |entry|
           path = entry.fetch("path")
-          manuals = entry.fetch("manuals")
-          if manuals.nil?
-            return "RTFM_FIRST has no reviewed manual/schema map for mirror configuration #{path}; identify its format, owning daemon/tool and validator"
+          required = entry.fetch("manuals")
+          source = reads[path]
+          source_current = if source
+                             repository_content_digest(path, nil, root:) == source.fetch("sha256")
+                           else
+                             false
+                           end
+          page_rows = Array(required).map do |page_id|
+            page, section = page_id.match(/\A(.+)\(([1-9])\)\z/).captures
+            receipt = manuals[page_id]
+            {
+              "page" => page_id,
+              "declared" => declared.include?(page_id),
+              "receipt_present" => !receipt.nil?,
+              "sha256" => receipt && receipt.fetch("sha256"),
+              "bytes" => receipt && receipt.fetch("bytes"),
+              "lines" => receipt && receipt.fetch("lines"),
+              "source" => receipt && receipt.fetch("source")
+            }
           end
-          unless reads.include?(path)
-            return "RTFM_FIRST requires a complete source-read receipt for mirror configuration #{path}"
-          end
-
-          missing = manuals - declared
-          unless missing.empty?
-            return "RTFM_FIRST mirror configuration #{path} lacks exact-release manual receipt(s): #{missing.join(', ')}"
-          end
+          unmapped = required.nil?
+          complete = !unmapped && !source.nil? && source_current &&
+                     page_rows.all? { |row| row.fetch("declared") && row.fetch("receipt_present") }
+          {
+            "path" => path,
+            "source_read" => !source.nil?,
+            "source_current" => source_current,
+            "source_sha256" => source && source.fetch("sha256"),
+            "manual_map" => (required || []),
+            "manuals" => page_rows,
+            "unmapped_native_interface" => unmapped,
+            "status" => complete ? "PASS" : "BLOCKED"
+          }
+        rescue TaskContract::Invalid
+          {
+            "path" => path,
+            "source_read" => !source.nil?,
+            "source_current" => false,
+            "source_sha256" => source && source.fetch("sha256"),
+            "manual_map" => (required || []),
+            "manuals" => page_rows || [],
+            "unmapped_native_interface" => required.nil?,
+            "status" => "BLOCKED"
+          }
         end
-        nil
+        blocked = files.count { |row| row.fetch("status") != "PASS" }
+        {
+          "hostname" => preflight.fetch("hostname"),
+          "os_release" => preflight.fetch("os_release"),
+          "architecture" => preflight.fetch("architecture"),
+          "total_files" => files.length,
+          "passed_files" => files.length - blocked,
+          "blocked_files" => blocked,
+          "status" => blocked.zero? ? "PASS" : "BLOCKED",
+          "files" => files
+        }
       rescue TaskContract::Invalid => error
-        "RTFM_FIRST blocked: #{error.message}"
+        {
+          "status" => "BLOCKED",
+          "total_files" => 0,
+          "passed_files" => 0,
+          "blocked_files" => 0,
+          "error" => error.message,
+          "files" => []
+        }
+      end
+
+      def mirror_configuration_refusal(preflight, root: Master::REPO_ROOT)
+        report = mirror_configuration_report(preflight, root:)
+        return "RTFM_FIRST blocked: #{report.fetch("error")}" if report.key?("error")
+        return if report.fetch("status") == "PASS"
+
+        first = report.fetch("files").find { |row| row.fetch("status") != "PASS" }
+        path = first.fetch("path")
+        return "RTFM_FIRST has no reviewed manual/schema map for mirror configuration #{path}; identify its format, owning daemon/tool and validator" if first.fetch("unmapped_native_interface")
+        return "RTFM_FIRST requires a complete source-read receipt for mirror configuration #{path}" unless first.fetch("source_read")
+        return "RTFM_FIRST source receipt is stale: #{path}" unless first.fetch("source_current")
+
+        missing = first.fetch("manuals").reject { |row| row.fetch("declared") && row.fetch("receipt_present") }.map { |row| row.fetch("page") }
+        "RTFM_FIRST mirror configuration #{path} lacks exact-release manual receipt(s): #{missing.join(", ")}"
       end
 
       def full_vps_deploy_command?(tokens)
