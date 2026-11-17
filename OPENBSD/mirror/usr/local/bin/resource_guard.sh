@@ -415,16 +415,19 @@ fi
 # hours apart.
 strikes=0
 if [[ $cpu_pressure -eq 1 && $deploying -eq 0 ]]; then
-  # The CPU monitor already proved sustained saturation over minute samples.
+  # The CPU monitor already proved sustained saturation over minute samples;
+  # this is exactly the threshold, not another strike to increment.
   strikes=$SHED_STRIKES
-elif [[ -f $STRIKE_STATE ]]; then
-  strikes=$(cat "$STRIKE_STATE" 2>/dev/null || echo 0)
-  [[ $strikes == +([0-9]) ]] || strikes=0
-fi
-if [[ $shed -eq 1 ]]; then
-  strikes=$((strikes + 1))
 else
-  strikes=0
+  if [[ -f $STRIKE_STATE ]]; then
+    strikes=$(cat "$STRIKE_STATE" 2>/dev/null || echo 0)
+    [[ $strikes == +([0-9]) ]] || strikes=0
+  fi
+  if [[ $shed -eq 1 ]]; then
+    strikes=$((strikes + 1))
+  else
+    strikes=0
+  fi
 fi
 echo "$strikes" > "$STRIKE_STATE" 2>/dev/null || true
 
