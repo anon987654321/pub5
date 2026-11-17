@@ -443,7 +443,7 @@ class TestCliFaceDispatch < Minitest::Test
 
     report = session.send(:operation_log_output, ["older event"], "fix0: complete")
 
-    assert_equal "fix0: pass 1\\ntest0: 4 runs, 8 assertions\\n\\nfix0: complete", report
+    assert_equal "fix0: pass 1\ntest0: 4 runs, 8 assertions\n\nfix0: complete", report
   end
 
   def test_registered_operation_publishes_a_redacted_report_and_prints_the_url
