@@ -769,8 +769,32 @@ finish() {
   fi
   # Only the process that owns the lock restores: the children of `all` fail into
   # their parent, which knows the whole pass. Each restore result is printed.
+  local restore_ok=1
   if (( rc != 0 )) && (( lock_owner )); then
-    restore_started || print -u2 "vps-deploy: production is NOT fully restored - see the lines above"
+    restore_started || {
+      restore_ok=0
+      print -u2 "vps-deploy: production is NOT fully restored - see the lines above"
+    }
+  fi
+  # A normal EXIT/TERM/HUP reaches this terminal update; SIGKILL/power loss
+  # leaves the last durable receipt pending for an explicit operator recovery.
+  if (( lock_owner )) && [[ -n ${VPS_DEPLOY_RUN_ID:-} ]]; then
+    VPS_DEPLOY_RECEIPT_STATUS=failed
+    (( rc == 0 )) && VPS_DEPLOY_RECEIPT_STATUS=ok
+    if [[ -n ${VPS_DEPLOY_STARTED:-} ]]; then
+      if (( rc == 0 || restore_ok )); then
+        VPS_DEPLOY_RECEIPT_RECOVERY=complete
+      else
+        VPS_DEPLOY_RECEIPT_RECOVERY=pending
+      fi
+    else
+      VPS_DEPLOY_RECEIPT_RECOVERY=none
+    fi
+    export VPS_DEPLOY_RECEIPT_STATUS VPS_DEPLOY_RECEIPT_RECOVERY
+    write_deploy_run_receipt || {
+      print -u2 "vps-deploy: FAILED to persist terminal recovery receipt"
+      (( rc == 0 )) && rc=1
+    }
   fi
   # Keep resource_guard excluded until every service restored by this failure
   # has answered, including slow boots; only then stop the heartbeat and remove
