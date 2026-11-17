@@ -26,6 +26,8 @@ module Master
       URL_CREDENTIAL = %r{(://[^/\s:@]+:)[^/@\s]+@}
       EMAIL_ADDRESS = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i
       OPERATION_VERBS = /\A\s*(?:(?:please|can you|could you|would you|also|and|now|then|go on and|go ahead and|tolong)\s+)*(?:fix|repair|run|execute|check|test|deploy|redeploy|build|commit|push|audit|inspect|verify|scan|render|generate|create|update|remove|delete|migrate|restart|start|stop|publish|install|revert|rollback|preflight|finish|complete|implement|refactor|streamline|clean|optimize|analyse|analyze|assess|restore|continue|proceed|go on|carry on|jalankan|semak|baiki|uji|bina|kemas kini|padam)\b/i
+      TECHNICAL_OUTPUT_VERBS = /\A\s*(?:(?:please|can you|could you|would you|also|and|now|then|go on and|go ahead and|tolong)\s+)*(?:fix|repair|run|execute|check|test|deploy|redeploy|build|commit|push|audit|inspect|verify|scan|migrate|restart|start|stop|preflight|finish|complete|implement|refactor|streamline|clean|optimize|restore|continue|proceed|go on|carry on)\b/i
+      OPERATION_LABELS = %w[fix repair run execute check test deploy redeploy build commit push audit inspect verify scan render generate create update remove delete migrate restart start stop publish install revert rollback preflight finish complete implement refactor streamline clean optimize analyse analyze assess restore continue proceed carry].freeze
       PRIVATE_COMMANDS = %w[documents memory read write ask chat email mail message forget pair].freeze
       PRIVATE_SHELL_COMMANDS = %w[cat less more head tail sed awk grep rg find env printenv set history].freeze
 
@@ -47,6 +49,26 @@ module Master
 
           return true
         end
+
+      def self.public_output_allowed?(input)
+        text = input.to_s.strip
+        if text.start_with?("/")
+          name = text[/\A\/([a-z][a-z0-9_-]*)/i, 1].to_s.downcase
+          return false if PRIVATE_COMMANDS.include?(name)
+
+          return true
+        end
+        if text.start_with?("!")
+          command = text.delete_prefix("!").strip
+          executable = command[/\A(?:sudo\s+)?([A-Za-z0-9._\/-]+)/, 1].to_s
+          return false if PRIVATE_SHELL_COMMANDS.include?(File.basename(executable))
+          return false if command.match?(/\b(?:File\.read|File\.open|IO\.read|ENV(?:\[|\.fetch)|read_file)\b/i)
+
+          return true
+        end
+
+        text.match?(TECHNICAL_OUTPUT_VERBS)
+      end
         if text.start_with?("!")
           command = text.delete_prefix("!").strip
           executable = command[/\A(?:sudo\s+)?([A-Za-z0-9._\/-]+)/, 1].to_s
@@ -86,7 +108,8 @@ module Master
       def build_report(operation:, status:, output:)
         label = operation_label(operation)
         outcome = %w[success failure changed inconclusive blocked cancelled].include?(status.to_s) ? status.to_s : "unknown"
-        details = sanitize(output)
+        details = self.class.public_output_allowed?(operation) ? sanitize(output) :
+                   "[operation output withheld: non-technical content may be private]"
         report = [
           "MASTER operation log",
           "finished_utc: #{Time.now.utc.iso8601}",
@@ -132,8 +155,8 @@ module Master
           executable = text.delete_prefix("!").strip[/\A(?:sudo\s+)?([A-Za-z0-9._\/-]+)/, 1]
           "!#{File.basename(executable.to_s)}"
         else
-          text.split(" ").first(4).join(" ")[0, OPERATION_MAX_CHARS]
-        end
+          verb = text.split.take(6).find { |word| OPERATION_LABELS.include?(word.downcase) }
+          verb || text.split.first.to_s
       end
 
       def safe_title(operation)
