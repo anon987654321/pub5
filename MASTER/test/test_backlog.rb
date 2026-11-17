@@ -8,6 +8,7 @@ require_relative "test_helper"
 require "yaml"
 require "json"
 require_relative "../tools/backlog"
+require_relative "../lib/fix/adaptive_journey"
 
 # The backlog is the one machine-readable view of TODO.md's checkbox items:
 # this file holds the generator to the source the way the tools hold the
@@ -355,6 +356,113 @@ class TestBacklog < Minitest::Test
         plan = JSON.parse(queued.fetch(:plan))
         assert_equal "safe-task", plan.fetch("item_id")
         assert_equal ["MASTER/lib/example.rb"], plan.fetch("scope_paths")
+      end
+    end
+  end
+
+  def test_adaptive_journey_selects_a_prerequisite_before_its_dependent_route
+    planner = Master::Fix::AdaptiveJourney.new
+    evidence = [
+      { id: "source", sha256: "a" * 64, verified: true },
+      { id: "command", sha256: "b" * 64, verified: true },
+    ]
+    routes = [
+      { id: "release-preflight", actions: ["verify deployment preflight"], evidence_ids: %w[source],
+        impact: 0.7, confidence: 0.9, priority: 0.95, cost: 0.8, risk: 0.1, reversibility: "easy" },
+      { id: "app-release", actions: ["validate active application release"], evidence_ids: %w[source command],
+        impact: 1.0, confidence: 0.95, priority: 1.0, cost: 0.2, risk: 0.05,
+        reversibility: "easy", dependencies: ["release-preflight"] },
+    ]
+
+    first = planner.choose(routes:, verified_evidence: evidence, objective: "")
+    assert_equal "release-preflight", first.route.id
+
+    second = planner.choose(
+      routes: [routes.last], verified_evidence: evidence, objective: "",
+      satisfied_dependencies: ["release-preflight"]
+    )
+    assert_equal "app-release", second.route.id
+  end
+
+  def test_adaptive_journey_does_not_explore_outside_the_winning_priority_band
+    planner = Master::Fix::AdaptiveJourney.new
+    evidence = [
+      { id: "source", sha256: "a" * 64, verified: true },
+      { id: "command", sha256: "b" * 64, verified: true },
+      { id: "scope", sha256: "c" * 64, verified: true },
+    ]
+    routes = [
+      { id: "release-safety", actions: ["verify vm23 deployment"], evidence_ids: %w[source command scope],
+        impact: 0.8, confidence: 0.9, priority: 1.0, cost: 1.0, risk: 0, reversibility: "easy" },
+      { id: "studio-suite", actions: ["run studio suite"], evidence_ids: %w[source command scope],
+        impact: 0.8, confidence: 0.9, priority: 0.4, cost: 0.66, risk: 0, reversibility: "easy" },
+    ]
+
+    decision = planner.choose(routes:, verified_evidence: evidence, objective: "", exploration: true)
+
+    assert_equal "release-safety", decision.route.id
+    refute decision.exploration
+  end
+
+  def test_adaptive_journey_refuses_unverified_or_ungrounded_routes
+    planner = Master::Fix::AdaptiveJourney.new
+    error = assert_raises(ArgumentError) do
+      planner.choose(
+        routes: [{ id: "guess", actions: ["rewrite everything"], evidence_ids: ["unverified"],
+          impact: 1, confidence: 1, priority: 1, cost: 1, risk: 0, reversibility: "easy" }],
+        verified_evidence: [{ id: "unverified", sha256: "not-a-digest", verified: true }],
+        objective: ""
+      )
+    end
+    assert_match(/no route has grounded evidence/, error.message)
+  end
+
+  def test_adaptive_journey_causal_graph_uses_only_explicit_edges
+    graph = Master::Fix::AdaptiveJourney.new.causal_graph([
+      { id: "source", kind: "failure", status: "FAIL" },
+      { id: "repair", kind: "change", status: "PASS", caused_by: ["source", "missing", "repair"] },
+    ])
+
+    assert_equal [["source", "repair"]], graph.fetch("edges")
+    assert_equal ["source"], graph.fetch("roots")
+  end
+
+  def test_backlog_executor_selects_deployment_safety_before_creative_acceptance
+    rows = [
+      { id: "studio-check", text: "Run the STUDIO full suite.", tree: "STUDIO", kind: "mechanical",
+        scope_paths: ["STUDIO/test/suite_test.rb"], done_when: "rake test", size: "s", section: "STUDIO acceptance" },
+      { id: "openbsd-runner", text: "Run the updated OPENBSD deployment runner and receipt tests.",
+        tree: "OPENBSD", kind: "mechanical", scope_paths: ["OPENBSD/test/runner_test.rb"],
+        done_when: "rake test", size: "s", section: "OPENBSD production safety" },
+    ]
+    fake_mission = Class.new do
+      class << self
+        attr_accessor :queued
+        def current(root:) = nil
+      end
+      def initialize(root:); end
+      def ensure_queued!(**attributes)
+        self.class.queued = attributes
+      end
+    end
+
+    Dir.mktmpdir("adaptive-backlog") do |root|
+      Dir.mktmpdir("adaptive-repo") do |repo_root|
+        rows.each do |row|
+          path = File.join(repo_root, row.fetch(:scope_paths).first)
+          FileUtils.mkdir_p(File.dirname(path))
+          File.write(path, "class SuiteTest; end\\n")
+        end
+        executor = Backlog::Executor.new(root:, repo_root:, mission_class: fake_mission)
+        Backlog.stub(:generate, rows) do
+          assert_equal :queued, executor.enqueue_next!
+        end
+
+        plan = JSON.parse(fake_mission.queued.fetch(:plan))
+        assert_equal "openbsd-runner", plan.fetch("item_id")
+        assert_equal "release_safety", plan.dig("journey", "phase")
+        assert_equal 1.0, plan.dig("journey", "priority")
+        assert_equal plan.fetch("item_digest"), plan.dig("journey", "route_id")
       end
     end
   end
