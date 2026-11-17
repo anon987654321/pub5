@@ -2,7 +2,7 @@
 # pub4-alert - the one place a recurring symptom becomes a durable, actionable line.
 #
 #   pub4-alert raise KEY MESSAGE...   record an alert, once per quiet window per KEY
-#   pub4-alert watch                  disk, swap, failed services, stale backup
+#   pub4-alert watch                  host pressure, failed services, stale backup and interrupted deploys
 #   pub4-alert show [N]               the last N alerts (default 20)
 #
 # Why it exists. relayd-watchdog restarts relayd, resource_guard sheds apps and
@@ -17,9 +17,10 @@
 # each line still says what to do. The record is /var/log/pub4-alerts.log
 # (rotated by newsyslog) plus one daemon.crit syslog line.
 #
-# watch is bounded: it runs five reads (df, swapctl, rcctl, backup marker and
-# CPU-monitor heartbeat) and changes nothing. Run it from root's crontab.
-# PUB4_ALERT_PATH_PREFIX lets the test put fake df, swapctl and rcctl first.
+# watch is bounded: host checks are read-only; the fleet broker returns the
+# durable deploy receipts, and Ruby filters pending runs with dead owner PIDs.
+# It changes nothing. Run it from root's crontab. The test path prefix also
+# supplies a fake pub5-admin without changing the production broker path.
 PATH=${PUB4_ALERT_PATH_PREFIX:+$PUB4_ALERT_PATH_PREFIX:}/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 
 LOG=${PUB4_ALERT_LOG:-/var/log/pub4-alerts.log}
