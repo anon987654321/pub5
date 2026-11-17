@@ -5,3 +5,4 @@
 # modules load so every pass module reopens the same class object.
 require_relative "kernel"
 require_relative "kernel/convergence_adapter"
+require_relative "adaptive_journey"
