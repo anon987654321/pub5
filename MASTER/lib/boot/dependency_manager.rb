@@ -592,26 +592,23 @@ module Master
       end
 
       def bundler_spec(version)
-        candidates = []
-
-        path = File.join(
-          bundler_gem_home,
-          "specifications",
-          "bundler-#{version}.gemspec",
-        )
-        candidates << Gem::Specification.load(path) if File.file?(path)
-
-        candidates.concat(
-          Gem::Specification.find_all_by_name("bundler").select do |spec|
-            spec.version.to_s == version.to_s
-          end,
-        )
-
-        candidates.compact.find do |spec|
-          File.executable?(File.join(spec.full_gem_path, "exe", "bundle"))
-        end
+        candidates = bundler_spec_candidates(version)
+        candidates.compact.find { |spec| usable_bundler_spec?(spec) }
       rescue Gem::Exception
         nil
+      end
+
+      def bundler_spec_candidates(version)
+        path = File.join(bundler_gem_home, "specifications", "bundler-#{version}.gemspec")
+        local = File.file?(path) ? Gem::Specification.load(path) : nil
+        installed = Gem::Specification.find_all_by_name("bundler").select do |spec|
+          spec.version.to_s == version.to_s
+        end
+        [local, *installed]
+      end
+
+      def usable_bundler_spec?(spec)
+        File.executable?(File.join(spec.full_gem_path, "exe", "bundle"))
       end
 
       def refresh_gem_state!
@@ -861,23 +858,20 @@ module Master
 
       def package_commands
         packages = SYSTEM_PACKAGES.fetch(package_manager_name, [])
+        package_commands_for(package_manager_name, packages)
+      end
+
+      def package_commands_for(manager, packages)
         return [] if packages.empty?
 
-        case package_manager_name
-        when :termux
-          [[["pkg", "install", "-y", *packages], "pkg"]]
-        when :openbsd
-          [privileged(["pkg_add", "-I", *packages], "pkg_add")].compact
-        when :macos
-          [[["brew", "install", *packages], "brew"]]
-        when :debian
-          debian_package_commands(packages)
-        when :fedora
-          [privileged(["dnf", "install", "-y", *packages], "dnf")].compact
-        when :arch
-          [privileged(["pacman", "-Sy", "--needed", "--noconfirm", *packages], "pacman")].compact
-        else
-          []
+        case manager
+        when :termux then [[[ "pkg", "install", "-y", *packages ], "pkg"]]
+        when :openbsd then [privileged(["pkg_add", "-I", *packages], "pkg_add")].compact
+        when :macos then [[[ "brew", "install", *packages ], "brew"]]
+        when :debian then debian_package_commands(packages)
+        when :fedora then [privileged(["dnf", "install", "-y", *packages], "dnf")].compact
+        when :arch then [privileged(["pacman", "-Sy", "--needed", "--noconfirm", *packages], "pacman")].compact
+        else []
         end
       end
 
@@ -900,13 +894,27 @@ module Master
       def root? = Process.uid.zero?
 
       def package_manager_name
-        return :termux if @env["PREFIX"].to_s.start_with?("/data/data/com.termux/") && @command_path.call("pkg")
-        return :openbsd if RUBY_PLATFORM.include?("openbsd") && @command_path.call("pkg_add")
-        return :macos if RUBY_PLATFORM.include?("darwin") && @command_path.call("brew")
+        return :termux if termux_package_manager?
+        return :openbsd if openbsd_package_manager?
+        return :macos if macos_package_manager?
         return :debian if @command_path.call("apt-get")
         return :fedora if @command_path.call("dnf")
+
         :arch if @command_path.call("pacman")
       end
+
+      def termux_package_manager?
+        @env["PREFIX"].to_s.start_with?("/data/data/com.termux/") && @command_path.call("pkg")
+      end
+
+      def openbsd_package_manager?
+        RUBY_PLATFORM.include?("openbsd") && @command_path.call("pkg_add")
+      end
+
+      def macos_package_manager?
+        RUBY_PLATFORM.include?("darwin") && @command_path.call("brew")
+      end
+
     end
 
     module DependencyManagerProcessCapture
