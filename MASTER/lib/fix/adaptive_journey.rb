@@ -39,7 +39,7 @@ module Master
         raise ArgumentError, "no route has grounded evidence and valid constraints" if candidates.empty?
 
         satisfied = clean_list(satisfied_dependencies, 500).to_set
-        ready = candidates.select { |route| (route.dependencies - satisfied).empty? }
+        ready = candidates.select { |route| route.dependencies.all? { |dependency| satisfied.include?(dependency) } }
         if ready.empty?
           pending = candidates.flat_map(&:dependencies).uniq - satisfied.to_a
           raise ArgumentError, "no route is ready; unsatisfied dependencies: #{pending.sort.join(", ")}"
