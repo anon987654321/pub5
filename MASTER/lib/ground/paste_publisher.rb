@@ -28,7 +28,7 @@ module Master
       PRIVATE_COMMANDS = %w[documents memory read write ask chat email mail message forget pair].freeze
       PRIVATE_SHELL_COMMANDS = %w[cat less more head tail sed awk grep rg find env printenv set history].freeze
 
-      Outcome = Struct.new(:url, :service, :error, keyword_init: true) do
+      Outcome = Struct.new(:url, :service, :error, :expires_in, keyword_init: true) do
         def success? = !url.to_s.empty?
       end
 
@@ -71,7 +71,7 @@ module Master
         ].each do |service, upload|
           begin
             url = upload.call(report, safe_title(operation))
-            return Outcome.new(url:, service:)
+            return Outcome.new(url:, service:, expires_in: service == :pste_us ? "1 day" : "7 days")
           rescue StandardError => e
             failures << "#{service}=#{e.class}"
           end
@@ -153,7 +153,7 @@ module Master
           "content" => report,
           "lexer" => "text",
           "title" => title,
-          "expires" => "86400",
+          "expires" => "604800",
           "format" => "url",
         )
         response = post(uri, body, {
