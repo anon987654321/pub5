@@ -374,8 +374,34 @@ acquire_deploy_lock() {
   exit 75
 }
 
-# The re-entrant children of `all` and `rails` carry VPS_DEPLOY_LOCK_HELD and take nothing.
-[[ -n ${VPS_DEPLOY_LOCK_HELD:-} ]] || acquire_deploy_lock
+# Re-entrant children must prove the inherited lock belongs to their live
+# parent. An environment flag alone must never bypass top-level serialization.
+if [[ -n ${VPS_DEPLOY_LOCK_HELD:-} ]]; then
+  lock_read_owner || {
+    print -u2 "vps-deploy: refused - child invocation has no readable parent lock owner"
+    exit 75
+  }
+  [[ $lock_host == "$(hostname -s)" &&
+     $lock_pid == ${VPS_DEPLOY_LOCK_PID:-} &&
+     $lock_identity == ${VPS_DEPLOY_LOCK_IDENTITY:-} ]] || {
+    print -u2 "vps-deploy: refused - child invocation does not match the parent lock record"
+    exit 75
+  }
+  ps -p "$lock_pid" >/dev/null 2>&1 || {
+    print -u2 "vps-deploy: refused - parent deploy process is no longer running"
+    exit 75
+  }
+  current_identity=$(lock_process_identity "$lock_pid") || {
+    print -u2 "vps-deploy: refused - cannot verify the parent deploy process"
+    exit 75
+  }
+  [[ $current_identity == "$lock_identity" ]] || {
+    print -u2 "vps-deploy: refused - parent deploy PID identity changed"
+    exit 75
+  }
+else
+  acquire_deploy_lock
+fi
 
 # Durable deploy logging.
 #
