@@ -101,7 +101,12 @@ module Master
         resolve(parse_payload(raw), inventory)
       rescue StandardError => e
         log_unresolved(e)
-        Result.new(status: :unavailable, message: "MASTER could not validate operator intent (#{e.class}); no action was taken.")
+        detail = Master::Execution::Contract.diagnostic_fields(e.message).fetch(:diagnostic, nil)
+        suffix = detail.to_s.empty? ? "" : ": #{detail.to_s[0, 180]}"
+        Result.new(
+          status: :unavailable,
+          message: "MASTER could not validate operator intent (#{e.class})#{suffix}; no action was taken.",
+        )
       end
 
       private
@@ -318,7 +323,11 @@ module Master
       def ambiguous(message) = Result.new(status: :ambiguous, message:)
 
       def log_unresolved(error)
-        @bus&.publish("operator:intent_unresolved", error_class: error.class.name)
+        @bus&.publish(
+          "operator:intent_unresolved",
+          error_class: error.class.name,
+          **Master::Execution::Contract.diagnostic_fields(error.message),
+        )
         Master::Ground::Swallow.log(error, context: "OperatorIntent.call")
       rescue StandardError
         nil
