@@ -43,6 +43,25 @@ class TestLanePolicyFromYaml < Minitest::Test
     assert_nil envs.call("mistral-large")
   end
 
+  def test_configured_anthropic_and_gemini_apis_are_in_the_default_premier_pool
+    %w[default primary].each do |name|
+      tier = Selection.tier(name)
+      assert_includes tier, "claude-opus-5-5"
+      assert_includes tier, "claude-sonnet-5-5"
+      assert_includes tier, "gemini-2.5-flash"
+    end
+  end
+
+  def test_operator_configured_provider_credentials_are_wired_without_renaming
+    envs = ->(id) { Selection.api_keys.find { |pattern, _names| pattern.match?(id) }&.last }
+    assert_equal %w[ANTHROPIC_API_KEY], envs.call("claude-sonnet-5-5")
+    assert_equal %w[GOOGLE_API_KEY GEMINI_API_KEY], envs.call("gemini-2.5-flash")
+    assert_equal %w[OPENROUTER_API_KEY], envs.call("openai/gpt-4o")
+
+    providers = Master.load_yaml(File.join(Master::ROOT, "data", "providers.yml"))
+    assert_equal %w[REPLICATE_API_TOKEN REPLICATE_API_KEY], providers.dig("replicate", "env")
+  end
+
   # Perplexity stays out of hosted discovery until its product and provider-specific
   # request/response contract have been deliberately selected and tested.
   def test_perplexity_is_not_a_routable_hosted_provider
