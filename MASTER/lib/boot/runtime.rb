@@ -113,12 +113,13 @@ module Master
       provider_config(root:).flat_map { |_name, config| provider_key_specs(config) }.compact
     end
 
-    # Custom senders such as Replicate and the Z.ai OpenAI-compatible adapter
-    # do not expose a RubyLLM setter. Their credentials still count as real API
-    # access; providers.yml declares that distinction in api_key_envs.
+    # Custom API senders have a model_pattern but no RubyLLM setter.
+    # Their provider env list is still a real API credential boundary; tool,
+    # binary, and local identifiers have no model_pattern and are not counted.
     def supplemental_api_key_envs(root: ROOT)
       provider_config(root:).values.grep(Hash)
-                    .flat_map { |row| Array(row["api_key_envs"]) }.uniq
+                    .select { |row| row["model_pattern"] && !row["ruby_llm_key"] }
+                    .flat_map { |row| Array(row["env"]) }.uniq
     end
 
     def api_key_present?(env_var, root: ROOT)
