@@ -339,6 +339,11 @@ module Master
         now >= @model_down_until && @cost_usd + @config.fetch("est_cost_per_call_usd") <= @config.fetch("max_cost_usd")
       end
 
+      # A provider credit/billing refusal is not a transient narration failure.
+      # Retrying it every beat only repeats a known refusal; templates remain a
+      # complete, local fallback while the optional model lane rests.
+      BUDGET_BACKOFF_S = 60 * 60
+
       def model_text(job, now)
         prompt = format(@script.prompt_template,
                         story: job[:story].empty? ? "(nothing yet)" : job[:story].join(" "),
@@ -358,16 +363,24 @@ module Master
         detail = Master::Trace::Dmesg.verbose? ? " (#{e.message})" : ""
         Master::Trace::Dmesg.once("voice0", "model narration unavailable; using deterministic templates#{detail}")
         nil
+      rescue RubyLLM::PaymentRequiredError
+        record_model_failure(now, backoff: BUDGET_BACKOFF_S)
+        Master::Trace::Dmesg.once("voice0", "model narration budget unavailable; using deterministic templates for one hour")
+        nil
       rescue StandardError => e
         record_model_failure(now)
         Master::Ground::Swallow.log(e, context: "Voice::Narrator.model")
         nil
       end
 
-      def record_model_failure(now)
+      def record_model_failure(now, backoff: nil)
         @lock.synchronize do
           @model_failures += 1
-          @model_down_until = now + 60 * @model_failures if @model_failures >= 2
+          if backoff
+            @model_down_until = [@model_down_until, now + backoff].max
+          elsif @model_failures >= 2
+            @model_down_until = now + 60 * @model_failures
+          end
         end
       end
 

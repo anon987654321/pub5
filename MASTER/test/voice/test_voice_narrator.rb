@@ -145,6 +145,30 @@ class TestVoiceNarrator < Minitest::Test
     assert_match(/no lane/, messages.first.last)
   end
 
+  def test_provider_budget_refusal_uses_templates_and_has_a_long_backoff
+    calls = 0
+    n = build(writer: lambda { |**|
+      calls += 1
+      raise RubyLLM::PaymentRequiredError, "provider credits exhausted"
+    })
+    n.observe("scan0: reading 14 files")
+    window(n)
+    messages = []
+
+    Master::Trace::Dmesg.stub(:once, ->(unit, message, **) { messages << [unit, message] }) do
+      Master::Ground::Swallow.stub(:log, ->(*, **) { flunk "billing refusal is an expected optional-lane state" }) do
+        assert_equal :spoken, n.tick
+      end
+    end
+
+    assert_match(/reading 14 files/, @spoken.join)
+    refute n.send(:model_usable?, @clock.call + 59 * 60)
+    assert n.send(:model_usable?, @clock.call + Narrator::BUDGET_BACKOFF_S + 1)
+    assert_equal 1, calls
+    assert_equal "voice0", messages.first.first
+    assert_match(/budget unavailable/, messages.first.last)
+  end
+
   def test_invented_numbers_fall_back_to_the_template
     n = build(writer: ->(**) { "The scan read 900 files." })
     n.observe("scan0: reading 14 files")
