@@ -186,7 +186,8 @@ module Master
       def estimate(lane, prompt, seconds: nil, input: {}, today: Date.today)
         row = lane.row
         if row["usd_per_second"]
-          billed_seconds = Float(seconds || config["video_seconds"])
+          requested_seconds = seconds || input["duration"] || input[:duration] || config["video_seconds"]
+          billed_seconds = Float(requested_seconds)
           references = input["reference_video_urls"] || input[:reference_video_urls]
           if lane.provider == "replicate" && lane.model.start_with?("minimax/") && !Array(references).empty?
             # Replicate bills reference video too. Their documented combined
