@@ -283,8 +283,9 @@ class TestLaneSelection < Minitest::Test
     assert_equal [GROK, ANTHROPIC_OPUS], Selection.order_or_all([ANTHROPIC_OPUS, GROK], lead: [GROK, ANTHROPIC_OPUS])
   end
 
-  def test_subscription_lanes_lead_in_grok_agy_order_ahead_of_api_keys
-    assert_equal [GROK, AGY, DEEPSEEK, ANTHROPIC_OPUS, LOCAL, NEMOTRON], Selection.order([NEMOTRON, DEEPSEEK, AGY, GROK, LOCAL, ANTHROPIC_OPUS])
+  def test_remote_lanes_keep_the_declared_catalogue_order_ahead_of_local_and_free
+    assert_equal [ANTHROPIC_OPUS, DEEPSEEK, AGY, GROK, LOCAL, NEMOTRON],
+                 Selection.order([NEMOTRON, DEEPSEEK, AGY, GROK, LOCAL, ANTHROPIC_OPUS])
   end
 
   def test_browser_websites_have_independent_provider_identity
@@ -532,17 +533,18 @@ class TestLaneSelection < Minitest::Test
     router
   end
 
-  def test_the_router_chain_and_preferred_pass_through_the_selection
+  def test_the_router_chain_and_preferred_keep_the_first_configured_live_remote_lane
     Quota.note(AGY, AGY_REPLY)
     chain = [NEMOTRON, AGY, NANO, ANTHROPIC_OPUS, GROK]
     router = router_over(chain, [NEMOTRON, AGY, ANTHROPIC_OPUS])
 
     counting(:order_or_all) do |calls|
-      assert_equal [GROK, ANTHROPIC_OPUS, NEMOTRON, NANO], router.fallback_chain(task_type: :code_generation)
+      assert_equal [ANTHROPIC_OPUS, GROK, NEMOTRON, NANO],
+                   router.fallback_chain(task_type: :code_generation)
       refute_empty calls, "fallback_chain never reached LaneSelection"
     end
-    counting(:best_class) do |calls|
-      assert_equal GROK, router.preferred(task_type: :code_generation)
+    counting(:order) do |calls|
+      assert_equal ANTHROPIC_OPUS, router.preferred(task_type: :code_generation)
       refute_empty calls, "preferred never reached LaneSelection"
     end
   end
@@ -606,7 +608,8 @@ class TestLaneSelection < Minitest::Test
       refute_empty calls, "the repair loop's ask never reached LaneSelection"
     end
 
-    assert_equal [GROK], sent, "the first live subscription lane of the tier, not the dead agy and not a free nemotron"
+    assert_equal [ANTHROPIC_OPUS], sent,
+                 "the first configured live remote model wins; a later subscription CLI cannot leapfrog it"
   end
 
   def test_a_recent_provider_failure_changes_the_next_router_selection
@@ -796,13 +799,14 @@ class TestLaneSelection < Minitest::Test
   # must demote the floor in the same sort that ranks free lanes last.
   def test_a_suspended_floor_rides_behind_every_answering_class
     mixed = [NEMOTRON, LOCAL, DEEPSEEK, GROK]
-    assert_equal [GROK, DEEPSEEK, LOCAL, NEMOTRON], Selection.order(mixed), "free stays last while the floor stands"
+    assert_equal [DEEPSEEK, GROK, LOCAL, NEMOTRON], Selection.order(mixed),
+                 "declared remote order is preserved while local/free stay last"
 
     Selection.watch_free_class!
     Selection.note_provider_outcome(ANTHROPIC_OPUS, :success, alive: ALL)
     Selection.suspend_free_floor!(ANTHROPIC_OPUS)
-    assert_equal [GROK, DEEPSEEK, LOCAL, NEMOTRON], Selection.order(mixed),
-                 "free and local stay in the list, never-modelless keeps them, but every remote goes first"
+    assert_equal [DEEPSEEK, GROK, LOCAL, NEMOTRON], Selection.order(mixed),
+                 "free and local stay in the list, never-modelless keeps them, and remote order is declared"
     assert_equal [LOCAL, NEMOTRON], Selection.order([NEMOTRON, LOCAL]),
                  "with no remote left, the floor keeps its own order"
     assert_equal [NEMOTRON, LOCAL, DEEPSEEK, GROK], Selection.order(mixed, free_last: false),
@@ -814,8 +818,8 @@ class TestLaneSelection < Minitest::Test
   def test_the_all_dead_fallback_returns_the_ranked_order_not_the_given_order
     mixed = [NEMOTRON, LOCAL, DEEPSEEK, GROK]
     Selection.stub(:order, ->(_models, **_kw) { [] }) do
-      assert_equal [GROK, DEEPSEEK, LOCAL, NEMOTRON], Selection.order_or_all(mixed),
-                   "the refusal order goes through the ranking, so a walk that tries anyway is ranked"
+      assert_equal [DEEPSEEK, GROK, LOCAL, NEMOTRON], Selection.order_or_all(mixed),
+                   "the refusal order retains remote catalogue order and class ordering"
     end
   end
 
@@ -825,7 +829,7 @@ class TestLaneSelection < Minitest::Test
     Selection.note_provider_outcome(ANTHROPIC_OPUS, :success, alive: ALL)
     Selection.suspend_free_floor!(ANTHROPIC_OPUS)
     Selection.stub(:order, ->(_models, **_kw) { [] }) do
-      assert_equal [GROK, DEEPSEEK, NEMOTRON], Selection.order_or_all(mixed),
+      assert_equal [DEEPSEEK, GROK, NEMOTRON], Selection.order_or_all(mixed),
                    "the suspended free slug cannot jump a dead remote just because it was listed first"
     end
   ensure
