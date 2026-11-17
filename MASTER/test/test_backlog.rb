@@ -605,6 +605,17 @@ class TestBacklog < Minitest::Test
         "done_when" => row.fetch(:done_when),
         "proof_map_version" => Backlog::ProofMap::VERSION,
         "proof_types" => proof_types,
+        "journey" => {
+          "route_id" => executor.send(:item_digest, row),
+          "phase" => "tree_acceptance",
+          "tree" => "MASTER",
+          "objective" => Backlog::Executor::MISSION_OBJECTIVE,
+          "priority" => 0.78,
+          "score" => 1.25,
+          "reason" => "grounded TODO, scope and allowlisted command",
+          "exploration" => false,
+          "alternatives" => [],
+        },
       }
       record = {
         "origin" => "backlog", "state" => "completed", "stage" => "deliver",
@@ -640,6 +651,12 @@ class TestBacklog < Minitest::Test
         stale_command.fetch("proof").fetch("command_evidence")["command_digest"] = "d" * 64
         refute executor.record_completion!(record: stale_command)
 
+        stale_journey = Marshal.load(Marshal.dump(record))
+        stale_plan = JSON.parse(stale_journey.fetch("plan"))
+        stale_plan.fetch("journey")["priority"] = 1.0
+        stale_journey["plan"] = JSON.generate(stale_plan)
+        refute executor.record_completion!(record: stale_journey)
+
         assert executor.record_completion!(record:)
         assert executor.record_completion!(record:)
       end
@@ -651,6 +668,11 @@ class TestBacklog < Minitest::Test
       assert_equal 0, receipt.dig("evidence", "pending_repository_writes")
       assert_equal "fix_pipeline", receipt.dig("proof", "kind")
       assert_equal "origin", receipt.dig("repository_pushes", 0, "remote")
+      history = executor.send(:verified_route_history)
+      assert_equal 1, history.size
+      assert_equal plan.fetch("item_digest"), history.first.fetch("route_id")
+      assert_equal "PASS", history.first.fetch("status")
+      assert_equal "a" * 64, history.first.fetch("evidence_id")
     end
   end
 
