@@ -617,10 +617,45 @@ module Pub5Admin
     0
   end
 
-  # Monitoring does not need terminal receipt contents. Enumerate candidate
-  # filenames to select the newest window, read at most max_scan receipt files,
-  # return at most max_pending pending runs, and surface either truncation.
-  # The explicit deploy-run-list remains the complete diagnostic path.
+  # Retain the lexicographically newest filenames in a min-heap. The heap's
+  # root is the oldest retained name, so its size never exceeds the requested
+  # window even when the receipt directory contains a long history.
+  def retain_newest_deploy_run_name(names, name, limit)
+    if names.length < limit
+      names << name
+      index = names.length - 1
+      while index.positive?
+        parent = (index - 1) / 2
+        break if names[parent] <= names[index]
+
+        names[parent], names[index] = names[index], names[parent]
+        index = parent
+      end
+      return
+    end
+
+    return if name <= names[0]
+
+    names[0] = name
+    index = 0
+    loop do
+      left = index * 2 + 1
+      break if left >= names.length
+
+      right = left + 1
+      child = right < names.length && names[right] < names[left] ? right : left
+      break if names[index] <= names[child]
+
+      names[index], names[child] = names[child], names[index]
+      index = child
+    end
+  end
+
+  # Monitoring does not need terminal receipt contents. Enumerate directory
+  # entries once, retain only the newest max_scan filenames in a fixed-size
+  # heap, read at most max_scan receipt files, and return at most max_pending
+  # pending runs. Enumeration remains linear in directory size; retained memory
+  # and the final sort are bounded by max_scan. The full list remains diagnostic.
   def list_pending_deploy_runs(root: STAMP_DIR, verify_root: true, output: $stdout,
                                max_scan: DEPLOY_RUN_SCAN_LIMIT, max_pending: DEPLOY_RUN_PENDING_LIMIT)
     raise "invalid deploy-run scan limit" unless max_scan.is_a?(Integer) && max_scan.positive?
@@ -632,15 +667,14 @@ module Pub5Admin
     truncated = false
     if directory
       Dir.each_child(directory) do |name|
-        next unless name.match?(/\A\d{8}T\d{6}Z-[a-z0-9_-]{1,32}-\d+\.json\z/)
+        next unless name.match?(/\\A\\d{8}T\\d{6}Z-[a-z0-9_-]{1,32}-\\d+\\.json\\z/)
 
         scanned += 1
-        names << name
+        retain_newest_deploy_run_name(names, name, max_scan)
       end
     end
-    names.sort!.reverse!
     truncated = scanned > max_scan
-    names = names.first(max_scan)
+    names.sort!.reverse!
 
     records = names.map do |name|
       deploy_run_record(name.delete_suffix(".json"), root:, verify_root:)
