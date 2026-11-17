@@ -263,57 +263,76 @@ module Pub5Admin
     return 64 unless APPS.include?(app)
 
     candidates = ["/etc/#{app}.env", "/etc/rails/#{app}.env"]
-    candidates.each do |path|
-      next unless File.exist?(path) || File.symlink?(path)
-      stat = File.lstat(path)
-      raise "#{path} must be a root-owned regular file" unless
-        stat.file? && !stat.symlink? && stat.uid.zero? && (stat.mode & 0o022).zero?
-
-      secret = File.foreach(path).filter_map do |line|
-        match = line.match(/\ASECRET_KEY_BASE=([0-9a-fA-F]{64,256})\s*\z/)
-        match && match[1]
-      end.first
-      if secret
-        puts secret if emit
-        return 0
-      end
-    end
-
-    target = candidates.first
-    raise "#{target} is a symlink; refusing secret write" if File.symlink?(target)
-    if File.exist?(target)
-      stat = File.lstat(target)
-      raise "#{target} must be a root-owned regular file" unless
-        stat.file? && !stat.symlink? && stat.uid.zero? && (stat.mode & 0o022).zero?
-
-      raise "#{target} already exists without a valid SECRET_KEY_BASE; refusing to replace the environment file"
-    end
-    secret = SecureRandom.hex(64)
-    temporary = "/etc/.#{app}.env.#{Process.pid}.#{SecureRandom.hex(6)}"
-    begin
-      File.open(temporary, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
-        file.write("SECRET_KEY_BASE=#{secret}\n")
-        file.flush
-        file.fsync
-      end
-      group_id = Etc.getgrnam(app).gid
-      File.chown(0, group_id, temporary)
-      File.chmod(0o640, temporary)
-      begin
-        # Publish only if the name is still absent. Concurrent first deploys may
-        # race, but neither is allowed to silently replace the other's key.
-        File.link(temporary, target)
-      rescue Errno::EEXIST
-        raise "#{target} appeared during secret creation; refusing to replace it"
-      end
+    secret = existing_app_secret(candidates)
+    if secret
       puts secret if emit
-      0
-    ensure
-      File.unlink(temporary) if File.exist?(temporary)
+      return 0
     end
+
+    create_app_secret(app, candidates.first, emit)
   rescue ArgumentError
     raise "account or group #{app} is missing; cannot establish app secret"
   end
+
+  def existing_app_secret(candidates)
+    candidates.each do |path|
+      next unless File.exist?(path) || File.symlink?(path)
+
+      validate_secret_file!(path)
+      secret = secret_from_file(path)
+      return secret if secret
+    end
+    nil
+  end
+
+  def validate_secret_file!(path)
+    stat = File.lstat(path)
+    raise "#{path} must be a root-owned regular file" unless
+      stat.file? && !stat.symlink? && stat.uid.zero? && (stat.mode & 0o022).zero?
+  end
+
+  def secret_from_file(path)
+    File.foreach(path).filter_map do |line|
+      match = line.match(/\ASECRET_KEY_BASE=([0-9a-fA-F]{64,256})\s*\z/)
+      match && match[1]
+    end.first
+  end
+
+  def create_app_secret(app, target, emit)
+    raise "#{target} is a symlink; refusing secret write" if File.symlink?(target)
+    refuse_invalid_secret_target!(target) if File.exist?(target)
+
+    secret = SecureRandom.hex(64)
+    temporary = "/etc/.#{app}.env.#{Process.pid}.#{SecureRandom.hex(6)}"
+    publish_app_secret(app, secret, temporary, target, emit)
+  end
+
+  def refuse_invalid_secret_target!(target)
+    validate_secret_file!(target)
+    raise "#{target} already exists without a valid SECRET_KEY_BASE; refusing to replace the environment file"
+  end
+
+  def publish_app_secret(app, secret, temporary, target, emit)
+    File.open(temporary, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
+      file.write("SECRET_KEY_BASE=#{secret}\n")
+      file.flush
+      file.fsync
+    end
+    File.chown(0, Etc.getgrnam(app).gid, temporary)
+    File.chmod(0o640, temporary)
+    publish_secret_without_replace(temporary, target)
+    puts secret if emit
+    0
+  ensure
+    File.unlink(temporary) if File.exist?(temporary)
+  end
+
+  def publish_secret_without_replace(temporary, target)
+    File.link(temporary, target)
+  rescue Errno::EEXIST
+    raise "#{target} appeared during secret creation; refusing to replace it"
+  end
+
   # Read one app's root-owned progress record through this fixed broker verb.
   # The directory intentionally remains private (0700); vps-state runs as dev and
   # must not silently infer "no deploy" because direct filesystem access is denied.
@@ -364,12 +383,28 @@ module Pub5Admin
   end
 
   def write_deploy_status(app, step, state)
+    validate_deploy_status_input!(app, step, state)
+    directory = prepare_deploy_status_directory
+    target = deploy_status_target(directory, app)
+    validate_deploy_status_target!(target)
+
+    now = Time.now.utc.iso8601
+    payload = {
+      app: app, step: step, state: state, pid: Process.ppid,
+      started_at: deploy_status_started_at(target, now), updated_at: now,
+    }
+    write_deploy_status_atomically(target, directory, app, payload, step, state)
+  end
+
+  def validate_deploy_status_input!(app, step, state)
     raise "unknown app: #{app}" unless APPS.include?(app)
     raise "invalid deploy status" unless %w[running done failed].include?(state)
-    unless step.bytesize.between?(1, 160) && step.match?(/\A[A-Za-z0-9_ .:+(),\/-]+\z/)
-      raise "invalid deploy step"
-    end
+    return if step.bytesize.between?(1, 160) && step.match?(/\A[A-Za-z0-9_ .:+(),\/-]+\z/)
 
+    raise "invalid deploy step"
+  end
+
+  def prepare_deploy_status_directory
     if File.exist?(STAMP_DIR) || File.symlink?(STAMP_DIR)
       root_stat = File.lstat(STAMP_DIR)
       raise "#{STAMP_DIR} is a symlink; refusing status write" if root_stat.symlink?
@@ -386,40 +421,36 @@ module Pub5Admin
     raise "#{directory} must be a root-owned directory" unless
       directory_stat.directory? && directory_stat.uid.zero? && !directory_stat.symlink?
     File.chmod(0o700, directory) unless (directory_stat.mode & 0o777) == 0o700
+    directory
+  end
 
-    target = File.join(directory, "#{app}.json")
+  def deploy_status_target(directory, app)
+    File.join(directory, "#{app}.json")
+  end
+
+  def validate_deploy_status_target!(target)
     raise "#{target} is a symlink; refusing status write" if File.symlink?(target)
-    if File.exist?(target)
-      target_stat = File.lstat(target)
-      raise "#{target} must be a root-owned regular file" unless
-        target_stat.file? && target_stat.uid.zero? && !target_stat.symlink?
-    end
+    return unless File.exist?(target)
 
-    now = Time.now.utc.iso8601
-    started_at = now
-    if state != "running" && File.file?(target)
-      begin
-        previous = JSON.parse(File.read(target))
-        value = previous["started_at"]
-        started_at = value if previous["state"] == "running" &&
-                              value.is_a?(String) &&
-                              value.match?(/\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\z/)
-      rescue JSON::ParserError, SystemCallError
-        nil
-      end
-    elsif state == "running" && File.file?(target)
-      begin
-        previous = JSON.parse(File.read(target))
-        value = previous["started_at"]
-        started_at = value if previous["state"] == "running" &&
-                              value.is_a?(String) &&
-                              value.match?(/\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\z/)
-      rescue JSON::ParserError, SystemCallError
-        nil
-      end
-    end
-    payload = { app: app, step: step, state: state, pid: Process.ppid,
-                started_at: started_at, updated_at: now }
+    target_stat = File.lstat(target)
+    raise "#{target} must be a root-owned regular file" unless
+      target_stat.file? && target_stat.uid.zero? && !target_stat.symlink?
+  end
+
+  def deploy_status_started_at(target, fallback)
+    return fallback unless File.file?(target)
+
+    previous = JSON.parse(File.read(target))
+    value = previous["started_at"]
+    return fallback unless previous["state"] == "running" && value.is_a?(String)
+    return fallback unless value.match?(/\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\z/)
+
+    value
+  rescue JSON::ParserError, SystemCallError
+    fallback
+  end
+
+  def write_deploy_status_atomically(target, directory, app, payload, step, state)
     temporary = File.join(directory, ".#{app}.#{Process.pid}.#{SecureRandom.hex(6)}")
     begin
       File.open(temporary, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
@@ -775,49 +806,60 @@ module Pub5Admin
   # This verb knows no caller-provided filesystem paths. It only imports from the
   # fixed system cache or the selected app's fixed Bundler cache.
   def bundle_cache(app, action, ruby_key)
-    return 64 unless RAILS_APPS.include?(app)
-    return 64 unless valid_ruby_cache_key?(ruby_key)
+    return 64 unless RAILS_APPS.include?(app) && valid_ruby_cache_key?(ruby_key)
     return 64 unless %w[prepare import capture].include?(action)
 
     shared = File.join(BUNDLE_CACHE_BASE, ruby_key)
     cas = File.join(shared, "cas", "sha256")
-    if action == "prepare"
-      ensure_root_directory(shared)
-      ensure_root_directory(File.join(shared, "cache"))
-      ensure_root_directory(cas)
-      return 0
-    end
-
+    ensure_root_directory(shared)
     ensure_root_directory(cas)
-    if action == "import"
-      source_dir = File.join(shared, "cache")
-      ensure_root_directory(source_dir)
-      source_uid = 0
-    else
-      account = Etc.getpwnam(app)
-      home = "/home/#{app}"
-      app_dir = File.join(home, "app")
-      bundle_dir = File.join(home, ".bundle")
-      source_dir = File.join(bundle_dir, "cache")
-      [["/home", 0], [home, account.uid], [app_dir, account.uid], [bundle_dir, account.uid], [source_dir, account.uid]].each do |directory, expected_uid|
-        stat = File.lstat(directory)
-        raise "#{directory} must be a real, correctly owned directory" unless
-          stat.directory? && !stat.symlink? && stat.uid == expected_uid && (stat.mode & 0o022).zero?
-      end
-      source_uid = account.uid
-    end
+    return prepare_bundle_cache(shared, cas) if action == "prepare"
 
+    source_dir, source_uid = bundle_cache_source(app, action, shared)
+    store_bundle_cache_files(app, action, ruby_key, source_dir, cas, source_uid)
+  rescue ArgumentError
+    raise "unknown app or group; cannot prepare bundle cache"
+  end
+
+  def prepare_bundle_cache(shared, cas)
+    ensure_root_directory(File.join(shared, "cache"))
+    ensure_root_directory(cas)
+    0
+  end
+
+  def bundle_cache_source(app, action, shared)
+    return [File.join(shared, "cache"), 0] if action == "import"
+
+    account = Etc.getpwnam(app)
+    home = "/home/#{app}"
+    bundle_dir = File.join(home, ".bundle")
+    source_dir = File.join(bundle_dir, "cache")
+    paths = [["/home", 0], [home, account.uid], [File.join(home, "app"), account.uid],
+             [bundle_dir, account.uid], [source_dir, account.uid]]
+    validate_bundle_cache_directories!(paths)
+    [source_dir, account.uid]
+  end
+
+  def validate_bundle_cache_directories!(paths)
+    paths.each do |directory, expected_uid|
+      stat = File.lstat(directory)
+      raise "#{directory} must be a real, correctly owned directory" unless
+        stat.directory? && !stat.symlink? && stat.uid == expected_uid && (stat.mode & 0o022).zero?
+    end
+  end
+
+  def store_bundle_cache_files(app, action, ruby_key, source_dir, cas, source_uid)
     files = Dir.glob(File.join(source_dir, "*.gem"))
     raise "bundle cache import exceeds 500 files" if files.length > 500
     files.sort.each do |source|
       next if File.symlink?(source)
+
       bundle_cache_store_file(source, cas, owner_uid: source_uid)
     end
     puts "bundle_cache0: #{app} #{action} #{ruby_key} files=#{files.length}"
     0
-  rescue ArgumentError
-    raise "unknown app or group; cannot prepare bundle cache"
   end
+
   # These tasks touch only the fixed master_web tree; neither accepts a path from argv.
   def master_web_root!
     dev = Etc.getpwnam("dev")
