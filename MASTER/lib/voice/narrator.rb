@@ -363,7 +363,7 @@ module Master
         detail = Master::Trace::Dmesg.verbose? ? " (#{e.message})" : ""
         Master::Trace::Dmesg.once("voice0", "model narration unavailable; using deterministic templates#{detail}")
         nil
-      rescue StandardError => e
+      rescue StandardError, LoadError => e
         if e.class.name == "RubyLLM::PaymentRequiredError"
           record_model_failure(now, backoff: BUDGET_BACKOFF_S)
           Master::Trace::Dmesg.once(
