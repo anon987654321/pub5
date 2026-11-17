@@ -340,6 +340,16 @@ module Pub5Admin
     raise "unknown app: #{app}" unless APPS.include?(app)
 
     base = File.expand_path(root)
+    directory = deploy_status_read_directory(base, verify_root)
+    return output.puts("null") && 0 unless directory
+
+    path = File.join(directory, "#{app}.json")
+    record = deploy_status_read_record(path, app, verify_root)
+    output.puts(record ? JSON.generate(record) : "null")
+    0
+  end
+
+  def deploy_status_read_directory(base, verify_root)
     raise "#{base} is a symlink; refusing status read" if File.symlink?(base)
     if File.exist?(base)
       root_stat = File.lstat(base)
@@ -350,36 +360,34 @@ module Pub5Admin
 
     directory = File.join(base, "deploy_status")
     raise "#{directory} is a symlink; refusing status read" if File.symlink?(directory)
-    unless File.exist?(directory)
-      output.puts("null")
-      return 0
-    end
+    return unless File.exist?(directory)
+
     directory_stat = File.lstat(directory)
     raise "#{directory} must be a real directory" unless directory_stat.directory? && !directory_stat.symlink?
     raise "#{directory} must be root-owned and private" if
       verify_root && (!directory_stat.uid.zero? || (directory_stat.mode & 0o077).positive?)
+    directory
+  end
 
-    path = File.join(directory, "#{app}.json")
+  def deploy_status_read_record(path, app, verify_root)
     raise "#{path} is a symlink; refusing status read" if File.symlink?(path)
-    unless File.exist?(path)
-      output.puts("null")
-      return 0
-    end
+    return unless File.exist?(path)
 
     status_stat = File.lstat(path)
     raise "#{path} must be a root-owned, private regular file" unless
       status_stat.file? && !status_stat.symlink? &&
       (!verify_root || status_stat.uid.zero?) && (status_stat.mode & 0o077).zero?
-
     record = JSON.parse(File.read(path))
-    raise "#{path} has invalid status schema" unless
-      record.is_a?(Hash) && record["app"] == app &&
+    valid_deploy_status_record!(record, path, app)
+    record
+  end
+
+  def valid_deploy_status_record!(record, path, app)
+    valid = record.is_a?(Hash) && record["app"] == app &&
       %w[running done failed].include?(record["state"]) &&
       record["step"].is_a?(String) && record["pid"] &&
       record["started_at"].is_a?(String) && record["updated_at"].is_a?(String)
-
-    output.puts(JSON.generate(record))
-    0
+    raise "#{path} has invalid status schema" unless valid
   end
 
   def write_deploy_status(app, step, state)
@@ -828,7 +836,11 @@ module Pub5Admin
   end
 
   def bundle_cache_source(app, action, shared)
-    return [File.join(shared, "cache"), 0] if action == "import"
+    if action == "import"
+      source_dir = File.join(shared, "cache")
+      ensure_root_directory(source_dir)
+      return [source_dir, 0]
+    end
 
     account = Etc.getpwnam(app)
     home = "/home/#{app}"
