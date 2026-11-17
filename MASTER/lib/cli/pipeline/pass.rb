@@ -587,6 +587,8 @@ module Master
       return patch unless $stdout.tty?
 
       pastel = Master::Trace::Dmesg.pastel
+      return patch unless pastel.respond_to?(:decorate)
+
       patch.lines.map { |line| pastel.decorate(line, *patch_style(line)) }.join
     end
 

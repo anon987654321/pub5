@@ -63,6 +63,18 @@ class TestPipeline < Minitest::Test
     end
   end
 
+  def test_colour_patch_stays_plain_when_terminal_palette_is_unavailable
+    pass = Master::CLI::Pipeline::Pass.allocate
+    original_stdout = $stdout
+    terminal = Object.new
+    def terminal.tty? = true
+    $stdout = terminal
+
+    assert_equal "+added\\n", pass.send(:colour_patch, "+added\\n")
+  ensure
+    $stdout = original_stdout
+  end
+
   def test_happy_path_passes_context_through
     pipe = Master::CLI::Pipeline.new([OkStage.new, OkStage.new])
     result = pipe.call(Master::Result.ok(user_message: "hi"))
