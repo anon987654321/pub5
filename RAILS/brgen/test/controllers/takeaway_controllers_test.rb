@@ -305,6 +305,23 @@ class TakeawayControllersTest < ActionDispatch::IntegrationTest
     assert_equal 26 * 60, monday.closes_minute
   end
 
+  test "invalid opening times are rejected without saving partial hours" do
+    draft = Takeaway::Restaurant.create!(
+      user: @owner, name: "Bad hours #{SecureRandom.hex(2)}", address: "Torget 6",
+      cuisine_type: "Norwegian", city: @city, active: false, min_order_cents: 0
+    )
+    sign_in_as(@owner)
+
+    patch takeaway.restaurant_path(draft), params: {
+      restaurant: { active: "0" },
+      opening_hours: { "1" => { opens_at: "9:00", closes_at: "17:00" } }
+    }
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, I18n.t("takeaway.opening_hours_invalid_time")
+    assert_empty draft.opening_hours
+  end
+
   test "a kitchen cannot publish until it has an available menu item and opening hours" do
     draft = Takeaway::Restaurant.create!(
       user: @owner, name: "Empty draft #{SecureRandom.hex(2)}", address: "Torget 5",
