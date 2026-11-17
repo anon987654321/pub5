@@ -71,7 +71,7 @@ class TestOpenbsdConfig < Minitest::Test
 
   def test_mirror_coverage_report_is_written_atomically_under_master_runtime_state
     Dir.mktmpdir("openbsd-manual-report-") do |root|
-      FileUtils.mkdir_p(File.join(root, "MASTER", ".master"))
+      FileUtils.mkdir_p(File.join(root, "MASTER"))
       path = Master::Fix::OpenBSDManualPreflight.write_mirror_configuration_report(
         { "status" => "BLOCKED", "files" => [] },
         root:
