@@ -20,7 +20,21 @@ class TestFixHere < Minitest::Test
     end
   end
 
-  def test_failed_disk_probe_is_reported_as_unreadable
+
+  def test_production_host_refuses_fix_before_disk_probe_or_child_boot
+    with_worktree do |_main, worker, tools_bin|
+      output, status = run_fix_here(
+        worker, tools_bin, "MASTER", env: { "PUB5_PRODUCTION_HOST" => "1" }
+      )
+
+      refute status.success?
+      assert_includes output, "/fix is disabled on production vm23"
+      refute_includes output, "cannot read free disk"
+      refute File.exist?(File.join(worker, "MASTER/.master"))
+    end
+  end
+
+def test_failed_disk_probe_is_reported_as_unreadable
     with_worktree do |_main, worker, tools_bin|
       df = File.join(tools_bin, "df")
       File.write(df, "#!/bin/sh\nexit 1\n")
