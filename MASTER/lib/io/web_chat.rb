@@ -7,9 +7,10 @@ require "uri"
 
 module Master
   module Io
-    # Browser bridge to free web chat UIs (Grok, ChatGPT, Kimi, Gemini). This
-    # needs a signed-in provider website profile, not an API key; it is an
-    # automatic fallback only in keyless mode, unless an operator opts in.
+    # Browser bridge to the two configured free web chat UIs (Grok, ChatGPT).
+    # It needs a signed-in website profile, not an API key; it is an automatic
+    # fallback only in keyless mode, unless an operator opts in. Site-imposed
+    # quotas are respected; persistent profiles are never recycled to evade them.
     class WebChat
       DEFAULT_TIMEOUT = 120
       ENABLE_ENV = "MASTER_WEB_CHAT"
