@@ -89,6 +89,29 @@ class TestWebChat < Minitest::Test
     chat
   end
 
+  def test_ferrum_free_tier_contains_only_grok_and_chatgpt
+    config = Master.models_config.fetch("ferrum_web_chat")
+
+    assert_equal %w[web-chat:grok web-chat:chatgpt], config.fetch("free_latest")
+    assert_equal %w[chatgpt grok], config.fetch("providers").keys.sort
+    assert_equal "https://grok.com/", config.dig("providers", "grok", "url")
+    assert_equal "https://chatgpt.com/", config.dig("providers", "chatgpt", "url")
+  end
+
+  def test_browser_fallback_stays_opt_in_when_an_api_key_exists
+    names = %w[MASTER_LOCAL_ONLY MASTER_NO_KEYLESS MASTER_NO_WEB_CHAT MASTER_WEB_CHAT MASTER_KEYLESS]
+    previous = names.to_h { |name| [name, ENV[name]] }
+    names.each { |name| ENV.delete(name) }
+
+    Master.stub(:any_api_key_present?, true) do
+      refute Master::Io::WebChat.enabled?
+      ENV["MASTER_WEB_CHAT"] = "1"
+      assert Master::Io::WebChat.enabled?
+    end
+  ensure
+    previous&.each { |name, value| value.nil? ? ENV.delete(name) : ENV[name] = value }
+  end
+
   def test_browser_chat_returns_the_new_answer_and_captures_each_visible_stage
     chat = build_chat
     page = FakePage.new
