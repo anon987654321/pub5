@@ -129,6 +129,7 @@ if [[ $app == recover ]]; then
     *) usage >&2; exit 2 ;;
   esac
   unset VPS_DEPLOY_RUN_ID VPS_DEPLOY_RUN_TARGET VPS_DEPLOY_RUN_STARTED_AT
+  unset VPS_DEPLOY_STARTED
 else
   [[ $# -eq 1 ]] || { usage >&2; exit 2 }
   # Restrict the log/path component to a safe identifier before inventory lookup.
@@ -823,7 +824,7 @@ trap 'exit 143' TERM
 
 # One durable receipt belongs to the lock-owning parent. Child app deploys
 # inherit the ID, snapshot and owner identity and update only the current stage.
-if (( lock_owner )); then
+if (( lock_owner )) && [[ $app != recover ]]; then
   unset VPS_DEPLOY_RUN_ID VPS_DEPLOY_RUN_TARGET VPS_DEPLOY_RUN_STARTED_AT
   unset VPS_DEPLOY_RECEIPT_STATUS VPS_DEPLOY_RECEIPT_RECOVERY
   unset VPS_DEPLOY_RECEIPT_PINNED_SHA VPS_DEPLOY_RECEIPT_PREVIOUS_SHA
