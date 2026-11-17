@@ -113,9 +113,17 @@ module Master
       def run_input(input)
         return empty_input(:run_input) if input.strip.empty?
         @turn_queue_mutex.synchronize { @turn_cancel_requested = false unless @turn_queue_paused }
-        return Master::Result.err("turn cancelled before start", category: :abort) if turn_cancel_requested?
+        if turn_cancel_requested?
+          cancelled = Master::Result.err("turn cancelled before start", category: :abort)
+          publish_operation_log(operation: input, status: "cancelled", output: cancelled.message.to_s)
+          return cancelled
+        end
         blocked = check_budget_blocks(input)
-        return blocked if blocked
+        if blocked
+          detail = blocked.respond_to?(:message) ? blocked.message.to_s : blocked.to_s
+          publish_operation_log(operation: input, status: "blocked", output: detail)
+          return blocked
+        end
 
         @refs.ground_truth&.begin_turn! if @refs.respond_to?(:ground_truth)
         @user_active = true
