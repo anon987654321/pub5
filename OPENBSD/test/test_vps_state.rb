@@ -140,7 +140,7 @@ class TestVpsState < Minitest::Test
       payload = JSON.parse(state(dir, "--json"))
       recovery = payload.fetch("deploy_recovery")
       refute_equal "none", recovery.fetch("state")
-      assert_includes recovery.fetch("error"), "corrupt"
+      assert_match(/corrupt/i, recovery.fetch("error"))
     end
   end
 
