@@ -19,10 +19,11 @@ require "minitest/autorun"
 # keys: each held exactly one value, secret_key_base, and nothing else. No API key,
 # no database password.
 #
-# They were removed rather than re-keyed, because nothing read them. Every
-# Rails.application.credentials reference in this repo is inside a comment (the
-# commented-out aws block in each app's storage.yml). Production takes the value
-# from ENV — shared/config/environments/production_baseline.rb sets
+# They were removed rather than re-keyed, because nothing read them. The
+# only remaining Rails.application.credentials reference is in Hjerterom's
+# preserved, commented-out AWS template; every non-archival app uses the
+# environment for secrets. Production takes the value from ENV —
+# shared/config/environments/production_baseline.rb sets
 # config.secret_key_base from ENV["SECRET_KEY_BASE"], /etc/<app>.env supplies it at
 # 640 root:<app>, and each rc.d script hard-requires it
 # (`: "${SECRET_KEY_BASE:?missing SECRET_KEY_BASE in /etc/<app>.env}"`), so the
