@@ -112,6 +112,15 @@ class OperatorIntentTest < Minitest::Test
       )
       assert_equal :deploy, spaced.status
       assert_equal "all", spaced.target
+      punctuated_request = "Redeploy OPENBSD, RAILS apps and MASTER web to vm23."
+      assert intent.send(:repository_wide_deployment?, punctuated_request, inventory),
+             "terminal sentence punctuation must not change the destination host"
+      assert Master::CLI::OperatorIntent.direct_full_stack_confirmation?(punctuated_request),
+             "the exact natural-language command with a final full stop remains confirmed"
+      punctuated = Master::CLI::OperatorIntent.new(root:, agent: Object.new).call(punctuated_request)
+      assert_equal :deploy, punctuated.status
+      assert_equal "all", punctuated.target
+      assert_equal %w[control_web city_app wardrobe_app private_service], punctuated.selected
       refute intent.send(:repository_wide_deployment?, "redeploy OPENBSD, RAILS apps and MASTER web to staging", inventory),
              "the spaced full-stack alias must still reject non-production"
       refute intent.send(:repository_wide_deployment?, "redeploy OPENBSD and RAILS to vm23", inventory),
