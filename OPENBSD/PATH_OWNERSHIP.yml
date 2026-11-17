@@ -163,11 +163,11 @@ ownership:
     risk: critical
     check: ruby OPENBSD/checks/vps_safety_check.rb
   mirror/usr/:
-    purpose: copy-ready /usr payload: installed cron targets, fixed brokers and root-only libexec helpers
+    purpose: "copy-ready /usr payload: installed cron targets, fixed brokers and root-only libexec helpers"
     risk: critical
     check: ruby OPENBSD/checks/installed_targets_check.rb
   mirror/var/:
-    purpose: copy-ready /var payload: NSD configuration and unsigned zones generated before commit
+    purpose: "copy-ready /var payload: NSD configuration and unsigned zones generated before commit"
     risk: critical
     check: ruby OPENBSD/bin/render_dns.rb --check
   mirror/home/:
@@ -175,7 +175,7 @@ ownership:
     risk: low
     check: sh -n OPENBSD/mirror/home/johann/bin/mailimg
   mirror/:
-    purpose: copy-ready vm23 filesystem payload only: etc/, home/, usr/ and var/ map directly to /etc/, /home/, /usr/ and /var/; no tools or helper libraries
+    purpose: "copy-ready vm23 filesystem payload only: etc/, home/, usr/ and var/ map directly to /etc/, /home/, /usr/ and /var/; no tools or helper libraries"
     risk: critical
     check: ruby OPENBSD/test/test_ci_mirror_contract.rb
   mischa.txt:
