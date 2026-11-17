@@ -685,6 +685,37 @@ class Pub5AdminTest < Minitest::Test
     end
   end
 
+  def test_failed_receipts_are_terminal_when_recovery_is_complete_or_not_needed
+    [
+      ["20261117T010007Z-all-12352", "complete"],
+      ["20261117T010008Z-all-12353", "none"],
+    ].each do |run_id, recovery_state|
+      Dir.mktmpdir("pub5-admin-run-") do |root|
+        payload = deploy_run_payload(run_id)
+        if recovery_state == "none"
+          payload["started_services"] = []
+          payload["ports"] = {}
+          payload["restore_order"] = []
+          payload["snapshot_recorded"] = false
+        else
+          payload["snapshot_recorded"] = true
+        end
+        ADMIN.write_deploy_run(run_id, JSON.generate(payload),
+                               root:, verify_root: false, output: StringIO.new)
+        ADMIN.write_deploy_run(
+          run_id, JSON.generate("status" => "failed", "recovery_state" => recovery_state),
+          root:, verify_root: false, output: StringIO.new
+        )
+        assert_raises(RuntimeError) do
+          ADMIN.write_deploy_run(
+            run_id, JSON.generate("status" => "running", "recovery_state" => "pending"),
+            root:, verify_root: false, output: StringIO.new
+          )
+        end
+      end
+    end
+  end
+
   def test_deploy_run_receipt_terminal_states_cannot_be_rewritten
     Dir.mktmpdir("pub5-admin-run-") do |root|
       run_id = "20261117T010006Z-all-12351"
