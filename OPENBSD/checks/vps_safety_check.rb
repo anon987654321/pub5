@@ -5,8 +5,29 @@
 # it must flag; unset, it reads this checkout.
 ROOT = ENV.fetch("VPS_SAFETY_ROOT", File.expand_path("../..", __dir__))
 OPENBSD = File.join(ROOT, "OPENBSD")
-TOOLING = File.join(ROOT, "OPENBSD", "mirror", "bin")
+TOOLING = File.join(ROOT, "OPENBSD", "bin")
 failures = []
+
+new_operator_path = File.join(OPENBSD, "OPERATOR.sh")
+if File.file?(new_operator_path)
+  new_operator = File.read(new_operator_path)
+  %w[--plan --apply --verify].each do |mode|
+    failures << "OPERATOR.sh must expose #{mode}" unless new_operator.include?(mode)
+  end
+  failures << "OPERATOR.sh must restrict installs to tracked mirror files" unless
+    new_operator.include?('ls-files -z -- OPENBSD/mirror') && new_operator.include?('safe.directory=')
+  failures << "OPERATOR.sh must map mirror paths directly to /" unless
+    new_operator.include?('target=/$1') && new_operator.include?('MIRROR=') 
+  failures << "OPERATOR.sh must validate PF, relayd and httpd natively" unless
+    new_operator.include?('pfctl -nf "$MIRROR/etc/pf.conf"') &&
+    new_operator.include?('relayd -n -f "$MIRROR/etc/relayd.conf"') &&
+    new_operator.include?('httpd -n -f "$MIRROR/etc/httpd.conf"')
+  failures << "OPERATOR.sh must protect sshd_config and doas.conf" unless
+    new_operator.include?('etc/ssh/sshd_config') && new_operator.include?('etc/doas.conf')
+  failures << "OPERATOR.sh must not require Ruby for filesystem apply" if new_operator.match?(/(?:^|[\s;&|])(?:ruby|bundle)\s/)
+else
+  failures << "missing native OPENBSD/OPERATOR.sh"
+end
 
 doas_conf = File.join(OPENBSD, "mirror", "etc", "doas.conf")
 if File.file?(doas_conf)
@@ -38,19 +59,19 @@ else
   failures << "missing tracked etc/doas.conf"
 end
 
-operator_script = File.join(OPENBSD, "OPERATOR.sh")
+operator_script = File.join(OPENBSD, "BOOTSTRAP.sh")
 
 if File.file?(operator_script)
   operator = File.read(operator_script)
   unless operator.include?('[[ ${SKIP_MASTER_SCAN:-0} != 0 ]]') &&
          operator.include?('[[ ${SKIP_MASTER_SCAN} != 1 || ${I_UNDERSTAND_FAST_DEPLOY:-0} != 1 ]]')
-    failures << "OPERATOR.sh: MASTER scan bypass requires SKIP_MASTER_SCAN=1 plus I_UNDERSTAND_FAST_DEPLOY=1"
+    failures << "BOOTSTRAP.sh: MASTER scan bypass requires SKIP_MASTER_SCAN=1 plus I_UNDERSTAND_FAST_DEPLOY=1"
   end
 else
-  failures << "missing tracked OPERATOR.sh"
+  failures << "missing tracked BOOTSTRAP.sh"
 end
 
-guard_wrapper_path = File.join(OPENBSD, "mirror", "bin", "resource_guard.sh")
+guard_wrapper_path = File.join(OPENBSD, "bin", "resource_guard.sh")
 guard_impl_path = File.join(OPENBSD, "mirror", "usr", "local", "bin", "resource_guard.sh")
 
 if File.file?(guard_wrapper_path) && !File.symlink?(guard_wrapper_path) &&
@@ -68,13 +89,13 @@ if File.file?(guard_wrapper_path) && !File.symlink?(guard_wrapper_path) &&
                         !guard_impl.include?("GUARD_REPO") &&
                         !guard_impl.include?("/home/dev/pub5/OPENBSD/mirror/usr/local/libexec/stale_ci_cleanup.ksh")
   failures << "root load guard must be separate from its checkout wrapper and reject symlinked helpers" unless guard_impl_contract
-  operator = File.read(File.join(OPENBSD, "OPERATOR.sh"))
+  operator = File.read(File.join(OPENBSD, "BOOTSTRAP.sh"))
   source_list = operator[/typeset -a privileged_sources=\(.*?^  \)/m].to_s
   guard_install_contract = source_list.include?("usr/local/bin/resource_guard.sh") &&
                           operator.include?('install -o root -g wheel -m 555 "${src}/usr/local/bin/resource_guard.sh" /usr/local/bin/resource_guard.sh') &&
                           operator.include?('refusing symlinked privileged destination file: $rel') &&
                           operator.include?('installed resource guard is missing or symlinked')
-  failures << "OPERATOR.sh must preflight, install, and verify the root-owned load guard" unless guard_install_contract
+  failures << "BOOTSTRAP.sh must preflight, install, and verify the root-owned load guard" unless guard_install_contract
 else
   failures << "missing or symlinked resource-guard wrapper/runner source"
 end
@@ -97,14 +118,14 @@ if File.file?(emergency_wrapper_path) && !File.symlink?(emergency_wrapper_path) 
                     !emergency_impl.include?("GUARD_REPO") &&
                     !emergency_impl.include?("/home/dev/pub5/OPENBSD/mirror/usr/local/libexec/stale_ci_cleanup.ksh")
   failures << "emergency CPU runner must not source stale cleanup from checkout" unless runner_contract
-  installer = File.read(File.join(OPENBSD, "OPERATOR.sh"))
+  installer = File.read(File.join(OPENBSD, "BOOTSTRAP.sh"))
   source_list = installer[/typeset -a privileged_sources=\(.*?^  \)/m].to_s
   emergency_install_contract = source_list.include?("usr/local/bin/emergency_cpu.sh") &&
                                installer.include?("usr/local/bin/emergency_cpu.sh") &&
                               installer.include?('install -o root -g wheel -m 555 "${src}/usr/local/bin/emergency_cpu.sh" /usr/local/bin/emergency_cpu.sh') &&
                               installer.include?('refusing symlinked privileged destination file: $rel') &&
                               installer.include?('installed emergency CPU runner is missing or symlinked')
-  failures << "OPERATOR.sh must preflight, install, and verify the root-owned emergency runner" unless emergency_install_contract
+  failures << "BOOTSTRAP.sh must preflight, install, and verify the root-owned emergency runner" unless emergency_install_contract
 else
   failures << "missing or symlinked emergency CPU wrapper/runner source"
 end
@@ -121,7 +142,7 @@ if File.file?(validate_doas)
                 "not only that dev can reach root"
   end
 else
-  failures << "missing OPENBSD/mirror/bin/validate_doas.ksh"
+  failures << "missing OPENBSD/bin/validate_doas.ksh"
 end
 
 admin_path = File.join(OPENBSD, "mirror", "usr", "local", "sbin", "pub5-admin")
@@ -408,31 +429,31 @@ if File.file?(admin_path) && !File.symlink?(admin_path)
   else
     failures << "missing or symlinked tracked usr/local/libexec/rails-sync.ksh"
   end
-  installer = File.read(File.join(OPENBSD, "OPERATOR.sh"))
+  installer = File.read(File.join(OPENBSD, "BOOTSTRAP.sh"))
   source_preflight = installer.include?("typeset -a privileged_sources=(") &&
                      installer.include?('if [[ ! -f $src/$rel || -L $src/$rel ]]') &&
                      installer.include?("missing or symlinked privileged source")
-  failures << "OPERATOR.sh must preflight privileged sources before copying" unless source_preflight
+  failures << "BOOTSTRAP.sh must preflight privileged sources before copying" unless source_preflight
   install_preflight = installer.include?("installed privileged entrypoint missing or symlinked") &&
                       installer.include?("/usr/local/libexec/rails-sync.ksh; do") &&
                       installer.include?("/usr/local/libexec/pub4/solid_queue_proof.rb")
-  failures << "OPERATOR.sh must verify installed privileged entrypoints" unless install_preflight
+  failures << "BOOTSTRAP.sh must verify installed privileged entrypoints" unless install_preflight
   destination_guard_at = installer.index("Never copy privileged code through a symlinked system directory or file.")
   copy_loop_at = installer.index("for d in etc usr var; do")
   destination_preflight = installer.include?("refusing symlinked privileged destination directory") &&
                           installer.include?("refusing symlinked privileged destination file") &&
                           destination_guard_at && copy_loop_at && destination_guard_at < copy_loop_at
-  failures << "OPERATOR.sh must refuse symlinked privileged destinations before copying" unless destination_preflight
+  failures << "BOOTSTRAP.sh must refuse symlinked privileged destinations before copying" unless destination_preflight
   installs_after_copy = installer.include?("installed Solid Queue proof is missing or symlinked") &&
                         installer.include?("installed resource guard is missing or symlinked")
-  failures << "OPERATOR.sh must verify installed helpers after their explicit install" unless installs_after_copy
+  failures << "BOOTSTRAP.sh must verify installed helpers after their explicit install" unless installs_after_copy
   installer_pins_admin = installer.include?("chown root:wheel /usr/local/sbin/pub5-admin") &&
                          installer.include?("chmod 555 /usr/local/sbin/pub5-admin") &&
                          installer.include?("[[ -L $f ]]") &&
                          installer.include?("/usr/local/libexec/ci-sync.ksh") &&
                          installer.include?("/usr/local/libexec/rails-task.ksh") &&
                          installer.include?("/usr/local/libexec/rails-sync.ksh")
-  failures << "OPERATOR.sh must reject symlinked privileged entrypoints and install pub5-admin root-owned/non-writable" unless installer_pins_admin
+  failures << "BOOTSTRAP.sh must reject symlinked privileged entrypoints and install pub5-admin root-owned/non-writable" unless installer_pins_admin
 else
   failures << "missing tracked usr/local/sbin/pub5-admin"
 end
@@ -441,14 +462,14 @@ end
   path = File.join(OPENBSD, "mirror", "usr", "local", "libexec", name)
   failures << "usr/local/libexec/#{name} must not be a symlink" if File.symlink?(path)
 end
-smoke_source = File.read(File.join(OPENBSD, "mirror", "bin", "deploy-smoke.sh"))
+smoke_source = File.read(File.join(OPENBSD, "bin", "deploy-smoke.sh"))
 
 smoke_contract = smoke_source.include?('case "$svc" in master|brgen|amber|bsdports|relayd)') &&
                  smoke_source.include?('doas /usr/local/sbin/pub5-admin service check "$svc"') &&
                  smoke_source.include?('if [ -L /usr/local/sbin/pub5-admin ]; then') &&
                  smoke_source.include?("Bootstrap fallback only")
 failures << "deploy-smoke service checks must use the fixed broker and an explicit fallback" unless smoke_contract
-install_all_source = File.read(File.join(OPENBSD, "mirror", "bin", "vps_install_all.sh"))
+install_all_source = File.read(File.join(OPENBSD, "bin", "vps_install_all.sh"))
 
 install_all_contract = install_all_source.include?("admin_service() {") &&
                        install_all_source.include?('case "$action" in check|start|stop|restart)') &&
@@ -460,7 +481,7 @@ install_all_contract = install_all_source.include?("admin_service() {") &&
 
 failures << "vps_install_all service control must be broker-first and app-allowlisted" unless install_all_contract
 deploy_all_source = File.read(File.join(OPENBSD, "mirror", "bin", "deploy_all.sh"))
-deploy_all_contract = deploy_all_source.include?('zsh OPENBSD/mirror/bin/vps-deploy ${app}') &&
+deploy_all_contract = deploy_all_source.include?('zsh OPENBSD/bin/vps-deploy ${app}') &&
                       !deploy_all_source.include?('doas zsh ${script}') &&
                       !deploy_all_source.include?('RAILS/${app}/${app}.sh')
 failures << "deploy_all per-app mode must not elevate checkout Rails wrappers" unless deploy_all_contract
@@ -480,7 +501,7 @@ if File.file?(start_all_apps_path)
                      admin.include?('call_rcctl("restart", "relayd")')
   failures << "start_all_apps wrapper and broker must be fixed and non-root" unless start_all_wrapper && start_all_broker
 else
-  failures << "missing OPENBSD/mirror/bin/start_all_apps.sh"
+  failures << "missing OPENBSD/bin/start_all_apps.sh"
 end
 
 vps_state_path = File.join(OPENBSD, "mirror", "bin", "vps-state")
@@ -494,7 +515,7 @@ if File.file?(vps_state_path)
                    !service_state.include?('"/usr/sbin/rcctl", "check", service')
   failures << "vps-state service reads must use the root broker" unless state_contract
 else
-  failures << "missing OPENBSD/mirror/bin/vps-state"
+  failures << "missing OPENBSD/bin/vps-state"
 end
 
 restore_litestream_path = File.join(OPENBSD, "mirror", "bin", "restore_litestream.sh")
@@ -507,7 +528,7 @@ if File.file?(restore_litestream_path)
                      !restore_litestream.match?(/doas rcctl (?:stop|start|check)/)
   failures << "Litestream recovery must use brokered service control" unless restore_contract
 else
-  failures << "missing OPENBSD/mirror/bin/restore_litestream.sh"
+  failures << "missing OPENBSD/bin/restore_litestream.sh"
 end
 
 manual_master_path = File.join(OPENBSD, "mirror", "bin", "manual_master_deploy.ksh")
@@ -521,7 +542,7 @@ if File.file?(manual_master_path)
                            !manual_master.match?(/^\s*doas\s+rcctl\b/)
   failures << "manual MASTER recovery must use brokered service control" unless manual_master_contract
 else
-  failures << "missing OPENBSD/mirror/bin/manual_master_deploy.ksh"
+  failures << "missing OPENBSD/bin/manual_master_deploy.ksh"
 end
 
 master_deploy_path = File.join(OPENBSD, "mirror", "bin", "vps_deploy_master.sh")
@@ -540,7 +561,7 @@ if File.file?(master_deploy_path)
                            !master_deploy.include?("doas cp \"$ROOT/OPENBSD/mirror/etc/rc.d/master\" /etc/rc.d/master")
   failures << "MASTER web deploy must use fixed broker verbs and refuse root-installing checkout rc.d" unless master_deploy_contract
 else
-  failures << "missing OPENBSD/mirror/bin/vps_deploy_master.sh"
+  failures << "missing OPENBSD/bin/vps_deploy_master.sh"
 end
 
 deploy_source = File.read(File.join(OPENBSD, "mirror", "bin", "vps-deploy"))
@@ -551,18 +572,18 @@ console_main = File.join(TOOLING, "vps_console.exp")
 if File.file?(console_main)
   text = File.read(console_main)
   unless text.include?("proc require_console_risk_ack") && text.match?(/^require_console_risk_ack$/)
-    failures << "OPENBSD/mirror/bin/vps_console.exp must define and call require_console_risk_ack"
+    failures << "OPENBSD/bin/vps_console.exp must define and call require_console_risk_ack"
   end
-  failures << "OPENBSD/mirror/bin/vps_console.exp must target vm23 only (found vm27)" if text.include?("vm27")
+  failures << "OPENBSD/bin/vps_console.exp must target vm23 only (found vm27)" if text.include?("vm27")
 else
-  failures << "missing OPENBSD/mirror/bin/vps_console.exp"
+  failures << "missing OPENBSD/bin/vps_console.exp"
 end
 
 # vps_console.exp is the one console door, and the ack inside it is the whole
 # safety. Any other expect script beside it is a way to the console that
 # skipped that check, so it fails here rather than being trusted to delegate.
 Dir.glob(File.join(TOOLING, "*.exp")).reject { |path| path == console_main }.each do |path|
-  failures << "OPENBSD/mirror/bin/#{File.basename(path)}: console automation belongs in vps_console.exp as a mode"
+  failures << "OPENBSD/bin/#{File.basename(path)}: console automation belongs in vps_console.exp as a mode"
 end
 
 Dir.glob(File.join(OPENBSD, "mirror", "etc", "rc.d", "*")).sort.each do |path|

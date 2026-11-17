@@ -4,20 +4,25 @@ set -euo pipefail
 # Sourced by the entrypoint; defines usage without executing it.
 
 usage() {
-  print -r -- "OpenBSD vm23 deploy (OPERATOR.sh). Config trees: etc/ usr/ var/ -> /.
+  print -r -- "OpenBSD vm23 filesystem mirror (OPERATOR.sh).
 Usage:
-  cd ~/pub5 && doas zsh OPENBSD/OPERATOR.sh
+  doas zsh OPENBSD/OPERATOR.sh --plan
+  doas zsh OPENBSD/OPERATOR.sh --apply
+  doas zsh OPENBSD/OPERATOR.sh --verify
+  doas zsh OPENBSD/OPERATOR.sh --apply --doas
 
-Default: install configs, validate pf/relayd, restart services.
+Mirror contract:
+  OPENBSD/mirror/etc/  -> /etc/
+  OPENBSD/mirror/home/ -> /home/
+  OPENBSD/mirror/usr/  -> /usr/
+  OPENBSD/mirror/var/  -> /var/
 
-Rare:
-  doas zsh OPERATOR.sh --first-install
-  doas zsh OPERATOR.sh --stage-1        # requires I_UNDERSTAND_DNS_WIPE=1
-  doas zsh OPERATOR.sh --stage-2
+Legacy first-install and staged recovery:
+  doas zsh OPENBSD/BOOTSTRAP.sh --first-install
+  doas zsh OPENBSD/BOOTSTRAP.sh --stage-1  # requires I_UNDERSTAND_DNS_WIPE=1
+  doas zsh OPENBSD/BOOTSTRAP.sh --stage-2
 
---sync-configs is an alias for the default.
-
-Env:
-  RUN_PRODUCTION_SEEDS=1   run db:seed during app bootstrap (default 0: never seed production)
-  I_UNDERSTAND_DNS_WIPE=1  required by --stage-1"
+The routine mirror installer does not install sshd_config or doas.conf
+without their explicit guarded recovery paths. Root crontab is merged
+from OPENBSD/data/root.crontab; it is not a filesystem mirror file."
 }

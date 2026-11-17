@@ -3,9 +3,9 @@
 require "json"
 require "pathname"
 require "yaml"
-require_relative "../../OPENBSD/mirror/lib/deploy_inventory"
-require_relative "../../OPENBSD/mirror/lib/check_result"
-require_relative "../../OPENBSD/mirror/bin/render_dns"
+require_relative "../../OPENBSD/lib/deploy_inventory"
+require_relative "../../OPENBSD/lib/check_result"
+require_relative "../../OPENBSD/bin/render_dns"
 
 module Deploy
   class DomainAlignmentCheck

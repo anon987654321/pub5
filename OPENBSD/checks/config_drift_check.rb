@@ -91,8 +91,7 @@ VERBATIM = {
   "usr/local/bin/uptime-check.sh" => "/usr/local/bin/uptime-check.sh",
   "usr/local/bin/resource_guard.sh" => "/usr/local/bin/resource_guard.sh",
   "usr/local/bin/emergency_cpu.sh" => "/usr/local/bin/emergency_cpu.sh",
-  "checks/config_drift_check.rb" => "/usr/local/bin/config_drift_check.rb",
-  "bin/vps_weekly_integrity.sh" => "/usr/local/bin/vps_weekly_integrity.sh",
+  "usr/local/bin/vps_weekly_integrity.sh" => "/usr/local/bin/vps_weekly_integrity.sh",
 }.freeze
 
 EXCLUDED = %w[etc/relayd.conf etc/mail/smtpd.conf etc/litestream.yml etc/acme-client.conf].freeze
@@ -104,11 +103,11 @@ EXCLUDED = %w[etc/relayd.conf etc/mail/smtpd.conf etc/litestream.yml etc/acme-cl
 # repo declares and the box does not run is a capability that exists only in this
 # directory.
 #
-# It is the gap this check was written for. `etc/crontab.vm23:97` has scheduled
+# It is the gap this check was written for. `data/root.crontab:97` has scheduled
 # `/usr/local/bin/vps_weekly_integrity.sh` for weeks; the box has no such line, no
 # such file and no /var/log/pub4 to write into, and the weekly integrity pass has
 # therefore never run once. Every /etc file matched, so the check said clean.
-CRONTAB_MIRROR = "etc/crontab.vm23"
+CRONTAB_MIRROR = "data/root.crontab"
 
 CRONTAB_KEY = "@root-crontab"
 
@@ -269,7 +268,7 @@ def report(drift, missing, compared, unfound, cron)
   cron[:extra].each do |command|
     warn "config-drift: #{CRONTAB_MIRROR}: DRIFT - root's crontab schedules #{command}, which the repo does not"
   end
-  warn "config-drift: sync (doas zsh OPENBSD/OPERATOR.sh) or copy the live edit back into OPENBSD/"
+  warn "config-drift: sync (doas zsh OPENBSD/OPERATOR.sh --apply) or copy the live edit back into OPENBSD/"
 end
 
 # Nothing found and nothing missing are different answers. An unreadable crontab
@@ -317,7 +316,7 @@ end
 live_map = live_files(VERBATIM.values)
 drift, missing, compared, unfound = verbatim_report(live_map).values_at(:drift, :missing, :compared, :unfound)
 
-crontab_mirror_path = File.join(MIRROR, CRONTAB_MIRROR)
+crontab_mirror_path = File.join(File.dirname(MIRROR), CRONTAB_MIRROR)
 cron = crontab_report(
   File.file?(crontab_mirror_path) ? File.read(crontab_mirror_path) : nil,
   live_map[CRONTAB_KEY]

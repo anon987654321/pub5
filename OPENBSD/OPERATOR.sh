@@ -1,717 +1,541 @@
 #!/usr/bin/env zsh
-# OpenBSD vm23 deploy — executable script. Everything else in this tree is an exact config mirror.
-# Routine (on vm23): cd ~/pub5 && doas zsh OPENBSD/OPERATOR.sh
-# Installs OPENBSD/{etc,usr,var} onto /, validates pf/relayd, restarts services.
-# Rare: --first-install | --stage-1 (DNS wipe) | --stage-2 (full app bootstrap)
-# PLATFORM BASELINE: OpenBSD 7.9; release-specific behavior must be checked against the target man pages
-#
-# IDEMPOTENCY NOTES (CC14):
-# - Safe to re-run: bootstrap_rails_app (cp tree, bundle install, db:prepare), sync_openbsd_configs
-#   (backs up /etc first), relayd/pf template installs when configs already match, rcctl enable/start.
-# - DESTRUCTIVE on re-run: stage_1 deletes /var/nsd/etc/* and /var/nsd/zones/master/* before
-#   regenerating signed zones. Never re-run stage_1 on a live authoritative server without backup.
-# - State tracking: STATE_FILE=/var/db/openbsd_setup.state — is_step_completed/mark_step_completed
-#   helpers exist for future --resume support; certificate-renewal cron must stay append-idempotent.
-# - Data preserved: Rails SQLite under /home/<app>/app/storage, ~/priv, acme certs in /etc/ssl when
-#   stage_1 is skipped. Re-running stage_2 does not drop databases.
-# - Post-deploy verification: ruby /home/dev/pub5/OPENBSD/checks/health_check.rb
-# Engine-ize: bootstrap_rails now relies on bundle install for pub5-shared path gem (Gemfiles declare it); legacy sh shared/install_* deprecated in scripts + WIRING. No copy sprawl.
-
+# Copy-ready OpenBSD filesystem payload. No Ruby, rendering, templating or deletion.
+# OPENBSD/mirror/<path> installs to /<path>. Operator tools live in OPENBSD/bin and lib.
 set -euo pipefail
-setopt no_unset nullglob local_traps
-zmodload zsh/regex
-zmodload zsh/datetime
+setopt extended_glob null_glob
 
-typeset -a TMPFILES
-SCRIPT_DIR=${0:a:h}
-# A box with no Ruby yet still runs the stages that install one.
-source "${SCRIPT_DIR}/lib/ruby_select.sh" || print -u2 "OPERATOR: no Ruby installed; steps that need one will fail"
+SCRIPT_DIR=${0:A:h}
 REPO_ROOT=${SCRIPT_DIR:h}
-CONFIG_ROOT=${REPO_ROOT}/OPENBSD
+MIRROR=${SCRIPT_DIR}/mirror
+DATA=${SCRIPT_DIR}/data
+BACKUP_ROOT=${OPENBSD_BACKUP_ROOT:-/var/backups/openbsd_setup}
+ACTION=plan
+INSTALL_DOAS=0
+DOAS_NEEDED=0
+RUN_ID=
+LOCK_DIR=${OPENBSD_APPLY_LOCK_DIR:-/var/run/pub5-openbsd-apply.lock}
+LOCK_HELD=0
+typeset -a FILES CHANGED SIGNED_BEFORE
+typeset -A BACKUPS
+typeset -i failures=0 CRONTAB_APPLIED=0
 
-# Usage comes first. Operational stages live in small sourced modules, so the
-# entrypoint stays navigable without depending on a stale file-line count.
-source "${SCRIPT_DIR}/dev/operator_usage.zsh"
-# Helpers inlined for ONE_SOURCE. Pure Zsh: log, backup_directory, install_*, sync_openbsd_configs.
-log() {
-  typeset level=$1; shift
-  print -r -- "[$(date +'%Y-%m-%d %H:%M:%S')] [$level] $*" | tee -a /var/log/openbsd_setup.log >&2
-}
-log_info()  { log INFO "$@" }
-log_error() { log ERROR "$@" }
-
-# Production db:seed is never part of a default deploy. The one-off escape hatch
-# is gated here, in the entrypoint the deploy smoke check reads, so
-# dev/operator_stage_2.zsh inherits the contract instead of carrying its own copy.
-production_seeds_gated() { [[ ${RUN_PRODUCTION_SEEDS:-0} == 1 ]] }
-
-transaction_log() {
-  typeset operation=$1 target=$2 op_status=$3 metadata=${4:-}
-  print -r -- "[$(date +'%Y-%m-%d %H:%M:%S')] [$operation] $target | Status: $op_status | $metadata" \
-    >> /var/log/openbsd_transactions.log
+usage() {
+  print -r -- "usage: doas zsh OPENBSD/OPERATOR.sh [--plan|--apply|--verify] [--doas]"
+  print -r -- "  --plan    compare tracked mirror files with vm23 (default, read-only)"
+  print -r -- "  --apply   back up and install changed files, then validate/reload affected services"
+  print -r -- "  --verify  require the installed filesystem and managed root cron to match"
+  print -r -- "  --doas    explicitly install etc/doas.conf through validate_doas.ksh with its canary/rollback"
+  print -r -- "  sshd_config is always protected from automatic replacement."
 }
 
-cleanup() {
-  typeset exit_code=$?
-  for tmpfile in "${TMPFILES[@]}"; do
-    [[ -n $tmpfile && -f $tmpfile ]] && rm -f "$tmpfile"
-  done
-  return $exit_code
+for arg in "$@"; do
+  case "$arg" in
+    --plan) ACTION=plan ;;
+    --apply) ACTION=apply ;;
+    --verify) ACTION=verify ;;
+    --doas) INSTALL_DOAS=1 ;;
+    -h|--help) usage; exit 0 ;;
+    *) print -u2 -- "OPERATOR: unknown argument: $arg"; usage >&2; exit 64 ;;
+  esac
+done
+
+[[ $(uname -s) == OpenBSD ]] || {
+  print -u2 -- "OPERATOR: BLOCKED - this installer compares and changes the local OpenBSD host; current host is $(uname -s)"
+  exit 78
+}
+if [[ $ACTION != plan && $(id -u) != 0 ]]; then
+  print -u2 -- "OPERATOR: BLOCKED - --$ACTION must run as root (use doas)"
+  exit 78
+fi
+if (( INSTALL_DOAS )) && [[ $ACTION != apply ]]; then
+  print -u2 -- "OPERATOR: --doas is valid only with --apply"
+  exit 64
+fi
+[[ -d $MIRROR && -d $DATA ]] || {
+  print -u2 -- "OPERATOR: required OPENBSD/mirror or OPENBSD/data directory is missing"
+  exit 1
 }
 
-error_handler() {
-  typeset exit_code=$1 line_num=$2
-  log ERROR "Script failed with exit code $exit_code at line $line_num"
-  cleanup
-  exit $exit_code
+# Only Git-tracked regular files under the four filesystem roots are eligible.
+while IFS= read -r -d '' tracked; do
+  rel=${tracked#OPENBSD/mirror/}
+  case "$rel" in
+    etc/*|home/*|usr/*|var/*) ;;
+    *) print -u2 -- "OPERATOR: invalid mirror path: $rel"; exit 1 ;;
+  esac
+  source_file=$MIRROR/$rel
+  [[ -f $source_file && ! -L $source_file ]] || {
+    print -u2 -- "OPERATOR: BLOCKED - mirror source is missing, non-regular or symlinked: $rel"
+    exit 1
+  }
+  FILES+=("$rel")
+done < <(git -c safe.directory="$REPO_ROOT" -C "$REPO_ROOT" ls-files -z -- OPENBSD/mirror)
+
+(( ${#FILES} > 0 )) || {
+  print -u2 -- "OPERATOR: BLOCKED - no tracked filesystem payload found under OPENBSD/mirror"
+  exit 1
 }
 
-backup_directory() {
-  typeset target_dir=$1 backup_name=${2:-${1:t}}
-  typeset backup_dir=/var/backups/openbsd_setup
-  typeset backup_file="$backup_dir/${backup_name}-${EPOCHSECONDS}.tar.gz"
-  [[ ! -d $backup_dir ]] && mkdir -p "$backup_dir"
-  [[ ! -d $target_dir ]] && { log WARN "Directory $target_dir does not exist, skipping backup"; return 0 }
-  log INFO "Backing up $target_dir to $backup_file"
-  transaction_log "BACKUP" "$target_dir" "START"
-  if tar -czf "$backup_file" -C "${target_dir:h}" "${target_dir:t}" 2>/dev/null; then
-    transaction_log "BACKUP" "$target_dir" "SUCCESS" "$backup_file"
-    typeset -a _bfiles; _bfiles=("$backup_dir"/${backup_name}-*.tar.gz(N))
-    (( ${#_bfiles} > 10 )) && {
-      typeset -a _sorted; _sorted=("$backup_dir"/${backup_name}-*.tar.gz(NOm))
-      for _f in "${_sorted[@]:10}"; do rm -f "$_f"; done
-    }
-    echo "$backup_file"
-    return 0
-  else
-    transaction_log "BACKUP" "$target_dir" "FAILURE"
-    log ERROR "Backup failed for $target_dir"
+release_apply_lock() {
+  (( LOCK_HELD )) || return 0
+  rm -f "$LOCK_DIR/owner"
+  rmdir "$LOCK_DIR" 2>/dev/null || print -u2 -- "OPERATOR: stale lock directory remains: $LOCK_DIR"
+  LOCK_HELD=0
+}
+
+acquire_apply_lock() {
+  if ! mkdir -m 700 "$LOCK_DIR" 2>/dev/null; then
+    print -u2 -- "OPERATOR: BLOCKED - another OpenBSD apply owns $LOCK_DIR (inspect it; do not remove a live lock)"
     return 1
   fi
-}
-
-install_template() {
-  typeset src=${CONFIG_ROOT}/$1 dst=$2
-  [[ -f $src ]] || { log ERROR "Missing template: $src"; exit 1 }
-  typeset content; content=$(<"$src")
-  print -r -- "$content" > "$dst"
-}
-
-append_template() {
-  typeset src=${CONFIG_ROOT}/$1 dst=$2
-  [[ -f $src ]] || { log ERROR "Missing template: $src"; exit 1 }
-  typeset content; content=$(<"$src")
-  print -r -- "$content" >> "$dst"
-}
-
-install_static() {
-  typeset src=${CONFIG_ROOT}/$1 dst=$2
-  [[ -f $src ]] || { log ERROR "Missing file: $src"; exit 1 }
-  cp "$src" "$dst"
-}
-
-install_tracked_crontab() {
-  typeset tracked=${SCRIPT_DIR}/etc/crontab.vm23
-  [[ -f $tracked ]] || { log ERROR "Missing tracked root crontab: $tracked"; return 1; }
-
-  # /tmp/root_crontab.$$ was a PID-predictable name in a world-writable directory
-  # that root wrote and then fed straight to crontab(1) — the same shape as the
-  # doas.conf staging file in validate_doas.ksh, and with root's crontab as the
-  # payload. A root-owned 0700 directory has no symlink for root to follow.
-  # Public deploy receipts live directly in /var/db/pub4; keep root-crontab
-  # staging in a private child directory so making receipts readable cannot expose
-  # the temporary root crontab during an operator sync.
-  typeset cron_dir=/var/db/pub4/private
-  mkdir -p /var/db/pub4 "$cron_dir" || return 1
-  chown root:wheel /var/db/pub4 "$cron_dir" || return 1
-  chmod 755 /var/db/pub4 || return 1
-  chmod 700 "$cron_dir" || return 1
-  typeset root_cron
-  root_cron=$(mktemp "${cron_dir}/root_crontab.XXXXXXXXXX") || return 1
-  TMPFILES+=($root_cron)
-  crontab -l 2>/dev/null > $root_cron || :
-
-  # The PATH assignment gets its own pass, because the merge loop below cannot
-  # carry it: it skips anything with fewer than six fields, and `PATH=...` is one.
-  # That is how the single most load-bearing line in crontab.vm23 would have been
-  # tracked in the repo and never installed. Rewritten rather than appended so a
-  # stale PATH on the box is corrected rather than shadowed — cron takes the last
-  # assignment, but a reader takes the first.
-  typeset cron_path
-  cron_path=$(grep -m1 '^PATH=' $tracked) || cron_path=''
-  if [[ -n $cron_path ]]; then
-    typeset merged
-    merged=$(mktemp "${cron_dir}/root_crontab.XXXXXXXXXX") || return 1
-    TMPFILES+=($merged)
-    { print -r -- "$cron_path"; grep -v '^PATH=' $root_cron } > $merged || return 1
-    mv $merged $root_cron || return 1
-    log INFO "installed root cron: $cron_path"
-  fi
-
-  while IFS= read -r line; do
-    [[ -z $line || $line == \#* ]] && continue
-    typeset -a fields=(${=line})
-    [[ ${#fields[@]} -lt 6 ]] && continue
-    typeset cmdpath=$fields[6]
-    typeset tag=${cmdpath:t}
-    grep -q "$tag" $root_cron 2>/dev/null && continue
-    # Refusing to schedule a command that is not on the box is right: cron would
-    # mail root once per tick forever. Refusing silently is not. A tracked job
-    # then exists in etc/crontab.vm23, is absent from the crontab, and reads as
-    # complete from both ends — nothing is missing from the file you are looking
-    # at. uptime-check.sh sat in crontab.vm23 and in usr/local/bin/ from
-    # 2026-08-12 until 2026-08-18 and had never been scheduled, because the run
-    # that installs the wrapper at stage 1 had not happened and every earlier
-    # install_tracked_crontab call passed over the line without a word.
-    if [[ $cmdpath == /* && ! -x $cmdpath ]]; then
-      log WARN "tracked cron job not installed: $cmdpath is missing or not executable"
-      continue
-    fi
-
-    print -r -- "$line" >> $root_cron
-    log INFO "installed root cron: $tag"
-  done < $tracked
-
-  crontab $root_cron || { log ERROR "Crontab update failed"; return 1 }
-  return 0
-}
-
-is_step_completed()  { [[ -f "${STATE_FILE}.steps" ]] && [[ $(<"${STATE_FILE}.steps") == *"$1"* ]] }
-mark_step_completed() { print -r -- "$1" >> "${STATE_FILE}.steps" }
-
-# Install exact config trees from repo onto /. Run separately or before --sync-configs:
-#   doas cp -R etc usr var /
-install_root_configs() {
-  typeset src=${1:-${CONFIG_ROOT}}
-  [[ -d $src/etc ]] || { log ERROR "No etc/ in $src"; return 1 }
-
-  # These files become root-executed entrypoints after installation.
-  # Require regular, non-symlink sources before copying anything to /.
-  typeset -a privileged_sources=(
-    usr/local/sbin/pub4-admin
-    usr/local/sbin/pub5-admin
-    usr/local/bin/emergency_cpu.sh
-    usr/local/libexec/ci-prepare.ksh
-    usr/local/libexec/ci-run.ksh
-    usr/local/libexec/ci-sync.ksh
-    usr/local/libexec/rails-task.ksh
-    usr/local/libexec/rails-sync.ksh
-    checks/solid_queue_proof.rb
-    usr/local/bin/resource_guard.sh
-  )
-  typeset rel
-  for rel in ${privileged_sources[@]}; do
-    if [[ ! -f $src/$rel || -L $src/$rel ]]; then
-      log ERROR "missing or symlinked privileged source: $src/$rel"
-      return 1
-    fi
-  done
-  for rel in usr usr/local usr/local/bin usr/local/sbin usr/local/libexec checks bin; do
-    if [[ -L $src/$rel ]]; then
-      log ERROR "refusing symlinked privileged source directory: $src/$rel"
-      return 1
-    fi
-  done
-
-  # Never copy privileged code through a symlinked system directory or file.
-  for rel in /usr /usr/local /usr/local/bin /usr/local/sbin /usr/local/libexec /usr/local/libexec/pub4 /usr/local/libexec/pub5; do
-    if [[ -L $rel ]]; then
-      log ERROR "refusing symlinked privileged destination directory: $rel"
-      return 1
-    fi
-  done
-  for rel in /usr/local/sbin/pub4-admin \
-             /usr/local/sbin/pub5-admin \
-             /usr/local/libexec/ci-prepare.ksh \
-             /usr/local/libexec/ci-run.ksh \
-             /usr/local/libexec/ci-sync.ksh \
-             /usr/local/libexec/rails-task.ksh \
-             /usr/local/libexec/rails-sync.ksh \
-             /usr/local/libexec/pub4/solid_queue_proof.rb \
-             /usr/local/libexec/pub5/solid_queue_proof.rb \
-             /usr/local/bin/resource_guard.sh \
-             /usr/local/bin/emergency_cpu.sh; do
-    if [[ -L $rel ]]; then
-      log ERROR "refusing symlinked privileged destination file: $rel"
-      return 1
-    fi
-  done
-
-  backup_directory /etc "etc-pre-sync" || return 1
-
-  if [[ -f $src/etc/doas.conf ]]; then
-    typeset doas_size doas_last
-    doas_size=$(stat -f %z "$src/etc/doas.conf") || return 1
-    if (( doas_size == 0 )); then
-      print >> "$src/etc/doas.conf"
-      log WARN "doas.conf was empty - fixed before install"
-    else
-      doas_last=$(dd if="$src/etc/doas.conf" bs=1 skip=$((doas_size - 1)) count=1 2>/dev/null | od -An -t x1)
-      if [[ $doas_last != *0a* ]]; then
-        print >> "$src/etc/doas.conf"
-        log WARN "doas.conf missing trailing newline - fixed before install"
-      fi
-    fi
-  fi
-
-  typeset doas_rollback=""
-  if [[ -f /etc/doas.conf ]]; then
-    mkdir -p /var/backups/openbsd_setup
-    doas_rollback="/var/backups/openbsd_setup/doas.conf.${EPOCHSECONDS}.rollback"
-    cp /etc/doas.conf "$doas_rollback"
-  fi
-
-  for d in etc usr var; do
-    [[ -d $src/$d ]] || continue
-    install -d "/$d" 2>/dev/null || true
-    cp -R "$src/$d"/. "/$d"/
-    log INFO "installed /$d from repo"
-  done
-
-  # 755 first, then 555 for the scripts this repo owns. Written the other way
-  # round, the blanket loop undid the line above it two lines later, so the mode
-  # the file asks for twice — here and where master is installed — was never the
-  # mode it set.
-  #
-  # Two conventions, on purpose, and vm23 already runs both: OpenBSD's own 82
-  # base scripts are 755, and the nine this repo installs are r-xr-xr-x. The
-  # read-only bit is the signal that the file is generated from the checkout and
-  # a local edit will be overwritten. root writes through it regardless, which is
-  # why `cp` onto an installed script has always worked.
-  [[ -f /etc/daily.local ]] && chmod 755 /etc/daily.local
-  for f in /etc/rc.d/*(N); do chmod 755 "$f"; done
-  for svc in master ${ALL_APPS%%:*}; do
-    [[ -f /etc/rc.d/$svc ]] && chmod 555 /etc/rc.d/$svc
-  done
-  for f in /usr/local/bin/*(N); do [[ -f $f ]] && chmod 755 "$f"; done
-  for f in /usr/local/sbin/pub4-admin \
-           /usr/local/sbin/pub5-admin \
-           /usr/local/libexec/ci-prepare.ksh \
-           /usr/local/libexec/ci-run.ksh \
-           /usr/local/libexec/ci-sync.ksh \
-           /usr/local/libexec/rails-task.ksh \
-            /usr/local/libexec/rails-sync.ksh; do
-    if [[ ! -f $f || -L $f ]]; then
-      log ERROR "installed privileged entrypoint missing or symlinked: $f"
-      return 1
-    fi
-  done
-  # These fixed broker entrypoints must be regular files. A symlink would
-  # make root chown/chmod operate on a target outside the install contract.
-  for f in /usr/local/sbin/pub4-admin \
-           /usr/local/sbin/pub5-admin \
-           /usr/local/libexec/ci-prepare.ksh \
-           /usr/local/libexec/ci-run.ksh \
-           /usr/local/libexec/ci-sync.ksh \
-           /usr/local/libexec/rails-task.ksh \
-            /usr/local/libexec/rails-sync.ksh; do
-    if [[ -L $f ]]; then
-      log ERROR "refusing symlinked privileged entrypoint: $f"
-      return 1
-    fi
-  done
-
-  # The deploy account will use this fixed-path broker for root operations.
-  # It is refreshed only by this deliberate operator sync.
-  if [[ -f /usr/local/sbin/pub4-admin ]]; then
-    chown root:wheel /usr/local/sbin/pub4-admin || return 1
-    chmod 555 /usr/local/sbin/pub4-admin || return 1
-  fi
-  if [[ -f /usr/local/sbin/pub5-admin ]]; then
-    chown root:wheel /usr/local/sbin/pub5-admin || return 1
-    chmod 555 /usr/local/sbin/pub5-admin || return 1
-  fi
-  # libexec holds helpers root dot-sources (stale_ci_cleanup.ksh); they must be
-  # root-owned and not group/world writable or the sourcing is a root RCE.
-  for f in /usr/local/libexec/*(N); do [[ -f $f ]] && chown root:wheel "$f" && chmod 755 "$f"; done
-
-  if [[ -f /etc/doas.conf ]]; then
-    if ! su dev -c 'doas id' 2>/dev/null | grep -q 'uid=0(root)'; then
-      log ERROR "doas validation failed after config install - aborting (restoring previous doas.conf)"
-      [[ -n $doas_rollback && -f $doas_rollback ]] && cp "$doas_rollback" /etc/doas.conf
-      return 1
-    fi
-    log INFO "doas validation passed after config install"
-  fi
-
-  install_tracked_crontab || return 1
-
-  # /home/dev/.zshrc is not installed from etc/.zshrc. That file is sync.rb's
-  # redacted mirror of the live one, so copying it back would replace dev's API
-  # keys with __REDACTED__.
-
-  log INFO "OpenBSD config tree install complete (with backup)"
-}
-
-sync_openbsd_configs() {
-  install_root_configs "$@"
-}
-
-sync_openbsd_apply() {
-  typeset src=${1:-${CONFIG_ROOT}}
-  install_root_configs "$src" || return 1
-
-  /sbin/pfctl -nf /etc/pf.conf || { log ERROR "pf.conf invalid after sync"; return 1 }
-  /sbin/pfctl -f /etc/pf.conf  || { log ERROR "pf reload failed"; return 1 }
-  /sbin/pfctl -e 2>/dev/null || log WARN "pf already enabled or enable skipped"
-
-  if [[ -n ${RUBY:-} ]]; then
-    "$RUBY" "${SCRIPT_DIR}/relayd_prune_keypairs.rb" --apply /etc/relayd.conf \
-      || log WARN "relayd keypair prune failed"
-  fi
-  relayd -n -f /etc/relayd.conf || { log ERROR "relayd.conf invalid after sync"; return 1 }
-
-  if [[ -x /usr/local/bin/nsd-resign ]]; then
-    ruby /usr/local/bin/nsd-resign || log WARN "nsd-resign failed after zone sync"
-  fi
-
-  # STRICT laws.yml adherence (per success_criteria: "system_applies_to_itself_without_exception", self_test, ground_truth_check, evidence_scoring, veto_patterns, anti_patterns, tier1 principle_priorities).
-  # Run MASTER deep scan on OPERATOR tree before any service restart. Block on violations (tier1 critical + veto).
-  # Uses ground_truth_check (fresh read), self_test (laws on OPERATOR), evidence_scoring (scan_clean).
-  # Also covers lexical/structural for sh, yml, conf, erb.
-  # A scan bypass is a break-glass action and needs both explicit acknowledgements.
-  if [[ ${SKIP_MASTER_SCAN:-0} != 0 ]]; then
-    if [[ ${SKIP_MASTER_SCAN} != 1 || ${I_UNDERSTAND_FAST_DEPLOY:-0} != 1 ]]; then
-      log ERROR "SKIP_MASTER_SCAN=1 requires I_UNDERSTAND_FAST_DEPLOY=1 - refusing sync/apply"
-      return 1
-    fi
-    log WARN "MASTER scan skipped by explicit fast-deploy acknowledgement"
-  elif [[ -x /home/dev/pub5/MASTER/bin/master ]]; then
-    typeset scan_log_dir=/var/db/pub4
-    typeset scan_log=$scan_log_dir/master_deploy_scan.log
-    mkdir -p "$scan_log_dir" || { log ERROR "cannot create $scan_log_dir"; return 1 }
-    chmod 700 "$scan_log_dir"
-    log INFO "MASTER rules scan (OPERATOR) - strict pre-apply per laws.yml (ROBUSTNESS/SINGULARITY/LINEARITY/PROXIMITY/ABSTRACTION/DENSITY + veto)"
-    if ! su dev -c "cd /home/dev/pub5/MASTER && MASTER_SCAN_DETERMINISTIC=1 MASTER_SAFE_MODE=1 $BUNDLE exec $RUBY bin/check --scan-only --tree=OPENBSD" 2>&1 | tee "$scan_log"; then
-      log ERROR "MASTER scan found violations - refusing sync/apply (self_violation would occur per laws.yml)"
-      return 1
-    fi
-    log INFO "MASTER scan clean - proceeding (scan_clean + self_apply satisfied)"
-  else
-    log ERROR "MASTER not available for scan - refusing sync/apply"
-    return 1
-  fi
-
-  # Enforce ground_truth_check/ + evidence before writes (laws.yml): fresh read, diff, output shown.
-  # library_verify pre-flight before bundle/shell (per rules).
-  for f in /etc/pf.conf /etc/relayd.conf; do
-    [[ -s $f ]] || { log ERROR "ground_truth fail on $f"; return 1; }
-  done
-  # (In per-app: before bundle, check Gemfile etc.)
-
-  # Not `|| true`. The crontab schedules /usr/local/bin/resource_guard.sh every
-  # five minutes and it is the load-shedding guard that keeps this 1GB box up —
-  # swallowing the install failure meant it could simply be absent, with no
-  # error, while every log line still said the crontab was installed.
-  # The privileged broker invokes this fixed, root-owned copy, never the live checkout.
-  if ! install -d -o root -g wheel -m 755 /usr/local/libexec/pub4; then
-    log ERROR "cannot prepare /usr/local/libexec/pub4"
-    return 1
-  fi
-  if ! install -o root -g wheel -m 555 "${SCRIPT_DIR}/checks/solid_queue_proof.rb" /usr/local/libexec/pub4/solid_queue_proof.rb; then
-    log ERROR "solid_queue_proof install failed - deploy proof would run untrusted checkout code"
-    return 1
-  fi
-
-  [[ -f /usr/local/libexec/pub4/solid_queue_proof.rb && ! -L /usr/local/libexec/pub4/solid_queue_proof.rb ]] || {
-    log ERROR "installed Solid Queue proof is missing or symlinked"
+  LOCK_HELD=1
+  print -r -- "pid=$$ host=$(hostname) started=$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$LOCK_DIR/owner" || {
+    release_apply_lock
     return 1
   }
-
-  # pub5-admin has its own fixed helper path. Keep the pub4 copy above for
-  # compatibility callers; the current deploy chain uses this pub5-owned path.
-  if ! install -d -o root -g wheel -m 755 /usr/local/libexec/pub5; then
-    log ERROR "cannot prepare /usr/local/libexec/pub5"
-    return 1
-  fi
-  if ! install -o root -g wheel -m 555 "${SCRIPT_DIR}/checks/solid_queue_proof.rb" /usr/local/libexec/pub5/solid_queue_proof.rb; then
-    log ERROR "pub5 Solid Queue proof install failed - deploy proof would run untrusted checkout code"
-    return 1
-  fi
-  [[ -f /usr/local/libexec/pub5/solid_queue_proof.rb && ! -L /usr/local/libexec/pub5/solid_queue_proof.rb ]] || {
-    log ERROR "installed pub5 Solid Queue proof is missing or symlinked"
-    return 1
-  }
-
-  if ! install -o root -g wheel -m 555 "${src}/usr/local/bin/resource_guard.sh" /usr/local/bin/resource_guard.sh; then
-    log ERROR "resource_guard.sh install failed - the load guard would be absent"
-    return 1
-  fi
-
-  [[ -f /usr/local/bin/resource_guard.sh && ! -L /usr/local/bin/resource_guard.sh ]] || {
-    log ERROR "installed resource guard is missing or symlinked"
-    return 1
-  }
-
-  # resource_guard.sh's crisis tier is guarded the same way and installed from
-  # the same place. LOAD_CRIT runs `/usr/local/bin/emergency_cpu.sh` when it is
-  # executable and logs "emergency_cpu not installed" when it is not, so without
-  # this line the top tier of the load guard can only ever write that line.
-  if ! install -o root -g wheel -m 555 "${src}/usr/local/bin/emergency_cpu.sh" /usr/local/bin/emergency_cpu.sh; then
-    log ERROR "emergency_cpu.sh install failed - resource_guard's crisis tier would only log"
-    return 1
-  fi
-  [[ -f /usr/local/bin/emergency_cpu.sh && ! -L /usr/local/bin/emergency_cpu.sh ]] || {
-    log ERROR "installed emergency CPU runner is missing or symlinked"
-    return 1
-  }
-
-  # crontab.vm23 schedules the weekly integrity run, and install_tracked_crontab
-  # refuses a command that is not on the box. root runs the installed copy for
-  # the same reason daily.local does: the checkout is dev-writable.
-  if ! install -m 755 "${SCRIPT_DIR}/mirror/bin/vps_weekly_integrity.sh" /usr/local/bin/vps_weekly_integrity.sh; then
-    log ERROR "vps_weekly_integrity.sh install failed - the weekly integrity run would go unscheduled"
-    return 1
-  fi
-
-  # daily.local runs this as ROOT, and it guards on `[ -x /usr/local/bin/... ]`,
-  # so the guard is exactly as load-bearing as the install. Nothing installed it:
-  # config_drift_check.rb sits under checks/ rather than under usr/local/bin/,
-  # so install_root_configs never carried it, and the guard was false on every
-  # run. Live had been edited by hand to run /home/dev/pub5/OPENBSD/... instead —
-  # root executing a file the dev user can rewrite, every morning, which is the
-  # escalation the guard's own comment forbids. Deploying daily.local without
-  # this would swap that for a check that silently never runs.
-  #
-  # One file, and nothing beside it. It used to need lib/utf8.rb installed into a
-  # /usr/local/bin/lib/ made for the purpose, because `require_relative` resolves
-  # beside the installed copy; the check sets its own encoding now, so the install
-  # cannot half-succeed and the box carries no directory holding six lines.
-  if ! install -m 755 "${SCRIPT_DIR}/checks/config_drift_check.rb" /usr/local/bin/config_drift_check.rb; then
-    log ERROR "config_drift_check install failed - daily.local would skip the drift check in silence"
-    return 1
-  fi
-  install_tracked_crontab || return 1
-
-  typeset -a svcs=(nsd httpd relayd smtpd master)
-  for svc in $svcs; do
-    [[ -x /etc/rc.d/$svc ]] || continue
-    /usr/sbin/rcctl enable $svc 2>/dev/null || true
-    /usr/sbin/rcctl restart $svc 2>/dev/null || /usr/sbin/rcctl start $svc 2>/dev/null \
-      || log WARN "$svc restart/start failed"
-  done
-  # App services: start only if /up already returns 200 — avoids Falcon crash-loops burning CPU.
-  typeset -A app_ports=(brgen 38182 amber 61352 bsdports 47312)
-  typeset -a core_apps=(brgen)
-  typeset -a optional_apps=(amber bsdports)
-  for svc in $core_apps $optional_apps; do
-    [[ -x /etc/rc.d/$svc ]] || continue
-    /usr/sbin/rcctl enable $svc 2>/dev/null || true
-  done
-  for svc in $core_apps; do
-    typeset port=${app_ports[$svc]:-0}
-    if (( port > 0 )); then
-      typeset code; code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 http://127.0.0.1:${port}/up 2>/dev/null)
-      if [[ $code != 200 ]]; then
-        log WARN "$svc /up=$code before restart; attempting one controlled restart"
-        /usr/sbin/rcctl restart $svc 2>/dev/null || /usr/sbin/rcctl start $svc 2>/dev/null \
-          || { log ERROR "$svc restart/start failed"; return 1; }
-        sleep 10
-        code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://127.0.0.1:${port}/up 2>/dev/null)
-        [[ $code == 200 ]] || { log ERROR "$svc /up still $code after restart"; return 1; }
-        continue
-      fi
-    fi
-    /usr/sbin/rcctl restart $svc 2>/dev/null || /usr/sbin/rcctl start $svc 2>/dev/null \
-      || { log ERROR "$svc restart/start failed"; return 1; }
-  done
-  log INFO "optional Rails apps left stopped (vm23_small); start with: doas rcctl start <app>"
-
-  wait_for_up() {
-    typeset port=$1 name=$2 attempts=${3:-24} delay=${4:-5}
-    typeset i code
-    for (( i = 1; i <= attempts; i++ )); do
-      code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 8 http://127.0.0.1:${port}/up 2>/dev/null)
-      [[ $code == 200 ]] && { log INFO "$name /up ok (attempt $i)"; return 0; }
-      sleep $delay
-    done
-    log ERROR "$name /up not ready on :${port} after $((attempts * delay))s (last=$code)"
-    return 1
-  }
-
-  # No fallback falcon: one started here would run as dev beside rc.d/master's
-  # daemon_user="master" — a second server on the same port, as the account that
-  # can become root. A slow master gets the longer wait and then fails the run.
-  if ! wait_for_up 53187 master 12 5; then
-    log WARN "master slow - waiting longer for rc.d/master"
-    wait_for_up 53187 master 24 5 || return 1
-  fi
-  wait_for_up 38182 brgen 24 5 || return 1
-
-  "$RUBY" "${SCRIPT_DIR}/checks/health_check.rb" --core && log INFO "health_check ok" \
-    || { log ERROR "health_check failed"; return 1; }
+  trap release_apply_lock EXIT
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
 }
 
-source "${SCRIPT_DIR}/_net.sh"
-
-source "${SCRIPT_DIR}/dev/operator_stage_1.zsh"
-source "${SCRIPT_DIR}/dev/operator_stage_2.zsh"
-
-trap 'cleanup' EXIT
-trap 'error_handler $? $LINENO' ERR INT TERM
-
-# These four restate facts data/dns.yml already declares — BRGEN_IP is its
-# nameserver.ip, HYP_IP the first of its xfr_peers, PUBLIC_RESOLVERS its
-# resolvers.public. They stay as literals because this block is sourced before
-# anything, and making it shell out to ruby to boot would put the deploy
-# script behind an interpreter it also installs. test_dns_facts_agree fails if
-# either copy moves without the other.
-typeset -r BRGEN_IP="46.23.89.226"
-typeset -r HYP_IP="194.63.248.53"
-typeset -r LOCALHOST="127.0.0.1"
-
-typeset -a PUBLIC_RESOLVERS=(1.1.1.1 9.9.9.9)
-typeset -A APP_PORTS=(
-  brgen 38182
-  amber 61352
-  bsdports 47312
-  mrdamascy 47314
-  master 53187
-)
-typeset -A FAILED_CERTS
-
-validate_ip "$BRGEN_IP" || { log ERROR "Invalid BRGEN_IP: $BRGEN_IP"; exit 1 }
-validate_ip "$HYP_IP"   || { log ERROR "Invalid HYP_IP: $HYP_IP"; exit 1 }
-
-ALL_APPS=(
-  brgen:brgen.no
-  amber:amberapp.art
-  bsdports:bsdports.org
-  mrdamascy:mrd.brgen.no
-)
-
-SERVICES=()
-
-# Current registrar-held domain inventory, refreshed from the 2026-09-30 Domeneshop export.
-# This is ownership, not service exposure: parked or DNS-only names stay out of relayd/ACME until
-# an app/city explicitly adopts them. RAILS/apps.yml carries the same inventory; ownership tests pin both.
-OWNED_DOMAINS=(
-  amberapp.art
-  amberapp.no
-  amberapp.online
-  brgen.no
-  bsdports.net
-  bsdports.org
-  cardff.uk
-  denvr.us
-  edinbrgh.uk
-  foball.no
-  frankfrt.de
-  lndon.uk
-  lsangeles.com
-  lsangeles.store
-  oshlo.no
-  stvanger.no
-  trndheim.no
-  wshingtondc.com
-  wshingtondc.us
-)
-
-ALL_DOMAINS=(
-  brgen.no:markedsplass,radio,dating,tv,takeaway,maps,messenger,ai
-  longyearbyn.no:markedsplass,radio,dating,tv,takeaway,maps,messenger
-  oshlo.no:markedsplass,radio,dating,tv,takeaway,maps,messenger
-  stvanger.no:markedsplass,radio,dating,tv,takeaway,maps,messenger
-  trmso.no:markedsplass,radio,dating,tv,takeaway,maps,messenger
-  trndheim.no:markedsplass,radio,dating,tv,takeaway,maps,messenger
-  reykjavk.is:markadur,radio,dating,tv,takeaway,maps,messenger
-  kbenhvn.dk:markedsplads,radio,dating,tv,takeaway,maps,messenger
-  gtebrg.se:marknadsplats,radio,dating,tv,takeaway,maps,messenger
-  mlmoe.se:marknadsplats,radio,dating,tv,takeaway,maps,messenger
-  stholm.se:marknadsplats,radio,dating,tv,takeaway,maps,messenger
-  hlsinki.fi:markkinapaikka,radio,dating,tv,takeaway,maps,messenger
-  brmingham.uk:marketplace,radio,dating,tv,takeaway,maps,messenger
-  cardff.uk:marketplace,radio,dating,tv,takeaway,maps,messenger
-  edinbrgh.uk:marketplace,radio,dating,tv,takeaway,maps,messenger
-  glasgw.uk:marketplace,radio,dating,tv,takeaway,maps,messenger
-  lndon.uk:marketplace,radio,dating,tv,takeaway,maps,messenger
-  lverpool.uk:marketplace,radio,dating,tv,takeaway,maps,messenger
-  mnchester.uk:marketplace,radio,dating,tv,takeaway,maps,messenger
-  amstrdam.nl:marktplaats,radio,dating,tv,takeaway,maps,messenger
-  rottrdam.nl:marktplaats,radio,dating,tv,takeaway,maps,messenger
-  utrcht.nl:marktplaats,radio,dating,tv,takeaway,maps,messenger
-  brssels.be:marche,radio,dating,tv,takeaway,maps,messenger
-  zrich.ch:marktplatz,radio,dating,tv,takeaway,maps,messenger
-  lchtenstein.li:marktplatz,radio,dating,tv,takeaway,maps,messenger
-  frankfrt.de:marktplatz,radio,dating,tv,takeaway,maps,messenger
-  brdeaux.fr:marche,radio,dating,tv,takeaway,maps,messenger
-  mrseille.fr:marche,radio,dating,tv,takeaway,maps,messenger
-  mlan.it:mercato,radio,dating,tv,takeaway,maps,messenger
-  lisbon.pt:mercado,radio,dating,tv,takeaway,maps,messenger
-  wrsawa.pl:marktplatz,radio,dating,tv,takeaway,maps,messenger
-  gdnsk.pl:marktplatz,radio,dating,tv,takeaway,maps,messenger
-  austn.us:marketplace,radio,dating,tv,takeaway,maps,messenger
-  chcago.us:marketplace,radio,dating,tv,takeaway,maps,messenger
-  denvr.us:marketplace,radio,dating,tv,takeaway,maps,messenger
-  dllas.us:marketplace,radio,dating,tv,takeaway,maps,messenger
-  dnver.us:marketplace,radio,dating,tv,takeaway,maps,messenger
-  dtroit.us:marketplace,radio,dating,tv,takeaway,maps,messenger
-  houstn.us:marketplace,radio,dating,tv,takeaway,maps,messenger
-  lsangeles.com:marketplace,radio,dating,tv,takeaway,maps,messenger
-  mnnesota.com:marketplace,radio,dating,tv,takeaway,maps,messenger
-  newyrk.us:marketplace,radio,dating,tv,takeaway,maps,messenger
-  prtland.com:marketplace,radio,dating,tv,takeaway,maps,messenger
-  wshingtondc.com:marketplace,radio,dating,tv,takeaway,maps,messenger
-  pub.healthcare
-  pub.attorney
-  freehelp.legal
-  bsdports.org
-  bsddocs.org
-  discordb.org
-  stacyspassion.com
-  foball.no
-  amberapp.art
-)
-
-# ── Entry point ───────────────────────────────────────────────────────────────
-
-deploy_live() {
-  sync_openbsd_apply "${CONFIG_ROOT}"
-}
-
-main() {
-  if [[ ${1:-} = --help || ${1:-} = -h ]]; then
-    usage
-    exit 0
-  fi
-
-  case ${1:-} in
-    --sync-configs|--sync|sync)
-      deploy_live
-      ;;
-    --first-install)
-      [[ ${I_UNDERSTAND_DNS_WIPE:-0} == 1 ]] || {
-        log ERROR "first_install rewrites DNS material; rerun with I_UNDERSTAND_DNS_WIPE=1 if this is intentional"
-        exit 1
-      }
-      "$RUBY" "${SCRIPT_DIR}/checks/verify_openbsd_idempotency.rb" || exit 1
-      "$RUBY" "${SCRIPT_DIR}/checks/verify_deploy_identity.rb" || exit 1
-      stage_1
-      stage_2
-      ;;
-    --stage-1|--stage1)
-      [[ ${I_UNDERSTAND_DNS_WIPE:-0} == 1 ]] || {
-        log ERROR "stage_1 rewrites DNS material; rerun with I_UNDERSTAND_DNS_WIPE=1 if this is intentional"
-        exit 1
-      }
-      "$RUBY" "${SCRIPT_DIR}/checks/verify_openbsd_idempotency.rb" || exit 1
-      "$RUBY" "${SCRIPT_DIR}/checks/verify_deploy_identity.rb" || exit 1
-      stage_1
-      ;;
-    --stage-2|--stage2)
-      "$RUBY" "${SCRIPT_DIR}/checks/verify_openbsd_idempotency.rb" || exit 1
-      "$RUBY" "${SCRIPT_DIR}/checks/verify_deploy_identity.rb" || exit 1
-      stage_2
-      ;;
-    "")
-      deploy_live
-      ;;
-    *)
-      log ERROR "unknown flag: $1"
-      usage >&2
-      exit 1
-      ;;
+file_mode() {
+  local rel=$1 source_file=$MIRROR/$1
+  case "$rel" in
+    etc/rc.d/master|etc/rc.d/brgen|etc/rc.d/amber|etc/rc.d/bsdports|etc/rc.d/mrdamascy|usr/local/sbin/*) print 555 ;;
+    etc/doas.conf|etc/ssh/sshd_config) print 600 ;;
+    etc/rc.d/*) print 755 ;;
+    etc/daily.local|etc/weekly.local|usr/local/bin/*|usr/local/libexec/*) print 755 ;;
+    home/johann/.muttrc|home/johann/.mailcap) print 600 ;;
+    home/johann/bin/*) print 755 ;;
+    var/nsd/zones/master/*) print 640 ;;
+    *) if [[ -x $source_file ]]; then print 755; else print 644; fi ;;
   esac
 }
 
-main "$@"
+file_owner() {
+  case "$1" in
+    home/johann/*) print johann:johann ;;
+    var/nsd/zones/master/*) print _nsd:_nsd ;;
+    *) print root:wheel ;;
+  esac
+}
+
+file_matches() {
+  local rel=$1 source_file=$MIRROR/$1 target=/$1 attrs owner_group owner group mode
+  [[ -f $target && ! -L $target ]] || return 1
+  cmp -s "$source_file" "$target" || return 1
+  mode=$(file_mode "$rel")
+  owner_group=$(file_owner "$rel")
+  owner=${owner_group%%:*}
+  group=${owner_group##*:}
+  attrs=$(stat -f '%Lp:%Su:%Sg' "$target") || return 1
+  [[ $attrs == "$mode:$owner:$group" ]]
+}
+
+print_plan() {
+  local rel
+  for rel in $FILES; do
+    if [[ $rel == etc/ssh/sshd_config ]]; then
+      if file_matches "$rel"; then
+        print "SAME      /$rel (protected)"
+      else
+        print -u2 -- "PROTECTED /$rel (SSH configuration requires an out-of-band recovery path)"
+        failures=1
+      fi
+    elif [[ $rel == etc/doas.conf ]]; then
+      if file_matches "$rel"; then
+        print "SAME      /$rel (protected)"
+      elif (( INSTALL_DOAS )); then
+        print "GUARDED   /$rel (dedicated doas canary and rollback)"
+        DOAS_NEEDED=1
+      else
+        print -u2 -- "PROTECTED /$rel (pass --doas to use validate_doas.ksh)"
+        failures=1
+      fi
+    elif file_matches "$rel"; then
+      print "SAME      /$rel"
+    else
+      print "CHANGE    /$rel"
+      CHANGED+=("$rel")
+    fi
+  done
+  print "SPECIAL   root crontab: OPENBSD/data/root.crontab (merged through crontab(1), never copied to /etc)"
+}
+
+validate_payload() {
+  [[ ! -f $MIRROR/etc/pf.conf ]] || /sbin/pfctl -nf "$MIRROR/etc/pf.conf"
+  [[ ! -f $MIRROR/etc/relayd.conf ]] || /usr/sbin/relayd -n -f "$MIRROR/etc/relayd.conf"
+  [[ ! -f $MIRROR/etc/httpd.conf ]] || /usr/sbin/httpd -n -f "$MIRROR/etc/httpd.conf"
+  [[ ! -f $MIRROR/etc/mail/smtpd.conf ]] || /usr/sbin/smtpd -n -f "$MIRROR/etc/mail/smtpd.conf"
+  [[ ! -f $MIRROR/etc/ssh/sshd_config ]] || /usr/sbin/sshd -t -f "$MIRROR/etc/ssh/sshd_config"
+  [[ ! -f $MIRROR/var/nsd/etc/nsd.conf ]] || /usr/local/sbin/nsd-checkconf "$MIRROR/var/nsd/etc/nsd.conf"
+}
+
+no_symlink_path() {
+  local path=$1 current=/ component
+  local -a pieces
+  pieces=(${(s:/:)path})
+  for component in $pieces; do
+    [[ -n $component ]] || continue
+    current=${current%/}/$component
+    [[ ! -L $current ]] || return 1
+  done
+  return 0
+}
+
+backup_signed_zones() {
+  local dir=$BACKUP_ROOT/$RUN_ID/nsd-signed zone_file
+  install -d -o root -g wheel -m 700 "$dir" || return 1
+  SIGNED_BEFORE=(/var/nsd/zones/master/*.zone.signed(N))
+  for zone_file in $SIGNED_BEFORE; do
+    cp -p "$zone_file" "$dir/${zone_file:t}" || return 1
+  done
+}
+
+restore_signed_zones() {
+  local zone_file base dir=$BACKUP_ROOT/$RUN_ID/nsd-signed
+  for zone_file in /var/nsd/zones/master/*.zone.signed(N); do
+    (( ${SIGNED_BEFORE[(Ie)$zone_file]} )) || rm -f "$zone_file" || return 1
+  done
+  for zone_file in $SIGNED_BEFORE; do
+    base=${zone_file:t}
+    [[ -f $dir/$base ]] && cp -p "$dir/$base" "$zone_file" || return 1
+  done
+  /usr/local/sbin/nsd-control reload
+}
+
+backup_file() {
+  local rel=$1 target=/$1 backup=$BACKUP_ROOT/$RUN_ID/$1
+  install -d -o root -g wheel -m 700 "$backup:h"
+  if [[ -e $target ]]; then
+    [[ -f $target && ! -L $target ]] || {
+      print -u2 -- "OPERATOR: refusing non-regular destination: $target"
+      return 1
+    }
+    cp -p "$target" "$backup" || return 1
+    cmp -s "$target" "$backup" || return 1
+    BACKUPS[$rel]=$backup
+  else
+    BACKUPS[$rel]=MISSING
+  fi
+}
+
+restore_files() {
+  local rel target backup restore_failed=0 tmp
+  for rel in $CHANGED; do
+    target=/$rel
+    backup=${BACKUPS[$rel]:-}
+    [[ -n $backup ]] || continue
+    if [[ $backup == MISSING ]]; then
+      rm -f "$target" || restore_failed=1
+    elif [[ -f $backup ]]; then
+      tmp=$(mktemp "$target:h/.pub5-restore.XXXXXXXX") || { restore_failed=1; continue; }
+      cp -p "$backup" "$tmp" && mv -f "$tmp" "$target" || {
+        rm -f "$tmp"
+        restore_failed=1
+      }
+    else
+      restore_failed=1
+    fi
+  done
+  return $restore_failed
+}
+
+install_one() {
+  local rel=$1 source_file=$MIRROR/$1 target=/$1 owner_group owner group mode tmp
+  owner_group=$(file_owner "$rel")
+  owner=${owner_group%%:*}
+  group=${owner_group##*:}
+  mode=$(file_mode "$rel")
+  no_symlink_path "$target" || {
+    print -u2 -- "OPERATOR: refusing symlinked destination path: $target"
+    return 1
+  }
+  if [[ $rel == home/johann/* ]] && ! id johann >/dev/null 2>&1; then
+    print -u2 -- "OPERATOR: account johann is absent; refusing to create a home implicitly"
+    return 1
+  fi
+  if [[ ! -d $target:h ]]; then
+    install -d -o "$owner" -g "$group" -m 755 "$target:h" || return 1
+  fi
+  tmp=$(mktemp "$target:h/.pub5-install.XXXXXXXX") || return 1
+  if ! install -o "$owner" -g "$group" -m "$mode" "$source_file" "$tmp" ||
+     ! mv -f "$tmp" "$target"; then
+    rm -f "$tmp"
+    return 1
+  fi
+  print "INSTALLED /$rel ($owner:$group $mode)"
+}
+
+backup_root_crontab() {
+  local backup=$BACKUP_ROOT/$RUN_ID/root.crontab error_file=$BACKUP_ROOT/$RUN_ID/root.crontab.err detail
+  if crontab -l -u root > "$backup" 2> "$error_file"; then
+    rm -f "$error_file"
+    return 0
+  fi
+  detail=$(<"$error_file")
+  rm -f "$error_file"
+  if [[ $detail == *"no crontab for root"* ]]; then
+    : > "$backup"
+    return 0
+  fi
+  print -u2 -- "OPERATOR: cannot read root crontab safely: $detail"
+  rm -f "$backup"
+  return 1
+}
+
+restore_root_crontab() {
+  local backup=$BACKUP_ROOT/$RUN_ID/root.crontab
+  [[ -f $backup ]] || return 1
+  crontab -u root "$backup" || return 1
+  CRONTAB_APPLIED=0
+  print "RESTORED  root crontab"
+}
+
+install_root_crontab() {
+  local tracked=$DATA/root.crontab current=$BACKUP_ROOT/$RUN_ID/root.crontab merged path_line line cmdpath index work
+  [[ -f $tracked && -f $current ]] || {
+    print -u2 -- "OPERATOR: root crontab source or verified backup is missing"
+    return 1
+  }
+  work=$(mktemp -d /var/db/pub5-crontab.XXXXXXXX) || return 1
+  if ! chown root:wheel "$work" || ! chmod 700 "$work"; then
+    rm -rf "$work"
+    return 1
+  fi
+  merged=$work/merged
+  path_line=
+  while IFS= read -r line; do
+    [[ $line == PATH=* ]] && { path_line=$line; break; }
+  done < "$tracked"
+  if [[ -n $path_line ]]; then print -r -- "$path_line" > "$merged"; else : > "$merged"; fi
+  while IFS= read -r line; do
+    [[ $line == PATH=* ]] && continue
+    print -r -- "$line" >> "$merged"
+  done < "$current"
+
+  while IFS= read -r line; do
+    [[ -z $line || $line == \#* || $line == PATH=* ]] && continue
+    local -a fields
+    fields=(${=line})
+    if [[ ${fields[1]} == @* ]]; then
+      (( ${#fields} >= 2 )) || {
+        print -u2 -- "OPERATOR: malformed tracked cron entry: $line"
+        rm -rf "$work"
+        return 1
+      }
+      index=2
+    else
+      (( ${#fields} >= 6 )) || {
+        print -u2 -- "OPERATOR: malformed tracked cron entry: $line"
+        rm -rf "$work"
+        return 1
+      }
+      index=6
+    fi
+    cmdpath=
+    while (( index <= ${#fields} )); do
+      if [[ ${fields[index]} == /* ]]; then cmdpath=${fields[index]}; break; fi
+      (( index++ ))
+    done
+    [[ -n $cmdpath && -x $cmdpath ]] || {
+      print -u2 -- "OPERATOR: tracked cron command is missing or not executable: $line"
+      rm -rf "$work"
+      return 1
+    }
+    cron_has_command "$cmdpath" "$merged" || print -r -- "$line" >> "$merged"
+  done < "$tracked"
+
+  if ! crontab -u root "$merged"; then
+    rm -rf "$work"
+    return 1
+  fi
+  CRONTAB_APPLIED=1
+  rm -rf "$work"
+}
+
+cron_has_command() {
+  local command=$1 file=$2
+  awk -v command="$command" '
+    /^([[:space:]]*#|[[:space:]]*$)/ { next }
+    {
+      start = ($1 ~ /^@/) ? 2 : 6
+      for (i = start; i <= NF; i++) if ($i == command) found = 1
+    }
+    END { exit(found ? 0 : 1) }
+  ' "$file"
+}
+
+verify_root_crontab() {
+  local tracked=$DATA/root.crontab live line cmdpath index expected_path live_path
+  [[ -f $tracked ]] || return 1
+  live=$(mktemp /tmp/pub5-crontab.XXXXXXXX) || return 1
+  local error_file
+  error_file=$(mktemp /tmp/pub5-crontab-error.XXXXXXXX) || { rm -f "$live"; return 1; }
+  if ! crontab -l -u root > "$live" 2>"$error_file"; then
+    local detail
+    detail=$(<"$error_file")
+    if [[ $detail == *"no crontab for root"* ]]; then
+      : > "$live"
+    else
+      print -u2 -- "DRIFT     cannot read root crontab: $detail"
+      rm -f "$error_file" "$live"
+      return 1
+    fi
+  fi
+  rm -f "$error_file"
+  expected_path=
+  while IFS= read -r line; do
+    [[ $line == PATH=* ]] && { expected_path=$line; break; }
+  done < "$tracked"
+  live_path=
+  while IFS= read -r line; do
+    [[ $line == PATH=* ]] && { live_path=$line; break; }
+  done < "$live"
+  if [[ -n $expected_path && $expected_path != $live_path ]]; then
+    print -u2 -- "DRIFT     root crontab PATH assignment differs"
+    rm -f "$live"
+    return 1
+  fi
+  while IFS= read -r line; do
+    [[ -z $line || $line == \#* || $line == PATH=* ]] && continue
+    local -a fields
+    fields=(${=line})
+    index=6
+    [[ ${fields[1]} == @* ]] && index=2
+    cmdpath=
+    while (( index <= ${#fields} )); do
+      if [[ ${fields[index]} == /* ]]; then cmdpath=${fields[index]}; break; fi
+      (( index++ ))
+    done
+    if [[ -z $cmdpath ]] || ! cron_has_command "$cmdpath" "$live"; then
+      print -u2 -- "DRIFT     root crontab missing $cmdpath"
+      rm -f "$live"
+      return 1
+    fi
+  done < "$tracked"
+  rm -f "$live"
+  print "SAME      managed root-crontab entries"
+}
+
+case "$ACTION" in
+  plan)
+    [[ ! -d $LOCK_DIR ]] || { print -u2 -- "OPERATOR: BLOCKED - apply lock is active: $LOCK_DIR"; exit 75; }
+    print "OPENBSD mirror plan (read-only; source paths map directly to /)"
+    print_plan
+    (( failures == 0 )) || exit 78
+    ;;
+  verify)
+    [[ ! -d $LOCK_DIR ]] || { print -u2 -- "OPERATOR: BLOCKED - apply lock is active: $LOCK_DIR"; exit 75; }
+    print "OPENBSD mirror verification"
+    print_plan
+    verify_root_crontab || failures=1
+    (( failures == 0 )) || exit 1
+    ;;
+  apply)
+    print "OPENBSD mirror apply"
+    print_plan
+    if (( DOAS_NEEDED && ${#CHANGED} )); then
+      print -u2 -- "OPERATOR: BLOCKED - --doas may only change doas.conf by itself; apply other mirror changes separately"
+      exit 78
+    fi
+    (( failures == 0 )) || {
+      print -u2 -- "OPERATOR: BLOCKED - protected or invalid mirror differences must be handled separately"
+      exit 78
+    }
+    validate_payload || {
+      print -u2 -- "OPERATOR: BLOCKED - native OpenBSD configuration validation failed; nothing was copied"
+      exit 1
+    }
+    acquire_apply_lock || exit 75
+    RUN_ID=$(date -u +%Y%m%dT%H%M%SZ)-$$
+    install -d -o root -g wheel -m 700 "$BACKUP_ROOT/$RUN_ID"
+    # Every recovery input is captured and verified before the first live write.
+    for rel in $CHANGED; do
+      backup_file "$rel" || {
+        print -u2 -- "OPERATOR: backup failed for /$rel; nothing was installed"
+        exit 1
+      }
+    done
+    backup_root_crontab || {
+      print -u2 -- "OPERATOR: root crontab backup failed; nothing was installed"
+      exit 1
+    }
+    for rel in $CHANGED; do
+      install_one "$rel" || {
+        print -u2 -- "OPERATOR: install failed for /$rel"
+        restore_files || print -u2 -- "DELIVERY_FAILED: automatic file restoration failed"
+        exit 1
+      }
+    done
+    for rel in $CHANGED; do
+      file_matches "$rel" || {
+        print -u2 -- "OPERATOR: installed file did not verify: /$rel"
+        restore_files || print -u2 -- "DELIVERY_FAILED: automatic file restoration failed"
+        exit 1
+      }
+    done
+    install_root_crontab || {
+      print -u2 -- "OPERATOR: root crontab merge failed"
+      if (( CRONTAB_APPLIED )); then
+        restore_root_crontab || { print -u2 -- "DELIVERY_FAILED: root crontab restoration failed"; exit 1; }
+      fi
+      restore_files || print -u2 -- "DELIVERY_FAILED: automatic file restoration failed"
+      exit 1
+    }
+    verify_root_crontab || {
+      print -u2 -- "OPERATOR: root crontab read-back verification failed"
+      restore_root_crontab || { print -u2 -- "DELIVERY_FAILED: root crontab restoration failed"; exit 1; }
+      restore_files || print -u2 -- "DELIVERY_FAILED: automatic file restoration failed"
+      exit 1
+    }
+    if (( ${CHANGED[(Ie)etc/pf.conf]} )); then
+      /sbin/pfctl -nf /etc/pf.conf && /sbin/pfctl -f /etc/pf.conf || failures=1
+    fi
+    if (( failures == 0 && ${CHANGED[(Ie)etc/relayd.conf]} )); then
+      /usr/sbin/rcctl restart relayd || failures=1
+    fi
+    if (( failures == 0 && ${CHANGED[(Ie)etc/httpd.conf]} )); then
+      /usr/sbin/rcctl restart httpd || failures=1
+    fi
+    if (( failures == 0 && ${CHANGED[(Ie)etc/mail/smtpd.conf]} )); then
+      /usr/sbin/rcctl restart smtpd || failures=1
+    fi
+    if (( failures == 0 && ${CHANGED[(Ie)var/nsd/etc/nsd.conf]} )); then
+      /usr/sbin/rcctl restart nsd || failures=1
+    fi
+    if (( failures == 0 && ${CHANGED[(I)var/nsd/zones/master/*.zone]} )); then
+      if backup_signed_zones; then
+        /usr/local/bin/nsd-resign || failures=1
+      else
+        failures=1
+      fi
+    fi
+    if (( failures )); then
+      print -u2 -- "OPERATOR: activation failed; restoring the previous tracked files"
+      if (( CRONTAB_APPLIED )); then
+        restore_root_crontab || { print -u2 -- "DELIVERY_FAILED: root crontab restoration failed"; exit 1; }
+      fi
+      restore_files || { print -u2 -- "DELIVERY_FAILED: automatic file restoration failed"; exit 1; }
+      if (( ${#SIGNED_BEFORE} )) || [[ -d $BACKUP_ROOT/$RUN_ID/nsd-signed ]]; then
+        restore_signed_zones || { print -u2 -- "DELIVERY_FAILED: DNSSEC signature restoration failed"; exit 1; }
+      fi
+      [[ ${CHANGED[(Ie)etc/pf.conf]} -gt 0 ]] && /sbin/pfctl -f /etc/pf.conf || :
+      [[ ${CHANGED[(Ie)etc/relayd.conf]} -gt 0 ]] && /usr/sbin/rcctl restart relayd || :
+      [[ ${CHANGED[(Ie)etc/httpd.conf]} -gt 0 ]] && /usr/sbin/rcctl restart httpd || :
+      [[ ${CHANGED[(Ie)etc/mail/smtpd.conf]} -gt 0 ]] && /usr/sbin/rcctl restart smtpd || :
+      [[ ${CHANGED[(Ie)var/nsd/etc/nsd.conf]} -gt 0 ]] && /usr/sbin/rcctl restart nsd || :
+      exit 1
+    fi
+    if (( DOAS_NEEDED )); then
+      if ! "$SCRIPT_DIR/bin/validate_doas.ksh" install "$MIRROR/etc/doas.conf" "pub5-openbsd"; then
+        print -u2 -- "OPERATOR: guarded doas configuration change failed (helper restored the prior policy)"
+        restore_root_crontab || { print -u2 -- "DELIVERY_FAILED: root crontab restoration failed"; exit 1; }
+        exit 1
+      fi
+    fi
+    print "PASS      OPENBSD filesystem mirror applied"
+    print "BACKUP    $BACKUP_ROOT/$RUN_ID"
+    ;;
+esac

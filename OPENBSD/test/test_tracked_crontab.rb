@@ -10,15 +10,15 @@ require "tmpdir"
 # See test_restore_scripts.rb: the weekly integrity run on vm23 invokes these
 # under a C locale, where Ruby reads files as US-ASCII and every read of this
 # UTF-8 source raises "invalid byte sequence".
-require_relative "../mirror/lib/utf8"
+require_relative "../lib/utf8"
 require_relative "../checks/config_drift_check"
 
-# etc/crontab.vm23 is the tracked half of root's crontab, and OPERATOR.sh's
+# data/root.crontab is the tracked half of root's crontab, and BOOTSTRAP.sh's
 # install_tracked_crontab merges it onto the box. Both halves can be complete
 # and correct while the job is not scheduled anywhere, which is the failure this
 # file exists for.
 #
-# Measured 2026-08-18: uptime-check.sh was in crontab.vm23 and in
+# Measured 2026-08-18: uptime-check.sh was in root.crontab and in
 # usr/local/bin/ since 2026-08-12, and was on neither the box's crontab nor its
 # filesystem. Nothing was missing from either file, so nothing read as wrong.
 # The merge loop had skipped the line — correctly, since the wrapper was not
@@ -26,8 +26,8 @@ require_relative "../checks/config_drift_check"
 # silently, so the skip taught nobody anything.
 class TrackedCrontabTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  TRACKED = File.join(ROOT, "mirror", "etc", "crontab.vm23")
-  OPERATOR = File.join(ROOT, "OPERATOR.sh")
+  TRACKED = File.join(ROOT, "data", "root.crontab")
+  OPERATOR = File.join(ROOT, "BOOTSTRAP.sh")
 
   def crontab_source = @crontab_source ||= File.read(TRACKED)
 
@@ -44,14 +44,14 @@ class TrackedCrontabTest < Minitest::Test
 
   def test_the_tracked_crontab_actually_schedules_something
     refute_empty scheduled,
-                 "no cron lines parsed out of etc/crontab.vm23 - this test would pass having measured nothing"
+                 "no cron lines parsed out of data/root.crontab - this test would pass having measured nothing"
   end
 
   # The repo may not schedule a command it does not ship. If it does, the merge
   # loop skips the line on every run and the job is tracked but never installed.
   def test_every_scheduled_command_is_shipped_by_this_repo
     # Shipped means copied with usr/local/bin/, or named by an `install` line in
-    # OPERATOR.sh whose source is in the tree. Where that source sits is the
+    # BOOTSTRAP.sh whose source is in the tree. Where that source sits is the
     # install line's business, so the test reads the line rather than guessing a
     # directory.
     installed = operator_source.scan(%r{install\s[^\n]*?"\$\{SCRIPT_DIR\}/([\w./-]+)"\s+(/usr/local/bin/[\w.-]+)})
@@ -62,7 +62,7 @@ class TrackedCrontabTest < Minitest::Test
     end
 
     assert_empty missing,
-                 "etc/crontab.vm23 schedules commands this repo does not ship, so " \
+                 "data/root.crontab schedules commands this repo does not ship, so " \
                  "install_tracked_crontab will skip them forever:\n#{missing.join("\n")}"
   end
 
@@ -71,7 +71,7 @@ class TrackedCrontabTest < Minitest::Test
   def test_shipped_cron_wrappers_are_executable_in_the_repo
     not_executable = scheduled.filter_map do |command|
       base = File.basename(command)
-      path = [File.join(ROOT, "mirror", "usr", "local", "bin", base), File.join(ROOT, "mirror", "bin", base), File.join(ROOT, base)].find { |p| File.file?(p) }
+      path = [File.join(ROOT, "mirror", "usr", "local", "bin", base), File.join(ROOT, base)].find { |p| File.file?(p) }
       path if path && !File.executable?(path)
     end
 
@@ -85,7 +85,7 @@ class TrackedCrontabTest < Minitest::Test
   def test_the_crontab_sets_a_path_that_includes_usr_local_bin
     path_line = crontab_source.each_line.find { |l| l.start_with?("PATH=") }
 
-    refute_nil path_line, "etc/crontab.vm23 no longer sets PATH"
+    refute_nil path_line, "data/root.crontab no longer sets PATH"
     assert_includes path_line, "/usr/local/bin"
   end
 

@@ -10,9 +10,10 @@ class TestDeployPathsExist < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
 
   SCRIPT_GLOBS = %w[
-    OPENBSD/mirror/bin/*
-    OPENBSD/mirror/lib/*
+    OPENBSD/bin/*
+    OPENBSD/lib/*
     OPENBSD/OPERATOR.sh
+    OPENBSD/BOOTSTRAP.sh
     OPENBSD/mirror/etc/rc.d/*
     RAILS/_*.sh
     RAILS/deploy.sh
@@ -36,6 +37,12 @@ class TestDeployPathsExist < Minitest::Test
 
       line.scan(PATH_PATTERN).flatten.map { |p| [p.sub(/[.,:;)\]]+\z/, ""), i + 1] }
     end
+  end
+
+  def test_the_filesystem_mirror_has_only_real_root_paths
+    mirror = Dir.children(File.join(ROOT, "OPENBSD", "mirror")).sort
+    assert_equal %w[etc home usr var], mirror,
+                 "OPENBSD/mirror is an installable filesystem image only; operator tools/data belong elsewhere"
   end
 
   def test_every_repo_path_a_deploy_script_names_exists

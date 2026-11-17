@@ -5,7 +5,7 @@
 # where every interpreter on this box lives. `ruby` on line 2 and the versioned Ruby on the
 # config_drift_check line both failed to exec on every run, and the second one was
 # invisible because its `2>&1` sent the shell's own "not found" into the output
-# file it was writing. See etc/crontab.vm23 for the full accounting; the PATH line
+# file it was writing. See OPENBSD/data/root.crontab for the full accounting; the PATH line
 # there is the real fix, and this is the belt to its braces — daily.local is also
 # run by hand, from shells that have their own ideas about PATH.
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin

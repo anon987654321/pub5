@@ -4,11 +4,11 @@ require "minitest/autorun"
 require "open3"
 require "rbconfig"
 require "stringio"
-require_relative "../mirror/bin/zap"
+load File.expand_path("../mirror/usr/local/bin/zap", __dir__)
 
 class ZapTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
-  ZAP = File.join(ROOT, "OPENBSD", "mirror", "bin", "zap.rb")
+  ZAP = File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "bin", "zap")
 
   def run_zap(*args)
     Open3.capture2e(RbConfig.ruby, ZAP, *args)

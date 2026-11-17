@@ -23,7 +23,7 @@
 # a crontab line. It pulls out each /usr/local/{bin,libexec} path they name and
 # asks whether the repo provides it — either as a tracked file under
 # OPENBSD/mirror/usr/local/ (install_root_configs copies the tree) or through an
-# explicit `install` line in OPERATOR.sh.
+# explicit `install` line in BOOTSTRAP.sh.
 #
 #   ruby OPENBSD/checks/installed_targets_check.rb
 #   ruby OPENBSD/checks/installed_targets_check.rb --json
@@ -40,7 +40,7 @@ module Deploy
       attr_accessor :root
     end
 
-    CONFIG_GLOBS = ["etc/crontab*", "etc/*.local", "etc/rc.d/*",
+    CONFIG_GLOBS = ["etc/crontab*", "etc/*.local", "etc/rc.d/*", "data/root.crontab",
                     "mirror/etc/crontab*", "mirror/etc/*.local", "mirror/etc/rc.d/*"].freeze
     # The mirror reorganization moved the installed tree under mirror/; the
     # root layout remains a valid fixture surface, so both are scanned.
@@ -67,12 +67,12 @@ module Deploy
     def read(path) = File.read(path, encoding: "UTF-8").scrub
 
     def operator
-      path = File.join(root, "OPERATOR.sh")
+      path = File.join(root, "BOOTSTRAP.sh")
       File.file?(path) ? read(path) : ""
     end
 
     # The config that names a path, and every script the repo puts under
-    # /usr/local — including the ones OPERATOR.sh installs from the tree root.
+    # /usr/local — including the ones BOOTSTRAP.sh installs explicitly from outside the mirror.
     def referrers
       config = CONFIG_GLOBS.flat_map { |glob| Dir.glob(File.join(root, glob)) }
       installed = operator.scan(INSTALL_SOURCE).flatten.map { |name| File.join(root, name) }
@@ -129,7 +129,7 @@ module Deploy
       missing.each do |target, where|
         warn "installed-targets: /usr/local/#{target} is named by #{where.join(', ')} and nothing installs it"
       end
-      warn "installed-targets: add it to OPENBSD/mirror/usr/local/ (copied wholesale) or an install line in OPERATOR.sh"
+      warn "installed-targets: add it to OPENBSD/mirror/usr/local/ (copied as a filesystem tree) or an explicit bootstrap install"
       warn "installed-targets: a guard on a target that does not exist fails OPEN, into silence"
       false
     end

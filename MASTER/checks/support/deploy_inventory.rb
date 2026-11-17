@@ -3,4 +3,4 @@
 # Deploy::Inventory has one implementation under OPENBSD/mirror/lib. MASTER checks
 # use this path as a compatibility seam; keeping the definition here as well
 # would let app inventory behavior drift between the scanner and deploy tools.
-require_relative "../../../OPENBSD/mirror/lib/deploy_inventory"
+require_relative "../../../OPENBSD/lib/deploy_inventory"

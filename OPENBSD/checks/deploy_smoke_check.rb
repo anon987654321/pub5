@@ -3,8 +3,8 @@
 
 require "json"
 require "yaml"
-require_relative "../mirror/lib/utf8"
-require_relative "../mirror/lib/token_echo"
+require_relative "../lib/utf8"
+require_relative "../lib/token_echo"
 
 ROOT = File.expand_path("../..", __dir__)
 RAILS_ROOT = File.join(ROOT, "RAILS")
@@ -183,15 +183,21 @@ def check_master_web(failures)
 end
 
 def check_operator(failures)
-  openbsd = File.join(ROOT, "OPENBSD", "OPERATOR.sh")
-  if File.file?(openbsd)
-    text = File.read(openbsd)
-    failures << "OPERATOR.sh: production db:seed is not explicitly gated" unless text.include?("RUN_PRODUCTION_SEEDS")
+  bootstrap_path = File.join(ROOT, "OPENBSD", "BOOTSTRAP.sh")
+  bootstrap = File.file?(bootstrap_path) ? File.read(bootstrap_path) : ""
+  failures << "BOOTSTRAP.sh: production db:seed is not explicitly gated" unless bootstrap.include?("RUN_PRODUCTION_SEEDS")
 
-    failures << "OPERATOR.sh: default deploy must run sync/apply path" unless text.match?(/""\)\s*\n\s*deploy_live/m)
-  else
-    failures << "missing canonical OpenBSD deploy script"
+  installer_path = File.join(ROOT, "OPENBSD", "OPERATOR.sh")
+  installer = File.file?(installer_path) ? File.read(installer_path) : ""
+  failures << "missing canonical OPENBSD/OPERATOR.sh" if installer.empty?
+  %w[--plan --apply --verify].each do |mode|
+    failures << "OPERATOR.sh: missing #{mode}" unless installer.include?(mode)
   end
+  failures << "OPERATOR.sh: must copy only tracked mirror files" unless installer.include?('ls-files -z -- OPENBSD/mirror') && installer.include?('safe.directory=')
+  failures << "OPERATOR.sh: must validate PF before applying" unless installer.include?('pfctl -nf "$MIRROR/etc/pf.conf"')
+  failures << "OPERATOR.sh: must validate relayd before applying" unless installer.include?('relayd -n -f "$MIRROR/etc/relayd.conf"')
+  failures << "OPERATOR.sh: must protect sshd_config" unless installer.include?('etc/ssh/sshd_config')
+  failures << "OPERATOR.sh: must not invoke Ruby for filesystem installation" if installer.match?(/(?:^|[\s;&|])(?:ruby|bundle)\s/)
 end
 
 def check_system_configs(failures)

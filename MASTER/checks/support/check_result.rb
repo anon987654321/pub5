@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# MASTER/checks/support owns the check kernel. OPENBSD/mirror/lib/check_result.rb is a
+# MASTER/checks/support owns the check kernel. OPENBSD/lib/check_result.rb is a
 # compatibility path. Every check in the repo returns this
 # type: RAILS/checks, MASTER/checks, OPENBSD/checks and MASTER/tools/check.rb require it
 # across the tree boundary and add nothing to it, so adding an outcome is a

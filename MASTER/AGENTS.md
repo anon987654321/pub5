@@ -731,7 +731,7 @@ direct changes to `lib/master.rb` retain a `full` loader/integration check
 because that file participates in every boot. This is a narrow high-risk
 exception, not a post-`/fix` requirement for ordinary work.
 
-For work performed outside `/fix`, or for supplemental verification, run the smallest matching check: `bin/check` for ordinary code, `bin/check --profile=agent` for law, scanners and the loop, `bin/check --profile=web` for the face, `OPENBSD/mirror/bin/check-rails --profile=contributor` for deploy and Rails, and `MASTER/bin/operator check` when the whole maintenance ladder is intended. On failure: `bin/check --profile=agent --format=brief`.
+For work performed outside `/fix`, or for supplemental verification, run the smallest matching check: `bin/check` for ordinary code, `bin/check --profile=agent` for law, scanners and the loop, `bin/check --profile=web` for the face, `OPENBSD/bin/check-rails --profile=contributor` for deploy and Rails, and `MASTER/bin/operator check` when the whole maintenance ladder is intended. On failure: `bin/check --profile=agent --format=brief`.
 
 `--profile=agent` may fail on known debt tagged `agent-ignore`.
 Do not chase scan noise on unrelated patches.

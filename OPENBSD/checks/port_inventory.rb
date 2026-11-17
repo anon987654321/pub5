@@ -2,8 +2,8 @@
 
 require "English"
 require "yaml"
-require_relative "../../OPENBSD/mirror/lib/deploy_inventory"
-require_relative "../../OPENBSD/mirror/lib/check_result"
+require_relative "../../OPENBSD/lib/deploy_inventory"
+require_relative "../../OPENBSD/lib/check_result"
 
 module Deploy
   class PortInventoryCheck
@@ -22,7 +22,7 @@ module Deploy
     # app down forever, or reports a different app's health under this app's
     # name once the number is reused.
     SMOKE_SCRIPTS = [
-      "OPENBSD/mirror/bin/deploy-smoke.sh",
+      "OPENBSD/bin/deploy-smoke.sh",
       # keep-warm pairs a host with a port on one line and runs on
       # a timer against production, so a number that stops being true here does
       # not fail -- it quietly warms nothing, which is the same shape as a probe
@@ -51,7 +51,7 @@ module Deploy
       "OPENBSD/mirror/etc/relayd.conf" => "checked: check_relayd_ports",
       "RAILS/crawl_manifest.yml" => "checked: check_crawl_manifest",
       "RAILS/README.md" => "checked: check_readmes",
-      "OPENBSD/mirror/bin/deploy-smoke.sh" => "checked: check_smoke_probes",
+      "OPENBSD/bin/deploy-smoke.sh" => "checked: check_smoke_probes",
       "OPENBSD/mirror/usr/local/bin/keep-warm.sh" => "checked: check_smoke_probes",
       "RAILS/test/deploy_smoke_contract_test.rb" => "asserts the smoke scripts' own content",
       "CLAUDE.md" => "prose: the shed-vs-outage triage note, trap 3",
@@ -85,7 +85,7 @@ module Deploy
     # both certificate symlinks, both DNS zones, and blognet in litestream.yml.
     # The config half of this list is where those leftovers lived.
     SCANNED_FOR_RETIRED_NAMES = [
-      "OPENBSD/mirror/bin/vps_console.exp",
+      "OPENBSD/bin/vps_console.exp",
       "OPENBSD/mirror/usr/local/bin/relayd-watchdog",
       "RAILS/env.sample",
       "MASTER/tools/rails/build_workbox.mjs",

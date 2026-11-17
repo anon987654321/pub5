@@ -22,7 +22,7 @@ candidates:
     tree: OPENBSD
     status: implemented
     spec: >
-      OPENBSD/mirror/bin/deploy-story, exposed as operator deploy-story - structured vps-deploy log lines (stage=) as a timeline.
+      OPENBSD/bin/deploy-story, exposed as operator deploy-story - structured vps-deploy log lines (stage=) as a timeline.
     cost: S
     reversibility: high
   - id: cities
@@ -36,7 +36,7 @@ candidates:
     tree: OPENBSD
     status: implemented
     spec: >
-      OPENBSD/mirror/bin/domain-ghosts, exposed as operator domain-ghosts - available inventory names, owned/inventory skew, residual relayd Hosts.
+      OPENBSD/bin/domain-ghosts, exposed as operator domain-ghosts - available inventory names, owned/inventory skew, residual relayd Hosts.
     cost: S
     reversibility: high
   - id: tree_weight

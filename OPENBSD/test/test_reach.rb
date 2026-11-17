@@ -3,8 +3,8 @@
 require "minitest/autorun"
 require "tmpdir"
 require "fileutils"
-require_relative "../mirror/lib/utf8"
-load File.expand_path("../mirror/bin/reach", __dir__)
+require_relative "../lib/utf8"
+load File.expand_path("../bin/reach", __dir__)
 
 # Every check here is shown failing before it is trusted passing. A probe nobody
 # has watched fire is the same shape as the drift it looks for: complete,
@@ -12,7 +12,7 @@ load File.expand_path("../mirror/bin/reach", __dir__)
 #
 # Two of the three would have been wrong without this. `cron` naively wants the
 # scheduled path to be tracked, and resource_guard.sh is tracked at the OPENBSD
-# root while being scheduled at /usr/local/bin — OPERATOR.sh installs it there,
+# root while being scheduled at /usr/local/bin — BOOTSTRAP.sh installs it there,
 # so a path-only check reports a false positive on a correct tree. `rcd` naively
 # wants a starter, and all four *_jobs workers plus irc_gateway deliberately have
 # none and say so in their own headers.
@@ -21,11 +21,11 @@ class ReachTest < Minitest::Test
 
   def setup
     @tmp = Dir.mktmpdir("reach")
-    %w[mirror/etc/rc.d mirror/var/nsd/etc mirror/var/nsd/zones/master mirror/usr/local/bin mirror/bin].each do |d|
+    %w[mirror/etc/rc.d mirror/var/nsd/etc mirror/var/nsd/zones/master mirror/usr/local/bin bin].each do |d|
       FileUtils.mkdir_p(File.join(@tmp, d))
     end
-    write("mirror/etc/crontab.vm23", "PATH=/bin:/usr/local/bin\n")
-    write("OPERATOR.sh", "#!/bin/ksh\n")
+    write("data/root.crontab", "PATH=/bin:/usr/local/bin\n")
+    write("BOOTSTRAP.sh", "#!/bin/ksh\n")
     write("mirror/var/nsd/etc/nsd.conf", "server:\n")
     R.root = @tmp
   end
@@ -46,23 +46,23 @@ class ReachTest < Minitest::Test
   # ---- cron -----------------------------------------------------------------
 
   def test_a_scheduled_command_that_is_tracked_reaches
-    write("mirror/etc/crontab.vm23", "PATH=/bin:/usr/local/bin\n*/5 * * * * /usr/local/bin/thing.sh\n")
+    write("data/root.crontab", "PATH=/bin:/usr/local/bin\n*/5 * * * * /usr/local/bin/thing.sh\n")
     write("mirror/usr/local/bin/thing.sh", "#!/bin/ksh\n")
 
     assert_empty checks("cron")
   end
 
   def test_a_scheduled_command_that_is_nowhere_is_reported
-    write("mirror/etc/crontab.vm23", "PATH=/bin:/usr/local/bin\n*/5 * * * * /usr/local/bin/ghost.sh\n")
+    write("data/root.crontab", "PATH=/bin:/usr/local/bin\n*/5 * * * * /usr/local/bin/ghost.sh\n")
 
     assert_equal ["/usr/local/bin/ghost.sh"], checks("cron").map(&:subject)
   end
 
   # The resource_guard.sh shape: tracked somewhere else, installed into place.
   def test_a_command_installed_by_operator_reaches_from_anywhere
-    write("mirror/etc/crontab.vm23", "PATH=/bin:/usr/local/bin\n*/5 * * * * /usr/local/bin/guard.sh\n")
+    write("data/root.crontab", "PATH=/bin:/usr/local/bin\n*/5 * * * * /usr/local/bin/guard.sh\n")
     write("guard.sh", "#!/bin/ksh\n")
-    write("OPERATOR.sh", %(install -m 755 "${SCRIPT_DIR}/guard.sh" /usr/local/bin/guard.sh\n))
+    write("BOOTSTRAP.sh", %(install -m 755 "${SCRIPT_DIR}/guard.sh" /usr/local/bin/guard.sh\n))
 
     assert_empty checks("cron")
   end
@@ -70,7 +70,7 @@ class ReachTest < Minitest::Test
   # cron's own PATH excludes /usr/local/bin, where every env-shebang interpreter
   # lives. Four of five jobs had never run for exactly this.
   def test_a_command_outside_the_declared_path_is_reported
-    write("mirror/etc/crontab.vm23", "PATH=/bin\n*/5 * * * * /opt/thing.sh\n")
+    write("data/root.crontab", "PATH=/bin\n*/5 * * * * /opt/thing.sh\n")
     write("opt/thing.sh", "#!/bin/ksh\n")
 
     assert_includes checks("cron").map(&:subject), "/opt"
@@ -81,7 +81,7 @@ class ReachTest < Minitest::Test
   # here from reach's side.
   def test_an_environment_prefix_is_not_mistaken_for_the_command
     line = "*/5 * * * * ALLOW_X=1 /usr/local/bin/b.sh >> /var/log/b.log 2>&1"
-    write("mirror/etc/crontab.vm23", "PATH=/bin:/usr/local/bin\n#{line}\n")
+    write("data/root.crontab", "PATH=/bin:/usr/local/bin\n#{line}\n")
     write("mirror/usr/local/bin/b.sh", "#!/bin/ksh\n")
 
     assert_equal ["/usr/local/bin/b.sh"], R.cron_commands
@@ -89,7 +89,7 @@ class ReachTest < Minitest::Test
   end
 
   def test_redirections_are_not_mistaken_for_the_command
-    write("mirror/etc/crontab.vm23", "PATH=/bin:/usr/local/bin\n0 2 * * 1 /usr/local/bin/a.sh >> /var/log/a.log 2>&1\n")
+    write("data/root.crontab", "PATH=/bin:/usr/local/bin\n0 2 * * 1 /usr/local/bin/a.sh >> /var/log/a.log 2>&1\n")
     write("mirror/usr/local/bin/a.sh", "#!/bin/ksh\n")
 
     assert_empty checks("cron")

@@ -474,9 +474,9 @@ module Deploy
     DEPLOY_SCRIPTS = {
       "OPENBSD/OPERATOR.sh" => :via_rc_d,
       # vps_on_vm_install.sh is not listed: it only execs vps_install_all.sh.
-      "OPENBSD/mirror/bin/vps_install_all.sh" => :start_or_restart,
-      "OPENBSD/mirror/bin/vps_console.exp" => :restart,
-      "OPENBSD/mirror/bin/vps_deploy_master.sh" => :restart,
+      "OPENBSD/bin/vps_install_all.sh" => :start_or_restart,
+      "OPENBSD/bin/vps_console.exp" => :restart,
+      "OPENBSD/bin/vps_deploy_master.sh" => :restart,
     }.freeze
 
     def self.run

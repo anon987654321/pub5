@@ -8,7 +8,7 @@ require "tmpdir"
 # weekly integrity run invokes these on vm23 -- Ruby defaults file reads to
 # US-ASCII and each one raises "invalid byte sequence". Same require, same
 # reason, as MASTER/checks/runner.rb.
-require_relative "../mirror/lib/utf8"
+require_relative "../lib/utf8"
 
 class RestoreScriptsTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
@@ -63,7 +63,7 @@ class RestoreScriptsTest < Minitest::Test
   end
 
   def test_vps_deploy_stamps_head_after_the_work
-    source = File.read(File.join(ROOT, "mirror/bin/vps-deploy"))
+    source = File.read(File.join(ROOT, "bin/vps-deploy"))
     assert_includes source, "write_stamp()"
     # The deploy runs as root and reads the checkout as the deploy user, in $repo.
     assert_includes source, "sha=$(git_as_deploy_user rev-parse --short HEAD)"
@@ -76,7 +76,7 @@ class RestoreScriptsTest < Minitest::Test
     # The pin moves the checkout (merge --ff-only of the pinned SHA); a hand run of
     # vps_deploy_master.sh without a pin still pulls.
     assert_includes source, %q{merge -q --ff-only "$pin"}
-    assert_includes File.read(File.join(ROOT, "mirror/bin/vps_deploy_master.sh")), "pull --ff-only origin main"
+    assert_includes File.read(File.join(ROOT, "bin/vps_deploy_master.sh")), "pull --ff-only origin main"
     # Master deploys through the generic app loop since the mirror
     # reorganization: the failure contract is that the branch which runs
     # vps_deploy_master.sh stamps the app itself, so last_deploy_master.json
@@ -114,7 +114,7 @@ class RestoreScriptsTest < Minitest::Test
   # the Host that owns it — a bare-IP request 403s on these apps, which would
   # pass by finding no link at all.
   def test_vps_deploy_verifies_the_page_stylesheet_resolves
-    source = File.read(File.join(ROOT, "mirror/bin/vps-deploy"))
+    source = File.read(File.join(ROOT, "bin/vps-deploy"))
     assert_includes source, "css_href", "no stylesheet verification after restart"
     # The reader is run rather than matched: what matters is the href it finds
     # on a page that links one, and nothing, not a failure, on a page that does

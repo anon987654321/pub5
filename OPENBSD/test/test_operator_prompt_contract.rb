@@ -11,7 +11,7 @@ class TestOperatorPromptContract < Minitest::Test
     refute_path_exists File.join(ROOT, "FUN"), "retired FUN compatibility tree must stay removed"
     assert File.file?(CANONICAL)
     source = File.read(ZSHRC)
-    assert_includes source, 'source "${PUB5_ROOT}/OPENBSD/mirror/lib/zshrc.shared"'
+    assert_includes source, 'source "${PUB5_ROOT}/OPENBSD/lib/zshrc.shared"'
     refute_includes source, "FUN/zshrc.shared"
   end
 

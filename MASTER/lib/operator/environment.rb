@@ -79,15 +79,15 @@ module Operator
     def next_command_for(mode = self.mode)
       case mode
       when :vps_operator
-        "zsh OPENBSD/mirror/bin/vps-deploy <app>"
+        "zsh OPENBSD/bin/vps-deploy <app>"
       when :local_contributor
         if ruby_version_ok?
-          "OPENBSD/mirror/bin/check && cd MASTER && bin/check --profile=contributor"
+          "OPENBSD/bin/check && cd MASTER && bin/check --profile=contributor"
         else
-          "MASTER/bin/ruby OPENBSD/mirror/bin/check"
+          "MASTER/bin/ruby OPENBSD/bin/check"
         end
       else
-        "OPENBSD/mirror/bin/check --profile=full"
+        "OPENBSD/bin/check --profile=full"
       end
     end
   end

@@ -66,13 +66,13 @@ Do not install a partial `newsyslog.conf`: a partial file previously wiped
 base rules and filled `/var`. Do not send deploy logs to remote syslog until
 `/var` headroom and the privacy of receipt lines have been reviewed.
 
-Already on the box: `zsh OPENBSD/mirror/bin/redeploy`.
+Already on the box: `zsh OPENBSD/bin/redeploy`.
 
 ## Repo layout
 
 `MASTER/`, `RAILS/`, `OPENBSD/`, `STUDIO/` at the repo root, plus dotfolders. `MASTER/tools/` is inside MASTER and keeps compatibility entrypoints.
 Canonical inventories: `RAILS/apps.yml`, `OPENBSD/deploy_inventory.json`. The
-JSON is generated from `apps.yml` by `ruby OPENBSD/mirror/bin/sync_deploy_inventory.rb`,
+JSON is generated from `apps.yml` by `ruby OPENBSD/bin/sync_deploy_inventory.rb`,
 and the `domain_alignment` check fails when the two disagree. Deploy
 checks (`integrity_check.rb`, `verify_deploy_identity.rb`,
 `deploy_inventory.json`) live at `OPENBSD/` top level, and so does
@@ -98,7 +98,7 @@ Runtime contract: TLS terminates at relayd; apps listen on loopback-only ports;
 Rails uses SQLite plus Solid Queue/Cache; secrets live in `/etc/*.env`; source
 of truth on the VPS is `/home/dev/pub5`; long deploys run under tmux.
 
-Check flow — local: `OPENBSD/mirror/bin/check` → `verify_deploy_identity` → Rails
+Check flow — local: `OPENBSD/bin/check` → `verify_deploy_identity` → Rails
 production/domain/ phantom/frontend checks → OpenBSD deploy smoke. Operator: `git
 pull --ff-only` on vm23 → `vps_ci.sh <app>` → `OPERATOR.sh` or per-app deploy →
 `rcctl restart` affected services → `health_check --public --all-ready-apps`.
@@ -345,7 +345,7 @@ June) and `dnver.us` are unregistered: the .uk names lapsed on 24 and 25 June
 2026 and anyone may now register them. Bringing one up starts with buying it
 back, which is a registrar login, or with deleting its zone and
 `acme-client.conf` block if the city is dropped (record that in
-`data/domain_released.yml`). `ruby OPENBSD/mirror/bin/domain_watch.rb` is the check.
+`data/domain_released.yml`). `ruby OPENBSD/bin/domain_watch.rb` is the check.
 
 The order below is not a preference. Each step needs the one above it, and the
 last step is the one that bites: relayd refuses to start when a `tls keypair`
@@ -431,9 +431,9 @@ doas relayd -n -f /etc/relayd.conf && doas rcctl restart relayd
 ```
 
 Then in the repo: put `deployed: false` back on mrdamascy in RAILS/apps.yml
-(drop its `domain` and `deploy_script`), run `ruby OPENBSD/mirror/bin/sync_deploy_inventory.rb`,
+(drop its `domain` and `deploy_script`), run `ruby OPENBSD/bin/sync_deploy_inventory.rb`,
 take `mrd` out of `extra_hosts` and `cert_extra_names` in `OPENBSD/data/dns.yml`,
-run `ruby OPENBSD/mirror/bin/render_dns.rb`, and remove the same lines from
+run `ruby OPENBSD/bin/render_dns.rb`, and remove the same lines from
 `OPENBSD/mirror/etc/relayd.conf`, so the tree matches the box. The DNS record and the
 SAN can stay until the next certificate renewal; neither serves anything.
 
@@ -453,7 +453,7 @@ or health, then document the fix).
 | `vps_console.exp` without human approval | Gated by `I_UNDERSTAND_CONSOLE_RISK=1`; recovery-only |
 | Deploy, install, or `pkill` deploy workers from the serial console | Bypasses SSH safety, tmux, and load checks |
 | Target vm27 or any non-vm23 VM | Wrong tenant; production is vm23 (`dev`) |
-| `OPERATOR.sh --stage-1` without `I_UNDERSTAND_DNS_WIPE=1` | Destructive DNS wipe |
+| `BOOTSTRAP.sh --stage-1` without `I_UNDERSTAND_DNS_WIPE=1` | Destructive DNS wipe |
 | Parallel SSH deploys, parallel `bin/ci`, or broad `rcctl restart` without a named target | 1 GiB VPS; contention causes outages |
 
 When SSH to vm23 is required, use normal paths — but note which of them takes
@@ -461,9 +461,9 @@ When SSH to vm23 is required, use normal paths — but note which of them takes
 
 | | |
 |---|---|
-| `doas zsh OPERATOR.sh` | root, it installs `/etc` |
-| `zsh OPENBSD/mirror/bin/vps-deploy <app>` | **root** (or `dev` via passwordless doas re-exec) |
-| `zsh OPENBSD/mirror/bin/vps_ci.sh <app>` | **dev** |
+| `doas zsh OPERATOR.sh --apply` | root, it installs `/etc` |
+| `zsh OPENBSD/bin/vps-deploy <app>` | **root** (or `dev` via passwordless doas re-exec) |
+| `zsh OPENBSD/bin/vps_ci.sh <app>` | **dev** |
 
 `vps-deploy` runs as root. Git fetch/checkout still run as `dev` so the
 `/home/dev/pub5` tree and GitHub deploy key are never used by root. Typing the
@@ -476,12 +476,12 @@ command as `dev` is fine: passwordless doas re-executes it as root.
 - Treat `RAILS/apps.yml` and `OPENBSD/deploy_inventory.json` as inventories, not
   suggestions.
 - Any `/etc` change made on vm23 must be copied back to `OPENBSD/mirror/etc/`.
-- Use the available compatible Ruby on OpenBSD (resolved dynamically by `OPENBSD/mirror/lib/ruby_select.sh`, which sets `$RUBY` and `$BUNDLE`); `zsh OPENBSD/mirror/bin/vps_ci.sh <app>` for
+- Use the available compatible Ruby on OpenBSD (resolved dynamically by `OPENBSD/lib/ruby_select.sh`, which sets `$RUBY` and `$BUNDLE`); `zsh OPENBSD/bin/vps_ci.sh <app>` for
   per-app CI.
 - Keep secrets in `/etc/*.env`; never commit them.
 - Keep Rails `config.assume_ssl = true`; do not enable `force_ssl` behind
   relayd.
-- Prefer local checks first (`OPENBSD/mirror/bin/check`) before any SSH.
+- Prefer local checks first (`OPENBSD/bin/check`) before any SSH.
 
 **Agent dmesg (verbose file operations):** external agents (Grok CLI, Claude
 Code, Cursor) and MASTER should log mutations in OpenBSD dmesg style — terse,
@@ -490,7 +490,7 @@ lowercase, one fact per line, path-first, e.g.:
 ```
 write OPENBSD/mirror/etc/rc.d/brgen 412B +12/-3
 read MASTER/lib/reach/base.rb sha256=a1b2c3… 2048B
-run zsh OPENBSD/mirror/bin/check-openbsd exit=0
+run zsh OPENBSD/bin/check-openbsd exit=0
 ```
 
 Name the path on every read/write/delete; show evidence on writes (diff stat or
@@ -508,31 +508,31 @@ context.
 
 Recovery-only expect scripts refuse to run unless a human operator exports
 `I_UNDERSTAND_CONSOLE_RISK=1` (same pattern as `I_UNDERSTAND_DNS_WIPE=1` for
-`OPERATOR.sh --stage-1`).
+`BOOTSTRAP.sh --stage-1`).
 
 ## doas.conf
 
 OpenBSD rejects `/etc/doas.conf` without a trailing newline — `doas` breaks for
-everyone. `OPERATOR.sh` fixes the repo copy before install, validates `su dev -c
+everyone. `BOOTSTRAP.sh` fixes the repo copy before install, validates `su dev -c
 'doas id'`, and rolls back on failure. No cron job installs it: the only other
-path is a deliberate `doas ksh OPENBSD/mirror/bin/validate_doas.ksh install <file> <reason>`,
+path is a deliberate `doas ksh OPENBSD/bin/validate_doas.ksh install <file> <reason>`,
 which validates the same way. The comment atop `etc/doas.conf` says what dev's
 passwordless rule exposes and why neither command scoping nor a password can
 narrow it.
 
 ## Backups
 
-`OPENBSD/mirror/bin/dr-pull` is the backup. It runs nightly on the operator Mac under
+`OPENBSD/bin/dr-pull` is the backup. It runs nightly on the operator Mac under
 launchd, writes a `VACUUM INTO` snapshot of every production database on vm23,
 streams them back in one tar, checks `PRAGMA integrity_check` on arrival and
-rotates the last fourteen. `ruby OPENBSD/mirror/bin/dr-pull --check` reports the newest
+rotates the last fourteen. `ruby OPENBSD/bin/dr-pull --check` reports the newest
 pull and its age, and fails when the newest is stale — read that rather than the
 launchd exit status, because a snapshot that has stopped working exits 0.
 
 Each pull also records `SHA256SUMS`, taken from vm23's own `sha256` before the
 stream and compared on arrival, and copies the newest Active Storage blobs (the
 two-character directories beside the databases) to `~/pub5-dr/blobs/<app>`.
-`ruby OPENBSD/mirror/bin/dr-pull --drill` is the restore test: it copies the newest pull
+`ruby OPENBSD/bin/dr-pull --drill` is the restore test: it copies the newest pull
 to a scratch directory, checks the bytes against `SHA256SUMS`, runs
 `integrity_check` on the copy, reads the migration version, table count and user
 count, prints the seconds, and removes the scratch. Run on 2026-10-12 against
@@ -575,9 +575,9 @@ workstation.
 ```zsh
 cd ~/pub5
 # config sync (installs /etc) — explicit doas:
-tmux new-session -d -s opsync "doas zsh OPENBSD/OPERATOR.sh 2>&1 | tee /tmp/opsync.log"
+tmux new-session -d -s opsync "doas zsh OPENBSD/OPERATOR.sh --apply 2>&1 | tee /tmp/opsync.log"
 # routine app deploy — script becomes root itself:
-tmux new-session -d -s deploy "zsh OPENBSD/mirror/bin/vps-deploy all 2>&1 | tee /home/dev/vps-deploy.log"
+tmux new-session -d -s deploy "zsh OPENBSD/bin/vps-deploy all 2>&1 | tee /home/dev/vps-deploy.log"
 tmux attach -t deploy
 ```
 
@@ -637,7 +637,7 @@ failure. Nothing is stopped before step 4.
 3. Prove the commit boots. `bin/operator vps deploy <app> --remote` runs
    `Operator::DeployPreflight` (`MASTER/lib/operator/canary.rb`) on your machine (Ruby syntax sweep of
    `MASTER/lib`, `MASTER/law` and `RAILS/*/app`; `test_law_files_load.rb`;
-   `MASTER/tools/boot_smoke.rb`; `OPENBSD/mirror/bin/rehearse`) and sends the box the SHA
+   `MASTER/tools/boot_smoke.rb`; `OPENBSD/bin/rehearse`) and sends the box the SHA
    with `VPS_DEPLOY_PREFLIGHT_SHA`. A run typed on the box has no such word and
    runs the first three itself, on the pinned commit, detached; a failure puts the
    checkout back where it was. The exit trap restores that ref if the session is
@@ -676,7 +676,7 @@ doas rcctl restart bsdports
 until curl -fsS http://127.0.0.1:47312/up >/dev/null; do sleep 3; done
 doas rcctl restart master
 until curl -fsS http://127.0.0.1:53187/up >/dev/null; do sleep 3; done
-OPENBSD/mirror/bin/canary --local        # ports, rcctl, every public route, then each flow journey
+OPENBSD/bin/canary --local        # ports, rcctl, every public route, then each flow journey
 ```
 
 `rcctl restart master` may print `kill: <pid>: No such process`. That was rc.subr's
@@ -685,7 +685,7 @@ silences that one signal. The stop path exits 0 when the process is already gone
 kills the process group if one is left, and `rc_post` fails the stop if `:53187` is
 still held, so a start never races a survivor. The ports above are the ones in `RAILS/apps.yml`; read them there if they change.
 
-To deploy an exact commit, not the tip: `VPS_DEPLOY_SHA=<sha> zsh OPENBSD/mirror/bin/vps-deploy all`
+To deploy an exact commit, not the tip: `VPS_DEPLOY_SHA=<sha> zsh OPENBSD/bin/vps-deploy all`
 on the box, or push it and use `bin/operator vps deploy all --remote` from a clean
 worktree at that commit. A stale `/home/dev/.pub4-vps-deploy.lock` is reaped by the next run
 when its pid is gone; every exit, including a halted `all`, releases it.
@@ -701,11 +701,11 @@ deliberately:
 
 | Script | CI | Scope | When |
 |--------|----|-------|------|
-| `ruby OPENBSD/mirror/bin/deploy [app]` | as `vps-deploy` | The one Ruby entrypoint over the same serial `vps-deploy` stages | The port's single deploy door; the zsh stages below remain the implementation |
-| `zsh OPENBSD/mirror/bin/vps_ci_all.sh` | **Yes** — serial `vps_ci.sh` per app | Every app in the inventory's RAILS namespace | Normal code change; tests must pass |
-| `I_UNDERSTAND_FAST_DEPLOY=1 zsh OPENBSD/mirror/bin/vps_production_push.sh` | **No** — `SKIP_CI=1 SKIP_RUNTIME_CHECK=1 bin/vps-deploy all`; only the post-restart checks run, and the runtime skip requires that exact acknowledgement. | Every active inventory app, in `deploy_order`; `DEMO_SEED_ON_DEPLOY=1` adds Brgen's demo seed | Fast hotfix; skips test check |
-| `zsh OPENBSD/mirror/bin/deploy_all.sh` | **No** | Runs from a workstation: syncs the pub5 checkout to vm23 and runs `OPERATOR.sh`, so it reapplies `/etc`, relayd and the services, not just app code. `--per-app` also runs each `RAILS/<app>/<app>.sh` | The box's config has drifted or a fresh install needs redoing — not for shipping a code change |
-| `ksh OPENBSD/mirror/bin/start_all_apps.sh` as `dev` | **No** — recovery only | Calls the fixed `pub4-admin start-all-apps` broker verb; checks all services and pins them against `resource_guard.sh` shedding | Recovery after a deliberate decision to keep every app running despite load |
+| `ruby OPENBSD/bin/deploy [app]` | as `vps-deploy` | The one Ruby entrypoint over the same serial `vps-deploy` stages | The port's single deploy door; the zsh stages below remain the implementation |
+| `zsh OPENBSD/bin/vps_ci_all.sh` | **Yes** — serial `vps_ci.sh` per app | Every app in the inventory's RAILS namespace | Normal code change; tests must pass |
+| `I_UNDERSTAND_FAST_DEPLOY=1 zsh OPENBSD/bin/vps_production_push.sh` | **No** — `SKIP_CI=1 SKIP_RUNTIME_CHECK=1 bin/vps-deploy all`; only the post-restart checks run, and the runtime skip requires that exact acknowledgement. | Every active inventory app, in `deploy_order`; `DEMO_SEED_ON_DEPLOY=1` adds Brgen's demo seed | Fast hotfix; skips test check |
+| `zsh OPENBSD/bin/deploy_all.sh` | **No** | Runs from a workstation: syncs the pub5 checkout to vm23 and runs `OPERATOR.sh`, so it reapplies `/etc`, relayd and the services, not just app code. `--per-app` also runs each `RAILS/<app>/<app>.sh` | The box's config has drifted or a fresh install needs redoing — not for shipping a code change |
+| `ksh OPENBSD/bin/start_all_apps.sh` as `dev` | **No** — recovery only | Calls the fixed `pub4-admin start-all-apps` broker verb; checks all services and pins them against `resource_guard.sh` shedding | Recovery after a deliberate decision to keep every app running despite load |
 
 `vps_production_push.sh` is the footgun under pressure: it restarts production
 without running CI. Use `vps_ci_all.sh` unless you explicitly need the fast path
@@ -722,15 +722,15 @@ dead one until it is written down.
 |--------|----------|----------------|
 | `ruby OPENBSD/sync.rb` (as `doas ruby`) | vm23 | Mirror live `/etc` config **back into** `OPENBSD/`, with secret redaction. The repo→live direction is well travelled; this is the return leg, and skipping it is how `relayd.conf` drifted for weeks (see the warning under *OpenBSD deploy*). |
 | `ruby OPENBSD/ptr_openbsd_amsterdam.rb --ipv4 … --hostname …` | anywhere | Set the PTR record via openbsd.amsterdam's `ptr4`/`ptr6` endpoints; `--ipv6` sets the v6 record. Needed only if the VM's IP changes. It prints the request as a dry run unless `APPLY_PTR=1` is set. |
-| `zsh OPENBSD/mirror/bin/vps_run_remote.sh` | workstation | Bootstrap a *fresh* VM: copies `vps_install_all.sh` up through the server4 hypervisor jump and runs it. Not for routine deploys — use `vps-deploy`. |
-| `ksh OPENBSD/mirror/bin/manual_master_deploy.ksh` | vm23, under tmux | Fallback when `vps_deploy_master.sh` stalls. It pkills the stuck deploy and its precompile, then precompiles MASTER web, runs the `master_web_assets` check, restarts master and relayd, and probes `/up`. Output goes to `/tmp/master_manual.log`, not the terminal — `tail -f` it. |
-| `sh OPENBSD/mirror/bin/amber_queue_sweep.sh [APP]` | vm23 | **Deletes** finished jobs, orphaned executions, unfinished Turbo broadcasts and duplicate media jobs from a Solid Queue backlog (amber by default); drain-jobs.sh runs due jobs, this removes what should never run. Named in `RAILS/amber/README.md` |
-| `zsh OPENBSD/mirror/bin/deploy-diff.sh` | workstation | Read-only: runs `config_drift_check.rb --remote`, then diffs `relayd.conf` (which the check excludes) and prints `rcctl check`. It changes nothing in either direction; `sync.rb` above is what pulls the live side back into the repo. |
-| `sh OPENBSD/mirror/bin/amber_queue_sweep.sh [APP]` | vm23 | Delete a stale Solid Queue backlog (finished jobs, orphaned executions, unfinished Turbo broadcasts, duplicate media jobs) with sqlite3, no Rails boot. `drain-jobs.sh` runs due jobs hourly; this removes what should never run. |
+| `zsh OPENBSD/bin/vps_run_remote.sh` | workstation | Bootstrap a *fresh* VM: copies `vps_install_all.sh` up through the server4 hypervisor jump and runs it. Not for routine deploys — use `vps-deploy`. |
+| `ksh OPENBSD/bin/manual_master_deploy.ksh` | vm23, under tmux | Fallback when `vps_deploy_master.sh` stalls. It pkills the stuck deploy and its precompile, then precompiles MASTER web, runs the `master_web_assets` check, restarts master and relayd, and probes `/up`. Output goes to `/tmp/master_manual.log`, not the terminal — `tail -f` it. |
+| `sh OPENBSD/bin/amber_queue_sweep.sh [APP]` | vm23 | **Deletes** finished jobs, orphaned executions, unfinished Turbo broadcasts and duplicate media jobs from a Solid Queue backlog (amber by default); drain-jobs.sh runs due jobs, this removes what should never run. Named in `RAILS/amber/README.md` |
+| `zsh OPENBSD/bin/deploy-diff.sh` | workstation | Read-only: runs `config_drift_check.rb --remote`, then diffs `relayd.conf` (which the check excludes) and prints `rcctl check`. It changes nothing in either direction; `sync.rb` above is what pulls the live side back into the repo. |
+| `sh OPENBSD/bin/amber_queue_sweep.sh [APP]` | vm23 | Delete a stale Solid Queue backlog (finished jobs, orphaned executions, unfinished Turbo broadcasts, duplicate media jobs) with sqlite3, no Rails boot. `drain-jobs.sh` runs due jobs hourly; this removes what should never run. |
 
 ## Self-healing cron (vm23)
 
-Tracked mirror: `OPENBSD/mirror/etc/crontab.vm23` (installed idempotently by
+Tracked mirror: `OPENBSD/data/root.crontab` (installed idempotently by
 `OPERATOR.sh`). Hand-edits on vm23 should be copied back to that file.
 
 | Job | Schedule | Log / signal |
@@ -750,7 +750,7 @@ Tracked mirror: `OPENBSD/mirror/etc/crontab.vm23` (installed idempotently by
 | `purge-deleted-users.sh` | `55 3 * * *` | `/var/log/purge-deleted-users.log` — nightly amber GDPR Art. 17 erasure (`UserPurgeJob`); five minutes after the documented 3:50 slot so a future resident scheduler cannot race it |
 | `vps_weekly_integrity.sh` | `30 3 * * 0` | **tracked and never installed** — absent from root's live crontab and from `/usr/local/bin`, measured 2026-09-12. See TODO 1060. |
 
-Fourteen rows because `etc/crontab.vm23` schedules fourteen jobs. This table listed four
+Fourteen rows because `data/root.crontab` schedules fourteen jobs. This table listed four
 for long enough that six self-healing jobs existed only in the file nobody
 reads next to the one they do; the three recurring-schedule hygiene wrappers
 (`declutter-hygiene.sh`, `ports-import.sh`, `purge-deleted-users.sh`) joined the
@@ -773,7 +773,7 @@ and `/var/log/nsd-resign` if present.
 Off-box detection (no alerting pipeline yet):
 
 ```sh
-sh OPENBSD/mirror/bin/uptime-check.sh
+sh OPENBSD/bin/uptime-check.sh
 ```
 
 A wrapper with no URL list of its own: it execs `health_check.rb --public-only
@@ -800,13 +800,13 @@ After `vps-deploy` / rcctl restarts, run:
 
 ```sh
 # on vm23 — local ports + public + brgen HTML checks (no splash, nav tablist)
-sh OPENBSD/mirror/bin/deploy-smoke.sh
+sh OPENBSD/bin/deploy-smoke.sh
 
 # laptop / public only
-sh OPENBSD/mirror/bin/deploy-smoke.sh --public
+sh OPENBSD/bin/deploy-smoke.sh --public
 
 # policy: amber optional on 1GB hosts
-ALLOW_AMBER_DOWN=1 sh OPENBSD/mirror/bin/deploy-smoke.sh
+ALLOW_AMBER_DOWN=1 sh OPENBSD/bin/deploy-smoke.sh
 ```
 
 Checks `rcctl` (when present), localhost `/up` ports (master 53187, brgen 38182,
@@ -816,7 +816,7 @@ vm23 has 1 GB, so three apps leave little headroom. Restart order when recoverin
 ## vps_console.exp modes
 
 Recovery-only — requires `I_UNDERSTAND_CONSOLE_RISK=1`. One script, the mode
-as its first argument: `expect -f OPENBSD/mirror/bin/vps_console.exp <mode>`.
+as its first argument: `expect -f OPENBSD/bin/vps_console.exp <mode>`.
 
 | Mode | Purpose |
 |------|---------|
@@ -830,13 +830,13 @@ as its first argument: `expect -f OPENBSD/mirror/bin/vps_console.exp <mode>`.
 | `sync_and_install` | Base64 tarball sync to `/home/dev/pub5` then on-vm install |
 | `drop_install` | Base64-embed `vps_on_vm_install.sh` only; it execs `vps_install_all.sh`, so the tree must already be at `/home/dev/pub5` |
 
-Laptop SSH to vm23: `source OPENBSD/mirror/lib/ssh_vm23.sh` or `zsh
-OPENBSD/mirror/lib/ssh_vm23.sh <cmd>`. Long deploys: `vm23_tmux deploy 'doas zsh
+Laptop SSH to vm23: `source OPENBSD/lib/ssh_vm23.sh` or `zsh
+OPENBSD/lib/ssh_vm23.sh <cmd>`. Long deploys: `vm23_tmux deploy 'doas zsh
 OPENBSD/OPERATOR.sh …'`.
 
 ## Rails deploy
 
-Rehearse first, from the checkout you are about to ship: `ruby OPENBSD/mirror/bin/rehearse`
+Rehearse first, from the checkout you are about to ship: `ruby OPENBSD/bin/rehearse`
 runs in seconds and covers what the box's CI would otherwise tell you forty
 minutes in. It runs the CI lints and the dialect check, and the static contracts
 that tie the deploy scripts to the tree: every repo path a script names exists,
@@ -846,12 +846,12 @@ Rails; `rails_test` on the box is where the remaining failures live.
 
 ```zsh
 cd /home/dev/pub5 && git pull --ff-only
-zsh OPENBSD/mirror/bin/vps-deploy brgen       # canonical serial deploy
-zsh OPENBSD/mirror/bin/vps-deploy amber       # or: all
+zsh OPENBSD/bin/vps-deploy brgen       # canonical serial deploy
+zsh OPENBSD/bin/vps-deploy amber       # or: all
 ruby OPENBSD/checks/health_check.rb --public --all-ready-apps
 ```
 
-Use only `zsh OPENBSD/mirror/bin/vps-deploy <app|all>` for production deploys (runs as root; re-exec via doas from dev).
+Use only `zsh OPENBSD/bin/vps-deploy <app|all>` for production deploys (runs as root; re-exec via doas from dev).
 The compatibility `zsh RAILS/deploy.sh` delegates to it and refuses UID 0.
 The individual `RAILS/<app>/<app>.sh` entrypoints also refuse root because they
 source code from the dev-writable checkout. Do not run them with `doas`.
@@ -864,8 +864,8 @@ cd /home/dev/pub5 && git gc --quiet && git count-objects -v
 ## Checks
 
 ```zsh
-OPENBSD/mirror/bin/check                         # local static deploy checks
-OPENBSD/mirror/bin/check-vps                     # vm23/live health checks; skips off-VPS
+OPENBSD/bin/check                         # local static deploy checks
+OPENBSD/bin/check-vps                     # vm23/live health checks; skips off-VPS
 ruby OPENBSD/checks/integrity_check.rb              # full chain: production, phantom_fk, frontend, relayd, domain_align, crawl
 ruby MASTER/tools/rails/crawl_probe.rb           # HTTP manifest + apps.yml ↔ deploy_inventory.json sync
 MASTER_CRAWL_BROWSER=1 ruby MASTER/tools/rails/crawl_browser.rb   # Ferrum element crawl (VPS)
@@ -884,7 +884,7 @@ workstation environment.
 
 ## Recovery
 
-Load shedding: `ksh OPENBSD/mirror/bin/resource_guard.sh` as `dev`; the wrapper refuses root and delegates to the installed root-owned runner. Full stack: `ksh OPENBSD/mirror/bin/start_all_apps.sh` (as dev; only the fixed broker runs as root). Core health: `doas /usr/local/sbin/pub4-admin service check master` (repeat for brgen/relayd)
+Load shedding: `ksh OPENBSD/bin/resource_guard.sh` as `dev`; the wrapper refuses root and delegates to the installed root-owned runner. Full stack: `ksh OPENBSD/bin/start_all_apps.sh` (as dev; only the fixed broker runs as root). Core health: `doas /usr/local/sbin/pub4-admin service check master` (repeat for brgen/relayd)
 pf`.
 
 SSH lockout only: `ssh server4`, then `vmctl console vm23` (manual — not
@@ -952,20 +952,20 @@ time and kernel patches need another reboot. Plan the window as a reboot.
 
 Before the window:
 
-1. `ruby OPENBSD/mirror/bin/dr-pull` on the Mac and `ruby OPENBSD/mirror/bin/dr-pull --drill`;
+1. `ruby OPENBSD/bin/dr-pull` on the Mac and `ruby OPENBSD/bin/dr-pull --drill`;
    a patched box is one failed boot from needing the pull.
-2. `zsh OPENBSD/mirror/bin/deploy-diff.sh` and `ruby OPENBSD/mirror/bin/domain_watch.rb --tls`,
+2. `zsh OPENBSD/bin/deploy-diff.sh` and `ruby OPENBSD/bin/domain_watch.rb --tls`,
    saved, as the "before" for relayd, certificates and ports.
 3. Note libvips: vm23 runs a locally built libvips (daily.local explains why
    `pkg_add -u` would replace it with a build that has no SVG loader); do not run
    `pkg_add -u` in the same window, and keep the console reachable.
 4. Have the `server4` console session ready (`vmctl console vm23`, manual).
 
-In the window: `ruby OPENBSD/mirror/bin/vps-admin updates apply` (`doas syspatch`), then
+In the window: `ruby OPENBSD/bin/vps-admin updates apply` (`doas syspatch`), then
 `doas reboot`. After a reboot the apps cold-boot together and starve each other on
 one vCPU (the 2026-08-24 boot storm): start them one at a time, master and
 `brgen_jobs` last, and wait for each to answer on its own port before the next.
-Then `ruby OPENBSD/mirror/bin/domain_watch.rb --tls` against the saved "before". No
+Then `ruby OPENBSD/bin/domain_watch.rb --tls` against the saved "before". No
 deploy is needed afterwards, because syspatch does not touch `/home`.
 
 `vps-admin upgrade check` only reads the running release and the mirror. Do not
@@ -979,7 +979,7 @@ exist for it.
 
 - Integrity failure: run `ruby OPENBSD/checks/integrity_check.rb` and fix the first
   failing check.
-- App CI failure: run `zsh OPENBSD/mirror/bin/vps_ci.sh <app>` serially. If caches are
+- App CI failure: run `zsh OPENBSD/bin/vps_ci.sh <app>` serially. If caches are
   root-owned, export the app `HOME` and `NPM_CONFIG_CACHE`.
 - MASTER dead tap: precompile `MASTER/web` production assets, restart `master`,
   then verify `https://ai.brgen.no` after the primer tap.
@@ -1024,7 +1024,7 @@ blocker; a runbook on purpose, not a script — GUARD_EXPENSIVE_OPS exists
 precisely so no bin/ file carries a fleet-wide delete. Run it BY HAND, per app,
 on launch day:
 
-1. `ruby OPENBSD/mirror/bin/dr-pull` from the Mac — a verified pre-wipe snapshot.
+1. `ruby OPENBSD/bin/dr-pull` from the Mac — a verified pre-wipe snapshot.
 2. On vm23, stop the app and its optional job worker: `doas /usr/local/sbin/pub4-admin service stop <app>` and, if configured, `doas /usr/local/sbin/pub4-admin service stop <app>_jobs`.
 3. Move the primary aside (never delete): `mv
    /home/<app>/app/storage/production.sqlite3{,.pre-launch}`.
@@ -1045,3 +1045,29 @@ announcement noindex question. Those are product calls, not runbook steps.
 Run `ruby OPENBSD/checks/pf_policy_check.rb` for the tracked `OPENBSD/mirror/etc/pf.conf` policy invariants, and `ruby OPENBSD/test/test_pf_policy_check.rb` for positive and negative fixtures. The guard checks that a default-deny rule precedes pass rules, inbound passes are scoped to `$ext_if`, and the explicit SSH exception precedes the quick `<bruteforce>` block. It rejects pass rules without explicit `$ext_if` scope, including protocol-specific passes such as `pass inet proto tcp all`. The only unscoped exception is the current explicit ICMP type allowlist (`echoreq`, `unreach`, `timex`), whose scope is retained as a deliberate tracked-policy exception.
 
 This is a deliberately narrow policy check, not a replacement for OpenBSD's parser. Validate syntax on the target host with `pfctl -nf /etc/pf.conf` before applying a change. PF evaluates rules in order and the last matching pass/block rule decides the action unless `quick` terminates evaluation, so a terminal catch-all block is not a required policy invariant ([OpenBSD pf.conf(5)](https://man.openbsd.org/pf.conf)).
+
+
+## Filesystem mirror and operator entrypoints
+
+`OPENBSD/mirror/` contains only installable filesystem payload. Paths map
+one-to-one to the vm23 root: `etc` to `/etc`, `home` to `/home`,
+`usr` to `/usr`, and `var` to `/var`. It contains no deploy tools,
+Ruby libraries or documentation sources. Those live under `OPENBSD/bin`
+and `OPENBSD/lib`.
+
+Use the native, Ruby-free installer for routine host configuration:
+
+```sh
+doas zsh OPENBSD/OPERATOR.sh --plan
+doas zsh OPENBSD/OPERATOR.sh --apply
+doas zsh OPENBSD/OPERATOR.sh --verify
+```
+
+The root crontab is managed separately from the filesystem mirror using
+`OPENBSD/data/root.crontab` and `crontab(1)`. The redacted user shell
+snapshot and sample environment are not installable payload. SSH configuration
+is protected from routine replacement; doas configuration needs the explicit
+`--doas` canary/rollback path.
+
+`OPENBSD/BOOTSTRAP.sh` is retained for first-install and staged legacy
+bootstrap/recovery only. It must not replace the routine mirror apply path.

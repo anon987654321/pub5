@@ -35,9 +35,9 @@ class TestDomainSignals < Minitest::Test
   end
 
   def test_the_master_copy_matches_the_openbsd_original_byte_for_byte
-    canonical = File.expand_path("../../OPENBSD/mirror/lib/domain_signals.rb", __dir__)
+    canonical = File.expand_path("../../OPENBSD/lib/domain_signals.rb", __dir__)
     copy = File.expand_path("../lib/operator/domain_signals.rb", __dir__)
     assert FileUtils.compare_file(canonical, copy),
-           "lib/operator/domain_signals.rb drifted from OPENBSD/mirror/lib/domain_signals.rb; copy the original over it"
+           "lib/operator/domain_signals.rb drifted from OPENBSD/lib/domain_signals.rb; copy the original over it"
   end
 end

@@ -5,14 +5,14 @@ require "tmpdir"
 # See test_restore_scripts.rb: the weekly integrity run on vm23 invokes these
 # under a C locale, where Ruby reads files as US-ASCII and every read of this
 # UTF-8 source raises "invalid byte sequence".
-require_relative "../mirror/lib/utf8"
+require_relative "../lib/utf8"
 require_relative "../checks/config_drift_check"
 
 # The crontab half of the drift check, with the shape it must flag and the shape
 # it must not.
 #
 # It exists because the /etc half passed clean while a scheduled job was missing.
-# `etc/crontab.vm23:97` has named /usr/local/bin/vps_weekly_integrity.sh for
+# `data/root.crontab:97` has named /usr/local/bin/vps_weekly_integrity.sh for
 # weeks; the box has no such line and no such file, and the weekly integrity pass
 # has never run. Every file the check compared matched, so it said clean and meant
 # it — it was comparing the wrong thing.
@@ -102,13 +102,13 @@ class ConfigDriftCheckCrontabTest < Minitest::Test
     assert_includes cron[:summary], "not readable"
   end
 
-  # The check is only as good as its mirror. If crontab.vm23 stops parsing, every
+  # The check is only as good as its mirror. If root.crontab stops parsing, every
   # comparison below it silently compares nothing.
   def test_the_real_tracked_crontab_parses
-    tracked = File.join(File.expand_path("..", __dir__), "mirror", "etc", "crontab.vm23")
+    tracked = File.join(File.expand_path("..", __dir__), "data", "root.crontab")
     commands = scheduled_commands(File.read(tracked))
 
-    refute_empty commands, "etc/crontab.vm23 parsed to no commands - the check would pass having measured nothing"
+    refute_empty commands, "data/root.crontab parsed to no commands - the check would pass having measured nothing"
     assert(commands.all? { |c| c.start_with?("/") }, "a parsed command is not an absolute path: #{commands.inspect}")
   end
 end

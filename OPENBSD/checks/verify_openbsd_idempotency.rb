@@ -1,17 +1,17 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-#   ruby OPENBSD/checks/verify_openbsd_idempotency.rb [path/to/OPERATOR.sh]
+#   ruby OPENBSD/checks/verify_openbsd_idempotency.rb [path/to/BOOTSTRAP.sh]
 #
 # The path argument exists so test/test_check_fixtures.rb can hand it a snippet
 # that deletes the zones without backing them up, and watch it refuse.
 #
-# OPERATOR.sh legitimately contains UTF-8 bytes (em dashes in comments); the
+# BOOTSTRAP.sh legitimately contains UTF-8 bytes (em dashes in comments); the
 # plain string #include? checks below tolerated that under the remote's
 # US-ASCII default external encoding, but the =~ regex checks do not.
-# With no argument the script is OPERATOR.sh and the two stage scripts it
+# With no argument the script is BOOTSTRAP.sh and the two stage scripts it
 # sources, because the nsd backup/delete and the db:prepare live in the stages.
-paths = ARGV.empty? ? ["OPERATOR.sh", "dev/operator_stage_1.zsh", "dev/operator_stage_2.zsh"].map { |p| File.expand_path("../#{p}", __dir__) } : [ARGV.fetch(0)]
+paths = ARGV.empty? ? ["BOOTSTRAP.sh", "dev/operator_stage_1.zsh", "dev/operator_stage_2.zsh"].map { |p| File.expand_path("../#{p}", __dir__) } : [ARGV.fetch(0)]
 
 script = paths.map { |path| File.read(path, encoding: "UTF-8") }.join("\n")
 
@@ -21,7 +21,7 @@ backup_idx = script.index("backup_directory /var/nsd/zones/master nsd-zones")
 delete_idx = script.index("rm -rf /var/nsd/etc/*(/) /var/nsd/zones/master/*(/)") # scan: intentional — searches for the command, never runs it
 issues << "nsd backup does not precede destructive delete" unless backup_idx && delete_idx && backup_idx < delete_idx
 
-# Regexes, not exact strings: the actual variable names in OPERATOR.sh ($src/$d,
+# Regexes, not exact strings: the actual variable names in BOOTSTRAP.sh ($src/$d,
 # $svc) drift over time, but the two guarantees these check for - a backup copy
 # into a quoted destination, and a restart-with-start-fallback - must survive.
 issues << "missing guarded /home backup copy path" unless script =~ %r{cp -R "\$\{?src\}?[^"]*"[^\n]*?"[^"]*"}
@@ -37,4 +37,4 @@ if issues.any?
   exit 1
 end
 
-puts "OPERATOR.sh idempotency ok"
+puts "BOOTSTRAP.sh idempotency ok"

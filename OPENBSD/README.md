@@ -1,12 +1,10 @@
 # OPENBSD
 
-**Production is one box, and this tree is everything that puts it there and keeps
-it honest.** The box is vm23, and it runs every app behind relayd. This tree holds
-the VPS configuration under `etc/`, `usr/` and `var/`, and the deploy tooling under
-`bin/`, `lib/`, `checks/` and `test/`. The top of the tree keeps the installer,
-`OPERATOR.sh`, the DNS helpers it sources, a few one-off Ruby tools, and two
-scripts that vm23 still runs by their top-level paths, each of which says in its
-header which line on the box pins it.
+**Production is one box, and this tree is everything that puts it there and keeps it honest.**
+The box is vm23, and it runs every app behind relayd. `OPENBSD/mirror/` is a
+literal filesystem payload: `etc/`, `home/`, `usr/` and `var/` map directly
+to `/`. Operator tools live separately under `bin/` and `lib/`; checks,
+tests, data and bootstrap code remain outside the installable mirror.
 
 ## Canonical operator path
 
@@ -38,14 +36,14 @@ Hands-off path: local preflight, pin SHA, tmux on vm23, `vps-deploy` as root
 (git as `dev`), stream progress until finished, then `vps-state` + public canary.
 Log: `/home/dev/vps-deploy.log`. Session: `pub5-deploy`.
 
-`/usr/local/bin/zap` is installed from `OPENBSD/mirror/bin/zap.rb`, a standard-library Ruby port of OpenBSD's interactive process killer. It searches command lines, asks before each signal, defaults to `SIGTERM`, and supports `-f`, `-s SIGNAL`, the classic `-SIGNAL` form and `--dry-run`. On OpenBSD it refuses to signal `vmd`, `vmctl` or `cu`; use the documented VM controls and recovery path instead.
+`/usr/local/bin/zap` is installed from `OPENBSD/mirror/usr/local/bin/zap`, a standard-library Ruby port of OpenBSD's interactive process killer. It searches command lines, asks before each signal, defaults to `SIGTERM`, and supports `-f`, `-s SIGNAL`, the classic `-SIGNAL` form and `--dry-run`. On OpenBSD it refuses to signal `vmd`, `vmctl` or `cu`; use the documented VM controls and recovery path instead.
 
 The commands live in one place. `data/operator.yml` is the source of the command
 recipes, so do not write another catalogue. From the repository root, the operator
 reaches the box with `MASTER/bin/operator vps state` and `MASTER/bin/operator vps
 deploy`. In this tree `bin/check` is the local check, `bin/check-vps` checks vm23,
 and `bin/vps-deploy` deploys. It resolves apps and groups from `RAILS/apps.yml` through
-`OPENBSD/mirror/lib/deploy_inventory.rb`. Group membership comes from the namespace
+`OPENBSD/lib/deploy_inventory.rb`. Group membership comes from the namespace
 segment of each `deploy_root`; `deploy_order` controls the serial pass. Under
 degraded memory/health evidence, the MASTER namespace moves last. Services that
 are shed by deployment remain at the end of their configured order so restoration
@@ -101,8 +99,8 @@ The deploy and privileged-broker references are under `man/man8/`. From the
 repository root, render the complete local pages without an interactive pager:
 
 ```zsh
-MANPATH="$PWD/OPENBSD/mirror/man" man -P cat 8 vps-deploy
-MANPATH="$PWD/OPENBSD/mirror/man" man -P cat 8 pub5-admin
+MANPATH="$PWD/OPENBSD/mirror/usr/local/man" man -P cat 8 vps-deploy
+MANPATH="$PWD/OPENBSD/mirror/usr/local/man" man -P cat 8 pub5-admin
 ```
 
 These local pages document pub5 tools only. Every edit under `OPENBSD/`
@@ -115,3 +113,33 @@ covers every subsystem, not an allowlist. Non-native prose/data files require
 full source and schema/contract review, not irrelevant man pages. Record the
 target identity and each page's source, section, SHA-256, byte/line count and
 complete status. Missing, partial or mismatched manuals mean BLOCKED.
+
+
+## Filesystem mirror contract
+
+`OPENBSD/mirror/` is a filesystem image, not a tooling directory. Its relative
+paths map directly to the vm23 root:
+
+- `mirror/etc/relayd.conf` → `/etc/relayd.conf`
+- `mirror/usr/local/bin/resource_guard.sh` → `/usr/local/bin/resource_guard.sh`
+- `mirror/var/nsd/etc/nsd.conf` → `/var/nsd/etc/nsd.conf`
+
+Only tracked regular files are eligible for installation. The installer never
+deletes untracked files or directories. `etc/ssh/sshd_config` is protected from
+routine replacement. `etc/doas.conf` requires the explicit `--doas` path and
+the dedicated validation/rollback helper. The root crontab is not a filesystem
+file: its source is `OPENBSD/data/root.crontab` and it is merged with
+`crontab(1)`. The redacted user shell snapshot and sample environment are
+also under `OPENBSD/data/`, not the installable mirror.
+
+Routine configuration operations:
+
+```sh
+doas zsh OPENBSD/OPERATOR.sh --plan
+doas zsh OPENBSD/OPERATOR.sh --apply
+doas zsh OPENBSD/OPERATOR.sh --verify
+```
+
+`OPENBSD/BOOTSTRAP.sh` retains the legacy first-install and staged bootstrap
+workflows. It is not the routine filesystem-copy command. DNS stage 1 remains
+destructive and requires its existing explicit acknowledgement.

@@ -8,7 +8,7 @@
 require "open3"
 
 # The doas.conf "heal" that used to run here (root executing
-# /home/dev/pub5/OPENBSD/validate_doas.ksh and installing that checkout's
+# /home/dev/pub5/OPENBSD/bin/validate_doas.ksh and installing that checkout's
 # doas.conf over /etc/doas.conf every 15 minutes) was removed: it was root code
 # execution from a dev-owned tree and reverted any hand-hardening of the live
 # file. doas policy is installed only by OPERATOR.sh now. This job stays a
@@ -23,7 +23,7 @@ failures = []
 # takes the whole check down. That surfaced the day this job started running at
 # all — it had been failing at exec for months on cron's PATH — and the trigger
 # was an em dash in a relayd.conf comment written the same afternoon. Same fault
-# as OPENBSD/mirror/bin/render_dns.rb, and RAILS/test/integrity_locale_test.rb pins the
+# as OPENBSD/bin/render_dns.rb, and RAILS/test/integrity_locale_test.rb pins the
 # shape of it for the integrity check.
 def read(path)
   File.read(path, encoding: "UTF-8")

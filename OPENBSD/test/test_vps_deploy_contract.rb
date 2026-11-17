@@ -4,7 +4,7 @@ require "minitest/autorun"
 require "tmpdir"
 require "socket"
 require "yaml"
-require_relative "../mirror/lib/deploy_inventory"
+require_relative "../lib/deploy_inventory"
 require "open3"
 
 # vps-deploy is the entrypoint for every production deploy and had no test.
@@ -16,10 +16,15 @@ require "open3"
 # root rather than dying at `git pull` with a message about host keys.
 class VpsDeployContractTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
-  SOURCE = File.read(File.join(ROOT, "OPENBSD", "mirror", "bin", "vps-deploy"), encoding: "UTF-8")
-  CI_SOURCE = File.read(File.join(ROOT, "OPENBSD", "mirror", "bin", "vps_ci.sh"), encoding: "UTF-8")
+  SOURCE = File.read(File.join(ROOT, "OPENBSD", "bin", "vps-deploy"), encoding: "UTF-8")
+  CI_SOURCE = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_ci.sh"), encoding: "UTF-8")
   APPS = Deploy::Inventory.new(root: ROOT).app_names
-  MASTER_DEPLOY = File.read(File.join(ROOT, "OPENBSD", "mirror", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
+  MASTER_DEPLOY = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
+
+  def test_all_applies_the_filesystem_mirror_before_application_deploys
+    assert_includes SOURCE, 'zsh "$repo/OPENBSD/OPERATOR.sh" --apply'
+    assert_operator SOURCE.index('OPENBSD/OPERATOR.sh" --apply'), :<, SOURCE.index('for one in $deploy_order')
+  end
 
   def test_deploy_scope_and_order_are_derived_from_inventory
     inventory = Deploy::Inventory.new(root: ROOT)
@@ -62,7 +67,7 @@ class VpsDeployContractTest < Minitest::Test
   end
 
   def test_master_deploy_refuses_root_override
-    source = File.read(File.join(ROOT, "OPENBSD", "mirror", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
+    source = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
     assert_includes source, 'if [ "$ROOT" != "/home/dev/pub5" ]; then'
     assert_includes source, 'pub5-admin master-web-assets-reset'
     assert_includes source, 'pub5-admin master-web-runtime-dirs'
@@ -70,10 +75,12 @@ class VpsDeployContractTest < Minitest::Test
     refute_includes source, 'doas chown -R dev:dev public'
     refute_includes source, 'doas cp "$ROOT/OPENBSD/mirror/etc/rc.d/master" /etc/rc.d/master'
   end
-  def test_workstation_per_app_mode_uses_canonical_unprivileged_supervisor
-    script = File.read(File.join(ROOT, "OPENBSD", "mirror", "bin", "deploy_all.sh"), encoding: "UTF-8")
-    assert_includes script, 'zsh OPENBSD/mirror/bin/vps-deploy ${app}'
-    refute_includes script, 'doas zsh ${script}'
+  def test_legacy_deploy_all_aliases_the_canonical_unprivileged_supervisor
+    script = File.read(File.join(ROOT, "OPENBSD", "bin", "deploy_all.sh"), encoding: "UTF-8")
+    assert_includes script, 'MASTER/bin/redeploy'
+    assert_includes script, 'exec "${REPO_ROOT}/MASTER/bin/redeploy" all'
+    refute_includes script, 'OPENBSD/bin/vps-deploy'
+    refute_includes script, 'doas zsh'
     refute_includes script, 'RAILS/${app}/${app}.sh'
   end
   def test_ci_rejects_unknown_target_before_interpolating_a_path
@@ -93,13 +100,13 @@ class VpsDeployContractTest < Minitest::Test
 
   def test_root_crontab_staging_is_private_from_deploy_receipts
     operator = File.read(File.join(ROOT, "OPENBSD", "OPERATOR.sh"))
-    block = operator[/typeset cron_dir=\/var\/db\/pub4\/private.*?chmod 700 "\$cron_dir"/m]
 
-    refute_nil block, "root crontab temp files must not share the public deploy-receipt directory"
-    assert_includes block, "chmod 755 /var/db/pub4"
-    assert_includes block, "chown root:wheel /var/db/pub4"
+    assert_includes operator, 'work=$(mktemp -d /var/db/pub5-crontab.XXXXXXXX)'
+    assert_includes operator, 'chown root:wheel "$work"'
+    assert_includes operator, 'chmod 700 "$work"'
+    assert_includes operator, 'backup_root_crontab || {'
+    assert_includes operator, 'verify_root_crontab || {'
   end
-
   def test_disk_recovery_hint_uses_bounded_broker
     assert_includes SOURCE, "doas /usr/local/sbin/pub5-admin disk-usage $mount_point"
     refute_includes SOURCE, "doas du -xk $mount_point"
@@ -116,7 +123,7 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes SOURCE, '[[ -f "$PUB5_ADMIN" && -x "$PUB5_ADMIN" && ! -L "$PUB5_ADMIN" ]]'
     refute_match(/^\s*doas\s+rcctl\b/, SOURCE)
     refute_match(/^\s*doas\s+(?:tee|chmod|mkdir)\b/, SOURCE)
-    refute_includes SOURCE, 'doas ksh "$repo/OPENBSD/mirror/bin/resource_guard.sh"'
+    refute_includes SOURCE, 'doas ksh "$repo/OPENBSD/bin/resource_guard.sh"'
     refute_includes SOURCE, 'doas "$RUBY" "$repo/OPENBSD/checks/solid_queue_proof.rb"'
     refute_includes SOURCE, 'doas tee "$file"'
   end
@@ -314,7 +321,7 @@ class VpsDeployContractTest < Minitest::Test
     legacy = File.read(File.join(ROOT, "RAILS", "deploy.sh"), encoding: "UTF-8")
 
     assert_includes legacy, 'if [[ $(id -u) -eq 0 ]]'
-    assert_includes legacy, 'exec zsh "${REPO_ROOT}/OPENBSD/mirror/bin/vps-deploy" "$app"'
+    assert_includes legacy, 'exec zsh "${REPO_ROOT}/OPENBSD/bin/vps-deploy" "$app"'
     refute_includes legacy, 'doas zsh "$script"'
   end
 
@@ -597,14 +604,14 @@ class VpsDeployContractTest < Minitest::Test
   end
 
   def test_the_flag_is_taken_before_ci_and_the_app_is_checked_before_ok
-    assert_operator SOURCE.index("\nkeep_deploy_flag\n"), :<, SOURCE.index("OPENBSD/mirror/bin/vps_ci.sh")
+    assert_operator SOURCE.index("\nkeep_deploy_flag\n"), :<, SOURCE.index("OPENBSD/bin/vps_ci.sh")
     assert_operator SOURCE.index("kill $flag_keeper"), :<, SOURCE.index(%(rm -f -- "$deploy_flag"))
     assert_operator SOURCE.rindex(%(admin_service check "$app")), :>, SOURCE.index(%(CHECK_AUTOFIX=0 "$RUBY" "$repo/MASTER/checks/runner.rb"))
   end
 
   def test_a_master_deploy_holds_the_flag_before_its_build
     flag_call = SOURCE.index("\n  keep_deploy_flag\n")
-    build_call = SOURCE.index('if zsh "$repo/OPENBSD/mirror/bin/vps_deploy_master.sh"')
+    build_call = SOURCE.index('if zsh "$repo/OPENBSD/bin/vps_deploy_master.sh"')
 
     refute_nil flag_call
     refute_nil build_call
@@ -618,7 +625,7 @@ class VpsDeployContractTest < Minitest::Test
   # inside brgen as engines/) and the CI mirror kept building the old one until
   # a deploy died on "The path /home/brgen/__shared does not exist".
   def test_ci_mirror_syncs_every_path_gem_the_gemfiles_name
-    ci = File.read(File.join(ROOT, "OPENBSD", "mirror", "bin", "vps_ci.sh"), encoding: "UTF-8")
+    ci = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_ci.sh"), encoding: "UTF-8")
     sync = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "ci-sync.ksh"), encoding: "UTF-8")
     assert_includes sync, "shared_dir=$app_home/__shared"
     # The engines ride the brgen app-tree copy: the rel list must carry engines/.
@@ -791,7 +798,7 @@ class VpsDeployContractTest < Minitest::Test
       assert_equal 1, status
       assert_includes out, "/home has 195 MB free, the floor is 1024 MB"
       assert_includes out, "Nothing was stopped"
-      assert_includes out, "zsh OPENBSD/mirror/bin/vps-deploy brgen"
+      assert_includes out, "zsh OPENBSD/bin/vps-deploy brgen"
       refute_includes out, "passed"
     end
   end

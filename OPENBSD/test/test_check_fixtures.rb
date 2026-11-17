@@ -4,7 +4,7 @@ require "minitest/autorun"
 require "tmpdir"
 require "fileutils"
 require "open3"
-require_relative "../mirror/lib/utf8"
+require_relative "../lib/utf8"
 require_relative "../checks/installed_targets_check"
 
 # Every OPENBSD check beside the defect it exists to catch.
@@ -37,7 +37,7 @@ class InstalledTargetsCheckFixtureTest < Minitest::Test
   # The daily.local shape the check was written for: a guard on a target nothing
   # installs.
   def test_a_cron_target_nothing_installs_is_named
-    plant("etc/crontab.vm23", "*/5 * * * * /usr/local/bin/ghost.sh\n")
+    plant("data/root.crontab", "*/5 * * * * /usr/local/bin/ghost.sh\n")
 
     assert_equal ["bin/ghost.sh"], missing
   end
@@ -276,12 +276,12 @@ class ShellSyntaxFixtureTest < Minitest::Test
   end
 
   def test_a_script_that_does_not_parse_fails_and_is_named
-    ok, out = scan("mirror/bin/broken" => "#!/usr/bin/env zsh\nif [[ -n x ]]; then\n  print hi\n",
+    ok, out = scan("bin/broken" => "#!/usr/bin/env zsh\nif [[ -n x ]]; then\n  print hi\n",
                    "fine.sh" => "#!/bin/sh\necho ok\n")
 
     refute ok
     assert_includes out, "1 of 2 scripts do not parse"
-    assert_includes out, "zsh -n OPENBSD/mirror/bin/broken"
+    assert_includes out, "zsh -n OPENBSD/bin/broken"
   end
 
   # The shebang picks the parser: `set -A` is ksh and a syntax error to nothing

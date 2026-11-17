@@ -41,7 +41,7 @@ rescue EOFError, ArgumentError
   nil
 end
 
-scripts = (Dir.glob("OPENBSD/**/*.sh") + Dir.glob("OPENBSD/mirror/bin/*") +
+scripts = (Dir.glob("OPENBSD/**/*.sh") + Dir.glob("OPENBSD/bin/*") +
            Dir.glob("OPENBSD/mirror/usr/local/bin/*") + Dir.glob("OPENBSD/mirror/usr/local/libexec/**/*.ksh"))
           .uniq.sort.select { |path| File.file?(path) }
 

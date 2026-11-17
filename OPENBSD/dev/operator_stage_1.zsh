@@ -1,8 +1,8 @@
 #!/usr/bin/env zsh
 set -euo pipefail
-# Stage 1 of OPENBSD/OPERATOR.sh: DNS, DNSSEC and TLS.
+# Stage 1 of OPENBSD/BOOTSTRAP.sh: DNS, DNSSEC and TLS.
 #
-# This file is sourced by OPERATOR.sh after its shared helpers and deploy facts
+# This file is sourced by BOOTSTRAP.sh after its shared helpers and deploy facts
 # are loaded. It owns stage_1 only; it does not execute on source.
 
 stage_1() {
@@ -20,7 +20,7 @@ stage_1() {
   # which is the worst failure shape. See the old backlog "Host TTS Binaries".
   pkg_add -U ldns-utils ruby%3.4 zsh fish neovim tmux fontconfig fzf ripgrep fd espeak ffmpeg 2>/var/log/pkg_add.log \
     || { log ERROR "pkg_add failed. See /var/log/pkg_add.log"; exit 1 }
-  install_static bin/zap.rb /usr/local/bin/zap
+  install_static usr/local/bin/zap /usr/local/bin/zap
   chmod 755 /usr/local/bin/zap
 
   [[ -f /etc/rc.conf.local && $(<"/etc/rc.conf.local") == *"pf=NO"* ]] && log WARN "pf disabled in rc.conf.local"
@@ -97,7 +97,7 @@ stage_1() {
   # DS records are derived from the signed zone by bin/ds-records, never written
   # to a .ds file here. A cached DS goes stale the moment a key rotates, and a DS
   # naming a key the zone no longer publishes takes the zone down.
-  log INFO "DS records: doas ruby34 ${REPO_ROOT}/OPENBSD/mirror/bin/ds-records"
+  log INFO "DS records: doas ruby34 ${REPO_ROOT}/OPENBSD/bin/ds-records"
 
   [[ ! -f /var/nsd/etc/nsd_server.pem ]] && {
     log INFO "Generating NSD control certificates"
@@ -170,7 +170,7 @@ stage_1() {
   install_tracked_crontab || exit 1
 
   log INFO "Stage 1 complete. ns.brgen.no ($BRGEN_IP) authoritative with DNSSEC."
-  log INFO "DS records: doas ruby34 ${REPO_ROOT}/OPENBSD/mirror/bin/ds-records - submit each to your registrar (Domeneshop: domain settings -> DNSSEC)."
+  log INFO "DS records: doas ruby34 ${REPO_ROOT}/OPENBSD/bin/ds-records - submit each to your registrar (Domeneshop: domain settings -> DNSSEC)."
   log INFO "Only for domains the registrar has actually delegated to ns.brgen.no. A DS on a domain we do not serve takes it down."
   log INFO "After submitting DS records, wait 24-48h for propagation, then press Enter to continue."
   log INFO "Verify with: dig DS brgen.no +short"
