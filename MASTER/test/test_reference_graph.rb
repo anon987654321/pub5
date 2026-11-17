@@ -13,12 +13,14 @@ class TestReferenceGraph < Minitest::Test
       FileUtils.mkdir_p(File.join(real_root, "RAILS", "brgen", "db"))
       path = File.join(real_root, "RAILS", "brgen", "db", "seeds.rb")
       File.write(path, "module BrgenSeeds; end\\n")
+      File.write(File.join(real_root, "README.md"), "the dependency graph must traverse the full checkout\\n")
       File.symlink(real_root, alias_root)
 
       graph = Master::Review::ReferenceGraph.new(root: alias_root)
       result = graph.build(refresh: true, required_paths: [path])
 
       assert_includes result[:nodes], "RAILS/brgen/db/seeds.rb"
+      assert_includes result[:nodes], "README.md", "the canonical root walk must still index the rest of the checkout"
       assert graph.includes_path?(path)
       assert_empty result[:analysis_failures]
     end

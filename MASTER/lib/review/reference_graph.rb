@@ -332,7 +332,7 @@ module Master
 
       def files(extra_paths: [])
         collected = []
-        Find.find(@root) do |path|
+        Find.find(source_root) do |path|
           if File.directory?(path)
             Find.prune if File.symlink?(path) || skipped_by_scanner?(path)
             next
@@ -358,8 +358,12 @@ module Master
         collected.uniq
       end
 
+      def source_root
+        @source_root ||= canonical_existing_path(@root) || File.expand_path(@root)
+      end
+
       def under_root?(path)
-        root = canonical_existing_path(@root) || File.expand_path(@root)
+        root = source_root
         path == root || path.start_with?(root + File::SEPARATOR)
       end
 
@@ -374,9 +378,9 @@ module Master
       # Scanner owns generated/vendor exclusions. The local fallback is only for
       # isolated consumers that load ReferenceGraph without the fix runtime.
       def skipped_by_scanner?(path)
-        return Master::Fix::Scanner.skip_path?(path, root: @root) if defined?(Master::Fix::Scanner)
+        return Master::Fix::Scanner.skip_path?(path, root: source_root) if defined?(Master::Fix::Scanner)
 
-        relative = File.expand_path(path).delete_prefix("#{@root}/")
+        relative = File.expand_path(path).delete_prefix("#{source_root}#{File::SEPARATOR}")
         relative.split(File::SEPARATOR).any? { |segment| FALLBACK_IGNORE_DIRS.include?(segment) }
       end
 
@@ -729,8 +733,7 @@ module Master
         # the collector's path look absent from a graph walked under another
         # spelling of the same root.
         expanded = canonical_existing_path(path) || File.expand_path(path)
-        root = canonical_existing_path(@root) || File.expand_path(@root)
-        expanded.sub(%r{\A#{Regexp.escape(root)}(?:/|\z)}, "")
+        expanded.sub(%r{\A#{Regexp.escape(source_root)}(?:/|\z)}, "")
       end
 
       public :relative
