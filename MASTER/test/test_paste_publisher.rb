@@ -70,7 +70,7 @@ class PastePublisherTest < Minitest::Test
     assert_includes payload.fetch("content"), "checks passed"
   end
 
-  def test_dpaste_is_used_when_pste_is_unavailable_and_expires_after_one_day
+  def test_dpaste_is_used_when_pste_is_unavailable_and_expires_after_seven_days
     calls = []
     transport = lambda do |uri:, body:, headers:|
       calls << [uri, body, headers]
