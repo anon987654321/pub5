@@ -19,6 +19,16 @@ nb:
       delivery_fee: "Lavest leveringsgebyr"
       minimum_order: "Lavest minsteordre"
     opening_hours_heading: "Åpningstider"
+    opening_hours_invalid_time: "Skriv åpningstid i 24-timersformatet TT:MM."
+    publish_needs_menu_and_hours: "Legg inn minst én tilgjengelig rett og åpningstider før du publiserer."
+    weekdays:
+      monday: Mandag
+      tuesday: Tirsdag
+      wednesday: Onsdag
+      thursday: Torsdag
+      friday: Fredag
+      saturday: Lørdag
+      sunday: Søndag
     closed_all_day: "Stengt"
     tip_line: "Tips: %{amount}"
     position: "Posisjon"
