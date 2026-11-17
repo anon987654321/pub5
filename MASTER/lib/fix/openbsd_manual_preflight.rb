@@ -769,6 +769,11 @@ module Master
         return %w[smtpd.conf(5) smtpd(8) smtpctl(8)] if path == "OPENBSD/mirror/etc/mail/smtpd.conf"
         return %w[smtpd.conf(5) table(5) smtpd(8) makemap(8)] if %w[OPENBSD/mirror/etc/mail/domains OPENBSD/mirror/etc/mail/virtuals].include?(path)
         return %w[newsyslog(8)] if path == "OPENBSD/mirror/etc/newsyslog.conf"
+        # This tracked Litestream example is explicitly inert: the package is
+        # absent from OpenBSD ports and no service is enabled in rc.conf.local.
+        # Read and digest the file, but do not invent an OpenBSD manual page for
+        # a daemon that is not installed or used on this host.
+        return [] if path == "OPENBSD/mirror/etc/litestream.yml"
         return %w[daily(8) cron(8) ksh(1)] if %w[OPENBSD/mirror/etc/daily.local OPENBSD/mirror/etc/weekly.local].include?(path)
         return %w[crontab(5) cron(8) ksh(1) zsh(1) ruby(1)] if path == "OPENBSD/mirror/etc/crontab.vm23"
         return %w[zsh(1)] if path == "OPENBSD/mirror/etc/.zshrc"

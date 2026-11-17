@@ -47,6 +47,21 @@ class TestOpenbsdConfig < Minitest::Test
     assert(paths.any? { |path| path.end_with?(".zone") })
   end
 
+  def test_inert_litestream_example_is_source_audited_without_fabricated_openbsd_manual
+    manuals = Master::Fix::OpenBSDManualPreflight.required_path_manuals(
+      "OPENBSD/mirror/etc/litestream.yml"
+    )
+
+    assert_equal [], manuals
+  end
+
+  def test_full_stack_deploy_detection_is_explicit
+    preflight = Master::Fix::OpenBSDManualPreflight
+    assert preflight.full_vps_deploy_command?(%w[zsh OPENBSD/bin/vps-deploy all])
+    assert preflight.full_vps_deploy_command?(%w[MASTER/bin/operator vps deploy all --remote])
+    refute preflight.full_vps_deploy_command?(%w[zsh OPENBSD/bin/vps-deploy brgen])
+  end
+
   def test_full_stack_manual_gate_requires_every_mirror_configuration_source_read
     preflight = { "source_reads" => [], "native_interfaces" => [] }
     refusal = Master::Fix::OpenBSDManualPreflight.mirror_configuration_refusal(
