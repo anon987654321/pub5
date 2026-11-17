@@ -854,7 +854,7 @@ module Master
 
         results, audit_lines = run_fix_target_passes(
           scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, targets:, cancellation:,
-          writes_requested:, critique:, aesthetic:, only:, mode:, task_intent:
+          writes_requested:, apply:, critique:, aesthetic:, only:, mode:, task_intent:
         )
         failure = results.find { |result| result.is_a?(Master::Result::Err) }
         return failure if failure
@@ -908,7 +908,7 @@ module Master
       # [results, audit_lines]. The pass recomputes writes_requested from the
       # flags, the way the workflow always did.
       def run_fix_target_passes(scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, targets:,
-                                cancellation:, writes_requested:, critique:, aesthetic:, only:,
+                                cancellation:, writes_requested:, apply:, critique:, aesthetic:, only:,
                                 mode:, task_intent:)
         writes_requested = writes_requested?(apply:, only:)
         effective_critique = critique.nil? ? writes_requested && council_default : critique
