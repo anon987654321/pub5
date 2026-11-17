@@ -32,6 +32,12 @@ class TestGroundConfig < Minitest::Test
       assert_match(/migrated legacy model preference/, err)
       persisted = YAML.safe_load_file(File.join(root, ".master", "config.yml"), aliases: true)
       assert_equal Master::Ground::Config::DEFAULTS["model"], persisted.fetch("model")
+      assert_equal true, persisted.fetch("model_preference_migrated")
+
+      config["model"] = "claude-opus-5-5"
+      config.save!
+      again = Master::Ground::Config.new(root)
+      assert_equal "claude-opus-5-5", again.model
     end
   end
 
