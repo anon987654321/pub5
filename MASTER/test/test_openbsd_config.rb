@@ -91,6 +91,32 @@ class TestOpenbsdConfig < Minitest::Test
     assert_equal [], manuals
   end
 
+  def test_manual_coverage_revalidates_page_digest_and_exact_release
+    preflight = Master::Fix::OpenBSDManualPreflight
+    content = <<~MANUAL
+      pfctl(8) - control the packet filter
+      NAME
+           pfctl - control the packet filter
+      SYNOPSIS
+           pfctl [options]
+      DESCRIPTION
+           A complete rendered manual page used for this regression fixture.
+           #{'x' * 180}
+    MANUAL
+    digest = Digest::SHA256.hexdigest(content.b)
+    receipt = {
+      "page" => "pfctl", "section" => "8",
+      "source" => "https://man.openbsd.org/OpenBSD-7.8/pfctl.8",
+      "content" => content, "complete" => true,
+      "sha256" => digest, "bytes" => content.bytesize, "lines" => content.lines.length
+    }
+
+    assert preflight.manual_receipt_valid?(receipt, "pfctl(8)", release: "7.8")
+    refute preflight.manual_receipt_valid?(receipt, "pfctl(8)", release: "7.7")
+    refute preflight.manual_receipt_valid?(receipt.merge("sha256" => "0" * 64), "pfctl(8)", release: "7.8")
+    refute preflight.manual_receipt_valid?(receipt.merge("complete" => false), "pfctl(8)", release: "7.8")
+  end
+
   def test_full_stack_deploy_detection_is_explicit
     preflight = Master::Fix::OpenBSDManualPreflight
     assert preflight.full_vps_deploy_command?(%w[zsh OPENBSD/bin/vps-deploy all])
