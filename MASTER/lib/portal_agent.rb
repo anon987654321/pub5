@@ -101,7 +101,7 @@ module Master
         {
           "url" => browser.current_url,
           "marks" => browser.evaluate(MARKS_JS),
-          "image_base64" => browser.screenshot(format: "jpeg", quality: quality, encoding: :base64),
+          "image_base64" => browser.screenshot(format: "jpeg", quality: quality, encoding: :base64)
         }
       end
     end
@@ -305,7 +305,7 @@ module Master
           "marks" => snapshot["marks"],
           "history" => history
         })
-
+        
         require "tempfile"
         Tempfile.create(["snapshot", ".jpg"]) do |f|
           f.binmode

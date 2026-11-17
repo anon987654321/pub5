@@ -310,7 +310,7 @@ module Operator
                         ["messenger-window", "messenger_window_title", "messenger-inbox-list"]],
         "bsdports" => ["RAILS/bsdports/app/views/ports/index.html.erb",
                        ["live_search_index", "auto_discovery_link_tag"]],
-        "mrdamascy" => ["RAILS/mrdamascy/app/views/orders/index.html.erb", ["order-card", "state_chip(order)"]],
+        "mrdamascy" => ["RAILS/mrdamascy/app/views/orders/index.html.erb", ["order-card", "state_chip(order)"]]
       }
 
       pages.each do |name, (path, markers)|
@@ -337,7 +337,7 @@ module Operator
         "radio" => [pages.fetch("radio").first, 'tag.h1 t("playlist.home_title"), class: "visually-hidden"'],
         "messenger" => [pages.fetch("messenger").first, 'tag.h1 t(@list_title_key)'],
         "bsdports" => [pages.fetch("bsdports").first, 'tag.h1 t("pages.ports")'],
-        "mrdamascy" => [pages.fetch("mrdamascy").first, '<h1 class="page-title">'],
+        "mrdamascy" => [pages.fetch("mrdamascy").first, '<h1 class="page-title">']
       }
       headings.each do |name, (path, marker)|
         expect("vertical.#{name}.primary_heading", path, read(path), marker,

@@ -119,7 +119,7 @@ class TestPortalAgentCrawler < Minitest::Test
   def test_dedupes_and_stops_on_disabled_next
     b = F::Browser.with_pages([
       { rows: [F::Browser.row("A", "/a"), F::Browser.row("B", "/b")], next: :enabled },
-      { rows: [F::Browser.row("B", "/b"), F::Browser.row("C", "/c")], next: :disabled },
+      { rows: [F::Browser.row("B", "/b"), F::Browser.row("C", "/c")], next: :disabled }
     ])
     c = crawl(b)
     assert_equal "DONE", c.status

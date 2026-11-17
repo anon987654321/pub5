@@ -20,6 +20,7 @@ coverage/
 
 # Runtime and temp files
 tmp/
+/fix/
 # Local bootstrap builds (sh bin/bootstrap): ruby/ksh/zsh under .tools/prefix
 .tools/
 # The link-embed thumbnail cache (shared-029) is runtime state: the job and the

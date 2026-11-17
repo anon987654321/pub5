@@ -85,6 +85,8 @@ module Master
         File.join(MasterPaths.fix_state(root: root), relative)
       end
 
+
+
       def initialize(root: Master::ROOT, bus: nil, checkpoint: nil, namespace: self.class.current_namespace)
         @root = File.expand_path(root)
         @state_root = MasterPaths.fix_state(root: @root)

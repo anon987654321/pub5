@@ -446,7 +446,7 @@ module Master
         { law: key[0], stream: key[1], surface: key[2], status:, iteration:, **values }
       end
 
-
+ 
     end
 
     # Dimension-level read model over the canonical Law ledger. It does not
