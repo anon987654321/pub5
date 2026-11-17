@@ -62,6 +62,7 @@ class PastePublisherTest < Minitest::Test
     assert outcome.success?
     assert_equal :pste_us, outcome.service
     assert_equal "https://pste.us/abc123", outcome.url
+    assert_equal "1 day", outcome.expires_in
     payload = JSON.parse(calls.fetch(0)[1])
     assert_equal "1d", payload.fetch("expires_in")
     assert_includes payload.fetch("content"), "checks passed"
@@ -84,8 +85,9 @@ class PastePublisherTest < Minitest::Test
     assert outcome.success?
     assert_equal :dpaste_org, outcome.service
     assert_equal "https://dpaste.org/xyz789", outcome.url
+    assert_equal "7 days", outcome.expires_in
     assert_equal 2, calls.size
-    assert_includes calls.fetch(1)[1], "expires=86400"
+    assert_includes calls.fetch(1)[1], "expires=604800"
     assert_includes calls.fetch(1)[1], "format=url"
   end
 
