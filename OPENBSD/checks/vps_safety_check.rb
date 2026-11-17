@@ -573,6 +573,20 @@ end
 deploy_source = File.read(File.join(OPENBSD, "bin", "vps-deploy"))
 failures << "vps-deploy must not recommend generic privileged du" unless
   deploy_source.include?('pub5-admin disk-usage $mount_point') && !deploy_source.include?("doas du -xk $mount_point")
+
+deploy_finish = deploy_source[/^finish\(\) \{.*?^\}/m].to_s
+restore_at = deploy_finish.index("restore_started")
+keeper_stop_at = deploy_finish.index("kill $flag_keeper")
+flag_remove_at = deploy_finish.index('rm -f -- "$deploy_flag"')
+finish_guard_contract = restore_at && keeper_stop_at && flag_remove_at &&
+                        restore_at < keeper_stop_at && restore_at < flag_remove_at
+failures << "vps-deploy must keep the resource-guard flag active through failure restoration" unless finish_guard_contract
+
+group_start = deploy_source.index('if [[ $deploy_target_kind == all || $deploy_target_kind == group ]]; then')
+group_loop = group_start && deploy_source.index('  for one in $deploy_order; do', group_start)
+group_guard_contract = group_start && group_loop &&
+                       deploy_source[group_start...group_loop].include?("keep_deploy_flag")
+failures << "vps-deploy group batches must hold a resource-guard exclusion across child deploys" unless group_guard_contract
 console_main = File.join(TOOLING, "vps_console.exp")
 
 if File.file?(console_main)
