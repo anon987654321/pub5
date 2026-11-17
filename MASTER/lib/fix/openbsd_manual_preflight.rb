@@ -303,7 +303,7 @@ module Master
           "rb",
           &:read
         )
-        status = $CHILD_STATUS
+        status = $?
         unless status&.success?
           raise TaskContract::Invalid, "cannot enumerate tracked OpenBSD mirror configuration paths"
         end
