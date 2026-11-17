@@ -357,6 +357,11 @@ class TestPub4Alert < Minitest::Test
 
     assert_includes crontab, "*/5 * * * * /usr/local/bin/pub4-alert watch"
     assert_includes source, "watch_deploy_recovery"
+    assert_includes source, 'deploy-run-pending-list'
+    assert_includes source, 'ps", "-p", pid.to_s, "-o", "lstart="'
+    assert_includes source, 'ps", "-ww", "-p", pid.to_s, "-o", "command="'
+    assert_includes source, 'Open3.capture2("cksum", stdin_data: command)'
+    assert_includes source, "deploy-recovery-scan-truncated"
   end
 
   def test_show_prints_the_last_alerts
