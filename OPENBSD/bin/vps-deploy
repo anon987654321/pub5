@@ -909,7 +909,7 @@ fi
   load_deploy_ports
   typeset -a receipt_ports
   for svc in ${(k)deploy_ports}; do
-    receipt_ports+=("$svc=$${deploy_ports[$svc]}")
+    receipt_ports+=("$svc=${deploy_ports[$svc]}")
   done
   VPS_DEPLOY_RECEIPT_PORTS="${(j:,:)receipt_ports}"
   VPS_DEPLOY_RECEIPT_ORDER="${(j:,:)DEPLOY_ALL_DEGRADED}"
