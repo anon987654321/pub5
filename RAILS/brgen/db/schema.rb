@@ -1825,6 +1825,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_17_110000) do
     t.decimal "latitude", precision: 10, scale: 7
     t.decimal "longitude", precision: 10, scale: 7
     t.integer "min_order_cents"
+    t.text "metadata"
     t.string "name"
     t.string "phone"
     t.integer "place_id"
