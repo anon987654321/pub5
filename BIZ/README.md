@@ -1,35 +1,36 @@
 # BIZ — professional documents, one evidence-backed production chain
 
-Restored from the pub, pub2 and pub3 archives into the pub5 anlage and
-completed for Innovasjon Norge applications. One tree since 8 November 2026,
-when the operator merged the published folders, the preserved BPLANS archive
-and the tooling that lived in MASTER/tools/biz into the single BIZ tree you
-are reading. Each concept is delivered as one self-contained HTML document
-and one PDF printed from that same document, one folder per plan:
+BIZ is the professional document studio for business plans, funding applications,
+legal instruments, governance and financial reports. Its current portfolio has
+seven workstreams:
 
-    syre/syre.html + syre.pdf                     3D-printede sko, NOK 250 000
-    ragnhild/ragnhild.html + ragnhild.pdf         begravelsesbyrå (karaokekiste), NOK 150 000
-    speis/speis.html + speis.pdf                  maritime og forsvar, NOK 500 000
-    future_nato_weapons/…                         arktiske dominanseskip og polar SAR, NOK 500 000
-    norwegianhedge/norwegianhedge.html + .pdf     Ruby-handelsroboter, NOK 300 000
-    pubhealthcare/pubhealthcare.html + .pdf       autonome parametriske sykehus, NOK 500 000
-    govt_bergen/govt_bergen.html + .pdf           bergensk selvstyre-teknologi, NOK 200 000
-    future_healthcare_os/…                        helse-OS etter OpenBSD, Rails/Rhoda og MASTER, NOK 500 000
+- **Published:** SYRE, Ragnhild, pub.healthcare, Bergen Selvstyreparti and
+  Fremtidens helse-OS. These have reader-facing HTML/PDF pairs.
+- **Draft sources:** NORDVAKT Arctic Systems and Norwegian Financial. Their
+  editable sources live in `tools/`; no published pair is claimed until build,
+  print, arithmetic checks and page-by-page visual review pass.
+- **Historical source documents:** SPEIS and Fremtidens NATO-våpen are retained
+  as provenance for NORDVAKT. Norwegian Hedge is retained as a historical
+  quant-fund concept, not as the active consumer-bank plan.
 
-Eight concepts, sought funding in total: **NOK 2 900 000**. `future_nato_weapons`
-is the 8 November 2026 merge of NATO Aurora with the space domain, by the
-operator's order "nato and space merges into one new plan"; `future_healthcare_os`
-followed the same day's order to model a healthcare OS on OpenBSD,
-Rails/Rhoda and the MASTER trees. Both carry their source-of-truth proposal
-in `tools/<plan>_proposal.md`, after the fetat setup.
+NORDVAKT combines the maritime and space/Arctic concepts into a civil-first data
+and operations platform. It begins with existing, licensed data and software
+pilots; it does not assume owned ships, satellites, weapons, NATO procurement or
+partner agreements. Norwegian Financial reframes the old quant concept into a
+partner-first financial-software and future-bank strategy. Quantitative fund
+management remains separate from banking and customer deposits.
 
-`fetat/fetat.html + fetat.pdf` (Familieetaten) shares the folder layout. Its
-publishable proposal source, build and trace live in `tools/` under the `fetat_`
-prefix; `fetat/research.md` is the supplementary source-history and evidence audit.
-`ai3/` is preserved from the pub3/pub5 archives and is not in the keep-list
-for this restoration. `__templates/` keeps the original bob, bob2 and bob3
-correspondence in HTML and PDF form — historical source material, not
-deliverables — and `research/` keeps the evidence notes.
+The index separates published plans, source-only drafts and archive documents.
+Its funding summary reads only the explicit `Innovasjon Norge` row from each
+financing table. It does not add total project capital, political fundraising
+targets or bank-license capital as if they were grant requests. Funding sources
+remain subject to applicant eligibility, scheme rules and evidence.
+
+The portfolio is intended to support applications to Innovasjon Norge and
+relevant legater, but no plan is presumed eligible. Verify the applicant,
+current call, eligible cost categories, matching funds, state-aid limits and
+evidence before submitting. Forecasts and proposed contributions are not
+commitments.
 
 ## Scope and document profiles
 
@@ -38,7 +39,7 @@ document families are:
 
 - **Business models and plans:** explore credible alternatives early, test the
   riskiest assumptions, then produce a full plan when the model is supported.
-  The Innovasjon Norge plan series below remains the current Bob2 deliverable.
+  The published business-plan series uses Bob2. Draft plans remain source-only until their rendered HTML/PDF pairs pass the full release gate.
   Use the nine Business Model Canvas areas as an initial completeness map, not a
   substitute for validation; see the [Innovasjon Norge business-model guidance](https://www.innovasjonnorge.no/artikkel/hvordan-lage-forretningsmodell).
 - **Funding applications and proposals:** follow the recipient's current form,
@@ -93,7 +94,7 @@ template". bob2's token vocabulary is the starter of every plan: the
 (both variable faces from the Google Fonts link, exactly as on fetat), the
 66-character measure on one 1.5 baseline grid, guillemets and true dashes,
 sentence-case titles, and a white ground. A plan's own brand mark stays
-artwork (syre's fractal, the SPEIS/NORWEGIAN HEDGE gradients, ragnhild's
+artwork (syre's fractal, the historical SPEIS/NORWEGIAN HEDGE gradients, ragnhild's
 Nosifer wordmark - the one face still embedded - and govt_bergen's plain
 EB Garamond mark). The colophon of every plan names these facts; the old
 claim of an embedded EB Garamond, oldstyle prose figures and a #F7F2E9
@@ -120,8 +121,9 @@ A BIZ package that grows a Rails app later inherits the RAILS entry pattern
 The folder carries only what the reader receives: the html, its svg mark
 (where one exists) and the pdf printed from that html, so the pair cannot
 drift. Editable sources and all tooling sit in `tools/`, never inside a
-plan folder: all eight base documents (`tools/<plan>.html` — six restored,
-two authored complete per their proposals), the build/check/print/index
+plan folder: active plan sources (`tools/<plan>.html`), with NORDVAKT and Norwegian Financial
+authored as complete Bob2 documents and historic SPEIS, NATO and Norwegian Hedge
+sources retained as provenance, the build/check/print/index
 chain (`bp_build.mjs`, `bp_retemplate.mjs`, `bp_check.mjs`, `bp_print.mjs`,
 `bp_index.mjs`), the content modules (`plans_a.mjs`, `plans_b.mjs`,
 `content_add.mjs`) and the two new plans' proposals. The published pair is
@@ -138,8 +140,9 @@ regenerated from them:
 
 `bp_print.mjs` prints with headless Chromium (no Python anywhere in the
 chain, per laws.yml REACH_non_native_tool) and checks every page size
-against the hefte canon (156mm 234mm). `bp_index.mjs` fails if a folder
-table row lacks its published pair or the funding total drifts. The retired
+against the hefte canon (156mm 234mm). `bp_index.mjs` fails if a published or archived link lacks its HTML/PDF pair;
+it derives the Innovasjon Norge request only from that explicit row in each
+plan's financing table and reports source-only drafts separately. The retired
 poise/cover generation (bp_cover.mjs) left with its generation; its history
 is in git.
 

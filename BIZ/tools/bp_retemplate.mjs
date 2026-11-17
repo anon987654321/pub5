@@ -14,12 +14,12 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { OUTPUT_DIR as OUT } from './paths.mjs';
 
-const ORDER = ['syre', 'speis', 'ragnhild', 'future_nato_weapons', 'norwegianhedge',
-  'pubhealthcare', 'govt_bergen', 'future_healthcare_os'];
+const ORDER = ['syre', 'ragnhild', 'nordvakt', 'norwegianfinancial', 'pubhealthcare',
+  'govt_bergen', 'future_healthcare_os'];
 
-// The two 8 November 2026 plans were authored straight into the final bob2
-// skin (no <nav> to re-extract): the skin is verified, never re-applied.
-const COMPLETED = new Set(['future_nato_weapons', 'future_healthcare_os']);
+// NORDVAKT, Norwegian Financial and Future Healthcare OS are authored
+// straight into the final bob2 skin: verify the skin, never re-apply it.
+const COMPLETED = new Set(['nordvakt', 'norwegianfinancial', 'future_healthcare_os']);
 
 // ---- the plan canon: bob2 tokens + the hefte print contract -----------------
 const CANON = `

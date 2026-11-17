@@ -483,6 +483,11 @@ measure is already owned by the Bymorgen item above.
   accessible templates and qualified review workflow before claiming legal or
   institutional deliverables complete. Inspect every page raster at print size;
   raster generation alone is not visual approval.
+  2026-11-17 portfolio decision: SPEIS and Fremtidens NATO-våpen are preserved
+  as history behind the NORDVAKT civil-first source; Norwegian Hedge is preserved
+  as history behind the Norwegian Financial partner-bank concept. Build, print,
+  output checks, visual inspection and applicant-specific grant eligibility for
+  the new drafts remain NOT_RUN. Do not publish draft sources as completed pairs.
 - [ ] **Historical hardening review.** Reconcile the remaining P01–P11
   findings in `MASTER/docs/history/fix-review-log.md`. L4 stale-member
   detection/tests, L5 heredoc/keyword detection plus structured Council

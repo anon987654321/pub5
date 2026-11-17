@@ -6,10 +6,9 @@
 //  - ragnhild brand wordmark in Nosifer (SIL OFL), embedded as woff2 data URL
 //    and used ONLY for the wordmark, never for semantic headings
 //  - aria-hidden on the decorative SYRE fractal mark
-//  - COMPLETED bases (the two 8 November 2026 plans) are authored to the
-//    finished document per their tools/<plan>_proposal.md; the build stages
-//    them untouched and re-verifies title, sections, arithmetic and chars —
-//    no injection ever runs against them
+//  - COMPLETED bases are authored as full documents; the build stages them
+//    untouched and re-verifies title, sections, arithmetic and characters —
+//    no content injection ever runs against these sources
 // Usage: node BIZ/tools/bp_build.mjs — build bases come from BIZ/tools
 // (SOURCE_DIR), completed builds land in OUTPUT_DIR for the operator to
 // review before anything is published into a plan folder.
@@ -23,15 +22,15 @@ const PLANS = { ...PLANS_A, ...PLANS_B };
 
 const PUB_SYRE = `${SRC}/syre.html`;
 mkdirSync(OUT, { recursive: true });
-const ORDER = ['syre', 'speis', 'ragnhild', 'future_nato_weapons', 'norwegianhedge',
-  'pubhealthcare', 'govt_bergen', 'future_healthcare_os'];
+const ORDER = ['syre', 'ragnhild', 'nordvakt', 'norwegianfinancial', 'pubhealthcare',
+  'govt_bergen', 'future_healthcare_os'];
 // Authored complete per their proposals; staged and re-verified, not injected.
-const COMPLETED = new Set(['future_nato_weapons', 'future_healthcare_os']);
+const COMPLETED = new Set(['nordvakt', 'norwegianfinancial', 'future_healthcare_os']);
 const TITLES = {
-  syre: 'SYRE™ – forretningsplan', speis: 'SPEIS – forretningsplan',
+  syre: 'SYRE™ – forretningsplan',
   ragnhild: 'Ragnhild – forretningsplan',
-  future_nato_weapons: 'Fremtidens NATO-våpen – forretningsplan',
-  norwegianhedge: 'Norwegian Hedge – forretningsplan',
+  nordvakt: 'NORDVAKT Arctic Systems – forretningsplan',
+  norwegianfinancial: 'Norwegian Financial – forretningsplan',
   pubhealthcare: 'pub.healthcare – forretningsplan',
   govt_bergen: 'Bergen Selvstyreparti – forretningsplan',
   future_healthcare_os: 'Fremtidens helse-OS – forretningsplan',

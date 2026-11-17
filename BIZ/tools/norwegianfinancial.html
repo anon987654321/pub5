@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="nb">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Norwegian Financial – forretningsplan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&display=swap">
+    <style>
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --color-text: #000; --color-muted: #777; --color-link: #005f73; --color-link-bold: #003087;
+  --color-print-muted: #aaa; --color-border: #ddd; --color-icon: #000; --color-background: #fff;
+  --color-footer-text: #888; --font-size-base: 1rem; --font-size-small: 0.9rem;
+  --font-size-xsmall: 0.75rem; --font-size-h1: 3.6rem; --font-size-h2: 1.8rem;
+  --line-height-normal: 1.5; --line-height-heading: 1.2;
+  --line-height-subheading: 1.4; --space-xs: 0.75rem; --space-s: 0.75rem; --space-m: 0.75rem;
+  --space-l: 1.5rem; --space-xl: 3rem; --space-xxl: 4.5rem; --space-list-item: 0;
+  --width-content: 33rem; --width-indent: 16.2px; --layout-margin: auto;
+  --font-text: "Source Serif 4", serif; --font-heading: "EB Garamond", serif;
+  --underline-thickness: 1.5px; --underline-offset: 2px;
+}
+html { font-size: 16px; }
+body {
+  font: 400 var(--font-size-base)/var(--line-height-normal) var(--font-text);
+  color: var(--color-text); background: var(--color-background);
+  width: 90%; max-width: var(--width-content); margin: var(--layout-margin);
+  text-rendering: optimizeLegibility; letter-spacing: -0.01em;
+}
+main { padding-inline: var(--space-m); }
+article { margin-bottom: var(--space-xxl); hanging-punctuation: first last; }
+/* The cover is the page, not a column: the plan mark, the title pushed to
+   the foot of the page and the byline carry page one as on fetat. */
+header.cover {
+  min-height: 94vh; display: flex; flex-direction: column;
+  text-align: center; padding: var(--space-xl) 0;
+  break-after: page; page-break-after: always;
+}
+.cover .mark, .cover .mark-brand { margin: 0 auto; }
+.cover h1 {
+  font: 600 2.6rem/1.2 var(--font-heading);
+  margin: auto 0; letter-spacing: -0.015em; text-wrap: balance;
+}
+.cover .byline { font-style: italic; color: var(--color-muted); margin: var(--space-m) 0; }
+h2 {
+  font: 600 var(--font-size-h2)/var(--line-height-subheading) var(--font-heading);
+  margin: var(--space-xl) 0; letter-spacing: -0.01em; text-wrap: balance;
+}
+h3 { font: 600 1.3rem/1.3 var(--font-heading); margin: var(--space-l) 0 var(--space-s); text-wrap: balance; }
+h4 { font: 400 1.05rem/1.3 var(--font-heading); margin: var(--space-m) 0 var(--space-xs); color: var(--color-text); }
+p { margin-bottom: var(--space-l); orphans: 2; widows: 2; }
+strong { font-weight: 600; }
+.count { font-variant-numeric: tabular-nums; }
+a {
+  color: var(--color-link); text-decoration: underline;
+  text-decoration-thickness: var(--underline-thickness); text-underline-offset: var(--underline-offset);
+}
+a:focus { outline: 2px solid var(--color-link); outline-offset: 2px; }
+code { font-family: ui-monospace, Menlo, monospace; font-size: 0.88em; }
+ul { margin: 0 0 var(--space-l); padding-left: 1.1em; }
+li { margin-bottom: var(--space-list-item); text-wrap: pretty; }
+li::marker { color: var(--color-muted); }
+dl { margin: 0 0 var(--space-l); }
+dt { font-weight: 600; margin-top: 0.6em; }
+dd { margin: 0 0 0.35em; padding-left: 1.1em; text-wrap: pretty; }
+/* Tables and figures: the archive rules, retokenised onto bob2's colors. */
+table { width: 100%; border-collapse: collapse; margin: var(--space-l) 0; font-size: 0.9em; font-variant-numeric: tabular-nums lining-nums; }
+caption { caption-side: top; text-align: left; font-style: italic; color: var(--color-muted); font-size: 0.8em; padding-bottom: 0.5rem; }
+th, td { padding: 0.3rem 0.6rem 0.3rem 0; border-bottom: 1px solid var(--color-border); text-align: left; vertical-align: baseline; hyphens: auto; }
+thead th { border-top: 2px solid var(--color-text); border-bottom: 1px solid var(--color-text); font-weight: 600; }
+tfoot td { border-top: 1px solid var(--color-text); border-bottom: 2px solid var(--color-text); font-weight: 600; }
+table.numbers td, table.numbers th { text-align: right; }
+table.numbers td:first-child, table.numbers th:first-child { text-align: left; }
+figure { margin: var(--space-xl) 0; }
+figure svg { display: block; width: 100%; height: auto; }
+figcaption { font-size: 0.8em; font-style: italic; color: var(--color-muted); margin-top: 0.5rem; }
+.mark-plain { font-weight: 400; font-size: 1.3em; letter-spacing: 0.05em; line-height: 1.2; }
+/* The brand wordmark carries its own display font (ragnhild's Nosifer);
+   the rule is the base's, ported so the plan's own mark reads as itself. */
+.mark-brand {
+  font-family: 'Nosifer', 'EB Garamond', Georgia, serif;
+  font-weight: 400; font-size: 2.1em; line-height: 1.45; margin: 0 auto; color: inherit;
+}
+.mark-brand:empty { display: none; }
+.toc {
+  font-size: var(--font-size-small); line-height: 1.6;
+  margin: 0 auto var(--space-xxl); padding: var(--space-m) 0;
+  break-after: page; page-break-after: always;
+}
+.toc .lv1 { font-family: var(--font-heading); font-weight: 600; margin: var(--space-s) 0 2px; }
+.toc p { margin: 0; }
+.toc h2 { font: 600 1.4rem/1.3 var(--font-heading); margin: 0 0 var(--space-s); }
+footer {
+  font-size: var(--font-size-xsmall); color: var(--color-footer-text);
+  margin-top: var(--space-xl); padding: var(--space-m) 0;
+}
+footer p { margin: 0 0 var(--space-s); }
+footer a { color: var(--color-footer-text); }
+footer a strong { color: var(--color-link-bold); }
+@media (max-width: 768px) {
+  :root { --font-size-h1: 2.1rem; --font-size-h2: 1.35rem; }
+}
+@media print {
+  /* The printed document is the Chrome render, paged, exactly as fetat:
+     the @page box adds the hefte size, the folio and break hygiene only.
+     A zero top margin on the first page makes the cover the page. */
+  @page {
+    size: 156mm 234mm;
+    margin: 6mm 0 12mm;
+    @bottom-center { content: counter(page); font: 0.75rem/1.4 var(--font-heading); color: var(--color-print-muted); }
+  }
+  @page :first { margin-top: 0; }
+  /* body keeps its auto margins in print: the browser centres the 33rem
+     column on the page box, and the pdf must be laid out by the same
+     algorithm - pinning body margin to 0 shifted every printed page to
+     the left edge and broke the html/pdf twin. */
+  header.cover { min-height: 221mm; }
+  h2, h3, h4 { break-after: avoid; }
+  table, li, figure { break-inside: avoid; }
+  h1 { page-break-inside: avoid; }
+  footer { page-break-before: always; }
+  a { color: inherit; text-decoration: none; }
+  a[target="_blank"]::after, a[href^="mailto:"]::after { content: none; }
+  a:focus { outline: none; }
+}
+
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <header class="cover">
+<h1>Norwegian Financial – norsk digitalbankplattform (arbeidsnavn)</h1>
+<p class="byline">Norwegian Financial · digital finansplattform · arbeidsutkast · november 2026</p>
+        </header>
+        <div class="toc" aria-label="Innhold">
+          <h2>Innhold</h2>
+<p class="lv1">Sammendrag</p>
+<p class="lv1">Markedsanalyse</p>
+<p class="lv1">Teknologi og innovasjon</p>
+<p class="lv1">Forretningsmodell</p>
+<p class="lv1">Utviklingsveikart</p>
+<p class="lv1">Finansieringsbehov</p>
+<p class="lv1">Team og kompetanse</p>
+<p class="lv1">Bærekraft og samfunnsansvar</p>
+        </div>
+
+<section id="sammendrag">
+<h2>Sammendrag</h2><h3>Visjon</h3><p>Norwegian Financial er et arbeidsnavn for en norsk digital finansplattform som utfordrer etablerte bankers kundeopplevelse med oversikt, forståelige priser og kontroll over egen økonomi.</p><h3>Misjon</h3><p>Bygg først en sikker, installérbar Rails PWA for personlig økonomi og åpen bank. Konto- og betalingstjenester tilbys kun gjennom en tydelig identifisert lisensiert partner. Egen bank er et langsiktig mål som krever egen kapital, konsesjon og styring.</p><h3>Innovasjon</h3><p>Samlet økonomiflate med samtykkestyrt kontoinnsyn, abonnementskontroll, kontantstrøm og sparemål. Signerte, hash-kjedede hendelseslogger kan dokumentere samtykker og administrative endringer; offentlig blokkjede er ikke nødvendig.</p><h3>Kundefordel</h3><p>Kunden ser kostnader og faste trekk på tvers av egne banker, kan eksportere data og trekke tilbake samtykke uten skjulte bindinger.</p>
+</section>
+<section id="markedsanalyse">
+<h2>Markedsanalyse</h2><h3>Kunder</h3><ul><li>Privatkunder med kontoer i flere banker</li><li>Familier og unge voksne som vil styre budsjett og sparing</li><li>Selvstendige og små virksomheter</li></ul><h3>Konkurranse</h3><p>Relevante alternativer er DNB, Sbanken som digitalt kundekonsept i DNB, Bulder, Lunar og andre nordiske banker. Sbanken behandles som DNBs merkevare og kundeopplevelse, ikke som en selvstendig bank. Konkurrentenes priser og vilkår må sammenlignes med daterte primærkilder.</p><h3>Fortrinn som skal testes</h3><ul><li>Samlet oversikt over samtykkebaserte kontoer</li><li>Synlige gebyrer, renter og faste trekk</li><li>Sparemål, kontantstrøm og enkel dataeksport</li><li>Lik PWA-opplevelse på mobil og desktop</li></ul><h3>Validering</h3><p>At kunder vil bytte bank for bedre innsikt er en hypotese. Minst 20 kundeintervjuer og en sammenligning av 5–7 konkurrenter skal dokumentere behov, gebyrfriksjon og hva som utløser et bytte.</p>
+</section>
+<section id="teknologi">
+<h2>Teknologi og innovasjon</h2><h3>Rails PWA</h3><p>En egen Rails-applikasjon med Hotwire, Turbo og Stimulus, separat database, autentisering, driftsmiljø, nøkler og administrasjonsflate. Den deler ikke brukerøkter, kontoidentiteter eller hemmeligheter med Brgen eller andre RAILS-apper.</p><h3>Regulert partner</h3><p>Kontooversikt og betalinger bruker autoriserte grensesnitt og gyldig samtykke. Partneren oppgis tydelig som kontotilbyder, betalingsformidler og eventuell innskuddsmottaker. Plattformen fremstilles ikke som bank før konsesjon foreligger.</p><h3>Personvern</h3><p>Service worker mellomlagrer bare applikasjonsskallet, aldri saldo, transaksjoner eller sensitive API-svar. Ingen offline-betalinger. Kryptering, minste privilegium, sterk kundeverifisering, nøkkelhåndtering og hendelsesrespons bygges inn. DORA-plikter kartlegges med partneren.</p><h3>Blockchain</h3><p>Append-only journal med signerte hendelser, hash-kjede og kontrollsummer for samtykke og administratorhandlinger. Ingen persondata, saldo eller betalinger på offentlig kjede.</p><h3>Status</h3><p>Dette er et konsept, ikke en operativ bank. Ingen konto, innskudd, lån, kort, betaling, banklisens eller partnerintegrasjon er dokumentert som levert. Partnerens regulerte kjernesystem brukes i første fase.</p>
+</section>
+<section id="forretningsmodell">
+<h2>Forretningsmodell</h2><h3>Mulig selskapsmodell</h3><ul><li>Norwegian Technology: PWA, økonomioversikt og integrasjoner</li><li>Norwegian Bank: mulig fremtidig regulert bank med egen konsesjon</li><li>Norwegian Wealth: eventuell fonds- og investeringsvirksomhet, separat regulert</li><li>Norwegian Business: senere bedriftskontoer via lisensiert struktur</li></ul><p>Dette er en foreløpig modell, ikke en bekreftet konsernstruktur. Juridiske enheter og transaksjoner må vurderes særskilt.</p><h3>Inntekter</h3><p>Mulige inntekter er partnerdistribusjon, bedriftsmoduler og frivillig premium. Pris fastsettes etter partnerdialog og kundeundersøkelser. Kundemidler brukes aldri som driftskapital.</p><h3>Kvantteknologi</h3><p>Norwegian Hedge beholdes som historisk kilde til kvantitativ programvare, ikke bankens produkt. Fondsforvaltning skal ligge separat med egen tillatelse og risikobudsjett. Bankinnskudd brukes aldri til bot-handel eller spekulasjon.</p><table class="numbers"><caption>Illustrativ økonomi per premiumkunde, NOK per år</caption><thead><tr><th>Post</th><th>Beløp</th></tr></thead><tbody><tr><td>Abonnement</td><td>588</td></tr><tr><td>Partnerinntekt</td><td>240</td></tr><tr><td>Drift og support</td><td>−300</td></tr></tbody><tfoot><tr><td>Bidrag før faste kostnader</td><td>528</td></tr></tfoot></table><p>Forutsetningene er ikke validert mot partnerkostnader, frafall eller betalingsvilje.</p>
+</section>
+<section id="veikart">
+<h2>Utviklingsveikart</h2><h3>Fase 1 — avgrensning</h3><p>0–3 måneder: kundeintervjuer, konkurrentkartlegging, produktklassifisering og dialog med regulerte partnere. Ingen tilgang til kundemidler.</p><h3>Fase 2 — prototype</h3><p>4–8 måneder: økonomioversikt med syntetiske data, samtykkemodell, eksport og sikkerhetsarkitektur. Mål brukbarhet, feilrate og datakvalitet.</p><h3>Fase 3 — partnerpilot</h3><p>9–18 måneder: testmiljø hos lisensiert partner, personvernvurdering, penetrasjonstest og leverandørkontroll før begrenset livepilot.</p><h3>Fase 4 — egen bank</h3><p>Bank krever konsesjon. Minimum startkapital tilsvarende EUR 5 millioner er en lovmessig terskel, ikke totalbudsjett for å åpne og drive bank. Egen søknad forutsetter eiere, styre, ledelse, AML, risiko, likviditet, operasjonell robusthet og treårsplan.</p><h3>Fase 5 — investeringer</h3><p>Fond og kapitalforvaltning vurderes i egen juridisk enhet. AIFM/MiFID-klassifisering, kundekategori og depot avklares før produkter tilbys.</p><table class="numbers"><caption>Mål for første 18 måneder</caption><thead><tr><th>Milepæl</th><th>Tid</th><th>Måltall</th></tr></thead><tbody><tr><td>Kartlagt behov og regler</td><td>Måned 3</td><td>20 intervjuer</td></tr><tr><td>Prototype</td><td>Måned 8</td><td>30 brukertester</td></tr><tr><td>Partnerpilot</td><td>Måned 12</td><td>1 regulert partner i test</td></tr><tr><td>Live pilot</td><td>Måned 18</td><td>Dokumentert samtykke</td></tr></tbody></table>
+</section>
+<section id="finansiering">
+<h2>Finansieringsbehov</h2><p><strong>Foreløpig kapitalbehov: NOK 3 500 000 for programvare, sikkerhet og partnerpilot over 18 måneder.</strong> Dette finansierer ikke en egen bank. Bankens konsesjonskapital og driftskapital holdes separat.</p><h3>Finansieringsplan</h3><p>Ingen søknad til Innovasjon Norge er budsjettert. Finansielle tjenester prioriteres ikke automatisk i ordinære oppstartstilskudd. Eventuell støtte må avklares skriftlig. Andre kilder er mål, ikke tilsagn.</p><table class="numbers"><caption>Bevegelsens finansiering, NOK</caption><thead><tr><th>Kilde</th><th>Beløp</th></tr></thead><tbody><tr><td>Innovasjon Norge — ikke budsjettert</td><td>0</td></tr><tr><td>Grunnleggerkapital</td><td>500 000</td></tr><tr><td>Private investorer</td><td>1 500 000</td></tr><tr><td>Strategiske investorer</td><td>1 000 000</td></tr><tr><td>Betalt pilot og samutvikling — mål</td><td>500 000</td></tr></tbody><tfoot><tr><td>Samlet kapitalbehov</td><td>3 500 000</td></tr></tfoot></table><h3>Resultatbudsjett 2027–2029</h3><table class="numbers"><caption>Resultatbudsjett, NOK millioner</caption><thead><tr><th>Post</th><th>2027</th><th>2028</th><th>2029</th></tr></thead><tbody><tr><td>Driftsinntekter</td><td>0,1</td><td>2,5</td><td>5,0</td></tr><tr><td>Driftskostnader</td><td>−3,2</td><td>−2,3</td><td>−4,5</td></tr><tr><td>Driftsresultat</td><td>−3,1</td><td>0,2</td><td>0,5</td></tr><tr><td>Finansposter</td><td>−0,1</td><td>−0,1</td><td>−0,1</td></tr></tbody><tfoot><tr><td>Resultat før skatt</td><td>−3,2</td><td>0,1</td><td>0,4</td></tr></tfoot></table><h3>Likviditetsbudsjett 2027–2029</h3><table class="numbers"><caption>Likviditetsbudsjett, NOK millioner</caption><thead><tr><th>Post</th><th>2027</th><th>2028</th><th>2029</th></tr></thead><tbody><tr><td>Inngående saldo</td><td>0,0</td><td>0,0</td><td>0,0</td></tr><tr><td>Kundeinnbetalinger</td><td>0,1</td><td>2,5</td><td>5,0</td></tr><tr><td>Kapitalinnbetaling</td><td>3,5</td><td>0,0</td><td>0,0</td></tr><tr><td>Driftsutbetalinger</td><td>−3,1</td><td>−2,3</td><td>−4,5</td></tr><tr><td>Investeringer</td><td>−0,5</td><td>−0,2</td><td>−0,3</td></tr></tbody><tfoot><tr><td>Utgående saldo</td><td>0,0</td><td>0,0</td><td>0,2</td></tr></tfoot></table><p>Alle prognoser er scenarier, ikke dokumenterte resultater. Reelle tilbud, lønnskalkyle og partnerdata må erstatte dem før søknad.</p>
+</section>
+<section id="team">
+<h2>Team og kompetanse</h2><p>Ingen ledere eller styremedlemmer er navngitt i dette utkastet. Prosjektet må dokumentere bank-, betalings-, risiko-, AML-, personvern-, cybersikkerhets-, Rails- og distribusjonskompetanse før partnerpilot.</p><h3>Ekstern kompetanse</h3><p>Det trengs norsk finansregulatorisk advokat, personvernrådgiver, uavhengig sikkerhetstest, kapitalrådgiver og teknisk due diligence av partneren. Ved egen bank må ledelse og kontrollfunksjoner oppfylle egnethetskrav.</p>
+</section>
+<section id="baerekraft">
+<h2>Bærekraft og ansvar</h2><p>Produktet skal gjøre kostnader og vilkår forståelige, gi kontroll over samtykke og unngå gebyrer skjult i brukerflyten.</p><p>Kun nødvendige data samles inn. Samtykke kan trekkes tilbake og data eksporteres. Ingen personlig finansiell informasjon legges på offentlig blokkjede.</p><p>Bankens balanse og kundemidler holdes helt atskilt fra eventuell kvantitativ fondsforvaltning. Bankinnskudd skal aldri brukes til egenhandel eller bot-strategier.</p><p>Arbeidsutkast · Norwegian Financial er et arbeidsnavn, ikke et registrert finansforetak eller en godkjent bank.</p>
+</section>
+</main>
+<footer>
+<p>Satt i Source Serif 4 og EB Garamond · mål 66 tegn · linjeavstand 1,5 · bob2-kontrakten.</p><p>Arbeidsutkast: Norwegian Financial er et arbeidsnavn, ikke et registrert foretak eller en godkjent bank.</p><p>Ingen innskudd, kontoer, betalinger, kort, lån, investeringsprodukter, konsesjon eller partneravtaler er dokumentert som live.</p>
+</footer>
+      </article>
+    </main>
+  </body>
+</html>

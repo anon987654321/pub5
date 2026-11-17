@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { OUTPUT_DIR as OUT, BIZ_ROOT } from './paths.mjs';
 
-const ORDER = ['syre', 'speis', 'ragnhild', 'future_nato_weapons', 'norwegianhedge', 'pubhealthcare', 'govt_bergen', 'future_healthcare_os'];
+const ORDER = ['syre', 'ragnhild', 'nordvakt', 'norwegianfinancial', 'pubhealthcare', 'govt_bergen', 'future_healthcare_os'];
 const fails = [];
 const notes = [];
 const ROW4 = /<tr><td>([^<]+)<\/td><td>([^<]*)<\/td><td>([^<]*)<\/td><td>([^<]*)<\/td><\/tr>/g;
@@ -92,6 +92,18 @@ for (const plan of ORDER) {
   if (plan === 'govt_bergen') {
     if (!/class="mark mark-plain">Bergens Selvstyreparti<\//.test(body)) add('cover: plain party mark missing');
     if (/background-clip:\s*text/.test(body)) add('cover: gradient wordmark still present');
+  }
+  if (plan === 'nordvakt') {
+    if (!/arbeidsnavn/.test(body)) add('portfolio: working-name status missing');
+    if (!/Ingen kundekontrakter/.test(body)) add('portfolio: absence of customer contracts not disclosed');
+    if (/nuclear propulsion|missile warning|stealth mode|Polar Class 1/i.test(body)) add('portfolio: retired ship/satellite claims remain');
+  }
+  if (plan === 'norwegianfinancial') {
+    if (!/arbeidsutkast/i.test(body)) add('bank concept: draft status missing');
+    if (!/Ingen innskudd|ingen innskudd/i.test(body)) add('bank concept: no-live-deposits boundary missing');
+    if (!/EUR 5 millioner/.test(body)) add('bank concept: bank minimum-capital caveat missing');
+    if (/Sharpe ratio|200\+ HNWI|Norwegian Hedge Lite/i.test(body)) add('bank concept: legacy hedge claims remain');
+    if (!/Bankinnskudd skal aldri/.test(body)) add('bank concept: deposit/quant ring-fence missing');
   }
 
   // Arithmetic is independently re-read from the generated HTML, never copied
