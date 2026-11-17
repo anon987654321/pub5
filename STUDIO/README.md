@@ -33,12 +33,17 @@ but the implementation is owned here.
 - `lora/photograph.rb` and `lora/idea_picture.rb` — the image-generation
   entrypoint and its IdeaPicture implementation. A still renders from an engine
   chosen with `--engine`; a film animates it from an engine chosen with
-  `--film-engine`, defaulting to MiniMax H3 Lite and offering the rest of
-  `models.yml`'s `image_to_video` catalogue (Kling v3 Omni included). Each film
-  engine declares the input keys it takes, and the renderer preflights the
-  model's own schema before any upload, so a mismatched shape fails before a
-  paid call. The provider's native audio stays off: STUDIO lays the dilla bed
-  under the cut itself.
+  `--film-engine`, defaulting to MiniMax H3 Highspeed at 768P. MiniMax H3 Lite is
+  selectable for drafts (480P by default, or `--film-resolution 768P`), with
+  the rest of `models.yml`'s `image_to_video` catalogue (Kling v3 Omni included)
+  available too. Both H3 models accept 4-15 seconds and support reference-driven
+  generation. Their 50% Replicate promotion is modelled through December 31,
+  2026; list pricing resumes automatically after that date. STUDIO reserves
+  output and maximum reference-video cost against a $1 per-call and $5 per-run
+  video budget before a prediction starts. Each film engine declares the input
+  keys it takes, and the renderer preflights the model's own schema before any
+  upload, so a mismatched shape fails before a paid call. The provider's native
+  audio stays off: STUDIO lays the dilla bed under the cut itself.
 - `replicate/client.rb` — the Studio-owned Replicate provider client
   (`Studio::ReplicateClient`), with version-aware input-schema reads, bounded
   transfers and explicit provider errors. `train_lora`, `upload_file` and
