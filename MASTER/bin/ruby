@@ -93,7 +93,22 @@ BEST_RUBY=
 
 # Prefer the generic interpreter selected by the user's PATH. It is the Ruby
 # they installed and use; do not silently switch to a different version.
+#
+# Self-guard: when this bin/ directory leads PATH (bin/master and fix-here do
+# exactly that), `command -v ruby` resolves to this shim. Probing or exec'ing
+# it here recurses into the same scan forever and every MASTER invocation
+# hangs with no output. Resolve both paths canonically; when the generic
+# candidate is this shim, drop it and let the discovery below pick a real
+# interpreter (the checkout's .tools Ruby first among them).
+SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd) || SELF_DIR=
 GENERIC_RUBY=$(command -v ruby 2>/dev/null || true)
+if [ -n "$GENERIC_RUBY" ] && [ -n "$SELF_DIR" ]; then
+  GENERIC_DIR=$(CDPATH= cd -- "$(dirname -- "$GENERIC_RUBY")" 2>/dev/null && pwd) || GENERIC_DIR=
+  if [ -n "$GENERIC_DIR" ] &&
+     [ "$GENERIC_DIR/$(basename -- "$GENERIC_RUBY")" = "$SELF_DIR/$(basename -- "$0")" ]; then
+    GENERIC_RUBY=
+  fi
+fi
 if [ -n "$GENERIC_RUBY" ]; then
   add_candidate "$GENERIC_RUBY"
   if [ "$BEST_RUBY" = "$GENERIC_RUBY" ]; then
