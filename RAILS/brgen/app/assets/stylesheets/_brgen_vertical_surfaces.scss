@@ -2964,3 +2964,47 @@ body.vertical-messenger .roster-nick {
 /* Shell polish — profile, discovery, post detail, thread summary. */
 // ---- /brgen_vertical_channel_log ----
 // ============================================================ /module: brgen_vertical_surfaces
+
+/* Restaurant owner onboarding: one readable row per weekday, with the closed
+   toggle kept beside its day rather than hidden in a separate settings panel. */
+.opening-hours-fields {
+  display: grid;
+  gap: 8px;
+  margin-block: 20px;
+  padding: 0;
+  border: 0;
+}
+
+.opening-hours-fields legend {
+  margin-block-end: 8px;
+  font-weight: var(--weight-bold);
+}
+
+.opening-hours-row {
+  display: grid;
+  grid-template-columns: minmax(6rem, 1fr) repeat(2, minmax(6rem, 0.8fr)) auto;
+  align-items: center;
+  gap: 8px;
+  padding-block: 6px;
+  border-block-end: 1px solid var(--border);
+}
+
+.opening-hours-row input[type="time"] {
+  min-width: 0;
+  min-height: var(--tap-min);
+}
+
+.opening-hours-row label {
+  font-size: var(--text-small);
+}
+
+@media (max-width: 520px) {
+  .opening-hours-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .opening-hours-day {
+    grid-column: 1 / -1;
+    font-weight: var(--weight-bold);
+  }
+}
