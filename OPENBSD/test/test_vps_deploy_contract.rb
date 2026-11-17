@@ -538,12 +538,13 @@ class VpsDeployContractTest < Minitest::Test
     refute_nil lock_block, "the lock block is gone - the scan broke, or the lock did"
     Dir.mktmpdir do |dir|
       out, status = lock_run(dir, body: "print -r -- $(<$lock_dir/owner)\nrelease_deploy_lock")
-      pid, host, epoch = out.lines.last.split
+      pid, host, epoch, identity = out.lines.last.split
 
       assert_equal 0, status
       assert_match(/\A\d+\z/, pid)
       assert_equal Socket.gethostname.split(".").first, host
       assert_in_delta Time.now.to_i, epoch.to_i, 30
+      assert_match(/\A[A-Za-z0-9_]+\z/, identity)
       refute Dir.exist?(File.join(dir, "deploy.lock")), "release left the lock behind"
     end
   end
@@ -558,6 +559,21 @@ class VpsDeployContractTest < Minitest::Test
       assert_equal 0, status
       assert_includes out, "reaping stale lock"
       assert_includes out, "owner pid 999999 is not running"
+      assert_includes out, "acquired"
+    end
+  end
+
+  def test_a_reused_pid_does_not_keep_an_abandoned_lock_alive
+    Dir.mktmpdir do |dir|
+      lock = File.join(dir, "deploy.lock")
+      Dir.mkdir(lock)
+      owner = "#{Process.pid} #{Socket.gethostname.split(".").first} #{Time.now.to_i - 9000} old_process_started_identity_123_45\n"
+      File.write(File.join(lock, "owner"), owner)
+      out, status = lock_run(dir)
+
+      assert_equal 0, status
+      assert_includes out, "process identity changed"
+      assert_includes out, "PID reused"
       assert_includes out, "acquired"
     end
   end
