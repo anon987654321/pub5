@@ -23,6 +23,18 @@ end
 # Every check in order, sorted into failures, warnings and skips. skip_reason
 # decides each skip from the needs the check declares, so vps_health off the box
 # is skipped by the same rule as any other check and never executed.
+# One check's outcome block: the failures branch is its own method so the
+# per-check walk stays a flat sequence of guard clauses (LINEARITY).
+def integrity_record_failure(check, out, report, io, label)
+  report[:failures] << check.name
+
+  io.puts "#{label} fail"
+  io.puts out unless out.strip.empty?
+  # A box-side check that cannot connect usually means a pull with no deploy.
+  warn Deploy::CheckEnvironment.post_pull_warning if
+    Array(check.needs).include?(:vps) && (out.include?("Could not connect") || out.include?("failed"))
+end
+
 def integrity_run(checks, root: INTEGRITY_ROOT, on_vps: Deploy::Environment.on_vps?, execute: RUN_CHECK, io: $stdout)
   report = { failures: [], warnings: [], skipped: [] }
   checks.each do |check|
@@ -54,14 +66,7 @@ def integrity_run(checks, root: INTEGRITY_ROOT, on_vps: Deploy::Environment.on_v
       report[:warnings] << "#{check.name}: #{out.lines.last(3).join.strip}"
       io.puts "#{label} warn"
     else
-      report[:failures] << check.name
-
-      io.puts "#{label} fail"
-      io.puts out unless out.strip.empty?
-      # A box-side check that cannot connect usually means a pull with no deploy.
-      if Array(check.needs).include?(:vps) && (out.include?("Could not connect") || out.include?("failed"))
-        warn Deploy::CheckEnvironment.post_pull_warning
-      end
+      integrity_record_failure(check, out, report, io, label)
     end
   end
 

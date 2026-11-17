@@ -144,21 +144,24 @@ module Deploy
     # The lines worth acting on, in the words of what to do about them. Returned
     # rather than printed so a check could read this too.
     def flags(rows = summary, min_runs: 5)
-      rows.filter_map do |r|
-        next if r[:runs] < min_runs
+      rows.filter_map { |r| row_flag(r, min_runs: min_runs) }
+    end
 
-        if r[:error_rate] >= 0.5
-          "#{r[:check]}: errored on #{r[:errored]}/#{r[:runs]} runs - it is failing open, " \
-            "so whatever it guards is currently unguarded"
-        elsif r[:fire_rate] >= 0.9
-          "#{r[:check]}: failed on #{r[:failed]}/#{r[:runs]} runs - either a standing unfixed " \
-            "finding or a line people have learned to skip; read it or retire it"
-        elsif r[:inconclusive] == r[:runs]
-          "#{r[:check]}: measured nothing on all #{r[:runs]} runs - its preconditions are never met here"
-        elsif doubled?(r)
-          "#{r[:check]}: #{self.class.duration(r[:earlier_ms])} -> #{self.class.duration(r[:recent_ms])} " \
-            "over the last five runs - a check that doubles becomes a check nobody runs"
-        end
+    # One row's acting-on line, or nil while the row has nothing to say yet.
+    def row_flag(r, min_runs:)
+      return if r[:runs] < min_runs
+
+      if r[:error_rate] >= 0.5
+        "#{r[:check]}: errored on #{r[:errored]}/#{r[:runs]} runs - it is failing open, " \
+          "so whatever it guards is currently unguarded"
+      elsif r[:fire_rate] >= 0.9
+        "#{r[:check]}: failed on #{r[:failed]}/#{r[:runs]} runs - either a standing unfixed " \
+          "finding or a line people have learned to skip; read it or retire it"
+      elsif r[:inconclusive] == r[:runs]
+        "#{r[:check]}: measured nothing on all #{r[:runs]} runs - its preconditions are never met here"
+      elsif doubled?(r)
+        "#{r[:check]}: #{self.class.duration(r[:earlier_ms])} -> #{self.class.duration(r[:recent_ms])} " \
+          "over the last five runs - a check that doubles becomes a check nobody runs"
       end
     end
 
