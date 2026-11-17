@@ -16,6 +16,8 @@
 .Ar run-id
 .Nm
 .Cm deploy-run-list
+.Nm
+.Cm deploy-run-pending-list
 .Sh DESCRIPTION
 .Nm
 is the root-owned broker installed at
@@ -27,9 +29,10 @@ strings and does not accept an arbitrary filesystem path as a command selector.
 .Pp
 The
 .Cm deploy-run-write ,
-.Cm deploy-run-read
-and
+.Cm deploy-run-read ,
 .Cm deploy-run-list
+and
+.Cm deploy-run-pending-list
 verbs manage fleet-level deploy receipts below
 .Pa /var/db/pub5/deploy_runs .
 The directory is root-owned and mode 0700; receipt files are root-owned and mode
@@ -38,6 +41,23 @@ The receipt binds one run ID to its target, owner process identity, pinned and
 previous commit SHAs, original running-service snapshot, app ports, restore order,
 log paths and most recent stage. Once the snapshot is recorded, its service set,
 ports, restore order and SHAs cannot be changed.
+.Pp
+.Cm deploy-run-pending-list
+is the bounded monitoring view. It returns up to 500 newest matching receipt
+files and at most 100 pending records in a JSON object containing
+.Cm pending ,
+.Cm scanned ,
+.Cm returned
+and
+.Cm truncated .
+A true
+.Cm truncated
+value means the monitor did not inspect the complete receipt history; an empty
+.Cm pending
+array in that response is not proof that no older pending receipt exists.
+The full
+.Cm deploy-run-list
+verb remains available to the explicit operator recovery plan.
 .Pp
 The broker requires effective root privileges through the reviewed
 .Xr doas 1
