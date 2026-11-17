@@ -340,7 +340,10 @@ module Pub4Admin
 
     base = File.expand_path(root)
     directory = deploy_status_read_directory(base, verify_root)
-    return output.puts("null") && 0 unless directory
+    unless directory
+      output.puts("null")
+      return 0
+    end
 
     path = File.join(directory, "#{app}.json")
     record = deploy_status_read_record(path, app, verify_root)
