@@ -147,13 +147,18 @@ module Master
       end
 
       def test_falsify_holds_its_thesis_on_fixture_traffic
-        out, = capture_io { Falsify.run_experiment }
-        reading = out.match(/\{.*\}/m) ? JSON.parse(out[/\{.*\}/m])["reading"] : nil
-        assert reading, "a falsify run must append one instrument reading"
-        assert_equal 1.0, reading["governed"]["held_quality"],
-                     "the governed lane must hold every seeded defect; an escape is the falsification"
-        assert_operator reading["ungoverned"]["defect_survival"], :>, 0.5,
-                        "the ungoverned lane must let most seeded defects survive, or the experiment proves nothing"
+        readings_backup = File.read(File.join(master_root, "data", "falsification", "readings.jsonl"))
+        begin
+          out, = capture_io { Falsify.run_experiment }
+          reading = out.match(/\{.*\}/m) ? JSON.parse(out[/\{.*\}/m])["reading"] : nil
+          assert reading, "a falsify run must append one instrument reading"
+          assert_equal 1.0, reading["governed"]["held_quality"],
+                       "the governed lane must hold every seeded defect; an escape is the falsification"
+          assert_operator reading["ungoverned"]["defect_survival"], :>, 0.5,
+                          "the ungoverned lane must let most seeded defects survive, or the experiment proves nothing"
+        ensure
+          File.write(File.join(master_root, "data", "falsification", "readings.jsonl"), readings_backup)
+        end
       end
 
       def test_coverage_greens_carry_revision_and_timestamp
@@ -184,16 +189,19 @@ module Master
       end
 
       def test_reconcile_opens_scoped_missions_for_gate_failures
-        out, = capture_io { Reconcile.check }
-        # The reconcile run nests a full fast gate; its own payload is the
-        # last JSON object printed, keyed by its command.
-        payload_text = out[/\{\s*"command": "reconcile check".*\z/m]
-        payload = JSON.parse(payload_text) if payload_text
-        if payload.nil? || payload["drift_count"].to_i.positive?
-          assert File.file?(File.join(master_root, "data", "reconcile", "missions.jsonl")),
-                 "a drift opens a mission where the next session reads it, or there was no drift to open"
-        else
-          assert_equal 0, payload["missions_opened"].to_i, "no drift, no mission"
+        missions_backup = File.read(File.join(master_root, "data", "reconcile", "missions.jsonl"))
+        begin
+          out, = capture_io { Reconcile.check }
+          payload_text = out[/\{\s*"command": "reconcile check".*\z/m]
+          payload = JSON.parse(payload_text) if payload_text
+          if payload.nil? || payload["drift_count"].to_i.positive?
+            assert File.file?(File.join(master_root, "data", "reconcile", "missions.jsonl")),
+                   "a drift opens a mission where the next session reads it, or there was no drift to open"
+          else
+            assert_equal 0, payload["missions_opened"].to_i, "no drift, no mission"
+          end
+        ensure
+          File.write(File.join(master_root, "data", "reconcile", "missions.jsonl"), missions_backup)
         end
       end
 
@@ -212,7 +220,11 @@ module Master
       end
 
       def test_court_awaits_the_operator_and_records_the_ruling
-        Dir.mktmpdir do |dir|
+        # The court writes real ledgers; the suite borrows them and puts them
+        # back byte for byte, so a test ruling never becomes precedent law.
+        ledger_backup = File.read(File.join(master_root, "data", "precedents.yml"))
+        cases_backup = Dir.glob(File.join(master_root, "data", "court", "*.yml")).to_h { |f| [f, File.read(f)] }
+        begin
           out, = capture_io do
             Court.open_case(["SMALL_FILES", "--against", "NO_PUTS",
                              "--question", "the split a size law proposes would move puts into new files"])
@@ -229,6 +241,9 @@ module Master
                         "--rationale", "test collision: the move is real and the puts are interface"])
           end
           assert_includes out, "precedent_recorded", "a ruled collision becomes a precedent with a citation"
+        ensure
+          File.write(File.join(master_root, "data", "precedents.yml"), ledger_backup)
+          (Dir.glob(File.join(master_root, "data", "court", "*.yml")) - cases_backup.keys).each { |f| File.delete(f) }
         end
       end
 
