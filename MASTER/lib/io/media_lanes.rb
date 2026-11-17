@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "date"
 require "digest"
 require "fileutils"
 require "json"
@@ -79,12 +80,12 @@ module Master
       def configured?(kind, env: ENV) = lanes(kind).any? { |lane| key_for(lane.provider, env:) }
 
       # The lanes that can be asked now, in selection order, and why the rest cannot.
-      def evaluate(kind, prompt = "", env: ENV, seconds: nil, skip: [])
+      def evaluate(kind, prompt = "", env: ENV, seconds: nil, skip: [], input: {})
         live = []
         out = []
         lanes(kind).each do |lane|
           reason = unavailable(lane, env, skip)
-          cost = estimate(lane, prompt, seconds:)
+          cost = estimate(lane, prompt, seconds:, input:)
           reason ||= over(kind, cost)
           reason ? out << [lane, reason] : live << [lane, cost]
         end
@@ -123,7 +124,7 @@ module Master
       def attempt(kind, prompt, digest, dir, env, opts)
         tried = []
         loop do
-          live, skipped = evaluate(kind, prompt, env:, seconds: opts[:seconds], skip: tried)
+          live, skipped = evaluate(kind, prompt, env:, seconds: opts[:seconds], input: opts.fetch(:input, {}), skip: tried)
           skipped.each { |lane, why| say("skip #{lane.id}: #{why}") unless tried.any? || why.start_with?("no key") }
           lane, cost = live.first
           return stuck(kind, skipped, tried) unless lane
@@ -182,9 +183,19 @@ module Master
       def free?(lane) = lane.row["free"] == true || lane.model.end_with?(":free")
 
       # Catalog price first (tokens at the row's price_id), else the data's flat figure.
-      def estimate(lane, prompt, seconds: nil)
+      def estimate(lane, prompt, seconds: nil, input: {}, today: Date.today)
         row = lane.row
-        return Float(row["usd_per_second"]) * (seconds || config["video_seconds"]) if row["usd_per_second"]
+        if row["usd_per_second"]
+          billed_seconds = Float(seconds || config["video_seconds"])
+          references = input["reference_video_urls"] || input[:reference_video_urls]
+          if lane.provider == "replicate" && lane.model.start_with?("minimax/") && !Array(references).empty?
+            # Replicate bills reference video too. Their documented combined
+            # reference-video limit is 15 seconds; reserve the full amount when
+            # callers supply URLs but do not give us each source's duration.
+            billed_seconds += 15.0
+          end
+          return media_per_second_rate(row, today:) * billed_seconds
+        end
         return 0.0 if free?(lane)
 
         price = catalog[row["price_id"] || (lane.provider == "openrouter" ? lane.model : nil)]
