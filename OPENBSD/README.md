@@ -62,16 +62,20 @@ different copy-tree layout.
 
 ## Privilege boundary
 
-`OPENBSD/mirror/usr/local/sbin/pub4-admin` is the fixed-path root broker. It exposes
-allowlisted service actions, atomic deploy receipts/secrets, a fixed CI lock, and
-bounded Rails/CI task and sync verbs. CI and production Rails tree replacement run
-with the selected app account; the CI runner has a wall-clock process-group deadline.
-The deploy adapter verifies root-owned rc.d files rather than installing from the
-checkout, and relay route verification is read-only. The progress records in
-`/var/db/pub4/deploy_status` stay root-only; `vps-state` reads them through the
-allowlisted `doas -n pub4-admin deploy-status-read <app>` verb. Missing status is
-JSON `null`; unreadable or malformed status is reported as corrupt rather than
-silently shown as no deploy.
+`OPENBSD/mirror/usr/local/sbin/pub5-admin` is the fixed-path root broker for the
+current deploy path. It exposes allowlisted service actions, atomic deploy
+status/run receipts and secrets, a fixed CI lock, and bounded Rails/CI task and
+sync verbs. CI and production Rails tree replacement run with the selected app
+account; the CI runner has a wall-clock process-group deadline. The deploy adapter
+verifies root-owned rc.d files rather than installing from the checkout, and relay
+route verification is read-only. Per-app progress records in
+`/var/db/pub5/deploy_status` and fleet recovery receipts in
+`/var/db/pub5/deploy_runs` stay root-only; `vps-state` reads per-app progress
+through the allowlisted `doas -n pub5-admin deploy-status-read <app>` verb. Missing
+status is JSON `null`; unreadable or malformed status is reported as corrupt
+rather than silently shown as no deploy. Fleet receipts bind the pinned SHA and
+original service snapshot to one run ID; explicit `vps-deploy recover` commands
+can restore that snapshot after an uncatchable process or host interruption.
 
 The Bundler content-addressed cache now uses fixed broker verbs, a bounded Ruby-version
 key and immutable SHA-256 objects; the app copies cache objects rather than sharing
