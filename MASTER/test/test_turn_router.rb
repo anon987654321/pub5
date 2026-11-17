@@ -158,7 +158,7 @@ class TurnRouterTest < Minitest::Test
         Master::Result.ok({ rendered: "captured" })
       }) do
         Master::CLI::TurnRouter.call(
-          message: "Deploy OPENBSD, RAILS and MASTER/web to vm23",
+          message: "Redeploy OPENBSD, RAILS apps and MASTER web to vm23",
           container: build_container,
         )
       end
@@ -198,10 +198,12 @@ class TurnRouterTest < Minitest::Test
   def test_full_stack_direct_confirmation_requires_explicit_vm23_destination
     intent = Master::CLI::OperatorIntent
     assert intent.direct_full_stack_confirmation?("Redeploy OPENBSD, RAILS and MASTER/web to vm23")
-    refute intent.direct_full_stack_confirmation?("Redeploy OPENBSD, RAILS and MASTER/web")
-    refute intent.direct_full_stack_confirmation?("Redeploy OPENBSD, RAILS and MASTER/web to staging")
-    refute intent.direct_full_stack_confirmation?("Redeploy OPENBSD, RAILS and MASTER/web to production")
-    refute intent.direct_full_stack_confirmation?("Prepare a deployment plan for OPENBSD, RAILS and MASTER/web to vm23")
+    assert intent.direct_full_stack_confirmation?("Redeploy OPENBSD, RAILS apps and MASTER web to vm23")
+    refute intent.direct_full_stack_confirmation?("Redeploy OPENBSD, RAILS apps and MASTER web")
+    refute intent.direct_full_stack_confirmation?("Redeploy OPENBSD, RAILS apps and MASTER web to staging")
+    refute intent.direct_full_stack_confirmation?("Redeploy OPENBSD, RAILS apps and MASTER web to production")
+    refute intent.direct_full_stack_confirmation?("Redeploy everything except MASTER/web on vm23")
+    refute intent.direct_full_stack_confirmation?("Prepare a deployment plan for OPENBSD, RAILS apps and MASTER web to vm23")
   end
 
   def test_semantic_operator_routing_preserves_only_explicit_confirmation
