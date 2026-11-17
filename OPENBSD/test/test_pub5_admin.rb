@@ -618,6 +618,35 @@ class Pub5AdminTest < Minitest::Test
     end
   end
 
+  def test_pending_deploy_run_list_caps_pending_records_and_keeps_newest
+    Dir.mktmpdir("pub5-admin-run-") do |root|
+      run_ids = [
+        "20261117T010010Z-all-12370",
+        "20261117T010011Z-all-12371",
+        "20261117T010012Z-all-12372",
+      ]
+      run_ids.each_with_index do |run_id, index|
+        payload = deploy_run_payload(run_id).merge(
+          "pid" => 12_370 + index,
+          "status" => "failed",
+          "recovery_state" => "pending",
+        )
+        ADMIN.write_deploy_run(run_id, JSON.generate(payload),
+                               root:, verify_root: false, output: StringIO.new)
+      end
+
+      output = StringIO.new
+      assert_equal 0, ADMIN.list_pending_deploy_runs(
+        root:, verify_root: false, max_scan: 10, max_pending: 2, output:
+      )
+      response = JSON.parse(output.string)
+      assert_equal true, response.fetch("truncated")
+      assert_equal 3, response.fetch("scanned")
+      assert_equal 2, response.fetch("returned")
+      assert_equal run_ids.last(2), response.fetch("pending").map { |row| row.fetch("run_id") }
+    end
+  end
+
   def test_pending_deploy_run_list_reports_empty_without_truncation
     Dir.mktmpdir("pub5-admin-run-") do |root|
       output = StringIO.new
