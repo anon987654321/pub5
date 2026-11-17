@@ -2,7 +2,7 @@
 
 require_relative "test_helper"
 # The MASTER runtime loads its own copy (lib/operator/domain_signals.rb) so no
-# MASTER/lib file requires a sibling tree's implementation; OPENBSD/mirror/lib keeps
+# MASTER/lib file requires a sibling tree's implementation; OPENBSD/lib keeps
 # the canonical original and the parity test below holds the two identical.
 require_relative "../lib/operator/domain_signals"
 
