@@ -198,6 +198,15 @@ module Master
       hosted = ids.lazy.map { |id| hosted_lane_reachable?(id) }.find { |verdict| !verdict.nil? }
       return hosted unless hosted.nil?
 
+      # A selected model is reachable only through the credential that serves
+      # its provider. An unrelated OpenRouter key must not make a direct Anthropic,
+      # Gemini, Z.ai or Replicate lane look configured.
+      keyed = ids.lazy.map do |id|
+        envs = Master::Io::LaneSelection.api_key_envs_for(id)
+        envs&.any? { |env_var| api_key_present?(env_var) }
+      end.find { |verdict| !verdict.nil? }
+      return keyed unless keyed.nil?
+
       any_api_key_present?
     end
 
