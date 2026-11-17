@@ -27,6 +27,21 @@ module Master
         include Base
 
         def run(argv)
+          options = parse_options(argv)
+          path = argv.shift
+          validate_path!(path)
+
+          corpus = load_corpus(options[:corpus])
+          files = discover(path)
+          validate_files!(path, files)
+
+          findings, elapsed = scan_files(corpus, files, options[:laws])
+          output = result_payload(path, options, corpus, files, findings, elapsed)
+          emit_results(output, options[:format], path, corpus, files, findings, elapsed)
+          findings.empty? ? 0 : 1
+        end
+
+        def parse_options(argv)
           options = { format: "json", corpus: DEFAULT_CORPUS, laws: nil }
           parser = OptionParser.new do |opts|
             opts.banner = "usage: bin/master scan --bare PATH [--laws ID,ID2] [--json|--text] [--corpus NAME]"
@@ -38,20 +53,32 @@ module Master
             opts.on("--json", "JSON (default)") { options[:format] = "json" }
           end
           parser.parse!(argv)
-          path = argv.shift
+          options
+        end
+
+        def validate_path!(path)
+          return unless path.nil?
+
           refuse("scan --bare", "no PATH given",
-                 "a file or directory to judge, e.g. bin/master scan --bare lib/agent") if path.nil?
+                 "a file or directory to judge, e.g. bin/master scan --bare lib/agent")
+        end
 
-          corpus = load_corpus(options[:corpus])
-          files = discover(path)
+        def validate_files!(path, files)
+          return unless files.empty?
+
           refuse("scan --bare", "PATH #{path} matches no readable file",
-                 "an existing file or directory under the checkout") if files.empty?
+                 "an existing file or directory under the checkout")
+        end
 
+        def scan_files(corpus, files, laws)
           started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-          findings = files.flat_map { |file| corpus.scan_file(file, only: options[:laws]) }
+          findings = files.flat_map { |file| corpus.scan_file(file, only: laws) }
           elapsed = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started).round(3)
+          [findings, elapsed]
+        end
 
-          payload = {
+        def result_payload(path, options, corpus, files, findings, elapsed)
+          {
             command: "scan --bare",
             path:,
             corpus: options[:corpus],
@@ -65,13 +92,13 @@ module Master
             elapsed_s: elapsed,
             note: "lexical corpus only; semantic and visual proof stay deferred until requested",
           }
-          if options[:format] == "text"
-            findings.each { |f| puts "#{f[:file] || path}:#{f[:law]}:#{f[:line]} #{f[:message]}" }
-            puts "#{findings.size} findings over #{files.size} files, #{corpus.laws.keys.size} laws, #{elapsed}s"
-          else
-            emit(payload)
-          end
-          findings.empty? ? 0 : 1
+        end
+
+        def emit_results(payload, format, path, corpus, files, findings, elapsed)
+          return emit(payload) unless format == "text"
+
+          findings.each { |f| puts "#{f[:file] || path}:#{f[:law]}:#{f[:line]} #{f[:message]}" }
+          puts "#{findings.size} findings over #{files.size} files, #{corpus.laws.keys.size} laws, #{elapsed}s"
         end
 
         def load_corpus(stem)
