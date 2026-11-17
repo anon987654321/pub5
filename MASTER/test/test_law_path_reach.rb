@@ -58,7 +58,7 @@ class TestLawPathReach < Minitest::Test
 
     MIGRATION_REMOVE_COLUMN: [MIGRATION, MODEL],
     NO_SILENT_TEST_SKIP: ["MASTER/test/test_thing.rb", "MASTER/lib/thing.rb"],
-    OPENBSD_DMESG_CONSOLE_STYLE: ["MASTER/lib/cli/session/repl_io.rb", "MASTER/lib/core/world.rb"],
+    OPENBSD_DMESG_CONSOLE_STYLE: ["MASTER/lib/cli/session/repl_io.rb", "RAILS/brgen/app/models/thing.rb"],
     PAPER_NOT_PURE_WHITE: ["RAILS/mrdamascy/app/assets/stylesheets/a.css", "RAILS/brgen/app/assets/stylesheets/a.css"],
     PARAMETRIC_MARK_ONLY: ["RAILS/mrdamascy/app/assets/stylesheets/a.css", "RAILS/brgen/app/assets/stylesheets/a.css"],
     SIGNAL_COLOR_NAMING: ["RAILS/mrdamascy/app/assets/stylesheets/a.css", "RAILS/brgen/app/assets/stylesheets/a.css"],
@@ -99,7 +99,7 @@ class TestLawPathReach < Minitest::Test
     end
   end
 
-  def test_openbsd_cli_laws_cover_the_full_operator_path
+  def test_openbsd_output_law_covers_all_master_runtime_surfaces
     scopes = {
       OPENBSD_DMESG_CONSOLE_STYLE: %w[
         MASTER/bin/master
