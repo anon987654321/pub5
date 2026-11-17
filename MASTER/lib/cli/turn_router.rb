@@ -451,8 +451,27 @@ module Master
         CONVERGENCE_SLASH[name] || FIX_PIN_SLASH[name]
       end
 
+      # Production is a serving environment, never a repair workstation. Detect
+      # vm23 independently of the interactive shell's environment: /etc/master.env
+      # and the fixed production checkout are both provisioned only on that host.
+      def production_host?
+        return true if ENV["PUB5_PRODUCTION_HOST"] == "1"
+        return false unless RUBY_PLATFORM.match?(/openbsd/i)
+
+        File.file?("/etc/master.env") && File.directory?("/home/dev/pub5/MASTER")
+      rescue SystemCallError
+        false
+      end
+
       def dispatch_slash(input, container:, felt_sense: nil, on_turn: nil, cancellation: nil)
-        name, rest = input.sub(%r{\A/}, "").split(/\s+/, 2)
+        input = rewrite_slash(input)
+        name, rest = input.sub(%r{\\A/}, "").split(/\\s+/, 2)
+        if name.to_s.downcase == "fix" && production_host?
+          return Master::Result.err(
+            "/fix is disabled on production vm23. Run repairs, scans and tests on the development workstation; deploy only a reviewed release.",
+            category: :policy,
+          )
+        end
         return run_fold(rest.to_s, container:, on_turn:, cancellation:) if FOLD_SLASH.include?(name.to_s.downcase)
 
         ctx = PipelineContext.wrap(user_message: input, felt_sense:)
