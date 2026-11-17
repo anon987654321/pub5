@@ -346,7 +346,7 @@ module Master
 
       def validate_media_lane(kind, row, index, providers, errors)
         label = "models.yml media_lanes.#{kind}[#{index}]"
-        strict_fields(row, %w[provider model price_id usd_per_call usd_per_second image_tokens], label, errors)
+        strict_fields(row, %w[provider model price_id usd_per_call usd_per_second image_tokens resolution promotion], label, errors)
         return unless row.is_a?(Hash)
 
         valid_provider = row["provider"].is_a?(String) && providers.key?(row["provider"])
@@ -354,10 +354,42 @@ module Master
         errors << "#{label}.model must be non-empty text" unless row["model"].is_a?(String) && !row["model"].empty?
         validate_media_lane_price_id(row, label, errors)
         validate_media_lane_costs(row, label, errors)
+        validate_media_lane_resolution(row, label, errors)
+        validate_media_lane_promotion(row, label, errors)
         if row.key?("image_tokens")
           valid_tokens = row["image_tokens"].is_a?(Integer) && row["image_tokens"].positive?
           errors << "#{label}.image_tokens must be a positive integer" unless valid_tokens
         end
+      end
+
+      def validate_media_lane_resolution(row, label, errors)
+        return unless row.key?("resolution")
+
+        errors << "#{label}.resolution must be 480P or 768P" unless %w[480P 768P].include?(row["resolution"])
+      end
+
+      def validate_media_lane_promotion(row, label, errors)
+        return unless row.key?("promotion")
+
+        promotion = row["promotion"]
+        strict_fields(promotion, %w[usd_per_second until], "#{label}.promotion", errors)
+        return unless promotion.is_a?(Hash)
+
+        rate = promotion["usd_per_second"]
+        base = row["usd_per_second"]
+        errors << "#{label}.promotion.usd_per_second must be positive and below the list rate" unless
+          rate.is_a?(Numeric) && rate.positive? && base.is_a?(Numeric) && rate < base
+        expiry = promotion["until"]
+        valid_date = expiry.is_a?(String) && expiry.match?(/\A\d{4}-\d{2}-\d{2}\z/)
+        if valid_date
+          begin
+            require "date"
+            Date.iso8601(expiry)
+          rescue Date::Error
+            valid_date = false
+          end
+        end
+        errors << "#{label}.promotion.until must be a YYYY-MM-DD date" unless valid_date
       end
 
       def validate_media_lane_price_id(row, label, errors)
