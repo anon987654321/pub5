@@ -54,15 +54,33 @@ class Takeaway::RestaurantsController < Takeaway::BaseController
     render :new, status: :unprocessable_entity
   end
 
-  def edit; end
+  def edit
+    @opening_hours = @restaurant.opening_hours.index_by(&:weekday)
+  end
 
   def update
-    if @restaurant.update(restaurant_params)
+    was_active = @restaurant.active?
+    ActiveRecord::Base.transaction do
+      @restaurant.update!(restaurant_params)
+      save_opening_hours! if params.key?(:opening_hours)
+      if !was_active && @restaurant.active?
+        unless @restaurant.menu_items.available.exists? && @restaurant.opening_hours.exists?
+          @restaurant.errors.add(:base, t("takeaway.publish_needs_menu_and_hours"))
+          raise ActiveRecord::RecordInvalid, @restaurant
+        end
+      end
       @restaurant.marketplace_store&.update!(active: @restaurant.active?)
-      redirect_to restaurant_path(@restaurant)
-    else
-      render :edit, status: :unprocessable_entity
     end
+    redirect_to restaurant_path(@restaurant)
+  rescue ActiveRecord::RecordInvalid => error
+    @restaurant = error.record if error.record.is_a?(Takeaway::Restaurant)
+    @opening_hours_error = error.message
+    @opening_hours = @restaurant.opening_hours.index_by(&:weekday)
+    render :edit, status: :unprocessable_entity
+  rescue ArgumentError => error
+    @opening_hours_error = error.message
+    @opening_hours = @restaurant.opening_hours.index_by(&:weekday)
+    render :edit, status: :unprocessable_entity
   end
 
   def destroy
@@ -95,6 +113,34 @@ class Takeaway::RestaurantsController < Takeaway::BaseController
   def load_marketplace_store
     store_id = params[:marketplace_store_id].presence
     @marketplace_store = Current.user.marketplace_stores.find_by!(id: store_id, vertical: "restaurants") if store_id
+  end
+
+  def save_opening_hours!
+    submitted = params.require(:opening_hours).permit!.to_h
+    7.times do |weekday|
+      row = submitted.fetch(weekday.to_s, {})
+      hour = @restaurant.opening_hours.find_or_initialize_by(weekday:)
+      opens_at = row["opens_at"].to_s
+      closes_at = row["closes_at"].to_s
+
+      if ActiveModel::Type::Boolean.new.cast(row["closed"]) || (opens_at.blank? && closes_at.blank?)
+        hour.destroy! if hour.persisted?
+        next
+      end
+
+      opens_minute = minute_from_time!(opens_at)
+      closes_minute = minute_from_time!(closes_at)
+      closes_minute += Takeaway::OpeningHour::DAY_MINUTES if closes_minute <= opens_minute
+      hour.assign_attributes(opens_minute:, closes_minute:)
+      hour.save!
+    end
+  end
+
+  def minute_from_time!(value)
+    match = value.match(/\\A([01]\\d|2[0-3]):([0-5]\\d)\\z/)
+    raise ArgumentError, t("takeaway.opening_hours_invalid_time") unless match
+
+    match[1].to_i * 60 + match[2].to_i
   end
 
   def authorize_owner!
