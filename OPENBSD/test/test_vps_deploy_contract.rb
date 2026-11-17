@@ -1094,6 +1094,8 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes recovery, "deploy-run-list"
     assert_includes recovery, "deploy-run-read"
     assert_includes recovery, "lock_process_identity"
+    assert_includes SOURCE, "def other_deploy_processes"
+    assert_includes SOURCE, "pgrep -f 'OPENBSD/bin/vps-deploy'"
     assert_includes recovery, "LIVE"
     assert_includes recovery, "AMBIGUOUS"
     assert_includes recovery, "RECOVERY AVAILABLE"
@@ -1109,6 +1111,8 @@ class VpsDeployContractTest < Minitest::Test
     refute_nil recovery
     assert_includes SOURCE, "unset VPS_DEPLOY_STARTED VPS_DEPLOY_LOCK_HELD"
     assert_includes SOURCE, "VPS_DEPLOY_RESTORE_PORTS_FROM_RECEIPT=1"
+    assert_includes SOURCE, "ORDER) DEPLOY_ALL_DEGRADED=(${=one})"
+    refute_includes SOURCE, "ORDER) DEPLOY_ALL_DEGRADED=(${@=one})"
     assert_includes SOURCE, 'if [[ ${VPS_DEPLOY_RESTORE_PORTS_FROM_RECEIPT:-0} != 1 ]]; then'
     assert_includes SOURCE, '[[ $owner_host == "$(hostname -s)" ]]'
     assert_includes recovery, "snapshot_recorded"
