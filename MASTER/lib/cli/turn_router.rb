@@ -465,7 +465,7 @@ module Master
 
       def dispatch_slash(input, container:, felt_sense: nil, on_turn: nil, cancellation: nil)
         input = rewrite_slash(input)
-        name, rest = input.sub(%r{\\A/}, "").split(/\\s+/, 2)
+        name, rest = input.sub(%r{\A/}, "").split(/\s+/, 2)
         if name.to_s.downcase == "fix" && production_host?
           return Master::Result.err(
             "/fix is disabled on production vm23. Run repairs, scans and tests on the development workstation; deploy only a reviewed release.",
