@@ -544,7 +544,7 @@ class VpsDeployContractTest < Minitest::Test
   end
 
   def lock_block
-    SOURCE[/^lock_dir=.*?^\[\[ -n \$\{VPS_DEPLOY_LOCK_HELD:-\} \]\] \|\| acquire_deploy_lock$/m]
+    SOURCE[/^lock_dir=.*?(?=^# Durable deploy logging\.)/m]
   end
 
   # Runs the lock block alone in zsh against a scratch directory; returns [output, exit status].
@@ -565,6 +565,22 @@ class VpsDeployContractTest < Minitest::Test
     normalized_start = started.strip.gsub(/[^A-Za-z0-9]/, "_")
     normalized_checksum = checksum.split.join("_")
     "#{normalized_start}_#{normalized_checksum}"
+  end
+
+  def test_inherited_child_flag_cannot_bypass_parent_lock_identity
+    refute_nil lock_block
+    assert_includes lock_block, "lock_read_owner ||"
+    assert_includes lock_block, "VPS_DEPLOY_LOCK_PID"
+    assert_includes lock_block, "VPS_DEPLOY_LOCK_IDENTITY"
+    assert_includes lock_block, "current_identity == \"$lock_identity\""
+
+    Dir.mktmpdir do |dir|
+      script = "export VPS_DEPLOY_LOCK_DIR=#{dir}/deploy.lock VPS_DEPLOY_LOCK_HELD=1\\n#{lock_block}\\nprint acquired\\n"
+      out = IO.popen(["zsh", "-c", script, { err: %i[child out] }], &:read)
+      refute_equal 0, $?.exitstatus
+      assert_includes out, "child invocation has no readable parent lock owner"
+      refute_includes out, "acquired"
+    end
   end
 
   def test_a_lock_records_its_owner_and_is_released_on_exit
