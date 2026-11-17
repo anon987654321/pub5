@@ -33,6 +33,18 @@ class TestTraceSupport < Minitest::Test
   # A chat turn that set off a background self-scan printed 2,657 per-file
   # scan and hook lines ahead of a one-line reply. Verbose shows the work;
   # only trace shows each file of it.
+  def test_normal_turn_hides_model_and_cache_telemetry_but_keeps_faults
+    Fiber[:master_unit] = "master0"
+    Master::Trace::Dmesg.with_verbosity("normal") do
+      assert Master::Trace::Dmesg.quiet_in_turn?("model0: cost")
+      assert Master::Trace::Dmesg.quiet_in_turn?("cache0: write")
+      assert Master::Trace::Dmesg.quiet_in_turn?("llm0: cost transparency")
+      refute Master::Trace::Dmesg.quiet_in_turn?("react0: malformed_tool_call")
+    end
+  ensure
+    Fiber[:master_unit] = nil
+  end
+
   def test_verbose_hides_per_file_churn_that_trace_shows
     console = Master::Trace::Dmesg::Console.new
     churn = [{ event: "scan:pass", path: "lib/a.rb" }, { event: "hook:on_violation_found", path: "lib/a.rb", count: 2 },
