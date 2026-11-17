@@ -99,6 +99,13 @@ class TestMediaLanes < Minitest::Test
       :estimate, fast, "", input: { "duration" => 15, "reference_video_urls" => ["https://example.test/ref.mp4"] },
       today: Date.new(2026, 11, 17)
     ), 0.001
+    assert_raises(ArgumentError) do
+      Lanes.send(:estimate, fast, "", input: { "duration" => 2 }, today: Date.new(2026, 11, 17))
+    end
+    assert_raises(ArgumentError) do
+      Lanes.send(:estimate, fast, "", input: { "duration" => 8, "reference_video_urls" => %w[a b c d] },
+                 today: Date.new(2026, 11, 17))
+    end
     assert_in_delta 0.69, Lanes.send(
       :estimate, fast, "", seconds: 8,
       input: { "reference_video_urls" => ["https://example.test/ref.mp4"] },
