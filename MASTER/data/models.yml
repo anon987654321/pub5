@@ -264,13 +264,14 @@ models:
     - *ollama_gemma
     - *llama_cli_gguf
   primary:
-    # Replicate GPT-5.2 is the operator's current automatic primary. Claude
-    # Opus 5.5 is its premium reasoning fallback; model and spend policy live
-    # in this catalogue, not in a saved shell-specific preference.
-    - *replicate_gpt_5_2
-    - *replicate_claude_opus_5_5
+    # Session-scoped reroute (operator request, 2026-11-17): glm-5.3-flash is
+    # the primary #1 model for this session, including the mainbus boot model
+    # and every /fix-serving tier (default/strong/fast lead with it too).
+    # Revert this commit to restore the replicate-first ordering.
     - *glm_5_3_flash
     - *zai_cli_auto
+    - *replicate_gpt_5_2
+    - *replicate_claude_opus_5_5
     - *glm_5_3
     - *sandbox_gateway
     - *deepseek_reasoner
