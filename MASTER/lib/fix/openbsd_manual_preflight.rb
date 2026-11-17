@@ -294,6 +294,65 @@ module Master
         nil
       end
 
+      # Full-stack production deployment consumes the mirror as a release
+      # payload. Inventory every tracked config/data interface in etc/ and
+      # the NSD tree; never treat a partial task receipt as release-wide proof.
+      def mirror_configuration_inventory(root: Master::REPO_ROOT)
+        output = IO.popen(
+          ["git", "-C", root, "ls-files", "-z", "--", "OPENBSD/mirror/etc", "OPENBSD/mirror/var/nsd"],
+          "rb",
+          &:read
+        )
+        status = $CHILD_STATUS
+        unless status&.success?
+          raise TaskContract::Invalid, "cannot enumerate tracked OpenBSD mirror configuration paths"
+        end
+
+        output.to_s.split("\0").filter_map do |relative|
+          next unless relative.start_with?("OPENBSD/mirror/etc/", "OPENBSD/mirror/var/nsd/")
+          absolute = File.join(root, relative)
+          next unless File.file?(absolute)
+
+          { "path" => relative, "manuals" => required_path_manuals(relative) }
+        end
+      rescue SystemCallError => error
+        raise TaskContract::Invalid, "cannot enumerate OpenBSD mirror configuration paths: #{error.class}"
+      end
+
+      def mirror_configuration_refusal(preflight, root: Master::REPO_ROOT)
+        inventory = mirror_configuration_inventory(root:)
+        reads = Array(preflight.fetch("source_reads")).map { |row| row.fetch("path") }
+        declared = Array(preflight.fetch("native_interfaces"))
+
+        inventory.each do |entry|
+          path = entry.fetch("path")
+          manuals = entry.fetch("manuals")
+          if manuals.nil?
+            return "RTFM_FIRST has no reviewed manual/schema map for mirror configuration #{path}; identify its format, owning daemon/tool and validator"
+          end
+          unless reads.include?(path)
+            return "RTFM_FIRST requires a complete source-read receipt for mirror configuration #{path}"
+          end
+
+          missing = manuals - declared
+          unless missing.empty?
+            return "RTFM_FIRST mirror configuration #{path} lacks exact-release manual receipt(s): #{missing.join(', ')}"
+          end
+        end
+        nil
+      rescue TaskContract::Invalid => error
+        "RTFM_FIRST blocked: #{error.message}"
+      end
+
+      def full_vps_deploy_command?(tokens)
+        values = Array(tokens).map(&:to_s)
+        values.each_cons(2).any? do |executable, target|
+          File.basename(executable) == "vps-deploy" && target == "all"
+        end || values.each_cons(5).any? do |a, b, c, d, target|
+          File.basename(a) == "operator" && b == "vps" && c == "deploy" && d == "all" && target == "--remote"
+        end
+      end
+
       def source_staleness(preflight, root: Master::REPO_ROOT)
         Array(preflight.fetch("source_reads")).each do |row|
           actual = repository_content_digest(row.fetch("path"), nil, root:)
@@ -477,6 +536,10 @@ module Master
         return missing_service_sources.first unless missing_service_sources.empty?
         missing_openbsd_sources = source_read_refusals(openbsd_sources, preflight, root: repo_root)
         return missing_openbsd_sources.first unless missing_openbsd_sources.empty?
+        if remote && full_vps_deploy_command?(tokens)
+          mirror_refusal = mirror_configuration_refusal(preflight, root: repo_root)
+          return mirror_refusal if mirror_refusal
+        end
         source_staleness(preflight, root: repo_root)
       rescue ArgumentError => error
         "RTFM_FIRST cannot parse operation argv for manual preflight: #{error.message}"

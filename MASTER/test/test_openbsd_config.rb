@@ -37,6 +37,26 @@ class TestOpenbsdConfig < Minitest::Test
     assert_empty @validator.validate("unknown.conf", "anything")
   end
 
+  def test_full_stack_manual_inventory_covers_tracked_configuration_and_nsd_files
+    inventory = Master::Fix::OpenBSDManualPreflight.mirror_configuration_inventory(root: Master::ROOT)
+    paths = inventory.map { |entry| entry.fetch("path") }
+
+    assert_includes paths, "OPENBSD/mirror/etc/relayd.conf"
+    assert_includes paths, "OPENBSD/mirror/etc/rc.conf.local"
+    assert_includes paths, "OPENBSD/mirror/var/nsd/etc/nsd.conf"
+    assert(paths.any? { |path| path.end_with?(".zone") })
+  end
+
+  def test_full_stack_manual_gate_requires_every_mirror_configuration_source_read
+    preflight = { "source_reads" => [], "native_interfaces" => [] }
+    refusal = Master::Fix::OpenBSDManualPreflight.mirror_configuration_refusal(
+      preflight,
+      root: Master::ROOT
+    )
+
+    assert_match(/complete source-read receipt for mirror configuration/, refusal)
+  end
+
   def test_validate_file_rejects_unknown_basename
     result = @validator.validate_file("/etc/nginx.conf")
     assert result.err?
