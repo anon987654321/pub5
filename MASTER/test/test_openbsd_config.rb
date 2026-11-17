@@ -115,6 +115,9 @@ class TestOpenbsdConfig < Minitest::Test
     refute preflight.manual_receipt_valid?(receipt, "pfctl(8)", release: "7.7")
     refute preflight.manual_receipt_valid?(receipt.merge("sha256" => "0" * 64), "pfctl(8)", release: "7.8")
     refute preflight.manual_receipt_valid?(receipt.merge("complete" => false), "pfctl(8)", release: "7.8")
+    local_receipt = receipt.merge("source" => "target-local:/usr/share/man/man8/pfctl.8")
+    assert preflight.manual_receipt_valid?(local_receipt, "pfctl(8)", release: "7.8")
+    refute preflight.manual_receipt_valid?(receipt.merge("source" => "https://man.openbsd.org/OpenBSD-7.8/rcctl.8"), "pfctl(8)", release: "7.8")
   end
 
   def test_full_stack_deploy_detection_is_explicit
