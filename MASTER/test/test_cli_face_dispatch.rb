@@ -431,4 +431,29 @@ class TestCliFaceDispatch < Minitest::Test
     refute_includes output, "Anything else is a prompt"
   end
 
+  def test_registered_operation_publishes_a_redacted_report_and_prints_the_url
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@container, {
+      commands: { "probe" => ->(args:) { Master::Result.ok("probe completed") } },
+    })
+    session.instance_variable_set(:@refs, Struct.new(:ground_truth).new(nil))
+    session.define_singleton_method(:print_terminal_output) { |*| }
+    printed = []
+    session.define_singleton_method(:terminal_puts) { |line, **| printed << line }
+
+    published = []
+    publisher = Object.new
+    publisher.define_singleton_method(:publish) do |**details|
+      published << details
+      Master::Ground::PastePublisher::Outcome.new(url: "https://pste.us/test123", service: :pste_us)
+    end
+
+    Master::Ground::PastePublisher.stub(:new, ->(**) { publisher }) do
+      session.send(:dispatch_registered_slash_command, "/probe")
+    end
+
+    assert_equal [{ operation: "/probe", status: "success", output: "probe completed" }], published
+    assert_includes printed, "log0: published https://pste.us/test123 (pste_us; expires in 1 day)"
+  end
+
 end
