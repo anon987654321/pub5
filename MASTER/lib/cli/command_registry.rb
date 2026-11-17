@@ -39,32 +39,40 @@ module Master
       # writes. A dispatcher this hash does not return is unreachable, and
       # test_command_registry_dispatch.rb fails on a `*_commands` table it misses.
       def build(infra:, ai:, root:)
-        d = command_deps(ai:, root:, infra:)
-        droot = d[:root]
-        review_verbs(d).merge(session_verbs(infra[:session], infra[:undo])).merge(
-          "status" => command(:dispatch_status, droot, d[:fix_loop], d[:bus], d[:git], d[:trace], d[:learnings]),
-          "commit" => command(:dispatch_commit, ai[:agent], root, review_check: true),
+        deps = command_deps(ai:, root:, infra:)
+        verbs = review_verbs(deps).merge(session_verbs(infra[:session], infra[:undo]))
+        verbs.merge!(build_core_verbs(deps, root))
+        verbs.merge!(build_host_verbs(root))
+        verbs.merge!(build_auxiliary_verbs(deps, root))
+        verbs.merge(control_commands(ai[:standing], ai[:soul]))
+      end
+
+      def build_core_verbs(deps, root)
+        droot = deps[:root]
+        {
+          "status" => command(:dispatch_status, droot, deps[:fix_loop], deps[:bus], deps[:git], deps[:trace], deps[:learnings]),
+          "commit" => command(:dispatch_commit, deps[:agent], root, review_check: true),
           "deploy" => command(:dispatch_deploy, root, review_check: true),
-          "model" => command(:dispatch_model, d[:agent], d[:config], d[:metrics], droot),
-          "mcp" => Command.new { |ctx| dispatch_mcp(infra[:mcp], droot, ctx:) },
+          "model" => command(:dispatch_model, deps[:agent], deps[:config], deps[:metrics], droot),
+          "mcp" => Command.new { |ctx| dispatch_mcp(deps[:mcp], droot, ctx:) },
           "plugin" => command(:dispatch_plugin),
           "play" => command(:dispatch_play, droot),
           "mov" => command(:dispatch_mov, droot),
-          "documents" => command(:dispatch_documents, droot, d[:agent]),
-          "support" => command(:dispatch_support, d[:agent], droot),
-          "nsfw" => command(:dispatch_nsfw, d[:agent]),
-          "screen" => command(:dispatch_screen, root),
-          "android" => command(:dispatch_android, root),
-          "ios" => command(:dispatch_ios, root),
-          "wake" => command(:dispatch_wake, root),
-          "privacy" => command(:dispatch_privacy, root),
-          "pair" => command(:dispatch_pair, root),
-          "preferences" => command(:dispatch_preferences, root),
-          "agenda" => command(:dispatch_agenda, root),
-          "task" => command(:dispatch_task, root),
-          "skill" => command(:dispatch_skill, root),
-          "capabilities" => command(:dispatch_capabilities, root),
-          "doctor" => command(:dispatch_doctor, root),
+          "documents" => command(:dispatch_documents, droot, deps[:agent]),
+          "support" => command(:dispatch_support, deps[:agent], droot),
+          "nsfw" => command(:dispatch_nsfw, deps[:agent]),
+        }
+      end
+
+      def build_host_verbs(root)
+        %w[screen android ios wake privacy pair preferences agenda task skill capabilities doctor].to_h do |name|
+          [name, command(:"dispatch_#{name}", root)]
+        end
+      end
+
+      def build_auxiliary_verbs(deps, root)
+        droot = deps[:root]
+        {
           "voice" => Command.new { |ctx| dispatch_voice(ctx:) },
           "narrate" => Command.new { |ctx| dispatch_narrate(ctx:) },
           "bard" => Command.new { |context| dispatch_bard(context:) },
@@ -72,14 +80,13 @@ module Master
           "incident" => Command.new { |context| dispatch_incident(context:) },
           "laws" => command(:dispatch_laws, root),
           "snapshot" => command(:dispatch_snapshot, droot),
-          "why" => command(:dispatch_why, d[:agent], droot, d[:memory]),
+          "why" => command(:dispatch_why, deps[:agent], droot, deps[:memory]),
           "wishlist" => command(:dispatch_wishlist),
           "prove" => command(:dispatch_prove),
           "explain" => command(:dispatch_explain),
           "size" => command(:dispatch_size),
-
           "help" => command(:help_text, nil),
-        ).merge(control_commands(ai[:standing], ai[:soul]))
+        }
       end
 
       # The verbs that read or rewind the conversation: which one is active,
@@ -330,64 +337,87 @@ module Master
       end
 
       def dispatch_voice(ctx: nil)
-        arg = arg_for(ctx).downcase
-        case arg
-        when "", "status"
-          voice_status
-        when "on"
-          ENV["MASTER_CLI_SPEAK"] = "1"
-          if Voice::Playback.enabled?
-            "voice0 at mainbus0: on, CLI speech enabled for this session"
-          else
-            "voice0 at mainbus0: requested on, but blocked by MASTER_SKIP_TTS, CI, or a non-interactive terminal"
-          end
-        when "off"
-          ENV["MASTER_CLI_SPEAK"] = "0"
-          Voice::Playback.interrupt!("voice off")
-          "voice0 at mainbus0: off, CLI replies remain text"
-        when "natural", "normal", "classic", "fast"
-          ENV["MASTER_TTS_MODE"] = "classic"
-          ENV.delete("MASTER_TTS_PROFILE")
-          Voice::Policy.reload!
-          "voice0 at mainbus0: natural speech selected; clean voice, normal prosody, fast streaming"
-        when "expressive", "transcendent"
-          ENV["MASTER_TTS_MODE"] = "transcendent"
-          "voice0 at mainbus0: expressive speech selected; heavyweight engines and phrase performance enabled"
-        when "dilla"
-          ENV["MASTER_TTS_MODE"] = "classic"
-          ENV["MASTER_TTS_PROFILE"] = "dilla"
-          Voice::Policy.reload!
-          "voice0 at mainbus0: Dilla profile selected; classic streaming speech with the effects rack and room"
-        when "timing", "diagnostics"
-          timings = Voice::Speech.last_timings
-          return "voice0 at mainbus0: no timing recorded yet; use /voice test or speak normally" if timings.empty?
-
-          details = timings.sort_by { |stage, _| stage }.map do |stage, values|
-            "#{stage}=#{values.fetch(:elapsed_ms)}ms"
-          end
-          "voice0 timing: #{details.join(' ')}"
-        when "test"
-          # This explicit diagnostic may speak once even while ordinary CLI
-          # replies are off. Restore the user's session switch immediately after
-          # the synchronous test; it must not silently enable all future replies.
-          original_speak = ENV.fetch("MASTER_CLI_SPEAK", nil)
-          begin
-            ENV["MASTER_CLI_SPEAK"] = "1"
-            ok = Voice::Playback.speak_now("MASTER voice test.")
-            player = Voice::Playback.player
-            if ok
-              "voice0 at mainbus0: test passed, player #{player ? player.first : "none"}"
-            else
-              "voice0 at mainbus0: test failed, see /voice status for the last error"
-            end
-          ensure
-            original_speak ? ENV["MASTER_CLI_SPEAK"] = original_speak : ENV.delete("MASTER_CLI_SPEAK")
-          end
-        else
-          "voice  voice on  voice off  voice natural  voice expressive  voice dilla  voice status  voice timing  voice test"
-        end
+        voice_action(arg_for(ctx).downcase)
       rescue StandardError => e
         "voice0 at mainbus0: failed, #{e.class}: #{e.message}"
+      end
+
+      def voice_action(arg)
+        case arg
+        when "", "status" then voice_status
+        when "on" then voice_enable
+        when "off" then voice_disable
+        when "natural", "normal", "classic", "fast" then voice_natural
+        when "expressive", "transcendent" then voice_expressive
+        when "dilla" then voice_dilla
+        when "timing", "diagnostics" then voice_timing
+        when "test" then voice_test
+        else voice_help
+        end
+      end
+
+      def voice_enable
+        ENV["MASTER_CLI_SPEAK"] = "1"
+        return "voice0 at mainbus0: on, CLI speech enabled for this session" if Voice::Playback.enabled?
+
+        "voice0 at mainbus0: requested on, but blocked by MASTER_SKIP_TTS, CI, or a non-interactive terminal"
+      end
+
+      def voice_disable
+        ENV["MASTER_CLI_SPEAK"] = "0"
+        Voice::Playback.interrupt!("voice off")
+        "voice0 at mainbus0: off, CLI replies remain text"
+      end
+
+      def voice_natural
+        ENV["MASTER_TTS_MODE"] = "classic"
+        ENV.delete("MASTER_TTS_PROFILE")
+        Voice::Policy.reload!
+        "voice0 at mainbus0: natural speech selected; clean voice, normal prosody, fast streaming"
+      end
+
+      def voice_expressive
+        ENV["MASTER_TTS_MODE"] = "transcendent"
+        "voice0 at mainbus0: expressive speech selected; heavyweight engines and phrase performance enabled"
+      end
+
+      def voice_dilla
+        ENV["MASTER_TTS_MODE"] = "classic"
+        ENV["MASTER_TTS_PROFILE"] = "dilla"
+        Voice::Policy.reload!
+        "voice0 at mainbus0: Dilla profile selected; classic streaming speech with the effects rack and room"
+      end
+
+      def voice_timing
+        timings = Voice::Speech.last_timings
+        return "voice0 at mainbus0: no timing recorded yet; use /voice test or speak normally" if timings.empty?
+
+        details = timings.sort_by { |stage, _| stage }.map do |stage, values|
+          "#{stage}=#{values.fetch(:elapsed_ms)}ms"
+        end
+        "voice0 timing: #{details.join(' ')}"
+      end
+
+      def voice_test
+        original_speak = ENV.fetch("MASTER_CLI_SPEAK", nil)
+        begin
+          ENV["MASTER_CLI_SPEAK"] = "1"
+          voice_test_result
+        ensure
+          original_speak ? ENV["MASTER_CLI_SPEAK"] = original_speak : ENV.delete("MASTER_CLI_SPEAK")
+        end
+      end
+
+      def voice_test_result
+        ok = Voice::Playback.speak_now("MASTER voice test.")
+        player = Voice::Playback.player
+        return "voice0 at mainbus0: test failed, see /voice status for the last error" unless ok
+
+        "voice0 at mainbus0: test passed, player #{player ? player.first : "none"}"
+      end
+
+      def voice_help
+        "voice  voice on  voice off  voice natural  voice expressive  voice dilla  voice status  voice timing  voice test"
       end
 
       def voice_status
