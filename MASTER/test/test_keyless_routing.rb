@@ -865,6 +865,12 @@ class TestKeylessRouting < Minitest::Test
 
     refute_includes positions, nil, "every lane in the fallback policy must be present"
     assert_equal positions.sort, positions, "fallback order must be premium, free API, browser, then local"
+
+    normal = router.send(:chain_for, :code_generation)
+    assert_operator normal.index("preferred:model"), :<, normal.index("vendor/free-api:model:free")
+    assert_operator normal.index("vendor/free-api:model:free"), :<, normal.index("premium:subscription"),
+                    "the selected route tier must precede authenticated CLI fallback lanes"
+    assert_operator normal.index("premium:subscription"), :<, normal.index("openrouter/free-model:free")
   end
 
   def test_master_keyless_explicitly_enables_browser_chat_even_when_keys_are_present
