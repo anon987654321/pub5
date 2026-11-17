@@ -718,8 +718,8 @@ expire after seven days. Set
 `MASTER_LOG_PUBLISH=0` to keep every report local. Content-bearing commands
 such as `/documents`, `/memory`, `/read`, `/write`, `/ask` and `/message`,
 plus the known common shell readers and environment-dump commands, are
-excluded from automatic publication. Publication failure never changes the operation's own
-result or exit code. Standalone scripts that do not run inside the MASTER CLI
+excluded from automatic publication. Publication failure never changes the
+operation's own result or exit code. Standalone scripts that do not run inside the MASTER CLI
 (for example `MASTER/bin/check`) still keep their logs local; review and
 redact them before sharing.
 
