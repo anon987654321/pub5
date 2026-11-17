@@ -20,6 +20,12 @@ class TestMacUptimeWatch < Minitest::Test
       #!/usr/bin/env ruby
       File.open(ENV.fetch("PUB5_TEST_NOTIFY_LOG"), "a") { |file| file.puts(ARGV.join(" ")) }
     RUBY
+    write_command("ssh", <<~RUBY)
+      #!/usr/bin/env ruby
+      status = Integer(ENV.fetch("PUB5_TEST_SSH_EXIT", "0"))
+      exit status unless status.zero?
+      print ENV.fetch("PUB5_TEST_VMSTAT", "")
+    RUBY
   end
 
   def teardown
@@ -48,6 +54,45 @@ class TestMacUptimeWatch < Minitest::Test
     assert_match(/RECOVERED one\.test/, File.read(File.join(@home, ".pub5", "uptime_watch.log")))
   end
 
+  def test_vm23_cpu_saturation_notifies_after_three_five_minute_samples
+    2.times { tick("200", "PUB5_TEST_VMSTAT" => vmstat_sample(75, 10, 15)) }
+    refute_includes File.read(@notifications), "SATURATED"
+
+    assert_equal 1, tick("200", "PUB5_TEST_VMSTAT" => vmstat_sample(75, 10, 15))
+    assert_includes File.read(@notifications), "vm23 CPU busy 85% for 3 five-minute checks"
+    assert_includes File.read(File.join(@home, ".pub5", "vm23_cpu.log")), "busy=85% state=warning"
+  end
+
+  def test_vm23_cpu_critical_notifies_after_two_95_percent_samples
+    tick("200", "PUB5_TEST_VMSTAT" => vmstat_sample(90, 8, 2))
+    refute_includes File.read(@notifications), "CRITICAL"
+
+    assert_equal 1, tick("200", "PUB5_TEST_VMSTAT" => vmstat_sample(90, 8, 2))
+    assert_includes File.read(@notifications), "vm23 CPU busy 98% for 2 five-minute checks"
+  end
+
+  def test_vm23_cpu_recovery_notifies_after_three_quiet_samples
+    3.times { tick("200", "PUB5_TEST_VMSTAT" => vmstat_sample(75, 10, 15)) }
+    assert_includes File.read(@notifications), "SATURATED"
+
+    2.times { tick("200", "PUB5_TEST_VMSTAT" => vmstat_sample(10, 5, 85)) }
+    refute_includes File.read(@notifications), "RECOVERED"
+
+    tick("200", "PUB5_TEST_VMSTAT" => vmstat_sample(10, 5, 85))
+    assert_includes File.read(@notifications), "vm23 CPU recovered to 15%"
+  end
+
+  def test_vm23_ssh_probe_failure_notifies_after_two_checks_and_on_recovery
+    tick("200", "PUB5_TEST_SSH_EXIT" => "1")
+    refute_includes File.read(@notifications), "UNREACHABLE"
+
+    tick("200", "PUB5_TEST_SSH_EXIT" => "1")
+    assert_includes File.read(@notifications), "vm23 CPU probe via SSH failed for 2 consecutive checks"
+
+    tick("200")
+    assert_includes File.read(@notifications), "vm23 CPU probe via SSH is reachable again"
+  end
+
   def test_watch_has_no_external_text_filter_dependencies
     source = File.read(SCRIPT)
     refute_match(/\b(?:awk|tail)\b/, source)
@@ -61,7 +106,12 @@ class TestMacUptimeWatch < Minitest::Test
     File.chmod(0o755, path)
   end
 
-  def tick(code)
+  def vmstat_sample(user, system, idle)
+    row = (Array.new(11, "0") + [user.to_s, system.to_s, idle.to_s]).join(" ")
+    (["procs memory page disk traps cpu", "r b avm fre flt re pi po fr sr x y z us sy id"] + Array.new(6, row)).join("\\n") + "\\n"
+  end
+
+  def tick(code, extra = {})
     path = [@bin, ENV.fetch("PATH")].join(File::PATH_SEPARATOR)
     env = {
       "HOME" => @home,
@@ -71,10 +121,14 @@ class TestMacUptimeWatch < Minitest::Test
       "PUB5_UPTIME_FAILS" => "2",
       "PUB5_TEST_HTTP_CODE" => code,
       "PUB5_TEST_NOTIFY_LOG" => @notifications,
+      "PUB5_VM23_SSH_HOST" => "dev@vm23.test",
+      "PUB5_VM23_SSH_KEY" => File.join(@home, "no-key"),
+      "PUB5_TEST_SSH_EXIT" => "0",
+      "PUB5_TEST_VMSTAT" => vmstat_sample(10, 5, 85),
     }
     # zsh comes from PATH, not the /bin spelling: a Linux checkout builds it
     # into ~/.local/bin, and macOS finds /bin/zsh there too.
-    system(env, "zsh", SCRIPT, out: File::NULL, err: File::NULL)
+    system(env.merge(extra), "zsh", SCRIPT, out: File::NULL, err: File::NULL)
     $?.exitstatus
   end
 end
