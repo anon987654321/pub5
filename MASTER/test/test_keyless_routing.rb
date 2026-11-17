@@ -121,6 +121,27 @@ class TestKeylessRouting < Minitest::Test
     assert Master.llm_reachable?("replicate:anthropic/claude-opus-5.5")
   end
 
+  def test_openrouter_key_does_not_promote_the_grok_cli_lane
+    ENV["OPENROUTER_API_KEY"] = "sk-or-v1-" + ("o" * 64)
+    router = Master::CLI::Routing::ModelRouter.new(
+      config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT,
+    )
+
+    assert_equal "nvidia/nemotron-3-super-120b-a12b:free", Master.free_primary_model
+    assert_empty router.primary_models,
+                 "OpenRouter credentials must not be mistaken for direct xAI credentials"
+    refute_includes router.fallback_chain(task_type: :code_generation), "grok-cli:auto"
+  end
+
+  def test_direct_xai_key_selects_the_direct_api_model_not_the_grok_cli
+    ENV["XAI_API_KEY"] = "xai-" + ("x" * 40)
+    router = Master::CLI::Routing::ModelRouter.new(
+      config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT,
+    )
+
+    assert_equal ["grok-4.3"], router.primary_models
+  end
+
   def test_default_model_prefers_grok_api_with_xai_key
     ENV["XAI_API_KEY"] = "xai-" + ("a" * 32)
     assert_equal "grok-4.3", Master.default_model
