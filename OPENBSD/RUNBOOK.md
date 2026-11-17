@@ -238,6 +238,9 @@ for each mapped interface. Any unmapped format, missing source read, stale sourc
 or missing manual receipt blocks the deploy. The intentionally inert
 `etc/litestream.yml` still requires a complete source read, but no fictitious
 OpenBSD manual is assigned to an uninstalled daemon.
+The report is retained locally at
+`MASTER/.master/openbsd_mirror_coverage.json`; it includes the target identity,
+per-file status, source SHA-256 values and each required manual-page receipt.
 The only bootstrap commands are the manual reader and the minimum read-only
 identity probe. This is an admission requirement, not a claim that a remote
 host has been inspected when no host evidence was supplied.

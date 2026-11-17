@@ -436,8 +436,12 @@ module Master
 
       def mirror_configuration_refusal(preflight, root: Master::REPO_ROOT)
         report = mirror_configuration_report(preflight, root:)
+        stale = source_staleness(preflight, root:)
+        report["task_source_staleness"] = stale
+        report["status"] = "BLOCKED" if stale
         write_mirror_configuration_report(report, root:)
         return "RTFM_FIRST blocked: #{report.fetch("error")}" if report.key?("error")
+        return "RTFM_FIRST #{stale}" if stale
         return if report.fetch("status") == "PASS"
 
         first = report.fetch("files").find { |row| row.fetch("status") != "PASS" }
