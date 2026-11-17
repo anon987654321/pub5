@@ -7,10 +7,8 @@ require "time"
 
 module Master
   module Ground
-    # Publishes only the completed operation report supplied by the local CLI.
-    # The caller never hands this class a conversation transcript or a log
-    # directory. Anonymous pastes are link-accessible, so reports are redacted,
-    # bounded and short-lived before any request leaves the machine.
+    # Publishes a bounded operation receipt, never a conversation transcript
+    # or arbitrary file. Public output is admitted only for engineering work.
     class PastePublisher
       MAX_BYTES = 96 * 1024
       OPERATION_MAX_CHARS = 96
@@ -18,18 +16,33 @@ module Master
       READ_TIMEOUT = 3
       WRITE_TIMEOUT = 3
       EXPIRY = "1d"
-      ANSI = /\e(?:\[[0-?]*[ -\/]*[@-~]|\][^\a]*(?:\a|\e\\))/
+
+      ANSI = /\e(?:\[[0-?]*[ -\/@-~]|\][^\a]*(?:\a\e\\))/
       PRIVATE_KEY_BLOCK = /-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----.*?-----END [A-Z0-9 ]*PRIVATE KEY-----/mi
       SENSITIVE_ASSIGNMENT = /\b([A-Z0-9_.-]*(?:PASSWORD|PASSWD|SECRET|TOKEN|KEY|DSN|COOKIE|AUTHORIZATION|CREDENTIAL|DATABASE[_-]?(?:URL|URI)|DB[_-]?(?:URL|URI)|REDIS[_-]?(?:URL|URI))[A-Z0-9_.-]*\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/i
       AUTH_LINE = /\b(AUTHORIZATION|COOKIE|SET-COOKIE)\s*:\s*[^\r\n]*/i
       QUERY_SECRET = /([?&](?:token|access_token|refresh_token|api_key|key|secret|password)=)[^&\s]+/i
       URL_CREDENTIAL = %r{(://[^/\s:@]+:)[^/@\s]+@}
       EMAIL_ADDRESS = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i
+
       OPERATION_VERBS = /\A\s*(?:(?:please|can you|could you|would you|also|and|now|then|go on and|go ahead and|tolong)\s+)*(?:fix|repair|run|execute|check|test|deploy|redeploy|build|commit|push|audit|inspect|verify|scan|render|generate|create|update|remove|delete|migrate|restart|start|stop|publish|install|revert|rollback|preflight|finish|complete|implement|refactor|streamline|clean|optimize|analyse|analyze|assess|restore|continue|proceed|go on|carry on|jalankan|semak|baiki|uji|bina|kemas kini|padam)\b/i
       TECHNICAL_OUTPUT_VERBS = /\A\s*(?:(?:please|can you|could you|would you|also|and|now|then|go on and|go ahead and|tolong)\s+)*(?:fix|repair|run|execute|check|test|deploy|redeploy|build|commit|push|audit|inspect|verify|scan|migrate|restart|start|stop|preflight|finish|complete|implement|refactor|streamline|clean|optimize|restore|continue|proceed|go on|carry on)\b/i
-      OPERATION_LABELS = %w[fix repair run execute check test deploy redeploy build commit push audit inspect verify scan render generate create update remove delete migrate restart start stop publish install revert rollback preflight finish complete implement refactor streamline clean optimize analyse analyze assess restore continue proceed carry].freeze
-      PRIVATE_COMMANDS = %w[documents memory read write ask chat email mail message forget pair].freeze
-      PRIVATE_SHELL_COMMANDS = %w[cat less more head tail sed awk grep rg find env printenv set history].freeze
+
+      PRIVATE_COMMANDS = %w[
+        documents memory read write ask chat email mail message forget pair
+        draft letter proposal grant resume cv coverletter application
+      ].freeze
+      PRIVATE_SHELL_COMMANDS = %w[
+        cat less more head tail sed awk grep rg find env printenv set history
+      ].freeze
+      PRIVATE_CONTENT = /\b(?:personal|private|email|letter|message|proposal|grant|resume|curriculum vitae|cover letter|application|biography|handwritten|transcript|invoice|bank|financial|medical|health|family|relationship|password|secret|credentials?)\b/i
+      OPERATION_LABELS = %w[
+        fix repair run execute check test deploy redeploy build commit push audit
+        inspect verify scan render generate create update remove delete migrate
+        restart start stop publish install revert rollback preflight finish complete
+        implement refactor streamline clean optimize analyse analyze assess restore
+        continue proceed go carry
+      ].freeze
 
       Outcome = Struct.new(:url, :service, :error, :expires_in, keyword_init: true) do
         def success? = !url.to_s.empty?
@@ -43,41 +56,49 @@ module Master
 
       def self.operation_request?(input)
         text = input.to_s.strip
+        return false if text.empty?
+
         if text.start_with?("/")
           name = text[/\A\/([a-z][a-z0-9_-]*)/i, 1].to_s.downcase
-          return false if PRIVATE_COMMANDS.include?(name)
+          return false if name.empty? || PRIVATE_COMMANDS.include?(name)
 
           return true
         end
 
-      def self.public_output_allowed?(input)
-        text = input.to_s.strip
-        if text.start_with?("/")
-          name = text[/\A\/([a-z][a-z0-9_-]*)/i, 1].to_s.downcase
-          return false if PRIVATE_COMMANDS.include?(name)
-
-          return true
-        end
         if text.start_with?("!")
           command = text.delete_prefix("!").strip
           executable = command[/\A(?:sudo\s+)?([A-Za-z0-9._\/-]+)/, 1].to_s
-          return false if PRIVATE_SHELL_COMMANDS.include?(File.basename(executable))
-          return false if command.match?(/\b(?:File\.read|File\.open|IO\.read|ENV(?:\[|\.fetch)|read_file)\b/i)
-
-          return true
-        end
-
-        text.match?(TECHNICAL_OUTPUT_VERBS)
-      end
-        if text.start_with?("!")
-          command = text.delete_prefix("!").strip
-          executable = command[/\A(?:sudo\s+)?([A-Za-z0-9._\/-]+)/, 1].to_s
-          return false if PRIVATE_SHELL_COMMANDS.include?(File.basename(executable))
+          return false if executable.empty? || PRIVATE_SHELL_COMMANDS.include?(File.basename(executable))
 
           return true
         end
 
         text.match?(OPERATION_VERBS)
+      end
+
+      def self.public_output_allowed?(input)
+        text = input.to_s.strip
+        return false if text.empty? || text.match?(PRIVATE_CONTENT)
+
+        if text.start_with?("/")
+          name = text[/\A\/([a-z][a-z0-9_-]*)/i, 1].to_s.downcase
+          return false if name.empty? || PRIVATE_COMMANDS.include?(name)
+
+          return true
+        end
+
+        if text.start_with?("!")
+          command = text.delete_prefix("!").strip
+          return false if command.match?(/\b(?:File\.read|File\.open|IO\.read|ENV(?:\[|\.fetch)|read_file|\.env)\b/i)
+
+          executable = command[/\A(?:sudo\s+)?([A-Za-z0-9._\/-]+)/, 1].to_s
+          return false if executable.empty? || PRIVATE_SHELL_COMMANDS.include?(File.basename(executable))
+          return false unless %w[zsh sh ruby bundle rake git doas].include?(File.basename(executable))
+
+          return true
+        end
+
+        text.match?(TECHNICAL_OUTPUT_VERBS)
       end
 
       def publish(operation:, status:, output:)
@@ -108,17 +129,19 @@ module Master
       def build_report(operation:, status:, output:)
         label = operation_label(operation)
         outcome = %w[success failure changed inconclusive blocked cancelled].include?(status.to_s) ? status.to_s : "unknown"
-        details = self.class.public_output_allowed?(operation) ? sanitize(output) :
-                   "[operation output withheld: non-technical content may be private]"
-        report = [
+        details = if self.class.public_output_allowed?(operation)
+                    sanitize(output)
+                  else
+                    "[operation output withheld: non-technical content may be private]"
+                  end
+        truncate([
           "MASTER operation log",
           "finished_utc: #{Time.now.utc.iso8601}",
           "operation: #{label.empty? ? "unspecified" : label}",
           "status: #{outcome}",
           "",
           details,
-        ].join("\n")
-        truncate(report)
+        ].join("\n"))
       end
 
       def sanitize(value)
@@ -157,6 +180,7 @@ module Master
         else
           verb = text.split.take(6).find { |word| OPERATION_LABELS.include?(word.downcase) }
           verb || text.split.first.to_s
+        end
       end
 
       def safe_title(operation)
@@ -181,7 +205,14 @@ module Master
         raise IOError, "paste service rejected the report" unless parsed["ok"] == true
 
         data = parsed["data"].is_a?(Hash) ? parsed["data"] : {}
-        checked_url(data["url"] || data["paste_url"], "pste.us")
+        candidate = data["url"] || data["paste_url"]
+        if candidate.to_s.empty?
+          id = data["id"].to_s
+          raise IOError, "paste service returned no paste id" unless id.match?(/\A[A-Za-z0-9_-]+\z/)
+
+          candidate = "https://pste.us/raw/#{id}"
+        end
+        checked_url(candidate, "pste.us")
       end
 
       def upload_dpaste_org(report, title)
