@@ -817,7 +817,7 @@ module Pub5Admin
 
   def validate_existing_bundle_cache_entry!(target, digest)
     stat = validate_cache_source!(target, uid: 0)
-    validate_bundle_cache_digest!(target, digest, "entry")
+    validate_bundle_cache_digest!(target, digest, "entry has wrong digest")
     raise "bundle cache entry is writable: #{target}" unless (stat.mode & 0o222).zero?
 
     0
@@ -844,14 +844,14 @@ module Pub5Admin
 
   def validate_bundle_cache_collision!(target, digest)
     stat = validate_cache_source!(target, uid: 0)
-    validate_bundle_cache_digest!(target, digest, "collision")
+    validate_bundle_cache_digest!(target, digest, "collision has wrong digest")
     raise "bundle cache collision is writable: #{target}" unless (stat.mode & 0o222).zero?
   end
 
   def validate_bundle_cache_digest!(path, digest, label)
     return if Digest::SHA256.file(path).hexdigest == digest
 
-    raise "bundle cache #{label} has wrong digest: #{path}"
+    raise "bundle cache #{label}: #{path}"
   end
 
   # This verb knows no caller-provided filesystem paths. It only imports from the
