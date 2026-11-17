@@ -49,7 +49,7 @@ class PastePublisherTest < Minitest::Test
 
   def test_report_is_bounded_before_upload
     publisher = Master::Ground::PastePublisher.new
-    report = publisher.build_report(operation: "/fix", status: "success", output: "x" * 150_000)
+    report = publisher.build_report(operation: "/fix", status: "success", output: "public diagnostic line\n" * 10_000)
 
     assert_operator report.bytesize, :<=, Master::Ground::PastePublisher::MAX_BYTES + 80
     assert_includes report, "[operation log truncated"
@@ -111,6 +111,43 @@ class PastePublisherTest < Minitest::Test
 
     refute outcome.success?
     assert_nil outcome.url
+  end
+
+  def test_pste_us_builds_a_raw_url_from_the_returned_paste_id
+    transport = lambda do |uri:, body:, headers:|
+      response(201, JSON.generate("ok" => true, "data" => { "id" => "uHt9n0uQ" }))
+    end
+    publisher = Master::Ground::PastePublisher.new(transport:)
+
+    outcome = publisher.publish(operation: "/check", status: "success", output: "checks passed")
+
+    assert_equal "https://pste.us/raw/uHt9n0uQ", outcome.url
+    assert_equal :pste_us, outcome.service
+  end
+
+  def test_private_operation_output_is_withheld_from_public_pastes
+    publisher = Master::Ground::PastePublisher.new
+
+    report = publisher.build_report(
+      operation: "create a private letter",
+      status: "success",
+      output: "Dear recipient, this is the full private text",
+    )
+
+    assert_includes report, "[operation output withheld"
+    refute_includes report, "Dear recipient"
+  end
+
+  def test_technical_operations_keep_their_diagnostics
+    publisher = Master::Ground::PastePublisher.new
+
+    report = publisher.build_report(
+      operation: "please run the tests",
+      status: "success",
+      output: "12 runs, 36 assertions",
+    )
+
+    assert_includes report, "12 runs, 36 assertions"
   end
 
   def test_disabled_publishing_does_not_contact_a_provider

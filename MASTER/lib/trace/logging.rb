@@ -55,7 +55,7 @@ module Master
       # A stable copy for operation receipts. Readers must not race the event
       # writer or retain the mutable ring buffer itself.
       def snapshot
-        @mutex.synchronize { @buffer.to_a }
+        @mutex.synchronize { @buffer.to_a.dup }
       end
 
       # The terminal hears the same lines the ring holds, numbered once: two
