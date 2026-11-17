@@ -622,15 +622,17 @@ module Master
 
       def bundle_env(without: nil)
         env = base_bundle_env
+        clear_inherited_bundle_context!(env)
+        configure_owned_bundle_context!(env)
+        apply_without_group(env, without)
+      end
 
-        # A user's global ~/.bundle/config, deployment variables, or a stale
-        # BUNDLE_PATH can silently change what boot installs or loads. MASTER
-        # owns its dependency context, while still allowing explicit credential
-        # and build variables outside this list to flow through.
-        # A parent that ran bundler/setup leaves RUBYOPT and RUBYLIB pointing at
-        # its own Bundler; the pinned `bundle` then loads a second copy beside it
-        # and Bundler::Thor dies with a superclass mismatch.
-        (BUNDLE_CONTEXT_KEYS + %w[RUBYOPT RUBYLIB BUNDLE_BIN_PATH BUNDLER_SETUP BUNDLER_VERSION]).each { |key| env[key] = nil }
+      def clear_inherited_bundle_context!(env)
+        keys = BUNDLE_CONTEXT_KEYS + %w[RUBYOPT RUBYLIB BUNDLE_BIN_PATH BUNDLER_SETUP BUNDLER_VERSION]
+        keys.each { |key| env[key] = nil }
+      end
+
+      def configure_owned_bundle_context!(env)
         env.merge!(
           "BUNDLE_GEMFILE" => File.join(@root, "Gemfile"),
           "BUNDLE_RETRY" => "3",
@@ -641,7 +643,6 @@ module Master
           "BUNDLE_DISABLE_SHARED_GEMS" => "1",
           "BUNDLE_FROZEN" => "true",
         )
-        apply_without_group(env, without)
       end
 
       # The interpreter, gem home and search path the pinned Bundler must run
@@ -651,23 +652,28 @@ module Master
         default_gem_path = Gem.default_dir
         ruby_bin = File.dirname(RbConfig.ruby)
         {
-          # Bundler's executable is a Ruby shebang. Put the exact interpreter
-          # that launched MASTER first so native gem builds cannot silently
-          # switch to another Ruby installation with the same version.
-          "PATH" => [
-            ruby_bin,
-            File.join(bundle_gem_home, "bin"),
-            File.join(bundler_gem_home, "bin"),
-            @env.fetch("PATH", ""),
-          ].reject(&:empty?).join(File::PATH_SEPARATOR),
+          "PATH" => bundle_executable_path(ruby_bin, bundle_gem_home),
           "RUBY" => RbConfig.ruby,
           "GEM_HOME" => bundle_gem_home,
-          "GEM_PATH" => [
-            *gem_search_paths(bundle_gem_home),
-            *gem_search_paths(bundler_gem_home),
-            default_gem_path,
-          ].uniq.join(File::PATH_SEPARATOR),
+          "GEM_PATH" => bundle_gem_search_path(bundle_gem_home, default_gem_path),
         }
+      end
+
+      def bundle_executable_path(ruby_bin, bundle_gem_home)
+        [
+          ruby_bin,
+          File.join(bundle_gem_home, "bin"),
+          File.join(bundler_gem_home, "bin"),
+          @env.fetch("PATH", ""),
+        ].reject(&:empty?).join(File::PATH_SEPARATOR)
+      end
+
+      def bundle_gem_search_path(bundle_gem_home, default_gem_path)
+        [
+          *gem_search_paths(bundle_gem_home),
+          *gem_search_paths(bundler_gem_home),
+          default_gem_path,
+        ].uniq.join(File::PATH_SEPARATOR)
       end
 
       # BUNDLE_WITHOUT resolution order: the caller's group, the inherited
