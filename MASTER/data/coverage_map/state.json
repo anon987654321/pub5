@@ -1,0 +1,765 @@
+{
+  "revision": "a6ff27b6",
+  "laws": {
+    "NO_DEBUG@MASTER": {
+      "law": "NO_DEBUG",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:05Z",
+      "findings": 0,
+      "files": 51
+    },
+    "NO_DEBUG@RAILS": {
+      "law": "NO_DEBUG",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 150
+    },
+    "NO_DEBUG@OPENBSD": {
+      "law": "NO_DEBUG",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 95
+    },
+    "NO_DEBUG@STUDIO": {
+      "law": "NO_DEBUG",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 100
+    },
+    "NO_DEBUG@BIZ": {
+      "law": "NO_DEBUG",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 2
+    },
+    "NO_PUTS@MASTER": {
+      "law": "NO_PUTS",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 51
+    },
+    "NO_PUTS@RAILS": {
+      "law": "NO_PUTS",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 150
+    },
+    "NO_PUTS@OPENBSD": {
+      "law": "NO_PUTS",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 95
+    },
+    "NO_PUTS@STUDIO": {
+      "law": "NO_PUTS",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 12,
+      "files": 100
+    },
+    "NO_PUTS@BIZ": {
+      "law": "NO_PUTS",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 2,
+      "files": 2
+    },
+    "FROZEN_LITERAL@MASTER": {
+      "law": "FROZEN_LITERAL",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 51
+    },
+    "FROZEN_LITERAL@RAILS": {
+      "law": "FROZEN_LITERAL",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 150
+    },
+    "FROZEN_LITERAL@OPENBSD": {
+      "law": "FROZEN_LITERAL",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 95
+    },
+    "FROZEN_LITERAL@STUDIO": {
+      "law": "FROZEN_LITERAL",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 100
+    },
+    "FROZEN_LITERAL@BIZ": {
+      "law": "FROZEN_LITERAL",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 2
+    },
+    "LONG_LINE@MASTER": {
+      "law": "LONG_LINE",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 47,
+      "files": 51
+    },
+    "LONG_LINE@RAILS": {
+      "law": "LONG_LINE",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 21,
+      "files": 150
+    },
+    "LONG_LINE@OPENBSD": {
+      "law": "LONG_LINE",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 143,
+      "files": 95
+    },
+    "LONG_LINE@STUDIO": {
+      "law": "LONG_LINE",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 207,
+      "files": 100
+    },
+    "LONG_LINE@BIZ": {
+      "law": "LONG_LINE",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 8,
+      "files": 2
+    },
+    "TRAILING_WHITESPACE@MASTER": {
+      "law": "TRAILING_WHITESPACE",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 51
+    },
+    "TRAILING_WHITESPACE@RAILS": {
+      "law": "TRAILING_WHITESPACE",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 150
+    },
+    "TRAILING_WHITESPACE@OPENBSD": {
+      "law": "TRAILING_WHITESPACE",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 95
+    },
+    "TRAILING_WHITESPACE@STUDIO": {
+      "law": "TRAILING_WHITESPACE",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 100
+    },
+    "TRAILING_WHITESPACE@BIZ": {
+      "law": "TRAILING_WHITESPACE",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 2
+    },
+    "TODO_FIXME@MASTER": {
+      "law": "TODO_FIXME",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 51
+    },
+    "TODO_FIXME@RAILS": {
+      "law": "TODO_FIXME",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 150
+    },
+    "TODO_FIXME@OPENBSD": {
+      "law": "TODO_FIXME",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 95
+    },
+    "TODO_FIXME@STUDIO": {
+      "law": "TODO_FIXME",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 100
+    },
+    "TODO_FIXME@BIZ": {
+      "law": "TODO_FIXME",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 2
+    },
+    "NO_SILENT_TEST_SKIP@MASTER": {
+      "law": "NO_SILENT_TEST_SKIP",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 51
+    },
+    "NO_SILENT_TEST_SKIP@RAILS": {
+      "law": "NO_SILENT_TEST_SKIP",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 150
+    },
+    "NO_SILENT_TEST_SKIP@OPENBSD": {
+      "law": "NO_SILENT_TEST_SKIP",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 95
+    },
+    "NO_SILENT_TEST_SKIP@STUDIO": {
+      "law": "NO_SILENT_TEST_SKIP",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 100
+    },
+    "NO_SILENT_TEST_SKIP@BIZ": {
+      "law": "NO_SILENT_TEST_SKIP",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 2
+    },
+    "HARDCODED_ABSOLUTE_PATH@MASTER": {
+      "law": "HARDCODED_ABSOLUTE_PATH",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 51
+    },
+    "HARDCODED_ABSOLUTE_PATH@RAILS": {
+      "law": "HARDCODED_ABSOLUTE_PATH",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 150
+    },
+    "HARDCODED_ABSOLUTE_PATH@OPENBSD": {
+      "law": "HARDCODED_ABSOLUTE_PATH",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 95
+    },
+    "HARDCODED_ABSOLUTE_PATH@STUDIO": {
+      "law": "HARDCODED_ABSOLUTE_PATH",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 100
+    },
+    "HARDCODED_ABSOLUTE_PATH@BIZ": {
+      "law": "HARDCODED_ABSOLUTE_PATH",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 2
+    },
+    "RESCUE_EXCEPTION@MASTER": {
+      "law": "RESCUE_EXCEPTION",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 51
+    },
+    "RESCUE_EXCEPTION@RAILS": {
+      "law": "RESCUE_EXCEPTION",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 150
+    },
+    "RESCUE_EXCEPTION@OPENBSD": {
+      "law": "RESCUE_EXCEPTION",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:06Z",
+      "findings": 0,
+      "files": 95
+    },
+    "RESCUE_EXCEPTION@STUDIO": {
+      "law": "RESCUE_EXCEPTION",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 100
+    },
+    "RESCUE_EXCEPTION@BIZ": {
+      "law": "RESCUE_EXCEPTION",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 2
+    },
+    "IDENTICAL_BRANCHES@MASTER": {
+      "law": "IDENTICAL_BRANCHES",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 1,
+      "files": 51
+    },
+    "IDENTICAL_BRANCHES@RAILS": {
+      "law": "IDENTICAL_BRANCHES",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 150
+    },
+    "IDENTICAL_BRANCHES@OPENBSD": {
+      "law": "IDENTICAL_BRANCHES",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 95
+    },
+    "IDENTICAL_BRANCHES@STUDIO": {
+      "law": "IDENTICAL_BRANCHES",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 100
+    },
+    "IDENTICAL_BRANCHES@BIZ": {
+      "law": "IDENTICAL_BRANCHES",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 2
+    },
+    "SILENT_RESCUE@MASTER": {
+      "law": "SILENT_RESCUE",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 2,
+      "files": 51
+    },
+    "SILENT_RESCUE@RAILS": {
+      "law": "SILENT_RESCUE",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 1,
+      "files": 150
+    },
+    "SILENT_RESCUE@OPENBSD": {
+      "law": "SILENT_RESCUE",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 95
+    },
+    "SILENT_RESCUE@STUDIO": {
+      "law": "SILENT_RESCUE",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 5,
+      "files": 100
+    },
+    "SILENT_RESCUE@BIZ": {
+      "law": "SILENT_RESCUE",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 2
+    },
+    "NARROW_SILENT_RESCUE@MASTER": {
+      "law": "NARROW_SILENT_RESCUE",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 2,
+      "files": 51
+    },
+    "NARROW_SILENT_RESCUE@RAILS": {
+      "law": "NARROW_SILENT_RESCUE",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 1,
+      "files": 150
+    },
+    "NARROW_SILENT_RESCUE@OPENBSD": {
+      "law": "NARROW_SILENT_RESCUE",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 12,
+      "files": 95
+    },
+    "NARROW_SILENT_RESCUE@STUDIO": {
+      "law": "NARROW_SILENT_RESCUE",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 9,
+      "files": 100
+    },
+    "NARROW_SILENT_RESCUE@BIZ": {
+      "law": "NARROW_SILENT_RESCUE",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 2
+    },
+    "MODIFIER_SILENT_RESCUE@MASTER": {
+      "law": "MODIFIER_SILENT_RESCUE",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 51
+    },
+    "MODIFIER_SILENT_RESCUE@RAILS": {
+      "law": "MODIFIER_SILENT_RESCUE",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 150
+    },
+    "MODIFIER_SILENT_RESCUE@OPENBSD": {
+      "law": "MODIFIER_SILENT_RESCUE",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 1,
+      "files": 95
+    },
+    "MODIFIER_SILENT_RESCUE@STUDIO": {
+      "law": "MODIFIER_SILENT_RESCUE",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 1,
+      "files": 100
+    },
+    "MODIFIER_SILENT_RESCUE@BIZ": {
+      "law": "MODIFIER_SILENT_RESCUE",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 2
+    },
+    "CONSECUTIVE_BLANK_LINES@MASTER": {
+      "law": "CONSECUTIVE_BLANK_LINES",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 1,
+      "files": 51
+    },
+    "CONSECUTIVE_BLANK_LINES@RAILS": {
+      "law": "CONSECUTIVE_BLANK_LINES",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 150
+    },
+    "CONSECUTIVE_BLANK_LINES@OPENBSD": {
+      "law": "CONSECUTIVE_BLANK_LINES",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 95
+    },
+    "CONSECUTIVE_BLANK_LINES@STUDIO": {
+      "law": "CONSECUTIVE_BLANK_LINES",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 100
+    },
+    "CONSECUTIVE_BLANK_LINES@BIZ": {
+      "law": "CONSECUTIVE_BLANK_LINES",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 2
+    },
+    "DEBUG_OUTPUT@MASTER": {
+      "law": "DEBUG_OUTPUT",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 51
+    },
+    "DEBUG_OUTPUT@RAILS": {
+      "law": "DEBUG_OUTPUT",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 150
+    },
+    "DEBUG_OUTPUT@OPENBSD": {
+      "law": "DEBUG_OUTPUT",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 95
+    },
+    "DEBUG_OUTPUT@STUDIO": {
+      "law": "DEBUG_OUTPUT",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 100
+    },
+    "DEBUG_OUTPUT@BIZ": {
+      "law": "DEBUG_OUTPUT",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 2
+    },
+    "OMIT_NEEDLESS_WORDS@MASTER": {
+      "law": "OMIT_NEEDLESS_WORDS",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 1,
+      "files": 51
+    },
+    "OMIT_NEEDLESS_WORDS@RAILS": {
+      "law": "OMIT_NEEDLESS_WORDS",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 3,
+      "files": 150
+    },
+    "OMIT_NEEDLESS_WORDS@OPENBSD": {
+      "law": "OMIT_NEEDLESS_WORDS",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 95
+    },
+    "OMIT_NEEDLESS_WORDS@STUDIO": {
+      "law": "OMIT_NEEDLESS_WORDS",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 4,
+      "files": 100
+    },
+    "OMIT_NEEDLESS_WORDS@BIZ": {
+      "law": "OMIT_NEEDLESS_WORDS",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 2
+    },
+    "TRAILING_COMMENT@MASTER": {
+      "law": "TRAILING_COMMENT",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 8,
+      "files": 51
+    },
+    "TRAILING_COMMENT@RAILS": {
+      "law": "TRAILING_COMMENT",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 4,
+      "files": 150
+    },
+    "TRAILING_COMMENT@OPENBSD": {
+      "law": "TRAILING_COMMENT",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 5,
+      "files": 95
+    },
+    "TRAILING_COMMENT@STUDIO": {
+      "law": "TRAILING_COMMENT",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 16,
+      "files": 100
+    },
+    "TRAILING_COMMENT@BIZ": {
+      "law": "TRAILING_COMMENT",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 2,
+      "files": 2
+    },
+    "TIME_ZONE_UNSAFE@MASTER": {
+      "law": "TIME_ZONE_UNSAFE",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 51
+    },
+    "TIME_ZONE_UNSAFE@RAILS": {
+      "law": "TIME_ZONE_UNSAFE",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:07Z",
+      "findings": 0,
+      "files": 150
+    },
+    "TIME_ZONE_UNSAFE@OPENBSD": {
+      "law": "TIME_ZONE_UNSAFE",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:08Z",
+      "findings": 15,
+      "files": 95
+    },
+    "TIME_ZONE_UNSAFE@STUDIO": {
+      "law": "TIME_ZONE_UNSAFE",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:08Z",
+      "findings": 0,
+      "files": 100
+    },
+    "TIME_ZONE_UNSAFE@BIZ": {
+      "law": "TIME_ZONE_UNSAFE",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:08Z",
+      "findings": 0,
+      "files": 2
+    },
+    "NO_ASCII_LINE_ART@MASTER": {
+      "law": "NO_ASCII_LINE_ART",
+      "tree": "MASTER",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:08Z",
+      "findings": 0,
+      "files": 51
+    },
+    "NO_ASCII_LINE_ART@RAILS": {
+      "law": "NO_ASCII_LINE_ART",
+      "tree": "RAILS",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:08Z",
+      "findings": 0,
+      "files": 150
+    },
+    "NO_ASCII_LINE_ART@OPENBSD": {
+      "law": "NO_ASCII_LINE_ART",
+      "tree": "OPENBSD",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:08Z",
+      "findings": 17,
+      "files": 95
+    },
+    "NO_ASCII_LINE_ART@STUDIO": {
+      "law": "NO_ASCII_LINE_ART",
+      "tree": "STUDIO",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:08Z",
+      "findings": 29,
+      "files": 100
+    },
+    "NO_ASCII_LINE_ART@BIZ": {
+      "law": "NO_ASCII_LINE_ART",
+      "tree": "BIZ",
+      "revision": "a6ff27b6",
+      "at": "2026-11-17T00:44:08Z",
+      "findings": 0,
+      "files": 2
+    }
+  }
+}

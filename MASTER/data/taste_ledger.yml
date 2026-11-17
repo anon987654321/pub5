@@ -1,0 +1,31 @@
+# taste_ledger.yml - the operator's judgment, accumulating.
+#
+# Each row is a structured, versioned taste decision the tree can cite:
+# accepted or rejected, in one domain, at one revision, with the provenance
+# of where the decision was already recorded. Seeded from decisions the tree
+# itself carries; the operator's future render rulings append here via
+# `bin/master taste record`. Never a substitute for the operator's ruling:
+# the ledger stops re-asking and warns on conflict, it does not invent.
+schema: 1
+decisions:
+  - id: type-terminal-ascii-20261106
+    at: "2026-11-06"
+    revision: "recorded in MASTER/law/definition.rb TERMINAL_OUTPUT_PATH comment"
+    decision: accepted
+    domain: type
+    subject: "CLI, REPL prompt, terminal face and dmesg lines print ASCII: a terminal font and a pipe read a hyphen and three dots plainly"
+    rationale: "Web copy, locales and documents keep proper marks; the typographic Laws read every file except terminal output."
+  - id: palette-paper-token-2026
+    at: "2026-11-07"
+    revision: "recorded in MASTER/checks/data/law_fixtures.yml PAPER_NOT_PURE_WHITE"
+    decision: accepted
+    domain: palette
+    subject: "Paper surfaces use the --paper token; raw #FFFFFF backgrounds are rejected by the rendered laws"
+    rationale: "The fixture pair records it as law: bad background: #FFFFFF; good background: var(--paper)."
+  - id: palette-signal-not-warning-orange
+    at: "2026-11-07"
+    revision: "recorded in MASTER/checks/data/law_fixtures.yml SIGNAL_COLOR_NAMING"
+    decision: rejected
+    domain: palette
+    subject: "Semantic signal colors are named tokens (--signal), never hex literals or warning-orange --accent"
+    rationale: "The fixture pair records it: bad --accent: #E07A00; good --signal: #C97E1E."

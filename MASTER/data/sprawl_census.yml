@@ -102,7 +102,7 @@
 lone_dirs: 42
 stutter: 0
 vague_names: 0
-tracked_files: 7976
+tracked_files: 8006
 tracked_directories: 982
 corpus: 4127
 
@@ -115,3 +115,11 @@ corpus: 4127
 # one directory), and the generated laws_index.json the dictionary serves.
 # Each is priced in the commit that carries it; none is a placeholder, and
 # the census instrument itself is unchanged.
+
+# 2026-11-17 (2): re-set to the checkout as it stands at the wishlist-two
+# landing: seven lib/agent modules (falsify, predict, coverage_map,
+# export_kit, taste, reconcile, prune), the taste ledger seeded from the
+# tree's own recorded decisions, the falsification readings, the reconcile
+# mission ledger, and the coverage map state under data/coverage_map/. Each
+# is priced in its commit; the tier reuses its own directory, so eight of
+# the eleven paths are occupants of lib/agent, not new namespaces.

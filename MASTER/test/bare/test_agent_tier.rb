@@ -20,7 +20,8 @@ require "minitest/autorun"
 require_relative "../../lib/agent/agent_cli"
 
 # The router loads these lazily; the suite names them directly.
-%w[bare_scan law_index status_view receipts openbsd_tier fast_gate].each do |mod|
+%w[bare_scan law_index status_view receipts openbsd_tier fast_gate falsify
+   predict coverage_map export_kit taste reconcile prune].each do |mod|
   require_relative "../../lib/agent/#{mod}"
 end
 
@@ -142,6 +143,57 @@ module Master
         end
       rescue SystemExit
         pass
+      end
+
+      def test_falsify_holds_its_thesis_on_fixture_traffic
+        out, = capture_io { Falsify.run_experiment }
+        reading = out.match(/\{.*\}/m) ? JSON.parse(out[/\{.*\}/m])["reading"] : nil
+        assert reading, "a falsify run must append one instrument reading"
+        assert_equal 1.0, reading["governed"]["held_quality"],
+                     "the governed lane must hold every seeded defect; an escape is the falsification"
+        assert_operator reading["ungoverned"]["defect_survival"], :>, 0.5,
+                        "the ungoverned lane must let most seeded defects survive, or the experiment proves nothing"
+      end
+
+      def test_coverage_greens_carry_revision_and_timestamp
+        require_relative "../../lib/agent/coverage_map"
+        state = CoverageMap.read_state
+        rows = state["laws"].values
+        refute_empty rows, "the coverage state should have measurements from the last --map run"
+        rows.each do |row|
+          refute_nil row["revision"], "a green with no revision is a green that measured nothing"
+          refute_nil row["at"], "a green with no timestamp cannot be aged"
+        end
+      end
+
+      def test_prune_only_judges_laws_that_were_measured
+        out, = capture_io { Prune.report }
+        payload = JSON.parse(out[/\{.*\}/m])
+        (payload["fold_candidates"] + payload["narrow_candidates"]).each do |row|
+          refute row["law"].nil?
+        end
+        refute payload["fold_candidates"].any? { |r| r["law"] == "A_FINDING_IS_A_HYPOTHESIS" },
+               "a semantic law with no detector was never measured; it cannot be a fold candidate"
+      end
+
+      def test_taste_conflict_cites_the_recorded_decision
+        out, _err = capture_io { Taste.run(["conflicts", "--subject", "raw accent hex #E07A00 on a dashboard"]) }
+        assert_includes out, "you decided rejected", "the warning must cite the recorded decision, not re-ask"
+        assert_includes out, "2026-11-07", "the citation carries the date the decision was made"
+      end
+
+      def test_reconcile_opens_scoped_missions_for_gate_failures
+        out, = capture_io { Reconcile.check }
+        # The reconcile run nests a full fast gate; its own payload is the
+        # last JSON object printed, keyed by its command.
+        payload_text = out[/\{\s*"command": "reconcile check".*\z/m]
+        payload = JSON.parse(payload_text) if payload_text
+        if payload.nil? || payload["drift_count"].to_i.positive?
+          assert File.file?(File.join(master_root, "data", "reconcile", "missions.jsonl")),
+                 "a drift opens a mission where the next session reads it, or there was no drift to open"
+        else
+          assert_equal 0, payload["missions_opened"].to_i, "no drift, no mission"
+        end
       end
 
       private
