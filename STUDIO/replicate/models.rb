@@ -92,6 +92,21 @@ module Studio
         VIDEO_BUDGET_LOCK.synchronize { @video_spent_usd = 0.0 }
       end
 
+      def input_value(input, name)
+        input[name] || input[name.to_sym]
+      end
+
+      def video_budget_limit(key, environment)
+        configured = Float(catalogue.fetch("video_budget").fetch(key))
+        override = ENV[environment].to_s.strip
+        return configured if override.empty?
+
+        requested = Float(override)
+        raise ArgumentError, "#{environment} must be a positive finite amount" unless requested.positive? && requested.finite?
+
+        [configured, requested].min
+      end
+
       def default_engine = catalogue.fetch("default_engine")
 
       def free_models = Array(catalogue["free_models"])
