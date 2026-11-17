@@ -85,10 +85,14 @@ recipes:
   - want: Deploy production
     run: MASTER/bin/operator vps deploy all --remote
     expect: >-
-      Hands-off: local preflight, pin origin/main SHA, deploy under tmux on vm23
-      as root (git still as dev), wait until finished streaming the log, then
-      vps-state + public canary. Survives SSH drop. Add --follow to attach or
-      --detach to return after start.
+      One-time receipt-protocol bootstrap first: update the vm23 checkout to the
+      same origin/main commit, then run OPERATOR.sh --plan, --apply and --verify
+      once so the installed pub5-admin has the durable receipt verbs. vps-deploy
+      all cannot bootstrap an older broker because receipt creation precedes
+      its normal mirror apply. Thereafter: local preflight, pin origin/main SHA,
+      deploy under tmux on vm23 as root (git still as dev), wait until finished
+      streaming the log, then vps-state + public canary. Survives SSH drop.
+      Add --follow to attach or --detach to return after start.
   - want: Deploy one app
     run: MASTER/bin/operator vps deploy brgen --remote
     expect: same preflight, pinning, tmux and canary path for one app
