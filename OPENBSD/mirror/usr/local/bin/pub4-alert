@@ -161,8 +161,6 @@ watch_deploy_recovery() {
       started, start_status = Open3.capture2({ "LC_ALL" => "C" }, "ps", "-p", pid.to_s, "-o", "lstart=")
       command, command_status = Open3.capture2("ps", "-ww", "-p", pid.to_s, "-o", "command=")
       return "unknown" unless start_status.success? && command_status.success? &&
-                              !started.strip.empty? && !command.strip.empty?
-      return "unknown" unless start_status.success? && command_status.success? &&
                               !started.empty? && !command.empty?
       started = started.sub(/\n+\z/, "")
       command = command.sub(/\n+\z/, "")
