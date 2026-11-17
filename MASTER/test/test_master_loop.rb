@@ -242,9 +242,9 @@ class TestMasterLoop < Minitest::Test
       FileUtils.mkdir_p(one)
       FileUtils.mkdir_p(two)
       File.write(File.join(one, "providers.yml"), "openrouter:\n  default_model: one-default\n")
-      File.write(File.join(one, "models.yml"), "models:\n  grok_primary:\n    - id: one-model\n")
+      File.write(File.join(one, "models.yml"), "models:\n  openrouter_primary:\n    - id: one-model\n")
       File.write(File.join(two, "providers.yml"), "openrouter:\n  default_model: two-default\n")
-      File.write(File.join(two, "models.yml"), "models:\n  grok_primary:\n    - id: two-model\n")
+      File.write(File.join(two, "models.yml"), "models:\n  openrouter_primary:\n    - id: two-model\n")
 
       assert_equal "one-default", Master.openrouter_default(root: workspace + "/one")
       assert_equal "two-default", Master.openrouter_default(root: workspace + "/two")
