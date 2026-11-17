@@ -148,6 +148,15 @@ FLOW_OUTPUT = <<~OUT
     assert_includes call, "CHECK_AUTOFIX=0"
   end
 
+  def test_flow_runner_nonzero_exit_after_partial_output_is_a_failure
+    write("MASTER/checks/runner.rb", "")
+    partial = FLOW_OUTPUT.lines.reject { |line| line.include?("demo_search FAIL") || line.include?("flow:demo_search") }.join
+    got = by_name(runner(shell: ->(*_) { [partial, Ok.new(false)] }).run)
+    refute got["flows process"].ok
+    assert_equal "FAIL", got["flows process"].state
+    assert_match(/runner exited unsuccessfully/, got["flows process"].detail)
+  end
+
   def test_missing_flow_runner_is_a_named_failure_instead_of_a_silent_skip
     got = by_name(runner.run)
     refute got["flows"].ok
