@@ -287,8 +287,10 @@ cpu_watch() {
   if [[ $state == clear ]]; then
     threshold=$CPU_WARN_STRIKES
     (( deploying )) && threshold=$CPU_DEPLOY_STRIKES
-    if (( high >= threshold )); then
-      if (( critical >= CPU_CRIT_STRIKES )); then new_state=critical; else new_state=warning; fi
+    if (( critical >= CPU_CRIT_STRIKES )); then
+      new_state=critical
+    elif (( high >= threshold )); then
+      new_state=warning
     fi
   elif [[ $state == warning || $state == critical ]]; then
     if (( busy < CPU_RECOVER )); then
