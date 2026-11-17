@@ -208,14 +208,6 @@ model_defs:
     id: web-chat:chatgpt
     <<: *model_defaults
     score: { quality: 0.82, speed: 0.35, cost: 1.0 }
-  web_chat_kimi: &web_chat_kimi
-    id: web-chat:kimi
-    <<: *model_defaults
-    score: { quality: 0.80, speed: 0.35, cost: 1.0 }
-  web_chat_gemini: &web_chat_gemini
-    id: web-chat:gemini
-    <<: *model_defaults
-    score: { quality: 0.83, speed: 0.35, cost: 1.0 }
   ollama_gemma: &ollama_gemma
     id: ollama:gemma3:4b
     <<: *model_defaults
@@ -236,8 +228,6 @@ models:
   keyless:
     - *web_chat_grok
     - *web_chat_chatgpt
-    - *web_chat_kimi
-    - *web_chat_gemini
   default:
     - *glm_5_3_flash
     - *zai_cli_auto
@@ -245,6 +235,7 @@ models:
     - *sandbox_gateway
     - *claude_opus_api
     - *claude_sonnet
+    - *gemini_flash
     # The paid DeepSeek API leads the default chain beside the all-hands gateway
     # (operator, 2026-11-16): a /fix run on a host with only DEEPSEEK_API_KEY set
     # must answer on it, not fall through the free floor. Free lanes stay last.
@@ -273,6 +264,7 @@ models:
     - *deepseek_chat
     - *claude_opus_api
     - *claude_sonnet
+    - *gemini_flash
     - *agy_auto
     - *nemotron_super
     - *ollama_gemma
@@ -478,10 +470,11 @@ openrouter:
   free_latest:
     - nvidia/nemotron-3-super-120b-a12b:free
 
-# Keyless free fallback via headless Chrome (ferrum gem). Auto-activates when no API keys
-# are configured; opt-in anytime with MASTER_WEB_CHAT=1 or MASTER_KEYLESS=1.
-# Selectors are best-effort — sites change often. Login cookies persist in the profile dir.
-# Models use the web-chat: prefix. ToS-sensitive: never default when paid keys exist.
+# Free browser fallback via Ferrum, limited to ChatGPT and Grok. It auto-activates
+# only when no API keys are configured; opt in explicitly with MASTER_WEB_CHAT=1
+# or MASTER_KEYLESS=1. Profiles persist for sign-in continuity. Provider rate
+# limits are respected; a spent allowance is parked, never reset by deleting
+# cookies or site data. Browser sessions are not API entitlements.
 ferrum_web_chat:
   enabled_when_env: MASTER_WEB_CHAT
   auto_when_keyless: true
@@ -489,8 +482,6 @@ ferrum_web_chat:
   free_latest:
     - web-chat:grok
     - web-chat:chatgpt
-    - web-chat:kimi
-    - web-chat:gemini
   providers:
     grok:
       url: https://grok.com/
@@ -501,16 +492,6 @@ ferrum_web_chat:
       url: https://chatgpt.com/
       input_selector: "div#prompt-textarea, textarea#prompt-textarea, div[contenteditable='true']"
       reply_selector: "div[data-message-author-role='assistant']"
-      timeout: 60
-    kimi:
-      url: https://kimi.com/
-      input_selector: "textarea, div[contenteditable='true'], div[role='textbox']"
-      reply_selector: "div.markdown-body, div[class*='assistant'], div[class*='message']"
-      timeout: 60
-    gemini:
-      url: https://gemini.google.com/app
-      input_selector: "div.ql-editor[contenteditable='true'], div[contenteditable='true']"
-      reply_selector: "message-content, div[class*='response']"
       timeout: 60
 
 three_mirror_redundancy:
@@ -717,8 +698,10 @@ openai_compatible:
     key_env: [ZAI_API_KEY]
     privacy_posture: unknown
 
-# Language models Replicate hosts, asked as replicate:<owner>/<name> with
-# REPLICATE_API_TOKEN. Paid per call, so they sit behind the free lanes.
+# Language models Replicate hosts, asked explicitly as replicate:<owner>/<name>
+# with REPLICATE_API_TOKEN or REPLICATE_API_KEY. They appear in /model when
+# the key is present and use ReplicateSender; they stay out of automatic
+# ranking until verified per-model prices and a per-run spend cap are enforced.
 # Every slug was probed live on 2026-11-13 (a one-token POST to the model's
 # /predictions endpoint): each answered, and each declares the input keys the
 # dispatcher now shapes its request from — Anthropic max_tokens+system_prompt,
