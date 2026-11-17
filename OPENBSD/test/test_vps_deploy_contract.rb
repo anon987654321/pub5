@@ -1063,7 +1063,7 @@ class VpsDeployContractTest < Minitest::Test
 
 
   def test_fleet_recovery_receipt_is_created_and_snapshot_precedes_service_stops
-    assert_includes SOURCE, "def write_deploy_run_receipt"
+    assert_includes SOURCE, "write_deploy_run_receipt() {"
     assert_includes SOURCE, '"$PUB5_ADMIN" deploy-run-write "$VPS_DEPLOY_RUN_ID" "$payload"'
     assert_includes SOURCE, "export VPS_DEPLOY_LOCK_PID=${$}"
     assert_includes SOURCE, "export VPS_DEPLOY_LOCK_IDENTITY=$identity"
@@ -1094,7 +1094,7 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes recovery, "deploy-run-list"
     assert_includes recovery, "deploy-run-read"
     assert_includes recovery, "lock_process_identity"
-    assert_includes SOURCE, "def other_deploy_processes"
+    assert_includes SOURCE, "other_deploy_processes() {"
     assert_includes SOURCE, "pgrep -f 'OPENBSD/bin/vps-deploy'"
     scanner = SOURCE[/^other_deploy_processes\(\) \{.*?^\}/m]
     refute_nil scanner
