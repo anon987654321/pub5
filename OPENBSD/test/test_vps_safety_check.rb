@@ -42,11 +42,14 @@ class VpsSafetyCheckTest < Minitest::Test
       FileUtils.cp(File.join(ROOT, "emergency_cpu.sh"), File.join(openbsd, "emergency_cpu.sh"))
       FileUtils.cp(File.join(ROOT, "mirror", "usr", "local", "bin", "resource_guard.sh"),
                    File.join(mirror, "usr", "local", "bin", "resource_guard.sh"))
-      FileUtils.mkdir_p(File.join(mirror, "bin"))
       FileUtils.mkdir_p(File.join(openbsd, "bin"))
-      FileUtils.cp(File.join(ROOT, "bin", "vps_deploy_master.sh"), File.join(openbsd, "bin", "vps_deploy_master.sh"))
-      FileUtils.cp(File.join(ROOT, "bin", "deploy-smoke.sh"), File.join(openbsd, "bin", "deploy-smoke.sh"))
-      FileUtils.cp(File.join(ROOT, "mirror", "bin", "resource_guard.sh"), File.join(mirror, "bin", "resource_guard.sh"))
+      %w[
+        vps_deploy_master.sh deploy-smoke.sh resource_guard.sh validate_doas.ksh
+        vps_console.exp deploy_all.sh vps-deploy vps_install_all.sh
+        manual_master_deploy.ksh vps-state restore_litestream.sh start_all_apps.sh
+      ].each do |name|
+        FileUtils.cp(File.join(ROOT, "bin", name), File.join(openbsd, "bin", name))
+      end
       FileUtils.cp(File.join(ROOT, "OPERATOR.sh"), File.join(openbsd, "OPERATOR.sh"))
       FileUtils.mkdir_p(File.join(dir, "RAILS", "mrdamascy"))
       %w[Gemfile Gemfile.lock falcon.rb preload.rb].each do |name|
@@ -60,12 +63,6 @@ class VpsSafetyCheckTest < Minitest::Test
                    File.join(dir, "RAILS", "_bundle.sh"))
       %w[_service.sh _sync.sh _deploy.sh].each do |name|
         FileUtils.cp(File.join(ROOT, "..", "RAILS", name), File.join(dir, "RAILS", name))
-      end
-      FileUtils.cp(File.join(ROOT, "mirror", "bin", "vps-state"), File.join(mirror, "bin", "vps-state"))
-      FileUtils.cp(File.join(ROOT, "mirror", "bin", "restore_litestream.sh"), File.join(mirror, "bin", "restore_litestream.sh"))
-      FileUtils.cp(File.join(ROOT, "mirror", "bin", "start_all_apps.sh"), File.join(mirror, "bin", "start_all_apps.sh"))
-      (Dir.glob(File.join(ROOT, "mirror", "bin", "*.exp")) + [File.join(ROOT, "mirror", "bin", "validate_doas.ksh"), File.join(ROOT, "mirror", "bin", "deploy_all.sh"), File.join(ROOT, "mirror", "bin", "vps-deploy"), File.join(ROOT, "mirror", "bin", "vps_install_all.sh"), File.join(ROOT, "mirror", "bin", "manual_master_deploy.ksh")]).each do |path|
-        FileUtils.cp(path, File.join(mirror, "bin"))
       end
       yield dir, File.join(mirror, "etc", "doas.conf")
     end
@@ -271,7 +268,7 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_checkout_resource_guard_refuses_root_and_delegates_to_runner
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "mirror", "bin", "resource_guard.sh")
+      path = File.join(dir, "OPENBSD", "bin", "resource_guard.sh")
       text = File.read(path).sub('if [ "$(id -u)" -eq 0 ]; then', 'if [ "$(id -u)" -eq 1 ]; then')
       File.write(path, text)
       out, status = run_check(dir)
@@ -289,7 +286,7 @@ class VpsSafetyCheckTest < Minitest::Test
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "root load guard must be separate from its checkout wrapper and reject symlinked helpers"
+      assert_includes out, "root load guard must reject checkout helpers and never auto-restart core production services"
     end
   end
   def test_checkout_emergency_cpu_refuses_root_and_uses_installed_runner
@@ -330,7 +327,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_start_all_apps_refuses_root_and_delegates_to_broker
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "mirror", "bin", "start_all_apps.sh")
+      path = File.join(dir, "OPENBSD", "bin", "start_all_apps.sh")
       text = File.read(path).sub('if [ "$(id -u)" -eq 0 ]; then', 'if [ "$(id -u)" -eq 1 ]; then')
       File.write(path, text)
       out, status = run_check(dir)
@@ -353,7 +350,7 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_vps_state_must_not_execute_rcctl_directly
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "mirror", "bin", "vps-state")
+      path = File.join(dir, "OPENBSD", "bin", "vps-state")
       text = File.read(path).sub('"doas", "-n", broker, "service", "check", service', '"doas", "-n", "/usr/sbin/rcctl", "check", service')
       File.write(path, text)
       out, status = run_check(dir)
@@ -365,7 +362,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_litestream_recovery_must_not_execute_rcctl_directly
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "mirror", "bin", "restore_litestream.sh")
+      path = File.join(dir, "OPENBSD", "bin", "restore_litestream.sh")
       text = File.read(path).sub('doas /usr/local/sbin/pub5-admin service stop "$app"', 'doas rcctl stop "$app"')
       File.write(path, text)
       out, status = run_check(dir)
@@ -376,7 +373,7 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_manual_master_recovery_must_not_call_rcctl_directly
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "mirror", "bin", "manual_master_deploy.ksh")
+      path = File.join(dir, "OPENBSD", "bin", "manual_master_deploy.ksh")
       text = File.read(path).sub("pub5-admin service restart relayd", "rcctl restart relayd")
       File.write(path, text)
       out, status = run_check(dir)
@@ -398,7 +395,7 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_vps_install_all_service_control_is_broker_first
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "mirror", "bin", "vps_install_all.sh")
+      path = File.join(dir, "OPENBSD", "bin", "vps_install_all.sh")
       text = File.read(path).sub('doas /usr/local/sbin/pub5-admin service "$action" "$service"', 'doas rcctl "$action" "$service"')
       File.write(path, text)
       out, status = run_check(dir)
@@ -420,7 +417,7 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_vps_deploy_must_not_recommend_generic_privileged_du
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "mirror", "bin", "vps-deploy")
+      path = File.join(dir, "OPENBSD", "bin", "vps-deploy")
       text = File.read(path).sub("pub5-admin disk-usage $mount_point", "doas du -xk $mount_point")
       File.write(path, text)
       out, status = run_check(dir)
@@ -620,7 +617,7 @@ class VpsSafetyCheckTest < Minitest::Test
     skip "expect not installed" unless expect
 
     env = { "I_UNDERSTAND_CONSOLE_RISK" => nil }
-    out, status = Open3.capture2e(env, expect, "-f", File.join(ROOT, "mirror", "bin", "vps_console.exp"), "short")
+    out, status = Open3.capture2e(env, expect, "-f", File.join(ROOT, "bin", "vps_console.exp"), "short")
     assert_equal 1, status.exitstatus
     assert_includes out, "REFUSING"
   end
@@ -628,7 +625,7 @@ class VpsSafetyCheckTest < Minitest::Test
   # A second console script would reach vmctl without passing the ack.
   def test_a_second_console_script_is_refused
     with_fixture do |dir, _|
-      File.write(File.join(dir, "OPENBSD", "mirror", "bin", "vps_console_short.exp"), "#!/usr/bin/expect -f\nspawn ssh vm23\n")
+      File.write(File.join(dir, "OPENBSD", "bin", "vps_console_short.exp"), "#!/usr/bin/expect -f\nspawn ssh vm23\n")
       out, status = run_check(dir)
       refute status.success?
       assert_includes out, "vps_console_short.exp: console automation belongs in vps_console.exp"
@@ -637,9 +634,27 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_console_scripts_live_in_openbsd_bin
     %w[validate_doas.ksh vps_console.exp].each do |name|
-      assert File.file?(File.join(ROOT, "mirror", "bin", name)), "missing #{name} in OPENBSD/mirror/bin"
+      assert File.file?(File.join(ROOT, "bin", name)), "missing #{name} in OPENBSD/bin"
     end
   end
+  def test_resource_guard_retains_shed_state_when_start_fails
+    with_fixture do |dir, _|
+      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "bin", "resource_guard.sh")
+      text = File.read(path).sub(
+        'if rcctl start "$svc" 2>/dev/null; then',
+        'rcctl start "$svc" 2>/dev/null || true'
+      ).sub(
+        '        restored=$svc\n      else\n        # Keep the shed ledger entry: the next guard tick must retry rather than\n        # forget a service whose start command failed.\n        logger -t resource-guard "restore $svc failed; retaining shed state for retry"\n        break\n      fi',
+        '      restored=$svc'
+      )
+      File.write(path, text)
+      out, status = run_check(dir)
+
+      refute status.success?
+      assert_includes out, "resource guard must retain shed ledger entries when service restore fails"
+    end
+  end
+
   def test_resource_guard_must_not_auto_restart_core_services
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "bin", "resource_guard.sh")
