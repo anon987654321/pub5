@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_11_17_110000) do
+ActiveRecord::Schema[8.2].define(version: 2026_11_17_120000) do
   create_table "account_merges", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "guest_user_id", null: false
@@ -1011,6 +1011,28 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_17_110000) do
     t.index ["place_id"], name: "index_marketplace_stores_on_place_id"
     t.index ["slug"], name: "index_marketplace_stores_on_slug", unique: true
     t.index ["vertical", "active"], name: "index_marketplace_stores_on_vertical_and_active"
+  end
+
+  create_table "marketplace_wholesale_enquiries", force: :cascade do |t|
+    t.integer "store_id", null: false
+    t.integer "buyer_id", null: false
+    t.string "buyer_company_name", null: false
+    t.string "organisation_number", limit: 9, null: false
+    t.string "contact_name", null: false
+    t.string "contact_email", null: false
+    t.string "contact_phone"
+    t.text "requested_items", null: false
+    t.string "delivery_location", null: false
+    t.date "wanted_at"
+    t.text "seller_response"
+    t.string "status", default: "submitted", null: false
+    t.datetime "responded_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["buyer_id"], name: "index_marketplace_wholesale_enquiries_on_buyer_id"
+    t.index ["store_id"], name: "index_marketplace_wholesale_enquiries_on_store_id"
+    t.index ["store_id", "status", "created_at"], name: "idx_marketplace_wholesale_enquiries_store_status_created"
+    t.index ["buyer_id", "created_at"], name: "idx_marketplace_wholesale_enquiries_buyer_created"
   end
 
   create_table "marketplace_variant_options", force: :cascade do |t|
@@ -2207,6 +2229,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_17_110000) do
   add_foreign_key "marketplace_stores", "cities"
   add_foreign_key "marketplace_stores", "places"
   add_foreign_key "marketplace_stores", "users", column: "owner_id"
+  add_foreign_key "marketplace_wholesale_enquiries", "marketplace_stores", column: "store_id"
+  add_foreign_key "marketplace_wholesale_enquiries", "users", column: "buyer_id"
   add_foreign_key "marketplace_variant_options", "marketplace_variants", column: "variant_id"
   add_foreign_key "marketplace_variants", "marketplace_listings", column: "listing_id"
   add_foreign_key "mentions", "users", column: "mentioned_user_id"

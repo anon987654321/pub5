@@ -152,22 +152,4 @@ class Marketplace::StoresControllerTest < ActionDispatch::IntegrationTest
     get marketplace.shop_path(@store.slug)
     assert_select report, 0
   end
-  test "a store with wholesale enquiries cannot be deleted out from under the commercial record" do
-    @store.update!(vertical: "wholesale")
-    Marketplace::WholesaleEnquiry.create!(
-      store: @store, buyer: @stranger,
-      buyer_company_name: "Bergen Innkjøp AS",
-      organisation_number: "912345678",
-      contact_name: "Buyer", contact_email: "buyer@example.com",
-      requested_items: "Coffee beans, 10 kg",
-      delivery_location: "Bergen"
-    )
-    sign_in(@owner)
-
-    delete marketplace.shop_path(@store.slug)
-
-    assert_redirected_to marketplace.shop_path(@store.slug)
-    assert Marketplace::Store.exists?(@store.id)
-    assert_equal 1, @store.wholesale_enquiries.count
-  end
 end

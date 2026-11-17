@@ -181,53 +181,8 @@ en:
     checkout_errors:
       not_configured: Payment with %{provider} is not set up here yet.
       provider_failed: "%{provider} did not answer as expected. Nothing was charged — try again shortly."
-    wholesale_enquiries:
-      title: "Wholesale enquiry"
-      request_quote: "Request a wholesale quote"
-      sign_in_to_request: "Sign in to request a wholesale quote"
-      manage: "Trade enquiries"
-      awaiting_count: "%{count} enquiries awaiting a reply"
-      new: "Request wholesale terms"
-      inbox: "Trade enquiries"
-      inbox_intro: "Requests from business customers, kept with this store."
-      empty: "No trade enquiries yet."
-      empty_body: "New business requests will appear here."
-      back_to_store: "Back to store"
-      status:
-        submitted: "Awaiting supplier reply"
-        responded: "Supplier replied"
-      company_name: "Registered company name"
-      organisation_number: "Norwegian organisation number"
-      contact_name: "Contact person"
-      contact_email: "Business email"
-      contact_phone: "Phone (optional)"
-      requested_items: "Products, SKUs and quantities"
-      requested_items_hint: "List the products or SKUs you need, with quantities and any relevant specifications."
-      delivery_location: "Delivery address or postcode"
-      wanted_at: "Preferred delivery date (optional)"
-      seller_response: "Supplier response"
-      seller_response_hint: "Confirm availability, pricing, minimum order, delivery and payment terms here."
-      submit: "Send trade enquiry"
-      reply: "Send or update response"
-      no_order_yet: "This is an enquiry, not an order or payment. The supplier must confirm availability, prices, minimum quantities and terms before anything is agreed."
-      submitted_notice: "Your trade enquiry has been sent."
-      response_notice: "Your response has been sent to the business customer."
-      notification_title: "New wholesale enquiry"
-      notification_body: "A business customer sent a trade enquiry to %{store}."
-      buyer_notification_title: "Supplier response received"
-      buyer_notification_body: "The supplier has responded to your wholesale enquiry."
-      forbidden: "You do not have access to this trade enquiry."
-    store_delete_blocked: "This store has trade enquiries on record and cannot be deleted. Contact support if it needs to be closed."
   activerecord:
     attributes:
-      marketplace/wholesale_enquiry:
-        buyer_company_name: "Registered company name"
-        organisation_number: "Organisation number"
-        contact_name: "Contact person"
-        contact_email: "Business email"
-        requested_items: "Products and quantities"
-        delivery_location: "Delivery location"
-        seller_response: "Supplier response"
       marketplace/question:
         body: Question
         answer: Answer
