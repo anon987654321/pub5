@@ -91,6 +91,10 @@ if File.file?(guard_wrapper_path) && !File.symlink?(guard_wrapper_path) &&
                         guard_impl.include?("automatic core restart disabled") &&
                         !guard_impl.include?("ksh $EMERGENCY")
   failures << "root load guard must reject checkout helpers and never auto-restart core production services" unless guard_impl_contract
+  guard_restore_contract = guard_impl.match?(
+    /if rcctl start "\$svc" 2>\/dev\/null; then\s+restored=\$svc\s+else\s+logger -t resource-guard "restore \$svc failed; retaining shed state for retry"\s+break\s+fi/m
+  )
+  failures << "resource guard must retain shed ledger entries when service restore fails" unless guard_restore_contract
   operator = File.read(File.join(OPENBSD, "BOOTSTRAP.sh"))
   source_list = operator[/typeset -a privileged_sources=\(.*?^  \)/m].to_s
   guard_install_contract = source_list.include?("usr/local/bin/resource_guard.sh") &&
@@ -482,12 +486,12 @@ install_all_contract = install_all_source.include?("admin_service() {") &&
                        install_all_source.match?(/case "\$app" in\s+brgen\|amber\|bsdports\|mrdamascy\)/)
 
 failures << "vps_install_all service control must be broker-first and app-allowlisted" unless install_all_contract
-deploy_all_source = File.read(File.join(OPENBSD, "mirror", "bin", "deploy_all.sh"))
+deploy_all_source = File.read(File.join(OPENBSD, "bin", "deploy_all.sh"))
 deploy_all_contract = deploy_all_source.include?('zsh OPENBSD/bin/vps-deploy ${app}') &&
                       !deploy_all_source.include?('doas zsh ${script}') &&
                       !deploy_all_source.include?('RAILS/${app}/${app}.sh')
 failures << "deploy_all per-app mode must not elevate checkout Rails wrappers" unless deploy_all_contract
-start_all_apps_path = File.join(OPENBSD, "mirror", "bin", "start_all_apps.sh")
+start_all_apps_path = File.join(OPENBSD, "bin", "start_all_apps.sh")
 
 if File.file?(start_all_apps_path)
   start_all_apps = File.read(start_all_apps_path)
@@ -506,7 +510,7 @@ else
   failures << "missing OPENBSD/bin/start_all_apps.sh"
 end
 
-vps_state_path = File.join(OPENBSD, "mirror", "bin", "vps-state")
+vps_state_path = File.join(OPENBSD, "bin", "vps-state")
 
 if File.file?(vps_state_path)
   vps_state = File.read(vps_state_path)
@@ -520,7 +524,7 @@ else
   failures << "missing OPENBSD/bin/vps-state"
 end
 
-restore_litestream_path = File.join(OPENBSD, "mirror", "bin", "restore_litestream.sh")
+restore_litestream_path = File.join(OPENBSD, "bin", "restore_litestream.sh")
 
 if File.file?(restore_litestream_path)
   restore_litestream = File.read(restore_litestream_path)
@@ -533,7 +537,7 @@ else
   failures << "missing OPENBSD/bin/restore_litestream.sh"
 end
 
-manual_master_path = File.join(OPENBSD, "mirror", "bin", "manual_master_deploy.ksh")
+manual_master_path = File.join(OPENBSD, "bin", "manual_master_deploy.ksh")
 
 if File.file?(manual_master_path)
   manual_master = File.read(manual_master_path)
@@ -566,7 +570,7 @@ else
   failures << "missing OPENBSD/bin/vps_deploy_master.sh"
 end
 
-deploy_source = File.read(File.join(OPENBSD, "mirror", "bin", "vps-deploy"))
+deploy_source = File.read(File.join(OPENBSD, "bin", "vps-deploy"))
 failures << "vps-deploy must not recommend generic privileged du" unless
   deploy_source.include?('pub5-admin disk-usage $mount_point') && !deploy_source.include?("doas du -xk $mount_point")
 console_main = File.join(TOOLING, "vps_console.exp")
