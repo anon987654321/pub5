@@ -80,12 +80,12 @@ module Master
       def configured?(kind, env: ENV) = lanes(kind).any? { |lane| key_for(lane.provider, env:) }
 
       # The lanes that can be asked now, in selection order, and why the rest cannot.
-      def evaluate(kind, prompt = "", env: ENV, seconds: nil, skip: [], input: {})
+      def evaluate(kind, prompt = "", env: ENV, seconds: nil, skip: [], input: {}, today: Date.today)
         live = []
         out = []
         lanes(kind).each do |lane|
           reason = unavailable(lane, env, skip)
-          cost = estimate(lane, prompt, seconds:, input:)
+          cost = estimate(lane, prompt, seconds:, input:, today:)
           reason ||= over(kind, cost)
           reason ? out << [lane, reason] : live << [lane, cost]
         end
