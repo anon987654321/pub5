@@ -114,6 +114,14 @@ USAGE = "usage: MASTER/bin/fix-here <#{TREES.join('|')}|path> [--model ID|none] 
 abort USAGE if tree.to_s.empty? || args.any?
 abort "fix-here: #{tree} is not one of #{TREES.join(', ')} and not a path in this checkout" unless TREES.include?(tree) || File.exist?(File.join(ROOT, tree))
 
+# Production is for serving and reviewed deployments, never repository repair.
+# Keep this guard independent of the login shell and the caller's working dir.
+production_host = ENV["PUB5_PRODUCTION_HOST"] == "1" ||
+                  (RUBY_PLATFORM.match?(/openbsd/i) &&
+                   File.file?("/etc/master.env") &&
+                   File.directory?("/home/dev/pub5/MASTER"))
+abort "fix-here: /fix is disabled on production vm23; run it on the development workstation" if production_host
+
 # 2. Disk: a /fix run plus its tests writes logs and caches; below this tools start failing.
 out, status = Open3.capture2e("df", "-kP", ROOT)
 available_kib = out.lines.last.to_s.split[3]
