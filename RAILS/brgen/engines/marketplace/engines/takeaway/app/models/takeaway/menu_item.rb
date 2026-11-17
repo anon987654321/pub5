@@ -40,6 +40,12 @@ class Takeaway::MenuItem < ApplicationRecord
 
   def metadata_value(key) = (metadata || {}).fetch(key.to_s, nil)
 
+  def display_name
+    I18n.locale.to_s.start_with?("en") ? metadata_value("name_en").presence || name : name
+  end
+
+  def display_emoji = metadata_value("emoji")
+
   def badges = Array(metadata_value("badges"))
 
   def allergens_stated? = !allergens.nil?
