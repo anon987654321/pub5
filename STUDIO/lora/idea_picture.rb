@@ -355,12 +355,13 @@ module Studio
           # Both H3 engines take first_frame_image; Lite additionally requires
           # its selectable output resolution. Image-to-video inherits the
           # still's aspect ratio.
+          resolution = film_resolution if film_engine == "minimax/h3-lite"
           input = {
             prompt:,
             first_frame_image: client.upload_file(still, subject: @subject),
             duration: h3_duration(duration),
           }
-          input[:resolution] = film_resolution if film_engine == "minimax/h3-lite"
+          input[:resolution] = resolution if resolution
           return input
         when "kwaivgi/kling-v3-omni-video"
           # Kling v3 Omni takes start_image, and its duration window is 3-15s.
