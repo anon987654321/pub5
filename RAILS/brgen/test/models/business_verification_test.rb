@@ -53,9 +53,15 @@ class BusinessVerificationTest < ActiveSupport::TestCase
     assert_equal "verified", verification.reload.status
     assert Marketplace::Store.find(@store.id).verified?
     assert Notification.where(user_id: @owner.id, kind: "alert").exists?
+    approved = Shared::AuditEvent.find_by!(action: "business.verification.verified", target_type: "BusinessVerification",
+                                           target_id: verification.id)
+    assert_equal @reviewer.id, approved.actor_id
 
     verification.reject!(by: @reviewer, note: I18n.t("business_verifications.rejected_body"))
     assert_not Marketplace::Store.find(@store.id).verified?
+    rejected = Shared::AuditEvent.find_by!(action: "business.verification.rejected", target_type: "BusinessVerification",
+                                           target_id: verification.id)
+    assert_equal @reviewer.id, rejected.actor_id
   end
 
   test "a restaurant is verified by the same review" do
