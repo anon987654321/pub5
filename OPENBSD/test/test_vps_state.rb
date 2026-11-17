@@ -92,7 +92,7 @@ class TestVpsState < Minitest::Test
       output = state(dir)
 
       assert_match(/recovery0 at fleet: state=pending pending=1/, output)
-      assert_match(/recovery0 at #{Regexp.escape(run_id)}: target=all status=running owner_pid_state=gone snapshot=complete stage=restart-brgen/, output)
+      assert_match(/recovery0 at #{Regexp.escape(run_id)}: target=all status=running owner_pid_state=gone snapshot=complete started=master,brgen order=brgen,master stage=restart-brgen/, output)
       assert_includes output, "inspect=zsh OPENBSD/bin/vps-deploy recover --plan"
     end
   end
@@ -111,6 +111,9 @@ class TestVpsState < Minitest::Test
       assert_equal run_id, row.fetch("run_id")
       assert_equal "present", row.fetch("pid_state")
       assert_equal "incomplete", row.fetch("snapshot")
+      assert_equal %w[master brgen], row.fetch("started_services")
+      assert_equal %w[brgen master], row.fetch("restore_order")
+      assert_equal({ "master" => 53187, "brgen" => 38182 }, row.fetch("ports"))
       assert_equal "restart-brgen", row.fetch("stage")
       assert_equal "/var/log/pub5/runs/deploy-20261117-all-12345.log", row.fetch("run_log")
     end
