@@ -803,35 +803,55 @@ module Pub5Admin
     directory = File.join(root, digest[0, 2], digest[2, 2])
     ensure_root_directory(directory)
     target = File.join(directory, "#{digest}.gem")
-
-    if File.exist?(target) || File.symlink?(target)
-      target_stat = validate_cache_source!(target, uid: 0)
-      raise "bundle cache entry has wrong digest: #{target}" unless Digest::SHA256.file(target).hexdigest == digest
-      raise "bundle cache entry is writable: #{target}" unless (target_stat.mode & 0o222).zero?
-      return 0
-    end
+    return validate_existing_bundle_cache_entry!(target, digest) if File.exist?(target) || File.symlink?(target)
 
     temporary = File.join(directory, ".#{digest}.#{Process.pid}.#{SecureRandom.hex(5)}")
     begin
-      File.open(temporary, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
-        File.open(source, "rb") { |input| IO.copy_stream(input, file) }
-        file.flush
-        file.fsync
-      end
-      raise "bundle cache source changed while copying: #{source}" unless Digest::SHA256.file(temporary).hexdigest == digest
-      File.chown(0, Etc.getgrnam("wheel").gid, temporary)
-      File.chmod(0o444, temporary)
-      begin
-        File.link(temporary, target)
-      rescue Errno::EEXIST
-        existing_stat = validate_cache_source!(target, uid: 0)
-        raise "bundle cache collision has wrong digest: #{target}" unless Digest::SHA256.file(target).hexdigest == digest
-        raise "bundle cache collision is writable: #{target}" unless (existing_stat.mode & 0o222).zero?
-      end
+      write_bundle_cache_temporary(source, temporary, digest)
+      publish_bundle_cache_temporary(temporary, target, digest)
     ensure
       File.unlink(temporary) if File.exist?(temporary)
     end
     0
+  end
+
+  def validate_existing_bundle_cache_entry!(target, digest)
+    stat = validate_cache_source!(target, uid: 0)
+    validate_bundle_cache_digest!(target, digest, "entry")
+    raise "bundle cache entry is writable: #{target}" unless (stat.mode & 0o222).zero?
+
+    0
+  end
+
+  def write_bundle_cache_temporary(source, temporary, digest)
+    File.open(temporary, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
+      File.open(source, "rb") { |input| IO.copy_stream(input, file) }
+      file.flush
+      file.fsync
+    end
+    validate_bundle_cache_digest!(temporary, digest, "source changed while copying")
+  end
+
+  def publish_bundle_cache_temporary(temporary, target, digest)
+    File.chown(0, Etc.getgrnam("wheel").gid, temporary)
+    File.chmod(0o444, temporary)
+    begin
+      File.link(temporary, target)
+    rescue Errno::EEXIST
+      validate_bundle_cache_collision!(target, digest)
+    end
+  end
+
+  def validate_bundle_cache_collision!(target, digest)
+    stat = validate_cache_source!(target, uid: 0)
+    validate_bundle_cache_digest!(target, digest, "collision")
+    raise "bundle cache collision is writable: #{target}" unless (stat.mode & 0o222).zero?
+  end
+
+  def validate_bundle_cache_digest!(path, digest, label)
+    return if Digest::SHA256.file(path).hexdigest == digest
+
+    raise "bundle cache #{label} has wrong digest: #{path}"
   end
 
   # This verb knows no caller-provided filesystem paths. It only imports from the
