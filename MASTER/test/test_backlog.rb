@@ -368,7 +368,7 @@ class TestBacklog < Minitest::Test
     ]
     routes = [
       { id: "release-preflight", actions: ["verify deployment preflight"], evidence_ids: %w[source],
-        impact: 0.7, confidence: 0.9, priority: 0.95, cost: 0.8, risk: 0.1, reversibility: "easy" },
+        impact: 0.7, confidence: 0.9, priority: 0.7, cost: 0.8, risk: 0.1, reversibility: "easy" },
       { id: "app-release", actions: ["validate active application release"], evidence_ids: %w[source command],
         impact: 1.0, confidence: 0.95, priority: 1.0, cost: 0.2, risk: 0.05,
         reversibility: "easy", dependencies: ["release-preflight"] },
@@ -395,13 +395,55 @@ class TestBacklog < Minitest::Test
       { id: "release-safety", actions: ["verify vm23 deployment"], evidence_ids: %w[source command scope],
         impact: 0.8, confidence: 0.9, priority: 1.0, cost: 1.0, risk: 0, reversibility: "easy" },
       { id: "studio-suite", actions: ["run studio suite"], evidence_ids: %w[source command scope],
-        impact: 0.8, confidence: 0.9, priority: 0.4, cost: 0.66, risk: 0, reversibility: "easy" },
+        impact: 0.8, confidence: 0.9, priority: 0.4, cost: 0.1, risk: 0, reversibility: "easy" },
     ]
 
     decision = planner.choose(routes:, verified_evidence: evidence, objective: "", exploration: true)
 
     assert_equal "release-safety", decision.route.id
     refute decision.exploration
+  end
+
+  def test_adaptive_journey_includes_lower_priority_routes_only_as_explicit_prerequisites
+    planner = Master::Fix::AdaptiveJourney.new
+    evidence = [
+      { id: "source", sha256: "a" * 64, verified: true },
+      { id: "command", sha256: "b" * 64, verified: true },
+    ]
+    routes = [
+      { id: "required-preflight", actions: ["verify deployment preflight"], evidence_ids: %w[source],
+        impact: 0.7, confidence: 0.9, priority: 0.65, cost: 0.8, risk: 0.1, reversibility: "easy" },
+      { id: "release", actions: ["deploy production release"], evidence_ids: %w[source command],
+        impact: 1.0, confidence: 0.95, priority: 1.0, cost: 0.2, risk: 0.05,
+        reversibility: "easy", dependencies: ["required-preflight"] },
+      { id: "cheap-distraction", actions: ["polish studio artwork"], evidence_ids: %w[source command],
+        impact: 0.8, confidence: 0.9, priority: 0.1, cost: 0.01, risk: 0.0, reversibility: "easy" },
+    ]
+
+    decision = planner.choose(routes:, verified_evidence: evidence, objective: "")
+
+    assert_equal "required-preflight", decision.route.id
+    refute decision.exploration
+  end
+
+  def test_adaptive_journey_blocks_when_the_highest_priority_route_has_no_ready_dependency
+    planner = Master::Fix::AdaptiveJourney.new
+    evidence = [
+      { id: "source", sha256: "a" * 64, verified: true },
+      { id: "command", sha256: "b" * 64, verified: true },
+    ]
+    routes = [
+      { id: "release", actions: ["deploy production release"], evidence_ids: %w[source command],
+        impact: 1.0, confidence: 0.95, priority: 1.0, cost: 0.2, risk: 0.05,
+        reversibility: "easy", dependencies: ["missing-preflight"] },
+      { id: "cheap-distraction", actions: ["polish studio artwork"], evidence_ids: %w[source command],
+        impact: 0.8, confidence: 0.9, priority: 0.1, cost: 0.01, risk: 0.0, reversibility: "easy" },
+    ]
+
+    error = assert_raises(ArgumentError) do
+      planner.choose(routes:, verified_evidence: evidence, objective: "")
+    end
+    assert_match(/highest-priority routes are blocked/, error.message)
   end
 
   def test_adaptive_journey_refuses_unverified_or_ungrounded_routes
