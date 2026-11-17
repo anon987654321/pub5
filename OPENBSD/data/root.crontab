@@ -115,7 +115,7 @@ PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
 # pub4-alert watch checks disk, swap, failed services, backup freshness, the
 # CPU-watch heartbeat and interrupted fleet deploy receipts. The receipt view is
 # capped at 500 newest files / 100 pending runs; truncation itself alerts.
-# Dead or reused owner fingerprints alert; transitions go to pub4-alerts.log.
+# Dead/reused owners and unreadable fingerprints alert; transitions go to pub4-alerts.log.
 */5 * * * * /usr/local/bin/pub4-alert watch
 
 # weekly-integrity — integrity_check plus a public health pass, once a week.
