@@ -39,6 +39,8 @@ class Dating::Verification < ApplicationRecord
       # card is the shape that made this feed slow before.
       Dating::Profile.where(id: profile_id).update_all(verified_at: reviewed_at)
     end
+    Shared::Audit.record!(action: "dating.verification.verified", actor: by, target: self,
+                          metadata: { note: note.presence })
     notify(I18n.t("dating.verification_approved_title"), I18n.t("dating.verification_approved_body"))
     record_trust_signal
   end
@@ -49,8 +51,9 @@ class Dating::Verification < ApplicationRecord
 
       update!(status: "rejected", reviewed_by: by, reviewed_at: Time.current, review_note: note.presence)
       Dating::Profile.where(id: profile_id).update_all(verified_at: nil)
-      Dating::LocationPing.where(user_id: Dating::Profile.where(id: profile_id).pick(:user_id)).delete_all
     end
+    Shared::Audit.record!(action: "dating.verification.rejected", actor: by, target: self,
+                          metadata: { note: note.presence })
     notify(I18n.t("dating.verification_rejected_title"), note.presence || I18n.t("dating.verification_rejected_body"))
   end
 
