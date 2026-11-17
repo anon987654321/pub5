@@ -8,6 +8,7 @@ require_relative "backlog_classify"
 require_relative "backlog_reader"
 require_relative "backlog_store"
 require_relative "../lib/fix/task_contract"
+require_relative "../lib/fix/adaptive_journey"
 
 # The backlog generator: one YAML row per checkbox item in the root TODO.md.
 #
@@ -526,6 +527,7 @@ module Backlog
     READY_KINDS = %w[mechanical].freeze
     OWNED_TREES = %w[MASTER RAILS OPENBSD STUDIO BIZ].freeze
     RECEIPT_PATH = ".master/backlog-executor.jsonl"
+    MISSION_OBJECTIVE = "deployment-first: production release, then repository-wide repair, then creative work".freeze
 
     def initialize(root: Master::ROOT, repo_root: Master::REPO_ROOT, mission_class: nil)
       require_relative "../lib/fix/mission" unless defined?(Master::Fix::Mission)
@@ -545,13 +547,26 @@ module Backlog
 
       entries = Backlog.generate
       receipts = completed_receipts
-      item = entries.find do |row|
-        eligible?(row) && !receipts.include?(item_digest(row))
-      end
+      candidates = entries.select { |row| eligible?(row) && !receipts.include?(item_digest(row)) }
+      return :idle if candidates.empty?
+
+      item, decision = select_next(candidates, completed_receipts: receipts)
       return :idle unless item
 
       scope = item.fetch(:scope_paths)
       proof_types = ProofMap.types_for(item)
+      journey = {
+        "route_id" => decision.route.id,
+        "phase" => mission_phase(item),
+        "tree" => item.fetch(:tree),
+        "priority" => decision.route.priority,
+        "score" => decision.score,
+        "reason" => decision.reason,
+        "exploration" => decision.exploration,
+        "alternatives" => decision.alternatives.map do |row|
+          { "id" => row.fetch(:id), "score" => row.fetch(:score), "priority" => row.fetch(:priority) }
+        end,
+      }
       goal = [
         "Complete exactly this root TODO item, using MASTER's existing /fix pipeline.",
         "Backlog item: #{item.fetch(:id)}",
@@ -559,6 +574,7 @@ module Backlog
         "Owned tree: #{item.fetch(:tree)}",
         "Exact repository-relative scope: #{scope.join(', ')}",
         "Acceptance command from the register: #{item[:done_when]}",
+        "Adaptive journey: phase=#{journey.fetch("phase")} priority=#{journey.fetch("priority")} score=#{journey.fetch("score")} reason=#{journey.fetch("reason")}. Alternatives are bounded to the same mission-priority band.",
         "Required TaskContract proof types (closed proof-map v#{ProofMap::VERSION}): #{proof_types.join(", ")}. Unknown or absent mappings are not auto-queued.",
         "Do not edit the TODO checkbox. The executor records work only from a durable completed Mission with a delivery summary and no pending repository writes.",
         "Commit each coherent, verified slice and push directly to the existing main branch when the repository-delivery policy authorizes that remote action; do not create PRs, branches, worktrees or GitHub Actions. Stage only task-owned paths after checking git status and preserving unrelated changes.",
@@ -584,6 +600,7 @@ module Backlog
         "done_when" => item[:done_when],
         "proof_map_version" => ProofMap::VERSION,
         "proof_types" => proof_types,
+        "journey" => journey,
       )
       mission = @mission_class.new(root: @root).ensure_queued!(
         goal:, scope: @root, model:, effort:, plan:,
@@ -652,6 +669,10 @@ module Backlog
         "artifacts" => Array(record["artifacts"]),
         "proof_status" => "verified_fix_pipeline_acceptance_and_origin_main",
         "proof" => proof,
+        "journey" => plan["journey"],
+        "journey_outcome" => if plan["journey"].is_a?(Hash)
+          { "status" => "PASS", "evidence_id" => proof.fetch("report_digest") }
+        end,
         "repository_pushes" => pushes,
         "evidence" => {
           "mission_state" => record.fetch("state"),
@@ -701,16 +722,192 @@ module Backlog
       Digest::SHA256.hexdigest([row.fetch(:id), row.fetch(:text), *Array(row[:scope_paths]).sort].join("\0"))
     end
 
+    # Route history is reconstructed only from durable completion receipts
+    # whose item, current acceptance command, output digest and origin/main push
+    # still agree with the live root TODO source.
     def completed_receipts
+      completed_receipt_rows.map { |row| row.fetch("item_digest") }.uniq
+    end
+
+    def verified_route_history
+      completed_receipt_rows.filter_map do |row|
+        journey = row["journey"].is_a?(Hash) ? row["journey"] : {}
+        outcome = row["journey_outcome"].is_a?(Hash) ? row["journey_outcome"] : {}
+        evidence_id = row.dig("proof", "report_digest").to_s
+        next if journey["route_id"].to_s.empty?
+        next unless outcome["status"] == "PASS" && outcome["evidence_id"].to_s == evidence_id
+        next unless evidence_id.match?(/\A[0-9a-f]{64}\z/i)
+
+        { "route_id" => journey.fetch("route_id"), "status" => "PASS",
+          "evidence_id" => evidence_id, "verified" => true }
+      end
+    end
+
+    def completed_receipt_rows
       path = File.join(@root, RECEIPT_PATH)
-      return [] unless File.file?(path)
+      return [] unless File.exist?(path)
+
+      stat = File.lstat(path)
+      return [] unless stat.file? && !stat.symlink? && (stat.mode & 0o077).zero?
 
       File.foreach(path).filter_map do |line|
         row = JSON.parse(line)
-        row["item_digest"] if row["proof_status"] == "verified_fix_pipeline_acceptance_and_origin_main"
-      rescue JSON::ParserError
+        row if valid_completion_receipt?(row)
+      rescue JSON::ParserError, KeyError, ArgumentError, SystemCallError
         nil
       end
+    rescue SystemCallError
+      []
+    end
+
+    def valid_completion_receipt?(row)
+      return false unless row.is_a?(Hash)
+      return false unless row["proof_status"] == "verified_fix_pipeline_acceptance_and_origin_main"
+      return false unless row["mission_id"].to_s.match?(/\A[a-zA-Z0-9:_-]{1,200}\z/)
+      return false unless row["completed_at"].to_s.match?(/\A\d{4}-\d{2}-\d{2}T/)
+      return false unless row.dig("evidence", "mission_state") == "completed"
+      return false unless row.dig("evidence", "mission_stage") == "deliver"
+      return false unless row.dig("evidence", "pending_repository_writes") == 0
+      return false if row["summary"].to_s.strip.empty?
+
+      source_item = Backlog.generate.find { |item| item[:id].to_s == row["item_id"].to_s }
+      return false unless source_item && item_digest(source_item) == row["item_digest"].to_s
+      return false unless row["item_digest"].to_s.match?(/\A[0-9a-f]{64}\z/i)
+
+      proof = row["proof"].is_a?(Hash) ? row["proof"] : {}
+      return false unless proof["kind"] == "fix_pipeline" && proof["status"] == "pass"
+      return false unless proof["scope_paths"].is_a?(Array)
+      return false unless proof["scope_paths"].map(&:to_s).sort == Array(source_item[:scope_paths]).map(&:to_s).sort
+      return false unless proof["report_digest"].to_s.match?(/\A[0-9a-f]{64}\z/i)
+      return false unless proof["proof_summary"].to_s.match?(/fix done.*proof:/i)
+
+      required_types = ProofMap.types_for(source_item)
+      return false unless ProofMap.valid_types?(required_types)
+      return false unless Array(proof["required_proof_types"]).map(&:to_s) == required_types
+
+      command_spec = ProofMap.execution_spec(
+        source_item[:done_when], tree: source_item[:tree], repo_root: @repo_root
+      )
+      return false unless command_spec && required_types.one?
+      command = proof["command_evidence"].is_a?(Hash) ? proof["command_evidence"] : {}
+      return false unless command["proof_type"].to_s == required_types.first
+      return false unless command["status"] == "pass" && command["exit_status"] == 0
+      return false unless command["command_digest"].to_s == command_spec.fetch(:command_digest)
+      return false unless command["output_digest"].to_s.match?(/\A[0-9a-f]{64}\z/i)
+      return false unless command["output_bytes"].is_a?(Integer) && command["output_bytes"] >= 0
+      return false unless command["duration_ms"].is_a?(Integer) && command["duration_ms"] >= 0
+      return false unless command["cwd"].to_s == command_spec.fetch(:cwd_relative)
+
+      pushes = Array(row["repository_pushes"])
+      return false if pushes.empty?
+      return false unless pushes.all? do |push|
+        push.is_a?(Hash) && push["remote"] == "origin" && push["branch"] == "main" &&
+          push["commit"].to_s.match?(/\A[0-9a-f]{40}\z/i)
+      end
+
+      journey = row["journey"]
+      return true if journey.nil? # Older verified receipts remain valid, but do not train the planner.
+      return false unless journey.is_a?(Hash)
+      return false unless journey["route_id"].to_s == row["item_digest"].to_s
+      return false unless journey["tree"].to_s == source_item[:tree].to_s
+      return false unless journey["phase"].to_s == mission_phase(source_item)
+      return false unless journey["priority"].is_a?(Numeric) && journey["priority"].between?(0.0, 1.0)
+      return false unless journey["score"].is_a?(Numeric) && journey["score"].finite?
+
+      outcome = row["journey_outcome"].is_a?(Hash) ? row["journey_outcome"] : {}
+      outcome["status"] == "PASS" && outcome["evidence_id"].to_s == proof["report_digest"].to_s
+    end
+
+    def select_next(rows, completed_receipts:)
+      source_digest = Digest::SHA256.file(Backlog::SOURCE).hexdigest
+      evidence = [{
+        id: "todo:#{source_digest}", sha256: source_digest, verified: true,
+        kind: "root_todo_source",
+      }]
+      routes = rows.filter_map do |row|
+        spec = ProofMap.execution_spec(row[:done_when], tree: row[:tree], repo_root: @repo_root)
+        next unless spec
+
+        scope_facts = Array(row[:scope_paths]).map do |relative|
+          absolute = File.join(@repo_root, relative)
+          [relative, Digest::SHA256.file(absolute).hexdigest]
+        end.sort
+        scope_digest = Digest::SHA256.hexdigest(JSON.generate(scope_facts))
+        route_id = item_digest(row)
+        item_evidence = [
+          { id: "item:#{route_id}", sha256: route_id, verified: true, kind: "todo_item" },
+          { id: "command:#{spec.fetch(:command_digest)}", sha256: spec.fetch(:command_digest),
+            verified: true, kind: "allowlisted_acceptance_command" },
+          { id: "scope:#{scope_digest}", sha256: scope_digest, verified: true, kind: "existing_scope_hashes" },
+        ]
+        evidence.concat(item_evidence)
+        {
+          id: route_id,
+          actions: [row[:text].to_s, row[:section].to_s],
+          evidence_ids: ["todo:#{source_digest}", *item_evidence.map { |item| item.fetch(:id) }],
+          impact: journey_impact(row),
+          confidence: 0.95,
+          priority: journey_priority(row),
+          cost: { "s" => 0.25, "m" => 0.45, "l" => 0.8 }.fetch(row[:size].to_s, 0.5),
+          risk: { "OPENBSD" => 0.25, "RAILS" => 0.2, "MASTER" => 0.15 }.fetch(row[:tree].to_s, 0.1),
+          reversibility: "easy",
+          causes: [],
+          preserves: ["exact_single_tree_scope", "existing_paths", "operator_gates"],
+          dependencies: Array(row[:dependencies]).map(&:to_s),
+        }
+      rescue SystemCallError, ArgumentError
+        nil
+      end
+
+      return [nil, nil] if routes.empty?
+
+      planner = Master::Fix::AdaptiveJourney.new(history: verified_route_history)
+      decision = planner.choose(
+        routes:, verified_evidence: evidence.uniq { |item| item.fetch(:id) },
+        objective: "", satisfied_dependencies: completed_receipts, exploration: true
+      )
+      selected = rows.find { |row| item_digest(row) == decision.route.id }
+      [selected, decision]
+    end
+
+    def journey_priority(row)
+      tree = row[:tree].to_s
+      text = "#{row[:section]} #{row[:text]}".downcase
+      case
+      when tree == "OPENBSD" && text.match?(/deploy|vm23|receipt|restore|recover|pfctl|rehears|runner/)
+        1.0
+      when tree == "MASTER" && text.match?(/deploy|preflight|release|boot|receipt|installed compatible ruby/)
+        0.97
+      when tree == "RAILS" && text.match?(/deploy|production|full contracts|app.*ci|migration|acceptance/)
+        0.92
+      when text.match?(/repository.wide|all.tree|all trees|all four|\/fix/)
+        0.88
+      when tree == "MASTER" || tree == "RAILS" || tree == "OPENBSD"
+        0.78
+      when tree == "STUDIO" || tree == "BIZ"
+        0.45
+      else
+        0.6
+      end
+    end
+
+    def mission_phase(row)
+      priority = journey_priority(row)
+      return "release_safety" if priority >= 0.97 && row[:tree].to_s == "OPENBSD"
+      return "release_preflight" if priority >= 0.97 && row[:tree].to_s == "MASTER"
+      return "application_validation" if priority >= 0.9 && row[:tree].to_s == "RAILS"
+      return "repository_repair" if priority >= 0.85
+      return "creative_acceptance" if %w[STUDIO BIZ].include?(row[:tree].to_s)
+
+      "tree_acceptance"
+    end
+
+    def journey_impact(row)
+      text = "#{row[:section]} #{row[:text]}".downcase
+      return 0.98 if text.match?(/production|restore|recovery|security|critical|deployment/)
+      return 0.9 if text.match?(/full|complete|all.tree|repository.wide|acceptance/)
+
+      0.78
     end
   end
 end
