@@ -49,7 +49,7 @@ module Master
       end
 
       def dmesg(lines = DEFAULT_DMESG_LINES)
-        @buffer.to_a.last(lines).join("\n")
+        snapshot.last(lines).join("\n")
       end
 
       # A stable copy for operation receipts. Readers must not race the event
@@ -77,10 +77,15 @@ module Master
         Thread.current.thread_variable_set(:master_trace_logging_active, true)
         begin
           units = @mutex.synchronize { @console.lines(payload) }.map { |line| Master::Ground::Redactor.text(line) }
-          return @buffer.push(format_entry(payload)) if units.empty?
+          if units.empty?
+            line = format_entry(payload)
+            return @mutex.synchronize { @buffer.push(line) }
+          end
 
-          units.each { |line| @buffer.push(line) }
-          listeners = @mutex.synchronize { @listeners.dup }
+          listeners = @mutex.synchronize do
+            units.each { |line| @buffer.push(line) }
+            @listeners.dup
+          end
           units.each { |line| listeners.each { |listener| listener.call(line) } }
         rescue StandardError => e
           warn_logging_failure(e)
