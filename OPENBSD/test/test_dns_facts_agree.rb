@@ -18,6 +18,7 @@ class DnsFactsAgreeTest < Minitest::Test
   OPENBSD = File.expand_path("..", __dir__)
   POLICY = YAML.safe_load_file(File.join(OPENBSD, "data", "dns.yml"))
   OPERATOR = File.read(File.join(OPENBSD, "OPERATOR.sh"), encoding: "UTF-8")
+  BOOTSTRAP = File.read(File.join(OPENBSD, "BOOTSTRAP.sh"), encoding: "UTF-8")
 
   def shell_scalar(name)
     OPERATOR[/^typeset -r #{name}="([^"]+)"/, 1]
@@ -41,15 +42,11 @@ class DnsFactsAgreeTest < Minitest::Test
     assert_equal POLICY.fetch("resolvers").fetch("public"), shell_array("PUBLIC_RESOLVERS")
   end
 
-  # The domain list is read twice as well, and not in two files but in two
-  # languages. OPERATOR.sh's loops walk ALL_DOMAINS as zsh expands the array;
-  # render_dns.rb splits the same block into lines. A comment, a quoted entry or
-  # two entries on one line inside it splits differently, and then the zones the
-  # generator writes and the domains the installer walks are two fleets. zsh
-  # evaluates the block here so the two readings are compared, not assumed.
+  # The bootstrap's legacy fleet declaration is the source read by render_dns.
+  # Evaluate it as zsh does so the generator and bootstrap cannot silently diverge.
   def test_all_domains_reads_the_same_in_zsh_and_in_render_dns
-    block = OPERATOR[/^ALL_DOMAINS=\(\n.*?\n\)$/m]
-    refute_nil block, "no ALL_DOMAINS block in OPERATOR.sh"
+    block = BOOTSTRAP[/^ALL_DOMAINS=\(\n.*?\n\)$/m]
+    refute_nil block, "no ALL_DOMAINS block in BOOTSTRAP.sh"
 
     out, status = Open3.capture2(ENV.fetch("PUB5_ZSH", "zsh"), "-f", "-c", "#{block}\nprint -rl -- $ALL_DOMAINS")
     assert status.success?, "zsh could not evaluate the ALL_DOMAINS block"

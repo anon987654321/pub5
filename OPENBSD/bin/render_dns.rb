@@ -39,7 +39,7 @@ module RenderDns
 
   OPENBSD = File.join(ROOT, "OPENBSD")
   POLICY = File.join(OPENBSD, "data", "dns.yml")
-  OPERATOR = File.join(OPENBSD, "OPERATOR.sh")
+  DOMAIN_SOURCE = File.join(OPENBSD, "BOOTSTRAP.sh")
   ZONES_DIR = File.join(OPENBSD, "mirror", "var", "nsd", "zones", "master")
   NSD_CONF = File.join(OPENBSD, "mirror", "var", "nsd", "etc", "nsd.conf")
   ACME_CONF = File.join(OPENBSD, "mirror", "etc", "acme-client.conf")
@@ -50,11 +50,11 @@ module RenderDns
 
   def policy = @policy ||= YAML.safe_load_file(POLICY)
 
-  # The city network, straight out of the shell array the installer uses, so the
-  # generator cannot describe a different fleet from the one OPERATOR.sh deploys.
+  # The city network comes from the legacy bootstrap's ALL_DOMAINS array.
+  # Routine OPERATOR.sh intentionally contains only the filesystem apply path.
   def city_zones
-    block = File.read(OPERATOR, encoding: "UTF-8")[/ALL_DOMAINS=\(\n(.*?)\n\)/m, 1] or
-      raise "ALL_DOMAINS block not found in #{OPERATOR}"
+    block = File.read(DOMAIN_SOURCE, encoding: "UTF-8")[/ALL_DOMAINS=\(\n(.*?)\n\)/m, 1] or
+      raise "ALL_DOMAINS block not found in #{DOMAIN_SOURCE}"
 
     block.lines.filter_map do |line|
       line = line.strip
