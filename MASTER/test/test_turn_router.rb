@@ -615,4 +615,28 @@ class TurnRouterTest < Minitest::Test
     assert_equal "/documents analyze \\~/Photos", routed
   end
 
+  def test_fix_is_blocked_before_intake_on_production_hosts
+    router = Master::CLI::TurnRouter
+
+    router.stub(:production_host?, true) do
+      ["/fix MASTER", "/review RAILS", "/scan OPENBSD"].each do |command|
+        result = router.dispatch_slash(command, container: build_container)
+        refute result.ok?, command
+        assert_equal :policy, result.category, command
+        assert_match(/disabled on production vm23/, result.message, command)
+      end
+    end
+  end
+
+  def test_fix_remains_available_on_a_development_host
+    router = Master::CLI::TurnRouter
+
+    router.stub(:production_host?, false) do
+      command = Master::CLI::CommandRegistry::Command.new { "fix-dispatched" }
+      result = router.dispatch_slash("/fix", container: build_container(commands: { "fix" => command }))
+      assert result.ok?, result.message.to_s
+      assert_match(/fix-dispatched/, result.value[:rendered].to_s)
+    end
+  end
+
 end
