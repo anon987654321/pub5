@@ -158,7 +158,7 @@ class TurnRouterTest < Minitest::Test
         Master::Result.ok({ rendered: "captured" })
       }) do
         Master::CLI::TurnRouter.call(
-          message: "Redeploy OPENBSD, RAILS apps and MASTER web to vm23",
+          message: "Redeploy OPENBSD, RAILS apps and MASTER web to vm23.",
           container: build_container,
         )
       end
