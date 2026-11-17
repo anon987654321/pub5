@@ -41,6 +41,31 @@ autoload:
     # Master::Builder module functions, split out of builder.rb.
     - builder/ai_boot.rb
     - builder/boot_phases.rb
+    # Master::Fix::Kernel::LifecycleJournal -- the durable /fix run journal,
+    # split by responsibility: plan and pass mutations, assessment and
+    # architecture report persistence/verification, matrix and surface-evidence
+    # validators, artifact and state safety, legacy migration. The defining
+    # file is fix/kernel/lifecycle_journal.rb; these re-open its class.
+    - fix/kernel/lifecycle_journal/runs.rb
+    - fix/kernel/lifecycle_journal/reports.rb
+    - fix/kernel/lifecycle_journal/architecture_reports.rb
+    - fix/kernel/lifecycle_journal/report_matrix.rb
+    - fix/kernel/lifecycle_journal/surface_evidence.rb
+    - fix/kernel/lifecycle_journal/artifacts.rb
+    - fix/kernel/lifecycle_journal/state_store.rb
+    - fix/kernel/lifecycle_journal/legacy_state.rb
+    # Master::Fix::SurfaceEvidence -- read-only surface sensors, split by
+    # concern: surface receipt builders, browser receipts, test/deployment
+    # receipts, inventory and manifest, runtime probes, and the command runner.
+    - fix/surface_evidence/receipts.rb
+    - fix/surface_evidence/visual_receipts.rb
+    - fix/surface_evidence/execution_receipts.rb
+    - fix/surface_evidence/inventory.rb
+    - fix/surface_evidence/runtime_probes.rb
+    - fix/surface_evidence/command_execution.rb
+    # Master::Fix::FourStreamAssessment -- terminal renderings (summary, report,
+    # evidence_report) split out of fix/four_stream_assessment.rb.
+    - fix/four_stream_assessment/reporting.rb
 
   # Declare a constant outside Master::, so the path cannot imply the name.
   defines_a_foreign_namespace:
