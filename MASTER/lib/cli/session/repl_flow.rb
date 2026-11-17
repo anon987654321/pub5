@@ -542,7 +542,9 @@ module Master
         def operation_log_output(before, fallback)
           current = operation_log_snapshot
           previous = Array(before)
-          added = if previous.empty?
+          added = if current == previous
+                    []
+                  elsif previous.empty?
                     current
                   elsif current.first(previous.length) == previous
                     current.drop(previous.length)
