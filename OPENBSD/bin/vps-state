@@ -145,6 +145,85 @@ def pid_alive?(pid)
   Deploy::PidProbe.alive?(pid)
 end
 
+# Fleet receipts are root-private under /var/db/pub5. On the real VPS read
+# them only through the fixed broker; custom stamp roots are local test/drill
+# fixtures and may be inspected directly without any privilege transition.
+def deploy_run_records
+  if Deploy::Environment.on_vps? && File.expand_path(STAMP_DIR) == "/var/db/pub4"
+    broker = "/usr/local/sbin/pub5-admin"
+    unless File.file?(broker) && !File.symlink?(broker) && File.executable?(broker)
+      return [nil, "pub5-admin missing or untrusted"]
+    end
+
+    output, result = Open3.capture2e("doas", "-n", broker, "deploy-run-list")
+    return [nil, "deploy-run-list broker failed (exit #{result.exitstatus})"] unless result.success?
+
+    records = JSON.parse(output)
+  else
+    directory = File.join(STAMP_DIR, "deploy_runs")
+    return [[], nil] unless File.exist?(directory)
+    raise "#{directory} is a symlink; refusing deploy-run read" if File.symlink?(directory)
+    raise "#{directory} is not a directory" unless File.directory?(directory)
+
+    records = Dir.children(directory).grep(/\A\d{8}T\d{6}Z-[a-z0-9_-]{1,32}-\d+\.json\z/).map do |name|
+      path = File.join(directory, name)
+      raise "#{path} is a symlink; refusing deploy-run read" if File.symlink?(path)
+      raise "#{path} is not a regular file" unless File.file?(path)
+      JSON.parse(File.read(path))
+    end
+  end
+
+  raise "deploy-run-list did not return an array" unless records.is_a?(Array)
+  records.each do |record|
+    raise "invalid deploy-run record" unless record.is_a?(Hash)
+    raise "invalid deploy-run ID" unless record["run_id"].is_a?(String) &&
+      record["run_id"].match?(/\A\d{8}T\d{6}Z-[a-z0-9_-]{1,32}-\d+\z/)
+    raise "invalid deploy-run target" unless %w[master brgen amber bsdports mrdamascy all rails].include?(record["target"])
+    raise "invalid deploy-run status" unless %w[running ok failed recovered].include?(record["status"])
+    raise "invalid deploy-run recovery state" unless %w[none pending complete].include?(record["recovery_state"])
+    raise "invalid deploy-run PID" unless record["pid"].is_a?(Integer) && record["pid"].positive?
+    raise "invalid deploy-run stage" unless record["stage"].is_a?(String) &&
+      record["stage"].match?(/\A[A-Za-z0-9_.:+\/-]{1,160}\z/)
+    raise "invalid deploy-run snapshot marker" unless [true, false].include?(record["snapshot_recorded"])
+    %w[pinned_sha previous_sha].each do |field|
+      value = record[field]
+      raise "invalid deploy-run #{field}" unless value.nil? || value == "unknown" ||
+        (value.is_a?(String) && value.match?(/\A[0-9a-f]{7,40}\z/i))
+    end
+    raise "invalid deploy-run log path" unless record["run_log"].is_a?(String) &&
+      record["run_log"].match?(/\A\/[A-Za-z0-9_.\/-]{1,2048}\z/)
+  end
+  [records, nil]
+rescue JSON::ParserError => e
+  [nil, "deploy-run receipt JSON corrupt (#{e.class})"]
+rescue StandardError => e
+  [nil, "#{e.class}: #{e.message}"]
+end
+
+def deploy_recovery_status
+  records, error = deploy_run_records
+  return { state: "unavailable", count: 0, pending: [], error: error } if error
+
+  pending = records.select do |record|
+    record["recovery_state"] == "pending" && %w[running failed].include?(record["status"])
+  end.sort_by { |record| record.fetch("started_at", "") }.reverse.map do |record|
+    {
+      run_id: record.fetch("run_id"),
+      target: record.fetch("target"),
+      status: record.fetch("status"),
+      stage: record.fetch("stage"),
+      pid: record.fetch("pid"),
+      owner_state: pid_alive?(record["pid"]) ? "present" : "gone",
+      snapshot: record["snapshot_recorded"] ? "complete" : "incomplete",
+      pinned_sha: record["pinned_sha"] || "unknown",
+      run_log: record.fetch("run_log"),
+      updated_at: record["updated_at"],
+    }
+  end
+
+  { state: pending.empty? ? "none" : "pending", count: pending.length, pending: pending }
+end
+
 def app_row(name, port)
   dev_sha = git_short(ROOT)
   deployed_root = Deploy::Environment.deployed_app_root(name)
@@ -220,6 +299,7 @@ payload = {
     deploy_in_progress: deploy_in_progress("master"),
   },
   apps: apps.map { |name| app_row(name, ports.fetch(name)) },
+  deploy_recovery: deploy_recovery_status,
   alerts: recent_alerts,
 }
 
@@ -265,6 +345,20 @@ else
         row[:app],
         "state=#{state} step=#{status['step']} pid=#{status['pid']}",
       )
+    end
+  end
+  recovery = payload[:deploy_recovery]
+  if recovery[:state] == "unavailable"
+    puts Deploy::Dmesg.line("recovery0", "fleet", "state=unavailable error=#{recovery[:error]}")
+  else
+    puts Deploy::Dmesg.line("recovery0", "fleet", "state=#{recovery[:state]} pending=#{recovery[:count]}")
+    recovery[:pending].each do |run|
+      puts Deploy::Dmesg.line(
+        "recovery0",
+        run[:run_id],
+        "target=#{run[:target]} status=#{run[:status]} owner=#{run[:owner_state]} snapshot=#{run[:snapshot]} stage=#{run[:stage]} pid=#{run[:pid]} sha=#{run[:pinned_sha]}",
+      )
+      puts Deploy::Dmesg.line("recovery0", run[:run_id], "log=#{run[:run_log]} inspect=zsh OPENBSD/bin/vps-deploy recover --plan")
     end
   end
   payload[:alerts].each { |line| puts Deploy::Dmesg.line("alert0", "pub4", line) }
