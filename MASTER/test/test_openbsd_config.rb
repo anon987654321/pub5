@@ -83,6 +83,24 @@ class TestOpenbsdConfig < Minitest::Test
     end
   end
 
+  def test_mirror_coverage_report_refuses_symlinked_runtime_directory
+    Dir.mktmpdir("openbsd-manual-symlink-") do |root|
+      FileUtils.mkdir_p(File.join(root, "MASTER"))
+      outside = Dir.mktmpdir("openbsd-manual-outside-")
+      File.symlink(outside, File.join(root, "MASTER", ".master"))
+
+      error = assert_raises(Master::Fix::TaskContract::Invalid) do
+        Master::Fix::OpenBSDManualPreflight.write_mirror_configuration_report(
+          { "status" => "BLOCKED", "files" => [] },
+          root:
+        )
+      end
+      assert_match(/not a real directory/, error.message)
+    ensure
+      FileUtils.remove_entry(outside) if outside && File.directory?(outside)
+    end
+  end
+
   def test_inert_litestream_example_is_source_audited_without_fabricated_openbsd_manual
     manuals = Master::Fix::OpenBSDManualPreflight.required_path_manuals(
       "OPENBSD/mirror/etc/litestream.yml"
