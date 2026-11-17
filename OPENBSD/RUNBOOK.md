@@ -729,6 +729,12 @@ doas zsh OPENBSD/OPERATOR.sh --apply
 doas zsh OPENBSD/OPERATOR.sh --verify
 ```
 
+The bounded state and five-minute monitor view also require the installed
+`pub5-admin deploy-run-pending-list` verb. An older installed broker is shown
+as unavailable by `vps-state` and raises a monitor alert; it is never treated as
+an empty receipt list. Re-run the reviewed `OPERATOR.sh --plan/--apply/--verify`
+sequence after updating the mirror before relying on the new monitoring fields.
+
 After an interrupted run, inspect first:
 
 ```sh
