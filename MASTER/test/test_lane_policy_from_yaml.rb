@@ -57,6 +57,8 @@ class TestLanePolicyFromYaml < Minitest::Test
     assert_equal %w[ANTHROPIC_API_KEY], envs.call("claude-sonnet-5-5")
     assert_equal %w[GOOGLE_API_KEY GEMINI_API_KEY], envs.call("gemini-2.5-flash")
     assert_equal %w[OPENROUTER_API_KEY], envs.call("openai/gpt-4o")
+    assert_equal %w[REPLICATE_API_TOKEN REPLICATE_API_KEY],
+                 envs.call("replicate:anthropic/claude-opus-5.5")
 
     providers = Master.load_yaml(File.join(Master::ROOT, "data", "providers.yml"))
     assert_equal %w[REPLICATE_API_TOKEN REPLICATE_API_KEY], providers.dig("replicate", "env")
