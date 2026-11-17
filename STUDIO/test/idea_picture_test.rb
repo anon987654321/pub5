@@ -471,6 +471,25 @@ class TestIdeaPictureOutput < Minitest::Test
     Studio::ReplicateClient::Models.reset_video_budget!
   end
 
+  def test_minimax_budget_refuses_a_call_over_the_per_call_ceiling
+    models = Studio::ReplicateClient::Models
+    previous_budget = ENV["STUDIO_VIDEO_BUDGET_USD"]
+    previous_cap = ENV["STUDIO_VIDEO_CALL_CAP_USD"]
+    ENV["STUDIO_VIDEO_BUDGET_USD"] = "5.00"
+    ENV["STUDIO_VIDEO_CALL_CAP_USD"] = "0.20"
+    models.reset_video_budget!
+
+    error = assert_raises(Studio::ReplicateClient::Models::BudgetExceeded) do
+      models.reserve_video_spend!("minimax/h3-highspeed", { "duration" => 10 }, today: Date.new(2026, 11, 17))
+    end
+    assert_match(/per-call cap/, error.message)
+    assert_in_delta 0.0, models.video_budget_spent, 0.001
+  ensure
+    previous_budget ? ENV["STUDIO_VIDEO_BUDGET_USD"] = previous_budget : ENV.delete("STUDIO_VIDEO_BUDGET_USD")
+    previous_cap ? ENV["STUDIO_VIDEO_CALL_CAP_USD"] = previous_cap : ENV.delete("STUDIO_VIDEO_CALL_CAP_USD")
+    Studio::ReplicateClient::Models.reset_video_budget!
+  end
+
   def test_add_soundtrack_muxes_real_audio_and_keeps_the_silent_original
     skip "ffmpeg is not on PATH" unless system("ffmpeg", "-version", out: File::NULL, err: File::NULL)
 
