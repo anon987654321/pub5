@@ -363,12 +363,17 @@ end
 Law.define(:DEVICE_LIMITS) do
   source "MASTER constitution (soul.yml absolute.rules)"
   practice <<~TEXT
-    heavy work belongs on the VPS. The Mac edits and HTTP-probes; browser
-    checks run on the deploy host unless explicitly forced local.
+    vm23 is a production serving host, not a development or repair workstation.
+    Run /fix, repository scans, test suites, audits, browser checks, model calls
+    and asset builds on the development workstation or dedicated CI capacity,
+    never on vm23. The workstation proves a pinned release; vm23 receives that
+    reviewed release, performs only bounded deployment/runtime work, serves
+    traffic and answers bounded read-only health probes. A production incident
+    is investigated from the workstation; do not repair the live checkout.
   TEXT
-  fix "heavy work belongs on the VPS."
-  bad  "browser checks on the laptop"
-  good "browser checks on the deploy host"
+  fix "Keep repair, scans, tests, audits, model calls and builds off production vm23."
+  bad  "runs /fix, bin/ci or an asset build on the production server"
+  good "proves a pinned release on the workstation and deploys that release to vm23"
 end
 
 Law.define(:CONFIGURATION_AS_CODE) do
