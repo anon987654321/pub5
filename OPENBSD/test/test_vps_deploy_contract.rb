@@ -26,6 +26,35 @@ class VpsDeployContractTest < Minitest::Test
     assert_operator SOURCE.index('OPENBSD/OPERATOR.sh" --apply'), :<, SOURCE.index('for one in $deploy_order')
   end
 
+  def test_mirror_validation_and_verified_backups_precede_the_first_live_install
+    operator = File.read(File.join(ROOT, "OPENBSD", "OPERATOR.sh"), encoding: "UTF-8")
+    validate = operator.index("validate_payload ||")
+    backup = operator.index('backup_file "$rel"')
+    install = operator.index('install_one "$rel"')
+
+    refute_nil validate
+    refute_nil backup
+    refute_nil install
+    assert_operator validate, :<, backup
+    assert_operator backup, :<, install
+    assert_includes operator, 'file_matches "$rel" ||'
+    assert_includes operator, "restore_files"
+  end
+
+  def test_mirror_apply_keeps_ssh_and_doas_changes_on_their_guarded_paths
+    operator = File.read(File.join(ROOT, "OPENBSD", "OPERATOR.sh"), encoding: "UTF-8")
+    assert_includes operator, 'PROTECTED /$rel (SSH configuration requires an out-of-band recovery path)'
+    assert_includes operator, 'PROTECTED /$rel (pass --doas to use validate_doas.ksh)'
+    assert_includes operator, 'validate_doas.ksh" install'
+  end
+
+  def test_mirror_apply_does_not_turn_every_release_into_a_host_reboot
+    operator = File.read(File.join(ROOT, "OPENBSD", "OPERATOR.sh"), encoding: "UTF-8")
+    refute_match(/\b(?:reboot|shutdown)\b/, operator)
+    assert_includes operator, 'rcctl restart relayd'
+    assert_includes operator, 'rcctl restart httpd'
+  end
+
   def test_success_stamp_follows_a_blocking_local_canary_for_every_app
     canary = SOURCE.index('if ! "$RUBY" "$repo/OPENBSD/bin/canary" --local --app "$app"')
     refute_nil canary
