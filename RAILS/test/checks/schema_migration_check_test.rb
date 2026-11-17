@@ -156,6 +156,21 @@ class SchemaMigrationCheckTest < Minitest::Test
     assert_match(/nothing was read/, result.unchecked.first)
   end
 
+  def test_brgen_schema_matches_the_committed_wholesale_enquiry_migration
+    repo = File.expand_path("../../..", __dir__)
+    migration = File.join(repo, "RAILS/brgen/db/migrate/20261117120000_create_marketplace_wholesale_enquiries.rb")
+    migrations = Dir.glob(File.join(repo, "RAILS/brgen/db/migrate/*.rb"))
+    latest = migrations.filter_map { |path| File.basename(path)[/\\A\\d+/] }.max
+    schema = File.read(File.join(repo, "RAILS/brgen/db/schema.rb"))
+    version = schema[/define\\(version:\\s*([\\d_]+)\\)/, 1]&.delete("_")
+
+    assert_path_exists migration
+    assert_equal "20261117120000", latest
+    assert_equal latest, version, "Brgen's schema dump must follow the latest committed migration"
+    assert_match(/create_table :marketplace_wholesale_enquiries/, File.read(migration))
+    assert_match(/^  create_table "marketplace_wholesale_enquiries"/, schema)
+  end
+
   def test_amber_schema_matches_the_latest_identity_migrations
     repo = File.expand_path("../../..", __dir__)
     migration_paths = Dir.glob(File.join(repo, "RAILS/amber/db/migrate/*.rb"))
