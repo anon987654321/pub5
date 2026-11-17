@@ -1045,4 +1045,57 @@ class VpsDeployContractTest < Minitest::Test
     assert_operator failed, :<, success
   end
 
+
+  def test_fleet_recovery_receipt_is_created_and_snapshot_precedes_service_stops
+    assert_includes SOURCE, "def write_deploy_run_receipt"
+    assert_includes SOURCE, '"$PUB5_ADMIN" deploy-run-write "$VPS_DEPLOY_RUN_ID" "$payload"'
+    assert_includes SOURCE, "export VPS_DEPLOY_LOCK_PID=${$}"
+    assert_includes SOURCE, "export VPS_DEPLOY_LOCK_IDENTITY=$identity"
+    assert_includes SOURCE, 'VPS_DEPLOY_RUN_ID="$(date -u'
+    assert_includes SOURCE, "VPS_DEPLOY_RECEIPT_SNAPSHOT_RECORDED=1"
+
+    created = SOURCE.index('write_deploy_run_receipt || {')
+    snapshot = SOURCE.index("VPS_DEPLOY_RECEIPT_SNAPSHOT_RECORDED=1")
+    first_stop = SOURCE.index('admin_service stop "$jobs_service"')
+    refute_nil created
+    refute_nil snapshot
+    refute_nil first_stop
+    assert_operator created, :<, snapshot
+    assert_operator snapshot, :<, first_stop
+
+    stage = SOURCE[/set_stage\(\) \{.*?^\}/m]
+    refute_nil stage
+    assert_includes stage, "write_deploy_run_receipt"
+    assert_includes stage, "failed to persist recovery receipt"
+  end
+
+  def test_recovery_plan_is_explicit_and_never_deploys_or_checks_out_code
+    recovery = SOURCE[/# Recovery is separate from deployment\..*?(?=^# Done once, by the process that owns the lock)/m]
+    refute_nil recovery
+    assert_includes SOURCE, "recover --plan"
+    assert_includes SOURCE, "recover --apply <run-id>"
+    assert_includes recovery, "deploy-run-list"
+    assert_includes recovery, "deploy-run-read"
+    assert_includes recovery, "lock_process_identity"
+    assert_includes recovery, "LIVE"
+    assert_includes recovery, "AMBIGUOUS"
+    assert_includes recovery, "RECOVERY AVAILABLE"
+    assert_includes recovery, "restore_started"
+    assert_includes recovery, 'admin_service check "$svc"'
+    assert_includes recovery, 'wait_up "$port" "$restore_wait"'
+    refute_includes recovery, "git_as_deploy_user fetch"
+    refute_includes recovery, "git_as_deploy_user switch"
+  end
+
+  def test_recovery_requires_a_durable_service_snapshot_and_keeps_resource_guard_excluded
+    recovery = SOURCE[/# Recovery is separate from deployment\..*?(?=^# Done once, by the process that owns the lock)/m]
+    refute_nil recovery
+    assert_includes recovery, '[[ -n $VPS_DEPLOY_STARTED ]]'
+    assert_includes recovery, "keep_deploy_flag"
+    assert_includes recovery, 'recovery_state: "pending"'
+    assert_includes recovery, 'recovery_state: "complete"'
+    assert_includes recovery, 'status: "recovered"'
+  end
+
+
 end
