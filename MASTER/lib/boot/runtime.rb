@@ -113,6 +113,14 @@ module Master
       provider_config(root:).flat_map { |_name, config| provider_key_specs(config) }.compact
     end
 
+    # Custom senders such as Replicate and the Z.ai OpenAI-compatible adapter
+    # do not expose a RubyLLM setter. Their credentials still count as real API
+    # access; providers.yml declares that distinction in api_key_envs.
+    def supplemental_api_key_envs(root: ROOT)
+      provider_config(root:).values.grep(Hash)
+                    .flat_map { |row| Array(row["api_key_envs"]) }.uniq
+    end
+
     def api_key_present?(env_var, root: ROOT)
       spec = api_key_specs(root:).find { |_attr, candidate, _minimum| candidate == env_var }
       minimum = spec ? spec.last : MIN_API_KEY_LENGTH_HEURISTIC
@@ -163,8 +171,9 @@ module Master
 
     def any_api_key_present?
       return true if agy_cli_available?
+      return true if api_key_specs.any? { |_attr, env_var, minimum| key_present?(ENV[env_var], minimum) }
 
-      api_key_specs.any? { |_attr, env_var, minimum| key_present?(ENV[env_var], minimum) }
+      supplemental_api_key_envs.any? { |env_var| api_key_present?(env_var) }
     end
 
     # Lanes that answer with no provider key: a local model, a local server, a
@@ -253,10 +262,11 @@ module Master
     def no_api_key_message
       return keyless_message if keyless_llm_enabled?
 
-      "I'm not wired to any LLM yet. Install Antigravity CLI (agy) or set OPENROUTER_API_KEY / XAI_API_KEY in " \
+      "I'm not wired to any LLM yet. Install Antigravity CLI (agy) or set a provider key such as " \
+        "OPENROUTER_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY or REPLICATE_API_KEY in " \
         "~/.config/master/env (or /etc/master.env on OpenBSD) and restart. " \
         "Or run a local model: #{local_model_install_hint}, then /model local. " \
-        "Or enable keyless mode: MASTER_KEYLESS=1 (browser chat at zero cost)."
+        "Or enable eligible free lanes: MASTER_KEYLESS=1."
     end
 
     # Termux packages Ollama for arm64 phones, where 1B to 3B models are what
@@ -304,8 +314,9 @@ module Master
     end
 
     def keyless_message
-      "No API keys configured - trying discovered keyless hosted models first, then browser chat if available. " \
-        "Set OPENROUTER_API_KEY / XAI_API_KEY in ~/.config/master/env for keyed API routing."
+      "No provider API keys configured - trying discovered keyless hosted models first, then browser chat if available. " \
+        "Set a provider key such as OPENROUTER_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY or REPLICATE_API_KEY " \
+        "in ~/.config/master/env for keyed API routing."
     end
   end
 end
