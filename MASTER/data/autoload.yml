@@ -81,6 +81,13 @@ autoload:
     # side plus pending-queue reporting. The defining file is fix/wishlist.rb.
     - fix/wishlist/claims.rb
     - fix/wishlist/rendering.rb
+    # Master::Fix::UserSimulation -- the candidate simulator beside BestOfN,
+    # split by responsibility: scenarios.rb the interaction-campaign oracle
+    # (surface mapping, scenario context, campaign validation), execution.rb
+    # the focused-test runner and the reversible candidate trial. The defining
+    # file is fix/best_of_n.rb; these re-open its class.
+    - fix/user_simulation/scenarios.rb
+    - fix/user_simulation/execution.rb
     # Master::Fix::Mission -- the durable objective, split by responsibility:
     # schema.rb the record's shape, version migrations and disk round trip,
     # lock.rb the inter-process mission lock, run_state.rb the
@@ -95,6 +102,20 @@ autoload:
     - fix/mission/state.rb
     - fix/mission/proof.rb
     - fix/mission/repository.rb
+    # Master::Fix::RestructureSweep -- the tree-level restructure sweep, split
+    # by concern: candidates.rb ranks structural findings into the read-only
+    # candidate map and resolves sweep targets, verdicts.rb carries the
+    # proposal prompt, decommission audit/blocking, hostile verdict, commit
+    # message and report. The defining file is fix/restructure_sweep.rb; these
+    # re-open its class.
+    - fix/restructure_sweep/candidates.rb
+    - fix/restructure_sweep/verdicts.rb
+    # Master::Fix::RestructureSweep::Context -- the evidence the model reads,
+    # split by concern: surfaces.rb the repository-surface duplication
+    # findings, references.rb the reverse-reference sections. The defining
+    # file is fix/restructure_sweep/context.rb; these re-open its class.
+    - fix/restructure_sweep/context/surfaces.rb
+    - fix/restructure_sweep/context/references.rb
 
   # Declare a constant outside Master::, so the path cannot imply the name.
   defines_a_foreign_namespace:
