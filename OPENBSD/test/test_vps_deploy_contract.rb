@@ -206,18 +206,35 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes SOURCE, 'admin_request solid-queue-proof "$app"'
   end
 
+  # Since 6735acf1 the mirror is a copy-ready filesystem image: OPERATOR.sh
+  # installs whatever git tracks under OPENBSD/mirror, and file_mode/file_owner
+  # give usr/local/sbin/* the 555 root:wheel treatment. The brokers therefore
+  # ride the tracked payload instead of dedicated install lines, and the Solid
+  # Queue proof is installed by BOOTSTRAP.sh, never from the live checkout.
   def test_operator_installs_pub5_broker_and_its_solid_queue_helper
     operator = File.read(File.join(ROOT, "OPENBSD", "OPERATOR.sh"))
+    bootstrap = File.read(File.join(ROOT, "OPENBSD", "BOOTSTRAP.sh"))
 
     # The active deployer is pub5-admin; pub4-admin remains installed for
     # compatibility callers that have not crossed the broker boundary yet.
-    assert_includes operator, "usr/local/sbin/pub5-admin"
-    assert_includes operator, "chown root:wheel /usr/local/sbin/pub5-admin"
-    assert_includes operator, "chmod 555 /usr/local/sbin/pub5-admin"
-    assert_includes operator, "/usr/local/libexec/pub5"
-    assert_match %r{/usr/local/libexec/pub5/solid_queue_proof\.rb\s+\\\n\s+/usr/local/bin/resource_guard\.sh}, operator
-    assert_includes operator, "/usr/local/libexec/pub5/solid_queue_proof.rb"
-    assert_includes operator, "chown root:wheel /usr/local/sbin/pub4-admin"
+    %w[pub5-admin pub4-admin].each do |broker|
+      assert File.file?(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "sbin", broker)),
+             "#{broker} is not tracked in the mirror, so OPERATOR.sh never installs it"
+    end
+    assert_includes operator, "usr/local/sbin/*) print 555 ;;"
+    assert_includes operator, "*) print root:wheel ;;"
+    assert_includes operator, 'install -o "$owner" -g "$group" -m "$mode" "$source_file" "$tmp"'
+
+    # The Solid Queue proof must never run from the live checkout: the broker
+    # execs a fixed, root-owned copy installed by BOOTSTRAP.sh for both brokers.
+    assert_includes bootstrap,
+                    'install -o root -g wheel -m 555 "${SCRIPT_DIR}/checks/solid_queue_proof.rb" /usr/local/libexec/pub5/solid_queue_proof.rb'
+    assert_includes bootstrap,
+                    'install -o root -g wheel -m 555 "${SCRIPT_DIR}/checks/solid_queue_proof.rb" /usr/local/libexec/pub4/solid_queue_proof.rb'
+
+    broker = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin"), encoding: "UTF-8")
+    assert_includes broker, 'SOLID_QUEUE_PROOF = "/usr/local/libexec/pub5/solid_queue_proof.rb"'
+    assert_includes broker, 'RESOURCE_GUARD = "/usr/local/bin/resource_guard.sh"'
   end
 
   def test_tree_sync_exposes_only_the_fixed_app_user_broker
@@ -528,7 +545,10 @@ class VpsDeployContractTest < Minitest::Test
     refute_nil guard_glob, "resource_guard no longer reads a deploy flag glob"
 
     Dir.mktmpdir do |repo|
-      script = "repo=#{repo}; app=bsdports; deploy_log=#{repo}/deploy.log\nrelease_deploy_lock() { :; }\n#{flag_block}\nhold_deploy_flag\nprint -r -- $deploy_flag\n[[ -e $deploy_flag ]] && print held\n"
+      # log() lives above the extracted block; without a stub the EXIT trap's
+      # log call resolves to zsh's own `log` builtin (zsh/watch module), which
+      # rejects arguments and leaks "too many arguments" onto the runner's stderr.
+      script = "repo=#{repo}; app=bsdports; deploy_log=#{repo}/deploy.log\nrelease_deploy_lock() { :; }\nlog() { :; }\n#{flag_block}\nhold_deploy_flag\nprint -r -- $deploy_flag\n[[ -e $deploy_flag ]] && print held\n"
       out = IO.popen(["zsh", "-c", script], &:read).lines.map(&:chomp)
       flag = out.first
 
