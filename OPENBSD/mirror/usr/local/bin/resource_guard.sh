@@ -478,12 +478,13 @@ fi
 crit=$LOAD_CRIT
 [[ $deploying -eq 1 ]] && crit=$DEPLOY_LOAD_CRIT
 if at_least "$load" "$crit"; then
-  logger -t resource-guard "crit load=$load - running emergency_cpu"
-  if [[ -x $EMERGENCY ]]; then
-    ksh $EMERGENCY 2>&1 | logger -t resource-guard
-  else
-    logger -t resource-guard "emergency_cpu not installed under $EMERGENCY"
-  fi
+  # Never auto-restart core production services from a periodic CPU guard.
+  # emergency_cpu restarted MASTER and Brgen; MASTER rc_pre can precompile
+  # assets for minutes on this single vCPU. A 5-minute cron tick could then
+  # interrupt that work, launch another precompile, and repeat indefinitely.
+  # Keep the guard's optional-service shedding above, but make core recovery
+  # an explicit human decision after inspecting top(1) and the service logs.
+  logger -t resource-guard "CRITICAL load=$load (threshold=$crit) - automatic core restart disabled; inspect processes and logs"
 fi
 
 exit 0
