@@ -2985,7 +2985,7 @@ body.vertical-messenger .roster-nick {
   grid-template-columns: minmax(6rem, 1fr) repeat(2, minmax(6rem, 0.8fr)) auto;
   align-items: center;
   gap: 8px;
-  padding-block: 6px;
+  padding-block: 4px;
   border-block-end: 1px solid var(--border);
 }
 
