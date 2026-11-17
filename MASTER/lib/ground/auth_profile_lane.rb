@@ -2,8 +2,9 @@
 
 module Master
   module Ground
-    # OAuth-before-key ordering (OpenCrabs/OpenClaw): prefer subscription/CLI lanes
-    # before burning API keys on the same turn's fallback chain.
+    # Discover available OAuth/CLI profiles as extra fallback lanes.
+    # The model router places them after the selected task tier; authentication
+    # type is not permission to override the operator's declared primary order.
     module AuthProfileLane
 
       module_function
