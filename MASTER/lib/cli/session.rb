@@ -59,6 +59,7 @@ module Master
 
       def run(initial_message = nil)
         setup_signals
+        Master::Voice::Playback.state_listener = method(:announce_voice_status)
         @refs.agent.pin_boot_model! if @refs.agent.respond_to?(:pin_boot_model!)
         @refs.session.load! if @refs.session.exists?
         start_background_loop if background_scan_enabled?
@@ -176,6 +177,8 @@ module Master
         @terminal_ask_cv = ConditionVariable.new
         @pending_terminal_ask = nil
         @closed = false
+        @voice_mic_active = false
+        @voice_listen_active = false
       end
 
       def init_turn_state(input)

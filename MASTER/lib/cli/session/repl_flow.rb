@@ -116,6 +116,9 @@ module Master
           return if @closed
 
           @closed = true
+          @voice_listen_stop = true
+          @voice_mic_active = false
+          Master::Voice::Playback.state_listener = nil
           shutdown_interactive_queue! if $stdin.tty? && $stdout.tty?
           stop_background_loop
           stop_reminder_watch
@@ -168,10 +171,52 @@ module Master
         STATE_TOKEN_COUNT = /\A\d+(?:\.\d+)?[kM]?\/\d+(?:\.\d+)?[kM]?\z/.freeze
 
         def announce_state(state)
-          return if state.nil? || same_state_meaning?(state, @announced_state)
+          return if state.nil?
 
-          @announced_state = state
-          terminal_puts(state)
+          if voice_indicators_enabled?
+            signature = [state_meaning(state), voice_indicator_state]
+            return if signature == @announced_state_signature
+
+            @announced_state = state
+            @announced_state_signature = signature
+            terminal_puts(voice_status_line(state))
+          else
+            return if same_state_meaning?(state, @announced_state)
+
+            @announced_state = state
+            terminal_puts(Master::Trace::Dmesg::Report.format_reply(state, unit: "state0"))
+          end
+        end
+
+        def voice_indicators_enabled?
+          $stdin.tty? && $stdout.tty?
+        rescue StandardError
+          false
+        end
+
+        def voice_indicator_state
+          [@voice_mic_active == true, Master::Voice::Playback.speaking?]
+        rescue StandardError
+          [@voice_mic_active == true, false]
+        end
+
+        def voice_status_line(state)
+          mic, tts = voice_indicator_state
+          suffix = "MIC #{mic ? "●" : "○"}  TTS #{tts ? "●" : "○"}"
+          line = Master::Trace::Dmesg::Report.format_reply(state, unit: "state0")
+          width = TTY::Screen.width.to_i
+          width = 80 unless width.positive?
+          visible = line.gsub(/\e\[[0-?]*[ -\/]*[@-~]/, "").length
+          "#{line}#{' ' * [width - visible - suffix.length, 2].max}#{suffix}"
+        rescue StandardError
+          "#{Master::Trace::Dmesg::Report.format_reply(state, unit: "state0")}  MIC ○  TTS ○"
+        end
+
+        def announce_voice_status
+          return unless voice_indicators_enabled? && @announced_state
+
+          @announced_state_signature = nil
+          announce_state(@announced_state)
         end
 
         def same_state_meaning?(state, previous)
@@ -379,23 +424,68 @@ module Master
           nil
         end
 
-        # One deliberate microphone capture. Ear enforces both local grants and
-        # leaves Android OS permission to the Termux:API app; no background mic.
+        # /listen explicitly starts a hands-free conversation. The microphone
+        # remains visibly active only in this session; capture pauses while
+        # MASTER thinks and speaks so the recogniser cannot hear its own reply.
+        # Both one-hour local grants and OS permission are rechecked per take.
         def run_listen
+          unless $stdin.tty? && $stdout.tty?
+            terminal_puts("mic0 at mainbus0: hands-free input requires an interactive terminal")
+            return
+          end
+
           ear = Face::Ear.new(root: @refs.respond_to?(:root) ? @refs.root : Master::REPO_ROOT)
           if (missing = ear.missing)
             terminal_puts(missing)
             return
           end
 
-          terminal_puts("mic0: listening")
-          transcript = ear.listen(stop: -> { false }, on_partial: nil).to_s.strip
-          return terminal_puts("mic0: heard nothing") if transcript.empty?
+          @voice_listen_stop = false
+          @voice_listen_active = true
+          terminal_puts("mic0 at mainbus0: hands-free active; Ctrl-C returns to text; capture pauses during replies")
+          last_result = nil
 
-          run_agent_turn(transcript)
-        rescue StandardError => e
-          terminal_puts("mic0: capture failed - #{e.class}: #{e.message}")
+          loop do
+            break if @voice_listen_stop || @closed
+
+            @voice_mic_active = true
+            announce_voice_status
+            transcript = ear.listen(
+              stop: -> { @voice_listen_stop || @closed },
+              on_partial: nil,
+            ).to_s.strip
+            break if @voice_listen_stop || @closed
+
+            if transcript.empty?
+              if (missing = ear.missing)
+                terminal_puts(missing)
+                break
+              end
+              sleep 0.15
+              next
+            end
+
+            @voice_mic_active = false
+            announce_voice_status
+            last_result = run_input(transcript)
+            wait_for_voice_reply
+          end
+          last_result
+        rescue Interrupt
+          terminal_puts("mic0 at mainbus0: stopped; text input ready")
           nil
+        rescue StandardError => e
+          terminal_puts("mic0 at mainbus0: capture failed - #{e.class}: #{e.message}")
+          nil
+        ensure
+          @voice_listen_stop = true
+          @voice_mic_active = false
+          @voice_listen_active = false
+          announce_voice_status
+        end
+
+        def wait_for_voice_reply
+          sleep 0.05 while Master::Voice::Playback.speaking? && !@voice_listen_stop && !@closed
         end
 
         # !command runs one zsh line through the Io::Shell the model's zsh tool

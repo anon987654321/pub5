@@ -55,6 +55,8 @@ module Master
       @last_at = 0.0
       @generation = 0
       @playing_pid = nil
+      @active_playback = false
+      @state_listener = nil
       @job_generations = {}
 
       module_function
@@ -292,7 +294,28 @@ end
       # composes its next beat while this is at most one, so synthesis of the
       # next overlaps playback of the current.
       def backlog
-        @lock.synchronize { @queue&.size.to_i + (@playing_pid ? 1 : 0) }
+        @lock.synchronize { @queue&.size.to_i + ((@active_playback || @playing_pid) ? 1 : 0) }
+      end
+
+      def speaking?
+        active = @lock.synchronize do
+          @active_playback == true || !@playing_pid.nil? || @queue&.size.to_i.positive?
+        end
+        active || external_speaking?
+      end
+
+      def state_listener=(listener)
+        raise ArgumentError, "state listener must respond to call" unless listener.nil? || listener.respond_to?(:call)
+
+        @lock.synchronize { @state_listener = listener }
+      end
+
+      def notify_state_change
+        listener = @lock.synchronize { @state_listener }
+        listener&.call
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "Voice::Playback.state_listener")
+        nil
       end
 
       def echo?(str)
@@ -345,19 +368,26 @@ end
       end
 
       def process_job_sequence(current)
+        @lock.synchronize { @active_playback = true }
+        notify_state_change
         prepared_current = nil
 
-        loop do
-          following = dequeue_nowait
-          prepared_following = start_prefetch(following)
+        begin
+          loop do
+            following = dequeue_nowait
+            prepared_following = start_prefetch(following)
 
-          prepared_current ||= prepare_job(current)
-          consume_prepared(prepared_current)
-          cleanup_prepared(prepared_current)
+            prepared_current ||= prepare_job(current)
+            consume_prepared(prepared_current)
+            cleanup_prepared(prepared_current)
 
-          current = following
-          prepared_current = await_prefetch(prepared_following)
-          break unless current
+            current = following
+            prepared_current = await_prefetch(prepared_following)
+            break unless current
+          end
+        ensure
+          @lock.synchronize { @active_playback = false }
+          notify_state_change
         end
       end
 

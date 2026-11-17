@@ -265,6 +265,29 @@ module Master
 
         module_function
 
+        # Operational status uses the device-log record grammar. Conversational
+        # prose remains ordinary width-aware text at its presentation boundary.
+        def format_reply(text, unit: "master0", parent: "mainbus0")
+          source = text.to_s.scrub.gsub(ANSI, "").delete("\r")
+          attached = false
+          source.lines(chomp: true).filter_map do |raw|
+            body = raw.strip
+            next if body.empty?
+
+            if UNIT_RE.match?(body) || body.match?(/\A(?:root|syncing disks|rebooting)\b/i)
+              attached = true
+              body
+            elsif !attached
+              attached = true
+              "#{unit} at #{parent}: #{body}"
+            elsif raw.start_with?("    ")
+              raw.rstrip
+            else
+              "    #{body}"
+            end
+          end.join("\n")
+        end
+
         def command(command, text, parent: "master0")
           word = command.to_s.strip.split(/\s+/, 2).first.to_s.delete_prefix("/").downcase
           unit = COMMAND_UNITS.fetch(word) { safe_unit(word) }

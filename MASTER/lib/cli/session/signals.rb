@@ -29,6 +29,15 @@ module Master
       # raises ThreadError, so the cancel runs on a thread of its own and the
       # prompt raises Interrupt for repl_loop to close in ordinary context.
       def on_int
+        if @voice_listen_active
+          @voice_listen_stop = true
+          turn = @pipeline_thread
+          if turn&.alive?
+            return Thread.new { request_or_interrupt_turn(turn, @turn_children, reason: "ctrl_c") }
+          end
+          raise Interrupt
+        end
+
         turn = @pipeline_thread
         if turn&.alive?
           # In the interactive queue, Ctrl+C has the same safe semantics as

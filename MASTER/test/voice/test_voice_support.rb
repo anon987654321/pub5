@@ -188,6 +188,63 @@ class TestVoiceSupport < Minitest::Test
     assert_empty spoken
   end
 
+  def test_playback_reports_queued_and_active_speech
+    previous_queue = PB.instance_variable_get(:@queue)
+    previous_active = PB.instance_variable_get(:@active_playback)
+    previous_pid = PB.instance_variable_get(:@playing_pid)
+    PB.instance_variable_set(:@active_playback, false)
+    PB.instance_variable_set(:@playing_pid, nil)
+    PB.instance_variable_set(:@queue, Queue.new)
+    PB.stub(:external_speaking?, false) do
+      refute PB.speaking?
+      PB.instance_variable_get(:@queue) << "queued"
+      assert PB.speaking?
+      PB.instance_variable_set(:@queue, Queue.new)
+      PB.instance_variable_set(:@active_playback, true)
+      assert PB.speaking?
+      PB.instance_variable_set(:@active_playback, false)
+      refute PB.speaking?
+    end
+  ensure
+    PB.instance_variable_set(:@queue, previous_queue)
+    PB.instance_variable_set(:@active_playback, previous_active)
+    PB.instance_variable_set(:@playing_pid, previous_pid)
+  end
+
+  def test_state_listener_receives_both_playback_edges
+    states = []
+    previous_queue = PB.instance_variable_get(:@queue)
+    previous_pid = PB.instance_variable_get(:@playing_pid)
+    previous_active = PB.instance_variable_get(:@active_playback)
+    PB.instance_variable_set(:@queue, Queue.new)
+    PB.instance_variable_set(:@playing_pid, nil)
+    PB.instance_variable_set(:@active_playback, false)
+    PB.state_listener = -> { states << PB.speaking? }
+
+    PB.stub(:external_speaking?, false) do
+      PB.stub(:dequeue_nowait, nil) do
+        PB.stub(:start_prefetch, nil) do
+          PB.stub(:prepare_job, Object.new) do
+            PB.stub(:consume_prepared, nil) do
+              PB.stub(:cleanup_prepared, nil) do
+                PB.stub(:await_prefetch, nil) do
+                  PB.send(:process_job_sequence, :job)
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+
+    assert_equal [true, false], states
+  ensure
+    PB.state_listener = nil
+    PB.instance_variable_set(:@queue, previous_queue)
+    PB.instance_variable_set(:@playing_pid, previous_pid)
+    PB.instance_variable_set(:@active_playback, previous_active)
+  end
+
   def test_cli_playback_is_on_by_default_and_can_be_turned_off
     $stdout.stub(:isatty, true) do
       with_env("MASTER_CLI_SPEAK" => nil, "MASTER_SKIP_TTS" => nil, "CI" => nil) { assert PB.enabled? }

@@ -46,6 +46,27 @@ class TraceDmesgTest < Minitest::Test
     assert_equal "a\nb\nx\ny\r\nc\n", io.string
   end
 
+  def test_operational_reply_formatter_uses_openbsd_record_shape
+    formatted = Master::Trace::Dmesg::Report.format_reply(
+      "\nThe repair is complete.\nThree checks passed.\n\nNo files were added.",
+    )
+
+    assert_equal [
+      "master0 at mainbus0: The repair is complete.",
+      "    Three checks passed.",
+      "    No files were added.",
+    ].join("\n"), formatted
+    refute_match(/\n{2,}/, formatted)
+  end
+
+  def test_operational_reply_formatter_preserves_existing_unit_records
+    formatted = Master::Trace::Dmesg::Report.format_reply(
+      "voice0 at mainbus0: narration on\nmic0: permission required",
+    )
+
+    assert_equal "voice0 at mainbus0: narration on\nmic0: permission required", formatted
+  end
+
   def test_dmesg_unit_is_defined_when_logging_is_loaded
     load File.expand_path("../lib/trace/logging.rb", __dir__)
 

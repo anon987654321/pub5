@@ -328,32 +328,41 @@ class TestCliFaceDispatch < Minitest::Test
     assert_equal 2, session.instance_variable_get(:@exit_code)
   end
 
-  def test_listen_command_sends_one_consented_transcript_through_the_existing_session
+  def test_listen_starts_a_visible_hands_free_session_and_reuses_run_input
     ear = Object.new
     ear.define_singleton_method(:missing) { nil }
     ear.define_singleton_method(:listen) do |stop:, on_partial:|
-      raise "unexpected stop" if stop.call
       raise "unexpected interim callback" unless on_partial.nil?
-
-      "voice transcript"
+      stop.call ? nil : "voice transcript"
     end
     session = Master::CLI::Session.allocate
     session.instance_variable_set(:@refs, Struct.new(:root).new(Master::REPO_ROOT))
     output = []
     submitted = []
     session.define_singleton_method(:terminal_puts) { |line| output << line }
-    session.define_singleton_method(:run_agent_turn) { |text| submitted << text; :submitted }
+    session.define_singleton_method(:run_input) do |text|
+      submitted << text
+      @voice_listen_stop = true
+      :submitted
+    end
 
     result = Master::CLI::Face::Ear.stub(:new, ear) do
-      session.send(:dispatch_core_slash_command, "/listen")
+      $stdin.stub(:tty?, true) do
+        $stdout.stub(:tty?, true) do
+          Master::Voice::Playback.stub(:speaking?, false) do
+            session.send(:dispatch_core_slash_command, "/listen")
+          end
+        end
+      end
     end
 
     assert_equal :submitted, result
     assert_equal ["voice transcript"], submitted
-    assert_equal ["mic0: listening"], output
+    assert_equal ["mic0 at mainbus0: hands-free active; Ctrl-C returns to text; capture pauses during replies"], output
+    refute session.instance_variable_get(:@voice_mic_active)
   end
 
-  def test_listen_does_not_open_the_microphone_without_both_local_grants
+  def test_listen_refuses_to_open_the_microphone_without_both_local_grants
     ear = Object.new
     ear.define_singleton_method(:missing) { "mic0: voice input is off by default" }
     ear.define_singleton_method(:listen) { |**| flunk("permission-denied microphone was opened") }
@@ -362,9 +371,46 @@ class TestCliFaceDispatch < Minitest::Test
     output = []
     session.define_singleton_method(:terminal_puts) { |line| output << line }
 
-    Master::CLI::Face::Ear.stub(:new, ear) { session.send(:dispatch_core_slash_command, "/listen") }
+    Master::CLI::Face::Ear.stub(:new, ear) do
+      $stdin.stub(:tty?, true) do
+        $stdout.stub(:tty?, true) { session.send(:dispatch_core_slash_command, "/listen") }
+      end
+    end
 
     assert_equal ["mic0: voice input is off by default"], output
+  end
+
+  def test_voice_status_line_places_two_indicators_at_the_right_edge
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@voice_mic_active, true)
+    line = Master::Voice::Playback.stub(:speaking?, false) do
+      TTY::Screen.stub(:width, 80) { session.send(:voice_status_line, "ready, model x") }
+    end
+
+    assert line.end_with?("MIC ●  TTS ○")
+    assert_operator line.length, :>=, 80
+  end
+
+  def test_ctrl_c_leaves_hands_free_mode
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@voice_listen_active, true)
+
+    assert_raises(Interrupt) { session.send(:on_int) }
+    assert session.instance_variable_get(:@voice_listen_stop)
+  end
+
+  def test_listen_requires_an_interactive_terminal_before_opening_the_microphone
+    ear = Object.new
+    ear.define_singleton_method(:missing) { nil }
+    ear.define_singleton_method(:listen) { |**| flunk("non-interactive CLI opened the microphone") }
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@refs, Struct.new(:root).new(Master::REPO_ROOT))
+    output = []
+    session.define_singleton_method(:terminal_puts) { |line| output << line }
+
+    Master::CLI::Face::Ear.stub(:new, ear) { session.send(:dispatch_core_slash_command, "/listen") }
+
+    assert_equal ["mic0 at mainbus0: hands-free input requires an interactive terminal"], output
   end
 
   def test_general_help_uses_one_live_shell_cap_and_plain_multiline_guidance

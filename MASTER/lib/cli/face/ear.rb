@@ -146,6 +146,9 @@ module Master
           reader.join(1)
           heard.last
         ensure
+          halt(wait_thr) if wait_thr&.alive?
+          reader&.join(0.2)
+          reader&.kill if reader&.alive?
           stdout&.close unless stdout&.closed?
           stdin&.close unless stdin&.closed?
         end
