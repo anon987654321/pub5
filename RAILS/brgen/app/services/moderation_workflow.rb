@@ -11,14 +11,16 @@ class ModerationWorkflow
     new.report!(reporter: reporter, target: target, reason: reason, details: details)
   end
 
-  def self.transition!(report:, status:, decision_reason: nil)
-    new.transition!(report: report, status: status, decision_reason: decision_reason)
+  def self.transition!(report:, status:, decision_reason: nil, actor: nil)
+    new.transition!(report: report, status: status, decision_reason: decision_reason, actor: actor)
   end
 
   # One open report per reporter and target. A second press returned a second
   # row, which lengthened the queue and counted twice in the trust signals;
   # it now answers with the report already waiting.
   def report!(reporter:, target:, reason:, details: nil)
+    raise ActiveRecord::RecordNotFound unless ModerationReport.reportable?(target)
+
     pending = reporter && ModerationReport.find_by(user: reporter, reportable: target, status: %w[open reviewing])
     return pending if pending
 
@@ -36,10 +38,11 @@ class ModerationWorkflow
     end
   end
 
-  def transition!(report:, status:, decision_reason: nil)
+  def transition!(report:, status:, decision_reason: nil, actor: nil)
     return report unless ModerationReport::STATUSES.include?(status)
 
     ModerationReport.transaction do
+      previous_status = report.status
       attrs = { status: status }
       if %w[resolved dismissed].include?(status)
         attrs[:decision_reason] = decision_reason.presence || report.reason
@@ -56,6 +59,11 @@ class ModerationWorkflow
       when "dismissed"
         close_flags(report, status: "dismissed")
         release_hold(report)
+      end
+      if previous_status != status
+        Shared::Audit.record!(action: "moderation.report.#{status}", actor: actor, target: subject_for(report),
+                              metadata: { report_id: report.id, reason: report.reason,
+                                          decision_reason: report.decision_reason })
       end
       report
     end
