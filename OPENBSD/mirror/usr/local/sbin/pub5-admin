@@ -433,6 +433,168 @@ module Pub5Admin
     end
   end
 
+  # Fleet-level recovery receipt. Unlike per-app deploy_status records, this
+  # binds the run to its pinned commit, original service snapshot and port map.
+  # The directory and files are root-private; callers never choose a path.
+  def deploy_run_id?(value)
+    value.is_a?(String) && value.match?(/\A\d{8}T\d{6}Z-[a-z0-9_-]{1,32}-\d+\z/)
+  end
+
+  def deploy_run_directory(root: STAMP_DIR, create: false, verify_root: true)
+    base = File.expand_path(root)
+    raise "#{base} is a symlink; refusing deploy-run access" if File.symlink?(base)
+    unless File.exist?(base)
+      return nil unless create
+      FileUtils.mkdir_p(base, mode: 0o755)
+    end
+    base_stat = File.lstat(base)
+    raise "#{base} must be a real directory" unless base_stat.directory? && !base_stat.symlink?
+    raise "#{base} must be root-owned and not group/other writable" if
+      verify_root && (!base_stat.uid.zero? || (base_stat.mode & 0o022).positive?
+
+    directory = File.join(base, "deploy_runs")
+    raise "#{directory} is a symlink; refusing deploy-run access" if File.symlink?(directory)
+    unless File.exist?(directory)
+      return nil unless create
+      Dir.mkdir(directory, 0o700)
+      File.chown(0, -1, directory) if verify_root
+    end
+    stat = File.lstat(directory)
+    raise "#{directory} must be a real directory" unless stat.directory? && !stat.symlink?
+    raise "#{directory} must be root-owned and private" if
+      verify_root && (!stat.uid.zero? || (stat.mode & 0o077).positive?)
+    File.chmod(0o700, directory) unless (stat.mode & 0o777) == 0o700
+    directory
+  end
+
+  def validate_deploy_run!(record, run_id)
+    raise "invalid deploy-run record" unless record.is_a?(Hash)
+    raise "invalid deploy-run schema" unless record["schema"] == 1 && record["run_id"] == run_id
+    raise "invalid deploy-run target" unless record["target"].is_a?(String) &&
+      (APPS + %w[all rails]).include?(record["target"])
+    raise "invalid deploy-run host" unless record["host"].is_a?(String) &&
+      record["host"].bytesize.between?(1, 255) && !record["host"].match?(/[\x00-\x1f]/)
+    raise "invalid deploy-run pid" unless record["pid"].is_a?(Integer) && record["pid"].positive?
+    raise "invalid deploy-run owner identity" unless record["owner_identity"].is_a?(String) &&
+      record["owner_identity"].match?(/\A[A-Za-z0-9_]{1,220}\z/)
+    raise "invalid deploy-run status" unless %w[running ok failed recovered].include?(record["status"])
+    raise "invalid deploy-run recovery state" unless %w[none pending complete].include?(record["recovery_state"])
+    raise "invalid deploy-run stage" unless record["stage"].is_a?(String) &&
+      record["stage"].bytesize.between?(1, 160) && record["stage"].match?(/\A[A-Za-z0-9_.:+\/-]+\z/)
+    %w[started_at updated_at].each do |field|
+      value = record[field]
+      raise "invalid deploy-run #{field}" unless value.is_a?(String) && value.match?(/\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\z/)
+      Time.iso8601(value)
+    end
+    %w[pinned_sha previous_sha].each do |field|
+      value = record[field]
+      raise "invalid deploy-run #{field}" unless value.nil? || value == "unknown" ||
+        (value.is_a?(String) && value.match?(/\A[0-9a-f]{7,40}\z/i))
+    end
+    services = record["started_services"]
+    raise "invalid deploy-run service snapshot" unless services.is_a?(Array) &&
+      services.length <= SERVICES.length && services.uniq == services &&
+      services.all? { |service| SERVICES.include?(service) }
+    ports = record["ports"]
+    raise "invalid deploy-run port map" unless ports.is_a?(Hash) &&
+      ports.all? { |service, port| APPS.include?(service) && port.is_a?(Integer) && (1..65_535).cover?(port) }
+    order = record["restore_order"]
+    raise "invalid deploy-run restore order" unless order.is_a?(Array) &&
+      order.length <= APPS.length && order.uniq == order && order.all? { |service| APPS.include?(service) }
+    %w[run_log aggregate_log].each do |field|
+      value = record[field]
+      raise "invalid deploy-run #{field}" unless value.is_a?(String) &&
+        value.bytesize.between?(1, 2048) && !value.include?("\0")
+    end
+    record
+  rescue ArgumentError
+    raise "invalid deploy-run timestamp"
+  end
+
+  def deploy_run_record(run_id, root: STAMP_DIR, verify_root: true)
+    raise "invalid deploy-run id" unless deploy_run_id?(run_id)
+    directory = deploy_run_directory(root:, create: false, verify_root:)
+    return nil unless directory
+    path = File.join(directory, "#{run_id}.json")
+    raise "#{path} is a symlink; refusing deploy-run read" if File.symlink?(path)
+    return nil unless File.exist?(path)
+
+    stat = File.lstat(path)
+    raise "#{path} must be a root-owned, private regular file" unless
+      stat.file? && !stat.symlink? && (!verify_root || stat.uid.zero?) && (stat.mode & 0o077).zero?
+    record = JSON.parse(File.read(path))
+    validate_deploy_run!(record, run_id)
+  rescue JSON::ParserError
+    raise "#{path} contains malformed deploy-run JSON"
+  end
+
+  def write_deploy_run(run_id, payload_json, root: STAMP_DIR, verify_root: true, output: $stdout)
+    raise "invalid deploy-run id" unless deploy_run_id?(run_id)
+    payload = JSON.parse(payload_json)
+    raise "deploy-run update must be a JSON object" unless payload.is_a?(Hash)
+    allowed = %w[
+      schema run_id target host pid owner_identity status recovery_state stage
+      started_at updated_at pinned_sha previous_sha started_services ports
+      restore_order run_log aggregate_log recovered_at
+    ]
+    unknown = payload.keys - allowed
+    raise "unknown deploy-run field(s): #{unknown.join(', ')}" unless unknown.empty?
+
+    directory = deploy_run_directory(root:, create: true, verify_root:)
+    target = File.join(directory, "#{run_id}.json")
+    raise "#{target} is a symlink; refusing deploy-run write" if File.symlink?(target)
+    previous = deploy_run_record(run_id, root:, verify_root:)
+    immutable = %w[schema run_id target host pid owner_identity started_at]
+    if previous
+      immutable.each do |field|
+        next unless payload.key?(field)
+        raise "deploy-run identity field #{field} cannot change" unless payload[field] == previous[field]
+      end
+      record = previous.merge(payload)
+    else
+      required = %w[schema run_id target host pid owner_identity status recovery_state stage started_at started_services ports restore_order run_log aggregate_log]
+      missing = required - payload.keys
+      raise "deploy-run creation missing field(s): #{missing.join(', ')}" unless missing.empty?
+      record = payload
+    end
+    record["updated_at"] = Time.now.utc.iso8601
+    validate_deploy_run!(record, run_id)
+
+    temporary = File.join(directory, ".#{run_id}.#{Process.pid}.#{SecureRandom.hex(6)}")
+    begin
+      File.open(temporary, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
+        file.write(JSON.generate(record) + "\n")
+        file.flush
+        file.fsync
+      end
+      File.rename(temporary, target)
+      File.open(directory) { |dir| dir.fsync }
+      output.puts("deploy_run0: #{run_id} status=#{record.fetch('status')} recovery=#{record.fetch('recovery_state')} stage=#{record.fetch('stage')}")
+      0
+    ensure
+      File.unlink(temporary) if File.exist?(temporary)
+    end
+  end
+
+  def read_deploy_run(run_id, root: STAMP_DIR, verify_root: true, output: $stdout)
+    record = deploy_run_record(run_id, root:, verify_root:)
+    output.puts(record ? JSON.generate(record) : "null")
+    0
+  end
+
+  def list_deploy_runs(root: STAMP_DIR, verify_root: true, output: $stdout)
+    directory = deploy_run_directory(root:, create: false, verify_root:)
+    records = if directory
+                Dir.children(directory).grep(/\A\d{8}T\d{6}Z-[a-z0-9_-]{1,32}-\d+\.json\z/).map do |name|
+                  deploy_run_record(name.delete_suffix(".json"), root:, verify_root:)
+                end.compact
+              else
+                []
+              end
+    output.puts(JSON.generate(records.sort_by { |record| record.fetch("started_at") }.reverse))
+    0
+  end
+
   def valid_ruby_cache_key?(value)
     value.match?(/\Aruby(?:[0-9]{2}|[0-9]+\.[0-9]+)\z/)
   end
