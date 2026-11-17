@@ -13,13 +13,6 @@ require "digest"
 # MASTER/lib/io. Keep this anchored path rather than depending on the operator's
 # working directory.
 require_relative "analog_capabilities"
-# The style-contract validator was deleted upstream (the "Flatten the
-# photograph implementation tree" commit dropped it while keeping this file),
-# so a plain require killed every grade at boot. Refuse --style-contract
-# below by name instead of failing the mainline; the pair lives in pub4
-# history if the feature is restored.
-require_relative "../style_registry" if File.file?(File.expand_path("../style_registry.rb", __dir__))
-
 require "open3"
 require "rbconfig"
 # The pub v13/v14 creative names are compatibility methods on the same measured grade path,
@@ -27,9 +20,6 @@ require "rbconfig"
 require_relative "legacy_effects"
 require_relative "dilla_analog"
 require_relative "constitution"
-# Same as the style registry: source_map was deleted upstream with this
-# consumer kept. Refuse the --map mode below instead of dying at boot.
-require_relative "../source_map" if File.file?(File.expand_path("../source_map.rb", __dir__))
 require_relative "depth"
 include Postpro::LegacyEffects
 include Postpro::DillaAnalog
@@ -94,10 +84,10 @@ POSTPRO_USAGE = <<~TXT
     --measure FILE [--against AFTER]  read texture numbers and palette, or how a grade moved them
     --quality FILE                   report sampled exposure, clipping, tone and colour diagnostics
     --stabilize                      opt in to bounded source balancing before the style grade
-    --style-contract NAME            validate and record an image style contract (metadata only)
+    --style-contract NAME            unavailable: style registry not ported
     --stock-sheet FILE [--preset NAME] [--output FILE]  one frame through every stock, tiled
     --gallery [DIR]                   an index.html contact page of every render in DIR
-    --map                             the table of contents of this file, with line numbers
+    --map                             unavailable: source map not ported
     --set DIR                         which frames repeat, and how far each sits from the set's exposure
     --vocab-check                     are the tables consistent?
     --capabilities                    what this build can do

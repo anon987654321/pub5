@@ -284,11 +284,8 @@ def run_introspect
   elsif (scan = argv_flag("--fit-grain"))
     puts fit_grain(scan)
   elsif ARGV.include?("--map")
-    unless defined?(Studio::SourceMap)
-      warn "--map refused: the source map did not survive the port"
-      exit 2
-    end
-    puts POSTPRO_SOURCE_FILES.map { |path| Studio::SourceMap.render(path) }.join("\n")
+    warn "--map refused: source-map support is not part of this build"
+    exit 2
   elsif ARGV.include?("--gallery")
     write_gallery(argv_flag("--gallery") || Dir.pwd)
   elsif (name = argv_flag("--css-filter"))
