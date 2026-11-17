@@ -140,7 +140,8 @@ FLOW_OUTPUT = <<~OUT
     assert got["flow demo/demo_browse"].ok
     refute got["flow demo/demo_search"].ok
     assert_match(/invariant broken: hits\(0\) > 0/, got["flow demo/demo_search"].detail)
-    assert got["flow demo/demo_signed_in"].ok, "an unmeasured journey is non-blocking"\n    assert_equal "INCONCLUSIVE", got["flow demo/demo_signed_in"].state
+    assert got["flow demo/demo_signed_in"].ok, "an unmeasured journey is non-blocking"
+    assert_equal "INCONCLUSIVE", got["flow demo/demo_signed_in"].state
     assert_equal "inconclusive", got["flow demo/demo_signed_in"].detail
     call = asked.find { |a| a.include?("flow_journey") }
     assert_includes call, "FLOW_APP=demo"
