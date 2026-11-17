@@ -788,18 +788,11 @@ paid_tail:
   max_models: 12
 
 # Image and video generation lanes (Io::MediaLanes). Each kind lists its lanes;
-# the selector keeps the live ones (key present, not parked by Io::LaneQuota, not
-# silent), drops those whose estimate exceeds the call cap or the run budget that
-# is left, and asks the free ones first, then the cheapest; ties keep this order,
-# so a direct provider precedes the same model through OpenRouter. A lane is
-# "media-<provider>" to LaneQuota. Price per call is the catalog's price_id row
-# (prompt tokens, plus image_tokens at image_output) when the catalog has it, else
-# usd_per_call, else usd_per_second x seconds. The flat figures are estimates
-# written from the operator's 2026-10-12 brief and the catalog's token prices;
-# check them against the provider's price page before trusting a cap to them.
-# MASTER_MEDIA_BUDGET_USD overrides both run budgets; MASTER_MEDIA_PAID=0 turns
-# every paid lane off. There is no direct xAI image or video endpoint in this
-# repo (the xai block of data/providers.yml is chat only), so none is listed.
+# the selector keeps live lanes within separate per-call and per-run budgets.
+# Video rates are USD per output second. MiniMax reference-video input is reserved
+# at the documented maximum of 15 seconds whenever reference_video_urls is used.
+# MiniMax H3 prices are date-aware: promotional rates apply through 2026-12-31,
+# then list rates resume automatically.
 media_lanes:
   budget_usd: { image: 2.0, video: 5.0 }
   call_cap_usd: { image: 1.0, video: 4.0 }
@@ -828,6 +821,8 @@ media_lanes:
     - { provider: openrouter, model: openai/gpt-5-image, image_tokens: 4160, usd_per_call: 0.17 }
     - { provider: replicate, model: black-forest-labs/flux-2-pro, usd_per_call: 0.05 }
   video:
+    - { provider: replicate, model: minimax/h3-lite, resolution: "768P", usd_per_second: 0.04, promotion: { usd_per_second: 0.02, until: "2026-12-31" } }
+    - { provider: replicate, model: minimax/h3-highspeed, usd_per_second: 0.06, promotion: { usd_per_second: 0.03, until: "2026-12-31" } }
     - { provider: gemini, model: veo-3.1-lite-generate-preview, usd_per_second: 0.05 }
     - { provider: gemini, model: veo-3.1-fast-generate-preview, usd_per_second: 0.15 }
     - { provider: gemini, model: veo-3.1-generate-preview, usd_per_second: 0.40 }
