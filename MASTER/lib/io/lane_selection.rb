@@ -207,12 +207,18 @@ module Master
       def rank_pool(ids, latency:, lead:, cfg:)
         preferred = Array(lead).map(&:to_s).reject(&:empty?).uniq
         preferred_rank = preferred.each_with_index.to_h
-        listed = (preferred + catalogue(cfg:)).uniq
         ids.each_with_index.sort_by do |id, index|
-          # A measured/route lead and then the declared catalogue order decide
-          # within a class. Subscription status never promotes a later model.
-          within_class = preferred_rank.fetch(id, preferred.length + (listed.index(id) || index))
-          [class_rank(id), within_class, free_latency(id, latency), index]
+          # Explicit measured/route leads come first. Otherwise preserve the
+          # caller's declared remote/local order; only the free class is sorted
+          # by measured latency. Subscription status never promotes a lane.
+          within_class = if preferred_rank.key?(id)
+                           [0, preferred_rank.fetch(id), 0, 0]
+                         elsif kind(id) == :free
+                           [1, 0, free_latency(id, latency), index]
+                         else
+                           [1, 0, index, 0]
+                         end
+          [class_rank(id), *within_class]
         end.map(&:first)
       end
 
