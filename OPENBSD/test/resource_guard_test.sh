@@ -233,6 +233,7 @@ reset
 print -r -- "$(date +%s) 85" > "$DB/cpu-pressure"
 run_tick "$CLEAR"
 check "confirmed CPU pressure sheds only bsdports first" "amber" "$(running)"
+check "CPU pressure records the exact satisfied strike threshold" "2" "$(cat "$DB/strikes" 2>/dev/null)"
 check "CPU guard never restarts or stops core services" "" "$(cat "$DB/actions" 2>/dev/null | grep -E 'master|brgen' || true)"
 
 print "12. an expired CPU pressure signal is ignored"
