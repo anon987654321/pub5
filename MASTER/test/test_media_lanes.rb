@@ -73,7 +73,7 @@ class TestMediaLanes < Minitest::Test
     [out, printed]
   end
 
-  def ids(kind, env: ALL_KEYS) = Lanes.evaluate(kind, env:).first.map { |lane, _cost| lane.id }
+  def ids(kind, env: ALL_KEYS) = Lanes.evaluate(kind, env:, today: Date.new(2026, 11, 17)).first.map { |lane, _cost| lane.id }
 
   def test_lane_order_is_availability_then_cost
     order = ids(:image)
