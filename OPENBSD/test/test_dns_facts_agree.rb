@@ -3,12 +3,13 @@
 require "minitest/autorun"
 require "open3"
 require "yaml"
-require_relative "../mirror/bin/render_dns"
+require_relative "../bin/render_dns"
 
-# Four DNS facts were written down twice: data/dns.yml declares them, OPERATOR.sh
-# restates them as shell literals, and checks/dns_zones.rb had its own third copy
-# of two. The copies had already drifted — OPERATOR.sh's resolver list led with
-# 8.8.8.8 while the check used Cloudflare and Quad9 and had written down why.
+# DNS policy facts are declared in data/dns.yml. BOOTSTRAP.sh retains the fleet's
+# legacy ALL_DOMAINS list because its bootstrap path still consumes that array;
+# render_dns reads that same list, while routine OPERATOR.sh remains a file
+# installer and does not own domain routing. The resolver and nameserver checks
+# compare policy values independently.
 #
 # The check now reads the policy file. OPERATOR.sh cannot: that block is sourced
 # before anything else runs, and making the deploy script shell out to ruby34 to
