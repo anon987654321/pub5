@@ -885,11 +885,18 @@ if (( lock_owner )); then
     restore_preflight_checkout || deploy_refuse "cannot return to $preflight_back_to after preflight"
   fi
   git_as_deploy_user merge -q --ff-only "$pin" || deploy_refuse "cannot fast-forward $repo to $pin"
-  set_stage snapshot
   VPS_DEPLOY_STARTED="$(admin_service list-started 2>/dev/null)"
   VPS_DEPLOY_STARTED=${VPS_DEPLOY_STARTED//$'\n'/ }
   export VPS_DEPLOY_STARTED
+  VPS_DEPLOY_RECEIPT_PREVIOUS_SHA=$head_before
+  VPS_DEPLOY_RECEIPT_PINNED_SHA=$pin
+  VPS_DEPLOY_RECEIPT_SERVICES=$VPS_DEPLOY_STARTED
+  VPS_DEPLOY_RECEIPT_RECOVERY=none
+  [[ -z $VPS_DEPLOY_STARTED ]] || VPS_DEPLOY_RECEIPT_RECOVERY=pending
+  export VPS_DEPLOY_RECEIPT_PREVIOUS_SHA VPS_DEPLOY_RECEIPT_PINNED_SHA
+  export VPS_DEPLOY_RECEIPT_SERVICES VPS_DEPLOY_RECEIPT_RECOVERY
   print "vps-deploy: started before this deploy: $VPS_DEPLOY_STARTED"
+  set_stage snapshot
 fi
 
   # Resolve against the inventory in the checkout after it has been fast-forwarded
@@ -899,6 +906,15 @@ fi
   DEPLOY_ALL=(${(@f)$(inventory_names all)})
   DEPLOY_ALL_DEGRADED=(${(@f)$(inventory_names all 1)})
   DEPLOY_RAILS=(${(@f)$(inventory_names rails)})
+  load_deploy_ports
+  typeset -a receipt_ports
+  for svc in ${(k)deploy_ports}; do
+    receipt_ports+=("$svc=$${deploy_ports[$svc]}")
+  done
+  VPS_DEPLOY_RECEIPT_PORTS="${(j:,:)receipt_ports}"
+  VPS_DEPLOY_RECEIPT_ORDER="${(j:,:)DEPLOY_ALL_DEGRADED}"
+  export VPS_DEPLOY_RECEIPT_PORTS VPS_DEPLOY_RECEIPT_ORDER
+  set_stage inventory-ready
   (( ${#DEPLOY_ALL} )) || deploy_refuse "the pinned deployment inventory has no active apps"
   deploy_app_group=$(inventory_app_group "$app")
   if [[ $deploy_target_kind == all || $deploy_app_group == master ]]; then
