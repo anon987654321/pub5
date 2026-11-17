@@ -124,6 +124,7 @@ module Master
         paste, state, accumulated = init_turn_state(input)
 
         print_thinking_indicator unless paste
+        operation_log_start = operation_log_snapshot
         result = dispatch_turn(input, accumulated:, state:)
         stop_thinking_indicator
         print_bridge_footer(result.value[:core], state:) if result.ok? && state[:streamed] && result.value[:core]
@@ -132,6 +133,7 @@ module Master
           operation: input,
           status: result.ok? ? "success" : "failure",
           output: result.ok? ? success_text(result) : result.message.to_s,
+          since: operation_log_start,
         )
         @last_repeatable_input = input if result.ok? && Master::Io::MediaIntent.repeatable?(input)
 
