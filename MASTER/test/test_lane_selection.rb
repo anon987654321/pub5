@@ -214,6 +214,14 @@ class TestLaneSelection < Minitest::Test
     assert_equal GLM, primary[2], "direct GLM follows as a same-provider fallback"
   end
 
+  def test_task_tier_order_is_not_replaced_by_the_global_default_order
+    fast = Selection.tier("fast")
+
+    assert_equal ANTHROPIC_SONNET, fast.first
+    assert_equal [ANTHROPIC_SONNET, ANTHROPIC_OPUS],
+                 Selection.ranked_order([ANTHROPIC_SONNET, ANTHROPIC_OPUS])
+  end
+
   def test_free_models_come_last_without_reordering_remote_models_by_subscription
     mixed = [NEMOTRON, NANO, LOCAL, DEEPSEEK, GROK]
     assert_equal [DEEPSEEK, GROK, LOCAL, NEMOTRON, NANO], Selection.order(mixed),
