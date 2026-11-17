@@ -39,10 +39,14 @@ module Master
         raise ArgumentError, "no route has grounded evidence and valid constraints" if candidates.empty?
 
         satisfied = clean_list(satisfied_dependencies, 500).to_set
-        ready = candidates.select { |route| route.dependencies.all? { |dependency| satisfied.include?(dependency) } }
+        highest_priority = candidates.map(&:priority).max
+        mission_band = candidates.select { |route| route.priority >= highest_priority - @exploration_rate }
+        ready = mission_band.select do |route|
+          route.dependencies.all? { |dependency| satisfied.include?(dependency) }
+        end
         if ready.empty?
-          pending = candidates.flat_map(&:dependencies).uniq - satisfied.to_a
-          raise ArgumentError, "no route is ready; unsatisfied dependencies: #{pending.sort.join(", ")}"
+          pending = mission_band.flat_map(&:dependencies).uniq - satisfied.to_a
+          raise ArgumentError, "highest-priority routes are blocked by unsatisfied dependencies: #{pending.sort.join(", ")}"
         end
 
         ranked = ready.map { |route| [route, route_score(route, objective:), route_explanation(route)] }
