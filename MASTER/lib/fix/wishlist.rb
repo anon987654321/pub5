@@ -12,6 +12,10 @@ require_relative "../review/scan/semantic_fingerprint"
 require_relative "../master/time"
 require_relative "wishlist/proof_contract"
 require_relative "wishlist/personas"
+# The re-opened parts of this class, one responsibility each; every path is
+# listed in data/autoload.yml under autoload.reopens_a_constant_defined_elsewhere.
+require_relative "wishlist/claims"
+require_relative "wishlist/rendering"
 
 module Master
   module Fix
@@ -46,12 +50,30 @@ module Master
       def call(state:, target:, run_id:)
         return "wishlist: skipped - no model" unless @agent.respond_to?(:ask)
 
+        items = draft_items(state:, target:, run_id:)
+        added, queued = commit_items(items, state:, target:, run_id:)
+        publish_done(items, added, queued, target, state)
+        "wishlist: drafted #{items.size}, queued #{queued} -> #{LEDGER_PATH}"
+      rescue StandardError => e
+        @bus&.publish("wishlist:error", error: e.message, state:, target:)
+        "wishlist: #{e.class}: #{e.message}"
+      end
+
+      private
+
+      # One persona-collect pass over the rendered orientation, with the
+      # single-model fallback when no persona answered.
+      def draft_items(state:, target:, run_id:)
         orientation = Master::AI::Orientation.render(root: @root, target:, depth: 2, max_entries: 80)
         base = prompt(orientation:, state:, target:, run_id:)
         items = Personas.collect(agent: @agent, base:, parse: method(:parse), normalize: method(:normalize))
         items = normalize(parse(@agent.ask(base))) if items.empty?
-        items = items.first(MAX_NEW_ITEMS)
-        added, queued = with_ledger_lock do
+        items.first(MAX_NEW_ITEMS)
+      end
+
+      # One locked read-modify-write of the ledger, returning the row counts.
+      def commit_items(items, state:, target:, run_id:)
+        with_ledger_lock do
           ledger = load_ledger
           added = merge_new_items!(ledger, items, state:, target:, run_id:)
           save_ledger(ledger)
@@ -61,6 +83,9 @@ module Master
           end
           [added, queued]
         end
+      end
+
+      def publish_done(items, added, queued, target, state)
         @bus&.publish(
           "wishlist:done",
           drafted: items.size,
@@ -69,314 +94,7 @@ module Master
           target: relative(target),
           state:,
         )
-        "wishlist: drafted #{items.size}, queued #{queued} -> #{LEDGER_PATH}"
-      rescue StandardError => e
-        @bus&.publish("wishlist:error", error: e.message, state:, target:)
-        "wishlist: #{e.class}: #{e.message}"
       end
-
-      def self.pending_context(root, target: root, limit: BATCH_SIZE)
-        new(root:, agent: nil).render_pending(target:, limit:)
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.pending_context")
-        nil
-      end
-
-      def self.pending_titles(root, target: root, limit: BATCH_SIZE)
-        new(root:, agent: nil).pending_titles(target:, limit:)
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.pending_titles")
-        []
-      end
-
-      def claimable(target:, limit: BATCH_SIZE, run_id: nil)
-        with_ledger_lock do
-          ledger = load_ledger
-          head = @git.head
-          changed = false
-          rows = ledger["proposals"].filter_map do |proposal|
-            if proposal["status"] == "claimed"
-              proposal["status"] = "queued"
-              proposal.delete("claimed_at")
-              proposal.delete("claimed_run")
-              changed = true
-            end
-            next unless proposal["status"] == "queued"
-            next unless AUTO_IMPLEMENTATIONS.include?(proposal["implementation"])
-
-            anchor = anchor_file(proposal["anchor"])
-            unless anchor
-              proposal["status"] = "stale"
-              proposal["stale_reason"] = "anchor missing"
-              changed = true
-              next
-            end
-            next unless anchor_in_target?(anchor, target)
-
-            current_digest = Digest::SHA256.file(anchor).hexdigest
-            recorded_digest = proposal["anchor_sha256"].to_s
-            if recorded_digest.empty? || recorded_digest != current_digest
-              proposal["status"] = "stale"
-              proposal["stale_reason"] = "anchor changed since proposal"
-              proposal["stale_at"] = Master::Clock.utc_now.iso8601
-              changed = true
-              @bus&.publish("wishlist:stale", id: proposal["uid"], reason: proposal["stale_reason"])
-              next
-            end
-
-            if head.to_s.empty?
-              next
-            elsif proposal["basis_head"].to_s != head.to_s
-              proposal["basis_head"] = head
-              proposal["rebased_at"] = Master::Clock.utc_now.iso8601
-              changed = true
-            end
-
-            next if run_id && proposal["last_attempt_run"].to_s == run_id.to_s
-            proposal
-          end.then { |rows| Personas.order(rows) }.first(limit.to_i)
-
-          save_ledger(ledger) if changed
-          rows
-        end
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.claimable", event_bus: @bus)
-        []
-      end
-
-      def claim!(proposals, run_id:)
-        with_ledger_lock do
-          ids = Array(proposals).map { |proposal| proposal["uid"].to_s }.reject(&:empty?)
-          return [] if ids.empty?
-
-          ledger = load_ledger
-          now = Master::Clock.utc_now.iso8601
-          claimed = ledger["proposals"].filter_map do |proposal|
-            next unless ids.include?(proposal["uid"].to_s) && proposal["status"] == "queued"
-
-            proposal["status"] = "claimed"
-            proposal["claimed_at"] = now
-            proposal["claimed_run"] = run_id.to_s
-            proposal
-          end
-          save_ledger(ledger)
-          @bus&.publish("wishlist:claimed", run_id:, count: claimed.size)
-          claimed
-        end
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.claim!", event_bus: @bus)
-        []
-      end
-      # FixLoop::PassExecution asks for `claim`; without it every wishlist round raised NoMethodError.
-      alias claim claim!
-
-      def mark_attempt(proposal_id:, fixed:, status:, message:, run_id:)
-        with_ledger_lock do
-          ledger = load_ledger
-          proposal = ledger["proposals"].find { |item| item["uid"].to_s == proposal_id.to_s }
-          return unless proposal
-
-          attempts = proposal.fetch("attempts", 0).to_i + 1
-          proposal["attempts"] = attempts
-          proposal["last_attempt_run"] = run_id.to_s
-          proposal["last_outcome"] = status.to_s
-          proposal["last_message"] = message.to_s.byteslice(0, 500)
-
-          if fixed.to_i.positive?
-            proposal["status"] = "claimed"
-            proposal["last_fixed"] = fixed.to_i
-          elsif %i[human_decision needs_person].include?(status.to_sym)
-            proposal["status"] = "blocked"
-          elsif attempts >= MAX_ATTEMPTS
-            proposal["status"] = "blocked"
-            proposal["blocked_reason"] = "attempt limit reached"
-          else
-            proposal["status"] = "queued"
-          end
-
-          save_ledger(ledger)
-          @bus&.publish(
-            "wishlist:attempt",
-            id: proposal_id,
-            status: proposal["status"],
-            outcome: status,
-            fixed: fixed.to_i,
-            attempts:,
-          )
-          proposal
-        end
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.mark_attempt", event_bus: @bus)
-        nil
-      end
-
-      def mark_delivered(proposal_ids:, run_id:)
-        with_ledger_lock do
-          ids = Array(proposal_ids).map(&:to_s)
-          return [] if ids.empty?
-
-          ledger = load_ledger
-          changed = ledger["proposals"].filter_map do |proposal|
-            next unless ids.include?(proposal["uid"].to_s)
-            next unless proposal["status"] == "claimed"
-            next unless proposal.fetch("last_fixed", 0).to_i.positive?
-
-            proposal["status"] = "applied"
-            proposal["applied_at"] = Master::Clock.utc_now.iso8601
-            proposal["applied_run"] = run_id.to_s
-            proposal.delete("claimed_at")
-            proposal.delete("claimed_run")
-            proposal
-          end
-          save_ledger(ledger) unless changed.empty?
-          changed
-        end
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.mark_delivered", event_bus: @bus)
-        []
-      end
-
-      def mark_verified(proposal_ids:, run_id:)
-        with_ledger_lock do
-          ids = Array(proposal_ids).map(&:to_s)
-          return [] if ids.empty?
-
-          ledger = load_ledger
-          changed = ledger["proposals"].filter_map do |proposal|
-            next unless ids.include?(proposal["uid"].to_s)
-            next unless proposal["status"] == "applied"
-
-            proof = ProofContract.verify(proposal, root: @root)
-            proposal["proof_state"] = proof[:state].to_s
-            proposal["proof_checks"] = Array(proof[:checks]).first(6)
-
-            case proof[:state]
-            when :proven
-              proposal["status"] = "verified"
-              proposal["verified_at"] = Master::Clock.utc_now.iso8601
-              proposal["verified_run"] = run_id.to_s
-            when :failed
-              proposal["status"] = "blocked"
-              proposal["blocked_reason"] = "wishlist proof failed"
-              proposal["blocked_at"] = Master::Clock.utc_now.iso8601
-            else
-              proposal["status"] = "applied"
-              proposal["verification_reason"] = "proof contract requires external validation"
-            end
-            proposal
-          end
-          save_ledger(ledger) unless changed.empty?
-          changed
-        end
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.mark_verified", event_bus: @bus)
-        []
-      end
-
-      def record_reflection!(reflection:, state:, target:, run_id:)
-        with_ledger_lock do
-          return false unless reflection.respond_to?(:repair?) && reflection.repair?
-          law = reflection.law.to_s
-          anchor = reflection.anchor.to_s
-          evidence = reflection.evidence.to_s
-          change = reflection.next_action.to_s
-          return false if law.empty? || anchor.empty? || evidence.empty? || change.empty?
-
-          item = {
-            "id" => "reflection_#{Digest::SHA256.hexdigest([law, anchor, evidence, change].join("\n"))[0, 16]}",
-            "title" => reflection.summary.to_s,
-            "rationale" => reflection.summary.to_s,
-            "anchor" => anchor,
-            "change" => change,
-            "effort" => "medium",
-            "reversibility" => "guarded",
-            "implementation" => "next_fix",
-            "evidence" => evidence,
-            "proof" => ["same law and anchor must hold after mutation"],
-          }
-          ledger = load_ledger
-          added = merge_new_items!(ledger, [item], state:, target:, run_id:)
-          save_ledger(ledger) if added.positive?
-          @bus&.publish("wishlist:reflection", added:, law:, anchor:, run_id:)
-          added.positive?
-        end
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.record_reflection!", event_bus: @bus)
-        false
-      end
-
-      def pending_count(target:)
-        claimable(target:, limit: MAX_PROPOSALS).size
-      end
-
-      def pending_titles(target:, limit: BATCH_SIZE)
-        claimable(target:, limit:).map { |proposal| proposal["title"].to_s }.reject(&:empty?)
-      end
-
-      def render_pending(target:, limit: BATCH_SIZE)
-        rows = claimable(target:, limit:)
-        return if rows.empty?
-
-        body = rows.map do |proposal|
-          proof = Array(proposal["proof"]).join(", ")
-          [
-            "proposal: #{proposal["uid"]}",
-            "title: #{proposal["title"]}",
-            "anchor: #{proposal["anchor"]}",
-            "change: #{proposal["change"]}",
-            "evidence: #{proposal["evidence"]}",
-            "proof: #{proof}",
-            "effort: #{proposal["effort"]}",
-            "reversibility: #{proposal["reversibility"]}",
-          ].join("\n")
-        end
-
-        <<~TEXT.strip
-          Pending automatic convergence proposals from the durable /fix ledger.
-          Treat each queued next_fix proposal as an actual bounded repair target.
-          Do not treat this as a TODO list. Re-check the live source and constitutional
-          rules before mutation. Unsupported, stale, operator-owned, or research-only
-          work is not automatically completed.
-
-          #{body.join("\n\n")}
-        TEXT
-      end
-
-      def self.findings(proposals, root:)
-        Array(proposals).filter_map do |proposal|
-          path, line = proposal["anchor"].to_s.split(":", 2)
-          next if path.to_s.empty? || line.to_s !~ /\A\d+\z/
-
-          file = File.expand_path(path, root)
-          next unless File.file?(file)
-
-          fingerprint = Master::Review::Scan::SemanticFingerprint.for(File.read(file, encoding: "UTF-8"))
-          proof = Array(proposal["proof"]).join(", ")
-          {
-            law: LAW_ID,
-            file:,
-            line: line.to_i,
-            severity: :warning,
-            confidence: 1.0,
-            reversibility: proposal["reversibility"].to_s,
-            blast_radius: { files_touched: 1 },
-            fingerprint:,
-            message: "#{proposal["title"]}: #{proposal["rationale"]}",
-            fix: [
-              proposal["change"],
-              "Evidence: #{proposal["evidence"]}",
-              ("Proof contract: #{proof}" unless proof.empty?),
-            ].compact.join("\n"),
-            wishlist_id: proposal["uid"].to_s,
-            wishlist_proposal: proposal,
-          }
-        end
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.findings")
-        []
-      end
-
-      private
 
       def ledger_path
         File.join(@root, LEDGER_PATH)
@@ -384,7 +102,25 @@ module Master
 
       # One lock covers the full ledger read-modify-write transaction.
       # Atomic rename prevents partial JSON, not lost updates.
-      def with_ledger_lock
+      def with_ledger_lock(&block)
+        directory_stat = prepare_ledger_directory
+        directory = File.dirname(ledger_path)
+        group_shared = (directory_stat.mode & 0o020).positive?
+        lock_mode = ledger_lock_mode(group_shared)
+        lock_path = ledger_lock_path
+        File.open(lock_path, ledger_lock_flags, lock_mode) do |file|
+          opened = settle_lock_permissions(file, lock_mode)
+          assert_lock_policy(opened, directory_stat, group_shared, lock_mode)
+          assert_lock_path_stable(lock_path, opened)
+          hold_ledger_lock(file, directory, directory_stat, lock_path, group_shared, opened, &block)
+        end
+      rescue SystemCallError => e
+        raise IOError, "cannot safely lock wishlist ledger: #{e.class}: #{e.message}"
+      end
+
+      # Creates the ledger directory and proves it is a real, stable,
+      # non-world-writable home for the lock.
+      def prepare_ledger_directory
         directory = File.dirname(ledger_path)
         FileUtils.mkdir_p(directory, mode: 0o700)
         directory_stat = File.lstat(directory)
@@ -393,51 +129,86 @@ module Master
           raise IOError, "wishlist directory must be a stable, real, non-world-writable directory"
         end
 
-        group_shared = (directory_stat.mode & 0o020).positive?
-        lock_mode = group_shared ? 0o660 : 0o600
-        lock_path = "#{ledger_path}.lock"
-        raise IOError, "refusing symlinked wishlist lock" if File.symlink?(lock_path)
+        directory_stat
+      end
+
+      # The lock file inherits the directory's sharing policy.
+      def ledger_lock_mode(group_shared)
+        group_shared ? 0o660 : 0o600
+      end
+
+      # NOFOLLOW where the platform has it, so a planted symlink is refused.
+      def ledger_lock_flags
         flags = File::RDWR | File::CREAT
         flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
-        File.open(lock_path, flags, lock_mode) do |file|
-          opened = file.stat
-          if opened.uid == Process.uid && (opened.mode & 0o777) != lock_mode
-            file.chmod(lock_mode)
-            opened = file.stat
-          end
-          permissions = opened.mode & 0o777
-          shared_permissions = group_shared ?
-            (permissions & 0o060) == 0o060 && opened.gid == directory_stat.gid :
-            (permissions & 0o070).zero?
-          unless opened.file? && opened.nlink == 1 && (permissions & 0o007).zero? &&
-                 (permissions & 0o600) == 0o600 && shared_permissions
-            raise IOError, "wishlist lock permissions do not match its directory's sharing policy"
-          end
-          current = File.lstat(lock_path)
-          unless current.file? && !current.symlink? && current.dev == opened.dev && current.ino == opened.ino
-            raise IOError, "wishlist lock path changed while opening"
-          end
-          raise IOError, "could not acquire wishlist ledger lock" unless file.flock(File::LOCK_EX)
+        flags
+      end
 
-          begin
-            current_directory = File.lstat(directory)
-            current = File.lstat(lock_path)
-            current_group_shared = (current_directory.mode & 0o020).positive?
-            unless current_directory.directory? && !current_directory.symlink? &&
-                   current_directory.dev == directory_stat.dev && current_directory.ino == directory_stat.ino &&
-                   current_directory.gid == directory_stat.gid && current_group_shared == group_shared &&
-                   (current_directory.mode & 0o002).zero? &&
-                   current.file? && !current.symlink? && current.nlink == 1 &&
-                   current.dev == opened.dev && current.ino == opened.ino
-              raise IOError, "wishlist ledger lock identity changed while waiting"
-            end
-            yield
-          ensure
-            file.flock(File::LOCK_UN)
-          end
+      def ledger_lock_path
+        lock_path = "#{ledger_path}.lock"
+        raise IOError, "refusing symlinked wishlist lock" if File.symlink?(lock_path)
+
+        lock_path
+      end
+
+      # Re-chmods an existing lock file we own so it matches the current policy.
+      def settle_lock_permissions(file, lock_mode)
+        opened = file.stat
+        if opened.uid == Process.uid && (opened.mode & 0o777) != lock_mode
+          file.chmod(lock_mode)
+          opened = file.stat
         end
-      rescue SystemCallError => e
-        raise IOError, "cannot safely lock wishlist ledger: #{e.class}: #{e.message}"
+        opened
+      end
+
+      # The lock must be owner-only or group-shared exactly as the directory is;
+      # anything looser means someone planted a permissive file.
+      def assert_lock_policy(opened, directory_stat, group_shared, lock_mode)
+        permissions = opened.mode & 0o777
+        shared_permissions = group_shared ?
+          (permissions & 0o060) == 0o060 && opened.gid == directory_stat.gid :
+          (permissions & 0o070).zero?
+        unless opened.file? && opened.nlink == 1 && (permissions & 0o007).zero? &&
+               (permissions & 0o600) == 0o600 && shared_permissions
+          raise IOError, "wishlist lock permissions do not match its directory's sharing policy"
+        end
+      end
+
+      # The lock path must still resolve to the very file this handle opened.
+      def assert_lock_path_stable(lock_path, opened)
+        current = File.lstat(lock_path)
+        return if current.file? && !current.symlink? && current.dev == opened.dev && current.ino == opened.ino
+
+        raise IOError, "wishlist lock path changed while opening"
+      end
+
+      # Blocks on the exclusive flock, re-proves the directory and lock identity
+      # after the wait, yields, and always releases before the handle closes.
+      def hold_ledger_lock(file, directory, directory_stat, lock_path, group_shared, opened, &block)
+        raise IOError, "could not acquire wishlist ledger lock" unless file.flock(File::LOCK_EX)
+
+        begin
+          assert_lock_held(directory, directory_stat, lock_path, group_shared, opened)
+          yield
+        ensure
+          file.flock(File::LOCK_UN)
+        end
+      end
+
+      # After blocking on flock, the directory and the lock must still be the
+      # ones this handle was opened against.
+      def assert_lock_held(directory, directory_stat, lock_path, group_shared, opened)
+        current_directory = File.lstat(directory)
+        current = File.lstat(lock_path)
+        current_group_shared = (current_directory.mode & 0o020).positive?
+        unless current_directory.directory? && !current_directory.symlink? &&
+               current_directory.dev == directory_stat.dev && current_directory.ino == directory_stat.ino &&
+               current_directory.gid == directory_stat.gid && current_group_shared == group_shared &&
+               (current_directory.mode & 0o002).zero? &&
+               current.file? && !current.symlink? && current.nlink == 1 &&
+               current.dev == opened.dev && current.ino == opened.ino
+          raise IOError, "wishlist ledger lock identity changed while waiting"
+        end
       end
 
       def load_ledger
@@ -463,27 +234,37 @@ module Master
         added = 0
 
         items.each do |item|
-          anchor = item["anchor"].to_s
-          fingerprint = proposal_fingerprint(item)
-          next if Personas.absorb!(ledger["proposals"], item.merge("fingerprint" => fingerprint))
+          next if absorbed?(ledger, item)
 
-          ledger["proposals"] << item.merge(
-            "uid" => "#{item["id"]}-#{fingerprint[0, 12]}",
-            "fingerprint" => fingerprint,
-            "status" => "queued",
-            "attempts" => 0,
-            "created_at" => now,
-            "generated_by_run" => run_id.to_s,
-            "generated_state" => state.to_s,
-            "target" => relative(target),
-            "basis_head" => basis_head,
-            "anchor_sha256" => anchor_sha256(anchor),
-          )
+          ledger["proposals"] << ledger_row(item, state:, target:, run_id:, now:, basis_head:)
           added += 1
         end
 
         prune!(ledger)
         added
+      end
+
+      # An open row that already is this wish takes the new names instead of a
+      # second row; true when the item was absorbed rather than appended.
+      def absorbed?(ledger, item)
+        fingerprint = proposal_fingerprint(item)
+        Personas.absorb!(ledger["proposals"], item.merge("fingerprint" => fingerprint))
+      end
+
+      def ledger_row(item, state:, target:, run_id:, now:, basis_head:)
+        fingerprint = proposal_fingerprint(item)
+        item.merge(
+          "uid" => "#{item["id"]}-#{fingerprint[0, 12]}",
+          "fingerprint" => fingerprint,
+          "status" => "queued",
+          "attempts" => 0,
+          "created_at" => now,
+          "generated_by_run" => run_id.to_s,
+          "generated_state" => state.to_s,
+          "target" => relative(target),
+          "basis_head" => basis_head,
+          "anchor_sha256" => anchor_sha256(item["anchor"].to_s),
+        )
       end
 
       def prune!(ledger)
@@ -540,101 +321,6 @@ module Master
         return path.to_s unless full.start_with?("#{@root}#{File::SEPARATOR}")
 
         full.delete_prefix("#{@root}#{File::SEPARATOR}")
-      end
-
-      def prompt(orientation:, state:, target:, run_id:)
-        <<~PROMPT
-          You are proposing the next bounded work queue after a completed MASTER /fix run.
-          Do not claim a defect unless the supplied evidence supports it.
-          Do not repeat work that is already marked done. Prefer concrete improvements
-          that a later /fix can implement and verify.
-
-          Run:
-          state: #{state}
-          target: #{target}
-          run_id: #{run_id}
-
-          Orientation:
-          #{orientation}
-
-          Produce 0 to #{MAX_NEW_ITEMS} wishlist items as YAML.
-          Each item must contain:
-          - id: snake_case
-          - title: short human-readable name
-          - rationale: one sentence
-          - anchor: repository-relative path:line, or run:<state>
-          - change: one concrete implementation sentence
-          - effort: cheap, medium, or deep
-          - reversibility: reversible, guarded, or operator
-          - implementation: next_fix, research, or operator
-          - evidence: one sentence using only facts present in the supplied orientation/run
-          - proof: 0 to 6 concrete checks that can verify the proposed change
-
-          Prefer automatic next_fix only for bounded, evidence-backed changes anchored in
-          a real file. Use research when more investigation is needed and operator when
-          a human, credential, device, external service, irreversible decision, or
-          real-world observation is required.
-
-          Do not invent external purchases, users, scale numbers, credentials, incidents,
-          benchmarks, or measurements. Never pad the list to reach a quota.
-          Return only the YAML array. No Markdown fences and no prose.
-        PROMPT
-      end
-
-      def parse(text)
-        body = text.to_s.sub(/\A.*?(?=^- |\A- )/m, "").sub(/\n```.*\z/m, "").strip
-        data = YAML.safe_load(body, aliases: false)
-        raise ParseError, "wishlist response must be a YAML array" unless data.is_a?(Array)
-
-        data
-      rescue Psych::Exception => e
-        raise ParseError, "wishlist response contains invalid YAML: #{e.message}"
-      end
-
-      def normalize(items)
-        items.filter_map do |item|
-          next unless item.is_a?(Hash)
-
-          id = slug(item["id"] || item["title"])
-          anchor = item["anchor"].to_s.strip
-          next if id.empty?
-          next if item["title"].to_s.strip.empty? || item["rationale"].to_s.strip.empty?
-          next if item["change"].to_s.strip.empty? || item["evidence"].to_s.strip.empty?
-          next unless valid_anchor?(anchor)
-
-          reversibility = normalize_choice(item["reversibility"], %w[reversible guarded operator], "guarded")
-          implementation = normalize_choice(item["implementation"], %w[next_fix research operator], "operator")
-          implementation = "operator" if reversibility == "operator" && implementation == "next_fix"
-          implementation = "operator" unless anchor_file(anchor) || implementation != "next_fix"
-
-          {
-            "id" => id,
-            "title" => item["title"].to_s.strip,
-            "rationale" => item["rationale"].to_s.strip,
-            "anchor" => anchor,
-            "change" => item["change"].to_s.strip,
-            "effort" => normalize_choice(item["effort"], %w[cheap medium deep], "medium"),
-            "reversibility" => reversibility,
-            "implementation" => implementation,
-            "evidence" => item["evidence"].to_s.strip,
-            "proof" => Array(item["proof"]).map { |value| value.to_s.strip }.reject(&:empty?).first(6),
-          }
-        end.uniq { |item| [item["id"], item["anchor"], item["change"]] }.first(MAX_NEW_ITEMS)
-      end
-
-      def valid_anchor?(anchor)
-        return true if anchor.match?(/\Arun:[a-z_]+\z/i)
-
-        !anchor_file(anchor).nil?
-      end
-
-      def normalize_choice(value, allowed, fallback)
-        choice = value.to_s.downcase
-        allowed.include?(choice) ? choice : fallback
-      end
-
-      def slug(value)
-        value.to_s.downcase.gsub(/[^a-z0-9]+/, "_").gsub(/\A_+|_+\z/, "")[0, 64]
       end
 
     end
