@@ -188,6 +188,22 @@ FLOW_OUTPUT = <<~OUT
     assert(names.none? { |n| n.start_with?("rcctl", "port") })
   end
 
+  def test_requested_smoke_check_fails_loudly_when_the_script_is_missing
+    canary = Canary::Runner.new(
+      root: @root,
+      apps: %w[demo],
+      smoke: true,
+      shell: ->(*_) { ["", Ok.new(true)] },
+      connect: ->(*) { true },
+      http: ->(*) { Canary::Reply.new(status: 200, headers: {}, body: "", elapsed_ms: 1) },
+    )
+    result = canary.run.last
+
+    refute result.ok
+    assert_equal "deploy-smoke local", result.name
+    assert_equal "missing OPENBSD/bin/deploy-smoke.sh", result.detail
+  end
+
   def test_smoke_script_failure_is_reported_with_its_fail_lines
     write("OPENBSD/bin/deploy-smoke.sh", "#!/bin/sh\n")
     shell = ->(*argv) { argv.first == "sh" ? ["FAIL amber_local\nok x\n", Ok.new(false)] : ["", Ok.new(true)] }

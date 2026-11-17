@@ -197,8 +197,14 @@ module Operator
       end
 
       def smoke_check
-        script = File.join(@root, "OPENBSD", "mirror", "bin", "deploy-smoke.sh")
-        return [] unless File.file?(script)
+        script = File.join(@root, "OPENBSD", "bin", "deploy-smoke.sh")
+        unless File.file?(script)
+          return [Result.new(
+            name: "deploy-smoke #{@mode}",
+            ok: false,
+            detail: "missing OPENBSD/bin/deploy-smoke.sh",
+          )]
+        end
 
         out, status = @shell.call("sh", script, @mode == :local ? "--local" : "--public")
         [Result.new(name: "deploy-smoke #{@mode}", ok: status.success?, detail: status.success? ? nil : out.to_s.lines.grep(/FAIL/).first(4).join(" ").strip)]
