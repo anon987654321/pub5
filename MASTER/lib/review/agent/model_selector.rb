@@ -27,9 +27,9 @@ module Master
           ([@pinned_model] + chain).uniq
         end
 
-        # The saved preference goes first while it is reachable (the boot probe)
-        # and no worse a class than the chain head; a free model never leads a
-        # live subscription lane.
+        # An operator-saved preference may lead when reachable and no worse
+        # than the task head. Otherwise the task's configured tier owns #1;
+        # subscription status alone never promotes a later lane.
         def preference_led(chain)
           return chain unless @preferred_model && Io::LaneSelection.no_worse_class?(@preferred_model, chain.first)
 
