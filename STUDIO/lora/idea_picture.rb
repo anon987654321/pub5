@@ -356,10 +356,11 @@ module Studio
           # its selectable output resolution. Image-to-video inherits the
           # still's aspect ratio.
           resolution = film_resolution if film_engine == "minimax/h3-lite"
+          seconds = h3_duration(duration)
           input = {
             prompt:,
             first_frame_image: client.upload_file(still, subject: @subject),
-            duration: h3_duration(duration),
+            duration: seconds,
           }
           input[:resolution] = resolution if resolution
           return input
