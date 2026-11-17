@@ -137,6 +137,10 @@ end
 # as before rendering a failure summary.
 def redact_diagnostic_text(value)
   text = value.to_s
+  # These HTTP headers carry the complete credential value, not just a single
+  # token: Basic/Digest authorization and cookie jars may contain separators.
+  text = text.gsub(/\b(AUTHORIZATION\s*[:=]\s*)[^\r\n]+/i, '\\1[redacted]')
+  text = text.gsub(/\b(COOKIE\s*[:=]\s*)[^\r\n]+/i, '\\1[redacted]')
   text = text.gsub(
     /\b([A-Z0-9_]*(?:API_KEY|ACCESS_TOKEN|REFRESH_TOKEN|TOKEN|SECRET|PASSWORD|AUTHORIZATION|COOKIE|CREDENTIAL)[A-Z0-9_]*\s*[:=]\s*)(?:Bearer\s+[A-Za-z0-9._+\/-]+|"[^"]*"|'[^']*'|[^\s,;]+)/i,
     '\\1[redacted]',
