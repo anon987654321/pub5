@@ -62,7 +62,7 @@ module Master
 
         destination = request.match(DESTINATION_RE)&.captures&.first
         destination.to_s.downcase == "vm23" &&
-          self.class.full_inventory_scope?(request) &&
+          full_inventory_scope?(request) &&
           !request.match?(/\b(?:except|excluding|leave\s+out|but\s+not)\b/i)
       end
 
