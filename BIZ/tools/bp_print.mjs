@@ -4,7 +4,7 @@
 // Every front page is also rendered as a png at one CSS-pixel scale
 // (96 dpi = 4/3 x 72 pt), Johann, 2026-11-07: "include a png of every
 // front page ... in BIZ"; the folder law carries it beside the pair.
-// Usage: node scripts/bp_print.mjs
+// Usage: BIZ_CHROME_BIN=/path/to/chrome node BIZ/tools/bp_print.mjs
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, renameSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
