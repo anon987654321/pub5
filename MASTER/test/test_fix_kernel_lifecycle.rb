@@ -109,6 +109,24 @@ class TestFixKernelLifecycle < Minitest::Test
     [holder, contender].compact.each { |thread| thread.join(2) }
   end
 
+  def test_kernel_refuses_execution_on_production_host_before_lock_or_receipt
+    with_workspace do |root|
+      kernel = K.new(root:)
+      error = kernel.stub(:production_host?, true) do
+        assert_raises(Master::Fix::TaskContract::Invalid) do
+          kernel.run(
+            adapter: Object.new, contract: nil, target: root, max_passes: 1,
+            budget_seconds: 1, incremental: false, requested: true
+          )
+        end
+      end
+
+      assert_match(/disabled on production vm23/, error.message)
+      refute File.exist?(File.join(root, ".master", "fix-execution.lock"))
+      assert_empty kernel.verify_log!
+    end
+  end
+
   def test_kernel_refuses_a_missing_task_contract_before_lock_or_receipt
     with_workspace do |root|
       kernel = K.new(root:)
