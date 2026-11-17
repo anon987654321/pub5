@@ -4,6 +4,7 @@ require "json"
 require "net/http"
 require "timeout"
 require "uri"
+require_relative "../../trace/session"
 
 module Master
   module Review
@@ -27,6 +28,8 @@ module Master
         # else: no userinfo, port, query or fragment a redirect could steer.
         REPLICATE_POLL_URL = %r{\Ahttps://api\.replicate\.com/v1/predictions/[A-Za-z0-9_-]+\z}
         REPLICATE_MAX_TOKENS = 4096
+        REPLICATE_BUDGET_LOCK = Mutex.new
+        REPLICATE_BUDGET_STATE = { spent: 0.0 }
 
         # Each Replicate chat model declares its own spelling for the token cap
         # and the system prompt, and Replicate drops a key the model does not
@@ -53,14 +56,96 @@ module Master
           return Result.err("replicate: missing API token", category: :no_api_key) unless headers
 
           slug = selected_model.delete_prefix("replicate:")
+          reservation = reserve_replicate_chat_budget!(slug, messages:, sys:)
+          return reservation if reservation.is_a?(Result)
+
           input = replicate_chat_input(slug, messages:, sys:)
           response = post_json("#{REPLICATE_API}/models/#{slug}/predictions", { input: }, headers:,
                                                                                          timeout: REPLICATE_WAIT_S + 10)
           return http_lane_error("replicate", response) unless response.is_a?(Net::HTTPSuccess)
 
-          replicate_output(JSON.parse(response.body), headers:)
+          result = replicate_output(JSON.parse(response.body), headers:)
+          record_replicate_chat_usage(slug, messages:, sys:, response: result.value!) if result.ok?
+          result
         rescue JSON::ParserError
           Result.err("replicate: invalid prediction response", category: :provider_error)
+        end
+
+        # The token-cap and system-prompt key names this model declares, by slug
+        # family; a model that declares neither keeps the Replicate default.
+        # Reserve the maximum billable completion plus a safety-adjusted input
+        # estimate before the provider sees the request. The shared process
+        # budget is intentionally conservative: a timeout after POST may still
+        # have started a billable prediction, so failed/ambiguous calls keep it.
+        def reserve_replicate_chat_budget!(slug, messages:, sys:)
+          config = Master.models_config.fetch("replicate_chat_budget")
+          rates = config.fetch("prices_usd_per_million").fetch(slug.to_s)
+          input_text = [text_prompt_for(messages), sys.to_s].reject(&:empty?).join("\n")
+          input_tokens = Master::Trace::Session.estimate_tokens(input_text)
+          safety = Float(config.fetch("input_token_safety_factor"))
+          estimate = (
+            (input_tokens * safety * Float(rates.fetch("input"))) +
+            (REPLICATE_MAX_TOKENS * Float(rates.fetch("output")))
+          ) / 1_000_000.0
+          call_cap = replicate_budget_limit(config.fetch("call_cap_usd"), "MASTER_REPLICATE_CALL_CAP_USD")
+          run_cap = replicate_budget_limit(config.fetch("run_cap_usd"), "MASTER_REPLICATE_BUDGET_USD")
+          return Result.err(format("replicate: estimated call $%.4f exceeds $%.2f call cap", estimate, call_cap),
+                            category: :budget) if estimate > call_cap
+
+          REPLICATE_BUDGET_LOCK.synchronize do
+            spent = REPLICATE_BUDGET_STATE.fetch(:spent)
+            if spent + estimate > run_cap
+              return Result.err(format("replicate: estimated call $%.4f exceeds $%.2f remaining run budget",
+                                       estimate, run_cap - spent), category: :budget)
+            end
+            REPLICATE_BUDGET_STATE[:spent] = spent + estimate
+          end
+          estimate
+        rescue KeyError, ArgumentError, TypeError => e
+          Result.err("replicate: spend preflight refused the call (#{e.class})", category: :budget)
+        end
+
+        def replicate_budget_limit(configured, env_name)
+          ceiling = Float(configured)
+          override = ENV[env_name].to_s.strip
+          return ceiling if override.empty?
+
+          requested = Float(override)
+          raise ArgumentError, "#{env_name} must be positive and finite" unless requested.positive? && requested.finite?
+
+          [ceiling, requested].min
+        end
+
+        def replicate_chat_spent
+          REPLICATE_BUDGET_LOCK.synchronize { REPLICATE_BUDGET_STATE.fetch(:spent) }
+        end
+
+        def reset_replicate_chat_budget!
+          REPLICATE_BUDGET_LOCK.synchronize { REPLICATE_BUDGET_STATE[:spent] = 0.0 }
+        end
+
+        # The reservation is the safety ceiling; the ledger records an estimate
+        # based on the actual returned text and is explicitly marked approximate.
+        def record_replicate_chat_usage(slug, messages:, sys:, response:)
+          return unless @session&.respond_to?(:record_cost)
+
+          rates = Master.models_config.fetch("replicate_chat_budget")
+            .fetch("prices_usd_per_million").fetch(slug.to_s)
+          input_tokens = Master::Trace::Session.estimate_tokens(
+            [text_prompt_for(messages), sys.to_s].reject(&:empty?).join("\n")
+          )
+          output_tokens = Master::Trace::Session.estimate_tokens(response.to_s)
+          cost = ((input_tokens * Float(rates.fetch("input"))) +
+                  (output_tokens * Float(rates.fetch("output")))) / 1_000_000.0
+          total = input_tokens + output_tokens
+          model = "replicate:#{slug}"
+          @session.record_cost(cost, model:, tokens: total, approximate: true)
+          publish_llm_cost(model:, cost:, tokens: total, tokens_in: input_tokens,
+                           tokens_out: output_tokens, estimated: true, approximate: true) if
+            respond_to?(:publish_llm_cost, true)
+        rescue StandardError => e
+          @bus&.publish("cost:record_error", error_class: e.class.name,
+                        **Master::Execution::Contract.diagnostic_fields(e.message))
         end
 
         # The token-cap and system-prompt key names this model declares, by slug
