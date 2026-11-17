@@ -42,6 +42,10 @@ class TestFixFreshCheckoutModels < Minitest::Test
     assert_equal :free, Master::Io::LaneSelection.kind(chain.last)
   end
 
+  def test_model_picker_pool_starts_with_the_declared_default_primary
+    assert_equal PRIMARY, @router.pool(wait: false).first
+  end
+
   def test_boot_default_uses_glm_when_its_provider_key_is_present
     assert_equal PRIMARY, Master.default_model
   end
