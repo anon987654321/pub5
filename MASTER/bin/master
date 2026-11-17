@@ -97,6 +97,19 @@ end
 require "rbconfig"
 require_relative "../lib/trace/dmesg"
 
+# The zero-dependency agent tier dispatches before any boot. scan --bare,
+# laws, status --agent, owns, selfcheck --fast, receipt, hooks, orient and
+# the rest answer under a stdlib-only Ruby with no bundle: an agent on a
+# dying host gets real findings in seconds, and Chrome and libvips stay
+# deferred until a rendered proof is actually requested. This branch is
+# sacred in the same way --exec-worker is: nothing above it may load.
+if ARGV.first && %w[scan laws status owns orient export receipt hooks selfcheck
+                    openbsd-tier coverage predict falsify taste reconcile prune
+                    precedent trust court scars pedagogy capability sunset kinds].include?(ARGV.first)
+  require_relative "../lib/agent/agent_cli"
+  exit(Master::Agent::CLI.run(ARGV))
+end
+
 master_root = File.expand_path("..", __dir__)
 
 if ARGV.first == "core"

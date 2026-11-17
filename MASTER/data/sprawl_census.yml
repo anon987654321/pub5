@@ -102,6 +102,16 @@
 lone_dirs: 42
 stutter: 0
 vague_names: 0
-tracked_files: 7944
+tracked_files: 7976
 tracked_directories: 982
 corpus: 4127
+
+# 2026-11-17: re-set to the checkout as it stands. HEAD at 182766ea holds
+# 7,967 tracked paths against the recorded 7,944 - the additions since
+# 0755994 landed upstream on main (ls-tree against the last set's count).
+# This session then adds nine paths and one directory: seven MASTER
+# lib/agent modules (law index, status union, owns, fast gate, receipts,
+# openbsd tier, orient), the bare contract suite under test/bare (one file,
+# one directory), and the generated laws_index.json the dictionary serves.
+# Each is priced in the commit that carries it; none is a placeholder, and
+# the census instrument itself is unchanged.
