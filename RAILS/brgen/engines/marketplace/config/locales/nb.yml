@@ -15,6 +15,8 @@ nb:
       sold: Solgt
       reserved: Reservert
       removed: Fjernet
+    verticals:
+      restaurants: "Restaurant og takeaway"
     stores:
       no_listings: Ingenting til salgs her akkurat nå
       no_listings_body: Butikken har ingen aktive annonser. Se innom senere, eller bla i markedsplassen.
@@ -161,6 +163,7 @@ nb:
     alerts_turn_off: Slå av varsler
     partner_program: Partnerprogram
     store_created: Butikken er opprettet
+    restaurant_store_created: "Butikken er opprettet. Fullfør restaurantprofilen nå."
     store_updated: Butikken er oppdatert
     store_deleted: Butikken er fjernet
     store_not_allowed: Bare eieren kan endre denne butikken
