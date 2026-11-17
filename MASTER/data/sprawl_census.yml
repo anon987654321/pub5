@@ -102,8 +102,8 @@
 lone_dirs: 42
 stutter: 0
 vague_names: 0
-tracked_files: 8006
-tracked_directories: 982
+tracked_files: 8021
+tracked_directories: 984
 corpus: 4127
 
 # 2026-11-17: re-set to the checkout as it stands. HEAD at 182766ea holds
@@ -123,3 +123,15 @@ corpus: 4127
 # mission ledger, and the coverage map state under data/coverage_map/. Each
 # is priced in its commit; the tier reuses its own directory, so eight of
 # the eleven paths are occupants of lib/agent, not new namespaces.
+
+# 2026-11-17 (3): re-set to the checkout as it stands at the wishlist-three
+# landing: seven lib/agent modules (precedent, trust, court, scars,
+# pedagogy, capability, sunset), five registries (precedents, incidents,
+# treaties, capability tiers, sunset ledger), the court's first ruled case
+# file, and the hash-chained receipt ledger the trust credential computes
+# from. All occupants of existing directories except data/court/.
+
+# 2026-11-17 (4): tracked_directories follows the wishlist-three landing:
+# data/court/ (the case files a ruled collision records) and data/receipts/
+# (the hash-chained ledger the trust credential computes from) are the two
+# new namespaces, both carrying instruments, not placeholders.

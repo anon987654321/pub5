@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "generated_at": "2026-11-17T00:43:31Z",
-  "revision": "a6ff27b643fb7b78b2a4a9a5d51ec2a1cb1b79c0",
+  "generated_at": "2026-11-17T00:52:14Z",
+  "revision": "6761fdea65dbc9840ac7097b9fcc8706ff224f89",
   "law_count": 543,
   "laws": {
     "A_FINDING_IS_A_HYPOTHESIS": {
@@ -6097,7 +6097,11 @@
       "definition_sources": [
         "MASTER/law/lexical.rb"
       ],
-      "bare_detector": true
+      "bare_detector": true,
+      "incidents": [
+        "I-005",
+        "I-006"
+      ]
     },
     "MONKEY_PATCH_CORE": {
       "id": "MONKEY_PATCH_CORE",
@@ -7837,7 +7841,10 @@
       "definition_sources": [
         "MASTER/law/lexical.rb"
       ],
-      "bare_detector": true
+      "bare_detector": true,
+      "incidents": [
+        "I-001"
+      ]
     },
     "NO_SELECTOR_ARGUMENTS": {
       "id": "NO_SELECTOR_ARGUMENTS",

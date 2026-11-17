@@ -101,6 +101,11 @@ module Master
                     .fetch("laws", {})
           statement_rows = laws_yml
           kind_rows = File.file?(data_path("law_kinds.yml")) ? load_yaml(data_path("law_kinds.yml")).fetch("kinds", []) : []
+          incidents = File.file?(data_path("incidents.yml")) ? load_yaml(data_path("incidents.yml")).fetch("incidents", []) : []
+          incident_by_law = incidents.each_with_object({}) do |incident, map|
+            Array(incident["laws_governed"]).each { |law| (map[law] ||= []) << incident["id"] }
+            Array(incident["laws_born"]).each { |law| (map[law] ||= []) << incident["id"] }
+          end
 
           rows = {}
           catalogue_entries.each do |id, entry|
@@ -128,6 +133,7 @@ module Master
               "proved_by" => statement["proved_by"] || entry["proved_by"],
               "definition_sources" => Array(entry["definition_sources"]),
               "bare_detector" => corpus.laws.key?(id) ? true : false,
+              "incidents" => incident_by_law[id],
             }
             row.delete_if { |_k, v| v.nil? }
             rows[id] = row

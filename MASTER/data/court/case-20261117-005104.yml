@@ -1,0 +1,29 @@
+---
+id: case-20261117-005104
+opened_at: '2026-11-17T00:51:04Z'
+revision: 6761fdea
+status: ruled
+question: A finding asks for a minimal comment fix; the repair loop wants the full
+  mechanical repair in the same landing
+sides:
+- law: PRESERVE_FIRST
+  statement: Preserve working code and behaviour before improving it; never break
+    what exists to build what does not yet exist.
+  severity: error
+  bare_detector: false
+  precedents_citing: []
+  taste_rows_touching: []
+- law: DO_THE_WORK_NOW
+  statement:
+  severity: error
+  bare_detector: false
+  precedents_citing: []
+  taste_rows_touching:
+  - type-terminal-ascii-20261106
+note: the court assembles the brief and waits; a collision of two living laws is the
+  operator's ruling to make
+ruling:
+  winner: PRESERVE_FIRST
+  rationale: A comment-only fix carries no behavior; the mechanical repair waits for
+    its own landing with its own receipt
+  ruled_at: '2026-11-17T00:51:11Z'

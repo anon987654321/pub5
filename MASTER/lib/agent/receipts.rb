@@ -12,7 +12,9 @@
 
 require "json"
 require "digest"
+require "fileutils"
 require "open3"
+require_relative "fast_gate"
 
 module Master
   module Agent

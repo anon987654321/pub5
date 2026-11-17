@@ -1,0 +1,36 @@
+# treaties.yml - portable trust between governed peers.
+#
+# INTER_MODEL_CONTRACT is the seed; this is the treaty layer that grows
+# from it. Two trees agree on a shared contract and settle disputes by
+# evidence rather than authority: the party claiming PASS presents the
+# receipt, the other party re-runs the measurement, and disagreement
+# resolves by re-measurement, never by seniority.
+#
+# A treaty names the receipt schema version it honours and the credential
+# fields both sides compute the same way. `bin/master trust treaty` prints
+# what a peer can hold pub5 to; `bin/master trust issue` computes a
+# credential from the receipt ledger and `bin/master trust verify` re-derives
+# it, so the numbers are checkable, not asserted.
+schema: 1
+treaties:
+  - id: T-001
+    name: "receipt-schema-1"
+    parties:
+      - pub5/MASTER
+      - "<peer tree: fill in on adoption>"
+    shared_contract: "MASTER/lib/agent/receipts.rb receipt vocabulary, schema receipt=1"
+    receipts_accepted: "receipt 1"
+    credential_fields:
+      - receipts_total
+      - claims_pass
+      - claims_fail
+      - claims_inconclusive
+      - claims_not_run
+      - honest_not_run_ratio
+      - hash_chain_intact
+    dispute_resolution: >
+      The party claiming PASS presents the receipt; the other party re-runs
+      the measurement it names. A receipt whose command cannot be re-run is
+      INCONCLUSIVE, never PASS. A hash chain that does not verify voids the
+      credential it travelled with.
+    seeded_from: "INTER_MODEL_CONTRACT, MASTER/data/laws.yml"

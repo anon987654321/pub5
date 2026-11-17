@@ -1,0 +1,149 @@
+---
+schema: 1
+precedents:
+- id: P-001
+  date: '2026-11-16'
+  laws:
+  - SMALL_FILES
+  question: Is a file's length evidence of mixed responsibility?
+  ruling: No. Line count alone is not evidence of mixed responsibility; SMALL_FUNCTIONS
+    and CYCLOMATIC_COMPLEXITY judge what the code does.
+  rationale: 'The 300-line ceiling kept generating split proposals that delayed and
+    stalled /fix runs instead of letting them repair real defects. A file''s length
+    is not a defect while its content still has module boundaries.
+
+    '
+  cites:
+  - MASTER/data/laws.yml SMALL_FILES retirement note
+  overrules: []
+  adopted_by:
+  - pub5
+  status: governing
+- id: P-002
+  date: 2026-10
+  laws:
+  - MODIFIER_SILENT_RESCUE
+  question: Is a predicate rescuing to nil or false a swallowed error?
+  ruling: 'No. A predicate rescuing to nil or false has absorbed the error into its
+    answer: the health-check idiom, not a swallow.'
+  rationale: 'The fleet''s health endpoints carried seven error-severity findings
+    for degrading gracefully. Only nil/false qualify; a predicate rescuing to an empty
+    array is still discarding.
+
+    '
+  cites:
+  - MASTER/law/lexical.rb SilentRescue#predicate_method?
+  overrules: []
+  adopted_by:
+  - pub5
+  status: governing
+- id: P-003
+  date: 2026-11
+  laws:
+  - NO_PUTS
+  question: Where does an interface exemption live?
+  ruling: 'Exemptions live in the kind registry with owned globs, not as path strings
+    inside a detector: when lib/now/ became lib/cli/ and the address stayed, 105 findings
+    arrived overnight on exactly what the exemption was for.
+
+    '
+  rationale: 'An exemption whose subject moves out from under it is a check that starts
+    firing on what it exempted. data/law_kinds.yml owns the reason and the globs;
+    the catalogue carries the reach once.
+
+    '
+  cites:
+  - MASTER/law/lexical.rb NO_PUTS check comment
+  - MASTER/data/law_kinds.yml
+  overrules: []
+  adopted_by:
+  - pub5
+  status: governing
+- id: P-004
+  date: '2026-10-27'
+  laws: []
+  question: What does a /fix file budget buy - a model call or a repair?
+  ruling: 'A repair. The default file budget is the repair (a proposal, a retry and
+    a verifier call - three or four model calls), not one call; the old 240 s defaults
+    timed out every paid lane and a free lane stayed bounded by its own call timeout.
+
+    '
+  rationale: 'Opus on 2026-10-27, then the same shape on any lane without a named
+    entry: a paid host could not finish a repair the free floor was merely slow at.
+
+    '
+  cites:
+  - MASTER/data/budgets.yml fix_time comment
+  overrules: []
+  adopted_by:
+  - pub5
+  status: governing
+- id: P-005
+  date: '2026-11-06'
+  laws:
+  - TERMINAL_OUTPUT_ASCII
+  question: Do terminal surfaces print typographic marks?
+  ruling: No. The CLI, the REPL prompt, the terminal face and dmesg lines print ASCII;
+    web copy, locales and documents keep proper marks.
+  rationale: 'A terminal font and a pipe both read a hyphen and three dots plainly,
+    so the typographic laws read every file except terminal output paths.
+
+    '
+  cites:
+  - MASTER/law/definition.rb TERMINAL_OUTPUT_PATH
+  overrules: []
+  adopted_by:
+  - pub5
+  status: governing
+- id: P-006
+  date: '2026-09-10'
+  laws: []
+  question: May a budget ceiling be raised?
+  ruling: 'Only in a commit that names what the lines buy, and at most twice consecutively
+    (consecutive_raises_allowed is 2); a raise that describes a tree that no longer
+    exists is a measurement of nothing.
+
+    '
+  rationale: 'The third raise was not available when two were spent, and the cap did
+    what it is for: the debt was paid out of a file that recorded four things and
+    was called for one.
+
+    '
+  cites:
+  - MASTER/data/spine.yml lib_body_ceiling commentary
+  overrules: []
+  adopted_by:
+  - pub5
+  status: governing
+- id: P-7
+  date: '2026-11-17T00:51:11Z'
+  laws:
+  - PRESERVE_FIRST
+  question: A finding asks for a minimal comment fix; the repair loop wants the full
+    mechanical repair in the same landing
+  ruling: 'PRESERVE_FIRST prevails over DO_THE_WORK_NOW for this collision: A comment-only
+    fix carries no behavior; the mechanical repair waits for its own landing with
+    its own receipt'
+  rationale: recorded from the operator's ruling on case case-20261117-005104; the
+    losing law stands where it does not collide
+  cites:
+  - MASTER/data/court/case-20261117-005104.yml
+  overrules: []
+  adopted_by:
+  - pub5
+  status: governing
+- id: P-8
+  date: '2026-11-17T00:52:14Z'
+  laws:
+  - SMALL_FILES
+  question: the split a size law proposes would move puts into new files
+  ruling: 'SMALL_FILES prevails over NO_PUTS for this collision: test collision: the
+    move is real and the puts are interface'
+  rationale: recorded from the operator's ruling on case case-20261117-005214; the
+    losing law stands where it does not collide
+  cites:
+  - MASTER/data/court/case-20261117-005214.yml
+  overrules: []
+  adopted_by:
+  - pub5
+  status: governing

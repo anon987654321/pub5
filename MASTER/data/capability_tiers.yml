@@ -1,0 +1,37 @@
+# capability_tiers.yml - the constitution in a pocket.
+#
+# The same laws, the same receipts, the same discipline on the 1 GB OpenBSD
+# box, on a phone in Termux, and across a fleet, degrading monotonically as
+# capability falls. Each lower tier owes a subset of the next higher tier's
+# obligations and a subset of its proof surface - never a different one - so
+# the discipline is host-agnostic down to the smallest edge and a tier's
+# honesty is checkable by the monotonicity test in bin/master capability.
+#
+# needs     what the host must supply for the tier to run
+# laws      which corpus the tier can judge
+# receipts  what a receipt from this tier may claim
+schema: 1
+tiers:
+  - id: full
+    needs: [ruby-3.3+, bundle, prism, chrome, libvips, network]
+    laws: [lexical, lexical-ast, semantic, visual, rendered]
+    receipts: "rendered proof may claim PASS; everything else per schema"
+    notes: "the big box: every proof lane, 48-minute full audits included"
+
+  - id: fast
+    needs: [ruby-3.3+, bundle, prism]
+    laws: [lexical, lexical-ast, semantic]
+    receipts: "semantic and scanner receipts may claim PASS; rendered stays NOT_RUN"
+    notes: "the runtime without the rendered lane"
+
+  - id: bare
+    needs: [ruby-3.3+, prism]
+    laws: [lexical, lexical-ast]
+    receipts: "scanner receipts may claim PASS; rendered and semantic stay NOT_RUN"
+    notes: "the zero-dependency tier this checkout ships: no bundle, seconds"
+
+  - id: pocket
+    needs: [ruby-3.3+]
+    laws: [lexical]
+    receipts: "scanner receipts on regex laws only; the AST laws (lexical-ast) are named NOT_RUN by the tier"
+    notes: "a phone in Termux or a 1 GB box without room for Prism's parse trees: the regex laws still judge, and say which laws they did not run"

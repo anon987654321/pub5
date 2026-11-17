@@ -21,7 +21,8 @@ require_relative "../../lib/agent/agent_cli"
 
 # The router loads these lazily; the suite names them directly.
 %w[bare_scan law_index status_view receipts openbsd_tier fast_gate falsify
-   predict coverage_map export_kit taste reconcile prune].each do |mod|
+   predict coverage_map export_kit taste reconcile prune precedent trust
+   court scars pedagogy capability sunset].each do |mod|
   require_relative "../../lib/agent/#{mod}"
 end
 
@@ -194,6 +195,59 @@ module Master
         else
           assert_equal 0, payload["missions_opened"].to_i, "no drift, no mission"
         end
+      end
+
+      def test_precedent_rows_carry_provenance
+        rows = Precedent.ledger
+        assert_operator rows.size, :>=, 6, "the seeded corpus carries the tree's own recorded rulings"
+        rows.each do |row|
+          assert row["cites"], "a precedent with no citation is a preference: #{row['id']}"
+          assert_equal "governing", row["status"] || row[:status] if row["id"] == "P-001"
+        end
+      end
+
+      def test_trust_credential_verifies_its_own_chain
+        out, = capture_io { Trust.verify }
+        assert_includes out, '"hash_chain_intact": true', "an edited chain voids the credential it travelled with"
+      end
+
+      def test_court_awaits_the_operator_and_records_the_ruling
+        Dir.mktmpdir do |dir|
+          out, = capture_io do
+            Court.open_case(["SMALL_FILES", "--against", "NO_PUTS",
+                             "--question", "the split a size law proposes would move puts into new files"])
+          end
+          case_file = out[/MASTER\/data\/court\/(case-[\d-]+)\.yml/, 1]
+          refute_nil case_file, "opening a case writes a brief"
+
+          path = File.join(master_root, "data", "court", "#{case_file}.yml")
+          brief = YAML.safe_load(File.read(path), permitted_classes: [Date, Time], aliases: true)
+          assert_equal "awaiting-operator", brief["status"], "the court assembles the brief and waits; the model never rules"
+
+          out, = capture_io do
+            Court.rule([case_file, "--winner", "SMALL_FILES",
+                        "--rationale", "test collision: the move is real and the puts are interface"])
+          end
+          assert_includes out, "precedent_recorded", "a ruled collision becomes a precedent with a citation"
+        end
+      end
+
+      def test_scars_cite_and_admit_their_own_pending_provenance
+        out, = capture_io { Scars.run(["--law", "NO_PUTS"]) }
+        assert_includes out, "I-001", "the rename scar governs NO_PUTS and is cited by id"
+        assert_includes out, "provenance_verified", "rows admit which citations are verified and which are still pending"
+      end
+
+      def test_capability_tiers_are_monotonic
+        out, = capture_io { Capability.detect }
+        assert_includes out, '"monotonic": true',
+                        "a tier that adds an obligation as capability falls is a different constitution, not a reduction"
+      end
+
+      def test_sunset_ranks_itself
+        out, = capture_io { Sunset.report }
+        assert_includes out, "agent-tier", "the final ratchet turns on the ratchet: this tier is itself a row"
+        assert_includes out, "advice", "every row answers whether it earns its place"
       end
 
       private
