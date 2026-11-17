@@ -994,7 +994,7 @@ class TestLLMDispatcher < Minitest::Test
     messages = [{ role: "user", content: "hello" }]
 
     Master::Io::WebChat.stub(:call, ->(**_kwargs) { raise error }) do
-      result = dispatcher.send(:send_web_chat, "kimi", messages, sys: nil)
+      result = dispatcher.send(:send_web_chat, "chatgpt", messages, sys: nil)
       assert_equal :timeout, result.category
     end
   end
