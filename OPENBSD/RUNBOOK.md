@@ -27,6 +27,19 @@ Partial or model-classified app/group requests retain the explicit `/deploy --co
 review gate. Never run `/fix` on vm23.
 Attach: `tmux attach -t pub5-deploy`.
 
+## What a full deployment actually applies
+
+The `all` target is the combined release path, not just the Rails fleet:
+
+1. The workstation proves and pins one commit; vm23 checks that exact SHA before any service is stopped.
+2. The remote `vps-deploy all` applies the tracked filesystem mirror by invoking `zsh OPENBSD/OPERATOR.sh --apply`.
+3. The mirror installer validates native configs and NSD zones, backs up changed files and the managed root crontab, installs each file with its declared owner and mode, verifies read-back, and activates only affected services. SSH configuration remains protected; doas changes require the separate guarded path.
+4. The application inventory is deployed serially, with bounded health checks, recovery of services that were up before the run, and post-deploy canaries.
+
+This is the controlled equivalent of copying the mirror into `/`, not a blind recursive copy. It deliberately does not reboot the host: the installer restarts the affected daemons/services after validation. A reboot is a separate maintenance decision, not an automatic side effect of every release.
+
+For a mirror-only operation, inspect first with `doas zsh OPENBSD/OPERATOR.sh --plan`; apply only after review with `doas zsh OPENBSD/OPERATOR.sh --apply`; verify with `doas zsh OPENBSD/OPERATOR.sh --verify`. A full `vps-deploy all` already runs the apply step as part of its pinned release.
+
 ## Log rotation
 
 OpenBSD uses `newsyslog(8)`, not logrotate. The repository mirror is
