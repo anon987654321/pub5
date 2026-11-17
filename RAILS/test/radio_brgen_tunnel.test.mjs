@@ -71,7 +71,8 @@ test("Radio audio, visual and integration responsibilities live in separate modu
   const imports = await readFile(resolve(ROOT, "brgen/config/importmap.rb"), "utf8")
 
   assert.match(entry, /import \{ AudioEngine \} from "radio_brgen_audio"/)
-  assert.match(entry, /import \{ VisualEngine, MODES \} from "radio_brgen_visual"/)
+  assert.match(entry, /import \{ VisualEngine \} from "radio_brgen_visual"/)
+  assert.match(entry, /import \{ MODES \} from "radio_brgen_modes"/)
   assert.match(audio, /export class AudioEngine/)
   assert.match(audio, /export function initialTrackIndex/)
   assert.doesNotMatch(audio, /class VisualEngine|createShader\(/)
