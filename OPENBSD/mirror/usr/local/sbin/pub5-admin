@@ -925,106 +925,120 @@ end
   # CI execution starts as root only long enough to drop to the app via su; tree sync
   # is spawned directly with that app UID/GID and only the groups it needs.
   def supervised_helper(helper, app, duration, helper_arguments = nil)
+    validate_supervised_helper!(helper, app, duration)
+    arguments = supervised_helper_arguments(helper, app, duration, helper_arguments)
+    trusted_script!(helper)
+    secret = supervised_helper_secret(helper, app, arguments)
+    environment = supervised_helper_environment(helper, app)
+    environment["SECRET_KEY_BASE"] = secret if secret
+    account, groups = supervised_helper_account(helper, app)
+    pid = spawn_helper(environment:, helper:, arguments:, account:, groups:)
+    wait_for_helper(pid, helper, duration)
+  end
+
+  def validate_supervised_helper!(helper, app, duration)
     raise "unknown helper" unless [CI_RUN, CI_SYNC, RAILS_TASK, RAILS_SYNC].include?(helper)
     known_apps = helper == RAILS_TASK ? RAILS_TASK_APPS : RAILS_APPS
     raise "unknown app" unless known_apps.include?(app)
     raise "invalid helper timeout" unless duration.is_a?(Integer) && (1..7200).cover?(duration)
+  end
 
-    arguments = case helper
-                when CI_RUN then [app, duration.to_s]
-                when CI_SYNC then [app]
-                when RAILS_TASK then Array(helper_arguments)
-                when RAILS_SYNC then [app, *Array(helper_arguments)]
-                end
-    trusted_script!(helper)
-    if helper == RAILS_TASK && %w[db-prepare db-seed demo-seed assets-precompile schema-load ci].include?(arguments[1])
-      begin
-        environment_secret = app_secret_value(app)
-      rescue RuntimeError => error
-        raise unless error.message == "no valid SECRET_KEY_BASE for #{app}"
-
-        # First deploy may not have an app secret yet. Create it through the same
-        # fixed, atomic broker code, but never print it into command output/logs.
-        ensure_app_secret(app, emit: false)
-        environment_secret = app_secret_value(app)
-      end
+  def supervised_helper_arguments(helper, app, duration, extra)
+    case helper
+    when CI_RUN then [app, duration.to_s]
+    when CI_SYNC then [app]
+    when RAILS_TASK then Array(extra)
+    when RAILS_SYNC then [app, *Array(extra)]
     end
-    environment = if [CI_SYNC, RAILS_SYNC].include?(helper)
-                    { "PATH" => "/usr/local/bin:/usr/bin:/bin",
-                      "HOME" => "/home/#{app}",
-                      "GIT_CONFIG_NOSYSTEM" => "1",
-                      "GIT_CONFIG_GLOBAL" => "/dev/null" }
-                  else
-                    { "PATH" => "/usr/local/bin:/usr/bin:/bin", "HOME" => "/root" }
-                  end
-    environment["SECRET_KEY_BASE"] = environment_secret if environment_secret
-    account = groups = nil
-    if [CI_SYNC, RAILS_SYNC].include?(helper)
-      account = Etc.getpwnam(app)
-      groups = [account.gid, Etc.getgrnam("_pub5ci").gid].uniq
-    end
+  end
 
-    pid = spawn_helper(environment:, helper:, arguments:, account:, groups:)
+  def supervised_helper_secret(helper, app, arguments)
+    return unless helper == RAILS_TASK
+    return unless %w[db-prepare db-seed demo-seed assets-precompile schema-load ci].include?(arguments[1])
+
+    app_secret_value(app)
+  rescue RuntimeError => error
+    raise unless error.message == "no valid SECRET_KEY_BASE for #{app}"
+
+    ensure_app_secret(app, emit: false)
+    app_secret_value(app)
+  end
+
+  def supervised_helper_environment(helper, app)
+    sync = [CI_SYNC, RAILS_SYNC].include?(helper)
+    home = sync ? "/home/#{app}" : "/root"
+    environment = { "PATH" => "/usr/local/bin:/usr/bin:/bin", "HOME" => home }
+    return environment unless sync
+
+    environment.merge(
+      "GIT_CONFIG_NOSYSTEM" => "1",
+      "GIT_CONFIG_GLOBAL" => "/dev/null",
+    )
+  end
+
+  def supervised_helper_account(helper, app)
+    return [nil, nil] unless [CI_SYNC, RAILS_SYNC].include?(helper)
+
+    account = Etc.getpwnam(app)
+    groups = [account.gid, Etc.getgrnam("_pub5ci").gid].uniq
+    [account, groups]
+  end
+
+  def wait_for_helper(pid, helper, duration)
     deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + duration
-
     loop do
-      waited = Process.waitpid(pid, Process::WNOHANG)
-      if waited
-        status = $?
-        return status.exitstatus if status.exited?
-        return 128 + status.termsig if status.signaled?
-
-        return 1
-      end
-
-      if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
-        warn "pub5-admin: helper #{File.basename(helper)} timed out after #{duration}s; stopping process group #{pid}"
-        begin
-          Process.kill("TERM", -pid)
-        rescue Errno::ESRCH
-          nil
-        end
-        grace_deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 5
-        leader_reaped = false
-        loop do
-          unless leader_reaped
-            begin
-              leader_reaped = !Process.waitpid(pid, Process::WNOHANG).nil?
-            rescue Errno::ECHILD
-              leader_reaped = true
-            end
-          end
-
-          group_alive = begin
-            Process.kill(0, -pid)
-            true
-          rescue Errno::ESRCH
-            false
-          end
-          break unless group_alive
-
-          if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= grace_deadline
-            begin
-              Process.kill("KILL", -pid)
-            rescue Errno::ESRCH
-              nil
-            end
-            break
-          end
-          sleep 0.1
-        end
-        unless leader_reaped
-          begin
-            Process.waitpid(pid)
-          rescue Errno::ECHILD
-            nil
-          end
-        end
-        return 124
-      end
+      return helper_exit_status(pid) if Process.waitpid(pid, Process::WNOHANG)
+      return stop_helper_group(pid, helper, duration) if monotonic_now >= deadline
 
       sleep 0.25
     end
+  end
+
+  def helper_exit_status(pid)
+    status = $?
+    return status.exitstatus if status&.exited?
+    return 128 + status.termsig if status&.signaled?
+
+    1
+  end
+
+  def stop_helper_group(pid, helper, duration)
+    warn "#{cfg.name}: helper #{File.basename(helper)} timed out after #{duration}s; stopping process group #{pid}"
+    signal_helper_group("TERM", pid)
+    grace_deadline = monotonic_now + 5
+    leader_reaped = false
+    while helper_group_alive?(pid)
+      leader_reaped ||= reap_helper(pid)
+      break if monotonic_now >= grace_deadline && signal_helper_group("KILL", pid)
+
+      sleep 0.1
+    end
+    reap_helper(pid) unless leader_reaped
+    124
+  end
+
+  def signal_helper_group(signal, pid)
+    Process.kill(signal, -pid)
+    true
+  rescue Errno::ESRCH
+    false
+  end
+
+  def helper_group_alive?(pid)
+    Process.kill(0, -pid)
+    true
+  rescue Errno::ESRCH
+    false
+  end
+
+  def reap_helper(pid)
+    !Process.waitpid(pid, Process::WNOHANG).nil?
+  rescue Errno::ECHILD
+    true
+  end
+
+  def monotonic_now
+    Process.clock_gettime(Process::CLOCK_MONOTONIC)
   end
 
   def run_ci(app, duration)
@@ -1113,128 +1127,113 @@ end
     puts "start_all_apps0: services=#{services.join(',')} flag=#{flag}"
     0
   end
-  def main(argv)
-    raise "must run as root through doas" unless Process.euid.zero?
+  def dispatch_setup_command(args)
+    return ensure_app_secret(args[1]) if args.length == 2 && args[0] == "ensure-secret" && APPS.include?(args[1])
+    return ensure_app_layout(args[1]) if args.length == 2 && args[0] == "ensure-app" && RAILS_APPS.include?(args[1])
+    return relayd_check(*args.drop(1)) if args.length == 4 && args[0] == "relayd-check"
+    return retire_legacy_service(args[1]) if args.length == 2 && args[0] == "retire-legacy"
 
-    args = Array(argv).map(&:to_s)
-    if args.length == 2 && args[0] == "ensure-secret" && APPS.include?(args[1])
-      return ensure_app_secret(args[1])
-    end
+    nil
+  end
 
-    if args.length == 2 && args[0] == "ensure-app" && RAILS_APPS.include?(args[1])
-      return ensure_app_layout(args[1])
-    end
+  def retire_legacy_service(name)
+    service = legacy_service_name(name)
+    raise "unknown legacy service target" unless service
 
-    if args.length == 4 && args[0] == "relayd-check"
-      return relayd_check(args[1], args[2], args[3])
-    end
+    path = "/etc/rc.d/#{service}"
+    return 0 unless File.exist?(path) || File.symlink?(path)
 
-    if args.length == 2 && args[0] == "retire-legacy"
-      service = legacy_service_name(args[1])
-      raise "unknown legacy service target" unless service
+    stat = File.lstat(path)
+    raise "#{path} must be a root-owned, non-writable regular file" unless
+      stat.file? && !stat.symlink? && stat.uid.zero? && (stat.mode & 0o022).zero?
 
-      path = "/etc/rc.d/#{service}"
-      return 0 unless File.exist?(path) || File.symlink?(path)
+    exec(RCCTL, "disable", service)
+  end
 
-      stat = File.lstat(path)
-      raise "#{path} must be a root-owned, non-writable regular file" unless
-        stat.file? && !stat.symlink? && stat.uid.zero? && (stat.mode & 0o022).zero?
-
-      exec(RCCTL, "disable", service)
-    end
-
-    if args == ["master-web-assets-reset"]
-      return master_web_assets_reset
-    end
-
-    if args == ["master-web-runtime-dirs"]
-      return master_web_runtime_dirs
-    end
-
+  def dispatch_deploy_command(args)
+    return master_web_assets_reset if args == ["master-web-assets-reset"]
+    return master_web_runtime_dirs if args == ["master-web-runtime-dirs"]
     return start_all_apps if args == ["start-all-apps"]
+    return write_deploy_status(*args.drop(1)) if args.length == 4 && args[0] == "deploy-status"
+    return read_deploy_status(args[1]) if args.length == 2 && args[0] == "deploy-status-read"
+    return write_stamp(*args.drop(1)) if args.length == 4 && args[0] == "stamp"
 
-    if args.length == 4 && args[0] == "deploy-status"
-      return write_deploy_status(*args.drop(1))
-    end
+    dispatch_deploy_run_command(args)
+  end
 
-    if args.length == 2 && args[0] == "deploy-status-read"
-      return read_deploy_status(args[1])
-    end
-
-    if args.length == 3 && args[0] == "deploy-run-write"
-      return write_deploy_run(args[1], args[2])
-    end
-
-    if args.length == 2 && args[0] == "deploy-run-read"
-      return read_deploy_run(args[1])
-    end
-
+  def dispatch_deploy_run_command(args)
+    return write_deploy_run(args[1], args[2]) if args.length == 3 && args[0] == "deploy-run-write"
+    return read_deploy_run(args[1]) if args.length == 2 && args[0] == "deploy-run-read"
     return list_deploy_runs if args == ["deploy-run-list"]
     return list_pending_deploy_runs if args == ["deploy-run-pending-list"]
 
-    if args.length == 4 && args[0] == "stamp"
-      return write_stamp(*args.drop(1))
-    end
+    nil
+  end
 
+  def dispatch_ci_command(args)
     return ensure_ci_lock if args == ["ci-lock"]
+    return bundle_cache(*args.drop(1)) if args.length == 4 && args[0] == "bundle-cache"
+    return run_ci(args[1], args[2].to_i) if args.length == 3 && args[0] == "ci-run" &&
+      RAILS_APPS.include?(args[1]) && valid_ci_timeout?(args[2])
+    return run_ci_sync(args[1]) if args.length == 2 && args[0] == "ci-sync" && RAILS_APPS.include?(args[1])
+    return run_rails_sync(args[1], args[2]) if args.length == 3 && args[0] == "rails-sync" && RAILS_APPS.include?(args[1])
+    return run_rails_task(args[1], args[2]) if args.length == 3 && args[0] == "rails-task" && RAILS_TASK_APPS.include?(args[1])
+    return run_rails_task(args[1], args[2], args[3]) if args.length == 4 && args[0] == "rails-task" && RAILS_TASK_APPS.include?(args[1])
 
-    if args.length == 4 && args[0] == "bundle-cache"
-      return bundle_cache(args[1], args[2], args[3])
-    end
+    dispatch_fixed_script_command(args)
+  end
 
+  def dispatch_fixed_script_command(args)
     if args.length == 2 && args[0] == "ci-prepare" && RAILS_APPS.include?(args[1])
       trusted_script!(CI_PREPARE)
       exec("/bin/ksh", CI_PREPARE, args[1])
     end
-
-    if args.length == 3 && args[0] == "ci-run" && RAILS_APPS.include?(args[1]) &&
-       valid_ci_timeout?(args[2])
-      return run_ci(args[1], args[2].to_i)
-    end
-
-    if args.length == 2 && args[0] == "ci-sync" && RAILS_APPS.include?(args[1])
-      return run_ci_sync(args[1])
-    end
-
-    if args.length == 3 && args[0] == "rails-sync" && RAILS_APPS.include?(args[1])
-      return run_rails_sync(args[1], args[2])
-    end
-
-    if args.length == 3 && args[0] == "rails-task" && RAILS_TASK_APPS.include?(args[1])
-      return run_rails_task(args[1], args[2])
-    end
-
-    if args.length == 4 && args[0] == "rails-task" && RAILS_TASK_APPS.include?(args[1])
-      return run_rails_task(args[1], args[2], args[3])
-    end
-
     if args == ["resource-guard"]
       trusted_script!(RESOURCE_GUARD)
       exec("/bin/ksh", RESOURCE_GUARD)
     end
-
     if args.length == 2 && args[0] == "solid-queue-proof" && APPS.include?(args[1])
       trusted_script!(SOLID_QUEUE_PROOF)
       exec(ruby_path, SOLID_QUEUE_PROOF, args[1])
     end
+    nil
+  end
 
-    if args == %w[service list-started]
-      output = IO.popen([RCCTL, "ls", "started"], &:read)
-      status = $?
-      raise "rcctl ls started failed (#{status&.exitstatus || "no status"})" unless status&.success?
+  def dispatch_service_command(args)
+    return nil unless args == %w[service list-started]
 
-      puts filter_started_services(output)
-      return 0
-    end
+    output = IO.popen([RCCTL, "ls", "started"], &:read)
+    status = $?
+    raise "rcctl ls started failed (#{status&.exitstatus || "no status"})" unless status&.success?
 
+    puts filter_started_services(output)
+    0
+  end
+
+  def dispatch_admin_command(args)
+    dispatch_setup_command(args) ||
+      dispatch_deploy_command(args) ||
+      dispatch_ci_command(args) ||
+      dispatch_service_command(args) ||
+      execute_admin_command(args)
+  end
+
+  def execute_admin_command(args)
     command = command_for(args)
     raise "refused arguments: #{args.inspect}" unless command
 
     exec(*command)
+  end
+
+  def main(argv)
+    raise "must run as root through doas" unless Process.euid.zero?
+
+    dispatch_admin_command(Array(argv).map(&:to_s))
   rescue StandardError => e
-    warn "pub5-admin: refused or failed: #{e.class}: #{e.message}"
+    warn "#{cfg.name}: refused or failed: #{e.class}: #{e.message}"
     126
   end
+
 end
 
 exit(Pub5Admin.main(ARGV)) if $PROGRAM_NAME == __FILE__
