@@ -108,6 +108,16 @@ class PortInventoryCheckTest < Minitest::Test
     FileUtils.rm_f(path)
   end
 
+  def test_bootstrap_app_ports_are_the_deployable_apps_inventory
+    ports = CHECK.new.send(:openbsd_ports)
+    expected = apps.to_h { |app| [app.name, app.port] }
+
+    assert_equal expected, ports.slice(*expected.keys)
+    result = Deploy::CheckResult.new
+    CHECK.new.send(:check_openbsd_ports, result, apps)
+    assert_empty result.failures
+  end
+
   def test_the_committed_tree_satisfies_every_check_it_declares
     result = CHECK.run
 

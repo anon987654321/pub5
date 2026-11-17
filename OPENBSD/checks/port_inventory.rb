@@ -9,7 +9,9 @@ module Deploy
   class PortInventoryCheck
     ROOT = File.expand_path("../..", __dir__)
     DEPLOY_INVENTORY = ENV.fetch("DEPLOY_INVENTORY", File.join(ROOT, "OPENBSD", "deploy_inventory.json"))
-    OPENBSD_DEPLOY = File.join(ROOT, "OPENBSD", "OPERATOR.sh")
+    # The fleet port map is retained in the legacy bootstrap; OPERATOR.sh is
+    # intentionally a filesystem-only apply tool and does not own app routing.
+    OPENBSD_DEPLOY = File.join(ROOT, "OPENBSD", "BOOTSTRAP.sh")
 
     APPS_YML = File.join(ROOT, "RAILS", "apps.yml")
     RAILS_README = File.join(ROOT, "RAILS", "README.md")
@@ -47,7 +49,7 @@ module Deploy
     FLEET_INVENTORIES = {
       "RAILS/apps.yml" => "source of truth",
       "OPENBSD/deploy_inventory.json" => "checked: check_master_json",
-      "OPENBSD/OPERATOR.sh" => "checked: check_openbsd_ports",
+      "OPENBSD/BOOTSTRAP.sh" => "checked: check_openbsd_ports",
       "OPENBSD/mirror/etc/relayd.conf" => "checked: check_relayd_ports",
       "RAILS/crawl_manifest.yml" => "checked: check_crawl_manifest",
       "RAILS/README.md" => "checked: check_readmes",
@@ -360,12 +362,12 @@ module Deploy
       end
 
       ports = openbsd_ports
-      result.fail("OPENBSD/OPERATOR.sh missing APP_PORTS map") if ports.empty?
+      result.fail("OPENBSD/BOOTSTRAP.sh missing APP_PORTS map") if ports.empty?
       apps.each do |app|
-        result.fail("#{app.name}: missing fixed OpenBSD APP_PORTS entry") unless ports.key?(app.name)
+        result.fail("#{app.name}: missing fixed BOOTSTRAP.sh APP_PORTS entry") unless ports.key?(app.name)
         next unless ports.key?(app.name) && ports.fetch(app.name) != app.port
 
-        result.fail("#{app.name}: OpenBSD APP_PORTS #{ports.fetch(app.name)} must mirror apps.yml #{app.port}")
+        result.fail("#{app.name}: BOOTSTRAP.sh APP_PORTS #{ports.fetch(app.name)} must mirror apps.yml #{app.port}")
       end
     end
 
