@@ -13,7 +13,7 @@ module Marketplace
     self.table_name = "marketplace_stores"
 
     VERTICALS = %w[
-      restaurants groceries homewares furniture electronics fashion beauty sports toys
+      restaurants groceries wholesale homewares furniture electronics fashion beauty sports toys
       garden automotive pets books health local_services other
     ].freeze
 
