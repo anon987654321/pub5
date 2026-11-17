@@ -705,6 +705,7 @@ class VpsDeployContractTest < Minitest::Test
     Dir.mktmpdir do |dir|
       lock = File.join(dir, "deploy.lock")
       Dir.mkdir(lock)
+      File.write(File.join(lock, "owner.tmp.123"), "partial owner record\n")
       _out, status = lock_run(dir)
       assert_equal 75, status
 
@@ -712,6 +713,8 @@ class VpsDeployContractTest < Minitest::Test
       out, status = lock_run(dir)
       assert_equal 0, status
       assert_includes out, "no readable owner"
+      assert_empty Dir.glob(File.join(dir, "deploy.lock.stale.*")),
+                   "reaping must remove an interrupted atomic owner-write temporary"
     end
   end
 
