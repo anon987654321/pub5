@@ -102,9 +102,10 @@ class TestLaneSelection < Minitest::Test
     Selection.singleton_class.send(:remove_method, method_name)
   end
 
-  def test_default_repair_tier_keeps_live_subscription_cli_ahead_of_free_floor
+  def test_default_repair_tier_keeps_glm_first_and_subscription_clis_as_fallbacks
     tier = Selection.tier("default")
 
+    assert_equal GLM_FLASH, tier.first
     assert_includes tier, GROK
     assert_operator tier.index(GROK), :<, tier.index(NEMOTRON)
   end
@@ -183,42 +184,42 @@ class TestLaneSelection < Minitest::Test
     end
   end
 
-  def test_first_live_of_the_tier_skips_a_quota_dead_lane
-    tier = [AGY, ANTHROPIC_OPUS, GROK, NEMOTRON]
-    assert_equal GROK, Selection.first_live(tier), "the configured subscription lane leads the available pool"
+  def test_first_live_of_the_tier_preserves_declared_order_and_skips_quota_dead_lanes
+    tier = [ANTHROPIC_OPUS, AGY, GROK, NEMOTRON]
+    assert_equal ANTHROPIC_OPUS, Selection.first_live(tier)
+
+    Quota.note(ANTHROPIC_OPUS, RATE_LIMIT_REPLY)
+    assert_equal AGY, Selection.first_live(tier)
 
     Quota.note(AGY, AGY_REPLY)
     assert_equal GROK, Selection.first_live(tier)
-
-    Quota.note(GROK, RATE_LIMIT_REPLY)
-    assert_equal ANTHROPIC_OPUS, Selection.first_live(tier)
   end
 
-  def test_the_real_default_tier_keeps_subscription_lead_and_glm_lists_first
+  def test_the_real_default_tier_keeps_glm_primary_and_subscriptions_as_fallbacks
     tier = Selection.tier("default")
-    assert_equal GLM_FLASH, tier.first, "models.yml lists glm-5.3-flash first in the default tier (operator, 2026-11-16)"
-    # The selection sort is a contract of its own: a live subscription lane
-    # leads whatever the file order came in as, and a metered-API lane with
-    # no key on the host drops out of the live list entirely.
-    assert_equal GROK, Selection.first_live(tier)
+    assert_equal GLM_FLASH, tier.first, "models.yml lists glm-5.3-flash first in the default tier"
+    assert_equal GLM_FLASH, Selection.first_live(tier), "a later signed-in CLI never silently promotes itself"
+    assert_includes tier, GROK
+    assert_operator tier.index(GROK), :<, tier.index(NEMOTRON)
 
     Quota.note(GROK, RATE_LIMIT_REPLY)
-    assert_equal AGY, Selection.first_live(tier), "a dead subscription lane is skipped"
+    assert_equal GLM_FLASH, Selection.first_live(tier), "a later CLI quota does not change the declared primary"
     ordered = Selection.order(tier)
     kinds = ordered.map { |id| Selection.kind(id) }
     assert_equal kinds.sort_by { |k| Selection::KIND_RANK.fetch(k) }, kinds, "remote, then local, then free"
-    refute_includes ordered, GROK
-    assert_includes ordered, ANTHROPIC_OPUS
 
     primary = Selection.tier("primary")
-    assert_equal GLM_FLASH, primary.first, "the primary /fix lane stays glm-5.3-flash (operator, 2026-11-16)"
-    assert_equal GLM, primary[1], "glm-5.3 follows as the same-provider fallback (operator, 2026-11-16)"
+    assert_equal GLM_FLASH, primary.first, "the primary /fix lane stays glm-5.3-flash"
+    assert_equal "zai-cli:auto", primary[1], "the configured CLI fallback stays in the GLM provider family"
+    assert_equal GLM, primary[2], "direct GLM follows as a same-provider fallback"
   end
 
-  def test_free_models_come_last_whatever_the_given_order
+  def test_free_models_come_last_without_reordering_remote_models_by_subscription
     mixed = [NEMOTRON, NANO, LOCAL, DEEPSEEK, GROK]
-    assert_equal [GROK, DEEPSEEK, LOCAL, NEMOTRON, NANO], Selection.order(mixed), "a subscription CLI precedes a metered API key"
-    assert_equal [NEMOTRON, NANO, LOCAL, DEEPSEEK, GROK], Selection.order(mixed, free_last: false), "a free route keeps its order"
+    assert_equal [DEEPSEEK, GROK, LOCAL, NEMOTRON, NANO], Selection.order(mixed),
+                 "remote order is preserved; local and free stay behind it"
+    assert_equal [NEMOTRON, NANO, LOCAL, DEEPSEEK, GROK], Selection.order(mixed, free_last: false),
+                 "a free route keeps its declared order"
   end
 
   def test_llm7_hosted_turbo_models_are_ranked_in_the_free_class
@@ -301,15 +302,18 @@ class TestLaneSelection < Minitest::Test
   end
 
   def test_the_boot_choice_is_the_first_live_lane_and_names_its_source
-    assert_equal [GROK, "availability"], Selection.boot_choice(env: {}, saved: nil, alive: ALL)
+    assert_equal [GLM_FLASH, "availability"], Selection.boot_choice(env: {}, saved: nil, alive: ALL)
     assert_equal [AGY, "MASTER_MODEL"], Selection.boot_choice(env: { "MASTER_MODEL" => AGY }, saved: nil, alive: ALL)
 
     sonnet = ANTHROPIC_SONNET
     assert_equal [sonnet, "saved preference"], Selection.boot_choice(env: {}, saved: sonnet, alive: ALL)
-    assert_equal [GROK, "availability"], Selection.boot_choice(env: {}, saved: NEMOTRON, alive: ALL), "a saved free model never leads a live subscription"
+    assert_equal [GLM_FLASH, "availability"], Selection.boot_choice(env: {}, saved: NEMOTRON, alive: ALL),
+                 "the saved free preference cannot displace the configured remote primary"
 
-    Quota.note(GROK, RATE_LIMIT_REPLY)
-    assert_equal [AGY, "availability"], Selection.boot_choice(env: {}, saved: sonnet, alive: ALL), "a dead subscription lane is skipped"
+    Quota.note(GLM_FLASH, GLM_REPLY)
+    assert_equal ["zai-cli:auto", "availability"],
+                 Selection.boot_choice(env: {}, saved: sonnet, alive: ALL),
+                 "the next configured live GLM route follows the quota-dead primary"
   end
 
   def test_announce_lists_only_lanes_available_on_this_machine
@@ -335,7 +339,8 @@ class TestLaneSelection < Minitest::Test
 
   def test_the_primary_report_names_the_lane_and_why
     Quota.note(AGY, AGY_REPLY)
-    assert_match(/\Aprimary: #{Regexp.escape(GROK)} \(first live lane by availability.*; dead: agy/, Selection.primary_report(env: {}, alive: ALL))
+    assert_match(/\Aprimary: #{Regexp.escape(GLM_FLASH)} \(first live lane in configured model-tier order.*; dead: agy/,
+                 Selection.primary_report(env: {}, alive: ALL))
     assert_match(/pinned \(MASTER_MODEL\), no failover/,
                  Selection.primary_report(env: { "MASTER_MODEL" => GROK }, alive: ALL))
     assert_match(/pinned \(MASTER_MODEL\), failover on/,
@@ -395,16 +400,15 @@ class TestLaneSelection < Minitest::Test
   end
 
   def test_when_every_lane_is_dead_the_list_comes_back_for_the_typed_offline
-    lanes = [AGY, ANTHROPIC_OPUS]
+    lanes = [ANTHROPIC_OPUS, AGY]
     Quota.note(AGY, AGY_REPLY)
     Quota.note(ANTHROPIC_OPUS, RATE_LIMIT_REPLY)
     assert_empty Selection.order(lanes)
     assert_nil Selection.first_live(lanes)
-    # The refusal list is ranked, not the given order: a walk that must try
-    # something anyway, or name why it cannot, walks the class ranks and not
-    # the file order that let dead :free slugs burn a queue (2026-11-07).
+    # Class ordering still moves local/free behind remote lanes, while order
+    # within one class remains the declared route order.
     assert_equal Selection.ranked_order(lanes), Selection.order_or_all(lanes)
-    assert_equal [AGY, ANTHROPIC_OPUS], Selection.order_or_all(lanes), "the configured subscription order ranks AGY ahead of ordinary API lanes"
+    assert_equal [ANTHROPIC_OPUS, AGY], Selection.order_or_all(lanes), "a dead refusal list preserves its declared remote order"
   end
 
   def test_the_always_online_tail_answers_when_every_remote_lane_is_dead
