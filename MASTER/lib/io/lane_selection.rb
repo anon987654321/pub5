@@ -36,7 +36,6 @@ module Master
       # selection order agree that every answering class goes first.
       FLOOR_SUSPENDED_RANK = 9
       FLOOR_LOCK = Mutex.new
-      NOT_SUBSCRIPTION = 10_000
       NEUTRAL_LATENCY_S = 45
       UNMEASURED_TIMEOUT_S = 60
       SLOW_S = 600
@@ -210,7 +209,9 @@ module Master
         preferred_rank = preferred.each_with_index.to_h
         listed = (preferred + catalogue(cfg:)).uniq
         ids.each_with_index.sort_by do |id, index|
-          within_class = preferred_rank.fetch(id, preferred.length + subscription_rank(id, listed))
+          # A measured/route lead and then the declared catalogue order decide
+          # within a class. Subscription status never promotes a later model.
+          within_class = preferred_rank.fetch(id, preferred.length + (listed.index(id) || index))
           [class_rank(id), within_class, free_latency(id, latency), index]
         end.map(&:first)
       end
@@ -218,23 +219,6 @@ module Master
       def subscription_lanes = Array(config.fetch("subscription_lanes"))
 
       def subscription?(model) = subscription_lanes.include?(LaneQuota.lane_of(model))
-
-      # Low for a subscription lane (its lane position, then its place in the
-      # catalogue so opus precedes sonnet as data/models.yml lists them), high
-      # for every other model, which keeps the order it arrived in.
-      def subscription_rank(id, listed)
-        return NOT_SUBSCRIPTION unless kind(id) == :remote && subscription?(id)
-
-        subscription_lanes.index(LaneQuota.lane_of(id)) * 100 + (listed.index(id) || 99)
-      end
-
-      # The same ids with the live subscription lanes first, in their fixed order;
-      # every other id keeps its place. The pool's measured utility ranks within
-      # a class, never across it.
-      def subscriptions_first(ids, lead: [])
-        listed = (Array(lead) + catalogue).uniq
-        Array(ids).each_with_index.sort_by { |id, index| [subscription_rank(id, listed), index] }.map(&:first)
-      end
 
       # The ids of the tier the rules route this task type to, in the order
       # data/models.yml lists them: the lane order the route asks for, so a route
@@ -508,9 +492,9 @@ module Master
       # the dead (quota, health, hand-kept list) and the lanes this machine lacks.
       def live_lanes(cfg: config, alive: method(:alive?)) = order(catalogue(cfg:)).lazy.select { |id| alive.call(id) }
 
-      # The lane a run starts on and why. Availability decides; a saved model is
-      # a preference, honoured only while it is live and no worse a class than
-      # the best live lane, and MASTER_MODEL alone forces a lane.
+      # The lane a run starts on and why. Availability follows the declared
+      # catalogue/tier order; a saved preference is honoured only when it is
+      # live and no worse a class than the configured head. MASTER_MODEL pins.
       def boot_choice(env: ENV, saved: nil, cfg: config, alive: method(:alive?))
         forced = env["MASTER_MODEL"].to_s.strip
         return [forced, "MASTER_MODEL"] unless forced.empty?
@@ -670,8 +654,7 @@ module Master
         why = {
           "MASTER_MODEL" => pin_label(env),
           "saved preference" => "saved preference, live",
-          "availability" => "first live lane by availability " \
-                            "(#{subscription_lanes.join(" > ")}, then APIs, paid tail, local, free)",
+          "availability" => "first live lane in configured model-tier order (remote, paid tail, local, free)",
         }.fetch(source)
         dead = catalogue(cfg:).select { |id| LaneQuota.dead?(id) }.map { |id| LaneQuota.lane_of(id) }.uniq
         "primary: #{lane} (#{why}#{dead.empty? ? "" : "; dead: #{dead.join(", ")}"})"
