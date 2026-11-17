@@ -17,6 +17,8 @@ class Takeaway::Restaurant < ApplicationRecord
   include Shared::MediaProcessable
   tracks_activity created: "TakeawayRestaurantCreated", updated: "TakeawayRestaurantUpdated", source_vertical: "takeaway", actor: :user
 
+  serialize :metadata, coder: JSON
+
   belongs_to :user
   belongs_to :marketplace_store, class_name: "Marketplace::Store", optional: true
   belongs_to :place, optional: true
