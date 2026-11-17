@@ -387,7 +387,10 @@ module Master
 
         source = receipt.fetch("source").to_s
         return false unless source.end_with?("/#{page}.#{section}")
-        return false if release && !source.start_with?("https://man.openbsd.org/OpenBSD-#{release}/")
+        versioned = source.start_with?("https://man.openbsd.org/OpenBSD-")
+        local = source.start_with?("target-local:/")
+        return false unless versioned || local
+        return false if versioned && release && !source.start_with?("https://man.openbsd.org/OpenBSD-#{release}/")
 
         true
       rescue KeyError, TypeError
