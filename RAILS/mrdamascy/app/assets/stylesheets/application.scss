@@ -1,17 +1,37 @@
 // Mr. Damascy — "Fra Damaskus med kjærlighet".
 // Mobile-first, flat mint pastels on white paper, gold accents, Damascus
 // 8-point star motif. One 480px phone column; no external fonts.
-@use "tokens";
-@use "base";
-@use "buttons";
-@use "forms";
-@use "cards";
-@use "menu";
-@use "item_sheet";
-@use "cart";
-@use "checkout";
-@use "tracking";
-@use "staff";
-@use "loyalty";
-@use "tab_bar";
-@use "utilities";
+//
+// Cascade architecture (MASTER/data/css_architecture.yml): this entry owns
+// the one @layer order statement. Partials contribute CSS through
+// meta.load-css inside their layer — a bare @use would emit unlayered CSS,
+// and unlayered rules beat every layered one.
+@use "sass:meta";
+
+@layer reset, tokens, base, components, utilities, autofix;
+
+@layer tokens {
+  @include meta.load-css("tokens");
+}
+
+@layer base {
+  @include meta.load-css("base");
+}
+
+@layer components {
+  @include meta.load-css("buttons");
+  @include meta.load-css("forms");
+  @include meta.load-css("cards");
+  @include meta.load-css("menu");
+  @include meta.load-css("item_sheet");
+  @include meta.load-css("cart");
+  @include meta.load-css("checkout");
+  @include meta.load-css("tracking");
+  @include meta.load-css("staff");
+  @include meta.load-css("loyalty");
+  @include meta.load-css("tab_bar");
+}
+
+@layer utilities {
+  @include meta.load-css("utilities");
+}
