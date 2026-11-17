@@ -150,6 +150,72 @@ class TestReplicateSender < Minitest::Test
     assert_equal 1, polls
   end
 
+  def test_replicate_chat_budget_reserves_max_output_before_posting
+    dispatcher = build_dispatcher
+    dispatcher.define_singleton_method(:text_prompt_for) { |_messages| "hi" }
+    dispatcher.send(:reset_replicate_chat_budget!)
+    estimate = dispatcher.send(
+      :reserve_replicate_chat_budget!,
+      "openai/gpt-5.2",
+      messages: [{ role: "user", content: "hi" }],
+      sys: "be concise",
+    )
+
+    assert_kind_of Float, estimate
+    assert_operator estimate, :>, 0.05
+    assert_in_delta estimate, dispatcher.send(:replicate_chat_spent), 0.000_001
+  ensure
+    dispatcher&.send(:reset_replicate_chat_budget!)
+  end
+
+  def test_replicate_chat_budget_refuses_over_cap_before_a_network_call
+    dispatcher = build_dispatcher
+    previous_call = ENV["MASTER_REPLICATE_CALL_CAP_USD"]
+    ENV["MASTER_REPLICATE_CALL_CAP_USD"] = "0.01"
+    dispatcher.send(:reset_replicate_chat_budget!)
+
+    result = dispatcher.send(
+      :reserve_replicate_chat_budget!,
+      "openai/gpt-5.2",
+      messages: [{ role: "user", content: "hi" }],
+      sys: nil,
+    )
+
+    assert result.err?
+    assert_equal :budget, result.category
+    assert_in_delta 0.0, dispatcher.send(:replicate_chat_spent), 0.000_001
+  ensure
+    previous_call ? ENV["MASTER_REPLICATE_CALL_CAP_USD"] = previous_call : ENV.delete("MASTER_REPLICATE_CALL_CAP_USD")
+    dispatcher&.send(:reset_replicate_chat_budget!)
+  end
+
+  def test_replicate_chat_budget_stops_at_run_ceiling_across_models
+    dispatcher = build_dispatcher
+    previous_run = ENV["MASTER_REPLICATE_BUDGET_USD"]
+    previous_call = ENV["MASTER_REPLICATE_CALL_CAP_USD"]
+    ENV["MASTER_REPLICATE_BUDGET_USD"] = "0.05"
+    ENV["MASTER_REPLICATE_CALL_CAP_USD"] = "1.00"
+    dispatcher.define_singleton_method(:text_prompt_for) { |_messages| "hi" }
+    dispatcher.send(:reset_replicate_chat_budget!)
+
+    first = dispatcher.send(
+      :reserve_replicate_chat_budget!, "openai/gpt-5.2",
+      messages: [{ role: "user", content: "hi" }], sys: nil
+    )
+    second = dispatcher.send(
+      :reserve_replicate_chat_budget!, "anthropic/claude-opus-5.5",
+      messages: [{ role: "user", content: "hi" }], sys: nil
+    )
+
+    assert_kind_of Float, first
+    assert second.err?
+    assert_equal :budget, second.category
+  ensure
+    previous_run ? ENV["MASTER_REPLICATE_BUDGET_USD"] = previous_run : ENV.delete("MASTER_REPLICATE_BUDGET_USD")
+    previous_call ? ENV["MASTER_REPLICATE_CALL_CAP_USD"] = previous_call : ENV.delete("MASTER_REPLICATE_CALL_CAP_USD")
+    dispatcher&.send(:reset_replicate_chat_budget!)
+  end
+
   def test_replicate_chat_refuses_to_send_without_an_api_token
     dispatcher = build_dispatcher
     ENV.stub(:[], ->(_key) { nil }) do
