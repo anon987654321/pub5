@@ -243,12 +243,12 @@ cpu_watch() {
   typeset previous_state new_state details threshold pressure_tmp heartbeat_tmp
   mkdir -p "$STATE" || return 1
   sample=$(vmstat_cpu_sample) || {
-    raise_transition cpu-watch-sample-failed "vmstat CPU sample failed; monitor has no valid measurement - inspect /var/log/daemon and /var/log/cpu-watch.log"
+    raise cpu-watch-sample-failed "vmstat CPU sample failed; monitor has no valid measurement - inspect /var/log/daemon and /var/log/cpu-watch.log"
     return 1
   }
   set -- $sample
   if (( $# != 4 )); then
-    raise_transition cpu-watch-sample-failed "vmstat CPU sample was malformed; monitor has no valid measurement"
+    raise cpu-watch-sample-failed "vmstat CPU sample was malformed; monitor has no valid measurement"
     return 1
   fi
   busy=$1
@@ -316,23 +316,23 @@ cpu_watch() {
     if ! ( umask 077; print -r -- "$stamp $busy" > "$pressure_tmp" ) ||
        ! mv -f "$pressure_tmp" "$CPU_PRESSURE"; then
       rm -f "$pressure_tmp"
-      raise_transition cpu-watch-state-failed "could not write CPU pressure signal at $CPU_PRESSURE"
+      raise cpu-watch-state-failed "could not write CPU pressure signal at $CPU_PRESSURE"
       return 1
     fi
   fi
   print -r -- "$new_state $high $critical $clear" > "$CPU_STATE" || {
-    raise_transition cpu-watch-state-failed "could not write CPU monitor state at $CPU_STATE"
+    raise cpu-watch-state-failed "could not write CPU monitor state at $CPU_STATE"
     return 1
   }
   print -r -- "$(date -u +%Y-%m-%dT%H:%M:%SZ) busy=${busy}% user=${user}% system=${system}% idle=${idle}% state=$new_state deploy=$deploying" >> "$CPU_HISTORY" || {
-    raise_transition cpu-watch-log-failed "could not append CPU sample to $CPU_HISTORY"
+    raise cpu-watch-log-failed "could not append CPU sample to $CPU_HISTORY"
     return 1
   }
   heartbeat_tmp="$CPU_HEARTBEAT.tmp.$"
   if ! print -r -- "$stamp" > "$heartbeat_tmp" ||
      ! mv -f "$heartbeat_tmp" "$CPU_HEARTBEAT"; then
     rm -f "$heartbeat_tmp"
-    raise_transition cpu-watch-state-failed "could not write CPU monitor heartbeat at $CPU_HEARTBEAT"
+    raise cpu-watch-state-failed "could not write CPU monitor heartbeat at $CPU_HEARTBEAT"
     return 1
   fi
 
