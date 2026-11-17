@@ -43,13 +43,17 @@ log paths and most recent stage. Once the snapshot is recorded, its service set,
 ports, restore order and SHAs cannot be changed.
 .Pp
 .Cm deploy-run-pending-list
-is the bounded monitoring view. It returns up to 500 newest matching receipt
-files and at most 100 pending records in a JSON object containing
+is the bounded monitoring view. It walks the directory entries once and
+retains only the 500 newest matching filenames in a fixed-size min-heap.
+It then reads at most 500 receipt files and returns at most 100 pending records
+in a JSON object containing
 .Cm pending ,
 .Cm scanned ,
 .Cm returned
 and
 .Cm truncated .
+The directory walk remains linear in the number of entries; retained filename
+memory, the final sort and receipt-file reads are bounded by these limits.
 A true
 .Cm truncated
 value means the monitor did not inspect the complete receipt history; an empty
