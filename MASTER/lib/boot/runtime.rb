@@ -142,11 +142,10 @@ module Master
     end
 
     def default_model
-      # The first lane that can answer now, by Io::LaneSelection: the signed-in
-      # subscription CLIs (a quota-dead one such as agy is skipped), then the
-      # direct APIs, the paid tail, local models, and free models last. No saved
-      # model and no other process state decides it; the keys below are the floor
-      # for a machine where no catalogue lane is live.
+      # The first live lane in the declared model catalogue. Provider class,
+      # authentication type and an unrelated OpenRouter key never promote a
+      # later subscription CLI above the configured primary. The keys below
+      # are only the final fallback when no catalogue lane is live.
       lane = Master::Io::LaneSelection.live_lanes.first
       return lane if lane
 
