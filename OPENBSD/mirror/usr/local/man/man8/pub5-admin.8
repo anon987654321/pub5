@@ -7,6 +7,15 @@
 .Sh SYNOPSIS
 .Nm
 .Ar verb arguments ...
+.Nm
+.Cm deploy-run-write
+.Ar run-id
+.Ar JSON
+.Nm
+.Cm deploy-run-read
+.Ar run-id
+.Nm
+.Cm deploy-run-list
 .Sh DESCRIPTION
 .Nm
 is the root-owned broker installed at
@@ -15,6 +24,20 @@ It exposes a bounded argv protocol for selected service, resource, application
 layout, deployment and CI operations.
 It does not evaluate shell command
 strings and does not accept an arbitrary filesystem path as a command selector.
+.Pp
+The
+.Cm deploy-run-write ,
+.Cm deploy-run-read
+and
+.Cm deploy-run-list
+verbs manage fleet-level deploy receipts below
+.Pa /var/db/pub5/deploy_runs .
+The directory is root-owned and mode 0700; receipt files are root-owned and mode
+0600. Writes validate the fixed schema and replace each receipt atomically.
+The receipt binds one run ID to its target, owner process identity, pinned and
+previous commit SHAs, original running-service snapshot, app ports, restore order,
+log paths and most recent stage. Once the snapshot is recorded, its service set,
+ports, restore order and SHAs cannot be changed.
 .Pp
 The broker requires effective root privileges through the reviewed
 .Xr doas 1
@@ -26,6 +49,12 @@ Unknown verbs, unapproved services, invalid argument shapes and paths outside
 the explicit allowlist are refused.
 The broker is an internal privilege
 boundary, not a general-purpose shell.
+.Pp
+Do not write deploy receipts directly from the deploy shell or alter their
+snapshot fields. Use only the fixed deploy-run verbs. Recovery is operator-driven
+through
+.Xr vps-deploy 8 ;
+the broker does not start, stop or restart services for a receipt.
 .Sh EXAMPLES
 .Bd -literal -offset indent
 doas /usr/local/sbin/pub5-admin service check relayd
