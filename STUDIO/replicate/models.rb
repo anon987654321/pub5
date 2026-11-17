@@ -38,6 +38,8 @@ module Studio
       # bills output and reference-video input seconds; when source durations
       # are not supplied, reserve the model's documented maximum of 15 seconds.
       def video_cost_usd(name, input, today: Date.today)
+        raise ArgumentError, "video input must be a Hash" unless input.is_a?(Hash)
+
         spec = film_engine(name)
         pricing = spec.fetch("pricing")
         duration = Integer(input_value(input, "duration") || 5)
