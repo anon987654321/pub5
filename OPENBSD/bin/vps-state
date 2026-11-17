@@ -197,7 +197,7 @@ def deploy_run_records
 rescue JSON::ParserError => e
   [nil, "CORRUPT: deploy-run receipt JSON (#{e.class})"]
 rescue StandardError => e
-  category = e.message.match?(/\\A(?:invalid deploy-run|deploy-run-list did not return|corrupt deploy-run)/) ? "CORRUPT" : "UNAVAILABLE"
+  category = e.message.match?(/\A(?:invalid deploy-run|deploy-run-list did not return|corrupt deploy-run|.*symlink; refusing deploy-run|.*is not a regular file)/) ? "CORRUPT" : "UNAVAILABLE"
   [nil, "#{category}: #{e.class}: #{e.message}"]
 end
 
