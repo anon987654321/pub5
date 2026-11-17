@@ -47,10 +47,10 @@ module Master
             nil
           end
 
-          # Only reachable, non-silent lanes enter the chain. Empirical health and
-          # cost ranking order candidates within the final policy: premium/API,
-          # free API, browser chat, then local compute. Local availability is not
-          # an offline contract.
+          # Only reachable, non-silent lanes enter the chain. The selected
+          # task tier keeps its declared head; empirical health and cost ranking
+          # order fallbacks within that policy. Authenticated CLI and Replicate
+          # lanes stay supplementary unless the task tier itself names them.
           def fallback_chain(task_type: :exploration)
             if task_type.to_sym == :nsfw
               model = Io::LaneSelection.nsfw_model_id
