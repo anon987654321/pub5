@@ -784,7 +784,7 @@ end
     config = Struct.new(:saved) { def save! = self.saved = true }.new
 
     listing = Master::CLI::CommandRegistry.list_models(root: Master::ROOT, metrics: nil, agent:)
-    assert_match(/^-> nvidia\/nemotron-3-super-120b-a12b:free +grok_primary/, listing)
+    assert_match(/^-> nvidia\/nemotron-3-super-120b-a12b:free +openrouter_primary/, listing)
     assert_match(/^more with:\n  set GEMINI_API_KEY/, listing)
 
     output = Master::CLI::CommandRegistry.dispatch_model(agent:, config:, metrics: nil, root: Master::ROOT, arg: "gemini-2.5-flash")
