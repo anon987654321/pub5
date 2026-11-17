@@ -486,8 +486,14 @@ if [[ $shed -eq 0 && -s $SHED_STATE && $mem_avail_pct -ge $MEM_RESTORE ]]; then
         break
       fi
       logger -t resource-guard "restore $svc (load=$load mem_avail=${mem_avail_pct}%)"
-      rcctl start "$svc" 2>/dev/null || true
-      restored=$svc
+      if rcctl start "$svc" 2>/dev/null; then
+        restored=$svc
+      else
+        # Keep the shed ledger entry: the next guard tick must retry rather than
+        # forget a service whose start command failed.
+        logger -t resource-guard "restore $svc failed; retaining shed state for retry"
+        break
+      fi
       break
     done
     if [[ -n $restored ]]; then
