@@ -35,6 +35,8 @@ module Pub5Admin
   RAILS_APPS = %w[brgen amber bsdports mrdamascy].freeze
   RAILS_TASK_APPS = %w[master brgen amber bsdports mrdamascy].freeze
   STAMP_DIR = "/var/db/pub5"
+  DEPLOY_RUN_SCAN_LIMIT = 500
+  DEPLOY_RUN_PENDING_LIMIT = 100
   RUBY_CANDIDATES = %w[/usr/local/bin/ruby].freeze
 
   module_function
@@ -615,6 +617,50 @@ module Pub5Admin
     0
   end
 
+  # Monitoring does not need the terminal history. Scan only the newest
+  # bounded filename window, return pending runs only, and surface truncation.
+  # The operator's explicit deploy-run-list remains the complete diagnostic path.
+  def list_pending_deploy_runs(root: STAMP_DIR, verify_root: true, output: $stdout,
+                               max_scan: DEPLOY_RUN_SCAN_LIMIT, max_pending: DEPLOY_RUN_PENDING_LIMIT)
+    raise "invalid deploy-run scan limit" unless max_scan.is_a?(Integer) && max_scan.positive?
+    raise "invalid deploy-run pending limit" unless max_pending.is_a?(Integer) && max_pending.positive?
+
+    directory = deploy_run_directory(root:, create: false, verify_root:)
+    names = []
+    scanned = 0
+    truncated = false
+    if directory
+      Dir.each_child(directory) do |name|
+        next unless name.match?(/\\A\\d{8}T\\d{6}Z-[a-z0-9_-]{1,32}-\\d+\\.json\\z/)
+
+        scanned += 1
+        names << name
+        if names.length > max_scan
+          names.sort!.reverse!
+          names.pop
+          truncated = true
+        end
+      end
+    end
+
+    records = names.sort.reverse.map do |name|
+      deploy_run_record(name.delete_suffix(".json"), root:, verify_root:)
+    end.compact.select do |record|
+      record["recovery_state"] == "pending" && %w[running failed].include?(record["status"])
+    end
+    if records.length > max_pending
+      truncated = true
+      records = records.first(max_pending)
+    end
+    output.puts(JSON.generate(
+      pending: records,
+      truncated: truncated,
+      scanned: scanned,
+      returned: records.length,
+    ))
+    0
+  end
+
   def valid_ruby_cache_key?(value)
     value.match?(/\Aruby(?:[0-9]{2}|[0-9]+\.[0-9]+)\z/)
   end
@@ -1091,6 +1137,7 @@ end
     end
 
     return list_deploy_runs if args == ["deploy-run-list"]
+    return list_pending_deploy_runs if args == ["deploy-run-pending-list"]
 
     if args.length == 4 && args[0] == "stamp"
       return write_stamp(*args.drop(1))
