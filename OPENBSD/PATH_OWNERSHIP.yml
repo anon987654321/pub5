@@ -138,6 +138,10 @@ ownership:
     purpose: root-owned load-shedding runner; sources only the installed stale-cleanup helper, never checkout code
     risk: critical
     check: ruby OPENBSD/checks/vps_safety_check.rb
+  mirror/usr/local/bin/pub4-alert:
+    purpose: root-owned durable alerts, minute CPU sampler and CPU-monitor heartbeat
+    risk: critical
+    check: ruby OPENBSD/test/test_pub4_alert.rb
   mirror/usr/local/bin/emergency_cpu.sh:
     purpose: root-owned emergency CPU recovery runner; sources only the installed stale cleanup helper, never checkout code
     risk: critical

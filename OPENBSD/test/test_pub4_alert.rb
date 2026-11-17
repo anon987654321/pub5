@@ -208,6 +208,15 @@ class TestPub4Alert < Minitest::Test
     end
   end
 
+  def test_cpu_watch_is_scheduled_once_per_minute_and_its_log_is_rotated
+    root = File.expand_path("../..", __dir__)
+    crontab = File.read(File.join(root, "OPENBSD", "data", "root.crontab"))
+    newsyslog = File.read(File.join(root, "OPENBSD", "mirror", "etc", "newsyslog.conf"))
+
+    assert_includes crontab, "* * * * * -s /usr/local/bin/pub4-alert cpu-watch >> /var/log/cpu-watch.log 2>&1"
+    assert_includes newsyslog, "/var/log/cpu-watch.log                   root:wheel 640 12 250 $W0D0 Z"
+  end
+
   def test_show_prints_the_last_alerts
     Dir.mktmpdir do |dir|
       3.times { |i| run_alert(dir, "raise", "k#{i}", "message #{i}") }

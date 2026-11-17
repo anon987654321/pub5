@@ -741,7 +741,8 @@ Tracked mirror: `OPENBSD/data/root.crontab` (installed idempotently by
 | `config-drift-check` | `*/15 * * * *` | `/var/log/config_drift.log` — relayd Host routes vs acme SANs vs NSD zones vs DNSSEC paths |
 | `resource_guard.sh` | `*/5 * * * *` | sheds bsdports then amber under sustained pressure; `/var/log/resource_guard_history.log` |
 | `uptime-check.sh` | `*/5 * * * *` | `/var/log/uptime-check.log`, with `ALLOW_BSDPORTS_DOWN=1` |
-| `pub4-alert watch` | `*/15 * * * *` | `/var/log/pub4-alerts.log`, shown by `vps-state` — disk 90%, swap 92%, any `rcctl ls failed` service except `brgen_jobs`, no `dr-pull` report in 48 h. Each key alerts once per six hours |
+| `pub4-alert cpu-watch` | `* * * * *` | `/var/log/cpu-watch.log` — five one-second vmstat intervals; warning at 80% busy for 3 minutes, critical at 95% for 2 minutes, 15 minutes during a deploy; records process names only |
+| `pub4-alert watch` | `*/5 * * * *` | `/var/log/pub4-alerts.log`, shown by `vps-state` — disk 90%, swap 92%, failed services except `brgen_jobs`, stale backup and missing CPU-monitor heartbeat. Ordinary recurring keys quiet for 6 hours; CPU state transitions alert on each new transition |
 | `drain-jobs.sh` | `5 * * * *` | `/var/log/drain-jobs.log` |
 | `core-reclaim.sh` | `40 * * * *` | `/var/log/core-reclaim.log` — returns a core app's grown resident set |
 | `keep-warm.sh` | `*/10 * * * *` | `/var/log/keep-warm.log` — brgen and amber only |
@@ -752,7 +753,7 @@ Tracked mirror: `OPENBSD/data/root.crontab` (installed idempotently by
 | `purge-deleted-users.sh` | `55 3 * * *` | `/var/log/purge-deleted-users.log` — nightly amber GDPR Art. 17 erasure (`UserPurgeJob`); five minutes after the documented 3:50 slot so a future resident scheduler cannot race it |
 | `vps_weekly_integrity.sh` | `30 3 * * 0` | **tracked and never installed** — absent from root's live crontab and from `/usr/local/bin`, measured 2026-09-12. See TODO 1060. |
 
-Fourteen rows because `data/root.crontab` schedules fourteen jobs. This table listed four
+Fifteen rows because `data/root.crontab` schedules fifteen jobs. This table listed four
 for long enough that six self-healing jobs existed only in the file nobody
 reads next to the one they do; the three recurring-schedule hygiene wrappers
 (`declutter-hygiene.sh`, `ports-import.sh`, `purge-deleted-users.sh`) joined the
@@ -761,10 +762,16 @@ crontab after the last table audit and are now named here too.
 A healer that works hides the fault that makes it run. `relayd-watchdog` stamps
 each restart in `/var/db/pub4/relayd-watchdog.restarts` and raises a
 `relayd-restarts` alert on the third inside an hour; `uptime-check.sh` raises
-`uptime-down` when an endpoint is down for three ticks running (fifteen minutes,
-longer than a deploy restart); `pub4-alert show` and `vps-state` print the
-record. The dr-pull job reports to the box by writing `~dev/.dr_pull_ok` after
-each pull, which is what the stale-backup alert reads.
+`uptime-down` when an endpoint is down for three ticks running. The CPU watcher
+takes five one-second `vmstat` intervals each minute: 80% busy for three
+consecutive samples alerts, 95% for two alerts as critical, and the active
+pressure signal lets `resource_guard.sh` shed bsdports then amber. A fresh deploy
+flag extends the CPU threshold to fifteen minutes. Three samples below 60%
+clear the incident. It never kills or restarts MASTER or Brgen. Its heartbeat is
+checked by `pub4-alert watch`; a stale heartbeat raises `cpu-watch-stale`.
+`pub4-alert show` and `vps-state` print the durable alerts. The dr-pull job
+reports to the box by writing `~dev/.dr_pull_ok` after each pull, which is what
+the stale-backup alert reads.
 
 `nsd-resign` is **not** in root crontab — it runs from `etc/daily.local` (daily
 DNSSEC re-sign + backup pass). Failures surface in syslog (`daily.local` tag)

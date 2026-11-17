@@ -93,10 +93,13 @@ that file host-local with owner-only permissions, outside this checkout.
 Nothing on the box backs itself up off the box. `bin/dr-pull` runs nightly on the
 operator's Mac, brings back a checksummed snapshot of every production database and
 the uploaded files, and `bin/dr-pull --drill` restores the newest pull into a
-scratch directory and reads it back. A healed symptom must not stay quiet, so
-`usr/local/bin/pub4-alert` records a recurring fault once per six hours in
-`/var/log/pub4-alerts.log`, and `bin/vps-state` prints the last few next to each
-deploy stamp. `bin/domain_watch.rb` asks the registries which domains are still
+scratch directory and reads it back. A healed symptom must not stay quiet. `usr/local/bin/pub4-alert` records
+durable fault transitions in `/var/log/pub4-alerts.log`; its minute CPU watcher
+samples five one-second `vmstat` intervals, alerts on sustained 80% CPU (or
+critical 95%), and writes a heartbeat that the five-minute watch checks.
+Sustained pressure enables the existing optional-app shedding ladder only;
+MASTER and Brgen are never automatically killed or restarted. `bin/vps-state`
+prints recent alerts next to each deploy stamp. `bin/domain_watch.rb` asks the registries which domains are still
 ours, and with `--tls` it asks every public host for its certificate and a
 health answer, the way a visitor would.
 
