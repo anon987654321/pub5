@@ -89,6 +89,12 @@ class OperatorIntentTest < Minitest::Test
              "an explicit third-party host must not be rewritten to vm23"
       assert intent.send(:repository_wide_deployment?, "please deploy pub5 to production", inventory),
              "an explicit production destination remains deterministic"
+      assert intent.send(:repository_wide_deployment?, "redeploy OPENBSD, RAILS and MASTER/web to vm23", inventory),
+             "the explicit three-part production stack is the canonical full release"
+      refute intent.send(:repository_wide_deployment?, "redeploy OPENBSD and RAILS to vm23", inventory),
+             "a partial stack must not expand into a full production release"
+      refute intent.send(:repository_wide_deployment?, "redeploy OPENBSD, RAILS and MASTER/web to staging", inventory),
+             "an explicit non-production destination must remain unsupported"
     end
   end
 

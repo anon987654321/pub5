@@ -96,10 +96,14 @@ module Master
       # --confirm review gate before any production effect.
       def repository_wide_deployment?(text, inventory)
         request = text.to_s
-        return false unless request.match?(REPOSITORY_TARGET_RE) && request.match?(DIRECT_DEPLOY_REQUEST_RE)
+        return false unless request.match?(DIRECT_DEPLOY_REQUEST_RE)
         return false if request.match?(NON_PRODUCTION_ENV_RE)
         destination = request.match(DESTINATION_RE)&.captures&.first
         return false if destination && !VM23_DESTINATIONS.include?(destination.downcase)
+
+        complete_stack = complete_stack_components?(request)
+        return false unless request.match?(REPOSITORY_TARGET_RE) || complete_stack
+        return true if complete_stack
 
         named_app = inventory.ordered_apps.any? do |app|
           [app.name, app.title, app.domain].any? do |value|
@@ -110,6 +114,15 @@ module Master
           request.match?(/\b#{Regexp.escape(name)}\b/i)
         end
         !named_app && !named_group
+      end
+
+      # OPENBSD + the RAILS fleet + MASTER/web is the canonical full release.
+      # Resolve this explicit three-part scope locally rather than asking a model
+      # classifier that could omit the host mirror or web surface.
+      def complete_stack_components?(request)
+        request.match?(/\bopenbsd\b/i) &&
+          request.match?(/\brails\b/i) &&
+          request.match?(/\bmaster\s*\/\s*web\b/i)
       end
 
       def repository_root(root)
