@@ -170,7 +170,8 @@ class TestStudioReplicateClientPaths < Minitest::Test
       "minimax/h3-highspeed",
       { prompt: "a quiet harbour", first_frame_image: "https://example.test/frame.jpg", duration: 10 }
     )
-    assert_in_delta 0.30, models.video_budget_spent, 0.001
+    expected = models.video_cost_usd("minimax/h3-highspeed", { "duration" => 10 }, today: Date.today)
+    assert_in_delta expected, models.video_budget_spent, 0.001
     assert_equal %i[get get post], client.requests.map(&:first)
   ensure
     models.reset_video_budget!
