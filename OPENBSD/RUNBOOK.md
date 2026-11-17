@@ -132,14 +132,18 @@ pull --ff-only` on vm23 → `vps_ci.sh <app>` → `OPERATOR.sh` or per-app deplo
 
 ## Privileged deploy broker
 
-The staged root boundary is `/usr/local/sbin/pub4-admin`, mirrored at
-`OPENBSD/mirror/usr/local/sbin/pub4-admin`. A deliberate `OPERATOR.sh` sync installs
+The current staged root boundary is `/usr/local/sbin/pub5-admin`, mirrored at
+`OPENBSD/mirror/usr/local/sbin/pub5-admin`. A deliberate `OPERATOR.sh` sync installs
 it as `root:wheel`, mode `0555`, and installs the fixed CI preparation/sync/runner
 plus Rails task and Rails tree-sync helpers under `/usr/local/libexec/`; the Solid Queue proof
 is installed under `/usr/local/libexec/pub4/`.
 
-The broker exposes allowlisted service actions, validated deploy receipts, fixed
-CI lock/preparation operations, and trusted helper verbs. CI and production Rails
+The broker exposes allowlisted service actions, per-app deploy-status records,
+and fleet-level recovery receipts in the private `/var/db/pub5/deploy_runs/`
+directory. Receipt writes use validated fixed verbs and atomic replacement; the
+pinned commit, original service snapshot, port map, restore order and last stage
+are retained for interrupted-run diagnosis. CI lock/preparation operations and
+trusted helper verbs remain fixed-argument operations. CI and production Rails
 tree mutations run with the selected app's UID, primary GID and only the required
 `_pub4ci` supplementary group. Production sync stages tracked `HEAD` paths from a
 Git archive, not ignored files from the mutable working tree. The CI runner has a real wall-clock deadline and terminates
@@ -669,7 +673,9 @@ the verdict. A kill or hangup counts as a failure with the stage it interrupted.
 `bin/vps-deploy all` (or one app) now does this, in order, and stops at the first
 failure. Nothing is stopped before step 4.
 
-1. Take the lock and start the log. Print nothing about services yet.
+1. Take the lock, start the log and atomically create a root-private fleet receipt
+   under `/var/db/pub5/deploy_runs/`. The receipt exists before any service is
+   stopped; child app runs append to the one parent run ID.
 2. Pin one commit. The target is `VPS_DEPLOY_SHA`, or `origin/main` fetched once
    here, and the run prints `pinned <sha> (box HEAD was <sha>)`. It must be a
    fast-forward of the box. No later step pulls; each checks `HEAD` against the pin.
@@ -683,7 +689,9 @@ failure. Nothing is stopped before step 4.
    interrupted while the checkout is detached. Break-glass is
    `VPS_DEPLOY_SKIP_PREFLIGHT=1` and, like the runtime-check skip, only with
    `I_UNDERSTAND_FAST_DEPLOY=1`.
-4. Record `doas rcctl ls started`. This is what the exit trap restores.
+4. Record `doas rcctl ls started`. This is what the exit trap restores and what
+   the durable receipt records. The pinned SHA, previous SHA, service snapshot,
+   ports and restore order are immutable after the snapshot is committed.
 5. Choose the order. `master` leads only when every app that was started answers
    `/up` and the last `resource_guard` tick shows `mem_avail` at or above
    `VPS_DEPLOY_MASTER_MIN_AVAIL` (10). Otherwise: brgen, mrdamascy, amber, bsdports, master.
@@ -701,6 +709,51 @@ failure. Nothing is stopped before step 4.
    deploy stopped it, `resource_guard` shed it, or it went down for another reason.
    The exit status stays the failure's, and the trap names the stage.
 
+#### Interrupted deploy receipt recovery
+
+The EXIT/HUP/INT/TERM path writes a terminal receipt after it attempts restoration.
+`SIGKILL`, a kernel crash or power loss cannot run that trap; the last atomic receipt
+remains `running` with `recovery_state=pending`. It records the exact run ID, owner
+PID and process fingerprint, pinned and previous SHAs, original running services,
+restore order, ports, per-run log path and last durable stage.
+
+The first rollout of this receipt protocol has one broker prerequisite. The new
+`vps-deploy` deliberately refuses before service control if the installed
+`pub5-admin` lacks `deploy-run-*` verbs. Apply and verify the reviewed mirror once
+before using the new deployer; do not rely on `vps-deploy all` to bootstrap this
+version transition because its receipt preflight runs before its normal mirror apply:
+
+```sh
+doas zsh OPENBSD/OPERATOR.sh --plan
+doas zsh OPENBSD/OPERATOR.sh --apply
+doas zsh OPENBSD/OPERATOR.sh --verify
+```
+
+After an interrupted run, inspect first:
+
+```sh
+zsh OPENBSD/bin/vps-deploy recover --plan
+```
+
+The plan is serialized by the deploy lock and does not start, stop or restart
+services. It reports `LIVE` when the receipt's owner fingerprint still matches,
+`AMBIGUOUS` when a visible PID cannot be identified, and `RECOVERY AVAILABLE`
+only when the recorded owner is gone or its PID has been reused. Never apply a
+`LIVE` or `AMBIGUOUS` receipt. Copy the exact ID from a `RECOVERY AVAILABLE` row,
+review its stage and log, then explicitly request restoration:
+
+```sh
+zsh OPENBSD/bin/vps-deploy recover --apply 20261117T010000Z-all-12345
+```
+
+`--apply` does not fetch, check out or redeploy code, and it does not roll back
+database migrations or application data. It restores only services recorded as
+running before that run, in the saved order, then verifies brokered service state
+and each recorded app's loopback `/up` endpoint. A failed check leaves the receipt
+pending and the command reports the log/daemon diagnosis path; inspect
+`/var/log/daemon` before retrying. A successful restore marks the original receipt
+`recovered` / `complete`. There is no automatic boot-time recovery and no guessed
+release rollback.
 Recovery by hand, one app at a time, waiting for each port before the next. Falcon
 needs 30 to 40 seconds under load, and two booting together is how the apps got
 shed. Use `restart`, not `start`: `rc.d/master` runs its relayd restart, TTS warmup
