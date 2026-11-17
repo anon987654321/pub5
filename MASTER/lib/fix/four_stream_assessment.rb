@@ -61,16 +61,20 @@ module Master
         @surfaces = Array(surfaces).map(&:to_sym).uniq.freeze
         @clean_passes = Integer(clean_passes)
         @max_iterations = Integer(max_iterations)
+        validate_population!
+        @history = Hash.new { |hash, key| hash[key] = [] }
+        @generation = 0
+        @last_mutation_iteration = 0
+      end
+
+      def validate_population!
         raise ArgumentError, "law population is empty" if @laws.empty?
         raise ArgumentError, "surface population is empty" if @surfaces.empty?
         raise ArgumentError, "clean_passes must be positive" unless @clean_passes.positive?
         raise ArgumentError, "max_iterations must be positive" unless @max_iterations.positive?
+
         unknown_surfaces = @surfaces - SURFACES
         raise ArgumentError, "unknown surfaces: #{unknown_surfaces.join(', ')}" unless unknown_surfaces.empty?
-
-        @history = Hash.new { |hash, key| hash[key] = [] }
-        @generation = 0
-        @last_mutation_iteration = 0
       end
 
       # assessors may be keyed by [stream, surface] or by stream. Each assessor
@@ -100,13 +104,17 @@ module Master
         finding_rows = findings.nil? ? [] : Array(findings)
         validate_evidence!(state, evidence_rows, finding_rows)
         iteration, generation = validate_progress!(key, iteration, generation)
-        row = Result.new(
+        row = build_result_row(key, state, detail, evidence_rows, finding_rows, iteration, generation, repair)
+        history[key] << row
+        row
+      end
+
+      def build_result_row(key, state, detail, evidence_rows, finding_rows, iteration, generation, repair)
+        Result.new(
           law: key[0], stream: key[1], surface: key[2], status: state,
           iteration:, generation:, reason: detail.empty? ? nil : detail,
           evidence: evidence_rows.freeze, findings: finding_rows.freeze, repair:
         )
-        history[key] << row
-        row
       end
 
       # Called when the owning /fix plan detects a source, scope, Law, authority,
