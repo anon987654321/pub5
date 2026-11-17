@@ -97,10 +97,13 @@ class TestOpenbsdConfig < Minitest::Test
   def test_full_stack_manual_gate_requires_every_mirror_configuration_source_read
     preflight = { "hostname" => "vm23", "os_release" => "0.0", "architecture" => "amd64",
                   "source_reads" => [], "native_interfaces" => [], "manual_pages" => [] }
-    refusal = Master::Fix::OpenBSDManualPreflight.mirror_configuration_refusal(
-      preflight,
-      root: Master::ROOT
-    )
+    refusal = nil
+    Master::Fix::OpenBSDManualPreflight.stub(:write_mirror_configuration_report, ->(*) {}) do
+      refusal = Master::Fix::OpenBSDManualPreflight.mirror_configuration_refusal(
+        preflight,
+        root: Master::ROOT
+      )
+    end
 
     assert_match(/complete source-read receipt for mirror configuration/, refusal)
   end
