@@ -104,6 +104,17 @@ class OperatorIntentTest < Minitest::Test
     end
   end
 
+  def test_plan_only_request_stays_conversational_without_classifier_or_deployment
+    with_inventory do |root|
+      agent = Object.new
+      result = Master::CLI::OperatorIntent.new(root:, agent:).call(
+        "Prepare a deployment plan ONLY for redeploying OPENBSD, RAILS and MASTER/web to vm23"
+      )
+
+      assert_equal :conversation, result.status
+    end
+  end
+
   def test_classifier_failure_reports_error_class_without_running_an_action
     with_inventory do |root|
       agent = Object.new

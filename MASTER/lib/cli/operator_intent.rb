@@ -65,6 +65,7 @@ module Master
 
       def call(text)
         return unless self.class.candidate?(text)
+        return Result.new(status: :conversation) if planning_request?(text)
 
         inventory = Deploy::Inventory.new(root: @root)
         return Result.new(status: :unavailable, message: "Deployment inventory is empty; no action was taken.") if inventory.apps.empty?
@@ -92,6 +93,14 @@ module Master
       private
 
       # The repository name means every registered deployable surface, not every
+      # A plan is conversation, not permission to invoke the operator surface.
+      # Let the normal assistant answer it without spending a classifier call.
+      def planning_request?(text)
+        request = text.to_s
+        request.match?(/\b(?:prepare|create|write|draft)\b.*\bdeployment\s+plan\b/i) ||
+          request.match?(/\bdeployment\s+plan\b.*\b(?:only|just|without\s+executing)\b/i)
+      end
+
       # source tree. The normal /deploy command still applies its explicit
       # --confirm review gate before any production effect.
       def repository_wide_deployment?(text, inventory)
