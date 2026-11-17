@@ -538,6 +538,31 @@ module Master
       BUNDLE_CONTEXT_KEYS = DependencyManager::BUNDLE_CONTEXT_KEYS
       private
 
+      # Keep the lockfile's Bundler version in a dedicated tool store. It is
+      # deliberately separate from the application bundle: installing Bundler
+      # must not mutate Gemfile.lock or pollute the app's gem path.
+      def ensure_bundler
+        version = locked_bundler_version
+        return ok_result("no pinned Bundler version", changed: false) if version.empty?
+        return ok_result("bundler ready", changed: false, bundler: true) if bundler_path(version)
+
+        gem = gem_command
+        return fail_result("gem executable not found; cannot install Bundler #{version}") unless gem
+
+        install_dir = bundler_gem_home
+        command = [gem, "install", "bundler", "-v", version, "--no-document", "--install-dir", install_dir]
+        install_env = base_bundle_env.merge(
+          "GEM_HOME" => install_dir,
+          "GEM_PATH" => [*gem_search_paths(install_dir), Gem.default_dir].uniq.join(File::PATH_SEPARATOR),
+        )
+        ok, stdout, stderr = run(command, chdir: @root, env: install_env)
+        output = join_output(stdout, stderr)
+        return fail_result("could not install pinned Bundler #{version}", output:) unless ok
+        return fail_result("Bundler #{version} install completed but its executable is unavailable", output:) unless bundler_path(version)
+
+        ok_result("Bundler #{version} installed", changed: true, bundler: true, output:)
+      end
+
       def run_bundle(*args)
         bundle = bundler_path(locked_bundler_version) || @command_path.call("bundle")
         return [false, "", "bundle executable not found"] unless bundle
