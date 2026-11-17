@@ -475,6 +475,24 @@ class TestTraceSupport < Minitest::Test
     singleton&.send(:define_method, :text, original) if original
   end
 
+  def test_logging_snapshot_is_an_immutable_copy_of_the_current_buffer
+    bus = Bus.new
+    logging = Master::Trace::Logging.new(ring_buffer: [], event_bus: bus)
+    Master::Trace::Dmesg.with_verbosity("normal") do
+      bus.emit("**", { event: "boot", ts: 1 })
+    end
+
+    snapshot = logging.snapshot
+    assert_equal ["boot0: ready"], snapshot
+    snapshot << "caller mutation"
+
+    assert_equal ["boot0: ready"], logging.snapshot
+    Master::Trace::Dmesg.with_verbosity("normal") do
+      bus.emit("**", { event: "test:done", ts: 2 })
+    end
+    assert_equal ["boot0: ready", "test0: done"], logging.snapshot
+  end
+
   def test_logging_formats_tool_events_and_redacts_details
     bus = Bus.new
     logging = Master::Trace::Logging.new(ring_buffer: [], event_bus: bus)
