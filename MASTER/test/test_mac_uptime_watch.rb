@@ -108,7 +108,7 @@ class TestMacUptimeWatch < Minitest::Test
 
   def vmstat_sample(user, system, idle)
     row = (Array.new(11, "0") + [user.to_s, system.to_s, idle.to_s]).join(" ")
-    (["procs memory page disk traps cpu", "r b avm fre flt re pi po fr sr x y z us sy id"] + Array.new(6, row)).join("\\n") + "\\n"
+    (["procs memory page disk traps cpu", "r b avm fre flt re pi po fr sr x y z us sy id"] + Array.new(6, row)).join("\n") + "\n"
   end
 
   def tick(code, extra = {})
