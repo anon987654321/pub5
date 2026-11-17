@@ -431,6 +431,21 @@ class TestCliFaceDispatch < Minitest::Test
     refute_includes output, "Anything else is a prompt"
   end
 
+  def test_operation_report_includes_new_dmesg_lines_and_the_final_result
+    snapshots = [
+      ["older event"],
+      ["older event", "fix0: pass 1", "test0: 4 runs, 8 assertions"],
+    ]
+    logger = Object.new
+    logger.define_singleton_method(:snapshot) { snapshots.shift }
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@refs, Struct.new(:logging).new(logger))
+
+    report = session.send(:operation_log_output, ["older event"], "fix0: complete")
+
+    assert_equal "fix0: pass 1\\ntest0: 4 runs, 8 assertions\\n\\nfix0: complete", report
+  end
+
   def test_registered_operation_publishes_a_redacted_report_and_prints_the_url
     session = Master::CLI::Session.allocate
     session.instance_variable_set(:@container, {
