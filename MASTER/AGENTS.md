@@ -713,11 +713,12 @@ Interactive MASTER operations publish a bounded, redacted operation report to
 `pste.us`, falling back to `dpaste.org`; the CLI prints the validated URL as
 `log0`. The report contains the operation, terminal status, captured dmesg
 lines and final result, not the conversation transcript or a local log
-directory. Both providers receive a one-day expiry. Set
+directory. pste.us pastes expire after one day; dpaste.org fallback pastes
+expire after seven days. Set
 `MASTER_LOG_PUBLISH=0` to keep every report local. Content-bearing commands
 such as `/documents`, `/memory`, `/read`, `/write`, `/ask` and `/message`,
-plus shell commands that read files or environment state, are excluded from
-automatic publication. Publication failure never changes the operation's own
+plus the known common shell readers and environment-dump commands, are
+excluded from automatic publication. Publication failure never changes the operation's own
 result or exit code. Standalone scripts that do not run inside the MASTER CLI
 (for example `MASTER/bin/check`) still keep their logs local; review and
 redact them before sharing.
