@@ -132,7 +132,7 @@ module Master
                            when :local_server
                              [local_server_for(id), "no local server lists #{id.delete_prefix('local:')}"]
                            when :hosted then [hosted_endpoint_for(id), "no hosted endpoint lists #{id}"]
-                           else [replicate_key?, "set REPLICATE_API_TOKEN in #{KEY_FILES}"]
+                           else [replicate_key?, "set REPLICATE_API_TOKEN or REPLICATE_API_KEY in #{KEY_FILES}"]
                            end
             fix unless present
           end
