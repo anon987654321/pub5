@@ -120,6 +120,9 @@ module Master
           phases:,
           failures:,
         )
+      rescue ArgumentError => e
+        Result.new(ok: false, files: 0, bytes: 0, ruby_files: 0,
+                   phases:, failures: [e.message])
       rescue SyntaxError, StandardError => e
         Result.new(ok: false, files: 0, bytes: 0, ruby_files: 0,
                    phases:, failures: ["execution trace crashed: #{e.class}: #{e.message}"])
@@ -145,7 +148,14 @@ module Master
           full = File.expand_path(scope, repo)
           next if full == repo
           unless File.exist?(full)
-            raise ArgumentError, "execution trace scope does not exist: #{scope.inspect}"
+            hint = ""
+            if scope.to_s.start_with?("/") && defined?(Master::CLI::CommandRegistry::HELP_TOPICS)
+              cmd = scope.to_s[1..-1]
+              if Master::CLI::CommandRegistry::HELP_TOPICS.key?(cmd)
+                hint = " (did you mean `#{scope}` instead of `/fix #{scope}`?)"
+              end
+            end
+            raise ArgumentError, "execution trace scope does not exist: #{scope.inspect}#{hint}"
           end
           # A scope spelled on a case-insensitive filesystem ("master" for
           # "MASTER") passes exist? but git pathspecs are case-sensitive: the
