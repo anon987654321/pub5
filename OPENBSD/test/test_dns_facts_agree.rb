@@ -11,22 +11,21 @@ require_relative "../bin/render_dns"
 # installer and does not own domain routing. The resolver and nameserver checks
 # compare policy values independently.
 #
-# The check now reads the policy file. OPERATOR.sh cannot: that block is sourced
-# before anything else runs, and making the deploy script shell out to ruby34 to
-# boot would put it behind an interpreter it is itself responsible for
-# installing. So the duplication stays and this makes it cost something.
+# The check reads data/dns.yml. BOOTSTRAP.sh still declares the nameserver,
+# transfer peers, resolver list and legacy city array for its shell startup path;
+# this test pins those retained facts to the policy without making the shell
+# bootstrap invoke Ruby or changing its startup order.
 class DnsFactsAgreeTest < Minitest::Test
   OPENBSD = File.expand_path("..", __dir__)
   POLICY = YAML.safe_load_file(File.join(OPENBSD, "data", "dns.yml"))
-  OPERATOR = File.read(File.join(OPENBSD, "OPERATOR.sh"), encoding: "UTF-8")
   BOOTSTRAP = File.read(File.join(OPENBSD, "BOOTSTRAP.sh"), encoding: "UTF-8")
 
   def shell_scalar(name)
-    OPERATOR[/^typeset -r #{name}="([^"]+)"/, 1]
+    BOOTSTRAP[/^typeset -r #{name}="([^"]+)"/, 1]
   end
 
   def shell_array(name)
-    OPERATOR[/^typeset -a #{name}=\(([^)]*)\)/, 1]&.split
+    BOOTSTRAP[/^typeset -a #{name}=\(([^)]*)\)/, 1]&.split
   end
 
   def test_brgen_ip_is_the_nameserver_the_policy_declares
@@ -71,7 +70,7 @@ end
 
 require_relative "../checks/dns_zones"
 require_relative "../checks/domain_alignment"
-require_relative "../mirror/bin/domain_watch"
+require_relative "../bin/domain_watch"
 
 # domain_watch asks the registry about every zone the policy declares, including
 # one not yet rendered into nsd.conf.
@@ -241,7 +240,7 @@ end
 
 class OwnedDomainFactsAgreeTest < Minitest::Test
   RAILS_APPS = File.expand_path("../../RAILS/apps.yml", __dir__)
-  OPERATOR = File.expand_path("../OPERATOR.sh", __dir__)
+  BOOTSTRAP = File.expand_path("../BOOTSTRAP.sh", __dir__)
   EXPECTED = %w[
     amberapp.art amberapp.no amberapp.online brgen.no bsdports.net bsdports.org
     cardff.uk denvr.us edinbrgh.uk foball.no frankfrt.de lndon.uk lsangeles.com
@@ -267,9 +266,9 @@ class OwnedDomainFactsAgreeTest < Minitest::Test
   end
 
   def test_openbsd_owned_domains_match_rails_inventory
-    operator = File.read(OPERATOR, encoding: "UTF-8")
-    block = operator[/^OWNED_DOMAINS=\(\n.*?\n\)$/m]
-    refute_nil block, "no OWNED_DOMAINS block in OPERATOR.sh"
+    bootstrap = File.read(BOOTSTRAP, encoding: "UTF-8")
+    block = bootstrap[/^OWNED_DOMAINS=\(\n.*?\n\)$/m]
+    refute_nil block, "no OWNED_DOMAINS block in BOOTSTRAP.sh"
     out, status = Open3.capture2(ENV.fetch("PUB5_ZSH", "zsh"), "-f", "-c", "#{block}\nprint -rl -- $OWNED_DOMAINS")
     assert status.success?, "zsh could not evaluate OWNED_DOMAINS"
     assert_equal YAML.safe_load_file(RAILS_APPS).fetch("owned_domains"), out.lines.map(&:chomp)

@@ -64,8 +64,9 @@ module Deploy
 
     module_function
 
-    # The zones data/dns.yml and OPERATOR.sh declare, which is where nsd.conf is
-    # rendered from, so a zone declared and not yet rendered is still watched.
+    # The zones data/dns.yml and the legacy domain list in BOOTSTRAP.sh are the
+    # source for generated nsd.conf, so a zone declared and not yet rendered
+    # is still watched.
     def zones
       # Watch both served zones and every registrar-held domain. Ownership is not
       # service exposure: a parked/DNS-only name must be watched without becoming
