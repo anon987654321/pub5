@@ -90,10 +90,7 @@ module Master
           content_rows = [rows - transcript_rows - 4, 1].max
           face_rows, face_cols = Sizing.fit(content_rows, cols, mode: @size_mode || Sizing.mode)
           face = render_face(state, level, events, face_rows, face_cols, t)
-          body = body_lines(state, face, content_rows, transcript_lines(jobs, words, transcript_rows, cols),
-                            draft, cols, color?)
-          # The cursor goes where the prompt was drawn; the body is a line short of
-          # the window, so the prompt is not on the last row.
+          body = screen_body(state, face, content_rows, jobs, words, draft, cols, transcript_rows)
           prompt_row = [body.length, rows].min
           body = body.first(rows)
           body += Array.new(rows - body.length, "") if body.length < rows
@@ -623,7 +620,10 @@ module Master
           return if exit_requested_by?(text)
 
           set(:thinking, ["you: #{text}"])
-          result = think(text)
+          present_answer(think(text), text)
+        end
+
+        def present_answer(result, text)
           if result == :face_toggle
             @closing = true
             return
@@ -985,6 +985,11 @@ module Master
 
         # Head, stage, transcript, status and prompt in the row order the
         # window paints them.
+        def screen_body(state, face, content_rows, jobs, words, draft, cols, transcript_rows)
+          transcript = transcript_lines(jobs, words, transcript_rows, cols)
+          body_lines(state, face, content_rows, transcript, draft, cols, color?)
+        end
+
         def body_lines(state, face, content_rows, transcript, draft, cols, color)
           [
             heading(state, color:),
