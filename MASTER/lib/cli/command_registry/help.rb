@@ -70,6 +70,7 @@ module Master
           summary: "deploy a registered app, inventory group, or the complete production fleet through the canonical VPS path",
           detail: [
             "/deploy <group> --confirm - deploy every registered app whose deploy_root belongs to that group.",
+            "/deploy rails --confirm - the inventory group naming the RAILS apps (brgen mrdamascy amber bsdports).",
             "/deploy <app> --confirm - deploy one app registered in RAILS/apps.yml.",
             "/deploy all --confirm - deploy every active registered surface, including MASTER web.",
             "Plain language works: redeploy OPENBSD, RAILS apps and MASTER web to vm23.",
@@ -464,6 +465,7 @@ module Master
         "voice" => "interface", "narrate" => "interface", "bard" => "interface",
         "reload" => "session", "incident" => "session",
         "play" => "media", "mov" => "media", "documents" => "media", "android" => "media", "ios" => "media",
+        "nsfw" => "media",
         "support" => "review",
         "soul" => "constitution", "help" => "help", "exit" => "session", "quit" => "session"
       }.freeze
