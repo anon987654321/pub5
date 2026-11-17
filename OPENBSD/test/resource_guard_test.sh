@@ -79,7 +79,7 @@ export GUARD_SHED_STRIKES=2
 # Point the guard's state files into the sandbox.
 run_tick() {
   free=$1
-  GUARD_CPU_PRESSURE_FILE="$DB/cpu-pressure" FAKE_FREE=$free ksh "$SANDBOX/guard_under_test.sh" >/dev/null 2>&1 || true
+  FAKE_FREE=$free ksh "$SANDBOX/guard_under_test.sh" >/dev/null 2>&1 || true
 }
 
 # Rebuild a script with the sandbox paths, one case per line. The state-file
@@ -91,6 +91,7 @@ rewrite_paths() { # rewrite_paths <src> <dst> <helper>
     "export PATH="*) print -r -- "export PATH=$BIN:/usr/bin:/bin" ;;
     SHED_STATE=*) print -r -- "SHED_STATE=$DB/shed" ;;
     STRIKE_STATE=*) print -r -- "STRIKE_STATE=$DB/strikes" ;;
+    CPU_PRESSURE_FILE=*) print -r -- "CPU_PRESSURE_FILE=$DB/cpu-pressure" ;;
     ALL_APPS_FLAG=*) print -r -- "ALL_APPS_FLAG=$DB/all_apps" ;;
     GUARD_HELPER=*) print -r -- "GUARD_HELPER=$3" ;;
     EMERGENCY=*) print -r -- "EMERGENCY=$DB/emergency" ;;
