@@ -222,8 +222,9 @@ model_defs:
 # operator's current account/quota constraint keeps it out of the live pool.
 # Do not enable it by zero-key discovery or background warmup.
 models:
-  grok_primary:
-    - *grok_cli_auto
+  # OpenRouter's keyless free fallback head. Subscription CLIs belong to
+  # their declared model tiers; they are never smuggled into this API list.
+  openrouter_primary:
     - *nemotron_super
   keyless:
     - *web_chat_grok
@@ -522,7 +523,8 @@ three_mirror_redundancy:
 # names a file the CLI writes its answer to, and a prompt with no %{prompt}
 # goes in on stdin. A model named auto passes no model flag, so the CLI uses
 # its own default. `login` is the command the pool names when signed out.
-# Signed-in subscription CLIs lead the remote class when available.
+# Subscription CLI names describe authentication and billing boundaries only.
+# They do not reorder model tiers: the selected tier's YAML order is authoritative.
 # The generic CLI runner owns Grok, Codex, AGY and zai-chat; Anthropic remains an API provider.
 subscription_lanes: [grok-cli, codex-cli, agy, zai-cli]
 
