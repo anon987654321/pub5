@@ -72,13 +72,9 @@ module Master
       end
 
       def capture
-        source_before = source_manifest
-        inventory_before = inventory_snapshot
-        @current_inventory_digest = inventory_before["digest"]
+        source_before, inventory_before = capture_baseline
         receipts = initial_receipts(inventory_before, source_before)
-
-        source_after = source_manifest
-        inventory_after = inventory_snapshot
+        source_after, inventory_after = capture_current_state
         stable = surface_stability(source_before, source_after, inventory_before, inventory_after)
         mark_unstable_receipts(receipts, source_after, inventory_after) unless stable
 
@@ -89,6 +85,17 @@ module Master
           source_before:, source_after:, inventory_before:, inventory_after:, stable:)
       rescue StandardError => e
         failed_report(e)
+      end
+
+      def capture_baseline
+        source = source_manifest
+        inventory = inventory_snapshot
+        @current_inventory_digest = inventory["digest"]
+        [source, inventory]
+      end
+
+      def capture_current_state
+        [source_manifest, inventory_snapshot]
       end
 
       private
