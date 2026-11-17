@@ -167,6 +167,14 @@ model_defs:
     <<: *model_defaults
     context_window: 1000000
     score: { quality: 0.99, speed: 0.50, cost: 0.20 }
+  replicate_gpt_5_2: &replicate_gpt_5_2
+    id: replicate:openai/gpt-5.2
+    <<: *model_defaults
+    score: { quality: 0.98, speed: 0.82, cost: 0.55 }
+  replicate_claude_opus_5_5: &replicate_claude_opus_5_5
+    id: replicate:anthropic/claude-opus-5.5
+    <<: *model_defaults
+    score: { quality: 0.99, speed: 0.58, cost: 0.25 }
   # Codex and Grok use the generic signed-in CLI adapter. Grok remains listed
   # in the primary pool; Codex stays outside automatic selection until its
   # bounded execution probe can prove a live response.
@@ -230,6 +238,8 @@ models:
     - *web_chat_grok
     - *web_chat_chatgpt
   default:
+    - *replicate_gpt_5_2
+    - *replicate_claude_opus_5_5
     - *glm_5_3_flash
     - *zai_cli_auto
     - *glm_5_3
@@ -251,12 +261,11 @@ models:
     - *ollama_gemma
     - *llama_cli_gguf
   primary:
-    # glm-5.3-flash leads every /fix run as the primary #1 lane (operator,
-    # 2026-11-16); without ZAI_API_KEY it falls through exactly like any dead
-    # lane. zai-cli:auto follows so a keyless host still rides the GLM class
-    # through the operator's configured CLI, and glm-5.3 follows so a flashed-
-    # out or absent flash key still reaches the same provider, and the sandbox
-    # gateway follows so a keyless OpenHands run answers next.
+    # Replicate GPT-5.2 is the operator's current automatic primary. Claude
+    # Opus 5.5 is its premium reasoning fallback; model and spend policy live
+    # in this catalogue, not in a saved shell-specific preference.
+    - *replicate_gpt_5_2
+    - *replicate_claude_opus_5_5
     - *glm_5_3_flash
     - *zai_cli_auto
     - *glm_5_3
@@ -271,6 +280,8 @@ models:
     - *ollama_gemma
     - *llama_cli_gguf
   strong:
+    - *replicate_gpt_5_2
+    - *replicate_claude_opus_5_5
     - *glm_5_3_flash
     - *zai_cli_auto
     - *glm_5_3
@@ -700,27 +711,20 @@ openai_compatible:
     key_env: [ZAI_API_KEY]
     privacy_posture: unknown
 
-# Language models Replicate hosts, asked explicitly as replicate:<owner>/<name>
-# with REPLICATE_API_TOKEN or REPLICATE_API_KEY. They appear in /model when
-# the key is present and use ReplicateSender; they stay out of automatic
-# ranking until verified per-model prices and a per-run spend cap are enforced.
-# Every slug was probed live on 2026-11-13 (a one-token POST to the model's
-# /predictions endpoint): each answered, and each declares the input keys the
-# dispatcher now shapes its request from — Anthropic max_tokens+system_prompt,
-# OpenAI gpt-5.x max_completion_tokens+system_prompt, Google
-# max_output_tokens+system_instruction, gpt-oss max_tokens only
-# (replicate_sender.rb REPLICATE_CHAT_SHAPES). Strongest first.
-# deepseek-ai/deepseek-v3.1 and moonshotai/kimi-k2.5 were here and Replicate has
-# since disabled both deployments, so a call to either failed 422; git history
-# holds the removal.
+# Replicate chat is a paid primary lane, not merely an opt-in model picker.
+# The only automatically eligible models are those with verified per-token
+# prices and an enforced per-process reservation ceiling.
 replicate_chat:
-  - anthropic/claude-opus-5.5
   - openai/gpt-5.2
-  - google/gemini-4-carbon
-  - anthropic/claude-4.5-sonnet
-  - openai/gpt-5
-  - google/gemini-2.5-flash
-  - openai/gpt-oss-120b
+  - anthropic/claude-opus-5.5
+
+replicate_chat_budget:
+  run_cap_usd: 14.0
+  call_cap_usd: 1.0
+  input_token_safety_factor: 1.5
+  prices_usd_per_million:
+    openai/gpt-5.2: { input: 1.75, output: 14.0 }
+    anthropic/claude-opus-5.5: { input: 4.0, output: 20.0 }
 
 # Tier-D is a dormant local Ollama fallback. It is disabled by default; when
 # explicitly enabled, the only eligible model is allowlisted Gemma 3 4B.
