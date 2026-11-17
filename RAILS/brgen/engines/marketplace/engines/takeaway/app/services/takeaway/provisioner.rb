@@ -9,14 +9,15 @@ module Takeaway
 
     Result = Data.define(:restaurant, :store)
 
-    def self.create_restaurant!(owner:, attributes:, marketplace_store: nil)
-      new(owner:, attributes:, marketplace_store:).create_restaurant!
+    def self.create_restaurant!(owner:, attributes:, marketplace_store: nil, city: nil)
+      new(owner:, attributes:, marketplace_store:, city:).create_restaurant!
     end
 
-    def initialize(owner:, attributes:, marketplace_store: nil)
+    def initialize(owner:, attributes:, marketplace_store: nil, city: nil)
       @owner = owner
       @attributes = attributes.to_h.symbolize_keys
       @marketplace_store = marketplace_store
+      @city = city
     end
 
     def create_restaurant!
@@ -33,7 +34,7 @@ module Takeaway
           restaurant.marketplace_store = store
           restaurant.active = false
           restaurant.demo = false
-          restaurant.city = Current.city_record if Current.respond_to?(:city_record) && Current.city_record
+          restaurant.city = @city || Current.city_record if @city || (Current.respond_to?(:city_record) && Current.city_record)
           restaurant.save!
 
           DEFAULT_MENU_CATEGORIES.each do |name|
