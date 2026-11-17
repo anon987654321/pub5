@@ -105,6 +105,7 @@ class TestLawPathReach < Minitest::Test
         MASTER/bin/master
         MASTER/bin/doctor
         MASTER/lib/cli/session/repl_io.rb
+        MASTER/lib/cli/session/result_display.rb
         MASTER/lib/cli/session/thinking_indicator.rb
         MASTER/lib/cli/turn_router.rb
         MASTER/lib/cli/command_registry.rb
