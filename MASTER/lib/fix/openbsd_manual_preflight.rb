@@ -299,7 +299,7 @@ module Master
       # the NSD tree; never treat a partial task receipt as release-wide proof.
       def mirror_configuration_inventory(root: Master::REPO_ROOT)
         output = IO.popen(
-          ["git", "-C", root, "ls-files", "-z", "--", "OPENBSD/mirror/etc", "OPENBSD/mirror/var/nsd"],
+          ["git", "-C", root, "ls-files", "-z", "--", "OPENBSD/mirror/etc", "OPENBSD/mirror/var/nsd", "OPENBSD/mirror/home"],
           "rb",
           &:read
         )
@@ -309,7 +309,7 @@ module Master
         end
 
         output.to_s.split("\0").filter_map do |relative|
-          next unless relative.start_with?("OPENBSD/mirror/etc/", "OPENBSD/mirror/var/nsd/")
+          next unless relative.start_with?("OPENBSD/mirror/etc/", "OPENBSD/mirror/var/nsd/") || %w[OPENBSD/mirror/home/johann/.mailcap OPENBSD/mirror/home/johann/.muttrc].include?(relative)
           absolute = File.join(root, relative)
           next unless File.file?(absolute)
 
@@ -847,6 +847,8 @@ module Master
         return %w[daily(8) cron(8) ksh(1)] if %w[OPENBSD/mirror/etc/daily.local OPENBSD/mirror/etc/weekly.local].include?(path)
         return %w[crontab(5) cron(8) ksh(1) zsh(1) ruby(1)] if path == "OPENBSD/mirror/etc/crontab.vm23"
         return %w[zsh(1)] if path == "OPENBSD/mirror/etc/.zshrc"
+        return %w[mailcap(5) mutt(1)] if path == "OPENBSD/mirror/home/johann/.mailcap"
+        return %w[mutt(1)] if path == "OPENBSD/mirror/home/johann/.muttrc"
         return %w[sshd_config(5) sshd(8) ssh(1)] if path == "OPENBSD/mirror/etc/ssh/sshd_config"
         return %w[nsd.conf(5) nsd(8) nsd-checkconf(8) nsd-control(8)] if path == "OPENBSD/mirror/var/nsd/etc/nsd.conf"
         if path.match?(%r{\AOPENBSD/mirror/var/nsd/zones/master/[^/]+\.zone\z})

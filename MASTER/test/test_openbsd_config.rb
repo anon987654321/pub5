@@ -44,6 +44,8 @@ class TestOpenbsdConfig < Minitest::Test
     assert_includes paths, "OPENBSD/mirror/etc/relayd.conf"
     assert_includes paths, "OPENBSD/mirror/etc/rc.conf.local"
     assert_includes paths, "OPENBSD/mirror/var/nsd/etc/nsd.conf"
+    assert_includes paths, "OPENBSD/mirror/home/johann/.mailcap"
+    assert_includes paths, "OPENBSD/mirror/home/johann/.muttrc"
     assert(paths.any? { |path| path.end_with?(".zone") })
   end
 
