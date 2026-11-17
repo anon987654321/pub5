@@ -48,60 +48,82 @@ module Master
         def run_experiment
           require_relative "bare_scan"
           corpus = BareScan.load_corpus("lexical")
-          defects = corpus.laws.filter_map do |id, row|
-            bad = row.fetch(:builder).meta[:bad]
-            good = row.fetch(:builder).meta[:good]
-            next nil if bad.nil? || good.nil?
-
-            # A law proves its fixtures at the path it declares (example_path):
-            # DEBUG_OUTPUT judges /lib/, TIME_ZONE_UNSAFE judges /app/. Traffic
-            # that ignores the reach is not the law's own proof condition.
-            example = row.fetch(:builder).meta[:example_path].to_s.delete_prefix("/")
-            relative = example.empty? ? "repo/lib/incoming.rb" : example
-            { law: id, bad:, good:, severity: row.fetch(:entry)["severity"], relative: }
-          end
+          defects = fixture_defects(corpus)
           refuse("falsify run", "the corpus exposes no fixture pair to traffic",
                  "laws with bad and good fixtures; rake dogfood is the full provenance") if defects.empty?
 
           started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          governed, ungoverned, drift = measure_fixture_traffic(corpus, defects)
+          reading = falsification_reading(defects, governed, ungoverned, drift, started)
+          persist_falsification_reading(reading)
+          emit(command: "falsify run", reading:)
+          governed[:escaped].zero? ? 0 : 1
+        end
+
+        def fixture_defects(corpus)
+          corpus.laws.filter_map do |id, row|
+            bad = row.fetch(:builder).meta[:bad]
+            good = row.fetch(:builder).meta[:good]
+            next if bad.nil? || good.nil?
+
+            example = row.fetch(:builder).meta[:example_path].to_s.delete_prefix("/")
+            relative = example.empty? ? "repo/lib/incoming.rb" : example
+            { law: id, bad:, good:, severity: row.fetch(:entry)["severity"], relative: }
+          end
+        end
+
+        def measure_fixture_traffic(corpus, defects)
           governed = { blocked: 0, repaired: 0, remediation_steps: 0, escaped: 0 }
           ungoverned = { accepted: 0, survived: 0 }
-          drift_before = drift_after = 0
+          drift = { before: 0, after: 0 }
+          defects.each { |defect| measure_fixture(defect, corpus, governed, ungoverned, drift) }
+          [governed, ungoverned, drift]
+        end
 
-          defects.each do |defect|
-            Dir.mktmpdir do |dir|
-              subject = File.join(dir, defect[:relative])
-              FileUtils.mkdir_p(File.dirname(subject))
+        def measure_fixture(defect, corpus, governed, ungoverned, drift)
+          Dir.mktmpdir do |dir|
+            subject = File.join(dir, defect[:relative])
+            FileUtils.mkdir_p(File.dirname(subject))
+            measure_ungoverned_lane(subject, defect, corpus, ungoverned)
+            measure_governed_lane(subject, defect, corpus, governed, drift)
+          end
+        end
 
-              # Lane A, ungoverned: the change lands as it arrived.
-              File.write(subject, defect[:bad])
-              ungoverned[:accepted] += 1
-              ungoverned[:survived] += 1 if corpus.scan_file(subject).any? { |f| f[:law] == defect[:law] }
+        def measure_ungoverned_lane(subject, defect, corpus, ungoverned)
+          File.write(subject, defect[:bad])
+          ungoverned[:accepted] += 1
+          ungoverned[:survived] += 1 if fixture_finding?(corpus, subject, defect[:law])
+        end
 
-              # Lane B, governed: measure, refuse, repair, measure again.
-              File.write(subject, defect[:bad])
-              first = corpus.scan_file(subject)
-              drift_before += first.size
-              if first.any? { |f| f[:law] == defect[:law] }
-                governed[:blocked] += 1
-                File.write(subject, defect[:good])
-                governed[:remediation_steps] += 1
-                second = corpus.scan_file(subject)
-                drift_after += second.size
-                if second.any? { |f| f[:law] == defect[:law] }
-                  governed[:escaped] += 1
-                else
-                  governed[:repaired] += 1
-                end
-              else
-                governed[:escaped] += 1
-                governed[:remediation_steps] += 1
-              end
-            end
+        def measure_governed_lane(subject, defect, corpus, governed, drift)
+          File.write(subject, defect[:bad])
+          first = corpus.scan_file(subject)
+          drift[:before] += first.size
+          unless first.any? { |finding| finding[:law] == defect[:law] }
+            governed[:escaped] += 1
+            governed[:remediation_steps] += 1
+            return
           end
 
+          governed[:blocked] += 1
+          File.write(subject, defect[:good])
+          governed[:remediation_steps] += 1
+          second = corpus.scan_file(subject)
+          drift[:after] += second.size
+          if second.any? { |finding| finding[:law] == defect[:law] }
+            governed[:escaped] += 1
+          else
+            governed[:repaired] += 1
+          end
+        end
+
+        def fixture_finding?(corpus, subject, law)
+          corpus.scan_file(subject).any? { |finding| finding[:law] == law }
+        end
+
+        def falsification_reading(defects, governed, ungoverned, drift, started)
           elapsed = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started).round(3)
-          reading = {
+          {
             "at" => Time.now.utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "revision" => FastGate.head_revision,
             "scope" => "lexical corpus, synthetic fixture traffic",
@@ -111,14 +133,19 @@ module Master
               held_quality: ratio(governed[:repaired], governed[:blocked] + governed[:escaped]),
               avg_remediation_steps: ratio(governed[:remediation_steps], defects.size),
             ),
-            "ratchet_drift" => { ungoverned_lane_findings: drift_before, after_governed_repair: drift_after },
+            "ratchet_drift" => {
+              ungoverned_lane_findings: drift[:before],
+              after_governed_repair: drift[:after],
+            },
             "elapsed_s" => elapsed,
           }
+        end
+
+        def persist_falsification_reading(reading)
           path = File.join(master_root, "data", READINGS)
           FileUtils.mkdir_p(File.dirname(path))
-          File.open(path, "a") { |f| f.puts JSON.generate(reading) }
-          emit(command: "falsify run", reading:)
-          governed[:escaped].zero? ? 0 : 1
+          File.open(path, "a") { |file| file.puts JSON.generate(reading) }
+          path
         end
 
         def status
