@@ -728,31 +728,39 @@ module Pub4Admin
     dev, public_dir = master_web_root!
     root = File.dirname(public_dir)
     master = Etc.getgrnam("master")
-    %w[tmp log].each do |name|
-      path = File.join(root, name)
-      if File.exist?(path) || File.symlink?(path)
-        stat = File.lstat(path)
-        raise "#{path} must be a real directory" unless stat.directory? && !stat.symlink?
-      else
-        Dir.mkdir(path, 0o2775)
-      end
-      master_web_tree_paths!(path).each do |entry, stat|
-        File.chown(dev.uid, master.gid, entry)
-        mode = stat.mode & 0o7777
-        if stat.directory?
-          mode = 0o2775
-        else
-          mode |= 0o660
-          mode |= 0o110 if (stat.mode & 0o111).positive?
-        end
-        File.chmod(mode, entry)
-      end
-    end
+    %w[tmp log].each { |name| prepare_master_web_runtime_dir(root, name, dev, master) }
     puts "master_web0: tmp/log owned by dev:master with group write"
     0
   rescue ArgumentError
     raise "master account or group is missing; cannot prepare runtime directories"
   end
+
+  def prepare_master_web_runtime_dir(root, name, dev, master)
+    path = File.join(root, name)
+    if File.exist?(path) || File.symlink?(path)
+      stat = File.lstat(path)
+      raise "#{path} must be a real directory" unless stat.directory? && !stat.symlink?
+    else
+      Dir.mkdir(path, 0o2775)
+    end
+    master_web_tree_paths!(path).each do |entry, stat|
+      prepare_master_web_runtime_entry(entry, stat, dev, master)
+    end
+  end
+
+  def prepare_master_web_runtime_entry(path, stat, dev, master)
+    File.chown(dev.uid, master.gid, path)
+    mode = stat.mode & 0o7777
+    mode = stat.directory? ? 0o2775 : runtime_file_mode(mode, stat)
+    File.chmod(mode, path)
+  end
+
+  def runtime_file_mode(mode, stat)
+    mode |= 0o660
+    mode |= 0o110 if (stat.mode & 0o111).positive?
+    mode
+  end
+
   def valid_ci_timeout?(value)
     value.match?(/\A[0-9]{1,4}\z/) && (1..7200).cover?(value.to_i)
   end
