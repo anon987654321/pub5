@@ -27,12 +27,22 @@ class TestProviderConfig < Minitest::Test
   # lives there. Neither half may drift from the other, and this row carries no
   # ruby_llm_key on purpose - RubyLLM has no zhipu setter, the trap
   # test_provider_key_wiring exists to catch.
+  def test_replicate_declares_both_custom_api_credential_names
+    providers = YAML.safe_load_file(File.expand_path("../data/providers.yml", __dir__))
+    row = providers.fetch("replicate")
+
+    assert_equal %w[REPLICATE_API_TOKEN REPLICATE_API_KEY], Array(row["env"])
+    assert_equal Array(row["env"]), Array(row["api_key_envs"])
+    refute row.key?("ruby_llm_key"), "Replicate uses its dedicated sender, not RubyLLM configuration"
+  end
+
   def test_the_zai_route_is_coherent_across_both_halves
     providers = YAML.safe_load_file(File.expand_path("../data/providers.yml", __dir__))
     models = YAML.safe_load_file(File.expand_path("../data/models.yml", __dir__), aliases: true)
 
     row = providers.fetch("zai")
     assert_equal %w[ZAI_API_KEY], Array(row["env"])
+    assert_equal %w[ZAI_API_KEY], Array(row["api_key_envs"])
     pattern = Regexp.new(row["model_pattern"])
     assert pattern.match?("glm-5.3-flash")
     refute pattern.match?("claude-sonnet-5-5")
