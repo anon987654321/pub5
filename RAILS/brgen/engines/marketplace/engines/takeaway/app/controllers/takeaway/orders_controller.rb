@@ -15,7 +15,6 @@ class Takeaway::OrdersController < Takeaway::BaseController
     mine = Takeaway::Order.where(user_id: Current.user.id)
     scope = mine.or(incoming).includes(:user, restaurant: :user).recent
     @pagy, @orders = pagy(scope)
-    @incoming_order_ids = @orders.filter_map { |order| order.id if order.restaurant.user_id == Current.user.id }.to_set
   end
 
   def show
