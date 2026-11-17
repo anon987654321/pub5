@@ -20,7 +20,7 @@
 # watch is bounded: it runs five reads (df, swapctl, rcctl, backup marker and
 # CPU-monitor heartbeat) and changes nothing. Run it from root's crontab.
 # PUB4_ALERT_PATH_PREFIX lets the test put fake df, swapctl and rcctl first.
-PATH=${PUB4_ALERT_PATH_PREFIX:+$PUB4_ALERT_PATH_PREFIX:}/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
+PATH=${PUB4_ALERT_PATH_PREFIX:+$PUB4_ALERT_PATH_PREFIX:}/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 
 LOG=${PUB4_ALERT_LOG:-/var/log/pub4-alerts.log}
 STATE=${PUB4_ALERT_STATE:-/var/db/pub4/alerts}
@@ -48,6 +48,8 @@ CPU_CRIT_STRIKES=2
 CPU_DEPLOY_STRIKES=${PUB4_CPU_DEPLOY_STRIKES:-15}
 CPU_RECOVER_STRIKES=3
 CPU_HEARTBEAT_MAX_AGE=420
+DEPLOY_ADMIN=${PUB4_ALERT_ADMIN:-/usr/local/sbin/pub5-admin}
+DEPLOY_RUN_RUBY=${PUB4_ALERT_RUBY:-/usr/local/bin/ruby}
 
 now() { date +%s; }
 
@@ -129,6 +131,66 @@ watch_services() {
     case " $ALLOW_FAILED " in *" $svc "*) continue ;; esac
     raise "failed-$svc" "$svc is in rcctl failed - read /var/log/daemon, then: doas rcctl restart $svc (an amber or bsdports failure may be resource_guard shedding: check /var/db/resource_guard_shed)"
   done
+}
+
+# Fleet receipts are root-private. Read them through the fixed broker and
+# alert only after the owner PID has disappeared. A live PID is deliberately
+# treated as in-flight (even if its identity may have changed); recover --plan
+# performs the stronger process fingerprint and child-process checks.
+watch_deploy_recovery() {
+  if [[ ! -x $DEPLOY_ADMIN || -L $DEPLOY_ADMIN ]]; then
+    raise deploy-recovery-status-unavailable "pub5-admin missing or untrusted at $DEPLOY_ADMIN - install and verify the tracked mirror with doas zsh OPENBSD/OPERATOR.sh --verify"
+    return 0
+  fi
+
+  runs=$("$DEPLOY_ADMIN" deploy-run-list 2>/dev/null) || {
+    raise deploy-recovery-status-unavailable "pub5-admin deploy-run-list failed - inspect the broker and /var/log/daemon"
+    return 0
+  }
+
+  pending=$(print -r -- "$runs" | "$DEPLOY_RUN_RUBY" -rjson -e '
+    rows = JSON.parse(STDIN.read)
+    abort "deploy-run-list is not an array" unless rows.is_a?(Array)
+    rows.each do |r|
+      abort "invalid deploy receipt" unless r.is_a?(Hash)
+      next unless r["recovery_state"] == "pending" && %w[running failed].include?(r["status"])
+      id = r["run_id"]
+      abort "invalid deploy receipt ID" unless id.is_a?(String) && id.match?(/\A\d{8}T\d{6}Z-[a-z0-9_-]{1,32}-\d+\z/)
+      pid = r["pid"]
+      abort "invalid deploy receipt PID" unless pid.is_a?(Integer) && pid.positive?
+      alive = begin
+        Process.kill(0, pid)
+        true
+      rescue Errno::EPERM
+        true
+      rescue Errno::ESRCH
+        false
+      end
+      next if alive
+      target = r["target"]
+      stage = r["stage"]
+      sha = r["pinned_sha"] || "unknown"
+      snapshot = r["snapshot_recorded"] == true ? "complete" : "incomplete"
+      log = r["run_log"]
+      abort "invalid deploy receipt fields" unless
+        target.is_a?(String) && target.match?(/\A[a-z0-9_-]{1,32}\z/) &&
+        stage.is_a?(String) && stage.match?(/\A[A-Za-z0-9_.:+\/-]{1,160}\z/) &&
+        sha.to_s.match?(/\A(?:[0-9a-f]{7,40}|unknown)\z/i) &&
+        log.is_a?(String) && log.match?(/\A\/[A-Za-z0-9_.\/-]{1,2048}\z/)
+      puts [id, target, stage, pid, r["status"], snapshot, sha, log].join("|")
+    end
+  ') || {
+    raise deploy-recovery-status-unavailable "cannot parse fleet deploy receipts - inspect /var/db/pub5/deploy_runs through pub5-admin"
+    return 0
+  }
+
+  [[ -n $pending ]] || return 0
+  while IFS='|' read -r run_id target stage pid status snapshot sha run_log; do
+    [[ -n $run_id ]] || continue
+    raise "deploy-recovery-$run_id" "interrupted deploy $run_id target=$target status=$status stage=$stage owner PID $pid is gone, snapshot=$snapshot pinned=$sha - inspect with: zsh OPENBSD/bin/vps-deploy recover --plan; log: $run_log"
+  done <<EOF
+$pending
+EOF
 }
 
 watch_backup() {
@@ -366,6 +428,7 @@ watch)
   watch_services
   watch_backup
   watch_cpu_heartbeat
+  watch_deploy_recovery
   ;;
 cpu-watch)
   cpu_watch
