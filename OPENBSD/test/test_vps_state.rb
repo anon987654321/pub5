@@ -129,6 +129,24 @@ class TestVpsState < Minitest::Test
     end
   end
 
+  def test_pending_receipt_view_is_bounded_and_marks_truncation
+    Dir.mktmpdir do |dir|
+      101.times do |index|
+        run_id = format("20261117T%06dZ-all-%d", index, 20_000 + index)
+        write_run(dir, run_id:, pid: 2_000_000_000, status: "failed")
+      end
+
+      payload = JSON.parse(state(dir, "--json"))
+      recovery = payload.fetch("deploy_recovery")
+
+      assert_equal "truncated", recovery.fetch("state")
+      assert_equal true, recovery.fetch("truncated")
+      assert_equal 101, recovery.fetch("scanned")
+      assert_equal 100, recovery.fetch("count")
+      assert_equal 100, recovery.fetch("pending").length
+    end
+  end
+
   def test_corrupt_fleet_receipt_is_not_silently_reported_as_no_pending_runs
     Dir.mktmpdir do |dir|
       directory = File.join(dir, "deploy_runs")
