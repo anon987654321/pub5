@@ -11,12 +11,12 @@ module Master
       schema routing weights fallback_policy failover defaults model_defs models routes
       task_strengths vision_families tool_capable_prefixes operation_constraints continuity
       openrouter ferrum_web_chat three_mirror_redundancy subscription_lanes cli_lanes
-      local_servers openai_compatible replicate_chat ollama free_tier paid_tail media_lanes
+      local_servers openai_compatible replicate_chat replicate_chat_budget ollama free_tier paid_tail media_lanes
     ].freeze
     MODEL_MAP_SECTIONS = %w[
       routing weights fallback_policy failover defaults model_defs models routes task_strengths
       vision_families operation_constraints continuity openrouter ferrum_web_chat
-      three_mirror_redundancy cli_lanes openai_compatible ollama free_tier paid_tail media_lanes
+      three_mirror_redundancy cli_lanes openai_compatible replicate_chat_budget ollama free_tier paid_tail media_lanes
     ].freeze
     MODEL_ARRAY_SECTIONS = %w[tool_capable_prefixes subscription_lanes local_servers replicate_chat].freeze
     MODEL_SCORE_FIELDS = %w[quality speed cost].freeze
