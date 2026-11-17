@@ -164,6 +164,7 @@ watch_deploy_recovery() {
                               !started.empty? && !command.empty?
       started = started.sub(/\n+\z/, "")
       command = command.sub(/\n+\z/, "")
+      return "unknown" if started.empty? || command.empty?
       checksum, checksum_status = Open3.capture2("cksum", stdin_data: command)
       return "unknown" unless checksum_status.success? && !checksum.strip.empty?
       identity = "#{started.gsub(/[^A-Za-z0-9]/, "_")}_#{checksum.strip.tr(" ", "_")}"
