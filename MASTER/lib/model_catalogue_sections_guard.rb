@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "date"
+
 module Master
   # Validates the nested provider-lane and media-lane catalogues inside models.yml.
   # Kept separate from tier identity/routing so each schema has one responsibility.
@@ -383,7 +385,6 @@ module Master
         valid_date = expiry.is_a?(String) && expiry.match?(/\A\d{4}-\d{2}-\d{2}\z/)
         if valid_date
           begin
-            require "date"
             Date.iso8601(expiry)
           rescue Date::Error
             valid_date = false
