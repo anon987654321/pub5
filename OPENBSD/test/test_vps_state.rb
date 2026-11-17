@@ -133,10 +133,23 @@ class TestVpsState < Minitest::Test
 
   def test_truncated_empty_receipt_view_is_not_reported_as_none
     Dir.mktmpdir do |dir|
+      501.times do |index|
+        run_id = format("20261117T%06dZ-all-%d", index, 30_000 + index)
+        path = write_run(dir, run_id:, pid: 2_000_000_000, status: "failed")
+        record = JSON.parse(File.read(path))
+        record["status"] = "recovered"
+        record["recovery_state"] = "complete"
+        File.write(path, JSON.generate(record))
+        File.chmod(0o600, path)
+      end
+
       payload = JSON.parse(state(dir, "--json"))
       recovery = payload.fetch("deploy_recovery")
-      assert_equal "none", recovery.fetch("state")
-      assert_equal false, recovery.fetch("truncated")
+      assert_equal "truncated", recovery.fetch("state")
+      assert_equal true, recovery.fetch("truncated")
+      assert_equal 501, recovery.fetch("scanned")
+      assert_equal 0, recovery.fetch("count")
+      assert_empty recovery.fetch("pending")
     end
   end
 
