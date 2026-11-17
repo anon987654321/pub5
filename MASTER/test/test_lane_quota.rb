@@ -133,9 +133,10 @@ class TestLaneQuota < Minitest::Test
     assert_equal :manual, Quota.until_for("ollama:glm-4", manual:)
   end
 
-  def test_selection_skips_a_quota_dead_lane_without_a_hand_entry
+  def test_selection_preserves_declared_lane_order_and_skips_a_quota_dead_lane
     models = %w[agy:auto grok-cli:sonnet]
-    assert_equal "grok-cli:sonnet", Master::Io::LaneSelection.first_live(models), "grok-cli leads agy"
+    assert_equal "agy:auto", Master::Io::LaneSelection.first_live(models),
+                 "subscription status does not reorder the caller's declared lane order"
     assert_equal "agy:auto", Master::Io::LaneSelection.first_live(%w[agy:auto deepseek-chat])
 
     Quota.note("agy:auto", AGY_REPLY)
