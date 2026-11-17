@@ -79,7 +79,7 @@ export GUARD_SHED_STRIKES=2
 # Point the guard's state files into the sandbox.
 run_tick() {
   free=$1
-  FAKE_FREE=$free ksh "$SANDBOX/guard_under_test.sh" >/dev/null 2>&1 || true
+  GUARD_CPU_PRESSURE_FILE="$DB/cpu-pressure" FAKE_FREE=$free ksh "$SANDBOX/guard_under_test.sh" >/dev/null 2>&1 || true
 }
 
 # Rebuild a script with the sandbox paths, one case per line. The state-file
@@ -226,6 +226,27 @@ check "deploy flag, load 5: no pkill" "" "$(cat "$DB/pkills" 2>/dev/null)"
 rm -f "$DB/flag/.deploying-test"
 FAKE_LOAD=5.0 FAKE_FREE="$CLEAR" ksh "$SANDBOX/guard_with_helper.sh" >/dev/null 2>&1 || true
 check "no deploy flag, load 5: the sweep ran" "yes" "$([[ -s "$DB/pkills" ]] && print yes)"
+
+print "11. confirmed CPU pressure sheds optional apps without core restarts"
+reset
+print -r -- "$(date +%s) 85" > "$DB/cpu-pressure"
+run_tick "$CLEAR"
+check "confirmed CPU pressure sheds only bsdports first" "amber" "$(running)"
+check "CPU guard never restarts or stops core services" "" "$(cat "$DB/actions" 2>/dev/null | grep -E 'master|brgen' || true)"
+
+print "12. an expired CPU pressure signal is ignored"
+reset
+print -r -- "$(( $(date +%s) - 600 )) 91" > "$DB/cpu-pressure"
+run_tick "$CLEAR"
+check "stale CPU pressure does not shed" "amber bsdports" "$(running)"
+
+print "13. an active deploy suppresses CPU-triggered shedding"
+reset
+mkdir -p "$DB/flag"
+: > "$DB/flag/.deploying-test"
+print -r -- "$(date +%s) 88" > "$DB/cpu-pressure"
+run_tick "$CLEAR"
+check "deploy flag keeps optional services up" "amber bsdports" "$(running)"
 
 rm -rf "$SANDBOX"
 [[ $fail -eq 0 ]] && print "\nALL PASS" || { print "\nFAILURES"; exit 1; }

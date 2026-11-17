@@ -25,6 +25,9 @@ class TestPub4Alert < Minitest::Test
       "PUB4_ALERT_STATE" => File.join(dir, "state"),
       "PUB4_ALERT_LOGGER" => "true",
       "PUB4_DR_MARKER" => File.join(dir, "marker"),
+      "PUB4_CPU_HISTORY" => File.join(dir, "cpu-watch.log"),
+      "PUB4_CPU_PRESSURE" => File.join(dir, "cpu-pressure"),
+      "PUB4_CPU_HEARTBEAT" => File.join(dir, "state", "cpu-watch.seen"),
     }.merge(extra)
   end
 
@@ -41,6 +44,8 @@ class TestPub4Alert < Minitest::Test
     fake(dir, "df", %(echo "Filesystem 512-blocks Used Available Capacity Mounted on"; echo "/dev/sd0k 100 76 24 76% /home"))
     fake(dir, "swapctl", %(echo "total: 2588672 512-blocks allocated, 1000000 used, 1588672 available"))
     fake(dir, "rcctl", "exit 0")
+    FileUtils.mkdir_p(File.join(dir, "state"))
+    File.write(File.join(dir, "state", "cpu-watch.seen"), Time.now.to_i.to_s)
     File.write(File.join(dir, "marker"), Time.now.to_i.to_s)
   end
 
@@ -120,6 +125,86 @@ class TestPub4Alert < Minitest::Test
       File.write(File.join(dir, "marker"), (Time.now.to_i - 4 * 86_400).to_s)
       run_alert(dir, "watch")
       assert_match(/backup-stale the newest dr-pull reported 96 hours ago/, log(dir))
+    end
+  end
+
+  def fake_cpu(dir, user:, system:, idle:)
+    row = "0 0 0 0 0 0 0 0 0 0 0 #{user} #{system} #{idle}"
+    lines = ["echo 'procs memory page disk traps cpu'", "echo 'r b avm fre flt re pi po fr sr x y z us sy id'"]
+    6.times { lines << "echo '#{row}'" }
+    fake(dir, "vmstat", lines.join("\n"))
+    fake(dir, "ps", "echo 'PCPU PID PPID USER STAT TIME COMMAND'; echo '84.0 123 1 root R 00:05 ruby'; echo '9.0 99 1 _nsd S 00:02 nsd'")
+  end
+
+  def test_cpu_watch_needs_three_high_busy_samples_and_records_process_names_only
+    Dir.mktmpdir do |dir|
+      quiet_box(dir)
+      fake_cpu(dir, user: 75, system: 10, idle: 15)
+
+      2.times { run_alert(dir, "cpu-watch") }
+      refute_includes log(dir), "cpu-saturation"
+
+      _, status = run_alert(dir, "cpu-watch")
+      assert_equal 0, status
+      assert_includes log(dir), "cpu-saturation CPU busy 85%"
+      assert_includes log(dir), "ruby"
+      refute_includes log(dir), "ruby -"
+      assert File.file?(File.join(dir, "cpu-pressure")), "active CPU pressure must be visible to resource_guard"
+      assert File.file?(File.join(dir, "state", "cpu-watch.seen")), "successful sampling must refresh the heartbeat"
+      assert_equal 3, File.readlines(File.join(dir, "cpu-watch.log")).size
+    end
+  end
+
+  def test_cpu_watch_raises_critical_after_two_95_percent_samples
+    Dir.mktmpdir do |dir|
+      quiet_box(dir)
+      fake_cpu(dir, user: 90, system: 8, idle: 2)
+
+      run_alert(dir, "cpu-watch")
+      refute_includes log(dir), "cpu-critical"
+      run_alert(dir, "cpu-watch")
+      assert_includes log(dir), "cpu-critical CPU busy 98%"
+    end
+  end
+
+  def test_cpu_watch_allows_a_longer_sustained_window_during_deploy
+    Dir.mktmpdir do |dir|
+      quiet_box(dir)
+      flag = File.join(dir, ".deploying-test")
+      File.write(flag, "")
+      fake_cpu(dir, user: 75, system: 10, idle: 15)
+
+      3.times { run_alert(dir, "cpu-watch", "PUB4_CPU_DEPLOY_FLAGS" => flag, "PUB4_CPU_DEPLOY_STRIKES" => "4") }
+      refute_includes log(dir), "cpu-saturation"
+      run_alert(dir, "cpu-watch", "PUB4_CPU_DEPLOY_FLAGS" => flag, "PUB4_CPU_DEPLOY_STRIKES" => "4")
+      assert_includes log(dir), "cpu-saturation CPU busy 85%"
+    end
+  end
+
+  def test_cpu_pressure_clears_only_after_three_quiet_samples
+    Dir.mktmpdir do |dir|
+      quiet_box(dir)
+      fake_cpu(dir, user: 75, system: 10, idle: 15)
+      3.times { run_alert(dir, "cpu-watch") }
+      assert File.file?(File.join(dir, "cpu-pressure"))
+
+      fake_cpu(dir, user: 10, system: 5, idle: 85)
+      2.times { run_alert(dir, "cpu-watch") }
+      assert File.file?(File.join(dir, "cpu-pressure"))
+      refute_includes log(dir), "cpu-recovered"
+
+      run_alert(dir, "cpu-watch")
+      refute File.exist?(File.join(dir, "cpu-pressure"))
+      assert_includes log(dir), "cpu-recovered CPU recovered to 15%"
+    end
+  end
+
+  def test_watch_alerts_when_cpu_monitor_heartbeat_is_missing
+    Dir.mktmpdir do |dir|
+      quiet_box(dir)
+      File.delete(File.join(dir, "state", "cpu-watch.seen"))
+      run_alert(dir, "watch")
+      assert_includes log(dir), "cpu-watch-stale CPU monitor heartbeat is missing"
     end
   end
 

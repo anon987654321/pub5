@@ -33,6 +33,22 @@ BACKUP_MAX_AGE=${PUB4_ALERT_BACKUP_MAX_AGE:-172800}
 # drain-jobs.sh runs the queue from cron (etc/crontab.vm23 says so).
 ALLOW_FAILED=${PUB4_ALERT_ALLOW_FAILED:-brgen_jobs}
 
+# Root-only, bounded CPU monitoring. vmstat supplies five one-second intervals;
+# the first (since-boot) row is discarded. The 5-second sample runs once a minute.
+CPU_HISTORY=${PUB4_CPU_HISTORY:-/var/log/cpu-watch.log}
+CPU_HEARTBEAT=${PUB4_CPU_HEARTBEAT:-$STATE/cpu-watch.seen}
+CPU_STATE=${PUB4_CPU_STATE:-$STATE/cpu-watch}
+CPU_PRESSURE=${PUB4_CPU_PRESSURE:-/var/db/pub4/cpu_pressure}
+CPU_DEPLOY_FLAGS=${PUB4_CPU_DEPLOY_FLAGS:-/home/dev/pub5/.deploying*}
+CPU_WARN=80
+CPU_CRIT=95
+CPU_RECOVER=60
+CPU_WARN_STRIKES=3
+CPU_CRIT_STRIKES=2
+CPU_DEPLOY_STRIKES=${PUB4_CPU_DEPLOY_STRIKES:-15}
+CPU_RECOVER_STRIKES=3
+CPU_HEARTBEAT_MAX_AGE=420
+
 now() { date +%s; }
 
 raise() {
@@ -129,6 +145,207 @@ watch_backup() {
   fi
 }
 
+# A transition alert bypasses the ordinary six-hour quiet window. State
+# transitions, not every minute of the same incident, are the unit of notice.
+raise_transition() {
+  typeset previous_quiet result
+  previous_quiet=$QUIET
+  QUIET=0
+  raise "$@"
+  result=$?
+  QUIET=$previous_quiet
+  return $result
+}
+
+# OpenBSD vmstat -c 6 -w 1 prints one since-boot summary followed by five
+# one-second interval rows. CPU columns are the final us/sy/id fields.
+# The five interval rows, not the lifetime average, determine this sample.
+vmstat_cpu_sample() {
+  vmstat -c 6 -w 1 2>/dev/null | {
+    typeset rows=0 samples=0 user_sum=0 system_sum=0 idle_sum=0 field a b c
+    while IFS= read -r row; do
+      set -- $row
+      (( $# >= 3 )) || continue
+      a=""
+      b=""
+      c=""
+      for field in "$@"; do
+        a=$b
+        b=$c
+        c=$field
+      done
+      case $a$b$c in
+      '' | *[!0-9]*) continue ;;
+      esac
+      if (( rows == 0 )); then
+        rows=1
+        continue
+      fi
+      user_sum=$(( user_sum + a ))
+      system_sum=$(( system_sum + b ))
+      idle_sum=$(( idle_sum + c ))
+      samples=$(( samples + 1 ))
+    done
+    if (( samples != 5 )); then
+      print -u2 "pub4-alert: vmstat returned $samples interval rows; expected 5"
+      exit 1
+    fi
+    print -r -- "$(( (user_sum + system_sum) / samples )) $(( user_sum / samples )) $(( system_sum / samples )) $(( idle_sum / samples ))"
+  }
+}
+
+# Diagnostic only: ps -c reports executable names, never full argument strings
+# or process environments. Command-line arguments can contain secrets.
+cpu_top_processes() {
+  ps -axcr -o pcpu,pid,ppid,user,state,time,comm 2>/dev/null | {
+    typeset rows=0 details="" line
+    while IFS= read -r line; do
+      [[ -n $line ]] || continue
+      rows=$(( rows + 1 ))
+      (( rows == 1 )) && continue
+      (( rows > 4 )) && break
+      [[ -n $details ]] && details="$details; "
+      details="$details$line"
+    done
+    print -r -- "${details:-unavailable}"
+  }
+}
+
+cpu_deploy_in_progress() {
+  typeset flag mtime stamp age
+  stamp=$(now)
+  for flag in $CPU_DEPLOY_FLAGS; do
+    [[ -e $flag ]] || continue
+    mtime=$(stat -f %m "$flag" 2>/dev/null)
+    case $mtime in *[!0-9]*|'') continue ;; esac
+    age=$(( stamp - mtime ))
+    if (( age >= 0 && age <= 1800 )); then
+      return 0
+    fi
+  done
+  return 1
+}
+
+watch_cpu_heartbeat() {
+  typeset seen stamp age
+  stamp=$(now)
+  seen=0
+  [[ -f $CPU_HEARTBEAT ]] && read seen < "$CPU_HEARTBEAT"
+  case $seen in *[!0-9]*|'') seen=0 ;; esac
+  age=$(( stamp - seen ))
+  if (( seen == 0 || age < 0 || age > CPU_HEARTBEAT_MAX_AGE )); then
+    raise cpu-watch-stale "CPU monitor heartbeat is missing or ${age}s old (limit ${CPU_HEARTBEAT_MAX_AGE}s) - inspect root cron and /var/log/cpu-watch.log"
+  fi
+}
+
+cpu_watch() {
+  typeset sample busy user system idle stamp deploying state high critical clear
+  typeset previous_state new_state details threshold
+  mkdir -p "$STATE" || return 1
+  sample=$(vmstat_cpu_sample) || {
+    raise_transition cpu-watch-sample-failed "vmstat CPU sample failed; monitor has no valid measurement - inspect /var/log/daemon and /var/log/cpu-watch.log"
+    return 1
+  }
+  set -- $sample
+  if (( $# != 4 )); then
+    raise_transition cpu-watch-sample-failed "vmstat CPU sample was malformed; monitor has no valid measurement"
+    return 1
+  fi
+  busy=$1
+  user=$2
+  system=$3
+  idle=$4
+  stamp=$(now)
+  deploying=0
+  cpu_deploy_in_progress && deploying=1
+
+  state=clear
+  high=0
+  critical=0
+  clear=0
+  if [[ -f $CPU_STATE ]]; then
+    read state high critical clear < "$CPU_STATE"
+  fi
+  case $state in clear|warning|critical) ;; *) state=clear ;; esac
+  case $high in *[!0-9]*|'') high=0 ;; esac
+  case $critical in *[!0-9]*|'') critical=0 ;; esac
+  case $clear in *[!0-9]*|'') clear=0 ;; esac
+  previous_state=$state
+
+  if (( busy >= CPU_WARN )); then
+    high=$(( high + 1 ))
+  else
+    high=0
+  fi
+  if (( busy >= CPU_CRIT )); then
+    critical=$(( critical + 1 ))
+  else
+    critical=0
+  fi
+
+  new_state=$state
+  if [[ $state == clear ]]; then
+    threshold=$CPU_WARN_STRIKES
+    (( deploying )) && threshold=$CPU_DEPLOY_STRIKES
+    if (( high >= threshold )); then
+      if (( critical >= CPU_CRIT_STRIKES )); then new_state=critical; else new_state=warning; fi
+    fi
+  elif [[ $state == warning || $state == critical ]]; then
+    if (( busy < CPU_RECOVER )); then
+      clear=$(( clear + 1 ))
+      if (( clear >= CPU_RECOVER_STRIKES )); then
+        new_state=clear
+        high=0
+        critical=0
+        clear=0
+      fi
+    else
+      clear=0
+      if (( critical >= CPU_CRIT_STRIKES )); then new_state=critical; fi
+    fi
+  fi
+
+  # An active signal is refreshed every successful minute. The load-shedding
+  # guard consumes it only while fresh; it never uses manual core recovery.
+  if [[ $new_state == clear ]]; then
+    rm -f "$CPU_PRESSURE"
+  else
+    ( umask 077; print -r -- "$stamp $busy" > "$CPU_PRESSURE" ) || {
+      raise_transition cpu-watch-state-failed "could not write CPU pressure signal at $CPU_PRESSURE"
+      return 1
+    }
+  fi
+  print -r -- "$new_state $high $critical $clear" > "$CPU_STATE" || {
+    raise_transition cpu-watch-state-failed "could not write CPU monitor state at $CPU_STATE"
+    return 1
+  }
+  print -r -- "$(date -u +%Y-%m-%dT%H:%M:%SZ) busy=${busy}% user=${user}% system=${system}% idle=${idle}% state=$new_state deploy=$deploying" >> "$CPU_HISTORY" || {
+    raise_transition cpu-watch-log-failed "could not append CPU sample to $CPU_HISTORY"
+    return 1
+  }
+  print -r -- "$stamp" > "$CPU_HEARTBEAT" || {
+    raise_transition cpu-watch-state-failed "could not write CPU monitor heartbeat at $CPU_HEARTBEAT"
+    return 1
+  }
+
+  if [[ $previous_state == clear && $new_state == warning ]]; then
+    details=$(cpu_top_processes)
+    if (( deploying )); then
+      raise_transition cpu-saturation "CPU busy ${busy}% for $high consecutive minutes during a deploy (alert threshold $CPU_DEPLOY_STRIKES minutes); top processes (names only): $details; history: $CPU_HISTORY"
+    else
+      raise_transition cpu-saturation "CPU busy ${busy}% for $high consecutive minutes (warning threshold $CPU_WARN%, recovery below $CPU_RECOVER% for $CPU_RECOVER_STRIKES minutes); top processes (names only): $details; history: $CPU_HISTORY"
+    fi
+  elif [[ $previous_state == clear && $new_state == critical ]] ||
+       [[ $previous_state == warning && $new_state == critical ]]; then
+    details=$(cpu_top_processes)
+    raise_transition cpu-critical "CPU busy ${busy}% for $critical consecutive minutes (critical threshold $CPU_CRIT%); top processes (names only): $details; history: $CPU_HISTORY"
+  elif [[ ( $previous_state == warning || $previous_state == critical ) && $new_state == clear ]]; then
+    raise_transition cpu-recovered "CPU recovered to ${busy}% busy for $CPU_RECOVER_STRIKES consecutive minutes; active pressure signal cleared"
+  fi
+  return 0
+}
+
+
 case ${1:-} in
 raise)
   shift
@@ -140,6 +357,10 @@ watch)
   watch_swap
   watch_services
   watch_backup
+  watch_cpu_heartbeat
+  ;;
+cpu-watch)
+  cpu_watch
   ;;
 show)
   n=${2:-20}
@@ -154,7 +375,7 @@ show)
   done < "$LOG"
   ;;
 *)
-  print -u2 "usage: pub4-alert raise KEY MESSAGE... | watch | show [N]"
+  print -u2 "usage: pub4-alert raise KEY MESSAGE... | watch | cpu-watch | show [N]"
   exit 2
   ;;
 esac

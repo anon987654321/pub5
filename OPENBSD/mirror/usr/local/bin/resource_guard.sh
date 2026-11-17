@@ -36,6 +36,8 @@ SHED_STATE=/var/db/resource_guard_shed
 # first sample, because a genuine crisis should not wait.
 SHED_STRIKES=${GUARD_SHED_STRIKES:-2}
 STRIKE_STATE=/var/db/resource_guard_strikes
+CPU_PRESSURE_FILE=${GUARD_CPU_PRESSURE_FILE:-/var/db/pub4/cpu_pressure}
+CPU_PRESSURE_MAX_AGE=${GUARD_CPU_PRESSURE_MAX_AGE:-420}
 CORE="master brgen"
 # Ordered cheapest-to-lose first, because shedding now takes one per tick.
 # bsdports is a low-traffic ports index and leads. amber is a real app with real
@@ -115,7 +117,7 @@ MEM_WARN=8
 MEM_RESTORE=10
 
 # All decimal comparisons and field reads below are pure ksh: the same
-# hundredths-scaling arithmetic pub5-alert uses for its own load compare.
+# hundredths-scaling arithmetic pub4-alert cpu-watch uses for its own thresholds.
 # No awk, no sed, no head, no tail (SHELL_DISCIPLINE), and one fewer fork per
 # comparison on a box that runs this from cron every five minutes.
 hundredths() {
@@ -345,6 +347,21 @@ if [[ $helper_loaded -eq 1 ]]; then
   fi
 fi
 
+# CPU shedding is enabled only by the monitor's sustained-pressure state. The
+# monitor requires several minute samples before writing this signal, so the
+# guard may act on its first five-minute tick without another long delay.
+cpu_pressure=0
+if [[ -f $CPU_PRESSURE_FILE ]]; then
+  read cpu_stamp cpu_busy < "$CPU_PRESSURE_FILE" || cpu_stamp=0
+  case $cpu_stamp in *[!0-9]*|'') cpu_stamp=0 ;; esac
+  case $cpu_busy in *[!0-9]*|'') cpu_busy=0 ;; esac
+  cpu_age=$((_now - cpu_stamp))
+  if (( cpu_stamp > 0 && cpu_age >= 0 && cpu_age <= CPU_PRESSURE_MAX_AGE && cpu_busy >= 80 )); then
+    cpu_pressure=1
+    shed=1
+  fi
+fi
+
 if [[ $deploying -eq 1 ]]; then
   if [[ $shed -eq 1 ]]; then
     logger -t resource-guard \
@@ -383,7 +400,7 @@ shed_svc=""
 log_tick() {
   _shed_now=0
   [[ -n $shed_svc ]] && _shed_now=1
-  _tick="load=$load mem_avail=${mem_avail_pct}% shed=$_shed_now deploy=$deploying$rss"
+  _tick="load=$load mem_avail=${mem_avail_pct}% shed=$_shed_now deploy=$deploying$rss cpu_pressure=$cpu_pressure"
   echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $_tick breach=$breach strikes=$strikes" \
     >> /var/log/resource_guard_history.log 2>/dev/null || true
 }
@@ -397,7 +414,10 @@ fi
 # strikes only accumulate for sustained pressure, never across unrelated spikes
 # hours apart.
 strikes=0
-if [[ -f $STRIKE_STATE ]]; then
+if [[ $cpu_pressure -eq 1 && $deploying -eq 0 ]]; then
+  # The CPU monitor already proved sustained saturation over minute samples.
+  strikes=$SHED_STRIKES
+elif [[ -f $STRIKE_STATE ]]; then
   strikes=$(cat "$STRIKE_STATE" 2>/dev/null || echo 0)
   [[ $strikes == +([0-9]) ]] || strikes=0
 fi
