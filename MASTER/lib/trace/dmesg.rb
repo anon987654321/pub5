@@ -502,7 +502,7 @@ module Master
       # Normal mode keeps conversational turns quiet. Explicit command reports
       # force their already-rendered lines through the same presenter.
       def quiet_in_turn?(line)
-        verbosity == "normal" && Fiber[:master_unit] == "master0" && line.match?(/at \w+0|llm\d+:/)
+        verbosity == "normal" && Fiber[:master_unit] == "master0" && line.match?(/at \w+0|(?:llm|model|cache)\d+:/)
       end
 
       # OpenBSD's console prints the kernel white on blue and userland plain.
