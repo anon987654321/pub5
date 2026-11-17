@@ -15,7 +15,7 @@ require "minitest/autorun"
 # This scan reads source only, so it needs no Rails boot.
 class TestPathIdiomsTest < Minitest::Test
   RAILS_ROOT = File.expand_path("..", __dir__)
-  FILES = Dir.glob(File.join(RAILS_ROOT, "*", "test", "**", "*.rb")).reject { |f| f == __FILE__ }.freeze
+  FILES = Dir.glob(File.join(RAILS_ROOT, "*", "**", "test", "**", "*.rb")).reject { |f| f == __FILE__ }.freeze
 
   def offences(pattern)
     FILES.flat_map do |file|
@@ -29,6 +29,11 @@ class TestPathIdiomsTest < Minitest::Test
 
   def test_scan_sees_the_test_files
     assert_operator FILES.size, :>, 50
+  end
+
+  def test_scan_includes_nested_engine_test_files
+    nested = File.join(RAILS_ROOT, "brgen", "engines", "messenger", "test", "models", "message_file_attachment_test.rb")
+    assert_includes FILES, nested
   end
 
   def test_no_path_is_guessed_through_a_brgen_directory_name
