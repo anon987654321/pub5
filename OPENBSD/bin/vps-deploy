@@ -199,7 +199,7 @@ file_identity() {
 # command; if either cannot be read, callers fail safe and keep the lock.
 lock_process_identity() {
   local pid=$1 started command digest
-  started=$(ps -p "$pid" -o lstart= 2>/dev/null) || return 1
+  started=$(LC_ALL=C ps -p "$pid" -o lstart= 2>/dev/null) || return 1
   command=$(ps -ww -p "$pid" -o command= 2>/dev/null) || return 1
   [[ -n $started && -n $command ]] || return 1
   started=${started//[^A-Za-z0-9]/_}
