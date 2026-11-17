@@ -317,13 +317,13 @@ acquire_deploy_lock() {
   for attempt in 1 2; do
     if mkdir "$lock_dir" 2>/dev/null; then
       local identity owner_tmp
-      identity=$(lock_process_identity "$") || {
+      identity=$(lock_process_identity "${$}") || {
         print -u2 "vps-deploy: cannot identify the lock owner process; refusing an unverifiable deploy"
         rmdir "$lock_dir" 2>/dev/null || true
         exit 1
       }
-      owner_tmp="$lock_dir/owner.tmp.$"
-      if ! print -r -- "$ $(hostname -s) $(date +%s) $identity" > "$owner_tmp" ||
+      owner_tmp="$lock_dir/owner.tmp.${$}"
+      if ! print -r -- "${$} $(hostname -s) $(date +%s) $identity" > "$owner_tmp" ||
          ! mv "$owner_tmp" "$lock_dir/owner"; then
         print -u2 "vps-deploy: cannot write the deploy lock owner record"
         rm -f -- "$owner_tmp"
