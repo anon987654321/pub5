@@ -66,6 +66,42 @@ if ARGV.intersect?(%w[-h --help])
   exit 0
 end
 
+# The recorded SHA256SUMS: one digest per pulled filename. Blank or missing
+# maps mean the pull predates checksum recording and integrity_check carries
+# the drill alone.
+def drill_recorded_sums(sums_path)
+  return {} unless File.exist?(sums_path)
+
+  File.readlines(sums_path, chomp: true).to_h do |line|
+    digest, name = line.split(/\s+/, 2)
+    [name.to_s.delete_prefix("*"), digest]
+  end
+end
+
+# Verify one pulled database against the recorded checksums: sha256 when the
+# pull recorded one, then integrity_check, the migration floor and the table
+# count the Rails database must report. Findings accumulate in `failures`.
+def drill_verify_database(db, recorded, failures)
+  name = File.basename(db)
+  app = name.sub(/-production\.sqlite3\z/, "")
+  digest = Digest::SHA256.file(db).hexdigest
+  if recorded.key?(name)
+    ok = recorded[name] == digest
+    failures << "#{name}: checksum #{digest} != recorded #{recorded[name]}" unless ok
+    puts "  #{name}  sha256 #{digest[0, 16]}...  #{ok ? 'matches the pull' : 'MISMATCH'}"
+  else
+    puts "  #{name}  sha256 #{digest[0, 16]}..."
+  end
+
+  integrity, = Open3.capture2("sqlite3", "-readonly", db, "PRAGMA integrity_check;")
+  failures << "#{name}: integrity_check said #{integrity.strip[0, 80]}" unless integrity.strip == "ok"
+  version, = Open3.capture2("sqlite3", "-readonly", db, "SELECT max(version) FROM schema_migrations;")
+  tables, = Open3.capture2("sqlite3", "-readonly", db, "SELECT count(*) FROM sqlite_master WHERE type='table';")
+  users, = Open3.capture2("sqlite3", "-readonly", db, "SELECT count(*) FROM users;")
+  failures << "#{name}: no schema_migrations rows, so it is not a Rails database" if version.strip.empty?
+  puts "  #{app}: integrity #{integrity.strip}, migration #{version.strip}, #{tables.strip} tables, users #{users.strip.empty? ? 'n/a' : users.strip}"
+end
+
 def ssh_preflight(cmd)
   Open3.capture2e(
     OPERATOR, "rtfm", "--host", HOST, "--key", KEY,
@@ -218,29 +254,12 @@ if ARGV.include?("--drill")
     source = File.join(DEST, newest)
     FileUtils.cp(Dir.glob(File.join(source, "*")).select { |p| File.file?(p) }, scratch)
     sums = File.join(scratch, "SHA256SUMS")
-    recorded = File.exist?(sums) ? File.readlines(sums, chomp: true).to_h { |l| l.split(/\s+/, 2).then { |h, n| [n.to_s.delete_prefix("*"), h] } } : {}
+    recorded = drill_recorded_sums(sums)
     puts "dr-pull --drill: pull #{newest} -> #{scratch}"
     puts "  no SHA256SUMS in this pull (made before checksums were recorded); integrity_check only" if recorded.empty?
 
     Dir.glob(File.join(scratch, "*.sqlite3")).sort.each do |db|
-      name = File.basename(db)
-      app = name.sub(/-production\.sqlite3\z/, "")
-      digest = Digest::SHA256.file(db).hexdigest
-      if recorded.key?(name)
-        ok = recorded[name] == digest
-        failures << "#{name}: checksum #{digest} != recorded #{recorded[name]}" unless ok
-        puts "  #{name}  sha256 #{digest[0, 16]}...  #{ok ? 'matches the pull' : 'MISMATCH'}"
-      else
-        puts "  #{name}  sha256 #{digest[0, 16]}..."
-      end
-
-      integrity, = Open3.capture2("sqlite3", "-readonly", db, "PRAGMA integrity_check;")
-      failures << "#{name}: integrity_check said #{integrity.strip[0, 80]}" unless integrity.strip == "ok"
-      version, = Open3.capture2("sqlite3", "-readonly", db, "SELECT max(version) FROM schema_migrations;")
-      tables, = Open3.capture2("sqlite3", "-readonly", db, "SELECT count(*) FROM sqlite_master WHERE type='table';")
-      users, = Open3.capture2("sqlite3", "-readonly", db, "SELECT count(*) FROM users;")
-      failures << "#{name}: no schema_migrations rows, so it is not a Rails database" if version.strip.empty?
-      puts "  #{app}: integrity #{integrity.strip}, migration #{version.strip}, #{tables.strip} tables, users #{users.strip.empty? ? 'n/a' : users.strip}"
+      drill_verify_database(db, recorded, failures)
     end
   end
   blob_root = File.join(DEST, "blobs")
