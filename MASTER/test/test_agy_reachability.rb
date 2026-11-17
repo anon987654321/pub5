@@ -10,14 +10,12 @@ require "rbconfig"
 #
 #   1. It is never offered when the binary is not there. An id that can only be
 #      failed over is not a route.
-#   2. When present, it is the primary subscription lane. API/local/free routes
-#      remain available behind it, and observed failures/quota can still move
-#      the router away from agy without changing the configured default.
+#   2. When present, it is available at its declared position in the model
+#      tiers. Earlier configured models keep their lead; observed quota/failure
+#      moves the router to the next configured lane without special promotion.
 #
-# The absence property remains important, but presence now deliberately makes agy
-# primary. data/models.yml puts agy:auto in default and primary, while the live
-# `agy models` catalogue feeds additional agy:<model> members into the subscription
-# lane. API/local/free routes remain the fallback path.
+# data/models.yml carries agy:auto in default and primary, while the live
+# `agy models` catalogue feeds additional agy:<model> fallback members.
 #
 # The shape this hid behind: MASTER_NO_AGY_CLI existed and both
 # agy_cli_available? methods honoured it, so the guard looked complete while the
@@ -117,18 +115,18 @@ class TestAgyReachability < Minitest::Test
     end
   end
 
-  def test_agy_is_primary_even_when_an_api_key_is_configured
+  def test_agy_remains_available_after_the_declared_primary_when_an_api_key_is_configured
     ENV["OPENROUTER_API_KEY"] = OPENROUTER_KEY
     with_agy(true) do
       assert_match AGY, Master.default_model,
-                   "configured agy should remain MASTER's primary model lane"
+                   "AGY remains eligible without promoting itself over earlier configured tier entries"
       assert_match AGY, chain.first,
-                   "agy should lead the fallback chain when its binary is present"
+                   "AGY remains in the fallback chain when its binary is present"
     end
   end
 
-  # The API route is not deleted merely because agy is primary: fallback still
-  # contains non-agy members so a provider failure can move the turn elsewhere.
+  # API routes remain available beside and ahead of AGY according to their
+  # declared tier position; AGY availability never replaces a configured head.
   def test_api_routes_remain_available_behind_agy
     ENV["OPENROUTER_API_KEY"] = OPENROUTER_KEY
     with_agy(true) do
