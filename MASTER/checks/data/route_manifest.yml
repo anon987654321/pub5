@@ -214,7 +214,7 @@ apps:
       active_storage/disk#show:
       - "/rails/active_storage/disk/:encoded_key/*filename"
   brgen:
-    digest: 7819a8a1fcc5507b
+    digest: 2e7f2f72526f51e1
     routes:
       shared/changelog#show:
       - "/changelog"
@@ -515,13 +515,12 @@ apps:
       - "/verifications/new"
       dating/picks#index:
       - "/picks"
-      playlist/playlists#index:
-      - "/"
-      - "/playlists"
       playlist/playlists#embed:
       - "/playlists/:id/embed"
       playlist/playlists#analytics:
       - "/playlists/:id/analytics"
+      playlist/playlists#index:
+      - "/playlists"
       playlist/playlists#new:
       - "/playlists/new"
       playlist/playlists#edit:

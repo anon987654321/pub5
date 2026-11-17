@@ -1,8 +1,17 @@
 /* Ultra-minimal shared UI for all apps — synced from MASTER web */
-// The head of _components.scss: the cascade layer order, the reset, the input font
-// floor, the focus ring and the utility classes. _components.scss @uses it
-// before its own first rule, so it compiles exactly where it stood.
-@layer reset, base, layout, components, utilities, overrides;
+// The head of _components.scss: the reset, the input font floor, the focus
+// ring and the utility classes. _components.scss @uses it before its own
+// first rule, so it compiles exactly where it stood.
+//
+// This partial carried its own `@layer reset, base, layout, components,
+// utilities, overrides;` order statement — the MASTER web face.css stack. It
+// went stale twice over: no rule in any output it compiles into sits in
+// those five named layers (the only @layer block in the shared styles is
+// _tokens.scss's `@layer tokens`, which the statement never named), and a
+// partial must not declare a stack at all — CssLayerStackCheck reads a
+// partial's statement as a competing architecture, which is what it becomes
+// the day an app entry declares the real one. Removed 2026-11-17; the entry
+// owns the stack.
 
 /* Keep iOS from inflating text when the viewport changes orientation. */
 html {
