@@ -330,7 +330,7 @@ module Master
         receipts = manual_receipt_index(preflight)
         declared = Array(preflight.fetch("native_interfaces"))
         files = inventory.map do |entry|
-          mirror_configuration_file_report(entry, reads:, receipts:, declared:, root:)
+          mirror_configuration_file_report(entry, reads:, receipts:, declared:, release: preflight.fetch("os_release"), root:)
         end
         mirror_configuration_report_summary(preflight, files)
       rescue TaskContract::Invalid, KeyError => error
@@ -343,12 +343,12 @@ module Master
         end
       end
 
-      def mirror_configuration_file_report(entry, reads:, receipts:, declared:, root:)
+      def mirror_configuration_file_report(entry, reads:, receipts:, declared:, release:, root:)
         path = entry.fetch("path")
         required = entry.fetch("manuals")
         source = reads[path]
         current = source && repository_content_digest(path, nil, root:) == source.fetch("sha256")
-        page_rows = mirror_manual_receipt_rows(required, receipts, declared, release: nil)
+        page_rows = mirror_manual_receipt_rows(required, receipts, declared, release:)
         complete = !required.nil? && !source.nil? && current &&
                    page_rows.all? { |row| row.fetch("declared") && row.fetch("receipt_present") }
         mirror_file_row(path, required, source, current, page_rows, complete)
@@ -473,8 +473,6 @@ module Master
         report["status"] = "BLOCKED" if stale
         write_mirror_configuration_report(report, root:)
         return "RTFM_FIRST blocked: #{report.fetch("error")}" if report.key?("error")
-      rescue TaskContract::Invalid => error
-        "RTFM_FIRST blocked: coverage report could not be verified or persisted (#{error.class})"
         return "RTFM_FIRST #{stale}" if stale
         return if report.fetch("status") == "PASS"
 
@@ -486,6 +484,8 @@ module Master
 
         missing = first.fetch("manuals").reject { |row| row.fetch("declared") && row.fetch("receipt_present") }.map { |row| row.fetch("page") }
         "RTFM_FIRST mirror configuration #{path} lacks exact-release manual receipt(s): #{missing.join(", ")}"
+      rescue TaskContract::Invalid => error
+        "RTFM_FIRST blocked: coverage report could not be verified or persisted (#{error.class})"
       end
 
       def full_vps_deploy_command?(tokens)
