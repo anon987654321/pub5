@@ -54,6 +54,13 @@ autoload:
     - fix/kernel/lifecycle_journal/artifacts.rb
     - fix/kernel/lifecycle_journal/state_store.rb
     - fix/kernel/lifecycle_journal/legacy_state.rb
+    # Master::Fix::Kernel -- the hash-chained /fix ledger, split out of
+    # fix/kernel.rb: append_event with its TOCTOU-checked directory, path and
+    # handle validation, the verified read path (read_log/read_log_io) behind
+    # `bin/master replay`, and the verify_log! reader. The defining file keeps
+    # the coordinator lifecycle: settings lock, construction, run, terminal
+    # receipts and the replay CLI.
+    - fix/kernel/ledger.rb
     # Master::Fix::SurfaceEvidence -- read-only surface sensors, split by
     # concern: surface receipt builders, browser receipts, test/deployment
     # receipts, inventory and manifest, runtime probes, and the command runner.
@@ -116,6 +123,20 @@ autoload:
     # file is fix/restructure_sweep/context.rb; these re-open its class.
     - fix/restructure_sweep/context/surfaces.rb
     - fix/restructure_sweep/context/references.rb
+    # Master::Fix::Scan::FileProcessor -- the scan's per-file processor, split
+    # by responsibility: semantic_tier.rb the model tier's schedule within a
+    # pass (off, defer, budget, replay) and the outage evidence it records,
+    # progress.rb the per-law progress monitor and its CHECK_PROGRESS_FILE /
+    # console heartbeat. The defining file is fix/scan/file_processor.rb;
+    # these re-open its class.
+    - fix/scan/file_processor/progress.rb
+    - fix/scan/file_processor/semantic_tier.rb
+    # Master::Review::Agent -- the review agent, split by concern:
+    # conversation.rb the chat door with its dispatch, finalization and
+    # evidence preflight, research.rb the guarded operator research call. The
+    # defining file is review/agent.rb; these re-open its class.
+    - review/agent/conversation.rb
+    - review/agent/research.rb
 
   # Declare a constant outside Master::, so the path cannot imply the name.
   defines_a_foreign_namespace:
