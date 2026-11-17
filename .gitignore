@@ -254,19 +254,12 @@ MASTER/tools/dilla/samples/dug/**/*.wav
 *ikke-dele*
 *ikke_dele*
 
-# Python venvs the audio tools shell out to (demucs stem separation, librosa
-# analysis) — rebuilt locally, never shipped.
-MASTER/tools/dilla/.venv-demucs/
-MASTER/tools/dilla/venv-librosa/
-
 # --- studio/lora ------------------------------------------------------------
 
 # Training caches, extracted frames, staging copies, and reproducible bundles.
 # <subject>/.cache/ is every lane's scratch: dataset zips, downloaded trainer
 # tars, staged Kaggle payloads.
 STUDIO/lora/**/.cache/
-STUDIO/lora/*/dataset/
-STUDIO/lora/*/dataset_*/
 STUDIO/lora/**/_frames/
 STUDIO/lora/**/_latent_cache/
 STUDIO/lora/**/.aitk_size.json

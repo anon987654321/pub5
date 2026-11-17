@@ -21,3 +21,8 @@ r[0-9]_*.mp3
 .live_tmp.wav
 .dilla_*
 all_tracks_demo/
+
+# Retired local Python environments from the pre-Ruby audio tools.
+# Keep stale environments out of Git; the current engine is Ruby-only.
+.venv-demucs/
+venv-librosa/
