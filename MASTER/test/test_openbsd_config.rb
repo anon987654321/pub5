@@ -65,6 +65,20 @@ class TestOpenbsdConfig < Minitest::Test
     assert(report.fetch("files").any? { |row| row.fetch("path") == "OPENBSD/mirror/etc/relayd.conf" })
   end
 
+  def test_mirror_coverage_report_is_written_atomically_under_master_runtime_state
+    Dir.mktmpdir("openbsd-manual-report-") do |root|
+      FileUtils.mkdir_p(File.join(root, "MASTER", ".master"))
+      path = Master::Fix::OpenBSDManualPreflight.write_mirror_configuration_report(
+        { "status" => "BLOCKED", "files" => [] },
+        root:
+      )
+
+      assert_equal File.join(root, "MASTER", ".master", "openbsd_mirror_coverage.json"), path
+      assert_equal "BLOCKED", JSON.parse(File.read(path)).fetch("status")
+      assert_equal 0o600, File.stat(path).mode & 0o777
+    end
+  end
+
   def test_inert_litestream_example_is_source_audited_without_fabricated_openbsd_manual
     manuals = Master::Fix::OpenBSDManualPreflight.required_path_manuals(
       "OPENBSD/mirror/etc/litestream.yml"

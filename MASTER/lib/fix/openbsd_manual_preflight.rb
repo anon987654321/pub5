@@ -16,6 +16,7 @@ module Master
       MAX_SOURCE_READS = 256
       MAX_MANUAL_PAGES = 80
       RECEIPT_RELATIVE_PATH = "MASTER/.master/openbsd_preflight.json".freeze
+      MIRROR_COVERAGE_REPORT_RELATIVE_PATH = "MASTER/.master/openbsd_mirror_coverage.json".freeze
       MAX_RECEIPT_FILE_BYTES = 68 * 1024 * 1024
       MAX_RECEIPT_AGE_SECONDS = 3_600
 
@@ -409,8 +410,33 @@ module Master
         }
       end
 
+      def write_mirror_configuration_report(report, root: Master::REPO_ROOT)
+        repository = File.realpath(root)
+        directory = File.join(repository, "MASTER", ".master")
+        stat = File.lstat(directory)
+        raise TaskContract::Invalid, "coverage report directory is not a real directory" unless stat.directory? && !stat.symlink?
+        path = File.join(repository, MIRROR_COVERAGE_REPORT_RELATIVE_PATH)
+        raise TaskContract::Invalid, "coverage report target is a symlink" if File.symlink?(path)
+        temporary = "#{path}.#{Process.pid}.#{Thread.current.object_id}.tmp"
+        flags = File::WRONLY | File::CREAT | File::EXCL
+        flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+        File.open(temporary, flags, 0o600) do |file|
+          file.write(JSON.pretty_generate(report))
+          file.write("\n")
+          file.flush
+          file.fsync
+        end
+        File.rename(temporary, path)
+        path
+      rescue SystemCallError => error
+        raise TaskContract::Invalid, "coverage report could not be written: #{error.class}"
+      ensure
+        File.unlink(temporary) if defined?(temporary) && temporary && File.exist?(temporary)
+      end
+
       def mirror_configuration_refusal(preflight, root: Master::REPO_ROOT)
         report = mirror_configuration_report(preflight, root:)
+        write_mirror_configuration_report(report, root:)
         return "RTFM_FIRST blocked: #{report.fetch("error")}" if report.key?("error")
         return if report.fetch("status") == "PASS"
 
