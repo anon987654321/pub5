@@ -19,7 +19,6 @@ module Master
             return @config.model unless enabled?
             return preferred_local(task_type:) if local_only?
 
-            empirical_best = @capability_map.best_model_for(task_type)
             candidates = reachable_candidates(task_type)
             return live_config_model(task_type:) if candidates.empty?
 
@@ -32,8 +31,10 @@ module Master
               live = Io::LaneSelection.live_lanes.reject { |id| suspended_free_lane?(id) || !reachable?(id) }.first
               return live unless live.to_s.empty?
             end
-            @compute_pool.select(Io::LaneSelection.best_class(ids, free_last: !free_route?(task_type)), task_type:, empirical_best:) ||
-              ids.first ||
+
+            # This is the operator-declared primary order. Health, score and
+            # latency may rank the fallbacks, but cannot replace a live tier head.
+            Io::LaneSelection.order(ids, free_last: !free_route?(task_type)).first ||
               live_config_model(task_type:)
           end
 
@@ -91,7 +92,14 @@ module Master
               ),
               task_type,
             )
-            priority_fallback_order(selected, task_type:)
+            ordered = priority_fallback_order(selected, task_type:)
+            primary = candidates.first
+            # Keep the first usable lane from the selected task tier at #1.
+            # Learned provider/compute ranking is still useful for every fallback.
+            return ordered unless primary && ordered.include?(primary)
+            return ordered unless Io::LaneSelection.kind(primary) == Io::LaneSelection.kind(ordered.first)
+
+            [primary, *ordered.reject { |id| id == primary }]
           end
 
           # Greetings are explicitly routed to the free tier. A locally installed
@@ -108,7 +116,9 @@ module Master
             lanes = { pref: [preferred(task_type:)], tiers: tier_ids.reject { |id| ollama_model?(id) },
                       free: continuity_models + hosted_models + browser_chat_models + local_server_models,
                       subscription: agy_catalog_models + Ground::AuthProfileLane.models_for_router(self) + primary_models + cli_lane_models }
-            order = task_type.to_sym == :chitchat ? %i[pref tiers free subscription] : %i[subscription pref tiers free]
+            # The route's declared tier leads. Dynamic subscription/auth lanes
+            # remain available after it and before anonymous/free fallback.
+            order = task_type.to_sym == :chitchat ? %i[pref tiers free subscription] : %i[pref tiers subscription free]
             order.flat_map { |lane| lanes.fetch(lane) } + Io::PaidTail.models + replicate_models + local_models + [@config.model]
           end
 
