@@ -101,6 +101,26 @@ class TestOpenbsdConfig < Minitest::Test
     end
   end
 
+  def test_mirror_coverage_report_refuses_symlinked_report_target
+    Dir.mktmpdir("openbsd-manual-target-") do |root|
+      master = File.join(root, "MASTER")
+      FileUtils.mkdir_p(File.join(master, ".master"))
+      outside = File.join(root, "outside.json")
+      File.write(outside, "do not overwrite")
+      target = File.join(master, ".master", "openbsd_mirror_coverage.json")
+      File.symlink(outside, target)
+
+      error = assert_raises(Master::Fix::TaskContract::Invalid) do
+        Master::Fix::OpenBSDManualPreflight.write_mirror_configuration_report(
+          { "status" => "BLOCKED", "files" => [] },
+          root:
+        )
+      end
+      assert_match(/target is a symlink/, error.message)
+      assert_equal "do not overwrite", File.read(outside)
+    end
+  end
+
   def test_inert_litestream_example_is_source_audited_without_fabricated_openbsd_manual
     manuals = Master::Fix::OpenBSDManualPreflight.required_path_manuals(
       "OPENBSD/mirror/etc/litestream.yml"
