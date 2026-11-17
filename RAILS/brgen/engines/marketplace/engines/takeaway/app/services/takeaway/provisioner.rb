@@ -26,16 +26,19 @@ module Takeaway
       ActiveRecord::Base.transaction do
         store = find_or_create_store!
         verify_store_owner!(store)
+        restaurant = Takeaway::Restaurant.find_by(marketplace_store_id: store.id)
 
-        restaurant = @owner.takeaway_restaurants.build(restaurant_attributes)
-        restaurant.marketplace_store = store
-        restaurant.active = false
-        restaurant.demo = false
-        restaurant.city = Current.city_record if Current.respond_to?(:city_record) && Current.city_record
-        restaurant.save!
+        unless restaurant
+          restaurant = @owner.takeaway_restaurants.build(restaurant_attributes)
+          restaurant.marketplace_store = store
+          restaurant.active = false
+          restaurant.demo = false
+          restaurant.city = Current.city_record if Current.respond_to?(:city_record) && Current.city_record
+          restaurant.save!
 
-        DEFAULT_MENU_CATEGORIES.each do |name|
-          restaurant.menu_categories.find_or_create_by!(name:)
+          DEFAULT_MENU_CATEGORIES.each do |name|
+            restaurant.menu_categories.find_or_create_by!(name:)
+          end
         end
 
         Result.new(restaurant:, store:)
@@ -47,30 +50,27 @@ module Takeaway
     def find_or_create_store!
       return @marketplace_store if @marketplace_store
 
-      slug = [
-        @attributes[:name].to_s.parameterize,
-        "restaurant",
-        @owner.id,
-        SecureRandom.hex(3),
-      ].join("-")
+      slug = @attributes[:store_slug].presence ||
+             [@attributes[:name].to_s.parameterize, "restaurant", @owner.id].join("-")
+      store = Marketplace::Store.find_or_initialize_by(slug:)
+      return store if store.persisted?
 
-      Marketplace::Store.create!(
+      store.assign_attributes(
         owner: @owner,
         name: @attributes[:name].to_s.strip,
-        slug:,
         description: @attributes[:description].to_s,
         vertical: "restaurants",
         active: false,
       )
+      store.save!
+      store
     end
 
     def verify_store_owner!(store)
       unless store.owner_id == @owner.id && store.vertical == "restaurants"
         raise ActiveRecord::RecordNotFound, "restaurant storefront is not owned by this account"
       end
-      if Takeaway::Restaurant.where(marketplace_store_id: store.id).exists?
-        raise ActiveRecord::RecordInvalid, store
-      end
+
     end
 
     def restaurant_attributes
