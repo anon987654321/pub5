@@ -737,8 +737,10 @@ zsh OPENBSD/bin/vps-deploy recover --plan
 
 The plan is serialized by the deploy lock and does not start, stop or restart
 services. It reports `LIVE` when the receipt's owner fingerprint still matches,
-`AMBIGUOUS` when a visible PID cannot be identified, and `RECOVERY AVAILABLE`
-only when the recorded owner is gone or its PID has been reused. Never apply a
+and `AMBIGUOUS` when a visible PID cannot be identified, another deployer process
+may still be active, or the process-table scan fails. `RECOVERY AVAILABLE` is
+shown only when the recorded owner is gone or its PID was reused, the full service
+snapshot is present, and no other deployer process is visible. Never apply a
 `LIVE` or `AMBIGUOUS` receipt. Copy the exact ID from a `RECOVERY AVAILABLE` row,
 review its stage and log, then explicitly request restoration:
 
@@ -754,6 +756,7 @@ pending and the command reports the log/daemon diagnosis path; inspect
 `/var/log/daemon` before retrying. A successful restore marks the original receipt
 `recovered` / `complete`. There is no automatic boot-time recovery and no guessed
 release rollback.
+
 Recovery by hand, one app at a time, waiting for each port before the next. Falcon
 needs 30 to 40 seconds under load, and two booting together is how the apps got
 shed. Use `restart`, not `start`: `rc.d/master` runs its relayd restart, TTS warmup
