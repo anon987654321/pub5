@@ -144,10 +144,10 @@ upscale_and_restore:
   topazlabs/dust-and-scratch-v2:
     inputs: [image]
 
-# Video generation has its own bounded spend pool in STUDIO. These estimates
-# include output seconds and the model's documented maximum 15 seconds of
-# reference-video input whenever references are supplied. The temporary 50%
-# promotion expires after 2026-12-31; the list rates remain in the catalogue.
+# MiniMax H3 video calls use a separate bounded STUDIO spend pool. Estimates
+# include output seconds and the documented maximum 15 seconds of reference
+# video input whenever references are supplied. The temporary 50% promotion
+# expires after 2026-12-31; list rates remain in the catalogue.
 video_budget:
   run_usd: 5.0
   call_usd: 1.0
