@@ -223,14 +223,23 @@ class TestPub4Alert < Minitest::Test
     assert_includes newsyslog, "/var/log/cpu-watch.log                   root:wheel 640 12 250 $W0D0 Z"
   end
 
-  def recovery_receipt(run_id:, pid:, status: "running", snapshot_recorded: true)
+  def process_identity(pid)
+    started, start_status = Open3.capture2({ "LC_ALL" => "C" }, "ps", "-p", pid.to_s, "-o", "lstart=")
+    command, command_status = Open3.capture2("ps", "-ww", "-p", pid.to_s, "-o", "command=")
+    raise "could not read current process identity" unless start_status.success? && command_status.success?
+    checksum, checksum_status = Open3.capture2("cksum", stdin_data: command.strip)
+    raise "could not checksum current process command" unless checksum_status.success?
+    "#{started.strip.gsub(/[^A-Za-z0-9]/, "_")}_#{checksum.strip.tr(" ", "_")}"
+  end
+
+  def recovery_receipt(run_id:, pid:, status: "running", snapshot_recorded: true, owner_identity: "Tue_Nov_17_01_00_00_2026_123_456")
     {
       schema: 1,
       run_id: run_id,
       target: "all",
       host: "vm23",
       pid: pid,
-      owner_identity: "Tue_Nov_17_01_00_00_2026_123_456",
+      owner_identity: owner_identity,
       status: status,
       recovery_state: "pending",
       stage: "restart-brgen",
@@ -271,12 +280,27 @@ class TestPub4Alert < Minitest::Test
     Dir.mktmpdir do |dir|
       quiet_box(dir)
       run_id = "20261117T010001Z-all-12346"
-      fake_run_list(dir, [recovery_receipt(run_id:, pid: Process.pid)])
+      identity = process_identity(Process.pid)
+      fake_run_list(dir, [recovery_receipt(run_id:, pid: Process.pid, owner_identity: identity)])
 
       _, status = run_alert(dir, "watch")
 
       assert_equal 0, status
       refute_includes log(dir), "deploy-recovery-#{run_id}"
+    end
+  end
+
+  def test_watch_alerts_when_the_recorded_pid_is_reused_by_another_process
+    Dir.mktmpdir do |dir|
+      quiet_box(dir)
+      run_id = "20261117T010004Z-all-12349"
+      fake_run_list(dir, [recovery_receipt(run_id:, pid: Process.pid, owner_identity: "different_process_fingerprint")])
+
+      _, status = run_alert(dir, "watch")
+
+      assert_equal 0, status
+      assert_includes log(dir), "deploy-recovery-#{run_id}"
+      assert_includes log(dir), "owner PID #{Process.pid} is reused"
     end
   end
 
