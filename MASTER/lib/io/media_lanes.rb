@@ -188,12 +188,21 @@ module Master
         if row["usd_per_second"]
           requested_seconds = seconds || input["duration"] || input[:duration] || config["video_seconds"]
           billed_seconds = Float(requested_seconds)
+          raise ArgumentError, "video duration must be a positive finite number" unless billed_seconds.positive? && billed_seconds.finite?
+
           references = input["reference_video_urls"] || input[:reference_video_urls]
-          if lane.provider == "replicate" && lane.model.start_with?("minimax/") && !Array(references).empty?
-            # Replicate bills reference video too. Their documented combined
-            # reference-video limit is 15 seconds; reserve the full amount when
-            # callers supply URLs but do not give us each source's duration.
-            billed_seconds += 15.0
+          if lane.provider == "replicate" && lane.model.start_with?("minimax/")
+            unless billed_seconds.to_i == billed_seconds && billed_seconds.between?(4, 15)
+              raise ArgumentError, "MiniMax H3 duration must be an integer from 4 to 15 seconds"
+            end
+            reference_list = Array(references)
+            raise ArgumentError, "MiniMax H3 accepts at most 3 reference videos" if reference_list.length > 3
+            unless reference_list.empty?
+              # Replicate bills reference video too. Their combined limit is
+              # 15 seconds; reserve the full amount when source durations are
+              # unavailable instead of pretending URL count reveals duration.
+              billed_seconds += 15.0
+            end
           end
           return media_per_second_rate(row, today:) * billed_seconds
         end
