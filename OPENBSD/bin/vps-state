@@ -161,8 +161,8 @@ def deploy_run_records
     records = JSON.parse(output)
   else
     directory = File.join(STAMP_DIR, "deploy_runs")
-    return [[], nil] unless File.exist?(directory)
-    raise "#{directory} is a symlink; refusing deploy-run read" if File.symlink?(directory)
+    return [[], nil] unless File.exist?(directory) || File.symlink?(directory)
+    raise "corrupt deploy-run directory is a symlink: #{directory}" if File.symlink?(directory)
     raise "#{directory} is not a directory" unless File.directory?(directory)
 
     records = Dir.children(directory).grep(/\A\d{8}T\d{6}Z-[a-z0-9_-]{1,32}-\d+\.json\z/).map do |name|
@@ -195,14 +195,18 @@ def deploy_run_records
   end
   [records, nil]
 rescue JSON::ParserError => e
-  [nil, "deploy-run receipt JSON corrupt (#{e.class})"]
+  [nil, "CORRUPT: deploy-run receipt JSON (#{e.class})"]
 rescue StandardError => e
-  [nil, "#{e.class}: #{e.message}"]
+  category = e.message.match?(/\\A(?:invalid deploy-run|deploy-run-list did not return|corrupt deploy-run)/) ? "CORRUPT" : "UNAVAILABLE"
+  [nil, "#{category}: #{e.class}: #{e.message}"]
 end
 
 def deploy_recovery_status
   records, error = deploy_run_records
-  return { state: "unavailable", count: 0, pending: [], error: error } if error
+  if error
+    state = error.start_with?("CORRUPT:") ? "corrupt" : "unavailable"
+    return { state: state, count: 0, pending: [], error: error }
+  end
 
   pending = records.select do |record|
     record["recovery_state"] == "pending" && %w[running failed].include?(record["status"])
@@ -348,8 +352,8 @@ else
     end
   end
   recovery = payload[:deploy_recovery]
-  if recovery[:state] == "unavailable"
-    puts Deploy::Dmesg.line("recovery0", "fleet", "state=unavailable error=#{recovery[:error]}")
+  if %w[unavailable corrupt].include?(recovery[:state])
+    puts Deploy::Dmesg.line("recovery0", "fleet", "state=#{recovery[:state]} error=#{recovery[:error]}")
   else
     puts Deploy::Dmesg.line("recovery0", "fleet", "state=#{recovery[:state]} pending=#{recovery[:count]}")
     recovery[:pending].each do |run|
