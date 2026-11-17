@@ -155,27 +155,41 @@ module Master
         mode = nil
         index = 0
         while index < tokens.length
-          token = tokens[index]
-          if token.match?(MODE_FLAG)
-            value = token.match(MODE_FLAG)[1].to_s
-            if value.empty?
-              index += 1
-              value = tokens[index].to_s
-            end
-            return [nil, nil, "--mode requires one of: #{FIX_MODES.join(", ")}"] if value.empty? || value.start_with?("--")
+          if tokens[index].match?(MODE_FLAG)
+            value, index = fix_mode_value(tokens, index)
+            error = fix_mode_error(value, mode)
+            return [nil, nil, error] if error
 
-            value = value.downcase
-            return [nil, nil, "unknown /fix mode #{value.inspect}; use: #{FIX_MODES.join(", ")}"] unless FIX_MODES.include?(value)
-            return [nil, nil, "conflicting --mode values"] if mode && mode != value
-
-            mode = value
+            mode = value.downcase
           else
-            remaining << token
+            remaining << tokens[index]
           end
           index += 1
         end
         [mode || "repair", remaining.join(" "), nil]
       end
+
+      # The value of a --mode token: its --mode=value part, or the next token
+      # for the split spelling, which the scan then skips.
+      def fix_mode_value(tokens, index)
+        value = tokens[index].match(MODE_FLAG)[1].to_s
+        return [tokens[index + 1].to_s, index + 1] if value.empty?
+
+        [value, index]
+      end
+
+      # The refusal a resolved --mode value earns, or nil when it names a mode.
+      def fix_mode_error(value, mode)
+        return "--mode requires one of: #{FIX_MODES.join(", ")}" if value.empty? || value.start_with?("--")
+
+        value = value.downcase
+        return "unknown /fix mode #{value.inspect}; use: #{FIX_MODES.join(", ")}" unless FIX_MODES.include?(value)
+        return "conflicting --mode values" if mode && mode != value
+
+        nil
+      end
+
+      private_class_method :fix_mode_value, :fix_mode_error
 
       # Mode presets are defaults, not a second dispatcher. Audit and visual
       # stop before repair; elevate/all select existing bounded work lanes.
@@ -203,35 +217,15 @@ module Master
       def dispatch_structural_recipe(raw, deliberation:)
         tokens = raw.to_s.split(/\s+/)
         recipes = Master::Fix::StructuralRecipes.new(repo_root: Master.repo_root)
+        return structural_recipe_list(recipes) if tokens == ["--list-recipes"]
 
-        if tokens == ["--list-recipes"]
-          return recipes.list.map { |name, description| "#{name}  #{description}" }.join("\n")
-        end
-
-        unless tokens.length == 3 && tokens[0] == "--recipe" && tokens[1].match?(/\A[a-z][a-z0-9_]*\z/) &&
-               %w[--dry-run --apply].include?(tokens[2])
+        unless structural_recipe_call?(tokens)
           return "recipe0: usage: /fix --list-recipes | /fix --recipe NAME --dry-run | /fix --recipe NAME --apply"
         end
 
-        name = tokens[1]
         case tokens[2]
-        when "--dry-run"
-          result = recipes.preview(name)
-          return "recipe0: BLOCKED: #{result.message}" unless result.ok?
-
-          value = result.value!
-          state = value.fetch(:already_applied) ? "already applied; no diff" : "dry-run; no files changed"
-          diff = value.fetch(:diff).to_s
-          suffix = diff.empty? ? "" : "\n#{diff}"
-          "recipe0: #{name}, #{state}; operation=#{value.fetch(:operations).join(",")}; paths=#{value.fetch(:paths).join(", ")}#{suffix}"
-        when "--apply"
-          result = recipes.apply(name, agent: deliberation&.agent)
-          return "recipe0: BLOCKED: #{result.message}" unless result.ok?
-
-          value = result.value!
-          state = value.fetch(:state, :delivered)
-          detail = state == :already_applied ? value.fetch(:message) : "committed and pushed"
-          "recipe0: #{name}, #{detail}"
+        when "--dry-run" then structural_recipe_preview(recipes, tokens[1])
+        else structural_recipe_apply(recipes, tokens[1], deliberation)
         end
       rescue Master::Fix::StructuralRecipes::Invalid, KeyError, ArgumentError => error
         "recipe0: REFUSED: #{error.message}"
@@ -239,41 +233,94 @@ module Master
         "recipe0: INCONCLUSIVE: #{error.class}: #{error.message}"
       end
 
+      # A structural recipe call names one recipe exactly: --recipe NAME with a
+      # --dry-run or --apply spelling, and nothing else on the line.
+      def structural_recipe_call?(tokens)
+        tokens.length == 3 && tokens[0] == "--recipe" && tokens[1].match?(/\A[a-z][a-z0-9_]*\z/) &&
+          %w[--dry-run --apply].include?(tokens[2])
+      end
+
+      def structural_recipe_list(recipes)
+        recipes.list.map { |name, description| "#{name}  #{description}" }.join("\n")
+      end
+
+      def structural_recipe_preview(recipes, name)
+        result = recipes.preview(name)
+        return "recipe0: BLOCKED: #{result.message}" unless result.ok?
+
+        value = result.value!
+        state = value.fetch(:already_applied) ? "already applied; no diff" : "dry-run; no files changed"
+        diff = value.fetch(:diff).to_s
+        suffix = diff.empty? ? "" : "\n#{diff}"
+        "recipe0: #{name}, #{state}; operation=#{value.fetch(:operations).join(",")}; paths=#{value.fetch(:paths).join(", ")}#{suffix}"
+      end
+
+      def structural_recipe_apply(recipes, name, deliberation)
+        result = recipes.apply(name, agent: deliberation&.agent)
+        return "recipe0: BLOCKED: #{result.message}" unless result.ok?
+
+        value = result.value!
+        state = value.fetch(:state, :delivered)
+        detail = state == :already_applied ? value.fetch(:message) : "committed and pushed"
+        "recipe0: #{name}, #{detail}"
+      end
+
+      private_class_method :structural_recipe_call?, :structural_recipe_list,
+                           :structural_recipe_preview, :structural_recipe_apply
+
       def dispatch_fix(scanner:, fix_loop:, deliberation:, root:, bus:, ctx: nil, swarm: nil)
         raw = lane_flag_joined(arg_for(ctx).to_s.strip)
         return convergence_read(raw, root:) if convergence_read?(raw)
         return dispatch_structural_recipe(raw, deliberation:) if raw == "--list-recipes" || raw.start_with?("--recipe")
+        options = fix_dispatch_options(raw, ctx)
+        return Master::Result.err("fix: #{options[:mode_error]}", category: :validation) if options[:mode_error]
+
+        # A target naming no governed tree cannot be served by any lane, so it
+        # is refused before the run picks one: the operator learns the tree list
+        # instead of watching a model get chosen for work that cannot start.
+        refusal = Master::CLI::Pipeline::TreeTarget.refusal(options[:target])
+        return Master::Result.err("fix: #{refusal}", category: :validation) if refusal
+
+        fix_dispatch_run(scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, options:)
+      end
+
+      # Everything /fix parses before it may run: the mode (with its refusal),
+      # the pass flags, the per-dispatch execution overrides with the mode preset
+      # applied on top, and this dispatch's cancellation, activated.
+      def fix_dispatch_options(raw, ctx)
         mode, raw, mode_error = extract_fix_mode(raw)
-        return Master::Result.err("fix: #{mode_error}", category: :validation) if mode_error
+        return { mode_error: } if mode_error
 
         apply, critique, aesthetic, only, target = parse_pass_flags(raw)
         overrides = execution_overrides(raw)
         apply, critique, only, overrides = apply_fix_mode(mode, raw:, apply:, critique:, only:, overrides:)
         cancellation = ctx.cancellation if ctx.respond_to?(:cancellation)
         cancellation.activate! if cancellation&.respond_to?(:activate!)
+        { mode:, raw:, apply:, critique:, aesthetic:, only:, target:, overrides:, cancellation: }
+      end
 
-        # A target naming no governed tree cannot be served by any lane, so it
-        # is refused before the run picks one: the operator learns the tree list
-        # instead of watching a model get chosen for work that cannot start.
-        refusal = Master::CLI::Pipeline::TreeTarget.refusal(target)
-        return Master::Result.err("fix: #{refusal}", category: :validation) if refusal
-
-        writes_requested = writes_requested?(apply:, only:)
+      # The run itself: ownership of the shared run budget first, then the
+      # process-wide compatibility overrides, then the parsed dispatch.
+      def fix_dispatch_run(scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, options:)
+        writes_requested = writes_requested?(apply: options[:apply], only: options[:only])
         max_passes = writes_requested ? Master::Fix::FixLoop::ABSOLUTE_MAX_PASSES : 0
 
         # Acquire run ownership before touching the process-wide compatibility
         # overrides below. A rejected concurrent caller must not change the
         # active run's mode, lane, check focus or critique pin even briefly.
-        Master::Fix::RunBudget.with_shared_run(root: Master::ROOT, max_passes:, bus:, target:) do
-          with_fix_overrides(overrides) do
+        Master::Fix::RunBudget.with_shared_run(root: Master::ROOT, max_passes:, bus:, target: options[:target]) do
+          with_fix_overrides(options[:overrides]) do
             dispatch_fix_parsed(
-              scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, raw:,
-              apply:, critique:, aesthetic:, only:, target:, cancellation:, mode:,
-              task_intent: overrides[:task_intent] || "functional_change"
+              scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, raw: options[:raw],
+              apply: options[:apply], critique: options[:critique], aesthetic: options[:aesthetic],
+              only: options[:only], target: options[:target], cancellation: options[:cancellation],
+              mode: options[:mode], task_intent: options[:overrides][:task_intent] || "functional_change"
             )
           end
         end
       end
+
+      private_class_method :fix_dispatch_options, :fix_dispatch_run
 
       # The execution overrides a single dispatch sets, and what the next
       # command inherits: set the run's mode, lane and pin, yield the run,
@@ -407,36 +454,7 @@ module Master
         return :cancelled if cancellation&.cancelled?
 
         kernel ||= Master::Fix::Kernel.new(root: repo_root, actor: "fix-backlog-review", bus:)
-        last = kernel.verify_log!.reverse.find { |row| row["kind"] == "backlog_review_completed" }
-        reviewed_at = last && Time.iso8601(last.fetch("at"))
-        elapsed = reviewed_at && now - reviewed_at
-        if elapsed && elapsed >= 0 && elapsed < BACKLOG_REVIEW_INTERVAL
-          Master::Trace::Dmesg.status("backlog0", "weekly review not due")
-          return :not_due
-        end
-        agent = deliberation&.agent
-        unless agent&.respond_to?(:ask)
-          Master::Trace::Dmesg.status("backlog0", "INCONCLUSIVE: weekly review due; no model lane")
-          return :inconclusive
-        end
-
-        snapshot = backlog_review_snapshot(repo_root, since: reviewed_at || now - BACKLOG_REVIEW_INTERVAL)
-        return :cancelled if cancellation&.cancelled?
-        review = parse_backlog_review(agent.ask(backlog_review_prompt(snapshot), operation: :structural_review), snapshot)
-        return :cancelled if cancellation&.cancelled?
-        if record
-          kernel.append_event("backlog_review_completed", {
-            schema: 1, status: "reviewed", head_sha: snapshot[:head_sha], todo_sha256: snapshot[:todo_sha256],
-            open_item_count: snapshot[:items].size, completion_candidates: review[:completion_candidates],
-            stale_candidates: review[:stale_candidates], summary: review[:summary],
-          })
-        end
-        Master::Trace::Dmesg.status(
-          "backlog0", "reviewed #{snapshot[:items].size} item(s); " \
-                      "#{review[:completion_candidates].size} possible completion(s), " \
-                      "#{review[:stale_candidates].size} possibly stale; no backlog edits; receipt=#{record ? "recorded" : "not written (read-only)"}"
-        )
-        :reviewed
+        weekly_backlog_review_run(deliberation:, bus:, cancellation:, repo_root:, kernel:, now:, record:)
       rescue StandardError => error
         begin
           kernel&.append_event("backlog_review_inconclusive", {
@@ -449,38 +467,115 @@ module Master
         :inconclusive
       end
 
+      def weekly_backlog_review_run(deliberation:, bus:, cancellation:, repo_root:, kernel:, now:, record:)
+        last = kernel.verify_log!.reverse.find { |row| row["kind"] == "backlog_review_completed" }
+        reviewed_at = last && Time.iso8601(last.fetch("at"))
+        return :not_due if weekly_review_not_due?(reviewed_at, now)
+
+        agent = deliberation&.agent
+        unless agent&.respond_to?(:ask)
+          Master::Trace::Dmesg.status("backlog0", "INCONCLUSIVE: weekly review due; no model lane")
+          return :inconclusive
+        end
+
+        snapshot = backlog_review_snapshot(repo_root, since: reviewed_at || now - BACKLOG_REVIEW_INTERVAL)
+        return :cancelled if cancellation&.cancelled?
+
+        review = parse_backlog_review(agent.ask(backlog_review_prompt(snapshot), operation: :structural_review), snapshot)
+        return :cancelled if cancellation&.cancelled?
+
+        weekly_backlog_review_record(kernel, snapshot, review) if record
+        weekly_backlog_review_status(snapshot, review, record)
+      end
+
+      # The weekly interval gate: not due while a completed review less than
+      # BACKLOG_REVIEW_INTERVAL old sits on the Kernel log.
+      def weekly_review_not_due?(reviewed_at, now)
+        elapsed = reviewed_at && now - reviewed_at
+        return false unless elapsed && elapsed >= 0 && elapsed < BACKLOG_REVIEW_INTERVAL
+
+        Master::Trace::Dmesg.status("backlog0", "weekly review not due")
+        true
+      end
+
+      def weekly_backlog_review_record(kernel, snapshot, review)
+        kernel.append_event("backlog_review_completed", {
+          schema: 1, status: "reviewed", head_sha: snapshot[:head_sha], todo_sha256: snapshot[:todo_sha256],
+          open_item_count: snapshot[:items].size, completion_candidates: review[:completion_candidates],
+          stale_candidates: review[:stale_candidates], summary: review[:summary],
+        })
+      end
+
+      def weekly_backlog_review_status(snapshot, review, record)
+        Master::Trace::Dmesg.status(
+          "backlog0", "reviewed #{snapshot[:items].size} item(s); " \
+                      "#{review[:completion_candidates].size} possible completion(s), " \
+                      "#{review[:stale_candidates].size} possibly stale; no backlog edits; receipt=#{record ? "recorded" : "not written (read-only)"}"
+        )
+        :reviewed
+      end
+
+      private_class_method :weekly_backlog_review_run, :weekly_review_not_due?,
+                           :weekly_backlog_review_record, :weekly_backlog_review_status
+
       def backlog_review_snapshot(repo_root, since:)
         root = File.expand_path(repo_root)
         path = File.join(root, "TODO.md")
+        todo = read_backlog_todo(path)
+        head = backlog_repo_head(root)
+        history = backlog_repo_history(root, since)
+        items = backlog_open_items(todo)
+        { head_sha: head, todo_sha256: Digest::SHA256.hexdigest(todo), todo:, history:,
+          commit_ids: history.scan(/^([a-f0-9]{40})\t/).flatten.uniq, items: }
+      end
+
+      # The root TODO.md, read with its whole-content invariants: a regular,
+      # unsymlinked file within the review size cap, unchanged while being read.
+      def read_backlog_todo(path)
         before = File.lstat(path)
         raise IOError, "root TODO.md must be a regular file" unless before.file? && !before.symlink?
         raise IOError, "root TODO.md exceeds the review size limit" if before.size > BACKLOG_REVIEW_MAX_BYTES
+
         bytes = File.binread(path)
         after = File.lstat(path)
         raise IOError, "root TODO.md changed while being read" unless
           after.file? && !after.symlink? && before.dev == after.dev && before.ino == after.ino &&
           before.size == after.size && before.mtime == after.mtime && bytes.bytesize == before.size
+
         todo = bytes.dup.force_encoding(Encoding::UTF_8)
         raise EncodingError, "root TODO.md is not valid UTF-8" unless todo.valid_encoding?
+        todo
+      end
 
+      def backlog_repo_head(root)
         head, status = Master::Io::Exec.capture2e("git", "rev-parse", "HEAD", chdir: root, timeout: 10)
         raise IOError, "could not read repository HEAD" unless status.success?
+
         head = head.strip
         raise IOError, "repository HEAD is not a full object ID" unless head.match?(/\A[a-f0-9]{40}\z/)
+        head
+      end
+
+      def backlog_repo_history(root, since)
         history, status = Master::Io::Exec.capture2e(
           "git", "log", "--max-count=30", "--format=%H%x09%s", "--name-only",
           "--since=#{since.utc.iso8601}", chdir: root, timeout: 15
         )
         raise IOError, "could not read recent repository history" unless status.success?
-        history = history.to_s.byteslice(0, BACKLOG_REVIEW_HISTORY_BYTES).to_s.force_encoding("UTF-8").scrub
-        items = todo.each_line.with_index(1).filter_map do |line, number|
+
+        history.to_s.byteslice(0, BACKLOG_REVIEW_HISTORY_BYTES).to_s.force_encoding("UTF-8").scrub
+      end
+
+      def backlog_open_items(todo)
+        todo.each_line.with_index(1).filter_map do |line, number|
           text = line.strip
           next unless text.match?(/\A- \[ \] .+/)
+
           { id: Digest::SHA256.hexdigest("#{number}:#{text}")[0, 12], line: number, text: }
         end
-        { head_sha: head, todo_sha256: Digest::SHA256.hexdigest(bytes), todo:, history:,
-          commit_ids: history.scan(/^([a-f0-9]{40})\t/).flatten.uniq, items: }
       end
+
+      private_class_method :read_backlog_todo, :backlog_repo_head, :backlog_repo_history, :backlog_open_items
 
       def backlog_review_prompt(snapshot)
         <<~PROMPT
@@ -507,35 +602,49 @@ module Master
       def parse_backlog_review(answer, snapshot)
         payload = JSON.parse(answer.to_s)
         raise TypeError, "backlog review must return an object" unless payload.is_a?(Hash)
+
         summary = payload.fetch("summary").to_s.strip
         raise ArgumentError, "backlog review summary is empty" if summary.empty?
+
         known = snapshot[:items].to_h { |item| [item[:id], item[:text]] }
         commits = snapshot[:commit_ids]
         used = []
-        normalize = lambda do |rows, completion|
-          raise TypeError, "backlog candidates must be arrays" unless rows.is_a?(Array)
-          raise ArgumentError, "too many backlog candidates" if rows.size > BACKLOG_REVIEW_MAX_CANDIDATES
-          rows.map do |row|
-            raise TypeError, "backlog candidate must be an object" unless row.is_a?(Hash)
-            id = row.fetch("id").to_s
-            raise ArgumentError, "unknown or repeated backlog item id" unless known.key?(id) && !used.include?(id)
-            used << id
-            reason = row.fetch("reason").to_s.strip
-            raise ArgumentError, "candidate reason is empty" if reason.empty?
-            candidate = { id:, item: known.fetch(id)[0, 180], reason: reason[0, 240] }
-            if completion
-              commit = row.fetch("commit").to_s
-              raise ArgumentError, "completion candidate cites no recent commit" unless commits.include?(commit)
-              candidate[:commit] = commit
-            end
-            candidate
-          end
-        end
-        { summary: summary[0, 300], completion_candidates: normalize.call(payload.fetch("completion_candidates", []), true),
-          stale_candidates: normalize.call(payload.fetch("stale_candidates", []), false) }
+        completion = backlog_candidates(payload.fetch("completion_candidates", []), known, commits, used, true)
+        stale = backlog_candidates(payload.fetch("stale_candidates", []), known, commits, used, false)
+        { summary: summary[0, 300], completion_candidates: completion, stale_candidates: stale }
       rescue JSON::ParserError => error
         raise ArgumentError, "backlog review did not return JSON: #{error.message}"
       end
+
+      # One candidate array, validated against the open-item index and, for
+      # completion candidates, against the recent commit ids. An item id may be
+      # named once across both arrays.
+      def backlog_candidates(rows, known, commits, used, completion)
+        raise TypeError, "backlog candidates must be arrays" unless rows.is_a?(Array)
+        raise ArgumentError, "too many backlog candidates" if rows.size > BACKLOG_REVIEW_MAX_CANDIDATES
+
+        rows.map do |row|
+          raise TypeError, "backlog candidate must be an object" unless row.is_a?(Hash)
+
+          id = row.fetch("id").to_s
+          raise ArgumentError, "unknown or repeated backlog item id" unless known.key?(id) && !used.include?(id)
+          used << id
+          reason = row.fetch("reason").to_s.strip
+          raise ArgumentError, "candidate reason is empty" if reason.empty?
+          candidate = { id:, item: known.fetch(id)[0, 180], reason: reason[0, 240] }
+          candidate[:commit] = completion_commit(row, commits) if completion
+          candidate
+        end
+      end
+
+      # A completion candidate must cite a commit the supplied history shows.
+      def completion_commit(row, commits)
+        commit = row.fetch("commit").to_s
+        raise ArgumentError, "completion candidate cites no recent commit" unless commits.include?(commit)
+        commit
+      end
+
+      private_class_method :backlog_candidates, :completion_commit
 
       # The second read, after the trace: the whole target reviewed with fresh eyes against the Laws.
       # Inconclusive is reported and the run goes on.
@@ -667,25 +776,42 @@ module Master
         lane_refusal = Master::Fix::WorkLane.refusal(target)
         return Master::Result.err("fix: #{lane_refusal}", category: :validation) if lane_refusal
 
+        preflight = fix_lane_preflight(deliberation, cancellation)
+        return preflight if preflight
+
+        run_fix_report(scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, raw:, targets:,
+                       cancellation:, writes_requested:, apply:, critique:, aesthetic:, only:,
+                       mode:, task_intent:, trace_scope: execution_trace_scopes(target))
+      end
+
+      # The lane gate after the target is accepted: the lane summary, the model
+      # lane's preflight, and the cancellation that may land during it.
+      def fix_lane_preflight(deliberation, cancellation)
         Master::Trace::Dmesg.status("fix0", Master::Fix::WorkLane.summary)
         refusal = Master::Fix::LanePreflight.check(agent: deliberation.agent) if deliberation
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
-        return refusal if refusal
 
-        trace_scope = execution_trace_scopes(target)
+        refusal
+      end
+
+      # The voice-wrapped run report. A run that stopped for newer code continues
+      # on it, in this process: reexec! replaces this process, so the report
+      # leaves through the dmesg report facade here or the operator never sees it.
+      def run_fix_report(scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, raw:, targets:,
+                         cancellation:, writes_requested:, apply:, critique:, aesthetic:, only:,
+                         mode:, task_intent:, trace_scope:)
         rendered = render_fix_with_voice(
           scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, raw:, targets:, cancellation:,
           writes_requested:, apply:, critique:, aesthetic:, only:, mode:, task_intent:, trace_scope:
         )
         return rendered unless Master::Fix::CodeWatch.requested?
 
-        # A run that stopped for newer code continues on it, in this process.
-        # reexec! replaces this process, so the report leaves through the
-        # dmesg report facade here or the operator never sees it.
         Master::Trace::Dmesg::Report.print("/fix", rendered)
         Master::Fix::CodeWatch.reexec!(root, "/fix #{raw}")
         rendered
       end
+
+      private_class_method :fix_lane_preflight, :run_fix_report
 
       def announce_fix_scope(raw:, mode:, target:, writes_requested:)
         display_target = display_fix_target(target)
@@ -722,31 +848,68 @@ module Master
                               writes_requested:, apply:, critique:, aesthetic:, only:, mode:, task_intent:, trace_scope:)
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
 
-        first_read_results = first_read(
-          deliberation:, bus:, targets:, persist: writes_requested, cancellation:,
+        phase_refusal = run_fix_review_phases(scanner:, fix_loop:, deliberation:, bus:, targets:,
+                                              cancellation:, writes_requested:, trace_scope:)
+        return phase_refusal if phase_refusal
+
+        results, audit_lines = run_fix_target_passes(
+          scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, targets:, cancellation:,
+          writes_requested:, critique:, aesthetic:, only:, mode:, task_intent:
+        )
+        failure = results.find { |result| result.is_a?(Master::Result::Err) }
+        return failure if failure
+
+        delivery = publish_fix_delivery(fix_loop, targets, cancellation) if writes_requested
+        return delivery if delivery
+
+        rendered_run = [results.join("\n"), audit_lines.join("\n")]
+                       .reject { |part| part.to_s.strip.empty? }.join("\n")
+        # The run ends with its record: the governed wishlist, an honest state
+        # per workstream — what /fix still owes the trees. Wishlist failure is
+        # tail evidence, never a failed repair.
+        [rendered_run, wishlist_report].reject { |part| part.to_s.strip.empty? }.join("\n")
+      end
+
+      # The reading phases before any repair: the model's first read, the weekly
+      # backlog review, the steady execution trace and the fresh-eyes structural
+      # review. Returns the result that ends the run, or nil when they all passed.
+      def run_fix_review_phases(scanner:, fix_loop:, deliberation:, bus:, targets:, cancellation:,
+                                writes_requested:, trace_scope:)
+        first_read_results = first_read(deliberation:, bus:, targets:, persist: writes_requested, cancellation:)
+        return cancelled_fix_result(cancellation) if cancellation&.cancelled?
+
+        weekly_backlog_review(deliberation:, bus:, cancellation:, repo_root: Master.repo_root, record: writes_requested)
+        return cancelled_fix_result(cancellation) if cancellation&.cancelled?
+
+        trace_refusal = run_fix_steady_trace(scanner:, fix_loop:, deliberation:, bus:, cancellation:, trace_scope:)
+        return trace_refusal if trace_refusal
+
+        structural_review(deliberation:, bus:, targets:, persist: writes_requested,
+                          first_read_results:, cancellation:)
+        return cancelled_fix_result(cancellation) if cancellation&.cancelled?
+        nil
+      end
+
+      # The pre-repair execution trace, unless deep tracing is switched off.
+      # Returns the refusal that ends the run, or nil when the trace is clean;
+      # drift alone is retried and reported, not refused.
+      def run_fix_steady_trace(scanner:, fix_loop:, deliberation:, bus:, cancellation:, trace_scope:)
+        return nil if ENV["MASTER_FIX_DEEP_TRACE"] == "0"
+
+        trace = steady_trace(
+          scope: trace_scope, dependencies: { scanner:, fix_loop:, deliberation:, bus: }, cancellation:,
         )
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
 
-        weekly_backlog_review(
-          deliberation:, bus:, cancellation:, repo_root: Master.repo_root, record: writes_requested,
-        )
-        return cancelled_fix_result(cancellation) if cancellation&.cancelled?
+        trace_refusal(trace)
+      end
 
-        unless ENV["MASTER_FIX_DEEP_TRACE"] == "0"
-          trace = steady_trace(
-            scope: trace_scope, dependencies: { scanner:, fix_loop:, deliberation:, bus: }, cancellation:,
-          )
-          return cancelled_fix_result(cancellation) if cancellation&.cancelled?
-
-          refusal = trace_refusal(trace)
-          return refusal if refusal
-        end
-
-        structural_review(
-          deliberation:, bus:, targets:, persist: writes_requested, first_read_results:, cancellation:,
-        )
-        return cancelled_fix_result(cancellation) if cancellation&.cancelled?
-
+      # One pass per target tree, then the audit-mode instrument sweep; returns
+      # [results, audit_lines]. The pass recomputes writes_requested from the
+      # flags, the way the workflow always did.
+      def run_fix_target_passes(scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, targets:,
+                                cancellation:, writes_requested:, critique:, aesthetic:, only:,
+                                mode:, task_intent:)
         writes_requested = writes_requested?(apply:, only:)
         effective_critique = critique.nil? ? writes_requested && council_default : critique
         results = targets.map do |fix_target|
@@ -759,29 +922,27 @@ module Master
           )
         end
         audit_lines = mode == "audit" ? run_audit_probes(targets:, cancellation:) : []
-        failure = results.find { |result| result.is_a?(Master::Result::Err) }
-        return failure if failure
-
-        if writes_requested
-          return cancelled_fix_result(cancellation) if cancellation&.cancelled?
-
-          begin
-            fix_loop.publish_pending!
-          rescue StandardError => e
-            message = "final publish failed after verification (#{e.class})"
-            Master::Trace::Dmesg.status("deliver0", "DELIVERY_FAILED: #{message}")
-            return Master::Result.err("DELIVERY_FAILED: #{message}", category: :delivery_failed)
-          end
-          ::Operator::CheckChain.persist_verified_baselines!(targets)
-        end
-
-        rendered_run = [results.join("\n"), audit_lines.join("\n")]
-                       .reject { |part| part.to_s.strip.empty? }.join("\n")
-        # The run ends with its record: the governed wishlist, an honest state
-        # per workstream — what /fix still owes the trees. Wishlist failure is
-        # tail evidence, never a failed repair.
-        [rendered_run, wishlist_report].reject { |part| part.to_s.strip.empty? }.join("\n")
+        [results, audit_lines]
       end
+
+      # A write run publishes its pending work and persists the verified check
+      # baselines; a delivery failure here ends the run DELIVERY_FAILED.
+      def publish_fix_delivery(fix_loop, targets, cancellation)
+        return cancelled_fix_result(cancellation) if cancellation&.cancelled?
+
+        begin
+          fix_loop.publish_pending!
+        rescue StandardError => e
+          message = "final publish failed after verification (#{e.class})"
+          Master::Trace::Dmesg.status("deliver0", "DELIVERY_FAILED: #{message}")
+          return Master::Result.err("DELIVERY_FAILED: #{message}", category: :delivery_failed)
+        end
+        ::Operator::CheckChain.persist_verified_baselines!(targets)
+        nil
+      end
+
+      private_class_method :run_fix_review_phases, :run_fix_steady_trace, :run_fix_target_passes,
+                           :publish_fix_delivery
 
       def run_fix_target(scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, target:,
                          writes_requested:, effective_critique:, critique:, aesthetic:, only:, cancellation: nil,
