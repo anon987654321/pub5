@@ -24,6 +24,8 @@ class PastePublisherTest < Minitest::Test
     KEY
     raw = [
       "PASSWORD=hunter2",
+      "RAILS_MASTER_KEY=master-secret",
+      "DATABASE_URL=postgres://svc:db-secret@example.test/app",
       "Authorization: Bearer #{'B' * 32}",
       "https://deploy:secret@example.test/hook?token=one-time",
       token,
@@ -36,7 +38,7 @@ class PastePublisherTest < Minitest::Test
     assert_includes report, "status: success"
     assert_includes report, "[PRIVATE KEY BLOCK REDACTED]"
     assert_includes report, "$REPO/MASTER/bin/check"
-    %w[hunter2 secret one-time private-key-material].each { |secret| refute_includes report, secret }
+    %w[hunter2 master-secret db-secret secret one-time private-key-material].each { |secret| refute_includes report, secret }
     refute_includes report, token
     refute_includes report, "deploy:secret@"
   end
