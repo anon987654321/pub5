@@ -68,6 +68,33 @@ class TestBinRuby < Minitest::Test
     ENV["PATH"] = old_path
   end
 
+  def test_deleted_running_interpreter_path_is_not_returned_for_child_checks
+    Dir.mktmpdir do |dir|
+      master = staged_master_with_tools_ruby(dir, version: "3.4.2", marker: "FALLBACK-RUBY")
+      stale = File.join(dir, "Cellar", "ruby", "4.0.5", "bin", "ruby")
+      FileUtils.mkdir_p(File.dirname(stale))
+
+      Operator::RubyRunner.stub(:config, nil) do
+        RbConfig.stub(:ruby, stale) do
+          selected = Operator::RubyRunner.best_available_ruby(root: master)
+
+          assert_equal File.join(master, ".tools", "ruby", "bin", "ruby"), selected.fetch(:path)
+          refute selected.fetch(:current)
+        end
+      end
+    end
+  end
+
+  def test_missing_explicit_ruby_override_is_rejected_without_spawning_it
+    missing = File.join(Dir.tmpdir, "pub5-ruby-missing-#{Process.pid}")
+
+    ENV.stub(:[], ->(key) { key == "PUB5_RUBY" ? missing : nil }) do
+      error = assert_raises(RuntimeError) { Operator::RubyRunner.ruby_cmd }
+
+      assert_match(/PUB5_RUBY must name an executable Ruby/, error.message)
+    end
+  end
+
   def test_running_compatible_interpreter_is_preferred
     selected = Operator::RubyRunner.best_available_ruby
     assert_equal File.expand_path(RbConfig.ruby), File.expand_path(selected.fetch(:path))

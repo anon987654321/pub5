@@ -14,8 +14,8 @@ module Operator
     def ruby_cmd(root: Environment.repo_root)
       explicit = ENV["PUB5_RUBY"].to_s
       unless explicit.empty?
-        version = version_for(explicit)
-        return explicit if File.executable?(explicit) && version && version >= Environment::SUPPORTED_RUBY_MIN
+        version = version_for(explicit) if File.file?(explicit) && File.executable?(explicit)
+        return explicit if version && version >= Environment::SUPPORTED_RUBY_MIN
 
         raise "PUB5_RUBY must name an executable Ruby >= #{Environment::SUPPORTED_RUBY_MIN}: #{explicit}"
       end
@@ -58,7 +58,11 @@ module Operator
 
     def best_available_ruby(root: Environment.repo_root)
       current = RbConfig.ruby
-      current_version = version_for(current)
+      # The running process can outlive the Homebrew Cellar path it was
+      # launched from. RbConfig still remembers that deleted path, but it is no
+      # longer a valid interpreter for child checks; discover an installed
+      # replacement instead of handing out a stale executable.
+      current_version = version_for(current) if File.file?(current) && File.executable?(current)
       return { path: current, version: current_version, current: true } if current_version && current_version >= Environment::SUPPORTED_RUBY_MIN
 
       candidates = Dir.glob(File.join(rbenv_root_for(root), "versions", "*", "bin", "ruby"))
@@ -114,7 +118,8 @@ module Operator
     # Ruby's directory names its version, and each other path is asked once. Spawning every candidate cost
     # 0.9s of each MASTER boot, because loading check_chain.rb asks for the best Ruby.
     def version_for(path)
-      return Gem::Version.new(RUBY_VERSION) if File.identical?(path, RbConfig.ruby)
+      running = RbConfig.ruby
+      return Gem::Version.new(RUBY_VERSION) if File.file?(path) && File.file?(running) && File.identical?(path, running)
 
       named = path.to_s[RBENV_VERSION_DIR, 1]
       return Gem::Version.new(named) if named
@@ -127,7 +132,7 @@ module Operator
       return unless status.success?
 
       Gem::Version.new(output.to_s.strip[/\d+(\.\d+)+\z/])
-    rescue ArgumentError, Errno::ENOEXEC, Errno::EACCES
+    rescue ArgumentError, SystemCallError
       nil
     end
 
