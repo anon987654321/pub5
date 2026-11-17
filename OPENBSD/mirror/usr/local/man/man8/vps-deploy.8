@@ -3,10 +3,15 @@
 .Os
 .Sh NAME
 .Nm vps-deploy
-.Nd deploy approved pub4 services to the production VPS
+.Nd deploy approved pub5 services to the production VPS
 .Sh SYNOPSIS
 .Nm
 .Cm all | master | brgen | amber | bsdports | mrdamascy
+.Nm
+.Cm recover --plan
+.Nm
+.Cm recover --apply
+.Ar run-id
 .Sh DESCRIPTION
 .Nm
 is the serialized production deploy entry point at
@@ -21,9 +26,9 @@ which re-executes the script as root).
 Git fetch and checkout always run as
 .Cm dev
 so the production tree and GitHub credentials stay correctly owned.
-Service control calls
-.Nm pub4-admin
-directly.
+Service control and recovery receipt calls use the fixed root-owned
+.Nm pub5-admin
+broker directly.
 When started as
 .Cm dev ,
 passwordless
@@ -41,7 +46,10 @@ validates bounded timing and capacity settings, obtains the deploy lock, and
 runs the configured preflight, synchronization, CI, restart, health and deploy
 stamp steps.
 The exact order and restore behavior are implemented in the script
-and the production runbook.
+and the production runbook. Every top-level run has a root-private atomic receipt
+under /var/db/pub5/deploy_runs, recording the pinned SHA, previous SHA, original
+running-service snapshot, ports, restore order, owner process identity and latest
+stage. Child app runs update the parent receipt.
 .Pp
 The accepted targets are
 .Cm all ,
@@ -103,6 +111,28 @@ Setting this to
 .Cm 1
 adds the browser checks after restart.
 .El
+.Ss Interrupted deployment recovery
+.Pp
+.Cm recover --plan
+lists receipts whose service restoration is pending. It is serialized by the
+deploy lock, does not fetch or check out code, and does not start, stop or
+restart services. A receipt is reported as live when its owner PID and process
+fingerprint still match, ambiguous when that PID cannot be identified, and
+available only when the recorded process is gone or the PID has been reused.
+.Pp
+.Cm recover --apply
+.Ar run-id
+requires the exact ID shown by the plan. It refuses a live or ambiguous owner,
+restores only services captured as running before that deploy, in the recorded
+order, and verifies brokered service state plus each recorded app's loopback
+.Pa /up
+endpoint. Success marks the receipt recovered. A failed verification leaves it
+pending for diagnosis and a later explicit retry.
+.Pp
+Recovery restores service availability only. It does not roll back the Git
+checkout, database migrations or application data. It is never run automatically
+at boot. The installed broker must support the deploy-run verbs; install and
+verify the reviewed mirror before the first use of this receipt-enabled deployer.
 .Sh SECURITY
 Do not run as root.
 Do not bypass preflight during ordinary deployments.
@@ -119,9 +149,11 @@ and the owning tree README.
 zsh OPENBSD/bin/vps-deploy --help
 zsh OPENBSD/bin/vps-deploy master
 zsh OPENBSD/bin/vps-deploy all
+zsh OPENBSD/bin/vps-deploy recover --plan
+zsh OPENBSD/bin/vps-deploy recover --apply 20261117T010000Z-all-12345
 .Ed
 .Sh SEE ALSO
 .Xr operator 1 ,
-.Xr pub4-admin 8 ,
+.Xr pub5-admin 8 ,
 .Xr rcctl 8 ,
 .Xr relayd 8
