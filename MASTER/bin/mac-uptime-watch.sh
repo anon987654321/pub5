@@ -113,14 +113,14 @@ vm23_cpu_sample() {
     -o ServerAliveCountMax=2
   )
   [[ -f "$PUB5_VM23_SSH_KEY" ]] && ssh_opts+=(-i "$PUB5_VM23_SSH_KEY")
-  output=$(ssh "\${ssh_opts[@]}" "$PUB5_VM23_SSH_HOST" "/usr/bin/vmstat -c 6 -w 1" 2>/dev/null) || return 1
+  output=$(ssh "${ssh_opts[@]}" "$PUB5_VM23_SSH_HOST" "/usr/bin/vmstat -c 6 -w 1" 2>/dev/null) || return 1
 
   while IFS= read -r line; do
-    columns=(\${=line})
-    (( \${#columns} >= 3 )) || continue
-    a=\${columns[-3]}
-    b=\${columns[-2]}
-    c=\${columns[-1]}
+    columns=(${=line})
+    (( ${#columns} >= 3 )) || continue
+    a=${columns[-3]}
+    b=${columns[-2]}
+    c=${columns[-1]}
     [[ $a == <-> && $b == <-> && $c == <-> ]] || continue
     if (( rows == 0 )); then
       rows=1
@@ -157,7 +157,7 @@ watch_vm23_cpu() {
       vm23_cpu_notice "UNREACHABLE" "vm23 CPU probe via SSH failed for $sshfails consecutive checks"
       sshdown=1
     fi
-    tmp="$CPU_STATE.new.$"
+    tmp="${CPU_STATE}.new"
     print -r -- "$state $high $critical $recovery $sshfails $sshdown" > "$tmp" &&
       mv -f "$tmp" "$CPU_STATE" || { rm -f "$tmp"; alerted=1; }
     return 0
@@ -194,17 +194,17 @@ watch_vm23_cpu() {
     fi
   fi
 
-  print -r -- "$(date '+%Y-%m-%d %H:%M:%S') busy=\${busy}% state=$state" >> "$CPU_LOG"
-  tmp="$CPU_STATE.new.$"
+  print -r -- "$(date '+%Y-%m-%d %H:%M:%S') busy=${busy}% state=$state" >> "$CPU_LOG"
+  tmp="${CPU_STATE}.new"
   print -r -- "$state $high $critical $recovery $sshfails $sshdown" > "$tmp" &&
     mv -f "$tmp" "$CPU_STATE" || { rm -f "$tmp"; alerted=1; return 1; }
 
   if [[ $previous == clear && $state == warning ]]; then
-    vm23_cpu_notice "SATURATED" "vm23 CPU busy \${busy}% for $high five-minute checks (limit $PUB5_VM23_CPU_WARN%)"
+    vm23_cpu_notice "SATURATED" "vm23 CPU busy ${busy}% for $high five-minute checks (limit $PUB5_VM23_CPU_WARN%)"
   elif [[ $previous != critical && $state == critical ]]; then
-    vm23_cpu_notice "CRITICAL" "vm23 CPU busy \${busy}% for $critical five-minute checks (limit $PUB5_VM23_CPU_CRIT%)"
+    vm23_cpu_notice "CRITICAL" "vm23 CPU busy ${busy}% for $critical five-minute checks (limit $PUB5_VM23_CPU_CRIT%)"
   elif [[ $previous != clear && $state == clear ]]; then
-    vm23_cpu_notice "RECOVERED" "vm23 CPU recovered to \${busy}% for $PUB5_VM23_CPU_RECOVER_SAMPLES checks"
+    vm23_cpu_notice "RECOVERED" "vm23 CPU recovered to ${busy}% for $PUB5_VM23_CPU_RECOVER_SAMPLES checks"
   fi
 }
 
