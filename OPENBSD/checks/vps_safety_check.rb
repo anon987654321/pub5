@@ -520,7 +520,7 @@ if File.file?(vps_state_path)
                    service_state.include?('return "unknown (pub5-admin missing)" unless File.file?(broker)') &&
                    !service_state.include?('"/usr/sbin/rcctl", "check", service')
   failures << "vps-state service reads must use the root broker" unless state_contract
-  recovery_state_contract = vps_state.include?('Open3.capture2e("doas", "-n", broker, "deploy-run-list")') &&
+  recovery_state_contract = vps_state.include?('Open3.capture2e("doas", "-n", broker, "deploy-run-pending-list")') &&
                            vps_state.include?("def deploy_recovery_status") &&
                            vps_state.include?('File.expand_path(STAMP_DIR) == "/var/db/pub4"')
   failures << "vps-state fleet recovery reads must use the fixed root broker" unless recovery_state_contract
