@@ -26,7 +26,8 @@ class Admin::ReportsController < ApplicationController
   end
 
   def update
-    ModerationWorkflow.transition!(report: @report, status: params[:status], decision_reason: params[:decision_reason]) if params[:status].present?
+    ModerationWorkflow.transition!(report: @report, status: params[:status], decision_reason: params[:decision_reason],
+                                   actor: Current.user) if params[:status].present?
     redirect_back fallback_location: admin_reports_path
   end
 
