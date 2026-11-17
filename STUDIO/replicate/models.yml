@@ -6,9 +6,7 @@
 #
 # The image catalogue rows were refit from Replicate on 2026-11-13. The new
 # MiniMax H3 Lite and H3 Highspeed video entries were verified on 2026-11-17.
-# exist and the `inputs` listed are the ones the model's own schema declares, so
-# a caller can pass them without a rejected-key surprise. Run counts are the
-# catalogue's at that date and are a popularity hint, not a quality claim.
+# Image-model run counts are a popularity hint, not a quality claim.
 #
 # `likeness` is the field that matters for a selfie of a real person:
 #   reference  the model takes the subject's own photographs as input and keeps
