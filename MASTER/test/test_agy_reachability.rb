@@ -112,22 +112,26 @@ class TestAgyReachability < Minitest::Test
 
   def test_agy_is_available_when_its_binary_is_there_and_no_api_key_is_set
     with_agy(true) do
+      live = Master::Io::LaneSelection.live_lanes.to_a
+      assert_includes live, "agy:auto"
       assert_includes chain, "agy:auto",
                       "the binary-backed lane stays available at its declared tier position"
-      assert_match(/\A(?:agy|zai-cli|web-chat|nvidia|gateway|local|ollama|deepseek|claude|gemini)/,
-                   Master.default_model.to_s,
-                   "boot names an available configured lane, not an absent provider"
+      assert_equal live.first, Master.default_model,
+                   "boot selects the first live lane in the configured model-tier order"
     end
   end
 
   def test_agy_remains_a_fallback_after_the_declared_primary_when_an_api_key_is_configured
     ENV["OPENROUTER_API_KEY"] = OPENROUTER_KEY
+    ENV["ZAI_API_KEY"] = "zai-" + ("z" * 48)
     with_agy(true) do
       offered = chain
+      assert_equal "glm-5.3-flash", Master.default_model
+      assert_equal "glm-5.3-flash", offered.first,
+                   "the configured GLM primary precedes every subscription CLI"
       assert_includes offered, "agy:auto",
-                      "AGY remains in the fallback chain when its binary is present"
-      refute_equal "agy:auto", offered.first,
-                   "AGY does not promote itself over the configured first reachable tier entry"
+                      "AGY remains available as a later fallback"
+      assert_operator offered.index("agy:auto"), :>, offered.index("glm-5.3-flash")
     end
   end
 
