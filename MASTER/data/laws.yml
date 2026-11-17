@@ -3919,6 +3919,14 @@ law_catalogue:
       severity: warning
       autofix: automatic
       languages: [ruby]
+      # The interface exemption lives as a kind in data/law_kinds.yml
+      # (agent_interface, repl_session): stdout is the subject's only channel.
+      # The catalogue carries the reach so both the full scanner and the bare
+      # tier honour it from one place; the kind owns the reason and the globs
+      # that prove the subject still exists. Renaming lib/agent/ or
+      # lib/cli/session/ without moving the kind is a kinds-check breach, not
+      # an overnight re-arm.
+      path_exclude: 'lib/(?:agent|cli/session)/'
     NO_SELECTOR_ARGUMENTS:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
