@@ -383,8 +383,9 @@ puts "Playlist: #{playlists.size} playlists, tracks, sets"
 # the way the checkout builds them, reviews and drivers (lib/brgen/takeaway_seed.rb).
 ActsAsTenant.current_tenant = seed_city if seed_city
 restaurants = Brgen::TakeawaySeed.seed!(users: users, city: seed_city, scale: SEED_SCALE)
+mrdamascy = Brgen::TakeawaySeed.seed_mrdamascy!(owner: admin, city: seed_city)
 
-puts "Takeaway: #{restaurants.size} restaurants, menu items, orders, reviews, drivers"
+puts "Takeaway: #{restaurants.size} demo restaurants plus #{mrdamascy.name} owner tenant, menu, photos and kitchen hours"
 
 # TV subapp
 num_ch = (8 * SEED_SCALE).clamp(3, 50)
