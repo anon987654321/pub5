@@ -140,6 +140,17 @@ class TestRuntimeCatalogueValidation < Minitest::Test
     assert_match(/models\.yml routing has unknown field\(s\): provder/, error)
   end
 
+  def test_media_lane_promotion_must_have_a_valid_date_and_lower_price
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    lane = data.fetch("media_lanes").fetch("video").find { |row| row["model"] == "minimax/h3-lite" }
+    lane.fetch("promotion")["until"] = "2026-13-40"
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/media_lanes.video\[0\].promotion.until must be a YYYY-MM-DD date/, error)
+  end
+
   def test_boot_checks_apply_model_reference_validation_before_startup
     Dir.mktmpdir("master-model-catalogue-boot") do |tmp|
       root = File.join(tmp, "MASTER")
