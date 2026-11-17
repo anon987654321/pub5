@@ -69,8 +69,13 @@ module Master
             visual_applicable = assessment_add_visual_law(info, plan)
             assessment_activate_matrix(info, files, plan, opportunity_applicable, visual_applicable)
           rescue StandardError => e
-            stage_failures[:assessment_matrix] << "#{e.class}: #{e.message.to_s[0, 180]}"
-            @bus&.publish("fix_loop:assessment_matrix_init_failed", error_class: e.class.name, message: e.message)
+            assessment_matrix_initialization_failed(e)
+          end
+
+          def assessment_matrix_initialization_failed(error)
+            stage_failures[:assessment_matrix] << "#{error.class}: #{error.message.to_s[0, 180]}"
+            @bus&.publish("fix_loop:assessment_matrix_init_failed",
+              error_class: error.class.name, message: error.message)
             @assessment_ledger = nil
             self
           end
@@ -1026,9 +1031,7 @@ module Master
 
           def assessment_file_cell_result(law_id:, info:, stream:, surface:, observation:,
                                           signatures_stable:, semantic_gaps:, pending:, evidence:, surface_evidence:)
-            scoped_files = observation[:files].select do |path|
-              assessment_law_applies?(info, path, stream:) && assessment_surface_applies?(info, surface, path, stream:)
-            end
+            scoped_files = assessment_scoped_cell_files(info, stream, surface, observation)
             return assessment_result(:not_applicable, reason: "no eligible file matches this Law/surface scope") if scoped_files.empty?
             unless assessment_surface_supported?(info, surface, stream:)
               return assessment_unmeasurable("#{surface} has no assessor for this Law/stream adapter", evidence)
@@ -1044,6 +1047,13 @@ module Master
               semantic: %i[semantic_violations semantic_opportunities].include?(stream),
               semantic_gaps:, pending:, evidence: cell_evidence
             )
+          end
+
+          def assessment_scoped_cell_files(info, stream, surface, observation)
+            observation[:files].select do |path|
+              assessment_law_applies?(info, path, stream:) &&
+                assessment_surface_applies?(info, surface, path, stream:)
+            end
           end
 
           def assessment_file_surface_evidence(surface, scoped_files, evidence)
