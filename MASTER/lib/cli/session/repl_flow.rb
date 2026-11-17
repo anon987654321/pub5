@@ -396,6 +396,7 @@ module Master
           command = name && @container.fetch(:commands, {})[name]
           return :unhandled unless command
 
+          log_snapshot = operation_log_snapshot
           @refs.ground_truth&.begin_turn! if @refs&.respond_to?(:ground_truth)
           result = command.call(args: match[:args].to_s)
           # Pipe mode (`bin/master /fix RAILS` with no TTY) reaches commands here, and bin/master
@@ -415,14 +416,14 @@ module Master
           # The commands' replies print here; the face transcript is gone with
           # the terminal face.
           print_terminal_output(text, mode: @last_ok ? :dim : :error) unless text.empty?
-          publish_operation_log(operation: stripped, status: @last_ok ? "success" : "failure", output: text)
+          publish_operation_log(operation: stripped, status: @last_ok ? "success" : "failure", output: text, since: log_snapshot)
           result
         rescue StandardError => e
           @last_ok = false
           @exit_code = 2
           text = "cmd0: /#{name} failed - #{e.class}: #{e.message}"
           print_terminal_output(text, mode: :error)
-          publish_operation_log(operation: stripped, status: "failure", output: text)
+          publish_operation_log(operation: stripped, status: "failure", output: text, since: log_snapshot)
           nil
         end
 
@@ -498,12 +499,13 @@ module Master
           shell = bang_shell
           return Master::Trace::Dmesg.status("shell0", "governor unavailable") unless shell
 
+          log_snapshot = operation_log_snapshot
           result = shell.call(command:)
           text = result.ok? ? result.value!.to_s : result.message.to_s
           record_execution_output(command:, text:, status: result.ok? ? "success" : "failure")
 
           terminal_puts(@refs.renderer.render(text, mode: result.ok? ? :dim : :error))
-          publish_operation_log(operation: "!#{command}", status: result.ok? ? "success" : "failure", output: text)
+          publish_operation_log(operation: "!#{command}", status: result.ok? ? "success" : "failure", output: text, since: log_snapshot)
         end
 
         # Terminal output is attached to the session as execution evidence. The model
@@ -530,11 +532,37 @@ module Master
           Master::Ground::Swallow.log(e, context: "cli.execution_output", event_bus: @refs.bus)
         end
 
-        def publish_operation_log(operation:, status:, output:)
+        def operation_log_snapshot
+          logger = @refs.logging if @refs&.respond_to?(:logging)
+          logger&.respond_to?(:snapshot) ? logger.snapshot : []
+        rescue StandardError
+          []
+        end
+
+        def operation_log_output(before, fallback)
+          current = operation_log_snapshot
+          previous = Array(before)
+          added = if previous.empty?
+                    current
+                  elsif current.first(previous.length) == previous
+                    current.drop(previous.length)
+                  else
+                    overlap = [previous.length, current.length].min.downto(1).find do |count|
+                      previous.last(count) == current.first(count)
+                    end
+                    current.drop(overlap || 0)
+                  end
+          [added.join("\\n"), fallback.to_s].reject { |part| part.strip.empty? }.join("\\n\\n")
+        rescue StandardError
+          fallback.to_s
+        end
+
+        def publish_operation_log(operation:, status:, output:, since: nil)
           return unless Master::Ground::PastePublisher.operation_request?(operation)
 
+          report_output = since.nil? ? output : operation_log_output(since, output)
           outcome = Master::Ground::PastePublisher.new(root: Master::REPO_ROOT).publish(
-            operation:, status:, output:
+            operation:, status:, output: report_output
           )
           if outcome.success?
             terminal_puts("log0: published #{outcome.url} (#{outcome.service}; expires in 1 day)")
@@ -621,6 +649,7 @@ module Master
           shell = bang_shell
           return Master::Trace::Dmesg.status("shell0", "unavailable") unless shell
 
+          log_snapshot = operation_log_snapshot
           result = shell.call(command:)
           text = result.ok? ? result.value!.to_s : result.message.to_s
           record_execution_output(command:, text:, status: result.ok? ? "success" : "failure")
@@ -630,7 +659,7 @@ module Master
           # Like run_bang: the write shares Dmesg's mutex and rebuilds Reline's
           # draft, instead of appending at the cursor after the prompt glyphs.
           terminal_puts(@refs.renderer.render(text, mode: result.ok? ? :dim : :error))
-          publish_operation_log(operation: "!#{command}", status: result.ok? ? "success" : "failure", output: text)
+          publish_operation_log(operation: "!#{command}", status: result.ok? ? "success" : "failure", output: text, since: log_snapshot)
         end
 
         def repeat_last
