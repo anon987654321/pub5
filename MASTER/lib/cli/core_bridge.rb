@@ -534,21 +534,7 @@ module Master
         lambda do |turn:, effect:, observation:|
           line = "#{turn}: #{effect} -> #{observation}"
           transcript << line
-          if repository_delivery && effect.verb == :write && observation.ok?
-            mission.record_repository_write!(
-              path: effect.args[:path], content: effect.args[:content], repository_root: root,
-            )
-          elsif repository_delivery && effect.verb == :git &&
-                effect.args[:operation].to_s.to_sym == :commit && observation.ok?
-            committed = mission.record_repository_commit!(
-              expected_hashes: effect.args[:expected_hashes], repository_root: root,
-            )
-            if mission.record&.fetch("origin", nil) == "backlog"
-              raise DeliveryFailed, "DELIVERY_FAILED: commit write receipt could not be reconciled" unless committed
-
-              push_backlog_commit!(mission:, root:, bus:)
-            end
-          end
+          record_repository_delivery_effect(effect, observation, mission:, root:, bus:) if repository_delivery
           if effect.verb == :write && observation.ok?
             Master::Trace::WriteTracker.current&.record(File.expand_path(effect.args[:path].to_s, root))
           end
@@ -561,6 +547,33 @@ module Master
           # the prompt or hides the following refusal/status.
           on_turn&.call(report_turn(line))
         end
+      end
+
+      # Keep repository-delivery bookkeeping outside the turn callback: the
+      # observer should report one effect, not own a nested commit protocol.
+      def record_repository_delivery_effect(effect, observation, mission:, root:, bus:)
+        return unless observation.ok?
+
+        case effect.verb
+        when :write
+          mission.record_repository_write!(
+            path: effect.args[:path], content: effect.args[:content], repository_root: root,
+          )
+        when :git
+          record_repository_delivery_commit(effect, mission:, root:, bus:) if
+            effect.args[:operation].to_s == "commit"
+        end
+      end
+
+      def record_repository_delivery_commit(effect, mission:, root:, bus:)
+        committed = mission.record_repository_commit!(
+          expected_hashes: effect.args[:expected_hashes], repository_root: root,
+        )
+        return unless mission.record&.fetch("origin", nil) == "backlog"
+
+        raise DeliveryFailed, "DELIVERY_FAILED: commit write receipt could not be reconciled" unless committed
+
+        push_backlog_commit!(mission:, root:, bus:)
       end
 
       # Always audit even when no host supplied a bus. In that case persist to the
