@@ -973,6 +973,11 @@ if [[ $app == recover ]]; then
   print "vps-deploy: only the recorded service snapshot will be restored"
   keep_deploy_flag
   set_stage recovery-restore
+  recovery_payload=$("$RUBY" -rjson -e 'puts JSON.generate(status: "failed", recovery_state: "pending", stage: "recovery-restore")')
+  admin_request deploy-run-write "$recover_id" "$recovery_payload" || {
+    print -u2 "vps-deploy: cannot persist recovery-attempt stage; no services were changed"
+    exit 1
+  }
   recovery_failed=0
   VPS_DEPLOY_RESTORE_ATTEMPTED=1
   restore_started || recovery_failed=1
