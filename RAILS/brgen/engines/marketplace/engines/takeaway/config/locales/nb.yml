@@ -10,6 +10,9 @@
 # Keys the host already carries are NOT copied here. Use them.
 nb:
   takeaway:
+    setup_store_linked: "Restauranten kobles til Marketplace-butikken din."
+    setup_draft_hint: "Restauranten starter som et privat utkast. Legg inn meny og åpningstider, og publiser når alt er klart."
+    incoming_order_from: "Ny bestilling fra %{name}"
     sort_label: "Sorter restauranter"
     sorts:
       popular: "Best vurdert"
