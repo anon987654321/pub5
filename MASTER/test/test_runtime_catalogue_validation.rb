@@ -73,6 +73,27 @@ class TestRuntimeCatalogueValidation < Minitest::Test
     assert_match(/models.yml openai_compatible.llm7.keyless.tier must be non-empty text/, error)
   end
 
+  def test_replicate_chat_budget_requires_a_price_for_every_automatic_model
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("replicate_chat_budget").fetch("prices_usd_per_million").delete("openai/gpt-5.2")
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/replicate_chat_budget missing prices for openai\/gpt-5\.2/, error)
+  end
+
+  def test_replicate_chat_budget_rejects_nonpositive_model_prices
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("replicate_chat_budget").fetch("prices_usd_per_million")
+      .fetch("openai/gpt-5.2")["output"] = 0
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/replicate_chat_budget\.prices_usd_per_million\.openai\/gpt-5\.2\.output must be positive/, error)
+  end
+
   def test_media_lanes_must_reference_declared_media_providers
     path = catalogue_path("models.yml")
     data = YAML.safe_load_file(path, aliases: true)
