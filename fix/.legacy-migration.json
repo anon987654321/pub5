@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "repository_state": "anon987654321-pub5-ea6dfea0fc2a",
+  "sources": [
+    "/Users/mac/Documents/GitHub/pub5/MASTER/.master",
+    "/Users/mac/Documents/GitHub/pub5/.master"
+  ],
+  "copied": [
+    {
+      "source": "costs.jsonl",
+      "path": ".master/costs.jsonl",
+      "sha256": "48c44f9f3fbef215bfee9e52fb689bb8fbf8627e5200aacf28a78bd638371408",
+      "bytes": 2988,
+      "source_mode": "0600"
+    },
+    {
+      "source": "log.jsonl",
+      "path": ".master/log.jsonl",
+      "sha256": "c21109d94d5772062f9351c9360728479673cd41328369c05aa3b827c1f4c86b",
+      "bytes": 334,
+      "source_mode": "0600"
+    },
+    {
+      "source": "mission.json",
+      "path": ".master/mission.json",
+      "sha256": "6533c5b6f843f86f5a9473020f7650a6f3db0d3b6661a5bdd733963ef43169c0",
+      "bytes": 1078,
+      "source_mode": "0600"
+    }
+  ],
+  "created_at": "2026-11-17T03:18:15Z"
+}
