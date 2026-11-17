@@ -206,6 +206,15 @@ module Master
         prompt_tokens * price["prompt"] + tokens * (price["image_output"] || price["completion"])
       end
 
+      def media_per_second_rate(row, today:)
+        list_rate = Float(row.fetch("usd_per_second"))
+        promotion = row["promotion"]
+        return list_rate unless promotion.is_a?(Hash)
+        return list_rate if today > Date.iso8601(promotion.fetch("until"))
+
+        Float(promotion.fetch("usd_per_second"))
+      end
+
       def catalog_lanes(kind, known)
         merge = config.fetch("catalog_merge")
         rows = catalog.select { |id, price| price["outputs"].include?(kind.to_s) && !known.include?("media-openrouter:#{id}") && price["prompt"] * PER_MILLION <= merge["max_prompt_usd_per_m"] && price["prompt"].positive? }
