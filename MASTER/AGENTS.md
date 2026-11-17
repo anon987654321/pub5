@@ -707,8 +707,20 @@ compatibility entrypoint for `bin/check --profile=ci`.
 
 When a check fails, its combined run log is `MASTER/.master/check/latest.log`;
 individual step logs are in `MASTER/.master/check/`. A terminal `fix-here`
-run writes `MASTER/.master/fix-TREE.log`. These are local diagnostic artifacts;
-review and redact credentials or private data before sharing them.
+run writes `MASTER/.master/fix-TREE.log`. These full local logs remain on disk.
+
+Interactive MASTER operations publish a bounded, redacted operation report to
+`pste.us`, falling back to `dpaste.org`; the CLI prints the validated URL as
+`log0`. The report contains the operation, terminal status, captured dmesg
+lines and final result, not the conversation transcript or a local log
+directory. Both providers receive a one-day expiry. Set
+`MASTER_LOG_PUBLISH=0` to keep every report local. Content-bearing commands
+such as `/documents`, `/memory`, `/read`, `/write`, `/ask` and `/message`,
+plus shell commands that read files or environment state, are excluded from
+automatic publication. Publication failure never changes the operation's own
+result or exit code. Standalone scripts that do not run inside the MASTER CLI
+(for example `MASTER/bin/check`) still keep their logs local; review and
+redact them before sharing.
 
 The check runner explains itself without running a suite:
 `MASTER/bin/check --help` lists profiles, `MASTER/bin/check --list --profile=NAME`
