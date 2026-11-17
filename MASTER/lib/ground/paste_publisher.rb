@@ -17,7 +17,7 @@ module Master
       WRITE_TIMEOUT = 3
       EXPIRY = "1d"
 
-      ANSI = /\e(?:\[[0-?]*[ -\/@-~]|\][^\a]*(?:\a\e\\))/
+      ANSI = /\e(?:\[[0-?]*[ -\/]*[@-~]|\][^\a]*(?:\a|\e\\))/
       PRIVATE_KEY_BLOCK = /-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----.*?-----END [A-Z0-9 ]*PRIVATE KEY-----/mi
       SENSITIVE_ASSIGNMENT = /\b([A-Z0-9_.-]*(?:PASSWORD|PASSWD|SECRET|TOKEN|KEY|DSN|COOKIE|AUTHORIZATION|CREDENTIAL|DATABASE[_-]?(?:URL|URI)|DB[_-]?(?:URL|URI)|REDIS[_-]?(?:URL|URI))[A-Z0-9_.-]*\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/i
       AUTH_LINE = /\b(AUTHORIZATION|COOKIE|SET-COOKIE)\s*:\s*[^\r\n]*/i
