@@ -49,6 +49,7 @@ class TestPub4Alert < Minitest::Test
     fake(dir, "df", %(echo "Filesystem 512-blocks Used Available Capacity Mounted on"; echo "/dev/sd0k 100 76 24 76% /home"))
     fake(dir, "swapctl", %(echo "total: 2588672 512-blocks allocated, 1000000 used, 1588672 available"))
     fake(dir, "rcctl", "exit 0")
+    fake(dir, "pub5-admin", "printf '[]\\n'")
     FileUtils.mkdir_p(File.join(dir, "state"))
     File.write(File.join(dir, "state", "cpu-watch.seen"), Time.now.to_i.to_s)
     File.write(File.join(dir, "marker"), Time.now.to_i.to_s)
@@ -309,7 +310,6 @@ class TestPub4Alert < Minitest::Test
     source = File.read(SCRIPT)
 
     assert_includes crontab, "*/5 * * * * /usr/local/bin/pub4-alert watch"
-    assert_includes source, "watch_deploy_recovery"
     assert_includes source, "watch_deploy_recovery"
   end
 
