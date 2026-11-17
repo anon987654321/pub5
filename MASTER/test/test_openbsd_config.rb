@@ -48,6 +48,10 @@ class TestOpenbsdConfig < Minitest::Test
     assert_includes paths, "OPENBSD/mirror/home/johann/.muttrc"
     assert(paths.any? { |path| path.end_with?(".zone") })
     assert_operator Master::Fix::OpenBSDManualPreflight::MAX_SOURCE_READS, :>=, inventory.length
+    unmapped = inventory.select { |entry| entry.fetch("manuals").nil? }.map { |entry| entry.fetch("path") }
+    assert_empty unmapped
+    required_pages = inventory.flat_map { |entry| Array(entry.fetch("manuals")) }.uniq
+    assert_operator Master::Fix::OpenBSDManualPreflight::MAX_MANUAL_PAGES, :>=, required_pages.length
   end
 
   def test_full_stack_report_is_per_file_and_names_target_identity
