@@ -2,6 +2,7 @@
 
 require "set"
 require_relative "../../law/definition"
+require_relative "four_stream_assessment/reporting"
 
 module Master
   module Fix
@@ -13,6 +14,9 @@ module Master
     # This is deliberately adapter-driven: language parsers, path inventories,
     # cross-file analyzers, browser probes and model reviewers each keep their
     # own evidence contract while sharing one convergence and coverage ledger.
+    #
+    # The terminal renderings (#summary, #report, #evidence_report) live in
+    # fix/four_stream_assessment/reporting.rb, which re-opens this class.
     class FourStreamAssessment
       STREAMS = %i[
         lexical_violations
@@ -89,33 +93,13 @@ module Master
       def record(law:, stream:, surface:, status:, iteration:, generation: @generation,
                  reason: nil, evidence: [], findings: [], repair: nil)
         key = cell_key(law, stream, surface)
-        raise ArgumentError, "unknown law: #{key[0]}" unless laws.include?(key[0])
-        raise ArgumentError, "unknown stream: #{key[1]}" unless STREAMS.include?(key[1])
-        raise ArgumentError, "unknown surface: #{key[2]}" unless surfaces.include?(key[2])
-
-        state = status.to_sym
-        raise ArgumentError, "unknown assessment state: #{state}" unless STATES.include?(state)
+        state = validate_key!(key, status)
         detail = reason.to_s.strip
-        raise ArgumentError, "#{state} requires a reason" if %i[not_applicable inconclusive].include?(state) && detail.empty?
-
+        validate_reason!(state, detail)
         evidence_rows = evidence.nil? ? [] : Array(evidence)
         finding_rows = findings.nil? ? [] : Array(findings)
-        if state == :assessed_clean && evidence_rows.empty?
-          raise ArgumentError, "assessed_clean requires evidence naming what was examined"
-        end
-        if FINDING_STATES.include?(state) && evidence_rows.empty? && finding_rows.empty?
-          raise ArgumentError, "#{state} requires evidence or a finding"
-        end
-
-        iteration = Integer(iteration)
-        generation = Integer(generation)
-        raise ArgumentError, "iteration must be positive" unless iteration.positive?
-        raise ArgumentError, "generation cannot be negative" if generation.negative?
-        previous = history[key].last
-        if previous && iteration <= previous.iteration
-          raise ArgumentError, "iteration must advance for #{key.join("/")}"
-        end
-
+        validate_evidence!(state, evidence_rows, finding_rows)
+        iteration, generation = validate_progress!(key, iteration, generation)
         row = Result.new(
           law: key[0], stream: key[1], surface: key[2], status: state,
           iteration:, generation:, reason: detail.empty? ? nil : detail,
@@ -143,34 +127,6 @@ module Master
         @generation
       end
 
-      # Small summary for the terminal event. Full findings remain available via
-      # #report; callers need not serialize every unassessed cell to know coverage.
-      def summary
-        keys = cells
-        latest = keys.map { |key| [key, history[key].last] }
-        by_stream = STREAMS.to_h do |stream|
-          rows = latest.select { |key, _row| key[1] == stream }.map(&:last)
-          counts = (STATES + [:pending]).to_h do |state|
-            [state, rows.count { |row| row ? row.status == state : state == :pending }]
-          end
-          [stream, { cells: rows.size, states: counts }]
-        end
-        {
-          laws: laws.size,
-          generation:,
-          last_mutation_iteration:,
-          clean_passes_required: clean_passes,
-          expected_cells: keys.size,
-          recorded_cells: latest.count { |_key, row| !row.nil? },
-          unassessed_cells: latest.count { |_key, row| row.nil? },
-          inconclusive_cells: latest.count { |_key, row| row&.status == :inconclusive },
-          finding_cells: latest.count { |_key, row| row && FINDING_STATES.include?(row.status) },
-          complete: complete?,
-          clean: clean?,
-          streams: by_stream.transform_keys(&:to_s),
-        }
-      end
-
       # A cell is complete only after the required consecutive clean readings or
       # a reasoned not-applicable decision. Any missing work remains open.
       def complete?
@@ -190,143 +146,16 @@ module Master
         STREAMS.to_h { |stream| [stream.to_s, stream_coverage(stream, unmeasurable)] }
       end
 
-      def stream_coverage(stream, unmeasurable)
-        keys = cells.select { |key| key[1] == stream }
-        states = keys.to_h { |key| [key, history[key].last&.status] }
-        not_applicable = states.count { |_key, state| state == :not_applicable }
-        blind = states.count { |key, state| state == :inconclusive && unmeasurable.include?(key) }
-
-        { cells: keys.size, measurable: keys.size - not_applicable - blind, unmeasurable: blind, not_applicable: }
-      end
-
       def clean?
         complete? && cells.all? do |key|
           %i[assessed_clean not_applicable].include?(history[key].last.status)
         end
       end
 
-      def report
-        latest_by_cell = cells.to_h { |key| [key, history[key].last] }
-        stream_summary = STREAMS.to_h do |stream|
-          stream_cells = latest_by_cell.select { |key, _| key[1] == stream }
-          counts = (STATES + [:pending]).to_h do |state|
-            [state, stream_cells.count { |_, row| row ? row.status == state : state == :pending }]
-          end
-          [stream, { cells: stream_cells.size, states: counts }]
-        end
-
-        {
-          laws: laws.size,
-          generation: @generation,
-          clean_passes_required: clean_passes,
-          last_mutation_iteration:,
-          streams: STREAMS.map(&:to_s),
-          surfaces: surfaces.map(&:to_s),
-          expected_cells: cells.size,
-          recorded_cells: latest_by_cell.count { |_, row| !row.nil? },
-          complete: complete?,
-          clean: clean?,
-          stream_summary:,
-          open_findings: latest_by_cell.filter_map do |key, row|
-            next unless row && (
-              %i[violation_found opportunity_found].include?(row.status) ||
-              (row.status == :inconclusive && (row.evidence.any? || row.findings.any?))
-            )
-
-            { law: key[0], stream: key[1].to_s, surface: key[2].to_s, status: row.status.to_s,
-              iteration: row.iteration, reason: row.reason, evidence: row.evidence,
-              findings: row.findings }
-          end,
-          inconclusive: latest_by_cell.filter_map do |key, row|
-            next unless row&.status == :inconclusive
-
-            { law: key[0], stream: key[1].to_s, surface: key[2].to_s,
-              iteration: row.iteration, reason: row.reason }
-          end,
-          unassessed: latest_by_cell.filter_map do |key, row|
-            { law: key[0], stream: key[1].to_s, surface: key[2].to_s } unless row
-          end,
-        }
-      end
-
-      # Durable per-cell proof, including the complete transition history. The
-      # compact terminal summary is intentionally separate from this audit record.
-      def evidence_report
-        {
-          schema_version: 2,
-          streams: STREAMS.map(&:to_s),
-          surfaces: surfaces.map(&:to_s),
-          laws:,
-          summary:,
-          invalidations: Array(@invalidations).map do |entry|
-            {
-              iteration: entry[:iteration],
-              generation: entry[:generation],
-              reason: entry[:reason],
-            }
-          end,
-          cells: cells.sort_by { |key| key.map(&:to_s) }.map do |key|
-            rows = history[key]
-            latest = rows.last
-            {
-              law: key[0],
-              stream: key[1].to_s,
-              surface: key[2].to_s,
-              status: latest ? latest.status.to_s : "pending",
-              clean_streak: clean_streak(key),
-              readings: rows.map { |row| reading_evidence(row) },
-            }
-          end,
-        }
-      end
-
       private
 
       def cells
         @cells ||= laws.product(STREAMS, surfaces).freeze
-      end
-
-      def reading_evidence(row)
-        {
-          iteration: row.iteration,
-          generation: row.generation,
-          status: row.status.to_s,
-          reason: row.reason,
-          evidence: json_safe_value(row.evidence),
-          findings: json_safe_value(row.findings),
-          repair: repair_evidence(row.repair),
-        }
-      end
-
-      def repair_evidence(repair)
-        return if repair.nil?
-
-        if repair.is_a?(Hash)
-          {
-            changed: repair[:changed] == true || repair["changed"] == true,
-            retryable: repair[:retryable] == true || repair["retryable"] == true,
-            reason: (repair[:reason] || repair["reason"]).to_s[0, 240],
-          }
-        else
-          { changed: repair == true }
-        end
-      end
-
-      def json_safe_value(value)
-        case value
-        when NilClass, TrueClass, FalseClass, Numeric, String
-          value
-        when Symbol
-          value.to_s
-        when Array
-          value.map { |entry| json_safe_value(entry) }
-        when Hash
-          value.each_with_object({}) do |(key, entry), normalized|
-            normalized[key.to_s] = json_safe_value(entry)
-          end
-        else
-          value.respond_to?(:to_h) ? json_safe_value(value.to_h) : value.to_s
-        end
       end
 
       def cell_key(law, stream, surface)
@@ -339,6 +168,45 @@ module Master
         raise ArgumentError, "law id is blank" if id.empty?
 
         id
+      end
+
+      # Cell and reading validity, in the order record() has always reported
+      # problems, so callers see the same first ArgumentError for the same input.
+      def validate_key!(key, status)
+        raise ArgumentError, "unknown law: #{key[0]}" unless laws.include?(key[0])
+        raise ArgumentError, "unknown stream: #{key[1]}" unless STREAMS.include?(key[1])
+        raise ArgumentError, "unknown surface: #{key[2]}" unless surfaces.include?(key[2])
+
+        state = status.to_sym
+        raise ArgumentError, "unknown assessment state: #{state}" unless STATES.include?(state)
+
+        state
+      end
+
+      def validate_reason!(state, detail)
+        return unless %i[not_applicable inconclusive].include?(state) && detail.empty?
+
+        raise ArgumentError, "#{state} requires a reason"
+      end
+
+      def validate_evidence!(state, evidence_rows, finding_rows)
+        if state == :assessed_clean && evidence_rows.empty?
+          raise ArgumentError, "assessed_clean requires evidence naming what was examined"
+        end
+        return unless FINDING_STATES.include?(state) && evidence_rows.empty? && finding_rows.empty?
+
+        raise ArgumentError, "#{state} requires evidence or a finding"
+      end
+
+      def validate_progress!(key, iteration, generation)
+        iteration = Integer(iteration)
+        generation = Integer(generation)
+        raise ArgumentError, "iteration must be positive" unless iteration.positive?
+        raise ArgumentError, "generation cannot be negative" if generation.negative?
+        previous = history[key].last
+        return [iteration, generation] unless previous && iteration <= previous.iteration
+
+        raise ArgumentError, "iteration must advance for #{key.join("/")}"
       end
 
       # Readings collected during a round that made a repair cannot count as
@@ -358,23 +226,34 @@ module Master
       def assess_cell(law:, stream:, surface:, iteration:, assessors:, repairer:)
         key = [law, stream, surface]
         assessor = assessor_for(assessors, stream, surface)
-        unless assessor.respond_to?(:call)
-          record(**record_args(key, :inconclusive, iteration,
-            reason: "no assessor registered for #{stream}/#{surface}"))
-          return false
-        end
+        return missing_assessor(key, stream, surface, iteration) unless assessor.respond_to?(:call)
 
         outcome = normalize_outcome(assessor.call(
           law:, stream:, surface:, iteration:, prior: history[key].dup.freeze,
         ))
+        return record_outcome(key, outcome, iteration) unless FINDING_STATES.include?(outcome[:status])
 
-        unless FINDING_STATES.include?(outcome[:status])
-          record(**record_args(key, outcome.fetch(:status), iteration,
-            reason: outcome[:reason], evidence: outcome[:evidence],
-            findings: outcome[:findings]))
-          return false
-        end
+        repair_finding(key, outcome, iteration, repairer)
+      rescue StandardError => e
+        record(**record_args(key, :inconclusive, iteration,
+          reason: "assessment/repair failed: #{e.class}: #{e.message}"))
+        false
+      end
 
+      def missing_assessor(key, stream, surface, iteration)
+        record(**record_args(key, :inconclusive, iteration,
+          reason: "no assessor registered for #{stream}/#{surface}"))
+        false
+      end
+
+      def record_outcome(key, outcome, iteration)
+        record(**record_args(key, outcome.fetch(:status), iteration,
+          reason: outcome[:reason], evidence: outcome[:evidence],
+          findings: outcome[:findings]))
+        false
+      end
+
+      def repair_finding(key, outcome, iteration, repairer)
         unless repairer.respond_to?(:call)
           record(**record_args(key, :inconclusive, iteration,
             reason: "finding remains; no repairer is registered",
@@ -383,29 +262,34 @@ module Master
         end
 
         repair = repairer.call(
-          law:, stream:, surface:, status: outcome[:status],
+          law: key[0], stream: key[1], surface: key[2], status: outcome[:status],
           findings: Array(outcome[:findings]), evidence: Array(outcome[:evidence]), iteration:
         )
         changed = repair == true || (repair.respond_to?(:[]) && repair[:changed] == true)
         retryable = repair.respond_to?(:[]) && repair[:retryable] == true
         unless changed
-          reason = repair.respond_to?(:[]) ? repair[:reason] : nil
-          reason = "repair did not change the artifact" if reason.to_s.strip.empty? && !retryable
-          reason = "repair requires another iteration" if reason.to_s.strip.empty?
           record(**record_args(key, :inconclusive, iteration,
-            reason:, evidence: outcome[:evidence], findings: outcome[:findings], repair:))
+            reason: unchanged_repair_reason(repair, retryable),
+            evidence: outcome[:evidence], findings: outcome[:findings], repair:))
           return false
         end
 
+        record_repair(key, outcome, iteration, repair)
+      end
+
+      def unchanged_repair_reason(repair, retryable)
+        reason = repair.respond_to?(:[]) ? repair[:reason] : nil
+        reason = "repair did not change the artifact" if reason.to_s.strip.empty? && !retryable
+        reason = "repair requires another iteration" if reason.to_s.strip.empty?
+        reason
+      end
+
+      def record_repair(key, outcome, iteration, repair)
         record(**record_args(key, outcome[:status], iteration,
           evidence: outcome[:evidence], findings: outcome[:findings], repair:))
         @generation += 1
         @last_mutation_iteration = iteration
         true
-      rescue StandardError => e
-        record(**record_args(key, :inconclusive, iteration,
-          reason: "assessment/repair failed: #{e.class}: #{e.message}"))
-        false
       end
 
       def finalize_open_cells
@@ -442,11 +326,18 @@ module Master
         row
       end
 
+      def stream_coverage(stream, unmeasurable)
+        keys = cells.select { |key| key[1] == stream }
+        states = keys.to_h { |key| [key, history[key].last&.status] }
+        not_applicable = states.count { |_key, state| state == :not_applicable }
+        blind = states.count { |key, state| state == :inconclusive && unmeasurable.include?(key) }
+
+        { cells: keys.size, measurable: keys.size - not_applicable - blind, unmeasurable: blind, not_applicable: }
+      end
+
       def record_args(key, status, iteration, **values)
         { law: key[0], stream: key[1], surface: key[2], status:, iteration:, **values }
       end
-
- 
     end
 
     # Dimension-level read model over the canonical Law ledger. It does not
@@ -481,62 +372,71 @@ module Master
         dimensions = DIMENSIONS.to_h { |name| [name, dimension(name)] }
         validation = external_validation
         workflows = workflow_receipts
-        assessed = dimensions.values + validation.values.select { |row| row[:applicable] } +
-          workflows.values.select { |row| row[:applicable] }
         matrix = matrix_summary
-        dimension_statuses = dimensions.values.map { |row| row[:status] }
-        # Grouped visual repair is a local defect-removal gate. Continuous
-        # improvement is deliberately separate: an open elevation opportunity
-        # belongs in overall_status, not in the compliance verdict.
-        compliance_workflows = [:grouped_visual_repair].filter_map do |name|
-          row = workflows[name]
-          row[:status] if row && row[:applicable]
-        end
-        local_statuses = dimension_statuses + compliance_workflows
-        compliance_status = if @ledger.nil?
-                              "BLOCKED"
-                            elsif local_statuses.include?("FAIL")
-                              "FAIL"
-                            elsif local_statuses.include?("BLOCKED")
-                              "BLOCKED"
-                            elsif matrix[:status] != "complete" ||
-                                  local_statuses.any? { |status| %w[INCONCLUSIVE NOT_RUN].include?(status) }
-                              "INCONCLUSIVE"
-                            elsif local_statuses.all? { |status| status == "PASS" }
-                              "PASS"
-                            else
-                              "NOT_RUN"
-                            end
-        statuses = assessed.map { |row| row[:status] }.uniq
-        overall = if @ledger.nil?
-                    "BLOCKED"
-                  elsif statuses.include?("FAIL")
-                    "FAIL"
-                  elsif statuses.include?("BLOCKED")
-                    "BLOCKED"
-                  elsif compliance_status != "PASS" ||
-                        statuses.any? { |status| %w[INCONCLUSIVE NOT_RUN].include?(status) }
-                    "INCONCLUSIVE"
-                  elsif statuses.include?("PASS")
-                    "PASS"
-                  else
-                    "NOT_RUN"
-                  end
+        statuses = assessed_statuses(dimensions, validation, workflows)
+        compliance = compliance_status(dimensions, workflows, matrix)
         {
-          schema_version: 1, overall_status: overall, compliance_status:, dimensions:,
-          external_validation: validation, workflows:,
-          matrix: matrix_summary,
+          schema_version: 1, overall_status: overall_status(statuses, compliance),
+          compliance_status: compliance, dimensions:, external_validation: validation,
+          workflows:, matrix:,
           rule: "local compliance and external product proof are separate; missing evidence never passes",
         }
       rescue StandardError => e
+        build_failure(e)
+      end
+
+      private
+
+      def build_failure(error)
         {
           schema_version: 1, overall_status: "BLOCKED",
-          reason: "quality contract could not be assembled: #{e.class}: #{e.message.to_s[0, 180]}",
+          reason: "quality contract could not be assembled: #{error.class}: #{error.message.to_s[0, 180]}",
           dimensions: {}, external_validation: {}, workflows: {},
         }
       end
 
-      private
+      # Grouped visual repair is a local defect-removal gate. Continuous
+      # improvement is deliberately separate: an open elevation opportunity
+      # belongs in overall_status, not in the compliance verdict.
+      def compliance_status(dimensions, workflows, matrix)
+        local_statuses = dimension_statuses(dimensions) + compliance_workflows(workflows)
+        return "BLOCKED" if @ledger.nil?
+        return "FAIL" if local_statuses.include?("FAIL")
+        return "BLOCKED" if local_statuses.include?("BLOCKED")
+        return "INCONCLUSIVE" if matrix[:status] != "complete" ||
+          local_statuses.any? { |status| %w[INCONCLUSIVE NOT_RUN].include?(status) }
+        return "PASS" if local_statuses.all? { |status| status == "PASS" }
+
+        "NOT_RUN"
+      end
+
+      def dimension_statuses(dimensions)
+        dimensions.values.map { |row| row[:status] }
+      end
+
+      def compliance_workflows(workflows)
+        [:grouped_visual_repair].filter_map do |name|
+          row = workflows[name]
+          row[:status] if row && row[:applicable]
+        end
+      end
+
+      def assessed_statuses(dimensions, validation, workflows)
+        assessed = dimensions.values + validation.values.select { |row| row[:applicable] } +
+          workflows.values.select { |row| row[:applicable] }
+        assessed.map { |row| row[:status] }.uniq
+      end
+
+      def overall_status(statuses, compliance)
+        return "BLOCKED" if @ledger.nil?
+        return "FAIL" if statuses.include?("FAIL")
+        return "BLOCKED" if statuses.include?("BLOCKED")
+        return "INCONCLUSIVE" if compliance != "PASS" ||
+          statuses.any? { |status| %w[INCONCLUSIVE NOT_RUN].include?(status) }
+        return "PASS" if statuses.include?("PASS")
+
+        "NOT_RUN"
+      end
 
       def read(hash, key, fallback = nil)
         return fallback unless hash.is_a?(Hash)
@@ -575,33 +475,40 @@ module Master
       def dimension(name)
         rows = cells.select { |row| dimension_for(read(row, :law).to_s) == name }
         applicable = rows.reject { |row| read(row, :status).to_s == "not_applicable" }
+        {
+          status: dimension_status(applicable),
+          applicable: !applicable.empty?,
+          law_ids: rows.map { |row| read(row, :law).to_s }.uniq.sort,
+          cells: rows.size, applicable_cells: applicable.size,
+          failures: status_count(applicable, "violation_found"),
+          open_opportunities: status_count(applicable, "opportunity_found"),
+          inconclusive: inconclusive_count(applicable),
+          not_applicable: rows.size - applicable.size,
+          evidence: "FourStreamAssessment Law × stream × surface ledger",
+        }
+      end
+
+      def status_count(rows, state)
+        rows.count { |row| read(row, :status).to_s == state }
+      end
+
+      def inconclusive_count(rows)
         required = [read(read(@ledger, :summary, {}), :clean_passes_required, 2).to_i, 1].max
-        failures = applicable.count { |row| read(row, :status).to_s == "violation_found" }
-        opportunities = applicable.count { |row| read(row, :status).to_s == "opportunity_found" }
-        inconclusive = applicable.count do |row|
+        rows.count do |row|
           state = read(row, :status).to_s
           state == "inconclusive" || state == "pending" ||
             (state == "assessed_clean" && read(row, :clean_streak, 0).to_i < required)
         end
-        status = if applicable.empty?
-                   "NOT_RUN"
-                 elsif failures.positive?
-                   "FAIL"
-                 elsif opportunities.positive? || inconclusive.positive?
-                   "INCONCLUSIVE"
-                 elsif applicable.all? { |row| read(row, :status).to_s == "assessed_clean" }
-                   "PASS"
-                 else
-                   "INCONCLUSIVE"
-                 end
-        {
-          status:, applicable: !applicable.empty?,
-          law_ids: rows.map { |row| read(row, :law).to_s }.uniq.sort,
-          cells: rows.size, applicable_cells: applicable.size,
-          failures:, open_opportunities: opportunities, inconclusive:,
-          not_applicable: rows.size - applicable.size,
-          evidence: "FourStreamAssessment Law × stream × surface ledger",
-        }
+      end
+
+      def dimension_status(applicable)
+        return "NOT_RUN" if applicable.empty?
+        return "FAIL" if status_count(applicable, "violation_found").positive?
+        return "INCONCLUSIVE" if status_count(applicable, "opportunity_found").positive? ||
+          inconclusive_count(applicable).positive?
+        return "PASS" if applicable.all? { |row| read(row, :status).to_s == "assessed_clean" }
+
+        "INCONCLUSIVE"
       end
 
       def target_has?(tree)
@@ -640,93 +547,136 @@ module Master
       end
 
       def external_validation
-        documents = target_has?("BIZ") || @files.any? { |path| path.match?(/\.(?:pdf|docx|xlsx|pptx)\z/i) }
-        rails = target_has?("RAILS")
-        openbsd = target_has?("OPENBSD")
-        audio = @files.any? { |path| path.match?(/\.(?:wav|mp3|m4a|aac|ogg|flac)\z/i) } ||
-          @target.match?(%r{(?:\A|/)STUDIO/dilla(?:/|\z)})
-        visual_media = @files.any? { |path| path.match?(/\.(?:png|jpe?g|gif|webp|avif|svg|mp4|mov|webm)\z/i) } ||
-          @target.match?(%r{(?:\A|/)STUDIO/postpro(?:/|\z)})
-        biz = target_has?("BIZ")
+        local_surfaces.merge(external_rows(external_presence)).merge(user_acceptance: user_acceptance_row)
+      end
+
+      def local_surfaces
         {
           local_test_suite: local_surface("tests"),
           local_runtime: local_surface("runtime"),
           local_deployment_manifest: local_surface("deployment"),
-          document_rendering: external_row(
-            documents, "format-aware source check and rendered-output comparison are not established by file signatures",
-          ),
-          assistive_technology: external_row(
-            rails, "browser and DOM checks do not prove screen-reader or real-device acceptance",
-          ),
-          visual_media_review: external_row(
-            visual_media && !rails, "asset signatures and source inspection do not prove composition, hierarchy or optical quality of rendered media",
-          ),
-          live_openbsd_host: external_row(
-            openbsd, "local manifests do not prove the live host, daemon or deployed service state",
-          ),
-          human_listening: external_row(
-            audio, "asset integrity and signal checks do not establish musical or listening quality",
-          ),
-          business_and_legal_review: external_row(
-            biz, "business assumptions, factual claims and legal effect require qualified human review",
-          ),
-          user_acceptance: {
-            status: "NOT_RUN", applicable: false,
-            reason: "operator/user acceptance remains a human decision outside an automated repair run",
-          },
+        }
+      end
+
+      # File signatures only raise the external question; they never answer it,
+      # so a present target still owes the named human or rendered-output review.
+      def external_presence
+        rails = target_has?("RAILS")
+        {
+          documents: documents_present?,
+          rails:,
+          openbsd: target_has?("OPENBSD"),
+          audio: audio_present?,
+          visual_media: visual_media_present? && !rails,
+          biz: target_has?("BIZ"),
+        }
+      end
+
+      def documents_present?
+        target_has?("BIZ") || @files.any? { |path| path.match?(/\.(?:pdf|docx|xlsx|pptx)\z/i) }
+      end
+
+      def audio_present?
+        @files.any? { |path| path.match?(/\.(?:wav|mp3|m4a|aac|ogg|flac)\z/i) } ||
+          @target.match?(%r{(?:\A|/)STUDIO/dilla(?:/|\z)})
+      end
+
+      def visual_media_present?
+        @files.any? { |path| path.match?(/\.(?:png|jpe?g|gif|webp|avif|svg|mp4|mov|webm)\z/i) } ||
+          @target.match?(%r{(?:\A|/)STUDIO/postpro(?:/|\z)})
+      end
+
+      def external_rows(presence)
+        {
+          document_rendering: external_row(presence[:documents],
+            "format-aware source check and rendered-output comparison are not established by file signatures"),
+          assistive_technology: external_row(presence[:rails],
+            "browser and DOM checks do not prove screen-reader or real-device acceptance"),
+          visual_media_review: external_row(presence[:visual_media],
+            "asset signatures and source inspection do not prove composition, hierarchy or optical quality of rendered media"),
+          live_openbsd_host: external_row(presence[:openbsd],
+            "local manifests do not prove the live host, daemon or deployed service state"),
+          human_listening: external_row(presence[:audio],
+            "asset integrity and signal checks do not establish musical or listening quality"),
+          business_and_legal_review: external_row(presence[:biz],
+            "business assumptions, factual claims and legal effect require qualified human review"),
+        }
+      end
+
+      def user_acceptance_row
+        {
+          status: "NOT_RUN", applicable: false,
+          reason: "operator/user acceptance remains a human decision outside an automated repair run",
         }
       end
 
       def workflow_receipts
-        visual_applicable = target_has?("RAILS")
-        visual_scheduled = %w[all visual].include?(@lane)
-        visual = if !visual_applicable || !visual_scheduled
-                   { status: "NOT_RUN", applicable: false, reason: "grouped visual repair is not scheduled for this target/lane" }
-                 elsif !@visual_groups.is_a?(Hash)
-                   { status: "INCONCLUSIVE", applicable: true, reason: "grouped visual repair ran without a recorded outcome" }
-                 else
-                   findings = read(@visual_groups, :findings, 0).to_i
-                   remaining = read(@visual_groups, :remaining, findings).to_i
-                   resweep = read(@visual_groups, :resweep) == true
-                   cleared = read(@visual_groups, :cleared, 0).to_i
-                   groups = read(@visual_groups, :groups, 0).to_i
-                   status = if findings.zero? || (resweep && remaining.zero? && cleared == groups)
-                              "PASS"
-                            elsif resweep && remaining.positive?
-                              "FAIL"
-                            else
-                              "INCONCLUSIVE"
-                            end
-                   {
-                     status:, applicable: true, findings:,
-                     groups:, cleared:,
-                     remaining:, resweep:,
-                     report: read(@visual_groups, :report),
-                   }
-                 end
-        improvement_scheduled = %w[all elevate].include?(@lane)
-        improvement = if !improvement_scheduled
-                        { status: "NOT_RUN", applicable: false, reason: "improvement lane not selected" }
-                      elsif !@improvement.is_a?(Hash) || read(@improvement, :evaluated_passes, 0).to_i.zero?
-                        { status: "INCONCLUSIVE", applicable: true, reason: "improvement engine recorded no assessment" }
-                      elsif read(@improvement, :measured_files, 0).to_i.zero?
-                        {
-                          status: "INCONCLUSIVE", applicable: true,
-                          reason: "no supported improvement domain was measured; file presence is not proof",
-                          files_seen: read(@improvement, :files_seen, 0).to_i,
-                          measured_files: 0,
-                          domains: [],
-                        }
-                      else
-                        findings = read(@improvement, :findings, 0).to_i
-                        fixed = read(@improvement, :fixed, 0).to_i
-                        # Findings are the latest post-repair assessment, not a
-                        # cumulative count of opportunities repeated across passes.
-                        # Only a clean re-observation proves this workflow complete.
-                        status = findings.zero? ? "PASS" : "INCONCLUSIVE"
-                        @improvement.merge(status:, applicable: true)
-                      end
-        { grouped_visual_repair: visual, continuous_improvement: improvement }
+        { grouped_visual_repair: visual_workflow, continuous_improvement: improvement_workflow }
+      end
+
+      def visual_workflow
+        unless target_has?("RAILS") && %w[all visual].include?(@lane)
+          return { status: "NOT_RUN", applicable: false,
+                   reason: "grouped visual repair is not scheduled for this target/lane" }
+        end
+        unless @visual_groups.is_a?(Hash)
+          return { status: "INCONCLUSIVE", applicable: true,
+                   reason: "grouped visual repair ran without a recorded outcome" }
+        end
+
+        findings = read(@visual_groups, :findings, 0).to_i
+        remaining = read(@visual_groups, :remaining, findings).to_i
+        {
+          status: visual_status(findings, remaining),
+          applicable: true, findings:,
+          groups: read(@visual_groups, :groups, 0).to_i,
+          cleared: read(@visual_groups, :cleared, 0).to_i,
+          remaining:, resweep: read(@visual_groups, :resweep) == true,
+          report: read(@visual_groups, :report),
+        }
+      end
+
+      def visual_status(findings, remaining)
+        resweep = read(@visual_groups, :resweep) == true
+        cleared = read(@visual_groups, :cleared, 0).to_i
+        groups = read(@visual_groups, :groups, 0).to_i
+        if findings.zero? || (resweep && remaining.zero? && cleared == groups)
+          "PASS"
+        elsif resweep && remaining.positive?
+          "FAIL"
+        else
+          "INCONCLUSIVE"
+        end
+      end
+
+      def improvement_workflow
+        unless %w[all elevate].include?(@lane)
+          return { status: "NOT_RUN", applicable: false, reason: "improvement lane not selected" }
+        end
+        return no_assessment_workflow if !@improvement.is_a?(Hash) ||
+          read(@improvement, :evaluated_passes, 0).to_i.zero?
+        return unmeasured_workflow if read(@improvement, :measured_files, 0).to_i.zero?
+
+        # Findings are the latest post-repair assessment, not a cumulative count
+        # of opportunities repeated across passes. Only a clean re-observation
+        # proves this workflow complete.
+        findings = read(@improvement, :findings, 0).to_i
+        status = findings.zero? ? "PASS" : "INCONCLUSIVE"
+        @improvement.merge(status:, applicable: true)
+      end
+
+      def no_assessment_workflow
+        { status: "INCONCLUSIVE", applicable: true, reason: "improvement engine recorded no assessment" }
+      end
+
+      def unmeasured_workflow
+        {
+          status: "INCONCLUSIVE", applicable: true,
+          reason: "no supported improvement domain was measured; file presence is not proof",
+          files_seen: read(@improvement, :files_seen, 0).to_i,
+          measured_files: 0,
+          domains: [],
+        }
       end
     end
   end
