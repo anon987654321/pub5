@@ -145,11 +145,34 @@ upscale_and_restore:
   topazlabs/dust-and-scratch-v2:
     inputs: [image]
 
+# Video generation has its own bounded spend pool in STUDIO. These estimates
+# include output seconds and the model's documented maximum 15 seconds of
+# reference-video input whenever references are supplied. The temporary 50%
+# promotion expires after 2026-12-31; the list rates remain in the catalogue.
+video_budget:
+  run_usd: 5.0
+  call_usd: 1.0
+
 # Motion from a still — the selfie series' short film.
 image_to_video:
   minimax/h3-lite:
     inputs: [prompt, first_frame_image, last_frame_image, reference_image_urls, reference_video_urls, reference_audio_urls, duration, resolution, ratio]
+    pricing:
+      usd_per_second: { "480P": 0.025, "768P": 0.04 }
+      promotional_usd_per_second: { "480P": 0.0125, "768P": 0.02 }
+      promotion_until: "2026-12-31"
+      max_reference_videos: 3
+      max_reference_video_seconds: 15
     note: "MiniMax H3 Lite: first/last-frame image-to-video, 4-15s, 480P or 768P. Image-to-video ignores ratio and uses the input image's aspect ratio."
+  minimax/h3-highspeed:
+    inputs: [prompt, first_frame_image, last_frame_image, reference_image_urls, reference_video_urls, reference_audio_urls, duration, ratio]
+    pricing:
+      usd_per_second: 0.06
+      promotional_usd_per_second: 0.03
+      promotion_until: "2026-12-31"
+      max_reference_videos: 3
+      max_reference_video_seconds: 15
+    note: "MiniMax H3 Highspeed: 768P, 4-15s. The default for everyday short films."
   kwaivgi/kling-v4-flash:
     inputs: [image, prompt, duration, aspect_ratio, mode]
     note: "Kling v4 flash: fast image-to-video with a short prompt."
