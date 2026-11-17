@@ -79,7 +79,6 @@ replicate:
   model_pattern: '\Areplicate:'
   # Replicate uses its own sender, not a RubyLLM setter. These credentials
   # still count as configured API access for global reachability and keyless policy.
-  api_key_envs: [REPLICATE_API_TOKEN, REPLICATE_API_KEY]
   strengths: [image_generation, video_generation, tts, fast_inference, specialized_models, edge, hosted_llms]
   # Replicate hosts large chat models beside its image and video models; the
   # dispatcher reaches them as replicate:<owner>/<name> (data/models.yml
@@ -97,7 +96,6 @@ replicate:
 zai:
   env: [ZAI_API_KEY]
   # OpenAI-compatible custom sender; no RubyLLM setter, but this is a paid API key.
-  api_key_envs: [ZAI_API_KEY]
   model_pattern: '\Aglm'
   strengths: [cheap, coding, long_context, agentic]
   default_model: glm-5.3-flash
