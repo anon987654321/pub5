@@ -41,20 +41,20 @@ module Master
       def build(infra:, ai:, root:)
         deps = command_deps(ai:, root:, infra:)
         verbs = review_verbs(deps).merge(session_verbs(infra[:session], infra[:undo]))
-        verbs.merge!(build_core_verbs(deps, root))
+        verbs.merge!(build_core_verbs(deps, infra, ai, root))
         verbs.merge!(build_host_verbs(root))
         verbs.merge!(build_auxiliary_verbs(deps, root))
         verbs.merge(control_commands(ai[:standing], ai[:soul]))
       end
 
-      def build_core_verbs(deps, root)
+      def build_core_verbs(deps, infra, ai, root)
         droot = deps[:root]
         {
           "status" => command(:dispatch_status, droot, deps[:fix_loop], deps[:bus], deps[:git], deps[:trace], deps[:learnings]),
-          "commit" => command(:dispatch_commit, deps[:agent], root, review_check: true),
+          "commit" => command(:dispatch_commit, ai[:agent], root, review_check: true),
           "deploy" => command(:dispatch_deploy, root, review_check: true),
           "model" => command(:dispatch_model, deps[:agent], deps[:config], deps[:metrics], droot),
-          "mcp" => Command.new { |ctx| dispatch_mcp(deps[:mcp], droot, ctx:) },
+          "mcp" => Command.new { |ctx| dispatch_mcp(infra[:mcp], droot, ctx:) },
           "plugin" => command(:dispatch_plugin),
           "play" => command(:dispatch_play, droot),
           "mov" => command(:dispatch_mov, droot),
