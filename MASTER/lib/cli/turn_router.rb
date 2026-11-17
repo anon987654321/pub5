@@ -59,7 +59,9 @@ module Master
         case proposal&.status
         when :deploy
           args = proposal.target.to_s
-          args = "#{args} --confirm" if text.match?(/(?:^|\s)--confirm(?:\s|$)/i)
+          confirmed = text.match?(/(?:^|\s)--confirm(?:\s|$)/i) ||
+                      OperatorIntent.direct_full_stack_confirmation?(text)
+          args = "#{args} --confirm" if confirmed
           return dispatch_slash("/deploy #{args}", container:, felt_sense:, on_turn:)
         when :ambiguous
           return Master::Result.ok({ rendered: proposal.message, output: proposal.message })

@@ -52,6 +52,21 @@ module Master
         Return only the schema-bound object.
       PROMPT
 
+      # An explicit full-stack production instruction naming vm23 is itself
+      # the operator's confirmation. Model-classified app/group requests and
+      # requests without an explicit vm23 destination retain the review gate.
+      def self.direct_full_stack_confirmation?(text)
+        request = text.to_s
+        return false unless request.match?(DIRECT_DEPLOY_REQUEST_RE)
+        return false if request.match?(NON_PRODUCTION_ENV_RE)
+
+        destination = request.match(DESTINATION_RE)&.captures&.first
+        VM23_DESTINATIONS.include?(destination.to_s.downcase) &&
+          request.match?(/\bopenbsd\b/i) &&
+          request.match?(/\brails\b/i) &&
+          request.match?(/\bmaster\s*\/\s*web\b/i)
+      end
+
       def self.candidate?(text)
         value = text.to_s.strip
         value.split.size >= 2 && value.match?(ACTION_CUES)

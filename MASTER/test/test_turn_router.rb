@@ -146,6 +146,35 @@ class TurnRouterTest < Minitest::Test
     assert_equal "/deploy rails", routed
   end
 
+  def test_explicit_full_stack_vm23_deploy_is_direct_confirmation_without_a_plan
+    proposal = Master::CLI::OperatorIntent::Result.new(status: :deploy, target: "all")
+    fake_intent = Object.new
+    fake_intent.define_singleton_method(:call) { |_text| proposal }
+    routed = nil
+
+    Master::CLI::OperatorIntent.stub(:new, fake_intent) do
+      Master::CLI::TurnRouter.stub(:dispatch_slash, lambda { |command, **|
+        routed = command
+        Master::Result.ok({ rendered: "captured" })
+      }) do
+        Master::CLI::TurnRouter.call(
+          message: "Deploy OPENBSD, RAILS and MASTER/web to vm23",
+          container: build_container,
+        )
+      end
+    end
+
+    assert_equal "/deploy all --confirm", routed
+  end
+
+  def test_full_stack_direct_confirmation_requires_explicit_vm23_destination
+    intent = Master::CLI::OperatorIntent
+    assert intent.direct_full_stack_confirmation?("Redeploy OPENBSD, RAILS and MASTER/web to vm23")
+    refute intent.direct_full_stack_confirmation?("Redeploy OPENBSD, RAILS and MASTER/web")
+    refute intent.direct_full_stack_confirmation?("Redeploy OPENBSD, RAILS and MASTER/web to staging")
+    refute intent.direct_full_stack_confirmation?("Prepare a deployment plan for OPENBSD, RAILS and MASTER/web to vm23")
+  end
+
   def test_semantic_operator_routing_preserves_only_explicit_confirmation
     agent = Object.new
     agent.define_singleton_method(:ask_once) do |_prompt, **|
