@@ -188,9 +188,10 @@ module Master
           end
           source = item.fetch("source").to_s.strip
           versioned_url = %r{\Ahttps://man\.openbsd\.org/OpenBSD-#{Regexp.escape(release)}/[A-Za-z0-9_.+-]+\.[1-9]\z}
-          local_page = %r{\Atarget-local:/\S+/man[1-9]/[A-Za-z0-9_.+-]+\.[1-9]\z}
-          unless source.match?(versioned_url) || source.match?(local_page)
-            raise TaskContract::Invalid, "OpenBSD manual source must be target-local or exact-release versioned: #{page_id}"
+          local_page = %r{\Atarget-local:/\S+/man[1-9]/#{Regexp.escape(page)}\.#{Regexp.escape(section)}\z}
+          versioned_path = source.end_with?("/#{page}.#{section}")
+          unless (source.match?(versioned_url) && versioned_path) || source.match?(local_page)
+            raise TaskContract::Invalid, "OpenBSD manual source must identify #{page_id} on the exact target release"
           end
           content = item.fetch("content").to_s
           raise TaskContract::Invalid, "OpenBSD manual receipt is not marked complete: #{page_id}" unless item.fetch("complete") == true
