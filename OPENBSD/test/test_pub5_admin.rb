@@ -530,4 +530,126 @@ class Pub5AdminTest < Minitest::Test
     assert_equal true, policy.fetch("receipt_requires_full_content_read")
     assert_equal "BLOCKED", policy.fetch("failure_status")
   end
+
+  def deploy_run_payload(run_id)
+    {
+      "schema" => 1,
+      "run_id" => run_id,
+      "target" => "all",
+      "host" => "vm23",
+      "pid" => 12345,
+      "owner_identity" => "Tue_Nov_17_01_00_00_2026_123_456",
+      "status" => "running",
+      "recovery_state" => "pending",
+      "stage" => "snapshot",
+      "started_at" => "2026-11-17T01:00:00Z",
+      "pinned_sha" => "a" * 40,
+      "previous_sha" => "b" * 40,
+      "started_services" => %w[master brgen amber brgen_jobs],
+      "ports" => { "master" => 53187, "brgen" => 38182, "amber" => 61352 },
+      "restore_order" => %w[master brgen amber bsdports mrdamascy],
+      "run_log" => "/var/log/pub5/runs/deploy-20261117-all-12345.log",
+      "aggregate_log" => "/var/log/pub5/vps-deploy.log",
+    }
+  end
+
+  def test_deploy_run_receipt_is_private_atomic_and_round_trips
+    Dir.mktmpdir("pub5-admin-run-") do |root|
+      run_id = "20261117T010000Z-all-12345"
+      output = StringIO.new
+      assert_equal 0, ADMIN.write_deploy_run(run_id, JSON.generate(deploy_run_payload(run_id)),
+                                             root:, verify_root: false, output:)
+      path = File.join(root, "deploy_runs", "#{run_id}.json")
+      assert_equal 0o700, File.stat(File.dirname(path)).mode & 0o777
+      assert_equal 0o600, File.stat(path).mode & 0o777
+
+      record_output = StringIO.new
+      assert_equal 0, ADMIN.read_deploy_run(run_id, root:, verify_root: false, output: record_output)
+      record = JSON.parse(record_output.string)
+      assert_equal run_id, record.fetch("run_id")
+      assert_equal "all", record.fetch("target")
+      assert_equal "pending", record.fetch("recovery_state")
+      assert_equal %w[master brgen amber brgen_jobs], record.fetch("started_services")
+      assert_equal 38182, record.fetch("ports").fetch("brgen")
+
+      list_output = StringIO.new
+      assert_equal 0, ADMIN.list_deploy_runs(root:, verify_root: false, output: list_output)
+      assert_equal [run_id], JSON.parse(list_output.string).map { |row| row.fetch("run_id") }
+      assert_includes output.string, "recovery=pending"
+    end
+  end
+
+  def test_deploy_run_updates_preserve_identity_and_change_only_valid_state
+    Dir.mktmpdir("pub5-admin-run-") do |root|
+      run_id = "20261117T010001Z-brgen-12346"
+      assert_equal 0, ADMIN.write_deploy_run(run_id, JSON.generate(deploy_run_payload(run_id)),
+                                             root:, verify_root: false, output: StringIO.new)
+      assert_equal 0, ADMIN.write_deploy_run(
+        run_id, JSON.generate("stage" => "recovery-failed", "status" => "failed"),
+        root:, verify_root: false, output: StringIO.new
+      )
+      output = StringIO.new
+      ADMIN.read_deploy_run(run_id, root:, verify_root: false, output:)
+      record = JSON.parse(output.string)
+      assert_equal "recovery-failed", record.fetch("stage")
+      assert_equal "failed", record.fetch("status")
+      assert_equal "pending", record.fetch("recovery_state")
+
+      assert_raises(RuntimeError) do
+        ADMIN.write_deploy_run(run_id, JSON.generate("host" => "other"),
+                               root:, verify_root: false, output: StringIO.new)
+      end
+    end
+  end
+
+  def test_deploy_run_rejects_invalid_ids_services_ports_and_symlinked_storage
+    Dir.mktmpdir("pub5-admin-run-") do |root|
+      assert_raises(RuntimeError) do
+        ADMIN.write_deploy_run("../outside", "{}", root:, verify_root: false, output: StringIO.new)
+      end
+
+      run_id = "20261117T010002Z-all-12347"
+      payload = deploy_run_payload(run_id).merge("started_services" => ["../../etc/passwd"])
+      assert_raises(RuntimeError) do
+        ADMIN.write_deploy_run(run_id, JSON.generate(payload), root:, verify_root: false, output: StringIO.new)
+      end
+
+      outside = File.join(root, "outside")
+      Dir.mkdir(outside)
+      File.symlink(outside, File.join(root, "deploy_runs"))
+      assert_raises(RuntimeError) do
+        ADMIN.write_deploy_run(run_id, JSON.generate(deploy_run_payload(run_id)),
+                               root:, verify_root: false, output: StringIO.new)
+      end
+    end
+  end
+
+  def test_deploy_run_read_rejects_corrupt_or_world_readable_receipts
+    Dir.mktmpdir("pub5-admin-run-") do |root|
+      run_id = "20261117T010003Z-all-12348"
+      ADMIN.write_deploy_run(run_id, JSON.generate(deploy_run_payload(run_id)),
+                             root:, verify_root: false, output: StringIO.new)
+      path = File.join(root, "deploy_runs", "#{run_id}.json")
+      File.chmod(0o644, path)
+      assert_raises(RuntimeError) do
+        ADMIN.read_deploy_run(run_id, root:, verify_root: false, output: StringIO.new)
+      end
+      File.chmod(0o600, path)
+      File.write(path, "{broken")
+      assert_raises(RuntimeError) do
+        ADMIN.read_deploy_run(run_id, root:, verify_root: false, output: StringIO.new)
+      end
+    end
+  end
+
+  def test_deploy_run_broker_verbs_are_fixed_and_argument_bounded
+    source = File.read(File.expand_path("../mirror/usr/local/sbin/pub5-admin", __dir__))
+    assert_includes source, 'args.length == 3 && args[0] == "deploy-run-write"'
+    assert_includes source, 'args.length == 2 && args[0] == "deploy-run-read"'
+    assert_includes source, 'args == ["deploy-run-list"]'
+    assert_includes source, 'return write_deploy_run(args[1], args[2])'
+    refute_nil ADMIN.deploy_run_id?("20261117T010004Z-master-12349")
+    refute ADMIN.deploy_run_id?("../20261117T010004Z-master-12349")
+  end
+
 end
