@@ -39,8 +39,18 @@ MASTER's in-place web app. The inventory-derived `rails` group deploys only
 active RAILS app roots (and their shared engine where applicable); it does not
 apply the host mirror or deploy MASTER.
 
-Hands-off path: local preflight, pin SHA, tmux on vm23, `vps-deploy` as root
-(git as `dev`), stream progress until finished, then `vps-state` + public canary.
+**One-time receipt-protocol bootstrap:** the new deployer requires the current
+`pub5-admin` receipt verbs before it can create its first durable run receipt.
+For this protocol transition, update the vm23 checkout to the same current
+`origin/main` commit, then run the reviewed
+`doas zsh OPENBSD/OPERATOR.sh --plan`, `--apply` and `--verify` sequence
+once. `vps-deploy all` deliberately cannot bootstrap an older broker: its
+receipt preflight runs before the normal mirror apply. See the interrupted-deploy
+section in `RUNBOOK.md`.
+
+Hands-off path after that prerequisite: local preflight, pin SHA, tmux on vm23,
+`vps-deploy` as root (git as `dev`), stream progress until finished, then
+`vps-state` + public canary.
 Log: `/home/dev/vps-deploy.log`. Session: `pub5-deploy`.
 
 `/usr/local/bin/zap` is installed from `OPENBSD/mirror/usr/local/bin/zap`, a standard-library Ruby port of OpenBSD's interactive process killer. It searches command lines, asks before each signal, defaults to `SIGTERM`, and supports `-f`, `-s SIGNAL`, the classic `-SIGNAL` form and `--dry-run`. On OpenBSD it refuses to signal `vmd`, `vmctl` or `cu`; use the documented VM controls and recovery path instead.
