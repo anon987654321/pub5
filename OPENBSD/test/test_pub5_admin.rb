@@ -727,6 +727,8 @@ class Pub5AdminTest < Minitest::Test
     assert_includes source, 'args.length == 2 && args[0] == "deploy-run-read"'
     assert_includes source, 'args == ["deploy-run-list"]'
     assert_includes source, 'args == ["deploy-run-pending-list"]'
+    assert_includes source, "DEPLOY_RUN_SCAN_LIMIT = 500"
+    assert_includes source, "DEPLOY_RUN_PENDING_LIMIT = 100"
     assert_includes source, 'return list_pending_deploy_runs'
     assert_includes source, 'return write_deploy_run(args[1], args[2])'
     refute_nil ADMIN.deploy_run_id?("20261117T010004Z-master-12349")
