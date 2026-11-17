@@ -50,6 +50,7 @@ class VpsSafetyCheckTest < Minitest::Test
       ].each do |name|
         FileUtils.cp(File.join(ROOT, "bin", name), File.join(openbsd, "bin", name))
       end
+      FileUtils.cp(File.join(ROOT, "BOOTSTRAP.sh"), File.join(openbsd, "BOOTSTRAP.sh"))
       FileUtils.cp(File.join(ROOT, "OPERATOR.sh"), File.join(openbsd, "OPERATOR.sh"))
       FileUtils.mkdir_p(File.join(dir, "RAILS", "mrdamascy"))
       %w[Gemfile Gemfile.lock falcon.rb preload.rb].each do |name|
@@ -641,11 +642,9 @@ class VpsSafetyCheckTest < Minitest::Test
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "bin", "resource_guard.sh")
       text = File.read(path).sub(
-        'if rcctl start "$svc" 2>/dev/null; then',
-        'rcctl start "$svc" 2>/dev/null || true'
-      ).sub(
-        '        restored=$svc\n      else\n        # Keep the shed ledger entry: the next guard tick must retry rather than\n        # forget a service whose start command failed.\n        logger -t resource-guard "restore $svc failed; retaining shed state for retry"\n        break\n      fi',
-        '      restored=$svc'
+        /if rcctl start "\$svc" 2>\/dev\/null; then.*?^      fi/m,
+        'rcctl start "$svc" 2>/dev/null || true
+      restored=$svc'
       )
       File.write(path, text)
       out, status = run_check(dir)
