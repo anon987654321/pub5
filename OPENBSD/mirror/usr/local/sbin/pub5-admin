@@ -553,9 +553,9 @@ module Pub5Admin
     previous = deploy_run_record(run_id, root:, verify_root:)
     immutable = %w[schema run_id target host pid owner_identity started_at run_log aggregate_log]
     if previous
-      if %w[ok recovered].include?(previous["status"])
-        raise "terminal deploy-run receipt cannot be changed"
-      end
+      terminal = %w[ok recovered].include?(previous["status"]) ||
+                 (previous["status"] == "failed" && previous["recovery_state"] != "pending")
+      raise "terminal deploy-run receipt cannot be changed" if terminal
       immutable.each do |field|
         next unless payload.key?(field)
         raise "deploy-run identity field #{field} cannot change" unless payload[field] == previous[field]
