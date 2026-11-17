@@ -535,7 +535,7 @@ class VpsDeployContractTest < Minitest::Test
   end
 
   def lock_process_identity(pid)
-    started, started_status = Open3.capture2("ps", "-p", pid.to_s, "-o", "lstart=")
+    started, started_status = Open3.capture2({ "LC_ALL" => "C" }, "ps", "-p", pid.to_s, "-o", "lstart=")
     command, command_status = Open3.capture2("ps", "-ww", "-p", pid.to_s, "-o", "command=")
     return unless started_status.success? && command_status.success?
 
