@@ -47,6 +47,7 @@ class TestOpenbsdConfig < Minitest::Test
     assert_includes paths, "OPENBSD/mirror/home/johann/.mailcap"
     assert_includes paths, "OPENBSD/mirror/home/johann/.muttrc"
     assert(paths.any? { |path| path.end_with?(".zone") })
+    assert_operator Master::Fix::OpenBSDManualPreflight::MAX_SOURCE_READS, :>=, inventory.length
   end
 
   def test_full_stack_report_is_per_file_and_names_target_identity
