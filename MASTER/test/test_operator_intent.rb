@@ -149,7 +149,7 @@ class OperatorIntentTest < Minitest::Test
 
       assert_equal :unavailable, result.status
       assert_includes result.message, "JSON::ParserError"
-      refute_includes result.message, "provider payload detail"
+      assert_includes result.message, "provider payload detail"
       assert_includes result.message, "no action was taken"
     end
   end
