@@ -12,7 +12,7 @@ class TestGroundConfig < Minitest::Test
       File.write(File.join(root, ".master", "config.yml"), yaml)
       config = nil
       _out, err = capture_io { config = Master::Ground::Config.new(root) }
-      yield config, err
+      yield config, err, root
     end
   end
 
@@ -27,13 +27,11 @@ class TestGroundConfig < Minitest::Test
   # The web tier and pairing keep their own keys here, so only a near miss is
   # a finding; an unrelated key and a short one two edits away are not.
   def test_legacy_opus_preference_migrates_once_to_routed_default
-    config_with("model: claude-opus-5-5\n") do |config, err|
+    config_with("model: claude-opus-5-5\n") do |config, err, root|
       assert_equal Master::Ground::Config::DEFAULTS["model"], config.model
       assert_match(/migrated legacy model preference/, err)
-      persisted = YAML.safe_load_file(File.join(Dir.pwd, ".master", "config.yml"), aliases: true) rescue nil
-      # config_with owns a temporary root; the saved file is inspected inside
-      # the helper in the separate assertion below.
-      assert_nil persisted
+      persisted = YAML.safe_load_file(File.join(root, ".master", "config.yml"), aliases: true)
+      assert_equal Master::Ground::Config::DEFAULTS["model"], persisted.fetch("model")
     end
   end
 
