@@ -20,7 +20,7 @@ module Master
       EXPIRY = "1d"
       ANSI = /\e(?:\[[0-?]*[ -\/]*[@-~]|\][^\a]*(?:\a|\e\\))/
       PRIVATE_KEY_BLOCK = /-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----.*?-----END [A-Z0-9 ]*PRIVATE KEY-----/mi
-      SENSITIVE_ASSIGNMENT = /\b([A-Z0-9_.-]*(?:PASSWORD|PASSWD|SECRET|TOKEN|API[_-]?KEY|ACCESS[_-]?KEY|PRIVATE[_-]?KEY|COOKIE|AUTHORIZATION|CREDENTIAL)[A-Z0-9_.-]*\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/i
+      SENSITIVE_ASSIGNMENT = /\b([A-Z0-9_.-]*(?:PASSWORD|PASSWD|SECRET|TOKEN|KEY|DSN|COOKIE|AUTHORIZATION|CREDENTIAL|DATABASE[_-]?(?:URL|URI)|DB[_-]?(?:URL|URI)|REDIS[_-]?(?:URL|URI))[A-Z0-9_.-]*\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/i
       AUTH_LINE = /\b(AUTHORIZATION|COOKIE|SET-COOKIE)\s*:\s*[^\r\n]*/i
       QUERY_SECRET = /([?&](?:token|access_token|refresh_token|api_key|key|secret|password)=)[^&\s]+/i
       URL_CREDENTIAL = %r{(://[^/\s:@]+:)[^/@\s]+@}
