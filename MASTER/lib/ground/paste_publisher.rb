@@ -106,9 +106,9 @@ module Master
         text = text.gsub(QUERY_SECRET, '\1[REDACTED]')
         text = text.gsub(URL_CREDENTIAL, '\1[REDACTED]@')
         text = Master::Ground::Redactor.text(text)
-        text = text.gsub(home, "$HOME") unless home.empty? || home == "/"
         text = text.gsub(@root, "$REPO") unless @root.empty?
         home = File.expand_path(Dir.home)
+        text = text.gsub(home, "$HOME") unless home.empty? || home == "/"
         text
       rescue StandardError
         "[diagnostic redaction failed]"
