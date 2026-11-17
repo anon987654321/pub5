@@ -1,34 +1,53 @@
-// The pub5 shared stack: the family barrel, the dialect palette mixins, the
-// shell, and the one focus-ring owner. This file previously imported the pub4
-// engine stack (pub4_stack, x_base, x_root, x_shell, x_widgets, x_responsive),
-// none of which exists anywhere in pub5 — the compile could never have
-// succeeded, so the imports are re-pointed at the flattened shared gem the
-// Gemfile already ships.
+// Hjerterom — entry stylesheet.
+//
+// Cascade architecture (MASTER/data/css_architecture.yml): this entry owns
+// the one @layer order statement. The shared foundation sheets load into
+// base; the dialect token rules sit in tokens — the layer after base, the
+// same "dialect beats shared default" precedence the old unlayered source
+// order gave them. Author rules load into components.
 @use "sass:meta";
-@use "stack" as *;
 @use "dialect_tokens" as x;
 
-@include meta.load-css("shell");
-@include meta.load-css("shell_widgets");
-@include meta.load-css("responsive");
-@include meta.load-css("focus_ring");
+@layer reset, tokens, base, components, utilities, autofix;
 
-:root {
-  @include x.app-root-tokens;
-  @include x.dark-tokens;
-  --turbo-progress-bar-color: var(--accent);
-  --app-accent: #e11d48;
-  --app-accent-dark: #9f1239;
-  --heart-accent-light: #fb7185;
-  --accent: var(--app-accent);
-  --panel: var(--bg);
-  // The pin-card caption ink: the scheme's one dim text tone, so it follows
-  // the theme like every other map-home caption.
-  --text-dim: var(--text-secondary);
-  // The one keyboard focus indicator, from design_tokens shared_chrome.focus_ring;
-  // the global :focus-visible rule that consumes it comes from _focus_ring.scss.
-  --focus-ring: 2px solid var(--app-accent);
+@layer base {
+  @include meta.load-css("stack");
+  @include meta.load-css("shell");
+  @include meta.load-css("shell_widgets");
+  @include meta.load-css("responsive");
+  @include meta.load-css("focus_ring");
 }
+
+@layer tokens {
+
+  :root {
+    @include x.app-root-tokens;
+    @include x.dark-tokens;
+    --turbo-progress-bar-color: var(--accent);
+    --app-accent: #e11d48;
+    --app-accent-dark: #9f1239;
+    --heart-accent-light: #fb7185;
+    --accent: var(--app-accent);
+    --panel: var(--bg);
+    // The pin-card caption ink: the scheme's one dim text tone, so it follows
+    // the theme like every other map-home caption.
+    --text-dim: var(--text-secondary);
+    // The one keyboard focus indicator, from design_tokens shared_chrome.focus_ring;
+    // the global :focus-visible rule that consumes it comes from _focus_ring.scss.
+    --focus-ring: 2px solid var(--app-accent);
+  }
+
+
+  #dark-toggle:checked ~ .theme-root {
+    @include x.light-tokens;
+    color-scheme: light;
+    --panel-blur-bg: var(--bg);
+    --panel: var(--bg);
+  }
+
+}
+
+@layer components {
 
 #dark-toggle {
   position: fixed;
@@ -40,12 +59,6 @@
   min-height: 100vh;
 }
 
-#dark-toggle:checked ~ .theme-root {
-  @include x.light-tokens;
-  color-scheme: light;
-  --panel-blur-bg: var(--bg);
-  --panel: var(--bg);
-}
 
 body.map-home-page {
   overflow: hidden;
@@ -389,3 +402,7 @@ h2 {
 [dir="rtl"] .form .field--check {
   flex-direction: row-reverse;
 }
+
+
+}
+
