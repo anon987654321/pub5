@@ -877,19 +877,28 @@ module Master
             return assessment_result(:inconclusive, reason: receipt_problem, evidence:) if receipt_problem
 
             visual_value = visual.value!
+            assessment_rendered_law_result(visual_value, law_id, rendered_receipt, evidence)
+          end
+
+          def assessment_rendered_law_result(visual_value, law_id, receipt, evidence)
             unless visual_value.is_a?(Hash) && (visual_value.key?(:findings) || visual_value.key?("findings"))
-              return assessment_result(:inconclusive, reason: "rendered visual review did not return a law-findings collection", evidence:)
+              return assessment_result(:inconclusive,
+                reason: "rendered visual review did not return a law-findings collection", evidence:)
             end
 
             visual_rows = assessment_findings_for_law(visual_value[:findings] || visual_value["findings"], law_id)
-            visual_evidence = Array(evidence) + [{
-              "surface_probe" => "rendered_ui",
-              "status" => "assessed_clean",
-              "evidence_sha256" => rendered_receipt["evidence_sha256"],
-              "counts" => rendered_receipt["counts"],
-            }]
+            visual_evidence = assessment_rendered_law_evidence(receipt, evidence)
             assessment_result(visual_rows.any? ? :violation_found : :assessed_clean,
               evidence: visual_evidence, findings: visual_rows)
+          end
+
+          def assessment_rendered_law_evidence(receipt, evidence)
+            Array(evidence) + [{
+              "surface_probe" => "rendered_ui",
+              "status" => "assessed_clean",
+              "evidence_sha256" => receipt["evidence_sha256"],
+              "counts" => receipt["counts"],
+            }]
           end
 
           def assessment_rendered_ui_receipt_problem(receipt)
@@ -935,22 +944,33 @@ module Master
           def assessment_surface_probe_result(law_id:, info:, surface:, receipt:, status:, reason:, evidence:)
             case status
             when "not_applicable"
-              assessment_result(:not_applicable, reason: reason.empty? ? "target has no #{surface} surface" : reason, evidence:)
+              assessment_result(:not_applicable,
+                reason: reason.empty? ? "target has no #{surface} surface" : reason, evidence:)
             when "inconclusive"
-              assessment_result(:inconclusive, reason: reason.empty? ? "#{surface} probe was inconclusive" : reason,
-                evidence:, findings: Array(receipt["findings"] || receipt[:findings]))
-            when "violation_found"
-              findings = Array(receipt["findings"] || receipt[:findings])
-              return assessment_result(:violation_found, reason:, evidence:, findings:) if info[:source_kind] == :visual
-
               assessment_result(:inconclusive,
-                reason: "#{surface} probe found a target-level issue not attributed to Law #{law_id}: #{reason}",
-                evidence:, findings:)
+                reason: reason.empty? ? "#{surface} probe was inconclusive" : reason,
+                evidence:, findings: assessment_receipt_findings(receipt))
+            when "violation_found"
+              assessment_surface_violation_result(law_id, info, surface, receipt, reason, evidence)
             when "assessed_clean"
               nil
             else
-              assessment_result(:inconclusive, reason: "#{surface} probe returned unknown status #{status.inspect}", evidence:)
+              assessment_result(:inconclusive,
+                reason: "#{surface} probe returned unknown status #{status.inspect}", evidence:)
             end
+          end
+
+          def assessment_receipt_findings(receipt)
+            Array(receipt["findings"] || receipt[:findings])
+          end
+
+          def assessment_surface_violation_result(law_id, info, surface, receipt, reason, evidence)
+            findings = assessment_receipt_findings(receipt)
+            return assessment_result(:violation_found, reason:, evidence:, findings:) if info[:source_kind] == :visual
+
+            assessment_result(:inconclusive,
+              reason: "#{surface} probe found a target-level issue not attributed to Law #{law_id}: #{reason}",
+              evidence:, findings:)
           end
 
           def assessment_source_kind_cell_result(law_id:, info:, stream:, surface:, signatures_stable:,
@@ -1064,15 +1084,19 @@ module Master
             missing = []
             receipt_evidence = []
             scoped_files.each do |path|
-              receipt = receipts[File.expand_path(path)]
-              expected = source_hashes[File.expand_path(path)]
-              unless receipt && receipt["status"] == "assessed" && expected && receipt["sha256"] == expected
-                missing << path
-                next
-              end
-              receipt_evidence << "prism_ast=#{File.basename(path)} sha256=#{receipt["sha256"]}"
+              row = assessment_ast_receipt_row(path, receipts, source_hashes)
+              row ? receipt_evidence << row : missing << path
             end
             [missing, receipt_evidence]
+          end
+
+          def assessment_ast_receipt_row(path, receipts, source_hashes)
+            expanded = File.expand_path(path)
+            receipt = receipts[expanded]
+            expected = source_hashes[expanded]
+            return unless receipt && receipt["status"] == "assessed" && expected && receipt["sha256"] == expected
+
+            "prism_ast=#{File.basename(path)} sha256=#{receipt["sha256"]}"
           end
 
           VISUAL_SURFACES = %i[rendered_ui interactive_behavior].freeze
@@ -1380,17 +1404,21 @@ module Master
             unresolved = []
 
             keys.each do |key|
-              raw = key.to_s
-              candidates = assessment_gap_candidates(raw, roots)
-              path = candidates.find { |candidate| scope.include?(candidate) }
-              if path
-                matched << path
-              elsif assessment_gap_path_outside_roots?(candidates, roots)
-                unresolved << raw
-              end
+              path, raw = assessment_resolve_gap_path(key, scope, roots)
+              path ? matched << path : unresolved << raw if raw
             end
 
             [matched.to_a, unresolved]
+          end
+
+          def assessment_resolve_gap_path(key, scope, roots)
+            raw = key.to_s
+            candidates = assessment_gap_candidates(raw, roots)
+            path = candidates.find { |candidate| scope.include?(candidate) }
+            return [path, nil] if path
+            return [nil, raw] if assessment_gap_path_outside_roots?(candidates, roots)
+
+            [nil, nil]
           end
 
           def assessment_gap_roots
