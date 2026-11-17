@@ -69,6 +69,19 @@ class TestStudioReplicateClientPaths < Minitest::Test
     end
   end
 
+  class H3VideoClient < StubClient
+    def get(uri)
+      @requests << [:get, uri]
+      schema = {
+        "properties" => { "prompt" => {}, "first_frame_image" => {}, "duration" => {} },
+        "required" => %w[prompt first_frame_image duration]
+      }
+      wrapped = { "components" => { "schemas" => { "Input" => schema } } }
+      uri.path.include?("/versions/") ? { "openapi_schema" => wrapped } :
+        { "latest_version" => { "id" => "e" * 64, "openapi_schema" => wrapped } }
+    end
+  end
+
   class MissingTrainerFieldClient < StubClient
     def get(uri)
       @requests << [:get, uri]
@@ -146,6 +159,21 @@ class TestStudioReplicateClientPaths < Minitest::Test
 
   def setup
     @client = StubClient.new
+  end
+
+  def test_h3_video_prediction_reserves_the_estimate_before_posting
+    models = Studio::ReplicateClient::Models
+    models.reset_video_budget!
+    client = H3VideoClient.new
+
+    assert_equal "ok", client.predict(
+      "minimax/h3-highspeed",
+      { prompt: "a quiet harbour", first_frame_image: "https://example.test/frame.jpg", duration: 10 }
+    )
+    assert_in_delta 0.30, models.video_budget_spent, 0.001
+    assert_equal %i[get get post], client.requests.map(&:first)
+  ensure
+    models.reset_video_budget!
   end
 
   def test_pinned_model_reference_uses_its_version_schema_before_prediction
