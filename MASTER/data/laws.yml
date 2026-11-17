@@ -5494,7 +5494,7 @@ architecture:
       depends_on:
         - master
         - rails
-      check: OPENBSD/mirror/bin/check
+      check: OPENBSD/bin/check
     studio:
       path: STUDIO
       # b5acc93bc flattened the photograph tree; the public entry it preserved

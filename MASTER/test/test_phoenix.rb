@@ -14,6 +14,8 @@ class TestPhoenix < Minitest::Test
     openbsd = report.boundaries.find { |boundary| boundary.name == "openbsd" }
     assert_equal "OPENBSD/bin/vps-deploy", openbsd.entry
     assert File.file?(File.join(Master::REPO_ROOT, openbsd.entry))
+    assert_equal "OPENBSD/bin/check", openbsd.check
+    assert File.file?(File.join(Master::REPO_ROOT, openbsd.check))
   end
 
   def test_boundary_lookup_under_master_root
