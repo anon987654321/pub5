@@ -835,7 +835,7 @@ Tracked mirror: `OPENBSD/data/root.crontab` (installed idempotently by
 | `resource_guard.sh` | `*/5 * * * *` | sheds bsdports then amber under sustained pressure; `/var/log/resource_guard_history.log` |
 | `uptime-check.sh` | `*/5 * * * *` | `/var/log/uptime-check.log`, with `ALLOW_BSDPORTS_DOWN=1` |
 | `pub4-alert cpu-watch` | `* * * * *` | `/var/log/cpu-watch.log` — five one-second vmstat intervals; warning at 80% busy for 3 minutes, critical at 95% for 2 minutes, 15 minutes during a deploy; records process names only |
-| `pub4-alert watch` | `*/5 * * * *` | `/var/log/pub4-alerts.log`, shown by `vps-state` — disk 90%, swap 92%, failed services except `brgen_jobs`, stale backup and missing CPU-monitor heartbeat. Ordinary recurring keys quiet for 6 hours; CPU state transitions alert on each new transition |
+| `pub4-alert watch` | `*/5 * * * *` | `/var/log/pub4-alerts.log`, shown by `vps-state` — disk 90%, swap 92%, failed services except `brgen_jobs`, stale backup, missing CPU-monitor heartbeat and pending interrupted fleet deploy receipts whose owner PID has disappeared. Ordinary recurring keys quiet for 6 hours; CPU state transitions alert on each new transition |
 | `drain-jobs.sh` | `5 * * * *` | `/var/log/drain-jobs.log` |
 | `core-reclaim.sh` | `40 * * * *` | `/var/log/core-reclaim.log` — returns a core app's grown resident set |
 | `keep-warm.sh` | `*/10 * * * *` | `/var/log/keep-warm.log` — brgen and amber only |
