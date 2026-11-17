@@ -68,11 +68,14 @@ module Takeaway
       unless store.owner_id == @owner.id && store.vertical == "restaurants"
         raise ActiveRecord::RecordNotFound, "restaurant storefront is not owned by this account"
       end
-      raise ActiveRecord::RecordInvalid, store if store.persisted? && store.takeaway_restaurant.present?
+      if Takeaway::Restaurant.where(marketplace_store_id: store.id).exists?
+        raise ActiveRecord::RecordInvalid, store
+      end
     end
 
     def restaurant_attributes
       @attributes.except(:active, :demo, :marketplace_store_id, :store_id, :slug)
+                 .except(:city)
                  .merge(active: false, demo: false)
     end
   end
