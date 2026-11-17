@@ -325,58 +325,70 @@ module Master
       def mirror_configuration_report(preflight, root: Master::REPO_ROOT)
         inventory = mirror_configuration_inventory(root:)
         reads = Array(preflight.fetch("source_reads")).to_h { |row| [row.fetch("path"), row] }
-        manuals = Array(preflight.fetch("manual_pages")).to_h do |row|
+        receipts = manual_receipt_index(preflight)
+        declared = Array(preflight.fetch("native_interfaces"))
+        files = inventory.map do |entry|
+          mirror_configuration_file_report(entry, reads:, receipts:, declared:, root:)
+        end
+        mirror_configuration_report_summary(preflight, files)
+      rescue TaskContract::Invalid, KeyError => error
+        blocked_mirror_report(error)
+      end
+
+      def manual_receipt_index(preflight)
+        Array(preflight.fetch("manual_pages")).to_h do |row|
           ["#{row.fetch("page")}(#{row.fetch("section")})", row]
         end
-        declared = Array(preflight.fetch("native_interfaces"))
+      end
 
-        files = inventory.map do |entry|
-          path = entry.fetch("path")
-          required = entry.fetch("manuals")
-          source = reads[path]
-          source_current = if source
-                             repository_content_digest(path, nil, root:) == source.fetch("sha256")
-                           else
-                             false
-                           end
-          page_rows = Array(required).map do |page_id|
-            page, section = page_id.match(/\A(.+)\(([1-9])\)\z/).captures
-            receipt = manuals[page_id]
-            {
-              "page" => page_id,
-              "declared" => declared.include?(page_id),
-              "receipt_present" => !receipt.nil?,
-              "sha256" => receipt && receipt.fetch("sha256"),
-              "bytes" => receipt && receipt.fetch("bytes"),
-              "lines" => receipt && receipt.fetch("lines"),
-              "source" => receipt && receipt.fetch("source")
-            }
-          end
-          unmapped = required.nil?
-          complete = !unmapped && !source.nil? && source_current &&
-                     page_rows.all? { |row| row.fetch("declared") && row.fetch("receipt_present") }
+      def mirror_configuration_file_report(entry, reads:, receipts:, declared:, root:)
+        path = entry.fetch("path")
+        required = entry.fetch("manuals")
+        source = reads[path]
+        current = source && repository_content_digest(path, nil, root:) == source.fetch("sha256")
+        page_rows = mirror_manual_receipt_rows(required, receipts, declared)
+        complete = !required.nil? && !source.nil? && current &&
+                   page_rows.all? { |row| row.fetch("declared") && row.fetch("receipt_present") }
+        mirror_file_row(path, required, source, current, page_rows, complete)
+      rescue TaskContract::Invalid, KeyError
+        blocked_mirror_file_row(path, required, source)
+      end
+
+      def mirror_manual_receipt_rows(required, receipts, declared)
+        Array(required).map do |page_id|
+          receipt = receipts[page_id]
           {
-            "path" => path,
-            "source_read" => !source.nil?,
-            "source_current" => source_current,
-            "source_sha256" => source && source.fetch("sha256"),
-            "manual_map" => (required || []),
-            "manuals" => page_rows,
-            "unmapped_native_interface" => unmapped,
-            "status" => complete ? "PASS" : "BLOCKED"
-          }
-        rescue TaskContract::Invalid
-          {
-            "path" => path,
-            "source_read" => !source.nil?,
-            "source_current" => false,
-            "source_sha256" => source && source.fetch("sha256"),
-            "manual_map" => (required || []),
-            "manuals" => page_rows || [],
-            "unmapped_native_interface" => required.nil?,
-            "status" => "BLOCKED"
+            "page" => page_id,
+            "declared" => declared.include?(page_id),
+            "receipt_present" => !receipt.nil?,
+            "sha256" => receipt && receipt.fetch("sha256"),
+            "bytes" => receipt && receipt.fetch("bytes"),
+            "lines" => receipt && receipt.fetch("lines"),
+            "source" => receipt && receipt.fetch("source")
           }
         end
+      end
+
+      def mirror_file_row(path, required, source, current, page_rows, complete)
+        {
+          "path" => path, "source_read" => !source.nil?, "source_current" => !!current,
+          "source_sha256" => source && source.fetch("sha256"),
+          "manual_map" => (required || []), "manuals" => page_rows,
+          "unmapped_native_interface" => required.nil?,
+          "status" => complete ? "PASS" : "BLOCKED"
+        }
+      end
+
+      def blocked_mirror_file_row(path, required, source)
+        {
+          "path" => path, "source_read" => !source.nil?, "source_current" => false,
+          "source_sha256" => source && source["sha256"],
+          "manual_map" => (required || []), "manuals" => [],
+          "unmapped_native_interface" => required.nil?, "status" => "BLOCKED"
+        }
+      end
+
+      def mirror_configuration_report_summary(preflight, files)
         blocked = files.count { |row| row.fetch("status") != "PASS" }
         {
           "hostname" => preflight.fetch("hostname"),
@@ -388,14 +400,12 @@ module Master
           "status" => blocked.zero? ? "PASS" : "BLOCKED",
           "files" => files
         }
-      rescue TaskContract::Invalid, KeyError => error
+      end
+
+      def blocked_mirror_report(error)
         {
-          "status" => "BLOCKED",
-          "total_files" => 0,
-          "passed_files" => 0,
-          "blocked_files" => 0,
-          "error" => error.message,
-          "files" => []
+          "status" => "BLOCKED", "total_files" => 0, "passed_files" => 0,
+          "blocked_files" => 0, "error" => error.message, "files" => []
         }
       end
 
