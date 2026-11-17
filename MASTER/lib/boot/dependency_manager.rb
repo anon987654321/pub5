@@ -222,14 +222,20 @@ module Master
 
       def ensure_recovered_bundle(bundler, bundle)
         system = install_system_packages_for_recovery
-        unless system[:ok]
-          return fail_result(
-            "bundle install failed; system build dependencies unavailable",
-            output: join_output(bundle.output, system[:output]),
-          )
-        end
+        return recovered_bundle_system_failure(bundle, system) unless system[:ok]
 
         retry_bundle = ensure_bundle
+        recovered_bundle_result(bundler, bundle, system, retry_bundle)
+      end
+
+      def recovered_bundle_system_failure(bundle, system)
+        fail_result(
+          "bundle install failed; system build dependencies unavailable",
+          output: join_output(bundle.output, system[:output]),
+        )
+      end
+
+      def recovered_bundle_result(bundler, bundle, system, retry_bundle)
         Result.new(
           ok: retry_bundle.ok,
           changed: bundler.changed || system[:changed] || retry_bundle.changed,
@@ -361,22 +367,27 @@ module Master
         return unless path
 
         @deploy_bundle = path
+        result = inspect_deploy_bundle(path)
+        return result if result
+
+        @deploy_bundle = nil
+        nil
+      end
+
+      def inspect_deploy_bundle(path)
         ok, stdout, stderr = run_bundle("check")
         output = join_output(stdout, stderr)
         native_ok, native_stdout, native_stderr = ok ? probe_native_bundle : [true, "", ""]
         return ok_result("deploy bundle clean", changed: false, bundle: true, output:) if ok && native_ok
 
         output = join_output(output, native_stdout, native_stderr)
-        unless File.writable?(path)
-          return fail_result(
-            "deploy bundle at #{path} does not satisfy #{File.join(@root, 'Gemfile.lock')} " \
-            "and uid #{Process.uid} cannot write it; run vps-deploy as the deploy user",
-            output:,
-          )
-        end
+        return unless File.writable?(path)
 
-        @deploy_bundle = nil
-        nil
+        fail_result(
+          "deploy bundle at #{path} does not satisfy #{File.join(@root, 'Gemfile.lock')} " \
+          "and uid #{Process.uid} cannot write it; run vps-deploy as the deploy user",
+          output:,
+        )
       end
 
       def deploy_bundle_path
@@ -389,52 +400,16 @@ module Master
         nil
       end
 
-      def ensure_bundler
-        version = locked_bundler_version
-        return ok_result("no Bundler pin", changed: false) if version.empty?
-        return ok_result("bundler #{version} already installed", changed: false, bundler: version) if bundler_path(version)
-
-        install_bundler(version)
-      end
-
-      # ensure_bundler's install leg: one gem install into the private store,
-      # then re-resolve the executable.
-      def install_bundler(version)
-        report("installing bundler #{version}")
-        gem = gem_command
-        return fail_result("gem executable missing; install RubyGems or use MASTER/bin/ruby") unless gem
-
-        ok, stdout, stderr = run(
-          [gem, "install", "bundler", "-v", version, "--no-document", "--install-dir", bundler_gem_home],
-          chdir: @root,
-          env: bundle_env,
-        )
-        output = join_output(stdout, stderr)
-        return fail_result("bundler #{version} installation failed", output:) unless ok
-
-        refresh_gem_state!
-        bundler_install_outcome(version, output)
-      end
-
-      def bundler_install_outcome(version, output)
-        return ok_result("bundler #{version} installed", changed: true, bundler: version, output:) if bundler_path(version)
-
-        fail_result("bundler #{version} installed but its executable is unavailable", output:)
-      end
-    end
-
-    module DependencyManagerBundleInstaller
-      ABI_STALE_LINE = DependencyManager::ABI_STALE_LINE
-      NATIVE_REPAIR_REFUSED = DependencyManager::NATIVE_REPAIR_REFUSED
-      private
-
       def ensure_bundle
         ok, stdout, stderr = run_bundle("check")
         output = join_output(stdout, stderr)
         return install_bundle unless ok
 
         native_ok, native_stdout, native_stderr = probe_native_bundle
-        native_output = join_output(native_stdout, native_stderr)
+        handle_native_bundle_probe(output, native_ok, join_output(native_stdout, native_stderr))
+      end
+
+      def handle_native_bundle_probe(output, native_ok, native_output)
         return ok_result("bundle clean", changed: false, bundle: true, output: join_output(output, native_output)) if native_ok
         return fail_result("bundle native probe failed", output: join_output(output, native_output)) unless native_build_failure?(native_output)
         unless native_output.match?(ABI_STALE_LINE) || @env["MASTER_DEPS_DISCARD_BUNDLE"] == "1"
@@ -535,23 +510,28 @@ module Master
       def install_to_user_path(previous_output)
         path = File.join(@home, ".local", "share", "master", "bundles", bundle_key)
         report("bundle path is not writable; using #{path}")
-        ok, stdout, stderr = run_bundle_config("path", path)
-        unless ok
-          return fail_result("could not set user bundle path",
-                             output: join_output(previous_output, stdout, stderr))
-        end
+        install_to_user_bundle(path, previous_output)
+      end
 
+      def install_to_user_bundle(path, previous_output)
+        ok, stdout, stderr = run_bundle_config("path", path)
+        return fail_result("could not set user bundle path",
+          output: join_output(previous_output, stdout, stderr)) unless ok
+
+        install_user_bundle(previous_output)
+      end
+
+      def install_user_bundle(previous_output)
         ok, stdout, stderr = run_bundle("install", "--jobs", bundle_jobs.to_s, "--retry", "3")
         output = join_output(previous_output, stdout, stderr)
-        if ok
-          ok_result("bundle installed in user path", changed: true, bundle: true, output:)
-        else
-          message = dependency_conflict?(output) ?
-            "bundle dependency constraints conflict; no automatic lockfile rewrite was attempted" :
-            "bundle install failed in user path"
-          fail_result(message, output:)
-        end
+        return ok_result("bundle installed in user path", changed: true, bundle: true, output:) if ok
+
+        message = dependency_conflict?(output) ?
+          "bundle dependency constraints conflict; no automatic lockfile rewrite was attempted" :
+          "bundle install failed in user path"
+        fail_result(message, output:)
       end
+
     end
 
     module DependencyManagerBundleEnvironment
