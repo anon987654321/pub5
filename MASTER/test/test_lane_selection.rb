@@ -102,10 +102,12 @@ class TestLaneSelection < Minitest::Test
     Selection.singleton_class.send(:remove_method, method_name)
   end
 
-  def test_default_repair_tier_keeps_glm_first_and_subscription_clis_as_fallbacks
+  def test_default_repair_tier_keeps_replicate_gpt_first_and_subscription_clis_as_fallbacks
     tier = Selection.tier("default")
 
-    assert_equal GLM_FLASH, tier.first
+    assert_equal "replicate:openai/gpt-5.2", tier.first
+    assert_equal "replicate:anthropic/claude-opus-5.5", tier[1]
+    assert_equal GLM_FLASH, tier[2]
     assert_includes tier, GROK
     assert_operator tier.index(GROK), :<, tier.index(NEMOTRON)
   end
@@ -195,23 +197,27 @@ class TestLaneSelection < Minitest::Test
     assert_equal GROK, Selection.first_live(tier)
   end
 
-  def test_the_real_default_tier_keeps_glm_primary_and_subscriptions_as_fallbacks
+  def test_the_real_default_tier_keeps_replicate_first_and_subscriptions_as_fallbacks
     tier = Selection.tier("default")
-    assert_equal GLM_FLASH, tier.first, "models.yml lists glm-5.3-flash first in the default tier"
-    assert_equal GLM_FLASH, Selection.first_live(tier), "a later signed-in CLI never silently promotes itself"
+    assert_equal "replicate:openai/gpt-5.2", tier.first
+    assert_equal "replicate:openai/gpt-5.2", Selection.first_live(tier),
+                 "the configured Replicate primary leads when its lane is not parked"
+    assert_equal "replicate:anthropic/claude-opus-5.5", tier[1]
+    assert_equal GLM_FLASH, tier[2]
     assert_includes tier, GROK
     assert_operator tier.index(GROK), :<, tier.index(NEMOTRON)
 
     Quota.note(GROK, RATE_LIMIT_REPLY)
-    assert_equal GLM_FLASH, Selection.first_live(tier), "a later CLI quota does not change the declared primary"
+    assert_equal "replicate:openai/gpt-5.2", Selection.first_live(tier),
+                 "a later CLI quota does not change the declared primary"
     ordered = Selection.order(tier)
     kinds = ordered.map { |id| Selection.kind(id) }
     assert_equal kinds.sort_by { |k| Selection::KIND_RANK.fetch(k) }, kinds, "remote, then local, then free"
 
     primary = Selection.tier("primary")
-    assert_equal GLM_FLASH, primary.first, "the primary /fix lane stays glm-5.3-flash"
-    assert_equal "zai-cli:auto", primary[1], "the configured CLI fallback stays in the GLM provider family"
-    assert_equal GLM, primary[2], "direct GLM follows as a same-provider fallback"
+    assert_equal "replicate:openai/gpt-5.2", primary.first
+    assert_equal "replicate:anthropic/claude-opus-5.5", primary[1]
+    assert_equal GLM_FLASH, primary[2], "GLM is the next provider fallback"
   end
 
   def test_task_tier_order_is_not_replaced_by_the_global_default_order
