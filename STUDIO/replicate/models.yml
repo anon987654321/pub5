@@ -4,7 +4,8 @@
 # all-the-public-replicate-models and the /v1/collections API) so STUDIO can
 # choose a current model rather than the one it happened to learn first.
 #
-# Every entry was read live from the Replicate API on 2026-11-13: owner/name
+# The image catalogue rows were refit from Replicate on 2026-11-13. The new
+# MiniMax H3 Lite and H3 Highspeed video entries were verified on 2026-11-17.
 # exist and the `inputs` listed are the ones the model's own schema declares, so
 # a caller can pass them without a rejected-key surprise. Run counts are the
 # catalogue's at that date and are a popularity hint, not a quality claim.
@@ -20,7 +21,7 @@
 # from it. Keep this list to models worth reaching for, not every row Replicate
 # has ever published.
 
-verified_on: "2026-11-13"
+verified_on: "2026-11-17"
 # The 2026-11-14 rows (the fofr/kontext edits, the levelsio film looks and
 # the kontext trainer) carry their schema as read from each model's own
 # Replicate page: the declared inputs plus the pinned API example.
