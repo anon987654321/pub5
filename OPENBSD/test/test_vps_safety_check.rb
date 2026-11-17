@@ -637,4 +637,19 @@ class VpsSafetyCheckTest < Minitest::Test
       assert File.file?(File.join(ROOT, "mirror", "bin", name)), "missing #{name} in OPENBSD/mirror/bin"
     end
   end
+  def test_resource_guard_must_not_auto_restart_core_services
+    with_fixture do |dir, _|
+      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "bin", "resource_guard.sh")
+      text = File.read(path).sub(
+        'logger -t resource-guard "CRITICAL load=$load (threshold=$crit) - automatic core restart disabled; inspect processes and logs"',
+        'logger -t resource-guard "critical"; ksh $EMERGENCY',
+      )
+      File.write(path, text)
+      out, status = run_check(dir)
+
+      refute status.success?
+      assert_includes out, "never auto-restart core production services"
+    end
+  end
+
 end
