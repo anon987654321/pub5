@@ -49,6 +49,7 @@ module Master
         }.compact
 
         FileUtils.mkdir_p(File.dirname(@path), mode: 0o700)
+        File.chmod(0o700, File.dirname(@path))
         File.open(@path, "a:UTF-8", 0o600) { |f| f.puts(JSON.generate(antigen)) }
         File.chmod(0o600, @path)
         antigen["id"]
