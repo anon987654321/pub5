@@ -2,6 +2,7 @@
 
 require_relative "../cli/context_layers"
 require_relative "../boot/paths"
+require_relative "causal_trace"
 require "json"
 require "fileutils"
 require "securerandom"
@@ -350,6 +351,8 @@ module Master
           @cost += amount
           @tokens_billed += tokens.to_i
           entry = { ts: Time.now.to_i, amount:, model:, tokens: tokens.to_i, total: @cost, billed: @tokens_billed }
+          trace_context = CausalTrace.current
+          entry[:run_id] = trace_context[:run_id] if trace_context
           entry[:approximate] = true if approximate
         end
         rotate_costs! if File.exist?(@costs_path) && File.size(@costs_path) > COSTS_MAX_BYTES
