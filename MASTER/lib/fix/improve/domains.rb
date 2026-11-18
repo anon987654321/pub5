@@ -24,9 +24,9 @@ module Master
         STRUCTURE_EXTENSIONS = %w[.yml .yaml].freeze
         MUSIC_EXTENSIONS = %w[.sco .orc .csd].freeze
         QUALITY_AREAS = {
-          code: %w[implementation_craft interaction_choreography state_lifecycle resilience perceived_performance],
-          prose: %w[editorial_craft information_architecture discoverability content_provenance localization],
-          visual: %w[visual_hierarchy accessible_interaction first_use_identity navigation privacy_dignity],
+          code: %w[implementation_craft interaction_choreography interaction state_lifecycle resilience perceived_performance],
+          prose: %w[editorial_craft information_architecture discoverability provenance localization],
+          visual: %w[visual_hierarchy accessibility interaction first_use_identity navigation privacy],
           structure: %w[configuration_clarity data_integrity content_portability],
           music: %w[notation creative_authorship production_provenance],
         }.freeze
