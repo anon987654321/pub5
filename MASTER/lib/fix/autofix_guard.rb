@@ -29,10 +29,11 @@ module Master
       TEST_TIMEOUT_S = 120
       DATA_EXTENSIONS = %w[.yml .yaml .json .tsv .csv .toml .conf].freeze
 
-      # Rendered or irreplaceable output, matched against the absolute path.
-      # laws.yml declares the protected paths through SACRED_AUTHORSHIP.
-      # soul.yml is separately protected by that same Law; tokens.yml is not
-      # sacred, so it is named here.
+      # Deterministic-autofix exclusions for rendered or irreplaceable output,
+      # matched against the absolute path. These patterns are this guard's
+      # local scope, not Soul-sacred paths. Explicit Soul declarations are
+      # checked separately through Constitution::Paths; configuration files
+      # are also subject to ConfigurationGuard's content validation.
       #
       # Operator decree 2026-11-09 (MASTER_SACRED_WRITES=allowed) lifts this
       # boundary per run; see Master::Ground::Immutability.writes_allowed?.

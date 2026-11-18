@@ -29,7 +29,7 @@ Laws in `MASTER/data/laws.yml` (with catalogue entries) plus executable modules:
 
 - Causal evidence: `TRUTHFUL_STATUS_causal_trace_is_evidence`, `TRUTHFUL_STATUS_profile_is_not_intent`
 - Shape: `DRY` + `SINGULARITY_architectural_tangle`; `KISS` / `POLA` / `SOLID` strengthened
-- Robustness: `ROBUSTNESS_least_authority_tracing`, `immune_pattern`, `homeostasis`, `morphological_exploration`, `antigen_memory`, `sclerotium`
+- Robustness: `ROBUSTNESS_least_authority_tracing`, `ROBUSTNESS_antigen_memory` (storage and recognition), `ROBUSTNESS_homeostasis`, `ROBUSTNESS_morphological_exploration`, `ROBUSTNESS_sclerotium`
 - Stewardship: `DO_THE_WORK_NOW` (execute authorised work; do not manufacture planning TODOs)
 
 Implemented modules (smoke-tested):

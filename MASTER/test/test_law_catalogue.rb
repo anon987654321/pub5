@@ -156,6 +156,30 @@ class TestRuleCatalogue < Minitest::Test
     end
   end
 
+  def test_antigen_memory_is_one_law_for_durable_storage_and_recognition
+    data = Master.laws_document(root: Master::ROOT)
+    entries = data.fetch("law_catalogue").fetch("entries")
+    statement = data.fetch("ROBUSTNESS_antigen_memory").fetch("statement")
+
+    refute data.key?("ROBUSTNESS_immune_pattern")
+    refute entries.key?("ROBUSTNESS_immune_pattern")
+    assert entries.key?("ROBUSTNESS_antigen_memory")
+    assert_match(/retained as antigens/, statement)
+    assert_match(/recognise matching defect classes/, statement)
+    assert_match(/durable memory/, statement)
+  end
+
+  def test_truthful_status_rejects_fabricated_or_unverifiable_provenance
+    data = Master.laws_document(root: Master::ROOT)
+    statement = data.fetch("TRUTHFUL_STATUS_unverified_claim").fetch("statement")
+    inter_model = data.fetch("INTER_MODEL_CONTRACT_unsourced_finding").fetch("statement")
+
+    ["path", "source", "Law ID", "URL", "quotation", "measurement", "captured evidence set"].each do |term|
+      assert_includes statement, term
+    end
+    assert_includes inter_model, "absent from the supplied evidence set"
+  end
+
   # The live catalogue, as an invariant rather than as today's numbers: these
   # three are at zero and zero is the floor recorded in law_ratchets.hygiene.
   def test_the_live_catalogue_is_clean

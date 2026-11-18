@@ -7,8 +7,8 @@ require "time"
 
 module Master
   module Fix
-    # AntigenStore — durable memory of failure signatures (ROBUSTNESS_antigen_memory,
-    # ROBUSTNESS_immune_pattern).
+    # AntigenStore — durable memory and recognition of failure signatures
+    # (ROBUSTNESS_antigen_memory).
     #
     # Records veto reasons, high-cost trajectories and defect classes so later
     # probes can be down-weighted or refused early when they match a known

@@ -88,9 +88,12 @@ TRUTHFUL_STATUS_false_ready:
 
 TRUTHFUL_STATUS_unverified_claim:
   parent: TRUTHFUL_STATUS
-  statement: "A claim about state with no evidence of its class."
+  statement: >
+    A claim about state with no evidence of its class, or a cited path, source,
+    Law ID, URL, quotation or measurement that is absent from the captured
+    evidence set or cannot be verified at the cited source.
   resolution: review
-  evidence: { read: sha256, modify: diff, complete: output }
+  evidence: { read: sha256, modify: diff, complete: output, source: verified_reference }
 
 TRUTHFUL_STATUS_no_simulated_completion:
   parent: TRUTHFUL_STATUS
@@ -142,9 +145,11 @@ TRUTHFUL_STATUS_causal_trace_is_evidence:
 TRUTHFUL_STATUS_profile_is_not_intent:
   parent: TRUTHFUL_STATUS
   statement: >
-    Continuous or sampled profiles (CPU, memory, allocation) report observed
-    cost. A claim that a path is "fast enough" or "cheap" without a current
-    profile or measured budget is a claim of intent, not of state.
+    CPU, memory, allocation and latency profiles, plus provider usage receipts
+    for input/output tokens, retries, cache hits and reported spend, are
+    observations of cost. Configured limits or a model's estimate are not
+    observed usage. A claim that a path is "fast enough", "cheap" or within
+    budget requires current measurements for the cost dimensions it names.
   resolution: review
 
 EXTERNAL_RESEARCH_IS_EVIDENCE_NOT_AUTHORITY:
@@ -258,17 +263,7 @@ ROBUSTNESS_least_authority_tracing:
     every path without sampling or purpose is a privilege expansion.
   resolution: review
 
-ROBUSTNESS_immune_pattern:
-  parent: ROBUSTNESS
-  statement: >
-    Recurring failure signatures from past /fix runs, council vetoes or
-    production incidents should be treated as antigens. A detector or gate
-    that cannot recognise a previously seen defect class at the same
-    high-risk boundary is incomplete; the system should learn the pattern
-    rather than rediscover it by accident.
-  resolution: review
-
-ROBUSTNESS_homeostasis:
+ ROBUSTNESS_homeostasis:
   parent: ROBUSTNESS
   statement: >
     The system returns to a healthy state after interruption, budget
@@ -291,12 +286,12 @@ ROBUSTNESS_morphological_exploration:
 ROBUSTNESS_antigen_memory:
   parent: ROBUSTNESS
   statement: >
-    Failure signatures, veto reasons and high-cost trajectories are
-    retained as antigens. Subsequent probes that match a known antigen
-    at the same high-risk boundary are down-weighted or refused early
-    unless new evidence shows the pattern has been resolved. Rediscovery
-    of a previously recorded defect class without recognition is incomplete
-    robustness.
+    Failure signatures, council vetoes and high-cost trajectories from /fix
+    or production are retained as antigens. Subsequent probes and gates must
+    recognise matching defect classes at the same high-risk boundary, then
+    down-weight or refuse them unless new evidence shows the pattern is
+    resolved. Recognition without durable memory, or memory that is never
+    consulted, is incomplete robustness.
   resolution: review
 
 ROBUSTNESS_sclerotium:
@@ -764,7 +759,10 @@ INTER_MODEL_CONTRACT_invalid_envelope:
 
 INTER_MODEL_CONTRACT_unsourced_finding:
   parent: INTER_MODEL_CONTRACT
-  statement: "A finding that names no evidence."
+  statement: >
+    A finding that names no evidence in its request envelope, or cites a path,
+    Law ID, source, quotation or measurement that is absent from the supplied
+    evidence set.
   resolution: never
 
 INTER_MODEL_CONTRACT_simulated_concurrence:
@@ -778,7 +776,10 @@ INTER_MODEL_CONTRACT_simulated_concurrence:
 
 SACRED_AUTHORSHIP:
   root: least_authority
-  statement: "No autonomous write to a path declared sacred by the governing Soul manifest."
+  statement: >
+    No autonomous write to a path explicitly declared in
+    soul.yml#absolute.sacred_paths. An empty declaration is valid and means
+    that no paths are sacred.
   severity: error
   resolution: never
   mechanical: Soul.refuse_write!
@@ -796,7 +797,10 @@ SACRED_AUTHORSHIP_soul_hash_mismatch:
 
 SACRED_AUTHORSHIP_soul_paths_are_soul_owned:
   parent: SACRED_AUTHORSHIP
-  statement: "Protected paths are declared only by soul.yml#absolute.sacred_paths and cannot be shadowed by laws.yml, runtime metadata or a Ruby constant."
+  statement: >
+    Protected paths, when any are declared, are owned only by
+    soul.yml#absolute.sacred_paths; an empty list protects none and no
+    declaration may be shadowed by laws.yml, runtime metadata or Ruby constants.
   resolution: never
 
 # ---
@@ -3249,10 +3253,7 @@ law_catalogue:
     ROBUSTNESS_least_authority_tracing:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
-    ROBUSTNESS_immune_pattern:
-      definition_sources: [MASTER/law/universal.rb]
-      severity: warning
-    ROBUSTNESS_homeostasis:
+     ROBUSTNESS_homeostasis:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
     ROBUSTNESS_morphological_exploration:
@@ -6854,7 +6855,6 @@ law_map:
     responsive_animation: {"meaning": "Motion responds to input  ", "detects": "static_response", "severity": "medium",
       "confidence": 0.75, "operation": "simplify", "law_ids": ["DIRECT_MANIPULATION_FEEDBACK", "INTERACTION_PERFORMANCE"
       ], "status": "covered", "root": "reach", "tags": ["ux_laws"], "source": "master.yml@30dad7ead"}
-    
     gesture_ownership: {"meaning": "A direct gesture declares its relationship to browser scrolling",
       "detects": "ambiguous_gesture_pan", "severity": "medium", "confidence": 0.8, "operation": "clarify",
       "law_ids": ["GESTURE_OWNERSHIP"], "status": "covered", "root": "reach", "tags": ["ux_laws"]}
@@ -7076,7 +7076,6 @@ law_map:
     yugen: {"meaning": "subtle grace, mysterious depth", "detects": "shallow_implementation", "severity": "low",
       "confidence": 0.65, "operation": "deepen", "law_ids": [], "status": "gap", "root": "bounded_load",
       "tags": ["japanese_aesthetics"], "source": "master.yml@30dad7ead"}
-  
   # The eleven root definitions the entries' root: fields reference — folded
   # from data/principle_roots.yml (no reader of its own; the map is the reader).
   signature_moment:

@@ -96,6 +96,7 @@ class TestSoul < Minitest::Test
   # Operator decree 2026-11-09: nothing is sacred, so the write guard refuses
   # nothing for sacredness — including the Ruby authority itself.
   def test_soul_write_guard_honours_the_operator_decree
+    assert_empty Master::Soul.sacred_paths
     refute Master::Soul.sacred?("lib/soul.rb")
     refute Master::Soul.sacred?("lib/fix/fix_loop.rb")
     assert_nil Master::Soul.refuse_write!("lib/soul.rb")

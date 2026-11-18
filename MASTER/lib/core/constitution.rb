@@ -184,8 +184,9 @@ module Master::Core
     end
 
     # Configuration content is judged by its schema and constitutional invariants
-    # on every Fold write; whether the Fold may write a path at all is
-    # immutable_paths_rule's question, and laws.yml and soul.yml are sacred.
+    # on every Fold write. Whether the Fold may write a path at all is the
+    # separate immutable_paths_rule question; only paths explicitly declared in
+    # soul.yml#absolute.sacred_paths enter that list, and an empty list is valid.
     # The guard is shared with lib/fix/write_guard.rb and sits outside the
     # fold's seven-file concept budget (data/spine.yml core_files), so it is
     # resolved through the shared loader rather than required from lib/.
@@ -202,10 +203,10 @@ module Master::Core
       })
     end
 
-    # Protected paths are declared by laws.yml#SACRED_AUTHORSHIP. The Soul
-    # manifest is subordinate identity/delivery data, not a write-protection source.
-    # The agent may not rewrite the constitution it is judged by or the spine
-    # that folds its effects. A write, or a git stage or commit of such a path, is blocked.
+    # SACRED_AUTHORSHIP is the Law; soul.yml#absolute.sacred_paths is the
+    # declaration it governs. laws.yml defines the rule, not the protected paths.
+    # This predicate blocks only explicitly declared paths. Configuration
+    # validation is a separate check and does not make a path "sacred".
     def self.immutable_paths_rule(immutable, master_root: nil, workspace_root: nil)
       Law.new(id: :immutable_paths, verbs: %i[write git], judge: lambda { |effect, _memory|
         targets = effect.verb == :write ? [effect.args[:path]] : Array(effect.args[:paths])
@@ -706,8 +707,9 @@ module Master::Core
 
       def legacy_sacred_paths
         begin
-          # Fail closed: a missing, unreadable, invalid, or empty soul.yml must
-          # never degrade into "nothing is sacred" and silently disable protection.
+          # Fail closed when the manifest is missing, unreadable or invalid.
+          # An explicitly empty sacred_paths list is valid and deliberately means
+          # that this workspace has no Soul-declared protected paths.
           root = manifest_root
           raise Errno::ENOENT, "#{MANIFEST} not found under #{@root}" unless root
 
