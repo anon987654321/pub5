@@ -1,7 +1,7 @@
 ---
 source_repo: anon987654321/pub
 target_repo: anon987654321/pub5
-audit_date: 2026-10-03
+audit_date: 2026-11-18
 purpose: >
   Machine-readable restore ledger for legacy pub material that pub5 has not
   fully restored as source, behavior, or explicit retirement decision.
