@@ -62,7 +62,7 @@ class TestRecoveryPubManifest < Minitest::Test
 
     refute_nil legacy_ai3
     assert_equal "archived", legacy_ai3.fetch("state")
-    assert_equal source_commit, legacy_ai3.fetch("target_path").match(/@([0-9a-f]{40}):/) && $1
+    assert_equal source_commit, legacy_ai3.fetch("target_path").match(/@([0-9a-f]{40}):/)&.[](1)
     assert_equal source_tree, legacy_ai3.fetch("source_tree")
     assert_equal 130, legacy_ai3.dig("inventory", "entries")
     assert_equal 120, legacy_ai3.dig("inventory", "blobs")
