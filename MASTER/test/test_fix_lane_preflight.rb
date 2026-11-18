@@ -94,6 +94,27 @@ class TestFixLanePreflight < Minitest::Test
     [result, lines]
   end
 
+  def test_preflight_reuses_the_live_agent_model_router_for_jury_readiness
+    agent = Agent.new({})
+    router = Object.new
+    agent.define_singleton_method(:model_router) { router }
+    captured = nil
+    readiness = Master::Review::Consensus::Readiness.new(state: :pass, detail: "ready")
+
+    Master::Review::Consensus.stub(:jury_readiness, lambda { |router: nil, **|
+      captured = router
+      readiness
+    }) do
+      Master::Trace::Dmesg.stub(:verbose?, false) do
+        Master::Io::LaneSelection.stub(:live_lanes, [OPUS]) do
+          assert_nil Preflight.check(agent:, env: {})
+        end
+      end
+    end
+
+    assert_same router, captured
+  end
+
   def test_a_broken_consensus_jury_blocks_before_model_routes_are_consulted
     agent = Object.new
     agent.define_singleton_method(:model_for) { |**| raise "model route must not be queried" }
