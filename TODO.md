@@ -853,7 +853,7 @@ The complete candidate records and rejected alternatives live in `MASTER/data/id
 
 ### 8.4 MASTER convergence wishlist — 36 unfinished workstreams
 
-`MASTER/convergence.yml` is the non-authoritative assistant wishlist and implementation/evidence map. It currently records 21 landed, 27 partial, 7 evidence-dependent and 2 missing workstreams (36 unresolved; 57 total). These IDs are proof/ownership cross-links to the sections above, not permission to create duplicate implementations. Close each only when its named implementation and proof are real.
+`MASTER/convergence.yml` is the non-authoritative assistant wishlist and implementation/evidence map. It currently records 21 landed, 28 partial, 7 evidence-dependent and 1 missing workstream (36 unresolved; 57 total). These IDs are proof/ownership cross-links to the sections above, not permission to create duplicate implementations. Close each only when its named implementation and proof are real.
 
 **Evidence-dependent — 7**
 - [ ] `voice_local_first` — local-first speech ladder and real microphone proof.
@@ -893,9 +893,11 @@ The complete candidate records and rejected alternatives live in `MASTER/data/id
 - [ ] `master_quota_facts` — PARTIAL 2026-11-11: quota/cache payload rendering and dashboard contract coverage exist in `MASTER/test/test_dashboard_fleet_panel.rb`; quota suite execution and rendered-browser proof remain NOT_RUN.
 - [ ] `inconclusive_aging` — PARTIAL 2026-11-11: receipt ageing/reopening logic and `MASTER/test/test_convergence_proof.rb` cases exist; run focused proof suite on the installed Ruby and inspect a real receipt, NOT_RUN here.
 - [ ] `constitution_self_budget` — PARTIAL 2026-11-11: `MASTER/checks/data/constitutional_budget.yml` carries the 6,717-line ceiling and `MASTER/test/test_constitutional_budget.rb` pins fit + down-only ratchet; run the tests on the installed compatible Ruby, NOT_RUN here.
-**Missing — 2**
-- [ ] `documentation_completeness` — public-contract changes carry documentation-review proof in the same task/commit.
+**Missing — 1**
 - [ ] `ops_alert_channel` — heartbeat failures reach one operator-owned relay with an allowlisted endpoint and secret held outside the tree.
+
+**Partial — additional**
+- [ ] `documentation_completeness` — 2026-11-18: exact public contract/document pairs now require `documentation_review` and both changed paths in the same /fix delivery. Regression cases are authored in `MASTER/test/test_task_contract.rb` and `MASTER/test/test_fix_loop_committer.rb`; focused runs remain NOT_RUN. Human review still chooses the appropriate reader-facing document and judges its content.
 
 ### 8.5 Operator-only and external evidence seams — 55 dependencies
 
