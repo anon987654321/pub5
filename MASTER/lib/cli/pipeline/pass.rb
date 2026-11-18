@@ -239,7 +239,9 @@ module Master
         claimed = Master::Ops::LoopOwner.with_claim("fix") do
           head = git.head
           result = run_fix_loop(abs)
-          fix_verdict(result, fix_commits_since(head))
+          verdict = fix_verdict(result, fix_commits_since(head))
+          receipt = @fix_loop.terminal_receipt_summary if @fix_loop.respond_to?(:terminal_receipt_summary)
+          [verdict, receipt].compact.reject { |part| part.to_s.strip.empty? }.join("\\n\\n")
         end
         return claimed unless claimed == false
 
