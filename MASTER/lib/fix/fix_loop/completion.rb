@@ -160,7 +160,11 @@ module Master
           RunBudget.finish_run(reason: run_end_reason(result))
           @last_terminal_state = state
           evidence[:causal_trace] = if trace_receipt
-                                       { trace_id: trace_receipt[:trace_id], sha256: trace_receipt[:sha256] }
+                                       {
+                                         trace_id: trace_receipt[:trace_id],
+                                         sha256: trace_receipt[:sha256],
+                                         runtime_profile: trace_receipt[:runtime_profile],
+                                       }
                                      else
                                        { status: "persistence_failed", error_class: trace_error&.class&.name }
                                      end
