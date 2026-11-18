@@ -20,6 +20,7 @@
          data-map-open-label-value="<%= t("maps.popup_open") %>"
          data-map-point-label-value="<%= t("maps.point_untitled") %>"
          data-map-kind-label-value="<%= t("maps.point_kind") %>"
+         data-map-type-labels-value="<%= json_escape({ place: t("maps.types.place"), event: t("maps.types.event"), story: t("maps.types.story"), courier: t("maps.types.courier") }.to_json) %>"
          data-map-empty-label-value="<%= t("maps.no_points") %>"
          data-map-points-url-value="<%= request.path %>">
   <div id="map" class="map-canvas" data-map-target="canvas" aria-hidden="true"></div>
