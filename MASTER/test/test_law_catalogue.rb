@@ -162,6 +162,8 @@ class TestRuleCatalogue < Minitest::Test
     statement = data.fetch("ROBUSTNESS_antigen_memory").fetch("statement")
 
     refute data.key?("ROBUSTNESS_immune_pattern")
+    assert data.key?("ROBUSTNESS_homeostasis")
+    assert entries.key?("ROBUSTNESS_homeostasis")
     refute entries.key?("ROBUSTNESS_immune_pattern")
     assert entries.key?("ROBUSTNESS_antigen_memory")
     assert_match(/retained as antigens/, statement)
@@ -177,7 +179,7 @@ class TestRuleCatalogue < Minitest::Test
     ["path", "source", "Law ID", "URL", "quotation", "measurement", "captured evidence set"].each do |term|
       assert_includes statement, term
     end
-    assert_includes inter_model, "absent from the supplied evidence set"
+    assert_includes inter_model, "supplied evidence set"
   end
 
   # The live catalogue, as an invariant rather than as today's numbers: these

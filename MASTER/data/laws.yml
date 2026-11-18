@@ -263,7 +263,7 @@ ROBUSTNESS_least_authority_tracing:
     every path without sampling or purpose is a privilege expansion.
   resolution: review
 
- ROBUSTNESS_homeostasis:
+ROBUSTNESS_homeostasis:
   parent: ROBUSTNESS
   statement: >
     The system returns to a healthy state after interruption, budget
@@ -3253,7 +3253,7 @@ law_catalogue:
     ROBUSTNESS_least_authority_tracing:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
-     ROBUSTNESS_homeostasis:
+    ROBUSTNESS_homeostasis:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
     ROBUSTNESS_morphological_exploration:
@@ -6855,6 +6855,7 @@ law_map:
     responsive_animation: {"meaning": "Motion responds to input  ", "detects": "static_response", "severity": "medium",
       "confidence": 0.75, "operation": "simplify", "law_ids": ["DIRECT_MANIPULATION_FEEDBACK", "INTERACTION_PERFORMANCE"
       ], "status": "covered", "root": "reach", "tags": ["ux_laws"], "source": "master.yml@30dad7ead"}
+
     gesture_ownership: {"meaning": "A direct gesture declares its relationship to browser scrolling",
       "detects": "ambiguous_gesture_pan", "severity": "medium", "confidence": 0.8, "operation": "clarify",
       "law_ids": ["GESTURE_OWNERSHIP"], "status": "covered", "root": "reach", "tags": ["ux_laws"]}
