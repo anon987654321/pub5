@@ -130,6 +130,22 @@ class OperatorIntentTest < Minitest::Test
     end
   end
 
+  def test_greeted_polite_question_form_resolves_exact_full_stack_without_model_guessing
+    with_inventory do |root|
+      message = "Hey, can you redeploy OPENBSD, RAILS, and MASTER web on vm23 please?"
+      agent = Object.new
+
+      assert Master::CLI::OperatorIntent.direct_deploy_request?(message)
+      assert Master::CLI::OperatorIntent.direct_full_stack_confirmation?(message)
+
+      result = Master::CLI::OperatorIntent.new(root:, agent:).call(message)
+
+      assert_equal :deploy, result.status
+      assert_equal "all", result.target
+      assert_equal %w[control_web city_app wardrobe_app private_service], result.selected
+    end
+  end
+
   def test_plan_only_request_stays_conversational_without_classifier_or_deployment
     with_inventory do |root|
       agent = Object.new
