@@ -58,8 +58,12 @@ module Master
 
       def initialize(root:, target:, files:, laws:, excluded:, adapters:, max_passes:, budget_seconds:, task_contract: nil)
         @root = File.expand_path(root).freeze
+        @real_root = File.realpath(@root).freeze
+        raise ArgumentError, "fix plan root is not a directory" unless File.directory?(@real_root)
+
         @target = expand(target).freeze
         raise ArgumentError, "fix target escapes repository root" unless inside?(@target, @root)
+        validate_existing_path!(@target, label: "fix target", final_kind: :target, allow_missing: true)
 
         @created_at = Time.now.utc.iso8601.freeze
         @max_passes = positive_integer(max_passes, "max_passes")
@@ -159,6 +163,51 @@ module Master
         path.delete_prefix(root + File::SEPARATOR)
       end
 
+      # A lexical path inside the checkout is not enough: a parent symlink can
+      # silently redirect a regular-looking source into a sibling checkout.
+      # The repository root itself is an explicit trust boundary and may be a
+      # symlinked checkout path; every component beneath it must be no-follow.
+      def validate_existing_path!(path, label:, final_kind:, single_link: false, allow_missing: false)
+        expanded = File.expand_path(path)
+        raise ArgumentError, "#{label} escapes repository root" unless inside?(expanded, root)
+
+        segments = relative(expanded).split(File::SEPARATOR)
+        cursor = root
+        stat = File.stat(root)
+        segments.each_with_index do |segment, index|
+          cursor = File.join(cursor, segment)
+          unless File.exist?(cursor) || File.symlink?(cursor)
+            return if allow_missing
+            raise ArgumentError, "#{label} is missing: #{relative(cursor)}"
+          end
+
+          stat = File.lstat(cursor)
+          raise ArgumentError, "#{label} traverses a symlink: #{relative(cursor)}" if stat.symlink?
+          if index < segments.length - 1 && !stat.directory?
+            raise ArgumentError, "#{label} has a non-directory parent: #{relative(cursor)}"
+          end
+        end
+
+        valid_kind = case final_kind
+                     when :file then stat.file?
+                     when :directory then stat.directory?
+                     when :target then stat.file? || stat.directory?
+                     else false
+                     end
+        raise ArgumentError, "#{label} is not a regular #{final_kind}: #{relative(expanded)}" unless valid_kind
+        if single_link && stat.nlink != 1
+          raise ArgumentError, "#{label} is hard-linked: #{relative(expanded)}"
+        end
+
+        resolved = File.realpath(expanded)
+        unless inside?(resolved, @real_root)
+          raise ArgumentError, "#{label} resolves outside repository root: #{relative(expanded)}"
+        end
+        stat
+      rescue SystemCallError => error
+        raise ArgumentError, "#{label} cannot be safely resolved: #{error.class}"
+      end
+
       def positive_integer(value, name)
         number = Integer(value)
         raise ArgumentError, "#{name} must be positive" unless number.positive?
@@ -177,10 +226,10 @@ module Master
       def snapshot_sources(files)
         Array(files).map { |path| expand(path) }.uniq.sort.map do |path|
           raise ArgumentError, "fix source escapes repository root: #{path}" unless inside?(path, root)
-          raise ArgumentError, "fix source is not a regular non-symlink file: #{relative(path)}" unless File.file?(path) && !File.symlink?(path)
-
+          validate_existing_path!(path, label: "fix source", final_kind: :file, single_link: true)
           before = File.stat(path)
           sha256 = Digest::SHA256.file(path).hexdigest
+          validate_existing_path!(path, label: "fix source", final_kind: :file, single_link: true)
           after = File.stat(path)
           signature = ->(stat) { [stat.dev, stat.ino, stat.size, stat.mtime.to_r, stat.ctime.to_r] }
           unless signature.call(before) == signature.call(after)
