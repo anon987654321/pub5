@@ -9,6 +9,7 @@ require_relative "repo_scope"
 require_relative "../autofix_guard"
 require_relative "../run_budget"
 require_relative "../refusals"
+require_relative "../task_contract"
 
 module Master
   module Fix
@@ -507,6 +508,7 @@ def stage_commit_mode?
         def validate_paths(message, paths)
           @refusing_paths = paths
           return false unless scope_ok?(paths)
+          return false unless documentation_review_ok?(paths)
           return false unless ratchet_sponsorship_ok?(paths)
 
           broken = ruby_files(paths).reject { |path| ruby_parses?(path) }
@@ -516,6 +518,17 @@ def stage_commit_mode?
           return false unless lint_changed_ruby(paths)
 
           house_lint_clean(paths)
+        end
+
+        # Public contract/document pairs are explicit task obligations. Both exact
+        # paths must be among this delivery's changes so the reader-facing document
+        # cannot trail the contract into a later commit.
+        def documentation_review_ok?(paths)
+          refusal = TaskContract.documentation_review_refusal(paths:, root: @root)
+          return true unless refusal
+
+          refuse_commit(reason: "documentation_review", paths:, detail: refusal)
+          false
         end
 
         # The pre-commit hook runs `bin/operator lint --staged --changed-lines` and refuses a finding in any line a
