@@ -58,6 +58,7 @@
 
 <% active_filters = [ params[:from], params[:category_id], params[:condition],
                       params[:min_price], params[:max_price], @search_lat ].count(&:present?) %>
+<% source_filter_params = request.query_parameters.merge("kind" => @kind) %>
 <%# The drawer is not a form of its own. Its fields join the header search
     through the form attribute, so one submission carries the query and every
     filter, and a change here streams the results the way typing does. The
@@ -85,11 +86,11 @@
             <fieldset class="listing-filter-group">
               <legend><%= t("marketplace.listing_kind") %></legend>
               <div class="listing-filter-controls">
-                <%= link_to t("marketplace.from_anyone"), listings_path(kind: @kind, category_id: params[:category_id], q: params[:q].presence),
+                <%= link_to t("marketplace.from_anyone"), listings_path(source_filter_params.except("from")),
                       class: "deal-cat#{" active" if params[:from].blank?}" %>
-                <%= link_to t("marketplace.from_a_person"), listings_path(kind: @kind, from: "person", category_id: params[:category_id], q: params[:q].presence),
+                <%= link_to t("marketplace.from_a_person"), listings_path(source_filter_params.merge("from" => "person")),
                       class: "deal-cat#{" active" if params[:from] == "person"}" %>
-                <%= link_to t("marketplace.from_a_shop"), listings_path(kind: @kind, from: "shop", category_id: params[:category_id], q: params[:q].presence),
+                <%= link_to t("marketplace.from_a_shop"), listings_path(source_filter_params.merge("from" => "shop")),
                       class: "deal-cat#{" active" if params[:from] == "shop"}" %>
               </div>
             </fieldset>
