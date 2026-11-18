@@ -139,6 +139,12 @@ Report added/removed files and directories in the delivery summary.
 
 Task routing and minimum proof:
 
+**Repair versus verification commands:**
+- `/fix [path]` is the canonical repair command. It observes, repairs, re-observes and runs proof selected for the changed scope: focused affected tests when reliable, otherwise the target tree's registered suite or Rails source/rendered proof. Do not require `bin/check --profile=full` after every /fix.
+- `MASTER/bin/fix-here TREE` is an optional terminal wrapper around the same `/fix` runtime. It adds disk and parse preflight, provider preflight, a followable per-tree log, stall handling and RAILS app lifecycle. `--dry` only checks readiness; `--dry-run` runs /fix's read-only preview; `--no-publish` keeps commits local.
+- `MASTER/bin/check` is a separate profile-based verification runner, not a repair command. Its default is `operator`; `ci` is the local CI floor; `full` adds all probes and the full audit and is for broad/release verification, not every repair. `MASTER/bin/ci` is a compatibility entrypoint for `bin/check --profile=ci`.
+- `MASTER/bin/operator check` is the distinct repo-wide `Operator::CheckChain` maintenance ladder. It writes fixes by default; use `--scan-only` when only measuring. It is not an alias for `bin/check`.
+
 - **MASTER behavior or Laws:** read the owning Law, implementation and callers;
   run focused tests, changed-line Law assessment and the relevant suite.
 - **Task intent or preservation:** read `MASTER/data/task_contract.yml` and
