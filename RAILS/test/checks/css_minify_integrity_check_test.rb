@@ -131,17 +131,20 @@ class CssMinifyIntegrityCheckTest < Minitest::Test
     captured = {}
     status = Object.new
     status.define_singleton_method(:success?) { true }
-    payload = { "expanded" => ".a { color: red; }", "compressed" => ".a{color:red}" }
+    payload = "CSS_MINIFY_RESULT:#{Base64.strict_encode64(JSON.generate(
+      "expanded" => ".a { color: red; }", "compressed" => ".a{color:red}"
+    ))}\n"
 
     runner = lambda do |*argv, **options|
       captured[:argv] = argv
       captured[:options] = options
-      [JSON.generate(payload), status]
+      ["Sass warning: fixture warning\n#{payload}", status]
     end
 
     Master::Io::Exec.stub(:capture2e, runner) do
-      assert_equal payload, checker.send(:compile_stylesheets, entry: "/tmp/application.scss",
-                                                              load_paths: ["/tmp/stylesheets"])
+      result = checker.send(:compile_stylesheets, entry: "/tmp/application.scss",
+                                         load_paths: ["/tmp/stylesheets"])
+      assert_equal ".a{color:red}", result.fetch("compressed")
     end
 
     assert_equal CHECK::COMPILE_TIMEOUT, captured.fetch(:options).fetch(:timeout)

@@ -5,6 +5,7 @@ require_relative "../../support/brgen_vertical_surfaces"
 require_relative "../../support/fleet"
 require_relative "../../../lib/io/exec"
 require_relative "../../../tools/scss"
+require "base64"
 require "json"
 require "rbconfig"
 require "set"
@@ -35,6 +36,7 @@ module Deploy
     MIN_SELECTOR_LIST_SIZE = 3
     COMPILE_TIMEOUT = 900
     SASS_COMPILER = <<~'RUBY'.freeze
+      require "base64"
       require "json"
       require "sass-embedded"
 
@@ -43,7 +45,8 @@ module Deploy
         load_paths = JSON.parse(ARGV.fetch(1))
         expanded = Sass.compile(entry, load_paths:, style: :expanded).css
         compressed = Sass.compile(entry, load_paths:, style: :compressed).css
-        STDOUT.write(JSON.generate("expanded" => expanded, "compressed" => compressed))
+        result = JSON.generate("expanded" => expanded, "compressed" => compressed)
+        STDOUT.puts("CSS_MINIFY_RESULT:#{Base64.strict_encode64(result)}")
       rescue StandardError => error
         warn "#{error.class}: #{error.message}"
         exit 1
@@ -141,7 +144,11 @@ module Deploy
         raise "Sass compiler subprocess exited #{status.exitstatus || "signal"}: #{detail}"
       end
 
-      JSON.parse(output)
+      record = output.to_s.lines.reverse.find { |line| line.start_with?("CSS_MINIFY_RESULT:") }
+      raise "Sass compiler subprocess produced no result: #{output.to_s.lines.last(4).join.strip}" unless record
+
+      payload = record.delete_prefix("CSS_MINIFY_RESULT:").strip
+      JSON.parse(Base64.strict_decode64(payload))
     rescue Master::Io::Exec::TimeoutError
       raise "Sass compilation timed out after #{COMPILE_TIMEOUT}s"
     end
