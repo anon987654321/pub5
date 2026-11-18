@@ -79,6 +79,10 @@ module Deploy
       # without this a plain [^{}]+ scan spans straight through them into
       # the next real rule's selector, misreading the at-rule's name list
       # as part of a selector list.
+      # Normalize the full compressed output once per app, not once per
+      # comma-separated rule. Repeating this full-stylesheet scan for every
+      # selector list turns the comparison quadratic in the number of rules.
+      normalized_compressed = normalize_selector(compressed)
       strip_comments(expanded).scan(/([^{};]+)\{/) do |(selector_text)|
         next unless selector_text.include?(",")
         next if selector_text.lstrip.start_with?("@")
@@ -86,7 +90,6 @@ module Deploy
         selectors = selector_text.split(",").map(&:strip).reject(&:empty?)
         next if selectors.length < MIN_SELECTOR_LIST_SIZE
 
-        normalized_compressed = normalize_selector(compressed)
         missing = selectors.reject { |sel| normalized_compressed.include?(normalize_selector(sel)) }
         next if missing.empty?
 

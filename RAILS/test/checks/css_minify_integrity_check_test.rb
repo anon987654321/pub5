@@ -38,12 +38,12 @@ class CssMinifyIntegrityCheckTest < Minitest::Test
     skip "sass-embedded unavailable — the check reports itself inconclusive here" unless SASS
   end
 
-  def check(scss)
+  def check(scss, checker: CHECK.new)
     Dir.mktmpdir do |dir|
       plant(dir, "app/assets/stylesheets/application.scss", scss)
       rel = Pathname.new(dir).relative_path_from(Pathname.new(CHECK::RAILS_ROOT)).to_s
       result = Deploy::CheckResult.new
-      CHECK.new.send(:check_app, result, rel)
+      checker.send(:check_app, result, rel)
       result
     end
   end
@@ -61,6 +61,24 @@ class CssMinifyIntegrityCheckTest < Minitest::Test
 
     assert result.ok?, result.failures.join(", ")
     assert_equal 1, result.checks_ran
+  end
+
+  def test_compressed_stylesheet_is_normalized_once_per_app_not_once_per_rule
+    checker = CHECK.new
+    calls = 0
+    original = checker.method(:normalize_selector)
+    checker.define_singleton_method(:normalize_selector) do |value|
+      calls += 1
+      original.call(value)
+    end
+    groups = (1..30).map do |index|
+      ".card-#{index}, .listing-#{index}, .story-#{index} { width: #{index}px; }"
+    end
+
+    result = check(groups.join("\\n"), checker:)
+
+    assert result.ok?, result.failures.join(", ")
+    assert_equal 91, calls, "one full compressed-output normalization plus three selectors per rule"
   end
 
   # A long compound-selector list is the shape the check was written for. Every
