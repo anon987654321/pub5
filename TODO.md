@@ -16,21 +16,22 @@ execution container has Ruby 3.3.8 but no repository checkout; a shallow clone
 failed at DNS resolution for github.com. Repository test, lint and build commands
 therefore remain NOT_RUN in this session. Subsequent source and regression-test commits were pushed through the repository API after source review, but could not be executed through `bin/check`; their current-revision status is NOT_RUN, not PASS. They remain pending acceptance on the installed compatible Ruby.
 
-2026-11-18 source-only follow-up on `85b22bada05f6a8d699b7e5827081ed8e690f608`: commits
-`bbe3e74`, `c08c86b`, `fff8ecb`, `e205aed`, `a94c39b`, `a2c02b8`,
-`f2b9009`, `b9381c6`, `1353ba7`, `ad3805d`, `a9ab5d7`, `9c2b910` and
-`85b22ba` tighten the `/deploy` boundary and CSS compile check. The deploy
-path bounds local CI through MASTER's process-group executor, distinguishes
-a detached tmux start from completion/canary proof, fails closed on Git
-command failures and untracked governed source, and avoids overclaiming
-session state. The CSS check runs embedded Sass in a supervised process group
-with a 900-second per-app deadline, indexes exact selectors with the shared
-lexer, and preserves whitespace inside quoted/escaped selector content. New
-regressions are authored but NOT_RUN; an isolated Ruby probe of the normalizer
-passed. These are source-level hardenings, not acceptance evidence: the full
-current-revision check ladder, native OpenBSD, and live vm23 deployment/health
-evidence remain NOT_RUN or BLOCKED pending their required environments and
-access. PRs #11 (MASTER portrait,
+2026-11-18 source and retry follow-up on `20bccf521ea35e01780bf8356a4068e0232cdb23`: source changes
+remain committed on main, including bounded deploy preflight/CI, detached
+deployment-start reporting, fail-closed Git evidence, supervised Sass
+compilation and exact CSS selector indexing. The newer GLM commit
+`6a42c366` reports 11 OpenBSD test files green (62 runs, 172 assertions,
+0 failures); this is a commit-message report, not CI-attested or independently
+reproduced by this retry. Source inspection then found and fixed a path split:
+`DeployStamp`, `pub5-admin` and `vps-state` now agree on `/var/db/pub5`, and
+`vps-state` routes root-private status/recovery reads through the matching
+broker (`20bccf5`). Its regression tests and the earlier deploy/Sass changes
+remain authored but NOT_RUN here. A fresh `git ls-remote` and shallow clone
+retry still fail because `github.com` does not resolve; Ruby 3.3.8 is present,
+but zsh, Bundler and SSH access/credentials for vm23 are absent. Therefore
+the current-revision RAILS/MASTER suites, native OpenBSD acceptance and live
+vm23 deployment/health checks remain NOT_RUN/BLOCKED. GitHub repository API
+source access is not runtime evidence.  PRs #11 (MASTER portrait,
 semantic subject morphs, CLI feedback and Replicate upload guards) and #12
 (Brgen city wordmark refinement) are merged. No pull request was open at the
 time of this audit. Entries below remain open until their own source, test,
