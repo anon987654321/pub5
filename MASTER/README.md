@@ -157,7 +157,7 @@ The near horizon is self-maintenance: `/fix` holding this repository's suites an
 - Execution contracts: `lib/execution/contract.rb` and its tests.
 - Mobile support: `data/mobile.yml`, `bin/master-mobile-install` and `test/test_mobile.rb`.
 - Provider routing and quotas: `data/providers.yml`, `data/models.yml` and `lib/io/model_quota.rb`.
-- Lovdata access limits: `lib/io/llm.rb` and its tool contract tests.
+- Lovdata access limits: `lib/io/lovdata.rb`, `lib/io/llm.rb` and their tool contract tests.
 - Scope expectations and vocabulary: `data/expectations.yml` and `data/synonyms.yml`.
 - Cross-tree inventory: `lib/convergence/architecture.rb` and `MasterPaths::TREES`.
 - CSS cascade order and thresholds: `data/css_architecture.yml`, `data/tokens.yml` and the corresponding Laws.
