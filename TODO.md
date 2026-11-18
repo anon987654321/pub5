@@ -264,6 +264,14 @@ are not new implementation requests.
   voter quorum to remain available after excluding each possible author family;
   a timed-out or unmeasured probe is not ready. Extend the existing Council and
   /fix preflight owners rather than adding another router.
+  2026-11-18 source: the author-family exclusion, quorum and independent-family
+  proof now have one owner in `Review::Consensus.jury_readiness`. The runtime
+  doctor delegates to that owner; `LanePreflight` refuses /fix before routes or
+  repair budget are entered unless the live probe returns PASS. FAIL and
+  unmeasured/timeouts both refuse, including under the free-lane opt-in. Doctor
+  tests cover passing, insufficient quorum and timed-out probes; preflight
+  regressions cover fail-closed admission. Source and tests landed, NOT_RUN on
+  the installed Ruby; keep open until focused tests and a live doctor probe run.
 - [ ] **Law reload diagnosis.** At the existing Law.reload boundary, record the
   reload reason, resolved law root and changed source paths. Reproduce the
   duplicate-constant warning before changing reload semantics; do not mask it
