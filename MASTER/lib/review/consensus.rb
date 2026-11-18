@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../trace/causal_trace"
+
 require "json"
 
 module Master
@@ -135,6 +137,13 @@ module Master
             reviewer_families:,
             quorum: @quorum,
             minimum_families: MIN_INDEPENDENT_FAMILIES,
+          )
+          Master::Trace::CausalTrace.step(
+            kind: :decision, name: "consensus.approve_fix",
+            input: { law: violation[:law].to_s, severity: violation[:severity].to_s,
+                     author_families: author_families.size, reviewer_families: reviewer_families.size,
+                     quorum: @quorum },
+            output: { approved: false, reason: "insufficient_independent_reviewers" },
           )
           return false
         end
