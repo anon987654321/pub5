@@ -189,11 +189,12 @@ module Master
       def documentation_review_refusal(paths:, root: nil, contract: current)
         return if contract.nil? || contract.documentation_pairs.empty?
 
-        repository = File.realpath(
+        workspace_root = File.realpath(
           root || (defined?(Master::REPO_ROOT) ? Master::REPO_ROOT : File.expand_path("../../..", __dir__))
         )
+        repository = canonical_repository_root(workspace_root)
         changed = Array(paths).filter_map do |path|
-          absolute = File.expand_path(path.to_s, repository)
+          absolute = File.expand_path(path.to_s, workspace_root)
           next unless absolute.start_with?(repository + File::SEPARATOR)
 
           absolute.delete_prefix(repository + File::SEPARATOR)
@@ -207,6 +208,18 @@ module Master
         "public contract and its documentation must be delivered in the same commit: #{pairs.join('; ')}"
       rescue SystemCallError => error
         raise Invalid, "documentation review root cannot be verified: #{error.class}"
+      end
+
+      # FixLoop may run from MASTER or one RAILS app while task-contract paths
+      # are always relative to the checkout root. Convert each path from the
+      # committer's workspace (including ../ sibling-tree paths) into that one
+      # canonical coordinate system before comparing declared pairs.
+      def canonical_repository_root(workspace_root)
+        return workspace_root unless defined?(Master::REPO_ROOT) && File.directory?(Master::REPO_ROOT)
+
+        repository = File.realpath(Master::REPO_ROOT)
+        workspace_root == repository || workspace_root.start_with?(repository + File::SEPARATOR) ?
+          repository : workspace_root
       end
 
       def coerce(value, path: PATH)
