@@ -383,10 +383,14 @@ module Master
           end
           verified = within_file_budget(violation) { reflexion_verify(violation, source) }
           return :file_timeout if @file_timed_out
+          reflexion_reason = Thread.current[:reflexion_reason].to_s
+          reason_code = unless verified
+                          reflexion_reason.start_with?("no verdict") ? "no_verdict" : "reviewer_rejected"
+                        end
           Master::Trace::CausalTrace.step(
             kind: :decision, name: "repair.reflexion",
             input: { law: @law.id, candidate_sha256: Digest::SHA256.hexdigest(source) },
-            output: { verified: verified == true, reason_code: (Thread.current[:reflexion_reason].to_s.start_with?("no verdict") ? "no_verdict" : "reviewer_rejected") unless verified },
+            output: { verified: verified == true, reason_code: },
           )
           unless verified
             RunLedger.reject("reflexion_unsafe", file: violation[:file], law: @law.id, bus: @bus)
