@@ -56,6 +56,13 @@ class TestFixLanePreflight < Minitest::Test
     Preflight.instance_variable_set(:@probed, nil)
   end
 
+  def preflight_check(jury_state: :pass, jury_detail: "fixture jury readiness", **options)
+    readiness = Master::Review::Consensus::Readiness.new(state: jury_state, detail: jury_detail)
+    Master::Review::Consensus.stub(:jury_readiness, readiness) do
+      Preflight.check(**options)
+    end
+  end
+
   def check(routes, live:, env: {})
     lines = []
     result = nil
@@ -63,7 +70,7 @@ class TestFixLanePreflight < Minitest::Test
     Master::Trace::Dmesg.stub(:verbose?, true) do
       Master::Trace::Dmesg.stub(:status, ->(_unit, text, **) { lines << text }) do
         Master::Io::LaneSelection.stub(:live_lanes, live) do
-          result = Preflight.check(agent: Agent.new(routes), env:)
+          result = preflight_check(agent: Agent.new(routes), env:)
         end
       end
     end
@@ -79,12 +86,37 @@ class TestFixLanePreflight < Minitest::Test
         Master::Io::LaneSelection.stub(:live_lanes, live) do
           Master::Io::LaneSelection.stub(:alive?, ->(_id) { true }) do
             agent = ProbingAgent.new(routes, answers:, candidates:)
-            result = Preflight.check(agent:, env: {})
+            result = preflight_check(agent:, env: {})
           end
         end
       end
     end
     [result, lines]
+  end
+
+  def test_a_broken_consensus_jury_blocks_before_model_routes_are_consulted
+    agent = Object.new
+    agent.define_singleton_method(:model_for) { |**| raise "model route must not be queried" }
+
+    result = preflight_check(agent:, env: {}, jury_state: :fail, jury_detail: "author exclusion leaves only 1/2 voters")
+
+    assert_kind_of Master::Result::Err, result
+    assert_equal :inconclusive, result.category
+    assert_includes result.message, "consensus jury is not ready (fail)"
+    assert_includes result.message, "author exclusion leaves only 1/2 voters"
+    assert_includes result.message, "/doctor consensus-jury"
+  end
+
+  def test_an_unmeasured_consensus_jury_is_not_treated_as_ready
+    agent = Object.new
+    agent.define_singleton_method(:model_for) { |**| raise "model route must not be queried" }
+
+    result = preflight_check(agent:, env: {}, jury_state: :unmeasured, jury_detail: "provider probe timed out")
+
+    assert_kind_of Master::Result::Err, result
+    assert_equal :inconclusive, result.category
+    assert_includes result.message, "consensus jury is not ready (unmeasured)"
+    assert_includes result.message, "provider probe timed out"
   end
 
   def test_a_free_lane_for_a_tree_read_while_opus_is_live_refuses_the_run
@@ -103,7 +135,7 @@ class TestFixLanePreflight < Minitest::Test
       Master::Trace::Dmesg.stub(:status, ->(*) {}) do
         Master::Io::LaneSelection.stub(:live_lanes, [OPUS, GEMMA]) do
           Master::Io::LaneSelection.stub(:order, ->(ids, **_options) { ids }) do
-            result = Preflight.check(agent:, env: {})
+            result = preflight_check(agent:, env: {})
           end
         end
       end
@@ -121,7 +153,7 @@ class TestFixLanePreflight < Minitest::Test
     Master::Trace::Dmesg.stub(:verbose?, false) do
       Master::Trace::Dmesg.stub(:status, ->(*) {}) do
         Master::Io::LaneSelection.stub(:live_lanes, [OPUS, GEMMA]) do
-          result = Preflight.check(agent:, env: {})
+          result = preflight_check(agent:, env: {})
         end
       end
     end
@@ -203,7 +235,7 @@ class TestFixLanePreflight < Minitest::Test
         Master::Io::LaneSelection.stub(:alive?, ->(_id) { true }) do
           Master::Io::LaneSelection.stub(:order, ->(_ids, **_options) { [] }) do
             Master::Io::LaneSelection.stub(:live_lanes, [OPUS]) do
-              result = Preflight.check(
+              result = preflight_check(
                 agent: ProbingAgent.new({}, answers: true, candidates: [OPUS]),
                 env: {},
               )
@@ -244,7 +276,7 @@ class TestFixLanePreflight < Minitest::Test
     Master::Trace::Dmesg.stub(:verbose?, false) do
       Master::Trace::Dmesg.stub(:status, ->(_unit, text, **) { lines << text }) do
         Master::Io::LaneSelection.stub(:live_lanes, [OPUS]) do
-          Preflight.check(agent: Agent.new({}), env: {})
+          preflight_check(agent: Agent.new({}), env: {})
         end
       end
     end
