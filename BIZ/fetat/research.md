@@ -86,13 +86,20 @@ The archive presents most structural posts in October 2024, with later posts inc
 
 The first three files are byte-identical in the inspected default-branch snapshot (blob SHA `558115039cfbba8cfd01bbc8f370da810c711489`). They should be counted as three paths to one text, not three corroborating sources. The HTML political platform has an additional, distinct section “Sideprosjekt: Barnevernet Reform,” which proposes AI³ visualization to expose gaps and conflicts in records, explain complex material, create a visual evidence map, support fair decisions and prioritize preventive family help with independent review.
 
-The relevant path was in the initial pub commit dated 18 July 2025: https://github.com/anon987654321/pub/commit/ebed360f0969f5d203e2c16cc24323d782fa49f7. The accessible history for the path returned the initial commit; that does not establish that every old branch, unreachable commit, local backup, external archive or prior chat has been examined.
+The relevant paths were present in the initial pub commit dated 18 July 2025: https://github.com/anon987654321/pub/commit/ebed360f0969f5d203e2c16cc24323d782fa49f7. The accessible path history returned that initial commit. The three mirrors are retained here as one source, not as independent corroboration.
 
-Default-branch searches in pub2 and pub3 did not locate the same-named Barnevern proposal. Files called AI³ in those trees concern unrelated technical/aerospace material and are not treated as evidence for FETAT. The current pub4 tree did not contain this FETAT.md before this work.
+The consolidated FETAT proposal was subsequently created in pub4 as root-level FETAT.md on 29 October 2026. Its recorded history is:
+- Initial consolidation and source audit: https://github.com/anon987654321/pub4/commit/ea5da441638d8cbe8070123cda2e0a2132bebafb
+- Statistical and validation expansion: https://github.com/anon987654321/pub4/commit/5a13e45d8ed93595f75088a9d5d0707e20922129
+- Evidence-verification and release-test hardening: https://github.com/anon987654321/pub4/commit/7a75128a011eb129f90039c545af08da688edd9d
+- Renaming the proposed evidence-visualization concept from AI³ to MASTER: https://github.com/anon987654321/pub4/commit/367a67e1b68fa0932882cd3b063834184ba3877b
+- Relocation from root FETAT.md to STUDIO/docs/fetat/proposal.md on 2 November 2026: https://github.com/anon987654321/pub4/commit/7357a5f7da2696f9b534b99de475308356d9eac1
 
-Two pub4 commits concern a software regression test for a superseded 1992-law identifier, not the FETAT website proposal:
-- https://github.com/anon987654321/pub4/commit/5119dd514f9b8868cad0013a2c3691a957b19890
-- https://github.com/anon987654321/pub4/commit/58501f5a386aad61da5dabc0643ed42625e51a0f
+The root document at the relocation parent (92bf6448533856de0e98012d02f491f82189b6b6) is the same consolidated proposal lineage; its inspected blob was a5dc0f3854971b55a7931f1488c3ab259ae7799a (66,912 characters). The current pub5/BIZ/fetat/research.md is the later expanded copy, not a newly discovered independent proposal.
+
+Default-branch code searches and commit searches for barnevernet in pub2 and pub3 did not locate the same-named proposal. Their visible matches are incidental domain references in network-scan scripts; pub2 also contains a NATO document with a cross-reference to the old legal-strategy path. These negative results are scoped to the accessible repository history and indexed/default-branch content: they do not prove that no material exists in unreachable commits, unindexed branches, local backups, external archives or prior chats.
+
+The earlier references to pub4 commits 5119dd514f9b8868cad0013a2c3691a957b19890 and 58501f5a386aad61da5dabc0643ed42625e51a0f concern a software regression test for a superseded 1992-law identifier, not the FETAT proposal. They are not evidence for the proposal lineage.
 
 ### 2.3 Identity of FETAT
 ### 2.4 Reproducible verification ledger
