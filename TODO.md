@@ -296,8 +296,9 @@ are not new implementation requests.
   guidance. Do not add another journal or status vocabulary.
   2026-11-18: `PipelineContext#inspect` now reports only sorted top-level keys;
   a regression covers prompt, provider output, metadata and tool-argument
-  redaction. Structural look-stage drops now report bounded category/path
-  rejection reasons in the summary and existing event receipt. A typed `/q`
+  redaction. Both first-read `TreeReasoning` and structural review now report
+  bounded category/path rejection reasons in the summary and existing event
+  receipt; free-form model explanations are not copied. A typed `/q`
   now directly explains `/quit` and `/exit`, with REPL and help regressions.
   The interactive /fix response now includes a compact projection of the
   existing verified coordinator terminal receipt (run/attempt identity,
