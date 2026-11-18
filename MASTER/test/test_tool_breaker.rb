@@ -2,6 +2,8 @@
 
 require_relative "test_helper"
 require "tmpdir"
+require "digest"
+require_relative "../lib/fix/antigen_store"
 
 # The failure this fuse closes: /fix re-asks the model about the same finding in
 # the same unchanged file on every pass, and the answer has not changed. The
@@ -71,6 +73,26 @@ class TestToolBreaker < Minitest::Test
     Breaker.record("TEST_RULE", @violation, state, :applied)
     Breaker.record("TEST_RULE", @violation, state, :rejected)
     refute Breaker.refuse?("TEST_RULE", @violation, state)
+  end
+
+  def test_antigen_matches_only_the_same_source_revision
+    store = Master::Fix::AntigenStore.new(root: @dir)
+    digest = Digest::SHA256.file(@path).hexdigest
+    id = store.record(
+      law: "TEST_RULE", boundary: "a.rb", defect_class: "consensus_rejected",
+      evidence: { source_sha256: digest, outcome: "consensus_rejected", prompt: "must never be stored" },
+    )
+
+    assert_equal id, store.match(
+      law: "TEST_RULE", boundary: "a.rb", defect_class: "consensus_rejected",
+      source_sha256: digest, limit: 1,
+    ).first.fetch("id")
+    refute store.known?(
+      law: "TEST_RULE", boundary: "a.rb", defect_class: "consensus_rejected",
+      source_sha256: "0" * 64,
+    )
+    refute_includes File.read(File.join(@dir, Master::Fix::AntigenStore::DIR, Master::Fix::AntigenStore::FILE)),
+                    "must never be stored"
   end
 
   def test_best_of_n_sees_a_fused_tuple
