@@ -578,7 +578,12 @@ deploy_source = File.read(File.join(OPENBSD, "bin", "vps-deploy"))
 failures << "vps-deploy must not recommend generic privileged du" unless
   deploy_source.include?('pub5-admin disk-usage $mount_point') && !deploy_source.include?("doas du -xk $mount_point")
 
-deploy_finish = deploy_source[/^finish\(\) \{.*?^\}/m].to_s
+finish_definitions = deploy_source.scan(/^finish\(\) \{.*?^\}/m)
+finish_exit_traps = deploy_source.scan(/^trap finish EXIT$/)
+failures << "vps-deploy must define exactly one terminal finish handler and one EXIT trap" unless
+  finish_definitions.length == 1 && finish_exit_traps.length == 1
+
+deploy_finish = finish_definitions.first.to_s
 restore_at = deploy_finish.index("restore_started")
 keeper_stop_at = deploy_finish.index("kill $flag_keeper")
 flag_remove_at = deploy_finish.index('rm -f -- "$deploy_flag"')

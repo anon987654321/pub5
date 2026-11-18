@@ -724,36 +724,6 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-finish() {
-  local exit_status=$?
-  [[ -n $flag_keeper ]] && kill $flag_keeper 2>/dev/null || true
-  rm -f -- "$deploy_flag"
-
-  if (( exit_status != 0 )); then
-    if (( ! stamp_written )); then
-      write_stamp "$app" failed
-    fi
-    print -u2 "vps-deploy: $app FAILED at stage \"$deploy_stage\" (exit $exit_status)"
-    if (( app_stopped )); then
-      print -u2 "vps-deploy: $app was stopped for this deploy and is DOWN"
-      print -u2 "/usr/local/sbin/pub5-admin service start $app"
-    else
-      print -u2 "vps-deploy: $app was not stopped; the previous release is still serving"
-    fi
-    for svc in $DEPLOY_RAILS; do
-      if ! admin_service check "$svc" >/dev/null 2>&1; then
-         print -u2 "vps-deploy: $svc is DOWN"
-      fi
-    done
-  fi
-  print "stage=$deploy_stage finished exit=$exit_status" >> "$deploy_log" || true
-  release_deploy_lock || true
-}
-
-trap finish EXIT
-trap 'exit 143' TERM
-trap 'exit 129' HUP
-
 # Services the deploy needs to put back, and how it waits for them.
 #
 # On 2026-10-12 a halted `all` pass left brgen, amber and bsdports down for minutes

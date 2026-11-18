@@ -804,6 +804,11 @@ class VpsDeployContractTest < Minitest::Test
     end
   end
 
+  def test_the_deploy_has_exactly_one_terminal_finish_definition_and_exit_trap
+    assert_equal 1, SOURCE.scan(/^finish\(\) \{$/).size
+    assert_equal 1, SOURCE.scan(/^trap finish EXIT$/).size
+  end
+
   # The trap block alone, in zsh, with doas and write_stamp stubbed: what a failed
   # deploy says, stamps and leaves behind is the contract an operator reads at 3 a.m.
   def finish_block

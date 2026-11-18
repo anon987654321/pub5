@@ -443,6 +443,19 @@ class VpsSafetyCheckTest < Minitest::Test
       assert_includes out, "vps-deploy must not recommend generic privileged du"
     end
   end
+  def test_vps_deploy_rejects_a_shadowed_terminal_handler
+    with_fixture do |dir, _|
+      path = File.join(dir, "OPENBSD", "bin", "vps-deploy")
+      File.open(path, "a") do |file|
+        file.write("\nfinish() { :; }\ntrap finish EXIT\n")
+      end
+      out, status = run_check(dir)
+
+      refute status.success?
+      assert_includes out, "vps-deploy must define exactly one terminal finish handler and one EXIT trap"
+    end
+  end
+
   def test_vps_deploy_restores_services_before_releasing_guard_flag
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "vps-deploy")
