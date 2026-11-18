@@ -71,4 +71,12 @@ class MapsHomeControllerTest < ActionDispatch::IntegrationTest
     assert_includes controller, "this.typeLabelsValue[key]"
     assert_includes controller, "point.subtitle || this._pointTypeLabel(point.type)"
   end
+
+  test "fallback points without a safe URL are not rendered as links" do
+    controller = Rails.root.join("app/javascript/controllers/map_controller.js").read
+    assert_includes controller, 'document.createElement(href ? "a" : "div")'
+    assert_includes controller, 'item.className = "map-fallback-item"'
+    styles = Rails.root.join("app/assets/stylesheets/_brgen_shared_overrides.scss").read
+    assert_includes styles, ".map-fallback .map-fallback-item"
+  end
 end
