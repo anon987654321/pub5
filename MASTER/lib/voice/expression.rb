@@ -13,7 +13,7 @@ module Master
     # pre-speech anticipation, post-speech decay, vertical timbre, and mood persistence
     # logic belongs here.
     module Expression
-      CREATIVE_STYLES = %i[dramatic intense energetic storyteller ethereal].freeze
+      CREATIVE_STYLES = %i[dramatic intense energetic eager storyteller ethereal].freeze
       LOW_STYLES = %i[whispered intimate robotic calm].freeze
 
       CONFIDENCE_WEIGHTS = { verdict: 0.45, retrieval: 0.30, council: 0.25 }.freeze
