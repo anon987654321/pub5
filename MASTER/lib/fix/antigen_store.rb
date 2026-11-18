@@ -20,10 +20,11 @@ module Master
       SCHEMA = 1
       DIR = File.join(".master", "antigens")
       FILE = "signatures.jsonl"
-      EVIDENCE_FIELDS = %w[source_sha256 outcome attempts trace_id run_id tangle_digest paths edge_types].freeze
+      EVIDENCE_FIELDS = %w[source_sha256 outcome attempts trace_id run_id tangle_digest paths edge_types cost_usd cost_tokens cost_basis usage_status exact_receipts exact_amount exact_tokens estimated_records estimated_amount estimated_tokens].freeze
       SAFE_NOTES = [
         "repair attempt rejected against unchanged source",
         "resolved source dependency cycle in ReferenceGraph",
+        "repair attempt crossed its Law budget",
       ].freeze
 
       def initialize(root: nil)
