@@ -129,6 +129,33 @@ end
   # spelling only long enough to rewrite it to /fix, so no separate scan
   # dispatcher, help topic, or pipeline stage can survive.
 
+  def test_polish_lens_enters_the_existing_improvement_lane_only_when_enabled
+    folder = File.join(@root, "MASTER", "lib")
+    FileUtils.mkdir_p(folder)
+    marker = File.join(folder, ".keep")
+    File.write(marker, "")
+    File.write(File.join(folder, "real.rb"), "# frozen_string_literal: true\n")
+
+    loop = build_loop([])
+    runner = loop.instance_variable_get(:@pass_runner)
+    previous = ENV["MASTER_BACKLOG_AUTORUN"]
+    ENV.delete("MASTER_BACKLOG_AUTORUN")
+
+    assert_empty runner.send(:mechanical_polish_findings, [marker])
+
+    ENV["MASTER_BACKLOG_AUTORUN"] = "1"
+    findings = runner.send(:mechanical_polish_findings, [marker])
+
+    assert_equal 1, findings.size
+    finding = findings.first
+    assert_equal Master::Fix::Improve::LAW_ID, finding[:law]
+    assert_equal "MASTER/lib/.keep", finding[:file]
+    assert_includes finding[:message], "Law=DENSITY"
+    assert_equal "delete MASTER/lib/.keep", finding[:fix]
+  ensure
+    previous.nil? ? ENV.delete("MASTER_BACKLOG_AUTORUN") : ENV["MASTER_BACKLOG_AUTORUN"] = previous
+  end
+
   def test_kernel_owns_the_fix_loop_journal_and_run_receipts
     loop = build_loop([])
     kernel = loop.kernel
