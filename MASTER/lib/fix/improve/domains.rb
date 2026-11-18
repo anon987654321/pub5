@@ -548,8 +548,17 @@ module Master
               end
             end
 
-            stream = Psych.parse_stream(source)
-            walk.call(stream) if stream
+            begin
+              stream = Psych.parse_stream(source)
+              walk.call(stream) if stream
+            rescue Psych::SyntaxError => error
+              findings << opportunity(
+                :structure, path, "invalid_yaml_structure",
+                "YAML parser rejected this file at line #{error.line}: #{error.problem}",
+                9.5, "Correct the syntax at the parser-reported location, then rerun the schema and configuration checks before treating the file as valid.",
+                line: error.line
+              )
+            end
             findings
           end
         end
