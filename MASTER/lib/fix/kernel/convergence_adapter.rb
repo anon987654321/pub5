@@ -465,6 +465,38 @@ module Master
         nil
       end
 
+      # A cycle's digest is a stable structural signature of resolved
+      # source edges. Persist it once and feed the same readback to subsequent
+      # architecture probes; no model is asked to rediscover a known tangle.
+      def record_dependency_antigens(report)
+        store = AntigenStore.new(root: @root)
+        Array(report[:cycles] || report["cycles"]).each do |cycle|
+          digest = (cycle[:sha256] || cycle["sha256"]).to_s
+          next unless digest.match?(/\A[0-9a-f]{64}\z/)
+
+          boundary = "dependency-cycle/#{digest}"
+          law = "SINGULARITY_architectural_tangle"
+          defect_class = "resolved_source_dependency_cycle"
+          next if store.known?(law:, boundary:, defect_class:)
+
+          store.record(
+            law:, boundary:, defect_class:,
+            evidence: {
+              tangle_digest: digest,
+              paths: cycle[:paths] || cycle["paths"],
+              edge_types: cycle[:edge_types] || cycle["edge_types"],
+            },
+            note: "resolved source dependency cycle in ReferenceGraph",
+            severity: "warning",
+          )
+        end
+        store.recent(limit: 500)
+      rescue StandardError => error
+        @dependency_antigen_gap = "#{error.class}: #{error.message.to_s[0, 160]}"
+        Master::Ground::Swallow.log(error, context: "fix.dependency_antigens", event_bus: @bus)
+        []
+      end
+
       # Before a requested /fix can write, read every eligible text source
       # into the repository reference graph and refuse partial dependency maps.
       # The graph is refreshed per run; failed reads and corpus files with no
@@ -485,11 +517,19 @@ module Master
         end
 
         graph_metrics = snapshot.fetch(:metrics)
+        @dependency_tangle_report = snapshot.fetch(:tangles, { cycles: [], coupling_hotspots: [], metrics: {} })
+        @dependency_source_digests = snapshot.fetch(:nodes).filter_map do |path|
+          digest = graph.source_digest(File.join(@root, path))
+          [path, digest] if digest
+        end.to_h
+        @dependency_antigens = record_dependency_antigens(@dependency_tangle_report)
         Master::Trace::CausalTrace.step(
           kind: :context, name: "reference_graph.ready",
           input: { target: relative_target(snapshot[:nodes].first.to_s), files: snapshot[:nodes].size },
           output: { nodes: snapshot[:nodes].size, edges: snapshot[:edges].size,
                     unresolved: graph_metrics[:unresolved_ruby_references].to_i + graph_metrics[:unresolved_local_imports].to_i,
+                    dependency_cycles: graph_metrics[:dependency_cycle_count].to_i,
+                    coupling_hotspots: graph_metrics[:coupling_hotspot_count].to_i,
                     analysis_failures: 0 },
         )
         Master::Trace::Dmesg.status(
@@ -508,6 +548,8 @@ module Master
           unresolved_local_imports: graph_metrics[:unresolved_local_imports],
           resolved_local_import_edges: graph_metrics[:resolved_local_import_edges],
           dynamic_sites: graph_metrics[:dynamic_sites],
+          dependency_cycles: graph_metrics[:dependency_cycle_count].to_i,
+          coupling_hotspots: graph_metrics[:coupling_hotspot_count].to_i,
           analysis_failures: 0,
         )
         snapshot
@@ -662,8 +704,11 @@ module Master
           return { "status" => "SKIPPED", "targets" => [], "brief" => "" }
         end
 
-        ArchitectureExploration.new(root: @root, agent: @agent, bus: @bus,
-          run_journal: @run_journal, run_id:, provenance: @fix_plan&.to_h).run(target:, files:)
+        ArchitectureExploration.new(
+          root: @root, agent: @agent, bus: @bus, run_journal: @run_journal, run_id:,
+          provenance: @fix_plan&.to_h, dependency_tangles: Array(@dependency_tangle_report&.dig(:cycles)),
+          antigens: Array(@dependency_antigens), source_digests: @dependency_source_digests || {},
+        ).run(target:, files:)
       end
 
       def run_research(target:, files:)
