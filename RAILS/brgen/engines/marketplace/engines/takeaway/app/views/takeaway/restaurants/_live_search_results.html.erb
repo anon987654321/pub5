@@ -1,13 +1,14 @@
 <%= turbo_frame_tag "takeaway-restaurants-list", target: "_top" do %>
+<% restaurant_filter_params = request.query_parameters %>
 <%# The cuisines are the category shortcut rail: a white square well with the
     cuisine's initial above its name, "Alle" first. %>
 <nav class="deal-cats" aria-label="<%= t("actions.all_cuisines") %>">
-  <%= link_to restaurants_path(q: params[:q].presence, sort: @sort), class: "deal-cat#{" active" if params[:cuisine].blank?}", aria: { current: (params[:cuisine].blank? ? "page" : nil) } do %>
+  <%= link_to restaurants_path(restaurant_filter_params.except("cuisine")), class: "deal-cat#{" active" if params[:cuisine].blank?}", aria: { current: (params[:cuisine].blank? ? "page" : nil) } do %>
     <span class="store-shortcut-well" aria-hidden="true"><%= icon :layers, size: 32 %></span>
     <%= t("actions.all_cuisines") %>
   <% end %>
   <% Takeaway::Restaurant::CUISINE_TYPES.each do |cuisine| %>
-    <%= link_to restaurants_path(q: params[:q].presence, cuisine:, sort: @sort), class: "deal-cat#{" active" if params[:cuisine] == cuisine}", aria: { current: (params[:cuisine] == cuisine ? "page" : nil) } do %>
+    <%= link_to restaurants_path(restaurant_filter_params.merge("cuisine" => cuisine)), class: "deal-cat#{" active" if params[:cuisine] == cuisine}", aria: { current: (params[:cuisine] == cuisine ? "page" : nil) } do %>
       <span class="store-shortcut-well" aria-hidden="true"><%= cuisine.first %></span>
       <%= cuisine %>
     <% end %>
@@ -20,7 +21,7 @@
   <nav class="store-pills" aria-label="<%= t("takeaway.sort_label") %>">
     <% Takeaway::Restaurant::SORTS.each do |sort_key| %>
       <%= link_to t("takeaway.sorts.#{sort_key}"),
-            restaurants_path(q: params[:q].presence, cuisine: params[:cuisine].presence, sort: sort_key),
+            restaurants_path(restaurant_filter_params.merge("sort" => sort_key)),
             class: "deal-cat#{" active" if @sort == sort_key}",
             aria: { current: (@sort == sort_key ? "page" : nil) } %>
     <% end %>
