@@ -3,8 +3,11 @@
 require_relative "../../support/check_result"
 require_relative "../../support/brgen_vertical_surfaces"
 require_relative "../../support/fleet"
-require "set"
+require_relative "../../../lib/io/exec"
 require_relative "../../../tools/scss"
+require "json"
+require "rbconfig"
+require "set"
 
 module Deploy
   # dart-sass's compressed output mode has a real, reproducible bug: a long
@@ -30,6 +33,22 @@ module Deploy
     # master has no application.scss to compile; its face CSS is hand-written.
     APPS = Fleet.engine_apps.freeze
     MIN_SELECTOR_LIST_SIZE = 3
+    COMPILE_TIMEOUT = 900
+    SASS_COMPILER = <<~'RUBY'.freeze
+      require "json"
+      require "sass-embedded"
+
+      begin
+        entry = ARGV.fetch(0)
+        load_paths = JSON.parse(ARGV.fetch(1))
+        expanded = Sass.compile(entry, load_paths:, style: :expanded).css
+        compressed = Sass.compile(entry, load_paths:, style: :compressed).css
+        STDOUT.write(JSON.generate("expanded" => expanded, "compressed" => compressed))
+      rescue StandardError => error
+        warn "#{error.class}: #{error.message}"
+        exit 1
+      end
+    RUBY
 
     def self.run
       new.run
@@ -51,7 +70,8 @@ module Deploy
 
     private
 
-    def check_app(result, app)
+    def check_app(result, app, compiler: nil)
+      compiler ||= method(:compile_stylesheets)
       entry = File.join(RAILS_ROOT, app, "app/assets/stylesheets/application.scss")
       return result.inconclusive!("css_minify_integrity: #{app} has no application.scss") unless File.file?(entry)
 
@@ -69,8 +89,9 @@ module Deploy
       ]
 
       begin
-        expanded = Sass.compile(entry, load_paths:, style: :expanded).css
-        compressed = Sass.compile(entry, load_paths:, style: :compressed).css
+        compiled = compiler.call(entry:, load_paths:)
+        expanded = compiled.fetch("expanded")
+        compressed = compiled.fetch("compressed")
       rescue StandardError => e
         result.fail("css_minify_integrity: #{app} failed to compile (#{e.class}: #{e.message})")
         return
@@ -105,6 +126,24 @@ module Deploy
       # This app's stylesheet was compiled and compared; an app without an
       # application.scss should not make the ones that have it count for nothing.
       result.checked!
+    end
+
+    # Compile Sass in a separately supervised process. The embedded compiler
+    # owns a Dart process of its own; keeping it inside this check's Ruby process
+    # meant the runner's script timeout could not interrupt or reap a wedged compile.
+    def compile_stylesheets(entry:, load_paths:)
+      output, status = Master::Io::Exec.capture2e(
+        ENV.to_h, RbConfig.ruby, "-e", SASS_COMPILER, entry, JSON.generate(load_paths),
+        chdir: ROOT, timeout: COMPILE_TIMEOUT, raise_on_timeout: true
+      )
+      unless status.success?
+        detail = output.to_s.lines.last(4).join.strip
+        raise "Sass compiler subprocess exited #{status.exitstatus || "signal"}: #{detail}"
+      end
+
+      JSON.parse(output)
+    rescue Master::Io::Exec::TimeoutError
+      raise "Sass compilation timed out after #{COMPILE_TIMEOUT}s"
     end
 
     # Exact normalized selectors from the compressed stylesheet. The shared

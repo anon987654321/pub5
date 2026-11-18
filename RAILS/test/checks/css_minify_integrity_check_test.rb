@@ -38,12 +38,12 @@ class CssMinifyIntegrityCheckTest < Minitest::Test
     skip "sass-embedded unavailable — the check reports itself inconclusive here" unless SASS
   end
 
-  def check(scss, checker: CHECK.new)
+  def check(scss, checker: CHECK.new, compiler: nil)
     Dir.mktmpdir do |dir|
       plant(dir, "app/assets/stylesheets/application.scss", scss)
       rel = Pathname.new(dir).relative_path_from(Pathname.new(CHECK::RAILS_ROOT)).to_s
       result = Deploy::CheckResult.new
-      checker.send(:check_app, result, rel)
+      checker.send(:check_app, result, rel, compiler:)
       result
     end
   end
@@ -92,49 +92,74 @@ class CssMinifyIntegrityCheckTest < Minitest::Test
   end
 
   def test_a_missing_selector_is_not_matched_by_a_longer_selector_prefix
-    scss = ".feed-card.listing .feed-card-avatar, .post-card .avatar, .story .avatar { width: 32px; }\\n"
-    real = Sass.method(:compile)
-    lossy = lambda do |entry, **options|
-      css = real.call(entry, **options).css
-      if options[:style] == :compressed
-        css = css.sub(".feed-card.listing .feed-card-avatar", ".feed-card.listing .feed-card-avatar-large")
-      end
-      Struct.new(:css).new(css)
+    scss = ".feed-card.listing .feed-card-avatar, .post-card .avatar, .story .avatar { width: 32px; }\n"
+    compiler = lambda do |entry:, load_paths:|
+      expanded = Sass.compile(entry, load_paths:, style: :expanded).css
+      compressed = Sass.compile(entry, load_paths:, style: :compressed).css
+      compressed = compressed.sub(".feed-card.listing .feed-card-avatar", ".feed-card.listing .feed-card-avatar-large")
+      { "expanded" => expanded, "compressed" => compressed }
     end
 
-    result = with_compile(lossy) { check(scss) }
+    result = check(scss, compiler:)
 
     refute result.ok?, "a longer selector prefix must not satisfy exact selector presence"
-    assert_match(/lost selector\\(s\\) under compression/, result.failures.first)
-    assert_match(/missing after compression: \\[".feed-card.listing .feed-card-avatar"\\]/, result.failures.first)
+    assert_match(/lost selector\(s\) under compression/, result.failures.first)
+    assert_match(/missing after compression: \[".feed-card.listing .feed-card-avatar"\]/, result.failures.first)
   end
 
-  # The compiler cannot be made to lose a selector, but the comparison can be
+    # The compiler cannot be made to lose a selector, but the comparison can be
   # handed compressed output that has lost one. This is the shape seen live:
   # the listing qualifier gone, leaving the bare avatar selector.
   def test_a_selector_that_loses_its_qualifier_under_compression_fails
     scss = ".feed-card.listing .feed-card-avatar, .post-card .avatar, .story .avatar { width: 32px; }\n"
-    real = Sass.method(:compile)
-    lossy = lambda do |entry, **options|
-      css = real.call(entry, **options).css
-      css = css.sub(".feed-card.listing .feed-card-avatar", ".feed-card-avatar") if options[:style] == :compressed
-      Struct.new(:css).new(css)
+    compiler = lambda do |entry:, load_paths:|
+      expanded = Sass.compile(entry, load_paths:, style: :expanded).css
+      compressed = Sass.compile(entry, load_paths:, style: :compressed).css
+      compressed = compressed.sub(".feed-card.listing .feed-card-avatar", ".feed-card-avatar")
+      { "expanded" => expanded, "compressed" => compressed }
     end
 
-    result = with_compile(lossy) { check(scss) }
+    result = check(scss, compiler:)
 
     refute result.ok?, "a selector that lost its qualifier passed"
     assert_match(/lost selector\(s\) under compression/, result.failures.first)
     assert_match(/missing after compression: \[".feed-card.listing .feed-card-avatar"\]/, result.failures.first)
   end
 
-  def with_compile(impl)
-    Sass.singleton_class.send(:alias_method, :__real_compile, :compile)
-    Sass.define_singleton_method(:compile, &impl)
-    yield
-  ensure
-    Sass.singleton_class.send(:alias_method, :compile, :__real_compile)
-    Sass.singleton_class.send(:remove_method, :__real_compile)
+  def test_stylesheet_compilation_uses_the_process_group_deadline
+    checker = CHECK.new
+    captured = {}
+    status = Object.new
+    status.define_singleton_method(:success?) { true }
+    payload = { "expanded" => ".a { color: red; }", "compressed" => ".a{color:red}" }
+
+    runner = lambda do |*argv, **options|
+      captured[:argv] = argv
+      captured[:options] = options
+      [JSON.generate(payload), status]
+    end
+
+    Master::Io::Exec.stub(:capture2e, runner) do
+      assert_equal payload, checker.send(:compile_stylesheets, entry: "/tmp/application.scss",
+                                                              load_paths: ["/tmp/stylesheets"])
+    end
+
+    assert_equal CHECK::COMPILE_TIMEOUT, captured.fetch(:options).fetch(:timeout)
+    assert_equal true, captured.fetch(:options).fetch(:raise_on_timeout)
+    assert_includes captured.fetch(:argv), "-e"
+    assert_includes captured.fetch(:argv), CHECK::SASS_COMPILER
+  end
+
+  def test_stylesheet_compilation_timeout_becomes_a_named_check_failure
+    timeout = Master::Io::Exec::TimeoutError.new("timed out", result: ["", nil])
+    result = nil
+
+    Master::Io::Exec.stub(:capture2e, ->(*) { raise timeout }) do
+      result = check(".a, .b, .c { color: red; }\n")
+    end
+
+    refute result.ok?
+    assert_match(/failed to compile.*timed out after #{CHECK::COMPILE_TIMEOUT}s/, result.failures.first)
   end
 
   def test_a_missing_entrypoint_is_inconclusive_rather_than_clean
