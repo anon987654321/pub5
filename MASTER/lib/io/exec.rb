@@ -162,12 +162,26 @@ module Master
       # exited successfully just before cancellation and only a pipe-holding
       # descendant remained. Preserve that distinction in the capture result.
       class CancelledStatus
+        attr_reader :process_status
+
+        def initialize(process_status)
+          @process_status = process_status
+        end
+
         def success? = false
         def cancelled? = true
-        def exitstatus = nil
-        def exited? = false
-        def signaled? = false
-        def termsig = nil
+
+        # Preserve the leader's actual terminal facts. Cancellation describes
+        # the whole owned group; it does not rewrite how the leader exited.
+        def method_missing(name, ...)
+          return process_status.public_send(name, ...) if process_status.respond_to?(name)
+
+          super
+        end
+
+        def respond_to_missing?(name, include_private = false)
+          process_status.respond_to?(name, include_private) || super
+        end
       end
 
       class Children
