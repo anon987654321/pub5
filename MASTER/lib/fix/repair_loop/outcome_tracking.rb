@@ -113,7 +113,7 @@ module Master
           result
         end
 
-        FAILURE_ANTIGEN_OUTCOMES = %i[no_proposal reflexion_rejected consensus_rejected rejected].freeze
+        FAILURE_ANTIGEN_OUTCOMES = %i[no_proposal reflexion_rejected consensus_rejected rejected out_of_scope].freeze
 
         # A failed, model-produced repair becomes durable memory only for the
         # exact source bytes that produced it. Changing the file reopens the gate.
@@ -121,7 +121,7 @@ module Master
           return unless FAILURE_ANTIGEN_OUTCOMES.include?(outcome)
           return unless source_sha256.to_s.match?(/\A[0-9a-f]{64}\z/)
 
-          repo_root = defined?(Master::REPO_ROOT) ? File.expand_path(Master::REPO_ROOT) : File.expand_path(@root)
+          repo_root = File.expand_path(@root)
           absolute = File.expand_path(violation[:file].to_s, repo_root)
           return unless absolute.start_with?(repo_root + File::SEPARATOR)
 
