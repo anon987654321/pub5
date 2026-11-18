@@ -13,6 +13,11 @@ nb:
     popup_open: "Åpne"
     point_untitled: "Kartpunkt"
     point_kind: "punkt"
+    types:
+      place: "Sted"
+      event: "Arrangement"
+      story: "Story"
+      courier: "Bud"
     no_points: "Ingen kartpunkter ennå."
     point_list: "Punktene på kartet"
     address: "Adresse"
