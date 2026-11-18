@@ -38,6 +38,7 @@ module Master
           agent: agent.to_s,
           started_at: Time.now.utc,
           steps: [],
+          profile_start: profile_snapshot,
           previous: Thread.current[CONTEXT_KEY],
         }
         raise ArgumentError, "run_id required" if context[:run_id].empty?
@@ -95,6 +96,43 @@ module Master
         Thread.current[CONTEXT_KEY] = context[:previous]
       end
 
+      # Portable profiling from Ruby process and GC counters. This measures
+      # local execution only; it is not provider billing, resident memory or eBPF.
+      def profile_snapshot
+        times = Process.times
+        gc = GC.stat
+        {
+          monotonic: Process.clock_gettime(Process::CLOCK_MONOTONIC),
+          user_cpu: times.utime,
+          system_cpu: times.stime,
+          allocated_objects: gc[:total_allocated_objects],
+          heap_allocated_pages: gc[:heap_allocated_pages],
+          minor_gc_count: gc[:minor_gc_count],
+          major_gc_count: gc[:major_gc_count],
+        }
+      rescue StandardError
+        nil
+      end
+
+      def profile_delta(before, after)
+        return unless before.is_a?(Hash) && after.is_a?(Hash)
+
+        {
+          source: "ruby_process_and_gc_counters",
+          measured: true,
+          wall_ms: ((after[:monotonic] - before[:monotonic]) * 1_000).round(2),
+          cpu_ms: (((after[:user_cpu] - before[:user_cpu]) +
+                    (after[:system_cpu] - before[:system_cpu])) * 1_000).round(2),
+          allocated_objects: after[:allocated_objects].to_i - before[:allocated_objects].to_i,
+          heap_allocated_pages_delta: after[:heap_allocated_pages].to_i - before[:heap_allocated_pages].to_i,
+          minor_gc_count: after[:minor_gc_count].to_i - before[:minor_gc_count].to_i,
+          major_gc_count: after[:major_gc_count].to_i - before[:major_gc_count].to_i,
+          provider_usage: "NOT_CAPTURED",
+          resident_memory: "NOT_MEASURED",
+        }
+      rescue StandardError
+        nil
+      end
       def safe_metadata(value, depth = 0)
         return if depth > MAX_METADATA_DEPTH
 
