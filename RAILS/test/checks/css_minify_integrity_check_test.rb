@@ -75,7 +75,7 @@ class CssMinifyIntegrityCheckTest < Minitest::Test
       ".card-#{index}, .listing-#{index}, .story-#{index} { width: #{index}px; }"
     end
 
-    result = check(groups.join("\\n"), checker:)
+    result = check(groups.join("\n"), checker:)
 
     assert result.ok?, result.failures.join(", ")
     assert_equal 1, calls, "the compressed selector index is built once per app"
@@ -107,7 +107,7 @@ class CssMinifyIntegrityCheckTest < Minitest::Test
     assert_match(/missing after compression: \[".feed-card.listing .feed-card-avatar"\]/, result.failures.first)
   end
 
-    # The compiler cannot be made to lose a selector, but the comparison can be
+  # The compiler cannot be made to lose a selector, but the comparison can be
   # handed compressed output that has lost one. This is the shape seen live:
   # the listing qualifier gone, leaving the bare avatar selector.
   def test_a_selector_that_loses_its_qualifier_under_compression_fails
@@ -157,7 +157,7 @@ class CssMinifyIntegrityCheckTest < Minitest::Test
     timeout = Master::Io::Exec::TimeoutError.new("timed out", result: ["", nil])
     result = nil
 
-    Master::Io::Exec.stub(:capture2e, ->(*) { raise timeout }) do
+    Master::Io::Exec.stub(:capture2e, lambda { |*args, **kwargs| raise timeout }) do
       result = check(".a, .b, .c { color: red; }\n")
     end
 
