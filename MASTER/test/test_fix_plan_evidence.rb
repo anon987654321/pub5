@@ -70,11 +70,22 @@ class TestFixPlanEvidence < Minitest::Test
 
   def test_task_contract_is_pinned_and_changes_the_plan_identity
     contract = Master::Fix::TaskContract.build(
-      intent: "content_only", scope: %w[README.md sample.rb], preserve: [], proof: ["focused_tests"]
+      intent: "content_only",
+      scope: %w[README.md sample.rb],
+      preserve: [],
+      proof: ["focused_tests", "documentation_review"],
+      documentation_pairs: [{
+        contract_path: "sample.rb",
+        document_path: "README.md",
+        reason: "The README documents this sample's public contract.",
+      }],
     )
     plan = capture(task_contract: contract)
+    restored = Master::Fix::TaskContract.coerce(plan.to_h.fetch("task_contract"))
 
     assert_equal "content_only", plan.to_h.dig("task_contract", "intent")
+    assert_equal contract.documentation_pairs, restored.documentation_pairs
+    assert_equal contract.documentation_pairs, plan.to_h.dig("task_contract", "documentation_pairs")
     assert_match(/\A[0-9a-f]{64}\z/, plan.task_contract_digest)
     assert_equal plan.task_contract_digest, plan.to_h.fetch("task_contract_digest")
     refute_equal capture.task_contract_digest, plan.task_contract_digest
