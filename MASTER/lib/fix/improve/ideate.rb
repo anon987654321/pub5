@@ -73,15 +73,15 @@ module Master
         def persona_ideas(files)
           names = files.map { |path| File.basename(path).downcase }
           out = []
-          has_architecture_map = files.any? do |path|
+          has_architecture_report = files.any? do |path|
             normalized = path.to_s.tr("\\", "/")
             normalized.match?(%r{(?:\A|/)(?:MASTER/)?docs/ARCHITECTURE\.md\z}) ||
               normalized.match?(%r{(?:\A|/)ARCHITECTURE\.md\z})
           end
-          unless has_architecture_map
+          unless has_architecture_report
             out << Idea.new(
-              title: "No maintained cross-tree architecture map - a newcomer cannot see how the runtime trees relate",
-              source: "persona.newcomer", evidence: "missing MASTER/docs/ARCHITECTURE.md", kind: :document
+              title: "No live cross-tree architecture report - the runtime tree boundaries are not discoverable",
+              source: "persona.newcomer", evidence: "missing MASTER/lib/convergence/architecture.rb", kind: :document
             )
           end
           out << Idea.new(
