@@ -12,15 +12,13 @@ class TestRecoveryPubManifest < Minitest::Test
   # pin the wrong ones. It arrived naming two under DEPLOY/, a tree this repo
   # renamed away — asserting them would have made a green test the reason the
   # tree came back.
-  def test_restore_docs_exist
-    # The prose halves are gone. RESTORE_FROM_PUB.md and the three RECOVERY/
-    # READMEs restated in 905 lines what the manifest below already holds as
-    # structured rows — a source, a state, and a reason per entry — and they
-    # opened by dating themselves to a layout this repo had already renamed.
-    # The ledger is what the contract needs; git holds the prose.
+  def test_structured_recovery_ledgers_exist
+    # Recovery state lives in the structured manifests. Historical prose remains
+    # available through Git history and is not a second active recovery contract.
     required = [
       "MASTER/data/recovery/legacy_manifest.yml",
-            "MASTER/data/recovery/pub_restore.yml",
+      "MASTER/data/recovery/pub_restore.yml",
+      "MASTER/data/recovery/pub_archive_restore.yml",
     ]
 
     missing = required.reject { |path| ROOT.join(path).file? }
