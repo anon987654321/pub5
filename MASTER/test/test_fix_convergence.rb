@@ -2562,7 +2562,7 @@ end
       budget_seconds: 60, start_pass: 1, run_id: "r1",
     )
 
-    assert_match(/\\APLATEAU: /, result.value!)
+    assert_match(/\APLATEAU: /, result.value!)
     assert_equal [:repair_pass], order
   ensure
     saved.nil? ? ENV.delete("MASTER_FIX_STRUCTURAL") : ENV["MASTER_FIX_STRUCTURAL"] = saved
