@@ -28,12 +28,17 @@ candidates:
     reversibility: git revert
   - id: polish_c02
     tree: MASTER
-    status: candidate
+    status: implemented
     spec: >
-      Wire PolishLens --candidates into the existing /fix intake behind the
-      same MASTER_BACKLOG_AUTORUN gate, selecting only mechanical single-tree
-      rows with exact paths, reusing TaskSteward and the argv-allowlisted
-      executor. Requires the installed bundle and a focused regression.
+      Wire the read-only PolishLens findings into the existing /fix improvement
+      intake when MASTER_BACKLOG_AUTORUN=1. Only exact, existing file paths
+      already owned by the active pass and one registered tree are eligible;
+      directory-only suggestions cannot expand the transaction scope. Findings
+      route through ELEVATION_IDEAL, Council, the existing repair transaction,
+      veto and proof path. Lens discovery never executes a command or creates
+      a second Mission/queue. When /fix is invoked by the root backlog
+      TaskSteward, its existing Mission and argv-allowlisted acceptance executor
+      remain the lifecycle and command authorities.
     cost: medium
     reversibility: git revert
   - id: polish_c03
@@ -59,10 +64,11 @@ critique:
   - candidate: polish_c02
     verdict: keep
     attack: >
-      Auto-running polish could churn taste surfaces; mitigated by reusing
-      the existing gate, budgets, veto and Council, and by excluding rendered
-      values. Still NOT_RUN until the bundle is installed and a regression
-      exercises the intake path.
+      Auto-running polish could churn taste surfaces; mitigated by the opt-in
+      MASTER_BACKLOG_AUTORUN gate, exact active-file scope, single-tree
+      restriction, and reuse of the existing Council, transaction, veto and
+      proof path. Focused regressions are committed but have not been executed
+      in this editing session; runtime verification remains NOT_RUN.
   - candidate: polish_c03
     verdict: reject
     attack: >
