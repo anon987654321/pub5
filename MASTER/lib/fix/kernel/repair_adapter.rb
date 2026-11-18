@@ -24,6 +24,7 @@ require_relative "../conflict_resolver"
 require_relative "../constants"
 require_relative "../attempt"
 require_relative "../fix_trace"
+require_relative "../../trace/causal_trace"
 require_relative "../patch_applier"
 require_relative "../primitive_first"
 require_relative "../taste_memory"
@@ -332,6 +333,17 @@ module Master
 
           note_unverified_fix(violation)
           FixTrace.begin_attempt(@law.id, violation[:file])
+          Master::Trace::CausalTrace.step(
+            kind: :context, name: "repair.finding",
+            input: {
+              law: @law.id,
+              path: violation[:file].to_s.delete_prefix("#{@root}/"),
+              line: violation[:line],
+              severity: violation[:severity].to_s,
+              source_sha256: (Digest::SHA256.file(violation[:file]).hexdigest if File.file?(violation[:file])),
+            },
+            output: { state: "attempt_started" },
+          )
           @model_failed = false
           @model_unavailable = false
           Thread.current[:master_fix_candidate_author_models] = []
