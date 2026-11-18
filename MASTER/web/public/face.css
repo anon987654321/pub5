@@ -431,12 +431,9 @@ body[data-face-pip="1"][data-face-pip-corner="bottom-right"] canvas {
   50% { transform: translateY(-1px); }
 }
 
-/* Pristine chrome: only the logo, face, and shell prompt stay visible --
-   drop every top-right and bottom-right badge/status element. #mic-dot is
-   exempt: it is the only feedback about whether the microphone is open.
-   It used to be free when idle because it was invisible then — and that was
-   the bug, since "off" and "no indicator" looked the same. It is now always
-   drawn, grey when idle. One 18px glyph is the price of not having to guess. */
+/* Pristine chrome: only the logo, face, and shell prompt stay visible.
+   The compact mic/TTS rings are the sole persistent status overlay: both show
+   their idle state, and the active one fills. All other badges stay hidden. */
 .model-badge,
 .sound-on-chip,
 .provider-chip,
