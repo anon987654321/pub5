@@ -155,6 +155,18 @@ DesignTokens.face_root_css.lines.grep(/--#{key.to_s.tr('_', '-')}/).first.to_s.s
     end
   end
 
+  def test_type_spec_reports_canonical_roles_and_law_owned_limits
+    spec = DesignTokens.type_spec_markdown
+    tokens = DesignTokens.load
+
+    assert_includes spec, "`#{tokens.dig("shared_chrome", "font_size_body")}`"
+    assert_includes spec, "`#{tokens.dig("luxury", "font_size_display")}`"
+    assert_includes spec, "#{tokens.dig("typography", "accessibility", "body_min_px")} px"
+    assert_includes spec, "#{tokens.dig("typography", "line_length", "ideal_ch")} ch"
+    assert_includes spec, "do not replace another app's type system"
+    refute_includes spec, "four sizes and two weights everywhere"
+  end
+
   def test_social_tokens_yaml_present
     social = DesignTokens.load.fetch("social")
     %w[bg surface text accent border].each do |key|
