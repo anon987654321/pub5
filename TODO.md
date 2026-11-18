@@ -1,14 +1,14 @@
 # pub5 — remaining work
 
-Last full register audit: 2026-11-14, source tree checked against `main@bd23114ca49bfc3d05dccf31e232a03d857ea28d`.
-Current checkbox inventory verified at `main@df4c5113dfdae2473b72f0f3fb305c8c9232c819`: 161 active unchecked register rows and 5 checked rows. This is a count refresh, not a new full acceptance audit. Grouped rows
+Last full register/acceptance audit: 2026-11-14, source tree checked against `main@bd23114ca49bfc3d05dccf31e232a03d857ea28d`.
+Task-register consolidation review: 2026-11-18, tracked task-like Markdown and references checked against `main@139ff1a03b04424fb68185937080ca6a2067646e`. The root register now contains 165 active unchecked rows and no checked rows. This is a task-list consolidation, not a new full source or acceptance audit. Grouped rows
 are not atomic task counts; aspirational horizons remain visible but are not
 active checkboxes. The tracked tree contains no `PLAN.md`; root `TODO.md` is
 the sole cross-tree Markdown action register, with detailed state owned by the
 existing structured ledgers. No parallel plan or backlog file is needed.
 The register travels with the migration; source-owned status remains in the
-structured ledgers, and completed entries are checked here only when their
-evidence is present.
+structured ledgers. Completed work leaves the active checkbox set; retain its
+evidence in the owning ledger, commit history or acceptance record.
 
 Follow-up audit: pub4/main remains at the recorded migration cutoff; the live
 blob disposition is refreshed in `MIGRATION.md` against `ff607922`. The
@@ -45,7 +45,9 @@ screenshot count or previous revision.
 
 - [ ] **MASTER on the installed compatible Ruby.** Run focused Law, Soul, configuration,
   registry, replay-reader, fix-loop oscillation, reachability, run-ledger,
-  media and CLI regressions. Then run
+  media and CLI regressions, plus `ruby MASTER/test/bare/test_agent_tier.rb`,
+  `MASTER/bin/master selfcheck --fast` and `MASTER/bin/master hooks status`.
+  Then run
   `MASTER_TEST_START_MARKERS=1 MASTER_TEST_JOBS=1 MASTER_TEST_PROGRESS_EVERY=25 rake test`,
   `MASTER_TEST_JOBS=3 rake test`, `rake audit` and
   `bin/check --profile=agent`. Inspect
@@ -247,6 +249,38 @@ remaining failures are content needles on brgen/vertical_dating_profile_new
   path-scoped commit behavior with another active writer. Never stage another
   writer's changes.
   
+### Transcript and agent-runtime follow-ups
+
+The 2026-11-09 session record and the 2026-11-17 external-agent wishlist were
+reconciled against current source. The bare scanner, law index, fast self-check,
+structured evidence receipts, OPENBSD admission tiers, status union, kind-owned
+exemptions, ownership query and clone hook wiring already exist. The CLI lane
+slot cap, remote-repository-scoped journal state and terminal control-reply
+filter also exist. Their runtime acceptance remains part of section 1; these
+are not new implementation requests.
+
+- [ ] **Council readiness admission.** Feed the existing live juror diagnosis
+  into /fix admission before its repair budget is spent. Require the independent
+  voter quorum to remain available after excluding each possible author family;
+  a timed-out or unmeasured probe is not ready. Extend the existing Council and
+  /fix preflight owners rather than adding another router.
+- [ ] **Law reload diagnosis.** At the existing Law.reload boundary, record the
+  reload reason, resolved law root and changed source paths. Reproduce the
+  duplicate-constant warning before changing reload semantics; do not mask it
+  with constant guards or disable reload.
+- [ ] **External sibling-checkout boundary.** Add read-only observation for an
+  authorised external Git root, then independently prove that local
+  transactions, commits and cleanup cannot write into that checkout. Keep
+  FixPlan and TaskContract containment; any future write and verification must
+  run through the target repository's own Git root and checks.
+- [ ] **CLI session observability and recovery.** Provide a redacted,
+  run-specific chat-visible receipt from the existing run ledger (never prompt
+  text, tool arguments or raw stdout); reproduce and remove the reported
+  PipelineContext inspect output if still present; make look-stage proposal
+  drops explain their reason or link an existing receipt; and resolve `/q`
+  with a deliberate tested alias or clear canonical `/quit`/`/exit`
+  guidance. Do not add another journal or status vocabulary.
+
 Build on existing Mission, Supervisor, TaskSteward, TaskContract,
 OutcomeLearning, RepairMemory, RunBudget, RunPulse, Transaction and
 Checkpoint owners. Do not create a YAML backlog, second proposal system,
@@ -866,28 +900,6 @@ guard) and three banked child-margin budgets; completed checklist rows are
 deleted from this index, with the findings ledger and its fixes living in
 git history.
 
-Open, itemized, and not to be waved through — the split debt the ratchets
-count. Both ratchets' law is "split it and lower the number; never raise":
-
-- [x] `file_length_ratchet_test.rb`: fifteen files sit past their ceilings or
-  the per-kind limit with no row — brgen `_brgen_shared_overrides.scss`
-  (2,264 code lines) and `_brgen_vertical_surfaces.scss` (2,210) worst; then
-  `_brgen_messenger.scss` (+59), `_brgen_marketplace.scss` (+39),
-  `conversations/show.html.erb` (+41), `_brgen_dating.scss` (+82),
-  `_brgen_feed_posts.scss` (+18), `_minimal.scss` (+6), `seeds.rb` (+2),
-  `application_helper_test.rb` (+4), `user_purge_job_test.rb` (357, no row),
-  `_brgen_core_shell.scss` (480, no row), `posts/show.html.erb` (164, no row),
-  `listings/show.html.erb` (+1), playlist `_player.html.erb` (159, no row).
-  Splitting them is real work against files their authors are actively
-  editing; each split lowers its row.
-- [x] `method_length_ratchet_test.rb`: brgen carries 11 methods over 30 code
-  lines against a ceiling of 8, and its longest is 71 lines against 51. Same
-  law: split at the responsibility bound, lower the numbers.
-- [x] `weight_kb` in `css_budget.yml` was seeded 2026-08-31/09-25 and the
-  shared engine's stack has grown since; amber's compiled build measured
-  157KB against a 103KB ceiling in this sandbox. The build is gitignored, so
-  the honest re-measure belongs to a checkout that can precompile — raise
-  only with every added kilobyte named, per the file's own record.
 
 
 2026-11-16: all three closed on the current revision. file_length: the
@@ -975,13 +987,7 @@ The migration note recorded several exclusions. These are the carry-over
 items still needing a disposition; none should be restored blindly or placed
 back at the repository root:
 
-- [x] **Ragnhild artist-grant application PDF.** The grant guide is restored and date-reviewed in `BIZ/ragnhild/ragnhild_legater.html`; the business-plan pair `BIZ/ragnhild/ragnhild.pdf` (19 pages, "Ragnhild - forretningsplan") stays a separate artifact. The print workflow's explicit source mapping was run on 2026-11-15: `ragnhild_legater.pdf` rendered from that exact source to the output dir beside the business-plan output without touching `ragnhild.pdf`, copied into the folder as `BIZ/ragnhild/ragnhild_legater.pdf`. Evidence: 5 pages at 442.08 x 663.12 pts (pdfinfo), 34 URI link annotations preserved, pdftotext matches the source Norwegian text, and all five pages inspected visually at 144 dpi - clean typography, footnotes, sources list, no overflow.
-- [x] **Merethe LoRA preparation restored at the canonical path.** The
-  recovery/preflight package and its test now live under `STUDIO/lora/merethe/`.
-  Its preparation command moves only known local, ignored subject data from the
-  previous `STUDIO/replicate/lora/merethe/` path and refuses symlinks or
-  destination collisions. Paid training and source-rights decisions remain
-  separate gates in §8.10.
+
 
 The one-shot legacy archive-extraction helper was also intentionally excluded.
 The pub4 repository remains the read-only provenance source; do not revive
