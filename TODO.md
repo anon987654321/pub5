@@ -268,6 +268,11 @@ are not new implementation requests.
   reload reason, resolved law root and changed source paths. Reproduce the
   duplicate-constant warning before changing reload semantics; do not mask it
   with constant guards or disable reload.
+  2026-11-18 source review: `Law.reload` already records its canonical root and
+  changed-source reasons in `last_reload_report`, and emits a diagnostic before
+  re-evaluating a previously loaded file. The focused regression now forces a
+  same-root source change and checks that this diagnostic precedes Ruby's
+  duplicate-constant warning. Test authored, NOT_RUN; keep open until execution.
 - [ ] **External sibling-checkout boundary.** Add read-only observation for an
   authorised external Git root, then independently prove that local
   transactions, commits and cleanup cannot write into that checkout. Keep
@@ -280,6 +285,12 @@ are not new implementation requests.
   drops explain their reason or link an existing receipt; and resolve `/q`
   with a deliberate tested alias or clear canonical `/quit`/`/exit`
   guidance. Do not add another journal or status vocabulary.
+  2026-11-18: `PipelineContext#inspect` now reports only sorted top-level keys;
+  a regression covers prompt, provider output, metadata and tool-argument
+  redaction. Structural look-stage drops now report bounded category/path
+  rejection reasons in the summary and existing event receipt. `/help q`
+  explicitly directs operators to `/quit` or `/exit`. Regressions authored,
+  NOT_RUN. The redacted, run-specific chat-visible run receipt remains open.
 
 Build on existing Mission, Supervisor, TaskSteward, TaskContract,
 OutcomeLearning, RepairMemory, RunBudget, RunPulse, Transaction and
