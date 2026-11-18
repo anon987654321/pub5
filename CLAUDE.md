@@ -5,8 +5,9 @@ is the one hand-written bootstrap pointer; it holds no policy of its own.
 
 Before planning or acting, read the root `AGENTS.md`. Gemini, GLM and Cursor
 entry files point there; Copilot reads it directly. The shared contract is
-generated from `MASTER/AGENTS.md`. Tree contracts for RAILS, MASTER/web and
-OPENBSD live in `TREE_CONTRACTS.md`. Claude's project hooks remain available
+generated from `MASTER/AGENTS.md`. The shared tree contract matrix is
+`MASTER/data/law/TREE_CONTRACTS.md`; RAILS, MASTER/web and OPENBSD requirements
+are recorded there. Claude's project hooks remain available
 at the native `.claude/settings.json` path.
 
 ## First three commands
