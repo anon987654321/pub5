@@ -47,6 +47,9 @@ class TestFixProtocol < Minitest::Test
     assert_includes text, "0.3 SERIAL FIVE-TREE DELIVERY"
     assert_includes text, "3. REVIEW — FRESH EYES AND EXTERNAL REVIEW INTAKE"
     assert_includes text, "one in-memory intake row per distinct claim"
+    assert_includes text, "inventory every supplied artifact and every numbered"
+    assert_includes text, "mark overall review coverage INCONCLUSIVE"
+    assert_includes text, "A terse instruction such as \"finish\" authorises completion"
     assert_includes text, "already_implemented, partially_implemented, actionable"
     assert_includes text, "Do not create review reports, planning documents"
     assert_includes text, "three separate completed green causal traces"
@@ -191,6 +194,9 @@ class TestFixProtocol < Minitest::Test
       review_contract = payload.fetch("external_review_contract")
       assert_equal "untrusted_claims", review_contract.fetch("source_policy")
       assert_equal Master::Fix::Protocol::REVIEW_DISPOSITIONS, review_contract.fetch("dispositions")
+      assert_equal %w[source_artifact source_item_id], review_contract.fetch("required_provenance")
+      assert_match(/every_supplied_review_source_and_numbered_item/, review_contract.fetch("coverage_policy"))
+      assert_match(/bare_finish_instruction_adds_no_invented_requirements/, review_contract.fetch("finish_semantics"))
       assert_includes review_contract.fetch("required_grounding"), "source_sha256"
       assert_match(/no_new_backlog_files/, review_contract.fetch("backlog_policy"))
       assert_includes payload.fetch("terminal_states"), "PLATEAU"
