@@ -64,6 +64,32 @@ class TestFixStructuralReview < Minitest::Test
     assert_includes result.summary, "unsupported category (rewrite_everything)"
   end
 
+  def test_rejection_reasons_are_attached_to_the_existing_structural_review_receipt
+    events = []
+    bus = Object.new
+    bus.define_singleton_method(:publish) { |event, **details| events << [event, details] }
+    agent = FakeAgent.new("FINDING: odd | lib/missing.rb | NONE | never persist this explanation\n")
+
+    result = Review.new(agent:, root: @root, bus:).call(target: @root)
+
+    assert_equal 1, result.dropped
+    event = events.find { |name, _details| name == "fix_loop:structural_review" }
+    refute_nil event
+    assert_equal ["unknown path (lib/missing.rb)"], event.last.fetch(:dropped_reasons)
+    refute_includes event.last.inspect, "never persist this explanation"
+  end
+
+  def test_dropped_proposal_labels_are_sanitized_and_bounded
+    hostile_path = "lib/\u001b[31msecret.rb"
+    agent = FakeAgent.new("FINDING: odd | #{hostile_path} | NONE | not in tree\\n")
+
+    result = Review.new(agent:, root: @root).call(target: @root)
+
+    assert_equal 1, result.dropped
+    refute_match(/[\\x00-\\x1f\\x7f]/, result.summary)
+    assert_operator result.summary.bytesize, :<, 520
+  end
+
   def test_the_prompt_protects_the_core_and_carries_the_constitution
     agent = FakeAgent.new("")
     Review.new(agent:, root: @root).call(target: @root)
