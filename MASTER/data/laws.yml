@@ -263,6 +263,15 @@ ROBUSTNESS_least_authority_tracing:
     every path without sampling or purpose is a privilege expansion.
   resolution: review
 
+ROBUSTNESS_immune_pattern:
+  parent: ROBUSTNESS
+  statement: >
+    Recognition answers damage, not novelty. A boundary distinguishes
+    harmful patterns from benign ones by evidenced damage signals and
+    tolerates what is safe; rejecting every unfamiliar input alike raises
+    alarms on benign novelty while missing real damage.
+  resolution: review
+
 ROBUSTNESS_homeostasis:
   parent: ROBUSTNESS
   statement: >
@@ -3269,6 +3278,9 @@ law_catalogue:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
     ROBUSTNESS_least_authority_tracing:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    ROBUSTNESS_immune_pattern:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
     ROBUSTNESS_homeostasis:
