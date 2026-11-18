@@ -211,11 +211,12 @@ module Master
         line = JSON.generate(trace)
         File.open(path, "a:UTF-8", 0o600) do |file|
           file.flock(File::LOCK_EX)
-          file.puts(line)
-          file.flush
-          file.flock(File::LOCK_UN)
-        ensure
-          file&.flock(File::LOCK_UN)
+          begin
+            file.puts(line)
+            file.flush
+          ensure
+            file.flock(File::LOCK_UN)
+          end
         end
         File.chmod(0o600, path)
         {
