@@ -182,6 +182,21 @@ class TestImproveEngine < Minitest::Test
     assert_includes coverage[:external_review_areas], "user_acceptance"
   end
 
+  def test_improvement_receipt_includes_quality_and_external_review_scope
+    files = [
+      write("lib/main.js", "const ready = true;\n"),
+      write("docs/guide.md", "# Guide\n"),
+      write("docs/settings.yml", "enabled: true\n"),
+      write("docs/views/page.scss", "a { transition: opacity .2s; }\n"),
+    ]
+    coverage = Master::Fix::Improve::Domains.coverage(files:)
+
+    assert_includes coverage[:quality_areas], "interaction"
+    assert_includes coverage[:quality_areas], "provenance"
+    assert_includes coverage[:external_review_areas], "rendered_composition"
+    assert_includes coverage[:external_review_areas], "assistive_technology"
+  end
+
   def test_elevates_prose_placeholders
     path = write("docs/README.md", "# X\n\n" + ("word " * 80) + "\n\nTODO: write this later.\n")
     findings = @engine.elevate(files: [path])
