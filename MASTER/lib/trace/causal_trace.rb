@@ -76,13 +76,16 @@ module Master
           "name" => "run.terminal",
           "output" => safe_metadata(outcome),
         }
+        runtime_profile = profile_delta(context[:profile_start], profile_snapshot)
+        trace_metadata = metadata.is_a?(Hash) ? metadata.dup : {}
+        trace_metadata[:runtime_profile] = runtime_profile if runtime_profile
         trace = build(
           run_id: context.fetch(:run_id),
           agent: context.fetch(:agent),
           started_at: context.fetch(:started_at),
           finished_at: Time.now.utc,
           steps: context.fetch(:steps),
-          metadata:,
+          metadata: trace_metadata,
         )
         record(trace, root: context.fetch(:root))
       ensure
@@ -211,6 +214,7 @@ module Master
           path: path,
           sha256: Digest::SHA256.hexdigest(line),
           trace_id: trace["trace_id"],
+          runtime_profile: trace.dig("metadata", "runtime_profile"),
         }
       end
 
