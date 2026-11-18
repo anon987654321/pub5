@@ -208,6 +208,15 @@ class TestImproveEngine < Minitest::Test
     assert findings.any? { |f| f[:message].include?("placeholder") }, findings.inspect
   end
 
+  def test_invalid_yaml_is_reported_without_silently_aborting_other_polish_checks
+    path = write("docs/broken.yml", "enabled: [true, false\n")
+    findings = Master::Fix::Improve::Domains.scan(root: @root, files: [path])
+
+    finding = findings.find { |row| row.signal == "invalid_yaml_structure" }
+    refute_nil finding
+    assert_operator finding.line, :>, 0
+  end
+
   def test_empty_studio_music_metadata_is_a_structural_polish_finding
     path = write("STUDIO/dilla/session.yml", "bpm:\n")
     findings = Master::Fix::Improve::Domains.scan(root: @root, files: [path])
