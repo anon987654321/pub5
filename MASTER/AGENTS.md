@@ -925,10 +925,9 @@ because agents read the Law one identity at a time. Reopen with a duplicate body
   unmeasured.
 - **No documentation outside its boundary.** Human documentation is one
   `README.md` per boundary; Aegis, cognition and the contract examples live in
-  `README.md`, and the Do Not Touch list lives here. `MASTER/docs/` holds only
-  the execution-contract references, the generated Law digest, the glossary and
-  preserved handoffs that `test/test_doc_paths.rb` names one by one; a new file
-  there needs its entry in that test.
+  `README.md`, and the Do Not Touch list lives here. Live execution contracts,
+  scope expectations and vocabularies belong in Ruby or YAML beside their owners;
+  historical reviews and handoffs remain recoverable through Git history.
 - **Media generation lives behind STUDIO.** Dilla, photograph, postpro and
   Replicate are STUDIO-owned boundaries. LoRA subject profiles and private
   weights live under `STUDIO/lora/<subject>/`; generated stills land flat in
