@@ -297,6 +297,28 @@ window._chatOnChunk = (raw) => {
   if (/(?:\(|\b)(?:ha(?:ha)?|heh|lol|lmao|rofl)\b|[🤣😂😆]/i.test(raw)) triggerLaughterBurst();
   updateSessionStats();
 };
+window._chatOnOperationLog = (payload) => {
+  const raw = String(payload?.url || '').trim();
+  if (!raw || !_streamEl) return;
+  let url;
+  try { url = new URL(raw); } catch (_) { return; }
+  if (url.protocol !== 'https:' || !['pste.us', 'dpaste.org'].includes(url.hostname) || url.username || url.password) return;
+
+  const row = document.createElement('span');
+  row.className = 'operation-log-link';
+  row.appendChild(document.createTextNode('\nlog0: '));
+  const link = document.createElement('a');
+  link.href = url.toString();
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = url.toString();
+  row.appendChild(link);
+  const service = String(payload?.service || url.hostname).slice(0, 24);
+  const expires = String(payload?.expires_in || '').slice(0, 24);
+  row.appendChild(document.createTextNode(' (' + service + (expires ? '; expires in ' + expires : '') + ')'));
+  _streamEl.appendChild(row);
+};
+
 window._chatOnDone = () => {
   _toolStackCount = 0;
   delete document.body.dataset.pipelineStage;
