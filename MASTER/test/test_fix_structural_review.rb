@@ -60,6 +60,8 @@ class TestFixStructuralReview < Minitest::Test
 
     assert_empty result.findings
     assert_equal 2, result.dropped
+    assert_includes result.summary, "unknown path (lib/missing.rb)"
+    assert_includes result.summary, "unsupported category (rewrite_everything)"
   end
 
   def test_the_prompt_protects_the_core_and_carries_the_constitution
