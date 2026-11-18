@@ -155,6 +155,9 @@ class TestArchitectureExploration < Minitest::Test
       assert_includes preview.fetch(:missing_dimensions), :profile_cost
       assert_includes prompt, "dependency_tangles"
       assert_includes prompt, cycle[:sha256]
+      assert_includes prompt, "SCLEROTIUM GATE"
+      assert_includes prompt, "three separate completed green causal traces"
+      assert_includes prompt, "NOT_READY"
     end
   end
 
