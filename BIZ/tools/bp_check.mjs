@@ -30,7 +30,8 @@ function footVals(tableHtml) {
   return cap ? [cap[2], cap[3], cap[4]] : null;
 }
 
-const files = ORDER.map(plan => resolve(OUT, plan, plan + '.html'));
+const fundingGuide = resolve(BIZ_ROOT, 'ragnhild', 'ragnhild_legater.html');
+const files = [...ORDER.map(plan => resolve(OUT, plan, plan + '.html')), fundingGuide];
 const masterOperator = resolve(BIZ_ROOT, '..', 'MASTER', 'bin', 'operator');
 const lawRun = spawnSync(masterOperator, ['lint', ...files], {
   cwd: BIZ_ROOT,
@@ -157,6 +158,97 @@ for (const plan of ORDER) {
 
   notes.push(plan + ': sections ' + sections + ', fonts ' + fonts + ', chars ' + src.length);
 }
+
+
+function checkFundingGuide() {
+  const label = 'ragnhild_legater';
+  let src;
+  try {
+    src = readFileSync(fundingGuide, 'utf8');
+  } catch (error) {
+    fails.push(label + ': funding guidance source missing: ' + error.message);
+    return;
+  }
+  const add = message => fails.push(label + ': ' + message);
+
+  // This is a funding-guidance brief, not one of the Bob2 business plans and
+  // not a submitted application. Keep its own layout while verifying the
+  // evidence and document semantics that are independent of the plan template.
+  if (!/<html\\b[^>]*\\blang="no"/i.test(src)) add('document language must be Norwegian');
+  if (!/<meta\\s+charset="utf-8"/i.test(src)) add('UTF-8 declaration missing');
+  if (!/<title>[^<]+<\\/title>/i.test(src)) add('document title missing');
+  if (!/<meta\\s+name="description"\\s+content="[^"]{20,}"/i.test(src)) add('descriptive metadata missing');
+  if (!/<main\\b[^>]*\\baria-label="[^"]+"/i.test(src)) add('main landmark needs an accessible name');
+
+  const ids = [...src.matchAll(/\\bid="([^"]+)"/g)].map(match => match[1]);
+  if (new Set(ids).size !== ids.length) add('duplicate id attributes');
+  const sheets = [...src.matchAll(/<section class="sheet" aria-labelledby="([^"]+)">([\\s\\S]*?)<\\/section>/g)];
+  if (sheets.length !== 5) add('expected five explicitly paginated sheets; found ' + sheets.length);
+  sheets.forEach((match, index) => {
+    const headingId = match[1];
+    if (!match[2].includes('id="' + headingId + '"')) {
+      add('sheet ' + (index + 1) + ' aria-labelledby target is not inside that sheet');
+    }
+    if (!/<h[12]\\b[^>]*\\bid="[^"]+"/.test(match[2])) {
+      add('sheet ' + (index + 1) + ' has no identified page heading');
+    }
+  });
+  const footers = [...src.matchAll(/<div class="footer">[\\s\\S]*?<span>(\\d+)\\s*\\/\\s*(\\d+)<\\/span><\\/div>/g)];
+  if (footers.length !== 5 || footers.some((match, index) =>
+    Number(match[1]) !== index + 1 || Number(match[2]) !== 5
+  )) add('page folios must run consecutively from 1 / 5 through 5 / 5');
+
+  const calendar = src.match(/<table\\b[^>]*aria-label="Søknadskalender"[^>]*>([\\s\\S]*?)<\\/table>/);
+  if (!calendar) {
+    add('application calendar table missing');
+  } else {
+    const heads = [...calendar[1].matchAll(/<th\\b([^>]*)>/g)];
+    if (heads.length < 2 || heads.some(match => !/\\bscope="col"/.test(match[1]))) {
+      add('calendar headers need explicit column scope');
+    }
+    const rows = calendar[1].match(/<tbody>([\\s\\S]*?)<\\/tbody>/);
+    if (!rows || !/<tr>/.test(rows[1])) add('calendar has no schedule rows');
+  }
+  if (!/@page\\s*\\{\\s*size:\\s*156mm 234mm/s.test(src)) {
+    add('guide print format must retain its own 156 mm × 234 mm page contract');
+  }
+
+  const sourceList = src.match(/<ol class="source-list">([\\s\\S]*?)<\\/ol>/);
+  if (!sourceList) {
+    add('numbered source list missing');
+  } else {
+    const refs = [...sourceList[1].matchAll(/<li>\\[(\\d+)\\]\\s*<a\\b[^>]*href="(https?:\\/\\/[^"]+)"/g)];
+    const refIds = refs.map(match => match[1]);
+    if (refs.length !== 6 || new Set(refIds).size !== 6 ||
+        ['1', '2', '3', '4', '5', '6'].some(id => !refIds.includes(id))) {
+      add('source list must contain six distinct, linked references [1]–[6]');
+    }
+    const narrative = src.replace(sourceList[0], '');
+    ['1', '2', '3', '4', '5', '6'].forEach(id => {
+      if (!narrative.includes('[' + id + ']')) add('source reference [' + id + '] is not cited in the guidance');
+    });
+  }
+
+  const links = [...src.matchAll(/<a\\b[^>]*\\bhref="([^"]*)"/g)].map(match => match[1]);
+  if (!links.length || links.some(href => !/^(https?:\\/\\/|mailto:|#)/i.test(href))) {
+    add('every link needs a non-empty HTTP(S), mailto or in-document destination');
+  }
+  if (!/Kontrollert\\s+\\d{1,2}\\.\\s+[\\p{L}]+\\s+\\d{4}/u.test(src)) {
+    add('source-check date missing');
+  }
+  if (!/ikke publisert/i.test(src) || !/ikke kontrollert/i.test(src)) {
+    add('unpublished deadlines and unverified applicant eligibility must remain explicit');
+  }
+
+  notes.push(label + ': funding-guidance profile, ' + sheets.length + ' sheets, ' + refsCount(src) + ' cited source links');
+}
+
+function refsCount(src) {
+  const list = src.match(/<ol class="source-list">([\\s\\S]*?)<\\/ol>/);
+  return list ? [...list[1].matchAll(/<li>\\[\\d+\\]\\s*<a\\b/g)].length : 0;
+}
+
+checkFundingGuide();
 
 console.log(notes.join('\n'));
 console.log('=== FAILS ===');
