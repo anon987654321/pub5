@@ -20,6 +20,7 @@ module Master
       SCHEMA = 1
       DIR = File.join(".master", "antigens")
       FILE = "signatures.jsonl"
+      EVIDENCE_FIELDS = %w[source_sha256 outcome attempts trace_id run_id tangle_digest paths edge_types].freeze
 
       def initialize(root: nil)
         @root = root || (defined?(Master::REPO_ROOT) && Master::REPO_ROOT) || Dir.pwd
@@ -41,7 +42,7 @@ module Master
           "boundary" => boundary.to_s,
           "defect_class" => defect_class.to_s,
           "severity" => severity.to_s,
-          "evidence" => evidence.is_a?(Hash) ? evidence : {},
+          "evidence" => safe_evidence(evidence),
           "note" => note,
           "recorded_at" => Time.now.utc.iso8601,
           "hits" => 1,
@@ -54,7 +55,7 @@ module Master
 
       # Match a proposed probe against known antigens. Returns matching records
       # (most recent first) or [].
-      def match(law:, boundary:, defect_class: nil, limit: 5)
+      def match(law:, boundary:, defect_class: nil, limit: 5, source_sha256: nil)
         sig = if defect_class
                 signature_key(law, boundary, defect_class)
               else
@@ -63,17 +64,19 @@ module Master
               end
 
         recent(limit: 500).select do |a|
-          if sig
-            a["signature"] == sig
-          else
-            a["signature"].to_s.start_with?(prefix)
-          end
+          signature_match = if sig
+                              a["signature"] == sig
+                            else
+                              a["signature"].to_s.start_with?(prefix)
+                            end
+          digest_match = source_sha256.nil? || a.dig("evidence", "source_sha256") == source_sha256
+          signature_match && digest_match
         end.last(limit.to_i).reverse
       end
 
       # True when a known antigen exists for this exact signature.
-      def known?(law:, boundary:, defect_class:)
-        !match(law: law, boundary: boundary, defect_class: defect_class, limit: 1).empty?
+      def known?(law:, boundary:, defect_class:, source_sha256: nil)
+        !match(law: law, boundary: boundary, defect_class: defect_class, source_sha256:, limit: 1).empty?
       end
 
       def recent(limit: 50)
@@ -87,6 +90,23 @@ module Master
       end
 
       private
+
+      # Keep the ledger useful as operational evidence, not a second transcript.
+      # Only stable identifiers, digests and bounded path lists are retained.
+      def safe_evidence(value)
+        return {} unless value.is_a?(Hash)
+
+        value.each_with_object({}) do |(key, item), safe|
+          name = key.to_s
+          next unless EVIDENCE_FIELDS.include?(name)
+          clean = case item
+                  when String then item[0, 256]
+                  when Numeric, TrueClass, FalseClass then item
+                  when Array then item.first(32).filter_map { |entry| entry.to_s[0, 256] }
+                  end
+          safe[name] = clean unless clean.nil?
+        end
+      end
 
       def signature_key(law, boundary, defect_class)
         digest = Digest::SHA256.hexdigest(defect_class.to_s)[0, 12]
