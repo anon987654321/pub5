@@ -116,6 +116,16 @@ class TestConvergenceDiscipline < Minitest::Test
                  @discipline.adaptive_decision(deadline_expired: false, pass_limit: 60, absolute_limit: 60).reason
   end
 
+  def test_adaptive_decision_fails_closed_on_invalid_budgets
+    [[-1, 60], [1, 0], ["1", 60], [Float::NAN, 60], [1, Float::INFINITY]].each do |pass_limit, absolute_limit|
+      decision = @discipline.adaptive_decision(
+        deadline_expired: false, pass_limit:, absolute_limit:
+      )
+      assert_equal :stop, decision.action
+      assert_equal :invalid_budget, decision.reason
+    end
+  end
+
   def test_finding_fingerprint_survives_source_line_movement
     first = { law: "ROBUSTNESS", file: "example.rb", line: 8, fingerprint: "unsafe-call:abc123" }
     moved = { law: "ROBUSTNESS", file: "example.rb", line: 19, fingerprint: "unsafe-call:abc123" }
