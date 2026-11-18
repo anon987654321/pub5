@@ -67,6 +67,11 @@ module Master
         clean = Speech.clean_text(text)
         return if clean.empty?
 
+        # The automatic route uses the same text-aware house-style inference
+        # as classic speech; :auto must not fall through to an older, slower
+        # warm-supportive preset.
+        style = Speech.infer_style(clean, fallback: Speech.default_style) if style.to_s == "auto" && !style_locked
+
         emotion = Emotion.analyze(clean)
         melody = Melody.plan(clean, emotion, melodic: melodic_contour?(cfg, emotion), languages: phrase_languages(cfg))
         resolved_voice, resolved_rate, resolved_pitch = resolve_voice_and_prosody(
