@@ -31,7 +31,16 @@ authority:
     tests: MASTER/test/test_mobile.rb
   external_targets:
     core_source: MASTER/lib/core/
-    boundary: Master::Core is a separate external-root workflow, not the governed /fix pipeline
+    interface: "bin/master core --root PATH --real GOAL"
+    real_mode: Requires provider credentials and targets the supplied external repository root.
+    rehearsal_mode: Without --real, runs the scripted Constitution self-test and does not pursue GOAL.
+    proof_boundary: Core is not the /fix scanner, repair loop, Fix::Transaction, or governed delivery-proof pipeline.
+    path_policy: /fix rejects absolute paths outside pub5; do not relax that boundary to enable sibling checkouts.
+    layout:
+      pub5: ~/src/pub5/
+      openbsd_rust: ~/src/openbsd-rust/
+      openbsd_source: ~/src/openbsd-src/
+      vendor_checkout: ~/src/vendor/<project>/
 
 agent_rule: >-
   Never emit delivered for a claim no check in this repository can falsify.
