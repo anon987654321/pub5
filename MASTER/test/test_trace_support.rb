@@ -358,6 +358,17 @@ class TestTraceSupport < Minitest::Test
   def test_fix_causal_trace_correlates_agent_and_council_steps_without_prompt_content
     root = Dir.mktmpdir("causal-trace")
     trace = Master::Trace::CausalTrace
+    FileUtils.mkdir_p(File.join(root, ".master"), mode: 0o700)
+    cost_rows = [
+      { ts: 1, amount: 0.12, model: "glm:fast", tokens: 120, run_id: "run-1" },
+      { ts: 2, amount: 0.03, model: "replicate:estimate", tokens: 30, run_id: "run-1", approximate: true },
+      { ts: 3, amount: 0.50, model: "other-run", tokens: 500, run_id: "another-run" },
+    ]
+    File.write(
+      File.join(root, ".master", "costs.jsonl"),
+      cost_rows.map { |row| JSON.generate(row) }.join("\n") + "\n",
+      mode: "w",
+    )
     outer = trace.start(run_id: "run-1", root:, agent: "fix")
     trace.step(
       kind: :model_turn, name: "repair",
@@ -389,7 +400,14 @@ class TestTraceSupport < Minitest::Test
     assert_operator profile.fetch("wall_ms"), :>=, 0
     assert_operator profile.fetch("cpu_ms"), :>=, 0
     assert_operator profile.fetch("allocated_objects"), :>=, 0
-    assert_equal "NOT_CAPTURED", profile.fetch("provider_usage")
+    usage = profile.fetch("provider_usage")
+    assert_equal "REPORTED_USAGE", usage.fetch("status")
+    assert_equal 1, usage.fetch("exact_receipts")
+    assert_equal 1, usage.fetch("estimated_records")
+    assert_in_delta 0.12, usage.fetch("exact_amount"), 0.000001
+    assert_equal 120, usage.fetch("exact_tokens")
+    assert_equal ["glm:fast"], usage.fetch("models")
+    assert_match(/\A[0-9a-f]{64}\z/, usage.fetch("receipt_sha256"))
     assert_equal "NOT_MEASURED", profile.fetch("resident_memory")
     assert_equal 0o600, File.stat(File.join(root, trace::LEDGER_DIR, trace::LEDGER_FILE)).mode & 0o7777
     assert_equal 0o700, File.stat(File.join(root, trace::LEDGER_DIR)).mode & 0o777
