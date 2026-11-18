@@ -104,6 +104,51 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "authenticated technical browser command returns its published operation log link" do
+    dir = Dir.mktmpdir("chat-operation-log")
+    bus = Master::Trace::EventBus.new(event_log: Master::Trace::Log::Event.new(root: dir))
+    gateway = Object.new
+    gateway.define_singleton_method(:receive) do |channel:, message:, metadata: {}|
+      raise "unexpected channel #{channel}" unless channel == :cli
+      raise "unexpected command #{message}" unless message == "/fix RAILS"
+
+      bus.publish("wishlist:done", drafted: 2)
+      Master::Result.ok({ rendered: "fix complete", client_actions: [], metadata: })
+    end
+    Rails.application.config.x.master_container = stub_master_container.merge(bus:, gateway:)
+
+    published = []
+    publisher = Object.new
+    publisher.define_singleton_method(:publish) do |**details|
+      published << details
+      Master::Ground::PastePublisher::Outcome.new(
+        url: "https://pste.us/test-operation-log",
+        service: :pste_us,
+        expires_in: "1 day",
+      )
+    end
+
+    Master::Ground::PastePublisher.stub(:new, ->(**) { publisher }) do
+      post "/chat/command", params: { command: "/fix RAILS" }, headers: auth_headers
+    end
+
+    assert_response :success
+    payload = JSON.parse(response.body)
+    assert_equal "fix complete", payload.fetch("output")
+    assert_equal "https://pste.us/test-operation-log", payload.dig("operation_log", "url")
+    assert_equal 1, published.size
+    assert_equal "/fix RAILS", published.first.fetch(:operation)
+    assert_equal "success", published.first.fetch(:status)
+    assert_includes published.first.fetch(:output), "drafted 2"
+  ensure
+    FileUtils.rm_rf(dir) if dir
+    Fiber[:master_visitor] = nil
+    Fiber[:master_conversation] = nil
+    Fiber[:master_elevated] = nil
+    Fiber[:master_paired] = nil
+    Fiber[:master_pair_subject] = nil
+  end
+
   test "message smoke ping streams sse without container" do
     Rails.application.config.x.master_container = nil
 
