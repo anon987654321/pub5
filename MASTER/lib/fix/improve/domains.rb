@@ -272,7 +272,7 @@ module Master
 
             line.to_enum(:scan, /!?\[[^\]]*\]\(([^)]+)\)/).each do
               match = Regexp.last_match
-              destination = match[1].strip.sub(/\A</, "").sub(/>\z/, "")
+              destination = match[1].strip.sub(/\s+["'][^"']*["']\z/, "").sub(/\A</, "").sub(/>\z/, "")
               next if destination.empty? || destination.start_with?("#", "//")
               uri = URI.parse(destination) rescue nil
               next if uri&.scheme || destination.start_with?("mailto:", "tel:")
@@ -357,6 +357,34 @@ module Master
                   "a full HTML document has no non-empty title element",
                   7.5, "Provide a concise, page-specific document title consistent with the product's naming conventions.",
                   line: line_number(source, source.index(/<html\b/i))
+                )
+              end
+
+              control_match = nil
+              source.to_enum(:scan, /<(input|select|textarea)\b[^>]*>/im).each do
+                candidate = Regexp.last_match
+                tag = candidate[0]
+                next if tag.match?(/\btype\s*=\s*["']?(?:hidden|submit|button|reset|image)\b/i)
+                next if tag.match?(/\b(?:aria-label|aria-labelledby|title)\s*=/i)
+
+                id_match = tag.match(/\bid\s*=\s*["']([^"']+)["']/i)
+                paired = id_match && source.match?(/<label\b[^>]*\bfor\s*=\s*["']#{Regexp.escape(id_match[1])}["']/i)
+                before = source[0...candidate.begin(0)]
+                label_open = before.rindex(/<label\b[^>]*>/i)
+                label_close = before.rindex(%r{</label>}i)
+                wrapped = label_open && (!label_close || label_open > label_close) &&
+                  source[candidate.end(0)..].to_s.match?(%r{</label>}i)
+                next if paired || wrapped
+
+                control_match = candidate
+                break
+              end
+              if control_match
+                findings << opportunity(
+                  :visual, path, "form_control_without_label",
+                  "a form control has no explicit label or programmatic accessible name in this source",
+                  9.5, "Associate the control with a visible label or a concise aria-label/aria-labelledby reference; placeholders alone are not labels.",
+                  line: line_number(source, control_match.begin(0))
                 )
               end
 
