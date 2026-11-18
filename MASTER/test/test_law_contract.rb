@@ -59,7 +59,7 @@ class TestLawContract < Minitest::Test
         assert_includes first_stderr, "law_loader: re-evaluating"
         assert_includes first_stderr, "source_root_changed"
 
-        File.write(path, File.read(path) + "# changed source\\n")
+        File.write(path, File.read(path) + "# changed source\n")
         future = Time.now + 2
         File.utime(future, future, path)
         _stdout, second_stderr = capture_io { Law.load_all(dir) }
