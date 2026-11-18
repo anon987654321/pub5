@@ -271,10 +271,22 @@ FLOW_OUTPUT = <<~OUT
     assert_operator elapsed, :<, 3
   end
 
-  def test_rollback_advice_names_previous_and_current_sha
-    git = ->(*argv) { argv.include?("HEAD@{1}") ? "aaa1111" : "bbb2222" }
+  def test_rollback_advice_does_not_infer_last_good_deploy_from_local_reflog
+    asked = []
+    git = lambda do |*argv|
+      asked << argv
+      "bbb2222"
+    end
     lines = Canary::Rollback.advice(root: @root, git:)
-    assert_includes lines.join("\n"), "git revert --no-edit aaa1111..bbb2222"
+    advice = lines.join("\n")
+
+    assert_includes advice, "source checkout HEAD: bbb2222"
+    assert_includes advice, "HEAD@{1} is not proof"
+    assert_includes advice, "/var/db/pub5/last_deploy_<app>.json"
+    assert_includes advice, "reviewed, app-scoped revert"
+    assert_includes advice, "bin/operator vps deploy <app> --remote"
+    refute_includes advice, "git revert --no-edit"
+    refute asked.flatten.include?("HEAD@{1}"), "the local reflog is not a deployment ledger"
   end
 
   # The operator in a clean environment: the test run's bundler variables
