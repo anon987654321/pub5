@@ -539,8 +539,7 @@ measure is already owned by the Bymorgen item above.
   as history behind the Norwegian Financial partner-bank concept. Build, print,
   output checks, visual inspection and applicant-specific grant eligibility for
   the new drafts remain NOT_RUN. Do not publish draft sources as completed pairs.
-- [ ] **Historical hardening review.** Reconcile the remaining P01–P11
-  findings in `MASTER/docs/history/fix-review-log.md`. L4 stale-member
+- [ ] **Historical hardening review.** Reconcile the remaining P01–P11 historical findings using Git history and the live source/test owners. L4 stale-member
   detection/tests, L5 heredoc/keyword detection plus structured Council
   ideation, L7 declarative/runtime parity assertion, and L8 parse-time
   check-registry refusal now have source coverage on `main`; their focused
