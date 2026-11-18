@@ -100,12 +100,12 @@ class TestImproveEngine < Minitest::Test
     path = write("docs/views/index.html.erb",
       '<img src="coat.jpg"><button><svg></svg></button><a href="/next"><i class="icon"></i></a>')
 
-    findings = @engine.elevate(files: [path])
-    messages = findings.map { |row| row[:message] }
+    findings = Master::Fix::Improve::Domains.scan(root: @root, files: [path])
+    signals = findings.map(&:signal)
 
-    assert messages.any? { |message| message.include?("image_without_alt") }, messages.inspect
-    assert messages.any? { |message| message.include?("icon_only_button") }, messages.inspect
-    assert messages.any? { |message| message.include?("icon_only_link") }, messages.inspect
+    assert_includes signals, "image_without_alt"
+    assert_includes signals, "icon_only_button"
+    assert_includes signals, "icon_only_link"
   end
 
   def test_polish_coverage_exposes_per_domain_counts
