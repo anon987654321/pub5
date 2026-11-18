@@ -300,6 +300,15 @@ class DeployPreflightTest < Minitest::Test
     assert_includes reason, "commit these first"
   end
 
+  def test_remote_command_refuses_untracked_governed_source
+    ok, reason = remote(dirty: "?? RAILS/brgen/config/boot.rb\n")
+
+    refute ok
+    assert_includes reason, "commit these first"
+    assert_includes reason, "untracked files"
+    assert_includes reason, "RAILS/brgen/config/boot.rb"
+  end
+
   def test_remote_break_glass_needs_the_acknowledgement
     ok, reason = remote(env: { "VPS_DEPLOY_SKIP_PREFLIGHT" => "1" }, runner: ->(*) { flunk "the preflight must not run" })
     refute ok
