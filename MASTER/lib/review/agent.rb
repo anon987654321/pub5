@@ -3,6 +3,7 @@
 require_relative "llm_dispatcher"
 require_relative "consensus"
 require_relative "../trace/causal_trace"
+require_relative "../trace/telemetry"
 require_relative "prompt_filter"
 require_relative "agent/model_selector"
 require_relative "agent/model_override"
@@ -68,8 +69,13 @@ module Master
         Thread.current[:master_llm_answer_model] = nil
         messages = Array(context) + [{ role: "user", content: apply_reasoning_mode(prompt) }]
         selected_model = operation ? model_for(operation:) : routed_models.first
-        result = @dispatcher.send_with_cache(selected_model, messages, stream: false, image:, temperature:)
-        result = retry_on_broke_lane(result, selected_model, messages, image:, temperature:, promote: true)
+        result = Master::Trace::Telemetry.span(
+          "master.llm.ask",
+          { model: selected_model, operation: operation || "unspecified" },
+        ) do
+          response = @dispatcher.send_with_cache(selected_model, messages, stream: false, image:, temperature:)
+          retry_on_broke_lane(response, selected_model, messages, image:, temperature:, promote: true)
+        end
         record_capability_outcome(operation:, selected_model:, result:)
         remember_answer_model(result, selected_model)
         record_causal_model_turn(operation:, selected_model:, result:)
@@ -86,8 +92,13 @@ module Master
         messages = [{ role: "user", content: prompt }]
         chosen = model || (operation ? model_for(operation:) : self.model)
         sys = role_system(system, law:)
-        result = @dispatcher.send_with_cache(chosen, messages, system: sys, stream: false, image:, temperature:, format:)
-        result = retry_on_broke_lane(result, chosen, messages, system: sys, image:, temperature:, promote: model.nil?) if failover
+        result = Master::Trace::Telemetry.span(
+          "master.llm.ask_once",
+          { model: chosen, operation: operation || "unspecified", failover: },
+        ) do
+          response = @dispatcher.send_with_cache(chosen, messages, system: sys, stream: false, image:, temperature:, format:)
+          failover ? retry_on_broke_lane(response, chosen, messages, system: sys, image:, temperature:, promote: model.nil?) : response
+        end
         record_capability_outcome(operation:, selected_model: chosen, result:)
         remember_answer_model(result, chosen)
         record_causal_model_turn(operation:, selected_model: chosen, result:)
