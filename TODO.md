@@ -23,27 +23,31 @@ This register replaces the previous 1,275-line, 462-checkbox carry-forward
 dump. It contains unresolved outcomes, not session notes or speculative
 architecture proposals.
 
-## Observability, causal evidence and nature-inspired quality (landed 2026-11-18)
+## Observability, causal evidence and nature-inspired quality (integrated 2026-11-18)
 
-Laws in `MASTER/data/laws.yml` (with catalogue entries) plus executable modules:
+Laws in `MASTER/data/laws.yml` (with catalogue entries) and executable enforcement:
 
 - Causal evidence: `TRUTHFUL_STATUS_causal_trace_is_evidence`, `TRUTHFUL_STATUS_profile_is_not_intent`
 - Shape: `DRY` + `SINGULARITY_architectural_tangle`; `KISS` / `POLA` / `SOLID` strengthened
 - Robustness: `ROBUSTNESS_least_authority_tracing`, `ROBUSTNESS_antigen_memory` (storage and recognition), `ROBUSTNESS_homeostasis`, `ROBUSTNESS_morphological_exploration`, `ROBUSTNESS_sclerotium`
 - Stewardship: `DO_THE_WORK_NOW` (execute authorised work; do not manufacture planning TODOs)
 
-Implemented modules (smoke-tested):
+Integrated into the existing `/fix` owners:
 
-- `MASTER/lib/trace/causal_trace.rb` — build / validate / append-only record / recent causal traces
-- `MASTER/lib/fix/antigen_store.rb` — record / match / known? failure signatures
-- `MASTER/lib/fix/morphological_score.rb` — rank divergent probes; winner selection
+- `MASTER/lib/trace/causal_trace.rb` — run-scoped, nested-safe, content-redacted causal ledger; private filesystem modes; append/readback receipts; observed wall time, process CPU, Ruby allocations, heap-page deltas and GC counters. Provider billing and resident memory are explicitly marked NOT_CAPTURED / NOT_MEASURED.
+- `MASTER/lib/review/agent.rb` and `MASTER/lib/review/consensus.rb` — model dispatches and both positive and negative council decisions enter the active run trace; model dispatches also emit optional OpenTelemetry spans.
+- `MASTER/lib/fix/kernel/repair_adapter.rb` — findings, source/candidate digests, model outcomes, reflexion decisions, application and delivery outcomes join the causal chain without persisting prompts or source text.
+- `MASTER/lib/fix/fix_loop/completion.rb` — terminal evidence carries the trace receipt and runtime profile; a DONE state is withheld if the durable trace cannot be written.
+- `MASTER/lib/review/reference_graph.rb` — resolved source dependency cycles are detected as strongly connected components; fan-in/fan-out hotspots and deterministic cycle digests are reported to `/fix`.
+- `MASTER/lib/fix/antigen_store.rb` — cycle signatures and source-bound failed repair signatures are stored once, with metadata-only evidence and private filesystem modes. Changed source bytes reopen a failed repair decision.
+- `MASTER/lib/fix/morphological_score.rb` and `MASTER/lib/fix/architecture_exploration/` — graph cycles and matching antigens inform candidate prompts and morphology previews. Unknown dimensions receive no points; incomplete probes cannot win. The planning-only architecture tournament remains the selector until probes are actually executed and measured.
 
-Remainders that need runtime or host capability (not planning debt):
+Evidence-gated / host-bound limitations (not claimed as complete):
 
-- Wire CausalTrace emission into live council / agent / `/fix` entrypoints so PASS paths carry a trace id
-- OTel / continuous profiling on a host that has the toolchain
-- Mechanical tangle detectors that feed MorphologicalScore and AntigenStore
-- Compile-proven trajectories (sclerotium) once a workstream has repeated green causal traces
+- The optional OpenTelemetry adapter is wired but its SDK remains an optional, currently undeclared dependency. OS resident-memory, eBPF and continuous host profiling require the target host toolchain; portable Ruby counters do not substitute for those measurements.
+- No `ROBUSTNESS_sclerotium` trajectory is eligible for compilation yet. Promotion requires repeated green causal traces for the same proven path, measured provider usage and runtime profile, explicit rollback proof, and a deterministic replacement that passes the same verification. No such evidence was available in this source-only session.
+
+The new and updated Ruby regression tests were committed but remain NOT_RUN in this session: the execution container has no repository checkout and could not resolve github.com for cloning. No runtime PASS is claimed.
 
 ## Stewardship
 
