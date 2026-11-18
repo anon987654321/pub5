@@ -119,7 +119,7 @@ module Master
         # exact source bytes that produced it. Changing the file reopens the gate.
         def record_failure_antigen(violation, source_sha256, outcome)
           return unless FAILURE_ANTIGEN_OUTCOMES.include?(outcome)
-          return unless source_sha256.to_s.match?(/\\A[0-9a-f]{64}\\z/)
+          return unless source_sha256.to_s.match?(/\A[0-9a-f]{64}\z/)
 
           repo_root = defined?(Master::REPO_ROOT) ? File.expand_path(Master::REPO_ROOT) : File.expand_path(@root)
           absolute = File.expand_path(violation[:file].to_s, repo_root)
