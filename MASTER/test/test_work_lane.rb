@@ -17,6 +17,7 @@ class TestWorkLane < Minitest::Test
   def test_code_is_the_default_and_starts_no_browser_research_or_architecture
     assert_equal :code, Lane::DEFAULT
     assert Lane.runs?(:code_passes, :code)
+    assert Lane.runs?(:improve_code, :code), "ordinary /fix must discover and repair bounded polish opportunities"
     %i[research architecture layout_sweep browser_checks visual_pass visual_groups].each do |stage|
       refute Lane.runs?(stage, :code), "code lane must skip #{stage}"
     end
@@ -27,6 +28,7 @@ class TestWorkLane < Minitest::Test
   # alongside the code passes, but asks for no research/architecture and no grouped repair.
   def test_standard_is_the_rendered_target_default_and_sees_the_pages
     assert Lane.runs?(:code_passes, :standard)
+    assert Lane.runs?(:improve_code, :standard), "the rendered-target default must also run polish discovery"
     %i[layout_sweep browser_checks screenshot_sweep visual_pass].each do |stage|
       assert Lane.runs?(stage, :standard), "standard lane must run #{stage}"
     end
