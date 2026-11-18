@@ -107,6 +107,73 @@ class TestConsensus < Minitest::Test
     assert_equal 2, blocked.last.fetch(:minimum_families)
   end
 
+  def test_jury_readiness_passes_only_when_each_author_family_leaves_an_independent_quorum
+    models = ["zai-cli:auto", "ovh:gpt-oss-120b", "kilo:nvidia/nemotron-3.5-lightning:free"]
+    router = Object.new
+    router.define_singleton_method(:unreachable_reason) { |_model, wait:| nil }
+
+    readiness = Master::Review::Consensus.stub(:default_models, models) do
+      Master::Review::Consensus.stub(:default_quorum, 2) do
+        Master::Review::Consensus.jury_readiness(router:)
+      end
+    end
+
+    assert_predicate readiness, :ready?
+    assert_equal :pass, readiness.state
+    assert_includes readiness.detail, "survive every author-family exclusion"
+  end
+
+  def test_jury_readiness_fails_when_one_unavailable_family_breaks_author_exclusion
+    models = ["zai-cli:auto", "ovh:gpt-oss-120b", "kilo:nvidia/nemotron-3.5-lightning:free"]
+    router = Object.new
+    router.define_singleton_method(:unreachable_reason) do |model, wait:|
+      model == "ovh:gpt-oss-120b" ? "set OPENROUTER_API_KEY" : nil
+    end
+
+    readiness = Master::Review::Consensus.stub(:default_models, models) do
+      Master::Review::Consensus.stub(:default_quorum, 2) do
+        Master::Review::Consensus.jury_readiness(router:)
+      end
+    end
+
+    refute_predicate readiness, :ready?
+    assert_equal :fail, readiness.state
+    assert_includes readiness.detail, "zhipu author leaves 1/2 voters"
+    assert_includes readiness.detail, "set OPENROUTER_API_KEY"
+  end
+
+  def test_jury_readiness_does_not_treat_a_pending_provider_probe_as_ready
+    models = ["zai-cli:auto", "ovh:gpt-oss-120b", "kilo:nvidia/nemotron-3.5-lightning:free"]
+    router = Object.new
+    router.define_singleton_method(:unreachable_reason) do |model, wait:|
+      model == "zai-cli:auto" ? "checking whether zai-chat is available" : nil
+    end
+
+    readiness = Master::Review::Consensus.stub(:default_models, models) do
+      Master::Review::Consensus.stub(:default_quorum, 2) do
+        Master::Review::Consensus.jury_readiness(router:)
+      end
+    end
+
+    refute_predicate readiness, :ready?
+    assert_equal :unmeasured, readiness.state
+    assert_includes readiness.detail, "provider probe did not finish"
+  end
+
+  def test_jury_readiness_rejects_a_pool_smaller_than_quorum_without_probing
+    router = Object.new
+    router.define_singleton_method(:unreachable_reason) { |*| raise "no provider probe should run" }
+
+    readiness = Master::Review::Consensus.stub(:default_models, ["zai-cli:auto"]) do
+      Master::Review::Consensus.stub(:default_quorum, 2) do
+        Master::Review::Consensus.jury_readiness(router:)
+      end
+    end
+
+    assert_equal :fail, readiness.state
+    assert_includes readiness.detail, "configured pool has 1 model(s), quorum is 2"
+  end
+
   def test_model_family_tracks_the_model_across_provider_aliases
     assert_equal "anthropic", Master::Review::Consensus.model_family("anthropic/claude-opus-5-5")
     assert_equal "anthropic", Master::Review::Consensus.model_family("openrouter:anthropic/claude-sonnet-5-5")
