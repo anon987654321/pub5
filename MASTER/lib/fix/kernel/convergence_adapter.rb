@@ -211,6 +211,10 @@ module Master
         # scoped to this exact target; it never declares new paths.
         contract = task_contract || TaskContract.current ||
           TaskContract.for_target(target:, root: @root)
+        # The committer is built with the adapter, before Kernel#run establishes
+        # its task scope. Pin the validated run contract now so parallel repair
+        # workers enforce the same documentation pair at delivery time.
+        @committer.task_contract = contract if @committer&.respond_to?(:task_contract=)
         @kernel.run(
           adapter: self, contract:, target:, max_passes:, budget_seconds:,
           incremental:, requested:, cancellation:
