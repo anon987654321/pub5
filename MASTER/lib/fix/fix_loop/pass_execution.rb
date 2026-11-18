@@ -33,10 +33,11 @@ module Master
                 wishlist_proposals: active_wishlist
               )
               return terminal(:plateau, "no further improvement after #{i + 1} pass(es)") if outcome == :break
-              return outcome if outcome
+              structural_repaired = outcome == :structural_repaired
+              return outcome if outcome && !structural_repaired
               return cancellation_terminal if cancellation_requested?
 
-              if i == 0 && structural_target?(target)
+              if i == 0 && !structural_repaired && structural_target?(target)
                 if structure_checkpoint(target:, files:, run_id:)
                   state[:consecutive_clean] = 0
                   state[:history].clear
@@ -295,7 +296,9 @@ module Master
               pass_state: durable_pass_state(state),
             )
           end
-          return if structural
+          # The caller must not immediately repeat the structural sweep as
+          # its first-pass checkpoint after this pass already performed one.
+          return :structural_repaired if structural
 
           @run_journal.pass_finish(run_id, pass, status: result.status, message: result.message)
           ending = PASS_ENDINGS[result.status]

@@ -2535,6 +2535,39 @@ end
     saved.nil? ? ENV.delete("MASTER_FIX_STRUCTURAL") : ENV["MASTER_FIX_STRUCTURAL"] = saved
   end
 
+  def test_structural_repair_does_not_trigger_a_second_first_pass_sweep
+    target = File.join(@root, "RAILS")
+    FileUtils.mkdir_p(target)
+    order = []
+    loop = Master::Fix::FixLoop.allocate
+    loop.instance_variable_set(:@root, @root)
+    discipline = Object.new
+    discipline.define_singleton_method(:improving?) { false }
+    loop.instance_variable_set(:@convergence_discipline, discipline)
+    loop.define_singleton_method(:run_one_pass) do |_index, **|
+      order << :repair_pass
+      :structural_repaired
+    end
+    loop.define_singleton_method(:sweep_tree) do |_target, _run_id, phase:|
+      order << phase
+      []
+    end
+    deadline = Object.new
+    deadline.define_singleton_method(:expired?) { false }
+
+    saved = ENV["MASTER_FIX_STRUCTURAL"]
+    ENV["MASTER_FIX_STRUCTURAL"] = "1"
+    result = loop.send(
+      :run_passes, files: [], target:, max_passes: 1, deadline:,
+      budget_seconds: 60, start_pass: 1, run_id: "r1",
+    )
+
+    assert_match(/\\APLATEAU: /, result.value!)
+    assert_equal [:repair_pass], order
+  ensure
+    saved.nil? ? ENV.delete("MASTER_FIX_STRUCTURAL") : ENV["MASTER_FIX_STRUCTURAL"] = saved
+  end
+
   def test_structural_sweep_failure_is_not_swallowed
     sweep = Object.new
     def sweep.run(**) = raise "boom"
