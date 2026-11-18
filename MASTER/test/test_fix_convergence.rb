@@ -1699,6 +1699,10 @@ end
     assert_includes briefing, "bypasses"
     assert_includes briefing, "verification"
     assert_includes briefing, "inversion"
+    assert_includes briefing, "product experience"
+    assert_includes briefing, "trust and stewardship"
+    assert_includes briefing, "cross-product coherence"
+    assert_includes briefing, "polish discipline"
     assert_includes briefing, "dummy.yml"
   end
 
