@@ -25,6 +25,7 @@ module Master
             "--mode=repair (default) writes; --mode=audit reads tree, trace, structure, scanner, typography, map, council and per-tree repo probes; preview only.",
             "--mode=visual is a read-only style pass; --mode=elevate selects improvement;",
             "Polish probes are advisory: source inspection never claims rendered beauty, accessibility-device acceptance or human listening proof.",
+            "Council improvement review also considers comprehension, navigation, interaction, trust, privacy, localization, resilience, provenance, performance and cross-product continuity while preserving product identity.",
             "--mode=all selects the existing all-work lane. All modes keep the run budgets and gates.",
             "/audit, /review, /critique and /council are audit aliases; /visual and /style are visual aliases.",
             "/elevate and /map are elevation aliases; /all, /workflow, /triad, /sweep, /through and /self are all aliases.",
