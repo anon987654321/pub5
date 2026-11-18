@@ -42,7 +42,7 @@ The core execution path is `lib/core/`: an admitted effect passes through Consti
 
 The existing compatibility spellings rewrite to the one dispatcher: `/audit`, `/review`, `/critique` and `/council` select audit; `/scan` selects the read-only repair preview (`--mode=repair --dry-run`); `/visual` and `/style` select visual; `/elevate` and `/map` select elevate; `/all`, `/workflow`, `/triad`, `/sweep`, `/through` and `/self` select all. Use `/fix --mode=audit|visual|elevate|all` for explicit mode selection. New instructions and scripts should call `/fix` directly.
 
-The Kernel serializes a run, records its lifecycle, and delegates convergence and Law-level repair. Runs are bounded and resumable; a stopped or interrupted run is not a successful one. Ordinary per-file repairs use `Fix::Transaction` for staged writes, rollback and delivery. Multi-file restructuring uses the explicit snapshot, proof and undo path in `Fix::Restructure`. Those are distinct recovery contracts; do not describe one as the other. The [coordinator ownership map](docs/fix_coordinator_map.md) records the actual owners and remaining migration boundaries.
+The Kernel serializes a run, records its lifecycle, and delegates convergence and Law-level repair. Runs are bounded and resumable; a stopped or interrupted run is not a successful one. Ordinary per-file repairs use `Fix::Transaction` for staged writes, rollback and delivery. Multi-file restructuring uses the explicit snapshot, proof and undo path in `Fix::Restructure`. Those are distinct recovery contracts; do not describe one as the other. The canonical execution owners are the Ruby implementations under `lib/core/`, `lib/fix/kernel/` and `lib/execution/`; tests pin the public ownership and recovery boundaries.
 
 The run footer includes a per-run file outcome docket for files that entered the repair adapter. The durable assessment artifact separately enumerates every eligible scanner path as scanned or unmeasured; that is scanner coverage, not a Law PASS or a census of rendered behaviour. The Law × stream × surface matrix remains the compliance record. Its quality projection reports engineering, editorial, visual, experience and operations separately. `compliance_status` must be PASS before repair can finish DONE; `overall_status` also records external evidence, which remains INCONCLUSIVE until document rendering, assistive technology, live-host, listening or qualified business/legal review is actually supplied.
 
@@ -70,7 +70,7 @@ A scan-only run does not authorize edits. Source checks do not prove rendered be
 
 ## Configuration has owners
 
-- `data/providers.yml` and `data/models.yml` own provider and model configuration. See [free-compute and routing notes](docs/free_compute.md).
+- `data/providers.yml` and `data/models.yml` own provider and model configuration; `lib/io/model_quota.rb` owns quota measurement and fallback decisions.
 - `data/voice.yml` owns speech runtime configuration.
 - `data/tokens.yml` owns visual values; `data/laws.yml` owns minimal-interface, visual, dialogue and constitutional policy.
 - `data/council.yml` owns council personas, presets and the juror and judge prompts; the default hard-critique preset is `general_critique`, and the prose contract on those prompts applies to English and Bokmål alike.
@@ -152,8 +152,14 @@ The ask is access — one real repository, its operator's trust, a month of meas
 
 The near horizon is self-maintenance: `/fix` holding this repository's suites and ratchets at green is the product demonstration. The next horizon is one external pilot on someone else's tree. Commercial terms, pricing and eligibility wait for pilot evidence; nothing here commits any funder.
 
-## References
+## Source map
 
-[Execution contracts](docs/execution-contracts.md) explain the shared boundaries. [Free compute](docs/free_compute.md) covers model access. [Mobile support](docs/mobile.md) covers Termux and device behavior. [Expectations](docs/expectations.yml) sorts what the operator asks for into in scope, stretch code-only and out of scope, with the one agent rule about delivered. [openbsd-rust](docs/openbsd-rust.md) is the layout contract for the operator's port project and the external targets MASTER addresses by path. [Session 2026-11-08](docs/session-2026-11-08.md) reads the operator's transcript and the container suite baseline as evidence, with the answered and the open rows. [Session 2026-11-09](docs/session-2026-11-09.md) preserves the next operator transcript as historical evidence. Its unresolved follow-ups live only in the root [TODO](../TODO.md), the single cross-tree Markdown action list. [Design sweep](docs/design_sweep.md) maps the pixel Laws to their owners and carries the eight lenses for a RAILS stylesheet pass. The root [TODO](../TODO.md) is the only cross-tree action list; structured YAML files remain owners of their own IDs, evidence and state.
-
+- Execution contracts: `lib/execution/contract.rb` and its tests.
+- Mobile support: `data/mobile.yml`, `bin/master-mobile-install` and `test/test_mobile.rb`.
+- Provider routing and quotas: `data/providers.yml`, `data/models.yml` and `lib/io/model_quota.rb`.
+- Lovdata access limits: `lib/io/llm.rb` and its tool contract tests.
+- Scope expectations and vocabulary: `data/expectations.yml` and `data/synonyms.yml`.
+- Cross-tree inventory: `lib/convergence/architecture.rb` and `MasterPaths::TREES`.
+- CSS cascade order and thresholds: `data/css_architecture.yml`, `data/tokens.yml` and the corresponding Laws.
+- Root `TODO.md` remains the only cross-tree action list. Structured ledgers own their own IDs, evidence, provenance and lifecycle state.
 Use `bin/master --help` and `bin/operator --help` for the current command surface.
