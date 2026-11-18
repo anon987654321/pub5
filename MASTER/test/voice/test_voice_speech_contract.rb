@@ -41,6 +41,26 @@ class SpeechContractSpec < Minitest::Test
     ENV["MASTER_TTS_STYLE"] = old_style
   end
 
+  def test_house_delivery_defaults_to_eager_and_is_shared_with_fallback_policy
+    previous_style = ENV.delete("MASTER_TTS_STYLE")
+    Master::Voice::Policy.reload!
+
+    assert_equal :eager, Master::Voice::Speech.default_style
+    assert_equal({ rate: "+6%", pitch: "+6Hz" },
+                 Master::Voice::Speech.style_config_for(:christopher, :eager))
+    assert_equal "+6%", Master::Voice::Policy.default_rate
+    assert_equal "+6Hz", Master::Voice::Policy.default_pitch
+    assert_equal "+6%", Master::Voice::Transcendent.supportive_rate(
+      "Hello there.", :eager, { "warmth" => 0.5, "depth" => 0.5 }
+    )
+    assert_equal "+8Hz", Master::Voice::Transcendent.supportive_pitch(
+      "Hello there.", :eager, { "depth" => 0.5 }
+    )
+  ensure
+    ENV["MASTER_TTS_STYLE"] = previous_style if previous_style
+    Master::Voice::Policy.reload!
+  end
+
   def test_transcendent_engine_chain_can_be_overridden
     old = ENV["MASTER_TTS_ENGINE_CHAIN"]
     ENV["MASTER_TTS_ENGINE_CHAIN"] = "edge,say"
