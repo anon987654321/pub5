@@ -522,7 +522,8 @@ if File.file?(vps_state_path)
   failures << "vps-state service reads must use the root broker" unless state_contract
   recovery_state_contract = vps_state.include?('Open3.capture2e("doas", "-n", broker, "deploy-run-pending-list")') &&
                            vps_state.include?("def deploy_recovery_status") &&
-                           vps_state.include?('File.expand_path(STAMP_DIR) == "/var/db/pub4"')
+                           vps_state.include?('STAMP_DIR = ENV.fetch("PUB5_STAMP_DIR", "/var/db/pub5")') &&
+                           vps_state.include?('File.expand_path(STAMP_DIR) == "/var/db/pub5"')
   failures << "vps-state fleet recovery reads must use the fixed root broker" unless recovery_state_contract
 else
   failures << "missing OPENBSD/bin/vps-state"

@@ -14,7 +14,7 @@ class TestVpsState < Minitest::Test
   SCRIPT = File.expand_path("../bin/vps-state", __dir__)
 
   def state(dir, *args)
-    env = { "DEPLOY_ASSUME_VPS" => "1", "PUB4_STAMP_DIR" => dir, "PUB4_ALERT_LOG" => File.join(dir, "alerts.log") }
+    env = { "DEPLOY_ASSUME_VPS" => "1", "PUB5_STAMP_DIR" => dir, "PUB4_ALERT_LOG" => File.join(dir, "alerts.log") }
     out, err, status = Open3.capture3(env, RbConfig.ruby, SCRIPT, *args)
     assert status.success?, err
     out
@@ -58,6 +58,14 @@ class TestVpsState < Minitest::Test
     end
   end
 
+  def test_stamp_reader_and_broker_use_the_pub5_host_ledger
+    source = File.read(SCRIPT)
+
+    assert_includes source, %q{STAMP_DIR = ENV.fetch("PUB5_STAMP_DIR", "/var/db/pub5")}
+    assert_equal 2, source.scan(%q{File.expand_path(STAMP_DIR) == "/var/db/pub5"}).length
+    refute_includes source, %q{File.expand_path(STAMP_DIR) == "/var/db/pub4"}
+  end
+
   def test_production_status_reader_uses_fixed_broker_verb
     source = File.read(SCRIPT)
 
@@ -68,7 +76,7 @@ class TestVpsState < Minitest::Test
     assert_includes source, "DEPLOY_RUN_PENDING_LIMIT = 100"
     assert_includes source, 'def deploy_recovery_status'
     assert_includes source, 'status["unavailable"] ? "unavailable"'
-    assert_includes source, 'File.expand_path(STAMP_DIR) == "/var/db/pub4"'
+    assert_includes source, 'File.expand_path(STAMP_DIR) == "/var/db/pub5"'
   end
 
   def test_corrupt_in_progress_deploy_status_is_visible

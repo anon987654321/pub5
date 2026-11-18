@@ -11,7 +11,7 @@ ROOT = File.expand_path("../..", __dir__)
 require_relative "../lib/environment"
 require_relative "../lib/pid_probe"
 
-STAMP_DIR = ENV.fetch("PUB4_STAMP_DIR", "/var/db/pub4")
+STAMP_DIR = ENV.fetch("PUB5_STAMP_DIR", "/var/db/pub5")
 # pub4-alert's record: what a healed or noted symptom left behind when it recurred.
 ALERT_LOG = ENV.fetch("PUB4_ALERT_LOG", "/var/log/pub4-alerts.log")
 
@@ -76,10 +76,10 @@ end
 def deploy_in_progress(app)
   path = File.join(STAMP_DIR, "deploy_status", "#{app}.json")
 
-  # /var/db/pub4/deploy_status is root-only by design. On vm23 read through the
+  # /var/db/pub5/deploy_status is root-only by design. On vm23 read through the
   # fixed broker instead of treating denied direct reads as "no deploy". A
   # custom stamp directory remains directly readable for tests and local drills.
-  if Deploy::Environment.on_vps? && File.expand_path(STAMP_DIR) == "/var/db/pub4"
+  if Deploy::Environment.on_vps? && File.expand_path(STAMP_DIR) == "/var/db/pub5"
     broker = "/usr/local/sbin/pub5-admin"
     unless File.file?(broker) && !File.symlink?(broker) && File.executable?(broker)
       return unavailable_deploy_status(path, "pub5-admin missing or untrusted")
@@ -189,7 +189,7 @@ def validate_pending_deploy_records!(records)
 end
 
 def deploy_run_records
-  if Deploy::Environment.on_vps? && File.expand_path(STAMP_DIR) == "/var/db/pub4"
+  if Deploy::Environment.on_vps? && File.expand_path(STAMP_DIR) == "/var/db/pub5"
     broker = "/usr/local/sbin/pub5-admin"
     unless File.file?(broker) && !File.symlink?(broker) && File.executable?(broker)
       return [nil, "pub5-admin missing or untrusted", false, 0]
