@@ -12,6 +12,10 @@ class TestDeployStamp < Minitest::Test
     end
   end
 
+  def test_default_stamp_directory_matches_the_pub5_host_ledger
+    assert_equal "/var/db/pub5", Deploy::DeployStamp::DIR
+  end
+
   def test_the_stamp_sha_is_read_and_a_missing_or_torn_stamp_is_nil
     with_stamp(%({"app":"master","sha":"aa4f010c1","status":"ok"})) do |dir|
       assert_equal "aa4f010c1", Deploy::DeployStamp.sha("master", dir:)
