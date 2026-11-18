@@ -15,6 +15,12 @@ class TestFixLanePreflight < Minitest::Test
     def model_for(operation:) = @routes.fetch(operation, OPUS)
   end
 
+  class ExplodingAgent
+    def model_for(**)
+      raise "model route must not be queried"
+    end
+  end
+
   class RoutedAgent < Agent
     def initialize(routes, candidates)
       super(routes)
@@ -116,8 +122,7 @@ class TestFixLanePreflight < Minitest::Test
   end
 
   def test_a_broken_consensus_jury_blocks_before_model_routes_are_consulted
-    agent = Object.new
-    agent.define_singleton_method(:model_for) { |**| raise "model route must not be queried" }
+    agent = ExplodingAgent.new
 
     result = preflight_check(agent:, env: {}, jury_state: :fail, jury_detail: "author exclusion leaves only 1/2 voters")
 
@@ -129,8 +134,7 @@ class TestFixLanePreflight < Minitest::Test
   end
 
   def test_an_unmeasured_consensus_jury_is_not_treated_as_ready
-    agent = Object.new
-    agent.define_singleton_method(:model_for) { |**| raise "model route must not be queried" }
+    agent = ExplodingAgent.new
 
     result = preflight_check(agent:, env: {}, jury_state: :unmeasured, jury_detail: "provider probe timed out")
 
