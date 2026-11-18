@@ -143,8 +143,15 @@ module Master
               .gsub(/\x60[^\x60]*\x60/, " ")
               .gsub(/^\s*(?:\x60{3}|~{3}).*?^\s*(?:\x60{3}|~{3})\s*$/m, " ")
             words = prose.scan(/[\p{L}\p{N}]+/).size
-            markdown = %w[.md .markdown .rst].include?(File.extname(path).downcase)
-            heading_rows = markdown ? markdown_headings(source) : []
+            extension = File.extname(path).downcase
+            markdown = %w[.md .markdown].include?(extension)
+            heading_rows = if markdown
+                             markdown_headings(source)
+                           elsif %w[.html .htm].include?(extension)
+                             html_headings(source)
+                           else
+                             []
+                           end
             findings = []
 
             if words < 60 && File.basename(path) =~ /README|CONTRIBUTING|ARCHITECTURE/i
@@ -155,7 +162,11 @@ module Master
               )
             end
 
-            if heading_rows.empty? && words > 240
+            navigational = markdown && (
+              File.basename(path).match?(/\A(?:README|AGENTS|ARCHITECTURE|CONTRIBUTING)/i) ||
+              path.tr("\\", "/").split("/").include?("docs")
+            )
+            if heading_rows.empty? && words > 240 && navigational
               findings << opportunity(
                 :prose, path, "wall_of_text",
                 "#{words} words appear without navigational headings",
@@ -205,6 +216,15 @@ module Master
             match = line.match(/^\s*(\#{1,6})\s+\S/)
             { level: match[1].length, line: index + 1 } if match
           end
+        end
+
+        def html_headings(source)
+          rows = []
+          source.to_enum(:scan, /<h([1-6])\b/i).each do
+            match = Regexp.last_match
+            rows << { level: match[1].to_i, line: line_number(source, match.begin(0)) }
+          end
+          rows
         end
 
         # --- visual: semantic names and token-led styling, not aesthetic claims. ---
