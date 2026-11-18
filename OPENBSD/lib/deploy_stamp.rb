@@ -22,9 +22,12 @@ module Deploy
       path = File.join(dir, "last_deploy_#{app}.json")
       return nil unless File.readable?(path)
 
-      value = JSON.parse(File.read(path))["sha"].to_s
-      value.empty? ? nil : value
-    rescue JSON::ParserError
+      record = JSON.parse(File.read(path))
+      return nil unless record.is_a?(Hash)
+
+      value = record["sha"].to_s
+      value.match?(/\A[0-9a-f]{7,40}\z/i) ? value : nil
+    rescue JSON::ParserError, TypeError, IOError, SystemCallError
       nil
     end
 
