@@ -62,6 +62,7 @@ conversation: nil)
     end
 
     prepare_turn
+    begin_operation_log_capture
     subscribe_to_events
     publish_canvas_state
     result = Master::CLI::TurnRouter.call(
@@ -75,6 +76,7 @@ conversation: nil)
     )
     write_fallback(result)
     write_turn_ctx_footer
+    publish_operation_log(result)
     write_done
     trigger_post_mutation_work
   rescue ClientGone
@@ -83,8 +85,11 @@ conversation: nil)
   rescue StandardError => e
     Master::Ground::Swallow.log(e, context: "ChatService.call", event_bus: @container&.dig(:bus))
     write_error_frame
+    publish_operation_log(nil, status: "failure")
     write_done
   ensure
+    @operation_log_capture&.close
+    @operation_log_capture = nil
     clear_fiber_flags
     unsubscribe_all
     @stream.close
@@ -113,6 +118,50 @@ conversation: nil)
     when "health", "up" then "ok"
     else "ok"
     end
+  end
+
+  def begin_operation_log_capture
+    input = @params[:message].to_s.strip
+    return unless Master::Ground::PastePublisher.operation_request?(input)
+    return if Fiber[:master_visitor] == true
+
+    @operation_log_capture = Master::Ground::PastePublisher::Capture.new(
+      bus: @container[:bus],
+      conversation: @conversation,
+    )
+  rescue StandardError => e
+    Master::Ground::Swallow.log(e, context: "ChatService.operation_log.capture", event_bus: @container&.dig(:bus))
+    @operation_log_capture = nil
+  end
+
+  def publish_operation_log(result, status: nil)
+    input = @params[:message].to_s.strip
+    return unless Master::Ground::PastePublisher.operation_request?(input)
+
+    capture = @operation_log_capture
+    @operation_log_capture = nil
+    return unless capture
+
+    outcome = Master::Ground::PastePublisher.new(root: Master::REPO_ROOT).publish(
+      operation: input,
+      status: status || Master::Ground::PastePublisher.status_for(
+        result, cancelled: @cancellation&.cancelled?,
+      ),
+      output: capture.close,
+    )
+    return unless outcome.success?
+
+    write_json_event("operation_log", {
+      url: outcome.url,
+      service: outcome.service,
+      expires_in: outcome.expires_in,
+    })
+    outcome
+  rescue StandardError => e
+    Master::Ground::Swallow.log(e, context: "ChatService.operation_log.publish", event_bus: @container&.dig(:bus))
+    nil
+  ensure
+    capture&.close
   end
 
   def prepare_turn
