@@ -4,6 +4,8 @@ require_relative "test_helper"
 require "tmpdir"
 require "digest"
 require_relative "../lib/fix/antigen_store"
+require_relative "../lib/fix/repair_loop/outcome_tracking"
+require_relative "../lib/trace/causal_trace"
 
 # The failure this fuse closes: /fix re-asks the model about the same finding in
 # the same unchanged file on every pass, and the answer has not changed. The
@@ -103,6 +105,38 @@ class TestToolBreaker < Minitest::Test
     assert_equal 0o700, File.stat(File.dirname(antigen_path)).mode & 0o777
   end
 
+  def test_high_cost_law_budget_antigen_carries_run_bound_usage_receipts
+    FileUtils.mkdir_p(File.join(@dir, ".master"))
+    trace = Master::Trace::CausalTrace.start(run_id: "budget-run", root: @dir, agent: "fix")
+    File.write(
+      File.join(@dir, ".master", "costs.jsonl"),
+      [
+        { ts: 1, amount: 0.25, model: "priced-model", tokens: 200, run_id: "budget-run" },
+        { ts: 2, amount: 0.03, model: "estimated-model", tokens: 40, run_id: "budget-run", approximate: true },
+      ].map { |row| JSON.generate(row) }.join("\n") + "\n",
+    )
+    tracker = Object.new
+    tracker.extend(Master::Fix::RepairLoop::OutcomeTracking)
+    tracker.instance_variable_set(:@root, @dir)
+    tracker.instance_variable_set(:@bus, nil)
+    digest = Digest::SHA256.file(@path).hexdigest
+
+    tracker.send(:record_budget_antigen, @violation, digest, 0.25, 200, law: "TEST_RULE")
+
+    antigen = Master::Fix::AntigenStore.new(root: @dir).match(
+      law: "TEST_RULE", boundary: "a.rb",
+      defect_class: "high_cost_law_budget_exceeded", source_sha256: digest, limit: 1,
+    ).first
+    evidence = antigen.fetch("evidence")
+    assert_equal "high_cost_law_budget_exceeded", evidence.fetch("outcome")
+    assert_equal 0.25, evidence.fetch("cost_usd")
+    assert_equal 200, evidence.fetch("cost_tokens")
+    assert_equal "REPORTED_USAGE", evidence.fetch("usage_status")
+    assert_equal 1, evidence.fetch("exact_receipts")
+    assert_equal 1, evidence.fetch("estimated_records")
+  ensure
+    Master::Trace::CausalTrace.clear(trace) if defined?(trace)
+  end
   def test_best_of_n_sees_a_fused_tuple
     ENV["MASTER_FIX_BEST_OF"] = "3"
     visual = @violation.merge(law: Master::Fix::BestOfN::LAW_ID, file: File.join(@dir, "a.scss"))
