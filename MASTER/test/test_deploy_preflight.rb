@@ -144,6 +144,13 @@ class DeployPreflightTest < Minitest::Test
     end
   end
 
+  def test_git_out_reports_a_missing_git_executable_as_a_repository_error
+    Master::Io::Exec.stub(:capture2, ->(*args, **options) { raise Errno::ENOENT, "git" }) do
+      error = assert_raises(Pre::GitCommandError) { Pre.git_out("/tmp/pub5", "fetch", "origin", "main") }
+      assert_match(/git fetch origin main could not run \(Errno::ENOENT:/, error.message)
+    end
+  end
+
   def test_remote_command_blocks_when_git_fetch_fails_before_running_preflight
     calls = []
     git = lambda do |_root, *argv|

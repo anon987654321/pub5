@@ -413,6 +413,8 @@ module Operator
       output.to_s.strip
     rescue Master::Io::Exec::TimeoutError
       raise GitCommandError, "git #{argv.join(" ")} timed out after #{Master::Io::Exec::DEFAULT_TIMEOUT}s"
+    rescue SystemCallError => error
+      raise GitCommandError, "git #{argv.join(" ")} could not run (#{error.class}: #{error.message})"
     end
 
     def report(results)
