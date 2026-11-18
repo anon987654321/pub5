@@ -222,6 +222,38 @@ class TestFixLoopCommitter < Minitest::Test
     refute blocked?(bus)
   end
 
+  def test_documentation_obligation_survives_a_worker_thread_without_thread_local_state
+    write_file("api/routes.rb", "ROUTES = []\\n")
+    write_file("README.md", "# API contract\\n")
+    contract = Master::Fix::TaskContract.build(
+      intent: "functional_change",
+      scope: %w[api/routes.rb README.md],
+      preserve: [],
+      proof: ["documentation_review"],
+      documentation_pairs: [{
+        contract_path: "api/routes.rb",
+        document_path: "README.md",
+        reason: "The README documents the externally visible route contract.",
+      }],
+    )
+    git = FakeGit.new([], ["api/routes.rb"])
+    bus = FakeBus.new
+    committer = Master::Fix::FixLoop::Committer.new(
+      git:, bus:, root: @dir, task_contract: contract
+    )
+    committer.baseline!
+
+    worker = Thread.new do
+      Master::Fix::TaskContract.with_current(nil) do
+        committer.commit_if_dirty(OK_MESSAGE)
+      end
+    end
+    worker.value
+
+    assert_empty git.commits
+    assert blocked?(bus)
+  end
+
   def test_a_path_dirty_before_the_pass_stays_out_of_the_commit
     write_file("lib/ok.rb", "OK = 1\n")
     git = FakeGit.new(["lib/theirs.rb"], ["lib/theirs.rb", "lib/ok.rb"])
