@@ -75,8 +75,7 @@ module Master
           out = []
           has_architecture_report = files.any? do |path|
             normalized = path.to_s.tr("\\", "/")
-            normalized.match?(%r{(?:\A|/)(?:MASTER/)?docs/ARCHITECTURE\.md\z}) ||
-              normalized.match?(%r{(?:\A|/)ARCHITECTURE\.md\z})
+            normalized.match?(%r{(?:\A|/)(?:MASTER/)?lib/convergence/architecture\.rb\z})
           end
           unless has_architecture_report
             out << Idea.new(
