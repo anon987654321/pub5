@@ -2,6 +2,7 @@
 
 require_relative "../autofix_guard"
 require_relative "../antigen_store"
+require_relative "../../trace/causal_trace"
 require "digest"
 
 module Master
@@ -131,9 +132,13 @@ module Master
           store = AntigenStore.new(root: repo_root)
           return if store.known?(law:, boundary:, defect_class:, source_sha256:)
 
+          trace_context = Master::Trace::CausalTrace.current
           store.record(
             law:, boundary:, defect_class:,
-            evidence: { source_sha256:, outcome: outcome.to_s, attempts: 1 },
+            evidence: {
+              source_sha256:, outcome: outcome.to_s, attempts: 1,
+              run_id: trace_context && trace_context[:run_id],
+            },
             note: "repair attempt rejected against unchanged source",
             severity: "warning",
           )
