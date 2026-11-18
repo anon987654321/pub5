@@ -24,6 +24,12 @@ class TestDeployStamp < Minitest::Test
     with_stamp(%({"app":"mas)) { |dir| assert_nil Deploy::DeployStamp.sha("master", dir:) }
   end
 
+  def test_valid_json_with_wrong_shape_or_invalid_sha_is_not_a_deploy_stamp
+    with_stamp(%([])) { |dir| assert_nil Deploy::DeployStamp.sha("master", dir:) }
+    with_stamp(%({"sha":"a"})) { |dir| assert_nil Deploy::DeployStamp.sha("master", dir:) }
+    with_stamp(%({"sha":"not-a-sha"})) { |dir| assert_nil Deploy::DeployStamp.sha("master", dir:) }
+  end
+
   # Measured on vm23 2026-09-15: /health said aa4f010c1 and the stamp said
   # aa4f010c1, while the checkout had moved on to b9d0f4fac.
   def test_the_booted_build_matching_the_stamp_passes_at_either_short_length
