@@ -1,35 +1,10 @@
 ---
 doc_numbers:
-  MASTER/docs/history/recovery/legacy-apps-handoff.md:
-  - value: 0.75rem
-    why: Archived pub4 recovery handoff. The dimensions are quoted from retired app
-      stylesheets inside shell-heredoc code samples, so they record what was deleted,
-      not a scale anything here follows.
-  - value: 2rem
-    why: Same archived heredoc. A quoted retired stylesheet cannot be repointed at
-      a live token without falsifying the record of what pub4 shipped.
-  - value: 3rem
-    why: Same archived heredoc; historical quotation, not a prescription.
-  - value: 6px
-    why: Same archived heredoc; historical quotation, not a prescription.
-  - value: 10px
-    why: Same archived heredoc; historical quotation, not a prescription.
   BIZ/research/bringhurst-strunk-research.md:
   - value: 3rem
     why: Typography research quoting the canonical measure formula
       (max-width:min(66ch, 100% − 3rem)) as scholarship about why the tokens
       exist; the page prescribes no live dimension of its own.
-  MASTER/docs/visual/browserless_ad_audits.md:
-  - value: 24px
-    why: 'This page is the worked example of the static-audit input format: the dimensions
-      sit in a JSON css payload describing an external advertisement, not MASTER design
-      tokens.'
-  - value: 14px
-    why: Same JSON payload; an ad creative's own geometry, measured by the auditor,
-      not a value this tree prescribes.
-  - value: 32px
-    why: Same JSON payload; an ad creative's own geometry, measured by the auditor,
-      not a value this tree prescribes.
   RAILS/docs/SCREENSHOT_LAW_ADHERENCE.md:
   - value: 44px
     why: Capture-review evidence. The line reports that real 44px touch geometry was
