@@ -2492,9 +2492,9 @@ end
 
 Law.define(:ROBUSTNESS_sclerotium) do
   source "laws.yml ROBUSTNESS_sclerotium - harden settled paths into deterministic code"
-  ask "Has a trajectory proven by causal traces, evidence and acceptable profile cost been compiled or hardened into ordinary deterministic code, rather than leaving a living agent or model on a settled hot path?"
-  practice "Harden what is settled; let the agent explore the unsettled and rest as deterministic code."
-  fix "Compile the proven trajectory into deterministic code and remove the model from the settled hot path."
-  bad "A model is called on every run of a path whose behaviour has long been proven and stable."
-  good "The settled path runs as ordinary deterministic code; the agent is reserved for the unsettled."
+  ask "Do at least three separate completed green causal traces prove the same task, path and source revision, with measured runtime and actual provider-usage receipts, no matching unresolved antigen, explicit rollback, deterministic reproducing tests and acceptable measured cost?"
+  practice "Harden only what repeated evidence has settled; let the agent explore the unsettled and rest as deterministic code."
+  fix "When every promotion condition is proven, compile the trajectory into deterministic code and remove the model from that settled hot path. Otherwise preserve the model path and report NOT_READY."
+  bad "A model is called on every run of a path whose behaviour has repeatedly been proven stable, or a model is removed after one green run without cost and rollback evidence."
+  good "The settled path runs as ordinary deterministic code only after repeated causal, cost, usage, antigen, test and rollback evidence agrees; the agent is reserved for the unsettled."
 end
