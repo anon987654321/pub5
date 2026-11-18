@@ -172,20 +172,10 @@ module Master
 
         def announce_state(state)
           return if state.nil?
+          return if same_state_meaning?(state, @announced_state)
 
-          if voice_indicators_enabled?
-            signature = [state_meaning(state), voice_indicator_state]
-            return if signature == @announced_state_signature
-
-            @announced_state = state
-            @announced_state_signature = signature
-            terminal_puts(voice_status_line(state))
-          else
-            return if same_state_meaning?(state, @announced_state)
-
-            @announced_state = state
-            terminal_puts(Master::Trace::Dmesg::Report.format_reply(state, unit: "state0"))
-          end
+          @announced_state = state
+          terminal_puts(Master::Trace::Dmesg::Report.format_reply(state, unit: "state0"))
         end
 
         def voice_indicators_enabled?
@@ -200,23 +190,47 @@ module Master
           [@voice_mic_active == true, false]
         end
 
-        def voice_status_line(state)
+        # The terminal equivalent of a fixed overlay: save the live cursor,
+        # paint two compact rings in the upper-right corner, then restore it.
+        # One ring is microphone input; the other is TTS output.
+        def voice_indicator_overlay
           mic, tts = voice_indicator_state
-          suffix = "MIC #{mic ? "●" : "○"}  TTS #{tts ? "●" : "○"}"
-          line = Master::Trace::Dmesg::Report.format_reply(state, unit: "state0")
           width = TTY::Screen.width.to_i
           width = 80 unless width.positive?
-          visible = line.gsub(/\e\[[0-?]*[ -\/]*[@-~]/, "").length
-          "#{line}#{' ' * [width - visible - suffix.length, 2].max}#{suffix}"
+          return if width < 5
+
+          column = width - 2
+          rings = "#{mic ? "●" : "○"}#{tts ? "●" : "○"}"
+          "\e[s\e[1;#{column}H\e[0m#{rings}\e[0m\e[u"
         rescue StandardError
-          "#{Master::Trace::Dmesg::Report.format_reply(state, unit: "state0")}  MIC ○  TTS ○"
+          nil
+        end
+
+        def paint_voice_indicators
+          return unless voice_indicators_enabled?
+
+          overlay = voice_indicator_overlay
+          terminal_print(overlay, guard: false) if overlay
+        end
+
+        # Called under the terminal write lock after output and prompt redraw.
+        # Repainting here keeps the overlay pinned to the visible top row even
+        # when normal output scrolls the terminal.
+        def write_voice_indicators(target)
+          return unless voice_indicators_enabled?
+          return unless target.respond_to?(:tty?) && target.tty?
+
+          overlay = voice_indicator_overlay
+          return unless overlay
+
+          target.print(overlay)
+          target.flush if target.respond_to?(:flush)
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "cli.voice_indicators", event_bus: @refs&.bus)
         end
 
         def announce_voice_status
-          return unless voice_indicators_enabled? && @announced_state
-
-          @announced_state_signature = nil
-          announce_state(@announced_state)
+          paint_voice_indicators
         end
 
         def same_state_meaning?(state, previous)
