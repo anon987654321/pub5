@@ -143,7 +143,6 @@ class TestDocPaths < Minitest::Test
   # operator order, so the boundary rule below must admit it.
   MARKDOWN_REFERENCE_EXCEPTIONS = %w[
     MASTER/FACE_WORLD.md
-    MASTER/data/principles/openbsd_kernel_philosophy.md
     BIZ/RESTORATION_REPORT.md
     BIZ/tools/fetat_proposal.md
     STUDIO/agent-guidance/claude/agents/rails-layout-refiner.md
