@@ -206,18 +206,18 @@ class TakeawayControllersTest < ActionDispatch::IntegrationTest
     host! "markedsplass.brgen.no"
     search = {
       q: "suppe", cuisine: "Norwegian", lat: "60.39", lng: "5.32",
-      radius_km: "12", sort: "delivery_fee"
+      radius_km: "12", sort: "delivery_fee", page: "4"
     }
 
     get "/food", params: search
 
     assert_response :success
     assert_select "nav.deal-cats a[href=?]",
-                  takeaway.restaurants_path(search.except(:cuisine))
+                  takeaway.restaurants_path(search.except(:cuisine, :page))
     assert_select "nav.deal-cats a[href=?]",
-                  takeaway.restaurants_path(search)
+                  takeaway.restaurants_path(search.except(:page))
     assert_select "nav.store-pills a[href=?]",
-                  takeaway.restaurants_path(search.merge(sort: "minimum_order"))
+                  takeaway.restaurants_path(search.except(:page).merge(sort: "minimum_order"))
   end
 
   test "restaurant discovery sorts by recorded delivery fee and minimum order" do
