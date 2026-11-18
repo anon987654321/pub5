@@ -44,20 +44,31 @@ class TestRecoveryPubManifest < Minitest::Test
     assert_includes ids, "privcam_active_decision"
   end
 
-  def test_ai3_recovery_target_is_canonical_across_ledgers
+  def test_ai3_recovery_pins_the_historical_source_without_declaring_a_missing_runtime
     contract = YAML.safe_load(ROOT.join("MASTER/data/recovery/pub_restore.yml").read, permitted_classes: [Date])
     ai3_item = contract.fetch("critical_items").find { |item| item.fetch("id") == "ai3_standalone" }
-    expected_target = "MASTER/data/recovery/ai3/legacy/"
+    source_commit = "ff73247ac8389c29dd6a9f426d16d39900c17815"
+    source_tree = "c750e01881dc22b44e4f86c470e8d9c608c3352e"
 
     refute_nil ai3_item
-    assert_equal expected_target, ai3_item.fetch("expected_target")
-    assert_includes contract.fetch("checks").fetch("missing_until_restored"), "#{expected_target}ai3.rb"
+    assert_equal "archived", ai3_item.fetch("current_state")
+    assert_equal source_commit, ai3_item.fetch("source_commit")
+    assert_equal source_tree, ai3_item.fetch("source_tree")
+    assert_empty contract.fetch("checks").fetch("missing_until_restored")
 
     manifest = YAML.safe_load(ROOT.join("MASTER/data/recovery/legacy_manifest.yml").read, permitted_classes: [Date])
     legacy_ai3 = manifest.fetch("legacy_roots").find { |item| item.fetch("path") == "ai3/" }
+    review = manifest.fetch("legacy_ai3_role_review")
 
     refute_nil legacy_ai3
-    assert_equal expected_target, legacy_ai3.fetch("target_path")
+    assert_equal "archived", legacy_ai3.fetch("state")
+    assert_equal source_commit, legacy_ai3.fetch("target_path").match(/@([0-9a-f]{40}):/) && $1
+    assert_equal source_tree, legacy_ai3.fetch("source_tree")
+    assert_equal 130, legacy_ai3.dig("inventory", "entries")
+    assert_equal 120, legacy_ai3.dig("inventory", "blobs")
+    assert_equal source_commit, review.fetch("source_commit")
+    assert review.fetch("current_owner_map").key?("model_routing_and_fallback")
+    assert review.fetch("genuinely_absent_or_partial").any? { |item| item.include?("Ferrum") }
   end
 
   def test_legacy_manifest_has_state_definitions
