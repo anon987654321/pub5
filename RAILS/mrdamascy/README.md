@@ -106,9 +106,9 @@ unknown key is refused. Change a dish's recipe, and its list with it.
 
 The restaurant's original logo assets are operator-owned originals. Keep them
 byte-for-byte; do not redraw or replace them. Generated dish photographs have
-provenance sidecars in `app/assets/images/food/provenance.json`. Reference
-captures of the former Webflow site and the current app are retained under
-`docs/webflow-reference/` and `screenshots/`.
+provenance sidecars in `app/assets/images/food/provenance.json`. App captures
+that remain useful are kept under `screenshots/`; historical Webflow reference
+material is not part of the active source tree.
 
 The orange Vipps wordmark in `app/assets/images/vipps/vipps-wordmark.svg` is
 an unmodified copy of the asset published in the Vipps WooCommerce merchant
@@ -123,6 +123,5 @@ today. Any future integration must preserve its own order/payment ownership
 boundary and is not permission to add marketplace coupling pre-emptively.
 
 For implementation detail, read [APP_SPEC.md](APP_SPEC.md). For contribution
-constraints, read [AGENTS.md](AGENTS.md). The dated
-[`/fix` ledger](docs/fix-ledger.md) is historical evidence, not a competing
-specification.
+constraints, read [AGENTS.md](AGENTS.md). Historical repair transcripts remain
+in Git history; they are not an operational checklist or a second specification.
