@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
-require "json"
 require "rubygems"
-require "time"
 
 root = File.expand_path("..", __dir__)
 checks = []
@@ -64,6 +62,14 @@ rescue StandardError => e
   add.call("boot", "FAIL", "#{e.class}: #{e.message.to_s.lines.first.to_s.strip}",
            location: e.backtrace&.first.to_s)
 end
+
+# json/time load here, after the boot either activated the locked default
+# gems or failed cleanly. Requiring them at the top of the file activated the
+# interpreter's default date/time before Bundler.setup, and boot then crashed
+# with "already activated date 3.4.1, but your Gemfile requires 3.5.1" on a
+# Ruby whose defaults are older than the lock (see lib/boot/entrypoint.rb).
+require "json"
+require "time"
 
 overall = if checks.any? { |check| check[:status] == "FAIL" }
             "FAIL"
