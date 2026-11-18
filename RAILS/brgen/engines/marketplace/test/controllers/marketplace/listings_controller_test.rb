@@ -76,6 +76,25 @@ class Marketplace::ListingsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, casual.title
   end
 
+  test "switching seller type keeps the active marketplace filters" do
+    params = {
+      kind: "goods", q: "ski", from: "person", category_id: @category.id,
+      condition: "very_good", min_price: "100", max_price: "500",
+      lat: "60.39", lng: "5.32", radius_km: "12", sort: "price_low"
+    }
+
+    get marketplace.listings_path, params: params
+    assert_response :success
+
+    base = params.except(:from)
+    assert_select ".listing-filter-group a[href=?]",
+                  marketplace.listings_path(base)
+    assert_select ".listing-filter-group a[href=?]",
+                  marketplace.listings_path(base.merge(from: "person"))
+    assert_select ".listing-filter-group a[href=?]",
+                  marketplace.listings_path(base.merge(from: "shop"))
+  end
+
   test "the price floor hides what sits below it" do
     cheap = listing_for(@seller, "Paperback shelf", price_cents: 9_000)
     dear = listing_for(@seller, "Freeride ski 180", price_cents: 45_000)
