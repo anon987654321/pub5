@@ -111,7 +111,7 @@ module Master
         when Array
           value.first(16).filter_map { |item| safe_metadata(item, depth + 1) }
         when String
-          value.gsub(/\\b(?:sk-[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9_]{8,}|github_pat_[A-Za-z0-9_]{8,})\\b/, "<redacted>")[0, 256]
+          value.gsub(/\b(?:sk-[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9_]{8,}|github_pat_[A-Za-z0-9_]{8,})\b/, "<redacted>")[0, 256]
         when Symbol
           value.to_s
         when Numeric, TrueClass, FalseClass
