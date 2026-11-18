@@ -368,6 +368,22 @@ class TestDependencyManager < Minitest::Test
     assert_equal 2, @commands.length
   end
 
+  def test_native_install_failure_without_abi_evidence_is_refused_cleanly
+    manager = fake_manager([
+      [false, "", "the lockfile is out of date"],
+      [false, "", "Gem::Ext::BuildError: ERROR: Failed to build gem native extension."],
+    ])
+
+    result = manager.send(:ensure_bundle)
+
+    refute result.success?
+    # A native build failure with no ABI-stale evidence must come back as the
+    # refused-message result, not as a NameError from an unaliased constant
+    # inside the composed bundle-discovery module.
+    assert_match(/native bundle repair refused/, result.message)
+    assert_equal 2, @commands.length
+  end
+
   def test_capture_uses_the_shared_process_spawn_environment
     manager = MANAGER.new(root: @root, env: { "PATH" => ENV.fetch("PATH", "") }, out: StringIO.new, home: @root)
     ok, stdout, stderr = manager.send(

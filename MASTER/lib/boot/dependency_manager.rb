@@ -330,9 +330,12 @@ module Master
     module DependencyManagerBundleDiscovery
       # Constants live on DependencyManager; the mixins alias them, because a
       # method's constants resolve lexically in its own module, not in the
-      # including class. Without this alias, repair_native_bundle crashed with
-      # NameError on exactly the native-build failure it exists to repair.
+      # including class. Without these aliases, repair_native_bundle crashed
+      # with NameError on exactly the native-build failure it exists to
+      # repair: first on ABI_STALE_LINE, then on NATIVE_REPAIR_REFUSED one
+      # line later in the same method.
       ABI_STALE_LINE = DependencyManager::ABI_STALE_LINE
+      NATIVE_REPAIR_REFUSED = DependencyManager::NATIVE_REPAIR_REFUSED
 
       private
 
