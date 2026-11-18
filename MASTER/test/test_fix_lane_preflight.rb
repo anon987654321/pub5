@@ -136,7 +136,10 @@ class TestFixLanePreflight < Minitest::Test
   def test_an_unmeasured_consensus_jury_is_not_treated_as_ready
     agent = ExplodingAgent.new
 
-    result = preflight_check(agent:, env: {}, jury_state: :unmeasured, jury_detail: "provider probe timed out")
+    result = preflight_check(
+      agent:, env: { "MASTER_FIX_FREE_OK" => "1" },
+      jury_state: :unmeasured, jury_detail: "provider probe timed out",
+    )
 
     assert_kind_of Master::Result::Err, result
     assert_equal :inconclusive, result.category
