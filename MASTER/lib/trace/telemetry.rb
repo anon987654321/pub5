@@ -18,6 +18,7 @@ module Master
 
       def self.bootstrap!(root:, service: "master")
         return if @enabled
+        require "opentelemetry/sdk"
         path = File.join(root, TRACE_PATH)
         OpenTelemetry::SDK.configure do |c|
           c.service_name = service
