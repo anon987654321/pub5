@@ -224,6 +224,7 @@ module Master
               preserve: contract.preserve,
               proof: contract.proof,
               new_paths: contract.new_paths,
+              documentation_pairs: contract.documentation_pairs,
             }
           end
           append_event("coordinator_started", payload, run_id:)
