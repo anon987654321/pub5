@@ -86,6 +86,7 @@ module Master
                 begin
                   @current_run_id = nil
                   @current_attempt_id = attempt_id
+                  adapter.clear_terminal_receipt_identity if adapter.respond_to?(:clear_terminal_receipt_identity)
                   cancellation.activate! if cancellation&.respond_to?(:activate!)
                   reconcile_coordinated_runs!
                   result = adapter.run_unlocked(
