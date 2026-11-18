@@ -288,8 +288,8 @@ workstreams:
     title: >-
       The free-compute landscape is on record with dated numbers and named gates, and the router's
       free-model quota matches OpenRouter's 50/day per model
-    implementation: MASTER/docs/free_compute.md + MASTER/data/models.yml
-    proof: MASTER/test/test_model_quota_forecast.rb; no lane in the doc is wired until its gate is met
+    implementation: MASTER/data/providers.yml + MASTER/data/models.yml + MASTER/lib/io/model_quota.rb
+    proof: MASTER/test/test_model_quota_forecast.rb; provider reachability is established only by live lane probes
 
   # --- architecture review of MASTER (2026-11-03, operator chat) ---
   # Design of record only: nothing below is wired, each row names where its
