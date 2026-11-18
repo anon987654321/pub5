@@ -157,6 +157,15 @@ end
     end
     assert_equal "done", terminal.dig("payload", "state")
     assert_equal "ok", terminal.dig("payload", "result")
+
+    receipt = loop.terminal_receipt
+    assert_equal started.fetch("run_id"), receipt.run_id
+    assert_equal "done", receipt.terminal_state
+    assert_same receipt, receipt.verify!(log_path: kernel.log_path)
+    summary = loop.terminal_receipt_summary
+    assert_includes summary, "fix-receipt0: done"
+    assert_includes summary, "run=#{started.fetch("run_id")}"
+    refute_includes summary, "controlled adapter receipt"
   end
 
   def test_convergence_accepts_non_finite_baseline_without_coercion_crash
