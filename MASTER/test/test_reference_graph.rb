@@ -245,6 +245,25 @@ class TestReferenceGraph < Minitest::Test
     end
   end
 
+  def test_mechanical_tangle_report_finds_resolved_source_cycles_only
+    files = {
+      "a.rb" => 'require_relative "b"' + "\n",
+      "b.rb" => 'require_relative "a"' + "\n",
+      "independent.rb" => "module Independent; end\\n",
+    }
+
+    graph_of(files) do |graph, _root|
+      snapshot = graph.build(refresh: true)
+
+      assert_equal 1, snapshot.dig(:metrics, :dependency_cycle_count)
+      cycle = snapshot.dig(:tangles, :cycles).first
+      assert_equal %w[a.rb b.rb], cycle.fetch(:paths)
+      assert_equal 2, cycle.fetch(:paths).size
+      assert_operator cycle.fetch(:edge_count), :>=, 2
+      assert_equal 2, snapshot.dig(:metrics, :dependency_cycle_nodes)
+    end
+  end
+
   def test_refresh_reports_invalid_ruby_source_as_an_analysis_gap
     Dir.mktmpdir("reference-graph-invalid") do |root|
       path = File.join(root, "broken.rb")
