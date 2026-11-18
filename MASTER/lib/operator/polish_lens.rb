@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require "set"
 
 module Operator
   # PolishLens identifies mechanical, single-owner polishing opportunities and
@@ -32,9 +33,45 @@ module Operator
 
     module_function
 
+    # Pure, deterministic discovery. The CLI and /fix consume the same
+    # findings; discovery itself never writes files, creates missions or emits
+    # a second backlog.
+    def findings(root: ROOT)
+      CHECKS.flat_map { |check| send(check, root) }
+        .sort_by { |finding| [finding.path, finding.line.to_i, finding.id] }
+    end
+
+    # /fix may only act on findings whose exact file is already inside its
+    # transaction scope. Directory-only findings remain available to the
+    # read-only report but cannot expand a repair pass's ownership boundary.
+    def findings_for_paths(root: ROOT, paths:)
+      root_real = File.realpath(root)
+      owned = Array(paths).filter_map do |path|
+        absolute = File.expand_path(path.to_s, root_real)
+        next unless absolute.start_with?(root_real + File::SEPARATOR)
+        next if File.symlink?(absolute)
+        next unless File.file?(absolute)
+
+        real = File.realpath(absolute)
+        real if real.start_with?(root_real + File::SEPARATOR)
+      rescue SystemCallError
+        nil
+      end.to_set
+
+      findings(root: root_real).select do |finding|
+        absolute = File.expand_path(finding.path, root_real)
+        next false unless absolute.start_with?(root_real + File::SEPARATOR)
+        next false if File.symlink?(absolute)
+        next false unless File.file?(absolute)
+
+        owned.include?(File.realpath(absolute))
+      rescue SystemCallError
+        false
+      end
+    end
+
     def run(root: ROOT, json: false, candidates: false)
-      findings = CHECKS.flat_map { |c| send(c, root) }
-      findings.sort_by! { |f| [f.path, f.line.to_i, f.id] }
+      findings = findings(root:)
       if candidates
         puts JSON.pretty_generate(to_candidates(findings))
       elsif json
