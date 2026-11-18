@@ -150,7 +150,7 @@ class TestArchitectureExploration < Minitest::Test
       preview = candidate.fetch(:morphological_preview)
       prompt = explorer.send(:candidate_prompt, "MASTER", [File.join(root, source)], [])
 
-      assert_equal 1, preview.dig(:components, :antigen_hits).to_i.positive? ? 1 : 0
+      assert_operator preview.dig(:components, :antigen_hits), :>, 0
       refute preview.fetch(:qualified), "planning-only evidence must not become an executed morphology win"
       assert_includes preview.fetch(:missing_dimensions), :profile_cost
       assert_includes prompt, "dependency_tangles"
