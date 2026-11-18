@@ -392,6 +392,7 @@ class TestTraceSupport < Minitest::Test
     assert_equal "NOT_CAPTURED", profile.fetch("provider_usage")
     assert_equal "NOT_MEASURED", profile.fetch("resident_memory")
     assert_equal 0o600, File.stat(File.join(root, trace::LEDGER_DIR, trace::LEDGER_FILE)).mode & 0o7777
+    assert_equal 0o700, File.stat(File.join(root, trace::LEDGER_DIR)).mode & 0o777
     assert_nil trace.current
   ensure
     FileUtils.rm_rf(root) if root
