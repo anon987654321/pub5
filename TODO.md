@@ -1,7 +1,7 @@
 # pub5 — remaining work
 
 Last full register/acceptance audit: 2026-11-14, source tree checked against `main@bd23114ca49bfc3d05dccf31e232a03d857ea28d`.
-Task-register consolidation review: 2026-11-18, tracked task-like Markdown and references checked against `main@139ff1a03b04424fb68185937080ca6a2067646e`. The root register now contains 165 active unchecked rows and no checked rows. This is a task-list consolidation, not a new full source or acceptance audit. Grouped rows
+Task-register consolidation review: 2026-11-18, tracked task-like Markdown and references checked against `main@139ff1a03b04424fb68185937080ca6a2067646e`. The consolidation checkpoint contained 165 active unchecked rows and no checked rows. A count-only refresh after the 2026-11-18 source-review work found 164 active unchecked rows and no checked rows; this is not a new full source or acceptance audit. This is a task-list consolidation, not a new full source or acceptance audit. Grouped rows
 are not atomic task counts; aspirational horizons remain visible but are not
 active checkboxes. The tracked tree contains no `PLAN.md`; root `TODO.md` is
 the sole cross-tree Markdown action register, with detailed state owned by the
@@ -57,7 +57,7 @@ Integrated into the existing `/fix` owners:
 - `MASTER/lib/review/reference_graph.rb` — resolved source dependency cycles are detected as strongly connected components; fan-in/fan-out hotspots and deterministic cycle digests are reported to `/fix`.
 - `MASTER/lib/fix/antigen_store.rb` — cycle signatures, source-bound repair failures, and configured per-Law budget crossings are stored once, with metadata-only evidence, exact/estimated cost summaries and private filesystem modes. Changed source bytes reopen a failed repair decision.
 - `MASTER/lib/fix/morphological_score.rb` and `MASTER/lib/fix/architecture_exploration/` — graph cycles and matching antigens inform candidate prompts and morphology previews. Unknown dimensions receive no points; incomplete probes cannot win. The planning-only architecture tournament remains the selector until probes are actually executed and measured.
-- `MASTER/lib/fix/protocol.rb` — the machine-readable `review` stage now has an external-review intake contract: normalize and deduplicate recommendations, ground every claim in current source/Law/test evidence, classify every disposition, execute authorised reversible changes, and preserve only genuine external blockers.
+- `MASTER/lib/fix/protocol.rb` — the machine-readable `review` stage has an external-review intake contract: inventory every supplied artifact and numbered item, retain source/item provenance, detect incomplete input, normalize and deduplicate recommendations, ground every claim in current source/Law/test evidence, classify every disposition, execute authorised reversible changes, and preserve only genuine external blockers. A bare `finish` instruction completes accepted actionable scope without inventing requirements. Regression coverage was extended in `MASTER/test/test_fix_protocol.rb`; it is authored but NOT_RUN here.
 
 Evidence-gated / host-bound limitations (not claimed as complete):
 
