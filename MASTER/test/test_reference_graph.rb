@@ -249,7 +249,7 @@ class TestReferenceGraph < Minitest::Test
     files = {
       "a.rb" => 'require_relative "b"' + "\n",
       "b.rb" => 'require_relative "a"' + "\n",
-      "independent.rb" => "module Independent; end\\n",
+      "independent.rb" => "module Independent; end\n",
     }
 
     graph_of(files) do |graph, _root|
