@@ -215,6 +215,9 @@ class TestPipeline < Minitest::Test
       # The loop speaks in terminal states; a bare :done reads as incomplete.
       Master::Result.ok("DONE: clean")
     end
+    probe.define_singleton_method(:terminal_receipt_summary) do
+      "fix-receipt0: done run=fixture target=MASTER result=ok changed=1 assessment=verified ledger=4 sha256=#{"a" * 64}"
+    end
 
     pass = Master::CLI::Pipeline::Pass.allocate
     pass.instance_variable_set(:@fix_loop, probe)
@@ -226,7 +229,8 @@ class TestPipeline < Minitest::Test
 
     result = pass.send(:run_fix, File.expand_path("../tmp", __dir__))
 
-    assert_equal "DONE: clean", result
+    assert_includes result, "DONE: clean"
+    assert_includes result, "fix-receipt0: done run=fixture"
     assert_equal "fix", seen.fetch("loop")
     assert_nil Master::Ops::LoopOwner.active
   ensure
