@@ -152,7 +152,7 @@ module Master
         @runtime = VisualRuntime.new(root:, bus:)
       end
 
-      # Each pass renders its surfaces again, so only --lane all runs it; the visual lane groups one sweep instead.
+      # Repair passes render their eligible surfaces; the visual lane instead performs one grouped RAILS sweep.
       def applicable?(target)
         return false unless WorkLane.runs?(:visual_pass)
 
