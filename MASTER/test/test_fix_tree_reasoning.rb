@@ -66,6 +66,7 @@ class TestFixTreeReasoning < Minitest::Test
 
     assert_empty result.proposals
     assert_equal 1, result.dropped
+    assert_includes result.summary, "1 invalid proposal(s) dropped"
   end
 
   def test_no_model_is_reported_and_does_not_raise
