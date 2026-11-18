@@ -6,72 +6,73 @@ authorization: >
   Operator request to land the polishing register and make MASTER able to
   identify and implement similar polishing opportunities as part of /fix.
 method: >
-  Extend the nearest existing owners. Discovery is a read-only lens in
-  lib/operator (the family that already holds law_audit and law_reach),
-  exposed by a thin tools/ wrapper. Implementation stays with the existing
-  /fix pipeline, its budgets, veto and Council; the lens emits candidates in
-  the intake shape and invents no second queue and no new backlog file.
-  Rendered values, taste and listening decisions remain operator-owned under
-  RENDERED_VALUES and are surfaced, never auto-applied.
+  Extend the nearest existing owners. Discovery is Operator::PolishLens
+  (lib/operator, the law_audit/law_reach family), read-only by default.
+  Implementation is a bounded, operator-gated --apply (polish_apply.rb) for
+  the strictly mechanical reversible subset, suitable as an argv-allowlisted
+  /fix implementer: dry-run by default, refuses sacred paths (fail closed)
+  and rendered values, consults antigen memory, emits a receipt per edit.
+  Full intake scheduling reuses TaskSteward and the existing /fix pipeline;
+  no second queue and no new backlog file. Rendered, taste, listening and
+  live-host decisions remain operator-owned under RENDERED_VALUES.
 candidates:
   - id: polish_c01
     tree: MASTER
     status: implemented
-    spec: >
-      Operator::PolishLens plus tools/polish_lens.rb: deterministic,
-      context-aware discovery of mechanical single-owner polish (keep
-      hygiene, empty dirs, shebang portability, exec bit, fixture extension
-      and mirror, generated banner, generated-pointer symmetry, doc links),
-      each finding grounded in an existing Law with a proposed edit and a
-      proof command, emitted as /fix-compatible candidates.
+    spec: Operator::PolishLens discovery, context-aware, /fix-compatible candidates.
     cost: small
     reversibility: git revert
   - id: polish_c02
     tree: MASTER
-    status: implemented
+    status: candidate
     spec: >
-      Wire the read-only PolishLens findings into the existing /fix improvement
-      intake when MASTER_BACKLOG_AUTORUN=1. Only exact, existing file paths
-      already owned by the active pass and one registered tree are eligible;
-      directory-only suggestions cannot expand the transaction scope. Findings
-      route through ELEVATION_IDEAL, Council, the existing repair transaction,
-      veto and proof path. Lens discovery never executes a command or creates
-      a second Mission/queue. When /fix is invoked by the root backlog
-      TaskSteward, its existing Mission and argv-allowlisted acceptance executor
-      remain the lifecycle and command authorities.
+      Schedule PolishLens --candidates through the existing /fix intake behind
+      MASTER_BACKLOG_AUTORUN, reusing TaskSteward and the argv-allowlisted
+      executor; add polish_lens --apply to the allowlist. Needs the bundle and
+      a focused regression.
     cost: medium
     reversibility: git revert
   - id: polish_c03
     tree: cross
     status: candidate
     spec: >
-      The four-hundred-item polishing register is candidate material, not a
-      build order. Mechanical rows are regenerable by the lens; rendered,
-      taste, listening and live-host rows remain operator-owned decisions.
+      The polishing registers are candidate material, not a build order.
+      Mechanical rows are regenerable by the lens; rendered, taste, listening
+      and live-host rows remain operator-owned decisions.
     cost: large
     reversibility: n/a
+  - id: polish_c04
+    tree: MASTER
+    status: implemented
+    spec: >
+      Bounded --apply implementation half (polish_apply.rb): mechanical subset
+      only, dry-run default, sacred-path fail-closed guard, antigen memory,
+      per-edit receipts; --reject records operator rejections as antigens.
+    cost: small
+    reversibility: git revert
 critique:
   - candidate: polish_c01
     verdict: keep
     attack: >
-      A naive lens cried wolf: a hardcoded shebang convention flagged 86 of a
-      legitimately polyglot tree, an absolute-path check flagged intentional
-      OPENBSD/mirror target-host scripts, and a pointer check compared the
-      hand-written CLAUDE.md against generated peers. Each was corrected to
-      respect context, so the lens reports zero on a clean tree and real
-      defects on a dirty one (bare-ruby proof). This is the saturation and
-      immune_pattern discipline applied to the instrument itself.
+      A naive lens cried wolf on the polyglot tree, OPENBSD/mirror paths and
+      the hand-written CLAUDE.md; each was corrected (saturation and
+      immune_pattern applied to the instrument). Zero findings on a clean
+      tree, real defects on a dirty one.
   - candidate: polish_c02
     verdict: keep
     attack: >
-      Auto-running polish could churn taste surfaces; mitigated by the opt-in
-      MASTER_BACKLOG_AUTORUN gate, exact active-file scope, single-tree
-      restriction, and reuse of the existing Council, transaction, veto and
-      proof path. Focused regressions are committed but have not been executed
-      in this editing session; runtime verification remains NOT_RUN.
+      Auto-running polish could churn taste surfaces; mitigated by the
+      existing gate, budgets, veto, Council and the rendered exclusion.
+      NOT_RUN until the bundle is installed and a regression exercises intake.
   - candidate: polish_c03
     verdict: reject
     attack: >
-      Landing the register as a tracked backlog would violate the single
-      register contract and treat taste decisions as build permission. The
-      lens regenerates mechanical rows; the rest stay operator-owned.
+      Landing the registers as a tracked backlog breaks the single-register
+      contract and treats taste as build permission. The lens regenerates
+      mechanical rows; the rest stay operator-owned.
+  - candidate: polish_c04
+    verdict: keep
+    attack: >
+      An apply mode could overreach; bounded to three mechanical kinds,
+      dry-run by default, fail-closed on sacred paths, antigen-gated, and
+      receipted. Bare-ruby proof passes; minitest suite NOT_RUN pending bundle.
