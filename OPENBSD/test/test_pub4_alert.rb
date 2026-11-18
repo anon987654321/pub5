@@ -142,7 +142,7 @@ class TestPub4Alert < Minitest::Test
     fake(dir, "ps", "echo 'PCPU PID PPID USER STAT TIME COMMAND'; echo '84.0 123 1 root R 00:05 ruby'; echo '9.0 99 1 _nsd S 00:02 nsd'")
   end
 
-  def test_cpu_watch_needs_three_high_busy_samples_and_records_process_names_only
+  def test_cpu_watch_needs_three_high_busy_samples_and_records_process_identity_without_arguments
     Dir.mktmpdir do |dir|
       quiet_box(dir)
       fake_cpu(dir, user: 75, system: 10, idle: 15)
@@ -153,7 +153,9 @@ class TestPub4Alert < Minitest::Test
       _, status = run_alert(dir, "cpu-watch")
       assert_equal 0, status
       assert_includes log(dir), "cpu-saturation CPU busy 85%"
-      assert_includes log(dir), "ruby"
+      assert_includes log(dir), "top processes (CPU/PID/PPID/user/state/time/executable; args hidden):"
+      assert_includes log(dir), "84.0 123 1 root R 00:05 ruby"
+      assert_includes log(dir), "9.0 99 1 _nsd S 00:02 nsd"
       refute_includes log(dir), "ruby -"
       assert File.file?(File.join(dir, "cpu-pressure")), "active CPU pressure must be visible to resource_guard"
       assert File.file?(File.join(dir, "state", "cpu-watch.seen")), "successful sampling must refresh the heartbeat"

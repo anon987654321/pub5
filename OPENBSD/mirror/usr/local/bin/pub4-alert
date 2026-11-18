@@ -291,8 +291,9 @@ vmstat_cpu_sample() {
   }
 }
 
-# Diagnostic only: ps -c reports executable names, never full argument strings
-# or process environments. Command-line arguments can contain secrets.
+# Diagnostic only: ps -c reports the executable name, not its full arguments.
+# The snapshot also includes CPU, PID/PPID, user, state and CPU time so an operator
+# can identify a runaway or zombie without exposing command arguments or env.
 cpu_top_processes() {
   ps -axcr -o pcpu,pid,ppid,user,state,time,comm 2>/dev/null | {
     typeset rows=0 details="" line
@@ -436,14 +437,14 @@ cpu_watch() {
   if [[ $previous_state == clear && $new_state == warning ]]; then
     details=$(cpu_top_processes)
     if (( deploying )); then
-      raise_transition cpu-saturation "CPU busy ${busy}% for $high consecutive minutes during a deploy (alert threshold $CPU_DEPLOY_STRIKES minutes); top processes (names only): $details; history: $CPU_HISTORY"
+      raise_transition cpu-saturation "CPU busy ${busy}% for $high consecutive minutes during a deploy (alert threshold $CPU_DEPLOY_STRIKES minutes); top processes (CPU/PID/PPID/user/state/time/executable; args hidden): $details; history: $CPU_HISTORY"
     else
-      raise_transition cpu-saturation "CPU busy ${busy}% for $high consecutive minutes (warning threshold $CPU_WARN%, recovery below $CPU_RECOVER% for $CPU_RECOVER_STRIKES minutes); top processes (names only): $details; history: $CPU_HISTORY"
+      raise_transition cpu-saturation "CPU busy ${busy}% for $high consecutive minutes (warning threshold $CPU_WARN%, recovery below $CPU_RECOVER% for $CPU_RECOVER_STRIKES minutes); top processes (CPU/PID/PPID/user/state/time/executable; args hidden): $details; history: $CPU_HISTORY"
     fi
   elif [[ $previous_state == clear && $new_state == critical ]] ||
        [[ $previous_state == warning && $new_state == critical ]]; then
     details=$(cpu_top_processes)
-    raise_transition cpu-critical "CPU busy ${busy}% for $critical consecutive minutes (critical threshold $CPU_CRIT%); top processes (names only): $details; history: $CPU_HISTORY"
+    raise_transition cpu-critical "CPU busy ${busy}% for $critical consecutive minutes (critical threshold $CPU_CRIT%); top processes (CPU/PID/PPID/user/state/time/executable; args hidden): $details; history: $CPU_HISTORY"
   elif [[ ( $previous_state == warning || $previous_state == critical ) && $new_state == clear ]]; then
     raise_transition cpu-recovered "CPU recovered to ${busy}% busy for $CPU_RECOVER_STRIKES consecutive minutes; active pressure signal cleared"
   fi
