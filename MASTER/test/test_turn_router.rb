@@ -182,7 +182,7 @@ class TurnRouterTest < Minitest::Test
   end
 
   def test_greeted_polite_full_stack_deploy_routes_with_confirmation_and_cancellation
-    message = "Hey, can you redeploy OPENBSD, RAILS, and MASTER web on vm23 please?"
+    message = "Hey, could you please redeploy OPENBSD, RAILS, and MASTER web on vm23 please?"
     proposal = Master::CLI::OperatorIntent::Result.new(status: :deploy, target: "all")
     fake_intent = Object.new
     fake_intent.define_singleton_method(:call) { |_text| proposal }

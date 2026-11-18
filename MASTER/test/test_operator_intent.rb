@@ -146,6 +146,28 @@ class OperatorIntentTest < Minitest::Test
     end
   end
 
+  def test_stacked_politeness_prefixes_keep_explicit_deploys_deterministic
+    with_inventory do |root|
+      messages = [
+        "Hey, could you please redeploy OPENBSD, RAILS, and MASTER web on vm23?",
+        "Please, can you redeploy everything on vm23?",
+        "I need you to please redeploy OPENBSD, RAILS, and MASTER web on vm23.",
+      ]
+
+      messages.each do |message|
+        assert Master::CLI::OperatorIntent.direct_deploy_request?(message), message
+        assert Master::CLI::OperatorIntent.direct_full_stack_confirmation?(message), message
+        result = Master::CLI::OperatorIntent.new(root:, agent: Object.new).call(message)
+        assert_equal :deploy, result.status, message
+        assert_equal "all", result.target, message
+      end
+
+      refute Master::CLI::OperatorIntent.direct_deploy_request?(
+        "Could you please explain how to redeploy the full stack on vm23?"
+      )
+    end
+  end
+
   def test_plan_only_request_stays_conversational_without_classifier_or_deployment
     with_inventory do |root|
       agent = Object.new

@@ -17,6 +17,10 @@ module Master
     module CommandRegistry
       module_function
 
+      # Three preflight checks may each use 15 minutes; single-app CI may use
+      # one hour. The remote deployment itself runs in tmux and is detached.
+      DEPLOY_CAPTURE_TIMEOUT = 7_200
+
       # /pair — issue, list, revoke or redeem a pairing code.
       def dispatch_pair(root, ctx: nil)
         arg = arg_for(ctx).to_s.strip
@@ -814,17 +818,46 @@ module Master
 
         operator = File.join(MasterPaths.repo, "MASTER", "bin", "operator")
         output, status = Master::Io::Exec.capture2e(
-          RbConfig.ruby, operator, "vps", "deploy", target, "--remote",
-          chdir: MasterPaths.repo
+          RbConfig.ruby, operator, "vps", "deploy", target, "--remote", "--detach",
+          chdir: MasterPaths.repo, timeout: DEPLOY_CAPTURE_TIMEOUT, raise_on_timeout: true
         )
         summary = deploy_summary(output, status)
         return Result.ok(summary) if status.success?
 
         Result.err("deploy: #{summary}", category: :infrastructure)
+      rescue Master::Io::Exec::TimeoutError => error
+        output = Array(error.result).first.to_s
+        summary = deploy_interrupted_summary(output, "local deployment start exceeded #{DEPLOY_CAPTURE_TIMEOUT}s")
+        Result.err("deploy: #{summary}", category: :infrastructure)
       end
 
       def deploy_summary(output, status)
         lines = output.to_s.lines.map(&:strip).reject(&:empty?)
+        return deploy_interrupted_summary(output, "local deployment wait was cancelled") if status.respond_to?(:cancelled?) && status.cancelled?
+
+        started = lines.find { |line| line.match?(/\Avps-deploy: started in tmux session [\w.-]+/i) }
+        if started
+          return deploy_interrupted_summary(output, "local deployment command ended before acknowledging the start") unless status.success?
+
+          session = started[/tmux session ([\w.-]+)/i, 1]
+          return [
+            "deployment started in tmux session #{session}; completion and public canary are not yet verified",
+            "attach: tmux attach -t #{session}",
+            "log: ~/vps-deploy.log",
+          ].join("\n")
+        end
+
+        running = lines.find { |line| line.match?(/\Avps-deploy: session [\w.-]+ already running\z/i) }
+        if running
+          session = running[/session ([\w.-]+) already running/i, 1]
+          return [
+            "deployment not started: tmux session #{session} is already running",
+            "attach: tmux attach -t #{session}",
+            "log: ~/vps-deploy.log",
+            "do not start another deployment while this session exists",
+          ].join("\n")
+        end
+
         success_line = lines.reverse.find { |line| line.match?(/\bvps-deploy:\s+.+\b(?:ok|complete|ready)\b/i) }
         return "remote: #{success_line}" if status.success? && success_line
 
@@ -843,6 +876,16 @@ module Master
         detail = lines.last(2).join(" | ") if decisive && lines.last != decisive && lines.last.length < 90
         detail = detail[0, 150]
         status.success? ? "remote: #{detail}" : "remote exit #{status.exitstatus || "signal"}: #{detail}"
+      end
+
+      def deploy_interrupted_summary(output, reason)
+        session = output.to_s[/vps-deploy: started in tmux session ([\w.-]+)/i, 1]
+        if session
+          "#{reason}; remote deployment continues in tmux session #{session}. Completion and public canary are unverified. " \
+            "Attach with: tmux attach -t #{session}. Log: ~/vps-deploy.log. Do not retry while that session exists."
+        else
+          "#{reason}; remote start state is unknown. Check tmux session pub5-deploy and ~/vps-deploy.log on vm23 before retrying."
+        end
       end
 
       # /android and /ios are the public mobile onboarding entrypoints. The

@@ -736,6 +736,8 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_includes Registry.help_text("deploy"), "/deploy all --confirm"
     assert_includes Registry.help_text("deploy"), "/deploy rails --confirm"
     assert_includes Registry.help_text("deploy"), "receipt gate runs before the normal mirror apply"
+    assert_includes Registry.help_text("deploy"), "detached"
+    assert_includes Registry.help_text("deploy"), "completion and the final public"
     assert_match(/needs explicit confirmation/, command.call(Master::CLI::PipelineContext.new(user_message: "/deploy all")))
     assert_match(/needs explicit confirmation/, command.call(Master::CLI::PipelineContext.new(user_message: "/deploy rails")))
   end
@@ -747,7 +749,7 @@ class TestCommandRegistryDispatch < Minitest::Test
     calls = []
     capture = lambda do |*argv, **options|
       calls << [argv, options]
-      ["vps-deploy: rails ok (brgen mrdamascy amber bsdports)\n", status]
+      ["vps-deploy: started in tmux session pub5-deploy (mode=detach)\nvps-deploy: detached; re-check with: tmux attach -t pub5-deploy\n", status]
     end
 
     result = Master::Io::Exec.stub(:capture2e, capture) do
@@ -759,6 +761,49 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_equal "deploy", calls.fetch(0).fetch(0).fetch(3)
     assert_equal "rails", calls.fetch(0).fetch(0).fetch(4)
     assert_equal "--remote", calls.fetch(0).fetch(0).fetch(5)
+    assert_equal "--detach", calls.fetch(0).fetch(0).fetch(6)
+    assert_equal Master::CLI::CommandRegistry::DEPLOY_CAPTURE_TIMEOUT, calls.fetch(0).fetch(1).fetch(:timeout)
+    assert_equal true, calls.fetch(0).fetch(1).fetch(:raise_on_timeout)
+  end
+
+  def test_deploy_summary_reports_a_detached_start_as_pending_not_complete
+    status = Struct.new(:exitstatus) do
+      def success? = true
+    end.new(0)
+    output = "vps-deploy: started in tmux session pub5-deploy (mode=detach)\n" \
+             "vps-deploy: detached; re-check with: tmux attach -t pub5-deploy\n"
+
+    result = Registry.send(:deploy_summary, output, status)
+
+    assert_includes result, "deployment started in tmux session pub5-deploy"
+    assert_includes result, "completion and public canary are not yet verified"
+    assert_includes result, "tmux attach -t pub5-deploy"
+    refute_includes result, "all ok"
+  end
+
+  def test_deploy_summary_preserves_the_existing_remote_session_and_prevents_a_second_start
+    status = Struct.new(:exitstatus) do
+      def success? = false
+    end.new(75)
+    result = Registry.send(:deploy_summary,
+      "vps-deploy: session pub5-deploy already running\n  attach: tmux attach -t pub5-deploy\n  log: ~/vps-deploy.log\n", status)
+
+    assert_includes result, "deployment not started"
+    assert_includes result, "tmux attach -t pub5-deploy"
+    assert_includes result, "do not start another deployment"
+  end
+
+  def test_deploy_summary_reports_a_cancelled_wait_without_claiming_remote_cancellation
+    status = Struct.new(:exitstatus) do
+      def success? = false
+      def cancelled? = true
+    end.new(130)
+    result = Registry.send(:deploy_summary,
+      "vps-deploy: started in tmux session pub5-deploy (mode=detach)\n", status)
+
+    assert_includes result, "local deployment wait was cancelled"
+    assert_includes result, "remote deployment continues"
+    assert_includes result, "do not retry"
   end
 
   def test_deploy_summary_reports_remote_success_without_the_full_log

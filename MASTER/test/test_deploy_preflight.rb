@@ -145,6 +145,55 @@ class DeployPreflightTest < Minitest::Test
                  "VPS_DEPLOY_CI_SHA=#{SHA} zsh OPENBSD/bin/vps-deploy brgen", command
   end
 
+  def test_local_ci_uses_the_bounded_executor_and_clears_foreign_bundle_state
+    dir = tree("RAILS/brgen/bin/ci" => "#!/bin/sh\nexit 0\n")
+    captured = {}
+    status = Object.new
+    status.define_singleton_method(:success?) { true }
+    runner = lambda do |*argv, **options|
+      captured[:argv] = argv
+      captured[:options] = options
+      ["ci output\n", status]
+    end
+    output = StringIO.new
+
+    Operator::RubyRunner.stub(:ruby_cmd, "/opt/ruby/bin/ruby") do
+      Master::Io::Exec.stub(:capture2e, runner) do
+        assert Pre.local_ci(root: dir, app: "brgen", out: output, err: StringIO.new)
+      end
+    end
+
+    env, ruby, script = captured.fetch(:argv)
+    assert_equal "/opt/ruby/bin/ruby", ruby
+    assert_equal "bin/ci", script
+    assert_nil env.fetch("BUNDLE_GEMFILE")
+    assert_equal "brgen", env.fetch("PUB5_CI_APP")
+    assert_equal File.join(dir, "RAILS", "brgen"), captured.fetch(:options).fetch(:chdir)
+    assert_equal Pre::LOCAL_CI_TIMEOUT, captured.fetch(:options).fetch(:timeout)
+    assert_equal true, captured.fetch(:options).fetch(:raise_on_timeout)
+    assert_equal "ci output\n", output.string
+  ensure
+    FileUtils.rm_rf(dir)
+  end
+
+  def test_local_ci_timeout_is_reported_and_returns_failure
+    dir = tree("RAILS/brgen/bin/ci" => "#!/bin/sh\nexit 0\n")
+    output = StringIO.new
+    errors = StringIO.new
+    timeout = Master::Io::Exec::TimeoutError.new("timed out", result: ["partial ci output\n", nil])
+
+    Operator::RubyRunner.stub(:ruby_cmd, "/opt/ruby/bin/ruby") do
+      Master::Io::Exec.stub(:capture2e, lambda { |*args, **kwargs| raise timeout }) do
+        refute Pre.local_ci(root: dir, app: "brgen", out: output, err: errors)
+      end
+    end
+
+    assert_includes output.string, "partial ci output"
+    assert_includes errors.string, "timed out after #{Pre::LOCAL_CI_TIMEOUT}s"
+  ensure
+    FileUtils.rm_rf(dir)
+  end
+
   def test_a_red_local_ci_sends_nothing
     ok, reason = remote(app: "amber", ci_runner: ->(**) { false })
 

@@ -254,6 +254,9 @@ module Operator
     Result = Struct.new(:name, :ok, :detail, keyword_init: true)
     SWEEP_GLOBS = %w[MASTER/lib/**/*.rb MASTER/law/**/*.rb RAILS/*/app/**/*.rb].freeze
     TIMEOUT = 900
+    # A single-app Rails suite may take close to an hour on a one-core host.
+    # Keep the whole child process group under a real deadline.
+    LOCAL_CI_TIMEOUT = 3_600
 
     module_function
 
@@ -375,12 +378,21 @@ module Operator
 
     # Run each app under the interpreter MASTER selected for this checkout;
     # clear the caller's Bundler state so the app activates its own Gemfile.
-    def local_ci(root:, app:)
+    def local_ci(root:, app:, out: $stdout, err: $stderr)
       dir = File.join(root, "RAILS", app)
       ruby = RubyRunner.ruby_cmd(root:)
       cleared = %w[BUNDLE_GEMFILE BUNDLE_PATH BUNDLE_BIN_PATH GEM_HOME GEM_PATH RUBYOPT RUBYLIB].to_h { [_1, nil] }
       env = cleared.merge("PATH" => "#{File.dirname(ruby)}:#{ENV.fetch("PATH", "")}", "PUB5_CI_APP" => app)
-      system(env, ruby, "bin/ci", chdir: dir)
+      output, status = Master::Io::Exec.capture2e(
+        env, ruby, "bin/ci", chdir: dir, timeout: LOCAL_CI_TIMEOUT, raise_on_timeout: true
+      )
+      out.write(output) unless output.empty?
+      status.success?
+    rescue Master::Io::Exec::TimeoutError => error
+      output = Array(error.result).first.to_s
+      out.write(output) unless output.empty?
+      err.puts("ci0: #{app} bin/ci timed out after #{LOCAL_CI_TIMEOUT}s")
+      false
     end
 
     def git_out(root, *argv)
