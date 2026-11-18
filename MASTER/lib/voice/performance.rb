@@ -53,6 +53,11 @@ module Master
         body: 0,
       }.freeze
 
+      # The house voice carries a little extra forward motion and lift in every
+      # phrase. The deltas stay inside the same bounded contour as other styles.
+      STYLE_RATE = { eager: 2 }.freeze
+      STYLE_PITCH = { eager: 3 }.freeze
+
       module_function
 
       def plan(text, emotion: {}, style: :normal)
@@ -69,10 +74,12 @@ module Master
           arc = arc_factor(index, phrases.length)
 
           rate = ROLE_RATE.fetch(role) +
+                 STYLE_RATE.fetch(style.to_sym, 0) +
                  ((arousal - 0.35) * 3.0).round +
                  (expressiveness * 1.5 * arc).round +
                  ((seed % 5) - 2)
           pitch = ROLE_PITCH.fetch(role) +
+                  STYLE_PITCH.fetch(style.to_sym, 0) +
                   ((valence - 0.5) * 8.0).round -
                   (intimacy * 4.0).round +
                   ((seed % 7) - 3)
