@@ -6,6 +6,9 @@ seven workstreams:
 
 - **Published:** SYRE, Ragnhild, pub.healthcare, Bergen Selvstyreparti and
   Fremtidens helse-OS. These have reader-facing HTML/PDF pairs.
+- **Published guidance:** Ragnhild Mæhle's five-page funding guide lives beside
+  her plan. It is preparation material, not a submitted application or a grant
+  decision, and is not counted as a sixth business plan.
 - **Draft sources:** NORDVAKT Arctic Systems and Norwegian Financial. Their
   editable sources live in `tools/`; no published pair is claimed until build,
   print, arithmetic checks and page-by-page visual review pass.
@@ -136,11 +139,11 @@ regenerated from them:
                                       # pdfinfo verifies 442.08 x 663.12 pts
     node BIZ/tools/bp_index.mjs       # this index
 
-`bp_check.mjs` delegates common HTML, prose and hygiene Laws to `MASTER/bin/operator lint`; its own checks are limited to the bob2/print contract and re-read financial arithmetic. The standalone print stylesheet carries a line-local `scan: intentional` marker because the document has no asset pipeline.
+`bp_check.mjs` delegates common HTML, prose and hygiene Laws to `MASTER/bin/operator lint` for the business-plan outputs and Ragnhild's funding guide. Business-plan checks remain specific to the Bob2/print contract and independently re-read financial arithmetic; the funding guide has a separate profile check for its five-page structure, accessible calendar headers, cited source links, source-check date and explicit eligibility/deadline caveats. The guide is not passed through the business-plan finance model or Bob2 skin.
 
 `bp_print.mjs` prints with headless Chromium (no Python anywhere in the
 chain, per laws.yml REACH_non_native_tool) and checks every page size
-against the hefte canon (156mm 234mm). `bp_index.mjs` fails if a published or archived link lacks its HTML/PDF pair;
+against the hefte canon (156mm 234mm); it also verifies the funding guide's five-page output. Raster generation is not visual approval. `bp_index.mjs` fails if a published or archived link lacks its HTML/PDF pair, and lists guidance separately from plans;
 it derives the Innovasjon Norge request only from that explicit row in each
 plan's financing table and reports source-only drafts separately. The retired
 poise/cover generation (bp_cover.mjs) left with its generation; its history
