@@ -50,16 +50,27 @@ body[data-council-persona]::after {
  * Idle is dark grey and legible rather than hidden — a control you can see is
  * off is not clutter, it is the answer to the question. Listening keeps the
  * live colour and the pulse it always had. */
-#mic-dot {
+.voice-indicators {
   position: fixed;
-  top: var(--safe-top);
+  top: calc(var(--safe-top) + 8px);
   inset-inline-end: var(--safe-right);
+  z-index: calc(var(--z-overlay) + 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  pointer-events: none;
+}
+
+#voice-indicators #mic-dot {
+  position: relative;
+  top: auto;
+  inset-inline-end: auto;
   width: var(--tap-min);
   height: var(--tap-min);
   color: var(--c-mic-off, #6b6b6b);
   opacity: 1;
   pointer-events: auto;
-  z-index: var(--z-ui);
+  z-index: auto;
   border: 0;
   border-radius: 0;
   padding: 0;
@@ -68,6 +79,35 @@ body[data-council-persona]::after {
   display: grid;
   place-items: center;
   transition: color 160ms var(--ease-out), opacity 160ms var(--ease-out);
+}
+
+#tts-dot {
+  width: var(--tap-min);
+  height: var(--tap-min);
+  display: grid;
+  place-items: center;
+  color: var(--c-mic-off, #6b6b6b);
+  pointer-events: none;
+  transition: color 160ms var(--ease-out);
+}
+
+#tts-dot::before {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  background: transparent;
+  transition: background-color 160ms var(--ease-out);
+}
+
+body[data-mode="speaking"] #tts-dot {
+  color: var(--c-accent);
+}
+
+body[data-mode="speaking"] #tts-dot::before {
+  background: currentColor;
 }
 
 #mic-dot:focus-visible {
@@ -79,7 +119,13 @@ body[data-council-persona]::after {
   width: 18px;
   height: 18px;
   display: block;
-  fill: currentColor;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+#mic-dot svg circle {
+  transition: fill 160ms var(--ease-out);
 }
 
 #mic-dot[data-mic="open"] {
@@ -103,6 +149,10 @@ body[data-mode="listening"] #mic-dot {
   color: var(--c-danger);
   will-change: transform;
   animation: micPulse 1.4s var(--ease-in-out) infinite;
+}
+
+body[data-mode="listening"] #mic-dot svg circle {
+  fill: currentColor;
 }
 
 /* While MASTER is speaking the mic is deliberately not listening, and saying so
