@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "generated_at": "2026-11-18T08:30:00Z",
-  "revision": "0f4bcb069bea99820b74d12b191fb0b95092add5",
+  "generated_at": "2026-11-18T08:31:00Z",
+  "revision": "14064c54d197746576b692f053e1026d23d3e996",
   "law_count": 544,
   "laws": {
     "A_FINDING_IS_A_HYPOTHESIS": {
@@ -10851,7 +10851,7 @@
     },
     "SINGULARITY_architectural_coherence": {
       "id": "SINGULARITY_architectural_coherence",
-      "statement": "Every addition, modification and abstraction belongs to the existing architectural whole. New work inherits its governing design grammar, ownership boundaries, conventions, dependencies and product identity. Variation is welcome; unrelated parallel systems and accidental drift are not. Assess the change in the context of the whole architecture, not only the files being edited.\\n",
+      "statement": "Every addition, modification and abstraction belongs to the existing architectural whole. New work inherits its governing design grammar, ownership boundaries, conventions, dependencies and product identity. Variation is welcome; unrelated parallel systems and accidental drift are not. Assess the change in the context of the whole architecture, not only the files being edited.\n",
       "parent": "SINGULARITY",
       "severity": "error",
       "mode": "violation",
