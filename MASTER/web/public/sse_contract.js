@@ -55,11 +55,17 @@ function handleDmesg(data) {
   window._chatOnDmesg?.(typeof payload === "string" ? payload : String(payload));
 }
 
+function handleOperationLog(data) {
+  const payload = parseSseJson(data, null);
+  if (payload && typeof payload === "object") window._chatOnOperationLog?.(payload);
+}
+
 const NAMED_HANDLERS = {
   thought: handleThought,
   tool: handleTool,
   enhance: handleEnhance,
   dmesg: handleDmesg,
+  operation_log: handleOperationLog,
   compaction: (data) => window._chatOnCompaction?.(parseSseJson(data, {})),
   ctx_footer: (data) => window._chatOnCtxFooter?.(parseSseJson(data, {})),
   phantom: (data) => window._chatOnPhantom?.(parseSseJson(data, {})),
