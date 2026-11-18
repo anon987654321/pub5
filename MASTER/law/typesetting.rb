@@ -39,7 +39,7 @@ module Law
 
     def locale(path)
       value = path.to_s.tr("\\", "/")
-      return "en" if value.match?(%r{(?:\A|/)MASTER/docs/|(?:\A|/)README\.md\z})
+      return "en" if value.match?(%r{(?:\A|/)README\.md\z})
       return "nb" if value.match?(%r{(?:\A|/)BIZ/})
 
       File.basename(value)[/\A(nb|nn|no|en)\b/, 1]&.then { |code| code == "en" ? "en" : "nb" }
