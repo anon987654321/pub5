@@ -39,11 +39,13 @@ class TestDocPaths < Minitest::Test
     MASTER/README.md
     MASTER/AGENTS.md
     OPENBSD/README.md
+    OPENBSD/CLAUDE.md
     OPENBSD/RUNBOOK.md
     RAILS/README.md
     RAILS/CLAUDE.md
     MASTER/tools/README.md
     STUDIO/README.md
+    BIZ/README.md
   ].freeze
 
   def test_execution_owners_are_live_ruby_implementations
