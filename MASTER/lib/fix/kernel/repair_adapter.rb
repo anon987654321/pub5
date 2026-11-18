@@ -753,7 +753,7 @@ module Master
         # Matching evidence is presented only when Law, boundary and source
         # digest all match. It is a warning to bring new proof, not a permanent ban.
         def known_antigen_context(violation, path, source)
-          repo_root = defined?(Master::REPO_ROOT) ? File.expand_path(Master::REPO_ROOT) : File.expand_path(@root)
+          repo_root = File.expand_path(@root)
           absolute = File.expand_path(path.to_s, repo_root)
           return unless absolute.start_with?(repo_root + File::SEPARATOR)
 
