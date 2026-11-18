@@ -47,6 +47,7 @@ require_relative "../protocol"
 require_relative "../architecture_exploration"
 require_relative "../transformation_plan"
 require_relative "../../review/reference_graph"
+require_relative "../../trace/causal_trace"
 require_relative "../research_pass"
 require_relative "../conversation_probe"
 require_relative "../convergence_discipline"
@@ -233,6 +234,18 @@ module Master
 
       def cancellation_requested? = @cancellation&.cancelled? == true
 
+      def begin_causal_trace(run_id:, target:, requested:, files:)
+        Master::Trace::CausalTrace.clear(@causal_trace_context)
+        @causal_trace_context = Master::Trace::CausalTrace.start(
+          run_id:, root: @root, agent: "MASTER /fix",
+        )
+        Master::Trace::CausalTrace.step(
+          kind: :context, name: "fix.scope",
+          input: { target: relative_target(target), requested: requested == true },
+          output: { eligible_files: Array(files).size },
+        )
+      end
+
       def cancellation_terminal
         reason = @cancellation.respond_to?(:reason) ? @cancellation.reason : nil
         detail = reason.to_s.strip
@@ -294,6 +307,7 @@ module Master
         current_phase = :journal
         journal = @run_journal.start_or_resume(target:, files:, max_passes:, budget_seconds:)
         run_id = journal["id"]
+        begin_causal_trace(run_id:, target:, requested:, files:)
         @kernel.bind_fix_run(
           adapter: self, run_id:, target:, max_passes:, budget_seconds:, requested:,
         )
@@ -320,6 +334,7 @@ module Master
 
           journal = @run_journal.start_or_resume(target:, files:, max_passes:, budget_seconds:)
           run_id = journal["id"]
+          begin_causal_trace(run_id:, target:, requested:, files:)
           @kernel.bind_fix_run(
             adapter: self, run_id:, target:, max_passes:, budget_seconds:, requested:,
           )
@@ -427,6 +442,8 @@ module Master
         end
         result
       ensure
+        Master::Trace::CausalTrace.clear(@causal_trace_context)
+        @causal_trace_context = nil
         cleanup_run_resources(target:, run_id: (defined?(run_id) ? run_id : nil))
       end
 
@@ -468,6 +485,13 @@ module Master
         end
 
         graph_metrics = snapshot.fetch(:metrics)
+        Master::Trace::CausalTrace.step(
+          kind: :context, name: "reference_graph.ready",
+          input: { target: relative_target(snapshot[:nodes].first.to_s), files: snapshot[:nodes].size },
+          output: { nodes: snapshot[:nodes].size, edges: snapshot[:edges].size,
+                    unresolved: graph_metrics[:unresolved_ruby_references].to_i + graph_metrics[:unresolved_local_imports].to_i,
+                    analysis_failures: 0 },
+        )
         Master::Trace::Dmesg.status(
           "understand0",
           "text-source graph indexed, nodes=#{snapshot[:nodes].size}, edges=#{snapshot[:edges].size}, " \
