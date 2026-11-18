@@ -598,6 +598,14 @@ measure is already owned by the Bymorgen item above.
   as history behind the Norwegian Financial partner-bank concept. Build, print,
   output checks, visual inspection and applicant-specific grant eligibility for
   the new drafts remain NOT_RUN. Do not publish draft sources as completed pairs.
+  2026-11-18 partial: the existing Ragnhild funding guide now has a separate
+  source-backed check for its five labelled sheets, accessible calendar
+  headers, six linked/cited references, source-check date and explicit
+  eligibility/deadline caveats. Its pair is listed separately from business
+  plans and print now requires five pages. The guide is not a submitted
+  application; its rendered inspection remains NOT_RUN. This does not implement
+  reusable validators/templates or qualified review for other funding, legal,
+  corporate or financial document families.
 - [ ] **Historical hardening review.** Reconcile the remaining P01–P11 historical findings using Git history and the live source/test owners. L4 stale-member
   detection/tests, L5 heredoc/keyword detection plus structured Council
   ideation, L7 declarative/runtime parity assertion, and L8 parse-time
