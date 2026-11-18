@@ -39,6 +39,20 @@ class TestVoicePerformance < Minitest::Test
     end
   end
 
+  def test_eager_style_adds_bounded_rate_and_pitch_lift
+    text = "The first idea is simple. Then we move forward."
+    neutral = Master::Voice::Performance.plan(text, style: :normal)
+    eager = Master::Voice::Performance.plan(text, style: :eager)
+
+    assert_equal neutral.length, eager.length
+    eager.each_with_index do |part, index|
+      assert_operator part[:rate_delta], :>=, neutral[index][:rate_delta]
+      assert_operator part[:pitch_delta_hz], :>=, neutral[index][:pitch_delta_hz]
+    end
+    assert_operator eager.first[:rate_delta], :>, neutral.first[:rate_delta]
+    assert_operator eager.first[:pitch_delta_hz], :>, neutral.first[:pitch_delta_hz]
+  end
+
   def test_roles_are_semantic
     plan = Master::Voice::Performance.plan(
       "The answer starts here. However, the timing matters. Are you sure? The key is this.",
