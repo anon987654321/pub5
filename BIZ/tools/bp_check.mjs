@@ -45,7 +45,7 @@ if (lawRun.error) {
 } else if (lawRun.status !== 0) {
   fails.push('MASTER Law scan failed (exit ' + lawRun.status + '): ' + (lawOutput.slice(-6_000) || 'no output'));
 } else {
-  notes.push('MASTER Laws: ' + files.length + ' plan documents checked');
+  notes.push('MASTER Laws: ' + files.length + ' BIZ documents checked');
 }
 
 for (const plan of ORDER) {
