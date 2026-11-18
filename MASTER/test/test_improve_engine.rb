@@ -122,6 +122,66 @@ class TestImproveEngine < Minitest::Test
     assert_equal({ "code" => 1, "prose" => 1, "structure" => 1, "visual" => 1 }, coverage[:domain_counts])
   end
 
+  def test_discovers_interaction_and_recovery_opportunities_in_javascript
+    path = write("lib/request.js",
+      "export async function save() { window.confirm('Save?'); return fetch('/api'); }\n")
+    findings = Master::Fix::Improve::Domains.scan(root: @root, files: [path])
+    signals = findings.map(&:signal)
+
+    assert_includes signals, "native_dialog"
+    assert_includes signals, "fetch_without_visible_error_path"
+  end
+
+  def test_discovers_keyboard_focus_and_reduced_motion_gaps
+    path = write("docs/views/controls.scss", "button { outline: none; transition: opacity .2s; }\n")
+    findings = Master::Fix::Improve::Domains.scan(root: @root, files: [path])
+    signals = findings.map(&:signal)
+
+    assert_includes signals, "focus_outline_removed"
+    assert_includes signals, "motion_without_reduced_motion_path"
+  end
+
+  def test_discovers_missing_document_language_title_and_form_labels
+    path = write("docs/views/form.html.erb",
+      '<!doctype html><html><head></head><body><input id="email" type="email"><button></button></body></html>')
+    findings = Master::Fix::Improve::Domains.scan(root: @root, files: [path])
+    signals = findings.map(&:signal)
+
+    assert_includes signals, "document_language_missing"
+    assert_includes signals, "document_title_missing"
+    assert_includes signals, "form_control_without_label"
+    assert_includes signals, "empty_button"
+  end
+
+  def test_broken_relative_markdown_links_are_reported_but_existing_links_are_not
+    existing = write("docs/known.md", "# Known\n")
+    broken = write("docs/guide.md", "[known](known.md) [missing](missing.md)\n")
+    findings = Master::Fix::Improve::Domains.scan(root: @root, files: [broken])
+    broken_link = findings.find { |row| row.signal == "broken_relative_link" }
+
+    refute_nil broken_link
+    assert_equal 1, broken_link.line
+    assert File.file?(existing)
+    assert_equal [], Master::Fix::Improve::Domains.scan(root: @root, files: [existing])
+  end
+
+  def test_polish_coverage_names_quality_areas_and_external_evidence_boundaries
+    files = [
+      write("lib/main.js", "const main = true;\n"),
+      write("docs/guide.md", "# Guide\n"),
+      write("docs/settings.yml", "enabled: true\n"),
+      write("docs/views/page.html", "<main>Page</main>\n"),
+    ]
+    coverage = Master::Fix::Improve::Domains.coverage(files:)
+
+    assert_includes coverage[:quality_areas], "accessibility"
+    assert_includes coverage[:quality_areas], "interaction"
+    assert_includes coverage[:quality_areas], "provenance"
+    assert_includes coverage[:external_review_areas], "assistive_technology"
+    assert_includes coverage[:external_review_areas], "human_listening"
+    assert_includes coverage[:external_review_areas], "user_acceptance"
+  end
+
   def test_elevates_prose_placeholders
     path = write("docs/README.md", "# X\n\n" + ("word " * 80) + "\n\nTODO: write this later.\n")
     findings = @engine.elevate(files: [path])
