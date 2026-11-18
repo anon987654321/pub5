@@ -33,9 +33,9 @@ module Master
       ].freeze
 
       Edge = Struct.new(:type, :from, :to, :weight, keyword_init: true)
-      SOURCE_DEPENDENCY_TYPES = %i[
-        require local_import method_call dynamic_method_call inheritance mixin
-      ].freeze
+      # These are the only source-to-source edge types emitted by this
+      # graph today. Symbol/call-graph edges are intentionally not inferred.
+      SOURCE_DEPENDENCY_TYPES = %i[require local_import].freeze
 
       # Prism-derived facts supplement imports with static symbol and caller
       # relationships. Ambiguous/dynamic relationships remain explicit evidence
@@ -711,9 +711,9 @@ module Master
         )
       end
 
-      # Mechanical tangle evidence is limited to resolved source-to-source
-      # dependency edges. Event names, constants and textual tokens are not
-      # treated as caller relationships; unresolved edges remain separate gaps.
+      # Mechanical tangle evidence is limited to resolved require/import
+      # edges whose endpoints are both source nodes. Constants, commands,
+      # events, symbol names and inferred caller relationships are excluded.
       def tangle_report
         source_edges = @edges.select do |edge|
           SOURCE_DEPENDENCY_TYPES.include?(edge.type) &&
