@@ -76,6 +76,9 @@ for (const name of ORDER) {
   const size = (info.match(/Page size:\s*([\d.]+ x [\d.]+) pts/) || [])[1];
   const pages = Number((info.match(/Pages:\s*(\d+)/) || [])[1]);
   if (!Number.isInteger(pages) || pages < 1) throw new Error(`${name}: pdfinfo did not report a valid page count`);
+  if (name === 'ragnhild_legater' && pages !== 5) {
+    throw new Error(`${name}: five source sheets should print as five pages; found ${pages}`);
+  }
   const bytes = statSync(pdf).size;
   console.log(`${name}: ${bytes} bytes, ${pages} pages, ${size} pts`);
   if (size !== '442.08 x 663.12') throw new Error(`${name}: unexpected page size ${size}`);
