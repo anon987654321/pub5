@@ -61,6 +61,103 @@ class TestArchitectureExploration < Minitest::Test
     end
   end
 
+  def test_morphological_score_reports_unknown_dimensions_without_awarding_points
+    probe = {
+      id: "planning-only",
+      law_alignment: 10,
+      causal_trace_quality: nil,
+      profile_cost: nil,
+      tangle_delta: nil,
+      antigen_hits: 0,
+      evidence_count: 8,
+      rollback_ready: nil,
+      scope_clarity: 9,
+    }
+    score = Master::Fix::MorphologicalScore.score_one(probe)
+
+    assert_equal 47.0, score.fetch(:coverage)
+    assert_equal 0, score.dig(:components, :profile_cost)
+    assert_equal 0, score.dig(:components, :tangle_delta)
+    refute score.fetch(:qualified)
+    assert_nil Master::Fix::MorphologicalScore.winner([probe])
+    assert_includes score.fetch(:missing_dimensions), :causal_trace_quality
+    assert_includes score.fetch(:missing_dimensions), :rollback_ready
+  end
+
+  def test_a_complete_measured_morphological_probe_can_win
+    base = {
+      law_alignment: 10,
+      causal_trace_quality: 9,
+      profile_cost: 20,
+      antigen_hits: 0,
+      evidence_count: 8,
+      rollback_ready: true,
+      scope_clarity: 9,
+    }
+    probes = [
+      base.merge(id: "improved", tangle_delta: -5),
+      base.merge(id: "regressed", tangle_delta: 4),
+    ]
+
+    ranked = Master::Fix::MorphologicalScore.rank(probes)
+
+    assert_equal "improved", ranked.first.fetch(:id)
+    assert_equal 100.0, ranked.first.fetch(:coverage)
+    assert ranked.first.fetch(:qualified)
+    assert_equal "improved", Master::Fix::MorphologicalScore.winner(probes).fetch(:id)
+  end
+
+  def test_architecture_candidates_receive_graph_and_antigen_morphology_preview
+    Dir.mktmpdir("architecture-morphology") do |root|
+      source = "MASTER/lib/owner.rb"
+      test = "MASTER/test/test_owner.rb"
+      cycle = {
+        paths: [source, "MASTER/lib/peer.rb"],
+        edge_count: 2,
+        edge_types: ["require"],
+        sha256: "a" * 64,
+      }
+      antigen = {
+        "boundary" => "dependency-cycle/#{cycle[:sha256]}",
+        "evidence" => { "paths" => cycle[:paths], "tangle_digest" => cycle[:sha256] },
+      }
+      explorer = Master::Fix::ArchitectureExploration.new(
+        root:,
+        agent: FakeAgent.new("{}"),
+        candidate_count: 30,
+        dependency_tangles: [cycle],
+        antigens: [antigen],
+        source_digests: { source => "b" * 64 },
+      )
+      candidate = {
+        id: "AX01",
+        lens: "Keep current boundaries",
+        title: "Harden the existing owner",
+        thesis: "Keep the owner boundary while removing the measured cycle.",
+        core_boundary: "The existing source owner remains authoritative.",
+        change_paths: [source],
+        evidence_paths: [source],
+        test_paths: [test],
+        verification_plan: "Run the focused Ruby regression test and compare its baseline.",
+        rollback_plan: "Use git revert to restore the known-good owner.",
+        law_alignment: "Preserve existing Laws, public behavior and operator authority.",
+        benefits: ["Removes a known source dependency cycle at its current owner."],
+        tradeoffs: ["Requires coordinated edits across the two cycle endpoints."],
+        risks: ["A dynamic dependency could remain after the static edge is removed."],
+      }
+
+      explorer.send(:rank_candidates, [candidate])
+      preview = candidate.fetch(:morphological_preview)
+      prompt = explorer.send(:candidate_prompt, "MASTER", [File.join(root, source)], [])
+
+      assert_equal 1, preview.dig(:components, :antigen_hits).to_i.positive? ? 1 : 0
+      refute preview.fetch(:qualified), "planning-only evidence must not become an executed morphology win"
+      assert_includes preview.fetch(:missing_dimensions), :profile_cost
+      assert_includes prompt, "dependency_tangles"
+      assert_includes prompt, cycle[:sha256]
+    end
+  end
+
   def test_candidate_count_is_bounded_to_thirty_through_forty
     assert_equal 40, Master::Fix::ArchitectureExploration.candidate_count({ "MASTER_FIX_ARCHITECTURE_CANDIDATES" => "99" })
     assert_equal 30, Master::Fix::ArchitectureExploration.candidate_count({ "MASTER_FIX_ARCHITECTURE_CANDIDATES" => "3" })
