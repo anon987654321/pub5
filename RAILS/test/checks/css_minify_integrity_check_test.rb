@@ -199,5 +199,11 @@ class CssMinifyIntegrityCheckTest < Minitest::Test
     assert_equal check.send(:normalize_selector, ".a>.b"), check.send(:normalize_selector, ".a > .b")
     assert_equal check.send(:normalize_selector, ".a+.b"), check.send(:normalize_selector, ".a  +  .b")
     refute_equal check.send(:normalize_selector, ".a .b"), check.send(:normalize_selector, ".a.b")
+    refute_equal check.send(:normalize_selector, %q{.a[data-label="New  York"]}),
+                  check.send(:normalize_selector, %q{.a[data-label="New York"]})
+    refute_equal check.send(:normalize_selector, %q{.a[data-label="left > right"]}),
+                  check.send(:normalize_selector, %q{.a[data-label="left>right"]})
+    refute_equal check.send(:normalize_selector, %q{.foo\\> .bar}),
+                  check.send(:normalize_selector, %q{.foo\\>.bar})
   end
 end

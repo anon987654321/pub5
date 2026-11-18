@@ -163,7 +163,79 @@ module Deploy
     # ".a>bc"). Normalize both sides the same way instead of stripping all
     # whitespace, which produced false positives on exactly these selectors.
     def normalize_selector(text)
-      text.gsub(/\s*([>+~])\s*/, '\1').gsub(/\s+/, " ").strip
+      chars = text.chars
+      normalized = +""
+      quote = nil
+      escaped = false
+      last_was_combinator = false
+      combinators = %w[> + ~]
+      index = 0
+
+      while index < chars.length
+        character = chars[index]
+
+        if quote
+          normalized << character
+          if escaped
+            escaped = false
+          elsif character == "\\"
+            escaped = true
+          elsif character == quote
+            quote = nil
+          end
+          index += 1
+          next
+        end
+
+        if escaped
+          normalized << character
+          escaped = false
+          last_was_combinator = false
+          index += 1
+          next
+        end
+
+        if character == "\\"
+          normalized << character
+          escaped = true
+          last_was_combinator = false
+          index += 1
+          next
+        end
+
+        if character == '"' || character == "'"
+          normalized << character
+          quote = character
+          last_was_combinator = false
+          index += 1
+          next
+        end
+
+        if character.match?(/\s/)
+          index += 1 while index < chars.length && chars[index].match?(/\s/)
+          following = chars[index]
+          if !normalized.empty? && normalized[-1] != " " &&
+             !last_was_combinator && !combinators.include?(following)
+            normalized << " "
+          end
+          next
+        end
+
+        if combinators.include?(character)
+          normalized.rstrip!
+          normalized << character
+          last_was_combinator = true
+        else
+          normalized << character
+          last_was_combinator = false
+        end
+        index += 1
+      end
+
+      normalized.strip
+    end
+  end
+end
     end
   end
 end
