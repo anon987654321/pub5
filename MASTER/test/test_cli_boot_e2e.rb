@@ -264,9 +264,14 @@ class TestCliReplExit < Minitest::Test
         read_until(reader, output, READY, 30)
         assert_match(READY, output, "CLI never showed its working Reline prompt")
         boot_end = output.index("root on master0")
+        boot_line_end = boot_end && output.index("\n", boot_end)
         prompt_at = READY.match(output)&.begin(0)
-        assert boot_end && prompt_at && prompt_at > boot_end,
-               "the working prompt must be emitted after the completed boot surface"
+        assert boot_line_end && prompt_at && prompt_at > boot_line_end,
+               "the working prompt must start after the boot line's terminating newline"
+        overlay_start = output.index("\e7\e[1;")
+        overlay_end = overlay_start && output.index("\e8", overlay_start)
+        assert overlay_start && overlay_end && overlay_start > boot_line_end && overlay_end < prompt_at,
+               "the top-right indicator must restore the saved cursor before Reline starts"
         assert_includes output.b, "\xE2\x96\xBD".b, "bare startup did not render the face projection"
         refute_match(/\e\[\?1049h/, output, "bare startup must not take over the alternate screen")
 
