@@ -1,7 +1,8 @@
 schema: 1
 required_fields: [intent, scope, preserve, proof]
-optional_fields: [new_paths, openbsd_preflight]
+optional_fields: [new_paths, documentation_pairs, openbsd_preflight]
 new_path_fields: [path, reason]
+documentation_pair_fields: [contract_path, document_path, reason]
 common_proof: [baseline_hashes, path_scoped_diff, law_assessment]
 # documentation_review (convergence.yml workstream documentation_completeness)
 # names doc-side proof for a change that moves a public contract: the diff
