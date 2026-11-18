@@ -15,4 +15,15 @@ class PortsSortTest < ActionDispatch::IntegrationTest
     assert_select "nav.sort-order a[href=?]", ports_path(q: "git")
     assert_select "nav.sort-order a[href=?]", ports_path(q: "git", sort: "updated")
   end
+
+  test "a category shortcut keeps the search and sort context" do
+    platform = platforms(:openbsd)
+    category = Category.create!(platform:, name: "devel", slug: "devel")
+    Port.create!(platform:, category:, name: "git", version: "2.4", pkgpath: "devel/git")
+
+    get ports_url(q: "git", sort: "updated")
+    assert_response :success
+    assert_select "section.categories a[href=?]",
+                  ports_path(q: "git", sort: "updated", category_id: category.id)
+  end
 end
