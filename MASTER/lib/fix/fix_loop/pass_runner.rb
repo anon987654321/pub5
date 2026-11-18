@@ -500,6 +500,8 @@ module Master
             pass:, findings: found.size, ideas: ideas.size, restructures: restructures.size,
             files_seen: coverage.fetch(:files_seen), measured_files: coverage.fetch(:measured_files),
             domains: coverage.fetch(:domains),
+            quality_areas: coverage.fetch(:quality_areas, []),
+            external_review_areas: coverage.fetch(:external_review_areas, []),
           ) if respond_to?(:record_improvement_assessment!)
           unless found.empty?
             Master::Trace::Dmesg.status(
