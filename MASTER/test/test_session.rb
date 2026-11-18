@@ -118,6 +118,22 @@ class TestSession < Minitest::Test
     end
   end
 
+  def test_cost_rows_are_correlated_with_the_active_fix_trace
+    Dir.mktmpdir("session_cost") do |dir|
+      session = Master::Trace::Session.new(root: dir)
+      trace = Master::Trace::CausalTrace.start(run_id: "fix-cost-1", root: dir, agent: "fix")
+      session.record_cost(0.12, model: "priced-model", tokens: 120)
+      Master::Trace::CausalTrace.clear(trace)
+
+      row = JSON.parse(File.readlines(File.join(dir, ".master", "costs.jsonl")).last)
+      assert_equal "fix-cost-1", row.fetch("run_id")
+      assert_equal "priced-model", row.fetch("model")
+      assert_equal 120, row.fetch("tokens")
+      refute row.key?("approximate")
+    ensure
+      Master::Trace::CausalTrace.clear(trace) if defined?(trace)
+    end
+  end
   def test_record_cost_bills_the_same_tokens_the_meter_shows
     Dir.mktmpdir("session_cost") do |dir|
       session = Master::Trace::Session.new(root: dir)
