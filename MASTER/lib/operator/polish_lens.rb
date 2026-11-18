@@ -58,16 +58,16 @@ module Operator
         nil
       end.to_set
 
-      findings(root: root_real).select do |finding|
-        absolute = File.expand_path(finding.path, root_real)
-        next false unless absolute.start_with?(root_real + File::SEPARATOR)
-        next false if File.symlink?(absolute)
-        next false unless File.file?(absolute)
-
-        owned.include?(File.realpath(absolute))
-      rescue SystemCallError
-        false
-      end
+      scoped = owned.to_a
+      [
+        *keep_hygiene(root_real, paths: scoped),
+        *shebang_portability(root_real, paths: scoped),
+        *exec_bit(root_real, paths: scoped),
+        *fixture_extension(root_real, paths: scoped),
+        *generated_banner(root_real, paths: scoped),
+        *pointer_symmetry(root_real, paths: scoped),
+        *doc_links(root_real, paths: scoped),
+      ].sort_by { |finding| [finding.path, finding.line.to_i, finding.id] }
     end
 
     def run(root: ROOT, json: false, candidates: false)
@@ -114,8 +114,9 @@ module Operator
       Dir.glob("#{root}/**/*", File::FNM_DOTMATCH).reject { |p| p =~ %r{/\.git/} || File.directory?(p) }
     end
 
-    def keep_hygiene(root)
-      Dir.glob("#{root}/**/.keep").filter_map do |k|
+    def keep_hygiene(root, paths: nil)
+      keepers = paths ? paths.select { |path| File.basename(path) == ".keep" } : Dir.glob("#{root}/**/.keep")
+      keepers.filter_map do |k|
         dir = File.dirname(k)
         real = Dir.children(dir).reject { |c| c == ".keep" }
         next if real.empty?
@@ -140,8 +141,8 @@ module Operator
     # The tree is legitimately polyglot (ruby, zsh, ksh, sh). Only an absolute
     # interpreter path that `env` would resolve portably is a defect, and never
     # in OPENBSD/mirror, where the target host's absolute paths are intentional.
-    def shebang_portability(root)
-      files(root).filter_map do |f|
+    def shebang_portability(root, paths: nil)
+      (paths || files(root)).filter_map do |f|
         next unless (File.binread(f, 2) == "#!" rescue false)
         next if rel(root, f).start_with?("OPENBSD/mirror/")
         line = File.open(f, &:readline).strip
@@ -153,8 +154,9 @@ module Operator
       end
     end
 
-    def exec_bit(root)
-      Dir.glob("#{root}/MASTER/bin/*").filter_map do |f|
+    def exec_bit(root, paths: nil)
+      candidates = paths ? paths.select { |path| rel(root, path).match?(%r{\\AMASTER/bin/[^/]+\\z}) } : Dir.glob("#{root}/MASTER/bin/*")
+      candidates.filter_map do |f|
         next if File.directory?(f)
         next if File.executable?(f)
         Finding.new(id: "exec_bit", path: rel(root, f), line: 0, law: "POLA",
@@ -164,8 +166,9 @@ module Operator
       end
     end
 
-    def fixture_extension(root)
-      Dir.glob("#{root}/MASTER/test/fixtures/**/*").filter_map do |f|
+    def fixture_extension(root, paths: nil)
+      candidates = paths ? paths.select { |path| rel(root, path).start_with?("MASTER/test/fixtures/") } : Dir.glob("#{root}/MASTER/test/fixtures/**/*")
+      candidates.filter_map do |f|
         next if File.directory?(f)
         base = File.basename(f)
         next unless base == "-" || File.extname(base).empty?
@@ -187,8 +190,10 @@ module Operator
       end
     end
 
-    def generated_banner(root)
-      %w[AGENTS.md GEMINI.md GLM.md].filter_map do |name|
+    def generated_banner(root, paths: nil)
+      names = %w[AGENTS.md GEMINI.md GLM.md]
+      names.select! { |name| paths.include?(File.join(root, name)) } if paths
+      names.filter_map do |name|
         f = File.join(root, name)
         next unless File.exist?(f)
         head = File.open(f) { |io| io.read(400) }
@@ -201,21 +206,28 @@ module Operator
     end
 
     # Compare the generated peers only; CLAUDE.md is the hand-written bootstrap.
-    def pointer_symmetry(root)
+    def pointer_symmetry(root, paths: nil)
+      names = %w[GEMINI.md GLM.md]
+      names.select! { |name| paths.include?(File.join(root, name)) } if paths
+      return [] if paths && names.empty?
+
       counts = %w[GEMINI.md GLM.md].map do |n|
         f = File.join(root, n)
         File.exist?(f) ? File.readlines(f).size : nil
       end.compact
       return [] if counts.uniq.size <= 1
-      [Finding.new(id: "pointer_symmetry", path: "GEMINI.md", line: 1, law: "PROXIMITY",
+      candidate = (names & %w[GEMINI.md GLM.md]).first || "GEMINI.md"
+      [Finding.new(id: "pointer_symmetry", path: candidate, line: 1, law: "PROXIMITY",
                    kind: "align", detail: "generated pointer files differ in length (#{counts.join(", ")})",
                    edit: "make the generated pointers one symmetric line each", proof: "ruby MASTER/tools/polish_lens.rb --json",
                    cost: "trivial", reversibility: "git revert")]
     end
 
-    def doc_links(root)
+    def doc_links(root, paths: nil)
       findings = []
-      Dir.glob("#{root}/{README.md,MASTER/README.md,RAILS/README.md,OPENBSD/RUNBOOK.md,BIZ/README.md}").each do |doc|
+      docs = Dir.glob("#{root}/{README.md,MASTER/README.md,RAILS/README.md,OPENBSD/RUNBOOK.md,BIZ/README.md}")
+      docs.select! { |doc| paths.include?(doc) } if paths
+      docs.each do |doc|
         File.readlines(doc).each_with_index do |line, i|
           line.scan(/\]\(([^)#][^)]*)\)/).flatten.each do |link|
             next if link =~ %r{^https?://} || link.start_with?("mailto:")
