@@ -13,6 +13,11 @@ module Master
       NAME = "lovdata".freeze
       TIER = :guarded
       DESCRIPTION = "Find individual Norwegian laws and regulations on Lovdata. Search returns links; reading one document requires the operator's no-storage/no-training acknowledgement. No crawling, bulk download or legal corpus.".freeze
+      SOURCE_URLS = {
+        api: "https://lovdata.no/info/api",
+        terms: "https://lovdata.no/artikkel/brukervilkar_for_lovdatas_tjenester/1319",
+        licence: "https://data.norge.no/nlod/no/2.0",
+      }.freeze
       AI_USE_ENV = "MASTER_LOVDATA_AI_USE".freeze
       AI_USE_ACK = "single-document-no-storage-no-training".freeze
       MAX_REFERENCE_CHARS = 190
