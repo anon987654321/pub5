@@ -116,22 +116,19 @@
   <div id="ascii-star" aria-hidden="true"></div>
   <canvas id="cognition-ecology" aria-hidden="true"></canvas>
   <canvas id="face" role="img" aria-label="<%= t("face.face_aria") %>" tabindex="-1"></canvas>
-  <%# Mic state, always on screen. It used to be a 10px dot at opacity 0 that
-      appeared only while listening, so "off" and "not rendered" looked
-      identical and the only way to learn the mic was off was to talk and get
-      nothing. Grey glyph when idle, live colour when listening.
-      role=status rather than aria-hidden: this is now the only indication of
-      whether the microphone is open, which is not something to hide from a
-      screen reader. %>
-  <button id="mic-dot" class="mic-indicator" type="button" aria-pressed="false"
-          aria-label="<%= t("face.mic_state") %>" title="<%= t("face.mic_state") %>">
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/>
-      <path d="M5 11a7 7 0 0 0 14 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      <path d="M12 18v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-    </svg>
-    <span class="sr-only" data-mic-state-text></span>
-  </button>
+  <%# The mic toggle and TTS playback state float together above the face.
+      Both remain visible when idle; only the active ring fills. The microphone
+      keeps its 44px touch target while the TTS ring is informational. %>
+  <div id="voice-indicators" class="voice-indicators">
+    <button id="mic-dot" class="mic-indicator" type="button" aria-pressed="false"
+            aria-label="<%= t("face.mic_state") %>" title="<%= t("face.mic_state") %>">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <circle cx="12" cy="12" r="4"/>
+      </svg>
+      <span class="sr-only" data-mic-state-text></span>
+    </button>
+    <span id="tts-dot" class="tts-indicator" aria-hidden="true"></span>
+  </div>
   <div id="tts-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
   <%# Small synchronous prerequisite: every deferred ecology/worker module and
       the post-primer face import may assume window.ParticleKernel exists. %>
