@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "test_helper"
+require_relative "../lib/trace/causal_trace"
 
 # Four trace pieces with no test of their own: Telemetry wraps the bus and the
 # audit log in spans, Recorder keeps the last turn for /why, Logging feeds
@@ -352,6 +353,41 @@ class TestTraceSupport < Minitest::Test
   ensure
     telemetry.instance_variable_set(:@enabled, false)
     telemetry.instance_variable_set(:@tracer, nil)
+  end
+
+  def test_fix_causal_trace_correlates_agent_and_council_steps_without_prompt_content
+    root = Dir.mktmpdir("causal-trace")
+    trace = Master::Trace::CausalTrace
+    outer = trace.start(run_id: "run-1", root:, agent: "fix")
+    trace.step(
+      kind: :model_turn, name: "repair",
+      input: { model: "glm", prompt: "private bank details" },
+      output: { status: "success", content: "private generated source" },
+    )
+    inner = trace.start(run_id: "nested-run", root:, agent: "council")
+    trace.step(kind: :decision, name: "consensus", output: { approved: true, votes: 3 })
+    inner_receipt = trace.finish(inner, outcome: { state: "done" })
+    assert_equal outer, trace.current
+
+    trace.step(kind: :tool_result, name: "verification", output: { status: "pass", checked: 4 })
+    outer_receipt = trace.finish(outer, outcome: { state: "done", result_class: "Master::Result::Ok" })
+
+    rows = trace.recent(root:, limit: 5)
+    assert_equal 2, rows.size
+    assert_equal "nested-run", rows.first["run_id"]
+    saved = rows.last
+    assert_equal outer_receipt[:trace_id], saved["trace_id"]
+    assert_equal inner_receipt[:trace_id], rows.first["trace_id"]
+    assert_includes saved["steps"].map { |step| step["name"] }, "repair"
+    assert_includes saved["steps"].map { |step| step["name"] }, "verification"
+    ledger = File.read(File.join(root, trace::LEDGER_DIR, trace::LEDGER_FILE))
+    refute_includes ledger, "private bank details"
+    refute_includes ledger, "private generated source"
+    assert_equal 0o600, File.stat(File.join(root, trace::LEDGER_DIR, trace::LEDGER_FILE)).mode & 0o777
+    assert_nil trace.current
+  ensure
+    FileUtils.rm_rf(root) if root
+    trace&.clear(outer) if defined?(outer)
   end
 
   def test_the_recorder_keeps_a_turn_and_reads_it_back_after_a_restart
