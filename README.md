@@ -55,10 +55,24 @@ Start with [MASTER](MASTER/README.md), [RAILS](RAILS/README.md),
 
 ## Agent entrypoints
 
-`AGENTS.md` is the canonical agent entrypoint and carries the shared workflow
-contract generated from `MASTER/AGENTS.md`. Gemini, GLM and Cursor have short
-generated pointers to it; Codex and Copilot read it directly. `CLAUDE.md` is
-the bootstrap pointer.
+`AGENTS.md` is the shared contract generated from `MASTER/AGENTS.md` by
+`cd MASTER && rake docs:agent_contracts`; verify it with
+`rake lint:agent_contracts`. Do not edit generated pointers directly.
+
+| Agent | Entry file | Role |
+| --- | --- | --- |
+| Codex and Copilot | `AGENTS.md` | Read the complete shared contract directly. |
+| Gemini CLI | `GEMINI.md` | Generated pointer to `AGENTS.md`. |
+| GLM | `GLM.md` | Generated pointer to `AGENTS.md`. |
+| Cursor | `.cursorlaws` | Generated project-specific pointer to `AGENTS.md`. |
+| Claude Code | `CLAUDE.md` | Hand-written bootstrap; routes to `AGENTS.md`. |
+| Aider | `.aider.conf.yml` | Loads the canonical policy files; automatic commits are disabled. |
+
+The pointer files do not carry independent policy. Edit their source in
+`MASTER/AGENTS.md` and regenerate them together. `.cursorlaws` is Cursor's
+local entrypoint name, not a second Law catalogue. Aider's file list explains
+what it reads; the operator remains responsible for commits.
+
 `MASTER/lib/convergence/architecture.rb` reports the live cross-tree inventory; `MASTER/data/law/TREE_CONTRACTS.md`
 is the shared runtime/tree contract. `BIZ/README.md` owns BIZ's document-production workflow. Root `TODO.md` is the one cross-tree
 action list; structured YAML ledgers remain the owners of IDs, evidence receipts,
