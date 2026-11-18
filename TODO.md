@@ -290,8 +290,13 @@ are not new implementation requests.
   redaction. Structural look-stage drops now report bounded category/path
   rejection reasons in the summary and existing event receipt. A typed `/q`
   now directly explains `/quit` and `/exit`, with REPL and help regressions.
-  Regressions authored, NOT_RUN. The redacted, run-specific chat-visible run
-  receipt remains open.
+  The interactive /fix response now includes a compact projection of the
+  existing verified coordinator terminal receipt (run/attempt identity,
+  state, result, changed count, assessment status, ledger sequence and digest);
+  the projection contains no prompts, tools or raw output. Adapter/ledger and
+  response-path regressions are authored, NOT_RUN. Keep this item open until
+  the regressions execute on the installed Ruby and a real /fix response is
+  inspected.
 
 Build on existing Mission, Supervisor, TaskSteward, TaskContract,
 OutcomeLearning, RepairMemory, RunBudget, RunPulse, Transaction and
