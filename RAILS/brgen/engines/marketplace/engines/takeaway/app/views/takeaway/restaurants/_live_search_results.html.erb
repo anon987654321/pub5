@@ -1,5 +1,5 @@
 <%= turbo_frame_tag "takeaway-restaurants-list", target: "_top" do %>
-<% restaurant_filter_params = request.query_parameters %>
+<% restaurant_filter_params = request.query_parameters.except("page", "format") %>
 <%# The cuisines are the category shortcut rail: a white square well with the
     cuisine's initial above its name, "Alle" first. %>
 <nav class="deal-cats" aria-label="<%= t("actions.all_cuisines") %>">
