@@ -135,10 +135,8 @@ class TestDocPaths < Minitest::Test
   # have short pointer files; Codex and Copilot read AGENTS.md directly.
   HARNESS_FILES = %w[AGENTS.md GEMINI.md GLM.md .cursorlaws].freeze
 
-  # Non-entry Markdown has a narrow purpose: face/reference contracts, archived
-  # RAILS experiments and research, recovery material, and STUDIO migration guides.
-  # Historical reviews and recovery notes remain available through Git history.
-  # These are artifacts, not substitutes for tree/project README entry points.
+  # Non-entry Markdown survives only when an active boundary has a distinct job.
+  # Historical research, app ledgers and design experiments remain in Git history.
   # Runtime behavior and recovery contracts now live in Ruby or YAML. TREE_CONTRACTS.md is the one
   # tree-contract file, consolidated beside the rest of the normative corpus in
   # MASTER/data/law/; the per-tree CLAUDE.md contracts folded into it by
@@ -148,8 +146,6 @@ class TestDocPaths < Minitest::Test
     MASTER/data/principles/openbsd_kernel_philosophy.md
     BIZ/RESTORATION_REPORT.md
     BIZ/tools/fetat_proposal.md
-    RAILS/docs/COMPETITOR_BENCHMARK.md
-    RAILS/docs/SCREENSHOT_LAW_ADHERENCE.md
     STUDIO/agent-guidance/claude/agents/rails-layout-refiner.md
     RAILS/__shared/SOCIAL_FRONT_PAGE.md
     MASTER/data/law/TREE_CONTRACTS.md
@@ -159,13 +155,6 @@ class TestDocPaths < Minitest::Test
     MASTER/data/law/ad_creative_governance.md
     MASTER/data/law/bergen_brand_systems.md
     RAILS/mrdamascy/APP_SPEC.md
-    RAILS/mrdamascy/docs/fix-ledger.md
-    RAILS/docs/INTERACTION_CAMPAIGN.md
-    RAILS/docs/LEGACY_PROMISES.md
-    RAILS/docs/archive/LAYOUT_MICRO_REFINEMENT_MATRIX.md
-    RAILS/docs/archive/SURFACE_MICRO_REFINEMENT_MATRIX.md
-    RAILS/docs/archive/SURFACE_MICRO_REFINEMENT_MATRIX_II.md
-    RAILS/docs/archive/UI_ARCHAEOLOGY.md
     BIZ/research/bringhurst-strunk-research.md
     BIZ/research/business-plan-quality.md
     BIZ/research/typographic-styles.md
@@ -173,7 +162,6 @@ class TestDocPaths < Minitest::Test
     BIZ/tools/future_nato_weapons_proposal.md
     MASTER/lib/cli/face/contract.md
     MIGRATION.md
-    STUDIO/docs/fetat/proposal.md
   ].freeze
 
   # README.md is the human entry point at each tree/project boundary. Other
