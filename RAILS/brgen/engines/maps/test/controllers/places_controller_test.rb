@@ -126,6 +126,8 @@ class MapsPlacesControllerTest < ActionDispatch::IntegrationTest
     assert_select "h1", text: "Bryggen"
     assert_select "dd", text: "Strandgaten 9"
     assert_select "dt", text: I18n.t("maps.coordinates")
+    assert_select "article.place > .place-actions a[href^=?]", "https://www.openstreetmap.org/"
+    assert_select "article.place > .place-actions form.check-in-form"
     assert_includes response.body, "openstreetmap.org/?mlat="
     assert_select "aside.also-nearby li a", text: "Nordnes"
   end
