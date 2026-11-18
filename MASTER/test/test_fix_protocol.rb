@@ -45,6 +45,11 @@ class TestFixProtocol < Minitest::Test
     assert_includes text, "commit and push"
     assert_includes text, "Never promise that literally every defect was repaired"
     assert_includes text, "0.3 SERIAL FIVE-TREE DELIVERY"
+    assert_includes text, "3. REVIEW — FRESH EYES AND EXTERNAL REVIEW INTAKE"
+    assert_includes text, "one in-memory intake row per distinct claim"
+    assert_includes text, "already_implemented, partially_implemented, actionable"
+    assert_includes text, "Do not create review reports, planning documents"
+    assert_includes text, "three separate completed green causal traces"
     assert_includes text, "TaskContract.openbsd_preflight"
     assert_includes text, "Bob2 applies to the"
   end
@@ -179,9 +184,15 @@ class TestFixProtocol < Minitest::Test
 
       payload = JSON.parse(Master::Fix::Protocol.render(root:, target: root))
 
-      assert_equal 7, Master::Fix::Protocol::VERSION
+      assert_equal 9, Master::Fix::Protocol::VERSION
       assert_equal Master::Fix::Protocol::VERSION, payload.fetch("fix_protocol_version")
+      assert_includes payload.fetch("stages"), "review"
       assert_includes payload.fetch("stages"), "semantic"
+      review_contract = payload.fetch("external_review_contract")
+      assert_equal "untrusted_claims", review_contract.fetch("source_policy")
+      assert_equal Master::Fix::Protocol::REVIEW_DISPOSITIONS, review_contract.fetch("dispositions")
+      assert_includes review_contract.fetch("required_grounding"), "source_sha256"
+      assert_match(/no_new_backlog_files/, review_contract.fetch("backlog_policy"))
       assert_includes payload.fetch("terminal_states"), "PLATEAU"
       assert_includes payload.fetch("terminal_states"), "INCONCLUSIVE"
       assert_equal 1, payload.dig("corpus", "total_regular_files")
