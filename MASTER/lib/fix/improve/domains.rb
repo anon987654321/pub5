@@ -202,7 +202,7 @@ module Master
 
         def markdown_headings(source)
           source.each_line.with_index.filter_map do |line, index|
-            match = line.match(/^\s*(#{1,6})\s+\S/)
+            match = line.match(/^\s*(\#{1,6})\s+\S/)
             { level: match[1].length, line: index + 1 } if match
           end
         end
