@@ -80,7 +80,9 @@ module Master
       end
 
       def safe_label(value)
-        value.to_s.gsub(/[^a-zA-Z0-9_.\\/-]/, "?").byteslice(0, 80)
+        value.to_s.split("/", -1).map do |segment|
+          segment.gsub(/[^a-zA-Z0-9_.-]/, "?")
+        end.join("/").byteslice(0, 80)
       end
 
       def law_id(text, laws = nil)
