@@ -203,6 +203,16 @@ class TestImproveEngine < Minitest::Test
     assert findings.any? { |f| f[:message].include?("placeholder") }, findings.inspect
   end
 
+  def test_empty_studio_music_metadata_is_a_structural_polish_finding
+    path = write("STUDIO/dilla/session.yml", "bpm:\n")
+    findings = Master::Fix::Improve::Domains.scan(root: @root, files: [path])
+
+    finding = findings.find { |row| row.signal == "empty_music_field" }
+    refute_nil finding
+    assert_equal :structure, finding.domain
+    assert_equal 1, finding.line
+  end
+
   def test_elevates_unmarked_scores_in_the_music_domain
     path = write("docs/piece.sco", "i1 0 2 0.5\ni1 2 2 0.4\n")
     findings = @engine.elevate(files: [path])
