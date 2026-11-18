@@ -265,46 +265,11 @@ def check_provider_catalog
   Check.new(name: "provider-catalog", state: (File.exist?(path)) ? :pass : :fail, detail: File.exist?(path) ? path : "missing")
 end
 
-# A fix author is excluded from its own independent review. A jury is only
-# seatable when quorum and the independent-family floor survive every
-# configured author family, not merely when enough models answer in total.
+# Keep the doctor output shape here; the readiness rules themselves belong to
+# Review::Consensus so /fix admission and diagnostics cannot drift apart.
 def check_consensus_jury(router: nil)
-  consensus = Master::Review::Consensus
-  models = Array(consensus.default_models).map(&:to_s).reject(&:empty?).uniq
-  quorum = Integer(consensus.default_quorum)
-  return Check.new(name: "consensus-jury", state: :fail, detail: "configured pool has #{models.size} model(s), quorum is #{quorum}") if models.size < quorum
-
-  router ||= Master::CLI::Routing::ModelRouter.new(
-    config: Master::Ground::Config.new(ROOT), root: ROOT,
-  )
-  reasons = models.to_h { |model| [model, router.unreachable_reason(model, wait: true)] }
-  pending = reasons.select { |_model, reason| reason.to_s.start_with?("checking ") }
-  unless pending.empty?
-    detail = pending.map { |model, reason| "#{model}: #{reason}" }.join("; ")
-    return Check.new(name: "consensus-jury", state: :unmeasured, detail: "provider probe did not finish: #{detail}")
-  end
-
-  reachable = reasons.select { |_model, reason| reason.nil? }.keys
-  families = models.map { |model| consensus.model_family(model) }.uniq
-  family_floor = consensus::MIN_INDEPENDENT_FAMILIES
-  blocked = families.filter_map do |author_family|
-    voters = reachable.reject { |model| consensus.model_family(model) == author_family }
-    voter_families = voters.map { |model| consensus.model_family(model) }.uniq
-    next if voters.size >= quorum && voter_families.size >= family_floor
-
-    "#{author_family} author leaves #{voters.size}/#{quorum} voters across #{voter_families.size}/#{family_floor} families"
-  end
-
-  unavailable = reasons.filter_map { |model, reason| "#{model}: #{reason}" unless reason.nil? }
-  unless blocked.empty?
-    detail = blocked.join("; ")
-    detail += "; unavailable: #{unavailable.join('; ')}" unless unavailable.empty?
-    return Check.new(name: "consensus-jury", state: :fail, detail:)
-  end
-
-  detail = "#{reachable.size}/#{models.size} reachable; quorum #{quorum} and #{family_floor} independent families survive every author-family exclusion"
-  detail += "; unavailable but redundant: #{unavailable.join('; ')}" unless unavailable.empty?
-  Check.new(name: "consensus-jury", state: :pass, detail:)
+  readiness = Master::Review::Consensus.jury_readiness(router:, root: ROOT)
+  Check.new(name: "consensus-jury", state: readiness.state, detail: readiness.detail)
 rescue StandardError => e
   Check.new(name: "consensus-jury", state: :unmeasured, detail: "#{e.class}: #{e.message.lines.first.to_s.strip}")
 end
