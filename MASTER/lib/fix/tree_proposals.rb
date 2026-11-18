@@ -22,9 +22,31 @@ module Master
 
       # [proposals, dropped] for an answer, checked against the paths the tree holds.
       def parse(answer, known_paths, dialect = FIRST_READ)
-        lines = answer.lines.select { |line| line.strip.upcase.start_with?("#{dialect.header}:") }
-        parsed = lines.map { |line| proposal_from(line, known_paths, dialect) }
-        [parsed.compact.first(MAX), parsed.count(nil)]
+        proposals, dropped, = parse_detailed(answer, known_paths, dialect)
+        [proposals, dropped]
+      end
+
+      # Structural review needs to explain why a proposal was discarded, not
+      # only print a count. Reasons name the failed contract, never the model's
+      # free-form explanation or any prompt/output payload.
+      def parse_detailed(answer, known_paths, dialect = FIRST_READ)
+        proposals = []
+        reasons = []
+        dropped = 0
+
+        answer.lines.each do |line|
+          next unless line.strip.upcase.start_with?("#{dialect.header}:")
+
+          proposal = proposal_from(line, known_paths, dialect)
+          if proposal && proposals.size < MAX
+            proposals << proposal
+          else
+            dropped += 1
+            reasons << (proposal ? "proposal limit exceeded (#{MAX})" : rejection_reason(line, known_paths, dialect))
+          end
+        end
+
+        [proposals, dropped, reasons.first(6)]
       end
 
       def proposal_from(line, known_paths, dialect = FIRST_READ)
