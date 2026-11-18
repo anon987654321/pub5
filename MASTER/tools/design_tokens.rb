@@ -85,6 +85,68 @@ module DesignTokens
     Operator::MasterDesign.tokens(SOURCE)
   end
 
+  def type_spec_markdown
+    tokens = load
+    shared = tokens.fetch("shared_chrome")
+    amber = tokens.fetch("luxury")
+    identity = tokens.fetch("visual_identity")
+    thresholds = tokens.fetch("typography")
+
+    rows = [
+      ["Meta", "font_size_meta", shared.fetch("font_size_meta")],
+      ["Body", "font_size_body", shared.fetch("font_size_body")],
+      ["Section title", "font_size_title", shared.fetch("font_size_title")],
+      ["Display", "font_size_display", shared.fetch("font_size_display")],
+    ]
+    amber_rows = [
+      ["Meta", "font_size_meta", amber.fetch("font_size_meta")],
+      ["Body", "font_size_body", amber.fetch("font_size_body")],
+      ["Title", "font_size_title", amber.fetch("font_size_title")],
+      ["Display", "font_size_display", amber.fetch("font_size_display")],
+    ]
+
+    lines = [
+      "# Typography specification",
+      "",
+      "Generated from `MASTER/data/tokens.yml` by `ruby MASTER/tools/design_tokens.rb --type-spec`. Do not edit generated output.",
+      "",
+      "## Shared chrome roles",
+      "",
+      "| Role | Canonical token | Value |",
+      "| --- | --- | --- |",
+      *rows.map { |role, key, value| "| #{role} | `#{key}` | `#{value}` |" },
+      "",
+      "Measure: `#{shared.fetch("measure_body")}`. UI family: `#{shared.fetch("font")}`. Technical family: `#{shared.fetch("font_code")}`.",
+      "",
+      "## Amber wardrobe roles",
+      "",
+      "| Role | Canonical token | Value |",
+      "| --- | --- | --- |",
+      *amber_rows.map { |role, key, value| "| #{role} | `luxury.#{key}` | `#{value}` |" },
+      "",
+      "Amber keeps its own editorial wardrobe dialect and original masthead; these values do not replace another app's type system.",
+      "",
+      "## Surface and accessibility limits",
+      "",
+      "| Measure | Law-owned value |",
+      "| --- | --- |",
+      "| Minimum body text | #{thresholds.dig("accessibility", "body_min_px")} px |",
+      "| Minimum mobile input text | #{thresholds.dig("accessibility", "mobile_input_min_px")} px |",
+      "| Normal text contrast | #{thresholds.dig("accessibility", "normal_text_contrast")}:1 |",
+      "| Large text contrast | #{thresholds.dig("accessibility", "large_text_contrast")}:1 |",
+      "| Prose measure | #{thresholds.dig("line_length", "min_ch")}–#{thresholds.dig("line_length", "max_ch")} ch; ideal #{thresholds.dig("line_length", "ideal_ch")} ch |",
+      "| Preferred body leading | #{thresholds.dig("line_height", "body_preferred")} |",
+      "| Families / weights / sizes per surface | #{thresholds.dig("hierarchy", "max_font_families")} / #{thresholds.dig("hierarchy", "max_font_weights")} / #{thresholds.dig("hierarchy", "max_font_sizes")} maximum |",
+      "",
+      "Display role: `#{identity.dig("typography_roles", "display")}`. Body role: `#{identity.dig("typography_roles", "body")}`. Technical role: `#{identity.dig("typography_roles", "technical")}`. The wordmark remains original artwork.",
+      "",
+      "These are ceilings and accessibility floors, not a mandate to use every size or weight. Keep each product's operator-owned font, palette and mark; change rendered values only with surface evidence and human review.",
+      "",
+      "BIZ retains its document-specific type contract; see `BIZ/README.md`."
+    ]
+    lines.join("\n")
+  end
+
   def static_tokens_css
     tokens = load
     social = tokens.fetch("social")
@@ -403,8 +465,12 @@ module DesignTokens
 end
 
 if $PROGRAM_NAME == __FILE__
-  Master::Trace::Dmesg.status(
-    "design0",
-    DesignTokens.sync_design_artifact! ? "generated from MASTER/data/tokens.yml" : "already in sync",
-  )
+  if ARGV.include?("--type-spec")
+    puts DesignTokens.type_spec_markdown
+  else
+    Master::Trace::Dmesg.status(
+      "design0",
+      DesignTokens.sync_design_artifact! ? "generated from MASTER/data/tokens.yml" : "already in sync",
+    )
+  end
 end
