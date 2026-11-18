@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "yaml"
+require "uri"
 
 module Master
   module Fix
@@ -22,6 +23,17 @@ module Master
         VISUAL_EXTENSIONS = %w[.erb .scss .css .html .htm].freeze
         STRUCTURE_EXTENSIONS = %w[.yml .yaml].freeze
         MUSIC_EXTENSIONS = %w[.sco .orc .csd].freeze
+        QUALITY_AREAS = {
+          code: %w[readability maintainability interaction reliability],
+          prose: %w[editorial clarity navigation provenance localization],
+          visual: %w[visual_hierarchy accessibility interaction privacy],
+          structure: %w[configuration_clarity consistency data_integrity],
+          music: %w[notation production_provenance],
+        }.freeze
+        EXTERNAL_REVIEW_AREAS = %w[
+          rendered_composition real_device_use assistive_technology
+          human_listening live_host user_acceptance legal_and_business_review
+        ].freeze
 
         def coverage(files:)
           scoped = Array(files).select { |path| File.file?(path) }
@@ -31,6 +43,8 @@ module Master
             measured_files: counts.values.sum,
             domains: counts.keys.map(&:to_s).sort,
             domain_counts: counts.transform_keys(&:to_s).sort.to_h,
+            quality_areas: counts.keys.flat_map { |domain| QUALITY_AREAS.fetch(domain, []) }.uniq.sort,
+            external_review_areas: EXTERNAL_REVIEW_AREAS,
             unmeasured_files: scoped.size - counts.values.sum,
           }
         end
@@ -97,6 +111,10 @@ module Master
               end
             end
 
+            if %w[.js .mjs .cjs .jsx .ts .tsx].include?(File.extname(path).downcase)
+              findings.concat(scan_script_experience(path, source))
+            end
+
             if !source.empty? && !source.end_with?("\n")
               findings << opportunity(
                 :code, path, "missing_final_newline",
@@ -116,6 +134,33 @@ module Master
             end
             findings
           end
+        end
+
+        # Source-backed interaction and resilience prompts. These are advisory:
+        # a reviewer checks the call site and existing app feedback conventions
+        # before changing behaviour.
+        def scan_script_experience(path, source)
+          findings = []
+          dialog = source.match(/\b(?:window\s*\.\s*)?(?:alert|confirm|prompt)\s*\(/)
+          if dialog
+            findings << opportunity(
+              :code, path, "native_dialog",
+              "a browser-native dialog interrupts the application's interaction context",
+              5.5, "Review whether an inline, app-native feedback or confirmation pattern can preserve context; retain native confirmation where it protects a consequential action.",
+              line: line_number(source, dialog.begin(0))
+            )
+          end
+
+          fetch_call = source.match(/\bfetch\s*\(/)
+          if fetch_call && !source.match?(/\.\s*catch\s*\(|\btry\s*\{/)
+            findings << opportunity(
+              :code, path, "fetch_without_visible_error_path",
+              "the file contains fetch() but no visible rejection or try/catch path",
+              6.5, "Trace this request's full call chain and provide useful recovery or user feedback for rejection; do not add a catch that silently swallows the error.",
+              line: line_number(source, fetch_call.begin(0))
+            )
+          end
+          findings
         end
 
         def method_boundaries(lines)
@@ -188,6 +233,10 @@ module Master
               previous_level = row[:level]
             end
 
+            if markdown
+              findings.concat(scan_markdown_links(root:, path:, source:))
+            end
+
             generic_link = source.match(/\[([^\]]+)\]\([^)]+\)/)
             if generic_link && generic_link[1].strip.match?(/\A(?:here|click here|read more|learn more)\z/i)
               findings << opportunity(
@@ -209,6 +258,51 @@ module Master
             end
             findings
           end
+        end
+
+        def scan_markdown_links(root:, path:, source:)
+          findings = []
+          in_fence = false
+          source.each_line.with_index do |line, index|
+            if line.match?(/^\s*(?:`{3,}|~{3,})/)
+              in_fence = !in_fence
+              next
+            end
+            next if in_fence
+
+            line.to_enum(:scan, /!?\[[^\]]*\]\(([^)]+)\)/).each do
+              match = Regexp.last_match
+              destination = match[1].strip.sub(/\A</, "").sub(/>\z/, "")
+              next if destination.empty? || destination.start_with?("#", "//")
+              uri = URI.parse(destination) rescue nil
+              next if uri&.scheme || destination.start_with?("mailto:", "tel:")
+              next if destination.match?(/\A(?:data|javascript):/i)
+
+              raw_path = destination.split(/[?#]/, 2).first
+              next if raw_path.to_s.empty?
+              decoded = URI::DEFAULT_PARSER.unescape(raw_path)
+              candidate = if decoded.start_with?("/")
+                            File.expand_path(decoded.delete_prefix("/"), root)
+                          else
+                            File.expand_path(decoded, File.dirname(path))
+                          end
+              root_path = File.expand_path(root)
+              next unless candidate == root_path || candidate.start_with?(root_path + File::SEPARATOR)
+              next if File.file?(candidate) || File.directory?(candidate)
+
+              findings << opportunity(
+                :prose, path, "broken_relative_link",
+                "relative Markdown link points to a missing path: #{raw_path}",
+                8.5, "Resolve the destination against the repository and update the link to an existing file or remove the broken reference; preserve external URLs and intended anchors.",
+                line: index + 1
+              )
+              break
+            end
+            break if findings.any?
+          end
+          findings
+        rescue URI::InvalidURIError
+          []
         end
 
         def markdown_headings(source)
@@ -248,6 +342,34 @@ module Master
                 break
               end
 
+              if source.match?(/<html\b/i) && !source.match?(/<html\b[^>]*\blang\s*=/i)
+                findings << opportunity(
+                  :visual, path, "document_language_missing",
+                  "a full HTML document does not declare its primary language",
+                  8.5, "Declare the correct document language on the html element using the product's actual locale; do not guess from the file path.",
+                  line: line_number(source, source.index(/<html\b/i))
+                )
+              end
+
+              if source.match?(/<html\b/i) && !source.match?(/<title\b[^>]*>\s*\S/im)
+                findings << opportunity(
+                  :visual, path, "document_title_missing",
+                  "a full HTML document has no non-empty title element",
+                  7.5, "Provide a concise, page-specific document title consistent with the product's naming conventions.",
+                  line: line_number(source, source.index(/<html\b/i))
+                )
+              end
+
+              empty_button = source.match(/<button\b(?![^>]*\b(?:aria-label|aria-labelledby|title)=)[^>]*>\s*(?:<\/button>)/im)
+              if empty_button
+                findings << opportunity(
+                  :visual, path, "empty_button",
+                  "a button has no visible or programmatic name",
+                  9.0, "Give the control a visible action label or a concise accessible name that describes its action.",
+                  line: line_number(source, empty_button.begin(0))
+                )
+              end
+
               source.each_line.with_index do |line, index|
                 next unless line.match?(/\bimage_tag\b/) && !line.match?(/\balt\s*:/)
 
@@ -270,7 +392,7 @@ module Master
                 )
               end
 
-              icon_button = source.match(/<button\b(?![^>]*\b(?:aria-label|title)=)[^>]*>\s*(?:<i\b|<svg\b|<span\b[^>]*\bicon)/im)
+              icon_button = source.match(/<button\b(?![^>]*\b(?:aria-label|aria-labelledby|title)=)[^>]*>\s*(?:<i\b|<svg\b|<span\b[^>]*\bicon)/im)
               if icon_button
                 findings << opportunity(
                   :visual, path, "icon_only_button",
@@ -282,8 +404,33 @@ module Master
             end
 
             if %w[.scss .css].include?(extension) &&
-               source.match?(/#[0-9a-f]{3,8}\b/i) &&
-               !source.match?(/scan:\s*intentional-colors/i)
+               source.match?(/outline\s*:\s*(?:none|0)\b/i) &&
+               !source.match?(/:focus(?:-visible)?\b/i)
+              outline = source.match(/outline\s*:\s*(?:none|0)\b/i)
+              findings << opportunity(
+                :visual, path, "focus_outline_removed",
+                "the stylesheet removes outlines without a visible focus replacement in the same source",
+                9.0, "Check the compiled stylesheet graph and restore a clearly visible keyboard-focus treatment; do not add a duplicate if a shared global focus style already covers this selector.",
+                line: line_number(source, outline.begin(0))
+              )
+            end
+
+            if %w[.scss .css].include?(extension) &&
+               source.match?(/(?:^|[;{\s])(?:animation|transition)\s*:/i) &&
+               !source.match?(/prefers-reduced-motion/i)
+              motion = source.match(/(?:^|[;{\s])(?:animation|transition)\s*:/i)
+              findings << opportunity(
+                :visual, path, "motion_without_reduced_motion_path",
+                "the stylesheet defines motion but has no reduced-motion handling in the same source",
+                7.5, "Inspect the compiled stylesheet graph and provide a prefers-reduced-motion alternative where this motion is non-essential; avoid duplicating an existing global policy.",
+                line: line_number(source, motion.begin(0))
+              )
+            end
+
+            if %w[.scss .css].include?(extension) &&
+               source.scan(/#[0-9a-f]{3,8}\b/i).size >= 3 &&
+               !source.match?(/scan:\s*intentional-colors/i) &&
+               !path.match?(%r{(?:token|variable|palette|color|colour)[^/]*\.(?:scss|css)\z}i)
               findings << opportunity(
                 :visual, path, "raw_hex_colors",
                 "the stylesheet contains literal hex colours outside an intentional-colour declaration",
