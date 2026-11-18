@@ -60,6 +60,32 @@ class TestPolishLens < Minitest::Test
     assert_empty Operator::PolishLens.run(root: @root, json: true)
   end
 
+  def test_findings_for_paths_returns_only_existing_files_in_the_exact_scope
+    FileUtils.touch("#{@root}/MASTER/lib/.keep")
+    FileUtils.touch("#{@root}/MASTER/lib/real.rb")
+    FileUtils.mkdir_p("#{@root}/RAILS/lib")
+    FileUtils.touch("#{@root}/RAILS/lib/.keep")
+
+    findings = Operator::PolishLens.findings_for_paths(
+      root: @root,
+      paths: ["#{@root}/MASTER/lib/.keep"]
+    )
+
+    assert_equal ["MASTER/lib/.keep"], findings.map(&:path)
+    assert_equal "DENSITY", findings.first.law
+  end
+
+  def test_findings_for_paths_refuses_symlinks
+    outside = File.join(Dir.tmpdir, "polish-outside-#{Process.pid}")
+    File.write(outside, "outside")
+    link = "#{@root}/MASTER/lib/.keep"
+    File.symlink(outside, link)
+
+    assert_empty Operator::PolishLens.findings_for_paths(root: @root, paths: [link])
+  ensure
+    FileUtils.rm_f(outside)
+  end
+
   def test_candidates_carry_law_and_proof
     FileUtils.touch("#{@root}/MASTER/lib/.keep")
     FileUtils.touch("#{@root}/MASTER/lib/real.rb")
