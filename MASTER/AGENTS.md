@@ -413,13 +413,10 @@ pictures.
 `ps aux | grep -c chrome` showed 645. Run browser-touching tests when no
 sweep is active, or expect `Timeout::ExitException` from `cdp_framing.rb`.
 
-**The committed PNGs are documentation; the review set is not.** `RAILS/docs/screenshots/`
-and the per-engine `screenshots/` dirs are static docs (only
-`test_visual_sheets.rb` names one). `RAILS/screenshot_*.png` is the flat review
-set and raw captures live in temp (`pub5-screenshot-sweep/`), so a sweep creates
-no folder under `RAILS/`. The review set is git-ignored run artifact. Neither the
-review path nor the critic reads the committed docs; both read what the current
-sweep rendered.
+**Rendered review evidence is run-scoped.** `RAILS/screenshot_*.png` is the
+flat, git-ignored review set and raw captures live in temp
+(`pub5-screenshot-sweep/`). A sweep creates no screenshot archive under
+`RAILS/`; the critic reads only what the current sweep rendered.
 
 ## Judging your own work
 
