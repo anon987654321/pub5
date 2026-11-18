@@ -106,6 +106,10 @@ class TestDocPaths < Minitest::Test
 
     root_readme = File.read(File.join(REPO, "README.md"))
     assert_includes root_readme, "`MASTER/data/laws.yml`"
+    assert_includes root_readme, "`RAILS/CLAUDE.md`"
+    assert_includes root_readme, "`OPENBSD/CLAUDE.md`"
+    assert_includes root_readme, "`STUDIO/README.md`"
+    refute_includes root_readme, "target tree's `AGENTS.md`"
     refute_match(/\]\(ARCHITECTURE\.md\)/, root_readme)
   end
 
@@ -129,6 +133,8 @@ class TestDocPaths < Minitest::Test
 
     claude = File.read(File.join(REPO, "CLAUDE.md"))
     refute_match(/MASTER\/data\/rules\.yml`? > this file >.*executable law/i, claude)
+    assert_includes claude, "`MASTER/data/law/TREE_CONTRACTS.md`"
+    refute_match(/live in `TREE_CONTRACTS\.md`/, claude)
   end
 
   # AGENTS.md is generated from MASTER/AGENTS.md. Gemini, GLM and Cursor
