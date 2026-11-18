@@ -5,9 +5,9 @@ new_path_fields: [path, reason]
 documentation_pair_fields: [contract_path, document_path, reason]
 common_proof: [baseline_hashes, path_scoped_diff, law_assessment]
 # documentation_review (convergence.yml workstream documentation_completeness)
-# names doc-side proof for a change that moves a public contract: the diff
-# must show the document moved with the code, not that prose agrees with
-# intent.
+# requires exact contract_path/document_path/reason pairs in documentation_pairs.
+# The /fix committer refuses delivery unless every declared pair is changed in
+# the same commit/checkpoint; the proof label alone is not sufficient.
 proof_types: [baseline_hashes, path_scoped_diff, law_assessment, focused_tests, full_suite, rendered_evidence, runtime_evidence, accessibility_review, source_citations, human_review, documentation_review]
 preservation_dimensions: [visual_identity, layout, structure, assets, behavior, accessibility, public_contracts, operator_owned_values, product_identity, content_semantics, data_semantics]
 intents:
