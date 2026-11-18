@@ -209,7 +209,14 @@ module Master
         File.chmod(0o700, dir)
         path = File.join(dir, LEDGER_FILE)
         line = JSON.generate(trace)
-        File.open(path, "a:UTF-8", 0o600) { |f| f.puts(line) }
+        File.open(path, "a:UTF-8", 0o600) do |file|
+          file.flock(File::LOCK_EX)
+          file.puts(line)
+          file.flush
+          file.flock(File::LOCK_UN)
+        ensure
+          file&.flock(File::LOCK_UN)
+        end
         File.chmod(0o600, path)
         {
           path: path,
