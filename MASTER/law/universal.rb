@@ -2483,9 +2483,9 @@ end
 
 Law.define(:ROBUSTNESS_antigen_memory) do
   source "laws.yml ROBUSTNESS_antigen_memory - remember failures and recognise them again"
-  ask "Are failure signatures, council vetoes and high-cost trajectories retained as antigens, and do later probes and gates recognise matching defect classes at the same high-risk boundary, down-weighting or refusing them unless new evidence shows the pattern resolved?"
-  practice "Keep a durable memory of harm and consult it at the boundary where the harm occurred."
-  fix "Retain the failure signature, consult it at the matching boundary, and require new evidence to lift the weight."
+  ask "Are failed repair proposals and council vetoes retained against their source revision, are resolved dependency cycles and configured per-Law budget crossings retained as structural or cost antigens, and do later probes recognise matching defect classes at the same boundary until new evidence resolves them?"
+  practice "Keep a private, append-only memory of source-bound failures, structural cycles and configured budget crossings; consult it at the same boundary and distinguish estimates from reported usage."
+  fix "Record source-bound refusals, resolved dependency cycles and per-Law budget crossings; surface only matching evidence and require new proof before lifting a refusal."
   bad "A vetoed defect class recurs at the same boundary because no memory of the earlier failure is consulted."
   good "The earlier failure is remembered and recognised at its boundary, refused until new evidence resolves it."
 end
