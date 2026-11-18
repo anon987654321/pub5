@@ -166,7 +166,10 @@ class TestRuleCatalogue < Minitest::Test
     assert entries.key?("ROBUSTNESS_homeostasis")
     refute entries.key?("ROBUSTNESS_immune_pattern")
     assert entries.key?("ROBUSTNESS_antigen_memory")
-    assert_match(/retained as antigens/, statement)
+    assert_match(/retained as .* antigens/, statement)
+    assert_match(/source revision/, statement)
+    assert_match(/configured per-Law budget/, statement)
+    assert_match(/dependency cycles/, statement)
     assert_match(/recognise matching defect classes/, statement)
     assert_match(/durable memory/, statement)
   end
