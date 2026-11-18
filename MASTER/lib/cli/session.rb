@@ -63,17 +63,11 @@ module Master
         @refs.agent.pin_boot_model! if @refs.agent.respond_to?(:pin_boot_model!)
         @refs.session.load! if @refs.session.exists?
         start_background_loop if background_scan_enabled?
-        # One vertical rhythm: the dmesg, a blank line, the ready block, then
-        # a blank line before each block that follows and before the prompt.
+        # Finish the compact boot surface before presenting the operator prompt.
+        # Repository inventory and first-run hints remain available on demand.
         print_splash
-        # One line for a resumed session. Replaying its last turns printed an old
-        # reply above the prompt, which read as a canned answer to a message not
-        # yet typed.
         terminal_puts(@refs.renderer.session_line(@refs.session.messages.size)) if @refs.session.name
-        unless booted_before?
-          print_repo_tree
-          print_quick_start
-        end
+        paint_voice_indicators
         run_input(initial_message) if initial_message
         greet_from_model unless initial_message
         @running = true
