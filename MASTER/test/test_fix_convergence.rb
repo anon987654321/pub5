@@ -2190,6 +2190,22 @@ end
   end
 
   # 6. A clean tree the ground truth agrees with is the one state that says DONE.
+  def test_improvement_receipt_keeps_measured_polish_and_external_review_areas
+    runner = build_loop([]).instance_variable_get(:@pass_runner)
+    runner.send(
+      :record_improvement_assessment!,
+      pass: 2, findings: 1, files_seen: 12, measured_files: 9,
+      domains: %w[code prose visual],
+      quality_areas: %w[accessibility editorial interaction],
+      external_review_areas: %w[assistive_technology rendered_composition],
+    )
+    state = runner.instance_variable_get(:@assessment_improvement_state)
+
+    assert_equal %w[accessibility editorial interaction], state[:quality_areas]
+    assert_equal %w[assistive_technology rendered_composition], state[:external_review_areas]
+    assert_equal %w[code prose visual], state[:domains]
+  end
+
   def test_a_clean_pass_asks_council_for_improvements
     asked = []
     council = Object.new
