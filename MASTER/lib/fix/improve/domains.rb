@@ -24,11 +24,11 @@ module Master
         STRUCTURE_EXTENSIONS = %w[.yml .yaml].freeze
         MUSIC_EXTENSIONS = %w[.sco .orc .csd].freeze
         QUALITY_AREAS = {
-          code: %w[readability maintainability interaction resilience reliability trust performance],
-          prose: %w[editorial clarity cognition navigation provenance localization],
-          visual: %w[visual_hierarchy accessibility interaction privacy identity discoverability],
-          structure: %w[configuration_clarity consistency data_integrity portability],
-          music: %w[notation production_provenance authorship],
+          code: %w[implementation_craft interaction_choreography state_lifecycle resilience perceived_performance],
+          prose: %w[editorial_craft information_architecture discoverability content_provenance localization],
+          visual: %w[visual_hierarchy accessible_interaction first_use_identity navigation privacy_dignity],
+          structure: %w[configuration_clarity data_integrity content_portability],
+          music: %w[notation creative_authorship production_provenance],
         }.freeze
         EXTERNAL_REVIEW_AREAS = %w[
           rendered_composition real_device_use assistive_technology
@@ -274,9 +274,7 @@ module Master
               match = Regexp.last_match
               destination = match[1].strip.sub(/\s+["'][^"']*["']\z/, "").sub(/\A</, "").sub(/>\z/, "")
               next if destination.empty? || destination.start_with?("#", "//")
-              uri = URI.parse(destination) rescue nil
-              next if uri&.scheme || destination.start_with?("mailto:", "tel:")
-              next if destination.match?(/\A(?:data|javascript):/i)
+              next if destination.match?(/\A[a-z][a-z0-9+.-]*:/i)
 
               raw_path = destination.split(/[?#]/, 2).first
               next if raw_path.to_s.empty?
