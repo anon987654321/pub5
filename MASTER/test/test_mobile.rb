@@ -37,25 +37,18 @@ class TestMobileProfile < Minitest::Test
     refute Master::Mobile::Profile.new(env:).activate!
   end
 
-  def test_proot_install_instructions_use_pub5_and_valid_shell_continuations
-    guide = File.read(File.expand_path("../docs/mobile.md", __dir__))
+  def test_proot_installer_owns_the_supported_pub5_install_path
+    installer = File.read(File.expand_path("../bin/master-mobile-install", __dir__))
+    profile = Master::Mobile.config
 
-    assert_includes guide, "proot-distro install debian"
-    assert_includes guide, 'cd "$HOME/pub5"'
-    refute_includes guide, "/pub4"
-
-    continuations = guide.lines.select { |line| line.rstrip.end_with?("\\") }
-    refute_empty continuations
-    continuations.each do |line|
-      # each_line keeps the newline, and \z is the absolute end of the string,
-      # so the backslash run has to be sought on the stripped line itself --
-      # against line as delivered the match is always nil and the assertion
-      # dies on nil#length before it can say anything.
-      trailing = line.rstrip[/\\+\z/]
-      assert_equal 1, trailing.length, "shell continuation must be one backslash: #{line}"
-    end
+    assert_includes installer, 'proot-distro install "$distro"'
+    assert_includes installer, "cd /pub5/MASTER"
+    assert_includes installer, "git clone --depth 1 --branch"
+    assert_includes installer, "git pull --ff-only origin"
+    assert_includes installer, "ruby bin/deps boot"
+    assert_equal "3.3.0", profile.dig("profile", "min_ruby")
+    refute_includes installer, "/pub4"
   end
-
   def test_auto_approve_follows_the_data_until_the_operator_says_otherwise
     assert Master::Mobile::Profile.new(env: {}).auto_approve?
     refute Master::Mobile::Profile.new(env: { "MASTER_MOBILE_AUTO_APPROVE" => "0" }).auto_approve?
