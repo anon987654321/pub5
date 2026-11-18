@@ -171,6 +171,25 @@ class TestRuleCatalogue < Minitest::Test
     assert_match(/durable memory/, statement)
   end
 
+  def test_sclerotium_requires_repeated_causal_cost_and_rollback_evidence
+    data = Master.laws_document(root: Master::ROOT)
+    statement = data.fetch("ROBUSTNESS_sclerotium").fetch("statement")
+
+    [
+      "three separate completed green runs",
+      "same task, path and source revision",
+      "durable causal trace",
+      "measured runtime profile",
+      "actual provider-usage receipt",
+      "unresolved antigen",
+      "rollback or checkpoint",
+      "deterministic tests",
+      "NOT_READY",
+    ].each do |term|
+      assert_includes statement, term
+    end
+  end
+
   def test_truthful_status_rejects_fabricated_or_unverifiable_provenance
     data = Master.laws_document(root: Master::ROOT)
     statement = data.fetch("TRUTHFUL_STATUS_unverified_claim").fetch("statement")
