@@ -21,5 +21,4 @@ class SurfaceMicroRefinementTwoContractTest < Minitest::Test
       refute_includes source, '@forward "surface_micro_refinements_two";'
     end
   end
-
 end
