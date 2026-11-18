@@ -80,13 +80,13 @@ class Marketplace::ListingsControllerTest < ActionDispatch::IntegrationTest
     params = {
       kind: "goods", q: "ski", from: "person", category_id: @category.id,
       condition: "very_good", min_price: "100", max_price: "500",
-      lat: "60.39", lng: "5.32", radius_km: "12", sort: "price_low"
+      lat: "60.39", lng: "5.32", radius_km: "12", sort: "price_low", page: "4"
     }
 
     get marketplace.listings_path, params: params
     assert_response :success
 
-    base = params.except(:from)
+    base = params.except(:from, :page)
     assert_select ".listing-filter-group a[href=?]",
                   marketplace.listings_path(base)
     assert_select ".listing-filter-group a[href=?]",
@@ -99,7 +99,7 @@ class Marketplace::ListingsControllerTest < ActionDispatch::IntegrationTest
     params = {
       kind: "goods", q: "bike", from: "person", category_id: @category.id,
       condition: "good", min_price: "50", max_price: "900",
-      lat: "60.39", lng: "5.32", radius_km: "8", sort: "price_low"
+      lat: "60.39", lng: "5.32", radius_km: "8", sort: "price_low", page: "4"
     }
 
     get marketplace.listings_path, params: params
@@ -107,7 +107,7 @@ class Marketplace::ListingsControllerTest < ActionDispatch::IntegrationTest
 
     Marketplace::Listing::KINDS.each do |kind|
       assert_select "nav.listing-kinds a[href=?]",
-                    marketplace.listings_path(params.merge(kind: kind))
+                    marketplace.listings_path(params.except(:page).merge(kind: kind))
     end
   end
 
@@ -115,16 +115,16 @@ class Marketplace::ListingsControllerTest < ActionDispatch::IntegrationTest
     params = {
       kind: "goods", q: "bike", from: "person", condition: "good",
       min_price: "50", max_price: "900", lat: "60.39", lng: "5.32",
-      radius_km: "8", sort: "price_low"
+      radius_km: "8", sort: "price_low", page: "4"
     }
 
     get marketplace.listings_path, params: params
     assert_response :success
 
     assert_select "nav.deal-cats a[href=?]",
-                  marketplace.listings_path(params)
+                  marketplace.listings_path(params.except(:page))
     assert_select "nav.deal-cats a[href=?]",
-                  marketplace.listings_path(params.merge(category_id: @category.id))
+                  marketplace.listings_path(params.except(:page).merge(category_id: @category.id))
   end
 
   test "the active listing category is identified in the category navigation" do
