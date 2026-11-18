@@ -56,11 +56,12 @@ module Master
         File.chmod(0o700, File.dirname(@path))
         File.open(@path, "a:UTF-8", 0o600) do |file|
           file.flock(File::LOCK_EX)
-          file.puts(JSON.generate(antigen))
-          file.flush
-          file.flock(File::LOCK_UN)
-        ensure
-          file&.flock(File::LOCK_UN)
+          begin
+            file.puts(JSON.generate(antigen))
+            file.flush
+          ensure
+            file.flock(File::LOCK_UN)
+          end
         end
         File.chmod(0o600, @path)
         antigen["id"]
