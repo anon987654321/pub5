@@ -165,6 +165,7 @@ class TestWorkLaneWiring < Minitest::Test
 
   def test_the_check_runner_is_told_the_lane
     assert_equal({ "CHECK_LANE" => "code" }, Lane.check_env(:code))
+    assert_equal({ "CHECK_LANE" => "code" }, Lane.check_env(:master))
   end
 
   # The rendered suite is the 214-cell browser sweep; a code-lane proof measures the source leaves only.
