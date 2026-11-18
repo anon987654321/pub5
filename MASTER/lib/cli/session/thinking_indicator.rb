@@ -369,9 +369,10 @@ module Master
           @spinner_row_visible = false
         end
 
-        # Detailed dmesg is the default; MASTER_CLI_QUIET=1 is the opt-out.
+        # Routine unit traffic is diagnostic, not the interactive default.
+        # --verbose/--trace/--detail opt back in through Dmesg's single policy.
         def verbose_output?
-          ENV["MASTER_CLI_QUIET"] != "1"
+          Master::Trace::Dmesg.verbose? && ENV["MASTER_CLI_QUIET"] != "1"
         end
 
         def units_console?
