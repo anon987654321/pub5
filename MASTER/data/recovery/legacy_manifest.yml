@@ -28,30 +28,46 @@ legacy_roots:
       The original handoff is retained as Git history blob b5cffde383d0b148b3bd434666fba28353c57f13; recover with git cat-file if needed. Port only proven app intent into RAILS/apps.yml; never execute archived installers.
 
   - path: ai3/
-    state: absorbed
+    state: archived
     priority: critical
-    target_path: MASTER/data/recovery/ai3/legacy/
+    target_path: "anon987654321/pub@ff73247ac8389c29dd6a9f426d16d39900c17815:ai3/"
+    source_tree: "c750e01881dc22b44e4f86c470e8d9c608c3352e"
+    inventory:
+      entries: 130
+      blobs: 120
+      ruby_files: 96
+      spec_files: 21
+      markdown_files: 5
+      yaml_files: 4
     reason: >
-      MASTER absorbed the idea, but the old standalone Ruby CLI, assistant
-      inventory, LangChain/Weaviate/Ferrum layout, installers, and config
-      provenance are not preserved.
+      The complete AI3 subtree is still recoverable in the source repository at
+      the pinned commit and tree above. It is not missing from Git history and
+      does not need to be copied into pub5. The old standalone CLI and broad
+      assistant/runtime tree are archived provenance, not the current product.
     known_files:
       - ai3/README.md
+      - ai3/RESTORATION_SUMMARY.md
       - ai3/ai3.rb
-      - ai3/install.sh
-      - ai3/install_ass.sh
       - ai3/Gemfile
+      - ai3/config/assistants.yml
       - ai3/config/config.yml
-      - ai3/config/locales/en.yml
-      - ai3/lib/cognitive.rb
-      - ai3/lib/multimedia.rb
-      - ai3/lib/scraper.rb
-      - ai3/lib/utils/config.rb
-      - ai3/lib/utils/file.rb
-      - ai3/lib/utils/llm.rb
+      - ai3/lib/assistant_orchestrator.rb
+      - ai3/lib/assistant_registry.rb
+      - ai3/lib/cognitive_orchestrator.rb
+      - ai3/lib/context_manager.rb
+      - ai3/lib/enhanced_session_manager.rb
+      - ai3/lib/memory_manager.rb
+      - ai3/lib/multi_llm_manager.rb
+      - ai3/lib/rag_engine.rb
+      - ai3/lib/universal_scraper.rb
+      - ai3/lib/weaviate_integration.rb
     action: >
-      Preserve source under MASTER/data/recovery/ai3/legacy/ or implement a deterministic
-      importer into MASTER plugins/council roles.
+      Keep the pinned source tree in the historical pub repository; do not
+      restore the standalone CLI, installers, duplicate assistant classes,
+      Weaviate/Ferrum stack or broad root-capable tools into pub5. The detailed
+      current-owner map and deliberately absent capabilities are recorded in
+      legacy_ai3_role_review below. Port a single capability only when a live
+      product requirement identifies its owner and acceptance proof.
 
   - path: bplans/consolidated/
     state: archived
@@ -1169,8 +1185,31 @@ legacy_deploy_bundle_review:
 
 legacy_ai3_role_review:
   source_repo: pub
+  source_commit: "ff73247ac8389c29dd6a9f426d16d39900c17815"
+  source_tree: "c750e01881dc22b44e4f86c470e8d9c608c3352e"
+  inventory: { entries: 130, blobs: 120, ruby_files: 96, spec_files: 21, markdown_files: 5, yaml_files: 4 }
   consolidation_commit: "534d719c7532df9f2e9ba4e39f5d46e673668e18"
   restoration_commit: "21598560b57a78059df4dcd1751946914f91e179"
+  current_owner_map:
+    interactive_cli: "MASTER/lib/cli/session/repl_flow.rb and the existing CLI command registry"
+    model_routing_and_fallback: "MASTER/lib/cli/routing/model_router.rb, MASTER/lib/review/llm_dispatcher.rb and MASTER/lib/io/lane_state.rb"
+    assistant_roles_and_personas: "MASTER/lib/review/agent.rb, MASTER/lib/review/council/personas.rb and MASTER/data/personas.yml; roles are data/policy context, not copied assistant classes"
+    memory_and_context: "MASTER/lib/ground/memory/*, MASTER/lib/core/memory.rb and MASTER/lib/trace/session.rb"
+    research_and_retrieval: "MASTER/lib/review/agent/research.rb, MASTER/lib/review/graph_retriever.rb and MASTER/lib/io/web_fetch.rb"
+    bounded_browser: "MASTER/lib/io/browser_agent.rb, MASTER/lib/io/browser_broker.rb and MASTER/tools/rails/crawl_browser.rb"
+    tools_and_filesystem: "MASTER/lib/plugin.rb, MASTER/lib/io/exec.rb and the current tool permission/consent gates; no agent-owned doas or unrestricted shell"
+    cognitive_and_recovery_lifecycle: "MASTER/lib/fix/kernel/*, MASTER/lib/fix/run_budget.rb, MASTER/lib/fix/mission.rb and MASTER/lib/fix/checkpoint.rb; not a 1:1 restoration of AI3 cognitive-load/autonomous loops"
+    audio_and_multimedia: "STUDIO/dilla, STUDIO/postpro and RAILS Brgen radio; no generic AI3 Replicate broadcast framework"
+  partial_capabilities:
+    - capability: "UniversalScraper deep crawl and screenshot service"
+      current_mapping: "Bounded web fetch and browser verification cover specific workflows, not an unrestricted general crawler."
+      disposition: "partial; do not restore the Ferrum service"
+    - capability: "Encrypted session persistence"
+      current_mapping: "MASTER Trace::Session persists atomic JSON and quarantines corruption; it does not encrypt transcripts at rest."
+      disposition: "deferred-security-design; do not add encryption without key-management and recovery contracts"
+    - capability: "Full localization layer"
+      current_mapping: "Current language preferences and Norwegian voice support exist; no equivalent standalone AI3 I18n catalog was found."
+      disposition: "not-restored; no active requirement established"
   roles_with_nontrivial_surface:
     - role: architect
       evidence: "Enhanced role grew from a small inspiration/design helper into source-guided case studies, precedents, materials, technical specifications, sustainability and cost/timeline analysis."
@@ -1199,7 +1238,16 @@ legacy_ai3_role_review:
   excluded_as_runtime:
     - "offensive_operations and psychological-warfare style code"
     - "external Weaviate/Ferrum-backed autonomous assistant trees"
-  reason: "Several archived role implementations were generic demos, placeholders, or depended on retired infrastructure. Preserve capability provenance without recreating obsolete or unsafe execution surfaces."
+    - "broad shell/filesystem tools with doas or root-capable execution"
+    - "social/chatbot automation for dating, adult-content or third-party social platforms"
+    - "autonomous medical diagnosis, legal advice or financial trading agents"
+    - "speculative exoskeleton/3D-printing and generic multimedia/broadcast orchestration"
+  genuinely_absent_or_partial:
+    - "A general-purpose Ferrum deep-crawl/screenshot product service; current browser tooling is scoped to verification workflows."
+    - "Encrypted transcript-at-rest storage with managed keys and a tested recovery contract."
+    - "The complete AI3 locale catalog and translated assistant UI."
+    - "A standalone generic cognitive-load orchestrator; current budget, mission, homeostat and recovery controls are scoped to governed MASTER operations."
+  reason: "The complete historical source is pinned and recoverable in pub, while the current product implements only the semantics with active owners. Several archived roles were generic demos, placeholders, safety-sensitive or dependent on retired infrastructure. Preserve provenance without recreating obsolete or unsafe execution surfaces."
 
 pub2_reasoning_analysis_v225:
   source_files:
