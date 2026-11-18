@@ -41,8 +41,22 @@ class TestWorkLane < Minitest::Test
     assert_equal :standard, Lane.default_lane("RAILS")
     assert_equal :standard, Lane.default_lane("RAILS/brgen")
     assert_equal :standard, Lane.default_lane("/pub5/RAILS/mrdamascy")
-    assert_equal :code, Lane.default_lane("MASTER")
+    assert_equal :master, Lane.default_lane("MASTER")
+    assert_equal :master, Lane.default_lane("MASTER/web")
+    assert_equal :master, Lane.default_lane("/pub5/MASTER/web/public")
+    assert_equal :code, Lane.default_lane("MASTER/data")
     assert_equal :code, Lane.default_lane(".")
+  end
+
+  def test_master_lane_renders_only_the_master_web_product_and_keeps_polish
+    %i[conversation visual_pass code_passes improve_code].each do |stage|
+      assert Lane.runs?(stage, :master), "master lane must run #{stage}"
+    end
+    %i[research architecture layout_sweep browser_checks screenshot_sweep visual_groups
+       improve_prose improve_visual improve_music ideate restructure_drive].each do |stage|
+      refute Lane.runs?(stage, :master), "master lane must not start #{stage}"
+    end
+    refute_includes Lane.summary(:master), "rendered findings are not measured or proven"
   end
 
   def test_visual_sweeps_once_and_groups_without_the_code_passes
