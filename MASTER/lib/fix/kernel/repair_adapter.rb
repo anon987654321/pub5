@@ -352,18 +352,28 @@ module Master
           start_file_budget
           source = within_file_budget(violation) { violation[:severity].to_sym == :error ? council_fix(violation) : request_fix(violation) }
           return :file_timeout if @file_timed_out
-          return (if @model_unavailable
-                    :model_unavailable
-                  elsif @model_failed
-                    :model_failed
-                  else
-                    :no_proposal
-                  end) if source.to_s.strip.empty?
+          if source.to_s.strip.empty?
+            outcome = if @model_unavailable then :model_unavailable
+                      elsif @model_failed then :model_failed
+                      else :no_proposal
+                      end
+            Master::Trace::CausalTrace.step(
+              kind: :decision, name: "repair.model_outcome",
+              input: { law: @law.id, path: violation[:file].to_s.delete_prefix("#{@root}/") },
+              output: { outcome: outcome.to_s },
+            )
+            return outcome
+          end
 
           source = BestOfN.pick(self, violation, source, custody: @visual_custody, root: @root) if BestOfN.active?(violation, @visual_custody, tool: @law.id)
           return :no_proposal if source.to_s.strip.empty?
 
           FixTrace.proposed(@law.id, violation[:file], source)
+          Master::Trace::CausalTrace.step(
+            kind: :decision, name: "repair.proposal",
+            input: { law: @law.id, path: violation[:file].to_s.delete_prefix("#{@root}/") },
+            output: { status: "proposed", candidate_sha256: Digest::SHA256.hexdigest(source), bytes: source.bytesize },
+          )
           if (outside = outside_finding_range(violation, source))
             RunLedger.reject("out_of_scope", file: violation[:file], law: @law.id, bus: @bus)
             RunLedger.refused_because(outside)
