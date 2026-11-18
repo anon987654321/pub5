@@ -56,4 +56,19 @@ class MapsHomeControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("maps.needs_js")
     assert_includes response.body, I18n.t("maps.browse_as_list")
   end
+
+  test "the text fallback receives localized labels for internal point types" do
+    get "/"
+
+    assert_response :success
+    section = css_select("section[data-controller~='map']").first
+    labels = JSON.parse(section.fetch("data-map-type-labels-value"))
+    %w[place event story courier].each do |type|
+      assert_equal I18n.t("maps.types.#{type}"), labels.fetch(type)
+    end
+
+    controller = Rails.root.join("app/javascript/controllers/map_controller.js").read
+    assert_includes controller, "this.typeLabelsValue[key]"
+    assert_includes controller, "point.subtitle || this._pointTypeLabel(point.type)"
+  end
 end
