@@ -33,7 +33,7 @@ module Master
         "unchanged_bytes" => [],
       }.transform_values(&:freeze).freeze
 
-      Contract = Data.define(:schema, :intent, :scope, :preserve, :proof, :new_paths, :openbsd_preflight) do
+      Contract = Data.define(:schema, :intent, :scope, :preserve, :proof, :new_paths, :documentation_pairs, :openbsd_preflight) do
         def to_h
           value = {
             "schema" => schema,
@@ -43,6 +43,7 @@ module Master
             "proof" => proof,
           }
           value["new_paths"] = new_paths unless new_paths.empty?
+          value["documentation_pairs"] = documentation_pairs unless documentation_pairs.empty?
           value["openbsd_preflight"] = openbsd_preflight if openbsd_preflight
           value
         end
@@ -91,6 +92,13 @@ module Master
         unknown_proof = proof - allowed_proof
         raise Invalid, "unknown proof type(s): #{unknown_proof.join(', ')}" unless unknown_proof.empty?
         new_paths = normalize_new_paths(input.fetch("new_paths", []), scope:, schema:)
+        documentation_pairs = normalize_documentation_pairs(input.fetch("documentation_pairs", []), scope:, schema:)
+        if proof.include?("documentation_review") && documentation_pairs.empty?
+          raise Invalid, "documentation_review needs an exact public contract/documentation pair"
+        end
+        if documentation_pairs.any? && !proof.include?("documentation_review")
+          raise Invalid, "documentation_pairs require documentation_review proof"
+        end
         openbsd_preflight = OpenBSDManualPreflight.normalize(input["openbsd_preflight"], task_scope: scope)
 
         Contract.new(
@@ -100,6 +108,7 @@ module Master
           (preservation + required_preservation).uniq.sort.freeze,
           (proof + Array(schema.fetch("common_proof")).map(&:to_s)).uniq.sort.freeze,
           new_paths.freeze,
+          documentation_pairs.freeze,
           openbsd_preflight,
         ).freeze
       end
@@ -131,6 +140,73 @@ module Master
         raise Invalid, "duplicate new_paths declaration(s): #{duplicates.join(', ')}" unless duplicates.empty?
 
         rows.freeze
+      end
+
+      # Each declared public contract is paired with the exact reader-facing
+      # document that must land in the same delivery. This is explicit intent:
+      # no filename heuristic can reliably infer which document explains a
+      # product or operational promise.
+      def normalize_documentation_pairs(value, scope:, schema:)
+        raise Invalid, "task contract documentation_pairs must be an array" unless value.is_a?(Array)
+
+        fields = Array(schema.fetch("documentation_pair_fields", %w[contract_path document_path reason])).map(&:to_s)
+        rows = value.map do |row|
+          raise Invalid, "each documentation_pairs entry must be a mapping" unless row.is_a?(Hash)
+
+          attributes = row.to_h { |key, item| [key.to_s, item] }
+          missing = fields - attributes.keys
+          unknown = attributes.keys - fields
+          raise Invalid, "documentation pair is missing: #{missing.join(', ')}" unless missing.empty?
+          raise Invalid, "documentation pair has unknown fields: #{unknown.join(', ')}" unless unknown.empty?
+
+          contract_path = safe_path(attributes.fetch("contract_path"))
+          document_path = safe_path(attributes.fetch("document_path"))
+          [contract_path, document_path].each do |candidate|
+            if candidate.match?(/[*?\[\]{}]/)
+              raise Invalid, "documentation pairs require exact file paths: #{candidate.inspect}"
+            end
+            raise Invalid, "documentation pair path is outside task-contract scope: #{candidate}" unless covers?(candidate, scope:)
+          end
+          raise Invalid, "public contract and document paths must differ" if contract_path == document_path
+          reason = attributes.fetch("reason").to_s.strip
+          raise Invalid, "documentation pair reason must be non-empty: #{contract_path}" if reason.empty?
+
+          {
+            "contract_path" => contract_path.freeze,
+            "document_path" => document_path.freeze,
+            "reason" => reason.freeze,
+          }.freeze
+        end
+        duplicates = rows.map { |row| [row.fetch("contract_path"), row.fetch("document_path")] }
+                         .tally.select { |_pair, count| count > 1 }.keys
+        raise Invalid, "duplicate documentation pair(s): #{duplicates.map { |pair| pair.join(' -> ') }.join(', ')}" unless duplicates.empty?
+
+        rows.freeze
+      end
+
+      # The declaration becomes a delivery gate, not an advisory prompt: every
+      # pair must occur among the exact paths in one commit/checkpoint.
+      def documentation_review_refusal(paths:, root: nil, contract: current)
+        return if contract.nil? || contract.documentation_pairs.empty?
+
+        repository = File.realpath(
+          root || (defined?(Master::REPO_ROOT) ? Master::REPO_ROOT : File.expand_path("../../..", __dir__))
+        )
+        changed = Array(paths).filter_map do |path|
+          absolute = File.expand_path(path.to_s, repository)
+          next unless absolute.start_with?(repository + File::SEPARATOR)
+
+          absolute.delete_prefix(repository + File::SEPARATOR)
+        end.uniq
+        missing = contract.documentation_pairs.reject do |pair|
+          changed.include?(pair.fetch("contract_path")) && changed.include?(pair.fetch("document_path"))
+        end
+        return if missing.empty?
+
+        pairs = missing.map { |pair| "#{pair.fetch('contract_path')} -> #{pair.fetch('document_path')}" }
+        "public contract and its documentation must be delivered in the same commit: #{pairs.join('; ')}"
+      rescue SystemCallError => error
+        raise Invalid, "documentation review root cannot be verified: #{error.class}"
       end
 
       def coerce(value, path: PATH)
@@ -451,6 +527,7 @@ module Master
           "optional_fields" => schema.fetch("optional_fields", []),
           "openbsd_preflight" => { "required_fields" => %w[hostname os_release architecture scope source_reads native_interfaces manual_pages], "source_receipt_fields" => %w[path content complete], "manual_receipt_fields" => %w[page section source content complete] },
           "new_path_fields" => schema.fetch("new_path_fields", %w[path reason]),
+          "documentation_pair_fields" => schema.fetch("documentation_pair_fields", %w[contract_path document_path reason]),
           "common_proof" => schema.fetch("common_proof"),
           "intents" => schema.fetch("intents").transform_values { |value| value.slice("description", "must_preserve") },
         }
@@ -469,6 +546,7 @@ module Master
           "Existing paths are the default: extend the nearest owner and its existing tests before adding a tracked file.",
           "A missing task contract is an empty new_paths declaration: automated writes may edit existing repository paths but must refuse every new tracked path unless its exact path and reason are declared in an active contract.",
           "A new tracked file needs an exact path and non-empty reason in optional new_paths, inside the task scope. A new directory needs a genuine ownership boundary; never create helpers, tests, docs, config or utility folders merely for convenience.",
+          "When a public contract changes, declare each exact contract_path/document_path pair with a reason in documentation_pairs and include documentation_review proof. Both files must be changed in the same delivery commit; the proof label alone is not evidence.",
           "Proof always includes baseline hashes, a path-scoped diff and a Law assessment. Add relevant tests, rendered/runtime evidence, accessibility review, citations or human review.",
           *(["Active contract proof requirements: #{current.proof.join(", ")}. These are obligations, not evidence; report each result and keep missing proof INCONCLUSIVE or NOT_RUN."] if current),
           "For any OPENBSD/ write or OpenBSD-native command, include a validated openbsd_preflight in the TaskContract: host/release/architecture, complete current source reads with content and digests, every native interface and its complete exact-release manual content. Runtime write and command gates reject missing or stale receipts; only manual reading and minimum read-only identity probes are exempt.",
