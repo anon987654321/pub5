@@ -201,7 +201,10 @@ module Master
 
           column = width - 2
           rings = "#{mic ? "●" : "○"}#{tts ? "●" : "○"}"
-          "\e[s\e[1;#{column}H\e[0m#{rings}\e[0m\e[u"
+          # DEC save/restore is the VT100/VT220 contract used by OpenBSD
+          # wscons. CSI s/u is an ANSI.SYS extension and is ignored by some
+          # real consoles, leaving Reline's next prompt at row 1 over the boot.
+          "\e7\e[1;#{column}H\e[0m#{rings}\e[0m\e8"
         rescue StandardError
           nil
         end
