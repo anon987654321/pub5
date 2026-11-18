@@ -2810,8 +2810,8 @@ end
       sha256: "a" * 64,
     }
 
-    first = adapter.send(:record_dependency_antigens, cycles: [cycle])
-    second = adapter.send(:record_dependency_antigens, cycles: [cycle])
+    first = adapter.send(:record_dependency_antigens, { cycles: [cycle] })
+    second = adapter.send(:record_dependency_antigens, { cycles: [cycle] })
 
     assert_equal 1, first.size
     assert_equal 1, second.size
