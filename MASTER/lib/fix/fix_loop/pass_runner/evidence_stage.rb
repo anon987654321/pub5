@@ -83,6 +83,9 @@ module Master
             loop.injected_preamble = [
               @preamble,
               "Council-selected, anchored micro-improvement. Preserve behavior and make the smallest evidence-backed repair.",
+              "Look beyond code cleanliness when the scoped source provides evidence: assess comprehension and cognitive load, interaction states and feedback, accessibility, privacy and trust, localization, recovery and resilience, content provenance, discoverability, perceived performance, and continuity with adjacent product surfaces.",
+              "Preserve the product's own identity and its canonical design system. Do not homogenise products, introduce features or abstractions, or make aesthetic changes based on taste alone.",
+              "Only implement a directly evidenced improvement inside this run's owned files and existing transaction boundary. When rendered, real-device, assistive-technology, listening, live-host, user-acceptance, or qualified human review is needed, report that evidence boundary honestly rather than claiming it passed.",
             ].join("\n\n")
             result = loop.run_once(files, external_violations: findings)
             fixed = result[:fixed].to_i
