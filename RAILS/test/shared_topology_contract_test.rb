@@ -52,6 +52,7 @@ class SharedTopologyContractTest < Minitest::Test
     refute File.exist?(File.join(ROOT, "__shared", "pub4-shared.gemspec"))
     assert File.file?(File.join(ROOT, "__shared", "config", "ci.rb"))
   end
+
   def test_rails_lockfiles_use_the_canonical_shared_engine_path
     %w[amber brgen bsdports].each do |app|
       gemfile = File.read(File.join(ROOT, app, "Gemfile"))
@@ -87,6 +88,7 @@ class SharedTopologyContractTest < Minitest::Test
     assert_includes source, 'join(root, "__shared", "public")'
     refute_match(/join\(root,\s*["']shared["']/, source)
   end
+
   def test_active_shared_engine_references_use_the_pub5_identity
     operator = File.read(File.join(REPO, "OPENBSD", "data", "operator.yml"), encoding: "UTF-8")
     apps = File.read(File.join(ROOT, "apps.yml"), encoding: "UTF-8")
@@ -105,5 +107,4 @@ class SharedTopologyContractTest < Minitest::Test
       refute_includes source, "pub4-rails-pwa"
     end
   end
-
 end
