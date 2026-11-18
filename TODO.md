@@ -34,18 +34,18 @@ Laws in `MASTER/data/laws.yml` (with catalogue entries) and executable enforceme
 
 Integrated into the existing `/fix` owners:
 
-- `MASTER/lib/trace/causal_trace.rb` — run-scoped, nested-safe, content-redacted causal ledger; private filesystem modes; append/readback receipts; observed wall time, process CPU, Ruby allocations, heap-page deltas and GC counters. Provider billing and resident memory are explicitly marked NOT_CAPTURED / NOT_MEASURED.
+- `MASTER/lib/trace/causal_trace.rb` — run-scoped, nested-safe, content-redacted causal ledger; private filesystem modes; locked append/readback receipts; observed wall time, process CPU, Ruby allocations, heap-page deltas and GC counters. `Trace::Session` cost rows carry the active run ID; exact reported provider usage and estimated rows are aggregated separately with a receipt digest. Host resident memory remains NOT_MEASURED.
 - `MASTER/lib/review/agent.rb` and `MASTER/lib/review/consensus.rb` — model dispatches and both positive and negative council decisions enter the active run trace; model dispatches also emit optional OpenTelemetry spans.
 - `MASTER/lib/fix/kernel/repair_adapter.rb` — findings, source/candidate digests, model outcomes, reflexion decisions, application and delivery outcomes join the causal chain without persisting prompts or source text.
 - `MASTER/lib/fix/fix_loop/completion.rb` — terminal evidence carries the trace receipt and runtime profile; a DONE state is withheld if the durable trace cannot be written.
 - `MASTER/lib/review/reference_graph.rb` — resolved source dependency cycles are detected as strongly connected components; fan-in/fan-out hotspots and deterministic cycle digests are reported to `/fix`.
-- `MASTER/lib/fix/antigen_store.rb` — cycle signatures and source-bound failed repair signatures are stored once, with metadata-only evidence and private filesystem modes. Changed source bytes reopen a failed repair decision.
+- `MASTER/lib/fix/antigen_store.rb` — cycle signatures, source-bound repair failures, and configured per-Law budget crossings are stored once, with metadata-only evidence, exact/estimated cost summaries and private filesystem modes. Changed source bytes reopen a failed repair decision.
 - `MASTER/lib/fix/morphological_score.rb` and `MASTER/lib/fix/architecture_exploration/` — graph cycles and matching antigens inform candidate prompts and morphology previews. Unknown dimensions receive no points; incomplete probes cannot win. The planning-only architecture tournament remains the selector until probes are actually executed and measured.
 
 Evidence-gated / host-bound limitations (not claimed as complete):
 
 - The optional OpenTelemetry adapter is wired but its SDK remains an optional, currently undeclared dependency. OS resident-memory, eBPF and continuous host profiling require the target host toolchain; portable Ruby counters do not substitute for those measurements.
-- No `ROBUSTNESS_sclerotium` trajectory is eligible for compilation yet. Promotion requires repeated green causal traces for the same proven path, measured provider usage and runtime profile, explicit rollback proof, and a deterministic replacement that passes the same verification. No such evidence was available in this source-only session.
+- No `ROBUSTNESS_sclerotium` trajectory is eligible for compilation yet. The Law and `/fix` tournament now require at least three separate completed green causal traces for the same task, path and source revision; measured runtime and exact provider-usage receipts; no matching unresolved antigen; explicit rollback/checkpoint; deterministic reproducing tests; and an acceptable measured cost comparison. No such trajectory was available in this source-only session.
 
 The new and updated Ruby regression tests were committed but remain NOT_RUN in this session: the execution container has no repository checkout and could not resolve github.com for cloning. No runtime PASS is claimed.
 
