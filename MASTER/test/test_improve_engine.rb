@@ -67,6 +67,60 @@ class TestImproveEngine < Minitest::Test
     assert_equal %w[code prose], score[:domains]
   end
 
+  def test_javascript_is_a_measured_code_surface_and_reports_precise_lines
+    path = write("lib/entry.js", "const answer = 42;")
+    findings = @engine.elevate(files: [path])
+
+    finding = findings.find { |row| row[:message].include?("missing_final_newline") }
+    refute_nil finding
+    assert_equal 1, finding[:line]
+    assert_equal "lib/entry.js", finding[:file]
+  end
+
+  def test_yaml_duplicate_keys_are_identified_as_structural_polish
+    path = write("docs/settings.yml", "feature:\n  enabled: true\n  enabled: false\n")
+    findings = @engine.elevate(files: [path])
+
+    finding = findings.find { |row| row[:message].include?("duplicate_yaml_key") }
+    refute_nil finding
+    assert_equal 3, finding[:line]
+    assert_equal :improvement, finding[:kind]
+  end
+
+  def test_markdown_heading_hierarchy_and_generic_links_are_reported
+    path = write("docs/guide.md", "# Guide\n\n### Details\n\n[click here](https://example.test)\n")
+    findings = @engine.elevate(files: [path])
+
+    assert findings.any? { |row| row[:message].include?("heading_level_skip") }, findings.inspect
+    assert findings.any? { |row| row[:message].include?("generic_link_text") }, findings.inspect
+  end
+
+  def test_html_image_and_icon_controls_need_accessible_names
+    FileUtils.mkdir_p(File.join(@root, "docs", "views"))
+    path = write("docs/views/index.html.erb",
+      '<img src="coat.jpg"><button><svg></svg></button><a href="/next"><i class="icon"></i></a>')
+
+    findings = @engine.elevate(files: [path])
+    messages = findings.map { |row| row[:message] }
+
+    assert messages.any? { |message| message.include?("image_without_alt") }, messages.inspect
+    assert messages.any? { |message| message.include?("icon_only_button") }, messages.inspect
+    assert messages.any? { |message| message.include?("icon_only_link") }, messages.inspect
+  end
+
+  def test_polish_coverage_exposes_per_domain_counts
+    files = [
+      write("lib/main.js", "const main = true;\n"),
+      write("docs/guide.md", "# Guide\n"),
+      write("docs/settings.yml", "enabled: true\n"),
+      write("docs/views/page.html", "<main>Page</main>\n"),
+    ]
+    coverage = Master::Fix::Improve::Domains.coverage(files:)
+
+    assert_equal 4, coverage[:measured_files]
+    assert_equal({ "code" => 1, "prose" => 1, "structure" => 1, "visual" => 1 }, coverage[:domain_counts])
+  end
+
   def test_elevates_prose_placeholders
     path = write("docs/README.md", "# X\n\n" + ("word " * 80) + "\n\nTODO: write this later.\n")
     findings = @engine.elevate(files: [path])
