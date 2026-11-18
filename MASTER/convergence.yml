@@ -311,12 +311,12 @@ workstreams:
     implementation: MASTER/data/laws.yml
     proof: a ceiling row beside checks/data/constitutional_budget.yml and a test that fails when the constitution grows without an equal removal
   - id: documentation_completeness
-    state: missing
+    state: partial
     title: >-
-      A change that moves a public contract moves its document in the same
-      commit, declared on the task contract as documentation_review proof
-    implementation: MASTER/data/task_contract.yml
-    proof: test_task_contract builds a contract carrying documentation_review; contract-touching intents without it fail the fix review
+      A public contract is paired with its exact reader-facing document, and
+      the delivery gate requires both paths in the same commit
+    implementation: MASTER/data/task_contract.yml + MASTER/lib/fix/task_contract.rb + MASTER/lib/fix/fix_loop/committer.rb
+    proof: MASTER/test/test_task_contract.rb and MASTER/test/test_fix_loop_committer.rb cover schema, refusal and same-commit delivery; focused runs remain NOT_RUN
   - id: ops_alert_channel
     state: missing
     title: >-
