@@ -2411,3 +2411,90 @@ module Master
     end
   end
 end
+
+
+# --- Nature-derived robustness and truthfulness laws -------------------------
+# These complete the catalogue entries whose definition_sources name this file.
+# Each is a semantic evaluator in the same form as its parent principle: the
+# requirement is judged against real artifacts and causal traces, not a regex.
+
+Law.define(:SINGULARITY_architectural_tangle) do
+  source "laws.yml SINGULARITY_architectural_tangle - one source of truth, applied to the module graph"
+  ask "Does the dependency graph contain a cycle, a forbidden cross-module reach, or a tangle that forces the same knowledge or decision to be restated in more than one place? Map the actual graph against the intended graph and name only evidenced tangles."
+  practice "Keep the architecture a directed acyclic graph of owners; every fact lives once and is read everywhere else."
+  fix "Break the cycle by moving the shared fact to one owner both sides read, or invert the dependency so reach follows the intended graph."
+  bad "Two modules each restate the same threshold and call back into each other to keep their copies aligned."
+  good "One owner holds the fact; the graph is acyclic and continuous mapping shows no forbidden reach."
+end
+
+Law.define(:TRUTHFUL_STATUS_causal_trace_is_evidence) do
+  source "laws.yml TRUTHFUL_STATUS_causal_trace_is_evidence - the trace is the evidence class for agent work"
+  ask "Is every claim about agent, council or /fix behaviour backed by a causal execution trace that records the tool calls, model turns, context and outcome that produced it, and can that trace be replayed? A summary or receipt that cannot be replayed is unverified."
+  practice "Record the causal chain, not just the conclusion; keep the trace replayable beside the claim."
+  fix "Attach the causal trace to the claim, or downgrade the claim to INCONCLUSIVE until the trace exists."
+  bad "A receipt asserts the agent fixed the file, with no record of the calls and turns that led there."
+  good "The claim links a replayable trace of tool calls, model turns, context and outcome."
+end
+
+Law.define(:TRUTHFUL_STATUS_profile_is_not_intent) do
+  source "laws.yml TRUTHFUL_STATUS_profile_is_not_intent - profiles observe cost; limits and estimates are not usage"
+  ask "Does a claim that a path is fast enough, cheap, or within budget rest on current CPU, memory, allocation, latency or provider-usage measurements for the cost dimensions it names, rather than on a configured limit or a model's estimate?"
+  practice "Measure the cost you claim; treat configured limits and estimates as intent, never as observation."
+  fix "Run the profile or usage receipt for the named dimensions and cite it, or withdraw the cost claim."
+  bad "A path is called cheap because the token limit is high and the model estimated low usage."
+  good "A current profile and provider-usage receipt measure the latency, allocations and spend the claim names."
+end
+
+Law.define(:ROBUSTNESS_least_authority_tracing) do
+  source "laws.yml ROBUSTNESS_least_authority_tracing - observability obeys least authority"
+  ask "Does continuous profiling, eBPF or agent tracing observe only what the current investigation or budget requires, with sampling and a stated purpose, rather than unrestricted always-on high-fidelity capture of every path?"
+  practice "Scope every trace to a question and a budget; sample by default and widen only with cause."
+  fix "Bound the trace to its purpose, add sampling, and record why each observed path is needed."
+  bad "An always-on tracer records every method and token of every run with no sampling or stated purpose."
+  good "A trace names its question, samples within budget, and observes only the paths that question needs."
+end
+
+Law.define(:ROBUSTNESS_immune_pattern) do
+  source "laws.yml ROBUSTNESS_immune_pattern - recognise harm by damage, not novelty"
+  ask "Does the system distinguish harmful patterns from benign ones at its boundaries, responding to evidenced damage signals rather than to mere foreignness, and tolerating what is safe?"
+  practice "Recognise self from non-self by effect; answer damage, not difference, and keep tolerance for the benign."
+  fix "Tune recognition to evidenced harm, add a danger signal, and stop rejecting the merely unfamiliar."
+  bad "A gate rejects every unfamiliar input alike, raising alarms on benign novelty while missing real damage."
+  good "Recognition fires on evidenced damage at the boundary and tolerates benign variation without alarm."
+end
+
+Law.define(:ROBUSTNESS_homeostasis) do
+  source "laws.yml ROBUSTNESS_homeostasis - return to a healthy state after disturbance"
+  ask "After interruption, budget collapse, orphaned missions or checkpoint loss, does the system return to a healthy state, recovering durable mission state or surfacing the unrecovered remainder?"
+  practice "Treat recovery as a first-class path; restore what is durable and name honestly what is not."
+  fix "Recover the durable mission state, or surface the unrecovered remainder as an explicit failure of proof."
+  bad "An interrupted run leaves orphaned missions and lost checkpoints with no recovery and no report."
+  good "After interruption the system restores durable state and reports any remainder it could not recover."
+end
+
+Law.define(:ROBUSTNESS_morphological_exploration) do
+  source "laws.yml ROBUSTNESS_morphological_exploration - explore divergent shapes, then prune"
+  ask "When the best shape of a change is unknown, does the system explore multiple divergent probes under a shared budget and score them against the active Laws, causal-trace quality and measured cost, with a pruning rule and antigen memory, rather than resting on a single uncompared linear proposal?"
+  practice "Grow a scored set of candidate shapes under one budget; prune with memory, keep the best evidenced."
+  fix "Generate divergent probes, score them against Laws, trace quality and cost, and prune using antigen memory."
+  bad "One linear proposal is accepted with no alternatives compared and no pruning rule."
+  good "A shared budget grows several probes, scores them, and prunes to the best-evidenced shape."
+end
+
+Law.define(:ROBUSTNESS_antigen_memory) do
+  source "laws.yml ROBUSTNESS_antigen_memory - remember failures and recognise them again"
+  ask "Are failure signatures, council vetoes and high-cost trajectories retained as antigens, and do later probes and gates recognise matching defect classes at the same high-risk boundary, down-weighting or refusing them unless new evidence shows the pattern resolved?"
+  practice "Keep a durable memory of harm and consult it at the boundary where the harm occurred."
+  fix "Retain the failure signature, consult it at the matching boundary, and require new evidence to lift the weight."
+  bad "A vetoed defect class recurs at the same boundary because no memory of the earlier failure is consulted."
+  good "The earlier failure is remembered and recognised at its boundary, refused until new evidence resolves it."
+end
+
+Law.define(:ROBUSTNESS_sclerotium) do
+  source "laws.yml ROBUSTNESS_sclerotium - harden settled paths into deterministic code"
+  ask "Has a trajectory proven by causal traces, evidence and acceptable profile cost been compiled or hardened into ordinary deterministic code, rather than leaving a living agent or model on a settled hot path?"
+  practice "Harden what is settled; let the agent explore the unsettled and rest as deterministic code."
+  fix "Compile the proven trajectory into deterministic code and remove the model from the settled hot path."
+  bad "A model is called on every run of a path whose behaviour has long been proven and stable."
+  good "The settled path runs as ordinary deterministic code; the agent is reserved for the unsettled."
+end
