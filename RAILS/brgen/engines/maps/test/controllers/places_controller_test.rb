@@ -49,6 +49,7 @@ class MapsPlacesControllerTest < ActionDispatch::IntegrationTest
 
   test "the generic place kind is translated in the filter and on the detail page" do
     place = Place.create!(city: @city, name: "Bryggen", kind: "place", latitude: 60.3974, longitude: 5.3244)
+    Rails.cache.delete("maps/place_kinds/#{@city.id}")
 
     get "/places"
     assert_response :success
