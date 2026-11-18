@@ -626,6 +626,12 @@ measure is already owned by the Bymorgen item above.
   guard now includes BIZ's README and OPENBSD's Claude entrypoint. These
   regression tests remain NOT_RUN; the broader per-tree stale-instruction and
   ownership review remains open.
+  The deployment entrypoint audit also made the first-release `pub5-admin`
+  bootstrap explicit in `OPENBSD/RUNBOOK.md`: vm23 must be on the pinned
+  checkout and the reviewed `OPERATOR.sh --plan/--apply/--verify` sequence
+  must complete before the first durable deploy receipt can be written. A
+  regression assertion was added; it is NOT_RUN. No live host state or
+  deployment was inspected or changed by this documentation pass.
 - [ ] **BIZ document-family implementation.** The current source contract now
   defines distinct business-model/plan, funding, legal/contract, corporate and
   financial/analytical profiles. The production pipeline still publishes the
