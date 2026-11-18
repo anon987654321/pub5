@@ -25,6 +25,7 @@ en:
     coordinates: "Coordinates"
     kind: "Type"
     kinds:
+      place: "Place"
       attraction: "Attraction"
       bar: "Bar"
       cafe: "Café"
