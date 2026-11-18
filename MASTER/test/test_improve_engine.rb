@@ -20,6 +20,7 @@ class TestImproveEngine < Minitest::Test
 
   def write(path, text)
     full = File.join(@root, path)
+    FileUtils.mkdir_p(File.dirname(full))
     File.write(full, text)
     full
   end
