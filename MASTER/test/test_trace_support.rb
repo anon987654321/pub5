@@ -218,7 +218,6 @@ class TestTraceSupport < Minitest::Test
     assert_equal ["llm0 at master0: test-provider:model"], send_lines
     assert_equal ["llm0: MASTER fault, diagnostic aaaaaaaaaaaa (12 bytes)"], finished_lines
     assert_equal "llm", Master::Trace::Dmesg.detail_unit("llm")
-
     next_lines = Master::Trace::Dmesg.with_verbosity("verbose") do
       console.lines(event: "llm:send", model: "test-provider:model")
     end
@@ -437,7 +436,6 @@ class TestTraceSupport < Minitest::Test
 
     assert_equal "status0 at operator0: clean", rendered
   end
-
   def test_dmesg_finding_filters_accept_ansi_and_verdict_lines
     text = "\e[31mfix0: MASTER/lib/example.rb:12: missing check\e[0m\r\n"
     assert_equal ["fix0: MASTER/lib/example.rb:12: missing check"], Master::Trace::Dmesg.findings(text)
@@ -491,18 +489,6 @@ class TestTraceSupport < Minitest::Test
       bus.emit("**", { event: "test:done", ts: 2 })
     end
     assert_equal ["boot0: ready", "test0 at master0: done"], logging.snapshot
-  end
-
-
-    snapshot = logging.snapshot
-    assert_equal ["boot0: ready"], snapshot
-    snapshot << "caller mutation"
-
-    assert_equal ["boot0: ready"], logging.snapshot
-    Master::Trace::Dmesg.with_verbosity("normal") do
-      bus.emit("**", { event: "test:done", ts: 2 })
-    end
-    assert_equal ["boot0: ready", "test0: done"], logging.snapshot
   end
 
   def test_logging_formats_tool_events_and_redacts_details
