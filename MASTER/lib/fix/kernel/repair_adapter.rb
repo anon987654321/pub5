@@ -386,7 +386,7 @@ module Master
           Master::Trace::CausalTrace.step(
             kind: :decision, name: "repair.reflexion",
             input: { law: @law.id, candidate_sha256: Digest::SHA256.hexdigest(source) },
-            output: { verified: verified == true, reason_code: (Thread.current[:reflexion_reason].to_s[0, 120] unless verified) },
+            output: { verified: verified == true, reason_code: (Thread.current[:reflexion_reason].to_s.start_with?("no verdict") ? "no_verdict" : "reviewer_rejected") unless verified },
           )
           unless verified
             RunLedger.reject("reflexion_unsafe", file: violation[:file], law: @law.id, bus: @bus)
