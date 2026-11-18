@@ -34,6 +34,9 @@ module Master
       def check(agent:, env: ENV)
         return unless agent.class.method_defined?(:model_for)
 
+        jury = Master::Review::Consensus.jury_readiness
+        return refuse_jury(jury) unless jury.ready?
+
         rows = routes(agent)
         explain_skipped
         return probe_refusal(agent) if env["MASTER_FIX_FREE_OK"] == "1"
@@ -83,6 +86,13 @@ module Master
         lanes.map { |id| Master::Io::LaneState.verdict(id) }.reject(&:usable?).each do |verdict|
           say("skipped #{verdict.model}: #{verdict.source}, #{verdict.reason}")
         end
+      end
+
+      def refuse_jury(readiness)
+        message = "fix: consensus jury is not ready (#{readiness.state}): #{readiness.detail}. " \
+                  "Inspect /doctor consensus-jury; no files were changed."
+        say(message)
+        Master::Result.err(message, category: :inconclusive)
       end
 
       def refuse(weak, better)
