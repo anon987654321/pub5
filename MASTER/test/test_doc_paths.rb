@@ -46,20 +46,34 @@ class TestDocPaths < Minitest::Test
     STUDIO/README.md
   ].freeze
 
-  def test_execution_ownership_map_covers_core_and_deployment_lifecycle
-    map = File.read(File.join(REPO, "MASTER/docs/fix_coordinator_map.md"))
-    %w[
-      Core::Fold Core::Constitution Core::World Fix::Mission Deployment
-      Fix::Restructure Fix::WatchLoop Fix::Improve::Engine
-      Fix::Improve::Restructure Fix::RestructureSweep
-      Fix::Governor Review::LLMDispatcher Ground::Redactor
-    ].each do |owner|
-      assert_includes map, owner
+  def test_execution_owners_are_live_ruby_implementations
+    owners = {
+      "MASTER/lib/core/fold.rb" => /class Fold/,
+      "MASTER/lib/core/constitution.rb" => /class Constitution/,
+      "MASTER/lib/core/world.rb" => /class World/,
+      "MASTER/lib/fix/mission.rb" => /class Mission/,
+      "MASTER/lib/fix/restructure.rb" => /class Restructure/,
+      "MASTER/lib/fix/watch_loop.rb" => /class WatchLoop/,
+      "MASTER/lib/fix/improve/engine.rb" => /class Engine/,
+      "MASTER/lib/fix/improve/restructure.rb" => /class Restructure/,
+      "MASTER/lib/fix/restructure_sweep.rb" => /class RestructureSweep/,
+      "MASTER/lib/fix/governor.rb" => /class Governor/,
+      "MASTER/lib/review/llm_dispatcher.rb" => /class LLMDispatcher/,
+      "MASTER/lib/ground/redactor.rb" => /class Redactor/,
+      "MASTER/lib/fix/kernel/lifecycle.rb" => /class Kernel/,
+      "MASTER/lib/fix/kernel/repair_adapter.rb" => /class RepairAdapter/,
+    }
+
+    owners.each do |path, declaration|
+      source_path = File.join(REPO, path)
+      assert File.file?(source_path), "missing execution owner: #{path}"
+      assert_match declaration, File.read(source_path), "#{path} must declare its owner"
     end
-    assert_match(/does \*\*not\*\* use.*Fix::Transaction/m, map)
-    refute File.exist?(File.join(REPO, "MASTER/lib/fix/README.md")),
-           "the coordinator map now owns the local fix boundary"
+
+    refute File.exist?(File.join(REPO, "MASTER/docs/fix_coordinator_map.md"))
+    refute File.exist?(File.join(REPO, "MASTER/lib/fix/README.md"))
   end
+
   def test_fix_workflow_is_consolidated_in_master_readme
     readme = File.read(File.join(REPO, "MASTER/README.md"))
 
