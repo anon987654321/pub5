@@ -3,6 +3,7 @@ require "json"
 require "digest"
 require "set"
 require_relative "ux_refinement_catalog"
+require_relative "morphological_score"
 require_relative "architecture_exploration/persistence"
 require_relative "architecture_exploration/exploration"
 require_relative "architecture_exploration/candidates"
@@ -88,13 +89,17 @@ module Master
           "execution_evidence" => "NOT_RUN until actual tree verification commands execute" }
       end
 
-      def initialize(root:, agent:, bus: nil, candidate_count: nil, run_journal: nil, run_id: nil, provenance: nil)
+      def initialize(root:, agent:, bus: nil, candidate_count: nil, run_journal: nil, run_id: nil, provenance: nil,
+                     dependency_tangles: [], antigens: [], source_digests: {})
         @root = File.expand_path(root)
         @agent = agent
         @bus = bus
         @run_journal = run_journal
         @run_id = run_id.to_s
         @provided_provenance = provenance
+        @dependency_tangles = Array(dependency_tangles).freeze
+        @antigens = Array(antigens).freeze
+        @source_digests = source_digests.is_a?(Hash) ? source_digests.transform_keys(&:to_s).freeze : {}.freeze
         @count = Integer(candidate_count || self.class.candidate_count).clamp(30, 40)
       rescue ArgumentError, TypeError
         @count = DEFAULT_CANDIDATES
