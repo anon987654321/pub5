@@ -70,6 +70,10 @@ module Master
       # Kernel calls this inside the same lifecycle boundary that writes the
       # terminal event. The identity is transient; the hash-chained ledger
       # remains the source of truth for the public receipt.
+      def clear_terminal_receipt_identity
+        @terminal_receipt_identity = nil
+      end
+
       def capture_terminal_receipt_identity(run_id:, attempt_id:)
         @terminal_receipt_identity = { run_id: run_id.to_s.freeze, attempt_id: attempt_id.to_s.freeze }.freeze
       end
