@@ -591,7 +591,13 @@ measure is already owned by the Bymorgen item above.
   binding requirements remain in the Law catalogue. Its stale doc-path
   exception is removed. These changed tests and the full repository
   reference/entrypoint audit remain NOT_RUN; documentation cleanup in the other
-  trees remains open.
+  trees remains open. 2026-11-18 entrypoint audit found and corrected
+  two live navigation defects: the root README no longer assumes every tree
+  has an `AGENTS.md`, and the root Claude bootstrap now names the actual
+  `MASTER/data/law/TREE_CONTRACTS.md` path. The maintained-doc citation/link
+  guard now includes BIZ's README and OPENBSD's Claude entrypoint. These
+  regression tests remain NOT_RUN; the broader per-tree stale-instruction and
+  ownership review remains open.
 - [ ] **BIZ document-family implementation.** The current source contract now
   defines distinct business-model/plan, funding, legal/contract, corporate and
   financial/analytical profiles. The production pipeline still publishes the
