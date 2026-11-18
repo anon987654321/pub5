@@ -734,7 +734,7 @@ module Master
           internal_edges = source_edges.select do |edge|
             paths.include?(edge.from) && paths.include?(edge.to)
           end
-          signature = internal_edges.map { |edge| [edge.type, edge.from, edge.to].join("|") }.sort.join("\\n")
+          signature = internal_edges.map { |edge| [edge.type, edge.from, edge.to].join("|") }.sort.join("\n")
           {
             paths: paths,
             edge_count: internal_edges.size,
