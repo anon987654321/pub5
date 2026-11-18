@@ -60,7 +60,7 @@
       <h2><%= t("ports.categories") %></h2>
       <ul class="category-list">
         <% @categories.each do |cat| %>
-          <li><%= link_to cat.name, ports_path(category_id: cat.id), class: "chip" %></li>
+          <li><%= link_to cat.name, ports_path(kept.merge(category_id: cat.id)), class: "chip" %></li>
         <% end %>
       </ul>
     </section>
