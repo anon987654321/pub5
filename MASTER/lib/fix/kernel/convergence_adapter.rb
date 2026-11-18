@@ -67,6 +67,36 @@ module Master
       # How the last run ended, as a TERMINAL_STATES symbol, for the pass to read instead of its message.
       attr_reader :last_terminal_state
 
+      # Kernel calls this inside the same lifecycle boundary that writes the
+      # terminal event. The identity is transient; the hash-chained ledger
+      # remains the source of truth for the public receipt.
+      def capture_terminal_receipt_identity(run_id:, attempt_id:)
+        @terminal_receipt_identity = { run_id: run_id.to_s.freeze, attempt_id: attempt_id.to_s.freeze }.freeze
+      end
+
+      def terminal_receipt
+        identity = @terminal_receipt_identity
+        return unless identity
+
+        @kernel.terminal_receipt(**identity)
+      end
+
+      # Chat-visible receipt: only the verified ledger projection, never
+      # prompts, tool arguments, model text, or raw command output.
+      def terminal_receipt_summary
+        receipt = terminal_receipt
+        return "fix-receipt0: INCONCLUSIVE (verified terminal receipt unavailable)" unless receipt
+
+        assessment = receipt.assessment.fetch("status", "unavailable")
+        "fix-receipt0: #{receipt.terminal_state} run=#{receipt.run_id} " \
+          "target=#{receipt.target || "unknown"} result=#{receipt.result || "unknown"} " \
+          "changed=#{receipt.changed} assessment=#{assessment} " \
+          "ledger=#{receipt.ledger_seq} sha256=#{receipt.hash}"
+      rescue StandardError => error
+        Master::Ground::Swallow.log(error, context: "fix.terminal_receipt_summary")
+        "fix-receipt0: INCONCLUSIVE (receipt read failed: #{error.class})"
+      end
+
       # Where this loop keeps its mission: the repository root when it serves MASTER. The Fold's
       # mission stays under MASTER's root; the two are different work and both may be live.
       def mission_root = @root
