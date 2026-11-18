@@ -430,13 +430,21 @@ module Master
                 )
               end
 
-              form_button = source.match(/<form\b[\s\S]*?<button\b(?![^>]*\btype\s*=)[^>]*>/im)
-              if form_button
+              form_button_offset = nil
+              source.to_enum(:scan, /<form\b[\s\S]*?<\/form>/im).each do
+                form_match = Regexp.last_match
+                button_match = form_match[0].match(/<button\b(?![^>]*\btype\s*=)[^>]*>/im)
+                if button_match
+                  form_button_offset = form_match.begin(0) + button_match.begin(0)
+                  break
+                end
+              end
+              if form_button_offset
                 findings << opportunity(
                   :visual, path, "implicit_form_button_type",
                   "a button inside a form relies on the browser's implicit submit type",
                   5.5, "Declare type=submit for intentional submission or type=button for other actions; preserve the existing interaction.",
-                  line: line_number(source, form_button.begin(0))
+                  line: line_number(source, form_button_offset)
                 )
               end
 
