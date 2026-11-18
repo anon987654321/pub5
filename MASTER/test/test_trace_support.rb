@@ -362,7 +362,7 @@ class TestTraceSupport < Minitest::Test
     trace.step(
       kind: :model_turn, name: "repair",
       input: { model: "glm", prompt: "private bank details" },
-      output: { status: "success", content: "private generated source" },
+      output: { status: "success", content: "private generated source", diagnostic: "provider echoed sk-abcdefghijklmnop" },
     )
     inner = trace.start(run_id: "nested-run", root:, agent: "council")
     trace.step(kind: :decision, name: "consensus", output: { approved: true, votes: 3 })
@@ -383,6 +383,14 @@ class TestTraceSupport < Minitest::Test
     ledger = File.read(File.join(root, trace::LEDGER_DIR, trace::LEDGER_FILE))
     refute_includes ledger, "private bank details"
     refute_includes ledger, "private generated source"
+    refute_includes ledger, "sk-abcdefghijklmnop"
+    profile = outer_receipt.fetch(:runtime_profile)
+    assert profile.fetch(:measured)
+    assert_operator profile.fetch(:wall_ms), :>=, 0
+    assert_operator profile.fetch(:cpu_ms), :>=, 0
+    assert_operator profile.fetch(:allocated_objects), :>=, 0
+    assert_equal "NOT_CAPTURED", profile.fetch(:provider_usage)
+    assert_equal "NOT_MEASURED", profile.fetch(:resident_memory)
     assert_equal 0o600, File.stat(File.join(root, trace::LEDGER_DIR, trace::LEDGER_FILE)).mode & 0o7777
     assert_nil trace.current
   ensure
