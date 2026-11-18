@@ -62,7 +62,8 @@ class MapsHomeControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     section = css_select("section[data-controller~='map']").first
-    labels = JSON.parse(section.fetch("data-map-type-labels-value"))
+    assert section, "map home must expose its point-type labels"
+    labels = JSON.parse(section["data-map-type-labels-value"])
     %w[place event story courier].each do |type|
       assert_equal I18n.t("maps.types.#{type}"), labels.fetch(type)
     end
