@@ -19,7 +19,6 @@ class TestRecoveryPubManifest < Minitest::Test
       "MASTER/data/recovery/legacy_manifest.yml",
       "MASTER/data/recovery/pub_restore.yml",
       "MASTER/data/recovery/pub_archive_restore.yml",
-      "MASTER/data/recovery/pub_archive_restore.yml",
     ]
 
     missing = required.reject { |path| ROOT.join(path).file? }
