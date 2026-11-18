@@ -297,11 +297,17 @@ ROBUSTNESS_antigen_memory:
 ROBUSTNESS_sclerotium:
   parent: ROBUSTNESS
   statement: >
-    A trajectory that has been proven by causal traces, evidence and
-    acceptable profile cost should be compiled or hardened into ordinary
-    deterministic code (sclerotium). Leaving a living agent or model on a
-    settled hot path is surplus and violates the spirit of KISS and
-    homeostasis.
+    Compile a model-assisted trajectory into deterministic code only after at
+    least three separate completed green runs prove the same task, path and
+    source revision. Each run must carry a durable causal trace, measured
+    runtime profile and actual provider-usage receipt; estimates and configured
+    limits are not measurements. No matching unresolved antigen may remain.
+    The replacement must have an explicit rollback or checkpoint, deterministic
+    tests that reproduce the proven result, and a measured comparison showing
+    acceptable cost without weakening any Law. Until every condition is met,
+    keep the living agent on the unsettled path and report compilation as
+    NOT_READY. Leaving a model on a genuinely settled path is surplus, but
+    compiling from one green run or missing evidence is unsafe.
   resolution: review
 
 # ---
