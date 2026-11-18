@@ -43,6 +43,7 @@ class SpeechContractSpec < Minitest::Test
 
   def test_house_delivery_defaults_to_eager_and_is_shared_with_fallback_policy
     previous_style = ENV.delete("MASTER_TTS_STYLE")
+    previous_profile = ENV.delete("MASTER_TTS_PROFILE")
     Master::Voice::Policy.reload!
 
     assert_equal :eager, Master::Voice::Speech.default_style
@@ -58,6 +59,7 @@ class SpeechContractSpec < Minitest::Test
     )
   ensure
     ENV["MASTER_TTS_STYLE"] = previous_style if previous_style
+    ENV["MASTER_TTS_PROFILE"] = previous_profile if previous_profile
     Master::Voice::Policy.reload!
   end
 
