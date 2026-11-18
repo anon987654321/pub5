@@ -35,10 +35,12 @@ class TestLawContract < Minitest::Test
     end
   end
 
-  def test_law_reload_report_names_a_changed_source_root_before_reloading
+  def test_law_reload_report_names_a_changed_source_root_and_precedes_constant_warnings
     with_catalogued(:RELOAD_DIAGNOSTIC_PROBE) do
       Dir.mktmpdir("law-reload-diagnostic") do |dir|
-        File.write(File.join(dir, "probe.rb"), <<~RUBY)
+        path = File.join(dir, "probe.rb")
+        File.write(path, <<~RUBY)
+          LAW_RELOAD_DIAGNOSTIC_CONSTANT = 1
           Law.define(:RELOAD_DIAGNOSTIC_PROBE) do
             source "test"
             practice "diagnostic"
@@ -48,16 +50,30 @@ class TestLawContract < Minitest::Test
           end
         RUBY
 
-        _stdout, stderr = capture_io { Law.load_all(dir) }
+        _stdout, first_stderr = capture_io { Law.load_all(dir) }
         report = Law.last_reload_report
 
         assert_equal "reloaded", report.fetch(:status)
         assert_equal File.realpath(dir), report.fetch(:root)
         assert report.fetch(:reasons).any? { |row| row[:reason] == "source_root_changed" }
-        assert_includes stderr, "law_loader: re-evaluating"
-        assert_includes stderr, "source_root_changed"
+        assert_includes first_stderr, "law_loader: re-evaluating"
+        assert_includes first_stderr, "source_root_changed"
+
+        File.write(path, File.read(path) + "# changed source\\n")
+        future = Time.now + 2
+        File.utime(future, future, path)
+        _stdout, second_stderr = capture_io { Law.load_all(dir) }
+        report = Law.last_reload_report
+        diagnostic_at = second_stderr.index("law_loader: re-evaluating")
+        warning_at = second_stderr.index("already initialized constant LAW_RELOAD_DIAGNOSTIC_CONSTANT")
+
+        assert report.fetch(:reasons).any? { |row| row[:path] == path && row[:reason].include?("mtime") }
+        refute_nil diagnostic_at
+        refute_nil warning_at
+        assert_operator diagnostic_at, :<, warning_at
       ensure
         Law.load_all(File.join(Master::ROOT, "law"))
+        Object.send(:remove_const, :LAW_RELOAD_DIAGNOSTIC_CONSTANT) if Object.const_defined?(:LAW_RELOAD_DIAGNOSTIC_CONSTANT, false)
       end
     end
   end
