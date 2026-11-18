@@ -80,12 +80,14 @@ module Master
 
         LINT_TIMEOUT_SECONDS = 120
 
-        def initialize(git:, bus: nil, root: nil, ground_truth: nil, preserve_user_intent: nil)
+        def initialize(git:, bus: nil, root: nil, ground_truth: nil, preserve_user_intent: nil,
+                       task_contract: nil)
           @git = git
           @bus = bus
           @root = root
           @ground_truth = ground_truth
           @preserve_user_intent = preserve_user_intent
+          @task_contract = task_contract ? TaskContract.coerce(task_contract) : TaskContract.current
           @baseline = nil
           # One commit-and-push at a time. Rule groups run in threads, and the
           # index is shared: two commits interleaving `git add` would let one
@@ -97,6 +99,13 @@ module Master
           @known_good = root ? Ground::KnownGood.new(root:, bus:) : nil
           @boundary_scope = nil
           @lease_guard = nil
+        end
+
+        # Fix workers run on separate threads. Pin the validated task object on
+        # the shared committer rather than relying on the caller's thread-local
+        # TaskContract.current being inherited by a worker.
+        def task_contract=(value)
+          @task_contract = value.nil? ? nil : TaskContract.coerce(value)
         end
 
         # The run's Mission#hold_lease!, called before every commit and push,
@@ -524,7 +533,8 @@ def stage_commit_mode?
         # paths must be among this delivery's changes so the reader-facing document
         # cannot trail the contract into a later commit.
         def documentation_review_ok?(paths)
-          refusal = TaskContract.documentation_review_refusal(paths:, root: @root)
+          contract = @task_contract || TaskContract.current
+          refusal = TaskContract.documentation_review_refusal(paths:, root: @root, contract:)
           return true unless refusal
 
           refuse_commit(reason: "documentation_review", paths:, detail: refusal)
