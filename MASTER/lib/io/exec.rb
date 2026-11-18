@@ -158,21 +158,49 @@ module Master
       # a user:interrupt kills that turn's processes and no one else's. Without it
       # a cancelled turn's thread sits in popen's ensure waiting for its child,
       # and the prompt waits with it for up to DEFAULT_TIMEOUT.
+      # A killed process group is a cancelled operation even if its leader
+      # exited successfully just before cancellation and only a pipe-holding
+      # descendant remained. Preserve that distinction in the capture result.
+      class CancelledStatus
+        def success? = false
+        def cancelled? = true
+        def exitstatus = nil
+        def exited? = false
+        def signaled? = false
+        def termsig = nil
+      end
+
       class Children
         def initialize
           @pids = []
+          @cancelled = {}
           @lock = Mutex.new
         end
 
         def track(pid)
-          @lock.synchronize { @pids << pid }
+          @lock.synchronize do
+            @pids << pid
+            @cancelled.delete(pid)
+          end
           yield
         ensure
-          @lock.synchronize { @pids.delete(pid) }
+          @lock.synchronize do
+            @pids.delete(pid)
+            @cancelled.delete(pid)
+          end
+        end
+
+        def cancelled?(pid)
+          @lock.synchronize { @cancelled.key?(pid) }
         end
 
         def kill_all
-          @lock.synchronize { @pids.dup }.each { |pid| Exec.kill_group(pid) }.size
+          pids = @lock.synchronize do
+            @pids.each { |pid| @cancelled[pid] = true }
+            @pids.dup
+          end
+          pids.each { |pid| Exec.kill_group(pid) }
+          pids.size
         end
       end
 
@@ -206,7 +234,13 @@ module Master
         end
 
         children = Fiber[:master_children]
-        children ? children.track(wait_thr.pid, &supervise) : supervise.call
+        return supervise.call unless children
+
+        children.track(wait_thr.pid) do
+          status, timed_out = supervise.call
+          status = CancelledStatus.new if children.cancelled?(wait_thr.pid) && !timed_out
+          [status, timed_out]
+        end
       end
 
       # An outer deadline (Timeout.timeout around a model call, a file's repair budget) interrupts the

@@ -236,6 +236,8 @@ class TestReachExec < Minitest::Test
       assert_equal 1, children.kill_all, "the live descendant group must remain registered"
       _output, status = turn.value
       refute status.success?, "cancellation must interrupt the still-open capture"
+      assert status.cancelled?, "a successful leader exit must not hide descendant cancellation"
+      assert_nil status.exitstatus
       assert_process_group_gone(group)
     ensure
       Process.kill("KILL", -group) rescue nil if defined?(group) && group
