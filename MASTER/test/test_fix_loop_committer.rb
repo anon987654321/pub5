@@ -169,9 +169,9 @@ class TestFixLoopCommitter < Minitest::Test
     refute blocked?(bus)
   end
 
-def test_public_contract_commit_is_blocked_without_its_document
-    write_file("api/routes.rb", "ROUTES = []\n")
-    write_file("README.md", "# API contract\n")
+  def test_public_contract_commit_is_blocked_without_its_document
+    write_file("api/routes.rb", "ROUTES = []\\n")
+    write_file("README.md", "# API contract\\n")
     contract = Master::Fix::TaskContract.build(
       intent: "functional_change",
       scope: %w[api/routes.rb README.md],
@@ -194,12 +194,12 @@ def test_public_contract_commit_is_blocked_without_its_document
     event = bus.events.find { |name, _payload| name == "fix_loop:commit_blocked" }
     refute_nil event
     assert_equal "documentation_review", event.last[:reason]
-    assert_match(/api\/routes\.rb -> README\.md/, event.last[:detail])
+    assert_includes event.last[:detail], "api/routes.rb -> README.md"
   end
 
   def test_public_contract_and_document_can_be_delivered_together
-    write_file("api/routes.rb", "ROUTES = [:health]\n")
-    write_file("README.md", "# API contract\n\nGET /health\n")
+    write_file("api/routes.rb", "ROUTES = [:health]\\n")
+    write_file("README.md", "# API contract\\n\\nGET /health\\n")
     contract = Master::Fix::TaskContract.build(
       intent: "functional_change",
       scope: %w[api/routes.rb README.md],
@@ -218,10 +218,9 @@ def test_public_contract_commit_is_blocked_without_its_document
       run_committer(git, bus, OK_MESSAGE)
     end
 
-    assert_equal [[OK_MESSAGE, %w[api/routes.rb README.md]], ], git.commits
+    assert_equal [[OK_MESSAGE, %w[api/routes.rb README.md]]], git.commits
     refute blocked?(bus)
   end
-
 
   def test_a_path_dirty_before_the_pass_stays_out_of_the_commit
     write_file("lib/ok.rb", "OK = 1\n")
