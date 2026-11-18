@@ -533,11 +533,23 @@ measure is already owned by the Bymorgen item above.
   RENAME, INLINE, DELETE, RETAIN or INVESTIGATE. Compare behavior, not
   hashes or names; never delete based only on file size, path depth or an
   unclear caller.
+  2026-11-18 partial: the static architecture map was retired in favour of
+  the live Ruby architecture report; fix ideation and bootstrap context now
+  read that owner. This closes the duplicated-map slice only. The complete
+  behavior/ownership census and per-candidate rollback analysis remain open.
 - [ ] **Documentation reduction.** Keep one canonical entry at each real
   boundary (repository, tree, product/engine). Remove stale instructions only
   after checking references, generators, links, tests and agent entrypoints.
   Preserve useful recovery/provenance records. Update sources and generators
   together; add no Markdown files.
+  2026-11-18 partial: live vocabulary, scope expectations, recovery manifests,
+  and architecture ownership moved to their Ruby/YAML owners; duplicate MASTER
+  guides and historical handoff copies were retired to Git history. The only
+  remaining tracked `MASTER/docs` artifact is the preserved pub4 analysis PDF.
+  `MASTER/test/test_doc_paths.rb` now enforces source ownership instead of
+  preserving deleted document paths. These changed tests and the full repository
+  reference/entrypoint audit remain NOT_RUN; documentation cleanup in the other
+  trees remains open.
 - [ ] **BIZ document-family implementation.** The current source contract now
   defines distinct business-model/plan, funding, legal/contract, corporate and
   financial/analytical profiles. The production pipeline still publishes the
