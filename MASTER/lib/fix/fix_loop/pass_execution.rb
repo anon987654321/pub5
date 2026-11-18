@@ -51,14 +51,12 @@ module Master
                 deadline_expired: deadline.expired?, pass_limit:, absolute_limit: ABSOLUTE_MAX_PASSES,
               )
             else
-              action = if deadline.expired? || pass_limit >= ABSOLUTE_MAX_PASSES
-                :stop
-              elsif @convergence_discipline.improving?
-                :extend
-              else
-                :stop
-              end
-              { action:, reason: deadline.expired? ? :deadline : (pass_limit >= ABSOLUTE_MAX_PASSES ? :absolute_limit : :no_improvement) }
+              ConvergenceDiscipline.budget_decision(
+                improving: @convergence_discipline.improving?,
+                deadline_expired: deadline.expired?,
+                pass_limit:,
+                absolute_limit: ABSOLUTE_MAX_PASSES,
+              )
             end
             unless decision[:action] == :extend
               stop_reason = decision[:reason]

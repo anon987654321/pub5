@@ -175,18 +175,24 @@ module Master
         comparison&.negative? == true
       end
 
-      # One fail-closed budget decision: malformed limits never become an
-      # accidental extension, and a deadline always wins over improvement.
-      def adaptive_decision(deadline_expired:, pass_limit:, absolute_limit:)
+      # The single budget policy is shared by the live discipline and the
+      # compatibility adapter used by older injected implementations.
+      def self.budget_decision(improving:, deadline_expired:, pass_limit:, absolute_limit:)
         return Decision.new(action: :stop, reason: :deadline) if deadline_expired
         unless pass_limit.is_a?(Integer) && absolute_limit.is_a?(Integer) &&
                pass_limit >= 0 && absolute_limit.positive?
           return Decision.new(action: :stop, reason: :invalid_budget)
         end
         return Decision.new(action: :stop, reason: :absolute_limit) if pass_limit >= absolute_limit
-        return Decision.new(action: :extend, reason: :measured_improvement) if improving?
+        return Decision.new(action: :extend, reason: :measured_improvement) if improving
 
         Decision.new(action: :stop, reason: :no_improvement)
+      end
+
+      def adaptive_decision(deadline_expired:, pass_limit:, absolute_limit:)
+        self.class.budget_decision(
+          improving: improving?, deadline_expired:, pass_limit:, absolute_limit:
+        )
       end
 
       # Compact index into terminal evidence; the source snapshots and verifier

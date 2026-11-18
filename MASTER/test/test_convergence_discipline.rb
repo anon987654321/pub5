@@ -116,6 +116,23 @@ class TestConvergenceDiscipline < Minitest::Test
                  @discipline.adaptive_decision(deadline_expired: false, pass_limit: 60, absolute_limit: 60).reason
   end
 
+  def test_budget_policy_is_shared_with_legacy_adapters
+    decision = Master::Fix::ConvergenceDiscipline.budget_decision(
+      improving: true, deadline_expired: false, pass_limit: 1, absolute_limit: 60
+    )
+    assert_equal :extend, decision.action
+
+    decision = Master::Fix::ConvergenceDiscipline.budget_decision(
+      improving: true, deadline_expired: false, pass_limit: 60, absolute_limit: 60
+    )
+    assert_equal :absolute_limit, decision.reason
+
+    decision = Master::Fix::ConvergenceDiscipline.budget_decision(
+      improving: true, deadline_expired: true, pass_limit: 1, absolute_limit: 60
+    )
+    assert_equal :deadline, decision.reason
+  end
+
   def test_adaptive_decision_fails_closed_on_invalid_budgets
     [[-1, 60], [1, 0], ["1", 60], [Float::NAN, 60], [1, Float::INFINITY]].each do |pass_limit, absolute_limit|
       decision = @discipline.adaptive_decision(
