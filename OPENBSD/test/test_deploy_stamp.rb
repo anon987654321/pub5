@@ -24,6 +24,12 @@ class TestDeployStamp < Minitest::Test
     with_stamp(%({"app":"mas)) { |dir| assert_nil Deploy::DeployStamp.sha("master", dir:) }
   end
 
+  def test_stamp_payload_must_name_the_app_in_its_filename
+    with_stamp(%({"app":"brgen","sha":"aa4f010c1","status":"ok"})) do |dir|
+      assert_nil Deploy::DeployStamp.sha("master", dir:)
+    end
+  end
+
   def test_valid_json_with_wrong_shape_or_invalid_sha_is_not_a_deploy_stamp
     with_stamp(%([])) { |dir| assert_nil Deploy::DeployStamp.sha("master", dir:) }
     with_stamp(%({"sha":"a"})) { |dir| assert_nil Deploy::DeployStamp.sha("master", dir:) }
