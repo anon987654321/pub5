@@ -170,7 +170,7 @@ module Master
                   else
                     {}
                   end
-          store.record(
+          antigen_id = store.record(
             law:, boundary:, defect_class:,
             evidence: {
               source_sha256:, outcome: "high_cost_law_budget_exceeded", attempts: 1,
@@ -186,6 +186,13 @@ module Master
             note: "repair attempt crossed its Law budget",
             severity: "error",
           )
+          Master::Trace::CausalTrace.step(
+            kind: :decision, name: "run_budget.law_limit_exceeded",
+            input: { law: law.to_s, source_sha256:, cost_usd: cost_usd.to_f, cost_tokens: cost_tokens.to_i },
+            output: { antigen_id:, usage_status: usage[:status].to_s,
+                      exact_receipts: usage[:exact_receipts].to_i, estimated_records: usage[:estimated_records].to_i },
+          )
+          antigen_id
         rescue StandardError => error
           Master::Ground::Swallow.log(error, context: "repair_loop.record_budget_antigen", event_bus: @bus, law:)
         end
