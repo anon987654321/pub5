@@ -99,8 +99,12 @@ module Master
         "--lane visual renders the RAILS apps; #{target} has no rendered surface"
       end
 
-      # The child check runner reads this: CHECK_LANE=code leaves its browser checks out.
-      def check_env(lane = current) = { "CHECK_LANE" => lane.to_s }
+      # The child suite has a RAILS browser-fleet switch, not a MASTER face
+      # switch. MASTER's own rendered proof belongs to VisualPass, so keep its
+      # supplemental check runner on the code profile.
+      def check_env(lane = current)
+        { "CHECK_LANE" => (lane == :master ? :code : lane).to_s }
+      end
 
       def summary(lane = current)
         skipped = skipped(lane)
