@@ -897,7 +897,7 @@ The complete candidate records and rejected alternatives live in `MASTER/data/id
 - [ ] `ops_alert_channel` — heartbeat failures reach one operator-owned relay with an allowlisted endpoint and secret held outside the tree.
 
 **Partial — additional**
-- [ ] `documentation_completeness` — 2026-11-18: exact public contract/document pairs now require `documentation_review` and both changed paths in the same /fix delivery. Regression cases are authored in `MASTER/test/test_task_contract.rb` and `MASTER/test/test_fix_loop_committer.rb`; focused runs remain NOT_RUN. Human review still chooses the appropriate reader-facing document and judges its content.
+- [ ] `documentation_completeness` — 2026-11-18: exact public contract/document pairs now require `documentation_review` and both changed paths in the same /fix delivery. The validated contract is pinned to the committer before parallel repair workers start, so the gate does not rely on thread-local inheritance. Regression cases are authored in `MASTER/test/test_task_contract.rb` and `MASTER/test/test_fix_loop_committer.rb`; focused runs remain NOT_RUN. Human review still chooses the appropriate reader-facing document and judges its content.
 
 ### 8.5 Operator-only and external evidence seams — 55 dependencies
 
