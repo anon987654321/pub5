@@ -111,6 +111,22 @@ class Marketplace::ListingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "category shortcuts keep the complete marketplace search context" do
+    params = {
+      kind: "goods", q: "bike", from: "person", condition: "good",
+      min_price: "50", max_price: "900", lat: "60.39", lng: "5.32",
+      radius_km: "8", sort: "price_low"
+    }
+
+    get marketplace.listings_path, params: params
+    assert_response :success
+
+    assert_select "nav.deal-cats a[href=?]",
+                  marketplace.listings_path(params)
+    assert_select "nav.deal-cats a[href=?]",
+                  marketplace.listings_path(params.merge(category_id: @category.id))
+  end
+
   test "the price floor hides what sits below it" do
     cheap = listing_for(@seller, "Paperback shelf", price_cents: 9_000)
     dear = listing_for(@seller, "Freeride ski 180", price_cents: 45_000)
