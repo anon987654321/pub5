@@ -40,12 +40,39 @@ module Master
           @repo_git = beside_repo? ? Master::Io::GitOperations.new(repo_root) : nil
         end
 
-        def beside_repo? = @root && File.expand_path(@root).start_with?("#{File.expand_path(repo_root)}/")
+        # Only a workspace physically contained by this checkout may borrow its
+        # Git writer. A lexical prefix is insufficient: /work/pub5-old is not
+        # inside /work/pub5, and symlinked workspace roots must not redirect the
+        # repository writer into a different checkout.
+        def beside_repo?
+          return false unless @root && File.directory?(@root) && File.directory?(repo_root)
 
-        def repo_prefix = Pathname.new(File.expand_path(@root)).relative_path_from(File.expand_path(repo_root)).to_s
+          workspace = File.realpath(@root)
+          repository = File.realpath(repo_root)
+          workspace.start_with?("#{repository}#{File::SEPARATOR}")
+        rescue SystemCallError
+          false
+        end
+
+        def repo_prefix
+          workspace = File.realpath(@root)
+          repository = File.realpath(repo_root)
+          raise ArgumentError, "fix workspace is outside its repository" unless
+            workspace.start_with?("#{repository}#{File::SEPARATOR}")
+
+          Pathname.new(workspace).relative_path_from(repository).to_s
+        end
 
         def repo_relative(path)
-          Pathname.new(File.expand_path(path, @root)).relative_path_from(File.expand_path(repo_root)).to_s
+          repository = File.realpath(repo_root)
+          workspace = File.realpath(@root)
+          absolute = File.expand_path(path.to_s, workspace)
+          unless workspace.start_with?("#{repository}#{File::SEPARATOR}") &&
+                 absolute.start_with?("#{repository}#{File::SEPARATOR}")
+            raise ArgumentError, "fix delivery path is outside its repository"
+          end
+
+          Pathname.new(absolute).relative_path_from(repository).to_s
         end
       end
     end
