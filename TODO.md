@@ -288,9 +288,10 @@ are not new implementation requests.
   2026-11-18: `PipelineContext#inspect` now reports only sorted top-level keys;
   a regression covers prompt, provider output, metadata and tool-argument
   redaction. Structural look-stage drops now report bounded category/path
-  rejection reasons in the summary and existing event receipt. `/help q`
-  explicitly directs operators to `/quit` or `/exit`. Regressions authored,
-  NOT_RUN. The redacted, run-specific chat-visible run receipt remains open.
+  rejection reasons in the summary and existing event receipt. A typed `/q`
+  now directly explains `/quit` and `/exit`, with REPL and help regressions.
+  Regressions authored, NOT_RUN. The redacted, run-specific chat-visible run
+  receipt remains open.
 
 Build on existing Mission, Supervisor, TaskSteward, TaskContract,
 OutcomeLearning, RepairMemory, RunBudget, RunPulse, Transaction and
