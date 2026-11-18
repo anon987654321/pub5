@@ -152,6 +152,13 @@ module Master
         approvals = votes.count(&:approved)
         approved = approvals >= @quorum
         dissent = votes.reject(&:approved)
+        Master::Trace::CausalTrace.step(
+          kind: :decision, name: "consensus.approve_fix",
+          input: { law: violation[:law].to_s, severity: violation[:severity].to_s,
+                   author_families: author_families.size, reviewer_families: reviewer_families.size,
+                   quorum: @quorum },
+          output: { approved:, approvals:, voters: votes.size, dissenters: dissent.size },
+        )
         @bus&.publish(
           "consensus:result",
           approved:,
