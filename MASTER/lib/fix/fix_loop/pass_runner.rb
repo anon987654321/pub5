@@ -508,9 +508,6 @@ module Master
             @bus&.publish("fix_loop:elevation", pass:, steps: found.size, lane: lane.to_s)
           end
           found
-        rescue StandardError => e
-          Master::Ground::Swallow.log(e, context: "fix_loop.elevation", event_bus: @bus)
-          []
         end
 
         def ideas_to_findings(ideas, pass:)
