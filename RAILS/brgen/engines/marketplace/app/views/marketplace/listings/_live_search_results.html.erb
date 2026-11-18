@@ -10,6 +10,7 @@
   </div>
 <% end %>
 
+<% listing_filter_params = request.query_parameters.except("page", "format") %>
 <% if @categories.any? %>
   <%# Kaufland.de's category shortcut rail: a 110px white well over each name.
       Categories carry no picture, so the well holds the name's initial rather
@@ -18,11 +19,11 @@
       Every link that rebuilds the index carries the kind, or a category tap on
       the jobs list lands back on goods. %>
   <nav class="deal-cats" aria-label="<%= t("aria.categories") %>">
-    <%= link_to listings_path(kind: @kind), class: "deal-cat#{" active" unless params[:category_id]}" do %>
+    <%= link_to listings_path(listing_filter_params.except("category_id")), class: "deal-cat#{" active" unless params[:category_id]}" do %>
       <span class="store-shortcut-well" aria-hidden="true"><%= icon :layers, size: 32 %></span><%= t("marketplace.all_categories") %>
     <% end %>
     <% @categories.each do |cat| %>
-      <%= link_to listings_path(kind: @kind, category_id: cat.id, q: params[:q].presence), class: "deal-cat#{" active" if params[:category_id].to_s == cat.id.to_s}" do %>
+      <%= link_to listings_path(listing_filter_params.merge("category_id" => cat.id)), class: "deal-cat#{" active" if params[:category_id].to_s == cat.id.to_s}" do %>
         <span class="store-shortcut-well" aria-hidden="true"><%= cat.name.to_s.first&.upcase %></span><%= cat.name %>
       <% end %>
     <% end %>
@@ -33,7 +34,7 @@
   <%= render "marketplace/top_offers", offers: @top_offers %>
 <% end %>
 
-<% filter_params = request.query_parameters.except("page", "format") %>
+<% filter_params = listing_filter_params %>
 <% removable_filter_keys = %w[from category_id condition min_price max_price lat lng radius_km] %>
 <% active_filter_chips = [] %>
 <% if params[:from] == "person" %>
@@ -123,7 +124,7 @@
   <nav class="store-terms" aria-labelledby="store-terms-title">
     <%= tag.h2 t("marketplace.browse_categories"), id: "store-terms-title", class: "store-heading" %>
     <% @categories.flat_map(&:children).each do |sub| %>
-      <%= link_to sub.name, listings_path(kind: @kind, category_id: sub.id) %>
+      <%= link_to sub.name, listings_path(listing_filter_params.merge("category_id" => sub.id)) %>
     <% end %>
   </nav>
 <% end %>
