@@ -92,7 +92,8 @@ class TestToolBreaker < Minitest::Test
       source_sha256: "0" * 64,
     )
     refute_includes File.read(File.join(@dir, Master::Fix::AntigenStore::DIR, Master::Fix::AntigenStore::FILE)),
-                    "must never be stored"
+                    "must never be stored"    antigen_path = File.join(@dir, Master::Fix::AntigenStore::DIR, Master::Fix::AntigenStore::FILE)
+    assert_equal 0o600, File.stat(antigen_path).mode & 0o777
   end
 
   def test_best_of_n_sees_a_fused_tuple
