@@ -525,7 +525,7 @@ module Master
         @dependency_antigens = record_dependency_antigens(@dependency_tangle_report)
         Master::Trace::CausalTrace.step(
           kind: :context, name: "reference_graph.ready",
-          input: { target: relative_target(snapshot[:nodes].first.to_s), files: snapshot[:nodes].size },
+          input: { files: snapshot[:nodes].size },
           output: { nodes: snapshot[:nodes].size, edges: snapshot[:edges].size,
                     unresolved: graph_metrics[:unresolved_ruby_references].to_i + graph_metrics[:unresolved_local_imports].to_i,
                     dependency_cycles: graph_metrics[:dependency_cycle_count].to_i,
