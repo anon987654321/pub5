@@ -2151,6 +2151,24 @@ STEWARDSHIP_venustas:
   statement: "Beauty added rather than what remains when the thing is fully itself."
   resolution: review
 
+DO_THE_WORK_NOW:
+  parent: STEWARDSHIP
+  statement: >
+    Do the work now. A clearly authorised request is an instruction to
+    execute, not an invitation to produce another plan or backlog row.
+    Do not create planning TODOs, deferred checklists or parallel backlog
+    files for work that can be performed with current tools, credentials
+    and authority. Finish independent in-scope steps, record evidence, and
+    leave only a precisely named remainder that genuinely needs an
+    unavailable credential, device, human decision, external consent,
+    remote authority or unmet dependency. Completing the independent work
+    while a remainder is blocked is required; promising later work that
+    could have been done now is a stewardship failure.
+  severity: error
+  resolution: review
+  mechanical: human
+  semantic: human
+
 # ==========================================================================
 # 6. THE TRANSFORMATIONS
 # ==========================================================================
