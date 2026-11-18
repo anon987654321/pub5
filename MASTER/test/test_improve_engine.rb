@@ -99,7 +99,8 @@ class TestImproveEngine < Minitest::Test
   def test_html_image_and_icon_controls_need_accessible_names
     FileUtils.mkdir_p(File.join(@root, "docs", "views"))
     path = write("docs/views/index.html.erb",
-      '<img src="coat.jpg"><button><svg></svg></button><a href="/next"><i class="icon"></i></a>')
+      '<img src="coat.jpg"><form><button></button></form><button><svg></svg></button>' +
+      '<a href="/next"><i class="icon"></i></a><a href="/empty"></a><div tabindex="2">skip</div>')
 
     findings = Master::Fix::Improve::Domains.scan(root: @root, files: [path])
     signals = findings.map(&:signal)
@@ -107,6 +108,10 @@ class TestImproveEngine < Minitest::Test
     assert_includes signals, "image_without_alt"
     assert_includes signals, "icon_only_button"
     assert_includes signals, "icon_only_link"
+    assert_includes signals, "empty_button"
+    assert_includes signals, "empty_link"
+    assert_includes signals, "positive_tabindex"
+    assert_includes signals, "implicit_form_button_type"
   end
 
   def test_polish_coverage_exposes_per_domain_counts
