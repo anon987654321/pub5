@@ -47,8 +47,10 @@ module Master
         tree = Tree.new(root: @root, target:)
         return result(:empty, "tree has no tracked files") if tree.files.empty?
 
-        proposals, dropped = TreeProposals.parse(@agent.ask(prompt(tree), operation: :tree).to_s, tree.paths)
-        record(tree:, proposals:, dropped:, persist:)
+        proposals, dropped, drop_reasons = TreeProposals.parse_detailed(
+          @agent.ask(prompt(tree), operation: :tree).to_s, tree.paths,
+        )
+        record(tree:, proposals:, dropped:, drop_reasons:, persist:)
       rescue StandardError => e
         @bus&.publish("fix_loop:tree_error", target: target.to_s, error: "#{e.class}: #{e.message}")
         result(:inconclusive, "tree reasoning inconclusive, #{e.class}: #{e.message}")
@@ -81,21 +83,25 @@ module Master
         text.byteslice(0, MAX_PROMPT_BYTES)
       end
 
-      def record(tree:, proposals:, dropped:, persist: true)
+      def record(tree:, proposals:, dropped:, drop_reasons:, persist: true)
         if persist
           path = self.class.hints_path(@root)
           FileUtils.mkdir_p(File.dirname(path))
           File.write(path, JSON.generate(proposals.map(&:to_h)))
-          @bus&.publish("fix_loop:tree", metrics: tree.metrics, proposals: proposals.map(&:to_h), dropped:)
+          @bus&.publish(
+            "fix_loop:tree", metrics: tree.metrics, proposals: proposals.map(&:to_h),
+            dropped:, dropped_reasons: drop_reasons,
+          )
         end
-        summary = summary(tree:, proposals:, dropped:)
+        summary = summary(tree:, proposals:, dropped:, drop_reasons:)
         Master::Trace::Dmesg.status("tree0", summary)
         Result.new(state: :answered, summary:, proposals:, dropped:)
       end
 
-      def summary(tree:, proposals:, dropped:)
+      def summary(tree:, proposals:, dropped:, drop_reasons:)
         metrics = tree.metrics
-        note = dropped.positive? ? ", #{dropped} invalid proposal(s) dropped" : ""
+        detail = drop_reasons.empty? ? "" : " (#{drop_reasons.join("; ")})"
+        note = dropped.positive? ? ", #{dropped} invalid proposal(s) dropped#{detail}" : ""
         "#{metrics[:files]} files in #{metrics[:directories]} dirs, #{proposals.size} proposal(s)#{note}"
       end
 
