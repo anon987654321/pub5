@@ -13,6 +13,11 @@ en:
     popup_open: "Open"
     point_untitled: "Map point"
     point_kind: "point"
+    types:
+      place: "Place"
+      event: "Event"
+      story: "Story"
+      courier: "Courier"
     no_points: "No map points yet."
     point_list: "The points on the map"
     address: "Address"
