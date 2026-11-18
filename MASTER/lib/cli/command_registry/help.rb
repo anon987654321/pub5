@@ -409,6 +409,7 @@ module Master
       def help_text(command = nil)
         key = command.to_s.strip.sub(/\A\//, "").downcase
         return help_summary if key.empty?
+        return "help: /q is not a command; use /quit or /exit to leave the current MASTER session." if key == "q"
         return "/#{key} - leave the current MASTER session." if %w[exit quit].include?(key)
 
         key = Stages::Route::SPELLINGS.fetch(key, key)
