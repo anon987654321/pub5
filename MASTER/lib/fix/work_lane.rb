@@ -18,7 +18,7 @@ module Master
         research: "research0 web research", architecture: "architecture exploration",
         layout_sweep: "layout sweep", browser_checks: "browser checks", screenshot_sweep: "screenshot sweep",
         visual_pass: "rendered visual review", code_passes: "code-law repair passes",
-        visual_groups: "grouped visual repair", improve_code: "code elevation",
+        visual_groups: "grouped visual repair", improve_code: "continuous polish discovery and repair",
         improve_prose: "prose elevation", improve_visual: "visual elevation",
         improve_music: "music elevation", ideate: "ideation", restructure_drive: "restructure drive",
         conversation: "conversation UX probe"
@@ -28,8 +28,8 @@ module Master
         # conversation rides the code lane too (Johann 2026-11-08): the deterministic
         # conversation suite costs no model and no boot, and a /fix MASTER that never
         # asks how the replies read would claim the product while measuring only laws.
-        code: %i[conversation code_passes],
-        standard: %i[conversation layout_sweep browser_checks screenshot_sweep visual_pass code_passes],
+        code: %i[conversation code_passes improve_code],
+        standard: %i[conversation layout_sweep browser_checks screenshot_sweep visual_pass code_passes improve_code],
         visual: %i[layout_sweep browser_checks screenshot_sweep visual_groups],
         all: %i[research architecture conversation layout_sweep browser_checks screenshot_sweep visual_pass visual_groups code_passes improve_code improve_prose improve_visual improve_music ideate restructure_drive],
         elevate: %i[improve_code improve_prose improve_visual improve_music ideate restructure_drive code_passes],
