@@ -112,6 +112,22 @@ class TestPipeline < Minitest::Test
     assert_equal Master::CLI::PipelineContext::MAX_OUTPUT_BYTES, merged[:output].bytesize
   end
 
+  def test_pipeline_context_inspect_never_discloses_prompt_output_or_tool_data
+    ctx = Master::CLI::PipelineContext.build(
+      user_message: "prompt-private-marker",
+      output: "provider-private-marker",
+      metadata: { access_token: "token-private-marker" },
+      tool_calls: [{ arguments: "argument-private-marker" }],
+    )
+
+    inspected = ctx.inspect
+
+    %w[user_message output metadata tool_calls].each { |key| assert_includes inspected, key }
+    %w[prompt-private-marker provider-private-marker token-private-marker argument-private-marker].each do |secret|
+      refute_includes inspected, secret
+    end
+  end
+
   def test_pipeline_context_caps_timing_entries_on_merge
     ctx = Master::CLI::PipelineContext.build(user_message: "hi")
     timings = 25.times.to_h { |i| ["stage#{i}", i] }
