@@ -292,6 +292,18 @@ class VisualPassContractTest < Minitest::Test
 
   # /fix constructs the pass with MASTER's own directory as root; RAILS must
   # still read as RAILS, or the whole rendered review silently skips.
+  def test_master_tree_is_a_visual_target_for_its_own_web_face
+    pass = Master::Fix::VisualPass.new(agent: Object.new, root: Master::ROOT)
+    master = Master::ROOT
+    web = File.join(master, "web")
+
+    assert pass.applicable?(master)
+    assert pass.applicable?(web)
+    sources = pass.send(:fallback_sources, master)
+    refute_empty sources
+    assert sources.all? { |source| source.start_with?(File.join(master, "web") + File::SEPARATOR) }
+  end
+
   def test_rails_is_a_visual_target_when_root_is_master
     pass = Master::Fix::VisualPass.new(agent: Object.new, root: Master::ROOT)
     rails = File.expand_path("../RAILS", Master::ROOT)
