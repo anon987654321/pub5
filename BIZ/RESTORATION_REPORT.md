@@ -29,8 +29,8 @@ documents; nothing is invented.
 
 The whole of `MASTER/data/laws.yml` and the relevant runtime sections of
 `law_runtime.yml` (tool discipline, typography, Norwegian prose, visual
-identity) were read before the build; the historical per-law audit is archived in
-`MASTER/docs/history/master-laws-research.md`. The operative consequences:
+identity) were read before the build; the dated audit is retained in Git history; the operative source is
+`MASTER/data/laws.yml`. The operative consequences:
 
 - **REACH_non_native_tool** bans python, bash, sed, awk, head, tail, wc,
   perl; "Use Ruby" — but Ruby/zsh do not exist on the restoration host and
