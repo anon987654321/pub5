@@ -4,7 +4,7 @@ name: pub_restore_contract
 # which this file already names under checks.file_presence. Both keys stood here
 # too, with the same two values and no reader in either tree — a second copy that
 # could only drift. lint:data_singularity and lint:dedup both failed on the pair.
-updated: "2026-10-28"
+updated: "2026-11-18"
 layout_note: >-
   Paths naming DEPLOY/ predate its split into RAILS/, OPENBSD/ and the
   MASTER/tools plane. Those paths are repointed; DEPLOY/bp and DEPLOY/sh have no
