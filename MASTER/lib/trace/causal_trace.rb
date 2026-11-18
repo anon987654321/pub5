@@ -5,6 +5,7 @@ require "fileutils"
 require "json"
 require "securerandom"
 require "time"
+require_relative "../boot/paths"
 
 module Master
   module Trace
@@ -142,7 +143,7 @@ module Master
       # provider-reported rows and estimated rows remain separate; no prompt,
       # request or response material is read or copied.
       def provider_usage(root:, run_id:)
-        path = File.join(root, ".master", "costs.jsonl")
+        path = File.join(MasterPaths.fix_state(root: root), "costs.jsonl")
         return unavailable_usage unless File.file?(path)
 
         exact = []
@@ -162,7 +163,7 @@ module Master
         estimated_rows = estimated.map(&:first)
         {
           status: exact_rows.any? ? "REPORTED_USAGE" : (estimated_rows.any? ? "ESTIMATES_ONLY" : "NOT_CAPTURED"),
-          source: ".master/costs.jsonl",
+          source: MasterPaths.fix_state(root: root) + "/costs.jsonl",
           exact_receipts: exact_rows.size,
           estimated_records: estimated_rows.size,
           exact_amount: exact_rows.sum { |row| row["amount"].to_f }.round(8),
