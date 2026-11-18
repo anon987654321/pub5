@@ -380,15 +380,18 @@ class TestCliFaceDispatch < Minitest::Test
     assert_equal ["mic0: voice input is off by default"], output
   end
 
-  def test_voice_status_line_places_two_indicators_at_the_right_edge
+  def test_voice_indicator_overlay_uses_two_unlabelled_rings_in_the_upper_right
     session = Master::CLI::Session.allocate
     session.instance_variable_set(:@voice_mic_active, true)
-    line = Master::Voice::Playback.stub(:speaking?, false) do
-      TTY::Screen.stub(:width, 80) { session.send(:voice_status_line, "ready, model x") }
+    overlay = Master::Voice::Playback.stub(:speaking?, false) do
+      TTY::Screen.stub(:width, 80) { session.send(:voice_indicator_overlay) }
     end
 
-    assert line.end_with?("MIC ●  TTS ○")
-    assert_operator line.length, :>=, 80
+    assert_includes overlay, "\e[1;78H●○"
+    assert_includes overlay, "\e[s"
+    assert_includes overlay, "\e[u"
+    refute_includes overlay, "MIC"
+    refute_includes overlay, "TTS"
   end
 
   def test_ctrl_c_leaves_hands_free_mode
