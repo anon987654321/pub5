@@ -125,3 +125,6 @@ covered requirements now live in `MASTER/law/` and `MASTER/data/laws.yml`. The w
 proposal (a document, not policy) lives at `BIZ/tools/fetat_proposal.md`.
 The workstation deploy interface is `MASTER/bin/operator vps deploy <app|group|all> --remote`;
 the on-box serial deployment engine is `OPENBSD/bin/vps-deploy`.
+
+Security reports should follow the private-disclosure path in [SECURITY.md](SECURITY.md);
+do not publish unremediated vulnerabilities in public issues.
