@@ -97,9 +97,8 @@ class TestImproveEngine < Minitest::Test
   end
 
 
-  def test_canonical_cross_tree_architecture_map_does_not_reappear_as_ideation
-    FileUtils.mkdir_p(File.join(@root, "MASTER/docs"))
-    path = write("MASTER/docs/ARCHITECTURE.md", "# Cross-tree map\n")
+  def test_live_ruby_architecture_report_does_not_reappear_as_ideation
+    path = write("MASTER/lib/convergence/architecture.rb", "module Master; end\n")
 
     ideas = @engine.ideate(files: [path])
 
