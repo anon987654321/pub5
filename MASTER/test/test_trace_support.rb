@@ -383,7 +383,7 @@ class TestTraceSupport < Minitest::Test
     ledger = File.read(File.join(root, trace::LEDGER_DIR, trace::LEDGER_FILE))
     refute_includes ledger, "private bank details"
     refute_includes ledger, "private generated source"
-    assert_equal 0o600, File.stat(File.join(root, trace::LEDGER_DIR, trace::LEDGER_FILE)).mode & 0o777
+    assert_equal 0o600, File.stat(File.join(root, trace::LEDGER_DIR, trace::LEDGER_FILE)).mode & 0o7777
     assert_nil trace.current
   ensure
     FileUtils.rm_rf(root) if root
