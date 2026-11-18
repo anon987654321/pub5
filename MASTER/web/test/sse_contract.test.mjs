@@ -62,6 +62,16 @@ test("the stop path cancels the turn without inventing a named event", () => {
   assert.deepEqual([...emittedEvents()].filter((name) => /stop|cancel|abort/i.test(name)), []);
 });
 
+test("operation log SSE is handled by the chat transcript link renderer", () => {
+  const { sse, window } = loadContract();
+  const published = [];
+  window._chatOnOperationLog = (payload) => published.push(payload);
+  const payload = { url: "https://dpaste.org/example", service: "dpaste_org", expires_in: "7 days" };
+
+  assert.equal(sse.dispatchNamed("operation_log", JSON.stringify(payload)), true);
+  assert.deepEqual(published, [payload]);
+});
+
 test("dispatchNamed runs the contract handler, prefers an extension, and logs a throwing one", () => {
   const { sse, window, logged } = loadContract();
   const lines = [];
