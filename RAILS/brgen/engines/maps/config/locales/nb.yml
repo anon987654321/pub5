@@ -14,7 +14,6 @@ nb:
     point_untitled: "Kartpunkt"
     point_kind: "punkt"
     types:
-      place: "Sted"
       event: "Arrangement"
       story: "Story"
       courier: "Bud"
