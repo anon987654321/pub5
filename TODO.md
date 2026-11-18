@@ -14,7 +14,20 @@ Follow-up audit: pub4/main remains at the recorded migration cutoff; the live
 blob disposition is refreshed in `MIGRATION.md` against `ff607922`. The
 execution container has Ruby 3.3.8 but no repository checkout; a shallow clone
 failed at DNS resolution for github.com. Repository test, lint and build commands
-therefore remain NOT_RUN in this session. Subsequent source and regression-test commits were pushed through the repository API after source review, but could not be executed through `bin/check`; their current-revision status is NOT_RUN, not PASS. They remain pending acceptance on the installed compatible Ruby. PRs #11 (MASTER portrait,
+therefore remain NOT_RUN in this session. Subsequent source and regression-test commits were pushed through the repository API after source review, but could not be executed through `bin/check`; their current-revision status is NOT_RUN, not PASS. They remain pending acceptance on the installed compatible Ruby.
+
+2026-11-18 source-only follow-up on `a2c02b885db2e0ea9af8e03c9b1948cda4388d9c`: commits
+`bbe3e74`, `c08c86b`, `fff8ecb`, `e205aed`, `a94c39b` and
+`a2c02b8` tighten the `/deploy` boundary: bounded single-app CI through the
+shared process-group executor; detached tmux start acknowledgement distinct
+from completion/canary proof; fail-closed Git fetch/revision/status probes;
+untracked governed-file detection; and no repeated full-CSS normalization
+inside the selector loop. Regression tests were added for those contracts.
+They are authored, not run. The stylesheet optimization is a source-supported
+candidate explanation for the recorded CSS runner stall, not a verified
+resolution. Native OpenBSD, the full current-revision check ladder and live
+vm23 deployment/health evidence remain NOT_RUN or BLOCKED pending their
+required environments and access. PRs #11 (MASTER portrait,
 semantic subject morphs, CLI feedback and Replicate upload guards) and #12
 (Brgen city wordmark refinement) are merged. No pull request was open at the
 time of this audit. Entries below remain open until their own source, test,
