@@ -4,8 +4,23 @@ require "json"
 require_relative "../../lib/visual/ad_audit"
 require_relative "browserless_measurements"
 
+USAGE = [
+  "usage: ruby tools/visual/audit_ad.rb MANIFEST.json",
+  "",
+  "Required JSON fields: html, css, placement.",
+  "Optional fields: asset_root, viewport, rendered.",
+  "Without rendered evidence, BrowserlessMeasurements analyzes the supported static HTML/CSS subset.",
+  "Reports include measurement mode and source digests.",
+  "Exit 0 means the declared audit passed; exit 1 means findings failed; invalid input exits nonzero.",
+].join("\\n").freeze
+
+if ARGV.first == "--help" || ARGV.first == "-h"
+  puts USAGE
+  exit 0
+end
+
 manifest_path = ARGV.fetch(0) { ENV["AD_VISUAL_MANIFEST"] }
-abort "usage: ruby tools/visual/audit_ad.rb MANIFEST.json" if manifest_path.to_s.empty?
+abort USAGE if manifest_path.to_s.empty?
 manifest_path = File.expand_path(manifest_path)
 abort "ad_visual_audit: manifest not found: #{manifest_path}" unless File.file?(manifest_path)
 
