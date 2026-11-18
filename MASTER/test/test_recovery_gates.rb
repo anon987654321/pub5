@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Required proof gates before folding FixLoop / RepairLoop / RunJournal into
-# Fix::Kernel. See MASTER/docs/fix_coordinator_map.md.
+# Fix::Kernel. The current owners are MASTER/lib/fix/kernel/lifecycle.rb and MASTER/lib/fix/kernel/repair_adapter.rb.
 #
 # Each gate must exercise production code with planted failure conditions. A
 # gate is not closed merely because its test is authored: run it on pinned Ruby,
