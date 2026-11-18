@@ -497,6 +497,7 @@ body[data-council-persona]::after {
 #voice-indicators #mic-dot {
   position: relative;
   top: auto;
+  inset-block-start: auto;
   inset-inline-end: auto;
   width: var(--tap-min);
   height: var(--tap-min);
