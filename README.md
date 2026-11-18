@@ -40,10 +40,10 @@ reader.
 
 ## Fifth content root: business and writing deliverables
 
-`BIZ/` holds the business plans as one tree (merged from BPLANS and
-MASTER/tools/biz on 2026-11-08): one folder per plan with its published
-pair, and the bases, build/check/print chain, templates, research and
-proposals in `BIZ/tools/`. The canonical guide is `BIZ/README.md`.
+`BIZ/` holds business plans and professional documents as one tree:
+one folder per workstream with its published pair or editable source, while
+the bases, build/check/print chain, templates, research and proposals live in
+`BIZ/tools/`. The canonical guide is `BIZ/README.md`.
 
 ## Start by role
 
