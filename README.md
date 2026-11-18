@@ -1,10 +1,28 @@
 # pub5
 
-**One checkout, four runtime trees, a fifth BIZ content root, and a written source hierarchy that outranks every
-agent working in any of them.** pub5 is a self-governing repository: the model
-only proposes; Soul defines global identity, preservation, source order and
-protected paths, while the Law catalogue defines the requirements each change
-must satisfy.
+**pub5 builds and governs Brgen and its sister products, their OpenBSD operations, creative tooling and professional documents in one evidence-led repository.**
+
+One checkout holds four runtime trees and a fifth BIZ content root. The model
+only proposes. **Soul** is the global constitution: it defines identity,
+preservation, source precedence and protected paths. The **Law catalogue**
+contains individually named requirements that executable checks, tree
+contracts and reviews apply to changes. **INCONCLUSIVE** means the available
+evidence does not establish an outcome; it is never a passing result.
+
+## Products
+
+- [Brgen](RAILS/brgen/README.md) — the city-first social network and host for its verticals.
+- [Amber](RAILS/amber/README.md) — a private wardrobe and style companion.
+- [BSDPorts](RAILS/bsdports/README.md) — search and inspect the OpenBSD ports tree.
+- [Marketplace](RAILS/brgen/engines/marketplace/README.md) and [Takeaway](RAILS/brgen/engines/marketplace/engines/takeaway/README.md) — local commerce and food ordering.
+- [Dating](RAILS/brgen/engines/dating/README.md), [Messenger](RAILS/brgen/engines/messenger/README.md), [Maps](RAILS/brgen/engines/maps/README.md), [Radio](RAILS/brgen/engines/radio/playlist/README.md) and [TV](RAILS/brgen/engines/radio/tv/README.md) — Brgen's distinct city services.
+- [Mr. Damascy](RAILS/mrdamascy/README.md) — the standalone Bergen restaurant ordering app.
+- [BIZ](BIZ/README.md) — evidence-backed business, funding and professional documents.
+
+Engineering and agent-facing guidance is written in English. Customer-facing
+products are Norwegian-first, with English where the app's locale support is
+implemented. BIZ documents use the language and conventions of their intended
+reader.
 
 ## The four runtime trees
 
@@ -27,7 +45,16 @@ MASTER/tools/biz on 2026-11-08): one folder per plan with its published
 pair, and the bases, build/check/print chain, templates, research and
 proposals in `BIZ/tools/`. The canonical guide is `BIZ/README.md`.
 
-## How to enter
+## Start by role
+
+| Role | Start here |
+| --- | --- |
+| Operator | `MASTER/README.md` and `MASTER/bin/operator` |
+| Agent or contributor | `AGENTS.md`, then the target tree's `AGENTS.md` |
+| Deployer | `OPENBSD/RUNBOOK.md` |
+| Writer or plan maintainer | `BIZ/README.md` |
+
+## Agent entrypoints
 
 `AGENTS.md` is the canonical agent entrypoint and carries the shared workflow
 contract generated from `MASTER/AGENTS.md`. Gemini, GLM and Cursor have short
@@ -66,22 +93,35 @@ through the OPENBSD runbook path. Commit path-scoped changes to main; never forc
 ## Source authority and Laws
 
 `MASTER/data/soul.yml` owns global identity, preservation principles,
-source precedence and `absolute.sacred_paths`. Its source hierarchy is:
+source precedence and `absolute.sacred_paths`. The hierarchy is intentionally
+one-way:
 
-`soul.yml > laws.yml > executable laws and gates > tree contracts > Git history`.
+```text
+Soul (`soul.yml`)
+  ↓
+Law catalogue (`laws.yml`)
+  ↓
+Executable Laws and gates
+  ↓
+Tree contracts
+  ↓
+Git history
+```
+
+The Soul answers what must remain true. The Law catalogue gives each
+requirement one identity. Executable Laws and gates measure or constrain
+changes; tree contracts define each tree's local boundary; Git history records
+what happened, but cannot overrule current authority.
 
 `MASTER/data/laws.yml` is the one catalogue of individual Law identities,
 statements, parentage and the nine invariant nodes' internal order, together
-with the scanner, veto, plugin and `/fix` runtime configuration. It does not
-restate the source hierarchy or protected-path list. A missing or unrun
-measurement is INCONCLUSIVE, never PASS.
+with the scanner, veto, plugin and `/fix` runtime configuration. A missing or
+unrun measurement is INCONCLUSIVE, never PASS.
 
 ## Repository facts
 
-`VERSION` records the release line. The FULL.yml rule corpus was retired on
-2026-11-02: it declared itself `not_a_live_config` and every one of its rows
-in `MASTER/data/laws.yml` is marked covered — the constitution lives
-in `MASTER/law/` and `MASTER/data/laws.yml`. The working master of the FETAT
+`VERSION` records the release line. The retired `FULL.yml` rule corpus declared itself `not_a_live_config`; its
+covered requirements now live in `MASTER/law/` and `MASTER/data/laws.yml`. The working master of the FETAT
 proposal (a document, not policy) lives at `BIZ/tools/fetat_proposal.md`.
 The workstation deploy interface is `MASTER/bin/operator vps deploy <app|group|all> --remote`;
 the on-box serial deployment engine is `OPENBSD/bin/vps-deploy`.
