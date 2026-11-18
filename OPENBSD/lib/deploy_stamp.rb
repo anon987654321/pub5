@@ -34,7 +34,14 @@ module Deploy
     def booted_mismatch(app:, booted:, stamped:)
       booted = booted.to_s
       return "#{app} health: no deploy.git_sha - the booted build is unknown" if booted.empty?
-      return nil if stamped.nil? || booted.start_with?(stamped) || stamped.start_with?(booted)
+      return nil if stamped.nil?
+
+      stamped = stamped.to_s
+      valid_sha = ->(value) { value.match?(/\A[0-9a-f]{7,40}\z/i) }
+      unless valid_sha.call(booted) && valid_sha.call(stamped)
+        return "#{app} health: invalid deploy identity (booted=#{booted.inspect}, stamped=#{stamped.inspect})"
+      end
+      return nil if booted.start_with?(stamped) || stamped.start_with?(booted)
 
       "#{app} health: booted #{booted} but last deploy stamped #{stamped} - " \
         "this process runs code no deploy ran; `bin/vps-deploy #{app}` makes them one"
