@@ -35,14 +35,19 @@ Constitutional side landed in `MASTER/data/laws.yml` (statement + catalogue entr
 - `POLA` strengthened for agent/council behaviour and status surfaces.
 - `SOLID` strengthened for AI-generated code and continuous architecture checks.
 - `ROBUSTNESS_least_authority_tracing`, `ROBUSTNESS_immune_pattern`, `ROBUSTNESS_homeostasis`.
+- `ROBUSTNESS_morphological_exploration` — multi-probe divergent exploration under shared budget, scored against Laws and cost; linear single proposals are weaker evidence.
+- `ROBUSTNESS_antigen_memory` — retain failure/veto signatures as antigens; matching probes are down-weighted or refused early.
+- `ROBUSTNESS_sclerotium` — proven trajectories must be compiled/hardened to deterministic code; living agents on settled paths are surplus.
 
 Still open (implementation, not constitution):
 
 - [ ] Wire OpenTelemetry (traces + Profiles) and optional eBPF continuous profiling into MASTER runtime and `/fix` so every run can emit causal receipts and profiles.
 - [ ] Make council and agent entrypoints emit append-only causal traces (tool + reasoning + outcome) stored as evidence receipts; refuse PASS without them where the new Laws apply.
 - [ ] Add mechanical detectors / architecture mapping that surface semantic duplication and dependency tangles (continuous, not only on review).
-- [ ] Prototype immune-style recognition of previously seen failure signatures from `/fix` and production incidents.
-- [ ] Add a workstream path that, once a trajectory is proven, can compile it to deterministic Ruby (ReTrace-style) and retire the model from that path.
+- [ ] Prototype immune-style / antigen-memory recognition of previously seen failure signatures from `/fix` and production incidents.
+- [ ] Add a workstream path that, once a trajectory is proven, can compile it to deterministic Ruby (ReTrace / sclerotium) and retire the model from that path.
+- [ ] Implement morphological exploration: a narrow multi-probe mode that launches divergent short agents under different Law weightings, scores them, and retains the Pareto front.
+- [ ] Practical next experiment: pick one narrow high-value slice (e.g. “every council turn emits a causal receipt” or “surface top architectural tangles in MASTER”), run 5–7 divergent probes, score on the new Laws + cost, keep the winning shape, record antigen and nutrient for the next round.
 - [ ] Run law catalogue preflight + focused tests after the above; update ratchets if any new hygiene debt appears.
 
 ## Stewardship

@@ -277,6 +277,38 @@ ROBUSTNESS_homeostasis:
     robustness failure.
   resolution: review
 
+ROBUSTNESS_morphological_exploration:
+  parent: ROBUSTNESS
+  statement: >
+    When the best shape of a change is not yet known, the system may
+    explore multiple divergent paths (probes) under a shared budget and
+    score them against the active Laws, causal-trace quality and measured
+    cost. A single linear proposal that has not been compared with
+    alternatives is weaker evidence than a scored morphological set.
+    Exploration without a pruning rule or antigen memory is waste.
+  resolution: review
+
+ROBUSTNESS_antigen_memory:
+  parent: ROBUSTNESS
+  statement: >
+    Failure signatures, veto reasons and high-cost trajectories are
+    retained as antigens. Subsequent probes that match a known antigen
+    at the same high-risk boundary are down-weighted or refused early
+    unless new evidence shows the pattern has been resolved. Rediscovery
+    of a previously recorded defect class without recognition is incomplete
+    robustness.
+  resolution: review
+
+ROBUSTNESS_sclerotium:
+  parent: ROBUSTNESS
+  statement: >
+    A trajectory that has been proven by causal traces, evidence and
+    acceptable profile cost should be compiled or hardened into ordinary
+    deterministic code (sclerotium). Leaving a living agent or model on a
+    settled hot path is surplus and violates the spirit of KISS and
+    homeostasis.
+  resolution: review
+
 # ---
 
 SINGULARITY:
@@ -3203,6 +3235,15 @@ law_catalogue:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
     ROBUSTNESS_homeostasis:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    ROBUSTNESS_morphological_exploration:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    ROBUSTNESS_antigen_memory:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    ROBUSTNESS_sclerotium:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
     DUAL_DETECTION:
