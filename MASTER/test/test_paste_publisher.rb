@@ -191,4 +191,36 @@ class PastePublisherTest < Minitest::Test
     refute Master::Ground::PastePublisher.public_output_allowed?("!cat secrets.env")
     refute Master::Ground::PastePublisher.public_output_allowed?("!zsh -c 'cat ~/.ssh/id_rsa'")
   end
+
+  def test_operation_capture_is_bounded_to_its_conversation
+    Dir.mktmpdir("operation-log-capture") do |dir|
+      bus = Master::Trace::EventBus.new(event_log: Master::Trace::Log::Event.new(root: dir))
+      mine = "a" * 32
+      capture = Master::Ground::PastePublisher::Capture.new(bus:, conversation: mine)
+
+      Fiber[:master_conversation] = mine
+      bus.publish("wishlist:done", drafted: 1)
+      Fiber[:master_conversation] = "b" * 32
+      bus.publish("wishlist:done", drafted: 99)
+      Fiber[:master_conversation] = mine
+      bus.publish("wishlist:done", drafted: 2)
+
+      report = capture.close
+      assert_includes report, "drafted 1"
+      assert_includes report, "drafted 2"
+      refute_includes report, "drafted 99"
+      assert_equal report, capture.close
+    ensure
+      Fiber[:master_conversation] = nil
+    end
+  end
+
+  def test_status_for_keeps_blocked_and_cancelled_distinct
+    assert_equal "success", Master::Ground::PastePublisher.status_for(Master::Result.ok("done"))
+    assert_equal "blocked", Master::Ground::PastePublisher.status_for(
+      Master::Result.err("refused", category: :policy),
+    )
+    assert_equal "cancelled", Master::Ground::PastePublisher.status_for(nil, cancelled: true)
+  end
+
 end
