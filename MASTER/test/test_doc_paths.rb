@@ -179,9 +179,9 @@ class TestDocPaths < Minitest::Test
                  ".keep markers are redundant when their directory already has tracked contents:\n  #{redundant.join("\n  ")}"
   end
 
-  def test_master_docs_contains_no_documentation_files
-    files = tracked.grep(%r{\AMASTER/docs/})
-    assert_empty files, "MASTER/docs must be migrated into Ruby/YAML owners: #{files.join(", ")}"
+  def test_no_docs_directories_remain
+    files = tracked.grep(%r{(?:\A|/)docs/})
+    assert_empty files, "docs folders are retired; keep live contracts beside their owners: #{files.join(", ")}"
   end
 
   def test_markdown_stays_at_meaningful_boundaries
