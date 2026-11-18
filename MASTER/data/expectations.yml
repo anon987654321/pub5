@@ -25,8 +25,13 @@ authority:
   executable_laws:
     - MASTER/law/**/*.rb
   task_contract: MASTER/data/task_contract.yml
-  mobile_support: MASTER/data/mobile.yml and bin/master-mobile-install
-  external_targets: MASTER/lib/core/ and its command-level tests
+  mobile_support:
+    profile: MASTER/data/mobile.yml
+    installer: MASTER/bin/master-mobile-install
+    tests: MASTER/test/test_mobile.rb
+  external_targets:
+    core_source: MASTER/lib/core/
+    boundary: Master::Core is a separate external-root workflow, not the governed /fix pipeline
 
 agent_rule: >-
   Never emit delivered for a claim no check in this repository can falsify.
@@ -56,8 +61,8 @@ buckets:
       - id: mobile_cli
         statement: >-
           The same bin/master surface on Termux and small devices, per
-          data/mobile.yml and bin/master-mobile-install. Smoke proof per device class; no second Kernel and
-          no feature split between phone and desktop.
+          the mobile profile, installer and tests named above. Smoke proof per device
+          class; no second Kernel and no feature split between phone and desktop.
       - id: github_scale_repair
         statement: >-
           Large external trees addressed path-scoped and revision-pinned, in
@@ -72,22 +77,20 @@ buckets:
         statement: >-
           Replies print once, bind to the turn that prompted them, and a
           refusal names what it refused. Evidence and instruments:
-          the conversation and prompt-construction test suites; the display dedupe, the queued-turn
-          receipt and the conversation stage carry the checks.
+          the display-dedupe, queued-turn receipt and conversation-stage tests.
       - id: capability_narration_truthful
         statement: >-
           The model is told what its runtime actually provides (tools, voice,
           sight of the session) and answers inside that truth, denying no
           capability the CLI has and adopting no lane name as identity.
-          Open as of the conversation and prompt-construction test suites; the check is a
-          prompt-construction test plus a conversation-stage probe item.
+          Prompt-construction and conversation-stage tests verify the runtime capability contract.
       - id: voice_audible_or_named_failure
         statement: >-
           On a host with audio hardware, voice0 on ends in audible speech,
           and wherever the chain degrades the failure is named on the
           console. Unmeasurable in a headless container, so INCONCLUSIVE
           there, never pass. Owner: data/voice.yml and lib/voice; evidence
-          in the conversation and prompt-construction test suites.
+          in the voice and conversation test suites.
 
   stretch_code_only:
     definition: >-
@@ -99,8 +102,8 @@ buckets:
       - id: openbsd_rust_port
         statement: >-
           The operator's openbsd-rust repository, governed as a sibling
-          checkout per lib/core/ and its command-level tests. Honest delivered: paths changed
-          and the on-OpenBSD build smoke passed.
+          checkout; only the separate provider-backed Core workflow may target it today.
+          It does not inherit /fix transaction, Law-scan or delivery proof guarantees.
       - id: openbsd_src_patches
         statement: >-
           Patch-quality work in a local OpenBSD src checkout, path-bounded and
