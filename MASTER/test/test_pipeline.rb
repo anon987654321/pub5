@@ -231,6 +231,7 @@ class TestPipeline < Minitest::Test
 
     assert_includes result, "DONE: clean"
     assert_includes result, "fix-receipt0: done run=fixture"
+    assert_match(/DONE: clean\\n\\nfix-receipt0: done run=fixture/, result)
     assert_equal "fix", seen.fetch("loop")
     assert_nil Master::Ops::LoopOwner.active
   ensure
