@@ -185,6 +185,7 @@ module Master
       def supportive_rate(clean, style, cfg)
         words = clean.split.length
         base = case style.to_sym
+               when :eager then 6
                when :calm then -7
                when :intimate then -6
                when :storyteller then -5
@@ -201,6 +202,7 @@ module Master
       def supportive_pitch(clean, style, cfg)
         words = clean.split.length
         base = case style.to_sym
+               when :eager then 8
                when :calm then -20
                when :intimate then -18
                when :storyteller then -14
