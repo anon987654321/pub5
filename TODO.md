@@ -753,6 +753,16 @@ measure is already owned by the Bymorgen item above.
 
 ## 7. OpenBSD production safety and external seams
 
+2026-11-18 source-only deployment-safety refinements: `Deploy::DeployStamp`
+now defaults to the pub5 host ledger (`/var/db/pub5`), rejects malformed
+stamp records and SHA values shorter than Git's seven-character minimum, and
+has regression cases for those boundaries. The post-deploy canary no longer
+treats local `HEAD@{1}` as the previous production release or prints a blind
+revert range; it directs the operator to the app stamp and matching deploy-run
+receipt before a reviewed app-scoped revert. These tests are authored but
+NOT_RUN here. This does not replace live vm23 evidence or the staged-release
+work below.
+
 - [ ] **Measure vm23 before changing it.** The 2026-11-04 note reported 1 GB
   and near-exhausted swap; that is not a current measurement. Capture live
   RAM, swap, service RSS, job processes and health first. Present a provider
