@@ -56,12 +56,15 @@ module Master
       # redisplay to be a full repaint, anchored at the cursor, the row where
       # the payload just ended.
       def foreign_write_end(target)
-        return unless @reading_input && tty_target?(target)
+        return unless tty_target?(target)
 
-        # Do not print a blank spinner row after every dmesg event. The spinner
-        # reclaims one row only after the event stream has been quiet briefly.
-        @last_foreign_write_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        redraw_active_input
+        if @reading_input
+          # Do not print a blank spinner row after every dmesg event. The spinner
+          # reclaims one row only after the event stream has been quiet briefly.
+          @last_foreign_write_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          redraw_active_input
+        end
+        write_voice_indicators(target)
       end
 
       def redraw_active_input
