@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "../../execution/contract"
+require_relative "../../trace/causal_trace"
 
 module Master
   module Fix
@@ -126,9 +127,43 @@ module Master
           if terminal_state_for(result) == :done && compliance_status.to_s != "PASS"
             result = terminal(:blocked, "universal Law compliance #{compliance_status}; inspect the persisted quality receipt")
           end
-          RunBudget.finish_run(reason: run_end_reason(result))
           state = terminal_state_for(result)
+          trace_receipt = nil
+          trace_error = nil
+          trace_context = @causal_trace_context || Master::Trace::CausalTrace.start(
+            run_id:, root: @root, agent: "MASTER /fix",
+          )
+          begin
+            trace_receipt = Master::Trace::CausalTrace.finish(
+              trace_context,
+              outcome: {
+                state: state.to_s,
+                result_class: result.class.name,
+                category: (result.category.to_s if result.respond_to?(:category)),
+              },
+              metadata: {
+                target: fix_target_label(target),
+                plan_digest: @fix_plan&.digest,
+              },
+            )
+          rescue StandardError => error
+            trace_error = error
+            Master::Ground::Swallow.log(error, context: "fix.causal_trace", event_bus: @bus, run_id:)
+          ensure
+            Master::Trace::CausalTrace.clear(trace_context)
+            @causal_trace_context = nil
+          end
+          if state == :done && !trace_receipt
+            result = terminal(:blocked, "causal trace persistence failed; DONE withheld (#{trace_error&.class || "receipt unavailable"})")
+            state = :blocked
+          end
+          RunBudget.finish_run(reason: run_end_reason(result))
           @last_terminal_state = state
+          evidence[:causal_trace] = if trace_receipt
+                                       { trace_id: trace_receipt[:trace_id], sha256: trace_receipt[:sha256] }
+                                     else
+                                       { status: "persistence_failed", error_class: trace_error&.class&.name }
+                                     end
           evidence[:quality_contract] = quality_contract
           evidence[:assessment_matrix] = matrix_evidence
           evidence[:assessment_ledger_receipt] = assessment_receipt
@@ -159,6 +194,7 @@ module Master
 
           target_label = fix_target_label(target)
           outcome = { state:, message: result.to_s, task_id: run_id, capability: "code_repair", target: target_label, run_id: }
+          outcome[:trace_id] = trace_receipt[:trace_id] if trace_receipt
           if plan_evidence
             outcome[:plan_digest] = plan_evidence["digest"]
             outcome[:plan_generation] = plan_generation unless plan_generation.nil?
