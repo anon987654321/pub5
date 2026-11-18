@@ -2427,6 +2427,15 @@ Law.define(:SINGULARITY_architectural_tangle) do
   good "One owner holds the fact; the graph is acyclic and continuous mapping shows no forbidden reach."
 end
 
+Law.define(:SINGULARITY_architectural_coherence) do
+  source "laws.yml SINGULARITY_architectural_coherence - additions inherit the existing architecture's design grammar"
+  ask "Does this addition or change fit the existing architecture's ownership boundaries, conventions, dependencies and product identity, or does it introduce an unrelated parallel system or accidental drift? Assess the whole architecture, not only the edited files."
+  practice "Treat pub5 as one generative architecture: distinct products may express distinct identities, but every part speaks the governing architectural language."
+  fix "Read the nearest existing owner and its contracts first. Reuse its established structures and conventions; preserve meaningful product-specific variation. Introduce a new abstraction or boundary only when a distinct responsibility or independently changing contract earns it, and verify the result against the whole architecture."
+  bad "Add a second configuration system, component vocabulary or workflow that duplicates an existing owner and feels bolted onto the repository."
+  good "Extend the existing owner, preserve the product's own visual and operational dialect, and prove the addition fits its declared boundaries and shared principles."
+end
+
 Law.define(:TRUTHFUL_STATUS_causal_trace_is_evidence) do
   source "laws.yml TRUTHFUL_STATUS_causal_trace_is_evidence - the trace is the evidence class for agent work"
   ask "Is every claim about agent, council or /fix behaviour backed by a causal execution trace that records the tool calls, model turns, context and outcome that produced it, and can that trace be replayed? A summary or receipt that cannot be replayed is unverified."

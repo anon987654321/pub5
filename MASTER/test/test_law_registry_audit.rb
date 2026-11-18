@@ -197,6 +197,18 @@ class TestLawRegistryAudit < Minitest::Test
     end
   end
 
+  def test_architectural_coherence_is_a_registered_semantic_law
+    id = "SINGULARITY_architectural_coherence"
+    entry = Master.law_catalogue.fetch("entries").fetch(id)
+    definition = Master::Review::Scan::LawTree.definitions.find do |law|
+      law.id.to_s.casecmp?(id)
+    end
+
+    assert_equal ["MASTER/law/universal.rb"], Array(entry["definition_sources"])
+    assert_equal "error", entry["severity"]
+    refute_nil definition, "#{id} must have one executable semantic definition"
+  end
+
   def test_catalogue_reconciliation_is_an_enforced_gate
     report = audit.call
 

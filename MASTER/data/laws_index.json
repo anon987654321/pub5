@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "generated_at": "2026-11-17T00:59:15Z",
-  "revision": "27106c273ad4ac10d2a5b3bacbe1dc9fbc663637",
-  "law_count": 543,
+  "generated_at": "2026-11-18T08:26:00Z",
+  "revision": "d31313be3b2a631c8e816df020d2dbb790e05f4a",
+  "law_count": 544,
   "laws": {
     "A_FINDING_IS_A_HYPOTHESIS": {
       "id": "A_FINDING_IS_A_HYPOTHESIS",
@@ -2679,6 +2679,26 @@
       ],
       "bare_detector": false
     },
+    "DO_THE_WORK_NOW": {
+      "id": "DO_THE_WORK_NOW",
+      "severity": "error",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
+      },
+      "definition_sources": [
+        "MASTER/law/practice.rb"
+      ],
+      "bare_detector": false
+    },
     "DOCUMENTATION_FOLLOWS_CODE": {
       "id": "DOCUMENTATION_FOLLOWS_CODE",
       "severity": "error",
@@ -2761,26 +2781,6 @@
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
-      ],
-      "bare_detector": false
-    },
-    "DO_THE_WORK_NOW": {
-      "id": "DO_THE_WORK_NOW",
-      "severity": "error",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "docs"
-      },
-      "definition_sources": [
-        "MASTER/law/practice.rb"
       ],
       "bare_detector": false
     },
@@ -4291,6 +4291,28 @@
       ],
       "bare_detector": false
     },
+    "HAPTIC_SINGLE_SOURCE": {
+      "id": "HAPTIC_SINGLE_SOURCE",
+      "severity": "info",
+      "mode": "opportunity",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "javascript"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
+      },
+      "definition_sources": [
+        "MASTER/law/javascript.rb"
+      ],
+      "bare_detector": false
+    },
     "HARDCODED_ABSOLUTE_PATH": {
       "id": "HARDCODED_ABSOLUTE_PATH",
       "severity": "warning",
@@ -4318,28 +4340,6 @@
         "MASTER/law/lexical.rb"
       ],
       "bare_detector": true
-    },
-    "HAPTIC_SINGLE_SOURCE": {
-      "id": "HAPTIC_SINGLE_SOURCE",
-      "severity": "info",
-      "mode": "opportunity",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "javascript"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "docs"
-      },
-      "definition_sources": [
-        "MASTER/law/javascript.rb"
-      ],
-      "bare_detector": false
     },
     "HASH_FETCH": {
       "id": "HASH_FETCH",
@@ -5550,6 +5550,31 @@
       ],
       "bare_detector": false
     },
+    "MAEDA_THE_ONE": {
+      "id": "MAEDA_THE_ONE",
+      "severity": "error",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "json"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/MASTER/var/rendered/home.rendered.json",
+        "bad": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"div.card\",\"tag\":\"div\",\"index\":0},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":40,\"w\":358,\"h\":44},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"button.buy\",\"tag\":\"button\",\"primary\":true,\"host\":0},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":84,\"w\":358,\"h\":44},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"button.sell\",\"tag\":\"button\",\"primary\":true,\"host\":0}]}]}",
+        "good": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"div.card\",\"tag\":\"div\",\"index\":0},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"div.card\",\"tag\":\"div\",\"index\":1},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":40,\"w\":358,\"h\":44},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"button.buy\",\"tag\":\"button\",\"primary\":true,\"host\":0},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":84,\"w\":358,\"h\":44},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"button.sell\",\"tag\":\"button\",\"primary\":true,\"host\":1}]}]}"
+      },
+      "definition_sources": [
+        "MASTER/law/rendered.rb"
+      ],
+      "bare_detector": false
+    },
     "MAGIC_COLOR": {
       "id": "MAGIC_COLOR",
       "severity": "warning",
@@ -5655,31 +5680,6 @@
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
-      ],
-      "bare_detector": false
-    },
-    "MAEDA_THE_ONE": {
-      "id": "MAEDA_THE_ONE",
-      "severity": "error",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "json"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/MASTER/var/rendered/home.rendered.json",
-        "bad": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"div.card\",\"tag\":\"div\",\"index\":0},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":40,\"w\":358,\"h\":44},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"button.buy\",\"tag\":\"button\",\"primary\":true,\"host\":0},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":84,\"w\":358,\"h\":44},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"button.sell\",\"tag\":\"button\",\"primary\":true,\"host\":0}]}]}",
-        "good": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"div.card\",\"tag\":\"div\",\"index\":0},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"div.card\",\"tag\":\"div\",\"index\":1},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":40,\"w\":358,\"h\":44},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"button.buy\",\"tag\":\"button\",\"primary\":true,\"host\":0},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":84,\"w\":358,\"h\":44},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"button.sell\",\"tag\":\"button\",\"primary\":true,\"host\":1}]}]}"
-      },
-      "definition_sources": [
-        "MASTER/law/rendered.rb"
       ],
       "bare_detector": false
     },
@@ -7008,547 +7008,6 @@
       ],
       "bare_detector": false
     },
-    "NON_TEXT_CONTRAST": {
-      "id": "NON_TEXT_CONTRAST",
-      "statement": "The boundary of a control, an icon that acts, and a focus indicator each reach 3:1 against what is around them.\n",
-      "parent": "REACH",
-      "severity": "error",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "json"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/MASTER/var/rendered/home.rendered.json",
-        "bad": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[17,17,17,1],\"ground\":[0,0,0,1],\"own_ground\":[255,255,255,1],\"attrs\":{\"type\":\"text\"},\"decoration\":\"none\",\"key\":\"input\",\"tag\":\"input\",\"border_width\":1,\"border_color\":[34,34,34,1]}]}]}",
-        "good": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[17,17,17,1],\"ground\":[0,0,0,1],\"own_ground\":[255,255,255,1],\"attrs\":{\"type\":\"text\"},\"decoration\":\"none\",\"key\":\"input\",\"tag\":\"input\",\"border_width\":1,\"border_color\":[118,118,118,1]}]}]}"
-      },
-      "definition_sources": [
-        "MASTER/law/rendered.rb"
-      ],
-      "bare_detector": false
-    },
-    "NORMALIZES_OVER_CALLBACK": {
-      "id": "NORMALIZES_OVER_CALLBACK",
-      "severity": "info",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "never",
-      "languages": [
-        "ruby"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "docs"
-      },
-      "definition_sources": [
-        "MASTER/law/rails.rb"
-      ],
-      "bare_detector": false
-    },
-    "NUMBER_UNIT_UNBROKEN": {
-      "id": "NUMBER_UNIT_UNBROKEN",
-      "statement": "A number and its unit, or the groups of one number, are one unbreakable word.",
-      "parent": "BRINGHURST",
-      "severity": "warning",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "yaml",
-        "html",
-        "markdown"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/RAILS/brgen/config/locales/nb.yml",
-        "bad": "nb:\n  listing:\n    distance: \"%{km} km\"\n",
-        "good": "nb:\n  listing:\n    distance: \"%{km} km\"\n"
-      },
-      "definition_sources": [
-        "MASTER/law/typesetting.rb"
-      ],
-      "bare_detector": false
-    },
-    "NUMBER_GROUPED_IN_THOUSANDS": {
-      "id": "NUMBER_GROUPED_IN_THOUSANDS",
-      "statement": "A number of five or more digits groups its digits three by three from the right with an unbreakable space.",
-      "parent": "BRINGHURST",
-      "severity": "info",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "automatic",
-      "languages": [
-        "yaml",
-        "html",
-        "markdown"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/RAILS/brgen/config/locales/nb.yml",
-        "bad": "nb:\n  listing:\n    price: \"12500 kr\"\n",
-        "good": "nb:\n  listing:\n    price: \"12 500 kr\"\n"
-      },
-      "definition_sources": [
-        "MASTER/law/typesetting.rb"
-      ],
-      "bare_detector": false
-    },
-    "ONE_PRIMARY_ACTION": {
-      "id": "ONE_PRIMARY_ACTION",
-      "statement": "A view has exactly one primary action, and the eye finds it first.",
-      "parent": "PROPORTION",
-      "severity": "warning",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "html"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/app/views/example.html.erb",
-        "bad": "<%= button_to \"Publiser\", posts_path, class: \"button-primary\" %>\n<%= link_to \"Del\", share_path, class: \"button-primary\" %>\n",
-        "good": "<%= button_to \"Publiser\", posts_path, class: \"button-primary\" %>\n<%= link_to \"Del\", share_path, class: \"button-ghost\" %>\n"
-      },
-      "definition_sources": [
-        "MASTER/law/html.rb"
-      ],
-      "bare_detector": false
-    },
-    "ORIENTATION_UNLOCKED": {
-      "id": "ORIENTATION_UNLOCKED",
-      "statement": "No app locks the screen's orientation unless the task needs it.",
-      "parent": "REACH",
-      "severity": "warning",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "json",
-        "html",
-        "javascript"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/app/views/pwa/manifest.json.erb",
-        "bad": "{\n  \"name\": \"brgen\",\n  \"orientation\": \"portrait\"\n}\n",
-        "good": "{\n  \"name\": \"brgen\",\n  \"display\": \"standalone\"\n}\n"
-      },
-      "definition_sources": [
-        "MASTER/law/javascript.rb"
-      ],
-      "bare_detector": false
-    },
-    "PAGE_WEIGHT_RATCHET": {
-      "id": "PAGE_WEIGHT_RATCHET",
-      "statement": "Each core route's first load stays within a measured byte budget that only ratchets down.",
-      "parent": "DENSITY",
-      "severity": "error",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "json"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/MASTER/var/rendered/home.rendered.json",
-        "bad": "{\"probe\":\"design_laws\",\"viewports\":[],\"weight\":{\"route\":\"/\",\"bytes\":{\"script\":420000},\"budget\":{\"script\":180000}}}",
-        "good": "{\"probe\":\"design_laws\",\"viewports\":[],\"weight\":{\"route\":\"/\",\"bytes\":{\"script\":150000},\"budget\":{\"script\":180000}}}"
-      },
-      "definition_sources": [
-        "MASTER/law/rendered.rb"
-      ],
-      "bare_detector": false
-    },
-    "PARAGRAPH_SEPARATION_ONE_DEVICE": {
-      "id": "PARAGRAPH_SEPARATION_ONE_DEVICE",
-      "statement": "Paragraphs are separated by an indent or by space, never both, and the first paragraph is never indented.\n",
-      "parent": "BRINGHURST",
-      "severity": "warning",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "css",
-        "scss"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/app/assets/stylesheets/example.css",
-        "bad": "p { margin-block: 1.5em; text-indent: 1em; }\n",
-        "good": "p + p { margin-block-start: 1.5em; }\n"
-      },
-      "definition_sources": [
-        "MASTER/law/css.rb"
-      ],
-      "bare_detector": false
-    },
-    "PARENTHETICAL_DASH": {
-      "id": "PARENTHETICAL_DASH",
-      "statement": "A dash that sets off a phrase in web copy is a spaced en dash; a hyphen or a double hyphen is never a dash.\n",
-      "parent": "BRINGHURST",
-      "severity": "warning",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "yaml",
-        "html",
-        "markdown"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/RAILS/brgen/config/locales/nb.yml",
-        "bad": "nb:\n  takeaway:\n    pickup: \"Hent maten selv - eller bestill levering\"\n",
-        "good": "nb:\n  takeaway:\n    pickup: \"Hent maten selv – eller bestill levering\"\n"
-      },
-      "definition_sources": [
-        "MASTER/law/typesetting.rb"
-      ],
-      "bare_detector": false
-    },
-    "PRIMARY_ACTION_IN_THUMB_REACH": {
-      "id": "PRIMARY_ACTION_IN_THUMB_REACH",
-      "statement": "On a phone, a page's primary action sits where one thumb reaches it.",
-      "parent": "REACH",
-      "severity": "warning",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "json"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/MASTER/var/rendered/home.rendered.json",
-        "bad": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":300,\"y\":20,\"w\":70,\"h\":44},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"button.order\",\"tag\":\"button\",\"primary\":true}]}]}",
-        "good": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":780,\"w\":358,\"h\":44},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"button.order\",\"tag\":\"button\",\"primary\":true}]}]}"
-      },
-      "definition_sources": [
-        "MASTER/law/rendered.rb"
-      ],
-      "bare_detector": false
-    },
-    "PRINT_PAGE_CANON": {
-      "id": "PRINT_PAGE_CANON",
-      "statement": "A printed BIZ page sets its margins in classical proportion, inner smallest and foot largest.",
-      "parent": "BRINGHURST",
-      "severity": "warning",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "css",
-        "scss",
-        "html"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/BIZ/print.css",
-        "bad": "@page { margin: 20mm; }\n",
-        "good": "@page :right { margin: 33mm 44mm 66mm 22mm; }\n@page :left { margin: 33mm 22mm 66mm 44mm; }\n"
-      },
-      "definition_sources": [
-        "MASTER/law/css.rb"
-      ],
-      "bare_detector": false
-    },
-    "PRINT_FOLIO_PRESENCE": {
-      "id": "PRINT_FOLIO_PRESENCE",
-      "statement": "A printed document of more than one page numbers every page in the same place and voice; an unnumbered folio is a lost page.\n",
-      "parent": "BRINGHURST",
-      "severity": "warning",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "css",
-        "scss",
-        "html"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/BIZ/print.css",
-        "bad": "@page { size: 156mm 234mm; margin: 18mm 0 24mm; }\n",
-        "good": "@page { size: 156mm 234mm; margin: 18mm 0 24mm; @bottom-center { content: counter(page); } }\n"
-      },
-      "definition_sources": [
-        "MASTER/law/css.rb"
-      ],
-      "bare_detector": false
-    },
-    "QUOTES_BY_LOCALE": {
-      "id": "QUOTES_BY_LOCALE",
-      "statement": "Quotation marks and apostrophes in web copy are the locale's typographic marks, never straight quotes.",
-      "parent": "BRINGHURST",
-      "severity": "warning",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "yaml",
-        "html",
-        "markdown"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/RAILS/brgen/config/locales/nb.yml",
-        "bad": "nb:\n  search:\n    empty: 'Ingen treff for \"%{q}\"'\n",
-        "good": "nb:\n  search:\n    empty: \"Ingen treff for «%{q}»\"\n"
-      },
-      "definition_sources": [
-        "MASTER/law/typesetting.rb"
-      ],
-      "bare_detector": false
-    },
-    "SELF_EVIDENT_DATA_UNLABELLED": {
-      "id": "SELF_EVIDENT_DATA_UNLABELLED",
-      "statement": "Data whose form says what it is (an email, a phone number, a price, a date) appears without a visible label.\n",
-      "parent": "DENSITY",
-      "severity": "info",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "html"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/app/views/example.html.erb",
-        "bad": "<dt>E-post:</dt>\n<dd><%= mail_to user.email %></dd>\n",
-        "good": "<dd><%= mail_to user.email %></dd>\n"
-      },
-      "definition_sources": [
-        "MASTER/law/html.rb"
-      ],
-      "bare_detector": false
-    },
-    "SINGLE_SENTENCE_SPACE": {
-      "id": "SINGLE_SENTENCE_SPACE",
-      "statement": "Sentences in copy are separated by one word space.",
-      "parent": "BRINGHURST",
-      "severity": "info",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "yaml",
-        "markdown"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/RAILS/brgen/config/locales/nb.yml",
-        "bad": "nb:\n  flash:\n    saved: \"Lagret.  Du kan lukke vinduet.\"\n",
-        "good": "nb:\n  flash:\n    saved: \"Lagret. Du kan lukke vinduet.\"\n"
-      },
-      "definition_sources": [
-        "MASTER/law/typesetting.rb"
-      ],
-      "bare_detector": false
-    },
-    "SIZE_COMPENSATED_SPACING": {
-      "id": "SIZE_COMPENSATED_SPACING",
-      "statement": "Leading and tracking tighten as type grows and open as it shrinks.",
-      "parent": "BRINGHURST",
-      "severity": "warning",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "json"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/MASTER/var/rendered/home.rendered.json",
-        "bad": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":40,\"font_weight\":400,\"line_height\":64,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"h1\",\"tag\":\"h1\"}]}]}",
-        "good": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":40,\"font_weight\":400,\"line_height\":44,\"letter_spacing\":-0.8,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"h1\",\"tag\":\"h1\"}]}]}"
-      },
-      "definition_sources": [
-        "MASTER/law/rendered.rb"
-      ],
-      "bare_detector": false
-    },
-    "SMALLEST_EFFECTIVE_DIFFERENCE": {
-      "id": "SMALLEST_EFFECTIVE_DIFFERENCE",
-      "statement": "Structure is drawn with the quietest mark that still reads, quieter than the content it frames.",
-      "parent": "DENSITY",
-      "severity": "warning",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "json"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/MASTER/var/rendered/home.rendered.json",
-        "bad": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[0,0,0,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"div.card\",\"tag\":\"div\",\"border_width\":2,\"border_color\":[239,239,239,1]}]}]}",
-        "good": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[0,0,0,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"div.card\",\"tag\":\"div\",\"border_width\":1,\"border_color\":[51,51,51,1]}]}]}"
-      },
-      "definition_sources": [
-        "MASTER/law/rendered.rb"
-      ],
-      "bare_detector": false
-    },
-    "SPARE_COMMENTS": {
-      "id": "SPARE_COMMENTS",
-      "statement": "Code a reader must decode is not finished: rename and reshape until the code says what it does. A comment is the last resort - one present-tense line stating a reason the reader cannot derive. Any comment narrating what the code used to be, or where it came from, goes in the git commit message instead, and a rationale that must outlive the code goes in README.md prose.\n",
-      "severity": "warning",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "docs"
-      },
-      "definition_sources": [
-        "MASTER/law/universal.rb"
-      ],
-      "bare_detector": false
-    },
-    "SPACING_ENTROPY": {
-      "id": "SPACING_ENTROPY",
-      "severity": "warning",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "json"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/MASTER/var/rendered/home.rendered.json",
-        "bad": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s0\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":48,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s1\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":84,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s2\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":124,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s3\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":168,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s4\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":216,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s5\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":268,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s6\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":324,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s7\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16}]}]}",
-        "good": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s0\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":64,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s1\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":112,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s2\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":160,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s3\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":208,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s4\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":256,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s5\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":304,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s6\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":352,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s7\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16}]}]}"
-      },
-      "definition_sources": [
-        "MASTER/law/rendered.rb"
-      ],
-      "bare_detector": false
-    },
-    "SPONSORED_LINK_REL": {
-      "id": "SPONSORED_LINK_REL",
-      "severity": "warning",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "html"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/app/views/example.html.erb",
-        "bad": "<a href=\"<%= deal.affiliate_url %>\" target=\"_blank\">Buy</a>\n",
-        "good": "<a href=\"<%= deal.affiliate_url %>\" target=\"_blank\" rel=\"sponsored noopener\">Buy</a>\n"
-      },
-      "definition_sources": [
-        "MASTER/law/html.rb"
-      ],
-      "bare_detector": false
-    },
     "NO_JS_ERB": {
       "id": "NO_JS_ERB",
       "severity": "warning",
@@ -7676,26 +7135,6 @@
       ],
       "bare_detector": false
     },
-    "NO_NEW_FILES": {
-      "id": "NO_NEW_FILES",
-      "severity": "warning",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "docs"
-      },
-      "definition_sources": [
-        "MASTER/law/practice.rb"
-      ],
-      "bare_detector": false
-    },
     "NO_NEW_DOCUMENTS": {
       "id": "NO_NEW_DOCUMENTS",
       "severity": "warning",
@@ -7714,6 +7153,26 @@
       },
       "definition_sources": [
         "MASTER/law/meta.rb"
+      ],
+      "bare_detector": false
+    },
+    "NO_NEW_FILES": {
+      "id": "NO_NEW_FILES",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
+      },
+      "definition_sources": [
+        "MASTER/law/practice.rb"
       ],
       "bare_detector": false
     },
@@ -8165,6 +7624,55 @@
       ],
       "bare_detector": false
     },
+    "NON_TEXT_CONTRAST": {
+      "id": "NON_TEXT_CONTRAST",
+      "statement": "The boundary of a control, an icon that acts, and a focus indicator each reach 3:1 against what is around them.\n",
+      "parent": "REACH",
+      "severity": "error",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "json"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/MASTER/var/rendered/home.rendered.json",
+        "bad": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[17,17,17,1],\"ground\":[0,0,0,1],\"own_ground\":[255,255,255,1],\"attrs\":{\"type\":\"text\"},\"decoration\":\"none\",\"key\":\"input\",\"tag\":\"input\",\"border_width\":1,\"border_color\":[34,34,34,1]}]}]}",
+        "good": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[17,17,17,1],\"ground\":[0,0,0,1],\"own_ground\":[255,255,255,1],\"attrs\":{\"type\":\"text\"},\"decoration\":\"none\",\"key\":\"input\",\"tag\":\"input\",\"border_width\":1,\"border_color\":[118,118,118,1]}]}]}"
+      },
+      "definition_sources": [
+        "MASTER/law/rendered.rb"
+      ],
+      "bare_detector": false
+    },
+    "NORMALIZES_OVER_CALLBACK": {
+      "id": "NORMALIZES_OVER_CALLBACK",
+      "severity": "info",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "never",
+      "languages": [
+        "ruby"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
+      },
+      "definition_sources": [
+        "MASTER/law/rails.rb"
+      ],
+      "bare_detector": false
+    },
     "NORWEGIAN_COPY_BOKMAL": {
       "id": "NORWEGIAN_COPY_BOKMAL",
       "severity": "warning",
@@ -8235,6 +7743,64 @@
       },
       "definition_sources": [
         "MASTER/law/javascript.rb"
+      ],
+      "bare_detector": false
+    },
+    "NUMBER_GROUPED_IN_THOUSANDS": {
+      "id": "NUMBER_GROUPED_IN_THOUSANDS",
+      "statement": "A number of five or more digits groups its digits three by three from the right with an unbreakable space.",
+      "parent": "BRINGHURST",
+      "severity": "info",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "automatic",
+      "languages": [
+        "yaml",
+        "html",
+        "markdown"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/RAILS/brgen/config/locales/nb.yml",
+        "bad": "nb:\n  listing:\n    price: \"12500 kr\"\n",
+        "good": "nb:\n  listing:\n    price: \"12 500 kr\"\n"
+      },
+      "definition_sources": [
+        "MASTER/law/typesetting.rb"
+      ],
+      "bare_detector": false
+    },
+    "NUMBER_UNIT_UNBROKEN": {
+      "id": "NUMBER_UNIT_UNBROKEN",
+      "statement": "A number and its unit, or the groups of one number, are one unbreakable word.",
+      "parent": "BRINGHURST",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "yaml",
+        "html",
+        "markdown"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/RAILS/brgen/config/locales/nb.yml",
+        "bad": "nb:\n  listing:\n    distance: \"%{km} km\"\n",
+        "good": "nb:\n  listing:\n    distance: \"%{km} km\"\n"
+      },
+      "definition_sources": [
+        "MASTER/law/typesetting.rb"
       ],
       "bare_detector": false
     },
@@ -8341,6 +7907,33 @@
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "ONE_PRIMARY_ACTION": {
+      "id": "ONE_PRIMARY_ACTION",
+      "statement": "A view has exactly one primary action, and the eye finds it first.",
+      "parent": "PROPORTION",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "html"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/app/views/example.html.erb",
+        "bad": "<%= button_to \"Publiser\", posts_path, class: \"button-primary\" %>\n<%= link_to \"Del\", share_path, class: \"button-primary\" %>\n",
+        "good": "<%= button_to \"Publiser\", posts_path, class: \"button-primary\" %>\n<%= link_to \"Del\", share_path, class: \"button-ghost\" %>\n"
+      },
+      "definition_sources": [
+        "MASTER/law/html.rb"
       ],
       "bare_detector": false
     },
@@ -8484,6 +8077,35 @@
       ],
       "bare_detector": false
     },
+    "ORIENTATION_UNLOCKED": {
+      "id": "ORIENTATION_UNLOCKED",
+      "statement": "No app locks the screen's orientation unless the task needs it.",
+      "parent": "REACH",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "json",
+        "html",
+        "javascript"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/app/views/pwa/manifest.json.erb",
+        "bad": "{\n  \"name\": \"brgen\",\n  \"orientation\": \"portrait\"\n}\n",
+        "good": "{\n  \"name\": \"brgen\",\n  \"display\": \"standalone\"\n}\n"
+      },
+      "definition_sources": [
+        "MASTER/law/javascript.rb"
+      ],
+      "bare_detector": false
+    },
     "ORTHOGONALITY": {
       "id": "ORTHOGONALITY",
       "severity": "warning",
@@ -8501,6 +8123,33 @@
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "PAGE_WEIGHT_RATCHET": {
+      "id": "PAGE_WEIGHT_RATCHET",
+      "statement": "Each core route's first load stays within a measured byte budget that only ratchets down.",
+      "parent": "DENSITY",
+      "severity": "error",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "json"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/MASTER/var/rendered/home.rendered.json",
+        "bad": "{\"probe\":\"design_laws\",\"viewports\":[],\"weight\":{\"route\":\"/\",\"bytes\":{\"script\":420000},\"budget\":{\"script\":180000}}}",
+        "good": "{\"probe\":\"design_laws\",\"viewports\":[],\"weight\":{\"route\":\"/\",\"bytes\":{\"script\":150000},\"budget\":{\"script\":180000}}}"
+      },
+      "definition_sources": [
+        "MASTER/law/rendered.rb"
       ],
       "bare_detector": false
     },
@@ -8524,6 +8173,34 @@
       },
       "definition_sources": [
         "MASTER/law/brand.rb"
+      ],
+      "bare_detector": false
+    },
+    "PARAGRAPH_SEPARATION_ONE_DEVICE": {
+      "id": "PARAGRAPH_SEPARATION_ONE_DEVICE",
+      "statement": "Paragraphs are separated by an indent or by space, never both, and the first paragraph is never indented.\n",
+      "parent": "BRINGHURST",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "css",
+        "scss"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/app/assets/stylesheets/example.css",
+        "bad": "p { margin-block: 1.5em; text-indent: 1em; }\n",
+        "good": "p + p { margin-block-start: 1.5em; }\n"
+      },
+      "definition_sources": [
+        "MASTER/law/css.rb"
       ],
       "bare_detector": false
     },
@@ -8612,6 +8289,35 @@
       },
       "definition_sources": [
         "MASTER/law/rails.rb"
+      ],
+      "bare_detector": false
+    },
+    "PARENTHETICAL_DASH": {
+      "id": "PARENTHETICAL_DASH",
+      "statement": "A dash that sets off a phrase in web copy is a spaced en dash; a hyphen or a double hyphen is never a dash.\n",
+      "parent": "BRINGHURST",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "yaml",
+        "html",
+        "markdown"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/RAILS/brgen/config/locales/nb.yml",
+        "bad": "nb:\n  takeaway:\n    pickup: \"Hent maten selv - eller bestill levering\"\n",
+        "good": "nb:\n  takeaway:\n    pickup: \"Hent maten selv – eller bestill levering\"\n"
+      },
+      "definition_sources": [
+        "MASTER/law/typesetting.rb"
       ],
       "bare_detector": false
     },
@@ -8755,46 +8461,6 @@
       ],
       "bare_detector": false
     },
-    "PORTABILITY_IS_VERIFIED": {
-      "id": "PORTABILITY_IS_VERIFIED",
-      "severity": "warning",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "never",
-      "languages": [],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "docs"
-      },
-      "definition_sources": [
-        "MASTER/law/universal.rb"
-      ],
-      "bare_detector": false
-    },
-    "PRODUCTION_RELEASE_IS_PINNED": {
-      "id": "PRODUCTION_RELEASE_IS_PINNED",
-      "severity": "error",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "never",
-      "languages": [],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "docs"
-      },
-      "definition_sources": [
-        "MASTER/law/universal.rb"
-      ],
-      "bare_detector": false
-    },
     "PLUCK_OVER_MAP": {
       "id": "PLUCK_OVER_MAP",
       "severity": "info",
@@ -8862,6 +8528,26 @@
       ],
       "bare_detector": false
     },
+    "PORTABILITY_IS_VERIFIED": {
+      "id": "PORTABILITY_IS_VERIFIED",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "never",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
     "POSTEL": {
       "id": "POSTEL",
       "severity": "info",
@@ -8899,6 +8585,25 @@
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "PREDICATE_SIDE_EFFECTS": {
+      "id": "PREDICATE_SIDE_EFFECTS",
+      "severity": "info",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "ruby"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/structural.rb"
       ],
       "bare_detector": false
     },
@@ -8994,22 +8699,30 @@
       ],
       "bare_detector": false
     },
-    "PREDICATE_SIDE_EFFECTS": {
-      "id": "PREDICATE_SIDE_EFFECTS",
-      "severity": "info",
+    "PRIMARY_ACTION_IN_THUMB_REACH": {
+      "id": "PRIMARY_ACTION_IN_THUMB_REACH",
+      "statement": "On a phone, a page's primary action sits where one thumb reaches it.",
+      "parent": "REACH",
+      "severity": "warning",
       "mode": "violation",
       "lifecycle": "active",
       "autofix": "review",
       "languages": [
-        "ruby"
+        "json"
       ],
       "surfaces": [],
       "exemptions": {
         "path_exclude": [],
         "kinds": []
       },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/MASTER/var/rendered/home.rendered.json",
+        "bad": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":300,\"y\":20,\"w\":70,\"h\":44},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"button.order\",\"tag\":\"button\",\"primary\":true}]}]}",
+        "good": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":780,\"w\":358,\"h\":44},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"button.order\",\"tag\":\"button\",\"primary\":true}]}]}"
+      },
       "definition_sources": [
-        "MASTER/law/structural.rb"
+        "MASTER/law/rendered.rb"
       ],
       "bare_detector": false
     },
@@ -9033,6 +8746,64 @@
       },
       "definition_sources": [
         "MASTER/law/structural_questions.rb"
+      ],
+      "bare_detector": false
+    },
+    "PRINT_FOLIO_PRESENCE": {
+      "id": "PRINT_FOLIO_PRESENCE",
+      "statement": "A printed document of more than one page numbers every page in the same place and voice; an unnumbered folio is a lost page.\n",
+      "parent": "BRINGHURST",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "css",
+        "scss",
+        "html"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/BIZ/print.css",
+        "bad": "@page { size: 156mm 234mm; margin: 18mm 0 24mm; }\n",
+        "good": "@page { size: 156mm 234mm; margin: 18mm 0 24mm; @bottom-center { content: counter(page); } }\n"
+      },
+      "definition_sources": [
+        "MASTER/law/css.rb"
+      ],
+      "bare_detector": false
+    },
+    "PRINT_PAGE_CANON": {
+      "id": "PRINT_PAGE_CANON",
+      "statement": "A printed BIZ page sets its margins in classical proportion, inner smallest and foot largest.",
+      "parent": "BRINGHURST",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "css",
+        "scss",
+        "html"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/BIZ/print.css",
+        "bad": "@page { margin: 20mm; }\n",
+        "good": "@page :right { margin: 33mm 44mm 66mm 22mm; }\n@page :left { margin: 33mm 22mm 66mm 44mm; }\n"
+      },
+      "definition_sources": [
+        "MASTER/law/css.rb"
       ],
       "bare_detector": false
     },
@@ -9073,6 +8844,26 @@
       },
       "definition_sources": [
         "MASTER/law/practice.rb"
+      ],
+      "bare_detector": false
+    },
+    "PRODUCTION_RELEASE_IS_PINNED": {
+      "id": "PRODUCTION_RELEASE_IS_PINNED",
+      "severity": "error",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "never",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
       ],
       "bare_detector": false
     },
@@ -9189,6 +8980,31 @@
       ],
       "bare_detector": false
     },
+    "PROSE_ACTIVE_VOICE_EN_VALUES": {
+      "id": "PROSE_ACTIVE_VOICE_EN_VALUES",
+      "severity": "info",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "yaml"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "-",
+        "bad": "notice: The bug was fixed by the maintainer.",
+        "good": "notice: The maintainer fixed the bug."
+      },
+      "definition_sources": [
+        "MASTER/law/prose.rb"
+      ],
+      "bare_detector": false
+    },
     "PROSE_ACTIVE_VOICE_NB": {
       "id": "PROSE_ACTIVE_VOICE_NB",
       "severity": "info",
@@ -9210,31 +9026,6 @@
         "file": "-",
         "bad": "notis: Feilen ble rettet av vedlikeholderen",
         "good": "notis: Vedlikeholderen rettet feilen"
-      },
-      "definition_sources": [
-        "MASTER/law/prose.rb"
-      ],
-      "bare_detector": false
-    },
-    "PROSE_ACTIVE_VOICE_EN_VALUES": {
-      "id": "PROSE_ACTIVE_VOICE_EN_VALUES",
-      "severity": "info",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "yaml"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "-",
-        "bad": "notice: The bug was fixed by the maintainer.",
-        "good": "notice: The maintainer fixed the bug."
       },
       "definition_sources": [
         "MASTER/law/prose.rb"
@@ -9267,6 +9058,31 @@
       ],
       "bare_detector": false
     },
+    "PROSE_OMIT_QUALIFIERS_EN_VALUES": {
+      "id": "PROSE_OMIT_QUALIFIERS_EN_VALUES",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "yaml"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "-",
+        "bad": "title: This is very fast.",
+        "good": "title: This is fast."
+      },
+      "definition_sources": [
+        "MASTER/law/prose.rb"
+      ],
+      "bare_detector": false
+    },
     "PROSE_OMIT_QUALIFIERS_NB": {
       "id": "PROSE_OMIT_QUALIFIERS_NB",
       "severity": "warning",
@@ -9288,31 +9104,6 @@
         "file": "-",
         "bad": "tittel: Dette er veldig raskt",
         "good": "tittel: Dette er raskt"
-      },
-      "definition_sources": [
-        "MASTER/law/prose.rb"
-      ],
-      "bare_detector": false
-    },
-    "PROSE_OMIT_QUALIFIERS_EN_VALUES": {
-      "id": "PROSE_OMIT_QUALIFIERS_EN_VALUES",
-      "severity": "warning",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [
-        "yaml"
-      ],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "-",
-        "bad": "title: This is very fast.",
-        "good": "title: This is fast."
       },
       "definition_sources": [
         "MASTER/law/prose.rb"
@@ -9548,6 +9339,35 @@
       },
       "definition_sources": [
         "MASTER/law/javascript.rb"
+      ],
+      "bare_detector": false
+    },
+    "QUOTES_BY_LOCALE": {
+      "id": "QUOTES_BY_LOCALE",
+      "statement": "Quotation marks and apostrophes in web copy are the locale's typographic marks, never straight quotes.",
+      "parent": "BRINGHURST",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "yaml",
+        "html",
+        "markdown"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/RAILS/brgen/config/locales/nb.yml",
+        "bad": "nb:\n  search:\n    empty: 'Ingen treff for \"%{q}\"'\n",
+        "good": "nb:\n  search:\n    empty: \"Ingen treff for «%{q}»\"\n"
+      },
+      "definition_sources": [
+        "MASTER/law/typesetting.rb"
       ],
       "bare_detector": false
     },
@@ -10483,6 +10303,33 @@
       ],
       "bare_detector": false
     },
+    "SELF_EVIDENT_DATA_UNLABELLED": {
+      "id": "SELF_EVIDENT_DATA_UNLABELLED",
+      "statement": "Data whose form says what it is (an email, a phone number, a price, a date) appears without a visible label.\n",
+      "parent": "DENSITY",
+      "severity": "info",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "html"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/app/views/example.html.erb",
+        "bad": "<dt>E-post:</dt>\n<dd><%= mail_to user.email %></dd>\n",
+        "good": "<dd><%= mail_to user.email %></dd>\n"
+      },
+      "definition_sources": [
+        "MASTER/law/html.rb"
+      ],
+      "bare_detector": false
+    },
     "SELF_EXPLAINING": {
       "id": "SELF_EXPLAINING",
       "severity": "info",
@@ -10828,6 +10675,34 @@
       ],
       "bare_detector": false
     },
+    "SINGLE_SENTENCE_SPACE": {
+      "id": "SINGLE_SENTENCE_SPACE",
+      "statement": "Sentences in copy are separated by one word space.",
+      "parent": "BRINGHURST",
+      "severity": "info",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "yaml",
+        "markdown"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/RAILS/brgen/config/locales/nb.yml",
+        "bad": "nb:\n  flash:\n    saved: \"Lagret.  Du kan lukke vinduet.\"\n",
+        "good": "nb:\n  flash:\n    saved: \"Lagret. Du kan lukke vinduet.\"\n"
+      },
+      "definition_sources": [
+        "MASTER/law/typesetting.rb"
+      ],
+      "bare_detector": false
+    },
     "SINGULARITY": {
       "id": "SINGULARITY",
       "statement": "Every fact has one definition. Copies drift silently.",
@@ -10846,6 +10721,52 @@
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "SINGULARITY_architectural_coherence": {
+      "id": "SINGULARITY_architectural_coherence",
+      "statement": "Every addition, modification and abstraction belongs to the existing architectural whole. New work inherits its governing design grammar, ownership boundaries, conventions, dependencies and product identity. Variation is welcome; unrelated parallel systems and accidental drift are not. Assess the change in the context of the whole architecture, not only the files being edited.\\n",
+      "parent": "SINGULARITY",
+      "severity": "error",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "never",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "SIZE_COMPENSATED_SPACING": {
+      "id": "SIZE_COMPENSATED_SPACING",
+      "statement": "Leading and tracking tighten as type grows and open as it shrinks.",
+      "parent": "BRINGHURST",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "json"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/MASTER/var/rendered/home.rendered.json",
+        "bad": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":40,\"font_weight\":400,\"line_height\":64,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"h1\",\"tag\":\"h1\"}]}]}",
+        "good": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":40,\"font_weight\":400,\"line_height\":44,\"letter_spacing\":-0.8,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"h1\",\"tag\":\"h1\"}]}]}"
+      },
+      "definition_sources": [
+        "MASTER/law/rendered.rb"
       ],
       "bare_detector": false
     },
@@ -10919,6 +10840,79 @@
       ],
       "bare_detector": false
     },
+    "SMALLEST_EFFECTIVE_DIFFERENCE": {
+      "id": "SMALLEST_EFFECTIVE_DIFFERENCE",
+      "statement": "Structure is drawn with the quietest mark that still reads, quieter than the content it frames.",
+      "parent": "DENSITY",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "json"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/MASTER/var/rendered/home.rendered.json",
+        "bad": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[0,0,0,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"div.card\",\"tag\":\"div\",\"border_width\":2,\"border_color\":[239,239,239,1]}]}]}",
+        "good": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[0,0,0,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"div.card\",\"tag\":\"div\",\"border_width\":1,\"border_color\":[51,51,51,1]}]}]}"
+      },
+      "definition_sources": [
+        "MASTER/law/rendered.rb"
+      ],
+      "bare_detector": false
+    },
+    "SPACING_ENTROPY": {
+      "id": "SPACING_ENTROPY",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "json"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/MASTER/var/rendered/home.rendered.json",
+        "bad": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s0\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":48,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s1\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":84,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s2\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":124,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s3\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":168,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s4\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":216,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s5\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":268,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s6\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":324,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s7\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16}]}]}",
+        "good": "{\"probe\":\"design_laws\",\"viewports\":[{\"width\":390,\"height\":844,\"elements\":[{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":16,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s0\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":64,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s1\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":112,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s2\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":160,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s3\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":208,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s4\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":256,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s5\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":304,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s6\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16},{\"text\":\"Tekst\",\"rect\":{\"x\":16,\"y\":352,\"w\":358,\"h\":24},\"font_size\":16,\"font_weight\":400,\"line_height\":24,\"letter_spacing\":0,\"lines\":1,\"color\":[17,17,17,1],\"bg\":[0,0,0,0],\"ground\":[255,255,255,1],\"own_ground\":[255,255,255,1],\"attrs\":{},\"decoration\":\"none\",\"key\":\"p.s7\",\"tag\":\"p\",\"in_main\":true,\"display\":\"block\",\"content_x\":16}]}]}"
+      },
+      "definition_sources": [
+        "MASTER/law/rendered.rb"
+      ],
+      "bare_detector": false
+    },
+    "SPARE_COMMENTS": {
+      "id": "SPARE_COMMENTS",
+      "statement": "Code a reader must decode is not finished: rename and reshape until the code says what it does. A comment is the last resort - one present-tense line stating a reason the reader cannot derive. Any comment narrating what the code used to be, or where it came from, goes in the git commit message instead, and a rationale that must outlive the code goes in README.md prose.\n",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
     "SPECULATIVE_GENERALITY": {
       "id": "SPECULATIVE_GENERALITY",
       "severity": "info",
@@ -10936,6 +10930,31 @@
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "SPONSORED_LINK_REL": {
+      "id": "SPONSORED_LINK_REL",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "html"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/app/views/example.html.erb",
+        "bad": "<a href=\"<%= deal.affiliate_url %>\" target=\"_blank\">Buy</a>\n",
+        "good": "<a href=\"<%= deal.affiliate_url %>\" target=\"_blank\" rel=\"sponsored noopener\">Buy</a>\n"
+      },
+      "definition_sources": [
+        "MASTER/law/html.rb"
       ],
       "bare_detector": false
     },
@@ -11442,30 +11461,6 @@
       ],
       "bare_detector": false
     },
-    "TERMINAL_OUTPUT_TYPOGRAPHY": {
-      "id": "TERMINAL_OUTPUT_TYPOGRAPHY",
-      "statement": "Operational logs are append-only factual lines with lowercase subsystem0: prefixes. Never indent or pad fields to align records, and never use fixed-width or tabular columns. Terminal output remains ASCII, concise and measured; long status copy is split at meaningful boundaries.\n",
-      "parent": "BRINGHURST",
-      "severity": "error",
-      "mode": "violation",
-      "lifecycle": "trusted",
-      "autofix": "never",
-      "languages": [
-        "ruby"
-      ],
-      "surfaces": [
-        "whole_file",
-        "lines"
-      ],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "definition_sources": [
-        "MASTER/law/typesetting.rb"
-      ],
-      "bare_detector": false
-    },
     "TACTILE_FEEDBACK": {
       "id": "TACTILE_FEEDBACK",
       "severity": "info",
@@ -11557,6 +11552,30 @@
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "TERMINAL_OUTPUT_TYPOGRAPHY": {
+      "id": "TERMINAL_OUTPUT_TYPOGRAPHY",
+      "statement": "Operational logs are append-only factual lines with lowercase subsystem0: prefixes. Never indent or pad fields to align records, and never use fixed-width or tabular columns. Terminal output remains ASCII, concise and measured; long status copy is split at meaningful boundaries.\n",
+      "parent": "BRINGHURST",
+      "severity": "error",
+      "mode": "violation",
+      "lifecycle": "trusted",
+      "autofix": "never",
+      "languages": [
+        "ruby"
+      ],
+      "surfaces": [
+        "whole_file",
+        "lines"
+      ],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/typesetting.rb"
       ],
       "bare_detector": false
     },
@@ -11952,29 +11971,6 @@
       ],
       "bare_detector": false
     },
-    "TYPOGRAPHIC_EXCELLENCE": {
-      "id": "TYPOGRAPHIC_EXCELLENCE",
-      "severity": "info",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "automatic",
-      "languages": [],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "fixture",
-        "file": "/repo/RAILS/brgen/app/helpers/search_helper.rb",
-        "bad": "placeholder = \"...\"\n",
-        "good": "placeholder = \"…\"\n"
-      },
-      "definition_sources": [
-        "MASTER/law/universal.rb"
-      ],
-      "bare_detector": false
-    },
     "TYPEFACE_PER_ROLE": {
       "id": "TYPEFACE_PER_ROLE",
       "statement": "One sans family sets UI and text; monospace is only for chat, terminal and code; BIZ may use serifs.",
@@ -11999,6 +11995,29 @@
       },
       "definition_sources": [
         "MASTER/law/geometry.rb"
+      ],
+      "bare_detector": false
+    },
+    "TYPOGRAPHIC_EXCELLENCE": {
+      "id": "TYPOGRAPHIC_EXCELLENCE",
+      "severity": "info",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "automatic",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/RAILS/brgen/app/helpers/search_helper.rb",
+        "bad": "placeholder = \"...\"\n",
+        "good": "placeholder = \"…\"\n"
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
       ],
       "bare_detector": false
     },
@@ -12338,28 +12357,6 @@
       ],
       "bare_detector": false
     },
-    "VISUAL_LAYOUT_REFINEMENT_EVIDENCE": {
-      "id": "VISUAL_LAYOUT_REFINEMENT_EVIDENCE",
-      "statement": "A rendered-layout refinement proceeds from a before/after screenshot pair compared against the owning Laws, cites the Law each edit repairs, edits shared tokens before page CSS, and ships only with that measured pair.",
-      "parent": "OPERATOR_RENDERED",
-      "severity": "error",
-      "mode": "violation",
-      "lifecycle": "active",
-      "autofix": "review",
-      "languages": [],
-      "surfaces": [],
-      "exemptions": {
-        "path_exclude": [],
-        "kinds": []
-      },
-      "fixtures": {
-        "status": "docs"
-      },
-      "definition_sources": [
-        "MASTER/law/practice.rb"
-      ],
-      "bare_detector": false
-    },
     "VISUAL_IDENTITY_SOURCE_OF_TRUTH": {
       "id": "VISUAL_IDENTITY_SOURCE_OF_TRUTH",
       "severity": "warning",
@@ -12382,6 +12379,28 @@
       },
       "definition_sources": [
         "MASTER/law/recovered_design_semantics.rb"
+      ],
+      "bare_detector": false
+    },
+    "VISUAL_LAYOUT_REFINEMENT_EVIDENCE": {
+      "id": "VISUAL_LAYOUT_REFINEMENT_EVIDENCE",
+      "statement": "A rendered-layout refinement proceeds from a before/after screenshot pair compared against the owning Laws, cites the Law each edit repairs, edits shared tokens before page CSS, and ships only with that measured pair.",
+      "parent": "OPERATOR_RENDERED",
+      "severity": "error",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
+      },
+      "definition_sources": [
+        "MASTER/law/practice.rb"
       ],
       "bare_detector": false
     },

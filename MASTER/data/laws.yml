@@ -352,6 +352,17 @@ SINGULARITY_architectural_tangle:
     must surface these; they are not aesthetic preferences.
   resolution: review
 
+SINGULARITY_architectural_coherence:
+  parent: SINGULARITY
+  statement: >
+    Every addition, modification and abstraction belongs to the existing
+    architectural whole. New work inherits its governing design grammar,
+    ownership boundaries, conventions, dependencies and product identity.
+    Variation is welcome; unrelated parallel systems and accidental drift
+    are not. Assess the change in the context of the whole architecture,
+    not only the files being edited.
+  resolution: review
+
 SINGULARITY_one_true_mark:
   parent: SINGULARITY
   statement: "Two marks for one meaning."
@@ -4692,6 +4703,11 @@ law_catalogue:
       definition_sources: [MASTER/law/universal.rb]
       severity: error
       lifecycle: trusted
+      autofix: never
+    SINGULARITY_architectural_coherence:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      lifecycle: active
       autofix: never
     SKIP_TO_MAIN:
       definition_sources: [MASTER/law/html.rb]

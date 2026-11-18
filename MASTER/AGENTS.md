@@ -184,6 +184,19 @@ Law paths. Every Law carries one canonical catalogue entry, a traceable Ruby
 detector or an explicit semantic or visual evaluator, and coverage across
 lexical, semantic, and visual review.
 
+**Architectural coherence is a governing constraint.** Treat pub5 as one
+generative architecture, not a collection of independently invented projects.
+Every addition inherits the existing design grammar: ownership boundaries,
+source authority, naming and implementation conventions, dependency direction,
+visual and interaction language, operational rules, and product identity.
+Distinct products may retain distinct expressions; coherence does not mean
+forcing them into one template. Before creating a new abstraction, registry,
+configuration source, component vocabulary, workflow or directory, identify
+the existing owner and prove why it cannot accommodate the need. Evaluate
+changes against the whole architecture, preserve established relationships,
+and reject accidental parallel systems or bolted-on elements. Novelty is
+welcome when it is native to the architecture.
+
 A Law names the requirement; a detector or assessment names the instrument;
 proof is evidence. A declaration, an implementation, a passing test, and an
 excellent product are four different claims. A missing or unrun measurement
