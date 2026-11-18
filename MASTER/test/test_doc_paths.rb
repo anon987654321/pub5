@@ -150,14 +150,6 @@ class TestDocPaths < Minitest::Test
   MARKDOWN_REFERENCE_EXCEPTIONS = %w[
     MASTER/FACE_WORLD.md
     MASTER/data/principles/openbsd_kernel_philosophy.md
-    MASTER/docs/execution-contracts.md
-    MASTER/docs/ARCHITECTURE.md
-    MASTER/docs/fix_coordinator_map.md
-    MASTER/docs/free_compute.md
-    MASTER/docs/history/fix-review-log.md
-    MASTER/docs/history/recovery/legacy-apps-handoff.md
-    MASTER/docs/mobile.md
-    MASTER/docs/analysis/fix_slowness_audit.md
     BIZ/RESTORATION_REPORT.md
     BIZ/tools/fetat_proposal.md
     RAILS/docs/COMPETITOR_BENCHMARK.md
@@ -167,11 +159,9 @@ class TestDocPaths < Minitest::Test
     MASTER/data/law/TREE_CONTRACTS.md
     STUDIO/postpro/ARCHAEOLOGY.md
     STUDIO/postpro/LEGACY_RESTORE.md
-    MASTER/docs/LOVDATA.md
     MASTER/data/law/PUB5_PERMISSION_MATRIX.md
     MASTER/data/law/ad_creative_governance.md
     MASTER/data/law/bergen_brand_systems.md
-    MASTER/docs/visual/browserless_ad_audits.md
     RAILS/mrdamascy/APP_SPEC.md
     RAILS/mrdamascy/docs/fix-ledger.md
     RAILS/docs/INTERACTION_CAMPAIGN.md
@@ -182,14 +172,9 @@ class TestDocPaths < Minitest::Test
     RAILS/docs/archive/UI_ARCHAEOLOGY.md
     BIZ/research/bringhurst-strunk-research.md
     BIZ/research/business-plan-quality.md
-    MASTER/docs/history/master-laws-research.md
     BIZ/research/typographic-styles.md
     BIZ/tools/future_healthcare_os_proposal.md
     BIZ/tools/future_nato_weapons_proposal.md
-    MASTER/docs/design_sweep.md
-    MASTER/docs/openbsd-rust.md
-    MASTER/docs/session-2026-11-08.md
-    MASTER/docs/session-2026-11-09.md
     MASTER/lib/cli/face/contract.md
     MIGRATION.md
     STUDIO/docs/fetat/proposal.md
@@ -208,6 +193,11 @@ class TestDocPaths < Minitest::Test
 
     assert_empty redundant,
                  ".keep markers are redundant when their directory already has tracked contents:\n  #{redundant.join("\n  ")}"
+  end
+
+  def test_master_docs_contains_no_documentation_files
+    files = tracked.grep(%r{\AMASTER/docs/})
+    assert_empty files, "MASTER/docs must be migrated into Ruby/YAML owners: #{files.join(", ")}"
   end
 
   def test_markdown_stays_at_meaningful_boundaries
