@@ -266,12 +266,13 @@ are not new implementation requests.
   /fix preflight owners rather than adding another router.
   2026-11-18 source: the author-family exclusion, quorum and independent-family
   proof now have one owner in `Review::Consensus.jury_readiness`. The runtime
-  doctor delegates to that owner; `LanePreflight` refuses /fix before routes or
-  repair budget are entered unless the live probe returns PASS. FAIL and
-  unmeasured/timeouts both refuse, including under the free-lane opt-in. Doctor
-  tests cover passing, insufficient quorum and timed-out probes; preflight
-  regressions cover fail-closed admission. Source and tests landed, NOT_RUN on
-  the installed Ruby; keep open until focused tests and a live doctor probe run.
+  doctor delegates to that owner; `LanePreflight` reuses the active fix agent's
+  model router and refuses /fix before routes or repair budget are entered
+  unless the live probe returns PASS. FAIL and unmeasured/timeouts both refuse,
+  including under the free-lane opt-in. Doctor tests cover passing, insufficient
+  quorum and timed-out probes; preflight regressions cover fail-closed admission
+  and router reuse. Source and tests landed, NOT_RUN on the installed Ruby; keep
+  open until focused tests and a live doctor probe run.
 - [ ] **Law reload diagnosis.** At the existing Law.reload boundary, record the
   reload reason, resolved law root and changed source paths. Reproduce the
   duplicate-constant warning before changing reload semantics; do not mask it
@@ -301,10 +302,11 @@ are not new implementation requests.
   The interactive /fix response now includes a compact projection of the
   existing verified coordinator terminal receipt (run/attempt identity,
   state, result, changed count, assessment status, ledger sequence and digest);
-  the projection contains no prompts, tools or raw output. Adapter/ledger and
-  response-path regressions are authored, NOT_RUN. Keep this item open until
-  the regressions execute on the installed Ruby and a real /fix response is
-  inspected.
+  the projection contains no prompts, tools or raw output. Each new attempt
+  clears the prior adapter identity to prevent a failed run from surfacing a
+  stale previous receipt. Adapter/ledger, stale-identity and response-path
+  regressions are authored, NOT_RUN. Keep this item open until the regressions
+  execute on the installed Ruby and a real /fix response is inspected.
 
 Build on existing Mission, Supervisor, TaskSteward, TaskContract,
 OutcomeLearning, RepairMemory, RunBudget, RunPulse, Transaction and
