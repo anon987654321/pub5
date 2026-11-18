@@ -501,7 +501,7 @@ module Master
               node.children.each { |child| walk.call(child) }
             end
             if path.tr("\\", "/").split("/").include?("STUDIO")
-              empty_field = source.match(/^\s*(?:bpm|tempo|instrument):\s*(?:#.*)?$/i)
+              empty_field = source.match(/^[ \t]*(?:bpm|tempo|instrument):[ \t]*(?:#.*)?$/i)
               if empty_field
                 findings << opportunity(
                   :structure, path, "empty_music_field",
