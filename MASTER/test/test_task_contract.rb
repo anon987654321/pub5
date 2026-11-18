@@ -588,6 +588,34 @@ class TestTaskContract < Minitest::Test
     assert_equal contract.documentation_pairs, contract.to_h.fetch("documentation_pairs")
   end
 
+  def test_documentation_review_normalizes_master_and_sibling_tree_paths_to_repo_root
+    contract = CONTRACT.build(
+      intent: "functional_change",
+      scope: ["MASTER/data/**", "RAILS/**"],
+      preserve: [],
+      proof: ["documentation_review"],
+      documentation_pairs: [{
+        contract_path: "MASTER/data/task_contract.yml",
+        document_path: "RAILS/README.md",
+        reason: "The RAILS reader guide documents the changed shared task contract.",
+      }],
+    )
+
+    local_only = CONTRACT.documentation_review_refusal(
+      paths: ["data/task_contract.yml"],
+      root: Master::ROOT,
+      contract:,
+    )
+    both_trees = CONTRACT.documentation_review_refusal(
+      paths: ["data/task_contract.yml", "../RAILS/README.md"],
+      root: Master::ROOT,
+      contract:,
+    )
+
+    assert_match(/MASTER\/data\/task_contract\.yml -> RAILS\/README\.md/, local_only)
+    assert_nil both_trees
+  end
+
   def test_documentation_review_pairs_must_be_exact_unique_and_inside_scope
     base = {
       intent: "functional_change",
