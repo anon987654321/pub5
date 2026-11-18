@@ -22,6 +22,7 @@ export default class extends Controller {
     openLabel: { type: String, default: "Open" },
     pointLabel: { type: String, default: "Map point" },
     kindLabel: { type: String, default: "point" },
+    typeLabels: { type: Object, default: {} },
     emptyLabel: { type: String, default: "No map points yet." }
   }
 
@@ -346,6 +347,11 @@ export default class extends Controller {
     }
   }
 
+  _pointTypeLabel(type) {
+    const key = String(type || "")
+    return this.typeLabelsValue[key] || this.kindLabelValue
+  }
+
   _fallback(points = this.filteredPoints || this.points) {
     const canvas = this._rootCanvas()
     if (!canvas) return
@@ -359,7 +365,7 @@ export default class extends Controller {
       if (href) item.href = href
 
       const label = document.createElement("span")
-      label.textContent = point.subtitle || point.type || this.kindLabelValue
+      label.textContent = point.subtitle || this._pointTypeLabel(point.type)
       const title = document.createElement("strong")
       title.textContent = point.title || this.pointLabelValue
       item.append(label, title)
