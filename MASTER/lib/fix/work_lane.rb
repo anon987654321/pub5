@@ -9,7 +9,7 @@ module Master
       # observes rendered RAILS surfaces, visual performs grouped RAILS repair, all combines
       # research/architecture/rendered review/grouped repair with every elevation stage, and
       # elevate concentrates on improvement, ideation and restructuring.
-      NAMES = %i[code standard visual all elevate].freeze
+      NAMES = %i[code standard visual master all elevate].freeze
       DEFAULT = :code
 
       # The stages a lane may start. A stage absent from a lane's row is skipped and
@@ -31,6 +31,7 @@ module Master
         code: %i[conversation code_passes improve_code],
         standard: %i[conversation layout_sweep browser_checks screenshot_sweep visual_pass code_passes improve_code],
         visual: %i[layout_sweep browser_checks screenshot_sweep visual_groups],
+        master: %i[conversation visual_pass code_passes improve_code],
         all: %i[research architecture conversation layout_sweep browser_checks screenshot_sweep visual_pass visual_groups code_passes improve_code improve_prose improve_visual improve_music ideate restructure_drive],
         elevate: %i[improve_code improve_prose improve_visual improve_music ideate restructure_drive code_passes],
       }.freeze
@@ -55,7 +56,9 @@ module Master
         master_root = normalized.match?(%r{(?:\A|/)MASTER/?\z}i)
         master_web = normalized.match?(%r{(?:\A|/)MASTER/web(?:/|\z)}i)
 
-        rails || master_root || master_web ? :standard : DEFAULT
+        return :master if master_root || master_web
+
+        rails ? :standard : DEFAULT
       end
 
       def rendered_target?(target)
@@ -104,7 +107,7 @@ module Master
 
         line = "lane=#{lane}"
         line += ", skipped: #{skipped.join(", ")}" unless skipped.empty?
-        line += "; rendered findings are not measured or proven by this run" unless runs?(:layout_sweep, lane)
+        line += "; rendered findings are not measured or proven by this run" unless runs?(:layout_sweep, lane) || runs?(:visual_pass, lane)
         line += "; elevation improves toward the ideal and never blocks a run" if elevate?(lane)
         line
       end
