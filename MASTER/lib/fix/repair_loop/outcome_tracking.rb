@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require_relative "../autofix_guard"
+require_relative "../antigen_store"
+require "digest"
 
 module Master
   module Fix
@@ -104,9 +106,39 @@ module Master
           usd, tokens = RunBudget.run_spend
           result = fix_violation(violation)
           ToolBreaker.record(law, violation, state, result)
+          record_failure_antigen(violation, state, result)
           after_usd, after_tokens = RunBudget.run_spend
           RunBudget.note_law_cost(law, after_usd - usd, after_tokens - tokens)
           result
+        end
+
+        FAILURE_ANTIGEN_OUTCOMES = %i[no_proposal reflexion_rejected consensus_rejected rejected].freeze
+
+        # A failed, model-produced repair becomes durable memory only for the
+        # exact source bytes that produced it. Changing the file reopens the gate.
+        def record_failure_antigen(violation, source_sha256, outcome)
+          return unless FAILURE_ANTIGEN_OUTCOMES.include?(outcome)
+          return unless source_sha256.to_s.match?(/\\A[0-9a-f]{64}\\z/)
+
+          repo_root = defined?(Master::REPO_ROOT) ? File.expand_path(Master::REPO_ROOT) : File.expand_path(@root)
+          absolute = File.expand_path(violation[:file].to_s, repo_root)
+          return unless absolute.start_with?(repo_root + File::SEPARATOR)
+
+          boundary = absolute.delete_prefix(repo_root + File::SEPARATOR)
+          law = violation[:law].to_s.empty? ? @law.id : violation[:law].to_s
+          defect_digest = Digest::SHA256.hexdigest(violation[:message].to_s)[0, 16]
+          defect_class = "#{outcome}:#{defect_digest}"
+          store = AntigenStore.new(root: repo_root)
+          return if store.known?(law:, boundary:, defect_class:, source_sha256:)
+
+          store.record(
+            law:, boundary:, defect_class:,
+            evidence: { source_sha256:, outcome: outcome.to_s, attempts: 1 },
+            note: "repair attempt rejected against unchanged source",
+            severity: "warning",
+          )
+        rescue StandardError => error
+          Master::Ground::Swallow.log(error, context: "repair_loop.record_failure_antigen", event_bus: @bus, law: @law.id)
         end
 
         def protected_target?(violation)
