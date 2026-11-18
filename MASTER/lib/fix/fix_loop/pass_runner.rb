@@ -33,6 +33,7 @@ require_relative "../wishlist"
 require_relative "../constitutional_check"
 require_relative "../../review/scan/law_health"
 require_relative "../improve"
+require_relative "../../operator/polish_lens"
 require_relative "../commit_message"
 
 module Master
@@ -491,6 +492,8 @@ module Master
           @elevation_used_for_pass = pass
           engine = Improve::Engine.new(root: @root, lane:)
           found = engine.elevate(files:)
+          polish = mechanical_polish_findings(files:)
+          found.concat(polish)
           ideas = WorkLane.runs?(:ideate) ? engine.ideate(files:) : []
           restructures = WorkLane.runs?(:restructure_drive) ? engine.restructure_proposals(files:) : []
           coverage = Improve::Domains.coverage(files:)
@@ -510,6 +513,44 @@ module Master
             @bus&.publish("fix_loop:elevation", pass:, steps: found.size, lane: lane.to_s)
           end
           found
+        end
+
+        # PolishLens supplements the ordinary source-domain probes with
+        # deterministic repository-hygiene candidates. It is opt-in under the
+        # same operator gate as the durable backlog executor, and it can only
+        # name files already owned by this pass in one registered tree. Its
+        # findings enter the existing Council-selected improvement repair,
+        # transaction, veto and proof path; it never writes or starts a second
+        # mission queue.
+        def mechanical_polish_findings(files:)
+          return [] unless ENV["MASTER_BACKLOG_AUTORUN"] == "1"
+
+          scoped = Array(files).filter_map do |path|
+            absolute = File.expand_path(path, @root)
+            next unless absolute.start_with?(File.expand_path(@root) + File::SEPARATOR)
+
+            absolute
+          end
+          trees = scoped.map do |path|
+            path.delete_prefix(File.expand_path(@root) + File::SEPARATOR).split(File::SEPARATOR).first
+          end.uniq
+          return [] unless trees.one? && %w[MASTER RAILS OPENBSD STUDIO BIZ].include?(trees.first)
+
+          Operator::PolishLens.findings_for_paths(root: @root, paths: scoped)
+            .select { |finding| finding.path.split("/").first == trees.first }
+            .first(3)
+            .map do |finding|
+              {
+                law: Improve::LAW_ID,
+                kind: :improvement,
+                file: finding.path,
+                line: [finding.line.to_i, 1].max,
+                severity: Improve::SEVERITY,
+                confidence: Improve::CONFIDENCE,
+                message: "polish[lens:#{finding.id}] Law=#{finding.law}: #{finding.detail}; proposed=#{finding.edit}; proof=#{finding.proof}",
+                fix: finding.edit,
+              }
+            end
         end
 
         def ideas_to_findings(ideas, pass:)
