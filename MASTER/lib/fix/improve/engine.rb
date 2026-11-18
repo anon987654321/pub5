@@ -36,10 +36,11 @@ module Master
 
             best_per_domain[opportunity.domain] << opportunity
           end
-          best_per_domain.values.flatten.map { |opportunity| opportunity.finding(root: @root) }
+          best_per_domain.values.flatten.sort_by { |opportunity| -opportunity.leverage }
+            .first(MAX_FINDINGS).map { |opportunity| opportunity.finding(root: @root) }
         rescue StandardError => e
           Master::Ground::Swallow.log(e, context: "improve.engine.elevate")
-          []
+          raise
         end
 
         def ideate(files:)
