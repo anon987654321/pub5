@@ -49,6 +49,75 @@ module Master
         def success? = !url.to_s.empty?
       end
 
+      class Capture
+        MAX_BYTES = 192 * 1024
+        MAX_LINES = 2_400
+
+        def initialize(bus:, conversation:)
+          @conversation = conversation.to_s
+          @console = Master::Trace::Dmesg::Console.new
+          @lines = []
+          @bytes = 0
+          @closed = false
+          @mutex = Mutex.new
+          @subscription = bus&.subscribe("**") { |event| record(event) }
+        rescue StandardError
+          @subscription = nil
+        end
+
+        def close
+          subscription = @mutex.synchronize do
+            @closed = true
+            current, @subscription = @subscription, nil
+            @report ||= @lines.join("\n")
+            current
+          end
+          subscription&.call
+          @report
+        rescue StandardError
+          @report.to_s
+        end
+
+        private
+
+        def record(event)
+          return unless event.is_a?(Hash) && !@conversation.empty?
+          return unless event[:conversation].to_s == @conversation
+
+          @mutex.synchronize do
+            return if @closed || @bytes >= MAX_BYTES || @lines.size >= MAX_LINES
+
+            @console.lines(event).each do |line|
+              safe = Master::Ground::Redactor.text(line.to_s.scrub)
+              next if safe.empty?
+
+              remaining = MAX_BYTES - @bytes
+              break unless remaining.positive?
+
+              safe = safe.byteslice(0, remaining).to_s.scrub if safe.bytesize > remaining
+              @lines << safe
+              @bytes += safe.bytesize + 1
+              break if @bytes >= MAX_BYTES || @lines.size >= MAX_LINES
+            end
+          end
+        rescue StandardError
+          nil
+        end
+      end
+
+      def self.status_for(result, cancelled: false)
+        return "cancelled" if cancelled
+        return "success" if result.respond_to?(:ok?) && result.ok?
+
+        category = result.respond_to?(:category) ? result.category.to_s : ""
+        return "cancelled" if %w[abort cancelled].include?(category)
+        return "blocked" if %w[policy validation axiom_violation needs_user budget].include?(category)
+
+        "failure"
+      rescue StandardError
+        "unknown"
+      end
+
       def initialize(root: Master::REPO_ROOT, transport: nil, enabled: ENV.fetch("MASTER_LOG_PUBLISH", "1"))
         @root = File.expand_path(root.to_s)
         @transport = transport
