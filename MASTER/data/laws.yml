@@ -5052,18 +5052,15 @@ documents:
   # deliberately or the NO_NEW_DOCUMENTS Law finds it. A new folder for prose
   # is always a finding.
   allowed_documents:
-    [AGENTS.md, APP_SPEC.md, ARCHAEOLOGY.md, CLAUDE.md, COMPETITOR_BENCHMARK.md,
-     FACE_WORLD.md, GEMINI.md, GLM.md, INTERACTION_CAMPAIGN.md,
-     LAYOUT_MICRO_REFINEMENT_MATRIX.md, LEGACY_PROMISES.md, LEGACY_RESTORE.md,
-     LOOKBOOK.md, PUB4_PERMISSION_MATRIX.md, PUB5_PERMISSION_MATRIX.md,
-     README.md, RESTORATION_REPORT.md, RUNBOOK.md, SCREENSHOT_LAW_ADHERENCE.md,
-     SOCIAL_FRONT_PAGE.md, SURFACE_MICRO_REFINEMENT_MATRIX.md,
-     SURFACE_MICRO_REFINEMENT_MATRIX_II.md, TODO.md, TREE_CONTRACTS.md,
-     UI_ARCHAEOLOGY.md, ad_creative_governance.md, bergen_brand_systems.md,
+    [AGENTS.md, APP_SPEC.md, ARCHAEOLOGY.md, CLAUDE.md,
+     FACE_WORLD.md, GEMINI.md, GLM.md, LEGACY_RESTORE.md, LOOKBOOK.md,
+     PUB4_PERMISSION_MATRIX.md, PUB5_PERMISSION_MATRIX.md, README.md,
+     RESTORATION_REPORT.md, RUNBOOK.md, SOCIAL_FRONT_PAGE.md, TODO.md,
+     TREE_CONTRACTS.md, ad_creative_governance.md, bergen_brand_systems.md,
      bringhurst-strunk-research.md, business-plan-quality.md, contract.md,
-     fix-ledger.md, openbsd_kernel_philosophy.md, proposal.md,
-     rails-layout-refiner.md, snapshot_OPENBSD.md, snapshot_RAILS.md,
-     snapshot_STUDIO.md, typographic-styles.md]
+     openbsd_kernel_philosophy.md, proposal.md, rails-layout-refiner.md,
+     snapshot_OPENBSD.md, snapshot_RAILS.md, snapshot_STUDIO.md,
+     typographic-styles.md]
 
 detection_calibration:
   measurement_only:
