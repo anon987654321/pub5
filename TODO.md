@@ -476,8 +476,10 @@ measure is already owned by the Bymorgen item above.
   while source paints `.messenger-conversation-header` as a full-pane
   elevated bar (`brgen/app/assets/stylesheets/_brgen_messenger.scss:363`).
   The maps captures still show the raw kind value "place" at the page top,
-  and the fix in `brgen/engines/maps/app/views/maps/places/_card.html.erb` covers the
-  card partial only — verify the kind select and page header at recapture.
+  but the source now translates it on the place detail page and in the kind
+  filter (`maps.kinds.place`), and passes localized marker labels to the map
+  fallback. The map fallback now renders non-link points as non-link cards.
+  Confirm all three on a fresh browser capture.
   Recapture every committed RAILS capture at one revision after the pending
   items close, and record the revision beside the image so capture age is
   readable from the file. Measure the marketplace utility strip ("Rask
