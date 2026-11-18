@@ -24,11 +24,11 @@ module Master
         STRUCTURE_EXTENSIONS = %w[.yml .yaml].freeze
         MUSIC_EXTENSIONS = %w[.sco .orc .csd].freeze
         QUALITY_AREAS = {
-          code: %w[readability maintainability interaction reliability],
-          prose: %w[editorial clarity navigation provenance localization],
-          visual: %w[visual_hierarchy accessibility interaction privacy],
-          structure: %w[configuration_clarity consistency data_integrity],
-          music: %w[notation production_provenance],
+          code: %w[readability maintainability interaction resilience reliability trust performance],
+          prose: %w[editorial clarity cognition navigation provenance localization],
+          visual: %w[visual_hierarchy accessibility interaction privacy identity discoverability],
+          structure: %w[configuration_clarity consistency data_integrity portability],
+          music: %w[notation production_provenance authorship],
         }.freeze
         EXTERNAL_REVIEW_AREAS = %w[
           rendered_composition real_device_use assistive_technology
@@ -500,6 +500,18 @@ module Master
               end
               node.children.each { |child| walk.call(child) }
             end
+            if path.tr("\\", "/").split("/").include?("STUDIO")
+              empty_field = source.match(/^\s*(?:bpm|tempo|instrument):\s*(?:#.*)?$/i)
+              if empty_field
+                findings << opportunity(
+                  :structure, path, "empty_music_field",
+                  "a Studio music metadata field is declared but empty",
+                  4.0, "Fill the value from the authoritative session or remove the empty declaration; do not infer tempo or instrumentation.",
+                  line: line_number(source, empty_field.begin(0))
+                )
+              end
+            end
+
             stream = Psych.parse_stream(source)
             walk.call(stream) if stream
             findings
@@ -521,12 +533,6 @@ module Master
                 :music, path, "unmarked_score",
                 missing.join("; ") + "; a performer should not have to guess the basic markings",
                 6.0, "Add verified tempo and dynamics markings at the top of the score; do not infer musical values."
-              )
-            elsif File.extname(path).downcase == ".yml" && source.match?(/\b(?:bpm|tempo|instrument):\s*\z/)
-              opportunity(
-                :music, path, "empty_music_field",
-                "a tempo or instrument field is declared but empty",
-                4.0, "Fill the field from an authoritative source or remove the empty declaration."
               )
             end
           end
