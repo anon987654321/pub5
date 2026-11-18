@@ -410,7 +410,37 @@ module Master
                 break
               end
 
-              icon_link = source.match(/<a\b(?![^>]*\b(?:aria-label|title)=)[^>]*>\s*(?:<i\b|<svg\b|<span\b[^>]*\bicon)/im)
+              empty_link = source.match(/<a\b(?![^>]*\b(?:aria-label|aria-labelledby|title)=)[^>]*>\s*<\/a>/im)
+              if empty_link
+                findings << opportunity(
+                  :visual, path, "empty_link",
+                  "a link has neither visible text nor a programmatic name",
+                  9.0, "Give the link meaningful visible text or an accessible name that describes its destination.",
+                  line: line_number(source, empty_link.begin(0))
+                )
+              end
+
+              positive_tabindex = source.match(/\btabindex\s*=\s*["']([1-9]\d*)["']/i)
+              if positive_tabindex
+                findings << opportunity(
+                  :visual, path, "positive_tabindex",
+                  "a positive tabindex creates a custom focus order that can diverge from document order",
+                  8.0, "Remove the positive tabindex and preserve natural DOM order; use tabindex=0 only when a non-native interactive element genuinely requires focusability.",
+                  line: line_number(source, positive_tabindex.begin(0))
+                )
+              end
+
+              form_button = source.match(/<form\b[\s\S]*?<button\b(?![^>]*\btype\s*=)[^>]*>/im)
+              if form_button
+                findings << opportunity(
+                  :visual, path, "implicit_form_button_type",
+                  "a button inside a form relies on the browser's implicit submit type",
+                  5.5, "Declare type=submit for intentional submission or type=button for other actions; preserve the existing interaction.",
+                  line: line_number(source, form_button.begin(0))
+                )
+              end
+
+              icon_link = source.match(/<a\b(?![^>]*\b(?:aria-label|aria-labelledby|title)=)[^>]*>\s*(?:<i\b|<svg\b|<span\b[^>]*\bicon)/im)
               if icon_link
                 findings << opportunity(
                   :visual, path, "icon_only_link",
