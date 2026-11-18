@@ -17,8 +17,9 @@
 #   2. MASTER's bundle (bin/master, bin/operator, the checks)
 #   3. every active RAILS app's bundle (brgen amber bsdports mrdamascy, MASTER/web)
 #   4. libvips.so.42 and its friends, extracted from Debian pool .debs into
-#      /home/z/my-project/.libs — ruby-vips needs the C ABI, which the host's
-#      sharp npm tree does not ship and apt cannot reach without root
+#      ${PUB5_SANDBOX_LIBS:-$CACHE_ROOT/pub5/libs} —
+#      ruby-vips needs the C ABI, which the host's sharp npm tree does not
+#      ship and apt cannot reach without root
 #   5. Chrome for Testing headless shell (tools/chrome_install.rb), which
 #      writes CHROME_PATH into ~/.config/master/env
 #   6. the two gems the bare-ruby contract suites require outside any bundle:
@@ -29,7 +30,18 @@ set -eu
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 MASTER=$(dirname -- "$SCRIPT_DIR")
 ROOT=$(dirname -- "$MASTER")
-LIBS=/home/z/my-project/.libs
+# Cache root: XDG first, then HOME, then the passwd entry. Bare containers
+# sometimes export an empty HOME; a previous operator's absolute path is never
+# a default.
+if [ -n "${XDG_CACHE_HOME:-}" ]; then
+  CACHE_ROOT=$XDG_CACHE_HOME
+elif [ -n "${HOME:-}" ]; then
+  CACHE_ROOT=$HOME/.cache
+else
+  CACHE_ROOT=$(getent passwd "$(id -u)" 2>/dev/null | cut -d: -f6)/.cache
+  [ -n "$CACHE_ROOT" ] && [ "$CACHE_ROOT" != /.cache ] || CACHE_ROOT=$ROOT/.cache
+fi
+LIBS=${PUB5_SANDBOX_LIBS:-$CACHE_ROOT/pub5/libs}
 VIPS_LIB="$LIBS/extracted/usr/lib/x86_64-linux-gnu"
 POOL=http://deb.debian.org/debian/pool/main
 
@@ -130,15 +142,15 @@ fi
 # chromedriver searches PATH for a binary literally named `chrome`; the
 # headless shell's own name is not one of them ("cannot find Chrome binary",
 # amber bin/ci system_test, 2026-11-16), so expose it under the name it wants.
-CHROME_BIN_DIR=/home/z/.cache/pub5/chrome-bin
+CHROME_BIN_DIR=$CACHE_ROOT/pub5/chrome-bin
 if [ "$DRY" = 1 ]; then
   say "would expose the shell as chrome-bin/chrome for chromedriver"
 elif [ -x "$CHROME_BIN_DIR/chrome" ] || [ -n "${CHROME_PATH:-}" ]; then
   mkdir -p "$CHROME_BIN_DIR"
-  ln -sf "${CHROME_PATH:-$(find /home/z/.cache/pub5 -name chrome-headless-shell -type f 2>/dev/null | sort | tail -1)}" "$CHROME_BIN_DIR/chrome"
+  ln -sf "${CHROME_PATH:-$(find "$CACHE_ROOT/pub5" -name chrome-headless-shell -type f 2>/dev/null | sort | tail -1)}" "$CHROME_BIN_DIR/chrome"
   say "chrome binary exposed: $CHROME_BIN_DIR/chrome"
 fi
-CHROMEDRIVER=/home/z/.cache/pub5/chromedriver-linux64/chromedriver
+CHROMEDRIVER=$CACHE_ROOT/pub5/chromedriver-linux64/chromedriver
 if [ -x "$CHROMEDRIVER" ]; then
   say "chromedriver ok: $CHROMEDRIVER"
 else
@@ -146,13 +158,13 @@ else
   if [ "$DRY" = 1 ]; then
     say "would download chromedriver-linux64 for the shell's version"
   else
-    version=$(basename "$(dirname "$(find /home/z/.cache/pub5 -name chrome-headless-shell -type f 2>/dev/null | sort | tail -1)")" 2>/dev/null)
+    version=$(basename "$(dirname "$(find "$CACHE_ROOT/pub5" -name chrome-headless-shell -type f 2>/dev/null | sort | tail -1)")" 2>/dev/null)
     version=$(echo "$version" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')
     if [ -n "$version" ]; then
-      mkdir -p /home/z/.cache/pub5
-      curl -s -o /home/z/.cache/pub5/chromedriver.zip \
+      mkdir -p "$CACHE_ROOT/pub5"
+      curl -s -o "$CACHE_ROOT/pub5/chromedriver.zip" \
         "https://storage.googleapis.com/chrome-for-testing-public/$version/linux64/chromedriver-linux64.zip" &&
-      unzip -o -q /home/z/.cache/pub5/chromedriver.zip -d /home/z/.cache/pub5/ &&
+      unzip -o -q "$CACHE_ROOT/pub5/chromedriver.zip" -d "$CACHE_ROOT/pub5/" &&
       say "chromedriver installed for $version"
     else
       say "no chrome version found yet; chromedriver skipped until the shell exists"

@@ -32,7 +32,15 @@ if [ ! -x "$MASTER/.tools/ruby/bin/ruby" ]; then
 fi
 ROOT=$(dirname -- "$MASTER")
 
-VIPS_LIB=/home/z/my-project/.libs/extracted/usr/lib/x86_64-linux-gnu
+if [ -n "${XDG_CACHE_HOME:-}" ]; then
+  CACHE_ROOT=$XDG_CACHE_HOME
+elif [ -n "${HOME:-}" ]; then
+  CACHE_ROOT=$HOME/.cache
+else
+  CACHE_ROOT=$(getent passwd "$(id -u)" 2>/dev/null | cut -d: -f6)/.cache
+  [ -n "$CACHE_ROOT" ] && [ "$CACHE_ROOT" != /.cache ] || CACHE_ROOT=$ROOT/.cache
+fi
+VIPS_LIB=${PUB5_SANDBOX_LIBS:-$CACHE_ROOT/pub5/libs}/extracted/usr/lib/x86_64-linux-gnu
 if [ -d "$VIPS_LIB" ]; then
   case ":${LD_LIBRARY_PATH:-}:" in
     *":$VIPS_LIB:"*) ;;
@@ -42,8 +50,8 @@ fi
 
 # Selenium (bin/ci system tests) finds chromedriver on PATH, and
 # chromedriver finds the browser as a PATH entry named `chrome`.
-DRIVER_DIR=/home/z/.cache/pub5/chromedriver-linux64
-CHROME_BIN_DIR=/home/z/.cache/pub5/chrome-bin
+DRIVER_DIR=$CACHE_ROOT/pub5/chromedriver-linux64
+CHROME_BIN_DIR=$CACHE_ROOT/pub5/chrome-bin
 for dir in "$DRIVER_DIR" "$CHROME_BIN_DIR"; do
   if [ -x "$dir/chromedriver" ] || [ -x "$dir/chrome" ]; then
     case ":$PATH:" in
@@ -68,4 +76,4 @@ fi
 
 export PATH LD_LIBRARY_PATH
 [ -n "${CHROME_PATH:-}" ] && export CHROME_PATH
-unset SCRIPT_DIR MASTER ROOT VIPS_LIB found
+unset SCRIPT_DIR MASTER ROOT VIPS_LIB CACHE_ROOT found
