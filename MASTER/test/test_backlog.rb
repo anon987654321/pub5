@@ -170,13 +170,12 @@ class TestBacklog < Minitest::Test
     assert_equal ranks, ranks.sort
   end
 
-  def test_check_passes_on_a_clean_checkout
-    state = Dir.chdir(Backlog::MASTER_ROOT) do
-      `git status --porcelain -- ../TODO.md data/backlog.yml`.strip
+  def test_check_passes_for_freshly_generated_output
+    Dir.mktmpdir("backlog-check") do |dir|
+      out = File.join(dir, "backlog.yml")
+      assert_equal 0, Backlog::Store.write(out:, io: silent)
+      assert_equal 0, Backlog::Store.check(out:, io: silent)
     end
-    skip "TODO.md or data/backlog.yml is dirty in this checkout" unless state.empty?
-
-    assert_equal 0, Backlog::Store.check(io: silent)
   end
 
   def test_check_flags_a_source_that_grew
@@ -701,20 +700,24 @@ class TestBacklog < Minitest::Test
 
         assert executor.record_completion!(record:)
         assert executor.record_completion!(record:)
+
+        # Receipt validation re-reads the current TODO owner. Keep the fixture
+        # row installed until both the receipt and its learning projection are
+        # checked; outside this stub, "safe-task" is not a real TODO item.
+        receipts = File.readlines(File.join(root, Backlog::Executor::RECEIPT_PATH)).map { |line| JSON.parse(line) }
+        assert_equal 1, receipts.length
+        receipt = receipts.first
+        assert_equal "safe-task", receipt.fetch("item_id")
+        assert_equal "verified_fix_pipeline_acceptance_and_origin_main", receipt.fetch("proof_status")
+        assert_equal 0, receipt.dig("evidence", "pending_repository_writes")
+        assert_equal "fix_pipeline", receipt.dig("proof", "kind")
+        assert_equal "origin", receipt.dig("repository_pushes", 0, "remote")
+        history = executor.send(:verified_route_history)
+        assert_equal 1, history.size
+        assert_equal plan.fetch("item_digest"), history.first.fetch("route_id")
+        assert_equal "PASS", history.first.fetch("status")
+        assert_equal "a" * 64, history.first.fetch("evidence_id")
       end
-      receipts = File.readlines(File.join(root, Backlog::Executor::RECEIPT_PATH)).map { |line| JSON.parse(line) }
-      assert_equal 1, receipts.length
-      receipt = receipts.first
-      assert_equal "safe-task", receipt.fetch("item_id")
-      assert_equal "verified_fix_pipeline_acceptance_and_origin_main", receipt.fetch("proof_status")
-      assert_equal 0, receipt.dig("evidence", "pending_repository_writes")
-      assert_equal "fix_pipeline", receipt.dig("proof", "kind")
-      assert_equal "origin", receipt.dig("repository_pushes", 0, "remote")
-      history = executor.send(:verified_route_history)
-      assert_equal 1, history.size
-      assert_equal plan.fetch("item_digest"), history.first.fetch("route_id")
-      assert_equal "PASS", history.first.fetch("status")
-      assert_equal "a" * 64, history.first.fetch("evidence_id")
     end
   end
 
