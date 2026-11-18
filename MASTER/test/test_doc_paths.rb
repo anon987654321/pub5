@@ -97,18 +97,11 @@ class TestDocPaths < Minitest::Test
     assert_empty broken, "TODO.md contains broken local links:\n  #{broken.join("\n  ")}"
   end
 
-  def test_root_backlog_and_historical_reviews_are_not_competing_checklists
+  def test_root_backlog_is_the_only_cross_tree_checklist
     backlog = File.read(File.join(REPO, "TODO.md"))
     completed = backlog.lines.select { |line| line.lstrip.start_with?("- [x] ", "- [X] ") }
     assert_empty completed, "completed work must be deleted from TODO.md"
-
-    review = File.read(File.join(REPO, "MASTER/docs/history/fix-review-log.md"))
-    # The sentence wraps in the file; compare it as prose, not as one line.
-    assert_includes review.gsub(/\s+/, " "), "not live task instructions"
-    checklist = review.lines.select do |line|
-      line.lstrip.start_with?("- [ ] ", "- [x] ", "- [X] ")
-    end
-    assert_empty checklist, "historical review must not act as another backlog"
+    refute_includes backlog, "MASTER/docs/history/fix-review-log.md"
   end
 
   def test_design_authority_is_laws_yml_without_a_parallel_architecture_document
