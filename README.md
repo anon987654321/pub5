@@ -49,9 +49,22 @@ Start with [MASTER](MASTER/README.md), [RAILS](RAILS/README.md),
 | Role | Start here |
 | --- | --- |
 | Operator | `MASTER/README.md` and `MASTER/bin/operator` |
-| Agent or contributor | `AGENTS.md`, then the target tree's `AGENTS.md` |
+| Agent or contributor | `AGENTS.md`, then the owning tree or product entrypoint below |
 | Deployer | `OPENBSD/RUNBOOK.md` |
 | Writer or plan maintainer | `BIZ/README.md` |
+
+## Tree and product entrypoints
+
+| Scope | Maintained entrypoint |
+| --- | --- |
+| MASTER | `MASTER/AGENTS.md` and `MASTER/README.md` |
+| RAILS | `RAILS/CLAUDE.md`, `RAILS/README.md`, then the target app or engine README and any local `AGENTS.md` |
+| OPENBSD | `OPENBSD/CLAUDE.md`, `OPENBSD/RUNBOOK.md` |
+| STUDIO | `STUDIO/README.md` and the target tool's README |
+| BIZ | `BIZ/README.md` and the target workstream's source/production profile |
+
+Do not assume every tree has an `AGENTS.md`: use the maintained entrypoint
+for that boundary, then read any narrower app, engine or workstream contract.
 
 ## Agent entrypoints
 
