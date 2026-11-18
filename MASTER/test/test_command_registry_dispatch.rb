@@ -236,6 +236,13 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_equal Registry.help_text("fix"), Registry.help_text("Fix")
   end
 
+  def test_help_explains_the_supported_exit_commands_for_q_near_miss
+    assert_equal(
+      "help: /q is not a command; use /quit or /exit to leave the current MASTER session.",
+      Registry.help_text("q"),
+    )
+  end
+
   def test_help_resolves_route_aliases_to_the_canonical_topic
     assert_equal Registry.help_text("voice"), Registry.help_text("tts")
     assert_equal Registry.help_text("reload"), Registry.help_text("restart")
