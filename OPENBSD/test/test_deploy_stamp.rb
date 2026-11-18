@@ -38,6 +38,14 @@ class TestDeployStamp < Minitest::Test
     assert_includes line, "aa4f010c1"
   end
 
+  def test_a_short_or_malformed_stamp_cannot_match_a_real_commit_by_prefix
+    short = Deploy::DeployStamp.booted_mismatch(app: "master", booted: "aa4f010c1", stamped: "a")
+    malformed = Deploy::DeployStamp.booted_mismatch(app: "master", booted: "aa4f010c1", stamped: "not-a-sha")
+
+    assert_includes short, "invalid deploy identity"
+    assert_includes malformed, "invalid deploy identity"
+  end
+
   def test_a_process_that_cannot_name_its_build_fails
     refute_nil Deploy::DeployStamp.booted_mismatch(app: "master", booted: nil, stamped: "aa4f010c1")
   end
