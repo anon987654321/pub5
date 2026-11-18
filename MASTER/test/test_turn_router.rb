@@ -167,6 +167,47 @@ class TurnRouterTest < Minitest::Test
     assert_equal "/deploy all --confirm", routed
   end
 
+  def test_greeted_polite_full_stack_deploy_is_not_a_question
+    message = "Hey, can you redeploy OPENBSD, RAILS, and MASTER web on vm23 please?"
+
+    refute Master::CLI::TurnRouter.question?(message)
+    assert Master::CLI::OperatorIntent.direct_deploy_request?(message)
+    assert Master::CLI::OperatorIntent.direct_full_stack_confirmation?(message)
+    refute Master::CLI::OperatorIntent.direct_full_stack_confirmation?(
+      "Hey, can you redeploy OPENBSD, RAILS, and MASTER web on staging please?"
+    )
+    refute Master::CLI::OperatorIntent.direct_full_stack_confirmation?(
+      "Hey, can you redeploy OPENBSD, RAILS, and MASTER web on vm23 except MASTER web?"
+    )
+  end
+
+  def test_greeted_polite_full_stack_deploy_routes_with_confirmation_and_cancellation
+    message = "Hey, can you redeploy OPENBSD, RAILS, and MASTER web on vm23 please?"
+    proposal = Master::CLI::OperatorIntent::Result.new(status: :deploy, target: "all")
+    fake_intent = Object.new
+    fake_intent.define_singleton_method(:call) { |_text| proposal }
+    cancellation = Object.new
+    routed = nil
+    forwarded = nil
+
+    Master::CLI::OperatorIntent.stub(:new, fake_intent) do
+      Master::CLI::TurnRouter.stub(:dispatch_slash, lambda { |command, **options|
+        routed = command
+        forwarded = options[:cancellation]
+        Master::Result.ok({ rendered: "captured" })
+      }) do
+        Master::CLI::TurnRouter.call(
+          message:,
+          container: build_container,
+          cancellation:,
+        )
+      end
+    end
+
+    assert_equal "/deploy all --confirm", routed
+    assert_same cancellation, forwarded
+  end
+
   def test_everything_on_vm23_is_a_complete_inventory_deploy_and_explicit_confirmation
     intent = Master::CLI::OperatorIntent
     assert intent.direct_full_stack_confirmation?("Redeploy everything on vm23")

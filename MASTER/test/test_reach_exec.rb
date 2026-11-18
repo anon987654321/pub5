@@ -203,6 +203,45 @@ class TestReachExec < Minitest::Test
     refute status.success?
   end
 
+  def test_cancellation_tracks_a_descendant_after_its_group_leader_exits
+    Dir.mktmpdir("exec-cancel-descendant") do |dir|
+      child_file = File.join(dir, "descendant")
+      child_code = "Signal.trap('TERM', 'IGNORE'); File.write(#{child_file.dump}, [Process.pid, Process.getpgrp].join(' ')); sleep 30"
+      parent_code = "Process.spawn(#{RbConfig.ruby.dump}, '-e', #{child_code.dump}); until File.file?(#{child_file.dump}); sleep 0.005; end; puts 'leader exiting'; STDOUT.flush; exit 0"
+      children = E::Children.new
+      turn = Thread.new do
+        Fiber[:master_children] = children
+        E.capture2e(RbConfig.ruby, "-e", parent_code, timeout: 15)
+      end
+
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 3
+      sleep 0.01 until File.file?(child_file) || Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+      assert File.file?(child_file), "descendant did not start"
+      _child_pid, group = File.read(child_file).split.map { |value| Integer(value, 10) }
+
+      # Wait for the direct leader PID to disappear while its descendant still
+      # keeps the capture group and inherited output pipe alive.
+      loop do
+        begin
+          Process.kill(0, group)
+        rescue Errno::ESRCH
+          break
+        end
+        flunk "group leader did not exit" if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+        sleep 0.01
+      end
+      assert_silent { Process.kill(0, -group) }
+
+      assert_equal 1, children.kill_all, "the live descendant group must remain registered"
+      _output, status = turn.value
+      refute status.success?, "cancellation must interrupt the still-open capture"
+      assert_process_group_gone(group)
+    ensure
+      Process.kill("KILL", -group) rescue nil if defined?(group) && group
+    end
+  end
+
   def test_a_child_outside_any_turn_is_not_tracked
     children = E::Children.new
     out, = E.capture2e("sh", "-c", "printf ok")

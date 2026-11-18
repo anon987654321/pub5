@@ -16,7 +16,7 @@ module Master
       ACTION_CUES = /\b(?:deploy(?:ment)?|re[- ]?deploy|release|ship|publish|roll(?:\s+out)?|rollout|refresh|update|sync|synchroni[sz]e|push|promote|launch|bring|move|restart|start|stop|inspect|check|status|show|list|tail|backup|restore|health)\b/i.freeze
       CONFIDENCE_FLOOR = 0.72
       REPOSITORY_TARGET_RE = /\b(?:pub5|repo(?:sitory)?|codebase|whole\s+(?:repo|repository)|entire\s+(?:repo|repository)|everything|all(?:\s+(?:apps?|services?|stacks?|surfaces?))?|full\s+stack|entire\s+(?:stack|fleet))\b/i.freeze
-      DIRECT_DEPLOY_REQUEST_RE = /\A\s*(?:(?:please|can you|could you|i need you to|i want you to|go ahead and)\s+)?(?:deploy|re[- ]?deploy|release|ship|publish)\b/i.freeze
+      DIRECT_DEPLOY_REQUEST_RE = /\A\s*(?:(?:hey|hi|hello|master)[,!]?\s+)?(?:(?:please|can you|could you|i need you to|i want you to|go ahead and)\s+)?(?:deploy|re[- ]?deploy|release|ship|publish)\b/i.freeze
       NON_PRODUCTION_ENV_RE = /\b(?:local|development|dev|test|staging|stage|preview)\b/i.freeze
       DESTINATION_RE = /\b(?:to|onto|on|at|for)\s+([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)/i.freeze
       VM23_DESTINATIONS = %w[vm23 production prod].freeze
@@ -51,6 +51,14 @@ module Master
 
         Return only the schema-bound object.
       PROMPT
+
+      # A direct deploy/redeploy imperative can be phrased as a polite question.
+      # Keep it distinct from broader release/publish cues so normal questions
+      # about publishing or release terminology remain conversational.
+      def self.direct_deploy_request?(text)
+        request = text.to_s
+        request.match?(DIRECT_DEPLOY_REQUEST_RE) && request.match?(/\b(?:deploy|re[- ]?deploy)\b/i)
+      end
 
       # An explicit full-stack production instruction naming vm23 is itself
       # the operator's confirmation. Model-classified app/group requests and

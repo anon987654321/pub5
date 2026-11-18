@@ -62,7 +62,7 @@ module Master
           confirmed = text.match?(/(?:^|\s)--confirm(?:\s|$)/i) ||
                       OperatorIntent.direct_full_stack_confirmation?(text)
           args = "#{args} --confirm" if confirmed
-          return dispatch_slash("/deploy #{args}", container:, felt_sense:, on_turn:)
+          return dispatch_slash("/deploy #{args}", container:, felt_sense:, on_turn:, cancellation:)
         when :ambiguous
           return Master::Result.ok({ rendered: proposal.message, output: proposal.message })
         when :unavailable
@@ -342,6 +342,9 @@ module Master
 
       def question?(text)
         value = text.to_s.strip
+        # A direct deploy/redeploy imperative may be phrased as a polite question.
+        # Recognise that explicit action before punctuation can send it to chat.
+        return false if OperatorIntent.direct_deploy_request?(value)
         return true if value.end_with?("?")
         return false if value.match?(QUESTION_IMPERATIVE)
 
