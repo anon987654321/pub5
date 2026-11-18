@@ -539,15 +539,114 @@ class TestTaskContract < Minitest::Test
                  contract.proof.grep(/baseline_hashes|law_assessment|path_scoped_diff/)
   end
 
-  def test_documentation_review_is_an_accepted_proof_type
+  def test_documentation_review_requires_an_exact_scoped_contract_document_pair
+    scope = %w[MASTER/data/task_contract.yml MASTER/AGENTS.md]
+
+    error = assert_raises(CONTRACT::Invalid) do
+      CONTRACT.build(
+        intent: "functional_change",
+        scope:,
+        preserve: [],
+        proof: ["documentation_review"],
+      )
+    end
+    assert_match(/exact public contract\/documentation pair/, error.message)
+
+    error = assert_raises(CONTRACT::Invalid) do
+      CONTRACT.build(
+        intent: "functional_change",
+        scope:,
+        preserve: [],
+        proof: [],
+        documentation_pairs: [{
+          contract_path: "MASTER/data/task_contract.yml",
+          document_path: "MASTER/AGENTS.md",
+          reason: "The task contract schema defines the public agent contract.",
+        }],
+      )
+    end
+    assert_match(/require documentation_review proof/, error.message)
+
     contract = CONTRACT.build(
       intent: "functional_change",
-      scope: ["MASTER/data/task_contract.yml"],
+      scope:,
       preserve: [],
       proof: ["documentation_review"],
+      documentation_pairs: [{
+        contract_path: "MASTER/data/task_contract.yml",
+        document_path: "MASTER/AGENTS.md",
+        reason: "The task contract schema defines the public agent contract.",
+      }],
     )
 
     assert_includes contract.proof, "documentation_review"
+    assert_equal [{
+      "contract_path" => "MASTER/data/task_contract.yml",
+      "document_path" => "MASTER/AGENTS.md",
+      "reason" => "The task contract schema defines the public agent contract.",
+    }], contract.documentation_pairs
+    assert_equal contract.documentation_pairs, contract.to_h.fetch("documentation_pairs")
+  end
+
+  def test_documentation_review_pairs_must_be_exact_unique_and_inside_scope
+    base = {
+      intent: "functional_change",
+      scope: ["MASTER/data/**"],
+      preserve: [],
+      proof: ["documentation_review"],
+    }
+    pair = {
+      contract_path: "MASTER/data/task_contract.yml",
+      document_path: "MASTER/data/AGENTS.md",
+      reason: "Describe the changed public schema.",
+    }
+
+    assert_raises(CONTRACT::Invalid) do
+      CONTRACT.build(base.merge(documentation_pairs: [pair.merge(document_path: "MASTER/AGENTS.md")]))
+    end
+    assert_raises(CONTRACT::Invalid) do
+      CONTRACT.build(base.merge(documentation_pairs: [pair.merge(document_path: "MASTER/data/*.md")]))
+    end
+    assert_raises(CONTRACT::Invalid) do
+      CONTRACT.build(base.merge(documentation_pairs: [pair, pair]))
+    end
+    assert_raises(CONTRACT::Invalid) do
+      CONTRACT.build(base.merge(documentation_pairs: [pair.merge(reason: "  ")]))
+    end
+  end
+
+  def test_documentation_review_refuses_a_split_delivery_and_accepts_one_commit_pair
+    contract = CONTRACT.build(
+      intent: "functional_change",
+      scope: %w[MASTER/data/task_contract.yml MASTER/AGENTS.md],
+      preserve: [],
+      proof: ["documentation_review"],
+      documentation_pairs: [{
+        contract_path: "MASTER/data/task_contract.yml",
+        document_path: "MASTER/AGENTS.md",
+        reason: "The task contract schema defines the public agent contract.",
+      }],
+    )
+
+    source_only = CONTRACT.documentation_review_refusal(
+      paths: ["MASTER/data/task_contract.yml"],
+      root: Master::REPO_ROOT,
+      contract:,
+    )
+    document_only = CONTRACT.documentation_review_refusal(
+      paths: ["MASTER/AGENTS.md"],
+      root: Master::REPO_ROOT,
+      contract:,
+    )
+    together = CONTRACT.documentation_review_refusal(
+      paths: %w[MASTER/data/task_contract.yml MASTER/AGENTS.md],
+      root: Master::REPO_ROOT,
+      contract:,
+    )
+
+    assert_match(/same commit/, source_only)
+    assert_match(/same commit/, document_only)
+    assert_nil together
   end
 
   def test_shell_redirection_into_openbsd_is_gated_but_reading_sources_is_allowed
