@@ -76,7 +76,7 @@ class TestPolishLens < Minitest::Test
   end
 
   def test_pointer_symmetry_waits_until_both_pointers_are_in_scope
-    File.write("#{@root}/GEMINI.md", "one\n")
+    File.write("#{@root}/GEMINI.md", "Generated file; do not edit\none\n")
     File.write("#{@root}/GLM.md", "one\ntwo\n")
 
     findings = Operator::PolishLens.findings_for_paths(
