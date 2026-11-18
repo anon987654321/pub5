@@ -7,9 +7,9 @@ module Master
       # with the gap and the smallest step that narrows it. Opportunities carry
       # their evidence (signal names, measurements) so a reviewer can check the
       # claim without re-running anything.
-      Opportunity = Struct.new(:domain, :path, :signal, :detail, :leverage, :fix,
+      Opportunity = Struct.new(:domain, :path, :signal, :detail, :leverage, :fix, :line,
                                keyword_init: true) do
-        def finding(root:, line: 1)
+        def finding(root:, line: self.line || 1)
           relative = path.delete_prefix("#{root}/").delete_prefix("#{root}\\")
           {
             law: LAW_ID,
