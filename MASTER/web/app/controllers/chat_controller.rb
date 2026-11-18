@@ -123,15 +123,23 @@ class ChatController < ApplicationController
     end
     return head(:forbidden) if visitor?
 
+    operation_capture = nil
     with_master_fiber(unlocked: unlocked?) do
+      operation_capture = begin_command_operation_capture(cmd)
       result = container[:gateway].receive(channel: :cli, message: cmd)
       value = result.ok? ? result.value! : nil
       output = value.is_a?(Hash) ? (value[:rendered] || value.to_s) : (value || result.message)
       client_actions = value.is_a?(Hash) ? Array(value[:client_actions]) : []
-      render json: { output:, client_actions: }
+      operation_log = publish_command_operation_log(cmd, result, operation_capture)
+      render json: { output:, client_actions:, operation_log: }
+    ensure
+      operation_capture&.close
     end
   rescue StandardError => e
-    render json: { output: "Error: #{e.message}" }, status: :internal_server_error
+    operation_log = publish_command_operation_log(cmd, nil, operation_capture, status: "failure")
+    render json: { output: "Error: #{e.message}", operation_log: }, status: :internal_server_error
+  ensure
+    operation_capture&.close
   end
 
   def research
@@ -213,6 +221,38 @@ class ChatController < ApplicationController
   end
 
   private
+
+  def begin_command_operation_capture(command)
+    return unless Master::Ground::PastePublisher.operation_request?(command)
+    return if Fiber[:master_visitor] == true
+
+    Master::Ground::PastePublisher::Capture.new(
+      bus: container[:bus],
+      conversation: conversation_id,
+    )
+  rescue StandardError => e
+    Master::Ground::Swallow.log(e, context: "ChatController.operation_log.capture", event_bus: container&.dig(:bus))
+    nil
+  end
+
+  def publish_command_operation_log(command, result, capture, status: nil)
+    return unless capture
+    return unless Master::Ground::PastePublisher.operation_request?(command)
+
+    outcome = Master::Ground::PastePublisher.new(root: Master::REPO_ROOT).publish(
+      operation: command,
+      status: status || Master::Ground::PastePublisher.status_for(result),
+      output: capture.close,
+    )
+    return unless outcome.success?
+
+    { url: outcome.url, service: outcome.service, expires_in: outcome.expires_in }
+  rescue StandardError => e
+    Master::Ground::Swallow.log(e, context: "ChatController.operation_log.publish", event_bus: container&.dig(:bus))
+    nil
+  ensure
+    capture&.close
+  end
 
   def pair_redeem_arg(cmd)
     return unless cmd.to_s.match?(%r{\A/pair(?:\s|\z)})
