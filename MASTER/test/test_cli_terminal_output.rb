@@ -99,4 +99,30 @@ class TestCLITerminalOutput < Minitest::Test
     # puts adds no newline after text that already ends in one.
     assert_equal "dim:#{text}", stdout
   end
+
+  def test_routine_unit_lines_are_suppressed_until_diagnostic_verbosity_is_requested
+    previous_dmesg = ENV["MASTER_DMESG"]
+    previous_quiet = ENV["MASTER_CLI_QUIET"]
+    ENV["MASTER_DMESG"] = "normal"
+    ENV.delete("MASTER_CLI_QUIET")
+
+    refute session.send(:verbose_output?)
+
+    ENV["MASTER_DMESG"] = "verbose"
+    assert session.send(:verbose_output?)
+  ensure
+    previous_dmesg.nil? ? ENV.delete("MASTER_DMESG") : ENV["MASTER_DMESG"] = previous_dmesg
+    previous_quiet.nil? ? ENV.delete("MASTER_CLI_QUIET") : ENV["MASTER_CLI_QUIET"] = previous_quiet
+  end
+
+  def test_two_voice_rings_render_as_a_fixed_top_right_overlay
+    cli = session
+    cli.define_singleton_method(:voice_indicator_state) { [false, false] }
+
+    overlay = TTY::Screen.stub(:width, 80) { cli.send(:voice_indicator_overlay) }
+
+    assert_includes overlay, "\e[1;78H"
+    assert_includes overlay, "○○"
+    assert_match(/\e\[u\z/, overlay)
+  end
 end
