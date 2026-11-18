@@ -100,20 +100,14 @@ module Deploy
         return
       end
 
-      # Exclude ";" from the captured text too -- statement at-rules like
-      # "@layer reset, overrides;" end in a semicolon, not a block, and
-      # without this a plain [^{}]+ scan spans straight through them into
-      # the next real rule's selector, misreading the at-rule's name list
-      # as part of a selector list.
-      # Index exact compressed selectors once. Substring matching against the
-      # full stylesheet is both expensive and too permissive: a longer selector
-      # could make a missing shorter selector look present.
+      # Build one exact selector index for the compressed output. This avoids
+      # rescanning the full stylesheet for every selector and prevents a longer
+      # selector from satisfying a missing shorter selector by substring match.
       compressed_selectors = selector_set(compressed)
-      strip_comments(expanded).scan(/([^{};]+)\{/) do |(selector_text)|
-        next unless selector_text.include?(",")
-        next if selector_text.lstrip.start_with?("@")
+      Operator::ScssRules.rules(expanded).each do |rule|
+        next if rule.at_rule?
 
-        selectors = Operator::ScssRules.split_list(selector_text)
+        selectors = rule.selectors
         next if selectors.length < MIN_SELECTOR_LIST_SIZE
 
         missing = selectors.reject { |sel| compressed_selectors.include?(normalize_selector(sel)) }
@@ -156,19 +150,11 @@ module Deploy
     # Exact normalized selectors from the compressed stylesheet. The shared
     # parser keeps commas inside :is(), attributes and quoted strings intact.
     def selector_set(css)
-      selectors = Set.new
-      strip_comments(css).scan(/([^{};]+)\{/) do |(selector_text)|
-        next if selector_text.lstrip.start_with?("@")
+      Operator::ScssRules.rules(css).each_with_object(Set.new) do |rule, selectors|
+        next if rule.at_rule?
 
-        Operator::ScssRules.split_list(selector_text).each do |selector|
-          selectors << normalize_selector(selector)
-        end
+        rule.selectors.each { |selector| selectors << normalize_selector(selector) }
       end
-      selectors
-    end
-
-    def strip_comments(css)
-      css.gsub(%r{/\*.*?\*/}m, "")
     end
 
     # dart-sass's compressed output strips whitespace immediately around

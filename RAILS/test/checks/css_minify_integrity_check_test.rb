@@ -84,6 +84,18 @@ class CssMinifyIntegrityCheckTest < Minitest::Test
   # A long compound-selector list is the shape the check was written for. Every
   # item survives compression here, which is the state of the compiler rather
   # than of the check.
+  def test_selector_index_preserves_commas_and_semicolons_inside_attribute_values
+    checker = CHECK.new
+    css = %q{[data-label="a;b,c"], .story .item, .card .title, :is(.alpha,.beta) .link { color: red; }}
+
+    selectors = checker.send(:selector_set, css)
+
+    assert_includes selectors, '[data-label="a;b,c"]'
+    assert_includes selectors, ".story .item"
+    assert_includes selectors, ".card .title"
+    assert_includes selectors, ":is(.alpha,.beta) .link"
+  end
+
   def test_a_long_compound_selector_list_survives_compression
     selectors = (1..30).map { |i| ".feed-card.listing-#{i} .feed-card-avatar" }
     result = check("#{selectors.join(",\n")} { width: 32px; }\n")
