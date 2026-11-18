@@ -360,8 +360,9 @@ export default class extends Controller {
     const fragment = document.createDocumentFragment()
 
     points.forEach(point => {
-      const item = document.createElement("a")
       const href = this._safeHref(point.url)
+      const item = document.createElement(href ? "a" : "div")
+      item.className = "map-fallback-item"
       if (href) item.href = href
 
       const label = document.createElement("span")
