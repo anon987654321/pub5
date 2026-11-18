@@ -21,6 +21,10 @@ module Master
       DIR = File.join(".master", "antigens")
       FILE = "signatures.jsonl"
       EVIDENCE_FIELDS = %w[source_sha256 outcome attempts trace_id run_id tangle_digest paths edge_types].freeze
+      SAFE_NOTES = [
+        "repair attempt rejected against unchanged source",
+        "resolved source dependency cycle in ReferenceGraph",
+      ].freeze
 
       def initialize(root: nil)
         @root = root || (defined?(Master::REPO_ROOT) && Master::REPO_ROOT) || Dir.pwd
@@ -43,7 +47,7 @@ module Master
           "defect_class" => defect_class.to_s,
           "severity" => severity.to_s,
           "evidence" => safe_evidence(evidence),
-          "note" => note,
+          "note" => (note.to_s if SAFE_NOTES.include?(note.to_s)),
           "recorded_at" => Time.now.utc.iso8601,
           "hits" => 1,
         }.compact
