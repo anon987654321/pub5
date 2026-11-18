@@ -63,13 +63,13 @@ class CssMinifyIntegrityCheckTest < Minitest::Test
     assert_equal 1, result.checks_ran
   end
 
-  def test_compressed_stylesheet_is_normalized_once_per_app_not_once_per_rule
+  def test_compressed_stylesheet_is_indexed_once_per_app
     checker = CHECK.new
     calls = 0
-    original = checker.method(:normalize_selector)
-    checker.define_singleton_method(:normalize_selector) do |value|
+    original = checker.method(:selector_set)
+    checker.define_singleton_method(:selector_set) do |css|
       calls += 1
-      original.call(value)
+      original.call(css)
     end
     groups = (1..30).map do |index|
       ".card-#{index}, .listing-#{index}, .story-#{index} { width: #{index}px; }"
@@ -78,7 +78,7 @@ class CssMinifyIntegrityCheckTest < Minitest::Test
     result = check(groups.join("\\n"), checker:)
 
     assert result.ok?, result.failures.join(", ")
-    assert_equal 91, calls, "one full compressed-output normalization plus three selectors per rule"
+    assert_equal 1, calls, "the compressed selector index is built once per app"
   end
 
   # A long compound-selector list is the shape the check was written for. Every
@@ -89,6 +89,24 @@ class CssMinifyIntegrityCheckTest < Minitest::Test
     result = check("#{selectors.join(",\n")} { width: 32px; }\n")
 
     assert result.ok?, result.failures.join(", ")
+  end
+
+  def test_a_missing_selector_is_not_matched_by_a_longer_selector_prefix
+    scss = ".feed-card.listing .feed-card-avatar, .post-card .avatar, .story .avatar { width: 32px; }\\n"
+    real = Sass.method(:compile)
+    lossy = lambda do |entry, **options|
+      css = real.call(entry, **options).css
+      if options[:style] == :compressed
+        css = css.sub(".feed-card.listing .feed-card-avatar", ".feed-card.listing .feed-card-avatar-large")
+      end
+      Struct.new(:css).new(css)
+    end
+
+    result = with_compile(lossy) { check(scss) }
+
+    refute result.ok?, "a longer selector prefix must not satisfy exact selector presence"
+    assert_match(/lost selector\\(s\\) under compression/, result.failures.first)
+    assert_match(/missing after compression: \\[".feed-card.listing .feed-card-avatar"\\]/, result.failures.first)
   end
 
   # The compiler cannot be made to lose a selector, but the comparison can be

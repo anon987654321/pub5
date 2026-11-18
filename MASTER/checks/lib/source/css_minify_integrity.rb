@@ -3,6 +3,8 @@
 require_relative "../../support/check_result"
 require_relative "../../support/brgen_vertical_surfaces"
 require_relative "../../support/fleet"
+require "set"
+require_relative "../../../tools/scss"
 
 module Deploy
   # dart-sass's compressed output mode has a real, reproducible bug: a long
@@ -79,18 +81,18 @@ module Deploy
       # without this a plain [^{}]+ scan spans straight through them into
       # the next real rule's selector, misreading the at-rule's name list
       # as part of a selector list.
-      # Normalize the full compressed output once per app, not once per
-      # comma-separated rule. Repeating this full-stylesheet scan for every
-      # selector list turns the comparison quadratic in the number of rules.
-      normalized_compressed = normalize_selector(compressed)
+      # Index exact compressed selectors once. Substring matching against the
+      # full stylesheet is both expensive and too permissive: a longer selector
+      # could make a missing shorter selector look present.
+      compressed_selectors = selector_set(compressed)
       strip_comments(expanded).scan(/([^{};]+)\{/) do |(selector_text)|
         next unless selector_text.include?(",")
         next if selector_text.lstrip.start_with?("@")
 
-        selectors = selector_text.split(",").map(&:strip).reject(&:empty?)
+        selectors = Operator::ScssRules.split_list(selector_text)
         next if selectors.length < MIN_SELECTOR_LIST_SIZE
 
-        missing = selectors.reject { |sel| normalized_compressed.include?(normalize_selector(sel)) }
+        missing = selectors.reject { |sel| compressed_selectors.include?(normalize_selector(sel)) }
         next if missing.empty?
 
         result.fail(
@@ -103,6 +105,20 @@ module Deploy
       # This app's stylesheet was compiled and compared; an app without an
       # application.scss should not make the ones that have it count for nothing.
       result.checked!
+    end
+
+    # Exact normalized selectors from the compressed stylesheet. The shared
+    # parser keeps commas inside :is(), attributes and quoted strings intact.
+    def selector_set(css)
+      selectors = Set.new
+      strip_comments(css).scan(/([^{};]+)\{/) do |(selector_text)|
+        next if selector_text.lstrip.start_with?("@")
+
+        Operator::ScssRules.split_list(selector_text).each do |selector|
+          selectors << normalize_selector(selector)
+        end
+      end
+      selectors
     end
 
     def strip_comments(css)
