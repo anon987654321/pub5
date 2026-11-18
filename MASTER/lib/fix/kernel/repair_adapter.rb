@@ -39,6 +39,7 @@ require_relative "../artifact_preservation"
 require_relative "../task_contract"
 require_relative "../best_of_n"
 require_relative "../tool_breaker"
+require_relative "../antigen_store"
 require_relative "../../review/scan/law_health"
 require_relative "../repair_loop/autofix_policy"
 require_relative "../run_ledger"
@@ -681,6 +682,7 @@ module Master
           ctx = prompt_context_for(violation:, path:, style:)
           FixTrace.prompt(<<~PROMPT)
           #{preamble}
+          #{known_antigen_context(violation, path, src)}
 
           File: #{File.basename(path)} (#{ctx[:lang]})
           Rule violated: #{violation[:law]}
@@ -704,6 +706,30 @@ module Master
           #{src}
           ```
         PROMPT
+        end
+
+        # Matching evidence is presented only when Law, boundary and source
+        # digest all match. It is a warning to bring new proof, not a permanent ban.
+        def known_antigen_context(violation, path, source)
+          repo_root = defined?(Master::REPO_ROOT) ? File.expand_path(Master::REPO_ROOT) : File.expand_path(@root)
+          absolute = File.expand_path(path.to_s, repo_root)
+          return unless absolute.start_with?(repo_root + File::SEPARATOR)
+
+          boundary = absolute.delete_prefix(repo_root + File::SEPARATOR)
+          digest = Digest::SHA256.hexdigest(source.to_s)
+          law = violation[:law].to_s.empty? ? @law.id : violation[:law].to_s
+          matches = AntigenStore.new(root: repo_root).match(
+            law:, boundary:, source_sha256: digest, limit: 3,
+          )
+          return if matches.empty?
+
+          outcomes = matches.map { |row| row.dig("evidence", "outcome") }.compact.uniq
+          "Known failure signature at this exact Law/path/source revision (#{matches.size} record(s); " \
+            "outcomes=#{outcomes.join(",")}). Do not repeat the failed approach; identify concrete new " \
+            "test or source evidence that resolves it. Changed source bytes reopen the decision."
+        rescue StandardError => error
+          Master::Ground::Swallow.log(error, context: "repair_loop.antigen_context", law: @law.id)
+          nil
         end
 
         def visual_fix_context
