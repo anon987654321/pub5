@@ -52,10 +52,10 @@ module Master
         tree = Tree.new(root: @root, target:)
         return result(:empty, "tree has no tracked files") if tree.files.empty?
 
-        findings, dropped = parse(
+        findings, dropped, drop_reasons = parse(
           @agent.ask(prompt(tree, first_read_proposals:), operation: :structural_review).to_s, tree
         )
-        record(tree:, findings:, dropped:, persist:)
+        record(tree:, findings:, dropped:, drop_reasons:, persist:)
       rescue StandardError => e
         @bus&.publish("fix_loop:structural_review_error", target: target.to_s, error: "#{e.class}: #{e.message}")
         result(:inconclusive, "structural review inconclusive, #{e.class}")
@@ -64,7 +64,7 @@ module Master
       private
 
       def parse(answer, tree)
-        TreeProposals.parse(answer, tree.paths, TreeProposals::Dialect.new(HEADER, CATEGORIES, known_laws))
+        TreeProposals.parse_detailed(answer, tree.paths, TreeProposals::Dialect.new(HEADER, CATEGORIES, known_laws))
       end
 
       def known_laws
@@ -113,14 +113,18 @@ module Master
         "unavailable"
       end
 
-      def record(tree:, findings:, dropped:, persist: true)
+      def record(tree:, findings:, dropped:, drop_reasons:, persist: true)
         if persist
           path = self.class.findings_path(@root)
           FileUtils.mkdir_p(File.dirname(path))
           File.write(path, JSON.generate(findings.map(&:to_h)))
-          @bus&.publish("fix_loop:structural_review", findings: findings.map(&:to_h), dropped:)
+          @bus&.publish(
+            "fix_loop:structural_review",
+            findings: findings.map(&:to_h), dropped:, dropped_reasons: drop_reasons,
+          )
         end
-        note = dropped.positive? ? ", #{dropped} dropped" : ""
+        detail = drop_reasons.empty? ? "" : " (#{drop_reasons.join("; ")})"
+        note = dropped.positive? ? ", #{dropped} dropped#{detail}" : ""
         summary = "#{tree.metrics[:files]} files, #{findings.size} finding(s)#{note}"
 
         Master::Trace::Dmesg.status("look0", summary)
