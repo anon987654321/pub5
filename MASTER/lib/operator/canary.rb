@@ -252,6 +252,9 @@ module Operator
   #                it loads RAILS tests the box has no reason to carry)
   module DeployPreflight
     Result = Struct.new(:name, :ok, :detail, keyword_init: true)
+
+    class GitCommandError < StandardError; end
+
     SWEEP_GLOBS = %w[MASTER/lib/**/*.rb MASTER/law/**/*.rb RAILS/*/app/**/*.rb].freeze
     TIMEOUT = 900
     # A single-app Rails suite may take close to an hour on a one-core host.
@@ -363,6 +366,8 @@ module Operator
       return [false, ci_word] unless ok
 
       [true, ["#{lead} VPS_DEPLOY_PREFLIGHT_SHA=#{sha}", ci_word, tail].compact.join(" ")]
+    rescue GitCommandError => error
+      [false, "repository preflight failed: #{error.message}; nothing was sent to vm23"]
     end
 
     # Local CI applies to any single inventory app whose deploy_root belongs to
@@ -396,7 +401,18 @@ module Operator
     end
 
     def git_out(root, *argv)
-      Master::Io::Exec.capture2("git", "-C", root, *argv, err: File::NULL).first.to_s.strip
+      output, status = Master::Io::Exec.capture2(
+        "git", "-C", root, *argv, err: File::NULL,
+        timeout: Master::Io::Exec::DEFAULT_TIMEOUT, raise_on_timeout: true
+      )
+      unless status.success?
+        exit_code = status.exitstatus || "signal"
+        raise GitCommandError, "git #{argv.join(" ")} failed (#{exit_code})"
+      end
+
+      output.to_s.strip
+    rescue Master::Io::Exec::TimeoutError
+      raise GitCommandError, "git #{argv.join(" ")} timed out after #{Master::Io::Exec::DEFAULT_TIMEOUT}s"
     end
 
     def report(results)

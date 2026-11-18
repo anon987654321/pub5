@@ -105,7 +105,7 @@ class DeployPreflightTest < Minitest::Test
   end
 
   def remote(env: {}, runner: ->(*) { ["", true] }, app: "all",
-             ci_runner: ->(**) { flunk "bin/ci must not run" }, **git)
+             ci_runner: ->(**) { flunk "bin/ci must not run" }, git: nil, **git_state)
     apps = {
       "master" => { "title" => "MASTER", "domain" => "ai.example.test", "port" => 53187,
                     "deploy_script" => "OPENBSD/master.sh", "deploy_root" => "MASTER/web",
@@ -128,9 +128,50 @@ class DeployPreflightTest < Minitest::Test
     FileUtils.mkdir_p(File.join(dir, "RAILS"))
     File.write(File.join(dir, "MASTER", "lib", "ok.rb"), "x = 1\n")
     File.write(File.join(dir, "RAILS", "apps.yml"), YAML.dump("apps" => apps))
-    Pre.remote_command(root: dir, app:, env:, git: fake_git(**git), runner:, out: StringIO.new, ci_runner:)
+    Pre.remote_command(root: dir, app:, env:, git: git || fake_git(**git_state), runner:, out: StringIO.new, ci_runner:)
   ensure
     FileUtils.rm_rf(dir)
+  end
+
+  def test_git_out_rejects_a_nonzero_exit_instead_of_treating_empty_output_as_clean
+    status = Object.new
+    status.define_singleton_method(:success?) { false }
+    status.define_singleton_method(:exitstatus) { 128 }
+
+    Master::Io::Exec.stub(:capture2, ->(*args, **options) { ["", status] }) do
+      error = assert_raises(Pre::GitCommandError) { Pre.git_out("/tmp/pub5", "fetch", "origin", "main") }
+      assert_includes error.message, "git fetch origin main failed (128)"
+    end
+  end
+
+  def test_remote_command_blocks_when_git_fetch_fails_before_running_preflight
+    calls = []
+    git = lambda do |_root, *argv|
+      calls << argv
+      raise Pre::GitCommandError, "git fetch origin main failed (128)"
+    end
+
+    ok, reason = remote(git:, runner: ->(*) { flunk "preflight must not run after a failed fetch" })
+
+    refute ok
+    assert_includes reason, "repository preflight failed"
+    assert_includes reason, "nothing was sent to vm23"
+    assert_equal [["fetch", "-q", "origin", "main"]], calls
+  end
+
+  def test_remote_command_blocks_when_git_status_cannot_prove_a_clean_tree
+    base = fake_git
+    git = lambda do |root, *argv|
+      raise Pre::GitCommandError, "git status --porcelain failed (128)" if argv.first(2) == %w[status --porcelain]
+
+      base.call(root, *argv)
+    end
+
+    ok, reason = remote(git:, runner: ->(*) { flunk "preflight must not run when git status is unknown" })
+
+    refute ok
+    assert_includes reason, "git status --porcelain failed"
+    assert_includes reason, "nothing was sent to vm23"
   end
 
   # vm23 runs brgen's suite in about 50 minutes on one core; a green bin/ci here
