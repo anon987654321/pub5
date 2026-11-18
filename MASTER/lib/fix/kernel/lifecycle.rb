@@ -108,6 +108,9 @@ module Master
                   finish_coordinated_run(
                     run_id: coordinator_run_id, attempt_id: current_attempt_id, state:, outcome: result,
                   )
+                  adapter.capture_terminal_receipt_identity(
+                    run_id: coordinator_run_id, attempt_id: current_attempt_id,
+                  ) if adapter.respond_to?(:capture_terminal_receipt_identity)
                   result
                 rescue StandardError => error
                   coordinator_run_id ||= @current_run_id
@@ -124,6 +127,9 @@ module Master
                       run_id: coordinator_run_id, attempt_id: current_attempt_id,
                       state: :unknown_outcome, error:
                     )
+                    adapter.capture_terminal_receipt_identity(
+                      run_id: coordinator_run_id, attempt_id: current_attempt_id,
+                    ) if adapter.respond_to?(:capture_terminal_receipt_identity)
                   rescue StandardError => receipt_error
                     Master::Ground::Swallow.log(
                       receipt_error, context: "fix_kernel.coordinator_terminal", event_bus: @bus
