@@ -805,7 +805,7 @@ class VpsDeployContractTest < Minitest::Test
   end
 
   def test_the_deploy_has_exactly_one_terminal_finish_definition_and_exit_trap
-    assert_equal 1, SOURCE.scan(/^finish\(\) \{$/).size
+    assert_equal 1, SOURCE.scan(/^finish\(\) \{/).size
     assert_equal 1, SOURCE.scan(/^trap finish EXIT$/).size
   end
 

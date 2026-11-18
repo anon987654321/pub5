@@ -654,8 +654,14 @@ measure is already owned by the Bymorgen item above.
   and verifies the whole child process group has disappeared; when it cannot
   prove exit it reports termination UNCONFIRMED. Descendant-held-pipe and
   unconfirmed-stop regressions are authored but NOT_RUN. The broader
-  process-kill census and provider-boundary audits remain open. The constitutional scan runner now
-  puts its child in an isolated process group and applies one monotonic deadline
+  process-kill census and provider-boundary audits remain open. The canonical
+  MASTER/lib/io/exec.rb turn registry now retains its process-group owner for
+  the complete capture, including exited leaders with pipe-holding descendants;
+  cancellation reports non-success while preserving the leader's real exit
+  facts. The focused test_reach_exec.rb descendant regression and the exact
+  greeted full-stack intent regression are authored but NOT_RUN here. The
+  constitutional scan runner now puts its child in an isolated process group
+  and applies one monotonic deadline
   to both process exit and output-pipe EOF; timeout escalates TERM to KILL and
   checks group disappearance. A regression covers an exited leader with a
   descendant holding the pipe open; authored but NOT_RUN. The source-

@@ -446,9 +446,18 @@ class VpsSafetyCheckTest < Minitest::Test
   def test_vps_deploy_rejects_a_shadowed_terminal_handler
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "vps-deploy")
-      File.open(path, "a") do |file|
-        file.write("\nfinish() { :; }\ntrap finish EXIT\n")
-      end
+      File.open(path, "a") { |file| file.write("\nfinish() { :; }\n") }
+      out, status = run_check(dir)
+
+      refute status.success?
+      assert_includes out, "vps-deploy must define exactly one terminal finish handler and one EXIT trap"
+    end
+  end
+
+  def test_vps_deploy_rejects_a_duplicate_terminal_exit_trap
+    with_fixture do |dir, _|
+      path = File.join(dir, "OPENBSD", "bin", "vps-deploy")
+      File.open(path, "a") { |file| file.write("\ntrap finish EXIT\n") }
       out, status = run_check(dir)
 
       refute status.success?
