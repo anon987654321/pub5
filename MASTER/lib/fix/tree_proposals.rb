@@ -64,6 +64,25 @@ module Master
         kinds.include?(kind.to_s.downcase) && !names.empty? && names.all? { |name| known_paths.include?(name) }
       end
 
+      def rejection_reason(line, known_paths, dialect)
+        kind, paths = line.split(":", 2).last.to_s.split("|", 4).map(&:strip)
+        unless dialect.kinds.include?(kind.to_s.downcase)
+          return "unsupported category (#{safe_label(kind)})"
+        end
+
+        names = names_from(paths)
+        return "missing path" if names.empty?
+
+        unknown = names.reject { |name| known_paths.include?(name) }
+        return "unknown path (#{unknown.map { |name| safe_label(name) }.join(", ")})" unless unknown.empty?
+
+        "malformed proposal"
+      end
+
+      def safe_label(value)
+        value.to_s.gsub(/[^a-zA-Z0-9_.\\/-]/, "?").byteslice(0, 80)
+      end
+
       def law_id(text, laws = nil)
         id = text.to_s.upcase
         id.empty? || id == "NONE" || (laws && !laws.include?(id)) ? nil : id
