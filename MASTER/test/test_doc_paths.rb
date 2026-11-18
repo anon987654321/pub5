@@ -75,6 +75,16 @@ class TestDocPaths < Minitest::Test
     refute File.exist?(File.join(REPO, "MASTER/lib/fix/README.md"))
   end
 
+  def test_openbsd_runbook_explains_the_required_first_release_broker_bootstrap
+    runbook = File.read(File.join(REPO, "OPENBSD/RUNBOOK.md"))
+
+    assert_includes runbook, "One-time broker bootstrap"
+    assert_includes runbook, "OPENBSD/OPERATOR.sh --plan"
+    assert_includes runbook, "OPENBSD/OPERATOR.sh --apply"
+    assert_includes runbook, "OPENBSD/OPERATOR.sh --verify"
+    assert_includes runbook, "initial durable run receipt"
+  end
+
   def test_fix_workflow_is_consolidated_in_master_readme
     readme = File.read(File.join(REPO, "MASTER/README.md"))
 
