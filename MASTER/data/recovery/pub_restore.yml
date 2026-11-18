@@ -25,9 +25,13 @@ critical_items:
 
   - id: ai3_standalone
     source: ai3/
-    expected_target: MASTER/data/recovery/ai3/legacy/
-    current_state: absorbed
-    check: source_archived_or_importer_tested
+    source_repo: anon987654321/pub
+    source_commit: "ff73247ac8389c29dd6a9f426d16d39900c17815"
+    source_tree: "c750e01881dc22b44e4f86c470e8d9c608c3352e"
+    expected_target: "archived source tree anon987654321/pub@ff73247ac8389c29dd6a9f426d16d39900c17815:ai3/"
+    current_state: archived
+    check: pinned_source_commit_and_tree
+    disposition: "Do not copy the standalone AI3 tree into pub5; current behavior mappings and deliberately absent capabilities are recorded in legacy_manifest.yml#legacy_ai3_role_review."
 
   - id: bplans_pipeline
     source: bplans/
@@ -58,11 +62,10 @@ checks:
     - MASTER/data/recovery/pub_restore.yml
     - MASTER/data/recovery/pub_archive_restore.yml
 
-  # Only genuinely absent paths stay here. Historical DEPLOY/bp paths belonged
-  # to the old layout and the bplans pipeline never had the generator/templates
-  # this ledger once claimed.
-  missing_until_restored:
-    - MASTER/data/recovery/ai3/legacy/ai3.rb
+  # Only paths whose restoration is an active requirement belong here.
+  # AI3's historical source is pinned in the source repository; it is archived,
+  # not a missing pub5 runtime or a target for wholesale restoration.
+  missing_until_restored: []
 
 agent_prompt: >
   Before claiming pub5 restored pub, read MASTER/data/recovery/legacy_manifest.yml and this file.
