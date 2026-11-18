@@ -1255,6 +1255,11 @@ test("MASTER face markup hooks have owned styling", () => {
     assert.match(css, new RegExp(hook.replace(".", "\\.") + "\\s*\\{"));
   }
   assert.match(css, /body\[data-mode="listening"\] \.mic-indicator/);
+  assert.match(view, /id="voice-indicators" class="voice-indicators"/);
+  assert.match(view, /id="tts-dot" class="tts-indicator" aria-hidden="true"/);
+  assert.match(css, /#voice-indicators #mic-dot \{/);
+  assert.match(css, /z-index: calc\(var\(--z-overlay\) \+ 1\)/);
+  assert.match(css, /body\[data-mode="speaking"\] #tts-dot::before/);
 });
 
 test("constitutional ASCII face is wired as an overlay and a fallback", () => {
