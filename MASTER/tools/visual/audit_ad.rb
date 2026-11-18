@@ -12,7 +12,7 @@ USAGE = [
   "Without rendered evidence, BrowserlessMeasurements analyzes the supported static HTML/CSS subset.",
   "Reports include measurement mode and source digests.",
   "Exit 0 means the declared audit passed; exit 1 means findings failed; invalid input exits nonzero.",
-].join("\\n").freeze
+].join("\n").freeze
 
 if ARGV.first == "--help" || ARGV.first == "-h"
   puts USAGE
