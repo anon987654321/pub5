@@ -83,19 +83,26 @@ extractors) · D dual paths: #5, #11 merged/deleted · E source pins n/a ·
 F event topics n/a · G limits/guidance n/a. All edits re-read after write;
 `ruby -c` × 73, ERB compile × 22, YAML × 2 re-verified green.
 
-## NOT_RUN / remaining (named, with reason)
-- `rails test` (and `db:migrate` → real `db/schema.rb`): no Rails bundle in the
-  sandbox — the suite is authored and syntax-verified only. Run
-  `bundle install && rails db:prepare && rails test` on a machine that can.
-- **Strict loading** (MASTER law, every environment): deliberately not enabled —
-  ~6 production sites (`OrdersController#index/show/track`, `ReviewsController`,
-  `Staff::BoardController#advance`, `Session#user` in `current_user`) and ~8
-  test touch-points still lazy-load associations. Present-tense reason recorded
-  at the owning boundary (`app/models/application_record.rb`): flip
-  `strict_loading_by_default = true` in the same commit that adds the includes,
-  proven by the running suite.
+## Initial NOT_RUN snapshot (2026-11-01; superseded by live verification below)
+
+These were limits of the first source-level pass, not a continuing task list.
+The 2026-11-02 section below records the later 126-run suite and live-browser
+verification. Current unresolved work belongs in the root `TODO.md` and the
+source-owned acceptance ledgers; this dated repair record is not a second
+backlog.
+
+- `rails test` and `db:migrate` → real `db/schema.rb`: NOT_RUN in the initial
+  source-repair sandbox because it had no Rails bundle; the subsequent
+  2026-11-02 run below records the suite's actual result.
+- **Strict loading** (MASTER law, every environment): deliberately not enabled
+  in that pass. The listed production and test touch-points still lazy-loaded
+  associations. The owning boundary (`app/models/application_record.rb`)
+  records the safe rule: enable `strict_loading_by_default = true` only in the
+  same scoped change that adds the required includes and is proved by the live
+  suite. This is a decision constraint, not standing authority to change it.
 - Rendered/browser checks (rendered_geometry, mobile_flow, viewport_spill,
-  tap_target 44px): need a booted app + Chromium — NOT_RUN here.
+  tap_target 44px): NOT_RUN in the initial sandbox; later live-browser
+  verification is recorded below.
 - Waived, with reason: loading-shimmer and sheet-footer gradients (fade to
   transparent — functional edge, spared by the law); `--shadow` token (declared
   operator value, APP_SPEC §1 "no heavy shadows" — RENDERED_VALUES boundary).
