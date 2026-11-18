@@ -24,26 +24,25 @@ products are Norwegian-first, with English where the app's locale support is
 implemented. BIZ documents use the language and conventions of their intended
 reader.
 
-## The four runtime trees
+## Repository shape
 
-- `MASTER/` — the constitution, the runtime and the instruments: the Law
-  catalogue, the scanner, the single `/fix` pipeline (with compatibility mode aliases),
-  and the operator and agent entrypoints. Start at `MASTER/README.md`; the workflow contract is
-  `MASTER/AGENTS.md`.
-- `RAILS/` — the applications and their shared engine, with the deploy
-  tooling that carries them. Start at `RAILS/README.md`.
-- `OPENBSD/` — the vm23 deployment tree: VPS configuration under `etc/`,
-  `usr/` and `var/`, DNS, relayd, and the operator scripts. Live work starts
-  at `OPENBSD/RUNBOOK.md`.
-- `STUDIO/` — the media tools: Dilla, photograph and the Replicate client.
-  `STUDIO/Rakefile` is the tree's check surface.
+```text
+pub5/
+├── MASTER/   constitution, agent runtime, Laws and /fix
+├── RAILS/    Brgen, Amber, BSDPorts and product applications
+├── OPENBSD/  vm23, DNS, relayd and operator deployment
+├── STUDIO/   music, image and media-production tools
+└── BIZ/      business plans and professional documents
+```
 
-## Fifth content root: business and writing deliverables
+The four runtime trees have executable checks and operational owners.
+`BIZ/` is the fifth content root: one folder per workstream with its
+published pair or editable source; shared bases, build/check/print tools,
+templates and research live under `BIZ/tools/`.
 
-`BIZ/` holds business plans and professional documents as one tree:
-one folder per workstream with its published pair or editable source, while
-the bases, build/check/print chain, templates, research and proposals live in
-`BIZ/tools/`. The canonical guide is `BIZ/README.md`.
+Start with [MASTER](MASTER/README.md), [RAILS](RAILS/README.md),
+[OPENBSD](OPENBSD/RUNBOOK.md), [STUDIO](STUDIO/README.md) or
+[BIZ](BIZ/README.md), depending on the work.
 
 ## Start by role
 
