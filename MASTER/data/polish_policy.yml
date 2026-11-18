@@ -1,0 +1,71 @@
+# Continuous polish policy (data, not documentation).
+# Authority remains soul.yml → laws.yml. This file is operational policy for
+# Polish::Discovery and Polish::FixIntegration only.
+
+schema: 1
+
+# Standing rule: do not create new Markdown documents.
+# Prefer extending existing .md, or structured data (.yml / .json) under data/.
+# Discovery treats new top-level or drive-by .md files as policy violations.
+no_new_markdown:
+  enabled: true
+  statement: >
+    Do not create new .md documents. Extend an existing document, or put
+    operational content in structured data under MASTER/data/. Manifestos,
+    waves, and policy belong here or in code — not as new prose files.
+  severity: moderate
+  resolution: fold_into_existing_or_data
+  # Paths that are allowed to remain as the established documentation surface.
+  # Anything outside these (when newly introduced by polish/fix) is a finding.
+  established_doc_roots:
+    - MASTER/README.md
+    - MASTER/AGENTS.md
+    - MASTER/FACE_WORLD.md
+    - AGENTS.md
+    - README.md
+    - CLAUDE.md
+    - GEMINI.md
+    - GLM.md
+    - BIZ/
+    - OPENBSD/
+    - RAILS/
+    - STUDIO/
+    - TODO.md
+
+stance:
+  backlog_empty: true
+  work_is_refinement_only: true
+  every_applied_polish_leaves_trace: true
+  product_and_design_remain_human_gated: true
+
+categories:
+  - structure
+  - naming
+  - documentation
+  - typography
+  - accessibility
+  - ui
+  - ux
+  - cli
+  - interaction
+  - resilience
+  - provenance
+  - performance
+  - consistency
+  - stigmergy
+  - autopoiesis
+  - principle
+  - testability
+  - operator
+  - meta
+
+severities:
+  cosmetic: { auto_apply: true }
+  minor: { auto_apply: true }
+  moderate: { auto_apply: false }
+  substantial: { auto_apply: false }
+
+fix_modes:
+  - discover
+  - discover_and_emit
+  - apply_safe

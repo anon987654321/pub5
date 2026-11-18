@@ -7,8 +7,9 @@
 #
 # Contract:
 # - Never invents product features.
+# - Never creates new .md documents (policy in data/polish_policy.yml).
 # - Only proposes or applies changes that improve structure, consistency,
-#   documentation, accessibility, principle adherence, or operator experience.
+#   existing documentation, accessibility, principle adherence, or operator experience.
 # - Every applied change must leave a TraceStore record and a verification receipt.
 
 require_relative "discovery"

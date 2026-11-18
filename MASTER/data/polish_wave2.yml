@@ -1,0 +1,138 @@
+# Wave 2 polish opportunities (structured). Assumes Wave 1 landed.
+# Not a document — operational queue seed for Polish::Discovery / /fix.
+
+schema: 1
+wave: 2
+assumption: wave1_landed
+
+sections:
+  - id: meta_polish
+    range: [1, 40]
+    title: Meta-polish of the polishing system
+    items:
+      - Discovery emits coverage map of surfaces it cannot yet see
+      - Confidence score on every Opportunity from evidence strength
+      - Deduplicate opportunities that differ only by wording
+      - Cluster by root cause so one fix collapses many
+      - Polish debt interest that rises while an opportunity ages
+      - Visual timeline of applied vs open opportunities per surface
+      - Auto-retire opportunities whose surface no longer exists
+      - 30-day re-verification that an applied polish still satisfies its rationale
+      - Kernel regenerates Discovery rules from historically successful applications
+      - Simple TraceStore query language for operators and agents
+      - Version policy data; tag each opportunity with its wave
+      - Adversarial polish agent that tries to break the aesthetic of a just-applied fix
+      - Human digest of what became more coherent this week
+
+  - id: cross_tree
+    range: [41, 90]
+    title: Cross-tree coherence
+    items:
+      - Shared vocabulary required by every tree for core terms
+      - Uniform status badges on all established READMEs
+      - Single provenance schema for every generated artefact
+      - PATH_OWNERSHIP.yml completeness proof that fails CI on drift
+      - Consistent smallest-useful-thing section in every tree README
+      - Align error-message tone across CLI, web, and operator surfaces
+      - Shared design tokens for any HTML/PDF/report output
+      - Cross-tree link checker; zero broken relative references
+
+  - id: temporal
+    range: [91, 130]
+    title: Temporal and historical aesthetics
+    items:
+      - Conventional Git message style
+      - Changelogs distinguish polish from behaviour change
+      - Soul/law version history human-readable and machine-diffable
+      - TraceStore archive retention and storytelling policy
+      - Era markers so future readers see which wave shaped a region
+      - Dead-letter traces summarised rather than merely deleted
+
+  - id: operator
+    range: [131, 180]
+    title: Operator cognition and attention
+    items:
+      - Long-running commands expose a single-line current action
+      - Cognitive-load budget with progressive disclosure
+      - Consistent colour, weight, and silence in CLI output
+      - Keyboard-first operator flows documented and tested
+      - Quiet mode that still surfaces constitutional and safety signals
+      - Onboarding that teaches TraceStore and Kernel by doing
+      - Error messages state state and next move; never blame
+
+  - id: principles
+    range: [181, 230]
+    title: Principle deepening
+    items:
+      - Distinguish coincidental duplication from knowledge duplication
+      - POLA linter for public names versus side-effects
+      - Single-responsibility heat map at module and agent level
+      - Open/closed violations reported as opportunities
+      - Dependency-direction rules visualised and gated
+      - Interface-segregation score for every public API
+      - Surprise budget for places a reasonable reader would be astonished
+
+  - id: stigmergy
+    range: [231, 280]
+    title: Stigmergy maturity
+    items:
+      - Cascade simulation for local-patch tags
+      - Signal-to-noise dashboard for the TraceStore
+      - Reinforcement of which trace kinds improve outcomes
+      - Explicit evaporation schedules per trace kind
+      - Stigmergic trails to historically successful paths
+      - Conflict resolution for contradictory tags
+      - Human override of a trace recorded as higher-order signal
+
+  - id: autopoiesis
+    range: [281, 320]
+    title: Autopoietic maturity
+    items:
+      - Explicit list of components the Kernel may regenerate without assent
+      - Proof regeneration never touches protected soul paths
+      - Health probes that are themselves regenerable
+      - Boundary audit of what remains allopoietic and why
+      - Self-construction dry-run without activation
+      - Documented and tested Kernel failure modes
+
+  - id: accessibility
+    range: [321, 360]
+    title: Accessibility beyond first pass
+    items:
+      - Screen-reader-only flows for major operator journeys
+      - Cognitive accessibility scored
+      - Motion respects reduced-motion and still communicates state
+      - Colour is never the sole channel
+      - i18n readiness while only English is shipped
+
+  - id: performance
+    range: [361, 400]
+    title: Performance as aesthetics
+    items:
+      - CLI startup time as a beauty metric
+      - Time-to-first-useful-output for every major command
+      - Memory and FD discipline under long agent loops
+      - Latency budgets for TraceStore reads and writes
+      - Feels-instant checklist for interactive surfaces
+
+  - id: docs_as_craft
+    range: [401, 450]
+    title: Existing documentation craft
+    items:
+      - Rhythm pass on every major established document
+      - Examples always complete and copy-pasteable
+      - Conceptual diagrams have standalone textual equivalents
+      - Glossary entries as precise definitions
+      - Cross-references form a navigable graph
+      - Policy data periodically clarified under its own rules
+
+  - id: close_loop
+    range: [451, 500]
+    title: Closing the loop
+    items:
+      - Wave 2 opportunities discovered by Polish::Discovery where possible
+      - Machine-checkable success criteria for Wave 2 complete
+      - Next policy amendment prepared as a polish opportunity
+      - External observers can infer standards from artefacts alone
+      - Continuous generation of Wave 3 candidates from residual TraceStore signal
+      - Final self-audit that polishing still obeys soul and law

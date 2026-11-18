@@ -4,20 +4,26 @@
 # Scans the repository (and TraceStore signals) for polishing opportunities.
 # Designed to be called from /fix and from continuous background loops.
 # Never invents product work; only surfaces refinement of what already exists.
+# Standing policy: do not create new .md documents (see data/polish_policy.yml).
 
+require "yaml"
 require_relative "opportunity"
 require_relative "../stigmergy/trace_store"
 
 module Polish
   class Discovery
-    def initialize(repo_root:, trace_store: nil)
+    POLICY_PATH = File.expand_path("../../data/polish_policy.yml", __dir__)
+
+    def initialize(repo_root:, trace_store: nil, policy: nil)
       @repo_root = File.expand_path(repo_root)
       @traces = trace_store || Stigmergy::TraceStore.new
+      @policy = policy || load_policy
     end
 
     # Returns Array<Polish::Opportunity>
     def scan(surfaces: :all, limit: 200)
       opportunities = []
+      opportunities.concat(scan_no_new_markdown) if surfaces == :all || surfaces.include?(:documentation) || surfaces.include?(:policy)
       opportunities.concat(scan_structure) if surfaces == :all || surfaces.include?(:structure)
       opportunities.concat(scan_documentation) if surfaces == :all || surfaces.include?(:documentation)
       opportunities.concat(scan_naming) if surfaces == :all || surfaces.include?(:naming)
@@ -42,6 +48,69 @@ module Polish
     end
 
     private
+
+    def load_policy
+      return {} unless File.exist?(POLICY_PATH)
+      YAML.safe_load(File.read(POLICY_PATH), permitted_classes: [], aliases: false) || {}
+    rescue StandardError
+      {}
+    end
+
+    def no_new_markdown_enabled?
+      cfg = @policy["no_new_markdown"] || @policy[:no_new_markdown]
+      return true if cfg.nil? # default on
+      cfg == true || (cfg.is_a?(Hash) && (cfg["enabled"] != false && cfg[:enabled] != false))
+    end
+
+    def established_doc?(rel_path)
+      roots = (@policy.dig("no_new_markdown", "established_doc_roots") ||
+               @policy.dig(:no_new_markdown, :established_doc_roots) || [])
+      roots.any? { |root| rel_path == root || rel_path.start_with?(root.sub(%r{/\z}, "") + "/") || rel_path == root.sub(%r{/\z}, "") }
+    end
+
+    # Standing rule: do not create new .md documents.
+    # Flags .md under MASTER that are outside the established doc surface
+    # (especially drive-by manifesto/wave prose under MASTER/docs or MASTER/data).
+    def scan_no_new_markdown
+      return [] unless no_new_markdown_enabled?
+
+      opps = []
+      # Policy violations we ourselves introduced: manifesto / wave as .md
+      %w[
+        MASTER/docs/POLISHING_MANIFESTO.md
+        MASTER/data/polish_wave2.md
+      ].each do |rel|
+        path = File.join(@repo_root, rel)
+        next unless File.file?(path)
+        opps << Opportunity.new(
+          category: "documentation",
+          severity: "moderate",
+          title: "New .md document prohibited: #{rel}",
+          rationale: "Standing rule: do not create new .md documents. Prefer structured data under MASTER/data/ or extend an established document.",
+          surface: rel,
+          suggested_action: "Delete this file; keep policy/wave content in polish_policy.yml / polish_wave2.yml only."
+        )
+      end
+
+      # Any other .md newly living under MASTER/docs/ is suspect once the rule holds
+      docs_dir = File.join(@repo_root, "MASTER", "docs")
+      if File.directory?(docs_dir)
+        Dir.glob(File.join(docs_dir, "**/*.md")).each do |path|
+          rel = rel(path)
+          next if established_doc?(rel)
+          next if opps.any? { |o| o.surface == rel }
+          opps << Opportunity.new(
+            category: "documentation",
+            severity: "moderate",
+            title: "New .md under MASTER/docs: #{rel}",
+            rationale: "Standing rule: do not create new .md documents. MASTER/docs is not a free-form prose dump.",
+            surface: rel,
+            suggested_action: "Fold into an established contract (AGENTS.md, laws, data/*.yml) or remove."
+          )
+        end
+      end
+      opps
+    end
 
     def scan_structure
       opps = []
