@@ -121,7 +121,13 @@ module Master
         other.is_a?(PipelineContext) && @values == other.to_h
       end
 
-      def inspect = "#<PipelineContext #{@values.inspect}>"
+      # Inspection is used by test failures, result wrappers and diagnostics.
+      # Pipeline values can include the operator's prompt, tool arguments,
+      # provider output and cancellation metadata; never stringify those values.
+      def inspect
+        keys = @values.keys.map(&:to_s).sort.join(" ")
+        "#<PipelineContext keys=[#{keys}]>"
+      end
 
       private
 
