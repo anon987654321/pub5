@@ -58,21 +58,15 @@ tts:
   stream_live_default: true
   # With persona_affects_text_only these two ARE the effective rate/pitch for
   # every utterance (Personality#browser_profile substitutes them for the
-  # persona's own).
+  # persona's own). Keep this baseline aligned with Speech::STYLES[:eager] and
+  # Transcendent's warm_supportive profile so CLI, browser and fallback engines
+  # share one lively house delivery.
   #
-  # The everyday voice starts slightly brisker than neutral (+4%) with neutral
-  # pitch. Roughly ±15% rate and ±50Hz is where
-  # Azure neural voices stay natural.
-  #
-  # Christopher became the default voice on 2026-10-12. The everyday register
-  # became the cheerful house register on 2026-11-07 (Johann: MASTER talks deep,
-  # clear and cheerful by default, laughs included) — matches Speech's
-  # `cheerful` style (rate -14%, pitch -28Hz), which is the default style.
-  # Everyday speech runs slowed and dropped; the prior values (+4%) were the
-  # brisk everyday take. Christopher's operator_log below is unchanged.
-  # operator_log line below was tuned by ear and is untouched.
-  default_rate: "-14%"
-  default_pitch: "-28Hz"
+  # The house voice stays warm and grounded, but moves forward: modestly brisker
+  # than neutral with a little lift in pitch. Phrase-level variation supplies
+  # the excitement; fixed loudness or constant shouting does not.
+  default_rate: "+6%"
+  default_pitch: "+6Hz"
   operator_log:
     voice: christopher
     rate: "-10%"
