@@ -135,6 +135,15 @@ module Master
         pin_running_bundler_version!
         activate_locked_defaults!(root)
         require "bundler/setup"
+        # time.rb requires "date" internally. Load it only now that Bundler has
+        # activated the locked copies: on a fresh checkout the retry pin above
+        # still cannot see the just-installed store, so loading time earlier
+        # activated the interpreter's default date and Bundler.setup crashed
+        # with "already activated date 3.4.1, but your Gemfile requires 3.5.1"
+        # (Ruby 3.4.6 vs the lock written on a Ruby whose default date is
+        # newer, self-test boot 2026-11-18). The default-gem pins above remain
+        # for the paths where they do resolve (deploy bundle, vm23).
+        require "time"
       end
 
       # Bundler's auto-switch re-execs the program whenever the lock names a
@@ -154,8 +163,10 @@ module Master
       end
 
       # Retry the locked default-gem pins now that the dependency manager has
-      # installed them, then load time/date at the locked version. The early
-      # pass at load time could not do this on a fresh checkout.
+      # installed them. time/date themselves are required by activate_bundle!
+      # only after bundler/setup: loading them here would activate the
+      # interpreter's default date whenever the pin cannot resolve in this
+      # process's Gem.path, and Bundler.setup then refuses the version swap.
       def activate_locked_defaults!(root)
         lockfile = File.join(root, "Gemfile.lock")
         lock = File.file?(lockfile) ? File.binread(lockfile) : ""
@@ -170,7 +181,6 @@ module Master
           end
         end
         warn "boot0: Gem.path=#{Gem.path.inspect} date=#{Gem.loaded_specs['date']&.full_name.inspect}" if ENV["MASTER_BOOT_DEBUG"]
-        require "time"
       end
 
       # The lock records the Bundler that wrote it (4.x on Ruby 4.0); vm23's
