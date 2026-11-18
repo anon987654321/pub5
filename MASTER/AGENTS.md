@@ -201,7 +201,7 @@ execution evidence. Read `laws.yml` only when the task changes scanner,
 veto, plugin or `/fix` runtime configuration.
 Never claim a Law is enforced because its name or detector is merely declared.
 
-`MASTER/docs/synonyms.yml` is glossary-only. `MASTER/checks/checks.yml`
+`MASTER/data/synonyms.yml` is glossary-only. `MASTER/checks/checks.yml`
 routes operational checks. Neither creates Law identities or normative
 policy, and neither overrides the constitution. The four runtime owners are MASTER/
 (runtime, `MASTER/bin/master`), RAILS/ (apps, `MASTER/bin/operator` triangle
