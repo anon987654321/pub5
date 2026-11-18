@@ -127,6 +127,14 @@ class Marketplace::ListingsControllerTest < ActionDispatch::IntegrationTest
                   marketplace.listings_path(params.merge(category_id: @category.id))
   end
 
+  test "the active listing category is identified in the category navigation" do
+    get marketplace.listings_path, params: { category_id: @category.id }
+
+    assert_response :success
+    assert_select "nav.deal-cats a[aria-current=page][href=?]",
+                  marketplace.listings_path(kind: "goods", category_id: @category.id)
+  end
+
   test "the price floor hides what sits below it" do
     cheap = listing_for(@seller, "Paperback shelf", price_cents: 9_000)
     dear = listing_for(@seller, "Freeride ski 180", price_cents: 45_000)
