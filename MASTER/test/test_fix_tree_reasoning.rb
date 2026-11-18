@@ -51,6 +51,22 @@ class TestFixTreeReasoning < Minitest::Test
 
     assert_equal 1, result.proposals.size
     assert_equal 1, result.dropped
+    assert_includes result.summary, "unknown path (lib/invented.rb)"
+  end
+
+  def test_look_stage_drop_reasons_are_attached_to_the_existing_event_receipt
+    events = []
+    bus = Object.new
+    bus.define_singleton_method(:publish) { |event, **details| events << [event, details] }
+    agent = FakeAgent.new("PROPOSE: delete | lib/invented.rb | NONE | private explanation stays out of the receipt\\n")
+
+    result = Reasoning.new(agent:, root: @root, bus:).call(target: @root)
+
+    assert_equal 1, result.dropped
+    event = events.find { |name, _details| name == "fix_loop:tree" }
+    refute_nil event
+    assert_equal ["unknown path (lib/invented.rb)"], event.last.fetch(:dropped_reasons)
+    refute_includes event.last.inspect, "private explanation"
   end
 
   def test_a_directory_named_with_a_trailing_slash_is_known
