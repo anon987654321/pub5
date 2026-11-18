@@ -143,7 +143,7 @@ module Master
         when Hash
           value.each_with_object({}) do |(key, item), safe|
             name = key.to_s
-            next if name.match?(SENSITIVE_KEY)
+            next if name.match?(SENSITIVE_KEY) && !%w[candidate_sha256 source_sha256].include?(name)
             clean = safe_metadata(item, depth + 1)
             next if clean.nil?
             safe[name] = clean
