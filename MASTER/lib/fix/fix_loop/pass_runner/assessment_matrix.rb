@@ -174,10 +174,12 @@ module Master
           end
 
           def record_improvement_assessment!(pass:, findings:, ideas: 0, restructures: 0,
-                                              files_seen: 0, measured_files: 0, domains: [])
+                                              files_seen: 0, measured_files: 0, domains: [],
+                                              quality_areas: [], external_review_areas: [])
             @assessment_improvement_state ||= {
               evaluated_passes: 0, findings: 0, fixed: 0, ideas: 0, restructures: 0,
-              files_seen: 0, measured_files: 0, domains: [],
+              files_seen: 0, measured_files: 0, domains: [], quality_areas: [],
+              external_review_areas: [],
             }
             @assessment_improvement_state[:evaluated_passes] += 1
             @assessment_improvement_state[:last_pass] = Integer(pass)
@@ -189,6 +191,8 @@ module Master
             @assessment_improvement_state[:files_seen] = Integer(files_seen)
             @assessment_improvement_state[:measured_files] = Integer(measured_files)
             @assessment_improvement_state[:domains] = Array(domains).map(&:to_s).uniq.sort
+            @assessment_improvement_state[:quality_areas] = Array(quality_areas).map(&:to_s).uniq.sort
+            @assessment_improvement_state[:external_review_areas] = Array(external_review_areas).map(&:to_s).uniq.sort
             self
           end
 
@@ -291,7 +295,8 @@ module Master
             @assessment_visual_group_result = nil
             @assessment_improvement_state = {
               evaluated_passes: 0, findings: 0, fixed: 0, ideas: 0, restructures: 0,
-              files_seen: 0, measured_files: 0, domains: [],
+              files_seen: 0, measured_files: 0, domains: [], quality_areas: [],
+              external_review_areas: [],
             }
           end
 
