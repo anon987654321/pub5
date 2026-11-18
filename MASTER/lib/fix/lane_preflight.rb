@@ -2,6 +2,7 @@
 
 require_relative "../io/lane_state"
 require_relative "lane_probe"
+require_relative "../review/consensus"
 
 module Master
   module Fix
