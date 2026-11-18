@@ -237,7 +237,7 @@ class TestReachExec < Minitest::Test
       _output, status = turn.value
       refute status.success?, "cancellation must interrupt the still-open capture"
       assert status.cancelled?, "a successful leader exit must not hide descendant cancellation"
-      assert_nil status.exitstatus
+      assert_equal 0, status.exitstatus, "cancellation must preserve the leader's successful exit facts"
       assert_process_group_gone(group)
     ensure
       Process.kill("KILL", -group) rescue nil if defined?(group) && group
