@@ -34,6 +34,7 @@ async function runSlashCommand(text) {
     const data = await resp.json().catch(() => ({ output: "" }));
     const out = (data.output || "(no output)").toString();
     window._chatOnChunk?.(out);
+    window._chatOnOperationLog?.(data.operation_log);
     window._chatOnDone?.();
     (data.client_actions || []).forEach(triggerClientAction);
   } catch (err) {
