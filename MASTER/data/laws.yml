@@ -129,6 +129,24 @@ TRUTHFUL_STATUS_hidden_system_status:
   statement: "The system does not tell the reader what it is doing in time to be useful."
   resolution: review
 
+TRUTHFUL_STATUS_causal_trace_is_evidence:
+  parent: TRUTHFUL_STATUS
+  statement: >
+    A claim about agent, council, or /fix behaviour that lacks a causal
+    execution trace (tool calls, model turns, context that led to the action,
+    and the outcome) is unverified. The trace is the evidence class for agent
+    work; a summary or receipt that cannot be replayed is not sufficient.
+  resolution: review
+  evidence: { complete: causal_trace }
+
+TRUTHFUL_STATUS_profile_is_not_intent:
+  parent: TRUTHFUL_STATUS
+  statement: >
+    Continuous or sampled profiles (CPU, memory, allocation) report observed
+    cost. A claim that a path is "fast enough" or "cheap" without a current
+    profile or measured budget is a claim of intent, not of state.
+  resolution: review
+
 EXTERNAL_RESEARCH_IS_EVIDENCE_NOT_AUTHORITY:
   parent: TRUTHFUL_STATUS
   statement: "Third-party research is evidence bounded by its source, method, population and date; it does not override constitutional Law, operator intent or operator-owned product identity."
@@ -231,6 +249,34 @@ ROBUSTNESS_expired_exemption:
   statement: "A review resolution past its expiry still in force."
   resolution: never
 
+ROBUSTNESS_least_authority_tracing:
+  parent: ROBUSTNESS
+  statement: >
+    Observability itself must obey least authority. Continuous profiles,
+    eBPF or agent traces may observe only what is required for the current
+    investigation or budget; unrestricted always-on high-fidelity tracing of
+    every path without sampling or purpose is a privilege expansion.
+  resolution: review
+
+ROBUSTNESS_immune_pattern:
+  parent: ROBUSTNESS
+  statement: >
+    Recurring failure signatures from past /fix runs, council vetoes or
+    production incidents should be treated as antigens. A detector or gate
+    that cannot recognise a previously seen defect class at the same
+    high-risk boundary is incomplete; the system should learn the pattern
+    rather than rediscover it by accident.
+  resolution: review
+
+ROBUSTNESS_homeostasis:
+  parent: ROBUSTNESS
+  statement: >
+    The system returns to a healthy state after interruption, budget
+    collapse, orphaned missions or checkpoint loss. Failure to recover
+    durable mission state or to surface the unrecovered remainder is a
+    robustness failure.
+  resolution: review
+
 # ---
 
 SINGULARITY:
@@ -249,7 +295,11 @@ DRY:
     Don't Repeat Yourself. Every piece of knowledge has one
     authoritative representation in the system. Repetition of a
     decision is duplication; repetition of a shape with three different
-    reasons to change is not.
+    reasons to change is not. Semantic duplication (same intent, different
+    shape) across agents, detectors or modules is still duplication when
+    the sites co-change for the same reason. Architectural tangles that
+    force the same knowledge to be restated in multiple places violate
+    the single authoritative representation.
   resolution: review
   rule_of_three: >
     Three or more sites encoding one decision, co-changing for the same
@@ -258,6 +308,15 @@ DRY:
     Three or more lookalike sites serving divergent clients, keep them
     distinct.
   lineage: "Hunt & Thomas, The Pragmatic Programmer"
+
+SINGULARITY_architectural_tangle:
+  parent: SINGULARITY
+  statement: >
+    A dependency cycle, forbidden cross-module reach, or tangle that
+    forces the same knowledge or decision to be restated in multiple
+    places. Continuous architecture mapping against the intended graph
+    must surface these; they are not aesthetic preferences.
+  resolution: review
 
 SINGULARITY_one_true_mark:
   parent: SINGULARITY
@@ -1109,7 +1168,11 @@ KISS:
   statement: >
     Keep It Simple, Stupid. The simplest solution that works. Every
     layer of indirection, every abstraction, every configuration option
-    must earn its existence by removing more than it adds.
+    must earn its existence by removing more than it adds. When an agent
+    trajectory has been proven by causal traces and evidence, prefer
+    compiling it to ordinary deterministic code so the model is no longer
+    required on the hot path; a living agent for a settled workflow is
+    surplus.
   severity: warning
   resolution: review
   mechanical: composite (BOUNDED_LOAD, DENSITY, YAGNI)
@@ -1149,6 +1212,9 @@ POLA:
     Principle of Least Astonishment. A system behaves the way a person
     who has not read the source will expect. If a necessary feature
     astonishes, redesign the feature rather than document the surprise.
+    Agent and council behaviour, error surfaces, and status reports must
+    also obey least astonishment: a causal trace or status that surprises
+    the operator about what the system actually did is a POLA failure.
   severity: warning
   resolution: review
   mechanical: composite (POLA_mental_models, POLA_intuitive_navigation, POLA_bem_in_views, POLA_meaningless_name)
@@ -1182,6 +1248,11 @@ SOLID:
   statement: >
     Five object-oriented design principles. Each exists because a
     class designed without it becomes brittle under the next change.
+    AI-generated code tends to violate SRP and ISP by solving the
+    immediate problem in one place; the same principles apply with
+    greater force when agents write the majority of the code. Architectural
+    tangles and dependency cycles are SOLID failures that continuous
+    architecture checks must surface.
   severity: error
   resolution: review
   mechanical: composite (SRP, OCP, LSP, ISP, DIP)
@@ -3114,6 +3185,24 @@ law_catalogue:
       autofix: automatic
       languages: [ruby]
     DRY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    SINGULARITY_architectural_tangle:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    TRUTHFUL_STATUS_causal_trace_is_evidence:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    TRUTHFUL_STATUS_profile_is_not_intent:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    ROBUSTNESS_least_authority_tracing:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    ROBUSTNESS_immune_pattern:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    ROBUSTNESS_homeostasis:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
     DUAL_DETECTION:

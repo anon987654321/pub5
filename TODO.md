@@ -23,6 +23,28 @@ This register replaces the previous 1,275-line, 462-checkbox carry-forward
 dump. It contains unresolved outcomes, not session notes or speculative
 architecture proposals.
 
+## Observability, causal evidence and nature-inspired quality (landed 2026-11-18)
+
+Constitutional side landed in `MASTER/data/laws.yml` (statement + catalogue entries):
+
+- `TRUTHFUL_STATUS_causal_trace_is_evidence` — agent/council/`/fix` claims require replayable causal traces.
+- `TRUTHFUL_STATUS_profile_is_not_intent` — cost claims require current profile or measured budget.
+- `DRY` strengthened for semantic duplication and architectural tangles.
+- `SINGULARITY_architectural_tangle` — cycles / forbidden reach that force restatement of knowledge.
+- `KISS` strengthened: proven agent trajectories should compile to ordinary code.
+- `POLA` strengthened for agent/council behaviour and status surfaces.
+- `SOLID` strengthened for AI-generated code and continuous architecture checks.
+- `ROBUSTNESS_least_authority_tracing`, `ROBUSTNESS_immune_pattern`, `ROBUSTNESS_homeostasis`.
+
+Still open (implementation, not constitution):
+
+- [ ] Wire OpenTelemetry (traces + Profiles) and optional eBPF continuous profiling into MASTER runtime and `/fix` so every run can emit causal receipts and profiles.
+- [ ] Make council and agent entrypoints emit append-only causal traces (tool + reasoning + outcome) stored as evidence receipts; refuse PASS without them where the new Laws apply.
+- [ ] Add mechanical detectors / architecture mapping that surface semantic duplication and dependency tangles (continuous, not only on review).
+- [ ] Prototype immune-style recognition of previously seen failure signatures from `/fix` and production incidents.
+- [ ] Add a workstream path that, once a trajectory is proven, can compile it to deterministic Ruby (ReTrace-style) and retire the model from that path.
+- [ ] Run law catalogue preflight + focused tests after the above; update ratchets if any new hygiene debt appears.
+
 ## Stewardship
 
 Documentation reduction and decisive stewardship remain priorities one and two.
