@@ -170,8 +170,8 @@ class TestFixLoopCommitter < Minitest::Test
   end
 
   def test_public_contract_commit_is_blocked_without_its_document
-    write_file("api/routes.rb", "ROUTES = []\\n")
-    write_file("README.md", "# API contract\\n")
+    write_file("api/routes.rb", "ROUTES = []\n")
+    write_file("README.md", "# API contract\n")
     contract = Master::Fix::TaskContract.build(
       intent: "functional_change",
       scope: %w[api/routes.rb README.md],
@@ -198,8 +198,8 @@ class TestFixLoopCommitter < Minitest::Test
   end
 
   def test_public_contract_and_document_can_be_delivered_together
-    write_file("api/routes.rb", "ROUTES = [:health]\\n")
-    write_file("README.md", "# API contract\\n\\nGET /health\\n")
+    write_file("api/routes.rb", "ROUTES = [:health]\n")
+    write_file("README.md", "# API contract\n\nGET /health\n")
     contract = Master::Fix::TaskContract.build(
       intent: "functional_change",
       scope: %w[api/routes.rb README.md],
@@ -223,8 +223,8 @@ class TestFixLoopCommitter < Minitest::Test
   end
 
   def test_documentation_obligation_survives_a_worker_thread_without_thread_local_state
-    write_file("api/routes.rb", "ROUTES = []\\n")
-    write_file("README.md", "# API contract\\n")
+    write_file("api/routes.rb", "ROUTES = []\n")
+    write_file("README.md", "# API contract\n")
     contract = Master::Fix::TaskContract.build(
       intent: "functional_change",
       scope: %w[api/routes.rb README.md],
