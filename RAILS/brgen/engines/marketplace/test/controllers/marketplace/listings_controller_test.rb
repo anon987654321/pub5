@@ -95,6 +95,22 @@ class Marketplace::ListingsControllerTest < ActionDispatch::IntegrationTest
                   marketplace.listings_path(base.merge(from: "shop"))
   end
 
+  test "switching listing kind keeps search, locality and sort filters" do
+    params = {
+      kind: "goods", q: "bike", from: "person", category_id: @category.id,
+      condition: "good", min_price: "50", max_price: "900",
+      lat: "60.39", lng: "5.32", radius_km: "8", sort: "price_low"
+    }
+
+    get marketplace.listings_path, params: params
+    assert_response :success
+
+    Marketplace::Listing::KINDS.each do |kind|
+      assert_select "nav.listing-kinds a[href=?]",
+                    marketplace.listings_path(params.merge(kind: kind))
+    end
+  end
+
   test "the price floor hides what sits below it" do
     cheap = listing_for(@seller, "Paperback shelf", price_cents: 9_000)
     dear = listing_for(@seller, "Freeride ski 180", price_cents: 45_000)
