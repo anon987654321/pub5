@@ -802,8 +802,10 @@ class TestCommandRegistryDispatch < Minitest::Test
       "vps-deploy: started in tmux session pub5-deploy (mode=detach)\n", status)
 
     assert_includes result, "local deployment wait was cancelled"
-    assert_includes result, "remote deployment continues"
-    assert_includes result, "do not retry"
+    assert_includes result, "tmux session pub5-deploy was started"
+    assert_includes result, "completion, and public canary are unverified"
+    assert_includes result, "tmux has-session -t pub5-deploy"
+    refute_includes result, "remote deployment continues"
   end
 
   def test_deploy_summary_reports_remote_success_without_the_full_log

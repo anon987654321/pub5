@@ -879,13 +879,16 @@ module Master
       end
 
       def deploy_interrupted_summary(output, reason)
-        session = output.to_s[/vps-deploy: started in tmux session ([\w.-]+)/i, 1]
-        if session
-          "#{reason}; remote deployment continues in tmux session #{session}. Completion and public canary are unverified. " \
-            "Attach with: tmux attach -t #{session}. Log: ~/vps-deploy.log. Do not retry while that session exists."
-        else
-          "#{reason}; remote start state is unknown. Check tmux session pub5-deploy and ~/vps-deploy.log on vm23 before retrying."
-        end
+        text = output.to_s
+        started = text[/vps-deploy: started in tmux session ([\w.-]+)/i, 1]
+        existing = text[/vps-deploy: session ([\w.-]+) already running/i, 1]
+        session = started || existing
+        return "#{reason}; remote start state is unknown. Check tmux has-session -t pub5-deploy and ~/vps-deploy.log on vm23 before retrying." unless session
+
+        state = existing ? "was already running" : "was started"
+        "#{reason}; vm23 reported that tmux session #{session} #{state}. Its current state, completion, and public canary are unverified. " \
+          "Check with: tmux has-session -t #{session}. If active, attach with: tmux attach -t #{session}. " \
+          "Inspect ~/vps-deploy.log before retrying."
       end
 
       # /android and /ios are the public mobile onboarding entrypoints. The
