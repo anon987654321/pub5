@@ -22,7 +22,7 @@
 #   export PUB5_ZSH="$PWD/.tools/prefix/bin/zsh"
 #
 # That triple is the whole difference between "the suite is red here" and "the
-# suite runs here"; MASTER/docs/ARCHITECTURE.md has the context.
+# suite runs here"; MASTER/lib/convergence/architecture.rb reports the live tree inventory.
 
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
