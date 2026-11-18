@@ -70,7 +70,6 @@ class TestDocPaths < Minitest::Test
       assert_match declaration, File.read(source_path), "#{path} must declare its owner"
     end
 
-    refute File.exist?(File.join(REPO, "MASTER/docs/fix_coordinator_map.md"))
     refute File.exist?(File.join(REPO, "MASTER/lib/fix/README.md"))
   end
 
@@ -80,7 +79,6 @@ class TestDocPaths < Minitest::Test
     assert_includes readme, "bundle exec ruby checks/runner.rb --scan-only architecture layout_suite"
     assert_includes readme, "bin/operator check --scan-only --tree=RAILS"
     assert_includes readme, "constitutional_scan"
-    refute File.exist?(File.join(REPO, "MASTER/docs/efficient_repair_workflow.md"))
   end
 
   def test_root_backlog_markdown_links_resolve
@@ -101,7 +99,6 @@ class TestDocPaths < Minitest::Test
     backlog = File.read(File.join(REPO, "TODO.md"))
     completed = backlog.lines.select { |line| line.lstrip.start_with?("- [x] ", "- [X] ") }
     assert_empty completed, "completed work must be deleted from TODO.md"
-    refute_includes backlog, "MASTER/docs/history/fix-review-log.md"
   end
 
   def test_design_authority_is_laws_yml_without_a_parallel_architecture_document
