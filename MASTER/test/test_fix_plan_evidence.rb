@@ -30,11 +30,11 @@ class TestFixPlanEvidence < Minitest::Test
     FileUtils.remove_entry(@root) if @root && Dir.exist?(@root)
   end
 
-  def capture(files: [@ruby, @docs], laws: [LawStub.new("ROBUSTNESS")],
+  def capture(files: [@ruby, @docs], target: @root, laws: [LawStub.new("ROBUSTNESS")],
                adapters: { whole_file: "registered" }, excluded_paths: {}, task_contract: nil)
     Master::Fix::FixPlan.capture(
       root: @root,
-      target: @root,
+      target:,
       files:,
       laws:,
       excluded: {
@@ -134,6 +134,42 @@ class TestFixPlanEvidence < Minitest::Test
     assert_raises(ArgumentError) { capture(files: [outside]) }
   ensure
     File.delete(outside) if outside && File.exist?(outside)
+  end
+
+  def test_plan_rejects_sources_through_a_symlinked_parent
+    Dir.mktmpdir("fix-plan-external") do |outside|
+      external_file = File.join(outside, "private.rb")
+      File.write(external_file, "puts :outside\\n")
+      linked_directory = File.join(@root, "external")
+      File.symlink(outside, linked_directory)
+
+      error = assert_raises(ArgumentError) do
+        capture(files: [File.join(linked_directory, "private.rb")])
+      end
+      assert_match(/symlink/, error.message)
+    end
+  end
+
+  def test_plan_rejects_a_symlinked_target_directory
+    Dir.mktmpdir("fix-plan-target") do |outside|
+      linked_target = File.join(@root, "target-link")
+      File.symlink(outside, linked_target)
+
+      error = assert_raises(ArgumentError) { capture(target: linked_target) }
+      assert_match(/symlink/, error.message)
+    end
+  end
+
+  def test_plan_rejects_hard_linked_sources
+    Dir.mktmpdir("fix-plan-hardlink") do |outside|
+      external_file = File.join(outside, "outside.rb")
+      linked_file = File.join(@root, "linked.rb")
+      File.write(external_file, "puts :shared\\n")
+      File.link(external_file, linked_file)
+
+      error = assert_raises(ArgumentError) { capture(files: [linked_file]) }
+      assert_match(/hard-linked/, error.message)
+    end
   end
 
   def test_plan_rejects_empty_or_blank_law_identity
