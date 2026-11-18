@@ -383,6 +383,11 @@ module Master
           end
           verified = within_file_budget(violation) { reflexion_verify(violation, source) }
           return :file_timeout if @file_timed_out
+          Master::Trace::CausalTrace.step(
+            kind: :decision, name: "repair.reflexion",
+            input: { law: @law.id, candidate_sha256: Digest::SHA256.hexdigest(source) },
+            output: { verified: verified == true, reason_code: (Thread.current[:reflexion_reason].to_s[0, 120] unless verified) },
+          )
           unless verified
             RunLedger.reject("reflexion_unsafe", file: violation[:file], law: @law.id, bus: @bus)
             reason = Thread.current[:reflexion_reason].to_s
@@ -398,10 +403,21 @@ module Master
           end
 
           applied = apply(violation[:file], verified, violation)
+          Master::Trace::CausalTrace.step(
+            kind: :tool_result, name: "repair.apply",
+            input: { law: @law.id, path: violation[:file].to_s.delete_prefix("#{@root}/") },
+            output: { outcome: applied == :stale ? "stale" : (applied ? "applied" : "rejected") },
+          )
           return :skip_fingerprint if applied == :stale
           return :rejected unless applied
 
-          commit_applied_fix(violation)
+          delivered = commit_applied_fix(violation)
+          Master::Trace::CausalTrace.step(
+            kind: :tool_result, name: "repair.delivery",
+            input: { path: violation[:file].to_s.delete_prefix("#{@root}/") },
+            output: { outcome: delivered.to_s },
+          )
+          delivered
         end
 
         # One fix, one commit, one push — before the next violation is touched.
