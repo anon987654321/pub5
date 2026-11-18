@@ -4,7 +4,7 @@ Restored source-only archive. This is the standalone food-rescue and redistribut
 
 ## Provenance
 
-Restored on 2026-11-13 from `anon987654321/pub4` commit `c11f9e7d91258044658e1320c3030a1d51f9fd5d` (2026-07-12), the complete parent tree immediately before the app was removed. The later production retirement is recorded in `RAILS/apps.yml` and `MASTER/docs/history/recovery/legacy_manifest.yml`.
+Restored on 2026-11-13 from `anon987654321/pub4` commit `c11f9e7d91258044658e1320c3030a1d51f9fd5d` (2026-07-12), the complete parent tree immediately before the app was removed. The later production retirement is recorded in `RAILS/apps.yml` and `MASTER/data/recovery/legacy_manifest.yml`.
 
 ## Pub5 integration
 
