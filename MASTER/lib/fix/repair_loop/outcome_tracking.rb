@@ -109,7 +109,10 @@ module Master
           ToolBreaker.record(law, violation, state, result)
           record_failure_antigen(violation, state, result)
           after_usd, after_tokens = RunBudget.run_spend
-          RunBudget.note_law_cost(law, after_usd - usd, after_tokens - tokens)
+          cost_usd = [after_usd - usd, 0.0].max
+          cost_tokens = [after_tokens - tokens, 0].max
+          RunBudget.note_law_cost(law, cost_usd, cost_tokens)
+          record_budget_antigen(violation, state, cost_usd, cost_tokens, law:) if RunBudget.law_limit_exceeded?(law)
           result
         end
 
@@ -146,6 +149,46 @@ module Master
           Master::Ground::Swallow.log(error, context: "repair_loop.record_failure_antigen", event_bus: @bus, law: @law.id)
         end
 
+        # Crossing the existing per-Law budget is a measured high-cost boundary,
+        # not an invented global threshold. Remember the exact source revision
+        # so a changed file or new evidence can reopen the decision.
+        def record_budget_antigen(violation, source_sha256, cost_usd, cost_tokens, law:)
+          return unless source_sha256.to_s.match?(/\A[0-9a-f]{64}\z/)
+
+          repo_root = File.expand_path(@root)
+          absolute = File.expand_path(violation[:file].to_s, repo_root)
+          return unless absolute.start_with?(repo_root + File::SEPARATOR)
+
+          boundary = absolute.delete_prefix(repo_root + File::SEPARATOR)
+          defect_class = "high_cost_law_budget_exceeded"
+          store = AntigenStore.new(root: repo_root)
+          return if store.known?(law:, boundary:, defect_class:, source_sha256:)
+
+          trace_context = Master::Trace::CausalTrace.current
+          usage = if trace_context
+                    Master::Trace::CausalTrace.provider_usage(root: repo_root, run_id: trace_context[:run_id])
+                  else
+                    {}
+                  end
+          store.record(
+            law:, boundary:, defect_class:,
+            evidence: {
+              source_sha256:, outcome: "high_cost_law_budget_exceeded", attempts: 1,
+              run_id: trace_context && trace_context[:run_id],
+              cost_usd: cost_usd.to_f, cost_tokens: cost_tokens.to_i,
+              cost_basis: "existing_per_law_run_budget",
+              usage_status: usage[:status],
+              exact_receipts: usage[:exact_receipts].to_i, exact_amount: usage[:exact_amount].to_f,
+              exact_tokens: usage[:exact_tokens].to_i,
+              estimated_records: usage[:estimated_records].to_i, estimated_amount: usage[:estimated_amount].to_f,
+              estimated_tokens: usage[:estimated_tokens].to_i,
+            },
+            note: "repair attempt crossed its Law budget",
+            severity: "error",
+          )
+        rescue StandardError => error
+          Master::Ground::Swallow.log(error, context: "repair_loop.record_budget_antigen", event_bus: @bus, law:)
+        end
         def protected_target?(violation)
           AutofixGuard.protected_reason(File.expand_path(violation[:file].to_s, @root), root: @root)
         end
