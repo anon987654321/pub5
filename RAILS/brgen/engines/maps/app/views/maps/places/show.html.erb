@@ -39,7 +39,7 @@
     <dd><%= @place.latitude %>, <%= @place.longitude %></dd>
   </dl>
 
-  <p>
+  <div class="place-actions">
     <%= link_to t("maps.open_in_map"),
         "https://www.openstreetmap.org/?mlat=#{@place.latitude}&mlon=#{@place.longitude}#map=16/#{@place.latitude}/#{@place.longitude}",
         class: "button", target: "_blank", rel: "noopener" %>
@@ -53,10 +53,10 @@
           <%= f.submit t("maps.check_in"), class: "button" %>
         <% end %>
       <% else %>
-        <p><%= t("maps.checked_in_recently") %></p>
+        <p class="place-check-in-status"><%= t("maps.checked_in_recently") %></p>
       <% end %>
     <% end %>
-  </p>
+  </div>
 
   <% # The section shows at most eight of each, so read exactly that and branch
      # on the loaded rows - any? + limit(8).each asked the database twice. %>
