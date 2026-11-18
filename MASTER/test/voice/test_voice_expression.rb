@@ -51,6 +51,15 @@ class TestExpression < Minitest::Test
     assert plan.last[:t] >= 0
   end
 
+  def test_eager_visemes_move_faster_than_neutral
+    text = "Hello there."
+    neutral = Master::Voice::Expression.viseme_plan(text, style: :normal)
+    eager = Master::Voice::Expression.viseme_plan(text, style: :eager)
+
+    assert_equal neutral.length, eager.length
+    assert_operator eager.sum { |frame| frame[:ms] }, :<, neutral.sum { |frame| frame[:ms] }
+  end
+
   def test_viseme_stream_includes_duration
     stream = Master::Voice::Expression.viseme_stream("open", style: :calm)
     assert stream[:viseme_plan].is_a?(Array)
