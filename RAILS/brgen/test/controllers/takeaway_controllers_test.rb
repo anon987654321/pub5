@@ -202,6 +202,24 @@ class TakeawayControllersTest < ActionDispatch::IntegrationTest
     assert_select "#menu .deal-card input.qty-field[name=?]", "takeaway_order[items][#{@soup.id}]"
   end
 
+  test "cuisine and sort controls keep the restaurant location search" do
+    host! "markedsplass.brgen.no"
+    search = {
+      q: "suppe", cuisine: "Norwegian", lat: "60.39", lng: "5.32",
+      radius_km: "12", sort: "delivery_fee"
+    }
+
+    get "/food", params: search
+
+    assert_response :success
+    assert_select "nav.deal-cats a[href=?]",
+                  takeaway.restaurants_path(search.except(:cuisine))
+    assert_select "nav.deal-cats a[href=?]",
+                  takeaway.restaurants_path(search)
+    assert_select "nav.store-pills a[href=?]",
+                  takeaway.restaurants_path(search.merge(sort: "minimum_order"))
+  end
+
   test "restaurant discovery sorts by recorded delivery fee and minimum order" do
     low_fee = Takeaway::Restaurant.create!(
       user: @owner, name: "Low fee #{SecureRandom.hex(3)}", address: "Fee Street 1",
