@@ -9,7 +9,7 @@ require_relative "../lib/fix/rename_sweep"
 class TestFileRename < Minitest::Test
   PARTIAL = "RAILS/__shared/app/assets/stylesheets/_zen_thing.scss"
   APP = "RAILS/amber/app/assets/stylesheets/application.scss"
-  DOC = "RAILS/docs/notes.md"
+  DOC = "RAILS/test/fixtures/notes.md"
 
   # Rules unchanged by a rename: every stylesheet's text minus its load lines.
   SAME_RULES = lambda do |root|
