@@ -87,6 +87,17 @@ class TestCLI < Minitest::Test
     assert_same @container, @cli.container
   end
 
+  def test_q_command_directly_points_to_the_canonical_session_exit_commands
+    output = []
+    @cli.define_singleton_method(:print_terminal_output) do |message, mode:|
+      output << [message, mode]
+    end
+
+    @cli.send(:refuse_unknown_slash_command, "/q")
+
+    assert_equal [["unknown command: /q - use /quit or /exit to leave the current MASTER session", :error]], output
+  end
+
   def test_scan_report_uses_inverted_pyramid_order
     findings = [
       { law: "STYLE", line: 2, message: "style issue" },
