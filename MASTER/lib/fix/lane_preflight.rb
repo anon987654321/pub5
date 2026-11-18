@@ -35,7 +35,8 @@ module Master
       def check(agent:, env: ENV)
         return unless agent.class.method_defined?(:model_for)
 
-        jury = Master::Review::Consensus.jury_readiness
+        router = agent.model_router if agent.respond_to?(:model_router)
+        jury = Master::Review::Consensus.jury_readiness(router:)
         return refuse_jury(jury) unless jury.ready?
 
         rows = routes(agent)
