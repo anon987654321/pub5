@@ -166,6 +166,10 @@ end
     assert_includes summary, "fix-receipt0: done"
     assert_includes summary, "run=#{started.fetch("run_id")}"
     refute_includes summary, "controlled adapter receipt"
+
+    loop.clear_terminal_receipt_identity
+    assert_nil loop.terminal_receipt
+    assert_includes loop.terminal_receipt_summary, "INCONCLUSIVE (verified terminal receipt unavailable)"
   end
 
   def test_convergence_accepts_non_finite_baseline_without_coercion_crash
