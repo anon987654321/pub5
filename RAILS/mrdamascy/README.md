@@ -106,9 +106,9 @@ unknown key is refused. Change a dish's recipe, and its list with it.
 
 The restaurant's original logo assets are operator-owned originals. Keep them
 byte-for-byte; do not redraw or replace them. Generated dish photographs have
-provenance sidecars in `app/assets/images/food/provenance.json`. App captures
-that remain useful are kept under `screenshots/`; historical Webflow reference
-material is not part of the active source tree.
+provenance sidecars in `app/assets/images/food/provenance.json`. Current app
+screenshots and the original Webflow reference captures are grouped under
+`screenshots/`.
 
 The orange Vipps wordmark in `app/assets/images/vipps/vipps-wordmark.svg` is
 an unmodified copy of the asset published in the Vipps WooCommerce merchant
