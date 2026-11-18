@@ -41,6 +41,7 @@ Integrated into the existing `/fix` owners:
 - `MASTER/lib/review/reference_graph.rb` — resolved source dependency cycles are detected as strongly connected components; fan-in/fan-out hotspots and deterministic cycle digests are reported to `/fix`.
 - `MASTER/lib/fix/antigen_store.rb` — cycle signatures, source-bound repair failures, and configured per-Law budget crossings are stored once, with metadata-only evidence, exact/estimated cost summaries and private filesystem modes. Changed source bytes reopen a failed repair decision.
 - `MASTER/lib/fix/morphological_score.rb` and `MASTER/lib/fix/architecture_exploration/` — graph cycles and matching antigens inform candidate prompts and morphology previews. Unknown dimensions receive no points; incomplete probes cannot win. The planning-only architecture tournament remains the selector until probes are actually executed and measured.
+- `MASTER/lib/fix/protocol.rb` — the machine-readable `review` stage now has an external-review intake contract: normalize and deduplicate recommendations, ground every claim in current source/Law/test evidence, classify every disposition, execute authorised reversible changes, and preserve only genuine external blockers.
 
 Evidence-gated / host-bound limitations (not claimed as complete):
 
