@@ -110,9 +110,14 @@ the uploaded files, and `bin/dr-pull --drill` restores the newest pull into a
 scratch directory and reads it back. A healed symptom must not stay quiet. `usr/local/bin/pub4-alert` records
 durable fault transitions in `/var/log/pub4-alerts.log`; its minute CPU watcher
 samples five one-second `vmstat` intervals, alerts on sustained 80% CPU (or
-critical 95%), and writes a heartbeat that the five-minute watch checks. That
-same watch records a uniquely keyed alert when a fleet deploy receipt remains
-pending after its owner exits or its PID is reused; unreadable owner identity also raises a separate alert. `bin/vps-state --json` includes the
+critical 95%), and writes a heartbeat that the five-minute watch checks. The
+minute sample also captures the three busiest process identities (CPU, PID,
+PPID, PGID, user, state and CPU time) without command arguments or environments.
+OpenBSD's `Z` process state distinguishes zombies from running workers. The
+monitor does not kill processes automatically; operators can inspect the exact
+process group before taking action. The same watch records a uniquely keyed
+alert when a fleet deploy receipt remains pending after its owner exits or its
+PID is reused; unreadable owner identity also raises a separate alert. `bin/vps-state --json` includes the
 pending receipt IDs, stage, pinned SHA, original service snapshot and log path.
 The monitoring view is capped at the 500 newest receipt files / 100 pending runs.
 It walks the directory once and keeps only a 500-name min-heap in memory; the

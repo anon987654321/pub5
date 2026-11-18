@@ -139,7 +139,7 @@ class TestPub4Alert < Minitest::Test
     lines = ["echo 'procs memory page disk traps cpu'", "echo 'r b avm fre flt re pi po fr sr x y z us sy id'"]
     6.times { lines << "echo '#{row}'" }
     fake(dir, "vmstat", lines.join("\n"))
-    fake(dir, "ps", "echo 'PCPU PID PPID USER STAT TIME COMMAND'; echo '84.0 123 1 root R 00:05 ruby'; echo '9.0 99 1 _nsd S 00:02 nsd'")
+    fake(dir, "ps", "echo 'PCPU PID PPID PGID USER STAT TIME COMMAND'; echo '84.0 123 1 120 root R 00:05 ruby'; echo '9.0 99 1 120 _nsd S 00:02 nsd'")
   end
 
   def test_cpu_watch_needs_three_high_busy_samples_and_records_process_identity_without_arguments
@@ -153,9 +153,9 @@ class TestPub4Alert < Minitest::Test
       _, status = run_alert(dir, "cpu-watch")
       assert_equal 0, status
       assert_includes log(dir), "cpu-saturation CPU busy 85%"
-      assert_includes log(dir), "top processes (CPU/PID/PPID/user/state/time/executable; args hidden):"
-      assert_includes log(dir), "84.0 123 1 root R 00:05 ruby"
-      assert_includes log(dir), "9.0 99 1 _nsd S 00:02 nsd"
+      assert_includes log(dir), "top processes (CPU/PID/PPID/PGID/user/state/time/executable; args hidden):"
+      assert_includes log(dir), "84.0 123 1 120 root R 00:05 ruby"
+      assert_includes log(dir), "9.0 99 1 120 _nsd S 00:02 nsd"
       refute_includes log(dir), "ruby -"
       assert File.file?(File.join(dir, "cpu-pressure")), "active CPU pressure must be visible to resource_guard"
       assert File.file?(File.join(dir, "state", "cpu-watch.seen")), "successful sampling must refresh the heartbeat"
