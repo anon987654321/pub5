@@ -69,17 +69,16 @@ module Operator
 
       def advice(root:, git: ->(*argv) { Master::Io::Exec.capture2(*argv, err: File::NULL).first.to_s.strip })
         current = git.call("git", "-C", root, "rev-parse", "--short", "HEAD")
-        previous = git.call("git", "-C", root, "rev-parse", "--short", "HEAD@{1}")
-        previous = "unknown" if previous.empty?
         [
           "",
           "rollback (manual; the canary changes nothing):",
-          "  deployed now: #{current.empty? ? 'unknown' : current}   previous: #{previous}",
-          "  vps-deploy takes no SHA, and its git pull --ff-only would return to origin/main, so the",
-          "  rollback is a revert on main followed by a deploy, from the dev machine:",
-          "    git revert --no-edit #{previous}..#{current.empty? ? 'HEAD' : current} && git push origin main",
+          "  source checkout HEAD: #{current.empty? ? 'unknown' : current}",
+          "  HEAD@{1} is not proof of the last known-good deployment and is deliberately not used.",
+          "  Inspect /var/db/pub5/last_deploy_<app>.json and the matching deploy-run receipt",
+          "  to identify the affected app's last known-good SHA before choosing a rollback.",
+          "  Make a reviewed, app-scoped revert on main, push it, then redeploy that app:",
           "    bin/operator vps deploy <app> --remote",
-          "  per-app stamps: /var/db/pub5/last_deploy_<app>.json on the box",
+          "  Do not infer a revert range from the local Git reflog.",
         ]
       end
     end
