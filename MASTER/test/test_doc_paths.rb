@@ -179,7 +179,6 @@ class TestDocPaths < Minitest::Test
     BIZ/research/typographic-styles.md
     BIZ/tools/future_healthcare_os_proposal.md
     BIZ/tools/future_nato_weapons_proposal.md
-    MASTER/docs/agent_wishlist.md
     MASTER/docs/design_sweep.md
     MASTER/docs/openbsd-rust.md
     MASTER/docs/session-2026-11-08.md
