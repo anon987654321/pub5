@@ -75,6 +75,18 @@ class TestPolishLens < Minitest::Test
     assert_equal "DENSITY", findings.first.law
   end
 
+  def test_pointer_symmetry_waits_until_both_pointers_are_in_scope
+    File.write("#{@root}/GEMINI.md", "one\n")
+    File.write("#{@root}/GLM.md", "one\ntwo\n")
+
+    findings = Operator::PolishLens.findings_for_paths(
+      root: @root,
+      paths: ["#{@root}/GEMINI.md"]
+    )
+
+    assert_empty findings
+  end
+
   def test_findings_for_paths_refuses_symlinks
     outside = File.join(Dir.tmpdir, "polish-outside-#{Process.pid}")
     File.write(outside, "outside")
