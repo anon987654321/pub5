@@ -21,8 +21,7 @@ four generated files, one complete policy copy.
 
 ## First-run quickstart
 
-Use `MASTER/docs/COLD_START.md` for the complete first-run sequence. The
-essential checks are:
+The first-run path is executable and kept beside the runtime:
 
 ```sh
 MASTER/bin/dev-bootstrap
