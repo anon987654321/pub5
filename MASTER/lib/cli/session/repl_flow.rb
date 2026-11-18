@@ -362,9 +362,13 @@ module Master
 
         def refuse_unknown_slash_command(stripped)
           name = stripped.sub(%r{\A/}, "").split(/\s+/, 2).first.to_s.downcase
-          suggestion = Stages::Route.suggestion_for(name, @container.fetch(:commands, {}).keys)
-          message = "unknown command: /#{name}"
-          message += suggestion ? " - did you mean /#{suggestion}?" : " - /help lists the surface"
+          if name == "q"
+            message = "unknown command: /q - use /quit or /exit to leave the current MASTER session"
+          else
+            suggestion = Stages::Route.suggestion_for(name, @container.fetch(:commands, {}).keys)
+            message = "unknown command: /#{name}"
+            message += suggestion ? " - did you mean /#{suggestion}?" : " - /help lists the surface"
+          end
           print_terminal_output(message, mode: :error)
           nil
         end
