@@ -158,7 +158,7 @@ module Master
 
         relative = repo_relative(target)
         relative == "RAILS" || relative.start_with?("RAILS/") ||
-          relative == "MASTER/web" || relative.start_with?("MASTER/web/")
+          relative == "MASTER" || relative == "MASTER/web" || relative.start_with?("MASTER/web/")
       end
 
       def run(target:, files:, pass:)
@@ -347,7 +347,7 @@ module Master
       def selected_surfaces(target:, pass:, cap: MAX_SURFACES)
         rows = Deploy::GeometryProbe.surfaces(root: repo_root)
         relative = repo_relative(target)
-        master = relative == "MASTER/web" || relative.start_with?("MASTER/web/")
+        master = relative == "MASTER" || relative == "MASTER/web" || relative.start_with?("MASTER/web/")
         app_names = rows.map(&:app).uniq - ["master"]
         target_app = relative.delete_prefix("RAILS/").split("/").first unless relative == "RAILS"
         target_app = nil unless app_names.include?(target_app)
@@ -409,7 +409,7 @@ module Master
 
       def fallback_sources(target)
         base = repo_relative(target)
-        root = base.start_with?("MASTER/web") ? File.join(repo_root, "MASTER/web") : File.join(repo_root, "RAILS")
+        root = base == "MASTER" || base.start_with?("MASTER/web") ? File.join(repo_root, "MASTER/web") : File.join(repo_root, "RAILS")
         Dir.glob(File.join(root, "**", "*"))
            .select { |path| source_file?(path) }
            .sort_by { |path| [path.include?("stylesheets") ? 0 : 1, path.length, path] }
