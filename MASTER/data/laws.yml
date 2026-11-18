@@ -286,12 +286,13 @@ ROBUSTNESS_morphological_exploration:
 ROBUSTNESS_antigen_memory:
   parent: ROBUSTNESS
   statement: >
-    Failure signatures, council vetoes and high-cost trajectories from /fix
-    or production are retained as antigens. Subsequent probes and gates must
-    recognise matching defect classes at the same high-risk boundary, then
-    down-weight or refuse them unless new evidence shows the pattern is
-    resolved. Recognition without durable memory, or memory that is never
-    consulted, is incomplete robustness.
+    Failed repair proposals and council vetoes are retained against their
+    source revision; resolved dependency cycles and /fix trajectories that
+    cross a configured per-Law budget are retained as structural or cost
+    antigens. Subsequent probes and gates must recognise matching defect
+    classes at the same high-risk boundary, then down-weight or refuse them
+    unless new evidence shows the pattern is resolved. Recognition without
+    durable memory, or memory that is never consulted, is incomplete robustness.
   resolution: review
 
 ROBUSTNESS_sclerotium:
