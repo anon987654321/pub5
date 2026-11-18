@@ -315,8 +315,8 @@ workstreams:
     title: >-
       A public contract is paired with its exact reader-facing document, and
       the delivery gate requires both paths in the same commit
-    implementation: MASTER/data/task_contract.yml + MASTER/lib/fix/task_contract.rb + MASTER/lib/fix/fix_loop/committer.rb + MASTER/lib/fix/kernel/convergence_adapter.rb
-    proof: MASTER/test/test_task_contract.rb and MASTER/test/test_fix_loop_committer.rb cover validation, same-commit refusal and worker-thread delivery; focused runs remain NOT_RUN
+    implementation: MASTER/data/task_contract.yml + MASTER/lib/fix/task_contract.rb + MASTER/lib/fix/fix_plan.rb + MASTER/lib/fix/fix_loop/committer.rb + MASTER/lib/fix/kernel/convergence_adapter.rb + MASTER/AGENTS.md
+    proof: MASTER/test/test_task_contract.rb, MASTER/test/test_fix_plan_evidence.rb and MASTER/test/test_fix_loop_committer.rb cover pair validation, FixPlan persistence/digest, repository-root path mapping, split-delivery refusal and worker-thread enforcement; focused runs remain NOT_RUN
   - id: ops_alert_channel
     state: missing
     title: >-
