@@ -14,6 +14,9 @@ const DRAFTS = [
   ['nordvakt', 'NORDVAKT Arctic Systems (arbeidsnavn)', 'maritim situasjonsforståelse og dataintegrasjon i nordområdene', 'Maritime + Space'],
   ['norwegianfinancial', 'Norwegian Financial (arbeidsnavn)', 'partnerbasert digitalbankplattform, PWA og åpen bank', 'FinTech'],
 ];
+const GUIDES = [
+  ['ragnhild/ragnhild_legater', 'Ragnhild Mæhle — søknadsveiledning', 'Kildebasert plan for utstillingsstøtte og kunstnerstipend; veiledning, ikke en innsendt søknad eller et tilsagn'],
+];
 const ARCHIVE = [
   ['speis', 'SPEIS'],
   ['future_nato_weapons', 'Fremtidens NATO-våpen'],
@@ -50,6 +53,13 @@ for (const [key] of ARCHIVE) requirePair(key);
 for (const [key] of DRAFTS) {
   if (!existsSync(`${BIZ_ROOT}/tools/${key}.html`)) throw new Error(key + ': draft source missing');
 }
+for (const [key] of GUIDES) {
+  for (const ext of ['html', 'pdf']) {
+    if (!existsSync(`${BIZ_ROOT}/${key}.${ext}`)) {
+      throw new Error(key + ': published guidance ' + ext + ' missing');
+    }
+  }
+}
 
 const activeRows = ACTIVE.map(([key, title, description, tag]) => {
   const ask = fundingAsk(`${BIZ_ROOT}/${key}/${key}.html`);
@@ -63,6 +73,8 @@ const draftRows = DRAFTS.map(([key, title, description, tag]) => {
 }).join(String.fromCharCode(10));
 const archiveRows = ARCHIVE.map(([key, title]) =>
   `  <li><a href="${key}/${key}.html">${title}</a></li>`).join(String.fromCharCode(10));
+const guideRows = GUIDES.map(([path, title, description]) =>
+  `  <li><a href="${path}.html">${title}</a> — ${description}</li>`).join(String.fromCharCode(10));
 const activeAsk = ACTIVE.reduce((sum, [key]) => sum + fundingAsk(`${BIZ_ROOT}/${key}/${key}.html`), 0);
 const draftAsk = DRAFTS.reduce((sum, [key]) => sum + fundingAsk(`${BIZ_ROOT}/tools/${key}.html`), 0);
 
@@ -102,6 +114,11 @@ ${activeRows}
   <p>To nye konsepter er under arbeid. Foreløpig Innovasjon Norge-forespørsel i utkastene: NOK ${formatNok(draftAsk)}. Beløpene er ikke innsendte søknader, tilsagn eller bekreftet støtteberettigelse.</p>
   <ol>
 ${draftRows}
+  </ol>
+  <h2>Søknadsveiledning</h2>
+  <p>Praktisk forberedelsesmateriale for et konkret kunstprosjekt. Veiledningen er ikke en innsendt søknad, et vedtak eller en bekreftelse på støtteberettigelse.</p>
+  <ol>
+${guideRows}
   </ol>
   <h2>Historisk arkiv</h2>
   <p>SPEIS og Fremtidens NATO-våpen er kildene til NORDVAKT. Norwegian Hedge er bevart som et eldre kvantkonsept, ikke som bankens aktive plan.</p>
