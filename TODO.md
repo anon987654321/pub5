@@ -651,9 +651,6 @@ measure is already owned by the Bymorgen item above.
   The operator.env source-path test and live vm23 permission run remain open. R8 DesignRun candidates now use the existing Transaction journal, check exact source and candidate hashes across measurement and retention, and receive a second render/judge immediately before delivery. Interrupted open candidates recover on the next design run and rebuild affected app CSS; recovery fails closed when a restored Rails source has no available CSS builder. Definite refusals roll back; ambiguous deliveries retain their manifest for recovery. Focused regressions are authored but NOT_RUN. Full-run/post-commit verification rollback and isolation from non-transactional readers remain open.
 - [ ] **Local Claude hooks.** On macOS, launch a real Claude Code session and
   verify project hooks load through the `.claude` symlink.
-- [ ] **AI3 recovery.** Compare recovery manifests with recoverable historical
-  Git/archive objects; map unique behavior to current owners and state what
-  is actually absent. Do not restore a former tree wholesale.
 - [ ] **Account-wide transcript coverage.** Resume the earlier archive review
   only when an official ChatGPT export is supplied. Preserve source IDs and
   timestamps, deduplicate handoffs and do not claim all conversations were
