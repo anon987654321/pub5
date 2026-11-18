@@ -82,7 +82,7 @@ class TestFixStructuralReview < Minitest::Test
   def test_structural_review_caps_valid_findings_and_explains_the_excess
     proposals = Array.new(Master::Fix::TreeProposals::MAX + 1) do |index|
       "FINDING: odd | lonely/only.rb | NONE | finding #{index}"
-    end.join("\\n")
+    end.join("\n")
     agent = FakeAgent.new(proposals)
 
     result = Review.new(agent:, root: @root).call(target: @root)
@@ -94,12 +94,12 @@ class TestFixStructuralReview < Minitest::Test
 
   def test_dropped_proposal_labels_are_sanitized_and_bounded
     hostile_path = "lib/\u001b[31msecret.rb"
-    agent = FakeAgent.new("FINDING: odd | #{hostile_path} | NONE | not in tree\\n")
+    agent = FakeAgent.new("FINDING: odd | #{hostile_path} | NONE | not in tree\n")
 
     result = Review.new(agent:, root: @root).call(target: @root)
 
     assert_equal 1, result.dropped
-    refute_match(/[\\x00-\\x1f\\x7f]/, result.summary)
+    refute_match(/[\x00-\x1f\x7f]/, result.summary)
     assert_operator result.summary.bytesize, :<, 520
   end
 
