@@ -209,7 +209,9 @@ module Operator
     def pointer_symmetry(root, paths: nil)
       names = %w[GEMINI.md GLM.md]
       names.select! { |name| paths.include?(File.join(root, name)) } if paths
-      return [] if paths && names.empty?
+      # A symmetry check observes both documents. Do not read the other pointer
+      # when a repair pass owns only one of them.
+      return [] if paths && names.size < 2
 
       counts = %w[GEMINI.md GLM.md].map do |n|
         f = File.join(root, n)
