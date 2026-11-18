@@ -2,6 +2,7 @@
 
 require_relative "llm_dispatcher"
 require_relative "consensus"
+require_relative "../trace/causal_trace"
 require_relative "prompt_filter"
 require_relative "agent/model_selector"
 require_relative "agent/model_override"
@@ -71,6 +72,7 @@ module Master
         result = retry_on_broke_lane(result, selected_model, messages, image:, temperature:, promote: true)
         record_capability_outcome(operation:, selected_model:, result:)
         remember_answer_model(result, selected_model)
+        record_causal_model_turn(operation:, selected_model:, result:)
         raise_failure(result)
         result.to_s
       end
@@ -88,6 +90,7 @@ module Master
         result = retry_on_broke_lane(result, chosen, messages, system: sys, image:, temperature:, promote: model.nil?) if failover
         record_capability_outcome(operation:, selected_model: chosen, result:)
         remember_answer_model(result, chosen)
+        record_causal_model_turn(operation:, selected_model: chosen, result:)
         raise_failure(result)
         result.to_s
       end
@@ -120,6 +123,24 @@ module Master
               .reject(&:empty?)
               .reject { |id| id.end_with?(":cloud", "-cloud") }
               .uniq
+      end
+
+      # /fix traces model turns by identity and outcome only. Prompts and
+      # generated source remain transient and are never copied into the trace.
+      def record_causal_model_turn(operation:, selected_model:, result:)
+        effective_model = result.respond_to?(:model) && result.model ? result.model : selected_model
+        successful = result.is_a?(Master::Result::Ok)
+        Master::Trace::CausalTrace.step(
+          kind: :model_turn,
+          name: operation || "agent.ask",
+          input: { model: effective_model.to_s, operation: operation.to_s },
+          output: {
+            status: successful ? "success" : "failure",
+            category: (result.category.to_s if result.respond_to?(:category)),
+          },
+        )
+      rescue StandardError
+        nil
       end
 
       # A hop in retry_on_broke_lane answers with the fallback model, not the
