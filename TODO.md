@@ -270,8 +270,10 @@ are not new implementation requests.
   model router and refuses /fix before routes or repair budget are entered
   unless the live probe returns PASS. FAIL and unmeasured/timeouts both refuse,
   including under the free-lane opt-in. Doctor tests cover passing, insufficient
-  quorum and timed-out probes; preflight regressions cover fail-closed admission
-  and router reuse. Source and tests landed, NOT_RUN on the installed Ruby; keep
+  quorum and timed-out probes; direct consensus tests now pin pass, fail,
+  pending-probe and undersized-pool verdicts. Preflight regressions cover
+  fail-closed admission, router reuse and free-lane-opt-in bypass. Source and
+  tests landed, NOT_RUN on the installed Ruby; keep
   open until focused tests and a live doctor probe run.
 - [ ] **Law reload diagnosis.** At the existing Law.reload boundary, record the
   reload reason, resolved law root and changed source paths. Reproduce the
