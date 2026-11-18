@@ -15,7 +15,6 @@ class SurfaceMicroRefinementContractTest < Minitest::Test
            "the unvalidated 288-property experiment must not remain a scanned stylesheet"
   end
 
-
   def test_shared_stacks_keep_the_experimental_surface_pass_out_of_production
     STACKS.each do |relative|
       source = File.read(File.join(ROOT, relative), encoding: "UTF-8")
@@ -23,5 +22,4 @@ class SurfaceMicroRefinementContractTest < Minitest::Test
       refute_includes source, '@forward "surface_micro_refinements_two";'
     end
   end
-
 end
