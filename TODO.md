@@ -315,6 +315,12 @@ are not new implementation requests.
   transactions, commits and cleanup cannot write into that checkout. Keep
   FixPlan and TaskContract containment; any future write and verification must
   run through the target repository's own Git root and checks.
+  2026-11-18 source refinement: `FixPlan` now checks existing target and source components with
+  `lstat`/canonical-path validation, refusing parent-symlink redirects and
+  hard-linked source files; regression cases are authored. This tightens local
+  read containment but does not provide authorised external-root observation
+  or prove that `Transaction`, `Committer` and cleanup cannot mutate a sibling checkout.
+  Focused regressions remain NOT_RUN.
 - [ ] **CLI session observability and recovery.** Provide a redacted,
   run-specific chat-visible receipt from the existing run ledger (never prompt
   text, tool arguments or raw stdout); reproduce and remove the reported
