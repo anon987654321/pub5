@@ -14,6 +14,8 @@ MASTER/bin/operator vps deploy rails --remote
 MASTER/bin/operator vps deploy all --remote --follow
 ```
 
+**One-time broker bootstrap (required before the first release on a host or after a broker-protocol change):** update vm23's `/home/dev/pub5` checkout to the same `origin/main` commit, then run `doas zsh OPENBSD/OPERATOR.sh --plan`, review the plan, and run `--apply` followed by `--verify`. The first `vps-deploy all` cannot install the broker it needs to write its initial durable run receipt; it fails closed until this separate bootstrap is complete. Do not treat the routine mirror apply inside `vps-deploy all` as a substitute for this prerequisite.
+
 Hands-off: local preflight → pin SHA → `tmux` session `pub5-deploy` on vm23 →
 `vps-deploy` as **root** (git still as `dev`) → streams the log until finished →
 `vps-state` + public canary. Survives SSH disconnect. Logs: `/var/log/pub5/vps-deploy.log` (aggregate), `/var/log/pub5/runs/deploy-*.log` (per run), also `/home/dev/vps-deploy.log` and `vps-deploy-latest.log` symlinks.
