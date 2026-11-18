@@ -206,6 +206,7 @@ module Master
         validate!(trace)
         dir = File.join(root, LEDGER_DIR)
         FileUtils.mkdir_p(dir, mode: 0o700)
+        File.chmod(0o700, dir)
         path = File.join(dir, LEDGER_FILE)
         line = JSON.generate(trace)
         File.open(path, "a:UTF-8", 0o600) { |f| f.puts(line) }
