@@ -35,28 +35,27 @@ module Master
         elevate: %i[improve_code improve_prose improve_visual improve_music ideate restructure_drive code_passes],
       }.freeze
 
-      # The bare default a target earns: a rendered surface (RAILS) gets the standard lane —
-      # rendered findings were invisible to a plain /fix until Johann asked (2026-11-07) why a
-      # run produced no screenshots; every other tree has nothing to render and keeps code.
+      # RAILS apps and MASTER's own web face have rendered surfaces; other trees
+      # do not acquire browser review merely because they contain text or media.
       @current = DEFAULT
       @lock = Mutex.new
 
       module_function
 
-      # The bare default a target earns: a rendered surface (RAILS; RAILS' apps.yml
-      # declares the deploy roots, master lives at MASTER/web) gets the standard lane —
-      # rendered findings were invisible to a plain /fix until Johann asked (2026-11-07)
-      # why a run produced no screenshots. Every other tree has nothing to render and
-      # keeps code — BIZ (Johann 2026-11-07) is a documents plane whose html/pdf files
-      # the code laws read directly; its pages are not the RAILS fleet, so the
-      # browser checks stay out.
+      # The default follows the actual rendered surface: RAILS apps and
+      # MASTER's own web face earn the standard lane. BIZ remains a document
+      # plane, and OPENBSD/STUDIO do not acquire browser review merely because
+      # they contain text or media assets.
       def default_lane(target)
         # Same cut WorkLane.refusal uses: a path from anywhere in the checkout,
         # "/pub5/RAILS/mrdamascy" included, names its tree after the RAILS word.
-        relative = target.to_s.sub(%r{\A.*?(?=RAILS(?:/|\z))}i, "")
-        rendered = relative.upcase == "RAILS" || relative.upcase.start_with?("RAILS/")
+        normalized = target.to_s.tr("\\", "/")
+        relative = normalized.sub(%r{\A.*?(?=RAILS(?:/|\z))}i, "")
+        rails = relative.upcase == "RAILS" || relative.upcase.start_with?("RAILS/")
+        master_root = normalized.match?(%r{(?:\A|/)MASTER/?\z}i)
+        master_web = normalized.match?(%r{(?:\A|/)MASTER/web(?:/|\z)}i)
 
-        rendered ? :standard : DEFAULT
+        rails || master_root || master_web ? :standard : DEFAULT
       end
 
       def rendered_target?(target)
