@@ -14,7 +14,6 @@ en:
     point_untitled: "Map point"
     point_kind: "point"
     types:
-      place: "Place"
       event: "Event"
       story: "Story"
       courier: "Courier"
