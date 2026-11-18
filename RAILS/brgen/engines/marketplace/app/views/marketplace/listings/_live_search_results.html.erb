@@ -19,11 +19,15 @@
       Every link that rebuilds the index carries the kind, or a category tap on
       the jobs list lands back on goods. %>
   <nav class="deal-cats" aria-label="<%= t("aria.categories") %>">
-    <%= link_to listings_path(listing_filter_params.except("category_id")), class: "deal-cat#{" active" unless params[:category_id]}" do %>
+    <%= link_to listings_path(listing_filter_params.except("category_id")),
+          class: "deal-cat#{" active" unless params[:category_id]}",
+          aria: { current: (params[:category_id].blank? ? "page" : nil) } do %>
       <span class="store-shortcut-well" aria-hidden="true"><%= icon :layers, size: 32 %></span><%= t("marketplace.all_categories") %>
     <% end %>
     <% @categories.each do |cat| %>
-      <%= link_to listings_path(listing_filter_params.merge("category_id" => cat.id)), class: "deal-cat#{" active" if params[:category_id].to_s == cat.id.to_s}" do %>
+      <%= link_to listings_path(listing_filter_params.merge("category_id" => cat.id)),
+            class: "deal-cat#{" active" if params[:category_id].to_s == cat.id.to_s}",
+            aria: { current: (params[:category_id].to_s == cat.id.to_s ? "page" : nil) } do %>
         <span class="store-shortcut-well" aria-hidden="true"><%= cat.name.to_s.first&.upcase %></span><%= cat.name %>
       <% end %>
     <% end %>
