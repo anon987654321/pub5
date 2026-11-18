@@ -286,16 +286,15 @@ workstreams:
   - id: free_compute_design_of_record
     state: partial
     title: >-
-      The free-compute landscape is on record with dated numbers and named gates, and the router's
-      free-model quota matches OpenRouter's 50/day per model
+      Provider and model configuration own the available routing and quota defaults; live
+      provider reachability and commercial limits remain measurement-dependent
     implementation: MASTER/data/providers.yml + MASTER/data/models.yml + MASTER/lib/io/model_quota.rb
     proof: MASTER/test/test_model_quota_forecast.rb; provider reachability is established only by live lane probes
 
   # --- architecture review of MASTER (2026-11-03, operator chat) ---
-  # Design of record only: nothing below is wired, each row names where its
-  # proof will live, per the free_compute_design_of_record convention. The
-  # review that surfaced them read the tree statically; the numbers each proof
-  # needs come from the first measured run, not from the review.
+  # Architecture review only: nothing below is wired. Each row names its
+  # implementation and the proof still required; static review is not runtime
+  # evidence, and live limits must come from current provider measurements.
   - id: inconclusive_aging
     state: partial
     title: >-
