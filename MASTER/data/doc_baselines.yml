@@ -5,21 +5,6 @@ doc_numbers:
     why: Typography research quoting the canonical measure formula
       (max-width:min(66ch, 100% − 3rem)) as scholarship about why the tokens
       exist; the page prescribes no live dimension of its own.
-  RAILS/docs/SCREENSHOT_LAW_ADHERENCE.md:
-  - value: 44px
-    why: Capture-review evidence. The line reports that real 44px touch geometry was
-      NOT_RUN and the pills are unmeasured, which is the opposite of prescribing a
-      value.
-  - value: 600px
-    why: Describes what a capture shows (a centred column near the feed measure).
-      Recorded observation of a rendered page, not a token declaration.
-  RAILS/mrdamascy/docs/fix-ledger.md:
-  - value: 44px
-    why: Dated repair ledger. The entry records that touch targets were NOT_RUN because
-      they need a booted app and Chromium, so it reports an absence of measurement.
-  - value: 24px
-    why: Dated repair ledger describing a .tab-icon rebuilt as a 24px flex box; it
-      records a change that happened, not a scale to follow.
   RAILS/mrdamascy/APP_SPEC.md:
   - value: 10px
     why: 'Declared, not prescribed. The value is inside this app''s own fenced :root
