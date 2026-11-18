@@ -140,10 +140,9 @@ class TestDocPaths < Minitest::Test
 
   # Non-entry Markdown has a narrow purpose: face/reference contracts, archived
   # RAILS experiments and research, recovery material, and STUDIO migration guides.
-  # MASTER/docs/history keeps dated review records and recovery provenance.
+  # Historical reviews and recovery notes remain available through Git history.
   # These are artifacts, not substitutes for tree/project README entry points.
-  # MASTER/docs holds the execution-contract references that TODO.md, the code
-  # comments and the lifecycle work cite by path. TREE_CONTRACTS.md is the one
+  # Runtime behavior and recovery contracts now live in Ruby or YAML. TREE_CONTRACTS.md is the one
   # tree-contract file, consolidated beside the rest of the normative corpus in
   # MASTER/data/law/; the per-tree CLAUDE.md contracts folded into it by
   # operator order, so the boundary rule below must admit it.
