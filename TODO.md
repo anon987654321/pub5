@@ -16,18 +16,20 @@ execution container has Ruby 3.3.8 but no repository checkout; a shallow clone
 failed at DNS resolution for github.com. Repository test, lint and build commands
 therefore remain NOT_RUN in this session. Subsequent source and regression-test commits were pushed through the repository API after source review, but could not be executed through `bin/check`; their current-revision status is NOT_RUN, not PASS. They remain pending acceptance on the installed compatible Ruby.
 
-2026-11-18 source-only follow-up on `a2c02b885db2e0ea9af8e03c9b1948cda4388d9c`: commits
-`bbe3e74`, `c08c86b`, `fff8ecb`, `e205aed`, `a94c39b` and
-`a2c02b8` tighten the `/deploy` boundary: bounded single-app CI through the
-shared process-group executor; detached tmux start acknowledgement distinct
-from completion/canary proof; fail-closed Git fetch/revision/status probes;
-untracked governed-file detection; and no repeated full-CSS normalization
-inside the selector loop. Regression tests were added for those contracts.
-They are authored, not run. The stylesheet optimization is a source-supported
-candidate explanation for the recorded CSS runner stall, not a verified
-resolution. Native OpenBSD, the full current-revision check ladder and live
-vm23 deployment/health evidence remain NOT_RUN or BLOCKED pending their
-required environments and access. PRs #11 (MASTER portrait,
+2026-11-18 source-only follow-up on `9c2b910e61423d04b2de894ead1823e0cd20b7f0`: commits
+`bbe3e74`, `c08c86b`, `fff8ecb`, `e205aed`, `a94c39b`, `a2c02b8`,
+`f2b9009`, `b9381c6`, `1353ba7`, `ad3805d`, `a9ab5d7` and `9c2b910`
+tighten the `/deploy` boundary and CSS compile check. The deploy path now
+bounds local CI through MASTER's process-group executor, distinguishes a
+detached tmux start from completion/canary proof, fails closed on Git command
+failures and untracked governed source, and avoids overclaiming session state.
+The CSS check now bounds the embedded Sass worker to 900 seconds per app,
+uses process-group cleanup, indexes exact compressed selectors once, and
+extracts selectors with MASTER's shared lexer. Regression tests cover these
+contracts, but are authored, not run. These are source-level hardenings, not
+acceptance evidence: the full current-revision check ladder, native OpenBSD,
+and live vm23 deployment/health evidence remain NOT_RUN or BLOCKED pending
+their required environments and access. PRs #11 (MASTER portrait,
 semantic subject morphs, CLI feedback and Replicate upload guards) and #12
 (Brgen city wordmark refinement) are merged. No pull request was open at the
 time of this audit. Entries below remain open until their own source, test,
@@ -165,6 +167,16 @@ screenshot count or previous revision.
   checks complete clean standalone — diagnosing that hang is open work
   before the next full sweep; until then the standalone checks are the
   journey verdict of record.
+2026-11-18 source review: `CssMinifyIntegrityCheck` was also doing repeated
+full-compressed-stylesheet normalization inside its selector loop, and its
+class-based runner path had no child-process deadline around the embedded
+Sass compiler. The comparison now uses one exact selector index per app and
+the shared `Operator::ScssRules` lexer; Sass expanded/compressed compilation
+runs in a supervised process group with a 900-second per-app timeout. Tests
+cover compile timeout, one index build, exact-prefix losses and quoted
+attribute values. They are NOT_RUN here. Keep this acceptance row open until
+`runner.rb --all` completes on the compatible checkout and no compiler child
+remains afterward.
   Also: amber bin/ci system_test runs green (7 runs, 82 assertions) with
   the chromedriver + chrome symlink from sandbox-bootstrap.
 - [ ] **RAILS focused gaps.** Run billing, API-key/API-lint, dating identity,
