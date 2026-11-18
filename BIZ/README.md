@@ -114,7 +114,7 @@ MASTER's NO_IMPORTANT reads); brand styling reaches the page through the
 bob2 token vocabulary, never through selector weight; and where a plan
 documents density acceptance, it names DENSITY_kanso, not a private rule.
 A BIZ package that grows a Rails app later inherits the RAILS entry pattern
-(`MASTER/docs/css_layer_stack_entry_template.scss`) unchanged.
+(`MASTER/data/css_architecture.yml` and the existing RAILS entry stylesheets) unchanged.
 
 ## The folder law
 
