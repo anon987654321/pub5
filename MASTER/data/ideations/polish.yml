@@ -1,0 +1,71 @@
+schema: 1
+app: MASTER
+pass: polish
+date: 2026-11-18
+authorization: >
+  Operator request to land the polishing register and make MASTER able to
+  identify and implement similar polishing opportunities as part of /fix.
+method: >
+  Extend the nearest existing owners. Discovery is a read-only lens in
+  lib/operator (the family that already holds law_audit and law_reach),
+  exposed by a thin tools/ wrapper. Implementation stays with the existing
+  /fix pipeline, its budgets, veto and Council; the lens emits candidates in
+  the intake shape and invents no second queue and no new backlog file.
+  Rendered values, taste and listening decisions remain operator-owned under
+  RENDERED_VALUES and are surfaced, never auto-applied.
+candidates:
+  - id: polish_c01
+    tree: MASTER
+    status: implemented
+    spec: >
+      Operator::PolishLens plus tools/polish_lens.rb: deterministic,
+      context-aware discovery of mechanical single-owner polish (keep
+      hygiene, empty dirs, shebang portability, exec bit, fixture extension
+      and mirror, generated banner, generated-pointer symmetry, doc links),
+      each finding grounded in an existing Law with a proposed edit and a
+      proof command, emitted as /fix-compatible candidates.
+    cost: small
+    reversibility: git revert
+  - id: polish_c02
+    tree: MASTER
+    status: candidate
+    spec: >
+      Wire PolishLens --candidates into the existing /fix intake behind the
+      same MASTER_BACKLOG_AUTORUN gate, selecting only mechanical single-tree
+      rows with exact paths, reusing TaskSteward and the argv-allowlisted
+      executor. Requires the installed bundle and a focused regression.
+    cost: medium
+    reversibility: git revert
+  - id: polish_c03
+    tree: cross
+    status: candidate
+    spec: >
+      The four-hundred-item polishing register is candidate material, not a
+      build order. Mechanical rows are regenerable by the lens; rendered,
+      taste, listening and live-host rows remain operator-owned decisions.
+    cost: large
+    reversibility: n/a
+critique:
+  - candidate: polish_c01
+    verdict: keep
+    attack: >
+      A naive lens cried wolf: a hardcoded shebang convention flagged 86 of a
+      legitimately polyglot tree, an absolute-path check flagged intentional
+      OPENBSD/mirror target-host scripts, and a pointer check compared the
+      hand-written CLAUDE.md against generated peers. Each was corrected to
+      respect context, so the lens reports zero on a clean tree and real
+      defects on a dirty one (bare-ruby proof). This is the saturation and
+      immune_pattern discipline applied to the instrument itself.
+  - candidate: polish_c02
+    verdict: keep
+    attack: >
+      Auto-running polish could churn taste surfaces; mitigated by reusing
+      the existing gate, budgets, veto and Council, and by excluding rendered
+      values. Still NOT_RUN until the bundle is installed and a regression
+      exercises the intake path.
+  - candidate: polish_c03
+    verdict: reject
+    attack: >
+      Landing the register as a tracked backlog would violate the single
+      register contract and treat taste decisions as build permission. The
+      lens regenerates mechanical rows; the rest stay operator-owned.
