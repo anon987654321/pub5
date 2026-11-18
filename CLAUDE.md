@@ -9,6 +9,14 @@ generated from `MASTER/AGENTS.md`. Tree contracts for RAILS, MASTER/web and
 OPENBSD live in `TREE_CONTRACTS.md`. Claude's project hooks remain available
 at the native `.claude/settings.json` path.
 
+## First three commands
+
+From the repository root, after reading `AGENTS.md`:
+
+1. `ruby MASTER/tools/agent_context.rb --json` — load current task context and checks.
+2. `MASTER/bin/operator doctor` — inspect checkout and host readiness.
+3. `MASTER/bin/master --help` — read the current command surface.
+
 `MASTER/data/soul.yml` is the highest source for global identity,
 preservation, source order and protected paths. `MASTER/data/laws.yml`
 owns individual Law identities and statements; the executable Law Ruby in `MASTER/law/`
