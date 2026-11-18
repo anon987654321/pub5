@@ -133,10 +133,10 @@ class TestWorkLaneWiring < Minitest::Test
     registry = Master::CLI::CommandRegistry
 
     assert_equal "visual", registry.execution_overrides("RAILS --lane=visual")[:lane]
-    # A bare rendered target earns the standard lane; a bare MASTER stays code.
+    # RAILS gets the standard fleet lane; MASTER gets its focused web-render lane.
     assert_equal "standard", registry.execution_overrides("RAILS")[:lane]
     assert_equal "standard", registry.execution_overrides("RAILS/mrdamascy")[:lane]
-    assert_equal "code", registry.execution_overrides("MASTER")[:lane]
+    assert_equal "master", registry.execution_overrides("MASTER")[:lane]
     assert_equal "code", registry.execution_overrides("RAILS --lane=code")[:lane]
     assert_equal "RAILS", registry.parse_pass_flags("RAILS --lane=code").last
   end
