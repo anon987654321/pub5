@@ -1,6 +1,6 @@
 ---
 name: pub_restore_contract
-# source_repo and target_repo live once, in docs/history/recovery/legacy_manifest.yml,
+# source_repo and target_repo live once, in MASTER/data/recovery/legacy_manifest.yml,
 # which this file already names under checks.file_presence. Both keys stood here
 # too, with the same two values and no reader in either tree — a second copy that
 # could only drift. lint:data_singularity and lint:dedup both failed on the pair.
@@ -48,14 +48,15 @@ critical_items:
     check: retirement_or_archive_note
   - id: privcam_active_decision
     source: __OLD_BACKUPS/MEGA_ALL_APPS.md
-    expected_target: retired, with the reason in docs/history/recovery/legacy_manifest.yml
+    expected_target: retired, with the reason in MASTER/data/recovery/legacy_manifest.yml
     current_state: retired
     check: active_app_or_retirement_note
 
 checks:
   file_presence:
     - MASTER/data/recovery/legacy_manifest.yml
-    -     - MASTER/data/recovery/pub_restore.yml
+    - MASTER/data/recovery/pub_restore.yml
+    - MASTER/data/recovery/pub_archive_restore.yml
 
   # Only genuinely absent paths stay here. Historical DEPLOY/bp paths belonged
   # to the old layout and the bplans pipeline never had the generator/templates
