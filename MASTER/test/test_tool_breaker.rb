@@ -81,6 +81,7 @@ class TestToolBreaker < Minitest::Test
     id = store.record(
       law: "TEST_RULE", boundary: "a.rb", defect_class: "consensus_rejected",
       evidence: { source_sha256: digest, outcome: "consensus_rejected", prompt: "must never be stored" },
+      note: "private reviewer note sk-abcdefghijklmnop",
     )
 
     assert_equal id, store.match(
@@ -93,6 +94,10 @@ class TestToolBreaker < Minitest::Test
     )
     refute_includes File.read(File.join(@dir, Master::Fix::AntigenStore::DIR, Master::Fix::AntigenStore::FILE)),
                     "must never be stored"
+    refute_includes File.read(File.join(@dir, Master::Fix::AntigenStore::DIR, Master::Fix::AntigenStore::FILE)),
+                    "private reviewer note"
+    refute_includes File.read(File.join(@dir, Master::Fix::AntigenStore::DIR, Master::Fix::AntigenStore::FILE)),
+                    "sk-abcdefghijklmnop"
     antigen_path = File.join(@dir, Master::Fix::AntigenStore::DIR, Master::Fix::AntigenStore::FILE)
     assert_equal 0o600, File.stat(antigen_path).mode & 0o777
     assert_equal 0o700, File.stat(File.dirname(antigen_path)).mode & 0o777
