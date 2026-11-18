@@ -38,6 +38,43 @@ class TestFixRepoScope < Minitest::Test
     [Scoped.new(repo:, master_git: FakeGit.new(inside), repo_git:), repo_git]
   end
 
+  class ProductionScoped < Master::Fix::FixLoop::Committer
+    def initialize(root:, repository:)
+      super(git: FakeGit.new([]), root:)
+      @repository = repository
+    end
+
+    private
+
+    def repo_root = @repository
+  end
+
+  def test_external_checkout_with_a_shared_prefix_is_not_a_sibling
+    Dir.mktmpdir do |parent|
+      repository = File.join(parent, "pub5")
+      external = File.join(parent, "pub5-external", "MASTER")
+      FileUtils.mkdir_p([repository, external])
+      committer = ProductionScoped.new(root: external, repository:)
+
+      refute committer.send(:beside_repo?)
+      assert_nil committer.send(:repo_git)
+    end
+  end
+
+  def test_symlinked_workspace_cannot_borrow_repository_git
+    Dir.mktmpdir do |parent|
+      repository = File.join(parent, "pub5")
+      external = File.join(parent, "external", "MASTER")
+      FileUtils.mkdir_p([repository, external])
+      link = File.join(repository, "MASTER")
+      File.symlink(external, link)
+      committer = ProductionScoped.new(root: link, repository:)
+
+      refute committer.send(:beside_repo?)
+      assert_raises(ArgumentError) { committer.send(:repo_relative, "../RAILS/app.rb") }
+    end
+  end
+
   def test_changes_beside_master_are_named_relative_to_it
     committer, = scoped("/repo", inside: ["lib/a.rb"], everywhere: ["MASTER/lib/a.rb", "RAILS/amber/app/b.rb"])
 
