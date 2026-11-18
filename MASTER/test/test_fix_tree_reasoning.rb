@@ -58,7 +58,7 @@ class TestFixTreeReasoning < Minitest::Test
     events = []
     bus = Object.new
     bus.define_singleton_method(:publish) { |event, **details| events << [event, details] }
-    agent = FakeAgent.new("PROPOSE: delete | lib/invented.rb | NONE | private explanation stays out of the receipt\\n")
+    agent = FakeAgent.new("PROPOSE: delete | lib/invented.rb | NONE | private explanation stays out of the receipt\n")
 
     result = Reasoning.new(agent:, root: @root, bus:).call(target: @root)
 
