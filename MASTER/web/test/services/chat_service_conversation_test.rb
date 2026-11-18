@@ -94,6 +94,53 @@ class ChatServiceConversationTest < ActiveSupport::TestCase
     assert_equal own_writes, @stream.writes
     refute_includes @stream.writes.join, "private subject"
   end
+  test "authenticated technical operation publishes a conversation-scoped link event" do
+    @service.instance_variable_set(:@tier, "authenticated")
+    @service.instance_variable_set(:@params, { message: "please run the tests" })
+    Fiber[:master_visitor] = false
+    Fiber[:master_conversation] = @mine
+
+    @service.send(:begin_operation_log_capture)
+    @bus.publish("wishlist:done", drafted: 3)
+
+    published = []
+    publisher = Object.new
+    publisher.define_singleton_method(:publish) do |**details|
+      published << details
+      Master::Ground::PastePublisher::Outcome.new(
+        url: "https://dpaste.org/test-log",
+        service: :dpaste_org,
+        expires_in: "7 days",
+      )
+    end
+
+    Master::Ground::PastePublisher.stub(:new, ->(**) { publisher }) do
+      @service.send(:publish_operation_log, Master::Result.ok("complete"))
+    end
+
+    assert_equal 1, published.size
+    assert_equal "please run the tests", published.first.fetch(:operation)
+    assert_equal "success", published.first.fetch(:status)
+    assert_includes published.first.fetch(:output), "drafted 3"
+    event = @stream.writes.find { |chunk| chunk.start_with?("event: operation_log") }
+    refute_nil event
+    assert_includes event, "https://dpaste.org/test-log"
+  ensure
+    Fiber[:master_visitor] = nil
+    Fiber[:master_conversation] = nil
+  end
+
+  test "visitor operation does not start a public log capture" do
+    @service.instance_variable_set(:@params, { message: "please run the tests" })
+    Fiber[:master_visitor] = true
+
+    @service.send(:begin_operation_log_capture)
+
+    assert_nil @service.instance_variable_get(:@operation_log_capture)
+  ensure
+    Fiber[:master_visitor] = nil
+  end
+
   test "the model event names the model that answered, not the one routed first" do
     Fiber[:master_conversation] = @mine
     @bus.publish("llm:request", model: "routed/first-choice", tokens: 3)
