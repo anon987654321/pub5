@@ -63,6 +63,13 @@ dimensions and the proof required before editing. The canonical schema is
 | `functional_change` | Behavior inside the agreed scope | Visual identity, layout, accessibility, public contracts outside scope, operator-owned values and data meaning |
 | `redesign` | Presentation and layout | Product identity, content meaning, data meaning, accessibility, public contracts and operator-owned values |
 
+When a change alters a public or operational contract, declare each exact
+`contract_path` / `document_path` pair and its reason in
+`documentation_pairs`, and include `documentation_review` proof. Paths are
+repository-relative and must be inside the task scope. Both files must be
+changed in the same /fix delivery commit or checkpoint; the proof label alone
+does not show that the document explains the changed behaviour correctly.
+
 Intent is not inferred from a file extension. The validator adds mandatory
 preservation dimensions even when the caller omits them. HTML source checks prove
 only named source invariants; they do not prove responsive layout, accessibility,
