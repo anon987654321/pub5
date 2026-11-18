@@ -33,6 +33,9 @@ module Master
       ].freeze
 
       Edge = Struct.new(:type, :from, :to, :weight, keyword_init: true)
+      SOURCE_DEPENDENCY_TYPES = %i[
+        require local_import method_call dynamic_method_call inheritance mixin
+      ].freeze
 
       # Prism-derived facts supplement imports with static symbol and caller
       # relationships. Ambiguous/dynamic relationships remain explicit evidence
@@ -270,10 +273,12 @@ module Master
             @built = true
           end
 
+          tangles = tangle_report
           graph = {
             nodes: @nodes.to_a.sort,
             edges: @edges.map(&:to_h),
-            metrics:,
+            metrics: metrics.merge(tangles.fetch(:metrics)),
+            tangles:,
             analysis_failures: @analysis_failures.map(&:dup),
             ruby_definitions: @ruby_definitions.map(&:dup),
             unresolved_references: @unresolved_references.map(&:dup),
@@ -706,6 +711,120 @@ module Master
         )
       end
 
+      # Mechanical tangle evidence is limited to resolved source-to-source
+      # dependency edges. Event names, constants and textual tokens are not
+      # treated as caller relationships; unresolved edges remain separate gaps.
+      def tangle_report
+        source_edges = @edges.select do |edge|
+          SOURCE_DEPENDENCY_TYPES.include?(edge.type) &&
+            @nodes.include?(edge.from) && @nodes.include?(edge.to)
+        end
+        adjacency = @nodes.to_h { |node| [node, []] }
+        source_edges.each { |edge| adjacency.fetch(edge.from) << edge.to }
+        adjacency.each_value(&:uniq!)
+
+        components = strongly_connected_components(adjacency)
+        cycles = components.filter_map do |component|
+          self_loop = component.one? && source_edges.any? do |edge|
+            edge.from == component.first && edge.to == component.first
+          end
+          next unless component.size > 1 || self_loop
+
+          paths = component.sort
+          internal_edges = source_edges.select do |edge|
+            paths.include?(edge.from) && paths.include?(edge.to)
+          end
+          signature = internal_edges.map { |edge| [edge.type, edge.from, edge.to].join("|") }.sort.join("\\n")
+          {
+            paths: paths,
+            edge_count: internal_edges.size,
+            edge_types: internal_edges.map(&:type).uniq.map(&:to_s).sort,
+            sha256: Digest::SHA256.hexdigest(signature),
+          }
+        end.sort_by { |cycle| [cycle[:paths].size, cycle[:paths].first] }
+
+        inbound = Hash.new(0)
+        outbound = Hash.new(0)
+        source_edges.each do |edge|
+          outbound[edge.from] += 1
+          inbound[edge.to] += 1
+        end
+        hotspots = @nodes.filter_map do |path|
+          fan_in = inbound[path]
+          fan_out = outbound[path]
+          next if fan_in + fan_out < 8
+
+          { path:, fan_in:, fan_out:, total: fan_in + fan_out }
+        end.sort_by { |row| [-row[:total], row[:path]] }.first(12)
+
+        {
+          cycles:,
+          coupling_hotspots: hotspots,
+          metrics: {
+            dependency_cycle_count: cycles.size,
+            dependency_cycle_nodes: cycles.sum { |cycle| cycle[:paths].size },
+            dependency_cycle_edges: cycles.sum { |cycle| cycle[:edge_count] },
+            coupling_hotspot_count: hotspots.size,
+            max_dependency_fan_in: inbound.values.max || 0,
+            max_dependency_fan_out: outbound.values.max || 0,
+          },
+        }
+      end
+
+      # Iterative Kosaraju avoids recursive Ruby calls on long generated or
+      # vendored dependency chains. Ordering is stable for reproducible reports.
+      def strongly_connected_components(adjacency)
+        visited = Set.new
+        order = []
+        adjacency.keys.sort.each do |start|
+          next if visited.include?(start)
+
+          visited.add(start)
+          stack = [[start, adjacency.fetch(start).sort.each]]
+          until stack.empty?
+            node, neighbours = stack.last
+            neighbour = begin
+              neighbours.next
+            rescue StopIteration
+              order << node
+              stack.pop
+              next
+            end
+            next if visited.include?(neighbour)
+
+            visited.add(neighbour)
+            stack << [neighbour, Array(adjacency[neighbour]).sort.each]
+          end
+        end
+
+        reverse = adjacency.keys.to_h { |node| [node, []] }
+        adjacency.each do |from, neighbours|
+          neighbours.each { |to| reverse.fetch(to) << from if reverse.key?(to) }
+        end
+
+        assigned = Set.new
+        components = []
+        order.reverse_each do |start|
+          next if assigned.include?(start)
+
+          component = []
+          pending = [start]
+          assigned.add(start)
+          until pending.empty?
+            node = pending.pop
+            component << node
+            reverse.fetch(node, []).sort.reverse_each do |neighbour|
+              next if assigned.include?(neighbour)
+
+              assigned.add(neighbour)
+              pending << neighbour
+            end
+          end
+          components << component
+        end
+        components
+      end
+
       def metrics
         grouped = @edges.group_by(&:type)
         {
@@ -741,7 +860,7 @@ module Master
       def includes_path?(path)
         @nodes.include?(relative(path))
       end
-      public :includes_path?
+      public :includes_path?, :tangle_report
     end
   end
 end
