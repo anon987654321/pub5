@@ -317,10 +317,12 @@ are not new implementation requests.
   run through the target repository's own Git root and checks.
   2026-11-18 source refinement: `FixPlan` now checks existing target and source components with
   `lstat`/canonical-path validation, refusing parent-symlink redirects and
-  hard-linked source files; regression cases are authored. This tightens local
-  read containment but does not provide authorised external-root observation
-  or prove that `Transaction`, `Committer` and cleanup cannot mutate a sibling checkout.
-  Focused regressions remain NOT_RUN.
+  hard-linked source files. `RepoScope` now grants the repository Git writer
+  only when the canonical workspace is a real descendant of the canonical
+  checkout root; lexical-prefix collisions and symlinked external workspaces
+  cannot borrow that writer. Regression cases are authored, NOT_RUN. This is
+  not external-root observation and does not yet independently prove that
+  transaction recovery/cleanup cannot mutate an external checkout.
 - [ ] **CLI session observability and recovery.** Provide a redacted,
   run-specific chat-visible receipt from the existing run ledger (never prompt
   text, tool arguments or raw stdout); reproduce and remove the reported
