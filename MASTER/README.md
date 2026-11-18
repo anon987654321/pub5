@@ -73,6 +73,7 @@ A scan-only run does not authorize edits. Source checks do not prove rendered be
 - `data/providers.yml` and `data/models.yml` own provider and model configuration; `lib/io/model_quota.rb` owns quota measurement and fallback decisions.
 - `data/voice.yml` owns speech runtime configuration.
 - `data/tokens.yml` owns visual values; `data/laws.yml` owns minimal-interface, visual, dialogue and constitutional policy.
+- Generate the current typography reference without creating a second source: `ruby MASTER/tools/design_tokens.rb --type-spec` reads the named role tokens, product dialect and measured accessibility limits directly from `data/tokens.yml`.
 - `data/council.yml` owns council personas, presets and the juror and judge prompts; the default hard-critique preset is `general_critique`, and the prose contract on those prompts applies to English and Bokmål alike.
 - `data/affiliate_sources.yml` owns the affiliate source registry.
 
