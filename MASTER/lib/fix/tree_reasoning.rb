@@ -95,7 +95,7 @@ module Master
 
       def summary(tree:, proposals:, dropped:)
         metrics = tree.metrics
-        note = dropped.positive? ? ", #{dropped} dropped for naming an unknown path" : ""
+        note = dropped.positive? ? ", #{dropped} invalid proposal(s) dropped" : ""
         "#{metrics[:files]} files in #{metrics[:directories]} dirs, #{proposals.size} proposal(s)#{note}"
       end
 
