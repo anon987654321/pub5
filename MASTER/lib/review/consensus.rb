@@ -7,6 +7,53 @@ module Master
     class Consensus
       Vote = Struct.new(:model, :approved, :reason, keyword_init: true)
       MIN_INDEPENDENT_FAMILIES = 2
+      Readiness = Data.define(:state, :detail) do
+        def ready? = state == :pass
+      end
+
+      # The fix jury must be independently seatable before /fix spends its
+      # repair budget. Exclude each possible author family in turn and require
+      # both the configured voter quorum and the independent-family floor.
+      # A pending or failed probe is never evidence that the jury is ready.
+      def self.jury_readiness(router: nil, root: Master::ROOT)
+        models = Array(default_models).map(&:to_s).reject(&:empty?).uniq
+        quorum = Integer(default_quorum)
+        return Readiness.new(state: :fail, detail: "configured pool has #{models.size} model(s), quorum is #{quorum}") if models.size < quorum
+
+        router ||= Master::CLI::Routing::ModelRouter.new(
+          config: Master::Ground::Config.new(root), root: root,
+        )
+        reasons = models.to_h { |model| [model, router.unreachable_reason(model, wait: true)] }
+        pending = reasons.select { |_model, reason| reason.to_s.start_with?("checking ") }
+        unless pending.empty?
+          detail = pending.map { |model, reason| "#{model}: #{reason}" }.join("; ")
+          return Readiness.new(state: :unmeasured, detail: "provider probe did not finish: #{detail}")
+        end
+
+        reachable = reasons.select { |_model, reason| reason.nil? }.keys
+        families = models.map { |model| model_family(model) }.uniq
+        blocked = families.filter_map do |author_family|
+          voters = reachable.reject { |model| model_family(model) == author_family }
+          voter_families = voters.map { |model| model_family(model) }.uniq
+          next if voters.size >= quorum && voter_families.size >= MIN_INDEPENDENT_FAMILIES
+
+          "#{author_family} author leaves #{voters.size}/#{quorum} voters across #{voter_families.size}/#{MIN_INDEPENDENT_FAMILIES} families"
+        end
+
+        unavailable = reasons.filter_map { |model, reason| "#{model}: #{reason}" unless reason.nil? }
+        unless blocked.empty?
+          detail = blocked.join("; ")
+          detail += "; unavailable: #{unavailable.join('; ')}" unless unavailable.empty?
+          return Readiness.new(state: :fail, detail:)
+        end
+
+        detail = "#{reachable.size}/#{models.size} reachable; quorum #{quorum} and #{MIN_INDEPENDENT_FAMILIES} independent families survive every author-family exclusion"
+        detail += "; unavailable but redundant: #{unavailable.join('; ')}" unless unavailable.empty?
+        Readiness.new(state: :pass, detail:)
+      rescue StandardError => error
+        Readiness.new(state: :unmeasured, detail: "#{error.class}: #{error.message.to_s.lines.first.to_s.strip}")
+      end
+
       VOTE_SCHEMA = {
         type: "object",
         additionalProperties: false,
