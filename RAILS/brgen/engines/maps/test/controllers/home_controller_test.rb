@@ -65,7 +65,8 @@ class MapsHomeControllerTest < ActionDispatch::IntegrationTest
     assert section, "map home must expose its point-type labels"
     labels = JSON.parse(section["data-map-type-labels-value"])
     %w[place event story courier].each do |type|
-      assert_equal I18n.t("maps.types.#{type}"), labels.fetch(type)
+      key = type == "place" ? "maps.kinds.place" : "maps.types.#{type}"
+      assert_equal I18n.t(key), labels.fetch(type)
     end
 
     controller = Rails.root.join("app/javascript/controllers/map_controller.js").read
