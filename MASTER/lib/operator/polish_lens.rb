@@ -155,7 +155,7 @@ module Operator
     end
 
     def exec_bit(root, paths: nil)
-      candidates = paths ? paths.select { |path| rel(root, path).match?(%r{\\AMASTER/bin/[^/]+\\z}) } : Dir.glob("#{root}/MASTER/bin/*")
+      candidates = paths ? paths.select { |path| rel(root, path).match?(%r{\AMASTER/bin/[^/]+\z}) } : Dir.glob("#{root}/MASTER/bin/*")
       candidates.filter_map do |f|
         next if File.directory?(f)
         next if File.executable?(f)
