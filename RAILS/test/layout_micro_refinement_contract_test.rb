@@ -42,10 +42,10 @@ class LayoutMicroRefinementContractTest < Minitest::Test
     end
   end
 
-  def test_archived_matrix_is_not_described_as_production_output
-    matrix = File.read(File.join(ROOT, "docs/archive/LAYOUT_MICRO_REFINEMENT_MATRIX.md"), encoding: "UTF-8")
-    sheet = File.join(ROOT, "__shared/app/assets/stylesheets/_layout_micro_refinements.scss")
-    assert_includes matrix, "Archived layout micro-refinement matrix"
-    refute File.exist?(sheet), "an archived experiment must not remain in the active stylesheet tree"
+  def test_all_unvalidated_experiment_sheets_are_absent_from_the_active_asset_tree
+    EXPERIMENTAL_SHEETS.each do |sheet|
+      path = File.join(ROOT, "__shared/app/assets/stylesheets/_#{sheet}.scss")
+      refute File.exist?(path), "#{sheet} must not become an active stylesheet without rendered review"
+    end
   end
 end
