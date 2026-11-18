@@ -583,7 +583,11 @@ measure is already owned by the Bymorgen item above.
   guides and historical handoff copies were retired to Git history. The only
   remaining tracked `MASTER/docs` artifact is the preserved pub4 analysis PDF.
   `MASTER/test/test_doc_paths.rb` now enforces source ownership instead of
-  preserving deleted document paths. These changed tests and the full repository
+  preserving deleted document paths. The duplicate non-normative
+  `MASTER/data/principles/openbsd_kernel_philosophy.md` note is retired; its
+  fuller sourced record remains in `MASTER/data/project_context.yml`, and
+  binding requirements remain in the Law catalogue. Its stale doc-path
+  exception is removed. These changed tests and the full repository
   reference/entrypoint audit remain NOT_RUN; documentation cleanup in the other
   trees remains open.
 - [ ] **BIZ document-family implementation.** The current source contract now
