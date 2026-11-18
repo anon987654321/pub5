@@ -77,6 +77,9 @@ module Master
           "output" => safe_metadata(outcome),
         }
         runtime_profile = profile_delta(context[:profile_start], profile_snapshot)
+        if runtime_profile
+          runtime_profile[:provider_usage] = provider_usage(root: context.fetch(:root), run_id: context.fetch(:run_id))
+        end
         trace_metadata = metadata.is_a?(Hash) ? metadata.dup : {}
         trace_metadata[:runtime_profile] = runtime_profile if runtime_profile
         trace = build(
@@ -130,11 +133,61 @@ module Master
           heap_allocated_pages_delta: after[:heap_allocated_pages].to_i - before[:heap_allocated_pages].to_i,
           minor_gc_count: after[:minor_gc_count].to_i - before[:minor_gc_count].to_i,
           major_gc_count: after[:major_gc_count].to_i - before[:major_gc_count].to_i,
-          provider_usage: "NOT_CAPTURED",
           resident_memory: "NOT_MEASURED",
         }
       rescue StandardError
         nil
+      end
+      # Costs are joined by the run ID stamped by Trace::Session. Exact
+      # provider-reported rows and estimated rows remain separate; no prompt,
+      # request or response material is read or copied.
+      def provider_usage(root:, run_id:)
+        path = File.join(root, ".master", "costs.jsonl")
+        return unavailable_usage unless File.file?(path)
+
+        exact = []
+        estimated = []
+        File.foreach(path, encoding: "UTF-8") do |line|
+          begin
+            row = JSON.parse(line)
+            next unless row["run_id"].to_s == run_id.to_s
+
+            (row["approximate"] == true ? estimated : exact) << [row, line.strip]
+          rescue JSON::ParserError
+            next
+          end
+        end
+
+        exact_rows = exact.map(&:first)
+        estimated_rows = estimated.map(&:first)
+        {
+          status: exact_rows.any? ? "REPORTED_USAGE" : (estimated_rows.any? ? "ESTIMATES_ONLY" : "NOT_CAPTURED"),
+          source: ".master/costs.jsonl",
+          exact_receipts: exact_rows.size,
+          estimated_records: estimated_rows.size,
+          exact_amount: exact_rows.sum { |row| row["amount"].to_f }.round(8),
+          exact_tokens: exact_rows.sum { |row| row["tokens"].to_i },
+          estimated_amount: estimated_rows.sum { |row| row["amount"].to_f }.round(8),
+          estimated_tokens: estimated_rows.sum { |row| row["tokens"].to_i },
+          models: exact_rows.map { |row| row["model"].to_s }.reject(&:empty?).uniq.sort,
+          receipt_sha256: (Digest::SHA256.hexdigest(exact.map(&:last).join(10.chr)) unless exact.empty?),
+        }
+      rescue SystemCallError
+        unavailable_usage("UNREADABLE")
+      end
+
+      def unavailable_usage(status = "NOT_CAPTURED")
+        {
+          status:,
+          source: ".master/costs.jsonl",
+          exact_receipts: 0,
+          estimated_records: 0,
+          exact_amount: 0.0,
+          exact_tokens: 0,
+          estimated_amount: 0.0,
+          estimated_tokens: 0,
+          models: [],
+        }
       end
       def safe_metadata(value, depth = 0)
         return if depth > MAX_METADATA_DEPTH
