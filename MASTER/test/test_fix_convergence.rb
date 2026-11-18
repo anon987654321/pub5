@@ -2800,6 +2800,26 @@ end
       Master::CLI::CommandRegistry.send(:fix_targets, "MASTER RAILS --apply", root:),
     )
   end
+  def test_dependency_cycle_antigens_are_persisted_once_and_read_back
+    adapter = Master::Fix::Kernel::ConvergenceAdapter.allocate
+    adapter.instance_variable_set(:@root, @root)
+    cycle = {
+      paths: %w[MASTER/lib/a.rb MASTER/lib/b.rb],
+      edge_count: 2,
+      edge_types: ["require"],
+      sha256: "a" * 64,
+    }
+
+    first = adapter.send(:record_dependency_antigens, cycles: [cycle])
+    second = adapter.send(:record_dependency_antigens, cycles: [cycle])
+
+    assert_equal 1, first.size
+    assert_equal 1, second.size
+    assert_equal "SINGULARITY_architectural_tangle", first.first.fetch("law")
+    assert_equal cycle[:sha256], first.first.dig("evidence", "tangle_digest")
+    assert_equal cycle[:paths], first.first.dig("evidence", "paths")
+  end
+
   def test_fix_does_not_start_repair_when_verification_scope_is_invalid
     fix_loop = Object.new
     fix_loop.define_singleton_method(:run) do |*|
