@@ -23,7 +23,7 @@ module Deploy
       return nil unless File.readable?(path)
 
       record = JSON.parse(File.read(path))
-      return nil unless record.is_a?(Hash)
+      return nil unless record.is_a?(Hash) && record["app"].to_s == app.to_s
 
       value = record["sha"].to_s
       value.match?(/\A[0-9a-f]{7,40}\z/i) ? value : nil
