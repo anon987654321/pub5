@@ -8,7 +8,7 @@ class TestSynonymsContract < Minitest::Test
   POLICY_FIELDS = %w[law laws law_id law_ids rule rules policy severity tier statement rationale provenance].freeze
 
   def vocabulary
-    YAML.safe_load_file(File.join(Master::ROOT, "docs", "synonyms.yml"))
+    YAML.safe_load_file(File.join(Master::ROOT, "data", "synonyms.yml"))
   end
 
   def test_glossary_is_data_only_and_names_the_existing_authority
