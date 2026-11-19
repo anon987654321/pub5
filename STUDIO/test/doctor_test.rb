@@ -5,9 +5,11 @@ require_relative "../doctor"
 
 class TestStudioDoctor < Minitest::Test
   def test_ruby_floor_is_numeric_not_lexical
+    assert Studio::Doctor.ruby_supported?("3.2.0")
+    assert Studio::Doctor.ruby_supported?("3.2.99")
     assert Studio::Doctor.ruby_supported?("3.3.0")
     assert Studio::Doctor.ruby_supported?("4.0.5")
-    refute Studio::Doctor.ruby_supported?("3.2.99")
+    refute Studio::Doctor.ruby_supported?("3.1.99")
     refute Studio::Doctor.ruby_supported?("not-a-version")
   end
 
