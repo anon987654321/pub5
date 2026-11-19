@@ -1329,6 +1329,27 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     refute_includes out, "the streamed lead-upthe tool loop"
   end
 
+  def test_streamed_prefix_appends_only_the_unseen_final_suffix
+    result = Master::Result.ok(output: "Grok 4.7, from xAI.")
+
+    out, = capture_io do
+      @cli.send(:display_ok, ok: result, accumulated: +"Grok 4.7", streamed: true)
+    end
+
+    assert_equal ", from xAI.\n", out
+  end
+
+  def test_streamed_prefix_over_120_characters_does_not_hide_the_final_tail
+    prefix = "x" * 120
+    result = Master::Result.ok(output: "#{prefix} and the final words")
+
+    out, = capture_io do
+      @cli.send(:display_ok, ok: result, accumulated: +prefix, streamed: true)
+    end
+
+    assert_equal " and the final words\n", out
+  end
+
   def test_pipe_dispatches_slash_commands
     @cli.define_singleton_method(:handle_repl_line) { |line| @piped_command = line }
 
