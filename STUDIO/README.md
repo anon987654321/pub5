@@ -111,9 +111,10 @@ require HTTPS on port 443 and the Replicate host allowlist. Both paths resolve
 the hostname, reject the complete A/AAAA answer set if any address is private,
 reserved, translated or non-global, and pin the socket to the approved public
 address with `Net::HTTP#ipaddr`. The original hostname remains in use for TLS
-verification and Host; implicit environment proxies are disabled. Downloads
-also retain atomic publication, symlink refusal, byte caps and a monotonic
-deadline. Redirect responses are not followed.
+verification and Host; implicit environment proxies are disabled. API exchanges
+have a 180-second hard deadline in addition to socket-idle timeouts and the
+response byte cap. Downloads retain atomic publication, symlink refusal, byte
+caps and a monotonic deadline. Redirect responses are not followed.
 
 Do not turn a provider-returned URL into an unrestricted fetch. Keep the host
 allowlist, URL shape, pinned destination and transfer budgets together at the
