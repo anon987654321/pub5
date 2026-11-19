@@ -51,10 +51,10 @@ module Master
         # itself; every MASTER process boots through here.
         Encoding.default_external = Encoding::UTF_8
         root = File.expand_path(root)
-        prepare_mobile!(env:, out:)
-        reexec_best_ruby!(root:, env:, out:, argv:, program:)
+        boot_timed("mobile preflight", env:, out:) { prepare_mobile!(env:, out:) }
+        boot_timed("Ruby selection", env:, out:) { reexec_best_ruby!(root:, env:, out:, argv:, program:) }
         manager = DependencyManager.new(root:, env:, out:)
-        result = manager.ensure!
+        result = boot_timed("dependency check", env:, out:) { manager.ensure! }
         unless result.ok
           Master::Trace::Dmesg.status("deps0", result.message, io: out)
           detail = result.output.to_s.strip
@@ -62,10 +62,12 @@ module Master
           exit 78
         end
 
-        manager.activate_environment!
-        reexec_mismatched_bundler!(root:, env:, out:, argv:, program:)
-        activate_bundle!(root)
-        write_boot_receipt!(root:, out:)
+        boot_timed("dependency environment", env:, out:) do
+          manager.activate_environment!
+          reexec_mismatched_bundler!(root:, env:, out:, argv:, program:)
+          activate_bundle!(root)
+        end
+        boot_timed("boot receipt", env:, out:) { write_boot_receipt!(root:, out:) }
 
         true
       end
@@ -74,6 +76,18 @@ module Master
       # loads, which would activate the default psych before the locked copy
       # could be pinned on a fresh checkout. Off a phone the early load bought
       # nothing.
+      def boot_timed(name, env:, out:)
+        return yield unless env["MASTER_BOOT_TIMING"] == "1"
+
+        started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        yield
+      ensure
+        if started
+          elapsed = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1_000).round
+          Master::Trace::Dmesg.status("timing0", "#{name}=#{elapsed}ms", io: out)
+        end
+      end
+
       def prepare_mobile!(env:, out:)
         require_relative "../mobile/bootstrap"
         return unless Master::Mobile::Profile.new(env:).activate!
