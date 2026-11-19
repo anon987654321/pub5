@@ -12,7 +12,7 @@ module Master
       CONTEXT_STEP = 10_000
       CLOSE_WINDOW_S = 3
       INTERACTIVE_QUEUE_LIMIT = 32
-      BANG = /\A!(?<command>\S.*)\z/m
+      BANG = /\A![ \t]*(?<command>\S.*)\z/m
 
       # Slash verbs that answer from local state and may run while a model turn
       # streams (Johann's log 2026-11-08: /voice, /tts and /help typed during an
