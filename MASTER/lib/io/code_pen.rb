@@ -91,11 +91,9 @@ module Master
         nil
       end
 
-      def http(uri, address)
-        client = SsrfGuard.http_for(uri, address)
-        client.read_timeout = TIMEOUT
-        client.open_timeout = TIMEOUT
-        client.start { |h| h.get(uri.request_uri, "User-Agent" => "MASTER/1 (codepen)") }
+      def http(uri, _address = nil)
+        request = Net::HTTP::Get.new(uri.request_uri, "User-Agent" => "MASTER/1 (codepen)")
+        SsrfGuard.request(uri, request, max_bytes: MAX_BYTES, timeout: TIMEOUT)
       end
 
       def extract_trending(body)
