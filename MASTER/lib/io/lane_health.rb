@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "net/http"
+require "ipaddr"
 require "uri"
 require "yaml"
 require_relative "../gap"
@@ -60,6 +61,8 @@ module Master
       end
 
       def ollama_up?(base = ollama_base)
+        return false unless local?(base)
+
         uri = URI.join("#{base}/", "api/tags")
         http = Net::HTTP.new(uri.host, uri.port)
         http.open_timeout = http.read_timeout = PROBE_TIMEOUT_S
@@ -136,6 +139,8 @@ module Master
 
       # One-token generation; answers the elapsed seconds, nil on any failure.
       def warm_probe_post(base, model, num_predict, num_ctx)
+        return nil unless local?(base)
+
         uri = URI.join("#{base}/", "api/generate")
         body = { model:, prompt: "Reply with the single word OK.", stream: false,
                  num_predict:, options: { num_ctx: } }
@@ -217,7 +222,17 @@ module Master
         Master::Gap.new(horizon: :operator, cost_to_check: :operator)
       end
 
-      def local?(base) = URI(base).host.to_s.match?(/\A(?:localhost|127\.\d+\.\d+\.\d+|\[?::1\]?)\z/)
+      def local?(base)
+        uri = URI(base)
+        return false unless uri.is_a?(URI::HTTP) && uri.scheme == "http" && uri.userinfo.nil? && uri.fragment.nil?
+
+        host = uri.hostname.to_s.downcase
+        return true if host == "localhost"
+
+        IPAddr.new(host).loopback?
+      rescue URI::InvalidURIError, IPAddr::InvalidAddressError
+        false
+      end
 
       # A model that runs on this machine: no network, no quota. Both the
       # Ollama daemon and the local llama.cpp CLI answer here, and
