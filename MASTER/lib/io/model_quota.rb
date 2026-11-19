@@ -4,6 +4,9 @@ require "date"
 require "etc"
 require "fileutils"
 require "json"
+require "net/http"
+require "uri"
+require_relative "ssrf_guard"
 require "time"
 require_relative "atomic_write"
 
@@ -253,11 +256,12 @@ module Master
       # The key never lands in an error message or a log; only the status
       # leaves this method.
       def fetch_free_model_daily_requests(key)
-        require "net/http"
         uri = URI("https://openrouter.ai/api/v1/key")
-        response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 3, read_timeout: 8) do |http|
-          http.get(uri.request_uri, { "Authorization" => "Bearer "+key })
-        end
+        request = Net::HTTP::Get.new(uri.request_uri, { "Authorization" => "Bearer " + key })
+        response = SsrfGuard.request(
+          uri, request, max_bytes: 256_000, timeout: 8,
+          open_timeout: 3, read_timeout: 8, write_timeout: 3
+        )
         return unless response.is_a?(Net::HTTPSuccess)
 
         parsed = JSON.parse(response.body.to_s)
