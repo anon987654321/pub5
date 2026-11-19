@@ -178,7 +178,7 @@ module Master
         has_entry = source.match?(/^#!\/usr\/bin\/env ruby\b/m) ||
                     source.match?(/^\s*STDOUT\.sync\s*=\s*true\s*$/m)
         definition = source.match(/^\s*def\s+say\s*\(\s*([a-zA-Z_]\w*)\s*=\s*""\s*\)\s*$/m)
-        return unless has_entry && definition && source.match?(/^\s*begin\s*$/m)
+        return unless has_entry && definition && source.match?(/^\s*(?:safe\s+do|begin)\s*$/m)
 
         argument = Regexp.escape(definition[1])
         has_helper = source.match?(/^\s*STDOUT\.puts\(\s*#{argument}(?:\.to_s)?\s*\)\s*$/m)
