@@ -2,6 +2,22 @@
 
 MASTER is pub5's shared agent runtime and engineering constitution. It interprets work, applies the Laws, routes models and tools, and coordinates checks and repairs across the repository. Keep each product and system in its owning tree: RAILS owns the applications, OPENBSD owns hosts and deployment, and STUDIO owns creative and media work.
 
+## What the name means
+
+MASTER names two related ideas. **Mastery** is the disciplined practice of learning a subject well enough to exercise sound judgment: research, compare, experiment, measure, correct and verify. It is an aspiration, not a claim of infallibility. **Master** also names an authoritative source in the traditional DNS primary/secondary model. The name joins the two: authority should be earned through mastery and constrained by evidence.
+
+The DNS analogy is precise but limited. Within one DNS zone, a primary nameserver owns the canonical writable zone data. Secondary nameservers receive validated transfers, keep serving authoritative answers from their copies, and do not become independent writers of the primary data. Serial numbers and refresh checks make stale copies detectable. A secondary that cannot prove freshness is not silently treated as current.
+
+Apply that pattern to **each concern**, not to the repository as a whole. `MASTER/data/soul.yml` owns identity and source precedence; `MASTER/data/laws.yml` owns individual Law records; executable Laws and gates implement them; tree contracts define local boundaries; Git history records provenance. `RAILS`, `OPENBSD`, `STUDIO` and `BIZ` remain authoritative owners of their own products, hosts, creative work and documents. RAILS is not a replica of MASTER, and MASTER is not the writable source for every application detail.
+
+The rule is **one canonical owner per concern, with capable consumers and verifiable projections**. Generated agent entrypoints, compact agent briefs, runtime prompts, generated token files and deployed copies consume their owners. They must not become competing writable sources. A mismatch, missing source, stale digest or unmeasured projection is visible and inconclusive; it is never silently promoted to authority.
+
+## Mastery in the working loop
+
+Research should widen the set of plausible answers, not dictate the answer. For consequential or unfamiliar work, MASTER seeks primary documentation, source code, academic work and high-signal practitioner evidence; it looks for counterexamples and materially different approaches; then it chooses a bounded experiment, executes it under the Laws, measures the result, repairs failures and records the evidence in the existing owner. `/fix` is the delivery path, not a substitute for thought. A commit is a checkpoint, not proof that the work is correct.
+
+The model serving a turn is replaceable transport. MASTER's identity and authority do not move when the provider changes. The operator sets goals and owns deliberate value choices; MASTER owns the contracts assigned to it and remains answerable to evidence, the operator and applicable law.
+
 ## Read this first
 
 The authority order is:
