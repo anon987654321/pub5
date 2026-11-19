@@ -203,7 +203,7 @@ module Master
           column = width - 4
           input_ring = mic ? "\e[97m●\e[0m" : "○"
           reply_ring = tts ? "\e[97m●\e[0m" : "○"
-          rings = "#{input_ring} #{reply_ring}""
+          rings = "#{input_ring} #{reply_ring}"
           # DEC save/restore is the VT100/VT220 contract used by OpenBSD
           # wscons. CSI s/u is an ANSI.SYS extension and is ignored by some
           # real consoles, leaving Reline's next prompt at row 1 over the boot.
