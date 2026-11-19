@@ -104,7 +104,11 @@ A scan-only run does not authorize edits. Source checks do not prove rendered be
 - `data/council.yml` owns council personas, presets and the juror and judge prompts; the default hard-critique preset is `general_critique`, and the prose contract on those prompts applies to English and Bokmål alike.
 - `data/affiliate_sources.yml` owns the affiliate source registry.
 
-Do not copy their values into code, prompts or documentation when a reader can use the canonical source. Secrets belong in the runtime environment, never in Git. Relevant optional settings include `MASTER_BACKGROUND_SCAN=1` for opt-in background scanning, `MASTER_TEST_JOBS=1` for a single test worker, `MASTER_LLM_RECORD=1` for trajectory recording, `MASTER_LLM_GATEWAY_URL` and `MASTER_LLM_GATEWAY_KEY` for a hosted gateway, plus the runtime selectors `RUBY_BOX` and `MASTER_JIT`. Streaming `/fix` uses `MASTER_FIX_STREAM_WORKERS` (default 3, integer from 1 to 8); set `MASTER_FIX_STREAM=0` to disable the worker stream. The full builder self-test is off during ordinary startup: run `bundle exec rake selftest` for the complete Law scan, set `MASTER_BOOT_SELF_TEST=1` to run it in the background during startup, or `MASTER_STRICT_BOOT=1` to run it synchronously and fail boot on a finding.
+Do not copy their values into code, prompts or documentation when a reader can use the canonical source. Secrets belong in the runtime environment, never in Git.
+
+Relevant optional settings include `MASTER_BACKGROUND_SCAN=1` for opt-in background scanning, `MASTER_TEST_JOBS=1` for a single test worker, `MASTER_LLM_RECORD=1` for trajectory recording, `MASTER_LLM_GATEWAY_URL` and `MASTER_LLM_GATEWAY_KEY` for a hosted gateway, plus the runtime selectors `RUBY_BOX` and `MASTER_JIT`.
+
+The full builder self-test is off during ordinary startup. Run `bundle exec rake selftest` for the complete Law scan, set `MASTER_BOOT_SELF_TEST=1` to run it in the background during startup, or set `MASTER_STRICT_BOOT=1` to run it synchronously and fail boot on a finding. Streaming `/fix` uses `MASTER_FIX_STREAM_WORKERS` (default 3, integer from 1 to 8); set `MASTER_FIX_STREAM=0` to disable the worker stream.
 
 ## Outbound network boundary
 
