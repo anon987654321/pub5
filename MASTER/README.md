@@ -1,6 +1,6 @@
 # MASTER
 
-MASTER is pub5's shared agent runtime and engineering constitution. It interprets work, applies the Laws, routes models and tools, and coordinates checks and repairs across the repository. Keep each product and system in its owning tree: RAILS owns the applications, OPENBSD owns hosts and deployment, and STUDIO owns creative and media work.
+MASTER is pub5's agent runtime and engineering constitution. It interprets tasks, applies the Laws, routes models and tools, and coordinates checks and repairs. RAILS owns the applications; OPENBSD owns hosts and deployment; STUDIO owns creative and media work.
 
 ## What the name means
 
