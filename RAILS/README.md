@@ -27,9 +27,10 @@ This README is the entry to the tree. Feature truth is `apps.yml`, which also
 holds the ports, the domains and the stack versions, so nothing here restates
 them. Planned work that is not yet real sits in `apps.horizon.yml` and is
 marked for agents to ignore. Work only the operator can finish is listed in
-`MASTER/data/operator_seams.yml`. Rules for working in the tree are in `CLAUDE.md` beside
-this file,
-and each app keeps its own contract in an `AGENTS.md`.
+`MASTER/data/operator_seams.yml`. Rules for working in the tree are in `CLAUDE.md` beside this file, and
+each app keeps its own contract in an `AGENTS.md`. Product copy keeps each
+brand's voice; technical documentation follows the shared editorial standard
+in [MASTER/AGENTS.md](../MASTER/AGENTS.md).
 
 brgen is not a folder of apps. Every city apex in `Brgen::DomainRegistry` serves
 the feed, and the verticals are engines reached on subdomains of that apex, so
