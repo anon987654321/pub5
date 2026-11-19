@@ -83,8 +83,15 @@ module Studio
 
       def migrate(subject)
         destination = File.join(@destination_root, subject)
-        candidates = SOURCE_ROOTS.map { |root| File.join(@source_checkout, root, subject) }
-                                 .select { |path| File.directory?(path) && !File.symlink?(path) }
+        candidates = SOURCE_ROOTS.filter_map do |root|
+          path = File.join(@source_checkout, root, subject)
+          next unless File.exist?(path) || File.symlink?(path)
+
+          reject_symlink_components!(@source_checkout, path)
+          next unless File.directory?(path)
+
+          path
+        end
         entries = candidates.flat_map { |root| planned_entries(root) }
         entries.concat(johann_history_entries) if subject == "johann" && @restore_johann_history
         entries = deduplicate(entries)
