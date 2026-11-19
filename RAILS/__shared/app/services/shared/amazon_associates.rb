@@ -3,6 +3,7 @@
 require "net/http"
 require "json"
 require "uri"
+require_relative "outbound_http"
 require "time"
 
 # Amazon Associates product feed via the Creators API (PA-API 5.0 retired 2026-05-15).
