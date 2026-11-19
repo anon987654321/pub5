@@ -185,7 +185,7 @@ module Master
             connection.request(outbound_request) do |incoming|
               response = incoming
               declared = incoming["content-length"].to_s
-              if declared.match?(/\\A\\d+\\z/) && declared.to_i > cap
+              if declared.match?(/\A\d+\z/) && declared.to_i > cap
                 raise ResponseTooLarge, "response body exceeds #{cap} bytes"
               end
               incoming.read_body do |chunk|
@@ -203,7 +203,11 @@ module Master
       rescue Timeout::Error
         raise Timeout::Error, "outbound request exceeded #{timeout}s"
       ensure
-        http.finish if http&.started? rescue IOError, SystemCallError
+        begin
+          http.finish if http&.started?
+        rescue IOError, SystemCallError
+          nil
+        end
       end
 
       def self.blocked_ip?(ip)
