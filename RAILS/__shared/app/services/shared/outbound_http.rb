@@ -15,6 +15,7 @@ module Shared
   # itself, and the half that is wrong is the half nobody remembers to update.
   module OutboundHttp
     TIMEOUT = 10
+    MAX_TOTAL_TIMEOUT = 600
 
     # Remote servers are untrusted input. A malicious or broken one can answer a
     # gigabyte, so the body is read in chunks and the read stops at the cap
@@ -23,11 +24,12 @@ module Shared
     MAX_MEDIA_BODY = 8_000_000
 
     class BodyTooLarge < StandardError; end
+    class DeadlineExceeded < Timeout::Error; end
 
     NETWORK_ERRORS = [
       Errno::ECONNREFUSED, Errno::EHOSTUNREACH, Errno::ETIMEDOUT, Errno::ECONNRESET,
       Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError, SocketError, URI::InvalidURIError,
-      BodyTooLarge,
+      BodyTooLarge, DeadlineExceeded,
     ].freeze
 
     # HTTPS alone is not enough: a URL of https://127.0.0.1/ or a name that
@@ -145,8 +147,15 @@ module Shared
     # ipaddr= pins the socket destination while Net::HTTP keeps the original host
     # for the Host header and SNI, so certificate verification still checks the
     # name rather than the address.
+    # A socket read timeout limits silence between packets, not the lifetime of
+    # a response that drips one byte just before every deadline. The total budget
+    # bounds the whole request and defaults to the largest per-socket timeout,
+    # preserving the callers' timeout intent without permitting slow-drip hangs.
+    # Redirects are returned as responses; callers must refuse them or issue a new
+    # request through this policy so Location is never trusted implicitly.
     def request(uri, method: :get, headers: {}, body: nil, max_body: MAX_BODY,
-                open_timeout: TIMEOUT, read_timeout: TIMEOUT, write_timeout: TIMEOUT)
+                open_timeout: TIMEOUT, read_timeout: TIMEOUT, write_timeout: TIMEOUT,
+                total_timeout: nil)
       raise URI::InvalidURIError, "HTTPS required" unless uri.is_a?(URI::HTTPS)
       raise URI::InvalidURIError, "non-standard HTTPS port" unless uri.port == 443
       raise URI::InvalidURIError, "URL credentials and fragments are refused" unless uri.userinfo.nil? && uri.fragment.nil?
@@ -158,7 +167,31 @@ module Shared
       request = klass.new(uri.request_uri)
       headers.each { |key, value| request[key] = value }
       request.body = body if body
-      http.request(request) { |response| response.body = capped_body(response, max_body) }
+      total = Float(total_timeout || [open_timeout, read_timeout, write_timeout].map { |value| Float(value) }.max)
+      unless total.finite? && total.positive? && total <= MAX_TOTAL_TIMEOUT
+        raise ArgumentError, "total timeout must be finite and between 0 and #{MAX_TOTAL_TIMEOUT}s"
+      end
+
+      response = nil
+      Timeout.timeout(total, DeadlineExceeded, "outbound request exceeded its #{total}s total deadline") do
+        http.request(request) do |incoming|
+          response = incoming
+          declared = incoming["content-length"].to_s
+          if declared.match?(/\\A\\d+\\z/) && declared.to_i > max_body
+            raise BodyTooLarge, "response body exceeds #{max_body} bytes"
+          end
+          incoming.body = capped_body(incoming, max_body)
+        end
+      end
+      raise IOError, "outbound HTTP returned no response" unless response
+
+      response
+    ensure
+      begin
+        http.finish if http&.started?
+      rescue IOError, SystemCallError
+        nil
+      end
     end
 
     def pinned_connection(uri, address, open_timeout: TIMEOUT, read_timeout: TIMEOUT, write_timeout: TIMEOUT)
