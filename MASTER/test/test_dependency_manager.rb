@@ -73,7 +73,7 @@ class TestDependencyManager < Minitest::Test
     refute_match(/^ruby\s+["']/, gemfile, "the Gemfile must not freeze local Ruby metadata")
     refute_match(/^RUBY VERSION$/, lock)
     refute File.file?(File.join(Master::ROOT, ".ruby-version"))
-    assert_equal "3.3", policy.fetch("compatibility_floor")
+    assert_equal "3.2", policy.fetch("compatibility_floor")
     assert_includes policy.fetch("selection"), "already installed"
     assert_match(/no upper bound/i, policy.fetch("version_policy"))
   end
