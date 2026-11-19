@@ -432,7 +432,7 @@ module Master
         error = error.to_s.gsub(/\s+/, " ").strip unless error.nil?
         [
           "voice0 at mainbus0: #{enabled ? "on" : "off"}",
-          "player=#{player ? player.first : "none"} output=#{Voice::Playback.output_status} mode=#{engine} profile=#{profile} rate=#{policy.default_rate} pitch=#{policy.default_pitch}",
+          "player=#{player ? player.first : "none"} output=#{Voice::Playback.output_status} default=#{policy.single_voice_key} mode=#{engine} profile=#{profile} rate=#{policy.default_rate} pitch=#{policy.default_pitch}",
           detail,
           ("error=#{error}" if error && !error.empty?),
         ].compact.join("; ").gsub(/\s+/, " ").strip
