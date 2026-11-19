@@ -8,6 +8,7 @@ require "fileutils"
 require "uri"
 require_relative "../ground/failure_taxonomy"
 require_relative "../io/quota_check"
+require_relative "../io/ssrf_guard"
 # model_exists?, cancel_prediction and cancel_training all rescue into
 # Ground::Swallow, and nothing required it. Under a full MASTER boot something
 # else had loaded it first; loaded standalone -- which is how MASTER/tools/replicate
@@ -67,15 +68,17 @@ module Master
           mode = existing_target ? existing_target.mode & 0o7777 : 0o600
           deadline = monotonic_now + DOWNLOAD_TIMEOUT_SECONDS
 
+          address = SsrfGuard.pinned_address(uri)
+          raise SocketError, "Replicate download host is unsafe or unresolvable" unless address
+
           Tempfile.create(["replicate-download-", ".part"], directory, binmode: true) do |file|
             remaining = remaining_timeout(deadline, OPEN_TIMEOUT_SECONDS, label: "download")
-            Net::HTTP.start(
-              uri.host, uri.port, use_ssl: true,
-              open_timeout: remaining,
-              read_timeout: remaining_timeout(deadline, READ_TIMEOUT_SECONDS, label: "download"),
-              write_timeout: WRITE_TIMEOUT_SECONDS
-            ) do |http|
-              http.request_get(uri.request_uri) do |response|
+            http = SsrfGuard.http_for(uri, address, timeout: remaining)
+            http.open_timeout = remaining
+            http.read_timeout = remaining_timeout(deadline, READ_TIMEOUT_SECONDS, label: "download")
+            http.write_timeout = WRITE_TIMEOUT_SECONDS
+            http.start do |connection|
+              connection.request_get(uri.request_uri) do |response|
                 raise "download failed #{response.code}" unless response.code.to_i.between?(200, 299)
                 declared = response["content-length"].to_s
                 if declared.match?(/\A\d+\z/) && declared.to_i > max_bytes
@@ -571,14 +574,16 @@ module Master
         uri = api_uri(uri)
         response = nil
         body = +"".b
+        address = SsrfGuard.pinned_address(uri)
+        raise SocketError, "Replicate API host is unsafe or unresolvable" unless address
+
         remaining = remaining_timeout(deadline, OPEN_TIMEOUT_SECONDS, label: "API request")
-        Net::HTTP.start(
-          uri.host, uri.port, use_ssl: true,
-          open_timeout: remaining,
-          read_timeout: remaining_timeout(deadline, READ_TIMEOUT_SECONDS, label: "API request"),
-          write_timeout: remaining_timeout(deadline, WRITE_TIMEOUT_SECONDS, label: "API request")
-        ) do |http|
-          http.request(req) do |res|
+        http = SsrfGuard.http_for(uri, address, timeout: remaining)
+        http.open_timeout = remaining
+        http.read_timeout = remaining_timeout(deadline, READ_TIMEOUT_SECONDS, label: "API request")
+        http.write_timeout = remaining_timeout(deadline, WRITE_TIMEOUT_SECONDS, label: "API request")
+        http.start do |connection|
+          connection.request(req) do |res|
             response = res
             declared = res["content-length"].to_s
             if declared.match?(/\A\d+\z/) && declared.to_i > MAX_RESPONSE_BYTES
