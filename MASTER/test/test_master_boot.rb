@@ -2,6 +2,7 @@
 
 require_relative "test_helper"
 require "open3"
+require "timeout"
 require_relative "../lib/operator/ruby_runner"
 require_relative "../tools/backlog"
 
@@ -44,7 +45,7 @@ class MasterBootTest < Minitest::Test
       {}
     end
 
-    thread = Master.start_background_data_validation(root: Master::ROOT, bus: nil)
+    thread = Timeout.timeout(1) { Master.start_background_data_validation(root: Master::ROOT, bus: nil) }
     worker, root, bus = Timeout.timeout(1) { started.pop }
     assert_same thread, worker
     assert_equal Master::ROOT, root
