@@ -6,6 +6,12 @@ literal filesystem payload: `etc/`, `home/`, `usr/` and `var/` map directly
 to `/`. Operator tools live separately under `bin/` and `lib/`; checks,
 tests, data and bootstrap code remain outside the installable mirror.
 
+Keep operational prose as exact as the host contract: identify the target
+release, prerequisites, command, effect, validation and rollback. The shared
+Markdown standard lives in [MASTER/AGENTS.md](../MASTER/AGENTS.md); this tree's
+manual preflight and live-operation rules remain in [RUNBOOK.md](RUNBOOK.md).
+
+
 ## Canonical operator path
 
 Start with `RUNBOOK.md`, the single operational companion for live VPS work. Read it
