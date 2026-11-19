@@ -19,9 +19,13 @@ defaults: &defaults
   timeout_seconds: 60
 
 servers:
+  # The native ReadFile/WriteFile/Tree/ListDir/SearchFiles tools already
+  # cover the operator's normal workspace. Starting npm's filesystem server
+  # here made every CLI boot wait for an external Node package handshake.
+  # Enable it explicitly only when a task needs its additional MCP surface.
   filesystem:
     <<: *defaults
-    enabled: true
+    enabled: false
     tier: guarded
     args:
       - -y
