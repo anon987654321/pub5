@@ -45,33 +45,36 @@ class TestWebFetchCodePen < Minitest::Test
     end
   end
 
-  # A response read whole before the size check let a large page into memory first.
-  class Streamed
-    attr_reader :code, :chunks_read
-
-    def initialize(chunks)
-      @code = "200"
-      @chunks = chunks
-      @chunks_read = 0
+  def test_http_get_uses_the_shared_pinned_and_bounded_request
+    uri = URI("https://example.test/page")
+    response = Struct.new(:code, :body).new("200", "body")
+    calls = []
+    handler = lambda do |candidate, request, **options|
+      calls << [candidate, request, options]
+      response
     end
 
-    def read_body
-      @chunks.each do |chunk|
-        @chunks_read += 1
-        yield chunk
-      end
+    Master::Io::SsrfGuard.stub(:request, handler) do
+      fetched = fetch.send(:http_get, uri)
+      assert_equal "200", fetched.code
+      assert_equal "body", fetched.body
     end
+
+    candidate, request, options = calls.fetch(0)
+    assert_equal uri, candidate
+    assert_instance_of Net::HTTP::Get, request
+    assert_equal "MASTER/1 (web_fetch)", request["User-Agent"]
+    assert_equal Fetch::MAX_FULL_BYTES, options.fetch(:max_bytes)
+    assert_equal Fetch::DEADLINE_S, options.fetch(:timeout)
+    assert_equal Fetch::TIMEOUT, options.fetch(:open_timeout)
+    assert_equal Fetch::TIMEOUT, options.fetch(:read_timeout)
+    assert_equal Fetch::TIMEOUT, options.fetch(:write_timeout)
   end
 
-  def test_a_body_past_the_cap_is_refused_while_it_streams
-    chunk = "x" * (1024 * 1024)
-    response = Streamed.new(Array.new(10, chunk))
-
-    assert_raises(Fetch::TooLarge) { fetch.send(:capped_body, response) }
-    assert_equal 5, response.chunks_read, "reading stops at the first chunk over 4 MiB"
-  end
-
-  def test_a_body_under_the_cap_arrives_whole
-    assert_equal "ab", fetch.send(:capped_body, Streamed.new(%w[a b]))
+  def test_http_get_translates_a_shared_response_cap_failure
+    uri = URI("https://example.test/page")
+    Master::Io::SsrfGuard.stub(:request, ->(*) { raise Master::Io::SsrfGuard::ResponseTooLarge }) do
+      assert_raises(Fetch::TooLarge) { fetch.send(:http_get, uri) }
+    end
   end
 end
