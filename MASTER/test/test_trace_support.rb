@@ -49,6 +49,19 @@ class TestTraceSupport < Minitest::Test
     Fiber[:master_unit] = nil
   end
 
+  def test_normal_suppresses_model_telemetry_under_nested_units
+    Fiber[:master_unit] = "scan0"
+    Master::Trace::Dmesg.with_verbosity("normal") do
+      assert Master::Trace::Dmesg.quiet_in_turn?("llm0-nvidia: no answer")
+      assert Master::Trace::Dmesg.quiet_in_turn?("model0: usage")
+      assert Master::Trace::Dmesg.quiet_in_turn?("cache0: hit")
+      refute Master::Trace::Dmesg.quiet_in_turn?("llm0: MASTER fault, diagnostic abc123")
+      refute Master::Trace::Dmesg.quiet_in_turn?("llm0: call ended without provider outcome")
+    end
+  ensure
+    Fiber[:master_unit] = nil
+  end
+
   def test_verbose_keeps_provider_lane_diagnostics_available
     Fiber[:master_unit] = "master0"
     Master::Trace::Dmesg.with_verbosity("verbose") do
@@ -56,6 +69,30 @@ class TestTraceSupport < Minitest::Test
     end
   ensure
     Fiber[:master_unit] = nil
+  end
+
+  def test_normal_mode_summarizes_voice_worker_failures_but_verbose_keeps_detail
+    normal = StringIO.new
+    Master::Trace::Dmesg.with_verbosity("normal") do
+      Master::Trace::Dmesg.emit("voice0: edge worker failed: private worker stderr", io: normal)
+    end
+    assert_equal "voice0: speech synthesis degraded; fallback may continue; details: /voice status\n", normal.string
+    refute_includes normal.string, "private worker stderr"
+
+    verbose = StringIO.new
+    Master::Trace::Dmesg.with_verbosity("verbose") do
+      Master::Trace::Dmesg.emit("voice0: edge worker failed: private worker stderr", io: verbose)
+    end
+    assert_includes verbose.string, "private worker stderr"
+  end
+
+  def test_normal_mode_summarizes_final_audio_failure_without_hiding_text_fallback
+    output = StringIO.new
+    Master::Trace::Dmesg.with_verbosity("normal") do
+      Master::Trace::Dmesg.emit("voice0: audio playback failed - /usr/bin/afplay", io: output)
+    end
+
+    assert_equal "voice0: audio unavailable; reply remains visible as text; details: /voice status\n", output.string
   end
 
   def test_verbose_hides_per_file_churn_that_trace_shows
