@@ -31,6 +31,13 @@ class TestMeretheLoraPackage < Minitest::Test
     assert Studio::MeretheLora::CURATED_CAPTIONS.values.all? { |caption| caption.include?("MERETHE") }
   end
 
+  def test_public_caption_templates_do_not_publish_personal_appearance_details
+    captions = Studio::MeretheLora::CURATED_CAPTIONS.values.join(" ").downcase
+
+    assert captions.include?("merethe")
+    refute_match(/ash-blonde|blue eyes|hair|adult woman/, captions)
+  end
+
   def test_preflight_minimum_matches_trainer_floor_and_target_range
     assert_equal 10, Studio::MeretheLora::MIN_IMAGES
     assert_equal [12, 18], [Studio::MeretheLora::TARGET_MIN_IMAGES, Studio::MeretheLora::MAX_IMAGES]
