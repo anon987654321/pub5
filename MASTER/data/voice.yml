@@ -16,8 +16,8 @@ tts:
   # The language map takes precedence over single_voice; single_voice is the
   # fallback for text whose language cannot be determined.
   single_voice: christopher
-  # One speaker. When Edge returns nothing for a sentence, that sentence is silent; true lets macOS say or
-  # espeak speak it instead, in a different voice.
+  # The global OS fallback stays off. macOS may use Alex for the explicitly
+  # mapped Christopher/Andrew voices; unmapped voices remain silent on Edge failure.
   os_voice_fallback: false
   neural: en-US-ChristopherNeural
   rotation:
