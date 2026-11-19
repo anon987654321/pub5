@@ -644,7 +644,19 @@ measure is already owned by the Bymorgen item above.
   checkout and the reviewed `OPERATOR.sh --plan/--apply/--verify` sequence
   must complete before the first durable deploy receipt can be written. A
   regression assertion was added; it is NOT_RUN. No live host state or
-  deployment was inspected or changed by this documentation pass.
+  deployment was inspected or changed by that documentation pass.
+  2026-11-19 partial: the shared editorial contract was applied to the
+  principal entrypoints. Targeted copy edits clarify OPENBSD's operator
+  preflight and source ownership, BIZ's published/draft/archive boundaries
+  and production chain, STUDIO's consent-gated LoRA workflow, the shared
+  Rails HTML/accessibility contract, BSDPorts' product/search description,
+  and Brgen/Amber's product introductions. The BIZ print command now uses
+  the script's automatic Chrome discovery instead of an ellipsis placeholder.
+  This is not yet a line-by-line editorial audit of all 82 tracked Markdown
+  files. Preserve generated pointers, licences, receipts and historical
+  records; review the remaining maintained leaf documents for accuracy,
+  stale commands, links, hierarchy and rendered reading order.
+
 - [ ] **BIZ document-family implementation.** The current source contract now
   defines distinct business-model/plan, funding, legal/contract, corporate and
   financial/analytical profiles. The production pipeline still publishes the
