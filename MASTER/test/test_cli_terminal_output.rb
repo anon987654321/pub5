@@ -115,7 +115,7 @@ class TestCLITerminalOutput < Minitest::Test
     previous_quiet.nil? ? ENV.delete("MASTER_CLI_QUIET") : ENV["MASTER_CLI_QUIET"] = previous_quiet
   end
 
-  def test_conversational_replies_use_irc_lines_on_a_tty
+  def test_conversational_replies_are_plain_terminal_prose
     cli = session
     cli.instance_variable_set(:@last_input, "hello")
 
@@ -123,27 +123,34 @@ class TestCLITerminalOutput < Minitest::Test
       cli.send(:format_irc_reply, "Hello.\n\nHow are you?")
     end
 
-    rows = output.lines(chomp: true)
-    assert_match(/\A\[\d{2}:\d{2}\] <master> Hello\.\z/, rows.fetch(0))
-    assert_equal "", rows.fetch(1)
-    assert_match(/\A\[\d{2}:\d{2}\] <master> How are you\?\z/, rows.fetch(2))
+    assert_equal "Hello.\n\nHow are you?", output
+    refute_match(/\A\[\d{2}:\d{2}\]|<master>/, output)
   end
 
-  def test_streamed_irc_prefix_survives_chunk_and_line_boundaries
+  def test_streamed_conversation_preserves_text_without_chat_prefixes
     cli = session
     cli.instance_variable_set(:@last_input, "hello")
     state = {}
 
-    output = $stdout.stub(:tty?, true) do
-      cli.stub(:irc_prefix, "[12:34] <master> ") do
-        first = cli.send(:format_irc_stream, "Hello.\n\n", state:)
-        second = cli.send(:format_irc_stream, "How", state:)
-        third = cli.send(:format_irc_stream, " are you?\n", state:)
-        first + second + third
-      end
-    end
+    output = cli.send(:format_irc_stream, "Hello.\n\n", state:) +
+             cli.send(:format_irc_stream, "How", state:) +
+             cli.send(:format_irc_stream, " are you?\n", state:)
 
-    assert_equal "[12:34] <master> Hello.\n\n[12:34] <master> How are you?\n", output
+    assert_equal "Hello.\n\nHow are you?\n", output
+  end
+
+  def test_deploy_completion_uses_registered_targets_and_offers_confirmation
+    cli = session
+
+    assert_includes cli.send(:deploy_completion, "/deploy r", "r"), "rails"
+    assert_equal ["--confirm"], cli.send(:deploy_completion, "/deploy rails ", "")
+    assert_equal ["--confirm"], cli.send(:deploy_completion, "/deploy rails --c", "--c")
+  end
+
+  def test_fix_path_completion_uses_the_pub5_repository_root
+    candidates = session.send(:complete_paths, "RAIL", base: Master.repo_root)
+
+    assert_includes candidates, "RAILS/"
   end
 
   def test_normal_chat_unwraps_the_accidental_ruby_say_helper
@@ -215,6 +222,32 @@ class TestCLITerminalOutput < Minitest::Test
 
     assert_equal "Ruby is a programming language.",
                  cli.send(:conversation_output, wrapper)
+  end
+
+  def test_normal_chat_unwraps_stdout_write_say_wrapper_from_a_natural_answer
+    cli = session
+    cli.instance_variable_set(:@last_input, "so what can you really do?")
+    wrapper = <<~'RUBY'
+      STDOUT.sync = true
+      STDERR.sync = true
+      def say(s = "")
+        STDOUT.write(s.to_s)
+        STDOUT.write("\n")
+      end
+      begin
+        say "I can:"
+        say "- read and search the repository."
+        say
+        say "I cannot:"
+        say "- claim a deployment succeeded without a receipt."
+      rescue => e
+        say "The answer could not be rendered."
+      end
+    RUBY
+
+    assert_equal "I can:\n- read and search the repository.\n\nI cannot:\n- claim a deployment succeeded without a receipt.",
+                 cli.send(:conversation_output, wrapper)
+    assert cli.send(:ruby_say_wrapper_stream?, wrapper)
   end
 
   def test_explicit_code_request_is_not_unwrapped
