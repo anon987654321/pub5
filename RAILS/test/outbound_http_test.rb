@@ -204,6 +204,50 @@ class FediverseSsrfTest < Minitest::Test
     assert_equal "aaaabbbb", response.body
   end
 
+  def test_total_deadline_interrupts_a_slow_response
+    with_stubbed_dns("93.184.216.34") do
+      with_stubbed_request(lambda do |_http, _request, _block|
+        sleep 0.05
+        Net::HTTPOK.new("1.1", "200", "OK")
+      end) do
+        error = assert_raises(Shared::OutboundHttp::DeadlineExceeded) do
+          Shared::OutboundHttp.request(
+            URI("https://rebind.test/actor"),
+            open_timeout: 1, read_timeout: 1, write_timeout: 1,
+            total_timeout: 0.01
+          )
+        end
+        assert_match(/total deadline/, error.message)
+      end
+    end
+  end
+
+  def test_total_deadline_defaults_to_the_largest_socket_timeout_and_is_bounded
+    assert_raises(ArgumentError) do
+      Shared::OutboundHttp.request(
+        URI("https://rebind.test/actor"), total_timeout: Shared::OutboundHttp::MAX_TOTAL_TIMEOUT + 1
+      )
+    end
+  end
+
+  def test_redirects_are_returned_but_never_followed_by_the_transport
+    response = Net::HTTPFound.new("1.1", "302", "Found")
+    response["location"] = "https://127.0.0.1/private"
+    calls = 0
+
+    with_stubbed_dns("93.184.216.34") do
+      with_stubbed_request(lambda do |_http, _request, _block|
+        calls += 1
+        response
+      end) do
+        result = Shared::OutboundHttp.request(URI("https://rebind.test/actor"))
+        assert_instance_of Net::HTTPFound, result
+      end
+    end
+
+    assert_equal 1, calls, "redirects must not create a second outbound connection"
+  end
+
   def test_media_body_budget_is_bounded_and_larger_than_json
     assert_operator Shared::OutboundHttp::MAX_MEDIA_BODY, :>, Shared::OutboundHttp::MAX_BODY
     assert_operator Shared::OutboundHttp::MAX_MEDIA_BODY, :<=, 8_000_000
@@ -212,7 +256,7 @@ class FediverseSsrfTest < Minitest::Test
   def test_an_oversized_body_is_a_network_error_callers_already_rescue
     assert_includes Shared::OutboundHttp::NETWORK_ERRORS, Shared::OutboundHttp::BodyTooLarge
   end
-
+\n  def test_total_deadline_is_a_network_error_callers_already_rescue\n    assert_includes Shared::OutboundHttp::NETWORK_ERRORS, Shared::OutboundHttp::DeadlineExceeded\n  end\n
   private
 
   ChunkedResponse = Struct.new(:chunks, :body, :chunks_read) do
