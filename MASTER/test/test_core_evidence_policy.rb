@@ -29,7 +29,7 @@ class EvidencePolicyTest < Minitest::Test
     test_pass: %w[bundle exec rake test],
     scan_clean: %w[bin/check],
     code_review: %w[bin/review],
-    log_analysis: %w[rcctl check brgen],
+    log_analysis: %w[dmesg],
     profiling_data: %w[stackprof tmp/profile.dump],
   }.freeze
 
@@ -58,6 +58,35 @@ class EvidencePolicyTest < Minitest::Test
       proof = Master::Core::Proof.new(risk: :low)
       proof.record_evidence(E.exec(PRODUCER_ARGV.fetch(kind), evidence: kind), OK)
       refute_equal 0, proof.send(:evidence_score), "nothing can earn #{kind}"
+    end
+  end
+
+  # Producer names embedded in an unrelated command are not evidence.
+  def test_embedded_producer_names_do_not_match
+    false_claims = {
+      test_pass: [%w[echo rake test], %w[echo bundle exec rake test]],
+      scan_clean: [%w[echo rubocop], %w[echo bin/check]],
+      code_review: [%w[echo rake review], %w[echo bin/review]],
+    }
+
+    false_claims.each do |kind, commands|
+      commands.each do |argv|
+        proof = Master::Core::Proof.new(risk: :low)
+        proof.record_evidence(E.exec(argv, evidence: kind), OK)
+        assert_equal 0, proof.send(:evidence_score), "#{argv.inspect} forged #{kind}"
+      end
+    end
+  end
+
+  def test_interpreter_and_shell_wrappers_do_not_match_a_producer
+    [
+      %w[ruby -e puts rake test],
+      %w[sh -c rake test],
+      %w[bundle exec rake test --extra-task],
+    ].each do |argv|
+      proof = Master::Core::Proof.new(risk: :low)
+      proof.record_evidence(E.exec(argv, evidence: :test_pass), OK)
+      assert_equal 0, proof.send(:evidence_score), "#{argv.inspect} was not an exact producer"
     end
   end
 

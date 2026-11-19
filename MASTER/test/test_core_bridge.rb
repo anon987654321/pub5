@@ -3,6 +3,7 @@
 require_relative "test_helper"
 require "cli/core_bridge"
 require "tmpdir"
+require "fileutils"
 require "minitest/mock"
 
 # The bridge runs one goal through the core Fold from inside the CLI and streams
@@ -24,23 +25,28 @@ class CoreBridgeTest < Minitest::Test
     def publish_required(name, payload = {}) = @events << [name, payload]
   end
 
-  # The real Constitution blocks `done` before an evidence threshold, so a
-  # completing run must first produce passing exec evidence — same as production.
-  #
-  # The argv has to name a command Proof::PRODUCERS recognises. Declaring
-  # `evidence: :test_pass` on `true` records nothing: an exec that claims an
-  # evidence kind its command could not have produced is the forgery that guard
-  # exists to refuse, so these ran three no-ops, earned no evidence, and the
-  # fold spun to max_turns refusing `done` forty times. `echo` keeps them
-  # side-effect free while the argv stays something a producer pattern matches.
-  def evidence_then_done(*extra, summary:)
+  # Test fixtures run the exact argv vectors the proof policy recognises.
+  # Producer strings embedded in echo commands are deliberately not accepted.
+  def evidence_then_done(root:, extra: [], summary:)
+    seed_evidence_tools!(root)
     [
       *extra,
-      Master::Core::Effect.exec(%w[echo rake test], evidence: :test_pass),
-      Master::Core::Effect.exec(%w[echo rubocop], evidence: :scan_clean),
-      Master::Core::Effect.exec(%w[echo rake review], evidence: :code_review),
+      Master::Core::Effect.exec(%w[rake test], evidence: :test_pass),
+      Master::Core::Effect.exec(%w[bin/check], evidence: :scan_clean),
+      Master::Core::Effect.exec(%w[bin/review], evidence: :code_review),
       Master::Core::Effect.done(summary),
     ]
+  end
+
+  def seed_evidence_tools!(root)
+    File.write(File.join(root, "Rakefile"), "task(:test) { }\n")
+    bin = File.join(root, "bin")
+    FileUtils.mkdir_p(bin)
+    %w[check review].each do |name|
+      path = File.join(bin, name)
+      File.write(path, "#!/bin/sh\nexit 0\n")
+      File.chmod(0o755, path)
+    end
   end
 
   def test_model_reason_event_persists_digest_and_size_not_reason_text
@@ -65,7 +71,7 @@ class CoreBridgeTest < Minitest::Test
       File.write(File.join(root, "private.txt"), contents)
       streamed = []
       model = ScriptedModel.new(*evidence_then_done(
-        Master::Core::Effect.read("private.txt"), summary: "read complete"
+        root:, extra: [Master::Core::Effect.read("private.txt")], summary: "read complete"
       ))
 
       result = Master::CLI::CoreBridge.run(
@@ -101,7 +107,7 @@ class CoreBridgeTest < Minitest::Test
     Dir.mktmpdir do |root|
       bus = FakeBus.new
       model = ScriptedModel.new(
-        *evidence_then_done(Master::Core::Effect.write("note.txt", "hello\n"), summary: "wrote the note"),
+        *evidence_then_done(root:, extra: [Master::Core::Effect.write("note.txt", "hello\n")], summary: "wrote the note"),
       )
       result = Master::CLI::CoreBridge.run("write a note", root:, bus:, model:, memory: seeded_memory(root, "note.txt"))
 
@@ -242,7 +248,7 @@ class CoreBridgeTest < Minitest::Test
   def test_lifecycle_events_persist_without_a_host_bus
     Dir.mktmpdir do |root|
       model = ScriptedModel.new(*evidence_then_done(
-        Master::Core::Effect.write("persisted.txt", "never log this payload"), summary: "ok"
+        root:, extra: [Master::Core::Effect.write("persisted.txt", "never log this payload")], summary: "ok"
       ))
 
       result = Master::CLI::CoreBridge.run("persist a note", root:, model:)
@@ -281,7 +287,7 @@ class CoreBridgeTest < Minitest::Test
       File.write(File.join(root, "private.txt"), private_text)
       bus = FakeBus.new
       model = ScriptedModel.new(*evidence_then_done(
-        Master::Core::Effect.read("private.txt"), summary: "read complete"
+        root:, extra: [Master::Core::Effect.read("private.txt")], summary: "read complete"
       ))
 
       result = Master::CLI::CoreBridge.run("read a private file", root:, bus:, model:)
@@ -301,7 +307,7 @@ class CoreBridgeTest < Minitest::Test
     Dir.mktmpdir do |root|
       bus = FakeBus.new
       effect = Master::Core::Effect.write("private.txt", "secret payload")
-      model = ScriptedModel.new(*evidence_then_done(effect, summary: "ok"))
+      model = ScriptedModel.new(*evidence_then_done(root:, extra: [effect], summary: "ok"))
 
       result = Master::CLI::CoreBridge.run("write a private note", root:, bus:, model:, memory: seeded_memory(root, "private.txt"))
 
@@ -355,7 +361,7 @@ class CoreBridgeTest < Minitest::Test
       undo.snapshot(older)
       File.write(older, "kept\n")
 
-      model = ScriptedModel.new(*evidence_then_done(Master::Core::Effect.write("note.txt", "after\n"), summary: "ok"))
+      model = ScriptedModel.new(*evidence_then_done(root:, extra: [Master::Core::Effect.write("note.txt", "after\n")], summary: "ok"))
       Master::CLI::CoreBridge.run("rewrite the note", root:, model:, container: { undo: })
       assert_equal "after\n", File.read(note)
 
@@ -402,7 +408,7 @@ class CoreBridgeTest < Minitest::Test
 
   def test_run_string_renders_a_transcript
     Dir.mktmpdir do |root|
-      model = ScriptedModel.new(*evidence_then_done(summary: "all clear"))
+      model = ScriptedModel.new(*evidence_then_done(root:, summary: "all clear"))
       out = Master::CLI::CoreBridge.run_string("check", root:, model:)
       assert_match(/core: complete/, out)
       assert_match(/all clear/, out)
@@ -559,7 +565,7 @@ class CoreBridgeTest < Minitest::Test
   def test_on_turn_callback_fires_per_turn
     Dir.mktmpdir do |root|
       lines = []
-      model = ScriptedModel.new(*evidence_then_done(summary: "done"))
+      model = ScriptedModel.new(*evidence_then_done(root:, summary: "done"))
       Master::CLI::CoreBridge.run("goal", root:, model:, on_turn: ->(line) { lines << line })
       refute_empty lines
       assert(lines.all? { |line| line.match?(/\A\d+:/) })

@@ -6,7 +6,6 @@ class TestEffectAuditCoverage < Minitest::Test
   MASTER_ROOT = File.expand_path("..", __dir__)
   APPROVED_FOLD_ENTRYPOINTS = %w[
     lib/cli/core_bridge.rb
-    lib/cli/core_command.rb
   ].freeze
 
   def test_every_production_fold_entrypoint_installs_the_strict_effect_observer
@@ -26,5 +25,9 @@ class TestEffectAuditCoverage < Minitest::Test
       assert_match(/effect_observer\s*:/, source,
                    "#{relative} must pass the observer into Fold")
     end
+
+    command = File.read(File.join(MASTER_ROOT, "lib/cli/core_command.rb"), encoding: "UTF-8")
+    assert_includes command, "CoreBridge.build_fold(",
+                    "core command must use the canonical Fold factory"
   end
 end

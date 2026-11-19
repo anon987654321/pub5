@@ -24,25 +24,49 @@ module Master::Core
     PASS_THRESHOLD = 80
     ALTERNATIVES_REQUIRED = 15
 
-    # What can actually produce each kind of proof. The kind was whatever the
-    # model wrote in the effect, so `exec(["true"], evidence: "test_pass")` was
-    # worth 35 points and four such calls ended the turn — the fold graded its own
-    # paper. A command that does not run the tests cannot be a passing test run.
+    # Evidence producers are complete argv vectors, not substrings. Matching
+    # "rake test" anywhere in argv let ["echo", "rake test"] earn test points;
+    # the same flaw let echo rubocop and echo rake review complete a run.
     #
-    # Unmatched scores nothing rather than blocking: the fold may run whatever it
-    # likes, it cannot claim credit for it. Refusing the effect outright
-    # would turn a wrong label into a dead turn, and the label is the model's
-    # mistake to correct on the next one.
+    # Keep this catalogue narrow and auditable. A command with extra arguments,
+    # an interpreter wrapper, or a quoted producer name is not the producer.
     PRODUCERS = {
-      # `ruby ... test/x.rb` rather than `ruby -I<something>test`: the real
-      # invocation in this repo is `ruby -Ilib -Itest test/test_core_world.rb`,
-      # where the include flags come first and an adjacency pattern misses it.
-      test_pass: %r{\b(?:rake\s+test|rails\s+test|rspec|minitest|bin/(?:ci|check)|ruby\S*\s[^;|]*\btest/)},
-      scan_clean: %r{\b(?:bin/(?:check|scan)|rubocop|brakeman|bundler-audit|rake\s+(?:lint|audit|scan))},
-      code_review: %r{\b(?:bin/(?:review|critique)|rake\s+(?:review|critique))},
-      log_analysis: %r{\b(?:journalctl|dmesg|rcctl|/var/log|\.log\b)},
-      profiling_data: %r{\b(?:benchmark|stackprof|ruby-prof|memory_profiler|--profile)},
-    }.freeze
+      test_pass: [
+        %w[rake test],
+        %w[bundle exec rake test],
+        %w[rails test],
+        %w[rspec],
+        %w[bin/ci],
+        %w[ruby RAILS/test/run_all.rb],
+        %w[ruby OPENBSD/test/run_all.rb],
+      ],
+      scan_clean: [
+        %w[bin/check],
+        %w[bin/scan],
+        %w[MASTER/bin/check --profile=agent],
+        %w[ruby MASTER/checks/runner.rb --all],
+        %w[rubocop],
+        %w[brakeman],
+        %w[bundler-audit],
+        %w[rake lint],
+        %w[rake audit],
+        %w[rake scan],
+      ],
+      code_review: [
+        %w[bin/review],
+        %w[bin/critique],
+        %w[rake review],
+        %w[rake critique],
+      ],
+      log_analysis: [
+        %w[dmesg],
+        %w[journalctl],
+      ],
+      profiling_data: [
+        %w[stackprof tmp/profile.dump],
+        %w[benchmark],
+      ],
+    }.transform_values { |commands| commands.map { |argv| argv.freeze }.freeze }.freeze
 
     RISK_ORDER = %i[low medium high critical].freeze
 
@@ -158,7 +182,8 @@ module Master::Core
 
       kind = effect.args[:evidence].to_s.to_sym
       score = SCORING.fetch(kind, 0)
-      return unless score.positive? && PRODUCERS[kind]&.match?(Array(effect.args[:argv]).join(" "))
+      argv = Array(effect.args[:argv]).map(&:to_s)
+      return unless score.positive? && PRODUCERS.fetch(kind, []).include?(argv)
 
       @evidence << Evidence.new(kind:, ok: true, score:, detail: observation.message, at: Time.now.utc,
                                 generation: @generation)

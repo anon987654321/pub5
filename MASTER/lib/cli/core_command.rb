@@ -69,11 +69,13 @@ module Master
         refusals = []
         probe_policy = Master::CLI::CoreBridge.read_only_probe(root:)
 
-        result = Master::Core::Fold.new(
-          model:, constitution: constitution(root, master_root, probe: probe_policy), world: Master::Core::World.new(root:, probe: probe_policy),
+        result = Master::CLI::CoreBridge.build_fold(
+          root:, data_dir: File.join(master_root, "data"), model:,
+          world: Master::Core::World.new(root:, probe: probe_policy),
           memory: Master::Core::Memory.new, max_turns: turn_budget(model, options),
           observer: refusal_recorder(refusals),
-          effect_observer: Master::Trace::EffectObserver.new(bus: event_bus(root))
+          effect_observer: Master::Trace::EffectObserver.new(bus: event_bus(root)),
+          probe: probe_policy,
         ).run(goal)
         verdict(result, refusals, real: options[:real])
       end
@@ -92,21 +94,6 @@ module Master
         return NullModel.new(goal) unless options[:real]
 
         Master::Core::Model.new(**{ model_id: options[:model] }.compact)
-      end
-
-      # The same guards CoreBridge gives the Fold: without them this entrypoint admitted writes no
-      # scan verified and execs no sandbox scoped, the path that runs unattended.
-      def constitution(root, master_root, probe: nil)
-        bridge = Master::CLI::CoreBridge
-        hooks = Master::CLI::ToolHooks
-
-        Master::Core::Constitution.load(
-          data_dir: File.join(master_root, "data"), workspace_root: root,
-          capabilities: Master::Core::Capabilities.for(:fix),
-          verify: hooks.wrap_verifier(bridge.scan_verifier(root:), root:),
-          sandbox: hooks.wrap_sandbox(bridge.shell_sandbox(root:), root:),
-          probe:
-        )
       end
 
       # A run against the checkout itself records into MASTER's own event log.

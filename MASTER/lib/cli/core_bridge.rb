@@ -674,10 +674,11 @@ module Master
       end
 
       def build_fold(root:, model:, memory:, world:, max_turns:, observer:, effect_observer: nil,
-                     capabilities: Master::Core::Capabilities.for(:fix), cancellation: nil, probe: nil)
+                     capabilities: Master::Core::Capabilities.for(:fix), cancellation: nil, probe: nil,
+                     data_dir: Master.data_path)
         Master::Core::Fold.new(
           model:,
-          constitution: Master::Core::Constitution.load(data_dir: Master.data_path, workspace_root: root,
+          constitution: Master::Core::Constitution.load(data_dir:, workspace_root: root,
                                                         verify: ToolHooks.wrap_verifier(scan_verifier(root:), root:),
                                                         sandbox: ToolHooks.wrap_sandbox(shell_sandbox(root:), root:),
                                                         probe:, capabilities:),
