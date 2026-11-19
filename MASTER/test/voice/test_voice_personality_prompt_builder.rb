@@ -156,6 +156,13 @@ class TestPersonalityPromptBuilder < Minitest::Test
     assert_includes prompt, "Give the answer itself"
     assert_includes prompt, "Never expose transcripts, role labels"
     assert_includes prompt, "Never present a script that merely prints prose"
+    assert_includes prompt, "shortest complete answer"
+    assert_includes prompt, "do not show both the full original message or report and its summary"
+    assert_includes prompt, "raw provider replies"
+    assert_includes prompt, "Git diffs verbatim"
+    assert_includes prompt, "material warnings, failures, uncertainty"
+    assert_includes prompt, "Routine success: one concise line"
+    refute_includes prompt, "No summary, no restatement."
   end
 
   def test_the_identity_answers_in_the_language_it_is_addressed_in
