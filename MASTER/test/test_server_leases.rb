@@ -131,9 +131,9 @@ class TestServerLeases < Minitest::Test
     source = File.read(File.expand_path("../bin/master", __dir__))
     fold_start = source.index('if ENV["MASTER_FOLD"] == "1"')
     tty_start = source.index("if $stdin.tty?", fold_start)
-    tty_end = source.index("\\nelse\\n  $stdout.sync = true", tty_start)
-    pipe_start = source.index("else\\n  $stdout.sync = true", tty_end)
-    pipe_end = source.index("\\nend\\n\\nstop_control_plane", pipe_start)
+    tty_end = source.index("\nelse\n  $stdout.sync = true", tty_start)
+    pipe_start = source.index("else\n  $stdout.sync = true", tty_end)
+    pipe_end = source.index("\nend\n\nstop_control_plane", pipe_start)
     sections = [
       fold_start && tty_start && source[fold_start...tty_start],
       tty_start && tty_end && source[tty_start...tty_end],
