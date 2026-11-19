@@ -55,7 +55,7 @@ def run(label, *argv, chdir: ROOT)
       head = detail.byteslice(0, half).to_s.scrub
       tail = detail.byteslice(-half, half).to_s.scrub
       omitted = detail.bytesize - head.bytesize - tail.bytesize
-      detail = "#{head}\\n... failure output truncated; omitted #{omitted} bytes ...\\n#{tail}"
+      detail = "#{head}\n... failure output truncated; omitted #{omitted} bytes ...\n#{tail}"
     end
     detail.lines.each { |line| puts "       #{line.rstrip}" }
   end
