@@ -34,6 +34,28 @@ class MasterBootTest < Minitest::Test
     assert_equal "1", Master::MasterRuntime::PROCESS_DEFAULTS["MASTER_SAFE_MODE"]
   end
 
+  def test_background_data_validation_reports_from_a_separate_thread
+    started = Queue.new
+    release = Queue.new
+    original = Master.method(:validate_data!)
+    Master.define_singleton_method(:validate_data!) do |root:, bus:|
+      started << [Thread.current, root, bus]
+      release.pop
+      {}
+    end
+
+    thread = Master.start_background_data_validation(root: Master::ROOT, bus: nil)
+    worker, root, bus = Timeout.timeout(1) { started.pop }
+    assert_same thread, worker
+    assert_equal Master::ROOT, root
+    assert_nil bus
+    assert thread.alive?
+  ensure
+    release << true if release
+    thread&.join(1)
+    Master.define_singleton_method(:validate_data!, original) if original
+  end
+
   def test_master_boot_module_exposes_boot_entrypoints
     assert Master.respond_to?(:boot)
     assert Master.respond_to?(:prepare_runtime!)
