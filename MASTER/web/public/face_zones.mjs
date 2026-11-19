@@ -61,8 +61,27 @@ export function sampleZone(i, space = '3d', salt = 1) {
   }
 
   if (space === '2d') {
-    // Flip Y for the 2D prototype (top-negative, bottom-positive)
-    y = -y + 0.05; // slight offset adjustment to match prototype's -0.12 eye Y
+    // Flip Y for the 2D prototype (top-negative, bottom-positive), with a
+    // slight offset to land the eye on the prototype's -0.12.
+    y = -y + 0.05;
+    // The prototype draws features readably small: eyes and brows are marks,
+    // not volumes, and the skin fill hugs the classic 0.73-by-0.91 head oval
+    // with an outer rim band.
+    if (zoneName === "eye") {
+      x = side * 0.31 + (x - side * 0.31) * 0.55;
+      y = -0.12 + (y - 0.12) * 0.55;
+      zoneName = "eye";
+    } else if (zoneName === "brow") {
+      y = -0.34 + (y + 0.33) * 0.4;
+    } else if (zoneName === "skin" || zoneName === "hair" || zoneName === "chin") {
+      const radius = Math.hypot(x, y);
+      if (radius > 1e-6) {
+        const classic = Math.min(1, radius / 0.97) * 0.92;
+        x = (x / radius) * classic * 0.79;
+        y = (y / radius) * classic * 0.99;
+      }
+      zoneName = radius > 0.9 ? "rim" : "skin";
+    }
   }
 
   return { x, y, z: space === '3d' ? z : 0, zone, zoneName, side };

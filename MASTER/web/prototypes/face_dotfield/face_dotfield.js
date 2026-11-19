@@ -1,23 +1,28 @@
+// The many become one: dots drift as a field, then settle into the face, and one mark stays solid.
+// A prototype beside the live face (face_stipple_system.js); nothing here is wired into it.
+// Loaded as a module so it shares the canonical zone map with the live face.
+import { sampleZone, SETTLE_MS, SOLO_PROBABILITY } from "../../public/face_zones.mjs";
+
 (() => {
   "use strict";
-  // The many become one: dots drift as a field, then settle into the face, and one mark stays solid.
-  // A prototype beside the live face (face_stipple_system.js); nothing here is wired into it.
   const canvas = document.getElementById("field");
   const ctx = canvas.getContext("2d");
   const ui = Object.fromEntries(["replay", "condense", "level", "solo"].map((id) => [id, document.getElementById(id)]));
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const COUNT = 2600;
-  const SETTLE_MS = 5200;
   const rand = (i, salt) => { const v = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453; return v - Math.floor(v); };
 
-import { sampleZone, SETTLE_MS, SOLO_PROBABILITY } from '../../public/face_zones.mjs';
-  // Face zones in unit space (x, y in -1..1), the same layout the live stipple samples.
-  function target(i) { return sampleZone(i, '2d'); }
+  // Face zones in unit space (x, y in -1..1), the same layout the live stipple
+  // samples. The shared map speaks zoneName strings to this 2D canvas.
+  function target(i) {
+    const t = sampleZone(i, "2d");
+    return { x: t.x, y: t.y, zone: t.zoneName, side: t.side };
+  }
 
   const dots = Array.from({ length: COUNT }, (_, i) => {
     const t = target(i);
     // The solo mark is one eye, left of centre: a single solid disc among the stipple.
-    const solo = t.zone === "eye" && t.side < 0 && rand(i, 11) < 0.9;
+    const solo = t.zone === "eye" && t.side < 0 && rand(i, 11) < SOLO_PROBABILITY;
     return { ...t, solo, sx: rand(i, 20) * 2 - 1, sy: rand(i, 21) * 2 - 1, delay: rand(i, 22) * 0.35, ph: rand(i, 23) * 6.283, size: 0.7 + rand(i, 24) * 1.1 };
   });
 
