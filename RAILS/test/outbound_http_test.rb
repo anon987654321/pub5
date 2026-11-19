@@ -222,12 +222,17 @@ class FediverseSsrfTest < Minitest::Test
     end
   end
 
-  def test_total_deadline_defaults_to_the_largest_socket_timeout_and_is_bounded
-    assert_raises(ArgumentError) do
-      Shared::OutboundHttp.request(
-        URI("https://rebind.test/actor"), total_timeout: Shared::OutboundHttp::MAX_TOTAL_TIMEOUT + 1
-      )
+  def test_total_deadline_rejects_values_above_the_global_cap_before_dns
+    resolved = false
+    resolver = ->(_host) { resolved = true; ["93.184.216.34"] }
+    Shared::OutboundHttp.stub(:resolve_addresses, resolver) do
+      assert_raises(ArgumentError) do
+        Shared::OutboundHttp.request(
+          URI("https://rebind.test/actor"), total_timeout: Shared::OutboundHttp::MAX_TOTAL_TIMEOUT + 1
+        )
+      end
     end
+    refute resolved, "invalid budgets must be rejected before network resolution"
   end
 
   def test_redirects_are_returned_but_never_followed_by_the_transport
