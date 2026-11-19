@@ -97,14 +97,39 @@ class TestLoraConsent < Minitest::Test
                  "new subject material must stay local by default"
   end
 
+  def test_source_photographs_must_be_private_and_singly_linked
+    write_record
+    references = File.join(@subject_dir, "references")
+    FileUtils.mkdir_p(references, mode: 0o700)
+    File.chmod(0o700, references)
+    image = File.join(references, "portrait.jpg")
+    File.write(image, "synthetic reference", mode: "w", perm: 0o644)
+
+    error = assert_raises(Consent::Error) do
+      Consent.required_source_sets(subject: "probe", subject_directory: @subject_dir)
+    end
+    assert_match(/owner-only \(0600\)/, error.message)
+
+    File.chmod(0o600, image)
+    assert_equal %w[reference_photographs subject_sources],
+                 Consent.required_source_sets(subject: "probe", subject_directory: @subject_dir)
+
+    linked = File.join(references, "second-name.jpg")
+    File.link(image, linked)
+    error = assert_raises(Consent::Error) do
+      Consent.required_source_sets(subject: "probe", subject_directory: @subject_dir)
+    end
+    assert_match(/singly-linked/, error.message)
+  end
+
   def test_merethe_archive_and_additional_photos_are_distinct_source_sets
     sources = File.join(@subject_dir, "sources")
     additional = File.join(sources, "additional")
     FileUtils.mkdir_p(additional, mode: 0o700)
     File.chmod(0o700, sources)
     File.chmod(0o700, additional)
-    File.write(File.join(sources, "01.jpg"), "archive fixture")
-    File.write(File.join(additional, "portrait.jpg"), "additional fixture")
+    File.write(File.join(sources, "01.jpg"), "archive fixture", mode: "w", perm: 0o600)
+    File.write(File.join(additional, "portrait.jpg"), "additional fixture", mode: "w", perm: 0o600)
     assert_equal %w[me2_archive additional_images],
                  Consent.required_source_sets(subject: "merethe", subject_directory: @subject_dir)
   end
@@ -122,7 +147,7 @@ class TestLoraConsent < Minitest::Test
     dataset_file = File.join(evidence, "dataset-rights.txt")
     sources = File.join(@subject_dir, "sources")
     FileUtils.mkdir_p(sources, mode: 0o700)
-    File.write(File.join(sources, "photo.jpg"), "synthetic source image")
+    File.write(File.join(sources, "photo.jpg"), "synthetic source image", mode: "w", perm: 0o600)
     if training
       dataset = File.join(@subject_dir, "dataset")
       FileUtils.mkdir_p(dataset, mode: 0o700)
