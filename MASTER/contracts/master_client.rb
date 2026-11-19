@@ -3,6 +3,8 @@
 require "json"
 require "net/http"
 require "uri"
+require "ipaddr"
+require_relative "../lib/io/ssrf_guard"
 
 module Contracts
   module MasterClient
@@ -74,15 +76,45 @@ module Contracts
       end
 
       def request(uri, req)
-        res = Net::HTTP.start(uri.host, uri.port,
-                              open_timeout: 5, read_timeout: @timeout,
-                              use_ssl: uri.scheme == "https") { |http| http.request(req) }
+        unless uri.userinfo.nil? && uri.fragment.nil?
+          raise URI::InvalidURIError, "MASTER ingress URL credentials and fragments are refused"
+        end
+
+        res = if local_endpoint?(uri)
+                http = Net::HTTP.new(uri.hostname, uri.port, nil)
+                http.open_timeout = 5
+                http.read_timeout = @timeout
+                http.write_timeout = 5
+                http.start { |connection| connection.request(req) }
+              else
+                unless uri.is_a?(URI::HTTPS) && uri.port == 443
+                  raise URI::InvalidURIError, "hosted MASTER ingress requires HTTPS on port 443"
+                end
+                Master::Io::SsrfGuard.request(
+                  uri, req, max_bytes: 2_000_000, timeout: @timeout,
+                  open_timeout: 5, read_timeout: @timeout, write_timeout: 5
+                )
+              end
+        raise Master::Io::SsrfGuard::ResponseTooLarge, "local MASTER ingress response exceeds 2 MB" if
+          local_endpoint?(uri) && res.body.to_s.bytesize > 2_000_000
+
         parsed = JSON.parse(res.body.to_s).transform_keys(&:to_s)
         return { "ok" => false, "error" => parsed["error"] || "HTTP #{res.code}", "output" => "" } if res.code.to_i >= 400
 
         parsed
       rescue JSON::ParserError
         { "ok" => res.code.to_i < 400, "output" => res.body.to_s, "error" => nil }
+      end
+
+      def local_endpoint?(uri)
+        return false unless uri.is_a?(URI::HTTP) && uri.scheme == "http"
+
+        host = uri.hostname.to_s.downcase
+        return true if host == "localhost"
+
+        IPAddr.new(host).loopback?
+      rescue IPAddr::InvalidAddressError
+        false
       end
     end
   end
