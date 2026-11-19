@@ -186,4 +186,143 @@ class SsrfGuardTest < Minitest::Test
     end
     assert_equal ["93.184.216.34"], pinned
   end
+  class FakeOutboundResponse
+    attr_reader :code, :body, :chunks_read
+
+    def initialize(code: "200", headers: {}, chunks: [])
+      @code = code
+      @headers = headers.transform_keys(&:downcase)
+      @chunks = chunks
+      @chunks_read = 0
+    end
+
+    def [](name)
+      @headers[name.downcase]
+    end
+
+    def read_body
+      @chunks.each do |chunk|
+        @chunks_read += 1
+        yield chunk
+      end
+    end
+
+    def body=(value)
+      @body = value
+    end
+  end
+
+  class FakeOutboundHttp
+    attr_reader :response, :timeout, :ipaddr
+
+    def initialize(response)
+      @response = response
+      @started = false
+    end
+
+    def start
+      @started = true
+      yield self
+    ensure
+      @started = false
+    end
+
+    def request(_request)
+      yield response
+      response
+    end
+
+    def started?
+      @started
+    end
+
+    def finish
+      @started = false
+    end
+  end
+
+  def test_shared_request_returns_a_bounded_body_from_the_pinned_connection
+    uri = URI("https://example.com/data")
+    request = Net::HTTP::Get.new(uri)
+    response = FakeOutboundResponse.new(headers: { "Content-Length" => "5" }, chunks: ["he", "llo"])
+    http = FakeOutboundHttp.new(response)
+    pins = []
+
+    Guard.stub(:pinned_address, ->(candidate) { pins << candidate; "93.184.216.34" }) do
+      Guard.stub(:http_for, ->(candidate, address, timeout:) {
+        assert_equal uri, candidate
+        assert_equal "93.184.216.34", address
+        assert_equal 3, timeout
+        http
+      }) do
+        result = Guard.request(uri, request, max_bytes: 5, timeout: 3)
+        assert_equal "hello", result.body
+      end
+    end
+
+    assert_equal [uri], pins
+    assert_equal 2, response.chunks_read
+  end
+
+  def test_shared_request_rejects_declared_oversize_before_reading_body
+    uri = URI("https://example.com/data")
+    response = FakeOutboundResponse.new(headers: { "Content-Length" => "101" }, chunks: ["small"])
+    http = FakeOutboundHttp.new(response)
+
+    Guard.stub(:pinned_address, "93.184.216.34") do
+      Guard.stub(:http_for, http) do
+        error = assert_raises(Guard::ResponseTooLarge) do
+          Guard.request(uri, Net::HTTP::Get.new(uri), max_bytes: 100)
+        end
+        assert_match(/exceeds 100 bytes/, error.message)
+      end
+    end
+
+    assert_equal 0, response.chunks_read
+  end
+
+  def test_shared_request_stops_a_chunked_body_at_the_cap
+    uri = URI("https://example.com/data")
+    response = FakeOutboundResponse.new(chunks: ["123456", "78901", "ignored"])
+    http = FakeOutboundHttp.new(response)
+
+    Guard.stub(:pinned_address, "93.184.216.34") do
+      Guard.stub(:http_for, http) do
+        assert_raises(Guard::ResponseTooLarge) do
+          Guard.request(uri, Net::HTTP::Get.new(uri), max_bytes: 10)
+        end
+      end
+    end
+
+    assert_equal 2, response.chunks_read
+  end
+
+  def test_shared_request_returns_redirects_without_following_them
+    uri = URI("https://example.com/start")
+    response = FakeOutboundResponse.new(code: "302", headers: { "Location" => "https://other.example/next" })
+    http = FakeOutboundHttp.new(response)
+    resolutions = []
+
+    Guard.stub(:pinned_address, ->(candidate) { resolutions << candidate.to_s; "93.184.216.34" }) do
+      Guard.stub(:http_for, http) do
+        result = Guard.request(uri, Net::HTTP::Get.new(uri))
+        assert_equal "302", result.code
+        assert_equal "https://other.example/next", result["Location"]
+      end
+    end
+
+    assert_equal ["https://example.com/start"], resolutions
+  end
+
+  def test_shared_request_does_not_connect_when_dns_policy_refuses
+    uri = URI("https://example.com/data")
+    Guard.stub(:pinned_address, nil) do
+      Guard.stub(:http_for, ->(*) { flunk "HTTP must not be constructed without an approved pin" }) do
+        assert_raises(SocketError) do
+          Guard.request(uri, Net::HTTP::Get.new(uri))
+        end
+      end
+    end
+  end
+
 end
