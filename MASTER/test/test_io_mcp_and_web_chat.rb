@@ -35,6 +35,16 @@ class TestIoMcpAndWebChat < Minitest::Test
     [Master::Io::McpCoordinator.new(root:, event_bus: Bus.new([])), root]
   end
 
+  def test_the_default_cli_does_not_start_a_redundant_npx_filesystem_server
+    servers = Master.load_yaml(Master.data_path("mcp_servers.yml")).fetch("servers")
+
+    refute servers.fetch("filesystem").fetch("enabled"),
+      "native workspace tools make an npm filesystem handshake unnecessary at every boot"
+    %w[ReadFile WriteFile Tree ListDir SearchFiles].each do |name|
+      assert_includes Master::Builder::DEFAULT_TOOL_MAP, name
+    end
+  end
+
   def test_only_enabled_servers_with_a_known_transport_connect
     coordinator, root = coordinator_with(<<~YAML)
       servers:
