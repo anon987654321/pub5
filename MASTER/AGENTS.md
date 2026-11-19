@@ -130,15 +130,15 @@ Use the following standards as one editorial method, not as competing styles:
   against the target release and environment. Update documentation with the
   code or configuration it describes. Prefer the authoritative manual and
   semantic structure over folklore or prose that merely sounds plausible.
-  OpenBSD man pages use `mdoc(7)`; Markdown is not mdoc, but it can and must
-  preserve the same discipline of precision and maintainability. For an
-  actual manual page, use semantic `mdoc(7)`, not the legacy `man(7)`
-  language, and run `mandoc(1)` checks. Markdown adopts the precision, not
-  the macro syntax. OpenBSD's
-  own guidance treats the man pages as authoritative and expects them to
-  change with the code; the FAQ supplements them
+  OpenBSD treats man pages as authoritative and expects them to change
+  with the code; the FAQ is supplementary. Use semantic `mdoc(7)` for actual
+  manual pages, not legacy `man(7)`, and validate them with `mandoc(1)`.
+  Markdown is not mdoc, but it must meet the same standard of precise
+  structure, complete examples and verifiable claims
   ([Manual Pages](https://www.openbsd.org/faq/faq1.html),
   [mdoc(7)](https://man.openbsd.org/mdoc.7),
+  [man(7)](https://man.openbsd.org/man.7),
+  [mandoc(1)](https://man.openbsd.org/mandoc.1),
   [style(9)](https://man.openbsd.org/style.9)).
 - **Creative copywriting — reader and response.** Know who is reading and
   what decision or action the copy serves. Make the headline specific; lead
