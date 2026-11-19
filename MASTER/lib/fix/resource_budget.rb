@@ -11,12 +11,12 @@ module Master
     # still finish and report truthfully.
     class ResourceBudget
       DEFAULTS = {
-        load_avg_1m: { warn: 1.5, crit: 2.5 },
-        master_rss_mb: { warn: 512, crit: 768 },
-        fd_count: { warn: 512, crit: 1024 },
-        thread_count: { warn: 32, crit: 64 },
-        process_count: { warn: 256, crit: 512 },
-        disk_free_gb: { warn: 5, crit: 2 },
+        load_avg_1m: { warn: 1.2, crit: 2.0 },
+        master_rss_mb: { warn: 384, crit: 640 },
+        fd_count: { warn: 384, crit: 768 },
+        thread_count: { warn: 24, crit: 48 },
+        process_count: { warn: 192, crit: 384 },
+        disk_free_gb: { warn: 8, crit: 3 },
       }.freeze
 
       # Share of physical memory this process may hold before model work is shed.

@@ -66,3 +66,22 @@ Changed surfaces (non-exhaustive):
 - Related test expectations updated to the new floor
 
 No force-push. Serial commit to main.
+
+## /fix + tough-cookie hardening (2026-11-19)
+
+Operator: "fix all, make MASTER a tough cookie"
+
+Hardening landed (MASTER_TOUGH=1 enables the strictest path):
+
+| Surface | Change |
+|---|---|
+| `Io::CircuitBreaker` | FAILURE_THRESHOLD 8→5, COOLDOWN 30→45s, RATE_MAX 60→40 |
+| `Fix::ResourceBudget` | Tighter warn/crit for load, RSS, FDs, threads, processes, disk |
+| `Fix::RunBudget` | DEFAULT_MAX_COST 50→30, resource check 30→15s, WARN_SHARE 0.8→0.7 |
+| `Fix::WriteGuard` | MASTER_TOUGH=1 also blocks `:warning` findings for automated writers |
+| `Fix::AutofixGuard` | MASTER_TOUGH=1 defaults mode to `dry`, max_files default 500 |
+| `Fix::ModelGate` | MASTER_TOUGH=1 caps load-wait at 90s instead of 300s |
+
+Export `MASTER_TOUGH=1` for the strict profile. Ordinary runs keep prior behaviour except the always-on circuit/resource/run budget tightenings.
+
+Ruby floor remains >= 3.2 (already relaxed). Full suite still needs provider keys / host evidence for runtime PASS claims; this commit is source hardening only.

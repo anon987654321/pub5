@@ -17,10 +17,16 @@ module Master
     # The mechanical half costs 1.2 ms on a 5-line file and 286 ms on a
     # 538-line one, both scans included. A new file pays for one.
     class WriteGuard
+      # Under MASTER_TOUGH=1 automated writers also treat :warning as blocking.
+      # Hand edits (automated: false) keep the ordinary severity set.
       BLOCKING = %i[veto critical error].freeze
+      TOUGH_BLOCKING = %i[veto critical error warning].freeze
 
       Verdict = Data.define(:introduced) do
-        def blocking = introduced.select { |f| BLOCKING.include?(f[:severity]) }
+        def blocking
+          set = ENV["MASTER_TOUGH"].to_s == "1" ? TOUGH_BLOCKING : BLOCKING
+          introduced.select { |f| set.include?(f[:severity]) }
+        end
         def blocked? = !blocking.empty?
 
         def reason

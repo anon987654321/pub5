@@ -12,10 +12,10 @@ module Master
       include ::Master::Io::AtomicWrite
       include MonitorMixin
 
-      FAILURE_THRESHOLD = 8
-      COOLDOWN_S = 30
+      FAILURE_THRESHOLD = 5
+      COOLDOWN_S = 45
       RATE_WINDOW_S = 60
-      RATE_MAX = 60
+      RATE_MAX = 40
 
       class CircuitError < StandardError
         attr_reader :category

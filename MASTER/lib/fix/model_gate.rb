@@ -20,6 +20,7 @@ module Master
     module ModelGate
       POLL_S = 15
       LOAD_WAIT_MAX_S = 300
+      TOUGH_LOAD_WAIT_MAX_S = 90
       # The last stretch of a run is for its proof, not for waiting on a lane.
       RESERVE_S = 120
 
@@ -46,7 +47,8 @@ module Master
         loop do
           load, ceiling = resources.load_pressure
           break unless load && load > ceiling
-          break if gate[:waited] - started >= LOAD_WAIT_MAX_S || !time_left?
+          limit = ENV["MASTER_TOUGH"].to_s == "1" ? TOUGH_LOAD_WAIT_MAX_S : LOAD_WAIT_MAX_S
+          break if gate[:waited] - started >= limit || !time_left?
 
           pause(gate, format("load %<load>.1f is over %<ceiling>.1f; waiting %<poll>ds before the model call",
                              load:, ceiling:, poll: POLL_S))

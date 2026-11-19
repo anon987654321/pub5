@@ -18,13 +18,13 @@ module Master
     # prints a RunPulse line every HEARTBEAT_SECONDS and stops the run past either limit.
     # ResourceBudget measures the host; this measures the run.
     class RunBudget
-      DEFAULT_MAX_COST = 50.0
+      DEFAULT_MAX_COST = 30.0
       DEFAULT_MAX_MINUTES = 480.0
       HEARTBEAT_SECONDS = 60
       MACHINE_BEAT_SECONDS = Mission::LEASE_RENEW_SECONDS
       GUARD_CHECK_SECONDS = 300
-      RESOURCE_CHECK_SECONDS = 30
-      WARN_SHARE = 0.8
+      RESOURCE_CHECK_SECONDS = 15
+      WARN_SHARE = 0.7
       UNIT = "budget0"
       DEFAULT_LAW_SHARE = 0.10
       DEFAULT_RUN_TOKENS = 10_000_000

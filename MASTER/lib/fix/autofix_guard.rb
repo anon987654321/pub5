@@ -64,7 +64,8 @@ module Master
       class << self
         # off, dry or on. A flag (--autofix=) sets it; the environment is the default.
         def mode
-          @mode || ENV.fetch("MASTER_AUTOFIX_MODE", "on").downcase.then { |m| MODES.include?(m) ? m : "on" }
+          default = ENV["MASTER_TOUGH"].to_s == "1" ? "dry" : "on"
+          @mode || ENV.fetch("MASTER_AUTOFIX_MODE", default).downcase.then { |m| MODES.include?(m) ? m : default }
         end
 
         # The explicit override belongs to one CLI operation, not the whole
@@ -85,7 +86,8 @@ module Master
         end
 
         def max_files
-          Integer(ENV.fetch("MASTER_AUTOFIX_MAX_FILES", DEFAULT_MAX_FILES.to_s), exception: false) || DEFAULT_MAX_FILES
+          default = ENV["MASTER_TOUGH"].to_s == "1" ? "500" : DEFAULT_MAX_FILES.to_s
+          Integer(ENV.fetch("MASTER_AUTOFIX_MAX_FILES", default), exception: false) || DEFAULT_MAX_FILES
         end
 
         def reset!
