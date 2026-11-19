@@ -263,6 +263,7 @@ module Studio
       def prepare_destination_parent!(parent, destination)
         root = File.realpath(destination)
         expanded = File.expand_path(parent)
+        return if expanded == root
         raise Error, "destination path escapes the subject directory" unless expanded.start_with?("#{root}#{File::SEPARATOR}")
 
         cursor = root
