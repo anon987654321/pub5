@@ -351,30 +351,36 @@ module Studio
     def inside_subject?(path)
       File.expand_path(path).start_with?("#{SUBJECT_ROOT}#{File::SEPARATOR}")
     end
+
+    # Recovery is intentionally a separate terminal action. It must never fall
+    # through into dataset construction, even when a complete local dataset
+    # already exists.
+    def run_cli(arguments, output: $stdout, error_output: $stderr)
+      args = arguments.dup
+      if args.delete("--help")
+        output.puts "Usage: ruby #{File.basename(__FILE__)} [--recover]"
+        output.puts "  --recover  retrieve and verify the 15 archived originals locally; do nothing else"
+        output.puts "  default   build a private, captioned candidate ZIP only when 10-18 images are ready"
+        return 0
+      end
+      unless args.empty? || args == ["--recover"]
+        error_output.puts "unknown option: #{args.join(" ")}"
+        return 64
+      end
+
+      if args.delete("--recover")
+        output.puts JSON.pretty_generate(recover!)
+        return 0
+      end
+
+      report = prepare!
+      output.puts JSON.pretty_generate(report)
+      report["status"] == "READY_FOR_OPERATOR_REVIEW" ? 0 : 2
+    rescue Studio::MeretheLora::Error, Studio::Lora::Consent::Error, SystemCallError, Net::HTTPError => error
+      error_output.puts "BLOCKED: #{error.class}: #{error.message}"
+      2
+    end
   end
 end
 
-if $PROGRAM_NAME == __FILE__
-  begin
-    arguments = ARGV.dup
-    if arguments.delete("--help")
-      puts "Usage: ruby #{File.basename(__FILE__)} [--recover]"
-      puts "  --recover  retrieve and verify the 15 archived originals locally"
-      puts "  default   build a private, captioned candidate ZIP only when 10-18 images are ready"
-      exit 0
-    end
-    abort "unknown option: #{arguments.join(" ")}" unless arguments.empty? || arguments == ["--recover"]
-
-    if arguments.delete("--recover")
-      result = Studio::MeretheLora.recover!
-      warn JSON.pretty_generate(result)
-    end
-
-    report = Studio::MeretheLora.prepare!
-    puts JSON.pretty_generate(report)
-    exit(report["status"] == "READY_FOR_OPERATOR_REVIEW" ? 0 : 2)
-  rescue Studio::MeretheLora::Error, Studio::Lora::Consent::Error, SystemCallError, Net::HTTPError => error
-    warn "BLOCKED: #{error.class}: #{error.message}"
-    exit 2
-  end
-end
+exit Studio::MeretheLora.run_cli(ARGV) if $PROGRAM_NAME == __FILE__
