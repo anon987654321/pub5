@@ -14,7 +14,6 @@ module Master
         in Master::Result::Ok => ok
           @last_ok = true
           @exit_code = 0
-          print_answer_attribution("answered")
           display_ok(ok:, accumulated:, streamed:, units_console:)
         in Master::Result::Err => err
           # Do not label a requested stop as complete. Report cancellation
@@ -30,7 +29,6 @@ module Master
           @exit_code = exit_code_for(err)
           return exit_cli if err.category == :shutdown
 
-          print_answer_attribution("failed")
           print_error(err)
         end
       end
@@ -72,6 +70,7 @@ module Master
 
       def display_ok(ok:, accumulated:, streamed:, units_console: false)
         text = streamed ? accumulated : success_text(ok)
+        text = conversation_output(text)
         if text.to_s.strip.empty?
           # Detailed dmesg replays a line-turn through the units console, so
           # the empty buffer is empty by construction, not an empty answer.
@@ -115,10 +114,10 @@ module Master
           # The reply replaces its row through the guard: while a draft is
           # edited, the row is cleared and the draft is repainted under it.
           terminal_print("\r\e[K") if $stdout.isatty
-          display_prepared_terminal_output(text) if routine
+          display_prepared_terminal_output(format_irc_reply(text)) if routine
           unless routine
             output = markdown_rendered ? text.chomp : @refs.renderer.measure(text.chomp, width: reply_measure)
-            display_prepared_terminal_output(output)
+            display_prepared_terminal_output(format_irc_reply(output))
           end
         end
 
@@ -153,6 +152,84 @@ module Master
         print_previous_question_footer
         print_parallel_errors_footer(ok)
         print_capability_stamp(ok)
+      end
+
+      CODE_REQUEST = /\b(?:code|script|program|source code|ruby|python|shell|snippet|function|class)\b/i
+
+      def conversational_input?
+        diagnostic_command(@last_input).nil? && !@last_input.to_s.match?(CODE_REQUEST)
+      end
+
+      def conversation_output(text)
+        return text unless conversational_input?
+
+        unwrap_ruby_say_wrapper(text) || text
+      end
+
+      # Some model turns have incorrectly returned an executable say helper
+      # instead of the words it was meant to print. Never execute model output.
+      # Recognise only that narrow wrapper and recover its literal say lines.
+      def unwrap_ruby_say_wrapper(text)
+        source = text.to_s
+        has_entry = source.match?(/^#!\/usr\/bin\/env ruby\b/m) ||
+                    source.match?(/^\s*STDOUT\.sync\s*=\s*true\s*$/m)
+        has_helper = source.match?(/^\s*def\s+say\s*\(\s*line\s*=\s*""\s*\)\s*$/m) &&
+                     source.match?(/^\s*STDOUT\.puts\(line\.to_s\)\s*$/m)
+        has_guard = source.match?(/^\s*(?:safe\s+do|begin)\s*$/m)
+        return unless has_entry && has_helper && has_guard
+
+        messages = source.each_line.filter_map do |line|
+          match = line.match(/\A[ \t]*say(?:[ \t]+("(?:\\.|[^"\\])*"))?[ \t]*\z/)
+          next unless match
+
+          match[1] ? match[1].undump : ""
+        end
+        return if messages.empty?
+
+        messages.join("\n")
+      rescue ArgumentError
+        nil
+      end
+
+      def irc_prefix
+        "[#{Time.now.strftime("%H:%M")}] <master> "
+      end
+
+      def format_irc_reply(text)
+        return text unless conversational_input?
+        return text unless $stdout.respond_to?(:tty?) && $stdout.tty?
+
+        prefix = irc_prefix
+        text.to_s.lines(chomp: true).map do |line|
+          line.empty? ? "" : "#{prefix}#{line}"
+        end.join("\n")
+      end
+
+      # The first streamed packet is held only long enough to distinguish the
+      # accidental executable wrapper from an ordinary sentence.
+      def ruby_say_wrapper_stream?(source)
+        first = source.to_s.lstrip
+        return true if first.start_with?("#!/usr/bin/env ruby")
+        return true if first.match?(/\A(?:STDOUT|STDERR)\.sync\s*=\s*true(?:\s*\z|\s*\r?\n)/)
+        return true if first.match?(/\A# frozen_string_literal: true\b/) &&
+                       first.match?(/^\s*def\s+say\b/m) &&
+                       first.match?(/STDOUT\.puts\(line\.to_s\)/m)
+
+        false
+      end
+
+      def ruby_say_wrapper_prefix_pending?(source)
+        first = source.to_s.lstrip.lines.first.to_s.rstrip
+        markers = ["#!/usr/bin/env ruby", "STDOUT.sync = true", "STDERR.sync = true",
+                   "# frozen_string_literal: true", "def say"]
+        first.length < 128 && markers.any? { |marker| marker.start_with?(first) }
+      end
+
+      def format_irc_stream(text)
+        return text unless conversational_input?
+        return text unless $stdout.respond_to?(:tty?) && $stdout.tty?
+
+        "#{irc_prefix}#{text}"
       end
 
       def diagnostic_command(input)
@@ -255,7 +332,8 @@ module Master
         raw = raw_success_text(ok).to_s.strip
         return streamed_text if raw.empty? || streamed_text.include?(raw[0, 120])
 
-        display_prepared_terminal_output(measured_reply(raw))
+        raw = conversation_output(raw)
+        display_prepared_terminal_output(format_irc_reply(measured_reply(raw)))
         raw
       end
 
@@ -277,36 +355,6 @@ module Master
         rendered = text
         rendered = @refs.renderer.terminal_markdown(text, width: reply_measure) if @refs.renderer.respond_to?(:terminal_markdown)
         @refs.renderer.measure(rendered.to_s.chomp, width: reply_measure)
-      end
-
-      # A queued turn's reply prints long after its prompt scrolled past; with
-      # several lines waiting, the answer read as belonging to whichever
-      # message was typed last (Johann's log 2026-11-08: the depression answer
-      # read as a reply to "hey hey"). One dim line binds a turn running off
-      # the queue to the line that started it, and names the outcome: a
-      # confirm-gated command is not answered, it failed (deploy log
-      # 2026-11-11 printed "answered:" over a review refusal).
-      def print_answer_attribution(verb)
-        return unless Thread.current == @turn_worker && $stdout.tty?
-
-        question = queue_question_brief(@last_input)
-        return if question.empty?
-
-        Master::Trace::Dmesg.status("queue0", "#{verb}: #{question}")
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "cli.answer_attribution", event_bus: @refs.bus)
-      end
-
-      # The queued line as a receipt shows it: one space run, capped at 72
-      # columns on a word boundary, the cut marked. Cutting inside a word
-      # invented a command that was never typed ("vm23" -> "vm2", deploy log
-      # 2026-11-11) and sent the reader hunting a host that was never named.
-      def queue_question_brief(text, cap = 72)
-        line = text.to_s.scrub.gsub(/\s+/, " ").strip
-        return line if line.length <= cap
-
-        head = line[0, cap].sub(/\s+\S*\z/, "")
-        "#{head}\u2026"
       end
 
       def success_text(ok)
