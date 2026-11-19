@@ -80,7 +80,10 @@ class TestSelfieSeries < Minitest::Test
     rendered = run_series(series, count: 3)
 
     assert_equal 3, rendered.size
-    rendered.each { |path| assert File.file?(path) }
+    rendered.each do |path|
+      assert File.file?(path)
+      assert_equal 0o600, File.stat(path).mode & 0o777
+    end
     assert File.file?(rendered.first)
     assert rendered.all? { |path| File.basename(path).include?("probe_selfie_") }
   end
@@ -109,6 +112,9 @@ class TestSelfieSeries < Minitest::Test
     archive = Dir.glob(File.join(directory, "probe", "out", "archive", "*", "*")).sort
     assert_equal 2, archive.length
     assert_equal %w[old old], archive.map { |path| File.read(path) }
+    archive_root = File.dirname(archive.first)
+    assert_equal 0o700, File.stat(archive_root).mode & 0o777
+    archive.each { |path| assert_equal 0o600, File.stat(path).mode & 0o777 }
     assert_equal 2, ledger_rows("replace_archive").first.fetch("archived")
     assert rendered.all? { |path| File.file?(path) }
   end
@@ -165,6 +171,8 @@ class TestSelfieSeries < Minitest::Test
 
     assert_equal "probe", row["subject"]
     assert row["scene"].to_s.length > 10
+    assert_equal 0o600, File.stat(File.join(@dir, "ledger.jsonl")).mode & 0o777
+    assert_equal 0o700, File.stat(@dir).mode & 0o777
   end
 
   def test_the_scenes_carry_no_intimate_framing
