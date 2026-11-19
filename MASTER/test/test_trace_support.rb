@@ -51,13 +51,24 @@ class TestTraceSupport < Minitest::Test
 
   def test_normal_suppresses_model_telemetry_under_nested_units
     Fiber[:master_unit] = "scan0"
+    normal = StringIO.new
+    fault = StringIO.new
+    forced = StringIO.new
     Master::Trace::Dmesg.with_verbosity("normal") do
       assert Master::Trace::Dmesg.quiet_in_turn?("llm0-nvidia: no answer")
       assert Master::Trace::Dmesg.quiet_in_turn?("model0: usage")
       assert Master::Trace::Dmesg.quiet_in_turn?("cache0: hit")
       refute Master::Trace::Dmesg.quiet_in_turn?("llm0: MASTER fault, diagnostic abc123")
       refute Master::Trace::Dmesg.quiet_in_turn?("llm0: call ended without provider outcome")
+
+      Master::Trace::Dmesg.emit("llm0-nvidia: no answer", io: normal)
+      Master::Trace::Dmesg.emit("llm0: MASTER fault, diagnostic abc123", io: fault)
+      Master::Trace::Dmesg.emit("llm0-nvidia: no answer", io: forced, force: true)
     end
+
+    assert_empty normal.string
+    assert_includes fault.string, "MASTER fault"
+    assert_includes forced.string, "no answer"
   ensure
     Fiber[:master_unit] = nil
   end
