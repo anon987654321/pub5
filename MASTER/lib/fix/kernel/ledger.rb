@@ -17,7 +17,7 @@ module Master
         @append_mutex.synchronize do
           assert_writable_ledger_directory!
           assert_private_ledger_path!
-          File.open(@log_path, ledger_open_flags, 0o600) do |file|
+          open_ledger_for_append do |file|
             opened_stat = assert_open_ledger_handle!(file)
             raise IOError, "could not acquire ledger append lock" unless file.flock(File::LOCK_EX)
 
@@ -200,8 +200,21 @@ module Master
           (path_stat.mode & 0o077).zero?
       end
 
-      def ledger_open_flags
-        flags = File::RDWR | File::CREAT
+      # Create a missing ledger exclusively so a competing first writer cannot
+      # plant a pre-seeded path between the absence check and open. If another
+      # legitimate writer wins, validate the now-existing path before reopening.
+      def open_ledger_for_append(&block)
+        begin
+          File.open(@log_path, ledger_open_flags(exclusive: true), 0o600, &block)
+        rescue Errno::EEXIST
+          assert_private_ledger_path!
+          File.open(@log_path, ledger_open_flags, 0o600, &block)
+        end
+      end
+
+      def ledger_open_flags(exclusive: false)
+        flags = File::RDWR | File::CREAT | File::APPEND
+        flags |= File::EXCL if exclusive
         flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
         flags
       end
@@ -213,13 +226,14 @@ module Master
         raise LedgerCorruption, "ledger handle is not a regular file" unless opened_stat.file?
         raise LedgerCorruption, "ledger permissions are not private" unless
           (opened_stat.mode & 0o077).zero?
+        raise LedgerCorruption, "refusing hard-linked audit ledger" unless opened_stat.nlink == 1
         assert_unchanged_ledger_path!("ledger path changed while opening", opened: opened_stat)
         opened_stat
       end
 
       def assert_unchanged_ledger_path!(message, opened:)
         current_stat = File.lstat(@log_path)
-        return if current_stat.file? && !current_stat.symlink? &&
+        return if current_stat.file? && !current_stat.symlink? && current_stat.nlink == 1 &&
                   current_stat.dev == opened.dev && current_stat.ino == opened.ino
 
         raise LedgerCorruption, message
