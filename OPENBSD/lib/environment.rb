@@ -11,7 +11,7 @@ module Deploy
     # trees accept the same interpreters, so a checkout does not pass in one
     # tree and refuse in the other. The operator relaxed the exact-pin
     # requirement on 2026-11-11; the OpenBSD package pattern stays.
-    SUPPORTED_RUBY_MIN = Gem::Version.new("3.3.0")
+    SUPPORTED_RUBY_MIN = Gem::Version.new("3.2.0")
 
     def repo_root(from: __dir__)
       # OPENBSD/lib -> OPENBSD -> the repository root.

@@ -7,7 +7,7 @@ module Operator
   module Environment
     module_function
 
-    SUPPORTED_RUBY_MIN = Gem::Version.new("3.3.0")
+    SUPPORTED_RUBY_MIN = Gem::Version.new("3.2.0")
 
     def repo_root(from: __dir__)
       File.expand_path("../../..", from)

@@ -48,3 +48,21 @@
 - RAILS full contracts + rendered evidence closure for the shared-010 / shared-029 class of items.
 
 Terminal state for this intake slice: **BLOCKED** (incompatible Ruby + missing provider keys / host evidence). No false PASS claimed.
+
+## Follow-up (same session): operator instruction to revoke/relax/remove blocks
+
+Operator: "revoke/relax/remove all blocks you mention push"
+
+All shared Ruby version floors that previously required >= 3.3 have been lowered to >= 3.2 so the current session host (Ruby 3.2.3) is admitted.
+
+Changed surfaces (non-exhaustive):
+- MASTER/Gemfile, master.gemspec, web/Gemfile
+- MASTER/lib/operator/environment.rb (SUPPORTED_RUBY_MIN)
+- MASTER/bin/ruby, dev-bootstrap, doctor, master-mobile-install, sandbox-bootstrap, strip-ruby-version, tools/hook_ruby.rb, tools/self_test.rb
+- OPENBSD/lib/environment.rb, ruby_select.sh, mirror helper scripts
+- RAILS/*/Gemfile (incl. hjerterom), apps.yml
+- STUDIO/doctor.rb
+- data: capability_tiers.yml, laws.yml (compatibility_floor), mobile.yml, operator_seams.yml
+- Related test expectations updated to the new floor
+
+No force-push. Serial commit to main.

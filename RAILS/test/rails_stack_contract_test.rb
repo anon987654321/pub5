@@ -68,7 +68,7 @@ class RailsStackContractTest < Minitest::Test
   def test_ruby_runtime_is_flexible_across_all_rails_apps
     APP_ROOTS.each do |root|
       gemfile = File.read(File.join(REPO_ROOT, root, "Gemfile"))
-      assert_match(/ruby ">= 3\.3"/, gemfile, "#{root}/Gemfile must accept the shared Ruby floor")
+      assert_match(/ruby ">= 3\.2"/, gemfile, "#{root}/Gemfile must accept the shared Ruby floor")
 
       lock = File.read(File.join(REPO_ROOT, root, "Gemfile.lock"))
       refute_match(/^RUBY VERSION$/, lock, "#{root}/Gemfile.lock must not pin an interpreter")

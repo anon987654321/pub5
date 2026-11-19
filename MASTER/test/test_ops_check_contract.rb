@@ -104,12 +104,12 @@ class CheckContractSpec < Minitest::Test
     wrapper = File.read(File.join(ROOT, "bin", "ruby"))
     gemfile = File.read(File.join(ROOT, "Gemfile"))
 
-    assert_includes environment, 'SUPPORTED_RUBY_MIN = Gem::Version.new("3.3.0")'
+    assert_includes environment, 'SUPPORTED_RUBY_MIN = Gem::Version.new("3.2.0")'
     refute_includes environment, "SUPPORTED_RUBY_MAX"
     refute_includes deploy_environment, "OPENBSD_RUBY_PATTERN"
     assert_includes entrypoint, "Operator::RubyRunner.best_available_ruby"
     assert_includes wrapper, "GENERIC_RUBY=$(command -v ruby"
-    assert_includes gemfile, 'ruby ">= 3.3"'
+    assert_includes gemfile, 'ruby ">= 3.2"'
   end
 
   def test_ruby_runner_openbsd_method_is_real_ruby_source

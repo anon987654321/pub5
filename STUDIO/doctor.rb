@@ -13,7 +13,7 @@ require_relative "lora/validate"
 
 module Studio
   class Doctor
-    MINIMUM_RUBY = Gem::Version.new("3.3.0").freeze
+    MINIMUM_RUBY = Gem::Version.new("3.2.0").freeze
 
     REQUIRED_FILES = %w[
       Rakefile bin/studio doctor.rb

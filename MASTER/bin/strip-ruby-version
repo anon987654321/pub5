@@ -3,7 +3,7 @@
 # into every Gemfile.lock it touches.
 #
 # The stack contract (RAILS/test/rails_stack_contract_test.rb) forbids the pin:
-# the fleet boots on any Ruby >= 3.3, and a lock that names 3.3.6 (this
+# the fleet boots on any Ruby >= 3.2, and a lock that names 3.3.6 (this
 # sandbox's vendored build) or 3.3.8 (the operator's) lies about that the next
 # time the other interpreter runs `bundle install`. Bundler 4 appends the
 # section on every lockfile write, satisfied or not, so the contract and the

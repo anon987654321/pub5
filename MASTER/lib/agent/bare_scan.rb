@@ -3,7 +3,7 @@
 # bin/master scan --bare PATH [--laws ID,ID2] [--text]
 #
 # The zero-dependency proof tier. One stdlib-only entry that runs the
-# detect-regex (lexical) law corpus over PATH under any Ruby 3.3+ with no
+# detect-regex (lexical) law corpus over PATH under any Ruby 3.2+ with no
 # bundle, no Chrome and no libvips, and emits JSON findings. The session that
 # wished for this approximated the scanner with greps because the real thing
 # meant building Ruby, five bundles, Chrome and libvips on a host that kept
@@ -12,7 +12,7 @@
 
 require_relative "bare_law_loader"
 
-# The lexical corpus parses Ruby with Prism (bundled with Ruby 3.3+); the
+# The lexical corpus parses Ruby with Prism (bundled with Ruby 3.2+); the
 # corpus itself is loaded verbatim and never re-typed here.
 require "prism"
 

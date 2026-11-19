@@ -3,8 +3,8 @@
 source "https://rubygems.org"
 
 # One supported-range rule with OPENBSD/lib/environment.rb and the
-# boot floor: the shared floor is Ruby 3.3.
-ruby ">= 3.3"
+# boot floor: the shared floor is Ruby 3.2.
+ruby ">= 3.2"
 
 gem "fiddle"
 gem "psych"

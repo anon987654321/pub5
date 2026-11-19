@@ -13,7 +13,7 @@
 #   MASTER/bin/sandbox-bootstrap -n           # short alias
 #
 # What it does, in order:
-#   1. a Ruby >= 3.3 (bin/dev-bootstrap builds the vendored one, no root)
+#   1. a Ruby >= 3.2 (bin/dev-bootstrap builds the vendored one, no root)
 #   2. MASTER's bundle (bin/master, bin/operator, the checks)
 #   3. every active RAILS app's bundle (brgen amber bsdports mrdamascy, MASTER/web)
 #   4. libvips.so.42 and its friends, extracted from Debian pool .debs into

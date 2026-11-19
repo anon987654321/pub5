@@ -70,7 +70,7 @@ end
 def check_ruby
   ok, out, err = run("ruby", "--version")
   version = out[/ruby (\d+\.\d+\.\d+)/, 1]
-  good = ok && version && Gem::Version.new(version) >= Gem::Version.new("3.3.0")
+  good = ok && version && Gem::Version.new(version) >= Gem::Version.new("3.2.0")
   Check.new(name: "ruby", state: (good) ? :pass : :fail, detail: out.empty? ? err : out)
 end
 

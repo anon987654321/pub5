@@ -53,11 +53,11 @@ class TestBootEntrypoint < Minitest::Test
     %w[3.3.0 3.3.8 3.4.9 4.0.5 4.0.7 4.1.0 4.2.0].each do |version|
       assert env::SUPPORTED_RUBY_MIN <= Gem::Version.new(version), version
     end
-    # The Gemfile ("ruby >= 3.3"), the gemspec's required_ruby_version and
-    # bin/ruby's MIN_MINOR=3 all gate on 3.3, so the floor is 3.3; 3.2 stays
+    # The Gemfile ("ruby >= 3.2"), the gemspec's required_ruby_version and
+    # bin/ruby's MIN_MINOR now gates on 3.2, so the floor is 3.2; 3.1 stays
     # below it.
-    assert env::SUPPORTED_RUBY_MIN <= Gem::Version.new("3.3.0")
-    refute env::SUPPORTED_RUBY_MIN <= Gem::Version.new("3.2.9")
+    assert env::SUPPORTED_RUBY_MIN <= Gem::Version.new("3.2.0")
+    refute env::SUPPORTED_RUBY_MIN <= Gem::Version.new("3.1.9")
   end
 
   def test_inline_program_does_not_reexec_when_the_selected_ruby_version_matches

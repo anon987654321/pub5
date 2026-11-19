@@ -18,7 +18,7 @@ _rs_find() {
 
 _rs_compatible() {
   [ -x "$1" ] || return 1
-  "$1" -e 'require "rubygems"; exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3") ? 1 : 0)' >/dev/null 2>&1
+  "$1" -e 'require "rubygems"; exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.2") ? 1 : 0)' >/dev/null 2>&1
 }
 
 # One PATH directory's scan: the first compatible versioned ruby in it.
@@ -37,7 +37,7 @@ _rs_scan_dir() {
 
 if [ -n "${RUBY:-}" ]; then
   _rs_compatible "$RUBY" || {
-    echo "ruby_select: configured Ruby is not executable or is older than 3.3: $RUBY" >&2
+    echo "ruby_select: configured Ruby is not executable or is older than 3.2: $RUBY" >&2
     return 1 2>/dev/null || exit 1
   }
 else
@@ -59,7 +59,7 @@ else
 fi
 
 if [ -z "${RUBY:-}" ]; then
-  echo "ruby_select: no compatible Ruby found (requires Ruby >= 3.3)" >&2
+  echo "ruby_select: no compatible Ruby found (requires Ruby >= 3.2)" >&2
   return 1 2>/dev/null || exit 1
 fi
 

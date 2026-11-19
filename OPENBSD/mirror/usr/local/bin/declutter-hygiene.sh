@@ -21,18 +21,18 @@ export PATH
 RUBY=${PUB5_RUBY:-}
 if [ -z "$RUBY" ]; then
   RUBY=/usr/local/bin/ruby
-if [ ! -x "$RUBY" ] || ! "$RUBY" -e 'require "rubygems"; exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3") ? 1 : 0)' >/dev/null 2>&1; then
+if [ ! -x "$RUBY" ] || ! "$RUBY" -e 'require "rubygems"; exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.2") ? 1 : 0)' >/dev/null 2>&1; then
   RUBY=
   for _r in /usr/local/bin/ruby[0-9]*; do
     [ -x "$_r" ] || continue
-    if "$_r" -e 'require "rubygems"; exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3") ? 1 : 0)' >/dev/null 2>&1; then
+    if "$_r" -e 'require "rubygems"; exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.2") ? 1 : 0)' >/dev/null 2>&1; then
       RUBY=$_r
       break
     fi
   done
 fi
 fi
-[ -n "$RUBY" ] || { echo "installed helper: Ruby >= 3.3 is required" >&2; exit 1; }
+[ -n "$RUBY" ] || { echo "installed helper: Ruby >= 3.2 is required" >&2; exit 1; }
 
 CEILING=${DECLUTTER_HYGIENE_LOAD_CEILING:-3.0}
 WAIT_TICKS=${DECLUTTER_HYGIENE_WAIT_TICKS:-15}

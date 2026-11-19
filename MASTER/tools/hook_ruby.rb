@@ -8,7 +8,7 @@
 # finds a Ruby new enough and replaces itself with that, stdin and all. It runs before every tool call,
 # so the running Ruby is used when it will do, and rbenv's are judged by their directory names.
 
-MINIMUM = Gem::Version.new("3.3")
+MINIMUM = Gem::Version.new("3.2")
 TOOLS = File.expand_path(__dir__)
 FALLBACKS = ["/opt/homebrew/bin/ruby", "/usr/local/bin/ruby"].freeze
 

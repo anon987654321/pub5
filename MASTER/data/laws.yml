@@ -7932,7 +7932,7 @@ visual_rubric:
 
 runtime_environment:
   ruby:
-    compatibility_floor: "3.3"
+    compatibility_floor: "3.2"
     selection: "Use the compatible Ruby already installed and active on the host. Prefer the current interpreter; search other installed interpreters only when it is below the compatibility floor."
     version_policy: "No patch-level pin, no minor-version pin and no upper bound. Ruby 4.x and later are not rejected by policy."
     installation: "Do not silently install or download another Ruby merely because a newer version exists. Report a real compatibility failure with its evidence."

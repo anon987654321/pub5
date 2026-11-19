@@ -23,7 +23,7 @@ EOF
 esac
 
 MIN_MAJOR=3
-MIN_MINOR=3
+MIN_MINOR=2
 
 # A Ruby this checkout built for itself (bin/dev-bootstrap) sits under
 # MASTER/.tools. Its OpenSSL trusts the bundle at its own openssldir, and a

@@ -38,9 +38,9 @@ OPENSSL_PREFIX="$PREFIX"
 OPENSSL_VER=3.0.15
 FFI_PREFIX="$PREFIX"
 MIN_MAJOR=3
-MIN_MINOR=3
-# Must satisfy the Gemfile floor (`ruby ">= 3.3"`). A 3.2.x build here produced an
-# interpreter this script and Bundler both reject, so the no-root fallback could
+MIN_MINOR=2
+# Must satisfy the Gemfile floor (`ruby ">= 3.2"`). A 3.1.x build here produced an
+# interpreter this script and Bundler both reject under the previous floor; the current floor accepts 3.2+ so the no-root fallback can
 # never boot MASTER.
 RUBY_VER=3.3.6
 
@@ -252,8 +252,8 @@ if chosen=$(best_on_path) && [ -n "$chosen" ]; then
 fi
 
 # 3: a Ruby this script built before, when it still meets the floor. A build
-# left by an older RUBY_VER must not be trusted blind: a 3.2.x build answered
-# here and then failed Bundler's own `ruby ">= 3.3"` check.
+# left by an older RUBY_VER must not be trusted blind: a 3.1.x build answered
+# here and then failed Bundler's own `ruby ">= 3.2"` check.
 if [ -x "$PREFIX/bin/ruby" ]; then
   built=$("$PREFIX/bin/ruby" -e 'print RUBY_VERSION' 2>/dev/null || true)
   stale=

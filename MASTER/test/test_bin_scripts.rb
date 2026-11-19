@@ -169,7 +169,7 @@ class TestBinScripts < Minitest::Test
                                     script)
 
       refute status.success?, "a 2.7 interpreter is outside the Gemfile's range"
-      assert_includes out, "no Ruby >= 3.3"
+      assert_includes out, "no Ruby >= 3.2"
       refute_includes out, "STALE-PINNED", "an out-of-range Ruby was exec'd"
     end
   end
@@ -224,7 +224,7 @@ class TestBinScripts < Minitest::Test
       out, status = Open3.capture2e(env, script)
 
       refute status.success?, "a host with no Ruby must not report success"
-      assert_includes out, "no Ruby >= 3.3"
+      assert_includes out, "no Ruby >= 3.2"
       assert_includes out, "MASTER_DEV_BOOTSTRAP_BUILD=0"
     end
   ensure
