@@ -83,6 +83,7 @@ module Studio
         raise ArgumentError, "source still is missing" unless File.file?(source) && !File.symlink?(source)
         raise ArgumentError, "source still must be jpg, png or webp" unless %w[.jpg .jpeg .png .webp].include?(File.extname(source).downcase)
         raise ArgumentError, "source still exceeds 25 MB" if File.size(source) > 25 * 1024 * 1024
+        require_private_media_file!(source)
 
         seconds = Integer(duration)
         raise ArgumentError, "duration must be between 1 and 10 seconds" unless seconds.between?(1, 10)
@@ -184,6 +185,7 @@ module Studio
         )
         raise "ffmpeg failed to lay the soundtrack: #{err}" unless status.success? && File.file?(path)
 
+        File.chmod(0o600, path)
         path
       end
 
@@ -199,14 +201,27 @@ module Studio
         @client ||= Studio::ReplicateClient.new
       end
 
+      def require_private_media_file!(path)
+        stat = File.lstat(path)
+        raise ArgumentError, "subject media must be a regular non-symlink file" unless stat.file? && !stat.symlink?
+        raise ArgumentError, "subject media must be owned by the current user" unless stat.uid == Process.uid
+        raise ArgumentError, "subject media must be owner-only (0600)" unless (stat.mode & 0o077).zero?
+        raise ArgumentError, "subject media must not be hard-linked" unless stat.nlink == 1
+        true
+      rescue SystemCallError => error
+        raise ArgumentError, "cannot verify private subject media: #{error.class}: #{error.message}"
+      end
+
       def render_still(words, stem, grade_seed: nil)
         path = File.join(@directory, "#{safe_stem(stem)}.jpg")
-        raise "refusing to replace an existing still: #{path}" if File.exist?(path)
+        raise "refusing to replace an existing still: #{path}" if File.exist?(path) || File.symlink?(path)
 
         output = render_with_fallback(words)
         client.download_url(first_url(output), path)
+        File.chmod(0o600, path)
         graded = grade(path, seed: grade_seed)
-        File.delete(path) if graded != path && File.file?(path)
+        File.chmod(0o600, graded)
+        File.delete(path) if graded != path && File.file?(path) && !File.symlink?(path)
         graded
       end
 
@@ -336,10 +351,11 @@ module Studio
 
       def render_film(words, still, stamp, duration)
         path = File.join(@directory, "#{safe_stem(stamp)}.mp4")
-        raise "refusing to replace an existing film: #{path}" if File.exist?(path)
+        raise "refusing to replace an existing film: #{path}" if File.exist?(path) || File.symlink?(path)
 
         output = client.predict(film_engine, film_input(words, still, duration), timeout: 600)
         client.download_url(first_url(output), path)
+        File.chmod(0o600, path)
         path
       end
 
@@ -501,7 +517,9 @@ module Studio
         run_postpro(path, seed:)
         graded = Dir[graded_pattern(path)].max_by { |file| File.mtime(file) }
         raise "postpro succeeded but produced no graded still under #{File.dirname(path)}" unless graded
+        raise "postpro grade is a symlink or not a regular file" unless File.file?(graded) && !File.symlink?(graded)
 
+        File.chmod(0o600, graded)
         graded
       end
 
