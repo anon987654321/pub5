@@ -27,7 +27,7 @@ RUBY = RbConfig.ruby
 TOOLS = {
   "dilla" => File.join(STUDIO_ROOT, "dilla", "dilla.rb"),
   "postpro" => File.join(STUDIO_ROOT, "postpro", "postpro.rb"),
-  "lora" => File.join(STUDIO_ROOT, "lora", "validate.rb"),
+  "lora" => File.join(STUDIO_ROOT, "lora", "lora.rb"),
   "photograph" => File.join(STUDIO_ROOT, "lora", "photograph.rb"),
   "gallery" => File.join(STUDIO_ROOT, "lora", "selfies_gallery.rb"),
   "doctor" => File.join(STUDIO_ROOT, "doctor.rb"),
@@ -47,7 +47,7 @@ def usage
   warn "       bin/studio --list"
   warn "  dilla     the beat engine — see STUDIO/dilla/README.md"
   warn "  postpro   the film grade — see STUDIO/postpro/README.md"
-  warn "  lora      read-only private LoRA profile audit — --help for options"
+  warn "  lora      subject-aware likeness tools, private recovery and read-only audit"
   warn "  photograph generate subject-aware stills and films"
   warn "  gallery   rebuild the publication-gated selfie gallery manifest"
   warn "  doctor    inspect local readiness; read-only, no provider calls"
