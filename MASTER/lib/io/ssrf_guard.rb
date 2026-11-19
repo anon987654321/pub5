@@ -203,9 +203,7 @@ module Master
       rescue Timeout::Error
         raise Timeout::Error, "outbound request exceeded #{timeout}s"
       ensure
-        http.finish if http&.started?
-      rescue IOError, SystemCallError
-        nil
+        http.finish if http&.started? rescue IOError, SystemCallError
       end
 
       def self.blocked_ip?(ip)
