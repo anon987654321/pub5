@@ -126,13 +126,8 @@ module Master
         return { ok: false, status: 0, body: "blocked" } if url.to_s.empty?
 
         uri = URI(url)
-        address = SsrfGuard.pinned_address(uri)
-        return { ok: false, status: 0, body: "blocked" } unless address
-
-        http = SsrfGuard.http_for(uri, address)
-        http.open_timeout = timeout
-        http.read_timeout = timeout
-        res = http.get(uri.request_uri)
+        request = Net::HTTP::Get.new(uri.request_uri, "User-Agent" => "MASTER/1 (subdomain_orchestrator)")
+        res = SsrfGuard.request(uri, request, max_bytes: 4_096, timeout: timeout)
         body = res.body.to_s.strip
         { ok: res.code.to_i < 500, status: res.code.to_i, body: }
       rescue StandardError => e
