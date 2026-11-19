@@ -3,10 +3,12 @@
 **A television channel anyone in the city can start.** Tv gives every neighbourhood a screen of
 its own, for what the town makes, what it streams live and what it wants to watch next.
 
-Tv is a mountable Rails engine served at `tv.<city>`, for instance `tv.brgen.no` and
-`tv.lsangeles.com`. It is not a separate app: it runs in brgen's process, with brgen's users,
-and the city comes from the apex. The recipe for a vertical is in `RAILS/brgen/README.md`, and
-the topology is in `RAILS/brgen/AGENTS.md`.
+TV is mounted at `tv.<city>`, including `tv.brgen.no` and
+`tv.lsangeles.com`. It runs inside Brgen's Rails process, uses Brgen's users
+and resolves the city from the apex host. It is not a separate app.
+
+Read [the Brgen guide](../../../README.md) for the vertical pattern and
+[Brgen's agent contract](../../../AGENTS.md) for the host topology.
 
 Channels publish uploaded videos and shows with numbered episodes. Viewers comment, take
 notes pinned to a moment in a video, and follow channels by subscribing. The data model also
