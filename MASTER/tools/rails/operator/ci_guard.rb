@@ -2,7 +2,7 @@
 
 require "fileutils"
 require "timeout"
-require File.join(ENV.fetch("PUB5_ROOT", File.expand_path("../../../../", __dir__)), "OPENBSD", "mirror", "lib", "load_average")
+require File.join(ENV.fetch("PUB5_ROOT", File.expand_path("../../../../", __dir__)), "OPENBSD", "lib", "load_average")
 
 module Operator
   # VPS-only mutex + load check for Rails bin/ci (prevents parallel CI pile-ups on vm23).
