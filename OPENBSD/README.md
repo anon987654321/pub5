@@ -13,10 +13,22 @@ manual preflight and live-operation rules remain in [RUNBOOK.md](RUNBOOK.md).
 
 ## Canonical operator path
 
-Start with `RUNBOOK.md`, the single operational companion for live VPS work. Read it
-before SSH, `doas`, deploy, DNS, relayd, NSD or recovery. `CLAUDE.md` holds the sharp
-edges that have burned agents here, and `PATH_OWNERSHIP.yml` says what every path is
-for. Every edit under `OPENBSD/` starts with a complete read of the target file and its relevant dependencies/contracts. Before using any OpenBSD-native command/tool, operating a daemon/service, or editing an interface-bearing file, read the complete exact-target-release and architecture manuals for every involved tool, configuration format, owning daemon, validator/reloader/control interface and relevant `SEE ALSO` page. All subsystems and file types are covered; non-native prose/data files still require full source and schema/contract review. Missing or partial evidence blocks the operation. `RUNBOOK.md` defines the preflight and receipt.
+Start with `RUNBOOK.md`. It is the operational guide for live VPS work.
+Read it before SSH, `doas`, deployment, DNS, relayd, NSD or recovery.
+
+`CLAUDE.md` records sharp edges that have caused real failures.
+`PATH_OWNERSHIP.yml` defines the purpose and owner of each path.
+
+Before editing, read the complete target file and its relevant dependencies
+and contracts. Before using an OpenBSD-native command, operating a daemon,
+or changing an interface-bearing file, read the complete manuals for the
+target release and architecture. Cover every involved command, configuration
+format, daemon, validator, reload/control interface and relevant `SEE ALSO`
+page. This requirement applies to every subsystem. For non-native prose and
+data files, review the complete source and its schema or contract instead.
+
+Missing, partial or mismatched evidence blocks the operation. `RUNBOOK.md`
+defines the preflight and the receipt required for live work.
 
 ## Visual identity
 
@@ -92,20 +104,35 @@ rather than silently shown as no deploy. Fleet receipts bind the pinned SHA and
 original service snapshot to one run ID; explicit `vps-deploy recover` commands
 can restore that snapshot after an uncatchable process or host interruption.
 
-The Bundler content-addressed cache now uses fixed broker verbs, a bounded Ruby-version
-key and immutable SHA-256 objects; the app copies cache objects rather than sharing
-root-owned inodes through hard links. The CI and `vps-deploy` entrypoints now fail closed without the reviewed broker; direct root-shell, service-control and receipt-write fallbacks were removed from those paths. The MASTER web deploy now uses fixed broker verbs for assets and daemon runtime directories, and refuses to install a checkout-owned `rc.d/master` as root. `deploy-smoke` checks services through the broker first. The fresh-box `vps_install_all.sh` keeps a direct `rcctl` fallback only until the broker is installed. The remaining privilege cut is the wider operator/recovery surface and any installer helpers that still invoke `doas` directly. Keep the existing `/etc/doas.conf` rule and `wheel` membership unchanged until every privileged path is inventoried, migrated, and tested in a real OpenBSD checkout on vm23.
+The Bundler content-addressed cache uses fixed broker verbs, a bounded
+Ruby-version key and immutable SHA-256 objects. Each app copies cache objects;
+it does not share root-owned inodes through hard links.
+
+The CI and `vps-deploy` entrypoints fail closed when the reviewed broker is
+unavailable. Their direct root-shell, service-control and receipt-write
+fallbacks have been removed. The MASTER web deploy also uses fixed broker
+verbs for assets and daemon runtime directories. It refuses to install a
+checkout-owned `rc.d/master` as root. `deploy-smoke` checks services through
+the broker first.
+
+The fresh-box `vps_install_all.sh` retains a direct `rcctl` fallback only
+until the broker is installed. The remaining privilege work is the wider
+operator/recovery surface and installer helpers that still invoke `doas`
+directly. Do not change the existing `/etc/doas.conf` rule or `wheel`
+membership until every privileged path has been inventoried, migrated and
+tested in a real OpenBSD checkout on vm23.
 
 ## Configuration ownership and secrets
 
-Domains and DNS come from one source. `RAILS/apps.yml` lists the owned domains, and
-the files in `data/` and the zone helpers derive from it. What is in `var/nsd/` is a
-mirror of the NSD configuration templates and nothing more. The live signed zones
-sit on vm23 under `/var/nsd/` and are deliberately not in git, because a signed zone
-in a shared checkout is a key in a shared checkout. Service secrets live in `/etc/*.env` on
-the box and never in this tree. The interactive operator shell loads provider
-credentials, when configured, from the user's `~/.config/pub4/operator.env`; keep
-that file host-local with owner-only permissions, outside this checkout.
+Domains and DNS have one source. `RAILS/apps.yml` lists the owned domains;
+the files in `data/` and the zone helpers derive from that inventory.
+`var/nsd/` contains templates, not the live served zones. The signed zones
+remain host-owned under `/var/nsd/` on vm23 and stay out of Git.
+
+Service secrets live in `/etc/*.env` on the host, never in this tree. When
+configured, the interactive operator shell reads provider credentials from
+`~/.config/pub4/operator.env`. Keep that file on the operator's machine,
+outside the checkout, with owner-only permissions.
 
 ## Backups, alerts and what the public sees
 
