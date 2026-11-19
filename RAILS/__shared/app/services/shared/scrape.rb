@@ -77,6 +77,7 @@ module Shared
             raise unless newly_pinned.any?
           end
           browser.network.wait_for_idle(timeout: 10)
+          raise ArgumentError, "scrape discovered more than #{MAX_PINNED_HOSTS} public hosts" unless overflow_hosts.empty?
 
           if newly_pinned.empty?
             html = browser.body
@@ -87,7 +88,6 @@ module Shared
           browser.quit
         end
 
-        raise ArgumentError, "scrape discovered more than #{MAX_PINNED_HOSTS} public hosts" unless overflow_hosts.empty?
         raise ArgumentError, "scrape did not converge on a fixed DNS map after #{MAX_PIN_ROUNDS} passes" if rounds >= MAX_PIN_ROUNDS
       end
     end
@@ -98,6 +98,7 @@ module Shared
     # the URL hostname; only the TCP destination is substituted.
     def self.host_resolver_rules(pins)
       rules = pins.sort.filter_map do |host, address|
+        raise ArgumentError, "invalid browser pin hostname: #{host}" unless Shared::OutboundHttp.valid_resolver_host?(host)
         next if ip_literal_host?(host)
 
         ip = IPAddr.new(address)
