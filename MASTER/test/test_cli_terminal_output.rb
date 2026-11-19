@@ -241,7 +241,11 @@ class TestCLITerminalOutput < Minitest::Test
         say "I cannot:"
         say "- claim a deployment succeeded without a receipt."
       rescue => e
-        say "The answer could not be rendered."
+        begin
+          say "The answer could not be rendered."
+        rescue
+          nil
+        end
       end
     RUBY
 
