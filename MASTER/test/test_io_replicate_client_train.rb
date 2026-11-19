@@ -234,24 +234,30 @@ class TestReplicateClientRetry < Minitest::Test
     request = nil
     response = StreamingResponse.new(chunks: ["{}"], headers: { "content-length" => "2" })
     http = Object.new
-    http.define_singleton_method(:read_timeout=) { |value| @read_timeout = value }
+    %i[open_timeout read_timeout write_timeout].each do |name|
+      http.define_singleton_method("#{name}=") { |value| instance_variable_set("@#{name}", value) }
+    end
+    http.define_singleton_method(:start) { |&block| block.call(self) }
     http.define_singleton_method(:request) do |value, &handler|
       request = value
       handler.call(response)
       response
     end
+    guard = Master::Io::SsrfGuard
 
-    Net::HTTP.stub(:start, lambda { |host, port, **options, &block|
-      assert_equal "api.replicate.com", host
-      assert_equal 443, port
-      assert_equal true, options.fetch(:use_ssl)
-      assert_equal Client::OPEN_TIMEOUT_SECONDS, options.fetch(:open_timeout)
-      assert_operator options.fetch(:read_timeout), :<=, Client::READ_TIMEOUT_SECONDS
-      assert_equal Client::WRITE_TIMEOUT_SECONDS, options.fetch(:write_timeout)
-      block.call(http)
-    }) do
-      client.account_username
+    guard.stub(:pinned_address, "93.184.216.34") do
+      guard.stub(:http_for, lambda { |uri, address, timeout:|
+        assert_equal "api.replicate.com", uri.hostname
+        assert_equal "93.184.216.34", address
+        assert_equal Client::OPEN_TIMEOUT_SECONDS, timeout
+        http
+      }) do
+        client.account_username
+      end
     end
+    assert_equal Client::OPEN_TIMEOUT_SECONDS, http.instance_variable_get(:@open_timeout)
+    assert_operator http.instance_variable_get(:@read_timeout), :<=, Client::READ_TIMEOUT_SECONDS
+    assert_equal Client::WRITE_TIMEOUT_SECONDS, http.instance_variable_get(:@write_timeout)
 
     assert_equal "Token replicate-test-secret", request["Authorization"]
   end
