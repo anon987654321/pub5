@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "stringio"
 
 # Asserted through the I18n key, not the English sentence. These apps default
 # to nb; the literals only ever matched because rails-i18n was missing, so the
@@ -21,6 +22,17 @@ class OutfitTest < ActiveSupport::TestCase
     outfit = Outfit.new(user: @user, name: "Rain day", season: "fall", category: "casual", occasion: "work")
 
     assert_equal "fall, casual, work", outfit.context_label
+  end
+
+  test "home look data carries an attached garment photograph" do
+    outfit = Outfit.create!(user: @user, name: "Rain day")
+    item = Item.create!(user: @user, title: "Oxford shirt", category: "Tops")
+    OutfitItem.create!(outfit: outfit, item: item)
+    item.photos.attach(io: StringIO.new("garment image"), filename: "shirt.jpg", content_type: "image/jpeg")
+
+    garment = Amber::HomeLooks.outfit_looks(@user.outfits).first.garments.first
+
+    assert_equal item.photos.first.blob_id, garment.photo.blob_id
   end
 
   # likes_count counted presses; one person could raise it as fast as the write limit.
