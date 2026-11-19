@@ -115,7 +115,7 @@ module Master
         return false unless metadata["host"] == Socket.gethostname
 
         pid = Integer(metadata["pid"], exception: false)
-        return false unless pid&.positive? && holders.include?(pid)
+        return false unless pid&.positive? && holders == [pid]
         return false unless process && process[:pid] == pid
         return false unless process[:tty] && process[:tty] != "??" && process[:tty] != "-"
         return false if process[:stat].to_s.match?(/[TZ]/)
@@ -135,7 +135,7 @@ module Master
         metadata = JSON.parse(File.read(path))
         holders = lock_holders(path)
         pid = Integer(metadata["pid"], exception: false)
-        return false unless pid&.positive? && holders&.include?(pid)
+        return false unless pid&.positive? && holders == [pid]
 
         output, status = Io::Exec.capture2(
           "ps", "-ax", "-o", "pid=,ppid=,pgid=,stat=,tty=,command=",
@@ -174,7 +174,7 @@ module Master
 
         # Close the check/signal race: the same PID must still hold the flock and
         # the transcript must still be beyond its lease immediately before TERM.
-        return false unless lock_holders(path)&.include?(pid)
+        return false unless lock_holders(path) == [pid]
 
         latest_activity = session_activity(root:)
         return false unless latest_activity && Time.now - latest_activity >= idle_seconds
