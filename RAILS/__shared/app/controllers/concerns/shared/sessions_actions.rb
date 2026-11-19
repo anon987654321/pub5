@@ -11,7 +11,7 @@ module Shared
       # shared counter per controller, so login would spend the magic-link
       # budget and the 3-minute window would win for both (see
       # RAILS/test/rate_limit_naming_test.rb).
-      rate_limit to: 10, within: 3.minutes, only: :create, name: :password,
+      rate_limit to: 8, within: 3.minutes, only: :create, name: :password,
         with: -> { redirect_to new_session_path, alert: t("shared.flash.rate_limited") }
       # Tighter than :create because this one sends mail on an unauthenticated
       # POST, so the cost of abuse is somebody else's inbox rather than a

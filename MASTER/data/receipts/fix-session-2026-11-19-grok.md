@@ -85,3 +85,15 @@ Hardening landed (MASTER_TOUGH=1 enables the strictest path):
 Export `MASTER_TOUGH=1` for the strict profile. Ordinary runs keep prior behaviour except the always-on circuit/resource/run budget tightenings.
 
 Ruby floor remains >= 3.2 (already relaxed). Full suite still needs provider keys / host evidence for runtime PASS claims; this commit is source hardening only.
+
+## RAILS /fix hardening (2026-11-19)
+
+| Surface | Change |
+|---|---|
+| `Shared::WriteThrottle` | default limit 120 → **60** writes/min |
+| `sessions_actions` password rate | 10 → **8** / 3 min |
+| `passwords_actions` request/consume reset | 10 → **5** / 3 min |
+| `account_security_actions` | 10 → **6** / 10 min |
+| `filter_parameter_logging` | expanded: password, phone, authorization, api_key, access_token, refresh_token, private_key, credit_card, card_number, iban |
+
+Vipps `params[:to]` already restricted to exact `"checkout"` → root/checkout only (no open redirect). Session cookies already httponly + secure-in-prod + same_site:lax + domain:all for city verticals. CSP remains report-only until operator sets PUB5_CSP_ENFORCE=1.

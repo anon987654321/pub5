@@ -6,7 +6,7 @@ module Shared
   #
   # Per-action rate_limit declarations stay where a controller needs a tighter
   # or a named limit (posts, messages, uploads, sign-in). This is the floor under
-  # all of them: 120 writes a minute to one controller from one identity is far
+  # all of them: 60 writes a minute to one controller from one identity is far
   # above a person and useful only to a script. Guests count by IP, because a
   # client that drops its cookie mints a new guest on every POST and would
   # otherwise never repeat a key.
@@ -20,7 +20,7 @@ module Shared
     extend ActiveSupport::Concern
 
     included do
-      class_attribute :write_throttle_limit, default: 120
+      class_attribute :write_throttle_limit, default: 60
       class_attribute :write_throttle_window, default: 1.minute
       before_action :throttle_writes, unless: :write_throttle_exempt?
     end
