@@ -10,6 +10,13 @@ The register travels with the migration; source-owned status remains in the
 structured ledgers. Completed work leaves the active checkbox set; retain its
 evidence in the owning ledger, commit history or acceptance record.
 
+2026-11-19 authority/mastery update: `MASTER/lib/soul.rb` now states the mastery loop,
+single-owner rule, projection freshness and bounded DNS primary/secondary
+analogy. `MASTER/README.md` and `RAILS/README.md` explain the boundary: MASTER
+owns shared constitution; RAILS and the other trees remain authoritative for
+their domains. Focused current-revision runtime checks remain part of §1;
+source changes and GitHub API writes alone do not establish a test PASS.
+
 Follow-up audit: pub4/main remains at the recorded migration cutoff; the live
 blob disposition is refreshed in `MIGRATION.md` against `ff607922`. The
 execution container has Ruby 3.3.8 but no repository checkout; a shallow clone
@@ -89,8 +96,13 @@ screenshot count or previous revision.
 
 - [ ] **MASTER on the installed compatible Ruby.** Run focused Law, Soul, configuration,
   registry, replay-reader, fix-loop oscillation, reachability, run-ledger,
-  media and CLI regressions, plus `ruby MASTER/test/bare/test_agent_tier.rb`,
-  `MASTER/bin/master selfcheck --fast` and `MASTER/bin/master hooks status`.
+  media and CLI regressions, including `ruby MASTER/test/test_soul.rb`,
+  `ruby MASTER/test/test_identity_and_runtime_surface.rb` and
+  `ruby MASTER/test/voice/test_voice_identity.rb`, plus
+  `ruby MASTER/test/bare/test_agent_tier.rb`, `MASTER/bin/master selfcheck --fast`
+  and `MASTER/bin/master hooks status`. Verify `ruby MASTER/tools/agent_context.rb --json`
+  reports the five-tier authority order from Soul, and run
+  `cd MASTER && rake lint:agent_contracts` to catch drift in generated entrypoints.
   Then run
   `MASTER_TEST_START_MARKERS=1 MASTER_TEST_JOBS=1 MASTER_TEST_PROGRESS_EVERY=25 rake test`,
   `MASTER_TEST_JOBS=3 rake test`, `rake audit` and
