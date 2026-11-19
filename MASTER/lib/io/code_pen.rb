@@ -75,10 +75,9 @@ module Master
 
       def get(url)
         uri = URI(url)
-        address = SsrfGuard.pinned_address(uri)
-        raise "refused internal/reserved address" unless address
+        raise "invalid public HTTP target" unless SsrfGuard.valid_http_uri?(uri)
 
-        response = http(uri, address)
+        response = http(uri)
         raise "HTTP #{response.code}" unless response.code == "200"
 
         response.body.to_s.byteslice(0, MAX_BYTES)
@@ -91,7 +90,7 @@ module Master
         nil
       end
 
-      def http(uri, _address = nil)
+      def http(uri)
         request = Net::HTTP::Get.new(uri.request_uri, "User-Agent" => "MASTER/1 (codepen)")
         SsrfGuard.request(uri, request, max_bytes: MAX_BYTES, timeout: TIMEOUT)
       end
