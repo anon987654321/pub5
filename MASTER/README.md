@@ -122,9 +122,11 @@ The chosen public address is pinned into `Net::HTTP#ipaddr`; the original
 hostname remains in place for TLS SNI, certificate verification and Host.
 Environment proxies are disabled because they would bypass the pin.
 
-A redirect is not permission to make a second request. `WebBrowse` checks its
-Location target before handing it to Chromium, then intercepts and pins the
-resulting request again. Other clients do not follow redirects implicitly.
+A redirect is not permission to make a second request. `WebBrowse` checks its Location target before handing it to Chromium, then
+intercepts and pins the resulting request again. `ExternalAudit` follows only
+bounded same-host redirects and re-resolves and pins every hop; it refuses
+cross-host redirects and HTTPS-to-HTTP downgrade. Other clients do not follow
+redirects implicitly.
 Response bodies, DNS lookup, connection phases and operation deadlines remain
 bounded. Local daemon probes are a deliberate separate policy, not public-web
 fetches.
