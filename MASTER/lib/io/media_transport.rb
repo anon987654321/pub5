@@ -256,7 +256,13 @@ module Master
         end
         request = verb == :post ? Net::HTTP::Post.new(uri, headers.merge("Content-Type" => "application/json")) : Net::HTTP::Get.new(uri, headers)
         request.body = body if body
-        response = Master::Io::SsrfGuard.request(uri, request, max_bytes: MAX_BYTES, timeout: [10, timeout].max)
+        seconds = Float(timeout)
+        response = Master::Io::SsrfGuard.request(
+          uri, request, max_bytes: MAX_BYTES, timeout: seconds,
+          open_timeout: [10.0, seconds].min,
+          read_timeout: seconds,
+          write_timeout: [10.0, seconds].min
+        )
         [response.code.to_i, response.body.to_s, response["location"]]
       rescue Net::OpenTimeout, Net::ReadTimeout, Timeout::Error => e
         raise TimedOut, "#{uri&.host} timed out: #{e.class}"
