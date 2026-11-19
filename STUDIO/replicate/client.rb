@@ -71,7 +71,6 @@ module Studio
           raise ArgumentError, "refusing download URL credentials" unless uri.userinfo.nil?
           raise ArgumentError, "refusing download URL fragment" unless uri.fragment.nil?
           raise ArgumentError, "refusing download from untrusted host: #{uri.host}" unless uri.host.to_s.match?(ALLOWED_DOWNLOAD_HOST)
-          pin = ReplicateClient.public_download_address!(uri.host)
 
           max_bytes = Integer(max_bytes)
           raise ArgumentError, "download byte limit must be positive" unless max_bytes.positive?
@@ -89,12 +88,18 @@ module Studio
           raise ArgumentError, "refusing to replace a symlink download target" if File.symlink?(target)
           raise ArgumentError, "download target exists and is not a regular file" if File.exist?(target) && !File.file?(target)
           mode = File.file?(target) ? File.stat(target).mode & 0o7777 : 0o640
+          # Validate filesystem state before DNS activity; an invalid target must
+          # not cause even a provider hostname lookup.
+          pin = ReplicateClient.public_download_address!(uri.host)
 
           # Keep the old output intact until the entire response has passed its
           # status, byte-limit and monotonic-deadline checks. The temporary lives
           # beside the canonical target so the final rename stays atomic.
           Tempfile.create(["replicate-download-", ".part"], directory, binmode: true) do |file|
-            http = Net::HTTP.new(uri.host, uri.port)
+            # A proxy inherited from the environment would route around ipaddr=
+            # and send the request to a different socket destination.
+            http = Net::HTTP.new(uri.host, uri.port, nil)
+            raise SocketError, "Net::HTTP cannot pin Replicate destination" unless http.respond_to?(:ipaddr=)
             http.ipaddr = pin
             http.use_ssl = true
             http.open_timeout = [OPEN_TIMEOUT_SECONDS, timeout].min
@@ -405,10 +410,13 @@ module Studio
       # otherwise let download_url talk to the host itself.
       BLOCKED_DOWNLOAD_RANGES = %w[
         0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16
-        172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15
-        198.51.100.0/24 203.0.113.0/24 224.0.0.0/4 240.0.0.0/4
-        ::/128 ::1/128 fc00::/7 fe80::/10 ff00::/8
+        172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.88.99.0/24 192.168.0.0/16
+        198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/4 240.0.0.0/4
+        ::/128 ::1/128 64:ff9b::/96 64:ff9b:1::/48 100::/64 2001::/23
+        2001:db8::/32 2002::/16 2d00::/8 2e00::/7 3000::/5 3800::/6
+        3c00::/7 3e00::/8 3f00::/8 fec0::/10 fc00::/7 fe80::/10 ff00::/8
       ].map { |cidr| IPAddr.new(cidr) }.freeze
+      GLOBAL_DOWNLOAD_IPV6 = IPAddr.new("2000::/3").freeze
       MODEL_REFERENCE = /\A([A-Za-z0-9][A-Za-z0-9._-]{0,127})\/([A-Za-z0-9][A-Za-z0-9._-]{0,127})(?::([A-Za-z0-9][A-Za-z0-9._-]{0,127}))?\z/.freeze
       RESOURCE_ID = /\A[A-Za-z0-9][A-Za-z0-9_-]{0,127}\z/.freeze
 
@@ -434,10 +442,27 @@ module Studio
       end
 
 
+      def self.resolve_download_addresses(host)
+        Addrinfo.getaddrinfo(host, nil, nil, :STREAM).map(&:ip_address).uniq
+      rescue SocketError, SystemCallError
+        []
+      end
+
+      def self.valid_download_hostname?(host)
+        candidate = host.to_s.downcase.delete_suffix(".")
+        return false if candidate.empty? || candidate.bytesize > 253
+
+        labels = candidate.split(".", -1)
+        labels.all? do |label|
+          label.bytesize <= 63 && label.match?(/\A[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\z/)
+        end
+      end
+
       def self.public_download_address!(host)
         host = host.to_s.downcase.delete_suffix(".")
-        raise ArgumentError, "refusing empty download host" if host.empty?
-        addresses = Addrinfo.getaddrinfo(host, "https", nil, :STREAM).map(&:ip_address).uniq
+        raise ArgumentError, "refusing invalid download host" unless valid_download_hostname?(host)
+
+        addresses = resolve_download_addresses(host)
         raise ArgumentError, "download host did not resolve: #{host}" if addresses.empty?
         addresses.each do |addr|
           ip = IPAddr.new(addr)
@@ -446,13 +471,14 @@ module Studio
           end
         end
         addresses.first
-      rescue SocketError, SystemCallError => e
-        raise ArgumentError, "download host resolution failed: #{host}: #{e.message}"
+      rescue IPAddr::InvalidAddressError => e
+        raise ArgumentError, "download host returned an invalid address: #{host}: #{e.message}"
       end
 
       def self.blocked_download_ip?(ip)
         ip = ip.native if ip.respond_to?(:ipv4_mapped?) && ip.ipv4_mapped?
         ip.loopback? || ip.link_local? || ip.private? ||
+          (ip.ipv6? && !GLOBAL_DOWNLOAD_IPV6.include?(ip)) ||
           (ip.respond_to?(:multicast?) && ip.multicast?) ||
           BLOCKED_DOWNLOAD_RANGES.any? { |range| range.include?(ip) }
       rescue StandardError
