@@ -190,7 +190,7 @@ module Master
           return Result.err("full-scope proof exceeded the run deadline", category: :timeout) if deadline.expired?
 
           @reachability.verify!(target, files: full_files)
-          run_record = @run_journal.history(limit: RunJournal::MAX_RUNS).find { |row| row["id"] == run_id }
+          run_record = @run_journal.history(limit: Master::Fix::Kernel::LifecycleJournal::MAX_RUNS).find { |row| row["id"] == run_id }
           start_pass = @run_journal.next_pass(run_record || journal)
           if start_pass > ABSOLUTE_MAX_PASSES
             return terminal(:blocked, "full-scope proof could not start within the absolute pass limit")

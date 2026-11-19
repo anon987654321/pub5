@@ -37,13 +37,10 @@ module Master
       class RepairAdapter; end unless const_defined?(:RepairAdapter, false)
 
       module Lifecycle
-        # Kernel owns the durable lifecycle-journal implementation. The historical
-        # RunJournal constant remains an alias, and every production writer enters
-        # through this accessor so a run has one journal owner and one on-disk format.
+        # Kernel owns the durable lifecycle journal. The historical RunJournal
+        # constant remains a separately loadable compatibility alias; runtime
+        # code uses this accessor and never needs to load that alias.
         def lifecycle_journal
-          # Installing the historical alias here avoids consuming a pending
-          # Zeitwerk autoload while ensuring existing callers see one class.
-          require_relative "../run_journal"
           @lifecycle_mutex.synchronize do
             @lifecycle_journal ||= LifecycleJournal.new(root: @root, bus: @bus)
           end

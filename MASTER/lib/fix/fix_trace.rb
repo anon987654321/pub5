@@ -4,7 +4,7 @@ require "json"
 require "tmpdir"
 require_relative "../io/exec"
 require_relative "../boot/paths"
-require_relative "run_journal"
+require_relative "kernel/lifecycle_journal"
 require_relative "transcript"
 require_relative "../trace/dmesg"
 
@@ -37,7 +37,7 @@ module Master
 
       def journal_run_id
         roots.each do |root|
-          path = File.join(MasterPaths.fix_state(root: root), RunJournal::PATH)
+          path = File.join(MasterPaths.fix_state(root: root), Kernel::LifecycleJournal::PATH)
           next unless File.file?(path)
 
           run = JSON.parse(File.read(path)).fetch("runs", []).reverse.find { |row| row["state"] == "active" }

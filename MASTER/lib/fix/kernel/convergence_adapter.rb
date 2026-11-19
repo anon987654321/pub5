@@ -12,7 +12,6 @@ module Master
   end
 end
 
-require_relative "../run_journal"
 require "set"
 require "time"
 require_relative "../scanner"

@@ -184,7 +184,7 @@ module Master
             provenance_matches:
           )
           evidence[:assessment_verification] = assessment_verification.to_h
-          run_record = @run_journal.history(limit: RunJournal::MAX_RUNS).find { |row| row["id"] == run_id }
+          run_record = @run_journal.history(limit: Master::Fix::Kernel::LifecycleJournal::MAX_RUNS).find { |row| row["id"] == run_id }
           plan_generation = Array(run_record && run_record["plan_generations"]).last&.fetch("generation", nil)
           evidence[:fix_plan_generation] = plan_generation unless plan_generation.nil?
           # Operator requirement: after each /fix the run's logs go to a gist
@@ -267,7 +267,7 @@ module Master
             "== kernel ledger events (#{events.size}) ==",
             *events,
           ]
-          record = @run_journal.history(limit: RunJournal::MAX_RUNS).find { |row| row["id"] == run_id }
+          record = @run_journal.history(limit: Master::Fix::Kernel::LifecycleJournal::MAX_RUNS).find { |row| row["id"] == run_id }
           if record
             lines << ""
             lines << "== run journal record =="

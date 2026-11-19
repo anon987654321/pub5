@@ -135,7 +135,7 @@ module Master
             remaining = @run_journal.remaining_seconds(run_id)
             break if remaining < WISHLIST_MIN_REMAINING_SECONDS
 
-            run_record = @run_journal.history(limit: RunJournal::MAX_RUNS).find { |row| row["id"] == run_id }
+            run_record = @run_journal.history(limit: Master::Fix::Kernel::LifecycleJournal::MAX_RUNS).find { |row| row["id"] == run_id }
             start_pass = @run_journal.next_pass(run_record)
             refreshed = @file_collector.collect(target)
             round_passes = [WISHLIST_MAX_PASSES, max_passes].min
