@@ -2,6 +2,7 @@
 
 require "yaml"
 require "json"
+require "rbconfig"
 
 # Consolidated LoRA craft: what a photograph of a subject can be asked for, in
 # words a FLUX.1-dev person LoRA acts on, plus the selfie sittings the series
@@ -127,8 +128,11 @@ module Studio
 
       def run_flags(argv)
         case argv.first
-        when "validate" then validate
-        when "recover" then puts JSON.pretty_generate(recovery_command(argv.drop(1)))
+        when "validate" then validate_with_flags(argv.drop(1))
+        when "recover"
+          puts JSON.pretty_generate(recovery_command(argv.drop(1)))
+          0
+        when "--json", "--subject" then validate_with_flags(argv)
         when "selfie" then selfie(Studio::Interactive.new(input: $stdin, output: $stdout, tty: false))
         when "-h", "--help", nil then puts help
         else abort "lora: unknown command #{argv.first.inspect} (see --help)"
