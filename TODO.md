@@ -764,15 +764,17 @@ receipt before a reviewed app-scoped revert. These tests are authored but
 NOT_RUN here. This does not replace live vm23 evidence or the staged-release
 work below.
 
-2026-11-19 MASTER chat deployment path: the handler now uses the canonical
-wait mode (not --detach), requires the exact target success line, tmux exit
-marker and public-canary stage, then verifies selected live services, ports,
-deployed SHA/stamp parity, in-progress status and the durable recovery ledger
-through read-only vps-state JSON. A lost waiter or non-green run is reconciled
-without automatic retry, service restart or rollback. Focused regression cases
-are authored; this session cannot run the installed Ruby suites or reach vm23,
-so code execution and live host acceptance remain NOT_RUN/BLOCKED. The host
-mirror stays at OPENBSD/mirror; it is the source for vm23, not a host-named tree.
+2026-11-19 MASTER chat deployment path: the handler uses the canonical wait
+mode (not --detach), requires the exact target success line, tmux exit marker
+and public-canary stage, then verifies the selected services, ports, deployed
+SHA/stamp parity, in-progress status and recovery ledger through read-only
+vps-state JSON. It binds the reported host to OPENBSD/data/operator.yml's
+canonical host inventory. Interrupted or cancelled waiters trigger read-only
+reconciliation; pending receipts report owner PID state and the safe next
+observation/plan step. No automatic retry, service restart or guessed rollback.
+Focused regression cases are authored; this session cannot run the installed
+Ruby suites or reach vm23, so code execution and live host acceptance remain
+NOT_RUN/BLOCKED. OPENBSD/mirror remains the source tree installed on vm23.
 
 - [ ] **Measure vm23 before changing it.** The 2026-11-04 note reported 1 GB
   and near-exhausted swap; that is not a current measurement. Capture live
