@@ -540,6 +540,43 @@ class TestStudioReplicateClientPaths < Minitest::Test
     end
   end
 
+  def test_replicate_api_request_has_a_total_deadline
+    uri = URI("https://api.replicate.com/v1/models")
+    http = FakeHTTP.new(
+      FakeResponse.new, host: "api.replicate.com", port: 443, proxy_address: nil
+    )
+    http.define_singleton_method(:request) { |_request| sleep 0.05 }
+
+    Studio::ReplicateClient.stub(:resolve_download_addresses, ["93.184.216.34"]) do
+      Net::HTTP.stub(:new, ->(*_args) { http }) do
+        error = assert_raises(Studio::ReplicateClient::DeadlineExceeded) do
+          @client.send(:attempt_request, Net::HTTP::Get.new(uri), uri, timeout: 0.01)
+        end
+        assert_match(/total deadline/, error.message)
+      end
+    end
+  end
+
+  def test_replicate_api_transport_does_not_follow_redirects
+    uri = URI("https://api.replicate.com/v1/models")
+    response = FakeResponse.new(code: "302", headers: { "location" => "https://127.0.0.1/private" })
+    requests = 0
+    http = FakeHTTP.new(response, host: "api.replicate.com", port: 443, proxy_address: nil)
+    http.define_singleton_method(:request) do |_request, &block|
+      requests += 1
+      block.call(response)
+    end
+
+    Studio::ReplicateClient.stub(:resolve_download_addresses, ["93.184.216.34"]) do
+      Net::HTTP.stub(:new, ->(*_args) { http }) do
+        assert_raises(Studio::ReplicateClient::APIError) do
+          @client.send(:attempt_request, Net::HTTP::Get.new(uri), uri)
+        end
+      end
+    end
+    assert_equal 1, requests
+  end
+
   def test_replicate_api_refuses_transport_without_ip_pinning
     uri = URI("https://api.replicate.com/v1/models")
     http = Object.new
