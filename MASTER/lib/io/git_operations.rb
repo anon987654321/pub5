@@ -10,6 +10,8 @@ module Master
   module Io
     # GitOperations — git wrappers scoped to a repository root.
     class GitOperations
+      COMMIT_TRAILER = "Co-authored-by: MASTER".freeze
+
       # A person's yes, typed at a terminal, to committing these sacred paths once. It is the
       # guard's one exception, so `soul approve` commits through the same door as every other
       # writer instead of beside it. Only `confirm_at_terminal` should make one; nothing
@@ -40,7 +42,29 @@ module Master
           commit_message = normalize_commit_message(message)
           refuse_sacred!(["commit", "--", *scoped], confirmed:)
           fingerprints = commit_fingerprints(scoped, expected_hashes:)
-          with_pathspec_file(scoped) do |pathspec_file|
+          commit_private_index(commit_message, scoped, fingerprints, confirmed:, trailer: COMMIT_TRAILER)
+        end
+
+        # The effect Fold has already applied its own stricter path, staged-file,
+        # deletion and proof gates. It enters here only after those checks; this
+        # method still requires exact content receipts and uses the same private
+        # index, commit receipt and sacred-path guard as every runtime writer.
+        def commit_from_fold(message:, paths:, expected_hashes:, trailer: COMMIT_TRAILER)
+          Master::Ground::LawHandshake::Admission.require!
+          scoped = scoped_paths(paths)
+          raise ArgumentError, "git commit needs paths: an unscoped commit takes the shared index" if scoped.empty?
+
+          expected = expected_hashes.is_a?(Hash) ? expected_hashes.to_h { |path, digest| [path.to_s, digest.to_s.downcase] } : {}
+          raise ArgumentError, "git commit needs exact content receipts" unless expected.keys.sort == scoped.sort
+          malformed = expected.reject { |_path, digest| digest.match?(/\A[0-9a-f]{64}\z/) }
+          raise ArgumentError, "git commit has malformed content receipts" if malformed.any?
+
+          fingerprints = commit_fingerprints(scoped, expected_hashes: expected)
+          commit_private_index(message.to_s, scoped, fingerprints, confirmed: nil, trailer:)
+        end
+
+        private def commit_private_index(message, paths, fingerprints, confirmed:, trailer:)
+          with_pathspec_file(paths) do |pathspec_file|
             Dir.mktmpdir("master-git-index-") do |directory|
               index_env = { "GIT_INDEX_FILE" => File.join(directory, "index") }
               _head, head_status = Master::Io::Exec.capture2e(
@@ -51,7 +75,7 @@ module Master
               git!("add", "--pathspec-from-file=#{pathspec_file}", "--pathspec-file-nul", env: index_env)
               verify_commit_fingerprints!(fingerprints)
               git!(
-                "commit", "-m", commit_message, "-m", Master::Core::World::COMMIT_TRAILER,
+                "commit", "-m", message, "-m", trailer,
                 "--pathspec-from-file=#{pathspec_file}", "--pathspec-file-nul", confirmed:, env: index_env
               )
             end
@@ -244,7 +268,9 @@ module Master
 
         def named_paths(args)
           listed = args.find { |arg| arg.start_with?("--pathspec-from-file=") }
-          return File.read(listed.delete_prefix("--pathspec-from-file=")).split("\0") if listed
+          return File.read(listed.delete_prefix("--pathspec-from-file=")).split("\0").map do |path|
+            path.delete_prefix(":(literal)")
+          end if listed
 
           separator = args.index { |arg| arg.match?(/\A-{2}\z/) }
           args.drop(separator + 1) if separator
@@ -327,7 +353,7 @@ module Master
       def with_pathspec_file(paths)
         file = Tempfile.new(["master-git-paths-", ".nul"])
         file.binmode
-        file.write(paths.join("\x00"))
+        file.write(paths.map { |path| ":(literal)#{path}" }.join("\x00"))
         file.write("\x00")
         file.close
         yield file.path

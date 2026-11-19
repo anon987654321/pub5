@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "digest"
-require "tmpdir"
 require "rbconfig"
 require "securerandom"
 require "time"
@@ -38,7 +36,7 @@ module Master::Core
     # The host supplies the process boundary. Core owns effect policy; the host
     # owns subprocess execution, cancellation and environment handling.
     def initialize(root:, ask: nil, critique_runner: nil, undo: nil, capabilities: Capabilities.for(:fix),
-                   network: nil, probe: nil, browser: nil, process_runner: nil, atomic_writer: nil)
+                   network: nil, probe: nil, browser: nil, process_runner: nil, atomic_writer: nil, git_service: nil)
       @root = File.expand_path(root)
       @ask = ask
       @critique_runner = critique_runner
@@ -49,6 +47,7 @@ module Master::Core
       @browser = browser
       @process_runner = process_runner
       @atomic_writer = atomic_writer
+      @git_service = git_service
     end
 
     # The Core-owned browser broker, or nil. Injected for the same reason
@@ -66,6 +65,7 @@ module Master::Core
     # actually perform. Constitution and World both recheck every proposal.
     def process_runner? = @process_runner&.respond_to?(:capture2e) == true
     def atomic_writer? = @atomic_writer&.respond_to?(:validate_atomic_destination) && @atomic_writer&.respond_to?(:write_atomic)
+    def git_service? = @git_service&.respond_to?(:commit_from_fold) == true
 
     def verbs
       Master::Core::VERBS.select do |verb|
@@ -89,7 +89,7 @@ module Master::Core
 
       operations = []
       operations << "diff" if @capabilities.allow?(:read)
-      operations << "commit" if @capabilities.allow?(:write)
+      operations << "commit" if @capabilities.allow?(:write) && git_service?
       operations.freeze
     end
 
@@ -318,7 +318,10 @@ module Master::Core
       case operation.to_s.to_sym
       when :diff then Observation.ok(git_capture("diff"))
       when :stage then Observation.no("git stage is not a separate action; use a path-scoped commit after proof")
-      when :commit then do_git_commit(Array(paths), message, expected_hashes:)
+      when :commit
+        return Observation.no("git commit service unavailable") unless git_service?
+
+        do_git_commit(Array(paths), message, expected_hashes:)
       else Observation.no("unknown git operation: #{operation}")
       end
     end
@@ -371,39 +374,12 @@ module Master::Core
       return Observation.no("git commit refused: missing or ignored paths: #{unknown.join(", ")}") if unknown.any?
 
       verify_delivery_hashes!(safe_paths, expected)
-      # A private temporary index prevents another session's staged entries
-      # from being changed even briefly. It starts at HEAD and receives only
-      # this task's exact, content-verified paths. A repository with no commits
-      # yet has no HEAD; its first commit still deserves the same isolation, so
-      # the temporary index starts empty instead.
-      Dir.mktmpdir("master-git-index-") do |directory|
-        index_env = { "GIT_INDEX_FILE" => File.join(directory, "index") }
-        head_output, head_status = bounded_capture2e("git", "-C", @root, "rev-parse", "--verify", "-q", "HEAD")
-        raise head_output.strip if head_status.equal?(TIMED_OUT)
-
-        git_capture(*(head_status.success? ? %w[read-tree HEAD] : %w[read-tree --empty]), env: index_env)
-        verify_delivery_hashes!(safe_paths, expected)
-        git_capture("add", "--", *pathspecs, env: index_env)
-        verify_delivery_hashes!(safe_paths, expected)
-        Observation.ok(
-          git_capture(
-            "commit", "-m", message.to_s, "-m", COMMIT_TRAILER, "--", *pathspecs,
-            env: index_env,
-          )
-        )
-      end
+      output = @git_service.commit_from_fold(
+        message: message.to_s, paths: safe_paths, expected_hashes: expected, trailer: COMMIT_TRAILER,
+      )
+      Observation.ok(output)
     rescue StandardError => error
       Observation.no("git commit refused: #{error.class}: #{error.message}")
-    end
-
-    def verify_delivery_hashes!(paths, expected)
-      mismatched = paths.reject do |path|
-        full = within(path)
-        File.file?(full) && !File.symlink?(full) && Digest::SHA256.file(full).hexdigest == expected.fetch(path)
-      end
-      return if mismatched.empty?
-
-      raise "task-owned file content changed since its proof: #{mismatched.join(", ")}"
     end
 
     def do_ask(prompt:, options: nil, **)

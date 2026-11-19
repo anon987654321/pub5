@@ -243,8 +243,31 @@ class GitOperationsTest < Minitest::Test
     @git.commit("bulk change", paths:)
 
     assert_equal %w[read-tree add commit], argv.map { |args, _kwargs| args.first }
-    assert_equal [paths, paths], pathspecs.map { |data| data.split("\0").reject(&:empty?) }
+    literal_paths = paths.map { |path| ":(literal)#{path}" }
+    assert_equal [literal_paths, literal_paths], pathspecs.map { |data| data.split("\0").reject(&:empty?) }
     refute argv.flat_map(&:first).any? { |arg| paths.include?(arg) }, "large path sets must not become argv entries"
+  end
+
+  def test_commit_from_fold_requires_exact_receipts_and_uses_the_shared_private_index
+    content = "FOLD = 1\n"
+    write("lib/fold.rb", content)
+    before = @git.head
+
+    error = assert_raises(ArgumentError) do
+      @git.commit_from_fold(message: "fold write", paths: ["lib/fold.rb"], expected_hashes: {})
+    end
+    assert_match(/exact content receipts/, error.message)
+    assert_equal before, @git.head
+
+    output = @git.commit_from_fold(
+      message: "fold write",
+      paths: ["lib/fold.rb"],
+      expected_hashes: { "lib/fold.rb" => Digest::SHA256.hexdigest(content) },
+    )
+
+    refute_empty output
+    assert_includes sh("git", "show", "--format=", "--name-only", "HEAD", chdir: @repo), "lib/fold.rb"
+    assert_includes sh("git", "log", "-1", "--format=%B", chdir: @repo), Master::Io::GitOperations::COMMIT_TRAILER
   end
 
   def test_commit_refuses_without_paths

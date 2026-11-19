@@ -11,9 +11,17 @@ require "tmpdir"
 class WorldTest < Minitest::Test
   E = Master::Core::Effect
 
+  class SilentGitReceiptBus
+    def publish_required(*) = true
+  end
+
   def build_world(**options)
+    root = options.fetch(:root)
+    git_service = Master::Io::GitOperations.new(
+      root, receipts: Master::Trace::ToolObserver.new(bus: SilentGitReceiptBus.new)
+    )
     Master::Core::World.new(
-      process_runner: Master::Io::Exec, atomic_writer: Master::Io::AtomicWrite, **options
+      process_runner: Master::Io::Exec, atomic_writer: Master::Io::AtomicWrite, git_service:, **options
     )
   end
 

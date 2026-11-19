@@ -136,7 +136,10 @@ class CoreSmokeTest < Minitest::Test
       constitution: Master::Core::Constitution.load(data_dir: DATA),
       # This test harness explicitly approves the irreversible Git effects
       # that the real operator would be asked to approve.
-      world: Master::Core::World.new(root:, process_runner: Master::Io::Exec, atomic_writer: Master::Io::AtomicWrite, ask: ->(**) { "yes" }),
+      world: Master::Core::World.new(
+        root:, process_runner: Master::Io::Exec, atomic_writer: Master::Io::AtomicWrite,
+        git_service: Master::Io::GitOperations.new(root), ask: ->(**) { "yes" },
+      ),
       memory:,
     }
     options[:max_turns] = max_turns if max_turns
