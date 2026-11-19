@@ -6,12 +6,10 @@ require "json"
 
 module Master
   module Voice
-    # The startup sound, "Lysbue": an Fmaj9 FM pad swells in under an opening lowpass, then one or two crushed
-    # FM bells ring on top, in a short room with tape wow and hiss. The score is data in voice.yml under
-    # boot_sound; this renders it per surface (cli, web) into a stereo wav cached outside the repo. The terminal
-    # plays it when a session starts and the face plays the same render, built into public/ with the assets.
-    # Every onset is a raised cosine and the bells never open the sound, because a hard onset is what startles.
-    # MASTER_BOOT_SOUND=0 or `enabled: false` is silence; it never plays without a terminal.
+    # The optional "Lysbue" sound is shared by the browser face and CLI renderer.
+    # Its score lives in voice.yml and its cached WAV stays outside the repository.
+    # The browser keeps its gesture-gated asset; CLI playback is off by default
+    # and, when explicitly enabled, renders on a low-priority background thread.
     module BootSound
 
       RATE = Dsp::RATE
