@@ -123,7 +123,7 @@ module Master
         return false unless activity && now - activity >= idle_seconds
 
         expected = File.join(File.expand_path(root), "bin", "master")
-        process[:command].to_s.include?(expected)
+        process[:command].to_s.match?(/(?:\\A|\\s)#{Regexp.escape(expected)}(?:\\s|\\z)/)
       rescue StandardError
         false
       end
