@@ -60,41 +60,30 @@ voice of the creative work.
   subject permission and separate rights evidence for every local source set.
   MASTER has its own client
   and runtime policies; this one is STUDIO's.
-- `lora/` — subject descriptors and private training plans. `bin/studio lora`
-  opens the subject-aware menu; `bin/studio lora validate [--json]` performs
-  the read-only profile audit, and `bin/studio lora recover` is a dry-run-first
-  importer from a local, read-only pub4 checkout. Applying it requires valid
-  private consent and separate source-rights evidence. It copies only approved
-  subject descriptors, pinned model manifests and explicitly selected source
-  photographs — never datasets, loose weights or renders. Source trees and
-  evidence are owner-only, and generated replacement series archive prior
-  portraits only after every requested new render succeeds. Merethe's separate
-  recovery command verifies the 15 original Git blobs and does not prepare a
-  dataset. Merethe's preparation step builds in a private staging directory
-  and preserves the last known-good dataset if a build fails.
-  - The Replicate client is also an outbound-network boundary. API URLs are
-    restricted to the canonical HTTPS API origin; output downloads are restricted
-    to `replicate.com` / `replicate.delivery` hosts on HTTPS port 443. DNS names
-    are syntax-bounded, every IPv4 and IPv6 answer must be public, and a mixed
-    answer set is refused. Mapped IPv4, NAT64, 6to4, Teredo, private, loopback,
-    link-local, multicast, documentation and reserved ranges are blocked. The
-    socket is pinned with `Net::HTTP#ipaddr=` while the original hostname is
-    retained for TLS. Proxies are disabled, unsupported pinning is a hard error,
-    redirects are not followed, and transfers have byte and deadline caps.
-  `lora/judge.rb` audits whole-frame texture, highlight, clipping and tonal-range proxies.
-  Highlight spread is only assessed when a frame has highlight samples; the
-  committed fallback floor is neutral until recalibrated because the historical
-  ceiling used the wrong direction. Calibration requires at least five regular
-  reference images outside the checkout; it prints path-free aggregate YAML by
-  default, or writes a new mode-0600 file outside the checkout with --output.
-  STUDIO_LORA_THRESHOLDS selects a private override. These proxies do not replace
-  full-size human review or calibrated perceptual ΔE fixtures.
-- `promo.rb` — cut a subject's stills into one vertical motion-graphics clip
-  with a soundtrack. A slow push on each still, a crossfade between stills, one
-  film look over the whole piece and the dilla render underneath. It composes
-  ffmpeg directly rather than the per-frame in-process grade, which is the right
-  tool for a shot clip but measured minutes for a four-second 1080p one. A
-  render writes the MP4 plus a `.promo.json` sidecar naming every input.
+- `lora/` — subject descriptors and private training plans.
+  `bin/studio lora` opens the subject-aware menu.
+  `bin/studio lora validate [--json]` performs a read-only profile audit.
+  `bin/studio lora recover` imports from a local, read-only pub4 checkout;
+  it starts with a dry run. Applying a recovery requires private consent and
+  separate source-rights evidence.
+
+  Recovery copies only approved subject descriptors, pinned model manifests
+  and explicitly selected source photographs. It never copies datasets, loose
+  weights or renders. Source trees and evidence remain owner-only. A generated
+  replacement series archives prior portraits only after every requested
+  render succeeds. Merethe's separate recovery command verifies the 15
+  original Git blobs; it does not prepare a dataset. Merethe's preparation
+  step builds in a private staging directory and preserves the last known-good
+  dataset if a build fails.
+- `lora/judge.rb` — audits whole-frame texture, highlight, clipping and
+  tonal-range proxies. Highlight spread is assessed only when a frame contains
+  highlight samples. The committed fallback floor is neutral until
+  recalibration; the historical ceiling used the wrong direction. Calibration
+  requires at least five regular reference images outside the checkout. By
+  default, it prints path-free aggregate YAML. With `--output`, it writes a
+  new mode-0600 file outside the checkout. `STUDIO_LORA_THRESHOLDS` selects
+  a private override. These proxies do not replace full-size human review or
+  calibrated perceptual ΔE fixtures.
 
 ## Shared surfaces
 
