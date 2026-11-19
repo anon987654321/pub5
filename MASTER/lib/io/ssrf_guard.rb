@@ -2,6 +2,7 @@
 require "ipaddr"
 require "net/http"
 require "socket"
+require "timeout"
 # Without this, safe_uri?'s `uri.is_a?(URI::HTTP)` raised NameError into its own
 # blanket rescue and the guard answered false for every URL — web_fetch silently off.
 require "uri"
@@ -52,6 +53,7 @@ module Master
 
       DNS_LABEL_MAX_BYTES = 63
       DNS_MAX_WIRE_BYTES = 255
+      DNS_TIMEOUT_S = 5
       GLOBAL_IPV6 = IPAddr.new("2000::/3").freeze
       BLOCKED_HOST_SUFFIXES = %w[.localhost .local .internal .home.arpa .onion].freeze
 
@@ -82,8 +84,10 @@ module Master
       def self.resolve_addresses(host)
         return [] unless valid_resolver_host?(host)
 
-        Addrinfo.getaddrinfo(host, nil, nil, :STREAM).map(&:ip_address).uniq
-      rescue SocketError, SystemCallError
+        Timeout.timeout(DNS_TIMEOUT_S) do
+          Addrinfo.getaddrinfo(host, nil, nil, :STREAM).map(&:ip_address).uniq
+        end
+      rescue SocketError, SystemCallError, Timeout::Error
         []
       end
 
@@ -105,7 +109,9 @@ module Master
         return if addresses.empty?
         return if addresses.any? { |addr| blocked_ip?(IPAddr.new(addr)) }
 
-        addresses.first
+        address = IPAddr.new(addresses.first)
+        address = address.native if address.respond_to?(:ipv4_mapped?) && address.ipv4_mapped?
+        address.to_s
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "SsrfGuard.pinned_address")
         nil
