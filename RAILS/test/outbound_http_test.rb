@@ -102,6 +102,7 @@ class FediverseSsrfTest < Minitest::Test
 
     assert_equal 15, http.open_timeout
     assert_equal 300, http.read_timeout
+    assert_equal Shared::OutboundHttp::TIMEOUT, http.write_timeout
   end
 
   def test_request_refuses_a_non_443_port
