@@ -14,8 +14,9 @@ but the implementation is owned here.
   not presented as complete transcriptions. The renderer remains owned by
   `dilla/dilla.rb`; the stdlib-only `dilla/lib/als*.rb` tools
   recover composition archives and MIDI from `.als` files. The unified
-  `bin/studio` CLI exposes `dilla`, `postpro`, `lora` validation,
-  consent-gated `photograph` generation, publication-gated `gallery`, `promo`,
+  `bin/studio` CLI exposes `dilla`, `postpro`, the subject-aware `lora`
+  menu and validation/recovery commands, consent-gated `photograph` generation,
+  publication-gated `gallery`, `promo`,
   and `ableton inventory|export|midi`.
   Rendered output is replaceable:
   a new run may delete and replace it, and no rendered-sound default moves on
@@ -55,7 +56,8 @@ but the implementation is owned here.
   MASTER has its own client
   and runtime policies; this one is STUDIO's.
 - `lora/` — subject descriptors and private training plans. `bin/studio lora`
-  runs a read-only validator; `bin/studio lora recover` is a dry-run-first
+  opens the subject-aware menu; `bin/studio lora validate [--json]` performs
+  the read-only profile audit, and `bin/studio lora recover` is a dry-run-first
   importer from a local, read-only pub4 checkout. Applying it requires valid
   private consent and separate source-rights evidence. It copies only approved
   subject descriptors, pinned model manifests and explicitly selected source
