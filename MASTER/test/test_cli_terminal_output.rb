@@ -184,7 +184,7 @@ class TestCLITerminalOutput < Minitest::Test
 
     overlay = TTY::Screen.stub(:width, 80) { cli.send(:voice_indicator_overlay) }
 
-    assert_match(/\A\e7\e\[1;76H/, overlay)
+    assert_match(/\A\e7\e\[1;77H/, overlay)
     assert_includes overlay, "○ ○"
     assert_match(/\e8\z/, overlay)
     refute_includes overlay, "\e[s"
