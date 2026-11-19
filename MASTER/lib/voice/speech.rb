@@ -468,11 +468,9 @@ module Master
         log_timing("synthesis_total", started_at, text_length: text.to_s.length) if started_at
       end
 
-      # An OS voice (macOS say, espeak) is a second, different speaker; off unless voice.yml tts.os_voice_fallback
-      # is true, so a failed Edge sentence is silent rather than spoken by a stranger.
-      # The global switch remains off by default. macOS gets only the
-      # explicitly mapped voices; other hosts and unmapped language voices
-      # retain the one-speaker fail-closed policy.
+      # An OS voice is a separate engine, never a general fallback. The global
+      # switch stays off; only declared same-speaker macOS mappings are allowed.
+      # Other hosts and unmapped language voices remain fail-closed.
       def macos_host? = RUBY_PLATFORM.include?("darwin")
 
       def macos_mapped_voice?(voice)
