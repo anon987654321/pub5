@@ -158,7 +158,7 @@ module Master
         print_capability_stamp(ok)
       end
 
-      CODE_REQUEST = /\b(?:code|script|program|source code|ruby|python|shell|snippet|function|class)\b/i
+      CODE_REQUEST = /\b(?:code|script|program|source code|snippet|function|class)\b/i
 
       def conversational_input?
         diagnostic_command(@last_input).nil? && !@last_input.to_s.match?(CODE_REQUEST)
