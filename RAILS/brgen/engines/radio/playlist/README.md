@@ -3,12 +3,14 @@
 **Music is better when someone is listening with you.** Playlist lets a city build its soundtrack
 together, hear the same song at the same moment, and talk over it as it plays.
 
-Playlist is a mountable Rails engine, and the public name of its host is radio: the engine is
-served at `radio.<city>`, for instance `radio.brgen.no` and `radio.lsangeles.com`. The engine
-keeps the name Playlist in its directory, module and tables, and the host constraint is called
-`RADIO_SUBDOMAINS`. The old `playlist.<city>` host no longer resolves, and no alias was kept. The
-engine is not a separate app: it runs in brgen's process, with brgen's users. The recipe for a
-vertical is in `RAILS/brgen/README.md`, and the topology is in `RAILS/brgen/AGENTS.md`.
+The public host is `radio.<city>`, for example `radio.brgen.no` and
+`radio.lsangeles.com`. The source directory, module and tables retain the
+name Playlist; the host constraint is `RADIO_SUBDOMAINS`. The former
+`playlist.<city>` host no longer resolves, and no alias remains. The engine
+runs inside Brgen's process and uses Brgen's users; it is not a separate app.
+
+Read [the Brgen guide](../../../README.md) for the vertical pattern and
+[Brgen's agent contract](../../../AGENTS.md) for the host topology.
 
 Users build playlists and sets, add tracks, and invite collaborators as owner, editor or viewer.
 Pasting URLs, one to a line, imports tracks into a playlist from YouTube, Spotify, SoundCloud,
