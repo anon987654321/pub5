@@ -78,12 +78,19 @@ Law.define(:BE_CONCISE) do
   # One rule, both halves: the catalogue's name is "avoid unnecessary words,
   # tokens, or lines", so the reply and the source are the same subject.
   practice <<~TEXT
-    omit needless words and omit needless code. if the answer is one word, say
-    one word.
+    omit needless words and code. Give the shortest complete answer. For
+    substantial work, lead with the outcome and include only decisive evidence,
+    material risks or blockers, and the next action. Hide raw provider and tool
+    messages, internal prompts, intermediate drafts, retries, and repeated
+    progress from ordinary output; retain underlying records in their existing
+    owners for explicit diagnosis. Preserve requested source, code, artifact
+    output, and Git diffs verbatim. Never omit material facts, failures,
+    uncertainty, security risks, required approvals, or evidence needed to
+    verify the result. A routine success takes one line.
   TEXT
-  fix "Omit needless words. Omit needless code."
-  bad  "a paragraph restating the question"
-  good "one word"
+  fix "Omit needless words and code. Show the shortest complete result; retain material facts and full evidence."
+  bad  "a paragraph restating the question, followed by raw provider chatter and a second copy of the result"
+  good "the result, decisive evidence, material blocker, and next action"
 end
 
 Law.define(:REGISTER_STABLE) do
