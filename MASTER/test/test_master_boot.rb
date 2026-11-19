@@ -35,6 +35,31 @@ class MasterBootTest < Minitest::Test
     assert_equal "1", Master::MasterRuntime::PROCESS_DEFAULTS["MASTER_SAFE_MODE"]
   end
 
+  def test_bootstrap_does_not_collect_an_unused_native_inventory
+    saved = %w[MASTER_BOOT_TIMING MASTER_DRIFT].to_h { |key| [key, ENV[key]] }
+    ENV.delete("MASTER_BOOT_TIMING")
+    ENV.delete("MASTER_DRIFT")
+    container = {}
+
+    Master.stub(:prepare_runtime!, nil) do
+      Master.stub(:init_ground, nil) do
+        Master::Builder.stub(:build, container) do
+          Master::Runtime::Jit.stub(:apply!, nil) do
+            Master.stub(:init_loop, ->(**) { nil }) do
+              Master::Runtime::NativeInventory.stub(:snapshot, -> { flunk "unused inventory must not run during boot" }) do
+                assert_same container, Master.bootstrap_container(root: Master::ROOT)
+              end
+            end
+          end
+        end
+      end
+    end
+
+    refute container.key?(:native_inventory)
+  ensure
+    saved&.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+  end
+
   def test_background_data_validation_reports_from_a_separate_thread
     started = Queue.new
     release = Queue.new
