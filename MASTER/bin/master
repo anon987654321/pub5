@@ -450,9 +450,9 @@ if !$stdin.tty? && ENV["MASTER_FAST"] == "1"
   exit!(0)
 end
 
-# The Fold, fast and headless switches are tested below from the environment,
-# which only this parse sets.
-initial_message_from_argv(ARGV.dup)
+# Parse once and reuse the result. OptionParser callbacks can emit warnings
+# and alter mode state; repeating this parse duplicated both effects.
+initial_message = initial_message_from_argv(ARGV.dup)
 
 cli = nil
 control_plane = nil
@@ -525,7 +525,7 @@ end
 # --fold routes one coding goal through the core Fold, then exits. Plain-language
 # agent turns and /run <goal> use the Fold; other slash commands dispatch directly.
 if ENV["MASTER_FOLD"] == "1"
-  goal = initial_message_from_argv(ARGV)
+  goal = initial_message
   container = cli.container
   format = ENV.fetch("MASTER_OUTPUT_FORMAT") { ENV["MASTER_HEADLESS"] == "1" ? "json" : "text" }
   streamed = ->(line) { puts JSON.generate(type: "turn", line:) } if format == "stream-json"
@@ -549,7 +549,7 @@ if ENV["MASTER_FOLD"] == "1"
 end
 
 if $stdin.tty?
-  message = initial_message_from_argv(ARGV)
+  message = initial_message
   message = "/status" if fast_boot && message.empty?
   if fast_boot
     cli.pipe(message) unless message.empty?
@@ -576,7 +576,7 @@ else
   # the run finished, then the CLI sat waiting for lines that never come and
   # consumed the harness's own plumbing as turns. A caller that wants argv
   # plus stdin lines can still have it by passing the command through stdin.
-  message = initial_message_from_argv(ARGV)
+  message = initial_message
   if message.empty?
     $stdin.each_line { |line| cli.pipe(line) }
   else

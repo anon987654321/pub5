@@ -40,7 +40,19 @@ class TestTraceSupport < Minitest::Test
       assert Master::Trace::Dmesg.quiet_in_turn?("model0: cost")
       assert Master::Trace::Dmesg.quiet_in_turn?("cache0: write")
       assert Master::Trace::Dmesg.quiet_in_turn?("llm0: cost transparency")
+      assert Master::Trace::Dmesg.quiet_in_turn?("llm0-nvidia: no nvidia answer in 3 calls")
+      assert Master::Trace::Dmesg.quiet_in_turn?("llm0-google: rate_limit")
+      assert Master::Trace::Dmesg.quiet_in_turn?("llm0-replicate: provider timeout")
       refute Master::Trace::Dmesg.quiet_in_turn?("react0: malformed_tool_call")
+    end
+  ensure
+    Fiber[:master_unit] = nil
+  end
+
+  def test_verbose_keeps_provider_lane_diagnostics_available
+    Fiber[:master_unit] = "master0"
+    Master::Trace::Dmesg.with_verbosity("verbose") do
+      refute Master::Trace::Dmesg.quiet_in_turn?("llm0-nvidia: no answer")
     end
   ensure
     Fiber[:master_unit] = nil

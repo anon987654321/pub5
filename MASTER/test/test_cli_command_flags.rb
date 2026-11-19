@@ -6,13 +6,21 @@ require_relative "test_helper"
 # rather than booting the runtime.
 class TestCliCommandFlags < Minitest::Test
   SOURCE = File.read(File.expand_path("../bin/master", __dir__))
-  HELPERS = SOURCE[/^COMMAND_FLAG.*?(?=^# Flags are read before the runtime boots)/m]
+  HELPERS = SOURCE[/^COMMAND_FLAG.*?(?=^# Flags that affect boot)/m] ||
+            raise("CLI argument helper source block not found")
 
   def setup
     host = Object.new
     host.extend(Module.new { def self.status(*, **) = nil })
     host.instance_eval("require 'optparse'; module Master; module Trace; module Dmesg; def self.status(*, **) = nil; end; end; end\n#{HELPERS}", __FILE__, 1)
     @host = host
+  end
+
+  def test_runtime_extracts_the_message_once_and_reuses_it
+    assert_equal 1, SOURCE.scan(/initial_message_from_argv\(ARGV/).size
+    assert_includes SOURCE, "initial_message = initial_message_from_argv(ARGV.dup)"
+    assert_includes SOURCE, "goal = initial_message"
+    assert_equal 2, SOURCE.scan(/message = initial_message\b/).size
   end
 
   def test_fix_flags_survive_into_the_message

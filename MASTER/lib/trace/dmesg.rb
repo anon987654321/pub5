@@ -522,10 +522,11 @@ module Master
 
       def emit_mutex = TERMINAL_WRITE_MUTEX
 
-      # Normal mode keeps conversational turns quiet. Explicit command reports
-      # force their already-rendered lines through the same presenter.
+      # Provider-qualified llm0-lane records are diagnostics too. Keep them
+      # out of the reply; /model and --verbose retain the detailed view.
       def quiet_in_turn?(line)
-        verbosity == "normal" && Fiber[:master_unit] == "master0" && line.match?(/at \w+0|(?:llm|model|cache)\d+:/)
+        verbosity == "normal" && Fiber[:master_unit] == "master0" &&
+          line.match?(/at \w+0|(?:llm|model|cache)\d+(?:-[a-z0-9_-]+)?:/i)
       end
 
       # OpenBSD's console prints the kernel white on blue and userland plain.
