@@ -129,6 +129,23 @@ class TestCLITerminalOutput < Minitest::Test
     assert_match(/\A\[\d{2}:\d{2}\] <master> How are you\?\z/, rows.fetch(2))
   end
 
+  def test_streamed_irc_prefix_survives_chunk_and_line_boundaries
+    cli = session
+    cli.instance_variable_set(:@last_input, "hello")
+    state = {}
+
+    output = $stdout.stub(:tty?, true) do
+      cli.stub(:irc_prefix, "[12:34] <master> ") do
+        first = cli.send(:format_irc_stream, "Hello.\\n\\n", state:)
+        second = cli.send(:format_irc_stream, "How", state:)
+        third = cli.send(:format_irc_stream, " are you?\\n", state:)
+        first + second + third
+      end
+    end
+
+    assert_equal "[12:34] <master> Hello.\\n\\n[12:34] <master> How are you?\\n", output
+  end
+
   def test_normal_chat_unwraps_the_accidental_ruby_say_helper
     cli = session
     cli.instance_variable_set(:@last_input, "tell xmas story")
