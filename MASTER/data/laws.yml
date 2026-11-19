@@ -217,6 +217,19 @@ ROBUSTNESS_fail_safe_defaults:
     operation beyond its explicitly inventoried and approved targets.
   resolution: review
 
+ROBUSTNESS_outbound_fetch_is_pinned:
+  parent: ROBUSTNESS
+  statement: >
+    An outbound request to a URL supplied by a user, model, file or remote
+    response resolves and classifies every A and AAAA answer, refuses any
+    non-public or special-purpose destination, and pins the socket to an
+    approved address while retaining the original hostname for TLS SNI,
+    certificate verification and the Host header. Schemes and ports are
+    restricted, URL credentials are refused, proxies cannot bypass the pin,
+    and response size and time are bounded. A redirect is either refused or
+    subjected to the same checks before the next connection.
+  resolution: never
+
 ROBUSTNESS_portability_is_verified:
   parent: ROBUSTNESS
   statement: >
@@ -3295,6 +3308,10 @@ law_catalogue:
     ROBUSTNESS_sclerotium:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
+    ROBUSTNESS_outbound_fetch_is_pinned:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      autofix: never
     DUAL_DETECTION:
       definition_sources: [MASTER/law/universal.rb]
       severity: info
