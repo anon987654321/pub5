@@ -61,16 +61,11 @@ module Master
       def fetch_search_response(query)
         uri = URI(ENDPOINT)
         uri.query = URI.encode_www_form(q: query)
-        address = SsrfGuard.pinned_address(uri)
-        raise "refused internal/reserved address" unless address
-
-        http = SsrfGuard.http_for(uri, address, timeout: TIMEOUT)
-        http.start do |client|
-          client.get(uri.request_uri, {
-            "User-Agent" => "MASTER/1 (web_search)",
-            "Accept" => "text/html,application/xhtml+xml",
-          })
-        end
+        request = Net::HTTP::Get.new(uri.request_uri, {
+          "User-Agent" => "MASTER/1 (web_search)",
+          "Accept" => "text/html,application/xhtml+xml",
+        })
+        SsrfGuard.request(uri, request, max_bytes: MAX_RESPONSE_BYTES, timeout: TIMEOUT)
       end
 
       private
