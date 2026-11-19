@@ -383,10 +383,10 @@ class TestCliFaceDispatch < Minitest::Test
   def test_voice_indicator_overlay_shows_each_input_output_state
     session = Master::CLI::Session.allocate
     states = [
-      [false, false, "○○"],
-      [true, false, "●○"],
-      [false, true, "○●"],
-      [true, true, "●●"],
+      [false, false, "○ ○"],
+      [true, false, "\e[97m●\e[0m ○"],
+      [false, true, "○ \e[97m●\e[0m"],
+      [true, true, "\e[97m●\e[0m \e[97m●\e[0m"],
     ]
 
     states.each do |mic, tts, expected|
@@ -395,9 +395,9 @@ class TestCliFaceDispatch < Minitest::Test
         TTY::Screen.stub(:width, 80) { session.send(:voice_indicator_overlay) }
       end
 
-      assert_includes overlay, "\e[1;78H#{expected}"
-      assert_includes overlay, "\e[s"
-      assert_includes overlay, "\e[u"
+      assert_includes overlay, "\e[1;76H#{expected}"
+      assert_includes overlay, "\e7"
+      assert_includes overlay, "\e8"
       refute_includes overlay, "MIC"
       refute_includes overlay, "TTS"
     end
