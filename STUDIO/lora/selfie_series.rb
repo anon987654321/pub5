@@ -93,7 +93,10 @@ module Studio
           patterns.concat(IMAGE_EXTENSIONS.map { |ext| File.join(legacy_series, "*.#{ext}") })
         end
 
-        patterns.flat_map { |pattern| Dir.glob(pattern) }.uniq.select do |path|
+        archive_prefix = File.join(File.expand_path(legacy_output), "archive", "")
+        patterns.flat_map { |pattern| Dir.glob(pattern) }.uniq.reject do |path|
+          File.expand_path(path).start_with?(archive_prefix)
+        end.select do |path|
           File.file?(path) && !File.symlink?(path)
         end
       end
