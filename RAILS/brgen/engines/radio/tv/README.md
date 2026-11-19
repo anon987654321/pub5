@@ -7,8 +7,8 @@ TV is mounted at `tv.<city>`, including `tv.brgen.no` and
 `tv.lsangeles.com`. It runs inside Brgen's Rails process, uses Brgen's users
 and resolves the city from the apex host. It is not a separate app.
 
-Read [the Brgen guide](../../../README.md) for the vertical pattern and
-[Brgen's agent contract](../../../AGENTS.md) for the host topology.
+Read [the Brgen guide](../../README.md) for the vertical pattern and
+[Brgen's agent contract](../../AGENTS.md) for the host topology.
 
 Channels publish uploaded videos and shows with numbered episodes. Viewers comment, take
 notes pinned to a moment in a video, and follow channels by subscribing. The data model also
