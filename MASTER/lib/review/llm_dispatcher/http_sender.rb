@@ -216,7 +216,11 @@ module Master
         rescue Net::ReadTimeout => e
           Result.err("#{lane} went silent longer than #{read_idle_timeout_s}s: #{e.message}", category: :timeout)
         ensure
-          http.finish if http&.started? rescue IOError, SystemCallError
+          begin
+            http.finish if http&.started?
+          rescue IOError, SystemCallError
+            nil
+          end
         end
 
         def local_http_uri?(uri)
