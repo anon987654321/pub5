@@ -116,10 +116,21 @@
 # with their tests and man page, the stale Pub4Mobile iOS duplicate pair, and
 # the pub4-shared.rb shim the topology contract already forbade), and no
 # directory went with them. The ceiling follows the deletion down.
-lone_dirs: 45
+#
+# 2026-11-19 (10): re-set to the checkout as it stands. The instrument reads
+# 8,080 files and 47 lone directories against the recorded 8,078/45, so no
+# path could commit. The two files since (9) landed upstream on main with the
+# pinned-outbound-fetch work: MASTER/test/test_io_external_audit.rb and
+# MASTER/test/test_io_public_fetchers.rb, the proof suites for the SSRF
+# boundary. The lone_dirs correction repays a mis-set in (9): measured in a
+# worktree at e539dcf2, the instrument already read 47 there, so 45 was a
+# stale number carried into the file, not growth since. No path added by
+# this session; the counts are corrected to what HEAD already carries, not
+# raised above it.
+lone_dirs: 47
 stutter: 0
 vague_names: 0
-tracked_files: 8078
+tracked_files: 8080
 tracked_directories: 995
 corpus: 4127
 
