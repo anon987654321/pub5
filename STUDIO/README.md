@@ -3,10 +3,12 @@
 **STUDIO owns pub5's music, image and video tools.** Dilla, Postpro,
 photograph, Replicate and the private LoRA tools live here. MASTER may call
 them through compatibility symlinks under `MASTER/tools/`, but STUDIO owns
-the implementations.but the implementation is owned here. Project notes preserve provenance,
-source rights, consent, reproducibility and the limits of each result. Their
-prose follows the shared editorial standard in [MASTER/AGENTS.md](../MASTER/AGENTS.md),
-without flattening the voice of the creative work.
+the implementations.
+
+Project notes preserve provenance, source rights, consent, reproducibility
+and the limits of each result. Their prose follows the shared editorial
+standard in [MASTER/AGENTS.md](../MASTER/AGENTS.md), without flattening the
+voice of the creative work.
 
 ## The tools
 
