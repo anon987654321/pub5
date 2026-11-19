@@ -426,21 +426,14 @@ module Master
         engine = Voice::Speech.synthesis_mode
         policy = Voice::Policy
         profile = policy.profile_name.empty? ? "natural" : policy.profile_name
-        last = Voice::Transcendent.last_pick
-        detail = if last
-          "last=#{last[:engine] || "none"} voice=#{last[:voice] || "none"} primary=#{last[:primary] || "none"}"
-        else
-          "last=none"
-        end
+        last_engine = Voice::Speech.last_engine
+        detail = "last=#{last_engine}" unless last_engine.to_s.empty?
         error = [Voice::Speech.last_error, Voice::Playback.last_error].compact.map(&:to_s).find { |item| !item.empty? }
         error = error.to_s.gsub(/\s+/, " ").strip unless error.nil?
-        timings = Voice::Speech.last_timings
-        timing = timings.empty? ? "timing=not-recorded" : "timing=#{timings.map { |stage, values| "#{stage}:#{values.fetch(:elapsed_ms)}ms" }.join(",")}"
         [
           "voice0 at mainbus0: #{enabled ? "on" : "off"}",
-          "player=#{player ? player.first : "none"} output=#{Voice::Playback.output_status} engine=#{engine} profile=#{profile} rate=#{policy.default_rate} pitch=#{policy.default_pitch}",
+          "player=#{player ? player.first : "none"} output=#{Voice::Playback.output_status} mode=#{engine} profile=#{profile} rate=#{policy.default_rate} pitch=#{policy.default_pitch}",
           detail,
-          timing,
           ("error=#{error}" if error && !error.empty?),
         ].compact.join("; ").gsub(/\s+/, " ").strip
       end
