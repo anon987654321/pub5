@@ -266,4 +266,52 @@ class OperatorIntentTest < Minitest::Test
       assert_equal :conversation, result.status
     end
   end
+
+  # A schema-less provider drops empty fields: the request "deploy everything"
+  # has no exclusions, so the model omits the key. Absent means none.
+  def test_a_missing_exclude_defaults_to_no_exclusions
+    with_inventory do |root|
+      reply = JSON.generate(
+        "intent" => "operator_action", "operation" => "deploy", "environment" => "production",
+        "target_type" => "app", "target" => "city_app",
+        "confidence" => 0.97, "reason" => "One named app.",
+      )
+      result = Master::CLI::OperatorIntent.new(root:, agent: FakeAgent.new(reply, [])).call(
+        "deploy city_app to vm23"
+      )
+
+      assert_equal :deploy, result.status
+      assert_equal ["city_app"], result.selected
+    end
+  end
+
+  def test_unknown_fields_still_fail_closed
+    with_inventory do |root|
+      reply = JSON.generate(
+        "intent" => "operator_action", "operation" => "deploy", "environment" => "production",
+        "target_type" => "app", "target" => "city_app", "exclude" => [],
+        "confidence" => 0.97, "reason" => "One named app.", "confirm" => true,
+      )
+      result = Master::CLI::OperatorIntent.new(root:, agent: FakeAgent.new(reply, [])).call(
+        "deploy city_app to vm23"
+      )
+
+      assert_equal :unavailable, result.status
+    end
+  end
+
+  def test_a_missing_confidence_still_fails_closed
+    with_inventory do |root|
+      reply = JSON.generate(
+        "intent" => "operator_action", "operation" => "deploy", "environment" => "production",
+        "target_type" => "app", "target" => "city_app",
+        "reason" => "Confidence omitted entirely.",
+      )
+      result = Master::CLI::OperatorIntent.new(root:, agent: FakeAgent.new(reply, [])).call(
+        "deploy city_app to vm23"
+      )
+
+      assert_equal :unavailable, result.status
+    end
+  end
 end

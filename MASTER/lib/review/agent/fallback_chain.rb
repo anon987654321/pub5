@@ -200,12 +200,17 @@ module Master
         def mode_chain_for(candidates)
           models = Array(candidates).empty? ? [@config.model] : candidates
           primary = models.first
+          # A model without tools still answers chat in prose first: leading
+          # with code_agent made every answer executable Ruby the host never
+          # runs, and voice read the source aloud. The configured reasoning
+          # mode leads either way; the Ruby-only mode stays as the last resort.
           modes = if (@dispatcher.respond_to?(:agy_model?) && @dispatcher.agy_model?(primary)) ||
                      @dispatcher.tool_capable?(primary)
                     [@config.reasoning_mode.to_s, "code_agent", "react"]
                   else
-                    %w[code_agent react direct]
+                    [@config.reasoning_mode.to_s, "direct", "react", "code_agent"]
                   end
+          modes = modes.uniq
           chain = models.map { |m| { model: m, mode: modes.first } }
           chain.concat(modes.drop(1).map { |mode| { model: primary, mode: } })
           chain

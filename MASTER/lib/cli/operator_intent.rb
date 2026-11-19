@@ -20,6 +20,11 @@ module Master
       NON_PRODUCTION_ENV_RE = /\b(?:local|development|dev|test|staging|stage|preview)\b/i.freeze
       DESTINATION_RE = /\b(?:to|onto|on|at|for)\s+([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)/i.freeze
       VM23_DESTINATIONS = %w[vm23 production prod].freeze
+      # Destination vocabulary the deterministic path resolves. A politeness
+      # prefix ("I need you to please redeploy ... on vm23") makes the first
+      # to/on/at/for capture a filler word, so the destination is the first
+      # capture in this vocabulary, falling back to the first capture.
+      KNOWN_DESTINATIONS = (VM23_DESTINATIONS + %w[staging stage preview local development dev test]).freeze
       REQUIRED_KEYS = %w[intent operation environment target_type target exclude confidence reason].freeze
 
       SYSTEM = <<~PROMPT.freeze
@@ -68,10 +73,15 @@ module Master
         return false unless request.match?(DIRECT_DEPLOY_REQUEST_RE)
         return false if request.match?(NON_PRODUCTION_ENV_RE)
 
-        destination = request.match(DESTINATION_RE)&.captures&.first
+        destination = destination_of(request)
         destination.to_s.downcase == "vm23" &&
           (full_inventory_scope?(request) || complete_stack_components?(request)) &&
           !request.match?(/\b(?:except|excluding|leave\s+out|but\s+not)\b/i)
+      end
+
+      def self.destination_of(request)
+        captures = request.to_s.scan(DESTINATION_RE).flatten
+        captures.find { |capture| KNOWN_DESTINATIONS.include?(capture.downcase) } || captures.first
       end
 
       def self.candidate?(text)
@@ -135,7 +145,7 @@ module Master
         request = text.to_s
         return false unless request.match?(DIRECT_DEPLOY_REQUEST_RE)
         return false if request.match?(NON_PRODUCTION_ENV_RE)
-        destination = request.match(DESTINATION_RE)&.captures&.first
+        destination = self.class.destination_of(request)
         return false if destination && !VM23_DESTINATIONS.include?(destination.downcase)
 
         complete_stack = self.class.complete_stack_components?(request)
@@ -251,6 +261,12 @@ module Master
         source = source[/\{.*\}/m] unless source.start_with?("{") && source.end_with?("}")
         data = JSON.parse(source)
         raise ArgumentError, "intent response is not an object" unless data.is_a?(Hash)
+
+        # Schema-less providers drop empty fields: an absent exclusion list
+        # says "no exclusions" as plainly as an empty one. Every other key
+        # stays required, and unknown keys still fail, so the contract is
+        # relaxed exactly where omission is unambiguous.
+        data["exclude"] = [] unless data.key?("exclude")
         raise ArgumentError, "intent response has missing or unknown fields" unless data.keys.sort == REQUIRED_KEYS.sort
 
         data

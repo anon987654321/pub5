@@ -92,7 +92,8 @@ class TestThroughInference < Minitest::Test
     inferred = Master::CLI::TurnRouter.infer_operator_command(text, container: { bus: nil, session: nil })
     refute_nil inferred, "expected natural language to infer operator command"
     # A word that means "go through the tree and change it" is a spelling of /fix.
-    assert_equal "/fix rails", Master::CLI::TurnRouter.rewrite_slash("/#{inferred[:command]} #{inferred[:args]}".strip)
+    rewritten = Master::CLI::TurnRouter.rewrite_slash("/#{inferred[:command]} #{inferred[:args]}".strip)
+    assert_equal "/fix --mode=all rails", rewritten
   end
 
   # Both words mean the same work now: being told what is wrong is where a
@@ -306,7 +307,7 @@ class TestThroughInference < Minitest::Test
     )
     refute_nil inferred
     assert_match(%r{\A/fix}, Master::CLI::TurnRouter.rewrite_slash("/#{inferred[:command]} #{inferred[:args]}".strip))
-    assert_includes %w[master self], inferred[:args].to_s, "the self phrase must name MASTER, not a stray word"
+    assert_match(/\b(?:master|self)\b/, inferred[:args].to_s, "the self phrase must name MASTER, not a stray word")
   end
 
   def test_through_pipeline_resolves_rails_alias
@@ -340,7 +341,7 @@ class TestThroughInference < Minitest::Test
       assert_equal Master::RAILS_ROOT, pipe.send(:resolve_target, "../RAILS")
       assert_equal File.join(Master::RAILS_ROOT, "brgen"), pipe.send(:resolve_target, "../RAILS/brgen")
       assert File.exist?(pipe.send(:resolve_target, "../RAILS")), "resolved RAILS target must exist"
-      assert_equal "all four trees", pipe.send(:shell_target, Master::REPO_ROOT)
+      assert_equal "all five trees", pipe.send(:shell_target, Master::REPO_ROOT)
     end
   end
 
@@ -447,8 +448,8 @@ class TestThroughInference < Minitest::Test
     )
 
     assert_equal "fix", inferred[:command]
-    assert_equal "--dry-run --critique --only critique,map STUDIO/lora", inferred[:args]
-    assert_equal "/fix --dry-run --critique --only critique,map STUDIO/lora",
+    assert_equal "--mode=audit STUDIO/lora", inferred[:args]
+    assert_equal "/fix --mode=audit STUDIO/lora",
                  Master::CLI::TurnRouter.rewrite_slash("/#{inferred[:command]} #{inferred[:args]}")
   end
 

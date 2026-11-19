@@ -825,11 +825,14 @@ auth_profiles:
       kind: cli
       command: agy
       priority: 0
+      # agy model ids are install- and plan-specific (agy rotates the list;
+      # gemini-3.1-pro-high was refused by the operator's install on
+      # 2026-11-19 and each pinned retry burned one of the three attempts
+      # before the 5-minute skip). `auto` passes no --model flag, so agy
+      # serves its own default — the only id every install accepts. `agy
+      # models` lists what a given host can actually take.
       models:
         - agy:auto
-        - agy:gemini-3.1-pro-high
-        - agy:gemini-3.8-flash-medium
-        - agy:gemini-3.8-flash-high
     - id: codex_subscription
       name: chatgpt
       auth: subscription
