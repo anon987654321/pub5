@@ -127,6 +127,21 @@ class TestServerLeases < Minitest::Test
     end
   end
 
+  def test_one_shot_cli_exits_release_server_leases_before_exit_bang
+    source = File.read(File.expand_path("../bin/master", __dir__))
+    fold = source[/if ENV\\["MASTER_FOLD"\\] == "1"(.*?)\\nif \\$stdin\\.tty\\?/m, 1]
+    tty = source[/if \\$stdin\\.tty\\?(.*?)\\nelse\\n  \\$stdout\\.sync = true/m, 1]
+    pipe = source[/else\\n  \\$stdout\\.sync = true(.*?)\\nend\\n\\nstop_control_plane/m, 1]
+
+    [fold, tty, pipe].each_with_index do |section, index|
+      refute_nil section, "missing one-shot branch #{index}"
+      cleanup = section.index("stop_booted_servers")
+      termination = section.index("exit!(")
+      assert cleanup && termination && cleanup < termination,
+             "one-shot branch #{index} must release its server leases before exit!"
+    end
+  end
+
   def wait_for_file(path, timeout: 3)
     deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
     until File.file?(path)

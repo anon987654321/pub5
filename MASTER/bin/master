@@ -477,8 +477,14 @@ end
 
 # exit! runs no ensure and no at_exit, so the app servers a /fix run booted are stopped first; a run
 # stopped mid-pass left them serving for hours.
-def stop_booted_servers
-  Master::Fix::ServerLeases.stop_all_from_trap! if defined?(Master::Fix::ServerLeases)
+def stop_booted_servers(from_trap: false)
+  return unless defined?(Master::Fix::ServerLeases)
+
+  if from_trap
+    Master::Fix::ServerLeases.stop_all_from_trap!
+  else
+    Master::Fix::ServerLeases.stop_all!
+  end
 rescue StandardError => e
   warn "cli0: booted servers not stopped, #{e.class}: #{e.message}"
 end
@@ -486,12 +492,12 @@ end
 trap("INT") do
   Master::Trace::Dmesg.status("cli0", "interrupt, exiting", io: $stderr)
 
-  stop_booted_servers
+  stop_booted_servers(from_trap: true)
   exit!(130)
 end
 
 trap("TERM") do
-  stop_booted_servers
+  stop_booted_servers(from_trap: true)
   exit!(143)
 end
 trap("TSTP") do
@@ -545,6 +551,7 @@ if ENV["MASTER_FOLD"] == "1"
     puts [header, *result[:transcript], result[:summary]].compact.join("\n")
   end
   save_cli_session_safely(cli)
+  stop_booted_servers
   exit!(result[:reason] == :complete ? 0 : 1)
 end
 
@@ -561,6 +568,7 @@ if $stdin.tty?
     stop_control_plane_safely(control_plane)
     stop_cli_background_loop_safely(cli)
     save_cli_session_safely(cli)
+    stop_booted_servers
     exit!(cli.exit_code || 0)
   else
     cli.run(message.empty? ? nil : message)
@@ -585,6 +593,7 @@ else
   stop_control_plane_safely(control_plane)
   stop_cli_background_loop_safely(cli)
   save_cli_session_safely(cli)
+  stop_booted_servers
   $stdout.flush
   $stderr.flush
   exit!(cli.exit_code || 0)
