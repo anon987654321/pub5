@@ -76,6 +76,8 @@ class TestLoraConsent < Minitest::Test
   def test_subject_media_and_permission_records_are_ignored_for_new_files
     paths = %w[
       STUDIO/lora/probe/sources/photo.jpg
+      STUDIO/lora/probe/source.jpg
+      STUDIO/lora/probe/checkpoint.safetensors
       STUDIO/lora/probe/references/reference.jpg
       STUDIO/lora/probe/subject.env
       STUDIO/lora/probe/consent.yml
@@ -120,6 +122,24 @@ class TestLoraConsent < Minitest::Test
       Consent.required_source_sets(subject: "probe", subject_directory: @subject_dir)
     end
     assert_match(/singly-linked/, error.message)
+  end
+
+  def test_nested_source_files_are_scanned_and_kept_private
+    write_record
+    archive = File.join(@subject_dir, "sources", "archive")
+    FileUtils.mkdir_p(archive, mode: 0o700)
+    File.chmod(0o700, archive)
+    image = File.join(archive, "old-portrait.jpg")
+    File.write(image, "synthetic nested source", mode: "w", perm: 0o644)
+
+    error = assert_raises(Consent::Error) do
+      Consent.required_source_sets(subject: "probe", subject_directory: @subject_dir)
+    end
+    assert_match(/owner-only \(0600\)/, error.message)
+
+    File.chmod(0o600, image)
+    assert_equal %w[subject_sources],
+                 Consent.required_source_sets(subject: "probe", subject_directory: @subject_dir)
   end
 
   def test_merethe_archive_and_additional_photos_are_distinct_source_sets
