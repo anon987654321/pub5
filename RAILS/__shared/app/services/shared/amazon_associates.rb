@@ -287,7 +287,7 @@ module Shared
           client_secret:,
           scope: "creatorsapi::default",
         )
-        address = Shared::OutboundHttp.resolve_addresses(uri.hostname).reject { |a| Shared::OutboundHttp.unsafe_ip?(a) }.first
+        address = Shared::OutboundHttp.public_address!(uri.hostname)
         raise SocketError, "unsafe or unresolvable remote host" unless address
         http = Shared::OutboundHttp.pinned_connection(uri, address, open_timeout: 8, read_timeout: 15)
         res = http.start { |conn| conn.request(req) }
