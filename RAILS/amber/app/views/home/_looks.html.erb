@@ -19,7 +19,7 @@
           <% slides.each_with_index do |caption, position| %>
             <figure class="amber-look-slide">
               <% if position.zero? %>
-                <div class="amber-look-media amber-look-media--outfit<%= " amber-look-media--single" if look.garments.one? %><%= " amber-look-media--triple" if look.garments.size == 3 %>"
+                <div class="amber-look-media amber-look-media--outfit<%= " amber-look-media--outfit-single" if look.garments.one? %><%= " amber-look-media--triple" if look.garments.size == 3 %>"
                      role="group" aria-label="<%= look.garments.map(&:title).join(", ") %>">
                   <% look.garments.each do |garment| %>
                     <div class="amber-look-piece">

@@ -2255,8 +2255,10 @@
     gap: 4px;
   }
 
+  .amber-look-media--outfit-single,
   .amber-look-media--single {
-    display: block;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
   }
 
   .amber-look-media--triple .amber-look-piece:first-child {
