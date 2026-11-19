@@ -1,23 +1,29 @@
 # amber
 
-**A wardrobe that knows what is in it, what you actually wear, and what it is only guessing
-at.** amber is Ragnhild's wardrobe app. It holds garments and outfits, runs the KonMari
-declutter loop, keeps a style timeline of how your taste has moved, and makes recommendations
-that can say where they came from. It is a Rails 8.2.0.alpha app on SQLite behind Falcon, with
-Hotwire, Active Storage, Solid Queue and relayd, and it listens on port 61352.
+**A wardrobe that knows what is in it, what you wear, and what it is only
+guessing at.** Amber is Ragnhild's wardrobe app. It holds garments and outfits,
+runs the KonMari declutter loop, tracks how taste changes over time, and
+explains the basis of its recommendations.
+
+Amber runs Rails 8.2.0.alpha on SQLite behind Falcon, with Hotwire, Active
+Storage, Solid Queue and relayd. It listens on port 61352.
 
 ## Character
 
-Amber is a personal wardrobe intelligence, not a fashion shop. Its territory is warmth, intimacy
-and taste with evidence: the wardrobe is the source of truth, a recommendation explains itself,
-and the product helps its owner wear and understand what already hangs in the closet before it
-encourages another purchase. Toteme is Amber's primary fashion-design reference: borrow its
-collection-led navigation, image-first grids, restrained product metadata and clear item-detail
-composition, translating them into wardrobe organisation and wear decisions rather than retail
-selling. Keep Amber's warm-neutral token dialect, original masthead, sans typography and truthful
-garment imagery; never import another brand's wordmark, campaign art or exact visual skin. The
-design values come from MASTER/data/tokens.yml through Master.tokens, and the feature matrix is
-RAILS/apps.yml under amber.
+Amber is a personal wardrobe companion, not a fashion shop. Its character
+is warm, intimate and evidence-led. The wardrobe is the source of truth; a
+recommendation explains itself. The product helps its owner wear and understand
+what she already owns before encouraging another purchase.
+
+Toteme is Amber's primary fashion-design reference. Borrow its collection-led
+navigation, image-first grids, restrained metadata and clear item-detail
+composition. Translate those patterns into wardrobe organisation and wear
+decisions, not retail selling. Keep Amber's warm-neutral tokens, original
+masthead, sans typography and truthful garment imagery. Do not import another
+brand's wordmark, campaign art or exact visual skin.
+
+Design values come from `MASTER/data/tokens.yml` through `Master.tokens`.
+The feature matrix is `RAILS/apps.yml`, under `amber`.
 
 The app defaults to Norwegian. The default locale is nb, with en available, and a request picks
 its language from a ?locale= parameter, then the session, then Accept-Language, then nb. A
