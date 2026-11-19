@@ -139,6 +139,26 @@ class TestCLITerminalOutput < Minitest::Test
                  cli.send(:conversation_output, wrapper)
   end
 
+  def test_ordinary_question_about_a_language_is_still_conversation
+    cli = session
+    cli.instance_variable_set(:@last_input, "what is Ruby?")
+    wrapper = <<~'RUBY'
+      STDOUT.sync = true
+      def say(line = "")
+        STDOUT.puts(line.to_s)
+      end
+      def safe
+        yield
+      end
+      safe do
+        say "Ruby is a programming language."
+      end
+    RUBY
+
+    assert_equal "Ruby is a programming language.",
+                 cli.send(:conversation_output, wrapper)
+  end
+
   def test_explicit_code_request_is_not_unwrapped
     cli = session
     cli.instance_variable_set(:@last_input, "show me Ruby code")
