@@ -32,6 +32,7 @@ module Shared
       loop do
         rounds += 1
         newly_pinned = []
+        overflow_hosts = []
         browser = Ferrum::Browser.new(
           headless: true, timeout: 30,
           browser_options: {
@@ -53,9 +54,9 @@ module Shared
 
             uri = URI.parse(request.url) rescue nil
             host = uri&.hostname.to_s.downcase.delete_suffix(".")
-            if uri && public_http_url?(request.url) && pins.key?(host)
+            if uri && public_browser_url?(uri) && pins.key?(host)
               request.continue
-            elsif uri && public_http_url?(request.url) && !pins.key?(host) &&
+            elsif uri && public_browser_url?(uri) && !pins.key?(host) &&
                   pins.length < MAX_PINNED_HOSTS
               begin
                 pins[host] = pinned_public_address!(host)
@@ -65,6 +66,7 @@ module Shared
               end
               request.abort
             else
+              overflow_hosts << host if uri && public_browser_url?(uri) && !pins.key?(host)
               request.abort
             end
           end
@@ -85,7 +87,7 @@ module Shared
           browser.quit
         end
 
-        raise ArgumentError, "scrape discovered more than #{MAX_PINNED_HOSTS} public hosts" if pins.length >= MAX_PINNED_HOSTS
+        raise ArgumentError, "scrape discovered more than #{MAX_PINNED_HOSTS} public hosts" unless overflow_hosts.empty?
         raise ArgumentError, "scrape did not converge on a fixed DNS map after #{MAX_PIN_ROUNDS} passes" if rounds >= MAX_PIN_ROUNDS
       end
     end
@@ -96,7 +98,7 @@ module Shared
     # the URL hostname; only the TCP destination is substituted.
     def self.host_resolver_rules(pins)
       rules = pins.sort.filter_map do |host, address|
-        next if IPAddr.new(host).then { true } rescue false
+        next if ip_literal_host?(host)
 
         ip = IPAddr.new(address)
         raise ArgumentError, "non-public browser pin refused: #{host}" if Shared::OutboundHttp.unsafe_ip?(ip)
@@ -108,6 +110,18 @@ module Shared
 
     def self.pinned_public_address!(host)
       Shared::OutboundHttp.public_address!(host)
+    end
+
+    def self.ip_literal_host?(host)
+      IPAddr.new(host.to_s)
+      true
+    rescue IPAddr::InvalidAddressError
+      false
+    end
+
+    def self.public_browser_url?(uri)
+      uri.is_a?(URI::HTTP) && uri.userinfo.nil? && uri.fragment.nil? &&
+        !uri.hostname.to_s.empty? && Shared::OutboundHttp.valid_resolver_host?(uri.hostname)
     end
 
     def self.safe_non_network_scheme?(value)
