@@ -1,8 +1,14 @@
 # Operator
 
-Production runbook for pub5. Read this file before live work. Read `MASTER/README.md` for the agent runtime; this file covers the
-VPS and deploy surface, the agent contract, and live-operation safety in one
-place.
+Production runbook for pub5. Read it before any live operation.
+[MASTER/README.md](../MASTER/README.md) covers the agent runtime; this runbook
+owns the VPS, deployment and recovery procedures.
+
+Every procedure names its prerequisites, target, command, expected result and
+recovery path. Use the complete manuals for the exact OpenBSD release and
+architecture before invoking native tools or changing host configuration.
+A command example is an operational instruction: verify it before publishing
+and never infer success from a plan or source inspection alone.
 
 ## Production deploy
 
