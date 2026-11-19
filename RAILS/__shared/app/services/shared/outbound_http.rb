@@ -48,6 +48,7 @@ module Shared
 
     DNS_LABEL_MAX_BYTES = 63
     DNS_MAX_WIRE_BYTES = 255
+    BLOCKED_HOST_SUFFIXES = %w[.localhost .local .internal .home.arpa .onion].freeze
 
     module_function
 
@@ -67,7 +68,10 @@ module Shared
       end
 
       labels = candidate.split(".", -1)
-      return false if labels.any? { |label| label.empty? || label.bytesize > DNS_LABEL_MAX_BYTES }
+      return false if labels.any? do |label|
+        label.empty? || label.bytesize > DNS_LABEL_MAX_BYTES ||
+          !label.match?(/\\A[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\z/i)
+      end
 
       labels.sum { |label| label.bytesize + 1 } + 1 <= DNS_MAX_WIRE_BYTES
     end
@@ -83,13 +87,35 @@ module Shared
 
     def public_https?(uri)
       return false unless uri.is_a?(URI::HTTPS)
-      return false unless uri.port.nil? || uri.port == 443
-      return false unless valid_resolver_host?(uri.hostname)
+      return false unless uri.port == 443
+      return false unless uri.userinfo.nil? && uri.fragment.nil?
 
-      addrs = resolve_addresses(uri.hostname)
-      return false if addrs.empty?
+      !public_address(uri.hostname).nil?
+    rescue URI::InvalidURIError, ArgumentError
+      false
+    end
 
-      addrs.none? { |addr| unsafe_ip?(addr) }
+    # One bad DNS answer poisons the entire set. Choosing only the public member
+    # of a mixed set makes a rebinding-shaped answer look like a benign round
+    # robin response; fail closed instead.
+    def public_address(host)
+      name = host.to_s.downcase.delete_suffix(".")
+      return nil unless valid_resolver_host?(name)
+      return nil if name == "localhost" || BLOCKED_HOST_SUFFIXES.any? { |suffix| name.end_with?(suffix) }
+
+      addresses = resolve_addresses(name)
+      return nil if addresses.empty?
+      return nil if addresses.any? { |address| unsafe_ip?(address) }
+
+      ip = IPAddr.new(addresses.first)
+      ip = ip.native if ip.respond_to?(:ipv4_mapped?) && ip.ipv4_mapped?
+      ip.to_s
+    rescue IPAddr::InvalidAddressError
+      nil
+    end
+
+    def public_address!(host)
+      public_address(host) || raise(SocketError, "unsafe or unresolvable remote host")
     end
 
     def unsafe_ip?(addr)
@@ -117,10 +143,10 @@ module Shared
     def request(uri, method: :get, headers: {}, body: nil, max_body: MAX_BODY,
                 open_timeout: TIMEOUT, read_timeout: TIMEOUT)
       raise URI::InvalidURIError, "HTTPS required" unless uri.is_a?(URI::HTTPS)
-      raise URI::InvalidURIError, "non-standard HTTPS port" unless uri.port.nil? || uri.port == 443
+      raise URI::InvalidURIError, "non-standard HTTPS port" unless uri.port == 443
+      raise URI::InvalidURIError, "URL credentials and fragments are refused" unless uri.userinfo.nil? && uri.fragment.nil?
 
-      address = resolve_addresses(uri.hostname).reject { |addr| unsafe_ip?(addr) }.first
-      raise SocketError, "unsafe or unresolvable remote host" unless address
+      address = public_address!(uri.hostname)
 
       http = pinned_connection(uri, address, open_timeout:, read_timeout:)
       klass = method.to_sym == :post ? Net::HTTP::Post : Net::HTTP::Get
@@ -131,14 +157,21 @@ module Shared
     end
 
     def pinned_connection(uri, address, open_timeout: TIMEOUT, read_timeout: TIMEOUT)
+      unless uri.is_a?(URI::HTTPS) && uri.port == 443 && uri.userinfo.nil? && uri.fragment.nil?
+        raise URI::InvalidURIError, "pinned connection requires a clean HTTPS origin on port 443"
+      end
+      ip = IPAddr.new(address.to_s)
+      ip = ip.native if ip.respond_to?(:ipv4_mapped?) && ip.ipv4_mapped?
+      raise SocketError, "refusing a non-public pinned address" if unsafe_ip?(ip)
+
       # Passing nil disables Net::HTTP's implicit :ENV proxy lookup; a proxy
       # would otherwise route around the IP address this guard approved.
-      http = Net::HTTP.new(uri.hostname, uri.port || 443, nil)
+      http = Net::HTTP.new(uri.hostname, uri.port, nil)
       # Refuse rather than fall back: without pinning this is the same
       # validate-then-reresolve pair the method exists to remove.
       raise SocketError, "Net::HTTP cannot pin remote address" unless http.respond_to?(:ipaddr=)
 
-      http.ipaddr = address
+      http.ipaddr = ip.to_s
       http.use_ssl = true
       http.open_timeout = open_timeout
       http.read_timeout = read_timeout
