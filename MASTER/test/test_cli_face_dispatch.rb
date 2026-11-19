@@ -395,7 +395,7 @@ class TestCliFaceDispatch < Minitest::Test
         TTY::Screen.stub(:width, 80) { session.send(:voice_indicator_overlay) }
       end
 
-      assert_includes overlay, "\e[1;76H#{expected}"
+      assert_includes overlay, "\e[1;77H#{expected}"
       assert_includes overlay, "\e7"
       assert_includes overlay, "\e8"
       refute_includes overlay, "MIC"
