@@ -26,6 +26,15 @@ module Shared
     class BodyTooLarge < StandardError; end
     class DeadlineExceeded < Timeout::Error; end
 
+    REQUEST_CLASSES = {
+      get: Net::HTTP::Get,
+      head: Net::HTTP::Head,
+      post: Net::HTTP::Post,
+      put: Net::HTTP::Put,
+      patch: Net::HTTP::Patch,
+      delete: Net::HTTP::Delete,
+    }.freeze
+
     NETWORK_ERRORS = [
       Errno::ECONNREFUSED, Errno::EHOSTUNREACH, Errno::ETIMEDOUT, Errno::ECONNRESET,
       Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError, SocketError, URI::InvalidURIError,
@@ -167,9 +176,10 @@ module Shared
         raise ArgumentError, "total timeout must be finite and between 0 and #{MAX_TOTAL_TIMEOUT}s"
       end
 
+      klass = REQUEST_CLASSES[method.to_s.downcase.to_sym] ||
+              raise(ArgumentError, "unsupported outbound HTTP method: #{method.inspect}")
       address = public_address!(uri.hostname)
       http = pinned_connection(uri, address, open_timeout:, read_timeout:, write_timeout:)
-      klass = method.to_sym == :post ? Net::HTTP::Post : Net::HTTP::Get
       request = klass.new(uri.request_uri)
       headers.each { |key, value| request[key] = value }
       request.body = body if body
