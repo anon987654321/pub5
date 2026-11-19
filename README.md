@@ -44,6 +44,14 @@ Start with [MASTER](MASTER/README.md), [RAILS](RAILS/README.md),
 [OPENBSD](OPENBSD/RUNBOOK.md), [STUDIO](STUDIO/README.md) or
 [BIZ](BIZ/README.md), depending on the work.
 
+## Documentation standard
+
+Maintained Markdown follows one house method: Strunk and White for clear
+sentences, Bringhurst for hierarchy and typographic restraint, and OpenBSD
+documentation practice for precise, maintained, testable instructions. Product
+copy may keep its own voice; technical claims, commands and evidence remain
+literal. The full editorial contract lives in [MASTER/AGENTS.md](MASTER/AGENTS.md).
+
 ## Start by role
 
 | Role | Start here |
