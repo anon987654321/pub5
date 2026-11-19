@@ -309,21 +309,24 @@ module Master
       end
 
       def handle_stream_text(text, state)
-        if state[:conversational] && !state[:chat_stream_started]
+        if state[:conversational]
           return if state[:stream_suppressed]
 
-          state[:stream_probe] ||= +""
-          state[:stream_probe] << text.to_s
-          if ruby_say_wrapper_stream?(state[:stream_probe])
-            state[:stream_suppressed] = true
-            state[:stream_probe] = nil
-            return
-          end
-          return if ruby_say_wrapper_prefix_pending?(state[:stream_probe])
+          unless state[:chat_stream_started]
+            state[:stream_probe] ||= +""
+            state[:stream_probe] << text.to_s
+            if ruby_say_wrapper_stream?(state[:stream_probe])
+              state[:stream_suppressed] = true
+              state[:stream_probe] = nil
+              return
+            end
+            return if ruby_say_wrapper_prefix_pending?(state[:stream_probe])
 
-          text = format_irc_stream(state[:stream_probe])
-          state[:stream_probe] = nil
-          state[:chat_stream_started] = true
+            text = state[:stream_probe]
+            state[:stream_probe] = nil
+            state[:chat_stream_started] = true
+          end
+          text = format_irc_stream(text, state:)
         elsif state[:stream_suppressed]
           return
         end
