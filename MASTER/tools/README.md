@@ -4,69 +4,74 @@
 standard as the code they measure, because a measurement nobody has checked is
 only an opinion that happens to carry a number.**
 
-This directory holds the operators, scanners, audits and censuses that govern
-the repository. They are small Ruby scripts, most with one question each. Which
-methods in the runtime does nothing call? Which keys in the data files does
-nothing read? Which files are exact copies, and which are one concept under
-several names? Which exemptions still excuse a finding, and which excuse
-nothing? Which prose claims a number that the design system already owns? The
-operator reaches most of them. Run
-`bin/operator measure` to see the ratchets they feed, `bin/operator lint` to
-judge files by the laws with no model, and `bin/operator doctor` to check the
-environment's known traps. `sweep.rb` runs the census instruments in one pass
-and reports them in dmesg form. It measures and proposes, and it never edits.
+This directory contains the operators, scanners, audits and inventories
+that maintain the repository. Most are small Ruby programs with one clear
+responsibility. The operator exposes the main entrypoints:
 
-Substantive registry, reachability and hygiene audits live in `audit/`; stable one-command endpoints whose implementations already live in `lib/` stay at the top level. The audit family's former root paths were removed with its move - there are no compatibility entrypoints.
+- `bin/operator measure` reports the ratchets and measurements.
+- `bin/operator lint` applies the Laws without a model.
+- `bin/operator doctor` checks the environment for known hazards.
+- `sweep.rb` runs the census instruments in one pass and writes their
+  findings in dmesg form. It measures and proposes; it never edits.
 
-Repository maintenance tools live in `repo/`: tracked-tree inventory, entrypoint reachability and structural migration planning. `snapshot.rb` stays a top-level operator command until its reader/writer contracts are verified independently.
+## Directory map
 
-Research and benchmarking tools live in `research/`: cognition outcome benchmarking, mutation-oriented challenge checks, and LLM trajectory reporting.
+- `audit/` contains substantive registry, reachability and hygiene audits.
+  Stable one-command endpoints whose implementations already live in
+  `lib/` remain at this directory's top level. The former root paths for
+  the audit family were removed; no compatibility entrypoints remain.
+- `repo/` contains tracked-tree inventory, entrypoint reachability and
+  structural migration planning. `snapshot.rb` remains a top-level
+  operator command until its reader/writer contracts are verified
+  independently.
+- `research/` contains cognition outcome benchmarks, mutation-oriented
+  challenge checks and LLM trajectory reports.
+- `audit/design_baseline.rb` measures the repository's design baseline.
+- `rails/` contains Rails tooling. The operator exposes it through
+  `triangle` (boot the live Brgen, Amber, BSDPorts and MASTER-face
+  entries), `premerge`, `ci` and `coverage`. The same directory builds
+  stylesheets and the route manifest, crawls apps with a browser, and holds
+  Rails convention checks.
 
-Design baseline measurement lives in `audit/` alongside the other repository-wide checks:
-`tools/audit/design_baseline.rb`.
+Several top-level tools serve cross-tree contracts:
 
-The Rails tooling lives in `rails/`. The operator reaches it as `triangle` to
-boot brgen, amber, bsdports and the MASTER face, as `premerge`, as `ci` and as
-`coverage`. The same directory builds the stylesheets and the route manifest,
-crawls the apps with a browser, and holds the lints that guard Rails
-conventions. `agent_context.rb` prints the law and tree map an agent reads
-before it works — `--json` serializes the same standing context (conduct,
-blocking rules, coverage, shell contract, and with `--tree` the tree map) as
-one JSON document for harnesses and session handoffs that consume data rather
-than prose. `coverage_reconciliation.rb` computes the census the repo kept
-finding by hand — files the trees hold that no instrument in
-`checks/data/coverage_map.yml` claims to see; it reports inconclusive while
-that map declares itself partial and fails on uncovered files once it is
-complete. `diff_routes.rb` answers the question before an edit rather than
-after it: given paths, a `--diff` base or `--stdin`, it prints the
-`PATH_OWNERSHIP.yml` rows that govern each path and the check each row
-declares, and exits 1 naming any path no row claims. It adds no
-path-to-check table — the ownership file stays the only one.
-`snapshot.rb` backs `bin/operator snapshot`, which writes
-one snapshot per tree for another model to read, or with `--mirror` the
-byte-exact pack. `gap_discipline.rb` checks the one chain that turns absence
-into work: `data/gaps.yml` (what the suite is missing, which no scanner can
-see) -> `data/ideations/*.yml` (candidates attacked one by one, a winner
-picked with the losers' reasons kept) -> `convergence.yml` workstreams. It
-fails on a pick whose critique did not keep it, a gap with fewer candidates
-than a real choice needs, a "picked" ledger row with no workstream, and any
-workstream name that exists nowhere.
+- `agent_context.rb` prints the Law and tree map agents must read before
+  working. Its `--json` option serializes the same standing context
+  (conduct, blocking rules, coverage and shell contract); `--tree` adds
+  the selected tree map. Harnesses and session handoffs can consume the
+  JSON without parsing prose.
+- `coverage_reconciliation.rb` compares tracked files with the instruments
+  claimed in `checks/data/coverage_map.yml`. It reports INCONCLUSIVE while
+  that map is marked partial, then fails on uncovered files once the map
+  declares itself complete.
+- `diff_routes.rb` accepts paths, a `--diff` base or `--stdin`, then
+  prints the governing `PATH_OWNERSHIP.yml` rows and their declared checks.
+  It exits 1 and names any path no row claims. It does not add a second
+  path-to-check table.
+- `snapshot.rb` backs `bin/operator snapshot`. It writes one snapshot per
+  tree for another model to read; `--mirror` creates the byte-exact pack.
+- `gap_discipline.rb` checks the chain from absence to implementation:
+  `data/gaps.yml` identifies missing capabilities;
+  `data/ideations/*.yml` records candidates and the reasons losers were
+  rejected; `convergence.yml` records the resulting workstreams. It fails
+  when critique rejects a picked candidate, a real choice has too few
+  candidates, a picked gap has no workstream, or a workstream has no
+  corresponding gap.
 
 Media implementations belong to `STUDIO/`. The two compatibility links
-that remain here are `dilla` and `replicate`; their targets and contracts are
-owned by STUDIO. Postpro is invoked through its canonical `STUDIO/postpro`
-entrypoint, not a MASTER/tools link. Read the owning project README before
-changing media behavior, and do not add a second implementation here.
+that remain here are `dilla` and `replicate`; STUDIO owns their targets and
+contracts. Invoke Postpro through `STUDIO/postpro`, not through a MASTER
+link. Read the owning project README before changing media behavior. Do not
+add a second implementation here.
 
 ## Read this part first
 
-The instrument is wrong more often than the reasoning. Measurement code in this
-repository has misread the code it measured more often than the code has
-misread the world, so before you believe a finding, check the finding's source
-against a case whose answer you already know. A probe can be the confound, as
-when a greyscale test image made a color effect look dead. A reading can be
-unstable while the thing read is steady, as when a parallel sum changed in its
-last digit. Hash the output instead.
+A measurement can be wrong even when its output looks precise. Before
+trusting a finding, compare the instrument's source with a case whose answer
+you already know. A greyscale test image once made a colour effect look dead.
+A parallel sum changed in its last digit even when the input stayed steady.
+When the result is unstable, hash the output and investigate the source of
+the variation.
 
 Declarations with no reader are the dominant defect. A preset names a setting
 that no effect consults, a call passes an argument that the callee does not
