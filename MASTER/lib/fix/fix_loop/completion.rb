@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
+require "json"
+require "time"
+
 require_relative "../../execution/contract"
 require_relative "../../trace/causal_trace"
+require_relative "../log_publication"
 
 module Master
   module Fix
@@ -10,6 +14,10 @@ module Master
       # mission state, receipts and the terminal event. OutcomePolicy remains
       # the pure decision core; this module applies that decision to runtime state.
       module Completion
+        # The kernel ledger never rotates; the log-publication read takes at
+        # most this tail slice before filtering to the run's own events.
+        KERNEL_LOG_READ_BYTES = 1024 * 1024
+
         private
 
         # DONE needs complete evidence, not just a clean scanner result. A run
@@ -179,6 +187,14 @@ module Master
           run_record = @run_journal.history(limit: RunJournal::MAX_RUNS).find { |row| row["id"] == run_id }
           plan_generation = Array(run_record && run_record["plan_generations"]).last&.fetch("generation", nil)
           evidence[:fix_plan_generation] = plan_generation unless plan_generation.nil?
+          # Operator requirement: after each /fix the run's logs go to a gist
+          # or command-line pastebin. The receipt is recorded before the
+          # journal terminal write so the URL survives in durable state even
+          # when the run outlived the operator's own terminal. Publication is
+          # fail-soft and never changes the run's terminal state.
+          evidence[:log_publication] = publish_run_log(
+            run_id:, target: fix_target_label(target), state:, message: result.to_s,
+          ).to_h
           @run_journal.terminal(run_id, state, message: result.to_s, evidence:)
 
           if %i[cancelled unknown_outcome recovery_failed].include?(state)
@@ -206,6 +222,7 @@ module Master
           end
           outcome[:assessment_matrix] = matrix_evidence
           outcome[:assessment_verification] = assessment_verification.to_h
+          outcome[:log_publication] = evidence[:log_publication]
           outcome[:outcome_receipt] = write_outcome_receipt(
             run_id:, target: target_label, state:, result:, convergence: convergence_evidence,
           )
@@ -213,6 +230,72 @@ module Master
           @bus&.publish("fix_loop:terminal", **outcome)
 
           result
+        end
+
+        # Publish the run's log to a gist/pastebin and announce where it went.
+        # Fail-soft by contract: any error becomes a receipt field, never a
+        # change to the run's terminal state.
+        def publish_run_log(run_id:, target:, state:, message:)
+          publication = Master::Fix::LogPublication.publish(
+            run_id:, log_text: run_log_text(run_id:, target:, state:, message:),
+          )
+          if publication.url
+            Master::Trace::Dmesg.status("fix0", "run log published: #{publication.url}")
+          else
+            reason = publication.skipped || publication.error || "no sink answered"
+            Master::Trace::Dmesg.status("fix0", "run log not published: #{reason}"[0, 200])
+          end
+          publication
+        rescue StandardError => error
+          Master::Fix::LogPublication::Result.new(error: "#{error.class}: #{error.message}")
+        end
+
+        # The published body: a header with the terminal verdict, every kernel
+        # ledger event this run appended, and the run journal record. Only the
+        # journal's own terminal row postdates the upload; its fields are in
+        # the header.
+        def run_log_text(run_id:, target:, state:, message:)
+          events = kernel_events_for(run_id)
+          lines = [
+            "pub5 /fix run log",
+            "run_id: #{run_id}",
+            "target: #{target}",
+            "terminal_state: #{state}",
+            "terminal_message: #{message}",
+            "captured_at: #{Time.now.utc.iso8601}",
+            "",
+            "== kernel ledger events (#{events.size}) ==",
+            *events,
+          ]
+          record = @run_journal.history(limit: RunJournal::MAX_RUNS).find { |row| row["id"] == run_id }
+          if record
+            lines << ""
+            lines << "== run journal record =="
+            lines << JSON.pretty_generate(record)
+          end
+          lines.join("\n")
+        end
+
+        # Raw ledger lines for this run only. The ledger has no rotation, so
+        # the read is tail-bounded; LogPublication's own byte cap then keeps
+        # the newest of those lines. Partial trailing lines from a concurrent
+        # append are dropped by the parser rescue.
+        def kernel_events_for(run_id)
+          path = @kernel&.log_path
+          return [] unless path && File.file?(path)
+
+          offset = [File.size(path) - KERNEL_LOG_READ_BYTES, 0].max
+          tail = File.binread(path, KERNEL_LOG_READ_BYTES, offset)
+          # A mid-line offset leaves a partial first line; drop only that case.
+          if offset.positive? && tail.include?("\n")
+            tail = tail.byteslice(tail.index("\n") + 1..) || tail
+          end
+          tail.lines.filter_map do |line|
+            row = JSON.parse(line)
+            line.chomp if row.is_a?(Hash) && row["run_id"] == run_id
+          rescue JSON::ParserError
+            nil
+          end
         end
 
         # A normalized receipt for consumers that share the VerificationResult
