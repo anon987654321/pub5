@@ -61,6 +61,15 @@ also keeps its own `bin/ci` for RuboCop, Brakeman, bundler-audit and the tests.
 The design tokens come from `MASTER/data/tokens.yml`, and the shared engine's
 `design_tokens.yml` is a file generated from it, not a second source.
 
+
+## Authority and derived copies
+
+RAILS is not a secondary copy of MASTER. It is the authoritative product tree for its Rails applications and shared engine. MASTER governs shared constitutional policy and common tooling; RAILS owns application behaviour, product data and its deploy inventory. Within RAILS, `apps.yml` is the active app/deploy inventory, `apps.horizon.yml` records ideas that are not active work, and each app or engine owns its implementation contract.
+
+The DNS primary/secondary analogy applies only where one source deliberately publishes a derived copy. `MASTER/data/tokens.yml` is the design-token authoring source; `RAILS/__shared/design_tokens.yml` is generated from it. The shared engine's deployed copies are runtime artefacts of the tracked source, not independent places to author fixes. Refresh and verify a projection from its owner; never repair drift by creating a second writable source.
+
+This is one authoritative owner per concern, not one authority for every concern. Keep product decisions and application implementation in RAILS, shared Laws in MASTER, host and service truth in OPENBSD, and media-production truth in STUDIO. When a change crosses those boundaries, record the contract and evidence at the owning boundary rather than flattening the trees into one hierarchy.
+
 Production is one box. A deploy sheds amber and bsdports, and relayd keeps
 answering TLS with their ports closed, so the outage looks like a hang and not a
 server error. The deploy command restores them. If you deploy by hand, check
