@@ -46,7 +46,7 @@ class FediverseSsrfTest < Minitest::Test
   end
 
   def test_ipv6_targets_must_be_global_unicast_and_not_documentation_space
-    %w[4000::1 5f00::1 2d00::1 2e00::1 3000::1 3800::1 3c00::1 3e00::1 3f00::1 3ffe::1 3fff::1 2001:db8::1 fd00::1 fe80::1 ff02::1].each do |address|
+    %w[4000::1 5f00::1 2d00::1 2e00::1 3000::1 3800::1 3c00::1 3e00::1 3f00::1 3ffe::1 3fff::1 2001:db8::1 ::a00:1 fc00::1 fd00::1 fe80::1 ff02::1].each do |address|
       assert Shared::OutboundHttp.unsafe_ip?(address), "#{address} must not be an outbound target"
     end
     refute Shared::OutboundHttp.unsafe_ip?("2606:4700:4700::1111")
@@ -64,6 +64,21 @@ class FediverseSsrfTest < Minitest::Test
     assert Shared::OutboundHttp.valid_resolver_host?("127.0.0.1")
     refute Shared::OutboundHttp.valid_resolver_host?("#{"a" * 64}.example")
     refute Shared::OutboundHttp.valid_resolver_host?(Array.new(4, "a" * 63).join("."))
+  end
+
+  def test_single_label_resolver_names_are_refused_before_dns
+    called = false
+    resolver = Shared::OutboundHttp.singleton_class
+    resolver.alias_method(:saved_single_label_resolver, :resolve_addresses)
+    Shared::OutboundHttp.define_singleton_method(:resolve_addresses) do |_host|
+      called = true
+      ["93.184.216.34"]
+    end
+    assert_nil Shared::OutboundHttp.public_address("instance-data")
+    refute called, "single-label names must not use resolver search domains"
+  ensure
+    resolver.alias_method(:resolve_addresses, :saved_single_label_resolver)
+    resolver.remove_method(:saved_single_label_resolver)
   end
 
   def test_pinned_connection_ignores_environment_proxy
