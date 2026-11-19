@@ -96,6 +96,16 @@ class TestFixKernel < Minitest::Test
     end
   end
 
+  def test_append_flags_require_nofollow_and_append
+    with_workspace do |root|
+      kernel = K.new(root:)
+      flags = kernel.send(:ledger_open_flags)
+
+      assert_equal File::NOFOLLOW, flags & File::NOFOLLOW
+      assert_equal File::APPEND, flags & File::APPEND
+    end
+  end
+
   def test_append_refuses_a_hard_linked_ledger_without_writing
     with_workspace do |root|
       kernel = K.new(root:)
