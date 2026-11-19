@@ -40,21 +40,22 @@ class S2sPostbackJobTest < ActiveJob::TestCase
     )
   end
 
-  def perform_with_http(conversion)
-    requests = []
-    http = Object.new
-    http.define_singleton_method(:request) do |request|
-      requests << request
-      Struct.new(:code).new("200")
+  def with_outbound_http(responses)
+    sent = []
+    handler = lambda do |uri, **options|
+      request = Net::HTTP::Get.new(uri)
+      options.fetch(:headers, {}).each { |key, value| request[key] = value }
+      sent << [request, options]
+      Struct.new(:code).new(responses.shift || "200")
     end
+    Shared::OutboundHttp.stub(:request, handler) { yield sent }
+  end
 
-    Net::HTTP.stub(
-      :start,
-      ->(*_args, **_options, &block) { block.call(http) }
-    ) do
+  def perform_with_http(conversion)
+    with_outbound_http(["200"]) do |sent|
       Shared::S2sPostbackJob.perform_now(conversion.id)
+      sent.map(&:first)
     end
-    requests
   end
 
   def query_for(request)
@@ -102,16 +103,10 @@ class S2sPostbackJobTest < ActiveJob::TestCase
     conversion = conversion!(currency: "USD")
 
     requests = []
-    responses = %w[200 503]
-    http = Object.new
-    http.define_singleton_method(:request) do |request|
-      requests << request
-      Struct.new(:code).new(responses.shift)
-    end
-
     assert_enqueued_with(job: Shared::S2sPostbackJob) do
-      Net::HTTP.stub(:start, ->(*_args, **_options, &block) { block.call(http) }) do
+      with_outbound_http(%w[200 503]) do |sent|
         Shared::S2sPostbackJob.perform_now(conversion.id)
+        requests.concat(sent.map(&:first))
       end
     end
 
