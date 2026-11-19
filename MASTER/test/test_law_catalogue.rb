@@ -274,6 +274,7 @@ class TestRuleCatalogue < Minitest::Test
     assert_includes rows.map { |row| row["id"] }, "TRAILING_WHITESPACE"
     assert_equal [], Operator::LawReach.unreachable(rows)
   end
+
   def test_deploy_evidence_policy_has_one_runtime_owner
     data = Master.laws_document(root: Master::ROOT)
     law = data.fetch("EVIDENCE_SCORING")

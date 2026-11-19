@@ -8,6 +8,15 @@
 #   and positive path constraints.
 # * law_catalogue.defaults are merged first; an entry overrides its defaults.
 #   Parent links organize the Law tree; they do not inherit executable policy.
+#   A parent's top-level severity can satisfy the presence-only hygiene check,
+#   but it does not become the child's effective execution severity.
+#
+# The file order is deliberate: axiom; nine constitutional invariants;
+# constitutional support; named principles; remaining universal Laws;
+# transformations; then kinds, ratchets, lints and metadata.
+#
+# An executable catalogue entry without a top-level statement row takes its
+# semantic question and repair contract from its Ruby definition source.
 #
 # A top-level severity is the flat Law record's declared severity. Where the
 # same identity is executable, it must agree with the effective catalogue
@@ -890,8 +899,10 @@ DUAL_MODALITY:
     detectors and semantic assessments are distinct; a human assessor is
     not a deterministic detector. The registry audit reports which paths
     actually run and measures each gap. Missing evidence is INCONCLUSIVE,
-    never a pass. Reduce a gap only when independently verified coverage
-    improves; never hide it by renaming Laws or shrinking the population.
+    never a pass. Rendered or interactive subjects also require visual and
+    behavioral evidence. Reduce a gap only when independently verified
+    coverage improves; never hide it by renaming Laws or shrinking the
+    population.
   severity: warning
   resolution: review
   mechanical: Master::Lint#both_modalities
