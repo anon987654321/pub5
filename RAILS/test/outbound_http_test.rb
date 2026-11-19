@@ -46,14 +46,14 @@ class FediverseSsrfTest < Minitest::Test
   end
 
   def test_ipv6_targets_must_be_global_unicast_and_not_documentation_space
-    %w[4000::1 5f00::1 2d00::1 2e00::1 3000::1 3800::1 3c00::1 3e00::1 3f00::1 3ffe::1 3fff::1 2001:db8::1 ::a00:1 fc00::1 fd00::1 fe80::1 ff02::1].each do |address|
+    %w[4000::1 5f00::1 2d00::1 2e00::1 3000::1 3800::1 3c00::1 3e00::1 3f00::1 3ffe::1 3fff::1 2001:db8::1 2620:4f:8000::1 ::a00:1 fc00::1 fd00::1 fe80::1 ff02::1].each do |address|
       assert Shared::OutboundHttp.unsafe_ip?(address), "#{address} must not be an outbound target"
     end
     refute Shared::OutboundHttp.unsafe_ip?("2606:4700:4700::1111")
   end
 
   def test_special_ipv4_ranges_are_refused
-    %w[0.1.2.3 100.64.0.1 169.254.1.1 192.168.1.1 198.18.0.1 203.0.113.1 224.0.0.1 240.0.0.1 255.255.255.255].each do |address|
+    %w[0.1.2.3 100.64.0.1 169.254.1.1 192.31.196.1 192.52.193.1 192.168.1.1 192.175.48.1 198.18.0.1 203.0.113.1 224.0.0.1 240.0.0.1 255.255.255.255].each do |address|
       assert Shared::OutboundHttp.unsafe_ip?(address), "#{address} must not be an outbound target"
     end
     refute Shared::OutboundHttp.unsafe_ip?("93.184.216.34")
