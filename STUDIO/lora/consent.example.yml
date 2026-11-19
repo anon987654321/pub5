@@ -1,6 +1,7 @@
 # Copy to STUDIO/lora/<subject>/consent.yml and keep it private (0600).
-# Every referenced evidence file must be under evidence/ and mode 0600.
-# evidence/ itself must be owner-only (0700). Nothing is granted by default.
+# The subject root, source/reference trees and evidence/ directories are 0700;
+# every photograph, caption, consent record and evidence file is 0600.
+# No symlinks or hard links are accepted. Nothing is granted by default.
 schema: 1
 subject: REPLACE_WITH_SUBJECT_SLUG
 
