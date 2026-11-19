@@ -1,41 +1,41 @@
 # BIZ — professional documents, one evidence-backed production chain
 
 BIZ produces business plans, funding applications, legal instruments,
-governance documents and financial reports. The index separates published
-work, source-only drafts and historical material. Every claim retains its
-source, date, assumptions and uncertainty; copy persuades through evidence,
+governance documents and financial reports. The index distinguishes published
+work, editable drafts and historical sources. Every material claim retains
+its source, date, assumptions and uncertainty. Persuasion comes from evidence,
 not inflated language. The shared editorial standard lives in
 [MASTER/AGENTS.md](../MASTER/AGENTS.md).
 
-- **Published:** SYRE, Ragnhild, pub.healthcare, Bergen Selvstyreparti and
-  Fremtidens helse-OS. These have reader-facing HTML/PDF pairs.
-- **Published guidance:** Ragnhild Mæhle's five-page funding guide lives beside
-  her plan. It is preparation material, not a submitted application or a grant
-  decision, and is not counted as a sixth business plan.
+- **Published plans:** SYRE, Ragnhild, pub.healthcare, Bergen Selvstyreparti
+  and Fremtidens helse-OS. Each has a reader-facing HTML/PDF pair.
+- **Published guidance:** Ragnhild Mæhle's five-page funding guide sits beside
+  her plan. It prepares the applicant; it is not a submitted application or a
+  grant decision, and it is not a sixth business plan.
 - **Draft sources:** NORDVAKT Arctic Systems and Norwegian Financial. Their
-  editable sources live in `tools/`; no published pair is claimed until build,
-  print, arithmetic checks and page-by-page visual review pass.
-- **Historical source documents:** SPEIS and Fremtidens NATO-våpen are retained
-  as provenance for NORDVAKT. Norwegian Hedge is retained as a historical
-  quant-fund concept, not as the active consumer-bank plan.
+  editable sources live in `tools/`. Neither has a published pair until its
+  build, print, arithmetic checks and page-by-page visual review pass.
+- **Historical sources:** SPEIS and Fremtidens NATO-våpen document the
+  provenance of NORDVAKT. Norwegian Hedge remains a historical quant-fund
+  concept, not the active consumer-bank plan.
 
-NORDVAKT combines the maritime and space/Arctic concepts into a civil-first data
-and operations platform. It begins with existing, licensed data and software
-pilots; it does not assume owned ships, satellites, weapons, NATO procurement or
-partner agreements. Norwegian Financial reframes the old quant concept into a
-partner-first financial-software and future-bank strategy. Quantitative fund
-management remains separate from banking and customer deposits.
+NORDVAKT combines the maritime and space/Arctic concepts into a civil-first
+data and operations platform. It begins with existing, licensed data and
+software pilots. It does not assume owned ships, satellites, weapons, NATO
+procurement or partner agreements. Norwegian Financial reframes the former
+quant concept as a partner-first financial-software and future-bank strategy.
+Quantitative fund management remains separate from banking and customer
+deposits.
 
-The index separates published plans, source-only drafts and archive documents.
-Its funding summary reads only the explicit `Innovasjon Norge` row from each
-financing table. It does not add total project capital, political fundraising
-targets or bank-license capital as if they were grant requests. Funding sources
-remain subject to applicant eligibility, scheme rules and evidence.
+The funding summary reads only the explicit `Innovasjon Norge` row in each
+financing table. It does not treat total project capital, political fundraising
+targets or bank-licence capital as grant requests. Funding sources remain
+subject to applicant eligibility, scheme rules and evidence.
 
-The portfolio is intended to support applications to Innovasjon Norge and
-relevant legater, but no plan is presumed eligible. Verify the applicant,
-current call, eligible cost categories, matching funds, state-aid limits and
-evidence before submitting. Forecasts and proposed contributions are not
+The portfolio may support applications to Innovasjon Norge and relevant
+legater, but no plan is presumed eligible. Before submission, verify the
+applicant, current call, eligible cost categories, matching funds, state-aid
+limits and required evidence. Forecasts and proposed contributions are not
 commitments.
 
 ## Scope and document profiles
@@ -122,18 +122,21 @@ documents density acceptance, it names DENSITY_kanso, not a private rule.
 A BIZ package that grows a Rails app later inherits the RAILS entry pattern
 (`MASTER/data/css_architecture.yml` and the existing RAILS entry stylesheets) unchanged.
 
-## The folder law
+## ## The folder law
 
-The folder carries only what the reader receives: the html, its svg mark
-(where one exists) and the pdf printed from that html, so the pair cannot
-drift. Editable sources and all tooling sit in `tools/`, never inside a
-plan folder: active plan sources (`tools/<plan>.html`), with NORDVAKT and Norwegian Financial
-authored as complete Bob2 documents and historic SPEIS, NATO and Norwegian Hedge
-sources retained as provenance, the build/check/print/index
-chain (`bp_build.mjs`, `bp_retemplate.mjs`, `bp_check.mjs`, `bp_print.mjs`,
-`bp_index.mjs`), the content modules (`plans_a.mjs`, `plans_b.mjs`,
-`content_add.mjs`) and the two new plans' proposals. The published pair is
-regenerated from them:
+Each published workstream folder contains only its reader-facing HTML, its
+optional SVG mark and the PDF printed from that HTML. This keeps the published
+pair together and avoids competing editable copies. Sources and production
+tools live in `BIZ/tools/`, never inside a plan folder.
+
+Active plan sources use `tools/<plan>.html`. NORDVAKT and Norwegian Financial
+are authored as complete Bob2 documents; historical SPEIS, NATO and Norwegian
+Hedge sources remain as provenance. The build/check/print/index chain uses
+`bp_build.mjs`, `bp_retemplate.mjs`, `bp_check.mjs`, `bp_print.mjs` and
+`bp_index.mjs`. Content modules are `plans_a.mjs`, `plans_b.mjs` and
+`content_add.mjs`; the two new plans also have proposal sources.
+
+Regenerate the published pair from those sources:
 
     node BIZ/tools/bp_build.mjs       # bases + additions -> OUTPUT_DIR
     node BIZ/tools/bp_retemplate.mjs  # bob2 skin onto the builds
