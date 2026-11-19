@@ -156,10 +156,19 @@ module Master
 
       private
 
+      # Rendering the first cached WAV is CPU work. It must not sit between
+      # the boot message and the operator's first prompt.
       def play_boot_sound
-        Master::Voice::BootSound.play
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "cli.boot_sound", event_bus: @refs.bus)
+        @boot_sound_thread = Thread.new do
+          Thread.current.priority = -3
+          Master::Voice::BootSound.play
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "cli.boot_sound", event_bus: @refs.bus)
+        end
+        @boot_sound_thread.abort_on_exception = false
+        @boot_sound_thread.report_on_exception = false
+        @boot_sound_thread.name = "master-boot-sound" if @boot_sound_thread.respond_to?(:name=)
+        @boot_sound_thread
       end
 
       def init_session_state!
