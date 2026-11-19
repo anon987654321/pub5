@@ -97,3 +97,13 @@ Ruby floor remains >= 3.2 (already relaxed). Full suite still needs provider key
 | `filter_parameter_logging` | expanded: password, phone, authorization, api_key, access_token, refresh_token, private_key, credit_card, card_number, iban |
 
 Vipps `params[:to]` already restricted to exact `"checkout"` → root/checkout only (no open redirect). Session cookies already httponly + secure-in-prod + same_site:lax + domain:all for city verticals. CSP remains report-only until operator sets PUB5_CSP_ENFORCE=1.
+
+## STUDIO /fix hardening (2026-11-19)
+
+`Studio::ReplicateClient#download_url`:
+- Resolve allowlisted hostnames before connect
+- Refuse any answer in private/loopback/link-local/reserved ranges (DNS rebinding)
+- Pin `Net::HTTP#ipaddr` to the approved public address while keeping SNI hostname
+- Existing guards kept: HTTPS-only :443, no userinfo/fragment, host allowlist `*.replicate.(com|delivery)`, symlink-safe atomic download, byte/deadline caps, mode 0640
+
+Consent, doctor private-path classifiers, token file mode checks (owner-only, no group/other, no symlink) already present — left intact.

@@ -7,6 +7,8 @@ require "securerandom"
 require "tempfile"
 require "timeout"
 require "uri"
+require "ipaddr"
+require "socket"
 require_relative "../lora/consent"
 require_relative "models"
 
@@ -69,6 +71,7 @@ module Studio
           raise ArgumentError, "refusing download URL credentials" unless uri.userinfo.nil?
           raise ArgumentError, "refusing download URL fragment" unless uri.fragment.nil?
           raise ArgumentError, "refusing download from untrusted host: #{uri.host}" unless uri.host.to_s.match?(ALLOWED_DOWNLOAD_HOST)
+          pin = ReplicateClient.public_download_address!(uri.host)
 
           max_bytes = Integer(max_bytes)
           raise ArgumentError, "download byte limit must be positive" unless max_bytes.positive?
@@ -91,13 +94,14 @@ module Studio
           # status, byte-limit and monotonic-deadline checks. The temporary lives
           # beside the canonical target so the final rename stays atomic.
           Tempfile.create(["replicate-download-", ".part"], directory, binmode: true) do |file|
-            Net::HTTP.start(
-              uri.host, uri.port, use_ssl: true,
-              open_timeout: [OPEN_TIMEOUT_SECONDS, timeout].min,
-              read_timeout: [READ_TIMEOUT_SECONDS, timeout].min,
-              write_timeout: [WRITE_TIMEOUT_SECONDS, timeout].min
-            ) do |http|
-              http.request_get(uri.request_uri) do |res|
+            http = Net::HTTP.new(uri.host, uri.port)
+            http.ipaddr = pin
+            http.use_ssl = true
+            http.open_timeout = [OPEN_TIMEOUT_SECONDS, timeout].min
+            http.read_timeout = [READ_TIMEOUT_SECONDS, timeout].min
+            http.write_timeout = [WRITE_TIMEOUT_SECONDS, timeout].min
+            http.start do |conn|
+              conn.request_get(uri.request_uri) do |res|
                 raise "download failed #{res.code}" unless res.code.to_i.between?(200, 299)
                 raise "download over #{max_bytes} bytes" if res["content-length"].to_s.to_i > max_bytes
 
@@ -396,6 +400,15 @@ module Studio
       # API itself. Refuse to fetch a URL a compromised/odd response pointed
       # us at anywhere else.
       ALLOWED_DOWNLOAD_HOST = /\A([a-z0-9-]+\.)*replicate\.(com|delivery)\z/i.freeze
+      # Even an allowlisted name must resolve only to public addresses. A
+      # rebinding answer that later points at loopback or link-local would
+      # otherwise let download_url talk to the host itself.
+      BLOCKED_DOWNLOAD_RANGES = %w[
+        0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16
+        172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15
+        198.51.100.0/24 203.0.113.0/24 224.0.0.0/4 240.0.0.0/4
+        ::/128 ::1/128 fc00::/7 fe80::/10 ff00::/8
+      ].map { |cidr| IPAddr.new(cidr) }.freeze
       MODEL_REFERENCE = /\A([A-Za-z0-9][A-Za-z0-9._-]{0,127})\/([A-Za-z0-9][A-Za-z0-9._-]{0,127})(?::([A-Za-z0-9][A-Za-z0-9._-]{0,127}))?\z/.freeze
       RESOURCE_ID = /\A[A-Za-z0-9][A-Za-z0-9_-]{0,127}\z/.freeze
 
@@ -418,6 +431,32 @@ module Studio
         token_from_env_file
       rescue StandardError
         ""
+      end
+
+
+      def self.public_download_address!(host)
+        host = host.to_s.downcase.delete_suffix(".")
+        raise ArgumentError, "refusing empty download host" if host.empty?
+        addresses = Addrinfo.getaddrinfo(host, "https", nil, :STREAM).map(&:ip_address).uniq
+        raise ArgumentError, "download host did not resolve: #{host}" if addresses.empty?
+        addresses.each do |addr|
+          ip = IPAddr.new(addr)
+          if blocked_download_ip?(ip)
+            raise ArgumentError, "refusing download host resolving to non-public address: #{host} -> #{addr}"
+          end
+        end
+        addresses.first
+      rescue SocketError, SystemCallError => e
+        raise ArgumentError, "download host resolution failed: #{host}: #{e.message}"
+      end
+
+      def self.blocked_download_ip?(ip)
+        ip = ip.native if ip.respond_to?(:ipv4_mapped?) && ip.ipv4_mapped?
+        ip.loopback? || ip.link_local? || ip.private? ||
+          (ip.respond_to?(:multicast?) && ip.multicast?) ||
+          BLOCKED_DOWNLOAD_RANGES.any? { |range| range.include?(ip) }
+      rescue StandardError
+        true
       end
 
       def self.private_token_file?(path)
