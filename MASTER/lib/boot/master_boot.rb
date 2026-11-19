@@ -25,7 +25,7 @@ module Master
     end
 
     def bootstrap_container(root: Dir.pwd)
-      boot_timed("runtime preparation") { prepare_runtime! }
+      boot_timed("runtime preparation (container)") { prepare_runtime! }
       boot_timed("telemetry") { init_ground(root:) }
       container = boot_timed("builder") { Builder.build(root:) }
       boot_timed("JIT") { Runtime::Jit.apply! }
@@ -380,7 +380,7 @@ module Master
 
     def boot_container(root:)
       boot_timed("soul") { Soul.load! }
-      boot_timed("runtime preparation") { prepare_runtime! }
+      boot_timed("runtime preparation (entry)") { prepare_runtime! }
       boot_timed("device status") { emit_device_status }
       boot_timed("onboarding") { onboard }
       boot_timed("device setup") { set_up_device }
