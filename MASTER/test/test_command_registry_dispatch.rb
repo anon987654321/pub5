@@ -942,6 +942,22 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_includes result[:summary], "#{rows.first["app"]}: deployed SHA does not match the checkout"
   end
 
+  def test_deploy_reconciliation_refuses_a_healthy_but_unapproved_host
+    inventory = Deploy::Inventory.new(root: Master::ROOT)
+    payload = {
+      "host" => "other-host",
+      "dev_sha" => "a1b2c3d",
+      "master" => {},
+      "apps" => [],
+      "deploy_recovery" => { "state" => "none", "count" => 0, "pending" => [] },
+    }
+
+    result = Registry.send(:deploy_reconciliation_summary, payload, target: "all", inventory:)
+
+    refute result[:ok]
+    assert_includes result[:summary], "remote host \"other-host\" is not in the canonical host inventory"
+  end
+
   def test_deploy_reconciliation_summary_exposes_pending_receipts_without_mutating
     inventory = Deploy::Inventory.new(root: Master::ROOT)
     payload = {

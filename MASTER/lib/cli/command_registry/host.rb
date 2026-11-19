@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "shellwords"
+require "yaml"
 require "json"
 require_relative "../skills"
 require_relative "../../operator/capability_graph"
@@ -964,6 +965,12 @@ module Master
         host = payload["host"].to_s
         sha = payload["dev_sha"].to_s
         lines = ["vm23 state: host=#{host.empty? ? "unknown" : host} checkout=#{sha.empty? ? "unknown" : sha}"]
+        host_inventory = YAML.safe_load(File.read(File.join(inventory.root, "OPENBSD", "data", "operator.yml")))
+        canonical_hosts = host_inventory.dig("host_scope", "canonical_hosts")
+        unless canonical_hosts.is_a?(Array) && !canonical_hosts.empty? && canonical_hosts.all? { |name| name.is_a?(String) && !name.empty? }
+          errors << "canonical host inventory is missing or invalid"
+        end
+        errors << "remote host #{host.empty? ? "unknown" : host.inspect} is not in the canonical host inventory" unless Array(canonical_hosts).include?(host)
         errors << "remote checkout SHA is missing or invalid" unless sha.match?(/\A[0-9a-f]{7,40}\z/i)
 
         kind = inventory.target_kind(target)
