@@ -152,7 +152,8 @@ class TestStudioLoraValidator < Minitest::Test
   def with_subject
     Dir.mktmpdir("studio-lora-validator-") do |root|
       directory = File.join(root, "sample")
-      FileUtils.mkdir_p(directory)
+      FileUtils.mkdir_p(directory, mode: 0o700)
+      File.chmod(0o700, directory)
       yield root, directory
     end
   end
