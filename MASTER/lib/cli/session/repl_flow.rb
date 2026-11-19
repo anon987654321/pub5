@@ -185,7 +185,8 @@ module Master
         end
 
         def voice_indicator_state
-          [@voice_mic_active == true, Master::Voice::Playback.speaking?]
+          responding = @user_active == true || @turn_worker&.alive? || Master::Voice::Playback.speaking?
+          [@voice_mic_active == true, responding == true]
         rescue StandardError
           [@voice_mic_active == true, false]
         end
@@ -199,8 +200,10 @@ module Master
           width = 80 unless width.positive?
           return if width < 5
 
-          column = width - 2
-          rings = "#{mic ? "●" : "○"}#{tts ? "●" : "○"}"
+          column = width - 4
+          input_ring = mic ? "\e[97m●\e[0m" : "○"
+          reply_ring = tts ? "\e[97m●\e[0m" : "○"
+          rings = "#{input_ring} #{reply_ring}""
           # DEC save/restore is the VT100/VT220 contract used by OpenBSD
           # wscons. CSI s/u is an ANSI.SYS extension and is ignored by some
           # real consoles, leaving Reline's next prompt at row 1 over the boot.
@@ -798,11 +801,6 @@ module Master
             break if line.nil?
             next unless begin_interactive_line(line)
 
-            # One receipt names the turn now running: with several lines queued,
-            # the operator otherwise sees only a spinner and cannot tell which
-            # message started. The brief cuts on a word boundary — a mid-word
-            # cap turned "vm23" into "vm2" and read as a different host.
-            terminal_puts("queue0: run: #{queue_question_brief(line)}") if $stdin.tty? && $stdout.tty?
             begin
               handle_repl_line(line)
             ensure
