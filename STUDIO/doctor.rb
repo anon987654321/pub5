@@ -37,9 +37,12 @@ module Studio
         (?:consent\.yml|subject\.env|ledger\.jsonl)\z
       )
     }x.freeze
+    PRIVATE_SUBJECT_MEDIA_PATH = %r{\ASTUDIO/lora/[^/]+/[^/]+\.(?:jpg|jpeg|png|webp|gif|mp4|mov|webm|wav|mp3|zip|safetensors|ckpt|pt|pth)\z}i
     PRIVATE_RENDER_PATH = %r{\ASTUDIO/lora/[^/]+_(?:selfie|film)_}
     PRIVATE_POSTPRO_SOURCE = %r{\ASTUDIO/postpro/IMG_}
     PRIVATE_LEGACY_SUBJECT_PATH = %r{\ASTUDIO/replicate/lora/.*/(?:sources|dataset|weights|out)(?:/|\z)}
+    PRIVATE_MEDIA_EXTENSIONS = %w[jpg jpeg png webp gif mp4 mov webm wav mp3 zip safetensors ckpt pt pth].freeze
+    PRIVATE_MEDIA_PATHSPECS = PRIVATE_MEDIA_EXTENSIONS.map { |extension| ":(glob)STUDIO/lora/**/*.#{extension}" }.freeze
 
     PRIVATE_PATHSPECS = %w[
       :(glob)STUDIO/lora/*/sources/**
@@ -60,7 +63,7 @@ module Studio
       :(glob)STUDIO/replicate/lora/**/dataset/**
       :(glob)STUDIO/replicate/lora/**/weights/**
       :(glob)STUDIO/replicate/lora/**/out/**
-    ].freeze
+    ].concat(PRIVATE_MEDIA_PATHSPECS).freeze
 
     def self.ruby_supported?(version)
       Gem::Version.new(version.to_s) >= MINIMUM_RUBY
@@ -207,6 +210,7 @@ module Studio
 
     def private_path?(path)
       path.match?(PRIVATE_SUBJECT_PATH) ||
+        path.match?(PRIVATE_SUBJECT_MEDIA_PATH) ||
         path.match?(PRIVATE_RENDER_PATH) ||
         path.match?(PRIVATE_POSTPRO_SOURCE) ||
         path.match?(PRIVATE_LEGACY_SUBJECT_PATH)
