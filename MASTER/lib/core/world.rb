@@ -62,14 +62,19 @@ module Master::Core
       @capabilities.allow?(:browser) && !@browser.nil?
     end
 
-    # The model only sees effects this context can actually attempt. The
-    # Constitution and this World still recheck every proposed effect.
+    # A World exposes only effects its capabilities and injected services can
+    # actually perform. Constitution and World both recheck every proposal.
+    def process_runner? = @process_runner&.respond_to?(:capture2e) == true
+
     def verbs
       Master::Core::VERBS.select do |verb|
-        if verb == :git
-          @capabilities.allow?(:read) || @capabilities.allow?(:write)
-        elsif verb == :probe
-          @probe && @capabilities.allow?(:probe)
+        case verb
+        when :git
+          process_runner? && (@capabilities.allow?(:read) || @capabilities.allow?(:write))
+        when :probe
+          process_runner? && @probe && @capabilities.allow?(:probe)
+        when :exec
+          process_runner? && @capabilities.allow?(:execute)
         else
           @capabilities.allow?(CAPABILITIES.fetch(verb))
         end
@@ -77,6 +82,8 @@ module Master::Core
     end
 
     def git_operations
+      return [].freeze unless process_runner?
+
       operations = []
       operations << "diff" if @capabilities.allow?(:read)
       operations << "commit" if @capabilities.allow?(:write)

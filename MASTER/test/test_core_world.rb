@@ -276,9 +276,15 @@ class WorldTest < Minitest::Test
 
   def test_exec_fails_closed_without_a_host_process_runner
     Dir.mktmpdir do |root|
-      world = Master::Core::World.new(root:)
+      world = Master::Core::World.new(
+        root:, capabilities: Master::Core::Capabilities.read_only, probe: ->(_argv) { nil },
+      )
       result = world.perform(E.exec(["true"]))
 
+      refute_includes world.verbs, :exec
+      refute_includes world.verbs, :probe
+      refute_includes world.verbs, :git
+      assert_empty world.git_operations
       refute result.ok?
       assert_match(/process runner unavailable/, result.message)
     end
