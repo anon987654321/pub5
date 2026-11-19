@@ -246,14 +246,10 @@ class TestCliReplExit < Minitest::Test
     refute_match(/Error|from .+\.rb:\d+/, output)
   end
 
-  # Bare entry must show the face projection without taking keyboard ownership:
-  # the idle projection paints above the canonical prompt, /help answers through
-  # the same Reline session and the prompt re-arms beneath the overlay. The
-  # former "/face refreshes in place" contract named a marker no commit ever
-  # printed and a command the folded surface no longer registers; the exit
-  # behaviour this test's tail once gestured at is pinned where it belongs, by
-  # the ^C and ^D tests at the bare prompt above.
-  def test_bare_entry_keeps_the_canonical_prompt_beneath_the_face_overlay
+  # Bare entry must show the working Reline prompt and the fixed mic/TTS
+  # indicators without taking keyboard ownership. The terminal face is not
+  # part of the default CLI; /help still answers through this same prompt.
+  def test_bare_entry_keeps_the_canonical_prompt_beneath_voice_indicators
     require "pty"
     output = +""
     completed = false
@@ -272,7 +268,7 @@ class TestCliReplExit < Minitest::Test
         overlay_end = overlay_start && output.index("\e8", overlay_start)
         assert overlay_start && overlay_end && overlay_start > boot_line_end && overlay_end < prompt_at,
                "the top-right indicator must restore the saved cursor before Reline starts"
-        assert_includes output.b, "\xE2\x96\xBD".b, "bare startup did not render the face projection"
+        assert_includes output, "○ ○", "bare startup did not render both inactive mic/TTS indicators"
         refute_match(/\e\[\?1049h/, output, "bare startup must not take over the alternate screen")
 
         # The overlay repaints the prompt every frame, so a prompt count is not
