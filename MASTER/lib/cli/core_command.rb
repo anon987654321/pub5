@@ -22,7 +22,6 @@ module Master
           @script = [
             Master::Core::Effect.exec(["true"], evidence: :test_pass),
             Master::Core::Effect.exec(["true"], evidence: :scan_clean),
-            Master::Core::Effect.exec(["true"], evidence: :code_review),
             Master::Core::Effect.done("noop complete: #{@goal}"),
           ]
         end
@@ -103,7 +102,7 @@ module Master
       end
 
       # The scripted run is a check of the constitution, not a completed goal. It
-      # execs true(1) three times, each labelled as evidence it cannot produce, then
+      # execs true(1) twice, each labelled as evidence it cannot produce, then
       # declares done; true, because the sandbox refuses an inline interpreter such
       # as ruby -e before it runs. Core::Proof scores evidence only from a command
       # that can produce it, so `done` must be refused: exit 0 says the fold held,

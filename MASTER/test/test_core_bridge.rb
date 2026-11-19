@@ -33,7 +33,6 @@ class CoreBridgeTest < Minitest::Test
       *extra,
       Master::Core::Effect.exec(%w[rake test], evidence: :test_pass),
       Master::Core::Effect.exec(%w[bin/check], evidence: :scan_clean),
-      Master::Core::Effect.exec(%w[bin/review], evidence: :code_review),
       Master::Core::Effect.done(summary),
     ]
   end
@@ -42,7 +41,7 @@ class CoreBridgeTest < Minitest::Test
     File.write(File.join(root, "Rakefile"), "task(:test) { }\n")
     bin = File.join(root, "bin")
     FileUtils.mkdir_p(bin)
-    %w[check review].each do |name|
+    %w[check].each do |name|
       path = File.join(bin, name)
       File.write(path, "#!/bin/sh\nexit 0\n")
       File.chmod(0o755, path)

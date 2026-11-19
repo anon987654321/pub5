@@ -117,7 +117,6 @@ class CoreSmokeTest < Minitest::Test
       Master::Core::Effect.new(verb: :write, args: { path: "leak.rb", content: "K = 'sk-#{'A' * 24}'\n" }),
       Master::Core::Effect.exec(%w[rake test], evidence: :test_pass),
       Master::Core::Effect.exec(%w[bin/check], evidence: :scan_clean),
-      Master::Core::Effect.exec(%w[bin/review], evidence: :code_review),
       Master::Core::Effect.git(:stage, paths: ["ok.rb"]),
       # Paths, because git_commit_scope blocks an unscoped commit: `git commit -m`
       # takes the whole index, which in this repo is shared with other sessions.
@@ -168,9 +167,8 @@ class CoreSmokeTest < Minitest::Test
       raise "smoke fixture: A should be 1" unless eval(File.read("ok.rb")) == 1
     RUBY
     Dir.mkdir(File.join(root, "bin"))
-    # bin/check produces scan_clean, bin/review produces code_review -- the kinds
-    # the exec effects claim, and what PRODUCERS binds those names to.
-    %w[check review].each do |name|
+    # bin/check is the clean-scan producer used by this isolated fixture.
+    %w[check].each do |name|
       path = File.join(root, "bin", name)
       File.write(path, "#!/bin/sh\nexit 0\n")
       File.chmod(0o755, path)

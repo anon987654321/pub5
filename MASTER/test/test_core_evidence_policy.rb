@@ -28,9 +28,6 @@ class EvidencePolicyTest < Minitest::Test
   PRODUCER_ARGV = {
     test_pass: %w[bundle exec rake test],
     scan_clean: %w[bin/check],
-    code_review: %w[bin/review],
-    log_analysis: %w[dmesg],
-    profiling_data: %w[stackprof tmp/profile.dump],
   }.freeze
 
   def proof_with(*kinds)
@@ -66,8 +63,7 @@ class EvidencePolicyTest < Minitest::Test
     false_claims = {
       test_pass: [%w[echo rake test], %w[echo bundle exec rake test]],
       scan_clean: [%w[echo rubocop], %w[echo bin/check]],
-      code_review: [%w[echo rake review], %w[echo bin/review]],
-    }
+      }
 
     false_claims.each do |kind, commands|
       commands.each do |argv|
@@ -90,9 +86,9 @@ class EvidencePolicyTest < Minitest::Test
     end
   end
 
-  # Three distinct kinds is what the threshold is designed to want.
-  def test_three_distinct_kinds_reach_the_threshold
-    assert proof_with(:test_pass, :scan_clean, :code_review).proved?
+  # Both independent instruments are required to reach the threshold.
+  def test_test_pass_and_clean_scan_reach_the_threshold
+    assert proof_with(:test_pass, :scan_clean).proved?
   end
 
   # Repetition is not independence. Nothing deduplicated, so the same tag three

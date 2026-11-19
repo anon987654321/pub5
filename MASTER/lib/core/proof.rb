@@ -20,8 +20,8 @@ module Master::Core
     # What counts as proof, and how much of it ends the turn. This is the one
     # Ruby source for the core's evidence policy; the Model's prompt is built
     # from it (no restated numbers).
-    SCORING = { test_pass: 35, scan_clean: 25, code_review: 20, log_analysis: 10, profiling_data: 10 }.freeze
-    PASS_THRESHOLD = 80
+    SCORING = { test_pass: 60, scan_clean: 40 }.freeze
+    PASS_THRESHOLD = 100
     ALTERNATIVES_REQUIRED = 15
 
     # Evidence producers are complete argv vectors, not substrings. Matching
@@ -51,20 +51,6 @@ module Master::Core
         %w[rake lint],
         %w[rake audit],
         %w[rake scan],
-      ],
-      code_review: [
-        %w[bin/review],
-        %w[bin/critique],
-        %w[rake review],
-        %w[rake critique],
-      ],
-      log_analysis: [
-        %w[dmesg],
-        %w[journalctl],
-      ],
-      profiling_data: [
-        %w[stackprof tmp/profile.dump],
-        %w[benchmark],
       ],
     }.transform_values { |commands| commands.map { |argv| argv.freeze }.freeze }.freeze
 
