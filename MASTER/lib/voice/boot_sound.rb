@@ -27,7 +27,7 @@ module Master
       def enabled?(settings = config)
         return false if ENV["MASTER_BOOT_SOUND"] == "0" || ENV["MASTER_SKIP_TTS"] == "1" || ENV["CI"]
 
-        settings["enabled"] == true && $stdout.tty?
+        settings.fetch("cli_enabled", settings["enabled"]) == true && $stdout.tty?
       end
 
       # Plays the terminal's render in the background. True when a player was started.
@@ -59,7 +59,8 @@ module Master
       # Every setting that shapes the sound, the surface and the engine. Only the switch, the player and its
       # volume stay out, because they change how the file is played and not what is in it.
       def cache_key(settings, surface: :cli)
-        material = { engine: ENGINE, surface: surface.to_s, settings: settings.except("enabled", "player", "volume") }
+        material = { engine: ENGINE, surface: surface.to_s,
+                     settings: settings.except("enabled", "cli_enabled", "player", "volume") }
         Digest::SHA256.hexdigest(JSON.generate(material))[0, 12]
       end
 
