@@ -322,6 +322,24 @@ STUDIO/lora/*/dataset/
 STUDIO/lora/*/dataset_*/
 STUDIO/lora/*/ledger.jsonl
 
+# A subject's loose media is private too; do not require it to be nested in
+# sources/ before the ignore rule applies.
+STUDIO/lora/*/*.jpg
+STUDIO/lora/*/*.jpeg
+STUDIO/lora/*/*.png
+STUDIO/lora/*/*.webp
+STUDIO/lora/*/*.gif
+STUDIO/lora/*/*.mp4
+STUDIO/lora/*/*.mov
+STUDIO/lora/*/*.webm
+STUDIO/lora/*/*.wav
+STUDIO/lora/*/*.mp3
+STUDIO/lora/*/*.zip
+STUDIO/lora/*/*.safetensors
+STUDIO/lora/*/*.ckpt
+STUDIO/lora/*/*.pt
+STUDIO/lora/*/*.pth
+
 # Subject datasets, source captures, retouched media, outputs and weights live
 # under STUDIO/lora/<subject>/. The operator decides what to publish; the build
 # artefacts above (caches, zips, run logs) stay ignored.
