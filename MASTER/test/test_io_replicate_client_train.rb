@@ -57,7 +57,10 @@ class TestReplicateClientRetry < Minitest::Test
 
   def with_http_responses(responses, requests)
     http = Object.new
-    http.define_singleton_method(:read_timeout=) { |value| @read_timeout = value }
+    %i[open_timeout read_timeout write_timeout].each do |name|
+      http.define_singleton_method("#{name}=") { |value| instance_variable_set("@#{name}", value) }
+    end
+    http.define_singleton_method(:start) { |&block| block.call(self) }
     http.define_singleton_method(:request) do |request, &block|
       requests << request
       if request.body_stream
@@ -77,18 +80,30 @@ class TestReplicateClientRetry < Minitest::Test
                  end
       block ? (block.call(response); response) : response
     end
-    starter = lambda { |_host, _port, **_options, &block| block.call(http) }
-
-    Net::HTTP.stub(:start, starter) { yield }
+    with_pinned_http(http) { yield }
   end
 
   def with_download_response(response)
     http = Object.new
-    http.define_singleton_method(:read_timeout=) { |value| @read_timeout = value }
+    %i[open_timeout read_timeout write_timeout].each do |name|
+      http.define_singleton_method("#{name}=") { |value| instance_variable_set("@#{name}", value) }
+    end
+    http.define_singleton_method(:start) { |&block| block.call(self) }
     http.define_singleton_method(:request_get) { |_path, &block| block.call(response) }
-    starter = lambda { |_host, _port, **_options, &block| block.call(http) }
 
-    Net::HTTP.stub(:start, starter) { yield }
+    with_pinned_http(http) { yield }
+  end
+
+  def with_pinned_http(http)
+    guard = Master::Io::SsrfGuard
+    resolver = ->(_uri, address, timeout:) do
+      assert_equal "93.184.216.34", address
+      assert_operator timeout, :>, 0
+      http
+    end
+    guard.stub(:pinned_address, "93.184.216.34") do
+      guard.stub(:http_for, resolver) { yield }
+    end
   end
 
   def test_paid_post_is_not_retried_after_an_ambiguous_server_error
