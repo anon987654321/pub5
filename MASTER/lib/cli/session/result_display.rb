@@ -95,13 +95,9 @@ module Master
         end
 
         if streamed
-          # The stream already carried every chunk to the operator as it
-          # arrived (handle_stream_text prints each one at the cursor). All
-          # the display owes the stream here is the row's terminating newline:
-          # printing the accumulated buffer again appended a second copy to
-          # the first ("Grok 4.7, from xAI.Grok 4.7, from xAI.", Johann's
-          # log 2026-11-08).
-          terminal_puts unless text.to_s.empty? || text.end_with?("\n")
+          # The stream is already visible. Reconcile its complete text with
+          # the settled result: close it, append a confirmed missing suffix,
+          # or print a genuinely different final answer on its own row.
           text = print_unstreamed_reply(ok, streamed_text: text)
         elsif command
           # Pipeline commands already streamed their live dmesg units. Other
@@ -329,16 +325,35 @@ module Master
         Master::Trace::Dmesg.status("parallel0", lines.first(3).join("; "))
       end
 
-      # A streamed turn whose answer came from a later step (a tool loop's final reply, or the next lane after
-      # one failed mid-stream) printed only what led up to it; the answer itself is printed here. The stream
-      # carries the raw reply while the result carries its rendered form, so the duplicate check reads the raw
-      # output: rendered text wears ANSI escapes the stream never showed, and one escaped prefix read as "not
-      # yet printed" — the reply then appeared twice (Johann's log 2026-11-08).
+      # A fallback lane or tool loop can settle a reply after its stream stops.
+      # Compare complete text, not an arbitrary prefix: a 120-character match
+      # can hide an unseen tail, while a short streamed prefix can be printed
+      # twice with the full answer. Append only when the settled answer begins
+      # with every character already shown; otherwise keep the final answer on
+      # its own row rather than splice two different replies together.
       def print_unstreamed_reply(ok, streamed_text:)
+        streamed = streamed_text.to_s
         raw = raw_success_text(ok).to_s.strip
-        return streamed_text if raw.empty? || streamed_text.include?(raw[0, 120])
 
-        raw = conversation_output(raw)
+        if raw.empty?
+          terminal_puts unless streamed.empty? || streamed.end_with?("\n")
+          return streamed
+        end
+
+        raw = conversation_output(raw).to_s
+        if streamed.include?(raw)
+          terminal_puts unless streamed.empty? || streamed.end_with?("\n")
+          return streamed
+        end
+
+        if !streamed.empty? && raw.start_with?(streamed)
+          remainder = raw.delete_prefix(streamed)
+          terminal_print(remainder, guard: false) unless remainder.empty?
+          terminal_puts unless raw.end_with?("\n")
+          return raw
+        end
+
+        terminal_puts unless streamed.empty? || streamed.end_with?("\n")
         display_prepared_terminal_output(format_irc_reply(measured_reply(raw)))
         raw
       end
