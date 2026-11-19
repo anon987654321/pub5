@@ -318,9 +318,24 @@ module Operator
       Result.new(ok: bad.empty?, detail: bad.first(5).join("\n"))
     end
 
+    MAX_FAILURE_DETAIL_BYTES = 32_768
+
     def shell(runner, argv, chdir)
       out, ok = runner.call(argv, chdir)
-      Result.new(ok:, detail: ok ? "" : out.to_s.lines.last(12).join)
+      Result.new(ok:, detail: ok ? "" : bounded_failure_detail(out))
+    end
+
+    # Keep the failure heading and its final context together. Taking only the
+    # last lines hid Minitest's failing test name when the rehearsal continued
+    # with later green checks, leaving operators with "Actual: 0" and no cause.
+    def bounded_failure_detail(output)
+      text = output.to_s
+      return text if text.bytesize <= MAX_FAILURE_DETAIL_BYTES
+
+      half = (MAX_FAILURE_DETAIL_BYTES - 80) / 2
+      head = text.byteslice(0, half).to_s.scrub
+      tail = text.byteslice(-half, half).to_s.scrub
+      "#{head}\\n... failure output truncated; omitted #{text.bytesize - head.bytesize - tail.bytesize} bytes ...\\n#{tail}"
     end
 
     def capture(argv, chdir, timeout: TIMEOUT)
