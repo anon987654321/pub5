@@ -958,7 +958,14 @@ class TestCommandRegistryDispatch < Minitest::Test
 
     refute result[:ok]
     assert_includes result[:summary], "pending=1"
+    assert_includes result[:summary], "receipt 20261119T010203Z-all-1234: target=all status=running stage=brgen"
+    assert_includes result[:summary], "owner=present"
+    assert_includes result[:summary], "next=observe_current_run"
     assert_includes result[:summary], "deploy recovery receipts are pending or unavailable"
+    payload["deploy_recovery"]["pending"][0]["pid_state"] = "gone"
+    stale = Registry.send(:deploy_reconciliation_summary, payload, target: "all", inventory:)
+    assert_includes stale[:summary], "next=review_recover_plan"
+    assert_includes stale[:summary], "zsh OPENBSD/bin/vps-deploy recover --plan"
   end
 
   def test_full_stack_reconciliation_requires_the_master_web_stamp_too

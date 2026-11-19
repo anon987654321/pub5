@@ -988,7 +988,11 @@ module Master
           errors << "#{app.name}: deployed SHA does not match the checkout" unless row["deployed_sha"].to_s.casecmp?(sha) && row["drift"] == false
           stamp = row["last_deploy"]
           errors << "#{app.name}: missing or non-green deploy stamp" unless stamp.is_a?(Hash) && stamp["status"] == "ok" && stamp["sha"].to_s.casecmp?(sha)
-          errors << "#{app.name}: deploy still reports in progress" unless row["deploy_in_progress"].nil?
+          progress = row["deploy_in_progress"]
+          if progress
+            lines << "#{app.name}: deploy-progress state=#{progress["state"] || "unknown"} step=#{progress["step"] || "unknown"} pid=#{progress["pid"] || "unknown"}"
+            errors << "#{app.name}: deploy still reports in progress"
+          end
         end
 
         if kind == :all
@@ -998,12 +1002,36 @@ module Master
           errors << "MASTER web port is not listening" unless master["port_state"] == "listening"
           stamp = master["last_deploy"]
           errors << "MASTER web: missing or non-green deploy stamp" unless stamp.is_a?(Hash) && stamp["status"] == "ok" && stamp["sha"].to_s.casecmp?(sha)
-          errors << "MASTER web: deploy still reports in progress" unless master["deploy_in_progress"].nil?
+          progress = master["deploy_in_progress"]
+          if progress
+            lines << "master web: deploy-progress state=#{progress["state"] || "unknown"} step=#{progress["step"] || "unknown"} pid=#{progress["pid"] || "unknown"}"
+            errors << "MASTER web: deploy still reports in progress"
+          end
         end
 
         recovery = payload["deploy_recovery"].is_a?(Hash) ? payload["deploy_recovery"] : {}
-        lines << "recovery: #{recovery["state"] || "unknown"} pending=#{recovery["count"] || "unknown"}"
-        errors << "deploy recovery receipts are pending or unavailable" unless recovery["state"] == "none" && recovery["count"] == 0
+        recovery_state = recovery["state"] || "unknown"
+        recovery_count = recovery["count"] || "unknown"
+        lines << "recovery: #{recovery_state} pending=#{recovery_count}"
+        case recovery_state
+        when "pending", "truncated"
+          Array(recovery["pending"]).first(8).each do |run|
+            next unless run.is_a?(Hash)
+
+            owner = run["pid_state"] || "unknown"
+            next_action = owner == "gone" ? "review_recover_plan" : "observe_current_run"
+            lines << "receipt #{run["run_id"]}: target=#{run["target"]} status=#{run["status"]} stage=#{run["stage"]} " \
+                     "owner=#{owner} snapshot=#{run["snapshot"]} sha=#{run["pinned_sha"] || "unknown"} next=#{next_action}"
+            lines << "  plan only: zsh OPENBSD/bin/vps-deploy recover --plan" if owner == "gone"
+          end
+          errors << "deploy recovery receipts are pending or unavailable"
+        when "corrupt", "unavailable"
+          detail = recovery["error"].to_s
+          lines << "recovery detail: #{detail[0, 220]}" unless detail.empty?
+          errors << "deploy recovery receipts are pending or unavailable"
+        else
+          errors << "deploy recovery receipts are pending or unavailable" unless recovery_state == "none" && recovery_count == 0
+        end
         lines << (errors.empty? ? "verification: selected surfaces match #{sha}; no pending deploy receipts" :
           "verification: NOT GREEN - #{errors.join("; ")}")
         { ok: errors.empty?, summary: lines.join("\n") }
