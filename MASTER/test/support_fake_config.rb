@@ -2,8 +2,8 @@
 
 module Master
   module TestSupport
-    # The config object ModelRouter and Review::Agent read, with nothing on it
-    # but the two fields they ask for. Four routing tests each carried their own
+    # The config object ModelRouter and Review::Agent read, carrying the
+    # fields they ask for. Four routing tests each carried their own
     # copy — two byte-identical, two variants that differed only in whether they
     # exposed task_type and whether model had a default — so a router that grew
     # a third accessor would have needed the same edit four times.
@@ -22,8 +22,14 @@ module Master
         @task_type = task_type
       end
 
-      # Review::Agent reads config["model"] as it reads the real Config.
+      # Review::Agent reads and writes config["model"] as it does the real Config.
       def [](key) = { "model" => model, "task_type" => task_type }[key.to_s]
+
+      def []=(key, value)
+        key.to_s == "model" ? @model = value : @task_type = value
+      end
+
+      def reasoning_mode = ""
     end
 
     # Routing tests grade the policy that builds a chain: which lanes, in which

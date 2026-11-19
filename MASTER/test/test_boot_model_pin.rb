@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "test_helper"
+require_relative "support_fake_config"
 
 # A model the operator saved leads every chain, including the ones a one-shot
 # instruction or a /fix pass builds. Only Session#run used to apply the pin, so
@@ -32,7 +33,7 @@ class TestBootModelPin < Minitest::Test
     include Master::Review::Agent::ModelSelector
 
     def initialize(saved:, router:)
-      @config = { "model" => saved }
+      @config = Master::TestSupport::FakeConfig.new(model: saved)
       @model_router = router
       @bus = nil
     end
@@ -47,48 +48,14 @@ class TestBootModelPin < Minitest::Test
     public :routed_models, :model_for
   end
 
+  LANE_RANK = { local: 4, paid_tail: 1, free: 2 }.freeze
+
   def test_homeostat_cheap_bias_does_not_break_the_fallback_ladder
-    router = Master::CLI::Routing::ModelRouter.allocate
-    router.instance_variable_set(:@rules, { "openai_compatible" => {} })
-    chain = [
-      "grok-cli:sonnet",
-      "openrouter/free-model:free",
-      "web-chat:grok",
-      "ollama:gemma3:4b",
-    ]
-    router.define_singleton_method(:fallback_chain) { |task_type:| chain }
-    router.define_singleton_method(:tier_for_model) do |model|
-      %w[openrouter/free-model:free ollama:gemma3:4b].include?(model) ? "cheap" : "strong"
-    end
-    router.define_singleton_method(:priority_fallback_order) do |models, task_type: :exploration|
-      models.each_with_index.sort_by do |model, index|
-        rank = if model.start_with?("web-chat:")
-                 3
-               else
-                 case Master::Io::LaneSelection.kind(model)
-                 when :local then 4
-                 when :paid_tail then 1
-                 when :free then 2
-                 else 0
-                 end
-               end
-        [rank, index]
-      end.map(&:first)
-    end
+    chain = ["grok-cli:sonnet", "openrouter/free-model:free", "web-chat:grok", "ollama:gemma3:4b"]
+    router = tiered_router(chain)
     homeostat = Struct.new(:model_tier_bias).new(:cheap)
-    probe = Class.new do
-      include Master::Review::Agent::ModelSelector
 
-      def initialize(router:, homeostat:)
-        @model_router = router
-        @homeostat = homeostat
-        @config = { "model" => "grok-cli:sonnet" }
-      end
-
-      public :routed_chain
-    end.new(router:, homeostat:)
-
-    assert_equal chain, probe.routed_chain(nil, task_type: :exploration)
+    assert_equal chain, selector_probe(router:, homeostat:).routed_chain(nil, task_type: :exploration)
   end
 
   def test_a_saved_model_leads_the_chain_without_the_session
@@ -221,5 +188,37 @@ class TestBootModelPin < Minitest::Test
     end
 
     assert_equal %w[free/final local/secondary paid/primary configured/last-resort], chain
+  end
+
+  private
+
+  def tiered_router(chain)
+    router = Master::CLI::Routing::ModelRouter.allocate
+    router.instance_variable_set(:@rules, { "openai_compatible" => {} })
+    cheap = %w[openrouter/free-model:free ollama:gemma3:4b]
+    rank = ->(model) { model.start_with?("web-chat:") ? 3 : LANE_RANK.fetch(Master::Io::LaneSelection.kind(model), 0) }
+    router.define_singleton_method(:fallback_chain) { |task_type:| chain }
+    router.define_singleton_method(:tier_for_model) { |model| cheap.include?(model) ? "cheap" : "strong" }
+    router.define_singleton_method(:priority_fallback_order) do |models, task_type: :exploration|
+      models.each_with_index.sort_by { |model, index| [rank.call(model), index] }.map(&:first)
+    end
+
+    router
+  end
+
+  def selector_probe(router:, homeostat:)
+    probe_class = Class.new do
+      include Master::Review::Agent::ModelSelector
+
+      def initialize(router:, homeostat:)
+        @model_router = router
+        @homeostat = homeostat
+        @config = Master::TestSupport::FakeConfig.new(model: "grok-cli:sonnet")
+      end
+
+      public :routed_chain
+    end
+
+    probe_class.new(router:, homeostat:)
   end
 end
