@@ -244,15 +244,16 @@ module Shared
       def post_catalog(path, payload)
         token = access_token
         uri = URI("#{API_BASE}#{path}")
-        req = Net::HTTP::Post.new(uri)
-        req["Authorization"] = auth_header(token)
-        req["Content-Type"] = "application/json"
-        req["x-marketplace"] = marketplace_host
-        req.body = JSON.generate(payload)
-
-        address = Shared::OutboundHttp.public_address!(uri.hostname)
-        http = Shared::OutboundHttp.pinned_connection(uri, address, open_timeout: 10, read_timeout: 25)
-        res = http.start { |conn| conn.request(req) }
+        res = Shared::OutboundHttp.request(
+          uri, method: :post,
+          headers: {
+            "Authorization" => auth_header(token),
+            "Content-Type" => "application/json",
+            "x-marketplace" => marketplace_host
+          },
+          body: JSON.generate(payload), max_body: 1_000_000,
+          open_timeout: 10, read_timeout: 25, write_timeout: 10
+        )
         body = JSON.parse(res.body)
         unless res.is_a?(Net::HTTPSuccess)
           msg = body.dig("message") || body.dig("errors", 0, "message") || res.code
@@ -279,18 +280,16 @@ module Shared
           raise "Unknown AMAZON_CREATORS_VERSION=#{version} (expected #{TOKEN_ENDPOINTS.keys.join(', ')})"
         end
         uri = URI(endpoint)
-        req = Net::HTTP::Post.new(uri)
-        req["Content-Type"] = "application/json"
-        req.body = JSON.generate(
-          grant_type: "client_credentials",
-          client_id:,
-          client_secret:,
-          scope: "creatorsapi::default",
+        res = Shared::OutboundHttp.request(
+          uri, method: :post, headers: { "Content-Type" => "application/json" },
+          body: JSON.generate(
+            grant_type: "client_credentials",
+            client_id:,
+            client_secret:,
+            scope: "creatorsapi::default",
+          ),
+          max_body: 1_000_000, open_timeout: 8, read_timeout: 15, write_timeout: 8
         )
-        address = Shared::OutboundHttp.public_address!(uri.hostname)
-        raise SocketError, "unsafe or unresolvable remote host" unless address
-        http = Shared::OutboundHttp.pinned_connection(uri, address, open_timeout: 8, read_timeout: 15)
-        res = http.start { |conn| conn.request(req) }
         data = JSON.parse(res.body)
         token = data["access_token"]
         raise "Creators API token error: #{data['error'] || data['error_description'] || res.code}" if token.blank?
