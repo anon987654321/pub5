@@ -1,10 +1,10 @@
 # Shared Rails engine
 
-**One engine carries the grammar every surface speaks, so that brgen, amber,
-bsdports and the MASTER face feel like one family in four dialects, and so that a
-rule written once holds on every screen.** It is the `pub5-shared` gem: layout
-chrome, accessibility defaults, social primitives, a service worker and a
-vendored set of Stimulus components. The apps mount it by local path.
+**One engine gives Brgen, Amber, BSDPorts and MASTER's face a shared
+interface grammar.** Each product keeps its own visual dialect; shared rules
+behave consistently across screens. The `pub5-shared` gem supplies layout
+chrome, accessibility defaults, social primitives, a service worker and
+vendored Stimulus components. Apps load it by local path.
 
 The design values do not start here. They are declared in `MASTER/data/tokens.yml`,
 and the `design_tokens.yml` beside this README is a file generated from it by
@@ -14,14 +14,17 @@ source modules in `MASTER/web/styles/face/` by
 `MASTER/tools/rails/build_face_css.rb`; edit those modules rather than the public
 bundle. Its `:root` block is still generated from the canonical tokens.
 
-Every HTML document in every surface shares one chrome contract. The viewport
-covers the safe area, the first focusable element is a skip link to the main
-content, the `main` element has an id and its role, and primary controls are at
-least as tall as the tap minimum. Dialects restyle colour, type and radius. They do
-not invent a second z-scale, a second skip link or a second tap floor. The
-interface is flat: no shadows, blurs or hairline rules, and separation is space.
-The one exception left is the outline of a form field, because an input with no
-outline gives no target.
+Every HTML document inherits one chrome contract:
+
+- The viewport respects the safe area.
+- The first focusable element is a skip link to the main content.
+- The `main` element has an id and its required role.
+- Primary controls meet the minimum tap target height.
+
+A product may restyle colour, type and radius. It may not invent a second
+z-scale, skip link or tap-size standard. The interface is flat: no shadows,
+blur or hairline rules. Space separates components. Form fields retain an
+outline so users can identify their input targets.
 
 The dialects are deliberate. brgen and its verticals wear a grayscale called
 brgen_old, with a per-vertical accent. Amber wears warm paper and its own editorial
