@@ -49,7 +49,9 @@ openrouter:
 
 deepseek:
   env: [DEEPSEEK_API_KEY]
-  model_pattern: '\Adeepseek'
+  # Bare vendor IDs only: an owner/name id like deepseek/deepseek-chat routes
+  # through OpenRouter (its key, its catalogue), never through this direct key.
+  model_pattern: '\Adeepseek[^/:]*\z'
   ruby_llm_key: deepseek_api_key
   min_key_length: 20
   strengths: [coding, cheap]

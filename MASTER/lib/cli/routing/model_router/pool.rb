@@ -359,8 +359,18 @@ module Master
           # any id the registry does not know go to OpenRouter, as the sender
           # sends them.
           def api_problem(id, wait:)
+            # A gateway lane answers to its own boundary, the configured URL,
+            # never to a provider key the registry fallback happened to borrow.
+            if id.start_with?("gateway:")
+              return if ENV["MASTER_LLM_GATEWAY_URL"].to_s.strip != ""
+
+              return "set MASTER_LLM_GATEWAY_URL in #{KEY_FILES}"
+            end
             provider = api_provider(id)
             envs = Array((@provider_rows ||= Master.provider_config).dig(provider, "env"))
+            # A provider the repo never declared carries no credential to set;
+            # name the gap instead of printing an empty env list.
+            return "no declared credential for the #{provider} lane (#{id})" if envs.empty?
             return "set #{envs.join(' or ')} in #{KEY_FILES}" unless envs.any? { |env| Master.api_key_present?(env) }
             return unless provider == "openrouter" && !id.end_with?(":free")
             return unless probe_value("openrouter_credits", wait:) == false
@@ -371,7 +381,20 @@ module Master
           def api_provider(id)
             return "openrouter" if id.include?("/")
 
-            (@api_providers ||= {})[id] ||= registry_provider(id)
+            (@api_providers ||= {})[id] ||= declared_provider(id) || registry_provider(id)
+          end
+
+          # The repo's own providers.yml pattern table answers first: ids the
+          # runtime sends outside RubyLLM (glm- via z.ai's openai_compatible
+          # lane) resolve differently in the gem registry depending on its
+          # version, and an id the gem does not know must not borrow a key.
+          def declared_provider(id)
+            Master.provider_config(root: Master::ROOT).each do |name, row|
+              next unless row.is_a?(Hash) && row["model_pattern"]
+
+              return name.to_s if Regexp.new(row["model_pattern"]).match?(id)
+            end
+            nil
           end
 
           # The gem's registry is what the sender resolves an id against, so the

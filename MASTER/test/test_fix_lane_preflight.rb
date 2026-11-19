@@ -197,10 +197,10 @@ class TestFixLanePreflight < Minitest::Test
   end
 
   def test_a_refused_catalogue_lane_is_named_with_its_reason
-    Master::Io::ModelSkipCache.skip!(OPUS, reason: "session limit, resets in 2h", category: :rate_limit)
-    _result, lines = check({}, live: [OPUS])
+    Master::Io::ModelSkipCache.skip!(GROK, reason: "session limit, resets in 2h", category: :rate_limit)
+    _result, lines = check({}, live: [GROK])
 
-    assert(lines.any? { |line| line.start_with?("skipped #{OPUS}: parked") && line.include?("resets in 2h") })
+    assert(lines.any? { |line| line.start_with?("skipped #{GROK}: parked") && line.include?("resets in 2h") })
   ensure
     Master::Io::ModelSkipCache.clear!
   end
