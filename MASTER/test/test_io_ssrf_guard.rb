@@ -169,22 +169,26 @@ class SsrfGuardTest < Minitest::Test
     end
   end
 
-  def test_web_fetch_connects_through_the_pinned_address
-    pinned = []
-    fake = Object.new
-    def fake.read_timeout=(_); end
-    def fake.open_timeout=(_); end
-    def fake.start = Struct.new(:code, :body).new("200", "<p>hello</p>")
+  def test_web_fetch_uses_the_shared_pinned_request_boundary
+    calls = []
+    response = Struct.new(:code, :body).new("200", "<p>hello</p>")
     governor = Object.new
     def governor.permit?(*) = Master::Result.ok(true)
     fetch = Master::Io::WebFetch.new(governor:)
-
-    Guard.stub(:resolve_addresses, ["93.184.216.34"]) do
-      Guard.stub(:http_for, ->(_uri, address) { pinned << address; fake }) do
-        assert fetch.send(:fetch_one, "https://example.com/").ok?
-      end
+    handler = lambda do |uri, request, **options|
+      calls << [uri, request, options]
+      response
     end
-    assert_equal ["93.184.216.34"], pinned
+
+    Guard.stub(:request, handler) do
+      assert fetch.send(:fetch_one, "https://example.com/").ok?
+    end
+
+    uri, request, options = calls.fetch(0)
+    assert_equal URI("https://example.com/"), uri
+    assert_instance_of Net::HTTP::Get, request
+    assert_equal "MASTER/1 (web_fetch)", request["User-Agent"]
+    assert_equal fetch.class::MAX_FULL_BYTES, options.fetch(:max_bytes)
   end
   class FakeOutboundResponse
     attr_reader :code, :body, :chunks_read
@@ -270,7 +274,7 @@ class SsrfGuardTest < Minitest::Test
     http = FakeOutboundHttp.new(response)
 
     Guard.stub(:pinned_address, "93.184.216.34") do
-      Guard.stub(:http_for, http) do
+      Guard.stub(:http_for, ->(*_args, **_options) { http }) do
         error = assert_raises(Guard::ResponseTooLarge) do
           Guard.request(uri, Net::HTTP::Get.new(uri), max_bytes: 100)
         end
