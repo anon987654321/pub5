@@ -93,26 +93,87 @@ NOT_RUN or INCONCLUSIVE, never PASS; a local edit is not a delivered change.
 returns the live authority, task-contract schema, Law coverage and a process capability
 snapshot. `not_probed` means not tested; permission observations are not successful writes.
 
-## Research and editorial quality
+## Documentation and editorial standard
 
-Separate engineering verification from editorial review. A passing suite does not
-prove factual accuracy, fairness, accessibility or clarity; polished prose does not
-prove software works. Define terms, institutions, populations and time periods.
-Source material factual claims and retain publication date, population, method and
-limitations. Distinguish verified facts, attributed claims, proposals, inferences
-and open questions. Use descriptive headings and links, plain language and
-accessible structure. Consider relevant trade-offs, uncertainty, counter-evidence
-and affected groups; do not present advocacy as neutral research or false balance
-as fairness. Report an unreviewed editorial dimension as INCONCLUSIVE.
+Every maintained Markdown file is part of the product interface. Treat it as
+maintained software: give it one audience, one purpose and one canonical owner.
+Lead with the information the reader came for. Put prerequisites and hazards
+before commands that depend on them. A document must explain the real system,
+not the system its author intended to build.
 
-Typography follows the surface (operator, 2026-11-06). Output that reaches a
-terminal (the CLI, the shell and REPL prompt, the terminal face, dmesg and
-log lines) is ASCII: a hyphen, three dots, straight quotes. Web copy, locales,
-views and documents use proper marks: the ellipsis …, an en dash in a range
-(10–16), curly quotes, and a spaced en dash for an aside (word – aside –
-word). Norwegian copy quotes «slik», with ‘enkle’ inside; English uses “double”
-curly quotes. EN_DASH_RANGE, TYPOGRAPHIC_EXCELLENCE, PARENTHETICAL_DASH and
-QUOTES_BY_LOCALE hold this.
+Use the following standards as one editorial method, not as competing styles:
+
+- **Strunk and White — sentence craft.** Prefer active verbs, positive and
+  definite statements, concrete nouns, parallel constructions and one topic
+  per paragraph. Remove empty introductions, repeated claims, vague qualifiers
+  and words that do no work. Revise for meaning before polishing sound. Keep
+  passive voice when the actor is unknown, irrelevant or deliberately unnamed;
+  keep uncertainty where the evidence is uncertain.
+- **Bringhurst — page and type.** Give the reader a visible hierarchy, a calm
+  rhythm and enough white space to distinguish rather than decorate. Use
+  headings in a logical sequence; choose a small, consistent scale; keep body
+  measure comfortable (roughly 45–75 characters per line in the rendered
+  reading surface, about 66 as a useful target); use one space between
+  sentences. Set lists and tables only when their structure helps comparison
+  or scanning. Do not use ornament, emphasis or typographic novelty to compete
+  with the content.
+- **OpenBSD — operational documentation.** State what a command or component
+  does, what it needs, where it runs, what it changes, how to verify it, and
+  how to recover. Give complete, copyable examples that have been checked
+  against the target release and environment. Update documentation with the
+  code or configuration it describes. Prefer the authoritative manual and
+  semantic structure over folklore or prose that merely sounds plausible.
+  OpenBSD man pages use `mdoc(7)`; Markdown is not mdoc, but it can and must
+  preserve the same discipline of precision and maintainability
+  ([mdoc(7)](https://man.openbsd.org/mdoc.7),
+  [style(9)](https://man.openbsd.org/style.9)).
+- **Creative copywriting — reader and response.** Know who is reading and
+  what decision or action the copy serves. Make the headline specific; lead
+  with a credible benefit; support claims with evidence; make the next action
+  unmistakable. Use memorable language only when it sharpens the idea. Never
+  invent a benefit, inflate a capability, manufacture urgency or hide a cost.
+  Product voice may differ by brand; truth and clarity do not.
+
+Choose the form that fits the document. A README orients and routes; a runbook
+guides a safe operation; a specification defines boundaries and acceptance; a
+research note separates evidence, attribution, inference and unknowns; a
+proposal makes a case without disguising assumptions as facts. Do not make one
+form impersonate another.
+
+Use the locale's proper punctuation in prose: English curly double quotes and
+single quotes inside them; Norwegian «guillemets» and ‘single marks’ inside.
+Use an en dash for numeric ranges and a spaced en dash for parenthetical
+asides. Keep commands, paths, identifiers and literal output in code style.
+Terminal output remains ASCII. Typography must never alter executable text.
+
+Review the rendered result, not only the source. Check heading order, links,
+tables, list nesting, code fences, line wrapping and reading order. Run the
+existing prose and documentation checks. Source-backed claims need a source;
+commands need a real target and expected result; generated documents must be
+rebuilt from their owner. Report editorial review separately from software
+verification. A test pass does not prove a document is accurate or clear.
+
+## Research and source quality
+
+Separate engineering verification from editorial review. A passing suite does
+not prove factual accuracy, fairness, accessibility or clarity; polished prose
+does not prove software works. Define terms, institutions, populations and
+time periods. Source material factual claims and retain publication date,
+population, method and limitations. Distinguish verified facts, attributed
+claims, proposals, inferences and open questions. Consider relevant trade-offs,
+uncertainty, counter-evidence and affected groups; do not present advocacy as
+neutral research or false balance as fairness. Report an unreviewed editorial
+dimension as INCONCLUSIVE.
+
+Typography follows the surface. Output that reaches a terminal (the CLI, the
+shell and REPL prompt, the terminal face, dmesg and log lines) is ASCII: a
+hyphen, three dots and straight quotes. Web copy, locales, views and documents
+use proper marks: the ellipsis …, an en dash in a range (10–16), curly quotes,
+and a spaced en dash for an aside (word – aside – word). Norwegian copy quotes
+«slik», with ‘enkle’ inside; English uses “double” curly quotes.
+EN_DASH_RANGE, TYPOGRAPHIC_EXCELLENCE, PARENTHETICAL_DASH and QUOTES_BY_LOCALE
+hold this contract.
+
 
 ## Local test execution and /fix cleanup
 
