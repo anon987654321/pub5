@@ -221,6 +221,8 @@ module Master
             complete_command_argument(line, target)
           elsif line.match?(%r{\A/\S*\z})
             SLASH_COMMANDS.select { |cmd| cmd.start_with?(target.to_s) }
+          elsif line.match?(%r{\A(?:cd|!\s+cd)\s+})
+            complete_paths(target, base: Dir.pwd)
           elsif line.strip.empty?
             QUICK_COMMAND_COMPLETIONS.map { |cmd| "#{cmd} " }
           else
@@ -236,12 +238,44 @@ module Master
           model_completion(target)
         when "/help"
           SLASH_COMMANDS.map { |name| name.delete_prefix("/") }.select { |name| name.start_with?(target.to_s) }
+        when "/deploy"
+          deploy_completion(line, target)
+        when "/fix"
+          complete_paths(target, base: completion_root)
         else
-          complete_paths(target)
+          complete_paths(target, base: completion_root)
         end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "CLI.complete_argument")
         []
+      end
+
+      # Complete only names the canonical deployment inventory can execute.
+      # The second Tab after a valid target offers the review gate, never an
+      # automatic deployment.
+      def deploy_completion(line, target)
+        require_relative "../../../../OPENBSD/lib/deploy_inventory" unless defined?(Deploy::Inventory)
+        inventory = Deploy::Inventory.new(root: completion_root)
+        current = target.to_s.downcase
+        arguments = line.split.drop(1)
+
+        return ["--confirm"].select { |flag| flag.start_with?(current) } if current.start_with?("--")
+        if line.end_with?(" ") && arguments.any? && inventory.target_kind(arguments.first) != :unknown
+          return ["--confirm"]
+        end
+
+        names = (inventory.group_names + inventory.app_names + ["all"]).uniq.sort
+        names.select { |name| name.downcase.start_with?(current) }.first(50)
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "CLI.complete_deploy")
+        []
+      end
+
+      def completion_root
+        root = Master.repo_root
+        File.directory?(root) ? root : @refs.root
+      rescue StandardError
+        @refs.root
       end
 
       def model_completion(target)
@@ -253,10 +287,11 @@ module Master
         []
       end
 
-      def complete_paths(target)
+      def complete_paths(target, base: completion_root)
+        root = File.expand_path(base.to_s)
         prefix = target.to_s.empty? ? "*" : "#{target}*"
-        Dir.glob(File.join(@refs.root, prefix)).map do |path|
-          rel = path.delete_prefix("#{@refs.root}/")
+        Dir.glob(File.join(root, prefix)).map do |path|
+          rel = path.delete_prefix("#{root}/")
           File.directory?(path) ? "#{rel}/" : rel
         end.first(50)
       rescue StandardError => e
