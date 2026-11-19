@@ -6,6 +6,7 @@ require "fileutils"
 require_relative "event_bus"
 require_relative "log"
 require_relative "dmesg"
+require_relative "../io/atomic_write"
 
 module Master
   module Trace
@@ -225,7 +226,7 @@ module Master
       end
 
       def fsync_directory(path)
-        File.open(path, File::RDONLY) { |io| io.fsync }
+        Master::Io::AtomicWrite.fsync_directory(path)
       rescue Errno::EINVAL, Errno::EISDIR, NotImplementedError
         nil
       end

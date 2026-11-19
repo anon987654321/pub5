@@ -77,6 +77,30 @@ class TestMutationObserver < Minitest::Test
     assert_equal ["test:mutation_lifecycle:before"], bus.events.map(&:first)
   end
 
+  def test_pending_marker_sync_uses_the_shared_directory_helper
+    Dir.mktmpdir("mutation-observer") do |root|
+      bus = RecordingBus.new
+      marker_root = File.join(root, ".master", "mutation")
+      observer = Master::Trace::MutationObserver.new(
+        root:, namespace: "test:mutation_lifecycle",
+        subject_type: "test", subject_id: "sample", bus:, marker_root:
+      )
+      calls = []
+      sync = Master::Io::AtomicWrite.method(:fsync_directory)
+      instrumented = lambda do |path, expected: nil|
+        calls << path
+        sync.call(path, expected:)
+      end
+
+      Master::Io::AtomicWrite.stub(:fsync_directory, instrumented) do
+        observer.mutate(operation: "write") { :done }
+      end
+
+      assert_equal [marker_root, marker_root], calls
+      assert_empty Dir.children(marker_root)
+    end
+  end
+
   def test_tuple_with_failed_process_status_is_recorded_as_failed
     bus = RecordingBus.new
     observer = build(bus)
