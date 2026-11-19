@@ -90,7 +90,7 @@ class TestSelfieSeries < Minitest::Test
     assert_equal Studio::Visual::IdeaPicture::SUBJECTS, box.instance_variable_get(:@directory)
   end
 
-  def test_replace_removes_only_the_selected_subject_series
+  def test_replace_archives_only_the_selected_subject_series_after_success
     directory = File.join(@dir, "flat")
     FileUtils.mkdir_p(directory)
     old = File.join(directory, "probe_selfie_old.jpg")
@@ -101,14 +101,35 @@ class TestSelfieSeries < Minitest::Test
     box = Studio::Visual::SelfieSeries.new(
       subject: "probe", client: @client, directory:, ledger_path: File.join(@dir, "ledger.jsonl"),
     )
-    run_series(box, count: 1, replace: true)
+    rendered = run_series(box, count: 1, replace: true)
 
     refute File.exist?(old)
     refute File.exist?(processed)
-    assert File.exist?(other)
-    # A replace deletes the subject's own still and its postpro grade — both
-    # match the cleanup patterns — and nothing belonging to another subject.
-    assert_equal 2, ledger_rows("replace_cleanup").first.fetch("deleted")
+    assert File.file?(other)
+    archive = Dir.glob(File.join(directory, ".archive", "probe", "*", "*")).sort
+    assert_equal 2, archive.length
+    assert_equal %w[old old], archive.map { |path| File.read(path) }
+    assert_equal 2, ledger_rows("replace_archive").first.fetch("archived")
+    assert rendered.all? { |path| File.file?(path) }
+  end
+
+  def test_partial_replacement_preserves_the_previous_series
+    directory = File.join(@dir, "partial")
+    FileUtils.mkdir_p(directory)
+    old = File.join(directory, "probe_selfie_old.jpg")
+    File.write(old, "previous")
+
+    box = Studio::Visual::SelfieSeries.new(
+      subject: "probe", client: FakeClient.new(fail_download_at: 2), directory:,
+      ledger_path: File.join(@dir, "ledger.jsonl"),
+    )
+    rendered = run_series(box, count: 3, replace: true)
+
+    assert_equal 2, rendered.length
+    assert_equal "previous", File.read(old)
+    assert_empty Dir.glob(File.join(directory, ".archive", "probe", "*", "*"))
+    row = ledger_rows("replace_preserved").first
+    assert_equal [1, 2, 3], [row.fetch("previous"), row.fetch("rendered"), row.fetch("expected")]
   end
 
   def test_no_render_carries_the_film_model
