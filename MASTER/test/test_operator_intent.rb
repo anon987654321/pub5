@@ -130,6 +130,27 @@ class OperatorIntentTest < Minitest::Test
     end
   end
 
+  def test_operator_wording_for_the_complete_pub5_release_is_deterministic
+    with_inventory do |root|
+      requests = [
+        "you need to deploy pub5 onto vm23",
+        "i want you to deploy OPENBSD and MASTER and RAILS to vm23",
+      ]
+
+      requests.each do |message|
+        assert Master::CLI::OperatorIntent.direct_deploy_request?(message), message
+        assert Master::CLI::OperatorIntent.direct_full_stack_confirmation?(message), message
+
+        agent = Object.new
+        result = Master::CLI::OperatorIntent.new(root:, agent:).call(message)
+
+        assert_equal :deploy, result.status, message
+        assert_equal "all", result.target, message
+        assert_equal %w[control_web city_app wardrobe_app private_service], result.selected
+      end
+    end
+  end
+
   def test_greeted_polite_question_form_resolves_exact_full_stack_without_model_guessing
     with_inventory do |root|
       message = "Hey, can you redeploy OPENBSD, RAILS, and MASTER web on vm23 please?"
