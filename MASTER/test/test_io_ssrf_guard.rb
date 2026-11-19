@@ -105,7 +105,9 @@ class SsrfGuardTest < Minitest::Test
       refute Guard.safe_uri?(URI("http://example.com:8080/"))
     end
     refute called, "nonstandard ports must be rejected before DNS resolution"
-    assert Guard.safe_uri?(URI("http://example.com/")) if Guard.stub(:resolve_addresses, ["93.184.216.34"]) { true }
+    Guard.stub(:resolve_addresses, ["93.184.216.34"]) do
+      assert Guard.safe_uri?(URI("http://example.com/"))
+    end
   end
 
   def test_requires_a_fully_qualified_dns_name
