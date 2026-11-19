@@ -170,6 +170,33 @@ class TestCLITerminalOutput < Minitest::Test
                  cli.send(:conversation_output, wrapper)
   end
 
+  def test_normal_chat_unwraps_the_users_variable_named_say_wrapper_without_rescue_fallback
+    cli = session
+    cli.instance_variable_set(:@last_input, "can you help my sister?")
+    wrapper = <<~'RUBY'
+      STDOUT.sync = true
+      STDERR.sync = true
+      def say(s = "")
+        STDOUT.puts(s.to_s)
+      end
+      begin
+        say "No. I cannot do that."
+        say
+        say "I can help with realistic alternatives."
+      rescue => e
+        begin
+          say "No. I can help with alternatives."
+        rescue
+          nil
+        end
+      end
+    RUBY
+
+    assert_equal "No. I cannot do that.\\n\\nI can help with realistic alternatives.",
+                 cli.send(:conversation_output, wrapper)
+    assert cli.send(:ruby_say_wrapper_stream?, wrapper)
+  end
+
   def test_ordinary_question_about_a_language_is_still_conversation
     cli = session
     cli.instance_variable_set(:@last_input, "what is Ruby?")
