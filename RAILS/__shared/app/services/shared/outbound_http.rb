@@ -37,7 +37,7 @@ module Shared
       169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24
       192.88.99.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24
       203.0.113.0/24 224.0.0.0/4 240.0.0.0/4
-      ::/128 ::1/128 64:ff9b::/96 64:ff9b:1::/48 100::/64
+      ::/96 ::1/128 64:ff9b::/96 64:ff9b:1::/48 100::/64
       2001::/23 2001:db8::/32 2002::/16 2d00::/8 2e00::/7 3000::/5 3800::/6
       3c00::/7 3e00::/8 3f00::/8 fec0::/10 fc00::/7 fe80::/10 ff00::/8
     ].map { |cidr| IPAddr.new(cidr) }.freeze
@@ -70,6 +70,7 @@ module Shared
       end
 
       labels = candidate.split(".", -1)
+      return false if labels.length < 2
       return false if labels.any? do |label|
         label.empty? || label.bytesize > DNS_LABEL_MAX_BYTES ||
           !label.match?(/\A[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\z/i)
