@@ -8,6 +8,7 @@ require "active_support"
 require "active_support/core_ext/object/blank"
 require "active_support/core_ext/object/try"
 require_relative "../__shared/app/services/shared/link_converter"
+require_relative "../__shared/app/services/shared/outbound_http"
 
 # Why this exists: amber showed affiliate links and earned nothing from them, for
 # two independent reasons. The feed client it asked for lived in brgen's process,
@@ -127,6 +128,50 @@ class LinkConverterTest < Minitest::Test
 
       assert_equal "/js/td-lc.js", LC.script_src(dir)
     end
+  end
+
+  def test_sync_uses_the_shared_bounded_pinned_transport
+    configured!(wrap: false)
+    script = "// current vendor script"
+    response = Net::HTTPOK.new("1.1", "200", "OK")
+    response.instance_variable_set(:@body, script)
+    response.instance_variable_set(:@read, true)
+    calls = []
+
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "js", "td-lc.js")
+      Shared::OutboundHttp.stub(:request, lambda { |uri, **options|
+        calls << [uri, options]
+        response
+      }) do
+        assert LC.sync!(local_path: path)
+        assert_equal script, File.read(path)
+      end
+    end
+
+    uri, options = calls.fetch(0)
+    assert_equal URI(LC.remote_script_url), uri
+    assert_equal "Brgen-LinkConverter-Sync/1.0", options.dig(:headers, "User-Agent")
+    assert_equal 1_000_000, options.fetch(:max_body)
+    assert_equal 5, options.fetch(:open_timeout)
+    assert_equal 15, options.fetch(:read_timeout)
+    assert_equal 5, options.fetch(:write_timeout)
+  end
+
+  def test_sync_does_not_follow_a_redirect
+    configured!(wrap: false)
+    response = Net::HTTPFound.new("1.1", "302", "Found")
+    response["location"] = "https://127.0.0.1/private"
+    calls = 0
+
+    Shared::OutboundHttp.stub(:request, lambda { |*_args, **_options|
+      calls += 1
+      response
+    }) do
+      refute LC.sync!(local_path: "/tmp/should-not-be-written-#{Process.pid}")
+    end
+
+    assert_equal 1, calls, "redirects are responses, not new outbound requests"
   end
 
   def test_sync_refuses_without_a_website_id
