@@ -43,7 +43,7 @@ module Shared
         )
         begin
           # Chromium uses a fixed resolver table for this pass. The wildcard
-          # ~NOTFOUND rule makes an unpinned hostname fail closed instead of
+          # ^NOTFOUND rule makes an unpinned hostname fail closed instead of
           # falling back to a fresh OS DNS lookup after Ruby approved it.
           browser.network.intercept
           browser.on(:request) do |request|
@@ -107,7 +107,7 @@ module Shared
         destination = ip.ipv6? ? "[#{ip}]" : ip.to_s
         "MAP #{host} #{destination}"
       end
-      (rules << "MAP * ~NOTFOUND").join(", ")
+      (rules << "MAP * ^NOTFOUND").join(", ")
     end
 
     def self.pinned_public_address!(host)
