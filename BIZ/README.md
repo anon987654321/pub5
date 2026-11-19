@@ -2,7 +2,14 @@
 
 BIZ is the professional document studio for business plans, funding applications,
 legal instruments, governance and financial reports. Its current portfolio has
-seven workstreams:
+seven workstreams:BIZ is the professional document studio for business plans, funding
+applications, legal instruments, governance and financial reports. Its current
+portfolio has seven workstreams. Every claim must retain its source, date,
+assumption or uncertainty; copy must persuade through evidence, not inflated
+language. The shared editorial standard lives in
+[MASTER/AGENTS.md](../MASTER/AGENTS.md).
+
+
 
 - **Published:** SYRE, Ragnhild, pub.healthcare, Bergen Selvstyreparti and
   Fremtidens helse-OS. These have reader-facing HTML/PDF pairs.
