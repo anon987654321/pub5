@@ -2,6 +2,8 @@
 
 require "net/http"
 require "socket"
+require "ipaddr"
+require_relative "../../lib/io/ssrf_guard"
 require "uri"
 require_relative "utf8"
 
@@ -13,17 +15,44 @@ module CrawlSupport
   # port; Accept can narrow a probe to an expected response type.
   def fetch(url, timeout: 15, open_timeout: 8, host: nil, accept: nil)
     uri = URI(url)
+    req = Net::HTTP::Get.new(uri.request_uri)
+    req["Accept"] = accept if accept
 
-    Net::HTTP.start(uri.host, uri.port,
-                    use_ssl: uri.scheme == "https",
-                    open_timeout:,
-                    read_timeout: timeout) do |http|
-      req = Net::HTTP::Get.new(uri.request_uri)
+    if local_uri?(uri)
+      raise URI::InvalidURIError, "local crawl URL must not contain credentials or a fragment" unless uri.userinfo.nil? && uri.fragment.nil?
 
       req["Host"] = host if host
-      req["Accept"] = accept if accept
-      http.request(req)
+      http = Net::HTTP.new(uri.hostname, uri.port, nil)
+      http.open_timeout = open_timeout
+      http.read_timeout = timeout
+      http.write_timeout = open_timeout
+      response = http.start { |connection| connection.request(req) }
+      raise Master::Io::SsrfGuard::ResponseTooLarge, "local crawl response exceeds 2 MB" if response.body.to_s.bytesize > 2_000_000
+
+      response
+    else
+      raise URI::InvalidURIError, "remote crawl cannot override the Host header" if host
+      unless uri.is_a?(URI::HTTP) && Master::Io::SsrfGuard.valid_http_uri?(uri)
+        raise URI::InvalidURIError, "remote crawl requires HTTP/80 or HTTPS/443"
+      end
+
+      Master::Io::SsrfGuard.request(
+        uri, req, max_bytes: 2_000_000,
+        timeout: [open_timeout, timeout].max,
+        open_timeout:, read_timeout: timeout, write_timeout: open_timeout
+      )
     end
+  end
+
+  def local_uri?(uri)
+    return false unless uri.is_a?(URI::HTTP) && uri.scheme == "http" && uri.userinfo.nil? && uri.fragment.nil?
+
+    name = uri.hostname.to_s.downcase
+    return true if name == "localhost"
+
+    IPAddr.new(name).loopback?
+  rescue IPAddr::InvalidAddressError
+    false
   end
 
   # fetch with same-host redirects followed. A first-screen check that stops
