@@ -47,7 +47,7 @@ module Master
       def resolve_and_validate_uri(defn, params)
         url = interpolate(defn.fetch("url").to_s, params)
         uri = URI(url)
-        return Result.err("dynamic_http: only clean HTTP(S) URLs on standard ports", category: :validation) unless SsrfGuard.valid_http_uri?(uri)
+        return Result.err("dynamic_http: only http(s) URLs on standard ports", category: :validation) unless SsrfGuard.valid_http_uri?(uri)
 
         uri
       end
