@@ -16,6 +16,7 @@ require "sqlite3"
 require "time"
 require "uri"
 require_relative "../boot/paths"
+require_relative "ssrf_guard"
 
 # Zeitwerk-ignored (see lib/master.rb's ignore list) and required directly by
 # bin/provider-catalog, which doesn't load the full Master boot chain --
@@ -227,18 +228,21 @@ module Master::Io
 
     def fetch_json(url, token: nil)
       uri = URI(url)
+      raise ArgumentError, "catalog fetch requires https" unless uri.is_a?(URI::HTTPS)
+      open_t = Integer(ENV.fetch("MASTER_HTTP_OPEN_TIMEOUT", "10"))
+      read_t = Integer(ENV.fetch("MASTER_HTTP_READ_TIMEOUT", "30"))
+      address = Master::Io::SsrfGuard.pinned_address(uri)
+      raise ArgumentError, "catalog host refused or unresolvable: #{uri.host}" unless address
+
       request = Net::HTTP::Get.new(uri)
       request["Authorization"] = "Bearer #{token}" if token && !token.empty?
       request["Accept"] = "application/json"
       request["User-Agent"] = "MASTER provider catalog index"
-      # Bounded so a slow or unreachable catalog endpoint can't hang the caller
-      # (ROBUSTNESS: no unbounded HTTP). Tunable via env for slow networks.
-      response = Net::HTTP.start(uri.host, uri.port,
-                                 use_ssl: uri.scheme == "https",
-                                 open_timeout: Integer(ENV.fetch("MASTER_HTTP_OPEN_TIMEOUT", "10")),
-                                 read_timeout: Integer(ENV.fetch("MASTER_HTTP_READ_TIMEOUT", "30"))) do |http|
-        http.request(request)
-      end
+      # Pin the resolved public address so a second DNS lookup cannot rebind.
+      http = Master::Io::SsrfGuard.http_for(uri, address, timeout: [open_t, read_t].max)
+      http.open_timeout = open_t
+      http.read_timeout = read_t
+      response = http.start { |conn| conn.request(request) }
       raise "#{url} returned #{response.code}: #{response.body[0, 200]}" unless response.is_a?(Net::HTTPSuccess)
       JSON.parse(response.body)
     end

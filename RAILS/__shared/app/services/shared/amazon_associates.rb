@@ -250,9 +250,10 @@ module Shared
         req["x-marketplace"] = marketplace_host
         req.body = JSON.generate(payload)
 
-        res = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 10, read_timeout: 25) do |http|
-          http.request(req)
-        end
+        address = Shared::OutboundHttp.resolve_addresses(uri.hostname).reject { |a| Shared::OutboundHttp.unsafe_ip?(a) }.first
+        raise SocketError, "unsafe or unresolvable remote host" unless address
+        http = Shared::OutboundHttp.pinned_connection(uri, address, open_timeout: 10, read_timeout: 25)
+        res = http.start { |conn| conn.request(req) }
         body = JSON.parse(res.body)
         unless res.is_a?(Net::HTTPSuccess)
           msg = body.dig("message") || body.dig("errors", 0, "message") || res.code
@@ -287,9 +288,10 @@ module Shared
           client_secret:,
           scope: "creatorsapi::default",
         )
-        res = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 8, read_timeout: 15) do |http|
-          http.request(req)
-        end
+        address = Shared::OutboundHttp.resolve_addresses(uri.hostname).reject { |a| Shared::OutboundHttp.unsafe_ip?(a) }.first
+        raise SocketError, "unsafe or unresolvable remote host" unless address
+        http = Shared::OutboundHttp.pinned_connection(uri, address, open_timeout: 8, read_timeout: 15)
+        res = http.start { |conn| conn.request(req) }
         data = JSON.parse(res.body)
         token = data["access_token"]
         raise "Creators API token error: #{data['error'] || data['error_description'] || res.code}" if token.blank?

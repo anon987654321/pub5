@@ -153,11 +153,11 @@ module Shared
       return false if remote.blank?
 
       uri = URI(remote)
-      # get_response has no timeout argument; start is the call that takes one.
-      response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https",
-                                                     open_timeout: 5, read_timeout: 15) do |http|
-        http.request(Net::HTTP::Get.new(uri))
-      end
+      raise URI::InvalidURIError, "HTTPS required" unless uri.is_a?(URI::HTTPS)
+      address = Shared::OutboundHttp.resolve_addresses(uri.hostname).reject { |a| Shared::OutboundHttp.unsafe_ip?(a) }.first
+      raise SocketError, "unsafe or unresolvable remote host" unless address
+      http = Shared::OutboundHttp.pinned_connection(uri, address, open_timeout: 5, read_timeout: 15)
+      response = http.start { |conn| conn.request(Net::HTTP::Get.new(uri)) }
       return false unless response.is_a?(Net::HTTPSuccess)
 
       FileUtils.mkdir_p(File.dirname(local_path))

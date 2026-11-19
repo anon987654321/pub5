@@ -702,12 +702,15 @@ module Studio
         uri = api_uri(uri)
         response = nil
         body = +"".b
-        Net::HTTP.start(
-          uri.host, uri.port, use_ssl: true,
-          open_timeout: OPEN_TIMEOUT_SECONDS, read_timeout: READ_TIMEOUT_SECONDS,
-          write_timeout: WRITE_TIMEOUT_SECONDS
-        ) do |http|
-          http.request(req) do |res|
+        pin = ReplicateClient.public_download_address!(uri.host)
+        http = Net::HTTP.new(uri.host, uri.port, nil)
+        http.ipaddr = pin
+        http.use_ssl = true
+        http.open_timeout = OPEN_TIMEOUT_SECONDS
+        http.read_timeout = READ_TIMEOUT_SECONDS
+        http.write_timeout = WRITE_TIMEOUT_SECONDS
+        http.start do |conn|
+          conn.request(req) do |res|
             response = res
             declared = res["content-length"].to_s
             if !declared.empty? && declared.match?(/\A\d+\z/) && declared.to_i > MAX_RESPONSE_BYTES

@@ -69,8 +69,11 @@ module Shared
       uri.query = URI.encode_www_form(parameters)
       request = Net::HTTP::Get.new(uri)
       request["User-Agent"] = "Brgen-S2S-Attribution/1.0"
-      response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 3, read_timeout: 5) do |http|
-        http.request(request)
+      response = begin
+        address = Shared::OutboundHttp.resolve_addresses(uri.hostname).reject { |a| Shared::OutboundHttp.unsafe_ip?(a) }.first
+        raise SocketError, "unsafe or unresolvable remote host" unless address
+        http = Shared::OutboundHttp.pinned_connection(uri, address, open_timeout: 3, read_timeout: 5)
+        http.start { |conn| conn.request(request) }
       end
       code = response.code.to_i
       raise RetryableResponse, "S2S provider returned HTTP #{code}" if code == 429 || code >= 500
