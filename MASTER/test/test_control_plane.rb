@@ -226,6 +226,36 @@ class ControlPlaneSpec < Minitest::Test
     )
   end
 
+  def test_idle_interactive_reclaimer_signals_only_the_verified_idle_prompt
+    Dir.mktmpdir("master-lock-idle-takeover") do |root|
+      lock_dir = File.join(root, ".master")
+      FileUtils.mkdir_p(lock_dir)
+      path = File.join(lock_dir, "process.lock")
+      pid = 12_345
+      File.write(path, JSON.generate(
+        pid: pid, host: Socket.gethostname, mode: "interactive", at: Time.now.utc.iso8601
+      ))
+      command = File.join(root, "bin", "master")
+      process_row = "#{pid} 1 #{pid} S+ ttys001 #{command}\\n"
+      status = Status.new(true)
+      signals = []
+
+      Master::Ops::ProcessLock.stub(:lock_holders, ->(_path) { [pid] }) do
+        Master::Io::Exec.stub(:capture2, ->(*_args, **_options) { [process_row, status] }) do
+          Master::Ops::ProcessLock.stub(:session_activity, ->(root:) { Time.now - 7_200 }) do
+            Master::Ops::ProcessLock.stub(:wait_for_lock_release, ->(candidate) { candidate == path }) do
+              Process.stub(:kill, ->(signal, target) { signals << [signal, target] }) do
+                assert Master::Ops::ProcessLock.reclaim_idle_interactive_holder(path, root:)
+              end
+            end
+          end
+        end
+      end
+
+      assert_equal [["TERM", pid]], signals
+    end
+  end
+
   def test_idle_interactive_lock_stays_held_when_activity_is_recent
     now = Time.now
     metadata = { "pid" => 1234, "host" => Socket.gethostname, "mode" => "interactive" }
