@@ -4,6 +4,17 @@ require_relative "../test_helper"
 require_relative "../../lib/voice/speech"
 
 class SpeechContractSpec < Minitest::Test
+  def test_house_eq_is_warm_scooped_and_open_without_extra_effects
+    chain = Master::Voice::Policy.post_chain
+
+    assert_includes chain, "lowshelf=f=125:g=1.2"
+    assert_includes chain, "equalizer=f=1250:t=q:w=1.0:g=-1.6"
+    assert_includes chain, "highshelf=f=8500:g=1.5"
+    assert_includes chain, "alimiter=limit=0.98"
+    refute_includes chain, "tremolo"
+    refute_includes chain, "echo="
+  end
+
   def test_clean_text_preserves_spoken_content_while_removing_markup
     cleaned = Master::Voice::Speech.clean_text("hello `code` https://example.com ```ruby\nx\n```")
     # A URL is spoken as its host: nobody wants the scheme and path read aloud.
