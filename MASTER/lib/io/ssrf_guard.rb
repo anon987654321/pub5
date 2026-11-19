@@ -52,6 +52,8 @@ module Master
 
       DNS_LABEL_MAX_BYTES = 63
       DNS_MAX_WIRE_BYTES = 255
+      GLOBAL_IPV6 = IPAddr.new("2000::/3").freeze
+      BLOCKED_HOST_SUFFIXES = %w[.localhost .local .internal .home.arpa .onion].freeze
 
       # Bound names before resolution. Addrinfo uses the operating-system
       # resolver, avoiding the vulnerable Ruby Resolv parser for untrusted names.
@@ -69,7 +71,10 @@ module Master
         end
 
         labels = candidate.split(".", -1)
-        return false if labels.any? { |label| label.empty? || label.bytesize > DNS_LABEL_MAX_BYTES }
+        return false if labels.any? do |label|
+          label.empty? || label.bytesize > DNS_LABEL_MAX_BYTES ||
+            !label.match?(/\A[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\z/i)
+        end
 
         labels.sum { |label| label.bytesize + 1 } + 1 <= DNS_MAX_WIRE_BYTES
       end
@@ -89,11 +94,12 @@ module Master
       # shape of a rebinding setup, not a choice.
       def self.pinned_address(uri)
         return unless uri.is_a?(URI::HTTP) && uri.host
+        return unless uri.userinfo.nil? && uri.fragment.nil?
 
-        host = uri.hostname
+        host = uri.hostname.downcase.delete_suffix(".")
         return unless valid_resolver_host?(host)
-        return if host.strip.casecmp("localhost").zero?
-        return if BLOCKED_HOSTNAMES.any? { |name| host.casecmp?(name) }
+        return if host == "localhost" || BLOCKED_HOSTNAMES.any? { |name| host.casecmp?(name) }
+        return if BLOCKED_HOST_SUFFIXES.any? { |suffix| host.end_with?(suffix) }
 
         addresses = resolve_addresses(host)
         return if addresses.empty?
@@ -124,6 +130,7 @@ module Master
       def self.blocked_ip?(ip)
         ip = ip.native if ip.respond_to?(:ipv4_mapped?) && ip.ipv4_mapped?
         ip.loopback? || ip.link_local? || ip.private? ||
+          (ip.ipv6? && !GLOBAL_IPV6.include?(ip)) ||
           (ip.respond_to?(:multicast?) && ip.multicast?) ||
           RESERVED_RANGES.any? { |range| range.include?(ip) }
       rescue StandardError
