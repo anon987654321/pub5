@@ -107,6 +107,9 @@ module Studio
 
         required_sources = required_source_sets(entries)
         if @apply
+          raise Error, "destination subject directory is a symlink" if File.symlink?(destination)
+          raise Error, "destination subject directory must already exist with its private consent record" unless File.directory?(destination)
+          File.chmod(0o700, destination)
           consent = Consent.validate(
             subject:, subject_directory: destination,
             required_sources: (Consent.required_source_sets(subject:, subject_directory: destination) + required_sources).uniq,
@@ -145,13 +148,21 @@ module Studio
         entries = []
         env = File.join(root, "subject.env")
         env = File.join(root, "ai_toolkit", "subject.env") unless File.file?(env)
-        entries << entry(env, "subject.env") if File.file?(env) && !File.symlink?(env)
+        reject_symlink_components!(root, env) if File.exist?(env) || File.symlink?(env)
+        entries << entry(env, "subject.env") if File.file?(env)
 
-        Dir.glob(File.join(root, "weights", "*", "replicate_training.json")).sort.each do |path|
-          next unless File.file?(path) && !File.symlink?(path)
+        weights_root = File.join(root, "weights")
+        raise Error, "refusing symlink weights directory: #{weights_root}" if File.symlink?(weights_root)
+        if File.directory?(weights_root)
+          Dir.children(weights_root).sort.each do |model|
+            model_root = File.join(weights_root, model)
+            raise Error, "refusing symlink model directory: #{model_root}" if File.symlink?(model_root)
+            next unless File.directory?(model_root)
 
-          model = File.basename(File.dirname(path))
-          entries << entry(path, File.join("weights", model, "replicate_training.json"))
+            manifest = File.join(model_root, "replicate_training.json")
+            reject_symlink_components!(root, manifest) if File.exist?(manifest) || File.symlink?(manifest)
+            entries << entry(manifest, File.join("weights", model, "replicate_training.json")) if File.file?(manifest)
+          end
         end
 
         if @include_sources
@@ -181,6 +192,18 @@ module Studio
           raise Error, "source file is hard-linked: #{path}" unless stat.nlink == 1
 
           path
+        end
+      end
+
+      def reject_symlink_components!(root, path)
+        base = File.realpath(root)
+        expanded = File.expand_path(path)
+        raise Error, "source path escapes the subject directory: #{path}" unless expanded.start_with?("#{base}#{File::SEPARATOR}")
+
+        cursor = base
+        expanded.delete_prefix("#{base}#{File::SEPARATOR}").split(File::SEPARATOR).each do |part|
+          cursor = File.join(cursor, part)
+          raise Error, "refusing symlink in source path: #{cursor}" if File.symlink?(cursor)
         end
       end
 
@@ -237,6 +260,24 @@ module Studio
         sets.uniq
       end
 
+      def prepare_destination_parent!(parent, destination)
+        root = File.realpath(destination)
+        expanded = File.expand_path(parent)
+        raise Error, "destination path escapes the subject directory" unless expanded.start_with?("#{root}#{File::SEPARATOR}")
+
+        cursor = root
+        expanded.delete_prefix("#{root}#{File::SEPARATOR}").split(File::SEPARATOR).each do |part|
+          cursor = File.join(cursor, part)
+          raise Error, "refusing symlink in destination path: #{cursor}" if File.symlink?(cursor)
+          if File.exist?(cursor)
+            raise Error, "destination parent is not a directory: #{cursor}" unless File.directory?(cursor)
+          else
+            Dir.mkdir(cursor, 0o700)
+          end
+          File.chmod(0o700, cursor)
+        end
+      end
+
       def apply_entries(destination, entries)
         created = []
         begin
@@ -245,8 +286,7 @@ module Studio
             raise Error, "destination already exists: #{item.fetch(:relative)}" if File.exist?(target) || File.symlink?(target)
 
             parent = File.dirname(target)
-            FileUtils.mkdir_p(parent, mode: 0o700)
-            File.chmod(0o700, parent)
+            prepare_destination_parent!(parent, destination)
             File.open(target, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |output|
               if item[:history_bytes]
                 output.write(item.fetch(:history_bytes))
