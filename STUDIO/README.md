@@ -55,9 +55,17 @@ but the implementation is owned here.
   MASTER has its own client
   and runtime policies; this one is STUDIO's.
 - `lora/` — subject descriptors and private training plans. `bin/studio lora`
-  runs a read-only validator. Merethe's preparation step builds in a private
-  staging directory and preserves the last known-good dataset if a build fails.
-  lora/judge.rb audits whole-frame texture, highlight, clipping and tonal-range proxies.
+  runs a read-only validator; `bin/studio lora recover` is a dry-run-first
+  importer from a local, read-only pub4 checkout. Applying it requires valid
+  private consent and separate source-rights evidence. It copies only approved
+  subject descriptors, pinned model manifests and explicitly selected source
+  photographs — never datasets, loose weights or renders. Source trees and
+  evidence are owner-only, and generated replacement series archive prior
+  portraits only after every requested new render succeeds. Merethe's separate
+  recovery command verifies the 15 original Git blobs and does not prepare a
+  dataset. Merethe's preparation step builds in a private staging directory
+  and preserves the last known-good dataset if a build fails.
+  `lora/judge.rb` audits whole-frame texture, highlight, clipping and tonal-range proxies.
   Highlight spread is only assessed when a frame has highlight samples; the
   committed fallback floor is neutral until recalibrated because the historical
   ceiling used the wrong direction. Calibration requires at least five regular
