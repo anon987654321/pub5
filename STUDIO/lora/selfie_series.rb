@@ -105,7 +105,7 @@ module Studio
         candidates = Array(paths).select { |path| File.file?(path) && !File.symlink?(path) }
         return 0 if candidates.empty?
 
-        archive_root = File.join(@directory, ".archive", @subject,
+        archive_root = File.join(@directory, @subject, "out", "archive",
                                  "#{Time.now.utc.strftime("%Y%m%dT%H%M%S")}-#{SecureRandom.hex(3)}")
         FileUtils.mkdir_p(archive_root, mode: 0o700)
         File.chmod(0o700, archive_root)
