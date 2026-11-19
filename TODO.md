@@ -1,7 +1,7 @@
 # pub5 — remaining work
 
 Last full register/acceptance audit: 2026-11-14, source tree checked against `main@bd23114ca49bfc3d05dccf31e232a03d857ea28d`.
-Task-register consolidation review: 2026-11-18, tracked task-like Markdown and references checked against `main@139ff1a03b04424fb68185937080ca6a2067646e`. The consolidation checkpoint contained 165 active unchecked rows and no checked rows. A count-only refresh after the 2026-11-18 source-review work found 164 active unchecked rows and no checked rows; this is not a new full source or acceptance audit. This is a task-list consolidation, not a new full source or acceptance audit. Grouped rows
+Task-register consolidation review: 2026-11-18, tracked task-like Markdown and references checked against `main@139ff1a03b04424fb68185937080ca6a2067646e`. The consolidation checkpoint contained 165 active unchecked rows and no checked rows. A count-only refresh on 2026-11-19 found 169 active unchecked rows and no checked rows; this is not a new full source or acceptance audit. This is a task-list consolidation, not a new full source or acceptance audit. Grouped rows
 are not atomic task counts; aspirational horizons remain visible but are not
 active checkboxes. The tracked tree contains no `PLAN.md`; root `TODO.md` is
 the sole cross-tree Markdown action register, with detailed state owned by the
