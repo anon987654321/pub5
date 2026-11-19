@@ -451,7 +451,7 @@ orders and users included. It ran once at first deploy; a deploy never seeds,
 so run it again only to reset the demo:
 
 ```zsh
-doas /usr/local/sbin/pub4-admin rails-task mrdamascy db-seed
+doas /usr/local/sbin/pub5-admin rails-task mrdamascy db-seed
 ```
 
 **Stop the demo** (reversible; the tree, database and certificate stay):
@@ -665,7 +665,7 @@ When `bin/vps-deploy` fails it says where. Whatever the stage (pull, ci+sync,
 migrate, precompile, restart, health, checks), an exit trap stamps
 `last_deploy_<app>.json` failed, prints `FAILED at stage "<stage>"`, says
 whether the app was stopped for the deploy and so is down (the next command is
-`doas /usr/local/sbin/pub4-admin service start <app>` or a rerun), lists amber or bsdports if they are down,
+`doas /usr/local/sbin/pub5-admin service start <app>` or a rerun), lists amber or bsdports if they are down,
 releases the lock and the deploy flag, and appends `finished ... exit=N
 stage=...` to `/home/dev/vps-deploy.log` directly, so a dropped ssh session still leaves
 the verdict. A kill or hangup counts as a failure with the stage it interrupted.
@@ -809,7 +809,7 @@ deliberately:
 | `zsh OPENBSD/bin/vps_ci_all.sh` | **Yes** — serial `vps_ci.sh` per app | Every app in the inventory's RAILS namespace | Normal code change; tests must pass |
 | `I_UNDERSTAND_FAST_DEPLOY=1 zsh OPENBSD/bin/vps_production_push.sh` | **No** — `SKIP_CI=1 SKIP_RUNTIME_CHECK=1 bin/vps-deploy all`; only the post-restart checks run, and the runtime skip requires that exact acknowledgement. | Every active inventory app, in `deploy_order`; `DEMO_SEED_ON_DEPLOY=1` adds Brgen's demo seed | Fast hotfix; skips test check |
 | `zsh OPENBSD/bin/deploy_all.sh` | **No** | Runs from a workstation: syncs the pub5 checkout to vm23 and runs `OPERATOR.sh`, so it reapplies `/etc`, relayd and the services, not just app code. `--per-app` also runs each `RAILS/<app>/<app>.sh` | The box's config has drifted or a fresh install needs redoing — not for shipping a code change |
-| `ksh OPENBSD/bin/start_all_apps.sh` as `dev` | **No** — recovery only | Calls the fixed `pub4-admin start-all-apps` broker verb; checks all services and pins them against `resource_guard.sh` shedding | Recovery after a deliberate decision to keep every app running despite load |
+| `ksh OPENBSD/bin/start_all_apps.sh` as `dev` | **No** — recovery only | Calls the fixed `pub5-admin start-all-apps` broker verb; checks all services and pins them against `resource_guard.sh` shedding | Recovery after a deliberate decision to keep every app running despite load |
 
 `vps_production_push.sh` is the footgun under pressure: it restarts production
 without running CI. Use `vps_ci_all.sh` unless you explicitly need the fast path
@@ -843,8 +843,7 @@ Tracked mirror: `OPENBSD/data/root.crontab` (installed idempotently by
 | `config-drift-check` | `*/15 * * * *` | `/var/log/config_drift.log` — relayd Host routes vs acme SANs vs NSD zones vs DNSSEC paths |
 | `resource_guard.sh` | `*/5 * * * *` | sheds bsdports then amber under sustained pressure; `/var/log/resource_guard_history.log` |
 | `uptime-check.sh` | `*/5 * * * *` | `/var/log/uptime-check.log`, with `ALLOW_BSDPORTS_DOWN=1` |
-| `pub4-alert cpu-watch` | `* * * * *` | `/var/log/cpu-watch.log` — five one-second vmstat intervals; warning at 80% busy for 3 minutes, critical at 95% for 2 minutes, 15 minutes during a deploy; %CPU, PID/PPID/PGID, user, state, CPU time and executable; no command arguments or environment |
-| `pub4-alert watch` | `*/5 * * * *` | `/var/log/pub4-alerts.log`, shown by `vps-state` — disk 90%, swap 92%, failed services except `brgen_jobs`, stale backup, missing CPU-monitor heartbeat and pending interrupted fleet deploy receipts whose owner process has exited or whose PID has been reused, plus an alert when owner identity cannot be verified. The monitor walks receipt filenames once, retaining only the 500 newest names in a min-heap, then reads at most 500 receipt files and returns at most 100 pending runs. The directory walk still scales with entry count; retained names, final sort and receipt reads are capped. A truncated view raises its own alert and is never treated as clean. Ordinary recurring keys quiet for 6 hours; CPU state transitions alert on each new transition |
+| `pub5-alert watch` | `*/5 * * * *` | `/var/log/pub5-alerts.log`, shown by `vps-state` — disk 90%, swap 92%, 1-minute load at or above 2.00 for eight consecutive ticks, failed services except `brgen_jobs`, and a missing or stale (48h) dr-pull backup report. Ordinary recurring keys quiet for 6 hours |
 | `drain-jobs.sh` | `5 * * * *` | `/var/log/drain-jobs.log` |
 | `core-reclaim.sh` | `40 * * * *` | `/var/log/core-reclaim.log` — returns a core app's grown resident set |
 | `keep-warm.sh` | `*/10 * * * *` | `/var/log/keep-warm.log` — brgen and amber only |
@@ -864,14 +863,12 @@ crontab after the last table audit and are now named here too.
 A healer that works hides the fault that makes it run. `relayd-watchdog` stamps
 each restart in `/var/db/pub4/relayd-watchdog.restarts` and raises a
 `relayd-restarts` alert on the third inside an hour; `uptime-check.sh` raises
-`uptime-down` when an endpoint is down for three ticks running. The CPU watcher
-takes five one-second `vmstat` intervals each minute: 80% busy for three
-consecutive samples alerts, 95% for two alerts as critical, and the active
-pressure signal lets `resource_guard.sh` shed bsdports then amber. A fresh deploy
-flag extends the CPU threshold to fifteen minutes. Three samples below 60%
-clear the incident. It never kills or restarts MASTER or Brgen. Its heartbeat is
-checked by `pub4-alert watch`; a stale heartbeat raises `cpu-watch-stale`.
-`pub4-alert show` and `vps-state` print the durable alerts. The dr-pull job
+`uptime-down` when an endpoint is down for three ticks running. Sustained load
+is watched by `pub5-alert watch` (1-minute load at or above 2.00 across eight
+consecutive ticks) and shed by `resource_guard.sh` on its own load and memory
+strikes; the per-minute `vmstat` CPU sampler retired with `pub4-alert`, so the
+guard’s `cpu_pressure` fast path stays quiet until a successor writes it.
+`pub5-alert show` and `vps-state` print the durable alerts. The dr-pull job
 reports to the box by writing `~dev/.dr_pull_ok` after each pull, which is what
 the stale-backup alert reads.
 
@@ -1005,7 +1002,7 @@ workstation environment.
 
 ## Recovery
 
-Load shedding: `ksh OPENBSD/bin/resource_guard.sh` as `dev`; the wrapper refuses root and delegates to the installed root-owned runner. Full stack: `ksh OPENBSD/bin/start_all_apps.sh` (as dev; only the fixed broker runs as root). Core health: `doas /usr/local/sbin/pub4-admin service check master` (repeat for brgen/relayd)
+Load shedding: `ksh OPENBSD/bin/resource_guard.sh` as `dev`; the wrapper refuses root and delegates to the installed root-owned runner. Full stack: `ksh OPENBSD/bin/start_all_apps.sh` (as dev; only the fixed broker runs as root). Core health: `doas /usr/local/sbin/pub5-admin service check master` (repeat for brgen/relayd)
 pf`.
 
 SSH lockout only: `ssh server4`, then `vmctl console vm23` (manual — not
@@ -1146,14 +1143,14 @@ precisely so no bin/ file carries a fleet-wide delete. Run it BY HAND, per app,
 on launch day:
 
 1. `ruby OPENBSD/bin/dr-pull` from the Mac — a verified pre-wipe snapshot.
-2. On vm23, stop the app and its optional job worker: `doas /usr/local/sbin/pub4-admin service stop <app>` and, if configured, `doas /usr/local/sbin/pub4-admin service stop <app>_jobs`.
+2. On vm23, stop the app and its optional job worker: `doas /usr/local/sbin/pub5-admin service stop <app>` and, if configured, `doas /usr/local/sbin/pub5-admin service stop <app>_jobs`.
 3. Move the primary aside (never delete): `mv
    /home/<app>/app/storage/production.sqlite3{,.pre-launch}`.
 4. As the app user: `bundle exec bin/rails db:prepare` — schema, no seeds.
    brgen demo seeds are the DEMO; a launch database starts empty. If a curated
    skeleton is wanted (cities, categories, admin), seed ONLY
    `db/seeds/launch.rb` — write it that week, review it that week.
-5. Start the app with `doas /usr/local/sbin/pub4-admin service start <app>` and, if configured, start its job worker with `doas /usr/local/sbin/pub4-admin service start <app>_jobs`; then run the route-manifest probe.
+5. Start the app with `doas /usr/local/sbin/pub5-admin service start <app>` and, if configured, start its job worker with `doas /usr/local/sbin/pub5-admin service start <app>_jobs`; then run the route-manifest probe.
 6. The .pre-launch file stays until the first week survives; dr-pull keeps
    pulling nightly either way.
 

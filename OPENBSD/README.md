@@ -107,12 +107,9 @@ that file host-local with owner-only permissions, outside this checkout.
 Nothing on the box backs itself up off the box. `bin/dr-pull` runs nightly on the
 operator's Mac, brings back a checksummed snapshot of every production database and
 the uploaded files, and `bin/dr-pull --drill` restores the newest pull into a
-scratch directory and reads it back. A healed symptom must not stay quiet. `usr/local/bin/pub4-alert` records
-durable fault transitions in `/var/log/pub4-alerts.log`; its minute CPU watcher
-samples five one-second `vmstat` intervals, alerts on sustained 80% CPU (or
-critical 95%), and writes a heartbeat that the five-minute watch checks. The
-minute sample also captures the three busiest process identities (CPU, PID,
-PPID, PGID, user, state and CPU time) without command arguments or environments.
+scratch directory and reads it back. A healed symptom must not stay quiet. `usr/local/bin/pub5-alert` records
+durable fault transitions in `/var/log/pub5-alerts.log`; its five-minute watch
+checks disk, swap, sustained load, failed services and backup freshness.
 OpenBSD's `Z` process state distinguishes zombies from running workers. The
 monitor does not kill processes automatically; operators can inspect the exact
 process group before taking action. The same watch records a uniquely keyed

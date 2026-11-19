@@ -189,7 +189,6 @@ install_root_configs() {
   # These files become root-executed entrypoints after installation.
   # Require regular, non-symlink sources before copying anything to /.
   typeset -a privileged_sources=(
-    usr/local/sbin/pub4-admin
     usr/local/sbin/pub5-admin
     usr/local/bin/emergency_cpu.sh
     usr/local/libexec/ci-prepare.ksh
@@ -221,8 +220,7 @@ install_root_configs() {
       return 1
     fi
   done
-  for rel in /usr/local/sbin/pub4-admin \
-             /usr/local/sbin/pub5-admin \
+  for rel in /usr/local/sbin/pub5-admin \
              /usr/local/libexec/ci-prepare.ksh \
              /usr/local/libexec/ci-run.ksh \
              /usr/local/libexec/ci-sync.ksh \
@@ -285,8 +283,7 @@ install_root_configs() {
     [[ -f /etc/rc.d/$svc ]] && chmod 555 /etc/rc.d/$svc
   done
   for f in /usr/local/bin/*(N); do [[ -f $f ]] && chmod 755 "$f"; done
-  for f in /usr/local/sbin/pub4-admin \
-           /usr/local/sbin/pub5-admin \
+  for f in /usr/local/sbin/pub5-admin \
            /usr/local/libexec/ci-prepare.ksh \
            /usr/local/libexec/ci-run.ksh \
            /usr/local/libexec/ci-sync.ksh \
@@ -299,8 +296,7 @@ install_root_configs() {
   done
   # These fixed broker entrypoints must be regular files. A symlink would
   # make root chown/chmod operate on a target outside the install contract.
-  for f in /usr/local/sbin/pub4-admin \
-           /usr/local/sbin/pub5-admin \
+  for f in /usr/local/sbin/pub5-admin \
            /usr/local/libexec/ci-prepare.ksh \
            /usr/local/libexec/ci-run.ksh \
            /usr/local/libexec/ci-sync.ksh \
@@ -314,10 +310,6 @@ install_root_configs() {
 
   # The deploy account will use this fixed-path broker for root operations.
   # It is refreshed only by this deliberate operator sync.
-  if [[ -f /usr/local/sbin/pub4-admin ]]; then
-    chown root:wheel /usr/local/sbin/pub4-admin || return 1
-    chmod 555 /usr/local/sbin/pub4-admin || return 1
-  fi
   if [[ -f /usr/local/sbin/pub5-admin ]]; then
     chown root:wheel /usr/local/sbin/pub5-admin || return 1
     chmod 555 /usr/local/sbin/pub5-admin || return 1

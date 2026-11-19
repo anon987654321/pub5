@@ -108,15 +108,10 @@ PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
 # run; UserPurgeJob also holds limits_concurrency to 1 for the queue path.
 55 3 * * * /usr/local/bin/purge-deleted-users.sh >> /var/log/purge-deleted-users.log 2>&1
 
-# CPU watcher: five one-second vmstat intervals each minute. -s prevents
-# overlapping samples; a stuck monitor is detected by pub4-alert watch.
-* * * * * -s /usr/local/bin/pub4-alert cpu-watch >> /var/log/cpu-watch.log 2>&1
-
-# pub4-alert watch checks disk, swap, failed services, backup freshness, the
-# CPU-watch heartbeat and interrupted fleet deploy receipts. The receipt view is
-# capped at 500 newest files / 100 pending runs; truncation itself alerts.
-# Dead/reused owners and unreadable fingerprints alert; transitions go to pub4-alerts.log.
-*/5 * * * * /usr/local/bin/pub4-alert watch
+# pub5-alert watch checks disk, swap, sustained load, failed services and
+# backup freshness; transitions go to pub5-alerts.log. Deploy-receipt
+# scanning retired with pub4-alert; receipts stay in /var/db/pub4 for audit.
+*/5 * * * * /usr/local/bin/pub5-alert watch
 
 # weekly-integrity — integrity_check plus a public health pass, once a week.
 #

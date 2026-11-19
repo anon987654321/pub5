@@ -117,7 +117,8 @@ MEM_WARN=8
 MEM_RESTORE=10
 
 # All decimal comparisons and field reads below are pure ksh: the same
-# hundredths-scaling arithmetic pub4-alert cpu-watch uses for its own thresholds.
+# hundredths-scaling arithmetic the retired minute CPU sampler used for its
+# thresholds.
 # No awk, no sed, no head, no tail (SHELL_DISCIPLINE), and one fewer fork per
 # comparison on a box that runs this from cron every five minutes.
 hundredths() {

@@ -12,8 +12,8 @@ require_relative "../lib/environment"
 require_relative "../lib/pid_probe"
 
 STAMP_DIR = ENV.fetch("PUB5_STAMP_DIR", "/var/db/pub5")
-# pub4-alert's record: what a healed or noted symptom left behind when it recurred.
-ALERT_LOG = ENV.fetch("PUB4_ALERT_LOG", "/var/log/pub4-alerts.log")
+# pub5-alert's record: what a healed or noted symptom left behind when it recurred.
+ALERT_LOG = ENV.fetch("PUB4_ALERT_LOG", "/var/log/pub5-alerts.log")
 
 def git_short(path)
   return "missing" unless File.directory?(path)

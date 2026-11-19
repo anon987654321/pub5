@@ -6,7 +6,7 @@ require "open3"
 require "tmpdir"
 
 # usr/local/bin/uptime-check.sh: a down endpoint is one syslog line at first and a
-# durable pub4-alert record once it persists. Fake curl, ruby and logger go first
+# durable pub5-alert record once it persists. Fake curl, ruby and logger go first
 # on PATH; the alert is a recording stub, so nothing leaves the scratch directory.
 class TestUptimeCheck < Minitest::Test
   SCRIPT = File.expand_path("../mirror/usr/local/bin/uptime-check.sh", __dir__)

@@ -110,10 +110,16 @@
 # anchor followed its own file: bin/check stands where mirror/bin/check used
 # to be named. No path added by this session; the count is corrected, not
 # raised above what HEAD contains.
+#
+# 2026-11-19 (9): re-set to the checkout as it stands after the pub4-* file
+# removal. Eight tracked files left the tree (the pub4-alert/pub4-admin pair
+# with their tests and man page, the stale Pub4Mobile iOS duplicate pair, and
+# the pub4-shared.rb shim the topology contract already forbade), and no
+# directory went with them. The ceiling follows the deletion down.
 lone_dirs: 45
 stutter: 0
 vague_names: 0
-tracked_files: 8086
+tracked_files: 8078
 tracked_directories: 995
 corpus: 4127
 

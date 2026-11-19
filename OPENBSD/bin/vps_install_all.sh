@@ -17,7 +17,7 @@ exec > >(tee -a "$LOG") 2>&1
 
 log() { printf '[%s] %s\n' "$(date +%H:%M:%S)" "$*" }
 
-# Keep this fresh-box bootstrap usable before pub4-admin is installed, but never
+# Keep this fresh-box bootstrap usable before pub5-admin is installed, but never
 # let app names or verbs widen the root service boundary.
 admin_service() {
   local action=${1:-} service=${2:-}

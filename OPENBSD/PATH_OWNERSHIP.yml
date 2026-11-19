@@ -10,9 +10,9 @@ ownership:
     risk: high
     check: OPENBSD/bin/check
   mirror/usr/local/man/man8:
-    purpose: BSD manuals for the operator surface, pub4-admin(8) and vps-deploy(8)
+    purpose: BSD manuals for the operator surface, pub5-admin(8) and vps-deploy(8)
     risk: low
-    check: mandoc -Tlint OPENBSD/mirror/usr/local/man/man8/pub4-admin.8 OPENBSD/mirror/usr/local/man/man8/vps-deploy.8
+    check: mandoc -Tlint OPENBSD/mirror/usr/local/man/man8/pub5-admin.8 OPENBSD/mirror/usr/local/man/man8/vps-deploy.8
   PATH_OWNERSHIP.yml:
     purpose: this map
     risk: low
@@ -138,15 +138,15 @@ ownership:
     purpose: root-owned load-shedding runner; sources only the installed stale-cleanup helper, never checkout code
     risk: critical
     check: ruby OPENBSD/checks/vps_safety_check.rb
-  mirror/usr/local/bin/pub4-alert:
-    purpose: root-owned durable alerts, minute CPU sampler and CPU-monitor heartbeat
+  mirror/usr/local/bin/pub5-alert:
+    purpose: root-owned durable alerts; watch covers disk, swap, sustained load, failed services and backup freshness
     risk: critical
-    check: ruby OPENBSD/test/test_pub4_alert.rb
+    check: ruby OPENBSD/test/test_pub5_alert.rb
   mirror/usr/local/bin/emergency_cpu.sh:
     purpose: root-owned emergency CPU recovery runner; sources only the installed stale cleanup helper, never checkout code
     risk: critical
     check: ruby OPENBSD/checks/vps_safety_check.rb
-  mirror/usr/local/sbin/pub4-admin:
+  mirror/usr/local/sbin/pub5-admin:
     purpose: root-owned fixed-verb service/deploy/CI broker; no shell text or arbitrary paths
     risk: critical
     check: ruby OPENBSD/checks/vps_safety_check.rb

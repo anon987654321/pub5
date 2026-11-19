@@ -215,9 +215,8 @@ class VpsDeployContractTest < Minitest::Test
     operator = File.read(File.join(ROOT, "OPENBSD", "OPERATOR.sh"))
     bootstrap = File.read(File.join(ROOT, "OPENBSD", "BOOTSTRAP.sh"))
 
-    # The active deployer is pub5-admin; pub4-admin remains installed for
-    # compatibility callers that have not crossed the broker boundary yet.
-    %w[pub5-admin pub4-admin].each do |broker|
+    # The active deployer is pub5-admin, the only broker the mirror carries.
+    %w[pub5-admin].each do |broker|
       assert File.file?(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "sbin", broker)),
              "#{broker} is not tracked in the mirror, so OPERATOR.sh never installs it"
     end
@@ -500,7 +499,7 @@ class VpsDeployContractTest < Minitest::Test
   def test_the_ci_stamp_names_how_the_commit_was_tested
     %w[ci_stamp=ci_ok ci_stamp=ci_attested ci_stamp=ci_skipped].each { |line| assert_includes CI_SOURCE, line }
     assert_includes CI_SOURCE, %q{doas /usr/local/sbin/pub5-admin stamp "$app" "$sha" "$ci_stamp"}
-    admin = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "sbin", "pub4-admin"), encoding: "UTF-8")
+    admin = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin"), encoding: "UTF-8")
     assert_includes admin, "%w[ok failed ci_ok ci_attested ci_skipped].include?(status)"
   end
 

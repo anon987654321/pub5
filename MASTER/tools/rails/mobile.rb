@@ -6,8 +6,8 @@ require_relative "../../../RAILS/__shared/lib/shared/mobile_app_registry"
 require_relative "../../../RAILS/__shared/lib/shared/mobile_ios_project"
 
 module MobileTool
-  ANDROID_ROOT = ENV.fetch("MOBILE_ANDROID_BUILD_ROOT", File.join(Dir.tmpdir, "pub4-mobile", "android"))
-  IOS_ROOT = ENV.fetch("MOBILE_IOS_BUILD_ROOT", File.join(Dir.tmpdir, "pub4-mobile", "ios"))
+  ANDROID_ROOT = ENV.fetch("MOBILE_ANDROID_BUILD_ROOT", File.join(Dir.tmpdir, "pub5-mobile", "android"))
+  IOS_ROOT = ENV.fetch("MOBILE_IOS_BUILD_ROOT", File.join(Dir.tmpdir, "pub5-mobile", "ios"))
 
   module_function
 
@@ -71,8 +71,10 @@ module MobileTool
     puts output unless output.to_s.empty?
     exit status.exitstatus || 1 unless status.success?
 
-    puts "ios: generated #{File.join(directory, "Pub4Mobile.xcodeproj")}"
+    puts "ios: generated #{File.join(directory, "Pub5Mobile.xcodeproj")}"
   end
 end
 
-MobileTool.run(ARGV)
+# An operator command, not a library: the guard marks it as a program whose
+# stdout is its interface (the NO_PUTS exemption), and keeps it requireable.
+MobileTool.run(ARGV) if $PROGRAM_NAME == __FILE__
