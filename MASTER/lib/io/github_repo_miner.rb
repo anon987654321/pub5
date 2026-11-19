@@ -70,17 +70,12 @@ module Master
       def fetch_response(query:, sort:, limit:)
         uri = URI(ENDPOINT)
         uri.query = URI.encode_www_form(q: query, sort:, order: "desc", per_page: limit)
-        address = SsrfGuard.pinned_address(uri)
-        raise "refused internal/reserved address" unless address
-
-        client = SsrfGuard.http_for(uri, address, timeout: TIMEOUT)
-        client.start do |http|
-          http.get(uri.request_uri, {
-            "User-Agent" => "MASTER/1 (github_repo_miner)",
-            "Accept" => "application/vnd.github+json",
-            "X-GitHub-Api-Version" => "2022-11-28",
-          })
-        end
+        request = Net::HTTP::Get.new(uri.request_uri, {
+          "User-Agent" => "MASTER/1 (github_repo_miner)",
+          "Accept" => "application/vnd.github+json",
+          "X-GitHub-Api-Version" => "2022-11-28",
+        })
+        SsrfGuard.request(uri, request, max_bytes: MAX_RESPONSE_BYTES, timeout: TIMEOUT)
       end
 
       def format_repository(item)
