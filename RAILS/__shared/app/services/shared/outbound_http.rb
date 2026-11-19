@@ -160,27 +160,29 @@ module Shared
       raise URI::InvalidURIError, "non-standard HTTPS port" unless uri.port == 443
       raise URI::InvalidURIError, "URL credentials and fragments are refused" unless uri.userinfo.nil? && uri.fragment.nil?
 
-      address = public_address!(uri.hostname)
+      cap = Integer(max_body)
+      raise ArgumentError, "response byte cap must be positive" unless cap.positive?
+      total = Float(total_timeout || [open_timeout, read_timeout, write_timeout].map { |value| Float(value) }.max)
+      unless total.finite? && total.positive? && total <= MAX_TOTAL_TIMEOUT
+        raise ArgumentError, "total timeout must be finite and between 0 and #{MAX_TOTAL_TIMEOUT}s"
+      end
 
+      address = public_address!(uri.hostname)
       http = pinned_connection(uri, address, open_timeout:, read_timeout:, write_timeout:)
       klass = method.to_sym == :post ? Net::HTTP::Post : Net::HTTP::Get
       request = klass.new(uri.request_uri)
       headers.each { |key, value| request[key] = value }
       request.body = body if body
-      total = Float(total_timeout || [open_timeout, read_timeout, write_timeout].map { |value| Float(value) }.max)
-      unless total.finite? && total.positive? && total <= MAX_TOTAL_TIMEOUT
-        raise ArgumentError, "total timeout must be finite and between 0 and #{MAX_TOTAL_TIMEOUT}s"
-      end
 
       response = nil
       Timeout.timeout(total, DeadlineExceeded, "outbound request exceeded its #{total}s total deadline") do
         http.request(request) do |incoming|
           response = incoming
           declared = incoming["content-length"].to_s
-          if declared.match?(/\\A\\d+\\z/) && declared.to_i > max_body
-            raise BodyTooLarge, "response body exceeds #{max_body} bytes"
+          if declared.match?(/\A\d+\z/) && declared.to_i > cap
+            raise BodyTooLarge, "response body exceeds #{cap} bytes"
           end
-          incoming.body = capped_body(incoming, max_body)
+          incoming.body = capped_body(incoming, cap)
         end
       end
       raise IOError, "outbound HTTP returned no response" unless response
