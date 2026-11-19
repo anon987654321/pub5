@@ -87,6 +87,7 @@ class TestIdentityAndRuntimeSurface < Minitest::Test
   end
 
   def test_operator_contract_teaches_unattended_deploy_completion_and_recovery
+    assert_equal 4, Master::AI::OperatorContract::VERSION
     prompt = Master::AI::OperatorContract.prompt
 
     assert_includes prompt, "exact target receipt, terminal exit marker and public canary"

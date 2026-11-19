@@ -736,8 +736,10 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_includes Registry.help_text("deploy"), "/deploy all --confirm"
     assert_includes Registry.help_text("deploy"), "/deploy rails --confirm"
     assert_includes Registry.help_text("deploy"), "receipt gate runs before the normal mirror apply"
-    assert_includes Registry.help_text("deploy"), "detached"
-    assert_includes Registry.help_text("deploy"), "completion and the final public"
+    assert_includes Registry.help_text("deploy"), "canonical tmux run"
+    assert_includes Registry.help_text("deploy"), "exact target receipt"
+    assert_includes Registry.help_text("deploy"), "successful public canary"
+    assert_includes Registry.help_text("deploy"), "read-only"
     assert_match(/needs explicit confirmation/, command.call(Master::CLI::PipelineContext.new(user_message: "/deploy all")))
     assert_match(/needs explicit confirmation/, command.call(Master::CLI::PipelineContext.new(user_message: "/deploy rails")))
   end
@@ -957,6 +959,50 @@ class TestCommandRegistryDispatch < Minitest::Test
     refute result[:ok]
     assert_includes result[:summary], "pending=1"
     assert_includes result[:summary], "deploy recovery receipts are pending or unavailable"
+  end
+
+  def test_full_stack_reconciliation_requires_the_master_web_stamp_too
+    inventory = Deploy::Inventory.new(root: Master::ROOT)
+    sha = "a1b2c3d"
+    apps = inventory.ordered_apps.map do |app|
+      {
+        "app" => app.name, "service" => "ok", "port_state" => "listening",
+        "deployed_sha" => sha, "drift" => false,
+        "last_deploy" => { "sha" => sha, "status" => "ok" },
+        "deploy_in_progress" => nil,
+      }
+    end
+    payload = {
+      "host" => "vm23", "dev_sha" => sha, "apps" => apps,
+      "master" => {
+        "service" => "ok", "port_state" => "listening",
+        "last_deploy" => { "sha" => sha, "status" => "ok" },
+        "deploy_in_progress" => nil,
+      },
+      "deploy_recovery" => { "state" => "none", "count" => 0, "pending" => [] },
+    }
+
+    result = Registry.send(:deploy_reconciliation_summary, payload, target: "all", inventory:)
+
+    assert result[:ok]
+    assert_includes result[:summary], "master web: service=ok port=listening"
+    assert_includes result[:summary], "verification: selected surfaces match"
+    payload["master"]["last_deploy"]["sha"] = "deadbee"
+    failed = Registry.send(:deploy_reconciliation_summary, payload, target: "all", inventory:)
+
+    refute failed[:ok]
+    assert_includes failed[:summary], "MASTER web: missing or non-green deploy stamp"
+  end
+
+  def test_deploy_summary_reports_local_preflight_refusal_without_calling_it_remote
+    status = Struct.new(:exitstatus) do
+      def success? = false
+    end.new(1)
+
+    result = Registry.send(:deploy_summary, "vps0: deploy refused, stale checkout\n", status, "all")
+
+    assert_includes result, "deployment blocked before SSH"
+    refute_includes result, "remote exit"
   end
 
   def test_deploy_summary_preserves_the_preflight_check_that_blocked_ssh
