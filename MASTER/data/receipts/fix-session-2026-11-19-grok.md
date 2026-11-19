@@ -41,7 +41,7 @@
 4. This receipt written under MASTER/data/receipts/ as durable session evidence.
 5. Subsequent commits will land only reversible, authorised source changes and will push to origin/main.
 
-## Next authorised steps (when a 3.3+ Ruby and keys/hosts are available)
+## Next authorised steps (when a 3.2+ Ruby and keys/hosts are available)
 - MASTER_TEST_JOBS=1 rake test (and the focused list in TODO §1).
 - Genuine repository-wide /fix with model lane pinned to the intended primary.
 - OPENBSD native proof on a real OpenBSD host.
