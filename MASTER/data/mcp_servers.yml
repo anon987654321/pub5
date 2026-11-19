@@ -1,8 +1,9 @@
 # MCP server definitions for MASTER.
 # Transport options: stdio | sse.
 # Every external MCP capability is governed before execution.
-# Disabled by default on resource-constrained VPS.
-# Enable individual servers with enabled: true when needed.
+# Optional external MCP servers. Native workspace and research tools are
+# available without starting npm processes during the ordinary CLI boot.
+# Enable an individual server explicitly when its extra surface is needed.
 #
 # Package versions are pinned exactly (`@x.y.z`): `npx -y` executes third-party
 # code at runtime under a governed tier, and a name-only pin executes whatever
