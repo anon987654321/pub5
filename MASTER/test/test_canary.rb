@@ -190,6 +190,30 @@ FLOW_OUTPUT = <<~OUT
     refute(by_name(runner(shell: crash, flows: false).run).key?("flows"))
   end
 
+  def test_public_canary_uses_the_shared_pinned_request_boundary
+    captured = nil
+    response = Struct.new(:code, :body) do
+      def to_hash = { "content-type" => ["text/plain"] }
+    end.new("200", "fine")
+    runner = self.runner(mode: :public)
+
+    Master::Io::SsrfGuard.stub(:request, lambda { |uri, request, max_bytes:, timeout:|
+      captured = [uri, request, max_bytes, timeout]
+      response
+    }) do
+      reply = runner.send(:fetch, "demo.test", 443, "/up", "demo.test", true)
+      assert_equal 200, reply.status
+      assert_equal "fine", reply.body
+    end
+
+    uri, request, max_bytes, timeout = captured
+    assert_equal "https://demo.test/up", uri.to_s
+    assert_equal "/up", request.path
+    assert_equal "demo.test", request["Host"]
+    assert_equal 2_000_000, max_bytes
+    assert_equal 15, timeout
+  end
+
   def test_public_mode_never_runs_flows_because_they_read_the_box_loopback
     write("MASTER/checks/runner.rb", "")
     asked = []
