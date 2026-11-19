@@ -136,6 +136,21 @@ class TestLoraLocalMigration < Minitest::Test
     end
   end
 
+  def test_symlinked_subject_root_is_blocked_not_skipped
+    with_repositories do |source, destination|
+      real = File.join(source, "real-subject")
+      FileUtils.mkdir_p(File.join(real, "weights", "johann"), mode: 0o700)
+      link = File.join(source, "STUDIO", "replicate", "lora", "johann")
+      FileUtils.mkdir_p(File.dirname(link))
+      File.symlink(real, link)
+
+      report = Migration.new(source_checkout: source, destination_root: destination).migrate("johann")
+
+      assert_equal "BLOCKED", report.fetch("status")
+      assert_match(/symlink/, report.fetch("reason"))
+    end
+  end
+
   def test_apply_without_a_valid_private_consent_record_copies_nothing
     with_repositories do |source, destination|
       write_legacy_subject(source)
