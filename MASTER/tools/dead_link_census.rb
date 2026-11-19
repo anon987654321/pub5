@@ -6,6 +6,7 @@ require "optparse"
 require "set"
 require "uri"
 require_relative "../lib/trace/dmesg"
+require_relative "../lib/io/ssrf_guard"
 
 options = { url: "https://brgen.no/", limit: 250, timeout: 10 }
 OptionParser.new do |opts|
@@ -26,10 +27,12 @@ while (uri = queue.shift) && seen.length < options[:limit]
 
   seen << key
   response = begin
-    Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == "https",
-                    open_timeout: options[:timeout], read_timeout: options[:timeout]) do |http|
-      http.get(uri.request_uri)
-    end
+    raise URI::InvalidURIError, "census origin must use HTTP/80 or HTTPS/443" unless Master::Io::SsrfGuard.valid_http_uri?(uri)
+
+    Master::Io::SsrfGuard.request(
+      uri, Net::HTTP::Get.new(uri.request_uri),
+      max_bytes: 2_000_000, timeout: options[:timeout]
+    )
   rescue StandardError => error
     findings << { url: uri.to_s, error: "#{error.class}: #{error.message}" }
     next
