@@ -29,7 +29,6 @@ module Master
       boot_timed("telemetry") { init_ground(root:) }
       container = boot_timed("builder") { Builder.build(root:) }
       boot_timed("JIT") { Runtime::Jit.apply! }
-      container[:native_inventory] = boot_timed("native inventory") { Runtime::NativeInventory.snapshot }
       boot_timed("admission and cognition") { init_loop(root:, container:) }
       start_constitution_drift(container)
       container
