@@ -106,40 +106,34 @@ module Master
         current = start_uri
         redirects = 0
         loop do
-          address = SsrfGuard.pinned_address(current)
-          return Result.err("external_audit: refused internal/reserved destination", category: :policy) unless address
-          http = SsrfGuard.http_for(current, address, timeout: TIMEOUT)
-          body = +""
-          response = Timeout.timeout(TIMEOUT * 3) do
-            http.start do |client|
-            request = Net::HTTP::Get.new(current.request_uri)
-            request["User-Agent"] = "MASTER/1 (passive external assessment)"
-            request["Accept"] = "text/html,application/xhtml+xml,*/*;q=0.1"
-            client.request(request) do |incoming|
-              incoming.read_body do |chunk|
-                raise ResponseTooLarge if body.bytesize + chunk.bytesize > MAX_BODY_BYTES
-                body << chunk
-              end
-            end
-            end
-          end
+          request = Net::HTTP::Get.new(current.request_uri)
+          request["User-Agent"] = "MASTER/1 (passive external assessment)"
+          request["Accept"] = "text/html,application/xhtml+xml,*/*;q=0.1"
+          response = SsrfGuard.request(
+            current, request, max_bytes: MAX_BODY_BYTES, timeout: TIMEOUT * 3,
+            open_timeout: TIMEOUT, read_timeout: TIMEOUT, write_timeout: TIMEOUT
+          )
           if response.is_a?(Net::HTTPRedirection)
             return Result.err("external_audit: redirect limit exceeded", category: :validation) if redirects >= MAX_REDIRECTS
             location = response["location"]
             return Result.err("external_audit: redirect lacks location", category: :validation) if location.to_s.empty?
+
             next_uri = URI.join(current.to_s, location)
             return Result.err("external_audit: redirect changes host; assess new host separately", category: :policy) unless next_uri.host.to_s.casecmp(current.host.to_s).zero?
-            return Result.err("external_audit: redirect destination must be HTTP(S)", category: :validation) unless %w[http https].include?(next_uri.scheme)
+            return Result.err("external_audit: redirect destination must be HTTP(S) on a standard port", category: :validation) unless SsrfGuard.valid_http_uri?(next_uri)
             return Result.err("external_audit: HTTPS redirects cannot downgrade to HTTP", category: :policy) if current.scheme == "https" && next_uri.scheme == "http"
             return Result.err("external_audit: redirect credentials forbidden", category: :validation) if next_uri.user || next_uri.password
+
             current = next_uri
             redirects += 1
             next
           end
-          return [response, current, redirects, body]
+          return [response, current, redirects, response.body.to_s]
         end
-      rescue ResponseTooLarge
+      rescue ResponseTooLarge, SsrfGuard::ResponseTooLarge
         Result.err("external_audit: response body exceeds #{MAX_BODY_BYTES} bytes", category: :validation)
+      rescue SocketError
+        Result.err("external_audit: refused internal/reserved destination", category: :policy)
       rescue Timeout::Error, Net::OpenTimeout, Net::ReadTimeout => e
         Result.err("external_audit: TIMEOUT (#{e.class})", category: :timeout)
       rescue StandardError => e
