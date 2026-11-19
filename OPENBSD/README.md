@@ -1,10 +1,10 @@
 # OPENBSD
 
-**Production is one box, and this tree is everything that puts it there and keeps it honest.**
-The box is vm23, and it runs every app behind relayd. `OPENBSD/mirror/` is a
-literal filesystem payload: `etc/`, `home/`, `usr/` and `var/` map directly
-to `/`. Operator tools live separately under `bin/` and `lib/`; checks,
-tests, data and bootstrap code remain outside the installable mirror.
+**Production runs on one host: vm23, with every app behind relayd.** This
+tree contains the tracked filesystem payload and the tools that install,
+verify and recover it. `OPENBSD/mirror/` maps `etc/`, `home/`, `usr/` and
+`var/` to `/`. Operator tools live under `bin/` and `lib/`; checks, tests,
+data and bootstrap code stay outside the installable mirror.
 
 Keep operational prose as exact as the host contract: identify the target
 release, prerequisites, command, effect, validation and rollback. The shared
