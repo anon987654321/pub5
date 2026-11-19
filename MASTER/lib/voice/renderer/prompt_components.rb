@@ -139,10 +139,12 @@ module Master
           "unknown"
         end
 
-        # The state line carries model and context. Keep the editable prompt
-        # to checkout, meaningful Git state and the input token.
+        # The state line carries model and context. The editable row keeps the
+        # checkout and Git branch, then uses the operator's IRC nick.
         def shell_prompt(_phase, _last_ok, **)
-          suffix = [git_prompt_segment, "master$"].reject(&:empty?).join(" ")
+          nick = bounded_prompt_segment(ENV.fetch("USER", "operator"), 12)
+          nick = "operator" if nick.empty?
+          suffix = [git_prompt_segment, "<#{nick}>"].reject(&:empty?).join(" ")
           path = prompt_path(suffix_length: suffix.length + 1)
           "#{path} #{suffix} "
         end
