@@ -118,7 +118,7 @@ module Master
         return false unless pid&.positive? && holders == [pid]
         return false unless process && process[:pid] == pid
         return false unless process[:tty] && process[:tty] != "??" && process[:tty] != "-"
-        return false if process[:stat].to_s.match?(/[TZ]/)
+        return false unless process[:stat].to_s.match?(/\A[SI]/)
         return false unless descendants.empty?
         return false unless activity && now - activity >= idle_seconds
 
