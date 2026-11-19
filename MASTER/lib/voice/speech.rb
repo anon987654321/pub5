@@ -442,7 +442,17 @@ module Master
           return path if path
         end
 
-        return if voice_locked || !os_voice_fallback?
+        # On macOS, Christopher and Andrew have an explicit native mapping to
+        # Alex. That mapping preserves the selected speaker better than a
+        # generic OS voice, so it is the one safe fallback even for a locked
+        # CLI voice. Do not fall through to espeak for that mapped path.
+        if macos_mapped_voice?(voice)
+          path = synthesize_say(text_str)
+          (@last_engine = "say") if path
+          return path
+        end
+
+        return if voice_locked || !os_voice_fallback?(voice:)
 
         path = synthesize_espeak(text_str) if espeak_path
         (@last_engine = "espeak") if path
@@ -457,7 +467,18 @@ module Master
 
       # An OS voice (macOS say, espeak) is a second, different speaker; off unless voice.yml tts.os_voice_fallback
       # is true, so a failed Edge sentence is silent rather than spoken by a stranger.
-      def os_voice_fallback? = Policy.data["os_voice_fallback"] == true
+      # The global switch remains off by default. macOS gets only the
+      # explicitly mapped voices; other hosts and unmapped language voices
+      # retain the one-speaker fail-closed policy.
+      def macos_host? = RUBY_PLATFORM.include?("darwin")
+
+      def macos_mapped_voice?(voice)
+        macos_host? && Engines::MACOS_VOICE_FALLBACKS.key?(voice.to_s.downcase.to_sym)
+      end
+
+      def os_voice_fallback?(voice: default_voice)
+        Policy.data["os_voice_fallback"] == true || macos_mapped_voice?(voice)
+      end
 
       def try_transcendent_synthesis(text_str, mode, voice:, style:, rate:, pitch:, voice_locked:, style_locked:)
         use_mode = (mode || synthesis_mode).to_s
