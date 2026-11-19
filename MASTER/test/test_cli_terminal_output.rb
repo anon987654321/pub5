@@ -192,7 +192,7 @@ class TestCLITerminalOutput < Minitest::Test
       end
     RUBY
 
-    assert_equal "No. I cannot do that.\\n\\nI can help with realistic alternatives.",
+    assert_equal "No. I cannot do that.\n\nI can help with realistic alternatives.",
                  cli.send(:conversation_output, wrapper)
     assert cli.send(:ruby_say_wrapper_stream?, wrapper)
   end
