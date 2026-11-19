@@ -1,10 +1,10 @@
 # brgen
 
-**A social network with no global timeline, because the city you live in is the only feed that
-ever mattered.** brgen is one Rails process that answers to many hosts, and the host you arrive
-on decides which city you are in and which part of the network you are using. It is a Rails
-8.2.0.alpha app on SQLite behind Falcon, with Hotwire, Solid Queue, Solid Cache and relayd, and
-it listens on port 38182. RAILS/brgen/AGENTS.md is the agent map.
+**A social network with no global timeline. Your city is the feed that
+matters.** brgen is one Rails process for many hosts. The host you arrive on
+determines the city and the vertical you use. The app runs Rails 8.2.0.alpha
+on SQLite behind Falcon, with Hotwire, Solid Queue, Solid Cache and relayd.
+It listens on port 38182. Read `RAILS/brgen/AGENTS.md` before changing it.
 
 ## Brand
 
