@@ -115,6 +115,20 @@ class TestCLITerminalOutput < Minitest::Test
     previous_quiet.nil? ? ENV.delete("MASTER_CLI_QUIET") : ENV["MASTER_CLI_QUIET"] = previous_quiet
   end
 
+  def test_conversational_replies_use_irc_lines_on_a_tty
+    cli = session
+    cli.instance_variable_set(:@last_input, "hello")
+
+    output = $stdout.stub(:tty?, true) do
+      cli.send(:format_irc_reply, "Hello.\n\nHow are you?")
+    end
+
+    rows = output.lines(chomp: true)
+    assert_match(/\A\[\d{2}:\d{2}\] <master> Hello\.\z/, rows.fetch(0))
+    assert_equal "", rows.fetch(1)
+    assert_match(/\A\[\d{2}:\d{2}\] <master> How are you\?\z/, rows.fetch(2))
+  end
+
   def test_normal_chat_unwraps_the_accidental_ruby_say_helper
     cli = session
     cli.instance_variable_set(:@last_input, "tell xmas story")
