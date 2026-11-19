@@ -113,9 +113,11 @@ The service resolves once and pins the socket to an approved public address.
 It keeps the original hostname for TLS verification and SNI, disables
 environment proxies, and bounds the response body and connection timeouts.
 `LinkConverter#sync!`, `S2sPostbackJob`, and the Amazon Creators API use that
-same address policy. The shared request path also applies body caps and
-open/read/write timeouts; the Link Converter, S2S and Amazon callers use it
-instead of constructing their own HTTP exchange. `Shared::Scrape` applies
+same address policy. The shared request path applies body caps, explicit
+open/read/write timeouts and a hard total deadline (600 seconds maximum; the
+default is the largest socket timeout). Slow-drip responses cannot hold a
+request open indefinitely. The Link Converter, S2S and Amazon callers use this
+path instead of constructing their own HTTP exchange. `Shared::Scrape` applies
 equivalent host-resolver pins to Chromium and blocks names it has not approved.
 Net::HTTP does not follow redirects automatically. A future redirect flow must
 re-enter this policy for each Location before connecting; it must never reuse
