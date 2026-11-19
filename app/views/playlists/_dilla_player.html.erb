@@ -1,0 +1,19 @@
+<div id="dilla-player" data-pen-url="https://codepen.io/anon987654321/pen/jdilla-experience">
+  <iframe src="https://codepen.io/anon987654321/embed/jdilla-experience?default-tab=result" 
+          width="100%" 
+          height="300" 
+          frameborder="0" 
+          allow="autoplay; encrypted-media" 
+          allowfullscreen>
+  </iframe>
+</div>
+
+<script>
+  document.addEventListener('click', function initAudio() {
+    const iframe = document.querySelector('#dilla-player iframe');
+    if (iframe) {
+      iframe.contentWindow.postMessage('play', '*');
+    }
+    document.removeEventListener('click', initAudio);
+  }, { once: true });
+</script>
