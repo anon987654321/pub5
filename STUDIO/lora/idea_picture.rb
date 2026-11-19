@@ -173,7 +173,7 @@ module Studio
 
         path = source.sub(/(\.mp4)\z/i, "_audio\\1")
         path = "#{source}_audio.mp4" if path == source
-        raise "refusing to replace an existing film: #{path}" if File.exist?(path)
+        raise "refusing to replace an existing film: #{path}" if File.exist?(path) || File.symlink?(path)
 
         _out, err, status = Studio::Subprocess.capture3(
           "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
