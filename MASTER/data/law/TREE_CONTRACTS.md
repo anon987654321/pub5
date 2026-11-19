@@ -63,7 +63,7 @@ npm ci && npm run build:pwa               # rebuild the Workbox service worker
 `RAILS/test/*.rb` are standalone Minitest files run under bare `ruby` — they
 read source as text and never boot Rails. App tests under
 `RAILS/<app>/test/` need the app bundle. Ruby is not pinned to a patch release:
-use the installed Ruby 3.3+ selected by MASTER's shared runtime policy. Each
+use the installed Ruby 3.2+ selected by MASTER's shared runtime policy. Each
 app command must use the same interpreter for Ruby and Bundler.
 
 Which check proves the work: source change → the check that owns it
