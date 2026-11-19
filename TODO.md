@@ -196,7 +196,7 @@ compatible checkout and no compiler child remains afterward.
   (17 runs, 386 assertions) passed. The strict per-file runner now forwards
   keyword and positional subprocess environments correctly and rejects empty
   or invalid Minitest summaries. Its new subprocess regressions are source
-  coverage, not a passing run. Run `cd STUDIO && rake check test` on the installed compatible Ruby (3.3+). Review an actual Dilla render by ear with rights-cleared local
+  coverage, not a passing run. Run `cd STUDIO && rake check test` on the installed compatible Ruby (3.2+). Review an actual Dilla render by ear with rights-cleared local
   source and confirm the sample level leaves voice room.
   2026-11-07: `rake test` ran green — 7 files including the new
   `test_dilla_wear_test.rb` (Sonitex wear-pass battery; three Dilla rig
