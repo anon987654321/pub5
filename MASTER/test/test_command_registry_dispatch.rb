@@ -876,6 +876,49 @@ class TestCommandRegistryDispatch < Minitest::Test
     )
   end
 
+  def test_cancelled_local_wait_still_performs_read_only_remote_reconciliation
+    cancelled = Struct.new(:exitstatus) do
+      def success? = false
+      def cancelled? = true
+    end.new(130)
+    succeeded = Struct.new(:exitstatus) do
+      def success? = true
+    end.new(0)
+    calls = []
+    state = {
+      "host" => "vm23",
+      "dev_sha" => "a1b2c3d",
+      "master" => {},
+      "apps" => [],
+      "deploy_recovery" => {
+        "state" => "pending", "count" => 1,
+        "pending" => [{ "run_id" => "20261119T010203Z-all-1234", "target" => "all",
+                        "status" => "running", "stage" => "brgen", "pid_state" => "present",
+                        "snapshot" => "complete", "pinned_sha" => "a1b2c3d" }],
+      },
+    }
+    capture = lambda do |*argv, **options|
+      calls << [argv, options]
+      if argv.include?("deploy")
+        ["vps-deploy: started in tmux session pub5-deploy (mode=wait)\n", cancelled]
+      else
+        [JSON.generate(state), succeeded]
+      end
+    end
+
+    result = Master::Io::Exec.stub(:capture2e, capture) do
+      Registry.send(:dispatch_deploy, Master::ROOT, ctx: Struct.new(:args).new("all --confirm"))
+    end
+
+    refute result.ok?
+    assert_equal :cancelled, result.category
+    assert_equal 2, calls.length
+    assert_includes calls.fetch(1).fetch(0), "state"
+    assert_includes result.message, "remote tmux run may still be active"
+    assert_includes result.message, "pending=1"
+    assert_includes result.message, "Do not launch another deployment"
+  end
+
   def test_dispatch_deploy_queries_read_only_state_after_remote_failure
     failed = Struct.new(:exitstatus) do
       def success? = false

@@ -832,7 +832,14 @@ module Master
         )
         summary = deploy_summary(output, status, target)
         return Result.err("deploy: #{summary}", category: :infrastructure) if deploy_preflight_blocked?(output)
-        return Result.err("deploy: #{summary}; local wait was cancelled; remote state was not queried", category: :infrastructure) if status.respond_to?(:cancelled?) && status.cancelled?
+        if status.respond_to?(:cancelled?) && status.cancelled?
+          state = deploy_remote_reconciliation(MasterPaths.repo, target:, inventory:)
+          return Result.err(
+            ["deploy: local wait was cancelled; the remote tmux run may still be active",
+             state[:summary], "Do not launch another deployment. Observe the existing run and reconcile its receipt first."].join("\n"),
+            category: :cancelled,
+          )
+        end
 
         state = deploy_remote_reconciliation(MasterPaths.repo, target:, inventory:)
         return Result.ok([summary, state[:summary]].join("\n")) if deploy_success_receipt?(output, status, target) && state[:ok]
