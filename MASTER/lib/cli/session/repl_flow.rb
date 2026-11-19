@@ -200,7 +200,7 @@ module Master
           width = 80 unless width.positive?
           return if width < 5
 
-          column = width - 4
+          column = width - 3
           input_ring = mic ? "\e[97m●\e[0m" : "○"
           reply_ring = tts ? "\e[97m●\e[0m" : "○"
           rings = "#{input_ring} #{reply_ring}"
