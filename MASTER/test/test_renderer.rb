@@ -187,6 +187,57 @@ class TestRenderer < Minitest::Test
     ], calls
   end
 
+  def test_status_colours_stay_plain_when_no_color_is_present
+    previous = ENV["NO_COLOR"]
+    previous_term = ENV["TERM"]
+    ENV["NO_COLOR"] = ""
+    ENV["TERM"] = "xterm-256color"
+
+    $stdout.stub(:tty?, true) do
+      renderer = FakeRenderer.new(config: {})
+      assert_equal "ok: Ready", renderer.render("Ready", mode: :success)
+      assert_equal "warn: Slow", renderer.render("Slow", mode: :warning)
+      assert_equal "err: Failed", renderer.render("Failed", mode: :error)
+    end
+  ensure
+    previous.nil? ? ENV.delete("NO_COLOR") : ENV["NO_COLOR"] = previous
+    previous_term.nil? ? ENV.delete("TERM") : ENV["TERM"] = previous_term
+  end
+
+  def test_status_colours_stay_plain_for_a_dumb_terminal
+    previous = ENV["NO_COLOR"]
+    previous_term = ENV["TERM"]
+    ENV.delete("NO_COLOR")
+    ENV["TERM"] = "dumb"
+
+    $stdout.stub(:tty?, true) do
+      renderer = FakeRenderer.new(config: {})
+      assert_equal "ok: Ready", renderer.render("Ready", mode: :success)
+      assert_equal "warn: Slow", renderer.render("Slow", mode: :warning)
+      assert_equal "err: Failed", renderer.render("Failed", mode: :error)
+    end
+  ensure
+    previous.nil? ? ENV.delete("NO_COLOR") : ENV["NO_COLOR"] = previous
+    previous_term.nil? ? ENV.delete("TERM") : ENV["TERM"] = previous_term
+  end
+
+  def test_status_colours_stay_plain_when_stdout_is_redirected
+    previous = ENV["NO_COLOR"]
+    previous_term = ENV["TERM"]
+    ENV.delete("NO_COLOR")
+    ENV["TERM"] = "xterm-256color"
+
+    $stdout.stub(:tty?, false) do
+      renderer = FakeRenderer.new(config: {})
+      assert_equal "ok: Ready", renderer.render("Ready", mode: :success)
+      assert_equal "warn: Slow", renderer.render("Slow", mode: :warning)
+      assert_equal "err: Failed", renderer.render("Failed", mode: :error)
+    end
+  ensure
+    previous.nil? ? ENV.delete("NO_COLOR") : ENV["NO_COLOR"] = previous
+    previous_term.nil? ? ENV.delete("TERM") : ENV["TERM"] = previous_term
+  end
+
   def test_session_line_is_dmesg_shaped
     renderer = FakeRenderer.new(config: {})
     assert_equal "session0 at master0: resumed, 3 messages kept", strip_ansi(renderer.session_line(3))
