@@ -274,4 +274,18 @@ class TestRuleCatalogue < Minitest::Test
     assert_includes rows.map { |row| row["id"] }, "TRAILING_WHITESPACE"
     assert_equal [], Operator::LawReach.unreachable(rows)
   end
+  def test_deploy_evidence_policy_has_one_runtime_owner
+    data = Master.laws_document(root: Master::ROOT)
+    law = data.fetch("EVIDENCE_SCORING")
+    config = data.fetch("evidence_scoring")
+    weights = config.fetch("weights")
+
+    assert_equal %w[code_review scan_clean test_pass], weights.keys.map(&:to_s).sort
+    assert_equal 80, weights.values.sum
+    assert_equal 80, config.fetch("pass_threshold")
+    refute law.key?("weights")
+    refute law.key?("pass_threshold")
+    refute law.key?("require_all_kinds")
+  end
+
 end

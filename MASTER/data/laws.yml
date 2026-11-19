@@ -1,42 +1,48 @@
-# laws.yml - operative law, flat, ordered by importance.
+# laws.yml - the canonical, ordered Law catalogue and MASTER policy.
 #
-# Top-level statement rows own Law identities and requirement texts. The
-# reserved law_catalogue block at the end owns per-Law execution policy
-# for every entry; an entry with no statement row above carries its
-# requirement in the Ruby its definition_sources name.
+# Authority and ownership:
+# * Statement rows own Law identity, normative text, parentage and root/node.
+# * law_catalogue.entries owns executable Law policy: mode, lifecycle,
+#   autofix, language/surface reach and negative path exclusions.
+# * Ruby Law definitions own executable detectors, semantic prompts, fixtures
+#   and positive path constraints.
+# * law_catalogue.defaults are merged first; an entry overrides its defaults.
+#   Parent links organize the Law tree; they do not inherit executable policy.
 #
-# Order runs from most important to least:
-#   1. The axiom that makes the pipeline exist.
-#   2. The nine constitutional invariants, in soul.rb's precedence order.
-#   3. Constitutional support: authorship, modality, finding hygiene,
-#      attestation.
-#   4. The named principles the reader already knows.
-#   5. The remaining universal laws.
-#   6. The transformation operations.
-#   7. Kinds, ratchets, lints, and the file's own metadata.
+# A top-level severity is the flat Law record's declared severity. Where the
+# same identity is executable, it must agree with the effective catalogue
+# severity; LawHygiene checks that cross-population contract. Runtime execution
+# takes its severity from law_catalogue. A top-level resolution describes the
+# Law's disposition; catalogue autofix separately controls automatic mutation.
 #
-# A law names no domain, no path, no exclude. The detector finds the
-# pattern; if the pattern is not there, there is no finding. A file's
-# kind is data the review reads; it is not a scope that exempts the file.
+# Applicability is not an exemption. Every artifact is considered for every
+# Law, and the runtime evaluates declared reach. Positive path scope belongs
+# beside the Ruby detector; languages, surfaces and narrow path_exclude
+# controls belong in law_catalogue. No path, kind or file may be silently
+# removed from the review population.
 #
 # Famous names are not renamed. DRY is DRY, KISS is KISS, SOLID is SOLID,
-# POLA is POLA. A law whose famous name is a child of another carries
-# parent as data and keeps its own name as its id.
+# POLA is POLA. A child keeps its own Law ID and names its parent as data.
 #
 # Soul's source-authority hierarchy is declared in soul.yml. The nine
-# invariant Law nodes keep their own internal order in these node rows;
-# Master::Soul exposes a derived graph view but never restates source authority.
-
+# constitutional invariant Law nodes keep their order here; Master::Soul
+# exposes a derived graph view and does not restate source authority.
+#
+# The catalogue's modality vocabulary is lexical, semantic and visual.
+# "Mechanical" in an invariant row names a deterministic enforcement owner;
+# lexical detection is one deterministic technique, not the whole category.
+#
 # ==========================================================================
 # 1. THE AXIOM
 # ==========================================================================
 
 APPLICATION_IS_UNIFORM:
   statement: >
-    Every file passes through every law in both modalities. There is no
-    path that skips a law. There is no file exempt by location. A file's
-    kind is a fact, recorded; a finding is made against the fact, not
-    against a bypass.
+    Every artifact is considered for applicability under every Law. The
+    runtime evaluates each Law against its declared language, surface and
+    path reach. An inapplicable Law is not a pass or an exemption; it is an
+    explicit applicability outcome. No path or file kind may silently remove
+    an artifact from the review population.
   root: visible_state
   severity: error
   resolution: never
@@ -55,7 +61,7 @@ APPLICATION_IS_UNIFORM_unrecorded_finding:
 
 APPLICATION_IS_UNIFORM_legacy_reach_is_not_global:
   parent: APPLICATION_IS_UNIFORM
-  statement: "Per-Law language, surface and path reach is sourced only from law_catalogue; an unscoped Law inherits the catalogue's universal-by-default policy."
+  statement: "Catalogue entries own language, surface and negative path reach; a Ruby Law definition owns its positive path constraint. Effective applicability is the intersection of those declared constraints, with universal-by-default behavior when catalogue filters are absent."
   resolution: never
 
 
@@ -880,9 +886,12 @@ SOUL_SUBORDINATE_TO_LAW_no_shadow_vocabulary:
 DUAL_MODALITY:
   root: visible_state
   statement: >
-    Every law is enforced in both modalities. A law only mechanically
-    enforced has a semantic gap; only semantically enforced has a
-    mechanical gap. Both are measured; neither is zero; neither grows.
+    Every executable Law has a truthful assessment contract. Deterministic
+    detectors and semantic assessments are distinct; a human assessor is
+    not a deterministic detector. The registry audit reports which paths
+    actually run and measures each gap. Missing evidence is INCONCLUSIVE,
+    never a pass. Reduce a gap only when independently verified coverage
+    improves; never hide it by renaming Laws or shrinking the population.
   severity: warning
   resolution: review
   mechanical: Master::Lint#both_modalities
@@ -2308,6 +2317,12 @@ RECOMMEND:
 # ==========================================================================
 # 7. DATA: KINDS, RATCHETS, LINTS, AND THE FILE'S OWN METADATA
 # ==========================================================================
+#
+# KIND_* records have two different resolution fields:
+# resolution governs the KIND Law record; default_resolution is the initial
+# disposition for findings on artifacts of that kind. expiry: never means
+# the review decision has no automatic expiry. These fields are not synonyms.
+#
 
 KIND_PRODUCTION:
   root: visible_state
@@ -2455,7 +2470,7 @@ RATCHET_FIXTURE_DEBT_WITHOUT_FIXTURES:
 
 RATCHET_DEPS_UNGRAPHED:
   root: visible_state
-  statement: "after: ids that do not resolve to a registered law."
+  statement: "Dependency targets named by law_deps.<law_id>.after that do not resolve to a registered Law."
   severity: warning
   resolution: review
   value: 132
@@ -2519,9 +2534,10 @@ LINT_MEASUREMENT_DOES_NOT_MUTATE:
 LINT_NO_EXCLUDE:
   root: visible_state
   statement: >
-    A law does not carry exclude, path, or path_pattern. A file's kind
-    is a fact; the finding is made; the review resolution carries the
-    reason and the expiry.
+    A normative Law row does not carry exclude, path or path_pattern.
+    Positive path constraints live beside the Ruby definition; language,
+    surface and narrow negative path reach live in law_catalogue. Every
+    applicability constraint must be explicit and auditable.
   severity: error
   resolution: never
   enforcement: Master::FlatLawCatalogue.validate! (lib/flat_law_catalogue.rb#validate_relationships!)
@@ -2529,9 +2545,11 @@ LINT_NO_EXCLUDE:
 LINT_NO_SCOPE:
   root: visible_state
   statement: >
-    A law does not carry applies_to or domain. A universal law does not
-    say where it applies; if a file contains the pattern, the law
-    catches it. If it does not, there is no finding.
+    A normative Law row does not carry applies_to or domain. Effective
+    applicability comes from the Ruby definition's positive path constraint
+    and law_catalogue's language, surface and negative path policy. Universal
+    by default means every artifact is considered, not that every detector
+    can meaningfully run on every file. File kind never exempts an artifact.
   severity: error
   resolution: never
   enforcement: Master::FlatLawCatalogue.validate! (lib/flat_law_catalogue.rb#validate_relationships!)
@@ -2539,8 +2557,11 @@ LINT_NO_SCOPE:
 LINT_BOTH_MODALITIES:
   root: visible_state
   statement: >
-    Every law names a mechanical and a semantic detector. A detector
-    declared human is a gap, counted by the duality ratchet.
+    Each constitutional invariant declares mechanical and semantic
+    enforcement contracts. This validates declaration, not execution.
+    The registry audit separately measures actual deterministic reach and
+    semantic assessment. A human assessor is not a mechanical detector;
+    unresolved coverage remains a visible, measured gap.
   severity: error
   resolution: never
   enforcement: Master::LawParity (lib/fix/law_parity.rb) + validate_invariant_modalities!
@@ -2642,13 +2663,12 @@ ROOTS_VOCABULARY:
 EVIDENCE_SCORING:
   root: visible_state
   statement: >
-    Test pass, scan clean, and code review each contribute; the
-    threshold is all three. No margin, no partial credit.
+    A deployment requires a clean scan, passing tests and code review.
+    The evidence_scoring block below is the sole runtime source for their
+    weights and threshold. The threshold requires all three evidence classes;
+    a score cannot override a separate hard gate.
   severity: error
   resolution: never
-  weights: { test_pass: 35, scan_clean: 25, code_review: 20 }
-  pass_threshold: 80
-  require_all_kinds: true
 
 STYLE_REGISTRY:
   parent: OPERATOR_RENDERED
@@ -5705,10 +5725,10 @@ architecture:
       depends_on: []
       check: cd STUDIO && ruby -Itest test/idea_picture_test.rb
 
-# The deploy gate in lib/cli/pipeline.rb adds these for each kind of evidence a
-# deploy carries. It read this section before it existed, so every deploy
-# scored 0 and was refused with a number that measured nothing. A clean scan
-# alone is 25; a deploy needs passing tests and a review on top to reach 80.
+# Sole runtime scoring source for Master::CLI::Pipeline. A clean self-scan
+# contributes scan_clean automatically; test_pass and code_review come from
+# the deploy's evidence metadata. The weights total the threshold, so all
+# three classes are required. The separate hard gates still block violations.
 evidence_scoring:
   weights:
     test_pass: 35
@@ -5914,6 +5934,8 @@ law_ratchets:
   fixture_debt:
     without_fixtures: 0
   deps:
+    # Executable Law IDs absent as keys in law_deps. This counts missing graph
+    # entries; RATCHET_DEPS_UNGRAPHED separately counts dangling after targets.
     # Existing debt is held as a measured ceiling and may only fall.
     ungraphed: 194
 
