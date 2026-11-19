@@ -2,6 +2,7 @@
 
 require "tmpdir"
 require "fileutils"
+require "stringio"
 require_relative "minitest_helper"
 require_relative "../lora/merethe/prepare"
 
@@ -100,6 +101,22 @@ class TestMeretheLoraPackage < Minitest::Test
       refute File.exist?(File.join(dataset_path, "new.txt"))
       assert_equal "previous zip", File.read(zip_path)
     end
+  end
+
+  def test_recovery_cli_does_not_prepare_or_replace_a_dataset
+    output = StringIO.new
+    error_output = StringIO.new
+    recovered = { "status" => "RECOVERED", "source_count" => 15 }
+
+    Studio::MeretheLora.stub(:recover!, recovered) do
+      Studio::MeretheLora.stub(:prepare!, -> { flunk "recovery must not prepare a dataset" }) do
+        status = Studio::MeretheLora.run_cli(["--recover"], output:, error_output:)
+        assert_equal 0, status
+      end
+    end
+
+    assert_includes output.string, '"status": "RECOVERED"'
+    assert_empty error_output.string
   end
 
   def test_preparation_is_local_only
