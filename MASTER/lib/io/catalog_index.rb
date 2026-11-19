@@ -231,19 +231,16 @@ module Master::Io
       raise ArgumentError, "catalog fetch requires https" unless uri.is_a?(URI::HTTPS)
       open_t = Integer(ENV.fetch("MASTER_HTTP_OPEN_TIMEOUT", "10"))
       read_t = Integer(ENV.fetch("MASTER_HTTP_READ_TIMEOUT", "30"))
-      address = Master::Io::SsrfGuard.pinned_address(uri)
-      raise ArgumentError, "catalog host refused or unresolvable: #{uri.host}" unless address
-
-      request = Net::HTTP::Get.new(uri)
+      request = Net::HTTP::Get.new(uri.request_uri)
       request["Authorization"] = "Bearer #{token}" if token && !token.empty?
       request["Accept"] = "application/json"
       request["User-Agent"] = "MASTER provider catalog index"
-      # Pin the resolved public address so a second DNS lookup cannot rebind.
-      http = Master::Io::SsrfGuard.http_for(uri, address, timeout: [open_t, read_t].max)
-      http.open_timeout = open_t
-      http.read_timeout = read_t
-      response = http.start { |conn| conn.request(request) }
-      raise "#{url} returned #{response.code}: #{response.body[0, 200]}" unless response.is_a?(Net::HTTPSuccess)
+      response = Master::Io::SsrfGuard.request(
+        uri, request, max_bytes: 8 * 1024 * 1024, timeout: [open_t, read_t].max,
+        open_timeout: open_t, read_timeout: read_t, write_timeout: open_t
+      )
+      raise "#{url} returned #{response.code}: #{response.body.to_s[0, 200]}" unless response.is_a?(Net::HTTPSuccess)
+
       JSON.parse(response.body)
     end
 
