@@ -146,14 +146,14 @@ module Shared
     # for the Host header and SNI, so certificate verification still checks the
     # name rather than the address.
     def request(uri, method: :get, headers: {}, body: nil, max_body: MAX_BODY,
-                open_timeout: TIMEOUT, read_timeout: TIMEOUT)
+                open_timeout: TIMEOUT, read_timeout: TIMEOUT, write_timeout: TIMEOUT)
       raise URI::InvalidURIError, "HTTPS required" unless uri.is_a?(URI::HTTPS)
       raise URI::InvalidURIError, "non-standard HTTPS port" unless uri.port == 443
       raise URI::InvalidURIError, "URL credentials and fragments are refused" unless uri.userinfo.nil? && uri.fragment.nil?
 
       address = public_address!(uri.hostname)
 
-      http = pinned_connection(uri, address, open_timeout:, read_timeout:)
+      http = pinned_connection(uri, address, open_timeout:, read_timeout:, write_timeout:)
       klass = method.to_sym == :post ? Net::HTTP::Post : Net::HTTP::Get
       request = klass.new(uri.request_uri)
       headers.each { |key, value| request[key] = value }
@@ -161,7 +161,7 @@ module Shared
       http.request(request) { |response| response.body = capped_body(response, max_body) }
     end
 
-    def pinned_connection(uri, address, open_timeout: TIMEOUT, read_timeout: TIMEOUT)
+    def pinned_connection(uri, address, open_timeout: TIMEOUT, read_timeout: TIMEOUT, write_timeout: TIMEOUT)
       unless uri.is_a?(URI::HTTPS) && uri.port == 443 && uri.userinfo.nil? && uri.fragment.nil?
         raise URI::InvalidURIError, "pinned connection requires a clean HTTPS origin on port 443"
       end
@@ -180,6 +180,7 @@ module Shared
       http.use_ssl = true
       http.open_timeout = open_timeout
       http.read_timeout = read_timeout
+      http.write_timeout = write_timeout
       http
     end
 
