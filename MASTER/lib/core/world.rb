@@ -71,7 +71,7 @@ module Master::Core
       Master::Core::VERBS.select do |verb|
         case verb
         when :git
-          process_runner? && (@capabilities.allow?(:read) || @capabilities.allow?(:write))
+          process_runner? && (@capabilities.allow?(:read) || (@capabilities.allow?(:write) && git_service?))
         when :probe
           process_runner? && @probe && @capabilities.allow?(:probe)
         when :exec
@@ -297,23 +297,9 @@ module Master::Core
     CREDENTIAL_ENV_RX = /KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|SESSION|COOKIE|SALT|CERT|PRIVATE|
                          \A(?:AWS|GOOGLE|GCP|AZURE|STRIPE|TWILIO|SENDGRID|VAPID|DATABASE_URL)/xi
 
-    # commit is path-scoped, and refuses to run without paths.
-    #
-    # `git commit -m msg` commits THE INDEX, which in this repo is shared: the
-    # checkout is one working tree that several sessions and a human use at
-    # once, so whatever anyone else had staged went into the fold's commit under
-    # the fold's message. That is the exact failure CLAUDE.md forbids agents from
-    # causing ("commit path-scoped at minimum"), and the fold was the one agent
-    # not doing it.
-    #
-    # `git commit -- <paths>` commits the working-tree state of those paths and
-    # ignores the index entirely, which is what makes it safe here. The cost is
-    # that this form cannot express a deletion; a fold that needs one has to say
-    # so as its own effect rather than have it ride along invisibly.
-    #
-    # Empty paths is refused rather than defaulted. Defaulting to "everything I
-    # touched" would be a guess about intent made by the layer with the least
-    # information, and the failure it guesses wrong about is unrecoverable.
+    # The Fold has stricter admission than the generic Git service: it requires
+    # exact content receipts, rejects pre-staged targets and refuses deletions.
+    # The shared Git service owns the private-index write itself.
     def do_git(operation:, paths: [], message: nil, expected_hashes: nil, **)
       case operation.to_s.to_sym
       when :diff then Observation.ok(git_capture("diff"))
@@ -373,7 +359,6 @@ module Master::Core
       unknown = safe_paths - known - untracked
       return Observation.no("git commit refused: missing or ignored paths: #{unknown.join(", ")}") if unknown.any?
 
-      verify_delivery_hashes!(safe_paths, expected)
       output = @git_service.commit_from_fold(
         message: message.to_s, paths: safe_paths, expected_hashes: expected, trailer: COMMIT_TRAILER,
       )

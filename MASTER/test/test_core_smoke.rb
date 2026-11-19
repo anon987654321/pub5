@@ -23,6 +23,10 @@ class CoreSmokeTest < Minitest::Test
     def propose(_context, verbs:, **) = @script.shift || Master::Core::Effect.done("script empty")
   end
 
+  class SilentGitReceiptBus
+    def publish_required(*) = true
+  end
+
   class RecordingWorld < Master::Core::World
     attr_reader :performed
 
@@ -138,7 +142,9 @@ class CoreSmokeTest < Minitest::Test
       # that the real operator would be asked to approve.
       world: Master::Core::World.new(
         root:, process_runner: Master::Io::Exec, atomic_writer: Master::Io::AtomicWrite,
-        git_service: Master::Io::GitOperations.new(root), ask: ->(**) { "yes" },
+        git_service: Master::Io::GitOperations.new(
+          root, receipts: Master::Trace::ToolObserver.new(bus: SilentGitReceiptBus.new)
+        ), ask: ->(**) { "yes" },
       ),
       memory:,
     }

@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "open3"
 require "tempfile"
 require "pathname"
 require "tmpdir"
@@ -30,10 +29,8 @@ module Master
       module Mutations
         # Stage and commit only these paths in a private index. A shared checkout
         # has many writers and one .git/index; even a path-scoped `git add` mutates
-        # that shared file. Mirror Core::World#do_git_commit: start from HEAD (or
-        # an empty unborn index), stage the requested paths privately, and commit
-        # with the same private index. Optional expected hashes bind a caller's
-        # pre-write proof to the bytes actually delivered.
+        # that shared file. Public commits and Fold commits share one private-index
+        # implementation below. Content receipts bind delivery to proved bytes.
         def commit(message, paths:, confirmed: nil, expected_hashes: nil)
           Master::Ground::LawHandshake::Admission.require!
           scoped = scoped_paths(paths)

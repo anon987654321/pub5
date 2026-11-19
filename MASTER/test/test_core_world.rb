@@ -32,6 +32,19 @@ class WorldTest < Minitest::Test
   # within() stops a path leaving root and said nothing about what sits inside
   # it, so a credential file in the checkout was readable and its contents
   # landed in the transcript.
+  def test_commit_is_not_advertised_without_the_shared_git_service
+    Dir.mktmpdir do |root|
+      world = Master::Core::World.new(root:, process_runner: Master::Io::Exec)
+
+      assert_equal ["diff"], world.git_operations
+      assert_includes world.verbs, :git
+      result = world.perform(E.git(:commit, paths: ["file.rb"], message: "no service"))
+
+      refute result.ok?
+      assert_match(/git commit service unavailable/, result.message)
+    end
+  end
+
   def test_world_offers_only_verbs_in_its_capability_profile
     read_only = build_world(root: Dir.pwd, capabilities: Master::Core::Capabilities.read_only)
     refute_includes read_only.verbs, :probe, "do not offer a probe without its policy"
