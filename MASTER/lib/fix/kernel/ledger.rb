@@ -110,9 +110,11 @@ module Master
       end
 
       def self.log_read_flags
-        flags = File::RDONLY
-        flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
-        flags
+        unless File.const_defined?(:NOFOLLOW)
+          raise LedgerCorruption, "O_NOFOLLOW is required for safe audit-log reads on this platform"
+        end
+
+        File::RDONLY | File::NOFOLLOW
       end
 
       # Between open and read the path must still lstat to the same singly
@@ -219,9 +221,12 @@ module Master
       end
 
       def ledger_open_flags(exclusive: false)
-        flags = File::RDWR | File::CREAT | File::APPEND
+        unless File.const_defined?(:NOFOLLOW)
+          raise LedgerCorruption, "O_NOFOLLOW is required for safe audit-ledger appends on this platform"
+        end
+
+        flags = File::RDWR | File::CREAT | File::APPEND | File::NOFOLLOW
         flags |= File::EXCL if exclusive
-        flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
         flags
       end
 
