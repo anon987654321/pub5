@@ -160,7 +160,7 @@ class TestCLITerminalOutput < Minitest::Test
     thread = nil
 
     Master::Voice::BootSound.stub(:play, -> { entered << true; release.pop }) do
-      cli.send(:play_boot_sound)
+      Timeout.timeout(1) { cli.send(:play_boot_sound) }
       thread = cli.instance_variable_get(:@boot_sound_thread)
       assert_instance_of Thread, thread
       Timeout.timeout(1) { entered.pop }
