@@ -113,14 +113,16 @@ The full builder self-test is off during ordinary startup. Run `bundle exec rake
 ## Outbound network boundary
 
 Every server-side fetch is an SSRF boundary, even when its URL appears to name
-a trusted provider. `Master::Io::SsrfGuard` is the owner for MASTER's HTTP
-clients. It accepts only HTTP on port 80 or HTTPS on port 443, rejects URL
-credentials and fragments, validates DNS-name shape before resolution, and
-classifies every returned A and AAAA address. One private, loopback, link-local,
-multicast, translated, documentation or reserved answer rejects the whole set.
-The chosen public address is pinned into `Net::HTTP#ipaddr`; the original
-hostname remains in place for TLS SNI, certificate verification and Host.
-Environment proxies are disabled because they would bypass the pin.
+a trusted provider. `Master::Io::SsrfGuard` owns MASTER's public HTTP boundary.
+`SsrfGuard.request` parses a clean URL, accepts only HTTP on port 80 or HTTPS
+on port 443, rejects credentials and fragments, validates DNS-name shape before
+resolution, and classifies every returned A and AAAA address. One private,
+loopback, link-local, multicast, translated, documentation or reserved answer
+rejects the whole set. The chosen public address is pinned into
+`Net::HTTP#ipaddr`; the original hostname remains in place for TLS SNI,
+certificate verification and Host. Environment proxies are disabled because
+they would bypass the pin. The shared request path streams under a byte cap,
+bounds the total operation and sets explicit connect, read and write timeouts.
 
 A redirect is not permission to make a second request. `WebBrowse` checks its Location target before handing it to Chromium, then
 intercepts and pins the resulting request again. `ExternalAudit` follows only
