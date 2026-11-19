@@ -236,7 +236,9 @@ module Deploy
     # answers, the certificate dates and whether its names cover the host, and the
     # HTTPS status. Reads only; every external call is bounded. A host that does not
     # answer is reported as that, never as healthy.
-    TLS_VERTICALS = %w[markedsplass dating radio takeaway tv messenger maps].freeze
+    # playlist.brgen.no is the radio engine's second host (restored 2026-11-19);
+    # it has its own DNS record and acme SAN, so it is watched like a vertical.
+    TLS_VERTICALS = %w[markedsplass dating radio playlist takeaway tv messenger maps].freeze
     RELAYD_CONF = File.join(ROOT, "OPENBSD/mirror/etc/relayd.conf")
 
     def tls_hosts

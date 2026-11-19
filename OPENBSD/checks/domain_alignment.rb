@@ -50,9 +50,10 @@ module Deploy
       end
 
       # The key stays :playlist — that is the engine, and the engine keeps its
-      # name. The label is the host, which became radio on 2026-09-12.
+      # name. The labels are the hosts: radio since 2026-09-12, playlist again
+      # since 2026-11-19 as the engine's second host.
       routes.fetch(:playlist).each do |label|
-        next if label == "radio"
+        next if %w[radio playlist].include?(label)
 
         result.fail("routes radio lists unknown label #{label}")
       end
@@ -183,7 +184,12 @@ module Deploy
       # registry row (markedsplass, marknadsplats, marktplatz, mercato, ...).
       # Everything else is the same word in every city.
       subs = [marketplace_subdomain, *COMMON_SUBAPPS]
-      subs << "ai" if domain == "brgen.no"
+      if domain == "brgen.no"
+        subs << "ai"
+        # playlist.brgen.no: the radio engine's second host, restored 2026-11-19.
+        # brgen.no only — the other cities keep radio.<city> alone.
+        subs << "playlist"
+      end
       subs.uniq
     end
 

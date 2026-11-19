@@ -1,0 +1,34 @@
+<%#
+  The "J Dilla Experience" codepen, embedded as a keepsake next to the player
+  that grew out of it. The pen's crate — Dilla first, then the orbit, then the
+  operator's own whyp.it uploads as "how" — is what the wireframe tunnel
+  (public/tunnel.html, the engine root) plays natively; this iframe is the
+  original artifact for visitors who want to see where it started.
+
+  Pen slug note: codepen.io refuses datacenter requests, so the slug could not
+  be machine-verified from vm23. If the embed ever 404s, the slug here is the
+  first thing to check against the pen's real URL.
+
+  Render with: render "playlist/shared/dilla_player"
+%>
+<div id="dilla-player" data-pen-url="https://codepen.io/anon987654321/pen/jdilla-experience">
+  <iframe src="https://codepen.io/anon987654321/embed/jdilla-experience?default-tab=result"
+          width="100%"
+          height="300"
+          frameborder="0"
+          loading="lazy"
+          title="J Dilla Experience — the original codepen"
+          allow="autoplay; encrypted-media"
+          allowfullscreen>
+  </iframe>
+</div>
+
+<script>
+  document.addEventListener('click', function initAudio() {
+    const iframe = document.querySelector('#dilla-player iframe');
+    if (iframe) {
+      iframe.contentWindow.postMessage('play', '*');
+    }
+    document.removeEventListener('click', initAudio);
+  }, { once: true });
+</script>

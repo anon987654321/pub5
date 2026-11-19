@@ -15,6 +15,7 @@ module Brgen
       "dating" => :dating,
       "maps" => :maps,
       "messenger" => :messenger,
+      "playlist" => :playlist,
       "radio" => :playlist,
       "takeaway" => :takeaway,
       "tv" => :tv,
@@ -33,9 +34,13 @@ module Brgen
 
     TV_SUBDOMAINS = %w[tv].freeze
     DATING_SUBDOMAINS = %w[dating].freeze
-    # `radio` in every city, and nothing else. It was `playlist` until 2026-09-12,
-    # when the public name changed; no alias was kept, so playlist.<city> is gone
-    # rather than deprecated.
+    # `radio` in every city, plus `playlist` again since 2026-11-19. The public
+    # name changed from playlist to radio on 2026-09-12 with no alias kept; the
+    # operator reversed that on 2026-11-19 ("make sure playlist.brgen.no is
+    # playing"), so playlist is back as a second host for the same engine.
+    # `radio` stays first: it is the canonical host every generated URL uses
+    # (city_subdomain_for takes .first), while playlist is an accept-alias —
+    # only brgen.no has the DNS record and certificate SAN for it so far.
     #
     # Not translated, for the reason this file applies to the whole group:
     # marketplace is translated per country because the word is part of the brand in
@@ -50,7 +55,7 @@ module Brgen
     # The engine is still Playlist: its directory, module and tables keep that name,
     # and the constant below is RADIO_SUBDOMAINS because what it constrains is the
     # host. Renaming the engine is a separate pass.
-    RADIO_SUBDOMAINS = %w[radio].freeze
+    RADIO_SUBDOMAINS = %w[radio playlist].freeze
     TAKEAWAY_SUBDOMAINS = %w[takeaway].freeze
     MARKETPLACE_SUBDOMAINS = SUBAPP_ALIASES.select { |_subdomain, subapp| subapp == :marketplace }.keys.freeze
     MAPS_SUBDOMAINS = %w[maps].freeze
