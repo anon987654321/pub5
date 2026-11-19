@@ -45,11 +45,13 @@ module Studio
           ["Validate a subject's training plan", :validate],
           ["Review or restore local private source material", :recover],
           ["Render a selfie series", :selfie],
+          ["Produce finished selfie films", :film],
         ])
         case choice
         when :validate then validate
         when :recover then puts JSON.pretty_generate(recovery_command([]))
         when :selfie then selfie(wizard)
+        when :film then film_command([])
         end
       end
 
@@ -62,6 +64,7 @@ module Studio
           "craft" => ->(_request) { craft },
           "recover" => ->(request) { recovery_report(request) },
           "selfie" => ->(request) { selfie_render(request) },
+          "film" => ->(request) { film_render(request) },
         }
       end
 
@@ -117,6 +120,20 @@ module Studio
         Studio::Lora::LocalMigration.run(arguments)
       end
 
+      def film_render(request)
+        require_relative "selfie_film"
+        subjects = request["subjects"] || (request["subject"] ? [request["subject"]] : Studio::Lora::SelfieFilm::SUBJECTS)
+        Studio::Lora::SelfieFilm.new.run_all(
+          subjects:, count: request.fetch("count", Studio::Lora::SelfieFilm::DEFAULT_COUNT),
+          engine: request["engine"]
+        )
+      end
+
+      def film_command(argv)
+        success = system(RbConfig.ruby, File.expand_path("selfie_film.rb", __dir__), *argv)
+        success ? 0 : ($?.exitstatus || 1)
+      end
+
       def selfie_render(request)
         require_relative "selfie_series"
         subject = request.fetch("subject", "ragnhild")
@@ -134,6 +151,7 @@ module Studio
           0
         when "--json", "--subject" then validate_with_flags(argv)
         when "selfie" then selfie(Studio::Interactive.new(input: $stdin, output: $stdout, tty: false))
+        when "film" then film_command(argv.drop(1))
         when "-h", "--help", nil then puts help
         else abort "lora: unknown command #{argv.first.inspect} (see --help)"
         end
@@ -168,6 +186,7 @@ module Studio
             ruby STUDIO/lora/lora.rb recover --apply  copy only after private rights preflight
             ruby STUDIO/lora/lora.rb validate --json  read-only machine-readable profile audit
             ruby STUDIO/lora/lora.rb selfie          render a selfie series
+            ruby STUDIO/lora/lora.rb film            make finished, locally private selfie films
           The subject craft itself (scenes, prompting rules, grades) lives in
           this file as Studio::Lora::Craft and Studio::Lora::Selfie.
         TEXT
