@@ -154,13 +154,14 @@ module Shared
 
       uri = URI(remote)
       raise URI::InvalidURIError, "HTTPS required" unless uri.is_a?(URI::HTTPS)
-      address = Shared::OutboundHttp.public_address!(uri.hostname)
-      http = Shared::OutboundHttp.pinned_connection(uri, address, open_timeout: 5, read_timeout: 15)
-      response = http.start { |conn| conn.request(Net::HTTP::Get.new(uri)) }
+      response = Shared::OutboundHttp.request(
+        uri, headers: { "User-Agent" => "Brgen-LinkConverter-Sync/1.0" },
+        max_body: 1_000_000, open_timeout: 5, read_timeout: 15
+      )
       return false unless response.is_a?(Net::HTTPSuccess)
 
       FileUtils.mkdir_p(File.dirname(local_path))
-      File.binwrite(local_path, response.body)
+      File.binwrite(local_path, response.body.to_s)
       true
     rescue StandardError => e
       Rails.logger.warn("link_converter download failed: #{e.class}: #{e.message}")
