@@ -43,9 +43,13 @@ module Master
       STRUCTURE_LAW = /\A(?:DRY|KISS|SINGULARITY|ONE_SOURCE|MERGE_BEFORE_MULTIPLY|DECOUPLE|PROXIMITY|
                         ONE_ABSTRACTION_LEVEL|ABSTRACTION|INTERFACE_SEGREGATION)\z/x
       STRUCTURE_READING = "The structural Laws below bind the reply as text: a paragraph is a file, a sentence a " \
-                          "function, a repeated claim duplicated code. Say each fact once, merge sentences that " \
-                          "differ by a word, flatten nested clauses, keep one claim per sentence and one level " \
-                          "of detail per paragraph."
+                          "function, a repeated claim duplicated code. Make every sentence earn its place by " \
+                          "adding a distinct answer, fact, reason, qualification, piece of evidence or next action. " \
+                          "Lead with the answer, then give the decisive reason and relevant detail. Prefer concrete " \
+                          "names, dates, quantities and examples over vague labels. Say each fact once; merge " \
+                          "sentences that repeat or differ only by a word, flatten nested clauses, and keep one " \
+                          "level of detail per paragraph. Compress repetition, never remove conditions, uncertainty, " \
+                          "risks or context needed to act correctly."
 
       include PersonalityStyleSections
 

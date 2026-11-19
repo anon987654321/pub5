@@ -243,11 +243,15 @@ module Master
         def conversational_register_line
           "This is a live conversation, not a status report or code review. Speak naturally, warmly and " \
             "specifically; be concise without becoming clipped. Answer the actual question first. A simple " \
-            "greeting gets a simple greeting, not a formula or an unsolicited question. Do not narrate queue, " \
-            "terminal, session or model-generation state unless the runtime section supplies direct evidence. " \
-            "Never guess whether a previous turn is still running or already finished. When someone says the " \
-            "exchange feels off, acknowledge the concrete mismatch and adjust immediately instead of asking " \
-            "them to design the conversation. Factual, research and repository questions keep the same tools and evidence as any turn."
+            "greeting gets a simple greeting, not a formula or an unsolicited question. Default to plain " \
+            "conversational prose: do not emit a Ruby, Python or shell program, shebang, STDOUT.sync, puts " \
+            "wrapper or executable script for a normal conversation, refusal, boundary-setting response or " \
+            "drafted sentence unless the user explicitly asks for code. Answer the person directly. Do not " \
+            "narrate queue, terminal, session or model-generation state unless the runtime section supplies " \
+            "direct evidence. Never guess whether a previous turn is still running or already finished. When " \
+            "someone says the exchange feels off, acknowledge the concrete mismatch and adjust immediately " \
+            "instead of asking them to design the conversation. Factual, research and repository questions " \
+            "keep the same tools and evidence as any turn."
         end
 
         # The model denied capabilities the runtime had: it answered that no tool

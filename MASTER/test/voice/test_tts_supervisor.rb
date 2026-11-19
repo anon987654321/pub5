@@ -47,6 +47,27 @@ class TestTtsSupervisor < Minitest::Test
     pid
   end
 
+  def test_ca_resolution_uses_only_existing_readable_host_paths
+    Dir.mktmpdir("master_tts_ca") do |root|
+      file = File.join(root, "bundle.pem")
+      directory = File.join(root, "certs")
+      File.write(file, "test CA fixture")
+      Dir.mkdir(directory)
+
+      assert_equal file, Sup.system_ca_file(candidates: [File.join(root, "missing.pem"), file])
+      assert_equal directory, Sup.system_ca_dir(candidates: [File.join(root, "missing"), directory])
+      assert_nil Sup.system_ca_file(candidates: [File.join(root, "missing.pem")])
+      assert_nil Sup.system_ca_dir(candidates: [File.join(root, "missing")])
+    end
+  end
+
+  def test_worker_tls_environment_never_names_a_missing_ca_path
+    env = Sup.tls_environment
+
+    assert env["SSL_CERT_FILE"].nil? || File.file?(env.fetch("SSL_CERT_FILE"))
+    assert env["SSL_CERT_DIR"].nil? || File.directory?(env.fetch("SSL_CERT_DIR"))
+  end
+
   def test_daemon_env_carries_the_prepared_master_bundle
     previous = %w[BUNDLE_PATH BUNDLE_APP_CONFIG GEM_HOME GEM_PATH].to_h { |key| [key, ENV[key]] }
     ENV["BUNDLE_PATH"] = "/tmp/master-private-bundle"

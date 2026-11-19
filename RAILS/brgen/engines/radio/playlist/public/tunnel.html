@@ -24,6 +24,9 @@
     /* Start overlay (autoplay gate) */
     .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,0.9); color: #9aa; cursor: pointer; user-select: none; }
     .overlay[hidden] { display: none; }
+    /* Origin-artifact link, bottom-left, as quiet as the track readout */
+    .pen { position: fixed; left: 12px; bottom: 10px; color: #55606a; font-size: 11px; text-decoration: none; }
+    .pen:hover, .pen:focus-visible { color: #9ab; }
     /* Off-screen Whyp player container */
     #player { position: fixed; top: -1000px; left: -1000px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
@@ -37,6 +40,8 @@
     <p>Click / tap to start · ← / → switch modes (22) · Space next track · M mute/unmute · Mobile: tilt for parallax</p>
   </div>
   <div class="ui" id="ui">Ready</div>
+  <!-- The crate is the "J Dilla Experience" codepen's; the pen is the origin artifact. -->
+  <a class="pen" href="https://codepen.io/anon987654321/pen/jdilla-experience" target="_blank" rel="noopener">the pen</a>
   <iframe id="player" src="about:blank" frameborder="0" allow="autoplay; encrypted-media; accelerometer; gyroscope"></iframe>
   <script>
     "use strict";
@@ -106,8 +111,14 @@
     const WIRE_ALPHA = 200; // subtle transparency
     const FOV = 250, SPEED = 0.75, BASE_RADIUS = 75, SEGMENTS = 64, Z_STEP = 4;
     // ------------------ Audio: Whyp embed IFrame ------------------
+    // The codepen crate, front-loaded: Dilla opens and the unreleased Players
+    // cut (the whyp upload from the "j dilla experience" pen, the only signed
+    // stream in the list) comes second instead of buried mid-set. The orbit —
+    // FlyLo, Slum Village, Pete Rock, Jneiro — follows, then the operator's
+    // own whyp.it uploads as "how".
     const TRACKS = [
       { artist: "J Dilla", title: "Microphone Master", id: "9EGHwkDix78" },
+      { artist: "J Dilla", title: "Players (Second Version) (Unreleased)", id: "292777", token: "zaB8x" },
       { artist: "AFTA-1", title: "Due Time", id: "WC09qDzU9y4" },
       { artist: "Flying Lotus", title: "Message Situation", id: "9fzGGbiJags" },
       { artist: "Röyksopp", title: "Only This Moment (Forsiktige massage)", id: "vLE5XCc0XO8" },
@@ -119,7 +130,6 @@
       { artist: "Flying Lotus", title: "Camel", id: "t6SXXx1Fu_4" },
       { artist: "Slum Village", title: "Worlds Full of Sadness", id: "MU3nfxsz2XA" },
       { artist: "Black Loops", title: "Under the Sea", id: "U81xh9gJeYM" },
-      { artist: "how", title: "J Dilla - Players (Second Version) (Unreleased)", id: "292777", token: "zaB8x" },
       { artist: "how", title: "Black Loops - Under the Sea [U81xh9gJeYM]", id: "292774", token: "UTbNQ" },
       { artist: "how", title: "amiga", id: "292741", token: "2Jh5p" },
       { artist: "how", title: "RADIO BERGEN #1", id: "292718", token: "1cr3I" },

@@ -93,10 +93,11 @@ tts:
       pitch_hz: [0, 6, 10, 6, 0, -6, -10, -6, 3, 0]
     pitch_reference_hz: 180
 
-  # Gentle presence shaping. The voice already contains its own formants; post
-  # processing should reveal articulation, control peaks, and leave the melody
-  # alone rather than imposing a synthetic character.
-  post_chain: "highpass=f=65,equalizer=f=145:t=q:w=0.8:g=0.8,equalizer=f=700:t=q:w=1.0:g=0.6,equalizer=f=2800:t=q:w=1.1:g=1.2,lowpass=f=13500,acompressor=threshold=-19dB:ratio=1.5:attack=10:release=120:makeup=1,volume=12dB,alimiter=limit=0.98"
+  # Everyday voice contour: a restrained low shelf for warmth, a soft low/mid
+  # and presence dip to reduce forwardness, and a light high shelf for air.
+  # Keep consonants intelligible and peaks controlled; no tremolo, pitch wobble,
+  # echo or reverb on ordinary speech. Prosody carries expression, not FX.
+  post_chain: "highpass=f=58,lowshelf=f=125:g=1.2,equalizer=f=350:t=q:w=0.9:g=-0.8,equalizer=f=1250:t=q:w=1.0:g=-1.6,equalizer=f=2900:t=q:w=1.1:g=-0.6,highshelf=f=8500:g=1.5,lowpass=f=14500,acompressor=threshold=-19dB:ratio=1.45:attack=12:release=140:makeup=1,volume=12dB,alimiter=limit=0.98"
 
   # Every effect the old Dilla engine owned (the tag dilla-engine-final holds it), as ffmpeg filters, run after
   # post_chain (mono) and before the room; `region: stereo` units run after the

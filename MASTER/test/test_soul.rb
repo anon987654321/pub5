@@ -173,6 +173,8 @@ class TestSoul < Minitest::Test
 
     assert_includes line, "Speak naturally, warmly and specifically"
     assert_includes line, "Never guess whether a previous turn is still running"
+    assert_includes line, "Default to plain conversational prose"
+    assert_includes line, "unless the user explicitly asks for code"
     assert_includes line, "adjust immediately"
   end
 

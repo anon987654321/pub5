@@ -365,7 +365,7 @@ SSH aliases, host topology and provider access are kept in this runbook so live-
 | brgen | `https://brgen.no` |
 | brgen · marketplace | `https://markedsplass.brgen.no` |
 | brgen · dating | `https://dating.brgen.no` |
-| brgen · playlist | `https://radio.brgen.no` |
+| brgen · playlist | `https://radio.brgen.no` (canonical), `https://playlist.brgen.no` (second host, restored 2026-11-19; DNS record and acme SAN from BOOTSTRAP.sh ALL_DOMAINS, relayd route beside radio's, app-side alias in `Brgen::DomainRegistry::RADIO_SUBDOMAINS`) |
 | brgen · takeaway | `https://takeaway.brgen.no` |
 | brgen · tv | `https://tv.brgen.no` |
 | brgen · messenger | `https://messenger.brgen.no` |

@@ -3,6 +3,7 @@
 
 require_relative "../lib/boot/entrypoint"
 Master::Boot::Entrypoint.prepare!(root: File.expand_path("..", __dir__))
+require_relative "../lib/voice/tts_supervisor"
 #
 # TTS worker — runs EventMachine in isolation from Falcon Async fibers.
 # Three modes:
@@ -35,7 +36,7 @@ if ENV["TTS_WORKER_REEXEC_DONE"] != "1"
     # trap for anything else: the knob read fine in the parent and the daemon
     # that actually runs the loop never saw it.
     "TTS_WORKER_IDLE_S" => ENV.fetch("TTS_WORKER_IDLE_S", "1800"),
-  }
+  }.merge(Master::Voice::TtsSupervisor.tls_environment)
   exec(clean_env, RbConfig.ruby, __FILE__, *ARGV, unsetenv_others: true)
 end
 
@@ -103,10 +104,9 @@ EventMachine.singleton_class.prepend(Ipv4First)
 # verification on and point at the system bundle.
 Faye::WebSocket::Client.singleton_class.prepend(Module.new do
   def new(url, protocols = [], options = {})
-    cert = ENV["SSL_CERT_FILE"].to_s
-    cert = %w[/etc/ssl/cert.pem /etc/ssl/certs/ca-certificates.crt].find { |p| File.file?(p) }.to_s if cert.empty?
+    cert = Master::Voice::TtsSupervisor.system_ca_file
     tls = { verify_peer: true }
-    tls[:root_cert_file] = cert unless cert.empty?
+    tls[:root_cert_file] = cert if cert
     super(url, protocols, options.merge(tls: options.fetch(:tls, {}).merge(tls)))
   end
 end)
@@ -280,16 +280,16 @@ end
 
 def worker_env
   wipe = ENV.keys.to_h { |key| [key, nil] }
-  wipe.merge(
+  env = wipe.merge(
     "HOME" => ENV.fetch("HOME", ""),
     "USER" => ENV.fetch("USER", ""),
     "PATH" => ENV.fetch("PATH", "/usr/local/bin:/usr/bin:/bin"),
     "LANG" => ENV.fetch("LANG", "C.UTF-8"),
     "LC_ALL" => ENV.fetch("LC_ALL", "C.UTF-8"),
-    "BUNDLE_GEMFILE" => File.join(ROOT, "Gemfile"),
-    "SSL_CERT_FILE" => ENV["SSL_CERT_FILE"].to_s.empty? ? "/etc/ssl/cert.pem" : ENV["SSL_CERT_FILE"],
-    "SSL_CERT_DIR" => ENV.fetch("SSL_CERT_DIR", "/etc/ssl")
+    "BUNDLE_GEMFILE" => File.join(ROOT, "Gemfile")
   )
+  env.merge!(Master::Voice::TtsSupervisor.tls_environment)
+  env
 end
 
 # The argv order VOICE RATE PITCH OUT_PATH is the one-shot wire contract.
@@ -332,10 +332,7 @@ end
 # that retries the same way, and an Edge that answers nothing made an unbounded
 # chain of workers.
 def synth_forked(request, out_path, retry_in_subprocess: true)
-  if ENV["SSL_CERT_FILE"].to_s.empty?
-    cert = %w[/etc/ssl/cert.pem /etc/ssl/certs/ca-certificates.crt].find { |p| File.file?(p) }
-    ENV["SSL_CERT_FILE"] = cert if cert
-  end
+  Master::Voice::TtsSupervisor.tls_environment.each { |key, value| ENV[key] = value }
   pid = Process.fork do
     begin
       Process.setproctitle("tts-worker: synth")

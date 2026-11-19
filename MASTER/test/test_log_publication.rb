@@ -110,6 +110,25 @@ class LogPublicationTest < Minitest::Test
     assert_match(/no url/, result.error)
   end
 
+  def test_redacts_before_truncating_a_secret_value
+    captured = nil
+    http = lambda do |_url, payload, _headers, **_opts|
+      captured = payload[:files]["fix-run-1.log"][:content]
+      { "html_url" => "https://gist.github.com/anon/truncated-secret" }
+    end
+    secret = "private-value-#{'x' * (Publication::MAX_BYTES + 1_024)}"
+    result = publish(
+      log_text: "boot\\nOPENAI_API_KEY=#{secret}\\n",
+      env: { "GITHUB_TOKEN" => "test-token" },
+      http:
+    )
+
+    assert_equal "gist", result.sink
+    refute result.truncated, "redaction should remove the oversized secret before the size check"
+    assert_includes captured, "OPENAI_API_KEY=__REDACTED__"
+    refute_includes captured, secret
+  end
+
   def test_tail_bounded_at_max_bytes
     captured = nil
     http = lambda do |_url, payload, _headers, **_opts|
@@ -122,6 +141,13 @@ class LogPublicationTest < Minitest::Test
     assert_equal true, result.truncated
     assert captured.bytesize <= Publication::MAX_BYTES + 100
     assert captured.start_with?("[log truncated")
+  end
+
+  def test_command_line_helper_uses_the_redacting_publisher
+    source = File.read(File.expand_path("../../scripts/publish_log.zsh", __dir__))
+
+    assert_includes source, "Master::Fix::LogPublication.publish"
+    refute_includes source, "curl -F"
   end
 
   def test_result_to_h_compacts

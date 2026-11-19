@@ -608,8 +608,13 @@ OWNED_DOMAINS=(
   wshingtondc.us
 )
 
+# playlist.brgen.no returned 2026-11-19 as a second host for the radio engine
+# (operator request: the playlist address is the one people share). brgen.no
+# only — the other cities keep radio.<city> alone. render_dns.rb derives the
+# zone record and the acme SAN from this list; relayd.conf carries the route.
+# No comments inside the array: render_dns.rb parses every non-empty line.
 ALL_DOMAINS=(
-  brgen.no:markedsplass,radio,dating,tv,takeaway,maps,messenger,ai
+  brgen.no:markedsplass,radio,playlist,dating,tv,takeaway,maps,messenger,ai
   longyearbyn.no:markedsplass,radio,dating,tv,takeaway,maps,messenger
   oshlo.no:markedsplass,radio,dating,tv,takeaway,maps,messenger
   stvanger.no:markedsplass,radio,dating,tv,takeaway,maps,messenger

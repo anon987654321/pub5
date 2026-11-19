@@ -69,7 +69,10 @@ test("operation log SSE is handled by the chat transcript link renderer", () => 
   const payload = { url: "https://dpaste.org/example", service: "dpaste_org", expires_in: "7 days" };
 
   assert.equal(sse.dispatchNamed("operation_log", JSON.stringify(payload)), true);
-  assert.deepEqual(published, [payload]);
+  // The handler parses the JSON inside the contract's vm realm, so the pushed
+  // entry carries that realm's Object.prototype; re-home it before the strict
+  // structural comparison.
+  assert.deepEqual(published.map((entry) => ({ ...entry })), [payload]);
 });
 
 test("dispatchNamed runs the contract handler, prefers an extension, and logs a throwing one", () => {

@@ -8,7 +8,9 @@ require "yaml"
 module DomainSignals
   module_function
 
-  BRGEN_VERTICALS = %w[tv dating radio takeaway markedsplass maps messenger].freeze
+  # playlist.brgen.no restored 2026-11-19 as the radio engine's second host;
+  # without it here the relayd route reads as a residual.
+  BRGEN_VERTICALS = %w[tv dating radio playlist takeaway markedsplass maps messenger].freeze
 
   # Returns a hash; blank arrays mean "say nothing on status".
   def scan(root)
