@@ -38,6 +38,8 @@ module Master
         text = response.body.to_s.byteslice(0, MAX_BYTES)
         @bus&.publish("tool:after", tool: NAME, dynamic: name, status: response.code.to_i)
         Result.ok("HTTP #{response.code}\n#{text}")
+      rescue SocketError => e
+        Result.err("dynamic_http: refused internal/reserved address (#{e.message})", category: :validation)
       rescue StandardError => e
         Result.err("dynamic_http: #{e.message}", category: :infrastructure)
       end
@@ -45,38 +47,25 @@ module Master
       def resolve_and_validate_uri(defn, params)
         url = interpolate(defn.fetch("url").to_s, params)
         uri = URI(url)
-        return Result.err("dynamic_http: only http(s)", category: :validation) unless %w[http https].include?(uri.scheme)
-        return Result.err("dynamic_http: refused internal/reserved address", category: :validation) unless SsrfGuard.safe_uri?(uri)
+        return Result.err("dynamic_http: only clean HTTP(S) URLs on standard ports", category: :validation) unless SsrfGuard.valid_http_uri?(uri)
 
         uri
       end
 
       def perform_request(uri, method, defn, params)
-        # The socket timeouts bound each connect, write and read; only the outer
-        # deadline bounds a server that drips one byte inside every read_timeout.
-        # A blocked socket read is interruptible, and Net::HTTP.start's block
-        # closes the connection as the Timeout::Error unwinds through it.
-        Timeout.timeout(TIMEOUT * 2) do
-          address = SsrfGuard.pinned_address(uri) or raise SocketError, "#{uri.host} no longer resolves to a public address"
-          pinned = SsrfGuard.http_for(uri, address)
+        request = if %w[POST PUT PATCH].include?(method)
+                    outbound = Net::HTTP.const_get(method.capitalize).new(uri.request_uri)
+                    outbound["Content-Type"] = defn.fetch("content_type", "application/json")
+                    outbound.body = build_body(defn, params)
+                    outbound
+                  else
+                    Net::HTTP::Get.new(uri.request_uri)
+                  end
 
-          pinned.open_timeout = TIMEOUT
-          pinned.read_timeout = TIMEOUT
-          pinned.write_timeout = TIMEOUT
-
-          pinned.start do |http|
-            case method
-            when "POST", "PUT", "PATCH"
-              req = Net::HTTP.const_get(method.capitalize).new(uri)
-              body = build_body(defn, params)
-              req["Content-Type"] = defn.fetch("content_type", "application/json")
-              req.body = body
-              http.request(req)
-            else
-              http.get(uri.request_uri)
-            end
-          end
-        end
+        SsrfGuard.request(
+          uri, request, max_bytes: MAX_BYTES, timeout: TIMEOUT * 2,
+          open_timeout: TIMEOUT, read_timeout: TIMEOUT, write_timeout: TIMEOUT
+        )
       end
 
       private
