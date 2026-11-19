@@ -62,6 +62,16 @@ class TestStudioDoctor < Minitest::Test
     refute_includes serialized, "subject.env"
   end
 
+  def test_loose_subject_photographs_are_private_even_outside_sources
+    doctor = Studio::Doctor.new
+
+    assert doctor.send(:private_path?, "STUDIO/lora/johann/portrait.jpg")
+    assert doctor.send(:private_path?, "STUDIO/lora/ragnhild/contact-sheet.png")
+    assert doctor.send(:private_path?, "STUDIO/lora/merethe/model.safetensors")
+    refute doctor.send(:private_path?, "STUDIO/lora/ragnhild/train.yaml")
+    assert_includes Studio::Doctor::PRIVATE_PATHSPECS, ":(glob)STUDIO/lora/**/*.jpg"
+  end
+
   def test_shallow_checkout_does_not_report_private_history_clean
     doctor = Studio::Doctor.new
     checks = []
