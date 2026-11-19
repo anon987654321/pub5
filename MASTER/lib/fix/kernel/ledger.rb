@@ -204,9 +204,15 @@ module Master
       # plant a pre-seeded path between the absence check and open. If another
       # legitimate writer wins, validate the now-existing path before reopening.
       def open_ledger_for_append(&block)
+        if File.exist?(@log_path) || File.symlink?(@log_path)
+          assert_private_ledger_path!
+          return File.open(@log_path, ledger_open_flags, 0o600, &block)
+        end
+
         begin
           File.open(@log_path, ledger_open_flags(exclusive: true), 0o600, &block)
         rescue Errno::EEXIST
+          # Another first writer won. Re-validate its object before using it.
           assert_private_ledger_path!
           File.open(@log_path, ledger_open_flags, 0o600, &block)
         end
@@ -249,6 +255,11 @@ module Master
       end
 
       def write_ledger_row!(file, row)
+        stat = file.stat
+        unless stat.file? && stat.nlink == 1
+          raise LedgerCorruption, "refusing to append through a non-regular or hard-linked ledger handle"
+        end
+        assert_unchanged_ledger_path!("ledger path changed before append", opened: stat)
         line = JSON.generate(row) + "\n"
         file.seek(0, IO::SEEK_END)
         written = file.write(line)
