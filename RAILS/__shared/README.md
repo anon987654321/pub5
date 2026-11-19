@@ -1,8 +1,8 @@
 # Shared Rails engine
 
-**One engine gives Brgen, Amber, BSDPorts and MASTER's face a shared
-interface grammar.** Each product keeps its own visual dialect; shared rules
-behave consistently across screens. The `pub5-shared` gem supplies layout
+**One engine lets four products speak a shared interface language without
+looking alike.** Brgen, Amber, BSDPorts and MASTER's face share layout and
+interaction rules; each keeps its own visual dialect. The `pub5-shared` gem supplies layout
 chrome, accessibility defaults, social primitives, a service worker and
 vendored Stimulus components. Apps load it by local path.
 
