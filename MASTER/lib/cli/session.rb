@@ -122,6 +122,7 @@ module Master
         @refs.ground_truth&.begin_turn! if @refs.respond_to?(:ground_truth)
         @user_active = true
         @last_input = input
+        announce_voice_status
         Master::Trace::WriteTracker.current&.reset!
         paste, state, accumulated = init_turn_state(input)
 
@@ -130,7 +131,11 @@ module Master
         result = dispatch_turn(input, accumulated:, state:)
         stop_thinking_indicator
         print_bridge_footer(result.value[:core], state:) if result.ok? && state[:streamed] && result.value[:core]
-        display_result(result:, accumulated:, streamed: state[:streamed], units_console: state[:units_console])
+        display_result(
+          result:, accumulated:,
+          streamed: state[:streamed] && !state[:stream_suppressed],
+          units_console: state[:units_console]
+        )
         publish_operation_log(
           operation: input,
           status: result.ok? ? "success" : "failure",
@@ -146,6 +151,7 @@ module Master
         stop_thinking_indicator
         close_unit_console
         @user_active = false
+        announce_voice_status
       end
 
       private
@@ -192,7 +198,11 @@ module Master
 
       def init_turn_state(input)
         paste = paste_like_input?(input)
-        state = { streamed: false, thinking_shown: !paste }
+        state = {
+          streamed: false,
+          thinking_shown: !paste,
+          conversational: conversational_input?,
+        }
         accumulated = +""
         build_stream_handler(accumulated) { |text| handle_stream_text(text, state) }
         [paste, state, accumulated]
@@ -299,6 +309,25 @@ module Master
       end
 
       def handle_stream_text(text, state)
+        if state[:conversational] && !state[:chat_stream_started]
+          return if state[:stream_suppressed]
+
+          state[:stream_probe] ||= +""
+          state[:stream_probe] << text.to_s
+          if ruby_say_wrapper_stream?(state[:stream_probe])
+            state[:stream_suppressed] = true
+            state[:stream_probe] = nil
+            return
+          end
+          return if ruby_say_wrapper_prefix_pending?(state[:stream_probe])
+
+          text = format_irc_stream(state[:stream_probe])
+          state[:stream_probe] = nil
+          state[:chat_stream_started] = true
+        elsif state[:stream_suppressed]
+          return
+        end
+
         if state[:thinking_shown] && $stdout.isatty
           stop_thinking_indicator
           # The inline thinking row is cleared only when nothing is being
