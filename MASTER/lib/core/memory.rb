@@ -157,7 +157,7 @@ module Master::Core
       args = effect.args
       subject = case effect.verb
                 when :write then "#{args[:path]} (#{args[:content].to_s.lines.size} lines)"
-                when :exec then [Array(args[:argv]).join(" "), (" [#{args[:evidence]}]" if args[:evidence])].join
+                when :exec then Array(args[:argv]).join(" ")
                 when :probe then Array(args[:argv]).join(" ")
                 when :git then [args[:operation], *Array(args[:paths])].join(" ")
                 else args[:path] || args[:text] || args[:prompt] || args[:summary] || args[:scope]
