@@ -156,7 +156,7 @@ class TestWebBrowse < Minitest::Test
     assert_includes request.response_options[:body], "Blocked unsafe redirect"
   end
 
-  def test_redirect_to_a_private_http_service_is_blocked_on_follow_up
+  def test_redirect_to_a_private_http_service_is_blocked_before_browser_handoff
     request = InterceptedRequest.new(url: "https://example.com/start")
     response = FakeResponse.new(
       code: "302",
@@ -165,9 +165,13 @@ class TestWebBrowse < Minitest::Test
     )
     client = FakeHTTP.new(response)
     requested_hosts = []
+    resolved_hosts = []
     budget = tool.send(:new_budget)
 
-    Guard.stub(:pinned_address, ->(uri) { uri.host == "example.com" ? "93.184.216.34" : nil }) do
+    Guard.stub(:pinned_address, ->(uri) {
+      resolved_hosts << uri.host
+      uri.host == "example.com" ? "93.184.216.34" : nil
+    }) do
       Guard.stub(:http_for, lambda { |uri, _address, timeout:|
         requested_hosts << uri.host
         client
@@ -176,12 +180,36 @@ class TestWebBrowse < Minitest::Test
         follow_up = InterceptedRequest.new(url: "http://127.0.0.1/admin")
         tool.send(:handle_request, follow_up, budget:)
 
-        assert_equal 302, request.response_options[:responseCode]
-        assert_equal "http://127.0.0.1/admin", request.response_options[:responseHeaders]["location"]
-        assert follow_up.aborted, "the redirect target must be rejected before opening a socket"
+        assert_equal 403, request.response_options[:responseCode]
+        assert_includes request.response_options[:body], "Blocked unsafe redirect"
+        assert follow_up.aborted, "the browser follow-up is independently refused"
         assert_equal ["example.com"], requested_hosts
+        assert_equal ["example.com", "127.0.0.1", "127.0.0.1"], resolved_hosts
       end
     end
+  end
+
+  def test_redirect_to_a_public_destination_is_dns_checked_before_browser_handoff
+    request = InterceptedRequest.new(url: "https://example.com/start")
+    response = FakeResponse.new(
+      code: "302",
+      headers: { "location" => "https://cdn.example.net/next", "content-type" => "text/plain" },
+      body: "",
+    )
+    client = FakeHTTP.new(response)
+    resolved_hosts = []
+
+    Guard.stub(:pinned_address, ->(uri) {
+      resolved_hosts << uri.host
+      { "example.com" => "93.184.216.34", "cdn.example.net" => "8.8.8.8" }[uri.host]
+    }) do
+      Guard.stub(:http_for, ->(_uri, _address, timeout:) { client }) do
+        tool.send(:handle_request, request, budget: tool.send(:new_budget))
+      end
+    end
+
+    assert_equal 302, request.response_options[:responseCode]
+    assert_equal ["example.com", "cdn.example.net"], resolved_hosts
   end
 
   def test_it_is_registered_for_the_builder_the_llm_and_the_catalogue
