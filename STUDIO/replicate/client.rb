@@ -417,6 +417,7 @@ module Studio
         3c00::/7 3e00::/8 3f00::/8 fec0::/10 fc00::/7 fe80::/10 ff00::/8
       ].map { |cidr| IPAddr.new(cidr) }.freeze
       GLOBAL_DOWNLOAD_IPV6 = IPAddr.new("2000::/3").freeze
+      DNS_RESOLUTION_TIMEOUT_S = 5
       MODEL_REFERENCE = /\A([A-Za-z0-9][A-Za-z0-9._-]{0,127})\/([A-Za-z0-9][A-Za-z0-9._-]{0,127})(?::([A-Za-z0-9][A-Za-z0-9._-]{0,127}))?\z/.freeze
       RESOURCE_ID = /\A[A-Za-z0-9][A-Za-z0-9_-]{0,127}\z/.freeze
 
@@ -443,8 +444,10 @@ module Studio
 
 
       def self.resolve_download_addresses(host)
-        Addrinfo.getaddrinfo(host, nil, nil, :STREAM).map(&:ip_address).uniq
-      rescue SocketError, SystemCallError
+        Timeout.timeout(DNS_RESOLUTION_TIMEOUT_S) do
+          Addrinfo.getaddrinfo(host, nil, nil, :STREAM).map(&:ip_address).uniq
+        end
+      rescue SocketError, SystemCallError, Timeout::Error
         []
       end
 
@@ -464,13 +467,15 @@ module Studio
 
         addresses = resolve_download_addresses(host)
         raise ArgumentError, "download host did not resolve: #{host}" if addresses.empty?
-        addresses.each do |addr|
+        normalized = addresses.map do |addr|
           ip = IPAddr.new(addr)
           if blocked_download_ip?(ip)
             raise ArgumentError, "refusing download host resolving to non-public address: #{host} -> #{addr}"
           end
+          ip = ip.native if ip.respond_to?(:ipv4_mapped?) && ip.ipv4_mapped?
+          ip.to_s
         end
-        addresses.first
+        normalized.first
       rescue IPAddr::InvalidAddressError => e
         raise ArgumentError, "download host returned an invalid address: #{host}: #{e.message}"
       end
