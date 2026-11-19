@@ -153,30 +153,27 @@ class OperatorIntentTest < Minitest::Test
     end
   end
 
-  def test_compound_full_stack_analysis_then_deploy_resolves_without_model_guessing
+  def test_analysis_first_compound_request_bypasses_the_operator_classifier
     with_inventory do |root|
       message = "analyze OPENBSD and MASTER and RAILS folders recursively, and then ssh to vm23, git pull, and deploy these on the actual production system"
       agent = Object.new
       intent = Master::CLI::OperatorIntent.new(root:, agent:)
 
-      assert Master::CLI::OperatorIntent.compound_full_stack_deploy_request?(message)
-      assert Master::CLI::OperatorIntent.direct_full_stack_confirmation?(message)
-      assert intent.send(:repository_wide_deployment?, message, Deploy::Inventory.new(root:))
+      assert Master::CLI::OperatorIntent.source_analysis_first?(message)
+      refute Master::CLI::OperatorIntent.direct_full_stack_confirmation?(message)
 
       result = intent.call(message)
-      assert_equal :deploy, result.status
-      assert_equal "all", result.target
-      assert_equal %w[control_web city_app wardrobe_app private_service], result.selected
+      assert_equal :conversation, result.status
     end
   end
 
-  def test_compound_questions_negations_and_exclusions_are_not_confirmations
+  def test_questions_negations_and_partial_scopes_are_not_execution_confirmation
     [
       "How do I analyze OPENBSD MASTER and RAILS, then deploy them on vm23?",
       "Do not analyze OPENBSD MASTER and RAILS, then deploy on vm23",
-      "analyze OPENBSD MASTER and RAILS, then deploy on vm23 except the control web",
+      "analyze OPENBSD and RAILS, then deploy on vm23",
     ].each do |message|
-      refute Master::CLI::OperatorIntent.compound_full_stack_deploy_request?(message), message
+      refute Master::CLI::OperatorIntent.source_analysis_first?(message), message
       refute Master::CLI::OperatorIntent.direct_full_stack_confirmation?(message), message
     end
   end

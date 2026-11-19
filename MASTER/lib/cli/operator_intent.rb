@@ -67,34 +67,29 @@ module Master
         request.match?(DIRECT_DEPLOY_REQUEST_RE) && request.match?(/\b(?:deploy|re[- ]?deploy)\b/i)
       end
 
-      # A full-stack instruction is explicit when it names vm23 and either
-      # starts with a deploy imperative or contains a clear compound sequence
-      # ("inspect ..., then SSH to vm23, pull and deploy"). Questions,
-      # hypotheticals and negations never become execution permission.
-      def self.compound_full_stack_deploy_request?(text)
-        request = text.to_s
-        return false unless request.match?(/\bthen\b[\s\S]*\b(?:deploy|re[- ]?deploy)\b/i)
-        return false if request.match?(/[?]|\b(?:how|explain|whether|should|would|maybe|perhaps|hypothetical|not|never|don\x27t|do\s+not|won\x27t|will\s+not)\b/i)
-        return false if request.match?(NON_PRODUCTION_ENV_RE)
-
-        complete_stack_components?(request) && destination_of(request).to_s.downcase == "vm23"
-      end
-
-      # An explicit full-stack production instruction naming vm23 is itself
-      # the operator's confirmation. Model-classified app/group requests and
-      # requests without an explicit vm23 destination retain the review gate.
+      # A full-stack command is an execution request only when it begins with
+      # a direct deploy imperative. Compound research-then-deploy requests must
+      # pass through the normal work path first; they are not deployment consent.
       def self.direct_full_stack_confirmation?(text)
         request = text.to_s
+        return false unless request.match?(DIRECT_DEPLOY_REQUEST_RE)
         return false if request.match?(NON_PRODUCTION_ENV_RE)
         return false if request.match?(EXCLUSION_RE)
-
-        direct = request.match?(DIRECT_DEPLOY_REQUEST_RE)
-        compound = compound_full_stack_deploy_request?(request)
-        return false unless direct || compound
 
         destination = destination_of(request)
         destination.to_s.downcase == "vm23" &&
           (full_inventory_scope?(request) || complete_stack_components?(request))
+      end
+
+      # Source inspection is a research task even when the same sentence names a
+      # later production deployment. Keep it out of the operator classifier so
+      # a schema/provider failure cannot block the actual repository analysis.
+      def self.source_analysis_first?(text)
+        request = text.to_s
+        request.match?(/\A\s*(?:please\s+)?(?:analy[sz]e|inspect|audit|review|trace|read|study|scan)\b/i) &&
+          request.match?(/\b(?:deploy|re[- ]?deploy)\b/i) &&
+          complete_stack_components?(request) &&
+          destination_of(request).to_s.downcase == "vm23"
       end
 
       def self.destination_of(request)
@@ -116,6 +111,7 @@ module Master
       def call(text)
         return unless self.class.candidate?(text)
         return Result.new(status: :plan_only) if planning_request?(text)
+        return Result.new(status: :conversation) if self.class.source_analysis_first?(text)
 
         inventory = Deploy::Inventory.new(root: @root)
         return Result.new(status: :unavailable, message: "Deployment inventory is empty; no action was taken.") if inventory.apps.empty?
@@ -178,9 +174,7 @@ module Master
 
       def repository_wide_deployment?(text, inventory)
         request = text.to_s
-        direct = request.match?(DIRECT_DEPLOY_REQUEST_RE)
-        compound = self.class.compound_full_stack_deploy_request?(request)
-        return false unless direct || compound
+        return false unless request.match?(DIRECT_DEPLOY_REQUEST_RE)
         return false if request.match?(NON_PRODUCTION_ENV_RE)
         destination = self.class.destination_of(request)
         return false if destination && !VM23_DESTINATIONS.include?(destination.downcase)
