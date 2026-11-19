@@ -25,7 +25,7 @@ module Master
 
       def initialize(config:)
         @config = config
-        @p = Pastel.new
+        @p = Pastel.new(enabled: terminal_color_enabled?)
         @boot_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) * MS_PER_SEC).to_i
       end
 
@@ -83,6 +83,19 @@ module Master
       end
 
       private
+
+      # A colour is an aid, never a dependency. Be explicit at the stream that
+      # receives the text: redirected output, NO_COLOR (including an empty
+      # value), and TERM=dumb always remain plain.
+      def terminal_color_enabled?
+        return false unless $stdout.respond_to?(:tty?) && $stdout.tty?
+        return false if ENV.key?("NO_COLOR")
+        return false if ENV["TERM"].to_s.casecmp?("dumb")
+
+        true
+      rescue StandardError
+        false
+      end
 
       def d(text) = @p.dim(text)
     end
