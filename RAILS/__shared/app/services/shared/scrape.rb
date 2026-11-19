@@ -3,6 +3,8 @@
 require "json"
 require "ipaddr"
 require "socket"
+require "ipaddr"
+require "socket"
 require "uri"
 require_relative "outbound_http"
 
@@ -17,15 +19,8 @@ module Shared
     MODEL = ENV.fetch("SCRAPE_MODEL", Shared::Llm::DEFAULT_MODEL)
     HTML_MAX = 60_000
     BLOCKED_HOST_SUFFIXES = %w[.localhost .local .internal .home.arpa .onion].freeze
-    BLOCKED_NETWORKS = %w[
-      0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16
-      172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.88.99.0/24 192.168.0.0/16
-      198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/4 240.0.0.0/4
-      ::/128 ::1/128 ::ffff:0:0/96 64:ff9b:1::/48 100::/64 2001:db8::/32
-      fc00::/7 fe80::/10 ff00::/8
-    ].map { |range| IPAddr.new(range) }.freeze
-    NAT64_WELL_KNOWN_PREFIX = IPAddr.new("64:ff9b::/96").freeze
-    SIXTOFOUR_PREFIX = IPAddr.new("2002::/16").freeze
+    BLOCKED_HOST_SUFFIXES = Shared::OutboundHttp::BLOCKED_HOST_SUFFIXES
+
 
     def self.call(url, schema:, hint: nil)
       raise ArgumentError, "scrape requires a public HTTP(S) URL" unless public_http_url?(url)
@@ -63,19 +58,19 @@ module Shared
     def self.public_http_url?(value, resolver: ->(host) { Shared::OutboundHttp.resolve_addresses(host) })
       uri = URI.parse(value.to_s)
       return false unless %w[http https].include?(uri.scheme&.downcase)
-      return false if uri.userinfo || uri.hostname.to_s.empty?
+      return false if uri.userinfo || uri.fragment || uri.hostname.to_s.empty?
 
       host = uri.hostname.downcase.delete_suffix(".")
       return false unless Shared::OutboundHttp.valid_resolver_host?(host)
       return false if host == "localhost" || BLOCKED_HOST_SUFFIXES.any? { |suffix| host.end_with?(suffix) }
 
       addresses = begin
-        [IPAddr.new(host)]
+        [IPAddr.new(host).to_s]
       rescue IPAddr::InvalidAddressError
-        Array(resolver.call(host)).map { |address| IPAddr.new(address) }
+        Array(resolver.call(host))
       end
-      addresses.any? && addresses.all? { |address| public_address?(address) }
-    rescue URI::InvalidURIError, IPAddr::InvalidAddressError, SocketError, ArgumentError
+      addresses.any? && addresses.all? { |address| !Shared::OutboundHttp.unsafe_ip?(address) }
+    rescue URI::InvalidURIError, SocketError, ArgumentError
       false
     end
 
@@ -87,29 +82,6 @@ module Shared
     rescue URI::InvalidURIError, ArgumentError
       false
     end
-
-    def self.public_address?(address)
-      blocked = BLOCKED_NETWORKS.any? do |network|
-        network.ipv4? == address.ipv4? && network.include?(address)
-      end
-      return false if blocked
-      return true unless address.ipv6?
-
-      # IPv4 can be carried inside an IPv6 address. Validate the embedded
-      # destination too, otherwise a public-looking transition address can
-      # tunnel a private or link-local IPv4 target past the outer-range check.
-      embedded_ipv4 = if NAT64_WELL_KNOWN_PREFIX.include?(address)
-                        address.to_i & 0xffff_ffff
-                      elsif SIXTOFOUR_PREFIX.include?(address)
-                        (address.to_i >> 80) & 0xffff_ffff
-                      end
-      return true unless embedded_ipv4
-
-      public_address?(IPAddr.new(embedded_ipv4, Socket::AF_INET))
-    rescue IPAddr::InvalidAddressError
-      false
-    end
-    private_class_method :public_address?
 
     def self.reason(url:, html:, png:, schema:, hint:)
       prompt = <<~TXT
