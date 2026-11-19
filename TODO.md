@@ -1174,12 +1174,17 @@ host-resolver maps; STUDIO's Replicate API and asset client pin approved
 addresses. Redirects are refused or revalidated per hop. Local-daemon probes
 remain a separate, explicit local-trust path.
 
-- [ ] Run the focused MASTER suites: `test_io_ssrf_guard.rb`,
-  `test_io_external_audit.rb` and `test_io_dynamic_http.rb` on the installed
-  supported Ruby; record actual run counts and summaries.
+- [ ] Run the focused MASTER suites on the installed supported Ruby:
+  `test_io_ssrf_guard.rb`, `test_io_external_audit.rb`,
+  `test_io_dynamic_http.rb`, `test_web_fetch_codepen.rb`,
+  `test_io_public_fetchers.rb`, `test_io_catalog_index.rb` and
+  `test_laws_registry.rb`; record actual run counts and summaries.
 - [ ] Run the RAILS outbound transport, Link Converter, S2S postback and
   shared scrape tests; verify the app suites load the updated shared engine.
 - [ ] Run `STUDIO/test/replicate_client_test.rb` and the STUDIO test suite.
+- [ ] Audit remaining direct HTTP clients in MASTER and RAILS. Each must either
+  use the owning pinned/bounded boundary or document a narrow fixed-endpoint
+  or local-daemon exception with its own limits and tests.
 - [ ] Verify vm23 egress policy blocks RFC1918, loopback, link-local and
   metadata routes independently of application code; retain command output
   and host identity as evidence.
