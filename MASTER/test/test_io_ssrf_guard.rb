@@ -92,6 +92,35 @@ class SsrfGuardTest < Minitest::Test
 
   # The socket goes to the address the check approved, so a second DNS answer
   # at connect time cannot move it; the hostname still carries TLS.
+  def test_blocks_ipv6_outside_global_unicast
+    %w[4000::1 5f00::1 3fff::1 2001:0::1].each do |address|
+      assert Guard.blocked_ip?(IPAddr.new(address)), "#{address} is not a global unicast target"
+    end
+  end
+
+  def test_rejects_url_credentials_and_fragments
+    refute Guard.safe_uri?(URI.parse("https://user:pass@example.com/"))
+    refute Guard.safe_uri?(URI.parse("https://example.com/path#fragment"))
+  end
+
+  def test_rejects_reserved_local_dns_suffixes_before_resolution
+    called = false
+    %w[printer.local service.internal laptop.home.arpa host.onion name.localhost].each do |host|
+      Guard.stub(:resolve_addresses, ->(_name) { called = true; ["1.1.1.1"] }) do
+        refute Guard.safe_uri?(URI.parse("https://#{host}/"))
+      end
+    end
+    refute called, "reserved local suffixes must be rejected before DNS resolution"
+  end
+
+  def test_rejects_invalid_dns_label_characters_before_resolution
+    called = false
+    Guard.stub(:resolve_addresses, ->(_name) { called = true; ["1.1.1.1"] }) do
+      refute Guard.valid_resolver_host?("bad_name.example")
+    end
+    refute called
+  end
+
   def test_http_for_pins_the_connection_to_the_checked_address
     http = Guard.http_for(URI.parse("https://example.com/x"), "93.184.216.34")
 
