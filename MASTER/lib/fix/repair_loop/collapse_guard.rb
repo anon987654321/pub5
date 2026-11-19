@@ -71,10 +71,11 @@ module Master
           return if DELETION_RULES.include?(law.to_s)
 
           ratio = scope.size_ratio
-          return unless ratio && ratio < SHRINK_FLOOR
+          floor = ENV["MASTER_TOUGH"].to_s == "1" ? TOUGH_SHRINK_FLOOR : SHRINK_FLOOR
+          return unless ratio && ratio < floor
 
           "the proposal is #{(ratio * 100).round}% of the file's #{scope.old_bytes} bytes, " \
-            "under the #{(SHRINK_FLOOR * 100).round}% floor"
+            "under the #{(floor * 100).round}% floor"
         end
       end
     end

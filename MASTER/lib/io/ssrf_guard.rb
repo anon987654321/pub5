@@ -42,6 +42,14 @@ module Master
         fec0::/10
       ].map { |cidr| IPAddr.new(cidr) }.freeze
 
+      BLOCKED_HOSTNAMES = %w[
+        metadata.google.internal
+        metadata.google
+        instance-data
+        kubernetes.amazon.com
+        169.254.169.254
+      ].freeze
+
       DNS_LABEL_MAX_BYTES = 63
       DNS_MAX_WIRE_BYTES = 255
 
@@ -85,6 +93,7 @@ module Master
         host = uri.hostname
         return unless valid_resolver_host?(host)
         return if host.strip.casecmp("localhost").zero?
+        return if BLOCKED_HOSTNAMES.any? { |name| host.casecmp?(name) }
 
         addresses = resolve_addresses(host)
         return if addresses.empty?
