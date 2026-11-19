@@ -3,6 +3,7 @@
 require "json"
 require "net/http"
 require "uri"
+require_relative "../io/ssrf_guard"
 
 require_relative "../../../OPENBSD/lib/secret_redaction"
 
@@ -135,8 +136,12 @@ module Master
               req.body = JSON.generate(payload)
             end
           end
-        response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https",
-                                   open_timeout: TIMEOUT, read_timeout: TIMEOUT) { |conn| conn.request(request) }
+        unless uri.is_a?(URI::HTTPS) && uri.port == 443 && [GIST_API, IX_IO].include?(uri.to_s)
+          raise URI::InvalidURIError, "log publication requires a canonical HTTPS sink"
+        end
+        response = Master::Io::SsrfGuard.request(
+          uri, request, max_bytes: 1_000_000, timeout: TIMEOUT
+        )
         if form
           response.body.to_s
         else
