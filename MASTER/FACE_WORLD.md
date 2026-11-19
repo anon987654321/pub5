@@ -548,7 +548,1107 @@ These are implementation directions that all preserve the same state contract.
 139. Success lines fading after acknowledgement.
 140. Current command on the nearest plane.
 141. History receding into depth.
- / `<operator>` shared IRC prompt vocabulary.
+142. `you# MASTER FaceWorld
+
+FaceWorld is the browser's spatial projection of MASTER's canonical face state.
+The CLI, web HUD, 2D fallback, voice timing and 3D renderer share the same
+semantic contract. Renderers may simplify geometry for device limits, but may
+not invent a second state vocabulary.
+
+## Runtime shape
+
+```
+FaceState
+  -> FaceWorld
+     -> identity
+     -> eyes
+     -> mouth
+     -> cognition
+     -> repository
+     -> event_field
+     -> camera
+     -> hud
+
+FaceState
+  -> CLI
+     -> dmesg
+     -> prompt
+     -> scrollback
+
+FaceState
+  -> Voice
+     -> TTS
+     -> speech timing
+```
+
+The source of truth is `MASTER/data/tokens.yml#tokens.face_interface`.
+Ruby reads it through `MASTER/lib/face.rb`. Browser code receives
+the same block as `MASTER_FACE_CONTRACT` and keeps dynamic state in
+`MASTER_FACE_STATE`.
+
+Face-only grayscale values live in `tokens.face_root.palette`; the universal identity accent and
+Brgen/Amber palettes retain their own colours. The CLI uses neutral graphite depth tones, and its
+small gaze movements read from the same face contract. The web prompt renders the canonical
+`Master::Face::Contract.shell_prompt` at mobile and desktop widths while keeping its visible measure
+bounded so the message field and touch controls remain usable.
+
+Micro expressions are semantic blendshape cues; nano-saccades are event-driven eye-field nudges.
+Both reuse the existing runtime and remain off under reduced-motion preferences. Web visemes follow
+the audio clock at 45 ms sampling intervals; the terminal mouth continues to follow the audio
+envelope and phoneme shape.
+
+## Primary material: particle stipple
+
+The first-load introduction reuses this same field and renderer: deterministic
+seed-derived particles begin dispersed around the head, then an expanding signal
+front draws them onto the real face points over the token-defined interval.
+Per-carrier thresholds resolve the particles in small cohorts instead of one
+uniform fade. Once gathered, a restrained fingerprint-like contour field adds
+curved ridges through luminance alone; it does not alter the one-pixel point size
+or add a texture, geometry, canvas, pool or animation loop. This is an original
+many-to-one reveal, not a copy of another show's title treatment. Reduced motion
+resolves directly to the completed portrait.
+
+
+FaceWorld's material is greyscale particle stipple, named in `tokens.visual_identity.material`
+and governed by the law `VISUAL_PARTICLE_STIPPLE_PRIMARY`. The face is not a solid skin. It is a
+field of many carriers that resolve into one readable head: out of many, one. A renderer may
+simplify geometry for a device's limits; it may not invent a second identity material, such as a
+coloured particle skin or a glossy mesh.
+
+What each state means in that material lives beside its dials, in
+`tokens.face_interface.stipple_vocabulary`, `stipple_membership`, `stipple_force` and
+`stipple_note`, and the browser playground prints the reading for the state it shows. Membership
+runs from unturned (still individual) through transitional and turned (admitted into the field)
+to locked.
+
+| State | Membership | Force | Reading |
+|---|---|---|---|
+| idle | transitional | residual | many at rest; individual seeds still visible |
+| listening | transitional | ripple | the field opens to incoming signal |
+| thinking | turned | gather | parts concentrate toward one locus |
+| working | turned | gather | the locus holds while work runs |
+| speaking | turned | ripple | signal leaves through the mouth region |
+| warning | transitional | residual | binding loosens; individuals reappear |
+| error | unturned | fragment | admission fails; the field breaks and may rejoin |
+| ready | locked | settle | out of many, one stable form |
+| sleeping | unturned | residual | carriers at rest; the field dims but is not erased |
+
+Motion defaults to still. The only canonical still mode is declared by
+`face_interface.state.still_modes`; `still_after_activity_ms` sets the shared return interval
+(700 ms). The live terminal face, primary browser face, sparse field, stipple layer and FaceWorld
+all consume that policy. Pointer interaction, speech, state transitions and explicit events may
+wake their relevant layer; the terminal swarm and face keep responding through the same settle
+interval, then return to a stable pose and stop autonomous drift. The browser stipple retains one
+separate, five-percent luminance breath while idle; it changes alpha only, not position, point size
+or colour. Its own `uBreathScale` is zero under reduced motion, so normal stillness can feel quietly
+alive without re-enabling spatial drift or overriding the accessibility preference. This is distinct
+from reduced motion: it is the normal resting state, not an accessibility override. Gather, ripple, fragment
+and settle run only when a state supplies the cause, and reduced motion keeps the turned and
+unturned contrast readable without animation.
+Idle keeps its residual individuality as static original sample positions; a field with no individual variation is a fog. In moving residual states such as warning, the swarm contract's `face_interface.swarm.residual.fraction` and `.strength` apply a gentle home tether to a deterministic subset. The Ruby terminal swarm and browser stipple swarm use the same seeded selector, so both preserve the same individual carriers. This reuses existing carriers, adds no pool, and lets the rest of a moving field cohere. The stipple profile's density, ripple, turbulence, luminosity and attraction are also modulated by canonical activity, arousal, focus, confidence and risk dials. Their weights live in `face_interface.stipple.dial_modulation`; each adjustment is measured from the canonical state defaults and clamped, so the named mode profile remains the baseline rather than being replaced.
+
+The neutral highlight
+marks admission and focus only. The point budget and the stipple layer's limits are in the
+section on the additive stipple layer below.
+
+## 3D restructuring catalogue
+
+These are implementation directions that all preserve the same state contract.
+
+### Core geometry
+
+1. Floating head-shaped field.
+2. Wireframe skull.
+3. Volumetric fog skull.
+4. Hollow shell with luminous interior.
+5. Anatomical cutaway.
+6. Tessellated facial surface.
+7. Signed-distance facial field.
+8. Voxel head.
+9. Sparse particle reconstruction.
+10. Gaussian-splat reconstruction.
+11. Mesh plus splat hybrid.
+12. Geometry-free mouth.
+13. Recessed eye apertures.
+14. Layered anatomical shell.
+15. Asymmetric facial topology.
+16. Activity-driven geometry density.
+17. Confidence-driven shell scale.
+18. Risk-driven fracture.
+19. Sleep-driven topology collapse.
+20. Boot-driven reconstruction.
+
+### Eyes
+
+21. Recessed black apertures.
+22. Luminous depth wells.
+23. Camera-like optical assemblies.
+24. Pointer-tracked gaze.
+25. Split stimulus tracking.
+26. Attention-driven convergence.
+27. Multitask-driven divergence.
+28. Attention-driven pupil scale.
+29. Cognitive-load iris density.
+30. Uncertainty wireframe eyes.
+31. Confidence solid eyes.
+32. Geometry-derived blinking.
+33. Deterministic micro-saccades.
+34. Event-directed gaze shifts.
+35. Task-directed gaze shifts.
+36. Eyes inspect HUD state.
+37. Eyes inspect repository nodes.
+38. Input/output eye split.
+39. Single-aperture deep-think mode.
+40. Listening retinal scan.
+
+### Speech
+
+41. Luminous mouth slit.
+42. Volumetric mouth cavity.
+43. Speech topology deformation.
+44. Abstract lip geometry.
+45. Phoneme waves across the face.
+46. Amplitude-driven mouth depth.
+47. Speech-rate edge vibration.
+48. Pause-driven settling.
+49. Consonant impulses.
+50. Vowel widening.
+51. Waveform mouth aperture.
+52. Voice wave travelling through the head.
+53. Speech-only jaw geometry.
+54. Spatial speech trails.
+55. Rear-skull waveform wrap.
+
+### Cognition
+
+56. Volumetric neural field.
+57. Filament neural graph.
+58. Nodes mapped to pipeline stages.
+59. Edges mapped to data flow.
+60. Risk-driven density.
+61. Error-driven disconnection.
+62. Completion-driven graph collapse.
+63. Parallel tool paths.
+64. Ear-to-cortex-to-executor-to-mouth flow.
+65. Repository traversal visualization.
+66. Directory clusters.
+67. File nodes.
+68. Dependency fibres.
+69. Dead-code dark matter.
+70. Successful cleanup as entropy reduction.
+
+### Repository geometry
+
+71. MASTER as head.
+72. `lib` as brain.
+73. `law` as spine.
+74. `tools` as hands.
+75. `web` as visual cortex.
+76. `RAILS` as external sensory layer.
+77. `OPENBSD` as substrate.
+78. `STUDIO` as imagination layer.
+79. Git branches as spatial strata.
+80. Dirty changes as surface perturbations.
+81. Dirty files as local topology distortion.
+82. Tests as support structure.
+83. Failing checks as broken links.
+84. Known-good commits as anchors.
+85. `/fix` as geometric rehabilitation.
+
+### Camera
+
+86. Head-relative parallax.
+87. Face-centred camera.
+88. Restrained orbit.
+89. Pointer-driven camera tilt.
+90. Device-orientation camera.
+91. Listening proximity.
+92. Speaking recession.
+93. Bounded error displacement.
+94. Sleeping camera descent.
+95. Boot reveal from close range.
+96. Resize-preserving semantic scale.
+97. Shared CLI/browser camera state.
+98. Camera distance from attention.
+99. Camera distance from risk.
+100. Camera limit from canonical contract.
+
+### Materials
+
+101. One master face material graph.
+102. TSL-based shader layer.
+103. Cognition-driven topology visibility.
+104. Anisotropic curvature reveal.
+105. Subsurface-like restrained shading.
+106. Transparent thought volumes.
+107. Depth-dependent line density.
+108. Roughness as calm/activity.
+109. Specular response as attention.
+110. Speech-driven material density.
+111. Monochrome `wscons` mode.
+112. Device-budget material reduction.
+113. Postprocess reduction before semantic reduction.
+114. Stable monochrome fallback.
+115. Deterministic noise everywhere.
+
+### Splat and hybrid rendering
+
+116. Canonical neutral splat field.
+117. Expression field interpolation.
+118. Splat opacity for transient cognition.
+119. View-dependent SH detail.
+120. Mobile/desktop LOD.
+121. Eye-first streaming.
+122. Mouth-first streaming.
+123. Ghost-face streaming placeholder.
+124. Mesh collision hull under splats.
+125. Splat-backed thought matter.
+126. Fragmentation on error.
+127. Reconstruction on recovery.
+128. Native GaussianSplat capability detection.
+129. Deterministic point fallback.
+130. Shared state for mesh/splat projections.
+
+### Terminal-native 3D HUD
+
+131. Monospaced spatial labels.
+132. `master0` semantic anchor.
+133. `voice0` voice anchor.
+134. `web0` web anchor.
+135. `root on master0` boot anchor.
+136. Repository nodes with dmesg labels.
+137. Command execution as spatial dmesg.
+138. Errors pinned to their subsystem.
+139. Success lines fading after acknowledgement.
+140. Current command on the nearest plane.
+141. History receding into depth.
+142. `you# MASTER FaceWorld
+
+FaceWorld is the browser's spatial projection of MASTER's canonical face state.
+The CLI, web HUD, 2D fallback, voice timing and 3D renderer share the same
+semantic contract. Renderers may simplify geometry for device limits, but may
+not invent a second state vocabulary.
+
+## Runtime shape
+
+```
+FaceState
+  -> FaceWorld
+     -> identity
+     -> eyes
+     -> mouth
+     -> cognition
+     -> repository
+     -> event_field
+     -> camera
+     -> hud
+
+FaceState
+  -> CLI
+     -> dmesg
+     -> prompt
+     -> scrollback
+
+FaceState
+  -> Voice
+     -> TTS
+     -> speech timing
+```
+
+The source of truth is `MASTER/data/tokens.yml#tokens.face_interface`.
+Ruby reads it through `MASTER/lib/face.rb`. Browser code receives
+the same block as `MASTER_FACE_CONTRACT` and keeps dynamic state in
+`MASTER_FACE_STATE`.
+
+Face-only grayscale values live in `tokens.face_root.palette`; the universal identity accent and
+Brgen/Amber palettes retain their own colours. The CLI uses neutral graphite depth tones, and its
+small gaze movements read from the same face contract. The web prompt renders the canonical
+`Master::Face::Contract.shell_prompt` at mobile and desktop widths while keeping its visible measure
+bounded so the message field and touch controls remain usable.
+
+Micro expressions are semantic blendshape cues; nano-saccades are event-driven eye-field nudges.
+Both reuse the existing runtime and remain off under reduced-motion preferences. Web visemes follow
+the audio clock at 45 ms sampling intervals; the terminal mouth continues to follow the audio
+envelope and phoneme shape.
+
+## Primary material: particle stipple
+
+The first-load introduction reuses this same field and renderer: deterministic
+seed-derived particles begin dispersed around the head, then an expanding signal
+front draws them onto the real face points over the token-defined interval.
+Per-carrier thresholds resolve the particles in small cohorts instead of one
+uniform fade. Once gathered, a restrained fingerprint-like contour field adds
+curved ridges through luminance alone; it does not alter the one-pixel point size
+or add a texture, geometry, canvas, pool or animation loop. This is an original
+many-to-one reveal, not a copy of another show's title treatment. Reduced motion
+resolves directly to the completed portrait.
+
+
+FaceWorld's material is greyscale particle stipple, named in `tokens.visual_identity.material`
+and governed by the law `VISUAL_PARTICLE_STIPPLE_PRIMARY`. The face is not a solid skin. It is a
+field of many carriers that resolve into one readable head: out of many, one. A renderer may
+simplify geometry for a device's limits; it may not invent a second identity material, such as a
+coloured particle skin or a glossy mesh.
+
+What each state means in that material lives beside its dials, in
+`tokens.face_interface.stipple_vocabulary`, `stipple_membership`, `stipple_force` and
+`stipple_note`, and the browser playground prints the reading for the state it shows. Membership
+runs from unturned (still individual) through transitional and turned (admitted into the field)
+to locked.
+
+| State | Membership | Force | Reading |
+|---|---|---|---|
+| idle | transitional | residual | many at rest; individual seeds still visible |
+| listening | transitional | ripple | the field opens to incoming signal |
+| thinking | turned | gather | parts concentrate toward one locus |
+| working | turned | gather | the locus holds while work runs |
+| speaking | turned | ripple | signal leaves through the mouth region |
+| warning | transitional | residual | binding loosens; individuals reappear |
+| error | unturned | fragment | admission fails; the field breaks and may rejoin |
+| ready | locked | settle | out of many, one stable form |
+| sleeping | unturned | residual | carriers at rest; the field dims but is not erased |
+
+Motion defaults to still. The only canonical still mode is declared by
+`face_interface.state.still_modes`; `still_after_activity_ms` sets the shared return interval
+(700 ms). The live terminal face, primary browser face, sparse field, stipple layer and FaceWorld
+all consume that policy. Pointer interaction, speech, state transitions and explicit events may
+wake their relevant layer; the terminal swarm and face keep responding through the same settle
+interval, then return to a stable pose and stop autonomous drift. The browser stipple retains one
+separate, five-percent luminance breath while idle; it changes alpha only, not position, point size
+or colour. Its own `uBreathScale` is zero under reduced motion, so normal stillness can feel quietly
+alive without re-enabling spatial drift or overriding the accessibility preference. This is distinct
+from reduced motion: it is the normal resting state, not an accessibility override. Gather, ripple, fragment
+and settle run only when a state supplies the cause, and reduced motion keeps the turned and
+unturned contrast readable without animation.
+Idle keeps its residual individuality as static original sample positions; a field with no individual variation is a fog. In moving residual states such as warning, the swarm contract's `face_interface.swarm.residual.fraction` and `.strength` apply a gentle home tether to a deterministic subset. The Ruby terminal swarm and browser stipple swarm use the same seeded selector, so both preserve the same individual carriers. This reuses existing carriers, adds no pool, and lets the rest of a moving field cohere. The stipple profile's density, ripple, turbulence, luminosity and attraction are also modulated by canonical activity, arousal, focus, confidence and risk dials. Their weights live in `face_interface.stipple.dial_modulation`; each adjustment is measured from the canonical state defaults and clamped, so the named mode profile remains the baseline rather than being replaced.
+
+The neutral highlight
+marks admission and focus only. The point budget and the stipple layer's limits are in the
+section on the additive stipple layer below.
+
+## 3D restructuring catalogue
+
+These are implementation directions that all preserve the same state contract.
+
+### Core geometry
+
+1. Floating head-shaped field.
+2. Wireframe skull.
+3. Volumetric fog skull.
+4. Hollow shell with luminous interior.
+5. Anatomical cutaway.
+6. Tessellated facial surface.
+7. Signed-distance facial field.
+8. Voxel head.
+9. Sparse particle reconstruction.
+10. Gaussian-splat reconstruction.
+11. Mesh plus splat hybrid.
+12. Geometry-free mouth.
+13. Recessed eye apertures.
+14. Layered anatomical shell.
+15. Asymmetric facial topology.
+16. Activity-driven geometry density.
+17. Confidence-driven shell scale.
+18. Risk-driven fracture.
+19. Sleep-driven topology collapse.
+20. Boot-driven reconstruction.
+
+### Eyes
+
+21. Recessed black apertures.
+22. Luminous depth wells.
+23. Camera-like optical assemblies.
+24. Pointer-tracked gaze.
+25. Split stimulus tracking.
+26. Attention-driven convergence.
+27. Multitask-driven divergence.
+28. Attention-driven pupil scale.
+29. Cognitive-load iris density.
+30. Uncertainty wireframe eyes.
+31. Confidence solid eyes.
+32. Geometry-derived blinking.
+33. Deterministic micro-saccades.
+34. Event-directed gaze shifts.
+35. Task-directed gaze shifts.
+36. Eyes inspect HUD state.
+37. Eyes inspect repository nodes.
+38. Input/output eye split.
+39. Single-aperture deep-think mode.
+40. Listening retinal scan.
+
+### Speech
+
+41. Luminous mouth slit.
+42. Volumetric mouth cavity.
+43. Speech topology deformation.
+44. Abstract lip geometry.
+45. Phoneme waves across the face.
+46. Amplitude-driven mouth depth.
+47. Speech-rate edge vibration.
+48. Pause-driven settling.
+49. Consonant impulses.
+50. Vowel widening.
+51. Waveform mouth aperture.
+52. Voice wave travelling through the head.
+53. Speech-only jaw geometry.
+54. Spatial speech trails.
+55. Rear-skull waveform wrap.
+
+### Cognition
+
+56. Volumetric neural field.
+57. Filament neural graph.
+58. Nodes mapped to pipeline stages.
+59. Edges mapped to data flow.
+60. Risk-driven density.
+61. Error-driven disconnection.
+62. Completion-driven graph collapse.
+63. Parallel tool paths.
+64. Ear-to-cortex-to-executor-to-mouth flow.
+65. Repository traversal visualization.
+66. Directory clusters.
+67. File nodes.
+68. Dependency fibres.
+69. Dead-code dark matter.
+70. Successful cleanup as entropy reduction.
+
+### Repository geometry
+
+71. MASTER as head.
+72. `lib` as brain.
+73. `law` as spine.
+74. `tools` as hands.
+75. `web` as visual cortex.
+76. `RAILS` as external sensory layer.
+77. `OPENBSD` as substrate.
+78. `STUDIO` as imagination layer.
+79. Git branches as spatial strata.
+80. Dirty changes as surface perturbations.
+81. Dirty files as local topology distortion.
+82. Tests as support structure.
+83. Failing checks as broken links.
+84. Known-good commits as anchors.
+85. `/fix` as geometric rehabilitation.
+
+### Camera
+
+86. Head-relative parallax.
+87. Face-centred camera.
+88. Restrained orbit.
+89. Pointer-driven camera tilt.
+90. Device-orientation camera.
+91. Listening proximity.
+92. Speaking recession.
+93. Bounded error displacement.
+94. Sleeping camera descent.
+95. Boot reveal from close range.
+96. Resize-preserving semantic scale.
+97. Shared CLI/browser camera state.
+98. Camera distance from attention.
+99. Camera distance from risk.
+100. Camera limit from canonical contract.
+
+### Materials
+
+101. One master face material graph.
+102. TSL-based shader layer.
+103. Cognition-driven topology visibility.
+104. Anisotropic curvature reveal.
+105. Subsurface-like restrained shading.
+106. Transparent thought volumes.
+107. Depth-dependent line density.
+108. Roughness as calm/activity.
+109. Specular response as attention.
+110. Speech-driven material density.
+111. Monochrome `wscons` mode.
+112. Device-budget material reduction.
+113. Postprocess reduction before semantic reduction.
+114. Stable monochrome fallback.
+115. Deterministic noise everywhere.
+
+### Splat and hybrid rendering
+
+116. Canonical neutral splat field.
+117. Expression field interpolation.
+118. Splat opacity for transient cognition.
+119. View-dependent SH detail.
+120. Mobile/desktop LOD.
+121. Eye-first streaming.
+122. Mouth-first streaming.
+123. Ghost-face streaming placeholder.
+124. Mesh collision hull under splats.
+125. Splat-backed thought matter.
+126. Fragmentation on error.
+127. Reconstruction on recovery.
+128. Native GaussianSplat capability detection.
+129. Deterministic point fallback.
+130. Shared state for mesh/splat projections.
+
+### Terminal-native 3D HUD
+
+131. Monospaced spatial labels.
+132. `master0` semantic anchor.
+133. `voice0` voice anchor.
+134. `web0` web anchor.
+135. `root on master0` boot anchor.
+136. Repository nodes with dmesg labels.
+137. Command execution as spatial dmesg.
+138. Errors pinned to their subsystem.
+139. Success lines fading after acknowledgement.
+140. Current command on the nearest plane.
+141. History receding into depth.
+ / `master# MASTER FaceWorld
+
+FaceWorld is the browser's spatial projection of MASTER's canonical face state.
+The CLI, web HUD, 2D fallback, voice timing and 3D renderer share the same
+semantic contract. Renderers may simplify geometry for device limits, but may
+not invent a second state vocabulary.
+
+## Runtime shape
+
+```
+FaceState
+  -> FaceWorld
+     -> identity
+     -> eyes
+     -> mouth
+     -> cognition
+     -> repository
+     -> event_field
+     -> camera
+     -> hud
+
+FaceState
+  -> CLI
+     -> dmesg
+     -> prompt
+     -> scrollback
+
+FaceState
+  -> Voice
+     -> TTS
+     -> speech timing
+```
+
+The source of truth is `MASTER/data/tokens.yml#tokens.face_interface`.
+Ruby reads it through `MASTER/lib/face.rb`. Browser code receives
+the same block as `MASTER_FACE_CONTRACT` and keeps dynamic state in
+`MASTER_FACE_STATE`.
+
+Face-only grayscale values live in `tokens.face_root.palette`; the universal identity accent and
+Brgen/Amber palettes retain their own colours. The CLI uses neutral graphite depth tones, and its
+small gaze movements read from the same face contract. The web prompt renders the canonical
+`Master::Face::Contract.shell_prompt` at mobile and desktop widths while keeping its visible measure
+bounded so the message field and touch controls remain usable.
+
+Micro expressions are semantic blendshape cues; nano-saccades are event-driven eye-field nudges.
+Both reuse the existing runtime and remain off under reduced-motion preferences. Web visemes follow
+the audio clock at 45 ms sampling intervals; the terminal mouth continues to follow the audio
+envelope and phoneme shape.
+
+## Primary material: particle stipple
+
+The first-load introduction reuses this same field and renderer: deterministic
+seed-derived particles begin dispersed around the head, then an expanding signal
+front draws them onto the real face points over the token-defined interval.
+Per-carrier thresholds resolve the particles in small cohorts instead of one
+uniform fade. Once gathered, a restrained fingerprint-like contour field adds
+curved ridges through luminance alone; it does not alter the one-pixel point size
+or add a texture, geometry, canvas, pool or animation loop. This is an original
+many-to-one reveal, not a copy of another show's title treatment. Reduced motion
+resolves directly to the completed portrait.
+
+
+FaceWorld's material is greyscale particle stipple, named in `tokens.visual_identity.material`
+and governed by the law `VISUAL_PARTICLE_STIPPLE_PRIMARY`. The face is not a solid skin. It is a
+field of many carriers that resolve into one readable head: out of many, one. A renderer may
+simplify geometry for a device's limits; it may not invent a second identity material, such as a
+coloured particle skin or a glossy mesh.
+
+What each state means in that material lives beside its dials, in
+`tokens.face_interface.stipple_vocabulary`, `stipple_membership`, `stipple_force` and
+`stipple_note`, and the browser playground prints the reading for the state it shows. Membership
+runs from unturned (still individual) through transitional and turned (admitted into the field)
+to locked.
+
+| State | Membership | Force | Reading |
+|---|---|---|---|
+| idle | transitional | residual | many at rest; individual seeds still visible |
+| listening | transitional | ripple | the field opens to incoming signal |
+| thinking | turned | gather | parts concentrate toward one locus |
+| working | turned | gather | the locus holds while work runs |
+| speaking | turned | ripple | signal leaves through the mouth region |
+| warning | transitional | residual | binding loosens; individuals reappear |
+| error | unturned | fragment | admission fails; the field breaks and may rejoin |
+| ready | locked | settle | out of many, one stable form |
+| sleeping | unturned | residual | carriers at rest; the field dims but is not erased |
+
+Motion defaults to still. The only canonical still mode is declared by
+`face_interface.state.still_modes`; `still_after_activity_ms` sets the shared return interval
+(700 ms). The live terminal face, primary browser face, sparse field, stipple layer and FaceWorld
+all consume that policy. Pointer interaction, speech, state transitions and explicit events may
+wake their relevant layer; the terminal swarm and face keep responding through the same settle
+interval, then return to a stable pose and stop autonomous drift. The browser stipple retains one
+separate, five-percent luminance breath while idle; it changes alpha only, not position, point size
+or colour. Its own `uBreathScale` is zero under reduced motion, so normal stillness can feel quietly
+alive without re-enabling spatial drift or overriding the accessibility preference. This is distinct
+from reduced motion: it is the normal resting state, not an accessibility override. Gather, ripple, fragment
+and settle run only when a state supplies the cause, and reduced motion keeps the turned and
+unturned contrast readable without animation.
+Idle keeps its residual individuality as static original sample positions; a field with no individual variation is a fog. In moving residual states such as warning, the swarm contract's `face_interface.swarm.residual.fraction` and `.strength` apply a gentle home tether to a deterministic subset. The Ruby terminal swarm and browser stipple swarm use the same seeded selector, so both preserve the same individual carriers. This reuses existing carriers, adds no pool, and lets the rest of a moving field cohere. The stipple profile's density, ripple, turbulence, luminosity and attraction are also modulated by canonical activity, arousal, focus, confidence and risk dials. Their weights live in `face_interface.stipple.dial_modulation`; each adjustment is measured from the canonical state defaults and clamped, so the named mode profile remains the baseline rather than being replaced.
+
+The neutral highlight
+marks admission and focus only. The point budget and the stipple layer's limits are in the
+section on the additive stipple layer below.
+
+## 3D restructuring catalogue
+
+These are implementation directions that all preserve the same state contract.
+
+### Core geometry
+
+1. Floating head-shaped field.
+2. Wireframe skull.
+3. Volumetric fog skull.
+4. Hollow shell with luminous interior.
+5. Anatomical cutaway.
+6. Tessellated facial surface.
+7. Signed-distance facial field.
+8. Voxel head.
+9. Sparse particle reconstruction.
+10. Gaussian-splat reconstruction.
+11. Mesh plus splat hybrid.
+12. Geometry-free mouth.
+13. Recessed eye apertures.
+14. Layered anatomical shell.
+15. Asymmetric facial topology.
+16. Activity-driven geometry density.
+17. Confidence-driven shell scale.
+18. Risk-driven fracture.
+19. Sleep-driven topology collapse.
+20. Boot-driven reconstruction.
+
+### Eyes
+
+21. Recessed black apertures.
+22. Luminous depth wells.
+23. Camera-like optical assemblies.
+24. Pointer-tracked gaze.
+25. Split stimulus tracking.
+26. Attention-driven convergence.
+27. Multitask-driven divergence.
+28. Attention-driven pupil scale.
+29. Cognitive-load iris density.
+30. Uncertainty wireframe eyes.
+31. Confidence solid eyes.
+32. Geometry-derived blinking.
+33. Deterministic micro-saccades.
+34. Event-directed gaze shifts.
+35. Task-directed gaze shifts.
+36. Eyes inspect HUD state.
+37. Eyes inspect repository nodes.
+38. Input/output eye split.
+39. Single-aperture deep-think mode.
+40. Listening retinal scan.
+
+### Speech
+
+41. Luminous mouth slit.
+42. Volumetric mouth cavity.
+43. Speech topology deformation.
+44. Abstract lip geometry.
+45. Phoneme waves across the face.
+46. Amplitude-driven mouth depth.
+47. Speech-rate edge vibration.
+48. Pause-driven settling.
+49. Consonant impulses.
+50. Vowel widening.
+51. Waveform mouth aperture.
+52. Voice wave travelling through the head.
+53. Speech-only jaw geometry.
+54. Spatial speech trails.
+55. Rear-skull waveform wrap.
+
+### Cognition
+
+56. Volumetric neural field.
+57. Filament neural graph.
+58. Nodes mapped to pipeline stages.
+59. Edges mapped to data flow.
+60. Risk-driven density.
+61. Error-driven disconnection.
+62. Completion-driven graph collapse.
+63. Parallel tool paths.
+64. Ear-to-cortex-to-executor-to-mouth flow.
+65. Repository traversal visualization.
+66. Directory clusters.
+67. File nodes.
+68. Dependency fibres.
+69. Dead-code dark matter.
+70. Successful cleanup as entropy reduction.
+
+### Repository geometry
+
+71. MASTER as head.
+72. `lib` as brain.
+73. `law` as spine.
+74. `tools` as hands.
+75. `web` as visual cortex.
+76. `RAILS` as external sensory layer.
+77. `OPENBSD` as substrate.
+78. `STUDIO` as imagination layer.
+79. Git branches as spatial strata.
+80. Dirty changes as surface perturbations.
+81. Dirty files as local topology distortion.
+82. Tests as support structure.
+83. Failing checks as broken links.
+84. Known-good commits as anchors.
+85. `/fix` as geometric rehabilitation.
+
+### Camera
+
+86. Head-relative parallax.
+87. Face-centred camera.
+88. Restrained orbit.
+89. Pointer-driven camera tilt.
+90. Device-orientation camera.
+91. Listening proximity.
+92. Speaking recession.
+93. Bounded error displacement.
+94. Sleeping camera descent.
+95. Boot reveal from close range.
+96. Resize-preserving semantic scale.
+97. Shared CLI/browser camera state.
+98. Camera distance from attention.
+99. Camera distance from risk.
+100. Camera limit from canonical contract.
+
+### Materials
+
+101. One master face material graph.
+102. TSL-based shader layer.
+103. Cognition-driven topology visibility.
+104. Anisotropic curvature reveal.
+105. Subsurface-like restrained shading.
+106. Transparent thought volumes.
+107. Depth-dependent line density.
+108. Roughness as calm/activity.
+109. Specular response as attention.
+110. Speech-driven material density.
+111. Monochrome `wscons` mode.
+112. Device-budget material reduction.
+113. Postprocess reduction before semantic reduction.
+114. Stable monochrome fallback.
+115. Deterministic noise everywhere.
+
+### Splat and hybrid rendering
+
+116. Canonical neutral splat field.
+117. Expression field interpolation.
+118. Splat opacity for transient cognition.
+119. View-dependent SH detail.
+120. Mobile/desktop LOD.
+121. Eye-first streaming.
+122. Mouth-first streaming.
+123. Ghost-face streaming placeholder.
+124. Mesh collision hull under splats.
+125. Splat-backed thought matter.
+126. Fragmentation on error.
+127. Reconstruction on recovery.
+128. Native GaussianSplat capability detection.
+129. Deterministic point fallback.
+130. Shared state for mesh/splat projections.
+
+### Terminal-native 3D HUD
+
+131. Monospaced spatial labels.
+132. `master0` semantic anchor.
+133. `voice0` voice anchor.
+134. `web0` web anchor.
+135. `root on master0` boot anchor.
+136. Repository nodes with dmesg labels.
+137. Command execution as spatial dmesg.
+138. Errors pinned to their subsystem.
+139. Success lines fading after acknowledgement.
+140. Current command on the nearest plane.
+141. History receding into depth.
+142. `you# MASTER FaceWorld
+
+FaceWorld is the browser's spatial projection of MASTER's canonical face state.
+The CLI, web HUD, 2D fallback, voice timing and 3D renderer share the same
+semantic contract. Renderers may simplify geometry for device limits, but may
+not invent a second state vocabulary.
+
+## Runtime shape
+
+```
+FaceState
+  -> FaceWorld
+     -> identity
+     -> eyes
+     -> mouth
+     -> cognition
+     -> repository
+     -> event_field
+     -> camera
+     -> hud
+
+FaceState
+  -> CLI
+     -> dmesg
+     -> prompt
+     -> scrollback
+
+FaceState
+  -> Voice
+     -> TTS
+     -> speech timing
+```
+
+The source of truth is `MASTER/data/tokens.yml#tokens.face_interface`.
+Ruby reads it through `MASTER/lib/face.rb`. Browser code receives
+the same block as `MASTER_FACE_CONTRACT` and keeps dynamic state in
+`MASTER_FACE_STATE`.
+
+Face-only grayscale values live in `tokens.face_root.palette`; the universal identity accent and
+Brgen/Amber palettes retain their own colours. The CLI uses neutral graphite depth tones, and its
+small gaze movements read from the same face contract. The web prompt renders the canonical
+`Master::Face::Contract.shell_prompt` at mobile and desktop widths while keeping its visible measure
+bounded so the message field and touch controls remain usable.
+
+Micro expressions are semantic blendshape cues; nano-saccades are event-driven eye-field nudges.
+Both reuse the existing runtime and remain off under reduced-motion preferences. Web visemes follow
+the audio clock at 45 ms sampling intervals; the terminal mouth continues to follow the audio
+envelope and phoneme shape.
+
+## Primary material: particle stipple
+
+The first-load introduction reuses this same field and renderer: deterministic
+seed-derived particles begin dispersed around the head, then an expanding signal
+front draws them onto the real face points over the token-defined interval.
+Per-carrier thresholds resolve the particles in small cohorts instead of one
+uniform fade. Once gathered, a restrained fingerprint-like contour field adds
+curved ridges through luminance alone; it does not alter the one-pixel point size
+or add a texture, geometry, canvas, pool or animation loop. This is an original
+many-to-one reveal, not a copy of another show's title treatment. Reduced motion
+resolves directly to the completed portrait.
+
+
+FaceWorld's material is greyscale particle stipple, named in `tokens.visual_identity.material`
+and governed by the law `VISUAL_PARTICLE_STIPPLE_PRIMARY`. The face is not a solid skin. It is a
+field of many carriers that resolve into one readable head: out of many, one. A renderer may
+simplify geometry for a device's limits; it may not invent a second identity material, such as a
+coloured particle skin or a glossy mesh.
+
+What each state means in that material lives beside its dials, in
+`tokens.face_interface.stipple_vocabulary`, `stipple_membership`, `stipple_force` and
+`stipple_note`, and the browser playground prints the reading for the state it shows. Membership
+runs from unturned (still individual) through transitional and turned (admitted into the field)
+to locked.
+
+| State | Membership | Force | Reading |
+|---|---|---|---|
+| idle | transitional | residual | many at rest; individual seeds still visible |
+| listening | transitional | ripple | the field opens to incoming signal |
+| thinking | turned | gather | parts concentrate toward one locus |
+| working | turned | gather | the locus holds while work runs |
+| speaking | turned | ripple | signal leaves through the mouth region |
+| warning | transitional | residual | binding loosens; individuals reappear |
+| error | unturned | fragment | admission fails; the field breaks and may rejoin |
+| ready | locked | settle | out of many, one stable form |
+| sleeping | unturned | residual | carriers at rest; the field dims but is not erased |
+
+Motion defaults to still. The only canonical still mode is declared by
+`face_interface.state.still_modes`; `still_after_activity_ms` sets the shared return interval
+(700 ms). The live terminal face, primary browser face, sparse field, stipple layer and FaceWorld
+all consume that policy. Pointer interaction, speech, state transitions and explicit events may
+wake their relevant layer; the terminal swarm and face keep responding through the same settle
+interval, then return to a stable pose and stop autonomous drift. The browser stipple retains one
+separate, five-percent luminance breath while idle; it changes alpha only, not position, point size
+or colour. Its own `uBreathScale` is zero under reduced motion, so normal stillness can feel quietly
+alive without re-enabling spatial drift or overriding the accessibility preference. This is distinct
+from reduced motion: it is the normal resting state, not an accessibility override. Gather, ripple, fragment
+and settle run only when a state supplies the cause, and reduced motion keeps the turned and
+unturned contrast readable without animation.
+Idle keeps its residual individuality as static original sample positions; a field with no individual variation is a fog. In moving residual states such as warning, the swarm contract's `face_interface.swarm.residual.fraction` and `.strength` apply a gentle home tether to a deterministic subset. The Ruby terminal swarm and browser stipple swarm use the same seeded selector, so both preserve the same individual carriers. This reuses existing carriers, adds no pool, and lets the rest of a moving field cohere. The stipple profile's density, ripple, turbulence, luminosity and attraction are also modulated by canonical activity, arousal, focus, confidence and risk dials. Their weights live in `face_interface.stipple.dial_modulation`; each adjustment is measured from the canonical state defaults and clamped, so the named mode profile remains the baseline rather than being replaced.
+
+The neutral highlight
+marks admission and focus only. The point budget and the stipple layer's limits are in the
+section on the additive stipple layer below.
+
+## 3D restructuring catalogue
+
+These are implementation directions that all preserve the same state contract.
+
+### Core geometry
+
+1. Floating head-shaped field.
+2. Wireframe skull.
+3. Volumetric fog skull.
+4. Hollow shell with luminous interior.
+5. Anatomical cutaway.
+6. Tessellated facial surface.
+7. Signed-distance facial field.
+8. Voxel head.
+9. Sparse particle reconstruction.
+10. Gaussian-splat reconstruction.
+11. Mesh plus splat hybrid.
+12. Geometry-free mouth.
+13. Recessed eye apertures.
+14. Layered anatomical shell.
+15. Asymmetric facial topology.
+16. Activity-driven geometry density.
+17. Confidence-driven shell scale.
+18. Risk-driven fracture.
+19. Sleep-driven topology collapse.
+20. Boot-driven reconstruction.
+
+### Eyes
+
+21. Recessed black apertures.
+22. Luminous depth wells.
+23. Camera-like optical assemblies.
+24. Pointer-tracked gaze.
+25. Split stimulus tracking.
+26. Attention-driven convergence.
+27. Multitask-driven divergence.
+28. Attention-driven pupil scale.
+29. Cognitive-load iris density.
+30. Uncertainty wireframe eyes.
+31. Confidence solid eyes.
+32. Geometry-derived blinking.
+33. Deterministic micro-saccades.
+34. Event-directed gaze shifts.
+35. Task-directed gaze shifts.
+36. Eyes inspect HUD state.
+37. Eyes inspect repository nodes.
+38. Input/output eye split.
+39. Single-aperture deep-think mode.
+40. Listening retinal scan.
+
+### Speech
+
+41. Luminous mouth slit.
+42. Volumetric mouth cavity.
+43. Speech topology deformation.
+44. Abstract lip geometry.
+45. Phoneme waves across the face.
+46. Amplitude-driven mouth depth.
+47. Speech-rate edge vibration.
+48. Pause-driven settling.
+49. Consonant impulses.
+50. Vowel widening.
+51. Waveform mouth aperture.
+52. Voice wave travelling through the head.
+53. Speech-only jaw geometry.
+54. Spatial speech trails.
+55. Rear-skull waveform wrap.
+
+### Cognition
+
+56. Volumetric neural field.
+57. Filament neural graph.
+58. Nodes mapped to pipeline stages.
+59. Edges mapped to data flow.
+60. Risk-driven density.
+61. Error-driven disconnection.
+62. Completion-driven graph collapse.
+63. Parallel tool paths.
+64. Ear-to-cortex-to-executor-to-mouth flow.
+65. Repository traversal visualization.
+66. Directory clusters.
+67. File nodes.
+68. Dependency fibres.
+69. Dead-code dark matter.
+70. Successful cleanup as entropy reduction.
+
+### Repository geometry
+
+71. MASTER as head.
+72. `lib` as brain.
+73. `law` as spine.
+74. `tools` as hands.
+75. `web` as visual cortex.
+76. `RAILS` as external sensory layer.
+77. `OPENBSD` as substrate.
+78. `STUDIO` as imagination layer.
+79. Git branches as spatial strata.
+80. Dirty changes as surface perturbations.
+81. Dirty files as local topology distortion.
+82. Tests as support structure.
+83. Failing checks as broken links.
+84. Known-good commits as anchors.
+85. `/fix` as geometric rehabilitation.
+
+### Camera
+
+86. Head-relative parallax.
+87. Face-centred camera.
+88. Restrained orbit.
+89. Pointer-driven camera tilt.
+90. Device-orientation camera.
+91. Listening proximity.
+92. Speaking recession.
+93. Bounded error displacement.
+94. Sleeping camera descent.
+95. Boot reveal from close range.
+96. Resize-preserving semantic scale.
+97. Shared CLI/browser camera state.
+98. Camera distance from attention.
+99. Camera distance from risk.
+100. Camera limit from canonical contract.
+
+### Materials
+
+101. One master face material graph.
+102. TSL-based shader layer.
+103. Cognition-driven topology visibility.
+104. Anisotropic curvature reveal.
+105. Subsurface-like restrained shading.
+106. Transparent thought volumes.
+107. Depth-dependent line density.
+108. Roughness as calm/activity.
+109. Specular response as attention.
+110. Speech-driven material density.
+111. Monochrome `wscons` mode.
+112. Device-budget material reduction.
+113. Postprocess reduction before semantic reduction.
+114. Stable monochrome fallback.
+115. Deterministic noise everywhere.
+
+### Splat and hybrid rendering
+
+116. Canonical neutral splat field.
+117. Expression field interpolation.
+118. Splat opacity for transient cognition.
+119. View-dependent SH detail.
+120. Mobile/desktop LOD.
+121. Eye-first streaming.
+122. Mouth-first streaming.
+123. Ghost-face streaming placeholder.
+124. Mesh collision hull under splats.
+125. Splat-backed thought matter.
+126. Fragmentation on error.
+127. Reconstruction on recovery.
+128. Native GaussianSplat capability detection.
+129. Deterministic point fallback.
+130. Shared state for mesh/splat projections.
+
+### Terminal-native 3D HUD
+
+131. Monospaced spatial labels.
+132. `master0` semantic anchor.
+133. `voice0` voice anchor.
+134. `web0` web anchor.
+135. `root on master0` boot anchor.
+136. Repository nodes with dmesg labels.
+137. Command execution as spatial dmesg.
+138. Errors pinned to their subsystem.
+139. Success lines fading after acknowledgement.
+140. Current command on the nearest plane.
+141. History receding into depth.
+ shared prompt vocabulary.
 143. Flat scrollback instead of bubbles.
 144. No decorative panel chrome.
 145. `/status` widening the terminal plane.
