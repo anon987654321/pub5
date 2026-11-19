@@ -36,7 +36,7 @@ RAILS evidence starts with `MASTER/bin/operator browser install`, then
 `MASTER/bin/operator visual sweep APP --one-page` before the full sweep.
 
 The root TODO executor is opt-in: start with `MASTER_BACKLOG_AUTORUN=1 MASTER/bin/master`.
-Use the installed Ruby (the shared floor is 3.3); no patch-level `.ruby-version`
+Use the installed Ruby (the shared floor is 3.2); no patch-level `.ruby-version`
 or interpreter upper bound is authoritative. Bundler's `BUNDLED WITH` line is
 lockfile metadata, not a command to install or re-exec that exact Bundler.
 
