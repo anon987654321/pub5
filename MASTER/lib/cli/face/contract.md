@@ -1,6 +1,8 @@
 # Terminal face contract
 
-The terminal face is a presentation adapter for the same MASTER runtime used by the web face. It is not a second command router, policy engine, model, voice personality, or source of visual truth. Its job is to make the current interaction and system state legible in a terminal-sized surface.
+This contract governs the standalone terminal-face renderer and window components. They share MASTER's runtime state and visual tokens with the web face; they are not a second command router, policy engine, model, voice personality, or source of visual truth.
+
+The default `bin/master` CLI does not mount this face. Its active terminal surface is the Reline prompt, OpenBSD-style dmesg scrollback, and the fixed two-ring mic/TTS indicator in the top-right corner. The full-screen `Face::Window` remains an isolated component, not a CLI entry mode. Tests of that component do not prove that the default CLI paints a face.
 
 ## Canonical authority
 
@@ -20,7 +22,7 @@ is subordinate to the existing shared point allocation.
 
 ## Surface responsibilities
 
-`window.rb` owns terminal lifecycle, input, viewport handling and exit/interruption behavior. `head.rb` builds the reusable deterministic mesh. `ascii.rb` projects and shades that mesh into terminal cells; the web face ports the same rendering rules using its own surface primitives. Terminal-specific sizing may adapt to the available rows and columns, but shared geometry, glyph choices, rounding and state meaning stay governed by the canonical token document.
+`window.rb` owns the standalone component's terminal lifecycle, input, viewport handling and exit/interruption behavior; the default `bin/master` session does not invoke it. `head.rb` builds the reusable deterministic mesh. `ascii.rb` projects and shades that mesh into terminal cells; the web face ports the same rendering rules using its own surface primitives. Terminal-specific sizing may adapt to the available rows and columns, but shared geometry, glyph choices, rounding and state meaning stay governed by the canonical token document.
 
 Typed input follows `Master::CLI::TurnRouter`, the same command path as `bin/master`. Speech and microphone behavior use the existing voice runtime and explicit user interaction. The face never gains shell, filesystem, network-write or deployment authority merely because it is visible in a browser or full-screen terminal.
 
