@@ -48,7 +48,7 @@ if [ ! -x "$_ruby" ] || ! "$_ruby" -e 'require "rubygems"; exit(Gem::Version.new
   _ruby=
   for _candidate in /usr/local/bin/ruby[0-9]*; do
     [ -x "$_candidate" ] || continue
-    if "$_candidate" -e 'require "rubygems"; exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3") ? 1 : 0)' >/dev/null 2>&1; then
+    if "$_candidate" -e 'require "rubygems"; exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.2") ? 1 : 0)' >/dev/null 2>&1; then
       _ruby=$_candidate
       break
     fi
