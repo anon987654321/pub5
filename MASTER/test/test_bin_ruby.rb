@@ -16,13 +16,13 @@ class TestBinRuby < Minitest::Test
     window = Operator::Environment
     ok = ->(version) { window::SUPPORTED_RUBY_MIN <= Gem::Version.new(version) }
 
-    %w[3.3.8 3.4.9 4.0.5 4.0.7 4.1.0 4.2.0].each { |version| assert ok.(version), version }
-    refute ok.("3.2.9")
+    %w[3.2.0 3.2.9 3.3.8 3.4.9 4.0.5 4.0.7 4.1.0 4.2.0].each { |version| assert ok.(version), version }
+    refute ok.("3.1.9")
   end
 
   def test_wrapper_has_no_artificial_upper_version
     source = File.read(BIN)
-    assert_includes source, "MIN_MAJOR=3\nMIN_MINOR=3"
+    assert_includes source, "MIN_MAJOR=3\nMIN_MINOR=2"
     refute_includes source, "MAX_MAJOR="
   end
 
@@ -121,7 +121,7 @@ class TestBinRuby < Minitest::Test
   # answered here and then failed Bundler's own `ruby ">= 3.3"` check.
   def test_dev_bootstrap_ignores_a_prior_build_below_the_floor
     Dir.mktmpdir do |dir|
-      master = staged_master_with_tools_ruby(dir, version: "3.2.6", marker: "STALE-BUILT")
+      master = staged_master_with_tools_ruby(dir, version: "3.1.9", marker: "STALE-BUILT")
       FileUtils.cp(File.join(MASTER, "bin", "dev-bootstrap"), File.join(master, "bin", "dev-bootstrap"))
 
       out, status = Open3.capture2e({ "PATH" => "/usr/bin:/bin", "PUB5_RUBY" => nil,
@@ -129,7 +129,7 @@ class TestBinRuby < Minitest::Test
                                       "MASTER_DEV_BOOTSTRAP_BUILD" => "0" },
                                     File.join(master, "bin", "dev-bootstrap"), "-v")
 
-      refute status.success?, "a 3.2 build is below the Gemfile floor and must be refused"
+      refute status.success?, "a 3.1 build is below the Gemfile floor and must be refused"
       refute_includes out, "STALE-BUILT", "an out-of-range prior build was exec'd"
       assert_includes out, "ignoring #{File.join(master, '.tools', 'ruby', 'bin', 'ruby')}"
     end
