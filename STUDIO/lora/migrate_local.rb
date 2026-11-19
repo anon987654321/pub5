@@ -73,15 +73,16 @@ module Studio
         }
       end
 
-      def initialize(source_checkout:, apply: false, include_sources: false, restore_johann_history: false)
+      def initialize(source_checkout:, destination_root: DESTINATION_ROOT, apply: false, include_sources: false, restore_johann_history: false)
         @source_checkout = File.expand_path(source_checkout)
+        @destination_root = File.expand_path(destination_root)
         @apply = apply
         @include_sources = include_sources
         @restore_johann_history = restore_johann_history
       end
 
       def migrate(subject)
-        destination = File.join(DESTINATION_ROOT, subject)
+        destination = File.join(@destination_root, subject)
         candidates = SOURCE_ROOTS.map { |root| File.join(@source_checkout, root, subject) }
                                  .select { |path| File.directory?(path) && !File.symlink?(path) }
         entries = candidates.flat_map { |root| planned_entries(root) }
