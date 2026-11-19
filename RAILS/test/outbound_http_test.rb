@@ -256,7 +256,11 @@ class FediverseSsrfTest < Minitest::Test
   def test_an_oversized_body_is_a_network_error_callers_already_rescue
     assert_includes Shared::OutboundHttp::NETWORK_ERRORS, Shared::OutboundHttp::BodyTooLarge
   end
-\n  def test_total_deadline_is_a_network_error_callers_already_rescue\n    assert_includes Shared::OutboundHttp::NETWORK_ERRORS, Shared::OutboundHttp::DeadlineExceeded\n  end\n
+
+  def test_total_deadline_is_a_network_error_callers_already_rescue
+    assert_includes Shared::OutboundHttp::NETWORK_ERRORS, Shared::OutboundHttp::DeadlineExceeded
+  end
+
   private
 
   ChunkedResponse = Struct.new(:chunks, :body, :chunks_read) do
