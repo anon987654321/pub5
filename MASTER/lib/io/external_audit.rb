@@ -130,6 +130,7 @@ module Master
             next_uri = URI.join(current.to_s, location)
             return Result.err("external_audit: redirect changes host; assess new host separately", category: :policy) unless next_uri.host.to_s.casecmp(current.host.to_s).zero?
             return Result.err("external_audit: redirect destination must be HTTP(S)", category: :validation) unless %w[http https].include?(next_uri.scheme)
+            return Result.err("external_audit: HTTPS redirects cannot downgrade to HTTP", category: :policy) if current.scheme == "https" && next_uri.scheme == "http"
             return Result.err("external_audit: redirect credentials forbidden", category: :validation) if next_uri.user || next_uri.password
             current = next_uri
             redirects += 1
