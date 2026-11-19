@@ -36,6 +36,7 @@ require "openssl"
 require "resolv"
 require "socket"
 require "yaml"
+require_relative "../../MASTER/lib/io/ssrf_guard"
 require_relative "render_dns"
 
 module Deploy
@@ -189,11 +190,12 @@ module Deploy
 
   def rdap_base(tld)
     @rdap_bases ||= begin
-      out = capture_bounded("curl", "-sS", BOOTSTRAP, seconds: 20)
-      parsed = JSON.parse(out.to_s)
+      response = pinned_https_get(URI(BOOTSTRAP), max_bytes: 2_000_000, timeout: 20)
+      raise IOError, "IANA RDAP bootstrap HTTP #{response.code}" unless response.is_a?(Net::HTTPSuccess)
+      parsed = JSON.parse(response.body.to_s)
 
       parsed.fetch("services", []).each_with_object({}) do |(tlds, urls), map|
-        tlds.each { |t| map[t] = urls.first }
+        tlds.each { |name| map[name] = urls.first }
       end
     rescue StandardError => e
       # An empty map is every TLD unresolvable, and silently: the expiry check
@@ -205,18 +207,37 @@ module Deploy
     @rdap_bases[tld]
   end
 
+  # Follow only explicit public HTTPS redirects. Each hop is resolved,
+  # classified and pinned afresh; curl -L would silently repeat unpinned DNS.
+  def pinned_https_get(uri, max_bytes:, timeout:)
+    current = uri
+    4.times do
+      unless current.is_a?(URI::HTTPS) && current.port == 443 &&
+             current.userinfo.nil? && current.fragment.nil?
+        raise URI::InvalidURIError, "RDAP URL must be a clean HTTPS URL on port 443"
+      end
+      request = Net::HTTP::Get.new(current.request_uri)
+      response = Master::Io::SsrfGuard.request(current, request, max_bytes:, timeout:)
+      return response unless response.is_a?(Net::HTTPRedirection)
+
+      location = response["location"].to_s
+      raise IOError, "RDAP redirect has no Location" if location.empty?
+
+      current = URI.join(current.to_s, location)
+    end
+    raise IOError, "RDAP redirect limit exceeded"
+  end
+
   def rdap_query(domain)
     base = rdap_base(domain.split(".").last)
     return nil unless base
 
-    url = "#{base.chomp("/")}/domain/#{domain}"
-    out = capture_bounded("curl", "-sSL", "-w", "\n%{http_code}", url, seconds: 20)
-    lines = out.to_s.lines
-    code = lines.last.to_s.strip
-    return { "state" => "available" } if code == "404"
-    return nil unless code == "200"
+    uri = URI("#{base.chomp("/")}/domain/#{domain}")
+    response = pinned_https_get(uri, max_bytes: 2_000_000, timeout: 20)
+    return { "state" => "available" } if response.code.to_i == 404
+    return nil unless response.is_a?(Net::HTTPSuccess)
 
-    body = JSON.parse(lines[0..-2].join) rescue nil
+    body = JSON.parse(response.body.to_s) rescue nil
     return nil unless body
 
     event = ->(name) { body["events"]&.find { |e| e["eventAction"] == name }&.dig("eventDate") }
@@ -230,6 +251,7 @@ module Deploy
                        &.dig("vcardArray", 1)&.find { |f| f[0] == "fn" }&.last,
     }.compact
   end
+
 
     # What a visitor sees, per host relayd holds a keypair for (plus the brgen
     # verticals): nameservers and DS from the public resolver, the A/AAAA
@@ -251,25 +273,30 @@ module Deploy
     end
 
     def certificate_of(host)
-      socket = Socket.tcp(host, 443, connect_timeout: 8)
-      ssl = OpenSSL::SSL::SSLSocket.new(socket, OpenSSL::SSL::SSLContext.new.tap { |c| c.verify_mode = OpenSSL::SSL::VERIFY_NONE })
+      uri = URI::HTTPS.build(host:)
+      address = Master::Io::SsrfGuard.pinned_address(uri) or
+        raise SocketError, "refused non-public or unresolved TLS host"
+      socket = Socket.tcp(address, 443, connect_timeout: 8)
+      ssl = OpenSSL::SSL::SSLSocket.new(
+        socket, OpenSSL::SSL::SSLContext.new.tap { |context| context.verify_mode = OpenSSL::SSL::VERIFY_NONE }
+      )
       ssl.hostname = host
       ssl.connect
-      cert = ssl.peer_cert
-
-      ssl.close
-      socket.close
-      cert
+      ssl.peer_cert
     rescue StandardError => e
       "#{e.class}: #{e.message[0, 60]}"
+    ensure
+      ssl&.close
+      socket&.close
     end
 
     def https_status(host)
-      http = Net::HTTP.new(host, 443)
-      http.use_ssl = true
-      http.open_timeout = 8
-      http.read_timeout = 15
-      http.request(Net::HTTP::Get.new("/up")).code
+      uri = URI::HTTPS.build(host:, path: "/up")
+      response = Master::Io::SsrfGuard.request(
+        uri, Net::HTTP::Get.new(uri.request_uri),
+        max_bytes: 64_000, timeout: 15, open_timeout: 8, read_timeout: 15, write_timeout: 8
+      )
+      response.code
     rescue StandardError => e
       "#{e.class}"
     end
