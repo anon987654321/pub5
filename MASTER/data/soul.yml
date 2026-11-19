@@ -5,7 +5,7 @@
 
 schema: 1
 version: "3.0.0"
-body_sha256: "df2e60e284716e511f07e7b964a5d9cbae0bd7fa44a2b0b501856c6cdd264036"
+body_sha256: "89c9fe385bcfed000ef6792573cbe1bc2791af727c87fe062eb95842843e1fdd"
 constitution: MASTER/data/laws.yml
 
 # Source authority, highest first. This order governs conflicts between files;
