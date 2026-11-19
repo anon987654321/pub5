@@ -70,9 +70,10 @@ module Master
     def init_loop(root:, container:)
       Ground::LawHandshake::Admission.enable!
       start_background_data_validation(root:, bus: container[:bus])
-      # After validation, so the first tick sees a container that finished
-      # building rather than one mid-assembly. The tick persists the loaded
-      # state; its restore status and schema completeness remain explicit evidence.
+      # The wide YAML inventory runs independently at low priority. The
+      # admitted runtime is already built and its required data passed BootChecks;
+      # this first tick persists the loaded cognitive state without waiting for
+      # the diagnostic sweep to finish.
       container[:cognition] = Cognition::Mind.new(root:, bus: container[:bus], memory: container[:memory])
       container[:fix_loop]&.wire_cognition(container[:cognition])
       container[:cognition].tick!
