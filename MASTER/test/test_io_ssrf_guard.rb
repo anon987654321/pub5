@@ -113,7 +113,7 @@ class SsrfGuardTest < Minitest::Test
   def test_requires_a_fully_qualified_dns_name
     called = false
     Guard.stub(:resolve_addresses, ->(_host) { called = true; ["93.184.216.34"] }) do
-      refute Guard.safe_uri?(URI("http://instance-data/"))
+      refute Guard.safe_uri?(URI("http://buildhost/"))
     end
     refute called, "single-label names must not use resolver search domains"
   end
