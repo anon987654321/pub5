@@ -1164,3 +1164,26 @@ The pub4 repository remains the read-only provenance source; do not revive
 its old tree wholesale. Historical MASTER face files and OpenBSD/RAILS files
 that were replaced by newer owners should be assessed through the active
 convergence and acceptance rows, not copied back by path similarity.
+
+## Outbound HTTP pinning — source landed; host proof remains open
+
+Public-fetch boundaries are now pinned in MASTER, RAILS and STUDIO. The
+canonical policy is `MASTER/data/laws.yml#ROBUSTNESS_outbound_fetch_is_pinned`.
+MASTER uses `Io::SsrfGuard`; RAILS uses `Shared::OutboundHttp` and Chromium
+host-resolver maps; STUDIO's Replicate API and asset client pin approved
+addresses. Redirects are refused or revalidated per hop. Local-daemon probes
+remain a separate, explicit local-trust path.
+
+- [ ] Run the focused MASTER suites: `test_io_ssrf_guard.rb`,
+  `test_io_external_audit.rb` and `test_io_dynamic_http.rb` on the installed
+  supported Ruby; record actual run counts and summaries.
+- [ ] Run the RAILS outbound transport, Link Converter, S2S postback and
+  shared scrape tests; verify the app suites load the updated shared engine.
+- [ ] Run `STUDIO/test/replicate_client_test.rb` and the STUDIO test suite.
+- [ ] Verify vm23 egress policy blocks RFC1918, loopback, link-local and
+  metadata routes independently of application code; retain command output
+  and host identity as evidence.
+
+Source changes and regression cases are committed. Runtime tests and the
+vm23 egress-firewall proof have not been run by this session; do not mark this
+acceptance complete until their evidence exists.
