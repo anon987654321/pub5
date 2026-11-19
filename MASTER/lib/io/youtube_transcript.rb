@@ -87,10 +87,7 @@ module Master
         raise "player API bootstrap missing" if api_key.to_s.empty?
 
         uri = URI("https://www.youtube.com/youtubei/v1/player?key=#{CGI.escape(api_key)}")
-        address = SsrfGuard.pinned_address(uri)
-        raise "refused internal/reserved address" unless address
-
-        response = http_json(uri, address, {
+        response = http_json(uri, {
           context: {
             client: {
               clientName: client,
@@ -146,26 +143,16 @@ module Master
 
       def get_response(url)
         uri = URI(url)
-        address = SsrfGuard.pinned_address(uri)
-        raise "refused internal/reserved address" unless address
-
-        client = SsrfGuard.http_for(uri, address)
-        client.read_timeout = TIMEOUT
-        client.open_timeout = TIMEOUT
-        client.start { |http| http.get(uri.request_uri, "User-Agent" => "MASTER/1 (youtube_transcript)") }
+        request = Net::HTTP::Get.new(uri.request_uri, "User-Agent" => "MASTER/1 (youtube_transcript)")
+        SsrfGuard.request(uri, request, max_bytes: MAX_BYTES, timeout: TIMEOUT)
       end
 
-      def http_json(uri, address, payload)
-        client = SsrfGuard.http_for(uri, address)
-        client.read_timeout = TIMEOUT
-        client.open_timeout = TIMEOUT
-        client.start do |http|
-          request = Net::HTTP::Post.new(uri.request_uri)
-          request["User-Agent"] = "MASTER/1 (youtube_transcript)"
-          request["Content-Type"] = "application/json"
-          request.body = JSON.generate(payload)
-          http.request(request)
-        end
+      def http_json(uri, payload)
+        request = Net::HTTP::Post.new(uri.request_uri)
+        request["User-Agent"] = "MASTER/1 (youtube_transcript)"
+        request["Content-Type"] = "application/json"
+        request.body = JSON.generate(payload)
+        SsrfGuard.request(uri, request, max_bytes: MAX_BYTES, timeout: TIMEOUT)
       end
 
       def injection_guard
