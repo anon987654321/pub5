@@ -161,11 +161,16 @@ class TestRuleCatalogue < Minitest::Test
     entries = data.fetch("law_catalogue").fetch("entries")
     statement = data.fetch("ROBUSTNESS_antigen_memory").fetch("statement")
 
-    refute data.key?("ROBUSTNESS_immune_pattern")
+    # Immune recognition and antigen memory are separate registered Laws:
+    # universal.rb defines both, and the catalogue preflight fails closed on
+    # a Law.define with no catalogue entry.
+
+    assert data.key?("ROBUSTNESS_immune_pattern")
+    assert entries.key?("ROBUSTNESS_immune_pattern")
     assert data.key?("ROBUSTNESS_homeostasis")
     assert entries.key?("ROBUSTNESS_homeostasis")
-    refute entries.key?("ROBUSTNESS_immune_pattern")
     assert entries.key?("ROBUSTNESS_antigen_memory")
+
     assert_match(/retained as .* antigens/, statement)
     assert_match(/source revision/, statement)
     assert_match(/configured per-Law budget/, statement)
