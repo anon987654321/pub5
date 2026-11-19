@@ -70,7 +70,7 @@ module Shared
       uri.query = URI.encode_www_form(parameters)
       response = Shared::OutboundHttp.request(
         uri, headers: { "User-Agent" => "Brgen-S2S-Attribution/1.0" },
-        max_body: 16_384, open_timeout: 3, read_timeout: 5
+        max_body: 16_384, open_timeout: 3, read_timeout: 5, write_timeout: 3
       )
       code = response.code.to_i
       raise RetryableResponse, "S2S provider returned HTTP #{code}" if code == 429 || code >= 500
