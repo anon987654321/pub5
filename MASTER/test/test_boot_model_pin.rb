@@ -7,14 +7,22 @@ require_relative "test_helper"
 # the saved model never reached those runs.
 class TestBootModelPin < Minitest::Test
   class FakeRouter
-    attr_reader :probes
+    attr_reader :probes, :waits
 
-    def initialize(reachable:) = (@reachable = reachable; @probes = 0)
+    def initialize(reachable:, pending: false)
+      @reachable = reachable
+      @pending = pending
+      @probes = 0
+      @waits = []
+    end
 
     def constrained_for(operation:) = "agy:gemini-3.8-flash-medium"
 
     def unreachable_reason(_model, wait: false)
       @probes += 1
+      @waits << wait
+      return "checking provider sign-in" if @pending
+
       @reachable ? nil : "down"
     end
   end
@@ -93,6 +101,16 @@ class TestBootModelPin < Minitest::Test
     agent = FakeAgent.new(saved: "grok-cli:sonnet", router: FakeRouter.new(reachable: false))
 
     assert_equal %w[free/a free/b], agent.routed_models
+  end
+
+  def test_boot_model_pin_never_waits_for_an_unfinished_provider_probe
+    router = FakeRouter.new(reachable: true, pending: true)
+    agent = FakeAgent.new(saved: "grok-cli:sonnet", router:)
+
+    agent.pin_boot_model!
+
+    assert_equal "grok-cli:sonnet", agent.instance_variable_get(:@preferred_model)
+    assert_equal [false], router.waits
   end
 
   # ask(..., operation:) takes this path, which is the one /fix's semantic laws and
