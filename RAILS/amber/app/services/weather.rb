@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../../../__shared/app/services/shared/outbound_http"
+
 class Weather
   BERGEN_LAT = 60.39
   BERGEN_LNG = 5.32
@@ -67,15 +69,13 @@ class Weather
     # Net::HTTP.get takes no timeout options, which is why the old call had
     # none. Going through start/request is the only way to bound it.
     def get(uri)
-      Net::HTTP.start(uri.host, uri.port,
-                      use_ssl: uri.scheme == "https",
-                      open_timeout: OPEN_TIMEOUT,
-                      read_timeout: READ_TIMEOUT) do |http|
-        response = http.request(Net::HTTP::Get.new(uri))
-        raise "HTTP #{response.code}" unless response.is_a?(Net::HTTPSuccess)
+      response = Shared::OutboundHttp.request(
+        uri, max_body: 64_000,
+        open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT, write_timeout: OPEN_TIMEOUT
+      )
+      raise "HTTP #{response.code}" unless response.is_a?(Net::HTTPSuccess)
 
-        response.body
-      end
+      response.body
     end
   end
 end
