@@ -98,6 +98,24 @@ but the implementation is owned here.
 - `subprocess.rb` — the one child-process helper the tools share.
 - `analog_core.rb` — a seeded, bounded filtered-noise source shared by Dilla tape-speed variation and Postpro's frame-to-frame gate weave; no added gem or native dependency.
 
+## Outbound provider transport
+
+`Studio::ReplicateClient` owns both Replicate API requests and prediction
+asset downloads. The API origin and download hosts are constrained; downloads
+require HTTPS on port 443 and the Replicate host allowlist. Both paths resolve
+the hostname, reject the complete A/AAAA answer set if any address is private,
+reserved, translated or non-global, and pin the socket to the approved public
+address with `Net::HTTP#ipaddr`. The original hostname remains in use for TLS
+verification and Host; implicit environment proxies are disabled. Downloads
+also retain atomic publication, symlink refusal, byte caps and a monotonic
+deadline. Redirect responses are not followed.
+
+Do not turn a provider-returned URL into an unrestricted fetch. Keep the host
+allowlist, URL shape, pinned destination and transfer budgets together at the
+provider boundary. If another STUDIO tool needs an external URL, give it an
+explicit owner and the same resolve → classify every answer → pin → bound
+request pattern; do not copy a weaker `Net::HTTP.start(host)` example.
+
 ## Operator workflow
 
 `bin/studio doctor` gives a read-only local readiness report. Add `--json` for
