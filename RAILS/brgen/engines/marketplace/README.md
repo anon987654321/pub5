@@ -4,12 +4,14 @@
 Marketplace is one place for a city to buy, sell, rent, hire and order dinner, without asking
 anyone to learn a second site for each.
 
-Marketplace is a mountable Rails engine served at the marketplace subdomain, spelled in each
-country's own word: `markedsplass.brgen.no`, `marketplace.lsangeles.com`, `marktplatz` in
-Germany, `mercato` in Italy. `Brgen::DomainRegistry::SUBAPP_ALIASES` resolves every spelling
-to this engine. It is not a separate app: it runs in brgen's process, with brgen's users. The
-recipe for a vertical is in `RAILS/brgen/README.md`, and the topology is in
-`RAILS/brgen/AGENTS.md`.
+Marketplace is mounted on each city's localised commerce subdomain:
+`markedsplass.brgen.no`, `marketplace.lsangeles.com`, `marktplatz` in
+Germany and `mercato` in Italy. `Brgen::DomainRegistry::SUBAPP_ALIASES`
+maps each spelling to this engine. Marketplace runs inside Brgen's Rails
+process and uses Brgen's users; it is not a separate app.
+
+Read [the Brgen guide](../../../README.md) for the vertical pattern and
+[Brgen's agent contract](../../../AGENTS.md) for the host topology.
 
 ## Restored marketplace intent
 
