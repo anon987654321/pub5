@@ -67,6 +67,10 @@ module Studio
         unless File.directory?(directory) && !File.symlink?(directory)
           return result(subject, directory, ["subject directory is missing or is a symlink"])
         end
+        directory_stat = File.lstat(directory)
+        unless directory_stat.uid == Process.uid && (directory_stat.mode & 0o077).zero?
+          return result(subject, directory, ["subject directory must be owned by the current user and owner-only (0700)"])
+        end
 
         consent_path = File.join(directory, "consent.yml")
         unless File.file?(consent_path) && !File.symlink?(consent_path)
