@@ -1,13 +1,12 @@
 # Rails apps
 
 **Five Rails apps, one shared engine, and one Brgen process that answers to a
-hundred hostnames.** Brgen is the city network; its verticals are mountable
-engines under `brgen/engines/`, not sibling app trees. Amber is the wardrobe,
-BSDPorts is a search of the ports tree, MASTER's web face lives on
-`ai.brgen.no`, and Mr Damascy is one Bergen kitchen's ordering app. They run
-on SQLite behind Falcon, on one box called vm23, and
-Brgen, Amber and BSDPorts share one engine so that a fix made once is made
-everywhere; MASTER/web and mrdamascy stand alone and mount none of it.
+hundred hostnames.** Brgen is the city network. Its verticals are mountable
+engines under `brgen/engines/`, not sibling app trees. Amber is the wardrobe;
+BSDPorts searches the ports tree; MASTER's web face lives on `ai.brgen.no`;
+Mr Damascy handles ordering for one Bergen kitchen. The apps run on SQLite
+behind Falcon on vm23. Brgen, Amber and BSDPorts share one engine; MASTER/web
+and mrdamascy stand alone.
 
 Hjerterom is restored separately at `RAILS/hjerterom` as an archived
 source tree from pub4. It is not one of the active Rails apps and is not in
