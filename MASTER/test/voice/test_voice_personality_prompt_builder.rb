@@ -147,6 +147,17 @@ class TestPersonalityPromptBuilder < Minitest::Test
     assert_operator prompt.bytesize, :<, 18_000
   end
 
+  def test_chat_contract_uses_plain_multilingual_strunk_style_without_transcript_scaffolding
+    prompt = Master::Voice::Personality.new.system_prompt(context: :chat)
+
+    assert_includes prompt, "match the language of the operator's latest message"
+    assert_includes prompt, "standard Bahasa Melayu"
+    assert_includes prompt, "Omit needless words"
+    assert_includes prompt, "Give the answer itself"
+    assert_includes prompt, "Never expose transcripts, role labels"
+    assert_includes prompt, "Never present a script that merely prints prose"
+  end
+
   def test_the_identity_answers_in_the_language_it_is_addressed_in
     prompt = Master::Voice::Personality.new.system_prompt(context: :chat)
 
