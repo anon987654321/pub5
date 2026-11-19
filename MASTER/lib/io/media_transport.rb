@@ -7,6 +7,7 @@ require "tempfile"
 require "timeout"
 require "uri"
 require_relative "replicate_client"
+require_relative "ssrf_guard"
 
 module Master
   module Io
@@ -165,11 +166,24 @@ module Master
       def fetch_video(uri, headers, timeout)
         3.times do
           target = URI(uri)
-          raise BadShape, "veo: refusing video uri #{target.scheme}://#{target.host}" unless target.scheme == "https" && target.host.to_s.match?(VIDEO_HOST_RE)
+          unless target.is_a?(URI::HTTPS) && target.port == 443 && target.host.to_s.match?(VIDEO_HOST_RE) &&
+                 target.userinfo.nil? && target.fragment.nil?
+            raise BadShape, "veo: refusing video uri #{target.scheme}://#{target.host}"
+          end
 
-          code, body, location = get(uri, headers, timeout)
+          code, body, location = get(target.to_s, headers, timeout)
           if (300..399).cover?(code) && location
-            uri = location
+            next_target = URI.join(target.to_s, location)
+            unless next_target.is_a?(URI::HTTPS) && next_target.port == 443 &&
+                   next_target.host.to_s.match?(VIDEO_HOST_RE) && next_target.userinfo.nil? &&
+                   next_target.fragment.nil?
+              raise BadShape, "veo: refusing unsafe video redirect"
+            end
+            # The API key belongs to the original Google API origin. Never send
+            # it to the signed media host or another redirect destination.
+            headers = headers.reject { |name, _| name.to_s.downcase == "x-goog-api-key" } if
+              next_target.host.to_s.downcase != target.host.to_s.downcase
+            uri = next_target.to_s
             next
           end
           raise HttpError.new(code, body, lane: "veo download") unless code.between?(200, 299)
@@ -237,10 +251,13 @@ module Master
         return @http.call(verb, url, headers, body, timeout) if @http
 
         uri = URI(url)
-        req = verb == :post ? Net::HTTP::Post.new(uri, headers.merge("Content-Type" => "application/json")) : Net::HTTP::Get.new(uri, headers)
-        req.body = body if body
-        res = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https", open_timeout: 10, read_timeout: timeout) { |http| http.request(req) }
-        [res.code.to_i, res.body.to_s, res["location"]]
+        unless uri.is_a?(URI::HTTPS) && uri.port == 443 && uri.userinfo.nil? && uri.fragment.nil?
+          raise BadShape, "media provider request requires a clean HTTPS URL on port 443"
+        end
+        request = verb == :post ? Net::HTTP::Post.new(uri, headers.merge("Content-Type" => "application/json")) : Net::HTTP::Get.new(uri, headers)
+        request.body = body if body
+        response = Master::Io::SsrfGuard.request(uri, request, max_bytes: MAX_BYTES, timeout: [10, timeout].max)
+        [response.code.to_i, response.body.to_s, response["location"]]
       rescue Net::OpenTimeout, Net::ReadTimeout, Timeout::Error => e
         raise TimedOut, "#{uri&.host} timed out: #{e.class}"
       end
