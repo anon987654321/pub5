@@ -189,6 +189,24 @@ class TestIdeaPictureOutput < Minitest::Test
 
   public
 
+  def test_subject_media_upload_requires_owner_only_single_linked_files
+    Dir.mktmpdir do |dir|
+      image = File.join(dir, "portrait.jpg")
+      File.write(image, "private portrait", mode: "w", perm: 0o644)
+      picture = Studio::Visual::IdeaPicture.new(subject: "probe", directory: dir)
+
+      error = assert_raises(ArgumentError) { picture.send(:require_private_media_file!, image) }
+      assert_match(/owner-only/, error.message)
+
+      File.chmod(0o600, image)
+      assert picture.send(:require_private_media_file!, image)
+      linked = File.join(dir, "linked.jpg")
+      File.link(image, linked)
+      error = assert_raises(ArgumentError) { picture.send(:require_private_media_file!, image) }
+      assert_match(/hard-linked/, error.message)
+    end
+  end
+
   def test_private_replicate_model_name_is_a_supported_fallback_without_a_manifest
     Dir.mktmpdir do |dir|
       subject = File.join(dir, "ragnhild")
