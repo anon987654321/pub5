@@ -456,6 +456,8 @@ module Studio
         return false if candidate.empty? || candidate.bytesize > 253
 
         labels = candidate.split(".", -1)
+        return false if labels.length < 2
+
         labels.all? do |label|
           label.bytesize <= 63 && label.match?(/\A[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\z/)
         end
