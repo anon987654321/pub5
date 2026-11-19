@@ -214,11 +214,11 @@ class TestSoul < Minitest::Test
 
     ordinary = builder.send(:runtime_capability_section)
     assert_includes ordinary, "read_file:"
-    refute_match(/shell:/, ordinary)
+    refute_match(/zsh:/, ordinary)
 
     Fiber[:master_elevated] = true
     elevated = builder.send(:runtime_capability_section)
-    assert_match(/shell:/, elevated)
+    assert_match(/zsh:/, elevated)
   ensure
     Fiber[:master_visitor] = nil
     Fiber[:master_paired] = nil
