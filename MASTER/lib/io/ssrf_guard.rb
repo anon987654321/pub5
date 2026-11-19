@@ -168,16 +168,24 @@ module Master
       # consumed under a byte cap before the response leaves this boundary.
       # Redirects remain responses: a caller must validate each Location and
       # start a new request through this method.
-      def self.request(uri, outbound_request, max_bytes: 1_000_000, timeout: DEFAULT_TIMEOUT_S)
+      def self.request(uri, outbound_request, max_bytes: 1_000_000, timeout: DEFAULT_TIMEOUT_S,
+                       open_timeout: nil, read_timeout: nil, write_timeout: nil)
         raise URI::InvalidURIError, "outbound request needs a clean HTTP/HTTPS URL on its standard port" unless valid_http_uri?(uri)
 
         cap = Integer(max_bytes)
         seconds = Float(timeout)
+        open_t = Float(open_timeout || seconds)
+        read_t = Float(read_timeout || seconds)
+        write_t = Float(write_timeout || seconds)
         raise ArgumentError, "response byte cap must be positive" unless cap.positive?
         raise ArgumentError, "request timeout must be finite and positive" unless seconds.finite? && seconds.positive?
+        raise ArgumentError, "socket timeouts must be finite and positive" unless [open_t, read_t, write_t].all? { |value| value.finite? && value.positive? }
 
         address = pinned_address(uri) or raise SocketError, "refused non-public or unresolvable destination: #{uri.host}"
-        http = http_for(uri, address, timeout: seconds)
+        http = http_for(uri, address, timeout: [open_t, read_t, write_t].max)
+        http.open_timeout = open_t
+        http.read_timeout = read_t
+        http.write_timeout = write_t
         response = nil
         body = +"".b
         Timeout.timeout(seconds) do
