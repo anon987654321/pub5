@@ -124,6 +124,13 @@ class LogPublicationTest < Minitest::Test
     assert captured.start_with?("[log truncated")
   end
 
+  def test_command_line_helper_uses_the_redacting_publisher
+    source = File.read(File.expand_path("../../scripts/publish_log.zsh", __dir__))
+
+    assert_includes source, "Master::Fix::LogPublication.publish"
+    refute_includes source, "curl -F"
+  end
+
   def test_result_to_h_compacts
     skipped = Publication::Result.new(skipped: "why").to_h
     assert_equal({ skipped: "why" }, skipped)
