@@ -70,8 +70,7 @@ module Shared
       request = Net::HTTP::Get.new(uri)
       request["User-Agent"] = "Brgen-S2S-Attribution/1.0"
       response = begin
-        address = Shared::OutboundHttp.resolve_addresses(uri.hostname).reject { |a| Shared::OutboundHttp.unsafe_ip?(a) }.first
-        raise SocketError, "unsafe or unresolvable remote host" unless address
+        address = Shared::OutboundHttp.public_address!(uri.hostname)
         http = Shared::OutboundHttp.pinned_connection(uri, address, open_timeout: 3, read_timeout: 5)
         http.start { |conn| conn.request(request) }
       end
