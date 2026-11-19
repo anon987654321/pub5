@@ -27,6 +27,31 @@ their runtime and operational sharp edges here; STUDIO reads its project READMEs
 workflow in `BIZ/README.md`. The harness doors at the repo root route here.
 The content moved out of the per-tree `CLAUDE.md` files; git history holds the originals.
 
+## Documentation and Markdown
+
+This contract applies to every maintained Markdown file in pub5, not only the
+front-door READMEs. Give each document one clear audience, purpose and owner.
+Use the shared editorial standard in `MASTER/AGENTS.md`: Strunk and White for
+sentence craft, Bringhurst for hierarchy and typographic restraint, and
+OpenBSD's manual discipline for precise, complete, maintained instructions.
+Keep product copy specific and evidenced; never turn a technical contract into
+promotion. Preserve the distinct voice and language of each product.
+
+Keep authority local. A README routes to its owning source; a runbook gives
+preconditions, exact commands, expected results and recovery; a specification
+defines invariants and acceptance; research records sources, dates, methods,
+limits and uncertainty; a proposal separates evidence from assumptions and
+asks. Update the owning document with the behavior or configuration it
+describes. Regenerate generated documentation from its source. Do not copy
+facts into a second writable authority, add a new guide when an existing owner
+can carry the guidance, or churn accurate prose for uniformity.
+
+Review Markdown as rendered content: heading order, link targets, table
+structure, list nesting, code fences, line measure, whitespace and locale
+punctuation. Keep terminal examples ASCII where the command requires it. A
+source scan is not editorial approval; record unreviewed clarity or factual
+accuracy as INCONCLUSIVE.
+
 ## RAILS
 RAILS/README.md is the maintained long-form reference (check tables,
 rendered-check semantics, deploy blockers, subdomain map) and
