@@ -3,6 +3,7 @@
 require "json"
 require "date"
 require "net/http"
+require_relative "../../io/ssrf_guard"
 require "openssl"
 require "uri"
 
@@ -157,13 +158,11 @@ module Master
         end
 
         def send_request(uri, request)
-          http = Net::HTTP.new(uri.host, uri.port)
-          http.use_ssl = true
-          http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-          http.open_timeout = 10
-          http.read_timeout = 20
-          http.write_timeout = 20
-          http.start { |session| session.request(request) }
+          unless uri.is_a?(URI::HTTPS) && uri.port == 443
+            raise Tradedoubler::Error, "Claims API requires HTTPS on port 443"
+          end
+
+          Master::Io::SsrfGuard.request(uri, request, max_bytes: 2_000_000, timeout: 20)
         end
 
         def error_codes(body)
