@@ -89,7 +89,7 @@ class CoreSmokeTest < Minitest::Test
     Dir.mktmpdir do |root|
       protected_write = Master::Core::Effect.write("data/soul.yml", "golden_law: changed\n")
       model = ScriptedModel.new([protected_write, protected_write])
-      world = RecordingWorld.new(root:)
+      world = RecordingWorld.new(root:, process_runner: Master::Io::Exec)
       fold = Master::Core::Fold.new(
         model:,
         constitution: Master::Core::Constitution.load(data_dir: DATA),
@@ -136,7 +136,7 @@ class CoreSmokeTest < Minitest::Test
       constitution: Master::Core::Constitution.load(data_dir: DATA),
       # This test harness explicitly approves the irreversible Git effects
       # that the real operator would be asked to approve.
-      world: Master::Core::World.new(root:, ask: ->(**) { "yes" }),
+      world: Master::Core::World.new(root:, process_runner: Master::Io::Exec, ask: ->(**) { "yes" }),
       memory:,
     }
     options[:max_turns] = max_turns if max_turns

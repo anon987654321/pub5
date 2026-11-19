@@ -37,6 +37,8 @@ module Master
           @result = result
           super(message)
         end
+
+        def timeout? = true
       end
 
       def capture3(*cmd, timeout: DEFAULT_TIMEOUT, raise_on_timeout: false, **opts) =

@@ -49,7 +49,7 @@ end
 
 class WorldExternalContractTest < Minitest::Test
   def world(root)
-    Master::Core::World.new(root:, capabilities: Master::Core::Capabilities.for(:fix))
+    Master::Core::World.new(root:, capabilities: Master::Core::Capabilities.for(:fix), process_runner: Master::Io::Exec)
   end
 
   def test_exec_captures_a_real_child_process

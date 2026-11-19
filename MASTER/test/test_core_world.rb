@@ -11,26 +11,30 @@ require "tmpdir"
 class WorldTest < Minitest::Test
   E = Master::Core::Effect
 
+  def build_world(**options)
+    Master::Core::World.new(process_runner: Master::Io::Exec, **options)
+  end
+
   def with_world
-    Dir.mktmpdir { |root| yield Master::Core::World.new(root:), root }
+    Dir.mktmpdir { |root| yield build_world(root:), root }
   end
 
   # within() stops a path leaving root and said nothing about what sits inside
   # it, so a credential file in the checkout was readable and its contents
   # landed in the transcript.
   def test_world_offers_only_verbs_in_its_capability_profile
-    read_only = Master::Core::World.new(root: Dir.pwd, capabilities: Master::Core::Capabilities.read_only)
+    read_only = build_world(root: Dir.pwd, capabilities: Master::Core::Capabilities.read_only)
     refute_includes read_only.verbs, :probe, "do not offer a probe without its policy"
     refute_includes read_only.verbs, :exec
     refute_includes read_only.verbs, :write
     assert_equal ["diff"], read_only.git_operations
 
-    probed = Master::Core::World.new(
+    probed = build_world(
       root: Dir.pwd, capabilities: Master::Core::Capabilities.read_only, probe: ->(_argv) { nil }
     )
     assert_includes probed.verbs, :probe
 
-    repair = Master::Core::World.new(root: Dir.pwd, capabilities: Master::Core::Capabilities.for(:repair))
+    repair = build_world(root: Dir.pwd, capabilities: Master::Core::Capabilities.for(:repair))
     assert_includes repair.verbs, :exec
     assert_includes repair.verbs, :write
     assert_equal %w[diff commit], repair.git_operations
@@ -43,7 +47,7 @@ class WorldTest < Minitest::Test
         %w[check.rb broken.rb].include?(argv[2]) && argv[0, 2] == %w[ruby -c] ? nil : "command is not allowlisted"
       end
       capabilities = Master::Core::Capabilities.read_only
-      world = Master::Core::World.new(root:, capabilities:, probe: policy)
+      world = build_world(root:, capabilities:, probe: policy)
 
       result = world.perform(E.probe(["ruby", "-c", "check.rb"]))
       assert result.ok?, result.message
@@ -63,7 +67,7 @@ class WorldTest < Minitest::Test
       assert_match(/not allowlisted/, refused.message)
       refute File.exist?(File.join(root, "escape"))
 
-      untrusted = Master::Core::World.new(
+      untrusted = build_world(
         root:, capabilities: Master::Core::Capabilities.for(:model), probe: policy
       )
       assert_raises(SecurityError) { untrusted.perform(E.probe(["ruby", "-c", "check.rb"])) }
@@ -270,6 +274,16 @@ class WorldTest < Minitest::Test
     end
   end
 
+  def test_exec_fails_closed_without_a_host_process_runner
+    Dir.mktmpdir do |root|
+      world = Master::Core::World.new(root:)
+      result = world.perform(E.exec(["true"]))
+
+      refute result.ok?
+      assert_match(/process runner unavailable/, result.message)
+    end
+  end
+
   def test_exec_success_returns_stdout_and_a_world_issued_receipt
     argv = [RbConfig.ruby, "-e", "print 'ok'"]
     with_world do |world|
@@ -357,7 +371,7 @@ class WorldTest < Minitest::Test
   def test_http_requires_network_capability_and_uses_the_injected_client
     seen = []
     network = ->(url:) { seen << url; Master::Core::Observation.ok("body from #{url}") }
-    world = Master::Core::World.new(
+    world = build_world(
       root: Dir.mktmpdir("world_http"),
       capabilities: Master::Core::Capabilities.for(:fix),
       network:,
@@ -375,7 +389,7 @@ class WorldTest < Minitest::Test
   def test_http_is_refused_when_network_has_been_dropped
     root = Dir.mktmpdir("world_http_blocked")
     capabilities = Master::Core::Capabilities.for(:fix).drop(:network)
-    world = Master::Core::World.new(root:, capabilities:, network: ->(**) { flunk "network reached" })
+    world = build_world(root:, capabilities:, network: ->(**) { flunk "network reached" })
 
     error = assert_raises(SecurityError) { world.perform(Master::Core::Effect.http("https://example.com")) }
 
@@ -501,7 +515,7 @@ class WorldTest < Minitest::Test
       File.write(File.join(root, "seed.txt"), "seed\n")
       system("git", "-C", root, "add", "seed.txt", out: File::NULL, err: File::NULL)
       system("git", "-C", root, "commit", "-qm", "seed", out: File::NULL, err: File::NULL)
-      yield Master::Core::World.new(root:), root
+      yield build_world(root:), root
     end
   end
 

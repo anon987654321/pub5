@@ -70,7 +70,9 @@ module Master
 
         result = Master::CLI::CoreBridge.build_fold(
           root:, data_dir: File.join(master_root, "data"), model:,
-          world: Master::Core::World.new(root:, probe: probe_policy),
+          world: Master::CLI::CoreBridge.build_world(
+            root:, container: nil, capabilities: Master::Core::Capabilities.for(:fix), probe: probe_policy,
+          ),
           memory: Master::Core::Memory.new, max_turns: turn_budget(model, options),
           observer: refusal_recorder(refusals),
           effect_observer: Master::Trace::EffectObserver.new(bus: event_bus(root)),

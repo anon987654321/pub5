@@ -34,7 +34,7 @@ class TestKernelSpine < Minitest::Test
   end
 
   def fold_in(dir, effects)
-    Master::Core::Fold.new(model: Model.new(effects), constitution:, world: Master::Core::World.new(root: dir),
+    Master::Core::Fold.new(model: Model.new(effects), constitution:, world: Master::Core::World.new(root: dir, process_runner: Master::Io::Exec),
                            memory: Master::Core::Memory.new, max_turns: 3).run("what does notes.md say")
   end
 

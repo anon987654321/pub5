@@ -3,10 +3,8 @@
 require "digest"
 require "fileutils"
 require "tmpdir"
-require "open3"
 require "rbconfig"
 require "securerandom"
-require "timeout"
 require "time"
 
 module Master::Core
@@ -21,8 +19,6 @@ module Master::Core
   # This is where the old reach/ (git, web, fs), ops/, and tools/ collapse to.
   class World
     EXEC_TIMEOUT = 120  # seconds — max time for any subprocess call
-    TERM_GRACE = 2      # seconds a killed child gets to exit on TERM before KILL
-
     # A subprocess killed by the timeout never exited, so there is no
     # Process::Status to report. Every caller of bounded_capture2e asks
     # `.success?`, so handing back nil turned a wedged git into a
@@ -40,7 +36,10 @@ module Master::Core
     # pops that journal's newest entry, so a fold write that records nothing
     # leaves /undo reverting an older write instead. Injected, because core
     # reaches nothing in lib/.
-    def initialize(root:, ask: nil, critique_runner: nil, undo: nil, capabilities: Capabilities.for(:fix), network: nil, probe: nil, browser: nil)
+    # The host supplies the process boundary. Core owns effect policy; the host
+    # owns subprocess execution, cancellation and environment handling.
+    def initialize(root:, ask: nil, critique_runner: nil, undo: nil, capabilities: Capabilities.for(:fix),
+                   network: nil, probe: nil, browser: nil, process_runner: nil)
       @root = File.expand_path(root)
       @ask = ask
       @critique_runner = critique_runner
@@ -49,6 +48,7 @@ module Master::Core
       @network = network
       @probe = probe
       @browser = browser
+      @process_runner = process_runner
     end
 
     # The Core-owned browser broker, or nil. Injected for the same reason
@@ -372,7 +372,9 @@ module Master::Core
       # the temporary index starts empty instead.
       Dir.mktmpdir("master-git-index-") do |directory|
         index_env = { "GIT_INDEX_FILE" => File.join(directory, "index") }
-        _head, head_status = Open3.capture2e("git", "-C", @root, "rev-parse", "--verify", "-q", "HEAD")
+        head_output, head_status = bounded_capture2e("git", "-C", @root, "rev-parse", "--verify", "-q", "HEAD")
+        raise head_output.strip if head_status.equal?(TIMED_OUT)
+
         git_capture(*(head_status.success? ? %w[read-tree HEAD] : %w[read-tree --empty]), env: index_env)
         verify_delivery_hashes!(safe_paths, expected)
         git_capture("add", "--", *pathspecs, env: index_env)
@@ -600,71 +602,22 @@ module Master::Core
       raw ? out : out.strip
     end
 
-    # Bounded subprocess call with a hard timeout, which means killing the child
-    # — not just abandoning it.
-    #
-    # This used to wrap Open3.capture3 in Timeout.timeout. Timeout only unwinds
-    # the *block*; the process it spawned keeps running, and Ruby then blocks at
-    # exit waiting for it. Measured: a 1s timeout around `sleep 30` took the full
-    # 30 seconds to return, so the bound this method exists to provide did not
-    # exist. popen3 gives us the pid, so the deadline can actually be enforced:
-    # TERM, a short grace period, then KILL.
+    # Delegate to the one host-owned process supervisor. Core depends only
+    # on capture2e; it does not require the wider runtime.
     def bounded_capture2e(*cmd, stdin_data: nil, env: nil, chdir: nil, timeout: nil)
       timeout_sec = Integer(timeout || ENV.fetch("MASTER_EXEC_TIMEOUT", EXEC_TIMEOUT))
-      popen = env ? [env, *cmd] : cmd
-      opts = {}
-      opts[:chdir] = chdir if chdir
+      raise "process runner unavailable; host must inject capture2e" unless @process_runner&.respond_to?(:capture2e)
 
-      Open3.popen3(*popen, pgroup: true, **opts) do |stdin, stdout, stderr, wait_thread|
-        write_stdin(stdin, stdin_data)
-        # Readers run off-thread: a child that fills its stdout pipe blocks on
-        # write, so draining only after wait_thread returns would deadlock
-        # exactly the wedged process this bound is for.
-        out_reader = Thread.new { stdout.read }
-        err_reader = Thread.new { stderr.read }
+      options = { timeout: timeout_sec, raise_on_timeout: true }
+      options[:stdin_data] = stdin_data unless stdin_data.nil?
+      options[:env] = env unless env.nil?
+      options[:chdir] = chdir unless chdir.nil?
+      @process_runner.capture2e(*cmd, **options)
+    rescue StandardError => error
+      raise unless error.respond_to?(:timeout?) && error.timeout? && error.respond_to?(:result)
 
-        unless wait_thread.join(timeout_sec)
-          terminate(wait_thread.pid)
-          [out_reader, err_reader].each(&:kill)
-          next ["TIMEOUT after #{timeout_sec}s: #{cmd.first}", TIMED_OUT]
-        end
-
-        out = "#{out_reader.value}#{err_reader.value}"
-        [out, wait_thread.value]
-      end
-    end
-
-    def write_stdin(stdin, data)
-      stdin.write(data) if data
-      stdin.close
-    rescue Errno::EPIPE
-      # The child exited before reading its input; its status is the real signal.
-      nil
-    end
-
-    # TERM first so the child can clean up, KILL if it ignores that. ESRCH means
-    # it exited between the join timing out and this call — already gone.
-    def terminate(pid)
-      target = -Process.getpgid(pid)
-      Process.kill("TERM", target)
-      return if wait_for_exit(pid, TERM_GRACE)
-
-      Process.kill("KILL", target)
-      wait_for_exit(pid, TERM_GRACE)
-    rescue Errno::ESRCH, Errno::EPERM
-      nil
-    end
-
-    def wait_for_exit(pid, seconds)
-      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + seconds
-      until Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
-        return true if Process.waitpid(pid, Process::WNOHANG)
-
-        sleep 0.02
-      end
-      false
-    rescue Errno::ECHILD
-      true
+      output, = error.result
+      ["#{output}TIMEOUT after #{timeout_sec}s: #{cmd.first}", TIMED_OUT]
     end
 
     # Only a write names its target up front. exec can touch anything, and git
