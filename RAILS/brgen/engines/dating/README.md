@@ -7,8 +7,8 @@ Dating is mounted at `dating.<city>`, for example `dating.brgen.no` and
 `dating.lsangeles.com`. It runs inside Brgen's Rails process and uses Brgen's
 users. The city is resolved from the apex host; Dating is not a separate app.
 
-Read [the Brgen guide](../../../README.md) for the vertical pattern and
-[Brgen's agent contract](../../../AGENTS.md) for the host topology.
+Read [the Brgen guide](../../README.md) for the vertical pattern and
+[Brgen's agent contract](../../AGENTS.md) for the host topology.
 
 Each person builds a profile of photos, a short bio and up to three prompt answers. The deck
 shows one candidate at a time, and the next one comes from `home#next`. A like or a dislike
