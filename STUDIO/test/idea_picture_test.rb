@@ -193,11 +193,13 @@ class TestIdeaPictureOutput < Minitest::Test
     Dir.mktmpdir do |dir|
       subject = File.join(dir, "ragnhild")
       FileUtils.mkdir_p(subject)
-      File.write(File.join(subject, "subject.env"), <<~ENV)
+      subject_env_path = File.join(subject, "subject.env")
+      File.write(subject_env_path, <<~ENV)
         MODEL=ragnhild
         REPLICATE_MODEL=anon987654321/ragnhild-flux
         TRIGGER=ragnhild
       ENV
+      File.chmod(0o600, subject_env_path)
       picture = Studio::Visual::IdeaPicture.new(
         subject: "ragnhild", directory: dir, subjects_root: dir,
         model_manifest: File.join(subject, "weights", "ragnhild", "replicate_training.json")
@@ -299,6 +301,46 @@ class TestIdeaPictureOutput < Minitest::Test
       error = assert_raises(RuntimeError) { blocked.send(:still_model) }
       assert_includes error.message, missing
       assert_includes error.message, "REPLICATE_MODEL in probe/subject.env"
+    end
+  end
+
+  def test_tracked_subject_manifest_and_training_trigger_restore_the_pinned_identity
+    Dir.mktmpdir do |dir|
+      subject = File.join(dir, "johann")
+      FileUtils.mkdir_p(subject)
+      File.write(File.join(subject, "replicate_training.json"),
+                 JSON.generate("version" => "anon987654321/johann-flux:" + ("a" * 64)))
+      File.write(File.join(subject, "train.yaml"), <<~YAML)
+        job: extension
+        config:
+          process:
+            - type: sd_trainer
+              trigger_word: johann_lora
+      YAML
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "johann", directory: dir, subjects_root: dir
+      )
+
+      assert_equal "anon987654321/johann-flux:" + ("a" * 64), picture.send(:still_model)
+      assert_match(/\\Ajohann_lora,/, picture.send(:photographic, "window portrait"))
+    end
+  end
+
+  def test_subject_env_must_be_owner_only_before_prompt_use
+    Dir.mktmpdir do |dir|
+      subject = File.join(dir, "probe")
+      FileUtils.mkdir_p(subject)
+      path = File.join(subject, "subject.env")
+      File.write(path, "TRIGGER=probe\nDESCRIPTOR=private subject\n", mode: "w", perm: 0o644)
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "probe", directory: dir, subjects_root: dir
+      )
+
+      error = assert_raises(RuntimeError) { picture.send(:subject_env) }
+      assert_match(/owner-only/, error.message)
+
+      File.chmod(0o600, path)
+      assert_equal "private subject", picture.send(:subject_env).fetch("DESCRIPTOR")
     end
   end
 
