@@ -37,4 +37,15 @@ class TestLawsRegistry < Minitest::Test
 
     assert_empty invalid.map(&:id), "laws missing proof metadata: #{invalid.map(&:id).join(', ')}"
   end
+
+  def test_public_outbound_address_pinning_is_an_executable_law
+    law = laws.find { |candidate| candidate.id.to_s == "ROBUSTNESS_outbound_fetch_is_pinned" }
+
+    refute_nil law, "the canonical outbound SSRF Law must be executable"
+    assert_match(/A and AAAA address/, law.ask)
+    assert_match(/pin the socket/, law.ask)
+    assert_match(/redirect/, law.ask)
+    assert_match(/ambient proxy/, law.fix)
+    assert_match(/loopback daemon probes/, law.fix)
+  end
 end
