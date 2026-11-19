@@ -25,14 +25,26 @@ module Master
     end
 
     def bootstrap_container(root: Dir.pwd)
-      prepare_runtime!
-      init_ground(root:)
-      container = Builder.build(root:)
-      Runtime::Jit.apply!
-      container[:native_inventory] = Runtime::NativeInventory.snapshot
-      init_loop(root:, container:)
+      boot_timed("runtime preparation") { prepare_runtime! }
+      boot_timed("telemetry") { init_ground(root:) }
+      container = boot_timed("builder") { Builder.build(root:) }
+      boot_timed("JIT") { Runtime::Jit.apply! }
+      container[:native_inventory] = boot_timed("native inventory") { Runtime::NativeInventory.snapshot }
+      boot_timed("admission and cognition") { init_loop(root:, container:) }
       start_constitution_drift(container)
       container
+    end
+
+    def boot_timed(name)
+      return yield unless ENV["MASTER_BOOT_TIMING"] == "1"
+
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      yield
+    ensure
+      if started
+        elapsed = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1_000).round
+        Trace::Dmesg.status("timing0", "#{name}=#{elapsed}ms")
+      end
     end
 
     def init_ground(root:)
@@ -366,19 +378,18 @@ module Master
     end
 
     def boot_container(root:)
-      Soul.load!
-      prepare_runtime!
-      emit_device_status
-      onboard
-      set_up_device
+      boot_timed("soul") { Soul.load! }
+      boot_timed("runtime preparation") { prepare_runtime! }
+      boot_timed("device status") { emit_device_status }
+      boot_timed("onboarding") { onboard }
+      boot_timed("device setup") { set_up_device }
 
-      Ground::Pledge.stage1_boot!(root)
-      service_ok = ensure_services!(root:)
+      boot_timed("pledge stage 1") { Ground::Pledge.stage1_boot!(root) }
+      service_ok = boot_timed("voice services") { ensure_services!(root:) }
       Trace::Dmesg.status("master0", "continuing in degraded presentation mode") unless service_ok
-      container = bootstrap_container(root:)
-      Ground::Pledge.stage2_lock!
-
-      CLI::WebServer.start(container[:config]) unless ENV["MASTER_WEB"] == "0"
+      container = boot_timed("container") { bootstrap_container(root:) }
+      boot_timed("pledge stage 2") { Ground::Pledge.stage2_lock! }
+      boot_timed("web server") { CLI::WebServer.start(container[:config]) unless ENV["MASTER_WEB"] == "0" }
       container
     end
   end
