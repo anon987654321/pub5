@@ -3,6 +3,7 @@
 require "json"
 require "net/http"
 require "uri"
+require "ipaddr"
 
 module Master
   module Review
@@ -29,7 +30,7 @@ module Master
 
       def ollama_alive?
         return @ollama_alive unless @ollama_alive.nil?
-        uri = URI.join(ENV["OLLAMA_BASE_URL"], "/api/tags")
+        uri = local_ollama_uri("/api/tags")
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = uri.scheme == "https"
         http.open_timeout = HTTP_TIMEOUT
@@ -39,6 +40,17 @@ module Master
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "Embeddings.ollama_alive?")
         @ollama_alive = false
+      end
+
+      def local_ollama_uri(path)
+        base = ENV.fetch("OLLAMA_BASE_URL")
+        uri = URI.join("#{base.chomp('/')}/", path.delete_prefix("/"))
+        host = uri.hostname.to_s.downcase
+        local = host == "localhost" || (IPAddr.new(host).loopback? rescue false)
+        raise URI::InvalidURIError, "OLLAMA_BASE_URL must point to a local HTTP daemon" unless
+          uri.scheme == "http" && uri.userinfo.nil? && uri.fragment.nil? && local
+
+        uri
       end
 
       def cosine(a, b)
@@ -60,7 +72,7 @@ module Master
       # /api/embed takes `input` and answers a list of vectors, one per input;
       # Ollama marks the older /api/embeddings, with `prompt`, superseded by it.
       def ollama_embed(text)
-        uri = URI.join(ENV["OLLAMA_BASE_URL"], "/api/embed")
+        uri = local_ollama_uri("/api/embed")
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = uri.scheme == "https"
         http.read_timeout = HTTP_TIMEOUT
