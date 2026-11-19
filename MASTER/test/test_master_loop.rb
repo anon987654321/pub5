@@ -169,8 +169,8 @@ class TestMasterLoop < Minitest::Test
     assert_empty parameters.select { |kind, name| kind == :keyreq && name == :rollback }
   end
 
-  # On by default and beside the prompt; MASTER_BOOT_SELF_TEST=0 is the opt-out.
-  def test_boot_self_test_runs_unless_opted_out
+  # The full source-tree diagnostic is opt-in; strict boot always runs it.
+  def test_boot_self_test_is_opt_in_and_strict_boot_forces_it
     ran = []
     self_test = Object.new
     self_test.define_singleton_method(:call) { ran << :self_test }
@@ -193,10 +193,18 @@ class TestMasterLoop < Minitest::Test
       end
     end
 
-    with_env("MASTER_BOOT_SELF_TEST" => "0") { finalize.call }
-    assert_empty ran
-    with_env("MASTER_BOOT_SELF_TEST" => nil) { finalize.call }
-    assert_equal [:self_test], ran
+    with_env("MASTER_BOOT_SELF_TEST" => nil, "MASTER_STRICT_BOOT" => nil) { finalize.call }
+    assert_empty ran, "ordinary startup must not run the full source-tree scan"
+
+    with_env("MASTER_BOOT_SELF_TEST" => "0", "MASTER_STRICT_BOOT" => nil) { finalize.call }
+    assert_empty ran, "an explicit off value must keep the diagnostic disabled"
+
+    with_env("MASTER_BOOT_SELF_TEST" => "1", "MASTER_STRICT_BOOT" => nil) { finalize.call }
+    assert_equal [:self_test], ran, "explicit opt-in must run the diagnostic"
+
+    ran.clear
+    with_env("MASTER_BOOT_SELF_TEST" => "0", "MASTER_STRICT_BOOT" => "1") { finalize.call }
+    assert_equal [:self_test], ran, "strict boot must not be bypassed by the ordinary opt-out"
   end
 
   def with_env(pairs)
