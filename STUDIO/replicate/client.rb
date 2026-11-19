@@ -397,6 +397,7 @@ module Studio
       READ_TIMEOUT_SECONDS = 120
       WRITE_TIMEOUT_SECONDS = 120
       API_TOTAL_TIMEOUT_SECONDS = 180
+      MAX_API_TOTAL_TIMEOUT_SECONDS = 600
       MAX_MODEL_PAGES = 1_000
 
       # Replicate holds a sync request 60 seconds at most; Cancel-After takes
@@ -736,6 +737,10 @@ module Studio
 
       def attempt_request(req, uri, timeout: API_TOTAL_TIMEOUT_SECONDS)
         uri = api_uri(uri)
+        total = Float(timeout)
+        unless total.finite? && total.positive? && total <= MAX_API_TOTAL_TIMEOUT_SECONDS
+          raise ArgumentError, "Replicate API total timeout must be finite and between 0 and #{MAX_API_TOTAL_TIMEOUT_SECONDS}s"
+        end
         response = nil
         body = +"".b
         pin = ReplicateClient.public_download_address!(uri.host)
@@ -747,8 +752,6 @@ module Studio
         http.open_timeout = OPEN_TIMEOUT_SECONDS
         http.read_timeout = READ_TIMEOUT_SECONDS
         http.write_timeout = WRITE_TIMEOUT_SECONDS
-        total = Float(timeout)
-        raise ArgumentError, "Replicate API total timeout must be finite and positive" unless total.finite? && total.positive?
         Timeout.timeout(total, DeadlineExceeded, "Replicate API request exceeded #{total}s total deadline") do
           http.start do |conn|
             conn.request(req) do |res|
