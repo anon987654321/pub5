@@ -49,6 +49,8 @@ plane locks. Set `MASTER_LOCK_IDLE_RECLAIM_SECONDS=0` to disable the lease, or
 set a different positive number of seconds. Recovery is attempted on the next
 lock acquisition, not by the read-only `bin/master --status` command.
 
+The ordinary CLI boot uses native workspace tools and does not start an npm MCP server or play a startup sound. The browser face retains its explicitly gesture-gated sound asset. Optional MCP servers stay in `data/mcp_servers.yml` and are disabled unless enabled there. Set `MASTER_BOOT_TIMING=1` for one launch to print timings for Ruby/dependency preparation, voice services, the builder and the remaining boot phases; ordinary startup stays quiet. Provider reachability and the wider YAML inventory run without holding the prompt.
+
 The CLI lists canonical commands once. Compatibility spellings route to their owner: `/models` means `/model list`, `/tools` means `/capabilities`, and `/tts` means `/voice`. Use `/help <alias>` to open the owning page. `/doctor tools` is a separate diagnostic for unresolved tool outcomes.
 
 The core execution path is `lib/core/`: an admitted effect passes through Constitution before World dispatches it. Keep capabilities, validation and compensations at that boundary. Extend an existing owner before adding another wrapper, registry or helper.
