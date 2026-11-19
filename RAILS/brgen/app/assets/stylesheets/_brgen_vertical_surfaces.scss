@@ -2998,7 +2998,7 @@ body.vertical-messenger .roster-nick {
   font-size: var(--text-small);
 }
 
-@media (max-width: 520px) {
+@media (max-width: 479px) {
   .opening-hours-row {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
