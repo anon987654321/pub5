@@ -102,16 +102,11 @@ module Master
         raise "refused unexpected research host" unless uri.is_a?(URI::HTTPS) &&
           %w[export.arxiv.org ar5iv.labs.arxiv.org].include?(uri.host.to_s.downcase)
 
-        address = SsrfGuard.pinned_address(uri)
-        raise "refused internal/reserved address" unless address
-
-        client = SsrfGuard.http_for(uri, address, timeout: TIMEOUT)
-        client.start do |http|
-          http.get(uri.request_uri, {
-            "User-Agent" => "MASTER/1 (arxiv_research)",
-            "Accept" => "application/atom+xml,text/html;q=0.9",
-          })
-        end
+        request = Net::HTTP::Get.new(uri.request_uri, {
+          "User-Agent" => "MASTER/1 (arxiv_research)",
+          "Accept" => "application/atom+xml,text/html;q=0.9",
+        })
+        SsrfGuard.request(uri, request, max_bytes: MAX_RESPONSE_BYTES, timeout: TIMEOUT)
       end
 
       def parse_papers(body)
