@@ -141,12 +141,14 @@ Regenerate the published pair from those sources:
     node BIZ/tools/bp_build.mjs       # bases + additions -> OUTPUT_DIR
     node BIZ/tools/bp_retemplate.mjs  # bob2 skin onto the builds
     node BIZ/tools/bp_check.mjs       # MASTER Law scan + BIZ print/data contract
-    BIZ_CHROME_BIN=… node BIZ/tools/bp_print.mjs   # Chromium prints the pdf,
-                                      # pdfinfo verifies 442.08 x 663.12 pts
+    node BIZ/tools/bp_print.mjs   # auto-detects Chrome/Chromium; pdfinfo checks page size
     node BIZ/tools/bp_index.mjs       # this index
 
 `bp_check.mjs` delegates common HTML, prose and hygiene Laws to `MASTER/bin/operator lint` for the business-plan outputs and Ragnhild's funding guide. Business-plan checks remain specific to the Bob2/print contract and independently re-read financial arithmetic; the funding guide has a separate profile check for its five-page structure, accessible calendar headers, cited source links, source-check date and explicit eligibility/deadline caveats. The guide is not passed through the business-plan finance model or Bob2 skin.
 
+`bp_print.mjs` checks `BIZ_CHROME_BIN`, then `CHROME_BIN`, then common
+macOS and Linux Chrome/Chromium executable names. Set `BIZ_CHROME_BIN` to
+the exact executable path only when automatic discovery cannot find it.
 `bp_print.mjs` prints with headless Chromium (no Python anywhere in the
 chain, per laws.yml REACH_non_native_tool) and checks every page size
 against the hefte canon (156mm 234mm); it also verifies the funding guide's five-page output. Raster generation is not visual approval. `bp_index.mjs` fails if a published or archived link lacks its HTML/PDF pair, and lists guidance separately from plans;
