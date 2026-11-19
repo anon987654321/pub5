@@ -133,8 +133,8 @@ module Master
           @focus_mode ? focus_prompt : normal_prompt
         end
 
-        # Reline owns the working prompt and line editor; the face is an
-        # append-only visual layer above it, never a terminal-input handoff.
+        # Reline owns the working prompt and line editor. The fixed mic/TTS
+        # indicators are a cursor-preserving status overlay, never an input layer.
         def normal_prompt
           prompt_with(focused: false)
         end
@@ -437,8 +437,8 @@ module Master
           # Read-only model selector output is runtime evidence for the next turn.
           # Other commands may expose private state, so they are not copied wholesale.
           record_model_selector_output(args: match[:args].to_s, text:, success: @last_ok) if name == "model"
-          # The commands' replies print here; the face transcript is gone with
-          # the terminal face.
+          # Registered command replies join terminal scrollback; the prompt
+          # and mic/TTS indicators remain the only live CLI chrome.
           print_terminal_output(text, mode: @last_ok ? :dim : :error) unless text.empty?
           publish_operation_log(operation: stripped, status: @last_ok ? "success" : "failure", output: text, since: log_snapshot)
           result
