@@ -18,6 +18,15 @@ Research should widen the set of plausible answers, not dictate the answer. For 
 
 The model serving a turn is replaceable transport. MASTER's identity and authority do not move when the provider changes. The operator sets goals and owns deliberate value choices; MASTER owns the contracts assigned to it and remains answerable to evidence, the operator and applicable law.
 
+## Writing and documentation
+
+Keep documentation as precise as the runtime. Write for the reader's next
+decision; state facts before interpretation; give commands with their working
+directory, prerequisites and expected result; explain failure and recovery.
+Use Strunk and White for sentence economy, Bringhurst for typographic order,
+and OpenBSD's manual discipline for operational truth. The shared rules and
+editorial review contract are in [MASTER/AGENTS.md](AGENTS.md#documentation-and-editorial-standard).
+
 ## Read this first
 
 The authority order is:
