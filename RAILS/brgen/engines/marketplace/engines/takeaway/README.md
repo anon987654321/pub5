@@ -4,10 +4,14 @@
 connects restaurants, their menus, neighbours and delivery drivers. It is the food-ordering
 surface inside Brgen Marketplace, not a separate Rails application.
 
-The canonical route is `/food` on the city's localised Marketplace host, for example
-`markedsplass.brgen.no/food` or `marketplace.lsangeles.com/food`. The historical
-`takeaway.<city>` host remains a compatibility mount. New links should use Marketplace.
-The topology is described in `RAILS/brgen/README.md` and `RAILS/brgen/AGENTS.md`.
+Takeaway is nested inside the Marketplace engine. Its canonical route is
+`/food` on the city's localised Marketplace host, such as
+`markedsplass.brgen.no/food` or `marketplace.lsangeles.com/food`.
+The historical `takeaway.<city>` host remains as a compatibility mount;
+new links should use Marketplace. Takeaway is not a separate Rails app.
+
+Read [the Brgen guide](../../../../README.md) for the vertical pattern and
+[Brgen's agent contract](../../../../AGENTS.md) for the host topology.
 
 ## Recovered product promise
 
