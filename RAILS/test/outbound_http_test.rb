@@ -114,14 +114,49 @@ class FediverseSsrfTest < Minitest::Test
     assert_equal "93.184.216.34", pinned
   end
 
-  def test_a_host_answering_one_public_and_one_private_address_pins_the_public_one
-    pinned = with_stubbed_dns("127.0.0.1", "93.184.216.34") do
+  def test_a_mixed_public_and_private_answer_set_is_refused_without_connecting
+    connected = false
+    with_stubbed_dns("93.184.216.34", "127.0.0.1") do
+      with_stubbed_request(->(*) { connected = true; flunk "mixed DNS answers must never connect" }) do
+        error = assert_raises(SocketError) do
+          Shared::OutboundHttp.request(URI("https://rebind.test/actor"))
+        end
+        assert_match(/unsafe or unresolvable/, error.message)
+      end
+    end
+    refute connected
+  end
+
+  def test_all_public_dns_answers_are_accepted_and_the_first_is_pinned
+    pinned = with_stubbed_dns("93.184.216.34", "8.8.8.8") do
       with_stubbed_request(->(http, _request, _block) { http.ipaddr }) do
         Shared::OutboundHttp.request(URI("https://rebind.test/actor"))
       end
     end
 
     assert_equal "93.184.216.34", pinned
+  end
+
+  def test_request_refuses_credentials_and_fragments
+    [
+      URI("https://user:pass@rebind.test/actor"),
+      URI("https://rebind.test/actor#fragment")
+    ].each do |uri|
+      assert_raises(URI::InvalidURIError) { Shared::OutboundHttp.request(uri) }
+    end
+  end
+
+  def test_reserved_transition_ipv6_and_non_global_ranges_are_refused
+    %w[64:ff9b::a00:1 64:ff9b:1::a00:1 2002:0a00:0001::1 2001:0::1 4000::1].each do |address|
+      assert Shared::OutboundHttp.unsafe_ip?(address), "#{address} must not be an outbound target"
+    end
+  end
+
+  def test_dns_label_characters_are_bounded_before_resolution
+    assert Shared::OutboundHttp.valid_resolver_host?("example.com")
+    refute Shared::OutboundHttp.valid_resolver_host?("bad_name.example")
+    refute Shared::OutboundHttp.valid_resolver_host?("-bad.example")
+    refute Shared::OutboundHttp.valid_resolver_host?("bad-.example")
   end
 
   # The cap is enforced while reading, so a hostile server cannot make this
