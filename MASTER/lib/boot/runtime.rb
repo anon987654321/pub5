@@ -50,6 +50,8 @@ module Master
 
     def prepare_runtime!(unsafe: false)
       ENV["MASTER_UNSAFE_PROCESS_DEFAULTS"] = "1" if unsafe
+      return true if @runtime_prepared
+
       require_relative "../ground/env_loader"
       Ground::EnvLoader.load!
       require_relative "../ground/openhands_sandbox"
@@ -59,6 +61,8 @@ module Master
       require_relative "../ground/host_budget"
       Ground::HostBudget.apply_defaults!
       install_process_guards!
+      @runtime_prepared = true
+      true
     end
 
     # User- and provider-influenced regexps are a DoS surface. Ruby supports a
