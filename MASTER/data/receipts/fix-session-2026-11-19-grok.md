@@ -107,3 +107,25 @@ Vipps `params[:to]` already restricted to exact `"checkout"` → root/checkout o
 - Existing guards kept: HTTPS-only :443, no userinfo/fragment, host allowlist `*.replicate.(com|delivery)`, symlink-safe atomic download, byte/deadline caps, mode 0640
 
 Consent, doctor private-path classifiers, token file mode checks (owner-only, no group/other, no symlink) already present — left intact.
+
+
+## DNS rebinding hardening follow-up (2026-11-19)
+
+The operator supplied the mitigation pattern: parse and constrain the URL, resolve once, reject the entire answer set if any A/AAAA result is non-public, pin the approved address at connect time, retain the hostname for TLS SNI/Host, disable implicit proxies, and bound resolution and transfer time. A redirect is never followed without revalidation.
+
+Follow-up source changes landed on `main`:
+
+| Surface | Tightening |
+|---|---|
+| MASTER `Io::SsrfGuard` | All-answer fail-closed policy; bounded OS DNS resolution; strict DNS labels and local suffixes; IPv4-mapped normalisation; global-unicast IPv6 plus reserved, NAT64, Teredo and 6to4 exclusions; userinfo/fragment rejection; no environment proxy |
+| MASTER Replicate client | Both the API client and allowlisted asset downloads now use `SsrfGuard.pinned_address` + `http_for`; no `Net::HTTP.start(host)` second lookup or proxy bypass |
+| RAILS `Shared::OutboundHttp` | One shared resolver and pinned connection; mixed public/private DNS answers are refused rather than selecting the public member; standard HTTPS port, clean URL shape, no proxy, DNS timeout and address canonicalisation |
+| RAILS callers | S2S postbacks, TradeDoubler Link Converter, and both Amazon Creators API token/catalogue requests use the strict shared pin helper |
+| RAILS browser scrape | Chromium receives per-session host-to-address mappings for every approved hostname and a wildcard `MAP * ^NOTFOUND`; new hosts are resolved and pinned before a browser restart. Browser redirects and subresource requests pass the interceptor; proxying and non-standard ports are refused |
+| STUDIO Replicate client | Both asset downloads and API requests use pinned public addresses. Downloads disable environment proxies, validate every DNS answer, canonicalise mapped IPv4, and reject NAT64/Teredo/6to4/non-global IPv6 |
+
+Regression coverage was added or extended for mixed A/AAAA answers, mapped and transition IPv6, local/reserved name and URL shapes, proxy bypass, Chromium's current `^NOTFOUND` mapping token, and the MASTER Replicate API/download paths.
+
+No GitHub Actions or local test execution is claimed by this source-only pass. The Ruby test files are committed but remain **UNRUN** here; run the focused MASTER, RAILS and STUDIO tests on the operator's compatible checkout before marking runtime verification PASS. No live provider calls were made.
+
+Intentionally unchanged: local daemon health probes, and MASTER Rails API clients whose private destination is explicitly pinned by the operator at construction time. Public-fetch application policy is not a substitute for host egress firewalling; enforce network-layer denial of private and metadata routes on deployment hosts as a separate defence-in-depth control.
