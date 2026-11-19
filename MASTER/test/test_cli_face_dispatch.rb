@@ -118,6 +118,15 @@ class TestCliFaceDispatch < Minitest::Test
     assert_equal ["repeat me"], calls
   end
 
+  def test_bang_command_accepts_optional_space_after_marker
+    parser = Master::CLI::Session::BANG
+
+    assert_equal "git pull", parser.match("! git pull")[:command]
+    assert_equal "git pull", parser.match("!git pull")[:command]
+    assert_equal "git pull", parser.match("!  git pull")[:command]
+    assert_nil parser.match("!")
+  end
+
   def test_direct_shell_returns_the_result_to_the_terminal
     session = Master::CLI::Session.allocate
     shell = Object.new
