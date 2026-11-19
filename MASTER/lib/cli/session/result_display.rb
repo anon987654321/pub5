@@ -69,7 +69,11 @@ module Master
       end
 
       def display_ok(ok:, accumulated:, streamed:, units_console: false)
-        text = streamed ? accumulated : success_text(ok)
+        text = if streamed || (conversational_input? && !accumulated.to_s.strip.empty?)
+                 accumulated
+               else
+                 success_text(ok)
+               end
         text = conversation_output(text)
         if text.to_s.strip.empty?
           # Detailed dmesg replays a line-turn through the units console, so
