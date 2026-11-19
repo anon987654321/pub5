@@ -3,7 +3,10 @@
 **The media tools live here, each with one physical home and no second tree.**
 STUDIO holds Dilla, Postpro, photograph, Replicate and the private LoRA tools. MASTER's runtime may
 call into these tools through compatibility symlinks under `MASTER/tools/`,
-but the implementation is owned here.
+but the implementation is owned here.but the implementation is owned here. Project notes preserve provenance,
+source rights, consent, reproducibility and the limits of each result. Their
+prose follows the shared editorial standard in [MASTER/AGENTS.md](../MASTER/AGENTS.md),
+without flattening the voice of the creative work.
 
 ## The tools
 
