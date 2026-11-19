@@ -156,8 +156,8 @@ module Master
 
       def clear_last_error! = (@last_error = nil)
 
-      # Timings stay available to /voice status without requiring debug flags.
-      # Detailed per-stage log lines remain quiet unless an operator opts in.
+      # Timings stay available through /voice timing without debug flags.
+      # The ordinary /voice status remains a compact capability receipt.
       def last_timings
         @timing_mutex.synchronize { @last_timings.transform_values(&:dup) }
       end
@@ -448,7 +448,10 @@ module Master
         # CLI voice. Do not fall through to espeak for that mapped path.
         if macos_mapped_voice?(voice)
           path = synthesize_say(text_str)
-          (@last_engine = "say") if path
+          if path
+            @last_engine = "say"
+            clear_last_error!
+          end
           return path
         end
 
