@@ -185,3 +185,18 @@ contradictory file instead of working around it in silence.
 The HTML preservation guard proves source-level invariants only. It does
 not replace rendered, browser, viewport, keyboard, or accessibility
 evidence.
+
+Documentation is part of the interface. Apply the repository's editorial
+standard to every maintained Markdown document: write for one named reader and
+one task; lead with the answer; use active, concrete, economical prose and
+parallel structure; preserve real uncertainty; and remove repetition and
+unsupported adjectives. Apply Bringhurst's hierarchy and restraint: logical
+headings, consistent whitespace, a comfortable rendered measure and proper
+locale punctuation. Apply OpenBSD's operational discipline: authoritative
+sources, target-specific prerequisites, complete tested commands, expected
+results, failure modes and recovery. Apply copywriting craft only where it
+serves the reader: a specific promise, evidence and a clear next action; never
+hype or dark patterns. Update the owning document with its code or
+configuration. Review rendered Markdown and its links, tables, lists and code
+examples. Man pages use mdoc(7); Markdown adopts its precision, not its syntax.
+
