@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require "yaml"
 require "fileutils"
 require "rbconfig"
 require "securerandom"
@@ -404,41 +405,82 @@ module Studio
 
       def photographic(words)
         env = subject_env
-        parts = [
-          env["TRIGGER"], env["DESCRIPTOR"], words, PHOTOGRAPHIC_CRAFT
-        ]
-        parts.compact.join(", ")
+        trigger = env["TRIGGER"].to_s.strip
+        trigger = training_trigger if trigger.empty?
+        [trigger, env["DESCRIPTOR"], words, PHOTOGRAPHIC_CRAFT].compact.reject(&:empty?).join(", ")
       end
 
+      # subject.env is a private operator record, never a second secret store.
+      # Refuse public permissions, symlinks, hard links, foreign ownership,
+      # unknown fields and duplicate keys before using any prompt material.
       def subject_env
         path = File.join(@subject_directory, "subject.env")
-        return {} unless File.file?(path)
+        return {} unless File.exist?(path) || File.symlink?(path)
 
+        stat = File.lstat(path)
+        raise "subject.env must be a regular, non-symlink file" unless stat.file? && !stat.symlink?
+        raise "subject.env must be owned by the current user" unless stat.uid == Process.uid
+        raise "subject.env must be owner-only (0600)" unless (stat.mode & 0o077).zero?
+        raise "subject.env must not be hard-linked" unless stat.nlink == 1
+        raise "subject.env exceeds 64 KB" if stat.size > 65_536
+
+        allowed = %w[SUBJECT MODEL TRIGGER DESCRIPTOR REPLICATE_MODEL]
         File.foreach(path).each_with_object({}) do |line, env|
-          next if line.strip.empty? || line.strip.start_with?("#")
+          stripped = line.strip
+          next if stripped.empty? || stripped.start_with?("#")
 
-          key, value = line.strip.split("=", 2)
-          next unless value
+          match = /\A([A-Z][A-Z0-9_]*)=(.*)\z/.match(stripped)
+          raise "subject.env contains an invalid line" unless match
+
+          key, value = match.captures
+          raise "subject.env contains a secret field" if key.match?(/TOKEN|API_KEY|SECRET|PASSWORD|CREDENTIAL/i)
+          raise "subject.env contains an unsupported field: #{key}" unless allowed.include?(key)
+          raise "subject.env repeats #{key}" if env.key?(key)
 
           value = value.strip
-          value = value[1..-2] if value.length >= 2 && value.start_with?('"') && value.end_with?('"')
+          value = value[1...-1] if value.length >= 2 && value.start_with?('"') && value.end_with?('"')
           env[key] = value
         end
       end
 
+      # The tracked root manifest is the public, non-secret pin. A local
+      # weights/<model>/ manifest takes precedence when the operator has
+      # migrated a subject-specific private checkpoint.
       def default_model_manifest
         configured = subject_env["MODEL"].to_s.strip
         configured = @subject if configured.empty?
         raise ArgumentError, "MODEL in #{@subject}/subject.env must be a simple directory name" unless configured.match?(/\A[a-zA-Z0-9_.-]+\z/)
 
-        File.join(@subject_directory, "weights", configured, "replicate_training.json")
+        private_manifest = File.join(@subject_directory, "weights", configured, "replicate_training.json")
+        tracked_manifest = File.join(@subject_directory, "replicate_training.json")
+        return private_manifest if File.file?(private_manifest) && !File.symlink?(private_manifest)
+        return tracked_manifest if File.file?(tracked_manifest) && !File.symlink?(tracked_manifest)
+
+        private_manifest
+      end
+
+      def training_trigger
+        path = File.join(@subject_directory, "train.yaml")
+        return nil unless File.file?(path) && !File.symlink?(path)
+        raise "training plan exceeds 1 MB" if File.size(path) > 1_048_576
+
+        plan = YAML.safe_load(File.read(path, encoding: "UTF-8"),
+                              permitted_classes: [], permitted_symbols: [], aliases: false)
+        processes = plan.dig("config", "process") if plan.is_a?(Hash) && plan["config"].is_a?(Hash)
+        trainers = Array(processes).select { |entry| entry.is_a?(Hash) && entry["type"] == "sd_trainer" }
+        return nil unless trainers.length == 1
+
+        trigger = trainers.first["trigger_word"].to_s
+        trigger if trigger.match?(/\A[A-Za-z][A-Za-z0-9_-]{0,63}\z/)
       end
 
       def still_model
         path = @model_manifest
+        raise "training manifest must not be a symlink: #{path}" if File.symlink?(path)
         if File.file?(path)
-          version = JSON.parse(File.read(path))["version"].to_s
-          raise "training manifest has no valid owner/model:version: #{path}" unless version.match?(/\A[^\/\s:]+\/[^:\s]+:[^:\s]+\z/)
+          raise "training manifest exceeds 64 KB: #{path}" if File.size(path) > 65_536
+          version = JSON.parse(File.read(path, encoding: "UTF-8"))["version"].to_s
+          raise "training manifest has no valid owner/model:version: #{path}" unless version.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}:[A-Za-z0-9][A-Za-z0-9_-]{0,127}\z/)
 
           return version
         end
