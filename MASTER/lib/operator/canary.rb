@@ -8,6 +8,7 @@ require "socket"
 require "yaml"
 require_relative "../fix/routes_manifest"
 require_relative "../io/exec"
+require_relative "../io/ssrf_guard"
 require_relative "ruby_runner"
 require_relative "../../../OPENBSD/lib/deploy_inventory"
 
@@ -228,10 +229,21 @@ module Operator
       # Net::HTTP without following redirects: a 3xx is the answer being judged.
       def fetch(host, port, path, domain, tls)
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        http = Net::HTTP.new(host, port)
-        http.use_ssl = tls
-        http.open_timeout = http.read_timeout = 15
-        res = http.request(Net::HTTP::Get.new(path, "Host" => domain, "Accept-Language" => "nb", "User-Agent" => "pub5-canary"))
+        headers = { "Host" => domain, "Accept-Language" => "nb", "User-Agent" => "pub5-canary" }
+        request = Net::HTTP::Get.new(path, headers)
+        res = if tls
+                uri = URI::HTTPS.build(host: domain, port:, path:)
+                raise URI::InvalidURIError, "public canary requires HTTPS on port 443" unless port == 443
+
+                Master::Io::SsrfGuard.request(uri, request, max_bytes: 2_000_000, timeout: 15)
+              else
+                # Local mode deliberately addresses the loopback service by its
+                # configured port; it is not an untrusted public URL fetch.
+                http = Net::HTTP.new(host, port, nil)
+                http.open_timeout = http.read_timeout = 15
+                http.write_timeout = 15
+                http.start { |connection| connection.request(request) }
+              end
         ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
         Reply.new(status: res.code.to_i, headers: res.to_hash, body: res.body.to_s, elapsed_ms: ms)
       end
