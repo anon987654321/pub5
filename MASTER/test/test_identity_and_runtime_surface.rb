@@ -86,6 +86,17 @@ class TestIdentityAndRuntimeSurface < Minitest::Test
     assert_includes prompt, "complete independent work while a blocker remains"
   end
 
+  def test_operator_contract_teaches_unattended_deploy_completion_and_recovery
+    prompt = Master::AI::OperatorContract.prompt
+
+    assert_includes prompt, "exact target receipt, terminal exit marker and public canary"
+    assert_includes prompt, "read-only vps-state reconciliation"
+    assert_includes prompt, "never start a duplicate deploy"
+    assert_includes prompt, "retry only bounded, idempotent observations"
+    assert_includes prompt, "never rerun a whole deploy or roll back on guesswork"
+    assert_includes prompt, "OpenBSD diagnosis ladder"
+  end
+
   def test_operator_contract_allows_explicit_self_maintenance_without_self_authorization
     prompt = Master::AI::OperatorContract.prompt
 

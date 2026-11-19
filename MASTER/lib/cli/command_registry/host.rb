@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "shellwords"
+require "json"
 require_relative "../skills"
 require_relative "../../operator/capability_graph"
 require_relative "../../io/exec"
@@ -17,9 +18,11 @@ module Master
     module CommandRegistry
       module_function
 
-      # Three preflight checks may each use 15 minutes; single-app CI may use
-      # one hour. The remote deployment itself runs in tmux and is detached.
-      DEPLOY_CAPTURE_TIMEOUT = 7_200
+      # A full fleet deploy is serial. Allow six hours for workstation preflight,
+      # per-app CI, the remote rollout and its final public canary. The remote
+      # tmux run survives a disconnected waiter; reconciliation is read-only.
+      DEPLOY_CAPTURE_TIMEOUT = 21_600
+      DEPLOY_RECONCILE_TIMEOUT = 45
 
       # /pair — issue, list, revoke or redeem a pairing code.
       def dispatch_pair(root, ctx: nil)
@@ -810,6 +813,11 @@ module Master
 
       # /deploy — canonical remote vm23 deployment. Command#review_check requires
       # --confirm before this handler can mutate production.
+      #
+      # The default operator mode waits for the detached tmux run, verifies its
+      # terminal receipt and executes the public canary. Never return on "started".
+      # An ambiguous result triggers a read-only state/receipt reconciliation;
+      # it never starts a second deploy or guesses a rollback.
       def dispatch_deploy(_root, ctx: nil)
         target = arg_for(ctx).split(/\s+/).reject { |token| token.start_with?("--") }.first.to_s.downcase
         target = "all" if target.empty?
@@ -818,34 +826,61 @@ module Master
 
         operator = File.join(MasterPaths.repo, "MASTER", "bin", "operator")
         output, status = Master::Io::Exec.capture2e(
-          RbConfig.ruby, operator, "vps", "deploy", target, "--remote", "--detach",
+          RbConfig.ruby, operator, "vps", "deploy", target, "--remote",
           chdir: MasterPaths.repo, timeout: DEPLOY_CAPTURE_TIMEOUT, raise_on_timeout: true
         )
-        summary = deploy_summary(output, status)
-        return Result.ok(summary) if status.success?
+        summary = deploy_summary(output, status, target)
+        return Result.err("deploy: #{summary}", category: :infrastructure) if deploy_preflight_blocked?(output)
+        return Result.err("deploy: #{summary}; local wait was cancelled; remote state was not queried", category: :infrastructure) if status.respond_to?(:cancelled?) && status.cancelled?
 
-        Result.err("deploy: #{summary}", category: :infrastructure)
+        state = deploy_remote_reconciliation(MasterPaths.repo, target:, inventory:)
+        return Result.ok([summary, state[:summary]].join("\n")) if deploy_success_receipt?(output, status, target) && state[:ok]
+
+        Result.err(
+          ["deploy: #{summary}", state[:summary],
+           "No automatic retry or rollback was attempted. Reconcile the run receipt before another mutation."].join("\n"),
+          category: :infrastructure,
+        )
       rescue Master::Io::Exec::TimeoutError => error
         output = Array(error.result).first.to_s
-        summary = deploy_interrupted_summary(output, "local deployment start exceeded #{DEPLOY_CAPTURE_TIMEOUT}s")
-        Result.err("deploy: #{summary}", category: :infrastructure)
+        summary = deploy_interrupted_summary(output, "deployment wait exceeded #{DEPLOY_CAPTURE_TIMEOUT}s")
+        state = target && inventory ? deploy_remote_reconciliation(MasterPaths.repo, target:, inventory:) :
+          { ok: false, summary: "remote state: not queried; deployment target was not resolved" }
+        Result.err(
+          ["deploy: #{summary}", state[:summary], "The tmux run may still be active; do not launch another deployment."].join("\n"),
+          category: :infrastructure,
+        )
+      rescue StandardError => error
+        summary = "execution failed (#{error.class}: #{error.message}); deployment completion is unverified"
+        state = target && inventory ? deploy_remote_reconciliation(MasterPaths.repo, target:, inventory:) :
+          { ok: false, summary: "remote state: not queried; deployment target was not resolved" }
+        Result.err(
+          ["deploy: #{summary}", state[:summary], "Do not retry until the remote run and its receipt are reconciled."].join("\n"),
+          category: :infrastructure,
+        )
       end
 
-      def deploy_summary(output, status)
+      # A zero exit is not enough. The canonical waiter must report the exact
+      # target's terminal receipt, its tmux exit marker and execution of the
+      # public canary. The waiter's exit status then records the canary result.
+      def deploy_success_receipt?(output, status, target = "all")
+        return false unless status.success?
+
+        escaped = Regexp.escape(target.to_s)
+        lines = output.to_s.lines.map(&:strip)
+        target_receipt = lines.any? { |line| line.match?(/\Avps-deploy:\s+#{escaped}\s+ok(?:\s|\(|\z)/i) }
+        terminal_exit = lines.include?("vps-deploy: finished exit=0")
+        public_canary = lines.include?("vps-deploy: post-check public canary")
+        target_receipt && terminal_exit && public_canary
+      end
+
+      def deploy_preflight_blocked?(output)
+        output.to_s.match?(/deploy refused,|RTFM_FIRST blocked|^preflight:\s+\S+\s+FAILED\b/i)
+      end
+
+      def deploy_summary(output, status, target = "all")
         lines = output.to_s.lines.map(&:strip).reject(&:empty?)
         return deploy_interrupted_summary(output, "local deployment wait was cancelled") if status.respond_to?(:cancelled?) && status.cancelled?
-
-        started = lines.find { |line| line.match?(/\Avps-deploy: started in tmux session [\w.-]+/i) }
-        if started
-          return deploy_interrupted_summary(output, "local deployment command ended before acknowledging the start") unless status.success?
-
-          session = started[/tmux session ([\w.-]+)/i, 1]
-          return [
-            "deployment started in tmux session #{session}; completion and public canary are not yet verified",
-            "attach: tmux attach -t #{session}",
-            "log: ~/vps-deploy.log",
-          ].join("\n")
-        end
 
         running = lines.find { |line| line.match?(/\Avps-deploy: session [\w.-]+ already running\z/i) }
         if running
@@ -858,8 +893,13 @@ module Master
           ].join("\n")
         end
 
-        success_line = lines.reverse.find { |line| line.match?(/\bvps-deploy:\s+.+\b(?:ok|complete|ready)\b/i) }
-        return "remote: #{success_line}" if status.success? && success_line
+        escaped = Regexp.escape(target.to_s)
+        success_line = lines.reverse.find { |line| line.match?(/\Avps-deploy:\s+#{escaped}\s+ok(?:\s|\(|\z)/i) }
+        finished = lines.reverse.find { |line| line.match?(/\Avps-deploy: finished exit=\d+\z/i) }
+        public_canary = lines.include?("vps-deploy: post-check public canary")
+        if status.success? && success_line && finished == "vps-deploy: finished exit=0" && public_canary
+          return "remote: #{success_line}; tmux exit=0; public canary completed"
+        end
 
         # A local refusal happens before SSH. Keep the failed check and its
         # diagnostic together; compressing it to the final summary hid the cause.
@@ -871,11 +911,20 @@ module Master
           return (["deployment blocked before SSH; nothing was sent to vm23:", *detail]).join("\n")
         end
 
-        decisive = lines.reverse.find { |line| line.match?(/\b(?:fatal|failed|refused|error|aborted|conflict|not ready|did not|could not)\b/i) }
-        detail = decisive || lines.last || "no remote output"
-        detail = lines.last(2).join(" | ") if decisive && lines.last != decisive && lines.last.length < 90
+        if output.to_s.match?(/deploy refused,|RTFM_FIRST blocked/i)
+          return "deployment blocked before SSH: #{lines.last(3).join(" | ")[0, 150]}"
+        end
+
+        started = lines.find { |line| line.match?(/\Avps-deploy: started in tmux session [\w.-]+/i) }
+        return deploy_interrupted_summary(output, "remote wait ended without a terminal deployment receipt") if started && !finished
+
+        decisive = lines.reverse.find { |line| line.match?(/\b(?:fatal|failed|refused|error|aborted|conflict|not ready|did not|could not|FAIL)\b/i) }
+        detail = decisive || finished || lines.last || "no remote output or terminal deploy receipt"
+        detail = lines.last(2).join(" | ") if decisive && lines.last != decisive && lines.last.length < 120
         detail = detail[0, 150]
-        status.success? ? "remote: #{detail}" : "remote exit #{status.exitstatus || "signal"}: #{detail}"
+        exit = finished && finished[/exit=(\d+)/, 1]
+        status.success? ? "remote exit 0 without complete success evidence: #{detail}" :
+          "remote exit #{exit || status.exitstatus || "signal"}: #{detail}"
       end
 
       def deploy_interrupted_summary(output, reason)
@@ -883,12 +932,81 @@ module Master
         started = text[/vps-deploy: started in tmux session ([\w.-]+)/i, 1]
         existing = text[/vps-deploy: session ([\w.-]+) already running/i, 1]
         session = started || existing
-        return "#{reason}; remote start state is unknown. Check tmux has-session -t pub5-deploy and ~/vps-deploy.log on vm23 before retrying." unless session
+        return "#{reason}; remote start state is unknown. Read vps state --json --remote and the deploy-run receipt on vm23 before retrying." unless session
 
         state = existing ? "was already running" : "was started"
-        "#{reason}; vm23 reported that tmux session #{session} #{state}. Its current state, completion, and public canary are unverified. " \
-          "Check with: tmux has-session -t #{session}. If active, attach with: tmux attach -t #{session}. " \
-          "Inspect ~/vps-deploy.log before retrying."
+        "#{reason}; vm23 reported that tmux session #{session} #{state}. Its current state, completion and canary are unverified. " \
+          "Read vps state --json --remote; if active, attach with: tmux attach -t #{session}. " \
+          "Inspect the deploy-run receipt and ~/vps-deploy.log before retrying."
+      end
+
+      # Read-only reconciliation is the reflex for a lost waiter, transport
+      # error, pre-existing session or non-green deploy. It never retries a
+      # mutation, restarts a service or guesses which release should be active.
+      def deploy_remote_reconciliation(root, target:, inventory:)
+        operator = File.join(root, "MASTER", "bin", "operator")
+        output, status = Master::Io::Exec.capture2e(
+          RbConfig.ruby, operator, "vps", "state", "--json", "--remote",
+          chdir: root, timeout: DEPLOY_RECONCILE_TIMEOUT, raise_on_timeout: true
+        )
+        unless status.success?
+          detail = output.to_s.lines.map(&:strip).reject(&:empty?).last(2).join(" | ")
+          return { ok: false, summary: "remote state: unavailable (exit #{status.exitstatus || "signal"})#{detail.empty? ? "" : ": #{detail[0, 240]}"}" }
+        end
+
+        deploy_reconciliation_summary(JSON.parse(output), target:, inventory:)
+      rescue StandardError => error
+        { ok: false, summary: "remote state: unavailable (#{error.class}: #{error.message})" }
+      end
+
+      def deploy_reconciliation_summary(payload, target:, inventory:)
+        errors = []
+        host = payload["host"].to_s
+        sha = payload["dev_sha"].to_s
+        lines = ["vm23 state: host=#{host.empty? ? "unknown" : host} checkout=#{sha.empty? ? "unknown" : sha}"]
+        errors << "remote checkout SHA is missing or invalid" unless sha.match?(/\A[0-9a-f]{7,40}\z/i)
+
+        kind = inventory.target_kind(target)
+        selected = case kind
+                   when :all then inventory.ordered_apps
+                   when :group then inventory.apps_for_group(target)
+                   when :app then inventory.apps.select { |app| app.name.casecmp?(target) }
+                   else []
+                   end
+        errors << "no registered applications resolved for #{target}" if selected.empty?
+        rows = Array(payload["apps"]).select { |row| row.is_a?(Hash) }.to_h { |row| [row["app"].to_s, row] }
+        selected.each do |app|
+          row = rows[app.name.to_s]
+          unless row
+            errors << "#{app.name}: missing from vps-state"
+            next
+          end
+
+          lines << "#{app.name}: service=#{row["service"] || "unknown"} port=#{row["port_state"] || "unknown"} deployed=#{row["deployed_sha"] || "unknown"}"
+          errors << "#{app.name}: service is not healthy" unless row["service"] == "ok"
+          errors << "#{app.name}: port is not listening" unless row["port_state"] == "listening"
+          errors << "#{app.name}: deployed SHA does not match the checkout" unless row["deployed_sha"].to_s.casecmp?(sha) && row["drift"] == false
+          stamp = row["last_deploy"]
+          errors << "#{app.name}: missing or non-green deploy stamp" unless stamp.is_a?(Hash) && stamp["status"] == "ok" && stamp["sha"].to_s.casecmp?(sha)
+          errors << "#{app.name}: deploy still reports in progress" unless row["deploy_in_progress"].nil?
+        end
+
+        if kind == :all
+          master = payload["master"].is_a?(Hash) ? payload["master"] : {}
+          lines << "master web: service=#{master["service"] || "unknown"} port=#{master["port_state"] || "unknown"}"
+          errors << "MASTER web service is not healthy" unless master["service"] == "ok"
+          errors << "MASTER web port is not listening" unless master["port_state"] == "listening"
+          stamp = master["last_deploy"]
+          errors << "MASTER web: missing or non-green deploy stamp" unless stamp.is_a?(Hash) && stamp["status"] == "ok" && stamp["sha"].to_s.casecmp?(sha)
+          errors << "MASTER web: deploy still reports in progress" unless master["deploy_in_progress"].nil?
+        end
+
+        recovery = payload["deploy_recovery"].is_a?(Hash) ? payload["deploy_recovery"] : {}
+        lines << "recovery: #{recovery["state"] || "unknown"} pending=#{recovery["count"] || "unknown"}"
+        errors << "deploy recovery receipts are pending or unavailable" unless recovery["state"] == "none" && recovery["count"] == 0
+        lines << (errors.empty? ? "verification: selected surfaces match #{sha}; no pending deploy receipts" :
+          "verification: NOT GREEN - #{errors.join("; ")}")
+        { ok: errors.empty?, summary: lines.join("\n") }
       end
 
       # /android and /ios are the public mobile onboarding entrypoints. The

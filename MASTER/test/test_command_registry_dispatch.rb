@@ -747,9 +747,29 @@ class TestCommandRegistryDispatch < Minitest::Test
       def success? = true
     end.new(0)
     calls = []
+    inventory = Deploy::Inventory.new(root: Master::ROOT)
+    remote_sha = "a1b2c3d"
+    state = {
+      "host" => "vm23",
+      "dev_sha" => remote_sha,
+      "master" => {},
+      "apps" => inventory.apps_for_group("rails").map do |app|
+        {
+          "app" => app.name, "service" => "ok", "port_state" => "listening",
+          "deployed_sha" => remote_sha, "drift" => false,
+          "last_deploy" => { "sha" => remote_sha, "status" => "ok" },
+          "deploy_in_progress" => nil,
+        }
+      end,
+      "deploy_recovery" => { "state" => "none", "count" => 0, "pending" => [] },
+    }
     capture = lambda do |*argv, **options|
       calls << [argv, options]
-      ["vps-deploy: started in tmux session pub5-deploy (mode=detach)\nvps-deploy: detached; re-check with: tmux attach -t pub5-deploy\n", status]
+      if argv.include?("deploy")
+        ["vps-deploy: started in tmux session pub5-deploy (mode=wait)\nvps-deploy: rails ok (brgen mrdamascy amber bsdports)\nvps-deploy: finished exit=0\nvps-deploy: post-check public canary\ncanary: all checks passed\n", status]
+      else
+        [JSON.generate(state), status]
+      end
     end
 
     result = Master::Io::Exec.stub(:capture2e, capture) do
@@ -757,28 +777,63 @@ class TestCommandRegistryDispatch < Minitest::Test
     end
 
     assert result.ok?
+    assert_includes result.value, "verification: selected surfaces match"
+    assert_equal 2, calls.length
     assert_equal "vps", calls.fetch(0).fetch(0).fetch(2)
     assert_equal "deploy", calls.fetch(0).fetch(0).fetch(3)
     assert_equal "rails", calls.fetch(0).fetch(0).fetch(4)
     assert_equal "--remote", calls.fetch(0).fetch(0).fetch(5)
-    assert_equal "--detach", calls.fetch(0).fetch(0).fetch(6)
+    refute_includes calls.fetch(0).fetch(0), "--detach"
+    assert_equal 21_600, Master::CLI::CommandRegistry::DEPLOY_CAPTURE_TIMEOUT
     assert_equal Master::CLI::CommandRegistry::DEPLOY_CAPTURE_TIMEOUT, calls.fetch(0).fetch(1).fetch(:timeout)
     assert_equal true, calls.fetch(0).fetch(1).fetch(:raise_on_timeout)
+    assert_includes calls.fetch(1).fetch(0), "state"
+    assert_includes calls.fetch(1).fetch(0), "--json"
+    assert_includes calls.fetch(1).fetch(0), "--remote"
+    assert_equal 45, calls.fetch(1).fetch(1).fetch(:timeout)
   end
 
-  def test_deploy_summary_reports_a_detached_start_as_pending_not_complete
+  def test_deploy_summary_treats_a_detached_start_without_a_terminal_receipt_as_pending
     status = Struct.new(:exitstatus) do
       def success? = true
     end.new(0)
     output = "vps-deploy: started in tmux session pub5-deploy (mode=detach)\n" \
              "vps-deploy: detached; re-check with: tmux attach -t pub5-deploy\n"
 
-    result = Registry.send(:deploy_summary, output, status)
+    result = Registry.send(:deploy_summary, output, status, "all")
 
-    assert_includes result, "deployment started in tmux session pub5-deploy"
-    assert_includes result, "completion and public canary are not yet verified"
-    assert_includes result, "tmux attach -t pub5-deploy"
+    assert_includes result, "remote wait ended without a terminal deployment receipt"
+    assert_includes result, "tmux session pub5-deploy was started"
+    assert_includes result, "completion and canary are unverified"
     refute_includes result, "all ok"
+  end
+
+  def test_deploy_summary_accepts_exact_target_terminal_receipt_and_canary
+    status = Struct.new(:exitstatus) do
+      def success? = true
+    end.new(0)
+    output = "vps-deploy: started in tmux session pub5-deploy (mode=wait)\n" \
+             "vps-deploy: rails ok (brgen mrdamascy amber bsdports)\n" \
+             "vps-deploy: finished exit=0\n" \
+             "vps-deploy: post-check public canary\n"
+
+    result = Registry.send(:deploy_summary, output, status, "rails")
+
+    assert_includes result, "vps-deploy: rails ok"
+    assert_includes result, "tmux exit=0"
+    assert Registry.send(:deploy_success_receipt?, output, status, "rails")
+    refute Registry.send(:deploy_success_receipt?, output, status, "all")
+  end
+
+  def test_deploy_success_requires_the_public_canary_and_exact_target_receipt
+    status = Struct.new(:exitstatus) do
+      def success? = true
+    end.new(0)
+    base = "vps-deploy: rails ok (brgen amber)\nvps-deploy: finished exit=0\n"
+
+    refute Registry.send(:deploy_success_receipt?, base, status, "rails")
+    refute Registry.send(:deploy_success_receipt?, base + "vps-deploy: post-check public canary\n", status, "all")
+    assert Registry.send(:deploy_success_receipt?, base + "vps-deploy: post-check public canary\n", status, "rails")
   end
 
   def test_deploy_summary_preserves_the_existing_remote_session_and_prevents_a_second_start
@@ -803,8 +858,8 @@ class TestCommandRegistryDispatch < Minitest::Test
 
     assert_includes result, "local deployment wait was cancelled"
     assert_includes result, "tmux session pub5-deploy was started"
-    assert_includes result, "completion, and public canary are unverified"
-    assert_includes result, "tmux has-session -t pub5-deploy"
+    assert_includes result, "completion and canary are unverified"
+    assert_includes result, "vps state --json --remote"
     refute_includes result, "remote deployment continues"
   end
 
@@ -814,9 +869,94 @@ class TestCommandRegistryDispatch < Minitest::Test
     end.new(0)
 
     assert_equal(
-      "remote: vps-deploy: all ok (master brgen amber bsdports)",
-      Registry.send(:deploy_summary, "vps-deploy: all -> master\nvps-deploy: master ok\nvps-deploy: all ok (master brgen amber bsdports)\n", status),
+      "remote: vps-deploy: all ok (master brgen amber bsdports); tmux exit=0; public canary completed",
+      Registry.send(:deploy_summary, "vps-deploy: all -> master\nvps-deploy: master ok\nvps-deploy: all ok (master brgen amber bsdports)\nvps-deploy: finished exit=0\nvps-deploy: post-check public canary\n", status, "all"),
     )
+  end
+
+  def test_dispatch_deploy_queries_read_only_state_after_remote_failure
+    failed = Struct.new(:exitstatus) do
+      def success? = false
+    end.new(75)
+    succeeded = Struct.new(:exitstatus) do
+      def success? = true
+    end.new(0)
+    calls = []
+    state = {
+      "host" => "vm23",
+      "dev_sha" => "a1b2c3d",
+      "master" => {},
+      "apps" => [],
+      "deploy_recovery" => {
+        "state" => "pending", "count" => 1,
+        "pending" => [{ "run_id" => "20261119T010203Z-all-1234", "target" => "all",
+                        "status" => "running", "stage" => "brgen", "pid_state" => "present",
+                        "pinned_sha" => "a1b2c3d" }],
+      },
+    }
+    capture = lambda do |*argv, **options|
+      calls << [argv, options]
+      if argv.include?("deploy")
+        ["vps-deploy: session pub5-deploy already running\n", failed]
+      else
+        [JSON.generate(state), succeeded]
+      end
+    end
+
+    result = Master::Io::Exec.stub(:capture2e, capture) do
+      Registry.send(:dispatch_deploy, Master::ROOT, ctx: Struct.new(:args).new("all --confirm"))
+    end
+
+    refute result.ok?
+    assert_equal 2, calls.length
+    assert_includes calls.fetch(1).fetch(0), "state"
+    assert_includes calls.fetch(1).fetch(0), "--json"
+    assert_includes calls.fetch(1).fetch(0), "--remote"
+    assert_includes result.message, "pending=1"
+    assert_includes result.message, "do not start another deployment"
+    assert_includes result.message, "No automatic retry or rollback"
+  end
+
+  def test_deploy_reconciliation_requires_healthy_sha_aligned_selected_apps
+    inventory = Deploy::Inventory.new(root: Master::ROOT)
+    sha = "a1b2c3d"
+    rows = inventory.apps_for_group("rails").map do |app|
+      {
+        "app" => app.name, "service" => "ok", "port_state" => "listening",
+        "deployed_sha" => sha, "drift" => false,
+        "last_deploy" => { "sha" => sha, "status" => "ok" },
+        "deploy_in_progress" => nil,
+      }
+    end
+    rows.first["drift"] = true
+    payload = {
+      "host" => "vm23", "dev_sha" => sha, "apps" => rows, "master" => {},
+      "deploy_recovery" => { "state" => "none", "count" => 0, "pending" => [] },
+    }
+
+    result = Registry.send(:deploy_reconciliation_summary, payload, target: "rails", inventory:)
+
+    refute result[:ok]
+    assert_includes result[:summary], "#{rows.first["app"]}: deployed SHA does not match the checkout"
+  end
+
+  def test_deploy_reconciliation_summary_exposes_pending_receipts_without_mutating
+    inventory = Deploy::Inventory.new(root: Master::ROOT)
+    payload = {
+      "host" => "vm23", "dev_sha" => "a1b2c3d", "apps" => [], "master" => {},
+      "deploy_recovery" => {
+        "state" => "pending", "count" => 1,
+        "pending" => [{ "run_id" => "20261119T010203Z-all-1234", "target" => "all",
+                        "status" => "running", "stage" => "brgen", "pid_state" => "present",
+                        "pinned_sha" => "a1b2c3d" }],
+      },
+    }
+
+    result = Registry.send(:deploy_reconciliation_summary, payload, target: "all", inventory:)
+
+    refute result[:ok]
+    assert_includes result[:summary], "pending=1"
+    assert_includes result[:summary], "deploy recovery receipts are pending or unavailable"
   end
 
   def test_deploy_summary_preserves_the_preflight_check_that_blocked_ssh
@@ -842,6 +982,18 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_includes result, "rehearsal: 1 of 16 failed"
     refute_includes result, "remote exit"
     refute_includes result, "this commit does not boot"
+  end
+
+  def test_deploy_summary_does_not_call_a_nonzero_remote_marker_success
+    status = Struct.new(:exitstatus) do
+      def success? = false
+    end.new(1)
+    output = "vps-deploy: all ok (master brgen amber bsdports)\n" \
+             "vps-deploy: finished exit=1\n"
+    result = Registry.send(:deploy_summary, output, status, "all")
+
+    assert_match(/remote exit 1:/, result)
+    refute Registry.send(:deploy_success_receipt?, output + "vps-deploy: post-check public canary\n", status, "all")
   end
 
   def test_deploy_summary_keeps_the_decisive_remote_failure

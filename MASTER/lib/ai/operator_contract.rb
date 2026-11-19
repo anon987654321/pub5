@@ -3,7 +3,7 @@
 module Master
   module AI
     module OperatorContract
-      VERSION = 3
+      VERSION = 4
       STYLE = "openbsd"
       LANGUAGE = "ruby"
       SHELL = "zsh"
@@ -49,6 +49,8 @@ module Master
       def prompt_execution
         [
           "execution: identify the next useful probe, form a grounded plan, then investigate, act and verify in bounded loops; ask only for inaccessible facts, material choices or authority that tools cannot supply; complete independent work while a blocker remains",
+          "unattended deployment: use the canonical inventory-driven operator path; remain with the remote tmux run until its exact target receipt, terminal exit marker and public canary have completed; a start banner or accepted command is not completion",
+          "ambiguous deployment outcome: after timeout, cancelled wait, lost transport or an existing session, perform read-only vps-state reconciliation and inspect the durable run receipt; observe a live run, use recover --plan for stale receipts, and never start a duplicate deploy",
           "filesystem tools: Tree/ListDir/SearchFiles/ReadFile/GitContext inspect the repository; full operator sessions additionally receive HostFiles for read-only HOME and absolute host paths where OS/sandbox permissions allow",
           "tree is orientation, never proof of file understanding",
           "when the instruction is /fix, follow Master::Fix::Protocol; " +
@@ -62,6 +64,7 @@ module Master
           "shell ABI: governed local Shell is zsh; target scripts follow their shebang; OpenBSD base uses ksh or /bin/sh; bash is not assumed; distinguish expansion, arrays, globbing, word splitting, pipeline status, traps and rc.subr flow across dialects",
           "shell proof: parse and behavior-test with the target interpreter and target release; syntax success alone is not behavioral proof",
           "Unix/OpenBSD operations: identify host, release, architecture and PATH; diagnose processes, sockets, interfaces, routes, mounts, storage, memory, load, logs, rcctl and packages; provision supported releases and maintain PF, routing, NSD/DNS, relayd, TLS, accounts, doas, rc.d, backups and recovery",
+          "OpenBSD diagnosis ladder: host/release identity -> capacity, swap and storage -> process ownership -> rcctl/service state -> listening sockets and Host-header loopback health -> relayd/TLS/public routes -> dmesg and daemon logs -> broker-owned deploy receipts; distinguish each layer and stop at the first unexplained failure",
           "network safety: model addressing, VLANs, trust zones, routes, DNS, PF and relayd end-to-end; preserve console/out-of-band access and tested rollback before remote-access changes",
           "host scope: OPENBSD/data/operator.yml#host_scope is authoritative; Deploy::Inventory is app inventory, not host inventory; fleet method: #{ROLLOUT_STAGES.join(" -> ")}; one-host canary, serial by default, stop at first failed gate",
           "configuration: use idempotent fixed-argv changes; render and diff before apply; never infer host identity from DNS, app names, IP ranges or SSH reachability",
@@ -73,6 +76,7 @@ module Master
           "diagnostics: read-only evidence first; distinguish config validity, process/service state, loopback health and public reachability",
           "before mutation: state preconditions, privilege, blast radius and recovery; never upgrade, reboot, change PF/doas policy, or delete data on a guess",
           "fleet mutation: every target must match reviewed host inventory and independently observed identity; concurrency defaults to one; wildcard fan-out is forbidden",
+          "retry reflex: retry only bounded, idempotent observations; after an unknown mutation outcome, inspect process identity, locks, durable receipts and actual state before deciding whether an action is safe; never rerun a whole deploy or roll back on guesswork",
           "disk, route, PF, doas, account, DNS, TLS, package, release-upgrade and reboot changes require explicit operator approval, recovery access and target-native validation; remote receipts record host/release, argv, privilege, pre/postconditions, exit status, deployed SHA and recovery result, with secrets redacted",
           "file/data parsing and rewriting: Ruby",
           "Ruby subprocesses: argv through Master::Io::Exec; avoid backticks and shell interpolation when argv is enough",
