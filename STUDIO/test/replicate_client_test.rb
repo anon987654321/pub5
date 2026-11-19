@@ -514,7 +514,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
   def test_download_blocks_mapped_nat64_6to4_teredo_and_non_global_ipv6
     %w[
       ::ffff:127.0.0.1 64:ff9b::a00:1 64:ff9b:1::a00:1
-      2002:0a00:0001::1 2001:0::1 ::a00:1 fc00::1 4000::1 3fff::1
+      2002:0a00:0001::1 2001:0::1 ::a00:1 fc00::1 4000::1 3fff::1 192.31.196.1 192.52.193.1 192.175.48.1 2620:4f:8000::1
     ].each do |address|
       assert Studio::ReplicateClient.blocked_download_ip?(IPAddr.new(address)), "#{address} must be blocked"
     end
