@@ -48,7 +48,9 @@ module Master
       Trace::Ledger::Feedback.new(event_bus: bus, learnings: autonomous[:learnings]).attach
       Trace::Ledger::Reflexion.new(event_bus: bus, root:).attach
       subscribe_graph_retriever(bus:, infra:, root:) unless lean_boot
-      return if ENV["MASTER_BOOT_SELF_TEST"] == "0"
+      # The full source-tree diagnostic is not ordinary startup work.
+      # `rake selftest` runs it on demand; strict boot also runs it synchronously.
+      return unless ENV["MASTER_BOOT_SELF_TEST"] == "1" || strict_boot_requested?
 
       run = lambda do
         # This diagnostic scans the source tree. Keep its background work
