@@ -4,7 +4,7 @@ MASTER is pub5's shared agent runtime and engineering constitution. It interpret
 
 ## What the name means
 
-MASTER names two related ideas. **Mastery** is the disciplined practice of learning a subject well enough to exercise sound judgment: research, compare, experiment, measure, correct and verify. It is an aspiration, not a claim of infallibility. **Master** also names an authoritative source in the traditional DNS primary/secondary model. The name joins the two: authority should be earned through mastery and constrained by evidence.
+MASTER names two related ideas. **Mastery** is the disciplined practice of learning a subject well enough to exercise sound judgment: research, compare, experiment, measure, correct and verify. It is an aspiration, not a claim of infallibility. **Master** also names an authoritative source in the traditional DNS primary/secondary model. The name joins the two: authority should be earned through mastery and constrained by evidence. Current DNS standards use *primary* and *secondary*; older DNS material uses *master* and *slave*. This README uses the current protocol terms while explaining the historical connection ([RFC 9499, DNS Terminology](https://www.rfc-editor.org/rfc/rfc9499.html)).
 
 The DNS analogy is precise but limited. Within one DNS zone, a primary nameserver owns the canonical writable zone data. Secondary nameservers receive validated transfers, keep serving authoritative answers from their copies, and do not become independent writers of the primary data. Serial numbers and refresh checks make stale copies detectable. A secondary that cannot prove freshness is not silently treated as current.
 
