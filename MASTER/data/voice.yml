@@ -926,6 +926,9 @@ voice:
 # layer (bells: 1) keeps only that many of its notes.
 boot_sound:
   enabled: true
+  # The browser may use the sound after a deliberate gesture. The CLI stays
+  # silent at startup; rendering a 2.2s WAV is not part of showing the prompt.
+  cli_enabled: false
   volume: 1.0
   player: "ffplay -nodisp -autoexit -loglevel quiet -af volume=%{volume},afade=t=in:d=0.05"
   # Two detuned copies per note, panned apart, wowing 0.55 Hz; the index swells with the level, as brass.
