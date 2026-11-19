@@ -7,8 +7,8 @@ Maps is mounted at `maps.<city>`, including `maps.brgen.no` and
 `maps.lsangeles.com`. It runs inside Brgen's Rails process, uses Brgen's
 users and resolves the city from the apex host. It is not a separate app.
 
-Read [the Brgen guide](../../../README.md) for the vertical pattern and
-[Brgen's agent contract](../../../AGENTS.md) for the host topology.
+Read [the Brgen guide](../../README.md) for the vertical pattern and
+[Brgen's agent contract](../../AGENTS.md) for the host topology.
 
 The home page draws the map on a MapLibre canvas, with tiles from OpenFreeMap. Its GeoJSON
 source clusters nearby places, events and stories at city scale, expands a cluster on selection,
