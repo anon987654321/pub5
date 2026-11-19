@@ -12,7 +12,7 @@ if [ ! -x "$RUBY" ] || ! "$RUBY" -e 'require "rubygems"; exit(Gem::Version.new(R
   RUBY=
   for _r in /usr/local/bin/ruby[0-9]*; do
     [ -x "$_r" ] || continue
-    if "$_r" -e 'require "rubygems"; exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3") ? 1 : 0)' >/dev/null 2>&1; then
+    if "$_r" -e 'require "rubygems"; exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.2") ? 1 : 0)' >/dev/null 2>&1; then
       RUBY=$_r
       break
     fi
