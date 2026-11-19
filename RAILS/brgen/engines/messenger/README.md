@@ -5,11 +5,14 @@ conversation surface shared by people using Brgen. It should feel immediate, but
 promise is continuity: a conversation remains readable, searchable, safe to leave, and useful
 across devices and time.
 
-Messenger is a mountable vertical surface at `messenger.<city>`, for example
-`messenger.brgen.no` and `messenger.lsangeles.com`. Its routes are drawn by the Brgen host;
-the `brgen_messenger` engine supplies the vertical's autoloading and JavaScript assets. It is
-not a separate Rails application, database, identity system or deployment. The host topology
-and engine rules are documented in `RAILS/brgen/README.md` and `RAILS/brgen/AGENTS.md`.
+Messenger is mounted at `messenger.<city>`, including
+`messenger.brgen.no` and `messenger.lsangeles.com`. The Brgen host draws
+its routes; the `brgen_messenger` engine supplies the vertical's autoloading
+and JavaScript assets. It shares the host app, database, identity system and
+deployment. It is not a separate application.
+
+Read [the Brgen guide](../../../README.md) for the vertical pattern and
+[Brgen's agent contract](../../../AGENTS.md) for the host topology.
 
 ## Recovered product intent
 
