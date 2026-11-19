@@ -83,6 +83,22 @@ class DeployPreflightTest < Minitest::Test
     refute_includes report, "this commit does not boot"
   end
 
+  def test_failed_preflight_keeps_the_failing_test_name_before_later_green_checks
+    failure = [
+      "  1) Failure:",
+      "RehearsalContractTest#test_missing_copy_path [OPENBSD/test/test_vps_deploy_contract.rb:42]:",
+      "Expected: 1",
+      "  Actual: 0",
+      *Array.new(20) { |i| "ok  later check #{i}" },
+    ].join("\\n")
+
+    result = Pre.shell(->(*) { [failure, false] }, ["ruby", "OPENBSD/bin/rehearse"], Master::REPO_ROOT)
+
+    assert_includes result.detail, "RehearsalContractTest#test_missing_copy_path"
+    assert_includes result.detail, "Actual: 0"
+    assert_includes result.detail, "ok  later check 19"
+  end
+
   def test_main_exits_one_on_failure_and_zero_on_a_clean_tree
     bad = tree("MASTER/lib/a.rb" => "def (\n")
     good = tree("MASTER/lib/a.rb" => "x = 1\n")
