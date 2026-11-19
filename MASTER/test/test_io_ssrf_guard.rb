@@ -321,7 +321,7 @@ class SsrfGuardTest < Minitest::Test
   def test_shared_request_does_not_connect_when_dns_policy_refuses
     uri = URI("https://example.com/data")
     Guard.stub(:pinned_address, nil) do
-      Guard.stub(:http_for, ->(*) { flunk "HTTP must not be constructed without an approved pin" }) do
+      Guard.stub(:http_for, ->(*_args, **_options) { flunk "HTTP must not be constructed without an approved pin" }) do
         assert_raises(SocketError) do
           Guard.request(uri, Net::HTTP::Get.new(uri))
         end
