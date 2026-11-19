@@ -160,11 +160,10 @@ class TestLoraLocalMigration < Minitest::Test
 
       source_dir = File.join(legacy, "sources")
       File.symlink(existing, File.join(source_dir, "linked.jpg"))
-      error = assert_raises(Migration::Error) do
-        Migration.new(source_checkout: source, destination_root: destination,
-                      include_sources: true).migrate("johann")
-      end
-      assert_match(/symlink/, error.message)
+      blocked = Migration.new(source_checkout: source, destination_root: destination,
+                                include_sources: true).migrate("johann")
+      assert_equal "BLOCKED", blocked.fetch("status")
+      assert_match(/symlink/, blocked.fetch("reason"))
     end
   end
 end
