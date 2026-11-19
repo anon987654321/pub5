@@ -36,6 +36,7 @@ module Pub4Admin
     /usr/local/bin/ruby4.0 /usr/local/bin/ruby40
     /usr/local/bin/ruby3.4 /usr/local/bin/ruby34
     /usr/local/bin/ruby3.3 /usr/local/bin/ruby33
+    /usr/local/bin/ruby3.2 /usr/local/bin/ruby32
     /usr/local/bin/ruby
   ].freeze
 
