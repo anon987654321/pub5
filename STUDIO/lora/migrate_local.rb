@@ -196,7 +196,7 @@ module Studio
       end
 
       def reject_symlink_components!(root, path)
-        base = File.realpath(root)
+        base = File.expand_path(root)
         expanded = File.expand_path(path)
         raise Error, "source path escapes the subject directory: #{path}" unless expanded.start_with?("#{base}#{File::SEPARATOR}")
 
