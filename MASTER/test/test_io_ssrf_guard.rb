@@ -164,7 +164,7 @@ class SsrfGuardTest < Minitest::Test
 
   # Reserved, 6to4 relay and NAT64/6to4 forms that embed a private IPv4 address.
   def test_blocks_reserved_and_translated_forms
-    %w[240.0.0.1 192.88.99.1 64:ff9b::a00:1 64:ff9b:1::a00:1 2002:0a00:0001::1].each do |address|
+    %w[240.0.0.1 192.31.196.1 192.52.193.1 192.88.99.1 192.175.48.1 2620:4f:8000::1 64:ff9b::a00:1 64:ff9b:1::a00:1 2002:0a00:0001::1].each do |address|
       assert Guard.blocked_ip?(IPAddr.new(address)), "#{address} must be blocked"
     end
   end
