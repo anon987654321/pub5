@@ -229,11 +229,20 @@ module Master
         first.length < 128 && markers.any? { |marker| marker.start_with?(first) }
       end
 
-      def format_irc_stream(text)
+      def format_irc_stream(text, state:)
         return text unless conversational_input?
         return text unless $stdout.respond_to?(:tty?) && $stdout.tty?
 
-        "#{irc_prefix}#{text}"
+        prefix = state[:irc_prefix] ||= irc_prefix
+        line_start = state.fetch(:irc_line_start, true)
+        output = +""
+        text.to_s.each_char do |character|
+          output << prefix if line_start && character != "\n"
+          output << character
+          line_start = character == "\n"
+        end
+        state[:irc_line_start] = line_start
+        output
       end
 
       def diagnostic_command(input)
