@@ -80,6 +80,7 @@ class TestCLI < Minitest::Test
 
     refute_match(/[\r\n]/, status)
     assert_match(/\Avoice0 at mainbus0: (?:on|off); player=/, status)
+    assert_includes status, "default=christopher"
     assert_includes status, "mode="
     refute_includes status, "timing="
     refute_includes status, "last=none"
