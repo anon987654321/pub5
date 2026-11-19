@@ -97,12 +97,22 @@ class TestVoiceBootSound < Minitest::Test
     assert_nil Sound.browser_payload(Sound.config.merge("enabled" => false))[:url]
   end
 
-  def test_it_is_on_by_default_and_silent_with_the_switch
+  def test_cli_startup_is_silent_while_the_browser_sound_remains_available
     assert_equal true, Sound.config["enabled"]
+    assert_equal false, Sound.config["cli_enabled"]
+    assert_equal Sound.cache_key(Sound.config, surface: :web),
+                 Sound.cache_key(Sound.config.merge("cli_enabled" => true), surface: :web)
+    refute_nil Sound.browser_payload[:url]
+
+    $stdout.stub(:tty?, true) { refute Sound.enabled? }
+  end
+
+  def test_the_cli_sound_switch_still_forces_silence
     previous = ENV["MASTER_BOOT_SOUND"]
     ENV["MASTER_BOOT_SOUND"] = "0"
+    settings = Sound.config.merge("cli_enabled" => true)
 
-    refute Sound.enabled?
+    $stdout.stub(:tty?, true) { refute Sound.enabled?(settings) }
   ensure
     previous.nil? ? ENV.delete("MASTER_BOOT_SOUND") : ENV["MASTER_BOOT_SOUND"] = previous
   end
