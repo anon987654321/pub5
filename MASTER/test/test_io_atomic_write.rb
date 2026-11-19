@@ -68,7 +68,7 @@ class AtomicWriteTest < Minitest::Test
 
     assert_equal "600", format("%o", File.stat(path).mode & 0o777)
   ensure
-    File.umask(previous) if previous
+    File.umask(previous) unless previous.nil?
   end
 
   def test_a_rewrite_keeps_the_file_executable
