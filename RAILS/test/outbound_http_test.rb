@@ -4,6 +4,13 @@ require "minitest/autorun"
 require_relative "../__shared/app/services/shared/outbound_http"
 require_relative "../brgen/app/lib/fediverse/client"
 
+module Shared
+  module Llm
+    DEFAULT_MODEL = "test-model" unless const_defined?(:DEFAULT_MODEL)
+  end
+end
+require_relative "../__shared/app/services/shared/scrape"
+
 class FediverseSsrfTest < Minitest::Test
   def test_loopback_https_is_refused
     refute Fediverse::Client.public_https?(URI("https://127.0.0.1/actor"))
@@ -242,6 +249,49 @@ end
 # a Falcon fiber and the page for two minutes. A call that opens a connection
 # (start, new, URI.open) must name read_timeout in the same file; a convenience
 # call is refused outright, because it cannot be given one.
+class ScrapeDnsPinningTest < Minitest::Test
+  def test_scrape_refuses_mixed_public_and_private_dns_answers
+    resolver = ->(_host) { ["93.184.216.34", "127.0.0.1"] }
+    refute Shared::Scrape.public_http_url?("https://rebind.test/", resolver:)
+  end
+
+  def test_scrape_accepts_all_public_answers
+    resolver = ->(_host) { ["93.184.216.34", "8.8.8.8"] }
+    assert Shared::Scrape.public_http_url?("https://public.test/", resolver:)
+  end
+
+  def test_scrape_rejects_transition_and_non_global_ipv6
+    %w[64:ff9b::a00:1 64:ff9b:1::a00:1 2002:0a00:0001::1 2001:0::1 4000::1].each do |address|
+      resolver = ->(_host) { [address] }
+      refute Shared::Scrape.public_http_url?("https://rebind.test/", resolver:), "#{address} must be blocked"
+    end
+  end
+
+  def test_scrape_rejects_url_credentials_fragments_and_local_suffixes
+    resolver = ->(_host) { flunk "invalid URL must be rejected before resolving" }
+    refute Shared::Scrape.public_http_url?("https://user:pass@example.com/", resolver:)
+    refute Shared::Scrape.public_http_url?("https://example.com/#fragment", resolver:)
+    refute Shared::Scrape.public_http_url?("http://printer.local/", resolver:)
+  end
+
+  def test_chromium_resolver_rules_pin_hosts_and_block_unlisted_names
+    rules = Shared::Scrape.host_resolver_rules(
+      "example.com" => "93.184.216.34",
+      "cdn.example" => "2606:4700:4700::1111"
+    )
+
+    assert_includes rules, "MAP cdn.example [2606:4700:4700::1111]"
+    assert_includes rules, "MAP example.com 93.184.216.34"
+    assert rules.end_with?("MAP * ~NOTFOUND")
+  end
+
+  def test_chromium_resolver_rules_refuse_a_non_public_pin
+    assert_raises(ArgumentError) do
+      Shared::Scrape.host_resolver_rules("example.com" => "169.254.169.254")
+    end
+  end
+end
+
 class OutboundHttpTimeoutTest < Minitest::Test
   RAILS = File.expand_path("..", __dir__)
   SOURCE_DIRECTORIES = %w[app lib engines].freeze
