@@ -311,13 +311,18 @@ module Master
         result
       end
 
+      # Do not hand a redirect to Chromium until its destination has passed
+      # the same DNS, address-class, scheme and port policy as a direct request.
+      # The eventual browser request is intercepted and pinned again; this first
+      # check prevents an unsafe Location from crossing the browser boundary.
       def unsafe_redirect?(uri, response)
         return false unless response.code.to_i.between?(300, 399)
 
         location = response["location"].to_s
         return false if location.empty?
 
-        !web_uri?(URI.join(uri.to_s, location))
+        target = URI.join(uri.to_s, location)
+        !web_uri?(target) || SsrfGuard.pinned_address(target).nil?
       rescue StandardError
         true
       end
