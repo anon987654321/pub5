@@ -282,7 +282,7 @@ class ScrapeDnsPinningTest < Minitest::Test
 
     assert_includes rules, "MAP cdn.example [2606:4700:4700::1111]"
     assert_includes rules, "MAP example.com 93.184.216.34"
-    assert rules.end_with?("MAP * ~NOTFOUND")
+    assert rules.end_with?("MAP * ^NOTFOUND")
   end
 
   def test_chromium_resolver_rules_refuse_a_non_public_pin
