@@ -128,4 +128,28 @@ class S2sPostbackJobTest < ActiveJob::TestCase
     conversion = Shared::S2sConversion.find_by!(user: @user, reference: "euro-order-1")
     assert_equal "EUR", conversion.currency
   end
+  test "S2S uses the bounded shared outbound transport" do
+    ENV["REVCONTENT_API_KEY"] = "test-api-key"
+    attribution!(revcontent: "rc_pinned")
+    conversion = conversion!(currency: "USD")
+    calls = []
+    response = Struct.new(:code).new("200")
+    handler = lambda do |uri, **options|
+      calls << [uri, options]
+      response
+    end
+
+    Shared::OutboundHttp.stub(:request, handler) do
+      Shared::S2sPostbackJob.perform_now(conversion.id)
+    end
+
+    uri, options = calls.fetch(0)
+    assert_equal "https://sync.revcontent.com/api/postback", uri.to_s.split("?").first
+    assert_equal 16_384, options.fetch(:max_body)
+    assert_equal 3, options.fetch(:open_timeout)
+    assert_equal 5, options.fetch(:read_timeout)
+    assert_equal 3, options.fetch(:write_timeout)
+    assert_equal "Brgen-S2S-Attribution/1.0", options.dig(:headers, "User-Agent")
+  end
+
 end
