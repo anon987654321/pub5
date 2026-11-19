@@ -39,9 +39,25 @@ module Master
       Trace::Telemetry.bootstrap!(root:)
     end
 
+    # BootChecks validates the data required to construct the runtime. This
+    # wider inventory is diagnostic; it reports errors but does not decide
+    # admission, so it must not hold the first prompt behind a full-tree read.
+    def start_background_data_validation(root:, bus:)
+      thread = Thread.new do
+        Thread.current.priority = -3
+        validate_data!(root:, bus:)
+      rescue StandardError, ScriptError => e
+        Trace::Dmesg.status("boot0", "data validation failed, #{e.class}: #{e.message}")
+      end
+      thread.abort_on_exception = false
+      thread.report_on_exception = false
+      thread.name = "master-data-validation" if thread.respond_to?(:name=)
+      thread
+    end
+
     def init_loop(root:, container:)
-      validate_data!(root:, bus: container[:bus])
       Ground::LawHandshake::Admission.enable!
+      start_background_data_validation(root:, bus: container[:bus])
       # After validation, so the first tick sees a container that finished
       # building rather than one mid-assembly. The tick persists the loaded
       # state; its restore status and schema completeness remain explicit evidence.
