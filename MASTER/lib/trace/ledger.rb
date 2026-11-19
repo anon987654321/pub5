@@ -6,7 +6,7 @@ require_relative "../execution/contract"
 require_relative "../ground/redactor"
 require "json"
 require "time"
-require "tempfile"
+require_relative "../io/atomic_write"
 
 module Master
   module Trace
@@ -261,14 +261,7 @@ module Master
               []
             end
             content = (kept << "#{JSON.generate(entry)}\n").join
-            Tempfile.create(["reflexions-", ".tmp"], directory, binmode: true) do |temporary|
-              temporary.write(content)
-              temporary.flush
-              temporary.fsync
-              temporary.close
-              File.chmod(0o600, temporary.path)
-              File.rename(temporary.path, @path)
-            end
+            Master::Io::AtomicWrite.write_atomic(@path, content, mode: 0o600)
           ensure
             lock.flock(File::LOCK_UN) if lock
           end

@@ -64,6 +64,28 @@ class TestReflexionLedger < Minitest::Test
     assert_includes persisted, "[REDACTED]"
   end
 
+  def test_reflexion_snapshot_uses_the_shared_atomic_writer
+    bus = FakeBus.new
+    bus.subscribe("reflexion:recorded") {}
+    Master::Trace::Ledger::Reflexion.new(event_bus: bus, root: @dir).attach
+    calls = []
+    writer = Master::Io::AtomicWrite.method(:write_atomic)
+    instrumented = lambda do |path, content, **options|
+      calls << [path, content, options]
+      writer.call(path, content, **options)
+    end
+
+    Master::Io::AtomicWrite.stub(:write_atomic, instrumented) do
+      bus.publish("fix_loop:commit_blocked", reason: "syntax", files: ["lib/a.rb"])
+    end
+
+    assert_equal 1, calls.length
+    assert_equal File.join(@dir, "runtime", "reflexions.ndjson"), calls.first.first
+    assert_equal 0o600, calls.first.last.fetch(:mode)
+    assert_equal 0o600, File.stat(calls.first.first).mode & 0o777
+    assert_empty Dir.glob(File.join(@dir, "runtime", ".master_atomic_*"))
+  end
+
   def test_caps_reflection_history
     bus = FakeBus.new
     Master::Trace::Ledger::Reflexion.new(event_bus: bus, root: @dir).attach
