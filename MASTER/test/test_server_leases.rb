@@ -129,12 +129,19 @@ class TestServerLeases < Minitest::Test
 
   def test_one_shot_cli_exits_release_server_leases_before_exit_bang
     source = File.read(File.expand_path("../bin/master", __dir__))
-    fold = source[/if ENV\\["MASTER_FOLD"\\] == "1"(.*?)\\nif \\$stdin\\.tty\\?/m, 1]
-    tty = source[/if \\$stdin\\.tty\\?(.*?)\\nelse\\n  \\$stdout\\.sync = true/m, 1]
-    pipe = source[/else\\n  \\$stdout\\.sync = true(.*?)\\nend\\n\\nstop_control_plane/m, 1]
+    fold_start = source.index('if ENV["MASTER_FOLD"] == "1"')
+    tty_start = source.index("if $stdin.tty?", fold_start)
+    tty_end = source.index("\\nelse\\n  $stdout.sync = true", tty_start)
+    pipe_start = source.index("else\\n  $stdout.sync = true", tty_end)
+    pipe_end = source.index("\\nend\\n\\nstop_control_plane", pipe_start)
+    sections = [
+      fold_start && tty_start && source[fold_start...tty_start],
+      tty_start && tty_end && source[tty_start...tty_end],
+      pipe_start && pipe_end && source[pipe_start...pipe_end],
+    ]
 
-    [fold, tty, pipe].each_with_index do |section, index|
-      refute_nil section, "missing one-shot branch #{index}"
+    assert sections.all?, "all runtime one-shot branches must be identifiable"
+    sections.each_with_index do |section, index|
       cleanup = section.index("stop_booted_servers")
       termination = section.index("exit!(")
       assert cleanup && termination && cleanup < termination,
