@@ -47,7 +47,7 @@ module Master
           end
 
           io.close
-          return unless attempts.zero? && reclaimable?(path)
+          return unless attempts.zero? && reclaimable?(path, root:)
 
           attempts += 1
         end
