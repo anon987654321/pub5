@@ -181,8 +181,10 @@ module Master
         return unless has_entry && definition && source.match?(/^\s*(?:safe\s+do|begin)\s*$/m)
 
         argument = Regexp.escape(definition[1])
-        has_helper = source.match?(/^\s*STDOUT\.puts\(\s*#{argument}(?:\.to_s)?\s*\)\s*$/m)
-        return unless has_helper
+        puts_helper = source.match?(/^\s*STDOUT\.puts\(\s*#{argument}(?:\.to_s)?\s*\)\s*$/m)
+        write_helper = source.match?(/^\s*STDOUT\.write\(\s*#{argument}\.to_s\s*\)\s*$/m) &&
+                       source.match?(/^\s*STDOUT\.write\(\s*"\\n"\s*\)\s*$/m)
+        return unless puts_helper || write_helper
 
         calls = source.each_line.filter_map do |line|
           match = line.match(/\A([ \t]*)say(?:[ \t]+("(?:\\.|[^"\\])*")|[ \t]*\([ \t]*("(?:\\.|[^"\\])*")[ \t]*\))?[ \t]*;?[ \t]*\z/)
@@ -205,18 +207,11 @@ module Master
         nil
       end
 
-      def irc_prefix
-        "[#{Time.now.strftime("%H:%M")}] <master> "
-      end
-
+      # Conversation reads as ordinary terminal prose. Operational events
+      # already carry their own dmesg unit; timestamping every answer and
+      # inventing a speaker prefix made the shell feel like an IRC transcript.
       def format_irc_reply(text)
-        return text unless conversational_input?
-        return text unless $stdout.respond_to?(:tty?) && $stdout.tty?
-
-        prefix = irc_prefix
-        text.to_s.lines(chomp: true).map do |line|
-          line.empty? ? "" : "#{prefix}#{line}"
-        end.join("\n")
+        text.to_s
       end
 
       # The first streamed packet is held only long enough to distinguish the
@@ -239,20 +234,8 @@ module Master
         first.length < 128 && markers.any? { |marker| marker.start_with?(first) }
       end
 
-      def format_irc_stream(text, state:)
-        return text unless conversational_input?
-        return text unless $stdout.respond_to?(:tty?) && $stdout.tty?
-
-        prefix = state[:irc_prefix] ||= irc_prefix
-        line_start = state.fetch(:irc_line_start, true)
-        output = +""
-        text.to_s.each_char do |character|
-          output << prefix if line_start && character != "\n"
-          output << character
-          line_start = character == "\n"
-        end
-        state[:irc_line_start] = line_start
-        output
+      def format_irc_stream(text, state: nil)
+        text.to_s
       end
 
       def diagnostic_command(input)
