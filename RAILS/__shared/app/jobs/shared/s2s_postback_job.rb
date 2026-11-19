@@ -2,6 +2,7 @@
 
 require "net/http"
 require "uri"
+require_relative "../../services/shared/outbound_http"
 
 module Shared
   class S2sPostbackJob < ApplicationJob
