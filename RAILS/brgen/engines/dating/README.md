@@ -39,6 +39,19 @@ Routes are drawn on `Dating::Engine`, and brgen mounts the engine at the root un
 `constraints(subdomain: DATING_SUBDOMAINS)`. From the host, reach its helpers namespaced, as
 in `dating.matches_url(…, subdomain: "dating")`.
 
+## Visual direction
+
+**Tinder and happn are interaction references, not product authorities.** Keep discovery focused
+on one substantial profile at a time, with fluent swipe and tap controls, legible photographs,
+short prompts and a clear route from mutual match to conversation. Make local discovery and
+path-crossing context understandable without exposing a person's precise route or current
+location. The profile must remain more than a photograph: preserve prompts, biography, intent
+and verification context.
+
+Do not add streaks, artificial scarcity, opaque ranking, paid visibility or interaction
+patterns that pressure a person to like or disclose more than they choose. Reporting, blocking,
+privacy and identity checks must remain easy to find.
+
 ## Original product promise and present boundary
 
 The archived brief described a safe, local way to meet people: profiles, preference-aware

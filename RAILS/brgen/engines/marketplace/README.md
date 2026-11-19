@@ -68,6 +68,18 @@ Stripe controller, so that a dashboard pointed at either URL still pays the orde
 host also owns `/webhooks/vipps`. Dintero webhooks are verified on the raw body before any
 JSON parsing, and each delivery is stored for replay handling.
 
+## Visual direction
+
+**bol.com and Kaufland.de are commerce usability references.** Keep search prominent, category
+navigation predictable, filters relevant to the selected category, and the catalogue dense
+without making product images or prices hard to scan. Product cards should establish the
+product, price, condition, seller and delivery facts in a stable order. Product pages should
+make the gallery, variants, availability, seller trust, delivery and buy box easy to compare.
+
+Preserve separate trust cues for professional shops and private sellers; do not imply that one
+has the guarantees of the other. Borrow commerce geometry, not another retailer's identity,
+copy or campaign assets.
+
 ## Food
 
 The canonical food surface is `/food` on the localised Marketplace host, as in

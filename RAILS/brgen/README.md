@@ -16,6 +16,14 @@ come from MASTER/data/tokens.yml through Master.tokens, and the shared styleshee
 RAILS/__shared/README.md. The feature matrix is RAILS/apps.yml under brgen; work only the operator
 can finish is listed in `MASTER/data/operator_seams.yml`.
 
+**Visual benchmark: X, translated for a city.** Borrow its fast conversational hierarchy:
+recognisable authors, compact timestamps, readable post bodies, immediate media and reply
+actions, and clear thread relationships. Do not copy its global trending model or generic
+engagement loops. Brgen's feed remains city-scoped and single-column; its horizontal vertical
+navigation and mobile tab bar are deliberate. Do not restore the retired left rail or add a
+second row of feed-order chips. Add contextual material only when it is backed by real city
+data. The city, not a global timeline, remains the organising principle.
+
 ## Cities
 
 A city is an apex host, and the apex serves the social feed. The canonical city records

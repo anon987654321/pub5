@@ -31,6 +31,21 @@ switcher in the footer sets it. Chrome, empty states and flash messages all go t
 the sentences the shared engine owns, such as not_authorized and rate_limited, come from
 shared.flash. Tests assert through keys and never through English literals.
 
+## Visual direction
+
+TOTEME is Amber's primary fashion-design reference; NET-A-PORTER is the benchmark for
+catalogue clarity and product-information hierarchy. Borrow collection-led navigation,
+image-first grids, generous editorial spacing, restrained metadata and clear item-detail
+composition. Translate those patterns into wardrobe organisation and wear decisions, not
+retail selling.
+
+The wardrobe is the catalogue. Use consistent garment photography, useful filters, quiet
+collection headings and a clear garment detail hierarchy: image, identity, attributes, wear
+history, cost per wear and outfit relationships. Recommendations must explain their basis.
+Do not add shopping-cart chrome, fake stock pressure, discount language or purchase-first
+calls to action. Preserve Amber's original large masthead, warm-neutral tokens and truthful
+garment imagery. Amber should feel like a considered fashion editorial, not a retailer.
+
 ## Product boundary
 
 Amber is a private wardrobe companion, not a fashion storefront. It helps its owner

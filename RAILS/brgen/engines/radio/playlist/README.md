@@ -43,6 +43,18 @@ screen it uses an immersive stage with a transport bar, and it publishes the bar
 floating widgets clear it. Its stylesheet rules live in brgen's single `application.scss`,
 scoped under `body.vertical-playlist`.
 
+## Visual direction
+
+**SoundCloud and WHY.IT are creator and discovery references.** Make the creator and the
+recording the centre of the product: strong cover art, clear artist identity, useful track rows,
+waveform playback, timestamped discussion, playlists, sets and a discoverable creator catalogue.
+Human curation and local scenes should sit beside popularity signals, not disappear beneath them.
+
+The Radio Tunnel is Brgen Radio's signature listening mode; it must not become the only way to
+browse music. Keep a direct path to tracks, playlists, sets and uploads. Playback begins only
+after a reader's gesture, credits and import provenance remain visible, and listening counts
+must describe real recorded activity.
+
 ## Original creator-platform promise
 
 The archived Whyp.it-inspired brief called for easy local audio publishing, high-quality playback,
