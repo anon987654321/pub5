@@ -144,19 +144,26 @@ module Studio
           raise Error, "source directory must be owned by the current user and owner-only (0700): #{directory}"
         end
 
-        Dir.children(directory).any? do |name|
-          path = File.join(directory, name)
-          next false unless IMAGE_EXTENSIONS.include?(File.extname(name).downcase)
-          raise Error, "refusing symlink source image: #{path}" if File.symlink?(path)
+        found_image = false
+        Dir.glob(File.join(directory, "**", "*"), File::FNM_DOTMATCH).sort.each do |path|
+          next if %w[. ..].include?(File.basename(path))
 
           stat = File.lstat(path)
-          next false unless stat.file?
+          raise Error, "refusing symlink in source tree: #{path}" if stat.symlink?
+          if stat.directory?
+            unless stat.uid == Process.uid && (stat.mode & 0o077).zero?
+              raise Error, "nested source directory must be owner-only (0700): #{path}"
+            end
+            next
+          end
+          raise Error, "unsupported entry in source tree: #{path}" unless stat.file?
           unless stat.uid == Process.uid && stat.nlink == 1 && (stat.mode & 0o077).zero?
-            raise Error, "source image must be singly-linked, owned by the current user and owner-only (0600): #{path}"
+            raise Error, "source file must be singly-linked, owned by the current user and owner-only (0600): #{path}"
           end
 
-          true
+          found_image = true if IMAGE_EXTENSIONS.include?(File.extname(path).downcase)
         end
+        found_image
       rescue SystemCallError => error
         raise Error, "cannot inventory source directory #{directory}: #{error.class}: #{error.message}"
       end
