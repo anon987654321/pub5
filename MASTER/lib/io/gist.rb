@@ -52,17 +52,12 @@ module Master
 
       def get(url)
         uri = URI(url)
-        address = SsrfGuard.pinned_address(uri)
-        raise "refused internal/reserved address" unless address
-
-        http(uri, address)
-      end
-
-      def http(uri, address)
-        client = SsrfGuard.http_for(uri, address)
-        client.read_timeout = TIMEOUT
-        client.open_timeout = TIMEOUT
-        client.start { |h| h.get(uri.request_uri, "User-Agent" => "MASTER/1 (gist)", "Accept" => "application/vnd.github+json") }
+        request = Net::HTTP::Get.new(
+          uri.request_uri,
+          "User-Agent" => "MASTER/1 (gist)",
+          "Accept" => "application/vnd.github+json"
+        )
+        SsrfGuard.request(uri, request, max_bytes: MAX_BYTES * 2, timeout: TIMEOUT)
       end
 
       def injection_guard
