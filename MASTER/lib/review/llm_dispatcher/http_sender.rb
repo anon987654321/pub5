@@ -7,6 +7,7 @@ require "timeout"
 require "uri"
 require_relative "replicate_sender"
 require_relative "../../io/provider_concurrency"
+require_relative "../../io/ssrf_guard"
 
 module Master
   module Review
@@ -26,6 +27,7 @@ module Master
 
         OPEN_TIMEOUT_S = 5
         READ_IDLE_TIMEOUT_S = 60
+        MAX_RESPONSE_BYTES = 16_000_000
 
         private
 
@@ -178,29 +180,66 @@ module Master
         # failure accounting.
         def read_streaming_lane(base, request, lane)
           uri = URI("#{base.chomp('/')}/chat/completions")
-          Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https",
-                          open_timeout: OPEN_TIMEOUT_S, read_timeout: read_idle_timeout_s) do |http|
-            # The block form is the only one that leaves the body unread. A
-            # block-less request returns a response whose body net/http has
-            # already consumed, and read_body on it raises "called twice" —
-            # which every streaming provider answered with, so the whole
-            # event-stream path failed as a provider error instead of parsing.
-            # http.request returns the response rather than the block's value,
-            # so the answer is carried out in a local.
+          http = if local_http_uri?(uri)
+                   Net::HTTP.new(uri.hostname, uri.port, nil)
+                 else
+                   unless uri.is_a?(URI::HTTPS) && uri.port == 443 && uri.userinfo.nil? && uri.fragment.nil?
+                     raise URI::InvalidURIError, "hosted OpenAI-compatible lane requires HTTPS on port 443"
+                   end
+                   address = Master::Io::SsrfGuard.pinned_address(uri) or
+                     raise SocketError, "refused non-public or unresolvable hosted endpoint: #{uri.host}"
+                   Master::Io::SsrfGuard.http_for(uri, address, timeout: OPEN_TIMEOUT_S)
+                 end
+          http.open_timeout = OPEN_TIMEOUT_S
+          http.read_timeout = read_idle_timeout_s
+          http.write_timeout = OPEN_TIMEOUT_S
+          http.start do |connection|
+            # Keep the stream unread until the callback so the parser receives
+            # each bounded chunk. A redirect is a response, never an automatic
+            # second connection; a follow-up must re-enter this address policy.
             answer = nil
-            http.request(request) do |response|
-              return http_lane_error(lane, response) unless response.is_a?(Net::HTTPSuccess)
+            connection.request(request) do |response|
+              unless response.is_a?(Net::HTTPSuccess)
+                response.body = bounded_response_body(response)
+                return http_lane_error(lane, response)
+              end
 
               answer = if response["Content-Type"].to_s.include?("event-stream")
                          assemble_stream(response, lane)
                        else
-                         JSON.parse(response.body).dig("choices", 0, "message", "content").to_s
+                         parsed = JSON.parse(bounded_response_body(response))
+                         parsed.dig("choices", 0, "message", "content").to_s
                        end
             end
             answer
           end
         rescue Net::ReadTimeout => e
           Result.err("#{lane} went silent longer than #{read_idle_timeout_s}s: #{e.message}", category: :timeout)
+        ensure
+          http.finish if http&.started? rescue IOError, SystemCallError
+        end
+
+        def local_http_uri?(uri)
+          return false unless uri.is_a?(URI::HTTP) && uri.scheme == "http"
+          return false unless uri.userinfo.nil? && uri.fragment.nil?
+
+          host = uri.hostname.to_s.downcase
+          return true if host == "localhost"
+
+          IPAddr.new(host).loopback?
+        rescue IPAddr::InvalidAddressError
+          false
+        end
+
+        def bounded_response_body(response)
+          body = +"".b
+          response.read_body do |chunk|
+            raise Master::Io::SsrfGuard::ResponseTooLarge, "provider response exceeds #{MAX_RESPONSE_BYTES} bytes" if
+              body.bytesize + chunk.bytesize > MAX_RESPONSE_BYTES
+
+            body << chunk
+          end
+          body
         end
 
         # SSE deltas as they arrive. An event is the fields up to the next blank
@@ -212,7 +251,12 @@ module Master
           content = +""
           tail = +""
           event = nil
+          wire_bytes = 0
           response.read_body do |chunk|
+            wire_bytes += chunk.bytesize
+            raise Master::Io::SsrfGuard::ResponseTooLarge, "provider stream exceeds #{MAX_RESPONSE_BYTES} bytes" if
+              wire_bytes > MAX_RESPONSE_BYTES
+
             tail << chunk
             while (index = tail.index("\n"))
               (line, tail = tail[0...index], tail[(index + 1)..].to_s)
