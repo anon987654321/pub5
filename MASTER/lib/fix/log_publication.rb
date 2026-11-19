@@ -67,9 +67,12 @@ module Master
           return Result.new(skipped: "MASTER_IN_PROOF suite; set PUB5_FIX_LOG_PUBLISH=1 to force publication")
         end
 
-        body, truncated = bounded(log_text.to_s)
-        redacted = ::SecretRedaction.redact(body)
-        residue = ::SecretRedaction.residue(redacted)
+        # Redact before byte-bounding: slicing the tail first can remove a
+        # secret's key name and leave its value looking like ordinary text.
+        full_text = log_text.to_s.encode(Encoding::UTF_8, invalid: :replace, undef: :replace)
+        redacted = ::SecretRedaction.redact(full_text)
+        body, truncated = bounded(redacted)
+        residue = ::SecretRedaction.residue(body)
         unless residue.empty?
           return Result.new(skipped: "residue audit refused publication: #{residue.first(3).join('; ')}")
         end
