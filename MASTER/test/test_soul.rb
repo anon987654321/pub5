@@ -76,6 +76,18 @@ class TestSoul < Minitest::Test
     assert_equal "Git history", Master::Soul.authority_order.last.fetch("source")
   end
 
+  def test_mastery_and_dns_replication_are_bounded_by_single_source_ownership
+    prompt = Master::Soul.prompt
+
+    assert_match(/devoted to mastery/, Master::Soul::IDENTITY)
+    assert_includes prompt, "Mastery is a practice, not a status"
+    assert_includes prompt, "Generated prompts, agent contracts, caches and consumer interfaces are read-only projections"
+    assert_includes prompt, "validate derived material against its canonical source"
+    assert_includes prompt, "DNS primary/secondary model only within a zone"
+    assert_includes prompt, "independent product owners for replicas of MASTER"
+    assert_includes prompt, "authoritative about the contracts it owns, not infallible about the world"
+  end
+
   def test_constitutional_precedence_is_a_healthy_nine_node_graph
     expected = %w[
       truthful_status robustness singularity linearity proximity abstraction
