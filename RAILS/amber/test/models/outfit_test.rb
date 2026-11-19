@@ -29,10 +29,12 @@ class OutfitTest < ActiveSupport::TestCase
     item = Item.create!(user: @user, title: "Oxford shirt", category: "Tops")
     OutfitItem.create!(outfit: outfit, item: item)
     item.photos.attach(io: StringIO.new("garment image"), filename: "shirt.jpg", content_type: "image/jpeg")
+    outfit.image.attach(io: StringIO.new("outfit image"), filename: "look.jpg", content_type: "image/jpeg")
 
-    garment = Amber::HomeLooks.outfit_looks(@user.outfits).first.garments.first
+    look = Amber::HomeLooks.outfit_looks(@user.outfits).first
 
-    assert_equal item.photos.first.blob_id, garment.photo.blob_id
+    assert_equal outfit.image.attachment.blob_id, look.image.blob_id
+    assert_equal item.photos.first.blob_id, look.garments.first.photo.blob_id
   end
 
   # likes_count counted presses; one person could raise it as fast as the write limit.

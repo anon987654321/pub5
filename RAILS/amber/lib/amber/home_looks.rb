@@ -15,7 +15,7 @@ module Amber
     NAME_KEYS = %i[weekend studio dinner morning].freeze
 
     Garment = Data.define(:title, :color, :category, :zone, :photo)
-    Look = Data.define(:name, :garments) do
+    Look = Data.define(:name, :garments, :image) do
       # The track's captions: the whole outfit first, then one per garment.
       def captions(whole) = [ whole ] + garments.map(&:title)
     end
@@ -45,11 +45,12 @@ module Amber
     def outfit_looks(scope)
       return [] unless scope
 
-      scope.includes(items: { photos_attachments: { blob: :variant_records } }).limit(COUNT).filter_map do |outfit|
+      scope.with_images_for_display.limit(COUNT).filter_map do |outfit|
         garments = outfit.items.map do |item|
           garment(item.title, item.color, item.category, photo: item.photos.first)
         end
-        Look.new(name: outfit.name, garments: layered(garments)) if garments.any?
+        image = outfit.image.attachment if outfit.image.attached?
+        Look.new(name: outfit.name, garments: layered(garments), image: image) if garments.any?
       end
     end
 
@@ -64,7 +65,7 @@ module Amber
           row = rows[index]
           garment(row[:title], row[:color], DressingRoom::FALLBACK_CATEGORY.fetch(key)) if row
         end
-        Look.new(name: nil, garments: layered(garments))
+        Look.new(name: nil, garments: layered(garments), image: nil)
       end
     end
 

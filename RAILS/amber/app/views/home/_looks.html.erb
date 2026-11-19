@@ -18,7 +18,13 @@
              data-action="keydown->look-track#key">
           <% slides.each_with_index do |caption, position| %>
             <figure class="amber-look-slide">
-              <% if position.zero? %>
+              <% if position.zero? && look.image.present? %>
+                <div class="amber-look-media amber-look-media--single" role="img"
+                     aria-label="<%= look.garments.map(&:title).join(", ") %>">
+                  <%= responsive_image_tag look.image, alt: "", preset: :card,
+                        sizes: "(max-width: 768px) 78vw, 560px", class: "amber-look-image" %>
+                </div>
+              <% elsif position.zero? %>
                 <div class="amber-look-media amber-look-media--outfit<%= " amber-look-media--outfit-single" if look.garments.one? %><%= " amber-look-media--triple" if look.garments.size == 3 %>"
                      role="group" aria-label="<%= look.garments.map(&:title).join(", ") %>">
                   <% look.garments.each do |garment| %>
