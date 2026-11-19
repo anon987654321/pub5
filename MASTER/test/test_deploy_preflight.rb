@@ -90,7 +90,7 @@ class DeployPreflightTest < Minitest::Test
       "Expected: 1",
       "  Actual: 0",
       *Array.new(20) { |i| "ok  later check #{i}" },
-    ].join("\\n")
+    ].join("\n")
 
     result = Pre.shell(->(*) { [failure, false] }, ["ruby", "OPENBSD/bin/rehearse"], Master::REPO_ROOT)
 
