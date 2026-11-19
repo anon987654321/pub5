@@ -1,7 +1,7 @@
 # Shared OpenBSD Operator prompt for interactive zsh sessions.
-# Deliberately not the REPL prompt: Master::Face::Contract.shell_prompt is the
-# tree-ksh "<tree> <llm>@master$" shape inside MASTER, while the operator's
-# own zsh keeps the classic host:path$ login grammar.
+# Deliberately separate from MASTER's interactive prompt: its REPL is checkout-
+# relative, Git-qualified when applicable, and ends with the operator's IRC nick.
+# The operator's own zsh keeps the classic host:path$ login grammar.
 [[ -o interactive ]] || return
 
 PROMPT='%m:%~$ '
