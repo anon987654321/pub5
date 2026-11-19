@@ -96,6 +96,25 @@ class TestFixKernel < Minitest::Test
     end
   end
 
+  def test_append_refuses_a_hard_linked_ledger_without_writing
+    with_workspace do |root|
+      kernel = K.new(root:)
+      kernel.append_event("first", {}, run_id: "hard-link")
+      path = kernel.log_path
+      outside = File.join(root, "outside-ledger.jsonl")
+      File.link(path, outside)
+      before = File.binread(path)
+
+      error = assert_raises(K::LedgerCorruption) do
+        kernel.append_event("must_not_land", {}, run_id: "hard-link")
+      end
+
+      assert_match(/hard-linked/, error.message)
+      assert_equal before, File.binread(path)
+      assert_equal 2, File.stat(path).nlink
+    end
+  end
+
   def test_full_verification_refuses_an_incomplete_final_record
     with_workspace do |root|
       path = write_log(root, [%w[terminal a]])
