@@ -117,8 +117,8 @@ class TestBinRuby < Minitest::Test
     end
   end
 
-  # A build left by an older RUBY_VER must not be trusted blind: a 3.2.x build
-  # answered here and then failed Bundler's own `ruby ">= 3.3"` check.
+  # A build left by an older RUBY_VER must not be trusted blind: a 3.1.x build
+  # answered here and then failed Bundler's own `ruby ">= 3.2"` check.
   def test_dev_bootstrap_ignores_a_prior_build_below_the_floor
     Dir.mktmpdir do |dir|
       master = staged_master_with_tools_ruby(dir, version: "3.1.9", marker: "STALE-BUILT")
