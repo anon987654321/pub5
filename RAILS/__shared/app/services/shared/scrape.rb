@@ -99,10 +99,11 @@ module Shared
     def self.host_resolver_rules(pins)
       rules = pins.sort.filter_map do |host, address|
         raise ArgumentError, "invalid browser pin hostname: #{host}" unless Shared::OutboundHttp.valid_resolver_host?(host)
-        next if ip_literal_host?(host)
 
         ip = IPAddr.new(address)
         raise ArgumentError, "non-public browser pin refused: #{host}" if Shared::OutboundHttp.unsafe_ip?(ip)
+        next if ip_literal_host?(host)
+
         destination = ip.ipv6? ? "[#{ip}]" : ip.to_s
         "MAP #{host} #{destination}"
       end
