@@ -159,12 +159,14 @@ class TestCLITerminalOutput < Minitest::Test
     release = Queue.new
     thread = nil
 
-    Master::Voice::BootSound.stub(:play, -> { entered << true; release.pop }) do
-      Timeout.timeout(1) { cli.send(:play_boot_sound) }
+    Master::Voice::BootSound.stub(:enabled?, true) do
+      Master::Voice::BootSound.stub(:play, -> { entered << true; release.pop }) do
+        Timeout.timeout(1) { cli.send(:play_boot_sound) }
       thread = cli.instance_variable_get(:@boot_sound_thread)
       assert_instance_of Thread, thread
       Timeout.timeout(1) { entered.pop }
-      assert thread.alive?, "the caller must not wait for WAV rendering or playback"
+        assert thread.alive?, "the caller must not wait for WAV rendering or playback"
+      end
     end
   ensure
     release << true if release
