@@ -49,7 +49,9 @@ class SharedScrapeTest < ActiveSupport::TestCase
     source = File.read(Rails.root.join("../__shared/app/services/shared/scrape.rb"), encoding: "UTF-8")
     assert_includes source, "browser.network.intercept"
     assert_includes source, "browser.on(:request)"
-    assert_includes source, "safe_request_url?(request.url)"
+    assert_includes source, "public_browser_url?(uri) && pins.key?(host)"
+    assert_includes source, "pins[host] = pinned_public_address!(host)"
+    assert_includes source, "MAP * ^NOTFOUND"
     refute_match(/browser_options:\s*\{[^}]*no-sandbox/m, source,
                  "untrusted pages must not run outside Chromium's sandbox")
   end
@@ -90,6 +92,29 @@ class SharedScrapeTest < ActiveSupport::TestCase
     }.each do |address, expected|
       actual = Shared::Scrape.public_http_url?("https://[#{address}]/")
       assert_equal expected, actual, address
+    end
+  end
+
+  test "the browser's fixed DNS map pins approved hosts and forbids fallback" do
+    rules = Shared::Scrape.host_resolver_rules(
+      "example.com" => PUBLIC_ADDRESS,
+      "images.example.com" => "2606:4700:4700::1111"
+    )
+
+    assert_includes rules, "MAP example.com #{PUBLIC_ADDRESS}"
+    assert_includes rules, "MAP images.example.com [2606:4700:4700::1111]"
+    assert_includes rules, "MAP * ^NOTFOUND"
+  end
+
+  test "scrape URLs reject unusual ports, credentials and fragments before resolution" do
+    invalid = [
+      "https://example.com:8443/",
+      "http://example.com:8080/",
+      "https://user:pass@example.com/",
+      "https://example.com/page#fragment"
+    ]
+    invalid.each do |url|
+      refute Shared::Scrape.public_http_url?(url, resolver: ->(_host) { flunk "invalid URL must not resolve" }), url
     end
   end
 
