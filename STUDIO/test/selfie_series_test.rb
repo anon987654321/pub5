@@ -106,7 +106,7 @@ class TestSelfieSeries < Minitest::Test
     refute File.exist?(old)
     refute File.exist?(processed)
     assert File.file?(other)
-    archive = Dir.glob(File.join(directory, ".archive", "probe", "*", "*")).sort
+    archive = Dir.glob(File.join(directory, "probe", "out", "archive", "*", "*")).sort
     assert_equal 2, archive.length
     assert_equal %w[old old], archive.map { |path| File.read(path) }
     assert_equal 2, ledger_rows("replace_archive").first.fetch("archived")
@@ -127,7 +127,7 @@ class TestSelfieSeries < Minitest::Test
 
     assert_equal 2, rendered.length
     assert_equal "previous", File.read(old)
-    assert_empty Dir.glob(File.join(directory, ".archive", "probe", "*", "*"))
+    assert_empty Dir.glob(File.join(directory, "probe", "out", "archive", "*", "*"))
     row = ledger_rows("replace_preserved").first
     assert_equal [1, 2, 3], [row.fetch("previous"), row.fetch("rendered"), row.fetch("expected")]
   end
