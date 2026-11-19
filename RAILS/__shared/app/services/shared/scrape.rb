@@ -3,8 +3,6 @@
 require "json"
 require "ipaddr"
 require "socket"
-require "ipaddr"
-require "socket"
 require "uri"
 require_relative "outbound_http"
 
@@ -18,7 +16,6 @@ module Shared
   class Scrape
     MODEL = ENV.fetch("SCRAPE_MODEL", Shared::Llm::DEFAULT_MODEL)
     HTML_MAX = 60_000
-    BLOCKED_HOST_SUFFIXES = %w[.localhost .local .internal .home.arpa .onion].freeze
     BLOCKED_HOST_SUFFIXES = Shared::OutboundHttp::BLOCKED_HOST_SUFFIXES
 
 
