@@ -98,6 +98,36 @@ class SsrfGuardTest < Minitest::Test
     end
   end
 
+  def test_rejects_nonstandard_http_ports_before_dns
+    called = false
+    Guard.stub(:resolve_addresses, ->(_host) { called = true; ["93.184.216.34"] }) do
+      refute Guard.safe_uri?(URI("https://example.com:8443/"))
+      refute Guard.safe_uri?(URI("http://example.com:8080/"))
+    end
+    refute called, "nonstandard ports must be rejected before DNS resolution"
+    assert Guard.safe_uri?(URI("http://example.com/")) if Guard.stub(:resolve_addresses, ["93.184.216.34"]) { true }
+  end
+
+  def test_requires_a_fully_qualified_dns_name
+    called = false
+    Guard.stub(:resolve_addresses, ->(_host) { called = true; ["93.184.216.34"] }) do
+      refute Guard.safe_uri?(URI("http://instance-data/"))
+    end
+    refute called, "single-label names must not use resolver search domains"
+  end
+
+  def test_http_for_refuses_an_untrusted_pinned_address
+    assert_raises(SocketError) do
+      Guard.http_for(URI("https://example.com/"), "169.254.169.254")
+    end
+  end
+
+  def test_blocks_ipv4_compatible_ipv6_and_unique_local_ipv6
+    %w[::a00:1 fc00::1 fd00::1].each do |address|
+      assert Guard.blocked_ip?(IPAddr.new(address)), "#{address} must be blocked"
+    end
+  end
+
   def test_rejects_url_credentials_and_fragments
     refute Guard.safe_uri?(URI.parse("https://user:pass@example.com/"))
     refute Guard.safe_uri?(URI.parse("https://example.com/path#fragment"))
