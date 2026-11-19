@@ -12,7 +12,9 @@ class WorldTest < Minitest::Test
   E = Master::Core::Effect
 
   def build_world(**options)
-    Master::Core::World.new(process_runner: Master::Io::Exec, **options)
+    Master::Core::World.new(
+      process_runner: Master::Io::Exec, atomic_writer: Master::Io::AtomicWrite, **options
+    )
   end
 
   def with_world
@@ -125,11 +127,13 @@ class WorldTest < Minitest::Test
   def test_write_fsyncs_the_parent_directory_after_rename
     with_world do |world, root|
       observed = []
-      world.define_singleton_method(:fsync_directory) do |directory, expected: nil|
+      observer = lambda do |directory, expected: nil|
         observed << [directory, File.read(File.join(directory, "durable.txt")), expected&.ino]
       end
-
-      result = world.perform(E.write("durable.txt", "durable\n"))
+      result = nil
+      Master::Io::AtomicWrite.stub(:fsync_directory, observer) do
+        result = world.perform(E.write("durable.txt", "durable\n"))
+      end
 
       assert result.ok?, result.message
       assert_equal [[root, "durable\n", File.stat(root).ino]], observed
@@ -190,7 +194,7 @@ class WorldTest < Minitest::Test
       result = world.perform(E.write("redirect/escaped.txt", "no"))
 
       refute result.ok?
-      assert_match(/path escapes workspace/, result.message)
+      assert_match(/symlinked atomic-write directory/, result.message)
       refute File.exist?(File.join(outside, "escaped.txt"))
     end
   end
@@ -287,6 +291,18 @@ class WorldTest < Minitest::Test
       assert_empty world.git_operations
       refute result.ok?
       assert_match(/process runner unavailable/, result.message)
+    end
+  end
+
+  def test_write_fails_closed_without_a_host_atomic_writer
+    Dir.mktmpdir do |root|
+      world = Master::Core::World.new(root:)
+      result = world.perform(E.write("note.txt", "must not land"))
+
+      refute_includes world.verbs, :write
+      refute result.ok?
+      assert_match(/atomic writer unavailable/, result.message)
+      refute File.exist?(File.join(root, "note.txt"))
     end
   end
 

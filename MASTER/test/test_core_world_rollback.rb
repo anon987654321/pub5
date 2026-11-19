@@ -15,7 +15,7 @@ class WorldRollbackTest < Minitest::Test
       File.write(File.join(root, "tracked.txt"), "pre-effect\n")
       File.write(File.join(root, "untracked.txt"), "keep me\n")
 
-      world = Master::Core::World.new(root:, process_runner: Master::Io::Exec)
+      world = Master::Core::World.new(root:, process_runner: Master::Io::Exec, atomic_writer: Master::Io::AtomicWrite)
       checkpoint = world.checkpoint
 
       File.write(File.join(root, "tracked.txt"), "failed-effect\n")
@@ -43,7 +43,7 @@ class WorldRollbackTest < Minitest::Test
       system("git", "-C", repo, "commit", "-qm", "seed", out: File::NULL, err: File::NULL)
       File.write(File.join(root, "lib", "x.rb"), "operator edit\n")
 
-      world = Master::Core::World.new(root:, process_runner: Master::Io::Exec)
+      world = Master::Core::World.new(root:, process_runner: Master::Io::Exec, atomic_writer: Master::Io::AtomicWrite)
       checkpoint = world.checkpoint
       File.write(File.join(root, "lib", "x.rb"), "failed write\n")
       observation = world.rollback(checkpoint, Master::Core::Effect.write("lib/x.rb", "failed write\n"))
@@ -65,7 +65,7 @@ class WorldRollbackTest < Minitest::Test
       system("git", "-C", root, "add", ".", out: File::NULL, err: File::NULL)
       system("git", "-C", root, "commit", "-qm", "seed", out: File::NULL, err: File::NULL)
 
-      world = Master::Core::World.new(root:, process_runner: Master::Io::Exec)
+      world = Master::Core::World.new(root:, process_runner: Master::Io::Exec, atomic_writer: Master::Io::AtomicWrite)
       checkpoint = world.checkpoint
 
       File.write(File.join(root, "mine.txt"), "failed-effect\n")
@@ -92,7 +92,7 @@ class WorldRollbackTest < Minitest::Test
       system("git", "-C", root, "commit", "-qm", "seed", out: File::NULL, err: File::NULL)
       File.write(File.join(root, "tracked.txt"), "dirty\n")
 
-      world = Master::Core::World.new(root:, process_runner: Master::Io::Exec)
+      world = Master::Core::World.new(root:, process_runner: Master::Io::Exec, atomic_writer: Master::Io::AtomicWrite)
       checkpoint = world.checkpoint
       File.write(File.join(root, "tracked.txt"), "dirtier\n")
 

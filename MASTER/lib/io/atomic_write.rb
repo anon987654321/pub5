@@ -9,6 +9,8 @@ module Master
     # via fsync, and optionally fsyncs the parent directory on POSIX systems
     # to commit the rename to disk.
     module AtomicWrite
+      extend self
+
       # A rewrite keeps the file's own mode unless one is asked for: the rename
       # replaced it with 0644, and an executable rewritten here stopped being one.
       # The bytes go out as given. bin/master sets Encoding.default_internal, so a
@@ -53,6 +55,21 @@ module Master
         raise IOError, "cannot safely resolve atomic-write directory: #{error.class}: #{error.message}"
       end
 
+      # Validate before a caller snapshots the destination for undo. The
+      # write path repeats this check after creating missing parent directories.
+      def validate_atomic_destination(path)
+        expanded = File.expand_path(path)
+        dir = verified_atomic_directory(File.dirname(expanded))
+        destination = File.join(dir, File.basename(expanded))
+        return unless File.exist?(destination) || File.symlink?(destination)
+
+        stat = File.lstat(destination)
+        unless stat.file? && !stat.symlink? && stat.nlink == 1
+          raise IOError, "atomic-write destination must be a singly linked regular file"
+        end
+        stat
+      end
+
       def write_atomic(path, content, fsync: true, fsync_dir: true, mode: nil)
         expanded_destination = File.expand_path(path)
         dir = verified_atomic_directory(File.dirname(expanded_destination))
@@ -65,14 +82,8 @@ module Master
         end
         raise IOError, "atomic-write parent changed during creation" unless verified_atomic_directory(dir) == dir
 
-        original_stat = if File.exist?(destination) || File.symlink?(destination)
-                          stat = File.lstat(destination)
-                          unless stat.file? && !stat.symlink? && stat.nlink == 1
-                            raise IOError, "atomic-write destination must be a singly linked regular file"
-                          end
-                          stat
-                        end
-        mode ||= original_stat ? original_stat.mode & 0o7777 : 0o644
+        original_stat = validate_atomic_destination(destination)
+        mode ||= original_stat ? original_stat.mode & 0o7777 : (0o666 & ~File.umask)
 
         temp = Tempfile.new(".master_atomic_", dir, binmode: true)
         current_directory = File.lstat(dir)
@@ -84,8 +95,8 @@ module Master
 
         temp.write(content)
         temp.flush
-        temp.fsync if fsync
         temp.chmod(mode)
+        temp.fsync if fsync
         temp.close
 
         # Detect replacement of the parent or destination before rename. The
@@ -111,16 +122,25 @@ module Master
         end
 
         File.rename(temp.path, destination)
-        fsync_directory(dir) if fsync_dir && RUBY_PLATFORM !~ /win32|mingw/
+        fsync_directory(dir, expected: directory_stat) if fsync_dir && RUBY_PLATFORM !~ /win32|mingw/
         path
       rescue StandardError
         cleanup_atomic_temp(temp)
         raise
       end
 
-      def fsync_directory(dir)
+      def fsync_directory(dir, expected: nil)
         dir_fd = IO.sysopen(dir, File::RDONLY)
         dir_io = IO.new(dir_fd)
+        opened = dir_io.stat
+        unless opened.directory? && (!expected || (opened.dev == expected.dev && opened.ino == expected.ino))
+          raise IOError, "atomic-write directory identity changed before fsync"
+        end
+
+        current = File.lstat(dir)
+        unless current.directory? && !current.symlink? && current.dev == opened.dev && current.ino == opened.ino
+          raise IOError, "atomic-write directory path changed before fsync"
+        end
         dir_io.fsync
       ensure
         dir_io&.close

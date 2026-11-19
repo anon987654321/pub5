@@ -27,7 +27,7 @@ class TestCoreCancellation < Minitest::Test
 
   def build_fold(model:, root:, token:, world: nil, max_turns: 3)
     Master::Core::Fold.new(
-      model:, constitution:, world: world || Master::Core::World.new(root:, process_runner: Master::Io::Exec),
+      model:, constitution:, world: world || Master::Core::World.new(root:, process_runner: Master::Io::Exec, atomic_writer: Master::Io::AtomicWrite),
       memory: Master::Core::Memory.new, max_turns:, cancellation: token
     )
   end

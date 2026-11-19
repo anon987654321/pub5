@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "../io/exec"
+require_relative "../io/atomic_write"
 require_relative "../design/authoring"
 require_relative "../trace/effect_observer"
 require_relative "../io/git_operations"
@@ -175,11 +176,12 @@ module Master
 
       # Only the interactive session sets an asker; see Session#terminal_ask.
       def build_world(root:, container:, capabilities: Master::Core::Capabilities.for(:fix), network: nil,
-                      probe: nil, browser: nil, process_runner: Master::Io::Exec)
+                      probe: nil, browser: nil, process_runner: Master::Io::Exec,
+                      atomic_writer: Master::Io::AtomicWrite)
         critique_runner = container ? CouncilCrit.runner_for(container) : nil
         Master::Core::World.new(root:, ask: Fiber[:master_terminal_ask], critique_runner:,
                                 undo: container&.fetch(:undo, nil), capabilities:, network:, probe:, browser:,
-                                process_runner:)
+                                process_runner:, atomic_writer:)
       end
 
       # The brokered Chromium session, or nil. A browser process is only ever

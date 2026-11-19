@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "digest"
-require "fileutils"
 require "tmpdir"
 require "rbconfig"
 require "securerandom"
@@ -39,7 +38,7 @@ module Master::Core
     # The host supplies the process boundary. Core owns effect policy; the host
     # owns subprocess execution, cancellation and environment handling.
     def initialize(root:, ask: nil, critique_runner: nil, undo: nil, capabilities: Capabilities.for(:fix),
-                   network: nil, probe: nil, browser: nil, process_runner: nil)
+                   network: nil, probe: nil, browser: nil, process_runner: nil, atomic_writer: nil)
       @root = File.expand_path(root)
       @ask = ask
       @critique_runner = critique_runner
@@ -49,6 +48,7 @@ module Master::Core
       @probe = probe
       @browser = browser
       @process_runner = process_runner
+      @atomic_writer = atomic_writer
     end
 
     # The Core-owned browser broker, or nil. Injected for the same reason
@@ -65,6 +65,7 @@ module Master::Core
     # A World exposes only effects its capabilities and injected services can
     # actually perform. Constitution and World both recheck every proposal.
     def process_runner? = @process_runner&.respond_to?(:capture2e) == true
+    def atomic_writer? = @atomic_writer&.respond_to?(:validate_atomic_destination) && @atomic_writer&.respond_to?(:write_atomic)
 
     def verbs
       Master::Core::VERBS.select do |verb|
@@ -75,6 +76,8 @@ module Master::Core
           process_runner? && @probe && @capabilities.allow?(:probe)
         when :exec
           process_runner? && @capabilities.allow?(:execute)
+        when :write
+          atomic_writer? && @capabilities.allow?(:write)
         else
           @capabilities.allow?(CAPABILITIES.fetch(verb))
         end
@@ -213,16 +216,12 @@ module Master::Core
     end
 
     def do_write(path:, content:, **)
-      abs = within(path)
-      FileUtils.mkdir_p(File.dirname(abs))
-      # Re-resolve after directory creation. A parent replaced by a symlink
-      # between the first check and mkdir_p must not redirect the final write.
-      checked = within(path)
-      raise "path changed before write: #{path}" unless checked == abs
+      raise "atomic writer unavailable; host must inject write_atomic" unless atomic_writer?
 
-      validate_write_destination!(abs)
+      abs = within(path)
+      @atomic_writer.validate_atomic_destination(abs)
       @undo&.snapshot(abs)
-      write_atomic(abs, content)
+      @atomic_writer.write_atomic(abs, content)
       Observation.ok("wrote #{path} (#{content.bytesize}b)")
     end
 
@@ -480,104 +479,6 @@ module Master::Core
 
     def under_root?(abs, root)
       abs == root || abs.start_with?(root + File::SEPARATOR)
-    end
-
-    # Write via tmp+rename: an OOM kill or crash mid-write can never leave a
-    # half-written file, since rename is atomic on a POSIX filesystem. The tmp
-    # sits beside the target so the rename stays on one device, which is also
-    # why EXDEV cannot arise here however far apart root and target are.
-    #
-    # fsync before the rename, because atomic and durable are different
-    # promises. Rename guarantees a reader sees the old file or the new one and
-    # never half of one; it guarantees nothing about the data having reached the
-    # disk. On a power loss the rename can survive while the bytes it points at
-    # do not, and the result is an intact filename over a zero-length file —
-    # worse than a half-written one, because it looks fine.
-    #
-    # Io::AtomicWrite does the same job with Tempfile and a directory fsync.
-    # core/ does not reach into lib/, so this stays its own few lines rather
-    # than inverting that dependency to save them.
-    def write_atomic(abs, content)
-      directory = File.dirname(abs)
-      real_directory = File.realpath(directory)
-      real_root = File.realpath(@root)
-      raise IOError, "write parent escapes workspace" unless under_root?(real_directory, real_root)
-
-      directory_stat = File.stat(real_directory)
-      destination = File.join(real_directory, File.basename(abs))
-      original = validate_write_destination!(destination)
-      tmp = File.join(real_directory, ".#{File.basename(abs)}.tmp.#{Process.pid}.#{SecureRandom.hex(4)}")
-      File.open(tmp, File::WRONLY | File::CREAT | File::EXCL, 0o666) do |file|
-        file.binmode
-        file.write(content)
-        file.flush
-        file.fsync
-        file.chmod(original.mode & 0o7777) if original
-      end
-
-      current_real_directory = File.realpath(directory)
-      current_directory = File.stat(current_real_directory)
-      current_destination = if File.exist?(destination) || File.symlink?(destination)
-                              File.lstat(destination)
-                            end
-      unless current_real_directory == real_directory &&
-             current_directory.dev == directory_stat.dev && current_directory.ino == directory_stat.ino
-        raise IOError, "write parent changed before replacement"
-      end
-      if original
-        unless current_destination&.file? && !current_destination.symlink? && current_destination.nlink == 1 &&
-               current_destination.dev == original.dev && current_destination.ino == original.ino
-          raise IOError, "write destination changed before replacement"
-        end
-      elsif current_destination
-        raise IOError, "write destination appeared before replacement"
-      end
-
-      File.rename(tmp, destination)
-      fsync_directory(real_directory, expected: directory_stat) unless RUBY_PLATFORM.match?(/win32|mingw/)
-    rescue StandardError
-      if tmp && File.exist?(tmp) && real_directory && directory_stat
-        begin
-          current_real_directory = File.realpath(directory)
-          current_directory = File.stat(current_real_directory)
-          if current_real_directory == real_directory &&
-             current_directory.dev == directory_stat.dev && current_directory.ino == directory_stat.ino
-            File.delete(tmp)
-          end
-        rescue SystemCallError
-          # A moved/replaced parent is not safe to clean up through its old path.
-        end
-      end
-      raise
-    end
-
-    def validate_write_destination!(path)
-      return unless File.exist?(path) || File.symlink?(path)
-
-      stat = File.lstat(path)
-      unless stat.file? && !stat.symlink? && stat.nlink == 1
-        raise IOError, "write destination must be a singly linked regular file"
-      end
-      stat
-    end
-
-    # File fsync makes the bytes durable; the parent fsync makes the rename
-    # durable. Without both, a power loss can leave a successful-looking path
-    # whose directory entry never reached stable storage.
-    def fsync_directory(directory, expected: nil)
-      descriptor = IO.sysopen(directory, File::RDONLY)
-      handle = IO.new(descriptor)
-      opened = handle.stat
-      unless opened.directory? && (!expected || (opened.dev == expected.dev && opened.ino == expected.ino))
-        raise IOError, "directory identity changed before fsync"
-      end
-      current = File.stat(File.realpath(directory))
-      unless current.directory? && current.dev == opened.dev && current.ino == opened.ino
-        raise IOError, "directory path changed before fsync"
-      end
-      handle.fsync
-    ensure
-      handle&.close
     end
 
     def git_repo?

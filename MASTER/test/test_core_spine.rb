@@ -34,7 +34,7 @@ class TestKernelSpine < Minitest::Test
   end
 
   def fold_in(dir, effects)
-    Master::Core::Fold.new(model: Model.new(effects), constitution:, world: Master::Core::World.new(root: dir, process_runner: Master::Io::Exec),
+    Master::Core::Fold.new(model: Model.new(effects), constitution:, world: Master::Core::World.new(root: dir, process_runner: Master::Io::Exec, atomic_writer: Master::Io::AtomicWrite),
                            memory: Master::Core::Memory.new, max_turns: 3).run("what does notes.md say")
   end
 
@@ -87,7 +87,7 @@ class TestKernelSpine < Minitest::Test
     Dir.mktmpdir do |dir|
       model = Model.new([Master::Core::Effect.done("fake")])
       memory = Master::Core::Memory.new
-      world = Master::Core::World.new(root: dir, process_runner: Master::Io::Exec)
+      world = Master::Core::World.new(root: dir, process_runner: Master::Io::Exec, atomic_writer: Master::Io::AtomicWrite)
 
       result = Master::Core::Fold.new(
         model:,

@@ -62,10 +62,13 @@ class AtomicWriteTest < Minitest::Test
     assert_equal "600", format("%o", File.stat(path).mode & 0o777)
   end
 
-  def test_default_mode_is_readable
+  def test_default_mode_respects_the_process_umask
+    previous = File.umask(0o077)
     @writer.write_atomic(path, "x")
 
-    assert_equal "644", format("%o", File.stat(path).mode & 0o777)
+    assert_equal "600", format("%o", File.stat(path).mode & 0o777)
+  ensure
+    File.umask(previous) if previous
   end
 
   def test_a_rewrite_keeps_the_file_executable
@@ -75,6 +78,24 @@ class AtomicWriteTest < Minitest::Test
     @writer.write_atomic(path("run"), "#!/bin/sh\necho hi\n")
 
     assert_equal "755", format("%o", File.stat(path("run")).mode & 0o777)
+  end
+
+  def test_module_is_a_directly_injectable_writer
+    Master::Io::AtomicWrite.write_atomic(path, "module service")
+    assert_equal "module service", File.read(path)
+  end
+
+  def test_directory_identity_is_checked_before_fsync
+    other = Dir.mktmpdir("atomic_write_other")
+    expected = File.stat(other)
+
+    error = assert_raises(IOError) do
+      @writer.fsync_directory(@dir, expected:)
+    end
+
+    assert_match(/directory identity changed/, error.message)
+  ensure
+    FileUtils.remove_entry(other) if other
   end
 
   def test_handles_empty_and_binary_content
@@ -91,16 +112,16 @@ class AtomicWriteTest < Minitest::Test
   def test_the_target_never_holds_a_partial_write
     @writer.write_atomic(path, "old")
     seen = []
-    @writer.stub(:fsync_directory, ->(_dir) { seen << File.read(path) }) do
+    @writer.stub(:fsync_directory, lambda { |_dir, expected: nil| seen << [File.read(path), expected&.ino] }) do
       @writer.write_atomic(path, "new content")
     end
 
-    assert_equal ["new content"], seen, "rename must happen before the directory fsync"
+    assert_equal [["new content", File.stat(@dir).ino]], seen, "rename must happen before the directory fsync"
   end
 
   def test_a_failed_write_removes_its_temp_file
     error = Class.new(StandardError)
-    @writer.stub(:fsync_directory, ->(_dir) { raise error, "disk gone" }) do
+    @writer.stub(:fsync_directory, ->(_dir, expected: nil) { raise error, "disk gone" }) do
       assert_raises(error) { @writer.write_atomic(path, "doomed") }
     end
 

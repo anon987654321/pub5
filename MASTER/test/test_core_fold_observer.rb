@@ -18,7 +18,7 @@ class FoldObserverTest < Minitest::Test
     Master::Core::Fold.new(
       model:,
       constitution: Master::Core::Constitution.new(laws: []),
-      world: world || Master::Core::World.new(root:, process_runner: Master::Io::Exec),
+      world: world || Master::Core::World.new(root:, process_runner: Master::Io::Exec, atomic_writer: Master::Io::AtomicWrite),
       memory: Master::Core::Memory.new,
       observer:,
       effect_observer:,
@@ -51,7 +51,7 @@ class FoldObserverTest < Minitest::Test
       fold = Master::Core::Fold.new(
         model: ScriptedModel.new(Master::Core::Effect.write("a", "b"), Master::Core::Effect.done),
         constitution: Master::Core::Constitution.new(laws: [block_writes]),
-        world: Master::Core::World.new(root:, process_runner: Master::Io::Exec),
+        world: Master::Core::World.new(root:, process_runner: Master::Io::Exec, atomic_writer: Master::Io::AtomicWrite),
         memory: Master::Core::Memory.new,
         observer: ->(turn:, effect:, observation:) { seen << [effect.verb, observation.ok?] },
       )
