@@ -335,7 +335,7 @@ module Operator
       half = (MAX_FAILURE_DETAIL_BYTES - 80) / 2
       head = text.byteslice(0, half).to_s.scrub
       tail = text.byteslice(-half, half).to_s.scrub
-      "#{head}\\n... failure output truncated; omitted #{text.bytesize - head.bytesize - tail.bytesize} bytes ...\\n#{tail}"
+      "#{head}\n... failure output truncated; omitted #{text.bytesize - head.bytesize - tail.bytesize} bytes ...\n#{tail}"
     end
 
     def capture(argv, chdir, timeout: TIMEOUT)
