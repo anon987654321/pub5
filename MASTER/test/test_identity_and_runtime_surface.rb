@@ -83,11 +83,17 @@ class TestIdentityAndRuntimeSurface < Minitest::Test
     assert_includes prompt, "be curious and proactive"
     assert_includes prompt, "do not ask them to fetch evidence you can retrieve"
     assert_includes prompt, "search and read primary sources"
+    assert_includes prompt, "site:news.ycombinator.com"
+    assert_includes prompt, "ArxivResearch and ar5iv"
+    assert_includes prompt, "GitHubRepoMiner"
+    assert_includes prompt, "CodePen for live HTML/CSS/JavaScript examples"
+    assert_includes prompt, "at least seven materially different solution directions"
+    assert_includes prompt, "contrarian and genuinely radical options"
     assert_includes prompt, "complete independent work while a blocker remains"
   end
 
   def test_operator_contract_teaches_unattended_deploy_completion_and_recovery
-    assert_equal 4, Master::AI::OperatorContract::VERSION
+    assert_equal 5, Master::AI::OperatorContract::VERSION
     prompt = Master::AI::OperatorContract.prompt
 
     assert_includes prompt, "exact target receipt, terminal exit marker and public canary"
