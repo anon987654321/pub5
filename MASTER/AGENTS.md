@@ -315,7 +315,7 @@ An agent arrives with none of the session context that makes the tree
 navigable, so these are the facts that are not deducible from the code and
 that a fresh agent gets wrong on its first attempt.
 
-**Ruby follows the host, not a repository patch pin.** Use the installed Ruby already on `PATH` when it is 3.3 or newer; `MASTER/bin/ruby` prefers that interpreter and only searches alternatives when it is below the compatibility floor. Bundler and gem metadata remain authoritative: if a dependency genuinely requires a newer Ruby, report that exact conflict rather than silently switching runtimes. `PUB5_RUBY` is the explicit override. `MASTER/bin/dev-bootstrap` is a fallback only when no compatible interpreter is installed.
+**Ruby follows the host, not a repository patch pin.** Use the installed Ruby already on `PATH` when it is 3.2 or newer; `MASTER/bin/ruby` prefers that interpreter and only searches alternatives when it is below the compatibility floor. Bundler and gem metadata remain authoritative: if a dependency genuinely requires a newer Ruby, report that exact conflict rather than silently switching runtimes. `PUB5_RUBY` is the explicit override. `MASTER/bin/dev-bootstrap` is a fallback only when no compatible interpreter is installed.
 
 **A sandbox can flip the executable bit on every file.** An agent checkout sometimes shows six thousand mode-only diffs (644→755, zero content). That is not work; it is the sandbox's umask. `git config core.fileMode false` silences it so path-scoped commits stay path-scoped.
 
