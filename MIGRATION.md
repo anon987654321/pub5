@@ -478,7 +478,7 @@ The 124 non-identical/retired source blobs reconcile by owner and disposition:
 
 | Old source group | Blobs | Current disposition |
 | --- | ---: | --- |
-| Root and MASTER runtime selectors, plus RAILS app selectors | 7 | The root .ruby-version, two MASTER pins and four RAILS app pins were retired. The current contract uses the installed compatible Ruby 3.3+ floor and runtime discovery; no patch-level pin or upper bound is authoritative. |
+| Root and MASTER runtime selectors, plus RAILS app selectors | 7 | The root .ruby-version, two MASTER pins and four RAILS app pins were retired. The current contract uses the installed compatible Ruby 3.2+ floor and runtime discovery; no patch-level pin or upper bound is authoritative. |
 | BPLANS/ | 30 | Consolidated into BIZ/: plan folders own published pairs, templates and the authoring/check/print tools live under BIZ/tools/, the old NATO plan is merged into future_nato_weapons/, and the old cover script is superseded by bp_retemplate.mjs. |
 | MASTER/ | 21 | Two runtime selectors are counted in the runtime-selector row above. The backlog became root TODO.md; dialogue policy moved to the voice owner; execution and visual policy were consolidated under the canonical Law catalogue; the permission matrix was renamed PUB5_PERMISSION_MATRIX.md; creative governance moved to MASTER/data/law/; research/repository tools moved under their owners. The four unused legacy face/hero images were retired. The old Smart Turn/ONNX runtime binaries are not tracked in the current tree; their replacement/download integrity is a runtime acceptance concern, not a reason to restore old binaries blindly. |
 | OPENBSD/ | 4 | Nested hooks moved to root .githooks/ and were adapted to the pub5 environment and path contract. |
