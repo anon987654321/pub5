@@ -1,6 +1,6 @@
 #!/bin/sh
 # Idempotent bootstrap for a checkout of this repository on a machine that has
-# neither Ruby 3.3+ nor the box's shell tools. Written for three audiences:
+# neither Ruby 3.2+ nor the box's shell tools. Written for three audiences:
 # a new human on a laptop, a stripped CI sandbox, and the operator provisioning
 # the next box. Every step checks before it builds, so running this twice is
 # free, and nothing outside the checkout is written to.
@@ -37,7 +37,7 @@ have() { command -v "$1" >/dev/null 2>&1; }
 
 ruby_ok() {
   [ -x "$PREFIX/bin/ruby" ] || return 1
-  "$PREFIX/bin/ruby" -e 'exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3") ? 1 : 0)' >/dev/null 2>&1
+  "$PREFIX/bin/ruby" -e 'exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.2") ? 1 : 0)' >/dev/null 2>&1
 }
 
 build_ruby() {
@@ -62,7 +62,7 @@ build_ruby() {
     ./configure --prefix="$PREFIX" --disable-install-doc --with-libyaml-dir="$PREFIX" --enable-shared >/dev/null &&
     make -j"$JOBS" >"$SRC/ruby_make.log" 2>&1 &&
     make install >"$SRC/ruby_install.log" 2>&1)
-  ruby_ok || { echo "bootstrap: ruby build did not produce a working 3.3+ interpreter; see $SRC/ruby_make.log" >&2; exit 1; }
+  ruby_ok || { echo "bootstrap: ruby build did not produce a working 3.2+ interpreter; see $SRC/ruby_make.log" >&2; exit 1; }
   echo "bootstrap: ruby ready — $("$PREFIX/bin/ruby" -v | cut -d' ' -f1-2)"
 }
 
