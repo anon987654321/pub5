@@ -101,16 +101,17 @@ module Master
       def fetch_one(url, full: false)
         uri = URI(url)
         return Result.err("web_fetch: only http(s)", category: :validation) unless %w[http https].include?(uri.scheme)
-        address = SsrfGuard.pinned_address(uri)
-        return Result.err("web_fetch: refused internal/reserved address", category: :validation) unless address
+        return Result.err("web_fetch: invalid HTTP target", category: :validation) unless SsrfGuard.valid_http_uri?(uri)
 
         perm = @governor.permit?(NAME, TIER, url)
         return perm if perm.err?
 
-        response = http_get(uri, address)
+        response = http_get(uri)
         deliver(url, response, full:)
-      rescue TooLarge
+      rescue TooLarge, SsrfGuard::ResponseTooLarge
         Result.err("web_fetch: response exceeds #{MAX_FULL_BYTES} bytes; narrow the request", category: :validation)
+      rescue SocketError
+        Result.err("web_fetch: refused internal/reserved address", category: :validation)
       rescue StandardError => e
         Result.err("web_fetch: #{e.message}", category: :infrastructure)
       end
@@ -139,30 +140,15 @@ module Master
         @injection_guard ||= Master::Review::Security::InjectionGuard.new(mode: :permissive)
       end
 
-      def http_get(uri, address)
-        http = SsrfGuard.http_for(uri, address)
-        http.read_timeout = TIMEOUT
-        http.open_timeout = TIMEOUT
-        http.start do |h|
-          h.request(Net::HTTP::Get.new(uri.request_uri, "User-Agent" => "MASTER/1 (web_fetch)")) do |response|
-            return Fetched.new(code: response.code, body: capped_body(response))
-          end
-        end
-      end
-
-      # Streamed, so a large page is refused at the cap rather than after it is all in memory.
-      def capped_body(response)
-        return "" unless response.code == HTTP_OK
-
-        started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        body = +""
-        response.read_body do |chunk|
-          body << chunk
-          raise TooLarge if body.bytesize > MAX_FULL_BYTES
-          elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
-          raise Timeout::Error, "fetch exceeded #{DEADLINE_S}s" if elapsed > DEADLINE_S
-        end
-        body
+      def http_get(uri)
+        request = Net::HTTP::Get.new(uri.request_uri, "User-Agent" => "MASTER/1 (web_fetch)")
+        response = SsrfGuard.request(
+          uri, request, max_bytes: MAX_FULL_BYTES, timeout: DEADLINE_S,
+          open_timeout: TIMEOUT, read_timeout: TIMEOUT, write_timeout: TIMEOUT
+        )
+        Fetched.new(code: response.code, body: response.body.to_s)
+      rescue SsrfGuard::ResponseTooLarge
+        raise TooLarge
       end
 
       def strip_html(body)
