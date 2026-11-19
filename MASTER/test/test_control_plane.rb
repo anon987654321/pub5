@@ -308,6 +308,9 @@ class ControlPlaneSpec < Minitest::Test
     refute Master::Ops::ProcessLock.idle_interactive_candidate?(
       metadata: base, **args.merge(process: process.merge(stat: "T"))
     )
+    refute Master::Ops::ProcessLock.idle_interactive_candidate?(
+      metadata: base, **args.merge(process: process.merge(stat: "R+"))
+    )
   end
 
   def test_idle_interactive_lock_reclaim_can_be_disabled
