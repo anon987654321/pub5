@@ -6,6 +6,7 @@ work, source-only drafts and historical material. Every claim retains its
 source, date, assumptions and uncertainty; copy persuades through evidence,
 not inflated language. The shared editorial standard lives in
 [MASTER/AGENTS.md](../MASTER/AGENTS.md).
+
 - **Published:** SYRE, Ragnhild, pub.healthcare, Bergen Selvstyreparti and
   Fremtidens helse-OS. These have reader-facing HTML/PDF pairs.
 - **Published guidance:** Ragnhild Mæhle's five-page funding guide lives beside
