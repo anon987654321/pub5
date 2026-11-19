@@ -194,7 +194,9 @@ class TestRenderer < Minitest::Test
 
     assert_match(/\bno model, /, strip_ansi(state))
     refute_match(/\n|\r/, strip_ansi(prompt))
-    assert_match(/\Apub5\/MASTER master\$ \z/, strip_ansi(prompt))
+    nick = renderer.send(:bounded_prompt_segment, ENV.fetch("USER", "operator"), 12)
+    nick = "operator" if nick.empty?
+    assert_equal "pub5/MASTER <#{nick}> ", strip_ansi(prompt)
   end
 
   def test_phase_prompt_uses_the_plain_openbsd_operator_words
@@ -229,7 +231,7 @@ class TestRenderer < Minitest::Test
     state, prompt = FakeRenderer.new(config: {}).prompt_line("model", "idle", tokens: 45_000)
 
     assert_includes strip_ansi(state), "model, 45.0k/128.0k"
-    assert_match(/\A.+@master\$ \z/, strip_ansi(prompt))
+    assert_match(/\A.+ <[^>]+> \z/, strip_ansi(prompt))
   end
 
   def test_cli_prompt_uses_face_interface_geometry
