@@ -9,8 +9,8 @@ name Playlist; the host constraint is `RADIO_SUBDOMAINS`. The former
 `playlist.<city>` host no longer resolves, and no alias remains. The engine
 runs inside Brgen's process and uses Brgen's users; it is not a separate app.
 
-Read [the Brgen guide](../../../README.md) for the vertical pattern and
-[Brgen's agent contract](../../../AGENTS.md) for the host topology.
+Read [the Brgen guide](../../README.md) for the vertical pattern and
+[Brgen's agent contract](../../AGENTS.md) for the host topology.
 
 Users build playlists and sets, add tracks, and invite collaborators as owner, editor or viewer.
 Pasting URLs, one to a line, imports tracks into a playlist from YouTube, Spotify, SoundCloud,
