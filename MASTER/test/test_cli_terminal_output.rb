@@ -153,6 +153,24 @@ class TestCLITerminalOutput < Minitest::Test
     assert_includes candidates, "RAILS/"
   end
 
+  def test_boot_sound_rendering_runs_off_the_prompt_thread
+    cli = session
+    entered = Queue.new
+    release = Queue.new
+    thread = nil
+
+    Master::Voice::BootSound.stub(:play, -> { entered << true; release.pop }) do
+      cli.send(:play_boot_sound)
+      thread = cli.instance_variable_get(:@boot_sound_thread)
+      assert_instance_of Thread, thread
+      Timeout.timeout(1) { entered.pop }
+      assert thread.alive?, "the caller must not wait for WAV rendering or playback"
+    end
+  ensure
+    release << true if release
+    thread&.join(1)
+  end
+
   def test_normal_chat_unwraps_the_accidental_ruby_say_helper
     cli = session
     cli.instance_variable_set(:@last_input, "tell xmas story")
