@@ -81,7 +81,7 @@ module Master
 
       def reclaimable?(path, root: Master::ROOT)
         probe = File.open(path, File::RDWR | File::CREAT, 0o600)
-        return true if probe.flock(File::LOCK_EX | File::LOCK_NB) == true
+        return true if probe.flock(File::LOCK_EX | File::LOCK_NB)
 
         # A detached legacy player may have inherited the lock. Reap only the
         # exact media process tree; never unlink the inode or guess from metadata.
@@ -192,7 +192,7 @@ module Master
         deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + IDLE_INTERACTIVE_RECLAIM_WAIT_SECONDS
         loop do
           probe = File.open(path, File::RDWR | File::CREAT, 0o600)
-          free = probe.flock(File::LOCK_EX | File::LOCK_NB) == true
+          free = !!probe.flock(File::LOCK_EX | File::LOCK_NB)
           probe.flock(File::LOCK_UN) if free
           probe.close
           return true if free
@@ -246,7 +246,7 @@ module Master
         deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 0.25
         loop do
           probe = File.open(path, File::RDWR | File::CREAT, 0o600)
-          free = probe.flock(File::LOCK_EX | File::LOCK_NB) == true
+          free = !!probe.flock(File::LOCK_EX | File::LOCK_NB)
           probe.flock(File::LOCK_UN) if free
           probe.close
           return true if free
