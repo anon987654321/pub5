@@ -108,10 +108,12 @@ module Studio
         candidates = Array(paths).select { |path| File.file?(path) && !File.symlink?(path) }
         return 0 if candidates.empty?
 
-        archive_root = File.join(@directory, @subject, "out", "archive",
-                                 "#{Time.now.utc.strftime("%Y%m%dT%H%M%S")}-#{SecureRandom.hex(3)}")
-        FileUtils.mkdir_p(archive_root, mode: 0o700)
-        File.chmod(0o700, archive_root)
+        subject_root = File.join(@directory, @subject)
+        out_root = File.join(subject_root, "out")
+        archive_base = File.join(out_root, "archive")
+        [subject_root, out_root, archive_base].each { |path| ensure_private_directory!(path) }
+        archive_root = File.join(archive_base, "#{Time.now.utc.strftime("%Y%m%dT%H%M%S")}-#{SecureRandom.hex(3)}")
+        ensure_private_directory!(archive_root)
         moved = []
         begin
           candidates.each do |source|
@@ -136,9 +138,30 @@ module Studio
         moved.length
       end
 
+      def ensure_private_directory!(path)
+        raise "refusing symlink in subject archive path: #{path}" if File.symlink?(path)
+        if File.exist?(path)
+          raise "subject archive path is not a directory: #{path}" unless File.directory?(path)
+        else
+          Dir.mkdir(path, 0o700)
+        end
+        stat = File.lstat(path)
+        raise "subject archive directory is not owned by the current user: #{path}" unless stat.uid == Process.uid
+        File.chmod(0o700, path)
+      end
+
       def record(kind, **fields)
         directory = File.dirname(@ledger_path)
-        FileUtils.mkdir_p(directory)
+        raise "refusing symlinked subject ledger directory: #{directory}" if File.symlink?(directory)
+        FileUtils.mkdir_p(directory, mode: 0o700)
+        File.chmod(0o700, directory)
+        raise "refusing symlinked subject ledger: #{@ledger_path}" if File.symlink?(@ledger_path)
+        if File.exist?(@ledger_path)
+          stat = File.lstat(@ledger_path)
+          raise "subject ledger is not a regular file" unless stat.file? && !stat.symlink?
+          raise "subject ledger must be singly-linked" unless stat.nlink == 1
+          raise "subject ledger is not owned by the current user" unless stat.uid == Process.uid
+        end
         File.open(@ledger_path, "a", 0o600) do |file|
           file.puts JSON.generate({ "at" => Time.now.utc.iso8601, "kind" => kind, "subject" => @subject, **fields })
         end
