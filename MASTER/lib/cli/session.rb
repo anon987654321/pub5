@@ -159,6 +159,8 @@ module Master
       # Rendering the first cached WAV is CPU work. It must not sit between
       # the boot message and the operator's first prompt.
       def play_boot_sound
+        return unless Master::Voice::BootSound.enabled?
+
         @boot_sound_thread = Thread.new do
           Thread.current.priority = -3
           Master::Voice::BootSound.play
