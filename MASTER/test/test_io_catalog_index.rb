@@ -90,6 +90,35 @@ class ProviderCatalogIndexSpec < Minitest::Test
     end
   end
 
+  def test_provider_catalog_fetch_uses_the_shared_pinned_bounded_request
+    with_index do |index, _dir|
+      uri = URI("https://catalog.example.test/models")
+      payload = { "data" => [{ "id" => "provider/model" }] }
+      response = Net::HTTPOK.new("1.1", "200", "OK")
+      response.body = JSON.generate(payload)
+      calls = []
+      handler = lambda do |candidate, request, **options|
+        calls << [candidate, request, options]
+        response
+      end
+
+      Master::Io::SsrfGuard.stub(:request, handler) do
+        assert_equal payload, index.send(:fetch_json, uri.to_s, token: "catalog-token")
+      end
+
+      candidate, request, options = calls.fetch(0)
+      assert_equal uri, candidate
+      assert_instance_of Net::HTTP::Get, request
+      assert_equal "Bearer catalog-token", request["Authorization"]
+      assert_equal "application/json", request["Accept"]
+      assert_equal 8 * 1024 * 1024, options.fetch(:max_bytes)
+      assert_equal 30, options.fetch(:timeout)
+      assert_equal 10, options.fetch(:open_timeout)
+      assert_equal 30, options.fetch(:read_timeout)
+      assert_equal 10, options.fetch(:write_timeout)
+    end
+  end
+
   def import_openrouter_row(index, dir, id)
     path = File.join(dir, "openrouter.json")
     File.write(path, JSON.generate({ "data" => [{ "id" => id, "name" => id }] }))
