@@ -1,7 +1,7 @@
 # amber
 
-**A wardrobe that knows what is in it, what you wear, and what it is only
-guessing at.** Amber is Ragnhild's wardrobe app. It holds garments and outfits,
+**A wardrobe that knows what is in it, what you actually wear, and what it
+is only guessing at.** Amber is Ragnhild's wardrobe app. It holds garments and outfits,
 runs the KonMari declutter loop, tracks how taste changes over time, and
 explains the basis of its recommendations.
 
