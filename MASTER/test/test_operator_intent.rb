@@ -153,6 +153,47 @@ class OperatorIntentTest < Minitest::Test
     end
   end
 
+  def test_compound_full_stack_analysis_then_deploy_resolves_without_model_guessing
+    with_inventory do |root|
+      message = "analyze OPENBSD and MASTER and RAILS folders recursively, and then ssh to vm23, git pull, and deploy these on the actual production system"
+      agent = Object.new
+      intent = Master::CLI::OperatorIntent.new(root:, agent:)
+
+      assert Master::CLI::OperatorIntent.compound_full_stack_deploy_request?(message)
+      assert Master::CLI::OperatorIntent.direct_full_stack_confirmation?(message)
+      assert intent.send(:repository_wide_deployment?, message, Deploy::Inventory.new(root:))
+
+      result = intent.call(message)
+      assert_equal :deploy, result.status
+      assert_equal "all", result.target
+      assert_equal %w[control_web city_app wardrobe_app private_service], result.selected
+    end
+  end
+
+  def test_compound_questions_negations_and_exclusions_are_not_confirmations
+    [
+      "How do I analyze OPENBSD MASTER and RAILS, then deploy them on vm23?",
+      "Do not analyze OPENBSD MASTER and RAILS, then deploy on vm23",
+      "analyze OPENBSD MASTER and RAILS, then deploy on vm23 except the control web",
+    ].each do |message|
+      refute Master::CLI::OperatorIntent.compound_full_stack_deploy_request?(message), message
+      refute Master::CLI::OperatorIntent.direct_full_stack_confirmation?(message), message
+    end
+  end
+
+  def test_studio_is_not_silently_promoted_to_a_production_deployment_target
+    with_inventory do |root|
+      agent = Object.new
+      result = Master::CLI::OperatorIntent.new(root:, agent:).call(
+        "please redeploy OPENBSD, RAILS, STUDIO on vm23"
+      )
+
+      assert_equal :unsupported, result.status
+      assert_includes result.message, "STUDIO is not a registered vm23 deployment target"
+      assert_includes result.message, "MASTER/web"
+    end
+  end
+
   def test_greeted_polite_question_form_resolves_exact_full_stack_without_model_guessing
     with_inventory do |root|
       message = "Hey, can you redeploy OPENBSD, RAILS, and MASTER web on vm23 please?"

@@ -20,6 +20,8 @@ module Master
       NON_PRODUCTION_ENV_RE = /\b(?:local|development|dev(?!@)|test|staging|stage|preview)\b/i.freeze
       DESTINATION_RE = /\b(?:to|onto|on|at|for)\s+([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)/i.freeze
       VM23_DESTINATIONS = %w[vm23 production prod].freeze
+      EXCLUSION_RE = /\b(?:except|excluding|leave\s+out|but\s+not)\b/i.freeze
+      NON_DEPLOYABLE_TREE_RE = /\bstudio\b/i.freeze
       # Destination vocabulary the deterministic path resolves. A politeness
       # prefix ("I need you to please redeploy ... on vm23") makes the first
       # to/on/at/for capture a filler word, so the destination is the first
@@ -65,18 +67,34 @@ module Master
         request.match?(DIRECT_DEPLOY_REQUEST_RE) && request.match?(/\b(?:deploy|re[- ]?deploy)\b/i)
       end
 
+      # A full-stack instruction is explicit when it names vm23 and either
+      # starts with a deploy imperative or contains a clear compound sequence
+      # ("inspect ..., then SSH to vm23, pull and deploy"). Questions,
+      # hypotheticals and negations never become execution permission.
+      def self.compound_full_stack_deploy_request?(text)
+        request = text.to_s
+        return false unless request.match?(/\bthen\b[\s\S]*\b(?:deploy|re[- ]?deploy)\b/i)
+        return false if request.match?(/[?]|\b(?:how|explain|whether|should|would|maybe|perhaps|hypothetical|not|never|don\x27t|do\s+not|won\x27t|will\s+not)\b/i)
+        return false if request.match?(NON_PRODUCTION_ENV_RE)
+
+        complete_stack_components?(request) && destination_of(request).to_s.downcase == "vm23"
+      end
+
       # An explicit full-stack production instruction naming vm23 is itself
       # the operator's confirmation. Model-classified app/group requests and
       # requests without an explicit vm23 destination retain the review gate.
       def self.direct_full_stack_confirmation?(text)
         request = text.to_s
-        return false unless request.match?(DIRECT_DEPLOY_REQUEST_RE)
         return false if request.match?(NON_PRODUCTION_ENV_RE)
+        return false if request.match?(EXCLUSION_RE)
+
+        direct = request.match?(DIRECT_DEPLOY_REQUEST_RE)
+        compound = compound_full_stack_deploy_request?(request)
+        return false unless direct || compound
 
         destination = destination_of(request)
         destination.to_s.downcase == "vm23" &&
-          (full_inventory_scope?(request) || complete_stack_components?(request)) &&
-          !request.match?(/\b(?:except|excluding|leave\s+out|but\s+not)\b/i)
+          (full_inventory_scope?(request) || complete_stack_components?(request))
       end
 
       def self.destination_of(request)
@@ -101,6 +119,13 @@ module Master
 
         inventory = Deploy::Inventory.new(root: @root)
         return Result.new(status: :unavailable, message: "Deployment inventory is empty; no action was taken.") if inventory.apps.empty?
+
+        if non_deployable_tree_request?(text)
+          return Result.new(
+            status: :unsupported,
+            message: "STUDIO is not a registered vm23 deployment target. The full release deploys the OPENBSD mirror, all registered RAILS apps and MASTER/web. Nothing was run.",
+          )
+        end
 
         if repository_wide_deployment?(text, inventory)
           selected = inventory.ordered_apps
@@ -141,9 +166,21 @@ module Master
 
       # source tree. The normal /deploy command still applies its explicit
       # --confirm review gate before any production effect.
+      def non_deployable_tree_request?(text)
+        request = text.to_s
+        return false unless request.match?(NON_DEPLOYABLE_TREE_RE)
+        return false unless request.match?(/\b(?:deploy|re[- ]?deploy)\b/i)
+        return false unless self.class.destination_of(request).to_s.downcase == "vm23"
+        return false if self.class.complete_stack_components?(request) || self.class.full_inventory_scope?(request)
+
+        true
+      end
+
       def repository_wide_deployment?(text, inventory)
         request = text.to_s
-        return false unless request.match?(DIRECT_DEPLOY_REQUEST_RE)
+        direct = request.match?(DIRECT_DEPLOY_REQUEST_RE)
+        compound = self.class.compound_full_stack_deploy_request?(request)
+        return false unless direct || compound
         return false if request.match?(NON_PRODUCTION_ENV_RE)
         destination = self.class.destination_of(request)
         return false if destination && !VM23_DESTINATIONS.include?(destination.downcase)
@@ -151,7 +188,7 @@ module Master
         complete_stack = self.class.complete_stack_components?(request)
         full_inventory = self.class.full_inventory_scope?(request)
         return false unless request.match?(REPOSITORY_TARGET_RE) || complete_stack
-        return false if full_inventory && request.match?(/\b(?:except|excluding|leave\s+out|but\s+not)\b/i)
+        return false if (full_inventory || complete_stack) && request.match?(EXCLUSION_RE)
         return true if complete_stack || full_inventory
 
         named_app = inventory.ordered_apps.any? do |app|
