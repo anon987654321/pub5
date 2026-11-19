@@ -21,6 +21,7 @@ module Master
     # reader that keeps a tripped fuse from being silent.
     class ToolBreaker
       LIMIT = 3
+      TOUGH_LIMIT = 2
       COUNTED = %i[no_proposal reflexion_rejected consensus_rejected rejected].freeze
       Entry = Struct.new(:state, :count)
 
@@ -43,7 +44,7 @@ module Master
         end
       end
 
-      def initialize(limit: LIMIT)
+      def initialize(limit: (ENV["MASTER_TOUGH"].to_s == "1" ? TOUGH_LIMIT : LIMIT))
         @limit = limit
         @entries = {}
         @lock = Mutex.new
