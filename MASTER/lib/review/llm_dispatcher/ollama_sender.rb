@@ -130,10 +130,15 @@ module Master
         end
 
         def ollama_http(uri)
-          http = Net::HTTP.new(uri.host, uri.port)
-          http.use_ssl = uri.scheme == "https"
+          unless Io::LaneHealth.local?(ollama_base_url)
+            raise SocketError, "Ollama is a local-only lane; OLLAMA_BASE_URL must resolve to loopback"
+          end
+          raise SocketError, "Ollama local endpoint must use HTTP" unless uri.scheme == "http"
+
+          http = Net::HTTP.new(uri.host, uri.port, nil)
           http.open_timeout = OPEN_TIMEOUT_S
           http.read_timeout = READ_TIMEOUT_S
+          http.write_timeout = OPEN_TIMEOUT_S
           http
         end
 
