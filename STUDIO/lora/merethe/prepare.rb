@@ -72,6 +72,7 @@ module Studio
 
     def recover!
       migrate_legacy_local_data!
+      secure_directory(SUBJECT_ROOT)
       require_training_consent!
       secure_directory(SOURCE_ROOT)
       SOURCE_FILES.each do |filename, expected_sha|
@@ -100,6 +101,7 @@ module Studio
 
     def prepare!
       migrate_legacy_local_data!
+      secure_directory(SUBJECT_ROOT)
       require_training_consent!
       secure_directory(SOURCE_ROOT)
       secure_directory(CACHE_ROOT)
