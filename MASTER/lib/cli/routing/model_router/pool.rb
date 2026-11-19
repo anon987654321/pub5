@@ -5,6 +5,7 @@ require "json"
 require "net/http"
 require "uri"
 require_relative "../../../io/exec"
+require_relative "../../../io/ssrf_guard"
 
 module Master
   module CLI
@@ -457,11 +458,37 @@ module Master
 
           def get_json(url, headers: {}, timeout: PROBE_TIMEOUT_S)
             uri = URI(url)
-            Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https",
-                            open_timeout: timeout, read_timeout: timeout) do |http|
-              response = http.get(uri.request_uri, headers)
-              response.body if response.is_a?(Net::HTTPSuccess)
+            request = Net::HTTP::Get.new(uri.request_uri, headers)
+            if local_server_uri?(uri)
+              # These two configured model servers are explicitly loopback-only
+              # and use operator-selected nonstandard ports; they are not public
+              # egress targets and therefore do not enter the DNS pin policy.
+              http = Net::HTTP.new(uri.hostname, uri.port, nil)
+              http.open_timeout = http.read_timeout = timeout
+              http.write_timeout = timeout
+              response = http.start { |connection| connection.request(request) }
+              raise IOError, "local model catalogue response exceeds 1 MB" if response.body.to_s.bytesize > 1_000_000
+              return response.body if response.is_a?(Net::HTTPSuccess)
+
+              return
             end
+
+            raise URI::InvalidURIError, "hosted model catalogue requires HTTPS on port 443" unless uri.is_a?(URI::HTTPS) && uri.port == 443
+
+            response = Master::Io::SsrfGuard.request(uri, request, max_bytes: 2_000_000, timeout:)
+            response.body if response.is_a?(Net::HTTPSuccess)
+          end
+
+          def local_server_uri?(uri)
+            return false unless uri.is_a?(URI::HTTP) && uri.userinfo.nil? && uri.fragment.nil?
+            return false unless uri.scheme == "http"
+
+            host = uri.hostname.to_s.downcase
+            return true if host == "localhost"
+
+            IPAddr.new(host).loopback?
+          rescue IPAddr::InvalidAddressError
+            false
           end
 
           def ollama_problem(id)
