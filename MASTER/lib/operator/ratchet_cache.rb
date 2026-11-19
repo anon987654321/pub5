@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 require "digest"
-require "fileutils"
 require "json"
+require_relative "../io/atomic_write"
 require_relative "../io/exec"
 require_relative "../trace/dmesg"
 
@@ -99,10 +99,7 @@ module Operator
 
     def write(group, entry)
       data = read.merge(group => entry)
-      FileUtils.mkdir_p(File.dirname(@path))
-      temporary = "#{@path}.#{Process.pid}.tmp"
-      File.write(temporary, JSON.generate(data))
-      File.rename(temporary, @path)
+      Master::Io::AtomicWrite.write_atomic(@path, JSON.generate(data))
     rescue SystemCallError => e
       warn "ratchet cache not written: #{e.class}: #{e.message}"
     end

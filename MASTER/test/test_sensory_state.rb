@@ -31,6 +31,23 @@ class TestSensoryState < Minitest::Test
     assert_equal "maintenance", state["system"]
   end
 
+  def test_snapshot_uses_the_shared_atomic_writer
+    calls = []
+    writer = Master::Io::AtomicWrite.method(:write_atomic)
+    instrumented = lambda do |path, content, **options|
+      calls << [path, content]
+      writer.call(path, content, **options)
+    end
+    Master::Io::AtomicWrite.stub(:write_atomic, instrumented) do
+      @bus.publish("tts:playback:start")
+    end
+
+    assert_equal 1, calls.length
+    assert_equal File.join(@dir, ".master", "sensory_state.json"), calls.first.first
+    assert_equal "speaking", JSON.parse(calls.first.last).fetch("voice")
+    assert_empty Dir.glob(File.join(@dir, ".master", ".master_atomic_*"))
+  end
+
   def test_history_is_bounded
     40.times { @bus.publish("heartbeat:tick") }
     state = Master::Trace::SensoryState.snapshot(root: @dir)

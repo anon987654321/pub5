@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 require "json"
-require "fileutils"
 require "monitor"
+require_relative "../io/atomic_write"
 require "time"
 
 module Master
@@ -103,12 +103,7 @@ module Master
       def write_unlocked!
         root = @root || Master::ROOT
         path = File.join(root, ".master", "sensory_state.json")
-        FileUtils.mkdir_p(File.dirname(path))
-        tmp = "#{path}.tmp.#{$$}.#{Thread.current.object_id}"
-        File.write(tmp, JSON.pretty_generate(@state))
-        File.rename(tmp, path)
-      ensure
-        File.delete(tmp) if tmp && File.exist?(tmp)
+        Master::Io::AtomicWrite.write_atomic(path, JSON.pretty_generate(@state))
       end
 
       def deep_copy(value)

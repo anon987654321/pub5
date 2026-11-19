@@ -60,6 +60,25 @@ class TestRatchetCache < Minitest::Test
     end
   end
 
+  def test_snapshot_uses_the_shared_atomic_writer
+    with_repo do
+      calls = []
+      writer = Master::Io::AtomicWrite.method(:write_atomic)
+      instrumented = lambda do |path, content, **options|
+        calls << [path, content]
+        writer.call(path, content, **options)
+      end
+      Master::Io::AtomicWrite.stub(:write_atomic, instrumented) do
+        measure([])
+      end
+
+      assert_equal 1, calls.length
+      assert_equal @cache_path, calls.first.first
+      assert_includes JSON.parse(calls.first.last), "selftest"
+      assert_empty Dir.glob(File.join(File.dirname(@cache_path), ".master_atomic_*"))
+    end
+  end
+
   def test_an_unreadable_row_is_never_kept
     with_repo do |root|
       calls = []
