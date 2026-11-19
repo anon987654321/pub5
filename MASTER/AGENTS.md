@@ -101,6 +101,13 @@ Lead with the information the reader came for. Put prerequisites and hazards
 before commands that depend on them. A document must explain the real system,
 not the system its author intended to build.
 
+Use the source texts as references, not as rigid formulae:
+[Strunk and White, *The Elements of Style*, 4th edition](https://books.google.com/books/about/The_Elements_of_Style.html?id=6UzhEAAAQBAJ)
+and
+[Robert Bringhurst, *The Elements of Typographic Style*, 4th edition](https://books.google.com/books/about/The_Elements_of_Typographic_Style.html?id=Llcc0AEACAAJ).
+The repository rules below are the operational interpretation for Markdown,
+terminal output and product documents.
+
 Use the following standards as one editorial method, not as competing styles:
 
 - **Strunk and White — sentence craft.** Prefer active verbs, positive and
