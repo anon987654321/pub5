@@ -129,8 +129,18 @@ class TestStudioReplicateClientPaths < Minitest::Test
   end
 
   class FakeHTTP
-    def initialize(response)
+    attr_accessor :ipaddr, :use_ssl, :open_timeout, :read_timeout, :write_timeout
+    attr_reader :host, :port, :proxy_address
+
+    def initialize(response, host:, port:, proxy_address:)
       @response = response
+      @host = host
+      @port = port
+      @proxy_address = proxy_address
+    end
+
+    def start
+      yield self
     end
 
     def request_get(_path)
@@ -143,18 +153,27 @@ class TestStudioReplicateClientPaths < Minitest::Test
   end
 
   def with_http(response, timeout: nil)
-    start = lambda do |_host, _port, **options, &block|
-      assert_equal true, options.fetch(:use_ssl)
-      expected_write_timeout = timeout ? [Studio::ReplicateClient::WRITE_TIMEOUT_SECONDS, timeout].min :
-        Studio::ReplicateClient::WRITE_TIMEOUT_SECONDS
-      assert_equal expected_write_timeout, options.fetch(:write_timeout)
-      if timeout
-        assert_equal [Studio::ReplicateClient::OPEN_TIMEOUT_SECONDS, timeout].min, options.fetch(:open_timeout)
-        assert_equal [Studio::ReplicateClient::READ_TIMEOUT_SECONDS, timeout].min, options.fetch(:read_timeout)
-      end
-      block.call(FakeHTTP.new(response))
+    http = nil
+    constructor = lambda do |host, port, proxy_address|
+      assert_equal 443, port
+      assert_nil proxy_address, "environment proxy must not bypass the IP pin"
+      http = FakeHTTP.new(response, host:, port:, proxy_address:)
     end
-    Net::HTTP.stub(:start, start) { yield }
+    resolver = ->(_host) { ["93.184.216.34"] }
+    Studio::ReplicateClient.stub(:resolve_download_addresses, resolver) do
+      Net::HTTP.stub(:new, constructor) do
+        yield
+      end
+    end
+    expected_write_timeout = timeout ? [Studio::ReplicateClient::WRITE_TIMEOUT_SECONDS, timeout].min :
+      Studio::ReplicateClient::WRITE_TIMEOUT_SECONDS
+    assert_equal expected_write_timeout, http.write_timeout
+    if timeout
+      assert_equal [Studio::ReplicateClient::OPEN_TIMEOUT_SECONDS, timeout].min, http.open_timeout
+      assert_equal [Studio::ReplicateClient::READ_TIMEOUT_SECONDS, timeout].min, http.read_timeout
+    end
+    assert_equal "93.184.216.34", http.ipaddr
+    assert_equal true, http.use_ssl
   end
 
   def setup
@@ -403,7 +422,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
       File.write(original, "keep original")
       File.symlink(original, target)
 
-      Net::HTTP.stub(:start, ->(*_args, **_options) { flunk "symlink target must be refused before network" }) do
+      Net::HTTP.stub(:new, ->(*_args, **_options) { flunk "symlink target must be refused before network" }) do
         error = assert_raises(ArgumentError) do
           @client.download_url("https://replicate.delivery/audio.wav", target)
         end
@@ -420,7 +439,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
       target = File.join(directory, "download")
       Dir.mkdir(target)
 
-      Net::HTTP.stub(:start, ->(*_args, **_options) { flunk "directory target must be refused before network" }) do
+      Net::HTTP.stub(:new, ->(*_args, **_options) { flunk "directory target must be refused before network" }) do
         error = assert_raises(ArgumentError) do
           @client.download_url("https://replicate.delivery/audio.wav", target)
         end
@@ -432,7 +451,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
   def test_download_deadline_must_be_positive_and_finite_before_network
     Dir.mktmpdir do |directory|
       target = File.join(directory, "download.wav")
-      Net::HTTP.stub(:start, ->(*_args, **_options) { flunk "invalid deadline must be refused before network" }) do
+      Net::HTTP.stub(:new, ->(*_args, **_options) { flunk "invalid deadline must be refused before network" }) do
         [0, -1, Float::INFINITY, Float::NAN, "not-a-number"].each do |timeout|
           assert_raises(ArgumentError) do
             @client.download_url("https://replicate.delivery/audio.wav", target, timeout:)
@@ -470,6 +489,43 @@ class TestStudioReplicateClientPaths < Minitest::Test
     assert_raises(ArgumentError) do
       @client.download_url("https://replicate.delivery/archive.zip", "/tmp/not-written.zip", max_bytes: 0)
     end
+  end
+
+  def test_download_refuses_mixed_public_and_private_dns_answers
+    Studio::ReplicateClient.stub(
+      :resolve_download_addresses, ->(_host) { ["93.184.216.34", "127.0.0.1"] }
+    ) do
+      error = assert_raises(ArgumentError) do
+        Studio::ReplicateClient.public_download_address!("replicate.delivery")
+      end
+      assert_match(/non-public address/, error.message)
+    end
+  end
+
+  def test_download_accepts_multiple_public_answers_and_pins_one
+    Studio::ReplicateClient.stub(
+      :resolve_download_addresses, ->(_host) { ["93.184.216.34", "8.8.8.8"] }
+    ) do
+      assert_equal "93.184.216.34",
+                   Studio::ReplicateClient.public_download_address!("replicate.delivery")
+    end
+  end
+
+  def test_download_blocks_mapped_nat64_6to4_teredo_and_non_global_ipv6
+    %w[
+      ::ffff:127.0.0.1 64:ff9b::a00:1 64:ff9b:1::a00:1
+      2002:0a00:0001::1 2001:0::1 4000::1 3fff::1
+    ].each do |address|
+      assert Studio::ReplicateClient.blocked_download_ip?(IPAddr.new(address)), "#{address} must be blocked"
+    end
+    refute Studio::ReplicateClient.blocked_download_ip?(IPAddr.new("2606:4700:4700::1111"))
+  end
+
+  def test_download_dns_labels_reject_invalid_characters
+    refute Studio::ReplicateClient.valid_download_hostname?("bad_name.replicate.delivery")
+    refute Studio::ReplicateClient.valid_download_hostname?("-bad.replicate.delivery")
+    refute Studio::ReplicateClient.valid_download_hostname?("bad-.replicate.delivery")
+    assert Studio::ReplicateClient.valid_download_hostname?("replicate.delivery")
   end
 
   def test_api_json_response_is_rejected_before_reading_past_the_cap
