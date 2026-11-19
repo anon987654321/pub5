@@ -100,6 +100,28 @@ All three apps compile the same service worker from the engine's `pwa` directory
 and the styled error pages in the engine's `public` directory are copied into each
 app at deploy.
 
+## Outbound network boundary
+
+Remote URLs, DNS answers and response bodies are untrusted. The shared
+`Shared::OutboundHttp` boundary accepts HTTPS on port 443, refuses credentials
+and fragments, bounds DNS names, rejects single-label search-domain lookups,
+and checks every A and AAAA answer. A mixed public/private answer set fails
+closed. IPv4-mapped, NAT64, 6to4, Teredo, unique-local, link-local, multicast,
+documentation and reserved ranges are not public destinations.
+
+The service resolves once and pins the socket to an approved public address.
+It keeps the original hostname for TLS verification and SNI, disables
+environment proxies, and bounds the response body and connection timeouts.
+`LinkConverter#sync!`, `S2sPostbackJob`, and the Amazon Creators API use that
+same address policy; `Shared::Scrape` applies equivalent host-resolver pins to
+Chromium and blocks names it has not approved. Net::HTTP does not follow
+redirects automatically. A future redirect flow must re-enter this policy for
+each Location before connecting; it must never reuse the original approval.
+
+Keep outbound HTTP behind this shared boundary. A hostname allowlist or HTTPS
+alone is not a substitute for classifying every resolved address and pinning
+the actual socket.
+
 ## Visual identity
 
 The shared contract is `MASTER/data/laws.yml#visual_identity_contract`, and its
