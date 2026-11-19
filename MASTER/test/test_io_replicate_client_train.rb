@@ -349,6 +349,34 @@ class TestReplicateClientRetry < Minitest::Test
     assert_equal 3, requests.length
   end
 
+  def test_api_transport_refuses_a_mixed_public_and_private_dns_answer_set
+    client = Client.new(token: "replicate-test-secret")
+    uri = URI("#{Client::BASE}/account")
+    request = Net::HTTP::Get.new(uri)
+    guard = Master::Io::SsrfGuard
+
+    error = guard.stub(:resolve_addresses, ["93.184.216.34", "127.0.0.1"]) do
+      assert_raises(SocketError) { client.send(:attempt_request, request, uri) }
+    end
+    assert_match(/unsafe or unresolvable/, error.message)
+  end
+
+  def test_download_transport_refuses_a_mixed_public_and_private_dns_answer_set
+    Dir.mktmpdir do |directory|
+      target = File.join(directory, "download.wav")
+      guard = Master::Io::SsrfGuard
+      error = guard.stub(:resolve_addresses, ["93.184.216.34", "169.254.169.254"]) do
+        assert_raises(SocketError) do
+          Client.new(token: "replicate-test-secret").download_url(
+            "https://replicate.delivery/audio.wav", target
+          )
+        end
+      end
+      assert_match(/unsafe or unresolvable/, error.message)
+      assert_empty Dir.children(directory), "refused DNS must not create a partial download"
+    end
+  end
+
   def test_download_is_streamed_capped_and_replaces_the_previous_file_atomically
     Dir.mktmpdir do |directory|
       target = File.join(directory, "audio.wav")
