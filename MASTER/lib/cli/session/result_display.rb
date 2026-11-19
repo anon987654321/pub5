@@ -177,17 +177,27 @@ module Master
         source = text.to_s
         has_entry = source.match?(/^#!\/usr\/bin\/env ruby\b/m) ||
                     source.match?(/^\s*STDOUT\.sync\s*=\s*true\s*$/m)
-        has_helper = source.match?(/^\s*def\s+say\s*\(\s*line\s*=\s*""\s*\)\s*$/m) &&
-                     source.match?(/^\s*STDOUT\.puts\(line\.to_s\)\s*$/m)
-        has_guard = source.match?(/^\s*(?:safe\s+do|begin)\s*$/m)
-        return unless has_entry && has_helper && has_guard
+        definition = source.match(/^\s*def\s+say\s*\(\s*([a-zA-Z_]\w*)\s*=\s*""\s*\)\s*$/m)
+        return unless has_entry && definition && source.match?(/^\s*begin\s*$/m)
 
-        messages = source.each_line.filter_map do |line|
-          match = line.match(/\A[ \t]*say(?:[ \t]+("(?:\\.|[^"\\])*"))?[ \t]*\z/)
+        argument = Regexp.escape(definition[1])
+        has_helper = source.match?(/^\s*STDOUT\.puts\(\s*#{argument}(?:\.to_s)?\s*\)\s*$/m)
+        return unless has_helper
+
+        calls = source.each_line.filter_map do |line|
+          match = line.match(/\A([ \t]*)say(?:[ \t]+("(?:\\.|[^"\\])*")|[ \t]*\([ \t]*("(?:\\.|[^"\\])*")[ \t]*\))?[ \t]*;?[ \t]*\z/)
           next unless match
 
-          match[1] ? match[1].undump : ""
+          literal = match[2] || match[3]
+          [match[1].length, literal ? literal.undump : ""]
         end
+        return if calls.empty?
+
+        # Rescue handlers often contain a second, generic fallback sentence.
+        # Keep only the primary say block rather than appending that fallback
+        # to the answer as though it had also been spoken.
+        indent = calls.map(&:first).min
+        messages = calls.filter_map { |level, message| message if level == indent }
         return if messages.empty?
 
         messages.join("\n")
