@@ -70,7 +70,7 @@ module Shared
       labels = candidate.split(".", -1)
       return false if labels.any? do |label|
         label.empty? || label.bytesize > DNS_LABEL_MAX_BYTES ||
-          !label.match?(/\\A[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\z/i)
+          !label.match?(/\A[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\z/i)
       end
 
       labels.sum { |label| label.bytesize + 1 } + 1 <= DNS_MAX_WIRE_BYTES
