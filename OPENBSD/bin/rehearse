@@ -41,16 +41,23 @@ CONTRACTS = %w[
   RAILS/test/typography_lint_test.rb
 ].freeze
 
+FAILURE_OUTPUT_LIMIT = 32_768
+
 def run(label, *argv, chdir: ROOT)
   started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
   out, status = Open3.capture2e(*argv, chdir: chdir)
   secs = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
   puts format("%-4s %5.1fs  %s", status.success? ? "ok" : "FAIL", secs, label)
   unless status.success?
-    lines = out.lines
-    omitted = [lines.size - 80, 0].max
-    puts "       ... #{omitted} earlier lines omitted" if omitted.positive?
-    lines.last(80).each { |line| puts "       #{line.rstrip}" }
+    detail = out.to_s
+    if detail.bytesize > FAILURE_OUTPUT_LIMIT
+      half = FAILURE_OUTPUT_LIMIT / 2
+      head = detail.byteslice(0, half).to_s.scrub
+      tail = detail.byteslice(-half, half).to_s.scrub
+      omitted = detail.bytesize - head.bytesize - tail.bytesize
+      detail = "#{head}\\n... failure output truncated; omitted #{omitted} bytes ...\\n#{tail}"
+    end
+    detail.lines.each { |line| puts "       #{line.rstrip}" }
   end
   status.success?
 end
@@ -61,7 +68,7 @@ LINTS.each do |tool|
 end
 CONTRACTS.each do |test|
   dir = test.split("/").first
-  results << run(test, RUBY, "-Itest", "-I#{File.join(ROOT, 'MASTER', 'lib')}", File.join(ROOT, test), chdir: File.join(ROOT, dir))
+  results << run(test, RUBY, "-Itest", "-I#{File.join(ROOT, 'MASTER', 'lib')}", File.join(ROOT, test), "--verbose", chdir: File.join(ROOT, dir))
 end
 
 failed = results.count(false)
