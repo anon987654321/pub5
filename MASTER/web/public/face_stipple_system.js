@@ -218,7 +218,8 @@
       const initial = Math.floor(Math.random() * config.order.length);
       system.expressionCycle = {
         from: initial, to: initial, startedAt: time - config.transition / 1000,
-        pausedAt: null, pausedProgress: null, progress: 1, updatedAt: time,
+        pausedAt: null, pausedProgress: null, pausedByMotion: false,
+        progress: 1, updatedAt: time,
         nextAt: time + config.minInterval / 1000 +
           Math.random() * Math.max(0, config.maxInterval - config.minInterval) / 1000
       };
@@ -229,21 +230,56 @@
     const rotationPaused = reducedMotion || subjectSuppressed;
     if (rotationPaused) {
       if (cycle.pausedAt == null) {
-        cycle.pausedAt = Number.isFinite(cycle.updatedAt) ? cycle.updatedAt : time;
-        // Keep the last raw transition progress. The uniform is already eased;
-        // feeding it back through smoothstep on every paused frame would drift.
+        // Freeze at the last unpaused tick's rendered state. The pause is a
+        // hold, not a re-sample: recomputing from the wall clock here would
+        // count time nobody rendered (a suppression landing between ticks),
+        // and the freeze commit's contract is "its last rendered progress".
+        // Replaying that raw progress back through smoothstep is bit-exact
+        // (same pure function, same float), so the held frames and the
+        // resumed frame all render the exact eased value the operator last
+        // saw — no eased-blend snapshot is needed beside the raw progress.
         cycle.pausedProgress = Number.isFinite(cycle.progress)
           ? cycle.progress
           : clamp((time - cycle.startedAt) / (config.transition / 1000), 1, 0, 1);
+        cycle.pausedAt = Number.isFinite(cycle.updatedAt) ? cycle.updatedAt : time;
+        // Why the pause happened decides how the resume behaves: a reduced-
+        // motion hold freezes a frame the operator can see, while a subject
+        // suppression hides the expression behind strength 0.
+        cycle.pausedByMotion = reducedMotion;
       }
+      // Once any paused tick was a visible reduced-motion hold, the resume
+      // owes that exact frame back — even if every later paused tick is a
+      // suppression, the strictest cause wins.
+      cycle.pausedByMotion = cycle.pausedByMotion || reducedMotion;
     } else if (cycle.pausedAt != null) {
+      // Either way the rotation cadence loses exactly the pause: nothing
+      // rotates behind the operator's back.
       const pausedFor = Math.max(0, time - cycle.pausedAt);
-      cycle.startedAt += pausedFor;
       cycle.nextAt += pausedFor;
+      if (cycle.pausedByMotion) {
+        // Visible hold. No timestamp arithmetic puts the resumed frame back
+        // on the exact frozen blend — startedAt += pausedFor noisy-zeros
+        // time - startedAt (~1e-15, a visible nudge after a long hold) — so
+        // the frozen raw progress is the resumed frame's truth
+        // (holdProgressThisFrame) and the clock shifts with the pause, which
+        // keeps the transition's remaining time exactly what it was.
+        cycle.progress = cycle.pausedProgress;
+        cycle.startedAt += pausedFor;
+        cycle.holdProgressThisFrame = true;
+      }
+      // Hidden hold (strength was 0 while the subject was away): startedAt
+      // is deliberately left alone, so the interrupted transition ran on the
+      // wall clock while nobody could see it and the face returns to the
+      // arrived expression instead of resuming a stale half-blend.
       cycle.pausedAt = null;
       cycle.pausedProgress = null;
+      cycle.pausedByMotion = false;
     }
-    if (!rotationPaused && time >= cycle.nextAt) {
+    // The owed rotation yields to the replayed frame: when both are due this
+    // tick, the held progress renders first and the rotation starts from the
+    // next tick, so a resume never blends toward an expression the operator
+    // never saw arrive.
+    if (!rotationPaused && !cycle.holdProgressThisFrame && time >= cycle.nextAt) {
       cycle.from = cycle.to;
       cycle.to = nextExpression(cycle.from, config.order.length);
       cycle.startedAt = time;
@@ -251,9 +287,14 @@
       cycle.nextAt = time + config.minInterval / 1000 +
         Math.random() * Math.max(0, config.maxInterval - config.minInterval) / 1000;
     }
+    // The resume branch just set cycle.progress to the frozen value; hold it
+    // for this one frame instead of recomputing from the un-shifted clock.
     const progress = cycle.pausedAt != null
       ? clamp(cycle.pausedProgress, 1, 0, 1)
-      : clamp((time - cycle.startedAt) / (config.transition / 1000), 1, 0, 1);
+      : cycle.holdProgressThisFrame
+        ? clamp(cycle.progress, 1, 0, 1)
+        : clamp((time - cycle.startedAt) / (config.transition / 1000), 1, 0, 1);
+    cycle.holdProgressThisFrame = false;
     if (cycle.pausedAt == null) {
       cycle.progress = progress;
       cycle.updatedAt = time;

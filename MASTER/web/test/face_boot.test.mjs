@@ -263,7 +263,9 @@ test("semantic object subjects are validated, bounded and feature-staged", () =>
   assert.match(rules, /semantic_subject:/);
   assert.match(world, /function normalizeVisualSubject\(subject\)/);
   assert.match(world, /return SUBJECT_HINTS\.find\(\(\[, pattern\]\) => pattern\.test\(text\)\)\?\.\[0\] \|\| "face"/);
-  assert.match(world, /const kind = declaredKind === "object" \?\s*declaredForm \|\| declaredKind\s*:\s*declaredKind \|\| declaredForm;/);
+  // The ternary wraps across lines in the source, so whitespace is pinned
+  // loosely around the operators, exactly like the branches themselves.
+  assert.match(world, /const kind = declaredKind === "object"\s*\?\s*declaredForm \|\| declaredKind\s*:\s*declaredKind \|\| declaredForm;/);
   assert.match(rules, /unknown_kind: keep_portrait/);
   assert.match(world, /confidence < finite\(SEMANTIC_SUBJECT\.min_confidence/);
   assert.match(world, /const explicitSubject = visualSubject !== null && visualSubject !== undefined/);

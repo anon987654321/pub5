@@ -47,7 +47,8 @@ test("particle introduction converges into the face on the shared render clock",
   assert.match(system, /introScatter\[j\] = \(rand\(index, 41\) - 0\.5\) \* 2\.8/);
   assert.match(system, /geometry\.setAttribute\("aIntroScatter", new THREE\.BufferAttribute\(introScatter, 3\)\)/);
   assert.match(system, /uniform float uIntroProgress;/);
-  assert.match(system, /float localProgress = smoothstep\(aThreshold \* 0\.62,/);\n  assert.match(system, /vec3 p = mix\(aIntroScatter, position, localProgress\)/);
+  assert.match(system, /float localProgress = smoothstep\(aThreshold \* 0\.62,/);
+  assert.match(system, /vec3 p = mix\(aIntroScatter, position, localProgress\)/);
   assert.match(system, /system\.material\.uniforms\.uIntroProgress\.value = introProgress/);
   assert.match(system, /const reducedMotion = reducedMotionEnabled\(state\)/);
   assert.match(system, /const rawProgress = reducedMotion \? 1 :/);
@@ -204,7 +205,14 @@ test("face expression cycle preserves its exact blend across reduced motion and 
   document.documentElement.dataset.faceSubject = "face";
   update(faceSystem, 62.3, false);
   assert.equal(faceSystem.material.uniforms.uExpressionStrength.value, 0.78);
-  assert.equal(faceSystem.expressionCycle.from, pausedTarget);
+  // The pair the pause interrupted is still the pair in flight — rotation
+  // cadence shifted by exactly the pause, so nothing rotates behind the
+  // operator's back. But a suppression hides the expression behind
+  // strength 0, so the interrupted transition itself kept running on the
+  // wall clock: the face returns to the arrived expression, not a stale
+  // half-blend. (A reduced-motion hold is visible, so that resume replays
+  // the frozen frame exactly instead — see the t=51 assertion above.)
+  assert.equal(faceSystem.expressionCycle.to, pausedTarget);
   assert.ok(faceSystem.material.uniforms.uExpressionBlend.value > subjectPausedBlend);
 });
 
@@ -491,8 +499,10 @@ test("stipple shares face state and obeys point and motion budgets", () => {
   assert.match(system, /float depthScale = clamp\(uDepthReferenceDistance/);
   assert.doesNotMatch(tokens, /point_size:\s*$/m);
   // FACE_POINT_IS_ONE_PIXEL: depth scales alpha; no point-size controls survive.
+  // The clamp folds in every brightness factor — depth and, since faa8e102's
+  // contour ridges, the ridge tone — but never a size.
   assert.match(system, /gl_PointSize = 1\.0;/);
-  assert.match(system, /vAlpha = clamp\([^;]*\* depthScale, 0\.0, 1\.0\)/);
+  assert.match(system, /vAlpha = clamp\([^;]*\* depthScale[^;]*, 0\.0, 1\.0\)/);
   assert.doesNotMatch(system, /uPointSize(?:Base|Bias|Reference|Distance|Output)/);
   assert.match(system, /vThreshold = aThreshold/);
   assert.match(system, /vThreshold > uDensity/);
@@ -773,7 +783,10 @@ test("stipple module boots and builds from the canonical idle profile", () => {
   api.tick(stipple, { mode: "thinking", reducedMotion: false }, 10.7);
   const subjectPausedBlend = stipple.material.uniforms.uExpressionBlend.value;
   assert.equal(stipple.material.uniforms.uExpressionStrength.value, 0);
+  // The pause froze at the last unpaused tick's rendered progress — 10.6, the
+  // frame the operator actually saw — not at this mid-gap wall-clock tick.
   assert.equal(stipple.expressionCycle.pausedAt, 10.6);
+  assert.equal(stipple.expressionCycle.pausedProgress, stipple.expressionCycle.progress);
   api.tick(stipple, { mode: "thinking", reducedMotion: false }, 20);
   assert.equal(stipple.material.uniforms.uExpressionBlend.value, subjectPausedBlend);
   assert.equal(stipple.material.uniforms.uExpressionStrength.value, 0);
@@ -808,6 +821,11 @@ test("stipple module boots and builds from the canonical idle profile", () => {
   assert.equal(stipple.material.uniforms.uExpressionTo.value, 0);
   assert.equal(stipple.material.uniforms.uDepthFromRank.value, 1);
   assert.equal(stipple.material.uniforms.uDepthSteps.value, 6);
+  // The boot contract closes back on the canonical idle profile: one idle
+  // tick re-syncs the material from the thinking excursion above (rotation
+  // pinned away so the settled expression pair is left alone).
+  stipple.expressionCycle.nextAt = 100;
+  api.tick(stipple, { mode: "idle", reducedMotion: false }, 34);
   assert.equal(stipple.material.uniforms.uDensity.value, 0.44);
   window.MASTER_FACE_CONTRACT.swarm.size_from_depth = false;
   const flatDepth = api.buildFromSamples(THREE, [{ x: 0, y: 0, z: 0, zone: 0, bias: 1 }]);
