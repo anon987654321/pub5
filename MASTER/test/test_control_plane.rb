@@ -236,7 +236,7 @@ class ControlPlaneSpec < Minitest::Test
         pid: pid, host: Socket.gethostname, mode: "interactive", at: Time.now.utc.iso8601
       ))
       command = File.join(root, "bin", "master")
-      process_row = "#{pid} 1 #{pid} S+ ttys001 #{command}\\n"
+      process_row = "#{pid} 1 #{pid} S+ ttys001 #{command}\n"
       status = Status.new(true)
       signals = []
 
