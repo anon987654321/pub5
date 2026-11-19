@@ -38,7 +38,7 @@ module Studio
 
         require_relative "../interactive"
         wizard = Studio::Interactive.new
-        return run_flags(argv) unless argv.empty? || !wizard.tty?
+        return run_flags(argv) unless argv.empty? && wizard.tty?
 
         choice = wizard.choose("What would you like to do with a LoRA subject?", [
           ["Validate a subject's training plan", :validate],
@@ -47,7 +47,7 @@ module Studio
         ])
         case choice
         when :validate then validate
-        when :recover then puts JSON.pretty_generate(recovery_report({}))
+        when :recover then puts JSON.pretty_generate(recovery_command([]))
         when :selfie then selfie(wizard)
         end
       end
@@ -101,13 +101,18 @@ module Studio
       # request explicitly sets apply=true and each subject's private consent
       # and source-rights evidence already validates locally.
       def recovery_report(request)
-        require_relative "migrate_local"
+        request ||= {}
         arguments = []
         arguments.concat(["--from", request["from"].to_s]) unless request["from"].to_s.empty?
         arguments.concat(["--subject", request["subject"].to_s]) unless request["subject"].to_s.empty?
         arguments << "--include-sources" if request["include_sources"] == true
         arguments << "--restore-johann-history" if request["restore_johann_history"] == true
         arguments << "--apply" if request["apply"] == true
+        recovery_command(arguments)
+      end
+
+      def recovery_command(arguments)
+        require_relative "migrate_local"
         Studio::Lora::LocalMigration.run(arguments)
       end
 
@@ -123,7 +128,7 @@ module Studio
       def run_flags(argv)
         case argv.first
         when "validate" then validate
-        when "recover" then puts JSON.pretty_generate(recovery_report({}))
+        when "recover" then puts JSON.pretty_generate(recovery_command(argv.drop(1)))
         when "selfie" then selfie(Studio::Interactive.new(input: $stdin, output: $stdout, tty: false))
         when "-h", "--help", nil then puts help
         else abort "lora: unknown command #{argv.first.inspect} (see --help)"
@@ -134,13 +139,19 @@ module Studio
         load File.expand_path("validate.rb", __dir__)
       end
 
+      def validate_with_flags(argv)
+        success = system(RbConfig.ruby, File.expand_path("validate.rb", __dir__), *argv)
+        success ? 0 : ($?.exitstatus || 1)
+      end
+
       def selfie(wizard)
         require_relative "../replicate/models"
         subject = wizard.ask("Subject", default: "ragnhild")
         count = wizard.number("How many sittings", default: 10, range: 1..24)
         engine = wizard.ask("Engine", default: Studio::ReplicateClient::Models.default_engine)
-        system(RbConfig.ruby, File.expand_path("../photograph.rb", __dir__),
-               "--selfie-series", "--subject", subject, "--count", count.to_s, "--engine", engine)
+        success = system(RbConfig.ruby, File.expand_path("../photograph.rb", __dir__),
+                        "--selfie-series", "--subject", subject, "--count", count.to_s, "--engine", engine)
+        success ? 0 : ($?.exitstatus || 1)
       end
 
       def help
@@ -150,6 +161,8 @@ module Studio
             ruby STUDIO/lora/lora.rb                 ask what to do (interactive)
             ruby STUDIO/lora/lora.rb validate        audit every subject's training plan
             ruby STUDIO/lora/lora.rb recover         dry-run local source recovery from ../pub4
+            ruby STUDIO/lora/lora.rb recover --apply  copy only after private rights preflight
+            ruby STUDIO/lora/lora.rb validate --json  read-only machine-readable profile audit
             ruby STUDIO/lora/lora.rb selfie          render a selfie series
           The subject craft itself (scenes, prompting rules, grades) lives in
           this file as Studio::Lora::Craft and Studio::Lora::Selfie.
