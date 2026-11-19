@@ -161,6 +161,53 @@ module Master
         end
       end
 
+      class ResponseTooLarge < StandardError; end
+
+      # The one request path for public HTTP clients. The URL is classified,
+      # every DNS answer is checked, the socket is pinned, and the body is
+      # consumed under a byte cap before the response leaves this boundary.
+      # Redirects remain responses: a caller must validate each Location and
+      # start a new request through this method.
+      def self.request(uri, outbound_request, max_bytes: 1_000_000, timeout: DEFAULT_TIMEOUT_S)
+        raise URI::InvalidURIError, "outbound request needs a clean HTTP/HTTPS URL on its standard port" unless valid_http_uri?(uri)
+
+        cap = Integer(max_bytes)
+        seconds = Float(timeout)
+        raise ArgumentError, "response byte cap must be positive" unless cap.positive?
+        raise ArgumentError, "request timeout must be finite and positive" unless seconds.finite? && seconds.positive?
+
+        address = pinned_address(uri) or raise SocketError, "refused non-public or unresolvable destination: #{uri.host}"
+        http = http_for(uri, address, timeout: seconds)
+        response = nil
+        body = +"".b
+        Timeout.timeout(seconds) do
+          http.start do |connection|
+            connection.request(outbound_request) do |incoming|
+              response = incoming
+              declared = incoming["content-length"].to_s
+              if declared.match?(/\\A\\d+\\z/) && declared.to_i > cap
+                raise ResponseTooLarge, "response body exceeds #{cap} bytes"
+              end
+              incoming.read_body do |chunk|
+                raise ResponseTooLarge, "response body exceeds #{cap} bytes" if body.bytesize + chunk.bytesize > cap
+
+                body << chunk
+              end
+            end
+          end
+        end
+        raise IOError, "outbound HTTP returned no response" unless response
+
+        response.body = body
+        response
+      rescue Timeout::Error
+        raise Timeout::Error, "outbound request exceeded #{timeout}s"
+      ensure
+        http.finish if http&.started?
+      rescue IOError, SystemCallError
+        nil
+      end
+
       def self.blocked_ip?(ip)
         ip = ip.native if ip.respond_to?(:ipv4_mapped?) && ip.ipv4_mapped?
         ip.loopback? || ip.link_local? || ip.private? ||
