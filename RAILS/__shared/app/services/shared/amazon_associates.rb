@@ -250,8 +250,7 @@ module Shared
         req["x-marketplace"] = marketplace_host
         req.body = JSON.generate(payload)
 
-        address = Shared::OutboundHttp.resolve_addresses(uri.hostname).reject { |a| Shared::OutboundHttp.unsafe_ip?(a) }.first
-        raise SocketError, "unsafe or unresolvable remote host" unless address
+        address = Shared::OutboundHttp.public_address!(uri.hostname)
         http = Shared::OutboundHttp.pinned_connection(uri, address, open_timeout: 10, read_timeout: 25)
         res = http.start { |conn| conn.request(req) }
         body = JSON.parse(res.body)
