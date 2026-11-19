@@ -50,9 +50,13 @@ module Master
       subscribe_graph_retriever(bus:, infra:, root:) unless lean_boot
       return if ENV["MASTER_BOOT_SELF_TEST"] == "0"
 
-      run = -> { publish_self_test(bus, Review::Scan::SelfTest.new(root:, event_bus: bus).call) }
-      # Only a strict boot acts on the result, so only a strict boot waits for it: the self-test read the
-      # source tree for 1.9s of every ordinary boot before the prompt appeared.
+      run = lambda do
+        # This diagnostic scans the source tree. Keep its background work
+        # below the interactive lane so it cannot starve the first response.
+        Thread.current.priority = -3 unless strict_boot_requested?
+        publish_self_test(bus, Review::Scan::SelfTest.new(root:, event_bus: bus).call)
+      end
+      # Only a strict boot acts on the result, so only a strict boot waits for it.
       strict_boot_requested? ? run.call : watched_thread(bus, "builder_self_test", &run)
     end
 
