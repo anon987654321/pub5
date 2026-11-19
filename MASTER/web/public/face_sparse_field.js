@@ -178,6 +178,7 @@
   function makeShader() {
     pointMaterial = new THREE.ShaderMaterial({
       uniforms: {
+        // The face dialect owns this neutral grey; mood colour never tints the head.
         uColor: { value: new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue("--c-accent").trim() || "#d8d6e0") },
         uTime: { value: 0 },
         uSize: { value: 1.0 },
@@ -458,7 +459,8 @@
     pointMaterial.uniforms.uViewportHeight.value = Math.max(1,
       Number(face.renderer?.domElement?.height) || Number(document.documentElement.clientHeight) || 1);
     pointMaterial.uniforms.uEnergy.value = profile.activity + risk * 0.4;
-    pointMaterial.uniforms.uOpacity.value = reduced ? 0.42 : 0.78;
+    // Reduced motion freezes movement; it must not dim the face into invisibility.
+    pointMaterial.uniforms.uOpacity.value = 0.94;
 
     for (let i = 0; i < maxParticles; i += 1) {
       const j = i * 3;
@@ -562,9 +564,11 @@
       const rank = active ? 1 : 0;
       const well = groups[i] === 1 || groups[i] === 3 ? 1.18 : 1.0;
       const semanticBoost = semanticLive * semantic.energy * (groups[i] === 7 ? 0.22 : 0.06);
-      const targetOpacity = rank * (0.36 + profile.activity * 0.50 + semanticBoost) *
-        (0.46 + reveal * 0.54) * (0.74 + confidence * 0.26) /
-        Math.max(0.2, profile.void * well);
+      const targetOpacity = Math.min(0.92,
+        rank * (0.46 + profile.activity * 0.50 + semanticBoost) *
+          (0.46 + reveal * 0.54) * (0.74 + confidence * 0.26) /
+          Math.max(0.2, profile.void * well)
+      );
       opacity[i] += (targetOpacity - opacity[i]) * 0.08;
       sizes[i] = (0.026 + seeded(i, 12.1) * 0.034) * (1 + profile.activity * 0.45) * (groups[i] === 8 ? 0.72 : 1.0);
     }

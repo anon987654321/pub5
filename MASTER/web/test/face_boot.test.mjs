@@ -435,6 +435,13 @@ test("face.modules.bundle.js is generated from face module entry", () => {
   assert.match(sparse, /gl_PointSize = 1\.0;/);
   assert.doesNotMatch(sparse, /gl_PointSize = clamp\(/);
   assert.match(sparse, /vOpacity = aOpacity \* clamp\([^;]*-mv\.z\)/);
+  assert.match(sparse, /getPropertyValue\("--c-accent"\)/, "face particles stay neutral grey");
+  assert.match(sparse, /pointMaterial\.uniforms\.uOpacity\.value = 0\.94;/,
+    "reduced motion preserves particle contrast");
+  assert.match(sparse, /Math\.min\(0\.92,[\s\S]*0\.46 \+ profile\.activity \* 0\.50/,
+    "particle brightness has a visible floor and a bounded ceiling");
+  assert.doesNotMatch(sparse, /uOpacity\.value = reduced \?/,
+    "motion preference must not suppress visibility");
   assert.match(sparse, /voice trace|Speaking grows a filament/i);
   assert.match(sparse, /semantic particles|Semantic particles remember/i);
   assert.match(sparse, /ghostSerial/);
