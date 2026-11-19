@@ -315,6 +315,11 @@ cpu_deploy_in_progress() {
   for flag in $CPU_DEPLOY_FLAGS; do
     [[ -e $flag ]] || continue
     mtime=$(stat -f %m "$flag" 2>/dev/null)
+    # BSD stat reads mtime as `stat -f %m`; GNU stat takes -f as --file-system
+    # and prints the mount point, which fails the numeric guard below. On a
+    # GNU host (a DR rehearsal box or a Linux sandbox running the suite) fall
+    # back to `stat -c %Y` so a deploy flag still suppresses the alert.
+    case $mtime in *[!0-9]*|'') mtime=$(stat -c %Y "$flag" 2>/dev/null) ;; esac
     case $mtime in *[!0-9]*|'') continue ;; esac
     age=$(( stamp - mtime ))
     if (( age >= 0 && age <= 1800 )); then
