@@ -14,7 +14,7 @@ class RestoreScriptsTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
 
   def test_restore_litestream_is_litestream_restore
-    source = File.read(File.join(ROOT, "mirror", "bin", "restore_litestream.sh"))
+    source = File.read(File.join(ROOT, "bin", "restore_litestream.sh"))
     assert_includes source, "litestream restore"
     refute_includes source, "MASTER/RAILS"
   end
@@ -24,14 +24,14 @@ class RestoreScriptsTest < Minitest::Test
   # restored none and exited 0. A restore that reports success having restored
   # nothing is read as evidence the backups work.
   def test_restore_litestream_uses_brokered_service_control
-    source = File.read(File.join(ROOT, "mirror", "bin", "restore_litestream.sh"))
+    source = File.read(File.join(ROOT, "bin", "restore_litestream.sh"))
     assert_includes source, 'doas /usr/local/sbin/pub5-admin service stop "$app"'
     assert_includes source, 'doas /usr/local/sbin/pub5-admin service start "$app"'
     assert_includes source, 'doas /usr/local/sbin/pub5-admin service check "$app"'
     refute_match(/doas rcctl (?:stop|start|check)/, source)
   end
   def test_restore_litestream_fails_rather_than_skipping
-    source = File.read(File.join(ROOT, "mirror", "bin", "restore_litestream.sh"))
+    source = File.read(File.join(ROOT, "bin", "restore_litestream.sh"))
     assert_includes source, "require_litestream", "no check that the binary exists"
     refute_match(/log "skip \$app/, source, "a missing replica must fail, not skip")
     assert_match(/missing replica \$replica"; exit 1/, source)
@@ -42,7 +42,7 @@ class RestoreScriptsTest < Minitest::Test
   # it as an app name and failed later on "/home/[restore] missing…/app/storage".
   def test_a_dry_run_with_no_config_fails_on_the_config
     env = { "DRY_RUN" => "1", "LITESTREAM_CONFIG" => File.join(Dir.tmpdir, "no-such-litestream.yml") }
-    out, err, status = Open3.capture3(env, ENV.fetch("PUB5_ZSH", "zsh"), File.join(ROOT, "mirror", "bin", "restore_litestream.sh"))
+    out, err, status = Open3.capture3(env, ENV.fetch("PUB5_ZSH", "zsh"), File.join(ROOT, "bin", "restore_litestream.sh"))
 
     assert_equal 1, status.exitstatus
     assert_includes err, "missing litestream config"
@@ -55,7 +55,7 @@ class RestoreScriptsTest < Minitest::Test
       config = File.join(dir, "litestream.yml")
       File.write(config, "dbs:\n  - path: /home/ghostapp/app/storage/production.sqlite3\n")
       out, _, status = Open3.capture3({ "DRY_RUN" => "1", "LITESTREAM_CONFIG" => config },
-                                      ENV.fetch("PUB5_ZSH", "zsh"), File.join(ROOT, "mirror", "bin", "restore_litestream.sh"))
+                                      ENV.fetch("PUB5_ZSH", "zsh"), File.join(ROOT, "bin", "restore_litestream.sh"))
 
       assert_equal 1, status.exitstatus, "the app has no storage here, so the plan must fail rather than skip"
       assert_includes out, "FAIL ghostapp - missing /home/ghostapp/app/storage"
@@ -81,7 +81,7 @@ class RestoreScriptsTest < Minitest::Test
     # reorganization: the failure contract is that the branch which runs
     # vps_deploy_master.sh stamps the app itself, so last_deploy_master.json
     # cannot keep saying ok through a failed deploy.
-    master_branch = source[/if zsh "\$repo\/OPENBSD\/mirror\/bin\/vps_deploy_master\.sh".*?^fi$/m].to_s
+    master_branch = source[/if zsh "\$repo\/OPENBSD\/bin\/vps_deploy_master\.sh".*?^fi$/m].to_s
     assert master_branch.include?('write_stamp "$app" failed'),
            "the master deploy branch does not stamp failure; last_deploy_master.json would keep saying ok"
     assert_includes source, 'write_stamp "$app" failed'
@@ -182,7 +182,7 @@ class RestoreScriptsTest < Minitest::Test
   end
 
   def dr_pull(env, *args)
-    Open3.capture3(env, RbConfig.ruby, File.join(ROOT, "mirror", "bin", "dr-pull"), *args)
+    Open3.capture3(env, RbConfig.ruby, File.join(ROOT, "bin", "dr-pull"), *args)
   end
 
   def test_dr_pull_records_vm23s_checksums_and_the_drill_reads_the_pull_back

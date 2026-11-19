@@ -6,3 +6,24 @@
 
 PROMPT='%m:%~$ '
 RPROMPT=''
+
+# Provider credentials load only from the host-local operator file, never from
+# this checkout (OPENBSD/README.md, "Configuration ownership and secrets").
+# The file must be owned by the caller with owner-only permissions; anything
+# else is refused before a credential enters the environment.
+typeset -g PUB4_OPERATOR_ENV="${HOME}/.config/pub4/operator.env"
+if [[ -e "$PUB4_OPERATOR_ENV" ]]; then
+  if [[ ! -O "$PUB4_OPERATOR_ENV" ]]; then
+    print -u2 "zshrc.shared: refusing $PUB4_OPERATOR_ENV - not owned by the current user"
+  else
+    typeset -g PUB4_OPERATOR_ENV_MODE=$(stat -f %Lp "$PUB4_OPERATOR_ENV" 2>/dev/null)
+    case "$PUB4_OPERATOR_ENV_MODE" in
+      [0-7]00|0[0-7]00)
+        source "$PUB4_OPERATOR_ENV"
+        ;;
+      *)
+        print -u2 "zshrc.shared: refusing $PUB4_OPERATOR_ENV - permissions must be owner-only (got ${PUB4_OPERATOR_ENV_MODE:-unknown})"
+        ;;
+    esac
+  fi
+fi

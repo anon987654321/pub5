@@ -72,6 +72,12 @@ module Deploy
                                                 "no fleet agreement is asserted from these literals",
       "OPENBSD/mirror/usr/local/bin/emergency_cpu.sh" => "unchecked: root runs it from /usr/local/bin with no checkout " \
                                                   "to read, and it names only master and brgen, the two it restarts",
+      "OPENBSD/test/test_pub4_alert.rb" => "fixture: literal brgen and master ports drive the alert scanner's " \
+                                                  "parser cases; no fleet agreement is asserted from these literals",
+      "OPENBSD/test/test_pub5_admin.rb" => "fixture: literal brgen and master ports exercise broker validation " \
+                                                  "and dispatch; no fleet agreement is asserted from these literals",
+      "OPENBSD/test/test_vps_state.rb" => "fixture: literal brgen and master ports stand in for vps-state " \
+                                                  "output rows; no fleet agreement is asserted from these literals",
     }.freeze
 
     FLEET_SCAN_GLOB = "{RAILS,OPENBSD,MASTER,bin}/**/*.{rb,sh,yml,yaml,json,conf,mjs,js,md,erb,exp}"

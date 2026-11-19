@@ -684,13 +684,15 @@ module Pub5Admin
     raise "invalid deploy-run id" unless deploy_run_id?(run_id)
 
     payload = parse_deploy_run_payload(payload_json)
-    directory = deploy_run_directory(root:, create: true, verify_root:)
-    target = File.join(directory, "#{run_id}.json")
-    raise "#{target} is a symlink; refusing deploy-run write" if File.symlink?(target)
+    # Merge and validate before creating or touching storage: a refused write
+    # must leave no deploy_runs directory behind for the next caller to trip on.
     previous = deploy_run_record(run_id, root:, verify_root:)
     record = merge_deploy_run_payload(payload, previous, run_id)
     record["updated_at"] = Time.now.utc.iso8601
     validate_deploy_run!(record, run_id)
+    directory = deploy_run_directory(root:, create: true, verify_root:)
+    target = File.join(directory, "#{run_id}.json")
+    raise "#{target} is a symlink; refusing deploy-run write" if File.symlink?(target)
     write_deploy_run_record(directory, target, run_id, record, output)
   end
 
@@ -727,7 +729,6 @@ module Pub5Admin
     raise "terminal deploy-run receipt cannot be changed" if terminal
 
     validate_deploy_run_immutable_fields!(payload, previous)
-    validate_deploy_run_pinned_fields!(payload, previous)
     validate_deploy_run_snapshot_fields!(payload, previous)
   end
 
@@ -740,19 +741,14 @@ module Pub5Admin
     end
   end
 
-  def validate_deploy_run_pinned_fields!(payload, previous)
-    %w[pinned_sha previous_sha].each do |field|
-      next if previous[field].nil?
-      next unless payload.key?(field)
-
-      raise "deploy-run pinned field #{field} cannot change" if payload[field] != previous[field]
-    end
-  end
-
+  # Everything the interrupted-run recovery replays freezes the moment the
+  # service snapshot is durable, not before: the pin and snapshot stages are
+  # still establishing pinned_sha and the started-services list, and the first
+  # receipt with snapshot_recorded=true is what recover --apply may trust.
   def validate_deploy_run_snapshot_fields!(payload, previous)
     return unless previous["snapshot_recorded"]
 
-    %w[started_services ports restore_order].each do |field|
+    %w[pinned_sha previous_sha started_services ports restore_order].each do |field|
       raise "deploy-run snapshot field #{field} cannot change" if payload.key?(field) && payload[field] != previous[field]
     end
     raise "deploy-run snapshot marker cannot be cleared" if payload["snapshot_recorded"] == false
@@ -845,7 +841,9 @@ module Pub5Admin
     names, scanned = pending_deploy_run_names(directory, max_scan)
     records = pending_deploy_run_records(names, root, verify_root, max_pending)
     truncated = scanned > max_scan || records.length > max_pending
-    output_pending_deploy_runs(output, records.first(max_pending), truncated, scanned)
+    # Newest-cap in chronological order: the operator reads incidents in the
+    # order they happened, and the cap keeps the newest, never the oldest.
+    output_pending_deploy_runs(output, records.first(max_pending).reverse, truncated, scanned)
   end
 
   def validate_pending_deploy_run_limits!(max_scan, max_pending)

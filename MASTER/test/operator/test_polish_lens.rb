@@ -53,6 +53,9 @@ class TestPolishLens < Minitest::Test
   end
 
   def test_clean_tree_yields_no_findings
+    # A populated bin: an empty one is itself a DENSITY finding.
+    File.write("#{@root}/MASTER/bin/tool", "#!/bin/sh\necho hi\n")
+    FileUtils.chmod(0o755, "#{@root}/MASTER/bin/tool")
     FileUtils.touch("#{@root}/MASTER/lib/real.rb")
     FileUtils.mkdir_p("#{@root}/MASTER/test/fixtures/law/good")
     FileUtils.touch("#{@root}/MASTER/test/fixtures/law/bad/x.rb")

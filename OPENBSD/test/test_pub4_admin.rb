@@ -184,7 +184,7 @@ class Pub4AdminTest < Minitest::Test
     assert_includes source, "File.lstat(path)"
     assert_includes source, "Find.find(root)"
     assert_includes source, 'raise "symlink refused in MASTER web path: #{path}" if stat.symlink?'
-    assert_includes source, "File.chown(dev.uid, master.gid, entry)"
+    assert_includes source, "File.chown(dev.uid, master.gid, path)"
   end
   def test_ci_timeout_is_a_real_process_group_deadline
     source = File.read(File.expand_path("../mirror/usr/local/sbin/pub4-admin", __dir__))
@@ -192,9 +192,9 @@ class Pub4AdminTest < Minitest::Test
     assert_includes source, "def valid_ci_timeout?(value)"
     assert_includes source, "def run_ci(app, duration)"
     assert_includes source, "Process.clock_gettime(Process::CLOCK_MONOTONIC) + duration"
-    assert_includes source, 'Process.kill("TERM", -pid)'
-    assert_includes source, 'Process.kill("KILL", -pid)'
-    assert_includes source, "return 124"
+    assert_includes source, 'Process.kill(signal, -pid)'
+    assert_includes source, 'signal_helper_group("TERM", pid)'
+    assert_includes source, 'signal_helper_group("KILL", pid)'
     assert_includes source, "unsetenv_others: true"
   end
 
@@ -210,7 +210,7 @@ class Pub4AdminTest < Minitest::Test
   end
   def test_first_deploy_secret_does_not_replace_a_racing_secret
     source = File.read(File.expand_path("../mirror/usr/local/sbin/pub4-admin", __dir__))
-    method = source[/def ensure_app_secret\(app, emit: true\).*?^  end/m]
+    method = source[/def publish_secret_without_replace\(temporary, target\).*?^  end/m]
     refute_nil method
     assert_includes method, "File.link(temporary, target)"
     refute_includes method, "File.rename(temporary, target)"
@@ -226,8 +226,8 @@ class Pub4AdminTest < Minitest::Test
   def test_rails_secret_is_passed_in_environment_not_command_text
     broker = File.read(File.expand_path("../mirror/usr/local/sbin/pub4-admin", __dir__))
     helper = File.read(File.expand_path("../mirror/usr/local/libexec/rails-task.ksh", __dir__))
-    assert_includes broker, 'environment["SECRET_KEY_BASE"] = environment_secret if environment_secret'
-    assert_includes broker, "environment_secret = app_secret_value(app)"
+    assert_includes broker, 'environment["SECRET_KEY_BASE"] = secret if secret'
+    assert_includes broker, "secret = supervised_helper_secret(helper, app, arguments)"
     assert_includes helper, "export SECRET_KEY_BASE"
     refute_includes helper, 'command="SECRET_KEY_BASE=$secret'
   end
@@ -333,7 +333,8 @@ class Pub4AdminTest < Minitest::Test
     source = File.read(File.expand_path("../mirror/usr/local/sbin/pub4-admin", __dir__))
     helper = File.read(File.expand_path("../mirror/usr/local/libexec/ci-run.ksh", __dir__))
 
-    assert_includes source, 'args[0] == "ci-run" && RAILS_APPS.include?(args[1])'
+    assert_includes source, 'args[0] == "ci-run" &&'
+    assert_includes source, 'RAILS_APPS.include?(args[1]) && valid_ci_timeout?(args[2])'
     assert_includes source, "supervised_helper(CI_RUN, app, duration)"
     assert_includes helper, 'brgen|amber|bsdports'
     assert_includes helper, '[ "$timeout" -le 7200 ]'
@@ -490,7 +491,7 @@ class Pub4AdminTest < Minitest::Test
 
     refute_match(/system\s*\(|Open3\.|%x/, source)
     assert_equal 1, source.scan("Process.spawn").length
-    fixed_spawn = %q(Process.spawn(environment, "/bin/ksh", helper, *arguments, pgroup: true, unsetenv_others: true))
+    fixed_spawn = "Process.spawn(environment, \"/bin/ksh\", helper, *arguments,\n    pgroup: true, unsetenv_others: true)"
     assert_includes source, fixed_spawn
     assert_includes source, %q(exec(environment, "/bin/ksh", helper, *arguments, unsetenv_others: true))
     assert_includes source, "raise \"unknown helper\" unless [CI_RUN, CI_SYNC, RAILS_TASK, RAILS_SYNC].include?(helper)"

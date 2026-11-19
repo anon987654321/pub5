@@ -21,6 +21,10 @@ coverage/
 # Runtime and temp files
 tmp/
 /fix/
+# Deploy-in-progress flags: rc.d/<app> touches .deploying-<app> and vps-deploy
+# touches .deploying-vps-deploy-<app> in the checkout root; a SIGKILLed deploy
+# would otherwise leave them as untracked noise in git status on the box.
+.deploying-*
 # Local bootstrap builds (sh bin/bootstrap): ruby/ksh/zsh under .tools/prefix
 .tools/
 # The link-embed thumbnail cache (shared-029) is runtime state: the job and the

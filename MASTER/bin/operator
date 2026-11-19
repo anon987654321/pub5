@@ -55,7 +55,7 @@ def usage
       bin/operator vps deploy <app|group|all> [--remote] [--follow|--detach]  --remote: preflight, pin SHA, tmux on box; default waits + canary
       bin/operator vps logs <app> [--lines N] [--remote]
       bin/operator vps canary [--remote] [--app a,b] [--budget-ms N]  post-deploy probe: ports, rcctl, every public GET route (--remote runs on the box, otherwise the public domains)
-      bin/operator vps rollback <sha>     prints the manual rollback; vps-deploy takes no SHA, so nothing is run
+      bin/operator vps rollback <sha>     prints the manual rollback; vps-deploy refuses non-fast-forward pins, so nothing is run
       bin/operator vps admin <status|services|service|pf|disk|memory|swap|dmesg|packages|updates|upgrade|reboot> [args] [--remote]
       bin/operator post-pull
       bin/operator measure [--deep] [--json]
@@ -1152,12 +1152,15 @@ when "vps"
       exec(File.join(OPENBSD_OPS, "bin", "canary"), "--public", *ARGV)
     end
   when "rollback"
-    # vps-deploy takes only an app name and starts with `git pull --ff-only
-    # origin main`, so it cannot deploy an older SHA. Until it can, this prints
-    # the revert procedure and runs nothing against the box.
+    # vps-deploy pins one commit (VPS_DEPLOY_SHA) and refuses any pin that is
+    # not a fast-forward of the box's HEAD, so an older SHA cannot be deployed
+    # directly. Rollback is a reviewed revert on main; this prints the
+    # procedure and runs nothing against the box.
     sha = ARGV.shift.to_s
     die("vps", "usage, bin/operator vps rollback <sha>", 64) unless sha.match?(/\A\h{7,40}\z/)
-    warn "vps rollback #{sha}: not automated. vps-deploy has no SHA argument; its pull returns the box to origin/main."
+    warn "vps rollback #{sha}: not automated. vps-deploy pins a SHA but refuses non-fast-forward pins, so an older commit cannot be deployed directly."
+    warn "  Identify the affected app's last known-good SHA from /var/db/pub5/last_deploy_<app>.json"
+    warn "  and the matching deploy-run receipt (zsh OPENBSD/bin/vps-deploy recover --plan on the box)."
     warn "  git revert --no-edit #{sha}..HEAD && git push origin main"
     warn "  bin/operator vps deploy <app> --remote"
     exit 2

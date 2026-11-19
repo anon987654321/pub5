@@ -239,9 +239,9 @@ class VpsSafetyCheckTest < Minitest::Test
     end
   end
 
-  def test_operator_checks_destinations_before_copying_privileged_trees
+  def test_bootstrap_checks_destinations_before_copying_privileged_trees
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "OPERATOR.sh")
+      path = File.join(dir, "OPENBSD", "BOOTSTRAP.sh")
       text = File.read(path)
       guard = text.index("Never copy privileged code through a symlinked system directory or file.")
       copy = text.index("for d in etc usr var; do")
@@ -252,7 +252,7 @@ class VpsSafetyCheckTest < Minitest::Test
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "OPERATOR.sh must refuse symlinked privileged destinations before copying"
+      assert_includes out, "BOOTSTRAP.sh must refuse symlinked privileged destinations before copying"
     end
   end
 
@@ -314,15 +314,15 @@ class VpsSafetyCheckTest < Minitest::Test
     end
   end
 
-  def test_operator_preflights_and_installs_emergency_cpu_runner
+  def test_bootstrap_preflights_and_installs_emergency_cpu_runner
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "OPERATOR.sh")
+      path = File.join(dir, "OPENBSD", "BOOTSTRAP.sh")
       text = File.read(path).sub("usr/local/bin/emergency_cpu.sh", "usr/local/bin/removed-emergency.sh")
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "OPERATOR.sh must preflight, install, and verify the root-owned emergency runner"
+      assert_includes out, "BOOTSTRAP.sh must preflight, install, and verify the root-owned emergency runner"
     end
   end
 
@@ -469,25 +469,18 @@ class VpsSafetyCheckTest < Minitest::Test
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "vps-deploy")
       original = File.read(path)
-      safe_order = <<~'SAFE'
-        if (( rc != 0 )) && (( lock_owner )); then
-          restore_started || print -u2 "vps-deploy: production is NOT fully restored - see the lines above"
-        fi
-        # Keep resource_guard excluded until every service restored by this failure
-        # has answered, including slow boots; only then stop the heartbeat and remove
-        # this process's deploy flag.
-        [[ -n $flag_keeper ]] && kill $flag_keeper 2>/dev/null
-        rm -f -- "$deploy_flag"
-      SAFE
-      unsafe_order = <<~'UNSAFE'
-        [[ -n $flag_keeper ]] && kill $flag_keeper 2>/dev/null
-        rm -f -- "$deploy_flag"
-        if (( rc != 0 )) && (( lock_owner )); then
-          restore_started || print -u2 "vps-deploy: production is NOT fully restored - see the lines above"
-        fi
-      UNSAFE
-      text = original.sub(safe_order, unsafe_order)
+      restore_block = "  if (( rc != 0 )) && (( lock_owner )) && [[ \${VPS_DEPLOY_RESTORE_ATTEMPTED:-0} != 1 ]]; then\n" \
+                      "    restore_started || {\n" \
+                      "      restore_ok=0\n" \
+                      "      print -u2 \"vps-deploy: production is NOT fully restored - see the lines above\"\n" \
+                      "    }\n" \
+                      "  fi\n"
+      flag_lines = "  [[ -n $flag_keeper ]] && kill $flag_keeper 2>/dev/null\n" \
+                   "  rm -f -- \"$deploy_flag\"\n"
+      text = original.sub(restore_block, "")
       refute_equal original, text, "the safety mutation must match the current finish ordering"
+      # Unsafe: the failure restore runs only after the guard flag is gone.
+      text = text.sub(flag_lines, flag_lines + restore_block)
       File.write(path, text)
       out, status = run_check(dir)
 
@@ -515,29 +508,29 @@ class VpsSafetyCheckTest < Minitest::Test
     end
   end
 
-  def test_operator_install_refuses_symlinked_system_destinations
+  def test_bootstrap_install_refuses_symlinked_system_destinations
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "OPERATOR.sh")
+      path = File.join(dir, "OPENBSD", "BOOTSTRAP.sh")
       text = File.read(path).sub("refusing symlinked privileged destination file",
                                  "symlinked target check weakened")
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "OPERATOR.sh must refuse symlinked privileged destinations before copying"
+      assert_includes out, "BOOTSTRAP.sh must refuse symlinked privileged destinations before copying"
     end
   end
 
-  def test_operator_install_preflights_privileged_source_files
+  def test_bootstrap_install_preflights_privileged_source_files
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "OPERATOR.sh")
+      path = File.join(dir, "OPENBSD", "BOOTSTRAP.sh")
       text = File.read(path).sub('if [[ ! -f $src/$rel || -L $src/$rel ]]; then',
                               'if [[ ! -f $src/$rel ]]; then')
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "OPERATOR.sh must preflight privileged sources before copying"
+      assert_includes out, "BOOTSTRAP.sh must preflight privileged sources before copying"
     end
   end
   def test_ci_prepare_path_validation_is_required
@@ -562,15 +555,15 @@ class VpsSafetyCheckTest < Minitest::Test
     end
   end
 
-  def test_operator_install_refuses_symlinked_broker_helpers
+  def test_bootstrap_install_refuses_symlinked_broker_helpers
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "OPERATOR.sh")
+      path = File.join(dir, "OPENBSD", "BOOTSTRAP.sh")
       text = File.read(path).sub('if [[ -L $f ]]; then', 'if [[ -L $unused ]]; then')
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "OPERATOR.sh must reject symlinked privileged entrypoints"
+      assert_includes out, "BOOTSTRAP.sh must reject symlinked privileged entrypoints"
     end
   end
 
@@ -687,7 +680,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_master_scan_skip_requires_explicit_fast_deploy_ack
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "OPERATOR.sh")
+      path = File.join(dir, "OPENBSD", "BOOTSTRAP.sh")
       text = File.read(path).sub(
         '[[ ${SKIP_MASTER_SCAN} != 1 || ${I_UNDERSTAND_FAST_DEPLOY:-0} != 1 ]]',
         '[[ -n ${SKIP_MASTER_SCAN:-} ]]'

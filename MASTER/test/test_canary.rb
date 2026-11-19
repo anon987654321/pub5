@@ -254,7 +254,9 @@ FLOW_OUTPUT = <<~OUT
     text = out.string
     assert_match(/FAIL GET demo \/gone - status 500/, text)
     assert_match(/rollback \(manual; the canary changes nothing\)/, text)
-    assert_match(/vps-deploy takes no SHA/, text)
+    assert_match(/HEAD@\{1\} is not proof of the last known-good deployment/, text)
+    assert_match(%r{/var/db/pub5/last_deploy_<app>\.json}, text)
+    assert_match(/bin\/operator vps deploy <app> --remote/, text)
   end
 
   def test_deploy_preflight_capture_kills_a_hung_process_group

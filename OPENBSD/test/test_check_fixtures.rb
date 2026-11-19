@@ -45,14 +45,14 @@ class InstalledTargetsCheckFixtureTest < Minitest::Test
   # resource_guard.sh is installed from the tree root and calls its crisis tier by
   # its installed path. A script the repo installs is a referrer like any crontab.
   def test_an_installed_script_naming_a_target_nothing_installs_is_named
-    plant("OPERATOR.sh", %(install -m 755 "${SCRIPT_DIR}/guard.sh" /usr/local/bin/guard.sh\n))
+    plant("BOOTSTRAP.sh", %(install -m 755 "${SCRIPT_DIR}/guard.sh" /usr/local/bin/guard.sh\n))
     plant("guard.sh", "[ -x /usr/local/bin/crisis.sh ] && /usr/local/bin/crisis.sh\n")
 
     assert_equal ["bin/crisis.sh"], missing
   end
 
   def test_an_install_line_provides_its_target
-    plant("OPERATOR.sh", <<~SH)
+    plant("BOOTSTRAP.sh", <<~SH)
       install -m 755 "${SCRIPT_DIR}/guard.sh" /usr/local/bin/guard.sh
       install -m 755 "${SCRIPT_DIR}/crisis.sh" /usr/local/bin/crisis.sh
     SH
@@ -242,7 +242,7 @@ class PortInventoryFixtureTest < Minitest::Test
   end
 
   def test_operator_app_ports_on_the_old_port_fails
-    assert_includes findings(:check_openbsd_ports, moved).join(" | "), "brgen: OpenBSD APP_PORTS"
+    assert_includes findings(:check_openbsd_ports, moved).join(" | "), "brgen: BOOTSTRAP.sh APP_PORTS"
   end
 
   def test_two_apps_on_one_port_fail

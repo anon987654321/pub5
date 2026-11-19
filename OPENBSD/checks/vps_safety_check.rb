@@ -187,14 +187,14 @@ if File.file?(admin_path) && !File.symlink?(admin_path)
   task_app_scope = admin.include?("known_apps = helper == RAILS_TASK ? RAILS_TASK_APPS : RAILS_APPS") &&
                    admin.include?("RAILS_TASK_APPS = %w[master brgen amber bsdports mrdamascy].freeze")
   failures << "pub5-admin must validate each helper against its own app allowlist" unless task_app_scope
-  fixed_spawn = 'Process.spawn(environment, "/bin/ksh", helper, *arguments, pgroup: true, unsetenv_others: true)'
+  fixed_spawn = "Process.spawn(environment, \"/bin/ksh\", helper, *arguments,\n    pgroup: true, unsetenv_others: true)"
   safe_spawn = admin.include?(fixed_spawn) &&
                admin.include?('exec(environment, "/bin/ksh", helper, *arguments, unsetenv_others: true)') &&
                admin.include?('raise "unknown helper" unless [CI_RUN, CI_SYNC, RAILS_TASK, RAILS_SYNC].include?(helper)') &&
-               admin.include?("when RAILS_TASK then Array(helper_arguments)") &&
+               admin.include?("when RAILS_TASK then Array(extra)") &&
                admin.include?("when CI_RUN then [app, duration.to_s]") &&
                admin.include?("when CI_SYNC then [app]") &&
-               admin.include?("when RAILS_SYNC then [app, *Array(helper_arguments)]") &&
+               admin.include?("when RAILS_SYNC then [app, *Array(extra)]") &&
                admin.include?("Process.groups = groups") &&
                admin.include?("Process::GID.change_privilege(account.gid)") &&
                admin.include?("Process::UID.change_privilege(account.uid)") &&
@@ -244,8 +244,9 @@ if File.file?(admin_path) && !File.symlink?(admin_path)
   rails_task_path = File.join(OPENBSD, "mirror", "usr", "local", "libexec", "rails-task.ksh")
   if File.file?(rails_task_path) && !File.symlink?(rails_task_path)
     rails_task = File.read(rails_task_path)
-    rails_task_secret_contract = admin.include?('environment["SECRET_KEY_BASE"] = environment_secret if environment_secret') &&
-                              admin.include?("environment_secret = app_secret_value(app)") &&
+    rails_task_secret_contract = admin.include?('environment["SECRET_KEY_BASE"] = secret if secret') &&
+                              admin.include?("secret = supervised_helper_secret(helper, app, arguments)") &&
+                              admin.include?("app_secret_value(app)") &&
                               rails_task.include?("export SECRET_KEY_BASE") &&
                               !rails_task.include?('command="SECRET_KEY_BASE=$secret')
     failures << "Rails task secrets must use the child environment, never command arguments" unless rails_task_secret_contract
@@ -402,7 +403,8 @@ if File.file?(admin_path) && !File.symlink?(admin_path)
     failures << "missing RAILS/_bundle.sh CAS adapters"
   end
   broker_helper_dispatch = admin.include?('args[0] == "ci-prepare" && RAILS_APPS.include?(args[1])') &&
-                           admin.include?('args[0] == "ci-run" && RAILS_APPS.include?(args[1])') &&
+                           admin.include?('args[0] == "ci-run" &&') &&
+                           admin.include?('RAILS_APPS.include?(args[1]) && valid_ci_timeout?(args[2])') &&
                            admin.include?('args[0] == "ci-sync" && RAILS_APPS.include?(args[1])') &&
                            admin.include?('trusted_script!(CI_PREPARE)') &&
                            admin.include?("trusted_script!(helper)") &&
@@ -487,7 +489,10 @@ install_all_contract = install_all_source.include?("admin_service() {") &&
 
 failures << "vps_install_all service control must be broker-first and app-allowlisted" unless install_all_contract
 deploy_all_source = File.read(File.join(OPENBSD, "bin", "deploy_all.sh"))
-deploy_all_contract = deploy_all_source.include?('zsh OPENBSD/bin/vps-deploy ${app}') &&
+# deploy_all.sh is now a compatibility shim: it execs the operator deploy,
+# whose admission, SHA pinning, tmux supervision and canaries are stricter
+# than the retired per-app loop. It must not elevate checkout Rails wrappers.
+deploy_all_contract = deploy_all_source.include?('MASTER/bin/operator" vps deploy all --remote') &&
                       !deploy_all_source.include?('doas zsh ${script}') &&
                       !deploy_all_source.include?('RAILS/${app}/${app}.sh')
 failures << "deploy_all per-app mode must not elevate checkout Rails wrappers" unless deploy_all_contract

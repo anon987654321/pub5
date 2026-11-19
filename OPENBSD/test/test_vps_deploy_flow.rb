@@ -4,6 +4,7 @@ require "minitest/autorun"
 require "tmpdir"
 require "fileutils"
 require "open3"
+require "shellwords"
 
 # The sequence around the services: the pinned SHA, the preflight, the snapshot,
 # the restore and the order. bin/vps-deploy cannot run here (it deploys), so each
@@ -29,7 +30,11 @@ class VpsDeployFlowTest < Minitest::Test
   # restore_preflight_checkout joined them with the 2026-10-12 pin work: the
   # preflight's failure paths (and only a full run's EXIT trap) restore the
   # detached checkout, so the pin block must carry its own definition.
-  HELPER_NAMES = %w[run_as_deploy_user git_as_deploy_user log_ts log set_stage retry admin_service_retry restore_preflight_checkout].freeze
+  # write_deploy_run_receipt is a no-op in the harness (no VPS_DEPLOY_RUN_ID),
+  # but set_stage calls it, so the real definition must be present. The finish
+  # block's failure path calls restore_started, which needs stop_origin and
+  # wait_up; all three come from the same source, never from a stub.
+  HELPER_NAMES = %w[run_as_deploy_user git_as_deploy_user log_ts log set_stage retry admin_service_retry restore_preflight_checkout write_deploy_run_receipt restore_started stop_origin wait_up].freeze
   HELPERS = HELPER_NAMES.to_h { |name| [name, SOURCE[/^#{name}\(\) \{.*?^\}$/m]] }
   HELPER_SOURCE = HELPERS.values.join("\n")
   # su stands in for root changing to the deploy user: it refuses any other user
@@ -83,6 +88,9 @@ class VpsDeployFlowTest < Minitest::Test
     exports = env.map { |k, v| "export #{k}=#{v}" }.join("\n")
     zsh(<<~ZSH)
       repo=#{box}; lock_owner=1; deploy_stage=start; app=all
+      # The real script sources OPENBSD/lib/ruby_select.sh before the pin; the
+      # harness runs the pin block alone, so it names the interpreter itself.
+      RUBY=#{RbConfig.ruby.shellescape}
       unset VPS_DEPLOY_USER VPS_DEPLOY_HOME
       #{DEPLOY_USER_LINES}
       #{HELPER_SOURCE}
