@@ -134,7 +134,7 @@ class OperatorIntentTest < Minitest::Test
     with_inventory do |root|
       requests = [
         "you need to deploy pub5 onto vm23",
-        "i want you to deploy OPENBSD and MASTER and RAILS to vm23",
+        "i want you to deploy OPENBSD and MASTER and RAILS to vm23 (ssh dev@brgen.no, wheel group)",
       ]
 
       requests.each do |message|
