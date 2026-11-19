@@ -22,7 +22,7 @@ class CritiqueFoldTest < Minitest::Test
       Master::Result.ok("critique: council pass")
     end
     Dir.mktmpdir do |root|
-      world = Master::Core::World.new(root:, critique_runner: runner)
+      world = Master::Core::World.new(root:, process_runner: Master::Io::Exec, critique_runner: runner)
       observation = world.perform(Master::Core::Effect.critique)
       memory.record(Master::Core::Effect.critique, observation)
     end
@@ -51,7 +51,7 @@ class CritiqueFoldTest < Minitest::Test
       done = Master::Core::Fold.new(
         model:,
         constitution:,
-        world: Master::Core::World.new(root:, critique_runner: runner),
+        world: Master::Core::World.new(root:, process_runner: Master::Io::Exec, critique_runner: runner),
         memory:,
       ).run("ship fix")
 

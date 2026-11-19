@@ -87,7 +87,7 @@ class TestKernelSpine < Minitest::Test
     Dir.mktmpdir do |dir|
       model = Model.new([Master::Core::Effect.done("fake")])
       memory = Master::Core::Memory.new
-      world = Master::Core::World.new(root: dir)
+      world = Master::Core::World.new(root: dir, process_runner: Master::Io::Exec)
 
       result = Master::Core::Fold.new(
         model:,
