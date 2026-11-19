@@ -557,6 +557,20 @@ class TestStudioReplicateClientPaths < Minitest::Test
     end
   end
 
+  def test_replicate_api_deadline_is_bounded_before_dns_resolution
+    uri = URI("https://api.replicate.com/v1/models")
+    resolved = false
+    resolver = ->(_host) { resolved = true; ["93.184.216.34"] }
+
+    Studio::ReplicateClient.stub(:resolve_download_addresses, resolver) do
+      assert_raises(ArgumentError) do
+        @client.send(:attempt_request, Net::HTTP::Get.new(uri), uri,
+                     timeout: Studio::ReplicateClient::MAX_API_TOTAL_TIMEOUT_SECONDS + 1)
+      end
+    end
+    refute resolved, "an invalid time budget must be rejected before DNS resolution"
+  end
+
   def test_replicate_api_transport_does_not_follow_redirects
     uri = URI("https://api.replicate.com/v1/models")
     response = FakeResponse.new(code: "302", headers: { "location" => "https://127.0.0.1/private" })
