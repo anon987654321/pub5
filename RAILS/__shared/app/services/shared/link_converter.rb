@@ -154,8 +154,7 @@ module Shared
 
       uri = URI(remote)
       raise URI::InvalidURIError, "HTTPS required" unless uri.is_a?(URI::HTTPS)
-      address = Shared::OutboundHttp.resolve_addresses(uri.hostname).reject { |a| Shared::OutboundHttp.unsafe_ip?(a) }.first
-      raise SocketError, "unsafe or unresolvable remote host" unless address
+      address = Shared::OutboundHttp.public_address!(uri.hostname)
       http = Shared::OutboundHttp.pinned_connection(uri, address, open_timeout: 5, read_timeout: 15)
       response = http.start { |conn| conn.request(Net::HTTP::Get.new(uri)) }
       return false unless response.is_a?(Net::HTTPSuccess)
