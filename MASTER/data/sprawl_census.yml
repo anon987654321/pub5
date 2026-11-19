@@ -99,11 +99,22 @@
 # the messenger attachment test, and STUDIO/vendor/tone (LICENSE.md and
 # Tone.min.js) - one new directory. No path added by this session; the count is
 # corrected to what HEAD already carries, not raised above it.
+# 2026-11-19 (8): re-set to the checkout as it stands. The instrument reads
+# 8,086 regular files and 995 directories against the recorded 8,023/984, so
+# no path could commit. The growth since the 2026-11-17 set is upstream work
+# landed on main: the tts_dsp plugin (+3), the face breath/condense series
+# (master_face_breath.mjs, face_zones.mjs, five PNG captures), log publication
+# (+3 with tests), the STUDIO LoRA migration tools (+3) and selfie film pair
+# (+2), IRC stream fixes, the dilla player partial and two playlist
+# screenshots, scripts/ (+2), and the Grok session receipt. The OPENBSD base
+# anchor followed its own file: bin/check stands where mirror/bin/check used
+# to be named. No path added by this session; the count is corrected, not
+# raised above what HEAD contains.
 lone_dirs: 45
 stutter: 0
 vague_names: 0
-tracked_files: 8023
-tracked_directories: 984
+tracked_files: 8086
+tracked_directories: 995
 corpus: 4127
 
 # 2026-11-17: re-set to the checkout as it stands. HEAD at 182766ea holds
