@@ -514,7 +514,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
   def test_download_blocks_mapped_nat64_6to4_teredo_and_non_global_ipv6
     %w[
       ::ffff:127.0.0.1 64:ff9b::a00:1 64:ff9b:1::a00:1
-      2002:0a00:0001::1 2001:0::1 4000::1 3fff::1
+      2002:0a00:0001::1 2001:0::1 ::a00:1 fc00::1 4000::1 3fff::1
     ].each do |address|
       assert Studio::ReplicateClient.blocked_download_ip?(IPAddr.new(address)), "#{address} must be blocked"
     end
@@ -525,6 +525,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
     refute Studio::ReplicateClient.valid_download_hostname?("bad_name.replicate.delivery")
     refute Studio::ReplicateClient.valid_download_hostname?("-bad.replicate.delivery")
     refute Studio::ReplicateClient.valid_download_hostname?("bad-.replicate.delivery")
+    refute Studio::ReplicateClient.valid_download_hostname?("replicate")
     assert Studio::ReplicateClient.valid_download_hostname?("replicate.delivery")
   end
 
@@ -536,6 +537,24 @@ class TestStudioReplicateClientPaths < Minitest::Test
     with_http(response) do
       error = assert_raises(ArgumentError) { @client.send(:attempt_request, Net::HTTP::Get.new(uri), uri) }
       assert_match(/response exceeds/, error.message)
+    end
+  end
+
+  def test_replicate_api_refuses_transport_without_ip_pinning
+    uri = URI("https://api.replicate.com/v1/models")
+    http = Object.new
+    def http.use_ssl=(_value); end
+    def http.open_timeout=(_value); end
+    def http.read_timeout=(_value); end
+    def http.write_timeout=(_value); end
+
+    Studio::ReplicateClient.stub(:resolve_download_addresses, ["93.184.216.34"]) do
+      Net::HTTP.stub(:new, ->(*_args) { http }) do
+        error = assert_raises(SocketError) do
+          @client.send(:attempt_request, Net::HTTP::Get.new(uri), uri)
+        end
+        assert_match(/cannot pin/, error.message)
+      end
     end
   end
 
