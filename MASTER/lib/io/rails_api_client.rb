@@ -118,7 +118,9 @@ module Master
       def parse_pinned_address(value)
         return nil if value.nil? || value.to_s.empty?
 
-        IPAddr.new(value.to_s).to_s
+        ip = IPAddr.new(value.to_s)
+        ip = ip.native if ip.respond_to?(:ipv4_mapped?) && ip.ipv4_mapped?
+        ip.to_s
       rescue IPAddr::InvalidAddressError
         raise ArgumentError, "pinned_address must be an IP address"
       end
@@ -185,7 +187,23 @@ module Master
         literal = IPAddr.new(@base_uri.hostname) rescue nil
         return literal.to_s == address if literal
 
-        SsrfGuard.resolve_addresses(@base_uri.hostname).include?(address)
+        # An explicit operator pin still obeys the all-answer rule. A mixed
+        # public/private set is refused even when the selected pin is public;
+        # otherwise this constructor would become a weaker side door around
+        # SsrfGuard.pinned_address.
+        addresses = SsrfGuard.resolve_addresses(@base_uri.hostname)
+        return false if addresses.empty?
+
+        normalized = addresses.map do |value|
+          ip = IPAddr.new(value)
+          return false if SsrfGuard.blocked_ip?(ip)
+
+          ip = ip.native if ip.respond_to?(:ipv4_mapped?) && ip.ipv4_mapped?
+          ip.to_s
+        end
+        normalized.include?(address)
+      rescue IPAddr::InvalidAddressError
+        false
       end
 
       def destination_address(uri)
@@ -218,18 +236,23 @@ module Master
         http = SsrfGuard.http_for(uri, address, timeout: @timeout)
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         captured = nil
-        http.start do |connection|
-          connection.request(request) do |response|
-            content = +"".b
-            response.read_body do |chunk|
-              raise IOError, "response body exceeds #{MAX_BODY_BYTES} bytes" if content.bytesize + chunk.bytesize > MAX_BODY_BYTES
-              content << chunk
+        # Per-read timeouts do not bound a peer that keeps sending tiny chunks.
+        # Bound each attempt as a whole; the retry count and backoff are bounded
+        # separately by the constructor's validated limits.
+        Timeout.timeout(@timeout) do
+          http.start do |connection|
+            connection.request(request) do |response|
+              content = +"".b
+              response.read_body do |chunk|
+                raise IOError, "response body exceeds #{MAX_BODY_BYTES} bytes" if content.bytesize + chunk.bytesize > MAX_BODY_BYTES
+                content << chunk
+              end
+              captured = Response.new(
+                status: response.code.to_i, headers: response.to_hash,
+                body: content.force_encoding(Encoding::UTF_8).scrub,
+                elapsed_s: Process.clock_gettime(Process::CLOCK_MONOTONIC) - started,
+              )
             end
-            captured = Response.new(
-              status: response.code.to_i, headers: response.to_hash,
-              body: content.force_encoding(Encoding::UTF_8).scrub,
-              elapsed_s: Process.clock_gettime(Process::CLOCK_MONOTONIC) - started,
-            )
           end
         end
         captured || raise(IOError, "HTTP response was not captured")
