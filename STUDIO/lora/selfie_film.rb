@@ -165,9 +165,9 @@ module Studio
         graded = File.join(subject_root, "#{subject}_house_grade.mp4")
         final = File.join(subject_root, "#{subject}_selfies.mp4")
         make_montage!(stills, montage)
-        grade_film!(montage, graded, subject:)
-        mux_dilla!(graded, audio, final)
-        video = probe_video!(final)
+        grade_film!(montage, graded, subject:, image_count: stills.length)
+        mux_dilla!(graded, audio, final, image_count: stills.length)
+        video = probe_video!(final, image_count: stills.length)
         still_records = stills.map do |path|
           { "file" => File.basename(path), "sha256" => Digest::SHA256.file(path).hexdigest }
         end
@@ -211,13 +211,13 @@ module Studio
           "-pix_fmt", "yuv420p", "-movflags", "+faststart", output
         ])
         run!({}, *args, timeout: 600)
-        validate_private_file!(output)
+        seal_private_file!(output)
       end
 
-      def grade_film!(input, output, subject:)
+      def grade_film!(input, output, subject:, image_count:)
         script = File.join(@studio_root, "postpro", "postpro.rb")
         seed = Digest::SHA256.hexdigest("postpro-selfie-film:#{subject}:#{DILLA_SEED}")[0, 8].to_i(16)
-        frames = (self.class.expected_duration(DEFAULT_COUNT) * FPS).ceil
+        frames = (self.class.expected_duration(image_count) * FPS).ceil
         pixels = WIDTH * HEIGHT * frames + 1_000_000
         env = {
           "POSTPRO_SEED" => seed.to_s,
@@ -228,24 +228,24 @@ module Studio
         }
         run!(env, RbConfig.ruby, script, "--video", input, "--output", output,
              "--preset", POSTPRO_PRESET, timeout: frames + 180)
-        validate_private_file!(output)
+        seal_private_file!(output)
         sidecar = "#{output}.json"
         raise Error, "Postpro did not write its grade receipt" unless File.file?(sidecar) && !File.symlink?(sidecar)
         File.chmod(0o600, sidecar)
       end
 
-      def mux_dilla!(video, audio, output)
-        duration = self.class.expected_duration(DEFAULT_COUNT)
+      def mux_dilla!(video, audio, output, image_count:)
+        duration = self.class.expected_duration(image_count)
         run!({}, "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
              "-i", video, "-i", audio, "-map", "0:v:0", "-map", "1:a:0",
              "-af", self.class.audio_filter(duration), "-c:v", "copy",
              "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
              "-t", format("%.6f", duration), "-shortest", "-map_metadata", "-1",
              "-movflags", "+faststart", output, timeout: 300)
-        validate_private_file!(output)
+        seal_private_file!(output)
       end
 
-      def probe_video!(path)
+      def probe_video!(path, image_count:)
         require_tools!("ffprobe")
         raw = run!({}, "ffprobe", "-v", "error", "-show_streams", "-show_format",
                    "-of", "json", path, timeout: 30)
@@ -258,7 +258,7 @@ module Studio
         raise Error, "finished film is not H.264/AAC" unless video["codec_name"] == "h264" && audio["codec_name"] == "aac"
 
         duration = data.dig("format", "duration").to_f
-        expected = self.class.expected_duration(DEFAULT_COUNT)
+        expected = self.class.expected_duration(image_count)
         raise Error, "finished film duration differs from its edit" if (duration - expected).abs > 0.35
         { "width" => WIDTH, "height" => HEIGHT, "frame_rate" => "#{FPS}/1",
           "video_codec" => video["codec_name"], "audio_codec" => audio["codec_name"],
@@ -287,6 +287,15 @@ module Studio
           candidate = File.join(directory, name)
           File.file?(candidate) && File.executable?(candidate)
         end
+      end
+
+      def seal_private_file!(path)
+        raise Error, "refusing to seal missing media or a symlink: #{path}" unless File.file?(path) && !File.symlink?(path)
+        stat = File.lstat(path)
+        raise Error, "media file is not owned by the current user: #{path}" unless stat.uid == Process.uid
+        raise Error, "media file must be singly-linked: #{path}" unless stat.nlink == 1
+        File.chmod(0o600, path)
+        validate_private_file!(path)
       end
 
       def validate_private_file!(path)
