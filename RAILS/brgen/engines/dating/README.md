@@ -3,10 +3,12 @@
 **Matchmaking for a city you already live in.** Dating shows you the people of your own town,
 asks them to prove they are who they look like, and leaves the rest to the two of you.
 
-Dating is a mountable Rails engine served at `dating.<city>`, for instance `dating.brgen.no`
-and `dating.lsangeles.com`. It is not a separate app: it runs in brgen's process, with brgen's
-users, and the city comes from the apex the visitor arrived through. The recipe for building
-a vertical is in `RAILS/brgen/README.md`, and the topology is in `RAILS/brgen/AGENTS.md`.
+Dating is mounted at `dating.<city>`, for example `dating.brgen.no` and
+`dating.lsangeles.com`. It runs inside Brgen's Rails process and uses Brgen's
+users. The city is resolved from the apex host; Dating is not a separate app.
+
+Read [the Brgen guide](../../../README.md) for the vertical pattern and
+[Brgen's agent contract](../../../AGENTS.md) for the host topology.
 
 Each person builds a profile of photos, a short bio and up to three prompt answers. The deck
 shows one candidate at a time, and the next one comes from `home#next`. A like or a dislike
