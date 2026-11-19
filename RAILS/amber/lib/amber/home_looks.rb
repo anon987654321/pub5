@@ -14,7 +14,7 @@ module Amber
     # the page never shows a numbered placeholder.
     NAME_KEYS = %i[weekend studio dinner morning].freeze
 
-    Garment = Data.define(:title, :color, :category, :zone)
+    Garment = Data.define(:title, :color, :category, :zone, :photo)
     Look = Data.define(:name, :garments) do
       # The track's captions: the whole outfit first, then one per garment.
       def captions(whole) = [ whole ] + garments.map(&:title)
@@ -45,8 +45,10 @@ module Amber
     def outfit_looks(scope)
       return [] unless scope
 
-      scope.includes(:items).limit(COUNT).filter_map do |outfit|
-        garments = outfit.items.map { |item| garment(item.title, item.color, item.category) }
+      scope.includes(items: { photos_attachments: { blob: :variant_records } }).limit(COUNT).filter_map do |outfit|
+        garments = outfit.items.map do |item|
+          garment(item.title, item.color, item.category, photo: item.photos.first)
+        end
         Look.new(name: outfit.name, garments: layered(garments)) if garments.any?
       end
     end
@@ -66,9 +68,10 @@ module Amber
       end
     end
 
-    def garment(title, color, category)
+    def garment(title, color, category, photo: nil)
       shape = GarmentSilhouette.shape_for(title: title, category: category)
-      Garment.new(title: title, color: color, category: category, zone: ZONE_BY_SHAPE.fetch(shape, :torso))
+      Garment.new(title: title, color: color, category: category,
+                  zone: ZONE_BY_SHAPE.fetch(shape, :torso), photo: photo)
     end
 
     def layered(garments)

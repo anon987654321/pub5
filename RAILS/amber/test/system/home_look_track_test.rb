@@ -5,6 +5,14 @@ require "application_system_test_case"
 # A home look's track is a focusable scroll group. It steps one slide at a
 # time from the arrow keys and from the previous/next buttons under it.
 class HomeLookTrackTest < ApplicationSystemTestCase
+  test "home looks reserve editorial media frames with a text fallback" do
+    visit root_path
+
+    assert_selector ".amber-look-media--outfit", minimum: 4
+    assert_selector ".amber-look-media", minimum: 4
+    assert_selector ".amber-look-placeholder", minimum: 1
+  end
+
   test "the arrow keys and the previous and next buttons step a look one slide at a time" do
     visit root_path
     locale = page_locale

@@ -18,6 +18,31 @@
              data-action="keydown->look-track#key">
           <% slides.each_with_index do |caption, position| %>
             <figure class="amber-look-slide">
+              <% if position.zero? %>
+                <div class="amber-look-media amber-look-media--outfit<%= " amber-look-media--single" if look.garments.one? %><%= " amber-look-media--triple" if look.garments.size == 3 %>"
+                     role="group" aria-label="<%= look.garments.map(&:title).join(", ") %>">
+                  <% look.garments.each do |garment| %>
+                    <div class="amber-look-piece">
+                      <% if garment.photo.present? %>
+                        <%= responsive_image_tag garment.photo, alt: "", preset: :card,
+                              sizes: "(max-width: 768px) 78vw, 560px", class: "amber-look-image" %>
+                      <% else %>
+                        <span class="amber-look-placeholder"><%= garment.title %></span>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+              <% else %>
+                <% garment = look.garments.fetch(position - 1) %>
+                <div class="amber-look-media amber-look-media--single">
+                  <% if garment.photo.present? %>
+                    <%= responsive_image_tag garment.photo, alt: "", preset: :card,
+                          sizes: "(max-width: 768px) 78vw, 560px", class: "amber-look-image" %>
+                  <% else %>
+                    <span class="amber-look-placeholder"><%= garment.title %></span>
+                  <% end %>
+                </div>
+              <% end %>
               <figcaption>
                 <span><%= caption %></span>
                 <span class="amber-look-position"><%= t("home.looks.position", index: position + 1, count: slides.size) %></span>

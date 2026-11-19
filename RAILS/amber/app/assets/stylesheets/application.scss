@@ -2231,12 +2231,68 @@
   }
 
   .amber-look-slide {
-    flex: 0 0 max-content;
-    min-width: min(78vw, 280px);
+    flex: 0 0 min(78vw, 560px);
+    min-width: 0;
     margin: 0;
     padding: 0;
     scroll-snap-align: start;
     border-block-start: 1px solid var(--border);
+  }
+
+  /* The first slide is an outfit edit; the following slides isolate each garment.
+     Owner photographs remain uncropped, and missing media gets an honest text tile. */
+  .amber-look-media {
+    display: grid;
+    inline-size: 100%;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    background: var(--luxury-bg);
+  }
+
+  .amber-look-media--outfit {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .amber-look-media--single {
+    display: block;
+  }
+
+  .amber-look-media--triple .amber-look-piece:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .amber-look-piece {
+    display: grid;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--luxury-surface);
+  }
+
+  .amber-look-media picture,
+  .amber-look-media img {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    min-width: 0;
+    min-height: 0;
+    object-fit: contain;
+    background: var(--luxury-bg);
+  }
+
+  .amber-look-placeholder {
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    min-height: 0;
+    padding: clamp(1rem, 3vw, 2.5rem);
+    color: var(--luxury-muted);
+    font-size: clamp(.9rem, 2vw, 1.35rem);
+    line-height: var(--leading-snug);
+    text-align: center;
+    text-wrap: balance;
   }
 
   .amber-look-slide figcaption {
