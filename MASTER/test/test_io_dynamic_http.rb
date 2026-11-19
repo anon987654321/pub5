@@ -12,8 +12,8 @@ require_relative "test_helper"
 # SsrfGuard's own tests cover the guard, not this call site: reorder those two
 # lines, or drop the `unless`, and every one of them still passes.
 #
-# Nothing here opens a socket. Every case is refused before perform_request, which
-# is the point: a test that needed the network could not prove a refusal.
+# Refusal tests reach the shared request boundary but stub no network exchange:
+# the address policy must stop a private destination before Net::HTTP is built.
 class DynamicHttpTest < Minitest::Test
   # permit? returns a Result; err short-circuits the call.
   Governor = Struct.new(:answer) do
