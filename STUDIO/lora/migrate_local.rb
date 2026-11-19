@@ -178,18 +178,24 @@ module Studio
       end
 
       def walk_files(directory)
-        return [] unless File.directory?(directory) && !File.symlink?(directory)
+        raise Error, "refusing symlink source directory: #{directory}" if File.symlink?(directory)
+        return [] unless File.directory?(directory)
 
         Dir.glob(File.join(directory, "**", "*"), File::FNM_DOTMATCH).sort.filter_map do |path|
           next if %w[. ..].include?(File.basename(path))
 
           stat = File.lstat(path)
           raise Error, "refusing symlink in local source tree: #{path}" if stat.symlink?
-          next if stat.directory?
+          if stat.directory?
+            raise Error, "nested source directory must be owned by the current user: #{path}" unless stat.uid == Process.uid
+            next
+          end
           raise Error, "unsupported source entry: #{path}" unless stat.file?
           raise Error, "source file exceeds #{MAX_FILE_BYTES} bytes: #{path}" if stat.size > MAX_FILE_BYTES
           raise Error, "source file is not owned by the current user: #{path}" unless stat.uid == Process.uid
           raise Error, "source file is hard-linked: #{path}" unless stat.nlink == 1
+          extension = File.extname(path).downcase
+          raise Error, "unsupported file in source tree: #{path}" unless IMAGE_EXTENSIONS.include?(extension) || extension == ".txt"
 
           path
         end
@@ -212,6 +218,7 @@ module Studio
         raise Error, "legacy input is not a regular file: #{source}" unless stat.file? && !stat.symlink?
         raise Error, "legacy input is not owned by the current user: #{source}" unless stat.uid == Process.uid
         raise Error, "legacy input exceeds #{MAX_FILE_BYTES} bytes: #{source}" if stat.size > MAX_FILE_BYTES
+        raise Error, "legacy input is hard-linked: #{source}" unless stat.nlink == 1
 
         { source:, relative:, bytes: stat.size, sha256: Digest::SHA256.file(source).hexdigest }
       end
@@ -288,17 +295,49 @@ module Studio
 
             parent = File.dirname(target)
             prepare_destination_parent!(parent, destination)
+            # Register the exclusive destination before writing so any short
+            # read, changed source or verification failure is rolled back.
             File.open(target, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |output|
+              created << target
+              digest = Digest::SHA256.new
+              copied = 0
+
               if item[:history_bytes]
-                output.write(item.fetch(:history_bytes))
+                bytes = item.fetch(:history_bytes)
+                copied = bytes.bytesize
+                raise Error, "historical source exceeds #{MAX_FILE_BYTES} bytes" if copied > MAX_FILE_BYTES
+                digest.update(bytes)
+                output.write(bytes)
               else
-                File.open(item.fetch(:source), "rb") { |input| IO.copy_stream(input, output) }
+                source = item.fetch(:source)
+                before = File.lstat(source)
+                raise Error, "legacy source changed or became a symlink: #{source}" unless before.file? && !before.symlink?
+                raise Error, "legacy source became hard-linked: #{source}" unless before.nlink == 1
+
+                File.open(source, "rb") do |input|
+                  opened = input.stat
+                  current = File.lstat(source)
+                  same_file = opened.dev == current.dev && opened.ino == current.ino
+                  unless same_file && opened.file? && opened.uid == Process.uid &&
+                         opened.nlink == 1 && opened.size == item.fetch(:bytes)
+                    raise Error, "legacy source changed after preflight: #{source}"
+                  end
+
+                  while (chunk = input.read(1024 * 1024))
+                    copied += chunk.bytesize
+                    raise Error, "legacy source grew beyond #{MAX_FILE_BYTES} bytes: #{source}" if copied > MAX_FILE_BYTES
+                    digest.update(chunk)
+                    output.write(chunk)
+                  end
+                end
               end
+
+              raise Error, "legacy source changed after preflight: #{source}" if !item[:history_bytes] && copied != item.fetch(:bytes)
+              raise Error, "legacy source SHA-256 changed after preflight: #{item.fetch(:relative)}" unless digest.hexdigest == item.fetch(:sha256)
               output.flush
               output.fsync
             end
             File.chmod(0o600, target)
-            created << target
           end
         rescue StandardError
           created.reverse_each { |path| File.delete(path) if File.file?(path) && !File.symlink?(path) }
