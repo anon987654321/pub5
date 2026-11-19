@@ -139,12 +139,23 @@ module Studio
         raise Error, "refusing symlink source directory: #{directory}" if File.symlink?(directory)
         return false unless File.directory?(directory)
 
+        directory_stat = File.lstat(directory)
+        unless directory_stat.uid == Process.uid && (directory_stat.mode & 0o077).zero?
+          raise Error, "source directory must be owned by the current user and owner-only (0700): #{directory}"
+        end
+
         Dir.children(directory).any? do |name|
           path = File.join(directory, name)
           next false unless IMAGE_EXTENSIONS.include?(File.extname(name).downcase)
           raise Error, "refusing symlink source image: #{path}" if File.symlink?(path)
 
-          File.file?(path)
+          stat = File.lstat(path)
+          next false unless stat.file?
+          unless stat.uid == Process.uid && stat.nlink == 1 && (stat.mode & 0o077).zero?
+            raise Error, "source image must be singly-linked, owned by the current user and owner-only (0600): #{path}"
+          end
+
+          true
         end
       rescue SystemCallError => error
         raise Error, "cannot inventory source directory #{directory}: #{error.class}: #{error.message}"
