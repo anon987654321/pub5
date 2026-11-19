@@ -67,6 +67,15 @@ but the implementation is owned here.
   recovery command verifies the 15 original Git blobs and does not prepare a
   dataset. Merethe's preparation step builds in a private staging directory
   and preserves the last known-good dataset if a build fails.
+  - The Replicate client is also an outbound-network boundary. API URLs are
+    restricted to the canonical HTTPS API origin; output downloads are restricted
+    to `replicate.com` / `replicate.delivery` hosts on HTTPS port 443. DNS names
+    are syntax-bounded, every IPv4 and IPv6 answer must be public, and a mixed
+    answer set is refused. Mapped IPv4, NAT64, 6to4, Teredo, private, loopback,
+    link-local, multicast, documentation and reserved ranges are blocked. The
+    socket is pinned with `Net::HTTP#ipaddr=` while the original hostname is
+    retained for TLS. Proxies are disabled, unsupported pinning is a hard error,
+    redirects are not followed, and transfers have byte and deadline caps.
   `lora/judge.rb` audits whole-frame texture, highlight, clipping and tonal-range proxies.
   Highlight spread is only assessed when a frame has highlight samples; the
   committed fallback floor is neutral until recalibrated because the historical
