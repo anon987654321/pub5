@@ -136,14 +136,14 @@ class TestCLITerminalOutput < Minitest::Test
 
     output = $stdout.stub(:tty?, true) do
       cli.stub(:irc_prefix, "[12:34] <master> ") do
-        first = cli.send(:format_irc_stream, "Hello.\\n\\n", state:)
+        first = cli.send(:format_irc_stream, "Hello.\n\n", state:)
         second = cli.send(:format_irc_stream, "How", state:)
-        third = cli.send(:format_irc_stream, " are you?\\n", state:)
+        third = cli.send(:format_irc_stream, " are you?\n", state:)
         first + second + third
       end
     end
 
-    assert_equal "[12:34] <master> Hello.\\n\\n[12:34] <master> How are you?\\n", output
+    assert_equal "[12:34] <master> Hello.\n\n[12:34] <master> How are you?\n", output
   end
 
   def test_normal_chat_unwraps_the_accidental_ruby_say_helper
