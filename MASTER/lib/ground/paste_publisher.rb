@@ -2,6 +2,7 @@
 
 require "json"
 require "net/http"
+require_relative "../io/ssrf_guard"
 require "uri"
 require "time"
 
@@ -308,14 +309,14 @@ module Master
       def post(uri, body, headers)
         return @transport.call(uri:, body:, headers:) if @transport
 
+        raise URI::InvalidURIError, "paste publication requires HTTPS on port 443" unless uri.is_a?(URI::HTTPS) && uri.port == 443
+
         request = Net::HTTP::Post.new(uri.request_uri, headers)
         request.body = body
-        http = Net::HTTP.new(uri.host, uri.port)
-        http.use_ssl = true
-        http.open_timeout = OPEN_TIMEOUT
-        http.read_timeout = READ_TIMEOUT
-        http.write_timeout = WRITE_TIMEOUT if http.respond_to?(:write_timeout=)
-        http.start { |connection| connection.request(request) }
+        Master::Io::SsrfGuard.request(
+          uri, request, max_bytes: 1_000_000,
+          timeout: [OPEN_TIMEOUT, READ_TIMEOUT, WRITE_TIMEOUT].max
+        )
       end
 
       def require_success!(response)
