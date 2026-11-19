@@ -150,7 +150,11 @@ checks:
   # --- playlist ---
   - {id: playlist.player, in: brgen/engines/radio/playlist/app/views/playlist/playlists/show.html.erb, has: [player]}
   - {id: playlist.sets, in: brgen/engines/radio/playlist/app/views/playlist/sets/index.html.erb, has: [set]}
-  - {id: playlist.hosted, in: brgen/engines/radio/playlist/app/views/playlist/hosted_tracks/index.html.erb, has: [track]}
+  - {id: playlist.hosted, in: brgen/engines/radio/playlist/app/views/playlist/hosted_tracks/index.html.erb,
+     has: [radio-home-header, radio-track-list, radio_track_card, hosted_tracks, empty]}
+  - {id: playlist.hosted_artwork_preload,
+     in: brgen/engines/radio/playlist/app/controllers/playlist/hosted_tracks_controller.rb,
+     has: [artwork_attachment, variant_records]}
   # --- maps ---
   - {id: maps.canvas,
      in: [brgen/engines/maps/app/views/maps/home/index.html.erb, brgen/app/javascript/controllers/map_controller.js],

@@ -11,7 +11,9 @@ class Playlist::HostedTracksController < Playlist::BaseController
   before_action :authorize_owner!, only: %i[edit update destroy]
 
   def index
-    @tracks = Playlist::Track.publicly_visible.unexpired.recent.limit(100)
+    @tracks = Playlist::Track.publicly_visible.unexpired.recent
+                                     .includes(artwork_attachment: { blob: :variant_records })
+                                     .limit(100)
   end
 
   def show
