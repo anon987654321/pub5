@@ -274,6 +274,14 @@ class ScrapeDnsPinningTest < Minitest::Test
     refute Shared::Scrape.public_http_url?("http://printer.local/", resolver:)
   end
 
+  def test_scrape_rejects_nonstandard_http_ports_before_dns
+    resolver = ->(_host) { flunk "non-standard ports must be refused before DNS" }
+    refute Shared::Scrape.public_http_url?("https://example.com:8443/", resolver:)
+    refute Shared::Scrape.public_http_url?("http://example.com:8080/", resolver:)
+    refute Shared::Scrape.public_browser_url?(URI("https://example.com:8443/"))
+    refute Shared::Scrape.public_browser_url?(URI("http://example.com:8080/"))
+  end
+
   def test_chromium_resolver_rules_pin_hosts_and_block_unlisted_names
     rules = Shared::Scrape.host_resolver_rules(
       "example.com" => "93.184.216.34",
