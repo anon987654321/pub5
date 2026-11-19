@@ -19,7 +19,7 @@ module Studio
       Rakefile bin/studio doctor.rb
       dilla/dilla.rb dilla/lib/reference_analyzer.rb
       postpro/postpro.rb postpro/video.yml
-      lora/consent.rb lora/consent.example.yml lora/validate.rb
+      lora/consent.rb lora/consent.example.yml lora/validate.rb lora/migrate_local.rb
       lora/photograph.rb lora/idea_picture.rb lora/selfie_series.rb
       lora/selfies_gallery.rb replicate/client.rb replicate/models.yml
       rg69.html rg69.css rg69.js selfies.html selfies.css selfies.js
