@@ -25,6 +25,7 @@ class TestVoiceOneSpeaker < Minitest::Test
   end
 
   def test_failed_edge_uses_the_mapped_mac_voice_even_when_voice_is_locked
+    Speech.instance_variable_set(:@last_error, "Edge endpoint answered nothing")
     Speech.stub(:macos_host?, true) do
       Speech.stub(:available?, true) do
         Speech.stub(:edge_tts_available?, true) do
@@ -33,6 +34,7 @@ class TestVoiceOneSpeaker < Minitest::Test
               assert_equal "/tmp/m_tts_mapped_mac.aiff",
                            Speech.synthesize("a sentence that edge fails", voice: :christopher, voice_locked: true)
               assert_equal "say", Speech.last_engine
+              assert_nil Speech.last_error
             end
           end
         end
