@@ -73,8 +73,12 @@ module Master
           saved = @config["model"].to_s
           return if @pinned_model || saved.empty? || saved == Ground::Config::DEFAULTS["model"]
 
-          reason = @model_router.unreachable_reason(saved, wait: true) if @model_router.respond_to?(:unreachable_reason)
-          return @preferred_model = saved unless reason
+          # Boot must not wait for a CLI login probe or an OpenRouter credit
+          # request. The router starts those probes in the background; while a
+          # result is pending, preserve the saved preference and let the normal
+          # fallback chain decide from the evidence available to that turn.
+          reason = @model_router.unreachable_reason(saved, wait: false) if @model_router.respond_to?(:unreachable_reason)
+          return @preferred_model = saved if reason.nil? || reason.to_s.start_with?("checking ")
 
           Trace::Dmesg.once("model0", "#{saved} unavailable; live pool selected")
         end
