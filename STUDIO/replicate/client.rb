@@ -379,6 +379,7 @@ module Studio
       # buy the same refusal three times. Named so the retry loop can tell a
       # wait that will help from one that cannot.
       ExhaustedError = Class.new(StandardError)
+      DeadlineExceeded = Class.new(Timeout::Error)
 
       CONFIG_PATH = File.expand_path("~/.config/replicate/config.json").freeze
       BASE = "https://api.replicate.com/v1"
@@ -395,6 +396,7 @@ module Studio
       OPEN_TIMEOUT_SECONDS = 10
       READ_TIMEOUT_SECONDS = 120
       WRITE_TIMEOUT_SECONDS = 120
+      API_TOTAL_TIMEOUT_SECONDS = 180
       MAX_MODEL_PAGES = 1_000
 
       # Replicate holds a sync request 60 seconds at most; Cancel-After takes
@@ -718,7 +720,7 @@ module Studio
           warn("replicate quota exhausted: #{e.message}")
 
           raise
-        rescue TransientError, Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNRESET, Errno::ETIMEDOUT => e
+        rescue TransientError, DeadlineExceeded, Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNRESET, Errno::ETIMEDOUT => e
           # GET is safe to retry. Replicate throttling 429 explicitly rejects
           # the request, but a POST 5xx/read-timeout/reset can hide a paid create
           # that succeeded before its response was lost.
@@ -732,7 +734,7 @@ module Studio
         raise last_error
       end
 
-      def attempt_request(req, uri)
+      def attempt_request(req, uri, timeout: API_TOTAL_TIMEOUT_SECONDS)
         uri = api_uri(uri)
         response = nil
         body = +"".b
@@ -745,17 +747,21 @@ module Studio
         http.open_timeout = OPEN_TIMEOUT_SECONDS
         http.read_timeout = READ_TIMEOUT_SECONDS
         http.write_timeout = WRITE_TIMEOUT_SECONDS
-        http.start do |conn|
-          conn.request(req) do |res|
-            response = res
-            declared = res["content-length"].to_s
-            if !declared.empty? && declared.match?(/\A\d+\z/) && declared.to_i > MAX_RESPONSE_BYTES
-              raise ArgumentError, "Replicate response exceeds #{MAX_RESPONSE_BYTES} bytes"
-            end
-            res.read_body do |chunk|
-              raise ArgumentError, "Replicate response exceeds #{MAX_RESPONSE_BYTES} bytes" if body.bytesize + chunk.bytesize > MAX_RESPONSE_BYTES
+        total = Float(timeout)
+        raise ArgumentError, "Replicate API total timeout must be finite and positive" unless total.finite? && total.positive?
+        Timeout.timeout(total, DeadlineExceeded, "Replicate API request exceeded #{total}s total deadline") do
+          http.start do |conn|
+            conn.request(req) do |res|
+              response = res
+              declared = res["content-length"].to_s
+              if !declared.empty? && declared.match?(/\A\d+\z/) && declared.to_i > MAX_RESPONSE_BYTES
+                raise ArgumentError, "Replicate response exceeds #{MAX_RESPONSE_BYTES} bytes"
+              end
+              res.read_body do |chunk|
+                raise ArgumentError, "Replicate response exceeds #{MAX_RESPONSE_BYTES} bytes" if body.bytesize + chunk.bytesize > MAX_RESPONSE_BYTES
 
-              body << chunk
+                body << chunk
+              end
             end
           end
         end
