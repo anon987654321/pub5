@@ -53,8 +53,8 @@ module Master
         end
         case mode
         when :error then @p.red("err: #{text}")
-        when :success then @p.bright_red("ok: #{text}")
-        when :warning then @p.red("warn: #{text}")
+        when :success then @p.green("ok: #{text}")
+        when :warning then @p.yellow("warn: #{text}")
         when :dim then @p.dim(text)
         when :dmesg then format_dmesg(text)
         else text
