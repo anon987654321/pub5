@@ -24,6 +24,15 @@ For local handwritten archives, `/documents analyze ~/Photos` reads a bounded se
 
 `bin/master` is the interactive assistant and command entrypoint. `bin/operator` is the operations surface for status, checks, tests and supported host tasks. The browser face and speech runtime live under `web/`; their policy belongs in the relevant data sources rather than duplicated literals. Music plays only after an explicit operator request; startup never begins audio on its own.
 
+A new interactive launch can recover an abandoned same-host MASTER prompt after
+two hours without session-transcript activity. It acts only when the OS confirms
+that the exact MASTER process is the sole lock holder, is sleeping or idle, has
+no child work and still has a terminal; it sends that process TERM and waits for
+the OS lock to clear. It never unlinks the lock file or reclaims daemon/control-
+plane locks. Set `MASTER_LOCK_IDLE_RECLAIM_SECONDS=0` to disable the lease, or
+set a different positive number of seconds. Recovery is attempted on the next
+lock acquisition, not by the read-only `bin/master --status` command.
+
 The CLI lists canonical commands once. Compatibility spellings route to their owner: `/models` means `/model list`, `/tools` means `/capabilities`, and `/tts` means `/voice`. Use `/help <alias>` to open the owning page. `/doctor tools` is a separate diagnostic for unresolved tool outcomes.
 
 The core execution path is `lib/core/`: an admitted effect passes through Constitution before World dispatches it. Keep capabilities, validation and compensations at that boundary. Extend an existing owner before adding another wrapper, registry or helper.
