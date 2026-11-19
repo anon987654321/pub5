@@ -32,9 +32,8 @@ module Master
         198.18.0.0/15
         198.51.100.0/24
         203.0.113.0/24
-        192.88.99.0/24
         240.0.0.0/4
-        ::/128
+        ::/96
         64:ff9b::/96
         64:ff9b:1::/48
         100::/64
@@ -49,6 +48,7 @@ module Master
         3e00::/8
         3f00::/8
         fec0::/10
+        fc00::/7
       ].map { |cidr| IPAddr.new(cidr) }.freeze
 
       BLOCKED_HOSTNAMES = %w[
@@ -81,6 +81,7 @@ module Master
         end
 
         labels = candidate.split(".", -1)
+        return false if labels.length < 2
         return false if labels.any? do |label|
           label.empty? || label.bytesize > DNS_LABEL_MAX_BYTES ||
             !label.match?(/\A[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\z/i)
@@ -99,14 +100,25 @@ module Master
         []
       end
 
+      # Browser-facing research may use ordinary HTTP, but arbitrary ports
+      # turn a public URL into a scanner for exposed services. Keep the two
+      # web schemes on their standard ports only.
+      def self.valid_http_uri?(uri)
+        return false unless uri.is_a?(URI::HTTP) && !uri.host.to_s.empty?
+        return false unless uri.userinfo.nil? && uri.fragment.nil?
+
+        (uri.scheme == "https" && uri.port == 443) || (uri.scheme == "http" && uri.port == 80)
+      rescue URI::InvalidURIError, ArgumentError
+        false
+      end
+
       def self.safe_uri?(uri) = !pinned_address(uri).nil?
 
       # The address to connect to, or nil when the host is unsafe. Every answer
       # must be public: a name with one public and one private address is the
       # shape of a rebinding setup, not a choice.
       def self.pinned_address(uri)
-        return unless uri.is_a?(URI::HTTP) && uri.host
-        return unless uri.userinfo.nil? && uri.fragment.nil?
+        return unless valid_http_uri?(uri)
 
         host = uri.hostname.downcase.delete_suffix(".")
         return unless valid_resolver_host?(host)
@@ -130,10 +142,18 @@ module Master
       DEFAULT_TIMEOUT_S = 15
 
       def self.http_for(uri, address, timeout: DEFAULT_TIMEOUT_S)
+        raise URI::InvalidURIError, "pinned HTTP requires a clean HTTP/HTTPS URL on its standard port" unless valid_http_uri?(uri)
+
+        ip = IPAddr.new(address.to_s)
+        ip = ip.native if ip.respond_to?(:ipv4_mapped?) && ip.ipv4_mapped?
+        raise SocketError, "refusing a non-public pinned address" if blocked_ip?(ip)
+
         # Net::HTTP defaults its proxy argument to :ENV. An ambient HTTP_PROXY or
         # HTTPS_PROXY would move the socket to a proxy and defeat the IP pin.
         Net::HTTP.new(uri.hostname, uri.port, nil).tap do |http|
-          http.ipaddr = address
+          raise SocketError, "Net::HTTP cannot pin remote address" unless http.respond_to?(:ipaddr=)
+
+          http.ipaddr = ip.to_s
           http.use_ssl = uri.scheme == "https"
           http.open_timeout = timeout
           http.read_timeout = timeout
