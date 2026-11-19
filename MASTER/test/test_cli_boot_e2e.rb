@@ -271,9 +271,8 @@ class TestCliReplExit < Minitest::Test
         assert_includes output, "○ ○", "bare startup did not render both inactive mic/TTS indicators"
         refute_match(/\e\[\?1049h/, output, "bare startup must not take over the alternate screen")
 
-        # The overlay repaints the prompt every frame, so a prompt count is not
-        # evidence of anything; the /help footer is: only an answered turn in
-        # the working session prints it.
+        # The rings do not own or animate the prompt. The /help footer proves
+        # the command was handled by this same live Reline session.
         writer.write("/help\n")
         deadline = Time.now + 8
         loop do
