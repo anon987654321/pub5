@@ -4,7 +4,7 @@ require "json"
 require "tmpdir"
 require_relative "../io/exec"
 require_relative "../boot/paths"
-require_relative "kernel/lifecycle_journal"
+require_relative "kernel"
 require_relative "transcript"
 require_relative "../trace/dmesg"
 
