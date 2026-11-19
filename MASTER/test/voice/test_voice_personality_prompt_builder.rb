@@ -135,6 +135,9 @@ class TestPersonalityPromptBuilder < Minitest::Test
 
     %w[STRUNK_WHITE BE_CONCISE PROSE_ACTIVE_VOICE DRY KISS SINGULARITY].each { |id| assert_includes prompt, "#{id}:" }
     assert_includes prompt, "a paragraph is a file"
+    assert_includes prompt, "Make every sentence earn its place"
+    assert_includes prompt, "Lead with the answer"
+    assert_includes prompt, "never remove conditions, uncertainty"
     refute_includes prompt, "CLAMP_TYPOGRAPHY:"
     # The budget grew from 16,000 with two deliberate arrivals, not with the
     # corpus this test refuses: soul's live performance profile (the
