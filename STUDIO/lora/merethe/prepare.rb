@@ -58,10 +58,10 @@ module Studio
     # retained locally as originals but excluded from the general identity set:
     # low resolution, overlays/text, face obscured/cropped, or intimate framing.
     CURATED_CAPTIONS = {
-      "10.jpg" => "A close head-and-shoulders photograph of MERETHE, an adult woman with long wavy ash-blonde hair and blue eyes, wearing dark rectangular eyeglasses and a plain dark top, soft indoor light.",
-      "11.jpg" => "A front-facing head-and-shoulders photograph of MERETHE, an adult woman with long wavy ash-blonde hair and blue eyes, without eyeglasses, wearing a plain dark top against a patterned indoor backdrop.",
-      "12.jpg" => "A close indoor portrait photograph of MERETHE, an adult woman with long wavy ash-blonde hair and blue eyes, wearing dark rectangular eyeglasses and dark clothing, bright natural window light.",
-      "13.jpg" => "A close portrait photograph of MERETHE, an adult woman with long wavy ash-blonde hair and blue eyes, looking slightly sideways, one hand resting against her cheek, wearing a dark top in soft indoor light.",
+      "10.jpg" => "A close head-and-shoulders source photograph of MERETHE in soft indoor light.",
+      "11.jpg" => "A front-facing head-and-shoulders source photograph of MERETHE against a patterned indoor backdrop.",
+      "12.jpg" => "A close indoor source portrait of MERETHE in bright natural window light.",
+      "13.jpg" => "A close source portrait of MERETHE looking slightly sideways in soft indoor light.",
     }.freeze
 
     IMAGE_EXTENSIONS = %w[.jpg .jpeg .png .webp].freeze
