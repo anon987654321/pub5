@@ -1,19 +1,23 @@
 # bsdports
 
-**Search the whole OpenBSD ports tree as fast as you can type.** bsdports gives every port a
-page of its own, with its dependencies, its security advisories and its maintainer, and finds
-any of them in the time it takes to press a key.
+**Search the whole OpenBSD ports tree as fast as you can type.**
+Each port has its own page with dependencies, security advisories and
+maintainer details. Search returns matching ports as you type.
 
-It is a Rails 8.2.0.alpha app on the installed compatible Ruby runtime (3.2+), with SQLite, Falcon and Hotwire. Search runs
-through an FTS5 index over port names and comments, kept beside the data in the same database.
-The pages use an ultra-minimal white search-page language, inspired by the classic Google
-front page: Arial, white paper, #202124 ink, #4d5156 secondary text and #1a0dab links, with
-square corners and compact, exact port results. OpenBSD supplies the subject matter and technical
-seriousness, not a dark terminal theme. The app follows the shared engine's layout and
-accessibility contracts, so it differs from brgen and amber in visual dialect, not in grammar.
-Its interface is Norwegian by default, like the other two
-apps. The promise, the stack and the status of every feature are in `apps.yml`, under
-`bsdports`.
+The app uses Rails 8.2.0.alpha on the installed compatible Ruby runtime
+(3.2+), with SQLite, Falcon and Hotwire. Search reads an FTS5 index of port
+names and comments stored in the same database.
+
+The interface is an ultra-minimal white search surface inspired by the
+classic Google front page: Arial, white background, `#202124` text,
+`#4d5156` secondary text and `#1a0dab` links. Corners are square and port
+results stay compact and exact. OpenBSD supplies the subject matter and
+technical seriousness, not a dark terminal theme. The app follows the shared
+engine's layout and accessibility contracts; its visual dialect differs
+from Brgen and Amber, not its underlying interface grammar.
+
+The interface defaults to Norwegian. The feature promise, stack and shipped
+status live in `RAILS/apps.yml`, under `bsdports`.
 
 The ports data arrives by import. The rake task `ports:import_now` reads a local tree at once.
 Set `PLATFORM` to `openbsd` and `BSDPORTS_TREE_PATH` to `/usr/ports`, and it reports how many
