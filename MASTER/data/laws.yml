@@ -252,6 +252,44 @@ ROBUSTNESS_bounded_operation_lifecycle:
   statement: "A timeout bounds the direct child but leaves owned descendants, inherited pipes, readers or cleanup unbounded."
   resolution: never
 
+ROBUSTNESS_public_outbound_address_is_pinned:
+  parent: ROBUSTNESS
+  statement: >
+    A server-side request to a public destination validates a hostname or DNS
+    answer but lets the socket resolve the name again, accepts a mixed public
+    and non-public A/AAAA answer set, or routes around the approved destination
+    through an ambient proxy. The TCP connection must use the exact public
+    address that passed the policy check while preserving the original hostname
+    for TLS SNI, certificate validation and the HTTP Host header.
+  severity: error
+  resolution: never
+  semantic: human
+  enforcement: declared
+  coverage_mode: semantic
+  note: >
+    Bound OS DNS resolution; validate every returned address, including
+    IPv4-mapped and IPv4-embedding IPv6 forms; reject loopback, private,
+    link-local, CGNAT, multicast, documentation, reserved and non-global
+    destinations. Disable implicit environment proxies. Local daemon probes
+    are separate, explicitly configured local-trust paths, not exceptions for
+    public fetches.
+
+ROBUSTNESS_redirect_reenters_remote_policy:
+  parent: ROBUSTNESS
+  statement: >
+    A remote HTTP redirect is followed without reapplying the full URL, scheme,
+    hostname, port, DNS-answer and pinned-socket policy to the next hop.
+  severity: error
+  resolution: never
+  semantic: human
+  enforcement: declared
+  coverage_mode: semantic
+  note: >
+    Prefer not to follow redirects. If a feature follows one, bound the hop
+    count, reject credentials and unsafe schemes, refuse HTTPS downgrade, and
+    validate and pin every hop. A host change requires a separate explicit
+    policy decision; same-host is not proof that the destination remains safe.
+
 ROBUSTNESS_proactive_defect_audit:
   parent: ROBUSTNESS
   statement: "An audit stops at the reported incident or changed lines without examining the complete high-risk boundary for the same defect class."
