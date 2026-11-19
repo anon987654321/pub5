@@ -6,7 +6,7 @@
 - Host: Ubuntu 24.04.4 LTS, Ruby 3.2.3
 - Project floor: Ruby >= 3.3 (MASTER/Gemfile, OPENBSD/lib/environment.rb, all RAILS Gemfiles)
 - Consequence: full MASTER boot, `rake test`, `bin/master`, `/fix` runtime, and RAILS `bin/ci` are blocked (Gemfile/ruby version gate). Syntax-only and static review remain possible.
-- Memory: 1.2 GiB, 2 cores — insufficient for compiling Ruby 3.3+ in-session without risk.
+- Memory at intake: 1.2 GiB, 2 cores — compiling a newer Ruby was impractical. This is no longer a runtime admission blocker after the shared floor was relaxed to 3.2.
 - No ZAI_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY or other provider keys present in this container; grok-cli lane exists in models.yml but the binary is not installed here.
 
 **Disposition:** This session therefore operates as an external, constitution-aware /fix pass driven by Grok (xAI). It does not claim runtime PASS for any Law, test suite or deployment. It does claim static analysis, source review, and any reversible source edits that land under the delivery policy (serial commits to main, no force-push).
