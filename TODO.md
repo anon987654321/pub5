@@ -650,8 +650,11 @@ measure is already owned by the Bymorgen item above.
   preflight and source ownership, BIZ's published/draft/archive boundaries
   and production chain, STUDIO's consent-gated LoRA workflow, the shared
   Rails HTML/accessibility contract, BSDPorts' product/search description,
-  and Brgen/Amber's product introductions. The BIZ print command now uses
-  the script's automatic Chrome discovery instead of an ellipsis placeholder.
+  Brgen/Amber's product introductions and the host topology in seven Brgen
+  vertical briefs. The BIZ print command now uses the script's automatic
+  Chrome discovery instead of an ellipsis placeholder. A relative-file-link
+  pass over the 19 principal and edited entrypoints found no missing targets;
+  anchor-fragment validity and rendered reading order were not tested.
   This is not yet a line-by-line editorial audit of all 82 tracked Markdown
   files. Preserve generated pointers, licences, receipts and historical
   records; review the remaining maintained leaf documents for accuracy,
