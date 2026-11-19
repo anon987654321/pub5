@@ -11,8 +11,8 @@ its routes; the `brgen_messenger` engine supplies the vertical's autoloading
 and JavaScript assets. It shares the host app, database, identity system and
 deployment. It is not a separate application.
 
-Read [the Brgen guide](../../../README.md) for the vertical pattern and
-[Brgen's agent contract](../../../AGENTS.md) for the host topology.
+Read [the Brgen guide](../../README.md) for the vertical pattern and
+[Brgen's agent contract](../../AGENTS.md) for the host topology.
 
 ## Recovered product intent
 
