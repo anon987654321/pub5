@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "yaml"
+require "json"
 
 # Consolidated LoRA craft: what a photograph of a subject can be asked for, in
 # words a FLUX.1-dev person LoRA acts on, plus the selfie sittings the series
@@ -41,10 +42,12 @@ module Studio
 
         choice = wizard.choose("What would you like to do with a LoRA subject?", [
           ["Validate a subject's training plan", :validate],
+          ["Review or restore local private source material", :recover],
           ["Render a selfie series", :selfie],
         ])
         case choice
         when :validate then validate
+        when :recover then puts JSON.pretty_generate(recovery_report({}))
         when :selfie then selfie(wizard)
         end
       end
@@ -56,6 +59,7 @@ module Studio
           "validate" => ->(request) { validate_report(request) },
           "subjects" => ->(_request) { subjects },
           "craft" => ->(_request) { craft },
+          "recover" => ->(request) { recovery_report(request) },
           "selfie" => ->(request) { selfie_render(request) },
         }
       end
@@ -93,6 +97,20 @@ module Studio
         }
       end
 
+      # Read-only by default. Applying copies is possible only when the
+      # request explicitly sets apply=true and each subject's private consent
+      # and source-rights evidence already validates locally.
+      def recovery_report(request)
+        require_relative "migrate_local"
+        arguments = []
+        arguments.concat(["--from", request["from"].to_s]) unless request["from"].to_s.empty?
+        arguments.concat(["--subject", request["subject"].to_s]) unless request["subject"].to_s.empty?
+        arguments << "--include-sources" if request["include_sources"] == true
+        arguments << "--restore-johann-history" if request["restore_johann_history"] == true
+        arguments << "--apply" if request["apply"] == true
+        Studio::Lora::LocalMigration.run(arguments)
+      end
+
       def selfie_render(request)
         require_relative "selfie_series"
         subject = request.fetch("subject", "ragnhild")
@@ -105,6 +123,7 @@ module Studio
       def run_flags(argv)
         case argv.first
         when "validate" then validate
+        when "recover" then puts JSON.pretty_generate(recovery_report({}))
         when "selfie" then selfie(Studio::Interactive.new(input: $stdin, output: $stdout, tty: false))
         when "-h", "--help", nil then puts help
         else abort "lora: unknown command #{argv.first.inspect} (see --help)"
@@ -130,6 +149,7 @@ module Studio
           usage:
             ruby STUDIO/lora/lora.rb                 ask what to do (interactive)
             ruby STUDIO/lora/lora.rb validate        audit every subject's training plan
+            ruby STUDIO/lora/lora.rb recover         dry-run local source recovery from ../pub4
             ruby STUDIO/lora/lora.rb selfie          render a selfie series
           The subject craft itself (scenes, prompting rules, grades) lives in
           this file as Studio::Lora::Craft and Studio::Lora::Selfie.
