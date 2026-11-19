@@ -289,6 +289,17 @@ class ControlPlaneSpec < Minitest::Test
     old.nil? ? ENV.delete("MASTER_LOCK_IDLE_RECLAIM_SECONDS") : ENV["MASTER_LOCK_IDLE_RECLAIM_SECONDS"] = old
   end
 
+  def test_reclaimable_probe_recognizes_rubys_integer_flock_success
+    dir = Dir.mktmpdir("master-lock-free-probe")
+    path = File.join(dir, "master.lock")
+    File.write(path, "{}\n")
+
+    assert Master::Ops::ProcessLock.reclaimable?(path)
+    assert Master::Ops::ProcessLock.wait_for_lock_release(path)
+  ensure
+    FileUtils.remove_entry(dir) if dir && Dir.exist?(dir)
+  end
+
   def test_process_lock_reclaims_dead_metadata_when_no_process_holds_the_file
     dir = Dir.mktmpdir("master-lock-stale")
     path = File.join(dir, "master.lock")
