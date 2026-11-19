@@ -2,6 +2,7 @@
 
 require "json"
 require "net/http"
+require_relative "../../io/ssrf_guard"
 require "timeout"
 require "uri"
 require_relative "../../trace/session"
@@ -214,11 +215,8 @@ module Master
 
         def replicate_poll_request(uri, headers, remaining:)
           request = Net::HTTP::Get.new(uri.request_uri, headers)
-          Net::HTTP.start(
-            uri.host, uri.port, use_ssl: true,
-            open_timeout: [REPLICATE_POLL_OPEN_TIMEOUT_S, remaining].min,
-            read_timeout: [REPLICATE_POLL_READ_TIMEOUT_S, remaining].min,
-          ) { |http| http.request(request) }
+          timeout = [REPLICATE_POLL_OPEN_TIMEOUT_S, REPLICATE_POLL_READ_TIMEOUT_S, remaining].min
+          Master::Io::SsrfGuard.request(uri, request, max_bytes: 1_000_000, timeout:)
         end
 
         # A poll URL is trusted only when it is exactly the API origin and a
@@ -245,12 +243,14 @@ module Master
 
         def post_json(url, body, headers: {}, timeout: REPLICATE_WAIT_S + 10)
           uri = URI(url)
+          raise URI::InvalidURIError, "Replicate sender requires HTTPS on port 443" unless uri.is_a?(URI::HTTPS) && uri.host == "api.replicate.com" && uri.port == 443
+
           request = Net::HTTP::Post.new(uri.request_uri, headers.merge("Content-Type" => "application/json"))
           request.body = JSON.generate(body)
-          Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https",
-                          open_timeout: OPEN_TIMEOUT_S, read_timeout: timeout) do |http|
-            http.request(request)
-          end
+          Master::Io::SsrfGuard.request(
+            uri, request, max_bytes: 1_000_000,
+            timeout: [OPEN_TIMEOUT_S, timeout].min
+          )
         end
       end
     end
