@@ -56,6 +56,36 @@ class BootSafetySpec < Minitest::Test
     saved.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
   end
 
+  def test_prepare_runtime_is_idempotent_within_one_process
+    previous = Master.instance_variable_get(:@runtime_prepared)
+    Master.remove_instance_variable(:@runtime_prepared) if Master.instance_variable_defined?(:@runtime_prepared)
+    calls = Hash.new(0)
+    increment = ->(name) { calls[name] += 1 }
+
+    Master::Ground::EnvLoader.stub(:load!, -> { increment.call(:env) }) do
+      Master::Ground::OpenhandsSandbox.stub(:wire!, ->(*) { increment.call(:sandbox) }) do
+        Master::Ground::HostBudget.stub(:apply_defaults!, -> { increment.call(:budget) }) do
+          Master.stub(:install_regexp_timeout!, -> { increment.call(:regexp) }) do
+            Master.stub(:apply_process_defaults!, -> { increment.call(:defaults) }) do
+              Master.stub(:install_process_guards!, -> { increment.call(:guards) }) do
+                Master.prepare_runtime!
+                Master.prepare_runtime!
+              end
+            end
+          end
+        end
+      end
+    end
+
+    assert_equal %i[env sandbox budget regexp defaults guards].to_h { |name| [name, 1] }, calls
+  ensure
+    if previous.nil?
+      Master.remove_instance_variable(:@runtime_prepared) if Master.instance_variable_defined?(:@runtime_prepared)
+    else
+      Master.instance_variable_set(:@runtime_prepared, previous)
+    end
+  end
+
   def test_master_boot_installs_process_guards
     source = File.read(MASTER_RUNTIME)
     assert_includes source, "def install_process_guards!"
@@ -89,6 +119,14 @@ class BootSafetySpec < Minitest::Test
     assert_includes source, 'ps", "-ax", "-o", "pid=,ppid=,pgid=,command="'
     refute_includes source, "return false if pid.positive? && process_alive?(pid)"
     assert_includes source, "0.25"
+  end
+
+  def test_recursive_yaml_diagnostic_is_not_on_the_synchronous_boot_path
+    boot = File.read(MASTER_BOOT)
+    init_loop = boot[boot.index("def init_loop")...boot.index("def run_backlog_task")]
+
+    assert_includes init_loop, "start_background_data_validation"
+    refute_match(/^\s*validate_data!\(/, init_loop)
   end
 
   def test_constitution_drift_requires_explicit_env
