@@ -3,7 +3,7 @@
 module Master
   module AI
     module OperatorContract
-      VERSION = 4
+      VERSION = 5
       STYLE = "openbsd"
       LANGUAGE = "ruby"
       SHELL = "zsh"
