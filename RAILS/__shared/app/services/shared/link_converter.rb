@@ -4,6 +4,7 @@ require "digest"
 require "fileutils"
 require "net/http"
 require "uri"
+require_relative "outbound_http"
 
 module Shared
   # TradeDoubler Link Converter, in the engine so every app can attribute.
@@ -156,7 +157,7 @@ module Shared
       raise URI::InvalidURIError, "HTTPS required" unless uri.is_a?(URI::HTTPS)
       response = Shared::OutboundHttp.request(
         uri, headers: { "User-Agent" => "Brgen-LinkConverter-Sync/1.0" },
-        max_body: 1_000_000, open_timeout: 5, read_timeout: 15
+        max_body: 1_000_000, open_timeout: 5, read_timeout: 15, write_timeout: 5
       )
       return false unless response.is_a?(Net::HTTPSuccess)
 
