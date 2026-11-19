@@ -34,7 +34,7 @@ daemon="/bin/ksh"
 # rc.d cannot source the repo's selector. Prefer generic packaged Ruby,
 # then discover any versioned package suffix without maintaining a release list.
 _ruby=/usr/local/bin/ruby
-if [ ! -x "$_ruby" ] || ! "$_ruby" -e 'require "rubygems"; exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3") ? 1 : 0)' >/dev/null 2>&1; then
+if [ ! -x "$_ruby" ] || ! "$_ruby" -e 'require "rubygems"; exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.2") ? 1 : 0)' >/dev/null 2>&1; then
   _ruby=
   for _candidate in /usr/local/bin/ruby[0-9]*; do
     [ -x "$_candidate" ] || continue
@@ -44,7 +44,7 @@ if [ ! -x "$_ruby" ] || ! "$_ruby" -e 'require "rubygems"; exit(Gem::Version.new
     fi
   done
 fi
-[ -n "$_ruby" ] || { echo "master: Ruby >= 3.3 is required" >&2; exit 1; }
+[ -n "$_ruby" ] || { echo "master: Ruby >= 3.2 is required" >&2; exit 1; }
 _ruby_suffix=${_ruby##*/}
 _ruby_suffix=${_ruby_suffix#ruby}
 _bundle="/usr/local/bin/bundle${_ruby_suffix}"
