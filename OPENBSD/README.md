@@ -11,7 +11,6 @@ release, prerequisites, command, effect, validation and rollback. The shared
 Markdown standard lives in [MASTER/AGENTS.md](../MASTER/AGENTS.md); this tree's
 manual preflight and live-operation rules remain in [RUNBOOK.md](RUNBOOK.md).
 
-
 ## Canonical operator path
 
 Start with `RUNBOOK.md`, the single operational companion for live VPS work. Read it
