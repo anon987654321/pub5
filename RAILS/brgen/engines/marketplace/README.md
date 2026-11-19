@@ -10,8 +10,8 @@ Germany and `mercato` in Italy. `Brgen::DomainRegistry::SUBAPP_ALIASES`
 maps each spelling to this engine. Marketplace runs inside Brgen's Rails
 process and uses Brgen's users; it is not a separate app.
 
-Read [the Brgen guide](../../../README.md) for the vertical pattern and
-[Brgen's agent contract](../../../AGENTS.md) for the host topology.
+Read [the Brgen guide](../../README.md) for the vertical pattern and
+[Brgen's agent contract](../../AGENTS.md) for the host topology.
 
 ## Restored marketplace intent
 
