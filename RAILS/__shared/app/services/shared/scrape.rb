@@ -122,7 +122,11 @@ module Shared
     end
 
     def self.public_browser_url?(uri)
-      uri.is_a?(URI::HTTP) && uri.userinfo.nil? && uri.fragment.nil? &&
+      return false unless uri.is_a?(URI::HTTP)
+      return false unless %w[http https].include?(uri.scheme&.downcase)
+      return false unless uri.port == (uri.is_a?(URI::HTTPS) ? 443 : 80)
+
+      uri.userinfo.nil? && uri.fragment.nil? &&
         !uri.hostname.to_s.empty? && Shared::OutboundHttp.valid_resolver_host?(uri.hostname)
     end
 
@@ -139,6 +143,7 @@ module Shared
     def self.public_http_url?(value, resolver: ->(host) { Shared::OutboundHttp.resolve_addresses(host) })
       uri = URI.parse(value.to_s)
       return false unless %w[http https].include?(uri.scheme&.downcase)
+      return false unless uri.port == (uri.scheme == "https" ? 443 : 80)
       return false if uri.userinfo || uri.fragment || uri.hostname.to_s.empty?
 
       host = uri.hostname.downcase.delete_suffix(".")
