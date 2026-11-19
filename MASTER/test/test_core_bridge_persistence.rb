@@ -3,6 +3,7 @@
 require_relative "test_helper"
 require "cli/core_bridge"
 require "tmpdir"
+require "fileutils"
 require "digest"
 
 class CoreBridgePersistenceTest < Minitest::Test
@@ -72,10 +73,16 @@ class CoreBridgePersistenceTest < Minitest::Test
       assert_equal "waiting", saved["state"]
       mission_id = saved["id"]
 
+      File.write(File.join(root, "Rakefile"), "task(:test) { puts 'proof fixture' }\n")
+      bin = File.join(root, "bin")
+      FileUtils.mkdir_p(bin)
+      check = File.join(bin, "check")
+      File.write(check, "#!/bin/sh\nexit 0\n")
+      File.chmod(0o755, check)
+
       second = ScriptedModel.new(
-        Master::Core::Effect.exec(%w[echo rake test], evidence: :test_pass),
-        Master::Core::Effect.exec(%w[echo rubocop], evidence: :scan_clean),
-        Master::Core::Effect.exec(%w[echo rake review], evidence: :code_review),
+        Master::Core::Effect.exec(%w[rake test]),
+        Master::Core::Effect.exec(%w[bin/check]),
         Master::Core::Effect.done("finished"),
       )
       resumed = Master::CLI::CoreBridge.run("finish the task", root:, model: second, max_turns: 4)

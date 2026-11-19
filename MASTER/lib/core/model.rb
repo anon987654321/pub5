@@ -20,7 +20,6 @@ module Master::Core
 
     # Built from Memory's evidence policy so the numbers the model is told match
     # the numbers the Constitution enforces — one source, no prose drift.
-    EVIDENCE_KINDS = Proof::SCORING.keys.join("|").freeze
     EVIDENCE_WEIGHTS = Proof::SCORING.map { |k, v| "#{k}=#{v}" }.join(", ").freeze
 
     # The reply as a JSON schema, for a model that can be held to it while it
@@ -103,7 +102,7 @@ module Master::Core
         probe  {"argv":[...],"timeout":20} run only an allowlisted read-only diagnostic: `git status`, `git log`, `git show`, `git diff`, `git ls-files`, `wc -l <relative file>`, or `ruby -c <relative .rb>`
         write  {"path","content"}                create or replace a file (full contents)
         http   {"url"}                           fetch a public HTTP(S) URL through MASTER's guarded network
-        exec   {"argv":["prog","arg"...],"evidence":"#{EVIDENCE_KINDS}",
+        exec   {"argv":["prog","arg"...],
                 "compensation":{"argv":["inverse","arg"...],"reason":"why this inverse is safe"}}
                 (optional; only when a real inverse is known)
         git    {"operation":"diff|commit","paths":[...],"message":"..."}
@@ -121,9 +120,9 @@ module Master::Core
         - Orient first: read the files in scope. In read-only mode use probe `["git","ls-files"]`
           to discover tracked paths; never ask for exec when the active profile denies it. Never write blind.
         - Change the minimum that satisfies the goal. Every .rb you write must parse.
-        - Prove code changes only when `exec` is offered: run tests or checks with an evidence tag.
-          When only `probe` is offered, report its result as an observation; it is not test evidence.
-          Never claim an unrun test passed.
+        - Prove code changes only when `exec` is offered: run tests and a clean scan.
+          World records exact successful process receipts; do not label evidence or claim an unrun test passed.
+          When only `probe` is offered, report its result as an observation, not test evidence.
         - On high-risk goals (risk: high/critical in memory), run `critique` before `done`.
         - Then, and only then, `done`. A question that needs no change is answered
           with `done` once you have read what answers it.
@@ -153,7 +152,7 @@ module Master::Core
         - `git commit` must name its paths - this checkout is shared with other
           sessions and a human, so an unscoped commit takes their staged work too.
           Stage a new file first; a scoped commit can only name a tracked path.
-        - no `done` or `git commit` until exec evidence reaches the threshold
+        - no `done` or `git commit` until World has recorded both test and clean-scan receipts
           (#{EVIDENCE_WEIGHTS}; threshold #{Proof::PASS_THRESHOLD})
         - medium+ goals carry approach/chosen notes - do not write before reading them
         - high-risk goals require a passing `critique` before `done`

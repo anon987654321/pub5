@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "digest"
+
 # MASTER — a constitutional coding agent.
 #
 # The whole thing is one sentence: fold proposed effects through a constitution
@@ -99,8 +101,9 @@ module Master::Core
     def self.write(path, content) = new(verb: :write, args: { path:, content: })
     def self.probe(argv, timeout: 20) = new(verb: :probe, args: { argv:, timeout: })
     def self.http(url) = new(verb: :http, args: { url: })
+    # evidence: remains accepted for old callers; it is deliberately not retained.
     def self.exec(argv, timeout: 60, evidence: nil, env: {}, compensation: nil)
-      args = { argv:, timeout:, evidence:, env: }
+      args = { argv:, timeout:, env: }
       args[:compensation] = compensation unless compensation.nil?
       new(verb: :exec, args:)
     end
@@ -131,6 +134,8 @@ module Master::Core
       raise ArgumentError, "unknown effect verb: #{verb}" unless VERBS.include?(verb)
       raise ArgumentError, "effect args must be a Hash" unless args.is_a?(Hash)
 
+      # Legacy model-selected evidence labels are discarded at the Effect boundary.
+      args = args.reject { |key, _| key.to_s == "evidence" } if verb == :exec
       args = freeze_payload(args)
       expected = if verb == :git && args[:operation].to_s.to_sym == :diff
                    :read
@@ -244,6 +249,42 @@ module Master::Core
   # about a tree that no longer exists. Proof counts only the current generation.
   Evidence = Data.define(:kind, :ok, :score, :detail, :at, :generation)
 
+  # Issued by World after a successful child process exits. A model may propose
+  # argv, but cannot include this object in an Effect or a JSON reply.
+  ExecutionReceipt = Data.define(:argv, :exitstatus, :stdout_sha256, :elapsed_ms) do
+    def initialize(argv:, exitstatus:, stdout_sha256:, elapsed_ms:)
+      words = Array(argv)
+      raise ArgumentError, "receipt argv must be non-empty strings" if words.empty? || !words.all? { |word| word.is_a?(String) }
+      status = Integer(exitstatus, exception: false)
+      raise ArgumentError, "execution receipt requires exit status zero" unless status == 0
+      digest = stdout_sha256.to_s
+      raise ArgumentError, "receipt output digest must be SHA-256" unless digest.match?(/\A[0-9a-f]{64}\z/)
+      duration = Float(elapsed_ms)
+      raise ArgumentError, "receipt elapsed time must be finite and non-negative" unless duration.finite? && duration >= 0
+
+      super(
+        argv: words.map { |word| word.dup.freeze }.freeze,
+        exitstatus: status,
+        stdout_sha256: digest.freeze,
+        elapsed_ms: duration,
+      )
+    end
+
+    def self.from_process(argv:, exitstatus:, output:, elapsed_ms:)
+      status = Integer(exitstatus, exception: false)
+      return unless status == 0
+
+      new(
+        argv:,
+        exitstatus: status,
+        stdout_sha256: Digest::SHA256.hexdigest(output.to_s),
+        elapsed_ms:,
+      )
+    end
+
+    private_class_method :new
+  end
+
   # A Verdict is the Constitution's answer to an Effect. The Core sees three
   # shapes; the fourth is internal to a single rule:
   #   Allow(effect:)         perform this effect (possibly rewritten by a rule)
@@ -272,9 +313,17 @@ module Master::Core
 
   # What the World reports after performing an Effect. The agent reacts to this,
   # so a failure is data the model must handle — never a swallowed success.
-  Observation = Data.define(:ok, :detail) do
-    def self.ok(detail = nil) = new(ok: true, detail:)
-    def self.no(detail) = new(ok: false, detail:)
+  Observation = Data.define(:ok, :detail, :execution_receipt) do
+    def initialize(ok:, detail: nil, execution_receipt: nil)
+      unless execution_receipt.nil? || execution_receipt.instance_of?(ExecutionReceipt)
+        raise ArgumentError, "observation receipt must be a Core::ExecutionReceipt"
+      end
+
+      super(ok:, detail:, execution_receipt:)
+    end
+
+    def self.ok(detail = nil, execution_receipt: nil) = new(ok: true, detail:, execution_receipt:)
+    def self.no(detail) = new(ok: false, detail:, execution_receipt: nil)
     def ok? = ok
     def err? = !ok
     def value! = detail

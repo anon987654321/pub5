@@ -13,16 +13,24 @@ class FoldDeliberationTest < Minitest::Test
 
   def evidence_effects
     [
-      Master::Core::Effect.exec(%w[bundle exec rake test], evidence: :test_pass),
-      Master::Core::Effect.exec(%w[bin/check], evidence: :scan_clean),
-      Master::Core::Effect.exec(%w[bin/review], evidence: :code_review),
+      Master::Core::Effect.exec(%w[bundle exec rake test]),
+      Master::Core::Effect.exec(%w[bin/check]),
     ]
   end
+
+  def execution_observation(argv, output: "verified")
+    receipt = Master::Core::ExecutionReceipt.from_process(
+      argv:, exitstatus: 0, output:, elapsed_ms: 1.0
+    )
+    Master::Core::Observation.ok(output, execution_receipt: receipt)
+  end
+
+
 
   def test_high_risk_blocks_done_without_critique
     memory = Master::Core::Memory.new(risk: :high)
     memory.note(:goal, "ship it")
-    evidence_effects.each { |effect| memory.record(effect, Master::Core::Observation.ok("ok")) }
+    evidence_effects.each { |effect| memory.record(effect, execution_observation(effect.args[:argv])) }
 
     law = Master::Core::Constitution.load(data_dir: File.expand_path("../data", __dir__))
     verdict = law.admit(Master::Core::Effect.done("shipped"), memory)

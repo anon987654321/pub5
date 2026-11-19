@@ -3,10 +3,32 @@
 require "minitest/autorun"
 require "master"
 
-# The evidence weights live in exactly one place, Proof::SCORING, and the
-# model's prompt is built from it.
+# Proof accepts only successful process receipts from registered commands.
+# Model-supplied labels are not evidence.
 class EvidencePolicyTest < Minitest::Test
-  # Every kind that scores must have a producer, or its weight is unreachable.
+  E = Master::Core::Effect
+  O = Master::Core::Observation
+  PRODUCER_ARGV = {
+    test_pass: %w[rake test],
+    scan_clean: %w[bin/check],
+  }.freeze
+
+  def execution_observation(argv, output: "verified")
+    receipt = Master::Core::ExecutionReceipt.from_process(
+      argv:, exitstatus: 0, output:, elapsed_ms: 1.0
+    )
+    O.ok(output, execution_receipt: receipt)
+  end
+
+  def proof_with(*kinds)
+    proof = Master::Core::Proof.new(risk: :low)
+    kinds.each do |kind|
+      argv = PRODUCER_ARGV.fetch(kind)
+      proof.record_evidence(E.exec(argv), execution_observation(argv))
+    end
+    proof
+  end
+
   def test_every_scored_kind_has_a_producer
     assert_equal Master::Core::Proof::SCORING.keys.sort, Master::Core::Proof::PRODUCERS.keys.sort
   end
@@ -17,58 +39,43 @@ class EvidencePolicyTest < Minitest::Test
     Master::Core::Proof::SCORING.each do |kind, weight|
       assert_includes prompt, "#{kind}=#{weight}"
     end
+    refute_includes prompt, '"evidence":'
+    assert_includes prompt, "World records exact successful process receipts"
   end
 
-  E = Master::Core::Effect
-  OK = Master::Core::Observation.ok("ok")
-
-  # A command that can actually produce each kind. These fixtures used to run
-  # ["true"] for all of them, which is the forgery PRODUCERS now closes — the
-  # suite was demonstrating the hole while pinning the policy around it.
-  PRODUCER_ARGV = {
-    test_pass: %w[bundle exec rake test],
-    scan_clean: %w[bin/check],
-  }.freeze
-
-  def proof_with(*kinds)
+  def test_exact_command_without_a_world_receipt_scores_nothing
     proof = Master::Core::Proof.new(risk: :low)
-    kinds.each { |kind| proof.record_evidence(E.exec(PRODUCER_ARGV.fetch(kind), evidence: kind), OK) }
-    proof
-  end
-
-  # The forgery itself, pinned so it cannot come back. `true` deliberately stays
-  # literal here — this is the one place in the suite that should use it.
-  def test_a_command_that_proves_nothing_scores_nothing
-    proof = Master::Core::Proof.new(risk: :low)
-    %i[test_pass scan_clean code_review].each do |kind|
-      proof.record_evidence(E.exec(%w[true], evidence: kind), OK)
-    end
-
-    refute proof.proved?, "exec(['true']) laundered into a passing proof"
+    proof.record_evidence(E.exec(%w[rake test]), O.ok("the model says it passed"))
     assert_equal 0, proof.send(:evidence_score)
+    refute proof.proved?
   end
 
-  # Every kind needs at least one command that earns it, or the label is
-  # unreachable and the weight beside it is decoration.
-  def test_every_scored_kind_has_a_command_that_earns_it
+  def test_a_successful_but_unregistered_command_scores_nothing
+    proof = Master::Core::Proof.new(risk: :low)
+    argv = %w[true]
+    proof.record_evidence(E.exec(argv), execution_observation(argv))
+    assert_equal 0, proof.send(:evidence_score)
+    refute proof.proved?
+  end
+
+  def test_every_scored_kind_has_a_receipt_producer
     Master::Core::Proof::SCORING.each_key do |kind|
       proof = Master::Core::Proof.new(risk: :low)
-      proof.record_evidence(E.exec(PRODUCER_ARGV.fetch(kind), evidence: kind), OK)
+      argv = PRODUCER_ARGV.fetch(kind)
+      proof.record_evidence(E.exec(argv), execution_observation(argv))
       refute_equal 0, proof.send(:evidence_score), "nothing can earn #{kind}"
     end
   end
 
-  # Producer names embedded in an unrelated command are not evidence.
   def test_embedded_producer_names_do_not_match
     false_claims = {
       test_pass: [%w[echo rake test], %w[echo bundle exec rake test]],
       scan_clean: [%w[echo rubocop], %w[echo bin/check]],
-      }
-
+    }
     false_claims.each do |kind, commands|
       commands.each do |argv|
         proof = Master::Core::Proof.new(risk: :low)
-        proof.record_evidence(E.exec(argv, evidence: kind), OK)
+        proof.record_evidence(E.exec(argv), execution_observation(argv))
         assert_equal 0, proof.send(:evidence_score), "#{argv.inspect} forged #{kind}"
       end
     end
@@ -81,75 +88,74 @@ class EvidencePolicyTest < Minitest::Test
       %w[bundle exec rake test --extra-task],
     ].each do |argv|
       proof = Master::Core::Proof.new(risk: :low)
-      proof.record_evidence(E.exec(argv, evidence: :test_pass), OK)
+      proof.record_evidence(E.exec(argv), execution_observation(argv))
       assert_equal 0, proof.send(:evidence_score), "#{argv.inspect} was not an exact producer"
     end
   end
 
-  # Both independent instruments are required to reach the threshold.
+  def test_receipt_for_a_different_argv_is_rejected
+    proof = Master::Core::Proof.new(risk: :low)
+    proof.record_evidence(E.exec(%w[bin/check]), execution_observation(%w[rake test]))
+    assert_equal 0, proof.send(:evidence_score)
+  end
+
   def test_test_pass_and_clean_scan_reach_the_threshold
     assert proof_with(:test_pass, :scan_clean).proved?
   end
 
-  # Repetition is not independence. Nothing deduplicated, so the same tag three
-  # times was 105 points out of one kind of proof.
   def test_repeating_one_kind_does_not_stack
     proof = proof_with(:test_pass, :test_pass, :test_pass)
-    refute proof.proved?, "three of the same evidence kind reached the threshold"
+    refute proof.proved?, "repeated test runs counted as independent scan evidence"
   end
 
-  # Evidence proves something about the tree it was earned against. A write after
-  # it makes it a claim about a tree that no longer exists, so `done` must not be
-  # reachable on the strength of a run that predates the change.
-  def test_an_unlabelled_exec_invalidates_evidence_earned_before_it
-    proof = proof_with(:test_pass, :scan_clean, :code_review)
+  def test_unregistered_exec_invalidates_earlier_evidence
+    proof = proof_with(:test_pass, :scan_clean)
     assert proof.proved?
-
-    proof.record_evidence(E.exec(%w[echo mutate]), OK)
-
-    refute proof.proved?, "an unlabeled exec preserved evidence from an earlier state"
-  end
-
-  def test_an_evidence_bearing_exec_keeps_the_current_proof_generation
-    proof = proof_with(:test_pass, :scan_clean, :code_review)
-    assert proof.proved?
-
-    proof.record_evidence(E.exec(PRODUCER_ARGV.fetch(:code_review), evidence: :code_review), OK)
-
-    assert proof.proved?, "producer evidence should not invalidate itself"
-  end
-  def test_a_write_invalidates_evidence_earned_before_it
-    proof = proof_with(:test_pass, :scan_clean, :code_review)
-    assert proof.proved?, "precondition: the fold had proved itself"
-
-    proof.record_evidence(E.write("MASTER/lib/thing.rb", "CHANGED = 1\n"), OK)
-
-    refute proof.proved?, "evidence survived a write to the code it was proving"
-  end
-
-  # And it can be re-earned: the fold tests again after the change and is proved
-  # once more. Staleness must not be a dead end.
-  def test_evidence_re_earned_after_a_write_counts_again
-    proof = proof_with(:test_pass, :scan_clean, :code_review)
-    proof.record_evidence(E.write("MASTER/lib/thing.rb", "CHANGED = 1\n"), OK)
+    argv = %w[echo mutate]
+    proof.record_evidence(E.exec(argv), execution_observation(argv))
     refute proof.proved?
-
-    %i[test_pass scan_clean code_review].each do |kind|
-      proof.record_evidence(E.exec(PRODUCER_ARGV.fetch(kind), evidence: kind), OK)
-    end
-    assert proof.proved?, "a fold that re-proves its work after a change is stuck"
   end
-  # A refused write touched nothing. Measured on gemma3:4b: a fold asked what a
-  # file said read it, tried to write it, was refused, and lost both its
-  # evidence and the read-only answer for every turn after.
-  def test_a_refused_write_leaves_the_evidence_and_the_answer_standing
-    proof = proof_with(:test_pass, :scan_clean, :code_review)
-    proof.record_evidence(E.write("notes.md", "x\n"), Master::Core::Observation.no("refused by forbidden_file"))
-    assert proof.proved?, "a write that never happened voided the evidence"
+
+  def test_recognised_receipt_preserves_the_current_proof_generation
+    proof = proof_with(:test_pass, :scan_clean)
+    assert proof.proved?
+    argv = PRODUCER_ARGV.fetch(:test_pass)
+    proof.record_evidence(E.exec(argv), execution_observation(argv))
+    assert proof.proved?
+  end
+
+  def test_failed_exec_invalidates_earlier_evidence
+    proof = proof_with(:test_pass, :scan_clean)
+    proof.record_evidence(E.exec(%w[bin/check]), O.no("exit 1"))
+    refute proof.proved?
+  end
+
+  def test_a_write_invalidates_evidence_earned_before_it
+    proof = proof_with(:test_pass, :scan_clean)
+    assert proof.proved?
+    proof.record_evidence(E.write("MASTER/lib/thing.rb", "CHANGED = 1\n"), O.ok)
+    refute proof.proved?
+  end
+
+  def test_evidence_re_earned_after_a_write_counts_again
+    proof = proof_with(:test_pass, :scan_clean)
+    proof.record_evidence(E.write("MASTER/lib/thing.rb", "CHANGED = 1\n"), O.ok)
+    refute proof.proved?
+    %i[test_pass scan_clean].each do |kind|
+      argv = PRODUCER_ARGV.fetch(kind)
+      proof.record_evidence(E.exec(argv), execution_observation(argv))
+    end
+    assert proof.proved?
+  end
+
+  def test_a_refused_write_leaves_evidence_and_read_answer_standing
+    proof = proof_with(:test_pass, :scan_clean)
+    proof.record_evidence(E.write("notes.md", "x\n"), O.no("refused by forbidden_file"))
+    assert proof.proved?
 
     reader = Master::Core::Proof.new
-    reader.record_evidence(E.read("notes.md"), OK)
-    reader.record_evidence(E.write("notes.md", "x\n"), Master::Core::Observation.no("refused"))
-    assert reader.answered_from_reads?, "a refused write turned a read-only answer into a change"
+    reader.record_evidence(E.read("notes.md"), O.ok("hello"))
+    reader.record_evidence(E.write("notes.md", "x\n"), O.no("refused"))
+    assert reader.answered_from_reads?
   end
 end

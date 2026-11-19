@@ -252,10 +252,9 @@ class TestCoreReversibility < Minitest::Test
       memory.proof.authorize_repository_delivery!(root:)
       memory.record(E.write("a.rb", "A = 1"), Master::Core::Observation.ok("wrote a.rb"))
     [
-      E.exec(%w[rake test], evidence: :test_pass),
-      E.exec(%w[bin/check], evidence: :scan_clean),
-      E.exec(%w[bin/review], evidence: :code_review),
-    ].each { |effect| memory.record(effect, Master::Core::Observation.ok("verified")) }
+        E.exec(%w[rake test]),
+        E.exec(%w[bin/check]),
+      ].each { |effect| memory.record(effect, execution_observation(effect.args[:argv])) }
     assert memory.proof.proved?, "fixture evidence must satisfy the commit precondition"
     assert_includes memory.proof.scope[:write_paths], "a.rb"
 
@@ -275,10 +274,9 @@ class TestCoreReversibility < Minitest::Test
       memory.proof.authorize_repository_delivery!(root:)
       memory.record(E.write("a.rb", "A = 1"), Master::Core::Observation.ok("wrote a.rb"))
     [
-      E.exec(%w[rake test], evidence: :test_pass),
-      E.exec(%w[bin/check], evidence: :scan_clean),
-      E.exec(%w[bin/review], evidence: :code_review),
-    ].each { |effect| memory.record(effect, Master::Core::Observation.ok("verified")) }
+        E.exec(%w[rake test]),
+        E.exec(%w[bin/check]),
+      ].each { |effect| memory.record(effect, execution_observation(effect.args[:argv])) }
 
     verdict = C.load(data_dir: DATA_DIR).admit(
       E.git(:commit, message: "include someone else's file", paths: %w[a.rb other.rb]),
@@ -298,10 +296,9 @@ class TestCoreReversibility < Minitest::Test
       memory.proof.authorize_repository_delivery!(root:)
       memory.proof.record_evidence(E.write("a.rb", "approved bytes"), Master::Core::Observation.ok)
       [
-        E.exec(%w[rake test], evidence: :test_pass),
-        E.exec(%w[bin/check], evidence: :scan_clean),
-        E.exec(%w[bin/review], evidence: :code_review),
-      ].each { |effect| memory.record(effect, Master::Core::Observation.ok("verified")) }
+        E.exec(%w[rake test]),
+        E.exec(%w[bin/check]),
+      ].each { |effect| memory.record(effect, execution_observation(effect.args[:argv])) }
 
       verdict = C.load(data_dir: DATA_DIR).admit(
         E.git(:commit, message: "stale", paths: ["a.rb"]), memory
@@ -405,4 +402,11 @@ class TestCoreReversibility < Minitest::Test
     refute world.performed.any? { |performed| performed.args[:argv] == %w[undo partial] }
     assert_match(/compensation not run: operator declined/, seen.fetch(0).message)
   end
+  def execution_observation(argv, output: "verified")
+    receipt = Master::Core::ExecutionReceipt.from_process(
+      argv:, exitstatus: 0, output:, elapsed_ms: 1.0
+    )
+    Master::Core::Observation.ok(output, execution_receipt: receipt)
+  end
+
 end

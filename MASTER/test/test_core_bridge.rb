@@ -31,8 +31,8 @@ class CoreBridgeTest < Minitest::Test
     seed_evidence_tools!(root)
     [
       *extra,
-      Master::Core::Effect.exec(%w[rake test], evidence: :test_pass),
-      Master::Core::Effect.exec(%w[bin/check], evidence: :scan_clean),
+      Master::Core::Effect.exec(%w[rake test]),
+      Master::Core::Effect.exec(%w[bin/check]),
       Master::Core::Effect.done(summary),
     ]
   end

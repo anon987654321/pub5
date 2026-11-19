@@ -161,18 +161,20 @@ module Master::Core
       remember_commit(effect) if effect.verb == :git && effect.args[:operation].to_s.to_sym == :commit && observation.ok?
       remember_read(effect) if effect.verb == :read && observation.ok?
       remember_probe(effect) if effect.verb == :probe && observation.message.to_s.start_with?("probe result:")
-      invalidate_after_unlabelled_exec(effect) if effect.verb == :exec && observation.ok?
       @asked = true if effect.verb == :ask && observation.ok?
       @acted = true if %i[exec git].include?(effect.verb)
-      return unless effect.verb == :exec && observation.ok?
+      return unless effect.verb == :exec
 
-      kind = effect.args[:evidence].to_s.to_sym
-      score = SCORING.fetch(kind, 0)
-      argv = Array(effect.args[:argv]).map(&:to_s)
-      return unless score.positive? && PRODUCERS.fetch(kind, []).include?(argv)
-
-      @evidence << Evidence.new(kind:, ok: true, score:, detail: observation.message, at: Time.now.utc,
-                                generation: @generation)
+      kind = observation.ok? ? evidence_kind(effect, observation) : nil
+      if kind
+        receipt = observation.execution_receipt
+        detail = "exit=#{receipt.exitstatus} stdout_sha256=#{receipt.stdout_sha256} elapsed_ms=#{receipt.elapsed_ms.round(2)}"
+        @evidence << Evidence.new(kind:, ok: true, score: SCORING.fetch(kind), detail:, at: Time.now.utc,
+                                  generation: @generation)
+      else
+        # A failed or unrecognised command may have changed the tree.
+        @generation += 1
+      end
     end
 
     private
@@ -202,14 +204,13 @@ module Master::Core
                .sum { |_kind, found| found.map(&:score).max }
     end
 
-    # An unlabeled exec is an effect whose reach is not known to Proof.
-    # Invalidate earlier evidence before the next done decision. Evidence
-    # producer execs are observational by contract and retain the generation
-    # they are proving.
-    def invalidate_after_unlabelled_exec(effect)
-      return unless effect.args[:evidence].to_s.empty?
+    # The receipt must match the argv that the Constitution admitted.
+    def evidence_kind(effect, observation)
+      receipt = observation.execution_receipt
+      return unless receipt.instance_of?(ExecutionReceipt)
+      return unless receipt.argv == Array(effect.args[:argv]).map(&:to_s)
 
-      @generation += 1
+      PRODUCERS.find { |_kind, commands| commands.include?(receipt.argv) }&.first
     end
 
     def remember_write(effect)

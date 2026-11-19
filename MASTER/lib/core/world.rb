@@ -250,13 +250,23 @@ module Master::Core
       child_env = ENV.keys.grep(CREDENTIAL_ENV_RX).to_h { |name| [name, nil] }
       # These variables run code before Ruby starts the worker, ahead of pledge.
       %w[RUBYOPT RUBYLIB RUBYPATH RUBYGEMS_GEMDEPS].each { |name| child_env[name] = nil }
+      started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       out, status = bounded_capture2e(
         RbConfig.ruby, "--disable-gems", worker, "--exec-worker", "--", *argv,
         env: child_env,
         chdir: @root,
         timeout: seconds
       )
-      status.success? ? Observation.ok(out.to_s.strip) : Observation.no(out.to_s.strip)
+      elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1_000
+      return Observation.no(out.to_s.strip) unless status.success?
+
+      receipt = ExecutionReceipt.from_process(
+        argv:,
+        exitstatus: status.exitstatus,
+        output: out,
+        elapsed_ms:,
+      )
+      Observation.ok(out.to_s.strip, execution_receipt: receipt)
     end
 
     # Credentials do not go into the child, because the child's output comes back.

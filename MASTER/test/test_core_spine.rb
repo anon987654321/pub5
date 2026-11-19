@@ -58,7 +58,7 @@ class TestKernelSpine < Minitest::Test
   def test_a_sandbox_that_does_not_deny_lets_the_exec_through
     permissive = ->(_argv) { nil }
     verdict = constitution(sandbox: permissive).admit(
-      Master::Core::Effect.exec(%w[bundle exec rake test], evidence: :test_pass), Master::Core::Memory.new
+      Master::Core::Effect.exec(%w[bundle exec rake test]), Master::Core::Memory.new
     )
 
     assert_kind_of Master::Core::Verdict::Allow, verdict

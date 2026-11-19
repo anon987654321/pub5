@@ -35,15 +35,13 @@ class CritiqueFoldTest < Minitest::Test
       memory = Master::Core::Memory.new(risk: :high)
       memory.note(:goal, "ship fix")
       memory.proof.mark_ideation_complete!
-      # Evidence is seeded rather than executed. This Fold runs against a real
-      # World in a tmpdir, so a scripted `bundle exec rake test` really would be
-      # spawned there, fail, and record nothing — and ["true"], which used to
-      # stand in, no longer earns anything now that a kind has to name a command
-      # that could produce it. The subject here is critique-before-done, so the
-      # proof arrives the same way the spine test arranges it.
-      { test_pass: %w[bundle exec rake test], scan_clean: %w[bin/check],
-        code_review: %w[bin/review] }.each do |kind, argv|
-        memory.record(Master::Core::Effect.exec(argv, evidence: kind), Master::Core::Observation.ok("ok"))
+      # Seed World-shaped receipts; this test isolates the high-risk council gate.
+      [%w[bundle exec rake test], %w[bin/check]].each do |argv|
+        receipt = Master::Core::ExecutionReceipt.from_process(
+          argv:, exitstatus: 0, output: "verified", elapsed_ms: 1.0
+        )
+        observation = Master::Core::Observation.ok("verified", execution_receipt: receipt)
+        memory.record(Master::Core::Effect.exec(argv), observation)
       end
       model = ScriptedModel.new(
         Master::Core::Effect.critique,

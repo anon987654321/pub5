@@ -27,7 +27,7 @@ class TestModelParse < Minitest::Test
     e = parse('{"verb":"exec","args":{"argv":["rake","test"],"evidence":"test_pass"}}')
     assert_equal :exec, e.verb
     assert_equal %w[rake test], e.args[:argv]
-    assert_equal "test_pass", e.args[:evidence]
+    refute e.args.key?(:evidence), "legacy model-selected labels must be discarded"
   end
 
   def test_json_embedded_in_prose_is_extracted
@@ -118,13 +118,20 @@ class TestModelOffer < Minitest::Test
     assert_includes verbs(offered(proof)), "done"
   end
 
+  def execution_observation(argv)
+    receipt = Master::Core::ExecutionReceipt.from_process(
+      argv:, exitstatus: 0, output: "verified", elapsed_ms: 1.0
+    )
+    Observation.ok("verified", execution_receipt: receipt)
+  end
+
   def test_evidence_opens_done_and_commit
     proof = Master::Core::Proof.new
     proof.authorize_repository_delivery!(root: Master::REPO_ROOT)
     proof.record_evidence(Effect.write("a.rb", "A = 1\n"), Observation.ok)
     refute_includes verbs(offered(proof)), "done", "a write with no proof since is a claim nobody checked"
-    { test_pass: %w[rake test], scan_clean: %w[rubocop], code_review: %w[rake review] }.each do |kind, argv|
-      proof.record_evidence(Effect.exec(argv, evidence: kind), Observation.ok("ok"))
+    [%w[rake test], %w[bin/check]].each do |argv|
+      proof.record_evidence(Effect.exec(argv), execution_observation(argv))
     end
     assert_includes verbs(offered(proof)), "done"
     refute_includes operations(offered(proof)), "commit",
@@ -134,8 +141,8 @@ class TestModelOffer < Minitest::Test
 
   def test_evidence_without_a_fold_owned_write_does_not_offer_commit
     proof = Master::Core::Proof.new
-    { test_pass: %w[rake test], scan_clean: %w[bin/check], code_review: %w[bin/review] }.each do |kind, argv|
-      proof.record_evidence(Effect.exec(argv, evidence: kind), Observation.ok("ok"))
+    [%w[rake test], %w[bin/check]].each do |argv|
+      proof.record_evidence(Effect.exec(argv), execution_observation(argv))
     end
 
     assert proof.proved?

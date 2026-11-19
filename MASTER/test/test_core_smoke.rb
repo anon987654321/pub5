@@ -74,7 +74,7 @@ class CoreSmokeTest < Minitest::Test
       FileUtils.mkdir_p(File.join(root, "test"))
       File.write(File.join(root, "test", "fail_test.rb"), "abort 'verification deliberately failed'\n")
       model = ScriptedModel.new([
-        Master::Core::Effect.exec(%w[ruby test/fail_test.rb], evidence: :test_pass),
+        Master::Core::Effect.exec(%w[ruby test/fail_test.rb]),
         Master::Core::Effect.done("verification passed"),
       ])
 
@@ -115,8 +115,8 @@ class CoreSmokeTest < Minitest::Test
       Master::Core::Effect.write("ok.rb", "A = 1\n"),
       Master::Core::Effect.new(verb: :write, args: { path: "bad.rb", content: "A = {.freeze\n" }),
       Master::Core::Effect.new(verb: :write, args: { path: "leak.rb", content: "K = 'sk-#{'A' * 24}'\n" }),
-      Master::Core::Effect.exec(%w[rake test], evidence: :test_pass),
-      Master::Core::Effect.exec(%w[bin/check], evidence: :scan_clean),
+      Master::Core::Effect.exec(%w[rake test]),
+      Master::Core::Effect.exec(%w[bin/check]),
       Master::Core::Effect.git(:stage, paths: ["ok.rb"]),
       # Paths, because git_commit_scope blocks an unscoped commit: `git commit -m`
       # takes the whole index, which in this repo is shared with other sessions.

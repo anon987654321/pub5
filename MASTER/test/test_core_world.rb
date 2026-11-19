@@ -270,11 +270,18 @@ class WorldTest < Minitest::Test
     end
   end
 
-  def test_exec_success_returns_stdout
+  def test_exec_success_returns_stdout_and_a_world_issued_receipt
+    argv = [RbConfig.ruby, "-e", "print 'ok'"]
     with_world do |world|
-      obs = world.perform(E.exec([RbConfig.ruby, "-e", "print 'ok'"]))
+      obs = world.perform(E.exec(argv))
       assert obs.ok?
       assert_equal "ok", obs.value!
+      receipt = obs.execution_receipt
+      assert_instance_of Master::Core::ExecutionReceipt, receipt
+      assert_equal argv, receipt.argv
+      assert_equal 0, receipt.exitstatus
+      assert_equal Digest::SHA256.hexdigest("ok"), receipt.stdout_sha256
+      assert_operator receipt.elapsed_ms, :>=, 0
     end
   end
 
@@ -323,6 +330,7 @@ class WorldTest < Minitest::Test
     with_world do |world|
       obs = world.perform(E.exec([RbConfig.ruby, "-e", "exit 3"]))
       assert obs.err?
+      assert_nil obs.execution_receipt
     end
   end
 

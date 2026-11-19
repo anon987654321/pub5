@@ -14,14 +14,14 @@ module Master
       USAGE = "usage: bin/master core [--root PATH] [--max-turns N] [--real [--model ID]] GOAL"
       REAL = "drive a live LLM (needs a provider key); default is the scripted constitution check"
 
-      # Three self-labelled evidence claims, then done.
+      # Two successful but unrecognised commands, then a deliberately refused done.
       class NullModel
         def initialize(goal)
           @goal = goal
 
           @script = [
-            Master::Core::Effect.exec(["true"], evidence: :test_pass),
-            Master::Core::Effect.exec(["true"], evidence: :scan_clean),
+            Master::Core::Effect.exec(["true"]),
+            Master::Core::Effect.exec(["true"]),
             Master::Core::Effect.done("noop complete: #{@goal}"),
           ]
         end
@@ -102,10 +102,9 @@ module Master
       end
 
       # The scripted run is a check of the constitution, not a completed goal. It
-      # execs true(1) twice, each labelled as evidence it cannot produce, then
-      # declares done; true, because the sandbox refuses an inline interpreter such
-      # as ruby -e before it runs. Core::Proof scores evidence only from a command
-      # that can produce it, so `done` must be refused: exit 0 says the fold held,
+      # execs true(1) twice, then declares done. Neither command is a registered
+      # test or clean-scan producer, so World issues no proof receipt: exit 0 says
+      # the Fold refused a false completion claim,
       # and exit 1 says it admitted done on self-graded evidence. With --real, exit
       # 0 means the model's goal completed.
       def verdict(result, refusals, real:)
