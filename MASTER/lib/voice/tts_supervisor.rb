@@ -5,6 +5,7 @@ require "fileutils"
 require_relative "../io/process_spawn"
 require "socket"
 require "rbconfig"
+require "openssl"
 
 module Master
   module Voice
@@ -50,6 +51,37 @@ module Master
 
       def pool_size
         ENV.fetch("MASTER_TTS_POOL_SIZE", "2").to_i.clamp(1, 4)
+      end
+
+      # Resolve host CA locations rather than injecting a Unix path that may
+      # not exist on macOS or with a custom OpenSSL build. Nil leaves OpenSSL's
+      # compiled-in defaults in force; the websocket client still verifies peers.
+      def system_ca_file(candidates: nil)
+        candidates ||= [
+          ENV["SSL_CERT_FILE"], OpenSSL::X509::DEFAULT_CERT_FILE,
+          "/etc/ssl/cert.pem", "/etc/ssl/certs/ca-certificates.crt",
+          "/opt/homebrew/etc/openssl@3/cert.pem", "/usr/local/etc/openssl@3/cert.pem",
+          "/opt/homebrew/etc/openssl/cert.pem", "/usr/local/etc/openssl/cert.pem",
+        ]
+        Array(candidates).compact.uniq.find { |path| File.file?(path) && File.readable?(path) }
+      rescue StandardError
+        nil
+      end
+
+      def system_ca_dir(candidates: nil)
+        candidates ||= [ENV["SSL_CERT_DIR"], OpenSSL::X509::DEFAULT_CERT_DIR, "/etc/ssl/certs"]
+        Array(candidates).compact.uniq.find { |path| File.directory?(path) && File.readable?(path) }
+      rescue StandardError
+        nil
+      end
+
+      def tls_environment
+        {}.tap do |env|
+          file = system_ca_file
+          directory = system_ca_dir
+          env["SSL_CERT_FILE"] = file if file
+          env["SSL_CERT_DIR"] = directory if directory
+        end
       end
 
       def ensure_daemon!(root: Master::ROOT)
@@ -383,11 +415,11 @@ module Master
       end
 
       def spawn_env(root)
-        {
+        env = {
           "HOME" => ENV.fetch("HOME", ""),
           "USER" => ENV.fetch("USER", ""),
-          # A hardcoded system PATH, not ENV.fetch("PATH", ...) -- Falcon's own PATH
-          # (inherited otherwise, since this key is always present) puts web's
+          # A hardcoded system PATH, not ENV.fetch("PATH", ...) -- Falcon's own
+          # PATH (inherited otherwise, since this key is always present) puts web's
           # vendor/bundle/bin ahead of system bins, the same class of leak as
           # RUBYLIB/BUNDLE_LOCKFILE above.
           "PATH" => "/usr/local/bin:/usr/bin:/bin",
@@ -395,6 +427,8 @@ module Master
           "LC_ALL" => ENV.fetch("LC_ALL", "C.UTF-8"),
           "BUNDLE_GEMFILE" => File.join(root, "Gemfile"),
         }
+        env.merge!(tls_environment)
+        env
       end
     end
   end
