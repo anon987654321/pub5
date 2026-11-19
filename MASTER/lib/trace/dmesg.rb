@@ -501,9 +501,11 @@ module Master
       def emit(line, io: $stdout, force: false)
         return unless enabled? || force
 
-        return if !force && quiet_in_turn?(line)
-
         text = as_utf8_text(line.to_s).gsub(/\s+/, " ").strip
+        return if !force && quiet_in_turn?(text)
+
+        text = normal_terminal_summary(text) unless force
+        return if text.nil?
 
         terminal_write(io:) do |target|
           target.puts(boot_paint(text, target))
@@ -522,11 +524,39 @@ module Master
 
       def emit_mutex = TERMINAL_WRITE_MUTEX
 
-      # Provider-qualified llm0-lane records are diagnostics too. Keep them
-      # out of the reply; /model and --verbose retain the detailed view.
+      # Model sends, lane outcomes, usage and cache records are internal
+      # telemetry in normal mode, whichever unit initiated the work. A MASTER
+      # fault is a real runtime failure, not provider chatter, and stays visible.
+      # The event ledger retains every record; /model, /diag and --verbose expose
+      # the detailed view.
       def quiet_in_turn?(line)
-        verbosity == "normal" && Fiber[:master_unit] == "master0" &&
-          line.match?(/at \w+0|(?:llm|model|cache)\d+(?:-[a-z0-9_-]+)?:/i)
+        return false unless verbosity == "normal"
+
+        text = line.to_s.strip
+        return false if text.match?(/\A(?:llm|model)\d+: (?:MASTER fault|call ended without provider outcome)\b/i)
+
+        text.match?(/\A(?:llm|model|cache)\d+(?:-[a-z0-9_-]+)?:/i) ||
+          text.match?(/\A(?:llm|model)\d+ at [a-z][a-z0-9_]*\d+:/i)
+      end
+
+      # Voice engines can fail independently while the text reply remains
+      # available. Normal mode reports the capability state, not worker stderr
+      # or process internals; the measured cause remains available in /voice
+      # status. Explicit verbose output is left untouched.
+      def normal_terminal_summary(line)
+        return line unless verbosity == "normal"
+
+        match = line.match(/\A(?:voice|tts)\d+(?: at [^:]+)?:\s*(.*)\z/i)
+        return line unless match
+
+        detail = match[1]
+        if detail.match?(/\b(?:audio playback failed|no audio output found|no audio player found|voice test failed)\b/i)
+          "voice0: audio unavailable; reply remains visible as text; details: /voice status"
+        elsif detail.match?(/\b(?:edge worker|edge socket|edge stream|speech synthesis|synthesis failed|voice prefetch)\b/i)
+          "voice0: speech synthesis degraded; fallback may continue; details: /voice status"
+        else
+          line
+        end
       end
 
       # OpenBSD's console prints the kernel white on blue and userland plain.
