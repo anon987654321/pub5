@@ -103,7 +103,7 @@ interpreter pin bundler writes into the lockfiles. Source
 what it would do without doing it. On a machine that already has the
 stack, skip it.
 
-Use an installed Ruby 3.3 or newer and run `bundle install` in
+Use an installed Ruby 3.2 or newer and run `bundle install` in
 `MASTER/`. Keep API keys in the environment, never in Git. Run
 `MASTER/bin/operator doctor` for checkout/host readiness and
 `MASTER/bin/doctor` for MASTER runtime/provider/voice readiness. They are
