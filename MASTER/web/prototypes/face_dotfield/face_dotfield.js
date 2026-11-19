@@ -10,17 +10,9 @@
   const SETTLE_MS = 5200;
   const rand = (i, salt) => { const v = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453; return v - Math.floor(v); };
 
+import { sampleZone, SETTLE_MS, SOLO_PROBABILITY } from '../../public/face_zones.mjs';
   // Face zones in unit space (x, y in -1..1), the same layout the live stipple samples.
-  function target(i) {
-    const q = rand(i, 1), r = rand(i, 2), side = rand(i, 3) < 0.5 ? -1 : 1;
-    if (q < 0.17) { const a = r * Math.PI * 2, rad = 0.075 + rand(i, 4) * 0.04; return { x: side * 0.31 + Math.cos(a) * rad, y: -0.12 + Math.sin(a) * rad * 0.7, zone: "eye", side }; }
-    if (q < 0.29) { const a = Math.PI * (0.14 + r * 0.72); return { x: side * (0.30 + r * 0.11), y: -0.34 + Math.cos(a) * 0.05, zone: "brow", side }; }
-    if (q < 0.40) { const a = r * Math.PI * 2; return { x: Math.cos(a) * (0.21 + 0.045 * Math.sin(a * 2)), y: 0.40 + Math.sin(a) * 0.06, zone: "mouth", side }; }
-    if (q < 0.50) return { x: (rand(i, 6) - 0.5) * 0.045, y: -0.1 + r * 0.38, zone: "nose", side };
-    // Skin and rim fill an oval head: radius by the square root keeps the density even.
-    const angle = rand(i, 7) * Math.PI * 2, radius = Math.sqrt(r), rim = radius > 0.9;
-    return { x: Math.cos(angle) * radius * 0.73, y: Math.sin(angle) * radius * 0.91, zone: rim ? "rim" : "skin", side };
-  }
+  function target(i) { return sampleZone(i, '2d'); }
 
   const dots = Array.from({ length: COUNT }, (_, i) => {
     const t = target(i);
