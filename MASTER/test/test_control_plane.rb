@@ -212,6 +212,77 @@ class ControlPlaneSpec < Minitest::Test
     end
   end
 
+  def test_idle_interactive_lock_is_reclaimable_only_for_its_own_idle_prompt
+    now = Time.now
+    metadata = { "pid" => 1234, "host" => Socket.gethostname, "mode" => "interactive" }
+    process = {
+      pid: 1234, stat: "S+", tty: "ttys001",
+      command: "#{File.join(Master::ROOT, "bin", "master")}"
+    }
+
+    assert Master::Ops::ProcessLock.idle_interactive_candidate?(
+      metadata:, holders: [1234], process:, descendants: [],
+      activity: now - 7_200, root: Master::ROOT, now:, idle_seconds: 7_200
+    )
+  end
+
+  def test_idle_interactive_lock_stays_held_when_activity_is_recent
+    now = Time.now
+    metadata = { "pid" => 1234, "host" => Socket.gethostname, "mode" => "interactive" }
+    process = { pid: 1234, stat: "S+", tty: "ttys001",
+                command: File.join(Master::ROOT, "bin", "master") }
+
+    refute Master::Ops::ProcessLock.idle_interactive_candidate?(
+      metadata:, holders: [1234], process:, descendants: [],
+      activity: now - 30, root: Master::ROOT, now:, idle_seconds: 7_200
+    )
+  end
+
+  def test_idle_interactive_lock_stays_held_while_child_work_exists
+    now = Time.now
+    metadata = { "pid" => 1234, "host" => Socket.gethostname, "mode" => "interactive" }
+    process = { pid: 1234, stat: "S+", tty: "ttys001",
+                command: File.join(Master::ROOT, "bin", "master") }
+
+    refute Master::Ops::ProcessLock.idle_interactive_candidate?(
+      metadata:, holders: [1234], process:, descendants: [1235],
+      activity: now - 7_200, root: Master::ROOT, now:, idle_seconds: 7_200
+    )
+  end
+
+  def test_idle_interactive_lock_does_not_reclaim_other_modes_hosts_or_commands
+    now = Time.now
+    process = { pid: 1234, stat: "S+", tty: "ttys001",
+                command: File.join(Master::ROOT, "bin", "master") }
+    base = { "pid" => 1234, "host" => Socket.gethostname, "mode" => "interactive" }
+    args = {
+      holders: [1234], process:, descendants: [], activity: now - 7_200,
+      root: Master::ROOT, now:, idle_seconds: 7_200
+    }
+
+    refute Master::Ops::ProcessLock.idle_interactive_candidate?(
+      metadata: base.merge("mode" => "control_plane"), **args
+    )
+    refute Master::Ops::ProcessLock.idle_interactive_candidate?(
+      metadata: base.merge("host" => "another-host"), **args
+    )
+    refute Master::Ops::ProcessLock.idle_interactive_candidate?(
+      metadata: base, **args.merge(process: process.merge(command: "ruby unrelated.rb"))
+    )
+    refute Master::Ops::ProcessLock.idle_interactive_candidate?(
+      metadata: base, **args.merge(holders: [])
+    )
+  end
+
+  def test_idle_interactive_lock_reclaim_can_be_disabled
+    old = ENV["MASTER_LOCK_IDLE_RECLAIM_SECONDS"]
+    ENV["MASTER_LOCK_IDLE_RECLAIM_SECONDS"] = "0"
+
+    assert_equal 0, Master::Ops::ProcessLock.idle_interactive_reclaim_seconds
+  ensure
+    old.nil? ? ENV.delete("MASTER_LOCK_IDLE_RECLAIM_SECONDS") : ENV["MASTER_LOCK_IDLE_RECLAIM_SECONDS"] = old
+  end
+
   def test_process_lock_reclaims_dead_metadata_when_no_process_holds_the_file
     dir = Dir.mktmpdir("master-lock-stale")
     path = File.join(dir, "master.lock")
