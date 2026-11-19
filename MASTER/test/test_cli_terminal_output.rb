@@ -115,14 +115,57 @@ class TestCLITerminalOutput < Minitest::Test
     previous_quiet.nil? ? ENV.delete("MASTER_CLI_QUIET") : ENV["MASTER_CLI_QUIET"] = previous_quiet
   end
 
+  def test_normal_chat_unwraps_the_accidental_ruby_say_helper
+    cli = session
+    cli.instance_variable_set(:@last_input, "tell xmas story")
+    wrapper = <<~'RUBY'
+      STDOUT.sync = true
+      def say(line = "")
+        STDOUT.puts(line.to_s)
+      end
+      def safe
+        yield
+      rescue => e
+        nil
+      end
+      safe do
+        say "The house was quiet."
+        say
+        say "The tree lights were warm."
+      end
+    RUBY
+
+    assert_equal "The house was quiet.\n\nThe tree lights were warm.",
+                 cli.send(:conversation_output, wrapper)
+  end
+
+  def test_explicit_code_request_is_not_unwrapped
+    cli = session
+    cli.instance_variable_set(:@last_input, "show me Ruby code")
+    wrapper = <<~'RUBY'
+      STDOUT.sync = true
+      def say(line = "")
+        STDOUT.puts(line.to_s)
+      end
+      def safe
+        yield
+      end
+      safe do
+        say "literal"
+      end
+    RUBY
+
+    assert_equal wrapper, cli.send(:conversation_output, wrapper)
+  end
+
   def test_two_voice_rings_render_as_a_fixed_top_right_overlay
     cli = session
     cli.define_singleton_method(:voice_indicator_state) { [false, false] }
 
     overlay = TTY::Screen.stub(:width, 80) { cli.send(:voice_indicator_overlay) }
 
-    assert_match(/\A\e7\e\[1;78H/, overlay)
-    assert_includes overlay, "○○"
+    assert_match(/\A\e7\e\[1;76H/, overlay)
+    assert_includes overlay, "○ ○"
     assert_match(/\e8\z/, overlay)
     refute_includes overlay, "\e[s"
     refute_includes overlay, "\e[u"
