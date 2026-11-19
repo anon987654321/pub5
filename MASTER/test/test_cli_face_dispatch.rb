@@ -403,6 +403,19 @@ class TestCliFaceDispatch < Minitest::Test
     end
   end
 
+  def test_assistant_indicator_fills_while_the_turn_is_active_before_audio
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@user_active, true)
+    session.instance_variable_set(:@voice_mic_active, false)
+
+    overlay = Master::Voice::Playback.stub(:speaking?, false) do
+      TTY::Screen.stub(:width, 80) { session.send(:voice_indicator_overlay) }
+    end
+
+    assert_includes overlay, "\e[97m●\e[0m"
+    assert_includes overlay, "○"
+  end
+
   def test_ctrl_c_leaves_hands_free_mode
     session = Master::CLI::Session.allocate
     session.instance_variable_set(:@voice_listen_active, true)
