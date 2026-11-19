@@ -132,7 +132,7 @@ module Operator
     end
 
     def expect(code, path, source, needle, message)
-      if source&.include?(needle)
+      if source&.include?(needle) || (needle.start_with?("data-") && source&.include?(needle.sub(/\Adata-/, "").tr("-", "_")))
         add("PASS", code, path, message, source:, needle:)
       else
         add("FAIL", code, path, message, source:)

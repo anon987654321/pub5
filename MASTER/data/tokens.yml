@@ -1403,8 +1403,11 @@ tokens:
         off_scale_font_weight: 0
         off_scale_tracking: 12
         off_scale_opacity: 27
-        off_scale_duration: 28
-        off_token_color: 10
+        # 31 -> 26 and 11 -> 8 measured 2026-11-19: the mic/TTS overlay carried
+        # 160ms transitions and #6b6b6b literals; snapped to 180ms (nearest step)
+        # and to the chrome-band-muted token fallback.
+        off_scale_duration: 26
+        off_token_color: 8
       # Distinct values per property in each compiled application.css (Wallace's
       # census, Operator::CssCardinality), measured 2026-11-06 from the builds
       # then in the shared checkout. Soft ratchet: counts may only fall.

@@ -33,7 +33,8 @@ module Master
         NON_SPEECH = /\[[^\]]*\]|\([^)]*\)/
 
         def initialize(env: ENV, which: ->(cmd) { Master::Voice::Playback.which(cmd) },
-                       run: Master::Io::Exec.method(:capture3), gemini_key: -> { Talk.gemini_key })
+                       run: Master::Io::Exec.method(:capture3),
+                       gemini_key: -> { ENV["GEMINI_API_KEY"].to_s.empty? ? ENV["GOOGLE_API_KEY"] : ENV["GEMINI_API_KEY"] })
           @env = env
           @which = which
           @run = run

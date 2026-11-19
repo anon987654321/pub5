@@ -65,7 +65,7 @@ body[data-council-persona]::after {
   inset-inline-end: auto;
   width: var(--tap-min);
   height: var(--tap-min);
-  color: var(--c-mic-off, #6b6b6b);
+  color: var(--c-mic-off, var(--chrome-band-muted));
   opacity: 1;
   pointer-events: auto;
   z-index: auto;
@@ -76,7 +76,7 @@ body[data-council-persona]::after {
   cursor: pointer;
   display: grid;
   place-items: center;
-  transition: color 160ms var(--ease-out), opacity 160ms var(--ease-out);
+  transition: color 180ms var(--ease-out), opacity 180ms var(--ease-out);
 }
 
 #tts-dot {
@@ -84,9 +84,9 @@ body[data-council-persona]::after {
   height: var(--tap-min);
   display: grid;
   place-items: center;
-  color: var(--c-mic-off, #6b6b6b);
+  color: var(--c-mic-off, var(--chrome-band-muted));
   pointer-events: none;
-  transition: color 160ms var(--ease-out);
+  transition: color 180ms var(--ease-out);
 }
 
 #tts-dot::before {
@@ -97,7 +97,7 @@ body[data-council-persona]::after {
   border: 1.5px solid currentColor;
   border-radius: 50%;
   background: transparent;
-  transition: background-color 160ms var(--ease-out);
+  transition: background-color 180ms var(--ease-out);
 }
 
 body[data-mode="speaking"] #tts-dot {
@@ -123,7 +123,7 @@ body[data-mode="speaking"] #tts-dot::before {
 }
 
 #mic-dot svg circle {
-  transition: fill 160ms var(--ease-out);
+  transition: fill 180ms var(--ease-out);
 }
 
 #mic-dot[data-mic="open"] {
@@ -131,7 +131,7 @@ body[data-mode="speaking"] #tts-dot::before {
 }
 
 #mic-dot[data-mic="closed"] {
-  color: var(--c-mic-off, #6b6b6b);
+  color: var(--c-mic-off, var(--chrome-band-muted));
 }
 
 body[data-mic-open="1"] #mic-dot[data-mic="open"] {

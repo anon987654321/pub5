@@ -63,8 +63,9 @@ body[data-queue-active="1"] .turn-queue-status { opacity: .9; }
 /* brgen's deep-blue header band, the one surface the face shares with brgen's
    chrome: links in the band's muted ink, the current one in its full ink with
    the signal rule under it, as brgen's .nav_link.active is. The mic toggle sits
-   on the band's right end, where #6b6b6b measured 1.9:1; its off state takes the
-   band's muted ink (7.25:1) and open stays --c-danger (3.32:1, an icon's 3:1). */
+   on the band's right end, where the old #6b6b6b fallback measured 1.9:1; its
+   off state takes the band's muted ink (7.25:1) and open stays --c-danger
+   (3.32:1, an icon's 3:1). 20_chrome's fallback is the same token now. */
 #mic-dot { --c-mic-off: var(--chrome-band-muted); }
 .master-titlebar .brand-mark {
   display: none; position: static; inset: auto; z-index: auto; flex: 0 0 auto; align-items: center;
