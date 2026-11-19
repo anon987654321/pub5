@@ -104,6 +104,29 @@ A scan-only run does not authorize edits. Source checks do not prove rendered be
 
 Do not copy their values into code, prompts or documentation when a reader can use the canonical source. Secrets belong in the runtime environment, never in Git. Relevant optional settings include `MASTER_BACKGROUND_SCAN=1` for opt-in background scanning, `MASTER_TEST_JOBS=1` for a single test worker, `MASTER_LLM_RECORD=1` for trajectory recording, `MASTER_LLM_GATEWAY_URL` and `MASTER_LLM_GATEWAY_KEY` for a hosted gateway, plus the runtime selectors `RUBY_BOX` and `MASTER_JIT`. Streaming `/fix` uses `MASTER_FIX_STREAM_WORKERS` (default 3, integer from 1 to 8); set `MASTER_FIX_STREAM=0` to disable the worker stream.
 
+## Outbound network boundary
+
+Every server-side fetch is an SSRF boundary, even when its URL appears to name
+a trusted provider. `Master::Io::SsrfGuard` is the owner for MASTER's HTTP
+clients. It accepts only HTTP on port 80 or HTTPS on port 443, rejects URL
+credentials and fragments, validates DNS-name shape before resolution, and
+classifies every returned A and AAAA address. One private, loopback, link-local,
+multicast, translated, documentation or reserved answer rejects the whole set.
+The chosen public address is pinned into `Net::HTTP#ipaddr`; the original
+hostname remains in place for TLS SNI, certificate verification and Host.
+Environment proxies are disabled because they would bypass the pin.
+
+A redirect is not permission to make a second request. `WebBrowse` checks its
+Location target before handing it to Chromium, then intercepts and pins the
+resulting request again. Other clients do not follow redirects implicitly.
+Response bodies, DNS lookup, connection phases and operation deadlines remain
+bounded. Local daemon probes are a deliberate separate policy, not public-web
+fetches.
+
+`ROBUSTNESS_outbound_fetch_is_pinned` in `data/laws.yml` makes this a
+repository-wide robustness requirement. Keep new HTTP clients on the guard;
+never add a validate-by-hostname step followed by an unpinned connection.
+
 ## Doctor, first hour and failures
 
 `bin/operator doctor` checks the checkout/host and reports one line per area: disk, Ruby,
