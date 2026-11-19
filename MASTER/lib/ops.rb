@@ -76,14 +76,21 @@ module Master
 
       MEDIA_PLAYER_COMMAND = %r{(?:/|\\)STUDIO/dilla/dilla\.rb(?:\s|$)}.freeze
 
-      def reclaimable?(path)
+      IDLE_INTERACTIVE_RECLAIM_SECONDS = 2 * 60 * 60
+      IDLE_INTERACTIVE_RECLAIM_WAIT_SECONDS = 2.0
+
+      def reclaimable?(path, root: Master::ROOT)
         probe = File.open(path, File::RDWR | File::CREAT, 0o600)
         return true if probe.flock(File::LOCK_EX | File::LOCK_NB) == true
 
-        # The metadata PID may still be alive when it is a legacy Dilla player.
-        # Inspect the real flock holders before declaring the control plane busy;
-        # current media children close the lock, but old players must be reaped.
-        reclaim_detached_media_holders(path)
+        # A detached legacy player may have inherited the lock. Reap only the
+        # exact media process tree; never unlink the inode or guess from metadata.
+        return true if reclaim_detached_media_holders(path)
+
+        # An interactive shell abandoned for hours should not require a human
+        # to hunt down its terminal. Reclaim only a verified local MASTER prompt
+        # with no child work and no transcript activity beyond the bounded lease.
+        reclaim_idle_interactive_holder(path, root:)
       rescue Errno::ENOENT
         true
       rescue StandardError => e
@@ -94,6 +101,107 @@ module Master
           probe.flock(File::LOCK_UN) rescue nil
           probe.close rescue nil
         end
+      end
+
+      def idle_interactive_reclaim_seconds
+        Integer(ENV.fetch("MASTER_LOCK_IDLE_RECLAIM_SECONDS", IDLE_INTERACTIVE_RECLAIM_SECONDS.to_s),
+                exception: false)
+      end
+
+      def idle_interactive_candidate?(metadata:, holders:, process:, descendants:, activity:, root:,
+                                      now: Time.now, idle_seconds: idle_interactive_reclaim_seconds)
+        return false unless idle_seconds&.positive?
+        return false unless metadata["mode"] == "interactive"
+        return false unless metadata["host"] == Socket.gethostname
+
+        pid = Integer(metadata["pid"], exception: false)
+        return false unless pid&.positive? && holders.include?(pid)
+        return false unless process && process[:pid] == pid
+        return false unless process[:tty] && process[:tty] != "??" && process[:tty] != "-"
+        return false if process[:stat].to_s.match?(/[TZ]/)
+        return false unless descendants.empty?
+        return false unless activity && now - activity >= idle_seconds
+
+        expected = File.join(File.expand_path(root), "bin", "master")
+        process[:command].to_s.include?(expected)
+      rescue StandardError
+        false
+      end
+
+      def reclaim_idle_interactive_holder(path, root:)
+        idle_seconds = idle_interactive_reclaim_seconds
+        return false unless idle_seconds&.positive?
+
+        metadata = JSON.parse(File.read(path))
+        holders = lock_holders(path)
+        pid = Integer(metadata["pid"], exception: false)
+        return false unless pid&.positive? && holders&.include?(pid)
+
+        output, status = Io::Exec.capture2(
+          "ps", "-ax", "-o", "pid=,ppid=,pgid=,stat=,tty=,command=",
+          timeout: Io::Exec::DEFAULT_TIMEOUT
+        )
+        return false unless status.success?
+
+        rows = output.lines.filter_map do |line|
+          match = line.strip.match(/\A(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(.+)\z/)
+          next unless match
+
+          process_id, parent_id, group_id = match.captures.first(3).map(&:to_i)
+          { pid: process_id, ppid: parent_id, pgid: group_id,
+            stat: match[4], tty: match[5], command: match[6] }
+        end
+        process = rows.find { |row| row[:pid] == pid }
+        children_by_parent = rows.group_by { |row| row[:ppid] }
+        descendants = []
+        queue = [pid]
+        until queue.empty?
+          parent = queue.shift
+          children_by_parent.fetch(parent, []).each do |child|
+            next if descendants.include?(child[:pid])
+
+            descendants << child[:pid]
+            queue << child[:pid]
+          end
+        end
+
+        activity = session_activity(root:)
+        candidate = idle_interactive_candidate?(
+          metadata:, holders:, process:, descendants:, activity:, root:,
+          idle_seconds:,
+        )
+        return false unless candidate
+
+        # Close the check/signal race: the same PID must still hold the flock and
+        # the transcript must still be beyond its lease immediately before TERM.
+        return false unless lock_holders(path)&.include?(pid)
+
+        latest_activity = session_activity(root:)
+        return false unless latest_activity && Time.now - latest_activity >= idle_seconds
+
+        Process.kill("TERM", pid)
+        wait_for_lock_release(path)
+      rescue Errno::ESRCH
+        wait_for_lock_release(path)
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "ProcessLock.reclaim_idle_interactive_holder")
+        false
+      end
+
+      def wait_for_lock_release(path)
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + IDLE_INTERACTIVE_RECLAIM_WAIT_SECONDS
+        loop do
+          probe = File.open(path, File::RDWR | File::CREAT, 0o600)
+          free = probe.flock(File::LOCK_EX | File::LOCK_NB) == true
+          probe.flock(File::LOCK_UN) if free
+          probe.close
+          return true if free
+          return false if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+          sleep 0.05
+        end
+      ensure
+        probe&.close rescue nil
       end
 
       def reclaim_detached_media_holders(path)
