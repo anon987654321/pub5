@@ -127,10 +127,16 @@
 # stale number carried into the file, not growth since. No path added by
 # this session; the counts are corrected to what HEAD already carries, not
 # raised above it.
+#
+# 2026-11-19 (11): re-set to the checkout as it stands. One file since (10),
+# landed upstream on main with the same pinned-transport workstream:
+# MASTER/test/test_io_bounded_public_fetchers.rb (e5848ff9), the bounded
+# transport proof across the public research fetchers. No path added by this
+# session; the count is corrected, not raised above what HEAD contains.
 lone_dirs: 47
 stutter: 0
 vague_names: 0
-tracked_files: 8080
+tracked_files: 8081
 tracked_directories: 995
 corpus: 4127
 
