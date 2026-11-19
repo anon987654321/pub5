@@ -5,6 +5,7 @@ require "net/http"
 require "openssl"
 require "socket"
 require "uri"
+require "timeout"
 
 module Shared
   # Where an app is allowed to point an HTTP request, and how it reads the
@@ -48,6 +49,7 @@ module Shared
 
     DNS_LABEL_MAX_BYTES = 63
     DNS_MAX_WIRE_BYTES = 255
+    DNS_TIMEOUT_S = 5
     BLOCKED_HOST_SUFFIXES = %w[.localhost .local .internal .home.arpa .onion].freeze
 
     module_function
@@ -80,8 +82,10 @@ module Shared
     def resolve_addresses(host)
       return [] unless valid_resolver_host?(host)
 
-      Addrinfo.getaddrinfo(host, nil, nil, :STREAM).map(&:ip_address).uniq
-    rescue SocketError, SystemCallError
+      Timeout.timeout(DNS_TIMEOUT_S) do
+        Addrinfo.getaddrinfo(host, nil, nil, :STREAM).map(&:ip_address).uniq
+      end
+    rescue SocketError, SystemCallError, Timeout::Error
       []
     end
 
