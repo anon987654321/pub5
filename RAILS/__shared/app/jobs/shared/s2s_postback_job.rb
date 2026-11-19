@@ -67,13 +67,10 @@ module Shared
     def dispatch(endpoint, parameters)
       uri = URI(endpoint)
       uri.query = URI.encode_www_form(parameters)
-      request = Net::HTTP::Get.new(uri)
-      request["User-Agent"] = "Brgen-S2S-Attribution/1.0"
-      response = begin
-        address = Shared::OutboundHttp.public_address!(uri.hostname)
-        http = Shared::OutboundHttp.pinned_connection(uri, address, open_timeout: 3, read_timeout: 5)
-        http.start { |conn| conn.request(request) }
-      end
+      response = Shared::OutboundHttp.request(
+        uri, headers: { "User-Agent" => "Brgen-S2S-Attribution/1.0" },
+        max_body: 16_384, open_timeout: 3, read_timeout: 5
+      )
       code = response.code.to_i
       raise RetryableResponse, "S2S provider returned HTTP #{code}" if code == 429 || code >= 500
 
