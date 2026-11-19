@@ -191,8 +191,8 @@ class TestCliReplExit < Minitest::Test
     "MASTER_FAST" => "0", "MASTER_SKIP_BOOT_SCAN" => "1", "MASTER_SKIP_TTS" => "1", "TERM" => "xterm",
     "MASTER_FACE_AUTO_MIC" => "0"
   ).freeze
-  # The state line carries the lane; the prompt is "<dir> [Git] master$".
-  READY = /\S+ (?:git:\([^)]+\) )?master\$ /
+  # The state line carries the lane; the prompt is "<dir> [Git] <operator>".
+  READY = /\S+ (?:git:\([^)]+\) )?<[^>]+> /
 
   # Reaps the child if it has exited, returning its status; nil while alive.
   def reap_if_exited(pid)
