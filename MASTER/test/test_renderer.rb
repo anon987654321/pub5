@@ -298,7 +298,9 @@ class TestRenderer < Minitest::Test
     Dir.stub(:pwd, File.join(Dir.home, "pub5")) do
       _state, prompt = renderer.prompt_line("model", "discover", tokens: 10)
 
-      assert_equal "~/pub5 master$ ", strip_ansi(prompt)
+      nick = renderer.send(:bounded_prompt_segment, ENV.fetch("USER", "operator"), 12)
+      nick = "operator" if nick.empty?
+      assert_equal "~/pub5 <#{nick}> ", strip_ansi(prompt)
     end
   end
 
@@ -309,7 +311,9 @@ class TestRenderer < Minitest::Test
       Dir.stub(:pwd, File.join(Master.repo_root, "MASTER")) do
         _state, prompt = renderer.prompt_line(nil, "discover", tokens: 10)
 
-        assert_equal "pub5/MASTER master$ ", strip_ansi(prompt)
+        nick = renderer.send(:bounded_prompt_segment, ENV.fetch("USER", "operator"), 12)
+        nick = "operator" if nick.empty?
+        assert_equal "pub5/MASTER <#{nick}> ", strip_ansi(prompt)
       end
     end
   end
