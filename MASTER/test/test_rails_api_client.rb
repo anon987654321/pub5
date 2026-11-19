@@ -87,6 +87,50 @@ class TestRailsApiClient < Minitest::Test
     assert_includes audit, "path_digest"
   end
 
+  def test_explicit_public_pin_refuses_a_mixed_dns_answer_set
+    Master::Io::SsrfGuard.stub(
+      :resolve_addresses, ["93.184.216.34", "127.0.0.1"]
+    ) do
+      assert_raises(ArgumentError) do
+        Client.new(
+          base_url: "https://rails.example.test", auth_strategy: :api_key,
+          api_key: "test-secret", pinned_address: "93.184.216.34", log_root: @dir
+        )
+      end
+    end
+  end
+
+  def test_explicit_public_pin_accepts_only_all_public_answers
+    Master::Io::SsrfGuard.stub(
+      :resolve_addresses, ["93.184.216.34", "8.8.8.8"]
+    ) do
+      client = Client.new(
+        base_url: "https://rails.example.test", auth_strategy: :api_key,
+        api_key: "test-secret", pinned_address: "8.8.8.8", log_root: @dir
+      )
+      assert_equal "8.8.8.8", client.instance_variable_get(:@pinned_address)
+    end
+  end
+
+  def test_http_attempt_has_a_hard_deadline_even_when_the_peer_drips
+    client = Client.new(
+      base_url: "https://rails.example.test", auth_strategy: :api_key,
+      api_key: "test-secret", log_root: @dir, timeout: 0.01, retries: 0
+    )
+    http = Object.new
+    http.define_singleton_method(:start) { |&block| block.call(self) }
+    http.define_singleton_method(:request) { |_request, &_response| sleep 0.05 }
+
+    Master::Io::SsrfGuard.stub(:http_for, http) do
+      assert_raises(Timeout::Error) do
+        client.send(
+          :perform, :get, URI("https://rails.example.test/api/status"),
+          address: "93.184.216.34", body: nil, headers: {}
+        )
+      end
+    end
+  end
+
   def test_private_http_origin_requires_an_explicit_pinned_address
     assert_raises(ArgumentError) do
       Client.new(base_url: "http://127.0.0.1:3000", auth_strategy: :api_key, api_key: "x")
