@@ -3,10 +3,12 @@
 **Places and a live map, for whichever city you arrived through.** Maps puts the shops, cafes
 and corners of your town on one screen and lets you say that you were there.
 
-Maps is a mountable Rails engine served at `maps.<city>`, for instance `maps.brgen.no` and
-`maps.lsangeles.com`. It is not a separate app: it runs in brgen's process, with brgen's users,
-and the city comes from the apex. The recipe for a vertical is in `RAILS/brgen/README.md`, and
-the topology is in `RAILS/brgen/AGENTS.md`.
+Maps is mounted at `maps.<city>`, including `maps.brgen.no` and
+`maps.lsangeles.com`. It runs inside Brgen's Rails process, uses Brgen's
+users and resolves the city from the apex host. It is not a separate app.
+
+Read [the Brgen guide](../../../README.md) for the vertical pattern and
+[Brgen's agent contract](../../../AGENTS.md) for the host topology.
 
 The home page draws the map on a MapLibre canvas, with tiles from OpenFreeMap. Its GeoJSON
 source clusters nearby places, events and stories at city scale, expands a cluster on selection,
