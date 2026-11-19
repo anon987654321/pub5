@@ -162,6 +162,31 @@ class TestRenderer < Minitest::Test
     ENV["MASTER_DMESG"] = old_dmesg
   end
 
+  def test_renderer_uses_semantic_colours_for_status
+    renderer = FakeRenderer.new(config: {})
+    calls = []
+    pastel = Object.new
+    %i[green yellow red].each do |name|
+      pastel.define_singleton_method(name) do |text|
+        calls << [name, text]
+        text
+      end
+    end
+    guard = Object.new
+    guard.define_singleton_method(:sanitize) { |text, context:| text }
+    renderer.instance_variable_set(:@p, pastel)
+    renderer.define_singleton_method(:output_guard) { guard }
+
+    assert_equal "ok: Ready", renderer.render("Ready", mode: :success)
+    assert_equal "warn: Slow", renderer.render("Slow", mode: :warning)
+    assert_equal "err: Failed", renderer.render("Failed", mode: :error)
+    assert_equal [
+      [:green, "ok: Ready"],
+      [:yellow, "warn: Slow"],
+      [:red, "err: Failed"],
+    ], calls
+  end
+
   def test_session_line_is_dmesg_shaped
     renderer = FakeRenderer.new(config: {})
     assert_equal "session0 at master0: resumed, 3 messages kept", strip_ansi(renderer.session_line(3))
