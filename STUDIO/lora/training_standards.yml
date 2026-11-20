@@ -7,8 +7,6 @@ replicate:
   version: "26dce37af90b9d997eeb970d92e47de3064d46c300504ae376c75bef6a9022d2"
   steps: 1600
   lora_rank: 16
-  min_images: 12
-  max_images: 18
   extra_input:
     optimizer: adamw8bit
     batch_size: 1
@@ -28,6 +26,8 @@ save:
   max_step_saves_to_keep: 4
   push_to_hub: false
 dataset:
+  min_images: 12
+  max_images: 18
   caption_ext: txt
   caption_dropout_rate: 0.05
   shuffle_tokens: false
@@ -40,7 +40,7 @@ train:
   gradient_accumulation_steps: 1
   train_unet: true
   train_text_encoder: false
-  gradient_checkpointing: true
+  gradient_checkpointing: false
   noise_scheduler: flowmatch
   optimizer: adamw8bit
   lr: 0.0004
