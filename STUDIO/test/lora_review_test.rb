@@ -66,6 +66,38 @@ class TestStudioLoraReview < Minitest::Test
     assert_includes html, "Generated image measurements"
   end
 
+  def test_likeness_review_reuses_the_full_training_dataset_validator
+    validator = Object.new
+    validator.define_singleton_method(:validate_subject) do |subject|
+      raise "wrong subject" unless subject == "johann"
+      {
+        "training_ready" => false,
+        "blockers" => [{ "id" => "dataset_image_count", "detail" => "only 4 images" }],
+      }
+    end
+
+    error = Studio::Lora::Validator.stub(:new, ->(root:) {
+      raise "wrong root" unless root == @root
+      validator
+    }) do
+      assert_raises(Studio::Lora::Review::Error) { @builder.send(:require_training_ready!) }
+    end
+
+    assert_match(/only 4 images/, error.message)
+  end
+
+  def test_likeness_review_continues_only_after_the_full_dataset_gate_passes
+    validator = Object.new
+    validator.define_singleton_method(:validate_subject) do |_subject|
+      { "training_ready" => true, "blockers" => [] }
+    end
+
+    Studio::Lora::Validator.stub(:new, ->(root:) { validator }) do
+      report = @builder.send(:require_training_ready!)
+      assert_equal true, report.fetch("training_ready")
+    end
+  end
+
   def test_review_requires_exactly_six_final_renders
     error = assert_raises(Studio::Lora::Review::Error) do
       @builder.validate_render_count!(["one.jpg"])
