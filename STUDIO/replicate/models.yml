@@ -242,8 +242,8 @@ lipsync:
 # The training route, when a subject's own LoRA is the goal.
 training:
   replicate/fast-flux-trainer:
-    inputs: [input_images, trigger_word, lora_type]
-    note: "Replicate's newer maintained FLUX subject/style trainer. Current web workflow documents 10-20 images, roughly 1024px, and a 1000-step starting point. The current web version is newer than the public API example pin; do not switch the production client until its full immutable version and input schema are recorded."
+    inputs: [input_images, trigger_word, lora_type, training_steps, seed]
+    note: "Current subject/style trainer. The immutable production version, 1000 steps, subject type and seed are owned by lora/training_standards.yml; use 12-18 captioned private images around 1024px."
   replicate/train-rvc-model:
     inputs: [dataset_zip, model_name]
     note: "Voice model training, the audio counterpart of a face LoRA."
