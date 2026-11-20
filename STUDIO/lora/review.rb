@@ -88,6 +88,12 @@ module Studio
           cache = File.join(@subject_directory, ".cache")
           secure_directory!(cache)
 
+          # Check the private reference set and pinned candidate before any
+          # provider prediction. A bad dataset must not consume a paid sample.
+          references = reference_files
+          picture = Studio::Visual::IdeaPicture.new(subject: @subject, subjects_root: @root)
+          version = picture.send(:still_model)
+
           render_kind = candidate ? "UNAPPROVED_CANDIDATE" : "FINAL_SERIES"
           if candidate
             output = new_review_directory(File.join(cache, "likeness-review"))
@@ -98,10 +104,6 @@ module Studio
             validate_render_count!(renders)
             output = new_review_directory(File.join(cache, "reviews"))
           end
-
-          references = reference_files
-          picture = Studio::Visual::IdeaPicture.new(subject: @subject, subjects_root: @root)
-          version = picture.send(:still_model)
           sheet_path = File.join(output, "contact-sheet.jpg")
           write_contact_sheet(references, renders, sheet_path, render_label: candidate ? "CANDIDATE" : "RENDER")
           metrics = renders.map do |path|
@@ -128,7 +130,8 @@ module Studio
             "human_review_required" => true,
             "approval_field" => "LIKELINESS_REVIEWED_VERSION",
             "approval_instruction" => "Compare every full-size render with the approved source photographs. Do not approve a model from the contact sheet or image-quality metrics alone.",
-            "provider_calls" => 0,
+            "provider_predictions" => (candidate ? renders.length : 0),
+            "provider_uploads" => 0,
             "consent_valid" => consent.fetch("valid"),
           }
           write_private(File.join(output, "review.json"), JSON.pretty_generate(report) + "\n")
@@ -143,7 +146,8 @@ module Studio
             "model_version" => version,
             "render_count" => renders.length,
             "reference_count" => references.length,
-            "provider_calls" => 0,
+            "provider_predictions" => (candidate ? renders.length : 0),
+            "provider_uploads" => 0,
           }
         end
 
@@ -221,8 +225,8 @@ module Studio
             <body>
               <h1>Private likeness review — #{escape_html(@subject)} — #{escape_html(report.fetch("render_kind"))}</h1>
               <p>Candidate model: <code>#{escape_html(report.fetch("model_version"))}</code></p>
-              <p class="warning">Identity verdict: NOT AUTOMATED. Compare all six full-size renders with the references. Do not approve from image metrics alone.</p>
-              <img src="contact-sheet.jpg" alt="Three approved source images and six generated final portraits">
+              <p class="warning">Identity verdict: NOT AUTOMATED. Compare all #{Integer(report.fetch("render_count"))} full-size #{report.fetch("render_kind") == "UNAPPROVED_CANDIDATE" ? "candidate" : "final"} renders with the references. Do not approve from image metrics alone.</p>
+              <img src="contact-sheet.jpg" alt="#{Integer(report.fetch("reference_count"))} approved source images and #{Integer(report.fetch("render_count"))} #{report.fetch("render_kind") == "UNAPPROVED_CANDIDATE" ? "candidate" : "final"} portraits">
               <h2>Postpro measurements</h2>
               <p>Whole-frame texture, specular spread, clipping and tonal range are diagnostic proxies, not face recognition.</p>
               <table>
