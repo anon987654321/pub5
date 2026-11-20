@@ -74,10 +74,9 @@ module Studio
         rendered
       end
 
-      # Delete only prior generated image outputs for this subject. Validate
-      # every target before unlinking any of them; references, sources, datasets,
-      # weights, consent and other subjects are outside these roots by design.
-      def replace_previous_renders!(keep: [])
+      # Build a complete, non-destructive deletion plan. Call this for every
+      # subject before applying any plan in a multi-subject replacement.
+      def replacement_plan(keep: [])
         retained = Array(keep).map { |path| File.expand_path(path) }
         candidates = previous_render_paths.reject { |path| retained.include?(File.expand_path(path)) }
         sidecars = candidates.map { |path| "#{path}.json" }.select { |path| File.exist?(path) || File.symlink?(path) }
@@ -85,9 +84,18 @@ module Studio
         unsafe = targets.reject { |path| safe_generated_file?(path) }
         raise "refusing to delete unsafe or unowned generated output: #{unsafe.join(", ")}" unless unsafe.empty?
 
+        { images: candidates.freeze, sidecars: sidecars.freeze }.freeze
+      end
+
+      def replace_previous_renders!(keep: [], plan: nil)
+        expected = replacement_plan(keep:)
+        plan ||= expected
+        raise "replacement plan changed after preflight" unless plan == expected
+
+        targets = plan.fetch(:images) + plan.fetch(:sidecars)
         targets.each { |path| File.delete(path) }
-        record("replace_delete", deleted: candidates.length, sidecars: sidecars.length)
-        candidates.length
+        record("replace_delete", deleted: plan.fetch(:images).length, sidecars: plan.fetch(:sidecars).length)
+        plan.fetch(:images).length
       end
 
       private
