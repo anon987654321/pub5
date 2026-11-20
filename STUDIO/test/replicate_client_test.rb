@@ -296,7 +296,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
     client = MissingTrainerFieldClient.new
     error = assert_raises(ArgumentError) do
       client.train_lora(
-        "https://files.replicate.delivery/photos.zip", "owner/model", wait: false
+        "https://files.replicate.delivery/photos.zip", "owner/model", trigger_word: "SAMPLE", wait: false
       )
     end
 
@@ -377,7 +377,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
   def test_training_version_is_validated_before_a_create_request
     error = assert_raises(ArgumentError) do
       @client.train_lora("https://files.replicate.delivery/photos.zip", "owner/model",
-                         wait: false, version: "../account")
+                         trigger_word: "SAMPLE", wait: false, version: "../account")
     end
 
     assert_match(/trainer version/, error.message)
