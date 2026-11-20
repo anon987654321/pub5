@@ -3,7 +3,6 @@
 require "json"
 require "fileutils"
 require "time"
-require "securerandom"
 require_relative "idea_picture"
 require_relative "../lora/lora"
 
@@ -22,32 +21,34 @@ module Studio
 
       IMAGE_EXTENSIONS = %w[jpg jpeg png webp].freeze
 
-      def initialize(subject:, client: nil, directory: nil, scenes: SCENES, ledger_path: nil, engine: nil)
+      def initialize(subject:, client: nil, directory: nil, scenes: nil, ledger_path: nil, engine: nil)
         @subject = subject.to_s
         raise ArgumentError, "subject must be a simple directory name" unless @subject.match?(/\A[a-zA-Z0-9_-]+\z/)
-        @scenes = Array(scenes)
-        raise ArgumentError, "selfie series needs at least one scene" if @scenes.empty?
+        @scenes = scenes.nil? ? nil : Array(scenes)
+        raise ArgumentError, "selfie series needs at least one scene" if @scenes&.empty?
 
         @directory = File.expand_path(directory || IdeaPicture::SUBJECTS)
         @subject_directory = File.join(IdeaPicture::SUBJECTS, @subject)
         @series = IdeaPicture.new(
-          subject: @subject, directory: @directory, client:, engine:
+          subject: @subject, directory: @directory, client:, engine:, lora_only: engine.nil?
         )
         @ledger_path = ledger_path || File.join(IdeaPicture::SUBJECTS, @subject, "ledger.jsonl")
       end
 
-      def run(count: 12, replace: false)
+      def preflight! = @series.validate_model!
+
+      def run(count: 6, replace: false)
         total = Integer(count)
         raise ArgumentError, "count must be between 1 and #{LIMIT}" unless total.between?(1, LIMIT)
 
-        @series.validate_model!
+        preflight!
         previous = previous_render_paths if replace
         rendered = []
         total.times do |index|
-          scene = if @scenes.equal?(SCENES)
-                    Studio::Lora::Selfie.scene(index + 1)
-                  else
+          scene = if @scenes
                     @scenes[index % @scenes.size]
+                  else
+                    Studio::Lora::Selfie.scene(index + 1, subject: @subject)
                   end
           begin
             stem = "#{@subject}_selfie_#{format("%02d", index + 1)}"
@@ -66,8 +67,7 @@ module Studio
         if replace
           complete = rendered.length == total && rendered.all? { |path| File.file?(path) && !File.symlink?(path) }
           if complete
-            archived = archive_previous_renders!(previous - rendered)
-            record("replace_archive", archived:)
+            replace_previous_renders!(keep: rendered)
           else
             record("replace_preserved", previous: previous.length, rendered: rendered.length, expected: total)
           end
@@ -75,7 +75,46 @@ module Studio
         rendered
       end
 
+      # Delete only prior generated image outputs for this subject. Validate
+      # every target before unlinking any of them; references, sources, datasets,
+      # weights, consent and other subjects are outside these roots by design.
+      def replace_previous_renders!(keep: [])
+        retained = Array(keep).map { |path| File.expand_path(path) }
+        candidates = previous_render_paths.reject { |path| retained.include?(File.expand_path(path)) }
+        sidecars = candidates.map { |path| "#{path}.json" }.select { |path| File.exist?(path) || File.symlink?(path) }
+        targets = (candidates + sidecars).uniq
+        unsafe = targets.reject { |path| safe_generated_file?(path) }
+        raise "refusing to delete unsafe or unowned generated output: #{unsafe.join(", ")}" unless unsafe.empty?
+
+        targets.each { |path| File.delete(path) }
+        record("replace_delete", deleted: candidates.length, sidecars: sidecars.length)
+        candidates.length
+      end
+
       private
+
+      def safe_generated_file?(path)
+        expanded = File.expand_path(path)
+        roots = [
+          @directory,
+          File.join(@subject_directory, "out"),
+          File.join(IdeaPicture::SUBJECTS, "out", @subject, "selfie_series")
+        ].map { |root| File.expand_path(root) }
+        root = roots.find { |candidate| expanded.start_with?("#{candidate}#{File::SEPARATOR}") }
+        return false unless root && File.directory?(root) && !File.symlink?(root)
+
+        relative = expanded.delete_prefix("#{root}#{File::SEPARATOR}")
+        parts = relative.split(File::SEPARATOR)
+        cursor = root
+        parts[0...-1].each do |part|
+          cursor = File.join(cursor, part)
+          return false if File.symlink?(cursor) || !File.directory?(cursor)
+        end
+        stat = File.lstat(expanded)
+        stat.file? && !stat.symlink? && stat.uid == Process.uid && stat.nlink == 1
+      rescue SystemCallError
+        false
+      end
 
       def previous_render_paths
         patterns = IMAGE_EXTENSIONS.flat_map do |ext|
@@ -93,61 +132,9 @@ module Studio
           patterns.concat(IMAGE_EXTENSIONS.map { |ext| File.join(legacy_series, "*.#{ext}") })
         end
 
-        archive_prefix = File.join(File.expand_path(legacy_output), "archive", "")
-        patterns.flat_map { |pattern| Dir.glob(pattern) }.uniq.reject do |path|
-          File.expand_path(path).start_with?(archive_prefix)
-        end.select do |path|
+        patterns.flat_map { |pattern| Dir.glob(pattern) }.uniq.select do |path|
           File.file?(path) && !File.symlink?(path)
         end
-      end
-
-      # Replacement is a commit-like operation: old files move to a private,
-      # ignored archive only after every new render exists. A failed/partial run
-      # leaves the previous series untouched.
-      def archive_previous_renders!(paths)
-        candidates = Array(paths).select { |path| File.file?(path) && !File.symlink?(path) }
-        return 0 if candidates.empty?
-
-        subject_root = File.join(@directory, @subject)
-        out_root = File.join(subject_root, "out")
-        archive_base = File.join(out_root, "archive")
-        [subject_root, out_root, archive_base].each { |path| ensure_private_directory!(path) }
-        archive_root = File.join(archive_base, "#{Time.now.utc.strftime("%Y%m%dT%H%M%S")}-#{SecureRandom.hex(3)}")
-        ensure_private_directory!(archive_root)
-        moved = []
-        begin
-          candidates.each do |source|
-            expanded = File.expand_path(source)
-            raise "refusing to archive a path outside the render root" unless expanded.start_with?("#{@directory}#{File::SEPARATOR}")
-            raise "refusing to archive a symlink or non-file" if File.symlink?(source) || !File.file?(source)
-
-            destination = File.join(archive_root, File.basename(source))
-            raise "archive destination already exists" if File.exist?(destination)
-            File.rename(source, destination)
-            File.chmod(0o600, destination)
-            moved << [source, destination]
-          end
-        rescue StandardError
-          moved.reverse_each do |source, destination|
-            File.rename(destination, source) if File.file?(destination) && !File.exist?(source)
-          rescue SystemCallError
-            # Preserve the archive rather than deleting evidence if rollback itself fails.
-          end
-          raise
-        end
-        moved.length
-      end
-
-      def ensure_private_directory!(path)
-        raise "refusing symlink in subject archive path: #{path}" if File.symlink?(path)
-        if File.exist?(path)
-          raise "subject archive path is not a directory: #{path}" unless File.directory?(path)
-        else
-          Dir.mkdir(path, 0o700)
-        end
-        stat = File.lstat(path)
-        raise "subject archive directory is not owned by the current user: #{path}" unless stat.uid == Process.uid
-        File.chmod(0o700, path)
       end
 
       def record(kind, **fields)
