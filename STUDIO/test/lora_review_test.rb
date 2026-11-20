@@ -43,12 +43,12 @@ class TestStudioLoraReview < Minitest::Test
     assert_equal %w[source-0.jpg source-2.jpg source-4.jpg], references.map { |path| File.basename(path) }
   end
 
-  def test_review_requires_the_complete_six_image_series
-    write_private(File.join(@root, "postpro_johann_selfie_01_v1.jpg"))
+  def test_review_requires_exactly_six_final_renders
     error = assert_raises(Studio::Lora::Review::Error) do
-      raise Studio::Lora::Review::Error, "expected six final, private Postpro renders" unless @builder.render_files.length == 6
+      @builder.validate_render_count!(["one.jpg"])
     end
-    assert_match(/expected six/, error.message)
+    assert_match(/expected 6/, error.message)
+    assert @builder.validate_render_count!(Array.new(6, "render.jpg"))
   end
 
   private
