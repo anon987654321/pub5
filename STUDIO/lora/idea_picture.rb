@@ -491,8 +491,7 @@ module Studio
         Integer(seconds).clamp(3, 15)
       end
 
-      # The subject trigger is a field in the small schema-1 plan. It is
-      # not parsed from the retired AI-Toolkit config/process/sd_trainer format.
+      # The subject trigger is a field in the small schema-1 plan.
       def training_trigger
         path = File.join(@subject_directory, "train.yaml")
         return nil unless File.file?(path) && !File.symlink?(path)
