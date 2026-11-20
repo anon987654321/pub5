@@ -88,18 +88,35 @@ class TestSelfieSeries < Minitest::Test
     assert rendered.all? { |path| File.basename(path).include?("probe_selfie_") }
   end
 
+  def test_default_series_uses_the_subject_pinned_lora_without_fallback
+    run_series(series, count: 2)
+
+    assert_equal ["owner/model:version-123"] * 2, @client.predictions.map(&:first)
+  end
+
+  def test_each_named_subject_has_six_distinct_scenes
+    %w[johann ragnhild merethe].each do |subject|
+      scenes = (1..6).map { |number| Studio::Lora::Selfie.scene(number, subject:) }
+      assert_equal 6, scenes.uniq.length, "#{subject} must have six distinct scenes"
+    end
+    refute_equal Studio::Lora::Selfie.scene(1, subject: "johann"), Studio::Lora::Selfie.scene(1, subject: "ragnhild")
+    refute_equal Studio::Lora::Selfie.scene(1, subject: "ragnhild"), Studio::Lora::Selfie.scene(1, subject: "merethe")
+  end
+
   def test_default_output_directory_is_the_lora_root
     box = Studio::Visual::SelfieSeries.new(subject: "probe", client: @client)
     assert_equal Studio::Visual::IdeaPicture::SUBJECTS, box.instance_variable_get(:@directory)
   end
 
-  def test_replace_archives_only_the_selected_subject_series_after_success
+  def test_replace_deletes_only_the_selected_subject_renders_after_success
     directory = File.join(@dir, "flat")
     FileUtils.mkdir_p(directory)
     old = File.join(directory, "probe_selfie_old.jpg")
     processed = File.join(directory, "postpro_probe_selfie_old_v1.jpg")
+    sidecar = "#{old}.json"
     other = File.join(directory, "ragnhild_selfie_old.jpg")
     [old, processed, other].each { |path| File.write(path, "old") }
+    File.write(sidecar, '{"preset":"portrait"}')
 
     box = Studio::Visual::SelfieSeries.new(
       subject: "probe", client: @client, directory:, ledger_path: File.join(@dir, "ledger.jsonl"),
@@ -108,14 +125,11 @@ class TestSelfieSeries < Minitest::Test
 
     refute File.exist?(old)
     refute File.exist?(processed)
+    refute File.exist?(sidecar)
     assert File.file?(other)
-    archive = Dir.glob(File.join(directory, "probe", "out", "archive", "*", "*")).sort
-    assert_equal 2, archive.length
-    assert_equal %w[old old], archive.map { |path| File.read(path) }
-    archive_root = File.dirname(archive.first)
-    assert_equal 0o700, File.stat(archive_root).mode & 0o777
-    archive.each { |path| assert_equal 0o600, File.stat(path).mode & 0o777 }
-    assert_equal 2, ledger_rows("replace_archive").first.fetch("archived")
+    assert_empty Dir.glob(File.join(directory, "probe", "out", "archive", "*", "*"))
+    assert_equal 2, ledger_rows("replace_delete").first.fetch("deleted")
+    assert_equal 1, ledger_rows("replace_delete").first.fetch("sidecars")
     assert rendered.all? { |path| File.file?(path) }
   end
 
