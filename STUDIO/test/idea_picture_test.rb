@@ -479,7 +479,7 @@ class TestIdeaPictureOutput < Minitest::Test
       )
 
       assert_equal version, picture.send(:still_model)
-      assert_match(/\\Ajohann_lora,/, picture.send(:photographic, "window portrait"))
+      assert_match(/\Ajohann_lora,/, picture.send(:photographic, "window portrait"))
     end
   end
 
