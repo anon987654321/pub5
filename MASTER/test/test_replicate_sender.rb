@@ -86,25 +86,6 @@ class TestReplicateSender < Minitest::Test
     response
   end
 
-  # A stand-in HTTP session that records each request and answers the same body.
-  def fake_http(body, seen)
-    response = http_ok(body)
-    http = Object.new
-    http.define_singleton_method(:request) do |request|
-      seen << request
-      response
-    end
-    http
-  end
-
-  def assert_replicate_http_options(host:, port:, options:)
-    assert_equal "api.replicate.com", host
-    assert_equal 443, port
-    assert_equal true, options.fetch(:use_ssl)
-    assert_operator options.fetch(:open_timeout), :<=, 5
-    assert_operator options.fetch(:read_timeout), :<=, 10
-  end
-
   def replicate_prediction(url) = { "urls" => { "get" => url } }
 
   def fetch_replicate_prediction(dispatcher, url)
@@ -116,25 +97,74 @@ class TestReplicateSender < Minitest::Test
     )
   end
 
-  def assert_replicate_request(seen, path)
-    assert_equal "Bearer test-token", seen.first["Authorization"]
-    assert_equal path, seen.first.path
+  def test_replicate_post_keeps_the_wait_window_separate_from_socket_timeouts
+    dispatcher = build_dispatcher
+    uri = URI("https://api.replicate.com/v1/models/openai/gpt-5.2/predictions")
+    request_options = nil
+    response = http_ok("{}")
+
+    Master::Io::SsrfGuard.stub(:request, lambda { |seen_uri, outbound_request, **options|
+      request_options = [seen_uri, outbound_request, options]
+      response
+    }) do
+      result = dispatcher.send(:post_json, uri.to_s, { input: { prompt: "hello" } },
+                               headers: { "Authorization" => "Bearer test" }, timeout: 70)
+      assert_same response, result
+    end
+
+    seen_uri, outbound_request, options = request_options
+    assert_equal uri, seen_uri
+    assert_equal "/v1/models/openai/gpt-5.2/predictions", outbound_request.path
+    assert_equal "Bearer test", outbound_request["Authorization"]
+    assert_equal 70, options.fetch(:timeout)
+    assert_equal 5, options.fetch(:open_timeout)
+    assert_equal 70, options.fetch(:read_timeout)
+    assert_equal 5, options.fetch(:write_timeout)
   end
 
-  def test_replicate_poll_uses_only_the_validated_api_host_with_bounded_timeouts
+  def test_replicate_poll_uses_separate_total_and_socket_deadlines
     dispatcher = build_dispatcher
-    seen = []
-    http = fake_http(JSON.generate("status" => "succeeded", "output" => ["ok"]), seen)
+    uri = URI("https://api.replicate.com/v1/predictions/a_123-xyz")
+    request_options = nil
+    response = http_ok("{}")
 
-    Net::HTTP.stub(:start, lambda { |host, port, **options, &block|
-      assert_replicate_http_options(host:, port:, options:)
-      block.call(http)
+    Master::Io::SsrfGuard.stub(:request, lambda { |seen_uri, outbound_request, **options|
+      request_options = [seen_uri, outbound_request, options]
+      response
     }) do
-      result = fetch_replicate_prediction(dispatcher, "https://api.replicate.com/v1/predictions/a_123-xyz")
-
-      assert result.is_a?(Hash)
-      assert_replicate_request(seen, "/v1/predictions/a_123-xyz")
+      result = dispatcher.send(:replicate_poll_request, uri,
+                               { "Authorization" => "Bearer test-token" }, remaining: 30)
+      assert_same response, result
     end
+
+    seen_uri, outbound_request, options = request_options
+    assert_equal uri, seen_uri
+    assert_equal "/v1/predictions/a_123-xyz", outbound_request.path
+    assert_equal "Bearer test-token", outbound_request["Authorization"]
+    assert_equal 10, options.fetch(:timeout)
+    assert_equal 5, options.fetch(:open_timeout)
+    assert_equal 10, options.fetch(:read_timeout)
+    assert_equal 5, options.fetch(:write_timeout)
+  end
+
+  def test_replicate_poll_never_exceeds_the_remaining_prediction_deadline
+    dispatcher = build_dispatcher
+    captured = nil
+    response = http_ok("{}")
+
+    Master::Io::SsrfGuard.stub(:request, lambda { |_uri, _outbound_request, **options|
+      captured = options
+      response
+    }) do
+      dispatcher.send(:replicate_poll_request,
+                      URI("https://api.replicate.com/v1/predictions/a"),
+                      {}, remaining: 3)
+    end
+
+    assert_equal 3, captured.fetch(:timeout)
+    assert_equal 3, captured.fetch(:open_timeout)
+    assert_equal 3, captured.fetch(:read_timeout)
+    assert_equal 3, captured.fetch(:write_timeout)
   end
 
   def test_replicate_poll_stops_on_a_bounded_deadline_and_returns_the_result

@@ -215,8 +215,12 @@ module Master
 
         def replicate_poll_request(uri, headers, remaining:)
           request = Net::HTTP::Get.new(uri.request_uri, headers)
-          timeout = [REPLICATE_POLL_OPEN_TIMEOUT_S, REPLICATE_POLL_READ_TIMEOUT_S, remaining].min
-          Master::Io::SsrfGuard.request(uri, request, max_bytes: 1_000_000, timeout:)
+          timeout = [REPLICATE_POLL_READ_TIMEOUT_S, remaining].min
+          socket_timeout = [REPLICATE_POLL_OPEN_TIMEOUT_S, timeout].min
+          Master::Io::SsrfGuard.request(
+            uri, request, max_bytes: 1_000_000, timeout:,
+            open_timeout: socket_timeout, read_timeout: timeout, write_timeout: socket_timeout
+          )
         end
 
         # A poll URL is trusted only when it is exactly the API origin and a
@@ -247,9 +251,13 @@ module Master
 
           request = Net::HTTP::Post.new(uri.request_uri, headers.merge("Content-Type" => "application/json"))
           request.body = JSON.generate(body)
+          # Keep the short connect/write guards separate from the total response
+          # deadline. Applying OPEN_TIMEOUT_S to the total request cut every
+          # Replicate completion off after five seconds, before Prefer: wait=60.
           Master::Io::SsrfGuard.request(
             uri, request, max_bytes: 1_000_000,
-            timeout: [OPEN_TIMEOUT_S, timeout].min
+            timeout:, open_timeout: OPEN_TIMEOUT_S,
+            read_timeout: timeout, write_timeout: OPEN_TIMEOUT_S
           )
         end
       end
