@@ -558,6 +558,13 @@ module Studio
         private_manifest = File.join(@subject_directory, "weights", configured, "replicate_training.json")
         tracked_manifest = File.join(@subject_directory, "replicate_training.json")
         return private_manifest if File.file?(private_manifest) && !File.symlink?(private_manifest)
+
+        # An explicit immutable private pin supersedes a historical tracked
+        # checkpoint. A newly trained local weights manifest remains first.
+        configured_version = subject_env["REPLICATE_MODEL"].to_s.strip
+        if configured_version.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}:[A-Za-z0-9][A-Za-z0-9_-]{0,127}\z/)
+          return private_manifest
+        end
         return tracked_manifest if File.file?(tracked_manifest) && !File.symlink?(tracked_manifest)
 
         private_manifest
