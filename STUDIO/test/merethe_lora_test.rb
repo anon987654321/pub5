@@ -39,13 +39,16 @@ class TestMeretheLoraPackage < Minitest::Test
   end
 
   def test_preflight_minimum_matches_trainer_floor_and_target_range
-    assert_equal 10, Studio::MeretheLora::MIN_IMAGES
+    assert_equal 12, Studio::MeretheLora::MIN_IMAGES
     assert_equal [12, 18], [Studio::MeretheLora::TARGET_MIN_IMAGES, Studio::MeretheLora::MAX_IMAGES]
   end
 
-  def test_trainer_version_is_pinned_not_floating
-    assert_equal "ostris/flux-dev-lora-trainer", Studio::MeretheLora::TRAINER
-    assert_match(/\A[0-9a-f]{64}\z/, Studio::MeretheLora::TRAINER_VERSION)
+  def test_trainer_and_recipe_match_the_shared_standard
+    standard = YAML.safe_load_file(File.expand_path("../lora/training_standards.yml", __dir__))
+    assert_equal standard.fetch("replicate").fetch("trainer"), Studio::MeretheLora::TRAINER
+    assert_equal standard.fetch("replicate").fetch("version"), Studio::MeretheLora::TRAINER_VERSION
+    assert_equal standard.fetch("replicate").fetch("steps"), standard.fetch("train").fetch("steps")
+    assert_equal standard.fetch("replicate").fetch("lora_rank"), standard.fetch("network").fetch("linear")
   end
 
   def test_prepared_dataset_and_zip_replace_as_one_recoverable_pair
