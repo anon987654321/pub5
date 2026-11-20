@@ -46,7 +46,8 @@ module Studio
         film_engine: nil,
         film_resolution: nil,
         subjects_root: SUBJECTS,
-        lora_only: false
+        lora_only: false,
+        allow_unreviewed_likeness: false
       )
         @client = client
         @directory = directory
@@ -59,7 +60,9 @@ module Studio
         @model_manifest = model_manifest || default_model_manifest
         @engine = engine&.to_s
         @lora_only = !!lora_only
+        @allow_unreviewed_likeness = !!allow_unreviewed_likeness
         raise ArgumentError, "lora_only cannot be combined with a different engine" if @lora_only && @engine
+        raise ArgumentError, "unreviewed likeness is available only for the LoRA candidate-review path" if @allow_unreviewed_likeness && !@lora_only
         @film_engine = film_engine&.to_s
         @film_resolution = film_resolution&.to_s
       end
@@ -105,7 +108,9 @@ module Studio
         if @lora_only
           reviewed_version = subject_env["LIKELINESS_REVIEWED_VERSION"].to_s.strip
           unless reviewed_version == model
-            raise "LoRA likeness is not approved for #{@subject}: compare full-size training samples with approved subject references, then set LIKELINESS_REVIEWED_VERSION to the exact pinned version in private subject.env (#{model})"
+            unless @allow_unreviewed_likeness && candidate_review_directory?
+              raise "LoRA likeness is not approved for #{@subject}: compare full-size training samples with approved subject references, then set LIKELINESS_REVIEWED_VERSION to the exact pinned version in private subject.env (#{model})"
+            end
           end
         end
         return model if @lora_only && @validated_still_model == model
@@ -210,6 +215,27 @@ module Studio
       end
 
       private
+
+      # Candidate rendering is a narrow exception for likeness review, not
+      # a general bypass: output must stay below this subject's private cache.
+      def candidate_review_directory?
+        root = File.expand_path(File.join(@subject_directory, ".cache", "likeness-review"))
+        target = File.expand_path(@directory)
+        return false unless target.start_with?("#{root}#{File::SEPARATOR}")
+        return false unless File.directory?(root) && !File.symlink?(root)
+
+        cursor = root
+        [root, *target.delete_prefix("#{root}#{File::SEPARATOR}").split(File::SEPARATOR).then do |parts|
+          parts[0...-1].each_with_object([]) { |part, rows| cursor = File.join(cursor, part); rows << cursor }
+        end].each do |path|
+          stat = File.lstat(path)
+          return false unless stat.directory? && !stat.symlink? && stat.uid == Process.uid && (stat.mode & 0o077).zero?
+        end
+        true
+      rescue SystemCallError
+        false
+      end
+      private :candidate_review_directory?
 
       def authorize_subject!
         Studio::Lora::Consent.require!(
