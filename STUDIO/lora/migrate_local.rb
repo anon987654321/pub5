@@ -302,8 +302,9 @@ module Studio
 
             parent = File.dirname(target)
             prepare_destination_parent!(parent, destination)
-            # Register the exclusive destination before writing so any short
-            # read, changed source or verification failure is rolled back.
+            # Register the exclusive destination before writing so an
+            # interrupted copy can report every retained path. Never roll back
+            # by deleting subject material already written to the destination.
             File.open(target, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |output|
               created << target
               digest = Digest::SHA256.new
@@ -346,9 +347,12 @@ module Studio
             end
             File.chmod(0o600, target)
           end
-        rescue StandardError
-          created.reverse_each { |path| File.delete(path) if File.file?(path) && !File.symlink?(path) }
-          raise
+        rescue StandardError => error
+          retained = created.map { |path| path.delete_prefix("#{destination}/") }
+          detail = retained.empty? ? "no destination files were created" :
+            "retained #{retained.length} destination path(s): #{retained.join(", ")}"
+          raise Error,
+                "migration interrupted; #{detail}; no files were deleted: #{error.class}: #{error.message}"
         end
         created.map do |path|
           { "path" => path.delete_prefix("#{destination}/"), "bytes" => File.size(path), "mode" => "0600" }

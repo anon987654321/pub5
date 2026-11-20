@@ -109,6 +109,18 @@ class TestSelfiesGallery < Minitest::Test
     assert_equal "ragnhild selfie 01", item.fetch("caption")
   end
 
+  def test_gallery_prefers_the_grade_but_retains_the_raw_provider_still
+    raw = touch("ragnhild_selfie_01_20261120T120000_abcd12.jpg")
+    graded = touch("postpro_ragnhild_selfie_01_20261120T120000_abcd12_1_v1.jpg")
+
+    manifest = build
+
+    assert_equal 1, manifest.fetch("count")
+    assert_equal ["STUDIO/lora/#{File.basename(graded)}"], manifest.fetch("items").map { |item| item.fetch("src") }
+    assert File.file?(raw), "the private raw provider still must be retained"
+    assert File.file?(graded), "the grade must be retained"
+  end
+
   def test_a_film_is_paired_with_the_still_it_animates
     touch("ragnhild_selfie_01.jpg")
     touch("ragnhild_selfie_01.mp4")

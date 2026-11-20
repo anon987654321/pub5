@@ -161,6 +161,34 @@ class TestLoraLocalMigration < Minitest::Test
     end
   end
 
+  def test_interrupted_apply_keeps_every_destination_file_it_already_created
+    with_repositories do |source, destination|
+      legacy = write_legacy_subject(source, include_sources: true)
+      subject_destination = File.join(destination, "johann")
+      FileUtils.mkdir_p(subject_destination, mode: 0o700)
+      migration = Migration.new(
+        source_checkout: source, destination_root: destination,
+        apply: true, include_sources: true
+      )
+      entries = migration.send(:planned_entries, legacy)
+      File.delete(File.join(legacy, "sources", "portrait.jpg"))
+
+      error = assert_raises(Migration::Error) do
+        migration.send(:apply_entries, subject_destination, entries)
+      end
+
+      env = File.join(subject_destination, "subject.env")
+      manifest = File.join(subject_destination, "weights", "johann", "replicate_training.json")
+      partial_source = File.join(subject_destination, "sources", "portrait.jpg")
+      assert File.file?(env), "a previous successful copy must remain"
+      assert File.file?(manifest), "a previous successful model descriptor must remain"
+      assert File.file?(partial_source), "the failed source destination must remain visible for recovery"
+      assert_equal "", File.read(partial_source)
+      assert_match(/retained 3 destination path\(s\)/, error.message)
+      assert_match(/no files were deleted/, error.message)
+    end
+  end
+
   def test_conflicts_and_symlinks_are_never_overwritten_or_followed
     with_repositories do |source, destination|
       legacy = write_legacy_subject(source, include_sources: true)

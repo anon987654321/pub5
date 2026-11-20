@@ -1268,3 +1268,11 @@ git clean, git reset --hard and path-specific rm/mv/git rm/git mv/restore when
 their target contains a preserved asset. This inventory is separate from the
 general sacred_paths switch. Regressions are authored; runtime proof remains
 NOT_RUN in this publishing environment.
+
+
+2026-11-20 render and recovery retention: grading now retains the original
+provider still alongside its graded output; the gallery shows the graded take
+when both exist without removing the raw file. The local LoRA migration no
+longer rolls back by deleting files after a later copy fails; it reports all
+created destination paths, including any partial file, for explicit recovery.
+Focused regressions are authored; tests remain NOT_RUN here.

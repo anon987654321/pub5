@@ -113,9 +113,22 @@ module Studio
       private
 
       def files(extensions)
-        Dir[File.join(@root, "**", "*")].select do |path|
+        paths = Dir[File.join(@root, "**", "*")].select do |path|
           File.file?(path) && !File.symlink?(path) &&
             extensions.include?(File.extname(path).delete_prefix(".").downcase)
+        end
+        return paths.sort unless extensions == STILL_EXTENSIONS
+
+        # Keep raw provider originals on disk, but show the graded take when
+        # its postpro_ counterpart exists. This preserves the historical
+        # gallery presentation without throwing away the ungraded source.
+        graded_stems = paths.filter_map do |path|
+          name = File.basename(path, File.extname(path))
+          name.delete_prefix("postpro_") if name.start_with?("postpro_")
+        end
+        paths.reject do |path|
+          name = File.basename(path, File.extname(path))
+          !name.start_with?("postpro_") && graded_stems.any? { |stem| stem.start_with?("#{name}_") }
         end.sort
       end
 

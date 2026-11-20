@@ -168,6 +168,29 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
+  def test_render_still_retains_the_original_provider_output_after_grading
+    Dir.mktmpdir do |dir|
+      client = Object.new
+      client.define_singleton_method(:download_url) { |_url, path| File.write(path, "provider-original") }
+      picture = Studio::Visual::IdeaPicture.new(client:, directory: dir)
+      picture.define_singleton_method(:render_with_fallback) { |_words| "https://provider.example/still.jpg" }
+      picture.define_singleton_method(:first_url) { |output| output }
+      picture.define_singleton_method(:grade) do |path, seed: nil|
+        graded = File.join(File.dirname(path), "postpro_#{File.basename(path, ".jpg")}_test_v1.jpg")
+        File.write(graded, "graded")
+        graded
+      end
+
+      graded = picture.send(:render_still, "portrait prompt", "johann_selfie_01")
+      original = File.join(dir, "johann_selfie_01.jpg")
+
+      assert_equal "provider-original", File.read(original)
+      assert_equal "graded", File.read(graded)
+      assert_equal 0o600, File.stat(original).mode & 0o777
+      assert_equal 0o600, File.stat(graded).mode & 0o777
+    end
+  end
+
   def test_grade_fails_instead_of_returning_an_ungraded_still
     Dir.mktmpdir do |dir|
       source = File.join(dir, "portrait.jpg")

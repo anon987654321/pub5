@@ -271,7 +271,8 @@ module Studio
         File.chmod(0o600, path)
         graded = grade(path, seed: grade_seed)
         File.chmod(0o600, graded)
-        File.delete(path) if graded != path && File.file?(path) && !File.symlink?(path)
+        # The provider original and its grade are separate project assets.
+        # Keep both; grading must never destroy the original still.
         graded
       end
 
