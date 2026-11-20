@@ -74,8 +74,17 @@ module Studio
           block(report, "subject_consent", consent.fetch("errors").join("; "))
         end
 
-        env_path = %w[subject.env subject.env.example].map { |name| File.join(directory, name) }
-                                                    .find { |path| File.file?(path) && !File.symlink?(path) }
+        private_env_path = File.join(directory, "subject.env")
+        if File.exist?(private_env_path) || File.symlink?(private_env_path)
+          env_path = private_env_path
+          unless File.file?(env_path) && !File.symlink?(env_path)
+            fail_check(report, "subject_descriptor_path", "Private subject.env must be a regular, non-symlink file")
+            return report
+          end
+        else
+          example_path = File.join(directory, "subject.env.example")
+          env_path = example_path if File.file?(example_path) && !File.symlink?(example_path)
+        end
         unless env_path
           # A subject with no descriptor is not configured yet — the public
           # checkout ships none, by design: consent and subject.env are private,
