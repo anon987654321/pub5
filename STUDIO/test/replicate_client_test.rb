@@ -389,7 +389,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
     body = @client.requests.find { |request| request.first == :post }.fetch(2)
     assert_equal url, body.fetch(:input).fetch(:input_images)
     assert_equal "SAMPLE", body.fetch(:input).fetch(:trigger_word)
-    assert_equal 1_000, body.fetch(:input).fetch(:steps)
+    assert_equal 1_600, body.fetch(:input).fetch(:steps)
     assert_equal 16, body.fetch(:input).fetch(:lora_rank)
     assert_equal 7, body.fetch(:input).fetch(:seed)
   end
