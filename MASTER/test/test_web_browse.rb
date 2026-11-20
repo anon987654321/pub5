@@ -76,6 +76,14 @@ class TestWebBrowse < Minitest::Test
     assert tool.call(url: "https://user:pass@example.com/").err?
   end
 
+  def test_public_page_render_refuses_without_the_core_owned_broker
+    Guard.stub(:pinned_address, "93.184.216.34") do
+      result = tool.call(url: "https://example.com/")
+      assert result.err?
+      assert_match(/Core-owned browser broker is unavailable/, result.message)
+    end
+  end
+
   def test_browser_disables_direct_networking_and_keeps_native_sandbox
     options = tool.class::BROWSER_OPTIONS
     refute options.key?("no-sandbox")

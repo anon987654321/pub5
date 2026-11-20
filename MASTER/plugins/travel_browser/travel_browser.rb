@@ -53,7 +53,7 @@ module Master
         {
           plugin: manifest.id,
           runtime:,
-          browser: ferrum_available? ? "ferrum" : "unavailable",
+          browser: broker && ferrum_available? ? "ferrum" : "unavailable",
           sessions: Dir.glob(File.join(session_root, "*")).select { |p| File.directory?(p) }.map { |p| File.basename(p) }.sort,
           final_purchase_check: true,
           sensitive_fields_manual: true,
@@ -196,18 +196,21 @@ module Master
 
       def with_browser(session:, headless:, url: nil)
         require_ferrum!
+        owner = broker
+        raise PolicyError, "travel_browser: Core-owned browser broker is unavailable" unless owner
+
+        host = session_host(session, url)
+        raise PolicyError, "travel_browser: open a validated HTTPS URL before starting a browser session" if host.empty?
+
         name = safe_session_name(session)
         dir = File.join(session_root, name)
         run_dir = File.join(dir, "runs", timestamp_slug)
         FileUtils.mkdir_p(run_dir, mode: 0o700)
 
-        # The broker owns the process when one was threaded in and the session has
-        # a destination host (recorded by the last validated URL). The session
-        # profile dir is this plugin's signed-in storage and stays. A session with
-        # no known host — the pre-navigation login/fill/click flows — falls back to
-        # this plugin's own driver, as before.
-        lease = broker&.open(host: session_host(session, url), profile: dir, persistent: true, headless:) if host_known?(session, url)
-        browser = Ferrum::Browser.new(**driver_options(lease, dir:, headless:))
+        # The session profile remains plugin-owned. Every Chromium process is
+        # leased from Core and bound to the last URL that passed this plugin's policy.
+        lease = owner.open(host:, url:, profile: dir, persistent: true, headless:)
+        browser = Ferrum::Browser.new(**driver_options(lease))
         page = browser.create_page
         yield(page, run_dir)
       rescue Ferrum::TimeoutError => e
@@ -216,7 +219,7 @@ module Master
         raise Error, "travel_browser: browser navigation failed: #{e.message}"
       ensure
         browser&.quit
-        broker&.close(lease.id) if lease
+        owner&.close(lease.id) if lease
       end
 
       def broker = service(:browser_broker)
@@ -233,9 +236,8 @@ module Master
         host.to_s
       end
 
-      def driver_options(lease, dir:, headless:)
-        return { headless:, timeout: 30, window_size: [1440, 1000],
-                 browser_options: { "user-data-dir" => dir } } unless lease
+      def driver_options(lease)
+        raise PolicyError, "travel_browser: Core-owned browser lease is required" unless lease
 
         { ws_url: lease.cdp_url, timeout: 30, window_size: [1440, 1000] }
       end

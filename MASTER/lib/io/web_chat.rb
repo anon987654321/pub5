@@ -28,6 +28,7 @@ module Master
 
       DisabledError = Class.new(StandardError)
       ProviderError = Class.new(StandardError)
+      BrowserUnavailable = Class.new(StandardError)
       RequestTimeout = Class.new(StandardError)
 
       def self.call(provider:, prompt:, system: nil, broker: nil)
@@ -61,6 +62,7 @@ module Master
         timeout_class = classes.any? do |name|
           name.match?(/\A(?:Ferrum::)?(?:(?:Process)?TimeoutError|PendingConnectionsError)\z/)
         end
+        return :model_missing if error.is_a?(BrowserUnavailable)
         return :timeout if timeout_class || error.is_a?(Timeout::Error) || message.match?(/timed out/i)
         return :offline if error.is_a?(SystemCallError) || classes.include?("Ferrum::DeadBrowserError")
         return :model_missing if classes.include?("Ferrum::BinaryNotFoundError") ||
@@ -118,6 +120,8 @@ module Master
       end
 
       def with_browser
+        raise BrowserUnavailable, "#{@provider}: Core-owned browser broker is unavailable; refusing to spawn Chromium outside Core" unless @broker
+
         require "ferrum"
         PROFILE_MUTEX.synchronize do
           refuse_if_cleanup_pending!
@@ -126,26 +130,23 @@ module Master
           begin
             FileUtils.mkdir_p(profile_path, mode: 0o700)
             File.chmod(0o700, profile_path)
-            lease = @broker&.open(host: provider_host, url: @config.fetch("url"),
-                                  profile: profile_path, persistent: true,
-                                  headless: ENV[HEADFUL_ENV] != "1")
+            lease = @broker.open(host: provider_host, url: @config.fetch("url"),
+                                 profile: profile_path, persistent: true,
+                                 headless: ENV[HEADFUL_ENV] != "1")
             browser = Ferrum::Browser.new(**driver_options(lease))
             yield browser.create_page
           ensure
             cleanup_browser(browser) if browser
             # The broker stops the process group; the signed-in profile dir stays,
             # because the next keyless call reuses the same sign-in state.
-            @broker&.close(lease.id) if lease
+            @broker.close(lease.id) if lease
           end
         end
       end
 
-      # With a broker the CDP endpoint belongs to it and Ferrum attaches instead
-      # of spawning; without one this is the driver WebChat has always started.
+      # A lease is mandatory; Ferrum attaches to the broker's CDP endpoint.
       def driver_options(lease)
-        return { headless: ENV[HEADFUL_ENV] != "1", timeout: ferrum_timeout_s,
-                 process_timeout: ferrum_timeout_s,
-                 browser_options: { "user-data-dir" => profile_path } } unless lease
+        raise BrowserUnavailable, "#{@provider}: Core-owned browser lease is required" unless lease
 
         { ws_url: lease.cdp_url, timeout: ferrum_timeout_s, process_timeout: ferrum_timeout_s }
       end

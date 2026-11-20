@@ -1,5 +1,18 @@
 # pub5 — remaining work
 
+2026-11-20 selective source re-audit at main@5ca13a5: the Core-owned BrowserBroker
+and CoreBridge injection already exist, but BrowserAgent, WebBrowse, WebChat,
+SessionBrowser, SocialBrowser and TravelBrowser still had local Chromium
+fallbacks when the broker was absent. This pass removes those parallel process
+owner paths, passes validated start URLs into broker admission, preserves the
+SessionBrowser profile through the broker, and adds regressions for brokerless
+refusal and observable availability. The focused Ruby tests are authored but
+NOT_RUN because this execution environment cannot resolve github.com for a
+local checkout. Keep issue #5 and browser acceptance open until the tests, real
+Chromium network-policy checks and the end-to-end browser flow run on a
+compatible checkout. This is a selective source audit, not a full repository
+acceptance audit.
+
 Last full register/acceptance audit: 2026-11-14, source tree checked against `main@bd23114ca49bfc3d05dccf31e232a03d857ea28d`.
 Task-register consolidation review: 2026-11-18, tracked task-like Markdown and references checked against `main@139ff1a03b04424fb68185937080ca6a2067646e`. The consolidation checkpoint contained 165 active unchecked rows and no checked rows. A count-only refresh on 2026-11-19 found 169 active unchecked rows and no checked rows; this is not a new full source or acceptance audit. This is a task-list consolidation, not a new full source or acceptance audit. Grouped rows
 are not atomic task counts; aspirational horizons remain visible but are not

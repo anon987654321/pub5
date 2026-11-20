@@ -274,18 +274,63 @@ class TestPlugins < Minitest::Test
     assert_equal ["lease-1"], broker.closed
   end
 
-  def test_travel_browser_does_not_lease_a_session_with_no_known_host
+  def test_travel_browser_refuses_to_start_without_a_validated_host
     broker = FakeBroker.new
     plugin = Master::Plugin.load("travel_browser", services: { browser_broker: broker })
     plugin.define_singleton_method(:require_ferrum!) { true }
     plugin.define_singleton_method(:session_root) { Dir.mktmpdir }
 
     with_fake_ferrum_browser(fake_browser) do
-      plugin.send(:with_browser, session: "trip", headless: false) { |_| }
+      assert_raises(Master::Plugin::PolicyError) do
+        plugin.send(:with_browser, session: "trip", headless: false) { |_| flunk "must not start an unbound browser" }
+      end
     end
 
     assert_empty broker.opened
     assert_empty broker.closed
+  end
+
+  def test_session_browser_refuses_to_start_without_the_core_owned_broker
+    plugin = Master::Plugin.load("session_browser")
+    plugin.define_singleton_method(:require_ferrum!) { flunk "must refuse before loading Ferrum" }
+
+    assert_raises(Master::Plugin::PolicyError) do
+      plugin.send(:with_browser, Dir.mktmpdir, "example.com",
+                  url: "https://example.com/", headless: true) { flunk "must not start a browser" }
+    end
+  end
+
+  def test_social_browser_refuses_to_start_without_the_core_owned_broker
+    plugin = Master::Plugin.load("social_browser")
+    plugin.define_singleton_method(:resolve_runtime) { |_| "linux" }
+    plugin.define_singleton_method(:account_root) { Dir.mktmpdir }
+
+    with_fake_ferrum_browser(fake_browser) do
+      assert_raises(Master::Plugin::PolicyError) do
+        plugin.send(:with_browser, site: "fetlife", account: "test",
+                    url: "https://fetlife.com/home", headless: true, runtime: "linux") do
+          flunk "must not start a browser"
+        end
+      end
+    end
+  end
+
+  def test_session_browser_broker_keeps_its_private_profile
+    broker = FakeBroker.new
+    plugin = Master::Plugin.load("session_browser", services: { browser_broker: broker })
+    plugin.define_singleton_method(:require_ferrum!) { true }
+    plugin.define_singleton_method(:transport) do
+      Object.new.tap { |t| t.define_singleton_method(:secure_page) { |*, **| true } }
+    end
+
+    with_fake_ferrum_browser(fake_browser) do
+      plugin.send(:with_browser, Dir.mktmpdir, "example.com",
+                  url: "https://example.com/", headless: true) { |_| }
+    end
+
+    assert_match %r{/profile\z}, broker.opened.first[:profile]
+    assert_equal true, broker.opened.first[:persistent]
+    assert_equal ["lease-1"], broker.closed
   end
 
   def test_social_browser_leases_the_provider_host_from_the_broker

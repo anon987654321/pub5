@@ -66,7 +66,7 @@ module Master
         {
           plugin: manifest.id,
           runtime:,
-          browser: ferrum_available? ? "ferrum" : "unavailable",
+          browser: broker && ferrum_available? ? "ferrum" : "unavailable",
           sites: SITES.keys.map { |id| site_status(id) },
         }
       end
@@ -195,19 +195,19 @@ module Master
         raise PolicyError, "social_browser: #{selected} runtime is not supported here" unless %w[macos android_termux linux openbsd].include?(selected)
         require_ferrum!
         validate_url!(site, url)
+        owner = broker
+        raise PolicyError, "social_browser: Core-owned browser broker is unavailable" unless owner
+
         account_name = safe_account_name(account)
         account_dir = File.join(account_root, account_name)
         run_dir = File.join(account_dir, "runs", timestamp_slug)
         FileUtils.mkdir_p(run_dir, mode: 0o700)
 
-        # The broker owns the process when one was threaded in; the account dir is
-        # this plugin's signed-in profile and stays. The lease is bound to the
-        # provider host the site policy already allowed, so a redirect off that
-        # host is a visible refusal rather than a silent widen. Without a broker
-        # the plugin starts its own driver, as before.
-        lease = broker&.open(host: URI(url.to_s).host, url:, profile: account_dir,
-                             persistent: true, headless:)
-        browser = Ferrum::Browser.new(**driver_options(lease, account_dir, headless))
+        # The account dir is this plugin's signed-in profile and stays. Core
+        # owns the process; the lease is bound to the provider host.
+        lease = owner.open(host: URI(url.to_s).host, url:, profile: account_dir,
+                           persistent: true, headless:)
+        browser = Ferrum::Browser.new(**driver_options(lease))
         page = browser.create_page
         page.go_to(url)
         yield(page, run_dir)
@@ -217,14 +217,13 @@ module Master
         raise Error, "social_browser: navigation failed on #{site}: #{e.message}"
       ensure
         browser&.quit
-        broker&.close(lease.id) if lease
+        owner&.close(lease.id) if lease
       end
 
       def broker = service(:browser_broker)
 
-      def driver_options(lease, account_dir, headless)
-        return { headless:, timeout: 20, window_size: [1280, 900],
-                 browser_options: { "user-data-dir" => account_dir } } unless lease
+      def driver_options(lease)
+        raise PolicyError, "social_browser: Core-owned browser lease is required" unless lease
 
         { ws_url: lease.cdp_url, timeout: 20, window_size: [1280, 900] }
       end

@@ -66,10 +66,20 @@ class TestBrowserAgent < Minitest::Test
   def test_status_works_without_opening_a_browser
     result = tool.call(action: "status")
     assert result.ok?
-    assert_includes result.value!, "browser ready"
+    assert_includes result.value!, "browser unavailable"
+    assert_includes result.value!, "broker=unavailable"
     assert_includes result.value!, "network_methods=GET/HEAD"
     assert_includes result.value!, "page_scripts=enabled"
     assert_includes result.value!, "GET_side_effects=possible"
+  end
+
+  def test_navigation_refuses_to_spawn_without_the_core_owned_broker
+    result = Master::Io::SsrfGuard.stub(:pinned_address, "93.184.216.34") do
+      tool.call(action: "navigate", url: "https://example.com/")
+    end
+
+    assert result.err?
+    assert_match(/Core-owned browser broker is unavailable/, result.message)
   end
 
   def test_look_follow_and_paginate_fail_closed_without_a_session

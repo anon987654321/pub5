@@ -64,7 +64,7 @@ module Master
         hosts = allowed_hosts
         {
           plugin: manifest.id,
-          browser: ferrum_available? ? "ferrum" : "unavailable",
+          browser: broker && ferrum_available? ? "ferrum" : "unavailable",
           policy: hosts.empty? ? "blocked: no allowed hosts configured" : "host allowlist active",
           allowed_hosts: hosts,
           max_sessions: MAX_SESSIONS,
@@ -79,7 +79,7 @@ module Master
       def inspect_page(key, url:, wait:, links:)
         uri = validate_url!(url)
         with_session(key, initial_url: uri) do |directory, state|
-          with_browser(directory, state.fetch("host"), headless: true) do |page|
+          with_browser(directory, state.fetch("host"), url: uri.to_s, headless: true) do |page|
             navigate(page, uri)
             quiet_settle(page, wait)
             snapshot = snapshot_for(page)
@@ -101,7 +101,7 @@ module Master
       def open_page(key, url:, wait:)
         uri = validate_url!(url)
         with_session(key, initial_url: uri) do |directory, state|
-          with_browser(directory, state.fetch("host"), headless: true) do |page|
+          with_browser(directory, state.fetch("host"), url: uri.to_s, headless: true) do |page|
             navigate(page, uri)
             quiet_settle(page, wait)
             snapshot = snapshot_for(page)
@@ -127,7 +127,7 @@ module Master
 
         uri = validate_url!(url)
         with_session(key, initial_url: uri) do |directory, state|
-          with_browser(directory, state.fetch("host"), headless: false) do |page|
+          with_browser(directory, state.fetch("host"), url: uri.to_s, headless: false) do |page|
             navigate(page, uri)
             quiet_settle(page, wait)
             state["url"] = persisted_url(page.url.to_s)
@@ -150,7 +150,7 @@ module Master
         with_session(key) do |directory, state|
           url = state.fetch("url") { raise PolicyError, "session_browser: session has no saved URL; open a page first" }
           uri = validate_bound_url!(url, state)
-          with_browser(directory, state.fetch("host"), headless: true) do |page|
+          with_browser(directory, state.fetch("host"), url: uri.to_s, headless: true) do |page|
             navigate(page, uri)
             snapshot = snapshot_for(page)
             state["url"] = persisted_url(snapshot.fetch("url", page.url.to_s))
@@ -172,7 +172,7 @@ module Master
         with_session(key) do |directory, state|
           url = state.fetch("url") { raise PolicyError, "session_browser: session has no saved URL; open a page first" }
           uri = validate_bound_url!(url, state)
-          with_browser(directory, state.fetch("host"), headless: true) do |page|
+          with_browser(directory, state.fetch("host"), url: uri.to_s, headless: true) do |page|
             navigate(page, uri)
             {
               action: "look",
@@ -191,7 +191,7 @@ module Master
         with_session(key) do |directory, state|
           url = state.fetch("url") { raise PolicyError, "session_browser: session has no saved URL; open a page first" }
           current = validate_bound_url!(url, state)
-          with_browser(directory, state.fetch("host"), headless: true) do |page|
+          with_browser(directory, state.fetch("host"), url: current.to_s, headless: true) do |page|
             navigate(page, current)
             node = page.at_css(css)
             raise PolicyError, "session_browser: anchor not found: #{css}" unless node
@@ -223,7 +223,7 @@ module Master
         with_session(key) do |directory, state|
           url = state.fetch("url") { raise PolicyError, "session_browser: session has no saved URL; open a page first" }
           current = validate_bound_url!(url, state)
-          with_browser(directory, state.fetch("host"), headless: true) do |page|
+          with_browser(directory, state.fetch("host"), url: current.to_s, headless: true) do |page|
             pages = []
             bytes = 0
             truncated = false
@@ -337,30 +337,29 @@ module Master
 
       # The broker owns the Chromium process when one was threaded in, so this
       # plugin attaches to the lease's CDP endpoint instead of starting its own
-      # browser. The persistent profile directory stays this plugin's, because a
-      # signed-in session's storage is the plugin's contract; only the process
-      # and its lifecycle move to the broker. Without a broker the plugin keeps
-      # its own driver, which is what its focused tests exercise.
-      def with_browser(directory, host, headless:)
+      # The persistent profile remains plugin-owned; Core owns every Chromium
+      # process and its lifecycle. A missing broker is a hard refusal.
+      def with_browser(directory, host, url: nil, headless:)
+        owner = broker
+        raise PolicyError, "session_browser: Core-owned browser broker is unavailable" unless owner
+
         require_ferrum!
         profile = File.join(directory, "profile")
         secure_directory(profile)
-        lease = broker&.open(host: host.to_s.downcase, url: nil)
-        browser = Ferrum::Browser.new(**driver_options(lease, profile:, headless:))
+        lease = owner.open(host: host.to_s.downcase, url:, profile:, persistent: true, headless:)
+        browser = Ferrum::Browser.new(**driver_options(lease))
         page = browser.create_page
         transport.secure_page(page, allowed_host: host)
         yield page
       ensure
         browser&.quit
-        broker&.close(lease.id) if lease
+        owner&.close(lease.id) if lease
       end
 
       def broker = service(:browser_broker)
 
-      def driver_options(lease, profile:, headless:)
-        return { headless:, timeout: Master::Io::WebBrowse::TIMEOUT,
-                 process_timeout: Master::Io::WebBrowse::TIMEOUT,
-                 browser_options: Master::Io::WebBrowse::BROWSER_OPTIONS.merge("user-data-dir" => profile) } unless lease
+      def driver_options(lease)
+        raise PolicyError, "session_browser: Core-owned browser lease is required" unless lease
 
         { ws_url: lease.cdp_url, timeout: Master::Io::WebBrowse::TIMEOUT,
           process_timeout: Master::Io::WebBrowse::TIMEOUT }

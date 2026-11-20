@@ -213,6 +213,17 @@ class TestWebChat < Minitest::Test
     assert_equal :timeout, Master::Io::WebChat.failure_category(error)
   end
 
+  def test_missing_core_browser_broker_skips_the_web_chat_lane
+    error = Master::Io::WebChat::BrowserUnavailable.new("broker unavailable")
+    assert_equal :model_missing, Master::Io::WebChat.failure_category(error)
+
+    chat = build_chat
+    error = assert_raises(Master::Io::WebChat::BrowserUnavailable) do
+      chat.send(:with_browser)
+    end
+    assert_match(/Core-owned browser broker is unavailable/, error.message)
+  end
+
   def test_ferrum_binary_missing_skips_the_browser_lane
     error_class = Class.new(StandardError)
     error_class.define_singleton_method(:name) { "Ferrum::BinaryNotFoundError" }

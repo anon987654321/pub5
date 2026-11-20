@@ -40,12 +40,9 @@ module Master
 
       Session = Struct.new(:browser, :page, :mutex, :host, :headless, :lease_id, keyword_init: true)
 
-      # `broker:` is the Core-owned BrowserBroker. When present it owns the
-      # Chromium process and this adapter only attaches to the lease's CDP
-      # endpoint, so a session this tool opens is the same kind of session the
-      # fold opens and one shutdown path reaps both. Without a broker the
-      # adapter falls back to its own driver, which is what the focused tests
-      # and any boot that has not built a broker still exercise.
+      # `broker:` is the Core-owned BrowserBroker. It owns Chromium and this
+      # adapter only attaches to a broker-issued lease. A missing broker is a
+      # hard refusal; adapters never start their own Chromium process.
       def initialize(root:, governor:, event_bus: nil, broker: nil, **_opts)
         @root = File.expand_path(root)
         @governor = governor
@@ -87,8 +84,10 @@ module Master
         rows = @mutex.synchronize do
           @sessions.sort.map { |key, state| "#{key}=#{state.host} (#{state.headless ? "headless" : "visible"})" }
         end
-        Result.ok("browser ready; runtime=#{ferrum_available? ? "ferrum" : "unavailable"}; " \
-                   "network_methods=GET/HEAD; page_scripts=enabled; GET_side_effects=possible; " \
+        broker_ready = @broker && (!@broker.respond_to?(:available?) || @broker.available?)
+        runtime = broker_ready && ferrum_available? ? "ferrum" : "unavailable"
+        Result.ok("browser #{runtime == "ferrum" ? "ready" : "unavailable"}; broker=#{broker_ready ? "ready" : "unavailable"}; " \
+                   "runtime=#{runtime}; network_methods=GET/HEAD; page_scripts=enabled; GET_side_effects=possible; " \
                    "sessions=#{rows.empty? ? "none" : rows.join(", ")}")
       end
 
@@ -104,7 +103,7 @@ module Master
         permission = @governor.permit?(NAME, TIER, "navigate #{uri}")
         return permission if permission.err?
 
-        state = open_session(key, host: uri.host, headless: headless_for_navigation(key))
+        state = open_session(key, host: uri.host, url: uri.to_s, headless: headless_for_navigation(key))
         state.mutex.synchronize do
           ensure_session_host!(state, uri)
           @transport.reset_page_budget(state.page)
@@ -122,7 +121,7 @@ module Master
         permission = @governor.permit?(NAME, TIER, "open visible login browser at #{uri.host}")
         return permission if permission.err?
 
-        state = open_session(key, host: uri.host, headless: false)
+        state = open_session(key, host: uri.host, url: uri.to_s, headless: false)
         state.mutex.synchronize do
           ensure_session_host!(state, uri)
           @transport.reset_page_budget(state.page)
@@ -277,7 +276,7 @@ module Master
         end
       end
 
-      def open_session(key, host:, headless:)
+      def open_session(key, host:, url: nil, headless:)
         @mutex.synchronize do
           if (existing = @sessions[key])
             unless existing.host.casecmp(host.to_s).zero?
@@ -292,9 +291,11 @@ module Master
           end
           raise ArgumentError, "browser session limit reached (#{MAX_SESSIONS})" if @sessions.size >= MAX_SESSIONS
 
+          raise ArgumentError, "Core-owned browser broker is unavailable; refusing to spawn Chromium outside Core" unless @broker
+
           ferrum!
-          lease = @broker&.open(host: host.to_s.downcase, url: nil)
-          browser = Ferrum::Browser.new(**driver_options(lease, headless:))
+          lease = @broker.open(host: host.to_s.downcase, url:, headless:)
+          browser = Ferrum::Browser.new(**driver_options(lease))
           page = browser.create_page
           @transport.secure_page(page, allowed_host: host.to_s.downcase)
           @sessions[key] = Session.new(browser:, page:, mutex: Mutex.new, host: host.to_s.downcase,
@@ -306,14 +307,10 @@ module Master
         end
       end
 
-      # With a broker, the CDP endpoint is the broker's and Ferrum must attach
-      # rather than spawn — a ws_url makes Ferrum's Process#start return early,
-      # so the broker keeps sole ownership of the process and its profile. The
-      # adapter still owns the page and the transport's request guard. Without a
-      # broker this is the driver the adapter has always started itself.
-      def driver_options(lease, headless:)
-        return { headless:, timeout: WebBrowse::TIMEOUT, process_timeout: WebBrowse::TIMEOUT,
-                 browser_options: WebBrowse::BROWSER_OPTIONS } unless lease
+      # A lease is mandatory: Ferrum attaches to the broker's CDP endpoint and
+      # cannot start a second, unowned Chromium process.
+      def driver_options(lease)
+        raise ArgumentError, "Core-owned browser lease is required" unless lease
 
         { ws_url: lease.cdp_url, timeout: WebBrowse::TIMEOUT, process_timeout: WebBrowse::TIMEOUT }
       end

@@ -156,9 +156,11 @@ module Master
       private
 
       def render(uri, wait)
+        raise ArgumentError, "Core-owned browser broker is unavailable; refusing to spawn Chromium outside Core" unless @broker
+
         require "ferrum"
         require "json"
-        lease = @broker&.open(host: uri.host, url: uri.to_s)
+        lease = @broker.open(host: uri.host, url: uri.to_s)
         browser = Ferrum::Browser.new(**driver_options(lease))
         page = browser.create_page
         secure_page(page)
@@ -170,12 +172,9 @@ module Master
         @broker&.close(lease.id) if lease
       end
 
-      # With a broker the CDP endpoint belongs to it, so Ferrum attaches instead
-      # of spawning; without one this is the single-shot driver the transport has
-      # always started. The request guard and SSRF checks are unchanged either way.
+      # A lease is mandatory; Ferrum attaches to the broker's CDP endpoint.
       def driver_options(lease)
-        return { headless: true, timeout: TIMEOUT, process_timeout: TIMEOUT,
-                 browser_options: BROWSER_OPTIONS } unless lease
+        raise ArgumentError, "Core-owned browser lease is required" unless lease
 
         { ws_url: lease.cdp_url, timeout: TIMEOUT, process_timeout: TIMEOUT }
       end
