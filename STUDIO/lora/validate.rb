@@ -85,6 +85,21 @@ module Studio
           return report
         end
 
+        if File.basename(env_path) == "subject.env"
+          descriptor_stat = File.lstat(env_path)
+          unless descriptor_stat.file? && !descriptor_stat.symlink? &&
+                 descriptor_stat.uid == Process.uid && descriptor_stat.nlink == 1 &&
+                 (descriptor_stat.mode & 0o077).zero? &&
+                 (descriptor_stat.mode & 0o400).positive?
+            fail_check(
+              report,
+              "subject_descriptor_permissions",
+              "Private subject.env must be a regular, current-user-owned, singly-linked, owner-only readable file"
+            )
+            return report
+          end
+        end
+
         env = read_env(env_path, report)
         report["descriptor"] = File.basename(env_path)
         report["trigger"] = env["TRIGGER"]
