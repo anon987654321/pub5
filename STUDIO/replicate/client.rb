@@ -203,7 +203,9 @@ module Studio
           positive_integer!(training_steps, "training_steps")
           positive_integer!(seed, "seed")
           raise ArgumentError, "wait must be true or false" unless wait == true || wait == false
-          resource_id!(version || trainer_version, "trainer version")
+          trainer_pin = trainer_version
+          requested_trainer = resource_id!(version || trainer_pin, "trainer version")
+          raise ArgumentError, "trainer version must match the shared immutable standard" unless requested_trainer == trainer_pin
 
           owner, model_name, pinned = model_reference!(destination)
           raise ArgumentError, "training destination must be owner/model without a version" if pinned
@@ -214,7 +216,7 @@ module Studio
             webhook:, webhook_events_filter:, version:
           )
           trainer_owner, trainer_name, = model_reference!(LORA_TRAINER)
-          trainer_version_id = resource_id!(version || trainer_version, "trainer version")
+          trainer_version_id = trainer_pin
           validate_input_schema!("#{trainer_owner}/#{trainer_name}:#{trainer_version_id}", body.fetch(:input))
           ensure_private_model!(destination)
 
