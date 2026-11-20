@@ -533,13 +533,18 @@ three_mirror_redundancy:
   # openai + nvidia: whichever family authors a candidate, two independent
   # families remain to vote.
   # 2026-11-21 session (operator request): /fix runs on a sandbox where
-  # claude-opus-5-5 has no key, so the anthropic seat cannot answer and the
-  # gate fails again. The primary GLM lane (zai-cli:auto through bin/zai-chat,
-  # probed live) takes that seat for this session: zhipu + openai + nvidia,
-  # and each author-family exclusion still leaves two voters across two
-  # families. Revert this commit with the chain reroute to restore the
-  # anthropic seat.
-  pool:          ["zai-cli:auto", "ovh:gpt-oss-120b", "kilo:nvidia/nemotron-3.5-lightning:free"]
+  # claude-opus-5-5 has no key, so the anthropic seat cannot answer, and the
+  # first GLM seating (zai-cli:auto + ovh:gpt-oss-120b + kilo nemotron) then
+  # failed live because OVH reports "quota spent, back in 191h59m
+  # (2026-11-28 21:48)" and llm7 "quota spent, back in 16h4m". Seated for
+  # this session are the three seats that actually answered here, each
+  # verified live on 2026-11-21: zai-cli:auto (zhipu, probe ok),
+  # kilo:baidu/ernie-5.5-flash-preview:free (provider:kilo, POST 200 with a
+  # reply) and kilo:nvidia/nemotron-3.5-lightning:free (nvidia, used by
+  # structural review in the same run). Each author-family exclusion still
+  # leaves two voters across two families. Revert this commit with the chain
+  # reroute to restore the anthropic seat.
+  pool:          ["zai-cli:auto", "kilo:baidu/ernie-5.5-flash-preview:free", "kilo:nvidia/nemotron-3.5-lightning:free"]
   quorum:        2
 
 # Subscription CLIs, signed in once through the browser. The pool offers a
