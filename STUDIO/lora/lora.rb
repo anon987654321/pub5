@@ -130,6 +130,11 @@ module Studio
         )
       end
 
+      def train_command(argv)
+        success = system(RbConfig.ruby, File.expand_path("train.rb", __dir__), *argv)
+        success ? 0 : ($?.exitstatus || 1)
+      end
+
       def film_command(argv)
         success = system(RbConfig.ruby, File.expand_path("selfie_film.rb", __dir__), *argv)
         success ? 0 : ($?.exitstatus || 1)
@@ -153,6 +158,7 @@ module Studio
         when "--json", "--subject" then validate_with_flags(argv)
         when "selfie" then selfie(Studio::Interactive.new(input: $stdin, output: $stdout, tty: false))
         when "film" then film_command(argv.drop(1))
+        when "train" then train_command(argv.drop(1))
         when "-h", "--help", nil then puts help
         else abort "lora: unknown command #{argv.first.inspect} (see --help)"
         end
@@ -183,10 +189,11 @@ module Studio
           usage:
             ruby STUDIO/lora/lora.rb                 ask what to do (interactive)
             ruby STUDIO/lora/lora.rb validate        audit every subject's training plan
+            ruby STUDIO/lora/lora.rb train --all      preflight and train all three private LoRAs
             ruby STUDIO/lora/lora.rb recover         dry-run local source recovery from ../pub4
             ruby STUDIO/lora/lora.rb recover --apply  copy only after private rights preflight
             ruby STUDIO/lora/lora.rb validate --json  read-only machine-readable profile audit
-            ruby STUDIO/lora/lora.rb selfie          render a selfie series
+            ruby STUDIO/lora/lora.rb selfie          render a selfie series after likeness approval
             ruby STUDIO/lora/lora.rb film            make finished, locally private selfie films
           The subject craft itself (scenes, prompting rules, grades) lives in
           this file as Studio::Lora::Craft and Studio::Lora::Selfie.
