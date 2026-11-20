@@ -102,6 +102,12 @@ module Studio
         # In LoRA-only mode a missing manifest or incompatible schema is a hard
         # preflight failure. A subject selfie must never fall back to a generic face.
         model = still_model if @lora_only
+        if @lora_only
+          reviewed_version = subject_env["LIKELINESS_REVIEWED_VERSION"].to_s.strip
+          unless reviewed_version == model
+            raise "LoRA likeness is not approved for #{@subject}: compare full-size training samples with approved subject references, then set LIKELINESS_REVIEWED_VERSION to the exact pinned version in private subject.env (#{model})"
+          end
+        end
         return model if @lora_only && @validated_still_model == model
         return engine unless @lora_only || lora_configured?
 
@@ -446,7 +452,7 @@ module Studio
         raise "subject.env must not be hard-linked" unless stat.nlink == 1
         raise "subject.env exceeds 64 KB" if stat.size > 65_536
 
-        allowed = %w[SUBJECT MODEL TRIGGER DESCRIPTOR REPLICATE_MODEL]
+        allowed = %w[SUBJECT MODEL TRIGGER DESCRIPTOR REPLICATE_MODEL LIKELINESS_REVIEWED_VERSION]
         File.foreach(path).each_with_object({}) do |line, env|
           stripped = line.strip
           next if stripped.empty? || stripped.start_with?("#")
