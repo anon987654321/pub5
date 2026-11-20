@@ -478,6 +478,15 @@ test("stipple assets are declared after existing face modules", () => {
   assert.match(system, /active\.root\.add\(active\.points\)/);
 });
 
+test("sparse face particles remain visible in neutral grey while still", () => {
+  assert.match(sparseField, /getPropertyValue\("--pub5-signal"\)/);
+  assert.doesNotMatch(sparseField, /getPropertyValue\("--c-accent"\)/);
+  assert.match(sparseField, /0\.48, 1\.0/);
+  assert.match(sparseField, /opacity\[i\] = still \? targetOpacity/);
+  assert.match(faceWorld, /getPropertyValue\("--pub5-signal"\)/);
+  assert.doesNotMatch(faceWorld, /getPropertyValue\("--c-accent"\)/);
+});
+
 test("stipple shares face state and obeys point and motion budgets", () => {
   assert.match(system, /state\.pressureFields\?\.pct/);
   assert.match(system, /state\.pressureFields\?\.entropy/);

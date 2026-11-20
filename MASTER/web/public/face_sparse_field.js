@@ -178,8 +178,8 @@
   function makeShader() {
     pointMaterial = new THREE.ShaderMaterial({
       uniforms: {
-        // The face dialect owns this neutral grey; mood colour never tints the head.
-        uColor: { value: new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue("--c-accent").trim() || "#d8d6e0") },
+        // Particle identity is monochrome and independent of app or mood accents.
+        uColor: { value: new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue("--pub5-signal").trim() || "#D4D4D4") },
         uTime: { value: 0 },
         uSize: { value: 1.0 },
         uViewportHeight: { value: 1.0 },
@@ -196,7 +196,7 @@
         "  vec4 mv = modelViewMatrix * vec4(position,1.0);",
         "  gl_Position = projectionMatrix * mv;",
         "  gl_PointSize = 1.0;",
-        "  vOpacity = aOpacity * clamp(uSize * uViewportHeight * projectionMatrix[1][1] * 0.12 / max(0.001, -mv.z), 0.25, 1.0);",
+        "  vOpacity = aOpacity * clamp(uSize * uViewportHeight * projectionMatrix[1][1] * 0.12 / max(0.001, -mv.z), 0.48, 1.0);",
         "}"
       ].join("\n"),
       fragmentShader: [
@@ -569,7 +569,9 @@
           (0.46 + reveal * 0.54) * (0.74 + confidence * 0.26) /
           Math.max(0.2, profile.void * well)
       );
-      opacity[i] += (targetOpacity - opacity[i]) * 0.08;
+      // Still and reduced-motion frames have no fade-in animation. Settle them
+      // on the first frame so a static screenshot never captures an empty face.
+      opacity[i] = still ? targetOpacity : opacity[i] + (targetOpacity - opacity[i]) * 0.08;
       sizes[i] = (0.026 + seeded(i, 12.1) * 0.034) * (1 + profile.activity * 0.45) * (groups[i] === 8 ? 0.72 : 1.0);
     }
 

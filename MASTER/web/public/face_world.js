@@ -857,13 +857,13 @@
 
   function colorFromCss() {
     const raw = getComputedStyle(document.documentElement)
-      .getPropertyValue("--c-accent")
+      .getPropertyValue("--pub5-signal")
       .trim();
 
     try {
-      return new THREE.Color(raw || "#d8d6e0");
+      return new THREE.Color(raw || "#D4D4D4");
     } catch (_error) {
-      return new THREE.Color("#d8d6e0");
+      return new THREE.Color("#D4D4D4");
     }
   }
 
