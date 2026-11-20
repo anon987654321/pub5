@@ -63,6 +63,9 @@ voice of the creative work.
 - `lora/` — subject descriptors and private training plans.
   `bin/studio lora` opens the subject-aware menu. A default selfie series uses
   only that subject's pinned LoRA; it does not fall back to a generic face.
+  The exact version must also be recorded in private `subject.env` as
+  `LIKELINESS_REVIEWED_VERSION` after full-size comparison with approved
+  reference photographs. Retrained or changed versions are blocked until reviewed.
   `ruby STUDIO/lora/photograph.rb --all-subjects --count 6` preflights Johann,
   Ragnhild and Merethe together, renders six subject-specific scenes each, and
   deletes prior generated stills only after all 18 new images succeed. The
