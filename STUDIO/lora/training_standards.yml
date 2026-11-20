@@ -1,74 +1,29 @@
 ---
 schema: 1
-# Shared private-identity FLUX.1-dev recipe. Only identity, trigger, captions,
-# data paths and sample-scene content differ between subjects.
 replicate:
-  trainer: ostris/flux-dev-lora-trainer
-  version: "26dce37af90b9d997eeb970d92e47de3064d46c300504ae376c75bef6a9022d2"
-  steps: 1600
-  lora_rank: 16
-  extra_input:
-    optimizer: adamw8bit
-    batch_size: 1
-    resolution: "512,768,1024"
-    autocaption: false
-    learning_rate: 0.0004
-    caption_dropout_rate: 0.05
-    cache_latents_to_disk: false
-    gradient_checkpointing: false
-network:
-  type: lora
-  linear: 16
-  linear_alpha: 16
-save:
-  dtype: float16
-  save_every: 250
-  max_step_saves_to_keep: 4
-  push_to_hub: false
+  trainer: replicate/fast-flux-trainer
+  version: "e5a5bc821112c107e6ddb8491c5b898f94d06eaca861d1dbf37b29cd69ba8988"
+  training_steps: 1000
+  lora_type: subject
+  seed: 42
 quality:
   min_images: 12
   max_images: 18
 dataset:
+  path: dataset
   caption_ext: txt
-  caption_dropout_rate: 0.05
-  shuffle_tokens: false
-  cache_latents_to_disk: false
-  resolution: [512, 768, 1024]
-train:
-  batch_size: 1
-  steps: 1600
-  skip_first_sample: true
-  gradient_accumulation_steps: 1
-  train_unet: true
-  train_text_encoder: false
-  gradient_checkpointing: false
-  noise_scheduler: flowmatch
-  optimizer: adamw8bit
-  lr: 0.0004
-  timestep_type: linear
-  ema_config:
-    use_ema: true
-    ema_decay: 0.995
-  dtype: bf16
-model:
-  name_or_path: black-forest-labs/FLUX.1-dev
-  is_flux: true
-  quantize: true
-  low_vram: true
-sample:
-  sampler: flowmatch
-  sample_every: 250
-  width: 1024
-  height: 1024
-  seed: 42
-  walk_seed: true
+  require_trigger_word: true
+  target_resolution: 1024
+review:
+  candidate_render_count: 3
+  final_render_count: 6
+inference:
+  model: dev
+  aspect_ratio: "2:3"
+  num_outputs: 1
   guidance_scale: 3.5
-  sample_steps: 20
-  prompts:
-    - "{{trigger}}, natural close portrait in soft north-facing window light, unobstructed face, neutral expression settling after a laugh, eye-level camera, natural skin texture"
-    - "{{trigger}}, candid environmental portrait on a rainy Bergen street, soft overcast daylight, unobstructed face, relaxed expression, documentary photograph"
-    - "{{trigger}}, quiet café portrait with warm tungsten practical lights and cool window fill, face clearly visible, natural expression, shallow depth of field"
-    - "{{trigger}}, coastal portrait under a broad overcast sky, wind and weather in the environment, face clearly visible, realistic proportions"
-    - "{{trigger}}, direct-flash evening street portrait, natural expression, crisp focus on the eyes, documentary colour-negative photograph"
-    - "{{trigger}}, simple monochrome studio portrait, one soft directional light, full facial detail, honest texture, classic silver-gelatin print"
-  neg: "plastic skin, waxy face, airbrushed skin, generic influencer face, identity drift, face morph, beauty filter, CGI, illustration, extra teeth, deformed eyes, overly young face"
+  num_inference_steps: 28
+  output_format: jpg
+  output_quality: 95
+  go_fast: false
+  lora_scale: 1.0
