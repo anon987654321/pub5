@@ -144,9 +144,9 @@ module Studio
         "trainer" => TRAINER,
         "trainer_version" => TRAINER_VERSION,
         "trigger_word" => TRIGGER_WORD,
-        "steps" => TRAINING_STANDARD.fetch("replicate").fetch("steps"),
-        "lora_rank" => TRAINING_STANDARD.fetch("replicate").fetch("lora_rank"),
-        "extra_input" => TRAINING_STANDARD.fetch("replicate").fetch("extra_input"),
+        "training_steps" => TRAINING_STANDARD.fetch("replicate").fetch("training_steps"),
+        "lora_type" => TRAINING_STANDARD.fetch("replicate").fetch("lora_type"),
+        "seed" => TRAINING_STANDARD.fetch("replicate").fetch("seed"),
         "training_started" => false,
         "provider_upload_started" => false
       }
