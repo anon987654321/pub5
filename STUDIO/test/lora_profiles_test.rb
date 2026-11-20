@@ -18,6 +18,12 @@ class TestStudioLoraValidator < Minitest::Test
     refute report.fetch("subjects").all? { |item| item.fetch("training_ready") }
   end
 
+  def test_dataset_size_floor_and_ceiling_come_from_the_shared_standard
+    standard = YAML.safe_load_file(File.join(Studio::Lora::Validator::ROOT, "training_standards.yml"))
+    assert_equal standard.fetch("quality").fetch("min_images"), Studio::Lora::Validator::MINIMUM_IMAGES
+    assert_equal standard.fetch("quality").fetch("max_images"), Studio::Lora::Validator::MAXIMUM_IMAGES
+  end
+
   def test_committed_subject_plans_share_one_training_standard
     standard = YAML.safe_load_file(File.join(Studio::Lora::Validator::ROOT, "training_standards.yml"))
     %w[johann ragnhild merethe].each do |subject|
