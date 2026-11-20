@@ -17,23 +17,26 @@ class TestStudioReplicateClientPaths < Minitest::Test
       super(token: "test-token")
     end
 
-    # These tests exercise request construction, not human permissions; supply
-    # the subject those paths require without touching the filesystem.
+    # These tests exercise request construction, not human permissions or
+    # subject file loading; consent and trigger are isolated test seams.
     def train_lora(*arguments, **options)
       options[:subject] ||= "probe"
       super(*arguments, **options)
     end
 
+    def training_trigger_for_subject(_directory, supplied)
+      send(:training_trigger!, supplied)
+    end
+
     def get(uri)
       @requests << [:get, uri]
       properties = {
-        "prompt" => {},
         "input_images" => {},
         "trigger_word" => {},
-        "steps" => {},
-        "lora_rank" => {},
+        "lora_type" => {},
+        "training_steps" => {},
         "seed" => {}
-      }.merge(Studio::ReplicateClient::TRAINING_STANDARDS.fetch("replicate").fetch("extra_input").keys.to_h { |key| [key, {}] })
+      }
       schema = {
         "properties" => properties,
         "required" => []
@@ -313,11 +316,12 @@ class TestStudioReplicateClientPaths < Minitest::Test
     assert_equal "private", request.fetch(2).fetch(:visibility)
   end
 
-  def test_training_schema_is_checked_before_destination_model_creation
+  def test_fast_flux_training_schema_is_checked_before_destination_model_creation
     client = MissingTrainerFieldClient.new
     error = assert_raises(ArgumentError) do
       client.train_lora(
-        "https://files.replicate.delivery/photos.zip", "owner/model", trigger_word: "SAMPLE", wait: false
+        "https://files.replicate.delivery/photos.zip", "owner/model",
+        trigger_word: "SAMPLE", wait: false
       )
     end
 
@@ -326,72 +330,48 @@ class TestStudioReplicateClientPaths < Minitest::Test
     assert_match(%r{/versions/}, client.requests.first.fetch(1).path)
   end
 
-  def test_training_defaults_come_from_the_shared_standard
+  def test_training_defaults_come_from_the_shared_fast_flux_standard
     url = "https://files.replicate.delivery/photos.zip"
     @client.train_lora(url, "owner/model", trigger_word: "SAMPLE", wait: false)
 
-    input = @client.requests.find { |request| request.first == :post }.fetch(2).fetch(:input)
+    request = @client.requests.find { |item| item.first == :post }
+    input = request.fetch(2).fetch(:input)
     standard = Studio::ReplicateClient::TRAINING_STANDARDS.fetch("replicate")
-    assert_equal standard.fetch("steps"), input.fetch(:steps)
-    assert_equal standard.fetch("lora_rank"), input.fetch(:lora_rank)
-    standard.fetch("extra_input").each do |key, value|
-      assert_equal value, input.fetch(key.to_sym), "standard trainer input #{key}"
-    end
+    assert_equal url, input.fetch(:input_images)
+    assert_equal "SAMPLE", input.fetch(:trigger_word)
+    assert_equal standard.fetch("lora_type"), input.fetch(:lora_type)
+    assert_equal standard.fetch("training_steps"), input.fetch(:training_steps)
+    assert_equal standard.fetch("seed"), input.fetch(:seed)
   end
 
-  def test_callers_cannot_override_a_shared_training_input
-    error = assert_raises(ArgumentError) do
-      @client.train_lora(
-        "https://files.replicate.delivery/photos.zip", "owner/model",
-        trigger_word: "SAMPLE", wait: false, extra_input: { "learning_rate" => 0.9 }
-      )
-    end
-    assert_match(/cannot override learning_rate/, error.message)
-    assert_empty @client.requests
-  end
-
-  def test_trainer_constants_match_the_shared_standard
+  def test_trainer_constants_match_the_shared_fast_flux_standard
     standard = Studio::ReplicateClient::TRAINING_STANDARDS.fetch("replicate")
     assert_equal standard.fetch("trainer"), Studio::ReplicateClient::LORA_TRAINER
     assert_equal standard.fetch("version"), Studio::ReplicateClient::LORA_TRAINER_VERSION
   end
 
-  def test_training_input_cannot_override_dataset_trigger_or_numeric_controls
+  def test_callers_cannot_override_shared_training_settings
     url = "https://files.replicate.delivery/photos.zip"
-    %w[input_images trigger_word steps lora_rank].each do |key|
-      error = assert_raises(ArgumentError) do
-        @client.train_lora(url, "owner/model", wait: false, extra_input: { key => "override" })
-      end
-      assert_match(/cannot override/, error.message)
-    end
+    invalid = [
+      -> { @client.train_lora(url, "owner/model", trigger_word: "SAMPLE", training_steps: 1200, wait: false) },
+      -> { @client.train_lora(url, "owner/model", trigger_word: "SAMPLE", lora_type: "style", wait: false) },
+      -> { @client.train_lora(url, "owner/model", trigger_word: "SAMPLE", seed: 43, wait: false) },
+    ]
+    invalid.each { |call| assert_raises(ArgumentError, &call) }
     assert_empty @client.requests
   end
 
-  def test_training_request_validates_url_trigger_steps_rank_and_extra_input_before_network
+  def test_training_request_validates_url_trigger_type_steps_and_seed_before_network
     url = "https://files.replicate.delivery/photos.zip"
-    [
-      -> { @client.train_lora("http://files.example.invalid/photos.zip", "owner/model", wait: false) },
+    invalid = [
+      -> { @client.train_lora("http://files.example.invalid/photos.zip", "owner/model", trigger_word: "SAMPLE", wait: false) },
       -> { @client.train_lora(url, "owner/model", trigger_word: "two words", wait: false) },
-      -> { @client.train_lora(url, "owner/model", steps: 0, wait: false) },
-      -> { @client.train_lora(url, "owner/model", lora_rank: "16", wait: false) },
-      -> { @client.train_lora(url, "owner/model", extra_input: [], wait: false) }
-    ].each { |call| assert_raises(ArgumentError, &call) }
+      -> { @client.train_lora(url, "owner/model", trigger_word: "SAMPLE", lora_type: "unknown", wait: false) },
+      -> { @client.train_lora(url, "owner/model", trigger_word: "SAMPLE", training_steps: 0, wait: false) },
+      -> { @client.train_lora(url, "owner/model", trigger_word: "SAMPLE", seed: -1, wait: false) },
+    ]
+    invalid.each { |call| assert_raises(ArgumentError, &call) }
     assert_empty @client.requests
-  end
-
-  def test_training_extra_input_is_merged_without_replacing_protected_fields
-    url = "https://files.replicate.delivery/photos.zip"
-    @client.train_lora(
-      url, "owner/model", trigger_word: "SAMPLE", steps: 1_600, lora_rank: 16,
-      wait: false, extra_input: { "seed" => 7 }
-    )
-
-    body = @client.requests.find { |request| request.first == :post }.fetch(2)
-    assert_equal url, body.fetch(:input).fetch(:input_images)
-    assert_equal "SAMPLE", body.fetch(:input).fetch(:trigger_word)
-    assert_equal 1_600, body.fetch(:input).fetch(:steps)
-    assert_equal 16, body.fetch(:input).fetch(:lora_rank)
-    assert_equal 7, body.fetch(:input).fetch(:seed)
   end
 
   def test_training_destination_must_be_a_single_unpinned_model_reference
