@@ -18,6 +18,47 @@ class TestStudioLoraValidator < Minitest::Test
     refute report.fetch("subjects").all? { |item| item.fetch("training_ready") }
   end
 
+  def test_committed_subject_plans_share_one_training_standard
+    standard = YAML.safe_load_file(File.join(Studio::Lora::Validator::ROOT, "training_standards.yml"))
+    %w[johann ragnhild merethe].each do |subject|
+      plan = YAML.safe_load_file(File.join(Studio::Lora::Validator::ROOT, subject, "train.yaml"))
+      trainer = plan.fetch("config").fetch("process").find { |item| item["type"] == "sd_trainer" }
+      trigger = trainer.fetch("trigger_word")
+      %w[network save train model].each do |section|
+        standard.fetch(section).each do |key, expected|
+          assert_equal expected, trainer.fetch(section).fetch(key), "#{subject} #{section}.#{key}"
+        end
+      end
+      standard.fetch("dataset").each do |key, expected|
+        assert_equal expected, trainer.fetch("datasets").first.fetch(key), "#{subject} datasets[0].#{key}"
+      end
+      expected_prompts = standard.fetch("sample").fetch("prompts").map { |prompt| prompt.gsub("{{trigger}}", trigger) }
+      assert_equal expected_prompts, trainer.fetch("sample").fetch("prompts"), "#{subject} sample prompts"
+      standard.fetch("sample").each do |key, expected|
+        next if key == "prompts"
+        assert_equal expected, trainer.fetch("sample").fetch(key), "#{subject} sample.#{key}"
+      end
+    end
+  end
+
+  def test_nonstandard_rank_is_a_hard_validation_failure
+    with_subject do |root, directory|
+      write_descriptor(directory)
+      dataset = File.join(directory, "dataset")
+      write_dataset(dataset, 10)
+      write_training_plan(directory, dataset: "dataset")
+      path = File.join(directory, "train.yaml")
+      plan = YAML.safe_load_file(path)
+      plan.fetch("config").fetch("process").first.fetch("network")["linear"] = 32
+      File.write(path, YAML.dump(plan))
+      write_valid_consent(directory)
+
+      report = Studio::Lora::Validator.new(root:).validate_subject("sample")
+      assert_equal "FAIL", report.fetch("state")
+      assert_includes report.fetch("blockers").map { |item| item["id"] }, "shared_training_standard"
+    end
+  end
+
   def test_complete_private_training_plan_is_ready_for_operator_review
     with_subject do |root, directory|
       write_descriptor(directory)
@@ -216,22 +257,24 @@ class TestStudioLoraValidator < Minitest::Test
   end
 
   def write_training_plan(directory, dataset:, trigger: "SAMPLE", push_to_hub: false)
-    document = {
-      "job" => "extension",
-      "config" => {
-        "name" => "sample",
-        "process" => [
-          {
-            "type" => "sd_trainer",
-            "trigger_word" => trigger,
-            "network" => { "type" => "lora", "linear" => 16 },
-            "save" => { "push_to_hub" => push_to_hub },
-            "train" => { "steps" => 1_000 },
-            "datasets" => [{ "folder_path" => dataset }],
-          },
-        ],
-      }
+    standard = YAML.safe_load_file(File.join(Studio::Lora::Validator::ROOT, "training_standards.yml"))
+    config = {
+      "name" => "sample",
+      "process" => [
+        {
+          "type" => "sd_trainer",
+          "trigger_word" => trigger,
+          "network" => standard.fetch("network"),
+          "save" => standard.fetch("save").merge("push_to_hub" => push_to_hub),
+          "train" => standard.fetch("train"),
+          "model" => standard.fetch("model"),
+          "sample" => standard.fetch("sample").merge(
+            "prompts" => standard.fetch("sample").fetch("prompts").map { |prompt| prompt.gsub("{{trigger}}", trigger) }
+          ),
+          "datasets" => [standard.fetch("dataset").merge("folder_path" => dataset)],
+        },
+      ],
     }
-    File.write(File.join(directory, "train.yaml"), YAML.dump(document))
+    File.write(File.join(directory, "train.yaml"), YAML.dump("job" => "extension", "config" => config))
   end
 end
