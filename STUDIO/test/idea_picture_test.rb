@@ -254,14 +254,15 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
-  def test_private_replicate_model_name_is_a_supported_fallback_without_a_manifest
+  def test_private_replicate_model_pin_requires_an_immutable_version_without_a_manifest
     Dir.mktmpdir do |dir|
       subject = File.join(dir, "ragnhild")
       FileUtils.mkdir_p(subject)
       subject_env_path = File.join(subject, "subject.env")
+      version = "anon987654321/ragnhild-private:" + ("b" * 64)
       File.write(subject_env_path, <<~ENV)
         MODEL=ragnhild
-        REPLICATE_MODEL=anon987654321/ragnhild-flux
+        REPLICATE_MODEL=#{version}
         TRIGGER=ragnhild
       ENV
       File.chmod(0o600, subject_env_path)
@@ -269,7 +270,23 @@ class TestIdeaPictureOutput < Minitest::Test
         subject: "ragnhild", directory: dir, subjects_root: dir,
         model_manifest: File.join(subject, "weights", "ragnhild", "replicate_training.json")
       )
-      assert_equal "anon987654321/ragnhild-flux", picture.send(:still_model)
+      assert_equal version, picture.send(:still_model)
+    end
+  end
+
+  def test_private_pinned_model_overrides_a_legacy_tracked_manifest
+    Dir.mktmpdir do |dir|
+      subject = File.join(dir, "ragnhild")
+      FileUtils.mkdir_p(subject)
+      old = "anon987654321/ragnhild-flux:" + ("a" * 64)
+      current = "anon987654321/ragnhild-private:" + ("b" * 64)
+      File.write(File.join(subject, "replicate_training.json"), JSON.generate("version" => old))
+      env = File.join(subject, "subject.env")
+      File.write(env, "MODEL=ragnhild\\nREPLICATE_MODEL=#{current}\\nTRIGGER=ragnhild\\n", mode: "w", perm: 0o600)
+      File.chmod(0o600, env)
+
+      picture = Studio::Visual::IdeaPicture.new(subject: "ragnhild", directory: dir, subjects_root: dir)
+      assert_equal current, picture.send(:still_model)
     end
   end
 
