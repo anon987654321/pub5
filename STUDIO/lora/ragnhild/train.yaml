@@ -17,11 +17,11 @@ config:
       max_step_saves_to_keep: 4
       push_to_hub: false
     datasets:
-    - folder_path:
+    - folder_path: dataset
       caption_ext: txt
-      caption_dropout_rate: 0.08
+      caption_dropout_rate: 0.05
       shuffle_tokens: false
-      cache_latents_to_disk: true
+      cache_latents_to_disk: false
       resolution:
       - 512
       - 768
@@ -33,10 +33,10 @@ config:
       gradient_accumulation_steps: 1
       train_unet: true
       train_text_encoder: false
-      gradient_checkpointing: true
+      gradient_checkpointing: false
       noise_scheduler: flowmatch
       optimizer: adamw8bit
-      lr: 0.0001
+      lr: 0.0004
       timestep_type: linear
       ema_config:
         use_ema: true
