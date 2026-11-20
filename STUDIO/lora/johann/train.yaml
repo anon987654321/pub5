@@ -22,7 +22,7 @@ config:
     - folder_path:
       caption_ext: txt
       caption_dropout_rate: 0.08
-      shuffle_tokens: true
+      shuffle_tokens: false
       cache_latents_to_disk: true
       resolution:
       - 512
@@ -30,7 +30,7 @@ config:
       - 1024
     train:
       batch_size: 1
-      steps: 1800
+      steps: 1600
       skip_first_sample: true
       gradient_accumulation_steps: 1
       train_unet: true
@@ -39,6 +39,7 @@ config:
       noise_scheduler: flowmatch
       optimizer: adamw8bit
       lr: 0.0001
+      timestep_type: linear
       ema_config:
         use_ema: true
         ema_decay: 0.995
