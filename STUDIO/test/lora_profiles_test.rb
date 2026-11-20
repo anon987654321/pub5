@@ -114,7 +114,7 @@ class TestStudioLoraValidator < Minitest::Test
 
       report = Studio::Lora::Validator.new(root:).validate_subject("sample")
 
-      assert_equal "PASS", report.fetch("state")
+      assert_equal "FAIL", report.fetch("state")
       refute report.fetch("training_ready")
       assert_includes report.fetch("blockers").map { |item| item["id"] }, "dataset_path_contract"
     end
@@ -257,6 +257,8 @@ class TestStudioLoraValidator < Minitest::Test
     File.write(File.join(directory, "subject.env"), <<~ENV)
       TRIGGER=SAMPLE
       MODEL=sample
+      REPLICATE_DESTINATION=owner/sample-private
+      REPLICATE_MODEL=
       DESCRIPTOR=ordinary portrait subject
     ENV
   end
