@@ -154,7 +154,7 @@ if $PROGRAM_NAME == __FILE__
       end
       exit 0
     elsif options[:check_model]
-      { "subject" => options[:subject], "model" => Studio::Visual::IdeaPicture.new(subject: options[:subject]).validate_model! }
+      { "subject" => options[:subject], "model" => Studio::Visual::IdeaPicture.new(subject: options[:subject], lora_only: true).validate_model! }
     elsif options[:all_subjects]
       raise ArgumentError, "--all-subjects requires the subject's trained LoRA; --engine is not allowed" if options[:engine]
       raise ArgumentError, "--all-subjects cannot be combined with --keep" if options[:keep]
