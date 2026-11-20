@@ -43,7 +43,7 @@ class TestStudioLoraTrainingRunner < Minitest::Test
       package = {
         "subject" => "johann", "subject_directory" => subject_directory,
         "model_directory" => "johann", "dataset_sha256" => "a" * 64,
-        "trigger_word" => "johann_lora", "steps" => 1600, "lora_rank" => 16
+        "trigger_word" => "johann_lora", "training_steps" => 1000, "lora_type" => "subject", "seed" => 42
       }
 
       path = runner.send(:write_candidate_manifest, package, "owner/johann:version123", { "id" => "training123" })
@@ -51,6 +51,9 @@ class TestStudioLoraTrainingRunner < Minitest::Test
       assert_equal "TRAINED_NEEDS_LIKENESS_REVIEW", document.fetch("status")
       assert_equal true, document.fetch("likeness_review_required")
       assert_equal "owner/johann:version123", document.fetch("version")
+      assert_equal 1000, document.fetch("training_steps")
+      assert_equal "subject", document.fetch("lora_type")
+      assert_equal 42, document.fetch("seed")
       assert_equal 0o600, File.stat(path).mode & 0o777
     end
   end
@@ -70,7 +73,7 @@ class TestStudioLoraTrainingRunner < Minitest::Test
       package = {
         "subject" => "ragnhild", "subject_directory" => subject_directory,
         "model_directory" => "ragnhild", "dataset_sha256" => "b" * 64,
-        "trigger_word" => "ragnhild", "steps" => 1600, "lora_rank" => 16
+        "trigger_word" => "ragnhild", "training_steps" => 1000, "lora_type" => "subject", "seed" => 42
       }
 
       runner.send(:write_candidate_manifest, package, "owner/ragnhild:newversion", { "id" => "training456" })
