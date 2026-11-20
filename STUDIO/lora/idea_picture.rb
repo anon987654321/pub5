@@ -547,21 +547,6 @@ module Studio
         private_manifest
       end
 
-      def training_trigger
-        path = File.join(@subject_directory, "train.yaml")
-        return nil unless File.file?(path) && !File.symlink?(path)
-        raise "training plan exceeds 1 MB" if File.size(path) > 1_048_576
-
-        plan = YAML.safe_load(File.read(path, encoding: "UTF-8"),
-                              permitted_classes: [], permitted_symbols: [], aliases: false)
-        processes = plan.dig("config", "process") if plan.is_a?(Hash) && plan["config"].is_a?(Hash)
-        trainers = Array(processes).select { |entry| entry.is_a?(Hash) && entry["type"] == "sd_trainer" }
-        return nil unless trainers.length == 1
-
-        trigger = trainers.first["trigger_word"].to_s
-        trigger if trigger.match?(/\A[A-Za-z][A-Za-z0-9_-]{0,63}\z/)
-      end
-
       def still_model
         path = @model_manifest
         raise "training manifest must not be a symlink: #{path}" if File.symlink?(path)
