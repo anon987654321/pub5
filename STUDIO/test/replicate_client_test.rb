@@ -41,7 +41,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
       if uri.path.include?("/versions/")
         { "openapi_schema" => { "components" => { "schemas" => { "Input" => schema } } } }
       else
-        { "latest_version" => {
+        { "visibility" => "private", "latest_version" => {
           "id" => "c" * 64,
           "openapi_schema" => { "components" => { "schemas" => { "Input" => schema } } }
         } }
@@ -290,6 +290,27 @@ class TestStudioReplicateClientPaths < Minitest::Test
     method, uri = client.requests.fetch(0)
     assert_equal :get, method
     assert_equal "/v1/models/owner/model/versions/#{version}", uri.path
+  end
+
+  def test_existing_public_training_destination_is_refused
+    public_client = Class.new(StubClient) do
+      def model_exists?(_model_id) = true
+      def model_visibility(_model_id) = "public"
+    end.new
+
+    error = assert_raises(ArgumentError) { public_client.ensure_private_model!("owner/model") }
+    assert_match(/is public/, error.message)
+    assert_empty public_client.requests
+  end
+
+  def test_missing_training_destination_is_created_private
+    client = StubClient.new
+    client.stub(:model_exists?, false) do
+      client.ensure_private_model!("owner/private-model")
+    end
+
+    request = client.requests.find { |row| row.first == :post }
+    assert_equal "private", request.fetch(2).fetch(:visibility)
   end
 
   def test_training_schema_is_checked_before_destination_model_creation
