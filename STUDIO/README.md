@@ -80,7 +80,10 @@ voice of the creative work.
   and writes a contact sheet plus Postpro measurements. Candidate renders stay
   under the subject's ignored `.cache/likeness-review/` tree; they cannot enter
   the published selfie folder or approve a model.
-  After comparing all candidate images at full size, record the exact immutable
+  The candidate step still requires all training consent and source-rights
+  permissions; ZIP uploads also require a regular, singly-linked mode-0600 file
+  and an explicitly private destination model. After comparing all candidate
+  images at full size, record the exact immutable
   version in that subject's owner-only `subject.env` as
   `LIKELINESS_REVIEWED_VERSION`. Only then may the six-image batch run.
   `ruby STUDIO/lora/photograph.rb --all-subjects --count 6` replaces the three
