@@ -491,6 +491,23 @@ module Studio
         Integer(seconds).clamp(3, 15)
       end
 
+      # The subject trigger is a field in the small schema-1 plan. It is
+      # not parsed from the retired AI-Toolkit config/process/sd_trainer format.
+      def training_trigger
+        path = File.join(@subject_directory, "train.yaml")
+        return nil unless File.file?(path) && !File.symlink?(path)
+        raise "training plan exceeds 1 MB" if File.size(path) > 1_048_576
+
+        plan = YAML.safe_load(File.read(path, encoding: "UTF-8"),
+                              permitted_classes: [], permitted_symbols: [], aliases: false)
+        return nil unless plan.is_a?(Hash) && plan["schema"] == 1 && plan["subject"] == @subject
+
+        trigger = plan["trigger_word"].to_s
+        trigger if trigger.match?(/\\A[A-Za-z][A-Za-z0-9_-]{0,63}\\z/)
+      rescue Psych::Exception => error
+        raise "invalid subject training plan #{path}: #{error.message}"
+      end
+
       def photographic(words)
         env = subject_env
         trigger = env["TRIGGER"].to_s.strip
