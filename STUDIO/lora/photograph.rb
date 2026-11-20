@@ -168,8 +168,15 @@ if $PROGRAM_NAME == __FILE__
       end
       incomplete = rendered.select { |_subject, paths| paths.length != (options[:count] || 6) }
       raise "INCOMPLETE: no old renders were deleted; subjects with incomplete output: #{incomplete.keys.join(", ")}" unless incomplete.empty?
+      # Validate every subject's full deletion set before removing a single
+      # prior image from any subject.
+      plans = subjects.to_h do |subject|
+        [subject, series.fetch(subject).replacement_plan(keep: rendered.fetch(subject))]
+      end
       deleted = subjects.to_h do |subject|
-        [subject, series.fetch(subject).replace_previous_renders!(keep: rendered.fetch(subject))]
+        [subject, series.fetch(subject).replace_previous_renders!(
+          keep: rendered.fetch(subject), plan: plans.fetch(subject)
+        )]
       end
       { "subjects" => rendered, "old_renders_deleted" => deleted }
     elsif options[:series]
