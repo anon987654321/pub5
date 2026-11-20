@@ -7,6 +7,7 @@ require "securerandom"
 require "time"
 require "uri"
 require "yaml"
+require_relative "../../lib/io/atomic_write"
 
 module Master
   module Plugins
@@ -539,13 +540,7 @@ module Master
       def write_state(directory, state)
         secure_directory(directory)
         path = state_path(directory)
-        temporary = "#{path}.#{Process.pid}.#{SecureRandom.hex(5)}.tmp"
-        File.write(temporary, YAML.dump(state), mode: "w", perm: 0o600)
-        File.chmod(0o600, temporary)
-        File.rename(temporary, path)
-        File.chmod(0o600, path)
-      ensure
-        File.delete(temporary) if temporary && File.exist?(temporary)
+        Master::Io::AtomicWrite.write_atomic(path, YAML.dump(state), mode: 0o600)
       end
 
       def with_session_file_lock(directory)

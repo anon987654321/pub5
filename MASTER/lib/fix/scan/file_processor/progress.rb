@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../../../io/atomic_write"
+
 module Master
   module Fix
     module Scan
@@ -210,12 +212,9 @@ module Master
         def progress_reporting? = ENV["MASTER_SCAN_PROGRESS"] != "0"
 
         def write_progress_snapshot(row)
-          temporary = "#{@progress_path}.scan-#{@progress_writer_id}"
-          File.open(temporary, File::WRONLY | File::CREAT | File::TRUNC, 0o600) do |io|
-            io.write(JSON.generate(row))
-            io.flush
-          end
-          File.rename(temporary, @progress_path)
+          Master::Io::AtomicWrite.write_atomic(
+            @progress_path, JSON.generate(row), fsync: false, fsync_dir: false, mode: 0o600
+          )
         rescue SystemCallError, IOError => e
           should_report = @progress_mutex.synchronize do
             next false if @progress_error_reported
@@ -223,12 +222,6 @@ module Master
             @progress_error_reported = true
           end
           Master::Trace::Dmesg.status("scan0", "progress file unavailable, #{e.class}: #{e.message}") if should_report
-        ensure
-          begin
-            File.delete(temporary) if temporary && File.exist?(temporary)
-          rescue SystemCallError
-            nil
-          end
         end
 
         def relative_progress_path(path)

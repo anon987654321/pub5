@@ -5,6 +5,7 @@ require "json"
 require "digest"
 require "open3"
 require_relative "../io/process_spawn"
+require_relative "../io/atomic_write"
 
 module Operator
   # The MASTER suite across several processes. Workers are polled rather than
@@ -197,17 +198,7 @@ SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
     end
 
     def write_receipt(path, payload)
-      temporary = "#{path}.tmp-#{Process.pid}"
-      FileUtils.mkdir_p(File.dirname(path))
-      File.open(temporary, File::WRONLY | File::CREAT | File::TRUNC, 0o600) do |file|
-        file.write(JSON.pretty_generate(payload))
-        file.write("\n")
-        file.flush
-        file.fsync
-      end
-      File.rename(temporary, path)
-    ensure
-      FileUtils.rm_f(temporary) if temporary
+      Master::Io::AtomicWrite.write_atomic(path, "#{JSON.pretty_generate(payload)}\n", mode: 0o600)
     end
 
     def batch_aggregate(reports, files:, run_id:, revision:, batch_count:)
@@ -560,7 +551,7 @@ SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
       }
       payload["batch_label"] = batch_label if batch_label
       path = report_path || File.join(LOG_DIR, "suite-report.json")
-      File.write(path, JSON.pretty_generate(payload) + "\n")
+      Master::Io::AtomicWrite.write_atomic(path, JSON.pretty_generate(payload) + "\n")
       out.puts "test-suite-report0: #{path} completed_results=#{completed_results} status=#{payload["status"]}"
       tags = by_tag.map { |tag, count| "#{tag}:#{count}" }.join(",")
       out.puts "test-skip-summary0: total=#{total_skips} environment_tagged=#{tagged_skips.size} " \

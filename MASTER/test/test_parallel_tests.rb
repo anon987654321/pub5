@@ -97,6 +97,12 @@ class TestParallelTests < Minitest::Test
 
   def test_progress_and_suite_report_name_incomplete_workers
     out = StringIO.new
+    atomic_writes = []
+    writer = Master::Io::AtomicWrite.method(:write_atomic)
+    instrumented = lambda do |path, content, **options|
+      atomic_writes << [path, content, options]
+      writer.call(path, content, **options)
+    end
     command = lambda do |files|
       if files.include?("early")
         [RbConfig.ruby, "-e", "STDERR.puts 'test-start0: Early#test_gone'; exit 0"]
@@ -105,7 +111,12 @@ class TestParallelTests < Minitest::Test
       end
     end
 
-    refute Runner.run(%w[early ok], command:, out:)
+    result = nil
+    Master::Io::AtomicWrite.stub(:write_atomic, instrumented) do
+      result = Runner.run(%w[early ok], command:, out:)
+    end
+    refute result
+    assert atomic_writes.any? { |call| call.first == File.join(Runner::LOG_DIR, "suite-report.json") }
     assert_includes out.string, "test-progress0: completed_results=1"
     assert_includes out.string, "test-suite-report0:"
     assert_includes out.string, "test-suite-incomplete-workers0:"
@@ -119,6 +130,28 @@ class TestParallelTests < Minitest::Test
     incomplete = payload["workers"].select { |worker| worker["outcome"] == "incomplete" }
     refute_empty incomplete
     assert_equal "Early#test_gone", incomplete.first["last_started_test"]
+  end
+
+  def test_receipt_write_uses_the_shared_private_atomic_writer
+    Dir.mktmpdir do |root|
+      path = File.join(root, "receipt.json")
+      calls = []
+      writer = Master::Io::AtomicWrite.method(:write_atomic)
+      instrumented = lambda do |target, content, **options|
+        calls << [target, content, options]
+        writer.call(target, content, **options)
+      end
+      Master::Io::AtomicWrite.stub(:write_atomic, instrumented) do
+        Runner.write_receipt(path, { "status" => "passed" })
+      end
+
+      assert_equal 1, calls.length
+      assert_equal path, calls.first.first
+      assert_equal 0o600, calls.first.last.fetch(:mode)
+      assert_equal "passed", JSON.parse(File.read(path)).fetch("status")
+      assert_equal 0o600, File.stat(path).mode & 0o777
+      assert_empty Dir.glob(File.join(root, ".master_atomic_*"))
+    end
   end
 
   def test_environment_tagged_skips_are_grouped_in_the_suite_receipt
