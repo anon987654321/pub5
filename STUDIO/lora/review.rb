@@ -9,6 +9,7 @@ require "time"
 require "vips"
 require_relative "idea_picture"
 require_relative "consent"
+require_relative "validate"
 require_relative "../postpro/uncanny"
 
 module Studio
@@ -89,6 +90,10 @@ module Studio
           cache = File.join(@subject_directory, ".cache")
           secure_directory!(cache)
 
+          # Reuse the exact read-only gate used before paid training. A candidate
+          # must not be generated from an incomplete, altered or unconsented set.
+          require_training_ready!
+
           # Check the private reference set and pinned candidate before any
           # provider prediction. A bad dataset must not consume a paid sample.
           references = reference_files
@@ -148,6 +153,15 @@ module Studio
         end
 
         private
+
+        def require_training_ready!
+          report = Validator.new(root: @root).validate_subject(@subject)
+          return report if report["training_ready"] == true
+
+          details = Array(report["blockers"]).map { |item| item["detail"] || item["id"] }
+          details.concat(Array(report["errors"]))
+          raise Error, "subject validation blocks likeness review: #{details.join("; ")}"
+        end
 
         def new_review_directory(parent)
           secure_directory!(parent)
