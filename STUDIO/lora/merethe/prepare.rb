@@ -242,8 +242,13 @@ module Studio
         retained = (archived.values + published + [staged_dataset, staged_zip]).select do |path|
           File.exist?(path) || File.symlink?(path)
         end
-        raise Error,
-              "publication incomplete; no prepared assets were deleted; "               "archive=#{archive_root || "none"}; retained=#{retained.join(", ")}; "               "cause=#{error.class}: #{error.message}"
+        details = [
+          "publication incomplete; no prepared assets were deleted",
+          "archive=#{archive_root || "none"}",
+          "retained=#{retained.join(", ")}",
+          "cause=#{error.class}: #{error.message}"
+        ].join("; ")
+        raise Error, details
       end
 
       {

@@ -1293,3 +1293,9 @@ published dataset, partial ZIP or archived previous pair; the error/report
 names every retained archive and staging path. Staging cleanup removes only an
 empty directory. Regression expectations prove old and new datasets/ZIPs stay
 recoverable across success and injected failure. Runtime tests remain NOT_RUN.
+
+
+2026-11-20 documentation alignment: the Merethe preparation guide now records
+the permanent prepared-dataset archive and append-only selfie policy. The
+publication error message is assembled from explicit fields for clear,
+unambiguous recovery instructions. Tests remain NOT_RUN.

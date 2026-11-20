@@ -92,7 +92,10 @@ ruby STUDIO/lora/merethe/prepare.rb
 
 The preflight refuses fewer than 12 or more than 18 images, missing captions,
 invalid caption triggers and missing/corrupt archived sources. It builds a
-private ZIP only after these checks pass. The report is written to the ignored
+private ZIP only after these checks pass. Each previous prepared dataset and
+training ZIP is retained under the ignored .cache/prepared-archive-* folder
+before a new pair is published; an interrupted publication leaves its staging
+files in place and reports their recovery path. The report is written to the ignored
 \`.cache/prepare_report.json\`. The target is 12–18 images, in line with the
 trainer's dataset guidance.
 
@@ -139,8 +142,9 @@ Only after the person is recognisable in every candidate should the exact
 immutable model version be entered in that subject's local
 `subject.env` as `LIKELINESS_REVIEWED_VERSION`.
 
-The six-image final batch is a separate operation. No old selfie series is
-deleted until all three subjects have a complete replacement series.
+The six-image final batch is a separate operation. Selfie generation is
+append-only: no prior portrait, graded still, film or sidecar is replaced or
+deleted. Compare each new series with the previous one in the private gallery.
 
 ## Promo video
 
