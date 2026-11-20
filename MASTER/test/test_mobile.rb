@@ -46,7 +46,7 @@ class TestMobileProfile < Minitest::Test
     assert_includes installer, 'proot-distro install "$distro"'
     assert_includes installer, "cd /pub5/MASTER"
     assert_includes installer, "git clone --depth 1 --branch"
-    assert_includes installer, "git pull --ff-only origin"
+    assert_includes installer, 'pull --ff-only origin "$branch"'
     assert_includes installer, "ruby bin/deps boot"
     assert_includes installer, 'Gem::Version.new("3.2")'
     assert_equal "3.2.0", profile.dig("profile", "min_ruby")
