@@ -315,21 +315,18 @@ module Studio
       # accepts.
       def reference_input(words, engine_name = engine)
         allowed = Studio::ReplicateClient::Models.inputs_for(engine_name).map(&:to_s)
-        desired = {
-          "prompt" => photographic(words),
-          "image_input" => reference_urls,
-          "images" => reference_urls,
-          "input_images" => reference_urls,
-          "subject_reference" => (primary_reference_url if allowed.include?("subject_reference")),
-          "max_images" => 1,
-          "number_of_images" => 1,
-          "prompt_optimizer" => true,
-          "aspect_ratio" => "2:3",
-          "resolution" => "2K",
-          "output_format" => "jpg",
-          "output_quality" => 95,
-        }
-        desired.select { |key, _| allowed.include?(key) }
+        desired = { "prompt" => photographic(words), "aspect_ratio" => "2:3" }
+        desired["image_input"] = reference_urls if allowed.include?("image_input")
+        desired["images"] = reference_urls if allowed.include?("images")
+        desired["input_images"] = reference_urls if allowed.include?("input_images")
+        desired["subject_reference"] = primary_reference_url if allowed.include?("subject_reference")
+        desired["max_images"] = 1 if allowed.include?("max_images")
+        desired["number_of_images"] = 1 if allowed.include?("number_of_images")
+        desired["prompt_optimizer"] = true if allowed.include?("prompt_optimizer")
+        desired["resolution"] = "2K" if allowed.include?("resolution")
+        desired["output_format"] = "jpg" if allowed.include?("output_format")
+        desired["output_quality"] = 95 if allowed.include?("output_quality")
+        desired
       end
 
       # A text model has only the prompt; the descriptor carries what likeness it
