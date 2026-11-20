@@ -45,7 +45,7 @@ class TestStudioLoraValidator < Minitest::Test
     with_subject do |root, directory|
       write_descriptor(directory)
       dataset = File.join(directory, "dataset")
-      write_dataset(dataset, 10)
+      write_dataset(dataset, 12)
       write_training_plan(directory, dataset: "dataset")
       path = File.join(directory, "train.yaml")
       plan = YAML.safe_load_file(path)
@@ -64,7 +64,7 @@ class TestStudioLoraValidator < Minitest::Test
       write_descriptor(directory)
       dataset = File.join(directory, "dataset")
       FileUtils.mkdir_p(dataset)
-      write_dataset(dataset, 10)
+      write_dataset(dataset, 12)
       write_training_plan(directory, dataset: "dataset")
       write_valid_consent(directory)
 
@@ -81,7 +81,7 @@ class TestStudioLoraValidator < Minitest::Test
     with_subject do |root, directory|
       write_descriptor(directory)
       dataset = File.join(directory, "dataset")
-      write_dataset(dataset, 10, first_caption: "NOTSAMPLE portrait")
+      write_dataset(dataset, 12, first_caption: "NOTSAMPLE portrait")
       write_training_plan(directory, dataset: "dataset")
       write_valid_consent(directory)
 
@@ -97,7 +97,7 @@ class TestStudioLoraValidator < Minitest::Test
     with_subject do |root, directory|
       write_descriptor(directory)
       dataset = File.join(directory, "dataset")
-      write_dataset(dataset, 10, first_caption: "SAMPLE " + ("portrait " * 2_000))
+      write_dataset(dataset, 12, first_caption: "SAMPLE " + ("portrait " * 2_000))
       write_training_plan(directory, dataset: "dataset")
       write_valid_consent(directory)
 
@@ -240,11 +240,16 @@ class TestStudioLoraValidator < Minitest::Test
   end
 
   def write_dataset(directory, count, first_caption: nil)
-    FileUtils.mkdir_p(directory)
+    FileUtils.mkdir_p(directory, mode: 0o700)
+    File.chmod(0o700, directory)
     count.times do |index|
-      File.write(File.join(directory, "photo-#{index}.jpg"), "image")
+      image = File.join(directory, "photo-#{index}.jpg")
+      File.write(image, "image", mode: "w", perm: 0o600)
       caption = index.zero? && first_caption ? first_caption : "SAMPLE portrait #{index}"
-      File.write(File.join(directory, "photo-#{index}.txt"), caption)
+      caption_path = File.join(directory, "photo-#{index}.txt")
+      File.write(caption_path, caption, mode: "w", perm: 0o600)
+      File.chmod(0o600, image)
+      File.chmod(0o600, caption_path)
     end
   end
 
