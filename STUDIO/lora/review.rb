@@ -48,11 +48,11 @@ module Studio
           end
         end
 
-        def validate_render_count!(renders)
+        def validate_render_count!(renders, expected: RENDER_COUNT)
           count = Array(renders).length
-          return true if count == RENDER_COUNT
+          return true if count == expected
 
-          raise Error, "expected #{RENDER_COUNT} final, private Postpro renders for #{@subject}; found #{count}"
+          raise Error, "expected #{expected} private Postpro renders for #{@subject}; found #{count}"
         end
 
         def reference_files
@@ -81,26 +81,29 @@ module Studio
           indices.map { |index| images.fetch(index) }
         end
 
-        def build
+        def build(candidate: false)
           consent = Consent.require!(
             subject: @subject, subject_directory: @subject_directory, action: :generation
           )
-          renders = render_files
-          validate_render_count!(renders)
+          cache = File.join(@subject_directory, ".cache")
+          secure_directory!(cache)
+
+          render_kind = candidate ? "UNAPPROVED_CANDIDATE" : "FINAL_SERIES"
+          if candidate
+            output = new_review_directory(File.join(cache, "likeness-review"))
+            renders = render_candidate_renders(output)
+            validate_render_count!(renders, expected: 3)
+          else
+            renders = render_files
+            validate_render_count!(renders)
+            output = new_review_directory(File.join(cache, "reviews"))
+          end
+
           references = reference_files
           picture = Studio::Visual::IdeaPicture.new(subject: @subject, subjects_root: @root)
           version = picture.send(:still_model)
-
-          cache = File.join(@subject_directory, ".cache")
-          secure_directory!(cache)
-          reviews = File.join(cache, "reviews")
-          secure_directory!(reviews)
-          stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S")
-          output = File.join(reviews, stamp)
-          secure_directory!(output)
-
           sheet_path = File.join(output, "contact-sheet.jpg")
-          write_contact_sheet(references, renders, sheet_path)
+          write_contact_sheet(references, renders, sheet_path, render_label: candidate ? "CANDIDATE" : "RENDER")
           metrics = renders.map do |path|
             reading = Postpro::Uncanny.read(path)
             {
@@ -116,6 +119,7 @@ module Studio
             "schema" => "studio.lora.review.v1",
             "subject" => @subject,
             "model_version" => version,
+            "render_kind" => render_kind,
             "render_count" => renders.length,
             "reference_count" => references.length,
             "contact_sheet" => File.basename(sheet_path),
@@ -132,6 +136,7 @@ module Studio
           {
             "subject" => @subject,
             "status" => "AWAITING_HUMAN_IDENTITY_REVIEW",
+            "render_kind" => render_kind,
             "contact_sheet" => sheet_path,
             "review_report" => File.join(output, "review.json"),
             "html" => File.join(output, "index.html"),
@@ -144,9 +149,33 @@ module Studio
 
         private
 
-        def write_contact_sheet(references, renders, path)
+        def new_review_directory(parent)
+          secure_directory!(parent)
+          stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S")
+          path = File.join(parent, stamp)
+          secure_directory!(path)
+          path
+        end
+
+        def render_candidate_renders(output)
+          picture = Studio::Visual::IdeaPicture.new(
+            subject: @subject, subjects_root: @root, directory: output,
+            lora_only: true, allow_unreviewed_likeness: true
+          )
+          picture.validate_model!
+          [1, 4, 6].each_with_index.map do |scene_number, index|
+            picture.write(
+              Studio::Lora::Selfie.scene(scene_number, subject: @subject),
+              film: false,
+              output_stem: "#{@subject}_candidate_#{format("%02d", index + 1)}",
+              grade_seed: Studio::Lora::Selfie.grade_seed(scene_number, @subject)
+            ).fetch("still")
+          end
+        end
+
+        def write_contact_sheet(references, renders, path, render_label: "RENDER")
           entries = references.map.with_index { |file, index| [file, "REFERENCE #{index + 1}"] } +
-                    renders.map.with_index { |file, index| [file, format("RENDER %02d", index + 1)] }
+                    renders.map.with_index { |file, index| [file, format("%s %02d", render_label, index + 1)] }
           cells = entries.map { |file, label| contact_cell(file, label) }
           sheet = Vips::Image.arrayjoin(
             cells, across: COLUMNS, shim: 10, background: BACKGROUND, valign: :low
@@ -238,14 +267,15 @@ module Studio
       module_function
 
       def run_cli(argv)
-        options = { subject: nil }
+        options = { subject: nil, candidate: false }
         OptionParser.new do |parser|
           parser.banner = "Usage: ruby STUDIO/lora/review.rb --subject NAME"
-          parser.on("--subject NAME", "review the six latest final stills for one subject") { |value| options[:subject] = value }
+          parser.on("--subject NAME", "review a subject's portraits") { |value| options[:subject] = value }
+          parser.on("--candidate", "render three private LoRA samples before approving a new model") { options[:candidate] = true }
         end.parse!(argv)
         raise ArgumentError, "--subject is required" if options[:subject].to_s.empty?
 
-        result = Builder.new(subject: options[:subject]).build
+        result = Builder.new(subject: options[:subject]).build(candidate: options[:candidate])
         puts JSON.pretty_generate(result)
         0
       rescue Error, Consent::Error, ArgumentError, SystemCallError, IOError, Vips::Error => error
