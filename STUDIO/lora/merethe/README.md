@@ -90,7 +90,7 @@ After adding and reviewing the images, run:
 ruby STUDIO/lora/merethe/prepare.rb
 \`\`\`
 
-The preflight refuses fewer than 10 or more than 18 images, missing captions,
+The preflight refuses fewer than 12 or more than 18 images, missing captions,
 invalid caption triggers and missing/corrupt archived sources. It builds a
 private ZIP only after these checks pass. The report is written to the ignored
 \`.cache/prepare_report.json\`. The target is 12–18 images, in line with the
