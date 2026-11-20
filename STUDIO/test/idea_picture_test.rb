@@ -457,24 +457,28 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
-  def test_tracked_subject_manifest_and_training_trigger_restore_the_pinned_identity
+  def test_schema_one_training_plan_supplies_subject_trigger_and_pinned_identity
     Dir.mktmpdir do |dir|
       subject = File.join(dir, "johann")
       FileUtils.mkdir_p(subject)
-      File.write(File.join(subject, "replicate_training.json"),
-                 JSON.generate("version" => "anon987654321/johann-flux:" + ("a" * 64)))
+      version = "owner/johann-private:" + ("a" * 64)
+      File.write(File.join(subject, "weights-placeholder.json"), "{}")
+      File.write(File.join(subject, "replicate_training.json"), JSON.generate("version" => version))
       File.write(File.join(subject, "train.yaml"), <<~YAML)
-        job: extension
-        config:
-          process:
-            - type: sd_trainer
-              trigger_word: johann_lora
+        schema: 1
+        subject: johann
+        trigger_word: johann_lora
+        dataset:
+          path: dataset
+          caption_ext: txt
+        destination_env: REPLICATE_DESTINATION
+        model_directory: johann
       YAML
       picture = Studio::Visual::IdeaPicture.new(
         subject: "johann", directory: dir, subjects_root: dir
       )
 
-      assert_equal "anon987654321/johann-flux:" + ("a" * 64), picture.send(:still_model)
+      assert_equal version, picture.send(:still_model)
       assert_match(/\\Ajohann_lora,/, picture.send(:photographic, "window portrait"))
     end
   end
