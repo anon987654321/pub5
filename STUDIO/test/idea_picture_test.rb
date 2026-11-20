@@ -384,6 +384,20 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
+  def test_subject_lora_input_uses_shared_inference_settings_and_schema_optional_fields
+    standard = Studio::ReplicateClient::TRAINING_STANDARDS.fetch("inference")
+    picture = Studio::Visual::IdeaPicture.allocate
+    picture.instance_variable_set(:@validated_still_inputs, %w[prompt model num_inference_steps guidance_scale aspect_ratio])
+    picture.define_singleton_method(:photographic) { |words| "johann_lora, #{words}" }
+
+    input = picture.send(:lora_input, "portrait")
+    assert_equal standard.fetch("model"), input.fetch(:model)
+    assert_equal standard.fetch("num_inference_steps"), input.fetch(:num_inference_steps)
+    assert_equal standard.fetch("guidance_scale"), input.fetch(:guidance_scale)
+    assert_equal standard.fetch("aspect_ratio"), input.fetch(:aspect_ratio)
+    refute input.key?(:go_fast)
+  end
+
   def test_still_schema_preflight_catches_every_field_before_prediction
     Dir.mktmpdir do |dir|
       manifest = File.join(dir, "replicate_training.json")
@@ -397,7 +411,7 @@ class TestIdeaPictureOutput < Minitest::Test
 
       error = assert_raises(RuntimeError) { picture.write("portrait", film: false) }
       assert_match(/missing inputs used by the still renderer/, error.message)
-      assert_match(/aspect_ratio/, error.message)
+      assert_match(/model/, error.message)
       assert_empty Dir.children(dir).grep(/\.jpg\z/)
     end
   end
