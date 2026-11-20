@@ -272,7 +272,7 @@ class TestIdeaPictureOutput < Minitest::Test
       version = "owner/model:version-123"
       File.write(manifest, JSON.generate("version" => version))
       env_path = File.join(subject, "subject.env")
-      File.write(env_path, "MODEL=probe\\nTRIGGER=probe\\n")
+      File.write(env_path, "MODEL=probe\nTRIGGER=probe\n")
       File.chmod(0o600, env_path)
       calls = []
       client = Object.new
@@ -289,7 +289,7 @@ class TestIdeaPictureOutput < Minitest::Test
       assert_match(/LIKELINESS_REVIEWED_VERSION/, error.message)
       assert_empty calls, "an unreviewed model must be blocked before the provider schema call"
 
-      File.write(env_path, "MODEL=probe\\nTRIGGER=probe\\nLIKELINESS_REVIEWED_VERSION=#{version}\\n")
+      File.write(env_path, "MODEL=probe\nTRIGGER=probe\nLIKELINESS_REVIEWED_VERSION=#{version}\n")
       File.chmod(0o600, env_path)
       approved = Studio::Visual::IdeaPicture.new(
         subject: "probe", client:, directory: dir, subjects_root: subjects,
