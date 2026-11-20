@@ -1256,3 +1256,15 @@ symlinked sidecars to survive even when legacy callers pass replace: true.
 The natural-language MASTER route treats deletion wording as non-authority and
 reports that earlier portraits are retained. Runtime tests remain NOT_RUN in
 this publishing environment.
+
+
+2026-11-20 permanent asset-protection boundary: the canonical Soul asset
+inventory now identifies Rails screenshots/visual evidence/route captures and
+private LoRA source/reference sets, datasets, weights, descriptors, consent,
+review caches, ledgers and generated still/film outputs. PathGuard, the
+Constitution path registry, recursive DeletePath and Clean refuse to mutate or
+remove these assets. Shell/Fold destructive commands refuse non-dry-run
+git clean, git reset --hard and path-specific rm/mv/git rm/git mv/restore when
+their target contains a preserved asset. This inventory is separate from the
+general sacred_paths switch. Regressions are authored; runtime proof remains
+NOT_RUN in this publishing environment.

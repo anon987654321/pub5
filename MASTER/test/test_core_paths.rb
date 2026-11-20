@@ -69,6 +69,42 @@ class TestCorePaths < Minitest::Test
     assert_nil Master::Core::Constitution::Paths.write_refusal(File.join(Master::ROOT, "data", "soul.yml"))
   end
 
+  def test_preserved_project_assets_cover_visual_and_private_lora_material
+    repo_paths = Master::Core::Constitution::Paths.new(root: Master::REPO_ROOT)
+
+    [
+      "RAILS/screenshot_brgen_review.png",
+      "RAILS/amber/screenshots/amber-desktop.png",
+      "MASTER/checks/data/route_screenshots/brgen-home.png",
+      "STUDIO/lora/johann/sources/portrait-01.jpg",
+      "STUDIO/lora/ragnhild/weights/model.safetensors",
+      "STUDIO/lora/merethe/dataset/captions.json",
+      "STUDIO/lora/johann_selfie_01.jpg",
+      "STUDIO/selfies/manifest.js",
+    ].each do |path|
+      assert Master::Soul.preserved_asset?(path, root: Master::REPO_ROOT), path
+      assert repo_paths.sacred?(path), path
+      assert_match(/preserved project asset/, Master::Core::Constitution::Paths.write_refusal(path, root: Master::REPO_ROOT))
+    end
+
+    refute Master::Soul.preserved_asset?("STUDIO/lora/selfie_series.rb", root: Master::REPO_ROOT)
+    refute repo_paths.sacred?("STUDIO/lora/selfie_series.rb")
+  end
+
+  def test_preserved_assets_ignore_the_general_sacred_write_switch
+    Master::Ground::Immutability.stub(:writes_allowed?, true) do
+      assert Master::Ground::Immutability.blocked?(
+        "RAILS/screenshot_brgen_review.png", root: Master::REPO_ROOT
+      )
+      assert_match(
+        /preserved project asset/,
+        Master::Core::Constitution::Paths.write_refusal(
+          "RAILS/screenshot_brgen_review.png", root: Master::REPO_ROOT
+        )
+      )
+    end
+  end
+
   def test_path_escape_is_treated_as_protected
     assert paths.sacred?("../outside")
   end

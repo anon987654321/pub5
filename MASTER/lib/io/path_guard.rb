@@ -70,6 +70,7 @@ module Master
       private
 
       def sacred?(rel_path)
+        return true if Master::Soul.preserved_asset?(rel_path, root: @root)
         return false if Master::Ground::Immutability.writes_allowed?
 
         master_relative = @root == Master::REPO_ROOT ? rel_path.delete_prefix("MASTER/") : rel_path

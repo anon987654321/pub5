@@ -24,6 +24,9 @@ module Master
         target = path ? File.expand_path(path, @root) : @root
         return Result.err("path not found: #{target}",
                           category: :validation) unless File.exist?(target) || Dir.exist?(target)
+        if Master::Soul.preserved_assets_under?(target, root: @root)
+          return Result.err("clean refused: target contains preserved project assets", category: :validation)
+        end
 
         guard = @governor.permit?(NAME, TIER, "clean #{target}")
         return guard if guard.err?

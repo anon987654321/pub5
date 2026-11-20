@@ -105,6 +105,33 @@ class TestIoTools < Minitest::Test
     end
   end
 
+  def test_delete_path_refuses_preserved_screenshots_and_recursive_lora_directories
+    with_root(manifest: true) do |root|
+      screenshot = write(root, "RAILS/screenshot_brgen_review.png", "image")
+      weights = write(root, "STUDIO/lora/johann/weights/model.safetensors", "weights")
+      tool = Master::Io::DeletePath.new(root:, undo: nil, governor: allow)
+
+      single = tool.call(path: "RAILS/screenshot_brgen_review.png")
+      refute single.ok?
+      assert File.file?(screenshot)
+
+      recursive = tool.call(path: "STUDIO/lora", recursive: true)
+      refute recursive.ok?
+      assert File.file?(weights)
+    end
+  end
+
+  def test_clean_refuses_a_directory_containing_preserved_subject_data
+    with_root(manifest: true) do |root|
+      subject_env = write(root, "STUDIO/lora/johann/subject.env", "MODEL_VERSION=private\n")
+      result = Master::Io::Clean.new(root:, governor: allow).call(path: "STUDIO/lora")
+
+      refute result.ok?
+      assert_match(/preserved project assets/, result.message)
+      assert File.file?(subject_env)
+    end
+  end
+
   def test_delete_path_refuses_paths_outside_root
     with_root do |root|
       tool = Master::Io::DeletePath.new(root:, undo: nil, governor: allow)

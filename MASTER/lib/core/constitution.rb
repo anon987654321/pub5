@@ -349,6 +349,16 @@ module Master::Core
     # sentence is the Fold's next exec, not a batch argv.
     def self.batch_delete_reason(argv)
       argv = Array(argv).map(&:to_s)
+      git_command, git_args = git_command_parts(argv)
+      if git_command == "clean" && !git_clean_dry_run?(git_args)
+        return "git clean refused: it can erase ignored screenshots, private LoRA sources, datasets and trained models"
+      end
+      if git_command == "reset" && git_args.include?("--hard")
+        return "git reset --hard refused: it can discard retained screenshot changes"
+      end
+
+      preserved = preserved_asset_delete_reason(argv, git_command:, git_args:)
+      return preserved if preserved
       return "batch delete refused: git clean without a pathspec" if git_clean_all?(argv)
 
       paths = delete_operands(argv)
@@ -414,9 +424,65 @@ module Master::Core
       end
     end
 
+    def self.git_command_parts(argv)
+      return [nil, []] unless File.basename(argv.first.to_s) == "git"
+
+      index = 1
+      while (option = argv[index]) && option.start_with?("-")
+        index += %w[-C -c --git-dir --work-tree].include?(option) ? 2 : 1
+      end
+      [argv[index], argv.drop(index + 1)]
+    end
+
+    def self.git_clean_dry_run?(args)
+      Array(args).any? do |argument|
+        argument == "--dry-run" ||
+          (argument.start_with?("-") && argument.delete_prefix("-").include?("n"))
+      end
+    end
+
     def self.git_clean_all?(argv)
-      File.basename(argv[0].to_s) == "git" && argv[1] == "clean" &&
-        operands_after_flags(argv.drop(2)).empty?
+      command, args = git_command_parts(argv)
+      command == "clean" && !git_clean_dry_run?(args) && operands_after_flags(args).empty?
+    end
+
+    # A path-specific delete/restore is refused when it names a preserved
+    # asset or a directory containing one. Git clean is handled above because
+    # its default scope includes ignored local media that Git cannot enumerate.
+    def self.preserved_asset_delete_reason(argv, git_command: nil, git_args: nil)
+      argv = Array(argv).map(&:to_s)
+      executable = File.basename(argv.first.to_s)
+      paths = if executable == "rm" || executable == "mv"
+                operands_after_flags(argv.drop(1))
+              elsif executable == "git"
+                args = git_args || git_command_parts(argv).last
+                case git_command || git_command_parts(argv).first
+                when "rm", "mv"
+                  operands_after_flags(args)
+                when "restore"
+                  next_paths = args.index("--")
+                  next_paths ? args.drop(next_paths + 1) : operands_after_flags(args)
+                when "checkout"
+                  marker = args.index("--")
+                  marker ? args.drop(marker + 1) : []
+                else
+                  []
+                end
+              else
+                []
+              end
+
+      paths.each do |path|
+        [Dir.pwd, Master::REPO_ROOT].uniq.each do |base|
+          target = File.expand_path(path, base)
+          if Master::Soul.preserved_assets_under?(target, root: Master::REPO_ROOT)
+            return "preserved project asset refused: #{target}"
+          end
+        end
+      end
+      nil
+    rescue StandardError
+      "preserved project asset check failed; refusing destructive command"
     end
 
     def self.delete_operands(argv)
@@ -612,7 +678,8 @@ module Master::Core
     # its count was the idiom, and Memory's was the design.
     private_class_method :default_rules, :immutable_hit?, :configuration_invariant_rule, :no_secret_rule, :ruby_parses_rule, :scan_clean_rule, :reason_rule,
                          :safe_exec_rule, :sandboxed_exec_rule, :read_only_probe_rule, :structured_exec_rule, :batch_delete_rule, :delete_operands,
-                         :operands_after_flags, :git_clean_all?, :forbidden_file_rule, :scope_creep_rule,
+                         :operands_after_flags, :git_command_parts, :git_clean_dry_run?, :git_clean_all?,
+                         :preserved_asset_delete_reason, :forbidden_file_rule, :scope_creep_rule,
                          :two_hats_rule, :evidence_for_done_rule,
                          :git_commit_evidence_rule, :git_commit_scope_rule, :council_for_done_rule,
                          :ideation_before_write_rule, :new_path_rule, :openbsd_manual_preflight_rule, :effect_reversibility_rule, :ruby_syntax_error, :safe_rx
@@ -642,9 +709,13 @@ module Master::Core
       # outside the MASTER that constitution governs is not its to guard: every
       # sacred path is MASTER-relative, so RAILS/ or a test's tmpdir stays writable.
       def self.write_refusal(path, root: nil)
-        # Operator decree 2026-11-09 (MASTER_SACRED_WRITES=allowed): the
-        # sacred-path boundary stops refusing automated writers and commits.
-        # Master::Ground::Immutability.writes_allowed? is the one switch.
+        workspace = root ? File.expand_path(root.to_s) : Master::REPO_ROOT
+        if Master::Soul.preserved_asset?(path, root: workspace)
+          return "#{path} is a preserved project asset: automated modification is refused"
+        end
+
+        # Operator decree 2026-11-09 still applies to ordinary Soul-declared
+        # paths, but never disables the preserved-media boundary above.
         return nil if Master::Ground::Immutability.writes_allowed?
 
         master = governing_root(root)
@@ -678,6 +749,7 @@ module Master::Core
       end
 
       def sacred?(path)
+        return true if Master::Soul.preserved_asset?(path, root: @root)
         return false if Master::Ground::Immutability.writes_allowed?
 
         relative = normalize(path)

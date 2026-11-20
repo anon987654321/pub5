@@ -29,6 +29,9 @@ module Master
 
         full = resolved.value!
         return Result.err("not found: #{path}", category: :validation) unless File.exist?(full) || Dir.exist?(full)
+        if Master::Soul.preserved_assets_under?(full, root: @root)
+          return Result.err("protected path refused: preserved project asset under #{path}", category: :validation)
+        end
 
         permit = @governor.permit?(NAME, TIER, "#{recursive ? "delete recursively" : "delete"} #{path}")
         return permit if permit.err?
@@ -74,6 +77,8 @@ module Master
       private
 
       def sacred?(rel)
+        return true if Master::Soul.preserved_asset?(rel, root: @root)
+
         master_relative = @root == Master::REPO_ROOT ? rel.delete_prefix("MASTER/") : rel
         # The root's own policy governs, not MASTER's by default — same
         # contract as PathGuard#sacred?.

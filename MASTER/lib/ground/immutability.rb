@@ -21,6 +21,7 @@ module Master
       end
 
       def self.blocked?(path, root: Master::ROOT)
+        return true if Master::Soul.preserved_asset?(path, root:)
         return false if writes_allowed?
 
         new(root:).blocked?(path)
@@ -31,6 +32,8 @@ module Master
       end
 
       def blocked?(relative_or_absolute)
+        return true if Master::Soul.preserved_asset?(relative_or_absolute, root: @root)
+
         relative = normalize_relative(relative_or_absolute)
         return Master::Soul.sacred?(relative, root: @root) if [Master::ROOT, Master::REPO_ROOT].include?(@root)
 

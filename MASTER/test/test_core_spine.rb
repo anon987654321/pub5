@@ -128,6 +128,22 @@ class TestKernelSpine < Minitest::Test
     assert_match(/git clean/, reason)
   end
 
+  def test_git_clean_with_pathspec_refuses_ignored_private_media
+    reason = Master::Core::Constitution.batch_delete_reason(%w[git clean -fdx -- STUDIO/lora])
+    assert_match(/git clean refused/, reason)
+    assert_nil Master::Core::Constitution.batch_delete_reason(%w[git clean -ndx -- STUDIO/lora])
+  end
+
+  def test_single_path_delete_of_a_preserved_asset_is_refused
+    screenshot = File.join(Master::REPO_ROOT, "RAILS/screenshot_brgen_review.png")
+    reason = Master::Core::Constitution.batch_delete_reason(["rm", "-f", screenshot])
+    assert_match(/preserved project asset refused/, reason)
+
+    weights = File.join(Master::REPO_ROOT, "STUDIO/lora/johann/weights/model.safetensors")
+    reason = Master::Core::Constitution.batch_delete_reason(["git", "rm", "--", weights])
+    assert_match(/preserved project asset refused/, reason)
+  end
+
   def test_ruby_write_must_parse
     effect = Master::Core::Effect.write("bad.rb", "def nope")
     verdict = constitution.admit(effect, Master::Core::Memory.new)

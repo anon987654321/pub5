@@ -18,6 +18,51 @@ module Master
 
     VERSION = "3.0.0"
     ROOT = File.expand_path("..", __dir__).freeze
+    REPOSITORY_ROOT = File.expand_path("..", ROOT).freeze
+
+    PRESERVED_ASSET_GLOBS = %w[
+      RAILS/screenshot_*
+      RAILS/**/screenshots
+      RAILS/**/screenshots/**
+      RAILS/visual-review-*
+      RAILS/visual-review-*/**
+      RAILS/**/visual-review-*
+      RAILS/**/visual-review-*/**
+      RAILS/visual_contract
+      RAILS/visual_contract/**
+      RAILS/sweep-*
+      RAILS/sweep-*/**
+      MASTER/checks/data/route_screenshots
+      MASTER/checks/data/route_screenshots/**
+      STUDIO/lora/*/sources
+      STUDIO/lora/*/sources/**
+      STUDIO/lora/*/references
+      STUDIO/lora/*/references/**
+      STUDIO/lora/*/weights
+      STUDIO/lora/*/weights/**
+      STUDIO/lora/*/dataset
+      STUDIO/lora/*/dataset/**
+      STUDIO/lora/*/dataset_*
+      STUDIO/lora/*/dataset_*/**
+      STUDIO/lora/*/out
+      STUDIO/lora/*/out/**
+      STUDIO/lora/*/retouched
+      STUDIO/lora/*/retouched/**
+      STUDIO/lora/*/evidence
+      STUDIO/lora/*/evidence/**
+      STUDIO/lora/*/.cache
+      STUDIO/lora/*/.cache/**
+      STUDIO/lora/*/subject.env
+      STUDIO/lora/*/consent.yml
+      STUDIO/lora/*/ledger.jsonl
+      STUDIO/lora/*/replicate_training.json
+      STUDIO/lora/*_selfie_*
+      STUDIO/lora/*_film_*
+      STUDIO/selfies
+      STUDIO/selfies/**
+      STUDIO/postpro/models
+      STUDIO/postpro/models/**
+    ].freeze
 
     AUTHORITY_ORDER_IDS = %w[
       soul laws executable_laws_and_gates tree_contracts git_history
@@ -285,8 +330,56 @@ module Master
         raise IntegrityError, "protected paths could not be read from soul.yml#absolute.sacred_paths: #{e.class}: #{e.message}"
       end
 
+      # Private media and visual evidence are preserved independently of the
+      # general sacred-path switch. A tree-local root resolves to its checkout;
+      # absolute paths are accepted for the shell and filesystem adapters.
+      def preserved_asset?(path, root: REPOSITORY_ROOT)
+        workspace = File.expand_path(root)
+        parent = File.dirname(workspace)
+        repository = if File.file?(File.join(workspace, "MASTER", "data", "soul.yml"))
+                       workspace
+                     elsif File.file?(File.join(parent, "MASTER", "data", "soul.yml"))
+                       parent
+                     else
+                       workspace
+                     end
+
+        raw = path.to_s
+        tree_relative = raw.match?(%r{\A(?:MASTER|RAILS|OPENBSD|STUDIO|BIZ)/})
+        target = File.expand_path(raw, tree_relative ? repository : workspace)
+        return false unless inside?(target, repository)
+
+        relative = target.delete_prefix("#{repository}/")
+        PRESERVED_ASSET_GLOBS.any? do |pattern|
+          File.fnmatch?(pattern, relative, File::FNM_PATHNAME | File::FNM_DOTMATCH)
+        end
+      rescue StandardError
+        false
+      end
+
+      # Directory operations must check descendants as well as the directory
+      # name. This catches recursive removal of a subject root containing an
+      # empty weights/source folder, and broad cleanup of the checkout itself.
+      def preserved_assets_under?(path, root: REPOSITORY_ROOT)
+        return true if preserved_asset?(path, root:)
+
+        workspace = File.expand_path(root)
+        raw = path.to_s
+        tree_relative = raw.match?(%r{\A(?:MASTER|RAILS|OPENBSD|STUDIO|BIZ)/})
+        target = File.expand_path(raw, tree_relative ? preserved_repository_root(workspace) : workspace)
+        return false unless File.directory?(target) && !File.symlink?(target)
+
+        Dir.glob(File.join(target, "**", "*"), File::FNM_DOTMATCH).any? do |entry|
+          preserved_asset?(entry, root: workspace)
+        end
+      rescue StandardError
+        false
+      end
+
       def sacred?(path, root: ROOT)
         workspace = File.expand_path(root)
+        return true if preserved_asset?(path, root: workspace)
+
         master_root = resolve_master_root(root)
         target = File.expand_path(path.to_s, workspace)
         return true unless inside?(target, workspace)
@@ -403,6 +496,15 @@ module Master
 
       def inside?(path, root)
         path == root || path.start_with?("#{root}#{File::SEPARATOR}")
+      end
+
+      def preserved_repository_root(workspace)
+        value = File.expand_path(workspace)
+        parent = File.dirname(value)
+        return value if File.file?(File.join(value, "MASTER", "data", "soul.yml"))
+        return parent if File.file?(File.join(parent, "MASTER", "data", "soul.yml"))
+
+        value
       end
 
       def secure_digest_match?(actual, expected)
