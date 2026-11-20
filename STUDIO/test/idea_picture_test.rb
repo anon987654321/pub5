@@ -282,6 +282,12 @@ class TestIdeaPictureOutput < Minitest::Test
       assert_match(/owner-only \(0600\)/, error.message)
 
       File.chmod(0o600, manifest)
+      linked = File.join(model_directory, "linked.json")
+      File.link(manifest, linked)
+      error = assert_raises(RuntimeError) { picture.send(:still_model) }
+      assert_match(/singly-linked/, error.message)
+      File.unlink(linked)
+
       assert_equal version, picture.send(:still_model)
     end
   end
