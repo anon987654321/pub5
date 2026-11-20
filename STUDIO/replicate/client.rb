@@ -36,7 +36,7 @@ module Studio
 
         def upload_zip(path, subject:)
           authorize_subject!(subject, action: :training)
-          validate_upload_source!(path)
+          validate_private_training_zip!(path)
           upload_binary(path, mime: "application/zip")
         end
 
@@ -50,6 +50,17 @@ module Studio
           subject_directory = File.join(File.expand_path("../lora", __dir__), name)
           Studio::Lora::Consent.require!(subject: name, subject_directory:, action:)
         end
+
+        def validate_private_training_zip!(path)
+          validate_upload_source!(path)
+          stat = File.lstat(path)
+          unless stat.file? && !stat.symlink? && stat.uid == Process.uid &&
+                 stat.nlink == 1 && (stat.mode & 0o077).zero?
+            raise ArgumentError, "training ZIP must be a singly-linked owner-only (0600) regular file"
+          end
+          path
+        end
+        private :validate_private_training_zip!
 
         def validate_upload_source!(path)
           raise ArgumentError, "upload source must be a readable regular, non-symlink file" unless
