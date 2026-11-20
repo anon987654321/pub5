@@ -125,7 +125,7 @@ if $PROGRAM_NAME == __FILE__
     when :series
       options[:series] = true
       options[:count] = wizard.number("How many sittings", default: 6, range: 1..24)
-      options[:engine] = studio_engine_choice(wizard)
+      # The ordinary selfie path is always this subject's trained LoRA.
       options[:keep] = !wizard.confirm("Replace this subject's earlier stills?", default: true)
     when :picture
       options[:prompt] = wizard.ask("Describe the picture")
