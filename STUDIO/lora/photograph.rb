@@ -89,7 +89,7 @@ if $PROGRAM_NAME == __FILE__
     exit Studio::Api.respond(studio_photograph_actions, argv: ARGV)
   end
 
-  options = { film: false, duration: 5, subject: ENV.fetch("STUDIO_PHOTOGRAPH_SUBJECT", "ragnhild") }
+  options = { film: false, duration: 5, count: 6, all_subjects: false, subject: ENV.fetch("STUDIO_PHOTOGRAPH_SUBJECT", "ragnhild") }
   wizard = Studio::Interactive.new
   # No arguments in a terminal: ask, rather than require a remembered flag.
   # Flags still work for scripts, and a piped run keeps its defaults.
@@ -101,8 +101,9 @@ if $PROGRAM_NAME == __FILE__
       parser.on("--duration N", Integer, "film duration in seconds (1..10)") { |value| options[:duration] = value }
       parser.on("--soundtrack PATH", "lay a music bed under the film (e.g. dilla.wav)") { |value| options[:soundtrack] = value }
       parser.on("--subject NAME", "subject directory under STUDIO/lora (default ragnhild)") { |value| options[:subject] = value }
-      parser.on("--selfie-series", "render a bounded selfie series for --subject") { options[:series] = true }
-      parser.on("--count N", Integer, "series length, 1..24 (default 10)") { |value| options[:count] = value }
+      parser.on("--selfie-series", "render six portraits using --subject's own LoRA") { options[:series] = true }
+      parser.on("--all-subjects", "preflight and render six LoRA portraits for Johann, Ragnhild and Merethe") { options[:all_subjects] = true }
+      parser.on("--count N", Integer, "series length, 1..24 (default 6)") { |value| options[:count] = value }
       parser.on("--keep", "keep this subject's earlier generated stills instead of replacing them") { options[:keep] = true }
       parser.on("--engine NAME", "render with a model from STUDIO/replicate/models.yml") { |value| options[:engine] = value }
       parser.on("--film-engine NAME", "animate with a model from image_to_video (default minimax/h3-highspeed)") { |value| options[:film_engine] = value }
@@ -123,7 +124,7 @@ if $PROGRAM_NAME == __FILE__
     case mode
     when :series
       options[:series] = true
-      options[:count] = wizard.number("How many sittings", default: 10, range: 1..24)
+      options[:count] = wizard.number("How many sittings", default: 6, range: 1..24)
       options[:engine] = studio_engine_choice(wizard)
       options[:keep] = !wizard.confirm("Replace this subject's earlier stills?", default: true)
     when :picture
@@ -154,15 +155,29 @@ if $PROGRAM_NAME == __FILE__
       exit 0
     elsif options[:check_model]
       { "subject" => options[:subject], "model" => Studio::Visual::IdeaPicture.new(subject: options[:subject]).validate_model! }
+    elsif options[:all_subjects]
+      abort "--all-subjects requires the subject's trained LoRA; --engine is not allowed" if options[:engine]
+      abort "--all-subjects cannot be combined with --keep" if options[:keep]
+      subjects = %w[johann ragnhild merethe]
+      series = subjects.to_h { |subject| [subject, Studio::Visual::SelfieSeries.new(subject:)] }
+      # Validate every subject's consent, pinned model and input schema before
+      # the first prediction. A missing model blocks the whole batch up front.
+      series.each_value(&:preflight!)
+      rendered = subjects.to_h do |subject|
+        [subject, series.fetch(subject).run(count: options[:count] || 6, replace: false)]
+      end
+      incomplete = rendered.select { |_subject, paths| paths.length != (options[:count] || 6) }
+      abort "INCOMPLETE: no old renders were deleted; subjects with incomplete output: #{incomplete.keys.join(", ")}" unless incomplete.empty?
+      deleted = subjects.to_h do |subject|
+        [subject, series.fetch(subject).replace_previous_renders!(keep: rendered.fetch(subject))]
+      end
+      { "subjects" => rendered, "old_renders_deleted" => deleted }
     elsif options[:series]
-      # Sensible defaults, no flags required: ten sittings for the default
-      # subject, graded heavy, replacing that subject's earlier stills so the
-      # folder is the current series. --keep preserves the previous run instead.
-      # --engine NAME swaps the trained LoRA for a reference model that keeps the
-      # face from the subject's own photographs in lora/<subject>/references.
+      # A series defaults to the subject's pinned LoRA. An explicit --engine is
+      # an intentional opt-out for reference/text experiments.
       Studio::ReplicateClient::Models.engine(options[:engine]) if options[:engine]
       Studio::Visual::SelfieSeries.new(subject: options[:subject], engine: options[:engine]).run(
-        count: options[:count] || 10,
+        count: options[:count] || 6,
         replace: options[:keep] != true,
       )
     elsif options[:animate]
