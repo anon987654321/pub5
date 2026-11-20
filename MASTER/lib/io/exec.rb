@@ -19,8 +19,9 @@ module Master
     #   out, status      = Master::Io::Exec.capture2e("git", "status", chdir: root)
     #   out, err, status = Master::Io::Exec.capture3(env, "ruby", "-c", file)
     #
-    # A leading env Hash, chdir:, stdin_data:, and other Open3 spawn options pass
-    # through unchanged. On timeout the returned status is a non-success Process
+    # A leading env Hash and an env: keyword both reach the child environment;
+    # the keyword wins per name. chdir:, stdin_data: and the other spawn options
+    # pass through unchanged. On timeout the returned status is a non-success Process
     # status (the child signalled), so existing `status.success?` checks fall
     # through to their error path the same way they do for a real failure.
     # Callers that need to distinguish a timeout may set raise_on_timeout: true.
@@ -56,10 +57,10 @@ module Master
       # on_stdout: receives each chunk of the first output stream as it is read, so a caller can show a
       # reply while the child is still writing it; the whole output is still returned at the end.
       def run_capture(opener, cmd, timeout, opts, raise_on_timeout: false)
-        stdin_data, binmode, spawn_opts = split_opts(opts)
+        stdin_data, binmode, env, spawn_opts = split_opts(opts)
         on_stdout = spawn_opts.delete(:on_stdout)
         options = ProcessSpawn.options(spawn_opts.merge(pgroup: true))
-        command = command_with_clean_environment(cmd)
+        command = command_with_clean_environment(cmd, env)
         Open3.public_send(opener, *command, **options) do |stdin, *streams, wait_thr|
           if binmode
             stdin.binmode
@@ -77,9 +78,10 @@ module Master
       end
       private_class_method :run_capture
 
-      def command_with_clean_environment(command)
+      def command_with_clean_environment(command, env = nil)
         args = command.dup
         overrides = args.first.is_a?(Hash) ? args.shift : {}
+        overrides = overrides.merge(env) if env
         [ProcessSpawn.environment(overrides), *args]
       end
       private_class_method :command_with_clean_environment
@@ -123,13 +125,16 @@ module Master
         which(name, path: [ENV.fetch("PATH", ""), *user_bins, *HOMEBREW_BINS].join(File::PATH_SEPARATOR))
       end
 
-      # Open3.capture* consume stdin_data and binmode; all other options belong
-      # to spawn and must pass through, including env, chdir, and redirects.
+      # Open3.capture* consume stdin_data and binmode. env is not a spawn option:
+      # Process.spawn takes the environment as a leading Hash and raises
+      # ArgumentError, "wrong exec option symbol: env", when it rides in the
+      # options. Fold env: into the leading hash; chdir and redirects pass through.
       def split_opts(opts)
         opts = opts.dup
         stdin_data = opts.delete(:stdin_data)
         binmode = opts.delete(:binmode)
-        [stdin_data, binmode, opts]
+        env = opts.delete(:env)
+        [stdin_data, binmode, env, opts]
       end
 
       def writer_for(stdin, data)
