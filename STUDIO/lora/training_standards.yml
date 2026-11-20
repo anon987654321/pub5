@@ -25,9 +25,10 @@ save:
   save_every: 250
   max_step_saves_to_keep: 4
   push_to_hub: false
-dataset:
+quality:
   min_images: 12
   max_images: 18
+dataset:
   caption_ext: txt
   caption_dropout_rate: 0.05
   shuffle_tokens: false
