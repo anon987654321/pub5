@@ -56,6 +56,9 @@ module Master
       STUDIO/lora/*/consent.yml
       STUDIO/lora/*/ledger.jsonl
       STUDIO/lora/*/replicate_training.json
+      STUDIO/lora/*/train.yaml
+      STUDIO/lora/*/model.json
+      STUDIO/lora/*/model.yml
       STUDIO/lora/*_selfie_*
       STUDIO/lora/*_film_*
       STUDIO/selfies
@@ -335,14 +338,7 @@ module Master
       # absolute paths are accepted for the shell and filesystem adapters.
       def preserved_asset?(path, root: REPOSITORY_ROOT)
         workspace = File.expand_path(root)
-        parent = File.dirname(workspace)
-        repository = if File.file?(File.join(workspace, "MASTER", "data", "soul.yml"))
-                       workspace
-                     elsif File.file?(File.join(parent, "MASTER", "data", "soul.yml"))
-                       parent
-                     else
-                       workspace
-                     end
+        repository = preserved_repository_root(workspace)
 
         raw = path.to_s
         tree_relative = raw.match?(%r{\A(?:MASTER|RAILS|OPENBSD|STUDIO|BIZ)/})
@@ -364,9 +360,10 @@ module Master
         return true if preserved_asset?(path, root:)
 
         workspace = File.expand_path(root)
+        repository = preserved_repository_root(workspace)
         raw = path.to_s
         tree_relative = raw.match?(%r{\A(?:MASTER|RAILS|OPENBSD|STUDIO|BIZ)/})
-        target = File.expand_path(raw, tree_relative ? preserved_repository_root(workspace) : workspace)
+        target = File.expand_path(raw, tree_relative ? repository : workspace)
         return false unless File.directory?(target) && !File.symlink?(target)
 
         Dir.glob(File.join(target, "**", "*"), File::FNM_DOTMATCH).any? do |entry|
@@ -500,10 +497,16 @@ module Master
 
       def preserved_repository_root(workspace)
         value = File.expand_path(workspace)
-        parent = File.dirname(value)
-        return value if File.file?(File.join(value, "MASTER", "data", "soul.yml"))
-        return parent if File.file?(File.join(parent, "MASTER", "data", "soul.yml"))
+        cursor = value
+        loop do
+          return cursor if File.file?(File.join(cursor, "MASTER", "data", "soul.yml"))
 
+          parent = File.dirname(cursor)
+          return parent if File.basename(cursor) == "MASTER" && File.file?(File.join(cursor, "data", "soul.yml"))
+          break if parent == cursor
+
+          cursor = parent
+        end
         value
       end
 

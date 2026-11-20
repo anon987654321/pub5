@@ -132,6 +132,7 @@ class TestKernelSpine < Minitest::Test
     reason = Master::Core::Constitution.batch_delete_reason(%w[git clean -fdx -- STUDIO/lora])
     assert_match(/git clean refused/, reason)
     assert_nil Master::Core::Constitution.batch_delete_reason(%w[git clean -ndx -- STUDIO/lora])
+    refute_nil Master::Core::Constitution.batch_delete_reason(%w[git --no-optional-locks clean -fd])
   end
 
   def test_single_path_delete_of_a_preserved_asset_is_refused

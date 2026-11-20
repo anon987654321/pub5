@@ -1276,3 +1276,11 @@ when both exist without removing the raw file. The local LoRA migration no
 longer rolls back by deleting files after a later copy fails; it reports all
 created destination paths, including any partial file, for explicit recovery.
 Focused regressions are authored; tests remain NOT_RUN here.
+
+
+2026-11-20 preservation-guard hardening: nested subject-local roots now resolve
+all the way to the checkout when checking source photos, weights and training
+plans. The git-clean preview recognizer accepts only -n/-ndx or --dry-run; long
+options such as --no-optional-locks can no longer bypass the destructive-clean
+refusal. Regressions cover nested roots and this option boundary; tests remain
+NOT_RUN.

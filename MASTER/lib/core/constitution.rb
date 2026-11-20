@@ -437,7 +437,8 @@ module Master::Core
     def self.git_clean_dry_run?(args)
       Array(args).any? do |argument|
         argument == "--dry-run" ||
-          (argument.start_with?("-") && argument.delete_prefix("-").include?("n"))
+          (argument.start_with?("-") && !argument.start_with?("--") &&
+           argument.delete_prefix("-").include?("n"))
       end
     end
 

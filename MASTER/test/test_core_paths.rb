@@ -87,6 +87,11 @@ class TestCorePaths < Minitest::Test
       assert_match(/preserved project asset/, Master::Core::Constitution::Paths.write_refusal(path, root: Master::REPO_ROOT))
     end
 
+    subject_root = File.join(Master::REPO_ROOT, "STUDIO/lora/johann")
+    assert Master::Soul.preserved_asset?("sources/portrait.jpg", root: subject_root)
+    assert Master::Soul.preserved_asset?("weights/johann/replicate_training.json", root: subject_root)
+    assert Master::Soul.preserved_asset?("train.yaml", root: subject_root)
+
     refute Master::Soul.preserved_asset?("STUDIO/lora/selfie_series.rb", root: Master::REPO_ROOT)
     refute repo_paths.sacred?("STUDIO/lora/selfie_series.rb")
   end
