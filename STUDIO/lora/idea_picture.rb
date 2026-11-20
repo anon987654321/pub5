@@ -503,7 +503,7 @@ module Studio
         return nil unless plan.is_a?(Hash) && plan["schema"] == 1 && plan["subject"] == @subject
 
         trigger = plan["trigger_word"].to_s
-        trigger if trigger.match?(/\\A[A-Za-z][A-Za-z0-9_-]{0,63}\\z/)
+        trigger if trigger.match?(/\A[A-Za-z][A-Za-z0-9_-]{0,63}\z/)
       rescue Psych::Exception => error
         raise "invalid subject training plan #{path}: #{error.message}"
       end
