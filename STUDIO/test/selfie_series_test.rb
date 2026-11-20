@@ -49,6 +49,8 @@ class TestSelfieSeries < Minitest::Test
       define_method(:grade) { |path, **| path }
       alias_method :still_model_without_stub, :still_model
       define_method(:still_model) { "owner/model:version-123" }
+      alias_method :subject_env_without_stub, :subject_env
+      define_method(:subject_env) { { "LIKELINESS_REVIEWED_VERSION" => "owner/model:version-123" } }
     end
   end
 
@@ -60,6 +62,9 @@ class TestSelfieSeries < Minitest::Test
       remove_method(:still_model)
       alias_method :still_model, :still_model_without_stub
       remove_method(:still_model_without_stub)
+      remove_method(:subject_env)
+      alias_method :subject_env, :subject_env_without_stub
+      remove_method(:subject_env_without_stub)
     end
     FileUtils.remove_entry(@dir) if File.directory?(@dir)
   end
