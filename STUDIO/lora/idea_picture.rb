@@ -219,15 +219,18 @@ module Studio
       # Candidate rendering is a narrow exception for likeness review, not
       # a general bypass: output must stay below this subject's private cache.
       def candidate_review_directory?
-        root = File.expand_path(File.join(@subject_directory, ".cache", "likeness-review"))
+        base = File.expand_path(@subject_directory)
+        root = File.join(base, ".cache", "likeness-review")
         target = File.expand_path(@directory)
         return false unless target.start_with?("#{root}#{File::SEPARATOR}")
-        return false unless File.directory?(root) && !File.symlink?(root)
 
+        paths = [base, File.join(base, ".cache"), root]
         cursor = root
-        [root, *target.delete_prefix("#{root}#{File::SEPARATOR}").split(File::SEPARATOR).then do |parts|
-          parts[0...-1].each_with_object([]) { |part, rows| cursor = File.join(cursor, part); rows << cursor }
-        end].each do |path|
+        target.delete_prefix("#{root}#{File::SEPARATOR}").split(File::SEPARATOR).each do |part|
+          cursor = File.join(cursor, part)
+          paths << cursor
+        end
+        paths.each do |path|
           stat = File.lstat(path)
           return false unless stat.directory? && !stat.symlink? && stat.uid == Process.uid && (stat.mode & 0o077).zero?
         end
