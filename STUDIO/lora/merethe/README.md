@@ -98,8 +98,8 @@ trainer's dataset guidance.
 
 ## Training plan — shared with Johann and Ragnhild
 
-- Trainer: \`ostris/flux-dev-lora-trainer\`
-- Pinned trainer version: \`26dce37af90b9d997eeb970d92e47de3064d46c300504ae376c75bef6a9022d2\`
+- Trainer: \`replicate/fast-flux-trainer\`
+- Pinned trainer version: \`e5a5bc821112c107e6ddb8491c5b898f94d06eaca861d1dbf37b29cd69ba8988\`
 - Trigger: \`MERETHE\`
 - Initial steps: \`1600\`
 - LoRA rank: \`16\`
