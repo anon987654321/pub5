@@ -570,10 +570,45 @@ module Studio
         private_manifest
       end
 
+      # A manifest under weights/ is a private subject artifact. The old
+      # subject-root manifest is tracked compatibility metadata and remains
+      # readable; private manifests must stay inside owner-only directories.
+      def require_private_training_manifest!(path)
+        subject_root = File.expand_path(@subject_directory)
+        weights_root = File.join(subject_root, "weights")
+        absolute = File.expand_path(path)
+        return true unless absolute.start_with?("#{weights_root}#{File::SEPARATOR}")
+
+        model_directory = File.dirname(absolute)
+        unless File.dirname(model_directory) == weights_root &&
+               File.basename(absolute) == "replicate_training.json"
+          raise "private training manifest must be weights/<model>/replicate_training.json"
+        end
+
+        [subject_root, weights_root, model_directory].each do |directory|
+          stat = File.lstat(directory)
+          unless stat.directory? && !stat.symlink? &&
+                 stat.uid == Process.uid && (stat.mode & 0o077).zero?
+            raise "private training manifest directory must be current-user-owned and owner-only (0700): #{directory}"
+          end
+        end
+
+        stat = File.lstat(absolute)
+        unless stat.file? && !stat.symlink? &&
+               stat.uid == Process.uid && stat.nlink == 1 &&
+               (stat.mode & 0o077).zero?
+          raise "private training manifest must be a regular, current-user-owned, singly-linked owner-only (0600) file: #{absolute}"
+        end
+        true
+      rescue SystemCallError => error
+        raise "cannot verify private training manifest: #{error.class}: #{error.message}"
+      end
+
       def still_model
         path = @model_manifest
         raise "training manifest must not be a symlink: #{path}" if File.symlink?(path)
         if File.file?(path)
+          require_private_training_manifest!(path)
           raise "training manifest exceeds 64 KB: #{path}" if File.size(path) > 65_536
           version = JSON.parse(File.read(path, encoding: "UTF-8"))["version"].to_s
           raise "training manifest has no valid owner/model:version: #{path}" unless version.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}:[A-Za-z0-9][A-Za-z0-9_-]{0,127}\z/)
