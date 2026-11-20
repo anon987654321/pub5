@@ -43,12 +43,14 @@ class TestMeretheLoraPackage < Minitest::Test
     assert_equal [12, 18], [Studio::MeretheLora::TARGET_MIN_IMAGES, Studio::MeretheLora::MAX_IMAGES]
   end
 
-  def test_trainer_and_recipe_match_the_shared_standard
+  def test_trainer_and_recipe_match_the_shared_fast_flux_standard
     standard = YAML.safe_load_file(File.expand_path("../lora/training_standards.yml", __dir__))
-    assert_equal standard.fetch("replicate").fetch("trainer"), Studio::MeretheLora::TRAINER
-    assert_equal standard.fetch("replicate").fetch("version"), Studio::MeretheLora::TRAINER_VERSION
-    assert_equal standard.fetch("replicate").fetch("steps"), standard.fetch("train").fetch("steps")
-    assert_equal standard.fetch("replicate").fetch("lora_rank"), standard.fetch("network").fetch("linear")
+    replicate = standard.fetch("replicate")
+    assert_equal replicate.fetch("trainer"), Studio::MeretheLora::TRAINER
+    assert_equal replicate.fetch("version"), Studio::MeretheLora::TRAINER_VERSION
+    assert_equal 1000, replicate.fetch("training_steps")
+    assert_equal "subject", replicate.fetch("lora_type")
+    assert_equal 42, replicate.fetch("seed")
   end
 
   def test_prepared_dataset_and_zip_replace_as_one_recoverable_pair
