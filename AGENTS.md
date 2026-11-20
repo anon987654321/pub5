@@ -199,4 +199,3 @@ serves the reader: a specific promise, evidence and a clear next action; never
 hype or dark patterns. Update the owning document with its code or
 configuration. Review rendered Markdown and its links, tables, lists and code
 examples. Man pages use mdoc(7); Markdown adopts its precision, not its syntax.
-
