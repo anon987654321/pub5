@@ -27,6 +27,16 @@ class TestStudioLoraCli < Minitest::Test
     assert_equal ["--subject", "ragnhild", "--json"], seen
   end
 
+  def test_training_command_delegates_to_the_local_runner
+    seen = nil
+    status = CLI.stub(:train_command, ->(arguments) { seen = arguments; 0 }) do
+      CLI.run_flags(["train", "--all", "--timeout", "7200"])
+    end
+
+    assert_equal 0, status
+    assert_equal ["--all", "--timeout", "7200"], seen
+  end
+
   def test_recovery_is_dry_run_when_no_apply_flag_is_given
     seen = nil
     output, error = capture_io do
