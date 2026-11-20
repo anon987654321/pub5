@@ -534,7 +534,7 @@ module Master
                   end
                 end
               end
-              node.children.each { |child| walk.call(child) }
+              node.children&.each { |child| walk.call(child) }
             end
             if path.tr("\\", "/").split("/").include?("STUDIO")
               empty_field = source.match(/^[ \t]*(?:bpm|tempo|instrument):[ \t]*(?:#.*)?$/i)
