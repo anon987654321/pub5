@@ -282,7 +282,7 @@ class TestIdeaPictureOutput < Minitest::Test
       current = "anon987654321/ragnhild-private:" + ("b" * 64)
       File.write(File.join(subject, "replicate_training.json"), JSON.generate("version" => old))
       env = File.join(subject, "subject.env")
-      File.write(env, "MODEL=ragnhild\\nREPLICATE_MODEL=#{current}\\nTRIGGER=ragnhild\\n", mode: "w", perm: 0o600)
+      File.write(env, "MODEL=ragnhild\nREPLICATE_MODEL=#{current}\nTRIGGER=ragnhild\n", mode: "w", perm: 0o600)
       File.chmod(0o600, env)
 
       picture = Studio::Visual::IdeaPicture.new(subject: "ragnhild", directory: dir, subjects_root: dir)
