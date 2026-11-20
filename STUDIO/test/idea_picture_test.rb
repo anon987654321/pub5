@@ -362,7 +362,7 @@ class TestIdeaPictureOutput < Minitest::Test
       version = "owner/model:version-123"
       File.write(manifest, JSON.generate("version" => version))
       env_path = File.join(subject, "subject.env")
-      File.write(env_path, "MODEL=probe\\nTRIGGER=probe\\n")
+      File.write(env_path, "MODEL=probe\nTRIGGER=probe\n")
       File.chmod(0o600, env_path)
       client = Object.new
       client.define_singleton_method(:input_names) do |_model|
