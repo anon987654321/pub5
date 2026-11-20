@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 require "digest"
-require "fileutils"
 require "json"
+require_relative "../../io/atomic_write"
 require_relative "../../trace/dmesg"
 require_relative "../../ground/library_verify"
 
@@ -162,12 +162,9 @@ module Master
         def write(path, key:, findings:)
           data = JSON.generate("key" => key, "findings" => FindingCodec.encode(findings))
 
-          FileUtils.mkdir_p(@dir)
-          temp = "#{path}.#{Process.pid}.#{Thread.current.object_id}"
-          File.write(temp, data)
-          File.rename(temp, path)
+          Master::Io::AtomicWrite.write_atomic(path, data)
 
-        rescue TypeError, SystemCallError => e
+        rescue TypeError, SystemCallError, IOError => e
           Master::Trace::Dmesg.status("scan0", "finding cache not written: #{e.message[0, 80]}")
         end
       end

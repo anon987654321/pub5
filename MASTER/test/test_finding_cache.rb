@@ -84,6 +84,24 @@ class TestFindingCache < Minitest::Test
     assert_equal({ law: :PURE, line: 9, tags: [:X] }, replayed.last)
   end
 
+  def test_cache_entries_use_the_shared_atomic_writer
+    calls = []
+    writer = Master::Io::AtomicWrite.method(:write_atomic)
+    instrumented = lambda do |path, content, **options|
+      calls << [path, content, options]
+      writer.call(path, content, **options)
+    end
+
+    Master::Io::AtomicWrite.stub(:write_atomic, instrumented) do
+      fetch("x = 1\n")
+    end
+
+    assert_equal 1, calls.length
+    assert_equal File.join(@dir, ".master", "scan_findings"), File.dirname(calls.first.first)
+    assert_equal "PURE", JSON.parse(calls.first[1]).fetch("findings").first.fetch("$finding").fetch("law")
+    assert_empty Dir.glob(File.join(File.dirname(calls.first.first), ".master_atomic_*"))
+  end
+
   def test_changed_content_or_laws_run_again
     calls = []
     fetch("x = 1\n", calls:)

@@ -278,15 +278,26 @@ class TestAstFixerTransforms < Minitest::Test
     assert_empty result[:transforms]
   end
 
-  def test_write_back_preserves_the_executable_bit
+  def test_write_back_preserves_the_executable_bit_through_shared_writer
     Dir.mktmpdir do |dir|
       path = File.join(dir, "cron-job.zsh")
       File.write(path, "#!/usr/bin/env zsh\nprint hi\n")
       File.chmod(0o755, path)
-      Master::Fix::Scan::AstFixer.fix(path, File.read(path))
+      calls = []
+      writer = Master::Io::AtomicWrite.method(:write_atomic)
+      instrumented = lambda do |target, content, **options|
+        calls << [target, content, options]
+        writer.call(target, content, **options)
+      end
+      Master::Io::AtomicWrite.stub(:write_atomic, instrumented) do
+        Master::Fix::Scan::AstFixer.fix(path, File.read(path))
+      end
 
+      assert_equal 1, calls.length
+      assert_equal path, calls.first.first
       assert_equal 0o755, File.stat(path).mode & 0o777, "executable bit lost on write_back"
       assert_includes File.read(path), "set -euo pipefail"
+      assert_empty Dir.glob(File.join(dir, ".master_atomic_*"))
     end
   end
 

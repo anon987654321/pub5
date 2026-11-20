@@ -5,6 +5,7 @@ require "set"
 require "yaml"
 require "json"
 require_relative "../../io/exec"
+require_relative "../../io/atomic_write"
 require "strscan"
 require_relative "ast_fixer/syntax_transforms"
 require_relative "ast_fixer/web_transforms"
@@ -430,25 +431,7 @@ module Master
         end
 
         def write_back(content)
-          temporary_path = "#{@path}.ast_fix.#{Process.pid}.tmp"
-          File.write(temporary_path, content, encoding: "UTF-8")
-          # rename replaces the inode, so the original's mode must travel with
-          # the content — three executable cron scripts came back 0644 from
-          # one pass before this line existed.
-          File.chmod(File.stat(@path).mode, temporary_path) if File.exist?(@path)
-
-          File.rename(temporary_path, @path)
-        rescue StandardError => e
-          delete_temporary_path(temporary_path) if defined?(temporary_path)
-          raise e
-        end
-
-        def delete_temporary_path(path)
-          File.delete(path) if path && File.exist?(path)
-        rescue StandardError => e
-          Master::Ground::Swallow.log(e, context: "AstFixer.delete_temporary_path")
-
-          nil
+          Master::Io::AtomicWrite.write_atomic(@path, content)
         end
       end
     end
