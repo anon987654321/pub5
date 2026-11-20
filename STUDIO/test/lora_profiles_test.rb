@@ -141,6 +141,38 @@ class TestStudioLoraValidator < Minitest::Test
     end
   end
 
+  def test_private_training_manifest_requires_owner_only_directories_and_file
+    with_subject do |root, directory|
+      write_descriptor(directory)
+      dataset = File.join(directory, "dataset")
+      write_dataset(dataset, 12)
+      write_training_plan(directory, dataset: "dataset")
+      write_valid_consent(directory)
+
+      weights = File.join(directory, "weights")
+      model_directory = File.join(weights, "sample")
+      FileUtils.mkdir_p(model_directory, mode: 0o700)
+      [weights, model_directory].each { |path| File.chmod(0o700, path) }
+      manifest = File.join(model_directory, "replicate_training.json")
+      File.write(manifest, JSON.generate("version" => "owner/model:" + ("a" * 64)), mode: "w", perm: 0o600)
+      File.chmod(0o600, manifest)
+
+      [
+        [weights, 0o755, 0o700],
+        [model_directory, 0o755, 0o700],
+        [manifest, 0o644, 0o600],
+      ].each do |path, insecure_mode, secure_mode|
+        File.chmod(insecure_mode, path)
+        report = Studio::Lora::Validator.new(root:).validate_subject("sample")
+
+        assert_equal "FAIL", report.fetch("state")
+        refute report.fetch("training_ready")
+        assert_includes report.fetch("blockers").map { |item| item["id"] }, "replicate_manifest_permissions"
+        File.chmod(secure_mode, path)
+      end
+    end
+  end
+
   def test_dataset_cannot_escape_the_private_subject_directory
     with_subject do |root, directory|
       write_descriptor(directory)
