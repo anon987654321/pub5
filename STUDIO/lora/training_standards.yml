@@ -21,7 +21,7 @@ inference:
   model: dev
   aspect_ratio: "2:3"
   num_outputs: 1
-  guidance_scale: 3.5
+  guidance_scale: 7.5
   num_inference_steps: 28
   output_format: jpg
   output_quality: 95
