@@ -19,7 +19,7 @@
 # from it. Keep this list to models worth reaching for, not every row Replicate
 # has ever published.
 
-verified_on: "2026-11-17"
+verified_on: "2026-11-20"
 # The 2026-11-14 rows (the fofr/kontext edits, the levelsio film looks and
 # the kontext trainer) carry their schema as read from each model's own
 # Replicate page: the declared inputs plus the pinned API example.
@@ -29,9 +29,11 @@ verified_on: "2026-11-17"
 # the chain ends in Replicate's free tier, so a render never dies for want of
 # credit. "$subject_lora" is the subject's own trained model (lora/<subject>),
 # the one engine that is about this person rather than people in general.
-default_engine: google/nano-banana
+default_engine: google/nano-banana-2.1
 fallback_chain:
+  - minimax/image-01
   - bytedance/seedream-4.5
+  - black-forest-labs/flux-2-flex
   - black-forest-labs/flux-2-klein-4b
   - "$subject_lora"
   - black-forest-labs/flux-dev
@@ -47,6 +49,18 @@ free_models:
 
 # Still photographs of a person. The selfie pipeline picks from here.
 text_to_image:
+  google/nano-banana-2.1:
+    likeness: reference
+    inputs: [prompt, image_input, aspect_ratio, resolution, output_format]
+    note: "Current Google reference-image model; accepts up to 14 images and 1K/2K/4K output. Use 2K for face review; 1K for economical drafts."
+  minimax/image-01:
+    likeness: reference
+    inputs: [prompt, aspect_ratio, number_of_images, prompt_optimizer, subject_reference]
+    note: "Single-face subject_reference input; current schema lists $0.01 per output image. Provider README says inputs are sent to MiniMax, so use only with approved provider-processing consent."
+  black-forest-labs/flux-2-flex:
+    likeness: reference
+    inputs: [prompt, input_images, aspect_ratio, resolution, steps, guidance, seed, output_format, output_quality]
+    note: "Up to ten reference images and 4 MP editing; reference coherence is not a face-identity guarantee."
   google/nano-banana:
     likeness: reference
     inputs: [prompt, image_input, aspect_ratio, output_format]
@@ -101,7 +115,13 @@ image_to_image:
     inputs: [prompt, input_image, aspect_ratio, output_format, seed]
   google/nano-banana:
     inputs: [prompt, image_input, aspect_ratio]
-    note: "Also the best multi-reference identity model, so it doubles here."
+    note: "Earlier Gemini reference-image model; retain for compatibility tests, prefer nano-banana-2.1 for new work."
+  google/nano-banana-2.1:
+    inputs: [prompt, image_input, aspect_ratio, resolution, output_format]
+    note: "Current 2.1 model; up to 14 references, 1K/2K/4K output."
+  minimax/image-01:
+    inputs: [prompt, subject_reference, aspect_ratio, number_of_images, prompt_optimizer]
+    note: "Single-face reference image for subject-centric image generation."
   fofr/color-matcher:
     inputs: [image, reference]
     note: "Match one frame's grade to another; a deterministic grade without a look roll."
@@ -221,6 +241,9 @@ lipsync:
 
 # The training route, when a subject's own LoRA is the goal.
 training:
+  replicate/fast-flux-trainer:
+    inputs: [input_images, trigger_word, lora_type]
+    note: "Replicate's newer maintained FLUX subject/style trainer. Current web workflow documents 10-20 images, roughly 1024px, and a 1000-step starting point. The current web version is newer than the public API example pin; do not switch the production client until its full immutable version and input schema are recorded."
   replicate/train-rvc-model:
     inputs: [dataset_zip, model_name]
     note: "Voice model training, the audio counterpart of a face LoRA."
