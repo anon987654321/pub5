@@ -98,6 +98,7 @@ module Studio
         {
           "geometry" => Studio::Lora::Craft::GEOMETRY,
           "scenes" => Studio::Lora::Selfie::SCENES,
+          "subject_scenes" => Studio::Lora::Selfie::SUBJECT_SCENES,
         }
       end
 
@@ -137,7 +138,7 @@ module Studio
       def selfie_render(request)
         require_relative "selfie_series"
         subject = request.fetch("subject", "ragnhild")
-        count = request.fetch("count", 10).to_i.clamp(1, 24)
+        count = request.fetch("count", 6).to_i.clamp(1, 24)
         engine = request["engine"]
         series = Studio::Visual::SelfieSeries.new(subject:, engine:)
         { "subject" => subject, "rendered" => series.run(count:, replace: request.fetch("replace", true)) }
@@ -169,10 +170,10 @@ module Studio
       def selfie(wizard)
         require_relative "../replicate/models"
         subject = wizard.ask("Subject", default: "ragnhild")
-        count = wizard.number("How many sittings", default: 10, range: 1..24)
-        engine = wizard.ask("Engine", default: Studio::ReplicateClient::Models.default_engine)
+        count = wizard.number("How many sittings", default: 6, range: 1..24)
+        # A selfie series means this subject's own trained identity.
         success = system(RbConfig.ruby, File.expand_path("../photograph.rb", __dir__),
-                        "--selfie-series", "--subject", subject, "--count", count.to_s, "--engine", engine)
+                        "--selfie-series", "--subject", subject, "--count", count.to_s)
         success ? 0 : ($?.exitstatus || 1)
       end
 
@@ -375,11 +376,50 @@ module Studio
         portra ultramax cinestill fuji400h hp5 portra800 trix gold superia instax
       ].freeze
 
+      # Six individual sittings for each trained identity. Scene bodies carry
+      # the environment, gesture, light and framing; the subject trigger and
+      # identity descriptor are added once by IdeaPicture.
+      SUBJECT_SCENES = {
+        "johann" => [
+          "a candid selfie beside a rain-streaked café window in central Bergen, wet cobblestones and a soft harbour blur outside, cool north daylight, rectangular window catchlights, a quiet expression just after a laugh, portrait-distance facial proportions with intimate direct-to-lens framing, 85mm",
+          "a coastal-ferry-deck selfie with a Norwegian fjord wall behind, wind moving the hair and coat collar, broad overcast sky as a softbox, relaxed half-smile, natural eye contact, 50mm",
+          "a late-night record-shop selfie between listening shelves, one warm tungsten practical and a cool street-window fill, mixed warm and cool catchlights, amused mid-conversation expression, 50mm",
+          "a winter cabin selfie at blue hour, snow and dark pine outside, one warm lamp behind and cold sky fill across the face, wool knit, visible breath, unguarded eyes, 85mm",
+          "a morning harbour-side selfie after rain, working boats and muted buildings falling softly out of focus, clean grey daylight, a real small grin, documentary colour-negative photography, 50mm",
+          "a black-and-white street portrait selfie beneath an old Bergen arcade, wet stone catching a hard strip of daylight, rich Tri-X silver tones, direct gaze and natural facial texture, 85mm"
+        ].freeze,
+        "ragnhild" => [
+          "a painter's-studio selfie beside a large unfinished canvas, daylight from a tall north-facing window, paint-marked sleeve and quiet concentration, soft rectangular catchlights, restrained editorial framing, 85mm",
+          "a gallery-evening selfie after the visitors have left, warm track lights on the paintings and gentle cool fill from the windows, thoughtful expression, honest skin texture, 50mm",
+          "a waterfront selfie on a windy Bergen afternoon, grey sea and distant mountains behind, soft overcast light, hair moving naturally, the moment just after a laugh, 50mm",
+          "a small old-town café selfie on a rainy afternoon, window reflections and warm lamps behind, short-side window light shaping the cheek, a lopsided half-smile, 85mm",
+          "a monochrome studio portrait selfie in front of a charcoal drawing, one Rembrandt key light and a clear shadow side, direct calm gaze, tactile HP5 documentary grain, 85mm",
+          "a winter hillside selfie just after sunrise, pale sky and bare branches behind, crisp open-shade light, wool coat, a reflective unposed expression, muted Fuji colour, 50mm"
+        ].freeze,
+        "merethe" => [
+          "a coastal-cliff selfie in western Norway with wind lifting long wavy ash-blonde hair, sea and pale sky behind, low warm sunlight tracing the cheek, blue eyes with natural catchlights, a genuine half-smile, 85mm",
+          "a quiet minimalist studio selfie against warm white, one large softbox above and to camera-left, subtle natural makeup, visible pores and fine hair, composed direct gaze, 85mm",
+          "a candlelit kitchen selfie late in the evening, one practical flame warming one side of the face and soft darkness on the other, a candid expression mid-thought, natural blue eyes, 50mm",
+          "a backlit-window selfie on a grey morning, soft daylight outlining long wavy ash-blonde hair, reflected fill preserving detail in the eyes, a small post-laugh smile, 85mm",
+          "a rainy old-town street selfie under an umbrella, shop lights reflected on wet cobbles, restrained amber and blue mixed light, amused eyes and damp loose hair, 50mm",
+          "a coastal ferry selfie with a deep Norwegian fjord behind, cool overcast sky light, wind in the hair, practical wool outerwear, open unguarded expression, natural colour-negative film, 50mm"
+        ].freeze
+      }.freeze
+
+      SUBJECT_SCENE_STOCKS = {
+        "johann" => %w[portra hp5 cinestill portra800 gold trix].freeze,
+        "ragnhild" => %w[portra fuji400h gold portra800 hp5 superia].freeze,
+        "merethe" => %w[fuji400h portra portra800 cinestill ultramax instax].freeze
+      }.freeze
+
       # A sitting, one-based like the scenario numbers the old toolkit used.
-      def self.scene(number)
-        index = (Integer(number) - 1) % SCENES.size
-        stock = Studio::Lora::Craft::STOCK.fetch(SCENE_STOCKS.fetch(index))
-        "#{SCENES.fetch(index)}, #{stock}"
+      # Unknown subjects retain the recovered general-purpose scene set.
+      def self.scene(number, subject: nil)
+        scenes = SUBJECT_SCENES.fetch(subject.to_s, SCENES)
+        stocks = SUBJECT_SCENE_STOCKS.fetch(subject.to_s, SCENE_STOCKS)
+        index = (Integer(number) - 1) % scenes.size
+        stock = Studio::Lora::Craft::STOCK.fetch(stocks.fetch(index))
+        "#{scenes.fetch(index)}, #{stock}"
       end
 
       # A distinct postpro heavy look per frame, and per subject. postpro deals
