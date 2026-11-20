@@ -119,13 +119,14 @@ module Studio
         model ||= still_model
         return model if @validated_still_model == model
 
-        names = client.input_names(model)
+        names = client.input_names(model).map(&:to_s)
         raise "Replicate model is unavailable or has no readable input schema: #{model}" if names.empty?
 
-        required = lora_input("").keys.map(&:to_s)
+        required = %w[prompt model num_inference_steps guidance_scale]
         missing = required - names
-        raise "Replicate model #{model} is missing inputs used by the still renderer: #{missing.join(", ")}" unless missing.empty?
+        raise "Replicate model #{model} is missing required FLUX inference inputs: #{missing.join(", ")}" unless missing.empty?
 
+        @validated_still_inputs = names.freeze
         @validated_still_model = model
         model
       end
@@ -334,18 +335,26 @@ module Studio
 
       # The subject's trained LoRA: the input shape its FLUX base declares.
       def lora_input(words)
-        {
+        settings = Studio::ReplicateClient::TRAINING_STANDARDS.fetch("inference")
+        desired = {
           prompt: photographic(words),
-          model: "dev",
-          aspect_ratio: "2:3",
-          num_outputs: 1,
-          guidance_scale: 2.5,
-          num_inference_steps: 45,
-          output_format: "jpg",
-          output_quality: 95,
-          go_fast: false,
-          lora_scale: 1.0,
+          model: settings.fetch("model"),
+          num_inference_steps: settings.fetch("num_inference_steps"),
+          guidance_scale: settings.fetch("guidance_scale"),
         }
+        optional = {
+          aspect_ratio: settings["aspect_ratio"],
+          num_outputs: settings["num_outputs"],
+          output_format: settings["output_format"],
+          output_quality: settings["output_quality"],
+          go_fast: settings["go_fast"],
+          lora_scale: settings["lora_scale"],
+        }
+        allowed = Array(@validated_still_inputs).map(&:to_s)
+        optional.each do |key, value|
+          desired[key] = value if !value.nil? && allowed.include?(key.to_s)
+        end
+        desired
       end
 
       # A reference model keeps the face from the subject's own photographs. Send
