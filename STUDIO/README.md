@@ -61,7 +61,12 @@ voice of the creative work.
   MASTER has its own client
   and runtime policies; this one is STUDIO's.
 - `lora/` — subject descriptors and private training plans.
-  `bin/studio lora` opens the subject-aware menu.
+  `bin/studio lora` opens the subject-aware menu. A default selfie series uses
+  only that subject's pinned LoRA; it does not fall back to a generic face.
+  `ruby STUDIO/lora/photograph.rb --all-subjects --count 6` preflights Johann,
+  Ragnhild and Merethe together, renders six subject-specific scenes each, and
+  deletes prior generated stills only after all 18 new images succeed. The
+  operation never deletes source photographs, datasets, weights or consent.
   `bin/studio lora validate [--json]` performs a read-only profile audit.
   `bin/studio lora recover` imports from a local, read-only pub4 checkout;
   it starts with a dry run. Applying a recovery requires private consent and
@@ -70,8 +75,8 @@ voice of the creative work.
   Recovery copies only approved subject descriptors, pinned model manifests
   and explicitly selected source photographs. It never copies datasets, loose
   weights or renders. Source trees and evidence remain owner-only. A generated
-  replacement series archives prior portraits only after every requested
-  render succeeds. Merethe's separate recovery command verifies the 15
+  replacement series deletes prior generated portraits only after every
+  requested render succeeds. Merethe's separate recovery command verifies the 15
   original Git blobs; it does not prepare a dataset. Merethe's preparation
   step builds in a private staging directory and preserves the last known-good
   dataset if a build fails.
