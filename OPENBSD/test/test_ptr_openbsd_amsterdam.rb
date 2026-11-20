@@ -28,7 +28,9 @@ class PtrOpenbsdAmsterdamTest < Minitest::Test
     assert_equal({ "dry_run" => true, "endpoint" => "http://ptr4.openbsd.amsterdam",
                    "ip" => "46.23.89.226", "hostname" => "ns.brgen.no", "method" => "POST" },
                  report.except("note"))
-    uri = ptr.send(:build_request).uri
+    uri, request = ptr.send(:build_request)
+    assert uri.is_a?(URI::HTTP)
+    assert request.is_a?(Net::HTTP::Post)
     assert_equal "ip=46.23.89.226&hostname=ns.brgen.no", uri.query
   end
 
