@@ -167,50 +167,51 @@ module Studio
       # instance, so post/get/create_model/model_exists?/wait_for_training/
       # download_url (from AssetTransfer) all resolve normally.
       module Training
-        # Start ostris/flux-dev-lora-trainer. photos_zip_url must be a public or
-        # Replicate Files API URL. Returns the full training object when wait is
-        # true; when wait is false (webhook / async), returns the create response.
+        # Start the pinned Replicate fast-FLUX subject trainer. The ZIP is
+        # uploaded separately; only its URL, trigger, subject type, step count
+        # and reproducible seed are sent to this trainer version.
         def train_lora(
           photos_zip_url,
           destination,
           trigger_word: nil,
+          training_steps: nil,
+          lora_type: nil,
+          seed: nil,
           timeout: 3600,
-          steps: nil,
-          lora_rank: nil,
           webhook: nil,
           webhook_events_filter: nil,
           wait: true,
-          extra_input: {},
           version: nil,
           subject:
         )
-          name = subject.to_s
+          subject_name = subject.to_s
           raise ArgumentError, "subject must be a simple directory name" unless
-            name.match?(/\A[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}\z/)
-          subject_directory = File.join(File.expand_path("../lora", __dir__), name)
-          Studio::Lora::Consent.require!(subject: name, subject_directory:, action: :training)
+            subject_name.match?(/\A[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}\z/)
+          subject_directory = File.join(File.expand_path("../lora", __dir__), subject_name)
+          Studio::Lora::Consent.require!(subject: subject_name, subject_directory:, action: :training)
 
           timeout = operation_timeout!(timeout, "training timeout")
           photos_zip_url = training_zip_url!(photos_zip_url)
-          extra_input = normalize_training_input!(extra_input)
           standards = TRAINING_STANDARDS.fetch("replicate")
-          extra_input = standards.fetch("extra_input").transform_keys(&:to_sym).merge(extra_input)
           trigger_word = training_trigger_for_subject(subject_directory, trigger_word)
-          steps = standards.fetch("steps") if steps.nil?
-          lora_rank = standards.fetch("lora_rank") if lora_rank.nil?
-          raise ArgumentError, "steps must match the shared training standard (#{standards.fetch("steps")})" unless steps == standards.fetch("steps")
-          raise ArgumentError, "lora_rank must match the shared training standard (#{standards.fetch("lora_rank")})" unless lora_rank == standards.fetch("lora_rank")
-          steps = positive_integer!(steps, "steps")
-          lora_rank = positive_integer!(lora_rank, "lora_rank")
+          training_steps = standards.fetch("training_steps") if training_steps.nil?
+          lora_type = standards.fetch("lora_type") if lora_type.nil?
+          seed = standards.fetch("seed") if seed.nil?
+          raise ArgumentError, "training_steps must match the shared standard (#{standards.fetch("training_steps")})" unless training_steps == standards.fetch("training_steps")
+          raise ArgumentError, "lora_type must be #{standards.fetch("lora_type").inspect}" unless lora_type == standards.fetch("lora_type")
+          raise ArgumentError, "seed must match the shared standard (#{standards.fetch("seed")})" unless seed == standards.fetch("seed")
+          positive_integer!(training_steps, "training_steps")
+          positive_integer!(seed, "seed")
           raise ArgumentError, "wait must be true or false" unless wait == true || wait == false
           resource_id!(version || trainer_version, "trainer version")
 
-          owner, name, pinned = model_reference!(destination)
-          raise ArgumentError, "training destination must be owner/name without a version" if pinned
-          destination = "#{owner}/#{name}"
+          owner, model_name, pinned = model_reference!(destination)
+          raise ArgumentError, "training destination must be owner/model without a version" if pinned
+          destination = "#{owner}/#{model_name}"
 
           trainings_uri, body = build_training_request(
-            photos_zip_url, destination, trigger_word:, steps:, lora_rank:, webhook:, webhook_events_filter:, extra_input:, version:
+            photos_zip_url, destination, trigger_word:, training_steps:, lora_type:, seed:,
+            webhook:, webhook_events_filter:, version:
           )
           trainer_owner, trainer_name, = model_reference!(LORA_TRAINER)
           trainer_version_id = resource_id!(version || trainer_version, "trainer version")
@@ -223,22 +224,16 @@ module Studio
 
         def training_trigger_for_subject(directory, supplied)
           path = File.join(directory, "train.yaml")
-          return training_trigger!(supplied) unless File.file?(path) && !File.symlink?(path)
+          raise ArgumentError, "subject train.yaml is missing or is a symlink" unless File.file?(path) && !File.symlink?(path)
           raise ArgumentError, "subject training plan exceeds 1 MB" if File.size(path) > 1_048_576
 
           plan = YAML.safe_load(File.read(path, encoding: "UTF-8"),
                                 permitted_classes: [], permitted_symbols: [], aliases: false)
-          processes = plan.dig("config", "process") if plan.is_a?(Hash) && plan["config"].is_a?(Hash)
-          trainers = Array(processes).select { |entry| entry.is_a?(Hash) && entry["type"] == "sd_trainer" }
-          raise ArgumentError, "subject training plan must contain exactly one sd_trainer" unless trainers.length == 1
-
-          trainer = trainers.first
-          standards = TRAINING_STANDARDS.fetch("replicate")
-          raise ArgumentError, "subject plan steps differ from the shared training standard" unless trainer.dig("train", "steps") == standards.fetch("steps")
-          raise ArgumentError, "subject plan rank differs from the shared training standard" unless trainer.dig("network", "linear") == standards.fetch("lora_rank")
-
-          expected = training_trigger!(trainer["trigger_word"])
-          raise ArgumentError, "trigger_word does not match #{File.basename(directory)}/train.yaml" if supplied && training_trigger!(supplied) != expected
+          expected_subject = File.basename(directory)
+          raise ArgumentError, "subject training plan must identify #{expected_subject}" unless
+            plan.is_a?(Hash) && plan["schema"] == 1 && plan["subject"] == expected_subject
+          expected = training_trigger!(plan["trigger_word"])
+          raise ArgumentError, "trigger_word does not match #{expected_subject}/train.yaml" if supplied && training_trigger!(supplied) != expected
 
           expected
         rescue Psych::Exception => error
@@ -291,6 +286,16 @@ module Studio
           raise ArgumentError, "training ZIP URL must be a valid HTTPS URL"
         end
 
+        def training_zip_url!(value)
+          uri = URI.parse(value.to_s)
+          valid = uri.is_a?(URI::HTTPS) && !uri.host.to_s.empty? && uri.userinfo.nil? && uri.fragment.nil?
+          raise ArgumentError, "training ZIP URL must be an HTTPS URL without credentials or a fragment" unless valid
+
+          uri.to_s
+        rescue URI::InvalidURIError
+          raise ArgumentError, "training ZIP URL must be a valid HTTPS URL"
+        end
+
         def training_trigger!(value)
           trigger = value.to_s
           raise ArgumentError, "trigger_word must be a simple 1-64 character token" unless trigger.match?(/\A[A-Za-z][A-Za-z0-9_-]{0,63}\z/)
@@ -304,44 +309,22 @@ module Studio
           value
         end
 
-        def normalize_training_input!(value)
-          raise ArgumentError, "extra_input must be a Hash" unless value.is_a?(Hash)
-
-          protected = %w[input_images trigger_word steps lora_rank] +
-                      TRAINING_STANDARDS.fetch("replicate").fetch("extra_input", {}).keys.map(&:to_s)
-          normalized = {}
-          value.each do |key, item|
-            name = key.to_s
-            raise ArgumentError, "invalid trainer input key #{name.inspect}" unless name.match?(/\A[a-z][a-z0-9_]*\z/)
-            raise ArgumentError, "extra_input cannot override #{name}" if protected.include?(name)
-            raise ArgumentError, "duplicate trainer input key #{name}" if normalized.key?(name)
-
-            normalized[name] = item
-          end
-          normalized.transform_keys(&:to_sym)
-        end
-
-        def build_training_request(photos_zip_url, destination, trigger_word:, steps:, lora_rank:, webhook:, webhook_events_filter:, extra_input:, version: nil)
+        def build_training_request(photos_zip_url, destination, trigger_word:, training_steps:, lora_type:, seed:, webhook:, webhook_events_filter:, version: nil)
           trainer_owner, trainer_name, = model_reference!(LORA_TRAINER)
           trainer_version_id = resource_id!(version || trainer_version, "trainer version")
           trainings_uri = URI("#{BASE}/models/#{trainer_owner}/#{trainer_name}/versions/#{trainer_version_id}/trainings")
-
           input = {
             input_images: photos_zip_url,
             trigger_word:,
+            lora_type:,
+            training_steps:,
+            seed:,
           }
-          input[:steps] = steps if steps
-          input[:lora_rank] = lora_rank if lora_rank
-          input.merge!(extra_input) if extra_input && !extra_input.empty?
-
           body = { destination:, input: }
           body[:webhook] = webhook if webhook.to_s.strip != ""
           body[:webhook_events_filter] = Array(webhook_events_filter) if webhook_events_filter
-
           [trainings_uri, body]
         end
-      end
-
       # One prediction with its metrics, and the schema check that guards it.
       # Grouped apart from ReplicateClient for the same reason as Training: the
       # class stays under the public-method ceiling.
