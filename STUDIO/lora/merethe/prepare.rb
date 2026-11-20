@@ -7,6 +7,7 @@ require "json"
 require "net/http"
 require "open3"
 require "tempfile"
+require "yaml"
 require "tmpdir"
 require "uri"
 require_relative "../consent"
@@ -27,12 +28,16 @@ module Studio
 
     SOURCE_COMMIT = "8e1955ae130592ab7c20ee266c024f061431c67e".freeze
     SOURCE_BASE_URL = "https://raw.githubusercontent.com/anon987654321/pub4/#{SOURCE_COMMIT}/media/__lora/me2".freeze
-    TRAINER = "ostris/flux-dev-lora-trainer".freeze
-    TRAINER_VERSION = "26dce37af90b9d997eeb970d92e47de3064d46c300504ae376c75bef6a9022d2".freeze
+    TRAINING_STANDARD = YAML.safe_load_file(
+      File.expand_path("../training_standards.yml", __dir__),
+      permitted_classes: [], permitted_symbols: [], aliases: false
+    ).freeze
+    TRAINER = TRAINING_STANDARD.fetch("replicate").fetch("trainer").freeze
+    TRAINER_VERSION = TRAINING_STANDARD.fetch("replicate").fetch("version").freeze
     TRIGGER_WORD = "MERETHE".freeze
-    MIN_IMAGES = 10
-    TARGET_MIN_IMAGES = 12
-    MAX_IMAGES = 18
+    MIN_IMAGES = TRAINING_STANDARD.fetch("quality").fetch("min_images")
+    TARGET_MIN_IMAGES = MIN_IMAGES
+    MAX_IMAGES = TRAINING_STANDARD.fetch("quality").fetch("max_images")
     MAX_SOURCE_BYTES = 25 * 1024 * 1024
     MAX_ADDITIONAL_BYTES = 20 * 1024 * 1024
 
@@ -139,8 +144,9 @@ module Studio
         "trainer" => TRAINER,
         "trainer_version" => TRAINER_VERSION,
         "trigger_word" => TRIGGER_WORD,
-        "steps" => 1000,
-        "lora_rank" => 16,
+        "steps" => TRAINING_STANDARD.fetch("replicate").fetch("steps"),
+        "lora_rank" => TRAINING_STANDARD.fetch("replicate").fetch("lora_rank"),
+        "extra_input" => TRAINING_STANDARD.fetch("replicate").fetch("extra_input"),
         "training_started" => false,
         "provider_upload_started" => false
       }
