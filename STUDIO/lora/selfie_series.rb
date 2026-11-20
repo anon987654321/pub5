@@ -14,9 +14,8 @@ module Studio
     class SelfieSeries
       LIMIT = 24
 
-      # The sittings live in lora/lora.rb with the rest of the craft: ten
-      # radically different environments and moments, each stating its own crop,
-      # lens and light.
+      # Subject-specific sittings live in lora/lora.rb with the rest of the craft.
+      # Each prompt carries its own environment, moment, lens and light.
       SCENES = Studio::Lora::Selfie::SCENES
 
       IMAGE_EXTENSIONS = %w[jpg jpeg png webp].freeze
