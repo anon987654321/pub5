@@ -83,7 +83,7 @@ module Studio
 
         def build(candidate: false)
           consent = Consent.require!(
-            subject: @subject, subject_directory: @subject_directory, action: :generation
+            subject: @subject, subject_directory: @subject_directory, action: :training
           )
           cache = File.join(@subject_directory, ".cache")
           secure_directory!(cache)
@@ -219,7 +219,7 @@ module Studio
               </style>
             </head>
             <body>
-              <h1>Private likeness review — #{escape_html(@subject)}</h1>
+              <h1>Private likeness review — #{escape_html(@subject)} — #{escape_html(report.fetch("render_kind"))}</h1>
               <p>Candidate model: <code>#{escape_html(report.fetch("model_version"))}</code></p>
               <p class="warning">Identity verdict: NOT AUTOMATED. Compare all six full-size renders with the references. Do not approve from image metrics alone.</p>
               <img src="contact-sheet.jpg" alt="Three approved source images and six generated final portraits">
