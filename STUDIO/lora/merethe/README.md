@@ -98,22 +98,49 @@ trainer's dataset guidance.
 
 ## Training plan — shared with Johann and Ragnhild
 
-- Trainer: \`replicate/fast-flux-trainer\`
-- Pinned trainer version: \`e5a5bc821112c107e6ddb8491c5b898f94d06eaca861d1dbf37b29cd69ba8988\`
-- Trigger: \`MERETHE\`
-- Initial steps: \`1600\`
-- LoRA rank: \`16\`
-- Destination: \`anon987654321/merethe-flux\` (the account's private model).
-- Plan: \`train.yaml\`, mirroring the other subjects; 18 captioned images now
-  build (\`prepare.rb\` reports \`READY_FOR_OPERATOR_REVIEW\`).
+All three identities use one Replicate trainer and one canonical contract:
 
-The version pin matches \`STUDIO/replicate/client.rb\`. The trainer README
-recommends 12–18 varied subject images, caption sidecars, 1,000–3,000 steps and
-rank 16–32; the plan is conservative. Reassess captions and sample outputs
-before any second run.
+- Trainer: `replicate/fast-flux-trainer`
+- Immutable trainer version: `e5a5bc821112c107e6ddb8491c5b898f94d06eaca861d1dbf37b29cd69ba8988`
+- Trigger: `MERETHE`
+- Training type: `subject`
+- Training steps: `1000`
+- Seed: `42`
+- Dataset: 12–18 varied, captioned, private photographs around 1024px
+- Destination: `REPLICATE_DESTINATION` in the local, owner-only `subject.env`
 
-Uploading the ZIP and starting paid training need a \`REPLICATE_API_TOKEN\` and
-a separate explicit go-ahead. No provider call is made by \`prepare.rb\`.
+The exact contract lives in `STUDIO/lora/training_standards.yml`. The same
+file supplies the Replicate request, dataset-size bounds and inference defaults.
+The validator checks the local plan, trigger, captions, filesystem permissions,
+consent and source-rights records before training is eligible.
+
+After the approved dataset is ready, run all three jobs together from the
+repository root:
+
+```sh
+ruby STUDIO/lora/validate.rb --json
+ruby STUDIO/lora/train.rb --all
+```
+
+The runner preflights all three subjects before the first upload, verifies every
+destination is private, and records each successful result as
+`TRAINED_NEEDS_LIKENESS_REVIEW`. It does not mark the new model as approved.
+
+Generate three private candidate portraits for each subject and compare them
+against the original source photographs:
+
+```sh
+ruby STUDIO/lora/review.rb --subject merethe --candidate
+```
+
+The private contact sheet and report are written below
+`STUDIO/lora/merethe/.cache/likeness-review/`. Repeat for Johann and Ragnhild.
+Only after the person is recognisable in every candidate should the exact
+immutable model version be entered in that subject's local
+`subject.env` as `LIKELINESS_REVIEWED_VERSION`.
+
+The six-image final batch is a separate operation. No old selfie series is
+deleted until all three subjects have a complete replacement series.
 
 ## Promo video
 
