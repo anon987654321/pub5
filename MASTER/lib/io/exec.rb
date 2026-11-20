@@ -259,7 +259,7 @@ module Master
 
         children.track(wait_thr.pid) do
           status, timed_out = supervise.call
-          status = CancelledStatus.new if children.cancelled?(wait_thr.pid) && !timed_out
+          status = CancelledStatus.new(status) if children.cancelled?(wait_thr.pid) && !timed_out
           [status, timed_out]
         end
       end
