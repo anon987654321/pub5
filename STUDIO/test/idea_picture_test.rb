@@ -254,6 +254,38 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
+  def test_private_weights_manifest_requires_owner_only_directories_and_file
+    Dir.mktmpdir do |dir|
+      subject = File.join(dir, "probe")
+      weights = File.join(subject, "weights")
+      model_directory = File.join(weights, "probe")
+      FileUtils.mkdir_p(model_directory, mode: 0o700)
+      [subject, weights, model_directory].each { |path| File.chmod(0o700, path) }
+
+      manifest = File.join(model_directory, "replicate_training.json")
+      version = "owner/model:version-123"
+      File.write(manifest, JSON.generate("version" => version), mode: "w", perm: 0o600)
+      File.chmod(0o600, manifest)
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "probe", directory: dir, subjects_root: dir
+      )
+
+      [subject, weights, model_directory].each do |path|
+        File.chmod(0o755, path)
+        error = assert_raises(RuntimeError) { picture.send(:still_model) }
+        assert_match(/owner-only \(0700\)/, error.message)
+        File.chmod(0o700, path)
+      end
+
+      File.chmod(0o644, manifest)
+      error = assert_raises(RuntimeError) { picture.send(:still_model) }
+      assert_match(/owner-only \(0600\)/, error.message)
+
+      File.chmod(0o600, manifest)
+      assert_equal version, picture.send(:still_model)
+    end
+  end
+
   def test_private_replicate_model_pin_requires_an_immutable_version_without_a_manifest
     Dir.mktmpdir do |dir|
       subject = File.join(dir, "ragnhild")
