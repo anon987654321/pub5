@@ -189,6 +189,53 @@ class TestIdeaPictureOutput < Minitest::Test
 
   public
 
+  def test_google_reference_input_uses_multi_image_schema_without_single_face_upload
+    Dir.mktmpdir do |dir|
+      subject_root = File.join(dir, "subjects")
+      references = File.join(subject_root, "probe", "references")
+      FileUtils.mkdir_p(references)
+      File.write(File.join(references, "01.jpg"), "reference")
+      uploads = []
+      client = Object.new
+      client.define_singleton_method(:upload_file) do |path, subject:|
+        uploads << [File.basename(path), subject]
+        "https://files.replicate.delivery/#{File.basename(path)}"
+      end
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: dir, subjects_root: subject_root
+      )
+
+      input = picture.send(:reference_input, "portrait", "google/nano-banana-2.1")
+      assert_equal ["https://files.replicate.delivery/01.jpg"], input.fetch("image_input")
+      assert_equal "2K", input.fetch("resolution")
+      refute input.key?("subject_reference")
+      assert_equal [["01.jpg", "probe"]], uploads
+    end
+  end
+
+  def test_minimax_image_reference_uploads_only_one_subject_reference
+    Dir.mktmpdir do |dir|
+      subject_root = File.join(dir, "subjects")
+      references = File.join(subject_root, "probe", "references")
+      FileUtils.mkdir_p(references)
+      %w[01.jpg 02.jpg 03.jpg].each { |name| File.write(File.join(references, name), "reference") }
+      uploads = []
+      client = Object.new
+      client.define_singleton_method(:upload_file) do |path, subject:|
+        uploads << File.basename(path)
+        "https://files.replicate.delivery/#{File.basename(path)}"
+      end
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: dir, subjects_root: subject_root
+      )
+
+      input = picture.send(:reference_input, "portrait", "minimax/image-01")
+      assert_equal "https://files.replicate.delivery/01.jpg", input.fetch("subject_reference")
+      refute input.key?("image_input")
+      assert_equal ["01.jpg"], uploads
+    end
+  end
+
   def test_subject_media_upload_requires_owner_only_single_linked_files
     Dir.mktmpdir do |dir|
       image = File.join(dir, "portrait.jpg")
