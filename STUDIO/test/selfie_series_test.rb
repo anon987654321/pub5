@@ -138,6 +138,43 @@ class TestSelfieSeries < Minitest::Test
     assert rendered.all? { |path| File.file?(path) }
   end
 
+  def test_replacement_plan_is_non_destructive_and_covers_sidecars
+    directory = File.join(@dir, "planned")
+    FileUtils.mkdir_p(directory)
+    old = File.join(directory, "probe_selfie_old.jpg")
+    sidecar = "#{old}.json"
+    File.write(old, "old")
+    File.write(sidecar, '{"preset":"portrait"}')
+    box = Studio::Visual::SelfieSeries.new(
+      subject: "probe", client: @client, directory:, ledger_path: File.join(@dir, "ledger.jsonl")
+    )
+
+    plan = box.replacement_plan
+
+    assert_equal [old], plan.fetch(:images)
+    assert_equal [sidecar], plan.fetch(:sidecars)
+    assert File.file?(old), "preflight must not delete the previous image"
+    assert File.file?(sidecar), "preflight must not delete the previous sidecar"
+  end
+
+  def test_replacement_plan_refuses_a_symlinked_sidecar_without_deleting_the_image
+    directory = File.join(@dir, "unsafe")
+    FileUtils.mkdir_p(directory)
+    old = File.join(directory, "probe_selfie_old.jpg")
+    outside = File.join(@dir, "outside.json")
+    File.write(old, "old")
+    File.write(outside, '{"private":"other"}')
+    File.symlink(outside, "#{old}.json")
+    box = Studio::Visual::SelfieSeries.new(
+      subject: "probe", client: @client, directory:, ledger_path: File.join(@dir, "ledger.jsonl")
+    )
+
+    error = assert_raises(RuntimeError) { box.replacement_plan }
+    assert_match(/unsafe or unowned/, error.message)
+    assert File.file?(old)
+    assert File.file?(outside)
+  end
+
   def test_partial_replacement_preserves_the_previous_series
     directory = File.join(@dir, "partial")
     FileUtils.mkdir_p(directory)
