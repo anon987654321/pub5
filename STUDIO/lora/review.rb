@@ -48,6 +48,13 @@ module Studio
           end
         end
 
+        def validate_render_count!(renders)
+          count = Array(renders).length
+          return true if count == RENDER_COUNT
+
+          raise Error, "expected #{RENDER_COUNT} final, private Postpro renders for #{@subject}; found #{count}"
+        end
+
         def reference_files
           dataset = File.join(@subject_directory, "dataset")
           raise Error, "private training dataset is missing; no approved comparison images available" unless
@@ -79,9 +86,7 @@ module Studio
             subject: @subject, subject_directory: @subject_directory, action: :generation
           )
           renders = render_files
-          unless renders.length == RENDER_COUNT
-            raise Error, "expected #{RENDER_COUNT} final, private Postpro renders for #{@subject}; found #{renders.length}"
-          end
+          validate_render_count!(renders)
           references = reference_files
           picture = Studio::Visual::IdeaPicture.new(subject: @subject, subjects_root: @root)
           version = picture.send(:still_model)
