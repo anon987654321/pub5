@@ -199,6 +199,16 @@ module Studio
         path
       end
 
+      # Expose only the validated private descriptor needed by the local
+      # training orchestrator. Action-scoped consent is checked again here;
+      # credentials never belong in subject.env.
+      def subject_configuration(action: :generation)
+        Studio::Lora::Consent.require!(
+          subject: @subject, subject_directory: @subject_directory, action:
+        )
+        subject_env.dup.freeze
+      end
+
       private
 
       def authorize_subject!
