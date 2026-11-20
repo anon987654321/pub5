@@ -156,8 +156,8 @@ if $PROGRAM_NAME == __FILE__
     elsif options[:check_model]
       { "subject" => options[:subject], "model" => Studio::Visual::IdeaPicture.new(subject: options[:subject]).validate_model! }
     elsif options[:all_subjects]
-      abort "--all-subjects requires the subject's trained LoRA; --engine is not allowed" if options[:engine]
-      abort "--all-subjects cannot be combined with --keep" if options[:keep]
+      raise ArgumentError, "--all-subjects requires the subject's trained LoRA; --engine is not allowed" if options[:engine]
+      raise ArgumentError, "--all-subjects cannot be combined with --keep" if options[:keep]
       subjects = %w[johann ragnhild merethe]
       series = subjects.to_h { |subject| [subject, Studio::Visual::SelfieSeries.new(subject:)] }
       # Validate every subject's consent, pinned model and input schema before
@@ -167,7 +167,7 @@ if $PROGRAM_NAME == __FILE__
         [subject, series.fetch(subject).run(count: options[:count] || 6, replace: false)]
       end
       incomplete = rendered.select { |_subject, paths| paths.length != (options[:count] || 6) }
-      abort "INCOMPLETE: no old renders were deleted; subjects with incomplete output: #{incomplete.keys.join(", ")}" unless incomplete.empty?
+      raise "INCOMPLETE: no old renders were deleted; subjects with incomplete output: #{incomplete.keys.join(", ")}" unless incomplete.empty?
       deleted = subjects.to_h do |subject|
         [subject, series.fetch(subject).replace_previous_renders!(keep: rendered.fetch(subject))]
       end
