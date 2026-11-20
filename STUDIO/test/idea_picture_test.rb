@@ -263,6 +263,43 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
+  def test_lora_only_requires_an_exact_human_reviewed_model_version
+    Dir.mktmpdir do |dir|
+      subjects = File.join(dir, "subjects")
+      subject = File.join(subjects, "probe")
+      FileUtils.mkdir_p(subject)
+      manifest = File.join(subject, "replicate_training.json")
+      version = "owner/model:version-123"
+      File.write(manifest, JSON.generate("version" => version))
+      env_path = File.join(subject, "subject.env")
+      File.write(env_path, "MODEL=probe\\nTRIGGER=probe\\n")
+      File.chmod(0o600, env_path)
+      calls = []
+      client = Object.new
+      client.define_singleton_method(:input_names) do |model|
+        calls << model
+        %w[prompt model aspect_ratio num_outputs guidance_scale num_inference_steps output_format output_quality go_fast lora_scale]
+      end
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: dir, subjects_root: subjects,
+        model_manifest: manifest, lora_only: true
+      )
+
+      error = assert_raises(RuntimeError) { picture.validate_model! }
+      assert_match(/LIKELINESS_REVIEWED_VERSION/, error.message)
+      assert_empty calls, "an unreviewed model must be blocked before the provider schema call"
+
+      File.write(env_path, "MODEL=probe\\nTRIGGER=probe\\nLIKELINESS_REVIEWED_VERSION=#{version}\\n")
+      File.chmod(0o600, env_path)
+      approved = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: dir, subjects_root: subjects,
+        model_manifest: manifest, lora_only: true
+      )
+      assert_equal version, approved.validate_model!
+      assert_equal [version], calls
+    end
+  end
+
   def test_still_schema_preflight_catches_every_field_before_prediction
     Dir.mktmpdir do |dir|
       manifest = File.join(dir, "replicate_training.json")
