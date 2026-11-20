@@ -41,6 +41,10 @@ module Studio
         def run(subjects: SUBJECTS, timeout: DEFAULT_TIMEOUT)
           names = normalize_subjects(subjects)
           packages = names.map { |subject| prepare_subject!(subject) }
+          destinations = packages.map { |package| package.fetch("destination") }
+          unless destinations.uniq.length == destinations.length
+            raise Error, "each subject must have a distinct private Replicate destination"
+          end
           client = @client || Studio::ReplicateClient.new
           # Check/create every destination as private before the first dataset
           # ZIP is uploaded. A pre-existing public destination blocks the run.
