@@ -305,6 +305,22 @@ class TestStudioReplicateClientPaths < Minitest::Test
     assert_match(%r{/versions/}, client.requests.first.fetch(1).path)
   end
 
+  def test_training_defaults_come_from_the_shared_standard
+    url = "https://files.replicate.delivery/photos.zip"
+    @client.train_lora(url, "owner/model", trigger_word: "SAMPLE", wait: false)
+
+    input = @client.requests.find { |request| request.first == :post }.fetch(2).fetch(:input)
+    standard = Studio::ReplicateClient::TRAINING_STANDARDS.fetch("replicate")
+    assert_equal standard.fetch("steps"), input.fetch(:steps)
+    assert_equal standard.fetch("lora_rank"), input.fetch(:lora_rank)
+  end
+
+  def test_trainer_constants_match_the_shared_standard
+    standard = Studio::ReplicateClient::TRAINING_STANDARDS.fetch("replicate")
+    assert_equal standard.fetch("trainer"), Studio::ReplicateClient::LORA_TRAINER
+    assert_equal standard.fetch("version"), Studio::ReplicateClient::LORA_TRAINER_VERSION
+  end
+
   def test_training_input_cannot_override_dataset_trigger_or_numeric_controls
     url = "https://files.replicate.delivery/photos.zip"
     %w[input_images trigger_word steps lora_rank].each do |key|
