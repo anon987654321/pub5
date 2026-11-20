@@ -24,30 +24,23 @@ class TestStudioLoraValidator < Minitest::Test
     assert_equal standard.fetch("quality").fetch("max_images"), Studio::Lora::Validator::MAXIMUM_IMAGES
   end
 
-  def test_committed_subject_plans_share_one_training_standard
+  def test_committed_subject_plans_share_one_fast_flux_training_standard
     standard = YAML.safe_load_file(File.join(Studio::Lora::Validator::ROOT, "training_standards.yml"))
     %w[johann ragnhild merethe].each do |subject|
       plan = YAML.safe_load_file(File.join(Studio::Lora::Validator::ROOT, subject, "train.yaml"))
-      trainer = plan.fetch("config").fetch("process").find { |item| item["type"] == "sd_trainer" }
-      trigger = trainer.fetch("trigger_word")
-      %w[network save train model].each do |section|
-        standard.fetch(section).each do |key, expected|
-          assert_equal expected, trainer.fetch(section).fetch(key), "#{subject} #{section}.#{key}"
-        end
-      end
-      standard.fetch("dataset").each do |key, expected|
-        assert_equal expected, trainer.fetch("datasets").first.fetch(key), "#{subject} datasets[0].#{key}"
-      end
-      expected_prompts = standard.fetch("sample").fetch("prompts").map { |prompt| prompt.gsub("{{trigger}}", trigger) }
-      assert_equal expected_prompts, trainer.fetch("sample").fetch("prompts"), "#{subject} sample prompts"
-      standard.fetch("sample").each do |key, expected|
-        next if key == "prompts"
-        assert_equal expected, trainer.fetch("sample").fetch(key), "#{subject} sample.#{key}"
-      end
+      assert_equal 1, plan.fetch("schema"), "#{subject} schema"
+      assert_equal subject, plan.fetch("subject")
+      assert_equal standard.fetch("dataset").fetch("path"), plan.fetch("dataset").fetch("path")
+      assert_equal standard.fetch("dataset").fetch("caption_ext"), plan.fetch("dataset").fetch("caption_ext")
+      assert_equal "REPLICATE_DESTINATION", plan.fetch("destination_env")
+      assert_equal subject, plan.fetch("model_directory")
     end
+    assert_equal "replicate/fast-flux-trainer", standard.fetch("replicate").fetch("trainer")
+    assert_equal "subject", standard.fetch("replicate").fetch("lora_type")
+    assert_equal 1000, standard.fetch("replicate").fetch("training_steps")
   end
 
-  def test_nonstandard_rank_is_a_hard_validation_failure
+  def test_plan_cannot_drift_from_the_fast_flux_trainer_contract
     with_subject do |root, directory|
       write_descriptor(directory)
       dataset = File.join(directory, "dataset")
@@ -55,13 +48,13 @@ class TestStudioLoraValidator < Minitest::Test
       write_training_plan(directory, dataset: "dataset")
       path = File.join(directory, "train.yaml")
       plan = YAML.safe_load_file(path)
-      plan.fetch("config").fetch("process").first.fetch("network")["linear"] = 32
+      plan["dataset"]["caption_ext"] = "md"
       File.write(path, YAML.dump(plan))
       write_valid_consent(directory)
 
       report = Studio::Lora::Validator.new(root:).validate_subject("sample")
       assert_equal "FAIL", report.fetch("state")
-      assert_includes report.fetch("blockers").map { |item| item["id"] }, "shared_training_standard"
+      assert_includes report.fetch("blockers").map { |item| item["id"] }, "dataset_caption_contract"
     end
   end
 
@@ -123,7 +116,7 @@ class TestStudioLoraValidator < Minitest::Test
 
       assert_equal "PASS", report.fetch("state")
       refute report.fetch("training_ready")
-      assert_includes report.fetch("blockers").map { |item| item["id"] }, "dataset_path"
+      assert_includes report.fetch("blockers").map { |item| item["id"] }, "dataset_path_contract"
     end
   end
 
@@ -151,26 +144,27 @@ class TestStudioLoraValidator < Minitest::Test
   def test_dataset_cannot_escape_the_private_subject_directory
     with_subject do |root, directory|
       write_descriptor(directory)
-      write_training_plan(directory, dataset: "../shared-dataset")
+      File.symlink("../shared-dataset", File.join(directory, "dataset"))
+      write_training_plan(directory, dataset: "dataset")
 
       report = Studio::Lora::Validator.new(root:).validate_subject("sample")
 
       assert_equal "FAIL", report.fetch("state")
-      assert_includes report.fetch("blockers").map { |item| item["id"] }, "dataset_path_scope"
+      assert_includes report.fetch("blockers").map { |item| item["id"] }, "dataset_path"
     end
   end
 
   def test_trigger_must_match_and_automatic_publication_must_be_disabled
     with_subject do |root, directory|
       write_descriptor(directory)
-      write_training_plan(directory, dataset: "", trigger: "OTHER", push_to_hub: true)
+      write_training_plan(directory, dataset: "", trigger: "OTHER")
 
       report = Studio::Lora::Validator.new(root:).validate_subject("sample")
       blocker_ids = report.fetch("blockers").map { |item| item["id"] }
 
       assert_equal "FAIL", report.fetch("state")
       assert_includes blocker_ids, "trainer_trigger_matches_subject"
-      assert_includes blocker_ids, "private_training_output"
+      assert_includes blocker_ids, "dataset_path_contract"
     end
   end
 
@@ -268,24 +262,14 @@ class TestStudioLoraValidator < Minitest::Test
   end
 
   def write_training_plan(directory, dataset:, trigger: "SAMPLE", push_to_hub: false)
-    standard = YAML.safe_load_file(File.join(Studio::Lora::Validator::ROOT, "training_standards.yml"))
-    config = {
-      "name" => "sample",
-      "process" => [
-        {
-          "type" => "sd_trainer",
-          "trigger_word" => trigger,
-          "network" => standard.fetch("network"),
-          "save" => standard.fetch("save").merge("push_to_hub" => push_to_hub),
-          "train" => standard.fetch("train"),
-          "model" => standard.fetch("model"),
-          "sample" => standard.fetch("sample").merge(
-            "prompts" => standard.fetch("sample").fetch("prompts").map { |prompt| prompt.gsub("{{trigger}}", trigger) }
-          ),
-          "datasets" => [standard.fetch("dataset").merge("folder_path" => dataset)],
-        },
-      ],
-    }
-    File.write(File.join(directory, "train.yaml"), YAML.dump("job" => "extension", "config" => config))
+    File.write(File.join(directory, "train.yaml"), YAML.dump({
+      "schema" => 1,
+      "subject" => "sample",
+      "trigger_word" => trigger,
+      "dataset" => { "path" => dataset, "caption_ext" => "txt" },
+      "destination_env" => "REPLICATE_DESTINATION",
+      "model_directory" => "sample",
+      "legacy_publication_flag" => push_to_hub,
+    }))
   end
 end
