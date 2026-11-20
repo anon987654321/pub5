@@ -3,6 +3,7 @@
 require "fileutils"
 require "json"
 require "net/http"
+require "yaml"
 require "securerandom"
 require "tempfile"
 require "timeout"
@@ -181,8 +182,11 @@ module Studio
           timeout = operation_timeout!(timeout, "training timeout")
           photos_zip_url = training_zip_url!(photos_zip_url)
           trigger_word = training_trigger!(trigger_word)
-          steps = positive_integer!(steps, "steps") unless steps.nil?
-          lora_rank = positive_integer!(lora_rank, "lora_rank") unless lora_rank.nil?
+          standards = TRAINING_STANDARDS.fetch("replicate")
+          steps = standards.fetch("steps") if steps.nil?
+          lora_rank = standards.fetch("lora_rank") if lora_rank.nil?
+          steps = positive_integer!(steps, "steps")
+          lora_rank = positive_integer!(lora_rank, "lora_rank")
           extra_input = normalize_training_input!(extra_input)
           raise ArgumentError, "wait must be true or false" unless wait == true || wait == false
           resource_id!(version || trainer_version, "trainer version")
@@ -383,11 +387,14 @@ module Studio
 
       CONFIG_PATH = File.expand_path("~/.config/replicate/config.json").freeze
       BASE = "https://api.replicate.com/v1"
-      LORA_TRAINER = "ostris/flux-dev-lora-trainer"
-      # Pricing and request behaviour are tied to this reviewed version. The
-      # provider's "latest" pointer can change hardware and cost without a code
-      # change; update the pin, rate and schema evidence together.
-      LORA_TRAINER_VERSION = "26dce37af90b9d997eeb970d92e47de3064d46c300504ae376c75bef6a9022d2"
+      TRAINING_STANDARDS_PATH = File.expand_path("../lora/training_standards.yml", __dir__).freeze
+      TRAINING_STANDARDS = YAML.safe_load_file(
+        TRAINING_STANDARDS_PATH, permitted_classes: [], permitted_symbols: [], aliases: false
+      ).freeze
+      LORA_TRAINER = TRAINING_STANDARDS.fetch("replicate").fetch("trainer").freeze
+      # The trainer pin and request defaults live in training_standards.yml.
+      # Changing them requires a reviewed input-schema update and regression tests.
+      LORA_TRAINER_VERSION = TRAINING_STANDARDS.fetch("replicate").fetch("version").freeze
       TRANSIENT_STATUS = ((500..599).to_a << 429).freeze
       MAX_DOWNLOAD_BYTES = 4 * 1024**3
       MAX_UPLOAD_BYTES = 4 * 1024**3
