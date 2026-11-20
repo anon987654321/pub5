@@ -160,7 +160,7 @@ module Studio
         end
       end
 
-      # LoRA training lifecycle (ostris/flux-dev-lora-trainer): start, poll,
+      # LoRA training lifecycle (replicate/fast-flux-trainer): start, poll,
       # fetch weights. Grouped apart from prediction/model-management to keep
       # ReplicateClient itself under the NO_GOD_CLASS public-method ceiling --
       # same pattern as AssetTransfer. Methods run against the including
