@@ -183,6 +183,7 @@ module Studio
           photos_zip_url = training_zip_url!(photos_zip_url)
           extra_input = normalize_training_input!(extra_input)
           standards = TRAINING_STANDARDS.fetch("replicate")
+          extra_input = standards.fetch("extra_input").transform_keys(&:to_sym).merge(extra_input)
           trigger_word = training_trigger_for_subject(subject_directory, trigger_word)
           steps = standards.fetch("steps") if steps.nil?
           lora_rank = standards.fetch("lora_rank") if lora_rank.nil?
@@ -295,7 +296,8 @@ module Studio
         def normalize_training_input!(value)
           raise ArgumentError, "extra_input must be a Hash" unless value.is_a?(Hash)
 
-          protected = %w[input_images trigger_word steps lora_rank]
+          protected = %w[input_images trigger_word steps lora_rank] +
+                      TRAINING_STANDARDS.fetch("replicate").fetch("extra_input", {}).keys.map(&:to_s)
           normalized = {}
           value.each do |key, item|
             name = key.to_s
