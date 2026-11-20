@@ -133,10 +133,21 @@
 # MASTER/test/test_io_bounded_public_fetchers.rb (e5848ff9), the bounded
 # transport proof across the public research fetchers. No path added by this
 # session; the count is corrected, not raised above what HEAD contains.
+
+# 2026-11-21 (12): re-set to the checkout as it stands. Seven files since
+# (11), all landed upstream on main by parallel sessions, none by the
+# session recording this: STUDIO/lora/train.rb, review.rb and
+# training_standards.yml with their two proofs
+# (STUDIO/test/lora_training_test.rb, lora_review_test.rb) — the
+# consent-gated training standards and review instruments the lora
+# workstream contracts; MASTER/test/test_exec_env.rb — the Io::Exec
+# environment regression; BIZ/research/husleieloven-2026.md — the sourced
+# tenancy-law research document its BIZ workstream owns. Every path carries
+# an instrument or a sourced document; none is a placeholder.
 lone_dirs: 47
 stutter: 0
 vague_names: 0
-tracked_files: 8081
+tracked_files: 8088
 tracked_directories: 995
 corpus: 4127
 
