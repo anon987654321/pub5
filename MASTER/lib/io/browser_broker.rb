@@ -304,15 +304,25 @@ module Master
         end
         return false unless handle
 
-        receipt(:browser_stop, id:, host: handle.host, phase: :after) { @engine.stop(handle) }
+        stop_handle(id, handle)
         true
       end
 
-      # Conversation shutdown and interruption both land here; every child
-      # process group is stopped, so a cancelled fold leaves no browser running.
+      # Conversation shutdown and interruption both land here. A failed stop or
+      # receipt for one lease must not prevent attempts on the remaining process
+      # groups; report the aggregate only after every known lease was attempted.
       def close_all
         ids = @mutex.synchronize { @leases.keys }
-        ids.each { |id| close(id) }
+        failures = []
+        ids.each do |id|
+          begin
+            close(id)
+          rescue StandardError
+            failures << id
+          end
+        end
+        raise Denied, "browser: close_all attempted #{ids.size} sessions; #{failures.size} close(s) failed" unless failures.empty?
+
         ids.size
       end
 
@@ -343,11 +353,47 @@ module Master
 
       def reap_expired!
         now = @clock.call
-        @leases.select { |_id, lease| lease.expired?(now) }.keys.each do |id|
+        expired_ids = @leases.select { |_id, lease| lease.expired?(now) }.keys
+        failures = []
+        expired_ids.each do |id|
           handle = @handles.delete(id)
           @leases.delete(id)
-          @engine.stop(handle) if handle
+          next unless handle
+
+          begin
+            stop_handle(id, handle)
+          rescue StandardError
+            failures << id
+          end
         end
+        raise Denied, "browser: failed to stop #{failures.size} expired session(s)" unless failures.empty?
+      end
+
+      # Always attempt the process stop, even when durable receipt writing fails.
+      # The failure is surfaced after both operations so callers can report it
+      # without orphaning a process merely because the ledger is unavailable.
+      def stop_handle(id, handle)
+        stop_error = nil
+        receipt_error = nil
+
+        begin
+          @engine.stop(handle)
+        rescue StandardError => e
+          stop_error = e
+        end
+
+        begin
+          @ledger&.call(event: :browser_stop, phase: :after, lease: id, host: handle.host)
+        rescue StandardError => e
+          receipt_error = e
+        end
+
+        failures = []
+        failures << "process stop failed (#{stop_error.class})" if stop_error
+        failures << "stop receipt failed (#{receipt_error.class})" if receipt_error
+        raise Denied, "browser: session #{id} close incomplete: #{failures.join("; ")}" unless failures.empty?
+
+        true
       end
 
       def bounded_ttl(value)

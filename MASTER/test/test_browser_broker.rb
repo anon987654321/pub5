@@ -71,6 +71,61 @@ class BrowserBrokerTest < Minitest::Test
     assert_equal 1, engine.stopped.size
   end
 
+  def test_process_stop_is_attempted_when_the_stop_receipt_fails
+    engine = FakeEngine.new
+    ledger = lambda do |event:, phase:, **|
+      raise "receipt unavailable" if event == :browser_stop && phase == :after
+    end
+    b = broker(engine:, ledger:)
+    lease = b.open(host: "example.com")
+
+    error = assert_raises(Broker::Denied) { b.close(lease.id) }
+
+    assert_match(/stop receipt failed/, error.message)
+    assert_equal 1, engine.stopped.size
+    assert_equal 0, b.size
+  end
+
+  def test_close_all_attempts_every_session_after_a_stop_receipt_failure
+    engine = FakeEngine.new
+    failed_once = false
+    ledger = lambda do |event:, phase:, **|
+      if event == :browser_stop && phase == :after && !failed_once
+        failed_once = true
+        raise "receipt unavailable"
+      end
+    end
+    b = broker(engine:, ledger:)
+    3.times { b.open(host: "example.com") }
+
+    error = assert_raises(Broker::Denied) { b.close_all }
+
+    assert_match(/1 close\(s\) failed/, error.message)
+    assert_equal 3, engine.stopped.size
+    assert_equal 0, b.size
+  end
+
+  def test_expiry_reaping_attempts_every_expired_process_after_a_stop_receipt_failure
+    now = Time.utc(2026, 1, 1, 0, 0, 0)
+    engine = FakeEngine.new
+    failed_once = false
+    ledger = lambda do |event:, phase:, **|
+      if event == :browser_stop && phase == :after && !failed_once
+        failed_once = true
+        raise "receipt unavailable"
+      end
+    end
+    b = broker(engine:, ledger:, clock: -> { now }, ttl_seconds: 10)
+    3.times { b.open(host: "example.com") }
+
+    now += 11
+    error = assert_raises(Broker::Denied) { b.open(host: "example.com") }
+
+    assert_match(/failed to stop 1 expired session/, error.message)
+    assert_equal 3, engine.stopped.size
+    assert_equal 0, b.size
+  end
+
   def test_the_concurrent_session_cap_is_enforced
     b = broker(max_sessions: 2)
     b.open(host: "example.com")
