@@ -313,6 +313,20 @@ class TestStudioReplicateClientPaths < Minitest::Test
     standard = Studio::ReplicateClient::TRAINING_STANDARDS.fetch("replicate")
     assert_equal standard.fetch("steps"), input.fetch(:steps)
     assert_equal standard.fetch("lora_rank"), input.fetch(:lora_rank)
+    standard.fetch("extra_input").each do |key, value|
+      assert_equal value, input.fetch(key.to_sym), "standard trainer input #{key}"
+    end
+  end
+
+  def test_callers_cannot_override_a_shared_training_input
+    error = assert_raises(ArgumentError) do
+      @client.train_lora(
+        "https://files.replicate.delivery/photos.zip", "owner/model",
+        trigger_word: "SAMPLE", wait: false, extra_input: { "learning_rate" => 0.9 }
+      )
+    end
+    assert_match(/cannot override learning_rate/, error.message)
+    assert_empty @client.requests
   end
 
   def test_trainer_constants_match_the_shared_standard
