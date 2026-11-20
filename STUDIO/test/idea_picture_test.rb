@@ -488,7 +488,7 @@ class TestIdeaPictureOutput < Minitest::Test
       )
 
       error = assert_raises(RuntimeError) { picture.write("portrait", film: false) }
-      assert_match(/missing inputs used by the still renderer/, error.message)
+      assert_match(/missing required FLUX inference inputs/, error.message)
       assert_match(/model/, error.message)
       assert_empty Dir.children(dir).grep(/\.jpg\z/)
     end
@@ -531,7 +531,7 @@ class TestIdeaPictureOutput < Minitest::Test
       )
       error = assert_raises(RuntimeError) { blocked.send(:still_model) }
       assert_includes error.message, missing
-      assert_includes error.message, "REPLICATE_MODEL in probe/subject.env"
+      assert_includes error.message, "owner/model:version in probe/subject.env"
     end
   end
 
@@ -567,14 +567,16 @@ class TestIdeaPictureOutput < Minitest::Test
       FileUtils.mkdir_p(subject)
       path = File.join(subject, "subject.env")
       File.write(path, "TRIGGER=probe\nDESCRIPTOR=private subject\n", mode: "w", perm: 0o644)
-      picture = Studio::Visual::IdeaPicture.new(
-        subject: "probe", directory: dir, subjects_root: dir
-      )
 
-      error = assert_raises(RuntimeError) { picture.send(:subject_env) }
+      # The owner-only gate fires at construction, before any prompt or
+      # manifest read can touch the descriptor.
+      error = assert_raises(RuntimeError) do
+        Studio::Visual::IdeaPicture.new(subject: "probe", directory: dir, subjects_root: dir)
+      end
       assert_match(/owner-only/, error.message)
 
       File.chmod(0o600, path)
+      picture = Studio::Visual::IdeaPicture.new(subject: "probe", directory: dir, subjects_root: dir)
       assert_equal "private subject", picture.send(:subject_env).fetch("DESCRIPTOR")
     end
   end

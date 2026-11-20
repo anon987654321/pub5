@@ -334,8 +334,15 @@ module Studio
           fail_check(report, "dataset_path_scope", "Dataset path must remain inside this subject's private directory")
           return
         end
-        if File.symlink?(resolved) || !File.directory?(resolved) || !File.readable?(resolved)
-          block(report, "dataset_path", "Configured dataset directory is missing, unreadable, or a symlink")
+        # A declared plan that points its dataset at a symlink violates the
+        # dataset path contract: that is a FAIL (existing artifact, wrong
+        # shape), not the absence class a missing dataset is.
+        if File.symlink?(resolved)
+          fail_check(report, "dataset_path", "Configured dataset directory is a symlink")
+          return
+        end
+        unless File.directory?(resolved) && File.readable?(resolved)
+          block(report, "dataset_path", "Configured dataset directory is missing or unreadable")
           return
         end
 

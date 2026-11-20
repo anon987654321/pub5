@@ -66,7 +66,8 @@ module Studio
             stat.uid == Process.uid && (stat.mode & 0o077).zero?
 
           images = Dir.children(dataset).sort.filter_map do |name|
-            next unless IMAGE_EXTENSIONS.include?(File.extname(name).downcase)
+            # IMAGE_EXTENSIONS carries bare words; File.extname carries the dot.
+            next unless IMAGE_EXTENSIONS.include?(File.extname(name).delete_prefix(".").downcase)
 
             path = File.join(dataset, name)
             file_stat = File.lstat(path)

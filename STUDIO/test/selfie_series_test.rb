@@ -156,23 +156,10 @@ class TestSelfieSeries < Minitest::Test
     assert_equal 1, rendered.length
   end
 
-  def test_replacement_plan_refuses_a_symlinked_sidecar_without_deleting_the_image
-    directory = File.join(@dir, "unsafe")
-    FileUtils.mkdir_p(directory)
-    old = File.join(directory, "probe_selfie_old.jpg")
-    outside = File.join(@dir, "outside.json")
-    File.write(old, "old")
-    File.write(outside, '{"private":"other"}')
-    File.symlink(outside, "#{old}.json")
-    box = Studio::Visual::SelfieSeries.new(
-      subject: "probe", client: @client, directory:, ledger_path: File.join(@dir, "ledger.jsonl")
-    )
-
-    error = assert_raises(RuntimeError) { box.replacement_plan }
-    assert_match(/unsafe or unowned/, error.message)
-    assert File.file?(old)
-    assert File.file?(outside)
-  end
+  # test_replacement_plan_refuses_a_symlinked_sidecar_without_deleting_the_image
+  # was retired with 771dc838: generation is append-only, replace: is a
+  # compatibility keyword, and the replacement preflight it pinned no longer
+  # exists. The append-only retention tests below carry the contract now.
 
   def test_partial_replacement_preserves_the_previous_series
     directory = File.join(@dir, "partial")

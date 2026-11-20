@@ -173,7 +173,12 @@ module Studio
             digest.update(stat.size.to_s)
             digest.update("\0")
             File.open(path, "rb") do |file|
-              digest.update(chunk) while (chunk = file.read(1024 * 1024))
+              # A while-modifier body references `chunk` before its
+              # condition declares the local, which raises NameError; keep
+              # the read loop explicit.
+              while (chunk = file.read(1024 * 1024))
+                digest.update(chunk)
+              end
             end
           end
           digest.hexdigest

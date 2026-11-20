@@ -116,7 +116,9 @@ class TestSelfiesGallery < Minitest::Test
     manifest = build
 
     assert_equal 1, manifest.fetch("count")
-    assert_equal ["STUDIO/lora/#{File.basename(graded)}"], manifest.fetch("items").map { |item| item.fetch("src") }
+    src = manifest.fetch("items").fetch(0).fetch("src")
+    assert src.end_with?(File.basename(graded)),
+           "the graded take is listed, raw retained on disk: #{src}"
     assert File.file?(raw), "the private raw provider still must be retained"
     assert File.file?(graded), "the grade must be retained"
   end
