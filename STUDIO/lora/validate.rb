@@ -196,12 +196,41 @@ module Studio
             return
           end
           if File.file?(manifest)
+            private_directories = [directory, weights_directory, model_directory]
+            insecure_directories = private_directories.filter_map do |candidate|
+              stat = File.lstat(candidate)
+              candidate unless stat.directory? && !stat.symlink? &&
+                               stat.uid == Process.uid && (stat.mode & 0o077).zero?
+            rescue SystemCallError
+              candidate
+            end
+            if insecure_directories.any?
+              fail_check(
+                report,
+                "replicate_manifest_permissions",
+                "Private training manifest directories must be real, current-user-owned and owner-only (0700): #{insecure_directories.map { |item| File.basename(item) }.join(", ")}"
+              )
+              return
+            end
+
+            manifest_stat = File.lstat(manifest)
+            unless manifest_stat.file? && !manifest_stat.symlink? &&
+                   manifest_stat.uid == Process.uid && manifest_stat.nlink == 1 &&
+                   (manifest_stat.mode & 0o077).zero?
+              fail_check(
+                report,
+                "replicate_manifest_permissions",
+                "Private training manifest must be a regular, current-user-owned, singly-linked owner-only (0600) file"
+              )
+              return
+            end
+
             resolved_manifest = File.realpath(manifest)
             unless inside?(resolved_manifest, File.realpath(directory))
               fail_check(report, "replicate_manifest_scope", "Local training manifest resolves outside this subject's private directory")
               return
             end
-            raise ArgumentError, "training manifest exceeds 64 KB" if File.size(manifest) > 65_536
+            raise ArgumentError, "training manifest exceeds 64 KB" if manifest_stat.size > 65_536
 
             data = JSON.parse(File.read(manifest, encoding: "UTF-8"))
             version = data["version"].to_s
