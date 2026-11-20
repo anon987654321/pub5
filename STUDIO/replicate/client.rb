@@ -286,16 +286,6 @@ module Studio
           raise ArgumentError, "training ZIP URL must be a valid HTTPS URL"
         end
 
-        def training_zip_url!(value)
-          uri = URI.parse(value.to_s)
-          valid = uri.is_a?(URI::HTTPS) && !uri.host.to_s.empty? && uri.userinfo.nil? && uri.fragment.nil?
-          raise ArgumentError, "training ZIP URL must be an HTTPS URL without credentials or a fragment" unless valid
-
-          uri.to_s
-        rescue URI::InvalidURIError
-          raise ArgumentError, "training ZIP URL must be a valid HTTPS URL"
-        end
-
         def training_trigger!(value)
           trigger = value.to_s
           raise ArgumentError, "trigger_word must be a simple 1-64 character token" unless trigger.match?(/\A[A-Za-z][A-Za-z0-9_-]{0,63}\z/)
@@ -325,6 +315,8 @@ module Studio
           body[:webhook_events_filter] = Array(webhook_events_filter) if webhook_events_filter
           [trainings_uri, body]
         end
+      end
+
       # One prediction with its metrics, and the schema check that guards it.
       # Grouped apart from ReplicateClient for the same reason as Training: the
       # class stays under the public-method ceiling.
