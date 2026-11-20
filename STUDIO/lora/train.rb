@@ -81,9 +81,9 @@ module Studio
           configuration = Studio::Visual::IdeaPicture.new(
             subject:, subjects_root: @root
           ).subject_configuration(action: :training)
-          destination = configuration["REPLICATE_MODEL"].to_s.strip
+          destination = configuration["REPLICATE_DESTINATION"].to_s.strip
           unless destination.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}\z/)
-            raise Error, "#{subject}: REPLICATE_MODEL in private subject.env must be owner/model"
+            raise Error, "#{subject}: REPLICATE_DESTINATION in private subject.env must be owner/model"
           end
 
           model_directory = configuration["MODEL"].to_s.strip
@@ -93,8 +93,15 @@ module Studio
           end
 
           plan = load_plan(subject_directory)
-          trainer = plan.fetch("config").fetch("process").find { |item| item["type"] == "sd_trainer" }
-          dataset_relative = trainer.fetch("datasets").first.fetch("folder_path").to_s
+          raise Error, "#{subject}: training plan subject/schema mismatch" unless
+            plan.is_a?(Hash) && plan["schema"] == 1 && plan["subject"] == subject
+          raise Error, "#{subject}: plan destination/model directory mismatch" unless
+            plan["destination_env"] == "REPLICATE_DESTINATION" && plan["model_directory"] == model_directory
+
+          dataset_plan = plan.fetch("dataset")
+          dataset_relative = dataset_plan.fetch("path").to_s
+          raise Error, "#{subject}: caption extension differs from the shared standard" unless
+            dataset_plan.fetch("caption_ext") == STANDARD.fetch("dataset").fetch("caption_ext")
           dataset = File.expand_path(dataset_relative, subject_directory)
           dataset = private_dataset_directory!(dataset, subject_directory)
           digest = dataset_digest(dataset)
@@ -107,9 +114,10 @@ module Studio
             "zip_path" => zip_path,
             "destination" => destination,
             "model_directory" => model_directory,
-            "trigger_word" => trainer.fetch("trigger_word"),
-            "steps" => STANDARD.fetch("replicate").fetch("steps"),
-            "lora_rank" => STANDARD.fetch("replicate").fetch("lora_rank"),
+            "trigger_word" => plan.fetch("trigger_word"),
+            "training_steps" => STANDARD.fetch("replicate").fetch("training_steps"),
+            "lora_type" => STANDARD.fetch("replicate").fetch("lora_type"),
+            "seed" => STANDARD.fetch("replicate").fetch("seed"),
           }
         end
 
@@ -206,8 +214,9 @@ module Studio
               upload_url,
               package.fetch("destination"),
               trigger_word: package.fetch("trigger_word"),
-              steps: package.fetch("steps"),
-              lora_rank: package.fetch("lora_rank"),
+              training_steps: package.fetch("training_steps"),
+              lora_type: package.fetch("lora_type"),
+              seed: package.fetch("seed"),
               timeout:,
               wait: true,
               subject:
@@ -274,8 +283,9 @@ module Studio
             "training_id" => training["id"],
             "dataset_sha256" => package.fetch("dataset_sha256"),
             "trigger_word" => package.fetch("trigger_word"),
-            "steps" => package.fetch("steps"),
-            "lora_rank" => package.fetch("lora_rank"),
+            "training_steps" => package.fetch("training_steps"),
+            "lora_type" => package.fetch("lora_type"),
+            "seed" => package.fetch("seed"),
             "status" => "TRAINED_NEEDS_LIKENESS_REVIEW",
             "likeness_review_required" => true,
             "trained_at" => Time.now.utc.iso8601,
