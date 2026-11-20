@@ -101,7 +101,7 @@ trainer's dataset guidance.
 All three identities use one Replicate trainer and one canonical contract:
 
 - Trainer: `replicate/fast-flux-trainer`
-- Immutable trainer version: `e5a5bc821112c107e6ddb8491c5b898f94d06eaca861d1dbf37b29cd69ba8988`
+- Immutable trainer version: `080f17375c73ef43e1009da9d560ab5f935176c61a0c7a88866c8b8387057675`
 - Trigger: `MERETHE`
 - Training type: `subject`
 - Training steps: `1000`
