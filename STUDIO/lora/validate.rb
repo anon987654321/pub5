@@ -14,7 +14,7 @@ module Studio
       STANDARDS_PATH = File.join(ROOT, "training_standards.yml").freeze
       TRAINING_STANDARD = YAML.safe_load_file(STANDARDS_PATH, permitted_classes: [], permitted_symbols: [], aliases: false).freeze
       SUBJECT_NAME = /\A[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}\z/.freeze
-      ENV_KEYS = %w[SUBJECT MODEL TRIGGER DESCRIPTOR REPLICATE_MODEL LIKELINESS_REVIEWED_VERSION].freeze
+      ENV_KEYS = %w[SUBJECT MODEL TRIGGER DESCRIPTOR REPLICATE_DESTINATION REPLICATE_MODEL LIKELINESS_REVIEWED_VERSION].freeze
       IMAGE_EXTENSIONS = %w[.jpg .jpeg .png .webp].freeze
       MINIMUM_IMAGES = TRAINING_STANDARD.fetch("quality").fetch("min_images")
       MAXIMUM_IMAGES = TRAINING_STANDARD.fetch("quality").fetch("max_images")
@@ -178,11 +178,20 @@ module Studio
           pass_check(report, "subject_descriptor_text", "A descriptive prompt anchor is present")
         end
 
+        destination = env["REPLICATE_DESTINATION"].to_s.strip
+        if destination.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}\z/)
+          pass_check(report, "replicate_training_destination", "A private owner/model training destination is configured")
+        elsif destination.empty?
+          block(report, "replicate_training_destination", "REPLICATE_DESTINATION must name a private owner/model destination")
+        else
+          fail_check(report, "replicate_training_destination", "REPLICATE_DESTINATION must be owner/model without a version")
+        end
+
         if model.match?(/\A[a-zA-Z0-9_.-]{1,96}\z/)
           weights_directory = File.join(directory, "weights")
           model_directory = File.join(weights_directory, model)
           manifest = File.join(model_directory, "replicate_training.json")
-          if [weights_directory, model_directory, manifest].any? { |path| File.symlink?(path) }
+          if [weights_directory, model_directory, manifest].any? { |candidate| File.symlink?(candidate) }
             fail_check(report, "replicate_manifest_path", "Local training manifest path contains a symlink")
             return
           end
@@ -194,13 +203,16 @@ module Studio
             end
             raise ArgumentError, "training manifest exceeds 64 KB" if File.size(manifest) > 65_536
 
-            version = JSON.parse(File.read(manifest, encoding: "UTF-8"))["version"].to_s
+            data = JSON.parse(File.read(manifest, encoding: "UTF-8"))
+            version = data["version"].to_s
             if version.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}:[A-Za-z0-9][A-Za-z0-9_-]{0,127}\z/)
-              pass_check(report, "replicate_version_pin", "Local training manifest pins the Replicate model version")
-              return
+              if data["status"] == "TRAINED_NEEDS_LIKENESS_REVIEW" || data["likeness_review_required"] == true
+                report["warnings"] << "Pinned model exists but is awaiting human likeness review"
+              end
+              pass_check(report, "replicate_version_pin", "Local training manifest pins an immutable Replicate version")
+            else
+              fail_check(report, "replicate_training_manifest", "Local training manifest does not contain a pinned owner/model:version")
             end
-            fail_check(report, "replicate_training_manifest", "Local training manifest does not contain a pinned owner/model:version")
-            return
           end
         end
 
@@ -208,70 +220,59 @@ module Studio
         return if remote.empty?
 
         if remote.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}:[A-Za-z0-9][A-Za-z0-9_-]{0,127}\z/)
-          pass_check(report, "replicate_version_pin", "Replicate model reference pins a version")
-        elsif remote.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}\z/)
-          report["warnings"] << "REPLICATE_MODEL is unpinned; predictions resolve the provider's latest version"
-          block(report, "replicate_version_pin", "Pin owner/model:version or supply a local training manifest before treating renders as reproducible")
+          pass_check(report, "replicate_version_pin", "REPLICATE_MODEL pins an immutable model version")
         else
-          fail_check(report, "replicate_model_reference", "REPLICATE_MODEL must be owner/name or owner/name:version")
+          fail_check(report, "replicate_model_reference", "REPLICATE_MODEL must be owner/model:version; use REPLICATE_DESTINATION for new training")
         end
       end
 
       def validate_training_plan(path, directory, env, report)
         raise ArgumentError, "training config exceeds #{MAX_CONFIG_BYTES} bytes" if File.size(path) > MAX_CONFIG_BYTES
 
-        document = YAML.safe_load(File.read(path, encoding: "UTF-8"), permitted_classes: [], permitted_symbols: [], aliases: false)
+        document = YAML.safe_load(
+          File.read(path, encoding: "UTF-8"),
+          permitted_classes: [], permitted_symbols: [], aliases: false
+        )
         raise ArgumentError, "train.yaml root must be a mapping" unless document.is_a?(Hash)
-        raise ArgumentError, "train.yaml job must be extension" unless document["job"] == "extension"
+        raise ArgumentError, "train.yaml schema must be 1" unless document["schema"] == TRAINING_STANDARD.fetch("schema")
+        subject = File.basename(directory)
+        raise ArgumentError, "train.yaml subject must match #{subject}" unless document["subject"] == subject
 
-        config = document["config"]
-        raise ArgumentError, "train.yaml config must be a mapping" unless config.is_a?(Hash)
-
-        processes = config["process"]
-        raise ArgumentError, "train.yaml config.process must be a non-empty array" unless processes.is_a?(Array) && !processes.empty?
-
-        trainers = processes.select { |entry| entry.is_a?(Hash) && entry["type"] == "sd_trainer" }
-        raise ArgumentError, "train.yaml must declare exactly one sd_trainer process" unless trainers.length == 1
-
-        trainer = trainers.first
-        validate_shared_training_standard(trainer, report)
-        trigger = trainer["trigger_word"].to_s
-        unless trigger == env["TRIGGER"]
-          fail_check(report, "trainer_trigger_matches_subject", "train.yaml trigger_word does not match subject.env TRIGGER")
+        replicate = TRAINING_STANDARD.fetch("replicate")
+        trigger = document["trigger_word"].to_s
+        unless trigger == env["TRIGGER"] && trigger.match?(/\A[A-Za-z][A-Za-z0-9_-]{0,63}\z/)
+          fail_check(report, "trainer_trigger_matches_subject", "train.yaml trigger_word must exactly match subject.env TRIGGER")
         else
           pass_check(report, "trainer_trigger_matches_subject", "Training trigger matches the subject descriptor")
         end
 
-        network = trainer["network"]
-        unless network.is_a?(Hash) && network["type"] == "lora" && positive_integer?(network["linear"])
-          fail_check(report, "lora_network", "Trainer must declare a LoRA network with a positive linear rank")
+        plan_destination_env = document["destination_env"].to_s
+        unless plan_destination_env == "REPLICATE_DESTINATION"
+          fail_check(report, "training_destination_contract", "train.yaml destination_env must be REPLICATE_DESTINATION")
         else
-          pass_check(report, "lora_network", "LoRA network and rank are declared")
+          pass_check(report, "training_destination_contract", "Training destination comes from the private subject environment")
         end
 
-        save = trainer["save"]
-        unless save.is_a?(Hash) && save["push_to_hub"] == false
-          fail_check(report, "private_training_output", "save.push_to_hub must be explicitly false")
+        model_directory = document["model_directory"].to_s
+        unless model_directory == env["MODEL"] && model_directory.match?(/\A[a-zA-Z0-9_.-]{1,96}\z/)
+          fail_check(report, "training_model_directory", "train.yaml model_directory must match subject.env MODEL")
         else
-          pass_check(report, "private_training_output", "Automatic Hub publication is explicitly disabled")
+          pass_check(report, "training_model_directory", "Private candidate weights have one stable subject directory")
         end
 
-        training = trainer["train"]
-        if training.is_a?(Hash) && positive_integer?(training["steps"])
-          pass_check(report, "training_steps", "A positive training step count is configured")
-        else
-          fail_check(report, "training_steps", "Trainer must declare a positive integer step count")
-        end
-
-        datasets = trainer["datasets"]
-        unless datasets.is_a?(Array) && datasets.length == 1 && datasets.first.is_a?(Hash)
-          block(report, "dataset_config", "Exactly one dataset entry is required for operator review")
+        dataset = document["dataset"]
+        unless dataset.is_a?(Hash)
+          block(report, "dataset_config", "train.yaml dataset must be a mapping")
           return
         end
-
-        dataset_path = datasets.first["folder_path"].to_s.strip
-        if dataset_path.empty?
-          block(report, "dataset_path", "datasets[0].folder_path is blank; the profile is a plan, not a ready training run")
+        expected_dataset = TRAINING_STANDARD.fetch("dataset")
+        dataset_path = dataset["path"].to_s.strip
+        if dataset_path != expected_dataset.fetch("path")
+          fail_check(report, "dataset_path_contract", "dataset.path must equal #{expected_dataset.fetch("path")}")
+          return
+        end
+        unless dataset["caption_ext"] == expected_dataset.fetch("caption_ext")
+          fail_check(report, "dataset_caption_contract", "dataset.caption_ext must equal #{expected_dataset.fetch("caption_ext")}")
           return
         end
 
@@ -297,119 +298,53 @@ module Studio
           return
         end
 
-        insecure_images = []
+        insecure_entries = []
         images = Dir.children(real).select do |name|
           next false unless IMAGE_EXTENSIONS.include?(File.extname(name).downcase)
 
           image_path = File.join(real, name)
           stat = File.lstat(image_path)
           unless stat.file? && !stat.symlink? && stat.uid == Process.uid && stat.nlink == 1 && (stat.mode & 0o077).zero?
-            insecure_images << name
+            insecure_entries << name
             next false
           end
           true
         rescue SystemCallError
-          insecure_images << name
+          insecure_entries << name
           false
         end
-        if insecure_images.any?
-          fail_check(report, "dataset_image_permissions", "Training images must be regular, singly-linked, owner-only (0600) files: #{insecure_images.first(5).join(', ')}")
+        if insecure_entries.any?
+          fail_check(report, "dataset_image_permissions", "Training images must be regular, singly-linked, owner-only (0600) files: #{insecure_entries.first(5).join(", ")}")
           return
         end
-        caption_issues = images.filter_map do |name|
-          caption = File.join(real, "#{File.basename(name, File.extname(name))}.txt")
+
+        captions = images.filter_map do |name|
+          caption = File.join(real, "#{File.basename(name, File.extname(name))}.#{expected_dataset.fetch("caption_ext")}")
           problem = caption_problem(caption, env["TRIGGER"])
           [name, problem] if problem
         end
-        missing_captions = caption_issues.select { |_, problem| problem == :missing }
-        oversized_captions = caption_issues.select { |_, problem| problem == :too_large }
-        unreadable_captions = caption_issues.select { |_, problem| problem == :unreadable || problem == :invalid_encoding }
-        triggerless_captions = caption_issues.select { |_, problem| problem == :trigger_missing }
+        missing = captions.select { |_name, problem| problem == :missing }
+        too_large = captions.select { |_name, problem| problem == :too_large }
+        unreadable = captions.select { |_name, problem| %i[unreadable invalid_encoding].include?(problem) }
+        triggerless = captions.select { |_name, problem| problem == :trigger_missing }
 
-        if images.length < MINIMUM_IMAGES
-          block(report, "dataset_image_count", "Dataset has #{images.length} readable images; at least #{MINIMUM_IMAGES} are required")
-        elsif images.length > MAXIMUM_IMAGES
-          block(report, "dataset_image_count", "Dataset has #{images.length} readable images; no more than #{MAXIMUM_IMAGES} are allowed")
-        elsif missing_captions.any?
-          block(report, "dataset_captions", "Missing same-basename .txt captions for: #{missing_captions.first(5).map(&:first).join(', ')}")
-        elsif unreadable_captions.any?
-          block(report, "dataset_captions_unreadable", "Unreadable or invalid UTF-8 captions for: #{unreadable_captions.first(5).map(&:first).join(', ')}")
-        elsif oversized_captions.any?
-          block(report, "dataset_caption_size", "Captions exceed #{MAX_CAPTION_BYTES} bytes for: #{oversized_captions.first(5).map(&:first).join(', ')}")
-        elsif triggerless_captions.any?
-          block(report, "dataset_caption_trigger", "Captions must contain the exact subject trigger #{env["TRIGGER"].inspect}: #{triggerless_captions.first(5).map(&:first).join(', ')}")
+        minimum = TRAINING_STANDARD.fetch("quality").fetch("min_images")
+        maximum = TRAINING_STANDARD.fetch("quality").fetch("max_images")
+        if images.length < minimum
+          block(report, "dataset_image_count", "Dataset has #{images.length} images; at least #{minimum} are required")
+        elsif images.length > maximum
+          block(report, "dataset_image_count", "Dataset has #{images.length} images; no more than #{maximum} are allowed")
+        elsif missing.any?
+          block(report, "dataset_captions", "Missing same-basename captions for: #{missing.first(5).map(&:first).join(", ")}")
+        elsif unreadable.any?
+          block(report, "dataset_captions_unreadable", "Unreadable or invalid UTF-8 captions for: #{unreadable.first(5).map(&:first).join(", ")}")
+        elsif too_large.any?
+          block(report, "dataset_caption_size", "Captions exceed #{MAX_CAPTION_BYTES} bytes for: #{too_large.first(5).map(&:first).join(", ")}")
+        elsif triggerless.any?
+          block(report, "dataset_caption_trigger", "Captions must contain exact trigger #{env["TRIGGER"].inspect}: #{triggerless.first(5).map(&:first).join(", ")}")
         else
-          pass_check(report, "dataset_integrity", "#{images.length} images have readable captions containing the subject trigger")
+          pass_check(report, "dataset_integrity", "#{images.length} owner-only images have matching captions with the subject trigger")
         end
-      end
-
-      def validate_shared_training_standard(trainer, report)
-        standard = TRAINING_STANDARD
-        mismatches = []
-        %w[network save train model].each do |section|
-          expected = standard.fetch(section)
-          actual = trainer[section]
-          unless actual.is_a?(Hash)
-            mismatches << "#{section} must be a mapping"
-            next
-          end
-          expected.each do |key, value|
-            mismatches << "#{section}.#{key} must equal #{value.inspect}" unless actual[key] == value
-          end
-        end
-
-        dataset = Array(trainer["datasets"]).first
-        unless dataset.is_a?(Hash)
-          mismatches << "datasets[0] must be a mapping"
-        else
-          standard.fetch("dataset").each do |key, value|
-            mismatches << "datasets[0].#{key} must equal #{value.inspect}" unless dataset[key] == value
-          end
-        end
-
-        actual_sample = trainer["sample"]
-        expected_sample = standard.fetch("sample")
-        unless actual_sample.is_a?(Hash)
-          mismatches << "sample must be a mapping"
-        else
-          expected_sample.each do |key, value|
-            next if key == "prompts"
-
-            mismatches << "sample.#{key} must equal #{value.inspect}" unless actual_sample[key] == value
-          end
-          trigger = trainer["trigger_word"].to_s
-          expected_prompts = Array(expected_sample["prompts"]).map { |prompt| prompt.to_s.gsub("{{trigger}}", trigger) }
-          mismatches << "sample.prompts must use the shared six-scene identity-neutral set" unless actual_sample["prompts"] == expected_prompts
-        end
-
-        replicate = standard.fetch("replicate")
-        mismatches << "train.steps must equal Replicate steps #{replicate.fetch("steps")}" unless trainer.dig("train", "steps") == replicate.fetch("steps")
-        mismatches << "network.linear must equal Replicate lora_rank #{replicate.fetch("lora_rank")}" unless trainer.dig("network", "linear") == replicate.fetch("lora_rank")
-
-        api = replicate.fetch("extra_input")
-        input_checks = {
-          "optimizer" => trainer.dig("train", "optimizer"),
-          "batch_size" => trainer.dig("train", "batch_size"),
-          "learning_rate" => trainer.dig("train", "lr"),
-          "caption_dropout_rate" => dataset.is_a?(Hash) ? dataset["caption_dropout_rate"] : nil,
-          "cache_latents_to_disk" => dataset.is_a?(Hash) ? dataset["cache_latents_to_disk"] : nil,
-          "gradient_checkpointing" => trainer.dig("train", "gradient_checkpointing"),
-          "resolution" => (dataset.is_a?(Hash) ? Array(dataset["resolution"]).map(&:to_i).join(",") : nil),
-        }
-        api.each do |key, expected|
-          next if key == "autocaption" # Manual .txt captions are verified per image below.
-
-          mismatches << "Replicate #{key} must equal #{expected.inspect}" unless input_checks[key] == expected
-        end
-        mismatches << "Replicate autocaption must remain false because captions are human supplied" unless api["autocaption"] == false
-
-        if mismatches.empty?
-          pass_check(report, "shared_training_standard", "Training plans match the canonical FLUX.1-dev subject recipe")
-        else
-          fail_check(report, "shared_training_standard", mismatches.join("; "))
-        end
-      rescue Psych::Exception, SystemCallError, IOError, KeyError => error
-        fail_check(report, "shared_training_standard", "Cannot read the canonical training standard: #{error.class}: #{error.message}")
       end
 
       def caption_problem(path, trigger)
