@@ -200,6 +200,19 @@ class TestStudioLoraValidator < Minitest::Test
     end
   end
 
+  def test_symlinked_private_subject_descriptor_is_not_replaced_by_the_example
+    with_subject do |root, directory|
+      descriptor = File.join(directory, "subject.env")
+      File.symlink("missing.env", descriptor)
+      File.write(File.join(directory, "subject.env.example"), "TRIGGER=SAMPLE\n", mode: "w", perm: 0o644)
+
+      report = Studio::Lora::Validator.new(root:).validate_subject("sample")
+
+      assert_equal "FAIL", report.fetch("state")
+      assert_includes report.fetch("blockers").map { |item| item["id"] }, "subject_descriptor_path"
+    end
+  end
+
   def test_private_subject_descriptor_must_be_owner_only
     with_subject do |root, directory|
       write_descriptor(directory)
