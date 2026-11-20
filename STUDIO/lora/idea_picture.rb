@@ -314,12 +314,13 @@ module Studio
       # rather than `image_input`, or without output_quality, gets a schema it
       # accepts.
       def reference_input(words, engine_name = engine)
+        allowed = Studio::ReplicateClient::Models.inputs_for(engine_name).map(&:to_s)
         desired = {
           "prompt" => photographic(words),
           "image_input" => reference_urls,
           "images" => reference_urls,
           "input_images" => reference_urls,
-          "subject_reference" => primary_reference_url,
+          "subject_reference" => (primary_reference_url if allowed.include?("subject_reference")),
           "max_images" => 1,
           "number_of_images" => 1,
           "prompt_optimizer" => true,
@@ -328,7 +329,6 @@ module Studio
           "output_format" => "jpg",
           "output_quality" => 95,
         }
-        allowed = Studio::ReplicateClient::Models.inputs_for(engine_name).map(&:to_s)
         desired.select { |key, _| allowed.include?(key) }
       end
 
