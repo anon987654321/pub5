@@ -86,7 +86,11 @@ voice of the creative work.
   and an explicitly private destination model. After comparing all candidate
   images at full size, record the exact immutable
   version in that subject's owner-only `subject.env` as
-  `LIKELINESS_REVIEWED_VERSION`. Only then may the six-image batch run.
+  `LIKELINESS_REVIEWED_VERSION`. A present `subject.env` cannot be a symlink or
+  a shared-readable file. Private `weights/<MODEL>/replicate_training.json`
+  manifests require owner-only directories and a singly-linked owner-only file;
+  the tracked subject-root manifest remains a non-secret compatibility pin.
+  Only then may the six-image batch run.
   `ruby STUDIO/lora/photograph.rb --all-subjects --count 6` replaces the three
   final series atomically after all 18 renders succeed. Then run
   `ruby STUDIO/lora/review.rb --subject NAME` for each person to create final
