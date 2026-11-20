@@ -50,6 +50,28 @@ class TestDesignLoop < Minitest::Test
     end
   end
 
+  def test_design_edit_uses_the_shared_atomic_writer
+    with_sheet do |path|
+      edit = parse(path, find: "padding: 4px;", replace: "padding: 8px;", scale: SCALE)
+      calls = []
+      writer = Master::Io::AtomicWrite.method(:write_atomic)
+      instrumented = lambda do |target, content, **options|
+        calls << [target, content, options]
+        writer.call(target, content, **options)
+      end
+
+      Master::Io::AtomicWrite.stub(:write_atomic, instrumented) do
+        edit.apply!
+      end
+
+      assert_equal 1, calls.length
+      assert_equal path, calls.first.first
+      assert_includes calls.first[1], "padding: 8px;"
+      assert_equal File.read(path), calls.first[1]
+      assert_empty Dir.glob(File.join(File.dirname(path), ".master_atomic_*"))
+    end
+  end
+
   def test_an_edit_to_spacing_is_applied_and_undone
     with_sheet do |path|
       edit = parse(path, find: "padding: 4px;", replace: "padding: 16px;")

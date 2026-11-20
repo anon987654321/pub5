@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 require "yaml"
-require "fileutils"
 require "time"
+require_relative "../io/atomic_write"
 
 module Master
   module Mobile
@@ -45,10 +45,7 @@ module Master
       def blank = { "schema" => 1, "preferences" => {}, "log" => [] }
 
       def save!
-        FileUtils.mkdir_p(File.dirname(@path))
-        temp = "#{@path}.#{Process.pid}.tmp"
-        File.write(temp, YAML.dump(@data), perm: 0o600)
-        File.rename(temp, @path)
+        Master::Io::AtomicWrite.write_atomic(@path, YAML.dump(@data), mode: 0o600)
       end
     end
   end

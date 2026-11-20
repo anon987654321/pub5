@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 require "json"
-require "fileutils"
 require "securerandom"
+require_relative "../io/atomic_write"
 require "time"
 
 module Master
@@ -49,10 +49,7 @@ module Master
       def fresh = { "id" => SecureRandom.uuid, "created_at" => now, "turns" => [] }
 
       def save!
-        FileUtils.mkdir_p(File.dirname(@path))
-        temp = "#{@path}.#{Process.pid}.tmp"
-        File.write(temp, "#{JSON.pretty_generate(@data)}\n", perm: 0o600)
-        File.rename(temp, @path)
+        Master::Io::AtomicWrite.write_atomic(@path, "#{JSON.pretty_generate(@data)}\n", mode: 0o600)
       end
     end
   end

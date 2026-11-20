@@ -11,6 +11,8 @@ require "mobile/host"
 require "trace/effect_observer"
 require "ground/personal_permissions"
 require "mobile/ambient"
+require "mobile/session"
+require "mobile/personality"
 
 class TestMobileProfile < Minitest::Test
   def test_a_forced_profile_sets_the_defaults_the_operator_left_unset
@@ -428,6 +430,52 @@ class TestMobileAmbientPermissions < Minitest::Test
       assert result.ok?
       assert_equal "hello from Termux", result.text
       assert_equal ["termux-speech-to-text"], calls
+    end
+  end
+end
+
+
+class TestMobileStorage < Minitest::Test
+  def shared_writer_calls
+    calls = []
+    writer = Master::Io::AtomicWrite.method(:write_atomic)
+    instrumented = lambda do |path, content, **options|
+      calls << [path, content, options]
+      writer.call(path, content, **options)
+    end
+    Master::Io::AtomicWrite.stub(:write_atomic, instrumented) { yield }
+    calls
+  end
+
+  def test_session_uses_a_private_shared_atomic_snapshot
+    Dir.mktmpdir do |root|
+      calls = shared_writer_calls do
+        Master::Mobile::Session.new(root:).append_turn!(role: "user", text: "hello")
+      end
+      path = File.join(root, ".master", "mobile", "session.json")
+
+      assert_equal 1, calls.length
+      assert_equal path, calls.first.first
+      assert_equal 0o600, calls.first.last.fetch(:mode)
+      assert_equal "hello", JSON.parse(File.read(path)).fetch("turns").first.fetch("text")
+      assert_equal 0o600, File.stat(path).mode & 0o777
+      assert_empty Dir.glob(File.join(File.dirname(path), ".master_atomic_*"))
+    end
+  end
+
+  def test_personality_uses_a_private_shared_atomic_snapshot
+    Dir.mktmpdir do |root|
+      calls = shared_writer_calls do
+        Master::Mobile::Personality.new(root:, path: ".master/mobile/memory.yml").remember!("name", "Mochi")
+      end
+      path = File.join(root, ".master", "mobile", "memory.yml")
+
+      assert_equal 1, calls.length
+      assert_equal path, calls.first.first
+      assert_equal 0o600, calls.first.last.fetch(:mode)
+      assert_equal "Mochi", YAML.safe_load_file(path).fetch("preferences").fetch("name")
+      assert_equal 0o600, File.stat(path).mode & 0o777
+      assert_empty Dir.glob(File.join(File.dirname(path), ".master_atomic_*"))
     end
   end
 end

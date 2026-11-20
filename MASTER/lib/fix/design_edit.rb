@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require_relative "../io/atomic_write"
 
 module Master
   module Fix
@@ -201,9 +202,7 @@ module Master
       end
 
       def write(text)
-        tmp = "#{file}.design-#{Process.pid}"
-        File.write(tmp, text)
-        File.rename(tmp, file)
+        Master::Io::AtomicWrite.write_atomic(file, text)
       end
     end
   end
