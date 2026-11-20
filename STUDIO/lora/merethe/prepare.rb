@@ -161,12 +161,14 @@ module Studio
       staging_zip = File.join(staging_root, "merethe_training.zip")
       build_dataset(additional, dataset_root: staging_dataset)
       zip_dataset!(dataset_root: staging_dataset, zip_path: staging_zip)
-      publish_prepared_artifacts!(
+      publication = publish_prepared_artifacts!(
         staged_dataset: staging_dataset,
         staged_zip: staging_zip,
         staging_root:
       )
       report["dataset_zip"] = ZIP_PATH
+      report["previous_prepared_archive"] = publication.fetch("archive_root") if publication["archive_root"]
+      report["archived_prepared_artifacts"] = publication.fetch("archived")
       report["status"] = "READY_FOR_OPERATOR_REVIEW"
       write_report(report)
       report
@@ -177,17 +179,24 @@ module Studio
         "training_started" => false,
         "provider_upload_started" => false
       }
+      if staging_root && File.directory?(staging_root) && !File.symlink?(staging_root) && !Dir.empty?(staging_root)
+        report["recovery_staging_root"] = staging_root
+      end
       write_report(report) rescue nil
       report
     ensure
-      FileUtils.remove_entry(staging_root) if staging_root && File.directory?(staging_root) && !File.symlink?(staging_root)
+      # Remove only an empty staging directory. Never recursively discard staged assets.
+      Dir.rmdir(staging_root) if staging_root && File.directory?(staging_root) &&
+                                !File.symlink?(staging_root) && Dir.empty?(staging_root)
     end
 
-    # Stage both artefacts on the same filesystem, retain the previous pair
-    # until both new paths are in place, and roll back ordinary rename failures.
-    # No failed validation/build is allowed to erase the last usable package.
+    # Stage both artefacts on the same filesystem. Every previous prepared
+    # dataset and ZIP is moved into a permanent private archive before the new
+    # pair is published. On failure, partial outputs remain for recovery; no
+    # previous or newly written artifact is deleted.
     def publish_prepared_artifacts!(staged_dataset:, staged_zip:, staging_root:,
-                                       dataset_path: DATASET_ROOT, zip_path: ZIP_PATH)
+                                       dataset_path: DATASET_ROOT, zip_path: ZIP_PATH,
+                                       archive_root_parent: CACHE_ROOT)
       unless File.directory?(staged_dataset) && !File.symlink?(staged_dataset) &&
              File.file?(staged_zip) && !File.symlink?(staged_zip) && File.size(staged_zip).positive?
         raise Error, "staged dataset and non-empty training ZIP are required"
@@ -203,35 +212,46 @@ module Studio
         raise Error, "existing training ZIP path is not a regular file"
       end
 
-      backup_dataset = File.join(staging_root, "previous-dataset")
-      backup_zip = File.join(staging_root, "previous-training.zip")
-      previous_dataset = previous_zip = published_dataset = published_zip = false
-
+      archive_root = nil
+      archived = {}
+      published = []
       begin
-        if File.exist?(dataset_path)
-          File.rename(dataset_path, backup_dataset)
-          previous_dataset = true
-        end
-        if File.exist?(zip_path)
-          File.rename(zip_path, backup_zip)
-          previous_zip = true
+        if File.exist?(dataset_path) || File.exist?(zip_path)
+          raise Error, "archive parent must already exist" unless File.directory?(archive_root_parent) && !File.symlink?(archive_root_parent)
+
+          archive_root = Dir.mktmpdir("prepared-archive-", archive_root_parent)
+          if File.exist?(dataset_path)
+            archived_dataset = File.join(archive_root, "dataset")
+            File.rename(dataset_path, archived_dataset)
+            archived["dataset"] = archived_dataset
+          end
+          if File.exist?(zip_path)
+            archived_zip = File.join(archive_root, "merethe_training.zip")
+            File.rename(zip_path, archived_zip)
+            archived["zip"] = archived_zip
+          end
         end
 
         File.rename(staged_dataset, dataset_path)
-        published_dataset = true
-        File.rename(staged_zip, zip_path)
-        published_zip = true
+        published << dataset_path
         File.chmod(0o700, dataset_path)
+        File.rename(staged_zip, zip_path)
+        published << zip_path
         File.chmod(0o600, zip_path)
-      rescue StandardError
-        FileUtils.remove_entry(dataset_path) if published_dataset && File.directory?(dataset_path) && !File.symlink?(dataset_path)
-        FileUtils.rm_f(zip_path) if published_zip && File.file?(zip_path) && !File.symlink?(zip_path)
-        File.rename(backup_dataset, dataset_path) if previous_dataset && File.exist?(backup_dataset)
-        File.rename(backup_zip, zip_path) if previous_zip && File.exist?(backup_zip)
-        raise
+      rescue StandardError => error
+        retained = (archived.values + published + [staged_dataset, staged_zip]).select do |path|
+          File.exist?(path) || File.symlink?(path)
+        end
+        raise Error,
+              "publication incomplete; no prepared assets were deleted; "               "archive=#{archive_root || "none"}; retained=#{retained.join(", ")}; "               "cause=#{error.class}: #{error.message}"
       end
 
-      true
+      {
+        "dataset_path" => dataset_path,
+        "zip_path" => zip_path,
+        "archive_root" => archive_root,
+        "archived" => archived
+      }
     end
 
     def migrate_legacy_local_data!

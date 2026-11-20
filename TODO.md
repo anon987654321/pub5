@@ -1284,3 +1284,12 @@ plans. The git-clean preview recognizer accepts only -n/-ndx or --dry-run; long
 options such as --no-optional-locks can no longer bypass the destructive-clean
 refusal. Regressions cover nested roots and this option boundary; tests remain
 NOT_RUN.
+
+
+2026-11-20 Merethe dataset retention: successful preparation now moves each
+previous dataset and training ZIP into a permanent private archive before
+publishing the new pair. Publication failures no longer delete a newly
+published dataset, partial ZIP or archived previous pair; the error/report
+names every retained archive and staging path. Staging cleanup removes only an
+empty directory. Regression expectations prove old and new datasets/ZIPs stay
+recoverable across success and injected failure. Runtime tests remain NOT_RUN.

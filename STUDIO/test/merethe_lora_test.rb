@@ -53,7 +53,7 @@ class TestMeretheLoraPackage < Minitest::Test
     assert_equal 42, replicate.fetch("seed")
   end
 
-  def test_prepared_dataset_and_zip_replace_as_one_recoverable_pair
+  def test_prepared_dataset_and_zip_are_published_while_previous_pair_is_archived
     Dir.mktmpdir("merethe-publish-") do |root|
       dataset_path = File.join(root, "dataset")
       zip_path = File.join(root, "training.zip")
@@ -66,21 +66,30 @@ class TestMeretheLoraPackage < Minitest::Test
       FileUtils.mkdir_p(staged_dataset)
       File.write(File.join(staged_dataset, "new.txt"), "new dataset")
       File.write(staged_zip, "new zip")
+      archive_parent = File.join(root, "archives")
+      FileUtils.mkdir_p(archive_parent, mode: 0o700)
 
       result = Studio::MeretheLora.publish_prepared_artifacts!(
-        staged_dataset:, staged_zip:, staging_root:, dataset_path:, zip_path:
+        staged_dataset:, staged_zip:, staging_root:, dataset_path:, zip_path:,
+        archive_root_parent: archive_parent
       )
 
-      assert_equal true, result
       assert_equal "new dataset", File.read(File.join(dataset_path, "new.txt"))
-      refute File.exist?(File.join(dataset_path, "old.txt"))
       assert_equal "new zip", File.read(zip_path)
       assert_equal 0o700, File.stat(dataset_path).mode & 0o777
       assert_equal 0o600, File.stat(zip_path).mode & 0o777
+
+      archive_root = result.fetch("archive_root")
+      archived_dataset = result.fetch("archived").fetch("dataset")
+      archived_zip = result.fetch("archived").fetch("zip")
+      assert_equal archive_root, File.dirname(archived_dataset)
+      assert_equal archive_root, File.dirname(archived_zip)
+      assert_equal "previous dataset", File.read(File.join(archived_dataset, "old.txt"))
+      assert_equal "previous zip", File.read(archived_zip)
     end
   end
 
-  def test_failed_pair_publication_restores_the_previous_dataset_and_zip
+  def test_failed_pair_publication_keeps_previous_archive_new_dataset_and_staged_zip
     Dir.mktmpdir("merethe-rollback-") do |root|
       dataset_path = File.join(root, "dataset")
       zip_path = File.join(root, "training.zip")
@@ -94,6 +103,8 @@ class TestMeretheLoraPackage < Minitest::Test
       File.write(File.join(staged_dataset, "new.txt"), "new dataset")
       File.write(staged_zip, "new zip")
 
+      archive_parent = File.join(root, "archives")
+      FileUtils.mkdir_p(archive_parent, mode: 0o700)
       original_rename = File.method(:rename)
       failing_rename = lambda do |source, target|
         raise Errno::EACCES, staged_zip if source == staged_zip
@@ -101,17 +112,23 @@ class TestMeretheLoraPackage < Minitest::Test
         original_rename.call(source, target)
       end
 
+      error = nil
       File.stub(:rename, failing_rename) do
-        assert_raises(Errno::EACCES) do
+        error = assert_raises(Studio::MeretheLora::Error) do
           Studio::MeretheLora.publish_prepared_artifacts!(
-            staged_dataset:, staged_zip:, staging_root:, dataset_path:, zip_path:
+            staged_dataset:, staged_zip:, staging_root:, dataset_path:, zip_path:,
+            archive_root_parent: archive_parent
           )
         end
       end
 
-      assert_equal "previous dataset", File.read(File.join(dataset_path, "old.txt"))
-      refute File.exist?(File.join(dataset_path, "new.txt"))
-      assert_equal "previous zip", File.read(zip_path)
+      archive_root = error.message[/archive=([^;]+)/, 1]
+      assert File.directory?(archive_root)
+      assert_equal "previous dataset", File.read(File.join(archive_root, "dataset", "old.txt"))
+      assert_equal "previous zip", File.read(File.join(archive_root, "merethe_training.zip"))
+      assert_equal "new dataset", File.read(File.join(dataset_path, "new.txt"))
+      assert_equal "new zip", File.read(staged_zip)
+      assert_match(/no prepared assets were deleted/, error.message)
     end
   end
 
