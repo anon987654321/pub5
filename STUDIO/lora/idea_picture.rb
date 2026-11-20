@@ -319,8 +319,12 @@ module Studio
           "image_input" => reference_urls,
           "images" => reference_urls,
           "input_images" => reference_urls,
+          "subject_reference" => primary_reference_url,
           "max_images" => 1,
+          "number_of_images" => 1,
+          "prompt_optimizer" => true,
           "aspect_ratio" => "2:3",
+          "resolution" => "2K",
           "output_format" => "jpg",
           "output_quality" => 95,
         }
@@ -349,6 +353,17 @@ module Studio
       # every frame of a series. Required, because a reference engine with no
       # references is a text prompt wearing a likeness model's name — the raise
       # here sends the render on to the next engine in the chain instead.
+      # MiniMax Image-01 takes one face reference; upload only the first
+      # reviewed source image instead of sending the full reference set.
+      def primary_reference_url
+        @primary_reference_url ||= begin
+          source = reference_files.first
+          raise "no reference photographs for #{@subject} in #{references_directory}" unless source
+
+          client.upload_file(source, subject: @subject)
+        end
+      end
+
       def reference_urls
         @reference_urls ||= reference_files.map { |file| client.upload_file(file, subject: @subject) }.tap do |urls|
           raise "no reference photographs for #{@subject} in #{references_directory}" if urls.empty?
