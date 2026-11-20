@@ -55,6 +55,16 @@ module Master
         FileUtils.remove_entry(File.dirname(fixture)) if fixture
       end
 
+      def test_bare_scan_preserves_the_process_law_constant
+        had_law = Object.const_defined?(:Law, false)
+        original_law = Object.const_get(:Law, false) if had_law
+
+        scan_corpus
+
+        assert_equal had_law, Object.const_defined?(:Law, false)
+        assert_same original_law, Object.const_get(:Law, false) if had_law
+      end
+
       def test_bare_scanner_honours_catalogue_path_exclude
         corpus = scan_corpus
         lib_dir = File.join(master_root, "lib", "agent")

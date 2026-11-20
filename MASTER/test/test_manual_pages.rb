@@ -9,15 +9,17 @@ class TestManualPages < Minitest::Test
     MASTER/man/man1/master.1
     MASTER/man/man1/operator.1
     MASTER/man/man1/master-fix.1
-    OPENBSD/mirror/man/man8/vps-deploy.8
-    OPENBSD/mirror/man/man8/pub5-admin.8
+    OPENBSD/mirror/usr/local/man/man8/vps-deploy.8
+    OPENBSD/mirror/usr/local/man/man8/pub5-admin.8
   ].freeze
 
   BASE_SYSTEM_PAGES = %w[doas rcctl relayd].freeze
 
   def manual_paths
-    Dir.glob(File.join(REPO, "{MASTER,OPENBSD}/man/man[1-9]/*.[1-9]"))
-       .map { |path| path.delete_prefix("#{REPO}/") }.sort
+    roots = %w[MASTER/man OPENBSD/mirror/usr/local/man]
+    roots.flat_map do |root|
+      Dir.glob(File.join(REPO, root, "man[1-9]", "*.[1-9]"))
+    end.map { |path| path.delete_prefix("#{REPO}/") }.sort
   end
 
   def test_manual_inventory_is_complete
@@ -75,6 +77,6 @@ class TestManualPages < Minitest::Test
     openbsd = File.read(File.join(REPO, "OPENBSD/README.md"))
 
     assert_includes master, 'MANPATH="$PWD/MASTER/man" man master'
-    assert_includes openbsd, 'MANPATH="$PWD/OPENBSD/mirror/man" man vps-deploy'
+    assert_includes openbsd, 'MANPATH="$PWD/OPENBSD/mirror/usr/local/man" man -P cat 8 vps-deploy'
   end
 end

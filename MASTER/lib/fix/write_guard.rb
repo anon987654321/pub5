@@ -35,7 +35,12 @@ module Master
       end
 
       def self.default
-        require File.join(Master::ROOT, "law", "definition") unless defined?(::Law)
+        unless defined?(::Law) && ::Law.respond_to?(:definitions) && ::Law.respond_to?(:load_all)
+          require File.join(Master::ROOT, "law", "definition")
+        end
+        unless defined?(::Law) && ::Law.respond_to?(:definitions) && ::Law.respond_to?(:load_all)
+          raise LoadError, "Law runtime registry is incomplete; expected definitions and load_all"
+        end
         ::Law.load_all(File.join(Master::ROOT, "law")) if ::Law.definitions.empty?
         digest = ::Law::Contract.digest
         return @default if @default && @default_digest == digest

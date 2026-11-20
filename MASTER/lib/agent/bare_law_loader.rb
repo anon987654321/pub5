@@ -16,6 +16,7 @@
 # its corpus honestly: lexical laws only.
 
 require "yaml"
+require "thread"
 
 module Master
   module Agent
@@ -157,31 +158,43 @@ module Master
         @target = hash
       end
 
-      # Loads one law file verbatim under the captured DSL and returns
-      # {id => Builder}. The file's own constants and module functions
-      # (PROGRAM_GUARD, matches_mode?, ...) resolve exactly as written.
-      def load_file(path)
-        builders = {}
-        stub_law
-        self.target = builders
-        load path
-        self.target = nil
-        builders
+      # Absolute ::Law.define calls require a temporary top-level binding. Keep
+      # it inside one corpus load and restore the previous runtime Law exactly:
+      # the bare scanner is also exercised by the full MASTER Rake suite.
+      def with_stub_law
+        @stub_mutex ||= Mutex.new
+        @stub_mutex.synchronize do
+          had_law = Object.const_defined?(:Law, false)
+          previous_law = Object.const_get(:Law, false) if had_law
+          Object.send(:remove_const, :Law) if had_law
+
+          stub = Object.const_set(:Law, Module.new)
+          stub.define_singleton_method(:define) do |id, &block|
+            builder = BareLawLoader::Builder.new(id)
+            builder.instance_eval(&block)
+            BareLawLoader.target[id.to_s] = builder
+          end
+          # Helper constants belong to the temporary Law module, not Object.
+          stub.define_singleton_method(:const_missing) { |name| const_set(name, Module.new) }
+          yield
+        ensure
+          if stub && Object.const_defined?(:Law, false) && Object.const_get(:Law, false).equal?(stub)
+            Object.send(:remove_const, :Law)
+          end
+          Object.const_set(:Law, previous_law) if had_law
+        end
       end
 
-      def stub_law
-        return if defined?(@bare_law_defined) && @bare_law_defined
-
-        law = Object.const_set(:Law, Module.new)
-        law.define_singleton_method(:define) do |id, &block|
-          builder = BareLawLoader::Builder.new(id)
-          builder.instance_eval(&block)
-          BareLawLoader.target[id.to_s] = builder
-        end
-        # Some law files reopen Law for helper modules; give them a home that
-        # tolerates it without dragging in the catalogue machinery.
-        law.define_singleton_method(:const_missing) { |name| Object.const_set(name, Module.new) }
-        @bare_law_defined = true
+      # Loads one law file under the active bare DSL and returns {id => Builder}.
+      # Restore the previous target even when evaluating a law raises.
+      def load_file(path)
+        builders = {}
+        previous_target = @target
+        self.target = builders
+        load path
+        builders
+      ensure
+        @target = previous_target
       end
     end
 
@@ -193,7 +206,9 @@ module Master
       def initialize(paths)
         @laws = {}
         @skipped = {}
-        paths.each { |path| load_path(path) }
+        BareLawLoader.with_stub_law do
+          paths.each { |path| load_path(path) }
+        end
       end
 
       def load_path(path)

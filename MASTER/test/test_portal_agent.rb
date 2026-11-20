@@ -219,6 +219,15 @@ class TestPortalAgentSnapshot < Minitest::Test
 end
 
 class TestPortalAgentGateway < Minitest::Test
+  def test_provider_setup_uses_the_master_runtime_extension
+    configured = false
+    Master.stub(:configure_providers!, -> { configured = true }) do
+      Master::PortalAgent::Gateway.new(model: "test-model")
+    end
+
+    assert configured
+  end
+
   def test_requires_env_lane_or_fallback
     # Gateway should not crash on init; it falls back to standard ruby_llm env vars
     g = Master::PortalAgent::Gateway.new(model: "test-model")

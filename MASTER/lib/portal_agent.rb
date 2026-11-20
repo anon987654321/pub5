@@ -290,7 +290,7 @@ module Master
       def initialize(model: ENV["PORTAL_AGENT_MODEL"])
         begin
           require "master"
-          Master::MasterRuntime.configure_providers! if defined?(Master::MasterRuntime)
+          Master.configure_providers! if Master.respond_to?(:configure_providers!)
         rescue LoadError
           # Standalone mode: ruby_llm will read standard provider env vars.
         end

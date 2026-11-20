@@ -20,6 +20,17 @@ class WriteGuardTest < Minitest::Test
 
   def path(name = "example.rb") = File.join(@tmp, name)
 
+  def test_bare_scan_preserves_the_loaded_runtime_law_registry
+    original = ::Law
+    require_relative "../lib/agent/bare_scan"
+
+    Master::Agent::BareScan.load_corpus("lexical")
+
+    assert_same original, ::Law
+    assert_respond_to ::Law, :definitions
+    assert_respond_to ::Law, :load_all
+  end
+
   def test_default_rebuilds_after_law_digest_changes
     guard_class = Master::Fix::WriteGuard
     built = 0
