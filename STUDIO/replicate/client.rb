@@ -204,7 +204,7 @@ module Studio
           trainer_owner, trainer_name, = model_reference!(LORA_TRAINER)
           trainer_version_id = resource_id!(version || trainer_version, "trainer version")
           validate_input_schema!("#{trainer_owner}/#{trainer_name}:#{trainer_version_id}", body.fetch(:input))
-          create_model(destination) unless model_exists?(destination)
+          ensure_private_model!(destination)
 
           training = post(trainings_uri, body)
           wait ? wait_for_training(training["id"], timeout:) : training
@@ -627,6 +627,28 @@ module Studio
         return false if error.status == 404
 
         raise
+      end
+
+      # Replicate's model endpoint exposes visibility. Training into an
+      # existing public model would publish the resulting weights, so refuse it.
+      def model_visibility(model_id)
+        owner, name, pinned = model_reference!(model_id)
+        raise ArgumentError, "visibility lookup needs owner/name without a version" if pinned
+
+        value = get(URI("#{BASE}/models/#{owner}/#{name}"))["visibility"].to_s
+        raise "Replicate did not report model visibility for #{owner}/#{name}" unless %w[private public].include?(value)
+
+        value
+      end
+
+      def ensure_private_model!(model_id)
+        if model_exists?(model_id)
+          visibility = model_visibility(model_id)
+          raise ArgumentError, "training destination #{model_id} is #{visibility}; refusing to publish private identity weights" unless visibility == "private"
+        else
+          create_model(model_id, visibility: "private")
+        end
+        model_id
       end
 
       # A LoRA destination serves FLUX.1-dev, and gpu-l40s is the smallest SKU
