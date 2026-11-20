@@ -15,6 +15,7 @@
 
 require "json"
 require "tmpdir"
+require "time"
 require "fileutils"
 require "minitest/autorun"
 require_relative "../../lib/agent/agent_cli"

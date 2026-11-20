@@ -82,7 +82,8 @@ class TestIdentityAndRuntimeSurface < Minitest::Test
 
     assert_includes prompt, "be curious and proactive"
     assert_includes prompt, "do not ask them to fetch evidence you can retrieve"
-    assert_includes prompt, "search and read primary sources"
+    assert_includes prompt, "search relevant primary documentation"
+    assert_includes prompt, "read source pages, not just search snippets"
     assert_includes prompt, "site:news.ycombinator.com"
     assert_includes prompt, "ArxivResearch and ar5iv"
     assert_includes prompt, "GitHubRepoMiner"
