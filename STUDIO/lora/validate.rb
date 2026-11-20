@@ -12,11 +12,12 @@ module Studio
     class Validator
       ROOT = File.expand_path(__dir__).freeze
       STANDARDS_PATH = File.join(ROOT, "training_standards.yml").freeze
+      TRAINING_STANDARD = YAML.safe_load_file(STANDARDS_PATH, permitted_classes: [], permitted_symbols: [], aliases: false).freeze
       SUBJECT_NAME = /\A[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}\z/.freeze
       ENV_KEYS = %w[SUBJECT MODEL TRIGGER DESCRIPTOR REPLICATE_MODEL LIKELINESS_REVIEWED_VERSION].freeze
       IMAGE_EXTENSIONS = %w[.jpg .jpeg .png .webp].freeze
-      MINIMUM_IMAGES = 12
-      MAXIMUM_IMAGES = 18
+      MINIMUM_IMAGES = TRAINING_STANDARD.fetch("quality").fetch("min_images")
+      MAXIMUM_IMAGES = TRAINING_STANDARD.fetch("quality").fetch("max_images")
       MAX_CAPTION_BYTES = 16_384
       MAX_CONFIG_BYTES = 1_048_576
 
@@ -343,7 +344,7 @@ module Studio
       end
 
       def validate_shared_training_standard(trainer, report)
-        standard = YAML.safe_load_file(STANDARDS_PATH, permitted_classes: [], permitted_symbols: [], aliases: false)
+        standard = TRAINING_STANDARD
         mismatches = []
         %w[network save train model].each do |section|
           expected = standard.fetch(section)
