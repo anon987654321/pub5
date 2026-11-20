@@ -253,7 +253,13 @@ module Studio
             previous = File.binread(path)
             previous_name = "previous-training-#{Digest::SHA256.hexdigest(previous)[0, 12]}.json"
             previous_path = File.join(subject_directory, ".cache", previous_name)
-            unless File.exist?(previous_path)
+            if File.exist?(previous_path) || File.symlink?(previous_path)
+              backup_stat = File.lstat(previous_path)
+              unless backup_stat.file? && !backup_stat.symlink? && backup_stat.uid == Process.uid &&
+                     backup_stat.nlink == 1 && (backup_stat.mode & 0o077).zero?
+                raise Error, "existing checkpoint backup must be a private singly-linked regular file"
+              end
+            else
               File.open(previous_path, File::WRONLY | File::CREAT | File::EXCL, 0o600) { |file| file.write(previous) }
             end
           elsif File.exist?(path)
