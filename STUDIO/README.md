@@ -70,6 +70,27 @@ voice of the creative work.
   Ragnhild and Merethe together, renders six subject-specific scenes each, and
   deletes prior generated stills only after all 18 new images succeed. The
   operation never deletes source photographs, datasets, weights or consent.
+  `ruby STUDIO/lora/train.rb --all` validates all three private datasets,
+  consent records, captions, shared settings and Replicate destination visibility
+  before any upload, then trains sequentially and records immutable candidate
+  versions without approving them. The shared `training_standards.yml` governs
+  the trainer pin, rank, steps and API inputs.
+  `ruby STUDIO/lora/review.rb --subject NAME --candidate` renders three private
+  candidate samples after training, next to three approved source photographs,
+  and writes a contact sheet plus Postpro measurements. Candidate renders stay
+  under the subject's ignored `.cache/likeness-review/` tree; they cannot enter
+  the published selfie folder or approve a model.
+  After comparing all candidate images at full size, record the exact immutable
+  version in that subject's owner-only `subject.env` as
+  `LIKELINESS_REVIEWED_VERSION`. Only then may the six-image batch run.
+  `ruby STUDIO/lora/photograph.rb --all-subjects --count 6` replaces the three
+  final series atomically after all 18 renders succeed. Then run
+  `ruby STUDIO/lora/review.rb --subject NAME` for each person to create final
+  contact sheets and diagnostic reports. Identity remains a human judgement;
+  Postpro metrics are not face recognition.
+  On the development checkout, run `MASTER/bin/fix-here STUDIO/lora --lane=all`
+  after the final review to inspect the LoRA source, reports and available visual
+  evidence through MASTER's full repair lanes. Keep private review artefacts local.
   `bin/studio lora validate [--json]` performs a read-only profile audit.
   `bin/studio lora recover` imports from a local, read-only pub4 checkout;
   it starts with a dry run. Applying a recovery requires private consent and
