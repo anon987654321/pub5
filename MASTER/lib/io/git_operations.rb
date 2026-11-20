@@ -215,19 +215,19 @@ module Master
           receipt_args = env ? args + [{ "environment_keys" => env.keys.sort }] : args
           receipt = receipts.before(tool: "git_#{args.first}", tier: "dangerous", args: receipt_args)
           started = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)
-          output, status = run_receipted(receipt, args, started, env:)
+          output, status = run_receipted(receipt, args, started, env:, receipt_args:)
           raise "git #{args.first} failed: #{output.strip}" unless status.success?
 
           output
         end
 
-        def run_receipted(receipt, args, started, env: nil)
+        def run_receipted(receipt, args, started, env: nil, receipt_args: args)
           command = ["git", "-C", @root_path, *args]
           output, status = env ? Master::Io::Exec.capture2e(env, *command) : Master::Io::Exec.capture2e(*command)
-          close_receipt(receipt, args, started, status.success? ? "success" : "error")
+          close_receipt(receipt, receipt_args, started, status.success? ? "success" : "error")
           [output, status]
         rescue StandardError
-          close_receipt(receipt, args, started, "unknown_outcome")
+          close_receipt(receipt, receipt_args, started, "unknown_outcome")
           raise
         end
 
