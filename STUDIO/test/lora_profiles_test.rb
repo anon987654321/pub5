@@ -200,6 +200,19 @@ class TestStudioLoraValidator < Minitest::Test
     end
   end
 
+  def test_private_subject_descriptor_must_be_owner_only
+    with_subject do |root, directory|
+      write_descriptor(directory)
+      File.chmod(0o644, File.join(directory, "subject.env"))
+
+      report = Studio::Lora::Validator.new(root:).validate_subject("sample")
+
+      assert_equal "FAIL", report.fetch("state")
+      refute report.fetch("training_ready")
+      assert_includes report.fetch("blockers").map { |item| item["id"] }, "subject_descriptor_permissions"
+    end
+  end
+
   def test_subject_descriptor_rejects_secret_fields_and_duplicate_keys
     with_subject do |root, directory|
       File.write(File.join(directory, "subject.env"), <<~ENV)
@@ -209,6 +222,7 @@ class TestStudioLoraValidator < Minitest::Test
         DESCRIPTOR=ordinary portrait subject
         REPLICATE_API_TOKEN=must-not-live-here
       ENV
+      File.chmod(0o600, File.join(directory, "subject.env"))
       write_training_plan(directory, dataset: "")
 
       report = Studio::Lora::Validator.new(root:).validate_subject("sample")
@@ -293,6 +307,7 @@ class TestStudioLoraValidator < Minitest::Test
       REPLICATE_MODEL=
       DESCRIPTOR=ordinary portrait subject
     ENV
+    File.chmod(0o600, File.join(directory, "subject.env"))
   end
 
   def write_training_plan(directory, dataset:, trigger: "SAMPLE", push_to_hub: false)
