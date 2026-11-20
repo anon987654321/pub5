@@ -33,7 +33,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
         "steps" => {},
         "lora_rank" => {},
         "seed" => {}
-      }
+      }.merge(Studio::ReplicateClient::TRAINING_STANDARDS.fetch("replicate").fetch("extra_input").keys.to_h { |key| [key, {}] })
       schema = {
         "properties" => properties,
         "required" => []
@@ -382,7 +382,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
   def test_training_extra_input_is_merged_without_replacing_protected_fields
     url = "https://files.replicate.delivery/photos.zip"
     @client.train_lora(
-      url, "owner/model", trigger_word: "SAMPLE", steps: 1_000, lora_rank: 16,
+      url, "owner/model", trigger_word: "SAMPLE", steps: 1_600, lora_rank: 16,
       wait: false, extra_input: { "seed" => 7 }
     )
 
