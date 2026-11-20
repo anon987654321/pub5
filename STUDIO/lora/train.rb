@@ -8,6 +8,7 @@ require "open3"
 require "optparse"
 require "time"
 require "tmpdir"
+require "tempfile"
 require "yaml"
 require_relative "validate"
 require_relative "idea_picture"
@@ -27,10 +28,10 @@ module Studio
       class Error < StandardError; end
 
       class Runner
-        def initialize(client: nil, validator: Validator.new, root: ROOT, zip_executable: ENV.fetch("ZIP", "zip"))
+        def initialize(client: nil, validator: nil, root: ROOT, zip_executable: ENV.fetch("ZIP", "zip"))
           @client = client
-          @validator = validator
           @root = File.expand_path(root)
+          @validator = validator || Validator.new(root: @root)
           @zip_executable = zip_executable
         end
 
