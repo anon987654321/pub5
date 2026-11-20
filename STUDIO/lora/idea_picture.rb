@@ -503,7 +503,7 @@ module Studio
         raise "subject.env must not be hard-linked" unless stat.nlink == 1
         raise "subject.env exceeds 64 KB" if stat.size > 65_536
 
-        allowed = %w[SUBJECT MODEL TRIGGER DESCRIPTOR REPLICATE_MODEL LIKELINESS_REVIEWED_VERSION]
+        allowed = %w[SUBJECT MODEL TRIGGER DESCRIPTOR REPLICATE_DESTINATION REPLICATE_MODEL LIKELINESS_REVIEWED_VERSION]
         File.foreach(path).each_with_object({}) do |line, env|
           stripped = line.strip
           next if stripped.empty? || stripped.start_with?("#")
@@ -564,13 +564,12 @@ module Studio
           return version
         end
 
-        # A private Replicate model may be pinned by a local training manifest,
-        # or named in subject.env. Bare owner/name resolves the provider's latest
-        # version at prediction time; MASTER records the prediction id/cost.
+        # Training destinations are not inference pins. Predictions require an
+        # immutable owner/model:version from the private manifest or REPLICATE_MODEL.
         model = subject_env["REPLICATE_MODEL"].to_s.strip
-        return model if model.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}\z/)
+        return model if model.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}:[A-Za-z0-9][A-Za-z0-9_-]{0,127}\z/)
 
-        raise "no trained Replicate version for #{@subject}; expected #{path} or REPLICATE_MODEL in #{@subject}/subject.env"
+        raise "no trained, pinned Replicate version for #{@subject}; expected #{path} or owner/model:version in #{@subject}/subject.env"
       rescue JSON::ParserError => error
         raise "invalid training manifest #{path}: #{error.message}"
       end
