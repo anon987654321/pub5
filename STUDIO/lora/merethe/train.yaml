@@ -1,70 +1,9 @@
 ---
-job: extension
-config:
-  name: merethe
-  process:
-  - type: sd_trainer
-    training_folder:
-    device: mps
-    trigger_word: MERETHE
-    network:
-      type: lora
-      linear: 16
-      linear_alpha: 16
-    save:
-      dtype: float16
-      save_every: 250
-      max_step_saves_to_keep: 4
-      push_to_hub: false
-    datasets:
-    - folder_path: dataset
-      caption_ext: txt
-      caption_dropout_rate: 0.05
-      shuffle_tokens: false
-      cache_latents_to_disk: false
-      resolution:
-      - 512
-      - 768
-      - 1024
-    train:
-      batch_size: 1
-      steps: 1600
-      skip_first_sample: true
-      gradient_accumulation_steps: 1
-      train_unet: true
-      train_text_encoder: false
-      gradient_checkpointing: false
-      noise_scheduler: flowmatch
-      optimizer: adamw8bit
-      lr: 0.0004
-      timestep_type: linear
-      ema_config:
-        use_ema: true
-        ema_decay: 0.995
-      dtype: bf16
-    model:
-      name_or_path: black-forest-labs/FLUX.1-dev
-      is_flux: true
-      quantize: true
-      low_vram: true
-    sample:
-      sampler: flowmatch
-      sample_every: 250
-      width: 1024
-      height: 1024
-      seed: 42
-      walk_seed: true
-      guidance_scale: 3.5
-      sample_steps: 20
-      prompts:
-        - MERETHE, natural close portrait in soft north-facing window light, unobstructed face, neutral expression settling after a laugh, eye-level camera, natural skin texture
-        - MERETHE, candid environmental portrait on a rainy Bergen street, soft overcast daylight, unobstructed face, relaxed expression, documentary photograph
-        - MERETHE, quiet café portrait with warm tungsten practical lights and cool window fill, face clearly visible, natural expression, shallow depth of field
-        - MERETHE, coastal portrait under a broad overcast sky, wind and weather in the environment, face clearly visible, realistic proportions
-        - MERETHE, direct-flash evening street portrait, natural expression, crisp focus on the eyes, documentary colour-negative photograph
-        - MERETHE, simple monochrome studio portrait, one soft directional light, full facial detail, honest texture, classic silver-gelatin print
-      neg: plastic skin, waxy face, airbrushed skin, generic influencer face, identity drift, face morph, beauty filter, CGI, illustration, extra teeth, deformed eyes, overly young face
-  meta:
-    name: merethe
-    version: '1.0'
-    master_trigger: MERETHE
+schema: 1
+subject: merethe
+trigger_word: MERETHE
+dataset:
+  path: dataset
+  caption_ext: txt
+destination_env: REPLICATE_DESTINATION
+model_directory: merethe
