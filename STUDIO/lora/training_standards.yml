@@ -7,6 +7,17 @@ replicate:
   version: "26dce37af90b9d997eeb970d92e47de3064d46c300504ae376c75bef6a9022d2"
   steps: 1600
   lora_rank: 16
+  min_images: 12
+  max_images: 18
+  extra_input:
+    optimizer: adamw8bit
+    batch_size: 1
+    resolution: "512,768,1024"
+    autocaption: false
+    learning_rate: 0.0004
+    caption_dropout_rate: 0.05
+    cache_latents_to_disk: false
+    gradient_checkpointing: false
 network:
   type: lora
   linear: 16
@@ -18,9 +29,9 @@ save:
   push_to_hub: false
 dataset:
   caption_ext: txt
-  caption_dropout_rate: 0.08
+  caption_dropout_rate: 0.05
   shuffle_tokens: false
-  cache_latents_to_disk: true
+  cache_latents_to_disk: false
   resolution: [512, 768, 1024]
 train:
   batch_size: 1
@@ -32,7 +43,7 @@ train:
   gradient_checkpointing: true
   noise_scheduler: flowmatch
   optimizer: adamw8bit
-  lr: 0.0001
+  lr: 0.0004
   timestep_type: linear
   ema_config:
     use_ema: true
