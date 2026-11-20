@@ -2,7 +2,7 @@
 schema: 1
 replicate:
   trainer: replicate/fast-flux-trainer
-  version: "e5a5bc821112c107e6ddb8491c5b898f94d06eaca861d1dbf37b29cd69ba8988"
+  version: "080f17375c73ef43e1009da9d560ab5f935176c61a0c7a88866c8b8387057675"
   training_steps: 1000
   lora_type: subject
   seed: 42
