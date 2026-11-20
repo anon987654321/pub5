@@ -96,7 +96,7 @@ private ZIP only after these checks pass. The report is written to the ignored
 \`.cache/prepare_report.json\`. The target is 12–18 images, in line with the
 trainer's dataset guidance.
 
-## Training plan — not executed
+## Training plan — shared with Johann and Ragnhild
 
 - Trainer: \`ostris/flux-dev-lora-trainer\`
 - Pinned trainer version: \`26dce37af90b9d997eeb970d92e47de3064d46c300504ae376c75bef6a9022d2\`
