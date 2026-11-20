@@ -678,6 +678,19 @@ class TestStudioReplicateClientPaths < Minitest::Test
     assert_empty @client.requests
   end
 
+  def test_training_zip_upload_requires_private_owner_only_file
+    Dir.mktmpdir do |directory|
+      path = File.join(directory, "training.zip")
+      File.write(path, "zip", mode: "w", perm: 0o644)
+      error = assert_raises(ArgumentError) { @client.upload_zip(path, subject: "probe") }
+      assert_match(/owner-only/, error.message)
+      assert_empty @client.requests
+
+      File.chmod(0o600, path)
+      assert_equal path, @client.send(:validate_private_training_zip!, path)
+    end
+  end
+
   def test_upload_requires_a_readable_regular_file
     Dir.mktmpdir do |directory|
       source = File.join(directory, "notes.txt")
