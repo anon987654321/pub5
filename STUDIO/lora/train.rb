@@ -42,6 +42,9 @@ module Studio
           names = normalize_subjects(subjects)
           packages = names.map { |subject| prepare_subject!(subject) }
           client = @client || Studio::ReplicateClient.new
+          # Check/create every destination as private before the first dataset
+          # ZIP is uploaded. A pre-existing public destination blocks the run.
+          packages.each { |package| client.ensure_private_model!(package.fetch("destination")) }
 
           results = packages.map do |package|
             train_subject!(client, package, timeout: Integer(timeout))
