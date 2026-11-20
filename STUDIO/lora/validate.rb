@@ -385,6 +385,23 @@ module Studio
         mismatches << "train.steps must equal Replicate steps #{replicate.fetch("steps")}" unless trainer.dig("train", "steps") == replicate.fetch("steps")
         mismatches << "network.linear must equal Replicate lora_rank #{replicate.fetch("lora_rank")}" unless trainer.dig("network", "linear") == replicate.fetch("lora_rank")
 
+        api = replicate.fetch("extra_input")
+        input_checks = {
+          "optimizer" => trainer.dig("train", "optimizer"),
+          "batch_size" => trainer.dig("train", "batch_size"),
+          "learning_rate" => trainer.dig("train", "lr"),
+          "caption_dropout_rate" => dataset.is_a?(Hash) ? dataset["caption_dropout_rate"] : nil,
+          "cache_latents_to_disk" => dataset.is_a?(Hash) ? dataset["cache_latents_to_disk"] : nil,
+          "gradient_checkpointing" => trainer.dig("train", "gradient_checkpointing"),
+          "resolution" => (dataset.is_a?(Hash) ? Array(dataset["resolution"]).map(&:to_i).join(",") : nil),
+        }
+        api.each do |key, expected|
+          next if key == "autocaption" # Manual .txt captions are verified per image below.
+
+          mismatches << "Replicate #{key} must equal #{expected.inspect}" unless input_checks[key] == expected
+        end
+        mismatches << "Replicate autocaption must remain false because captions are human supplied" unless api["autocaption"] == false
+
         if mismatches.empty?
           pass_check(report, "shared_training_standard", "Training plans match the canonical FLUX.1-dev subject recipe")
         else
