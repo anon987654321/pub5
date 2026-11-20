@@ -47,13 +47,21 @@ Den fullstendige lovteksten nedenfor er satt opp med en konsekvent overskriftshi
 
 ## Kildegrunnlag og avgrensning
 
-Lovdata er den autoritative kilden for den konsoliderte lovteksten. Endringshistorikken for § 9-3 a er kontrollert mot lov 12. juni 2026 nr. 22 og ikraftsettingsvedtak FOR-2026-06-12-1076. Endringen i § 12-5 er kontrollert mot lov 22. desember 2025 nr. 127 og ikraftsettingsvedtak FOR-2025-12-22-2815.
+Gjeldende lovtekst er kontrollert mot Lovdatas lov- og endringspublikasjoner. Den fullstendige teksten i denne filen er hentet fra en maskinlesbar speiling av Lovdatas lovtekst og kryssjekket mot de offisielle kunngjøringene nedenfor. Speilfilens Git-blob er `e8b24e21ef40b6ddc07b3c935bc3806c6d8be675`. Ved avvik har Lovdata og Norsk Lovtidend forrang.
+
+**Kontrollerte endringsidentifikatorer:**
+
+- `LOV-2026-06-12-22` – flerlover-endringslov som også endrer husleieloven § 9-3 a.
+- `FOR-2026-06-12-1076` – setter endringsloven i kraft 1. juli 2026.
+- `LOV-2025-12-22-127` – endrer husleieloven § 12-5.
+- `FOR-2025-12-22-2815` – setter endringen i § 12-5 i kraft 1. januar 2026.
 
 - [Gjeldende husleielov – Lovdata](https://lovdata.no/dokument/NL/lov/1999-03-26-17)
-- [Lov 12. juni 2026 nr. 22 – Norsk Lovtidend](https://lovdata.no/dokument/LTI/lov/2026-06-12-22)
-- [Ikraftsettingsvedtak FOR-2026-06-12-1076 – Norsk Lovtidend](https://lovdata.no/dokument/LTI/forskrift/2026-06-12-1076)
-- [Lov 22. desember 2025 nr. 127 – Norsk Lovtidend](https://lovdata.no/dokument/LTI/lov/2025-12-22-127)
-- [Ikraftsettingsvedtak FOR-2025-12-22-2815 – Norsk Lovtidend](https://lovdata.no/dokument/LTI/forskrift/2025-12-22-2815)
+- [LOV-2026-06-12-22 – Norsk Lovtidend](https://lovdata.no/dokument/LTI/lov/2026-06-12-22)
+- [FOR-2026-06-12-1076 – Norsk Lovtidend](https://lovdata.no/dokument/LTI/forskrift/2026-06-12-1076)
+- [LOV-2025-12-22-127 – Norsk Lovtidend](https://lovdata.no/dokument/LTI/lov/2025-12-22-127)
+- [FOR-2025-12-22-2815 – Norsk Lovtidend](https://lovdata.no/dokument/LTI/forskrift/2025-12-22-2815)
+- [Maskinlesbar fulltekstspeiling og kildefil](https://github.com/sondreskarsten/norwegian-laws/blob/main/lover/lov-1999-03-26-17.md)
 
 Denne kildeutgaven gjengir lovtekst og endringshistorikk for oppslag. Den gir ikke råd om hvordan loven skal anvendes i en konkret tvist. En konkret juridisk vurdering krever at faktum, avtalen, relevante forskrifter, overgangsregler og rettspraksis undersøkes.
 
