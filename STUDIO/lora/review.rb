@@ -151,7 +151,7 @@ module Studio
 
         def new_review_directory(parent)
           secure_directory!(parent)
-          stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S")
+          stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S%6N")
           path = File.join(parent, stamp)
           secure_directory!(path)
           path
