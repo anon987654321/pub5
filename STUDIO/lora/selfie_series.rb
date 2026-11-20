@@ -18,8 +18,6 @@ module Studio
       # Each prompt carries its own environment, moment, lens and light.
       SCENES = Studio::Lora::Selfie::SCENES
 
-      IMAGE_EXTENSIONS = %w[jpg jpeg png webp].freeze
-
       def initialize(subject:, client: nil, directory: nil, scenes: nil, ledger_path: nil, engine: nil)
         @subject = subject.to_s
         raise ArgumentError, "subject must be a simple directory name" unless @subject.match?(/\A[a-zA-Z0-9_-]+\z/)
@@ -27,7 +25,6 @@ module Studio
         raise ArgumentError, "selfie series needs at least one scene" if @scenes&.empty?
 
         @directory = File.expand_path(directory || IdeaPicture::SUBJECTS)
-        @subject_directory = File.join(IdeaPicture::SUBJECTS, @subject)
         @series = IdeaPicture.new(
           subject: @subject, directory: @directory, client:, engine:, lora_only: engine.nil?
         )
@@ -36,12 +33,13 @@ module Studio
 
       def preflight! = @series.validate_model!
 
+      # replace: is a compatibility keyword only. All previous portraits,
+      # graded renders and sidecars are retained, regardless of its value.
       def run(count: 6, replace: false)
         total = Integer(count)
         raise ArgumentError, "count must be between 1 and #{LIMIT}" unless total.between?(1, LIMIT)
 
         preflight!
-        previous = previous_render_paths if replace
         rendered = []
         total.times do |index|
           scene = if @scenes
@@ -63,91 +61,10 @@ module Studio
           end
         end
 
-        if replace
-          complete = rendered.length == total && rendered.all? { |path| File.file?(path) && !File.symlink?(path) }
-          if complete
-            replace_previous_renders!(keep: rendered)
-          else
-            record("replace_preserved", previous: previous.length, rendered: rendered.length, expected: total)
-          end
-        end
         rendered
       end
 
-      # Build a complete, non-destructive deletion plan. Call this for every
-      # subject before applying any plan in a multi-subject replacement.
-      def replacement_plan(keep: [])
-        retained = Array(keep).map { |path| File.expand_path(path) }
-        candidates = previous_render_paths.reject { |path| retained.include?(File.expand_path(path)) }
-        sidecars = candidates.map { |path| "#{path}.json" }.select { |path| File.exist?(path) || File.symlink?(path) }
-        targets = (candidates + sidecars).uniq
-        unsafe = targets.reject { |path| safe_generated_file?(path) }
-        raise "refusing to delete unsafe or unowned generated output: #{unsafe.join(", ")}" unless unsafe.empty?
-
-        { images: candidates.freeze, sidecars: sidecars.freeze }.freeze
-      end
-
-      def replace_previous_renders!(keep: [], plan: nil)
-        expected = replacement_plan(keep:)
-        plan ||= expected
-        raise "replacement plan changed after preflight" unless plan == expected
-
-        targets = plan.fetch(:images) + plan.fetch(:sidecars)
-        targets.each { |path| File.delete(path) }
-        record("replace_delete", deleted: plan.fetch(:images).length, sidecars: plan.fetch(:sidecars).length)
-        plan.fetch(:images).length
-      end
-
       private
-
-      def safe_generated_file?(path)
-        expanded = File.expand_path(path)
-        roots = [
-          @directory,
-          File.join(@subject_directory, "out"),
-          File.join(IdeaPicture::SUBJECTS, "out", @subject, "selfie_series")
-        ].map { |root| File.expand_path(root) }
-        root = roots.find { |candidate| expanded.start_with?("#{candidate}#{File::SEPARATOR}") }
-        return false unless root && File.directory?(root) && !File.symlink?(root)
-
-        relative = expanded.delete_prefix("#{root}#{File::SEPARATOR}")
-        parts = relative.split(File::SEPARATOR)
-        cursor = root
-        parts[0...-1].each do |part|
-          cursor = File.join(cursor, part)
-          return false if File.symlink?(cursor) || !File.directory?(cursor)
-        end
-        stat = File.lstat(expanded)
-        stat.file? && !stat.symlink? && stat.uid == Process.uid && stat.nlink == 1
-      rescue SystemCallError
-        false
-      end
-
-      def previous_render_paths
-        patterns = IMAGE_EXTENSIONS.flat_map do |ext|
-          [
-            File.join(@directory, "#{@subject}_selfie_*.#{ext}"),
-            File.join(@directory, "postpro_#{@subject}_selfie_*.#{ext}"),
-          ]
-        end
-        legacy_output = File.join(IdeaPicture::SUBJECTS, @subject, "out")
-        if File.directory?(legacy_output) && !File.symlink?(legacy_output)
-          patterns.concat(IMAGE_EXTENSIONS.flat_map do |ext|
-            [
-              File.join(legacy_output, "**", "#{@subject}_selfie_*.#{ext}"),
-              File.join(legacy_output, "**", "postpro_#{@subject}_selfie_*.#{ext}"),
-            ]
-          end)
-        end
-        legacy_series = File.join(IdeaPicture::SUBJECTS, "out", @subject, "selfie_series")
-        if File.directory?(legacy_series) && !File.symlink?(legacy_series)
-          patterns.concat(IMAGE_EXTENSIONS.map { |ext| File.join(legacy_series, "*.#{ext}") })
-        end
-
-        patterns.flat_map { |pattern| Dir.glob(pattern) }.uniq.select do |path|
-          File.file?(path) && !File.symlink?(path)
-        end
-      end
 
       def record(kind, **fields)
         directory = File.dirname(@ledger_path)

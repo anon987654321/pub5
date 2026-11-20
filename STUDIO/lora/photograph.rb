@@ -33,9 +33,9 @@ def studio_photograph_actions
     "series" => lambda do |request|
       subject = request.fetch("subject", "ragnhild")
       paths = Studio::Visual::SelfieSeries.new(subject:, engine: request["engine"]).run(
-        count: request.fetch("count", 10), replace: request.fetch("replace", true)
+        count: request.fetch("count", 10)
       )
-      { "subject" => subject, "rendered" => paths }
+      { "subject" => subject, "rendered" => paths, "prior_renders_retained" => true }
     end,
     "animate" => lambda do |request|
       source = request["source"].to_s
@@ -104,7 +104,8 @@ if $PROGRAM_NAME == __FILE__
       parser.on("--selfie-series", "render six portraits using --subject's own LoRA") { options[:series] = true }
       parser.on("--all-subjects", "preflight and render six LoRA portraits for Johann, Ragnhild and Merethe") { options[:all_subjects] = true }
       parser.on("--count N", Integer, "series length, 1..24 (default 6)") { |value| options[:count] = value }
-      parser.on("--keep", "keep this subject's earlier generated stills instead of replacing them") { options[:keep] = true }
+      # Compatibility flag; earlier stills are always retained.
+      parser.on("--keep", "compatibility flag; prior generated stills are always retained") { options[:keep] = true }
       parser.on("--engine NAME", "render with a model from STUDIO/replicate/models.yml") { |value| options[:engine] = value }
       parser.on("--film-engine NAME", "animate with a model from image_to_video (default minimax/h3-highspeed)") { |value| options[:film_engine] = value }
       parser.on("--film-resolution RES", "H3 Lite resolution: 480P (default) or 768P") { |value| options[:film_resolution] = value }
@@ -126,7 +127,7 @@ if $PROGRAM_NAME == __FILE__
       options[:series] = true
       options[:count] = wizard.number("How many sittings", default: 6, range: 1..24)
       # The ordinary selfie path is always this subject's trained LoRA.
-      options[:keep] = !wizard.confirm("Replace this subject's earlier stills?", default: true)
+      puts "Earlier portraits are always retained."
     when :picture
       options[:prompt] = wizard.ask("Describe the picture")
       options[:engine] = studio_engine_choice(wizard)
@@ -157,35 +158,24 @@ if $PROGRAM_NAME == __FILE__
       { "subject" => options[:subject], "model" => Studio::Visual::IdeaPicture.new(subject: options[:subject], lora_only: true).validate_model! }
     elsif options[:all_subjects]
       raise ArgumentError, "--all-subjects requires the subject's trained LoRA; --engine is not allowed" if options[:engine]
-      raise ArgumentError, "--all-subjects cannot be combined with --keep" if options[:keep]
+ 
       subjects = %w[johann ragnhild merethe]
       series = subjects.to_h { |subject| [subject, Studio::Visual::SelfieSeries.new(subject:)] }
       # Validate every subject's consent, pinned model and input schema before
       # the first prediction. A missing model blocks the whole batch up front.
       series.each_value(&:preflight!)
       rendered = subjects.to_h do |subject|
-        [subject, series.fetch(subject).run(count: options[:count] || 6, replace: false)]
+        [subject, series.fetch(subject).run(count: options[:count] || 6)]
       end
       incomplete = rendered.select { |_subject, paths| paths.length != (options[:count] || 6) }
-      raise "INCOMPLETE: no old renders were deleted; subjects with incomplete output: #{incomplete.keys.join(", ")}" unless incomplete.empty?
-      # Validate every subject's full deletion set before removing a single
-      # prior image from any subject.
-      plans = subjects.to_h do |subject|
-        [subject, series.fetch(subject).replacement_plan(keep: rendered.fetch(subject))]
-      end
-      deleted = subjects.to_h do |subject|
-        [subject, series.fetch(subject).replace_previous_renders!(
-          keep: rendered.fetch(subject), plan: plans.fetch(subject)
-        )]
-      end
-      { "subjects" => rendered, "old_renders_deleted" => deleted }
+      raise "INCOMPLETE: subjects with incomplete output: #{incomplete.keys.join(", ")}" unless incomplete.empty?
+      { "subjects" => rendered, "prior_renders_retained" => true }
     elsif options[:series]
       # A series defaults to the subject's pinned LoRA. An explicit --engine is
       # an intentional opt-out for reference/text experiments.
       Studio::ReplicateClient::Models.engine(options[:engine]) if options[:engine]
       Studio::Visual::SelfieSeries.new(subject: options[:subject], engine: options[:engine]).run(
-        count: options[:count] || 6,
-        replace: options[:keep] != true,
+        count: options[:count] || 6
       )
     elsif options[:animate]
       prompt = options[:prompt].to_s.strip

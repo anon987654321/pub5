@@ -249,7 +249,7 @@ class MediaIntentTest < Minitest::Test
   end
 
 
-  def test_lora_selfie_series_preflights_both_subjects_then_replaces_only_their_renders
+  def test_lora_selfie_series_preflights_named_subjects_and_always_retains_prior_renders
     calls = []
     fake = Object.new
     fake.define_singleton_method(:validate_model) do |subject:|
@@ -268,11 +268,12 @@ class MediaIntentTest < Minitest::Test
       assert result.ok?, -> { result.message.to_s }
       assert_equal :lora_selfie_series, result.value!.fetch(:media)
       assert_equal 20, result.value!.fetch(:paths).size
+      assert result.value!.fetch(:prior_renders_retained)
     end
 
     assert_equal [
       [:preflight, "johann"], [:preflight, "ragnhild"],
-      [:render, "johann", 10, true], [:render, "ragnhild", 10, true],
+      [:render, "johann", 10, false], [:render, "ragnhild", 10, false],
     ], calls
   end
 

@@ -113,7 +113,7 @@ class TestSelfieSeries < Minitest::Test
     assert_equal Studio::Visual::IdeaPicture::SUBJECTS, box.instance_variable_get(:@directory)
   end
 
-  def test_replace_deletes_only_the_selected_subject_renders_after_success
+  def test_legacy_replace_true_appends_without_deleting_any_prior_render_or_sidecar
     directory = File.join(@dir, "flat")
     FileUtils.mkdir_p(directory)
     old = File.join(directory, "probe_selfie_old.jpg")
@@ -128,33 +128,32 @@ class TestSelfieSeries < Minitest::Test
     )
     rendered = run_series(box, count: 1, replace: true)
 
-    refute File.exist?(old)
-    refute File.exist?(processed)
-    refute File.exist?(sidecar)
-    assert File.file?(other)
-    assert_empty Dir.glob(File.join(directory, "probe", "out", "archive", "*", "*"))
-    assert_equal 2, ledger_rows("replace_delete").first.fetch("deleted")
-    assert_equal 1, ledger_rows("replace_delete").first.fetch("sidecars")
-    assert rendered.all? { |path| File.file?(path) }
+    [old, processed, sidecar, other].each { |path| assert File.file?(path), "#{path} must be retained" }
+    assert_equal "old", File.read(old)
+    refute ledger_rows("replace_delete").any?
+    assert_equal 1, rendered.length
+    assert File.file?(rendered.first)
+    refute_equal old, rendered.first
   end
 
-  def test_replacement_plan_is_non_destructive_and_covers_sidecars
-    directory = File.join(@dir, "planned")
+  def test_legacy_replace_true_does_not_touch_a_sidecar_symlink
+    directory = File.join(@dir, "unsafe")
     FileUtils.mkdir_p(directory)
     old = File.join(directory, "probe_selfie_old.jpg")
-    sidecar = "#{old}.json"
+    outside = File.join(@dir, "outside.json")
     File.write(old, "old")
-    File.write(sidecar, '{"preset":"portrait"}')
+    File.write(outside, '{"private":"other"}')
+    File.symlink(outside, "#{old}.json")
     box = Studio::Visual::SelfieSeries.new(
       subject: "probe", client: @client, directory:, ledger_path: File.join(@dir, "ledger.jsonl")
     )
 
-    plan = box.replacement_plan
+    rendered = run_series(box, count: 1, replace: true)
 
-    assert_equal [old], plan.fetch(:images)
-    assert_equal [sidecar], plan.fetch(:sidecars)
-    assert File.file?(old), "preflight must not delete the previous image"
-    assert File.file?(sidecar), "preflight must not delete the previous sidecar"
+    assert File.file?(old)
+    assert File.symlink?("#{old}.json")
+    assert_equal '{"private":"other"}', File.read(outside)
+    assert_equal 1, rendered.length
   end
 
   def test_replacement_plan_refuses_a_symlinked_sidecar_without_deleting_the_image
@@ -189,9 +188,8 @@ class TestSelfieSeries < Minitest::Test
 
     assert_equal 2, rendered.length
     assert_equal "previous", File.read(old)
-    assert_empty Dir.glob(File.join(directory, "probe", "out", "archive", "*", "*"))
-    row = ledger_rows("replace_preserved").first
-    assert_equal [1, 2, 3], [row.fetch("previous"), row.fetch("rendered"), row.fetch("expected")]
+    refute ledger_rows("replace_delete").any?
+    assert_equal 1, ledger_rows("render_attempt").length
   end
 
   def test_no_render_carries_the_film_model

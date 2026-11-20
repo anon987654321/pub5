@@ -23,9 +23,9 @@ voice of the creative work.
   menu and validation/recovery commands, consent-gated `photograph` generation,
   publication-gated `gallery`, `promo`,
   and `ableton inventory|export|midi`.
-  Rendered output is replaceable:
-  a new run may delete and replace it, and no rendered-sound default moves on
-  one person's judgement.
+  Generated output is append-only. A new run never replaces or deletes an
+  earlier still, film, sidecar, source photograph, dataset, weight or model
+  manifest. Existing renders remain available for comparison.
 - `rg69.html`, `rg69.css` and `rg69.js` — the RG-69 browser beat machine. Its page, styles and application code are separate assets under MASTER's HTML Laws; Tone.js 14.8.49 is vendored in `vendor/tone/` with its MIT license and failure is reported visibly.
 - `selfies.html`, `selfies.css` and `selfies.js` — the selfie gallery. A Swiper
   rail (vendored and version-pinned in `vendor/swiper/`) of a subject's stills
@@ -67,9 +67,9 @@ voice of the creative work.
   `LIKELINESS_REVIEWED_VERSION` after full-size comparison with approved
   reference photographs. Retrained or changed versions are blocked until reviewed.
   `ruby STUDIO/lora/photograph.rb --all-subjects --count 6` preflights Johann,
-  Ragnhild and Merethe together, renders six subject-specific scenes each, and
-  deletes prior generated stills only after all 18 new images succeed. The
-  operation never deletes source photographs, datasets, weights or consent.
+  Ragnhild and Merethe together and appends six subject-specific scenes each.
+  Earlier generated stills and sidecars are always retained; no stale-render
+  deletion path exists.
   `ruby STUDIO/lora/train.rb --all` validates all three private datasets,
   consent records, captions, shared settings and Replicate destination visibility
   before any upload, then trains sequentially and records immutable candidate
@@ -91,8 +91,9 @@ voice of the creative work.
   manifests require owner-only directories and a singly-linked owner-only file;
   the tracked subject-root manifest remains a non-secret compatibility pin.
   Only then may the six-image batch run.
-  `ruby STUDIO/lora/photograph.rb --all-subjects --count 6` replaces the three
-  final series atomically after all 18 renders succeed. Then run
+`ruby STUDIO/lora/photograph.rb --all-subjects --count 6` appends the three
+  final series after each subject's own preflight succeeds. Earlier generations
+  stay in place. Then run
   `ruby STUDIO/lora/review.rb --subject NAME` for each person to create final
   contact sheets and diagnostic reports. Open each private report's
   `index.html` to inspect every source and final portrait at full resolution;
@@ -112,9 +113,9 @@ voice of the creative work.
 
   Recovery copies only approved subject descriptors, pinned model manifests
   and explicitly selected source photographs. It never copies datasets, loose
-  weights or renders. Source trees and evidence remain owner-only. A generated
-  replacement series deletes prior generated portraits only after every
-  requested render succeeds. Merethe's separate recovery command verifies the 15
+  weights or renders. Source trees and evidence remain owner-only. Every
+  generated series is append-only; no series command deletes earlier portraits,
+  source photographs, datasets, weights or consent. Merethe's separate recovery command verifies the 15
   original Git blobs; it does not prepare a dataset. Merethe's preparation
   step builds in a private staging directory and preserves the last known-good
   dataset if a build fails.

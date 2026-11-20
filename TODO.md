@@ -1245,3 +1245,14 @@ remain a separate, explicit local-trust path.
 Source changes and regression cases are committed. Runtime tests and the
 vm23 egress-firewall proof have not been run by this session; do not mark this
 acceptance complete until their evidence exists.
+
+
+2026-11-20 asset-preservation correction: STUDIO selfie generation is now
+append-only across the series runner, direct CLI, API and MASTER adapter.
+Historical replace keywords remain accepted for compatibility but are no-ops;
+the all-subjects workflow no longer plans or executes stale-render deletion.
+Regression tests require old portraits, graded images, JSON sidecars and
+symlinked sidecars to survive even when legacy callers pass replace: true.
+The natural-language MASTER route treats deletion wording as non-authority and
+reports that earlier portraits are retained. Runtime tests remain NOT_RUN in
+this publishing environment.

@@ -908,7 +908,10 @@ module Master
 
       def lora_subjects_in(text, root: MasterPaths.repo)
         names = lora_subject_names(root:).sort_by { |name| -name.length }
-        names.select { |name| text.to_s.match?(/(?<![a-zA-Z0-9_-])#{Regexp.escape(name)}(?![a-zA-Z0-9_-])/i) }
+        names.filter_map do |name|
+          match = text.to_s.match(/(?<![a-zA-Z0-9_-])#{Regexp.escape(name)}(?![a-zA-Z0-9_-])/i)
+          [name, match.begin(0)] if match
+        end.sort_by(&:last).map(&:first)
       end
 
       def lora_subject_for(text, root: MasterPaths.repo)
@@ -935,10 +938,8 @@ module Master
         return Result.err("lora selfie series: name a configured subject", category: :validation) if subjects.empty?
 
         count = lora_count_for(text)
-        replace = text.to_s.match?(/\b(?:delete|replace|rerender|re-render)\b/i)
-        # Validate all selected models before deleting a single old render or
-        # paying for the first prediction. One missing profile cannot leave a
-        # half-completed two-person request.
+        # Keep every existing portrait even when the request mentions
+        # deletion or replacement. Validate all subjects before paid calls.
         begin
           subjects.each { |subject| IdeaPicture.new.validate_model(subject:) }
         rescue StandardError => error
@@ -949,7 +950,7 @@ module Master
         details = []
         subjects.each do |subject|
           begin
-            subject_paths = Array(IdeaPicture.new.selfie_series(subject:, count:, replace:)).map(&:to_s)
+            subject_paths = Array(IdeaPicture.new.selfie_series(subject:, count:, replace: false)).map(&:to_s)
             paths.concat(subject_paths)
             details << "#{subject}: #{subject_paths.size} render(s)"
           rescue StandardError => error
@@ -958,8 +959,8 @@ module Master
         end
         return Result.err("lora selfie series: #{details.join("; ")}", category: :infrastructure) if paths.empty?
 
-        rendered = ["lora selfies: #{paths.size} photo(s) in STUDIO/lora/", *details, *paths].join("\n")
-        Result.ok({ output: rendered, rendered:, media: :lora_selfie_series, paths:, details: })
+        rendered = ["lora selfies: #{paths.size} photo(s) in STUDIO/lora/; earlier portraits retained", *details, *paths].join("\n")
+        Result.ok({ output: rendered, rendered:, media: :lora_selfie_series, paths:, details:, prior_renders_retained: true })
       end
 
       def generate_lora_image(text, root: MasterPaths.repo)

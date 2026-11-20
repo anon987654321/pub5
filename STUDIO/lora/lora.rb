@@ -146,7 +146,7 @@ module Studio
         count = request.fetch("count", 6).to_i.clamp(1, 24)
         engine = request["engine"]
         series = Studio::Visual::SelfieSeries.new(subject:, engine:)
-        { "subject" => subject, "rendered" => series.run(count:, replace: request.fetch("replace", true)) }
+        { "subject" => subject, "rendered" => series.run(count:), "prior_renders_retained" => true }
       end
 
       def run_flags(argv)
