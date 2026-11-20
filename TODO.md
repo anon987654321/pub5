@@ -28,6 +28,16 @@ regressions are authored but NOT_RUN in this publishing environment. The root
 register remains open; device, provider, consent, live-host and rendered
 acceptance dependencies are not closed by source edits.
 
+2026-11-20 focused follow-up: stabilized test residual cleanup against mutable
+ENV, aligned wishlist ParseError display with its public contract, removed three
+duplicated five-tree arrays in favor of MasterPaths::TREES, fixed trace fixtures
+to use isolated state and explicit crash outcomes, completed a CoreBridge fake's
+Mission interface, and isolated Replicate request-shape tests from real spend
+estimation. Documentation path checks now distinguish the retired full-rule
+corpus and filesystem mapping examples from live paths, while retaining an
+explicit list of existing research, proposal, evidence and licence documents.
+These are source/test repairs, not a passing CI run.
+
 Last full register/acceptance audit: 2026-11-14, source tree checked against `main@bd23114ca49bfc3d05dccf31e232a03d857ea28d`.
 Task-register consolidation review: 2026-11-18, tracked task-like Markdown and references checked against `main@139ff1a03b04424fb68185937080ca6a2067646e`. The consolidation checkpoint contained 165 active unchecked rows and no checked rows. A count-only refresh on 2026-11-19 found 169 active unchecked rows and no checked rows; this is not a new full source or acceptance audit. This is a task-list consolidation, not a new full source or acceptance audit. Grouped rows
 are not atomic task counts; aspirational horizons remain visible but are not

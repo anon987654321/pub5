@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../boot/paths"
+
 # bin/master coverage --map - coverage that knows its own age.
 #
 # The reach ratchet says no law is unreachable; reach is not recency. A law
@@ -24,7 +26,7 @@ module Master
       # existed, and an instrument state that silently refuses to commit is
       # the inert-config defect twice over.
       STATE = "coverage_map/state.json"
-      TREES = %w[MASTER RAILS OPENBSD STUDIO BIZ].freeze
+      TREES = MasterPaths::TREES
 
       class << self
         include Base

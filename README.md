@@ -154,7 +154,7 @@ unrun measurement is INCONCLUSIVE, never PASS.
 
 ## Repository facts
 
-`VERSION` records the release line. The retired `FULL.yml` rule corpus declared itself `not_a_live_config`; its
+`VERSION` records the release line. The retired full-rule corpus declared itself `not_a_live_config`; its
 covered requirements now live in `MASTER/law/` and `MASTER/data/laws.yml`. The working master of the FETAT
 proposal (a document, not policy) lives at `BIZ/tools/fetat_proposal.md`.
 The workstation deploy interface is `MASTER/bin/operator vps deploy <app|group|all> --remote`;

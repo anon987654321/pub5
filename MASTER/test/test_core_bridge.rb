@@ -188,6 +188,7 @@ class CoreBridgeTest < Minitest::Test
 
   def test_trace_failed_mission_is_terminal_unknown_outcome_not_auto_deferred
     mission = Object.new
+    mission.define_singleton_method(:record) { {} }
     mission.define_singleton_method(:finish!) { |state:, summary:| @finished = [state, summary] }
     mission.define_singleton_method(:defer!) { |**| flunk("ambiguous side effects must not auto-continue") }
     mission.define_singleton_method(:fail!) { |*| flunk("unknown outcome must not be collapsed into generic failure") }

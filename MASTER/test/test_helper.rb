@@ -13,6 +13,7 @@ ENV["MASTER_PROOF_STORE"] = "0"
 # A test run must not leave the next real /fix a residual to resume from.
 require "tmpdir"
 ENV["MASTER_FIX_RESIDUAL"] = File.join(Dir.tmpdir, "master-test-residual-#{Process.pid}.json")
+MASTER_TEST_FIX_RESIDUAL_PATH = ENV.fetch("MASTER_FIX_RESIDUAL").dup.freeze
 # The semantic disk cache is a run instrument, not a test instrument: a test
 # that judged a file must not hand its verdicts to the next real /fix, and a
 # real run's verdicts must not pre-answer a test. Tests that exercise the
@@ -126,7 +127,7 @@ Minitest.after_run do
   next unless Process.pid == MASTER_TEST_PID
 
   FileUtils.rm_rf(LIVE_STATE_DIR)
-  FileUtils.rm_f(ENV["MASTER_FIX_RESIDUAL"])
+  FileUtils.rm_f(MASTER_TEST_FIX_RESIDUAL_PATH)
 end
 require "fix/run_budget"
 

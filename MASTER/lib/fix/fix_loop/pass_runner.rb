@@ -6,6 +6,7 @@ require "open3"
 require "set"
 require "time"
 require_relative "../kernel"
+require_relative "../../boot/paths"
 require_relative "../lane_preflight"
 
 # Some callers load PassRunner directly. Establish the canonical class identity
@@ -534,7 +535,7 @@ module Master
           trees = scoped.map do |path|
             path.delete_prefix(File.expand_path(@root) + File::SEPARATOR).split(File::SEPARATOR).first
           end.uniq
-          return [] unless trees.one? && %w[MASTER RAILS OPENBSD STUDIO BIZ].include?(trees.first)
+          return [] unless trees.one? && MasterPaths::TREES.include?(trees.first)
 
           Operator::PolishLens.findings_for_paths(root: @root, paths: scoped)
             .select { |finding| finding.path.split("/").first == trees.first }

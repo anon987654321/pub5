@@ -179,6 +179,17 @@ class TestDocPaths < Minitest::Test
     BIZ/tools/future_nato_weapons_proposal.md
     MASTER/lib/cli/face/contract.md
     MIGRATION.md
+    BIZ/fetat/research.md
+    BIZ/research/husleieloven-2026.md
+    BIZ/research/studio-replicate-growth-revenue-research.md
+    BIZ/tools/nordvakt_proposal.md
+    BIZ/tools/norwegianfinancial_proposal.md
+    MASTER/data/receipts/fix-session-2026-11-19-grok.md
+    RAILS/amber/__logo/PROPOSALS.md
+    RAILS/amber/__logo/RESEARCH.md
+    SECURITY.md
+    STUDIO/PHOTOGRAPHY.md
+    STUDIO/vendor/tone/LICENSE.md
   ].freeze
 
   # README.md is the human entry point at each tree/project boundary. Other

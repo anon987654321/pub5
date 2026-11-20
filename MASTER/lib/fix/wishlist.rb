@@ -56,7 +56,9 @@ module Master
         "wishlist: drafted #{items.size}, queued #{queued} -> #{LEDGER_PATH}"
       rescue StandardError => e
         @bus&.publish("wishlist:error", error: e.message, state:, target:)
-        "wishlist: #{e.class}: #{e.message}"
+        error_name = e.class.name.to_s.split("::").last
+        error_name = e.class.to_s if error_name.to_s.empty?
+        "wishlist: #{error_name}: #{e.message}"
       end
 
       private

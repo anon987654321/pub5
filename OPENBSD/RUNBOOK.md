@@ -1177,7 +1177,7 @@ The deployment model remains deliberately simple: a filesystem tree maps onto
 `/`. Historically the host was updated with `cp -R etc/ var/ /`, followed by
 a reboot. The current mirror has grown beyond those two trees: its 119 tracked
 files span `etc/`, `home/`, `usr/` and `var/`. The mapping is still direct:
-`mirror/etc/x` → `/etc/x`, `mirror/usr/x` → `/usr/x`, and so on.
+`mirror/etc/<path>` → `/etc/<path>`, `mirror/usr/<path>` → `/usr/<path>`, and so on.
 
 `OPENBSD/OPERATOR.sh` is the controlled equivalent of that copy, not a new
 configuration-management layer. It copies only changed tracked files, applies

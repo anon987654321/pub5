@@ -221,6 +221,16 @@ class TestFixWishlist < Minitest::Test
     assert_includes @bus.events.map { |event| event[:event] }, "wishlist:error"
   end
 
+  def test_call_reports_the_short_public_error_class_name
+    agent = RecordingAgent.new("- title: [")
+    result = Master::Fix::Wishlist.new(root: @root, agent:, event_bus: @bus).call(
+      state: "done", target: @root, run_id: "bad-yaml-name"
+    )
+
+    assert_match(/\Awishlist: ParseError:/, result)
+    refute_match(/Master::Fix::Wishlist::ParseError/, result)
+  end
+
   def test_ledger_lock_serializes_separate_wishlist_instances
     FileUtils.mkdir_p(File.join(@root, ".master"))
     File.chmod(0o2770, File.join(@root, ".master"))

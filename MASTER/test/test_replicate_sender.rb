@@ -304,6 +304,7 @@ class TestReplicateSender < Minitest::Test
     captured = nil
     dispatcher.define_singleton_method(:replicate_headers) { { "Authorization" => "Bearer test" } }
     dispatcher.define_singleton_method(:text_prompt_for) { |_messages| "hi" }
+    dispatcher.define_singleton_method(:reserve_replicate_chat_budget!) { |*args, **kwargs| 0.01 }
     dispatcher.define_singleton_method(:post_json) do |_url, body, **|
       captured = body.fetch(:input)
 

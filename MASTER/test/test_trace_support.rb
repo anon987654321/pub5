@@ -273,7 +273,7 @@ class TestTraceSupport < Minitest::Test
       console.lines(event: "llm:send", model: "test-provider:model")
     end
     finished_lines = Master::Trace::Dmesg.with_verbosity("verbose") do
-      console.lines(event: "llm:call_finished", model: "test-provider:model")
+      console.lines(event: "llm:call_finished", model: "test-provider:model", status: :crash)
     end
 
     assert_equal ["llm0 at master0: test-provider:model"], send_lines
@@ -416,6 +416,7 @@ class TestTraceSupport < Minitest::Test
   end
 
   def test_fix_causal_trace_correlates_agent_and_council_steps_without_prompt_content
+    previous_state_id = ENV.delete("MASTER_STATE_ID")
     root = Dir.mktmpdir("causal-trace")
     trace = Master::Trace::CausalTrace
     FileUtils.mkdir_p(File.join(root, ".master"), mode: 0o700)
@@ -475,6 +476,7 @@ class TestTraceSupport < Minitest::Test
   ensure
     FileUtils.rm_rf(root) if root
     trace&.clear(outer) if defined?(outer)
+    previous_state_id.nil? ? ENV.delete("MASTER_STATE_ID") : ENV["MASTER_STATE_ID"] = previous_state_id
   end
 
   def test_the_recorder_keeps_a_turn_and_reads_it_back_after_a_restart

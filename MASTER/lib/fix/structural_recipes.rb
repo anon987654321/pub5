@@ -6,6 +6,7 @@ require_relative "restructure"
 require_relative "transformation_plan"
 require_relative "commit_message"
 require_relative "rails_app"
+require_relative "../boot/paths"
 
 module Master
   module Fix
@@ -14,7 +15,7 @@ module Master
     # transformation; they do not contain shell commands or a second executor.
     class StructuralRecipes
       PATH = File.expand_path("../../data/structural_recipes.yml", __dir__)
-      TREES = %w[MASTER RAILS OPENBSD STUDIO BIZ].freeze
+      TREES = MasterPaths::TREES
       RECIPE_KEYS = %w[description operation plan proofs summary tree].freeze
       PROOF_KEYS = %w[app kind path].freeze
       APPROVAL = /\AAPPROVE:\s+\S.{19,}\z/.freeze
