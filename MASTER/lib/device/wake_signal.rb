@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
 require "json"
-require "fileutils"
 require "securerandom"
-require "tempfile"
+require_relative "../io/atomic_write"
 
 module Master
   module Device
@@ -16,7 +15,6 @@ module Master
 
       def self.publish(root:, phrase:, at: Time.now.to_f)
         path = File.join(root, PATH)
-        FileUtils.mkdir_p(File.dirname(path))
         payload = {
           version: VERSION,
           id: SecureRandom.hex(12),
@@ -24,12 +22,7 @@ module Master
           phrase: phrase.to_s,
           at: at.to_f,
         }
-        Tempfile.create(["wake-event-", ".json"], File.dirname(path)) do |tmp|
-          tmp.write(JSON.generate(payload))
-          tmp.flush
-          tmp.close
-          File.rename(tmp.path, path)
-        end
+        Master::Io::AtomicWrite.write_atomic(path, JSON.generate(payload), mode: 0o600)
         payload
       end
 

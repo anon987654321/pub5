@@ -714,10 +714,22 @@ class TestCheckChain < Minitest::Test
   # Keep distinct scope fingerprints in one bounded cache; targets within
   # the same governed tree share the same check scope across disposable worktrees.
   def test_baseline_records_are_reused_by_key_and_scoped_to_the_governed_tree
-    saved = File.file?(G::BASELINE_FILE) ? File.read(G::BASELINE_FILE) : nil
-    G.write_baseline("k1", { "suites" => ["x fail"] })
-    G.write_baseline("k2", { "lexical" => ["y fail"] })
+    saved = File.file?(G::BASELINE_FILE) ? File.binread(G::BASELINE_FILE) : nil
+    calls = []
+    writer = Master::Io::AtomicWrite.method(:write_atomic)
+    instrumented = lambda do |path, content, **options|
+      calls << [path, content, options]
+      writer.call(path, content, **options)
+    end
+    Master::Io::AtomicWrite.stub(:write_atomic, instrumented) do
+      G.write_baseline("k1", { "suites" => ["x fail"] })
+      G.write_baseline("k2", { "lexical" => ["y fail"] })
+    end
 
+    assert_equal 2, calls.length
+    assert calls.all? { |call| call.first == G::BASELINE_FILE }
+    assert calls.all? { |call| call.last.fetch(:mode) == 0o600 }
+    assert_equal 0o600, File.stat(G::BASELINE_FILE).mode & 0o777
     assert_equal({ "suites" => ["x fail"] }, G.read_baseline("k1"))
     assert_equal({ "lexical" => ["y fail"] }, G.read_baseline("k2"))
     assert_nil G.read_baseline("missing")

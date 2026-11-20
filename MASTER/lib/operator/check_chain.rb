@@ -5,7 +5,6 @@ require_relative "../master"
 require "digest"
 require "fileutils"
 require "json"
-require "tempfile"
 require "open3"
 require "rbconfig"
 require "tmpdir"
@@ -20,6 +19,7 @@ require_relative "../fix/resource_budget"
 require_relative "../fix/work_lane"
 require_relative "../fix/rails_app"
 require_relative "../io/exec"
+require_relative "../io/atomic_write"
 
 module Operator
   # Every check in the repo, in one order, fixing as it goes.
@@ -333,13 +333,9 @@ module Operator
       entries.delete(key)
       entries[key] = snapshot
       entries = entries.to_a.last(MAX_BASELINE_RECORDS).to_h
-      FileUtils.mkdir_p(File.dirname(BASELINE_FILE))
-      Tempfile.create(["check-baseline", ".json"], File.dirname(BASELINE_FILE)) do |file|
-        file.write(JSON.generate("version" => 2, "entries" => entries))
-        file.flush
-        file.fsync
-        File.rename(file.path, BASELINE_FILE)
-      end
+      Master::Io::AtomicWrite.write_atomic(
+        BASELINE_FILE, JSON.generate("version" => 2, "entries" => entries), mode: 0o600
+      )
     end
 
     PASS_PROVEN_TREES = %w[MASTER OPENBSD RAILS].freeze

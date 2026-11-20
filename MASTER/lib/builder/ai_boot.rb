@@ -4,6 +4,7 @@ require "fileutils"
 require "json"
 require "time"
 require_relative "../fix/kernel"
+require_relative "../io/atomic_write"
 
 module Master
   module Builder
@@ -135,17 +136,8 @@ module Master
       raise IOError, "self-test report directory is not a directory" unless stat.directory? && !stat.symlink?
       File.chmod(0o700, directory)
 
-      temporary = "#{path}.tmp-#{Process.pid}"
-      File.open(temporary, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
-        file.write(JSON.pretty_generate(payload))
-        file.write("\n")
-        file.flush
-        file.fsync
-      end
-      File.rename(temporary, path)
+      Master::Io::AtomicWrite.write_atomic(path, "#{JSON.pretty_generate(payload)}\n", mode: 0o600)
       path
-    ensure
-      File.delete(temporary) if temporary && File.file?(temporary)
     end
 
     def publish_self_test(bus, self_test)

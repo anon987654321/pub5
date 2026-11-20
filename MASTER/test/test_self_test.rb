@@ -64,6 +64,30 @@ class TestSelfTest < Minitest::Test
     end
   end
 
+  def test_self_test_report_uses_the_shared_private_atomic_writer
+    Dir.mktmpdir do |root|
+      path = File.join(root, ".master", "self-test.json")
+      calls = []
+      writer = Master::Io::AtomicWrite.method(:write_atomic)
+      instrumented = lambda do |target, content, **options|
+        calls << [target, content, options]
+        writer.call(target, content, **options)
+      end
+
+      Master::Io::AtomicWrite.stub(:write_atomic, instrumented) do
+        Master::Builder.persist_self_test_report(
+          Master::Result.err("offline", category: :offline), path:
+        )
+      end
+
+      assert_equal 1, calls.length
+      assert_equal path, calls.first.first
+      assert_equal 0o600, calls.first.last.fetch(:mode)
+      assert_equal 0o600, File.stat(path).mode & 0o777
+      assert_empty Dir.glob(File.join(root, ".master", ".master_atomic_*"))
+    end
+  end
+
   def test_boot_self_test_report_refuses_a_symlinked_state_directory
     Dir.mktmpdir do |root|
       outside = File.join(root, "outside")
