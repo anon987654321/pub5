@@ -45,7 +45,8 @@ module Studio
         engine: nil,
         film_engine: nil,
         film_resolution: nil,
-        subjects_root: SUBJECTS
+        subjects_root: SUBJECTS,
+        lora_only: false
       )
         @client = client
         @directory = directory
@@ -57,6 +58,8 @@ module Studio
         @subject_directory = File.join(subjects_root, @subject)
         @model_manifest = model_manifest || default_model_manifest
         @engine = engine&.to_s
+        @lora_only = !!lora_only
+        raise ArgumentError, "lora_only cannot be combined with a different engine" if @lora_only && @engine
         @film_engine = film_engine&.to_s
         @film_resolution = film_resolution&.to_s
       end
@@ -96,12 +99,13 @@ module Studio
 
       def validate_model!
         authorize_subject!
-        # A subject rendered only from reference photographs may have no trained
-        # LoRA yet; the render itself validates whatever engine it reaches. When
-        # a LoRA is configured, preflight it exactly as before.
-        return engine unless lora_configured?
+        # In LoRA-only mode a missing manifest or incompatible schema is a hard
+        # preflight failure. A subject selfie must never fall back to a generic face.
+        model = still_model if @lora_only
+        return model if @lora_only && @validated_still_model == model
+        return engine unless @lora_only || lora_configured?
 
-        model = still_model
+        model ||= still_model
         return model if @validated_still_model == model
 
         names = client.input_names(model)
@@ -250,6 +254,8 @@ module Studio
       # no reference photographs — otherwise every render would spend three
       # failures before reaching an engine that can actually run.
       def render_chain
+        return ["$subject_lora"] if @lora_only
+
         chain = Studio::ReplicateClient::Models.chain_for(engine)
         return chain if references_available?
 
@@ -268,7 +274,7 @@ module Studio
 
       # The engine this render reaches for first: the catalogue's primary
       # likeness model unless --engine named another.
-      def engine = @engine || Studio::ReplicateClient::Models.default_engine
+      def engine = @lora_only ? "$subject_lora" : (@engine || Studio::ReplicateClient::Models.default_engine)
 
       # The input for one engine, shaped to what that engine declares.
       def still_input(words, engine_name = nil)
