@@ -397,11 +397,11 @@ module Studio
           "a winter hillside selfie just after sunrise, pale sky and bare branches behind, crisp open-shade light, wool coat, a reflective unposed expression, muted Fuji colour, 50mm"
         ].freeze,
         "merethe" => [
-          "a coastal-cliff selfie in western Norway with wind lifting long wavy ash-blonde hair, sea and pale sky behind, low warm sunlight tracing the cheek, blue eyes with natural catchlights, a genuine half-smile, 85mm",
-          "a quiet minimalist studio selfie against warm white, one large softbox above and to camera-left, subtle natural makeup, visible pores and fine hair, composed direct gaze, 85mm",
-          "a candlelit kitchen selfie late in the evening, one practical flame warming one side of the face and soft darkness on the other, a candid expression mid-thought, natural blue eyes, 50mm",
-          "a backlit-window selfie on a grey morning, soft daylight outlining long wavy ash-blonde hair, reflected fill preserving detail in the eyes, a small post-laugh smile, 85mm",
-          "a rainy old-town street selfie under an umbrella, shop lights reflected on wet cobbles, restrained amber and blue mixed light, amused eyes and damp loose hair, 50mm",
+          "a coastal-cliff selfie in western Norway, sea and pale sky behind, low warm sunlight, a genuine half-smile, 85mm",
+          "a quiet minimalist studio selfie against warm white, one large softbox above and to camera-left, visible natural skin texture, composed direct gaze, 85mm",
+          "a candlelit kitchen selfie late in the evening, one practical flame warming one side of the face and soft darkness on the other, a candid expression mid-thought, 50mm",
+          "a backlit-window selfie on a grey morning, soft daylight outlining the subject, reflected fill preserving detail in the eyes, a small post-laugh smile, 85mm",
+          "a rainy old-town street selfie under an umbrella, shop lights reflected on wet cobbles, restrained amber and blue mixed light, an amused expression, 50mm",
           "a coastal ferry selfie with a deep Norwegian fjord behind, cool overcast sky light, wind in the hair, practical wool outerwear, open unguarded expression, natural colour-negative film, 50mm"
         ].freeze
       }.freeze
