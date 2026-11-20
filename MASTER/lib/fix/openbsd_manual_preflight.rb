@@ -5,6 +5,7 @@ require "json"
 require "open3"
 require "shellwords"
 require "time"
+require_relative "../io/atomic_write"
 
 module Master
   module Fix
@@ -542,7 +543,7 @@ module Master
         path = File.join(repository, MIRROR_COVERAGE_REPORT_RELATIVE_PATH)
         raise TaskContract::Invalid, "coverage report target is a symlink" if File.symlink?(path)
         write_report_atomically(report, path)
-      rescue SystemCallError => error
+      rescue SystemCallError, IOError => error
         raise TaskContract::Invalid, "coverage report could not be written: #{error.class}"
       end
 
@@ -563,19 +564,7 @@ module Master
       end
 
       def write_report_atomically(report, path)
-        temporary = "#{path}.#{Process.pid}.#{Thread.current.object_id}.tmp"
-        flags = File::WRONLY | File::CREAT | File::EXCL
-        flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
-        File.open(temporary, flags, 0o600) do |file|
-          file.write(JSON.pretty_generate(report))
-          file.write("\n")
-          file.flush
-          file.fsync
-        end
-        File.rename(temporary, path)
-        path
-      ensure
-        File.unlink(temporary) if defined?(temporary) && temporary && File.exist?(temporary)
+        Master::Io::AtomicWrite.write_atomic(path, "#{JSON.pretty_generate(report)}\n", mode: 0o600)
       end
 
       def mirror_configuration_refusal(preflight, root: Master::REPO_ROOT)

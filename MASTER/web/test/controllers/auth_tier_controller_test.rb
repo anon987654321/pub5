@@ -137,3 +137,31 @@ class AuthTierControllerTest < ActionDispatch::IntegrationTest
     %w[Shell WriteFile StrReplace BatchReplace AstEdit Clean].each { |tool| refute_includes allowed, tool }
   end
 end
+
+
+class AuthTierStorageTest < ActionDispatch::IntegrationTest
+  test "seeded web token is persisted by the shared private atomic writer" do
+    Dir.mktmpdir("auth-tier") do |root|
+      path = File.join(root, "master.yml")
+      calls = []
+      writer = Master::Io::AtomicWrite.method(:write_atomic)
+      instrumented = lambda do |target, content, **options|
+        calls << [target, content, options]
+        writer.call(target, content, **options)
+      end
+      token = nil
+
+      Master::Io::AtomicWrite.stub(:write_atomic, instrumented) do
+        token = AuthTier.allocate.send(:seed_token, path, {})
+      end
+
+      assert_equal 1, calls.length
+      assert_equal path, calls.first.first
+      assert_equal 0o600, calls.first.last.fetch(:mode)
+      assert_equal token, YAML.safe_load_file(path).fetch("web_token")
+      assert_operator token.length, :>=, AuthTier::MIN_TOKEN_LENGTH
+      assert_equal 0o600, File.stat(path).mode & 0o777
+      assert File.file?("#{path}.lock")
+    end
+  end
+end

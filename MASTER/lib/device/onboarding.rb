@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require_relative "../io/atomic_write"
 require_relative "../boot/paths"
 require_relative "../trace/dmesg"
 
@@ -224,8 +225,7 @@ module Master
       def home(path) = path.sub(Dir.home, "~")
 
       def mark!
-        FileUtils.mkdir_p(File.dirname(@mark))
-        File.write(@mark, "#{Time.now.utc}\n")
+        Master::Io::AtomicWrite.write_atomic(@mark, "#{Time.now.utc}\n")
       end
     end
   end

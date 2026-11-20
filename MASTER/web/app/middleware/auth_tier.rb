@@ -4,6 +4,7 @@ require "fileutils"
 require "rack/utils"
 require "securerandom"
 require "yaml"
+require_relative "../../../lib/io/atomic_write"
 
 # AuthTier — sets master.tier for every request and runs the cookie handshake.
 # Tiers:
@@ -169,9 +170,7 @@ class AuthTier
       end
       tok = SecureRandom.urlsafe_base64(TOKEN_BYTES)
       cfg["web_token"] = tok
-      tmp = "#{config_path}.tmp.#{Process.pid}"
-      File.open(tmp, File::WRONLY | File::CREAT | File::TRUNC, 0o600) { |f| f.write(cfg.to_yaml) }
-      File.rename(tmp, config_path)
+      Master::Io::AtomicWrite.write_atomic(config_path, cfg.to_yaml, mode: 0o600)
       tok
     end
   end

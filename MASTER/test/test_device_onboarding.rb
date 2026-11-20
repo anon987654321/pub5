@@ -25,12 +25,21 @@ class TestDeviceOnboarding < Minitest::Test
                    git: ->(_key) { identity })
   end
 
-  def test_a_first_run_is_detected_once
+  def test_a_first_run_is_detected_once_and_marks_through_the_shared_writer
     first = onboarding
+    calls = []
+    writer = Master::Io::AtomicWrite.method(:write_atomic)
+    instrumented = lambda do |path, content, **options|
+      calls << [path, content, options]
+      writer.call(path, content, **options)
+    end
+
     assert first.first_run?
-    first.run
+    Master::Io::AtomicWrite.stub(:write_atomic, instrumented) { first.run }
     refute onboarding.first_run?
     assert File.exist?(@mark)
+    assert_equal 1, calls.length
+    assert_equal @mark, calls.first.first
   end
 
   def test_the_phone_checklist_names_each_missing_piece_with_its_fix
