@@ -162,7 +162,7 @@ module Studio
         def train_lora(
           photos_zip_url,
           destination,
-          trigger_word: "subjectxyz",
+          trigger_word: nil,
           timeout: 3600,
           steps: nil,
           lora_rank: nil,
@@ -181,13 +181,15 @@ module Studio
 
           timeout = operation_timeout!(timeout, "training timeout")
           photos_zip_url = training_zip_url!(photos_zip_url)
-          trigger_word = training_trigger!(trigger_word)
+          extra_input = normalize_training_input!(extra_input)
           standards = TRAINING_STANDARDS.fetch("replicate")
+          trigger_word = training_trigger_for_subject(subject_directory, trigger_word)
           steps = standards.fetch("steps") if steps.nil?
           lora_rank = standards.fetch("lora_rank") if lora_rank.nil?
+          raise ArgumentError, "steps must match the shared training standard (#{standards.fetch("steps")})" unless steps == standards.fetch("steps")
+          raise ArgumentError, "lora_rank must match the shared training standard (#{standards.fetch("lora_rank")})" unless lora_rank == standards.fetch("lora_rank")
           steps = positive_integer!(steps, "steps")
           lora_rank = positive_integer!(lora_rank, "lora_rank")
-          extra_input = normalize_training_input!(extra_input)
           raise ArgumentError, "wait must be true or false" unless wait == true || wait == false
           resource_id!(version || trainer_version, "trainer version")
 
@@ -206,6 +208,31 @@ module Studio
           training = post(trainings_uri, body)
           wait ? wait_for_training(training["id"], timeout:) : training
         end
+
+        def training_trigger_for_subject(directory, supplied)
+          path = File.join(directory, "train.yaml")
+          return training_trigger!(supplied) unless File.file?(path) && !File.symlink?(path)
+          raise ArgumentError, "subject training plan exceeds 1 MB" if File.size(path) > 1_048_576
+
+          plan = YAML.safe_load(File.read(path, encoding: "UTF-8"),
+                                permitted_classes: [], permitted_symbols: [], aliases: false)
+          processes = plan.dig("config", "process") if plan.is_a?(Hash) && plan["config"].is_a?(Hash)
+          trainers = Array(processes).select { |entry| entry.is_a?(Hash) && entry["type"] == "sd_trainer" }
+          raise ArgumentError, "subject training plan must contain exactly one sd_trainer" unless trainers.length == 1
+
+          trainer = trainers.first
+          standards = TRAINING_STANDARDS.fetch("replicate")
+          raise ArgumentError, "subject plan steps differ from the shared training standard" unless trainer.dig("train", "steps") == standards.fetch("steps")
+          raise ArgumentError, "subject plan rank differs from the shared training standard" unless trainer.dig("network", "linear") == standards.fetch("lora_rank")
+
+          expected = training_trigger!(trainer["trigger_word"])
+          raise ArgumentError, "trigger_word does not match #{File.basename(directory)}/train.yaml" if supplied && training_trigger!(supplied) != expected
+
+          expected
+        rescue Psych::Exception => error
+          raise ArgumentError, "invalid subject training plan #{path}: #{error.message}"
+        end
+        private :training_trigger_for_subject
 
         def get_training(id)
           get(URI("#{BASE}/trainings/#{resource_id!(id, "training id")}"))
