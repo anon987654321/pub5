@@ -532,7 +532,14 @@ three_mirror_redundancy:
   # Operator directive that day: seat the saved primary instead. anthropic +
   # openai + nvidia: whichever family authors a candidate, two independent
   # families remain to vote.
-  pool:          ["claude-opus-5-5", "ovh:gpt-oss-120b", "kilo:nvidia/nemotron-3.5-lightning:free"]
+  # 2026-11-21 session (operator request): /fix runs on a sandbox where
+  # claude-opus-5-5 has no key, so the anthropic seat cannot answer and the
+  # gate fails again. The primary GLM lane (zai-cli:auto through bin/zai-chat,
+  # probed live) takes that seat for this session: zhipu + openai + nvidia,
+  # and each author-family exclusion still leaves two voters across two
+  # families. Revert this commit with the chain reroute to restore the
+  # anthropic seat.
+  pool:          ["zai-cli:auto", "ovh:gpt-oss-120b", "kilo:nvidia/nemotron-3.5-lightning:free"]
   quorum:        2
 
 # Subscription CLIs, signed in once through the browser. The pool offers a
