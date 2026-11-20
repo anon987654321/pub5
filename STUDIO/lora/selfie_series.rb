@@ -124,7 +124,12 @@ module Studio
         end
         legacy_output = File.join(IdeaPicture::SUBJECTS, @subject, "out")
         if File.directory?(legacy_output) && !File.symlink?(legacy_output)
-          patterns.concat(IMAGE_EXTENSIONS.map { |ext| File.join(legacy_output, "**", "*.#{ext}") })
+          patterns.concat(IMAGE_EXTENSIONS.flat_map do |ext|
+            [
+              File.join(legacy_output, "**", "#{@subject}_selfie_*.#{ext}"),
+              File.join(legacy_output, "**", "postpro_#{@subject}_selfie_*.#{ext}"),
+            ]
+          end)
         end
         legacy_series = File.join(IdeaPicture::SUBJECTS, "out", @subject, "selfie_series")
         if File.directory?(legacy_series) && !File.symlink?(legacy_series)
