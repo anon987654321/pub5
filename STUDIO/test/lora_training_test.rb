@@ -32,6 +32,22 @@ class TestStudioLoraTrainingRunner < Minitest::Test
     assert_raises(ArgumentError) { runner.send(:normalize_subjects, ["unknown"]) }
   end
 
+  def test_training_batch_requires_distinct_private_destinations_before_provider_calls
+    client = Object.new
+    client.define_singleton_method(:ensure_private_model!) do |_destination|
+      flunk "duplicate destinations must block before provider calls"
+    end
+    runner = Studio::Lora::Training::Runner.new(client:, validator: Object.new, root: Dir.pwd)
+    runner.define_singleton_method(:prepare_subject!) do |subject|
+      { "subject" => subject, "destination" => "owner/shared-model" }
+    end
+
+    error = assert_raises(Studio::Lora::Training::Error) do
+      runner.run(subjects: %w[johann ragnhild])
+    end
+    assert_match(/distinct private Replicate destination/, error.message)
+  end
+
   def test_prepare_subject_reads_the_canonical_fast_flux_plan_and_private_destination
     Dir.mktmpdir("studio-lora-package-") do |root|
       subject = File.join(root, "johann")
