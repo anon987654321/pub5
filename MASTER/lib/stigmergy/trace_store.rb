@@ -41,7 +41,7 @@ module Stigmergy
         strength: strength.to_f.clamp(0.0, 10.0),
         source: source.to_s,
         created_at: now.iso8601,
-        expires_at: expires_in ? (now + expires_in).iso8601 : nil
+        expires_at: expires_in ? (now + expires_in).iso8601 : nil,
       }
       path = File.join(@root, "active", "#{now.strftime('%Y%m%dT%H%M%S')}_#{id}.json")
       File.write(path, JSON.pretty_generate(record))
@@ -95,7 +95,7 @@ module Stigmergy
           flaw: flaw,
           fix_summary: fix_summary,
           higher_order: higher_order,
-          cascade_eligible: !higher_order.nil?
+          cascade_eligible: !higher_order.nil?,
         },
         strength: 1.2,
         source: source

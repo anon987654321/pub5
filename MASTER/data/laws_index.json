@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "generated_at": "2026-11-18T08:31:00Z",
-  "revision": "14064c54d197746576b692f053e1026d23d3e996",
-  "law_count": 544,
+  "generated_at": "2026-11-20T22:44:26Z",
+  "revision": "6133027203788a331753a2820b56efedfc175f9d",
+  "law_count": 554,
   "laws": {
     "A_FINDING_IS_A_HYPOTHESIS": {
       "id": "A_FINDING_IS_A_HYPOTHESIS",
@@ -2766,6 +2766,8 @@
     },
     "DO_THE_WORK_NOW": {
       "id": "DO_THE_WORK_NOW",
+      "statement": "Do the work now. A clearly authorised request is an instruction to execute, not an invitation to produce another plan or backlog row. Do not create planning TODOs, deferred checklists or parallel backlog files for work that can be performed with current tools, credentials and authority. Finish independent in-scope steps, record evidence, and leave only a precisely named remainder that genuinely needs an unavailable credential, device, human decision, external consent, remote authority or unmet dependency. Completing the independent work while a remainder is blocked is required; promising later work that could have been done now is a stewardship failure.\n",
+      "parent": "STEWARDSHIP",
       "severity": "error",
       "mode": "violation",
       "lifecycle": "active",
@@ -2836,7 +2838,7 @@
     },
     "DRY": {
       "id": "DRY",
-      "statement": "Don't Repeat Yourself. Every piece of knowledge has one authoritative representation in the system. Repetition of a decision is duplication; repetition of a shape with three different reasons to change is not.\n",
+      "statement": "Don't Repeat Yourself. Every piece of knowledge has one authoritative representation in the system. Repetition of a decision is duplication; repetition of a shape with three different reasons to change is not. Semantic duplication (same intent, different shape) across agents, detectors or modules is still duplication when the sites co-change for the same reason. Architectural tangles that force the same knowledge to be restated in multiple places violate the single authoritative representation.\n",
       "parent": "SINGULARITY",
       "severity": "warning",
       "mode": "violation",
@@ -2850,6 +2852,196 @@
       },
       "fixtures": {
         "status": "docs"
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "SINGULARITY_architectural_tangle": {
+      "id": "SINGULARITY_architectural_tangle",
+      "statement": "A dependency cycle, forbidden cross-module reach, or tangle that forces the same knowledge or decision to be restated in multiple places. Continuous architecture mapping against the intended graph must surface these; they are not aesthetic preferences.\n",
+      "parent": "SINGULARITY",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "TRUTHFUL_STATUS_causal_trace_is_evidence": {
+      "id": "TRUTHFUL_STATUS_causal_trace_is_evidence",
+      "statement": "A claim about agent, council, or /fix behaviour that lacks a causal execution trace (tool calls, model turns, context that led to the action, and the outcome) is unverified. The trace is the evidence class for agent work; a summary or receipt that cannot be replayed is not sufficient.\n",
+      "parent": "TRUTHFUL_STATUS",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "TRUTHFUL_STATUS_profile_is_not_intent": {
+      "id": "TRUTHFUL_STATUS_profile_is_not_intent",
+      "statement": "CPU, memory, allocation and latency profiles, plus provider usage receipts for input/output tokens, retries, cache hits and reported spend, are observations of cost. Configured limits or a model's estimate are not observed usage. A claim that a path is \"fast enough\", \"cheap\" or within budget requires current measurements for the cost dimensions it names.\n",
+      "parent": "TRUTHFUL_STATUS",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "ROBUSTNESS_least_authority_tracing": {
+      "id": "ROBUSTNESS_least_authority_tracing",
+      "statement": "Observability itself must obey least authority. Continuous profiles, eBPF or agent traces may observe only what is required for the current investigation or budget; unrestricted always-on high-fidelity tracing of every path without sampling or purpose is a privilege expansion.\n",
+      "parent": "ROBUSTNESS",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "ROBUSTNESS_immune_pattern": {
+      "id": "ROBUSTNESS_immune_pattern",
+      "statement": "Recognition answers damage, not novelty. A boundary distinguishes harmful patterns from benign ones by evidenced damage signals and tolerates what is safe; rejecting every unfamiliar input alike raises alarms on benign novelty while missing real damage.\n",
+      "parent": "ROBUSTNESS",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "ROBUSTNESS_homeostasis": {
+      "id": "ROBUSTNESS_homeostasis",
+      "statement": "The system returns to a healthy state after interruption, budget collapse, orphaned missions or checkpoint loss. Failure to recover durable mission state or to surface the unrecovered remainder is a robustness failure.\n",
+      "parent": "ROBUSTNESS",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "ROBUSTNESS_morphological_exploration": {
+      "id": "ROBUSTNESS_morphological_exploration",
+      "statement": "When the best shape of a change is not yet known, the system may explore multiple divergent paths (probes) under a shared budget and score them against the active Laws, causal-trace quality and measured cost. A single linear proposal that has not been compared with alternatives is weaker evidence than a scored morphological set. Exploration without a pruning rule or antigen memory is waste.\n",
+      "parent": "ROBUSTNESS",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "ROBUSTNESS_antigen_memory": {
+      "id": "ROBUSTNESS_antigen_memory",
+      "statement": "Failed repair proposals and council vetoes are retained against their source revision; resolved dependency cycles and /fix trajectories that cross a configured per-Law budget are retained as structural or cost antigens. Subsequent probes and gates must recognise matching defect classes at the same high-risk boundary, then down-weight or refuse them unless new evidence shows the pattern is resolved. Recognition without durable memory, or memory that is never consulted, is incomplete robustness.\n",
+      "parent": "ROBUSTNESS",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "ROBUSTNESS_sclerotium": {
+      "id": "ROBUSTNESS_sclerotium",
+      "statement": "Compile a model-assisted trajectory into deterministic code only after at least three separate completed green runs prove the same task, path and source revision. Each run must carry a durable causal trace, measured runtime profile and actual provider-usage receipt; estimates and configured limits are not measurements. No matching unresolved antigen may remain. The replacement must have an explicit rollback or checkpoint, deterministic tests that reproduce the proven result, and a measured comparison showing acceptable cost without weakening any Law. Until every condition is met, keep the living agent on the unsettled path and report compilation as NOT_READY. Leaving a model on a genuinely settled path is surplus, but compiling from one green run or missing evidence is unsafe.\n",
+      "parent": "ROBUSTNESS",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "ROBUSTNESS_outbound_fetch_is_pinned": {
+      "id": "ROBUSTNESS_outbound_fetch_is_pinned",
+      "statement": "An outbound request to a URL supplied by a user, model, file or remote response resolves and classifies every A and AAAA answer, refuses any non-public or special-purpose destination, and pins the socket to an approved address while retaining the original hostname for TLS SNI, certificate verification and the Host header. Schemes and ports are restricted, URL credentials are refused, ambient proxies cannot bypass the pin, and response size and time are bounded. A redirect is refused or subjected to the same checks before the next connection; HTTPS cannot downgrade to HTTP, and a host change requires a separate policy decision.\n",
+      "parent": "ROBUSTNESS",
+      "severity": "error",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "never",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
@@ -5094,7 +5286,7 @@
     },
     "KISS": {
       "id": "KISS",
-      "statement": "Keep It Simple, Stupid. The simplest solution that works. Every layer of indirection, every abstraction, every configuration option must earn its existence by removing more than it adds.\n",
+      "statement": "Keep It Simple, Stupid. The simplest solution that works. Every layer of indirection, every abstraction, every configuration option must earn its existence by removing more than it adds. When an agent trajectory has been proven by causal traces and evidence, prefer compiling it to ordinary deterministic code so the model is no longer required on the hot path; a living agent for a settled workflow is surplus.\n",
       "severity": "warning",
       "mode": "violation",
       "lifecycle": "active",

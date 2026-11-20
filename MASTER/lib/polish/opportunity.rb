@@ -64,7 +64,7 @@ module Polish
         suggested_action: suggested_action,
         trace_id: trace_id,
         created_at: created_at,
-        status: status
+        status: status,
       }
     end
 

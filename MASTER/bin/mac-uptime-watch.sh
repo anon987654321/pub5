@@ -1,4 +1,5 @@
 #!/bin/zsh
+set -euo pipefail
 # mac-uptime-watch -- external public-service and vm23 CPU monitoring.
 #
 # One invocation is one tick. State persists under ~/.pub5; launchd or cron
@@ -207,7 +208,6 @@ watch_vm23_cpu() {
     vm23_cpu_notice "RECOVERED" "vm23 CPU recovered to ${busy}% for $PUB5_VM23_CPU_RECOVER_SAMPLES checks"
   fi
 }
-
 
 for host in ${(z)PUB5_UPTIME_HOSTS}; do
   if [[ " ${PUB5_UPTIME_WAIVED} " == *" $host "* ]]; then

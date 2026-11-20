@@ -27,7 +27,7 @@ body {
   z-index: 2;
   padding: 12px 16px;
   background: color-mix(in srgb, Canvas 88%, transparent);
-  backdrop-filter: blur(8px);
+
   border-bottom: 1px solid var(--line);
 }
 
@@ -99,7 +99,7 @@ body {
 }
 .slide .aliases { margin: .125rem 0 0; color: var(--mut); font-size: .75rem; }
 .position {
-  margin: .35rem 0 0;
+  margin: 0.25rem 0 0;
   color: var(--mut);
   font-size: .8125rem;
   font-variant-numeric: tabular-nums;
@@ -132,12 +132,12 @@ body {
 .strip[data-scripted] .dots {
   display: flex;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   margin-top: 8px;
 }
 .dots button {
-  width: 8px;
-  height: 8px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 0;
   border-radius: 999px;
@@ -151,5 +151,4 @@ body {
   :root { --slide-h: min(78vh, 900px); }
   .rail { gap: 16px; }
 }
-
 

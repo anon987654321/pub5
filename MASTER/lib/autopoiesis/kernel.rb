@@ -30,7 +30,7 @@ module Autopoiesis
         component_count: manifest["components"].size,
         last_regeneration: manifest["last_regeneration"],
         healthy: manifest["components"].all? { |c| c["status"] == "healthy" },
-        components: manifest["components"].map { |c| c.slice("id", "kind", "status", "regenerated_at") }
+        components: manifest["components"].map { |c| c.slice("id", "kind", "status", "regenerated_at") },
       }
     end
 

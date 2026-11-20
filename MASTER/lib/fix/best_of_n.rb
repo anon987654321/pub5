@@ -186,10 +186,8 @@ module Master
         @campaign = nil
       end
 
-
       # The RAILS tree answers for itself; a RAILS path never falls through
       # to the MASTER patterns.
-
 
       # Test paths are run in a test bundle with bounded timeouts. The output
       # is summarized to a fingerprint; candidate selection never needs to log
@@ -324,12 +322,10 @@ module Master
 
       private
 
-
       # Candidate trials share RepairLoop's per-file deadline. Reserve time
       # for the independent verifier and consensus check, then divide only the
       # remaining time across commands still to run. This keeps timeouts from
       # interrupting the reversible source transaction during unwinding.
-
 
     end
 

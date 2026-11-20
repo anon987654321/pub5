@@ -22,7 +22,7 @@ module Master
         %r{\AOPENBSD/.*\.(sh|ksh|zsh)\z}, # install and repair scripts
         %r{\AOPENBSD/mirror/usr/},
         %r{\.conf\z},                    # pf.conf, relayd.conf, nsd.conf
-        %r{\AOPENBSD/(?!.*\.(md|txt)\z)}, # anything else with behavior
+        %r{\AOPENBSD/(?!.*\.(md|txt)\z)}, # anything else with behavior,
       ].freeze
 
       class << self

@@ -176,6 +176,8 @@ module Master
         CLI_SLOTS = Integer(ENV.fetch("MASTER_CLI_SLOTS", 2)).then { |n| SizedQueue.new(n).tap { |queue| n.times { queue << true } } }
         LOCAL_CLI_SLOTS = SizedQueue.new(1).tap { |queue| queue << true }
         LANE_SLOTS_MUTEX = Mutex.new
+        # Grown lazily per lane below; freezing this hash would raise
+        # FrozenError on the first LANE_SLOTS[name] ||= assignment.
         LANE_SLOTS = {}
 
         # A lane may declare `slots:` in models.yml cli_lanes to hold its own

@@ -187,7 +187,6 @@ and a spaced en dash for an aside (word – aside – word). Norwegian copy quot
 EN_DASH_RANGE, TYPOGRAPHIC_EXCELLENCE, PARENTHETICAL_DASH and QUOTES_BY_LOCALE
 hold this contract.
 
-
 ## Local test execution and /fix cleanup
 
 Tests are run by the local Ruby toolchain in the checked-out repository, not by Vercel or another hosted CI service. Use `MASTER/bin/operator test <paths...>` for the smallest complete proof, then `cd MASTER && MASTER_TEST_JOBS=1 bundle exec rake test` for the full MASTER suite. Resolve local runtime and dependency blockers where possible; if a command cannot actually run, record the exact blocker as NOT_RUN or INCONCLUSIVE rather than treating a hosted status, authored test, or static inspection as a pass.

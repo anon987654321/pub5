@@ -39,7 +39,6 @@ module Master
 
         def local_server_model?(model_id) = model_id.to_s.start_with?("local:")
 
-
         # The router found which server listed the model; the call goes there.
         def send_local_server(selected_model, messages, sys:, temperature: nil)
           base = @model_router&.local_server_for(selected_model)

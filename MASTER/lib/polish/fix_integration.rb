@@ -45,7 +45,7 @@ module Polish
       {
         traces_active: @traces.read_active.size,
         autopoiesis: @auto.status,
-        discovery_ready: true
+        discovery_ready: true,
       }
     end
 

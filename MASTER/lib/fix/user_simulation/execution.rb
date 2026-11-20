@@ -8,7 +8,6 @@ module Master
       # transaction around each candidate trial. The defining file is
       # fix/best_of_n.rb; this re-opens its UserSimulation class.
 
-
       private
 
       def execute_test(test_path)

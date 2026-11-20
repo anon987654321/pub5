@@ -50,7 +50,6 @@ class TestCdpBudget < Minitest::Test
   end
 end
 
-
 class TestCdpHandshakeBudget < Minitest::Test
   def test_websocket_upgrade_is_bounded_by_the_active_surface_deadline
     server = TCPServer.new("127.0.0.1", 0)

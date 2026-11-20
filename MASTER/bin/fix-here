@@ -199,7 +199,6 @@ else
   puts "fix0 at fix-here: --no-probe, bounded LanePreflight request disabled"
 end
 
-
 FileUtils.mkdir_p(File.dirname(log))
 # Read before the run overwrites the log: when the last run reached its first repair.
 puts Operator::RunPlan.line(File.basename(tree), log)

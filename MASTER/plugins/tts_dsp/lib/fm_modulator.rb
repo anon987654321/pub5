@@ -12,24 +12,24 @@ module Master
             # 1. FM Modulation (Tremolo/Vibrato artifact)
             # tremolo speed(Hz) depth(%)
             "tremolo", modulator_freq.to_s, depth.to_s,
-            
+
             # 2. Pitch shift for the "cooler" digital artifact (slight detune)
-            "pitch", "-15", 
-            
+            "pitch", "-15",
+
             # 3. Spatial Delay (Dub/Space echo effect)
             # echo delay-in delay-out decay
             "echo", "0.8", "0.88", "60", "0.4",
-            
+
             # 4. High-pass filter to remove mud, keeping it crisp
             "highpass", "200",
-            
+
             # 5. Reverb for the "stillness by default" spatial air
             "reverb", "40", "30", "50", "100", "20", "0"
           ]
-          
+
           cmd = ["sox", raw_audio_path, output_path] + chain
           system(*cmd, exception: true)
-          
+
           output_path
         end
       end

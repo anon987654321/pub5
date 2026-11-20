@@ -108,7 +108,6 @@ Vipps `params[:to]` already restricted to exact `"checkout"` → root/checkout o
 
 Consent, doctor private-path classifiers, token file mode checks (owner-only, no group/other, no symlink) already present — left intact.
 
-
 ## DNS rebinding hardening follow-up (2026-11-19)
 
 The operator supplied the mitigation pattern: parse and constrain the URL, resolve once, reject the entire answer set if any A/AAAA result is non-public, pin the approved address at connect time, retain the hostname for TLS SNI/Host, disable implicit proxies, and bound resolution and transfer time. A redirect is never followed without revalidation.
