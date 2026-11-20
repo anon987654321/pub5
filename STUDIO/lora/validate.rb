@@ -15,7 +15,8 @@ module Studio
       SUBJECT_NAME = /\A[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}\z/.freeze
       ENV_KEYS = %w[SUBJECT MODEL TRIGGER DESCRIPTOR REPLICATE_MODEL LIKELINESS_REVIEWED_VERSION].freeze
       IMAGE_EXTENSIONS = %w[.jpg .jpeg .png .webp].freeze
-      MINIMUM_IMAGES = 10
+      MINIMUM_IMAGES = 12
+      MAXIMUM_IMAGES = 18
       MAX_CAPTION_BYTES = 16_384
       MAX_CONFIG_BYTES = 1_048_576
 
@@ -283,15 +284,36 @@ module Studio
           return
         end
 
+        directory_stat = File.lstat(resolved)
+        unless directory_stat.directory? && directory_stat.uid == Process.uid && (directory_stat.mode & 0o077).zero?
+          fail_check(report, "dataset_permissions", "Training dataset directory must be owned by the current user and owner-only (0700)")
+          return
+        end
+
         real = File.realpath(resolved)
         unless inside?(real, File.realpath(directory))
           fail_check(report, "dataset_path_scope", "Dataset resolves outside this subject's private directory")
           return
         end
 
+        insecure_images = []
         images = Dir.children(real).select do |name|
-          IMAGE_EXTENSIONS.include?(File.extname(name).downcase) &&
-            File.file?(File.join(real, name)) && !File.symlink?(File.join(real, name))
+          next false unless IMAGE_EXTENSIONS.include?(File.extname(name).downcase)
+
+          image_path = File.join(real, name)
+          stat = File.lstat(image_path)
+          unless stat.file? && !stat.symlink? && stat.uid == Process.uid && stat.nlink == 1 && (stat.mode & 0o077).zero?
+            insecure_images << name
+            next false
+          end
+          true
+        rescue SystemCallError
+          insecure_images << name
+          false
+        end
+        if insecure_images.any?
+          fail_check(report, "dataset_image_permissions", "Training images must be regular, singly-linked, owner-only (0600) files: #{insecure_images.first(5).join(', ')}")
+          return
         end
         caption_issues = images.filter_map do |name|
           caption = File.join(real, "#{File.basename(name, File.extname(name))}.txt")
@@ -305,6 +327,8 @@ module Studio
 
         if images.length < MINIMUM_IMAGES
           block(report, "dataset_image_count", "Dataset has #{images.length} readable images; at least #{MINIMUM_IMAGES} are required")
+        elsif images.length > MAXIMUM_IMAGES
+          block(report, "dataset_image_count", "Dataset has #{images.length} readable images; no more than #{MAXIMUM_IMAGES} are allowed")
         elsif missing_captions.any?
           block(report, "dataset_captions", "Missing same-basename .txt captions for: #{missing_captions.first(5).map(&:first).join(', ')}")
         elsif unreadable_captions.any?
@@ -372,7 +396,10 @@ module Studio
 
       def caption_problem(path, trigger)
         return :missing unless File.file?(path) && !File.symlink?(path) && File.readable?(path)
-        return :too_large if File.size(path) > MAX_CAPTION_BYTES
+
+        stat = File.lstat(path)
+        return :unreadable unless stat.file? && stat.uid == Process.uid && stat.nlink == 1 && (stat.mode & 0o077).zero?
+        return :too_large if stat.size > MAX_CAPTION_BYTES
 
         caption = File.read(path, encoding: "UTF-8")
         return :invalid_encoding unless caption.valid_encoding?
