@@ -12,7 +12,7 @@ module Studio
     class Validator
       ROOT = File.expand_path(__dir__).freeze
       SUBJECT_NAME = /\A[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}\z/.freeze
-      ENV_KEYS = %w[SUBJECT MODEL TRIGGER DESCRIPTOR REPLICATE_MODEL].freeze
+      ENV_KEYS = %w[SUBJECT MODEL TRIGGER DESCRIPTOR REPLICATE_MODEL LIKELINESS_REVIEWED_VERSION].freeze
       IMAGE_EXTENSIONS = %w[.jpg .jpeg .png .webp].freeze
       MINIMUM_IMAGES = 10
       MAX_CAPTION_BYTES = 16_384
