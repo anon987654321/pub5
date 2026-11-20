@@ -4,6 +4,7 @@
 require "fileutils"
 require "json"
 require "optparse"
+require "pathname"
 require "time"
 require "vips"
 require_relative "idea_picture"
@@ -106,16 +107,9 @@ module Studio
           end
           sheet_path = File.join(output, "contact-sheet.jpg")
           write_contact_sheet(references, renders, sheet_path, render_label: candidate ? "CANDIDATE" : "RENDER")
-          metrics = renders.map do |path|
-            reading = Postpro::Uncanny.read(path)
-            {
-              "file" => File.basename(path),
-              "texture" => reading.texture,
-              "specular_spread" => reading.specular_spread,
-              "clipping_percent" => reading.clipping,
-              "tonal_range" => reading.tonal_range,
-            }
-          end
+          reference_metrics = measure_images(references)
+          metrics = measure_images(renders)
+          images = review_images(output, references, renders)
 
           report = {
             "schema" => "studio.lora.review.v1",
@@ -125,7 +119,9 @@ module Studio
             "render_count" => renders.length,
             "reference_count" => references.length,
             "contact_sheet" => File.basename(sheet_path),
+            "reference_measurements" => reference_metrics,
             "measurements" => metrics,
+            "images" => images,
             "identity_assessment" => "NOT_AUTOMATED",
             "human_review_required" => true,
             "approval_field" => "LIKELINESS_REVIEWED_VERSION",
@@ -177,6 +173,38 @@ module Studio
           end
         end
 
+        def measure_images(paths)
+          paths.map do |path|
+            reading = Postpro::Uncanny.read(path)
+            {
+              "file" => File.basename(path),
+              "texture" => reading.texture,
+              "specular_spread" => reading.specular_spread,
+              "clipping_percent" => reading.clipping,
+              "tonal_range" => reading.tonal_range,
+            }
+          end
+        end
+
+        def review_images(output, references, renders)
+          entries = references.map { |path| ["REFERENCE", path] } + renders.map do |path|
+            ["#{renders.length == 3 ? "CANDIDATE" : "FINAL"}", path]
+          end
+          entries.map do |role, path|
+            stat = File.lstat(path)
+            unless stat.file? && !stat.symlink? && stat.uid == Process.uid && stat.nlink == 1 &&
+                   (stat.mode & 0o077).zero?
+              raise Error, "review image is not a private, singly-linked file: #{File.basename(path)}"
+            end
+
+            {
+              "role" => role,
+              "file" => File.basename(path),
+              "relative_path" => Pathname.new(path).relative_path_from(Pathname.new(output)).to_s,
+            }
+          end
+        end
+
         def write_contact_sheet(references, renders, path, render_label: "RENDER")
           entries = references.map.with_index { |file, index| [file, "REFERENCE #{index + 1}"] } +
                     renders.map.with_index { |file, index| [file, format("%s %02d", render_label, index + 1)] }
@@ -198,12 +226,14 @@ module Studio
         end
 
         def html_document(report)
-          rows = report.fetch("measurements").map do |row|
-            "<tr><td>#{escape_html(row.fetch("file"))}</td>" \
-              "<td>#{format("%.4f", row.fetch("texture"))}</td>" \
-              "<td>#{format_optional(row["specular_spread"])}</td>" \
-              "<td>#{format("%.4f", row.fetch("clipping_percent"))}%</td>" \
-              "<td>#{format("%.4f", row.fetch("tonal_range"))}</td></tr>"
+          render_rows = measurement_rows(report.fetch("measurements"))
+          reference_rows = measurement_rows(report.fetch("reference_measurements"))
+          gallery = report.fetch("images").map do |entry|
+            relative = escape_html(entry.fetch("relative_path"))
+            label = escape_html(entry.fetch("role"))
+            filename = escape_html(entry.fetch("file"))
+            "<figure><a href=\"#{relative}\"><img src=\"#{relative}\" loading=\"lazy\" alt=\"#{label}: #{filename}\"></a>" \
+              "<figcaption><strong>#{label}</strong><br>#{filename} · open full resolution</figcaption></figure>"
           end.join("\n")
           <<~HTML
             <!doctype html>
@@ -211,15 +241,19 @@ module Studio
             <head>
               <meta charset="utf-8">
               <meta name="viewport" content="width=device-width, initial-scale=1">
-              <title>Private LoRA review — #{escape_html(@subject)}</title>
+              <title>Private likeness review — #{escape_html(@subject)}</title>
               <style>
                 :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-                body { max-width: 1180px; margin: 36px auto; padding: 0 24px; color: #171717; }
+                body { max-width: 1320px; margin: 36px auto; padding: 0 24px; color: #171717; }
                 img { display: block; width: 100%; height: auto; border: 1px solid #bbb; }
-                table { width: 100%; border-collapse: collapse; margin: 24px 0; }
+                table { width: 100%; border-collapse: collapse; margin: 16px 0 32px; font-variant-numeric: tabular-nums; }
                 th, td { text-align: left; padding: 8px; border-bottom: 1px solid #ddd; }
                 .warning { font-weight: 600; }
                 code { overflow-wrap: anywhere; }
+                .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin: 24px 0 40px; }
+                figure { margin: 0; }
+                figure img { aspect-ratio: 4 / 5; object-fit: contain; background: #eee; }
+                figcaption { padding-top: 8px; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
               </style>
             </head>
             <body>
@@ -227,16 +261,33 @@ module Studio
               <p>Candidate model: <code>#{escape_html(report.fetch("model_version"))}</code></p>
               <p class="warning">Identity verdict: NOT AUTOMATED. Compare all #{Integer(report.fetch("render_count"))} full-size #{report.fetch("render_kind") == "UNAPPROVED_CANDIDATE" ? "candidate" : "final"} renders with the references. Do not approve from image metrics alone.</p>
               <img src="contact-sheet.jpg" alt="#{Integer(report.fetch("reference_count"))} approved source images and #{Integer(report.fetch("render_count"))} #{report.fetch("render_kind") == "UNAPPROVED_CANDIDATE" ? "candidate" : "final"} portraits">
-              <h2>Postpro measurements</h2>
+              <h2>Full-resolution source and render files</h2>
+              <div class="gallery">#{gallery}</div>
+              <h2>Source reference measurements</h2>
               <p>Whole-frame texture, specular spread, clipping and tonal range are diagnostic proxies, not face recognition.</p>
               <table>
+                <thead><tr><th>Reference</th><th>Texture</th><th>Specular spread</th><th>Clipping</th><th>Tonal range</th></tr></thead>
+                <tbody>#{reference_rows}</tbody>
+              </table>
+              <h2>Generated image measurements</h2>
+              <table>
                 <thead><tr><th>File</th><th>Texture</th><th>Specular spread</th><th>Clipping</th><th>Tonal range</th></tr></thead>
-                <tbody>#{rows}</tbody>
+                <tbody>#{render_rows}</tbody>
               </table>
               <p>After visual review, record the exact immutable version in the owner's private <code>subject.env</code> as <code>LIKELINESS_REVIEWED_VERSION</code>. Leave it unset if any portrait does not clearly match.</p>
             </body>
             </html>
           HTML
+        end
+
+        def measurement_rows(rows)
+          rows.map do |row|
+            "<tr><td>#{escape_html(row.fetch("file"))}</td>" \
+              "<td>#{format("%.4f", row.fetch("texture"))}</td>" \
+              "<td>#{format_optional(row["specular_spread"])}</td>" \
+              "<td>#{format("%.4f", row.fetch("clipping_percent"))}%</td>" \
+              "<td>#{format("%.4f", row.fetch("tonal_range"))}</td></tr>"
+          end.join("\n")
         end
 
         def format_optional(value)
