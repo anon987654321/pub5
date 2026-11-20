@@ -11,6 +11,7 @@ module Studio
     # model, starts training, or writes into a subject directory.
     class Validator
       ROOT = File.expand_path(__dir__).freeze
+      STANDARDS_PATH = File.join(ROOT, "training_standards.yml").freeze
       SUBJECT_NAME = /\A[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}\z/.freeze
       ENV_KEYS = %w[SUBJECT MODEL TRIGGER DESCRIPTOR REPLICATE_MODEL LIKELINESS_REVIEWED_VERSION].freeze
       IMAGE_EXTENSIONS = %w[.jpg .jpeg .png .webp].freeze
@@ -231,6 +232,7 @@ module Studio
         raise ArgumentError, "train.yaml must declare exactly one sd_trainer process" unless trainers.length == 1
 
         trainer = trainers.first
+        validate_shared_training_standard(trainer, report)
         trigger = trainer["trigger_word"].to_s
         unless trigger == env["TRIGGER"]
           fail_check(report, "trainer_trigger_matches_subject", "train.yaml trigger_word does not match subject.env TRIGGER")
@@ -314,6 +316,58 @@ module Studio
         else
           pass_check(report, "dataset_integrity", "#{images.length} images have readable captions containing the subject trigger")
         end
+      end
+
+      def validate_shared_training_standard(trainer, report)
+        standard = YAML.safe_load_file(STANDARDS_PATH, permitted_classes: [], permitted_symbols: [], aliases: false)
+        mismatches = []
+        %w[network save train model].each do |section|
+          expected = standard.fetch(section)
+          actual = trainer[section]
+          unless actual.is_a?(Hash)
+            mismatches << "#{section} must be a mapping"
+            next
+          end
+          expected.each do |key, value|
+            mismatches << "#{section}.#{key} must equal #{value.inspect}" unless actual[key] == value
+          end
+        end
+
+        dataset = Array(trainer["datasets"]).first
+        unless dataset.is_a?(Hash)
+          mismatches << "datasets[0] must be a mapping"
+        else
+          standard.fetch("dataset").each do |key, value|
+            mismatches << "datasets[0].#{key} must equal #{value.inspect}" unless dataset[key] == value
+          end
+        end
+
+        actual_sample = trainer["sample"]
+        expected_sample = standard.fetch("sample")
+        unless actual_sample.is_a?(Hash)
+          mismatches << "sample must be a mapping"
+        else
+          expected_sample.each do |key, value|
+            next if key == "prompts"
+
+            mismatches << "sample.#{key} must equal #{value.inspect}" unless actual_sample[key] == value
+          end
+          trigger = trainer["trigger_word"].to_s
+          expected_prompts = Array(expected_sample["prompts"]).map { |prompt| prompt.to_s.gsub("{{trigger}}", trigger) }
+          mismatches << "sample.prompts must use the shared six-scene identity-neutral set" unless actual_sample["prompts"] == expected_prompts
+        end
+
+        replicate = standard.fetch("replicate")
+        mismatches << "train.steps must equal Replicate steps #{replicate.fetch("steps")}" unless trainer.dig("train", "steps") == replicate.fetch("steps")
+        mismatches << "network.linear must equal Replicate lora_rank #{replicate.fetch("lora_rank")}" unless trainer.dig("network", "linear") == replicate.fetch("lora_rank")
+
+        if mismatches.empty?
+          pass_check(report, "shared_training_standard", "Training plans match the canonical FLUX.1-dev subject recipe")
+        else
+          fail_check(report, "shared_training_standard", mismatches.join("; "))
+        end
+      rescue Psych::Exception, SystemCallError, IOError, KeyError => error
+        fail_check(report, "shared_training_standard", "Cannot read the canonical training standard: #{error.class}: #{error.message}")
       end
 
       def caption_problem(path, trigger)
