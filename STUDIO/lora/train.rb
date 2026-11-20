@@ -166,6 +166,8 @@ module Studio
 
             digest.update(name)
             digest.update("\0")
+            digest.update(stat.size.to_s)
+            digest.update("\0")
             File.open(path, "rb") do |file|
               digest.update(chunk) while (chunk = file.read(1024 * 1024))
             end
@@ -176,13 +178,15 @@ module Studio
         def build_training_zip(subject, dataset, digest)
           cache = File.join(@root, subject, ".cache")
           secure_directory!(cache)
-          stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S")
+          stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S%6N")
           target = File.join(cache, "#{subject}_training_#{digest[0, 12]}_#{stamp}.zip")
+          entries = Dir.children(dataset).sort.map { |name| "./#{name}" }
+          raise Error, "training dataset is empty" if entries.empty?
 
           Dir.mktmpdir(".#{subject}-training-", cache) do |staging|
             staged = File.join(staging, "training.zip")
             stdout, stderr, status = Open3.capture3(
-              @zip_executable, "-q", "-X", "-r", staged, ".", chdir: dataset
+              @zip_executable, "-q", "-X", staged, *entries, chdir: dataset
             )
             unless status.success? && File.file?(staged) && File.size(staged).positive?
               raise Error, "training ZIP creation failed: #{[stdout, stderr].join(" ").strip}"
