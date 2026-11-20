@@ -347,6 +347,43 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
+  def test_unreviewed_lora_is_allowed_only_inside_the_private_candidate_review_cache
+    Dir.mktmpdir do |dir|
+      subjects = File.join(dir, "subjects")
+      subject = File.join(subjects, "probe")
+      candidate = File.join(subject, ".cache", "likeness-review", "candidate-1")
+      outside = File.join(subject, "out")
+      FileUtils.mkdir_p(candidate, mode: 0o700)
+      FileUtils.mkdir_p(outside, mode: 0o700)
+      [subject, File.dirname(candidate), File.dirname(File.dirname(candidate)), candidate, outside].each do |path|
+        File.chmod(0o700, path)
+      end
+      manifest = File.join(subject, "replicate_training.json")
+      version = "owner/model:version-123"
+      File.write(manifest, JSON.generate("version" => version))
+      env_path = File.join(subject, "subject.env")
+      File.write(env_path, "MODEL=probe\\nTRIGGER=probe\\n")
+      File.chmod(0o600, env_path)
+      client = Object.new
+      client.define_singleton_method(:input_names) do |_model|
+        %w[prompt model aspect_ratio num_outputs guidance_scale num_inference_steps output_format output_quality go_fast lora_scale]
+      end
+
+      allowed = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: candidate, subjects_root: subjects,
+        model_manifest: manifest, lora_only: true, allow_unreviewed_likeness: true
+      )
+      assert_equal version, allowed.validate_model!
+
+      blocked = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: outside, subjects_root: subjects,
+        model_manifest: manifest, lora_only: true, allow_unreviewed_likeness: true
+      )
+      error = assert_raises(RuntimeError) { blocked.validate_model! }
+      assert_match(/likeness is not approved/, error.message)
+    end
+  end
+
   def test_still_schema_preflight_catches_every_field_before_prediction
     Dir.mktmpdir do |dir|
       manifest = File.join(dir, "replicate_training.json")
