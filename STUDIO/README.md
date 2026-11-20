@@ -90,8 +90,12 @@ voice of the creative work.
   `ruby STUDIO/lora/photograph.rb --all-subjects --count 6` replaces the three
   final series atomically after all 18 renders succeed. Then run
   `ruby STUDIO/lora/review.rb --subject NAME` for each person to create final
-  contact sheets and diagnostic reports. Identity remains a human judgement;
-  Postpro metrics are not face recognition.
+  contact sheets and diagnostic reports. Open each private report's
+  `index.html` to inspect every source and final portrait at full resolution;
+  the page links the underlying local image files. This is a private review,
+  not gallery publication. `selfies_gallery.rb` has a separate publication-
+  consent gate and is not needed to inspect the finished portraits. Identity
+  remains a human judgement; Postpro metrics are not face recognition.
   On the development checkout, run `MASTER/bin/fix-here STUDIO --lane all`
   after rendering to run MASTER's source, structural, behavioural and visual
   repair lanes over the STUDIO implementation. The review contact sheets and
