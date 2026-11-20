@@ -57,50 +57,14 @@ config:
       guidance_scale: 3.5
       sample_steps: 20
       prompts:
-      - ragnhild, Nordic
-        editorial portrait in open shade, huge soft north light, neutral grey backdrop,
-        clean catchlights, restrained makeup, Hasselblad medium format, gentle tonal
-        rolloff, 100mm
-      - ragnhild, Hardanger
-        fjord at golden hour, low sun raking across the cheekbone, warm rim light
-        through blowing hair, deep amber highlights, Kodak Gold 200, 50mm
-      - ragnhild, night
-        cafe interior, tungsten practicals behind her, cold blue window fill on the
-        near side, teal and orange separation, lifted milky shadows, ARRI Alexa, 40mm
-        anamorphic
-      - ragnhild, hard midday
-        sun, black and white, Kodak Tri-X 400 pushed, deep contrast, sharp nose shadow,
-        real skin texture and pores, photojournalistic, 35mm
-      - ragnhild, high fashion
-        studio, single large softbox above and left, black seamless background, sculpted
-        cheek shadow, glossy skin, editorial beauty lighting, 85mm
-      - ragnhild, neon side
-        street after rain, magenta and cyan signage as the only light sources, wet
-        asphalt reflections, chromatic fringing, handheld, CineStill 800T, 35mm
-      - ragnhild, candlelit
-        room, single flame just off frame, extreme low key, warm falloff into black,
-        heavy grain, most of the face in shadow, 50mm wide open
-      - ragnhild, high key
-        commercial portrait, white cyclorama, near shadowless wraparound light, bright
-        airy exposure, crisp clean colour, catalogue photography, 105mm
-      - ragnhild, backlit
-        by a bright window in a steamy room, strong rim separating hair from haze,
-        face in soft bounced shadow, blown highlights, dreamy diffusion, 85mm
-      - ragnhild, snowfield
-        under heavy overcast, flat diffuse light from every direction, cool blue cast,
-        visible breath, pale skin against white, Fuji Pro 400H, 70mm
-      - ragnhild, passenger
-        seat of a moving car, dappled sunlight sweeping through the windshield, handheld
-        documentary framing, motion in the background, warm skin cool glass, 28mm
-      - ragnhild, shooting
-        straight into the setting sun, heavy anamorphic lens flare, face rim-lit and
-        half in silhouette, dust in the air, orange sky bokeh, 65mm
-      neg: plastic skin, waxy face, over-smoothed, airbrushed, doll, uncanny, deformed
-        eyes, asymmetrical eyes, extra teeth, bad hands, harsh HDR, oversaturated,
-        anime, illustration, CGI, face swap artifacts, cap, hat, selfie distortion,
-        beauty filter, heavy makeup, face morph, identity drift, teenage face, overly
-        young face, generic influencer face, different subject
-    meta:
-      name: ragnhild
-      version: '2.0'
-      master_trigger: ragnhild
+        - ragnhild, natural close portrait in soft north-facing window light, unobstructed face, neutral expression settling after a laugh, eye-level camera, natural skin texture
+        - ragnhild, candid environmental portrait on a rainy Bergen street, soft overcast daylight, unobstructed face, relaxed expression, documentary photograph
+        - ragnhild, quiet café portrait with warm tungsten practical lights and cool window fill, face clearly visible, natural expression, shallow depth of field
+        - ragnhild, coastal portrait under a broad overcast sky, wind and weather in the environment, face clearly visible, realistic proportions
+        - ragnhild, direct-flash evening street portrait, natural expression, crisp focus on the eyes, documentary colour-negative photograph
+        - ragnhild, simple monochrome studio portrait, one soft directional light, full facial detail, honest texture, classic silver-gelatin print
+      neg: plastic skin, waxy face, airbrushed skin, generic influencer face, identity drift, face morph, beauty filter, CGI, illustration, extra teeth, deformed eyes, overly young face
+  meta:
+    name: ragnhild
+    version: '2.0'
+    master_trigger: ragnhild
