@@ -82,19 +82,20 @@ precedents:
   date: '2026-11-06'
   laws:
   - TERMINAL_OUTPUT_ASCII
-  question: Do terminal surfaces print typographic marks?
-  ruling: No. The CLI, the REPL prompt, the terminal face and dmesg lines print ASCII;
-    web copy, locales and documents keep proper marks.
-  rationale: 'A terminal font and a pipe both read a hyphen and three dots plainly,
-    so the typographic laws read every file except terminal output paths.
+  question: Must terminal presentation remain plain ASCII?
+  ruling: Plain terminal text retains an ASCII-safe form for pipes and limited terminals;
+    interactive ANSI colour and optional patched-font presentation are allowed.
+  rationale: 'The original portability concern remains valid, but it did not justify
+    suppressing semantic colour or a shared monospaced interface.
 
     '
   cites:
   - MASTER/law/definition.rb TERMINAL_OUTPUT_PATH
-  overrules: []
+  overrules:
+  - P-008
   adopted_by:
   - pub5
-  status: governing
+  status: superseded
 - id: P-006
   date: '2026-09-10'
   laws: []
@@ -129,6 +130,27 @@ precedents:
   cites:
   - MASTER/data/court/case-20261117-005104.yml
   overrules: []
+  adopted_by:
+  - pub5
+  status: governing
+- id: P-008
+  date: '2026-11-21'
+  laws: []
+  question: How should MASTER's CLI and web terminal surfaces share typography?
+  ruling: Use a Nerd Font Mono-first monospaced stack, semantic syntax colours and
+    the same visual roles in both surfaces; keep plain output ASCII-safe and avoid
+    mandatory third-party font requests.
+  rationale: 'A terminal font is a presentation choice, not a reason to make the
+    interface typographically inert. ANSI colour is disabled for pipes and dumb
+    terminals; web code styling uses semantic classes and the same font token.
+
+    '
+  cites:
+  - MASTER/lib/voice/renderer/prompt_components.rb
+  - MASTER/web/styles/face/30_conversation.css
+  - MASTER/data/taste_ledger.yml type-terminal-nerd-mono-20261121
+  overrules:
+  - P-005
   adopted_by:
   - pub5
   status: governing
