@@ -952,12 +952,22 @@ test("FaceWorld is one renderer projection, not a second renderer", () => {
 
 test("face.css meets MASTER design_rules typography and touch baselines", () => {
   const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  const tokens = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
+  const foundation = readFileSync(join(root, "styles", "face", "10_foundation.css"), "utf8");
+  const motion = readFileSync(join(root, "styles", "face", "40_accessibility_motion.css"), "utf8");
   assert.match(css, /font:\s*16px\/1\.5/);
   assert.match(css, /"ss03"/);
   assert.match(css, /--face-bar-height:\s*44px/);
+  assert.match(tokens, /face-chrome-bottom: "calc\(var\(--face-bar-height\) \+ var\(--chrome-inset\)\)"/);
   assert.match(css, /--face-chrome-bottom:\s*calc\(var\(--face-bar-height\) \+ var\(--chrome-inset\)\)/);
   assert.match(css, /image-rendering:\s*pixelated;/);
   assert.doesNotMatch(css, /image-rendering:\s*crisp-edges/);
+  for (const source of [foundation, motion]) {
+    assert.match(source, /var\(--face-chrome-bottom\)/);
+    assert.doesNotMatch(source, /calc\(56px \+ var\(--safe-bottom\)\)/);
+  }
+  assert.match(foundation, /image-rendering:\s*pixelated;/);
+  assert.doesNotMatch(foundation, /image-rendering:\s*crisp-edges/);
   assert.doesNotMatch(css, /calc\(56px \+ var\(--safe-bottom\)\)/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(css, /#chat-log[\s\S]*font:\s*1rem\/1\.5 var\(--font-mono\)/);
