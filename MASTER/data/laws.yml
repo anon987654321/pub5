@@ -5905,7 +5905,9 @@ plugins:
     endpoint: loopback_http_or_pinned_public_https
     api_key_storage: process_environment_only
     library_scan: explicit_path_read_only
+    quality_check: explicit_path_read_only
     manifest_import: explicit_path_read_only
+    catalogue_build: explicit_path_read_only
     catalogue_export: explicit_path_with_consent
     duplicate_detection: read_only
     sha256_duplicates: true
