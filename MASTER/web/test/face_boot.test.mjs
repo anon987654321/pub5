@@ -123,8 +123,8 @@ test("the chat keeps the CLI's monospaced presentation; the chrome takes brgen's
   assert.match(css, /html, body \{[\s\S]*?font:\s*16px\/1\.5 var\(--font\)/);
   assert.match(css, /#chat-log \{[^}]*font:\s*var\(--terminal-font-size\)\/var\(--leading-body\) var\(--font-mono\)/);
   assert.match(css, /#prompt-form input, #prompt-form textarea \{[^}]*font:\s*400 var\(--terminal-font-size\)\/var\(--leading-body\) var\(--font-mono\)/);
-  assert.match(css, /--terminal-font-size: 1\.125rem/);
-  assert.match(rules, /terminal-font-size: "1\.125rem"/);
+  assert.match(css, /--terminal-font-size: 1\.25rem/);
+  assert.match(rules, /terminal-font-size: "1\.25rem"/);
   assert.match(css, /--font-label:\s*"JetBrainsMono Nerd Font"/);
   assert.match(rules, /face_interface:/);
   assert.match(rules, /prompt:\s*\n\s+font: font_code/);
@@ -955,6 +955,10 @@ test("face.css meets MASTER design_rules typography and touch baselines", () => 
   assert.match(css, /font:\s*16px\/1\.5/);
   assert.match(css, /"ss03"/);
   assert.match(css, /--face-bar-height:\s*44px/);
+  assert.match(css, /--face-chrome-bottom:\s*calc\(var\(--face-bar-height\) \+ var\(--chrome-inset\)\)/);
+  assert.match(css, /image-rendering:\s*pixelated;/);
+  assert.doesNotMatch(css, /image-rendering:\s*crisp-edges/);
+  assert.doesNotMatch(css, /calc\(56px \+ var\(--safe-bottom\)\)/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(css, /#chat-log[\s\S]*font:\s*1rem\/1\.5 var\(--font-mono\)/);
   assert.match(css, /body\.face-loading #prompt-form:not\(\.live\)/);
