@@ -3,7 +3,7 @@
 # Route contracts: what each GET route answers an anonymous visitor, recorded
 # from a running app and checked against any other running copy of it.
 #
-# This is the first piece of the pub5 migration acceptance harness (TODO.md,
+# This is the first piece of the pub5 migration acceptance harness (MASTER/convergence.yml,
 # current-revision acceptance): a port is done for an app when its contracts pass against the
 # ported app. It records only what should survive a rewrite — status,
 # redirect target, media type, title, first heading, landmark elements and
