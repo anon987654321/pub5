@@ -1146,12 +1146,12 @@ tokens:
         unknown_kind: keep_portrait
         min_confidence: 0.42
         max_label_chars: 48
-        max_features: 6
+        max_features: 8
         morph_stage_duration_ms: 280
         morph_stage_gap_ms: 72
         custom_geometry:
           enabled: true
-          max_parts: 6
+          max_parts: 8
           allowed_primitives: [box, sphere, ring, cylinder, beam]
           axes: [x, y, z]
           center_limit: 0.45
