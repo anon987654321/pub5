@@ -50,7 +50,7 @@ class FixMissionTest < Minitest::Test
   def test_queued_backlog_mission_preserves_origin_intent_and_auto_continue
     Dir.mktmpdir do |root|
       mission = Master::Fix::Mission.new(root:).ensure_queued!(
-        goal: "Complete exactly this root TODO item",
+        goal: "Complete exactly this owner-registry task",
         scope: root,
         origin: "backlog",
         auto_continue: true,
@@ -72,7 +72,7 @@ class FixMissionTest < Minitest::Test
     Dir.mktmpdir do |root|
       parent = Master::Fix::Mission.new(root:).start!(
         goal: "Complete exactly this root TODO item", scope: root,
-        plan: '{"executor":"root_todo"}', origin: "backlog", auto_continue: true,
+        plan: '{"executor":"owner_registry"}', origin: "backlog", auto_continue: true,
       )
       parent_id = parent.id
       parent_lease = parent.record.fetch("lease_owner")
