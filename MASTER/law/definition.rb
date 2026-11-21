@@ -23,10 +23,10 @@ module Law
   LAW_CATALOGUE = Master.law_catalogue.freeze
   ASSESSMENT_SURFACES = Array(LAW_CATALOGUE.fetch("surfaces")).map(&:to_sym).freeze
 
-  # The CLI, the REPL prompt, the terminal face and dmesg lines print ASCII
-  # (operator, 2026-11-06): a terminal font and a pipe both read a hyphen
-  # and three dots plainly. Web copy, locales and documents keep proper
-  # marks, so the typographic Laws read every file except these.
+  # Terminal text keeps an ASCII-safe plain-text form for pipes, dumb
+  # terminals and hosts without patched fonts. Interactive TTYs may add ANSI
+  # semantic colour; the browser shares the same monospaced syntax roles.
+  # Nerd Font glyphs are optional presentation, never data or control syntax.
   TERMINAL_OUTPUT_PATH = %r{
     (?:\A|/)MASTER/(?:bin|lib|tools|checks|law|data|plugins|completions|test)/ |
     (?:\A|/)(?:OPENBSD|STUDIO)/(?!.*\.(?:md|markdown|tex|html)\z) |
