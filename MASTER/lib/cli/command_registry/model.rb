@@ -136,7 +136,7 @@ module Master
         provider_failures = (snapshot || {}).filter_map do |id, raw|
           next unless raw.is_a?(Hash)
 
-          count = (raw[:failures] || raw["failures"]).to_i
+          count = (raw[:failures] || raw["failures"] || 0).to_i
           next unless count.positive?
 
           failed_at = Float(raw[:last_failure_at] || raw["last_failure_at"], exception: false)
