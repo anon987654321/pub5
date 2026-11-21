@@ -219,7 +219,7 @@ booting MASTER. While a repair is active, `bin/operator fix status` and
 `bin/operator fix tail` expose its progress and transcript.
 
 First hour on a new host: use the installed compatible Ruby (3.2 or newer; no upper bound), run
-`ruby bin/bootstrap` (the same dependency preflight `bin/master` runs before every normal boot), keep keys in the environment,
+`bin/bootstrap` (the same dependency preflight `bin/master` runs before every normal boot), keep keys in the environment,
 run `bin/operator doctor` for the host and `bin/doctor` for the runtime, then take one narrow dry run:
 `bin/master '/fix --dry-run --critique --only critique,map MASTER/lib/cli'`.
 Read the result before widening scope.
