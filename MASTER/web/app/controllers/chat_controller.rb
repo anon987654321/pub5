@@ -14,7 +14,7 @@ class ChatController < ApplicationController
   before_action :require_same_origin!, only: :command
   # Face shell renders immediately; container finishes booting in the background (~90s on VPS).
   # Metrics returns 401/503 JSON — must not hit the HTML warming check first.
-  skip_before_action :require_container!, only: %i[index metrics metrics_prometheus sensory]
+  skip_before_action :require_container!, only: %i[index metrics metrics_prometheus sensory new_conversation]
 
   def index
     c = container
@@ -59,6 +59,23 @@ class ChatController < ApplicationController
     @container_ready = !c.nil?
     @face_law_field = Master::Face::LawField.browser_payload
     render layout: false
+  end
+
+  # A fresh opaque cookie selects a new server-side transcript. The previous
+  # conversation remains addressable by its old cookie; no transcript is
+  # deleted or copied into the new one. Return only the face-session digest,
+  # never the cookie that authorizes history.
+  def new_conversation
+    fresh = SecureRandom.hex(16)
+    cookies[:master_conversation] = {
+      value: fresh,
+      expires: 1.year.from_now,
+      secure: request.ssl?,
+      httponly: true,
+      same_site: :strict
+    }
+    face_session = Digest::SHA256.hexdigest("master-face-mask:#{fresh}")[0, 32]
+    render json: { face_session: }, status: :created
   end
 
   def metrics
