@@ -304,11 +304,12 @@ test("sixteen pixel mask profiles use bounded sparse geometry and the shared fac
   const manifest = readFileSync(join(root, "config", "face_assets.yml"), "utf8");
   const tokens = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
   const calls = [];
+  const listeners = {};
   const window = {
     MASTER_FACE_WORLD: {
       setSubjectForm(form, descriptor) { calls.push({ form, descriptor }); return form; }
     },
-    addEventListener() {},
+    addEventListener(type, listener) { (listeners[type] ||= []).push(listener); },
     dispatchEvent() {}
   };
   const document = {
@@ -347,6 +348,12 @@ test("sixteen pixel mask profiles use bounded sparse geometry and the shared fac
     }
   }
   assert.equal(api.current().id, "jah-hut-angular");
+  assert.equal(api.newConversation("conversation-next"), true);
+  assert.equal(api.current().id, "abelam-shield");
+  assert.equal(api.newConversation("conversation-next"), true);
+  assert.equal(api.current().id, "abelam-shield", "same conversation does not rotate twice");
+  assert.ok(listeners["master:conversation-created"]?.length);
+  assert.ok(listeners["master:bus"]?.length);
 });
 
 test("explicit visual subjects fail closed and never fall through to text guesses", () => {
