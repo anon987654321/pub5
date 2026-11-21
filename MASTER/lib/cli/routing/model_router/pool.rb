@@ -149,7 +149,7 @@ module Master
             start_pool_probes
             self
           rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "model_router.pool.refresh")
+            record_pool_discovery_error("pool_refresh", e)
             self
           end
 
@@ -242,7 +242,7 @@ module Master
             binary = agy_binary
             @agy_catalog_models = agy_binary_available?(binary) ? agy_catalog_for(binary) : []
           rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "model_router.pool.agy_catalog")
+            record_pool_discovery_error("antigravity_catalog", e)
             @agy_catalog_models = []
           end
 
@@ -266,7 +266,7 @@ module Master
             data = JSON.parse(File.read(file))
             data["models"] if data["key"] == key && data["models"].is_a?(Array)
           rescue JSON::ParserError, SystemCallError => e
-            Master::Ground::Swallow.log(e, context: "model_router.pool.agy_catalog_cache")
+            record_pool_discovery_error("antigravity_catalog_cache", e)
             nil
           end
 
@@ -318,7 +318,7 @@ module Master
               id
             end
           rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "model_router.live_catalog")
+            record_pool_discovery_error("openrouter_catalog", e)
             @live_catalog_models = []
           end
 
@@ -338,7 +338,7 @@ module Master
             @catalog_index ||= Master::Io::CatalogIndex.new(db_path: db)
             @catalog_index.search(nil, source:, limit: CATALOG_MODEL_LIMIT)
           rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "model_router.catalog_rows", source:)
+            record_pool_discovery_error("#{source}_catalog", e)
             []
           end
 
@@ -477,7 +477,7 @@ module Master
 
             data["total_credits"].to_f > data["total_usage"].to_f
           rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "model_router.pool.credits")
+            record_pool_discovery_error("openrouter_credits", e)
             nil
           end
 
@@ -495,7 +495,7 @@ module Master
               begin
                 index.refresh(source, token:)
               rescue StandardError => e
-                Master::Ground::Swallow.log(e, context: "model_router.pool.catalog", source:)
+                record_pool_discovery_error("#{source}_catalog_refresh", e)
               end
             end
             refresh_model_registry
@@ -514,7 +514,7 @@ module Master
 
             ::RubyLLM.models.refresh
           rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "model_router.pool.registry")
+            record_pool_discovery_error("model_registry_refresh", e)
             nil
           end
 
@@ -604,7 +604,8 @@ module Master
           def server_model_ids(base)
             body = get_json("#{base.chomp('/')}/models", timeout: SERVER_TIMEOUT_S)
             Array(JSON.parse(body.to_s)["data"]).filter_map { |row| row["id"] }
-          rescue StandardError
+          rescue StandardError => error
+            record_pool_discovery_error("local_server_catalog", error)
             []
           end
 

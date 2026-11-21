@@ -131,18 +131,56 @@ module Master
 
         models = router.respond_to?(:pool) ? Array(router.pool(wait: true)) : []
         failures = router.respond_to?(:pool_discovery_errors) ? Array(router.pool_discovery_errors) : []
-        lines = ["model doctor: reachable=#{models.size}; discovery_errors_since_start=#{failures.size}"]
+        compute_pool = router.compute_pool if router.respond_to?(:compute_pool)
+        snapshot = compute_pool.snapshot if compute_pool&.respond_to?(:snapshot)
+        provider_failures = (snapshot || {}).filter_map do |id, raw|
+          next unless raw.is_a?(Hash)
+
+          count = (raw[:failures] || raw["failures"]).to_i
+          next unless count.positive?
+
+          [id.to_s, count, raw[:last_error] || raw["last_error"]]
+        end
+        lines = [
+          "model doctor: reachable=#{models.size}; discovery_errors_since_start=#{failures.size}; provider_failures=#{provider_failures.size}"
+        ]
         failures.each do |failure|
           lane = failure["lane"] || failure[:lane] || "unknown"
           error = failure["error"] || failure[:error] || "StandardError"
           lines << "model-doctor0: #{lane} raised #{error} during discovery; other lanes remain eligible"
         end
         lines << "model doctor: no discovery exceptions recorded since router start" if failures.empty?
+        provider_failures.first(12).each do |id, count, error|
+          lane = if router.respond_to?(:lane_label)
+                   router.lane_label(id)
+                 else
+                   id.split(":", 2).first
+                 end
+          lines << "model-doctor0: #{id} lane=#{lane} failures=#{count} last_error=#{provider_failure_kind(error)}"
+        rescue StandardError
+          lines << "model-doctor0: #{id} lane=unknown failures=#{count} last_error=provider_error"
+        end
+        hidden = provider_failures.size - 12
+        lines << "model-doctor0: #{hidden} additional failing model(s) not shown" if hidden.positive?
+        lines << "model doctor: no recorded provider call failures" if provider_failures.empty?
         lines << "model doctor: no reachable models; inspect /doctor keyless and provider credentials" if models.empty?
         lines.join("\n")
       rescue StandardError => error
         Master::Ground::Swallow.log(error, context: "command_registry.model_doctor")
         "model doctor: unavailable (#{error.class})"
+      end
+
+      # Convert raw provider failure text into a small, non-sensitive category.
+      # Error strings can contain response bodies or credentials; never render them.
+      def provider_failure_kind(error)
+        message = error.to_s.downcase
+        case message
+        when /timeout|timed out|deadline|exceeded its deadline/ then "timeout"
+        when /401|403|unauthori[sz]ed|authentication|credential|invalid api key/ then "authentication"
+        when /429|rate.?limit|quota|insufficient credit|402/ then "quota"
+        when /connection|connect|socket|unreachable|dns|refused/ then "connectivity"
+        else "provider_error"
+        end
       end
 
       # Summarize measured provider outcomes without printing raw provider

@@ -120,4 +120,31 @@ class TestModelHealth < Minitest::Test
     refute_includes result, "Authorization"
   end
 
+  def test_model_doctor_classifies_provider_failures_without_rendering_raw_error_text
+    stats = {
+      "grok-cli:auto" => {
+        calls: 3, successes: 0, failures: 3,
+        last_error: "provider call exceeded its deadline: outbound request exceeded 5s; Authorization: Bearer secret",
+      },
+      "glm-5.3-flash" => { calls: 1, successes: 1, failures: 0, last_error: nil },
+    }
+    router = Router.new(Pool.new(stats))
+    router.define_singleton_method(:pool) { |wait:| ["glm-5.3-flash"] }
+    router.define_singleton_method(:pool_discovery_errors) { [] }
+    router.define_singleton_method(:lane_label) { |id| id.start_with?("grok-cli:") ? "subscription" : "paid" }
+
+    result = Registry.dispatch_model(
+      agent: Agent.new(router),
+      config: nil,
+      metrics: nil,
+      root: Master::ROOT,
+      arg: "doctor",
+    )
+
+    assert_includes result, "provider_failures=1"
+    assert_includes result, "grok-cli:auto lane=subscription failures=3 last_error=timeout"
+    refute_includes result, "Authorization"
+    refute_includes result, "secret"
+  end
+
 end
