@@ -499,6 +499,9 @@ class TestPlugins < Minitest::Test
       FileUtils.mkdir_p(album)
       track = File.join(album, "01 Workinonit.flac")
       File.binwrite(track, "read-only-fixture")
+      unknown_album = File.join(library, "Unidentified Release")
+      FileUtils.mkdir_p(unknown_album)
+      File.binwrite(File.join(unknown_album, "track.flac"), "intentional-short-fixture")
       output = File.join(root, "catalog.json")
       plugin = Master::Plugin.load("soulseek")
 
@@ -511,9 +514,16 @@ class TestPlugins < Minitest::Test
 
       result = plugin.call(action: "catalog", path: library, output_path: output, consent: true)
       document = JSON.parse(File.read(output))
-      assert_equal 1, result.fetch(:tracks)
-      assert_equal 1, document.fetch("summary").fetch("album_folders")
-      assert_equal "Workinonit", document.fetch("albums").first.fetch("tracks").first.fetch("title_hint")
+      assert_equal 2, result.fetch(:tracks)
+      assert_equal 2, document.fetch("summary").fetch("album_folders")
+      identified = document.fetch("albums").find { |album| album.fetch("artist_hint") == "J Dilla" }
+      assert_equal "Donuts", identified.fetch("album_title_hint")
+      assert_equal "2006", identified.fetch("year_hint")
+      assert_equal "Workinonit", identified.fetch("tracks").first.fetch("title_hint")
+      gaps = document.fetch("summary").fetch("metadata_gaps")
+      assert_equal 1, gaps.fetch("folders_without_artist_hint")
+      assert_equal 1, gaps.fetch("folders_without_year_hint")
+      assert_equal 1, gaps.fetch("tracks_without_track_number_hint")
       assert_equal "read-only-fixture", File.binread(track)
     end
   end
@@ -549,8 +559,8 @@ class TestPlugins < Minitest::Test
       result = Master::Plugin.load("soulseek").call(action: "quality", path: root)
       assert_equal 1, result.fetch(:empty_files)
       assert_equal 1, result.fetch(:unusually_small_files)
-      assert_equal 1, result.fetch(:format_classes).fetch(:lossless)
-      assert_equal 2, result.fetch(:format_classes).fetch(:lossy)
+      assert_equal 1, result.fetch(:format_classes).fetch(:lossless_common_extensions)
+      assert_equal 2, result.fetch(:format_classes).fetch(:lossy_common_extensions)
       assert_equal "Structural triage only. Small files may be short clips or intentional samples; file extension does not establish bitrate or fidelity. No audio was decoded or changed.", result.fetch(:note)
     end
   end
