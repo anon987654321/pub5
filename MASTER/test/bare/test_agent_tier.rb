@@ -93,6 +93,13 @@ module Master
         refused = view[:buckets].fetch("refused")
         assert refused.all? { |r| r.key?(:source) || r.key?("source") },
                "a refused row that does not name its owning file is a rumour"
+
+        assert_includes view[:sources], "MASTER/data/law/ux_refinements.yml"
+        assert_includes view[:sources], "RAILS/refinements.yml"
+        refute_includes view[:sources], "TODO.md",
+                        "the agent status view must read owner registries, not a shadow task list"
+        ids = view[:buckets].values.flatten.map { |row| row[:id] }
+        assert_equal ids.uniq, ids, "one owned item must not appear twice in the union view"
       end
 
       def test_receipt_with_executable_evidence_validates
