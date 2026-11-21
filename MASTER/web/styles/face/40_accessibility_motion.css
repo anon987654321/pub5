@@ -43,7 +43,7 @@
 .debug-panel {
   position: fixed;
   inset-inline-start: var(--inset-l);
-  bottom: calc(56px + var(--safe-bottom));
+  bottom: calc(var(--face-chrome-bottom) + var(--safe-bottom));
   z-index: var(--z-ui);
   padding: 8px 8px;
   background: color-mix(in srgb, #000 88%, transparent);
