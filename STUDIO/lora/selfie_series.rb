@@ -4,7 +4,7 @@ require "json"
 require "fileutils"
 require "time"
 require_relative "idea_picture"
-require_relative "../lora/lora"
+require_relative "lora"
 
 module Studio
   module Visual

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "tempfile"
-require_relative "../analog_core"
+require_relative "../dilla/analog_core"
 
 module Postpro
   module Motion

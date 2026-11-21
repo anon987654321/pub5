@@ -8,6 +8,7 @@
 # tool that quietly tries everything and reports success is lying about them.
 if ARGV.include?("--rescue")
   require_relative "../rescue"
+  require_relative "../../replicate/subprocess"
   subject = ARGV[ARGV.index("--rescue") + 1]
   if subject.nil? || !File.file?(subject)
     PostproBootstrap.dmesg("ERROR --rescue needs a readable file")
@@ -30,7 +31,7 @@ if ARGV.include?("--rescue")
   end
 
   PostproBootstrap.dmesg("rescue: applying preset=#{preset}")
-  out, status = Open3.capture2e(RbConfig.ruby, POSTPRO_ENTRY, "--input", subject,
+  out, status = Open3.capture2e(Studio::Subprocess.environment, RbConfig.ruby, POSTPRO_ENTRY, "--input", subject,
                                 "--output", target, "--preset", preset)
   unless status.success?
     PostproBootstrap.dmesg("ERROR rescue: the grade failed: #{out.lines.last.to_s.strip}")
