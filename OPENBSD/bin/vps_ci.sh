@@ -140,10 +140,10 @@ sha=$(git -C "$repo" rev-parse --short HEAD 2>/dev/null || echo unknown)
 # The stamp says how this commit was tested: ci_ok (the suite ran here),
 # ci_attested (it passed on the operator's machine) or ci_skipped (break-glass,
 # no suite anywhere). It said ci_ok for all three.
-doas "$RUBY" -rjson -retc -rtime -rsecurerandom -e '
+doas "$RUBY" -rjson -retc -rtime -rsecurerandom -rfileutils -rsocket -e '
   app, sha, status = ARGV
-  abort "invalid app" unless app.match?(/\\A[a-z][a-z0-9_]{0,31}\\z/)
-  abort "invalid SHA" unless sha == "unknown" || sha.match?(/\\A[0-9a-f]{7,40}\\z/i)
+  abort "invalid app" unless app.match?(/\A[a-z][a-z0-9_]{0,31}\z/)
+  abort "invalid SHA" unless sha == "unknown" || sha.match?(/\A[0-9a-f]{7,40}\z/i)
   abort "invalid CI status" unless %w[ci_ok ci_attested ci_skipped].include?(status)
   root = "/var/db/pub5"
   raise "unsafe /var/db/pub5" if File.symlink?(root)
