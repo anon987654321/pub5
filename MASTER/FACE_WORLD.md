@@ -336,11 +336,17 @@ The first-load introduction reuses this same field and renderer: deterministic
 seed-derived particles begin dispersed around the head, then an expanding signal
 front draws them onto the real face points over the token-defined interval.
 Per-carrier thresholds resolve the particles in small cohorts instead of one
-uniform fade. Once gathered, a restrained fingerprint-like contour field adds
-curved ridges through luminance alone; it does not alter the one-pixel point size
-or add a texture, geometry, canvas, pool or animation loop. This is an original
-many-to-one reveal, not a copy of another show's title treatment. Reduced motion
-resolves directly to the completed portrait.
+uniform fade. A tokenized 1.075 spatial scale now gives neighbouring carriers
+more physical room; the carrier count remains unchanged and each sprite remains
+exactly one pixel. Hollow Gaze opens the orbital and mouth apertures by moving
+their existing contour carriers outward rather than thinning the field. During
+a semantic error only, Faultline opens a narrow, bounded quiet seam along the
+right contour; the ready state removes that seam and the original field
+reassembles. Neither effect adds a point pool, texture, geometry, canvas or
+animation loop. Once gathered, a restrained fingerprint-like contour field adds
+curved ridges through luminance alone. This is an original many-to-one reveal,
+not a copy of another show's title treatment. Reduced motion keeps the semantic
+error seam static and resolves directly to the completed portrait on recovery.
 
 FaceWorld's material is greyscale particle stipple, named in `tokens.visual_identity.material`
 and governed by the law `VISUAL_PARTICLE_STIPPLE_PRIMARY`. The face is not a solid skin. It is a
