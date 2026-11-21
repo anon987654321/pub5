@@ -1,15 +1,16 @@
 # frozen_string_literal: true
 
-# bin/master status --agent - one read across the ledgers.
+# bin/master status --agent - one read across the owning registries.
 #
-# TODO.md, operator_seams.yml, gaps.yml, convergence.yml and proposals.yml
-# each hold a part of what is open. An outside agent read all seven files to
-# learn what was open; the one-backlog rule stays, and so does every ledger's
-# own authority - this view unions them and points at the owning file and
-# line, it does not become a second backlog. Rows land in four buckets:
-# actionable-now (an agent can start), needs-proof (blocked on a measurement),
-# needs-operator (blocked on a person, a device or a credential) and refused
-# (checked and wrong; the reason is kept so it is not re-proposed).
+# Each owner keeps its own IDs, evidence and lifecycle: operator seams,
+# product gaps, convergence workstreams, UX acceptance contracts, RAILS
+# refinements and the refutation ledger. This view is a projection only; it
+# never writes or becomes another backlog.
+#
+# Rows land in four buckets: actionable-now (picked or explicitly open work),
+# needs-proof (acceptance evidence still required), needs-operator (a person,
+# device, credential or external environment), and refused (a proposal checked
+# and rejected, retained with its reason).
 
 require "yaml"
 
@@ -31,9 +32,10 @@ module Master
         end
 
         def view
-          rows = todo_rows + seams_rows + gaps_rows + proposals_rows + convergence_rows
+          rows = seams_rows + gaps_rows + proposals_rows + convergence_rows + ux_rows + rails_refinement_rows
+          rows = deduplicate(rows)
           buckets = %w[actionable-now needs-proof needs-operator refused].to_h { |b| [b, []] }
-          rows.each { |row| buckets[row[:bucket]] << row }
+          rows.each { |row| buckets.fetch(row[:bucket]) << row }
 
           {
             command: "status --agent",
@@ -43,8 +45,14 @@ module Master
               [bucket, list.first(30).map { |r| r.sort_by { |k, _v| k.to_s }.to_h }]
             end,
             truncated: buckets.values.map(&:size) != buckets.values.map { |l| l.first(30).size },
-            sources: ["TODO.md", "MASTER/data/operator_seams.yml", "MASTER/data/gaps.yml",
-                      "MASTER/data/proposals.yml", "MASTER/convergence.yml"],
+            sources: [
+              "MASTER/data/operator_seams.yml",
+              "MASTER/data/gaps.yml",
+              "MASTER/data/proposals.yml",
+              "MASTER/convergence.yml",
+              "MASTER/data/law/ux_refinements.yml",
+              "RAILS/refinements.yml",
+            ],
           }
         end
 
@@ -57,43 +65,20 @@ module Master
           { counts: v[:counts], lines: lines.compact }
         end
 
-        def bucket_for(title)
-          title_down = title.downcase
-          return "refused" if title_down.match?(/\brefused\b|\bnever\b/i)
-
-          return "needs-operator" if OPERATOR_WORDS.any? { |w| title_down.include?(w) }
-          return "needs-proof" if title_down.match?(/\bproof\b|\bNOT_RUN\b|\bevidence\b|\bverify\b|\brendered\b/i)
-
-          "actionable-now"
-        end
-
-        def todo_rows
-          path = File.join(repo_root, "TODO.md")
-          return [] unless File.file?(path)
-
-          rows = []
-          section = nil
-          File.readlines(path).each_with_index do |line, i|
-            section = line.strip.delete_prefix("#").strip if line.start_with?("#")
-            next unless line.match?(/^\s*- \[ \]/)
-
-            title = line.sub(/^\s*- \[ \]\s*/, "").strip
-            rows << { source: "TODO.md", line: i + 1, title: title[0, 110],
-                      tree: section.to_s.split(" ")[0], why: nil,
-                      bucket: bucket_for(title), id: "todo-#{i + 1}" }
-          end
-          rows
-        end
-
         def seams_rows
           path = data_path("operator_seams.yml")
           return [] unless File.file?(path)
 
-          seams = load_yaml(path).fetch("seams", [])
-          seams.map do |seam|
-            { source: "MASTER/data/operator_seams.yml", line: seam[:__line] || 0, id: seam["id"],
-              tree: seam["tree"], title: seam["id"], why: "needs: #{seam['needs']}",
-              bucket: "needs-operator" }
+          load_yaml(path).fetch("seams", []).map do |seam|
+            {
+              source: "MASTER/data/operator_seams.yml",
+              line: seam[:__line] || 0,
+              id: seam["id"],
+              tree: seam["tree"],
+              title: seam["id"],
+              why: "needs: #{seam['needs']}; #{seam['evidence']}".strip[0, 180],
+              bucket: "needs-operator",
+            }
           end
         end
 
@@ -101,13 +86,28 @@ module Master
           path = data_path("gaps.yml")
           return [] unless File.file?(path)
 
-          load_yaml(path).fetch("gaps", []).filter_map do |gap|
-            next nil if %w[satisfied rejected].include?(gap["status"])
+          data = load_yaml(path)
+          workstream_ids = convergence_ids
+          data.fetch("gaps", []).filter_map do |gap|
+            next if %w[satisfied rejected].include?(gap["status"])
+            # The workstream is the implementation/evidence owner for a picked gap.
+            # Showing both creates two tickets for the same work.
+            next if workstream_ids.include?(gap["workstream"].to_s) && !gap["workstream"].to_s.empty?
 
-            bucket = gap["status"] == "picked" ? "actionable-now" : "needs-proof"
-            { source: "MASTER/data/gaps.yml", line: 0, id: gap["id"], title: gap["name"],
-              tree: gap["app"], why: "status #{gap['status']}: absence has no diff; ideation first",
-              bucket: }
+            bucket = case gap["status"]
+                     when "picked" then "actionable-now"
+                     when "blocked" then "needs-operator"
+                     else "actionable-now"
+                     end
+            {
+              source: "MASTER/data/gaps.yml",
+              line: 0,
+              id: gap["id"],
+              tree: gap["app"],
+              title: gap["name"],
+              why: [gap["status"], gap["note"]].compact.join(": ")[0, 180],
+              bucket:,
+            }
           end
         end
 
@@ -115,14 +115,19 @@ module Master
           path = data_path("proposals.yml")
           return [] unless File.file?(path)
 
-          load_yaml(path).fetch("proposals", []).filter_map do |prop|
-            next nil if prop["state"] == "landed"
+          load_yaml(path).fetch("proposals", []).filter_map do |proposal|
+            next if proposal["state"] == "landed"
 
-            bucket = prop["state"] == "refuted" ? "refused" : "actionable-now"
-            { source: "MASTER/data/proposals.yml", line: 0, id: prop["id"], tree: prop["tree"],
-              title: prop["claim"].to_s.lines.first.to_s.strip[0, 110],
-              why: prop["state"] == "refuted" ? prop["reason"].to_s.lines.first.to_s.strip[0, 90] : nil,
-              bucket: }
+            refused = proposal["state"] == "refuted"
+            {
+              source: "MASTER/data/proposals.yml",
+              line: 0,
+              id: proposal["id"],
+              tree: proposal["tree"],
+              title: proposal["claim"].to_s.lines.first.to_s.strip[0, 110],
+              why: refused ? proposal["reason"].to_s.lines.first.to_s.strip[0, 90] : nil,
+              bucket: refused ? "refused" : "actionable-now",
+            }
           end
         end
 
@@ -132,17 +137,86 @@ module Master
 
           data = load_yaml(path)
           streams = data.is_a?(Hash) ? (data["workstreams"] || data["streams"] || []) : []
-          streams.filter_map do |ws|
-            next nil unless ws.is_a?(Hash)
+          streams.filter_map do |stream|
+            next nil unless stream.is_a?(Hash)
 
-            state = ws["status"] || ws["state"] || "open"
-            bucket = %w[done landed complete].include?(state) ? nil :
-                       (%w[blocked operator].include?(state) ? "needs-operator" : "needs-proof")
+            state = stream["state"] || stream["status"] || "missing"
+            bucket = case state
+                     when "landed", "done", "complete" then nil
+                     when "rejected" then "refused"
+                     when "operator", "evidence" then "needs-operator"
+                     else "needs-proof"
+                     end
             next nil unless bucket
 
-            { source: "MASTER/convergence.yml", line: 0, id: ws["id"] || ws["name"],
-              title: (ws["name"] || ws["goal"]).to_s.lines.first.to_s.strip[0, 110],
-              why: "status #{state}", bucket: }
+            {
+              source: "MASTER/convergence.yml",
+              line: 0,
+              id: stream["id"] || stream["name"],
+              title: (stream["title"] || stream["name"] || stream["goal"]).to_s.lines.first.to_s.strip[0, 110],
+              why: "state #{state}; proof: #{stream['proof']}".slice(0, 180),
+              bucket:,
+            }
+          end
+        end
+
+        def ux_rows
+          path = data_path("law/ux_refinements.yml")
+          return [] unless File.file?(path)
+
+          load_yaml(path).fetch("refinements", []).filter_map do |row|
+            state = row["state"].to_s
+            next if %w[landed complete satisfied rejected].include?(state)
+
+            {
+              source: "MASTER/data/law/ux_refinements.yml",
+              line: 0,
+              id: row["id"],
+              tree: Array(row["owner_trees"]).join(","),
+              title: "#{row['id']} #{row['title']}",
+              why: "acceptance required: #{Array(row['proof']).join(', ')}",
+              bucket: "needs-proof",
+            }
+          end
+        end
+
+        def rails_refinement_rows
+          path = File.join(repo_root, "RAILS", "refinements.yml")
+          return [] unless File.file?(path)
+
+          load_yaml(path).fetch("items", []).filter_map do |row|
+            next if %w[landed complete satisfied rejected].include?(row["status"].to_s)
+
+            {
+              source: "RAILS/refinements.yml",
+              line: 0,
+              id: row["id"],
+              tree: "RAILS",
+              title: "#{row['id']} #{row['item']}".slice(0, 110),
+              why: "status #{row['status']}; source: #{row['path']}",
+              bucket: "needs-proof",
+            }
+          end
+        end
+
+        def convergence_ids
+          path = File.join(master_root, "convergence.yml")
+          return [] unless File.file?(path)
+
+          data = load_yaml(path)
+          Array(data["workstreams"] || data["streams"]).filter_map { |row| row["id"].to_s }
+        end
+
+        # Owner IDs are stable. The first source in the order above owns the
+        # projection; duplicate secondary references do not become extra work.
+        def deduplicate(rows)
+          seen = {}
+          rows.each_with_object([]) do |row, result|
+            key = row[:id].to_s
+            next if key.empty? || seen[key]
+
+            seen[key] = true
+            result << row
           end
         end
       end
