@@ -1,206 +1,24 @@
 # OPENBSD
 
-**Production runs on one host: vm23, with every app behind relayd.** This
-tree contains the tracked filesystem payload and the tools that install,
-verify and recover it. `OPENBSD/mirror/` maps `etc/`, `home/`, `usr/` and
-`var/` to `/`. Operator tools live under `bin/` and `lib/`; checks, tests,
-data and bootstrap code stay outside the installable mirror.
+vm23 is pub5's production host. This tree owns its system configuration,
+deployment tools and recovery procedures.
 
-Keep operational prose as exact as the host contract: identify the target
-release, prerequisites, command, effect, validation and rollback. The shared
-Markdown standard lives in [MASTER/AGENTS.md](../MASTER/AGENTS.md); this tree's
-manual preflight and live-operation rules remain in [RUNBOOK.md](RUNBOOK.md).
+## Filesystem mirror
 
-## Canonical operator path
+`OPENBSD/mirror/` is a filesystem image: each path beneath it maps to the
+same path beneath the host root.
 
-Start with `RUNBOOK.md`. It is the operational guide for live VPS work.
-Read it before SSH, `doas`, deployment, DNS, relayd, NSD or recovery.
-
-`CLAUDE.md` records sharp edges that have caused real failures.
-`PATH_OWNERSHIP.yml` defines the purpose and owner of each path.
-
-Before editing, read the complete target file and its relevant dependencies
-and contracts. Before using an OpenBSD-native command, operating a daemon,
-or changing an interface-bearing file, read the complete manuals for the
-target release and architecture. Cover every involved command, configuration
-format, daemon, validator, reload/control interface and relevant `SEE ALSO`
-page. This requirement applies to every subsystem. For non-native prose and
-data files, review the complete source and its schema or contract instead.
-
-Missing, partial or mismatched evidence blocks the operation. `RUNBOOK.md`
-defines the preflight and the receipt required for live work.
-
-## Visual identity
-
-Operator output follows the shared contract in `MASTER/data/laws.yml`: plain,
-quiet status text; an explicit location and phase; and concise, truthful failure
-states. Colour is supplemental, never a replacement for written state. Keep the
-prompt free of decorative banners and keep the actual 3D/ASCII face inside its
-own renderer.
-
-## Command entry points
-
-**Production deploy (from a clean `origin/main` workstation checkout):**
-
-```zsh
-MASTER/bin/operator vps deploy all --remote           # full release: mirror + MASTER + active RAILS
-MASTER/bin/operator vps deploy rails --remote         # active RAILS apps only
-MASTER/bin/operator vps deploy brgen --remote         # one app
-MASTER/bin/operator vps deploy all --remote --follow  # attach to the box tmux session
-MASTER/bin/operator vps deploy all --remote --detach  # start and return
+```text
+mirror/etc/relayd.conf                  -> /etc/relayd.conf
+mirror/usr/local/bin/resource_guard.sh  -> /usr/local/bin/resource_guard.sh
+mirror/var/nsd/etc/nsd.conf              -> /var/nsd/etc/nsd.conf
 ```
 
-The default `all` applies the reviewed `OPENBSD/mirror/**` payload, then deploys
-every active production entry registered in `RAILS/apps.yml`, including
-MASTER's in-place web app. The inventory-derived `rails` group deploys only
-active RAILS app roots (and their shared engine where applicable); it does not
-apply the host mirror or deploy MASTER.
+The old `doas cp -R mirror/* /` command expresses the same basic idea. The
+routine installer is its guarded equivalent; do not replace it with a blind
+recursive copy.
 
-**One-time receipt-protocol bootstrap:** the new deployer requires the current
-`pub5-admin` receipt verbs before it can create its first durable run receipt.
-For this protocol transition, update the vm23 checkout to the same current
-`origin/main` commit, then run the reviewed
-`doas zsh OPENBSD/OPERATOR.sh --plan`, `--apply` and `--verify` sequence
-once. `vps-deploy all` deliberately cannot bootstrap an older broker: its
-receipt preflight runs before the normal mirror apply. See the interrupted-deploy
-section in `RUNBOOK.md`.
-
-Hands-off path after that prerequisite: local preflight, pin SHA, tmux on vm23,
-`vps-deploy` as root (git as `dev`), stream progress until finished, then
-`vps-state` + public canary.
-Log: `/home/dev/vps-deploy.log`. Session: `pub5-deploy`.
-
-`/usr/local/bin/zap` is installed from `OPENBSD/mirror/usr/local/bin/zap`, a standard-library Ruby port of OpenBSD's interactive process killer. It searches command lines, asks before each signal, defaults to `SIGTERM`, and supports `-f`, `-s SIGNAL`, the classic `-SIGNAL` form and `--dry-run`. On OpenBSD it refuses to signal `vmd`, `vmctl` or `cu`; use the documented VM controls and recovery path instead.
-
-The commands live in one place. `data/operator.yml` is the source of the command
-recipes, so do not write another catalogue. From the repository root, the operator
-reaches the box with `MASTER/bin/operator vps state` and `MASTER/bin/operator vps
-deploy`. In this tree `bin/check` is the local check, `bin/check-vps` checks vm23,
-and `bin/vps-deploy` deploys. It resolves apps and groups from `RAILS/apps.yml` through
-`OPENBSD/lib/deploy_inventory.rb`. Group membership comes from the namespace
-segment of each `deploy_root`; `deploy_order` controls the serial pass. Under
-degraded memory/health evidence, the MASTER namespace moves last. Services that
-are shed by deployment remain at the end of their configured order so restoration
-stays inside the same pass. `bin/vps_ci.sh` validates each individual app before
-constructing any per-app path; an arbitrary name cannot select a filesystem path. The checks that guard the pipeline sit in `checks/`,
-and the registry that runs them is `MASTER/checks/checks.yml`. Before a risky deploy,
-`bin/rehearse` shows how the repository layout will map onto the box, which has a
-different copy-tree layout.
-
-## Privilege boundary
-
-`OPENBSD/mirror/usr/local/sbin/pub5-admin` is the fixed-path root broker for the
-current deploy path. It exposes allowlisted service actions, atomic deploy
-status/run receipts and secrets, a fixed CI lock, and bounded Rails/CI task and
-sync verbs. CI and production Rails tree replacement run with the selected app
-account; the CI runner has a wall-clock process-group deadline. The deploy adapter
-verifies root-owned rc.d files rather than installing from the checkout, and relay
-route verification is read-only. Per-app progress records in
-`/var/db/pub5/deploy_status` and fleet recovery receipts in
-`/var/db/pub5/deploy_runs` stay root-only; `vps-state` reads per-app progress
-through the allowlisted `doas -n pub5-admin deploy-status-read <app>` verb. Missing
-status is JSON `null`; unreadable or malformed status is reported as corrupt
-rather than silently shown as no deploy. Fleet receipts bind the pinned SHA and
-original service snapshot to one run ID; explicit `vps-deploy recover` commands
-can restore that snapshot after an uncatchable process or host interruption.
-
-The Bundler content-addressed cache uses fixed broker verbs, a bounded
-Ruby-version key and immutable SHA-256 objects. Each app copies cache objects;
-it does not share root-owned inodes through hard links.
-
-The CI and `vps-deploy` entrypoints fail closed when the reviewed broker is
-unavailable. Their direct root-shell, service-control and receipt-write
-fallbacks have been removed. The MASTER web deploy also uses fixed broker
-verbs for assets and daemon runtime directories. It refuses to install a
-checkout-owned `rc.d/master` as root. `deploy-smoke` checks services through
-the broker first.
-
-The fresh-box `vps_install_all.sh` retains a direct `rcctl` fallback only
-until the broker is installed. The remaining privilege work is the wider
-operator/recovery surface and installer helpers that still invoke `doas`
-directly. Do not change the existing `/etc/doas.conf` rule or `wheel`
-membership until every privileged path has been inventoried, migrated and
-tested in a real OpenBSD checkout on vm23.
-
-## Configuration ownership and secrets
-
-Domains and DNS have one source. `RAILS/apps.yml` lists the owned domains;
-the files in `data/` and the zone helpers derive from that inventory.
-`var/nsd/` contains templates, not the live served zones. The signed zones
-remain host-owned under `/var/nsd/` on vm23 and stay out of Git.
-
-Service secrets live in `/etc/*.env` on the host, never in this tree. When
-configured, the interactive operator shell reads provider credentials from
-`~/.config/pub4/operator.env`. Keep that file on the operator's machine,
-outside the checkout, with owner-only permissions.
-
-## Backups, alerts and what the public sees
-
-Nothing on the box backs itself up off the box. `bin/dr-pull` runs nightly on the
-operator's Mac, brings back a checksummed snapshot of every production database and
-the uploaded files, and `bin/dr-pull --drill` restores the newest pull into a
-scratch directory and reads it back. A healed symptom must not stay quiet. `usr/local/bin/pub5-alert` records
-durable fault transitions in `/var/log/pub5-alerts.log`; its five-minute watch
-checks disk, swap, sustained load, failed services and backup freshness.
-OpenBSD's `Z` process state distinguishes zombies from running workers. The
-monitor does not kill processes automatically; operators can inspect the exact
-process group before taking action. The same watch records a uniquely keyed
-alert when a fleet deploy receipt remains pending after its owner exits or its
-PID is reused; unreadable owner identity also raises a separate alert. `bin/vps-state --json` includes the
-pending receipt IDs, stage, pinned SHA, original service snapshot and log path.
-The monitoring view is capped at the 500 newest receipt files / 100 pending runs.
-It walks the directory once and keeps only a 500-name min-heap in memory; the
-walk itself remains proportional to receipt-directory size, while receipt reads
-and the final sort are capped. `truncated: true` is surfaced as its own alert
-and in state output, never as a clean result. Plain output shows PID presence
-and directs the operator to `vps-deploy recover --plan`. Recovery remains
-explicit and operator-driven.
-Sustained pressure enables the existing optional-app shedding ladder only;
-MASTER and Brgen are never automatically killed or restarted. `bin/vps-state`
-prints recent alerts next to each deploy stamp. `bin/domain_watch.rb` asks the registries which domains are still
-ours, and with `--tls` it asks every public host for its certificate and a
-health answer, the way a visitor would.
-
-## Manual pages and preflight
-
-The deploy and privileged-broker references are under `man/man8/`. From the
-repository root, render the complete local pages without an interactive pager:
-
-```zsh
-MANPATH="$PWD/OPENBSD/mirror/usr/local/man" man -P cat 8 vps-deploy
-MANPATH="$PWD/OPENBSD/mirror/usr/local/man" man -P cat 8 pub5-admin
-```
-
-These local pages document pub5 tools only. Every edit under `OPENBSD/`
-requires a complete read of the target file and its relevant dependencies,
-callers and tests. Before any OpenBSD-native tool, daemon/service action or
-interface-bearing file edit, read the complete manuals for the exact target
-release and architecture: all involved commands, file formats, daemons,
-validators, reload/control interfaces and relevant `SEE ALSO` pages. This
-covers every subsystem, not an allowlist. Non-native prose/data files require
-full source and schema/contract review, not irrelevant man pages. Record the
-target identity and each page's source, section, SHA-256, byte/line count and
-complete status. Missing, partial or mismatched manuals mean BLOCKED.
-
-
-## Filesystem mirror contract
-
-`OPENBSD/mirror/` is a filesystem image, not a tooling directory. Its relative
-paths map directly to the vm23 root:
-
-- `mirror/etc/relayd.conf` → `/etc/relayd.conf`
-- `mirror/usr/local/bin/resource_guard.sh` → `/usr/local/bin/resource_guard.sh`
-- `mirror/var/nsd/etc/nsd.conf` → `/var/nsd/etc/nsd.conf`
-
-Only tracked regular files are eligible for installation. The installer never
-deletes untracked files or directories. `etc/ssh/sshd_config` is protected from
-routine replacement. `etc/doas.conf` requires the explicit `--doas` path and
-the dedicated validation/rollback helper. The root crontab is not a filesystem
-file: its source is `OPENBSD/data/root.crontab` and it is merged with
-`crontab(1)`. The redacted user shell snapshot and sample environment are
-also under `OPENBSD/data/`, not the installable mirror.
-
-Routine configuration operations:
+From the repository root, inspect, apply and verify the mirror:
 
 ```sh
 doas zsh OPENBSD/OPERATOR.sh --plan
@@ -208,6 +26,39 @@ doas zsh OPENBSD/OPERATOR.sh --apply
 doas zsh OPENBSD/OPERATOR.sh --verify
 ```
 
-`OPENBSD/BOOTSTRAP.sh` retains the legacy first-install and staged bootstrap
-workflows. It is not the routine filesystem-copy command. DNS stage 1 remains
-destructive and requires its existing explicit acknowledgement.
+The installer uses tracked regular files only. It backs up changed files,
+validates supported configurations, installs their declared ownership and
+mode, and activates affected services. It does not delete unrelated host
+files. SSH configuration is protected; `doas.conf` has a separate guarded
+path; the managed root crontab is merged rather than copied as a file.
+
+## Full production release
+
+From a clean workstation checkout on `origin/main`:
+
+```sh
+MASTER/bin/operator vps deploy all --remote
+```
+
+This pins one revision, applies the mirror, then deploys every active
+application in `RAILS/apps.yml`, including MASTER's in-place web app.
+The one-time `pub5-admin` broker bootstrap and live-operation prerequisites
+are documented in [RUNBOOK.md](RUNBOOK.md). Read that runbook before SSH,
+`doas`, deployment, DNS, service changes or recovery.
+
+## Ownership
+
+- `OPENBSD/mirror/` contains tracked filesystem payload, not operator tools.
+- `OPENBSD/bin/`, `lib/`, `checks/` and `test/` contain the tooling and
+  proof; they are not copied wholesale to the host root.
+- `RAILS/apps.yml` is the application and domain source of truth.
+  `deploy_inventory.json` is a generated deployment projection; regenerate
+  it with `ruby OPENBSD/bin/sync_deploy_inventory.rb`, never edit it by hand.
+- Host secrets remain in `/etc/*.env`; signed NSD zones remain host-owned
+  under `/var/nsd/`. The root crontab source is
+  `OPENBSD/data/root.crontab`.
+
+Read [CLAUDE.md](CLAUDE.md) for operational sharp edges and
+[PATH_OWNERSHIP.yml](PATH_OWNERSHIP.yml) before changing a path. The local
+manual pages are under `mirror/usr/local/man/`; exact-release manual and
+evidence requirements are defined in [RUNBOOK.md](RUNBOOK.md).
