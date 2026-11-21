@@ -34,7 +34,7 @@ module Master
             end
 
             if fenced
-              rows << (body.empty? ? "" : "    #{body}")
+              rows << (body.empty? ? "" : "    #{highlight_terminal_code(body)}")
               next
             end
 
@@ -65,6 +65,29 @@ module Master
           end
 
           rows.join("\n") + (source.end_with?("\n") ? "\n" : "")
+        end
+
+
+        # A small semantic highlighter for fenced terminal code. It only adds
+        # ANSI presentation to an interactive TTY; redirected output stays
+        # byte-for-byte plain and remains suitable for pipes and logs.
+        def highlight_terminal_code(line)
+          return line unless $stdout.tty?
+
+          pattern = /(#[^\\n]*|\\/\\/[^\\n]*)|("(?:\\\\.|[^"\\\\])*"|'(?:\\\\.|[^'\\\\])*')|(--?[A-Za-z][\\w-]*)|(\\b(?:def|class|module|end|if|elsif|else|unless|case|when|return|yield|begin|rescue|ensure|const|let|var|function|async|await|import|export|from|new|true|false|null|nil|undefined|require|do|then|while|for|in)\\b)|(\\b\\d+(?:\\.\\d+)?\\b)|([A-Za-z0-9_.-]+\\/[A-Za-z0-9_./-]+)/
+          line.gsub(pattern) do |token|
+            case Regexp.last_match.captures.index { |capture| !capture.nil? }
+            when 0 then @p.dim(token)
+            when 1 then @p.green(token)
+            when 2 then @p.yellow(token)
+            when 3 then @p.cyan(token)
+            when 4 then @p.magenta(token)
+            when 5 then @p.blue(token)
+            else token
+            end
+          end
+        rescue StandardError
+          line
         end
 
         def format_dmesg(line) = @p.dim(line.to_s)
