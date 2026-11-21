@@ -175,8 +175,8 @@ module Master
           # Every duplicate selector key comes back "undefined]". `node --check`
           # passes, because the result is valid JavaScript and a different
           # program — the worst shape this transform has. It reached
-          # RAILS/checks/support/geometry_probe/walk.js on the trial run recorded
-          # in TODO.md and a person reverted it by hand.
+          # RAILS/checks/support/geometry_probe/walk.js on the trial run; the
+          # operator reverted it by hand after visual/source review.
           TRAILING_ACCESS = ["(", "[", ".", "`"].freeze
           private_constant :TRAILING_ACCESS
 
