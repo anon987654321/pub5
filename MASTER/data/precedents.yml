@@ -136,18 +136,28 @@ precedents:
   date: '2026-11-21'
   laws: []
   question: How should MASTER's CLI and web terminal surfaces share typography?
-  ruling: Use a Nerd Font Mono-first monospaced stack, semantic syntax colours and
-    the same visual roles in both surfaces; keep plain output ASCII-safe and avoid
-    mandatory third-party font requests.
-  rationale: 'A terminal font is a presentation choice, not a reason to make the
-    interface typographically inert. ANSI colour is disabled for pipes and dumb
-    terminals; web code styling uses semantic classes and the same font token.
+  ruling: Use JetBrainsMono Nerd Font when installed, semantic syntax colours and
+    the same visual roles in CLI and web. Set the web transcript and composer to
+    18px monospace with 1.55 leading. Keep CLI font size host-controlled and
+    document large native settings for PuTTY and Termux; plain output remains
+    ASCII-safe and no mandatory third-party font request is made.
+  rationale: 'A terminal font and size belong to the operator''s emulator, not a
+    shell escape sequence. PuTTY selects a font and point size; Termux supports
+    pinch zoom and a custom TTF. Large type is a first-class accessibility
+    preference. The web surface uses a measured 66ch column, while terminal
+    output reflows without fixed-width columns or padded log fields.
 
     '
   cites:
   - MASTER/lib/voice/renderer/prompt_components.rb
+  - MASTER/lib/voice/renderer/text_formatting.rb
+  - MASTER/web/styles/face/20_chrome.css
+  - MASTER/web/styles/face/30_conversation.css
   - MASTER/web/styles/face/60_session_chrome.css
+  - MASTER/lib/cli/face/contract.md
+  - MASTER/README.md
   - MASTER/data/taste_ledger.yml type-terminal-nerd-mono-20261121
+  - MASTER/data/taste_ledger.yml type-terminal-large-readable-20261121
   overrules:
   - P-005
   adopted_by:
