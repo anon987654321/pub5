@@ -295,7 +295,7 @@ class TestFixLoopCommitter < Minitest::Test
     committer.baseline!(scope: ["rails"])
     committer.commit_if_dirty(OK_MESSAGE, owned_paths: [
       File.join(Master::REPO_ROOT, "RAILS/apps.yml"),
-      File.join(Master::REPO_ROOT, "TODO.md"),
+      File.join(Master::REPO_ROOT, "MASTER/convergence.yml"),
     ])
 
     assert_empty git.commits
