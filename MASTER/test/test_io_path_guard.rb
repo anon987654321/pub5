@@ -157,7 +157,7 @@ class GitContextShowTest < Minitest::Test
   end
 
   def test_a_rev_path_ref_is_refused
-    ["HEAD:TODO.md", "HEAD:MASTER/data/security.yml", "HEAD~1:CLAUDE.md"].each do |ref|
+    ["HEAD:MASTER/convergence.yml", "HEAD:MASTER/data/security.yml", "HEAD~1:CLAUDE.md"].each do |ref|
       result = show(ref)
 
       refute result.ok?, "#{ref} must not reach git show"
