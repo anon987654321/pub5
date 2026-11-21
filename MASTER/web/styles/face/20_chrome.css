@@ -26,7 +26,7 @@ body[data-council-persona]::after {
   top: calc(14px + var(--safe-top));
   inset-inline-start: calc(14px + var(--safe-left));
   z-index: var(--z-ui);
-  font: 800 clamp(15px,3.8vw,24px)/1 var(--font-logo);
+  font: 700 clamp(0.9375rem, 2.8vw, 1.125rem)/1 var(--font-logo);
   letter-spacing: -.03em;
   text-transform: none; /* brgen wordmark is lowercase */
   color: var(--c-text);
