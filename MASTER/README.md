@@ -49,6 +49,36 @@ For local handwritten archives, `/documents analyze ~/Photos` reads a bounded se
 
 `bin/master` is the interactive assistant and command entrypoint. `bin/operator` is the operations surface for status, checks, tests and supported host tasks. The browser face and speech runtime live under `web/`; their policy belongs in the relevant data sources rather than duplicated literals. Music plays only after an explicit operator request; startup never begins audio on its own.
 
+
+## Terminal type and accessibility
+
+MASTER does not set the terminal emulator's font size. PuTTY and Termux own
+that setting, so choose a large fixed-width face there. Start at 16–18 pt in
+PuTTY, then increase it until the text is comfortable at normal viewing
+distance. Larger type is a supported operating preference, not a layout error.
+
+- **PuTTY:** open *Window → Appearance → Font*. Choose JetBrainsMono Nerd Font
+  or another fixed-width face and set its point size. Save the session so the
+  choice persists. PuTTY documents this in its
+  [Appearance panel](https://www.puttyssh.org/0.78/htmldoc/Chapter4.html).
+- **Termux:** pinch to zoom the terminal text. To choose a font, long-press the
+  terminal, open *More → Style → Choose Font*. A custom TTF may live at
+  ~/.termux/font.ttf; run termux-reload-settings after changing it.
+  See the [Termux terminal guide](https://github.com/termux/termux-tools/blob/master/doc/termux.1.md.in)
+  and [Termux:Styling](https://github.com/termux/termux-styling).
+
+Keep terminal output legible at every size. Use one factual event per line,
+allow the emulator to wrap long text, and never pad fields into fixed columns.
+MASTER uses semantic ANSI colour only on an eligible TTY; pipes, NO_COLOR
+and dumb terminals receive plain text. Nerd Font private-use icons are optional
+and never replace words or ASCII-safe output. The browser transcript uses the
+same monospaced roles at 18px with 1.55 leading and a 66ch measure.
+
+These choices follow Strunk and White's directness and Bringhurst's hierarchy,
+measure and rhythm: the reader should see the information first, not the
+interface's ornament. They also follow inclusive practice: the operator owns
+the size that makes the terminal readable.
+
 A new interactive launch can recover an abandoned same-host MASTER prompt after
 two hours without session-transcript activity. It acts only when the OS confirms
 that the exact MASTER process is the sole lock holder, is sleeping or idle, has
