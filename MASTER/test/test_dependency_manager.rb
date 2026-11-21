@@ -924,6 +924,18 @@ class TestDependencyManager < Minitest::Test
     assert_equal ["pkg", "install", "-y", "sqlite"], plan[:commands].first[:argv]
   end
 
+  def test_macos_system_package_plan_uses_homebrew
+    manager = fake_manager([])
+    manager.define_singleton_method(:package_manager_name) { :macos }
+
+    plan = manager.system_package_plan
+
+    assert_equal :macos, plan[:package_manager]
+    assert_equal Master::Boot::DependencyManager::SYSTEM_PACKAGES[:macos], plan[:packages]
+    assert_equal ["brew", "install", *Master::Boot::DependencyManager::SYSTEM_PACKAGES[:macos]],
+                 plan[:commands].first[:argv]
+  end
+
   def test_bootstrap_and_master_share_the_same_dependency_preflight
     bootstrap = File.read(File.join(Master::ROOT, "bin", "bootstrap"))
     master = File.read(File.join(Master::ROOT, "bin", "master"))
