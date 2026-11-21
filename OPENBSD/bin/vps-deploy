@@ -176,9 +176,9 @@ validate_deploy_setting VPS_DEPLOY_POLL "${VPS_DEPLOY_POLL:-3}" 1 60 || exit 2
 validate_deploy_setting VPS_DEPLOY_SETTLE_WAIT "${VPS_DEPLOY_SETTLE_WAIT:-240}" 1 3600 || exit 2
 validate_deploy_setting VPS_DEPLOY_MASTER_MIN_AVAIL "${VPS_DEPLOY_MASTER_MIN_AVAIL:-10}" 0 100 || exit 2
 validate_deploy_setting VPS_DEPLOY_MIN_FREE_KB "${VPS_DEPLOY_MIN_FREE_KB:-1048576}" 0 1000000000 || exit 2
-: "${PUB5_ADMIN:=/usr/local/sbin/pub5-admin}"
-[[ -f "$PUB5_ADMIN" && -x "$PUB5_ADMIN" && ! -L "$PUB5_ADMIN" ]] || {
-  print -u2 "vps-deploy: pub5-admin missing; run reviewed OPENBSD/OPERATOR.sh first"
+# The deploy ledger is ordinary root-owned data, not a command server.
+[[ -f "$repo/OPENBSD/lib/deploy_records.rb" && ! -L "$repo/OPENBSD/lib/deploy_records.rb" ]] || {
+  print -u2 "vps-deploy: deployment record library is missing or symlinked"
   exit 1
 }
 
@@ -464,7 +464,7 @@ write_deploy_run_receipt() {
     "${VPS_DEPLOY_RECEIPT_ORDER:-}" \
     "${VPS_DEPLOY_RUN_LOG}" "${VPS_DEPLOY_LOG}" \
     "${VPS_DEPLOY_RECEIPT_SNAPSHOT_RECORDED:-0}") || return 1
-  "$PUB5_ADMIN" deploy-run-write "$VPS_DEPLOY_RUN_ID" "$payload" >/dev/null
+  records_call write "$VPS_DEPLOY_RUN_ID" "$payload" >/dev/null
 }
 
 # Stage transitions persist the latest recovery breadcrumb before the next
@@ -573,24 +573,90 @@ if [[ -z ${VPS_DEPLOY_LOGGING:-} ]]; then
   log "argv: $*"
 fi
 
-# Transitional adapter: use the fixed root-owned broker once installed. The
-# fallback remains until the operator sync has installed it on vm23.
+# Resolve service names from the pinned deployment inventory. The optional
+# jobs service exists only when its operator-installed rc.d file exists.
+service_is_registered() {
+  local wanted=$1 one
+  for one in $DEPLOY_ALL; do
+    [[ $wanted == $one ]] && return 0
+    [[ $wanted == ${one}_jobs && -f /etc/rc.d/$wanted && ! -L /etc/rc.d/$wanted ]] && return 0
+  done
+  return 1
+}
+
 admin_service() {
   local action=${1:-}
   shift || true
   if [[ $action == list-started ]]; then
-    "$PUB5_ADMIN" service list-started
-  else
-    "$PUB5_ADMIN" service "$action" "$@"
+    local listing service
+    listing=$(/usr/sbin/rcctl ls started) || return $?
+    while IFS= read -r service; do
+      [[ -n $service ]] || continue
+      service_is_registered "$service" && print -r -- "$service"
+    done <<< "$listing"
+    return 0
   fi
+  case "$action" in check|get|start|stop|restart) ;; *)
+    print -u2 "vps-deploy: refused rcctl action: $action"
+    return 64
+    ;;
+  esac
+  local service=${1:-}
+  service_is_registered "$service" || {
+    print -u2 "vps-deploy: refused unregistered service: $service"
+    return 64
+  }
+  (( $# == 1 )) || { print -u2 "vps-deploy: one service argument required"; return 64; }
+  /usr/sbin/rcctl "$action" "$service"
+}
+
+records_call() {
+  "$RUBY" -I"$repo/OPENBSD/lib" -rdeploy_records -e '
+    repo, action, *args = ARGV
+    records = Deploy::Records.new(repo_root: repo)
+    case action
+    when "write"
+      records.write(args.fetch(0), args.fetch(1))
+    when "read"
+      puts JSON.generate(records.read(args.fetch(0)))
+    when "list"
+      puts JSON.generate(records.all)
+    when "stamp"
+      records.write_stamp(*args)
+    else
+      abort "unknown deployment-record operation"
+    end
+  ' "$repo" "$@"
 }
 
 admin_request() {
-  [[ -x "$PUB5_ADMIN" ]] || {
-    print -u2 "vps-deploy: pub5-admin is not installed; run the reviewed OPERATOR sync first"
-    return 127
-  }
-  "$PUB5_ADMIN" "$@"
+  local action=${1:-}
+  shift || true
+  case "$action" in
+    deploy-run-write) records_call write "$@" ;;
+    deploy-run-read) records_call read "$@" ;;
+    deploy-run-list) records_call list ;;
+    stamp) records_call stamp "$@" ;;
+    resource-guard) /usr/local/bin/resource_guard.sh ;;
+    solid-queue-proof)
+      [[ -f /usr/local/libexec/pub5/solid_queue_proof.rb && ! -L /usr/local/libexec/pub5/solid_queue_proof.rb ]] || {
+        print -u2 "vps-deploy: installed Solid Queue proof is missing or symlinked"
+        return 1
+      }
+      "$RUBY" /usr/local/libexec/pub5/solid_queue_proof.rb "$@"
+      ;;
+    disk-usage)
+      [[ ${1:-} == /home || ${1:-} == /var ]] || {
+        print -u2 "vps-deploy: disk usage is limited to /home and /var"
+        return 64
+      }
+      /usr/bin/du -xk "$1"
+      ;;
+    *)
+      print -u2 "vps-deploy: unknown native operation: $action"
+      return 64
+      ;;
+  esac
 }
 
 # The guard's deploy flag, held for the whole deploy and not only the restart.
@@ -657,7 +723,7 @@ finish() {
     print -u2 "vps-deploy: $app FAILED at stage \"$deploy_stage\" (exit $rc)"
     if (( app_stopped )); then
       print -u2 "vps-deploy: $app was stopped for this deploy and is DOWN - read /var/log/daemon, then"
-      print -u2 "            /usr/local/sbin/pub5-admin service start $app   (or rerun: doas zsh OPENBSD/bin/vps-deploy $app)"
+      print -u2 "            doas /usr/sbin/rcctl start $app   (or rerun: doas zsh OPENBSD/bin/vps-deploy $app)"
     else
       print -u2 "vps-deploy: $app was not stopped; the previous release is still serving. Fix the cause and rerun:"
       print -u2 "            doas zsh OPENBSD/bin/vps-deploy $app"
@@ -667,7 +733,7 @@ finish() {
       [[ $other == "$app" ]] && continue
       admin_service get "$other" >/dev/null 2>&1 || continue
       admin_service check "$other" >/dev/null 2>&1 \
-        || print -u2 "vps-deploy: $other is DOWN (shed or stopped) - /usr/local/sbin/pub5-admin service restart $other"
+        || print -u2 "vps-deploy: $other is DOWN (shed or stopped) - doas /usr/sbin/rcctl restart $other"
     done
   fi
   # Only the process that owns the lock restores: the children of `all` fail into
@@ -822,7 +888,7 @@ restore_started() {
     restored+=($svc)
   done
   (( $#restored )) && print "vps-deploy: restored ${restored}"
-  (( $#failed )) && print -u2 "vps-deploy: STILL DOWN after restore: ${failed}  (/usr/local/sbin/pub5-admin service restart <app>, one at a time)"
+  (( $#failed )) && print -u2 "vps-deploy: STILL DOWN after restore: ${failed}  (doas /usr/sbin/rcctl restart <app>, one at a time)"
   (( $#failed == 0 ))
 }
 
@@ -1322,7 +1388,7 @@ for mount_point in /home /var; do
   fi
   if (( free_kb < min_free_kb )); then
     print -u2 "vps-deploy: $app refused - $mount_point has $(( free_kb / 1024 )) MB free, the floor is $(( min_free_kb / 1024 )) MB."
-    print -u2 "            Nothing was stopped. Inspect usage with: doas /usr/local/sbin/pub5-admin disk-usage $mount_point ; clear old"
+    print -u2 "            Nothing was stopped. Inspect usage with: doas /usr/bin/du -xk $mount_point ; clear old"
     print -u2 "            logs or bundles, then rerun: doas zsh OPENBSD/bin/vps-deploy $app"
     exit 1
   fi
@@ -1602,7 +1668,7 @@ set_stage final-check
 # is the one outcome the stamp must never call ok.
 if ! admin_service check "$app" >/dev/null 2>&1; then
   write_stamp "$app" failed
-  print -u2 "vps-deploy: $app is down at the end of its own deploy - /usr/local/sbin/pub5-admin service restart $app, then read /var/log/daemon"
+  print -u2 "vps-deploy: $app is down at the end of its own deploy - doas /usr/sbin/rcctl restart $app, then read /var/log/daemon"
   exit 1
 fi
 
