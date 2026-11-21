@@ -17,7 +17,7 @@ decisions:
     rationale: "The portable text constraint remains; it never prohibited ANSI presentation or a monospaced type system."
   - id: type-terminal-nerd-mono-20261121
     at: "2026-11-21"
-    revision: "MASTER/lib/voice/renderer/prompt_components.rb and MASTER/web/styles/face/30_conversation.css"
+    revision: "MASTER/lib/voice/renderer/prompt_components.rb and MASTER/web/styles/face/60_session_chrome.css"
     decision: accepted
     domain: type
     subject: "MASTER CLI and web share a Nerd Font Mono-first stack, semantic prompt colours and syntax roles"
