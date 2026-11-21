@@ -427,6 +427,7 @@ tokens:
       # The smallest step of the shared type scale (__shared/_tokens.scss),
       # which the family :root embedded ahead of this block does not carry.
       text-extra-small: "0.75rem"
+      terminal-font-size: "1.125rem"
       text-title: "1.25rem"
       baseline: "4px"
       measure: "60ch"
