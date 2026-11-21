@@ -126,7 +126,9 @@ module Shared
       ip = IPAddr.new(addresses.first)
       ip = ip.native if ip.respond_to?(:ipv4_mapped?) && ip.ipv4_mapped?
       ip.to_s
-    rescue IPAddr::InvalidAddressError
+    rescue IPAddr::InvalidAddressError, IPAddr::AddressFamilyError
+      # A string IPAddr cannot place in a family (a hostname that reached
+      # this far, an odd literal) is no verifiable public address.
       nil
     end
 
@@ -135,12 +137,17 @@ module Shared
     end
 
     def unsafe_ip?(addr)
-      ip = IPAddr.new(addr)
+      # Callers pass both parsed addresses (host_resolver_rules) and raw
+      # strings; IPAddr.new of an existing IPAddr instance raises
+      # AddressFamilyError on current ipaddr, which would refuse every pin.
+      ip = addr.is_a?(IPAddr) ? addr : IPAddr.new(addr.to_s)
       ip = ip.native if ip.respond_to?(:ipv4_mapped?) && ip.ipv4_mapped?
       return true if ip.ipv6? && !GLOBAL_IPV6.include?(ip)
 
       UNSAFE_NETS.any? { |net| net.include?(ip) }
-    rescue IPAddr::InvalidAddressError
+    rescue IPAddr::InvalidAddressError, IPAddr::AddressFamilyError
+      # Same class of input as the invalid literal: cannot prove it safe,
+      # so treat it as unsafe.
       true
     end
 

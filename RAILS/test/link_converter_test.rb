@@ -4,6 +4,7 @@
 # git) is not installed. The converter only needs blank?/presence/try, so load
 # those core extensions from whatever ActiveSupport the interpreter has.
 require "minitest/autorun"
+require "minitest/mock"
 require "active_support"
 require "active_support/core_ext/object/blank"
 require "active_support/core_ext/object/try"
