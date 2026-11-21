@@ -50,6 +50,28 @@ candidates:
       per-edit receipts; --reject records operator rejections as antigens.
     cost: small
     reversibility: git revert
+  - id: polish_c05
+    tree: MASTER
+    status: candidate
+    spec: >-
+      Tufte data-ink proposal: test whether a small, explicit CSS-declaration
+      inventory can distinguish data-bearing visual rules from decorative
+      ink without penalising intentional brand identity. A chart-level ratio
+      requires rendered pixel segmentation and remains a separate experiment;
+      do not claim a numeric data-ink ratio from CSS counts alone.
+    cost: medium
+    reversibility: git revert
+  - id: polish_c06
+    tree: RAILS
+    status: candidate
+    spec: >-
+      Gestalt proximity proposal: on a measured rendered surface, grouping
+      distance should be smaller than the separation between groups. Define
+      element pairs and distance units per component family, test only a
+      rights-cleared existing screenshot or browser fixture, and refuse to
+      generalise one threshold across every layout.
+    cost: medium
+    reversibility: git revert
 critique:
   - candidate: polish_c01
     verdict: keep
