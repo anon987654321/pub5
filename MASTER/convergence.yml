@@ -263,11 +263,11 @@ workstreams:
       done_when: "cd RAILS/amber && ruby test/services/wears_well_with_test.rb"
   - id: master_face_breath
     state: partial
-    title: The stipple field breathes in brightness only, frozen by reduced motion twice over
+    title: The live stipple field gathers over 5.2 seconds and retains one deterministic identity carrier
     implementation: MASTER/web/public/face_stipple_system.js
     proof: >-
-      shader contract covers alpha-only idle breath via uBreathScale; reduced motion zeros uBreathScale
-      and uTime while the still-mode spatial-motion scale remains zero
+      source tests pin the 5.2-second intro, deterministic left-eye aSolo carrier, alpha-only idle breath
+      and reduced-motion completion; production browser capture and rendered-state verification remain outstanding
   - id: master_voice_browser_dsp
     state: partial
     title: >-
