@@ -30,10 +30,9 @@ no_new_markdown:
     - OPENBSD/
     - RAILS/
     - STUDIO/
-    - TODO.md
 
 stance:
-  backlog_empty: true
+  owner_registries_are_canonical: true
   work_is_refinement_only: true
   every_applied_polish_leaves_trace: true
   product_and_design_remain_human_gated: true
