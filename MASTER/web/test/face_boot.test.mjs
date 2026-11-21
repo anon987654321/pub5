@@ -1359,15 +1359,10 @@ test("session chrome reads brgen's family tokens and band without weakening mobi
   assert.match(css, /body\.mission-control #mission-grid > section \{[^}]*border-inline-start: 0;/s);
   assert.match(css, /body\.mission-control #mission-grid > section \{[^}]*padding-inline-start: 0;/s);
 
-  // The session chrome is mobile-first: the base rules carry the tap target and
-  // the wider breakpoint only relaxes spacing, never the target size.
-  assert.match(css, /\.master-session-tab \{[^}]*min-inline-size: var\(--tap-min\); min-block-size: var\(--tap-min\);/);
-  const tapTargets = /#photo-button, #music-loop-button, #pause-speech-button \{[^}]*/;
-  assert.match(css, new RegExp(`${tapTargets.source}min-inline-size: var\\(--tap-min\\); min-block-size: var\\(--tap-min\\);`));
-
-  const wide =css.match(/@media \(min-width: 480px\) \{[\s\S]*?\n\}/)?.[0] ?? "";
-  assert.match(wide, /\.master-session-tab \{ padding-inline:/);
-  assert.doesNotMatch(wide, /min-(inline|block)-size/);
+  // The workspace tabs are gone; interactive controls retain the shared touch floor.
+  assert.doesNotMatch(css, /master-session-tabs|master-session-tab/);
+  const tapTargets = /#photo-button, #music-loop-button, #pause-speech-button \\{[^}]*/;
+  assert.match(css, new RegExp(`${tapTargets.source}min-inline-size: var\\\\(--tap-min\\\\); min-block-size: var\\\\(--tap-min\\\\);`));
 });
 
 test("shell chrome uses plain CLI prompt words and downloads no font", () => {
