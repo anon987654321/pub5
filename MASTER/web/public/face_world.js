@@ -387,7 +387,7 @@
     const requested = Array.isArray(descriptor.sequence) ? descriptor.sequence : features;
     const sequence = [...new Set(requested.filter((name) => features.includes(name)))];
     features.forEach((name) => { if (!sequence.includes(name)) sequence.push(name); });
-    const ordered = sequence.slice(0, Math.max(1, Math.min(6, Math.floor(finite(SEMANTIC_SUBJECT.max_features, 6)))));
+    const ordered = sequence.slice(0, Math.max(1, Math.min(8, Math.floor(finite(SEMANTIC_SUBJECT.max_features, 8)))));
     const partByKey = new Map(parts.map((part) => [part.key, part]));
     const positions = new Float32Array(count * 3);
     const stages = new Float32Array(count);
