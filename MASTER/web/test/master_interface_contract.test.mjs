@@ -230,7 +230,7 @@ test("MASTER's first screen is its pixel face, readable CLI and Brgen wordmark",
   assert.match(dashboard, /<span class="brand-text">ai\.brgen\.no<\/span>/);
   assert.match(faceCss, /--font-logo: "Helvetica Neue", Helvetica, Arial, sans-serif;/);
   assert.match(faceCss, /font: 700 clamp\(0\.9375rem, 2\.8vw, 1\.125rem\) \/ 1 var\(--font-logo\)/);
-  assert.match(faceCss, /--terminal-font-size: 1\.125rem/);
+  assert.match(faceCss, /--terminal-font-size: 1\.25rem/);
   assert.match(faceCss, /font: var\(--terminal-font-size\)\/var\(--leading-body\) var\(--font-mono\)/);
   assert.match(faceCss, /font: 400 var\(--terminal-font-size\)\/var\(--leading-body\) var\(--font-mono\)/);
   assert.match(faceChrome, /\.master-titlebar \.brand-mark \{[\s\S]*?display: inline-flex/);
