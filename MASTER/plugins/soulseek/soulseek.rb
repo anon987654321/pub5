@@ -28,8 +28,8 @@ module Master
       MAX_HASH_FILES = 50_000
       MAX_SMALL_AUDIO_BYTES = 64 * 1024
       LOSSLESS_EXTENSIONS = %w[.aiff .alac .ape .flac .wav .wv].freeze
-      LOSSY_EXTENSIONS = %w[.aac .mp3 .mpc .oga .ogg .opus .wma].freeze
-      AMBIGUOUS_AUDIO_EXTENSIONS = %w[.m4a .m4p].freeze
+      LOSSY_EXTENSIONS = %w[.aac .mp3 .mpc .opus].freeze
+      AMBIGUOUS_AUDIO_EXTENSIONS = %w[.m4a .m4p .oga .ogg .wma].freeze
       MAX_MANIFEST_BYTES = 16 * 1024 * 1024
       MAX_MANIFEST_LINES = 500_000
       MAX_MANIFEST_PATHS = 8
@@ -189,9 +189,9 @@ module Master
         empty = files.select { |file| file[:size].zero? }
         small = files.select { |file| file[:size].positive? && file[:size] <= MAX_SMALL_AUDIO_BYTES }
         format_classes = {
-          lossless: files.count { |file| LOSSLESS_EXTENSIONS.include?(file[:extension]) },
-          lossy: files.count { |file| LOSSY_EXTENSIONS.include?(file[:extension]) },
-          ambiguous_container: files.count { |file| AMBIGUOUS_AUDIO_EXTENSIONS.include?(file[:extension]) },
+          lossless_common_extensions: files.count { |file| LOSSLESS_EXTENSIONS.include?(file[:extension]) },
+          lossy_common_extensions: files.count { |file| LOSSY_EXTENSIONS.include?(file[:extension]) },
+          ambiguous_or_multi_codec_containers: files.count { |file| AMBIGUOUS_AUDIO_EXTENSIONS.include?(file[:extension]) },
           unclassified: files.count do |file|
             !LOSSLESS_EXTENSIONS.include?(file[:extension]) &&
               !LOSSY_EXTENSIONS.include?(file[:extension]) &&
@@ -322,16 +322,27 @@ module Master
         albums = inventory[:files].group_by { |file| File.dirname(file[:relative_path]) }
         album_rows = albums.sort_by { |directory, _| directory }.map do |directory, files|
           label = directory == "." ? File.basename(inventory[:path]) : File.basename(directory)
+          year_hint = label[/\b(?:19|20)\d{2}\b/]
+          naming_parts = label.tr("_", " ").split(/\s+-\s+/, 2)
+          artist_hint = naming_parts.length == 2 ? naming_parts.first.strip : nil
+          album_hint = naming_parts.length == 2 ? naming_parts.last.strip : label.tr("_", " ").strip
+          album_hint = album_hint.sub(/\s*[\(\[]?(?:19|20)\d{2}[\)\]]?\s*\z/, "").strip
+          tracks = files.sort_by { |file| file[:relative_path] }.map { |file| track_hint(file) }
+          metadata_gaps = []
+          metadata_gaps << "artist_not_clear_from_folder_name" unless artist_hint
+          metadata_gaps << "year_not_in_folder_name" unless year_hint
           {
             directory:,
             release_hint: label.tr("_", " ").gsub(/\s+/, " ").strip,
-            year_hint: label[/\b(?:19|20)\d{2}\b/],
+            artist_hint:,
+            album_title_hint: album_hint,
+            year_hint:,
+            metadata_gaps:,
             track_count: files.length,
+            tracks_without_track_number_hint: tracks.count { |track| track[:track_number_hint].nil? },
             audio_bytes: files.sum { |file| file[:size] },
             formats: files.group_by { |file| file[:extension] }.transform_values(&:length).sort.to_h,
-            tracks: files.sort_by { |file| file[:relative_path] }.map do |file|
-              track_hint(file)
-            end
+            tracks:
           }
         end
 
@@ -348,6 +359,11 @@ module Master
             album_folders: album_rows.length,
             total_bytes: inventory[:bytes],
             formats: inventory[:extensions],
+            metadata_gaps: {
+              folders_without_artist_hint: album_rows.count { |album| album[:artist_hint].nil? },
+              folders_without_year_hint: album_rows.count { |album| album[:year_hint].nil? },
+              tracks_without_track_number_hint: album_rows.sum { |album| album[:tracks_without_track_number_hint] }
+            },
             truncated: inventory[:truncated]
           },
           albums: album_rows
@@ -365,8 +381,9 @@ module Master
           tracks: inventory[:tracks], albums: album_rows.length,
           bytes: inventory[:bytes], formats: inventory[:extensions],
           truncated: inventory[:truncated], export_path: exported,
+          metadata_gaps: document[:summary][:metadata_gaps],
           sample: album_rows.first(12).map do |album|
-            { directory: album[:directory], release_hint: album[:release_hint], track_count: album[:track_count] }
+            { directory: album[:directory], artist_hint: album[:artist_hint], album_title_hint: album[:album_title_hint], year_hint: album[:year_hint], track_count: album[:track_count] }
           end,
           note: "Release and track labels are filename/folder hints, not verified metadata. Embedded tags and audio content were not read; originals were not changed."
         }
