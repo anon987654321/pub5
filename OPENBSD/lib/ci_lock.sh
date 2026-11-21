@@ -59,6 +59,18 @@ pub5_ensure_ci_lock() {
     dir=$1
     lock=$2
     owner=$3
+    [ -d /var/db ] && [ ! -L /var/db ] && [ "$(stat -f %u /var/db)" -eq 0 ] || {
+      echo "ci_lock: /var/db must be a real root-owned directory" >&2
+      exit 1
+    }
+    [ ! -L "$dir" ] || {
+      echo "ci_lock: refusing symlinked lock directory" >&2
+      exit 1
+    }
+    if [ ! -e "$dir" ]; then
+      mkdir -m 755 "$dir"
+      chown root:wheel "$dir"
+    fi
     [ -d "$dir" ] && [ ! -L "$dir" ] || {
       echo "ci_lock: lock directory must be a real directory" >&2
       exit 1
@@ -83,5 +95,5 @@ pub5_ensure_ci_lock() {
       chmod 644 "$lock"
     fi
   ' ci-lock "$PUB5_CI_LOCK_DIR" "$lock" "$PUB5_CI_LOCK_OWNER" || return $?
-  printf '%s\\n' "$lock"
+  printf '%s\n' "$lock"
 }
