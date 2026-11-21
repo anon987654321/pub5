@@ -3,9 +3,9 @@ set -euo pipefail
 # _sync.sh — copy-tree sync and fixed app-user shared-file overlays.
 # Source this file; do not execute directly. Requires _core.sh sourced first.
 
-# Production tree replacement is performed only by the fixed-mode, app-owned
-# pub5-admin rails-sync helper below. No caller-supplied source/destination
-# paths cross into a privileged copy, delete, or rename operation.
+# Production tree replacement runs as the owning app user. No root copy, delete
+# or rename is needed: doas reaches su, then the fixed installed helper performs
+# the staged sync inside that app's home.
 # rails_sync_app_tree APP_NAME MODE — fixed app-user tree synchronization.
 # Source and destination paths are owned by the installed broker helper, not caller input.
 rails_sync_app_tree() {
@@ -21,11 +21,11 @@ rails_sync_app_tree() {
       ;;
     *) log_err "rails_sync_app_tree: refused mode: $mode"; return 2 ;;
   esac
-  [[ -x /usr/local/sbin/pub5-admin ]] || {
-    log_err "rails_sync_app_tree: pub5-admin is missing; run OPERATOR.sh before deploying"
+  [[ -x /usr/local/libexec/rails-sync.ksh && ! -L /usr/local/libexec/rails-sync.ksh ]] || {
+    log_err "rails_sync_app_tree: installed rails-sync.ksh is missing or untrusted; run OPERATOR.sh"
     return 1
   }
-  "${_PRIV}" /usr/local/sbin/pub5-admin rails-sync "$app_name" "$mode"
+  "${_PRIV}" /usr/bin/su -m "$app_name" -c "/usr/local/libexec/rails-sync.ksh $app_name $mode"
 }
 # overlay_shared_initializers APP_DIR — shared config wins over stale per-app copies
 overlay_shared_initializers() {
@@ -33,10 +33,6 @@ overlay_shared_initializers() {
   local shared_init=${PUB5_RAILS_ROOT:-/home/dev/pub5/RAILS}/__shared/config/initializers
   [[ -d $shared_init ]] || return 0
   local app_name=${app_dir:h:t}
-  [[ -x /usr/local/sbin/pub5-admin ]] || {
-    log_err "shared initializer overlay refused: pub5-admin is missing"
-    return 1
-  }
   run_rails_as_app "$app_name" "$app_dir" "overlay-initializers" || return $?
   log_ok "shared initializers overlaid (merge, app-specific files preserved)"
 }
@@ -48,10 +44,6 @@ overlay_shared_public() {
   local shared_public=${PUB5_RAILS_ROOT:-/home/dev/pub5/RAILS}/__shared/public
   [[ -d $shared_public ]] || return 0
   local app_name=${app_dir:h:t}
-  [[ -x /usr/local/sbin/pub5-admin ]] || {
-    log_err "shared public overlay refused: pub5-admin is missing"
-    return 1
-  }
   run_rails_as_app "$app_name" "$app_dir" "overlay-public" || return $?
   log_ok "shared public assets and bin stubs overlaid"
 }
