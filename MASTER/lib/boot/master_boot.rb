@@ -4,7 +4,7 @@ require_relative "../io/atomic_write"
 require_relative "../ground/service_supervisor"
 require_relative "../cli/core_bridge"
 require "json"
-require_relative "../../tools/backlog" if ENV["MASTER_BACKLOG_AUTORUN"] == "1"
+require_relative "../../tools/owner_registry_tasks" if ENV["MASTER_BACKLOG_AUTORUN"] == "1"
 
 module Master
   # Builder and CLI boot orchestration for Master.*.
