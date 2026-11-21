@@ -26,6 +26,21 @@ is subordinate to the existing shared point allocation.
 
 Typed input follows `Master::CLI::TurnRouter`, the same command path as `bin/master`. Speech and microphone behavior use the existing voice runtime and explicit user interaction. The face never gains shell, filesystem, network-write or deployment authority merely because it is visible in a browser or full-screen terminal.
 
+## Terminal typography
+
+The default CLI and browser transcript share a Nerd Font Mono-first type stack:
+JetBrainsMono Nerd Font, then installed JetBrains Mono and platform monospace
+fallbacks. The CLI cannot install or select a terminal emulator font; operators
+select the Nerd Font Mono family in their terminal settings. The browser uses
+the canonical `--font-mono` token and makes no third-party font request.
+
+The CLI prompt uses semantic ANSI colour for path, Git state and operator
+identity. The web transcript uses the same semantic roles for commands,
+keywords, flags, paths, strings, numbers, comments and outcome states. Colour
+is never the only carrier of meaning. ANSI is disabled for redirected output,
+dumb terminals and `NO_COLOR`; plain text remains ASCII-safe. Private-use
+Nerd Font glyphs are optional decoration and must never become required syntax.
+
 ## Required behavior
 
 The surface reports actual states, including waiting, interruption, cancellation, warning and failure; it must not imply success from a request being sent or from a flag being set. Meaning must survive when color, motion or audio is absent. Keep operational diagnostics in the OpenBSD-style dmesg stream rather than adding decorative status banners. Outside the face renderer itself, do not introduce ASCII pictures.
