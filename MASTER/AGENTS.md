@@ -35,7 +35,7 @@ probe; only its provider response proves that free compute answered. Rendered
 RAILS evidence starts with `MASTER/bin/operator browser install`, then
 `MASTER/bin/operator visual sweep APP --one-page` before the full sweep.
 
-The root TODO executor is opt-in: start with `MASTER_BACKLOG_AUTORUN=1 MASTER/bin/master`.
+The owner-registry task executor is opt-in: start with `MASTER_BACKLOG_AUTORUN=1 MASTER/bin/master`. Only records carrying an explicit `agent_task`, exact single-tree paths and an allowlisted acceptance command may be queued; operator-only and acceptance-only records remain human-gated.
 Use the installed Ruby (the shared floor is 3.2); no patch-level `.ruby-version`
 or interpreter upper bound is authoritative. Bundler's `BUNDLED WITH` line is
 lockfile metadata, not a command to install or re-exec that exact Bundler.
