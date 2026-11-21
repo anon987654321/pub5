@@ -27,6 +27,9 @@ module Master
       MACOS_VOICE_FALLBACKS = { andrew: "Alex", christopher: "Alex" }.freeze
       # major*10+minor version-code encoding (e.g. Python 3.10 -> 310); MLX needs 3.10+.
       MIN_MLX_PYTHON_VERSION_CODE = 310
+      # The z-ai speech API refuses an input above this size; glm_text_chunks
+      # bounds each request and bin/zai-tts refuses a longer one outright.
+      GLM_TTS_REQUEST_CEILING = 1024
 
       module_function
 
@@ -44,6 +47,7 @@ module Master
         when "mlx" then mlx_cli?(cfg)
         when "chatterbox" then chatterbox_cli?
         when "replicate_kokoro" then replicate_token?
+        when "glm_tts" then glm_tts_ready?
         when "edge", "edge_melodic" then Speech.edge_tts_available?
         when "say" then Master::Io::Exec.on_path?("say")
         else false
@@ -55,6 +59,7 @@ module Master
         when "mlx" then synth_mlx(text, out_path, cfg, emotion, rate:, pitch:, melody:)
         when "chatterbox" then synth_chatterbox(text, out_path, cfg, emotion, rate:, pitch:, melody:)
         when "replicate_kokoro" then synth_replicate_kokoro(text, out_path, cfg, emotion)
+        when "glm_tts" then synth_glm_tts(text, out_path, cfg, emotion, voice: voice, rate: rate)
         when "edge_melodic" then synth_edge_melodic(text, out_path, melody, voice, rate, pitch)
         when "edge" then synth_edge(text, out_path, voice, rate, pitch)
         when "say" then synth_say(text, out_path, voice:)
@@ -103,6 +108,123 @@ module Master
           FileUtils.cp(tmp, out_path)
           File.size?(out_path)
         end
+      end
+
+      # glm_tts rides the operator's existing z-ai SDK account — the same
+      # credential boundary bin/zai-chat uses (`.z-ai-config`, never a file in
+      # this tree). It is one engine in this registry and a member of the
+      # configured chain in data/tts.yml, not a second pipeline: chunking,
+      # conversion, joining, subprocess discipline and failure logging all
+      # reuse the helpers here. The API takes plain text only — no SSML — and
+      # an utterance is all or nothing, because a partial join is a truncated
+      # sentence and the chain can only fall through cleanly from a failed
+      # engine. An unmapped voice fails closed before any network call: GLM
+      # serves no Norwegian voice, and voice.yml keeps Norwegian on Pernille —
+      # the chain, not this engine, owns the fallback.
+      def glm_tts_ready?
+        return false if ENV["MASTER_TTS_NO_GLM"].to_s.strip == "1"
+
+        File.executable?(glm_tts_script) && glm_tts_config?
+      end
+
+      def glm_tts_script
+        File.join(Master::ROOT, "bin", "zai-tts")
+      end
+
+      # Mirrors the SDK's own config lookup (cwd, home, /etc). Presence is a
+      # cheap local check; a stale or invalid file still fails inside the
+      # bridge and falls through like any other engine error.
+      def glm_tts_config?
+        candidates = [File.join(Dir.pwd, ".z-ai-config"),
+                      File.join(ENV["HOME"].to_s, ".z-ai-config"),
+                      "/etc/.z-ai-config"]
+        candidates.any? { |path| File.size?(path) }
+      end
+
+      def synth_glm_tts(text, out_path, cfg, emotion, voice: nil, rate: nil)
+        # Bound before any early return: the ensure below cleans up on every
+        # exit path, including the fail-closed voice checks.
+        rendered = []
+        glm_voice = (cfg["glm_voice_map"] || {})[voice.to_s]
+        return false unless glm_voice
+
+        parts = glm_text_chunks(text)
+        return false if parts.empty?
+
+        tmp_dir = File.join(Master::ROOT, ".master", "glm_tts")
+        FileUtils.mkdir_p(tmp_dir)
+        parts.each_with_index do |part, i|
+          wav = File.join(tmp_dir, "part_#{Process.pid}_#{i}.wav")
+          rendered << wav if run_zai_tts(glm_voice, glm_speed(cfg, rate), wav, part)
+        end
+        return false if rendered.length != parts.length
+        return glm_finalize_single(rendered.first, out_path) if rendered.length == 1
+
+        glm_join_parts(rendered, out_path, tmp_dir)
+      rescue StandardError => e
+        Ground::Swallow.log(e, context: "Engines.synth_glm_tts")
+        false
+      ensure
+        Array(rendered).each { |path| File.delete(path) if File.exist?(path) }
+      end
+
+      def glm_finalize_single(wav, out_path)
+        return unless convert_to_mp3(wav, out_path)
+
+        File.size?(out_path)
+      end
+
+      # Parts are same-format WAV from one API, so the join re-encodes instead
+      # of concat -c copy, which would wrap WAV bytes in an .mp3 name.
+      def glm_join_parts(parts, out_path, tmp_dir)
+        list = File.join(tmp_dir, "concat_#{Process.pid}.txt")
+        File.write(list, parts.map { |p| "file '#{p}'" }.join("\n"))
+        ok = system("ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list,
+                    "-codec:a", "libmp3lame", "-q:a", "2", out_path,
+                    out: File::NULL, err: File::NULL)
+        ok && File.size?(out_path)
+      ensure
+        File.delete(list) if defined?(list) && list && File.exist?(list)
+      end
+
+      def glm_speed(cfg, rate)
+        ((cfg["glm_speed"] || 1.0).to_f * rate_factor(rate)).clamp(0.5, 2.0)
+      end
+
+      def glm_text_chunks(text)
+        clean = text.to_s.strip
+        return [] if clean.empty?
+        return [clean] if clean.length <= GLM_TTS_REQUEST_CEILING
+
+        chunks = []
+        current = +""
+        clean.split(/(?<=[.!?…])\s+/).each do |sentence|
+          candidate = current.empty? ? sentence : "#{current} #{sentence}"
+          if candidate.length <= GLM_TTS_REQUEST_CEILING
+            current = candidate
+          else
+            chunks << current unless current.empty?
+            current = sentence
+          end
+        end
+        chunks << current unless current.empty?
+        chunks
+      end
+
+      # The one seam a stub needs: the bridge call itself. stdin carries the
+      # plain text, argv carries voice, speed and the WAV destination.
+      def run_zai_tts(voice, speed, out_path, text)
+        _out, err, status = Master::Io::Exec.capture3(
+          glm_tts_script, voice.to_s, format("%.2f", speed), out_path,
+          stdin_data: text.to_s, timeout: 120,
+        )
+        return true if status.success? && File.size?(out_path)
+
+        Ground::Swallow.log(
+          RuntimeError.new("bin/zai-tts failed: #{err.to_s.strip[0, 200]}"),
+          context: "Engines.run_zai_tts",
+        )
+        false
       end
 
       def mlx_python

@@ -16,7 +16,9 @@ transcendent:
   depth: 0.68
   # Prefer expressive local engines when they are actually installed. Engines.attempt?
   # remains the availability check; missing MLX/Chatterbox falls through without delay.
-  engine_chain: mlx, chatterbox, edge_melodic, edge, say
+  # glm_tts is the hosted lane: a network round-trip per utterance, so it sits
+  # behind the local engines (the same reason Kokoro was demoted from the lead).
+  engine_chain: mlx, chatterbox, glm_tts, edge_melodic, edge, say
   emotion_enabled: true
   # Deterministic, capped Chatterbox Turbo events. No random speech effects.
   paralinguistic_tags: true
@@ -40,3 +42,15 @@ transcendent:
   replicate_model: jaaari/kokoro-82m
   replicate_voice: af_bella
   replicate_speed: 1.05
+  # glm_tts rides the operator's z-ai SDK account through bin/zai-tts — the
+  # same credential boundary as bin/zai-chat (`.z-ai-config`, never a file in
+  # this tree). Set MASTER_TTS_NO_GLM=1 or remove it from engine_chain to
+  # disable. Plain text only: no SSML, requests capped at 1024 characters and
+  # chunked by Engines. glm_voice_map routes a resolved Policy voice alias to
+  # an SDK voice id; GLM serves no Norwegian voice, so pernille stays unmapped
+  # and the engine fails closed — voice.yml language_voices keeps Norwegian on
+  # Pernille. glm_speed is the base speed; the Edge-style rate string scales
+  # it, clamped to the API's 0.5-2.0 range.
+  glm_voice_map:
+    christopher: jam
+  glm_speed: 1.0
