@@ -22,6 +22,10 @@ Nerd Font TTF/OTF build locally and select it in PuTTY's Window → Appearance
 font picker or Termux's More → Style → Choose Font menu. Termux can load a TTF
 from ~/.termux/font.ttf; run termux-reload-settings after changing it.
 
+The [official Nerd Fonts JetBrainsMono release archive](https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz)
+contains the native TTF/OTF variants, including the Mono build. Select that
+installed face in PuTTY or Termux.
+
 The WOFF2 assets are web projections, not an installer for the operating
 system or terminal. MASTER never changes the emulator's font or size.
 
