@@ -158,7 +158,7 @@ class TestFixTypographyAudit < Minitest::Test
     assert ::Law::Typesetting::PATH.match?("BIZ/plan.html")
     assert ::Law::Typesetting::PATH.match?("BIZ/research/bringhurst-strunk-research.md")
     assert ::Law::Typesetting::PATH.match?("MASTER/README.md")
-    assert ::Law::Typesetting::PATH.match?("TODO.md")
+    assert ::Law::Typesetting::PATH.match?("MASTER/AGENTS.md")
     assert ::Law::Typesetting::PATH.match?("OPENBSD/docs/operations.md")
 
     require File.expand_path("../law/prose", __dir__) unless defined?(::Law::Prose)
