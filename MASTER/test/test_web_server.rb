@@ -162,6 +162,16 @@ class TestWebServer < Minitest::Test
     old_bundle.nil? ? ENV.delete("BUNDLE_GEMFILE") : ENV["BUNDLE_GEMFILE"] = old_bundle
   end
 
+  def test_spawn_local_refuses_to_start_when_web_bundle_is_unavailable
+    Master::CLI::WebServer.stub(:ensure_web_bundle!, nil) do
+      Master.stub(:ensure_services!, ->(**_options) { flunk "services must not start without the web bundle" }) do
+        refute Master::CLI::WebServer.spawn_local(
+          config: {}, host: "127.0.0.1", port: 53_187, io: StringIO.new
+        )
+      end
+    end
+  end
+
   def test_web_bundle_preflight_refuses_to_spawn_when_install_fails
     web_dir = File.join(Master::ROOT, "web")
     manager = Object.new
