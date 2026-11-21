@@ -75,6 +75,12 @@ class TestStudioLoraCli < Minitest::Test
     assert_equal 4, options.fetch(:count)
   end
 
+  def test_photograph_cli_only_opens_the_wizard_without_explicit_arguments
+    assert studio_photograph_interactive?([], tty: true)
+    refute studio_photograph_interactive?(%w[--all-subjects --count 4], tty: true)
+    refute studio_photograph_interactive?([], tty: false)
+  end
+
   def test_photograph_cli_parses_batch_flags_for_non_tty_automation
     arguments = %w[--all-subjects --count 4]
     options = studio_photograph_options(arguments)
