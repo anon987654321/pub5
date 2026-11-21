@@ -98,14 +98,23 @@ class MasterBootTest < Minitest::Test
           File.write(full, "VALUE = 1\n")
         end
         done_when = "rake test"
+        task = {
+          id: "item-1", text: "Repair the existing MASTER sources and verify them",
+          tree: "MASTER", kind: "mechanical", size: "m", scope_paths: paths,
+          done_when:, section: "MASTER/convergence.yml",
+          registry_source: "MASTER/convergence.yml",
+        }
+        task[:registry_digest] = Backlog.registry_digest(task)
         plan = JSON.generate(
-          "executor" => "root_todo", "item_id" => "item-1",
-          "item_digest" => "d" * 64, "scope_paths" => paths,
-          "tree" => "MASTER", "done_when" => done_when,
+          "executor" => "owner_registry", "item_id" => task.fetch(:id),
+          "item_digest" => Backlog.item_digest(task),
+          "registry_source" => task.fetch(:registry_source),
+          "registry_digest" => task.fetch(:registry_digest),
+          "scope_paths" => paths, "tree" => "MASTER", "done_when" => done_when,
           "proof_map_version" => Backlog::ProofMap::VERSION,
           "proof_types" => Backlog::ProofMap.types_for(done_when:),
         )
-        goal = "Complete exactly this root TODO item using /fix"
+        goal = "Complete exactly this owner-registry task using /fix"
         queued = Master::Fix::Mission.new(root: mission_root).ensure_queued!(
           goal:, scope: mission_root, plan:, origin: "backlog", auto_continue: true,
           mode: "repair", intent: :functional_change,
@@ -155,10 +164,12 @@ class MasterBootTest < Minitest::Test
           Operator::RubyRunner.stub(:bundle_cmd, "bundle") do
             Master::Io::Exec.stub(:capture2e, capture) do
               Master::CLI::CoreBridge.stub(:push_backlog_commit!, push) do
-                result = Master.run_backlog_task(
-                  root: mission_root, container: { commands: { "fix" => command } },
-                  mission: queued.record, repo_root:
-                )
+                result = Backlog.stub(:generate, [task]) do
+                  Master.run_backlog_task(
+                    root: mission_root, container: { commands: { "fix" => command } },
+                    mission: queued.record, repo_root:
+                  )
+                end
                 assert result.ok?, -> { result.message }
               end
             end
@@ -198,7 +209,7 @@ class MasterBootTest < Minitest::Test
       }
       plan_for = lambda do |version|
         JSON.generate(
-          "executor" => "root_todo",
+          "executor" => "owner_registry",
           "item_id" => "item-proof",
           "done_when" => done_when,
           "proof_map_version" => version,
@@ -246,11 +257,22 @@ class MasterBootTest < Minitest::Test
         FileUtils.mkdir_p(File.dirname(full))
         File.write(full, "VALUE = 1\n")
         done_when = "rake test"
-        plan = JSON.generate("executor" => "root_todo", "item_id" => "item-2",
-                             "item_digest" => "e" * 64, "scope_paths" => [path],
-                             "tree" => "MASTER", "done_when" => done_when,
-                             "proof_map_version" => Backlog::ProofMap::VERSION,
-                             "proof_types" => Backlog::ProofMap.types_for(done_when:))
+        task = {
+          id: "item-2", text: "Repair the existing MASTER source and verify it",
+          tree: "MASTER", kind: "mechanical", size: "s", scope_paths: [path],
+          done_when:, section: "MASTER/convergence.yml",
+          registry_source: "MASTER/convergence.yml",
+        }
+        task[:registry_digest] = Backlog.registry_digest(task)
+        plan = JSON.generate(
+          "executor" => "owner_registry", "item_id" => task.fetch(:id),
+          "item_digest" => Backlog.item_digest(task),
+          "registry_source" => task.fetch(:registry_source),
+          "registry_digest" => task.fetch(:registry_digest),
+          "scope_paths" => [path], "tree" => "MASTER", "done_when" => done_when,
+          "proof_map_version" => Backlog::ProofMap::VERSION,
+          "proof_types" => Backlog::ProofMap.types_for(done_when:),
+        )
         queued = Master::Fix::Mission.new(root: mission_root).ensure_queued!(
           goal: "Complete item 2 using /fix", scope: mission_root, plan:,
           origin: "backlog", auto_continue: true, mode: "repair", intent: :functional_change,
@@ -267,10 +289,12 @@ class MasterBootTest < Minitest::Test
 
         Master::Io::GitOperations.stub(:new, ->(_root) { fake_git }) do
           Master::Io::Exec.stub(:capture2e, capture) do
-            result = Master.run_backlog_task(
-              root: mission_root, container: { commands: { "fix" => command } },
-              mission: queued.record, repo_root:
-            )
+            result = Backlog.stub(:generate, [task]) do
+              Master.run_backlog_task(
+                root: mission_root, container: { commands: { "fix" => command } },
+                mission: queued.record, repo_root:
+              )
+            end
             refute result.ok?
           end
         end
