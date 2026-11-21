@@ -4,184 +4,87 @@ require "digest"
 require "json"
 require "fileutils"
 require "shellwords"
-require_relative "backlog_classify"
-require_relative "backlog_reader"
-require_relative "backlog_store"
+require "yaml"
 require_relative "../lib/fix/task_contract"
 require_relative "../lib/fix/adaptive_journey"
 
-# The backlog generator: one YAML row per checkbox item in the root TODO.md.
-#
-# TODO.md is prose that a session reads, and /fix's work intake wants rows it
-# can rank, gate and receipt. Hand-copying the items into a second file
-# re-creates the staleness problem that file warns about — an entry outliving
-# its source — so the rows are generated, TODO.md stays the one source, and
-# the store's --check fails when the generated file no longer matches it.
-#
-# id, text and section are mechanical extractions. tree, kind and size are
-# derived heuristics from the item's own words: a starting classification, and
-# a deliberate curation of their rules belongs in Backlog::Classify, not in
-# the output file. done_when carries the first runnable command the item
-# names, verbatim; an item that names none carries the reason instead. A row
-# whose checkbox is checked off is landed evidence and leaves the backlog in
-# the same read.
+# Explicit, proof-bearing tasks live on existing owner records. This reader
+# does not create a second backlog, parse Markdown, infer paths or invent tests.
+# Only a row with an explicit agent_task contract enters unattended intake.
 module Backlog
   MASTER_ROOT = File.expand_path("..", __dir__)
-  SOURCE = File.expand_path("../TODO.md", MASTER_ROOT)
-  DEST = File.join(MASTER_ROOT, "data", "backlog.yml")
+  REPO_ROOT = File.expand_path("..", MASTER_ROOT)
 
-  TREES = %w[MASTER RAILS OPENBSD STUDIO BIZ cross operator].freeze
-  KINDS = %w[verify mechanical design product operator-only plan].freeze
+  REGISTRY_SOURCES = {
+    "MASTER/convergence.yml" => "workstreams",
+    "MASTER/data/gaps.yml" => "gaps",
+    "MASTER/data/law/ux_refinements.yml" => "refinements",
+    "MASTER/data/operator_seams.yml" => "seams",
+    "RAILS/refinements.yml" => "items",
+  }.freeze
+
+  TREES = %w[MASTER RAILS OPENBSD STUDIO BIZ].freeze
+  KINDS = %w[mechanical].freeze
   SIZES = %w[s m l].freeze
-
-  ROOTED_PATH = %r{(?:MASTER|RAILS|OPENBSD|STUDIO|BIZ|pub4)/[\w.\-]+(?:/[\w.\-]+)*}
-  REL_PATH = %r{
-    (?<![\w/])(?:lib|bin|data|docs|tools|checks|test|law|man|contracts|
-    plugins|app|config|knowledge|public|storage|etc|usr|home|var|dev|db|
-    script)/[\w.\-]+(?:/[\w.\-]+)*
-  }x
-  FILE_PATH = /\b[\w\-]+\.(?:yml|yaml|rb|md|json|erb|scss|js|mjs|png|conf|lock|csv|webp|wav)\b/
 
   module_function
 
-  def generate(source: SOURCE)
-    entries = parse(source).map { |item| entry(item) }
-    raise "no checkbox items found in #{source}: a parse that reads nothing says nothing" if entries.empty?
+  def generate
+    REGISTRY_SOURCES.flat_map do |source, collection|
+      path = File.join(REPO_ROOT, source)
+      next [] unless File.file?(path)
 
-    assign_ids!(entries)
+      data = YAML.safe_load_file(path, permitted_classes: [], permitted_symbols: [], aliases: false) || {}
+      Array(data.fetch(collection, [])).filter_map do |row|
+        task = row["agent_task"]
+        next unless task
+
+        entry(source:, row:, task:)
+      end
+    end
   end
 
-  def parse(source)
-    raise "missing source #{source}" unless File.file?(source)
+  def entry(source:, row:, task:)
+    id = row.fetch("id").to_s
+    text = (row["title"] || row["name"] || row["item"] || row["claim"]).to_s.strip
+    tree = task.fetch("tree").to_s
+    kind = task.fetch("kind").to_s
+    size = task.fetch("size").to_s
+    scope_paths = Array(task.fetch("scope_paths")).map(&:to_s)
+    done_when = task.fetch("done_when").to_s.strip
 
-    reader = Reader.new
-    File.foreach(source) { |raw| reader.read(raw.chomp) }
-    reader.finish
-  end
+    raise ArgumentError, "#{source}##{id} has an empty agent-task id or title" if id.empty? || text.empty?
+    raise ArgumentError, "#{source}##{id} names an unowned tree #{tree.inspect}" unless TREES.include?(tree)
+    raise ArgumentError, "#{source}##{id} names an unsupported task kind #{kind.inspect}" unless KINDS.include?(kind)
+    raise ArgumentError, "#{source}##{id} names an unknown task size #{size.inspect}" unless SIZES.include?(size)
+    raise ArgumentError, "#{source}##{id} needs exact non-empty scope_paths" if scope_paths.empty?
+    raise ArgumentError, "#{source}##{id} scope crosses its owning tree" unless scope_paths.all? { |path| path.start_with?("#{tree}/") }
+    raise ArgumentError, "#{source}##{id} needs an explicit allowlisted acceptance command" if done_when.empty?
 
-  def entry(item)
-    text = item[:prose].join(" ")
-    section = section_of(item)
-    kind = Classify.kind(item:, text:, section:)
-    command = first_command(item)
-
+    registry_digest = Digest::SHA256.hexdigest(YAML.dump("source" => source, "row" => row))
     {
-      id: nil,
+      id:,
       text:,
-      section:,
-
-      tree: owner(item:, text:, section:, kind:),
+      section: source,
+      tree:,
       kind:,
-      size: size_of(text),
-      scope_paths: scope_paths(text),
-
-      done_when: command,
-      done_when_note: note_for(item:, command:, kind:),
+      size:,
+      scope_paths: scope_paths.uniq.sort,
+      done_when:,
+      done_when_note: nil,
+      dependencies: Array(task["dependencies"]).map(&:to_s),
+      registry_source: source,
+      registry_digest:,
     }
   end
 
-  def section_of(item)
-    # A row above any ## heading takes the document title as its section.
-    [item[:h2] || item[:h1], item[:h3]].compact.join(" — ")
+  def item_digest(row)
+    Digest::SHA256.hexdigest([
+      row.fetch(:id), row.fetch(:text), row.fetch(:tree), row.fetch(:kind),
+      row.fetch(:done_when), row.fetch(:registry_digest),
+      *Array(row.fetch(:scope_paths)).sort,
+    ].join("\\0"))
   end
-
-  # The tree is the tree the text speaks for; a tie or a plan speaks for all.
-  def owner(item:, text:, section:, kind:)
-    return "operator" if kind == "operator-only"
-    return "cross" if item[:plan]
-
-    counts = Classify.signal_counts(text, section)
-    top = counts.values.max
-    return "cross" if top.nil? || top.zero?
-
-    leaders = counts.select { |signal, total| total == top }.keys
-    leaders.size == 1 ? leaders.first : "cross"
-  end
-
-  def size_of(text)
-    return "l" if text.length > 700
-    return "m" if text.length > 200
-
-    "s"
-  end
-
-  def scope_paths(text)
-    paths = text.scan(ROOTED_PATH) + text.scan(REL_PATH) + text.scan(FILE_PATH)
-    paths.map(&:strip).uniq.sort
-  end
-
-  # The first runnable command the item names, verbatim: prose backticks
-  # first, then the item's fenced code, one command per fence line. A span
-  # counts when the prose asks for a command run, or when the span is itself a
-  # full invocation on a named checkout ("cd RAILS/bsdports && bin/ci").
-  def first_command(item)
-    spans = item[:prose].flat_map { |line| line.scan(/`([^`\n]+)`/).flatten }
-    spans += item[:code].reject(&:empty?)
-    hint = item[:prose].join(" ").match?(Store::EXEC_HINT)
-    spans.find { |span| runnable?(span) && (hint || span.match?(/\Acd\s/)) }
-  end
-
-  def runnable?(span)
-    stripped, chained = without_invocation_prefix(span)
-    words = stripped.split
-    return false if words.empty?
-    return true if command_words?(words, stripped)
-
-    tool_ref?(words.first) && (words.size >= 2 || chained)
-  end
-
-  def command_words?(words, stripped)
-    words.first.match?(%r{\A(?:ruby|rake|bundle|node|pfctl|swapctl|ssh|git)\z}) &&
-      (words.size >= 2 || stripped.include?(":"))
-  end
-
-  def tool_ref?(word)
-    word.start_with?("bin/", "./") || word.match?(%r{\A(?:MASTER|OPENBSD)/bin/})
-  end
-
-  def without_invocation_prefix(span)
-    stripped = span.sub(/\A\$/, "")
-    # A cd or environment prefix makes the span an invocation written for a
-    # checkout, so a bare "bin/ci" inside it is a command, not a named path.
-    chained = span.match?(%r{\A(?:cd\s|[A-Z_][A-Z0-9_]*=)})
-    loop do
-      candidate = stripped.sub(%r{\A(?:cd\s+\S+\s*&&\s+|[A-Z_][A-Z0-9_]*=(?:"[^"]*"|\S+)\s+)}, "")
-      return [stripped, chained] if candidate == stripped
-
-      chained = true
-      stripped = candidate
-    end
-  end
-
-  def note_for(item:, command:, kind:)
-    return if command
-    return "pub5 is gated on the operator's freeze condition, not on one command" if item[:plan]
-    return "operator-owned action; the acceptance is the operator's decision" if kind == "operator-only"
-
-    "no runnable command named in the item text"
-  end
-
-  def assign_ids!(entries)
-    used = {}
-    entries.each { |row| row[:id] = slug_for(row[:text], used) }
-    entries
-  end
-
-  def slug_for(text, used)
-    base = text.downcase.scan(/[a-z0-9]+/).first(8).join("-")[0, 80]
-    base = "item" if base.empty?
-    return base unless used.key?(base)
-
-    digest = Digest::SHA1.hexdigest(text)[0, 6]
-    serial = 1
-    loop do
-      candidate = "#{base}-#{digest}#{serial > 1 ? "-#{serial}" : ""}"
-      return candidate unless used.key?(candidate)
-
-      serial += 1
-    end
-  end
-end
 
 module Backlog
   # Closed mapping from explicit acceptance commands to the existing
@@ -520,9 +423,9 @@ module Backlog
     end
   end
 
-  # A deliberately narrow bridge from the generated register to the existing
-  # durable Mission/TaskSteward lifecycle. It never edits TODO.md or treats a
-  # guessed classification as permission.
+  # A deliberately narrow bridge from explicit owner-registry tasks to the
+  # existing durable Mission/TaskSteward lifecycle. No prose classification or
+  # inferred acceptance command can authorize unattended work.
   class Executor
     READY_KINDS = %w[mechanical].freeze
     OWNED_TREES = %w[MASTER RAILS OPENBSD STUDIO BIZ].freeze
@@ -569,15 +472,15 @@ module Backlog
         end,
       }
       goal = [
-        "Complete exactly this root TODO item, using MASTER's existing /fix pipeline.",
-        "Backlog item: #{item.fetch(:id)}",
+        "Complete exactly this owner-registry task, using MASTER's existing /fix pipeline.",
+        "Owner-registry item: #{item.fetch(:id)}",
         "Task: #{item.fetch(:text)}",
         "Owned tree: #{item.fetch(:tree)}",
         "Exact repository-relative scope: #{scope.join(', ')}",
-        "Acceptance command from the register: #{item[:done_when]}",
+        "Acceptance command from the owning registry: #{item[:done_when]}",
         "Adaptive journey: phase=#{journey.fetch("phase")} priority=#{journey.fetch("priority")} score=#{journey.fetch("score")} reason=#{journey.fetch("reason")}. Alternatives are bounded to the same mission-priority band.",
         "Required TaskContract proof types (closed proof-map v#{ProofMap::VERSION}): #{proof_types.join(", ")}. Unknown or absent mappings are not auto-queued.",
-        "Do not edit the TODO checkbox. The executor records work only from a durable completed Mission with a delivery summary and no pending repository writes.",
+        "Do not edit an owner state on assumption. The executor records completion only from a durable Mission with a delivery summary and no pending repository writes; the owner retains its proof state until its declared evidence is accepted.",
         "Commit each coherent, verified slice and push directly to the existing main branch when the repository-delivery policy authorizes that remote action; do not create PRs, branches, worktrees or GitHub Actions. Stage only task-owned paths after checking git status and preserving unrelated changes.",
         "If the external-publication gate, GitHub authentication or the remote blocks a push, preserve the local commit and report DELIVERY_FAILED; never bypass the gate or claim a push succeeded.",
         "Do not deploy, spend money, contact people, alter production data, or cross a human/operator gate.",
@@ -588,13 +491,14 @@ module Backlog
         next if absolute == @repo_root || !absolute.start_with?(@repo_root + File::SEPARATOR)
         next if File.exist?(absolute) || File.symlink?(absolute)
 
-        { "path" => relative, "reason" => "Exact path explicitly named by root TODO item #{item.fetch(:id)}." }
+        { "path" => relative, "reason" => "Exact path explicitly declared by #{item.fetch(:registry_source)} item #{item.fetch(:id)}." }
       end
       plan = JSON.generate(
-        "executor" => "root_todo",
+        "executor" => "owner_registry",
         "item_id" => item.fetch(:id),
         "item_digest" => item_digest(item),
-        "source_digest" => Digest::SHA256.file(Backlog::SOURCE).hexdigest,
+        "registry_source" => item.fetch(:registry_source),
+        "registry_digest" => item.fetch(:registry_digest),
         "scope_paths" => scope,
         "tree" => item.fetch(:tree),
         "new_paths" => new_paths,
@@ -622,7 +526,7 @@ module Backlog
       return false unless record["repository_writes"].to_h.empty?
 
       plan = JSON.parse(record["plan"].to_s)
-      return false unless plan["executor"] == "root_todo" && plan["item_id"] && plan["item_digest"]
+      return false unless plan["executor"] == "owner_registry" && plan["item_id"] && plan["item_digest"]
       return false unless plan["proof_map_version"] == ProofMap::VERSION
       return false unless ProofMap.valid_types?(plan["proof_types"])
       proof = record["proof"].is_a?(Hash) ? record["proof"] : {}
@@ -731,7 +635,13 @@ module Backlog
     end
 
     def item_digest(row)
-      Digest::SHA256.hexdigest([row.fetch(:id), row.fetch(:text), *Array(row[:scope_paths]).sort].join("\0"))
+      Backlog.item_digest(row)
+    end
+
+    def row_registry_digest(rows)
+      rows.map { |row| [row.fetch(:registry_source), row.fetch(:registry_digest)] }
+          .sort.flatten.join("\\0")
+          .then { |value| Digest::SHA256.hexdigest(value) }
     end
 
     # Route history is reconstructed only from durable completion receipts
@@ -833,10 +743,10 @@ module Backlog
     end
 
     def select_next(rows, completed_receipts:)
-      source_digest = Digest::SHA256.file(Backlog::SOURCE).hexdigest
+      registry_digest = row_registry_digest(rows)
       evidence = [{
-        id: "todo:#{source_digest}", sha256: source_digest, verified: true,
-        kind: "root_todo_source",
+        id: "registries:#{registry_digest}", sha256: registry_digest, verified: true,
+        kind: "owner_registry_set",
       }]
       routes = rows.filter_map do |row|
         spec = ProofMap.execution_spec(row[:done_when], tree: row[:tree], repo_root: @repo_root)
@@ -849,7 +759,9 @@ module Backlog
         scope_digest = Digest::SHA256.hexdigest(JSON.generate(scope_facts))
         route_id = item_digest(row)
         item_evidence = [
-          { id: "item:#{route_id}", sha256: route_id, verified: true, kind: "todo_item" },
+          { id: "registry:#{row.fetch(:registry_digest)}", sha256: row.fetch(:registry_digest),
+            verified: true, kind: "explicit_owner_registry_task" },
+          { id: "item:#{route_id}", sha256: route_id, verified: true, kind: "owner_registry_item" },
           { id: "command:#{spec.fetch(:command_digest)}", sha256: spec.fetch(:command_digest),
             verified: true, kind: "allowlisted_acceptance_command" },
           { id: "scope:#{scope_digest}", sha256: scope_digest, verified: true, kind: "existing_scope_hashes" },
@@ -858,7 +770,7 @@ module Backlog
         {
           id: route_id,
           actions: [row[:text].to_s, row[:section].to_s],
-          evidence_ids: ["todo:#{source_digest}", *item_evidence.map { |item| item.fetch(:id) }],
+          evidence_ids: ["registries:#{registry_digest}", *item_evidence.map { |item| item.fetch(:id) }],
           impact: journey_impact(row),
           confidence: 0.95,
           priority: journey_priority(row),
