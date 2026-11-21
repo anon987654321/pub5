@@ -9,12 +9,12 @@
   const PROFILES = Object.freeze([
     { id: "abelam-shield", name: "Abelam Shield", family: "Abelam / East Sepik", note: "Stepped shield silhouette and nested planes", outer: "box", w: .40, h: .54, jaw: .25, crown: .42, asym: .00, brow: .34, nose: .40 },
     { id: "abelam-prow", name: "Abelam Prow", family: "Abelam / East Sepik", note: "Tall prow with a tapered lower face", outer: "box", crownAxis: "y", w: .29, h: .62, jaw: .12, crown: .28, asym: .02, brow: .27, nose: .52 },
-    { id: "iatmul-river", name: "Iatmul River Face", family: "Iatmul / Sepik", note: "Elongated vertical proportions and projecting bridge", outer: "cylinder", crownAxis: "y", w: .31, h: .60, jaw: .18, crown: .26, asym: .00, brow: .26, nose: .58 },
-    { id: "iatmul-concentric", name: "Iatmul Concentric", family: "Iatmul / Sepik", note: "Broad brow and concentric orbital voids", outer: "ring", inner: true, w: .43, h: .47, jaw: .28, crown: .38, asym: .00, brow: .42, nose: .35 },
-    { id: "sepik-split", name: "Sepik Split Face", family: "Sepik formal study", note: "Asymmetric broad and narrow halves", outer: "box", w: .44, h: .50, jaw: .24, crown: .40, asym: .13, brow: .38, nose: .42 },
+    { id: "iatmul-river", name: "Iatmul Mai — Long Face", family: "Iatmul / Middle Sepik", note: "Elongated human-face proportions; original particle study only", outer: "cylinder", w: .32, h: .62, jaw: .18, crown: .22, asym: .00, brow: .33, nose: .48, mouth: .19 },
+    { id: "iatmul-concentric", name: "Iatmul Human Face", family: "Iatmul / East Sepik", note: "Broad oval, readable human-face proportions; original particle study only", outer: "ring", w: .42, h: .58, jaw: .25, crown: .38, asym: .00, brow: .40, nose: .38, mouth: .26 },
+    { id: "sepik-split", name: "Iatmul Mwai", family: "Iatmul / Middle Sepik", note: "Long oval human face with a strong bridge; original particle study only", outer: "cylinder", w: .36, h: .61, jaw: .20, crown: .34, asym: .02, brow: .36, nose: .50, mouth: .20 },
     { id: "elema-tower", name: "Elema Spirit Tower", family: "Elema / Gulf", note: "High forehead and low-set features", outer: "cylinder", crownAxis: "y", w: .33, h: .64, jaw: .17, crown: .25, asym: .01, brow: .30, nose: .47 },
-    { id: "elema-hollow", name: "Elema Hollow Arch", family: "Elema / Gulf", note: "Open vaulted eye region and strong central ridge", outer: "ring", inner: true, w: .39, h: .53, jaw: .20, crown: .35, asym: .00, brow: .43, nose: .50 },
-    { id: "tatanua-crest", name: "Tatanua Crest", family: "New Ireland", note: "Raised asymmetric crest and compact lower face", outer: "box", crownAxis: "y", w: .39, h: .53, jaw: .20, crown: .50, asym: .15, brow: .36, nose: .39 },
+    { id: "elema-hollow", name: "Elema Eharo Human Face", family: "Elema / Gulf Province", note: "Broad human-face planes; original particle study only", outer: "ring", w: .43, h: .55, jaw: .28, crown: .34, asym: .00, brow: .42, nose: .42, mouth: .28 },
+    { id: "tatanua-crest", name: "Tatanua Human Face", family: "New Ireland", note: "Balanced oval human-face proportions; no crest or ornament is copied", outer: "ring", w: .40, h: .55, jaw: .24, crown: .40, asym: .01, brow: .38, nose: .39, mouth: .25 },
     { id: "malangan-double", name: "Malangan Double Visage", family: "New Ireland", note: "Nested inner and outer face contours", outer: "ring", inner: true, w: .44, h: .54, jaw: .27, crown: .39, asym: .02, brow: .38, nose: .39 },
     { id: "woven-void", name: "Woven Void", family: "Original synthesis", note: "Open lattice rhythm; voids carry the expression", outer: "ring", lattice: true, w: .41, h: .51, jaw: .24, crown: .38, asym: .00, brow: .33, nose: .34 },
     { id: "mak-yong-court", name: "Mak Yong Court", family: "Malay theatre / Kelantan", note: "Composed brows, narrow eyes and restrained mouth", outer: "sphere", w: .37, h: .48, jaw: .22, crown: .34, asym: .00, brow: .40, nose: .31 },
@@ -32,27 +32,32 @@
     const h = clamp(profile.h, .30, .62);
     const jaw = clamp(profile.jaw, .10, .36);
     const asym = clamp(profile.asym, 0, .15);
+    const mouth = clamp(profile.mouth ?? Math.min(.36, Math.max(.18, profile.crown * .62)), .14, .36);
     const eyeY = profile.id === "elema-tower" ? -.02 : .12;
-    const crownSize = profile.crownAxis === "y" ? [.06, profile.crown, .06] : [profile.crown, .06, .06];
+    const cheekPart = profile.inner
+      ? { key: "inner-face", primitive: "ring", center: [asym * .2, -.02, .12], size: [w * .62, h * .66, .06] }
+      : profile.lattice
+        ? beam("lattice", [asym, -.13, .06], [.06, .20, .06], "y")
+        : beam("cheeks", [asym, -.13, .06], [Math.max(.18, jaw * 1.55), .06, .06]);
+    // The eight pieces use the original shared particle field. The outline,
+    // eye wells, bridge, cheeks, mouth and jaw keep the result readable as a
+    // human face without copying a source mask's surface or ceremonial motifs.
     const parts = [
       { key: "outer", primitive: profile.outer || "ring", center: [asym * .25, 0, .06], size: [w, h, .08] },
-      beam("crown", [asym * .4, .39, .05], crownSize, profile.crownAxis || "x"),
       beam("brow", [asym, .25, .08], [profile.brow, .06, .06]),
       { key: "left-eye", primitive: "ring", center: [-.18 - asym, eyeY, .13], size: [.105, .060, .06] },
       { key: "right-eye", primitive: "ring", center: [.18 + asym, eyeY, .13], size: [.105, .060, .06] },
       beam("nose", [asym * .4, -.06, .16], [.06, profile.nose, .06], "y"),
-      profile.inner
-        ? { key: "inner-face", primitive: "ring", center: [asym * .2, -.02, .12], size: [w * .62, h * .66, .06] }
-        : profile.lattice
-          ? beam("lattice", [asym, -.13, .06], [.06, .20, .06], "y")
-          : beam("cheeks", [asym, -.13, .06], [Math.max(.18, jaw * 1.55), .06, .06]),
+      cheekPart,
+      beam("mouth", [asym, -.225, .14], [mouth, .06, .06]),
       beam("jaw", [asym, -.31, .06], [Math.max(.16, jaw * 1.65), .06, .06])
     ];
+    const cheekKey = profile.inner ? "inner-face" : profile.lattice ? "lattice" : "cheeks";
     return {
       kind: "custom",
       label: profile.name,
       confidence: 1,
-      sequence: ["outer", "crown", "brow", "left-eye", "right-eye", "nose", profile.inner ? "inner-face" : profile.lattice ? "lattice" : "cheeks", "jaw"],
+      sequence: ["outer", "brow", "left-eye", "right-eye", "nose", cheekKey, "mouth", "jaw"],
       parts
     };
   }
@@ -62,11 +67,22 @@
     for (const char of String(value)) h = Math.imul(h ^ char.charCodeAt(0), 16777619);
     return h >>> 0;
   }
+  const ROTATION_PROFILE_IDS = Object.freeze([
+    "iatmul-concentric",
+    "iatmul-river",
+    "sepik-split",
+    "tatanua-crest",
+    "elema-hollow"
+  ]);
+
+  function profileIndex(id) {
+    return PROFILES.findIndex((profile) => profile.id === String(id));
+  }
+
   function conversationKey() {
-    const explicit = window.MASTER_CONVERSATION_ID ||
-      document.querySelector('meta[name="master-conversation-id"]')?.content ||
-      document.querySelector("[data-conversation-id]")?.getAttribute("data-conversation-id") ||
-      window.history?.state?.conversationId;
+    const explicit = window.MASTER_FACE_MASK_SESSION ||
+      document.querySelector('meta[name="master-face-mask-session"]')?.content ||
+      window.history?.state?.faceMaskSession;
     if (explicit != null && String(explicit)) return String(explicit);
     try {
       let session = sessionStorage.getItem("master.mask.session");
@@ -79,39 +95,92 @@
       return location.pathname + location.search;
     }
   }
+
+  function sourceFor(profile) {
+    const direct = window.MASTER_FACE_MASK_ENTRY;
+    if (direct && String(direct.particle_profile || "") === profile.id) return direct;
+    const catalog = Array.isArray(window.MASTER_FACE_MASK_CATALOG)
+      ? window.MASTER_FACE_MASK_CATALOG : [];
+    return catalog.find((entry) => String(entry?.particle_profile || "") === profile.id) || null;
+  }
+
   function apply(index, reason) {
     const world = window.MASTER_FACE_WORLD;
     if (!world?.setSubjectForm) return false;
     const profile = PROFILES[((index % PROFILES.length) + PROFILES.length) % PROFILES.length];
+    const source = sourceFor(profile);
     world.setSubjectForm("object", descriptor(profile));
-    document.documentElement.dataset.maskProfile = profile.id;
-    document.documentElement.dataset.maskFamily = profile.family;
-    document.documentElement.dataset.maskLabel = profile.name;
-    try { sessionStorage.setItem("master.mask." + key, String(current)); } catch (_) {}
+
+    const root = document.documentElement;
+    root.dataset.maskProfile = profile.id;
+    root.dataset.maskFamily = profile.family;
+    root.dataset.maskLabel = profile.name;
+    if (source) {
+      root.dataset.maskSourceTitle = String(source.title || "");
+      root.dataset.maskSourceCollection = String(source.collection || "");
+      root.dataset.maskSourceRights = String(source.rights || "");
+    } else {
+      delete root.dataset.maskSourceTitle;
+      delete root.dataset.maskSourceCollection;
+      delete root.dataset.maskSourceRights;
+    }
+
+    const canvas = document.getElementById?.("face");
+    if (canvas && source) {
+      const credit = String(source.image_credit || source.collection || "");
+      canvas.title = `${profile.name} — original particle study. Reference: ${source.title || "collection object"}; ${source.collection || "collection"}; ${credit}.`;
+      canvas.setAttribute?.(
+        "aria-label",
+        `${profile.name}, an original monochrome particle-face study. Reference object: ${source.title || "collection object"}, ${source.collection || "collection"}. ${credit}.`
+      );
+    }
+
     window.dispatchEvent(new CustomEvent("master:mask-profile", {
-      detail: { id: profile.id, name: profile.name, family: profile.family, note: profile.note, index, reason }
+      detail: {
+        id: profile.id, name: profile.name, family: profile.family,
+        note: profile.note, index, reason,
+        source: source ? {
+          id: source.id, title: source.title, collection: source.collection,
+          accession: source.accession, object_url: source.object_url,
+          rights: source.rights, image_credit: source.image_credit || source.collection
+        } : null
+      }
     }));
+    try { sessionStorage.setItem("master.mask." + activeKey, String(index)); } catch (_) {}
     return true;
   }
 
-  let key = conversationKey();
-  const initial = hash(key) % PROFILES.length;
-  let current = initial;
-  if (key) {
+  let activeKey = conversationKey();
+  const serverProfileId = String(window.MASTER_FACE_MASK_PROFILE || "");
+  const serverProfileIndex = ROTATION_PROFILE_IDS.indexOf(serverProfileId);
+  let rotationIndex = serverProfileIndex >= 0
+    ? serverProfileIndex
+    : hash(activeKey) % ROTATION_PROFILE_IDS.length;
+  let current = profileIndex(ROTATION_PROFILE_IDS[rotationIndex]);
+
+  // A fresh chat page receives the signed server-side round-robin selection.
+  // Storage is only a fallback for standalone/offline face previews.
+  if (serverProfileIndex < 0 && activeKey) {
     try {
-      const stored = sessionStorage.getItem("master.mask." + key);
-      if (stored !== null && Number.isInteger(Number(stored))) current = Number(stored) % PROFILES.length;
-      else sessionStorage.setItem("master.mask." + key, String(current));
-    } catch (_) { /* private browsing: deterministic URL fallback remains */ }
+      const stored = Number(sessionStorage.getItem("master.mask." + activeKey));
+      const storedProfile = Number.isInteger(stored) ? PROFILES[stored] : null;
+      const storedRotation = storedProfile
+        ? ROTATION_PROFILE_IDS.indexOf(storedProfile.id) : -1;
+      if (storedRotation >= 0) {
+        rotationIndex = storedRotation;
+        current = stored;
+      }
+    } catch (_) { /* private browsing: use the deterministic session fallback */ }
   }
 
   function rotate(event) {
     const nextKey = String(event?.detail?.conversationId || event?.detail?.id || "");
-    if (!nextKey || nextKey === key) return;
-    key = nextKey;
-    current = (current + 1) % PROFILES.length;
+    if (!nextKey || nextKey === activeKey) return false;
+    activeKey = nextKey;
+    rotationIndex = (rotationIndex + 1) % ROTATION_PROFILE_IDS.length;
+    current = profileIndex(ROTATION_PROFILE_IDS[rotationIndex]);
     try { sessionStorage.setItem("master.mask." + nextKey, String(current)); } catch (_) {}
-    apply(current, "new-conversation");
+    return apply(current, "new-conversation");
   }
 
   function start() {
@@ -129,16 +198,24 @@
   });
   window.MASTER_FACE_MASKS = Object.freeze({
     profiles: PROFILES,
+    rotationProfiles: ROTATION_PROFILE_IDS,
     current: () => PROFILES[current],
+    source: () => sourceFor(PROFILES[current]),
     descriptor: () => descriptor(PROFILES[current]),
     applyCurrent: (reason = "restore") => apply(current, reason),
     select: (id) => {
-      const index = PROFILES.findIndex((profile) => profile.id === String(id));
+      const index = profileIndex(id);
       if (index < 0) return false;
       current = index;
+      const selectedRotation = ROTATION_PROFILE_IDS.indexOf(String(id));
+      rotationIndex = selectedRotation >= 0 ? selectedRotation : ROTATION_PROFILE_IDS.length - 1;
       return apply(current, "explicit-selection");
     },
-    next: () => { current = (current + 1) % PROFILES.length; return apply(current, "manual-cycle"); },
+    next: () => {
+      rotationIndex = (rotationIndex + 1) % ROTATION_PROFILE_IDS.length;
+      current = profileIndex(ROTATION_PROFILE_IDS[rotationIndex]);
+      return apply(current, "manual-cycle");
+    },
     newConversation: (id) => {
       const conversationId = String(id || "").trim();
       if (!conversationId) return false;
