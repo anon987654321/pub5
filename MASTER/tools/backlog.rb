@@ -89,9 +89,9 @@ module Backlog
       row.fetch(:id), row.fetch(:text), row.fetch(:tree), row.fetch(:kind),
       row.fetch(:done_when), registry_digest(row),
       *Array(row.fetch(:scope_paths)).sort,
-    ].join("\\0"))
+    ].join("\0"))
   end
-
+end
 module Backlog
   # Closed mapping from explicit acceptance commands to the existing
   # TaskContract proof vocabulary. An unknown command is not guessed.
@@ -648,10 +648,9 @@ module Backlog
 
     def row_registry_digest(rows)
       rows.map { |row| [row[:registry_source].to_s, Backlog.registry_digest(row)] }
-          .sort.flatten.join("\\0")
+          .sort.flatten.join("\0")
           .then { |value| Digest::SHA256.hexdigest(value) }
     end
-
     # Route history is reconstructed only from durable completion receipts
     # whose item, current acceptance command, output digest and origin/main push
     # still agree with the live owner-registry task.
