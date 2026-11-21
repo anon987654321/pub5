@@ -28,7 +28,7 @@ class TestFaceSwarm < Minitest::Test
     assert_equal 0.86, settings.fetch("damping")
     assert_equal 0.11, settings.fetch("cohesion_radius")
     assert_equal 0.045, settings.fetch("cohesion_strength")
-    assert_equal 0.05, settings.fetch("separation_radius")
+    assert_equal 0.055, settings.fetch("separation_radius")
     assert_equal 0.08, settings.fetch("separation_strength")
     assert_equal 0.014, settings.fetch("noise_scale")
     assert_equal({ "fraction" => 0.18, "strength" => 0.12 }, settings.fetch("residual"))
