@@ -6,7 +6,7 @@ require "rbconfig"
 class TestPlugins < Minitest::Test
   def test_manifests_have_local_policy
     manifests = Master::Plugin.list
-    assert_equal %w[air_superiority session_browser social_browser tap_probes travel_browser tts_dsp video_recordings], manifests.map(&:id)
+    assert_equal %w[air_superiority session_browser social_browser soulseek tap_probes travel_browser tts_dsp video_recordings], manifests.map(&:id)
     manifests.each { |manifest| assert Master::Plugin.policy(manifest.id).is_a?(Hash) }
   end
 
@@ -348,4 +348,130 @@ class TestPlugins < Minitest::Test
     assert_equal "fetlife.com", broker.opened.first[:host]
     assert_equal ["lease-1"], broker.closed
   end
+
+  def with_soulseek_env(values)
+    previous = values.to_h { |key, _| [key, ENV[key]] }
+    values.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+    yield
+  ensure
+    previous&.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+  end
+
+  def test_soulseek_is_registered_and_closed_without_an_api_key
+    assert_includes Master::Plugin.list.map(&:id), "soulseek"
+    result = with_soulseek_env("MASTER_SLSKD_API_KEY" => nil) do
+      Master::Plugin.load("soulseek").call(action: "status")
+    end
+    refute result.fetch(:configured)
+    refute result.fetch(:connected)
+    assert_includes result.fetch(:required_env), "MASTER_SLSKD_API_KEY"
+  end
+
+  def test_soulseek_accepts_only_loopback_http_or_pinned_public_https
+    plugin = Master::Plugin.load("soulseek")
+    with_soulseek_env("MASTER_SLSKD_URL" => "http://example.com:5030") do
+      assert_raises(Master::Plugin::PolicyError) { plugin.send(:endpoint_uri) }
+    end
+    with_soulseek_env("MASTER_SLSKD_URL" => "http://127.0.0.1:5030") do
+      assert_equal "127.0.0.1", plugin.send(:endpoint_uri).hostname
+    end
+  end
+
+  def test_soulseek_search_returns_the_server_search_id
+    id = "9d7c19c9-9de7-4b87-9f79-79b1c0a7bd55"
+    plugin = Master::Plugin.load("soulseek")
+    observed = nil
+    plugin.define_singleton_method(:api_request) do |method, path, payload = nil|
+      observed = [method, path, payload]
+      { "id" => id, "state" => "InProgress" }
+    end
+
+    result = plugin.call(action: "search", query: "J Dilla Jay Dee")
+    assert_equal id, result.fetch(:search_id)
+    assert_equal [:post, "searches"], observed.first(2)
+    assert_equal "J Dilla Jay Dee", observed[2].fetch(:searchText)
+  end
+
+  def test_soulseek_results_expose_audio_files_only
+    id = "9d7c19c9-9de7-4b87-9f79-79b1c0a7bd55"
+    plugin = Master::Plugin.load("soulseek")
+    plugin.define_singleton_method(:api_request) do |method, path, _payload = nil|
+      assert_equal :get, method
+      assert_equal "searches/#{id}/responses", path
+      [{
+        "username" => "selector",
+        "hasFreeUploadSlot" => true,
+        "files" => [
+          { "filename" => "Dilla/Donuts/01 Workinonit.flac", "size" => 12_000, "bitRate" => 900 },
+          { "filename" => "Dilla/cover.jpg", "size" => 1_000 },
+        ],
+      }]
+    end
+
+    result = plugin.call(action: "results", search_id: id)
+    assert_equal 1, result.fetch(:files)
+    assert_equal "selector", result.fetch(:results).first.fetch(:username)
+    assert_equal "Dilla/Donuts/01 Workinonit.flac", result.fetch(:results).first.fetch(:filename)
+  end
+
+  def test_soulseek_queue_requires_consent_and_a_policy_rights_basis
+    plugin = Master::Plugin.load("soulseek")
+    id = "9d7c19c9-9de7-4b87-9f79-79b1c0a7bd55"
+    args = {
+      search_id: id, username: "peer", filename: "Album/01 Track.flac",
+      size: 12_000, rights_basis: "artist_authorized"
+    }
+    assert_raises(Master::Plugin::PolicyError) { plugin.call(action: "queue", **args) }
+    bad_basis = args.merge(consent: true, rights_basis: "personal_use")
+    assert_raises(Master::Plugin::PolicyError) { plugin.call(action: "queue", **bad_basis) }
+  end
+
+  def test_soulseek_queue_submits_only_the_exact_single_selected_result
+    plugin = Master::Plugin.load("soulseek")
+    id = "9d7c19c9-9de7-4b87-9f79-79b1c0a7bd55"
+    calls = []
+    plugin.define_singleton_method(:api_request) do |method, path, payload = nil|
+      calls << [method, path, payload]
+      if method == :get
+        [{ "username" => "peer", "files" => [{ "filename" => "Album/01 Track.flac", "size" => 12_000 }] }]
+      else
+        { "batch" => { "id" => "batch-1" } }
+      end
+    end
+
+    result = plugin.call(
+      action: "queue", search_id: id, username: "peer",
+      filename: "Album/01 Track.flac", size: 12_000,
+      rights_basis: "artist_authorized", consent: true
+    )
+    assert_equal true, result.fetch(:submitted)
+    assert_equal "batch-1", result.fetch(:batch_id)
+    assert_equal 1, calls.last[2].fetch(:files).length
+    assert_equal "Album/01 Track.flac", calls.last[2].fetch(:files).first.fetch(:filename)
+  end
+
+  def test_soulseek_rejects_path_traversal
+    plugin = Master::Plugin.load("soulseek")
+    assert_raises(Master::Plugin::PolicyError) { plugin.send(:clean_remote_filename, "../outside.mp3") }
+    assert_raises(Master::Plugin::PolicyError) { plugin.send(:clean_remote_filename, "/absolute.mp3") }
+    refute plugin.send(:audio_file?, "cover.jpg")
+  end
+
+  def test_soulseek_library_inventory_and_gap_matching_are_read_only
+    require "tmpdir"
+    require "fileutils"
+    Dir.mktmpdir("soulseek-library") do |root|
+      FileUtils.mkdir_p(File.join(root, "J Dilla"))
+      File.write(File.join(root, "J Dilla", "Donuts.flac"), "audio")
+      File.write(File.join(root, "readme.txt"), "not audio")
+      plugin = Master::Plugin.load("soulseek")
+      inventory = plugin.call(action: "library", path: root)
+      assert_equal 1, inventory.fetch(:tracks)
+      assert_equal ".flac", inventory.fetch(:extensions).keys.first
+      gaps = plugin.call(action: "gaps", path: root, queries: ["J Dilla", "Hugh Mundell"])
+      assert_equal ["J Dilla"], gaps.fetch(:present)
+      assert_equal ["Hugh Mundell"], gaps.fetch(:missing)
+    end
+  end
+
 end
