@@ -493,10 +493,10 @@ tokens:
         strength: 0.48
         center: [0.08, 0.06]
         intro_wave_strength: 0.28
-      # Open the field without enlarging one-pixel carriers or changing source geometry.
-      # At 0.76, twenty-four percent fewer points pass the render threshold in every mood,
-      # opening visible negative space while preserving the existing point budget and size.
-      density_scale: 0.76
+      # Keep the normal carrier population; open small gaps by spacing positions, not by
+      # discarding dots. The point sprite remains exactly one pixel.
+      density_scale: 0.90
+      particle_spacing_scale: 1.025
       # Deliberate low-resolution contour stepping; subtle enough to preserve facial readability.
       aliasing:
         enabled: true
@@ -598,9 +598,11 @@ tokens:
       cohesion_radius: 0.11
       cohesion_strength: 0.045
       # A slightly wider personal-space radius keeps moving carriers distinct.
-      separation_radius: 0.045
+      separation_radius: 0.05
       separation_strength: 0.08
       noise_scale: 0.014
+      # Error loosens the field briefly; normal attractors reassemble it on recovery.
+      fragment_strength: 0.16
       # A deterministic subset keeps its original carrier identity in residual states.
       residual:
         fraction: 0.18
