@@ -95,7 +95,7 @@ test("live stipple keeps one deterministic solid carrier near the left eye", () 
   assert.equal(stipple.particleSpacingScale(), 1.075);
   const voids = stipple.voidConfiguration();
   assert.equal(voids.eyeApertureScale, 1.14);
-  assert.deepEqual(voids.faultline.states, ["error"]);
+  assert.equal(voids.faultline.states.join(","), "error");
   assert.equal(voids.faultline.strength, 0.82);
 
   const samples = stipple.defaultSamples(512);
@@ -106,7 +106,7 @@ test("live stipple keeps one deterministic solid carrier near the left eye", () 
   });
   assert.ok(eyeRadii.length > 0);
   assert.ok(Math.min(...eyeRadii) >= 0.18 * 1.14 - 1e-9, "orbital carriers keep a wider central void");
-  assert.deepEqual(samples, stipple.defaultSamples(512), "the new geometry remains deterministic");
+  assert.equal(JSON.stringify(samples), JSON.stringify(stipple.defaultSamples(512)), "the new geometry remains deterministic");
 });
 
 
