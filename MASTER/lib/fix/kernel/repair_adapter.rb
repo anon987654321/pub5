@@ -473,7 +473,14 @@ module Master
             return :commit_refused
           end
 
-          reason ||= "the committer answered :blocked and recorded no reason"
+          # An exception is itself the missing refusal reason. Do not obscure it
+          # behind the generic :blocked fallback: the recorded event and operator
+          # message must name the actual commit failure.
+          reason ||= if error
+                       "#{error.class}: #{error.message}"
+                     else
+                       "the committer answered :blocked and recorded no reason"
+                     end
           why = reason.to_s.strip.lines.last(3).join(" ")[0, 300]
           RunLedger.refused_because("commit refused: #{why}")
           refuse(:commit, violation, reason: why, error:)
