@@ -416,7 +416,7 @@ class TestScanLawContracts < Minitest::Test
     assert_finding rule("NO_NEW_DOCUMENTS"), "# stray\n", bad, "session_notes.md"
     assert_finding rule("NO_NEW_DOCUMENTS"), "# stray\n", bad, "documents.allowed_documents"
     assert_empty rule("NO_NEW_DOCUMENTS").check("# held\n", path: good)
-    assert_empty rule("NO_NEW_DOCUMENTS").check("# held\n", path: File.join(Master::ROOT, "TODO.md"))
+    assert_finding rule("NO_NEW_DOCUMENTS"), "# held\n", File.join(Master::ROOT, "TODO.md"), "documents.allowed_documents"
 
     # An allowlist that read from a missing section would arm-and-crash scans,
     # which is worse than the stray it hunts. Every allowlisted basename
