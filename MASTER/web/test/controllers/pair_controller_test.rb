@@ -104,7 +104,7 @@ class PairControllerTest < ActionDispatch::IntegrationTest
     assert_response :see_other
     assert_redirected_to "/pair/admin"
     code = flash[:pair_code]
-    assert_match(/\\A[A-HJ-NP-Z2-9]{8}\\z/, code)
+    assert_match(/\A[A-HJ-NP-Z2-9]{8}\z/, code)
 
     follow_redirect!
     assert_response :success
