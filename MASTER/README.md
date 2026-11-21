@@ -230,8 +230,6 @@ non-interactive runs fail closed with the exact package list and `bin/deps syste
 For unattended hosts, set `MASTER_AUTO_SYSTEM_PACKAGES=1` only when package installation has already been
 approved by the operator. The system package list covers native build prerequisites, not optional applications
 or provider credentials.
-`bin/master '/fix --dry-run --critique --only critique,map MASTER/lib/cli'`, and read it before
-widening scope.
 
 Failures have owners. `lib/ground/failure_taxonomy.rb` classifies the error and owns the retry
 policy: `exhausted` pauses the paid lane and re-probes on backoff through `Io::QuotaCheck`, so
