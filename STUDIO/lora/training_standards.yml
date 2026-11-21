@@ -16,7 +16,7 @@ dataset:
   target_resolution: 1024
 review:
   candidate_render_count: 3
-  final_render_count: 6
+  final_render_count: 4
 inference:
   model: dev
   aspect_ratio: "2:3"
