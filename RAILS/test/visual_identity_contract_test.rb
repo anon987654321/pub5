@@ -149,6 +149,9 @@ class VisualIdentityContractTest < Minitest::Test
     assert_includes LAWS_SOURCE, "Reduced-motion policy applies to every animated layer and transition"
     assert_includes LAWS_SOURCE, "no adapter may spend the whole renderer budget independently"
     assert_includes LAWS_SOURCE, "JavaScript render-call cadence from GPU completion"
+    assert_includes LAWS_SOURCE, "The family identity is a shared grammar"
+    assert_includes LAWS_SOURCE, "Particle spacing changes carrier centres, never sprite diameter"
+    assert_includes LAWS_SOURCE, "Pluribus informs the study of collective emergence"
   end
 
   def test_product_dialects_remain_explicit_in_the_visual_contract
@@ -173,6 +176,13 @@ class VisualIdentityContractTest < Minitest::Test
     assert_equal "text-base", type_roles.fetch("body")
     assert_equal "font-mono", type_roles.fetch("technical")
     assert_includes type_roles.fetch("wordmark"), "original"
+
+    family = identity.fetch("family_contract")
+    assert_equal %w[MASTER RAILS OPENBSD STUDIO], family.fetch("scope")
+    assert_includes family.fetch("material_boundary"), "MASTER face"
+    assert_includes family.fetch("material_boundary"), "not a compulsory particle skin"
+    assert_includes family.dig("tree_translations", "RAILS"), "preserve each product"
+    assert_includes family.fetch("reference_policy"), "Never reproduce its wordmark"
   end
 
   # BSDPorts is ultraminimal white, the classic search front page (operator,
