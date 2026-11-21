@@ -179,8 +179,8 @@ class Ports::ImporterTest < ActiveSupport::TestCase
     parser = Ports::Openbsd::PackageIndexParser
     assert_raises(ArgumentError) { parser.parse(StringIO.new("")) }
 
-    valid = "-rw-r--r-- 1 0 0 83961563 Apr 25 13:24:13 2026 git-2.50.0.tgz\\n"
-    malformed = "not-a-valid-listing git-2.50.1.tgz\\n"
+    valid = "-rw-r--r-- 1 0 0 83961563 Apr 25 13:24:13 2026 git-2.50.0.tgz\n"
+    malformed = "not-a-valid-listing git-2.50.1.tgz\n"
     assert_raises(ArgumentError) { parser.parse(StringIO.new(valid + malformed)) }
   end
 
