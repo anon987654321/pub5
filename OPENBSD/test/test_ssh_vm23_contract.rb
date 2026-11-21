@@ -23,6 +23,11 @@ end
 def test_remote_command_payload_remains_quoted
     assert_includes SOURCE, "${(q)cmd}"
   end
+  def test_repo_root_resolves_above_openbsd_lib
+    assert_includes SOURCE, 'SSH_VM23_REPO_ROOT=${SSH_VM23_SOURCE:h:h:h}'
+    refute_includes SOURCE, 'SSH_VM23_REPO_ROOT=${SSH_VM23_SOURCE:h:h}'
+  end
+
   def test_shared_ssh_library_and_operator_expose_one_preflight_command
     operator = File.read(File.expand_path("../../MASTER/bin/operator", __dir__))
     assert_includes operator, 'when "rtfm"'
