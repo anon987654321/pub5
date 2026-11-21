@@ -10,11 +10,18 @@ schema: 1
 decisions:
   - id: type-terminal-ascii-20261106
     at: "2026-11-06"
-    revision: "recorded in MASTER/law/definition.rb TERMINAL_OUTPUT_PATH comment"
+    revision: "superseded by type-terminal-nerd-mono-20261121"
+    decision: superseded
+    domain: type
+    subject: "Terminal text retains an ASCII-safe plain-text form for pipes and terminals without patched fonts"
+    rationale: "The portable text constraint remains; it never prohibited ANSI presentation or a monospaced type system."
+  - id: type-terminal-nerd-mono-20261121
+    at: "2026-11-21"
+    revision: "MASTER/lib/voice/renderer/prompt_components.rb and MASTER/web/styles/face/30_conversation.css"
     decision: accepted
     domain: type
-    subject: "CLI, REPL prompt, terminal face and dmesg lines print ASCII: a terminal font and a pipe read a hyphen and three dots plainly"
-    rationale: "Web copy, locales and documents keep proper marks; the typographic Laws read every file except terminal output."
+    subject: "MASTER CLI and web share a Nerd Font Mono-first stack, semantic prompt colours and syntax roles"
+    rationale: "Interactive colour is presentation only; plain output remains readable without ANSI or Nerd Font glyph support. No third-party font request is introduced."
   - id: palette-paper-token-2026
     at: "2026-11-07"
     revision: "recorded in MASTER/checks/data/law_fixtures.yml PAPER_NOT_PURE_WHITE"
