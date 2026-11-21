@@ -27,11 +27,10 @@ class TestStatusReport < Minitest::Test
     refute lines.any? { |line| line.match?(/ {2,}/) && line.match?(/\A(?:service0|port0):/) }
   end
 
-  def test_service_status_prefers_the_fixed_broker
+  def test_service_status_uses_native_rcctl
     source = File.read(File.expand_path("../lib/operator/status_report.rb", __dir__))
-    assert_includes source, '["doas", "-n", broker, "service", "check", service]'
-    assert_includes source, 'raise SecurityError, "pub5-admin is a symlink" if File.symlink?(broker)'
     assert_includes source, '["doas", "-n", "/usr/sbin/rcctl", "check", service]'
+    refute_includes source, "pub5-admin"
   end
 
   # git quotes a path the moment it holds a space or a non-ASCII byte, which
