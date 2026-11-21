@@ -103,6 +103,7 @@ class TestDocPaths < Minitest::Test
       "MASTER/data/operator_seams.yml" => "seams",
       "MASTER/data/law/ux_refinements.yml" => "refinements",
       "RAILS/refinements.yml" => "items",
+      "MASTER/data/ideations/polish.yml" => "candidates",
     }
 
     owners.each do |relative, collection|
