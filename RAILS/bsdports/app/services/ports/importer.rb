@@ -144,11 +144,6 @@ module Ports
           permit_file_distfiles: metadata[:permit_file_distfiles] == true
         )
       end
-      port.assign_attributes(attributes)
-      unless thin_metadata
-        port[:maintainer] = metadata[:maintainer]
-        port.maintainer_id = maintainer&.id
-      end
       # New synthetic rows stay hidden until this complete index run has
       # succeeded. Existing rows keep their last known availability on failure.
       attributes[:available] = false if thin_metadata && port.new_record?
