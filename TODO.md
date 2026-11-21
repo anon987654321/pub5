@@ -285,6 +285,16 @@ compatible checkout and no compiler child remains afterward.
   Marketplace filter/card/mutation, Takeaway model/migration, empty-state,
   token-projection and design-token tests. Use fresh databases; verify both
   fresh-install and upgrade migrations where applicable.
+  2026-11-21, sandbox (vendored Ruby 3.3.6, Minitest 5.27 for bare runs):
+  `ruby RAILS/test/run_all.rb` measured 214 files, 1,623 runs, 22 red; the
+  first execution caught a real shared defect, fixed on main: unsafe_ip?
+  re-wrapped already-parsed IPAddr instances and current ipaddr raises
+  AddressFamilyError for that, so every Chromium browser pin was refused.
+  link_converter is green after an explicit minitest/mock require. The
+  remaining reds split into ratchet counts to re-adjudicate on this host
+  (css_coverage_lint undefined_class 55 against 50), sandbox-dependent
+  Chrome/CDP and live-server contracts, and five stub-layer transport
+  drifts in outbound_http that belong to the pinned-transport workstream.
 - [ ] **OPENBSD updated runner and native proof.** Previous evidence was
   45 files/0 red, rehearsal 16/16, PF policy 11/11 and evidence tool 9/9.
   The runner now rejects empty or invalid Minitest summaries and has new
