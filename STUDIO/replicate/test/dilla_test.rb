@@ -5,6 +5,7 @@ require_relative "minitest_helper"
 require "open3"
 require "tmpdir"
 require_relative "../output_paths"
+require_relative "../subprocess"
 require "digest"
 require_relative "../../dilla/dilla"
 
@@ -692,7 +693,7 @@ class TestDillaIndustrialTechno < Minitest::Test
   def test_renders_a_four_on_the_floor_take
     Dir.mktmpdir do |dir|
       base = File.join(dir, "techno")
-      _out, err, status = Open3.capture3(RbConfig.ruby, File.expand_path("../../dilla/dilla.rb", __dir__),
+      _out, err, status = Open3.capture3(Studio::Subprocess.environment, RbConfig.ruby, File.expand_path("../../dilla/dilla.rb", __dir__),
                                          "industrial-techno", "--out", base, "--bars", "2", "--bpm", "130",
                                          chdir: File.expand_path("../..", __dir__))
       assert status.success?, err
