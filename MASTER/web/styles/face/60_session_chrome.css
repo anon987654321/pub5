@@ -68,7 +68,7 @@ body[data-queue-active="1"] .turn-queue-status { opacity: .9; }
    (3.32:1, an icon's 3:1). 20_chrome's fallback is the same token now. */
 #mic-dot { --c-mic-off: var(--chrome-band-muted); }
 .master-titlebar .brand-mark {
-  display: none; position: static; inset: auto; z-index: auto; flex: 0 0 auto; align-items: center;
+  display: inline-flex; position: static; inset: auto; z-index: auto; flex: 0 0 auto; align-items: center;
   min-inline-size: 0; min-block-size: var(--tap-min); padding-inline-end: .75rem;
   color: var(--chrome-band-muted); pointer-events: auto; cursor: pointer;
   transition: color var(--transition-fast) var(--ease-out);
