@@ -11,6 +11,9 @@ module Master
       # never adds or drops one. The web face ports every line (face_ascii.js).
       module Masks
         CONFIG = Glyphs::CONFIG.fetch("masks").freeze
+        ARCHIVE = Master.load_yaml(Master.data_path("face_masks.yml"), default: {}) || {}
+        CATALOG = Array(ARCHIVE.fetch("entries")).map(&:freeze).freeze
+        ENTRY_BY_PROFILE = CATALOG.to_h { |entry| [entry.fetch("profile"), entry] }.freeze
         ORDER = CONFIG.fetch("order").freeze
         TRIGGERS = CONFIG.fetch("trigger_states").freeze
         EASE = CONFIG.fetch("ease").freeze
@@ -77,6 +80,12 @@ module Master
           id = CONFIG.fetch("default_session") if id.empty?
           id.each_byte { |b| h = ((h ^ b) * 16_777_619) & 0xffffffff }
           ORDER.fetch(h % ORDER.size)
+        end
+
+        # The museum/source record corresponding to the abstract geometry chosen
+        # for this session. The record is provenance, not a mesh or mask template.
+        def entry(session = nil)
+          ENTRY_BY_PROFILE.fetch(pick(session))
         end
 
         # The Look's mask and mix for a schedule, or no mask without one.
