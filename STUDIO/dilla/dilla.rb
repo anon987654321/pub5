@@ -130,7 +130,7 @@ module Dilla
                   :kit, :voice, :rig, :sonitex, :sonitex_instances, :vcs, :drum_balance,
                   :chord_balance, :bars, :seed, :performer, :style, :no_stems, :max_duration,
                   :video, :mp3, :midi, :midi_out, :foley, :sample_vol, :sample_weight,
-                  :sample_slices, :sample_loop, :extra, :output_at
+                  :sample_slices, :sample_loop, :extra, :output_at, :overwrite
 
     def initialize
       @mode = :render
@@ -216,6 +216,7 @@ module Dilla
       when "--midi" then opts.midi = true
       when "--midi-out" then value_flag.call(:midi_out)
       when "--foley" then opts.foley = true
+      when "--overwrite" then opts.overwrite = true
       when "--random" then opts.mode = :random
       when "--showcase" then opts.mode = :showcase
       when "--list" then opts.mode = :list
@@ -239,6 +240,7 @@ module Dilla
             [--kit K] [--voice V] [--rig R] [--sonitex P] [--sonitex-instances N]
             [--vcs 0.0-1.0] [--drum-balance ±dB] [--chord-balance ±dB]
             [--seed N] [--performer ID] [--mp3] [--midi] [--midi-out PATH] [--foley]
+            [--overwrite]  replace existing regular output files deliberately
         ruby dilla.rb reference URL|FILE [--style j_dilla|industrial_techno|general]
             [--no-stems] [--max-duration S]
             optional yt-dlp download + bounded Ruby spectral analysis of the mix;
@@ -269,7 +271,7 @@ module Dilla
     when :list then print_list
     when :reference then reference(opts)
     when :industrial_techno then render_industrial_techno(opts)
-    when :demo_each then demo_each
+    when :demo_each then demo_each(opts)
     when :random then render_random(opts)
     when :showcase then render_showcase(opts)
     else render(opts)
@@ -412,8 +414,15 @@ module Dilla
     render(opts)
   end
 
-  def demo_each
+  def demo_each(command_opts)
     dest = render_destination_root
+    names = progressions.each_with_index.map { |p, i| format("%02d_%s", i + 1, p["id"]) }
+    outputs = names.flat_map do |name|
+      base = File.join(dest, name)
+      ["#{base}.wav", "#{base}.mp3", "#{base}.quality.json", "#{base}.session.json", "#{base}.provenance.json"]
+    end
+    outputs << File.join(dest, "demo_manifest.tsv")
+    refuse_existing_outputs!(outputs, overwrite: command_opts.overwrite)
     manifest = []
     progressions.each_with_index do |p, i|
       opts = Options.new
@@ -423,6 +432,7 @@ module Dilla
       out = File.join(dest, "#{name}.mp3")
       opts.out = out
       opts.mp3 = true
+      opts.overwrite = command_opts.overwrite
       result = render(opts, quiet: true)
       manifest << [name, p["id"], result[:seed], result[:performer], p["bpm"], result[:bpm]].join("\t")
       puts "demo-each: #{out}"
@@ -2537,6 +2547,13 @@ module Dilla
   end
 
   def render(opts, showcase: nil, quiet: false)
+    out_base = opts.out ? File.expand_path(opts.out) : File.join(ENGINE_ROOT, "demo")
+    out_base = out_base.sub(/\.(wav|mp3)\z/, "")
+    output_paths = ["#{out_base}.wav", "#{out_base}.quality.json", "#{out_base}.session.json", "#{out_base}.provenance.json"]
+    output_paths << (opts.midi_out.to_s.empty? ? "#{out_base}.mid" : File.expand_path(opts.midi_out)) if opts.midi || !opts.midi_out.to_s.empty?
+    output_paths << "#{out_base}.mp3" if opts.mp3 || opts.out.to_s.end_with?(".mp3") || opts.out.nil?
+    output_paths << "#{out_base}.mp4" if opts.video
+    refuse_existing_outputs!(output_paths, overwrite: opts.overwrite)
     t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     plan = resolve_render_plan(opts, showcase:)
     rng = Rng.new(opts.seed)
@@ -2665,8 +2682,6 @@ module Dilla
     }
 
     # --- write outputs + sidecars
-    out_base = opts.out ? File.expand_path(opts.out) : File.join(ENGINE_ROOT, "demo")
-    out_base = out_base.sub(/\.(wav|mp3)\z/, "")
     dir = File.dirname(out_base)
     FileUtils.mkdir_p(dir)
     wav_path = "#{out_base}.wav"
@@ -2683,10 +2698,10 @@ module Dilla
     mp3_path = nil
     if opts.mp3 || opts.out.to_s.end_with?(".mp3") || opts.out.nil?
       mp3_path = "#{out_base}.mp3"
-      ok, _err = encode_mp3(wav_path, mp3_path)
+      ok, _err = encode_mp3(wav_path, mp3_path, overwrite: opts.overwrite)
       mp3_path = nil unless ok
     end
-    render_video(opts, wav_path) if opts.video
+    render_video(opts, wav_path, overwrite: opts.overwrite) if opts.video
 
     seconds = Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0
     log = format("dilla %s: %s - %s / %s, %.1f BPM, %d bars, seed %s, performer %s, %.1fs render, LUFS %.1f",
@@ -2763,10 +2778,28 @@ module Dilla
     end
   end
 
-  def encode_mp3(wav_path, mp3_path)
+  def refuse_existing_outputs!(paths, overwrite: false)
+    Array(paths).compact.each do |path|
+      expanded = File.expand_path(path)
+      existing = begin
+        File.lstat(expanded)
+      rescue Errno::ENOENT
+        next
+      end
+      unless existing.file? && !existing.symlink?
+        raise ArgumentError, "refusing non-regular output path: #{expanded}"
+      end
+      next if overwrite
+
+      raise Errno::EEXIST, "output already exists: #{expanded} (use --overwrite to replace it)"
+    end
+    true
+  end
+
+  def encode_mp3(wav_path, mp3_path, overwrite: false)
     return [false, nil] if which("ffmpeg").nil?
 
-    _out, err, status = Open3.capture3(Studio::Subprocess.environment, "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+    _out, err, status = Open3.capture3(Studio::Subprocess.environment, "ffmpeg", "-hide_banner", "-loglevel", "error", *(overwrite ? ["-y"] : ["-n"]),
                                        "-i", wav_path, "-codec:a", "libmp3lame", "-b:a", "192k", mp3_path)
     [status.success?, err]
   end
@@ -2779,12 +2812,12 @@ module Dilla
     nil
   end
 
-  def render_video(opts, wav_path)
+  def render_video(opts, wav_path, overwrite: false)
     return unless which("ffmpeg")
 
     mp4 = "#{wav_path.sub(/\.wav\z/, '')}.mp4"
-    system(Studio::Subprocess.environment, "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
-           "-i", wav_path, "-filter_complex",
+    system(Studio::Subprocess.environment, "ffmpeg", "-hide_banner", "-loglevel", "error", *(overwrite ? ["-y"] : ["-n"]),
+           "-i", wav_path, "-filter_complex", 
            "[0:a]showwaves=s=1280x360:mode=cline:colors=cyan|magenta[v];" \
            "[0:a]showcqt=s=1280x360:fps=20[cq];[v][cq]vstack[out]",
            "-map", "[out]", "-map", "0:a", "-c:v", "libx264", "-preset", "veryfast",
@@ -3126,6 +3159,7 @@ module Dilla
     Master.fades!(mix)
     out_base = opts.out ? File.expand_path(opts.out) : File.join(ENGINE_ROOT, "industrial-techno")
     out_base = out_base.sub(/\.(wav|mp3)\z/, "")
+    refuse_existing_outputs!(["#{out_base}.wav", "#{out_base}.quality.json"], overwrite: opts.overwrite)
     FileUtils.mkdir_p(File.dirname(out_base))
     wav_path = "#{out_base}.wav"
     Wav.write_16bit(wav_path, mix)
