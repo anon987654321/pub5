@@ -1425,3 +1425,15 @@ test("web chat records monotonic first-token, first-audio and reply-completion l
   assert.ok(speech.includes("audio.preload = 'auto';"));
   assert.ok(!speech.includes("const dur = await new Promise(resolve =>"));
 });
+
+test("MASTER web shares the CLI's Nerd Font Mono syntax roles", () => {
+  const source = readFileSync(join(root, "styles", "face", "30_conversation.css"), "utf8");
+  const built = readFileSync(join(publicDir, "face.css"), "utf8");
+  for (const css of [source, built]) {
+    assert.match(css, /font-family:\\s*var\\(--font-mono\\)/);
+    for (const role of ["command", "keyword", "flag", "path", "string", "number", "comment", "success", "warning", "error", "operator"]) {
+      assert.match(css, new RegExp("\\.syntax-" + role + "\\b"));
+    }
+    assert.match(css, /font-variant-numeric:\\s*tabular-nums/);
+  }
+});
