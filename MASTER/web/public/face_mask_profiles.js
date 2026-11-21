@@ -7,22 +7,22 @@
   "use strict";
 
   const PROFILES = Object.freeze([
-    { id: "abelam-shield", name: "Abelam Shield", family: "Abelam / East Sepik", note: "Stepped shield silhouette and nested planes", w: .40, h: .54, jaw: .25, crown: .42, asym: .00, brow: .34, nose: .40 },
-    { id: "abelam-prow", name: "Abelam Prow", family: "Abelam / East Sepik", note: "Tall prow with a tapered lower face", w: .29, h: .62, jaw: .12, crown: .28, asym: .02, brow: .27, nose: .52 },
-    { id: "iatmul-river", name: "Iatmul River Face", family: "Iatmul / Sepik", note: "Elongated vertical proportions and projecting bridge", w: .31, h: .60, jaw: .18, crown: .26, asym: .00, brow: .26, nose: .58 },
-    { id: "iatmul-concentric", name: "Iatmul Concentric", family: "Iatmul / Sepik", note: "Broad brow and concentric orbital voids", w: .43, h: .47, jaw: .28, crown: .38, asym: .00, brow: .42, nose: .35 },
-    { id: "sepik-split", name: "Sepik Split Face", family: "Sepik formal study", note: "Asymmetric broad and narrow halves", w: .44, h: .50, jaw: .24, crown: .40, asym: .13, brow: .38, nose: .42 },
-    { id: "elema-tower", name: "Elema Spirit Tower", family: "Elema / Gulf", note: "High forehead and low-set features", w: .33, h: .64, jaw: .17, crown: .25, asym: .01, brow: .30, nose: .47 },
-    { id: "elema-hollow", name: "Elema Hollow Arch", family: "Elema / Gulf", note: "Open vaulted eye region and strong central ridge", w: .39, h: .53, jaw: .20, crown: .35, asym: .00, brow: .43, nose: .50 },
-    { id: "tatanua-crest", name: "Tatanua Crest", family: "New Ireland", note: "Raised asymmetric crest and compact lower face", w: .39, h: .53, jaw: .20, crown: .50, asym: .15, brow: .36, nose: .39 },
-    { id: "malangan-double", name: "Malangan Double Visage", family: "New Ireland", note: "Nested inner and outer face contours", w: .44, h: .54, jaw: .27, crown: .39, asym: .02, brow: .38, nose: .39 },
-    { id: "woven-void", name: "Woven Void", family: "Original synthesis", note: "Open lattice rhythm; voids carry the expression", w: .41, h: .51, jaw: .24, crown: .38, asym: .00, brow: .33, nose: .34 },
-    { id: "mak-yong-court", name: "Mak Yong Court", family: "Malay theatre / Kelantan", note: "Composed brows, narrow eyes and restrained mouth", w: .37, h: .48, jaw: .22, crown: .34, asym: .00, brow: .40, nose: .31 },
-    { id: "mak-yong-character", name: "Mak Yong Character", family: "Malay theatre / Kelantan", note: "Sharper brow and expressive cheek planes", w: .40, h: .50, jaw: .23, crown: .35, asym: .04, brow: .45, nose: .36 },
-    { id: "mek-mulung-hero", name: "Mek Mulung Hero", family: "Malay theatre / Kedah", note: "Strong brow and broad cheek structure", w: .44, h: .49, jaw: .28, crown: .37, asym: .02, brow: .46, nose: .35 },
-    { id: "jikey-comic", name: "Jikey Comic", family: "Malay theatre / Kedah–Perlis", note: "Playful compressed proportions and broad expression", w: .48, h: .42, jaw: .34, crown: .36, asym: .06, brow: .48, nose: .27 },
-    { id: "mah-meri-organic", name: "Mah Meri Carved Form", family: "Orang Asli / Mah Meri", note: "Organic silhouette with softened planes", w: .40, h: .50, jaw: .26, crown: .36, asym: .03, brow: .35, nose: .34 },
-    { id: "jah-hut-angular", name: "Jah Hut Angular Form", family: "Orang Asli / Jah Hut", note: "Faceted profile with angular cheek transitions", w: .38, h: .52, jaw: .18, crown: .37, asym: .02, brow: .42, nose: .43 }
+    { id: "abelam-shield", name: "Abelam Shield", family: "Abelam / East Sepik", note: "Stepped shield silhouette and nested planes", outer: "box", w: .40, h: .54, jaw: .25, crown: .42, asym: .00, brow: .34, nose: .40 },
+    { id: "abelam-prow", name: "Abelam Prow", family: "Abelam / East Sepik", note: "Tall prow with a tapered lower face", outer: "box", crownAxis: "y", w: .29, h: .62, jaw: .12, crown: .28, asym: .02, brow: .27, nose: .52 },
+    { id: "iatmul-river", name: "Iatmul River Face", family: "Iatmul / Sepik", note: "Elongated vertical proportions and projecting bridge", outer: "cylinder", crownAxis: "y", w: .31, h: .60, jaw: .18, crown: .26, asym: .00, brow: .26, nose: .58 },
+    { id: "iatmul-concentric", name: "Iatmul Concentric", family: "Iatmul / Sepik", note: "Broad brow and concentric orbital voids", outer: "ring", inner: true, w: .43, h: .47, jaw: .28, crown: .38, asym: .00, brow: .42, nose: .35 },
+    { id: "sepik-split", name: "Sepik Split Face", family: "Sepik formal study", note: "Asymmetric broad and narrow halves", outer: "box", w: .44, h: .50, jaw: .24, crown: .40, asym: .13, brow: .38, nose: .42 },
+    { id: "elema-tower", name: "Elema Spirit Tower", family: "Elema / Gulf", note: "High forehead and low-set features", outer: "cylinder", crownAxis: "y", w: .33, h: .64, jaw: .17, crown: .25, asym: .01, brow: .30, nose: .47 },
+    { id: "elema-hollow", name: "Elema Hollow Arch", family: "Elema / Gulf", note: "Open vaulted eye region and strong central ridge", outer: "ring", inner: true, w: .39, h: .53, jaw: .20, crown: .35, asym: .00, brow: .43, nose: .50 },
+    { id: "tatanua-crest", name: "Tatanua Crest", family: "New Ireland", note: "Raised asymmetric crest and compact lower face", outer: "box", crownAxis: "y", w: .39, h: .53, jaw: .20, crown: .50, asym: .15, brow: .36, nose: .39 },
+    { id: "malangan-double", name: "Malangan Double Visage", family: "New Ireland", note: "Nested inner and outer face contours", outer: "ring", inner: true, w: .44, h: .54, jaw: .27, crown: .39, asym: .02, brow: .38, nose: .39 },
+    { id: "woven-void", name: "Woven Void", family: "Original synthesis", note: "Open lattice rhythm; voids carry the expression", outer: "ring", lattice: true, w: .41, h: .51, jaw: .24, crown: .38, asym: .00, brow: .33, nose: .34 },
+    { id: "mak-yong-court", name: "Mak Yong Court", family: "Malay theatre / Kelantan", note: "Composed brows, narrow eyes and restrained mouth", outer: "sphere", w: .37, h: .48, jaw: .22, crown: .34, asym: .00, brow: .40, nose: .31 },
+    { id: "mak-yong-character", name: "Mak Yong Character", family: "Malay theatre / Kelantan", note: "Sharper brow and expressive cheek planes", outer: "box", w: .40, h: .50, jaw: .23, crown: .35, asym: .04, brow: .45, nose: .36 },
+    { id: "mek-mulung-hero", name: "Mek Mulung Hero", family: "Malay theatre / Kedah", note: "Strong brow and broad cheek structure", outer: "sphere", w: .44, h: .49, jaw: .28, crown: .37, asym: .02, brow: .46, nose: .35 },
+    { id: "jikey-comic", name: "Jikey Comic", family: "Malay theatre / Kedah–Perlis", note: "Playful compressed proportions and broad expression", outer: "sphere", w: .48, h: .42, jaw: .34, crown: .36, asym: .06, brow: .48, nose: .27 },
+    { id: "mah-meri-organic", name: "Mah Meri Carved Form", family: "Orang Asli / Mah Meri", note: "Organic silhouette with softened planes", outer: "sphere", w: .40, h: .50, jaw: .26, crown: .36, asym: .03, brow: .35, nose: .34 },
+    { id: "jah-hut-angular", name: "Jah Hut Angular Form", family: "Orang Asli / Jah Hut", note: "Faceted profile with angular cheek transitions", outer: "box", w: .38, h: .52, jaw: .18, crown: .37, asym: .02, brow: .42, nose: .43 }
   ]);
 
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 0));
@@ -34,20 +34,24 @@
     const asym = clamp(profile.asym, 0, .15);
     const eyeY = profile.id === "elema-tower" ? .02 : .12;
     const parts = [
-      { key: "outer", primitive: "ring", center: [asym * .25, 0, .06], size: [w, h, .08] },
-      beam("crown", [asym * .4, .39, .05], [profile.crown, .06, .06]),
+      { key: "outer", primitive: profile.outer || "ring", center: [asym * .25, 0, .06], size: [w, h, .08] },
+      beam("crown", [asym * .4, .39, .05], [profile.crown, .06, .06], profile.crownAxis || "x"),
       beam("brow", [asym, .25, .08], [profile.brow, .06, .06]),
       { key: "left-eye", primitive: "ring", center: [-.18 - asym, eyeY, .13], size: [.105, .060, .06] },
       { key: "right-eye", primitive: "ring", center: [.18 + asym, eyeY, .13], size: [.105, .060, .06] },
       beam("nose", [asym * .4, -.06, .16], [.06, profile.nose, .06], "y"),
-      beam("cheeks", [asym, -.13, .06], [Math.max(.18, jaw * 1.55), .06, .06]),
+      profile.inner
+        ? { key: "inner-face", primitive: "ring", center: [asym * .2, -.02, .12], size: [w * .62, h * .66, .06] }
+        : profile.lattice
+          ? beam("lattice", [asym, -.13, .06], [.06, .20, .06], "y")
+          : beam("cheeks", [asym, -.13, .06], [Math.max(.18, jaw * 1.55), .06, .06]),
       beam("jaw", [asym, -.31, .06], [Math.max(.16, jaw * 1.65), .06, .06])
     ];
     return {
       kind: "custom",
       label: profile.name,
       confidence: 1,
-      sequence: ["outer", "crown", "brow", "left-eye", "right-eye", "nose", "cheeks", "jaw"],
+      sequence: ["outer", "crown", "brow", "left-eye", "right-eye", "nose", profile.inner ? "inner-face" : profile.lattice ? "lattice" : "cheeks", "jaw"],
       parts
     };
   }
