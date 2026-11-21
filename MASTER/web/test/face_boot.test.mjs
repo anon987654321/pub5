@@ -1468,11 +1468,11 @@ test("MASTER web highlighter escapes source and classifies shell and Ruby tokens
   const sandbox = {};
   runInNewContext(source, sandbox);
 
-  assert.match(sandbox.output, /class="syntax-keyword">def<\\/span>/);
-  assert.match(sandbox.output, /class="syntax-command">puts<\\/span>/);
-  assert.match(sandbox.output, /class="syntax-string">/);
-  assert.match(sandbox.output, /class="syntax-number">42<\\/span>/);
-  assert.match(sandbox.output, /&lt;img src=x&gt;/);
-  assert.match(sandbox.output, /&lt;script&gt;/);
+  assert.ok(sandbox.output.includes('class="syntax-keyword">def</span>'));
+  assert.ok(sandbox.output.includes('class="syntax-command">puts</span>'));
+  assert.ok(sandbox.output.includes('class="syntax-string">'));
+  assert.ok(sandbox.output.includes('class="syntax-number">42</span>'));
+  assert.ok(sandbox.output.includes('&lt;img src=x&gt;'));
+  assert.ok(sandbox.output.includes('&lt;script&gt;'));
   assert.doesNotMatch(sandbox.output, /<script>/);
 });
