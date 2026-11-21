@@ -26,6 +26,10 @@ module Master
       MAX_RESULTS = 100
       MAX_LIBRARY_FILES = 200_000
       MAX_HASH_FILES = 50_000
+      MAX_SMALL_AUDIO_BYTES = 64 * 1024
+      LOSSLESS_EXTENSIONS = %w[.aiff .alac .ape .flac .wav .wv].freeze
+      LOSSY_EXTENSIONS = %w[.aac .mp3 .mpc .oga .ogg .opus .wma].freeze
+      AMBIGUOUS_AUDIO_EXTENSIONS = %w[.m4a .m4p].freeze
       MAX_MANIFEST_BYTES = 16 * 1024 * 1024
       MAX_MANIFEST_LINES = 500_000
       MAX_MANIFEST_PATHS = 8
@@ -44,6 +48,7 @@ module Master
         when "results" then search_results(search_id)
         when "downloads" then downloads
         when "library" then library(path)
+        when "quality" then quality(path)
         when "gaps" then gaps(path, queries)
         when "manifest"
           require_policy!("manifest_import", expected: "explicit_path_read_only")
@@ -177,6 +182,38 @@ module Master
         }
       end
 
+      def quality(path)
+        require_policy!("quality_check", expected: "explicit_path_read_only")
+        inventory = scan_library(path)
+        files = inventory[:files]
+        empty = files.select { |file| file[:size].zero? }
+        small = files.select { |file| file[:size].positive? && file[:size] <= MAX_SMALL_AUDIO_BYTES }
+        format_classes = {
+          lossless: files.count { |file| LOSSLESS_EXTENSIONS.include?(file[:extension]) },
+          lossy: files.count { |file| LOSSY_EXTENSIONS.include?(file[:extension]) },
+          ambiguous_container: files.count { |file| AMBIGUOUS_AUDIO_EXTENSIONS.include?(file[:extension]) },
+          unclassified: files.count do |file|
+            !LOSSLESS_EXTENSIONS.include?(file[:extension]) &&
+              !LOSSY_EXTENSIONS.include?(file[:extension]) &&
+              !AMBIGUOUS_AUDIO_EXTENSIONS.include?(file[:extension])
+          end
+        }
+        {
+          action: "quality",
+          tracks_scanned: inventory[:tracks],
+          formats: inventory[:extensions],
+          format_classes:,
+          empty_files: empty.length,
+          unusually_small_files: small.length,
+          review: (empty + small).first(200).map do |file|
+            { path: file[:relative_path], size: file[:size], reason: file[:size].zero? ? "empty_file" : "very_small_file" }
+          end,
+          review_list_truncated: empty.length + small.length > 200,
+          truncated: inventory[:truncated],
+          note: "Structural triage only. Small files may be short clips or intentional samples; file extension does not establish bitrate or fidelity. No audio was decoded or changed."
+        }
+      end
+
       def gaps(path, queries)
         requested = Array(queries)
         raise PolicyError, "soulseek: gaps needs 1–100 album or artist queries" unless requested.any? && requested.length <= 100
@@ -280,6 +317,7 @@ module Master
       end
 
       def catalog(path, output_path:, overwrite:, consent:)
+        require_policy!("catalogue_build", expected: "explicit_path_read_only")
         inventory = scan_library(path)
         albums = inventory[:files].group_by { |file| File.dirname(file[:relative_path]) }
         album_rows = albums.sort_by { |directory, _| directory }.map do |directory, files|
@@ -375,6 +413,7 @@ module Master
       end
 
       def duplicates(path, mode:)
+        require_policy!("duplicate_detection", expected: "read_only")
         inventory = scan_library(path)
         @duplicate_scan_skipped = 0
         selected_mode = mode.to_s
