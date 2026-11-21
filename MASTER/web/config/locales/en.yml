@@ -201,7 +201,7 @@ en:
       operator.
     key_plan: "%{plan}: %{quota} checks a month."
     key_docs: "How to use it"
-pair_admin:
+  pair_admin:
     title: "Pairing access"
     lede: "Manage devices that have redeemed a one-time pairing code."
     access_policy: "Pairing grants messaging access only. It does not grant operator tools or shell access. A redeemed pairing stays active until revoked."
