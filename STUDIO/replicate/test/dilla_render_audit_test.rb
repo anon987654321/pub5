@@ -28,11 +28,23 @@ class TestDillaRenderAudit < Minitest::Test
       "drums" => "boom_bap", "groove_profile" => "dilla_shadow",
       "arrangement" => [ { "section" => "A", "bars" => 2 } ]
     }
+    midi_path = File.join(directory, "audit-fixture.mid")
+    track = "\\x00\\xff\\x2f\\x00".b
+    midi = ["MThd", 6, 1, 1, 480].pack("A4Nnnn") + ["MTrk", track.bytesize].pack("A4N") + track
+    File.binwrite(midi_path, midi)
+
+    mp3_path = File.join(directory, "audit-fixture.mp3")
+    File.binwrite(mp3_path, "ID3\\x04\\x00\\x00".b + ("\\x00" * 128))
+
     provenance = {
       "engine" => "dilla", "version" => Dilla::VERSION, "seed" => 1234,
       "render" => {
         "wav" => path, "bytes" => File.size(path),
         "sha256" => Digest::SHA256.file(path).hexdigest
+      },
+      "files" => {
+        "midi" => { "path" => midi_path, "bytes" => File.size(midi_path), "sha256" => Digest::SHA256.file(midi_path).hexdigest },
+        "mp3" => { "path" => mp3_path, "bytes" => File.size(mp3_path), "sha256" => Digest::SHA256.file(mp3_path).hexdigest }
       }
     }
     {
@@ -55,6 +67,8 @@ class TestDillaRenderAudit < Minitest::Test
       assert_equal 44_100, report.dig("audio", "sample_rate")
       assert File.file?(report.fetch("report_path"))
       assert_equal 6, report.dig("manual_audition", "checklist").length
+      assert_equal "PASS", report.fetch("checks").find { |row| row["name"] == "midi_structure" }.fetch("state")
+      assert_equal "PASS", report.fetch("checks").find { |row| row["name"] == "mp3_frame" }.fetch("state")
     end
   end
 
