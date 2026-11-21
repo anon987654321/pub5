@@ -18,7 +18,7 @@ class TestScanLawContracts < Minitest::Test
     %w[bin/operator app.scss deploy.sh].each do |path|
       refute_empty Laws::SmallFilesLaw.new.check(long, path:), path
     end
-    %w[nb.yml snapshot.json TODO.md Gemfile.lock app.js face.part1.txt].each do |path|
+    %w[nb.yml snapshot.json MASTER/README.md Gemfile.lock app.js face.part1.txt].each do |path|
       assert_empty Laws::SmallFilesLaw.new.check(long, path:), path
     end
   end
