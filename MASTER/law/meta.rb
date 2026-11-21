@@ -167,7 +167,7 @@ module Master
         # folder for a .md it holds, and that document is the finding.
         ::Law.define(:NO_NEW_DOCUMENTS) do
           tags %i[CONSTITUTION DOCS]
-          fix "Fold the content into the file that already holds it - root README.md, TODO.md or the subject's existing document; a genuinely new document is a deliberate, recorded entry in documents.allowed_documents, never an authoring default."
+          fix "Fold the content into the existing owner registry, root README.md or the subject's existing document; a genuinely new document is a deliberate, recorded entry in documents.allowed_documents, never an authoring default."
           # A path rule: one example path cannot hold a flagged bad and a clean good.
           proved_by "test/test_scan_law_contracts.rb"
           check do |_src, path|
