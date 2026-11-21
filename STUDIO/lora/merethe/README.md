@@ -142,7 +142,7 @@ Only after the person is recognisable in every candidate should the exact
 immutable model version be entered in that subject's local
 `subject.env` as `LIKELINESS_REVIEWED_VERSION`.
 
-The six-image final batch is a separate operation. Selfie generation is
+The four-image final batch is a separate operation. Selfie generation is
 append-only: no prior portrait, graded still, film or sidecar is replaced or
 deleted. Compare each new series with the previous one in the private gallery.
 

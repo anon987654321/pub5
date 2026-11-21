@@ -12,7 +12,7 @@ export MASTER_SLSKD_API_KEY='your-slskd-api-key'
 MASTER/bin/master
 ```
 
-The default endpoint is loopback HTTP on port 5030. A remote endpoint must use public HTTPS on port 443 and pass MASTER's pinned-address SSRF guard. Do not expose the slskd API directly to the public internet. The API key is never written to repository files or plugin state.
+The default endpoint is loopback HTTP on port 5030. A remote endpoint must use public HTTPS on port 443 and pass MASTER's pinned-address SSRF guard. Do not expose the slskd API directly to the public internet. The API key is never written to repository files or plugin state. Search results are limited to unlocked audio files; MASTER also checks slskd's `isLocked` flag before listing or queueing a result.
 
 ## Actions
 

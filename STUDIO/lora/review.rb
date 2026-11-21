@@ -17,7 +17,7 @@ module Studio
     module Review
       SUBJECTS = %w[johann ragnhild merethe].freeze
       IMAGE_EXTENSIONS = %w[jpg jpeg png webp].freeze
-      RENDER_COUNT = 6
+      RENDER_COUNT = 4
       TILE_WIDTH = 420
       TILE_HEIGHT = 560
       COLUMNS = 3
@@ -37,17 +37,62 @@ module Studio
         end
 
         def render_files
+          rows = ledger_rows
+          latest = rows.reverse.find do |row|
+            row["kind"] == "series_start" && row["subject"] == @subject
+          end
+          paths = if latest
+                    rows.filter_map do |row|
+                      next unless row["kind"] == "render" && row["series_id"] == latest["series_id"]
+
+                      row["path"].to_s unless row["path"].to_s.empty?
+                    end
+                  else
+                    legacy_render_files
+                  end
+          paths.map { |path| File.expand_path(path) }.uniq.select { |path| private_render?(path) }
+        end
+
+        def ledger_rows
+          path = File.join(@subject_directory, "ledger.jsonl")
+          return [] unless File.exist?(path) || File.symlink?(path)
+
+          stat = File.lstat(path)
+          unless stat.file? && !stat.symlink? && stat.uid == Process.uid &&
+                 stat.nlink == 1 && (stat.mode & 0o077).zero?
+            raise Error, "subject ledger must be an owner-only, singly-linked regular file"
+          end
+
+          File.readlines(path, chomp: true, encoding: "UTF-8").filter_map do |line|
+            next if line.empty?
+
+            row = JSON.parse(line)
+            raise Error, "subject ledger row must be an object" unless row.is_a?(Hash)
+
+            row
+          end
+        rescue JSON::ParserError, EncodingError => error
+          raise Error, "subject ledger is not valid JSONL: #{error.message}"
+        end
+
+        def legacy_render_files
           patterns = IMAGE_EXTENSIONS.map do |extension|
             File.join(@root, "postpro_#{@subject}_selfie_*.#{extension}")
           end
-          files = patterns.flat_map { |pattern| Dir.glob(pattern) }.uniq.sort
-          files.select do |path|
-            stat = File.lstat(path)
-            stat.file? && !stat.symlink? && stat.uid == Process.uid &&
-              stat.nlink == 1 && (stat.mode & 0o077).zero? && stat.size.positive?
-          rescue SystemCallError
-            false
-          end
+          patterns.flat_map { |pattern| Dir.glob(pattern) }.uniq.sort
+        end
+
+        def private_render?(path)
+          expanded = File.expand_path(path)
+          return false unless expanded.start_with?("#{@root}#{File::SEPARATOR}")
+          return false unless File.basename(expanded).start_with?("postpro_#{@subject}_selfie_")
+          return false unless IMAGE_EXTENSIONS.include?(File.extname(expanded).delete_prefix(".").downcase)
+
+          stat = File.lstat(expanded)
+          stat.file? && !stat.symlink? && stat.uid == Process.uid &&
+            stat.nlink == 1 && (stat.mode & 0o077).zero? && stat.size.positive?
+        rescue SystemCallError
+          false
         end
 
         def validate_render_count!(renders, expected: RENDER_COUNT)

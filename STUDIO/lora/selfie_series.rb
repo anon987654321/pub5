@@ -3,6 +3,7 @@
 require "json"
 require "fileutils"
 require "time"
+require "securerandom"
 require_relative "idea_picture"
 require_relative "lora"
 
@@ -35,12 +36,14 @@ module Studio
 
       # replace: is a compatibility keyword only. All previous portraits,
       # graded renders and sidecars are retained, regardless of its value.
-      def run(count: 6, replace: false)
+      def run(count: 4, replace: false)
         total = Integer(count)
         raise ArgumentError, "count must be between 1 and #{LIMIT}" unless total.between?(1, LIMIT)
 
         preflight!
         rendered = []
+        series_id = SecureRandom.hex(8)
+        record("series_start", series_id:, count: total)
         total.times do |index|
           scene = if @scenes
                     @scenes[index % @scenes.size]
@@ -53,10 +56,10 @@ module Studio
               scene, film: false, output_stem: stem,
               grade_seed: Studio::Lora::Selfie.grade_seed(index + 1, @subject)
             ).fetch("still")
-            record("render", index: index, scene: scene, path: path)
+            record("render", series_id:, index: index, scene: scene, path: path)
             rendered << path
           rescue StandardError => error
-            record("render_attempt", index: index, scene: scene,
+            record("render_attempt", series_id:, index: index, scene: scene,
                    error: "#{error.class}: #{error.message[0, 200]}")
           end
         end

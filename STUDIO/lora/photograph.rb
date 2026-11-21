@@ -33,7 +33,7 @@ def studio_photograph_actions
     "series" => lambda do |request|
       subject = request.fetch("subject", "ragnhild")
       paths = Studio::Visual::SelfieSeries.new(subject:, engine: request["engine"]).run(
-        count: request.fetch("count", 10)
+        count: request.fetch("count", 4)
       )
       { "subject" => subject, "rendered" => paths, "prior_renders_retained" => true }
     end,
@@ -103,7 +103,7 @@ if $PROGRAM_NAME == __FILE__
       parser.on("--subject NAME", "subject directory under STUDIO/lora (default ragnhild)") { |value| options[:subject] = value }
       parser.on("--selfie-series", "render six portraits using --subject's own LoRA") { options[:series] = true }
       parser.on("--all-subjects", "preflight and render six LoRA portraits for Johann, Ragnhild and Merethe") { options[:all_subjects] = true }
-      parser.on("--count N", Integer, "series length, 1..24 (default 6)") { |value| options[:count] = value }
+      parser.on("--count N", Integer, "series length, 1..24 (default 4)") { |value| options[:count] = value }
       # Compatibility flag; earlier stills are always retained.
       parser.on("--keep", "compatibility flag; prior generated stills are always retained") { options[:keep] = true }
       parser.on("--engine NAME", "render with a model from STUDIO/replicate/models.yml") { |value| options[:engine] = value }
@@ -125,7 +125,7 @@ if $PROGRAM_NAME == __FILE__
     case mode
     when :series
       options[:series] = true
-      options[:count] = wizard.number("How many sittings", default: 6, range: 1..24)
+      options[:count] = wizard.number("How many sittings", default: 4, range: 1..24)
       # The ordinary selfie path is always this subject's trained LoRA.
       puts "Earlier portraits are always retained."
     when :picture
@@ -165,9 +165,9 @@ if $PROGRAM_NAME == __FILE__
       # the first prediction. A missing model blocks the whole batch up front.
       series.each_value(&:preflight!)
       rendered = subjects.to_h do |subject|
-        [subject, series.fetch(subject).run(count: options[:count] || 6)]
+        [subject, series.fetch(subject).run(count: options[:count] || 4)]
       end
-      incomplete = rendered.select { |_subject, paths| paths.length != (options[:count] || 6) }
+      incomplete = rendered.select { |_subject, paths| paths.length != (options[:count] || 4) }
       raise "INCOMPLETE: subjects with incomplete output: #{incomplete.keys.join(", ")}" unless incomplete.empty?
       { "subjects" => rendered, "prior_renders_retained" => true }
     elsif options[:series]
@@ -175,7 +175,7 @@ if $PROGRAM_NAME == __FILE__
       # an intentional opt-out for reference/text experiments.
       Studio::ReplicateClient::Models.engine(options[:engine]) if options[:engine]
       Studio::Visual::SelfieSeries.new(subject: options[:subject], engine: options[:engine]).run(
-        count: options[:count] || 6
+        count: options[:count] || 4
       )
     elsif options[:animate]
       prompt = options[:prompt].to_s.strip

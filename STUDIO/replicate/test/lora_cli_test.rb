@@ -3,6 +3,7 @@
 require "stringio"
 require_relative "minitest_helper"
 require_relative "../../lora/lora"
+require_relative "../../lora/photograph"
 
 class TestStudioLoraCli < Minitest::Test
   CLI = Studio::Lora::CLI

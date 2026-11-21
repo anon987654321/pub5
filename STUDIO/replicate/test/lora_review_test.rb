@@ -19,7 +19,7 @@ class TestStudioLoraReview < Minitest::Test
   end
 
   def test_render_inventory_selects_only_final_private_selfie_outputs
-    6.times do |index|
+    4.times do |index|
       write_private(File.join(@root, "postpro_johann_selfie_#{index + 1}_v1.jpg"))
     end
     write_private(File.join(@root, "postpro_ragnhild_selfie_01_v1.jpg"))
@@ -27,8 +27,32 @@ class TestStudioLoraReview < Minitest::Test
     write_private(File.join(@root, "johann_reference.jpg"))
 
     paths = @builder.render_files
-    assert_equal 6, paths.length
+    assert_equal 4, paths.length
     assert paths.all? { |path| File.basename(path).start_with?("postpro_johann_selfie_") }
+  end
+
+  def test_render_inventory_uses_only_the_latest_four_image_series
+    old_paths = 6.times.map do |index|
+      path = File.join(@root, "postpro_johann_selfie_old_#{index + 1}.jpg")
+      write_private(path)
+      path
+    end
+    latest_paths = 4.times.map do |index|
+      path = File.join(@root, "postpro_johann_selfie_new_#{index + 1}.jpg")
+      write_private(path)
+      path
+    end
+    ledger = File.join(@subject, "ledger.jsonl")
+    rows = [
+      { "kind" => "series_start", "subject" => "johann", "series_id" => "old", "count" => 6 },
+      *old_paths.each_with_index.map { |path, index| { "kind" => "render", "subject" => "johann", "series_id" => "old", "index" => index, "path" => path } },
+      { "kind" => "series_start", "subject" => "johann", "series_id" => "new", "count" => 4 },
+      *latest_paths.each_with_index.map { |path, index| { "kind" => "render", "subject" => "johann", "series_id" => "new", "index" => index, "path" => path } },
+    ]
+    File.write(ledger, rows.map { |row| JSON.generate(row) }.join("\n") + "\n", mode: "w", perm: 0o600)
+    File.chmod(0o600, ledger)
+
+    assert_equal latest_paths, @builder.render_files
   end
 
   def test_reference_inventory_uses_only_private_dataset_images
@@ -98,12 +122,12 @@ class TestStudioLoraReview < Minitest::Test
     end
   end
 
-  def test_review_requires_exactly_six_final_renders
+  def test_review_requires_exactly_four_final_renders
     error = assert_raises(Studio::Lora::Review::Error) do
       @builder.validate_render_count!(["one.jpg"])
     end
-    assert_match(/expected 6/, error.message)
-    assert @builder.validate_render_count!(Array.new(6, "render.jpg"))
+    assert_match(/expected 4/, error.message)
+    assert @builder.validate_render_count!(Array.new(4, "render.jpg"))
   end
 
   private

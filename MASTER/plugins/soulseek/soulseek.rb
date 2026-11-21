@@ -135,6 +135,7 @@ module Master
             next unless file.is_a?(Hash)
             name = file["filename"].to_s
             next unless audio_file?(name)
+            next if file.key?("isLocked") && file["isLocked"] != false
 
             {
               username: response["username"].to_s,
@@ -517,13 +518,22 @@ module Master
         id = clean_search_id(search_id)
         peer = clean_username(username)
         remote_file = clean_remote_filename(filename)
-        bytes = Integer(size)
+        bytes = case size
+                when Integer then size
+                when String
+                  raise ArgumentError unless size.match?(/\A\d+\z/)
+
+                  Integer(size, 10)
+                else
+                  raise ArgumentError
+                end
         raise PolicyError, "soulseek: file size must be positive" unless bytes.positive?
 
         found = Array(api_request(:get, "searches/#{id}/responses")).any? do |response|
           response.is_a?(Hash) && response["username"].to_s == peer &&
             Array(response["files"]).any? do |file|
-              file.is_a?(Hash) && file["filename"].to_s == remote_file && file["size"].to_i == bytes
+              file.is_a?(Hash) && file["filename"].to_s == remote_file && file["size"].to_i == bytes &&
+                (!file.key?("isLocked") || file["isLocked"] == false)
             end
         end
         raise PolicyError, "soulseek: selected file is not an unlocked result in that search" unless found

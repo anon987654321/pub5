@@ -68,10 +68,26 @@ voice of the creative work.
   The exact version must also be recorded in private `subject.env` as
   `LIKELINESS_REVIEWED_VERSION` after full-size comparison with approved
   reference photographs. Retrained or changed versions are blocked until reviewed.
-  `ruby STUDIO/lora/photograph.rb --all-subjects --count 6` preflights Johann,
-  Ragnhild and Merethe together and appends six subject-specific scenes each.
+  `ruby STUDIO/lora/photograph.rb --all-subjects --count 4` preflights Johann,
+  Ragnhild and Merethe together and appends four curated FW26 wardrobe scenes each.
   Earlier generated stills and sidecars are always retained; no stale-render
   deletion path exists.
+  Each selfie is then graded separately by
+  `STUDIO/postpro/postpro.rb --heavy --count 1` through
+  `IdeaPicture#render_still`. The provider original is preserved, Postpro
+  writes a separately named graded sibling, and the append-only series ledger
+  records the graded file as the final portrait. Review sheets use those
+  per-image Postpro outputs, not the ungraded originals.
+  The first four scenes for each subject use an original, coordinated
+  autumn/winter ’26 wardrobe direction: Johann gets textured wool, a long
+  chore coat, waffle-knit layering and a clean suede blouson; Ragnhild and
+  Merethe get structured tailoring, oxblood/chartreuse accents, velvet,
+  charmeuse, leather, suede and shearling. The clothing silhouettes and fabrics
+  are editorial references, not copies of specific products; the prompts do
+  not add retailer logos or branding. The direction follows
+  [NET-A-PORTER’s FW26 trend report](https://www.net-a-porter.com/en-gb/porter/article-c99dca08ba956cfc/fashion/art-of-style/fw26-fashion-trends),
+  [GQ’s A/W 2026 menswear edit featuring MR PORTER selections](https://www.gq-magazine.co.uk/article/autumn-winter-2026-menswear-trends)
+  and [MR PORTER Norway’s clothing range](https://www.mrporter.com/en-no/mens/clothing).
   `ruby STUDIO/lora/train.rb --all` validates all three private datasets,
   consent records, captions, shared settings and Replicate destination visibility
   before any upload, then trains sequentially and records immutable candidate
@@ -92,12 +108,14 @@ voice of the creative work.
   a shared-readable file. Private `weights/<MODEL>/replicate_training.json`
   manifests require owner-only directories and a singly-linked owner-only file;
   the tracked subject-root manifest remains a non-secret compatibility pin.
-  Only then may the six-image batch run.
-`ruby STUDIO/lora/photograph.rb --all-subjects --count 6` appends the three
+  Only then may the four-image batch run.
+`ruby STUDIO/lora/photograph.rb --all-subjects --count 4` appends the three
   final series after each subject's own preflight succeeds. Earlier generations
   stay in place. Then run
-  `ruby STUDIO/lora/review.rb --subject NAME` for each person to create final
-  contact sheets and diagnostic reports. Open each private report's
+  `ruby STUDIO/lora/review.rb --subject NAME` for each person to review only the
+  latest recorded four-image series. The ledger keeps earlier generations out
+  of the current contact sheet while preserving every old still and sidecar.
+  Open each private report's
   `index.html` to inspect every source and final portrait at full resolution;
   the page links the underlying local image files. This is a private review,
   not gallery publication. `selfies_gallery.rb` has a separate publication-

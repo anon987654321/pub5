@@ -20,4 +20,16 @@ class TestStudioLoraCraft < Minitest::Test
     end
     assert_equal 10, Studio::Lora::Selfie::SCENE_STOCKS.uniq.length
   end
+
+  def test_first_four_subject_sittings_use_fw26_wardrobe_directions
+    scenes = Studio::Lora::Selfie::SUBJECT_SCENES
+
+    assert_match(/herringbone|Fair Isle/i, scenes.fetch("johann").first)
+    assert_match(/suede|leather/i, scenes.fetch("johann")[2])
+    assert_match(/oxblood|silk-charmeuse/i, scenes.fetch("ragnhild").first)
+    assert_match(/velvet/i, scenes.fetch("ragnhild")[1])
+    assert_match(/shearling|cashmere/i, scenes.fetch("merethe").first)
+    assert_match(/velvet/i, scenes.fetch("merethe")[1])
+    refute scenes.values.flatten.first(4).any? { |scene| scene.match?(/Net-a-Porter|MR Porter/i) }
+  end
 end

@@ -44,9 +44,20 @@ class TestSelfieSeries < Minitest::Test
   def setup
     @dir = Dir.mktmpdir
     @client = FakeClient.new
+    @graded_paths = []
+    graded_paths = @graded_paths
     Studio::Visual::IdeaPicture.class_eval do
       alias_method :grade_without_stub, :grade
-      define_method(:grade) { |path, **| path }
+      define_method(:grade) do |path, **|
+        stem = File.basename(path, File.extname(path))
+        graded = File.join(File.dirname(path), "postpro_#{stem}_portrait_v1.jpg")
+        raise "refusing to replace a graded fixture" if File.exist?(graded) || File.symlink?(graded)
+
+        File.write(graded, "postpro graded image", mode: "w", perm: 0o600)
+        File.chmod(0o600, graded)
+        graded_paths << graded
+        graded
+      end
       alias_method :still_model_without_stub, :still_model
       define_method(:still_model) { "owner/model:version-123" }
       alias_method :subject_env_without_stub, :subject_env
@@ -91,6 +102,23 @@ class TestSelfieSeries < Minitest::Test
     end
     assert File.file?(rendered.first)
     assert rendered.all? { |path| File.basename(path).include?("probe_selfie_") }
+  end
+
+  def test_every_rendered_selfie_receives_its_own_postpro_grade
+    rendered = run_series(series, count: 4)
+
+    assert_equal 4, rendered.length
+    assert_equal 4, @graded_paths.length
+    assert_equal rendered.sort, @graded_paths.sort
+    assert rendered.all? { |path| File.basename(path).start_with?("postpro_probe_selfie_") }
+    rendered.each { |path| assert_equal "postpro graded image", File.read(path) }
+  end
+
+  def test_default_batch_contains_four_new_portraits
+    run_series(series)
+
+    assert_equal 4, @client.predictions.length
+    assert_equal 4, ledger_rows("render").length
   end
 
   def test_default_series_uses_the_subject_pinned_lora_without_fallback
@@ -208,10 +236,15 @@ class TestSelfieSeries < Minitest::Test
     run_series(series, count: 2)
 
     assert_equal 2, ledger_rows("render").size
+    all_rows = File.readlines(File.join(@dir, "ledger.jsonl")).map { |line| JSON.parse(line) }
     row = ledger_rows("render").first
 
     assert_equal "probe", row["subject"]
     assert row["scene"].to_s.length > 10
+    assert_equal 1, ledger_rows("series_start").length
+    assert_equal 1, ledger_rows("render").map { |item| item["series_id"] }.uniq.length
+    assert_equal ledger_rows("series_start").first["series_id"], row["series_id"]
+    assert_equal 2, all_rows.first["count"]
     assert_equal 0o600, File.stat(File.join(@dir, "ledger.jsonl")).mode & 0o777
     assert_equal 0o700, File.stat(@dir).mode & 0o777
   end

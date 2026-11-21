@@ -402,8 +402,12 @@ class TestPlugins < Minitest::Test
         "username" => "selector",
         "hasFreeUploadSlot" => true,
         "files" => [
-          { "filename" => "Dilla/Donuts/01 Workinonit.flac", "size" => 12_000, "bitRate" => 900 },
+          { "filename" => "Dilla/Donuts/01 Workinonit.flac", "size" => 12_000, "bitRate" => 900, "isLocked" => false },
+          { "filename" => "Dilla/Locked/02 Locked.flac", "size" => 13_000, "isLocked" => true },
           { "filename" => "Dilla/cover.jpg", "size" => 1_000 },
+        ],
+        "lockedFiles" => [
+          { "filename" => "Dilla/Private/03 Private.flac", "size" => 14_000, "isLocked" => true },
         ],
       }]
     end
@@ -448,6 +452,40 @@ class TestPlugins < Minitest::Test
     assert_equal "batch-1", result.fetch(:batch_id)
     assert_equal 1, calls.last[2].fetch(:files).length
     assert_equal "Album/01 Track.flac", calls.last[2].fetch(:files).first.fetch(:filename)
+  end
+
+  def test_soulseek_queue_refuses_a_locked_search_file
+    plugin = Master::Plugin.load("soulseek")
+    id = "9d7c19c9-9de7-4b87-9f79-79b1c0a7bd55"
+    posted = false
+    plugin.define_singleton_method(:api_request) do |method, _path, _payload = nil|
+      posted = true if method == :post
+      [{
+        "username" => "peer",
+        "files" => [{ "filename" => "Album/Locked.flac", "size" => 12_000, "isLocked" => true }]
+      }]
+    end
+
+    assert_raises(Master::Plugin::PolicyError) do
+      plugin.call(
+        action: "queue", search_id: id, username: "peer",
+        filename: "Album/Locked.flac", size: 12_000,
+        rights_basis: "artist_authorized", consent: true
+      )
+    end
+    refute posted
+  end
+
+  def test_soulseek_queue_rejects_fractional_file_sizes
+    plugin = Master::Plugin.load("soulseek")
+
+    assert_raises(Master::Plugin::PolicyError) do
+      plugin.call(
+        action: "queue", search_id: "9d7c19c9-9de7-4b87-9f79-79b1c0a7bd55",
+        username: "peer", filename: "Album/01 Track.flac", size: 12_000.5,
+        rights_basis: "artist_authorized", consent: true
+      )
+    end
   end
 
   def test_soulseek_rejects_path_traversal
