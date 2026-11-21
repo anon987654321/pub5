@@ -331,7 +331,7 @@ module Master
             convergence.rb core.rb design.rb device.rb face.rb flat_law_catalogue.rb
             gap.rb law_catalogue_preflight.rb law_vocabulary.rb master.rb md.rb
             model_catalogue_guard.rb model_catalogue_sections_guard.rb ops.rb pdf.rb
-            phoenix.rb plugin.rb proof.rb provider_catalogue_guard.rb result.rb
+            phoenix.rb plugin.rb portal_agent.rb proof.rb provider_catalogue_guard.rb result.rb
             security_error.rb snapshot.rb soul.rb unwrap_error.rb
           ].freeze
 
