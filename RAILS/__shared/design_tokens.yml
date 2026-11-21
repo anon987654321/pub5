@@ -1171,8 +1171,8 @@ face_interface:
       point_allocation:
         stipple_fraction: 0.75
         world_fraction: 0.25
-      desktop_points: 1200
-      mobile_points: 420
+      desktop_points: 10800
+      mobile_points: 3200
       desktop_particles: 200
       mobile_particles: 120
       reduced_motion_particles: 64

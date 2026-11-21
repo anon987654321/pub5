@@ -41,7 +41,7 @@ module Master
           ms = ev[:ts_ms]
           name = ev[:event]
           detail = ev.except(:ts_ms, :event).reject { |_, v| v.nil? }
-          lines << "  +#{ms.to_s.rjust(5)}ms  #{name}  #{detail.empty? ? "" : detail.inspect}"
+          lines << "event0: +#{ms}ms #{name}#{detail.empty? ? "" : "; #{detail.inspect}"}"
         end
         lines.join("\n")
       end

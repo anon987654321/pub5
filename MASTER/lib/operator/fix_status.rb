@@ -99,8 +99,8 @@ module Operator
                end
       end
       data[:runs].each do |row|
-        out << "  #{row[:state].ljust(11)} #{row[:tree]} pass #{row[:pass]}/#{row[:max_passes]} " \
-               "files #{row[:files]} pid #{row[:pid]}#{row[:alive] ? " alive" : ""} started #{row[:started]}"
+        out << "fix0: #{row[:state]} tree=#{row[:tree]} pass=#{row[:pass]}/#{row[:max_passes]} " \
+               "files=#{row[:files]} pid=#{row[:pid]}#{row[:alive] ? " alive" : ""} started=#{row[:started]}"
         out << "    result: #{row[:message]}" unless row[:message].empty?
         out << "    receipt: #{row[:receipt]}"
         out << "    assessment: #{row[:assessment_proof]}"

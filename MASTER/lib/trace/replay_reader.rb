@@ -209,7 +209,7 @@ module Master
           ms = ev[:ts_ms] || ev["ts_ms"]
           name = ev[:event] || ev["event"]
           detail = (ev.is_a?(Hash) ? ev : {}).except(:ts_ms, :event, "ts_ms", "event").reject { |_, v| v.nil? }
-          lines << "  +#{ms.to_s.rjust(5)}ms  #{name}  #{detail.empty? ? "" : detail.inspect}"
+          lines << "event0: +#{ms}ms #{name}#{detail.empty? ? "" : "; #{detail.inspect}"}"
         end
         lines.join("\n")
       end
@@ -230,10 +230,10 @@ module Master
 
       def format_record(rec)
         ts = (Time.parse(rec["timestamp"]) rescue Time.now.utc).strftime("%H:%M:%S")
-        event = rec["event"].to_s.ljust(28)
+        event = rec["event"].to_s
         pay = rec["payload"]
         summary = pay.is_a?(Hash) ? pay.first(4).map { |k, v| "#{k}=#{v.to_s.tr('"', "")[0, 24]}" }.join(" ") : pay.to_s
-        "#{ts} #{event} #{summary[0, 100]}"
+        ["event0:", ts, event, summary[0, 100]].reject(&:empty?).join(" ")
       end
 
       def render_commit(sha)

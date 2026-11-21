@@ -23,6 +23,17 @@ class TestReplayReader < Minitest::Test
     assert_includes output, "scan:complete"
   end
 
+  def test_event_records_use_unpadded_dmesg_lines
+    reader = Trace::ReplayReader.new(root: @dir)
+    line = reader.send(:format_record, {
+      "timestamp" => "2026-06-25T10:00:00Z",
+      "event" => "scan:complete",
+      "payload" => { "count" => 1 },
+    })
+    assert_equal "event0: 10:00:00 scan:complete count=1", line
+    refute_match(/ {2,}/, line)
+  end
+
   def test_replay_commit_correlates_nearby_events
     repo = File.join(@dir, "repo")
     FileUtils.mkdir_p(repo)

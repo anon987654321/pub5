@@ -53,7 +53,7 @@ For local handwritten archives, `/documents analyze ~/Photos` reads a bounded se
 ## Terminal type and accessibility
 
 MASTER does not set the terminal emulator's font size. PuTTY and Termux own
-that setting, so choose a large fixed-width face there. Start at 16–18 pt in
+that setting, so choose a large fixed-width face there. Start at 20–22 pt in
 PuTTY, then increase it until the text is comfortable at normal viewing
 distance. Larger type is a supported operating preference, not a layout error.
 

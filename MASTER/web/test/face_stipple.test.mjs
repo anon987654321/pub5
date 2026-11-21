@@ -56,7 +56,9 @@ test("particle introduction converges into the face on the shared render clock",
 });
 
 test("fingerprint ridges and radial signal waves stay inside the bounded one-pixel field", () => {
-  assert.match(tokens, /fingerprint:\s*\n\s+enabled: true\s*\n\s+spacing: 22\.0/);
+  assert.match(tokens, /fingerprint:\s*\n\s+enabled: true\s*\n\s+spacing: 22\.0\s*\n\s+strength: 0\.48/);
+  assert.match(tokens, /intro_wave_strength: 0\.28/);
+  assert.match(tokens, /desktop_points: 10800\s*\n\s+mobile_points: 3200/);
   assert.match(system, /function fingerprintConfiguration\(\)/);
   assert.match(system, /uniform float uFingerprintStrength;/);
   assert.match(system, /float waveRadius = uIntroProgress \* 2\.0/);
@@ -401,7 +403,7 @@ function loadFaceStateBudget({ coarsePointer = false, narrowViewport = false, co
       },
       spatial: { budget: {
         point_allocation: { stipple_fraction: 0.75, world_fraction: 0.25 },
-        desktop_points: 1200, mobile_points: 420, desktop_particles: 200, mobile_particles: 120,
+        desktop_points: 10800, mobile_points: 3200, desktop_particles: 200, mobile_particles: 120,
         reduced_motion_particles: 64, max_device_pixel_ratio: 2, active_fps: 24, idle_fps: 12,
         hidden_fps: 0, reduced_motion_fps: 8, battery_fps: 12, pulse_limit: 24, hud_labels: 5
       } }
@@ -602,7 +604,7 @@ test("stipple module boots and builds from the canonical idle profile", () => {
     MASTER_FACE_CONTRACT: {
       state: { activity: 0.14, arousal: 0.22, focus: 0.86, confidence: 0.86, risk: 0, still_modes: ["idle"] },
       spatial: { budget: {
-        desktop_points: 1200, mobile_points: 420, desktop_particles: 200, mobile_particles: 120,
+        desktop_points: 10800, mobile_points: 3200, desktop_particles: 200, mobile_particles: 120,
         reduced_motion_particles: 64, point_allocation: { stipple_fraction: 0.75, world_fraction: 0.25 }
       } },
       stipple_force: { idle: "residual", warning: "residual" },

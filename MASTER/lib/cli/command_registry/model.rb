@@ -81,7 +81,7 @@ module Master
           lane = router.lane_label(id) if router.respond_to?(:lane_label)
           labels = Array(tiers_by_id.fetch(id, [])) + Array(lane)
           detail = labels.map(&:to_s).reject(&:empty?).uniq.join(", ")
-          name = detail.empty? ? id : "#{id}  #{detail}"
+          name = detail.empty? ? id : "#{id}: #{detail}"
           name = "#{name} (current)" if id == current
           { name:, value: id }
         end
@@ -92,9 +92,7 @@ module Master
         TTY::Prompt.new.select("Choose a reachable model", choices, **options)
       end
 
-      # A table: one row per model the pool can reach, its tiers or its lane in
-      # the second column, and an arrow on the one in use. Under it, what would
-      # add more.
+      # One factual line per reachable model; the terminal wraps long identifiers.
       def list_models(root:, metrics:, agent:)
         router = model_router_of(agent)
         tiers_by_id = model_tiers_by_id(root)
@@ -106,19 +104,20 @@ module Master
       end
 
       def model_rows(ids:, current:, tiers_by_id:, router:)
-        width = ids.map(&:length).max.to_i
         ids.map do |id|
           label = tiers_by_id.fetch(id) { [router&.lane_label(id)].compact }.uniq.join(", ")
-          "#{id == current ? '->' : ' '} #{id.ljust(width)}  #{label}".rstrip
+          marker = id == current ? "current" : "available"
+          tier = label.empty? ? "" : "; tier=#{label}"
+          "model0: #{marker} #{id}#{tier}"
         end
       end
 
       def model_list_footer(router, metrics)
         growth = Array(router&.pool_growth)
         quality = Array(metrics&.model_quality&.map do |mod, stat|
-          "  #{mod}: #{stat[:calls]} calls, fail rate #{stat[:fail_rate]}"
+          "model0: #{mod}; calls=#{stat[:calls]}; fail_rate=#{stat[:fail_rate]}"
         end)
-        footer = growth.empty? ? [] : ["", "more with:"] + growth.map { |fix| "  #{fix}" }
+        footer = growth.empty? ? [] : ["", "more with:"] + growth.map { |fix| "pool0: add #{fix}" }
         footer += ["", "this session:"] + quality unless quality.empty?
         footer.empty? ? "" : "\n#{footer.join("\n")}"
       end
@@ -169,11 +168,11 @@ module Master
         measured.sort_by { |row| [-row[:failures], -row[:calls], row[:id]] }.first(30).each do |row|
           average = row[:latency_ms] ? "#{row[:latency_ms].round}ms" : "n/a"
           first_token = " ttft=#{row[:first_token_ms].round}ms" if row[:first_token_ms]
-          lines << "  #{row[:id]}  calls=#{row[:calls]} ok=#{row[:successes]} " \
-                   "fail=#{row[:failures]} success=#{(row[:rate] * 100).round(1)}% avg_ok=#{average}#{first_token}"
+          lines << "model0: #{row[:id]}; calls=#{row[:calls]}; ok=#{row[:successes]}; " \
+                   "fail=#{row[:failures]}; success=#{(row[:rate] * 100).round(1)}%; avg_ok=#{average}#{first_token ? "; #{first_token.strip}" : ""}"
         end
         hidden = measured.size - 30
-        lines << "  ... #{hidden} more models" if hidden.positive?
+        lines << "model0: #{hidden} more models not shown" if hidden.positive?
         lines.join("\n")
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "command_registry.model_health")
@@ -202,7 +201,7 @@ module Master
           average = latency.finite? && latency.positive? ? "avg_ok=#{latency.round}ms" : "avg_ok=n/a"
           first_token = Float(row[:first_token_ms], exception: false) || 0.0
           ttft = "ttft=#{first_token.round}ms" if first_token.finite? && first_token.positive?
-          "#{row[:rank]}. #{row[:id]}  #{row[:lane]}  #{quota}  #{rate} calls=#{calls} #{average}#{ttft ? " #{ttft}" : ""}"
+          "model0: rank=#{row[:rank]}; id=#{row[:id]}; lane=#{row[:lane]}; #{quota}; #{rate}; calls=#{calls}; #{average}#{ttft ? "; #{ttft}" : ""}"
         end.join("\n")
       end
 

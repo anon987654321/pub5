@@ -10,6 +10,23 @@ require "operator/status_report"
 class TestStatusReport < Minitest::Test
   def tree_of(line) = Operator::StatusReport.allocate.send(:tree_of, line)
 
+  def test_service_and_port_records_are_independent_dmesg_lines
+    report = Operator::StatusReport.allocate
+    payload = {
+      services: { "MASTER web" => "ok", "brgen" => "unknown" },
+      ports: { "MASTER web" => "listening :53187" },
+      repo: "/tmp/pub5", mode: "local", tree: "MASTER", branch: "main",
+      commit: "abc123", dirty: 0, dirty_by_tree: {}, behind: "0",
+      ruby: "3.4.1", ruby_ok: true, backlog_open: 0, backlog_source: "register",
+      horizon_count: 0, domain_signals: [], next_command: "bin/master /help",
+    }
+    lines = report.render_status_lines(payload)
+    assert_includes lines, "service0: MASTER web; ok"
+    assert_includes lines, "service0: brgen; unknown"
+    assert_includes lines, "port0: MASTER web; listening :53187"
+    refute lines.any? { |line| line.match?(/ {2,}/) && line.match?(/\A(?:service0|port0):/) }
+  end
+
   def test_service_status_prefers_the_fixed_broker
     source = File.read(File.expand_path("../lib/operator/status_report.rb", __dir__))
     assert_includes source, '["doas", "-n", broker, "service", "check", service]'

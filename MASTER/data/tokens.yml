@@ -485,13 +485,13 @@ tokens:
     # reads this through MASTER_FACE_CONTRACT and Ruby through Face::Contract.
     stipple:
       intro_duration_ms: 1200
-      # Curved contour ridges are a restrained tonal structure inside the same point field.
+      # Fingerprint ridges stay legible within the same greyscale point field.
       fingerprint:
         enabled: true
         spacing: 22.0
-        strength: 0.28
+        strength: 0.48
         center: [0.08, 0.06]
-        intro_wave_strength: 0.16
+        intro_wave_strength: 0.28
       # Deliberate low-resolution contour stepping; subtle enough to preserve facial readability.
       aliasing:
         enabled: true
@@ -1163,8 +1163,8 @@ tokens:
         # A single additive-point ceiling is partitioned between stipple and FaceWorld.
         # These weights must sum to 1; FaceState normalizes defensively at runtime.
         point_allocation: { stipple_fraction: 0.75, world_fraction: 0.25 }
-        desktop_points: 1200
-        mobile_points: 420
+        desktop_points: 10800
+        mobile_points: 3200
         desktop_particles: 200
         mobile_particles: 120
         reduced_motion_particles: 64

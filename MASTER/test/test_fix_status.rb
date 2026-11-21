@@ -110,6 +110,7 @@ class TestFixStatus < Minitest::Test
     assert_includes row[:receipt], "files=42"
     assert_includes row[:receipt], "finding=aaaaaaaaaaaa"
     assert_includes row[:receipt], "snapshot=bbbbbbbbbbbb"
+    assert_includes rendered, "fix0: validation_failed tree=RAILS pass=2/7 files=2 pid=0"
     assert_includes rendered, "result: validation failed: rendered output differs"
     assert_equal "partial", row[:assessment_verification].fetch("status")
     assert_equal 18, row[:assessment_verification].fetch("checked_count")

@@ -55,12 +55,8 @@ module Operator
       lines << "debt: #{payload[:backlog_open]} open (#{payload[:backlog_source]})"
       lines << "horizon: #{payload[:horizon_count]} planned items (agent: ignore)"
       lines << ""
-      lines << "services:"
-      payload[:services].each { |name, state| lines << "  #{name.ljust(14)} #{state}" }
-      lines << ""
-      lines << "ports:"
-      payload[:ports].each { |name, state| lines << "  #{name.ljust(14)} #{state}" }
-      lines << ""
+      payload[:services].each { |name, state| lines << "service0: #{name}; #{state}" }
+      payload[:ports].each { |name, state| lines << "port0: #{name}; #{state}" }
       # Domain/relay skew only when non-empty — silence is the success case
       # (experiment 1: no separate command to remember).
       Array(payload[:domain_signals]).each { |line| lines << line }
