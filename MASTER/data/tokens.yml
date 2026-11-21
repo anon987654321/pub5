@@ -553,7 +553,19 @@ tokens:
       # Keep the normal carrier population; open small gaps by spacing positions, not by
       # discarding dots. The point sprite remains exactly one pixel.
       density_scale: 0.90
-      particle_spacing_scale: 1.045
+      particle_spacing_scale: 1.075
+      # Hollow Gaze: open larger orbital and mouth apertures without thinning the carrier field.
+      # Faultline is a temporary, state-bound void along the right contour; ready restores it.
+      voids:
+        eye_aperture_scale: 1.14
+        mouth_width: 0.225
+        mouth_height: 0.072
+        mouth_curve: 0.05
+        faultline:
+          enabled: true
+          states: [error]
+          half_width: 0.011
+          strength: 0.82
       # Deliberate low-resolution contour stepping; subtle enough to preserve facial readability.
       aliasing:
         enabled: true
