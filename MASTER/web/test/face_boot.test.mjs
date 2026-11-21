@@ -123,8 +123,8 @@ test("the chat keeps the CLI's monospaced presentation; the chrome takes brgen's
   assert.match(css, /html, body \{[\s\S]*?font:\s*16px\/1\.5 var\(--font\)/);
   assert.match(css, /#chat-log \{[^}]*font:\s*var\(--terminal-font-size\)\/var\(--leading-body\) var\(--font-mono\)/);
   assert.match(css, /#prompt-form input, #prompt-form textarea \{[^}]*font:\s*400 var\(--terminal-font-size\)\/var\(--leading-body\) var\(--font-mono\)/);
-  assert.match(css, /--terminal-font-size: 1\\.125rem/);
-  assert.match(rules, /terminal-font-size: "1\\.125rem"/);
+  assert.match(css, /--terminal-font-size: 1\.125rem/);
+  assert.match(rules, /terminal-font-size: "1\.125rem"/);
   assert.match(css, /--font-label:\s*"JetBrainsMono Nerd Font"/);
   assert.match(rules, /face_interface:/);
   assert.match(rules, /prompt:\s*\n\s+font: font_code/);
