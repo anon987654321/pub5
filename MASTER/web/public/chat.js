@@ -323,7 +323,8 @@ window._chatOnChunk = (raw) => {
     _streamEl.closest('.message')?.classList.add('msg-error-flash');
     setTimeout(() => _streamEl.closest('.message')?.classList.remove('msg-error-flash'), 120);
   }
-  const text = _streamEl.textContent + raw.replace(/\n/g, '\n').replace(/\\\\/g, '\\');
+  const previousText = typeof _streamEl.innerText === 'string' ? _streamEl.innerText : _streamEl.textContent;
+  const text = previousText + raw.replace(/\n/g, '\\n').replace(/\\\\/g, '\\');
   if (text.includes('```')) {
     _streamEl.innerHTML = renderTerminalText(text);
   } else {
