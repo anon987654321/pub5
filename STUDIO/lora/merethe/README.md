@@ -147,6 +147,24 @@ The four-image final batch is a separate operation. Selfie generation is
 append-only: no prior portrait, graded still, film or sidecar is replaced or
 deleted. Compare each new series with the previous one in the private gallery.
 
+## Promotional campaign — Tommervik.no
+
+Campaign purpose, as confirmed by the operator: create portrait and video assets
+for Merethe's business, [Tommervik.no](https://www.tommervik.no/). The site's
+current public presentation includes courses, meditation and podcast content;
+use its approved wording, current brand assets and a clear link back to the
+site. The campaign must not invent testimonials, qualifications or service
+outcomes, and must not make diagnosis, treatment or guaranteed-recovery claims.
+See the site's [ethical guidance](https://www.tommervik.no/etikk-og-moral/).
+
+This brief records the requested creative purpose; it is not a consent record.
+The training and generation permissions do not grant public-use rights by
+themselves. Before a film or image is published or distributed, Merethe's
+private consent record and every contributing source set must separately
+approve `model_publication` and `model_distribution`, with the corresponding
+private evidence. Keep candidate renders and finished promo files private until
+those release checks pass. Nothing from this campaign belongs in Git.
+
 ## Promo video
 
 Once the LoRA renders a selfie series, cut it into the piece the subject
