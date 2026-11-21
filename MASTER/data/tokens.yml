@@ -427,7 +427,7 @@ tokens:
       # The smallest step of the shared type scale (__shared/_tokens.scss),
       # which the family :root embedded ahead of this block does not carry.
       text-extra-small: "0.75rem"
-      terminal-font-size: "1.125rem"
+      terminal-font-size: "1.25rem"
       text-title: "1.25rem"
       baseline: "4px"
       measure: "60ch"
@@ -439,6 +439,7 @@ tokens:
       radius-large: "0"
       radius-pill: "0"
       face-bar-height: "44px"
+      face-chrome-bottom: "calc(var(--face-bar-height) + var(--chrome-inset))"
       bar-height: "44px"
       hud-tier-status: "calc(var(--face-bar-height) + var(--safe-bottom) + 8px)"
       hud-tier-caption: "calc(var(--face-bar-height) + var(--safe-bottom) + var(--tap-min))"
@@ -484,7 +485,7 @@ tokens:
     # How the stipple layer looks in each state in `modes` above; the web face
     # reads this through MASTER_FACE_CONTRACT and Ruby through Face::Contract.
     stipple:
-      intro_duration_ms: 1200
+      intro_duration_ms: 5200
       # Fingerprint ridges stay legible within the same greyscale point field.
       fingerprint:
         enabled: true
