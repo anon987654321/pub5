@@ -42,9 +42,9 @@ MASTER/bin/operator vps deploy all --remote
 
 This pins one revision, applies the mirror, then deploys every active
 application in `RAILS/apps.yml`, including MASTER's in-place web app.
-The one-time `pub5-admin` broker bootstrap and live-operation prerequisites
-are documented in [RUNBOOK.md](RUNBOOK.md). Read that runbook before SSH,
-`doas`, deployment, DNS, service changes or recovery.
+Live-operation prerequisites and the direct `doas`/`rcctl` workflow are documented
+in [RUNBOOK.md](RUNBOOK.md). Read it before SSH, `doas`, deployment, DNS, service
+changes or recovery.
 
 ## Ownership
 
@@ -65,5 +65,4 @@ Render the local pub5 manual pages from the repository root:
 
 ```sh
 MANPATH="$PWD/OPENBSD/mirror/usr/local/man" man -P cat 8 vps-deploy
-MANPATH="$PWD/OPENBSD/mirror/usr/local/man" man -P cat 8 pub5-admin
 ```
