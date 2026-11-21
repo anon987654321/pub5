@@ -38,6 +38,8 @@ module Backlog
       Array(data.fetch(collection, [])).filter_map do |row|
         task = row["agent_task"]
         next unless task
+        state = (row["state"] || row["status"]).to_s
+        next if %w[landed satisfied rejected blocked operator evidence].include?(state)
 
         entry(source:, row:, task:)
       end
@@ -78,10 +80,14 @@ module Backlog
     }
   end
 
+  def registry_digest(row)
+    row[:registry_digest] || Digest::SHA256.hexdigest(YAML.dump(row))
+  end
+
   def item_digest(row)
     Digest::SHA256.hexdigest([
       row.fetch(:id), row.fetch(:text), row.fetch(:tree), row.fetch(:kind),
-      row.fetch(:done_when), row.fetch(:registry_digest),
+      row.fetch(:done_when), registry_digest(row),
       *Array(row.fetch(:scope_paths)).sort,
     ].join("\\0"))
   end
@@ -639,7 +645,7 @@ module Backlog
     end
 
     def row_registry_digest(rows)
-      rows.map { |row| [row.fetch(:registry_source), row.fetch(:registry_digest)] }
+      rows.map { |row| [row[:registry_source].to_s, Backlog.registry_digest(row)] }
           .sort.flatten.join("\\0")
           .then { |value| Digest::SHA256.hexdigest(value) }
     end
@@ -759,7 +765,7 @@ module Backlog
         scope_digest = Digest::SHA256.hexdigest(JSON.generate(scope_facts))
         route_id = item_digest(row)
         item_evidence = [
-          { id: "registry:#{row.fetch(:registry_digest)}", sha256: row.fetch(:registry_digest),
+          { id: "registry:#{Backlog.registry_digest(row)}", sha256: Backlog.registry_digest(row),
             verified: true, kind: "explicit_owner_registry_task" },
           { id: "item:#{route_id}", sha256: route_id, verified: true, kind: "owner_registry_item" },
           { id: "command:#{spec.fetch(:command_digest)}", sha256: spec.fetch(:command_digest),
