@@ -103,7 +103,7 @@
     const nextKey = String(event?.detail?.conversationId || event?.detail?.id || "");
     if (!nextKey || nextKey === key) return;
     key = nextKey;
-    current = (hash(nextKey) % PROFILES.length);
+    current = (current + 1) % PROFILES.length;
     try { sessionStorage.setItem("master.mask." + nextKey, String(current)); } catch (_) {}
     apply(current, "new-conversation");
   }
@@ -132,6 +132,12 @@
       current = index;
       return apply(current, "explicit-selection");
     },
-    next: () => { current = (current + 1) % PROFILES.length; return apply(current, "manual-cycle"); }
+    next: () => { current = (current + 1) % PROFILES.length; return apply(current, "manual-cycle"); },
+    newConversation: (id) => {
+      const conversationId = String(id || "").trim();
+      if (!conversationId) return false;
+      rotate({ detail: { conversationId } });
+      return true;
+    }
   });
 })();
