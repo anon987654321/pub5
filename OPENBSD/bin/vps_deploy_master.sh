@@ -22,7 +22,7 @@ set -eo pipefail
 export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 ROOT="${ROOT:-/home/dev/pub5}"
 if [ "$ROOT" != "/home/dev/pub5" ]; then
-  echo "vps_deploy_master: ROOT override refused; pub5-admin mutates the fixed /home/dev/pub5/MASTER/web tree" >&2
+  echo "vps_deploy_master: ROOT override refused; this deployer mutates the fixed /home/dev/pub5/MASTER/web tree" >&2
   exit 2
 fi
 . "$ROOT/OPENBSD/lib/ruby_select.sh"
@@ -90,7 +90,23 @@ BUNDLE_WITHOUT=development:test "$BUNDLE" exec rails db:prepare
 
 echo "==> assets precompile"
 # rc.d master precompiles as root; dev cannot rewrite root-owned public/assets/assets.
-doas /usr/local/sbin/pub5-admin master-web-assets-reset
+doas /bin/ksh -c '
+  set -eu
+  public=/home/dev/pub5/MASTER/web/public
+  for path in /home /home/dev /home/dev/pub5 /home/dev/pub5/MASTER /home/dev/pub5/MASTER/web "$public"; do
+    [ -d "$path" ] && [ ! -L "$path" ] || { echo "unsafe MASTER web path: $path" >&2; exit 1; }
+  done
+  assets=$public/assets
+  [ ! -L "$assets" ] || { echo "refusing symlinked assets directory" >&2; exit 1; }
+  if [ -d "$assets" ]; then
+    links=$(find "$assets" -type l -print -quit)
+    [ -z "$links" ] || { echo "symlink inside public/assets: $links" >&2; exit 1; }
+    rm -rf "$assets"
+  fi
+  links=$(find "$public" -type l -print -quit)
+  [ -z "$links" ] || { echo "symlink inside public tree: $links" >&2; exit 1; }
+  chown -R dev:dev "$public"
+'
 BUNDLE_WITHOUT=development:test "$BUNDLE" exec rails assets:build_face_runtime assets:build_face_modules_bundle assets:build_face_vision_bundle 2>/dev/null || true
 BUNDLE_WITHOUT=development:test "$BUNDLE" exec rails assets:precompile
 # rc.d master runs the daemon as `master`, which writes web/tmp and web/log and
@@ -99,7 +115,23 @@ BUNDLE_WITHOUT=development:test "$BUNDLE" exec rails assets:precompile
 # Rails.cache then dies mkdir-ing tmp/cache, so every rate-limited request 500s
 # (2026-10-12: chat and /health, while / and /up still answered).
 echo "==> runtime dirs"
-doas /usr/local/sbin/pub5-admin master-web-runtime-dirs
+doas /bin/ksh -c '
+  set -eu
+  root=/home/dev/pub5/MASTER/web
+  for path in /home /home/dev /home/dev/pub5 /home/dev/pub5/MASTER "$root"; do
+    [ -d "$path" ] && [ ! -L "$path" ] || { echo "unsafe MASTER web path: $path" >&2; exit 1; }
+  done
+  for name in tmp log; do
+    path=$root/$name
+    [ ! -L "$path" ] || { echo "refusing symlinked runtime directory: $path" >&2; exit 1; }
+    [ -d "$path" ] || install -d -o dev -g master -m 2775 "$path"
+    links=$(find "$path" -type l -print -quit)
+    [ -z "$links" ] || { echo "symlink inside runtime directory: $links" >&2; exit 1; }
+    chown -R dev:master "$path"
+    chmod -R u+rwX,g+rwX "$path"
+    find "$path" -type d -exec chmod 2775 {} +
+  done
+'
 # The asset check, through whichever door exists. MASTER/checks/runner.rb was
 # deleted on 2026-09-16 and every deploy script still named it, so `vps-deploy
 # master` died here under set -e with the box half deployed: new assets on disk,
@@ -123,7 +155,7 @@ if [ -f "$ROOT/OPENBSD/mirror/etc/rc.d/master" ]; then
 fi
 
 echo "==> restart master"
-doas /usr/local/sbin/pub5-admin service restart master
+doas /usr/sbin/rcctl restart master
 sleep 4
 rcctl check master
 
