@@ -32,7 +32,7 @@ module Master
         end
 
         def view
-          rows = seams_rows + gaps_rows + proposals_rows + convergence_rows + ux_rows + rails_refinement_rows
+          rows = seams_rows + gaps_rows + proposals_rows + convergence_rows + ux_rows + rails_refinement_rows + polish_rows
           rows = deduplicate(rows)
           buckets = %w[actionable-now needs-proof needs-operator refused].to_h { |b| [b, []] }
           rows.each { |row| buckets.fetch(row[:bucket]) << row }
@@ -52,6 +52,7 @@ module Master
               "MASTER/convergence.yml",
               "MASTER/data/law/ux_refinements.yml",
               "RAILS/refinements.yml",
+              "MASTER/data/ideations/polish.yml",
             ],
           }
         end
@@ -195,6 +196,28 @@ module Master
               title: "#{row['id']} #{row['item']}".slice(0, 110),
               why: "status #{row['status']}; source: #{row['path']}",
               bucket: "needs-proof",
+            }
+          end
+        end
+
+        def polish_rows
+          path = data_path("ideations/polish.yml")
+          return [] unless File.file?(path)
+
+          load_yaml(path).fetch("candidates", []).filter_map do |candidate|
+            state = candidate["status"].to_s
+            next if %w[implemented landed satisfied].include?(state)
+
+            critique = load_yaml(path).fetch("critique", []).find { |row| row["candidate"] == candidate["id"] }
+            refused = state == "rejected" || critique&.fetch("verdict", nil) == "reject"
+            {
+              source: "MASTER/data/ideations/polish.yml",
+              line: 0,
+              id: candidate["id"],
+              tree: candidate["tree"],
+              title: "#{candidate['id']} #{candidate['spec']}".lines.first.to_s.strip[0, 110],
+              why: [state, critique && "critique: #{critique['attack']}"].compact.join("; ")[0, 180],
+              bucket: refused ? "refused" : "needs-proof",
             }
           end
         end
