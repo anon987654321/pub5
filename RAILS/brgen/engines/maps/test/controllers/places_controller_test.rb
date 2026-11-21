@@ -96,6 +96,22 @@ class MapsPlacesControllerTest < ActionDispatch::IntegrationTest
     assert_equal @city.name, row["city"]
   end
 
+  test "the public JSON twin rounds coordinates to the place precision policy" do
+    place = Place.create!(
+      city: @city, name: "Neighbourhood Place", kind: "attraction",
+      latitude: 60.397456, longitude: 5.324456, location_precision: "neighbourhood"
+    )
+
+    get "/places.json"
+
+    assert_response :success
+    row = JSON.parse(response.body).find { |item| item["id"] == place.id }
+    assert_equal 60.397, row.fetch("lat")
+    assert_equal 5.324, row.fetch("lng")
+    assert_equal 60.397456, place.reload.latitude.to_f
+    assert_equal 5.324456, place.reload.longitude.to_f
+  end
+
   test "the JSON twin honours the kind filter the map sends" do
     Place.create!(city: @city, name: "Bryggen", kind: "attraction", latitude: 60.3974, longitude: 5.3244)
     Place.create!(city: @city, name: "Kafeteket", kind: "cafe", latitude: 60.3910, longitude: 5.3310)
