@@ -13,7 +13,7 @@ class IoLlmTest < Minitest::Test
   def test_failed_tool_reply_redacts_provider_credentials
     forwarding = Object.new.extend(Master::Io::LLM::ToolForwarding)
     forwarding.instance_variable_set(:@tool, Object.new)
-    result = Struct.new(:message).new("provider rejected request: sk-#{'A' * 24}")
+    result = Struct.new(:message, :category).new("provider rejected request: sk-#{'A' * 24}", :provider)
 
     previous = ENV["MASTER_LLM_RECORD"]
     ENV["MASTER_LLM_RECORD"] = "0"
