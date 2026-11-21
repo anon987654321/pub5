@@ -68,18 +68,13 @@ module Master
         end
 
 
-        TERMINAL_COMMANDS = %w[
-          bin/master ruby bundle rake git cd pwd ls cat grep rg sed awk find
-          doas sudo chmod chown install make node npm ssh scp tar env export
-          print printf echo curl pkg_add service rcctl
-        ].freeze
-
         TERMINAL_CODE_TOKENS = %r{
-          (#[^\n]*|//[^\n]*)
+          (\#[^\n]*|//[^\n]*)
           |("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')
           |(--?[A-Za-z][\w-]*)
           |(\b(?:def|class|module|end|if|elsif|else|unless|case|when|return|yield|begin|rescue|ensure|const|let|var|function|async|await|import|export|from|new|true|false|null|nil|undefined|require|do|then|while|for|in)\b)
           |(\b\d+(?:\.\d+)?\b)
+          |((?<![\w/.-])(?:bin/master|ruby|bundle|rake|git|cd|pwd|ls|cat|grep|rg|sed|awk|find|doas|sudo|chmod|chown|install|make|node|npm|ssh|scp|tar|env|export|print|printf|echo|curl|pkg_add|service|rcctl)(?![\w/.-]))
           |([A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+)
           |([=<>!|&+*-]+)
         }x.freeze
@@ -97,12 +92,10 @@ module Master
             when 2 then @p.yellow(token)
             when 3 then @p.cyan(token)
             when 4 then @p.magenta(token)
-            when 5 then @p.blue(token)
-            when 6 then @p.dim(token)
-            else
-              command_at_start = TERMINAL_COMMANDS.include?(token) &&
-                line.match?(/\A\s*#{Regexp.escape(token)}(?:\s|\z)/)
-              command_at_start ? @p.bold(@p.cyan(token)) : token
+            when 5 then @p.bold(@p.cyan(token))
+            when 6 then @p.blue(token)
+            when 7 then @p.dim(token)
+            else token
             end
           end
         rescue StandardError
