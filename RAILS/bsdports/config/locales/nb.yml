@@ -130,6 +130,7 @@ nb:
     empty_body: "Prøv et annet søk — for eksempel git, python eller en kategori."
     empty_unimported: "Katalogen er tom fordi OpenBSD-indeksen ikke er importert på denne serveren ennå. Det er ikke et søk uten treff."
     last_import: "Siste import: %{status}, %{count} porter, %{when}"
+    package_index_only: "Denne oppdateringen brukte binærpakkeindeksen, som bare viser navn og versjoner. Beskrivelser og avhengighetsdata kan mangle eller være videreført fra en tidligere full import av portstreet."
     never_imported: "Ingen importering er kjørt."
     header_page_label: "Hode for OpenBSD-porter"
     list_label: "Liste over OpenBSD-porter"
