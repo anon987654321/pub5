@@ -219,7 +219,7 @@ module Master
         manager = package_manager_name
         {
           package_manager: manager,
-          packages: SYSTEM_PACKAGES.fetch(manager, []).dup,
+          packages: DependencyManager::SYSTEM_PACKAGES.fetch(manager, []).dup,
           commands: package_commands.map { |argv, label| { label:, argv: argv.dup } },
         }
       end
