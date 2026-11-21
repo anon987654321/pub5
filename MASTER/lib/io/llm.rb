@@ -5,6 +5,7 @@ require "ruby_llm"
 require "securerandom"
 require_relative "../result"
 require_relative "../execution/contract"
+require_relative "../ground/redactor"
 require_relative "../trace/tool_observer"
 
 module Master
@@ -113,12 +114,13 @@ module Master
         end
 
         def finish_tool_failure(result:, args:, invocation_id:, outcome:, ms:, identity:)
+          safe_message = Master::Ground::Redactor.text(result.message)
           @bus&.publish("tool:failed", { tool: tool_name, invocation_id:, category: result.category }.merge(public_error_fields(result.message)))
           @bus&.publish("tool:return", { tool: tool_name, invocation_id:, ok: false, ms: }.merge(public_error_fields(result.message)))
-          record_trajectory_event(tool: tool_name, args:, phase: outcome, ok: false, error: result.message.to_s[0, 200])
+          record_trajectory_event(tool: tool_name, args:, phase: outcome, ok: false, error: safe_message.to_s[0, 200])
           return unknown_outcome_reply(invocation_id) if identity && outcome == "unknown_outcome"
 
-          "Error: #{result.message}"
+          "Error: #{safe_message}"
         end
 
         def finish_tool_success(result:, args:, invocation_id:, ms:, &block)
@@ -139,6 +141,7 @@ module Master
           rescue StandardError
             payload.to_s
           end
+          rendered = Master::Ground::Redactor.text(rendered)
           Master::Trace::Dmesg.detail(tool_name, "#{label}:\n#{rendered}")
         rescue StandardError => e
           Master::Ground::Swallow.log(e, context: "Trace::Dmesg.tool_detail", tool: tool_name)
