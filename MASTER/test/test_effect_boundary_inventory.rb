@@ -21,6 +21,8 @@ class TestEffectBoundaryInventory < Minitest::Test
     "lib/cli/command_registry/workspace.rb" => "GitOperations",
     "lib/cli/pipeline/pass.rb" => "GitOperations",
     "lib/cli/pipeline/proof.rb" => "GitOperations",
+    # Boot's backlog steward pushes only through the governed GitOperations boundary.
+    "lib/boot/master_boot.rb" => "GitOperations",
     "lib/fix/file_rename.rb" => "GitOperations",
     "lib/fix/kernel/convergence_adapter.rb" => "GitOperations",
     "lib/fix/fix_loop/repo_scope.rb" => "GitOperations",
@@ -28,8 +30,8 @@ class TestEffectBoundaryInventory < Minitest::Test
     "lib/fix/wishlist.rb" => "GitOperations",
     "lib/ground/orders.rb" => "GitOperations",
     "lib/operator/design_run.rb" => "GitOperations",
-    # The Fold's fetch: CoreBridge runs it inside an effect the EffectObserver brackets.
-    "lib/cli/core_bridge.rb" => "WebFetch",
+    # CoreBridge's Git delivery and the Fold's fetch both run inside observed effects.
+    "lib/cli/core_bridge.rb" => "GitOperations,WebFetch",
     # `!command` in the REPL: the operator typing a shell line; Shell asks its governor.
     "lib/cli/session/repl_flow.rb" => "Shell",
   }.freeze
