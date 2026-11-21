@@ -26,7 +26,7 @@ set -euo pipefail
 # Resolve the checkout without relying on the caller's working directory.
 # %N at source time names this file, including when another script sources it.
 typeset -g SSH_VM23_SOURCE=${${(%):-%N}:A}
-typeset -g SSH_VM23_REPO_ROOT=${SSH_VM23_SOURCE:h:h}
+typeset -g SSH_VM23_REPO_ROOT=${SSH_VM23_SOURCE:h:h:h}
 typeset -g SSH_VM23_OPERATOR=${SSH_VM23_REPO_ROOT}/MASTER/bin/operator
 
 vm23_rtfm() {
