@@ -102,6 +102,7 @@
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
   else start();
+  window.addEventListener("master:face-ready", start, { once: true });
   window.addEventListener("master:conversation-created", rotate);
   window.addEventListener("master:bus", (event) => {
     const detail = event.detail || {};
