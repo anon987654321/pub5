@@ -131,13 +131,13 @@ module Master
 
         models = router.respond_to?(:pool) ? Array(router.pool(wait: true)) : []
         failures = router.respond_to?(:pool_discovery_errors) ? Array(router.pool_discovery_errors) : []
-        lines = ["model doctor: reachable=#{models.size}; discovery_failures=#{failures.size}"]
+        lines = ["model doctor: reachable=#{models.size}; discovery_errors_since_start=#{failures.size}"]
         failures.each do |failure|
           lane = failure["lane"] || failure[:lane] || "unknown"
           error = failure["error"] || failure[:error] || "StandardError"
-          lines << "model-doctor0: #{lane} failed during discovery (#{error}); other lanes were retained"
+          lines << "model-doctor0: #{lane} raised #{error} during discovery; other lanes remain eligible"
         end
-        lines << "model doctor: no discovery exceptions recorded" if failures.empty?
+        lines << "model doctor: no discovery exceptions recorded since router start" if failures.empty?
         lines << "model doctor: no reachable models; inspect /doctor keyless and provider credentials" if models.empty?
         lines.join("\n")
       rescue StandardError => error

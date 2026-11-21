@@ -263,6 +263,7 @@ class TestLanePool < Minitest::Test
   ensure
     Quota.clock = -> { Time.now.to_f }
   end
+
   def test_a_failed_provider_discovery_lane_does_not_erase_healthy_models
     router = Master::CLI::Routing::ModelRouter.allocate
     router.define_singleton_method(:start_pool_probes) {}

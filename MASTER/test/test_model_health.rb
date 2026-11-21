@@ -97,6 +97,7 @@ class TestModelHealth < Minitest::Test
     assert_includes result, "... 5 more models"
     assert_equal 32, result.lines.size
   end
+
   def test_model_doctor_reports_isolated_discovery_failures_without_raw_errors
     router = Router.new(Pool.new)
     router.define_singleton_method(:pool) { |wait:| ["glm-5.3-flash"] }
@@ -113,9 +114,9 @@ class TestModelHealth < Minitest::Test
     )
 
     assert_includes Registry.help_text("model"), "/model doctor"
-    assert_includes result, "reachable=1; discovery_failures=1"
-    assert_includes result, "openrouter_catalog failed during discovery (Net::OpenTimeout)"
-    assert_includes result, "other lanes were retained"
+    assert_includes result, "reachable=1; discovery_errors_since_start=1"
+    assert_includes result, "openrouter_catalog raised Net::OpenTimeout during discovery"
+    assert_includes result, "other lanes remain eligible"
     refute_includes result, "Authorization"
   end
 
