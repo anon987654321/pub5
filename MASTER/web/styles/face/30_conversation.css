@@ -621,39 +621,3 @@ body[data-history-open="1"] #chat-log {
   margin-inline-start: min(332px, calc(100vw - 24px));
   transition: margin-left 220ms var(--ease-out);
 }
-
-/* MASTER terminal language: the same fixed-pitch face and semantic syntax
-   roles are used by the CLI prompt and the browser transcript. Highlighting
-   is class-driven so renderers can opt in without parsing untrusted HTML. */
-.msg-body pre,
-.msg-body code,
-body.mission-control pre,
-body.mission-control code {
-  font-family: var(--font-mono);
-  font-variant-ligatures: none;
-  font-variant-numeric: tabular-nums;
-}
-.msg-body pre {
-  max-inline-size: 100%;
-  overflow-x: auto;
-  padding: 8px 0;
-  white-space: pre;
-  tab-size: 2;
-}
-.msg-body :not(pre) > code {
-  color: var(--c-code);
-  white-space: break-spaces;
-}
-.syntax-command, .syntax-keyword { color: var(--c-accent); }
-.syntax-flag, .syntax-path, .syntax-operator { color: var(--face-muted); }
-.syntax-string { color: color-mix(in srgb, var(--c-accent) 72%, white); }
-.syntax-number { color: color-mix(in srgb, var(--face-fg) 76%, var(--c-accent)); }
-.syntax-comment { color: var(--face-muted); font-style: italic; }
-.syntax-success { color: var(--c-accent); }
-.syntax-warning { color: color-mix(in srgb, var(--c-accent) 68%, white); }
-.syntax-error { color: var(--c-danger); }
-.syntax-command, .syntax-keyword, .syntax-flag, .syntax-path,
-.syntax-string, .syntax-number, .syntax-comment, .syntax-success,
-.syntax-warning, .syntax-error, .syntax-operator {
-  font-family: var(--font-mono);
-}
