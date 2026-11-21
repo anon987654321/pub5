@@ -77,6 +77,22 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'data-profile="operator"'
   end
 
+  test "face mask identity and profile remain stable when the same chat is reloaded" do
+    get root_path
+    assert_response :success
+    first_session = response.body.match(/window\.MASTER_FACE_MASK_SESSION = "([^"]+)";/).fetch(1)
+    first_profile = response.body.match(/window\.MASTER_FACE_MASK_PROFILE = "([^"]*)";/).fetch(1)
+
+    get root_path
+    assert_response :success
+    second_session = response.body.match(/window\.MASTER_FACE_MASK_SESSION = "([^"]+)";/).fetch(1)
+    second_profile = response.body.match(/window\.MASTER_FACE_MASK_PROFILE = "([^"]*)";/).fetch(1)
+
+    assert_equal first_session, second_session
+    assert_equal first_profile, second_profile
+    refute_equal cookies[:master_conversation], first_session
+  end
+
   test "index face asset paths are wired for blob import replacement" do
     get root_path
 
