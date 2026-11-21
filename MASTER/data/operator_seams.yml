@@ -168,8 +168,10 @@ seams:
     tree: OPENBSD
     needs: console
     evidence: >-
-      A controlled failure on a throwaway ref shows the failed stamp, the stage, whether the app stays stopped,
-      lock and flag cleanup and the final log entry.
+      A controlled failure on a throwaway ref exercises the isolated release directory, staged artifact,
+      resource guard, atomic live switch and rollback to the prior known-good release. Capture the failed
+      stamp, failing stage, service state, lock/flag cleanup, final log entry and recovery receipt; do not
+      rehearse against live user data.
   - id: second_offhost_backup_and_key_recovery
     tree: OPENBSD
     needs: console
@@ -186,14 +188,18 @@ seams:
     tree: OPENBSD
     needs: console
     evidence: >-
-      pub5-alert, uptime-check.sh, relayd-watchdog and the cron and newsyslog entries installed after reading
-      every diff, the amber.brgen.no probe retired, and deploy-diff shrinking.
+      Read and review every diff before installing pub5-alert, uptime-check.sh, relayd-watchdog, cron and
+      newsyslog changes. Capture current RAM, swap, service RSS, job processes, load and health first;
+      the 2026-11-04 1 GB/near-exhausted-swap note is historical, not a current measurement. Record post-change
+      resource and alert behavior, with amber.brgen.no retired only after its replacement is proved.
   - id: two_consecutive_deploys
     tree: OPENBSD
     needs: console
     evidence: >-
-      Two vps-deploy all runs in one approved window with vps-state --json, deploy-diff and rcctl ls started
-      captured before, between and after, and matching apart from stamp times.
+      Build a reproducible OpenBSD/amd64 release artifact on the supported Mac build host, verify its
+      manifest and hashes, then unpack it on vm23 without compiling dependencies during deployment.
+      Prove two vps-deploy all runs in one approved window with vps-state --json, deploy-diff and rcctl ls
+      captured before, between and after, matching apart from stamp times.
   - id: syspatch_in_a_console_window
     tree: OPENBSD
     needs: console
@@ -250,6 +256,44 @@ seams:
       and timestamps, deduplicate repeated handoffs, and record the exact archive coverage. Do not claim
       complete account-wide coverage from a partial export or conversation snippets.
   # STUDIO
+  - id: human_accessibility_participant_review
+    tree: RAILS
+    needs: rights
+    evidence: >-
+      Recruit real consenting participants only after the operator's privacy and research review. Record
+      the task script, assistive technology and device, anonymised outcomes, withdrawal path and exact
+      screen-reader/keyboard evidence. Agents may prepare the protocol and analyse supplied results but
+      cannot impersonate a participant or manufacture human-study evidence.
+  - id: maplibre_runtime_and_vendor_decision
+    tree: RAILS
+    needs: rights
+    evidence: >-
+      Prove whether Brgen Maps intentionally remains on the list fallback. Do not load MapLibre from a CDN.
+      Any future WebGL map must have an approved, pinned, licensed local bundle, a source/security review,
+      CSP and size budgets, a graceful non-WebGL fallback and current browser evidence before release.
+  - id: rails_stale_capture_source_reconciliation
+    tree: RAILS
+    needs: browser
+    evidence: >-
+      Inventory committed desktop/mobile, route and micro-refinement screenshots against the exact current
+      source revision. Recapture only after a real browser render; record route, host, viewport, source SHA
+      and capture timestamp. Preserve contradictory historical captures as evidence rather than replacing
+      or deleting them.
+  - id: seo_canonical_host_browser_crawl
+    tree: RAILS
+    needs: browser
+    evidence: >-
+      Crawl canonical public hosts and representative city/vertical hosts in an actual browser and HTTP
+      client. Record canonical tags, robots, sitemap, redirects, hreflang, structured data, indexable
+      pagination and alias-host behavior. Include DNS/TLS identity and distinguish a crawl failure from
+      an empty index; do not report search-engine indexing without independent evidence.
+  - id: claude_code_hook_session_acceptance
+    tree: MASTER
+    needs: console
+    evidence: >-
+      On the operator's macOS checkout, launch a genuine Claude Code session through the existing .claude
+      symlink, prove project hooks load and run on an approved harmless change, capture hook output and
+      session identity, then verify no credential or private prompt content entered the repository.
   - id: wenche_subject_consent
     tree: STUDIO
     needs: rights
