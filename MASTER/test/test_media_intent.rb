@@ -17,6 +17,17 @@ class MediaIntentTest < Minitest::Test
     end
   end
 
+  # ScriptDispatch.run reaches real tools; keep this integration-style intent
+  # test isolated from the host's media utilities.
+  def with_dispatch_stub(runner)
+    klass = Master::Io::ScriptDispatch
+    original = klass.method(:run)
+    klass.define_singleton_method(:run) { |**kwargs| runner.call(**kwargs) }
+    yield
+  ensure
+    klass.define_singleton_method(:run, original)
+  end
+
   # Renders land in a temporary XDG_DATA_HOME and the player is not started.
   def without_sound
     Dir.mktmpdir do |home|
