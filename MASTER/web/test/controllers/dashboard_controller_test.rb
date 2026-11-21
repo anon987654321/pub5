@@ -136,6 +136,6 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_select "script[src*='/assets/dashboard_live-'][defer]"
     assert_select "header.master-titlebar:not([role])"
     assert_select "main#main-content:not([role])"
-    assert_select "a.master-session-tab[href='/master/dashboard'][aria-current='page']"
+    assert_select ".master-session-tabs, .master-session-tab", count: 0
   end
 end
