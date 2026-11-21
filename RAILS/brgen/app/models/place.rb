@@ -25,6 +25,34 @@ class Place < ApplicationRecord
   validates :longitude, presence: true, numericality: { greater_than_or_equal_to: -180, less_than_or_equal_to: 180 }
   validates :name, presence: true
 
+  SOURCES = %w[brgen openstreetmap operator].freeze
+  VERIFICATION_STATES = %w[unverified verified rejected].freeze
+  LOCATION_PRECISIONS = %w[exact street neighbourhood city].freeze
+
+  validates :source, presence: true
+  validates :verification_state, inclusion: { in: VERIFICATION_STATES }
+  validates :location_precision, inclusion: { in: LOCATION_PRECISIONS }
+  validates :external_id, uniqueness: { scope: [ :city_id, :source ] }, allow_nil: true
+
+  scope :not_rejected, -> { where.not(verification_state: "rejected") }
+  scope :verified, -> { where(verification_state: "verified") }
+
+  # Stable source identity for imports; native Brgen-created places retain their
+  # database id without pretending it is an upstream provider identifier.
+  def stable_key
+    external_id.present? ? "#{source}:#{external_id}" : "brgen:#{id}"
+  end
+
+  # Public map coordinates respect the precision policy stored with each place.
+  # Existing hand-entered records default to exact; imported or sensitive records
+  # can be rounded to street, neighbourhood or city scale without changing the
+  # private canonical coordinates used for operations.
+  def public_coordinates
+    digits = { "exact" => 6, "street" => 4, "neighbourhood" => 3, "city" => 2 }
+      .fetch(location_precision, 2)
+    [ latitude.to_f.round(digits), longitude.to_f.round(digits) ]
+  end
+
   has_many :place_check_ins, dependent: :destroy
   has_many :check_in_users, through: :place_check_ins, source: :user
   has_many :restaurants, class_name: "Takeaway::Restaurant", dependent: :nullify
