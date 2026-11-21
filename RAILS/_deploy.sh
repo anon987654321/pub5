@@ -28,22 +28,50 @@ deploy_tracked_app() {
 
   need_cmd "$RUBY" "$BUNDLE" doas curl
 
-  [[ -x /usr/local/sbin/pub5-admin ]] || {
-    log_err "pub5-admin is missing; run OPERATOR.sh before deploying"
-    return 1
-  }
   [[ -d $SRC_DIR ]] || { log_err "missing source tree: $SRC_DIR"; exit 1; }
+  [[ -d /home && ! -L /home ]] || { log_err "unsafe /home directory"; return 1; }
 
   log "${app_name} - deploying tracked tree -> ${APP_DIR}"
   deploy_status "$app_name" "sync tree"
-  ${_PRIV} /usr/local/sbin/pub5-admin ensure-app "$app_name" || {
-    log_err "app account/layout preparation failed for $app_name"
+
+  # Create only this inventory-approved app account and its own home. Existing
+  # homes are never recursively chowned or repaired through symlinks.
+  if ! id "$app_name" >/dev/null 2>&1; then
+    ${_PRIV} /usr/sbin/useradd -m -L daemon -s /bin/ksh "$app_name" || {
+      log_err "could not create app account $app_name"
+      return 1
+    }
+  fi
+  local app_home="/home/$app_name"
+  if [[ -L $app_home || ! -d $app_home ]]; then
+    log_err "app home is missing, symlinked or not a directory: $app_home"
+    return 1
+  fi
+  local app_home_owner
+  app_home_owner=$(/usr/bin/stat -f %Su "$app_home") || return 1
+  [[ $app_home_owner == "$app_name" ]] || {
+    log_err "app home $app_home is owned by $app_home_owner, not $app_name"
+    return 1
+  }
+  if [[ ! -e $APP_DIR && ! -L $APP_DIR ]]; then
+    ${_PRIV} /usr/bin/install -d -o "$app_name" -g "$app_name" -m 755 "$APP_DIR" || return 1
+  fi
+  [[ -d $APP_DIR && ! -L $APP_DIR ]] || {
+    log_err "app directory is unsafe: $APP_DIR"
+    return 1
+  }
+  [[ $(/usr/bin/stat -f %Su "$APP_DIR") == "$app_name" ]] || {
+    log_err "app directory is not owned by $app_name: $APP_DIR"
     return 1
   }
 
-  # Group access to the checkout is needed even on SKIP_CI deployments.
-  # Ensure the app is in _pub4ci before the app-user sync traverses /home/dev/pub5.
-  ${_PRIV} /usr/local/sbin/pub5-admin ci-prepare "$app_name" || {
+  # The installed helper grants the selected app only the checkout-read group
+  # and verifies every path before changing ownership or permissions.
+  [[ -x /usr/local/libexec/ci-prepare.ksh && ! -L /usr/local/libexec/ci-prepare.ksh ]] || {
+    log_err "installed ci-prepare.ksh is missing or untrusted; run OPERATOR.sh"
+    return 1
+  }
+  ${_PRIV} /usr/local/libexec/ci-prepare.ksh "$app_name" || {
     log_err "app checkout access preparation failed for $app_name"
     return 1
   }
