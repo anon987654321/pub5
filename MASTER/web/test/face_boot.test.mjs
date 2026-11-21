@@ -1448,3 +1448,31 @@ test("MASTER fenced code highlighting escapes model text and emits semantic span
   assert.match(chat, /function renderTerminalText\(source\)/);
   assert.match(chat, /_streamEl\.innerHTML = renderTerminalText\(text\)/);
 });
+
+test("MASTER web highlighter escapes source and classifies shell and Ruby tokens", () => {
+  const chat = readFileSync(join(publicDir, "chat.js"), "utf8");
+  const extract = (name) => {
+    const start = chat.indexOf("function " + name + "(");
+    assert.notEqual(start, -1);
+    const end = chat.indexOf("\n}", start);
+    assert.notEqual(end, -1);
+    return chat.slice(start, end + 2);
+  };
+  const sample = "\x60\x60\x60ruby\n def run\n  puts \"<img src=x>\"\n  42\nend\n\x60\x60\x60\n<script>";
+  const source = [
+    extract("escapeHtml"),
+    extract("highlightCode"),
+    extract("renderTerminalText"),
+    "this.output = renderTerminalText(" + JSON.stringify(sample) + ");"
+  ].join("\n");
+  const sandbox = {};
+  runInNewContext(source, sandbox);
+
+  assert.match(sandbox.output, /class="syntax-keyword">def<\\/span>/);
+  assert.match(sandbox.output, /class="syntax-command">puts<\\/span>/);
+  assert.match(sandbox.output, /class="syntax-string">/);
+  assert.match(sandbox.output, /class="syntax-number">42<\\/span>/);
+  assert.match(sandbox.output, /&lt;img src=x&gt;/);
+  assert.match(sandbox.output, /&lt;script&gt;/);
+  assert.doesNotMatch(sandbox.output, /<script>/);
+});
