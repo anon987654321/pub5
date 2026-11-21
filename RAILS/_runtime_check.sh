@@ -64,14 +64,14 @@ run_rails_as_app() {
   esac
   [[ $task != demo-seed || $app_name == brgen || $app_name == amber ]] || return 2
 
-  [[ -x /usr/local/sbin/pub5-admin ]] || {
-    log_err "run_rails_as_app: pub5-admin is missing; run OPERATOR.sh before deploying"
+  [[ -x /usr/local/libexec/rails-task.ksh && ! -L /usr/local/libexec/rails-task.ksh ]] || {
+    log_err "run_rails_as_app: installed rails-task.ksh is missing or untrusted; run OPERATOR.sh"
     return 1
   }
   if [[ $task == schema-load || $task == secondary-db-check || $task == bundle-cas-hydrate ]]; then
-    ${_PRIV} /usr/local/sbin/pub5-admin rails-task "$app_name" "$task" "$database"
+    ${_PRIV} /usr/local/libexec/rails-task.ksh "$app_name" "$task" "$database"
   else
-    ${_PRIV} /usr/local/sbin/pub5-admin rails-task "$app_name" "$task"
+    ${_PRIV} /usr/local/libexec/rails-task.ksh "$app_name" "$task"
   fi
 }
 
