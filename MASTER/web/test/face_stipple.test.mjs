@@ -556,7 +556,7 @@ test("stipple shares face state and obeys point and motion budgets", () => {
   assert.doesNotMatch(system, /uPointSize(?:Base|Bias|Reference|Distance|Output)/);
   assert.match(system, /vThreshold = aThreshold/);
   assert.match(system, /vThreshold > uDensity/);
-  assert.match(tokens, /density_scale:\s*0\.90/);
+  assert.match(tokens, /density_scale:\s*0\.76/);
   assert.match(system, /const densityScale = clamp\(window\.MASTER_FACE_CONTRACT\?\.stipple\?\.density_scale, 0\.90, 0\.7, 1\.0\)/);
 });
 
