@@ -212,13 +212,13 @@ module Master
 
       def backlog_proof_types
         # The interactive /fix run has its own mission namespace. Its proof
-        # contract belongs to the still-live backlog parent in the default store.
+        # contract belongs to the still-live owner-registry parent in the default store.
         mission = Master::Fix::Mission.current(root: @root, namespace: nil)
         return [] unless mission && mission["origin"].to_s == "backlog"
 
         plan = JSON.parse(mission.fetch("plan").to_s)
-        unless plan["executor"] == "root_todo"
-          raise Master::Fix::TaskContract::Invalid, "backlog mission has no root TODO proof contract"
+        unless plan["executor"] == "owner_registry"
+          raise Master::Fix::TaskContract::Invalid, "owner-registry mission has no explicit task proof contract"
         end
 
         types = Array(plan["proof_types"]).map(&:to_s)
