@@ -172,6 +172,7 @@ module Master
       end
 
       def library(path)
+        require_policy!("library_scan", expected: "explicit_path_read_only")
         inventory = scan_library(path)
         {
           action: "library", path: inventory[:path], tracks: inventory[:tracks],
@@ -215,6 +216,7 @@ module Master
       end
 
       def gaps(path, queries)
+        require_policy!("library_scan", expected: "explicit_path_read_only")
         requested = Array(queries)
         raise PolicyError, "soulseek: gaps needs 1–100 album or artist queries" unless requested.any? && requested.length <= 100
 
