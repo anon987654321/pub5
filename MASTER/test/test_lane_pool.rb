@@ -289,7 +289,6 @@ class TestLanePool < Minitest::Test
     )
   end
 
-
   def test_a_swallowed_local_catalogue_failure_is_retained_for_model_doctor
     router = Master::CLI::Routing::ModelRouter.allocate
     router.define_singleton_method(:get_json) { |*arguments, **options| raise IOError, "local catalogue unavailable" }
