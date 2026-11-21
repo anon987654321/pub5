@@ -9,6 +9,22 @@ require_relative "test_helper"
 class TestRepairLoopPerFixCommit < Minitest::Test
   Rule = Struct.new(:id, :severity)
 
+  # These contracts exercise one commit decision at a time. Retry behaviour
+  # has its own tests; leaving the production default on here turns one refusal
+  # into three attempts and changes the outcome to needs_person.
+  def setup
+    @previous_fix_retry = ENV["MASTER_FIX_RETRY"]
+    ENV["MASTER_FIX_RETRY"] = "0"
+  end
+
+  def teardown
+    if @previous_fix_retry.nil?
+      ENV.delete("MASTER_FIX_RETRY")
+    else
+      ENV["MASTER_FIX_RETRY"] = @previous_fix_retry
+    end
+  end
+
   class FakeBus
     attr_reader :events
 
@@ -363,7 +379,7 @@ class TestRepairLoopPerFixCommit < Minitest::Test
 
       said = []
 
-      Master::Trace::Dmesg.stub(:status, ->(unit, text) { said << "#{unit}: #{text}" }) do
+      Master::Trace::Dmesg.stub(:status, ->(unit, text, *_args, **_kwargs) { said << "#{unit}: #{text}" }) do
         assert_equal :commit_refused, loop.send(:fix_violation, violation_in(path))
       end
       assert_includes said, "fix0: sample.rb refused by commit: the committer answered :blocked and recorded no reason"
@@ -378,7 +394,7 @@ class TestRepairLoopPerFixCommit < Minitest::Test
                         committer: FakeCommitter.new(fail: true))
       said = []
 
-      Master::Trace::Dmesg.stub(:status, ->(unit, text) { said << "#{unit}: #{text}" }) { loop.run_once([path]) }
+      Master::Trace::Dmesg.stub(:status, ->(unit, text, *_args, **_kwargs) { said << "#{unit}: #{text}" }) { loop.run_once([path]) }
 
       assert_includes said, "fix0: sample.rb refused by commit: RuntimeError: pre-commit hook refused"
     end
