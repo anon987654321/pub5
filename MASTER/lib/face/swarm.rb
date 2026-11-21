@@ -145,7 +145,11 @@ module Master
         multipliers = mode_multipliers(mode, config:)
         forces_by_mode = config.fetch("stipple_force", {})
         mode_name = mode.to_s.downcase
-        residual_active = forces_by_mode.fetch(mode_name, forces_by_mode.fetch("idle", "none")) == "residual"
+        force_mode = forces_by_mode.fetch(mode_name, forces_by_mode.fetch("idle", "none"))
+        residual_active = force_mode == "residual"
+        fragment_active = force_mode == "fragment"
+        fragment_strength = [Float(config.fetch("fragment_strength", 0.0)), 0.0].max
+        target_attraction = fragment_active ? 0.24 : 1.0
         residual = config.fetch("residual", {})
         residual_fraction = Float(residual.fetch("fraction", 0.18)).clamp(0.0, 1.0)
         residual_strength = [Float(residual.fetch("strength", 0.0)), 0.0].max
@@ -168,7 +172,7 @@ module Master
           dz = (center[2] - z) / scale[2]
           distance = Math.sqrt((dx * dx) + (dy * dy) + (dz * dz)) + 1.0e-5
           falloff = Math.exp(-(distance * distance) / softness)
-          weight = Float(head.fetch("weight", 1.0)) * Float(multipliers.fetch("core"))
+          weight = Float(head.fetch("weight", 1.0)) * Float(multipliers.fetch("core")) * target_attraction
           force = forces[index]
           force[0] += weight * falloff * (center[0] - x)
           force[1] += weight * falloff * (center[1] - y)
@@ -180,7 +184,7 @@ module Master
             ddx, ddy, ddz = ex - x, ey - y, ez - z
             d = Math.sqrt((ddx * ddx) + (ddy * ddy) + (ddz * ddz)) + 1.0e-5
             reach = [Float(eye.fetch("radius")), 0.001].max
-            strength = Float(eye.fetch("weight", 1.0)) * Float(multipliers.fetch("eyes"))
+            strength = Float(eye.fetch("weight", 1.0)) * Float(multipliers.fetch("eyes")) * target_attraction
             f = Math.exp(-((d / reach)**2))
             force[0] += strength * f * ddx
             force[1] += strength * f * ddy
@@ -193,10 +197,20 @@ module Master
           mouth_distance = Math.sqrt((mdx * mdx) + (mdy * mdy) + (mdz * mdz)) + 1.0e-5
           mouth_radius = [Float(mouth.fetch("radius")), 0.001].max
           mouth_falloff = Math.exp(-((mouth_distance / mouth_radius)**2))
-          mouth_weight = Float(mouth.fetch("weight", 1.0))
+          mouth_weight = Float(mouth.fetch("weight", 1.0)) * target_attraction
           force[0] += mouth_weight * mouth_falloff * mdx
           force[1] += mouth_weight * mouth_falloff * mdy
           force[2] += mouth_weight * mouth_falloff * mdz
+
+          if fragment_active && fragment_strength.positive?
+            rx, ry, rz = x - center[0], y - center[1], z - center[2]
+            radial_distance = Math.sqrt((rx * rx) + (ry * ry) + (rz * rz)) + 1.0e-5
+            envelope = 0.65 + ((1.0 - falloff) * 0.35)
+            strength = fragment_strength * envelope
+            force[0] += (rx / radial_distance) * strength
+            force[1] += (ry / radial_distance) * strength
+            force[2] += (rz / radial_distance) * strength
+          end
 
           if cohesion_squared.positive? || separation_squared.positive?
             cohort = [0.0, 0.0, 0.0]
