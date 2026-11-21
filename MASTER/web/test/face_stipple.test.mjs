@@ -42,7 +42,7 @@ test("shared face budgets classify coarse pointers and declared reduced motion",
 });
 
 test("particle introduction converges into the face on the shared render clock", () => {
-  assert.match(tokens, /intro_duration_ms: 1200/);
+  assert.match(tokens, /intro_duration_ms: 5200/);
   assert.match(system, /const introScatter = new Float32Array\(samples\.length \* 3\)/);
   assert.match(system, /introScatter\[j\] = \(rand\(index, 41\) - 0\.5\) \* 2\.8/);
   assert.match(system, /geometry\.setAttribute\("aIntroScatter", new THREE\.BufferAttribute\(introScatter, 3\)\)/);
@@ -51,9 +51,45 @@ test("particle introduction converges into the face on the shared render clock",
   assert.match(system, /vec3 p = mix\(aIntroScatter, position, localProgress\)/);
   assert.match(system, /system\.material\.uniforms\.uIntroProgress\.value = introProgress/);
   assert.match(system, /const reducedMotion = reducedMotionEnabled\(state\)/);
+  assert.match(system, /const durationMs = clamp\(window\.MASTER_FACE_CONTRACT\?\.stipple\?\.intro_duration_ms, 5200, 400, 8000\)/);
   assert.match(system, /const rawProgress = reducedMotion \? 1 :/);
   assert.doesNotMatch(system, /requestAnimationFrame/);
 });
+test("live stipple keeps one deterministic solid carrier near the left eye", () => {
+  assert.match(system, /function selectSoloMark\(input\)/);
+  assert.match(system, /const samples = selectSoloMark\(Array\.from\(input \|\| \[\]\)\.slice\(0, MAX_POINTS\)\)/);
+  assert.match(system, /geometry\.setAttribute\("aSolo", new THREE\.BufferAttribute\(soloMarks, 1\)\)/);
+  assert.match(system, /attribute float aSolo;/);
+  assert.match(system, /vSolo = aSolo;/);
+  assert.match(system, /if \(vSolo < 0\.5 && \(vThreshold > uDensity \|\| length\(p\) > 0\.5\)\) discard;/);
+  assert.match(system, /vec3 ink = mix\(uColor \* zoneTone \* depthTone, vec3\(1\.0\), solo\)/);
+  assert.match(system, /float alpha = mix\(vAlpha \* uOpacity, 1\.0, solo\)/);
+
+  const window = {
+    location: { search: "" },
+    MASTER_FACE_CONTRACT: {},
+    addEventListener() {}
+  };
+  const document = { documentElement: { dataset: {} }, body: {}, hidden: false };
+  runInNewContext(system, {
+    window, document, URLSearchParams,
+    performance: { now: () => 0 },
+    navigator: { hardwareConcurrency: 8 }
+  });
+  const input = [
+    { id: "left-eye", x: -0.30, y: 0.17, z: 0.2, zone: 1 },
+    { id: "right-eye", x: 0.31, y: 0.17, z: 0.2, zone: 1 },
+    { id: "left-brow", x: -0.30, y: 0.42, z: 0.16, zone: 2 },
+    { id: "left-chin", x: -0.38, y: -0.55, z: 0.1, zone: 5 }
+  ];
+  const select = window.MASTER_FACE_STIPPLE.selectSoloMark;
+  const first = select(input);
+  const second = select(input);
+  assert.equal(first.filter((sample) => sample.solo).length, 1);
+  assert.equal(first.find((sample) => sample.solo).id, "left-eye");
+  assert.equal(second.find((sample) => sample.solo).id, "left-eye");
+});
+
 
 test("fingerprint ridges and radial signal waves stay inside the bounded one-pixel field", () => {
   assert.match(tokens, /fingerprint:\s*\n\s+enabled: true\s*\n\s+spacing: 22\.0\s*\n\s+strength: 0\.48/);
