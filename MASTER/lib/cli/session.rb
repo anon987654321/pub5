@@ -176,6 +176,7 @@ module Master
       def init_session_state!
         @running = false
         @last_ok = true
+        @last_outcome = nil
         @violations = 0
         @prev_violations = 0
         @violations_mutex = Mutex.new

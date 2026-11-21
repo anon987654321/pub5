@@ -5,6 +5,7 @@ require "cli/council_crit"
 require "cli/deliberation_prep"
 require "cli/fold_risk"
 require "cli/pipeline_context"
+require_relative "../lib/voice/renderer/prompt_components"
 
 class TestCLI < Minitest::Test
   def setup
@@ -1182,6 +1183,7 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     assert_match(/turn0: cancelled by \/stop/, out + err)
     refute_match(/answered|complete/i, out + err)
     refute @cli.instance_variable_get(:@last_ok)
+    assert_equal :cancelled, @cli.instance_variable_get(:@last_outcome)
     assert_equal 2, @cli.instance_variable_get(:@exit_code)
   end
 
@@ -1196,6 +1198,25 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
 
     assert_equal 130, @cli.instance_variable_get(:@exit_code)
     refute @cli.instance_variable_get(:@last_ok)
+    assert_equal :cancelled, @cli.instance_variable_get(:@last_outcome)
+  end
+
+  def test_prompt_distinguishes_a_cancelled_turn_from_a_failed_turn
+    prompt = Object.new.extend(Master::Voice::Renderer::PromptComponents)
+
+    cancelled = prompt.send(
+      :operator_state, :discover, false,
+      destination: "llm", focused: false, last_outcome: :cancelled
+    )
+    failed = prompt.send(
+      :operator_state, :discover, false,
+      destination: "llm", focused: false, last_outcome: :error
+    )
+
+    assert_equal "llm discover cancelled", cancelled
+    assert_equal "llm discover error", failed
+    assert_equal "input", prompt.send(:phase_prompt, false, :discover, last_outcome: :cancelled)
+    assert_equal "error input", prompt.send(:phase_prompt, false, :discover, last_outcome: :error)
   end
 
   # A late cursor-position reply was saved as "[38;51Rh" and replayed each boot.

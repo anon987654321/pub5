@@ -148,7 +148,7 @@ module Master
         def prompt_with(focused:)
           state, prompt = @refs.renderer.prompt_line(
             @refs.agent.model, @refs.session.phase,
-            last_ok: @last_ok, violations: violations_count,
+            last_ok: @last_ok, last_outcome: @last_outcome, violations: violations_count,
             tokens: @refs.session.token_est, cost: @refs.session.cost,
             focused:
           )
@@ -427,6 +427,7 @@ module Master
           # exits with @exit_code: a failed command must not exit 0.
           text = if result.is_a?(Master::Result)
                    @last_ok = result.ok?
+                   @last_outcome = result.ok? ? nil : (result.category == :abort ? :cancelled : :error)
                    @exit_code = result.ok? ? 0 : exit_code_for(result)
                    result.ok? ? result.value!.to_s : result.message.to_s
                  else
@@ -444,6 +445,7 @@ module Master
           result
         rescue StandardError => e
           @last_ok = false
+          @last_outcome = :error
           @exit_code = 2
           text = "cmd0: /#{name} failed - #{e.class}: #{e.message}"
           print_terminal_output(text, mode: :error)
@@ -654,6 +656,7 @@ module Master
           @bang_shell = nil
           record_execution_output(command:, text: Dir.pwd, status: "changed")
           @last_ok = true
+          @last_outcome = nil
           @exit_code = 0
           terminal_puts(@refs.renderer.render(Dir.pwd, mode: :dim))
           :changed
@@ -663,6 +666,7 @@ module Master
 
         def directory_change_failure(message)
           @last_ok = false
+          @last_outcome = :error
           @exit_code = 1
           terminal_puts(@refs.renderer.render("cd0: #{message}", mode: :error))
           :failed
@@ -680,6 +684,7 @@ module Master
           text = result.ok? ? result.value!.to_s : result.message.to_s
           record_execution_output(command:, text:, status: result.ok? ? "success" : "failure")
           @last_ok = result.ok?
+          @last_outcome = result.ok? ? nil : (result.category == :abort ? :cancelled : :error)
           @exit_code = result.ok? ? 0 : 2
 
           # Like run_bang: the write shares Dmesg's mutex and rebuilds Reline's

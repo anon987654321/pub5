@@ -13,6 +13,7 @@ module Master
         case result
         in Master::Result::Ok => ok
           @last_ok = true
+          @last_outcome = nil
           @exit_code = 0
           display_ok(ok:, accumulated:, streamed:, units_console:)
         in Master::Result::Err => err
@@ -21,11 +22,13 @@ module Master
           # until then the spinner says "stopping" and /stop says "request".
           if err.category == :abort
             @last_ok = false
+            @last_outcome = :cancelled
             @exit_code = cancellation_exit_code
             return Master::Trace::Dmesg.status("turn0", cancellation_status)
           end
 
           @last_ok = false
+          @last_outcome = :error
           @exit_code = exit_code_for(err)
           return exit_cli if err.category == :shutdown
 

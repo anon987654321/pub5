@@ -75,11 +75,12 @@ module Master
           last_ok = options.fetch(:last_ok, true)
           destination = options.fetch(:destination, "llm")
           focused = options.fetch(:focused, false)
-          operator = operator_state(phase, last_ok, destination:, focused:)
+          last_outcome = options.fetch(:last_outcome, nil)
+          operator = operator_state(phase, last_ok, destination:, focused:, last_outcome:)
 
           [
             state_line(model, **options.merge(operator:)),
-            shell_prompt(phase, last_ok, model:, destination:, focused:),
+            shell_prompt(phase, last_ok, model:, destination:, focused:, last_outcome:),
           ]
         end
 
@@ -100,7 +101,9 @@ module Master
           File.basename(ENV["SHELL"].to_s) == "zsh" ? "%" : "$"
         end
 
-        def phase_prompt(last_ok, _phase)
+        def phase_prompt(last_ok, _phase, last_outcome: nil)
+          return "input" if last_outcome == :cancelled
+
           last_ok ? "input" : "error input"
         end
 
@@ -156,10 +159,14 @@ module Master
           [painted_path, painted_git, painted_identity].reject(&:empty?).join(" ") + " "
         end
 
-        def operator_state(phase, last_ok, destination:, focused:)
+        def operator_state(phase, last_ok, destination:, focused:, last_outcome: nil)
           words = [prompt_destination(destination)]
           words << bounded_prompt_segment(phase_label(phase), 10) unless focused
-          words << "error" unless last_ok
+          if !last_ok && last_outcome == :cancelled
+            words << "cancelled"
+          elsif !last_ok
+            words << "error"
+          end
           words.reject(&:empty?).join(" ")
         end
 
@@ -168,11 +175,11 @@ module Master
           host.empty? ? "openbsd" : host
         end
 
-        def prompt_suffix(phase, last_ok, destination:, focused:)
+        def prompt_suffix(phase, last_ok, destination:, focused:, last_outcome: nil)
           phase_text = focused ? "" : bounded_prompt_segment(phase_label(phase), 10)
           git = git_prompt_segment
 
-          [git, prompt_destination(destination), phase_text, phase_prompt(last_ok, phase)].reject(&:empty?)
+          [git, prompt_destination(destination), phase_text, phase_prompt(last_ok, phase, last_outcome:)].reject(&:empty?)
         end
 
         def prompt_destination(value)
