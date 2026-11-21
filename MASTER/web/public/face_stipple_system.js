@@ -183,6 +183,13 @@
     return samples;
   }
 
+  function particleSpacingScale() {
+    return clamp(
+      window.MASTER_FACE_CONTRACT?.stipple?.particle_spacing_scale,
+      1.025, 1.0, 1.08
+    );
+  }
+
   function fingerprintConfiguration() {
     const config = window.MASTER_FACE_CONTRACT?.stipple?.fingerprint || {};
     const center = Array.isArray(config.center) ? config.center : [0.08, 0.06];
@@ -412,6 +419,7 @@
         uDepthScaleMin: { value: clamp(depth.scale_min, DEFAULT_DEPTH_RESPONSE.scale_min, 0.1, 2.0) },
         uDepthScaleMax: { value: clamp(depth.scale_max, DEFAULT_DEPTH_RESPONSE.scale_max, 0.1, 2.0) },
         uTime: { value: 0 }, uIntroProgress: { value: 0 },
+        uParticleSpacingScale: { value: particleSpacingScale() },
         uFingerprintEnabled: { value: fingerprint.enabled ? 1.0 : 0.0 },
         uFingerprintSpacing: { value: fingerprint.spacing },
         uFingerprintStrength: { value: fingerprint.strength },
@@ -444,6 +452,7 @@
         attribute vec3 aIntroScatter;
         uniform float uTime;
         uniform float uIntroProgress;
+        uniform float uParticleSpacingScale;
         uniform float uFingerprintEnabled;
         uniform float uFingerprintSpacing;
         uniform float uFingerprintStrength;
@@ -525,6 +534,10 @@
             vec2 stepped = floor(p.xy / uAliasGrid + 0.5) * uAliasGrid;
             p.xy = mix(p.xy, stepped, uAliasStrength);
           }
+          // A tiny spatial expansion creates actual breathing room between carriers.
+          // It moves their centres; the one-pixel sprite itself is never enlarged.
+          vec3 spacingOrigin = vec3(0.0, 0.05, 0.0);
+          p = spacingOrigin + (p - spacingOrigin) * uParticleSpacingScale;
 
           float zoneWeight = 0.72 + aZone * 0.035;
           float drift = sin(uTime * 0.72 + aPhase) * 0.008 * uTurbulence * uMotionScale;
@@ -741,6 +754,9 @@
 
     const force = contract.stipple_force?.[mode] || contract.stipple_force?.idle || "none";
     const residualActive = force === "residual";
+    const fragmentActive = force === "fragment";
+    const fragmentStrength = Math.max(0, Number(config.fragment_strength) || 0);
+    const targetAttraction = fragmentActive ? 0.24 : 1.0;
     const residual = config.residual || {};
     const residualFraction = clamp(residual.fraction, 0.18, 0, 1);
     const residualStrength = Math.max(0, Number(residual.strength) || 0);
@@ -766,7 +782,7 @@
       const dz = (center[2] - z) / scale[2];
       const dist = Math.sqrt(dx * dx + dy * dy + dz * dz) + 1e-5;
       const falloff = Math.exp(-(dist * dist) / softness);
-      const coreWeight = Number(head.weight ?? 1) * Number(multipliers.core ?? 1);
+      const coreWeight = Number(head.weight ?? 1) * Number(multipliers.core ?? 1) * targetAttraction;
       push(offset, coreWeight * falloff * (center[0] - x), coreWeight * falloff * (center[1] - y), coreWeight * falloff * (center[2] - z));
 
       for (const eye of eyes) {
@@ -774,7 +790,8 @@
         const ex = Number(point[0]) - x, ey = Number(point[1]) - y, ez = Number(point[2]) - z;
         const d = Math.sqrt(ex * ex + ey * ey + ez * ez) + 1e-5;
         const radius = Math.max(0.001, Number(eye.radius) || 0.17);
-        const factor = Number(eye.weight ?? 1) * Number(multipliers.eyes ?? 1) * Math.exp(-Math.pow(d / radius, 2));
+        const factor = Number(eye.weight ?? 1) * Number(multipliers.eyes ?? 1) *
+          Math.exp(-Math.pow(d / radius, 2)) * targetAttraction;
         push(offset, factor * ex, factor * ey, factor * ez);
       }
 
@@ -782,8 +799,17 @@
       const mx = Number(mouth.pos[0]) - x, my = Number(mouth.pos[1]) - y, mz = Number(mouth.pos[2]) - z;
       const mouthDistance = Math.sqrt(mx * mx + my * my + mz * mz) + 1e-5;
       const mouthRadius = Math.max(0.001, Number(mouth.radius) || 0.34);
-      const mouthFactor = Number(mouth.weight ?? 1) * Math.exp(-Math.pow(mouthDistance / mouthRadius, 2));
+      const mouthFactor = Number(mouth.weight ?? 1) * Math.exp(-Math.pow(mouthDistance / mouthRadius, 2)) * targetAttraction;
       push(offset, mouthFactor * mx, mouthFactor * my, mouthFactor * mz);
+
+      if (fragmentActive && fragmentStrength > 0) {
+        const rx = x - center[0], ry = y - center[1], rz = z - center[2];
+        const radialDistance = Math.sqrt(rx * rx + ry * ry + rz * rz) + 1e-5;
+        const envelope = 0.65 + (1.0 - falloff) * 0.35;
+        const strength = fragmentStrength * envelope;
+        push(offset, (rx / radialDistance) * strength,
+          (ry / radialDistance) * strength, (rz / radialDistance) * strength);
+      }
 
       let cohesionX = 0, cohesionY = 0, cohesionZ = 0, neighbors = 0;
       for (let j = 0; j < count; j += 1) {
