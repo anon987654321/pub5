@@ -266,8 +266,7 @@ window._chatOnUser = (text) => {
 // Small dependency-free tokenizer for fenced source blocks. It emits only
 // escaped source text and fixed class names; model output never becomes markup.
 function highlightCode(source) {
-  const pattern = /(\/\/[^\n]*|#[^\n]*)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|(--?[A-Za-z][\w-]*)|(\b(?:def|class|module|end|if|elsif|else|unless|case|when|return|yield|begin|rescue|ensure|const|let|var|function|async|await|import|export|from|new|true|false|null|nil|undefined|require|do|then|while|for|in)\b)|(\b\d+(?:\.\d+)?\b)|([A-Za-z0-9_.-]+\/[A-Za-z0-9_./-]+)|([=<>!|&+*-]+)/g;
-  const commands = new Set(["bin/master", "ruby", "bundle", "rake", "git", "cd", "doas", "chmod", "npm", "node", "ssh", "make"]);
+  const pattern = /(\/\/[^\n]*|#[^\n]*)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|(--?[A-Za-z][\w-]*)|(\b(?:def|class|module|end|if|elsif|else|unless|case|when|return|yield|begin|rescue|ensure|const|let|var|function|async|await|import|export|from|new|true|false|null|nil|undefined|require|do|then|while|for|in)\b)|(\b(?:bin\/master|ruby|bundle|rake|git|cd|pwd|ls|cat|grep|rg|sed|awk|find|doas|sudo|chmod|chown|install|make|node|npm|ssh|scp|tar|env|export|print|printf|echo|curl|pkg_add|service|rcctl)\b)|(\b\d+(?:\.\d+)?\b)|([A-Za-z0-9_.-]+\/[A-Za-z0-9_./-]+)|([=<>!|&+*-]+)/g;
   let html = "";
   let cursor = 0;
   for (const match of source.matchAll(pattern)) {
@@ -279,13 +278,13 @@ function highlightCode(source) {
     else if (match[2]) role = "string";
     else if (match[3]) role = "flag";
     else if (match[4]) role = "keyword";
-    else if (match[5]) role = "number";
-    else if (match[6]) role = "path";
-    else if (match[7]) role = "operator";
-    else {
+    else if (match[5]) {
       const lineStart = source.slice(source.lastIndexOf("\n", index - 1) + 1, index).trim();
-      if (!lineStart && commands.has(token)) role = "command";
+      if (!lineStart) role = "command";
     }
+    else if (match[6]) role = "number";
+    else if (match[7]) role = "path";
+    else if (match[8]) role = "operator";
     html += role ? '<span class="syntax-' + role + '">' + escapeHtml(token) + '</span>' : escapeHtml(token);
     cursor = index + token.length;
   }
