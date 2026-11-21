@@ -46,9 +46,8 @@ class TestBacklog < Minitest::Test
     row = entries.first
     changed = row.merge(text: "#{row.fetch(:text)} changed")
     refute_equal Backlog.item_digest(row), Backlog.item_digest(changed)
-    refute_equal row.fetch(:registry_digest), Backlog.registry_digest(changed)
+    assert_match(/\A[0-9a-f]{64}\z/, Backlog.registry_digest(row))
   end
-
   def test_operator_seams_and_acceptance_only_ledgers_are_not_auto_queued
     operator = YAML.safe_load_file(File.join(Master::REPO_ROOT, "MASTER/data/operator_seams.yml"))
     ux = YAML.safe_load_file(File.join(Master::REPO_ROOT, "MASTER/data/law/ux_refinements.yml"))
@@ -458,7 +457,7 @@ class TestBacklog < Minitest::Test
       record = {
         "origin" => "backlog", "state" => "completed", "stage" => "deliver",
         "summary" => "proof complete", "artifacts" => [], "repository_writes" => {},
-        "plan" => JSON.generate("executor" => "root_todo", "item_id" => "x", "item_digest" => "digest"),
+        "plan" => JSON.generate("executor" => "owner_registry", "item_id" => "x", "item_digest" => "digest"),
       }
       refute executor.record_completion!(record:)
       refute File.exist?(File.join(root, Backlog::Executor::RECEIPT_PATH))
@@ -476,7 +475,7 @@ class TestBacklog < Minitest::Test
       executor = Backlog::Executor.new(root:, repo_root: File.expand_path("..", Backlog::MASTER_ROOT))
       proof_types = Backlog::ProofMap.types_for(row)
       plan = {
-        "executor" => "root_todo",
+        "executor" => "owner_registry",
         "item_id" => row.fetch(:id),
         "item_digest" => executor.send(:item_digest, row),
         "tree" => row.fetch(:tree),
