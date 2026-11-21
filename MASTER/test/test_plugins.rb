@@ -538,4 +538,21 @@ class TestPlugins < Minitest::Test
     end
   end
 
+
+  def test_soulseek_quality_triage_reports_structure_without_decoding_audio
+    require "tmpdir"
+    require "fileutils"
+    Dir.mktmpdir("soulseek-quality") do |root|
+      File.binwrite(File.join(root, "empty.mp3"), "")
+      File.binwrite(File.join(root, "tiny.mp3"), "123456")
+      File.binwrite(File.join(root, "full.flac"), "x" * (70 * 1024))
+      result = Master::Plugin.load("soulseek").call(action: "quality", path: root)
+      assert_equal 1, result.fetch(:empty_files)
+      assert_equal 1, result.fetch(:unusually_small_files)
+      assert_equal 1, result.fetch(:format_classes).fetch(:lossless)
+      assert_equal 2, result.fetch(:format_classes).fetch(:lossy)
+      assert_equal "Structural triage only. Small files may be short clips or intentional samples; file extension does not establish bitrate or fidelity. No audio was decoded or changed.", result.fetch(:note)
+    end
+  end
+
 end
