@@ -2,6 +2,7 @@
 
 require "digest"
 require "json"
+require "securerandom"
 # Master::Io::Exec and Master::Face autoload through the `require "master"`
 # ApplicationController makes; this file reaches no MASTER path of its own.
 
@@ -23,6 +24,21 @@ class ChatController < ApplicationController
     # get a fresh transcript on every turn. A plain HTML render has no such
     # problem, and every chat begins with this page.
     conversation_id
+    @face_mask_session = SecureRandom.hex(16)
+    mask_archive = Master.load_yaml(Master.data_path("face_masks.yml"), default: {}) || {}
+    mask_entries = Array(mask_archive["entries"])
+    unless mask_entries.empty?
+      previous_mask_index = Integer(cookies.signed[:master_face_mask_rotation], exception: false)
+      next_mask_index = ((previous_mask_index || -1) + 1) % mask_entries.length
+      @face_mask_entry = mask_entries.fetch(next_mask_index)
+      cookies.signed[:master_face_mask_rotation] = {
+        value: next_mask_index,
+        expires: 1.year.from_now,
+        secure: request.ssl?,
+        httponly: true,
+        same_site: :strict
+      }
+    end
     @model = c&.[](:agent)&.model.to_s.split("/").last.presence || "booting"
     @tier = request.env["master.tier"].to_s
     @profile = face_profile
