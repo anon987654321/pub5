@@ -2884,10 +2884,10 @@ module Dilla
   # a person has auditioned the render against the checklist.
   def audit_render(path, overwrite: false)
     wav_path = File.expand_path(path.to_s)
-    raise ArgumentError, "audit expects a .wav file" unless wav_path.match?(/\\.wav\\z/i)
+    raise ArgumentError, "audit expects a .wav file" unless wav_path.match?(/\.wav\z/i)
     raise ArgumentError, "rendered WAV not found: #{wav_path}" unless File.file?(wav_path)
 
-    base = wav_path.sub(/\\.wav\\z/i, "")
+    base = wav_path.sub(/\.wav\z/i, "")
     report_path = "#{base}.audit.json"
     refuse_existing_outputs!([ report_path ], overwrite:)
     checks = []
