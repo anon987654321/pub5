@@ -2817,7 +2817,7 @@ module Dilla
 
     mp4 = "#{wav_path.sub(/\.wav\z/, '')}.mp4"
     system(Studio::Subprocess.environment, "ffmpeg", "-hide_banner", "-loglevel", "error", *(overwrite ? ["-y"] : ["-n"]),
-           "-i", wav_path, "-filter_complex", 
+           "-i", wav_path, "-filter_complex",
            "[0:a]showwaves=s=1280x360:mode=cline:colors=cyan|magenta[v];" \
            "[0:a]showcqt=s=1280x360:fps=20[cq];[v][cq]vstack[out]",
            "-map", "[out]", "-map", "0:a", "-c:v", "libx264", "-preset", "veryfast",
