@@ -69,6 +69,21 @@ class TestStudioLoraCli < Minitest::Test
     assert_includes output, '"mode": "apply"'
     assert_empty error
   end
+  def test_photograph_cli_defaults_to_four_images
+    options = studio_photograph_options([])
+
+    assert_equal 4, options.fetch(:count)
+  end
+
+  def test_photograph_cli_parses_batch_flags_for_non_tty_automation
+    arguments = %w[--all-subjects --count 4]
+    options = studio_photograph_options(arguments)
+
+    assert_equal true, options.fetch(:all_subjects)
+    assert_equal 4, options.fetch(:count)
+    assert_empty arguments
+  end
+
   def test_photograph_api_defaults_to_four_images_for_a_subject
     captured = {}
     fake_series = Object.new
