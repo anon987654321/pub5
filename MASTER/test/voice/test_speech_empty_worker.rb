@@ -112,11 +112,20 @@ class TestSpeechEmptyWorker < Minitest::Test
     end
   end
 
-  def test_retire_socket_reads_the_slot_from_the_path
+  def test_retire_socket_uses_the_slot_of_its_canonical_owned_path
     seen = []
-    Sup.stub(:retire_daemon, ->(index) { seen << index }) do
-      Sup.stub(:with_daemon_lock, ->(_root, index: 0, &blk) { blk.call }) do
-        Sup.retire_socket("/nonexistent/.master/tts-1.sock")
+    Dir.mktmpdir("t", "/tmp") do |root|
+      FileUtils.mkdir_p(File.join(root, ".master"))
+      pid = stub_daemon
+      @pids[1] = pid
+      path = Sup.socket_path(root, index: 1)
+
+      Sup.stub(:pool_size, 2) do
+        Sup.stub(:retire_daemon, ->(index) { seen << index; true }) do
+          Sup.stub(:with_daemon_lock, ->(_root, index: 0, &blk) { blk.call }) do
+            assert Sup.retire_socket(path, root:)
+          end
+        end
       end
     end
 
