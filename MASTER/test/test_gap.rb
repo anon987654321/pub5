@@ -62,9 +62,10 @@ class TestGap < Minitest::Test
 
   def test_runner_prints_the_gap_a_script_check_declares
     declared = run_runner("gap" => { "horizon" => "operator", "cost_to_check" => "minutes", "decidability" => "fact" })
-    assert_match(/probe inconclusive, gap: waits for the operator, checking costs minutes, a fact/, declared)
+    assert_includes declared,
+                    "gap_inconclusive.rb: subprocess measured nothing (gap: waits for the operator, checking costs minutes, a fact)"
 
-    assert_match(/probe inconclusive$/, run_runner({}))
+    assert_includes run_runner({}), "gap_inconclusive.rb: subprocess measured nothing"
   end
 
   def test_the_real_check_registry_declares_gaps_the_runner_can_build
