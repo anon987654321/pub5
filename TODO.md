@@ -194,6 +194,14 @@ screenshot count or previous revision.
   `bin/master selfcheck --fast` answers with lib_body_ceiling FAIL
   (131,443 body lines against the 111,024 ceiling, 20,419 over) — the
   ceiling needs its sponsor or a measured reduction; hooks are wired. The
+  2026-11-21, follow-up to the captured test failures: two incomplete
+  test doubles were corrected on main – `MASTER/test/test_io_ssrf_guard.rb`
+  now exposes Net::HTTP's three socket-timeout setters, and
+  `MASTER/test/test_io_catalog_index.rb` models the already-consumed response
+  body rather than invoking the socket-backed reader outside its request block.
+  Commits 22b3034 and 913e7e2. The repository suites were NOT_RUN after these
+  edits in this session; the isolated Ruby API contract check passed, which is
+  not a substitute for the suites.
   full `rake test` census stays open (two TIMEOUT attempts recorded above).
 - [ ] **RAILS full contracts on one current revision.** Run
   `ruby RAILS/test/run_all.rb`, every app's `bin/ci` and
