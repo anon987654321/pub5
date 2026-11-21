@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_11_17_120000) do
+ActiveRecord::Schema[8.2].define(version: 2026_11_22_120000) do
   create_table "account_merges", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "guest_user_id", null: false
@@ -1316,14 +1316,21 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_17_120000) do
     t.string "address"
     t.integer "city_id", null: false
     t.datetime "created_at", null: false
+    t.string "external_id"
     t.string "kind", null: false
+    t.datetime "last_observed_at"
+    t.string "location_precision", default: "exact", null: false
     t.decimal "latitude", precision: 10, scale: 6, null: false
     t.decimal "longitude", precision: 10, scale: 6, null: false
     t.string "name", null: false
+    t.string "source", default: "brgen", null: false
     t.integer "neighborhood_id"
     t.string "slug"
+    t.string "verification_state", default: "unverified", null: false
     t.datetime "updated_at", null: false
     t.index ["city_id", "kind"], name: "index_places_on_city_id_and_kind"
+    t.index ["city_id", "source", "external_id"], name: "index_places_on_city_source_external_id", unique: true, where: "external_id IS NOT NULL"
+    t.index ["city_id", "verification_state", "kind"], name: "index_places_on_city_verification_kind"
     t.index ["city_id", "slug"], name: "index_places_on_city_id_and_slug"
     t.index ["city_id"], name: "index_places_on_city_id"
     t.index ["neighborhood_id"], name: "index_places_on_neighborhood_id"
