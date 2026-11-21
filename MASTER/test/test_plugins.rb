@@ -474,4 +474,68 @@ class TestPlugins < Minitest::Test
     end
   end
 
+  def test_soulseek_manifest_audit_compares_exports_and_ignores_markdown_fences
+    require "tmpdir"
+    Dir.mktmpdir("soulseek-manifests") do |root|
+      first = File.join(root, "first.txt")
+      second = File.join(root, "second.md")
+      File.write(first, "reggae_dub/\nreggae_dub/release/\nreggae_dub/release/01_track.mp3\nreggae_dub/release/cover.jpg\n")
+      File.write(second, "reggae_dub/release/01_track.mp3\nreggae_dub/release/01_track.mp3\nworld/ethiopia/01_song.flac\n#{0x60.chr * 3}\n")
+      result = Master::Plugin.load("soulseek").call(action: "manifest", paths: [first, second])
+      assert_equal 1, result.fetch(:sources).first.fetch(:audio_files)
+      assert_equal 2, result.fetch(:sources).last.fetch(:audio_files)
+      assert_equal 1, result.fetch(:sources).last.fetch(:duplicate_entries)
+      assert_equal 1, result.fetch(:comparisons).first.fetch(:exact_shared_audio_paths)
+    end
+  end
+
+  def test_soulseek_catalogue_export_requires_consent_and_stays_outside_library
+    require "tmpdir"
+    require "fileutils"
+    require "json"
+    Dir.mktmpdir("soulseek-catalog") do |root|
+      library = File.join(root, "Music")
+      album = File.join(library, "J Dilla - Donuts (2006)")
+      FileUtils.mkdir_p(album)
+      track = File.join(album, "01 Workinonit.flac")
+      File.binwrite(track, "read-only-fixture")
+      output = File.join(root, "catalog.json")
+      plugin = Master::Plugin.load("soulseek")
+
+      assert_raises(Master::Plugin::PolicyError) do
+        plugin.call(action: "catalog", path: library, output_path: output)
+      end
+      assert_raises(Master::Plugin::PolicyError) do
+        plugin.call(action: "catalog", path: library, output_path: File.join(library, "catalog.json"), consent: true)
+      end
+
+      result = plugin.call(action: "catalog", path: library, output_path: output, consent: true)
+      document = JSON.parse(File.read(output))
+      assert_equal 1, result.fetch(:tracks)
+      assert_equal 1, document.fetch("summary").fetch("album_folders")
+      assert_equal "Workinonit", document.fetch("albums").first.fetch("tracks").first.fetch("title_hint")
+      assert_equal "read-only-fixture", File.binread(track)
+    end
+  end
+
+  def test_soulseek_duplicate_detection_separates_name_candidates_from_sha256_matches
+    require "tmpdir"
+    require "fileutils"
+    Dir.mktmpdir("soulseek-duplicates") do |root|
+      %w[A B C].each { |directory| FileUtils.mkdir_p(File.join(root, directory)) }
+      File.binwrite(File.join(root, "A", "01 Rhythm.mp3"), "aaaaaa")
+      File.binwrite(File.join(root, "B", "01 Rhythm.mp3"), "aaaaaa")
+      File.binwrite(File.join(root, "C", "01 Rhythm.mp3"), "bbbbbb")
+      plugin = Master::Plugin.load("soulseek")
+
+      candidates = plugin.call(action: "duplicates", path: root)
+      exact = plugin.call(action: "duplicates", path: root, mode: "sha256")
+      assert_equal 1, candidates.fetch(:groups)
+      assert_equal 3, candidates.fetch(:files_in_groups)
+      assert_equal 1, exact.fetch(:groups)
+      assert_equal 2, exact.fetch(:files_in_groups)
+      assert_equal 6, exact.fetch(:reclaimable_bytes_if_deduplicated)
+    end
+  end
+
 end
