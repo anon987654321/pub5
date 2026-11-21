@@ -1430,7 +1430,7 @@ test("MASTER web shares the CLI's Nerd Font Mono syntax roles", () => {
   const source = readFileSync(join(root, "styles", "face", "60_session_chrome.css"), "utf8");
   const built = readFileSync(join(publicDir, "face.css"), "utf8");
   for (const css of [source, built]) {
-    assert.match(css, /font-family:\s*var\\(--font-mono\\)/);
+    assert.match(css, /font-family:\s*var\(--font-mono\)/);
     for (const role of ["command", "keyword", "flag", "path", "string", "number", "comment", "success", "warning", "error", "operator"]) {
       assert.match(css, new RegExp("\\.syntax-" + role + "\\b"));
     }
