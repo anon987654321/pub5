@@ -189,7 +189,6 @@ install_root_configs() {
   # These files become root-executed entrypoints after installation.
   # Require regular, non-symlink sources before copying anything to /.
   typeset -a privileged_sources=(
-    usr/local/sbin/pub5-admin
     usr/local/bin/emergency_cpu.sh
     usr/local/libexec/ci-prepare.ksh
     usr/local/libexec/ci-run.ksh
@@ -220,8 +219,7 @@ install_root_configs() {
       return 1
     fi
   done
-  for rel in /usr/local/sbin/pub5-admin \
-             /usr/local/libexec/ci-prepare.ksh \
+  for rel in /usr/local/libexec/ci-prepare.ksh \
              /usr/local/libexec/ci-run.ksh \
              /usr/local/libexec/ci-sync.ksh \
              /usr/local/libexec/rails-task.ksh \
@@ -283,8 +281,7 @@ install_root_configs() {
     [[ -f /etc/rc.d/$svc ]] && chmod 555 /etc/rc.d/$svc
   done
   for f in /usr/local/bin/*(N); do [[ -f $f ]] && chmod 755 "$f"; done
-  for f in /usr/local/sbin/pub5-admin \
-           /usr/local/libexec/ci-prepare.ksh \
+  for f in /usr/local/libexec/ci-prepare.ksh \
            /usr/local/libexec/ci-run.ksh \
            /usr/local/libexec/ci-sync.ksh \
            /usr/local/libexec/rails-task.ksh \
@@ -294,10 +291,9 @@ install_root_configs() {
       return 1
     fi
   done
-  # These fixed broker entrypoints must be regular files. A symlink would
+  # These fixed app-user helpers must be regular files. A symlink would
   # make root chown/chmod operate on a target outside the install contract.
-  for f in /usr/local/sbin/pub5-admin \
-           /usr/local/libexec/ci-prepare.ksh \
+  for f in /usr/local/libexec/ci-prepare.ksh \
            /usr/local/libexec/ci-run.ksh \
            /usr/local/libexec/ci-sync.ksh \
            /usr/local/libexec/rails-task.ksh \
@@ -308,12 +304,6 @@ install_root_configs() {
     fi
   done
 
-  # The deploy account will use this fixed-path broker for root operations.
-  # It is refreshed only by this deliberate operator sync.
-  if [[ -f /usr/local/sbin/pub5-admin ]]; then
-    chown root:wheel /usr/local/sbin/pub5-admin || return 1
-    chmod 555 /usr/local/sbin/pub5-admin || return 1
-  fi
   # libexec holds helpers root dot-sources (stale_ci_cleanup.ksh); they must be
   # root-owned and not group/world writable or the sourcing is a root RCE.
   for f in /usr/local/libexec/*(N); do [[ -f $f ]] && chown root:wheel "$f" && chmod 755 "$f"; done
@@ -396,7 +386,7 @@ sync_openbsd_apply() {
   # five minutes and it is the load-shedding guard that keeps this 1GB box up —
   # swallowing the install failure meant it could simply be absent, with no
   # error, while every log line still said the crontab was installed.
-  # The privileged broker invokes this fixed, root-owned copy, never the live checkout.
+  # Deployment invokes this fixed, root-owned copy, never the live checkout.
   if ! install -d -o root -g wheel -m 755 /usr/local/libexec/pub4; then
     log ERROR "cannot prepare /usr/local/libexec/pub4"
     return 1
@@ -411,8 +401,7 @@ sync_openbsd_apply() {
     return 1
   }
 
-  # pub5-admin has its own fixed helper path. Keep the pub4 copy above for
-  # compatibility callers; the current deploy chain uses this pub5-owned path.
+  # The current deployment chain uses the versioned pub5 helper path.
   if ! install -d -o root -g wheel -m 755 /usr/local/libexec/pub5; then
     log ERROR "cannot prepare /usr/local/libexec/pub5"
     return 1
