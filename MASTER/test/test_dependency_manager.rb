@@ -26,12 +26,14 @@ class TestDependencyManager < Minitest::Test
 
   def teardown = FileUtils.rm_rf(@root)
 
-  def fake_manager(responses, bundler: true)
+  def fake_manager(responses, bundler: true, approval: nil, input: $stdin, out: nil)
     manager = MANAGER.new(
       root: @root,
       env: { "PATH" => "/bin", "MASTER_AUTO_INSTALL" => "1", "MASTER_AUTO_BUNDLE" => "1" },
-      out: StringIO.new,
+      out: out || StringIO.new,
       home: @root,
+      input:,
+      approval:,
       command_path: ->(_name) { "/fake/gem" },
       runner: lambda do |argv, chdir:, env:|
         @commands << [argv, chdir, env]
@@ -758,7 +760,56 @@ class TestDependencyManager < Minitest::Test
     assert_includes result.output, "pkg_add: permission denied"
   end
 
-  # Package installation is an explicit opt-in; the approved path retries once.
+  # Interactive approval is gathered once before OS packages are installed;
+  # the native build is then retried through the ordinary locked-bundle verifier.
+  def test_native_build_failure_prompts_for_system_packages_and_retries
+    responses = [
+      [false, "", "extconf failed: sqlite3.h not found"],
+      [false, "", "extconf failed: sqlite3.h not found"],
+      [true, "system packages installed", ""],
+      [true, "The Gemfile's dependencies are satisfied", ""],
+    ]
+    input = StringIO.new("yes\n")
+    input.define_singleton_method(:tty?) { true }
+    output = StringIO.new
+    output.define_singleton_method(:tty?) { true }
+    manager = fake_manager(responses, input:, out: output)
+    manager.define_singleton_method(:package_manager_name) { :termux }
+    manager.define_singleton_method(:package_commands) do
+      [[["pkg", "install", "-y", "sqlite"], "pkg"]]
+    end
+
+    result = manager.ensure!
+
+    assert result.success?
+    assert_includes output.string, "MASTER needs native build prerequisites"
+    assert_includes output.string, "Install these system packages now? [y/N]"
+    assert @commands.any? { |row| row.first == ["pkg", "install", "-y", "sqlite"] }
+  end
+
+  def test_declining_the_system_package_prompt_does_not_install_os_packages
+    responses = [
+      [false, "", "extconf failed: sqlite3.h not found"],
+      [false, "", "extconf failed: sqlite3.h not found"],
+    ]
+    input = StringIO.new("no\n")
+    input.define_singleton_method(:tty?) { true }
+    output = StringIO.new
+    output.define_singleton_method(:tty?) { true }
+    manager = fake_manager(responses, input:, out: output)
+    manager.define_singleton_method(:package_manager_name) { :termux }
+    manager.define_singleton_method(:package_commands) do
+      [[["pkg", "install", "-y", "sqlite"], "pkg"]]
+    end
+
+    result = manager.ensure!
+
+    refute result.success?
+    assert_includes result.output, "explicit approval"
+    refute @commands.any? { |row| row.first.first == "pkg" }
+  end
+
+  # Pre-authorized, unattended hosts can install without an interactive prompt.
   def test_native_build_failure_installs_system_packages_and_retries
     responses = [
       [false, "", "extconf failed: sqlite3.h not found"],
@@ -857,6 +908,15 @@ class TestDependencyManager < Minitest::Test
     assert_equal "pkg", label
     assert_equal %w[pkg install -y], argv.first(3)
     assert_includes argv, "sqlite"
+  end
+
+  def test_bootstrap_and_master_share_the_same_dependency_preflight
+    bootstrap = File.read(File.join(Master::ROOT, "bin", "bootstrap"))
+    master = File.read(File.join(Master::ROOT, "bin", "master"))
+
+    assert_includes bootstrap, "Entrypoint.prepare!"
+    assert_includes bootstrap, "system_package_plan"
+    assert_includes master, "Entrypoint.prepare!"
   end
 
   def test_boot_probe_uses_the_real_master_boot_path
