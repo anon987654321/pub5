@@ -28,7 +28,7 @@ class TestFaceSwarm < Minitest::Test
     assert_equal 0.86, settings.fetch("damping")
     assert_equal 0.11, settings.fetch("cohesion_radius")
     assert_equal 0.045, settings.fetch("cohesion_strength")
-    assert_equal 0.035, settings.fetch("separation_radius")
+    assert_equal 0.05, settings.fetch("separation_radius")
     assert_equal 0.08, settings.fetch("separation_strength")
     assert_equal 0.014, settings.fetch("noise_scale")
     assert_equal({ "fraction" => 0.18, "strength" => 0.12 }, settings.fetch("residual"))
@@ -150,6 +150,25 @@ class TestFaceSwarm < Minitest::Test
     Swarm.update!([particle], mode: :thinking, dt: 0.05, config: settings, rng: Random.new(1))
 
     assert_in_delta 0.4, particle.x, 1.0e-12
+  end
+
+  def test_fragment_force_opens_the_field_and_ready_attractor_reassembles_it
+    settings = deep_config
+    settings["noise_scale"] = 0.0
+    settings["cohesion_radius"] = 0.0
+    settings["separation_radius"] = 0.0
+    settings["target_field"]["eyes"].each_value { |eye| eye["weight"] = 0.0 }
+    settings["target_field"]["mouth"]["weight"] = 0.0
+    settings["target_field"]["head"]["weight"] = 1.0
+    settings["fragment_strength"] = 0.16
+    particle = still_particle(x: 0.8, y: 0.05, z: 0.0)
+
+    Swarm.update!([particle], mode: :error, dt: 0.05, config: settings, rng: Random.new(1))
+    opened_x = particle.x
+    assert_operator opened_x, :>, 0.8, "error must push carriers outward from the face centre"
+
+    Swarm.update!([particle], mode: :ready, dt: 0.05, config: settings, rng: Random.new(1))
+    assert_operator particle.x, :<, opened_x, "ready must let the existing attractor reassemble the field"
   end
 
   def test_head_attractor_pulls_particles_back_toward_the_field
