@@ -910,6 +910,20 @@ class TestDependencyManager < Minitest::Test
     assert_includes argv, "sqlite"
   end
 
+  def test_system_package_plan_uses_the_canonical_platform_package_list
+    manager = fake_manager([])
+    manager.define_singleton_method(:package_manager_name) { :termux }
+    manager.define_singleton_method(:package_commands) do
+      [[["pkg", "install", "-y", "sqlite"], "pkg"]]
+    end
+
+    plan = manager.system_package_plan
+
+    assert_equal :termux, plan[:package_manager]
+    assert_equal MANAGER::SYSTEM_PACKAGES[:termux], plan[:packages]
+    assert_equal ["pkg", "install", "-y", "sqlite"], plan[:commands].first[:argv]
+  end
+
   def test_bootstrap_and_master_share_the_same_dependency_preflight
     bootstrap = File.read(File.join(Master::ROOT, "bin", "bootstrap"))
     master = File.read(File.join(Master::ROOT, "bin", "master"))
