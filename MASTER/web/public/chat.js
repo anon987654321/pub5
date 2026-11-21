@@ -291,17 +291,27 @@ function highlightCode(source) {
   return html + escapeHtml(source.slice(cursor));
 }
 
+function renderPlainText(source) {
+  return source.split("\n").map((line) => {
+    const match = line.match(/^(ok:|warn:|error:)(\s*)(.*)$/);
+    if (!match) return escapeHtml(line);
+    const role = match[1] === "ok:" ? "success" : match[1] === "warn:" ? "warning" : "error";
+    return '<span class="syntax-' + role + '">' + escapeHtml(match[1]) + '</span>' +
+      match[2] + escapeHtml(match[3]);
+  }).join("<br>");
+}
+
 function renderTerminalText(source) {
   const fence = /\x60{3}([A-Za-z0-9_+.-]*)[ \t]*\r?\n([\s\S]*?)\x60{3}/g;
   let html = "";
   let cursor = 0;
   for (const match of source.matchAll(fence)) {
-    html += escapeHtml(source.slice(cursor, match.index)).replace(/\n/g, "<br>");
+    html += renderPlainText(source.slice(cursor, match.index));
     const language = match[1] ? ' data-language="' + escapeHtml(match[1]) + '"' : "";
     html += "<pre" + language + "><code>" + highlightCode(match[2]) + "</code></pre>";
     cursor = match.index + match[0].length;
   }
-  return html + escapeHtml(source.slice(cursor)).replace(/\n/g, "<br>");
+  return html + renderPlainText(source.slice(cursor));
 }
 
 let _chunkCount = 0;
