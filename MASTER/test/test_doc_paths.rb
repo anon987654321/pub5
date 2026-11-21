@@ -38,7 +38,7 @@ class TestDocPaths < Minitest::Test
     RAILS/README.md
     RAILS/CLAUDE.md
     MASTER/tools/README.md
-    STUDIO/README.md
+    STUDIO/replicate/README.md
     BIZ/README.md
   ].freeze
 
@@ -128,7 +128,7 @@ class TestDocPaths < Minitest::Test
     assert_includes root_readme, "`MASTER/data/laws.yml`"
     assert_includes root_readme, "`RAILS/CLAUDE.md`"
     assert_includes root_readme, "`OPENBSD/CLAUDE.md`"
-    assert_includes root_readme, "`STUDIO/README.md`"
+    assert_includes root_readme, "`STUDIO/replicate/README.md`"
     refute_includes root_readme, "target tree's `AGENTS.md`"
     refute_match(/\]\(ARCHITECTURE\.md\)/, root_readme)
   end
@@ -197,7 +197,7 @@ class TestDocPaths < Minitest::Test
     RAILS/amber/__logo/RESEARCH.md
     SECURITY.md
     STUDIO/lora/PHOTOGRAPHY.md
-    STUDIO/vendor/tone/LICENSE.md
+    STUDIO/dilla/vendor/tone/LICENSE.md
   ].freeze
 
   # README.md is the human entry point at each tree/project boundary. Other
