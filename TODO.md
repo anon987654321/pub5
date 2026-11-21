@@ -1,5 +1,39 @@
 # pub5 — remaining work
 
+2026-11-21 GLM-agent session at main@6e5da482, Debian 13 sandbox, 4 GB RAM,
+2 CPUs, no provider keys: `MASTER/bin/sandbox-bootstrap` built the vendored
+Ruby 3.3.6, installed every tree’s bundle, the libvips closure (plus the
+missing libcgif0 from the Debian pool), and Chrome for Testing; zsh 5.9.2,
+ksh93 and sqlite3 were extracted beside it for the OPENBSD suites. The
+operator’s session reroute – GLM 5.3 Flash as the primary #1 model for /fix –
+is live: `bin/zai-chat` probes ok and the router serves `zai-cli:auto` first.
+Seating the consensus jury for this sandbox took three commits (anthropic
+seat keyless; OVH quota spent to 2026-11-28; llm7 spent to 14:00; kilo
+guessed parks invalidated after a live 200): the jury is
+`zai-cli:auto + kilo:baidu/ernie-5.5-flash-preview:free +
+kilo:nvidia/nemotron-3.5-lightning:free`, quorum 2, /doctor consensus-jury
+3/3 reachable. Sustained /fix load still trips the gateway’s rate limit and
+each free tier’s small quota, so repair phases collapse to the free floor
+and fail closed; every stop below is recorded with its truthful state.
+
+/fix runs this session: MASTER reached pass 0 and its verified mechanical
+repairs were committed (be9519ad) — one refused repair (LANE_SLOTS.freeze)
+was caught and reverted with a comment. OPENBSD completed preflight,
+observation (174 violations from 1,467 findings), ratchets and the check
+baseline, then the repair floor collapsed (5 failed attempts, 0 repairs,
+0 fixes); the run is interrupted at pass 0 and resumable. STUDIO refused at
+LanePreflight while every juror was quota-spent. RAILS passed preflight,
+ran the code lane’s check/source/measure phases on the collapsed floor and
+is interrupted at pass 0 (0 repairs). No tree reached a terminal repair
+state; the runs own their receipts in the repository-scoped runtime store.
+
+Focused acceptance evidence recorded under §1 below. Full-suite census:
+`rake test` was attempted twice under MASTER_TEST_JOBS=2 and each attempt
+hit the sandbox tool window’s TIMEOUT mid-run (the runner has no resume);
+the focused suites and the two drift repairs found en route (mobile
+installer pull shape, operator-contract wording) are recorded individually
+and the census remains NOT_RUN as a single uninterrupted run.
+
 2026-11-20 selective source re-audit at main@5ca13a5: the Core-owned BrowserBroker
 and CoreBridge injection already exist, but BrowserAgent, WebBrowse, WebChat,
 SessionBrowser, SocialBrowser and TravelBrowser still had local Chromium
@@ -147,6 +181,20 @@ screenshot count or previous revision.
   `bin/check --profile=agent`. Inspect
   `.master/check/suite-report.json` for incomplete workers and mismatched
   start/result counts. Preserve actual output.
+  2026-11-21, sandbox (vendored Ruby 3.3.6): focused suites executed –
+  test_soul 26/151 PASS; test_identity_and_runtime_surface 10/110 PASS after
+  pinning the current operator-contract wording; test/voice/test_voice_identity
+  9/38 PASS; test/bare/test_agent_tier 21/283 PASS after requiring «time»;
+  test/test_mobile 40/108 PASS after following the `git -C` pull; law batch
+  test_law_fixtures 9, test_law_ids_unique 6, test_law_parity 14,
+  test_law_catalogue 23 and test_fix_interruption_restart 5, all PASS with
+  zero failures; `agent_context --json` emits the five-tier authority order;
+  `rake lint:agent_contracts` green after `rake docs:agent_contracts`
+  regenerated pointers a parallel session’s marked-block edit had drifted;
+  `bin/master selfcheck --fast` answers with lib_body_ceiling FAIL
+  (131,443 body lines against the 111,024 ceiling, 20,419 over) — the
+  ceiling needs its sponsor or a measured reduction; hooks are wired. The
+  full `rake test` census stays open (two TIMEOUT attempts recorded above).
 - [ ] **RAILS full contracts on one current revision.** Run
   `ruby RAILS/test/run_all.rb`, every app's `bin/ci` and
   `ruby MASTER/checks/runner.rb --all`. The last recorded RAILS run had six
@@ -242,6 +290,12 @@ compatible checkout and no compiler child remains afterward.
   The runner now rejects empty or invalid Minitest summaries and has new
   regression tests. Run the updated `ruby OPENBSD/test/run_all.rb` and
   runner tests; on actual OpenBSD run `pfctl -nf /etc/pf.conf`.
+  2026-11-21, sandbox: `ruby OPENBSD/test/run_all.rb` — 49 files, 0 red,
+  0 failures, 0 errors on the vendored Ruby 3.3.6 after provisioning zsh
+  5.9.2, ksh93 and sqlite3 from the Debian pool and PUB5_RUBY for the
+  installed helpers; test_ptr_openbsd_amsterdam was repaired to read the
+  [uri, request] pair 70fda2a5 returns. Native `pfctl -nf /etc/pf.conf`
+  still needs a real OpenBSD host (BLOCKED: console).
 - [ ] **STUDIO full proof.** Earlier `rake check` and Dilla test
   (17 runs, 386 assertions) passed. The strict per-file runner now forwards
   keyword and positional subprocess environments correctly and rejects empty
@@ -282,6 +336,17 @@ compatible checkout and no compiler child remains afterward.
   and training waits, with seven transfer/deadline tests added. All these new
   and changed tests remain NOT_RUN on pinned Ruby 4.0.5; no golden WAV, actual
   listening verdict, ALS-set check or live provider transaction is claimed.
+  2026-11-21, sandbox: `rake check` and `rake test` ran – 36 of 36 files
+  green on the vendored Ruby 3.3.6 with the libvips closure (libcgif0 added).
+  The first execution of the LoRA suites found three real defects, fixed in
+  the STUDIO LoRA repair commit: review.rb’s reference inventory compared
+  dotted extensions to bare words and always refused; train.rb’s dataset
+  digest used a
+  while-modifier that raises NameError; validate.rb classed a symlinked
+  declared dataset as absence instead of FAIL. Test drift from deliberate
+  source changes (append-only generation, schema-preflight wording,
+  constructor-time owner-only gate, graded-take src) updated. The by-ear
+  render review and golden audio fixture remain open (operator, ears).
 
 - [ ] **Generated-output freshness.** Check design-token projection and CSS;
   compare `MASTER/web/public/face.runtime.js` and `face.css` with their
@@ -1192,6 +1257,10 @@ sandbox and folds into section 1's Current-revision acceptance.
 
 - [ ] Verify on the installed compatible Ruby: rake dogfood green over law/, test_law_fixtures, test_law_ids_unique, test_law_parity and the test_law_catalogue* family green, and one rendered-suite pass per new snapshot Law in headless Chrome.
   PARTIAL 2026-11-07: test_law_fixtures (8 runs) and the catalogue family (test_law_ids_unique, test_law_parity, test_law_catalogue + bootstrap + policy, 6 runs) are green on the pinned 4.0.5 host. rake dogfood (writes) and the headless-Chrome rendered pass remain NOT_RUN.
+  PARTIAL 2026-11-21: on the vendored Ruby 3.3.6 the same focused family
+  answers green again – test_law_fixtures 9, test_law_ids_unique 6,
+  test_law_parity 14, test_law_catalogue 23, all 0 failures. rake dogfood
+  (writes) and the headless-Chrome rendered pass remain NOT_RUN.
 - [ ] Apply REDUNDANT_CORE_REQUIRE's fix — the 108 dead requires — through /fix with MASTER_AUTOFIX=1, not by hand.
 - [ ] Tune design_thresholds against measured surfaces once the rendered suite runs: the 0.02 OKLab merge distance and the APCA levels are starting levels, not standards.
 
