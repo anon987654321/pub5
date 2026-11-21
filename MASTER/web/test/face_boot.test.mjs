@@ -302,6 +302,7 @@ test("sixteen pixel mask profiles use bounded sparse geometry and the shared fac
   const masks = readFileSync(join(publicDir, "face_mask_profiles.js"), "utf8");
   const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
   const manifest = readFileSync(join(root, "config", "face_assets.yml"), "utf8");
+  const events = readFileSync(join(publicDir, "master_events.js"), "utf8");
   const tokens = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
   const calls = [];
   const listeners = {};
@@ -332,6 +333,7 @@ test("sixteen pixel mask profiles use bounded sparse geometry and the shared fac
   assert.equal(api.profiles.length, 16);
   assert.equal(new Set(api.profiles.map((profile) => profile.id)).size, 16);
   assert.match(manifest, /- face_mask_profiles/);
+  assert.match(events, /"conversation:created": \{ targets: \["face"\], fields: \["id", "conversationId"\] \}/);
   assert.match(tokens, /max_features: 8/);
   assert.match(tokens, /max_parts: 8/);
   assert.match(world, /Math\.min\(8, Math\.floor\(finite\(SEMANTIC_SUBJECT\.max_features, 8\)\)\)/);
