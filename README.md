@@ -95,9 +95,11 @@ local entrypoint name, not a second Law catalogue. Aider's file list explains
 what it reads; the operator remains responsible for commits.
 
 `MASTER/lib/convergence/architecture.rb` reports the live cross-tree inventory; `MASTER/data/law/TREE_CONTRACTS.md`
-is the shared runtime/tree contract. `BIZ/README.md` owns BIZ's document-production workflow. Root `TODO.md` is the one cross-tree
-action list; structured YAML ledgers remain the owners of IDs, evidence receipts,
-provenance and lifecycle state. Do not create another backlog file.
+is the shared runtime/tree contract. `BIZ/README.md` owns BIZ's document-production workflow. Open work lives with its
+owner: `MASTER/convergence.yml`, `MASTER/data/gaps.yml`,
+`MASTER/data/operator_seams.yml`, `MASTER/data/law/ux_refinements.yml` and
+`RAILS/refinements.yml`. `bin/master status --agent` is their read-only union;
+there is no parallel Markdown checklist or generated backlog.
 
 ## First hour
 
