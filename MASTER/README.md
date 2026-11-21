@@ -229,5 +229,5 @@ The near horizon is self-maintenance: `/fix` holding this repository's suites an
 - Scope expectations and vocabulary: `data/expectations.yml` and `data/synonyms.yml`.
 - Cross-tree inventory: `lib/convergence/architecture.rb` and `MasterPaths::TREES`.
 - CSS cascade order and thresholds: `data/css_architecture.yml`, `data/tokens.yml` and the corresponding Laws.
-- Root `TODO.md` remains the only cross-tree action list. Structured ledgers own their own IDs, evidence, provenance and lifecycle state.
+- Cross-tree implementation and proof state: `convergence.yml`; product gaps: `data/gaps.yml`; operator-only evidence: `data/operator_seams.yml`; UX acceptance: `data/law/ux_refinements.yml`; RAILS-specific refinement: `../RAILS/refinements.yml`. `bin/master status --agent` is the read-only union view, not another owner.
 Use `bin/master --help` and `bin/operator --help` for the current command surface.
