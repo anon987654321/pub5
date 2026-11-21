@@ -194,8 +194,8 @@ class TestSelfiesGallery < Minitest::Test
 
     # A soundtrack path relative to STUDIO/ is passed through; the file lives
     # beside the page, not in the temp tree, so the recorded value is the path.
-    manifest = build(soundtrack: "selfies/dilla.mp3")
-    assert_equal "selfies/dilla.mp3", manifest.fetch("soundtrack")
+    manifest = build(soundtrack: "lora/selfies/dilla.mp3")
+    assert_equal "lora/selfies/dilla.mp3", manifest.fetch("soundtrack")
   end
 end
 
@@ -247,7 +247,7 @@ class TestSelfiesBrowserContract < Minitest::Test
 
   def test_the_page_names_the_generated_manifest_and_bed
     html = File.read(File.join(studio_root, "lora", "selfies", "selfies.html"))
-    assert_includes html, 'src="selfies/manifest.js"'
-    assert_includes html, "selfies/dilla.mp3"
+    assert_includes html, 'src="manifest.js"'
+    assert_includes html, "dilla.mp3"
   end
 end
