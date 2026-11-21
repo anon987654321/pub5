@@ -153,6 +153,9 @@ module Master
             "social_browser covers OnlyFans and FetLife on supported desktop or Android/Termux runtimes.",
             "It permits explicit operator-owned or authorized actions and inbound replies only; no bulk outreach, friendship farming, deception or challenge bypass.",
             "air_superiority performs defensive Wi-Fi/Bluetooth observation and keeps only a local known-device baseline.",
+            "soulseek uses an operator-configured slskd daemon for music search, results, download status, local library inventory and gap checks.",
+            "Search does not download. Queueing requires explicit consent, one exact result file and a declared rights basis; bulk acquisition and access-control bypass are disabled.",
+            "Set MASTER_SLSKD_API_KEY in the process environment; never commit the key.",
           ],
         },
         "status" => {
