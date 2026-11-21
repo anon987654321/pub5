@@ -70,8 +70,9 @@ stickers, lack a visible face, or use intimate/cropped framing. In particular,
 this avoids teaching a general-purpose identity model from intimate images.
 
 Four clean portraits are not enough for a reliable first training. Add at least
-six more suitable photos (eight to fourteen is better) to the local, ignored
-folder \`STUDIO/lora/merethe/sources/additional/\`. Prefer ordinary,
+eight more suitable photos to reach the 12-image minimum; eight to fourteen
+additional photos (12–18 total) is the preferred range. Put them in the local,
+ignored folder \`STUDIO/lora/merethe/sources/additional/\`. Prefer ordinary,
 non-intimate photos with her face clearly visible, varied expressions, angles,
 clothing and everyday settings. Avoid filters, stickers, text overlays, heavy
 retouching and repeated near-duplicates. Each image needs a same-basename \`.txt\`
