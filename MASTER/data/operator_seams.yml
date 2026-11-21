@@ -224,6 +224,31 @@ seams:
     evidence: >-
       The shared prompt grammar read identically on the Mac shell, the live OpenBSD shell, the MASTER CLI and
       the web face, without giving the browser shell or filesystem authority.
+  # MASTER / repository and operator-owned archives
+  - id: repository_visibility_and_history_containment
+    tree: STUDIO
+    needs: rights
+    evidence: >-
+      The operator decides whether the public repository visibility is intentional. If a visibility
+      change or history rewrite is approved, use an administrator-authorised GitHub operation,
+      coordinate mirrors, branches, tags, forks and clones, preserve a complete recovery bundle, then
+      rescan every reachable ref for photographs, captions, descriptors, datasets, model weights and
+      credentials. Current-tree absence is not proof of history containment; no private media is
+      deleted from local storage as part of this audit.
+  - id: runtime_wishlist_reconciliation
+    tree: MASTER
+    needs: material
+    evidence: >-
+      Export the ignored local MASTER/.master/fix_wishlist.json from the operator checkout and reconcile
+      each still-valid row against convergence, gaps, UX and operator-seam IDs. Preserve provenance and
+      rejection reasons; do not copy a generated list into a second tracked backlog.
+  - id: account_wide_transcript_coverage
+    tree: MASTER
+    needs: material
+    evidence: >-
+      Only after the operator supplies an official ChatGPT export, reconcile source conversation IDs
+      and timestamps, deduplicate repeated handoffs, and record the exact archive coverage. Do not claim
+      complete account-wide coverage from a partial export or conversation snippets.
   # STUDIO
   - id: wenche_subject_consent
     tree: STUDIO
