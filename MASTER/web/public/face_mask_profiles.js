@@ -124,6 +124,8 @@
   window.MASTER_FACE_MASKS = Object.freeze({
     profiles: PROFILES,
     current: () => PROFILES[current],
+    descriptor: () => descriptor(PROFILES[current]),
+    applyCurrent: (reason = "restore") => apply(current, reason),
     select: (id) => {
       const index = PROFILES.findIndex((profile) => profile.id === String(id));
       if (index < 0) return false;
