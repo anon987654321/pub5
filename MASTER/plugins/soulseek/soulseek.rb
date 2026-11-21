@@ -376,6 +376,7 @@ module Master
 
       def duplicates(path, mode:)
         inventory = scan_library(path)
+        @duplicate_scan_skipped = 0
         selected_mode = mode.to_s
         groups = case selected_mode
                  when "candidates"
