@@ -97,6 +97,9 @@ test("live stipple keeps one deterministic solid carrier near the left eye", () 
   assert.equal(voids.eyeApertureScale, 1.14);
   assert.equal(voids.faultline.states.join(","), "error");
   assert.equal(voids.faultline.strength, 0.82);
+  assert.equal(stipple.faultlineStrengthForState("error"), 0.82);
+  assert.equal(stipple.faultlineStrengthForState("ready"), 0, "ready removes the temporary fracture");
+  assert.equal(stipple.faultlineStrengthForState("idle"), 0, "stillness does not carry a decorative crack");
 
   const samples = stipple.defaultSamples(512);
   assert.equal(samples.length, 512, "opening the voids does not discard carriers");
@@ -135,7 +138,7 @@ test("Hollow Gaze and Faultline are semantic, bounded voids in the one-pixel fie
   assert.match(system, /uFaultlineHalfWidth: \\{ value: voidConfiguration\\(\\)\\.faultline\\.halfWidth \\}/);
   assert.match(system, /vFaultline = \\(1\\.0 - smoothstep\\(uFaultlineHalfWidth/);
   assert.match(system, /if \\(vSolo < 0\\.5 && fault > 0\\.62\\) discard;/);
-  assert.match(system, /voids\\.faultline\\.states\\.includes\\(mode\\)/);
+  assert.match(system, /faultlineStrengthForState\\(mode\\)/);
   assert.match(system, /gl_PointSize = 1\\.0;/);
   assert.match(tokens, /density_scale:\\s*0\\.90/);
 });
