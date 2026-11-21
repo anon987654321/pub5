@@ -359,6 +359,7 @@ face_root:
     tap-min: 44px
     text-meta: 0.8125rem
     text-extra-small: 0.75rem
+    terminal-font-size: 1.25rem
     text-title: 1.25rem
     baseline: 4px
     measure: 60ch
@@ -370,6 +371,7 @@ face_root:
     radius-large: '0'
     radius-pill: '0'
     face-bar-height: 44px
+    face-chrome-bottom: calc(var(--face-bar-height) + var(--chrome-inset))
     bar-height: 44px
     hud-tier-status: calc(var(--face-bar-height) + var(--safe-bottom) + 8px)
     hud-tier-caption: calc(var(--face-bar-height) + var(--safe-bottom) + var(--tap-min))
@@ -421,7 +423,7 @@ face_interface:
     activity: 0.14
     risk: 0.0
   stipple:
-    intro_duration_ms: 1200
+    intro_duration_ms: 5200
     depth_response:
       reference_distance: 5.0
       scale_min: 0.75
