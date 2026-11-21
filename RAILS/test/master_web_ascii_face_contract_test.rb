@@ -175,8 +175,9 @@ class MasterWebAsciiFaceContractTest < Minitest::Test
   def test_the_brand_mark_is_left_to_its_own_font
     css = read(PUBLIC, "face.css")
 
-    assert_match(/--font-logo: system-ui/, css)
-    assert_match(/font: 800 clamp\(15px,3\.8vw,24px\)\/1 var\(--font-logo\)/, css)
+    assert_match(/--font-logo: "Helvetica Neue", Helvetica, Arial, sans-serif;/, css)
+    assert_includes css, 'font: 700 clamp(0.9375rem, 2.8vw, 1.125rem) / 1 var(--font-logo);'
+    assert_includes view, '<% mark = "ai.brgen.no" %>'
     assert_includes view, '<span class="brand-text"><%= mark %></span>'
   end
 
