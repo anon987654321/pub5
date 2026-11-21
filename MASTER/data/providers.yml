@@ -99,7 +99,9 @@ zai:
   env: [ZAI_API_KEY]
   # OpenAI-compatible custom sender; no RubyLLM setter, but this is a paid API key.
   model_pattern: '\Aglm'
-  strengths: [cheap, coding, long_context, agentic]
+  # tts: the glm_tts voice lane rides this account through bin/zai-tts
+  # (data/tts.yml), the same way replicate's strengths name its Kokoro lane.
+  strengths: [cheap, coding, long_context, agentic, tts]
   default_model: glm-5.3-flash
 
 # Explicit local Ollama-only content lane. MASTER_NSFW_MODEL is a model
