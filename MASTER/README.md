@@ -77,7 +77,7 @@ allow the emulator to wrap long text, and never pad fields into fixed columns.
 MASTER uses semantic ANSI colour only on an eligible TTY; pipes, NO_COLOR
 and dumb terminals receive plain text. Nerd Font private-use icons are optional
 and never replace words or ASCII-safe output. The browser transcript uses the
-same monospaced roles at 18px with 1.5 leading and a 66ch measure.
+same monospaced roles at 20px with 1.5 leading and a 66ch measure.
 
 These choices follow Strunk and White's directness and Bringhurst's hierarchy,
 measure and rhythm: the reader should see the information first, not the
