@@ -2,7 +2,7 @@
 
 # Law proof fixtures: what every Law's worked examples prove, recorded so a
 # port can be held to them. Fourth piece of the pub5 acceptance harness
-# (TODO.md, current-revision acceptance): laws.yml moves byte for byte, so the port's law
+# (MASTER/convergence.yml, current-revision acceptance): laws.yml moves byte for byte, so the port's law
 # engine must fire on the same bad example and stay quiet on the same good one.
 #
 #   ruby MASTER/tools/law_fixtures.rb record
