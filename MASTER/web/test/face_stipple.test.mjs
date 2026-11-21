@@ -557,7 +557,7 @@ test("stipple shares face state and obeys point and motion budgets", () => {
   assert.match(system, /vThreshold = aThreshold/);
   assert.match(system, /vThreshold > uDensity/);
   assert.match(tokens, /density_scale:\s*0\.90/);
-  assert.match(tokens, /particle_spacing_scale:\s*1\.025/);
+  assert.match(tokens, /particle_spacing_scale:\s*1\.045/);
   assert.match(system, /uParticleSpacingScale: \{ value: particleSpacingScale\(\) \}/);
   assert.match(system, /p = spacingOrigin \+ \(p - spacingOrigin\) \* uParticleSpacingScale;/);
   assert.match(system, /const densityScale = clamp\(window\.MASTER_FACE_CONTRACT\?\.stipple\?\.density_scale, 0\.90, 0\.7, 1\.0\)/);
@@ -569,7 +569,7 @@ test("the swarm geometry, force constants, modes and glyph ramp live in face tok
   assert.match(tokens, /damping:\s*0\.86/);
   assert.match(tokens, /cohesion_radius:\s*0\.11/);
   assert.match(tokens, /cohesion_strength:\s*0\.045/);
-  assert.match(tokens, /separation_radius:\s*0\.05/);
+  assert.match(tokens, /separation_radius:\s*0\.055/);
   assert.match(tokens, /fragment_strength:\s*0\.16/);
   assert.match(system, /const fragmentActive = force === "fragment"/);
   assert.match(system, /if \(fragmentActive && fragmentStrength > 0\)/);
@@ -658,7 +658,7 @@ test("stipple module boots and builds from the canonical idle profile", () => {
       swarm: {
         enabled: true, particle_budget: 240, damping: 0.86, size_from_depth: true, cohesion_radius: 0.11, cohesion_strength: 0.045,
         residual: { fraction: 1, strength: 0.12 },
-        separation_radius: 0.05, separation_strength: 0.08, noise_scale: 0.014, fragment_strength: 0.16,
+        separation_radius: 0.055, separation_strength: 0.08, noise_scale: 0.014, fragment_strength: 0.16,
         glyph_ramp: [".", "˙", "∘", "*", "○", "●"],
         target_field: {
           head: { center: [0, 0.05, 0], scale: [1.18, 1.02, 0.82], weight: 1 },
@@ -894,7 +894,7 @@ test("stipple module boots and builds from the canonical idle profile", () => {
   assert.equal(stipple.material.uniforms.uMotionScale.value, 0);
   assert.equal(stipple.material.uniforms.uLuminosity.value, 0.76);
   assert.equal(stipple.material.uniforms.uAttract.value, 0.14);
-  assert.equal(stipple.material.uniforms.uParticleSpacingScale.value, 1.025);
+  assert.equal(stipple.material.uniforms.uParticleSpacingScale.value, 1.045);
   assert.equal(stipple.material.uniforms.uDepthReferenceDistance.value, 5.0);
   assert.equal(stipple.material.uniforms.uDepthScaleMin.value, 0.75);
   assert.equal(stipple.material.uniforms.uDepthScaleMax.value, 1.25);
