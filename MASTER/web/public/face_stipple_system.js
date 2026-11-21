@@ -208,6 +208,11 @@
     };
   }
 
+  function faultlineStrengthForState(state) {
+    const faultline = voidConfiguration().faultline;
+    return faultline.enabled && faultline.states.includes(String(state)) ? faultline.strength : 0;
+  }
+
   function fingerprintConfiguration() {
     const config = window.MASTER_FACE_CONTRACT?.stipple?.fingerprint || {};
     const center = Array.isArray(config.center) ? config.center : [0.08, 0.06];
@@ -714,8 +719,7 @@
     const u = system.material.uniforms;
     const voids = voidConfiguration();
     u.uFaultlineHalfWidth.value = voids.faultline.halfWidth;
-    u.uFaultlineStrength.value = voids.faultline.enabled && voids.faultline.states.includes(mode)
-      ? voids.faultline.strength : 0;
+    u.uFaultlineStrength.value = faultlineStrengthForState(mode);
     u.uDensity.value = clamp(
       (profile.density + (pressure - 0.5) * 0.24 + (modulation.density || 0)) * densityScale,
       profile.density * densityScale,
@@ -1183,7 +1187,7 @@
 
   window.MASTER_FACE_STIPPLE = Object.freeze({
     createDefault, defaultSamples, buildFromSamples, selectSoloMark, mount, configure, syncFromFaceState, tick, updateExpressions, updateSwarm,
-    particleSpacingScale, voidConfiguration,
+    particleSpacingScale, voidConfiguration, faultlineStrengthForState,
     glyphForDepth, pointBudget, canonicalSwarmMode, modeMultipliersFor, applyPalette,
     get profiles() { return profiles(); },
     get system() { return active; },
