@@ -53,6 +53,10 @@
     window.MASTER_SOUL_SUMMARY = <%= raw json_escape("persona #{persona&.name || 'anchor'}; voice #{Master::Voice::Policy.neural_voice} (TTS fixed; persona affects text only); constitutional face".to_json) %>;
     window.MASTER_RUNTIME = <%= raw json_escape(Master::Ground::RuntimeCatalog.web_boot_payload_minimal.to_json) %>;
     window.MASTER_FACE_CONTRACT = <%= raw json_escape(Master.tokens.fetch("face_interface", {}).to_json) %>;
+    window.MASTER_FACE_MASK_SESSION = <%= raw json_escape(@face_mask_session.to_s.to_json) %>;
+    window.MASTER_FACE_MASK_PROFILE = <%= raw json_escape(@face_mask_profile.to_s.to_json) %>;
+    window.MASTER_FACE_MASK_ENTRY = <%= raw json_escape((@face_mask_entry || {}).to_json) %>;
+    window.MASTER_FACE_MASK_CATALOG = <%= raw json_escape(Array(@face_mask_entries).to_json) %>;
     window.MASTER_FACE_LAW_FIELD = <%= raw json_escape(@face_law_field.to_json) %>;
     window.MASTER_COMMANDS = <%= raw json_escape(Master::CLI::CommandRegistry.command_surface.to_json) %>;
     window.MASTER_I18N = <%= raw json_escape(t("face.js").to_json) %>;
