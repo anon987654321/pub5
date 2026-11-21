@@ -305,6 +305,11 @@ test("sixteen pixel mask profiles use bounded sparse geometry and the shared fac
   const tokens = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
   const calls = [];
   const listeners = {};
+  const storage = new Map();
+  const sessionStorage = {
+    getItem(key) { return storage.get(key) ?? null; },
+    setItem(key, value) { storage.set(key, value); }
+  };
   const window = {
     MASTER_FACE_WORLD: {
       setSubjectForm(form, descriptor) { calls.push({ form, descriptor }); return form; }
@@ -319,11 +324,7 @@ test("sixteen pixel mask profiles use bounded sparse geometry and the shared fac
   };
   const sandbox = {
     window, document, location: { pathname: "/chat", search: "" },
-    sessionStorage: {
-      values: new Map(),
-      getItem(key) { return this.values.get(key) ?? null; },
-      setItem(key, value) { this.values.set(key, value); }
-    },
+    sessionStorage,
     CustomEvent: class { constructor(type, options = {}) { this.type = type; this.detail = options.detail; } }
   };
   runInNewContext(masks, sandbox, { filename: "face_mask_profiles.js" });
@@ -348,8 +349,11 @@ test("sixteen pixel mask profiles use bounded sparse geometry and the shared fac
     }
   }
   assert.equal(api.current().id, "jah-hut-angular");
+  const sessionId = sessionStorage.getItem("master.mask.session");
+  assert.equal(sessionStorage.getItem("master.mask." + sessionId), "15");
   assert.equal(api.newConversation("conversation-next"), true);
   assert.equal(api.current().id, "abelam-shield");
+  assert.equal(sessionStorage.getItem("master.mask.conversation-next"), "0");
   assert.equal(api.newConversation("conversation-next"), true);
   assert.equal(api.current().id, "abelam-shield", "same conversation does not rotate twice");
   assert.ok(listeners["master:conversation-created"]?.length);
