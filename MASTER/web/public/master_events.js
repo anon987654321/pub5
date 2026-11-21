@@ -10,6 +10,8 @@
     "tts:start": { targets: ["face"], fields: ["text", "voice", "style"] },
     "tts:end": { targets: ["face"], fields: ["text", "interrupted"] },
     "tts:interrupt": { targets: ["face"], fields: ["reason", "intent"] },
+    "conversation:created": { targets: ["face"], fields: ["id", "conversationId"] },
+    "chat:created": { targets: ["face"], fields: ["id", "conversationId"] },
     "turn:started": { targets: ["face"], fields: ["id", "source"] },
     "turn:committed": { targets: ["face"], fields: ["id", "source", "text"] },
     "assistant:visual-subject": { targets: ["face"], fields: ["text", "visual_subject"] },
