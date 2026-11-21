@@ -5900,6 +5900,18 @@ plugins:
     chromium_profile_persists_site_data: true
     screenshot_evidence: required
     observable_actions: [status, inspect]
+  soulseek:
+    scope: operator_controlled_music_collection
+    endpoint: loopback_http_or_pinned_public_https
+    api_key_storage: process_environment_only
+    library_scan: explicit_path_read_only
+    search_and_result_inspection: allowed
+    bulk_download: false
+    one_file_per_queue_action: true
+    explicit_consent_per_file: true
+    rights_basis_required: [public_domain, open_license, artist_authorized, rights_owned]
+    rights_basis_is_operator_attestation: true
+    access_control_bypass: false
   social_browser:
     scope: external_web
     account_scope: operator_owned_or_authorized
