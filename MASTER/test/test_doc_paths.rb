@@ -93,24 +93,36 @@ class TestDocPaths < Minitest::Test
     assert_includes readme, "constitutional_scan"
   end
 
-  def test_root_backlog_markdown_links_resolve
-    body = File.read(File.join(REPO, "TODO.md"))
-    broken = body.scan(/\[[^\]]*\]\(([^)]+)\)/).flatten.filter_map do |target|
-      next if target.match?(%r{\A(?:https?:|mailto:|tel:|#|/)}i)
-
-      path = target.split(/[?#]/, 2).first
-      next if path.empty? || File.exist?(File.join(REPO, path))
-
-      "#{target} (missing #{path})"
+  def test_no_markdown_backlog_files_are_tracked
+    forbidden = tracked.select do |path|
+      %w[todo.md backlog.md backlogs.md tasks.md].include?(File.basename(path).downcase)
     end
 
-    assert_empty broken, "TODO.md contains broken local links:\n  #{broken.join("\n  ")}"
+    assert_empty forbidden, "open work belongs in the existing owner registries: #{forbidden.join(", ")}"
   end
 
-  def test_root_backlog_is_the_only_cross_tree_checklist
-    backlog = File.read(File.join(REPO, "TODO.md"))
-    completed = backlog.lines.select { |line| line.lstrip.start_with?("- [x] ", "- [X] ") }
-    assert_empty completed, "completed work must be deleted from TODO.md"
+  def test_existing_owner_registries_cover_each_cross_tree_work_class
+    require "yaml"
+    owners = {
+      "MASTER/convergence.yml" => "workstreams",
+      "MASTER/data/gaps.yml" => "gaps",
+      "MASTER/data/operator_seams.yml" => "seams",
+      "MASTER/data/law/ux_refinements.yml" => "refinements",
+      "RAILS/refinements.yml" => "items",
+    }
+
+    owners.each do |relative, collection|
+      data = YAML.safe_load_file(File.join(REPO, relative), permitted_classes: [], aliases: false)
+      rows = data.fetch(collection)
+      ids = rows.map { |row| row.fetch("id").to_s }
+      refute_empty ids, "#{relative} must own #{collection}"
+      assert_equal ids.uniq, ids, "#{relative} contains duplicate owner IDs"
+    end
+
+    require_relative "../lib/agent/status_view"
+    sources = Master::Agent::StatusView.view.fetch(:sources)
+    assert_equal owners.keys.sort, sources.sort
+    refute_includes sources, "TODO.md"
   end
 
   def test_design_authority_is_laws_yml_without_a_parallel_architecture_document
@@ -220,7 +232,6 @@ class TestDocPaths < Minitest::Test
 
     extras = tracked_md.reject do |path|
       File.basename(path) == "README.md" ||
-        path == "TODO.md" ||
         File.basename(path).match?(/\A(?:AGENTS|CLAUDE|GEMINI|GLM)\.md\z/) ||
         path == "OPENBSD/RUNBOOK.md" ||
         path.match?(%r{\AMASTER/data/(?:SOUL|IDENTITY|CANON)\.md\z}) ||
