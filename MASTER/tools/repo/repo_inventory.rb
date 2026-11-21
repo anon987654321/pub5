@@ -36,7 +36,6 @@ ALLOWED_ROOT_FILES = %w[
   GLM.md
   MIGRATION.md
   README.md
-  TODO.md
   VERSION
 ].freeze
 GENERATED_ROOT_FILES = %w[
