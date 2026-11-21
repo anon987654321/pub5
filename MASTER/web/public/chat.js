@@ -263,6 +263,48 @@ window._chatOnUser = (text) => {
   appendMsg('assistant');
 };
 
+// Small dependency-free tokenizer for fenced source blocks. It emits only
+// escaped source text and fixed class names; model output never becomes markup.
+function highlightCode(source) {
+  const pattern = /(\/\/[^\n]*|#[^\n]*)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|(--?[A-Za-z][\w-]*)|(\b(?:def|class|module|end|if|elsif|else|unless|case|when|return|yield|begin|rescue|ensure|const|let|var|function|async|await|import|export|from|new|true|false|null|nil|undefined|require|do|then|while|for|in)\b)|(\b\d+(?:\.\d+)?\b)|([A-Za-z0-9_.-]+\/[A-Za-z0-9_./-]+)|([=<>!|&+*-]+)/g;
+  const commands = new Set(["bin/master", "ruby", "bundle", "rake", "git", "cd", "doas", "chmod", "npm", "node", "ssh", "make"]);
+  let html = "";
+  let cursor = 0;
+  for (const match of source.matchAll(pattern)) {
+    const index = match.index;
+    html += escapeHtml(source.slice(cursor, index));
+    const token = match[0];
+    let role = "";
+    if (match[1]) role = "comment";
+    else if (match[2]) role = "string";
+    else if (match[3]) role = "flag";
+    else if (match[4]) role = "keyword";
+    else if (match[5]) role = "number";
+    else if (match[6]) role = "path";
+    else if (match[7]) role = "operator";
+    else {
+      const lineStart = source.slice(source.lastIndexOf("\n", index - 1) + 1, index).trim();
+      if (!lineStart && commands.has(token)) role = "command";
+    }
+    html += role ? '<span class="syntax-' + role + '">' + escapeHtml(token) + '</span>' : escapeHtml(token);
+    cursor = index + token.length;
+  }
+  return html + escapeHtml(source.slice(cursor));
+}
+
+function renderTerminalText(source) {
+  const fence = /\x60{3}([A-Za-z0-9_+.-]*)[ \t]*\r?\n([\s\S]*?)\x60{3}/g;
+  let html = "";
+  let cursor = 0;
+  for (const match of source.matchAll(fence)) {
+    html += escapeHtml(source.slice(cursor, match.index)).replace(/\n/g, "<br>");
+    const language = match[1] ? ' data-language="' + escapeHtml(match[1]) + '"' : "";
+    html += "<pre" + language + "><code>" + highlightCode(match[2]) + "</code></pre>";
+    cursor = match.index + match[0].length;
+  }
+  return html + escapeHtml(source.slice(cursor)).replace(/\n/g, "<br>");
+}
+
 let _chunkCount = 0;
 let _streamLiveTimer = null;
 window._chatOnChunk = (raw) => {
@@ -283,7 +325,7 @@ window._chatOnChunk = (raw) => {
   }
   const text = _streamEl.textContent + raw.replace(/\n/g, '\n').replace(/\\\\/g, '\\');
   if (text.includes('```')) {
-    _streamEl.innerHTML = escapeHtml(text).replace(/```([^`]*?)```/gs, '<pre><code>$1</code></pre>').replace(/\n/g, '<br>');
+    _streamEl.innerHTML = renderTerminalText(text);
   } else {
     _streamEl.textContent = text;
   }
