@@ -5,6 +5,19 @@ require_relative "../antigen_store"
 require_relative "../../trace/causal_trace"
 require "digest"
 
+# The repair modules reopen `class RepairLoop`. Establish the canonical alias
+# before they load so they reopen Kernel::RepairAdapter rather than creating a
+# divergent Master::Fix::RepairLoop. Without this, OutcomeTracking lands in the
+# divergent class and `include OutcomeTracking` raises NameError (worker crash).
+module Master
+  module Fix
+    class Kernel
+      class RepairAdapter; end
+    end
+    RepairLoop = Kernel::RepairAdapter unless const_defined?(:RepairLoop, false)
+  end
+end
+
 module Master
   module Fix
     class RepairLoop
