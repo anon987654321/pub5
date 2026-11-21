@@ -95,7 +95,11 @@ class ProviderCatalogIndexSpec < Minitest::Test
       uri = URI("https://catalog.example.test/models")
       payload = { "data" => [{ "id" => "provider/model" }] }
       response = Net::HTTPOK.new("1.1", "200", "OK")
-      response.body = JSON.generate(payload)
+      # The guard has already consumed the streamed body before returning. A
+      # raw Net::HTTPResponse has no active stream in this unit test, so expose
+      # the consumed payload directly instead of invoking its socket-backed
+      # body reader outside Net::HTTP#request.
+      response.define_singleton_method(:body) { JSON.generate(payload) }
       calls = []
       handler = lambda do |candidate, request, **options|
         calls << [candidate, request, options]
