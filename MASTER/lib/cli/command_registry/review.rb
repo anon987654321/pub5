@@ -446,7 +446,7 @@ module Master
       # Read-only weekly review hook. The registry projection already owns the
       # items and their state; this hook reports that projection without asking
       # a model to mutate, close or duplicate the work.
-      def weekly_backlog_review(deliberation: nil, bus: nil, cancellation: nil,
+      def weekly_owner_registry_review(deliberation: nil, bus: nil, cancellation: nil,
                                 repo_root: Master.repo_root, kernel: nil, now: Time.now, record: true)
         return :cancelled if cancellation&.cancelled?
 
@@ -698,7 +698,7 @@ module Master
         first_read_results = first_read(deliberation:, bus:, targets:, persist: writes_requested, cancellation:)
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
 
-        weekly_backlog_review(deliberation:, bus:, cancellation:, repo_root: Master.repo_root, record: writes_requested)
+        weekly_owner_registry_review(deliberation:, bus:, cancellation:, repo_root: Master.repo_root, record: writes_requested)
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
 
         trace_refusal = run_fix_steady_trace(scanner:, fix_loop:, deliberation:, bus:, cancellation:, trace_scope:)
