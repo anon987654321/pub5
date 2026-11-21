@@ -203,7 +203,7 @@ module Master
     bad "  # FIXME: the retry has no cap\n"
     good "  # the reasoning is in convergence.yml\n  MARKERS = /TODO|FIXME|XXX/\n"
     check do |src, path|
-      # The lookahead keeps TODO.md, the repo-wide backlog, from reading as a
+      # The lookahead keeps a Markdown document path from reading as a
       # marker — see data/laws.yml `unfinished`, which learned this at :veto.
       #
       # A marker inside a regex literal is a detector, which is the reason this
