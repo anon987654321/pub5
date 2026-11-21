@@ -545,6 +545,8 @@ module Backlog
       command_evidence = proof["command_evidence"].is_a?(Hash) ? proof["command_evidence"] : {}
       source_item = Backlog.generate.find { |item| item[:id] == plan["item_id"] }
       return false unless source_item && item_digest(source_item) == plan["item_digest"]
+      return false unless source_item[:registry_source].to_s == plan["registry_source"].to_s
+      return false unless Backlog.registry_digest(source_item) == plan["registry_digest"].to_s
       return false unless source_item[:done_when].to_s == plan["done_when"].to_s
       return false unless source_item[:tree].to_s == plan["tree"].to_s
       expected_types = ProofMap.types_for(done_when: source_item[:done_when])
