@@ -277,7 +277,7 @@ test("semantic object subjects are validated, bounded and feature-staged", () =>
   assert.match(rules, /custom_geometry:/);
   assert.match(rules, /allowed_primitives: \[box, sphere, ring, cylinder, beam\]/);
   assert.match(world, /function normalizeCustomParts\(subject\)/);
-  assert.match(world, /const maximum = Math.max\(1, Math.min\(6/);
+  assert.match(world, /const maximum = Math.max\(1, Math.min\(8/);
   assert.match(world, /centerLimit/);
   assert.match(world, /sizeMax/);
   assert.match(world, /function customPrimitivePoint\(part, t, b, c\)/);
@@ -296,6 +296,57 @@ test("semantic object subjects are validated, bounded and feature-staged", () =>
   assert.match(shader, /float stageGate = smoothstep/);
   assert.match(runtime, /function setSubjectScatter\(positions, stages = null\)/);
   assert.match(runtime, /stageAttribute\.array\.set\(stages\)/);
+});
+
+test("sixteen pixel mask profiles use bounded sparse geometry and the shared face renderer", () => {
+  const masks = readFileSync(join(publicDir, "face_mask_profiles.js"), "utf8");
+  const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
+  const manifest = readFileSync(join(root, "config", "face_assets.yml"), "utf8");
+  const tokens = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
+  const calls = [];
+  const window = {
+    MASTER_FACE_WORLD: {
+      setSubjectForm(form, descriptor) { calls.push({ form, descriptor }); return form; }
+    },
+    addEventListener() {},
+    dispatchEvent() {}
+  };
+  const document = {
+    readyState: "complete",
+    documentElement: { dataset: {} },
+    querySelector() { return null; }
+  };
+  const sandbox = {
+    window, document, location: { pathname: "/chat", search: "" },
+    sessionStorage: {
+      values: new Map(),
+      getItem(key) { return this.values.get(key) ?? null; },
+      setItem(key, value) { this.values.set(key, value); }
+    },
+    CustomEvent: class { constructor(type, options = {}) { this.type = type; this.detail = options.detail; } }
+  };
+  runInNewContext(masks, sandbox, { filename: "face_mask_profiles.js" });
+  const api = window.MASTER_FACE_MASKS;
+  assert.equal(api.profiles.length, 16);
+  assert.equal(new Set(api.profiles.map((profile) => profile.id)).size, 16);
+  assert.match(manifest, /- face_mask_profiles/);
+  assert.match(tokens, /max_features: 8/);
+  assert.match(tokens, /max_parts: 8/);
+  assert.match(world, /Math\.min\(8, Math\.floor\(finite\(SEMANTIC_SUBJECT\.max_features, 8\)\)\)/);
+  assert.match(world, /const mask = window\.MASTER_FACE_MASKS\?\.descriptor\?\.\(\)/);
+  for (const profile of api.profiles) {
+    assert.ok(api.select(profile.id), profile.id);
+    const call = calls.at(-1);
+    assert.equal(call.form, "object");
+    assert.equal(call.descriptor.kind, "custom");
+    assert.equal(call.descriptor.parts.length, 8);
+    for (const part of call.descriptor.parts) {
+      assert.ok(["ring", "beam"].includes(part.primitive));
+      assert.ok(part.center.every((value) => Number.isFinite(value) && Math.abs(value) <= 0.45));
+      assert.ok(part.size.every((value) => Number.isFinite(value) && value >= 0.06 && value <= 0.62));
+    }
+  }
+  assert.equal(api.current().id, "jah-hut-angular");
 });
 
 test("explicit visual subjects fail closed and never fall through to text guesses", () => {
