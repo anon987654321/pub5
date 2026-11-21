@@ -1,0 +1,6 @@
+---
+id: soulseek
+version: 1.0.0
+description: Search and inventory an operator-owned music collection through slskd; one rights-cleared file may be queued per confirmed action.
+entrypoint: soulseek.rb
+observe_actions: [status, results, downloads]
