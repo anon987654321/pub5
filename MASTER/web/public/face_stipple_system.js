@@ -107,6 +107,7 @@
 
   function defaultSamples(count) {
     const samples = [];
+    const voids = voidConfiguration();
     for (let i = 0; i < count; i += 1) {
       const q = rand(i, 1);
       const r = rand(i, 2);
@@ -114,7 +115,7 @@
       let x, y, z, zone;
       if (q < 0.17) {
         const a = r * Math.PI * 2;
-        const radius = 0.18 + rand(i, 4) * 0.105;
+        const radius = (0.18 + rand(i, 4) * 0.105) * voids.eyeApertureScale;
         x = side * 0.31 + Math.cos(a) * radius;
         y = 0.17 + Math.sin(a) * radius * 0.56;
         z = 0.20 + rand(i, 5) * 0.012;
@@ -127,8 +128,8 @@
         zone = 2;
       } else if (q < 0.40) {
         const a = r * Math.PI * 2;
-        x = Math.cos(a) * (0.21 + 0.045 * Math.sin(a * 2));
-        y = -0.32 + Math.sin(a) * 0.06;
+        x = Math.cos(a) * (voids.mouthWidth + voids.mouthCurve * Math.sin(a * 2));
+        y = -0.32 + Math.sin(a) * voids.mouthHeight;
         z = 0.21 + Math.abs(Math.cos(a)) * 0.012;
         zone = 3;
       } else if (q < 0.50) {
@@ -186,8 +187,25 @@
   function particleSpacingScale() {
     return clamp(
       window.MASTER_FACE_CONTRACT?.stipple?.particle_spacing_scale,
-      1.045, 1.0, 1.08
+      1.075, 1.0, 1.10
     );
+  }
+
+  function voidConfiguration() {
+    const config = window.MASTER_FACE_CONTRACT?.stipple?.voids || {};
+    const faultline = config.faultline || {};
+    return {
+      eyeApertureScale: clamp(config.eye_aperture_scale, 1.14, 1.0, 1.25),
+      mouthWidth: clamp(config.mouth_width, 0.225, 0.18, 0.28),
+      mouthHeight: clamp(config.mouth_height, 0.072, 0.05, 0.12),
+      mouthCurve: clamp(config.mouth_curve, 0.05, 0.02, 0.09),
+      faultline: {
+        enabled: faultline.enabled !== false,
+        states: Array.isArray(faultline.states) ? faultline.states.map((value) => String(value)) : ["error"],
+        halfWidth: clamp(faultline.half_width, 0.011, 0.004, 0.025),
+        strength: clamp(faultline.strength, 0.82, 0.0, 1.0)
+      }
+    };
   }
 
   function fingerprintConfiguration() {
@@ -420,6 +438,8 @@
         uDepthScaleMax: { value: clamp(depth.scale_max, DEFAULT_DEPTH_RESPONSE.scale_max, 0.1, 2.0) },
         uTime: { value: 0 }, uIntroProgress: { value: 0 },
         uParticleSpacingScale: { value: particleSpacingScale() },
+        uFaultlineStrength: { value: 0 },
+        uFaultlineHalfWidth: { value: voidConfiguration().faultline.halfWidth },
         uFingerprintEnabled: { value: fingerprint.enabled ? 1.0 : 0.0 },
         uFingerprintSpacing: { value: fingerprint.spacing },
         uFingerprintStrength: { value: fingerprint.strength },
@@ -453,6 +473,7 @@
         uniform float uTime;
         uniform float uIntroProgress;
         uniform float uParticleSpacingScale;
+        uniform float uFaultlineHalfWidth;
         uniform float uFingerprintEnabled;
         uniform float uFingerprintSpacing;
         uniform float uFingerprintStrength;
@@ -483,6 +504,7 @@
         varying float vSolo;
         varying float vThreshold;
         varying float vDepthRank;
+        varying float vFaultline;
         vec3 expressionPoint(vec3 point, float expression) {
           float side = point.x < 0.0 ? -1.0 : 1.0;
           if (expression < 0.5) {
@@ -539,6 +561,15 @@
           vec3 spacingOrigin = vec3(0.0, 0.05, 0.0);
           p = spacingOrigin + (p - spacingOrigin) * uParticleSpacingScale;
 
+          // A controlled right-contour faultline appears only for a semantic error.
+          // It is a temporary void in the existing field, not a second particle layer.
+          float faultLineX = 0.48 + 0.018 * sin((p.y + 0.50) * 7.0);
+          float faultSpan = smoothstep(-0.64, -0.52, p.y) *
+            (1.0 - smoothstep(0.44, 0.58, p.y));
+          float faultDistance = abs(p.x - faultLineX);
+          vFaultline = (1.0 - smoothstep(uFaultlineHalfWidth,
+            uFaultlineHalfWidth * 2.2, faultDistance)) * faultSpan;
+
           float zoneWeight = 0.72 + aZone * 0.035;
           float drift = sin(uTime * 0.72 + aPhase) * 0.008 * uTurbulence * uMotionScale;
           p.x += drift * (aZone < 2.0 ? 0.6 : 1.0);
@@ -588,14 +619,18 @@
         uniform float uDensity;
         uniform float uDepthFromRank;
         uniform float uDepthSteps;
+        uniform float uFaultlineStrength;
         varying float vAlpha;
         varying float vZone;
         varying float vSolo;
         varying float vThreshold;
         varying float vDepthRank;
+        varying float vFaultline;
         void main() {
           vec2 p = gl_PointCoord - vec2(0.5);
           if (vSolo < 0.5 && (vThreshold > uDensity || length(p) > 0.5)) discard;
+          float fault = clamp(vFaultline * uFaultlineStrength, 0.0, 1.0);
+          if (vSolo < 0.5 && fault > 0.62) discard;
           float zoneTone = vZone < 2.0 ? 1.0 : (vZone > 5.0 ? 0.84 : 0.93);
           // One-pixel law: the shared depth rank affects brightness, never size.
           float depthRank = clamp(vDepthRank, 0.0, 1.0);
@@ -605,7 +640,7 @@
             : 1.0;
           float solo = step(0.5, vSolo);
           vec3 ink = mix(uColor * zoneTone * depthTone, vec3(1.0), solo);
-          float alpha = mix(vAlpha * uOpacity, 1.0, solo);
+          float alpha = mix(vAlpha * uOpacity, 1.0, solo) * mix(1.0, 0.12, fault);
           gl_FragColor = vec4(ink, alpha);
         }
       `,
@@ -677,6 +712,10 @@
     const stillMode = window.MASTER_FACE_STATE?.isStillMode?.(mode) ?? mode === "idle";
     const motion = reducedMotionEnabled(state) || stillMode ? 0 : 1;
     const u = system.material.uniforms;
+    const voids = voidConfiguration();
+    u.uFaultlineHalfWidth.value = voids.faultline.halfWidth;
+    u.uFaultlineStrength.value = voids.faultline.enabled && voids.faultline.states.includes(mode)
+      ? voids.faultline.strength : 0;
     u.uDensity.value = clamp(
       (profile.density + (pressure - 0.5) * 0.24 + (modulation.density || 0)) * densityScale,
       profile.density * densityScale,
@@ -1143,7 +1182,8 @@
   }
 
   window.MASTER_FACE_STIPPLE = Object.freeze({
-    createDefault, buildFromSamples, selectSoloMark, mount, configure, syncFromFaceState, tick, updateExpressions, updateSwarm,
+    createDefault, defaultSamples, buildFromSamples, selectSoloMark, mount, configure, syncFromFaceState, tick, updateExpressions, updateSwarm,
+    particleSpacingScale, voidConfiguration,
     glyphForDepth, pointBudget, canonicalSwarmMode, modeMultipliersFor, applyPalette,
     get profiles() { return profiles(); },
     get system() { return active; },
