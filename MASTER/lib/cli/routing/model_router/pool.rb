@@ -274,7 +274,7 @@ module Master
             FileUtils.mkdir_p(File.dirname(agy_catalog_file))
             File.write(agy_catalog_file, JSON.generate(key:, models:))
           rescue SystemCallError => e
-            Master::Ground::Swallow.log(e, context: "model_router.pool.agy_catalog_cache")
+            record_pool_discovery_error("antigravity_catalog_cache", e)
           end
 
           def agy_binary

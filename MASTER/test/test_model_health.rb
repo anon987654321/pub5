@@ -125,6 +125,7 @@ class TestModelHealth < Minitest::Test
       "grok-cli:auto" => {
         calls: 3, successes: 0, failures: 3,
         last_error: "provider call exceeded its deadline: outbound request exceeded 5s; Authorization: Bearer secret",
+        last_failure_at: 1_795_219_200.0,
       },
       "glm-5.3-flash" => { calls: 1, successes: 1, failures: 0, last_error: nil },
     }
@@ -141,8 +142,8 @@ class TestModelHealth < Minitest::Test
       arg: "doctor",
     )
 
-    assert_includes result, "provider_failures=1"
-    assert_includes result, "grok-cli:auto lane=subscription failures=3 last_error=timeout"
+    assert_includes result, "models_with_recorded_failures=1"
+    assert_includes result, "grok-cli:auto lane=subscription failures=3 last_error=timeout last_failure_utc=2026-11-21T00:00:00Z"
     refute_includes result, "Authorization"
     refute_includes result, "secret"
   end

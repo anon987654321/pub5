@@ -139,10 +139,12 @@ module Master
           count = (raw[:failures] || raw["failures"]).to_i
           next unless count.positive?
 
-          [id.to_s, count, raw[:last_error] || raw["last_error"]]
+          failed_at = Float(raw[:last_failure_at] || raw["last_failure_at"], exception: false)
+          failed_at = failed_at&.finite? ? Time.at(failed_at).utc.strftime("%Y-%m-%dT%H:%M:%SZ") : nil
+          [id.to_s, count, raw[:last_error] || raw["last_error"], failed_at]
         end
         lines = [
-          "model doctor: reachable=#{models.size}; discovery_errors_since_start=#{failures.size}; provider_failures=#{provider_failures.size}"
+          "model doctor: reachable=#{models.size}; discovery_errors_since_start=#{failures.size}; models_with_recorded_failures=#{provider_failures.size}"
         ]
         failures.each do |failure|
           lane = failure["lane"] || failure[:lane] || "unknown"
@@ -150,13 +152,13 @@ module Master
           lines << "model-doctor0: #{lane} raised #{error} during discovery; other lanes remain eligible"
         end
         lines << "model doctor: no discovery exceptions recorded since router start" if failures.empty?
-        provider_failures.first(12).each do |id, count, error|
+        provider_failures.first(12).each do |id, count, error, failed_at|
           lane = if router.respond_to?(:lane_label)
                    router.lane_label(id)
                  else
                    id.split(":", 2).first
                  end
-          lines << "model-doctor0: #{id} lane=#{lane} failures=#{count} last_error=#{provider_failure_kind(error)}"
+          lines << "model-doctor0: #{id} lane=#{lane} failures=#{count} last_error=#{provider_failure_kind(error)}#{failed_at ? " last_failure_utc=#{failed_at}" : ""}"
         rescue StandardError
           lines << "model-doctor0: #{id} lane=unknown failures=#{count} last_error=provider_error"
         end

@@ -43,7 +43,7 @@ module Master
 
             configured.merge("gateway" => gateway_spec(base))
           rescue URI::Error, ArgumentError => e
-            Master::Ground::Swallow.log(e, context: "model_router.gateway_config")
+            record_pool_discovery_error("gateway_config", e)
             configured || {}
           end
 
@@ -133,7 +133,7 @@ module Master
               live_hosted_ids(spec, key)
             end
           rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "model_router.hosted", endpoint: spec["base"])
+            record_pool_discovery_error("hosted_catalog", e)
             []
           end
 

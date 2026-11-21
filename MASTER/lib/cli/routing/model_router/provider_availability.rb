@@ -193,7 +193,7 @@ def fetch_ollama_tags
   @ollama_sizes = rows.to_h { |row| [row["name"].to_s, row["size"].to_i] }
   rows.filter_map { |row| row["name"]&.to_s }
 rescue StandardError => e
-  Master::Ground::Swallow.log(e, context: "model_router.ollama_tags")
+  record_pool_discovery_error("ollama_local_catalog", e)
   nil
 end
 
@@ -206,7 +206,7 @@ end
             rows = Master::Io::CatalogIndex.new(db_path: db).search(":free", source: "openrouter", limit: 40)
             rows.filter_map { |row| row["id"] }.select { |id| id.to_s.end_with?(":free") }
           rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "model_router.live_free_models")
+            record_pool_discovery_error("openrouter_free_catalog", e)
             []
           end
         end
