@@ -1,5 +1,5 @@
 /* MASTER pixel-mask profile catalogue.
- * Six sparse primitives morph the existing face point field; no second renderer,
+ * Eight bounded parts morph the existing face point field; no second renderer,
  * bitmap, connected mesh, or downloaded asset is introduced. Cultural labels
  * identify reference families, not claims of ceremonial authenticity.
  */
@@ -9,9 +9,9 @@
   const PROFILES = Object.freeze([
     { id: "abelam-shield", name: "Abelam Shield", family: "Abelam / East Sepik", note: "Stepped shield silhouette and nested planes", outer: "box", w: .40, h: .54, jaw: .25, crown: .42, asym: .00, brow: .34, nose: .40 },
     { id: "abelam-prow", name: "Abelam Prow", family: "Abelam / East Sepik", note: "Tall prow with a tapered lower face", outer: "box", crownAxis: "y", w: .29, h: .62, jaw: .12, crown: .28, asym: .02, brow: .27, nose: .52 },
-    { id: "iatmul-river", name: "Iatmul Mai — Long Face", family: "Iatmul / Middle Sepik", note: "Elongated human-face proportions; original particle study only", outer: "cylinder", w: .32, h: .62, jaw: .18, crown: .22, asym: .00, brow: .33, nose: .48, mouth: .19 },
+    { id: "iatmul-river", name: "Iatmul Mai — Long Face", family: "Iatmul / Middle Sepik", note: "Elongated human-face proportions; original particle study only", outer: "ring", w: .32, h: .62, jaw: .18, crown: .22, asym: .00, brow: .33, nose: .48, mouth: .19 },
     { id: "iatmul-concentric", name: "Iatmul Human Face", family: "Iatmul / East Sepik", note: "Broad oval, readable human-face proportions; original particle study only", outer: "ring", w: .42, h: .58, jaw: .25, crown: .38, asym: .00, brow: .40, nose: .38, mouth: .26 },
-    { id: "sepik-split", name: "Iatmul Mwai", family: "Iatmul / Middle Sepik", note: "Long oval human face with a strong bridge; original particle study only", outer: "cylinder", w: .36, h: .61, jaw: .20, crown: .34, asym: .02, brow: .36, nose: .50, mouth: .20 },
+    { id: "sepik-split", name: "Iatmul Mwai", family: "Iatmul / Middle Sepik", note: "Long oval human face with a strong bridge; original particle study only", outer: "ring", w: .36, h: .61, jaw: .20, crown: .34, asym: .02, brow: .36, nose: .50, mouth: .20 },
     { id: "elema-tower", name: "Elema Spirit Tower", family: "Elema / Gulf", note: "High forehead and low-set features", outer: "cylinder", crownAxis: "y", w: .33, h: .64, jaw: .17, crown: .25, asym: .01, brow: .30, nose: .47 },
     { id: "elema-hollow", name: "Elema Eharo Human Face", family: "Elema / Gulf Province", note: "Broad human-face planes; original particle study only", outer: "ring", w: .43, h: .55, jaw: .28, crown: .34, asym: .00, brow: .42, nose: .42, mouth: .28 },
     { id: "tatanua-crest", name: "Tatanua Human Face", family: "New Ireland", note: "Balanced oval human-face proportions; no crest or ornament is copied", outer: "ring", w: .40, h: .55, jaw: .24, crown: .40, asym: .01, brow: .38, nose: .39, mouth: .25 },
@@ -133,6 +133,9 @@
         "aria-label",
         `${profile.name}, an original monochrome particle-face study. Reference object: ${source.title || "collection object"}, ${source.collection || "collection"}. ${credit}.`
       );
+    } else if (canvas) {
+      canvas.removeAttribute?.("title");
+      canvas.setAttribute?.("aria-label", "MASTER original monochrome particle face");
     }
 
     window.dispatchEvent(new CustomEvent("master:mask-profile", {
