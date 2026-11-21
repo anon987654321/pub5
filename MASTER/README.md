@@ -224,12 +224,14 @@ run `bin/operator doctor` for the host and `bin/doctor` for the runtime, then ta
 `bin/master '/fix --dry-run --critique --only critique,map MASTER/lib/cli'`.
 Read the result before widening scope.
 
-The bootstrap installs the locked Ruby bundle automatically. If a native gem build proves that OS build
+The bootstrap installs the locked core Ruby bundle automatically. If a native gem build proves that OS build
 prerequisites are missing, an interactive terminal receives one consolidated package plan and consent prompt;
 non-interactive runs fail closed with the exact package list and `bin/deps system` recovery command.
 For unattended hosts, set `MASTER_AUTO_SYSTEM_PACKAGES=1` only when package installation has already been
 approved by the operator. The system package list covers native build prerequisites, not optional applications
 or provider credentials.
+The separate `MASTER/web` Rails bundle is installed automatically on the first
+web-server start when `MASTER_WEB=1`; ordinary CLI-only sessions do not install unused web dependencies.
 
 Failures have owners. `lib/ground/failure_taxonomy.rb` classifies the error and owns the retry
 policy: `exhausted` pauses the paid lane and re-probes on backoff through `Io::QuotaCheck`, so
