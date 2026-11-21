@@ -2936,6 +2936,7 @@ module Dilla
     end
 
     file_records = provenance.is_a?(Hash) && provenance["files"].is_a?(Hash) ? provenance["files"] : {}
+    file_properties = {}
     file_records.each do |kind, record|
       file_path = record.is_a?(Hash) ? record["path"].to_s : ""
       exists = !file_path.empty? && File.file?(file_path)
@@ -2948,13 +2949,14 @@ module Dilla
       if kind == "midi"
         begin
           midi = audit_midi_file(file_path)
+          file_properties[kind] = midi
           check.call("midi_structure", true, "SMF format #{midi.fetch("format")}; #{midi.fetch("tracks")} track(s); #{midi.fetch("ppqn")} PPQN")
         rescue StandardError => error
           check.call("midi_structure", false, "#{error.class}: #{error.message}")
         end
       elsif kind == "mp3"
         begin
-          audit_mp3_file(file_path)
+          file_properties[kind] = { "header" => (File.binread(file_path, 3).start_with?("ID3") ? "ID3" : "MPEG frame sync") }
           check.call("mp3_frame", true, "MP3 frame sync or ID3 header found")
         rescue StandardError => error
           check.call("mp3_frame", false, "#{error.class}: #{error.message}")
@@ -2975,6 +2977,10 @@ module Dilla
       metrics = %w[duration_s peak_dbfs rms_dbfs crest_db lufs_estimate]
       complete = metrics.all? { |key| quality[key].is_a?(Numeric) && quality[key].finite? }
       check.call("quality_metrics", complete, "measured #{metrics.select { |key| quality[key].is_a?(Numeric) }.join(", ")}")
+      if wav && quality["duration_s"].is_a?(Numeric)
+        check.call("quality_duration", (quality["duration_s"] - wav["duration_s"]).abs <= 0.02,
+                   "WAV #{wav["duration_s"]}s; quality report #{quality["duration_s"]}s")
+      end
     else
       check.call("quality_metrics", false, "quality sidecar is unavailable")
     end
@@ -3000,6 +3006,8 @@ module Dilla
         "drums" => session["drums"], "groove_profile" => session["groove_profile"]
       },
       "quality" => quality && quality.slice("peak_dbfs", "rms_dbfs", "crest_db", "lufs_estimate", "stem_energy_share"),
+      "files" => file_records.transform_values { |record| record.slice("path", "bytes", "sha256") },
+      "file_properties" => file_properties,
       "checks" => checks,
       "manual_audition" => {
         "status" => "NOT_PERFORMED",
