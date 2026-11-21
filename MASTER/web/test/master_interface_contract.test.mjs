@@ -257,7 +257,7 @@ test("session chrome is mobile-first, nuanced, flat and touch-ready", () => {
   assert.ok(faceChrome.includes("background: var(--chrome-band)"));
   assert.ok(faceChrome.includes("background: var(--chrome-surface-active)"));
   assert.ok(faceChrome.includes("outline: 2px solid var(--chrome-focus)"));
-  assert.ok(faceChrome.includes('.master-session-tab[aria-current="page"]::after'));
+  assert.doesNotMatch(faceChrome, /master-session-tabs|master-session-tab/);
   assert.ok(faceChrome.includes("var(--safe-left)"));
   assert.ok(faceChrome.includes("var(--safe-bottom)"));
   assert.ok(faceChrome.includes("min-block-size: var(--tap-min)"));
