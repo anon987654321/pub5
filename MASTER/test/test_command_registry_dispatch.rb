@@ -18,164 +18,18 @@ require "time"
 class TestCommandRegistryDispatch < Minitest::Test
   Registry = Master::CLI::CommandRegistry
 
-  class BacklogReviewKernel
-    attr_reader :events
-
-    def initialize(events = [])
-      @events = events
-    end
-
-    def verify_log! = @events
-
-    # The real Kernel writes JSON and reads rows back, so a payload's symbol
-    # keys become strings. Storing the raw hash made every string-keyed
-    # assertion here read nil while production was correct.
-    def append_event(kind, payload, run_id: nil)
-      row = { "kind" => kind, "payload" => JSON.parse(JSON.generate(payload)),
-              "run_id" => run_id, "at" => Time.now.utc.iso8601(6) }
-      @events << row
-      row
-    end
-  end
-
-  class BacklogReviewAgent
-    attr_reader :prompts, :operations
-
-    def initialize(answer)
-      @answer = answer
-      @prompts = []
-      @operations = []
-    end
-
-    def ask(prompt, operation:)
-      @prompts << prompt
-      @operations << operation
-      @answer.respond_to?(:call) ? @answer.call(prompt) : @answer
-    end
-  end
-
-  def with_backlog_repo
-    Dir.mktmpdir("fix-weekly-backlog") do |root|
-      todo = "# Remaining work\n- [ ] **Review the runner** Inspect runner changes and execute focused tests.\n"
-      File.write(File.join(root, "TODO.md"), todo)
-      File.write(File.join(root, "runner.rb"), "RUNNER_VERSION = 1\n")
-      [
-        ["git", "init", "-q"],
-        ["git", "config", "user.name", "Backlog Review Test"],
-        ["git", "config", "user.email", "backlog-review@example.invalid"],
-        ["git", "add", "TODO.md", "runner.rb"],
-        ["git", "commit", "-q", "-m", "update runner implementation"],
-      ].each do |argv|
-        _output, status = Open3.capture2e(*argv, chdir: root)
-        assert status.success?, "test repository command failed: #{argv.join(" ")}"
-      end
-      yield root, todo
-    end
-  end
-
-  def test_weekly_backlog_review_is_not_due_before_seven_days
-    now = Time.utc(2026, 11, 6, 12)
-    previous = { "kind" => "backlog_review_completed",
-                 "at" => (now - Registry::BACKLOG_REVIEW_INTERVAL + 1).iso8601 }
-    kernel = BacklogReviewKernel.new([previous])
-    agent = BacklogReviewAgent.new(->(*) { flunk "not-due review must not call the model" })
-    result = Registry.weekly_backlog_review(
-      deliberation: Struct.new(:agent).new(agent), bus: nil, repo_root: "/unused", kernel:, now:
+  def test_weekly_review_projects_the_existing_owner_registries
+    result = Registry.weekly_owner_registry_review(
+      deliberation: nil, bus: nil, repo_root: Master.repo_root
     )
 
-    assert_equal :not_due, result
-    assert_equal [previous], kernel.events
-    assert_empty agent.prompts
-  end
-
-  def test_weekly_backlog_review_records_validated_candidates_without_editing_todo
-    with_backlog_repo do |root, todo|
-      head, status = Open3.capture2e("git", "rev-parse", "HEAD", chdir: root)
-      assert status.success?
-      line = todo.lines.find_index { |value| value.start_with?("- [ ]") } + 1
-      id = Digest::SHA256.hexdigest("#{line}:#{todo.lines.fetch(line - 1).strip}")[0, 12]
-      agent = BacklogReviewAgent.new(JSON.generate(
-        "summary" => "A recent runner change may overlap this item; focused test execution remains required.",
-        "completion_candidates" => [{ "id" => id, "commit" => head.strip,
-                                      "reason" => "The commit updates runner.rb; run focused tests before closure." }],
-        "stale_candidates" => [],
-      ))
-      kernel = BacklogReviewKernel.new
-      result = Registry.weekly_backlog_review(
-        deliberation: Struct.new(:agent).new(agent), bus: nil, repo_root: root, kernel:, now: Time.now
-      )
-
-      assert_equal :reviewed, result
-      event = kernel.events.last
-      assert_equal "backlog_review_completed", event.fetch("kind")
-      assert_equal 1, event.dig("payload", "open_item_count")
-      assert_equal id, event.dig("payload", "completion_candidates", 0, "id")
-      assert_equal head.strip, event.dig("payload", "completion_candidates", 0, "commit")
-      assert_equal :structural_review, agent.operations.first
-      assert_includes agent.prompts.first, todo
-      assert_equal todo, File.read(File.join(root, "TODO.md"))
-    end
-  end
-
-  def test_invalid_review_response_is_inconclusive_and_leaves_review_due
-    with_backlog_repo do |root, _todo|
-      kernel = BacklogReviewKernel.new
-      result = Registry.weekly_backlog_review(
-        deliberation: Struct.new(:agent).new(BacklogReviewAgent.new("not JSON")),
-        bus: nil, repo_root: root, kernel:, now: Time.now
-      )
-
-      assert_equal :inconclusive, result
-      assert_equal "backlog_review_inconclusive", kernel.events.last.fetch("kind")
-      refute kernel.events.any? { |row| row["kind"] == "backlog_review_completed" }
-    end
-  end
-
-  def test_an_inconclusive_attempt_does_not_reset_the_weekly_interval
-    now = Time.utc(2026, 11, 6, 12)
-    attempt = { "kind" => "backlog_review_inconclusive", "at" => now.iso8601 }
-    kernel = BacklogReviewKernel.new([attempt])
-    result = Registry.weekly_backlog_review(
-      deliberation: nil, bus: nil, repo_root: "/unused", kernel:, now:
-    )
-
-    assert_equal :inconclusive, result
-    assert_equal [attempt], kernel.events
-  end
-
-  def test_read_only_weekly_review_does_not_write_a_kernel_receipt
-    with_backlog_repo do |root, todo|
-      head, status = Open3.capture2e("git", "rev-parse", "HEAD", chdir: root)
-      assert status.success?
-      kernel = BacklogReviewKernel.new
-      answer = JSON.generate("summary" => "No item can be closed without execution proof.",
-                             "completion_candidates" => [], "stale_candidates" => [])
-      result = Registry.weekly_backlog_review(
-        deliberation: Struct.new(:agent).new(BacklogReviewAgent.new(answer)),
-        bus: nil, repo_root: root, kernel:, now: Time.now, record: false
-      )
-
-      assert_equal :reviewed, result
-      assert_empty kernel.events
-      assert_equal todo, File.read(File.join(root, "TODO.md"))
-    end
-  end
-
-  def test_success_receipt_survives_a_new_kernel_instance
-    Dir.mktmpdir("fix-backlog-restart") do |root|
-      Dir.mkdir(File.join(root, ".git"))
-      first = Master::Fix::Kernel.new(root:, actor: "backlog-review-test")
-      first.append_event("backlog_review_completed", { schema: 1, status: "reviewed" })
-      now = Time.now.utc
-      restarted = Master::Fix::Kernel.new(root:, actor: "backlog-review-restart")
-
-      result = Registry.weekly_backlog_review(
-        deliberation: nil, bus: nil, repo_root: root, kernel: restarted, now:
-      )
-
-      assert_equal :not_due, result
-      assert_equal "backlog_review_completed", restarted.verify_log!.last.fetch("kind")
-    end
+    assert_equal :reviewed, result
+    view = Master::Agent::StatusView.view
+    assert_includes view[:sources], "MASTER/convergence.yml"
+    assert_includes view[:sources], "MASTER/data/operator_seams.yml"
+    assert_includes view[:sources], "MASTER/data/law/ux_refinements.yml"
+    assert_includes view[:sources], "RAILS/refinements.yml"
+    refute_includes view[:sources], "TODO.md"
   end
 
   def built
