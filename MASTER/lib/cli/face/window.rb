@@ -2,6 +2,7 @@
 
 require "io/console"
 require "io/wait"
+require "securerandom"
 require_relative "../../face"
 require_relative "../../io/exec"
 
@@ -155,7 +156,7 @@ module Master
           @closing = false
           @retain_input_on_interrupt = false
           @speech_interrupted = false
-          @motion = Motion.new(seed: ::Random.new_seed % 1_000_003)
+          @motion = Motion.new(seed: ::Random.new_seed % 1_000_003, session: SecureRandom.hex(16))
           @events = []
           @jobs = []
           @event_bus = event_bus
