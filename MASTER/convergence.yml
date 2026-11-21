@@ -397,6 +397,26 @@ workstreams:
     title: All RAILS application contracts, app CI lanes and shared checks on one current revision
     implementation: RAILS/test/run_all.rb; RAILS apps/*/bin/ci; MASTER/checks/runner.rb
     proof: Every app's CI exit code, route/browser capture revision, MASTER checks result and the exact source revision
+  - id: rails_host_seo_indexability
+    state: evidence
+    title: Canonical-host SEO and indexability across the public RAILS surfaces
+    implementation: RAILS canonical hosts, routes, sitemap and metadata
+    proof: Browser/HTTP crawl of canonical hosts and representative city/vertical routes, canonical/robots/sitemap/hreflang/redirect checks, and DNS/TLS identity
+  - id: rails_budgets_and_ratchets
+    state: evidence
+    title: Fresh-build CSS, JavaScript, PWA and responsive budgets remain under their measured ceilings
+    implementation: RAILS build system; MASTER design-token and CSS projection
+    proof: Fresh build, per-app measured/ceiling report, route viewport captures and current ratchet results; no ceiling raised to conceal an overage
+  - id: master_cli_latency_and_input
+    state: evidence
+    title: CLI boot, first token, completed reply, memory and input responsiveness are measured on supported hardware
+    implementation: MASTER/lib/cli; MASTER/lib/trace; MASTER/web/public
+    proof: Repeated current-revision samples with host/runtime identity, p50/p95, first-token and first-audio latency, memory and busy-input behavior
+  - id: conversation_quality_replay
+    state: partial
+    title: Representative conversations are replayed for answer-first behavior, continuity and interruption quality
+    implementation: MASTER/lib/content; MASTER/lib/cognition; MASTER/test/test_social_assistant_contract.rb
+    proof: Rights-cleared replay cases for known facts, one necessary question at most, uncertainty, preference use, natural interruption/resumption and answer-first behavior
   - id: rails_focused_feature_acceptance
     state: evidence
     title: Focused billing, API, identity, Radio import, sharing, concurrency, account-merge and marketplace regressions
