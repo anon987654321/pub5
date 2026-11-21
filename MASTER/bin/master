@@ -351,6 +351,8 @@ if ARGV.first == "--help" || ARGV.first == "-h"
   print_master_help
 end
 
+# Canonical first-run bootstrap gate. ruby bin/bootstrap exposes this exact
+# preflight for operators; ordinary startup always passes through it here.
 require_relative "../lib/boot/entrypoint"
 Master::Boot::Entrypoint.prepare!(root: master_root)
 
