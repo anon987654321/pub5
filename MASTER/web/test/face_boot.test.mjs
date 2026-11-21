@@ -336,7 +336,7 @@ test("sixteen pixel mask profiles use bounded sparse geometry and the shared fac
   assert.match(world, /const mask = window\.MASTER_FACE_MASKS\?\.descriptor\?\.\(\)/);
   for (const profile of api.profiles) {
     assert.ok(api.select(profile.id), profile.id);
-    const call = calls.at(-1);
+    const call = calls[calls.length - 1];
     assert.equal(call.form, "object");
     assert.equal(call.descriptor.kind, "custom");
     assert.equal(call.descriptor.parts.length, 8);
