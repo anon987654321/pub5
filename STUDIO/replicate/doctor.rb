@@ -18,9 +18,11 @@ module Studio
     STUDIO_ROOT = File.expand_path("..", __dir__).freeze
 
     REQUIRED_FILES = %w[
-      replicate/Rakefile replicate/bin/studio replicate/doctor.rb replicate/output_paths.rb replicate/subprocess.rb replicate/test_runner.rb
-      dilla/dilla.rb dilla/lib/reference_analyzer.rb
-      postpro/postpro.rb postpro/video.yml
+      replicate/README.md replicate/Rakefile replicate/bin/studio replicate/doctor.rb
+      replicate/api.rb replicate/interactive.rb replicate/output_paths.rb replicate/particle_logo.rb replicate/promo.rb
+      replicate/subprocess.rb replicate/test_runner.rb replicate/agent-guidance/claude/settings.json
+      dilla/README.md dilla/dilla.rb dilla/lib/reference_analyzer.rb
+      postpro/README.md postpro/postpro.rb postpro/video.yml
       lora/consent.rb lora/consent.example.yml lora/validate.rb lora/migrate_local.rb lora/lora.rb
       lora/photograph.rb lora/idea_picture.rb lora/selfie_series.rb
       lora/selfies_gallery.rb lora/generate_selfies.rb replicate/client.rb replicate/models.yml

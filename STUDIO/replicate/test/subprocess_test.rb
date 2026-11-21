@@ -17,6 +17,22 @@ class TestStudioSubprocess < Minitest::Test
     assert_equal "err", stderr
   end
 
+  def test_capture3_strips_malloc_stack_logging_without_mutating_parent
+    previous = ENV["MallocStackLogging"]
+    ENV["MallocStackLogging"] = "1"
+
+    stdout, stderr, status = Studio::Subprocess.capture3(
+      RbConfig.ruby, "-e", 'print ENV.keys.grep(/\\AMallocStackLogging/).join(",")',
+      timeout: 2
+    )
+
+    assert status.success?, stderr
+    assert_equal "", stdout
+    assert_equal "1", ENV["MallocStackLogging"]
+  ensure
+    previous.nil? ? ENV.delete("MallocStackLogging") : ENV["MallocStackLogging"] = previous
+  end
+
   def test_capture3_applies_environment_keyword
     stdout, stderr, status = Studio::Subprocess.capture3(
       RbConfig.ruby, "-e", 'print ENV.fetch("STUDIO_CAPTURE3_ENV")',
