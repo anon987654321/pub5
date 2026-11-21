@@ -4,6 +4,7 @@ require "etc"
 require "fileutils"
 require "json"
 require "securerandom"
+require "socket"
 require "time"
 require_relative "deploy_inventory"
 
@@ -172,6 +173,17 @@ module Deploy
       raise "#{path} must be a real root-owned directory" unless dir.directory? && !dir.symlink? && dir.uid.zero?
       File.chown(0, wheel_gid, path)
       File.chmod(0o750, path)
+      if create
+        Dir.each_child(path) do |name|
+          next unless name.match?(/\\A\\d{8}T\\d{6}Z-[a-z0-9_-]{1,32}-\\d+\\.json\\z/)
+          entry = File.join(path, name)
+          raise "#{entry} is a symlink" if File.symlink?(entry)
+          stat = File.lstat(entry)
+          raise "#{entry} must be a root-owned regular file" unless stat.file? && stat.uid.zero?
+          File.chown(0, wheel_gid, entry)
+          File.chmod(0o640, entry)
+        end
+      end
       path
     end
 
