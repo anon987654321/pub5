@@ -155,7 +155,7 @@ body.mission-control a:focus-visible {
   min-height: calc(var(--face-bar-height) + var(--safe-bottom));
   height: calc(var(--face-bar-height) + var(--safe-bottom));
   padding: 0 16px var(--safe-bottom);
-  font: 18px/1.5 var(--font-mono);
+  font: var(--terminal-font-size)/var(--leading-body) var(--font-mono);
   color: var(--face-fg);
   border: 0;
   background: black;
