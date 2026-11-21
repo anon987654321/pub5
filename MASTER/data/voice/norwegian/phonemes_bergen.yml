@@ -1,0 +1,42 @@
+# Bergen / Vestland segmental inventory - evaluation reference.
+id: bergen
+description: Bergen / Vestland segmental inventory (high-tone companion)
+r_variant: uvular            # the skarre-r
+retroflexes: false
+
+vowels:
+  monophthongs:
+    - iː
+    - ɪ
+    - yː
+    - ʏ
+    - ʉː
+    - ʉ
+    - uː
+    - ʊ
+    - eː
+    - ɛ
+    - øː
+    - œ
+    - oː
+    - ɔ
+    - æː
+    - æ
+    - ɑː
+    - ɑ
+    - ə
+  diphthongs:
+    - æɪ
+    - æʉ
+    - øʏ
+    - ɑɪ
+    - ɔʏ
+    - ʉɪ
+
+consonants:
+  shared: [p, b, t, d, k, ɡ, m, n, ŋ, f, s, h, ʋ, j, l]
+  bergen_only: [ʁ]
+  absent: [ʈ, ɖ, ɳ, ɭ, ʂ, ɽ]   # no retroflex series
+  notes:
+    - The uvular skarre-r prevents retroflex assimilation.
+    - Clusters remain r + t/d/n/l/s.

@@ -161,6 +161,13 @@ ownership:
     purpose: model and routing registry
     risk: high
     check: ruby -Ilib:test test/test_provider_config.rb
+  data/voice/:
+    purpose: voice evaluation fixtures - the Norwegian accent data (tonem
+      targets, phoneme inventories, Bergen reference lexicon) feeds
+      Voice::Benchmark's tonem lane; evaluation only, never a synthesis path,
+      voice selection stays in data/voice.yml
+    risk: medium
+    check: ruby -Ilib:test test/voice/test_voice_tonem_eval.rb
   MASTER/web/app/views/chat/index.html.erb:
     purpose: face boot shell and primer contract
     risk: critical
