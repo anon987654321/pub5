@@ -44,7 +44,7 @@ class TestFixTraceDrift < Minitest::Test
     ran = false
     previous = ENV.delete("MASTER_FIX_DEEP_TRACE")
     stubs = {
-      first_read: ->(**) { {} }, weekly_backlog_review: ->(**) { :not_due }, steady_trace: ->(**) { result },
+      first_read: ->(**) { {} }, weekly_owner_registry_review: ->(**) { :not_due }, steady_trace: ->(**) { result },
       structural_review: ->(**) {}, run_pass: ->(*, **) { (ran = true) && "preview" },
     }
 
