@@ -2,6 +2,7 @@
 
 require "test_helper"
 require "tmpdir"
+require "stringio"
 
 class Ports::ImporterTest < ActiveSupport::TestCase
   test "imports ports from fixture tree with dependencies" do
@@ -122,6 +123,65 @@ class Ports::ImporterTest < ActiveSupport::TestCase
 
     assert fetcher.consulted, "importer must consult the remote fallback when there is no tree on disk"
     assert Port.exists?(platform:, pkgpath: "packages/git")
+  end
+
+  test "a complete package-index refresh revokes only absent synthetic rows" do
+    platform = platforms(:openbsd)
+    category = Category.find_or_create_by!(platform:, slug: "uncategorised") do |record|
+      record.name = "uncategorised"
+      record.description = "Uncategorised package-index entries"
+    end
+    retired = Port.create!(
+      platform:, category:, name: "retired", pkgpath: "packages/retired", version: "1",
+      package_index_seen_at: 2.days.ago
+    )
+    fetcher = FakeIndexFetcher.new([
+      { name: "git", version: "2.50.0", full_pkgname: "git-2.50.0",
+        pkgpath: "packages/git", category: "uncategorised" },
+    ])
+
+    result = Ports::Openbsd::PackageIndexFetcher.stub(:new, ->(**) { fetcher }) do
+      Ports::Openbsd::PortsTarball.stub(:new, ->(**) { FakeTarball.new }) do
+        Ports::Importer.call(platform:, tree_path: "/nonexistent/ports", use_ftp_fallback: true)
+      end
+    end
+
+    git = Port.find_by!(platform:, pkgpath: "packages/git")
+    assert git.available?
+    assert_equal result.import_run.started_at, git.package_index_seen_at
+    refute retired.reload.available?
+    assert_equal "succeeded", result.import_run.status
+  end
+
+  test "an empty package index cannot mark historical packages unavailable" do
+    platform = platforms(:openbsd)
+    category = Category.find_or_create_by!(platform:, slug: "uncategorised") do |record|
+      record.name = "uncategorised"
+      record.description = "Uncategorised package-index entries"
+    end
+    retired = Port.create!(
+      platform:, category:, name: "retired", pkgpath: "packages/retired", version: "1"
+    )
+    fetcher = FakeIndexFetcher.new([])
+
+    assert_raises(RuntimeError) do
+      Ports::Openbsd::PackageIndexFetcher.stub(:new, ->(**) { fetcher }) do
+        Ports::Openbsd::PortsTarball.stub(:new, ->(**) { FakeTarball.new }) do
+          Ports::Importer.call(platform:, tree_path: "/nonexistent/ports", use_ftp_fallback: true)
+        end
+      end
+    end
+
+    assert retired.reload.available?, "an empty/failed refresh is not deletion authority"
+  end
+
+  test "package-index parsing rejects empty and malformed snapshots" do
+    parser = Ports::Openbsd::PackageIndexParser
+    assert_raises(ArgumentError) { parser.parse(StringIO.new("")) }
+
+    valid = "-rw-r--r-- 1 0 0 83961563 Apr 25 13:24:13 2026 git-2.50.0.tgz\\n"
+    malformed = "not-a-valid-listing git-2.50.1.tgz\\n"
+    assert_raises(ArgumentError) { parser.parse(StringIO.new(valid + malformed)) }
   end
 
   test "thin package-index imports preserve existing dependency edges" do
