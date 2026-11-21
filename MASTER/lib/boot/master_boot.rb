@@ -93,8 +93,17 @@ module Master
       handle = nil
       plan = JSON.parse(mission.fetch("plan").to_s)
       paths = Array(plan.fetch("scope_paths")).map(&:to_s).uniq
-      raise ArgumentError, "backlog task has no exact scope paths" if paths.empty?
-      raise ArgumentError, "backlog plan is not owned by the root TODO executor" unless plan["executor"] == "root_todo"
+      raise ArgumentError, "owner-registry task has no exact scope paths" if paths.empty?
+      raise ArgumentError, "task plan is not owned by the explicit registry executor" unless plan["executor"] == "owner_registry"
+
+      live_item = Backlog.generate.find { |item| item[:id] == plan["item_id"] }
+      unless live_item && Backlog.item_digest(live_item) == plan["item_digest"] &&
+             Backlog.registry_digest(live_item) == plan["registry_digest"] &&
+             live_item[:registry_source].to_s == plan["registry_source"].to_s &&
+             Array(live_item[:scope_paths]).map(&:to_s).sort == paths.sort &&
+             live_item[:done_when].to_s == plan["done_when"].to_s
+        raise BacklogRunFailed, "ACCEPTANCE_BLOCKED: the owning registry task changed after intake"
+      end
 
       repository = File.realpath(repo_root)
       remote, target = Master::Io::GitOperations.new(repository).push_target
@@ -177,7 +186,7 @@ module Master
       )
         raise BacklogRunFailed, "FIX_PROOF_FAILED: durable /fix proof receipt was rejected"
       end
-      summary = "root TODO #{plan.fetch("item_id")}: /fix proof passed for #{paths.size} exact scope(s); origin/main verified"
+      summary = "owner registry #{plan.fetch("item_id")}: /fix proof passed for #{paths.size} exact scope(s); origin/main verified"
       handle.finish!(summary:)
       Master::Result.ok(summary)
     rescue BacklogRunFailed => error
