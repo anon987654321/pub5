@@ -35,7 +35,7 @@ if File.file?(doas_conf)
   failures << "doas.conf must end with newline (OpenBSD parser rejects EOF without one)" unless text.end_with?("\n")
 
   rules = text.lines.reject { |line| line.strip.empty? || line.strip.start_with?("#") }
-  dev_rule = rules.find { |line| line.match?(/\bdev\s+as\s+root\b/) }
+  dev_rule = rules.find { |line| line.match?(/\b:wheel\s+as\s+root\b/) }
 
   # keepenv on the dev rule is a root RCE by construction: it carries RUBYOPT,
   # RUBYLIB, GEM_HOME and BUNDLE_* across the boundary, so `RUBYOPT=-r/tmp/x.rb doas
@@ -43,16 +43,16 @@ if File.file?(doas_conf)
   # setenv allowlist; this is what stops it coming back with the next edit that finds
   # a variable missing. The root->root rule keeps keepenv on purpose — see the file.
   if dev_rule.nil?
-    failures << "etc/doas.conf has no `dev as root` rule"
+    failures << "etc/doas.conf has no `:wheel as root` rule"
   else
-    failures << "etc/doas.conf: dev rule must not use keepenv (root RCE via RUBYOPT)" if dev_rule.include?("keepenv")
+    failures << "etc/doas.conf: wheel rule must not use keepenv (root RCE via RUBYOPT)" if dev_rule.include?("keepenv")
     # The whole measured allowlist (etc/doas.conf): each is read by a script run
     # under doas and assigned by none, so dropping one silently breaks that
     # script — --stage-1's DNS-wipe check, the console check, production seeds, the
     # deploy scan skip, the mail image format.
     allowlist = dev_rule[/setenv\s*\{([^}]*)\}/, 1].to_s.split
     %w[I_UNDERSTAND_DNS_WIPE I_UNDERSTAND_CONSOLE_RISK I_UNDERSTAND_FAST_DEPLOY RUN_PRODUCTION_SEEDS SKIP_MASTER_SCAN MAIL_IMG_FMT].each do |name|
-      failures << "etc/doas.conf: dev rule must setenv-allowlist #{name}" unless allowlist.include?(name)
+      failures << "etc/doas.conf: wheel rule must setenv-allowlist #{name}" unless allowlist.include?(name)
     end
   end
 else
@@ -151,438 +151,228 @@ else
   failures << "missing OPENBSD/bin/validate_doas.ksh"
 end
 
+# Brokerless deployment contract. Ordinary host operations use OpenBSD's
+# native rcctl/du/install/su commands. Rails tasks and tree sync remain fixed,
+# app-user helpers; persistent deploy evidence is handled by a small data library.
 admin_path = File.join(OPENBSD, "mirror", "usr", "local", "sbin", "pub5-admin")
-# A symlinked broker is refused below; later checks still read this, so it starts as text.
-admin = ""
-if File.symlink?(admin_path)
-  failures << "usr/local/sbin/pub5-admin must not be a symlink"
-end
+admin_man = File.join(OPENBSD, "mirror", "usr", "local", "man", "man8", "pub5-admin.8")
+failures << "pub5-admin must be removed from the tracked mirror" if File.exist?(admin_path) || File.symlink?(admin_path)
+failures << "pub5-admin manual page must be removed" if File.exist?(admin_man) || File.symlink?(admin_man)
 
-if File.file?(admin_path) && !File.symlink?(admin_path)
-  admin = File.read(admin_path)
-  failures << "pub5-admin must use the fixed packaged Ruby interpreter" unless
-    admin.start_with?("#!/usr/local/bin/ruby\n")
-  status_contract = admin.include?('args.length == 4 && args[0] == "deploy-status"') &&
-                    admin.include?("def write_deploy_status(app, step, state)") &&
-                    admin.include?('File.join(directory, "#{app}.json")') &&
-                    admin.include?("File.link(temporary, target)") &&
-                    admin.include?('raise "#{target} is a symlink; refusing status write"')
-  failures << "deploy-status writes must use the atomic fixed-path broker" unless status_contract
-  disk_usage_contract = admin.include?('DISK_USAGE_PATHS = %w[/home /var].freeze') &&
-                       admin.include?('return [DU, "-xk", args[1]] if args.length == 2 && args[0] == "disk-usage" && DISK_USAGE_PATHS.include?(args[1])')
-  failures << "pub5-admin disk usage must be restricted to deploy mount roots" unless disk_usage_contract
-  master_web_contract = admin.include?('MASTER_WEB_ROOT = "/home/dev/pub5/MASTER/web"') &&
-                       admin.include?('args == ["master-web-assets-reset"]') &&
-                       admin.include?('args == ["master-web-runtime-dirs"]') &&
-                       admin.include?("def master_web_root!") &&
-                       admin.include?("def master_web_tree_paths!(root)") &&
-                       admin.include?("Find.find(root)") &&
-                       admin.include?('raise "symlink refused in MASTER web path: #{path}" if stat.symlink?')
-  failures << "master-web helper must be fixed-path and symlink-safe" unless master_web_contract
-  broker_contract = admin.include?("def command_for(argv)") &&
-                    admin.include?("exec(*command)") &&
-                    admin.include?("SERVICE_ACTIONS") &&
-                    admin.include?("SERVICES")
-  failures << "pub5-admin must be a fixed-path closed broker" unless broker_contract
-  task_app_scope = admin.include?("known_apps = helper == RAILS_TASK ? RAILS_TASK_APPS : RAILS_APPS") &&
-                   admin.include?("RAILS_TASK_APPS = %w[master brgen amber bsdports mrdamascy].freeze")
-  failures << "pub5-admin must validate each helper against its own app allowlist" unless task_app_scope
-  fixed_spawn = "Process.spawn(environment, \"/bin/ksh\", helper, *arguments,\n    pgroup: true, unsetenv_others: true)"
-  safe_spawn = admin.include?(fixed_spawn) &&
-               admin.include?('exec(environment, "/bin/ksh", helper, *arguments, unsetenv_others: true)') &&
-               admin.include?('raise "unknown helper" unless [CI_RUN, CI_SYNC, RAILS_TASK, RAILS_SYNC].include?(helper)') &&
-               admin.include?("when RAILS_TASK then Array(extra)") &&
-               admin.include?("when CI_RUN then [app, duration.to_s]") &&
-               admin.include?("when CI_SYNC then [app]") &&
-               admin.include?("when RAILS_SYNC then [app, *Array(extra)]") &&
-               admin.include?("Process.groups = groups") &&
-               admin.include?("Process::GID.change_privilege(account.gid)") &&
-               admin.include?("Process::UID.change_privilege(account.uid)") &&
-               admin.include?("trusted_script!(helper)")
-  unsafe_spawn = admin.include?("Process.spawn") &&
-                 (admin.scan("Process.spawn").length != 1 || !safe_spawn)
-  failures << "pub5-admin must not evaluate shell command strings or widen its CI spawn" if
-    admin.match?(/system\s*\(|Open3\.|%x/) || unsafe_spawn
-  sync_path = File.join(OPENBSD, "mirror", "usr", "local", "libexec", "ci-sync.ksh")
-  if File.file?(sync_path)
-    sync = File.read(sync_path)
-    sync_contract = sync.include?("brgen|amber|bsdports") &&
-                    sync.include?('repo=/home/dev/pub5') &&
-                    sync.include?('[ "$(id -un)" = "$app" ]') &&
-                    sync.include?('tar xf - -C "$app_dir"') &&
-                    sync.scan('git -c safe.directory="$repo" -C "$repo"').length >= 3 &&
-                    !sync.include?('git -C "$repo"') &&
-                    !sync.match?(/^\s*(?:doas|sudo|chown)\b/)
-    failures << "ci-sync helper must be app-scoped, pin one Git safe.directory and avoid privileged actions" unless sync_contract
-  else
-    failures << "missing tracked usr/local/libexec/ci-sync.ksh"
-  end
-  prepare_path = File.join(OPENBSD, "mirror", "usr", "local", "libexec", "ci-prepare.ksh")
-  if File.file?(prepare_path)
-    prepare = File.read(prepare_path)
-    group_create_at = prepare.index("/usr/sbin/groupadd _pub4ci")
-    current_create_at = prepare.index("/usr/sbin/groupadd _pub5ci")
-    usermod_at = prepare.index("/usr/sbin/usermod -G _pub5ci \"$app\"")
-    chgrp_at = prepare.index("/bin/chgrp _pub5ci /home/dev")
-    unless group_create_at && current_create_at && usermod_at && chgrp_at &&
-           group_create_at < current_create_at && current_create_at < usermod_at && usermod_at < chgrp_at
-      failures << "ci-prepare must create the legacy group, enroll the app in _pub5ci, and chgrp /home/dev before chmod"
-    end
-  end
-  if File.file?(prepare_path)
-    prepare = File.read(prepare_path)
-    prepare_contract = prepare.include?("brgen|amber|bsdports") &&
-                       prepare.include?('[ ! -L "$app_home" ]') &&
-                       prepare.include?('[ ! -L "$app_dir" ]') &&
-                       prepare.include?('[ "$(stat -f %u "$storage")" = "$app_uid" ]') &&
-                       prepare.include?('storage="$app_dir/storage"')
-    failures << "ci-prepare helper must check app-owned real path components before chmod" unless prepare_contract
-  else
-    failures << "missing tracked usr/local/libexec/ci-prepare.ksh"
-  end
-
-  rails_task_path = File.join(OPENBSD, "mirror", "usr", "local", "libexec", "rails-task.ksh")
-  if File.file?(rails_task_path) && !File.symlink?(rails_task_path)
-    rails_task = File.read(rails_task_path)
-    rails_task_secret_contract = admin.include?('environment["SECRET_KEY_BASE"] = secret if secret') &&
-                              admin.include?("secret = supervised_helper_secret(helper, app, arguments)") &&
-                              admin.include?("app_secret_value(app)") &&
-                              rails_task.include?("export SECRET_KEY_BASE") &&
-                              !rails_task.include?('command="SECRET_KEY_BASE=$secret')
-    failures << "Rails task secrets must use the child environment, never command arguments" unless rails_task_secret_contract
-    rails_task_contract = rails_task.include?("master|brgen|amber|bsdports") &&
-                          rails_task.include?("overlay-initializers|overlay-public") &&
-                          rails_task.include?("bundle-install|bundle-check|ci-bundle-install|db-prepare|db-seed|assets-precompile|ci") &&
-                          rails_task.include?("bundle-cache-prepare") &&
-                          rails_task.include?("export PUB4_TASK_RUBY=$ruby_path") &&
-                          rails_task.include?('ruby_version=$("$PUB5_TASK_RUBY" -e "print RUBY_VERSION.split(46.chr).first(2).join")') &&
-                          rails_task.include?('npm-cache)') &&
-                          rails_task.include?('command="mkdir -p /home/$app/.npm /home/$app/.cache"') &&
-                          rails_task.include?("bundle-cas-hydrate)") &&
-                          rails_task.include?('cp "$source" "$target"') &&
-                          rails_task.include?('export PUB4_TASK_CACHE_KEY=$database') &&
-                          rails_task.include?("db-storage-migrate)") &&
-                          rails_task.include?('[ ! -L db ]') &&
-                          rails_task.include?('[ ! -L storage ]') &&
-                          rails_task.include?("cache|queue|cable") &&
-                          rails_task.include?("secondary-db-check)") &&
-                          rails_task.include?('table=$("$ruby_path" -e') &&
-                          rails_task.include?('[ ! -L /home ]') &&
-                          rails_task.include?('[ ! -L "$app_home" ]') &&
-                          rails_task.include?('[ ! -L "$app_dir" ]') &&
-                          rails_task.include?('app_bundle="$app_dir/.bundle"') &&
-                          rails_task.include?('[ ! -L "$app_bundle" ]') &&
-                          rails_task.include?('[ ! -L "$app_dir/db" ]') &&
-                          rails_task.include?('[ ! -L "$app_dir/storage" ]') &&
-                          rails_task.include?('exec /usr/bin/su -m "$app" -c "$script"') &&
-                          rails_task.end_with?("exec /usr/bin/su -m \"$app\" -c \"$script\"\n") &&
-                          rails_task.scan('exec /usr/bin/su -m "$app" -c "$script"').length == 1 &&
-                          !rails_task.include?("EOF_KEY") &&
-                          rails_task.include?('unset BUNDLE_GEMFILE BUNDLE_PATH BUNDLE_BIN_PATH BUNDLE_WITH BUNDLE_WITHOUT')
-    failures << "rails-task helper must expose only fixed task names and execute as the app user" unless rails_task_contract
-  else
-    failures << "missing or symlinked tracked usr/local/libexec/rails-task.ksh"
-  end
-
-  runner_path = File.join(OPENBSD, "mirror", "usr", "local", "libexec", "ci-run.ksh")
-  if File.file?(runner_path)
-    runner = File.read(runner_path)
-    runner_contract = runner.include?("brgen|amber|bsdports") &&
-                      runner.include?('[ "$timeout" -ge 1 ] && [ "$timeout" -le 7200 ]') &&
-                      runner.include?('cd /home/$app/app') &&
-                      runner.include?('exec /usr/bin/su -m "$app" -c "$script"') &&
-                      runner.include?('/usr/local/bin/bundle') &&
-                      runner.include?('unset RUBYOPT RUBYLIB RUBYPATH RUBYGEMS_GEMDEPS GEM_HOME GEM_PATH')
-    failures << "ci-run helper must use fixed app paths, bounded timeout and sanitized Ruby environment" unless runner_contract
-  else
-    failures << "missing tracked usr/local/libexec/ci-run.ksh"
-  end
-
-  relay_adapter_path = File.join(ROOT, "RAILS", "_service.sh")
-  if File.file?(relay_adapter_path)
-    relay_adapter = File.read(relay_adapter_path)[/relayd_add_relay\(\) \{.*?^\}/m]
-    relay_adapter_contract = relay_adapter &&
-                            relay_adapter.include?('pub5-admin relayd-check "$app" "$domain" "$port"') &&
-                            relay_adapter.include?("fixed broker is missing; run OPERATOR.sh") &&
-                            !relay_adapter.match?(/\$\{_PRIV\}.*\$RUBY/)
-    failures << "relayd deploy adapter must use the broker and refuse unsafe fallback" unless relay_adapter_contract
-  else
-    failures << "missing RAILS/_service.sh relayd broker adapter"
-  end
-  sync_file = File.join(ROOT, "RAILS", "_sync.sh")
-  if File.file?(sync_file)
-    sync_source = File.read(sync_file)
-    initializers_overlay = sync_source[/overlay_shared_initializers\(\) \{.*?^\}/m]
-    public_overlay = sync_source[/overlay_shared_public\(\) \{.*?^\}/m]
-    overlay_contract = initializers_overlay &&
-                       initializers_overlay.include?('run_rails_as_app "$app_name" "$app_dir" "overlay-initializers"') &&
-                       !initializers_overlay.match?(/\$\{_PRIV\}\s+(?:mkdir|cp|rm|mv)/) &&
-                       public_overlay &&
-                       public_overlay.include?('run_rails_as_app "$app_name" "$app_dir" "overlay-public"') &&
-                       !public_overlay.match?(/\$\{_PRIV\}\s+(?:mkdir|cp|rm|mv)/)
-    failures << "shared Rails overlays must run as the app user through fixed Rails tasks" unless overlay_contract
-  else
-    failures << "missing RAILS/_sync.sh shared overlay adapters"
-  end
-
-  deploy_path = File.join(ROOT, "RAILS", "_deploy.sh")
-  if File.file?(deploy_path)
-    deploy = File.read(deploy_path)
-    access_at = deploy.index('pub5-admin ci-prepare "$app_name"')
-    app_sync_at = deploy.index('rails_sync_app_tree "$app_name" app')
-    shared_sync_at = deploy.index('rails_sync_app_tree "$app_name" shared')
-    overlay_at = deploy.index('overlay_shared_initializers "$APP_DIR"')
-    end_at = deploy.index('deploy_status "$app_name" "master scan"')
-    sync_block = app_sync_at && end_at ? deploy[app_sync_at...end_at] : ""
-    ordered = access_at && app_sync_at && shared_sync_at && overlay_at && end_at &&
-              access_at < app_sync_at && app_sync_at < shared_sync_at && shared_sync_at < overlay_at
-    unless ordered && !sync_block.match?(/doas (?:rm|chown|mkdir|mv|sh -c)/)
-      failures << "production Rails tree sync must use the fixed app-user broker after ci-prepare"
-    end
-  else
-    failures << "missing RAILS/_deploy.sh app-user sync path"
-  end
-  runtime_path = File.join(ROOT, "RAILS", "_runtime_check.sh")
-  if File.file?(runtime_path)
-    runtime = File.read(runtime_path)
-    runner = runtime[/run_rails_as_app\(\) \{.*?^\}/m]
-    runner_contract = runner &&
-                     runner.include?('[[ -x /usr/local/sbin/pub5-admin ]]') &&
-                     runner.include?('/usr/local/sbin/pub5-admin rails-task "$app_name" "$task"') &&
-                     runner.include?("pub5-admin is missing; run OPERATOR.sh before deploying") &&
-                     !runner.match?(/\$\{_PRIV\}\s+sh\s+-c/) &&
-                     !runner.include?("su -m")
-    failures << "rails runtime task runner must fail closed without the broker" unless runner_contract
-  else
-    failures << "missing RAILS/_runtime_check.sh task runner"
-  end
-  relayd_contract = admin.include?('args.length == 4 && args[0] == "relayd-check"') &&
-                    admin.include?("def relayd_check(app, domain, requested_port)") &&
-                    admin.include?("File.lstat(RELAYD_CONFIG)") &&
-                    admin.include?('no operator-approved Host route for #{domain}') &&
-                    admin.include?("requested port does not match the root-configured backend") &&
-                    !admin.include?("def relayd_add(app, domain, requested_port)") &&
-                    !admin.include?("File.rename(temporary, RELAYD_CONFIG)") &&
-                    !admin.match?(/IO\.popen\(\s*["']/)
-  failures << "relayd broker must be verification-only and reject unapproved Host routes" unless relayd_contract
-  ci_lock_contract = admin.include?('return ensure_ci_lock if args == ["ci-lock"]') &&
-                    admin.include?('path = File.join(STAMP_DIR, "ci.lock")') &&
-                    admin.include?('raise "#{path} is not a regular file" unless lock.file? && !lock.symlink?')
-  failures << "pub5-admin CI lock must use one fixed path and refuse symlinks" unless ci_lock_contract
-
-  secret_dispatch = admin.include?('args[0] == "ensure-secret" && APPS.include?(args[1])') &&
-                  admin.include?("def ensure_app_secret(app, emit: true)") &&
-                  admin.include?("ensure_app_secret(app, emit: false)") &&
-                  admin.include?("File::CREAT | File::EXCL") &&
-                  admin.include?("File.link(temporary, target)") &&
-                  admin.include?("already exists without a valid SECRET_KEY_BASE; refusing to replace the environment file")
-  failures << "pub5-admin must create secrets only at fixed app paths and atomically" unless secret_dispatch
-
-  bundle_cache_contract = admin.include?('args.length == 4 && args[0] == "bundle-cache"') &&
-                         admin.include?("def bundle_cache(app, action, ruby_key)") &&
-                         admin.include?('BUNDLE_CACHE_BASE = "/var/cache/pub4/bundle"') &&
-                         admin.include?('%w[prepare import capture].include?(action)') &&
-                         admin.include?("File.link(temporary, target)") &&
-                         admin.include?("File::CREAT | File::EXCL") &&
-                         admin.include?("valid_ruby_cache_key?(ruby_key)") &&
-                         admin.include?("bundle cache import exceeds 500 files")
-  failures << "pub5-admin bundle cache must be immutable and fixed-path" unless bundle_cache_contract
-  bundle_shell_path = File.join(ROOT, "RAILS", "_bundle.sh")
-  if File.file?(bundle_shell_path)
-    bundle_shell = File.read(bundle_shell_path)
-    cas_prepare = bundle_shell[/bundle_cas_prepare\(\) \{.*?^\}/m]
-    cas_capture = bundle_shell[/bundle_cas_capture\(\) \{.*?^\}/m]
-    bundle_cas_shell_contract = cas_prepare && cas_capture &&
-                               cas_prepare.include?('pub5-admin bundle-cache "$app_name" prepare "$RUBY_CACHE_KEY"') &&
-                               cas_prepare.include?('pub5-admin bundle-cache "$app_name" import "$RUBY_CACHE_KEY"') &&
-                               cas_prepare.include?('run_rails_as_app "$app_name" "$app_dir" "bundle-cas-hydrate" "$RUBY_CACHE_KEY"') &&
-                               cas_capture.include?('pub5-admin bundle-cache "$app_name" capture "$RUBY_CACHE_KEY"') &&
-                               ![cas_prepare, cas_capture].any? { |body| body.match?(/\$\{_PRIV\}\s+(?:mkdir|cp|ln|chown)\b/) }
-    failures << "Rails Bundler CAS wrappers must use the fixed broker and avoid privileged path operations" unless bundle_cas_shell_contract
-  else
-    failures << "missing RAILS/_bundle.sh CAS adapters"
-  end
-  broker_helper_dispatch = admin.include?('args[0] == "ci-prepare" && RAILS_APPS.include?(args[1])') &&
-                           admin.include?('args[0] == "ci-run" &&') &&
-                           admin.include?('RAILS_APPS.include?(args[1]) && valid_ci_timeout?(args[2])') &&
-                           admin.include?('args[0] == "ci-sync" && RAILS_APPS.include?(args[1])') &&
-                           admin.include?('trusted_script!(CI_PREPARE)') &&
-                           admin.include?("trusted_script!(helper)") &&
-                           admin.include?('supervised_helper(CI_SYNC, app, 900)') &&
-                           admin.include?('args[0] == "rails-task" && RAILS_TASK_APPS.include?(args[1])') &&
-                           admin.include?('run_rails_task(args[1], args[2])') &&
-                           admin.include?('supervised_helper(RAILS_TASK, app, 7200, arguments)') &&
-                           admin.include?('args[0] == "retire-legacy"') &&
-                           admin.include?("def legacy_service_name(app)\n" \
-                                         "    return nil unless RAILS_APPS.include?(app)") &&
-                           admin.include?('File.lstat(path)')
-  failures << "pub5-admin must expose only fixed app-scoped CI helper verbs" unless broker_helper_dispatch
-
-  rails_sync_path = File.join(OPENBSD, "mirror", "usr", "local", "libexec", "rails-sync.ksh")
-  if File.file?(rails_sync_path) && !File.symlink?(rails_sync_path)
-    rails_sync = File.read(rails_sync_path)
-    sync_contract = rails_sync.include?("app|shared") &&
-                    rails_sync.include?("verticals") &&
-                    rails_sync.include?('[ "$(id -un)" = "$app" ]') &&
-                    rails_sync.include?('sync_tree_stage "$rails_root/$app" "$app_dir" yes') &&
-                    rails_sync.include?('git -c safe.directory="$repo" -C "$repo" archive HEAD "RAILS/$source_rel"') &&
-                    rails_sync.include?('archive_tracked_tree "$source_dir" "$stage"') &&
-                    !rails_sync.include?('tar cf - -C "$source_dir" .') &&
-                    rails_sync.include?('for state in storage log; do') &&
-                    rails_sync.include?('if [ "$state" = storage ]; then storage_carried=1; fi') &&
-                    rails_sync.include?('if [ "$state" = log ]; then log_carried=1; fi') &&
-                    rails_sync.include?('public/assets') &&
-                    !rails_sync.match?(/^\s*(?:doas|sudo|chown)\b/)
-    failures << "rails-sync helper must be app-owned, fixed-mode and preserve runtime state" unless sync_contract
-  else
-    failures << "missing or symlinked tracked usr/local/libexec/rails-sync.ksh"
-  end
-  installer = File.read(File.join(OPENBSD, "BOOTSTRAP.sh"))
-  source_preflight = installer.include?("typeset -a privileged_sources=(") &&
-                     installer.include?('if [[ ! -f $src/$rel || -L $src/$rel ]]') &&
-                     installer.include?("missing or symlinked privileged source")
-  failures << "BOOTSTRAP.sh must preflight privileged sources before copying" unless source_preflight
-  install_preflight = installer.include?("installed privileged entrypoint missing or symlinked") &&
-                      installer.include?("/usr/local/libexec/rails-sync.ksh; do") &&
-                      installer.include?("/usr/local/libexec/pub4/solid_queue_proof.rb")
-  failures << "BOOTSTRAP.sh must verify installed privileged entrypoints" unless install_preflight
-  destination_guard_at = installer.index("Never copy privileged code through a symlinked system directory or file.")
-  copy_loop_at = installer.index("for d in etc usr var; do")
-  destination_preflight = installer.include?("refusing symlinked privileged destination directory") &&
-                          installer.include?("refusing symlinked privileged destination file") &&
-                          destination_guard_at && copy_loop_at && destination_guard_at < copy_loop_at
-  failures << "BOOTSTRAP.sh must refuse symlinked privileged destinations before copying" unless destination_preflight
-  installs_after_copy = installer.include?("installed Solid Queue proof is missing or symlinked") &&
-                        installer.include?("installed resource guard is missing or symlinked")
-  failures << "BOOTSTRAP.sh must verify installed helpers after their explicit install" unless installs_after_copy
-  installer_pins_admin = installer.include?("chown root:wheel /usr/local/sbin/pub5-admin") &&
-                         installer.include?("chmod 555 /usr/local/sbin/pub5-admin") &&
-                         installer.include?("[[ -L $f ]]") &&
-                         installer.include?("/usr/local/libexec/ci-sync.ksh") &&
-                         installer.include?("/usr/local/libexec/rails-task.ksh") &&
-                         installer.include?("/usr/local/libexec/rails-sync.ksh")
-  failures << "BOOTSTRAP.sh must reject symlinked privileged entrypoints and install pub5-admin root-owned/non-writable" unless installer_pins_admin
+records_path = File.join(OPENBSD, "lib", "deploy_records.rb")
+if File.file?(records_path) && !File.symlink?(records_path)
+  records = File.read(records_path)
+  records_contract = records.include?("class Records") &&
+                     records.include?('File.join(@root, RUNS)') &&
+                     records.include?("File::CREAT | File::EXCL") &&
+                     records.include?("file.fsync") &&
+                     records.include?("File.rename(temporary, target)") &&
+                     records.include?("File.chown(0, wheel_gid, temporary)") &&
+                     records.include?("File.chmod(0o640, temporary)") &&
+                     records.include?("Inventory.new(root: repo_root)") &&
+                     records.include?("terminal deploy-run receipt cannot be changed") &&
+                     records.include?("snapshot field")
+  failures << "deployment records must be inventory-derived, atomic and root:wheel readable" unless records_contract
 else
-  failures << "missing tracked usr/local/sbin/pub5-admin"
+  failures << "missing OPENBSD/lib/deploy_records.rb"
 end
+
+sync_path = File.join(OPENBSD, "mirror", "usr", "local", "libexec", "ci-sync.ksh")
+if File.file?(sync_path) && !File.symlink?(sync_path)
+  sync = File.read(sync_path)
+  sync_contract = sync.include?("brgen|amber|bsdports|mrdamascy") &&
+                  sync.include?('repo=/home/dev/pub5') &&
+                  sync.include?('[ "$(id -un)" = "$app" ]') &&
+                  sync.include?('tar xf - -C "$app_dir"') &&
+                  sync.include?('sync_tree_stage') == false &&
+                  sync.scan('git -c safe.directory="$repo" -C "$repo"').length >= 3 &&
+                  !sync.match?(/^\s*(?:doas|sudo|chown)\b/)
+  failures << "ci-sync helper must be fixed-path and app-owned, with no root mutation" unless sync_contract
+else
+  failures << "missing tracked usr/local/libexec/ci-sync.ksh"
+end
+
+prepare_path = File.join(OPENBSD, "mirror", "usr", "local", "libexec", "ci-prepare.ksh")
+if File.file?(prepare_path) && !File.symlink?(prepare_path)
+  prepare = File.read(prepare_path)
+  prepare_contract = prepare.include?("brgen|amber|bsdports|mrdamascy") &&
+                     prepare.include?('[ ! -L "$app_home" ]') &&
+                     prepare.include?('[ ! -L "$app_dir" ]') &&
+                     prepare.include?('[ "$(stat -f %u "$storage")" = "$app_uid" ]') &&
+                     prepare.include?('storage="$app_dir/storage"') &&
+                     prepare.include?('/usr/sbin/usermod -G _pub5ci "$app"')
+  failures << "ci-prepare must verify app paths and grant only checkout-read group access" unless prepare_contract
+else
+  failures << "missing tracked usr/local/libexec/ci-prepare.ksh"
+end
+
+runner_path = File.join(OPENBSD, "mirror", "usr", "local", "libexec", "ci-run.ksh")
+if File.file?(runner_path) && !File.symlink?(runner_path)
+  runner = File.read(runner_path)
+  runner_contract = runner.include?("brgen|amber|bsdports|mrdamascy") &&
+                    runner.include?('[ "$timeout" -ge 1 ] && [ "$timeout" -le 7200 ]') &&
+                    runner.include?('cd /home/$app/app') &&
+                    runner.include?('exec /usr/bin/su -m "$app" -c "$script"') &&
+                    runner.include?('/usr/local/bin/bundle') &&
+                    runner.include?('unset RUBYOPT RUBYLIB RUBYPATH RUBYGEMS_GEMDEPS GEM_HOME GEM_PATH')
+  failures << "ci-run must retain bounded, sanitized execution as the app user" unless runner_contract
+else
+  failures << "missing tracked usr/local/libexec/ci-run.ksh"
+end
+
+rails_task_path = File.join(OPENBSD, "mirror", "usr", "local", "libexec", "rails-task.ksh")
+if File.file?(rails_task_path) && !File.symlink?(rails_task_path)
+  rails_task = File.read(rails_task_path)
+  rails_task_contract = rails_task.include?("master|brgen|amber|bsdports|mrdamascy") &&
+                        rails_task.include?("overlay-initializers|overlay-public") &&
+                        rails_task.include?("bundle-install|bundle-check|ci-bundle-install|db-prepare|db-seed|assets-precompile|ci") &&
+                        rails_task.include?("db-storage-migrate") &&
+                        rails_task.include?("secondary-db-check)") &&
+                        rails_task.include?('exec /usr/bin/su -m "$app" -c "$script"') &&
+                        rails_task.include?('unset BUNDLE_GEMFILE BUNDLE_PATH BUNDLE_BIN_PATH BUNDLE_WITH BUNDLE_WITHOUT') &&
+                        !rails_task.include?("pub5-admin")
+  failures << "Rails task helper must expose fixed task names and drop to the app user" unless rails_task_contract
+else
+  failures << "missing tracked usr/local/libexec/rails-task.ksh"
+end
+
+rails_sync_path = File.join(OPENBSD, "mirror", "usr", "local", "libexec", "rails-sync.ksh")
+if File.file?(rails_sync_path) && !File.symlink?(rails_sync_path)
+  rails_sync = File.read(rails_sync_path)
+  rails_sync_contract = rails_sync.include?("app|shared") &&
+                        rails_sync.include?("verticals") &&
+                        rails_sync.include?('[ "$(id -un)" = "$app" ]') &&
+                        rails_sync.include?('sync_tree_stage "$rails_root/$app" "$app_dir" yes') &&
+                        rails_sync.include?('git -c safe.directory="$repo" -C "$repo" archive HEAD "RAILS/$source_rel"') &&
+                        rails_sync.include?('archive_tracked_tree "$source_dir" "$stage"') &&
+                        rails_sync.include?('for state in storage log; do') &&
+                        rails_sync.include?('public/assets') &&
+                        !rails_sync.match?(/^\s*(?:doas|sudo|chown)\b/)
+  failures << "rails-sync must be app-owned, fixed-mode and preserve runtime state" unless rails_sync_contract
+else
+  failures << "missing tracked usr/local/libexec/rails-sync.ksh"
+end
+
+bootstrap = File.read(File.join(OPENBSD, "BOOTSTRAP.sh"))
+bootstrap_contract = bootstrap.include?("typeset -a privileged_sources=(") &&
+                     bootstrap.include?("usr/local/libexec/ci-prepare.ksh") &&
+                     bootstrap.include?("usr/local/libexec/ci-run.ksh") &&
+                     bootstrap.include?("usr/local/libexec/ci-sync.ksh") &&
+                     bootstrap.include?("usr/local/libexec/rails-task.ksh") &&
+                     bootstrap.include?("usr/local/libexec/rails-sync.ksh") &&
+                     bootstrap.include?('[[ -L $f ]]') &&
+                     !bootstrap.include?("pub5-admin")
+failures << "BOOTSTRAP must install the app-user helpers without a command broker" unless bootstrap_contract
+
+vps_deploy_path = File.join(OPENBSD, "bin", "vps-deploy")
+deploy_source = File.read(vps_deploy_path)
+deploy_contract = deploy_source.include?('"/usr/sbin/rcctl"') &&
+                  deploy_source.include?('records_call write "$VPS_DEPLOY_RUN_ID" "$payload"') &&
+                  deploy_source.include?('records_call write "$@"') &&
+                  deploy_source.include?("Deploy::Records.new(repo_root: repo)") &&
+                  deploy_source.include?("/usr/local/bin/resource_guard.sh") &&
+                  deploy_source.include?("/usr/local/libexec/pub5/solid_queue_proof.rb") &&
+                  !deploy_source.include?("pub5-admin") &&
+                  !deploy_source.include?("PUB5_ADMIN")
+failures << "vps-deploy must use native rcctl and direct durable records, not pub5-admin" unless deploy_contract
+
+vps_state_path = File.join(OPENBSD, "bin", "vps-state")
+vps_state = File.read(vps_state_path)
+state_service = vps_state[/def service_state\(service\).*?^end/m]
+state_contract = state_service &&
+                 state_service.include?('"/usr/sbin/rcctl", "check", service') &&
+                 !state_service.include?("pub5-admin") &&
+                 vps_state.include?('File.join(STAMP_DIR, "deploy_runs")') &&
+                 vps_state.include?("unsafe owner or mode") &&
+                 vps_state.include?("Deploy::Inventory.new(root: ROOT)")
+failures << "vps-state must read wheel-readable state and use native rcctl" unless state_contract
+
+master_services = File.read(File.join(ROOT, "MASTER", "lib", "operator", "services.rb"))
+master_status = File.read(File.join(ROOT, "MASTER", "lib", "operator", "status_report.rb"))
+failures << "MASTER service controls must use native rcctl" unless
+  master_services.include?('["doas", "-n", "/usr/sbin/rcctl", action.to_s, service]') &&
+  !master_services.include?("pub5-admin")
+failures << "MASTER service status must use native rcctl" unless
+  master_status.include?('["doas", "-n", "/usr/sbin/rcctl", "check", service]') &&
+  !master_status.include?("pub5-admin")
+
+rails_core = File.read(File.join(ROOT, "RAILS", "_core.sh"))
+rails_sync = File.read(File.join(ROOT, "RAILS", "_sync.sh"))
+rails_runtime = File.read(File.join(ROOT, "RAILS", "_runtime_check.sh"))
+rails_deploy = File.read(File.join(ROOT, "RAILS", "_deploy.sh"))
+rails_database = File.read(File.join(ROOT, "RAILS", "_database.sh"))
+rails_service = File.read(File.join(ROOT, "RAILS", "_service.sh"))
+rails_bundle = File.read(File.join(ROOT, "RAILS", "_bundle.sh"))
+failures << "RAILS service adapter must call rcctl directly" unless
+  rails_core.include?('/usr/sbin/rcctl "$action" "$service"') && !rails_core.include?("pub5-admin")
+failures << "RAILS deploy status must be atomic and wheel-readable" unless
+  rails_core.include?('File.rename(temporary, target)') &&
+  rails_core.include?('File.chmod(0o750, directory)') &&
+  rails_core.include?('File.chmod(0o640, temporary)') &&
+  !rails_core.include?("pub5-admin")
+failures << "RAILS tree sync must su to the owning app and use the installed synchronizer" unless
+  rails_sync.include?('/usr/local/libexec/rails-sync.ksh') &&
+  rails_sync.include?('/usr/bin/su -m "$app_name"') && !rails_sync.include?("pub5-admin")
+failures << "RAILS runtime tasks must invoke the fixed task helper directly" unless
+  rails_runtime.include?('/usr/local/libexec/rails-task.ksh') && !rails_runtime.include?("pub5-admin")
+failures << "RAILS deploy must prepare the app account without a command broker" unless
+  rails_deploy.include?('/usr/sbin/useradd') &&
+  rails_deploy.include?('/usr/local/libexec/ci-prepare.ksh') && !rails_deploy.include?("pub5-admin")
+failures << "RAILS secrets must use atomic native file writes" unless
+  rails_database.include?('File.link(temporary, target)') &&
+  rails_database.include?("SECRET_KEY_BASE") && !rails_database.include?("pub5-admin")
+failures << "RAILS service helper must use rcctl and read-only relay policy inspection" unless
+  rails_service.include?('/usr/sbin/rcctl disable') &&
+  rails_service.include?('File.lstat(path)') && !rails_service.include?("pub5-admin")
+failures << "RAILS bundling must use app-owned caches rather than privileged CAS" unless
+  !rails_bundle.include?("bundle_cas_") && !rails_bundle.include?("pub5-admin")
+
+smoke_source = File.read(File.join(OPENBSD, "bin", "deploy-smoke.sh"))
+failures << "deploy-smoke must use native rcctl" unless
+  smoke_source.include?('doas -n /usr/sbin/rcctl check "$svc"') && !smoke_source.include?("pub5-admin")
+
+install_all_source = File.read(File.join(OPENBSD, "bin", "vps_install_all.sh"))
+failures << "fresh-box install must use native rcctl" unless
+  install_all_source.include?('doas /usr/sbin/rcctl "$action" "$service"') && !install_all_source.include?("pub5-admin")
+
+start_all_apps_path = File.join(OPENBSD, "bin", "start_all_apps.sh")
+if File.file?(start_all_apps_path)
+  start_all_apps = File.read(start_all_apps_path)
+  start_all_contract = start_all_apps.include?("Deploy::Inventory.new(root: ARGV.fetch(0))") &&
+                      start_all_apps.include?("/usr/sbin/rcctl enable") &&
+                      start_all_apps.include?("/usr/sbin/rcctl start") &&
+                      start_all_apps.include?('health_check.rb" --all-ready-apps') &&
+                      !start_all_apps.include?("pub5-admin")
+  failures << "start_all_apps must derive the app set and use native rcctl" unless start_all_contract
+else
+  failures << "missing OPENBSD/bin/start_all_apps.sh"
+end
+
+restore_litestream = File.read(File.join(OPENBSD, "bin", "restore_litestream.sh"))
+failures << "Litestream recovery must use native rcctl" unless
+  restore_litestream.include?('doas /usr/sbin/rcctl stop "$app"') &&
+  restore_litestream.include?('doas /usr/sbin/rcctl start "$app"') &&
+  restore_litestream.include?('doas /usr/sbin/rcctl check "$app"') &&
+  !restore_litestream.include?("pub5-admin")
+
+manual_master = File.read(File.join(OPENBSD, "bin", "manual_master_deploy.ksh"))
+failures << "manual MASTER recovery must use native rcctl" unless
+  manual_master.include?("doas /usr/sbin/rcctl stop master") &&
+  manual_master.include?("doas /usr/sbin/rcctl restart master") &&
+  manual_master.include?("doas /usr/sbin/rcctl restart relayd") &&
+  !manual_master.include?("pub5-admin")
+
+master_deploy = File.read(File.join(OPENBSD, "bin", "vps_deploy_master.sh"))
+master_deploy_contract = master_deploy.include?("doas /usr/sbin/rcctl restart master") &&
+                         master_deploy.include?("doas /bin/ksh -c") &&
+                         master_deploy.include?("find \"$path\" -type l") &&
+                         !master_deploy.include?("pub5-admin")
+failures << "MASTER web deploy must use native filesystem and rcctl operations" unless master_deploy_contract
 
 %w[ci-prepare.ksh ci-run.ksh ci-sync.ksh rails-task.ksh rails-sync.ksh].each do |name|
   path = File.join(OPENBSD, "mirror", "usr", "local", "libexec", name)
   failures << "usr/local/libexec/#{name} must not be a symlink" if File.symlink?(path)
 end
-smoke_source = File.read(File.join(OPENBSD, "bin", "deploy-smoke.sh"))
-
-smoke_contract = smoke_source.include?('case "$svc" in master|brgen|amber|bsdports|relayd)') &&
-                 smoke_source.include?('doas /usr/local/sbin/pub5-admin service check "$svc"') &&
-                 smoke_source.include?('if [ -L /usr/local/sbin/pub5-admin ]; then') &&
-                 smoke_source.include?("Bootstrap fallback only")
-failures << "deploy-smoke service checks must use the fixed broker and an explicit fallback" unless smoke_contract
-install_all_source = File.read(File.join(OPENBSD, "bin", "vps_install_all.sh"))
-
-install_all_contract = install_all_source.include?("admin_service() {") &&
-                       install_all_source.include?('case "$action" in check|start|stop|restart)') &&
-                       install_all_source.include?('case "$service" in master|brgen|amber|bsdports|mrdamascy)') &&
-                       install_all_source.include?('doas /usr/local/sbin/pub5-admin service "$action" "$service"') &&
-                       install_all_source.include?('doas rcctl "$action" "$service"') &&
-                       install_all_source.include?("Bootstrap fallback only") &&
-                       install_all_source.match?(/case "\$app" in\s+brgen\|amber\|bsdports\|mrdamascy\)/)
-
-failures << "vps_install_all service control must be broker-first and app-allowlisted" unless install_all_contract
-deploy_all_source = File.read(File.join(OPENBSD, "bin", "deploy_all.sh"))
-# deploy_all.sh is now a compatibility shim: it execs the operator deploy,
-# whose admission, SHA pinning, tmux supervision and canaries are stricter
-# than the retired per-app loop. It must not elevate checkout Rails wrappers.
-deploy_all_contract = deploy_all_source.include?('MASTER/bin/operator" vps deploy all --remote') &&
-                      !deploy_all_source.include?('doas zsh ${script}') &&
-                      !deploy_all_source.include?('RAILS/${app}/${app}.sh')
-failures << "deploy_all per-app mode must not elevate checkout Rails wrappers" unless deploy_all_contract
-start_all_apps_path = File.join(OPENBSD, "bin", "start_all_apps.sh")
-
-if File.file?(start_all_apps_path)
-  start_all_apps = File.read(start_all_apps_path)
-  start_all_wrapper = start_all_apps.include?('if [ "$(id -u)" -eq 0 ]; then') &&
-                      start_all_apps.include?('doas "$broker" start-all-apps') &&
-                      start_all_apps.include?('health_check.rb" --all-ready-apps') &&
-                      !start_all_apps.match?(/^\s*(?:rcctl|install|chmod|chown)\s/m)
-  start_all_broker = admin.include?('return start_all_apps if args == ["start-all-apps"]') &&
-                     admin.include?("def start_all_apps") &&
-                     admin.include?('flag = "/var/db/pub5_all_apps"') &&
-                     admin.include?('File::CREAT | File::EXCL') &&
-                     admin.include?('services = ["master", *RAILS_APPS]') &&
-                     admin.include?('call_rcctl("restart", "relayd")')
-  failures << "start_all_apps wrapper and broker must be fixed and non-root" unless start_all_wrapper && start_all_broker
-else
-  failures << "missing OPENBSD/bin/start_all_apps.sh"
-end
-
-vps_state_path = File.join(OPENBSD, "bin", "vps-state")
-
-if File.file?(vps_state_path)
-  vps_state = File.read(vps_state_path)
-  service_state = vps_state[/def service_state\(service\).*?^end/m]
-  state_contract = service_state &&
-                   service_state.include?('"doas", "-n", broker, "service", "check", service') &&
-                   service_state.include?('return "unknown (pub5-admin missing)" unless File.file?(broker)') &&
-                   !service_state.include?('"/usr/sbin/rcctl", "check", service')
-  failures << "vps-state service reads must use the root broker" unless state_contract
-  recovery_state_contract = vps_state.include?('Open3.capture2e("doas", "-n", broker, "deploy-run-pending-list")') &&
-                           vps_state.include?("def deploy_recovery_status") &&
-                           vps_state.include?('STAMP_DIR = ENV.fetch("PUB5_STAMP_DIR", "/var/db/pub5")') &&
-                           vps_state.include?('File.expand_path(STAMP_DIR) == "/var/db/pub5"')
-  failures << "vps-state fleet recovery reads must use the fixed root broker" unless recovery_state_contract
-else
-  failures << "missing OPENBSD/bin/vps-state"
-end
-
-restore_litestream_path = File.join(OPENBSD, "bin", "restore_litestream.sh")
-
-if File.file?(restore_litestream_path)
-  restore_litestream = File.read(restore_litestream_path)
-  restore_contract = restore_litestream.include?('doas /usr/local/sbin/pub5-admin service stop "$app"') &&
-                     restore_litestream.include?('doas /usr/local/sbin/pub5-admin service start "$app"') &&
-                     restore_litestream.include?('doas /usr/local/sbin/pub5-admin service check "$app"') &&
-                     !restore_litestream.match?(/doas rcctl (?:stop|start|check)/)
-  failures << "Litestream recovery must use brokered service control" unless restore_contract
-else
-  failures << "missing OPENBSD/bin/restore_litestream.sh"
-end
-
-manual_master_path = File.join(OPENBSD, "bin", "manual_master_deploy.ksh")
-
-if File.file?(manual_master_path)
-  manual_master = File.read(manual_master_path)
-  manual_master_contract = manual_master.include?("pub5-admin service stop master") &&
-                           manual_master.include?("pub5-admin service restart master") &&
-                           manual_master.include?("pub5-admin service restart relayd") &&
-                           manual_master.include?("pub5-admin missing or symlinked") &&
-                           !manual_master.match?(/^\s*doas\s+rcctl\b/)
-  failures << "manual MASTER recovery must use brokered service control" unless manual_master_contract
-else
-  failures << "missing OPENBSD/bin/manual_master_deploy.ksh"
-end
-
-master_deploy_path = File.join(OPENBSD, "bin", "vps_deploy_master.sh")
-
-if File.file?(master_deploy_path)
-  master_deploy = File.read(master_deploy_path)
-  master_deploy_contract = master_deploy.include?("pub5-admin master-web-assets-reset") &&
-                           master_deploy.include?("pub5-admin master-web-runtime-dirs") &&
-                           master_deploy.include?("pub5-admin service restart master") &&
-                           master_deploy.include?('if [ "$ROOT" != "/home/dev/pub5" ]; then') &&
-                           admin.include?("MASTER_WEB_ROOT.split(File::SEPARATOR)") &&
-                           master_deploy.include?("cmp -s \"$ROOT/OPENBSD/mirror/etc/rc.d/master\" /etc/rc.d/master") &&
-                           !master_deploy.include?("doas rm -rf public/assets") &&
-                           !master_deploy.include?("doas chown -R dev:dev public") &&
-                           !master_deploy.include?("doas install -d -o dev -g master") &&
-                           !master_deploy.include?("doas cp \"$ROOT/OPENBSD/mirror/etc/rc.d/master\" /etc/rc.d/master")
-  failures << "MASTER web deploy must use fixed broker verbs and refuse root-installing checkout rc.d" unless master_deploy_contract
-else
-  failures << "missing OPENBSD/bin/vps_deploy_master.sh"
-end
-
-deploy_source = File.read(File.join(OPENBSD, "bin", "vps-deploy"))
-failures << "vps-deploy must not recommend generic privileged du" unless
-  deploy_source.include?('pub5-admin disk-usage $mount_point') && !deploy_source.include?("doas du -xk $mount_point")
 
 finish_definition_count = deploy_source.scan(/^finish\(\) \{/).length
 finish_exit_trap_count = deploy_source.scan(/^trap finish EXIT$/).length
