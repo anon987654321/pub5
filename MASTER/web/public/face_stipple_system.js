@@ -208,8 +208,7 @@
     };
   }
 
-  function faultlineStrengthForState(state) {
-    const faultline = voidConfiguration().faultline;
+  function faultlineStrengthForState(state, faultline = voidConfiguration().faultline) {
     return faultline.enabled && faultline.states.includes(String(state)) ? faultline.strength : 0;
   }
 
@@ -719,7 +718,7 @@
     const u = system.material.uniforms;
     const voids = voidConfiguration();
     u.uFaultlineHalfWidth.value = voids.faultline.halfWidth;
-    u.uFaultlineStrength.value = faultlineStrengthForState(mode);
+    u.uFaultlineStrength.value = faultlineStrengthForState(mode, voids.faultline);
     u.uDensity.value = clamp(
       (profile.density + (pressure - 0.5) * 0.24 + (modulation.density || 0)) * densityScale,
       profile.density * densityScale,
