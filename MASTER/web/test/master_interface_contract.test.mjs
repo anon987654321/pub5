@@ -207,19 +207,13 @@ test("mission control distinguishes fresh, failed and terminal live states", () 
   assert.match(poller, /closeDoor\(\)/);
 });
 
-test("chat and mission control share accessible Ghostty-inspired session tabs", () => {
+test("MASTER web keeps the face and mission surface free of workspace tabs", () => {
   for (const page of [chatIndex, dashboard]) {
     assert.match(page, /class="[^"]*\bmaster-titlebar\b/);
-    assert.match(page, /class="master-session-tabs" aria-label=/);
-    assert.match(page, /class="master-session-tab"/);
-    assert.match(page, /href="<%= root_path %>"/);
-    assert.match(page, /href="<%= dashboard_path %>"/);
+    assert.doesNotMatch(page, /master-session-tabs|master-session-tab/);
   }
-  assert.match(chatIndex, /href="<%= root_path %>" aria-current="page"/);
-  assert.match(dashboard, /href="<%= dashboard_path %>" aria-current="page"/);
-  assert.match(faceChrome, /\.master-session-tab\[aria-current="page"\]::after/);
-  assert.match(faceChrome, /@media \(min-width: 480px\)/);
-  assert.match(faceChrome, /\.master-session-tab:focus-visible/);
+  assert.match(chatIndex, /class="prompt-sigil"[^>]*><%= Master::Face::Contract\.shell_prompt %>/);
+  assert.match(faceChrome, /#prompt-form \.prompt-sigil/);
 });
 
 test("MASTER's first screen is its pixel face, readable CLI and Brgen wordmark", () => {
