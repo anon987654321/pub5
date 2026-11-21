@@ -31,7 +31,7 @@ class PortsController < ApplicationController
         @pagy, @ports = pagy(scope)
         @categories = Category.order(:name)
         @category = Category.find_by(id: params[:category_id]) if params[:category_id].present?
-        @catalog_empty = !Port.available.exists?
+        @catalog_empty = !Port.exists?
         @unavailable_count = Port.where(available: false).count
         @last_import = ImportRun.recent.first if defined?(ImportRun)
         finish_live_search(partial: "ports/live_search_results")
