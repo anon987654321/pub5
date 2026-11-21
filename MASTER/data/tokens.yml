@@ -35,6 +35,41 @@ tokens:
       - "turned and unturned density as membership in the field"
       - "residual - individuality survives inside the collective"
       - "stillness by default - motion only when meaning moves"
+    # Family-wide authority: share the grammar, never flatten the products into one skin.
+    family_contract:
+      scope: [MASTER, RAILS, OPENBSD, STUDIO]
+      central_statement: >
+        Distinct carriers form a coherent whole without losing their identity, provenance or
+        capacity to separate again. Signal travels through the field; negative space gives it
+        room to be read. The system is still until a real event gives motion a purpose.
+      invariants:
+        - "Many-to-one composition keeps individual people, objects, messages and carriers legible."
+        - "Signal has a real source, direction, semantic cause and settled destination."
+        - "Negative space is structural; never fill it with decorative noise."
+        - "One dominant focal point and one clear primary action govern each first screen."
+        - "Stillness is the default; every meaningful animation has a reduced-motion equivalent."
+        - "Truth, provenance, accessibility and task clarity outrank stylistic effect."
+        - "The shared grammar never imposes one palette, typography, layout or material on every product."
+      material_boundary: >
+        Greyscale one-pixel particle stipple is the distinctive material of the MASTER face.
+        RAILS, OPENBSD and STUDIO inherit its principles, not a compulsory particle skin.
+      motion_grammar:
+        stages: [individual, signal, response, formation, residual_stillness]
+        rules:
+          - "Animate existing elements before creating new ones."
+          - "Prefer travelling waves, threshold cohorts and restrained interference over generic fades."
+          - "Keep individual identity visible during gathering, fragmentation and recovery."
+          - "Bound populations, duration, amplitude, render cost and lifecycle."
+          - "A failure may loosen a form; recovery must restore its canonical structure."
+      tree_translations:
+        MASTER: "An original monochrome face assembled from discrete carriers; meaning-driven signal, fingerprint-like contours and legible negative space."
+        RAILS: "Clear editorial hierarchy and coherent content groups; preserve each product's established visual dialect, card grammar and real media."
+        OPENBSD: "Plain, truthful, chronological operational signals; no decorative animation in place of status, evidence or recovery."
+        STUDIO: "Use signal, rhythm, fragmentation and reconstruction as original cinematic or musical composition tools; preserve source-media fidelity and operator-owned grades."
+      reference_policy: >
+        Pluribus is a study of collective emergence, travelling signal, stipple density and
+        motion timing only. Never reproduce its wordmark, title artwork, exact particle paths,
+        lettering, sequence or other protected expression. The pub5 form language remains original.
     signal: "#C8F55F"
     signal_ink: "#101010"
     signal_on_light: "#50630A"
@@ -78,9 +113,11 @@ tokens:
       wordmark: "original pub5 artwork only"
     adaptations:
       master: >-
-        brgen's dark family: #000 ground, #111 surfaces, #efefef ink and one Helvetica
-        sans for chrome under brgen's deep-blue band; mono only in the chat; the
-        particle face stays greyscale and the sole expressive centerpiece
+        OpenBSD-informed monochrome console and web chrome; the original greyscale particle face
+        is the expressive centerpiece, with plain text remaining the authority for operational truth
+      rails: >-
+        Share semantic hierarchy, measured spacing and restrained signal states; preserve each
+        app's declared palette, typography, layout, card grammar and truthful product media
       brgen: "retain deep-blue city identity and local editorial photography; signal is a sparse semantic accent only"
       amber: "retain neutral fashion surfaces and truthful garment colour; signal never recolours product photography"
       bsdports: "retain ultraminimal white: a classic search front page, Arial, blue links, square corners"
