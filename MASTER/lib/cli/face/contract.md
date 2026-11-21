@@ -47,7 +47,7 @@ ANSI presentation is enabled only when Renderer#terminal_color_enabled?
 allows it. Redirected output, NO_COLOR and TERM=dumb remain plain. Nerd
 Font private-use glyphs are optional; they never carry meaning by themselves.
 
-The browser transcript is 18px monospaced text with 1.55 leading and a 66ch
+The browser transcript uses the 18px terminal-font-size token, 1.5 body leading and a 66ch
 reading measure. It preserves line breaks, wraps long output, and does not
 shrink code below the surrounding terminal text. Do not align operational
 records with padding or fixed-width columns; each event remains one factual
