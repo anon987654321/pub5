@@ -11,10 +11,8 @@
   /* Optical display weights sit outside the body 400/600/800 ladder. */
   --face-weight-brand: 640;
   --face-weight-display: 560;
-  /* The wordmark face brgen.no sets its logo in ($brgen-logo-font in
-     brgen/app/assets/stylesheets/application.scss), so ai.brgen.no reads as the
-     same logo: same stack, heavy weight, tightest tracking. Operator, 2026-10-12. */
-  --font-logo: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Match brgen's actual wordmark face: Helvetica Neue, bold, with tight tracking. */
+  --font-logo: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 html, body {
