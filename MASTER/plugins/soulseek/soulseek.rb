@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
+require "digest"
 require "find"
 require "ipaddr"
 require "json"
+require "set"
+require "tempfile"
 require "net/http"
 require "timeout"
 require "uri"
@@ -22,13 +25,18 @@ module Master
       MAX_QUERY_BYTES = 240
       MAX_RESULTS = 100
       MAX_LIBRARY_FILES = 200_000
+      MAX_HASH_FILES = 50_000
+      MAX_MANIFEST_BYTES = 16 * 1024 * 1024
+      MAX_MANIFEST_LINES = 500_000
+      MAX_MANIFEST_PATHS = 8
       MAX_RESPONSE_BYTES = 2 * 1024 * 1024
       REQUEST_TIMEOUT = 12
       SEARCH_ID = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i.freeze
 
       def call(action:, query: nil, search_id: nil, path: nil, queries: nil,
                username: nil, filename: nil, size: nil, consent: false,
-               rights_basis: nil, **_options)
+               rights_basis: nil, paths: nil, output_path: nil, overwrite: false,
+               mode: "candidates", **_options)
         law_admission!
         case action.to_s
         when "status" then status
@@ -37,6 +45,13 @@ module Master
         when "downloads" then downloads
         when "library" then library(path)
         when "gaps" then gaps(path, queries)
+        when "manifest"
+          require_policy!("manifest_import", expected: "explicit_path_read_only")
+          manifest_audit(paths || path)
+        when "catalog"
+          catalog(path, output_path:, overwrite:, consent:)
+        when "duplicates"
+          duplicates(path, mode:)
         when "queue"
           queue_file(search_id:, username:, filename:, size:, consent:, rights_basis:)
         else
@@ -179,6 +194,260 @@ module Master
         }
       end
 
+      def manifest_audit(paths)
+        values = Array(paths).flatten(1).map { |value| value.to_s.strip }.reject(&:empty?)
+        unless values.any? && values.length <= MAX_MANIFEST_PATHS
+          raise PolicyError, "soulseek: manifest needs 1–#{MAX_MANIFEST_PATHS} explicit export paths"
+        end
+
+        sources = values.map { |value| audit_manifest(value) }
+        comparisons = sources.combination(2).map do |left, right|
+          shared = left[:paths] & right[:paths]
+          shared_audio = left[:audio_paths] & right[:audio_paths]
+          {
+            sources: [left[:label], right[:label]],
+            exact_shared_paths: shared.length,
+            exact_shared_audio_paths: shared_audio.length,
+            examples: shared.to_a.first(10)
+          }
+        end
+        {
+          action: "manifest",
+          sources: sources.map { |source| source.reject { |key, _| %i[paths audio_paths].include?(key) } },
+          comparisons:,
+          note: "Path overlap proves only that the same relative path appears in both exports. Different paths do not prove different audio; filenames do not verify tags, recordings, editions or rights."
+        }
+      end
+
+      def audit_manifest(value)
+        path = File.realpath(File.expand_path(value))
+        stat = File.stat(path)
+        raise PolicyError, "soulseek: manifest path is not a regular file" unless stat.file?
+        raise PolicyError, "soulseek: manifest exceeds #{MAX_MANIFEST_BYTES} bytes" if stat.size > MAX_MANIFEST_BYTES
+
+        lines = File.readlines(path, chomp: true, encoding: "UTF-8")
+        raise PolicyError, "soulseek: manifest exceeds #{MAX_MANIFEST_LINES} lines" if lines.length > MAX_MANIFEST_LINES
+
+        paths = Set.new
+        audio_paths = Set.new
+        directories = Set.new
+        extensions = Hash.new(0)
+        duplicate_entries = 0
+        entries = 0
+
+        lines.each do |line|
+          entry = line.to_s.strip
+          next if entry.empty? || entry.start_with?("#") || entry.start_with?(0x60.chr * 3)
+
+          entry = entry.tr("\\", "/")
+          directory = entry.end_with?("/")
+          relative = directory ? entry.sub(%r{/+\z}, "") : entry
+          next unless relative.include?("/")
+          next if relative.start_with?("/", "~") || relative.match?(/\A[A-Za-z]:/)
+          segments = relative.split("/")
+          next if segments.any? { |segment| segment.empty? || segment == "." || segment == ".." }
+          next if relative.match?(/[[:cntrl:]]/)
+
+          entries += 1
+          if directory
+            directories << relative
+            next
+          end
+
+          duplicate_entries += 1 unless paths.add?(relative)
+          ext = File.extname(relative).downcase
+          extensions[ext.empty? ? "[none]" : ext] += 1
+          audio_paths << relative if AUDIO_EXTENSIONS.include?(ext)
+        end
+
+        categories = audio_paths.group_by { |relative| relative.split("/").first }
+        {
+          label: File.basename(path),
+          source_bytes: stat.size,
+          entries:,
+          files: paths.length,
+          directories: directories.length,
+          audio_files: audio_paths.length,
+          album_folders_with_audio: audio_paths.map { |relative| File.dirname(relative) }.uniq.length,
+          duplicate_entries:,
+          extensions: extensions.sort.to_h,
+          top_categories: categories.sort_by { |_, items| -items.length }.first(20).to_h.transform_values(&:length),
+          paths:,
+          audio_paths:
+        }
+      rescue Errno::ENOENT, Errno::ENOTDIR, Errno::EACCES, IOError, EncodingError
+        raise PolicyError, "soulseek: manifest does not exist, cannot be read, or is not valid UTF-8"
+      end
+
+      def catalog(path, output_path:, overwrite:, consent:)
+        inventory = scan_library(path)
+        albums = inventory[:files].group_by { |file| File.dirname(file[:relative_path]) }
+        album_rows = albums.sort_by { |directory, _| directory }.map do |directory, files|
+          label = directory == "." ? File.basename(inventory[:path]) : File.basename(directory)
+          {
+            directory:,
+            release_hint: label.tr("_", " ").gsub(/\s+/, " ").strip,
+            year_hint: label[/\b(?:19|20)\d{2}\b/],
+            track_count: files.length,
+            audio_bytes: files.sum { |file| file[:size] },
+            formats: files.group_by { |file| file[:extension] }.transform_values(&:length).sort.to_h,
+            tracks: files.sort_by { |file| file[:relative_path] }.map do |file|
+              track_hint(file)
+            end
+          }
+        end
+
+        document = {
+          schema: "master.music-catalog.v1",
+          generated_at: Time.now.utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+          source: {
+            root: inventory[:path],
+            scan: "read_only_filesystem_inventory",
+            embedded_audio_metadata_read: false
+          },
+          summary: {
+            audio_files: inventory[:tracks],
+            album_folders: album_rows.length,
+            total_bytes: inventory[:bytes],
+            formats: inventory[:extensions],
+            truncated: inventory[:truncated]
+          },
+          albums: album_rows
+        }
+
+        exported = nil
+        unless output_path.to_s.strip.empty?
+          require_consent!(consent)
+          require_policy!("catalogue_export", expected: "explicit_path_with_consent")
+          exported = write_catalogue(document, output_path, inventory[:path], overwrite:)
+        end
+
+        {
+          action: "catalog", path: inventory[:path],
+          tracks: inventory[:tracks], albums: album_rows.length,
+          bytes: inventory[:bytes], formats: inventory[:extensions],
+          truncated: inventory[:truncated], export_path: exported,
+          sample: album_rows.first(12).map do |album|
+            { directory: album[:directory], release_hint: album[:release_hint], track_count: album[:track_count] }
+          end,
+          note: "Release and track labels are filename/folder hints, not verified metadata. Embedded tags and audio content were not read; originals were not changed."
+        }
+      end
+
+      def track_hint(file)
+        basename = File.basename(file[:relative_path], File.extname(file[:relative_path]))
+        match = basename.match(/\A(?:(?:cd|disc)\s*\d+[._ -]*)?(?<number>\d{1,3})[._ -]+(?<title>.+)\z/i)
+        {
+          filename: File.basename(file[:relative_path]),
+          title_hint: (match ? match[:title] : basename).tr("_", " ").gsub(/\s+/, " ").strip,
+          track_number_hint: match && match[:number].to_i,
+          size: file[:size],
+          format: file[:extension]
+        }
+      end
+
+      def write_catalogue(document, output_path, library_root, overwrite:)
+        expanded = File.expand_path(output_path.to_s)
+        parent = File.realpath(File.dirname(expanded))
+        target = File.join(parent, File.basename(expanded))
+        inside_library = target == library_root || target.start_with?("#{library_root}#{File::SEPARATOR}")
+        raise PolicyError, "soulseek: catalogue export must be outside the music library" if inside_library
+        raise PolicyError, "soulseek: refusing a symlink export target" if File.symlink?(target)
+        raise PolicyError, "soulseek: export target is a directory" if File.directory?(target)
+        if File.exist?(target) && !overwrite
+          raise PolicyError, "soulseek: export exists; set overwrite: true with consent to replace it"
+        end
+
+        temporary = Tempfile.new([".master-music-catalog-", ".json"], parent)
+        begin
+          temporary.write(JSON.pretty_generate(document))
+          temporary.write("\n")
+          temporary.flush
+          temporary.fsync
+          temporary.close
+          File.rename(temporary.path, target)
+        ensure
+          temporary.close!
+        end
+        target
+      rescue Errno::ENOENT, Errno::EACCES, Errno::EISDIR, Errno::ENOTDIR, IOError, SystemCallError
+        raise PolicyError, "soulseek: catalogue export path is not writable or its parent directory does not exist"
+      end
+
+      def duplicates(path, mode:)
+        inventory = scan_library(path)
+        selected_mode = mode.to_s
+        groups = case selected_mode
+                 when "candidates"
+                   candidate_duplicate_groups(inventory[:files])
+                 when "sha256"
+                   require_policy!("sha256_duplicates", expected: true)
+                   exact_duplicate_groups(inventory[:files])
+                 else
+                   raise PolicyError, "soulseek: duplicate mode must be candidates or sha256"
+                 end
+        rows = groups.map do |signature, files|
+          size = files.first[:size]
+          {
+            classification: selected_mode == "sha256" ? "exact_content_match" : "possible_same_name_and_size",
+            signature:,
+            copies: files.length,
+            bytes_per_copy: size,
+            reclaimable_bytes_if_one_copy_were_removed: size * (files.length - 1),
+            files: files.map { |file| { path: file[:relative_path], size: file[:size] } }
+          }
+        end
+        {
+          action: "duplicates", mode: selected_mode,
+          tracks_scanned: inventory[:tracks], groups: rows.length,
+          files_in_groups: rows.sum { |row| row[:copies] },
+          reclaimable_bytes_if_deduplicated: rows.sum { |row| row[:reclaimable_bytes_if_one_copy_were_removed] },
+          skipped_unreadable_or_changed: @duplicate_scan_skipped.to_i,
+          duplicates: rows.first(500),
+          truncated: rows.length > 500,
+          note: selected_mode == "sha256" ?
+            "Groups are SHA-256 byte-identical files. No file was changed or deleted." :
+            "Candidates share normalized basename and byte size only; these are not confirmed duplicates. Use mode sha256 to verify file contents."
+        }
+      end
+
+      def candidate_duplicate_groups(files)
+        groups = Hash.new { |hash, key| hash[key] = [] }
+        files.each do |file|
+          basename = File.basename(file[:relative_path], File.extname(file[:relative_path]))
+          groups[[file[:size], normalize_title(basename)]] << file
+        end
+        groups.select { |_, matches| matches.length > 1 }
+      end
+
+      def exact_duplicate_groups(files)
+        raise PolicyError, "soulseek: refusing to hash more than #{MAX_HASH_FILES} tracks in one action" if files.length > MAX_HASH_FILES
+
+        @duplicate_scan_skipped = 0
+        groups = Hash.new { |hash, key| hash[key] = [] }
+        files.each do |file|
+          before = File.lstat(file[:absolute_path])
+          unless before.file? && !before.symlink? && before.size == file[:size]
+            @duplicate_scan_skipped += 1
+            next
+          end
+
+          digest = Digest::SHA256.file(file[:absolute_path]).hexdigest
+          after = File.lstat(file[:absolute_path])
+          stable = after.file? && !after.symlink? &&
+                   [before.dev, before.ino, before.size, before.mtime] ==
+                     [after.dev, after.ino, after.size, after.mtime]
+          if stable
+            groups[digest] << file
+          else
+            @duplicate_scan_skipped += 1
+          end
+        rescue Errno::ENOENT, Errno::EACCES, IOError
+          @duplicate_scan_skipped += 1
+        end
+        groups.select { |_, matches| matches.length > 1 }
+      end
+
       def queue_file(search_id:, username:, filename:, size:, consent:, rights_basis:)
         require_consent!(consent)
         require_policy!("bulk_download", expected: false)
@@ -274,7 +543,7 @@ module Master
             extension = File.extname(entry).downcase
             extensions[extension] += 1
             bytes += stat.size
-            files << { relative_path: relative, size: stat.size }
+            files << { relative_path: relative, size: stat.size, absolute_path: entry, extension: extension }
           end
         end
         {
