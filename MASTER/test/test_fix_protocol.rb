@@ -198,7 +198,7 @@ class TestFixProtocol < Minitest::Test
       assert_match(/every_supplied_review_source_and_numbered_item/, review_contract.fetch("coverage_policy"))
       assert_match(/bare_finish_instruction_adds_no_invented_requirements/, review_contract.fetch("finish_semantics"))
       assert_includes review_contract.fetch("required_grounding"), "source_sha256"
-      assert_match(/no_new_backlog_files/, review_contract.fetch("backlog_policy"))
+      assert_match(/owner_ledgers_only/, review_contract.fetch("work_registry_policy"))
       assert_includes payload.fetch("terminal_states"), "PLATEAU"
       assert_includes payload.fetch("terminal_states"), "INCONCLUSIVE"
       assert_equal 1, payload.dig("corpus", "total_regular_files")
