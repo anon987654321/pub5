@@ -69,7 +69,7 @@ class TestDillaRenderAudit < Minitest::Test
       report = Dilla.audit_render(path)
       assert_equal "FAIL", report.fetch("technical_state")
       assert_equal "FAIL", report.fetch("state")
-      refute report.fetch("checks").find { |row| row["name"] == "wav_sha256" }.fetch("state") == "PASS"
+      assert_equal "FAIL", report.fetch("checks").find { |row| row["name"] == "wav_sha256" }.fetch("state")
     end
   end
 
