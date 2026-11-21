@@ -74,7 +74,7 @@ module Master
           |(--?[A-Za-z][\w-]*)
           |(\b(?:def|class|module|end|if|elsif|else|unless|case|when|return|yield|begin|rescue|ensure|const|let|var|function|async|await|import|export|from|new|true|false|null|nil|undefined|require|do|then|while|for|in)\b)
           |(\b\d+(?:\.\d+)?\b)
-          |((?<![\w/.-])(?:bin/master|ruby|bundle|rake|git|cd|pwd|ls|cat|grep|rg|sed|awk|find|doas|sudo|chmod|chown|install|make|node|npm|ssh|scp|tar|env|export|print|printf|echo|curl|pkg_add|service|rcctl)(?![\w/.-]))
+          |((?<![\w/.-])(?:bin/master|ruby|bundle|rake|git|cd|pwd|ls|cat|grep|rg|sed|awk|find|doas|sudo|chmod|chown|install|make|node|npm|ssh|scp|tar|env|export|print|puts|warn|printf|echo|curl|pkg_add|service|rcctl)(?![\w/.-]))
           |([A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+)
           |([=<>!|&+*-]+)
         }x.freeze
