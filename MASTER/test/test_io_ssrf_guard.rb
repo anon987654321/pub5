@@ -218,6 +218,7 @@ class SsrfGuardTest < Minitest::Test
 
   class FakeOutboundHttp
     attr_reader :response, :timeout, :ipaddr
+    attr_accessor :open_timeout, :read_timeout, :write_timeout
 
     def initialize(response)
       @response = response
