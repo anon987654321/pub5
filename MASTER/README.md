@@ -177,6 +177,13 @@ Response bodies, DNS lookup, connection phases and operation deadlines remain
 bounded. Local daemon probes are a deliberate separate policy, not public-web
 fetches.
 
+The Soulseek adapter lives in `plugins/soulseek/` and talks to an operator-owned
+slskd instance. Plain HTTP is restricted to loopback; remote instances require
+public HTTPS on port 443 through the same pinned-address guard. Its API key is
+process-environment-only. Search and inventory are read operations; a download
+queue request is one exact search result and one file, with explicit consent
+and a declared rights basis. Bulk acquisition is disabled.
+
 `ROBUSTNESS_outbound_fetch_is_pinned` in `data/laws.yml` makes this a
 repository-wide robustness requirement. Keep new HTTP clients on the guard;
 never add a validate-by-hostname step followed by an unpinned connection.
