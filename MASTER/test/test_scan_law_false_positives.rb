@@ -235,7 +235,7 @@ class TestScanRuleFalsePositives < Minitest::Test
     refute_empty findings(:veto_patterns, %(  # FIXME broken since the merge\n))
     refute_empty findings(:veto_patterns, %(def stub\n  ...\nend\n))
     # The lookahead sits on the marker, not on the line, so a real marker still
-    # vetoes on a line that also cites the backlog.
+    # vetoes even when the same line also names an owner registry.
     refute_empty findings(:veto_patterns, %(# TODO: wire this up, see TODO.md\n))
   end
 
