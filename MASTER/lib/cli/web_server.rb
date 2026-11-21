@@ -2,6 +2,7 @@
 
 require_relative "../io/atomic_write"
 require_relative "../boot/paths"
+require_relative "../boot/dependency_manager"
 
 require "fileutils"
 require "open3"
@@ -43,12 +44,15 @@ module Master
       def spawn_local(config:, host:, port:, io:)
         web_dir = File.join(Master::ROOT, "web")
         return unless Dir.exist?(web_dir)
+        dependency_context = ensure_web_bundle!(web_dir, io:)
+        return false unless dependency_context
 
         Master.ensure_services!(root: Master::ROOT)
         return false unless port_available?(port, io:)
 
         count = ENV.fetch("FALCON_COUNT", "2")
         env = spawn_env(web_dir).merge(
+          dependency_context,
           "RAILS_ENV" => "production", "SECRET_KEY_BASE" => stable_secret(config),
         )
         spawn(
@@ -57,6 +61,36 @@ module Master
           chdir: web_dir, out: File::NULL, err: File::NULL, unsetenv_others: true
         )
         Master::Trace::Dmesg.status("web0", "http://#{host}:#{port}", io:)
+      end
+
+      # The Rails-backed web surface owns a separate Gemfile and lock. Install
+      # it only when the operator enables the web server; installing Rails on
+      # every ordinary CLI boot would add cost to users who never use this surface.
+      # The environment is copied because ensuring the web bundle must not switch
+      # the running MASTER process away from its own activated bundle.
+      def ensure_web_bundle!(web_dir, io: $stderr)
+        bundle_env = ENV.to_h
+        manager = Master::Boot::DependencyManager.new(
+          root: web_dir, env: bundle_env, out: io, input: $stdin
+        )
+        result = manager.ensure!
+        unless result.ok
+          Master::Trace::Dmesg.status("web0", "web bundle unavailable, #{result.message}", io:)
+          detail = result.output.to_s.strip
+          Master::Trace::Dmesg.status("web0", detail, io:) unless detail.empty?
+          return nil
+        end
+
+        # ensure! may be a no-op when an operator explicitly disables automatic
+        # installs. Still derive the child environment from the web Gemfile; never
+        # inherit MASTER's active BUNDLE_PATH into the Falcon process.
+        manager.activate_environment!
+        keys = Master::Boot::DependencyManager::BUNDLE_CONTEXT_KEYS + %w[PATH GEM_HOME GEM_PATH]
+        Master::Trace::Dmesg.status("web0", result.message || "web bundle ready", io:)
+        bundle_env.select { |key, _value| keys.include?(key) }
+      rescue StandardError => e
+        Master::Trace::Dmesg.status("web0", "web dependency preflight failed, #{e.class}: #{e.message}", io:)
+        nil
       end
 
       # A configured port is not authority to terminate whoever owns it.
