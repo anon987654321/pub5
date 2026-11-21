@@ -115,6 +115,70 @@ class TestWebServer < Minitest::Test
     refute Master::CLI::WebServer.port_available?(65_536, io: StringIO.new)
   end
 
+  def test_web_bundle_preflight_uses_a_copy_of_the_core_environment_and_returns_web_context
+    web_dir = File.join(Master::ROOT, "web")
+    old_bundle = ENV["BUNDLE_GEMFILE"]
+    ENV["BUNDLE_GEMFILE"] = File.join(Master::ROOT, "Gemfile")
+    captured = nil
+    manager = Object.new
+    manager.define_singleton_method(:ensure!) do
+      Master::Boot::DependencyManager::Result.new(
+        ok: true, changed: false, bundler: true, bundle: true, system: nil,
+        message: "bundle clean", output: nil
+      )
+    end
+    manager.define_singleton_method(:activate_environment!) do
+      captured.merge!(
+        "BUNDLE_GEMFILE" => File.join(web_dir, "Gemfile"),
+        "BUNDLE_PATH" => "/private/web/bundle",
+        "BUNDLE_APP_CONFIG" => "/private/web/app",
+        "GEM_HOME" => "/private/web/gems",
+        "GEM_PATH" => "/private/web/gems",
+        "PATH" => "/private/web/bin:/usr/bin"
+      )
+    end
+    factory = lambda do |root:, env:, out:, input:|
+      assert_equal web_dir, root
+      refute_same ENV, env
+      assert_equal File.join(Master::ROOT, "Gemfile"), env["BUNDLE_GEMFILE"]
+      assert_same $stdin, input
+      captured = env
+      manager
+    end
+
+    context = nil
+    Master::Boot::DependencyManager.stub(:new, factory) do
+      context = Master::CLI::WebServer.ensure_web_bundle!(web_dir, io: StringIO.new)
+    end
+    assert_equal File.join(Master::ROOT, "Gemfile"), ENV["BUNDLE_GEMFILE"]
+    assert_equal File.join(web_dir, "Gemfile"), context["BUNDLE_GEMFILE"]
+    assert_equal "/private/web/bundle", context["BUNDLE_PATH"]
+    assert_equal "/private/web/app", context["BUNDLE_APP_CONFIG"]
+    assert_equal "/private/web/bin:/usr/bin", context["PATH"]
+    child_env = Master::CLI::WebServer.spawn_env(web_dir).merge(context)
+    assert_equal "/private/web/bundle", child_env["BUNDLE_PATH"]
+    assert_equal File.join(web_dir, "Gemfile"), child_env["BUNDLE_GEMFILE"]
+  ensure
+    old_bundle.nil? ? ENV.delete("BUNDLE_GEMFILE") : ENV["BUNDLE_GEMFILE"] = old_bundle
+  end
+
+  def test_web_bundle_preflight_refuses_to_spawn_when_install_fails
+    web_dir = File.join(Master::ROOT, "web")
+    manager = Object.new
+    manager.define_singleton_method(:ensure!) do
+      Master::Boot::DependencyManager::Result.new(
+        ok: false, changed: false, bundler: true, bundle: false, system: nil,
+        message: "bundle install failed", output: "missing native headers"
+      )
+    end
+    factory = ->(**_options) { manager }
+    Master::Boot::DependencyManager.stub(:new, factory) do
+      io = StringIO.new
+      refute Master::CLI::WebServer.ensure_web_bundle!(web_dir, io:)
+      assert_includes io.string, "bundle unavailable"
+    end
+  end
+
   def test_spawn_env_points_bundle_gemfile_at_web_dir_not_master
     web_dir = File.join(Master::ROOT, "web")
     env = Master::CLI::WebServer.spawn_env(web_dir)
