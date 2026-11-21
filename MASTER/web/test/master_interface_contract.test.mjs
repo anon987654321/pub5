@@ -222,6 +222,20 @@ test("chat and mission control share accessible Ghostty-inspired session tabs", 
   assert.match(faceChrome, /\.master-session-tab:focus-visible/);
 });
 
+test("MASTER's first screen is its pixel face, readable CLI and Brgen wordmark", () => {
+  assert.match(chatIndex, /<% mark = "ai\.brgen\.no" %>/);
+  assert.match(chatIndex, /aria-label="<%= mark %>"/);
+  assert.match(chatIndex, /<span class="brand-text"><%= mark %><\/span>/);
+  assert.match(dashboard, /aria-label="ai\.brgen\.no"/);
+  assert.match(dashboard, /<span class="brand-text">ai\.brgen\.no<\/span>/);
+  assert.match(faceCss, /--font-logo: "Helvetica Neue", Helvetica, Arial, sans-serif;/);
+  assert.match(faceCss, /font: 700 clamp\(0\.9375rem, 2\.8vw, 1\.125rem\) \/ 1 var\(--font-logo\)/);
+  assert.match(faceCss, /font: 1\.125rem\/1\.55 var\(--font-mono\)/);
+  assert.match(faceCss, /font: 400 18px\/1\.5 var\(--font-mono\)/);
+  assert.match(faceChrome, /\.master-titlebar \.brand-mark \{[\s\S]*?display: inline-flex/);
+  assert.match(faceMotion, /\.brand-mark \{[\s\S]*?font: 700/);
+});
+
 test("canonical theme token reaches CSS, routes and PWA manifest", () => {
   const rootStart = faceCss.indexOf("/* BEGIN:generated-face-root");
   const rootEnd = faceCss.indexOf("/* END:generated-face-root */", rootStart);
