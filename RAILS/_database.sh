@@ -11,19 +11,54 @@ app_secret_for() {
     *) log_err "app_secret_for: refused unknown app: $app_name"; return 2 ;;
   esac
 
-  [[ -x /usr/local/sbin/pub5-admin ]] || {
-    log_err "app_secret_for: pub5-admin is missing; run OPERATOR.sh before deploying"
+  secret=$("${_PRIV}" "$RUBY" -rsecurerandom -retc -e '
+    app = ARGV.fetch(0)
+    abort "invalid app name" unless app.match?(/\A[a-z][a-z0-9_]{0,31}\z/)
+    candidates = ["/etc/#{app}.env", "/etc/rails/#{app}.env"]
+    secret = nil
+    candidates.each do |path|
+      next unless File.exist?(path) || File.symlink?(path)
+      stat = File.lstat(path)
+      abort "#{path} must be a root-owned, non-writable regular file" unless
+        stat.file? && !stat.symlink? && stat.uid.zero? && (stat.mode & 0o022).zero?
+      secret = File.foreach(path).filter_map do |line|
+        match = line.match(/\ASECRET_KEY_BASE=([0-9a-fA-F]{64,256})\s*\z/)
+        match && match[1]
+      end.first
+      break if secret
+    end
+    unless secret
+      target = candidates.first
+      abort "#{target} is a symlink" if File.symlink?(target)
+      abort "#{target} exists without a valid SECRET_KEY_BASE; refusing replacement" if File.exist?(target)
+      secret = SecureRandom.hex(64)
+      temporary = "/etc/.#{app}.env.#{Process.pid}.#{SecureRandom.hex(6)}"
+      begin
+        File.open(temporary, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
+          file.write("SECRET_KEY_BASE=#{secret}\n")
+          file.flush
+          file.fsync
+        end
+        File.chown(0, Etc.getgrnam(app).gid, temporary)
+        File.chmod(0o640, temporary)
+        File.link(temporary, target)
+      ensure
+        File.unlink(temporary) if File.exist?(temporary)
+      end
+    end
+    puts secret
+  ' "$app_name") || {
+    log_err "app_secret_for: could not read or create SECRET_KEY_BASE for $app_name"
     return 1
   }
-  secret=$("${_PRIV}" /usr/local/sbin/pub5-admin ensure-secret "$app_name") || return 1
   case "$secret" in
     ""|*[!0123456789abcdefABCDEF]*)
-      log_err "app_secret_for: broker returned an invalid secret for $app_name"
+      log_err "app_secret_for: invalid secret returned for $app_name"
       return 1
       ;;
   esac
   (( ${#secret} >= 64 && ${#secret} <= 256 )) || {
-    log_err "app_secret_for: broker returned an invalid secret length for $app_name"
+    log_err "app_secret_for: invalid secret length for $app_name"
     return 1
   }
   print -r -- "$secret"
@@ -93,10 +128,6 @@ migrate_sqlite_db_to_storage_if_needed() {
   [[ $app_dir == "/home/${app_name}/app" ]] || {
     log_err "storage migration: refused app path: $app_dir"
     return 2
-  }
-  [[ -x /usr/local/sbin/pub5-admin ]] || {
-    log_err "storage migration: pub5-admin is missing; run OPERATOR.sh before deploying"
-    return 1
   }
   run_rails_as_app "$app_name" "$app_dir" "db-storage-migrate"
 }
