@@ -77,7 +77,7 @@ module Master
           connected: server_connected?(state),
           endpoint: endpoint_label,
           server: state.select { |key, _| %w[state isConnected connected username listenPort].include?(key) },
-          capabilities: %w[search results downloads library gaps queue],
+          capabilities: %w[search results downloads library quality manifest catalog duplicates gaps queue],
           acquisition: "one explicitly selected file per invocation",
           rights_basis_required: Array(policy.fetch("rights_basis_required")),
         }
