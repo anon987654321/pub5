@@ -4,7 +4,7 @@ require_relative "test_helper"
 require "open3"
 require "timeout"
 require_relative "../lib/operator/ruby_runner"
-require_relative "../tools/backlog"
+require_relative "../tools/owner_registry_tasks"
 
 class MasterBootTest < Minitest::Test
   def test_boot_loader_requires_all_modules
