@@ -146,6 +146,21 @@ class MapsPlacesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Bryggen"
   end
 
+  test "a place detail page and OSM link use public rounded coordinates" do
+    place = Place.create!(
+      city: @city, name: "Neighbourhood Place", kind: "attraction",
+      latitude: 60.397456, longitude: 5.324456, location_precision: "neighbourhood"
+    )
+
+    get "/places/#{place.id}"
+
+    assert_response :success
+    assert_includes response.body, "60.397, 5.324"
+    assert_includes response.body, "mlat=60.397&mlon=5.324#map=16/60.397/5.324"
+    refute_includes response.body, "60.397456"
+    refute_includes response.body, "5.324456"
+  end
+
   test "a place page shows its address, an OSM escape hatch and its neighbours" do
     place = Place.create!(city: @city, name: "Bryggen", kind: "attraction", address: "Strandgaten 9",
                           latitude: 60.3974, longitude: 5.3244)
