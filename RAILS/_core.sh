@@ -57,13 +57,13 @@ deploy_status() {
   local now pid
   now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   DEPLOY_STATUS_STARTED_AT=${DEPLOY_STATUS_STARTED_AT:-$now}
-  pid=$
+  pid="${$}"
 
-  ${_PRIV} "$RUBY" -rjson -retc -rtime -rsecurerandom -e '
+  ${_PRIV} "$RUBY" -rjson -retc -rtime -rsecurerandom -rfileutils -e '
     app, step, state, pid, started_at = ARGV
-    abort "invalid app identifier" unless app.match?(/\\A[a-z][a-z0-9_]{0,31}\\z/)
+    abort "invalid app identifier" unless app.match?(/\A[a-z][a-z0-9_]{0,31}\z/)
     abort "invalid deploy state" unless %w[running done failed].include?(state)
-    abort "invalid deploy step" unless step.bytesize.between?(1, 160) && step.match?(/\\A[A-Za-z0-9_ .:+(),\\/-]+\\z/)
+    abort "invalid deploy step" unless step.bytesize.between?(1, 160) && step.match?(/\A[A-Za-z0-9_ .:+(),\/-]+\z/)
     root = "/var/db/pub5"
     directory = File.join(root, "deploy_status")
     ["/var/db", root].each do |path|
@@ -97,7 +97,7 @@ deploy_status() {
     temporary = File.join(directory, ".#{app}.#{Process.pid}.#{SecureRandom.hex(6)}")
     begin
       File.open(temporary, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
-        file.write(JSON.generate(payload) + "\\n")
+        file.write(JSON.generate(payload) + "\n")
         file.flush
         file.fsync
       end
