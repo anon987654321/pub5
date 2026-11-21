@@ -298,7 +298,7 @@ test("semantic object subjects are validated, bounded and feature-staged", () =>
   assert.match(runtime, /stageAttribute\.array\.set\(stages\)/);
 });
 
-test("sixteen pixel mask profiles use bounded sparse geometry and the shared face renderer", () => {
+test("sixteen pixel mask profiles retain five curated human-face rotations on the shared renderer", () => {
   const masks = readFileSync(join(publicDir, "face_mask_profiles.js"), "utf8");
   const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
   const manifest = readFileSync(join(root, "config", "face_assets.yml"), "utf8");
@@ -332,6 +332,7 @@ test("sixteen pixel mask profiles use bounded sparse geometry and the shared fac
   const api = window.MASTER_FACE_MASKS;
   assert.equal(api.profiles.length, 16);
   assert.equal(new Set(api.profiles.map((profile) => profile.id)).size, 16);
+  assert.deepEqual(api.rotationProfiles, ["iatmul-concentric", "iatmul-river", "sepik-split", "tatanua-crest", "elema-hollow"]);
   assert.match(manifest, /- face_mask_profiles/);
   assert.match(events, /"conversation:created": \{ targets: \["face"\], fields: \["id", "conversationId"\] \}/);
   assert.match(tokens, /max_features: 8/);
@@ -354,12 +355,75 @@ test("sixteen pixel mask profiles use bounded sparse geometry and the shared fac
   const sessionId = sessionStorage.getItem("master.mask.session");
   assert.equal(sessionStorage.getItem("master.mask." + sessionId), "15");
   assert.equal(api.newConversation("conversation-next"), true);
-  assert.equal(api.current().id, "abelam-shield");
-  assert.equal(sessionStorage.getItem("master.mask.conversation-next"), "0");
+  assert.equal(api.current().id, "iatmul-concentric");
+  assert.equal(sessionStorage.getItem("master.mask.conversation-next"), "3");
   assert.equal(api.newConversation("conversation-next"), true);
   assert.equal(api.current().id, "abelam-shield", "same conversation does not rotate twice");
   assert.ok(listeners["master:conversation-created"]?.length);
   assert.ok(listeners["master:bus"]?.length);
+});
+
+test("server-selected human mask profile drives the particle face and its source attribution", () => {
+  const masks = readFileSync(join(publicDir, "face_mask_profiles.js"), "utf8");
+  const calls = [];
+  const attributes = {};
+  const canvas = {
+    setAttribute(name, value) { attributes[name] = value; }
+  };
+  const source = {
+    id: "iatmul_mai", particle_profile: "iatmul-river",
+    title: "Mask (Mai)", collection: "The Metropolitan Museum of Art",
+    accession: "1974.29.2", object_url: "https://www.metmuseum.org/art/collection/search/309933",
+    rights: "Collection record; source image is not downloadable"
+  };
+  const nextSource = {
+    id: "iatmul_mwai", particle_profile: "sepik-split",
+    title: "Mask (Mwai)", collection: "The Museum of Fine Arts, Houston",
+    accession: "62.33", object_url: "https://emuseum.mfah.org/objects/47457/mask-mwai",
+    rights: "Public Domain (object record); photograph © The Museum of Fine Arts, Houston"
+  };
+  const window = {
+    MASTER_FACE_MASK_SESSION: "page-session",
+    MASTER_FACE_MASK_PROFILE: "iatmul-river",
+    MASTER_FACE_MASK_ENTRY: source,
+    MASTER_FACE_MASK_CATALOG: [source, nextSource],
+    MASTER_FACE_WORLD: {
+      setSubjectForm(form, descriptor) { calls.push({ form, descriptor }); return form; }
+    },
+    addEventListener() {},
+    dispatchEvent() {}
+  };
+  const document = {
+    readyState: "complete",
+    documentElement: { dataset: {} },
+    querySelector() { return null; },
+    getElementById(id) { return id === "face" ? canvas : null; }
+  };
+  const storage = new Map();
+  const sandbox = {
+    window, document, location: { pathname: "/chat", search: "" },
+    sessionStorage: {
+      getItem(key) { return storage.get(key) ?? null; },
+      setItem(key, value) { storage.set(key, value); }
+    },
+    CustomEvent: class { constructor(type, options = {}) { this.type = type; this.detail = options.detail; } }
+  };
+  runInNewContext(masks, sandbox, { filename: "face_mask_profiles.js" });
+
+  const api = window.MASTER_FACE_MASKS;
+  assert.equal(api.current().id, "iatmul-river");
+  assert.equal(calls[0].form, "object");
+  assert.equal(calls[0].descriptor.kind, "custom");
+  assert.equal(calls[0].descriptor.parts.length, 8);
+  assert.equal(document.documentElement.dataset.maskSourceTitle, "Mask (Mai)");
+  assert.match(canvas.title, /original particle study/);
+  assert.match(attributes["aria-label"], /Mask \(Mai\)/);
+  assert.equal(api.source().id, "iatmul_mai");
+
+  assert.equal(api.newConversation("next-chat"), true);
+  assert.equal(api.current().id, "sepik-split");
+  assert.equal(api.source().id, "iatmul_mwai");
+  assert.equal(document.documentElement.dataset.maskSourceCollection, "The Museum of Fine Arts, Houston");
 });
 
 test("explicit visual subjects fail closed and never fall through to text guesses", () => {
