@@ -702,6 +702,7 @@ class TestRenderer < Minitest::Test
     rendered = renderer.terminal_markdown("```ruby\n#{source}\n```")
 
     assert_includes rendered, "<cyan>def</cyan>"
+    assert_includes rendered, "<bold><cyan>puts</cyan></bold>"
     assert_includes rendered, "<green>\"ready\"</green>"
     assert_includes rendered, "<magenta>42</magenta>"
   end
