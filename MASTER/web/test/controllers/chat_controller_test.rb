@@ -227,8 +227,7 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select ".brand-mark .brand-text", text: "face.example.test"
     assert_select "a.brand-mark[href='/master/']"
-    assert_select "a.master-session-tab[href='/master/'][aria-current='page']"
-    assert_select "a.master-session-tab[href='/master/dashboard']"
+    assert_select ".master-session-tabs, .master-session-tab", count: 0
     assert_select "main#chat-shell:not([role])"
   end
 
