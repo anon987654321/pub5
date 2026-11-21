@@ -90,6 +90,23 @@ test("live stipple keeps one deterministic solid carrier near the left eye", () 
   assert.equal(first.filter((sample) => sample.solo).length, 1);
   assert.equal(first.find((sample) => sample.solo).id, "left-eye");
   assert.equal(second.find((sample) => sample.solo).id, "left-eye");
+
+  const stipple = window.MASTER_FACE_STIPPLE;
+  assert.equal(stipple.particleSpacingScale(), 1.075);
+  const voids = stipple.voidConfiguration();
+  assert.equal(voids.eyeApertureScale, 1.14);
+  assert.deepEqual(voids.faultline.states, ["error"]);
+  assert.equal(voids.faultline.strength, 0.82);
+
+  const samples = stipple.defaultSamples(512);
+  assert.equal(samples.length, 512, "opening the voids does not discard carriers");
+  const eyeRadii = samples.filter((sample) => sample.zone === 1).map((sample) => {
+    const centre = Math.abs(sample.x + 0.31) < Math.abs(sample.x - 0.31) ? -0.31 : 0.31;
+    return Math.hypot(sample.x - centre, (sample.y - 0.17) / 0.56);
+  });
+  assert.ok(eyeRadii.length > 0);
+  assert.ok(Math.min(...eyeRadii) >= 0.18 * 1.14 - 1e-9, "orbital carriers keep a wider central void");
+  assert.deepEqual(samples, stipple.defaultSamples(512), "the new geometry remains deterministic");
 });
 
 
@@ -106,6 +123,21 @@ test("fingerprint ridges and radial signal waves stay inside the bounded one-pix
   assert.match(system, /ridgeTone, 0\.0, 1\.0\)/);
   assert.match(system, /gl_PointSize = 1\.0;/);
   assert.doesNotMatch(system, /requestAnimationFrame/);
+});
+
+test("Hollow Gaze and Faultline are semantic, bounded voids in the one-pixel field", () => {
+  assert.match(tokens, /particle_spacing_scale:\\s*1\\.075/);
+  assert.match(tokens, /voids:\\s*\\n\\s+eye_aperture_scale:\\s*1\\.14/);
+  assert.match(tokens, /mouth_width:\\s*0\\.225/);
+  assert.match(tokens, /mouth_height:\\s*0\\.072/);
+  assert.match(tokens, /faultline:\\s*\\n\\s+enabled: true\\s+states: \\[error\\]/);
+  assert.match(system, /function voidConfiguration\\(\\)/);
+  assert.match(system, /uFaultlineHalfWidth: \\{ value: voidConfiguration\\(\\)\\.faultline\\.halfWidth \\}/);
+  assert.match(system, /vFaultline = \\(1\\.0 - smoothstep\\(uFaultlineHalfWidth/);
+  assert.match(system, /if \\(vSolo < 0\\.5 && fault > 0\\.62\\) discard;/);
+  assert.match(system, /voids\\.faultline\\.states\\.includes\\(mode\\)/);
+  assert.match(system, /gl_PointSize = 1\\.0;/);
+  assert.match(tokens, /density_scale:\\s*0\\.90/);
 });
 
 test("aliased face contours use bounded tokenised position quantisation without enlarging points", () => {
@@ -557,7 +589,7 @@ test("stipple shares face state and obeys point and motion budgets", () => {
   assert.match(system, /vThreshold = aThreshold/);
   assert.match(system, /vThreshold > uDensity/);
   assert.match(tokens, /density_scale:\s*0\.90/);
-  assert.match(tokens, /particle_spacing_scale:\s*1\.045/);
+  assert.match(tokens, /particle_spacing_scale:\s*1\.075/);
   assert.match(system, /uParticleSpacingScale: \{ value: particleSpacingScale\(\) \}/);
   assert.match(system, /p = spacingOrigin \+ \(p - spacingOrigin\) \* uParticleSpacingScale;/);
   assert.match(system, /const densityScale = clamp\(window\.MASTER_FACE_CONTRACT\?\.stipple\?\.density_scale, 0\.90, 0\.7, 1\.0\)/);
