@@ -91,8 +91,7 @@ precedents:
     '
   cites:
   - MASTER/law/definition.rb TERMINAL_OUTPUT_PATH
-  overrules:
-  - P-008
+  overrules: []
   adopted_by:
   - pub5
   status: superseded
