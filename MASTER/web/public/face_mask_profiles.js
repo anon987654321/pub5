@@ -32,10 +32,11 @@
     const h = clamp(profile.h, .30, .62);
     const jaw = clamp(profile.jaw, .10, .36);
     const asym = clamp(profile.asym, 0, .15);
-    const eyeY = profile.id === "elema-tower" ? .02 : .12;
+    const eyeY = profile.id === "elema-tower" ? -.02 : .12;
+    const crownSize = profile.crownAxis === "y" ? [.06, profile.crown, .06] : [profile.crown, .06, .06];
     const parts = [
       { key: "outer", primitive: profile.outer || "ring", center: [asym * .25, 0, .06], size: [w, h, .08] },
-      beam("crown", [asym * .4, .39, .05], [profile.crown, .06, .06], profile.crownAxis || "x"),
+      beam("crown", [asym * .4, .39, .05], crownSize, profile.crownAxis || "x"),
       beam("brow", [asym, .25, .08], [profile.brow, .06, .06]),
       { key: "left-eye", primitive: "ring", center: [-.18 - asym, eyeY, .13], size: [.105, .060, .06] },
       { key: "right-eye", primitive: "ring", center: [.18 + asym, eyeY, .13], size: [.105, .060, .06] },
