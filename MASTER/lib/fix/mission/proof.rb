@@ -136,7 +136,7 @@ module Master
         required = Array(plan["proof_types"]).map(&:to_s)
         allowed = TaskContract.template.fetch("proof_types").map(&:to_s)
         map_version = Backlog::ProofMap::VERSION if defined?(Backlog::ProofMap::VERSION)
-        return unless plan["executor"] == "root_todo" && plan["proof_map_version"] == map_version
+        return unless plan["executor"] == "owner_registry" && plan["proof_map_version"] == map_version
         return if required.empty? || required.uniq != required || (required - allowed).any?
 
         [plan, required]
