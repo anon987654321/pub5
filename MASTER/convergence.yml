@@ -189,6 +189,13 @@ workstreams:
     title: Ruby-native analog audio and image processing
     implementation: STUDIO
     proof: STUDIO/test
+  - id: outbound_http_transport
+    state: partial
+    title: >-
+      Shared outbound HTTP transport pins DNS resolution, bounds response bytes and time,
+      rejects private destinations and never follows redirects with inherited authority
+    implementation: MASTER/lib/io/ssrf_guard.rb; RAILS/__shared/app/services/shared/outbound_http.rb
+    proof: MASTER/test/test_io_ssrf_guard.rb; MASTER/test/test_io_dynamic_http.rb; RAILS/test/outbound_http_test.rb; STUDIO/test/replicate_client_test.rb; OPENBSD host egress seam
   - id: data_minimization
     state: landed
     title: Heavy artifacts and source ownership remain measurable rather than invisible
