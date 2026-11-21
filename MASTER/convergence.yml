@@ -233,11 +233,27 @@ workstreams:
     title: Deterministic recency-plus-engagement feed ranking in the dating ranked_for shape
     implementation: RAILS/brgen
     proof: Feed surface test on a Ruby host
+    agent_task:
+      tree: RAILS
+      kind: mechanical
+      size: m
+      scope_paths:
+        - RAILS/brgen/app/models/post.rb
+        - RAILS/test/feed_ranking_contract_test.rb
+      done_when: "ruby RAILS/test/feed_ranking_contract_test.rb"
   - id: amber_similarity_right_sized
     state: partial
     title: Wears-well-with from typed attribute vectors by brute-force cosine at wardrobe scale
     implementation: RAILS/amber
     proof: RAILS/amber/test
+    agent_task:
+      tree: RAILS
+      kind: mechanical
+      size: m
+      scope_paths:
+        - RAILS/amber/app/services/wears_well_with.rb
+        - RAILS/amber/test/services/wears_well_with_test.rb
+      done_when: "cd RAILS/amber && ruby test/services/wears_well_with_test.rb"
   - id: master_face_breath
     state: partial
     title: The stipple field breathes in brightness only, frozen by reduced motion twice over
@@ -264,6 +280,17 @@ workstreams:
     title: The dashboard renders the fleet - sibling health, load and the resource_guard order
     implementation: MASTER/web/app/views/dashboard
     proof: dashboard fleet panel on a Ruby host
+    agent_task:
+      tree: MASTER
+      kind: mechanical
+      size: m
+      scope_paths:
+        - MASTER/web/app/services/fleet_panel.rb
+        - MASTER/web/app/controllers/dashboard_controller.rb
+        - MASTER/web/app/views/dashboard/index.html.erb
+        - MASTER/web/public/dashboard_live.js
+        - MASTER/test/test_dashboard_fleet_panel.rb
+      done_when: "ruby MASTER/test/test_dashboard_fleet_panel.rb"
   - id: master_quota_facts
     state: partial
     title: model_quota and cache_efficiency stop being computed and dropped - the status strip renders them
@@ -290,6 +317,16 @@ workstreams:
       provider reachability and commercial limits remain measurement-dependent
     implementation: MASTER/data/providers.yml + MASTER/data/models.yml + MASTER/lib/io/model_quota.rb
     proof: MASTER/test/test_model_quota_forecast.rb; provider reachability is established only by live lane probes
+    agent_task:
+      tree: MASTER
+      kind: mechanical
+      size: m
+      scope_paths:
+        - MASTER/data/providers.yml
+        - MASTER/data/models.yml
+        - MASTER/lib/io/model_quota.rb
+        - MASTER/test/test_model_quota_forecast.rb
+      done_when: "ruby MASTER/test/test_model_quota_forecast.rb"
 
   # --- architecture review of MASTER (2026-11-03, operator chat) ---
   # Architecture review only: nothing below is wired. Each row names its
@@ -303,6 +340,14 @@ workstreams:
       cannot settle into permanent amber
     implementation: MASTER/lib/convergence/proof.rb
     proof: escalation rows in the convergence receipt; test_convergence_proof fails on a dated INCONCLUSIVE whose window closed without a verdict
+    agent_task:
+      tree: MASTER
+      kind: mechanical
+      size: s
+      scope_paths:
+        - MASTER/lib/convergence/proof.rb
+        - MASTER/test/test_convergence_proof.rb
+      done_when: "ruby MASTER/test/test_convergence_proof.rb"
   - id: constitution_self_budget
     state: partial
     title: >-
@@ -310,6 +355,15 @@ workstreams:
       the same only-ratchets-down contract the scan budgets charge the code
     implementation: MASTER/data/laws.yml
     proof: a ceiling row beside checks/data/constitutional_budget.yml and a test that fails when the constitution grows without an equal removal
+    agent_task:
+      tree: MASTER
+      kind: mechanical
+      size: s
+      scope_paths:
+        - MASTER/data/laws.yml
+        - MASTER/checks/data/constitutional_budget.yml
+        - MASTER/test/test_constitutional_budget.rb
+      done_when: "ruby MASTER/test/test_constitutional_budget.rb"
   - id: documentation_completeness
     state: partial
     title: >-
