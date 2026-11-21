@@ -690,11 +690,10 @@ class TestRenderer < Minitest::Test
       pastel.define_singleton_method(name) { |value| "<#{label}>#{value}</#{label}>" }
     end
     renderer.instance_variable_set(:@p, pastel)
-    source = "~~~" # keep the fixture's source delimiters independent of Markdown parsing
     source = "def run\\n  puts \\"ready\\"\\n  42\\nend"
 
     $stdout.stub(:tty?, true) do
-      rendered = renderer.terminal_markdown("\\`\\`\\`ruby\\n#{source}\\n\\`\\`\\`")
+      rendered = renderer.terminal_markdown("```ruby\n#{source}\n```")
       assert_includes rendered, "<cyan>def</cyan>"
       assert_includes rendered, "<green>\\\"ready\\\"</green>"
       assert_includes rendered, "<magenta>42</magenta>"
