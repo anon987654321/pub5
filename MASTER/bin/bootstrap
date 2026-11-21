@@ -15,7 +15,7 @@ manager = Master::Boot::DependencyManager.new(root: ROOT)
 case command
 when "--help", "-h"
   puts <<~HELP
-    usage: ruby MASTER/bin/bootstrap [--check | --plan]
+    usage: bin/bootstrap [--check | --plan]
 
     no arguments   install/verify the locked Ruby bundle and prepare the boot environment
     --check        inspect the current Ruby/Bundler bundle without installing
