@@ -82,6 +82,7 @@
     document.documentElement.dataset.maskProfile = profile.id;
     document.documentElement.dataset.maskFamily = profile.family;
     document.documentElement.dataset.maskLabel = profile.name;
+    try { sessionStorage.setItem("master.mask." + key, String(current)); } catch (_) {}
     window.dispatchEvent(new CustomEvent("master:mask-profile", {
       detail: { id: profile.id, name: profile.name, family: profile.family, note: profile.note, index, reason }
     }));
