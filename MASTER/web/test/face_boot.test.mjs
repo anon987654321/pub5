@@ -358,13 +358,16 @@ test("sixteen pixel mask profiles retain five curated human-face rotations on th
   assert.equal(api.current().id, "iatmul-concentric");
   assert.equal(sessionStorage.getItem("master.mask.conversation-next"), "3");
   assert.equal(api.newConversation("conversation-next"), true);
-  assert.equal(api.current().id, "abelam-shield", "same conversation does not rotate twice");
+  assert.equal(api.current().id, "iatmul-concentric", "same conversation does not rotate twice");
   assert.ok(listeners["master:conversation-created"]?.length);
   assert.ok(listeners["master:bus"]?.length);
 });
 
 test("server-selected human mask profile drives the particle face and its source attribution", () => {
   const masks = readFileSync(join(publicDir, "face_mask_profiles.js"), "utf8");
+  const controller = readFileSync(join(root, "app", "controllers", "chat_controller.rb"), "utf8");
+  const view = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  const archive = readFileSync(join(root, "..", "..", "MASTER", "data", "face_masks.yml"), "utf8");
   const calls = [];
   const attributes = {};
   const canvas = {
@@ -412,6 +415,11 @@ test("server-selected human mask profile drives the particle face and its source
 
   const api = window.MASTER_FACE_MASKS;
   assert.equal(api.current().id, "iatmul-river");
+  assert.match(controller, /@face_mask_profile = @face_mask_entry.fetch\("particle_profile", ""\)\.to_s/);
+  assert.match(view, /window\.MASTER_FACE_MASK_PROFILE =/);
+  assert.match(view, /window\.MASTER_FACE_MASK_CATALOG =/);
+  assert.match(archive, /particle_profile: "iatmul-river"/);
+  assert.match(archive, /selection: "round_robin_per_new_chat"/);
   assert.equal(calls[0].form, "object");
   assert.equal(calls[0].descriptor.kind, "custom");
   assert.equal(calls[0].descriptor.parts.length, 8);
