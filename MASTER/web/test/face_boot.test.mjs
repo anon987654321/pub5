@@ -1361,8 +1361,7 @@ test("session chrome reads brgen's family tokens and band without weakening mobi
 
   // The workspace tabs are gone; interactive controls retain the shared touch floor.
   assert.doesNotMatch(css, /master-session-tabs|master-session-tab/);
-  const tapTargets = /#photo-button, #music-loop-button, #pause-speech-button \\{[^}]*/;
-  assert.match(css, new RegExp(`${tapTargets.source}min-inline-size: var\\\\(--tap-min\\\\); min-block-size: var\\\\(--tap-min\\\\);`));
+  assert.match(css, /#photo-button, #music-loop-button, #pause-speech-button \{[^}]*min-inline-size: var\(--tap-min\); min-block-size: var\(--tap-min\);/);
 });
 
 test("shell chrome uses plain CLI prompt words and downloads no font", () => {
