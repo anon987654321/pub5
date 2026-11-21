@@ -355,8 +355,8 @@ class TestRatchets < Minitest::Test
 
     output = Operator::Ratchets.render(rows)
 
-    assert_match(/growth\.master .*OVER .*\(MASTER\/data\/spine\.yml\)/, output)
-    refute_match(/spine\.core_files .*MASTER\/data\/spine\.yml/, output)
+    assert_includes output, "ratchet0: growth.master; current=11; ceiling=10; state=OVER +1; source=MASTER/data/spine.yml"
+    refute_includes output, "ratchet0: spine.core_files; current=5; ceiling=5; state=at; source=MASTER/data/spine.yml"
   end
   # The two spine numbers are not the same kind of thing and must not be reported
   # as if they were: one is a budget, one is an invariant (data/spine.yml's header).

@@ -38,7 +38,7 @@ end
 def integrity_run(checks, root: INTEGRITY_ROOT, on_vps: Deploy::Environment.on_vps?, execute: RUN_CHECK, io: $stdout)
   report = { failures: [], warnings: [], skipped: [] }
   checks.each do |check|
-    label = "integrity: #{check.name.ljust(18)}"
+    label = "integrity0: #{check.name}"
 
     script = File.join(root, check.path)
     unless File.file?(script)

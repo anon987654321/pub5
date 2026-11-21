@@ -736,14 +736,13 @@ def deep_rows(rails: true, stale_ok: false)
     # Rendering.
 
     def render(rows)
-      width = rows.map { |row| row.name.length }.max
       lines = rows.map do |row|
         current = row.current.nil? ? "?" : row.current.to_s
         ceiling = row.ceiling.nil? ? "-" : row.ceiling.to_s
-        line = format("  %-#{width}s %8s / %-8s %-10s", row.name, current, ceiling, row.state)
-        suffix = row.source.to_s.empty? ? "" : " (#{row.source})"
-        suffix = "" if row.state == "at"
-        row.note ? "#{line} #{suffix} #{row.note}".squeeze(" ") : "#{line}#{suffix}"
+        fields = ["ratchet0: #{row.name}", "current=#{current}", "ceiling=#{ceiling}", "state=#{row.state}"]
+        fields << "source=#{row.source}" if row.state != "at" && !row.source.to_s.empty?
+        fields << "note=#{row.note}" if row.note
+        fields.join("; ")
       end
       # "Off" covers both a measured row off its ceiling and a dead row — one
       # that could not be read at all (see ok? for why the dead row counts).
@@ -755,7 +754,7 @@ def deep_rows(rails: true, stale_ok: false)
                 else
                   "measure: #{broken.size} off - #{broken.map(&:name).join(', ')}"
                 end
-      (["ratchet".ljust(width) + "  current / ceiling  state"] + lines + ["", summary]).join("\n")
+      (lines + ["", summary]).join("\n")
     end
 
     # --why: the members behind one number.
@@ -778,19 +777,25 @@ def deep_rows(rails: true, stale_ok: false)
       answerable = rows.select(&:members)
       head = query.to_s.empty? ? "measure --why <row>" : "measure --why: no row named #{query.inspect}"
       lines = [head, "", "#{answerable.size} of #{rows.size} rows can name their members:"]
-      lines + answerable.map { |row| "  #{row.name}" }
+      lines + answerable.map { |row| "ratchet0: #{row.name}" }
     end
 
     def why_row(row)
-      head = "#{row.name}  #{row.current || '?'} / #{row.ceiling || '-'}  #{row.state}  (#{row.source})"
-      return [head, "  this row records a count and no population - nothing to name", ""] if row.members.nil?
+      head = [
+        "ratchet0: #{row.name}",
+        "current=#{row.current || '?'}",
+        "ceiling=#{row.ceiling || '-'}",
+        "state=#{row.state}",
+        "source=#{row.source}",
+      ].join("; ")
+      return [head, "member0: unavailable; this row records a count and no population", ""] if row.members.nil?
 
-      body = row.members.map { |member| "  #{member}" }
+      body = row.members.map { |member| "member0: #{member}" }
       # The instrument checking itself. A member list whose length is not the
       # number printed beside it means the count and the population came apart,
       # and a register that cannot notice that is the register this file replaced.
       unless row.members.size == row.current
-        body << "  MISMATCH: #{row.members.size} member(s) listed against a count of #{row.current}"
+        body << "member0: MISMATCH; listed=#{row.members.size}; count=#{row.current}"
       end
       [head] + body + [""]
     end
@@ -808,7 +813,7 @@ def deep_rows(rails: true, stale_ok: false)
       lines = ["measure --since #{ref}: recorded ceilings, then against now", ""]
       moved = sources.flat_map { |source| ceiling_deltas(ref, source) }
       lines << if moved.empty?
-                 "  no recorded ceiling moved in #{sources.size} file(s) since #{ref}"
+                 "ceiling0: no recorded ceiling moved in #{sources.size} file(s) since #{ref}"
                else
                  moved.join("\n")
                end
@@ -817,7 +822,7 @@ def deep_rows(rails: true, stale_ok: false)
 
     def ceiling_deltas(ref, source)
       before, status = Master::Io::Exec.capture2e("git", "-C", ROOT, "show", "#{ref}:#{source}")
-      return ["  #{source}: not at #{ref} (#{before.lines.first&.chomp})"] unless status.success?
+      return ["ceiling0: #{source}; not_at=#{ref}; reason=#{before.lines.first&.chomp}"] unless status.success?
 
       was = numeric_leaves(YAML.safe_load(before, aliases: true))
       now = numeric_leaves(YAML.safe_load_file(File.join(ROOT, source), aliases: true))
@@ -827,10 +832,10 @@ def deep_rows(rails: true, stale_ok: false)
         next if old == new
 
         delta = old && new ? format("%+d", new - old) : "added or removed"
-        "  #{source} #{key}: #{old || '-'} -> #{new || '-'} (#{delta})"
+        "ceiling0: #{source}; path=#{key}; before=#{old || '-'}; after=#{new || '-'}; delta=#{delta}"
       end
     rescue Psych::Exception => e
-      ["  #{source}: unparseable at #{ref} or now (#{e.class})"]
+      ["ceiling0: #{source}; unparseable_at=#{ref}; error=#{e.class}"]
     end
 
     # Every integer in the document, keyed by its dotted path. Generic on

@@ -9,7 +9,7 @@ def list_checks
   puts "Available checks (use the short name with runner.rb):"
   CHECKS.each do |name, row|
     kind = subprocess?(row) ? "subprocess #{row['script']}" : row["class"]
-    puts "  #{name.ljust(22)} #{kind}"
+    puts "check0: #{name}; type=#{kind}"
   end
 
   puts
@@ -17,7 +17,7 @@ def list_checks
   CHECKS.group_by { |_, row| row["covered_by"] }.each do |parent, rows|
     next unless parent
 
-    puts "  #{parent} includes: #{rows.map(&:first).join(', ')}"
+    puts "composite0: #{parent}; includes=#{rows.map(&:first).join(', ')}"
   end
 end
 
@@ -53,12 +53,12 @@ def explain_checks
 
     notes << "covered by #{row['covered_by']}" if row["covered_by"]
     row.fetch("env_flags", {}).each { |var, keyword| notes << "#{var}=1 -> #{keyword}" }
-    puts "  #{name.ljust(22)} #{kind}#{notes.empty? ? '' : " (#{notes.join('; ')})"}"
+    puts "check0: #{name}; type=#{kind}#{notes.empty? ? "" : "; #{notes.join('; ')}"}"
     pass = row["pass"] || "exit 0 passes, exit #{SUBPROCESS_INCONCLUSIVE} is inconclusive"
-    puts "  #{' ' * 22} pass: #{pass}"
+    puts "pass0: #{name}; #{pass}"
   end
 
   puts
   puts "Environment switches:"
-  ENV_SWITCHES.each { |var, meaning| puts "  #{var.ljust(24)} #{meaning}" }
+  ENV_SWITCHES.each { |var, meaning| puts "env0: #{var}; #{meaning}" }
 end

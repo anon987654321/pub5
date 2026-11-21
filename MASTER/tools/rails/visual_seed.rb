@@ -88,7 +88,8 @@ module Deploy
     def status
       APPS.each do |app|
         record = File.file?(marker(app)) ? JSON.parse(File.read(marker(app))) : nil
-        @out.puts("visual seed: #{app.ljust(9)} #{record ? "seeded #{record["at"]} (scale #{record["scale"]})" : "no seed"}")
+        state = record ? "seeded_at=#{record["at"]}; scale=#{record["scale"]}" : "no seed"
+        @out.puts("visual0: #{app}; #{state}")
       end
       0
     end

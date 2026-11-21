@@ -483,7 +483,7 @@ if $PROGRAM_NAME == __FILE__
                 "#{days} day(s) left"
               end
 
-      puts "  #{domain.ljust(18)} #{when_}"
+      puts "domain0: #{domain}; expiry=#{when_}"
     end
     puts "  Renew at the registrar. Nothing in this repo can do it."
   end
