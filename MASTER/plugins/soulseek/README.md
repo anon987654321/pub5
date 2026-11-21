@@ -43,9 +43,11 @@ Build a structured catalogue from an actual local music folder. Create the desti
 /plugin run soulseek catalog {"path":"~/Music","output_path":"~/.master/music/catalog.json","consent":true}
 /plugin run soulseek duplicates {"path":"~/Music","mode":"candidates"}
 /plugin run soulseek duplicates {"path":"~/Music","mode":"sha256"}
+/plugin run soulseek quality {"path":"~/Music"}
 ```
 
 The catalogue groups files by their containing folder and records relative paths, sizes, formats and filename-derived title/year hints. It does not read embedded tags or audio. Manifest comparisons report exact path overlap only; different paths do not establish different recordings. Duplicate candidates share a normalized filename and size, while `sha256` verifies byte-identical content by reading each audio file. Hashing can take time on large libraries. Both modes are reports only: nothing is deleted or reorganised. Existing catalogue files are not overwritten unless `overwrite: true` is also supplied with consent.
+The `quality` action is structural triage: it reports format families, empty files and very small files for manual review. It does not decode audio or establish bitrate, sample rate, clipping or audible fidelity; small files may be intentional samples or short clips.
 
 Search and result inspection do not download files. Queueing requires explicit `consent: true`, the exact unlocked filename and size from the named search result, and a rights basis admitted by MASTER's canonical plugin policy (`public_domain`, `open_license`, `artist_authorized` or `rights_owned`). One file is queued per call. Bulk acquisition is disabled. The rights basis is an operator attestation, not a legal determination; personal possession or personal-use intent alone is not a rights basis.
 
