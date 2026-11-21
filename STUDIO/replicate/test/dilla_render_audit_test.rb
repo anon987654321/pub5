@@ -29,12 +29,12 @@ class TestDillaRenderAudit < Minitest::Test
       "arrangement" => [ { "section" => "A", "bars" => 2 } ]
     }
     midi_path = File.join(directory, "audit-fixture.mid")
-    track = "\\x00\\xff\\x2f\\x00".b
+    track = "\x00\xff\x2f\x00".b
     midi = ["MThd", 6, 1, 1, 480].pack("A4Nnnn") + ["MTrk", track.bytesize].pack("A4N") + track
     File.binwrite(midi_path, midi)
 
     mp3_path = File.join(directory, "audit-fixture.mp3")
-    File.binwrite(mp3_path, "ID3\\x04\\x00\\x00".b + ("\\x00" * 128))
+    File.binwrite(mp3_path, "ID3\x04\x00\x00".b + ("\x00" * 128))
 
     provenance = {
       "engine" => "dilla", "version" => Dilla::VERSION, "seed" => 1234,
