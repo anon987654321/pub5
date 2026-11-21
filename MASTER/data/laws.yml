@@ -5293,7 +5293,7 @@ documents:
     [AGENTS.md, APP_SPEC.md, ARCHAEOLOGY.md, CLAUDE.md,
      FACE_WORLD.md, GEMINI.md, GLM.md, LEGACY_RESTORE.md, LOOKBOOK.md,
      PUB4_PERMISSION_MATRIX.md, PUB5_PERMISSION_MATRIX.md, README.md,
-     RESTORATION_REPORT.md, RUNBOOK.md, SOCIAL_FRONT_PAGE.md, TODO.md,
+     RESTORATION_REPORT.md, RUNBOOK.md, SOCIAL_FRONT_PAGE.md,
      TREE_CONTRACTS.md, ad_creative_governance.md, bergen_brand_systems.md,
      bringhurst-strunk-research.md, business-plan-quality.md, contract.md,
      openbsd_kernel_philosophy.md, proposal.md, rails-layout-refiner.md,
@@ -5664,7 +5664,7 @@ veto_pattern_config:
     violates_law: ROBUSTNESS
   unfinished:
     # Only explicit TODO/FIXME markers in comments or a standalone ellipsis body count as unfinished.
-    # Ordinary ellipses, ranges, "pending" states, and a bare TODO.md filename are not violations.
+    # Ordinary ellipses, ranges, "pending" states, and a bare README.md filename are not violations.
     detect: "#[^\\n]*\\b(TODO|FIXME)\\b(?!\\.md)|^\\s*\\.\\.\\.\\s*$"
     # This is the only veto whose subject is comment text; the other patterns inspect code.
     reads_comments: true
