@@ -66,6 +66,17 @@ class ImportRunTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordInvalid) { record.mark_succeeded!(ports_count: 1) }
   end
 
+  test "the package-index source is distinguished from full metadata sources" do
+    thin = import_run(source_revision: "https://cdn.openbsd.org/pub/OpenBSD/7.8/packages/amd64/index.txt")
+    full = import_run(source_revision: "https://cdn.openbsd.org/pub/OpenBSD/7.8/ports.tar.gz")
+    local = import_run(source_revision: "/usr/ports")
+
+    assert thin.package_index_only?
+    refute full.package_index_only?
+    refute local.package_index_only?
+    refute import_run.package_index_only?
+  end
+
   test "recent puts the newest run first" do
     old = import_run(started_at: 3.days.ago).tap(&:save!)
     fresh = import_run(started_at: 1.hour.ago).tap(&:save!)
