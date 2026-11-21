@@ -660,10 +660,16 @@
         : clamp(pressureRaw, 0, 0, 1);
     const entropy = clamp(state.pressureFields?.entropy ?? state.entropy ?? 0.18, 0.18, 0, 1);
     const mode = String(state.mode || state.mood || "idle").toLowerCase();
+    const densityScale = clamp(window.MASTER_FACE_CONTRACT?.stipple?.density_scale, 0.90, 0.7, 1.0);
     const stillMode = window.MASTER_FACE_STATE?.isStillMode?.(mode) ?? mode === "idle";
     const motion = reducedMotionEnabled(state) || stillMode ? 0 : 1;
     const u = system.material.uniforms;
-    u.uDensity.value = clamp(profile.density + (pressure - 0.5) * 0.24 + (modulation.density || 0), profile.density, 0.08, 0.98);
+    u.uDensity.value = clamp(
+      (profile.density + (pressure - 0.5) * 0.24 + (modulation.density || 0)) * densityScale,
+      profile.density * densityScale,
+      0.08,
+      0.98
+    );
     u.uRipple.value = clamp(profile.ripple + (modulation.ripple || 0), 0, 0, 1) * motion;
     u.uTurbulence.value = clamp(profile.turbulence + entropy * 0.18 + (modulation.turbulence || 0), 0, 0, 1) * motion;
     u.uLuminosity.value = clamp(profile.luminosity + (modulation.luminosity || 0), 0.76, 0.2, 1.2);

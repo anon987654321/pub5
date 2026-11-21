@@ -493,6 +493,9 @@ tokens:
         strength: 0.48
         center: [0.08, 0.06]
         intro_wave_strength: 0.28
+      # Open the field without enlarging one-pixel carriers or changing source geometry.
+      # At 0.90, ten percent fewer points pass the render threshold in every mood.
+      density_scale: 0.90
       # Deliberate low-resolution contour stepping; subtle enough to preserve facial readability.
       aliasing:
         enabled: true
@@ -593,7 +596,8 @@ tokens:
       damping: 0.86
       cohesion_radius: 0.11
       cohesion_strength: 0.045
-      separation_radius: 0.035
+      # A slightly wider personal-space radius keeps moving carriers distinct.
+      separation_radius: 0.045
       separation_strength: 0.08
       noise_scale: 0.014
       # A deterministic subset keeps its original carrier identity in residual states.

@@ -173,6 +173,7 @@ test("face expression cycle preserves its exact blend across reduced motion and 
     location: { search: "" },
     MASTER_FACE_CONTRACT: {
       stipple: {
+        density_scale: 0.90,
         expressions: {
           enabled: true,
           order: ["waterform", "architect", "forest_geometry", "monument"],
@@ -555,6 +556,8 @@ test("stipple shares face state and obeys point and motion budgets", () => {
   assert.doesNotMatch(system, /uPointSize(?:Base|Bias|Reference|Distance|Output)/);
   assert.match(system, /vThreshold = aThreshold/);
   assert.match(system, /vThreshold > uDensity/);
+  assert.match(tokens, /density_scale:\s*0\.90/);
+  assert.match(system, /const densityScale = clamp\(window\.MASTER_FACE_CONTRACT\?\.stipple\?\.density_scale, 0\.90, 0\.7, 1\.0\)/);
 });
 
 test("the swarm geometry, force constants, modes and glyph ramp live in face tokens", () => {
@@ -563,7 +566,7 @@ test("the swarm geometry, force constants, modes and glyph ramp live in face tok
   assert.match(tokens, /damping:\s*0\.86/);
   assert.match(tokens, /cohesion_radius:\s*0\.11/);
   assert.match(tokens, /cohesion_strength:\s*0\.045/);
-  assert.match(tokens, /separation_radius:\s*0\.035/);
+  assert.match(tokens, /separation_radius:\s*0\.045/);
   assert.match(tokens, /separation_strength:\s*0\.08/);
   assert.match(tokens, /noise_scale:\s*0\.014/);
   assert.match(tokens, /dial_modulation:\s*\n\s+activity:/);
@@ -649,7 +652,7 @@ test("stipple module boots and builds from the canonical idle profile", () => {
       swarm: {
         enabled: true, particle_budget: 240, damping: 0.86, size_from_depth: true, cohesion_radius: 0.11, cohesion_strength: 0.045,
         residual: { fraction: 1, strength: 0.12 },
-        separation_radius: 0.035, separation_strength: 0.08, noise_scale: 0.014,
+        separation_radius: 0.045, separation_strength: 0.08, noise_scale: 0.014,
         glyph_ramp: [".", "˙", "∘", "*", "○", "●"],
         target_field: {
           head: { center: [0, 0.05, 0], scale: [1.18, 1.02, 0.82], weight: 1 },
@@ -875,7 +878,7 @@ test("stipple module boots and builds from the canonical idle profile", () => {
   // pinned away so the settled expression pair is left alone).
   stipple.expressionCycle.nextAt = 100;
   api.tick(stipple, { mode: "idle", reducedMotion: false }, 34);
-  assert.equal(stipple.material.uniforms.uDensity.value, 0.44);
+  assert.equal(stipple.material.uniforms.uDensity.value, 0.396);
   window.MASTER_FACE_CONTRACT.swarm.size_from_depth = false;
   const flatDepth = api.buildFromSamples(THREE, [{ x: 0, y: 0, z: 0, zone: 0, bias: 1 }]);
   assert.equal(flatDepth.material.uniforms.uDepthFromRank.value, 0);
@@ -952,7 +955,7 @@ test("stipple module boots and builds from the canonical idle profile", () => {
 
   // An absent pressure event must preserve the mode's canonical density.
   api.tick(stipple, { mode: "idle", reducedMotion: false }, 0);
-  assert.equal(stipple.material.uniforms.uDensity.value, 0.44);
+  assert.equal(stipple.material.uniforms.uDensity.value, 0.396);
   assert.deepEqual(stipple.material.uniforms.uColor.value.rgb, [1, 1, 1]);
 
   // Continuous state dials make bounded changes without replacing the named mode profile.
@@ -960,7 +963,7 @@ test("stipple module boots and builds from the canonical idle profile", () => {
     mode: "idle", activity: 1, arousal: 1, focus: 1, confidence: 1, risk: 1,
     reducedMotion: false
   }, 0.5);
-  assert.ok(stipple.material.uniforms.uDensity.value > 0.44);
+  assert.ok(stipple.material.uniforms.uDensity.value > 0.396);
   assert.equal(stipple.material.uniforms.uRipple.value, 0, "idle cannot ripple autonomously");
   assert.equal(stipple.material.uniforms.uTurbulence.value, 0, "idle cannot tremble autonomously");
   assert.equal(stipple.material.uniforms.uMotionScale.value, 0);
@@ -970,7 +973,7 @@ test("stipple module boots and builds from the canonical idle profile", () => {
     mode: "idle", activity: 0.14, arousal: 0.22, focus: 0.86, confidence: 0.86, risk: 0,
     reducedMotion: false
   }, 0.75);
-  assert.equal(stipple.material.uniforms.uDensity.value, 0.44);
+  assert.equal(stipple.material.uniforms.uDensity.value, 0.396);
   assert.equal(stipple.material.uniforms.uRipple.value, 0);
   assert.equal(stipple.material.uniforms.uTurbulence.value, 0);
   assert.equal(api.applyPalette(stipple, { accent: "#C8F55F" }), false);
@@ -982,7 +985,7 @@ test("stipple module boots and builds from the canonical idle profile", () => {
     pressureFields: { pct: 50, entropy: 0.28 },
     reducedMotion: false
   }, 1);
-  assert.equal(stipple.material.uniforms.uDensity.value, 0.72);
+  assert.equal(stipple.material.uniforms.uDensity.value, 0.648);
   assert.equal(stipple.material.uniforms.uRipple.value, 0.16);
   assert.ok(Math.abs(stipple.material.uniforms.uTurbulence.value - 0.3304) < 0.00001);
   assert.equal(stipple.material.uniforms.uLuminosity.value, 0.91);
