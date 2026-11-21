@@ -143,9 +143,7 @@
   /* Optical display weights sit outside the body 400/600/800 ladder. */
   --face-weight-brand: 640;
   --face-weight-display: 560;
-  /* The wordmark face brgen.no sets its logo in ($brgen-logo-font in
-     brgen/app/assets/stylesheets/application.scss), so ai.brgen.no reads as the
-     same logo: same stack, heavy weight, tightest tracking. Operator, 2026-10-12. */
+  /* Match brgen's actual wordmark face: Helvetica Neue, bold, with tight tracking. */
   --font-logo: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
@@ -331,7 +329,7 @@ body[data-hidden-tab="1"] #cognition-ecology {
   border-bottom: 1px solid var(--border-faint);
   background: transparent;
   color: var(--face-fg);
-  font: var(--terminal-font-size)/var(--leading-body) var(--font-mono);
+  font: 16px/1.5 var(--font-mono);
   padding: 12px 12px;
   outline: none;
 }
@@ -927,7 +925,7 @@ body.mission-control a:focus-visible {
   min-height: calc(var(--face-bar-height) + var(--safe-bottom));
   height: calc(var(--face-bar-height) + var(--safe-bottom));
   padding: 0 16px var(--safe-bottom);
-  font: 16px/1.5 var(--font-mono);
+  font: var(--terminal-font-size)/var(--leading-body) var(--font-mono);
   color: var(--face-fg);
   border: 0;
   background: black;
@@ -1393,7 +1391,6 @@ body[data-history-open="1"] #chat-log {
   margin-inline-start: min(332px, calc(100vw - 24px));
   transition: margin-left 220ms var(--ease-out);
 }
-
 /* Family skip-link: hard-hide until focus (same contract as RAILS _shell.scss). */
 .skip-link {
   position: fixed;
