@@ -421,3 +421,20 @@ proposals:
       guessing. Reintroducing the flag would rebuild a second, unreachable
       route to the same provider.
     refuted_by: STUDIO/lib/io/media_lanes.rb
+
+  - id: master-voice-parallel-stack
+    tree: MASTER
+    state: refuted
+    claim: "an external patch proposed a top-level master_voice/ stack: its own engine registry (CosyVoice/XTTS/Kokoro/Qwen adapters), supervisor, accent resolver and G2P, plus silent dialect rewriting before synthesis"
+    reason: >
+      It duplicates the one speech stack: engines enter through
+      lib/voice/engines.rb case arms and the data/tts.yml chain, not a second
+      registry, and synthesis never rewrites the operator's words - faithful
+      speech is the default. Every adapter returned audio_path: nil and
+      raised on miss, breaking the fail-closed chain contract; subprocesses
+      ran on bare Open3; about 2,000 lines shipped with no tests. The
+      dialectology underneath was sound and is salvaged as evaluation
+      fixtures under data/voice/norwegian/ with a tonem lane in
+      Voice::Benchmark. A real nb engine (CosyVoice3 + NB LoRA) stays
+      welcome - through the chain, once it can pass the benchmark gates.
+    refuted_by: MASTER/lib/voice/engines.rb
