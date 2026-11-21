@@ -10,7 +10,6 @@ class TestManualPages < Minitest::Test
     MASTER/man/man1/operator.1
     MASTER/man/man1/master-fix.1
     OPENBSD/mirror/usr/local/man/man8/vps-deploy.8
-    OPENBSD/mirror/usr/local/man/man8/pub5-admin.8
   ].freeze
 
   BASE_SYSTEM_PAGES = %w[doas rcctl relayd].freeze
