@@ -148,4 +148,17 @@ class TestModelHealth < Minitest::Test
     refute_includes result, "secret"
   end
 
+
+  def test_model_doctor_failure_categories_are_stable
+    {
+      "outbound request exceeded its deadline" => "timeout",
+      "401 Unauthorized: invalid API key" => "authentication",
+      "429 rate limit exceeded" => "quota",
+      "SocketError: getaddrinfo failed" => "connectivity",
+      "unspecified provider failure" => "provider_error",
+    }.each do |raw, expected|
+      assert_equal expected, Registry.provider_failure_kind(raw)
+    end
+  end
+
 end
