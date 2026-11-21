@@ -217,9 +217,8 @@ class TestScanRuleFalsePositives < Minitest::Test
       %(# constant from lib/review and depending on its load order\n),
       %(text + "\\n... [truncated]"\n),
       %(scan_lines(src, /\\b(TODO|FIXME|HACK|XXX)\\b/, message: "unresolved marker")\n),
-      # The backlog CLAUDE.md sends every reader to. `\b` holds before the dot, so
-      # the filename read as a marker, at :veto — 59 of the 81 marker lines under
-      # MASTER are this and nothing else. The first line below is the real
+      # The former root checklist used to send readers to a single Markdown file. `\b` holds before the dot,
+      # so that filename read as a marker, at :veto. The first line below is the real
       # failover_config one; the pin above stops a word short of what fired.
       %(# constant from lib/review and depending on its load order. See TODO.md,\n),
       %(# worth re-reading is a present-tense comment; unfinished work goes in TODO.md.\n),
