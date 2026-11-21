@@ -135,7 +135,7 @@ class TestAstFixerTransforms < Minitest::Test
   #
   # Every duplicate key comes back "undefined]", and `node --check` passes. This
   # was written into MASTER/checks/support/geometry_probe/walk.js on the trial run
-  # recorded in TODO.md and reverted by hand. `'a'.repeat(3)` is the member-access
+  # recorded in the migration history and reverted by hand. `'a'.repeat(3)` is the member-access
   # half: converting it moves the call onto the whole template.
   def test_string_concat_declines_a_chain_followed_by_a_subscript_or_member
     result = fix("walk.js", <<~JS)
