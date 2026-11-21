@@ -757,7 +757,7 @@ repo_topics:
     - arxiv:2604.11548 SemaClaw harness engineering
     - arxiv:2603.10165 OpenClaw-RL online agent learning
     - arxiv:2604.02344 WebGPU dispatch overhead
-    pattern: 'Use ar5iv/arXiv as a research radar feeding MASTER''s design backlog.
+    pattern: 'Use ar5iv/arXiv as a research radar feeding MASTER''s existing design-candidate register.
 
       '
     build_next:
