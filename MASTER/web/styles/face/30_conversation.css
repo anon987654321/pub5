@@ -155,7 +155,7 @@ body.mission-control a:focus-visible {
   min-height: calc(var(--face-bar-height) + var(--safe-bottom));
   height: calc(var(--face-bar-height) + var(--safe-bottom));
   padding: 0 16px var(--safe-bottom);
-  font: 16px/1.5 var(--font-mono);
+  font: 18px/1.5 var(--font-mono);
   color: var(--face-fg);
   border: 0;
   background: black;
@@ -324,7 +324,7 @@ body[data-mode="speaking"] #pause-speech-button { display: block; }
 @keyframes cursorBlink { 0%,100%{opacity:1} 50%{opacity:0} }
 
 /* #37 Code block */
-.msg-body pre, .msg-body code { background:transparent; border-bottom:1px dotted color-mix(in srgb, var(--c-code) 18%, transparent); font-family:var(--font-mono); padding:0 4px; font-size:.88em; }
+.msg-body pre, .msg-body code { background:transparent; border-bottom:1px dotted color-mix(in srgb, var(--c-code) 18%, transparent); font-family:var(--font-mono); padding:0 4px; font-size:1em; }
 .msg-body pre { display:block; padding:8px 8px; margin:4px 0; white-space:pre-wrap; }
 .typing-indicator { display:inline-flex; gap:4px; margin-inline-start:6px; vertical-align:middle; align-items:center; }
 .typing-indicator span { width:5px; height:5px; border-radius:50%; background:var(--face-muted); animation:typingPulse 1s infinite var(--ease-in-out); }
