@@ -119,8 +119,8 @@
   function normalizeCustomParts(subject) {
     const contract = customGeometryContract();
     if (!contract.enabled || !Array.isArray(subject.parts)) return null;
-    const maximum = Math.max(1, Math.min(6,
-      Math.floor(finite(contract.max_parts, SEMANTIC_SUBJECT.max_features || 6))));
+    const maximum = Math.max(1, Math.min(8,
+      Math.floor(finite(contract.max_parts, SEMANTIC_SUBJECT.max_features || 8))));
     if (subject.parts.length < 1 || subject.parts.length > maximum) return null;
 
     const primitives = new Set(
@@ -180,7 +180,7 @@
       }).map((entry) => String(entry).toLowerCase().trim().replace(/[^a-z0-9_-]/g, "").slice(0, 24));
       const order = [...new Set(requested.filter((name) => allowed.includes(name)))];
       allowed.forEach((name) => { if (!order.includes(name)) order.push(name); });
-      const limit = Math.max(1, Math.min(6, Math.floor(finite(SEMANTIC_SUBJECT.max_features, 6))));
+      const limit = Math.max(1, Math.min(8, Math.floor(finite(SEMANTIC_SUBJECT.max_features, 8))));
       const sequence = order.slice(0, limit);
       const maxLabel = Math.max(8, Math.min(64, Math.floor(finite(SEMANTIC_SUBJECT.max_label_chars, 48))));
       const label = String(subject.label || subject.name || "object")
