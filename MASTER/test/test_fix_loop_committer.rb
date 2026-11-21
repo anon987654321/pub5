@@ -289,7 +289,7 @@ class TestFixLoopCommitter < Minitest::Test
   end
 
   def test_architecture_scope_blocks_an_unowned_path
-    git = FakeGit.new([], ["RAILS/apps.yml", "TODO.md"])
+    git = FakeGit.new([], ["RAILS/apps.yml", "MASTER/convergence.yml"])
     bus = FakeBus.new
     committer = Master::Fix::FixLoop::Committer.new(git:, bus:, root: Master::REPO_ROOT)
     committer.baseline!(scope: ["rails"])
