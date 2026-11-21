@@ -201,7 +201,7 @@ module Master
     tags %i[COMPLETENESS]
     fix "unresolved work markers"
     bad "  # FIXME: the retry has no cap\n"
-    good "  # the reasoning is in TODO.md\n  MARKERS = /TODO|FIXME|XXX/\n"
+    good "  # the reasoning is in convergence.yml\n  MARKERS = /TODO|FIXME|XXX/\n"
     check do |src, path|
       # The lookahead keeps TODO.md, the repo-wide backlog, from reading as a
       # marker — see data/laws.yml `unfinished`, which learned this at :veto.
