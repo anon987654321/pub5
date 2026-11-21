@@ -59,6 +59,11 @@ are documented in [RUNBOOK.md](RUNBOOK.md). Read that runbook before SSH,
   `OPENBSD/data/root.crontab`.
 
 Read [CLAUDE.md](CLAUDE.md) for operational sharp edges and
-[PATH_OWNERSHIP.yml](PATH_OWNERSHIP.yml) before changing a path. The local
-manual pages are under `mirror/usr/local/man/`; exact-release manual and
-evidence requirements are defined in [RUNBOOK.md](RUNBOOK.md).
+[PATH_OWNERSHIP.yml](PATH_OWNERSHIP.yml) before changing a path. The exact-release
+manual and evidence requirements are defined in [RUNBOOK.md](RUNBOOK.md).
+Render the local pub5 manual pages from the repository root:
+
+```sh
+MANPATH="$PWD/OPENBSD/mirror/usr/local/man" man -P cat 8 vps-deploy
+MANPATH="$PWD/OPENBSD/mirror/usr/local/man" man -P cat 8 pub5-admin
+```
