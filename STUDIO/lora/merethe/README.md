@@ -153,7 +153,7 @@ watches:
 
 \`\`\`sh
 ruby STUDIO/dilla/dilla.rb industrial-techno --bars 8 --out dilla.wav
-ruby STUDIO/promo.rb --subject merethe --audio dilla.wav --out merethe-promo.mp4
+ruby STUDIO/replicate/promo.rb --subject merethe --audio dilla.wav --out merethe-promo.mp4
 \`\`\`
 
 \`promo.rb\` pushes each still, crossfades them, lays the \`dilla_heavy\` film

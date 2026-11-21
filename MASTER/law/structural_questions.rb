@@ -356,7 +356,7 @@ module Master
 
 
           def check(code, path:)
-            # Tests reach private engine methods by `send` on purpose (STUDIO/test/tool_test_helper.rb).
+            # Tests reach private engine methods by `send` on purpose (STUDIO/replicate/test/tool_test_helper.rb).
             return [] if !path.to_s.end_with?(".rb", ".rake") || path.to_s.match?(%r{(?:\A|/)test/})
 
             code.lines.each_with_index.filter_map do |line, index|

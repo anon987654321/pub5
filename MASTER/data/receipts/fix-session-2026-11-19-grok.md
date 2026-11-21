@@ -61,7 +61,7 @@ Changed surfaces (non-exhaustive):
 - MASTER/bin/ruby, dev-bootstrap, doctor, master-mobile-install, sandbox-bootstrap, strip-ruby-version, tools/hook_ruby.rb, tools/self_test.rb
 - OPENBSD/lib/environment.rb, ruby_select.sh, mirror helper scripts
 - RAILS/*/Gemfile (incl. hjerterom), apps.yml
-- STUDIO/doctor.rb
+- STUDIO/replicate/doctor.rb
 - data: capability_tiers.yml, laws.yml (compatibility_floor), mobile.yml, operator_seams.yml
 - Related test expectations updated to the new floor
 

@@ -80,7 +80,7 @@ class TestCorePaths < Minitest::Test
       "STUDIO/lora/ragnhild/weights/model.safetensors",
       "STUDIO/lora/merethe/dataset/captions.json",
       "STUDIO/lora/johann_selfie_01.jpg",
-      "STUDIO/selfies/manifest.js",
+      "STUDIO/lora/selfies/manifest.js",
     ].each do |path|
       assert Master::Soul.preserved_asset?(path, root: Master::REPO_ROOT), path
       assert repo_paths.sacred?(path), path

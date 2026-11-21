@@ -34,9 +34,9 @@ require "digest"
 require "time"
 require "tmpdir"
 require "tempfile"
-require_relative "../subprocess"
-require_relative "../analog_core"
-require_relative "../api"
+require_relative "../replicate/subprocess"
+require_relative "analog_core"
+require_relative "../replicate/api"
 require_relative "lib/reference_analyzer"
 
 module Dilla
@@ -322,7 +322,7 @@ module Dilla
   def interactive_wizard
     return @interactive_wizard if defined?(@interactive_wizard)
 
-    require_relative "../interactive"
+    require_relative "../replicate/interactive"
     @interactive_wizard = Studio::Interactive.new
   rescue LoadError
     @interactive_wizard = nil
@@ -346,14 +346,14 @@ module Dilla
   end
 
   def default_render_directory
-    require_relative "../output_paths"
+    require_relative "../replicate/output_paths"
     Studio::OutputPaths.dilla_render_directory
   rescue StandardError
     "."
   end
 
   def output_path(opts)
-    require_relative File.join("..", "output_paths")
+    require_relative File.join("..", "replicate", "output_paths")
     case opts.source
     when "dilla-render-directory"
       puts Studio::OutputPaths.dilla_render_directory(at: opts.output_at)
@@ -434,7 +434,7 @@ module Dilla
   def render_destination_root
     env = ENV["DILLA_OUTPUT_DIR"].to_s.strip
     dir = if env.empty?
-            require_relative File.join("..", "output_paths")
+            require_relative File.join("..", "replicate", "output_paths")
             Studio::OutputPaths.dilla_render_directory
           else
             File.expand_path(env)
@@ -1745,7 +1745,7 @@ module Dilla
       cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
              "-i", source, "-t", MAX_SECONDS.to_s,
              "-ac", "1", "-ar", SAMPLE_RATE.to_s, "-f", "f32le", raw.path]
-      out, err, status = Open3.capture3(*cmd)
+      out, err, status = Open3.capture3(Studio::Subprocess.environment, *cmd)
       unless status.success?
         warn "dilla sample-flip: ffmpeg could not decode #{source}: #{err.lines.last.to_s.strip}"
         return nil
@@ -2766,7 +2766,7 @@ module Dilla
   def encode_mp3(wav_path, mp3_path)
     return [false, nil] if which("ffmpeg").nil?
 
-    _out, err, status = Open3.capture3("ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+    _out, err, status = Open3.capture3(Studio::Subprocess.environment, "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
                                        "-i", wav_path, "-codec:a", "libmp3lame", "-b:a", "192k", mp3_path)
     [status.success?, err]
   end
@@ -2783,7 +2783,7 @@ module Dilla
     return unless which("ffmpeg")
 
     mp4 = "#{wav_path.sub(/\.wav\z/, '')}.mp4"
-    system("ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+    system(Studio::Subprocess.environment, "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
            "-i", wav_path, "-filter_complex",
            "[0:a]showwaves=s=1280x360:mode=cline:colors=cyan|magenta[v];" \
            "[0:a]showcqt=s=1280x360:fps=20[cq];[v][cq]vstack[out]",
@@ -2926,7 +2926,7 @@ module Dilla
   def reference(opts)
     source = opts.source
     style = %w[j_dilla industrial_techno general].include?(opts.style) ? opts.style : "j_dilla"
-    require_relative File.join("..", "output_paths")
+    require_relative File.join("..", "replicate", "output_paths")
     root = Studio::OutputPaths.reference_root
     stamp = Time.now.utc.strftime("%Y%m%dT%H%M%SZ")
     workspace = File.join(root, "analysis-#{stamp}")

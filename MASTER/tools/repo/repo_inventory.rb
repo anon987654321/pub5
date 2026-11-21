@@ -19,7 +19,7 @@ INVENTORY_ROOT = File.expand_path("../../..", __dir__)
 # one nobody acts on, and that is how it stayed wrong.
 #
 # The four governed trees are the only tracked root directories. Claude Code's
-# native .claude/settings.json path is a symlink into STUDIO/agent-guidance;
+# native .claude/settings.json path is a symlink into STUDIO/replicate/agent-guidance;
 # Copilot reads root AGENTS.md, so no generated .github directory is needed.
 # test/test_lifecycle_tools.rb holds both lists to the tree in both directions.
 ALLOWED_ROOT_FILES = %w[

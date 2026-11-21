@@ -35,7 +35,7 @@ class TestSandboxPolicy < Minitest::Test
       "rake -f MASTER/Rakefile test",
       "rake -f MASTER/Rakefile audit",
       "rake -f MASTER/Rakefile ux:baymard",
-      "rake -f STUDIO/Rakefile check",
+      "rake -f STUDIO/replicate/Rakefile check",
       "ruby RAILS/test/run_all.rb",
       "ruby OPENBSD/test/run_all.rb",
       "ruby MASTER/checks/runner.rb --all",

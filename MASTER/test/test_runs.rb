@@ -80,7 +80,7 @@ class TestRuns < Minitest::Test
                       "#{prefix} contributed only #{found} test files; test discovery likely stopped matching"
     end
 
-    assert_includes Operator::Runs.globs.keys, "STUDIO/Rakefile",
+    assert_includes Operator::Runs.globs.keys, "STUDIO/replicate/Rakefile",
                     "the Dilla and idea-picture suites must be part of the runner census"
   end
 
@@ -109,10 +109,10 @@ class TestRuns < Minitest::Test
     studio = Operator::Runs.test_files.select { |path| path.start_with?("STUDIO/") }
 
     assert_operator studio.size, :>=, 2, "STUDIO's two maintained suites are not being read"
-    assert_includes studio, "STUDIO/test/dilla_test.rb"
-    assert_includes studio, "STUDIO/test/idea_picture_test.rb"
-    assert_includes Operator::Runs.who_runs("STUDIO/test/dilla_test.rb"), "STUDIO/Rakefile"
-    assert_includes Operator::Runs.who_runs("STUDIO/test/idea_picture_test.rb"), "STUDIO/Rakefile"
+    assert_includes studio, "STUDIO/replicate/test/dilla_test.rb"
+    assert_includes studio, "STUDIO/replicate/test/idea_picture_test.rb"
+    assert_includes Operator::Runs.who_runs("STUDIO/replicate/test/dilla_test.rb"), "STUDIO/replicate/Rakefile"
+    assert_includes Operator::Runs.who_runs("STUDIO/replicate/test/idea_picture_test.rb"), "STUDIO/replicate/Rakefile"
   end
 
   # What makes a file a test is the directory, not the name — three source files

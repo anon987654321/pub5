@@ -161,7 +161,7 @@ module Master
       end
 
       def studio_test_commands(label, paths)
-        return [] unless paths.any? { |path| path.start_with?("STUDIO/test/") } && File.file?(File.join(@root, "STUDIO", "Rakefile"))
+        return [] unless paths.any? { |path| path.start_with?("STUDIO/replicate/test/") } && File.file?(File.join(@root, "STUDIO", "replicate", "Rakefile"))
 
         [{ label: "STUDIO rake test", argv: [RbConfig.ruby, "-S", "rake", "test"], chdir: File.join(@root, "STUDIO") }]
       end

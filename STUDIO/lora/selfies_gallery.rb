@@ -3,14 +3,14 @@
 
 # selfies_gallery — build the manifest the selfies page reads.
 #
-# The gallery (STUDIO/selfies.html) shows a subject's stills and films over the
+# The gallery (STUDIO/lora/selfies/selfies.html) shows a subject's stills and films over the
 # dilla bed. The renders live in STUDIO/lora/ and are not tracked; this tool
-# scans them and writes STUDIO/selfies/manifest.js, the one generated file the
+# scans them and writes STUDIO/lora/selfies/manifest.js, the one generated file the
 # page needs, so the page stays static and the media stays private and out of
 # git.
 #
 #   ruby STUDIO/lora/selfies_gallery.rb
-#   ruby STUDIO/lora/selfies_gallery.rb --subject ragnhild --soundtrack selfies/dilla.mp3
+#   ruby STUDIO/lora/selfies_gallery.rb --subject ragnhild --soundtrack lora/selfies/dilla.mp3
 #   ruby STUDIO/lora/selfies_gallery.rb api '{"action":"build"}'
 #
 # It reads only; it never renders, uploads or deletes. Each included subject
@@ -21,7 +21,7 @@
 require "json"
 require "optparse"
 require "fileutils"
-require_relative "../api"
+require_relative "../replicate/api"
 require_relative "consent"
 
 module Studio
@@ -29,8 +29,8 @@ module Studio
     class SelfiesGallery
       ROOT = File.expand_path("..", __dir__).freeze
       LORA = File.join(ROOT, "lora").freeze
-      DEFAULT_OUT = File.join(ROOT, "selfies", "manifest.js").freeze
-      DEFAULT_SOUNDTRACK = "selfies/dilla.mp3".freeze
+      DEFAULT_OUT = File.join(ROOT, "lora", "selfies", "manifest.js").freeze
+      DEFAULT_SOUNDTRACK = "lora/selfies/dilla.mp3".freeze
 
       STILL_EXTENSIONS = %w[jpg jpeg png webp].freeze
       FILM_EXTENSIONS = %w[mp4 webm mov].freeze

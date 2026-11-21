@@ -1,10 +1,10 @@
 ---
 ownership:
-  ../STUDIO/output_paths.rb:
+  ../STUDIO/replicate/output_paths.rb:
     purpose: canonical STUDIO path policy - the root shim that used to shadow it is retired (2026-11-02)
     risk: low
     check: cd STUDIO && rake check
-  ../STUDIO/subprocess.rb:
+  ../STUDIO/replicate/subprocess.rb:
     purpose: canonical STUDIO subprocess boundary - the root shim that used to shadow it is retired (2026-11-02)
     risk: medium
     check: cd STUDIO && rake check

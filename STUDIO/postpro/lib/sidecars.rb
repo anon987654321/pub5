@@ -97,7 +97,7 @@ end
 # frame whose sidecar carries it can be re-graded identically by checking out
 # the commit whose files hash to it.
 GRADE_VERSION = Digest::SHA256.hexdigest(
-  [POSTPRO_ENTRY, File.expand_path("../analog_core.rb", POSTPRO_DIR),
+  [POSTPRO_ENTRY, File.expand_path("../dilla/analog_core.rb", POSTPRO_DIR),
    *Dir[File.join(POSTPRO_DIR, "*.rb"), File.join(POSTPRO_DIR, "lib", "*.rb")].sort].uniq
     .map { |path| File.binread(path) }.join,
 )[0, 12].freeze

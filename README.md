@@ -41,7 +41,7 @@ published pair or editable source; shared bases, build/check/print tools,
 templates and research live under `BIZ/tools/`.
 
 Start with [MASTER](MASTER/README.md), [RAILS](RAILS/README.md),
-[OPENBSD](OPENBSD/RUNBOOK.md), [STUDIO](STUDIO/README.md) or
+[OPENBSD](OPENBSD/RUNBOOK.md), [STUDIO](STUDIO/replicate/README.md) or
 [BIZ](BIZ/README.md), depending on the work.
 
 ## Documentation standard
@@ -68,7 +68,7 @@ literal. The full editorial contract lives in [MASTER/AGENTS.md](MASTER/AGENTS.m
 | MASTER | `MASTER/AGENTS.md` and `MASTER/README.md` |
 | RAILS | `RAILS/CLAUDE.md`, `RAILS/README.md`, then the target app or engine README and any local `AGENTS.md` |
 | OPENBSD | `OPENBSD/CLAUDE.md`, `OPENBSD/RUNBOOK.md` |
-| STUDIO | `STUDIO/README.md` and the target tool's README |
+| STUDIO | `STUDIO/replicate/README.md` and the target tool's README |
 | BIZ | `BIZ/README.md` and the target workstream's source/production profile |
 
 Do not assume every tree has an `AGENTS.md`: use the maintained entrypoint

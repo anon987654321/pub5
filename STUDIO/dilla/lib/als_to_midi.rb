@@ -2,7 +2,7 @@
 
 require "fileutils"
 require_relative "als"
-require_relative "../../subprocess"
+require_relative "../../replicate/subprocess"
 
 module Studio
   module ALS

@@ -110,7 +110,7 @@ its share of the mix, `--sample-slices` the grid.
 
 ## Where renders go
 
-`DILLA_OUTPUT_DIR` or `STUDIO/output_paths.rb` decides: the dated directory
+`DILLA_OUTPUT_DIR` or `STUDIO/replicate/output_paths.rb` decides: the dated directory
 under `$XDG_DATA_HOME/dilla-renders/`, falling back to `~/Downloads/dilla-renders/`.
 `ruby dilla.rb output-path dilla-render-directory` and `output-path
 reference-root` answer the same policy for MASTER. `out/`, `samples/` and
@@ -152,10 +152,10 @@ rclone copy "gdrive:Ableton Projects" "$HOME/Ableton-Archive" --progress
 Inspect and export a set (the parser also accepts extracted, plain XML):
 
 ```sh
-ruby STUDIO/bin/studio ableton inventory "$HOME/Ableton-Archive" --export-all
-ruby STUDIO/bin/studio ableton export "$HOME/Ableton-Archive/My Set/My Set.als"
-ruby STUDIO/bin/studio ableton midi "$HOME/Ableton-Archive/My Set/My Set.als" --out recovered.mid
-ruby STUDIO/bin/studio ableton midi "$HOME/Ableton-Archive/My Set/My Set.als" \
+ruby STUDIO/replicate/bin/studio ableton inventory "$HOME/Ableton-Archive" --export-all
+ruby STUDIO/replicate/bin/studio ableton export "$HOME/Ableton-Archive/My Set/My Set.als"
+ruby STUDIO/replicate/bin/studio ableton midi "$HOME/Ableton-Archive/My Set/My Set.als" --out recovered.mid
+ruby STUDIO/replicate/bin/studio ableton midi "$HOME/Ableton-Archive/My Set/My Set.als" \
   --out recovered.mid --wav recovered.wav --soundfont "$HOME/SoundFonts/bank.sf2" --analog
 ```
 

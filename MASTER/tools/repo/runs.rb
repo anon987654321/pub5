@@ -40,7 +40,7 @@ module Operator
       RAILS/test/run_all.rb
       RAILS/package.json
       MASTER/tools/rails/premerge.rb
-      STUDIO/Rakefile
+      STUDIO/replicate/Rakefile
       MASTER/checks/runner.rb
       MASTER/checks/release.rb
     ].freeze
@@ -68,7 +68,7 @@ module Operator
       ],
       # STUDIO's Rakefile builds this path from separate File.join arguments,
       # so the source-glob reader cannot recover the directory on its own.
-      "STUDIO/Rakefile" => ["STUDIO/test/*_test.rb"],
+      "STUDIO/replicate/Rakefile" => ["STUDIO/replicate/test/*_test.rb"],
     }.freeze
 
     # npm scripts name their test files inside `node --test ...` strings, so no

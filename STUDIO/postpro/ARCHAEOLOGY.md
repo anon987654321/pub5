@@ -69,7 +69,7 @@ The new engine preserves the original user intent but intentionally changes the 
 The two documents that were folded into implementation—not lost to an accidental delete—are
 still recoverable at their exact historical snapshot:
 - [`STUDIO/AMBITION.md` — all 168 proposals](https://github.com/anon987654321/pub4/blob/5c15297107d131eef8881241f6e84190670a2225/STUDIO/AMBITION.md)
-- [`STUDIO/PHOTOGRAPHY.md` — the four-layer photography model and refitted visual laws](https://github.com/anon987654321/pub4/blob/5c15297107d131eef8881241f6e84190670a2225/STUDIO/PHOTOGRAPHY.md)
+- [`STUDIO/lora/PHOTOGRAPHY.md` — the four-layer photography model and refitted visual laws](https://github.com/anon987654321/pub4/blob/5c15297107d131eef8881241f6e84190670a2225/STUDIO/lora/PHOTOGRAPHY.md)
 - [The later folding/deletion commit](https://github.com/anon987654321/pub4/commit/80709c0712559031fef10fe486f530ac35b185fc), whose message says those ideas now stand beside the code that uses them.
 
 This record preserves the trail without reintroducing two competing top-level specifications.

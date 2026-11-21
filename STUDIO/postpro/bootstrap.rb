@@ -2,7 +2,7 @@
 
 require "fileutils"
 require "json"
-require_relative "../subprocess"
+require_relative "../replicate/subprocess"
 require "rbconfig"
 require "time"
 

@@ -90,7 +90,7 @@ dilla stay operator-owned)?
 
 ## User growth loops that cost nothing new to build
 
-- **Gallery pages as landing surfaces.** `STUDIO/selfies.html` reads a generated
+- **Gallery pages as landing surfaces.** `STUDIO/lora/selfies/selfies.html` reads a generated
   manifest and nothing else — the same pattern one folder per subject turns into
   public portfolio pages (subject-filtered, screen-reader captioned, bed never
   autoplaying). Each gallery is a shareable URL that demos the pipeline without any
@@ -110,7 +110,7 @@ dilla stay operator-owned)?
 ## What must stay true (laws and honesty)
 
 - Media out of git: renders, beds and private likenesses never enter the repo
-  (`STUDIO/README.md`); a revenue stream that requires checked-in media is rejected.
+  (`STUDIO/replicate/README.md`); a revenue stream that requires checked-in media is rejected.
 - Consent: any likeness work routes through the same provider-consent shape mytoonz
   already migrated; no third-party faces, and the two trained subjects (johann,
   ragnhild) are the operator's own studio models.

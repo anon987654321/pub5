@@ -47,7 +47,7 @@ POSTPRO_LIB = %w[
 # Everything --vocab-check reads as this tool's source.
 POSTPRO_SOURCE_FILES = [
   POSTPRO_ENTRY,
-  File.expand_path("../analog_core.rb", POSTPRO_DIR),
+  File.expand_path("../dilla/analog_core.rb", POSTPRO_DIR),
   File.join(POSTPRO_DIR, "legacy_effects.rb"),
   File.join(POSTPRO_DIR, "dilla_analog.rb"),
   *(%w[early_modes] + POSTPRO_LIB).map { |name| File.join(POSTPRO_DIR, "lib", "#{name}.rb") },
@@ -233,7 +233,7 @@ end
 if __FILE__ == $0
   status = begin
     if ARGV.first == "api"
-      require_relative "../api"
+      require_relative "../replicate/api"
       postpro_api
     elsif ARGV.include?("--video")
       require_relative "motion"

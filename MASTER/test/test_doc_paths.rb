@@ -171,7 +171,7 @@ class TestDocPaths < Minitest::Test
     MASTER/FACE_WORLD.md
     BIZ/RESTORATION_REPORT.md
     BIZ/tools/fetat_proposal.md
-    STUDIO/agent-guidance/claude/agents/rails-layout-refiner.md
+    STUDIO/replicate/agent-guidance/claude/agents/rails-layout-refiner.md
     RAILS/__shared/SOCIAL_FRONT_PAGE.md
     MASTER/data/law/TREE_CONTRACTS.md
     STUDIO/postpro/ARCHAEOLOGY.md
@@ -196,7 +196,7 @@ class TestDocPaths < Minitest::Test
     RAILS/amber/__logo/PROPOSALS.md
     RAILS/amber/__logo/RESEARCH.md
     SECURITY.md
-    STUDIO/PHOTOGRAPHY.md
+    STUDIO/lora/PHOTOGRAPHY.md
     STUDIO/vendor/tone/LICENSE.md
   ].freeze
 

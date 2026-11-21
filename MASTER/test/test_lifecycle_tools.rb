@@ -54,7 +54,7 @@ class LifecycleToolsSpec < Minitest::Test
     link = File.join(repo, ".claude")
 
     assert File.symlink?(link)
-    assert_equal "STUDIO/agent-guidance/claude", File.readlink(link)
+    assert_equal "STUDIO/replicate/agent-guidance/claude", File.readlink(link)
     assert File.file?(File.join(link, "settings.json"))
   end
 

@@ -3,6 +3,7 @@
 require "yaml"
 require "json"
 require "rbconfig"
+require_relative "../replicate/subprocess"
 
 # Consolidated LoRA craft: what a photograph of a subject can be asked for, in
 # words a FLUX.1-dev person LoRA acts on, plus the selfie sittings the series
@@ -34,10 +35,10 @@ module Studio
       module_function
 
       def run(argv)
-        require_relative "../api"
+        require_relative "../replicate/api"
         return Studio::Api.respond(api_actions, argv:) if Studio::Api.requested?(argv)
 
-        require_relative "../interactive"
+        require_relative "../replicate/interactive"
         wizard = Studio::Interactive.new
         return run_flags(argv) unless argv.empty? && wizard.tty?
 
@@ -131,12 +132,12 @@ module Studio
       end
 
       def train_command(argv)
-        success = system(RbConfig.ruby, File.expand_path("train.rb", __dir__), *argv)
+        success = system(Studio::Subprocess.environment, RbConfig.ruby, File.expand_path("train.rb", __dir__), *argv)
         success ? 0 : ($?.exitstatus || 1)
       end
 
       def film_command(argv)
-        success = system(RbConfig.ruby, File.expand_path("selfie_film.rb", __dir__), *argv)
+        success = system(Studio::Subprocess.environment, RbConfig.ruby, File.expand_path("selfie_film.rb", __dir__), *argv)
         success ? 0 : ($?.exitstatus || 1)
       end
 
@@ -169,7 +170,7 @@ module Studio
       end
 
       def validate_with_flags(argv)
-        success = system(RbConfig.ruby, File.expand_path("validate.rb", __dir__), *argv)
+        success = system(Studio::Subprocess.environment, RbConfig.ruby, File.expand_path("validate.rb", __dir__), *argv)
         success ? 0 : ($?.exitstatus || 1)
       end
 
@@ -178,7 +179,7 @@ module Studio
         subject = wizard.ask("Subject", default: "ragnhild")
         count = wizard.number("How many sittings", default: 6, range: 1..24)
         # A selfie series means this subject's own trained identity.
-        success = system(RbConfig.ruby, File.expand_path("../photograph.rb", __dir__),
+        success = system(Studio::Subprocess.environment, RbConfig.ruby, File.expand_path("../photograph.rb", __dir__),
                         "--selfie-series", "--subject", subject, "--count", count.to_s)
         success ? 0 : ($?.exitstatus || 1)
       end

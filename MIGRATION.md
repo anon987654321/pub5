@@ -120,9 +120,9 @@ RAILS 1,800–2,200, OPENBSD 100–150, STUDIO 40–50).
 - Screenshot contact-sheet generation is owned by MASTER through
   `MASTER/tools/visual/sheets.rb`; STUDIO does not keep a duplicate Python
   implementation of the same review workflow.
-- `STUDIO/bin/studio` is the one CLI in front of dilla and postpro: a thin
+- `STUDIO/replicate/bin/studio` is the one CLI in front of dilla and postpro: a thin
   dispatcher to `dilla/dilla.rb` and the postpro entrypoints, so both tools
-  are reachable through one command. `STUDIO/Rakefile` remains the tree's
+  are reachable through one command. `STUDIO/replicate/Rakefile` remains the tree's
   check surface.
 
 ### Phase 5 — MASTER

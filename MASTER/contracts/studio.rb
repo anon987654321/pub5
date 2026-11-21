@@ -38,7 +38,7 @@ module Contracts
     end
 
     # Query STUDIO's own path authority over the executable boundary. MASTER
-    # must not load STUDIO/output_paths.rb as a sibling implementation.
+    # must not load STUDIO/replicate/output_paths.rb as a sibling implementation.
     def output_path(kind:, at: Time.now.utc)
       return query_output_path(kind:, at:) if kind.to_sym == :dilla_render_directory
 

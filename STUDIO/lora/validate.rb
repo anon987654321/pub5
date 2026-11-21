@@ -454,7 +454,7 @@ end
 
 if $PROGRAM_NAME == __FILE__
   require "optparse"
-  require_relative "../interactive"
+  require_relative "../replicate/interactive"
 
   options = {}
   wizard = Studio::Interactive.new

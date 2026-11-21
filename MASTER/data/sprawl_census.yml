@@ -96,7 +96,7 @@
 # path could commit. The nine files added since the last set (0755994, which
 # held 7,938) landed upstream on main: ARCHITECTURE.md, bin/bootstrap,
 # BIZ/ragnhild/ragnhild_legater.pdf, three RAILS tests and known_failures.yml,
-# the messenger attachment test, and STUDIO/vendor/tone (LICENSE.md and
+# the messenger attachment test, and STUDIO/dilla/vendor/tone (LICENSE.md and
 # Tone.min.js) - one new directory. No path added by this session; the count is
 # corrected to what HEAD already carries, not raised above it.
 # 2026-11-19 (8): re-set to the checkout as it stands. The instrument reads
@@ -138,7 +138,7 @@
 # (11), all landed upstream on main by parallel sessions, none by the
 # session recording this: STUDIO/lora/train.rb, review.rb and
 # training_standards.yml with their two proofs
-# (STUDIO/test/lora_training_test.rb, lora_review_test.rb) — the
+# (STUDIO/replicate/test/lora_training_test.rb, lora_review_test.rb) — the
 # consent-gated training standards and review instruments the lora
 # workstream contracts; MASTER/test/test_exec_env.rb — the Io::Exec
 # environment regression; BIZ/research/husleieloven-2026.md — the sourced

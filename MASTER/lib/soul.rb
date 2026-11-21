@@ -61,8 +61,8 @@ module Master
       STUDIO/lora/*/model.yml
       STUDIO/lora/*_selfie_*
       STUDIO/lora/*_film_*
-      STUDIO/selfies
-      STUDIO/selfies/**
+      STUDIO/lora/selfies
+      STUDIO/lora/selfies/**
       STUDIO/postpro/models
       STUDIO/postpro/models/**
     ].freeze

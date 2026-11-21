@@ -307,7 +307,7 @@ class TestOwnerRegistryTasks < Minitest::Test
   def test_backlog_executor_selects_deployment_safety_before_creative_acceptance
     rows = [
       { id: "studio-check", text: "Run the STUDIO full suite.", tree: "STUDIO", kind: "mechanical",
-        scope_paths: ["STUDIO/test/suite_test.rb"], done_when: "rake test", size: "s", section: "STUDIO acceptance" },
+        scope_paths: ["STUDIO/replicate/test/suite_test.rb"], done_when: "rake test", size: "s", section: "STUDIO acceptance" },
       { id: "openbsd-runner", text: "Run the updated OPENBSD deployment runner and receipt tests.",
         tree: "OPENBSD", kind: "mechanical", scope_paths: ["OPENBSD/test/runner_test.rb"],
         done_when: "rake test", size: "s", section: "OPENBSD production safety" },
