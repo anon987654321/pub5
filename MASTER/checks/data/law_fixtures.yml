@@ -1442,7 +1442,7 @@ laws:
     file: "/repo/app/models/example.rb"
     bad: "  # FIXME: the retry has no cap\n"
     good: |2
-        # the reasoning is in TODO.md
+        # the reasoning is in convergence.yml
         MARKERS = /TODO|FIXME|XXX/
   NO_SILENT_TEST_SKIP:
     status: fixture
