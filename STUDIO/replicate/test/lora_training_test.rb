@@ -161,4 +161,8 @@ class TestStudioLoraTrainingRunner < Minitest::Test
   def test_all_three_subjects_are_the_default_batch
     assert_equal %w[johann ragnhild merethe], Studio::Lora::Training::SUBJECTS
   end
+
+  def test_canonical_final_render_count_matches_the_four_portrait_release
+    assert_equal 4, Studio::Lora::Training::STANDARD.fetch("review").fetch("final_render_count")
+  end
 end
