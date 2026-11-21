@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
 require "open3"
+require "digest"
+require "json"
+require "uri"
+require "net/http"
+require "fileutils"
 
 module Master
   module Ground
@@ -206,8 +211,6 @@ module Master
 
         private
 
-        # Through git!, where every runtime commit refuses a sacred path; path-scoped, so the
-        # shared index stays out of it. nil when it landed, else the Result that says why not.
         def commit(repo, message:, paths:)
           Master::Io::GitOperations.new(repo).git!("commit", "-m", message, "--", *paths)
           nil
@@ -247,16 +250,11 @@ module Master
         end
       end
 
-      # Backup — openrsync standing order.
       class Backup < Base
         REMOTE_HOST = "s4vm23@wingman1.openbsd.amsterdam"
         REMOTE_PATH = "backup"
         SSH_OPTS = %w[-o BatchMode=yes -o ConnectTimeout=10].freeze
 
-        # The repo root is one level above MASTER. This was "../../..", which
-        # climbed three and landed outside the checkout entirely (/home on the
-        # VPS), so the order would have rsynced the wrong tree to the remote.
-        # Named so the path is assertable without executing the sync.
         def source_root = File.expand_path("..", root)
 
         def call
@@ -279,7 +277,6 @@ module Master
         end
       end
 
-      # Continuous self-audit: scans lib/ against the axioms and reports drift.
       class ConstitutionDrift < Base
         STATE_PATH = "runtime/constitution_drift.json"
 
@@ -297,7 +294,6 @@ module Master
 
         private
 
-        # total, delta-since-last-run, and per-axiom counts.
         def build_report(scanner)
           by_axiom = tally_violations(scanner)
           total = by_axiom.values.sum
@@ -311,7 +307,6 @@ module Master
              .sort
         end
 
-        # axiom_tag => violation count, across all of lib/.
         def tally_violations(scanner)
           lib_files.each_with_object(Hash.new(0)) do |path, acc|
             result = scanner.scan(path, depth: :deep)
@@ -320,7 +315,6 @@ module Master
           end
         end
 
-        # improved | regressed | steady — caught the moment a defect lands.
         def publish_drift(report)
           delta = report[:delta]
           kind = if delta.negative?
@@ -386,6 +380,173 @@ module Master
         end
       end
 
+      # General-purpose public page scraper for StandingOrders.
+      # Targets: data/scrape_targets.yml. Snapshots: .master/scrape/snapshots/.
+      # GET-only through SsrfGuard. No credentials, cookies, or login flows.
+      class PublicScrape < Base
+        TARGETS_PATH = "data/scrape_targets.yml"
+        SNAPSHOT_DIR = File.join(".master", "scrape", "snapshots")
+        DEFAULT_MAX_BYTES = 200_000
+        TIMEOUT_S = 20
+        EXCERPT_CHARS = 400
+
+        def call
+          targets = load_targets
+          return Result.ok(skipped: true, reason: "no targets in #{TARGETS_PATH}") if targets.empty?
+
+          FileUtils.mkdir_p(snapshot_root)
+          rows = targets.map { |target| scrape_one(target) }
+          changed = rows.count { |r| r[:status] == "changed" || r[:status] == "new" }
+          errors = rows.count { |r| r[:status] == "error" }
+
+          bus&.publish("public_scrape:ran", targets: rows.size, changed:, errors:)
+          summary = rows.map { |r| format_row(r) }.join("\n")
+          Result.ok("public_scrape: #{rows.size} target(s), #{changed} changed, #{errors} error(s)\n#{summary}")
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "Orders::PublicScrape.call", event_bus: bus)
+          Result.err(e.message)
+        end
+
+        private
+
+        def load_targets
+          path = File.join(root, TARGETS_PATH)
+          return [] unless File.exist?(path)
+
+          raw = Master.load_yaml(path)
+          list = raw.is_a?(Hash) ? Array(raw["targets"]) : Array(raw)
+          list.filter_map do |entry|
+            next unless entry.is_a?(Hash)
+
+            url = entry["url"].to_s.strip
+            next if url.empty?
+
+            {
+              url: url,
+              label: entry["label"].to_s.strip.empty? ? slug_for(url) : entry["label"].to_s.strip,
+              max_bytes: Integer(entry["max_bytes"] || DEFAULT_MAX_BYTES),
+            }
+          end
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "PublicScrape.load_targets")
+          []
+        end
+
+        def scrape_one(target)
+          uri = URI(target[:url])
+          unless Master::Io::SsrfGuard.valid_http_uri?(uri)
+            return row(target, "error", "refused: only public http(s) on standard ports")
+          end
+
+          request = Net::HTTP::Get.new(uri.request_uri)
+          request["User-Agent"] = "MASTER-public-scrape/1.0"
+          request["Accept"] = "text/html,application/xhtml+xml,application/xml,text/plain;q=0.9,*/*;q=0.8"
+
+          response = Master::Io::SsrfGuard.request(
+            uri, request,
+            max_bytes: target[:max_bytes],
+            timeout: TIMEOUT_S * 2,
+            open_timeout: TIMEOUT_S,
+            read_timeout: TIMEOUT_S,
+            write_timeout: TIMEOUT_S
+          )
+
+          code = response.code.to_i
+          unless code.between?(200, 299)
+            return row(target, "error", "HTTP #{code}")
+          end
+
+          text = plain_text(response.body.to_s)
+          fingerprint = Digest::SHA256.hexdigest(text)
+          previous = read_snapshot(target[:label])
+
+          status =
+            if previous.nil?
+              "new"
+            elsif previous["fingerprint"] == fingerprint
+              "unchanged"
+            else
+              "changed"
+            end
+
+          write_snapshot(target[:label], url: target[:url], fingerprint:, text:, status:, code:)
+          excerpt = text[0, EXCERPT_CHARS].to_s.gsub(/\s+/, " ").strip
+          row(target, status, excerpt.empty? ? "(empty body)" : excerpt)
+        rescue Master::Io::SsrfGuard::ResponseTooLarge
+          row(target, "error", "body exceeded byte cap")
+        rescue SocketError, Timeout::Error, URI::InvalidURIError => e
+          row(target, "error", e.message.to_s[0, 120])
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "PublicScrape.scrape_one", url: target[:url])
+          row(target, "error", e.message.to_s[0, 120])
+        end
+
+        def plain_text(body)
+          text = body.to_s.dup
+          text.force_encoding("UTF-8")
+          text = text.encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
+          text.gsub!(%r{<script\b[^>]*>.*?</script>}mi, " ")
+          text.gsub!(%r{<style\b[^>]*>.*?</style>}mi, " ")
+          text.gsub!(/<!--.*?-->/m, " ")
+          text.gsub!(/<[^>]+>/, " ")
+          text.gsub!(/&nbsp;/i, " ")
+          text.gsub!(/&/i, "&")
+          text.gsub!(/</i, "<")
+          text.gsub!(/>/i, ">")
+          text.gsub!(/"/i, "\"")
+          text.gsub!(/&#\d+;/, " ")
+          text.gsub!(/\s+/, " ")
+          text.strip
+        end
+
+        def snapshot_root = File.join(root, SNAPSHOT_DIR)
+
+        def snapshot_path(label)
+          safe = label.to_s.gsub(/[^A-Za-z0-9._-]/, "-")[0, 80]
+          safe = "target" if safe.empty?
+          File.join(snapshot_root, "#{safe}.json")
+        end
+
+        def read_snapshot(label)
+          path = snapshot_path(label)
+          return unless File.exist?(path)
+
+          JSON.parse(File.read(path))
+        rescue StandardError
+          nil
+        end
+
+        def write_snapshot(label, url:, fingerprint:, text:, status:, code:)
+          path = snapshot_path(label)
+          payload = {
+            "url" => url,
+            "label" => label,
+            "fingerprint" => fingerprint,
+            "status" => status,
+            "http_code" => code,
+            "chars" => text.bytesize,
+            "excerpt" => text[0, EXCERPT_CHARS],
+            "at" => Time.now.utc.iso8601,
+          }
+          File.write(path, JSON.pretty_generate(payload))
+        end
+
+        def row(target, status, detail)
+          { label: target[:label], url: target[:url], status:, detail: detail.to_s }
+        end
+
+        def format_row(r)
+          "#{r[:label]} [#{r[:status]}] #{r[:detail][0, 120]}"
+        end
+
+        def slug_for(url)
+          host = URI(url).host.to_s.gsub(/[^A-Za-z0-9.-]/, "-")
+          host.empty? ? "page" : host
+        rescue StandardError
+          "page"
+        end
+      end
+
       # Maps standing-order callable: keys to Order subclasses. Decouples the yaml
       # from class names — `callable: autocommit` is stable even if the class moves.
       module Registry
@@ -402,6 +563,7 @@ module Master
             "constitution_drift" => ConstitutionDrift,
             "backup" => Backup,
             "availability_posture" => AvailabilityPosture,
+            "public_scrape" => PublicScrape,
           }
         end
 
