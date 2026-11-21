@@ -208,6 +208,14 @@ screenshot count or previous revision.
   MASTER/scripts/probe_zai_lane.rb directory is now explicitly classified in
   scan_coverage.yml, with its operator-only role recorded (commit 19631c9).
   Both changes have isolated Ruby probes, not repository-suite acceptance.
+  The existing dependency-light `lib/portal_agent.rb` entrypoint was also
+  missing from its own exact `lib/*.rb` discipline allowlist; it is now
+  registered and the current tree/allowlist compare is 29/29 (commit 276ece4).
+  The per-fix commit contract now disables the global retry loop for these
+  single-decision tests, accepts Dmesg's optional argument shape, and preserves
+  a raised commit exception as the refusal reason rather than prefixing it with
+  a misleading generic :blocked message (commits b765ff5 and 3070822).
+  These edits are committed; focused repository tests remain NOT_RUN.
   full `rake test` census stays open (two TIMEOUT attempts recorded above).
 - [ ] **RAILS full contracts on one current revision.** Run
   `ruby RAILS/test/run_all.rb`, every app's `bin/ci` and
