@@ -858,8 +858,8 @@ class TestRG69BrowserContract < Minitest::Test
     assert_match(/<meta\s+charset=["']?utf-8/i, html)
     assert_includes html, 'href="rg69.css"'
     assert_includes html, 'src="rg69.js"'
-    tone_path = File.join(studio_root, "vendor", "tone", "Tone.min.js")
-    license_path = File.join(studio_root, "vendor", "tone", "LICENSE.md")
+    tone_path = File.join(studio_root, "dilla", "vendor", "tone", "Tone.min.js")
+    license_path = File.join(studio_root, "dilla", "vendor", "tone", "LICENSE.md")
     assert File.file?(tone_path), "missing vendored Tone.js 14.8.49"
     assert File.file?(license_path), "missing Tone.js license notice"
     assert_includes html, 'src="vendor/tone/Tone.min.js"'
