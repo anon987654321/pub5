@@ -138,7 +138,7 @@ test("Hollow Gaze and Faultline are semantic, bounded voids in the one-pixel fie
   assert.match(system, /uFaultlineHalfWidth: \{ value: voidConfiguration\(\)\.faultline\.halfWidth \}/);
   assert.match(system, /vFaultline = \(1\.0 - smoothstep\(uFaultlineHalfWidth/);
   assert.match(system, /if \(vSolo < 0\.5 && fault > 0\.62\) discard;/);
-  assert.match(system, /faultlineStrengthForState\(mode\)/);
+  assert.match(system, /faultlineStrengthForState\(mode, voids\.faultline\)/);
   assert.match(system, /gl_PointSize = 1\.0;/);
   assert.match(tokens, /density_scale:\s*0\.90/);
 });
