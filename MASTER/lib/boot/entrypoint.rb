@@ -265,9 +265,16 @@ module Master
           "root" => root,
           "at" => Time.now.utc.iso8601,
         }
-        FileUtils.mkdir_p(File.dirname(path))
+        # The persistent-state layer refuses group/world-writable /fix state,
+        # so the receipt must land private no matter what umask the caller
+        # had. mkdir_p's mode only shapes created leaves (and the umask still
+        # narrows it), hence the explicit chmod that also normalizes any
+        # broad legacy directory left by older versions.
+        dir = File.dirname(path)
+        FileUtils.mkdir_p(dir, mode: 0o700)
+        File.chmod(0o700, dir)
         tmp = "#{path}.#{Process.pid}.tmp"
-        File.write(tmp, JSON.generate(payload) + "\n", mode: "w", encoding: "UTF-8")
+        File.write(tmp, JSON.generate(payload) + "\n", mode: "w", encoding: "UTF-8", perm: 0o600)
         File.rename(tmp, path)
       rescue StandardError => e
         Master::Trace::Dmesg.status("boot0", "receipt unavailable, #{e.class}: #{e.message}", io: out)

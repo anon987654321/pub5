@@ -106,6 +106,33 @@ class TestBootEntrypoint < Minitest::Test
     end
   end
 
+  def test_boot_receipt_is_private_under_a_shared_umask
+    Dir.mktmpdir("master-entrypoint") do |root|
+      old_umask = File.umask(0o002)
+      begin
+        Master::Boot::Entrypoint.send(:write_boot_receipt!, root:, out: StringIO.new)
+      ensure
+        File.umask(old_umask)
+      end
+
+      dir = File.join(root, ".master")
+      assert_equal "700", format("%03o", File.stat(dir).mode & 0o777)
+      assert_equal "600", format("%03o", File.stat(File.join(dir, "boot.json")).mode & 0o777)
+    end
+  end
+
+  def test_boot_receipt_normalizes_a_broad_legacy_directory
+    Dir.mktmpdir("master-entrypoint") do |root|
+      dir = File.join(root, ".master")
+      FileUtils.mkdir_p(dir, mode: 0o775)
+
+      Master::Boot::Entrypoint.send(:write_boot_receipt!, root:, out: StringIO.new)
+
+      assert_equal "700", format("%03o", File.stat(dir).mode & 0o777)
+      assert_equal "600", format("%03o", File.stat(File.join(dir, "boot.json")).mode & 0o777)
+    end
+  end
+
   private
 
   # A scratch checkout with the lock reexec_mismatched_bundler! reads, and the
