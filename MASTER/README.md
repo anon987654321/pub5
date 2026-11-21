@@ -57,10 +57,15 @@ that setting, so choose a large fixed-width face there. Start at 16–18 pt in
 PuTTY, then increase it until the text is comfortable at normal viewing
 distance. Larger type is a supported operating preference, not a layout error.
 
-- **PuTTY:** open *Window → Appearance → Font*. Choose JetBrainsMono Nerd Font
-  or another fixed-width face and set its point size. Save the session so the
-  choice persists. PuTTY documents this in its
-  [Appearance panel](https://www.puttyssh.org/0.78/htmldoc/Chapter4.html).
+Install the JetBrainsMono Nerd Font Mono TTF from the
+[official Nerd Fonts release archive](https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz)
+before selecting it. The RAILS WOFF2 files are browser assets, not terminal
+font installers.
+
+- **PuTTY:** open *Window → Appearance → Font*. Choose the installed
+  JetBrainsMono Nerd Font Mono face or another fixed-width face and set its
+  point size. Save the session so the choice persists. PuTTY documents the
+  [font and size selector](https://www.puttyssh.org/0.78/htmldoc/Chapter4.html).
 - **Termux:** pinch to zoom the terminal text. To choose a font, long-press the
   terminal, open *More → Style → Choose Font*. A custom TTF may live at
   ~/.termux/font.ttf; run termux-reload-settings after changing it.
