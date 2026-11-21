@@ -23,7 +23,10 @@ ruby dilla.rb demo-each                # catalogue, one mp3 per track + manifest
 Flags: `--progression N|id --drums ID --profile NAME --groove 0.85-1.25
 --bpm X --bars N --kit K --voice V --rig R --sonitex P --sonitex-instances N
 --vcs 0-1 --drum-balance ±dB --chord-balance ±dB --seed N --performer ID
---mp3 --video/--no-video`. Kits: kit_dust / kit_break / kit_basement. Rigs:
+--mp3 --video/--no-video --overwrite`. Existing WAVs, MIDI files and sidecars are
+protected by default; pass `--overwrite` deliberately to replace regular files.
+Symlink and non-file destinations are always refused. This also applies to
+`demo-each` and `industrial-techno`. Kits: kit_dust / kit_break / kit_basement. Rigs:
 dilla_night / basement / dub_stairs. Sonitex wear: subtle / boom_bap /
 aggressive_lofi / phone_wear. Groove profiles: dilla_shadow /
 behind_the_beat / late_snare / on_grid.
