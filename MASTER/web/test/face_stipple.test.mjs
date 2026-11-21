@@ -556,7 +556,10 @@ test("stipple shares face state and obeys point and motion budgets", () => {
   assert.doesNotMatch(system, /uPointSize(?:Base|Bias|Reference|Distance|Output)/);
   assert.match(system, /vThreshold = aThreshold/);
   assert.match(system, /vThreshold > uDensity/);
-  assert.match(tokens, /density_scale:\s*0\.76/);
+  assert.match(tokens, /density_scale:\s*0\.90/);
+  assert.match(tokens, /particle_spacing_scale:\s*1\.025/);
+  assert.match(system, /uParticleSpacingScale: \{ value: particleSpacingScale\(\) \}/);
+  assert.match(system, /p = spacingOrigin \+ \(p - spacingOrigin\) \* uParticleSpacingScale;/);
   assert.match(system, /const densityScale = clamp\(window\.MASTER_FACE_CONTRACT\?\.stipple\?\.density_scale, 0\.90, 0\.7, 1\.0\)/);
 });
 
@@ -566,7 +569,10 @@ test("the swarm geometry, force constants, modes and glyph ramp live in face tok
   assert.match(tokens, /damping:\s*0\.86/);
   assert.match(tokens, /cohesion_radius:\s*0\.11/);
   assert.match(tokens, /cohesion_strength:\s*0\.045/);
-  assert.match(tokens, /separation_radius:\s*0\.045/);
+  assert.match(tokens, /separation_radius:\s*0\.05/);
+  assert.match(tokens, /fragment_strength:\s*0\.16/);
+  assert.match(system, /const fragmentActive = force === "fragment"/);
+  assert.match(system, /if \(fragmentActive && fragmentStrength > 0\)/);
   assert.match(tokens, /separation_strength:\s*0\.08/);
   assert.match(tokens, /noise_scale:\s*0\.014/);
   assert.match(tokens, /dial_modulation:\s*\n\s+activity:/);
@@ -648,11 +654,11 @@ test("stipple module boots and builds from the canonical idle profile", () => {
         desktop_points: 10800, mobile_points: 3200, desktop_particles: 200, mobile_particles: 120,
         reduced_motion_particles: 64, point_allocation: { stipple_fraction: 0.75, world_fraction: 0.25 }
       } },
-      stipple_force: { idle: "residual", warning: "residual" },
+      stipple_force: { idle: "residual", warning: "residual", error: "fragment", ready: "settle" },
       swarm: {
         enabled: true, particle_budget: 240, damping: 0.86, size_from_depth: true, cohesion_radius: 0.11, cohesion_strength: 0.045,
         residual: { fraction: 1, strength: 0.12 },
-        separation_radius: 0.045, separation_strength: 0.08, noise_scale: 0.014,
+        separation_radius: 0.05, separation_strength: 0.08, noise_scale: 0.014, fragment_strength: 0.16,
         glyph_ramp: [".", "˙", "∘", "*", "○", "●"],
         target_field: {
           head: { center: [0, 0.05, 0], scale: [1.18, 1.02, 0.82], weight: 1 },
@@ -888,6 +894,7 @@ test("stipple module boots and builds from the canonical idle profile", () => {
   assert.equal(stipple.material.uniforms.uMotionScale.value, 0);
   assert.equal(stipple.material.uniforms.uLuminosity.value, 0.76);
   assert.equal(stipple.material.uniforms.uAttract.value, 0.14);
+  assert.equal(stipple.material.uniforms.uParticleSpacingScale.value, 1.025);
   assert.equal(stipple.material.uniforms.uDepthReferenceDistance.value, 5.0);
   assert.equal(stipple.material.uniforms.uDepthScaleMin.value, 0.75);
   assert.equal(stipple.material.uniforms.uDepthScaleMax.value, 1.25);
@@ -942,6 +949,17 @@ test("stipple module boots and builds from the canonical idle profile", () => {
   assert.equal(api.updateSwarm(moving, { mode: "warning", reducedMotion: false }, 0.05, 1), true);
   assert.notDeepEqual(Array.from(moving.geometry.attributes.position.array), beforeMove);
   assert.equal(moving.geometry.attributes.aDepthRank.needsUpdate, true);
+  const fragmentSystem = api.buildFromSamples(THREE, [
+    { x: 0.8, y: 0.05, z: 0, zone: 0, bias: 1 }
+  ]);
+  const fragmentStart = fragmentSystem.geometry.attributes.position.array[0];
+  assert.equal(api.updateSwarm(fragmentSystem, { mode: "error", reducedMotion: false }, 0.05, 23), true);
+  const fragmentOpened = fragmentSystem.geometry.attributes.position.array[0];
+  assert.ok(fragmentOpened > fragmentStart, "error pushes carriers outward from the face centre");
+  assert.equal(api.updateSwarm(fragmentSystem, { mode: "ready", reducedMotion: false }, 0.05, 24), true);
+  assert.ok(fragmentSystem.geometry.attributes.position.array[0] < fragmentOpened,
+    "ready uses the existing attractor to begin rebuilding the face");
+
   const idleSystem = api.buildFromSamples(THREE, [
     { x: 0.8, y: 0, z: 0, zone: 0, bias: 1 },
     { x: 0.7, y: 0.03, z: 0.1, zone: 0, bias: 1 }
