@@ -134,7 +134,10 @@ precedents:
   status: governing
 - id: P-008
   date: '2026-11-21'
-  laws: []
+  laws:
+  - BRINGHURST
+  - STRUNK_WHITE
+  - TERMINAL_OUTPUT_TYPOGRAPHY
   question: How should MASTER's CLI and web terminal surfaces share typography?
   ruling: Use JetBrainsMono Nerd Font when installed, semantic syntax colours and
     the same visual roles in CLI and web. Set the web transcript and composer to
