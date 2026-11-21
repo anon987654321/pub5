@@ -26,7 +26,7 @@ body[data-layout="face"] #prompt-form.revealed { transform: translate(-50%,0); }
 }
 #prompt-form input, #prompt-form textarea {
   min-height: var(--tap-min); min-width: 0; padding: 8px 0;
-  font: 400 18px/1.5 var(--font-mono); color: var(--chrome-text);
+  font: 400 var(--terminal-font-size)/var(--leading-body) var(--font-mono); color: var(--chrome-text);
   caret-color: var(--chrome-focus); user-select: text; -webkit-user-select: text; touch-action: auto;
 }
 #prompt-form input::placeholder, #prompt-form textarea::placeholder { color: var(--chrome-muted); }
