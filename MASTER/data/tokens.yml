@@ -494,8 +494,9 @@ tokens:
         center: [0.08, 0.06]
         intro_wave_strength: 0.28
       # Open the field without enlarging one-pixel carriers or changing source geometry.
-      # At 0.90, ten percent fewer points pass the render threshold in every mood.
-      density_scale: 0.90
+      # At 0.76, twenty-four percent fewer points pass the render threshold in every mood,
+      # opening visible negative space while preserving the existing point budget and size.
+      density_scale: 0.76
       # Deliberate low-resolution contour stepping; subtle enough to preserve facial readability.
       aliasing:
         enabled: true
