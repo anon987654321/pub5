@@ -29,6 +29,24 @@ The default endpoint is loopback HTTP on port 5030. A remote endpoint must use p
 
 Library scans read filenames and sizes only. They do not open, tag, move, rename or delete audio. Gap matching is a filename heuristic, not an audio fingerprint or proof that two releases are identical.
 
+## Rebuild and audit a collection
+
+Compare existing path-list exports without counting directory names as tracks:
+
+```text
+/plugin run soulseek manifest {"paths":["~/MusicExports/0day.txt","~/MusicExports/samples.txt","~/MusicExports/reggae.txt"]}
+```
+
+Build a structured catalogue from an actual local music folder. Create the destination directory first; exports are written outside the music folder and require explicit consent:
+
+```text
+/plugin run soulseek catalog {"path":"~/Music","output_path":"~/.master/music/catalog.json","consent":true}
+/plugin run soulseek duplicates {"path":"~/Music","mode":"candidates"}
+/plugin run soulseek duplicates {"path":"~/Music","mode":"sha256"}
+```
+
+The catalogue groups files by their containing folder and records relative paths, sizes, formats and filename-derived title/year hints. It does not read embedded tags or audio. Manifest comparisons report exact path overlap only; different paths do not establish different recordings. Duplicate candidates share a normalized filename and size, while `sha256` verifies byte-identical content by reading each audio file. Hashing can take time on large libraries. Both modes are reports only: nothing is deleted or reorganised. Existing catalogue files are not overwritten unless `overwrite: true` is also supplied with consent.
+
 Search and result inspection do not download files. Queueing requires explicit `consent: true`, the exact unlocked filename and size from the named search result, and a rights basis admitted by MASTER's canonical plugin policy (`public_domain`, `open_license`, `artist_authorized` or `rights_owned`). One file is queued per call. Bulk acquisition is disabled. The rights basis is an operator attestation, not a legal determination; personal possession or personal-use intent alone is not a rights basis.
 
 MASTER does not bypass peer queues, locked shares, DRM, paywalls or access controls. Verify the recording, edition, source and licence before queueing. slskd's configured download directory and transfer limits remain authoritative.
