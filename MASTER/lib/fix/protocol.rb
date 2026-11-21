@@ -41,7 +41,7 @@ module Master
           "finish_semantics" => "continue_all_authorised_actionable_work_and_existing_accepted_scope; a_bare_finish_instruction_adds_no_invented_requirements",
           "execution_policy" => "land_all_actionable_authorised_reversible_repository_changes_now",
           "blocked_policy" => "do_not_fake_measurements_credentials_rights_approval_or_host_evidence",
-          "backlog_policy" => "no_new_backlog_files_or_speculative_todo_rows",
+          "work_registry_policy" => "use_owner_ledgers_only_no_new_markdown_checklists_or_speculative_rows",
           "delivery_policy" => "serial_commits_to_main_without_force_push_or_parallel_worktrees",
         }
       end
