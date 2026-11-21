@@ -111,16 +111,21 @@ def studio_photograph_options(argv)
   options
 end
 
+def studio_photograph_interactive?(arguments, tty:)
+  arguments.empty? && tty
+end
+
 if $PROGRAM_NAME == __FILE__
   if Studio::Api.requested?(ARGV)
     exit Studio::Api.respond(studio_photograph_actions, argv: ARGV)
   end
 
-  # Parse explicit flags in both interactive terminals and non-TTY automation.
-  options = studio_photograph_options(ARGV)
   wizard = Studio::Interactive.new
+  interactive = studio_photograph_interactive?(ARGV, tty: wizard.tty?)
+  # Capture the original invocation mode before OptionParser consumes flags.
+  options = studio_photograph_options(ARGV)
 
-  if ARGV.empty? && wizard.tty?
+  if interactive
     mode = wizard.choose("What shall STUDIO photograph?", [
       ["A selfie series", :series],
       ["One picture", :picture],
