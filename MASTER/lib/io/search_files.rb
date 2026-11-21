@@ -102,11 +102,19 @@ module Master
         false
       end
 
+      # Treat unreadable, empty or nil samples as binary. Under disk pressure
+      # File.read can return nil; calling include? on it previously raised
+      # NoMethodError before the rescue could classify the path.
       def binary_file?(path)
-        File.read(path, BINARY_SAMPLE_BYTES).include?("\x00")
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "search_files.binary_file", event_bus: @bus, path:)
-        true
+        sample = begin
+          File.read(path, BINARY_SAMPLE_BYTES)
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "search_files.binary_file", event_bus: @bus, path:)
+          return true
+        end
+        return true if sample.nil? || sample.empty?
+
+        sample.include?("\x00")
       end
     end
   end
