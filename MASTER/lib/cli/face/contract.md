@@ -30,8 +30,9 @@ Typed input follows `Master::CLI::TurnRouter`, the same command path as `bin/mas
 
 The terminal emulator owns its font family and size. MASTER must not issue
 font-changing OSC/escape sequences or pretend that it can set the host's
-display size. Prefer JetBrainsMono Nerd Font when installed, then any
-well-rendered fixed-width monospace face. Use a large size: 16–18 pt is a
+display size. Prefer the JetBrainsMono Nerd Font Mono build from the official
+[upstream release archive](https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz),
+then any well-rendered fixed-width monospace face. Use a large size: 16–18 pt is a
 useful PuTTY starting point; increase it further whenever that improves
 comfortable reading. Termux users resize text with pinch zoom.
 
