@@ -61,6 +61,26 @@ tokens:
           - "Keep individual identity visible during gathering, fragmentation and recovery."
           - "Bound populations, duration, amplitude, render cost and lifecycle."
           - "A failure may loosen a form; recovery must restore its canonical structure."
+      void_grammar:
+        principle: >
+          Empty space is an active shape with its own edge, scale and duration. It gives
+          individual carriers room to remain distinct and lets a signal become legible.
+        face:
+          - "Preserve deliberate gaps between neighbouring one-pixel carriers."
+          - "Use larger quiet pockets around important facial features rather than uniformly thinning the whole face."
+          - "Keep the silhouette readable while allowing selected contours to break into silence."
+        interface:
+          - "Reserve calm regions around the primary focal point, content groups and primary action."
+          - "Use asymmetrical quiet margins and pauses to establish hierarchy."
+          - "Do not fill empty areas with decorative dots, labels, lines or placeholder content."
+        motion:
+          - "A travelling signal leaves a readable wake and a quiet interval behind it."
+          - "Fragmentation creates temporary voids; reconstruction closes only the gaps needed for meaning."
+          - "Stillness must leave visible residual identity, not a blanked-out surface."
+        anti_patterns:
+          - "Uniformly sparse treatment that destroys facial or content legibility."
+          - "Random holes without a semantic cause."
+          - "Filling every void to make the interface appear busy."
       tree_translations:
         MASTER: "An original monochrome face assembled from discrete carriers; meaning-driven signal, fingerprint-like contours and legible negative space."
         RAILS: "Clear editorial hierarchy and coherent content groups; preserve each product's established visual dialect, card grammar and real media."
@@ -90,7 +110,7 @@ tokens:
       - "copied wordmarks, campaign art, characters or protected brand expression"
     composition:
       hierarchy: "one unmistakable focal point per first screen"
-      negative_space: "intentional and measured, never filled by decoration"
+      negative_space: "generous, asymmetrical and structural; void is active form, never filler space"
       surfaces: "flat and structured by alignment, type and rules"
       typography: "expressive display scale paired with readable body text"
     motion:
@@ -533,7 +553,7 @@ tokens:
       # Keep the normal carrier population; open small gaps by spacing positions, not by
       # discarding dots. The point sprite remains exactly one pixel.
       density_scale: 0.90
-      particle_spacing_scale: 1.025
+      particle_spacing_scale: 1.045
       # Deliberate low-resolution contour stepping; subtle enough to preserve facial readability.
       aliasing:
         enabled: true
@@ -635,7 +655,7 @@ tokens:
       cohesion_radius: 0.11
       cohesion_strength: 0.045
       # A slightly wider personal-space radius keeps moving carriers distinct.
-      separation_radius: 0.05
+      separation_radius: 0.055
       separation_strength: 0.08
       noise_scale: 0.014
       # Error loosens the field briefly; normal attractors reassemble it on recovery.
