@@ -34,14 +34,14 @@
     const asym = clamp(profile.asym, 0, .15);
     const eyeY = profile.id === "elema-tower" ? .02 : .12;
     const parts = [
-      { key: "outer", primitive: "ring", center: [asym * .25, 0, .04], size: [w, h, .08] },
+      { key: "outer", primitive: "ring", center: [asym * .25, 0, .06], size: [w, h, .08] },
       beam("crown", [asym * .4, .39, .05], [profile.crown, .035, .035]),
-      beam("brow", [asym, .25, .08], [profile.brow, .035, .035]),
-      { key: "left-eye", primitive: "ring", center: [-.18 - asym, eyeY, .13], size: [.105, .060, .04] },
+      beam("brow", [asym, .25, .08], [profile.brow, .06, .06]),
+      { key: "left-eye", primitive: "ring", center: [-.18 - asym, eyeY, .13], size: [.105, .060, .06] },
       { key: "right-eye", primitive: "ring", center: [.18 + asym, eyeY, .13], size: [.105, .060, .04] },
-      beam("nose", [asym * .4, -.06, .16], [.045, profile.nose, .045], "y"),
-      beam("cheeks", [asym, -.13, .045], [Math.max(.18, jaw * 1.55), .028, .035]),
-      beam("jaw", [asym, -.31, .06], [Math.max(.16, jaw * 1.65), .035, .04])
+      beam("nose", [asym * .4, -.06, .16], [.06, profile.nose, .06], "y"),
+      beam("cheeks", [asym, -.13, .045], [Math.max(.18, jaw * 1.55), .06, .06]),
+      beam("jaw", [asym, -.31, .06], [Math.max(.16, jaw * 1.65), .06, .06])
     ];
     return {
       kind: "custom",
@@ -62,7 +62,17 @@
       document.querySelector('meta[name="master-conversation-id"]')?.content ||
       document.querySelector("[data-conversation-id]")?.getAttribute("data-conversation-id") ||
       window.history?.state?.conversationId;
-    return explicit == null ? "" : String(explicit);
+    if (explicit != null && String(explicit)) return String(explicit);
+    try {
+      let session = sessionStorage.getItem("master.mask.session");
+      if (!session) {
+        session = String(Date.now()) + ":" + Math.random().toString(36).slice(2);
+        sessionStorage.setItem("master.mask.session", session);
+      }
+      return session;
+    } catch (_) {
+      return location.pathname + location.search;
+    }
   }
   function apply(index, reason) {
     const world = window.MASTER_FACE_WORLD;
@@ -78,8 +88,8 @@
     return true;
   }
 
-  const key = conversationKey();
-  const initial = key ? hash(key) % PROFILES.length : 0;
+  let key = conversationKey();
+  const initial = hash(key) % PROFILES.length;
   let current = initial;
   if (key) {
     try {
@@ -92,6 +102,7 @@
   function rotate(event) {
     const nextKey = String(event?.detail?.conversationId || event?.detail?.id || "");
     if (!nextKey || nextKey === key) return;
+    key = nextKey;
     current = (hash(nextKey) % PROFILES.length);
     try { sessionStorage.setItem("master.mask." + nextKey, String(current)); } catch (_) {}
     apply(current, "new-conversation");
