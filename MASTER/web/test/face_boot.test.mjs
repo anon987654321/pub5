@@ -1626,3 +1626,18 @@ test("MASTER web highlighter escapes source and classifies shell and Ruby tokens
   assert.ok(sandbox.output.includes('&lt;script&gt;'));
   assert.doesNotMatch(sandbox.output, /<script>/);
 });
+
+
+test("the /new command requests a new server transcript and emits the mask event", () => {
+  const actions = readFileSync(join(publicDir, "chat_actions.js"), "utf8");
+  const controller = readFileSync(join(root, "app", "controllers", "chat_controller.rb"), "utf8");
+  const routes = readFileSync(join(root, "config", "routes.rb"), "utf8");
+
+  assert.match(actions, /fetch\("\/chat\/new"/);
+  assert.match(actions, /master:conversation-created/);
+  assert.match(actions, /event\.stopImmediatePropagation\(\)/);
+  assert.match(actions, /window\.location\.reload\(\)/);
+  assert.match(controller, /def new_conversation/);
+  assert.match(controller, /httponly: true/);
+  assert.match(routes, /post "chat\/new",\s+to: "chat#new_conversation"/);
+});
