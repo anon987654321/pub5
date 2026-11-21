@@ -386,3 +386,104 @@ workstreams:
       relying on the operator looking
     implementation: OPENBSD relayd + MASTER/data/state.yml availability_posture
     proof: watched delivery drill on vm23, recorded like the restore drill
+  # --- current-revision acceptance and recovery gates ---
+  - id: master_current_revision_acceptance
+    state: evidence
+    title: Focused MASTER source, law, CLI, media and recovery suites on one compatible Ruby revision
+    implementation: MASTER/Rakefile; MASTER/test; MASTER/checks
+    proof: Rake check/test exit codes, installed Ruby/Bundler versions, revision SHA and current focused regression results
+  - id: rails_current_revision_acceptance
+    state: evidence
+    title: All RAILS application contracts, app CI lanes and shared checks on one current revision
+    implementation: RAILS/test/run_all.rb; RAILS apps/*/bin/ci; MASTER/checks/runner.rb
+    proof: Every app's CI exit code, route/browser capture revision, MASTER checks result and the exact source revision
+  - id: rails_focused_feature_acceptance
+    state: evidence
+    title: Focused billing, API, identity, Radio import, sharing, concurrency, account-merge and marketplace regressions
+    implementation: RAILS app and shared test suites
+    proof: Focused suites on the installed supported Ruby with source revision and zero hidden skips
+  - id: openbsd_runner_acceptance
+    state: evidence
+    title: Updated full OpenBSD runner and native proof on the supported host
+    implementation: OPENBSD/bin/check; OPENBSD/test/run_all.rb; OPENBSD/mirror
+    proof: Native host identity, full-profile exit code, individual suite results, PF syntax proof and no skipped test counted as pass
+  - id: studio_current_revision_acceptance
+    state: evidence
+    title: Full STUDIO check, Dilla and LoRA focused suites on the current supported runtime
+    implementation: STUDIO/Rakefile; STUDIO/test; STUDIO/postpro
+    proof: Check and test exit codes, rendered artifacts and their hashes, listening/likeness approvals kept separate
+  - id: generated_asset_freshness
+    state: partial
+    title: Generated tokens, CSS, face runtime and agent-contract pointers agree with their existing source owners
+    implementation: MASTER/tools; MASTER/web/public; RAILS build outputs
+    proof: Token/CSS check, face runtime source comparison, docs agent-contract generation check and exact generated-source digests
+  - id: law_baymard_acceptance
+    state: evidence
+    title: Law parity and Baymard UX gates on the supported toolchain
+    implementation: MASTER/law; MASTER/checks; MASTER/Rakefile
+    proof: lint:law_parity and ux:baymard exit codes plus the complete non-skipped rendered report
+  - id: fix_interruption_restart
+    state: partial
+    title: Interruption, rollback, durable Mission resumption and orphan receipt recovery survive process restart
+    implementation: MASTER/lib/fix; MASTER/lib/convergence; MASTER/test/test_fix_interruption_restart.rb
+    proof: Restart suite, checkpoint hashes, orphan receipt recovery and budget boundary evidence on one revision
+  - id: whole_repository_fix
+    state: evidence
+    title: One genuine four-report /fix over MASTER, RAILS, OPENBSD and STUDIO with BIZ document review
+    implementation: MASTER/lib/fix; MASTER/lib/convergence
+    proof: Four independent reports bound to one HEAD, candidate provenance, complete assessment receipts, verification and truthful terminal outcomes
+  - id: shared_checkout_concurrency
+    state: evidence
+    title: Shared-checkout lock ownership, interruption cleanup and path-scoped commit remain safe with another writer
+    implementation: MASTER/lib/io/git_operations.rb; MASTER/lib/fix
+    proof: Concurrent writer test, lease/lock receipt, interruption cleanup and proof no other writer's paths were staged
+  - id: council_readiness_admission
+    state: partial
+    title: Independent juror readiness is checked before /fix spends its repair budget
+    implementation: MASTER/lib/fix; MASTER/lib/ai
+    proof: Exclude each possible author family in turn and retain the independent voter quorum and admission receipt
+  - id: law_reload_diagnosis
+    state: partial
+    title: Law reload records its reason, resolved root and changed paths before reload semantics are altered
+    implementation: MASTER/lib/law; MASTER/lib/core/constitution.rb
+    proof: Reproduce the duplicate-constant warning and test the reload diagnosis against changed source paths
+  - id: external_git_root_boundary
+    state: partial
+    title: An authorised external Git root may be observed read-only without local effects crossing into it
+    implementation: MASTER/lib/io/git_operations.rb; MASTER/lib/fix
+    proof: Read-only external-root inventory plus isolated tests proving transactions, commits and cleanup cannot write there
+  - id: cli_session_receipt_observability
+    state: partial
+    title: A redacted run-specific receipt exposes the event ledger result without prompt text, tool arguments or raw stdout
+    implementation: MASTER/lib/trace; MASTER/lib/cli
+    proof: Session-scoped receipt tests for ordering, redaction, bounded output, interruption and final terminal state
+  - id: interaction_campaign_400
+    state: partial
+    title: Exact interaction and fault coverage for the 400-case campaign without mapping unrelated tests
+    implementation: RAILS/test/interaction_campaign_adapter_test.rb; MASTER/test
+    proof: Isolated state/action/fault contracts and saved case evidence for each mapped adapter
+  - id: rendered_accessibility_acceptance
+    state: evidence
+    title: Rendered geometry, accessibility tree, keyboard, VoiceOver/NVDA and human task evidence
+    implementation: MASTER/checks; RAILS/checks; RAILS/test
+    proof: Saved browser captures, computed AX results, non-skipped assistive-technology output and consented participant evidence
+  - id: biz_document_family_pipeline
+    state: partial
+    title: Distinct business plan, funding, legal, corporate and financial document profiles publish as coherent HTML/PDF pairs
+    implementation: BIZ/README.md; BIZ templates and existing document-family tooling
+    proof: Machine-checked calculations, source/HTML/PDF parity and the operator's Preserve First decision for historic correspondence templates
+  - id: historical_finding_reconciliation
+    state: partial
+    title: Remaining historical P01-P11 findings are reconciled against Git history and their live source/test owners
+    implementation: MASTER/law; MASTER/test; MASTER/data
+    proof: Each finding classified as fixed, rejected with reason or still open; focused regressions for remaining source gaps
+  - id: rendered_design_threshold_calibration
+    state: evidence
+    title: Design thresholds are calibrated on measured rendered surfaces rather than treated as universal constants
+    implementation: MASTER/checks/data/geometry_surfaces.yml; MASTER/checks/support
+    proof: Rights-cleared browser surfaces, measured distributions, false-positive review and a recorded threshold change or evidence-based refusal
+  - id: redundant_core_require_cleanup
+    state: partial
+    title: REDUNDANT_CORE_REQUIRE findings are reviewed and removed only through governed /fix with before/after proof
+    implementation: MASTER/law/ruby.rb; MASTER/test
+    proof: Exact finding inventory, /fix receipts, changed-line review, focused law fixtures and a fresh post-change scan
