@@ -186,7 +186,7 @@
   function particleSpacingScale() {
     return clamp(
       window.MASTER_FACE_CONTRACT?.stipple?.particle_spacing_scale,
-      1.025, 1.0, 1.08
+      1.045, 1.0, 1.08
     );
   }
 
