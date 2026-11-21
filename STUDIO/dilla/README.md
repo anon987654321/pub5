@@ -72,6 +72,18 @@ arranged: voicings, pattern, fills, sample plan) and `.provenance.json`
 one the seed and performer rotate per run — deleting a take loses it for
 good, so keep what you like.
 
+Audit a completed WAV without pretending a machine has listened to it:
+
+```sh
+ruby dilla.rb audit /path/to/render.wav
+```
+
+The `.audit.json` report checks RIFF/WAVE structure, delivery format, required
+sidecars, render size and SHA-256, and seed/arrangement agreement. It records
+peak/RMS/crest/LUFS measurements and a manual listening checklist. Technical
+success remains **INCONCLUSIVE** until a person has auditioned the full render;
+the command never turns structural checks into a claim about sound quality.
+
 ## Reference — learn from a recording
 
 ```sh
