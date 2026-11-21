@@ -1,0 +1,75 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Thin tmux wrapper so long-running MASTER work can be detached and reattached.
+# This is the Unix-screen style the operator asked for: create or attach a named
+# session that runs bin/master. No re-implementation of PTYs or process groups.
+#
+# Usage:
+#   bin/master-session                  # attach or create "master"
+#   bin/master-session digest           # named session
+#   bin/master-session list
+#   bin/master-session kill digest
+#
+# Detach inside the session with the tmux prefix (default Ctrl-b) then d.
+# Reattach with the same command.
+
+require "rbconfig"
+
+ROOT = File.expand_path("..", __dir__)
+MASTER = File.join(ROOT, "bin", "master")
+DEFAULT_NAME = "master"
+
+def which_tmux
+  ENV["PATH"].to_s.split(File::PATH_SEPARATOR).each do |dir|
+    candidate = File.join(dir, "tmux")
+    return candidate if File.executable?(candidate)
+  end
+  nil
+end
+
+def die(msg, code = 1)
+  warn "session0: #{msg}"
+  exit code
+end
+
+tmux = which_tmux
+die("tmux not found; install tmux (pkg_add tmux / brew install tmux / apt install tmux)", 78) unless tmux
+
+cmd = ARGV[0].to_s
+name = (ARGV[1] || DEFAULT_NAME).gsub(/[^A-Za-z0-9._-]/, "-")
+name = DEFAULT_NAME if name.empty?
+
+case cmd
+when "list", "ls"
+  exec(tmux, "list-sessions")
+when "kill", "rm"
+  target = (ARGV[1] || DEFAULT_NAME).gsub(/[^A-Za-z0-9._-]/, "-")
+  exec(tmux, "kill-session", "-t", target)
+when "help", "-h", "--help"
+  puts <<~HELP
+    master-session - detachable MASTER sessions via tmux
+
+    Usage:
+      bin/master-session [name]     create or attach named session (default: master)
+      bin/master-session list
+      bin/master-session kill name
+
+    Inside the session: Ctrl-b d to detach. Re-run the same command to reattach.
+    Long-running digests, /fix, or operators belong here so the controlling
+    terminal can close without killing the work.
+  HELP
+  exit 0
+else
+  # First argument is the session name when it does not look like a subcommand.
+  name = cmd.empty? || cmd.start_with?("-") ? DEFAULT_NAME : cmd.gsub(/[^A-Za-z0-9._-]/, "-")
+  name = DEFAULT_NAME if name.empty?
+
+  # Already exists → attach. Otherwise create a new session running bin/master.
+  if system(tmux, "has-session", "-t", name, out: File::NULL, err: File::NULL)
+    exec(tmux, "attach-session", "-t", name)
+  else
+    # -c keeps the working directory inside MASTER so relative paths stay correct.
+    exec(tmux, "new-session", "-s", name, "-c", ROOT, MASTER)
+  end
+end

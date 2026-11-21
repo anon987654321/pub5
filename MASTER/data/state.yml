@@ -73,3 +73,15 @@
   command: status availability
   callable: availability_posture
   enabled: true
+
+# Public news digest example (NRK). Disabled by default.
+# Enable only for public pages; never for login-walled or personal-data sites.
+# Interval 1h; reports deltas when the command is written to do so.
+# Adult-site user-list indexing and credential handling remain refused by policy.
+- name: nrk_digest
+  description: Hourly public digest of nrk.no top stories (deltas only). Public pages only.
+  trigger: scheduled
+  interval_s: 3600
+  command: "fetch and summarise top public headlines from https://www.nrk.no and https://www.nrk.no/toppsaker.rss; report only what changed since last run"
+  enabled: false
+  owner: operator
