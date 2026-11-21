@@ -53,11 +53,20 @@ The first-load introduction reuses this same field and renderer: deterministic
 seed-derived particles begin dispersed around the head, then an expanding signal
 front draws them onto the real face points over the token-defined interval.
 Per-carrier thresholds resolve the particles in small cohorts instead of one
-uniform fade. Once gathered, a restrained fingerprint-like contour field adds
-curved ridges through luminance alone; it does not alter the one-pixel point size
-or add a texture, geometry, canvas, pool or animation loop. This is an original
-many-to-one reveal, not a copy of another show's title treatment. Reduced motion
-resolves directly to the completed portrait.
+uniform fade. A tokenized 1.025 spatial scale opens small gaps between the actual
+particle centres; the sprite remains exactly one pixel and the carrier population
+is not reduced to fake extra spacing. Once gathered, a restrained fingerprint-like
+contour field adds curved ridges through luminance alone. The reference is the
+motion principle of a stable field disturbed by travelling signal, not another
+show's lettering, particle map or title sequence. Reduced motion resolves
+directly to the completed portrait.
+
+State forces retain the same carriers. Listening sends a restrained ripple through
+the field; thinking gathers around the existing facial attractors; speaking carries
+the signal outward from the mouth; warning loosens cohesion while preserving a
+deterministic residual subset. Error applies a bounded radial fragment force while
+reducing the inward attractors. Returning to ready restores the existing attractors
+and reassembles the face. This adds no particle pool or animation loop.
 
 FaceWorld's material is greyscale particle stipple, named in `tokens.visual_identity.material`
 and governed by the law `VISUAL_PARTICLE_STIPPLE_PRIMARY`. The face is not a solid skin. It is a
