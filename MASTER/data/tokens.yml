@@ -553,7 +553,7 @@ tokens:
       # Keep the normal carrier population; open small gaps by spacing positions, not by
       # discarding dots. The point sprite remains exactly one pixel.
       density_scale: 0.90
-      particle_spacing_scale: 1.075
+      particle_spacing_scale: 1.10
       # Hollow Gaze: open larger orbital and mouth apertures without thinning the carrier field.
       # Faultline is a temporary, state-bound void along the right contour; ready restores it.
       voids:
