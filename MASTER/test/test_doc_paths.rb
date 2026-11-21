@@ -21,15 +21,9 @@ class TestDocPaths < Minitest::Test
   # Docs an agent is actually pointed at. Adding one here is the point: a
   # document nobody reads does not need this guard, and a document that teaches
   # a path does.
-  # the old backlog is deliberately not here, and the reason is measured rather than an
-  # omission. It cites 428 repo paths; 34 of them name subjects that are gone on
-  # purpose — MASTER/DEBT.md, RAILS/BLOCKERS.md, docs/SEVERANCE.md, the deleted
-  # io/lora_pipeline.rb — because a register that records what was removed has to
-  # be able to say what it was. A check demanding every cited path exist would
-  # need a 34-row baseline that a fresh entry breaks the same week, and would
-  # turn the register's own function into a red check. Its citations go stale as
-  # numbers rather than as paths, which is why every section carries the date it
-  # was measured.
+  # The documentation ledger includes historical references to removed artifacts.
+  # This is deliberately broader than live path validation: archaeology must be
+  # able to name a deleted path without requiring that path to reappear.
   DOCS = %w[
     README.md
     CLAUDE.md
