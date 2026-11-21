@@ -121,7 +121,7 @@ class TestTtsSupervisor < Minitest::Test
   end
 
   def test_retire_socket_does_not_unlink_or_signal_an_unowned_worker_socket
-    Dir.mktmpdir("master_tts_foreign") do |root|
+    Dir.mktmpdir("t", "/tmp") do |root|
       FileUtils.mkdir_p(File.join(root, ".master"))
       Sup.stub(:pool_size, 2) do
         @pids.delete(0)
@@ -144,7 +144,7 @@ class TestTtsSupervisor < Minitest::Test
   end
 
   def test_replace_worker_refuses_to_clobber_a_foreign_socket
-    Dir.mktmpdir("master_tts_foreign_replace") do |root|
+    Dir.mktmpdir("t", "/tmp") do |root|
       FileUtils.mkdir_p(File.join(root, ".master"))
       Sup.stub(:pool_size, 2) do
         @pids.delete(0)
@@ -175,8 +175,9 @@ class TestTtsSupervisor < Minitest::Test
   end
 
   def test_retire_daemon_never_signals_a_pid_it_does_not_own
-    pid = Process.spawn("sleep", "60", out: File::NULL, err: File::NULL)
+    pid = Process.spawn("true", out: File::NULL, err: File::NULL)
     waiter = Process.detach(pid)
+    waiter.join
     slot = 94
     @pids[slot] = pid
 
