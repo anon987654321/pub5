@@ -152,6 +152,8 @@ class VisualIdentityContractTest < Minitest::Test
     assert_includes LAWS_SOURCE, "The family identity is a shared grammar"
     assert_includes LAWS_SOURCE, "Particle spacing changes carrier centres, never sprite diameter"
     assert_includes LAWS_SOURCE, "Pluribus informs the study of collective emergence"
+    assert_includes LAWS_SOURCE, "Void is an active compositional form"
+    assert_includes LAWS_SOURCE, "actual carrier spacing and purposeful quiet regions"
   end
 
   def test_product_dialects_remain_explicit_in_the_visual_contract
@@ -183,6 +185,11 @@ class VisualIdentityContractTest < Minitest::Test
     assert_includes family.fetch("material_boundary"), "not a compulsory particle skin"
     assert_includes family.dig("tree_translations", "RAILS"), "preserve each product"
     assert_includes family.fetch("reference_policy"), "Never reproduce its wordmark"
+    void_grammar = family.fetch("void_grammar")
+    assert_includes void_grammar.fetch("principle"), "active shape"
+    assert_includes void_grammar.fetch("face").join(" "), "one-pixel carriers"
+    assert_includes void_grammar.fetch("interface").join(" "), "Do not fill empty areas"
+    assert_includes void_grammar.fetch("anti_patterns").join(" "), "destroys facial or content legibility"
   end
 
   # BSDPorts is ultraminimal white, the classic search front page (operator,
