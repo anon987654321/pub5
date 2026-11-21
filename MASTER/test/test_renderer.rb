@@ -668,36 +668,54 @@ class TestRenderer < Minitest::Test
     renderer.define_singleton_method(:git_prompt_segment) { "main" }
     pastel = Object.new
     { dim: 2, cyan: 36, green: 32 }.each do |name, code|
-      pastel.define_singleton_method(name) { |value| "\\e[#{code}m#{value}\\e[0m" }
+      pastel.define_singleton_method(name) { |value| "\e[#{code}m#{value}\e[0m" }
     end
     renderer.instance_variable_set(:@p, pastel)
 
     prompt = renderer.shell_prompt("ready", true)
 
-    assert_includes prompt, "\\e[2m/repo/MASTER"
-    assert_includes prompt, "\\e[36mmain"
-    assert_includes prompt, "\\e[32m<operator>"
+    assert_includes prompt, "\e[2m/repo/MASTER"
+    assert_includes prompt, "\e[36mmain"
+    assert_includes prompt, "\e[32m<operator>"
     assert_equal "/repo/MASTER main <operator> ", strip_ansi(prompt)
   end
 
-  def test_terminal_markdown_highlights_code_only_on_an_interactive_tty
+  def test_terminal_markdown_highlights_code_only_when_colour_is_enabled
     renderer = FakeRenderer.new(config: {})
     guard = Object.new
     guard.define_singleton_method(:sanitize) { |text, context:| text }
     renderer.define_singleton_method(:output_guard) { guard }
+    renderer.define_singleton_method(:terminal_color_enabled?) { true }
     pastel = Object.new
-    { dim: "dim", green: "green", yellow: "yellow", cyan: "cyan", magenta: "magenta", blue: "blue" }.each do |name, label|
+    { dim: "dim", green: "green", yellow: "yellow", cyan: "cyan", magenta: "magenta",
+      blue: "blue", bold: "bold" }.each do |name, label|
       pastel.define_singleton_method(name) { |value| "<#{label}>#{value}</#{label}>" }
     end
     renderer.instance_variable_set(:@p, pastel)
-    source = "def run\\n  puts \\"ready\\"\\n  42\\nend"
+    source = <<~CODE.chomp
+      def run
+        puts "ready"
+        42
+      end
+    CODE
 
-    $stdout.stub(:tty?, true) do
-      rendered = renderer.terminal_markdown("```ruby\n#{source}\n```")
-      assert_includes rendered, "<cyan>def</cyan>"
-      assert_includes rendered, "<green>\\\"ready\\\"</green>"
-      assert_includes rendered, "<magenta>42</magenta>"
-    end
+    rendered = renderer.terminal_markdown("```ruby\n#{source}\n```")
+
+    assert_includes rendered, "<cyan>def</cyan>"
+    assert_includes rendered, "<green>\"ready\"</green>"
+    assert_includes rendered, "<magenta>42</magenta>"
+  end
+
+  def test_terminal_code_stays_plain_when_colour_is_disabled
+    renderer = FakeRenderer.new(config: {})
+    guard = Object.new
+    guard.define_singleton_method(:sanitize) { |text, context:| text }
+    renderer.define_singleton_method(:output_guard) { guard }
+    renderer.define_singleton_method(:terminal_color_enabled?) { false }
+    rendered = renderer.terminal_markdown("```ruby\nputs \"ready\"\n```")
+
+    refute_includes rendered, "\e["
+    assert_includes rendered, "puts \"ready\""
   end
 
 end
