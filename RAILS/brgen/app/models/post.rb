@@ -78,8 +78,8 @@ class Post < ApplicationRecord
   after_commit :federate_deletion, on: :destroy
   after_commit :federate_update, on: :update
 
-  VOTE_SQL = Arel.sql("posts.score DESC, posts.created_at DESC")
-  TOP_SQL = Arel.sql("posts.score DESC")
+  VOTE_SQL = Arel.sql("posts.score DESC, posts.created_at DESC, posts.id DESC")
+  TOP_SQL = Arel.sql("posts.score DESC, posts.id DESC")
   # "hot" = score decayed by age, so it is a live ranking rather than an all-time
   # leaderboard: score/(age_hours + 2). A high-vote post sinks as it ages and a
   # fresh well-received one can surface. julianday keeps it a single SQLite
@@ -87,7 +87,7 @@ class Post < ApplicationRecord
   HOT_SQL = Arel.sql(
     "(posts.score + 1.0) / " \
     "(((julianday('now') - julianday(posts.created_at)) * 24.0) + 2.0) DESC, " \
-    "posts.created_at DESC"
+    "posts.created_at DESC, posts.id DESC"
   )
 
   # The default feed lane, in the Dating deck's shape: recency bands first, a
@@ -132,7 +132,8 @@ class Post < ApplicationRecord
       #{RANK_RECENCY_SQL} ASC,
       #{RANK_ENGAGEMENT_SQL} DESC,
       ((posts.id * #{multiplier}) % #{modulus}) ASC,
-      posts.created_at DESC
+      posts.created_at DESC,
+      posts.id DESC
     SQL
   end
   READING_WORDS_PER_MINUTE = 200
@@ -154,14 +155,14 @@ class Post < ApplicationRecord
     end
   }
   scope :hot,    -> { kept.order(HOT_SQL) }
-  scope :fresh,  -> { kept.order(created_at: :desc) }
+  scope :fresh,  -> { kept.order(created_at: :desc, id: :desc) }
   scope :top,    -> { kept.order(TOP_SQL) }
   # The following lane is chronological ON PURPOSE: ranking what chosen people
   # said is the fenced AI-feed-ranking horizon item; recency is the honest
   # order for a lane whose whole point is "the people I picked".
   scope :followed_by, lambda { |user|
     kept.where(user_id: Follow.where(follower_id: user.id).select(:followed_id))
-        .order(created_at: :desc)
+        .order(created_at: :desc, id: :desc)
   }
 
   # ONE resolver for the feed lanes, used by PostsController AND the
