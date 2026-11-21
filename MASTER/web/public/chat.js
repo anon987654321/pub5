@@ -266,7 +266,7 @@ window._chatOnUser = (text) => {
 // Small dependency-free tokenizer for fenced source blocks. It emits only
 // escaped source text and fixed class names; model output never becomes markup.
 function highlightCode(source) {
-  const pattern = /(\/\/[^\n]*|#[^\n]*)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|(--?[A-Za-z][\w-]*)|(\b(?:def|class|module|end|if|elsif|else|unless|case|when|return|yield|begin|rescue|ensure|const|let|var|function|async|await|import|export|from|new|true|false|null|nil|undefined|require|do|then|while|for|in)\b)|(\b(?:bin\/master|ruby|bundle|rake|git|cd|pwd|ls|cat|grep|rg|sed|awk|find|doas|sudo|chmod|chown|install|make|node|npm|ssh|scp|tar|env|export|print|printf|echo|curl|pkg_add|service|rcctl)\b)|(\b\d+(?:\.\d+)?\b)|([A-Za-z0-9_.-]+\/[A-Za-z0-9_./-]+)|([=<>!|&+*-]+)/g;
+  const pattern = /(\/\/[^\n]*|#[^\n]*)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|(--?[A-Za-z][\w-]*)|(\b(?:def|class|module|end|if|elsif|else|unless|case|when|return|yield|begin|rescue|ensure|const|let|var|function|async|await|import|export|from|new|true|false|null|nil|undefined|require|do|then|while|for|in)\b)|(\b(?:bin\/master|ruby|bundle|rake|git|cd|pwd|ls|cat|grep|rg|sed|awk|find|doas|sudo|chmod|chown|install|make|node|npm|ssh|scp|tar|env|export|print|puts|warn|printf|echo|curl|pkg_add|service|rcctl)\b)|(\b\d+(?:\.\d+)?\b)|([A-Za-z0-9_.-]+\/[A-Za-z0-9_./-]+)|([=<>!|&+*-]+)/g;
   let html = "";
   let cursor = 0;
   for (const match of source.matchAll(pattern)) {
