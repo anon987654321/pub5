@@ -157,7 +157,7 @@ group-level disposition, so the recovered document stays legible from this tree:
 | D | Light (59–71) | `layers.light` carries the four patterns, short/broad and the catchlight rule; `lib/relight.rb` covers the one generative stage. |
 | E | Expression (72–81) | `layers.expression` carries the selection rule; dataset curation follows it in `../lora/`. |
 | F | Defeating the uncanny (82–98) | Built: `uncanny.rb` measures texture, tonal range, clipping and specular spread; `../lora/judge.rb` calibrates thresholds against private references and ratchets them (items 96–98). |
-| G | House look (99–116) | Portrait grade is the default with `--no-postpro` as the escape hatch; house preset in `lib/presets.rb`; sidecars publish the grade parameters (114). Contact-sheet mode is `lib/contact_sheet.rb` (110). LUT export (115) and golden-image perceptual fixtures (111–112) remain open — see `TODO.md`. |
+| G | House look (99–116) | Portrait grade is the default with `--no-postpro` as the escape hatch; house preset in `lib/presets.rb`; sidecars publish the grade parameters (114). Contact-sheet mode is `lib/contact_sheet.rb` (110). LUT export (115) and golden-image perceptual fixtures (111–112) remain open in the existing `media_effects` convergence row (`MASTER/convergence.yml`). |
 | H | Video (117–128) | Built as the in-process `motion.rb` / `motion_process.rb` path documented below. |
 | I | Rescue (129–140) | `rescue.rb`; the honest verdict rules travel with it. |
 | J | LoRA (141–155) | Consent gates, hash manifests and held-out evaluation are executable (`../lora/validate.rb`, `../lora/judge.rb`); checkpoint scoring uses the judge metrics (151). |
