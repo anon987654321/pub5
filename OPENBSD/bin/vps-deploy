@@ -27,8 +27,7 @@ usage() {
   VPS_DEPLOY_RUN_LOG=/path        per-run log (default auto under LOG_DIR/runs/)
 
   Git fetch/checkout always runs as user dev so the /home/dev/pub5 tree and the
-  GitHub deploy key stay owned and reachable. Service control uses pub5-admin
-  directly when already root."
+  GitHub deploy key stay owned and reachable. Service control uses native rcctl as root."
 }
 case ${1:-} in
   -h|--help) usage; exit 0 ;;
@@ -427,8 +426,8 @@ log() {
   print -r -- "$(log_ts) host=$(hostname -s) pid=$$ app=${app:-?} stage=${deploy_stage:-?} $*"
 }
 
-# The fleet receipt is written only through the fixed root broker. Ruby's JSON
-# encoder keeps service names, paths and metadata out of shell-generated JSON.
+# The fleet receipt is ordinary root-owned data. The focused Records library
+# validates its schema and publishes it atomically; it has no command-dispatch API.
 write_deploy_run_receipt() {
   [[ -n ${VPS_DEPLOY_RUN_ID:-} ]] || return 0
   local payload
@@ -977,7 +976,7 @@ other_deploy_processes() {
 # service set recorded as running before the interrupted run.
 if [[ $app == recover ]]; then
   runs_json=$(admin_request deploy-run-list) || {
-    print -u2 "vps-deploy: cannot list recovery receipts; install and verify the pub5-admin mirror first"
+    print -u2 "vps-deploy: cannot read deployment receipts; inspect /var/db/pub5/deploy_runs and its ownership"
     exit 1
   }
   if [[ $recover_mode == plan ]]; then
