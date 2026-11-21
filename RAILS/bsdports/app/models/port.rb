@@ -25,6 +25,7 @@ class Port < ApplicationRecord
   validates :pkgpath, uniqueness: { scope: :platform_id }
   validate :homepage_uses_safe_protocol
 
+  scope :available, -> { where(available: true) }
   scope :recent_updates, -> { joins(:port_updates).order("port_updates.committed_at DESC").distinct }
   scope :by_category, ->(cat) { where(category: cat) }
   scope :by_maintainer, ->(maintainer) { where(maintainer_id: maintainer.id) }
