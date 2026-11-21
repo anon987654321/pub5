@@ -14,6 +14,7 @@ module Master
         word, rest = subcommand({ args: arg })
         return dispatch_auth(ctx: rest) if word == "auth"
         return trajectory_lab(root:) if word == "lab"
+        return model_doctor(agent:) if word == "doctor"
         return list_models(root:, metrics:, agent:) if arg.casecmp?("list")
         return model_health(agent:) if arg.casecmp?("health")
         return compute_models(agent:, root:) if arg.casecmp?("compute")
@@ -120,6 +121,28 @@ module Master
         footer = growth.empty? ? [] : ["", "more with:"] + growth.map { |fix| "pool0: add #{fix}" }
         footer += ["", "this session:"] + quality unless quality.empty?
         footer.empty? ? "" : "\n#{footer.join("\n")}"
+      end
+
+      # Report isolated discovery failures without leaking raw exception
+      # messages, response bodies, endpoint credentials or request headers.
+      def model_doctor(agent:)
+        router = model_router_of(agent)
+        return "model doctor: router unavailable" unless router
+
+        models = router.respond_to?(:pool) ? Array(router.pool(wait: true)) : []
+        failures = router.respond_to?(:pool_discovery_errors) ? Array(router.pool_discovery_errors) : []
+        lines = ["model doctor: reachable=#{models.size}; discovery_failures=#{failures.size}"]
+        failures.each do |failure|
+          lane = failure["lane"] || failure[:lane] || "unknown"
+          error = failure["error"] || failure[:error] || "StandardError"
+          lines << "model-doctor0: #{lane} failed during discovery (#{error}); other lanes were retained"
+        end
+        lines << "model doctor: no discovery exceptions recorded" if failures.empty?
+        lines << "model doctor: no reachable models; inspect /doctor keyless and provider credentials" if models.empty?
+        lines.join("\n")
+      rescue StandardError => error
+        Master::Ground::Swallow.log(error, context: "command_registry.model_doctor")
+        "model doctor: unavailable (#{error.class})"
       end
 
       # Summarize measured provider outcomes without printing raw provider

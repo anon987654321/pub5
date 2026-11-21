@@ -263,4 +263,29 @@ class TestLanePool < Minitest::Test
   ensure
     Quota.clock = -> { Time.now.to_f }
   end
+  def test_a_failed_provider_discovery_lane_does_not_erase_healthy_models
+    router = Master::CLI::Routing::ModelRouter.allocate
+    router.define_singleton_method(:start_pool_probes) {}
+    router.define_singleton_method(:tier_ids) { ["glm-5.3-flash"] }
+    router.define_singleton_method(:primary_models) { raise IOError, "provider catalogue unavailable" }
+    router.define_singleton_method(:cli_lane_models) { |wait:| [] }
+    router.define_singleton_method(:agy_catalog_models) { [] }
+    router.define_singleton_method(:continuity_models) { [] }
+    router.define_singleton_method(:hosted_models) { [] }
+    router.define_singleton_method(:live_catalog_models) { [] }
+    router.define_singleton_method(:browser_chat_models) { [] }
+    router.define_singleton_method(:local_server_models) { [] }
+    router.define_singleton_method(:replicate_models) { [] }
+    router.define_singleton_method(:local_models) { [] }
+    router.define_singleton_method(:unreachable_reason) { |id, wait:| nil }
+
+    Tail.stub(:models, []) do
+      assert_equal ["glm-5.3-flash"], router.pool
+    end
+    assert_equal(
+      [{ "lane" => "primary", "error" => "IOError" }],
+      router.pool_discovery_errors,
+    )
+  end
+
 end

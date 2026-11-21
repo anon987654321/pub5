@@ -53,13 +53,38 @@ module Master
           # Every reachable model, strongest lanes first: what /model list shows.
           def pool(wait: false)
             start_pool_probes
-            # /model list and /model pick display the same ordering contract as
-            # /fix: configured default/primary tiers first, discovered/auth lanes
-            # afterwards, and keyless/local recovery at the end.
-            lanes = [tier_ids, primary_models, cli_lane_models(wait:), agy_catalog_models, Master::Io::PaidTail.models,
-                     continuity_models, hosted_models, live_catalog_models, browser_chat_models,
-                     local_server_models, replicate_models, local_models]
-            lanes.flatten.uniq.select { |id| unreachable_reason(id, wait:).nil? }
+            # Each catalogue and provider lane is an independent source. A
+            # broken provider must be visible in diagnostics, never fatal to
+            # models already discovered from other healthy lanes.
+            lanes = [
+              ["configured", -> { tier_ids }],
+              ["primary", -> { primary_models }],
+              ["cli", -> { cli_lane_models(wait:) }],
+              ["antigravity", -> { agy_catalog_models }],
+              ["paid_tail", -> { Master::Io::PaidTail.models }],
+              ["continuity", -> { continuity_models }],
+              ["hosted", -> { hosted_models }],
+              ["openrouter_catalog", -> { live_catalog_models }],
+              ["browser_chat", -> { browser_chat_models }],
+              ["local_server", -> { local_server_models }],
+              ["replicate", -> { replicate_models }],
+              ["local", -> { local_models }],
+            ]
+            candidates = lanes.flat_map do |name, discover|
+              Array(safe_pool_discovery(name) { discover.call })
+            end
+            candidates.uniq.filter_map do |id|
+              safe_pool_discovery("reachability:#{id}") do
+                id if unreachable_reason(id, wait:).nil?
+              end
+            end
+          end
+
+          # In-memory evidence for /model doctor. Raw exception messages stay
+          # in the protected diagnostic log, never on the operator's prompt.
+          def pool_discovery_errors
+            mutex = (@pool_discovery_mutex ||= Mutex.new)
+            mutex.synchronize { Array(@pool_discovery_errors).map(&:dup) }
           end
 
           # The distinct fixes that would grow the pool, keys gathered on one line.
@@ -98,10 +123,15 @@ module Master
             # has excluded; don't spend boot work on it outside its explicit canary.
             lanes = Master::Io::LaneState
             candidates = cli_lanes.keys.select { |name| lanes.usable?("#{name}:", sources: LANE_SOURCES) }
-            @pool_probes ||= candidates.to_h { |name| [name, Thread.new { probe_cli_lane(name) }] }.merge(
-              "openrouter_credits" => Thread.new { probe_openrouter_credits },
-              "provider_catalogs" => Thread.new { refresh_provider_catalogs },
+            @pool_probes ||= candidates.to_h do |name|
+              [name, Thread.new { safe_pool_discovery("cli:#{name}") { probe_cli_lane(name) } }]
+            end.merge(
+              "openrouter_credits" => Thread.new { safe_pool_discovery("openrouter_credits") { probe_openrouter_credits } },
+              "provider_catalogs" => Thread.new { safe_pool_discovery("provider_catalogs") { refresh_provider_catalogs } },
             )
+          rescue StandardError => error
+            record_pool_discovery_error("pool_probes", error)
+            {}
           end
 
           # Invalidate discovery caches without forgetting durable telemetry.
@@ -124,6 +154,26 @@ module Master
           end
 
           private
+
+          def safe_pool_discovery(lane)
+            yield
+          rescue StandardError => error
+            record_pool_discovery_error(lane, error)
+            nil
+          end
+
+          def record_pool_discovery_error(lane, error)
+            mutex = (@pool_discovery_mutex ||= Mutex.new)
+            row = { "lane" => lane.to_s, "error" => error.class.name.to_s }
+            mutex.synchronize do
+              @pool_discovery_errors ||= []
+              @pool_discovery_errors << row unless @pool_discovery_errors.include?(row)
+              @pool_discovery_errors.shift while @pool_discovery_errors.length > 32
+            end
+            Master::Ground::Swallow.log(error, context: "model_router.pool.discovery", lane: lane.to_s)
+          rescue StandardError
+            nil
+          end
 
           # The lanes that need a binary, a browser profile or a running server
           # rather than a key: each is present or it is not. A CLI lane without
@@ -326,7 +376,7 @@ module Master
             output = run_probe(lane["binary"], *Array(lane.dig("signed_in", "args")))
             signed_in_output?(output, lane.fetch("signed_in", {}))
           rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "model_router.pool.cli_lane")
+            record_pool_discovery_error("cli:#{name}", e)
             false
           end
 
@@ -346,10 +396,10 @@ module Master
 
             output
           rescue Master::Io::Exec::TimeoutError => e
-            Master::Ground::Swallow.log(e, context: "model_router.pool.run_probe_timeout")
+            record_pool_discovery_error("probe:#{command.first}", e)
             nil
           rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "model_router.pool.run_probe")
+            record_pool_discovery_error("probe:#{command.first}", e)
             nil
           end
 
