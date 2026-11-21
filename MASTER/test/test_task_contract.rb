@@ -807,17 +807,16 @@ class TestTaskContract < Minitest::Test
     assert_match(/rc\.d\(8\)/, reason)
   end
 
-  def test_unmapped_openbsd_native_paths_fail_closed
+  def test_inert_litestream_example_is_source_audited_without_a_fabricated_manual
     relative = "OPENBSD/mirror/etc/litestream.yml"
     contract = openbsd_task_contract(
       openbsd_preflight_fixture(source_paths: [relative], interfaces: ["nsd(8)"]),
     )
-    reason = Master::Fix::OpenBSDManualPreflight.refusal_for_path(
+
+    assert_equal [], Master::Fix::OpenBSDManualPreflight.required_path_manuals(relative)
+    assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_path(
       path: File.join(Master::REPO_ROOT, relative), contract:
     )
-
-    assert_match(/no reviewed manual\/schema map/, reason)
-    assert_match(/litestream\.yml/, reason)
   end
 
   def test_openbsd_native_configuration_edits_require_their_format_and_daemon_manuals
@@ -928,7 +927,7 @@ class TestTaskContract < Minitest::Test
       command: "ssh -o BatchMode=yes dev@brgen.no 'zsh OPENBSD/bin/vps-deploy all'", contract:
     )
 
-    assert_match(/source-read receipt for OpenBSD path OPENBSD\/mirror\/bin\/vps-deploy/, reason)
+    assert_match(/source-read receipt for OpenBSD path OPENBSD\/bin\/vps-deploy/, reason)
   end
 
   def test_openbsd_script_execution_accepts_a_complete_source_read
