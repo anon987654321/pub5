@@ -554,6 +554,26 @@ class TestDillaRender < Minitest::Test
     assert Dilla.parse_cli(["--overwrite"]).overwrite
   end
 
+  def test_render_refuses_existing_take_until_overwrite_is_requested
+    Dir.mktmpdir do |dir|
+      base = File.join(dir, "protected-take")
+      argv = [RbConfig.ruby, dilla, "--progression", "1", "--bars", "1", "--seed", "17", "--out", base]
+      _out, err, status = Open3.capture3(*argv, chdir: File.dirname(dilla))
+      assert status.success?, err
+
+      before = Digest::SHA256.file("#{base}.wav").hexdigest
+      _out, err, status = Open3.capture3(*argv, chdir: File.dirname(dilla))
+      refute status.success?, "a second render silently replaced the first take"
+      assert_match(/output already exists.*--overwrite/, err)
+      assert_equal before, Digest::SHA256.file("#{base}.wav").hexdigest
+
+      _out, err, status = Open3.capture3(*argv, "--overwrite", chdir: File.dirname(dilla))
+      assert status.success?, err
+      assert_equal before, Digest::SHA256.file("#{base}.wav").hexdigest,
+                   "a deliberate fixed-seed replacement should remain reproducible"
+    end
+  end
+
   def test_atomic_write_keeps_the_previous_artifact_when_replacement_fails
     Dir.mktmpdir do |dir|
       path = File.join(dir, "take.json")
