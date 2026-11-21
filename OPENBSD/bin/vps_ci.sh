@@ -24,7 +24,7 @@ app_dir=/home/${app}/app
 # The Gemfiles name path gems relative to the app dir (../__shared, engines/*),
 # so the copy-tree keeps them as siblings of app/, the layout RAILS/_deploy.sh builds.
 [[ -d $app_dir ]] || { print -u2 "missing $app_dir"; exit 1 }
-[[ -x /usr/local/sbin/pub5-admin ]] || { print -u2 "vps_ci: pub5-admin missing; run reviewed OPENBSD/OPERATOR.sh first"; exit 1 }
+
 
 # deploy_status (from RAILS/_core.sh) -- same in-progress status file the
 # SKIP_CI=1 path (_deploy.sh/_runtime_check.sh) writes, so `bin/vps-state`
@@ -80,22 +80,22 @@ unaccounted_tracked_files() {
   print -u2 "vps_ci: $app - add each to paths (bin/ci reads the copy-tree) or to kept_local with a reason"
 }
 
-# Once installed, the broker runs the fixed synchronizer with the app UID,
-# app primary group, and only the _pub4ci supplementary group. The root-copy
-# code above remains only for first rollout on boxes without the broker.
+# The installed synchronizer is purpose-built and runs as the selected app
+# user. doas supplies root only for the su transition; the helper never mutates
+# another app's tree.
 sync_from_repo() {
   local -a paths=(test app lib config bin db engines public vendor/javascript
                   Gemfile Gemfile.lock config.ru Rakefile .rubocop.yml .ruby-version)
   local -a kept_local=(log storage docs script domains.yml Procfile.dev)
   unaccounted_tracked_files "$app" "$repo" paths kept_local
-  doas /usr/local/sbin/pub5-admin ci-sync "$app"
+  doas /usr/bin/su -m "$app" -c "/usr/local/libexec/ci-sync.ksh $app"
 }
 
 print "vps_ci: $app (sync + mutex + load check)"
 # Establish group access and the private-storage mode before the app-owned
 # synchronizer reads the checkout and updates the CI copy-tree.
 pub5_ensure_ci_lock >/dev/null
-doas /usr/local/sbin/pub5-admin ci-prepare "$app"
+doas /usr/local/libexec/ci-prepare.ksh "$app"
 # The checkout is owned by dev, so this permission repair does not cross doas.
 chmod -R u+rX,g+rX "${repo}/MASTER/tools"
 deploy_status "$app" "sync tree"
@@ -131,7 +131,7 @@ else
   # The brgen suite ran 59 minutes on this 1 vCPU box (coverage on) and was cut off at the
   # guard's default 3600s still running, so CI gets two hours; the guard itself stays on.
   ci_timeout=${PUB4_CI_TIMEOUT:-7200}
-  doas /usr/local/sbin/pub5-admin ci-run "$app" "$ci_timeout" \
+  doas /usr/local/libexec/ci-run.ksh "$app" "$ci_timeout" \
     || { deploy_status "$app" "bundle install + bin/ci" "failed"; exit 1; }
   ci_stamp=ci_ok
 fi
@@ -140,5 +140,28 @@ sha=$(git -C "$repo" rev-parse --short HEAD 2>/dev/null || echo unknown)
 # The stamp says how this commit was tested: ci_ok (the suite ran here),
 # ci_attested (it passed on the operator's machine) or ci_skipped (break-glass,
 # no suite anywhere). It said ci_ok for all three.
-doas /usr/local/sbin/pub5-admin stamp "$app" "$sha" "$ci_stamp"
+doas "$RUBY" -rjson -retc -rtime -rsecurerandom -e '
+  app, sha, status = ARGV
+  abort "invalid app" unless app.match?(/\\A[a-z][a-z0-9_]{0,31}\\z/)
+  abort "invalid SHA" unless sha == "unknown" || sha.match?(/\\A[0-9a-f]{7,40}\\z/i)
+  abort "invalid CI status" unless %w[ci_ok ci_attested ci_skipped].include?(status)
+  root = "/var/db/pub5"
+  raise "unsafe /var/db/pub5" if File.symlink?(root)
+  FileUtils.mkdir_p(root, mode: 0o755)
+  wheel = Etc.getgrnam("wheel").gid
+  File.chown(0, wheel, root)
+  File.chmod(0o755, root)
+  target = File.join(root, "last_deploy_#{app}.json")
+  raise "stamp path is a symlink" if File.symlink?(target)
+  payload = { app: app, sha: sha, at: Time.now.utc.iso8601, status: status, host: Socket.gethostname }
+  temporary = File.join(root, ".last_deploy_#{app}.#{Process.pid}.#{SecureRandom.hex(6)}")
+  begin
+    File.open(temporary, File::WRONLY | File::CREAT | File::EXCL, 0o600) { |file| file.write(JSON.generate(payload) + "\\n"); file.flush; file.fsync }
+    File.chown(0, wheel, temporary)
+    File.chmod(0o640, temporary)
+    File.rename(temporary, target)
+  ensure
+    File.unlink(temporary) if File.exist?(temporary)
+  end
+' "$app" "$sha" "$ci_stamp"
 deploy_status "$app" "done" "done"
