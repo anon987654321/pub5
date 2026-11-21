@@ -84,36 +84,41 @@ def studio_film_engine_choice(wizard)
   wizard.choose("Which film engine?", options, default: default)
 end
 
+def studio_photograph_options(argv)
+  options = {
+    film: false, duration: 5, count: 4, all_subjects: false,
+    subject: ENV.fetch("STUDIO_PHOTOGRAPH_SUBJECT", "ragnhild")
+  }
+  OptionParser.new do |parser|
+    parser.on("--film", "also render the short film") { options[:film] = true }
+    parser.on("--animate SOURCE", "animate an existing LoRA still into a short clip") { |value| options[:animate] = value }
+    parser.on("--prompt TEXT", "motion direction for --animate") { |value| options[:prompt] = value }
+    parser.on("--duration N", Integer, "film duration in seconds (1..10)") { |value| options[:duration] = value }
+    parser.on("--soundtrack PATH", "lay a music bed under the film (e.g. dilla.wav)") { |value| options[:soundtrack] = value }
+    parser.on("--subject NAME", "subject directory under STUDIO/lora (default ragnhild)") { |value| options[:subject] = value }
+    parser.on("--selfie-series", "render four portraits using --subject's own LoRA") { options[:series] = true }
+    parser.on("--all-subjects", "preflight and render four LoRA portraits for Johann, Ragnhild and Merethe") { options[:all_subjects] = true }
+    parser.on("--count N", Integer, "series length, 1..24 (default 4)") { |value| options[:count] = value }
+    # Compatibility flag; earlier stills are always retained.
+    parser.on("--keep", "compatibility flag; prior generated stills are always retained") { options[:keep] = true }
+    parser.on("--engine NAME", "render with a model from STUDIO/replicate/models.yml") { |value| options[:engine] = value }
+    parser.on("--film-engine NAME", "animate with a model from image_to_video (default minimax/h3-highspeed)") { |value| options[:film_engine] = value }
+    parser.on("--film-resolution RES", "H3 Lite resolution: 480P (default) or 768P") { |value| options[:film_resolution] = value }
+    parser.on("--free", "stay inside Replicate's free tier (flux-dev, flux-schnell)") { options[:engine] = "black-forest-labs/flux-dev" }
+    parser.on("--models", "list the Replicate engines and exit") { options[:models] = true }
+    parser.on("--check-model", "verify the subject's local manifest or private Replicate model") { options[:check_model] = true }
+  end.parse!(argv)
+  options
+end
+
 if $PROGRAM_NAME == __FILE__
   if Studio::Api.requested?(ARGV)
     exit Studio::Api.respond(studio_photograph_actions, argv: ARGV)
   end
 
-  options = { film: false, duration: 5, count: 6, all_subjects: false, subject: ENV.fetch("STUDIO_PHOTOGRAPH_SUBJECT", "ragnhild") }
+  # Parse explicit flags in both interactive terminals and non-TTY automation.
+  options = studio_photograph_options(ARGV)
   wizard = Studio::Interactive.new
-  # No arguments in a terminal: ask, rather than require a remembered flag.
-  # Flags still work for scripts, and a piped run keeps its defaults.
-  unless ARGV.empty? || !wizard.tty?
-    OptionParser.new do |parser|
-      parser.on("--film", "also render the short film") { options[:film] = true }
-      parser.on("--animate SOURCE", "animate an existing LoRA still into a short clip") { |value| options[:animate] = value }
-      parser.on("--prompt TEXT", "motion direction for --animate") { |value| options[:prompt] = value }
-      parser.on("--duration N", Integer, "film duration in seconds (1..10)") { |value| options[:duration] = value }
-      parser.on("--soundtrack PATH", "lay a music bed under the film (e.g. dilla.wav)") { |value| options[:soundtrack] = value }
-      parser.on("--subject NAME", "subject directory under STUDIO/lora (default ragnhild)") { |value| options[:subject] = value }
-      parser.on("--selfie-series", "render six portraits using --subject's own LoRA") { options[:series] = true }
-      parser.on("--all-subjects", "preflight and render six LoRA portraits for Johann, Ragnhild and Merethe") { options[:all_subjects] = true }
-      parser.on("--count N", Integer, "series length, 1..24 (default 4)") { |value| options[:count] = value }
-      # Compatibility flag; earlier stills are always retained.
-      parser.on("--keep", "compatibility flag; prior generated stills are always retained") { options[:keep] = true }
-      parser.on("--engine NAME", "render with a model from STUDIO/replicate/models.yml") { |value| options[:engine] = value }
-      parser.on("--film-engine NAME", "animate with a model from image_to_video (default minimax/h3-highspeed)") { |value| options[:film_engine] = value }
-      parser.on("--film-resolution RES", "H3 Lite resolution: 480P (default) or 768P") { |value| options[:film_resolution] = value }
-      parser.on("--free", "stay inside Replicate's free tier (flux-dev, flux-schnell)") { options[:engine] = "black-forest-labs/flux-dev" }
-      parser.on("--models", "list the Replicate engines and exit") { options[:models] = true }
-      parser.on("--check-model", "verify the subject's local manifest or private Replicate model") { options[:check_model] = true }
-    end.parse!
-  end
 
   if ARGV.empty? && wizard.tty?
     mode = wizard.choose("What shall STUDIO photograph?", [
