@@ -6,9 +6,11 @@
 # exists and is recorded in the commit that deletes the entry; nothing here is a changelog and nothing
 # here is a to-do for an agent. `bin/operator status` prints this file.
 #
-# TODO.md tracks work an agent can still perform. This file tracks only evidence that requires
-# the operator or an external environment (a real device, credential, remote host, browser or decision).
-# Decisions live beside what they decide; this is a complementary evidence ledger, not a second code backlog.
+# Implementation and proof work stays in convergence.yml and data/gaps.yml; UX and
+# RAILS refinement stay with their own ledgers. This file holds only evidence that
+# requires the operator or an external environment (device, credential, remote host,
+# browser, ears, provider, source rights or a human decision). status --agent is a
+# read-only projection; no second queue is created here.
 #
 # needs: console (vm23), registrar, device, provider (paid), browser, ears, material (photos, data),
 #        credential, rights (a decision about publication), idle-host.
@@ -223,28 +225,42 @@ seams:
       The shared prompt grammar read identically on the Mac shell, the live OpenBSD shell, the MASTER CLI and
       the web face, without giving the browser shell or filesystem authority.
   # STUDIO
+  - id: wenche_subject_consent
+    tree: STUDIO
+    needs: rights
+    evidence: >-
+      Before any source recovery, dataset preparation, model training, rendering or promotion, obtain
+      the subject's written, dated approval for likeness generation and provider processing, with
+      separate explicit model-training and model-retention choices. Record provenance and rights for
+      each source set separately (including private archive frames and website photographs); verify
+      the subject is an adult and the intended use is within scope. Consent to one stage is not consent
+      to another. Keep the scaffold, paid training, outputs and publication blocked until the exact
+      permissions and source rights are reviewed. Preserve every original and existing render.
   - id: lora_source_refresh_and_paid_training
     tree: STUDIO
     needs: provider
     evidence: >-
-      The native source-refresh request for Johann and Ragnhild reaching the canonical tool, both sources/
-      curated, datasets archived, captions reviewed, both preflights passing, then a separate explicit
-      paid-training confirmation with Replicate IDs, versions, costs and weights.
+      For each explicitly authorised subject, the native source-refresh request reaches the canonical
+      tool, source provenance and rights are reviewed, datasets are privately archived, captions and
+      preflight pass, then a separate paid-training confirmation records Replicate IDs, immutable
+      versions, costs and private weight locations. Never infer consent from an existing model.
   - id: private_media_and_history
     tree: STUDIO
     needs: rights
     evidence: >-
-      A rights decision and complete history/reachable-ref audit for the previously reported IMG_* captures
-      and LoRA weight blob, plus the 29 Merethe source JPEGs, 14 training-caption sidecars and three subject
-      descriptors now removed from current pub5 main; cover pub4/pub5 mirrors, branches, tags, forks and clones.
-      Coordinate any rewrite with clone owners. No deletion by size alone.
+      A subject-by-subject rights, retention and publication decision for private source photographs,
+      captions, descriptors, derived datasets, renders and weights. Inventory current and historical
+      pub4/pub5 refs, mirrors, branches, tags, forks and known clones without deleting or overwriting any
+      original. Only after written approval: coordinate a backed-up history rewrite with clone owners,
+      rotate any exposed credential, and independently rescan every affected ref. No deletion by size alone.
   - id: person_renders_and_duet_video
     tree: STUDIO
     needs: material
     evidence: >-
-      About twenty new reference photographs per person (sharp, even daylight, 50-85 mm), a face-embedding
-      identity check thresholded from them, a Veo 3.1, Kling, Seedance and Wan bake-off with cost per second, and
-      a look bible the operator approves. Closes when the operator accepts a render.
+      Use only rights-cleared reference photographs and subject-specific identity checks. A Veo/Kling/
+      Seedance/Wan comparison records cost per second and provider provenance. Each person separately
+      reviews and accepts their likeness; duet use requires both subjects' explicit approval. A look
+      bible and any publication remain operator-owned decisions.
   - id: dilla_by_ear
     tree: STUDIO
     needs: ears
@@ -305,6 +321,22 @@ seams:
       The operator edits plugins.session_browser in laws.yml to allow POST to an approved host
       (allowed_network_methods [GET, HEAD, POST], post_scope approved_host_only, host_approval
       once_per_site_per_task, visible_login_post_submission allowed), as decided 2026-11-01.
+  - id: biz_template_preserve_first
+    tree: BIZ
+    needs: material
+    evidence: >-
+      Operator explicitly decides whether the bob/bob2 correspondence templates remain preserved as
+      historical source or receive a new versioned retrofit. Compare current HTML/PDF hashes before
+      any change; retain the originals and their PDFs. No in-place overwrite, migration or re-render
+      until the operator selects the treatment and approves the resulting before/after.
+  - id: radio_tunnel_rendered_review
+    tree: RAILS
+    needs: browser
+    evidence: >-
+      Capture the current Radio playlist home in Chrome at phone, tablet and desktop widths. Review
+      first-play/tap-to-start, no-track, library-open, track label, reduced-motion and keyboard/focus
+      states against current source. Compare the captures with the retained November 5/6 references;
+      save new before/after evidence without replacing historical screenshots.
   - id: radio_whyp_tracks_imported
     tree: RAILS
     needs: console
@@ -332,7 +364,7 @@ seams:
     needs: ears
     evidence: >-
       The operator's own reading of MASTER's answers to realistic personal-assistance scenarios, recorded
-      apart from the model-backed evaluation in TODO.md.
+      apart from the model-backed evaluation in the cognition/evaluation owner records.
   - id: oauth_callbacks_live
     tree: RAILS
     needs: credential
@@ -365,6 +397,14 @@ seams:
       The DeepSeek handoff or chat export the backlog cited, saved under ~/Downloads, so each finding can be
       classified against current source. No file in the tree or Downloads holds it; git keeps only the commits
       that applied some of it (proof guards kept, MASTER/web and lib/master layouts since removed).
+  - id: outbound_http_host_egress
+    tree: OPENBSD
+    needs: console
+    evidence: >-
+      On vm23, prove the host egress policy independently blocks loopback, RFC1918, link-local,
+      metadata-service and redirect-to-private destinations while allowing explicitly approved provider
+      endpoints. Record host identity, PF ruleset digest, command output and a negative/positive probe
+      pair. Source-level SSRF tests are not a substitute for this host proof.
   - id: csp_enforced_on_vm23
     tree: OPENBSD
     needs: console
