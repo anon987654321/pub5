@@ -2,7 +2,7 @@
 
 # CLI contracts: what each MASTER entrypoint answers to --help, recorded so a
 # port can be checked against them. Third piece of the pub5 acceptance harness
-# (TODO.md, current-revision acceptance): pub5's core keeps the same command surface, and
+# (MASTER/convergence.yml, current-revision acceptance): pub5's core keeps the same command surface, and
 # its help must not silently rename a verb the operator learned.
 #
 #   ruby MASTER/tools/cli_contracts.rb record
