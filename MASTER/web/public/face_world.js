@@ -649,7 +649,8 @@
     pendingSubjectForm = null;
     pendingSubjectDescriptor = null;
     subjectTransitionGeneration += 1;
-    return setSubjectForm("face");
+    const mask = window.MASTER_FACE_MASKS?.descriptor?.();
+    return mask ? setSubjectForm("object", mask) : setSubjectForm("face");
   }
 
   function setConversationSubject(value, visualSubject = null) {
