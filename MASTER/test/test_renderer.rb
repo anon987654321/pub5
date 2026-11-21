@@ -680,4 +680,25 @@ class TestRenderer < Minitest::Test
     assert_equal "/repo/MASTER main <operator> ", strip_ansi(prompt)
   end
 
+  def test_terminal_markdown_highlights_code_only_on_an_interactive_tty
+    renderer = FakeRenderer.new(config: {})
+    guard = Object.new
+    guard.define_singleton_method(:sanitize) { |text, context:| text }
+    renderer.define_singleton_method(:output_guard) { guard }
+    pastel = Object.new
+    { dim: "dim", green: "green", yellow: "yellow", cyan: "cyan", magenta: "magenta", blue: "blue" }.each do |name, label|
+      pastel.define_singleton_method(name) { |value| "<#{label}>#{value}</#{label}>" }
+    end
+    renderer.instance_variable_set(:@p, pastel)
+    source = "~~~" # keep the fixture's source delimiters independent of Markdown parsing
+    source = "def run\\n  puts \\"ready\\"\\n  42\\nend"
+
+    $stdout.stub(:tty?, true) do
+      rendered = renderer.terminal_markdown("\\`\\`\\`ruby\\n#{source}\\n\\`\\`\\`")
+      assert_includes rendered, "<cyan>def</cyan>"
+      assert_includes rendered, "<green>\\\"ready\\\"</green>"
+      assert_includes rendered, "<magenta>42</magenta>"
+    end
+  end
+
 end
