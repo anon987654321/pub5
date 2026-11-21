@@ -106,7 +106,7 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     assert_response :created
     new_cookie = cookies[:master_conversation]
     payload = JSON.parse(response.body)
-    assert_match(/\\A[0-9a-f]{32}\\z/, new_cookie)
+    assert_match(/^[0-9a-f]{32}$/, new_cookie)
     refute_equal first_cookie, new_cookie
     assert_equal Digest::SHA256.hexdigest("master-face-mask:#{new_cookie}")[0, 32],
                  payload.fetch("face_session")
