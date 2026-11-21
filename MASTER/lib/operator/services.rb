@@ -122,15 +122,7 @@ module Master
       allowed = service == "master" && %w[stop restart].include?(action.to_s)
       raise SecurityError, "service action is not allowlisted" unless allowed
 
-      broker = "/usr/local/sbin/pub5-admin"
-      raise SecurityError, "pub5-admin is a symlink" if File.symlink?(broker)
-
-      command = if File.executable?(broker)
-                  ["doas", "-n", broker, "service", action.to_s, service]
-                else
-                  # Legacy hosts only; remove once the broker is installed everywhere.
-                  ["doas", "-n", "/usr/sbin/rcctl", action.to_s, service]
-                end
+      command = ["doas", "-n", "/usr/sbin/rcctl", action.to_s, service]
       out, status = Master::Io::Exec.capture2e(*command)
       status.success? ? out.strip : raise("service #{action} #{service} failed: #{out.strip}")
     end
