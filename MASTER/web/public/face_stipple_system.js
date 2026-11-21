@@ -151,6 +151,38 @@
     return samples;
   }
 
+  // The single identity mark is selected once from the source geometry, never
+  // re-rolled by the frame clock. Prefer a carrier in the left-eye band nearest
+  // the shared face-zone target; fall back to the nearest left-side carrier.
+  function selectSoloMark(input) {
+    const samples = Array.from(input || []).map((sample) => ({ ...sample, solo: false }));
+    let eyeIndex = -1;
+    let eyeDistance = Infinity;
+    let leftIndex = -1;
+    let leftDistance = Infinity;
+
+    samples.forEach((sample, index) => {
+      const x = Number(sample.x);
+      const y = Number(sample.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y) || x >= 0) return;
+      const dx = x + 0.31;
+      const dy = y - 0.17;
+      const distance = dx * dx + dy * dy;
+      if (distance < leftDistance) {
+        leftDistance = distance;
+        leftIndex = index;
+      }
+      if (y >= -0.05 && y <= 0.48 && distance < eyeDistance) {
+        eyeDistance = distance;
+        eyeIndex = index;
+      }
+    });
+
+    const selected = eyeIndex >= 0 ? eyeIndex : leftIndex;
+    if (selected >= 0) samples[selected].solo = true;
+    return samples;
+  }
+
   function fingerprintConfiguration() {
     const config = window.MASTER_FACE_CONTRACT?.stipple?.fingerprint || {};
     const center = Array.isArray(config.center) ? config.center : [0.08, 0.06];
@@ -331,7 +363,7 @@
 
   function buildFromSamples(THREE, input) {
     if (!THREE?.BufferGeometry || !THREE?.ShaderMaterial) throw new Error("THREE is required");
-    const samples = Array.from(input || []).slice(0, MAX_POINTS);
+    const samples = selectSoloMark(Array.from(input || []).slice(0, MAX_POINTS));
     if (!samples.length) throw new Error("at least one valid stipple sample is required");
     const positions = new Float32Array(samples.length * 3);
     const introScatter = new Float32Array(samples.length * 3);
@@ -340,6 +372,7 @@
     const zones = new Float32Array(samples.length);
     const biases = new Float32Array(samples.length);
     const depthRanks = new Float32Array(samples.length);
+    const soloMarks = new Float32Array(samples.length);
     const homeDepths = new Float32Array(samples.length);
     const velocities = new Float32Array(samples.length * 3);
 
@@ -357,6 +390,7 @@
       thresholds[index] = rand(index, 19);
       zones[index] = clamp(sample.zone, 0, 0, 8);
       biases[index] = clamp(sample.bias, 1, 0.25, 1.5);
+      soloMarks[index] = sample.solo === true ? 1.0 : 0.0;
     });
 
     const geometry = new THREE.BufferGeometry();
@@ -365,6 +399,7 @@
     geometry.setAttribute("aPhase", new THREE.BufferAttribute(phases, 1));
     geometry.setAttribute("aThreshold", new THREE.BufferAttribute(thresholds, 1));
     geometry.setAttribute("aZone", new THREE.BufferAttribute(zones, 1));
+    geometry.setAttribute("aSolo", new THREE.BufferAttribute(soloMarks, 1));
     geometry.setAttribute("aBias", new THREE.BufferAttribute(biases, 1));
     geometry.setAttribute("aDepthRank", new THREE.BufferAttribute(depthRanks, 1));
     const idle = profiles().idle || IDLE_PROFILE;
@@ -403,6 +438,7 @@
         attribute float aPhase;
         attribute float aThreshold;
         attribute float aZone;
+        attribute float aSolo;
         attribute float aBias;
         attribute float aDepthRank;
         attribute vec3 aIntroScatter;
@@ -435,6 +471,7 @@
         uniform float uLuminosity;
         varying float vAlpha;
         varying float vZone;
+        varying float vSolo;
         varying float vThreshold;
         varying float vDepthRank;
         vec3 expressionPoint(vec3 point, float expression) {
@@ -529,6 +566,7 @@
           vDepthRank = aDepthRank;
           vAlpha = clamp((0.34 + zoneWeight * 0.56) * aBias * uLuminosity * breath * (1.0 - uEntropy * 0.08) * depthScale * ridgeTone, 0.0, 1.0);
           vZone = aZone;
+          vSolo = aSolo;
         }
       `,
       fragmentShader: `
@@ -539,11 +577,12 @@
         uniform float uDepthSteps;
         varying float vAlpha;
         varying float vZone;
+        varying float vSolo;
         varying float vThreshold;
         varying float vDepthRank;
         void main() {
           vec2 p = gl_PointCoord - vec2(0.5);
-          if (vThreshold > uDensity || length(p) > 0.5) discard;
+          if (vSolo < 0.5 && (vThreshold > uDensity || length(p) > 0.5)) discard;
           float zoneTone = vZone < 2.0 ? 1.0 : (vZone > 5.0 ? 0.84 : 0.93);
           // One-pixel law: the shared depth rank affects brightness, never size.
           float depthRank = clamp(vDepthRank, 0.0, 1.0);
@@ -551,7 +590,10 @@
           float depthTone = uDepthFromRank > 0.5
             ? mix(0.68, 1.0, depthBucket / max(1.0, uDepthSteps - 1.0))
             : 1.0;
-          gl_FragColor = vec4(uColor * zoneTone * depthTone, vAlpha * uOpacity);
+          float solo = step(0.5, vSolo);
+          vec3 ink = mix(uColor * zoneTone * depthTone, vec3(1.0), solo);
+          float alpha = mix(vAlpha * uOpacity, 1.0, solo);
+          gl_FragColor = vec4(ink, alpha);
         }
       `,
       transparent: true, depthWrite: false, depthTest: true
@@ -791,7 +833,7 @@
     const time = Number(timeSeconds) || 0;
     if (system.introStartedAt == null) system.introStartedAt = time;
     const reducedMotion = reducedMotionEnabled(state);
-    const durationMs = clamp(window.MASTER_FACE_CONTRACT?.stipple?.intro_duration_ms, 1200, 400, 2200);
+    const durationMs = clamp(window.MASTER_FACE_CONTRACT?.stipple?.intro_duration_ms, 5200, 400, 8000);
     const elapsed = Math.max(0, time - system.introStartedAt);
     const rawProgress = reducedMotion ? 1 : clamp(elapsed / (durationMs / 1000), 1, 0, 1);
     const introProgress = rawProgress * rawProgress * (3 - 2 * rawProgress);
@@ -1069,7 +1111,7 @@
   }
 
   window.MASTER_FACE_STIPPLE = Object.freeze({
-    createDefault, buildFromSamples, mount, configure, syncFromFaceState, tick, updateExpressions, updateSwarm,
+    createDefault, buildFromSamples, selectSoloMark, mount, configure, syncFromFaceState, tick, updateExpressions, updateSwarm,
     glyphForDepth, pointBudget, canonicalSwarmMode, modeMultipliersFor, applyPalette,
     get profiles() { return profiles(); },
     get system() { return active; },
