@@ -646,7 +646,7 @@ module Backlog
 
     # Route history is reconstructed only from durable completion receipts
     # whose item, current acceptance command, output digest and origin/main push
-    # still agree with the live root TODO source.
+    # still agree with the live owner-registry task.
     def completed_receipts
       completed_receipt_rows.map { |row| row.fetch("item_digest") }.uniq
     end
@@ -838,11 +838,3 @@ module Backlog
   end
 end
 
-if $PROGRAM_NAME == __FILE__
-  run = Backlog::Store.parse_cli(ARGV)
-  if run[:check]
-    exit(Backlog::Store.check(source: run[:source], out: run[:out]))
-  else
-    exit(Backlog::Store.write(source: run[:source], out: run[:out], refresh: run[:refresh]))
-  end
-end
