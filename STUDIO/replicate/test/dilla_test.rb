@@ -51,6 +51,7 @@ class TestDillaCliContract < Minitest::Test
     assert status.success?
     assert_includes out, "reference"
     assert_includes out, "output-path"
+    assert_includes out, "audit PATH.wav"
   end
 
   def test_output_path_answers_the_master_contract
