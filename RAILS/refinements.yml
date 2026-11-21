@@ -1,7 +1,7 @@
 # RAILS refinement ledger.
 # Only unresolved items remain here; completed and disproved rows are preserved in Git history.
 # Close an item only with its declared source and rendered evidence, then remove it
-# from this active ledger in the same cleanup that updates TODO.md.
+# from this active ledger in the same change that records its accepted proof.
 ---
 schema: 1
 items:
