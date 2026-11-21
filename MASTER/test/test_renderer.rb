@@ -662,4 +662,22 @@ class TestRenderer < Minitest::Test
     prose = renderer.send(:beautify, %q{The council called this a "plateau" and stopped.})
     assert_equal "The council called this a \"plateau\" and stopped.", prose
   end
+  def test_shell_prompt_uses_semantic_colours_without_changing_plain_text
+    renderer = FakeRenderer.new(config: {})
+    renderer.define_singleton_method(:prompt_path) { |suffix_length: 0| "/repo/MASTER" }
+    renderer.define_singleton_method(:git_prompt_segment) { "main" }
+    pastel = Object.new
+    { dim: 2, cyan: 36, green: 32 }.each do |name, code|
+      pastel.define_singleton_method(name) { |value| "\\e[#{code}m#{value}\\e[0m" }
+    end
+    renderer.instance_variable_set(:@p, pastel)
+
+    prompt = renderer.shell_prompt("ready", true)
+
+    assert_includes prompt, "\\e[2m/repo/MASTER"
+    assert_includes prompt, "\\e[36mmain"
+    assert_includes prompt, "\\e[32m<operator>"
+    assert_equal "/repo/MASTER main <operator> ", strip_ansi(prompt)
+  end
+
 end
