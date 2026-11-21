@@ -205,9 +205,9 @@ module Master
           contract and affected-tree proof after each coherent batch. Re-read the
           resulting source and diff. A written test is not a passing test; an
           unavailable runner is NOT_RUN, never PASS. Do not create review reports,
-          planning documents, parallel backlogs or speculative TODO rows. Root
-          TODO.md remains the sole cross-tree action register and retains only
-          genuine unresolved work or external prerequisites.
+          planning documents, parallel backlogs or speculative TODO rows. Keep
+          each unresolved item in its existing owner registry; `status --agent`
+          is only a read-only projection, never another source of authority.
 
           Host-only measurements, eBPF, resident-memory data, provider receipts,
           rights, credentials and live-device/browser evidence must come from the
