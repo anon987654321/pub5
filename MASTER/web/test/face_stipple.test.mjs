@@ -129,18 +129,18 @@ test("fingerprint ridges and radial signal waves stay inside the bounded one-pix
 });
 
 test("Hollow Gaze and Faultline are semantic, bounded voids in the one-pixel field", () => {
-  assert.match(tokens, /particle_spacing_scale:\\s*1\\.075/);
-  assert.match(tokens, /voids:\\s*\\n\\s+eye_aperture_scale:\\s*1\\.14/);
-  assert.match(tokens, /mouth_width:\\s*0\\.225/);
-  assert.match(tokens, /mouth_height:\\s*0\\.072/);
-  assert.match(tokens, /faultline:\\s*\\n\\s+enabled: true\\s+states: \\[error\\]/);
-  assert.match(system, /function voidConfiguration\\(\\)/);
-  assert.match(system, /uFaultlineHalfWidth: \\{ value: voidConfiguration\\(\\)\\.faultline\\.halfWidth \\}/);
-  assert.match(system, /vFaultline = \\(1\\.0 - smoothstep\\(uFaultlineHalfWidth/);
-  assert.match(system, /if \\(vSolo < 0\\.5 && fault > 0\\.62\\) discard;/);
-  assert.match(system, /faultlineStrengthForState\\(mode\\)/);
-  assert.match(system, /gl_PointSize = 1\\.0;/);
-  assert.match(tokens, /density_scale:\\s*0\\.90/);
+  assert.match(tokens, /particle_spacing_scale:\s*1\.075/);
+  assert.match(tokens, /voids:\s*\n\s+eye_aperture_scale:\s*1\.14/);
+  assert.match(tokens, /mouth_width:\s*0\.225/);
+  assert.match(tokens, /mouth_height:\s*0\.072/);
+  assert.match(tokens, /faultline:\s*\n\s+enabled: true\s+states: \[error\]/);
+  assert.match(system, /function voidConfiguration\(\)/);
+  assert.match(system, /uFaultlineHalfWidth: \{ value: voidConfiguration\(\)\.faultline\.halfWidth \}/);
+  assert.match(system, /vFaultline = \(1\.0 - smoothstep\(uFaultlineHalfWidth/);
+  assert.match(system, /if \(vSolo < 0\.5 && fault > 0\.62\) discard;/);
+  assert.match(system, /faultlineStrengthForState\(mode\)/);
+  assert.match(system, /gl_PointSize = 1\.0;/);
+  assert.match(tokens, /density_scale:\s*0\.90/);
 });
 
 test("aliased face contours use bounded tokenised position quantisation without enlarging points", () => {
