@@ -863,7 +863,7 @@ class TestRG69BrowserContract < Minitest::Test
     license_path = File.join(studio_root, "dilla", "vendor", "tone", "LICENSE.md")
     assert File.file?(tone_path), "missing vendored Tone.js 14.8.49"
     assert File.file?(license_path), "missing Tone.js license notice"
-    assert_includes html, 'src="vendor/tone/Tone.min.js"'
+    assert_includes html, 'src="../vendor/tone/Tone.min.js"'
     refute_match(%r{https?://[^"']*Tone\.min\.js}i, html, "Tone.js must be local, not fetched from a CDN")
     assert_includes File.read(tone_path), "14.8.49"
     assert_includes File.read(license_path), "MIT License"
