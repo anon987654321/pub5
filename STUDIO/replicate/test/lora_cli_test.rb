@@ -69,4 +69,27 @@ class TestStudioLoraCli < Minitest::Test
     assert_includes output, '"mode": "apply"'
     assert_empty error
   end
+  def test_photograph_api_defaults_to_four_images_for_a_subject
+    captured = {}
+    fake_series = Object.new
+    fake_series.define_singleton_method(:run) do |count:|
+      captured[:count] = count
+      []
+    end
+
+    Studio::Visual::SelfieSeries.stub(:new, lambda { |subject:, engine:|
+      captured[:subject] = subject
+      captured[:engine] = engine
+      fake_series
+    }) do
+      result = studio_photograph_actions.fetch("series").call({})
+      assert_equal [], result.fetch("rendered")
+    end
+
+    assert_equal "ragnhild", captured.fetch(:subject)
+    assert_nil captured.fetch(:engine)
+    assert_equal 4, captured.fetch(:count)
+  end
+
+
 end
