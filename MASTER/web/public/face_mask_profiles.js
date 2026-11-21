@@ -29,7 +29,7 @@
   const beam = (key, center, size, axis = "x") => ({ key, primitive: "beam", center, size, axis });
   function descriptor(profile) {
     const w = clamp(profile.w, .22, .48);
-    const h = clamp(profile.h, .30, .64);
+    const h = clamp(profile.h, .30, .62);
     const jaw = clamp(profile.jaw, .10, .36);
     const asym = clamp(profile.asym, 0, .15);
     const eyeY = profile.id === "elema-tower" ? .02 : .12;
