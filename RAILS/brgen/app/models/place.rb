@@ -29,7 +29,8 @@ class Place < ApplicationRecord
   VERIFICATION_STATES = %w[unverified verified rejected].freeze
   LOCATION_PRECISIONS = %w[exact street neighbourhood city].freeze
 
-  validates :source, presence: true
+  before_validation { self.external_id = external_id.presence }
+  validates :source, inclusion: { in: SOURCES }
   validates :verification_state, inclusion: { in: VERIFICATION_STATES }
   validates :location_precision, inclusion: { in: LOCATION_PRECISIONS }
   validates :external_id, uniqueness: { scope: [ :city_id, :source ] }, allow_nil: true
