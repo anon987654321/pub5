@@ -10,9 +10,13 @@ class TestVoiceGlmTts < Minitest::Test
     cfg = { "glm_speed" => 1.0 }
     assert_in_delta 1.06, Engines.glm_speed(cfg, "+6%"), 0.0001
     assert_in_delta 0.9, Engines.glm_speed(cfg, "-10%"), 0.0001
-    assert_in_delta 0.5, Engines.glm_speed(cfg, "-80%"), 0.0001
+    # rate_factor's own 0.80 floor binds before the API clamp: -80% lands at
+    # 0.8, not at the API floor.
+    assert_in_delta 0.8, Engines.glm_speed(cfg, "-80%"), 0.0001
     assert_in_delta 2.0, Engines.glm_speed({ "glm_speed" => 1.9 }, "+10%"), 0.0001
     assert_in_delta 1.0, Engines.glm_speed({}, nil), 0.0001
+    # The API's 0.5 floor is reachable through the configured glm_speed.
+    assert_in_delta 0.5, Engines.glm_speed({ "glm_speed" => 0.4 }, nil), 0.0001
   end
 
   def test_glm_text_chunks_keeps_short_text_whole
