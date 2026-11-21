@@ -218,8 +218,18 @@ requirement. `bin/check --help` explains the supplemental profiles,
 booting MASTER. While a repair is active, `bin/operator fix status` and
 `bin/operator fix tail` expose its progress and transcript.
 
-First hour on a new host: use the installed compatible Ruby (3.2 or newer; no upper bound), run `bundle install` in
-`MASTER/`, keep keys in the environment, run `bin/operator doctor` for the host and `bin/doctor` for the runtime, then take one narrow dry run,
+First hour on a new host: use the installed compatible Ruby (3.2 or newer; no upper bound), run
+`ruby bin/bootstrap` (the same dependency preflight `bin/master` runs before every normal boot), keep keys in the environment,
+run `bin/operator doctor` for the host and `bin/doctor` for the runtime, then take one narrow dry run:
+`bin/master '/fix --dry-run --critique --only critique,map MASTER/lib/cli'`.
+Read the result before widening scope.
+
+The bootstrap installs the locked Ruby bundle automatically. If a native gem build proves that OS build
+prerequisites are missing, an interactive terminal receives one consolidated package plan and consent prompt;
+non-interactive runs fail closed with the exact package list and `bin/deps system` recovery command.
+For unattended hosts, set `MASTER_AUTO_SYSTEM_PACKAGES=1` only when package installation has already been
+approved by the operator. The system package list covers native build prerequisites, not optional applications
+or provider credentials.
 `bin/master '/fix --dry-run --critique --only critique,map MASTER/lib/cli'`, and read it before
 widening scope.
 
