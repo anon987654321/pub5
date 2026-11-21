@@ -93,6 +93,42 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     refute_equal cookies[:master_conversation], first_session
   end
 
+  test "new conversation creates an isolated cookie and rotates its mask once" do
+    previous_container = Rails.application.config.x.master_container
+    Rails.application.config.x.master_container = nil
+
+    get root_path
+    assert_response :success
+    first_cookie = cookies[:master_conversation]
+    first_profile = response.body.match(/window\\.MASTER_FACE_MASK_PROFILE = "([^"]*)";/).fetch(1)
+
+    post "/chat/new"
+    assert_response :created
+    new_cookie = cookies[:master_conversation]
+    payload = JSON.parse(response.body)
+    assert_match(/\\A[0-9a-f]{32}\\z/, new_cookie)
+    refute_equal first_cookie, new_cookie
+    assert_equal Digest::SHA256.hexdigest("master-face-mask:#{new_cookie}")[0, 32],
+                 payload.fetch("face_session")
+    refute_equal new_cookie, payload.fetch("face_session")
+
+    get root_path
+    assert_response :success
+    next_session = response.body.match(/window\\.MASTER_FACE_MASK_SESSION = "([^"]+)";/).fetch(1)
+    next_profile = response.body.match(/window\\.MASTER_FACE_MASK_PROFILE = "([^"]*)";/).fetch(1)
+    assert_equal payload.fetch("face_session"), next_session
+    refute_equal first_profile, next_profile
+
+    get root_path
+    assert_response :success
+    assert_equal next_session,
+                 response.body.match(/window\\.MASTER_FACE_MASK_SESSION = "([^"]+)";/).fetch(1)
+    assert_equal next_profile,
+                 response.body.match(/window\\.MASTER_FACE_MASK_PROFILE = "([^"]*)";/).fetch(1)
+  ensure
+    Rails.application.config.x.master_container = previous_container
+  end
+
   test "index face asset paths are wired for blob import replacement" do
     get root_path
 
