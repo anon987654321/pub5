@@ -9,6 +9,14 @@ executes is the "pub5 — a ported fresh start" section of the pub4 backlog
 
 Rule for the whole port: **same behaviour, less code; new features wait.**
 
+Current-state note (2026-11-21): references below to pub5's root `TODO.md` describe the
+migration-era register at the time it was written. That file has since been reconciled
+into the existing owner ledgers — `MASTER/convergence.yml`, `MASTER/data/gaps.yml`,
+`MASTER/data/operator_seams.yml`, `MASTER/data/law/ux_refinements.yml`,
+`RAILS/refinements.yml` and the existing ideation records — and deleted. The
+read-only `bin/master status --agent` view projects those sources; do not recreate
+a parallel Markdown checklist.
+
 ## Source
 
 - Repository: <https://github.com/anon987654321/pub4>
