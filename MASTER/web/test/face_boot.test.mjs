@@ -1437,3 +1437,12 @@ test("MASTER web shares the CLI's Nerd Font Mono syntax roles", () => {
     assert.match(css, /font-variant-numeric:\\s*tabular-nums/);
   }
 });
+
+test("MASTER fenced code highlighting escapes model text and emits semantic spans", () => {
+  const chat = readFileSync(join(publicDir, "chat.js"), "utf8");
+  assert.match(chat, /function highlightCode\(source\)/);
+  assert.match(chat, /escapeHtml\(token\)/);
+  assert.match(chat, /class="syntax-/);
+  assert.match(chat, /function renderTerminalText\(source\)/);
+  assert.match(chat, /_streamEl\.innerHTML = renderTerminalText\(text\)/);
+});
