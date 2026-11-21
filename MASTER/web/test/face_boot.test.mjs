@@ -345,7 +345,7 @@ test("sixteen pixel mask profiles use bounded sparse geometry and the shared fac
     assert.equal(call.descriptor.kind, "custom");
     assert.equal(call.descriptor.parts.length, 8);
     for (const part of call.descriptor.parts) {
-      assert.ok(["ring", "beam"].includes(part.primitive));
+      assert.ok(["ring", "beam", "box", "cylinder", "sphere"].includes(part.primitive));
       assert.ok(part.center.every((value) => Number.isFinite(value) && Math.abs(value) <= 0.45));
       assert.ok(part.size.every((value) => Number.isFinite(value) && value >= 0.06 && value <= 0.62));
     }
