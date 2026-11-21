@@ -72,8 +72,9 @@ module Master
           from + (((trigger ? 1.0 : 0.0) - from) * progress)
         end
 
-        # The mask a session wears: FNV-1a over its id's bytes, so the terminal
-        # and the web face choose alike.
+        # The terminal session's mask: FNV-1a over its session id, stable for
+        # that run. It resolves through the same five-entry archive as the web
+        # face; the browser advances that archive by its signed-cookie rotation.
         def pick(session = nil)
           h = 2_166_136_261
           id = session.to_s
