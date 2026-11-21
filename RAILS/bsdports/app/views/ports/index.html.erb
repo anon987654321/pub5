@@ -26,6 +26,9 @@
         <%= t("ports.never_imported") %>
       <% end %>
     </p>
+    <% if @last_import&.package_index_only? %>
+      <p class="ports-data-note"><%= t("ports.package_index_only") %></p>
+    <% end %>
 
     <%# sort=updated was written in the controller and reachable only by typing the
         query string. Name is the implicit default, so both are named here. The
