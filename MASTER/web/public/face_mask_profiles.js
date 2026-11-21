@@ -35,17 +35,19 @@
     const eyeY = profile.id === "elema-tower" ? .02 : .12;
     const parts = [
       { key: "outer", primitive: "ring", center: [asym * .25, 0, .04], size: [w, h, .08] },
+      beam("crown", [asym * .4, .39, .05], [profile.crown, .035, .035]),
       beam("brow", [asym, .25, .08], [profile.brow, .035, .035]),
       { key: "left-eye", primitive: "ring", center: [-.18 - asym, eyeY, .13], size: [.105, .060, .04] },
       { key: "right-eye", primitive: "ring", center: [.18 + asym, eyeY, .13], size: [.105, .060, .04] },
       beam("nose", [asym * .4, -.06, .16], [.045, profile.nose, .045], "y"),
+      beam("cheeks", [asym, -.13, .045], [Math.max(.18, jaw * 1.55), .028, .035]),
       beam("jaw", [asym, -.31, .06], [Math.max(.16, jaw * 1.65), .035, .04])
     ];
     return {
       kind: "custom",
       label: profile.name,
       confidence: 1,
-      sequence: ["outer", "brow", "left-eye", "right-eye", "nose", "jaw"],
+      sequence: ["outer", "crown", "brow", "left-eye", "right-eye", "nose", "cheeks", "jaw"],
       parts
     };
   }
