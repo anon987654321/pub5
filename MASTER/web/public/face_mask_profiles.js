@@ -76,9 +76,9 @@
   }
   function apply(index, reason) {
     const world = window.MASTER_FACE_WORLD;
-    if (!world?.setConversationSubject) return false;
+    if (!world?.setSubjectForm) return false;
     const profile = PROFILES[((index % PROFILES.length) + PROFILES.length) % PROFILES.length];
-    world.setConversationSubject("pixel mask", descriptor(profile));
+    world.setSubjectForm("object", descriptor(profile));
     document.documentElement.dataset.maskProfile = profile.id;
     document.documentElement.dataset.maskFamily = profile.family;
     document.documentElement.dataset.maskLabel = profile.name;
