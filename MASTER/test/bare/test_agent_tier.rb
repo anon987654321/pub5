@@ -96,6 +96,7 @@ module Master
 
         assert_includes view[:sources], "MASTER/data/law/ux_refinements.yml"
         assert_includes view[:sources], "RAILS/refinements.yml"
+        assert_includes view[:sources], "MASTER/data/ideations/polish.yml"
         refute_includes view[:sources], "TODO.md",
                         "the agent status view must read owner registries, not a shadow task list"
         ids = view[:buckets].values.flatten.map { |row| row[:id] }
