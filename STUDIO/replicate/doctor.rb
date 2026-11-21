@@ -14,6 +14,7 @@ require_relative "../lora/validate"
 module Studio
   class Doctor
     MINIMUM_RUBY = Gem::Version.new("3.2.0").freeze
+    ROOT_OWNERS = %w[dilla lora postpro replicate].freeze
 
     STUDIO_ROOT = File.expand_path("..", __dir__).freeze
 
@@ -80,6 +81,24 @@ module Studio
       checks.none? { |check| %w[FAIL BLOCKED INCONCLUSIVE].include?(check.fetch("state")) }
     end
 
+    def self.root_layout(root = STUDIO_ROOT)
+      expected = ROOT_OWNERS.sort
+      entries = Dir.children(root).sort
+      invalid = ROOT_OWNERS.reject do |owner|
+        path = File.join(root, owner)
+        File.directory?(path) && !File.symlink?(path)
+      end
+      valid = entries == expected && invalid.empty?
+      detail = if valid
+                 "Exactly four real owners are present: #{expected.join(', ')}"
+               else
+                 "Expected exactly #{expected.join(', ')}; found #{entries.join(', ')}"
+               end
+      [valid, detail]
+    rescue SystemCallError => error
+      [false, "Cannot inspect STUDIO root: #{error.class}"]
+    end
+
     def initialize(root: STUDIO_ROOT, ruby_version: RUBY_VERSION)
       @root = File.expand_path(root)
       @repository_root = File.expand_path("..", @root)
@@ -90,6 +109,9 @@ module Studio
       checks = []
       add(checks, "ruby", self.class.ruby_supported?(@ruby_version) ? "PASS" : "FAIL",
           "Ruby #{@ruby_version}; minimum supported version is #{MINIMUM_RUBY}")
+
+      layout_ok, layout_detail = self.class.root_layout(@root)
+      add(checks, "root_boundary", layout_ok ? "PASS" : "FAIL", layout_detail)
 
       missing = REQUIRED_FILES.reject { |path| File.file?(File.join(@root, path)) }
       add(checks, "entrypoints", missing.empty? ? "PASS" : "FAIL",

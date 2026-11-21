@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "minitest_helper"
+require "tmpdir"
 require_relative "../doctor"
 
 class TestStudioDoctor < Minitest::Test
@@ -18,6 +19,21 @@ class TestStudioDoctor < Minitest::Test
     refute Studio::Doctor.ready?([{ "state" => "FAIL" }])
     assert Studio::Doctor.ready?([{ "state" => "PASS" }, { "state" => "OPTIONAL_MISSING" }])
     refute Studio::Doctor.ready?([{ "state" => "INCONCLUSIVE" }])
+  end
+
+  def test_studio_root_contains_exactly_the_four_declared_owners
+    Dir.mktmpdir do |root|
+      Studio::Doctor::ROOT_OWNERS.each { |owner| Dir.mkdir(File.join(root, owner)) }
+
+      valid, detail = Studio::Doctor.root_layout(root)
+      assert valid
+      assert_includes detail, "Exactly four real owners"
+
+      File.write(File.join(root, "stray.txt"), "no")
+      valid, detail = Studio::Doctor.root_layout(root)
+      refute valid
+      assert_includes detail, "stray.txt"
+    end
   end
 
   def test_report_is_explicitly_read_only_and_never_calls_a_provider

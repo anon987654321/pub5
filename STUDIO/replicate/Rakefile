@@ -10,6 +10,16 @@ RUBY = RbConfig.ruby
 
 desc "Load every STUDIO entrypoint and prove the contracts answer"
 task :check do
+  expected_owners = %w[dilla lora postpro replicate].sort
+  actual_owners = Dir.children(STUDIO_ROOT).sort
+  invalid_owners = expected_owners.reject do |owner|
+    path = File.join(STUDIO_ROOT, owner)
+    File.directory?(path) && !File.symlink?(path)
+  end
+  unless actual_owners == expected_owners && invalid_owners.empty?
+    raise "STUDIO root boundary failed: expected exactly #{expected_owners.join(', ')}; found #{actual_owners.join(', ')}"
+  end
+
   require_relative "output_paths"
   require_relative "subprocess"
   require_relative "../lora/validate"
