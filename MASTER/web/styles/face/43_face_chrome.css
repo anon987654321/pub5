@@ -168,7 +168,7 @@
   align-items: center;
   text-decoration: none;
   color: var(--face-fg);
-  font: 800 clamp(0.9375rem, 2.8vw, 1.125rem) / 1 var(--font-logo);
+  font: 700 clamp(0.9375rem, 2.8vw, 1.125rem) / 1 var(--font-logo);
   letter-spacing: -0.03em;
 }
 .brand-text {
