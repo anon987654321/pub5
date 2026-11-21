@@ -93,7 +93,7 @@ body.mission-control .mission-heading { max-inline-size: 80ch; margin: 0 0 1rem;
   #prompt-form { background: Canvas; color: CanvasText; outline-color: CanvasText; }
   #prompt-form input, #prompt-form textarea { color: CanvasText; }
   .master-titlebar, #turn-control { color: CanvasText; }
-  .master-session-tab:focus-visible, #turn-control:focus-visible { outline-color: CanvasText; }
+  #turn-control:focus-visible { outline-color: CanvasText; }
 }
 
 /* MASTER terminal language: the same fixed-pitch face and semantic syntax
