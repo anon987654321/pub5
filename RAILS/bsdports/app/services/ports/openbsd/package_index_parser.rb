@@ -47,7 +47,7 @@ module Ports
       # malformed package line must invalidate the whole snapshot. Silently
       # filter_map'ing it would make a partial parse look like a complete index.
       def self.parse(io)
-        package_lines = io.each_line.select { |line| line.match?(/\\.tgz\\s*\\z/) }
+        package_lines = io.each_line.select { |line| line.match?(/\.tgz\s*\z/) }
         raise ArgumentError, "package index contains no package rows" if package_lines.empty?
 
         package_lines.map do |line|
