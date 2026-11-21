@@ -53,26 +53,35 @@ pub5_ci_lock_path() {
 # never locked by anyone and the file that was locked was the world-writable one
 # this helper exists to replace.
 pub5_ensure_ci_lock() {
-  if [ -x /usr/local/sbin/pub5-admin ]; then
-    case "${PUB5_CI_LOCK:-}" in
-      ""|"${PUB5_CI_LOCK_DIR}/${PUB5_CI_LOCK_NAME}") ;;
-      *)
-        printf 'ci_lock: refusing override while the fixed broker is installed\n' >&2
-        return 1
-        ;;
-    esac
-    lock="${PUB5_CI_LOCK_DIR}/${PUB5_CI_LOCK_NAME}"
-    doas /usr/local/sbin/pub5-admin ci-lock || return $?
-  else
-    lock=$(pub5_ci_lock_path)
-    doas sh -c "
-      mkdir -p '${PUB5_CI_LOCK_DIR}'
-      chown root:wheel '${PUB5_CI_LOCK_DIR}'
-      chmod 755 '${PUB5_CI_LOCK_DIR}'
-      [ -e '${lock}' ] || : > '${lock}'
-      chown '${PUB5_CI_LOCK_OWNER}' '${lock}'
-      chmod 644 '${lock}'
-    " || return $?
-  fi
-  printf '%s\n' "$lock"
+  lock=$(pub5_ci_lock_path) || return $?
+  doas /bin/ksh -c '
+    set -eu
+    dir=$1
+    lock=$2
+    owner=$3
+    [ -d "$dir" ] && [ ! -L "$dir" ] || {
+      echo "ci_lock: lock directory must be a real directory" >&2
+      exit 1
+    }
+    [ "$(stat -f %u "$dir")" -eq 0 ] || {
+      echo "ci_lock: lock directory must be root-owned" >&2
+      exit 1
+    }
+    chmod 755 "$dir"
+    [ ! -L "$lock" ] || {
+      echo "ci_lock: refusing symlinked lock file" >&2
+      exit 1
+    }
+    if [ ! -e "$lock" ]; then
+      install -o "$owner" -g wheel -m 644 /dev/null "$lock"
+    else
+      [ -f "$lock" ] || {
+        echo "ci_lock: lock path must be a regular file" >&2
+        exit 1
+      }
+      chown "$owner":wheel "$lock"
+      chmod 644 "$lock"
+    fi
+  ' ci-lock "$PUB5_CI_LOCK_DIR" "$lock" "$PUB5_CI_LOCK_OWNER" || return $?
+  printf '%s\\n' "$lock"
 }
