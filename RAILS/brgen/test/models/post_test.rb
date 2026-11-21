@@ -29,6 +29,21 @@ class PostTest < ActiveSupport::TestCase
     assert_equal 0, Post.new(content: "<p> </p>").reading_time_minutes
   end
 
+  test "every feed lane has a unique final ordering key for stable pagination" do
+    viewer = Struct.new(:id).new(42)
+    relations = {
+      fresh: Post.fresh,
+      top: Post.top,
+      hot: Post.hot,
+      following: Post.followed_by(viewer),
+      ranked: Post.ranked_for(viewer: viewer, seed: "2026-11-21")
+    }
+
+    relations.each do |lane, relation|
+      assert_match(/id["`]? DESC/i, relation.to_sql, "#{lane} must end with a unique descending key")
+    end
+  end
+
   test "search raises when the FTS table is absent instead of answering empty" do
     skip "this database has posts_fts" if Post.connection.data_source_exists?("posts_fts")
 
