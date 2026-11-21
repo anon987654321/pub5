@@ -523,6 +523,37 @@ class TestDillaRender < Minitest::Test
     end
   end
 
+  def test_existing_render_outputs_require_explicit_overwrite
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "take.wav")
+      File.write(path, "existing")
+
+      assert_raises(Errno::EEXIST) { Dilla.refuse_existing_outputs!([path]) }
+      assert Dilla.refuse_existing_outputs!([path], overwrite: true)
+    end
+  end
+
+  def test_output_guard_never_allows_symlink_or_directory_destinations
+    Dir.mktmpdir do |dir|
+      target = File.join(dir, "target")
+      link = File.join(dir, "link")
+      File.write(target, "existing")
+      File.symlink(target, link)
+
+      assert_raises(ArgumentError) do
+        Dilla.refuse_existing_outputs!([link], overwrite: true)
+      end
+      assert_raises(ArgumentError) do
+        Dilla.refuse_existing_outputs!([dir], overwrite: true)
+      end
+    end
+  end
+
+  def test_overwrite_is_an_explicit_cli_option
+    refute Dilla.parse_cli([]).overwrite
+    assert Dilla.parse_cli(["--overwrite"]).overwrite
+  end
+
   def test_atomic_write_keeps_the_previous_artifact_when_replacement_fails
     Dir.mktmpdir do |dir|
       path = File.join(dir, "take.json")
