@@ -121,8 +121,8 @@ test("the chat keeps the CLI's monospaced presentation; the chrome takes brgen's
   const rules = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
 
   assert.match(css, /html, body \{[\s\S]*?font:\s*16px\/1\.5 var\(--font\)/);
-  assert.match(css, /#chat-log \{[^}]*font:\s*1rem\/1\.5 var\(--font-mono\)/);
-  assert.match(css, /#prompt-form input, #prompt-form textarea \{[^}]*font:\s*400 16px\/1\.5 var\(--font-mono\)/);
+  assert.match(css, /#chat-log \{[^}]*font:\s*1\.125rem\/1\.55 var\(--font-mono\)/);
+  assert.match(css, /#prompt-form input, #prompt-form textarea \{[^}]*font:\s*400 18px\/1\.5 var\(--font-mono\)/);
   assert.match(css, /--font-label:\s*"JetBrainsMono Nerd Font"/);
   assert.match(rules, /face_interface:/);
   assert.match(rules, /prompt:\s*\n\s+font: font_code/);
@@ -1430,11 +1430,11 @@ test("MASTER web shares the CLI's Nerd Font Mono syntax roles", () => {
   const source = readFileSync(join(root, "styles", "face", "60_session_chrome.css"), "utf8");
   const built = readFileSync(join(publicDir, "face.css"), "utf8");
   for (const css of [source, built]) {
-    assert.match(css, /font-family:\\s*var\\(--font-mono\\)/);
+    assert.match(css, /font-family:\s*var\\(--font-mono\\)/);
     for (const role of ["command", "keyword", "flag", "path", "string", "number", "comment", "success", "warning", "error", "operator"]) {
       assert.match(css, new RegExp("\\.syntax-" + role + "\\b"));
     }
-    assert.match(css, /font-variant-numeric:\\s*tabular-nums/);
+    assert.match(css, /font-variant-numeric:\s*tabular-nums/);
   }
 });
 
