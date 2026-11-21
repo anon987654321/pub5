@@ -28,7 +28,7 @@ decisions:
     decision: accepted
     domain: type
     subject: "Terminal text should be large and accessible; MASTER web defaults to 18px monospace while PuTTY and Termux retain host-owned size controls"
-    rationale: "The emulator owns physical font size. PuTTY offers a point-size control and Termux supports zoom and custom fonts; MASTER must not send non-portable resize escapes. The web transcript uses 18px text, 1.55 leading and a 66ch measure."
+    rationale: "The emulator owns physical font size. PuTTY offers a point-size control and Termux supports zoom and custom fonts; MASTER must not send non-portable resize escapes. The web transcript uses an 18px token, 1.5 leading and a 66ch measure."
   - id: palette-paper-token-2026
     at: "2026-11-07"
     revision: "recorded in MASTER/checks/data/law_fixtures.yml PAPER_NOT_PURE_WHITE"
