@@ -26,20 +26,37 @@ is subordinate to the existing shared point allocation.
 
 Typed input follows `Master::CLI::TurnRouter`, the same command path as `bin/master`. Speech and microphone behavior use the existing voice runtime and explicit user interaction. The face never gains shell, filesystem, network-write or deployment authority merely because it is visible in a browser or full-screen terminal.
 
-## Terminal typography
+## CLI terminal typography
 
-The default CLI and browser transcript share a Nerd Font Mono-first type stack:
-JetBrainsMono Nerd Font, then installed JetBrains Mono and platform monospace
-fallbacks. The CLI cannot install or select a terminal emulator font; operators
-select the Nerd Font Mono family in their terminal settings. The browser uses
-the canonical `--font-mono` token and makes no third-party font request.
+The terminal emulator owns its font family and size. MASTER must not issue
+font-changing OSC/escape sequences or pretend that it can set the host's
+display size. Prefer JetBrainsMono Nerd Font when installed, then any
+well-rendered fixed-width monospace face. Use a large size: 16–18 pt is a
+useful PuTTY starting point; increase it further whenever that improves
+comfortable reading. Termux users resize text with pinch zoom.
 
-The CLI prompt uses semantic ANSI colour for path, Git state and operator
-identity. The web transcript uses the same semantic roles for commands,
-keywords, flags, paths, strings, numbers, comments and outcome states. Colour
-is never the only carrier of meaning. ANSI is disabled for redirected output,
-dumb terminals and `NO_COLOR`; plain text remains ASCII-safe. Private-use
-Nerd Font glyphs are optional decoration and must never become required syntax.
+PuTTY selects the font and point size at *Window → Appearance → Font*.
+Termux supports pinch zoom and font selection at *More → Style → Choose
+Font*. Termux can also load ~/.termux/font.ttf; run
+termux-reload-settings after replacing that file. The operator-facing
+setup steps and source links live in MASTER/README.md#terminal-type-and-accessibility.
+
+The CLI prompt and fenced code use the same semantic roles as the browser:
+commands, keywords, flags, paths, strings, numbers, comments and outcomes.
+ANSI presentation is enabled only when Renderer#terminal_color_enabled?
+allows it. Redirected output, NO_COLOR and TERM=dumb remain plain. Nerd
+Font private-use glyphs are optional; they never carry meaning by themselves.
+
+The browser transcript is 18px monospaced text with 1.55 leading and a 66ch
+reading measure. It preserves line breaks, wraps long output, and does not
+shrink code below the surrounding terminal text. Do not align operational
+records with padding or fixed-width columns; each event remains one factual
+line and the terminal handles wrapping.
+
+Strunk and White govern the words: active verbs, concrete labels, one idea
+per sentence, and no needless banners. Bringhurst governs the setting:
+hierarchy, a measured line, consistent leading and enough negative space for
+the text to breathe. Colour supports meaning; it never replaces it.
 
 ## Required behavior
 
