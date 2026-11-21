@@ -202,6 +202,12 @@ screenshot count or previous revision.
   Commits 22b3034 and 913e7e2. The repository suites were NOT_RUN after these
   edits in this session; the isolated Ruby API contract check passed, which is
   not a substitute for the suites.
+  The TTS supervisor test now uses short /tmp socket paths (portable across
+  Unix AF_UNIX limits) and waits for a detached short-lived child to be reaped
+  before asserting the ECHILD no-signal contract (commit ee7e2bb). The one-off
+  MASTER/scripts/probe_zai_lane.rb directory is now explicitly classified in
+  scan_coverage.yml, with its operator-only role recorded (commit 19631c9).
+  Both changes have isolated Ruby probes, not repository-suite acceptance.
   full `rake test` census stays open (two TIMEOUT attempts recorded above).
 - [ ] **RAILS full contracts on one current revision.** Run
   `ruby RAILS/test/run_all.rb`, every app's `bin/ci` and
