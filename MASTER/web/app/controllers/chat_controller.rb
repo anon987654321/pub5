@@ -26,11 +26,13 @@ class ChatController < ApplicationController
     conversation_id
     @face_mask_session = SecureRandom.hex(16)
     mask_archive = Master.load_yaml(Master.data_path("face_masks.yml"), default: {}) || {}
-    mask_entries = Array(mask_archive["entries"])
-    unless mask_entries.empty?
+    @face_mask_entries = Array(mask_archive["entries"])
+    @face_mask_profile = ""
+    unless @face_mask_entries.empty?
       previous_mask_index = Integer(cookies.signed[:master_face_mask_rotation], exception: false)
-      next_mask_index = ((previous_mask_index || -1) + 1) % mask_entries.length
-      @face_mask_entry = mask_entries.fetch(next_mask_index)
+      next_mask_index = ((previous_mask_index || -1) + 1) % @face_mask_entries.length
+      @face_mask_entry = @face_mask_entries.fetch(next_mask_index)
+      @face_mask_profile = @face_mask_entry.fetch("particle_profile", "").to_s
       cookies.signed[:master_face_mask_rotation] = {
         value: next_mask_index,
         expires: 1.year.from_now,
