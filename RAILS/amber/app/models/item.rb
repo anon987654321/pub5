@@ -33,9 +33,13 @@ class Item < ApplicationRecord
 
   # Named variants match WardrobeMediaJob — keep dimensions in lockstep so
   # list/show helpers hit preprocessed digests instead of inventing new sizes.
+  # libvips ForeignKeep::ICC is bit 8: preserve the colour profile while
+  # excluding EXIF (including GPS), XMP, IPTC and incidental metadata from
+  # public display derivatives. Active Storage keeps the uploaded original
+  # blob unchanged; Item and Outfit share these exact transformations.
   PHOTO_VARIANTS = {
-    thumb: { resize_to_limit: [ 240, 240 ] },
-    card: { resize_to_limit: [ 720, 960 ] },
+    thumb: { resize_to_limit: [ 240, 240 ], saver: { keep: 8 } },
+    card: { resize_to_limit: [ 720, 960 ], saver: { keep: 8 } },
   }.freeze
 
   has_many_attached :photos do |attachable|
