@@ -98,7 +98,7 @@
   --tap-min: 44px;
   --text-meta: 0.8125rem;
   --text-extra-small: 0.75rem;
-  --terminal-font-size: 1.125rem;
+  --terminal-font-size: 1.25rem;
   --text-title: 1.25rem;
   --baseline: 4px;
   --measure: 60ch;
@@ -110,6 +110,7 @@
   --radius-large: 0;
   --radius-pill: 0;
   --face-bar-height: 44px;
+  --face-chrome-bottom: calc(var(--face-bar-height) + var(--chrome-inset));
   --bar-height: 44px;
   --hud-tier-status: calc(var(--face-bar-height) + var(--safe-bottom) + 8px);
   --hud-tier-caption: calc(var(--face-bar-height) + var(--safe-bottom) + var(--tap-min));
@@ -283,7 +284,6 @@ canvas {
   width: 100dvw;
   height: 100dvh;
   image-rendering: pixelated;
-  image-rendering: crisp-edges;
   touch-action: pinch-zoom;
   contain: strict;
   will-change: transform;
@@ -383,7 +383,7 @@ body[data-hidden-tab="1"] #cognition-ecology {
 body[data-face-pip="1"] canvas {
   width: min(34vw, 320px);
   height: min(34vw, 320px);
-  inset: auto var(--chrome-inset) calc(56px + var(--safe-bottom)) auto;
+  inset: auto var(--chrome-inset) calc(var(--face-chrome-bottom) + var(--safe-bottom)) auto;
   border-radius: 0;
   transition: inset 180ms var(--ease-out), width 180ms var(--ease-out), height 180ms var(--ease-out), border-radius 180ms var(--ease-out), transform 180ms var(--ease-out), filter var(--transition-fast) var(--ease-out);
 }
@@ -397,11 +397,11 @@ body[data-face-pip="1"][data-face-pip-corner="top-right"] canvas {
 }
 
 body[data-face-pip="1"][data-face-pip-corner="bottom-left"] canvas {
-  inset: auto auto calc(56px + var(--safe-bottom)) var(--inset-l);
+  inset: auto auto calc(var(--face-chrome-bottom) + var(--safe-bottom)) var(--inset-l);
 }
 
 body[data-face-pip="1"][data-face-pip-corner="bottom-right"] canvas {
-  inset: auto var(--inset-r) calc(56px + var(--safe-bottom)) auto;
+  inset: auto var(--inset-r) calc(var(--face-chrome-bottom) + var(--safe-bottom)) auto;
 }
 
 #zsh-wave {
@@ -1439,7 +1439,7 @@ body[data-history-open="1"] #chat-log {
 .debug-panel {
   position: fixed;
   inset-inline-start: var(--inset-l);
-  bottom: calc(56px + var(--safe-bottom));
+  bottom: calc(var(--face-chrome-bottom) + var(--safe-bottom));
   z-index: var(--z-ui);
   padding: 8px 8px;
   background: color-mix(in srgb, #000 88%, transparent);
