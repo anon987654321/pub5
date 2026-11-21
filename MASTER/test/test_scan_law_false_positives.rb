@@ -221,7 +221,7 @@ class TestScanRuleFalsePositives < Minitest::Test
       # so that filename read as a marker, at :veto. The first line below is the real
       # failover_config one; the pin above stops a word short of what fired.
       %(# constant from lib/review and depending on its load order. See convergence.yml,\n),
-      %(# worth re-reading is a present-tense comment; unfinished work goes in TODO.md.\n),
+      %(# worth re-reading is a present-tense comment; unfinished work stays with its owner registry.\n),
       %(  # TYPE_IN_NAME and NUMBERED_NAME, the two naming detectors from TODO.md's\n),
     ].each do |source|
       assert_empty findings(:veto_patterns, source),
