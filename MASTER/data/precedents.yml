@@ -146,7 +146,7 @@ precedents:
     '
   cites:
   - MASTER/lib/voice/renderer/prompt_components.rb
-  - MASTER/web/styles/face/30_conversation.css
+  - MASTER/web/styles/face/60_session_chrome.css
   - MASTER/data/taste_ledger.yml type-terminal-nerd-mono-20261121
   overrules:
   - P-005
