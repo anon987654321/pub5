@@ -177,15 +177,7 @@ module Operator
         "bsdports" => "bsdports",
       }
       mapping.transform_values do |service|
-        broker = "/usr/local/sbin/pub5-admin"
-        raise SecurityError, "pub5-admin is a symlink" if File.symlink?(broker)
-
-        command = if File.executable?(broker)
-                    ["doas", "-n", broker, "service", "check", service]
-                  else
-                    # Legacy installations only; remove after the broker is universal.
-                    ["doas", "-n", "/usr/sbin/rcctl", "check", service]
-                  end
+        command = ["doas", "-n", "/usr/sbin/rcctl", "check", service]
         out, status = Master::Io::Exec.capture2e(*command)
         if status.success? && out.include?("(ok)")
           "ok"
