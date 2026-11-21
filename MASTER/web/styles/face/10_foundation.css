@@ -150,7 +150,6 @@ canvas {
   width: 100dvw;
   height: 100dvh;
   image-rendering: pixelated;
-  image-rendering: crisp-edges;
   touch-action: pinch-zoom;
   contain: strict;
   will-change: transform;
@@ -250,7 +249,7 @@ body[data-hidden-tab="1"] #cognition-ecology {
 body[data-face-pip="1"] canvas {
   width: min(34vw, 320px);
   height: min(34vw, 320px);
-  inset: auto var(--chrome-inset) calc(56px + var(--safe-bottom)) auto;
+  inset: auto var(--chrome-inset) calc(var(--face-chrome-bottom) + var(--safe-bottom)) auto;
   border-radius: 0;
   transition: inset 180ms var(--ease-out), width 180ms var(--ease-out), height 180ms var(--ease-out), border-radius 180ms var(--ease-out), transform 180ms var(--ease-out), filter var(--transition-fast) var(--ease-out);
 }
@@ -264,11 +263,11 @@ body[data-face-pip="1"][data-face-pip-corner="top-right"] canvas {
 }
 
 body[data-face-pip="1"][data-face-pip-corner="bottom-left"] canvas {
-  inset: auto auto calc(56px + var(--safe-bottom)) var(--inset-l);
+  inset: auto auto calc(var(--face-chrome-bottom) + var(--safe-bottom)) var(--inset-l);
 }
 
 body[data-face-pip="1"][data-face-pip-corner="bottom-right"] canvas {
-  inset: auto var(--inset-r) calc(56px + var(--safe-bottom)) auto;
+  inset: auto var(--inset-r) calc(var(--face-chrome-bottom) + var(--safe-bottom)) auto;
 }
 
 #zsh-wave {
