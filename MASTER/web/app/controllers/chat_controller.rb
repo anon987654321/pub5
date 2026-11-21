@@ -23,18 +23,30 @@ class ChatController < ApplicationController
     # begun committing is a cookie the browser never sees — the visitor would
     # get a fresh transcript on every turn. A plain HTML render has no such
     # problem, and every chat begins with this page.
-    conversation_id
-    @face_mask_session = SecureRandom.hex(16)
+    conversation = conversation_id
+    # The browser sees only a one-way face-session key, never the HttpOnly
+    # conversation cookie that authorizes its transcript.
+    @face_mask_session = Digest::SHA256.hexdigest("master-face-mask:#{conversation}")[0, 32]
     mask_archive = Master.load_yaml(Master.data_path("face_masks.yml"), default: {}) || {}
     @face_mask_entries = Array(mask_archive["entries"])
     @face_mask_profile = ""
     unless @face_mask_entries.empty?
-      previous_mask_index = Integer(cookies.signed[:master_face_mask_rotation], exception: false)
-      next_mask_index = ((previous_mask_index || -1) + 1) % @face_mask_entries.length
+      rotation = cookies.signed[:master_face_mask_rotation]
+      same_conversation = rotation.is_a?(Hash) && rotation["conversation_id"] == conversation
+      previous_mask_index = if rotation.is_a?(Hash)
+                              Integer(rotation["index"], exception: false)
+                            else
+                              Integer(rotation, exception: false)
+                            end
+      next_mask_index = if same_conversation && previous_mask_index
+                          previous_mask_index % @face_mask_entries.length
+                        else
+                          ((previous_mask_index || -1) + 1) % @face_mask_entries.length
+                        end
       @face_mask_entry = @face_mask_entries.fetch(next_mask_index)
       @face_mask_profile = @face_mask_entry.fetch("particle_profile", "").to_s
       cookies.signed[:master_face_mask_rotation] = {
-        value: next_mask_index,
+        value: { "conversation_id" => conversation, "index" => next_mask_index },
         expires: 1.year.from_now,
         secure: request.ssl?,
         httponly: true,
