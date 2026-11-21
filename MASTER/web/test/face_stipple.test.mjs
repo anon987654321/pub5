@@ -61,6 +61,8 @@ test("live stipple keeps one deterministic solid carrier near the left eye", () 
   assert.match(system, /geometry\.setAttribute\("aSolo", new THREE\.BufferAttribute\(soloMarks, 1\)\)/);
   assert.match(system, /attribute float aSolo;/);
   assert.match(system, /vSolo = aSolo;/);
+  assert.equal((system.match(/varying float vSolo;/g) || []).length, 2);
+  assert.match(system, /gl_PointSize = 1\.0;/);
   assert.match(system, /if \(vSolo < 0\.5 && \(vThreshold > uDensity \|\| length\(p\) > 0\.5\)\) discard;/);
   assert.match(system, /vec3 ink = mix\(uColor \* zoneTone \* depthTone, vec3\(1\.0\), solo\)/);
   assert.match(system, /float alpha = mix\(vAlpha \* uOpacity, 1\.0, solo\)/);
@@ -70,7 +72,7 @@ test("live stipple keeps one deterministic solid carrier near the left eye", () 
     MASTER_FACE_CONTRACT: {},
     addEventListener() {}
   };
-  const document = { documentElement: { dataset: {} }, body: {}, hidden: false };
+  const document = { documentElement: { dataset: {} }, body: { classList: { contains: () => false } }, hidden: false };
   runInNewContext(system, {
     window, document, URLSearchParams,
     performance: { now: () => 0 },
