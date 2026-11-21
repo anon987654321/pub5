@@ -113,7 +113,9 @@ module Master
         out: $stderr,
         runner: nil,
         command_path: nil,
-        home: nil
+        home: nil,
+        input: $stdin,
+        approval: nil
       )
         @root = File.expand_path(root)
         @env = env
@@ -121,6 +123,8 @@ module Master
         @runner = runner || method(:capture)
         @command_path = command_path || method(:which)
         @home = home || File.expand_path(@env.fetch("MASTER_DEPENDENCY_HOME", "~"))
+        @input = input
+        @approval = approval
       end
 
     end
@@ -137,7 +141,10 @@ module Master
         activate_environment!
         return deployed if deployed
 
-        with_lock { ensure_locked_bundle }
+        report("checking pinned Ruby, Bundler and gem dependencies")
+        result = with_lock { ensure_locked_bundle }
+        report(result.message || "locked Ruby dependencies ready") if result.ok
+        result
       rescue StandardError => e
         report("dependency bootstrap failed: #{e.class}: #{e.message}")
         Result.new(ok: false, changed: false, bundler: nil, bundle: nil, system: nil,
@@ -202,6 +209,18 @@ module Master
           bundle_ok:,
           bundle_output:,
           package_manager: package_manager_name,
+        }
+      end
+
+      # The same package set drives recovery, bin/deps system and the standalone
+      # bootstrap plan. It is limited to native build prerequisites, not every
+      # optional MASTER capability.
+      def system_package_plan
+        manager = package_manager_name
+        {
+          package_manager: manager,
+          packages: SYSTEM_PACKAGES.fetch(manager, []).dup,
+          commands: package_commands.map { |argv, label| { label:, argv: argv.dup } },
         }
       end
 
@@ -839,19 +858,57 @@ module Master
       end
 
       def install_system_packages_for_recovery
-        return install_system_packages if @env["MASTER_AUTO_SYSTEM_PACKAGES"] == "1"
+        plan = system_package_plan
+        packages = plan[:packages]
+        commands = plan[:commands]
+        manager = plan[:package_manager]
 
-        packages = SYSTEM_PACKAGES.fetch(package_manager_name, [])
-        {
-          ok: false,
-          changed: false,
-          command: nil,
-          output: [
-            "system build dependency installation requires explicit approval",
-            "run `bin/deps system` after reviewing the package list, or set MASTER_AUTO_SYSTEM_PACKAGES=1",
-            "packages: #{packages.join(" ")}",
-          ].join("; "),
-        }
+        if packages.empty? || commands.empty?
+          return {
+            ok: false,
+            changed: false,
+            command: nil,
+            output: "no supported system package installation path detected; install native build prerequisites manually",
+          }
+        end
+
+        return install_system_packages if @env["MASTER_AUTO_SYSTEM_PACKAGES"] == "1"
+        unless approve_system_packages?(packages, manager)
+          return {
+            ok: false,
+            changed: false,
+            command: nil,
+            output: [
+              "system build dependency installation requires explicit approval",
+              "package manager: #{manager}",
+              "packages: #{packages.join(" ")}",
+              "run `bin/deps system` after reviewing the package list, or set MASTER_AUTO_SYSTEM_PACKAGES=1 for an explicitly pre-authorized unattended host",
+            ].join("; "),
+          }
+        end
+
+        install_system_packages
+      end
+
+      def approve_system_packages?(packages, manager)
+        return !!@approval.call(packages.dup) if @approval.respond_to?(:call)
+        return @approval == true unless @approval.nil?
+
+        interactive = @input.respond_to?(:tty?) && @input.tty? &&
+                      @out.respond_to?(:tty?) && @out.tty?
+        return false unless interactive
+
+        @out.puts
+        @out.puts("MASTER needs native build prerequisites to finish installing its locked Ruby dependencies.")
+        @out.puts("Package manager: #{manager}")
+        @out.puts("Packages: #{packages.join(" ")}")
+        @out.print("Install these system packages now? [y/N] ")
+        @out.flush if @out.respond_to?(:flush)
+        answer = @input.gets
+        %w[y yes].include?(answer.to_s.strip.downcase)
+      rescue IOError, SystemCallError => e
+        report("system package approval could not be read: #{e.class}: #{e.message}")
+        false
       end
 
       def install_system_packages
@@ -906,8 +963,11 @@ module Master
 
       def privileged(command, label)
         return [command, label] if root?
-        return [["doas", "-n", *command], "#{label} via doas"] if @command_path.call("doas")
-        return [["sudo", "-n", *command], "#{label} via sudo"] if @command_path.call("sudo")
+
+        noninteractive = !(@input.respond_to?(:tty?) && @input.tty?)
+        flags = noninteractive ? ["-n"] : []
+        return [["doas", *flags, *command], "#{label} via doas"] if @command_path.call("doas")
+        return [["sudo", *flags, *command], "#{label} via sudo"] if @command_path.call("sudo")
         nil
       end
 
