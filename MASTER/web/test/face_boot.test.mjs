@@ -1458,16 +1458,20 @@ test("MASTER web highlighter escapes source and classifies shell and Ruby tokens
     assert.notEqual(end, -1);
     return chat.slice(start, end + 2);
   };
-  const sample = "\x60\x60\x60ruby\n def run\n  puts \"<img src=x>\"\n  42\nend\n\x60\x60\x60\n<script>";
+  const sample = "ok: ready\nwarn: careful\nerror: failed\n\x60\x60\x60ruby\n def run\n  puts \"<img src=x>\"\n  42\nend\n\x60\x60\x60\n<script>";
   const source = [
     extract("escapeHtml"),
     extract("highlightCode"),
+    extract("renderPlainText"),
     extract("renderTerminalText"),
     "this.output = renderTerminalText(" + JSON.stringify(sample) + ");"
   ].join("\n");
   const sandbox = {};
   runInNewContext(source, sandbox);
 
+  assert.ok(sandbox.output.includes('class="syntax-success">ok:</span>'));
+  assert.ok(sandbox.output.includes('class="syntax-warning">warn:</span>'));
+  assert.ok(sandbox.output.includes('class="syntax-error">error:</span>'));
   assert.ok(sandbox.output.includes('class="syntax-keyword">def</span>'));
   assert.ok(sandbox.output.includes('class="syntax-command">puts</span>'));
   assert.ok(sandbox.output.includes('class="syntax-string">'));
