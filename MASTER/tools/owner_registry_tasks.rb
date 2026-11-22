@@ -579,7 +579,9 @@ module Backlog
         "parked_at" => Time.now.utc.iso8601,
       )
       true
-    rescue JSON::ParserError, KeyError, ArgumentError, SystemCallError
+    rescue JSON::ParserError, KeyError
+      :stale
+    rescue ArgumentError, SystemCallError
       false
     end
 
