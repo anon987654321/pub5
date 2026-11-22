@@ -528,3 +528,8 @@ workstreams:
     title: Append-only idempotent credits and entitlement ledger before any new payment path
     implementation: RAILS/__shared/app/services/shared/commerce.rb; RAILS/__shared/app/models/shared/commerce_ledger_entry.rb; RAILS/__shared/app/models/shared/referral_credit.rb
     proof: RAILS/brgen/test/services/commerce_ledger_test.rb; RAILS/brgen/test/services/referral_splinter_test.rb; RAILS/test/billing_plans_contract_test.rb (authored; NOT_RUN)
+  - id: brgen_cold_start_feed
+    state: partial
+    title: Give a reader with no follows an honest, city-popular Following feed
+    implementation: RAILS/brgen/lib/brgen/home_feed.rb; RAILS/brgen/app/controllers/home_controller.rb; RAILS/brgen/app/views/home/index.html.erb
+    proof: RAILS/brgen/test/lib/home_feed_test.rb; RAILS/brgen/test/controllers/home_controller_test.rb (authored; NOT_RUN)
