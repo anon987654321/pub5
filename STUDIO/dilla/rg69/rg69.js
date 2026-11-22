@@ -112,9 +112,9 @@ bass:{oscillator:"sawtooth",attack:.01,decay:.1,sustain:.5,release:.1,sub_freque
 keys:{max_polyphony:16,harmonicity:7,modulation_index:2.5,brightness_reference:.58,oscillator:"sine",attack:.005,decay:.1,sustain:.3,release:.1,modulation_oscillator:"square",mod_attack:.01,mod_decay:.2,mod_sustain:.2,mod_release:.3,filter_base_hz:1200,filter_brightness_span_hz:3800,chorus_frequency:2.5,chorus_delay_time:.3,chorus_depth:.3,tremolo_frequency:3.2,tremolo_depth:.2,tremolo_wet:.25,tremolo_spread:90,drive_amount:.08,drive_wet:.15,texture_amount:.18,texture_wet:.6},
 pads:{max_polyphony:16,oscillator:"fatsawtooth",count:3,spread:25,attack:2.2,decay:3.5,sustain:.75,release:4.8,filter_base_hz:600,filter_brightness_span_hz:400,lowpass_hz:3500,saturation_order:2,saturation_wet:.2}
 },
-kit:{kick:{tune:2,decay:.3,tone:.5,level:.95},sub:{tune:-12,decay:.24,level:.293},snare:{tune:1,decay:.19,tone:.66,level:1},hat:{tune:1,decay:.045,tone:.7,level:.306},openhat:{decay:.26,level:.27},perc:{decay:.1,level:.222}},
+kit:{kick:{tune:2,decay:.3,tone:.5,level:.95,pan:0},sub:{tune:-12,decay:.24,level:.293},snare:{tune:1,decay:.19,tone:.66,level:1,pan:.05},hat:{tune:1,decay:.045,tone:.7,level:.306,pan:-.14},openhat:{decay:.26,level:.27,pan:-.16},perc:{decay:.1,level:.222,pan:.2}},
 
-voice:{brightness:.58,level:.82},
+voice:{brightness:.58,level:.82,pan:-.05},
 
 rig:{delay:{feedback:.18,lowpass:2600,throw_chords:.04},reverb:{size:.3,level_chords:.1},wobble:{rate_hz:.5},vinyl:{level:.05,crackle:.3},},
 
