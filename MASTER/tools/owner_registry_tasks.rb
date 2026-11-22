@@ -466,7 +466,9 @@ module Backlog
       end
 
       if current && origin == "backlog" && state == "completed"
-        return :blocked unless record_completion!(record: current)
+        unless record_completion!(record: current)
+          return :delivery_failed unless park_unverified_completion!(record: current)
+        end
       end
 
       entries = Backlog.generate
@@ -556,7 +558,6 @@ module Backlog
 
       paths = Array(plan["scope_paths"]).map(&:to_s)
       scope_digest = scope_digest_for(paths)
-      return false unless scope_digest
 
       message = record["wake_reason"].to_s
       message = record["error"].to_s if message.empty?
@@ -603,6 +604,37 @@ module Backlog
       )
       true
     rescue SystemCallError
+      false
+    end
+
+    # A run may be terminal without satisfying the executor's stronger
+    # delivery receipt. Keep that objective visibly unverified and park it
+    # for review; never convert it into a completion receipt.
+    def park_unverified_completion!(record:, reason: "terminal mission lacks current delivery proof")
+      return false unless record && record["origin"].to_s == "backlog" && record["state"].to_s == "completed"
+
+      plan = JSON.parse(record["plan"].to_s)
+      return :stale unless plan["executor"] == "owner_registry"
+      item = Backlog.generate.find { |row| row[:id].to_s == plan["item_id"].to_s }
+      return :stale unless item && item_digest(item) == plan["item_digest"].to_s
+      return true if parked_task_rows.any? { |row| row["mission_id"].to_s == record["id"].to_s }
+
+      append_executor_receipt(
+        "record_type" => "parked_task",
+        "item_id" => item.fetch(:id).to_s,
+        "item_digest" => plan.fetch("item_digest").to_s,
+        "mission_id" => record.fetch("id").to_s,
+        "mission_state" => "completed_unverified",
+        "failure_category" => "ambiguous",
+        "retry_at" => nil,
+        "requires_operator" => true,
+        "scope_digest" => scope_digest_for(Array(plan["scope_paths"])),
+        "parked_at" => Time.now.utc.iso8601,
+        "reason_code" => "terminal_delivery_proof_missing",
+      )
+    rescue JSON::ParserError, KeyError
+      :stale
+    rescue ArgumentError, SystemCallError
       false
     end
 
