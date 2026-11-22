@@ -263,18 +263,32 @@ module Master
           end
         },
         after_run: ->(mission:, result:) {
-          next unless executor && mission && mission["origin"] == "backlog"
-          next unless mission["state"] == "completed"
-          unless executor.record_completion!(record: mission)
-            container[:bus]&.publish(
-              "backlog_executor:blocked",
-              mission: mission["id"],
-              reason: "terminal mission lacks a current-item delivery receipt; inspect summary and pending writes",
+          next unless executor
+          next if mission && mission["origin"] != "backlog"
+
+          if mission && mission["state"] == "completed"
+            unless executor.record_completion!(record: mission)
+              container[:bus]&.publish(
+                "backlog_executor:blocked",
+                mission: mission["id"],
+                reason: "terminal mission lacks a current-item delivery receipt; inspect summary and pending writes",
+              )
+              next
+            end
+          elsif mission && mission["state"] == "running"
+            # A returned attempt without terminal proof is parked for review;
+            # it must not retain the single-writer slot indefinitely.
+            Master::Fix::Mission.new(root:, bus: container[:bus]).block!(
+              reason: "backlog attempt returned without terminal delivery proof",
             )
+            mission = Master::Fix::Mission.current(root:)
+          elsif mission && !%w[waiting blocked failed].include?(mission["state"].to_s)
             next
           end
 
-          status = executor.enqueue_next!(model: mission["model"])
+          parked = mission && executor.park_current!(record: mission, result:)
+          container[:bus]&.publish("backlog_executor:parked", mission: mission && mission["id"]) if parked
+          status = executor.enqueue_next!(model: mission && mission["model"])
           container[:bus]&.publish("backlog_executor:intake", status:)
         },
       )
