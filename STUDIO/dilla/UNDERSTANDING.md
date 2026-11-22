@@ -44,11 +44,11 @@ The operator's curated YouTube list — recovered verbatim from
 best work: J Dilla, Slum Village, Flying Lotus, Madlib, AFTA-1, Jay
 Electronica, Samiyam, Chase Swayze, kemt, A. Mochi. The narrowed picks
 (players, climax_girl_shit, microphone_master_remix, fantastic) go
-through `reference_pipeline.py` (yt-dlp → demucs htdemucs) and
-`reference_stems.py` (keys, chroma, spectral bands, drum grids, swing;
-analyzer_version `stems-1`). Measured files land in
-`data/reference_measurements/`. What the measurements say about swing,
-bass weight and melody placement feeds the mix protocol above.
+through `ruby dilla.rb reference <rights-cleared URL or local audio> --style j_dilla`.
+The Ruby standard-library analyzer measures the complete mix: tempo, swing,
+onset density, harmony, spectral bands and energy. It does not separate stems,
+so no isolated drum, bass or keyboard measurements are claimed. Mix-level
+evidence about pocket and balance feeds the protocol above.
 
 Sample identifications for the narrowed picks (WhoSampled, fetched
 2026-11-22): Players <- Singers Unlimited "Clair"; Climax (Girl Shit)

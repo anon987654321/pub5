@@ -11,7 +11,7 @@ The Shining) play as first-class progressions beside the engine's own.
 ## Render
 
 ```sh
-ruby dilla.rb                          # curated showcase: Blue Hour — Dilla Minor Dub Cut
+ruby dilla.rb                          # original showcase: F-minor Dub Study
 ruby dilla.rb --list                   # progressions, drum patterns, groove profiles
 ruby dilla.rb --random --out out.wav   # random progression, random drum pattern
 ruby dilla.rb --progression 9 --drums dilla_shadow_full --profile dilla_shadow \
@@ -168,7 +168,7 @@ reference-root` answer the same policy for MASTER. `out/`, `samples/` and
 
 ## Tests
 
-`cd STUDIO && rake check test` — the dilla suite covers the CLI contract
+`cd STUDIO && rake -f replicate/Rakefile check test` — the dilla suite covers the CLI contract
 MASTER parses, chord parsing and voice-leading, deterministic seeds, mix
 balance, the sample-flip bounds, the reference profile schema and the
 analyzer's tempo measurement. Full-catalogue renders are a session activity,

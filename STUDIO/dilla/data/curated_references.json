@@ -179,7 +179,7 @@
    "W28aNa8bnRw": "Climax (Girl Shit) - live upload found via web search (not on the curation)"
   }
  },
- "measurement_contract": "reference_pipeline.py: yt-dlp audio download (operator cookies via DILLA_YT_COOKIES when the sandbox IP is bot-checked) -> demucs htdemucs four-stem split -> reference_stems.py per-stem keys, chroma, spectral bands, drum grids, swing; analyzer_version stems-1; output data/reference_measurements/<slug>.json. lib/reference_analyzer.rb stays the canonical mix-only profile lane for MASTER.",
+ "measurement_contract": "Ruby mix-only measurement: `ruby dilla.rb reference <rights-cleared URL or local audio> --style j_dilla`; optional acquisition uses yt-dlp and local FFmpeg, while lib/reference_analyzer.rb measures the resulting mix. No Python, Demucs stem separation, or isolated-stem claims.",
  "operator_picks": [
   {
    "slug": "players",
@@ -274,5 +274,5 @@
  ],
  "operator_picks_note": "Operator named four example tracks. 'life' does not exist as a Slum Village or J Dilla track on Fan-Tas-Tic Vol. 1 or Fantastic, Vol. 2 (both tracklists checked); closest real title is 'My Life' feat. Frank N Dank (2005, post-Dilla). The fourth slot uses the operator's own curated 'Fantastic'. If 'My Life' was intended it can be added as a fifth pick.",
  "operator_picks_date": "2026-11-22",
- "pipeline": "yt-dlp download (operator cookies) -> demucs htdemucs four-stem split -> STUDIO/dilla/reference_stems.py per-layer spectral/harmonic measurement (operator-directed deep lane) -> data/reference_measurements/<slug>.json; lib/reference_analyzer.rb stays the canonical mix-only profile lane for MASTER"
+ "pipeline": "operator-curated audio URL or local WAV -> optional yt-dlp acquisition -> local FFmpeg decode -> STUDIO/dilla/lib/reference_analyzer.rb mix-only tempo, swing, onset, harmony and spectral profile. Isolated stems are not measured or claimed."
 }

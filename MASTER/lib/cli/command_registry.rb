@@ -238,9 +238,10 @@ module Master
         Master::Result.err("NSFW lane failed: #{e.class}: #{e.message}", category: :handler_exception)
       end
 
-      # /play is the MASTER front door to Dilla. Bare /play plays the curated
-      # Blue Hour showcase; named requests select a progression or drum pattern.
-      # Nothing falls through to the shell or a web-search guess.
+      # /play is the MASTER front door to Dilla. Bare /play plays the original
+      # F-minor Dub Study; named requests select a progression or drum pattern.
+      # This is engine-authored material, not an artist transcription. Nothing
+      # falls through to the shell or a web-search guess.
       def dispatch_play(root, ctx: nil)
         arg = arg_for(ctx).to_s.strip
         result = Master::Io::MediaIntent.play_live_music(arg, root:)

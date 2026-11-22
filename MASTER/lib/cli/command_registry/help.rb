@@ -102,9 +102,9 @@ module Master
           ],
         },
         "play" => {
-          summary: "play the curated Blue Hour Dilla showcase or a named progression through the canonical effects rig",
+          summary: "play the original F-minor Dub Study or a named progression through Dilla's effects rig",
           detail: [
-            "/play - render and play the canonical Blue Hour Dilla showcase through the same arrangement and effects pipeline as ruby STUDIO/dilla/dilla.rb; video encoding is skipped.",
+            "/play - render and play the F-minor Dub Study (engine original) through the same arrangement and effects pipeline as ruby STUDIO/dilla/dilla.rb; it is not an artist transcription and video encoding is skipped.",
             "/play <progression> [drum pattern] - name either, or both; `ruby STUDIO/dilla/dilla.rb --list` prints the names.",
             "Bare /play renders the same arrangement as `ruby STUDIO/dilla/dilla.rb`; named progression requests use the Dilla pocket at 92 BPM unless an explicit or reference tempo applies.",
             "Each audition writes a distinct dated WAV and leaves reference dilla.wav and dilla_norsk.wav untouched.",

@@ -121,10 +121,8 @@ const DRUM_PATTERNS={
 'basic':tpP({k:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],s:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],c:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],h:[0,.3,0,.3,0,.3,0,.3,0,.3,0,.3,0,.3,0,.3],o:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}),
 'dusty1':tpP({k:[1,0,0,.3,0,0,.5,0,0,1,0,0,.4,0,0,0],s:[0,0,0,0,.8,0,0,.2,0,0,0,0,.9,0,0,.3],c:[0,0,.2,0,0,0,.3,0,0,0,0,0,.2,0,0,0],h:[.4,.2,.3,.2,.4,.2,.3,.2,.4,.2,.3,.2,.4,.2,.3,.2],o:[0,0,0,0,0,0,0,.2,0,0,0,0,0,0,0,.3]}),
 'wonky1':tpP({k:[1,0,0,0,0,0,.6,0,1,0,0,.4,0,0,0,0],s:[0,0,0,0,1,0,0,0,0,0,.3,0,.8,0,0,0],c:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],h:[.5,.3,.4,.2,.5,.3,.4,.2,.5,.3,.4,.2,.5,.3,.4,.2],o:[0,0,0,0,0,0,0,.3,0,0,0,0,0,0,0,.2]}),
-// Mirrors dilla's dilla_shadow_full (Blue Hour): boom-bap kick/snare with swung ghosts.
-// Blue Hour, played as industrial techno: straight 4-on-floor kick, clap on
-// 2 and 4, offbeat open hats and a driving closed-hat layer over the dilla
-// Fm material, so the tune is dilla's and the treatment is the machine.
+// RG-69's own dusty kick/snare grammar. It shares a loose MPC pocket and dub vocabulary,
+// but keeps its industrial 4-on-floor drum arrangement separate from the Ruby engine.
 'bluehour':tpP({k:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],s:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],c:[0,0,0,0,.32,0,0,0,0,0,0,0,.36,0,0,0],h:[.5,0,.34,0,.5,0,.34,.24,.5,0,.34,0,.5,0,.34,.24],o:[0,0,.44,0,0,0,.44,0,0,0,.44,0,0,0,.44,.32]})
 };
 const BASS_PATS={
@@ -143,7 +141,7 @@ const BASS_PATS={
 'basic':'C2,,,,G2,,,,C2,,,,Eb2,,,',
 'dustybass1':'C2,,G2,,Eb2,,,F2,,C2,,G2,,,Eb2,',
 'wonkybass1':'C2,,,G2,,,,Eb2,C2,,,G2,,,,',
-// Blue Hour dub bass in Fm: F pedal with Ab + C colour.
+// F-minor dub bass for this original engine study: F pedal with Ab + C colour.
 'bluehourbass':'F1,,,C2,,Ab1,,,,F1,,,,Eb2,,,'
 };
 const KEYS_PATS={
@@ -198,7 +196,7 @@ const KEYS_PATS={
 'marvin':[['C4','E4','G4'],0,0,0,['E3','G3','B3'],0,0,0,['F3','A3','C4'],0,0,0,['F3','Ab3','C4'],0,0,0],
 'tender':[['C4','Eb4','G4','Bb4','D5'],0,0,0,0,0,0,0,['Ab3','C4','Eb4','G4','Bb4'],0,0,0,0,0,0,0],
 'wonder':[['C4','E4','G4','A4','D5'],0,0,0,['F3','A3','C4','E4','G4'],0,0,0,['G3','B3','D4','F4','A4'],0,0,0,['C4','E4','G4','B4'],0,0,0],
-// Blue Hour (Fm) - one bar of the dilla 4-bar loop: Fm9 Ab13 Dbmaj9#11 C7b9.
+// F-minor harmony shared with Dilla's engine-original study; this is not artist-sourced material.
 'bluehourkeys':[['F3','Ab3','C4','Eb4','G4'],0,0,0,['Ab3','C4','Eb4','Gb4','F4'],0,0,0,['Db3','F3','Ab3','C4','Eb4','G4'],0,0,0,['C3','E3','G3','Bb3','Db4'],0,0,0]
 }
 const PAD_PATS={
@@ -217,16 +215,13 @@ const PAD_PATS={
 'souldrone':[['C3','Eb3','G3','Bb3','D4'],0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 'gospelwash':[['C3','E3','G3','B3'],0,0,0,['A2','C3','E3','G3'],0,0,0,['F2','A2','C3','E3'],0,0,0,['G2','B2','D3','F3'],0,0,0],
 'tenderwash':[['C3','Eb3','Bb3','D4'],0,0,0,0,0,0,0,['Ab2','C3','Eb3','G3'],0,0,0,0,0,0,0],
-// Blue Hour pad: low Fm9 wash under the loop.
+// Low F-minor wash under the RG-69 dub arrangement.
 'bluehourwash':[['F2','C3','Ab3','Eb4'],0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 }
 const STYLES=[
-// Blue Hour mirrors the dilla engine's default session: Fm, 86 BPM, 58% swing,
-// the Fm9 - Ab13 - Dbmaj9#11 - C7b9 loop and the dilla_shadow_full kit.
-// Blue Hour mirrors the dilla engine's default session (Fm, the Fm9 - Ab13 -
-// Dbmaj9#11 - C7b9 loop, the dilla bass and pad) played as industrial techno:
-// driving kit, low swing, dark drive and filter.
-{n:'Blue Hour',m:['Dark','Industrial'],d:'bluehour',b:'bluehourbass',k:'bluehourkeys',p:'bluehourwash',bpm:[92,100],sw:[6,12],dr:[62,80],tm:[18,28]},
+// Shares the F-minor engine-original harmony and dub palette; its tempo, drum
+// grammar and Tone.js performance remain an independent RG-69 arrangement.
+{n:'F-minor Dub',m:['Dark','Industrial'],d:'bluehour',b:'bluehourbass',k:'bluehourkeys',p:'bluehourwash',bpm:[92,100],sw:[6,12],dr:[62,80],tm:[18,28]},
 {n:'Analog Haze',m:['Lush','Magical'],d:'dusty1',b:'dustybass1',k:'neosoul',p:'ambientwash',bpm:[72,88],sw:[28,44],dr:[35,55],tm:[45,70]},
 {n:'Ethio-Jazz',m:['Joyful','Mysterious'],d:'eth-mulatu',b:'ethiobass',k:'tizita',p:'ethiodrone',bpm:[85,110],sw:[15,35],dr:[20,40],tm:[5,15]},
 {n:'Ethio-Funk',m:['Groovy','Joyful'],d:'eth-funk',b:'ethiovamp',k:'bati',p:'ethiowash',bpm:[100,120],sw:[20,35],dr:[25,45],tm:[5,15]},
@@ -270,7 +265,7 @@ const M={
 'soulwalk':{d:'dusty1',b:'dustybass1',k:'soulwalk',p:'souldrone',bpm:[76,92],sw:[25,40]},
 'tender':{d:'ambient-click',b:'ambientbass',k:'tender',p:'tenderwash',bpm:[60,75],sw:[15,30]},
  'wonder':{d:'dusty1',b:'dustybass1',k:'wonder',p:'souldrone',bpm:[80,96],sw:[22,38]},
- // Blue Hour: the dilla engine's material, played as industrial techno.
+ // RG-69 F-minor Dub mood: shared engine-original harmony, independent techno rhythm.
  'bluehour':{d:'bluehour',b:'bluehourbass',k:'bluehourkeys',p:'bluehourwash',bpm:[92,100],sw:[6,12]}
 };
 
@@ -294,7 +289,7 @@ return drums&&Object.values(drums).some(pattern=>pattern.some(hit=>hit>0))&&bass
 });
 const bootStylePool=bootStyleCandidates.length?bootStyleCandidates:STYLES;
 const bootStyle=bootStylePool[Math.floor(Math.random()*bootStylePool.length)];
-let st_={started:false,playing:false,idx:-1,timer:null,layoutIdx:49,heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,theme:'dark',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0}};
+let st_={started:false,playing:false,idx:-1,timer:null,layoutIdx:49,heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,theme:'dark',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0},randomizeFxPending:false};
 let aud_={bpm:bootStyle.bpm[0]+Math.random()*(bootStyle.bpm[1]-bootStyle.bpm[0]),swing:bootStyle.sw[0]+Math.random()*(bootStyle.sw[1]-bootStyle.sw[0]),drive:72,tape:44,comp:78,width:52,reverb:34,delay:26,filter:62,wobble:8,vinyl:12,crackle:8,drift:0.05};
 let mix_={drum:80,bass:70,keys:60,pads:55,master:75};
 let pat_={d:bootStyle.d,b:bootStyle.b,k:bootStyle.k,p:bootStyle.p};
@@ -576,6 +571,7 @@ padsG.connect(padsBW);padsBW.connect(padsSat);padsSat.connect(masterG);padsSat.c
 // route remaining tracks
 [drumG,bassG].forEach(g=>{g.connect(masterG);g.connect(revSend);g.connect(dlySend);});
 installDefaultFX();
+if(st_.randomizeFxPending){st_.randomizeFxPending=false;randomizeFX();}else applyFX();
 log("audio engine init (analog++)","k");
 }
 
@@ -601,8 +597,16 @@ if(driftLFO)driftLFO.frequency.value=.05+aud_.wobble/100*PARAMS.WOBB_FREQ_MAX;
 }
 
 // Shared helper function for triggering notes - eliminates duplication between scheduleLoop and exportWAV
+function swingOffsetSeconds(stepIdx,sixteenth,intensity,enabled){
+if(!enabled||stepIdx%2===0)return 0;
+const mpcSwing=50+Math.max(0,Math.min(100,Number(intensity)||0))*0.16;
+const position=0.5+((mpcSwing-50)/16)*(2/3-0.5);
+return (position-0.5)*sixteenth*2;
+}
+
 function triggerNotes(stepIdx,baseTime,synths,opts){
 const sixteenth=opts.sixteenth||60/aud_.bpm/4;
+const swungTime=baseTime+swingOffsetSeconds(stepIdx,sixteenth,aud_.swing,opts.addSwing);
 // Resolve note lengths to seconds before scheduling. Tone's musical-time
 // parser consults Transport when given strings such as "8n"; doing that
 // inside a Transport callback causes timing warnings and extra work.
@@ -617,11 +621,11 @@ const vel=dp[v]?dp[v][stepIdx]:0;
 const prob=seq_[v][stepIdx].p||100;
 if(vel>0&&(!opts.applyProb||Math.random()*100<prob)){
 const drift=opts.applyTranspose?(Math.random()-0.5)*5:0;
-const t=baseTime+seq_[v][stepIdx].t/1000;
+const t=swungTime+seq_[v][stepIdx].t/1000;
 const vl=vel*seq_[v][stepIdx].v;
 const ratch=opts.applyRatchet?seq_[v][stepIdx].r||1:1;
 for(let r=0;r<ratch;r++){
-const rt=t+(opts.addSwing?r*(sixteenth/ratch):r*(sixteenth/ratch));
+const rt=t+r*(sixteenth/ratch);
 if(v==='k'){
 const kpitch='C1';
 const kfreq=opts.applyTranspose?Tone.Frequency(kpitch).toFrequency()*(1+drift/1200):Tone.Frequency(kpitch).toFrequency();
@@ -642,23 +646,23 @@ if(bn[stepIdx]&&bn[stepIdx]!==''){
 const nt=bn[stepIdx];
 const drift=opts.applyTranspose?(Math.random()-0.5)*2:0;
 const freq=opts.applyTranspose?Tone.Frequency(nt).toFrequency()*(1+drift/1200):Tone.Frequency(nt).toFrequency();
-synths.bass.triggerAttackRelease(freq,eighth,baseTime+seq_.b[stepIdx].t/1000,seq_.b[stepIdx].v);
-synths.bassSub.frequency.setValueAtTime(Tone.Frequency(nt).toFrequency()/2,baseTime+seq_.b[stepIdx].t/1000);
+synths.bass.triggerAttackRelease(freq,eighth,swungTime+seq_.b[stepIdx].t/1000,seq_.b[stepIdx].v);
+synths.bassSub.frequency.setValueAtTime(Tone.Frequency(nt).toFrequency()/2,swungTime+seq_.b[stepIdx].t/1000);
 }
 const kn=KEYS_PATS[pat_.k]||[];
 if(kn[stepIdx]&&kn[stepIdx]!==0){
 const ch=kn[stepIdx];
 if(Array.isArray(ch)){
-synths.keys.triggerAttackRelease(ch,eighth,baseTime+seq_.keys[stepIdx].t/1000,seq_.keys[stepIdx].v);
+synths.keys.triggerAttackRelease(ch,eighth,swungTime+seq_.keys[stepIdx].t/1000,seq_.keys[stepIdx].v);
 }else if(typeof ch==='string'){
-synths.keys.triggerAttackRelease(ch,eighth,baseTime+seq_.keys[stepIdx].t/1000,seq_.keys[stepIdx].v);
+synths.keys.triggerAttackRelease(ch,eighth,swungTime+seq_.keys[stepIdx].t/1000,seq_.keys[stepIdx].v);
 }
 }
 const pn=PAD_PATS[pat_.p]||[];
 if(pn[stepIdx]&&pn[stepIdx]!==0){
 const pad=pn[stepIdx];
 if(Array.isArray(pad)){
-synths.pads.triggerAttackRelease(pad,half,baseTime+seq_.p[stepIdx].t/1000,seq_.p[stepIdx].v*0.6);
+synths.pads.triggerAttackRelease(pad,half,swungTime+seq_.p[stepIdx].t/1000,seq_.p[stepIdx].v*0.6);
 }
 }
 }
@@ -790,14 +794,7 @@ aud_.bpm=style.bpm[0]+Math.random()*(style.bpm[1]-style.bpm[0]);
 aud_.swing=style.sw[0]+Math.random()*(style.sw[1]-style.sw[0]);
 aud_.drive=style.dr[0]+Math.random()*(style.dr[1]-style.dr[0]);
 aud_.tape=style.tm[0]+Math.random()*(style.tm[1]-style.tm[0]);
-$id('bpm').value=aud_.bpm;$id('bpm-o').textContent=Math.round(aud_.bpm);
-$id('swing').value=aud_.swing;$id('swing-o').textContent=Math.round(aud_.swing);
-$id('drive').value=aud_.drive;$id('drive-o').textContent=Math.round(aud_.drive);
-$id('tape').value=aud_.tape;$id('tape-o').textContent=Math.round(aud_.tape);
-$id('drum-pat').value=pat_.d;
-$id('bass-pat').value=pat_.b;
-$id('keys-pat').value=pat_.k;
-$id('pads-pat').value=pat_.p;
+syncUIFromState();
 ['k','s','c','h','o','b','keys','p'].forEach(t=>{
 seq_[t]=seq_[t].map(()=>({v:0.85+rnd(0,0.15),t:rnd(-15,15),p:100,r:1}));
 });
@@ -806,6 +803,7 @@ randomizeFX();
 }
 
 function randomizeFX(){
+if(!drumG||!bassG||!keysG||!padsG||!masterG){st_.randomizeFxPending=true;return;}
 const clearFXArray=(arr)=>arr.forEach(fx=>{try{fx.disconnect();fx.dispose();}catch(e){log('FX cleanup: '+e.message,'w');}});
 [drumFX,bassFX,keysFX,padsFX,masterFX].forEach(clearFXArray);
 drumFX.length=bassFX.length=keysFX.length=padsFX.length=masterFX.length=0;
@@ -856,6 +854,7 @@ chainFX(drumG,drumFX,masterG);
 chainFX(bassG,bassFX,masterG);
 chainFX(keysG,keysFX,masterG);
 chainFX(padsG,padsFX,masterG);
+applyFX();
 log('FX randomized','k');
 }
 
@@ -945,7 +944,7 @@ muteMap:null,
 applyProb:false,
 applyRatchet:false,
 sixteenth:sixteenth,
-addSwing:false,
+addSwing:true,
 applyTranspose:false
 });
 const pct=Math.round((i/(bars*16))*100);
@@ -1054,11 +1053,7 @@ pushHistory();
 pat_.d=s.d;pat_.b=s.b;pat_.k=s.k;pat_.p=s.p;
 aud_.bpm=s.bpm[0]+Math.random()*(s.bpm[1]-s.bpm[0]);
 aud_.swing=s.sw[0]+Math.random()*(s.sw[1]-s.sw[0]);
-$id('bpm').value=aud_.bpm;$id('bpm-o').textContent=Math.round(aud_.bpm);
-$id('swing').value=aud_.swing;$id('swing-o').textContent=Math.round(aud_.swing);
-$id('drum-pat').value=pat_.d;$id('bass-pat').value=pat_.b;$id('keys-pat').value=pat_.k;$id('pads-pat').value=pat_.p;
-document.querySelectorAll('.style-chip').forEach(c=>c.classList.remove('active'));
-chip.classList.add('active');
+syncUIFromState();
 log(`style: ${s.n}`,"k");
 });
 styles_c.appendChild(chip);

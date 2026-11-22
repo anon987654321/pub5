@@ -8,7 +8,7 @@
   "progressions": [
     {
       "id": "blue_hour",
-      "title": "Blue Hour - Dilla Minor Dub Cut",
+      "title": "F-minor Dub Study (engine original)",
       "key": "Fm",
       "bpm": 86,
       "loop_bars": 4,
@@ -28,7 +28,7 @@
       "feel": {
         "bass": "dub",
         "melody": "dorian_moan",
-        "swing": 58.0,
+        "swing": 58,
         "grit": 0.75
       }
     },
@@ -54,7 +54,7 @@
       "feel": {
         "bass": "walk",
         "melody": "sweet_soul",
-        "swing": 57.0,
+        "swing": 57,
         "grit": 0.6
       }
     },
@@ -81,7 +81,7 @@
       "feel": {
         "bass": "walk",
         "melody": "dorian_moan",
-        "swing": 56.0,
+        "swing": 56,
         "grit": 0.8
       }
     },
@@ -117,7 +117,7 @@
       "feel": {
         "bass": "dub",
         "melody": "music_box",
-        "swing": 59.0,
+        "swing": 59,
         "grit": 0.7
       }
     },
@@ -152,7 +152,7 @@
       "feel": {
         "bass": "walk",
         "melody": "horn_stabs",
-        "swing": 56.0,
+        "swing": 56,
         "grit": 0.6
       }
     },
@@ -208,7 +208,7 @@
       "feel": {
         "bass": "dub",
         "melody": "music_box",
-        "swing": 59.0,
+        "swing": 59,
         "grit": 0.8
       }
     },
@@ -302,7 +302,7 @@
       "feel": {
         "bass": "walk",
         "melody": "dorian_moan",
-        "swing": 58.0,
+        "swing": 58,
         "grit": 0.6
       }
     }

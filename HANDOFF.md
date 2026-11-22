@@ -55,8 +55,8 @@ except where marked.
     `clair_moon` stays as a flagged engine study.
 11. **Render protocol.** Authentics rows for renders:
     `time_donut`, `fall_in_love`, `get_dis_money`, `players`,
-    `never_catch_me_flylo`. `blue_hour` is an engine original — not
-    performance material. Mix protocol owed from the last accepted
+    `never_catch_me_flylo`. `blue_hour` is the stable internal ID of the original F-minor Dub Study —
+    not performance material. Mix protocol owed from the last accepted
     direction: melody restored as a heard layer, bass -14 dB under the
     hierarchy, swing 54±1, iterate-and-keep with sidecars, judged by
     `stem_energy_share`. (Two earlier masters were rejected as "horrible";
@@ -67,21 +67,19 @@ except where marked.
     are the canon for Dilla's best work. `STUDIO/dilla/data/
     curated_references.json` holds the list and the operator's narrowed
     picks (players, climax_girl_shit, microphone_master_remix,
-    fantastic). `STUDIO/dilla/reference_pipeline.py` downloads with
-    yt-dlp, splits with demucs htdemucs, and
-    `STUDIO/dilla/reference_stems.py` measures per-layer keys, chroma,
-    spectral bands, drum grids and swing
-    (analyzer_version `stems-1`) into
-    `STUDIO/dilla/data/reference_measurements/<slug>.json`.
-    `lib/reference_analyzer.rb` stays the canonical mix-only profile
-    lane for MASTER. YouTube bot-checks this sandbox IP; downloads need
-    the operator's cookies: `DILLA_YT_COOKIES=~/cookies.txt`. Two
+    fantastic). The operator-supplied audio is analysed through
+    `ruby STUDIO/dilla/dilla.rb reference <URL|FILE> --style j_dilla`.
+    The standard-library Ruby analyser measures the complete mix only:
+    tempo, swing, onset density, harmony and spectral balance. It does not
+    separate stems or claim isolated drum, bass or keyboard measurements.
+    Optional URL acquisition uses yt-dlp and local FFmpeg; cookies remain
+    operator-supplied through `DILLA_YT_COOKIES=~/cookies.txt`. Two
     curated ids were dead on the 2026-11-22 probe (players, fantastic)
     and need live replacements or the operator's session.
 13. **Contract tests.** `STUDIO/replicate/test/dilla_test.rb` pins
     evidence_policy version 2 and the source_status vocabulary; renders
-    use `--progression blue_hour` (stable id) for the engine-row sidecar
-    contract. `STUDIO/replicate/test/rg69_defaults_test.rb` pins RG-69
+    use `--progression blue_hour` (stable internal ID; display title
+    F-minor Dub Study) for the engine-row sidecar contract. `STUDIO/replicate/test/rg69_defaults_test.rb` pins RG-69
     markup defaults. RG-69 preset names nod to artists but the loops are
     generic genre studies — sourced artist material lives only in
     `recovered_music.json`.

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "minitest_helper"
+require "json"
 
 # RG-69 is one HTML file, one JS file and one stylesheet, and a person meets it
 # through the defaults, not the sliders. Two things have gone wrong before and
@@ -17,6 +18,7 @@ class TestRg69Defaults < Minitest::Test
   JS = File.join(ROOT, "dilla", "rg69", "rg69.js")
   HTML = File.join(ROOT, "dilla", "rg69", "rg69.html")
   TONE = File.join(ROOT, "dilla", "vendor", "tone", "Tone.min.js")
+  DILLA_DATA = File.join(ROOT, "dilla", "data", "dilla.json")
 
   # The controls whose markup default must equal the engine's boot default.
   CONTROLS = %w[bpm swing drive tape comp width reverb delay filter wobble vinyl crackle].freeze
@@ -24,6 +26,7 @@ class TestRg69Defaults < Minitest::Test
   def js = @js ||= File.read(JS)
   def html = @html ||= File.read(HTML)
   def tone = @tone ||= File.read(TONE)
+  def dilla_data = @dilla_data ||= JSON.parse(File.read(DILLA_DATA))
 
   def test_markup_controls_match_the_engine_boot_defaults
     aud = boot_aud
@@ -42,6 +45,40 @@ class TestRg69Defaults < Minitest::Test
     end
   end
 
+  def test_f_minor_dub_is_labelled_as_an_engine_original
+    progression = dilla_data.fetch("progressions").find { |row| row.fetch("id") == "blue_hour" }
+    assert_equal "F-minor Dub Study (engine original)", progression.fetch("title")
+    assert_includes js, "{n:'F-minor Dub'"
+    refute_match(/Blue Hour mirrors|Blue Hour, played as industrial techno/, js)
+  end
+
+  def test_rg69_swing_uses_the_same_mpc_curve_as_dilla
+    assert_includes js, "function swingOffsetSeconds(stepIdx,sixteenth,intensity,enabled)"
+    assert_includes js, "if(!enabled||stepIdx%2===0)return 0;"
+    assert_includes js, "const mpcSwing=50+Math.max(0,Math.min(100,Number(intensity)||0))*0.16;"
+    assert_includes js, "const position=0.5+((mpcSwing-50)/16)*(2/3-0.5);"
+    assert_includes js, "return (position-0.5)*sixteenth*2;"
+    trigger = js[/function triggerNotes\(.*?(?=\nfunction scheduleLoop)/m] or raise "no triggerNotes"
+    assert_includes trigger, "const swungTime=baseTime+swingOffsetSeconds(stepIdx,sixteenth,aud_.swing,opts.addSwing);"
+    assert_includes trigger, "synths.bass.triggerAttackRelease(freq,eighth,swungTime+"
+    assert_includes trigger, "synths.keys.triggerAttackRelease(ch,eighth,swungTime+"
+    assert_includes trigger, "synths.pads.triggerAttackRelease(pad,half,swungTime+"
+    assert_equal 2, js.scan(/addSwing:true/).size,
+                 "live playback and WAV export must use the same swung timing"
+    refute_includes trigger, "r*(sixteenth/ratch):r*(sixteenth/ratch)"
+  end
+
+  def test_randomize_and_style_presets_sync_live_transport_state
+    style = js[/chip.addEventListener\('click',\(\)=>\{(.*?)\n\}\);/m, 1] or raise "no style chip handler"
+    assert_includes style, "syncUIFromState();"
+    randomize = js[/function randomize\(\).*?(?=\nfunction randomizeFX)/m] or raise "no randomize"
+    assert_includes randomize, "syncUIFromState();"
+    random_fx = js[/function randomizeFX\(\).*?(?=\nasync function exportWAV)/m] or raise "no randomizeFX"
+    assert_includes random_fx, "if(!drumG||!bassG||!keysG||!padsG||!masterG){st_.randomizeFxPending=true;return;}"
+    assert_includes random_fx, "applyFX();"
+    init = js[/async function initAudio\(.*?(?=\nfunction applyFX)/m] or raise "no initAudio"
+    assert_includes init, "if(st_.randomizeFxPending){st_.randomizeFxPending=false;randomizeFX();}else applyFX();"
+  end
   def test_the_default_style_chip_names_a_declared_style
     chip = js[/find\(c=>c\.textContent==='([^']+)'\)/, 1]
     refute_nil chip, "no default style chip is selected in rg69.js"
@@ -214,12 +251,14 @@ class TestRg69Defaults < Minitest::Test
   def test_boot_installs_a_fixed_chain_and_never_randomizes
     init = js[/async function initAudio\(\).*?(?=\n(?:async )?function )/m] or raise "no initAudio"
     assert_includes init, "installDefaultFX()"
-    refute_includes init, "randomizeFX()",
-                    "initAudio must not randomize the effect chain at boot"
+    assert_includes init, "if(st_.randomizeFxPending){st_.randomizeFxPending=false;randomizeFX();}else applyFX();"
+    refute_match(/installDefaultFX\(\);\s*randomizeFX\(\);/, init,
+                 "the default chain stays fixed; only an explicit queued action may randomize it")
 
-    # The only remaining call to randomizeFX is the explicit randomize() action.
-    assert_equal 1, js.scan(/randomizeFX\(\);/).size,
-                 "randomizeFX must be reachable only from the explicit randomize() action"
+    # Random effects are created only on explicit randomize, or when a queued
+    # pre-audio randomize is finally applied after the graph exists.
+    assert_equal 2, js.scan(/randomizeFX\(\);/).size,
+                 "randomizeFX may run only for an explicit action or its deferred startup"
   end
 
   def test_every_default_fx_parameter_is_a_literal_so_boots_are_repeatable

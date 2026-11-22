@@ -617,7 +617,7 @@ module Master
                             category: :infrastructure)
         end
 
-        Result.ok({ log: result.value!, path: output, progression: "Blue Hour - Dilla Minor Dub Cut",
+        Result.ok({ log: result.value!, path: output, progression: "F-minor Dub Study (engine original)",
                     drums: "dilla_shadow_full", groove: "dilla_shadow", kit: "kit_dust", tempo_range: [92, 116] })
       end
 

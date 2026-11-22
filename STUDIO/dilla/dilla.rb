@@ -8,7 +8,7 @@
 # NumPy, SciPy or Demucs runtime is required.
 #
 # Everything MASTER expects from `STUDIO/dilla/dilla.rb` is answered here:
-#   ruby dilla.rb                       curated showcase (Blue Hour)
+#   ruby dilla.rb                       original F-minor Dub Study showcase
 #   ruby dilla.rb --random --out X      random progression, random drums
 #   ruby dilla.rb --showcase [--no-video] --out X
 #   ruby dilla.rb --progression N [--drums ID] [--profile P] [--groove S]

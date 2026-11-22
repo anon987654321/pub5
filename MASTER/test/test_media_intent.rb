@@ -128,7 +128,7 @@ class MediaIntentTest < Minitest::Test
     assert_equal "--list", calls.first[:arg]
   end
 
-  def test_bare_play_renders_the_curated_blue_hour_showcase_and_plays_the_wav
+  def test_bare_play_renders_the_original_f_minor_dub_study_and_plays_the_wav
     calls = []
     result = nil
 
@@ -143,7 +143,7 @@ class MediaIntentTest < Minitest::Test
     words = Shellwords.split(calls.fetch(0)[:arg])
     assert_includes words, "--showcase"
     assert_includes words, "--no-video"
-    assert_equal "Blue Hour - Dilla Minor Dub Cut", result.value!.fetch(:style)
+    assert_equal "F-minor Dub Study (engine original)", result.value!.fetch(:style)
     assert_equal "dilla_shadow_full", result.value!.fetch(:drums)
     assert_equal "kit_dust", result.value!.fetch(:kit)
     refute_includes words, "--list"
