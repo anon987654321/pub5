@@ -77,7 +77,23 @@ module Master
         def create_page = Page.new(broker: @broker, lease_id: @lease_id, page: @browser.create_page)
 
         def quit(wait: true)
-          @browser.quit(wait:)
+          if quit_wait_supported?
+            @browser.quit(wait:)
+          elsif wait == false
+            Thread.new { @browser.quit }
+          else
+            @browser.quit
+          end
+        end
+
+        private
+
+        def quit_wait_supported?
+          @browser.method(:quit).parameters.any? do |kind, name|
+            kind == :keyrest || (%i[key keyreq].include?(kind) && name == :wait)
+          end
+        rescue StandardError
+          false
         end
       end
 
