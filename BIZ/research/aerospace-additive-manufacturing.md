@@ -1,9 +1,9 @@
 # Aerospace and spacecraft additive manufacturing
 
-**Status:** exploratory research frame  
-**Owner:** BIZ  
-**Date opened:** 2026-11-22  
-**Maturity:** concept research only; no approved mission, customer, budget, design baseline, manufacturing route or flight programme
+- **Status:** exploratory research frame
+- **Owner:** BIZ
+- **Date opened:** 2026-11-22
+- **Maturity:** concept research only; no approved mission, customer, budget, design baseline, manufacturing route or flight programme
 
 ## Purpose
 
