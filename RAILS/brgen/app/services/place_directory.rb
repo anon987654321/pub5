@@ -19,7 +19,9 @@ class PlaceDirectory
     def find_external(city:, source:, external_id:)
       return Place.none unless city&.id && source.present? && external_id.present?
 
-      for_city(city).where(source:, external_id:)
+      # Importers must be able to find and re-review a rejected identity;
+      # public consumers use for_city, which deliberately hides that state.
+      Place.where(city_id: city.id, source:, external_id:)
     end
   end
 end
