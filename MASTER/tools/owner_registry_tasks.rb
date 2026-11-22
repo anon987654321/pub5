@@ -456,9 +456,9 @@ module Backlog
       if origin == "backlog" && state == "waiting"
         return :busy if due_mission?(current)
 
-        park_current!(record: current)
+        return :delivery_failed unless park_current!(record: current)
       elsif origin == "backlog" && %w[blocked failed].include?(state)
-        park_current!(record: current)
+        return :delivery_failed unless park_current!(record: current)
       elsif state == "waiting"
         return :busy
       elsif %w[blocked failed].include?(state)
@@ -549,9 +549,9 @@ module Backlog
       return false unless %w[waiting blocked failed].include?(record["state"].to_s)
 
       plan = JSON.parse(record["plan"].to_s)
-      return false unless plan["executor"] == "owner_registry"
+      return :stale unless plan["executor"] == "owner_registry"
       source_item = Backlog.generate.find { |item| item[:id].to_s == plan["item_id"].to_s }
-      return false unless source_item && item_digest(source_item) == plan["item_digest"].to_s
+      return :stale unless source_item && item_digest(source_item) == plan["item_digest"].to_s
       return true if parked_task_rows.any? { |row| row["mission_id"].to_s == record["id"].to_s }
 
       paths = Array(plan["scope_paths"]).map(&:to_s)
@@ -588,6 +588,10 @@ module Backlog
     def resume_item!(item_id:)
       item = Backlog.generate.find { |row| row[:id].to_s == item_id.to_s }
       return false unless item
+
+      parked = latest_parked_tasks[item_digest(item)]
+      return false unless parked && parked["record_type"] == "parked_task"
+      return false unless parked["requires_operator"] == true
 
       append_executor_receipt(
         "record_type" => "resume_task",
