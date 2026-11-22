@@ -231,7 +231,10 @@ PROFILES = {
   # a visible non-pass rather than a silent omission.
   "web"         => [law_syntax, rake["test:web_ui"], web_node_step, rake["test:web"], web_live_step],
   "ci"          => ci_steps,
-  "full"        => [*full_ci, run_bin["probe", "all"], rake["audit"]],
+  # End-to-end completion sweep: cover every owned tree as well as the MASTER
+  # release profile. Exit 3 from test:all_trees means runtime evidence was
+  # unavailable (for example Node is missing), not that the tests passed.
+  "full"        => [*full_ci, rake["test:all_trees"], run_bin["probe", "all"], rake["audit"]],
 }.freeze
 
 check_io = format == "json" ? $stderr : $stdout
