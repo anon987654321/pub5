@@ -268,7 +268,10 @@ def collect_remote_deploy(session:, app:, sha:, log:)
     $stdout.write(chunk) unless chunk.empty?
     $stdout.flush unless chunk.empty?
     match = output.match(/PUB5_DEPLOY_EXIT=(\d{1,3})/)
-    next unless match
+    unless match
+      sleep 3
+      next
+    end
 
     exit_code = Integer(match[1], 10)
     sleep 1

@@ -185,10 +185,18 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes SOURCE, "deploy_run_log=/dev/null"
     assert_includes SOURCE, "VPS_DEPLOY_LOG_REF"
     assert_includes SOURCE, "workstation_log=$deploy_log_ref"
+    assert_includes SOURCE, "workstation log reference is required"
     refute_includes SOURCE, 'exec > >(tee -a'
     refute_includes SOURCE, 'mkdir -p -- "$deploy_log_dir/runs"'
     refute_includes SOURCE, "/var/log/pub5/vps-deploy.log"
     refute_includes SOURCE, "/home/dev/vps-deploy.log"
+  end
+  def test_remote_deploy_collector_polls_at_a_bounded_interval
+    operator = File.read(File.join(ROOT, "MASTER", "bin", "operator"), encoding: "UTF-8")
+    collector = operator[/def collect_remote_deploy\(.*?^end/m]
+    refute_nil collector
+    assert_includes collector, "sleep 3"
+    assert_includes collector, "tmux capture-pane -p -J -S -"
   end
 
   def test_disk_recovery_hint_uses_bounded_broker
