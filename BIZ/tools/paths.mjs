@@ -65,6 +65,10 @@ export const PUBLISHED_INPUTS = {
     html: ['tools/future_healthcare_os.html', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/paths.mjs'],
     pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
   },
+  neolimb: {
+    html: ['tools/neolimb.html', 'tools/neolimb_proposal.md', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/paths.mjs'],
+    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
+  },
   ragnhild_legater: {
     html: ['ragnhild/ragnhild_legater.html'],
     pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
