@@ -2,6 +2,7 @@
 
 require_relative "../io/atomic_write"
 require_relative "../ground/service_supervisor"
+require_relative "../ground/failure_taxonomy"
 require_relative "../cli/core_bridge"
 require "json"
 require_relative "../../tools/owner_registry_tasks" if ENV["MASTER_BACKLOG_AUTORUN"] == "1"
@@ -190,12 +191,33 @@ module Master
       handle.finish!(summary:)
       Master::Result.ok(summary)
     rescue BacklogRunFailed => error
-      handle&.block!(reason: error.message) unless handle&.record&.fetch("state", nil) == "blocked"
+      settle_backlog_failure!(handle, error.message)
       Master::Result.err(error.message, category: error.category)
     rescue StandardError => error
       reason = "FIX_FAILED: #{error.class}: #{error.message}"
-      handle&.block!(reason:) unless handle&.record&.fetch("state", nil) == "blocked"
+      settle_backlog_failure!(handle, reason)
       Master::Result.err(reason, category: :validation)
+    end
+
+    # A failed attempt releases only its own mission. Transient infrastructure
+    # recovers on bounded backoff; permanent failure ends this item; an
+    # ambiguous outcome remains parked for a human to resolve.
+    def settle_backlog_failure!(handle, reason)
+      return false unless handle
+
+      category = Ground::FailureTaxonomy.shared.classify(reason)
+      classified = "#{category}: #{reason}"
+      case category
+      when :transient
+        handle.defer!(reason: classified)
+      when :exhausted
+        handle.defer!(reason: classified, seconds: Fix::Mission::RETRY_MAX_SECONDS)
+      when :permanent
+        handle.fail!(classified)
+      else
+        handle.block!(reason: "human review required: #{classified}")
+      end
+      true
     end
 
     def backlog_acceptance_argv(spec, repository:)
