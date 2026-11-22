@@ -1698,12 +1698,38 @@ Representative commits on main:
 - `7d21ce155958023250564f4e50443121a26e2312` — allow the assigned Rails group to append private receipts without opening access to others.
 - `becd8b98f0dc015f7cedf89d7b60fe6ae983926d` — test the private receipt group-access boundary.
 
+### Operator flow-control surface
+
+- `bin/operator backlog status` is the read-only view of current mission,
+  eligible/ready/completed counts and parked item classifications/retry times.
+  It deliberately omits task prompts and raw exception bodies.
+- `bin/operator backlog resume <item-id>` validates that the source item still
+  exists and remains eligible, then records an explicit release event only for
+  a parked item requiring operator review. It does not mark work complete or
+  bypass the original acceptance proof. If another single-writer mission is
+  active, the released item waits for the next eligible selection.
+- The status API uses the existing owner registry and receipt stream; it adds
+  no task ledger or duplicate backlog.
+
+Additional commits on main:
+- `687050ca303320c5a5d1a0be2be02b6d14a782cf` — add the read-only status
+  projection and validate explicit resume targets.
+- `9ee475bb6cbb59791f72654cd2ed3073968f70fd` — test status redaction and
+  ready/parked counts.
+- `7b2412a115af87ceee063b071967e4b9795c8f9b` — declare the Set dependency
+  used by status.
+- `d4b40396e850460b4124ff4f6cca79625cf733a2` — bind the status test to the
+  real parked-scope fingerprint.
+- `8634ad75975972640718726559c73ed7d41da0bc` — concurrent browser lease
+  shutdown revocation change; unrelated to backlog recovery, included in
+  the verified branch tip.
+
 ### Phase 20 evidence boundary
 
 READ_BACK:
-- GitHub read-after-write completed for all changed implementation, test and
-  documentation files. The latest verified implementation HEAD before this
-  receipt amendment was `becd8b98f0dc015f7cedf89d7b60fe6ae983926d`.
+- GitHub read-after-write completed for all changed implementation, test,
+  operator and documentation files. The latest verified implementation HEAD
+  before this receipt amendment was `d4b40396e850460b4124ff4f6cca79625cf733a2`.
 - Permanent terminal failures overwrite any stale transient wake reason, so
   parked-item receipts retain the final failure classification.
 - Receipt-directory checks follow the private-state contract: the owner uses
