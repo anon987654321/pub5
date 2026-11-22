@@ -466,7 +466,7 @@ module Studio
           }
         }
         Tempfile.create([".film-receipt-", ".json"], File.dirname(receipt_path), mode: 0o600) do |file|
-          file.write(JSON.pretty_generate(receipt) + "\\n")
+          file.write(JSON.pretty_generate(receipt) + 10.chr)
           file.flush
           file.fsync
           file.close
