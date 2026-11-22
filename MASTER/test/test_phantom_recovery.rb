@@ -231,6 +231,121 @@ class TestPhantomRecovery < Minitest::Test
     assert harness.bus.events.any? { |event, payload| event == "phantom:detected" && payload[:patterns] == ["empty_tool_response"] }
   end
 
+  class NativeToolFallbackHarness
+    include Master::Review::LLMDispatcher::ReactLoop
+    include Master::Review::LLMDispatcher::RubyLLMSender
+
+    class CounterTool
+      def initialize(calls) = (@calls = calls)
+      def call(**)
+        @calls << :called
+        "counter evidence"
+      end
+    end
+
+    attr_reader :bus, :calls, :native_sends
+
+    def initialize(native_reply:, manual_replies:, native_rounds: 0)
+      @calls = []
+      @tools = [CounterTool.new(@calls)]
+      @tool_registry = { "CounterTool" => { "elevated" => false, "default" => true } }
+      @bus = FakeBus.new
+      @native_reply = native_reply
+      @manual_replies = manual_replies.dup
+      @native_rounds = native_rounds
+      @native_sends = 0
+    end
+
+    def send_ruby_llm(*, **)
+      @native_sends += 1
+      Fiber[:master_native_tool_rounds] = @native_rounds if @native_rounds.positive?
+      Master::Result.ok(@native_reply)
+    end
+
+    def send_llm_request(*, **)
+      Master::Result.ok(@manual_replies.shift.to_s)
+    end
+
+    def tool_available_for_context?(_) = true
+  end
+
+  def test_native_tool_text_failure_retries_once_through_manual_react
+    harness = NativeToolFallbackHarness.new(
+      native_reply: "results = CounterTool()",
+      manual_replies: [
+        %(<tool_call>{"name":"CounterTool","args":{}}</tool_call>),
+        "The tool ran and returned counter evidence.",
+      ],
+    )
+
+    result = Master::CLI::SubagentContext.stub(:permits?, true) do
+      Master::Ground::Tool::Profile.stub(:allowlist, ["CounterTool"]) do
+        harness.send(
+          :send_ruby_llm_with_manual_tool_fallback,
+          "gpt-4o-test", [{ role: "user", content: "run the counter tool" }],
+          sys: "governed instructions", stream: false,
+        )
+      end
+    end
+
+    assert_predicate result, :ok?
+    assert_equal "The tool ran and returned counter evidence.", result.to_s
+    assert_equal 1, harness.native_sends, "the native provider turn must not be repeated"
+    assert_equal [:called], harness.calls, "manual fallback should execute the tool exactly once"
+    assert harness.bus.events.any? do |event, payload|
+      event == "llm:manual_tool_fallback" &&
+        payload[:reason] == "native_tool_call_returned_as_text" &&
+        payload[:tools] == ["CounterTool"]
+    end
+  ensure
+    Fiber[:master_native_tool_rounds] = nil
+    Fiber[:master_no_tools] = nil
+  end
+
+  def test_native_text_fallback_does_not_replay_after_a_native_tool_round
+    harness = NativeToolFallbackHarness.new(
+      native_reply: "results = CounterTool()",
+      manual_replies: ["must not be requested"],
+      native_rounds: 1,
+    )
+
+    result = harness.send(
+      :send_ruby_llm_with_manual_tool_fallback,
+      "gpt-4o-test", [{ role: "user", content: "run the counter tool" }],
+      sys: nil, stream: false,
+    )
+
+    assert_predicate result, :ok?
+    assert_equal "results = CounterTool()", result.to_s
+    assert_empty harness.calls
+    refute harness.bus.events.any? { |event, _| event == "llm:manual_tool_fallback" }
+  ensure
+    Fiber[:master_native_tool_rounds] = nil
+    Fiber[:master_no_tools] = nil
+  end
+
+  def test_native_text_fallback_is_disabled_for_streaming_and_structured_output
+    [ { stream: true, format: nil }, { stream: false, format: { type: "json" } } ].each do |options|
+      harness = NativeToolFallbackHarness.new(
+        native_reply: "results = CounterTool()",
+        manual_replies: ["must not be requested"],
+      )
+      result = harness.send(
+        :send_ruby_llm_with_manual_tool_fallback,
+        "gpt-4o-test", [{ role: "user", content: "run the counter tool" }],
+        sys: nil, **options,
+      )
+
+      assert_predicate result, :ok?
+      assert_equal "results = CounterTool()", result.to_s
+      assert_empty harness.calls
+      refute harness.bus.events.any? { |event, _| event == "llm:manual_tool_fallback" }
+    end
+  ensure
+    Fiber[:master_native_tool_rounds] = nil
+    Fiber[:master_no_tools] = nil
+  end
+
   class SearchFiles
     def call(**) = "must not run"
   end
