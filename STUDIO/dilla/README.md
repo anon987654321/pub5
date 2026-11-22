@@ -72,6 +72,18 @@ arranged: voicings, pattern, fills, sample plan) and `.provenance.json`
 one the seed and performer rotate per run — deleting a take loses it for
 good, so keep what you like.
 
+These profiles and controls describe compositional techniques, timing and
+production choices; they do not promise imitation of a named artist or exact
+artist-style fidelity. A melody is called recovered only when its source
+supports that claim; generated voice-leading remains generated. A sample or
+reference source must be operator-supplied and rights-cleared; a URL, artist
+name or model output is not a rights grant. Preserve source material and the
+prior approved take before replacing or grading an export. The sidecars record
+render measurements and generation provenance, but neither a LUFS/FFT result
+nor a seed establishes musical quality, rights or consent. Final listening
+acceptance is a separate human decision and must be recorded separately from
+automated tests.
+
 ## Reference — learn from a recording
 
 ```sh
