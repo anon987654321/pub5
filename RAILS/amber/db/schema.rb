@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_11_12_100100) do
+ActiveRecord::Schema[8.2].define(version: 2026_11_22_170000) do
   create_table "account_merges", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "guest_user_id", null: false
@@ -183,6 +183,27 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_12_100100) do
     t.index ["commentable_type", "commentable_id"], name: "index_comments_on_commentable"
     t.index ["parent_id"], name: "index_comments_on_parent_id"
     t.index ["user_id"], name: "index_comments_on_user_id"
+  end
+
+  create_table "commerce_ledger_entries", force: :cascade do |t|
+    t.integer "actor_id"
+    t.bigint "amount_minor"
+    t.string "currency", limit: 3
+    t.datetime "created_at", null: false
+    t.datetime "expires_at"
+    t.string "entry_type", limit: 32, null: false
+    t.string "entitlement", limit: 64, null: false
+    t.string "idempotency_key", limit: 160, null: false
+    t.json "metadata", default: {}, null: false
+    t.integer "source_id"
+    t.string "source_type"
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["actor_id"], name: "index_commerce_ledger_entries_on_actor_id"
+    t.index ["idempotency_key"], name: "index_commerce_ledger_entries_on_idempotency_key", unique: true
+    t.index ["source_type", "source_id"], name: "index_commerce_ledger_entries_on_source"
+    t.index ["user_id", "created_at"], name: "index_commerce_ledger_entries_on_user_and_time"
+    t.index ["user_id"], name: "index_commerce_ledger_entries_on_user_id"
   end
 
   create_table "connections", force: :cascade do |t|
