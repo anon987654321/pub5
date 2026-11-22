@@ -20,7 +20,7 @@ module Master::Core
   # An Effect is something the agent wants to do. Nothing reaches the world
   # except by proposing an Effect and having the Constitution admit it. The verb
   # set is closed and small; that closure is what makes the agent auditable.
-  VERBS = %i[read write probe exec git http ask note critique done].freeze
+  VERBS = %i[read write probe exec git http browser ask note critique done].freeze
 
   # Cooperative cancellation shared by hosts and the Fold. A cancellation is
   # sticky: the first reason remains authoritative across racing callers.
@@ -101,6 +101,8 @@ module Master::Core
     def self.write(path, content) = new(verb: :write, args: { path:, content: })
     def self.probe(argv, timeout: 20) = new(verb: :probe, args: { argv:, timeout: })
     def self.http(url) = new(verb: :http, args: { url: })
+    # One-shot JavaScript-rendered, read-only page visit through the guarded browser transport.
+    def self.browser(url, wait: 1.0, links: true) = new(verb: :browser, args: { url:, wait:, links: })
     # evidence: remains accepted for old callers; it is deliberately not retained.
     def self.exec(argv, timeout: 60, evidence: nil, env: {}, compensation: nil)
       args = { argv:, timeout:, env: }
@@ -126,6 +128,7 @@ module Master::Core
       note: :stdio,
       critique: :stdio,
       http: :network,
+      browser: :browser,
       done: :stdio,
     }.freeze
 
@@ -146,6 +149,7 @@ module Master::Core
       raise ArgumentError, "effect capability mismatch: #{verb} requires #{expected}, got #{supplied}" if supplied && supplied != expected
 
       super(verb:, args:, capability: expected)
+      validate_browser_args! if verb == :browser
       compensation_action if args.key?(:compensation) || args.key?("compensation")
     end
 
@@ -193,6 +197,9 @@ module Master::Core
       when :http
         Reversibility.new(kind: :policy_gated, scope: args[:url],
                           reason: "network policy owns authorization; the remote effect has no generic inverse")
+      when :browser
+        Reversibility.new(kind: :policy_gated, scope: args[:url],
+                          reason: "the guarded browser policy owns a read-only remote visit; the remote effect has no generic inverse")
       when :git
         case args[:operation].to_s.to_sym
         when :diff
@@ -223,6 +230,23 @@ module Master::Core
         Reversibility.new(kind: :unknown, scope: verb, reason: "no reversibility contract exists for this effect")
       end
     end
+
+    def validate_browser_args!
+      extra = args.keys - %i[url wait links]
+      raise ArgumentError, "unknown browser fields: #{extra.join(", ")}" unless extra.empty?
+
+      url = args[:url]
+      raise ArgumentError, "browser requires a non-empty URL string" unless url.is_a?(String) && !url.strip.empty?
+      raise ArgumentError, "browser URL exceeds 2048 bytes" if url.bytesize > 2_048
+
+      wait = args.fetch(:wait, 1.0)
+      unless wait.is_a?(Numeric) && wait.respond_to?(:finite?) && wait.finite? && wait >= 0 && wait <= 12
+        raise ArgumentError, "browser wait must be a finite number between 0 and 12 seconds"
+      end
+      links = args.fetch(:links, true)
+      raise ArgumentError, "browser links must be true or false" unless links == true || links == false
+    end
+    private :validate_browser_args!
 
     # A compensation is structured data that will be re-admitted as a new exec
     # and explicitly approved only if the original command fails. It cannot
