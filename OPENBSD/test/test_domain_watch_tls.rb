@@ -24,7 +24,7 @@ class TestDomainWatchTls < Minitest::Test
 
   def relayd_keypairs
     File.readlines(Deploy::DomainWatch::RELAYD_CONF, encoding: "UTF-8").filter_map do |line|
-      line.sub(/#.*/, "").match(/\\btls keypair "([^"]+)"/)&.captures&.first
+      line.sub(/#.*/, "").match(/tls keypair "([^"]+)"/)&.captures&.first
     end.uniq
   end
 

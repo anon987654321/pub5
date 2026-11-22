@@ -262,7 +262,7 @@ module Deploy
 
     def tls_hosts
       keypairs = File.readlines(RELAYD_CONF, encoding: "UTF-8").filter_map do |line|
-        line.sub(/#.*/, "").match(/\\btls keypair "([^"]+)"/)&.captures&.first
+        line.sub(/#.*/, "").match(/tls keypair "([^"]+)"/)&.captures&.first
       end.uniq
 
       city_zones = RenderDns.city_zones
