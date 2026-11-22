@@ -51,6 +51,9 @@ module Master::Core
             properties: {
               argv: { type: "array", minItems: 1, maxItems: 5, items: { type: "string", maxLength: 240 } },
               timeout: { type: "integer", minimum: 1, maximum: 30 },
+              url: { type: "string", maxLength: 2_048 },
+              wait: { type: "number", minimum: 0, maximum: 12 },
+              links: { type: "boolean" },
               operation: { type: "string", enum: operations },
               compensation: {
                 type: "object",
