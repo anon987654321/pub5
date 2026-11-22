@@ -295,8 +295,8 @@ module Master
 
       def available? = @capabilities.allow?(:browser)
 
-      def sessions = @mutex.synchronize { @leases.keys.sort }
-      def size = @mutex.synchronize { @leases.size }
+      def sessions = @mutex.synchronize { @handles.keys.sort }
+      def size = @mutex.synchronize { @handles.size }
 
       # Open a host-bound session. The destination is checked before any process
       # starts, so a refused host never costs a Chromium launch or a receipt.
@@ -330,7 +330,7 @@ module Master
 
         @mutex.synchronize do
           reap_expired!
-          raise Denied, "browser: session limit reached (#{@max_sessions})" if @leases.size >= @max_sessions
+          raise Denied, "browser: session limit reached (#{@max_sessions})" if @handles.size >= @max_sessions
 
           id = SecureRandom.hex(8)
           lease = nil
@@ -350,6 +350,10 @@ module Master
                 @engine.stop(handle)
                 @ledger&.call(event: :browser_start, phase: :cleanup, lease: id, host: bound)
               rescue StandardError => cleanup_error
+                # The start was never published as a lease, but Chromium may
+                # still be alive. Retain its private handle as an orphan so the
+                # shutdown path and the next expiry sweep can retry teardown.
+                @handles[id] = handle
                 raise Denied, "browser: start receipt failed (#{error.class}); process cleanup failed (#{cleanup_error.class})"
               end
             end
@@ -431,7 +435,7 @@ module Master
       # receipt for one lease must not prevent attempts on the remaining process
       # groups; report the aggregate only after every known lease was attempted.
       def close_all
-        ids = @mutex.synchronize { @leases.keys }
+        ids = @mutex.synchronize { @handles.keys }
         failures = []
         ids.each do |id|
           begin
@@ -474,7 +478,10 @@ module Master
 
       def reap_expired!
         now = @clock.call
-        expired_ids = @leases.select { |_id, lease| lease.expired?(now) }.keys
+        expired_ids = @handles.keys.select do |id|
+          lease = @leases[id]
+          lease.nil? || lease.expired?(now)
+        end
         failures = []
         expired_ids.each do |id|
           next if @closing[id]
