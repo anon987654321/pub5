@@ -286,10 +286,8 @@ let drumTube,kickComp,vintageSat,phaserFX,lofiNoise,lofiComp,tapeWS,padsLFO,kick
 const fxPool=['AutoWah','AutoFilter','AutoPanner','Chebyshev','Chorus','Distortion','FeedbackDelay','Freeverb','FrequencyShifter','JCReverb','Phaser','PingPongDelay','PitchShift','Tremolo','Vibrato','StereoWidener'];
 let drumFX=[],bassFX=[],keysFX=[],padsFX=[],masterFX=[];
 
-// The boot chain is fixed. A person meets RG-69 through its defaults, so the
-// panel must ship one musical, repeatable instrument; the seventeen-effect
-// pool is an explicit choice (the "randomize" button), never applied at load.
-// Every parameter here is a single literal, so two loads are identical.
+// Each page load selects a playable style at random. The effect pool stays
+// out of the boot path; only the explicit randomize action builds extra FX.
 function createDefaultFX(){
 const drum=[],bass=[],keys=[],pads=[];
 const add=(arr,eff,wet)=>{if(eff){eff.wet.value=wet;arr.push(eff);}return arr;};
@@ -1405,7 +1403,7 @@ document.documentElement.setAttribute('data-theme',st_.theme);
 
 applyLayout(finalBlend,'final blend');
 buildUI();
-// Reflect the boot default (Blue Hour) in the controls before the first paint.
+// Reflect this page load's random playable style before the first paint.
 syncUIFromState();
 log(`RG-69 ready — ${bootStyle.n} · type help in terminal`,"k");
 
