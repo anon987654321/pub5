@@ -194,6 +194,7 @@ module Master
 
           @record["state"] = "failed"
           @record["error"] = error.to_s.byteslice(0, 1_200)
+          @record["wake_reason"] = error.to_s.byteslice(0, 240)
           @record["auto_continue"] = false
           @record["next_wake_at"] = nil
           @record["lease_owner"] = nil
