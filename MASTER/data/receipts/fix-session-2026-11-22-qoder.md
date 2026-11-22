@@ -2476,3 +2476,24 @@ source-level broker and network guards do not yet prove that a compromised
 adapter cannot issue direct CDP commands around those guards. Do not close the
 issue or call the browser boundary complete until that interface is narrowed
 and its network/capability tests run.
+
+### Browser Core-effect integration remains open (2026-11-22)
+
+A fresh read of MASTER/lib/core.rb confirms that the closed
+`Master::Core::VERBS` set still excludes `:browser`. `World#browser` is an
+injected broker reference, but browser navigation and interaction are still
+invoked through the existing `BrowserAgent`/plugin tool adapters inside the
+CoreBridge Fiber scope. They are not yet individual `Effect` values admitted
+by the Constitution and dispatched by `World`.
+
+That distinction matters: the current broker capability gates process/session
+creation, the adapters retain their own action consent, and lifecycle events
+are durable; but an agent's browser action is not yet represented as a
+first-class Core effect with an operation-specific capability, reversibility
+classification, admission receipt and World handler. The raw CDP endpoint is
+also still exposed on the lease to trusted in-process adapters, so the desired
+narrow plugin session interface is not yet established.
+
+Do not close issue #5 until both boundaries are addressed and tested. Preserve
+the current fail-closed `session_browser_post_policy` operator seam; no POST
+authority has been added by this work.
