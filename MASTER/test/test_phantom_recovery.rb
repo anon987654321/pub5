@@ -233,6 +233,7 @@ class TestPhantomRecovery < Minitest::Test
 
   class NativeToolFallbackHarness
     include Master::Review::LLMDispatcher::ReactLoop
+    include Master::Review::LLMDispatcher::ToolRegistry
     include Master::Review::LLMDispatcher::RubyLLMSender
 
     class CounterTool
