@@ -134,7 +134,7 @@ module Master
           state["revision"] = revision
           path = File.join(master_root, "data", STATE)
           FileUtils.mkdir_p(File.dirname(path))
-          File.write(path, JSON.pretty_generate(state))
+          File.write(path, "#{JSON.pretty_generate(state)}\n")
         end
       end
     end
