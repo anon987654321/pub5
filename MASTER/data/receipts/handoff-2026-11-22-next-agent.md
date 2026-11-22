@@ -1744,6 +1744,7 @@ Lease-fencing commits on main:
 - `a162e1308fbfcb221e421c5c77bdb1b558908d6c` — pass observed mission lease identity into recovery settlement.
 - `0a001412d6e57c0b318b473bbd0cd2a62d17b3f7` — preserve explicit `Fenced` outcomes.
 - `9d7b79cec0017fba202fe18ccc76c98cc6105c65` — test conditional scheduler recovery fencing for defer, block and fail.
+- `7434c8a7dc20c0ff2be15765f1252ca1b278f71e` — fence the unverified backlog completion handoff with mission ID and lease owner.
 
 ### Phase 20 evidence boundary
 
