@@ -46,6 +46,9 @@ module Master
           return dispatch_slash(shorthand, container:, felt_sense:, on_turn:, cancellation:)
         end
         return casual_reply(text, container:, felt_sense:, on_chunk:, image:) if public_research_request?(text)
+        if (shell_command_notice = operator_shell_command_notice(text))
+          return Master::Result.ok({ rendered: shell_command_notice, output: shell_command_notice })
+        end
         if (fix_request = explicit_fix_request(text))
           return dispatch_slash(rewrite_slash(fix_request), container:, felt_sense:, on_turn:, cancellation:)
         end
@@ -88,6 +91,22 @@ module Master
       end
 
       def visitor? = Fiber[:master_visitor] == true
+
+      # bin/operator is a workstation shell entrypoint, not a command to parse
+      # through an LLM from the interactive conversation. Deployments are exposed
+      # in MASTER as natural language and /deploy; push remains a shell operation.
+      def operator_shell_command_notice(text)
+        return unless text.to_s.match?(/\A\s*(?:(?:MASTER|\.\/MASTER)\/)?bin\/operator\b/i)
+
+        command = text.to_s.strip
+        if command.match?(/\bvps\s+deploy\b/i)
+          "That is a shell command, not a MASTER chat command. You can simply ask MASTER to redeploy OPENBSD and RAILS onto vm23; MASTER resolves the full registered release and runs its guarded deployment workflow. No separate vps-deploy command is needed from you."
+        elsif command.match?(/\bpush\b/i)
+          "That is a workstation shell command. Type /exit to leave the MASTER prompt, then run MASTER/bin/operator push from the pub5 repository root. MASTER will not execute shell text pasted into a conversation."
+        else
+          "That is a workstation shell command. MASTER's interactive prompt accepts natural-language requests and slash commands; shell commands must be run from your terminal after /exit."
+        end
+      end
 
       DOCUMENT_ARCHIVE_ACTION = /\A\s*(?:please\s+)?(?:analy[sz]e|transcribe|decipher|sequence|organize|sort|go through|go into|enter|open|read)\b|\b(?:tell|ask)\s+master\s+to\s+(?:analy[sz]e|transcribe|decipher|sequence|organize|sort|go through|go into|enter|open|read)\b/i.freeze
       DOCUMENT_ARCHIVE_SUBJECT = /\b(?:handwrit\w*|letters?|correspondence|postcards?|old notes?)\b/i.freeze
