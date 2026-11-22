@@ -296,6 +296,7 @@ class TestPhantomRecovery < Minitest::Test
     assert_equal [:called], harness.calls, "manual fallback should execute the tool exactly once"
     assert_equal [true, true], harness.manual_no_tools_flags,
                  "the fallback turns must use text-tool mode instead of recursively requesting native tools"
+    assert_nil Fiber[:master_no_tools], "manual text-tool mode must not leak into the next LLM turn"
     assert harness.bus.events.any? do |event, payload|
       event == "llm:manual_tool_fallback" &&
         payload[:reason] == "native_tool_call_returned_as_text" &&
