@@ -180,24 +180,15 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes operator, 'backup_root_crontab || {'
     assert_includes operator, 'verify_root_crontab || {'
   end
-  def test_durable_recovery_logs_are_opened_before_any_service_can_be_stopped
-    logging = SOURCE[/^if \[\[ -z \$\{VPS_DEPLOY_LOGGING:-\} \]\]; then.*?^fi$/m]
-    refute_nil logging, "the deploy log setup block is missing"
-
-    run_log = logging.index('if ! : >> "$deploy_run_log"')
-    aggregate_log = logging.index('if ! : >> "$deploy_log"')
-    tee = logging.index('exec > >(tee -a "$deploy_log" "$deploy_run_log")')
-    stop = SOURCE.index('admin_service stop "$app"')
-
-    refute_nil run_log
-    refute_nil aggregate_log
-    refute_nil tee
-    refute_nil stop
-    assert_operator run_log, :<, tee
-    assert_operator aggregate_log, :<, tee
-    assert_operator tee, :<, stop
-    assert_includes logging, '[[ ! -f "$deploy_run_log" || -L "$deploy_run_log" ]]'
-    assert_includes logging, "refusing before any service is touched"
+  def test_deploy_transcripts_never_create_files_on_vm23
+    assert_includes SOURCE, "deploy_log=/dev/null"
+    assert_includes SOURCE, "deploy_run_log=/dev/null"
+    assert_includes SOURCE, "VPS_DEPLOY_LOG_REF"
+    assert_includes SOURCE, "workstation_log=$deploy_log_ref"
+    refute_includes SOURCE, 'exec > >(tee -a'
+    refute_includes SOURCE, 'mkdir -p -- "$deploy_log_dir/runs"'
+    refute_includes SOURCE, "/var/log/pub5/vps-deploy.log"
+    refute_includes SOURCE, "/home/dev/vps-deploy.log"
   end
 
   def test_disk_recovery_hint_uses_bounded_broker
@@ -584,7 +575,7 @@ class VpsDeployContractTest < Minitest::Test
   end
 
   def lock_block
-    SOURCE[/^lock_dir=.*?(?=^# Durable deploy logging\.)/m]
+    SOURCE[/^lock_dir=.*?(?=^# Deployment transcripts belong on the workstation)/m]
   end
 
   # Runs the lock block alone in zsh against a scratch directory; returns [output, exit status].
@@ -859,6 +850,7 @@ class VpsDeployContractTest < Minitest::Test
     log = File.join(dir, "deploy.log")
     script = <<~ZSH
       app=brgen; repo=#{dir}; deploy_log=#{log}; deploy_flag=#{dir}/.flag; lock_owner=1; DEPLOY_RAILS=(brgen amber bsdports)
+      log() { print -r -- "$*"; }
       restore_started() { print restoring; }
       release_deploy_lock() { print released; }
       write_stamp() { stamp_written=1; print "stamp $1 $2"; }
@@ -885,7 +877,8 @@ class VpsDeployContractTest < Minitest::Test
       assert_includes out, "amber is DOWN"
       refute_includes out, "bsdports is DOWN"
       assert_includes out, "released"
-      assert_match(/stage=migrate finished exit=1/, log)
+      assert_match(/finished exit=1/, out)
+      assert_empty log, "deployment transcripts must not be written to the VM filesystem"
       refute File.exist?(File.join(dir, ".flag")), "the deploy flag outlived the script"
     end
   end
@@ -910,7 +903,8 @@ class VpsDeployContractTest < Minitest::Test
       out, status, log = finish_run(dir, "deploy_stage=final-check; exit 0")
       assert_equal 0, status
       refute_includes out, "FAILED"
-      assert_match(/stage=final-check finished exit=0/, log)
+      assert_match(/finished exit=0/, out)
+      assert_empty log, "successful deployments must not leave a remote transcript"
     end
   end
 
@@ -920,7 +914,8 @@ class VpsDeployContractTest < Minitest::Test
         out, status, log = finish_run(dir, "deploy_stage=precompile; kill -#{signal} $$; sleep 5")
         assert_equal({ "TERM" => 143, "HUP" => 129 }.fetch(signal), status, signal)
         assert_includes out, 'FAILED at stage "precompile"'
-        assert_includes log, "stage=precompile"
+        assert_includes out, "finished exit="
+        assert_empty log, "signal handling must not persist transcript files on vm23"
       end
     end
   end
