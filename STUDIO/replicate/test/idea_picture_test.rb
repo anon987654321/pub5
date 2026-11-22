@@ -710,6 +710,9 @@ class TestIdeaPictureOutput < Minitest::Test
         "actual_cost_status" => "NOT_REPORTED_BY_PREDICTION_API"
       }
       client = Object.new
+      client.define_singleton_method(:upload_file) do |_path, subject:|
+        "https://files.replicate.delivery/source-#{subject}.jpg"
+      end
       client.define_singleton_method(:predict_with_receipt) do |model, input, timeout:|
         raise "unexpected model" unless model == "minimax/h3-highspeed"
         raise "unexpected timeout" unless timeout == 600
