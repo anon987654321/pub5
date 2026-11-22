@@ -2,6 +2,7 @@
 
 require "minitest/autorun"
 require "tmpdir"
+require "fileutils"
 require_relative "../lib/operator/check_brief"
 require_relative "../lib/operator/check_runner"
 
@@ -173,6 +174,16 @@ class TestCheckBrief < Minitest::Test
 
       refute File.exist?(File.join(root, "escape.json"))
       refute File.exist?(File.join(root, ".master", "check", "receipts", "#{valid_id}.json"))
+
+      existing = File.join(root, valid_path)
+      FileUtils.mkdir_p(File.dirname(existing))
+      File.binwrite(existing, "operator-owned receipt\n")
+      assert_raises(Errno::EEXIST) do
+        Operator::CheckBrief.write_json_receipt(
+          root:, receipt: { "receipt_id" => valid_id, "receipt_path" => valid_path }
+        )
+      end
+      assert_equal "operator-owned receipt\n", File.binread(existing)
     end
   end
 
