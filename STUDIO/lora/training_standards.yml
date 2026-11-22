@@ -6,6 +6,9 @@ replicate:
   training_steps: 1000
   lora_type: subject
   seed: 42
+# Rate and hardware are copied from the pinned trainer's published page.
+# Time floors and margins below are local budget-guard policy, not provider limits.
+# Replicate's Cancel-After header is documented for predictions, not trainings.
 billing:
   hardware: "8x Nvidia H200 GPU"
   usd_per_second: 0.0122
