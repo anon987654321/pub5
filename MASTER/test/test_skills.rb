@@ -618,4 +618,73 @@ class TestSkills < Minitest::Test
   end
 
 
+
+  MASTER_WORKFLOW_SKILLS = {
+    "master-authority-chain" => [
+      "check the source authority chain", "who owns this path and its canonical source"
+    ],
+    "master-law-measurement" => [
+      "measure the law and record PASS or INCONCLUSIVE", "prepare the Law × stream × surface assessment"
+    ],
+    "master-fix-pipeline" => [
+      "/fix --mode=repair", "explain the governed fix pipeline and apply gate"
+    ],
+    "bounded-implementation-planning" => [
+      "plan a multi-step implementation", "execute the bounded implementation plan"
+    ],
+    "skill-authoring-evaluation" => [
+      "write a new MASTER skill", "create skill pressure scenarios"
+    ],
+    "differential-security-review" => [
+      "differential security review of the changes", "audit this commit range for vulnerabilities"
+    ],
+    "security-finding-verification" => [
+      "is this vulnerability a false positive", "search for sibling vulnerabilities"
+    ],
+    "secure-interface-design" => [
+      "pit of success review", "review unsafe defaults"
+    ],
+    "rails-code-review" => [
+      "review the Rails diff", "strong-parameters audit"
+    ],
+  }.freeze
+
+  def test_master_workflow_skills_route_from_plain_requests
+    MASTER_WORKFLOW_SKILLS.each do |name, requests|
+      requests.each do |request|
+        assert_includes shipped_skills.trigger_for(request).map { |skill| skill[:name] }, name, request
+      end
+    end
+  end
+
+  def test_master_workflow_skill_bodies_fit_and_preserve_authority_and_tool_contracts
+    body = ->(name) { registry.fetch("skills").find { |skill| skill["name"] == name }.fetch("body") }
+    MASTER_WORKFLOW_SKILLS.each_key do |name|
+      assert_operator body.call(name).length, :<=, 4_000, "#{name} is cut by the injection"
+    end
+
+    assert_match(/MASTER\/data\/soul.yml/, body.call("master-authority-chain"))
+    assert_match(/MASTER\/data\/laws.yml/, body.call("master-authority-chain"))
+    assert_match(/EXTERNAL_RESEARCH_IS_EVIDENCE_NOT_AUTHORITY/, body.call("master-authority-chain"))
+    assert_match(/--apply, --mode=repair and a named governed target/, body.call("master-fix-pipeline"))
+    assert_match(/audit and visual modes remain read-only/, body.call("master-fix-pipeline"))
+    assert_match(/one writer at a time/, body.call("master-fix-pipeline"))
+    assert_match(/Applicability is neither compliance PASS/, body.call("master-law-measurement"))
+    assert_match(/required gate/, body.call("master-law-measurement"))
+    assert_match(/No parallel subagents, competing writers or Git worktrees/, body.call("bounded-implementation-planning"))
+    assert_match(/a routing test proves discovery/, body.call("skill-authoring-evaluation"))
+    assert_match(/written authorization and exact target/, body.call("differential-security-review"))
+    assert_match(/INCONCLUSIVE/, body.call("security-finding-verification"))
+    assert_match(/Missing credentials must not silently select a weaker identity/, body.call("secure-interface-design"))
+    assert_match(/RAILS\/apps.yml/, body.call("rails-code-review"))
+    assert_match(/Do not introduce React, React Native, Expo/, body.call("rails-code-review"))
+    assert_match(/depth at a clean seam/, body.call("simplicity"))
+  end
+
+  def test_master_workflow_skills_do_not_activate_for_unrelated_personal_writing
+    matched = shipped_skills.trigger_for("write an email asking my friend to fix the broken heater")
+    refute matched.any? { |skill| MASTER_WORKFLOW_SKILLS.key?(skill[:name]) }
+  end
+
+
 end
