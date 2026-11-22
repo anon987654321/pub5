@@ -659,29 +659,82 @@ The spine ratchet + cohesion census forbid convenience splits.
      it. Repo is public: no receipt/paste/screenshot carries a secret/private path/
      personal datum.
 
-## 5. Blocked remainders (name the exact need; do not fake)
+## 5. External acceptance gates — not global implementation blockers
 
-    messenger_webrtc_calls        STUN/TURN infra on the host
-    marketplace_contact_relay     inbound mail routing + per-listing addresses on vm23
-    tv_live_stream_infra          media server (MediaMTX/SRS/nginx-rtmp) + delivery tier
-    brgen_activitypub_inbound     remote media proxying + remote moderation + blocklist
-    maps tiles                    maplibre_runtime_and_vendor_decision (licensing)
-    payments live                 payments_in_provider_staging (Vipps/Dintero staging)
-    real devices                  pwa_on_real_devices
-    SEO                           seo_canonical_host_browser_crawl
-    accessibility acceptance      human_accessibility_participant_review
-    live journeys                 journeys_in_all_three_apps, messenger_journey_in_a_browser,
-                                  brgen_first_screen_in_chrome, tenant_isolation_live
-    oauth                         oauth_callbacks_live
-    radio                         radio_tunnel_rendered_review, radio_whyp_tracks_imported
-    ops alert                     ops_alert_channel (operator-owned relay; allowlisted
-                                  endpoint, secret outside the tree; never a Slack webhook)
-    DNSSEC                        dnssec_ds_at_registrars
-    backup                        second_offhost_backup_and_key_recovery (tested restore)
-    CSP / egress                  csp_enforced_on_vm23, outbound_http_host_egress
+These entries are **narrow acceptance gates**, not reasons to stop unrelated
+repository work. For each one, continue local implementation, contracts,
+fixtures, dry-runs and failure-path tests that do not need the missing external
+resource. Only the corresponding live-production claim remains INCONCLUSIVE
+until its evidence exists. Do not convert a mock, local browser, estimate or
+configuration file into live acceptance.
 
-Each stays INCONCLUSIVE/blocked until its evidence exists. Complete the independent
-work around it; name the remainder precisely.
+- **Messenger WebRTC calls** — local signaling, call-session lifecycle,
+  permission UX, teardown and same-LAN/ICE tests can proceed using the existing
+  ActionCable path. Reliable cross-NAT media and production acceptance still
+  require host STUN/TURN and real network-path proof.
+- **Marketplace contact relay** — privacy-preserving in-app contact can proceed
+  through the existing buyer/seller conversation, including masking and a
+  reviewed reveal flow. Per-listing inbound email aliases and forwarding remain
+  gated on vm23 MX/relay routing.
+- **TV live streaming** — provider-neutral ingest/delivery contracts, local
+  loopback adapter, readiness checks, failure states and runbook work can
+  proceed. Production ingest, transcoding and viewer delivery require the
+  selected media server and host delivery tier.
+- **ActivityPub inbound** — local protocol parsing, actor identity, moderation,
+  blocklist semantics, bounded inbox processing and fixtures can proceed.
+  Federation must not be enabled until remote media proxying, remote
+  moderation and the blocklist are operational and tested.
+- **Map tiles** — the MapLibre surface, provider interface, attribution,
+  fallback and local fixture rendering can be tested without choosing a
+  production tile contract. Production tile delivery remains gated on the
+  vendor/licensing decision, attribution and usage terms.
+- **Payments live** — provider-neutral contracts, signed-webhook fixtures,
+  duplicate/out-of-order delivery, integer minor units, idempotency, refunds and
+  failure paths can be tested locally. Real charge/refund acceptance requires
+  Vipps/Dintero provider staging; never use a live customer charge as a test.
+- **PWA on real devices** — manifest, service-worker upgrade/rollback, stale
+  cache, offline shell and upload behavior can be tested in the local browser
+  harness and device emulation. Native install, platform prompts, offline
+  recovery and media upload still require real Android and iOS devices.
+- **SEO** — canonical URLs, metadata, robots, sitemap and structured data can
+  be source- and route-tested now. Public crawl/indexing acceptance requires
+  registered canonical hosts, DNS/TLS and a real crawler/browser pass.
+- **Accessibility** — semantic markup, automated checks, keyboard operation,
+  focus behavior, contrast and reduced-motion tests can proceed immediately.
+  Human participant review remains required for the final accessibility
+  acceptance claim; automation is not a substitute.
+- **Live journeys** — local browser journeys and per-app contract tests can
+  proceed against local fixtures and test accounts. Production tenant isolation,
+  OAuth callback, messenger streaming and first-screen claims require the
+  named live hosts and browser evidence.
+- **OAuth callbacks** — local callback handling, state/nonce/PKCE validation,
+  failure paths and provider fakes can be tested now. Real callback acceptance
+  requires provider registrations, exact public redirect URIs and credentials
+  in the approved secret store.
+- **Radio** — player/tunnel states, import parser, metadata validation and
+  empty/error states can be exercised with fixtures. Rendered radio review
+  still requires a real browser; Whyp track import requires a verified source,
+  provider access and rights/attribution evidence.
+- **Ops alerts** — event classification, redaction, retry limits and delivery
+  adapter contracts can be tested against a local fake receiver. Live paging
+  remains gated on an operator-owned allowlisted relay endpoint and a secret
+  outside the repository; never replace this with a Slack webhook.
+- **DNSSEC** — zone generation, DS calculation, consistency checks and
+  preflight can be tested locally. Publishing DS records and proving public
+  resolution remains a registrar-owned action.
+- **Backup and recovery** — local backup manifests, integrity checks and
+  restore drills can be improved now. The second off-host copy, recovery of
+  DNSSEC/DKIM/SSH/ACME keys and a tested off-host restore require the external
+  host, key custody and operator console.
+- **CSP and outbound egress** — inventory current origins, generate report-only
+  policies, add local response-header tests and exercise the outbound-host
+  guard now. Enforcing CSP/egress on vm23 remains gated on review of actual
+  production asset/API origins and a watched host change with rollback.
+
+The operator-seam registry now states this scope rule explicitly: an unmet
+seam blocks only the live claim that requires it. It never blocks independent
+source changes, local/contract tests, dry-runs, adapters or failure-path proof.
+Keep production readiness INCONCLUSIVE until the exact evidence is recorded.
 
 ## 6. Acceptance — the love contract (every public surface must pass)
 
