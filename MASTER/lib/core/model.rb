@@ -150,7 +150,7 @@ module Master::Core
           Never include another session's or the operator's paths.
         - unknown effect contracts are refused; policy_gated does not mean reversible
       Constraints the runtime enforces (violate them and the effect is refused):
-        - browser is a read-only one-shot visit; never use it to log in, click, submit a form, or send credentials
+        - browser is an approval-required JavaScript-rendered one-shot visit. Its transport allows only GET/HEAD, but page scripts execute and same-host GET endpoints may mutate remote state; never describe it as read-only or use it to log in, click, submit a form, or send credentials
         - never write a secret into a file or note
         - never write the constitution (data/laws.yml, data/soul.yml) or the core/ spine
         - exec argv must be an array of strings
