@@ -98,10 +98,13 @@ class TestStudioConsentEnforcement < Minitest::Test
       root: lora_root, consent_root: lora_root, out: manifest
     )
 
-    error = assert_raises(Studio::Lora::Consent::Error) { gallery.build }
+    result = gallery.build
 
-    assert_match(/private consent.yml is missing/, error.message)
-    refute File.exist?(manifest)
+    assert_equal "PARTIAL", result.fetch("publication_state")
+    assert_equal 1, result.fetch("excluded_subject_count")
+    assert_empty result.fetch("items")
+    assert File.file?(manifest), "a safe empty manifest must replace any stale publication index"
+    refute_includes File.read(manifest), "probe"
   end
 
   def test_training_is_refused_before_any_provider_request
