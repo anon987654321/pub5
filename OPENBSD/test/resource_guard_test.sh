@@ -236,13 +236,13 @@ print -r -- "$(( $(date +%s) - 600 )) 91" > "$DB/cpu-pressure"
 run_tick "$CLEAR"
 check "stale CPU pressure does not shed" "amber bsdports" "$(running)"
 
-print "13. an active deploy suppresses CPU-triggered shedding"
+print "13. an active deploy still sheds optional apps under confirmed CPU pressure"
 reset
 mkdir -p "$DB/flag"
 : > "$DB/flag/.deploying-test"
 print -r -- "$(date +%s) 88" > "$DB/cpu-pressure"
 run_tick "$CLEAR"
-check "deploy flag keeps optional services up" "amber bsdports" "$(running)"
+check "deploy flag does not disable CPU-pressure shedding" "amber" "$(running)"
 
 print "14. the all-apps pin holds during ordinary pressure"
 reset

@@ -49,12 +49,8 @@ OPTIONAL="bsdports amber"
 # restart-storm transient ~3-7, genuine OOM crisis ~4.6 sustained.
 LOAD_WARN=2.5
 LOAD_CRIT=5.0
-# A deploy raises its own load: brgen CI on 2026-10-12 crossed LOAD_CRIT at
-# 09:30, and emergency_cpu stopped amber and bsdports and pkilled the suite the
-# operator had asked for, 22 minutes in. Over 17137 history ticks, the 1111
-# taken with a deploy flag up peaked at 9.5 (p99 5.0); the 16026 without one
-# reached 24.9. A deploy gets the higher line, so a runaway still trips it.
-DEPLOY_LOAD_CRIT=${GUARD_DEPLOY_LOAD_CRIT:-12.0}
+# Deploy markers protect deploy-owned processes from stale-CI cleanup only.
+# They never relax load, memory or CPU-pressure protection.
 EMERGENCY=/usr/local/bin/emergency_cpu.sh
 DEPLOY_FLAGS="/home/dev/pub5/.deploying*"
 # Recalibrated 2026-07-29 from the 916 ticks the history log had accumulated
@@ -367,14 +363,6 @@ if [[ -f $CPU_PRESSURE_FILE ]]; then
   fi
 fi
 
-if [[ $deploying -eq 1 ]]; then
-  if [[ $shed -eq 1 ]]; then
-    logger -t resource-guard \
-      "deploy in progress (load=$load mem_avail=${mem_avail_pct}%) - not shedding"
-    shed=0
-  fi
-fi
-
 # Load-history log: LOAD_WARN/LOAD_CRIT above were set from a single evening's
 # observation (itself skewed high by concurrent deploys/agent activity, not a
 # calm baseline) -- recalibrating them again by guesswork would repeat the
@@ -414,8 +402,8 @@ log_tick() {
 
 # The all-apps pin protects ordinary operation, not a measured emergency.
 # Confirmed CPU saturation, critical load or dangerously low available memory
-# may still shed optional services. Active deploy flags retain their separate
-# protection below; core services are never restarted by this guard.
+# may still shed optional services. Deploy markers suppress stale-CI cleanup
+# only; they never disable load shedding. Core services are never restarted.
 all_apps_pinned=0
 pin_override=0
 [[ -f $ALL_APPS_FLAG ]] && all_apps_pinned=1
@@ -435,7 +423,7 @@ fi
 strikes=0
 confirmed_pressure=0
 if [[ $cpu_pressure -eq 1 || $pin_override -eq 1 ]]; then confirmed_pressure=1; fi
-if [[ $confirmed_pressure -eq 1 && $deploying -eq 0 ]]; then
+if [[ $confirmed_pressure -eq 1 ]]; then
   # CPU sampling or the all-apps emergency override already proved pressure;
   # do not add another five-minute strike before shedding.
   strikes=$SHED_STRIKES
@@ -525,7 +513,6 @@ if [[ $shed -eq 0 && -s $SHED_STATE && $mem_avail_pct -ge $MEM_RESTORE ]]; then
 fi
 
 crit=$LOAD_CRIT
-[[ $deploying -eq 1 ]] && crit=$DEPLOY_LOAD_CRIT
 if at_least "$load" "$crit"; then
   # Never auto-restart core production services from a periodic CPU guard.
   # emergency_cpu restarted MASTER and Brgen; MASTER rc_pre can precompile
