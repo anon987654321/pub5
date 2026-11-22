@@ -1778,3 +1778,51 @@ NOT_RUN:
   changing the existing worker and semantic budgets.
 - No external credential, provider, paid call, production host or live service
   was contacted or changed. PASS and production readiness remain unclaimed.
+
+### Phase 20 follow-up — operator release and recovery fencing
+
+Subsequent mainline changes tightened the handoff and made its recovery controls
+reachable from the existing operator interface:
+
+- `MASTER/bin/operator backlog status` exposes ready/parked/completed counts,
+  the current mission state and retry timing without printing prompts or raw
+  exception bodies.
+- `MASTER/bin/operator backlog resume <item-id>` validates that the owner
+  record still exists and remains eligible, then appends an explicit release
+  event for a human-review park. It does not create completion proof.
+- A future-waiting backlog mission may hand off to independent work only while
+  `auto_continue: true`. Explicitly disabled missions do not trigger an
+  unattended handoff.
+- Mission recovery writes from TaskSteward carry the observed mission ID and
+  lease owner. The write lock re-checks both before defer, block or fail.
+  The unverified-completion callback applies the same identity fence.
+- Adaptive scheduling now has a negative regression: when no candidate has
+  satisfied dependencies, it stops rather than inventing a runnable task.
+  The independent-work fallback applies only when a separate ready route exists.
+- Duplicate status coverage was removed after a stronger fixture already
+  covered parked counts, prompt redaction and a live scope fingerprint.
+
+Additional commits:
+- `2ea6017e3019964ce877ce41f7132bd0103d695c` — operator backlog status/resume.
+- `332c7cc0549df230681e86bdd60fe904a91cc35f` — do not hand off disabled missions.
+- `0062a9220abc904f578ce845b2e9f1f244e8e982` — test future-waiting handoff.
+- `687050ca303320c5a5d1a0be2be02b6d14a782cf` — status projection and resume eligibility.
+- `7bc400f736a60a6715a7cce8fde603c3d4acb833` — fence defer/block on claimed writes.
+- `2963701af33485ed6a81c3b65053cd3d630a9bc3` — fence scheduler settlement by mission ID and lease.
+- `a162e1308fbfcb221e421c5c77bdb1b558908d6c` — pass the observed lease snapshot into recovery.
+- `0a001412d6e57c0b318b473bbd0cd2a62d17b3f7` — propagate explicit fenced outcomes.
+- `7434c8a7dc20c0ff2be15765f1252ca1b278f71e` — fence unverified-delivery handoff.
+- `0d26c4c6e49262a96b24200d758dc5c8df00d84d` — test operator status/resume exposure.
+- `e7df083a927478215a645d5e296f7b36069363eb` — retain stop behavior when no route is ready.
+
+READ_BACK:
+- The updated mission, TaskSteward, Backlog::Executor, MasterBoot, operator
+  command, README and focused test files were read back from `main`.
+- Latest implementation/test changes were present on `main` at the time this
+  addendum was prepared.
+
+NOT_RUN:
+- Ruby tests, Rake suites, Law scans and the complete repository `/fix` remain
+  unexecuted in this environment. No PASS is claimed from source read-back.
+- No vm23 deployment, production action, external provider call or paid work
+  was performed.
