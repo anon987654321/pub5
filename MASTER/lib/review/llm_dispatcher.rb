@@ -550,7 +550,7 @@ module Master
         return send_ollama(selected_model, messages, sys:, stream:, temperature:, format:, &blk) if ollama_model?(selected_model)
         # A schema-bound call wants one object back, not a tool conversation.
         # The ReAct completion sets master_no_tools while it asks for each step.
-        send_ruby_llm(selected_model, messages, sys:, stream:, image:, temperature:, format:, &blk)
+        send_ruby_llm_with_manual_tool_fallback(selected_model, messages, sys:, stream:, image:, temperature:, format:, &blk)
       end
 
       # Message rows are {role:, content:} hashes. Only String content is
