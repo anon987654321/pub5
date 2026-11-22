@@ -187,6 +187,31 @@ class TaskStewardTest < Minitest::Test
     end
   end
 
+  def test_returned_result_failure_is_classified_and_deferred
+    Dir.mktmpdir do |root|
+      mission = write_mission(root)
+      steward = Master::Fix::TaskSteward.new(
+        root:, bus: nil,
+        runner: ->(**) {
+          current = Master::Fix::Mission.current(root:)
+          Master::Fix::Mission.new(root:).start_or_resume!(
+            goal: current.fetch("goal"), scope: root, origin: "fold", auto_continue: true,
+          )
+          Master::Result.err("provider overload", category: :infrastructure)
+        },
+      )
+
+      result = steward.tick!
+      assert result.err?
+      record = Master::Fix::Mission.current(root:)
+      assert_equal mission.id, record.fetch("id")
+      assert_equal "waiting", record.fetch("state")
+      assert_equal true, record.fetch("auto_continue")
+      assert_equal 1, record.fetch("retry_count")
+      assert_match(/transient:/, record.fetch("wake_reason"))
+    end
+  end
+
   def test_active_lease_failure_does_not_defer_another_process
     Dir.mktmpdir do |root|
       write_mission(root)
