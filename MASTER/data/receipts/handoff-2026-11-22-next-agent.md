@@ -754,3 +754,204 @@ boot smoke, hook, deploy, fresh visual sweep. Blocker: no Ruby >= 3.2 (Debian bu
 archived apt), no Chrome, no provider keys, no OpenBSD host; the sandbox recycled
 and lost the local checkout; agent browser verification is refused by the constitution.
 No Law PASS, no test PASS, no deploy claim, no design PASS. Re-measure everything.
+
+
+## 10. Phase 13 — STUDIO owner/source reconciliation — 2026-11-22
+
+Status: source reconciliation completed against the live owners and focused test
+surfaces; targeted changes were pushed to `main`. This is an evidence update,
+not a new backlog or a claim that the STUDIO suite passed.
+
+The live tree has exactly four STUDIO owners: `dilla/`, `lora/`,
+`postpro/` and `replicate/`. There is no `STUDIO/README.md` or
+`STUDIO/lora/README.md`; the shared contract is
+`STUDIO/replicate/README.md`, with local Dilla, Postpro and subject-specific
+documentation. Do not create replacement owner READMEs merely to match the
+proposal's assumed paths.
+
+### Delivered source corrections
+
+- **S-02 — Postpro prior-take retention: IMPLEMENTED, proof NOT_RUN.**
+  The live `Postpro::Constitution.retire_previous_renders!` path deleted prior
+  media and JSON sidecars for the same source before drawing a new family. The
+  method and its call were removed. Existing `available_output_path` continues
+  to select timestamped siblings for generated batch names. Explicit one-shot
+  grades now refuse an occupied media or sidecar destination; `--compare`
+  also refuses an occupied comparison file; explicit stock-sheet destinations
+  refuse collisions. The Postpro README now states append-only retention.
+  Static regressions cover the absence of the retirement call and the occupied
+  destination guard. No earlier media, source photograph or sidecar was
+  deleted by this change.
+  Files: `STUDIO/postpro/constitution.rb`,
+  `STUDIO/postpro/lib/cli.rb`,
+  `STUDIO/postpro/README.md`,
+  `STUDIO/replicate/test/postpro_cli_contract_test.rb`.
+  Commits: `d5b9354ab701434976101da01e7bc739d68d61d7`,
+  `ef30626cc2f3d68870e931797e4d128bcd281365`,
+  `82a0fbee2f538c5c48b8091d19a0ac8c812119eb`,
+  `1b4df126806ebdd9a3341b04a0a9a6c4c2bc2c48`.
+
+- **S-05 — Doctor provider-key honesty: IMPLEMENTED, proof NOT_RUN.**
+  `studio doctor` now reports `INCONCLUSIVE` when no usable Replicate
+  credential exists, `FAIL` when a configured credential file is unsafe, and
+  `PASS` only when a private credential is available. The report never prints
+  the credential. Regressions cover a missing key and a world-readable token
+  file. This gate is read-only and does not make a provider call.
+  Files: `STUDIO/replicate/doctor.rb`,
+  `STUDIO/replicate/test/doctor_test.rb`.
+  Commits: `564002e085ea4a241a2b4eed4888a5d4f15e584b`,
+  `dddb0c282cd1ed0a9dd94af0882619549d436d02`.
+
+- **R-03 — Download boundary regression: IMPLEMENTED, proof NOT_RUN.**
+  Added focused cases for public global-unicast IPv6-only DNS, private IPv6,
+  mixed public/private DNS answers, HTTP 302 to a private address (not followed),
+  and an interrupted/over-limit stream that must not publish a partial file.
+  Existing client code validates the full DNS answer set, pins the connection,
+  bounds transfer size and time, rejects redirects, writes to a same-directory
+  temporary file and atomically renames only after success. This change adds
+  tests; it does not add redirect-following behavior.
+  File: `STUDIO/replicate/test/replicate_client_test.rb`.
+  Commits: `cd3a4ed30084673f952c34bcae9ed0f4f3fa1372`,
+  `281783d7d1154603aef04f0fc331e37f2a8d6e2d`.
+
+### Proposal register reconciliation
+
+- **S-01:** Dilla, Postpro and LoRA already emit different, owner-specific
+  provenance/sidecar or training-manifest records. They include seeds and
+  hashes where applicable. No universal manifest was added: a parallel schema
+  would duplicate existing owners and would not by itself prove every output
+  has a manifest. Cross-tool identity/chain correlation remains open.
+- **S-02:** Landed as described above. The append-only regression and runtime
+  suite remain NOT_RUN.
+- **S-03:** No blind A/B player or preference ledger was added. Dilla already
+  separates technical audit from listening acceptance. Musical acceptance
+  remains an operator decision; no automated advance threshold is introduced.
+- **S-04:** Replicate remains the only STUDIO provider. No second registry or
+  speculative adapter framework was created. The subject-specific Merethe
+  recovery fetch uses a fixed `raw.githubusercontent.com` URL at an immutable
+  historical commit, accepts only an HTTP success, does not follow redirects,
+  and verifies each response against the expected Git blob digest. It still
+  uses `Net::HTTP.start` without explicit socket IP pinning or proxy
+  suppression; keep that exact recovery path under review before extending
+  outbound fetching. No broad source scanner was added while this known,
+  narrowly scoped fetch remains outside the pinned Replicate client.
+- **S-05:** Landed as described above. Full Doctor report and tests NOT_RUN.
+- **R-01:** Replicate's video path estimates and reserves spend before the
+  prediction request. There is no general cost receipt for every paid model
+  call; reliable per-call actual pricing data is not yet established. No
+  estimated amount is represented as an actual charge.
+- **R-02:** Existing video per-call and per-run caps are enforced before the
+  prediction. A generic per-session/per-day cap and explicit spend-approval
+  workflow for every paid path remain open.
+- **R-03:** Added the DNS/IPv6/redirect/interrupted-transfer regressions above.
+  Redirects are refused, not traversed. Test execution NOT_RUN.
+- **R-04:** Existing download code preserves an old output until successful
+  atomic rename, refuses symlink destinations, and bounds bytes/time. Added an
+  interrupted-download fixture. A separate owner-only output-directory mode
+  assertion is not established by this change and remains open.
+- **R-05:** No adapter contract was added for a hypothetical second provider.
+  One provider does not justify a second registry or an unused abstraction.
+- **D-01:** The active corpus is `STUDIO/dilla/data/music_theory.json`, not
+  the proposed `music_theory_chords.yml`. No duplicate corpus or synthetic
+  entries were created. A source/citation audit of each corpus item remains
+  open.
+- **D-02:** Voicing and sound curation remain ear-led and operator-owned.
+  No numeric acceptance threshold or agent-selected default was added.
+- **D-03:** Seed and renderer/provenance records already support deterministic
+  rerendering at the source/parameter level. An alignment-based
+  `dilla:reproduce` task is not implemented or proved.
+- **D-04:** The proposed sketch-to-render-to-playlist publication receipt and
+  end-to-end journey were not found in the inspected proof surface. Open.
+- **D-05:** No new measurement/dashboard was added without a named reader and
+  selection consumer. Open.
+- **D-06:** No new CPU/concurrency budget or 1 GB load fixture was added.
+  Existing bounds are not evidence of this proposed workload guarantee. Open.
+- **P-01:** Postpro's existing grade sidecars record input/output digests,
+  recipe/parameters, seed and grade-code digest. A stable prior-take identifier
+  shared across all output types is not established. Open.
+- **P-02:** Existing `--compare` and random-family contact sheets provide
+  rendered side-by-side material. They do not automatically grant visual
+  acceptance; operator comparison remains required.
+- **P-03:** Looks and presets remain existing product-owned configuration/code.
+  No mutable agent-owned preset source or default was introduced.
+- **P-04:** No first effect was selected without a measured before/after cost
+  and operator-owned visual purpose. Open.
+- **L-01/L-02:** Existing `Studio::Lora::Consent` gates actions separately:
+  generation, training, publication and distribution require explicit
+  subject permissions and matching source-rights evidence. Source files,
+  directories and consent/evidence records are checked for private ownership,
+  link count and mode. The validator checks private training manifests.
+  No duplicate consent schema or parallel permission authority was added.
+- **L-03:** No training estimate/receipt/approval/spend workflow was invoked or
+  added. Paid training remains operator-gated; the generic cost receipt is open.
+- **L-04:** Existing validators and Doctor inspect subject-private paths and
+  local Git history. The new world-readable fixture covers Replicate token
+  files, not a full weights/media permission census; do not overstate it.
+- **L-05:** Candidate contact sheets/reports are already private; exact
+  likeness-version approval remains a human review recorded in the subject's
+  local configuration. No agent acceptance was created.
+- **L-06:** The full consent-to-publication journey was not run. No real
+  subject's private data was opened, trained, rendered or published in this
+  session.
+- **L-07:** Revocation propagation to public surfaces was not verified or
+  implemented. Open.
+
+## 11. Phase 14 — BIZ owner/source reconciliation — 2026-11-22
+
+Status: one index-inventory guard was landed; rendered comparison, legal
+research verification and the complete BIZ build/print chain remain NOT_RUN.
+
+- **B-01:** `bp_print.mjs` already checks PDF page count and page dimensions,
+  rasterizes every page for visual inspection, and writes a first-page image.
+  Rasterization is not a baseline comparison or human acceptance. No rendered
+  before/after equivalence or approved redesign diff was fabricated. Gate open.
+- **B-02:** No Ruby port was made. The current build chain is several
+  interdependent JavaScript modules; replacing them without a local executable
+  baseline and per-tool rendered PDF evidence would risk changing argv and
+  published-pair semantics. Any port must remain a deliberate, one-tool,
+  one-commit migration with exact CLI parity and format-aware proof.
+- **B-03:** `BIZ/README.md` documents editable masters in `BIZ/tools/` and
+  the build/retemplate/check/print/index sequence. A source-newer-than-published
+  staleness check plus regeneration receipt is not implemented. Do not infer
+  freshness from the documentation.
+- **B-04:** `bp_retemplate.mjs` carries the Bob2 token/print contract onto
+  business-plan content, and Bob/Bob2/Bob3 templates remain preserved.
+  A rendered equivalence report or operator-approved redesign record was not
+  produced. Gate open.
+- **B-05:** `BIZ/README.md` already defines a detailed evidence register,
+  review states and separate qualified legal review. The high-risk
+  `BIZ/research/husleieloven-2026.md` claim-by-claim audit was NOT_RUN; no
+  legal claim or citation was changed. Software checks do not substitute for
+  Norwegian legal-source verification or qualified review.
+- **B-06 — INDEX COMPLETENESS: IMPLEMENTED, proof NOT_RUN.**
+  `BIZ/tools/bp_index.mjs` now checks that every top-level workstream
+  directory is represented by the active/archive index registry and checks
+  that the retained `bob`, `bob2` and `bob3` templates each have both HTML
+  and PDF files, with no unpaired or unexpected template basename. The BIZ
+  README documents the gate. The regex was corrected after source read-back;
+  no Node execution or regenerated index was run.
+  Files: `BIZ/tools/bp_index.mjs`, `BIZ/README.md`.
+  Commits: `47c010d6d9ec72ffd77f3d09787df3d5ef8272b1`,
+  `e8cd913996f32a6f8aa6cbd99c6649ea720219a9`,
+  `95e585da54d9c1c14a84a76446c77bcfb980bcfb`.
+- **B-07:** The ten-workstream finish checklist is not implemented. A directory
+  being indexed does not prove its source, generated pair, language,
+  provenance, render or review is complete. Open.
+- **B-08:** Tagged-PDF/reading-order/alt-text evidence was not generated.
+  Chromium PDF output and rasterization alone do not prove accessibility.
+  Open.
+- **B-09:** The Studio/Replicate growth-revenue research source/date audit was
+  NOT_RUN. No revenue claim or budget input was changed.
+
+### Execution boundary for Phases 13–14
+
+Remote source inspection and GitHub writes were available. There was no
+working local `pub5` checkout in this execution environment; DNS resolution
+for cloning was unavailable. Consequently the following are all **NOT_RUN**:
+`ruby MASTER/tools/agent_context.rb --json --tree`, `cd STUDIO && rake check`,
+`cd STUDIO && rake test`, Postpro focused tests, the complete Ruby syntax
+census, every BIZ Node command, Chromium/PDF page renders, rendered visual
+comparison, legal research audit and governed `/fix`. No source-level test
+or README assertion is reported as a runtime pass. Re-run the mandatory
+agent-context and focused owner suites from the live checkout before closing
+these workstreams.
