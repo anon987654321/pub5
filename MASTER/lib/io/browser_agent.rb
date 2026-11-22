@@ -351,11 +351,13 @@ module Master
         state = @mutex.synchronize { @sessions.delete(key) }
         return Result.ok("browser session already closed: #{key}") unless state
 
-        state.mutex.synchronize { state.browser.quit }
-        # Release the lease so the broker reaps the process group it owns. A
-        # lease-backed session's browser was only ever attached to that process,
-        # so quitting the driver leaves the browser running until this call.
-        @broker&.close(state.lease_id) if state.lease_id
+        # Release the broker lease even if Ferrum cannot detach cleanly.
+        # Chromium's process group belongs to the broker, not the driver.
+        begin
+          state.mutex.synchronize { state.browser.quit }
+        ensure
+          @broker&.close(state.lease_id) if state.lease_id
+        end
         Result.ok("browser session closed: #{key}")
       end
 
