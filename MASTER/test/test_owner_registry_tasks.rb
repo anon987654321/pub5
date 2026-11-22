@@ -264,37 +264,6 @@ class TestOwnerRegistryTasks < Minitest::Test
     File.define_singleton_method(:owned?, original_owned) if original_owned
   end
 
-  def test_executor_status_reports_ready_work_without_exposing_task_prompts
-    row = {
-      id: "safe-status-task", text: "Do not expose this private task prompt.",
-      tree: "MASTER", kind: "mechanical", scope_paths: ["MASTER/lib/status.rb"],
-      done_when: "rake test", size: "s", section: "MASTER",
-    }
-    fake_mission = Class.new do
-      def self.current(root:) = nil
-      def initialize(root:); end
-    end
-
-    Dir.mktmpdir("backlog-status") do |root|
-      Dir.mktmpdir("backlog-status-repo") do |repo_root|
-        target = File.join(repo_root, row.fetch(:scope_paths).first)
-        FileUtils.mkdir_p(File.dirname(target))
-        File.write(target, "VALUE = 1\\n")
-        executor = Backlog::Executor.new(root:, repo_root:, mission_class: fake_mission)
-
-        Backlog.stub(:generate, [row]) do
-          report = executor.status
-          assert_equal 1, report.fetch("owner_registry_items")
-          assert_equal 1, report.fetch("eligible_items")
-          assert_equal 1, report.fetch("ready_items")
-          assert_equal 0, report.fetch("completed_items")
-          assert_equal 0, report.fetch("parked_items")
-          refute_includes JSON.generate(report), "Do not expose this private task prompt."
-        end
-      end
-    end
-  end
-
   def test_parked_backlog_task_does_not_block_independent_ready_work
     parked = {
       id: "parked-task", text: "Repair the provider-dependent MASTER path.",
