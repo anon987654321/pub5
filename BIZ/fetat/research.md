@@ -104,7 +104,16 @@ The earlier references to pub4 commits 5119dd514f9b8868cad0013a2c3691a957b19890 
 ### 2.3 Identity of FETAT
 ### 2.4 Reproducible verification ledger
 
-For every material external factual, statistical or legal claim, maintain a verification record with: stable claim ID; exact wording used in this document; claim class (source fact, source claim, external fact, proposal or open question); primary source and canonical URL; source title/version and publication or effective date; retrieval date; exact table, section, paragraph or page locator; method and any calculation; result; limitations and contrary evidence; reviewer; and the date of the next review where the source is time-sensitive.
+For every material external factual, statistical or legal claim, maintain a verification record
+with: stable claim ID; exact wording used; claim class (source fact, source claim, external fact,
+proposal or open question); affected document and section; primary source and canonical URL; source
+title, issuer, jurisdiction and version; publication date and effective-from/effective-to dates
+where applicable; retrieval and last-verification dates; exact table, section, paragraph or page
+locator; method and any calculation; result; limitations and contrary evidence; reviewer and review
+role; explicit status; and the next-review date where the source is time-sensitive. Use the shared
+BIZ states `NOT_CHECKED`, `VERIFIED`, `PARTIAL`, `CONTRADICTED`, `SUPERSEDED` and `OUT_OF_SCOPE`.
+Record a separate qualified legal review against the exact document version; source verification
+alone does not approve the instrument.
 
 A URL in the source register establishes a lead, not that the linked material was inspected or that it supports the surrounding sentence. Record “not checked” when the source has not been opened and the relevant passage confirmed. Preserve previous verification results when a source changes; append a new record rather than silently overwriting the old result. Treat identical files as one textual source unless independent provenance is established. Search results, summaries and AI-generated citations are discovery aids, not substitutes for the primary record.
 
