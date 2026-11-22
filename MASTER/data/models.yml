@@ -1,4 +1,5 @@
-# Model routing profile — Ollama Cloud first, with GLM and other verified fallbacks.
+# Model routing profile — GLM-5.3 Flash heads /fix for the 2026-11-22 session;
+# Ollama Cloud and the other verified fallbacks follow.
 
 schema: 1
 routing:
@@ -143,7 +144,10 @@ model_defs:
   # glm-5.3-flash routed primary-first by operator request (2026-11-16): the
   # same Z.ai open-platform lane (providers.yml zai block, ZAI_API_KEY) with
   # the provider's own default_model as the chain head. Image understanding
-  # is routed separately through the explicit vision tier below.
+  # is routed separately through the explicit vision tier below. The 2026-11-22
+  # operator request wires it as the #1 /fix model for that session; the swap
+  # of the first two entries in default, primary, strong and fast restores the
+  # DeepSeek head.
   glm_5_3_flash: &glm_5_3_flash
     id: glm-5.3-flash
     <<: *model_defaults
@@ -260,9 +264,10 @@ models:
     - *web_chat_grok
     - *web_chat_chatgpt
   default:
-    # Ollama Cloud DeepSeek leads /fix-serving; GLM-5.3 Flash is its next lane.
-    - *ollama_deepseek_v4_1_flash
+    # GLM-5.3 Flash leads /fix-serving for this session (operator request,
+    # 2026-11-22); Ollama Cloud DeepSeek is its next lane.
     - *glm_5_3_flash
+    - *ollama_deepseek_v4_1_flash
     - *zai_cli_auto
     - *replicate_gpt_5_2
     - *replicate_claude_opus_5_5
@@ -285,9 +290,10 @@ models:
     - *ollama_gemma
     - *llama_cli_gguf
   primary:
-    # Ollama Cloud DeepSeek is the configured primary; GLM-5.3 Flash follows it.
-    - *ollama_deepseek_v4_1_flash
+    # GLM-5.3 Flash is the session primary (operator request, 2026-11-22);
+    # Ollama Cloud DeepSeek follows it.
     - *glm_5_3_flash
+    - *ollama_deepseek_v4_1_flash
     - *zai_cli_auto
     - *replicate_gpt_5_2
     - *replicate_claude_opus_5_5
@@ -303,8 +309,8 @@ models:
     - *ollama_gemma
     - *llama_cli_gguf
   strong:
-    - *ollama_deepseek_v4_1_flash
     - *glm_5_3_flash
+    - *ollama_deepseek_v4_1_flash
     - *zai_cli_auto
     - *replicate_gpt_5_2
     - *replicate_claude_opus_5_5
@@ -341,8 +347,8 @@ models:
     - *mistral_small
   # Short advisory calls use the same primary/fallback order as the main pool.
   fast:
-    - *ollama_deepseek_v4_1_flash
     - *glm_5_3_flash
+    - *ollama_deepseek_v4_1_flash
     - *zai_cli_auto
     - *claude_sonnet
     - *grok_cli_auto
