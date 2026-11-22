@@ -595,7 +595,7 @@ module Master
       # broker still owns the process and never deletes a persistent profile.
       def open(host:, url: nil, ttl_seconds: nil, profile: nil, persistent: false, headless: true)
         require_capability!
-        bound = canonical_host(host)
+        bound = canonical_host(host).freeze
         raise Denied, "browser: a session needs a bound host" if bound.empty?
 
         if url
@@ -623,7 +623,7 @@ module Master
           reap_expired!
           raise Denied, "browser: session limit reached (#{@max_sessions})" if @handles.size >= @max_sessions
 
-          id = SecureRandom.hex(8)
+          id = SecureRandom.hex(8).freeze
           lease = nil
           handle = nil
           begin
