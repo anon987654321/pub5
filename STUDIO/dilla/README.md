@@ -166,6 +166,13 @@ under `$XDG_DATA_HOME/dilla-renders/`, falling back to `~/Downloads/dilla-render
 reference-root` answer the same policy for MASTER. `out/`, `samples/` and
 `crate/` inside this directory are yours; none of it is tracked.
 
+## RG-69 browser renderer
+
+`rg69/rg69.js` reads the `tonejs_profiles.rg69` adapter in this catalogue. The adapter reuses `kit_break`, `prophet_5` and the dry `basement` rig, then maps their kit tuning, voice brightness and room sends into the browser's Tone.js instruments. The adapter is a translation layer: it does not claim that a Tone.js synth is the same instrument or circuit as Dilla's Ruby renderer.
+
+Live playback and WAV export call the same Tone.js instrument builder. The drum pitch/filter settings, FM keys, chorus/tremolo/drive chain, pad voice and its filters, and the room's delay/reverb controls come from that profile. If the catalogue cannot be fetched, a matching embedded RG-69 fallback keeps the browser page usable; the page reports which path it used.
+
+The two renderers share instrument and voice settings, not a promise of sample-identical output. Mastering graphs and browser/runtime behaviour still differ. Run the browser, export a WAV and audition it before claiming delivery or sound-quality parity; source checks cannot substitute for listening.
 ## Tests
 
 `cd STUDIO && rake -f replicate/Rakefile check test` — the dilla suite covers the CLI contract
