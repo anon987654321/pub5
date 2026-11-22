@@ -804,28 +804,14 @@ module Backlog
     end
 
     def parked_task_rows
-      directory = receipt_directory
-      directory_stat = File.lstat(directory)
-      return [] unless private_receipt_directory?(directory, directory_stat)
+      receipt_read_paths.flat_map do |path|
+        receipt_rows(path).filter_map do |row|
+          next unless %w[parked_task resume_task].include?(row["record_type"].to_s)
+          next unless row["item_digest"].to_s.match?(/\A[0-9a-f]{64}\z/i)
 
-      path = receipt_path
-      return [] unless File.exist?(path)
-
-      stat = File.lstat(path)
-      return [] unless stat.file? && !stat.symlink? && stat.nlink == 1 && (stat.mode & 0o077).zero?
-
-      File.foreach(path).filter_map do |line|
-        row = JSON.parse(line)
-        next unless row.is_a?(Hash)
-        next unless %w[parked_task resume_task].include?(row["record_type"].to_s)
-        next unless row["item_digest"].to_s.match?(/\A[0-9a-f]{64}\z/i)
-
-        row
-      rescue JSON::ParserError, ArgumentError
-        nil
+          row
+        end
       end
-    rescue SystemCallError
-      []
     end
 
     def latest_parked_tasks
@@ -957,19 +943,34 @@ module Backlog
     end
 
     def completed_receipt_rows
-      directory = receipt_directory
+      receipt_read_paths.flat_map do |path|
+        receipt_rows(path).select { |row| valid_completion_receipt?(row) }
+      end
+    end
+
+    # Legacy checkout-local receipts are read after a repository gains a
+    # remote-scoped state directory. New writes always use receipt_path; putting
+    # it last ensures a new resume event supersedes an older legacy park.
+    def receipt_read_paths
+      legacy = [
+        File.join(@repo_root, ".master", File.basename(RECEIPT_PATH)),
+        File.join(@repo_root, "MASTER", ".master", File.basename(RECEIPT_PATH)),
+        File.join(@root, ".master", File.basename(RECEIPT_PATH)),
+      ]
+      (legacy.uniq - [receipt_path]) + [receipt_path]
+    end
+
+    def receipt_rows(path)
+      directory = File.dirname(path)
       directory_stat = File.lstat(directory)
       return [] unless private_receipt_directory?(directory, directory_stat)
-
-      path = receipt_path
       return [] unless File.exist?(path)
 
       stat = File.lstat(path)
       return [] unless stat.file? && !stat.symlink? && stat.nlink == 1 && (stat.mode & 0o077).zero?
 
       File.foreach(path).filter_map do |line|
-        row = JSON.parse(line)
-        row if valid_completion_receipt?(row)
+        JSON.parse(line)
       rescue JSON::ParserError, KeyError, ArgumentError, SystemCallError
         nil
       end
