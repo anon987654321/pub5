@@ -171,8 +171,11 @@ module Master
         sleep wait
         JSON.parse(page.evaluate(SCRIPT))
       ensure
-        browser&.quit
-        @broker&.close(lease.id) if lease
+        begin
+          browser&.quit
+        ensure
+          @broker&.close(lease.id) if lease
+        end
       end
 
       # A lease is mandatory; Ferrum attaches to the broker's CDP endpoint.
