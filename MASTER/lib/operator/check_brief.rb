@@ -2,6 +2,7 @@
 
 require "json"
 require "securerandom"
+require "digest"
 require_relative "../io/atomic_write"
 
 module Operator
@@ -112,7 +113,8 @@ module Operator
     def render_json(profile:, results:, metadata:, started_at:, finished_at:,
                     duration_s:, exit_status:, command:, log_path: nil,
                     receipt_id: SecureRandom.uuid, operation_id: SecureRandom.uuid,
-                    receipt_path: nil, receipt_persisted: false)
+                    receipt_path: nil, receipt_persisted: false,
+                    log_artifact: nil)
       step_rows = results.map do |result|
         {
           "name" => result.name.to_s,
@@ -187,11 +189,34 @@ module Operator
         "steps" => step_rows,
         "evidence" => {
           "combined_log" => log_path,
+          "combined_log_artifact" => log_artifact,
           "receipt_persisted" => receipt_persisted,
           "raw_output_included" => false,
         },
       }
       JSON.pretty_generate(receipt) << "\n"
+    end
+
+    # Hash a private local artifact without copying its body into the receipt.
+    # Paths are confined to the repository and must name a singly-linked file.
+    def file_evidence(root:, path:)
+      return unless path
+
+      expanded_root = File.expand_path(root)
+      expanded_path = File.expand_path(path, expanded_root)
+      prefix = expanded_root + File::SEPARATOR
+      raise ArgumentError, "artifact path escapes repository" unless expanded_path.start_with?(prefix)
+
+      stat = File.lstat(expanded_path)
+      unless stat.file? && !stat.symlink? && stat.nlink == 1
+        raise IOError, "artifact must be a singly-linked regular file"
+      end
+
+      {
+        "path" => expanded_path.delete_prefix(prefix),
+        "byte_count" => stat.size,
+        "sha256" => Digest::SHA256.file(expanded_path).hexdigest,
+      }
     end
 
     # Persist one immutable check receipt beneath the private runtime area.
