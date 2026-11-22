@@ -34,6 +34,26 @@ module Brgen
       feed.to_s == "communities"
     end
 
+    # A signed-in reader with no followed accounts would otherwise see only
+    # their own posts in the Following lane. Keep that lane useful without
+    # turning signup or a follow graph into a wall: union the existing timeline
+    # with this city's existing hot posts, and label the fallback in the view.
+    def following_cold_start?(feed:, authenticated:, user:)
+      following?(feed:) && authenticated && user.respond_to?(:follows_as_follower) &&
+        !user.follows_as_follower.exists?
+    end
+
+    def following_with_city_popular(user)
+      visible = Post.kept.visible_to(user)
+      followed_ids = user.timeline_posts.reorder(nil).select(:id)
+      popular_ids = Post.hot.visible_to(user).reorder(nil).select(:id)
+
+      visible.where(id: followed_ids)
+              .or(visible.where(id: popular_ids))
+              .distinct
+              .order(Post::HOT_SQL)
+    end
+
     # BRGEN-104. The front page is newest-first, and hot is the named
     # alternative.
     #
@@ -50,6 +70,8 @@ module Brgen
       base =
         if communities?(feed:) && authenticated
           user.community_feed
+        elsif following_cold_start?(feed:, authenticated:, user:)
+          following_with_city_popular(user)
         elsif following?(feed:) && authenticated
           ranked ? user.timeline_posts.hot : user.timeline_posts.fresh
         elsif !authenticated && Brgen::DemoFeed.available?
