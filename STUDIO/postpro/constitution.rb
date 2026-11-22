@@ -5,6 +5,8 @@
 # their migration out of the catalogue. This adapter turns the applicable laws
 # into image-generation invariants rather than trying to lint aesthetics with regex.
 require "fileutils"
+require "digest"
+require "json"
 require_relative "../output_paths"
 
 module Postpro
@@ -86,6 +88,59 @@ module Postpro
       return true if explicit_count || DEFAULT_VARIATION_RANGE.cover?(variation_count)
 
       raise ArgumentError, "constitutional batch must generate five to ten variations per source by default"
+    end
+
+    # A random take gets an identity that survives a byte-identical rerender.
+    # It binds the source content, run seed, take position, look/lane, recipe and
+    # renderer digest; a changed input or grade cannot masquerade as the same take.
+    def take_identity(input_sha256:, seed:, take:, chain:, grade_version:)
+      return nil unless take
+
+      input_digest = input_sha256.to_s
+      unless input_digest.match?(/\\A[a-f0-9]{64}\\z/)
+        raise ArgumentError, "take identity needs a lowercase SHA-256 input digest"
+      end
+
+      number = Integer(take.number)
+      raise ArgumentError, "take identity number must be positive" unless number.positive?
+      raise ArgumentError, "take identity chain must be a non-empty Array" unless chain.is_a?(Array) && !chain.empty?
+
+      version = grade_version.to_s
+      raise ArgumentError, "take identity grade version is required" if version.empty?
+
+      payload = {
+        schema: "postpro.take.v1",
+        input_sha256: input_digest,
+        seed: Integer(seed || 0),
+        number:,
+        look: take.look&.to_s,
+        lane: take.lane.to_s,
+        grade_version: version,
+        chain: canonical_take_value(chain),
+      }
+      Digest::SHA256.hexdigest(JSON.generate(payload))
+    end
+
+    def canonical_take_value(value)
+      case value
+      when Hash
+        pairs = value.map { |key, item| [key.to_s, canonical_take_value(item)] }.sort_by(&:first)
+        raise ArgumentError, "take recipe has duplicate normalized keys" unless pairs.map(&:first).uniq.length == pairs.length
+
+        pairs.to_h
+      when Array
+        value.map { |item| canonical_take_value(item) }
+      when Symbol
+        value.to_s
+      when Float
+        raise ArgumentError, "take recipe contains a non-finite number" unless value.finite?
+
+        value
+      when String, Integer, TrueClass, FalseClass, NilClass
+        value
+      else
+        raise ArgumentError, "take recipe contains unsupported value: #{value.class}"
+      end
     end
 
     # A render sits beside its source, always: no environment variable and no
