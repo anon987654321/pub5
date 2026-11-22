@@ -1978,3 +1978,51 @@ tests; Ruby syntax; `TestCheckBrief`; `TestCheckRunnerStdin`;
 MASTER/RAILS/OPENBSD/STUDIO/BIZ acceptance; and all rendered, browser, device,
 host and production checks. The check runner is more expressive and honest;
 its runtime acceptance is not yet established.
+
+
+### Reliability continuation — canonical suite runner and nested status propagation (2026-11-22)
+
+- Fixed `Operator::CheckChain.suites` to retain each child command's third
+  return value. It now distinguishes normal success, ordinary failure, exit
+  3 (`INCONCLUSIVE`) and exit 124 (`TIMEOUT`) instead of collapsing every
+  nonzero child into `FAIL`. Its summary includes per-suite states and counts;
+  a run with inconclusive suites returns 3, one with timed-out suites returns
+  124, and ordinary failures return 1.
+- Refactored `rake test:all_trees` to avoid a second, ad-hoc test runner.
+  MASTER remains covered by the outer `full_ci` profile. The task delegates
+  RAILS contracts + each app's CI, OPENBSD's per-file runner, STUDIO media
+  tests and BIZ document checks to the existing bounded `CheckChain.suite_jobs`
+  and `CheckChain.suites` inventory. It retains the independent whole-tree
+  Ruby syntax, shell syntax, YAML and JSON parsing sweep. If Node is absent,
+  the BIZ document check is skipped explicitly as INCONCLUSIVE; no passing
+  status is fabricated.
+- Nested status is preserved through every layer: CheckChain exit 3 ->
+  `test:all_trees` exit 3 -> JSON `INCONCLUSIVE`; CheckChain exit 124 ->
+  `test:all_trees` exit 124 -> JSON `TIMEOUT` and process exit 124.
+- Added regression tests for CheckChain's exit-3, exit-124 and ordinary failure
+  outcomes, a source-level assertion that the Rake task delegates to the
+  canonical suite registry exactly once, and a JSON test for nested exit-124.
+- This is still the existing test runner, not a second queue, lifecycle or
+  receipt store.
+
+Commits:
+`223295eebf1a523f2c8aae6cb06180ffb9c0eed7` (CheckChain preserves exit status);
+`01b56f6bf6f5956277e87d4aa1e8cde1010ef1c1` (status regression tests);
+`addf04107952dae8e466b59bb7b6961cd5f840b5` (Rake task delegates suites);
+`b13cca0de9d516ccc0e4db45b6d0aec927d8f54b` (nested TIMEOUT mapping);
+`b60a379ac32101c04d57129e66399741aecbc64d` (preserve process exit 124);
+`22dc7ba36b772f3981d12dc5f907b165f3e41604` (nested timeout regression);
+`24b8efabf93d177b956642f152c1665c61ba2ae5` (single suite-owner regression).
+
+Proof performed: GitHub read-after-write verification of the complete
+`CheckChain.suites` method, `MASTER/Rakefile` task, JSON status aggregation,
+CLI exit mapping and both test files; static cross-check of the canonical ten
+suite jobs and their existing per-job timeouts. Concurrent Qwen work advanced
+main during this pass; the head immediately before this receipt update was
+`b0792006ed7f7a69782c684d99068987d4598056`.
+
+Still **NOT_RUN**: `TestCheckChain`, `TestCheckBrief`, `TestCheckRunnerStdin`,
+Ruby syntax, `rake test:all_trees`, `MASTER/bin/check --profile=full`,
+all app/host/visual/browser/device/production checks. No Ruby command was
+executed in this session. The suite wiring is present; all runtime outcomes
+remain NOT_RUN until measured on a supported checkout.
