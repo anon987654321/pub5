@@ -477,7 +477,7 @@ module Master
       end
 
       def canonical_host(host)
-        host.to_s.downcase.sub(/\.\z/, "").sub(/\Awww\./, "")
+        host.to_s.downcase.sub(/\.\z/, "")
       end
 
       def check_destination!(url)
