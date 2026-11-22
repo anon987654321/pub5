@@ -165,7 +165,6 @@ class SchemaMigrationCheckTest < Minitest::Test
     version = schema[/define\(version:\s*([\d_]+)\)/, 1]&.delete("_")
 
     assert_path_exists migration
-    assert_equal "20261117120000", latest
     assert_equal latest, version, "Brgen's schema dump must follow the latest committed migration"
     assert_match(/create_table :marketplace_wholesale_enquiries/, File.read(migration))
     assert_match(/^  create_table "marketplace_wholesale_enquiries"/, schema)

@@ -5,9 +5,33 @@
 # those core extensions from whatever ActiveSupport the interpreter has.
 require "minitest/autorun"
 require "minitest/mock"
-require "active_support"
-require "active_support/core_ext/object/blank"
-require "active_support/core_ext/object/try"
+begin
+  require "active_support"
+  require "active_support/core_ext/object/blank"
+  require "active_support/core_ext/object/try"
+rescue LoadError
+  # The contract runner uses MASTER's lean bundle, which has no ActiveSupport.
+  # The converter needs only these four core extensions.
+  class Object
+    def blank? = respond_to?(:empty?) ? !!empty? : !self
+    def present? = !blank?
+    def presence = present? ? self : nil
+
+    def try(name = nil, *args, &block)
+      return yield(self) if name.nil? && block
+      return nil unless name && respond_to?(name)
+
+      public_send(name, *args, &block)
+    end
+  end
+
+  class NilClass
+    def blank? = true
+    def present? = false
+    def presence = nil
+    def try(*) = nil
+  end
+end
 require_relative "../__shared/app/services/shared/link_converter"
 require_relative "../__shared/app/services/shared/outbound_http"
 
