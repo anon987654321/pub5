@@ -9,8 +9,7 @@ class MaintainersController < ApplicationController
     scope = Maintainer.order(:name)
     scope = apply_live_search(scope, columns: %w[name email], vertical: "maintainers") if live_search_query.present?
     @pagy, @maintainers = pagy(scope)
-    # One grouped COUNT for the page; includes(:ports) loaded every port row
-    # of every maintainer on it to print a number.
+    # One grouped COUNT for the page; historical package rows are not current catalogue entries.
     @port_counts = Port.available.where(maintainer_id: @maintainers.map(&:id)).group(:maintainer_id).count
     finish_live_search(partial: "maintainers/live_search_results")
   end
