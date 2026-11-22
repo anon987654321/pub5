@@ -33,6 +33,16 @@ class CoreCapabilitiesTest < Minitest::Test
     assert_raises(SecurityError) { capabilities.acquire(:write) }
   end
 
+  def test_browser_process_capability_is_limited_to_mutating_operation_profiles
+    %i[fix repair deploy].each do |profile|
+      assert Capabilities.for(profile).allow?(:browser), "#{profile} should admit the scoped browser broker"
+    end
+
+    %i[boot model observe plan device world].each do |profile|
+      refute Capabilities.for(profile).allow?(:browser), "#{profile} must not inherit a browser process"
+    end
+  end
+
   def test_locked_capabilities_cannot_change
     capabilities = Master::Core::Capabilities.for(:fix).lock!
 
