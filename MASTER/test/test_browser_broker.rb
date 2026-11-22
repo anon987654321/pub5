@@ -497,6 +497,25 @@ class BrowserBrokerTest < Minitest::Test
     b&.close(lease.id) if lease
   end
 
+  def test_internal_handle_diagnostics_redact_cdp_and_profile_details
+    handle = Broker::Handle.new(
+      pid: 4242,
+      pgroup: true,
+      cdp_url: "ws://127.0.0.1:9222/devtools/browser/private",
+      profile_dir: "/tmp/master-browser-private",
+      host: "example.com",
+      persistent: false,
+    )
+
+    [handle.inspect, handle.to_s, JSON.generate(handle), handle.diagnostic.inspect].each do |output|
+      refute_includes output, "ws://"
+      refute_includes output, "/devtools/browser/private"
+      refute_includes output, "/tmp/master-browser-private"
+      refute_includes output, "4242"
+      assert_includes output, "example.com"
+    end
+  end
+
   def test_an_expired_session_is_reaped_and_its_process_stopped
     now = Time.utc(2026, 1, 1, 0, 0, 0)
     engine = FakeEngine.new
