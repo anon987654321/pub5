@@ -820,11 +820,16 @@ module Backlog
     def private_receipt_directory?(directory, original_stat)
       return false unless original_stat.directory? && !original_stat.symlink?
 
-      expected_mode = MasterPaths.private_dir_mode(directory, 0o700)
       current = File.lstat(directory)
-      current.directory? && !current.symlink? &&
-        current.dev == original_stat.dev && current.ino == original_stat.ino &&
-        (current.mode & 0o2777) == expected_mode
+      return false unless current.directory? && !current.symlink? &&
+                          current.dev == original_stat.dev && current.ino == original_stat.ino
+
+      mode = current.mode & 0o2777
+      return mode == MasterPaths.private_dir_mode(directory, 0o700) if File.owned?(directory)
+
+      group_member = current.gid == Process.egid || Process.groups.include?(current.gid)
+      (mode & 0o700) == 0o700 && (mode & 0o007).zero? &&
+        (mode & 0o030) == 0o030 && group_member
     rescue ArgumentError, SystemCallError
       false
     end
