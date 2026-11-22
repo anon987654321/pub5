@@ -3346,7 +3346,7 @@ module Dilla
 
     render_record = provenance["render"]
     raise ArgumentError, "original WAV record is missing" unless render_record.is_a?(Hash)
-    unless render_record["sha256"].to_s.match?(/\\A[a-f0-9]{64}\\z/) && render_record["bytes"].to_i.positive?
+    unless render_record["sha256"].to_s.match?(/\A[a-f0-9]{64}\z/) && render_record["bytes"].to_i.positive?
       raise ArgumentError, "original WAV record has an invalid digest or byte count"
     end
     unless File.basename(render_record["wav"].to_s) == File.basename(render_path) &&
