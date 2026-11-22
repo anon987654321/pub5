@@ -65,6 +65,20 @@ class TestRg69Defaults < Minitest::Test
   # reaches Chebyshev 30, Distortion 0.8, BitCrusher 2 bits and PitchShift ±12
   # — at wet. A bad roll produced a crushed, detuned master, which read as
   # "unusable and inaudible". The boot must now install one fixed chain.
+  def test_live_and_offline_audio_graphs_do_not_require_audio_worklets
+    refute_includes js, "Tone.FrequencyShifter",
+                    "FrequencyShifter loads an AudioWorklet from a blob URL and fails on opaque origins"
+    refute_includes js, "new Tone.PitchShift",
+                    "PitchShift is excluded from the bounded random FX pool"
+  end
+
+  def test_randomized_fx_are_bounded_and_do_not_allocate_unused_master_effects
+    body = js[/function randomizeFX\(\).*?(?=\nasync function exportWAV)/m] or raise "no randomizeFX"
+    assert_includes body, "const num=isMaster?0:1+Math.floor(Math.random()*2)"
+    assert_includes body, "masterFX=[]"
+    refute_match(/3\+Math\.floor\(Math\.random\(\)\*6\)/, body)
+  end
+
   def test_boot_installs_a_fixed_chain_and_never_randomizes
     init = js[/async function initAudio\(\).*?(?=\n(?:async )?function )/m] or raise "no initAudio"
     assert_includes init, "installDefaultFX()"
