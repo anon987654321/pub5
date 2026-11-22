@@ -1110,7 +1110,7 @@ operator_playbook:
 skills_registry:
   meta:
     source: runtime authority - edit this file directly; do not add data/skills/*.md
-    count: 34
+    count: 45
   skills:
   - name: algorithmic-art
     description: Make generative art from one seeded algorithm, reproducible and tunable.
@@ -1434,6 +1434,162 @@ skills_registry:
       For hosted services, inspect free-tier quotas, rate limits, credit expiry, commercial-use terms, data retention, training use, geographic restrictions, payment requirements and what happens when the quota is exhausted. A free account is not a promise of free production. For models and datasets, check provenance, use restrictions, redistribution terms, attribution and known evaluation limits. For music, samples, fonts, footage, images and LoRA training data, verify the exact asset-level rights rather than assuming the platform licence covers every file.
 
       Compare at least two viable alternatives where practical by capability, total operating cost, privacy, reliability, portability, lock-in and maintenance burden. Prefer local and standard-library paths when they meet the need; use paid services only when their advantage is evidenced and credits are available. Do not automate account creation, bypass quotas, scrape gated content or retrieve credentials. Record the source, date checked, licence/terms link, limits and unresolved legal or technical uncertainty before an asset enters a production workflow.
+  - name: agent-evaluation
+    description: Evaluate MASTER skills, routing, tool use and agent changes against representative tasks and regression fixtures.
+    triggers:
+    - '\b(?:agent evaluation|evaluate (?:an )?agent|skill evaluation|skill quality|skill routing accuracy|benchmark (?:the )?agent|test (?:a |the )?skill|agent benchmark|tool selection accuracy|prompt regression)\b'
+    body: |-
+      The agent-evaluation skill improves MASTER through measured behavior, not self-approval. Define the task population, expected behavior, allowed tools, safety boundary and scoring rubric before changing prompts, skills, routing or orchestration. Include positive, negative, ambiguous and adversarial examples; measure both correct activation and correct abstention.
+
+      Separate deterministic checks (schema, parsing, contracts, permissions, fixture integrity and tool arguments) from model-judged qualities (reasoning usefulness, factuality, tone and task completion). Use blinded comparisons when practical, fixed seeds and pinned model/tool versions. Track latency, token use, cost, retries, failure modes and regression rate alongside quality.
+
+      A skill candidate should state its purpose, triggers, exclusions, prerequisites, evidence standard, output contract and provenance. Evaluate whether it improves representative tasks over the baseline and whether it causes unwanted triggers or conflicts. Keep fixtures small, synthetic or redacted; never include secrets or private user data. Do not execute skill-provided code merely because a fixture names it.
+
+      Report sample size, coverage, rubric, results, uncertainty and known blind spots. Promote only through the existing external approval process bound to the exact content digest. Changing a skill invalidates that revision's approval. A green benchmark is evidence for the tested scope, not proof of universal quality; preserve the baseline and rerun the relevant suite after every change.
+
+  - name: memory-context
+    description: Improve durable knowledge, retrieval, context selection and memory hygiene without confusing memory with authority.
+    triggers:
+    - '\b(?:memory hygiene|context engineering|context selection|knowledge retrieval|memory architecture|stale memory|memory consolidation|context budget|context compression|retrieval quality)\b'
+    body: |-
+      The memory-context skill separates constitutional authority, repository facts, durable operator preferences, session state, inferred patterns and temporary task context. Never let a remembered summary outrank current source files, executable laws, live system evidence or an explicit correction from the operator.
+
+      Retrieve only material relevant to the current task. Prefer exact paths, current revisions, dates, provenance and concise source-grounded summaries over broad transcript dumps. Preserve uncertainty and distinguish observed facts from inference. A memory without a source, timestamp or confidence should not silently become a project fact.
+
+      Consolidate duplicates by updating the existing canonical owner, not by creating parallel notes. Expire or revalidate time-sensitive claims, especially versions, prices, service states, host identities and deployment procedures. Keep sensitive personal information and credentials out of project memory. Do not infer sensitive traits or expose one person's private context to another.
+
+      Measure retrieval precision, stale-item rate, context tokens, missed constraints and repeated-question rate. Test with queries that should retrieve a fact and near-miss queries that should not. When source and memory disagree, prefer the higher-authority current source, explain the conflict and repair the stale memory through the authorized mechanism. Context compression may remove repetition, never provenance or a safety-critical constraint.
+
+  - name: observability-reliability
+    description: Diagnose service health, resource saturation, incidents and recovery through bounded measurements and evidence.
+    triggers:
+    - '\b(?:observability|reliability engineering|service health|resource saturation|cpu spike|memory pressure|swap pressure|memory leak|process runaway|incident response|service supervision|capacity planning|slo|error budget|latency budget)\b'
+    body: |-
+      The observability-reliability skill turns an operational symptom into a bounded investigation. Establish host, service, time window, recent deploys, expected behavior and impact before interpreting a metric. Correlate process, system, application, network and database evidence; retain timestamps and command provenance.
+
+      Measure CPU, resident memory, swap, disk, file descriptors, process count, queue depth, request rate, latency percentiles, error rate and restart frequency where the platform exposes them. Distinguish a short spike from sustained saturation and a leak from a legitimate workload increase. Set explicit timeouts, output limits and sampling intervals; do not launch unbounded log streams or recursive process scans.
+
+      On OpenBSD, prefer native rc.d/rcctl, sysctl, top, ps, vmstat, systat, swapctl, df, netstat, pf and newsyslog interfaces, consulting the installed release manuals. Do not transplant Linux systemd, cgroups, journalctl or container assumptions. Resource guards must shed only explicitly optional services, preserve recovery order and report every action. Never kill an unknown process based on name alone.
+
+      For incidents, preserve logs and receipts before changing state. Identify blast radius, mitigation, owner, rollback path and stop condition. A restart is not a root-cause fix. Verify the service and dependent user journey after recovery, then record cause, contributing factors, prevention and evidence. Do not claim an SLO or alert is effective until its signal, threshold, delivery path and failure behavior have been tested.
+
+  - name: rails-engineering
+    description: Engineer the existing Ruby on Rails applications for correctness, data integrity, performance, security and maintainability.
+    triggers:
+    - '\b(?:rails engineering|active record|activerecord|n\+1 quer(?:y|ies)|slow rails|rails performance|rails migration|solid queue|hotwire|turbo streams?|stimulus controller|action cable|ruby on rails|rails upgrade|database index(?:ing)?)\b'
+    body: |-
+      The rails-engineering skill works within the repository's pinned Rails and Ruby versions and each app's existing architecture. Read RAILS/apps.yml, app-local conventions, shared ownership boundaries, Gemfiles/lockfiles, laws and relevant tests before editing. Do not homogenize distinct products or create a parallel frontend/backend architecture.
+
+      Trace behavior from route through controller, authorization, model/service, job and view. Check tenant and record ownership at the server boundary; never rely on hidden UI controls. Prefer explicit validations, database constraints and transactions for invariants. Review callbacks for hidden side effects and make job handling idempotent where retries are possible.
+
+      For performance, inspect actual query plans and request traces. Find N+1 queries, missing or redundant indexes, unbounded collections, expensive serialization and cache-key errors. Optimize measured hot paths; do not add caching before defining invalidation and privacy boundaries. For Solid Queue, inspect concurrency, polling, retry, idempotency, shutdown and resource impact on the real host.
+
+      Migrations must be safe for existing production data: inspect table size and lock behavior, preserve rollback or a forward-repair path, use expand/contract for incompatible changes and verify schema state before dependent code ships. Keep SQLite and other configured adapters' real semantics in view.
+
+      Use Rails-native HTML, CSS, JavaScript, Turbo and Stimulus where already established. Do not introduce React, React Native, Expo, Tailwind, Bootstrap, Docker, Kamal, nginx or Puma. Run focused tests, relevant application suites, migration checks and production-shaped probes. A passing unit test does not establish production readiness; verify the actual affected journey and report tests not run as NOT_RUN.
+
+  - name: openbsd-operations
+    description: Maintain OpenBSD hosts with native security, networking, service, deployment and recovery practices.
+    triggers:
+    - '\b(?:openbsd operations|openbsd hardening|openbsd host|pledge|unveil|pfctl|pf rules?|doas|rcctl|relayd|nsd|syspatch|pkg_add|vm23|openbsd deployment|openbsd recovery)\b'
+    body: |-
+      The openbsd-operations skill treats the installed OpenBSD release and its own manuals as the authority. Identify host, release, architecture, ownership, current service state and exact task scope before proposing a command. Read the complete repository source and the relevant installed manuals; do not infer semantics from Linux or another OpenBSD release.
+
+      Prefer small, auditable native controls: pledge and unveil for process confinement where supported; doas for narrowly scoped privilege elevation; pf for packet filtering; rc.d and rcctl for services; native package tools and syspatch for maintenance. Use privilege separation and least authority. Never introduce Docker, Kubernetes, systemd, cgroups, Linux-only commands or a Linux security model as an assumed fallback.
+
+      For filesystem changes, consult OPENBSD/PATH_OWNERSHIP.yml and the tracked mirror. Plan first, preserve host-owned secrets and signed data, back up changed files, validate configuration before activation, install declared ownership/modes, read back and verify, then activate only affected services. SSH and doas policy are protected control planes and require their separate guarded procedures.
+
+      For deployment, pin one tested commit, verify host identity and checkout SHA, ensure broker readiness, inspect disk/swap/resource floors, serialize service changes, keep recovery receipts and restore services that were healthy before the run. Never run repository-wide /fix on the production host. A deploy is not complete until application journeys, process health, public canaries and restore state agree.
+
+      For incidents, gather bounded dmesg, daemon/application logs, process, memory, swap, filesystem, PF and service evidence before remediation. Do not kill unknown processes, flush all PF state, reboot reflexively or disable safeguards to make a check green. State what is measured, what remains unknown and the exact safe next action.
+
+  - name: media-review
+    description: Review audio and video with measurable media inspection, timestamped evidence and human creative judgment.
+    triggers:
+    - '\b(?:audio review|video review|critique (?:the )?(?:audio|video|mix|sound|film)|review (?:this )?(?:audio|video|recording|mix|film)|listen to (?:the )?(?:track|mix|recording)|watch (?:the )?(?:video|film|cut)|sound quality|audio quality|video quality|shot continuity|mix critique|cinematography review)\b'
+    body: |-
+      The media-review skill combines signal measurements, visual inspection, speech understanding and human listening/viewing. First identify the source file, duration, streams, codec, sample rate, channels, frame rate, resolution, time base and provenance. Preserve the original; work on bounded derivatives and never overwrite a selected take.
+
+      Start with the tools already owned by STUDIO: STUDIO/dilla/dilla.rb audit for WAV structure, provenance and measured level reports; STUDIO/dilla/render_evidence/tools/dilla_stem_analyze.js for its documented stem/onset analysis; STUDIO/postpro/lib/quality_analyzer.rb for sampled image and aligned-image diagnostics; STUDIO/postpro/lib/contact_sheet.rb, frame_set.rb and motion_process.rb for bounded visual sampling and frame workflows. Respect each tool's stated limits: a pixel statistic is not composition critique, a Dilla stem model is not a general music analyzer, and a contact sheet is not a full film review.
+
+      Use FFmpeg and FFprobe when installed for stream inspection, extraction and reproducible transforms. Consider PySceneDetect for shot boundaries; Whisper or faster-whisper for timestamped speech; librosa or Essentia for general tempo, onset, spectral and loudness features; OpenCV for frame inspection; MediaPipe for consent-appropriate landmarks; and OpenTimelineIO for structured timeline exchange. These are optional adapters, not assumed dependencies. Check availability, licence, version, platform and resource cost first; orchestrate from Ruby and isolate non-Ruby tools behind explicit bounded adapters. Do not introduce a second runtime merely to call a tool that is absent.
+
+      Audio review should inspect clipping, true peak where supported, integrated and short-term loudness, noise, silence, phase/correlation, channel balance, frequency masking, transient shape, dynamics, timing, tempo, structure, speech intelligibility and music/SFX balance. Metrics are diagnostic clues, not taste. Listen to the full work, including transitions and endings.
+
+      Video review should inspect shot boundaries, framing, exposure, color consistency, focus, motion blur, camera movement, identity and wardrobe continuity, eyelines, screen direction, temporal artifacts, subtitles, safe areas, frame pacing and synchronization with sound. Inspect representative frames and transitions, then watch the complete cut at delivery speed.
+
+      Deliver timestamped findings with severity, observed evidence, likely cause, confidence and a practical correction. Separate technical faults from subjective direction. Do not infer story, intent or emotion from a metric alone. A successful transcode, transcription, model score or contact sheet is not proof of a finished work; require full human watch/listen and disclose anything not reviewed.
+
+  - name: studio-3d
+    description: Coordinate general-purpose 3D modeling, CAD, digital fabrication and print preparation without owning domain-specific projects.
+    triggers:
+    - '\b(?:3d model(?:ing)?|3d print(?:ing)?|blender|openscad|cad model|parametric cad|mesh repair|stl export|3mf|step file|slicer profile|product visualization|3d sculpt(?:ing)?)\b'
+    body: |-
+      The studio-3d skill owns reusable creative and fabrication tooling, not the domain project being designed. Route spacecraft and aerospace-specific engineering programmes to BIZ; STUDIO supplies only generic modeling, rendering, CAD and print-preparation tools.
+
+      Choose the simplest suitable tool after checking the current environment: Blender for sculpting, animation, geometry, procedural work and rendering; OpenSCAD for scriptable parametric parts; an existing CAD application for dimensioned assemblies and drawings; and a compatible slicer such as OrcaSlicer for print preparation. Do not assume any application, printer, plugin or paid model service is installed or licensed. Keep orchestration Ruby-first and isolate native APIs behind adapters; tool-specific scripting is acceptable inside those adapters.
+
+      Preserve editable source files. For engineering geometry, prefer a parametric source and STEP exchange where supported; use STL or 3MF as manufacturing derivatives, not the only design authority. Record units, coordinate system, dimensions, tolerances, material assumptions, revision, source and export settings. Inspect mesh closure, normals, self-intersections, wall thickness, minimum features, clearances, overhangs, support needs and dimensional deviation.
+
+      For print preparation, verify printer model, firmware, nozzle, build volume, material, temperature limits, orientation, supports, layer height, infill, perimeters and slicer profile. Estimate time and material only from the selected slicer's output. Never start a physical print, move hardware or spend credits without explicit operator approval.
+
+      Separate artistic suitability from mechanical function and safety qualification. A mesh that slices is not necessarily printable in the selected material, dimensionally accurate or structurally sound. Preserve successful versions, compare rendered and physical measurements, and record failures as evidence for the next iteration.
+
+  - name: pixel-face
+    description: Improve MASTER's lightweight pixel face using rigged expression design, audio timing and deterministic raster output.
+    triggers:
+    - '\b(?:master pixel face|pixel face|face renderer|face animation|facial expression rig|talking pixel face|audio responsive face|speech synchronized face|face sprites?)\b'
+    body: |-
+      The pixel-face skill improves MASTER's existing face without replacing its established pixel identity or runtime. Inspect the current face renderer, manifests, runtime bundles, terminal/web paths, tests and performance budgets before changing geometry or animation. Preserve the monochrome pixel language and existing entrypoints.
+
+      Use 3D as an offline authoring and animation source where it adds value: a simple low-poly facial rig, blend shapes or equivalent controls for eyes, eyelids, brows, mouth and head orientation. Render through an orthographic camera to a fixed pixel grid with nearest-neighbour sampling and a restricted palette. Do not require Blender or a real-time 3D engine merely to display the face.
+
+      Define expression states and transitions for idle, listening, thinking, speaking, curiosity, concentration, surprise, error and recovery. Use restrained eye movement, natural blink intervals, deliberate pauses and low-amplitude head motion; avoid random twitching. Drive mouth shapes from available phoneme/viseme timing when trustworthy, with a graceful energy-envelope fallback. Never claim lip-sync accuracy from audio amplitude alone.
+
+      Keep state changes deterministic and testable. Separate animation state from rendering; bound frame rate, CPU, memory and event frequency; pause or reduce work when hidden or under resource pressure. Support reduced motion and static fallbacks. Compare terminal and browser output at the actual target resolution, and add regression fixtures for pixel alignment, palette, animation transitions and performance.
+
+  - name: aerospace-engineering
+    description: Route spacecraft and aerospace programme work to BIZ with staged engineering, manufacturing and qualification evidence.
+    triggers:
+    - '\b(?:aerospace|spacecraft|space craft|satellite bus|launch vehicle|orbital vehicle|space mission|spaceflight hardware|space propulsion|space structures|space thermal|flight hardware|space rated)\b'
+    body: |-
+      BIZ owns aerospace programme scope, requirements, architecture, budgets, suppliers, technical decisions and commercialization. STUDIO may provide generic modeling, visualization and fabrication tools, but aerospace-specific designs, files, risks and programme records belong under BIZ.
+
+      Begin with mission needs, operating environment, orbit or trajectory assumptions, launch interface, lifetime, reliability goals, regulatory jurisdiction, export-control constraints, budget and maturity level. Maintain traceable requirements, interface definitions, mass/power/data/thermal budgets, hazard analyses, trade studies and verification matrices. Separate concept studies, educational models, ground prototypes, qualification articles and flight hardware.
+
+      Treat additive manufacturing as a controlled process, not a shortcut from CAD to space. Evaluate material pedigree, powder/feedstock controls, machine qualification, build orientation, process parameters, porosity, anisotropy, residual stress, heat treatment, surface finish, dimensional inspection, nondestructive evaluation, lot traceability and configuration control. Assess thermal vacuum, vibration, shock, fatigue, fracture, outgassing, radiation and launch loads as relevant to the actual subsystem.
+
+      Use applicable primary standards and current agency/industry requirements as references, verifying revision, applicability and contractual flow-down before use. NASA standards are not universal certification and a checklist is not qualification. Require independent engineering review, safety assessment and test evidence before any flight claim. Never describe a printed part, simulation or prototype as flight-qualified without the responsible authority's documented acceptance.
+
+      Build the business case alongside the engineering: cost and schedule uncertainty, supply chain, test facilities, licensing, insurance, customers, funding milestones and credible alternatives. Record assumptions, evidence, open risks, decision owners and stop criteria. Keep propulsion and other high-consequence designs at the appropriate reviewed programme level; do not skip hazard analysis or independent validation.
+  - name: engineering-methods
+    description: Apply systematic debugging, test-driven development, explicit planning and verification before completion.
+    triggers:
+    - '\b(?:systematic debugging|debug systematically|test.driven development|\btdd\b|verification before completion|write an implementation plan|implementation planning|bounded repair loop|regression first|root cause analysis)\b'
+    body: |-
+      The engineering-methods skill makes changes through a short, evidence-led loop. First define the observed failure, expected behavior, scope, constraints and a reproducible example. Read the actual implementation and its callers before forming a hypothesis. Keep facts, hypotheses and unknowns separate.
+
+      Debug systematically: reproduce; capture the failing evidence; trace the smallest relevant path; list plausible causes; test one discriminating hypothesis at a time; identify the root cause; add a regression case; apply the smallest repair; rerun the focused test and adjacent integration checks. Do not change several unrelated variables at once or hide a failure by weakening its assertion.
+
+      Prefer test-driven development for deterministic behavior: write a minimal failing test, confirm it fails for the intended reason, implement only enough to pass, then refactor while keeping the test green. Tests must exercise observable behavior and meaningful failure cases, not merely mirror implementation details. Use synthetic or redacted fixtures and preserve existing data.
+
+      For larger work, write a bounded plan with file owners, dependencies, acceptance evidence, stop conditions and rollback/recovery path. Work serially in the shared checkout; do not create parallel writers or worktrees. Prefer existing mechanisms and registries over new frameworks. Do not introduce GitHub Actions, React/Expo, Docker, Kamal, nginx, Puma, Tailwind or Bootstrap into this repository.
+
+      Before completion, verify the exact changed revision: syntax, focused tests, relevant suite, integration behavior and the real user journey where applicable. Record command, exit status, scope and omitted checks. A timeout, unavailable tool, unrun suite or incomplete evidence is not PASS. Do not claim work landed, deployed or working from a code diff alone. Preserve the failing case and receipts so a later repair is reproducible.
+
+  - name: accessibility
+    description: Audit accessibility as observable behavior across semantics, keyboard, assistive technology, contrast and responsive rendering.
+    triggers:
+    - '\b(?:accessibility|accessible|wcag|screen reader|keyboard navigation|focus management|aria|reduced motion|color contrast|colour contrast|a11y|assistive technology)\b'
+    body: |-
+      The accessibility skill evaluates the rendered product and its interaction model, not an ARIA checklist in isolation. Read the applicable product laws, semantics, component contracts and current WCAG version before changing markup. Identify the user task, content, input modality and assistive technology context.
+
+      Inspect native semantics first: landmarks, headings, lists, labels, descriptions, buttons, links, form errors, tables and status messages. Prefer correct HTML over custom roles. Ensure every operation is possible with a keyboard; focus is visible, ordered, restored after overlays and never trapped unintentionally. Check screen-reader names, instructions, validation announcements, dynamic updates and meaningful document titles.
+
+      Measure text and non-text contrast against the applicable criteria; do not infer compliance from a token name. Check zoom, reflow, text spacing, long content, language changes, Norwegian glyphs, mobile safe areas, touch target spacing, orientation and virtual keyboard behavior. Respect reduced-motion preferences and provide alternatives to gesture, color, sound or hover-only cues.
+
+      Use existing browser, rendered-layout, accessibility and mobile journey probes. Automated checks are useful but do not establish usability or conformance by themselves. Test representative journeys with keyboard and available assistive technology, retain screenshots or logs as evidence, and state any platform that could not be tested. Fix the smallest demonstrated defect while preserving the product's visual identity and established component system.
+
   - name: amber-tenant-logo
     description: Dress a brgen tenant or any logo request in the amber mark law — locked Caprasimo glyphs, nine hairlines, plates from the generator, never redrawn.
     triggers:

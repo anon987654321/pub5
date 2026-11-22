@@ -31,6 +31,14 @@ neither hospital infrastructure nor a general health-IT operating system.
 Full-limb regeneration remains long-term research, not a clinical product or
 a promised outcome.
 
+Aerospace and spacecraft additive-manufacturing research is a separate,
+exploratory BIZ-owned workstream in
+[BIZ/research/aerospace-additive-manufacturing.md](research/aerospace-additive-manufacturing.md).
+It is not a published business plan, approved programme, flight design or
+qualification claim. STUDIO supplies generic CAD, modeling and fabrication
+tools only; aerospace requirements, engineering decisions, risks, funding,
+partners and programme records remain in BIZ.
+
 The funding summary reads only the explicit `Innovasjon Norge` row in each
 financing table. It does not treat total project capital, political fundraising
 targets or bank-licence capital as grant requests. Funding sources remain

@@ -126,6 +126,17 @@ class TestSkills < Minitest::Test
     "social" => ["plan a social media calendar"],
     "music-theory" => ["write a melody with smooth voice leading"],
     "open-resources" => ["find free open-source music tools"],
+    "agent-evaluation" => ["benchmark agent skill routing", "evaluate agent skills"],
+    "memory-context" => ["improve context engineering", "audit memory hygiene"],
+    "observability-reliability" => ["investigate CPU spike and swap pressure", "review observability"],
+    "rails-engineering" => ["review Active Record query performance", "audit Rails migrations"],
+    "openbsd-operations" => ["review OpenBSD rcctl and pledge usage", "harden vm23 OpenBSD"],
+    "media-review" => ["critique audio mix", "review video continuity"],
+    "studio-3d" => ["prepare a 3D print", "create an OpenSCAD model"],
+    "pixel-face" => ["improve MASTER pixel face animation", "design speech synchronized face"],
+    "aerospace-engineering" => ["plan spacecraft additive manufacturing", "review satellite bus architecture"],
+    "engineering-methods" => ["debug systematically", "use test-driven development"],
+    "accessibility" => ["audit WCAG accessibility", "review screen reader keyboard navigation"],
   }.freeze
 
   def test_specialist_skills_route_from_plain_requests
@@ -141,6 +152,37 @@ class TestSkills < Minitest::Test
       body = registry.fetch("skills").find { |skill| skill["name"] == name }.fetch("body")
       assert_operator body.length, :<=, 4_000, "#{name} is cut by the injection"
     end
+  end
+
+
+  def test_new_skill_boundaries_are_explicit
+    skills = registry.fetch("skills")
+    body = ->(name) { skills.find { |skill| skill["name"] == name }.fetch("body") }
+
+    assert_match(/Do not introduce React, React Native, Expo/, body.call("rails-engineering"))
+    assert_match(/Do not introduce Expo, React Native/, body.call("mobile-web"))
+    assert_match(/BIZ owns aerospace programme scope/, body.call("aerospace-engineering"))
+    assert_match(/Never describe a printed part, simulation or prototype as flight-qualified/, body.call("aerospace-engineering"))
+    assert_match(/pledge and unveil/, body.call("openbsd-operations"))
+    assert_match(/candidate adapters, not assumed installed dependencies/, body.call("media-review"))
+    assert_match(/Never start a physical print/, body.call("studio-3d"))
+  end
+
+
+  def test_new_skill_boundaries_are_explicit
+    skills = registry.fetch("skills")
+    body = ->(name) { skills.find { |skill| skill["name"] == name }.fetch("body") }
+
+    assert_match(/Do not introduce React, React Native, Expo/, body.call("rails-engineering"))
+    assert_match(/Do not introduce Expo, React Native/, body.call("mobile-web"))
+    assert_match(/BIZ owns aerospace programme scope/, body.call("aerospace-engineering"))
+    assert_match(/flight-qualified/, body.call("aerospace-engineering"))
+    assert_match(/pledge and unveil/, body.call("openbsd-operations"))
+    assert_match(/dilla_stem_analyze\.js/, body.call("media-review"))
+    assert_match(/optional adapters, not assumed dependencies/, body.call("media-review"))
+    assert_match(/Never start a physical print/, body.call("studio-3d"))
+    assert_match(/test-driven development/, body.call("engineering-methods"))
+    assert_match(/keyboard/, body.call("accessibility"))
   end
 
   def test_discover_ignores_skill_markdown_under_data
