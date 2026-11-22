@@ -114,11 +114,18 @@ module Master
           world = build_world(root: workspace_root, container:, capabilities:, network: network_client(container), probe: probe_policy,
                               browser: browser_broker(container, capabilities:, event_bus: lifecycle_bus))
           browser = world.browser
+          browser_scope = container[:browser_broker] if container.respond_to?(:[])
           mission.transition!(:execute)
           effect_observer = build_effect_observer(
             bus: lifecycle_bus, mission_id: mission.id, attempt_id: mission_attempt_id(mission),
           )
-          done = build_fold(root: workspace_root, model:, memory:, world:, max_turns:, observer:, effect_observer:, capabilities:, cancellation:, probe: probe_policy).run(goal)
+          fold = lambda do
+            build_fold(root: workspace_root, model:, memory:, world:, max_turns:, observer:, effect_observer:,
+                       capabilities:, cancellation:, probe: probe_policy).run(goal)
+          end
+          # The tool objects were built at boot with a powerless Scope. Bind the
+          # one broker created for this Fold only while its model/tools execute.
+          done = browser_scope.respond_to?(:with) ? browser_scope.with(browser, &fold) : fold.call
           unless %i[cancelled trace_failed needs_user blocked unknown_outcome recovery_failed].include?(done.reason)
             mission.transition!(:verify, summary: continuation_summary(done))
           end
