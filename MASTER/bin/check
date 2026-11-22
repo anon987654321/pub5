@@ -304,6 +304,11 @@ def check_relative_log(root, path)
   expanded_path.delete_prefix(expanded_root)
 end
 
+if format == "json" && check_relative_log(ROOT, run_log).nil?
+  warn "check0: JSON reports require the combined log to stay inside the repository"
+  exit 64
+end
+
 metadata = check_git_metadata(ROOT) if format == "json"
 started_at = Time.now.utc
 started_clock = Process.clock_gettime(Process::CLOCK_MONOTONIC)
