@@ -191,7 +191,7 @@ macOS and Linux Chrome/Chromium executable names. Set `BIZ_CHROME_BIN` to
 the exact executable path only when automatic discovery cannot find it.
 `bp_print.mjs` prints with headless Chromium (no Python anywhere in the
 chain, per laws.yml REACH_non_native_tool) and checks every page size
-against the hefte canon (156mm 234mm); it also verifies the funding guide's five-page output. Raster generation is not visual approval. `bp_index.mjs` fails if a published or archived link lacks its HTML/PDF pair, and lists guidance separately from plans;
+against the hefte canon (156mm 234mm); it also verifies the funding guide's five-page output. Raster generation is not visual approval. `bp_index.mjs` fails if a published or archived link lacks its HTML/PDF pair, if a workstream directory is unlisted, or if the retained `bob`, `bob2` and `bob3` templates are missing or unpaired. It lists guidance separately from plans;
 it derives the Innovasjon Norge request only from that explicit row in each
 plan's financing table and reports source-only drafts separately. The retired
 poise/cover generation (bp_cover.mjs) left with its generation; its history
