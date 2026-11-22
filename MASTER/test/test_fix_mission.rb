@@ -98,7 +98,7 @@ class FixMissionTest < Minitest::Test
       )
       mission.send(:with_lock) do
         record = mission.instance_variable_get(:@record)
-        record["attempt_count"] = Master::Fix::Mission::MAX_AUTOMATIC_ATTEMPTS + 20
+        record["attempt_count"] = 50
         mission.send(:persist!)
       end
 
