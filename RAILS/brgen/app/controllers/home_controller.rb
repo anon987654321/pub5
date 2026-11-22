@@ -11,6 +11,9 @@ class HomeController < ApplicationController
 
     @local_activity = Brgen::LocalActivity.for(ActsAsTenant.current_tenant)
     @feed = params[:feed]
+    @following_cold_start = Brgen::HomeFeed.following_cold_start?(
+      feed: @feed, authenticated: authenticated?, user: Current.user
+    )
     scope = Brgen::HomeFeed.scope(feed: @feed, authenticated: authenticated?, sort: params[:sort])
     @neighborhoods = Neighborhood.in_city(ActsAsTenant.current_tenant)
     @neighborhood_id = @neighborhoods.where(id: chosen_neighborhood_id).pick(:id)
