@@ -1,6 +1,6 @@
 // Generate BIZ/index.html from the active portfolio and each financing table.
 // The amount is the explicit Innovasjon Norge row only, never project capital.
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { BIZ_ROOT } from './paths.mjs';
 
 const ACTIVE = [
@@ -25,6 +25,40 @@ const ARCHIVE = [
   ['ai3', 'AI³ — arkiv'],
 ];
 
+const LISTED_PAIRS = new Set([...ACTIVE, ...ARCHIVE].map(([key]) => key));
+const TEMPLATE_NAMES = ['bob', 'bob2', 'bob3'];
+
+function verifyIndexInventory() {
+  const excluded = new Set(['__templates', 'research', 'tools']);
+  const actualPairs = readdirSync(BIZ_ROOT, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() || entry.isSymbolicLink())
+    .map(entry => entry.name)
+    .filter(name => !excluded.has(name))
+    .sort();
+  const unlisted = actualPairs.filter(name => !LISTED_PAIRS.has(name));
+  const missing = [...LISTED_PAIRS].filter(name => !actualPairs.includes(name));
+  if (unlisted.length || missing.length) {
+    throw new Error('BIZ index inventory mismatch; unlisted directories: ' +
+      (unlisted.join(', ') || 'none') + '; missing directories: ' + (missing.join(', ') || 'none'));
+  }
+
+  const templateDirectory = `${BIZ_ROOT}/__templates`;
+  const templateFiles = readdirSync(templateDirectory)
+    .filter(name => /\\.(?:html|pdf)$/i.test(name));
+  const templateBases = [...new Set(templateFiles.map(name => name.replace(/\\.(?:html|pdf)$/i, '')))].sort();
+  const expected = [...TEMPLATE_NAMES].sort();
+  const unexpected = templateBases.filter(name => !expected.includes(name));
+  const absent = expected.filter(name => !templateBases.includes(name));
+  const unpaired = templateBases.filter(name =>
+    !templateFiles.includes(name + '.html') || !templateFiles.includes(name + '.pdf')
+  );
+  if (unexpected.length || absent.length || unpaired.length) {
+    throw new Error('BIZ template inventory mismatch; unexpected: ' +
+      (unexpected.join(', ') || 'none') + '; missing: ' + (absent.join(', ') || 'none') +
+      '; unpaired: ' + (unpaired.join(', ') || 'none'));
+  }
+}
+
 function formatNok(value) {
   return new Intl.NumberFormat('nb-NO', { maximumFractionDigits: 0 }).format(value);
 }
@@ -48,6 +82,7 @@ function requirePair(key) {
     }
   }
 }
+verifyIndexInventory();
 for (const [key] of ACTIVE) requirePair(key);
 for (const [key] of ARCHIVE) requirePair(key);
 for (const [key] of DRAFTS) {
