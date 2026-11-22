@@ -438,3 +438,18 @@ proposals:
       Voice::Benchmark. A real nb engine (CosyVoice3 + NB LoRA) stays
       welcome - through the chain, once it can pass the benchmark gates.
     refuted_by: MASTER/lib/voice/engines.rb
+
+  - id: axe-core-vendor-needs-craft-ledger-exemption
+    tree: MASTER
+    state: refuted
+    claim: "the vendored axe-core bundle needs a new craft-ledger exemption row and review date"
+    reason: >
+      The file at checks/support/vendor/axe-core/axe.min.js is loaded by
+      Deploy::Axe inside the existing CDP page; it is not a Law-declared skip.
+      TestAxe already asserts the axe version header and MPL-2.0 licence. The
+      craft ledger says its rows only document executable markers in law/ and
+      grant nothing; ExemptionFreshnessCheck rejects a row whose Law has no
+      executable declaration. No axe-specific marker exists, so a ledger row
+      would be dead evidence, not a valid exemption. Leave the vendor bytes
+      and exemption registry unchanged.
+    refuted_by: MASTER/checks/support/axe.rb; MASTER/test/test_axe.rb; MASTER/checks/data/craft_ledger.yml; MASTER/checks/lib/source/exemption_freshness.rb
