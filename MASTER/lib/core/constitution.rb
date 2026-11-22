@@ -235,14 +235,14 @@ module Master::Core
 
     # No credential ever reaches disk, a transcript, a command or commit history.
     def self.no_secret_rule(veto)
-      Law.new(id: :no_secret, verbs: %i[write note exec git], judge: lambda { |effect, _memory|
+      Law.new(id: :no_secret, verbs: %i[write note exec git browser], judge: lambda { |effect, _memory|
         pattern = veto["secrets"]
         next Verdict::Block.new(
           reason: "veto_pattern_config.secrets missing or invalid - effects are unjudgeable for secrets",
           by: :no_secret,
         ) unless pattern.respond_to?(:match?)
 
-        body = [effect.args[:content], effect.args[:text], effect.args[:message],
+        body = [effect.args[:content], effect.args[:text], effect.args[:message], effect.args[:url],
                 Array(effect.args[:argv]).map(&:to_s)].flatten.compact.join("\n")
         next nil unless body.match?(pattern)
 
