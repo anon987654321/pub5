@@ -38,6 +38,8 @@ module Master
       LEASE_RENEW_SECONDS = 60
       RETRY_BASE_SECONDS = 60
       RETRY_MAX_SECONDS = 3_600
+      # Automatic continuation is a short recovery window, never an endless worker loop.
+      MAX_AUTOMATIC_ATTEMPTS = 5
       STATES = %w[queued running waiting completed failed blocked interrupted cancelled unknown_outcome recovery_failed].freeze
       RESUMABLE_STATES = %w[running waiting].freeze
       STAGES = %w[discover plan execute verify deliver].freeze
