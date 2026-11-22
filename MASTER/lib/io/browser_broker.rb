@@ -119,7 +119,7 @@ module Master
             }
           }
           textRoot ||= document.body;
-          const text = (textRoot && textRoot.innerText) || "";
+          const text = ((textRoot && textRoot.innerText) || "").slice(0, 256000);
           const headings = Array.from(document.querySelectorAll("h1, h2, h3, h4, h5, h6"))
             .slice(0, 40)
             .map(node => ({
@@ -127,7 +127,7 @@ module Master
               text: (node.innerText || "").trim().replace(/\s+/g, " ").slice(0, 120)
             }))
             .filter(item => item.text.length > 0);
-          const links = Array.from(document.querySelectorAll("a[href]")).map(a => ({
+          const links = Array.from(document.querySelectorAll("a[href]")).slice(0, 500).map(a => ({
             text: (a.innerText || a.getAttribute("aria-label") || "").trim().replace(/\s+/g, " ").slice(0, 120),
             href: a.href
           })).filter(link => link.text && /^https?:/.test(link.href));
@@ -288,7 +288,7 @@ module Master
           sec-fetch-dest sec-fetch-mode sec-fetch-site sec-ch-ua
           sec-ch-ua-mobile sec-ch-ua-platform
         ].freeze
-        MAX_RESPONSE_BYTES = 1_048_576
+        MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 
         def initialize(request)
           @request = request
@@ -691,6 +691,7 @@ module Master
 
         require "ferrum"
         browser = Ferrum::Browser.new(**options)
+        refresh!(id)
         Attachment.new(broker: self, lease_id: id.to_s, browser:)
       rescue LoadError
         raise Denied, "browser: Ferrum is not installed"
