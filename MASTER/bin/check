@@ -143,6 +143,11 @@ else
     "Node.js unavailable; web behavior was not measured"
   ["web ui behaviour unavailable", RUBY, "-e", "warn #{reason.inspect}; exit 3"]
 end
+web_live_step = if web_live
+  rake["test:integration_web"]
+else
+  ["integration web unavailable", RUBY, "-e", "warn 'MASTER_WEB_LIVE=1 was not set'; exit 3"]
+end
 
 # test:subsystems groups the cli/io/fix suites for a focused run, and the step
 # is in the operator and contributor profiles and the ci list so a break there
@@ -224,8 +229,7 @@ PROFILES = {
   # selected zero files without failing, so CI reported green without measuring
   # any of those JavaScript tests. An empty inventory or missing runtime is now
   # a visible non-pass rather than a silent omission.
-  "web"         => [law_syntax, rake["test:web_ui"], web_node_step, rake["test:web"],
-                    *(web_live ? [rake["test:integration_web"]] : [])],
+  "web"         => [law_syntax, rake["test:web_ui"], web_node_step, rake["test:web"], web_live_step],
   "ci"          => ci_steps,
   "full"        => [*full_ci, run_bin["probe", "all"], rake["audit"]],
 }.freeze
@@ -236,7 +240,6 @@ unless steps
   Master::Trace::Dmesg.status("check0", "unknown profile #{profile}, have #{PROFILES.keys.join(", ")}", io: check_io)
   exit 64
 end
-Master::Trace::Dmesg.status("web0", "live web checks skipped, set MASTER_WEB_LIVE=1", io: check_io) if profile == "web" && !web_live
 
 if list
   puts "profile: #{profile}"
@@ -301,6 +304,7 @@ def check_relative_log(root, path)
   expanded_path.delete_prefix(expanded_root)
 end
 
+metadata = check_git_metadata(ROOT) if format == "json"
 started_at = Time.now.utc
 started_clock = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 runner = Operator::CheckRunner.new(
@@ -315,7 +319,6 @@ failures = runner.results.reject { |r| r.success }.map(&:name)
 exit_status = failures.empty? ? 0 : 1
 
 if format == "json"
-  metadata = check_git_metadata(ROOT)
   puts Operator::CheckBrief.render_json(
     profile:, results: runner.results, metadata:,
     started_at: started_at.iso8601(3), finished_at: finished_at.iso8601(3),
