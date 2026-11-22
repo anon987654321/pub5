@@ -103,6 +103,7 @@ module Master
           broker ? broker.close(id) : false
         end
 
+        def screenshot(id, bytes) = current!.screenshot(id, bytes)
         def close_all = current!.close_all
         def sessions = current&.sessions || []
         def size = current&.size || 0
