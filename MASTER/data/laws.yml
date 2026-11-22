@@ -4709,6 +4709,10 @@ law_catalogue:
       severity: error
       lifecycle: trusted
       autofix: never
+    ROBUSTNESS_bounded_operation_lifecycle:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      autofix: never
     RTFM_FIRST:
       definition_sources: [MASTER/law/practice.rb]
       severity: error
