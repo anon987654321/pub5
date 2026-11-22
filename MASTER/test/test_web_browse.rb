@@ -89,8 +89,9 @@ class TestWebBrowse < Minitest::Test
     refute options.key?("no-sandbox")
     assert_equal "MAP * ~NOTFOUND", options.fetch("host-resolver-rules")
     assert options.key?("disable-quic")
-    assert_includes tool.class::NETWORK_SANDBOX_SCRIPT, "WebSocket"
-    assert_includes tool.class::NETWORK_SANDBOX_SCRIPT, "RTCPeerConnection"
+    sandbox = Master::Io::BrowserBroker::Page::NETWORK_SANDBOX_SCRIPT
+    assert_includes sandbox, "WebSocket"
+    assert_includes sandbox, "RTCPeerConnection"
   end
 
   def test_subrequest_is_fetched_at_the_checked_ip_and_fulfilled
