@@ -11,7 +11,7 @@ billing:
   usd_per_second: 0.0122
   verified_on: "2026-11-22"
   source: "https://replicate.com/replicate/fast-flux-trainer/train"
-  minimum_training_seconds: 60
+  minimum_reservable_compute_seconds: 60
   cancellation_margin_seconds: 10
 quality:
   min_images: 12
