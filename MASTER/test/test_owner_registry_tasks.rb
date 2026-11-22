@@ -195,6 +195,61 @@ class TestOwnerRegistryTasks < Minitest::Test
     end
   end
 
+  def test_legacy_checkout_backlog_receipts_remain_visible_after_remote_state_migration
+    row = {
+      id: "legacy-parked-task", text: "Resume only after its human review.",
+      tree: "MASTER", kind: "mechanical", scope_paths: ["MASTER/lib/legacy_parked.rb"],
+      done_when: "rake test", size: "s", section: "MASTER",
+    }
+
+    Dir.mktmpdir("backlog-legacy") do |root|
+      repo_root = File.join(root, "repo")
+      FileUtils.mkdir_p(File.join(repo_root, "MASTER/lib"))
+      File.write(File.join(repo_root, row.fetch(:scope_paths).first), "VALUE = 1\\n")
+      assert system("git", "-C", repo_root, "init", "--quiet")
+      assert system("git", "-C", repo_root, "config", "remote.origin.url", "https://github.com/owner/pub5.git")
+
+      legacy_directory = File.join(repo_root, ".master")
+      FileUtils.mkdir_p(legacy_directory, mode: 0o700)
+      legacy_path = File.join(legacy_directory, File.basename(Backlog::Executor::RECEIPT_PATH))
+      previous = ENV["MASTER_STATE_DIR"]
+      ENV["MASTER_STATE_DIR"] = File.join(root, "new-state")
+      executor = Backlog::Executor.new(root: repo_root, repo_root:)
+      item_digest = Backlog.item_digest(row)
+      legacy_receipt = {
+        "record_type" => "parked_task",
+        "item_id" => row.fetch(:id),
+        "item_digest" => item_digest,
+        "mission_id" => "legacy-mission",
+        "mission_state" => "blocked",
+        "failure_category" => "ambiguous",
+        "retry_at" => nil,
+        "requires_operator" => true,
+        "scope_digest" => executor.send(:scope_digest_for, row.fetch(:scope_paths)),
+        "parked_at" => Time.now.utc.iso8601,
+      }
+      File.open(legacy_path, File::WRONLY | File::CREAT | File::APPEND, 0o600) do |file|
+        file.puts(JSON.generate(legacy_receipt))
+        file.flush
+        file.fsync
+      end
+      File.chmod(0o600, legacy_path)
+
+      Backlog.stub(:generate, [row]) do
+        old_receipt = executor.send(:latest_parked_tasks)
+        assert_equal "parked_task", old_receipt.fetch(item_digest).fetch("record_type")
+        assert executor.resume_item!(item_id: row.fetch(:id))
+
+        latest = executor.send(:latest_parked_tasks)
+        assert_equal "resume_task", latest.fetch(item_digest).fetch("record_type")
+        refute executor.send(:parked_task?, row, latest)
+        assert File.file?(executor.send(:receipt_path))
+      end
+    ensure
+      previous.nil? ? ENV.delete("MASTER_STATE_DIR") : ENV["MASTER_STATE_DIR"] = previous
+    end
+  end
+
   def test_backlog_receipts_share_the_canonical_mission_state_from_either_root
     Dir.mktmpdir("backlog-state-root") do |root|
       repo_root = File.join(root, "repo")
