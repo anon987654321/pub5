@@ -524,7 +524,7 @@ workstreams:
     implementation: MASTER/web/app/controllers/pair_controller.rb
     proof: MASTER/web/test/controllers/pair_controller_test.rb
   - id: commerce_ledger_first
-    state: missing
+    state: partial
     title: Append-only idempotent credits and entitlement ledger before any new payment path
-    implementation: RAILS/__shared/app/services/shared/commerce.rb; RAILS/__shared/app/models/shared/commerce_ledger_entry.rb
-    proof: RAILS/brgen/test/services/commerce_ledger_test.rb
+    implementation: RAILS/__shared/app/services/shared/commerce.rb; RAILS/__shared/app/models/shared/commerce_ledger_entry.rb; RAILS/__shared/app/models/shared/referral_credit.rb
+    proof: RAILS/brgen/test/services/commerce_ledger_test.rb; RAILS/brgen/test/services/referral_splinter_test.rb; RAILS/test/billing_plans_contract_test.rb (authored; NOT_RUN)
