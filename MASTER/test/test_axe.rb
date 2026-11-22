@@ -21,12 +21,12 @@ class TestAxe < Minitest::Test
 
   def test_violations_are_named_under_the_law_that_owns_the_rule
     report = { "violations" => [
-      { "id" => "image-alt", "impact" => "critical", "nodes" => 2, "target" => "main > img" },
-      { "id" => "duplicate-id-aria", "impact" => "serious", "nodes" => 1, "target" => "#x" },
+      { "id" => "image-alt", "impact" => "critical", "nodes" => ["main > img", "#hero"] },
+      { "id" => "duplicate-id-aria", "impact" => "serious", "nodes" => ["#x"] },
     ] }
 
-    assert_equal ["accessibility_axe: a/b/mobile image-alt x2 (critical) - main > img law=IMG_ALT",
-                  "accessibility_axe: a/b/mobile duplicate-id-aria x1 (serious) - #x law=unmapped"],
+    assert_equal ["accessibility_axe: a/b/mobile image-alt (critical) nodes=[main > img | #hero] law=IMG_ALT",
+                  "accessibility_axe: a/b/mobile duplicate-id-aria (serious) nodes=[#x] law=unmapped"],
                  AXE.findings("a/b/mobile", report)
   end
 
