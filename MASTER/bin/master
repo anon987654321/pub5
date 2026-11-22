@@ -156,9 +156,9 @@ end
 # Flags the slash commands read from their own argument text (/fix --max-files=25,
 # /fix --no-critique, /fix --dry-run). The top-level parser does not know them and
 # must not reject them or drop them: a dropped --dry-run is a write run.
-COMMAND_FLAG = %r{\A--(?:(?:autofix|max-files|only|lane)=|
+COMMAND_FLAG = %r{\A--(?:(?:autofix|max-files|only|lane|mode)=|
                  (?:dry-run|no-autofix|apply|list-recipes|(?:no-)?critique|no-aesthetic|blockers|plan|until-checks|normal|quiet)\z)}x
-COMMAND_FLAG_WITH_VALUE = %w[--only --recipe].freeze
+COMMAND_FLAG_WITH_VALUE = %w[--only --recipe --mode].freeze
 
 def initial_message_from_argv(argv)
   kept = []
@@ -227,7 +227,7 @@ def print_master_help
   help = [
     HELP_USAGE,
     initial_message_parser({}).to_s,
-    "Repair: start MASTER/bin/master and enter /fix [TREE]; /fix runs scope-aware proof.",
+    "Repair: /fix [TREE] previews by default; /fix --mode=repair --apply TREE explicitly authorizes writes.",
     "Check help: MASTER/bin/check --help; preview: MASTER/bin/check --list --profile=operator.",
     "Check log: MASTER/bin/check --show-log --tail=120 (supplemental verification only).",
     "Operator ladder: MASTER/bin/operator check [--scan-only] is separate and writes by default.",
