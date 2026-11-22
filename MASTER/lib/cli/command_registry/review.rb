@@ -284,12 +284,18 @@ module Master
       # the pass flags, the per-dispatch execution overrides with the mode preset
       # applied on top, and this dispatch's cancellation, activated.
       def fix_dispatch_options(raw, ctx)
+        mode_explicit = raw.to_s.split(/\s+/).any? { |token| MODE_FLAG.match?(token) }
         mode, raw, mode_error = extract_fix_mode(raw)
         return { mode_error: } if mode_error
 
         apply, critique, aesthetic, only, target = parse_pass_flags(raw)
         overrides = execution_overrides(raw)
         apply, critique, only, overrides = apply_fix_mode(mode, raw:, apply:, critique:, only:, overrides:)
+        if apply == true && fix_stage_selected?(only) && (!mode_explicit || target.to_s.strip.empty?)
+          return {
+            mode_error: "mutating /fix requires explicit --mode=repair|elevate|all and a named repository target; use --dry-run to preview"
+          }
+        end
         cancellation = ctx.cancellation if ctx.respond_to?(:cancellation)
         cancellation.activate! if cancellation&.respond_to?(:activate!)
         { mode:, raw:, apply:, critique:, aesthetic:, only:, target:, overrides:, cancellation: }
@@ -990,10 +996,11 @@ module Master
         Array(only.to_s.split(",")).map(&:strip).any? { |stage| %w[fix converge].include?(stage.downcase) }
       end
 
-      # The canonical /fix command writes unless a caller explicitly asks for
-      # read-only work. Audit and visual mode presets pass apply:false.
+      # A repair writes only when the caller explicitly authorizes it.
+      # Read-only defaults are deliberate: a slash command, boot or retry is
+      # not consent to mutate a repository.
       def writes_requested?(apply:, only:)
-        apply != false && fix_stage_selected?(only)
+        apply == true && fix_stage_selected?(only)
       end
 
       # `--only critique` and `--only map` select read-only review stages.
@@ -1015,7 +1022,7 @@ module Master
         "preview" => [:apply, false], "dry" => [:apply, false],
         "--plan" => [:apply, false],
         "--no-autofix" => [:apply, false], "no-autofix" => [:apply, false],
-        "--apply" => [:apply, true], "apply" => [:apply, true], "fix" => [:apply, true],
+        "--apply" => [:apply, true],
         "--no-critique" => [:critique, false], "no-critique" => [:critique, false],
         "--critique" => [:critique, true], "critique" => [:critique, true],
         "--no-aesthetic" => [:aesthetic, false], "no-aesthetic" => [:aesthetic, false]
