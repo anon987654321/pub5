@@ -81,7 +81,13 @@ module Master
       def tick!
         record = Mission.current(root: @root)
         unless eligible?(record)
-          notify_after_run(:idle)
+          # A future-due backlog mission may be parked while independent work
+          # advances. Do not reinterpret an explicitly disabled or non-backlog
+          # mission as permission to enqueue unattended repository work.
+          if record && record["origin"].to_s == "backlog" &&
+             record["auto_continue"] == true && record["state"].to_s == "waiting"
+            notify_after_run(:idle)
+          end
           return :idle
         end
 
