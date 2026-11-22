@@ -92,7 +92,7 @@ module Autopoiesis
     end
 
     def save_manifest(data)
-      File.write(@manifest_path, JSON.pretty_generate(data))
+      File.write(@manifest_path, "#{JSON.pretty_generate(data)}\n")
     end
   end
 end
