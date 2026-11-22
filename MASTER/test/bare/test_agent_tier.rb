@@ -212,7 +212,7 @@ module Master
 
       def test_coverage_state_json_ends_with_a_final_newline
         path = File.join(master_root, "data", "coverage_map", "state.json")
-        assert File.binread(path).end_with?("\\n"),
+        assert File.binread(path).end_with?("\n"),
                "coverage state JSON must end with the repository-required newline"
       end
 
@@ -223,7 +223,7 @@ module Master
           kernel.instance_variable_set(:@manifest_path, output)
           kernel.send(:save_manifest, { "components" => [] })
 
-          assert File.binread(output).end_with?("\\n"),
+          assert File.binread(output).end_with?("\n"),
                  "generated component JSON must end with the repository-required newline"
         end
       end
