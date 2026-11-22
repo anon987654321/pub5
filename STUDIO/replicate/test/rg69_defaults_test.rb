@@ -172,8 +172,12 @@ class TestRg69Defaults < Minitest::Test
     refute_match(/case'(?:Freeverb|JCReverb)'/, js)
   end
 
+  def test_opaque_origin_uses_non_blob_transport_clock
+    assert_includes js, 'if(location.origin==="null")context.clockSource="timeout";'
+  end
+
   def test_audio_context_is_created_before_resume_inside_the_user_gesture
-    assert_includes js, "function startToneFromGesture(){Tone.getContext();return Tone.start();}"
+    assert_includes js, 'function startToneFromGesture(){const context=Tone.getContext();if(location.origin==="null")context.clockSource="timeout";return Tone.start();}'
     welcome = js[/\$id\('welcome-start'\)\.addEventListener\('click',async\(\)=>\{(.*?)\n\}\);/m, 1]
     play = js[/\$id\('play'\)\.addEventListener\('click',async\(\)=>\{(.*?)\n\}\);/m, 1]
     refute_nil welcome
