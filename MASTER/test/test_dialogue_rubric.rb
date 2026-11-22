@@ -284,7 +284,7 @@ class TestDialogueRubric < Minitest::Test
   def test_rubric_validation_rejects_unknown_ux_scenario_intents
     payload = JSON.parse(JSON.generate(Rubric.data(root: Master::ROOT)))
     payload.fetch("ux_probe").fetch("scenarios").first["intent"] = "unbounded"
-    
+
     error = assert_raises(ArgumentError) { Rubric.send(:validate!, payload) }
 
     assert_match(/unknown intent "unbounded"/, error.message)
