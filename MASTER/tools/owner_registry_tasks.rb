@@ -439,6 +439,8 @@ module Backlog
   class Executor
     READY_KINDS = %w[mechanical].freeze
     OWNED_TREES = %w[MASTER RAILS OPENBSD STUDIO BIZ].freeze
+    # Relative path when MasterPaths has no remote identity (not a hard-coded
+    # writer location); receipt_path resolves through the canonical /fix store.
     RECEIPT_PATH = ".master/backlog-executor.jsonl"
     MISSION_OBJECTIVE = "deployment-first: production release, then repository-wide repair, then creative work".freeze
 
