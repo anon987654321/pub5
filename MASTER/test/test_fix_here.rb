@@ -106,7 +106,8 @@ class TestFixHere < Minitest::Test
 
       assert status.success?, output
       log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
-      assert_includes log, "args=/fix MASTER --lane=visual --apply"
+      assert_includes log, "args=/fix MASTER --lane=visual"
+      refute_includes log, "--apply"
     end
   end
 
@@ -117,6 +118,28 @@ class TestFixHere < Minitest::Test
       assert status.success?, output
       assert_includes output, "--model ID"
       assert_includes output, "--lane LANE"
+      assert_includes output, "--mode repair|audit|visual|elevate|all"
+      assert_includes output, "--apply"
+      refute File.exist?(File.join(worker, "MASTER/.master"))
+    end
+  end
+
+  def test_apply_requires_an_explicit_write_mode_before_starting
+    with_worktree do |_main, worker, tools_bin|
+      output, status = run_fix_here(worker, tools_bin, "MASTER", "--apply")
+
+      refute status.success?
+      assert_includes output, "--apply requires explicit --mode=repair|elevate|all"
+      refute File.exist?(File.join(worker, "MASTER/.master"))
+    end
+  end
+
+  def test_mode_flag_requires_a_value
+    with_worktree do |_main, worker, tools_bin|
+      output, status = run_fix_here(worker, tools_bin, "MASTER", "--mode")
+
+      refute status.success?
+      assert_includes output, "--mode requires repair, audit, visual, elevate or all"
       refute File.exist?(File.join(worker, "MASTER/.master"))
     end
   end
@@ -149,17 +172,27 @@ class TestFixHere < Minitest::Test
 
       assert_equal 0, status.exitstatus, output
       log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
-      assert_includes log, "args=/fix MASTER --no-critique --apply"
+      assert_includes log, "args=/fix MASTER --no-critique"
+      refute_includes log, "--apply"
       assert_includes log, "checks=lexical,sprawl"
     end
   end
 
-  def test_explicit_write_and_read_only_flags_reach_the_run_without_conflicting
+  def test_default_fix_here_run_is_read_only_and_explicit_apply_is_forwarded
     with_worktree do |_main, worker, tools_bin|
       _, normal = run_fix_here(worker, tools_bin, "MASTER", "--model", "none", "--no-probe")
       assert normal.success?
       log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
-      assert_includes log, "args=/fix MASTER --apply"
+      assert_includes log, "args=/fix MASTER"
+      refute_includes log, "--apply"
+
+      _, authorized = run_fix_here(
+        worker, tools_bin, "MASTER", "--model", "none", "--no-probe", "--mode", "repair", "--apply"
+      )
+      assert authorized.success?
+      log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
+      assert_includes log, "--mode=repair"
+      assert_includes log, "--apply"
 
       _, readonly = run_fix_here(worker, tools_bin, "MASTER", "--model", "none", "--no-probe", "--read-only")
       assert readonly.success?
@@ -241,7 +274,8 @@ class TestFixHere < Minitest::Test
       log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
       assert_includes log, "child-model=saved-model"
       assert_includes log, "fix-probe=UNSET", "the normal /fix preflight owns the request"
-      assert_includes log, "args=/fix MASTER --apply"
+      assert_includes log, "args=/fix MASTER"
+      refute_includes log, "--apply"
       refute_includes log, "what bug does def total", "the wrapper must not boot a second chat session"
     end
   end
