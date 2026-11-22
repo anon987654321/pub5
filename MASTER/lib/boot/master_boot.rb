@@ -91,7 +91,14 @@ module Master
     # Each exact path gets its own scoped TaskContract, proof, commit and push;
     # the supervisor advances only after every path has a verified report.
     def run_backlog_task(root:, container:, mission:, bus: nil, repo_root: REPO_ROOT)
-      handle = nil
+      handle = Fix::Mission.new(root:, bus:).start_or_resume!(
+        goal: mission.fetch("goal"), scope: root, model: mission["model"], effort: mission["effort"],
+        plan: mission.fetch("plan"), origin: "backlog", auto_continue: true,
+        mode: mission.dig("operator", "mode") || "repair",
+        intent: mission.dig("operator", "intent") || :functional_change,
+      )
+      raise ArgumentError, "backlog mission could not be claimed" unless handle.record&.fetch("state", nil) == "running"
+
       plan = JSON.parse(mission.fetch("plan").to_s)
       paths = Array(plan.fetch("scope_paths")).map(&:to_s).uniq
       raise ArgumentError, "owner-registry task has no exact scope paths" if paths.empty?
@@ -120,14 +127,6 @@ module Master
           raise ArgumentError, "backlog target is missing or has an unsafe path: #{relative}"
         end
       end
-
-      handle = Fix::Mission.new(root:, bus:).start_or_resume!(
-        goal: mission.fetch("goal"), scope: root, model: mission["model"], effort: mission["effort"],
-        plan: mission.fetch("plan"), origin: "backlog", auto_continue: true,
-        mode: mission.dig("operator", "mode") || "repair",
-        intent: mission.dig("operator", "intent") || :functional_change,
-      )
-      raise ArgumentError, "backlog mission could not be claimed" unless handle.record&.fetch("state", nil) == "running"
 
       command_spec = Backlog::ProofMap.execution_spec(
         plan.fetch("done_when"), tree: plan.fetch("tree"), repo_root: repository
@@ -287,6 +286,9 @@ module Master
         after_run: ->(mission:, result:) {
           next unless executor
           next if mission && mission["origin"] != "backlog"
+          # :idle means this process did not own the running lease. Never
+          # reinterpret another worker's live mission as an unfinished result.
+          next if result == :idle && mission && mission["state"] == "running"
 
           if mission && mission["state"] == "completed"
             unless executor.record_completion!(record: mission)
