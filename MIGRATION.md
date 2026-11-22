@@ -510,8 +510,9 @@ superseded by this live-tree count. Five files that were byte-identical at the
 This is a file/provenance reconciliation, not behavioural acceptance. It does
 not prove that changed RAILS behavior, runtime-fetched model assets, the
 Ragnhild PDF, the BIZ build, browser rendering, full test suites, native
-OpenBSD checks or vm23 deployment passed. Those gates remain exactly where
-their owning rows in root TODO.md and the structured operator seams place
-them. No pub4 tree or retired binary/photo should be copied back merely to
-make blob counts match.
+OpenBSD checks or vm23 deployment passed. Their current status belongs in the
+owning records: `MASTER/convergence.yml`, `MASTER/data/gaps.yml`,
+`MASTER/data/operator_seams.yml`, `MASTER/data/law/ux_refinements.yml` and
+`RAILS/refinements.yml`. No pub4 tree or retired binary/photo should be copied
+back merely to make blob counts match.
 
