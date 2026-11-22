@@ -153,6 +153,33 @@ class TestCoreReversibility < Minitest::Test
     assert_includes verdict.reason, "same-host GET endpoints may mutate remote state"
   end
 
+  def test_browser_effect_never_reaches_world_without_an_approval_surface
+    world = Class.new do
+      attr_reader :performed
+
+      def initialize = @performed = []
+      def verbs = Master::Core::VERBS
+
+      def perform(effect)
+        @performed << effect
+        return Master::Core::Observation.no("no surface to ask") if effect.verb == :ask
+
+        Master::Core::Observation.no("browser must not be reached")
+      end
+    end.new
+    fold = Master::Core::Fold.new(
+      model: ScriptedModel.new(E.browser("https://example.com/catalog")),
+      constitution: C.load(data_dir: DATA_DIR),
+      world:,
+      memory: Master::Core::Memory.new,
+    )
+
+    result = fold.run("read a JavaScript-rendered page")
+
+    assert_equal :needs_user, result.reason
+    assert_equal [:ask], world.performed.map(&:verb)
+  end
+
   def test_browser_scope_is_bound_for_lifecycle_evidence
     fold = Master::Core::Fold.new(
       model: ScriptedModel.new,
