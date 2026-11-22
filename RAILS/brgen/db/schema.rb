@@ -2394,4 +2394,6 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_22_170000) do
   add_foreign_key "typing_indicators", "users"
   add_foreign_key "users", "cities"
   add_foreign_key "votes", "users"
+  add_foreign_key "commerce_ledger_entries", "users", column: "actor_id"
+  add_foreign_key "commerce_ledger_entries", "users"
 end
