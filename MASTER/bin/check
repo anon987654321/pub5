@@ -117,13 +117,13 @@ profile = "operator"
 format = "human"
 list = false
 OptionParser.new do |parser|
-  parser.banner = "usage: bin/check [--profile operator|contributor|agent|web|ci|full] [--list] [--format human|brief]"
+  parser.banner = "usage: bin/check [--profile operator|contributor|agent|web|ci|full] [--list] [--format human|brief|json]"
   parser.on("--profile=NAME") { |value| profile = value }
   parser.on("--format=NAME") { |value| format = value }
   parser.on("--list", "show the selected profile commands without running them") { list = true }
 end.parse!
 unless %w[human brief json].include?(format)
-  Master::Trace::Dmesg.status("check0", "unknown format #{format}, have human or brief")
+  Master::Trace::Dmesg.status("check0", "unknown format #{format}, have human, brief or json")
   exit 64
 end
 
