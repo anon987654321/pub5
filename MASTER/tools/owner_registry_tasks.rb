@@ -5,6 +5,7 @@ require "json"
 require "fileutils"
 require "shellwords"
 require "yaml"
+require_relative "../lib/boot/paths"
 require_relative "../lib/fix/constants"
 require_relative "../lib/ground/failure_taxonomy"
 require_relative "../lib/fix/task_contract"
@@ -763,8 +764,7 @@ module Backlog
     def parked_task_rows
       directory = File.join(@root, ".master")
       directory_stat = File.lstat(directory)
-      return [] unless directory_stat.directory? && !directory_stat.symlink? &&
-                        (directory_stat.mode & 0o077).zero?
+      return [] unless private_receipt_directory?(directory, directory_stat)
 
       path = File.join(directory, "backlog-executor.jsonl")
       return [] unless File.exist?(path)
@@ -814,12 +814,26 @@ module Backlog
       parked.dig(item_digest(item), "record_type") == "resume_task"
     end
 
+    # Match MASTER's existing private-state policy: no access for others,
+    # owner access retained, and an intentional foreign-group grant preserved.
+    # The directory must not be substituted between lstat and mode evaluation.
+    def private_receipt_directory?(directory, original_stat)
+      return false unless original_stat.directory? && !original_stat.symlink?
+
+      expected_mode = MasterPaths.private_dir_mode(directory, 0o700)
+      current = File.lstat(directory)
+      current.directory? && !current.symlink? &&
+        current.dev == original_stat.dev && current.ino == original_stat.ino &&
+        (current.mode & 0o2777) == expected_mode
+    rescue ArgumentError, SystemCallError
+      false
+    end
+
     def append_executor_receipt(row)
       directory = File.join(@root, ".master")
       FileUtils.mkdir_p(directory, mode: 0o700)
       directory_stat = File.lstat(directory)
-      return false unless directory_stat.directory? && !directory_stat.symlink? &&
-                          (directory_stat.mode & 0o077).zero?
+      return false unless private_receipt_directory?(directory, directory_stat)
 
       path = File.join(directory, "backlog-executor.jsonl")
       if File.exist?(path) || File.symlink?(path)
