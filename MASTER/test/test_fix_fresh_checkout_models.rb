@@ -13,6 +13,7 @@ class TestFixFreshCheckoutModels < Minitest::Test
       MASTER_NO_AGY_CLI MASTER_NO_OLLAMA MASTER_NO_POOL_PROBES
     ]
     @saved_env = @env_keys.to_h { |key| [key, ENV[key]] }
+    ENV.delete("OLLAMA_API_KEY")
     ENV["ZAI_API_KEY"] = "zai-" + ("a" * 48)
     ENV["OPENROUTER_API_KEY"] = "sk-or-v1-" + ("a" * 64)
     ENV["MASTER_NO_GROK_CLI"] = "1"
