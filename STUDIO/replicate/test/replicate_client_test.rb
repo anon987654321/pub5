@@ -470,6 +470,23 @@ class TestStudioReplicateClientPaths < Minitest::Test
     end
   end
 
+  def test_interrupted_download_never_publishes_a_partial_file
+    Dir.mktmpdir do |directory|
+      target = File.join(directory, "new-audio.wav")
+      response = FakeResponse.new(headers: { "content-length" => "2" }, chunks: ["be", "at"])
+
+      with_http(response) do
+        error = assert_raises(RuntimeError) do
+          @client.download_url("https://replicate.delivery/audio.wav", target, max_bytes: 3)
+        end
+        assert_match(/download over 3 bytes/, error.message)
+      end
+
+      refute File.exist?(target)
+      assert_empty Dir.children(directory)
+    end
+  end
+
   def test_download_stream_overflow_preserves_previous_output_and_cleans_temporary_file
     Dir.mktmpdir do |directory|
       target = File.join(directory, "weights.tar")
