@@ -277,12 +277,12 @@ let seq_={};
 ['k','s','c','h','o'].forEach(t=>{seq_[t]=Array(16).fill(0).map(()=>({v:0.85+rnd(0,0.15),t:rnd(-15,15),p:100,r:1}))});
 ['b','keys','p'].forEach(t=>{seq_[t]=Array(16).fill(0).map(()=>({v:0.85+rnd(0,0.15),t:rnd(-15,15),p:100,r:1}))});
 
-let kickN,kickSub,kickClk,kickBody,snareN,snareRng,clapN,hatN,openN,bassN,bassSub,keysN,keysChorus,padsN,padsFlt,padsShift;
+let kickN,kickSub,kickClk,kickBody,snareN,snareRng,clapN,hatN,openN,bassN,bassSub,keysN,keysChorus,padsN,padsFlt;
 let drumG,bassG,keysG,padsG,masterG,limiter,vinylNoise,crackleNoise,driftLFO,analyser;
 let fxRev,fxDly,fxFlt,tapeSat,compPar,sslComp,widener,kickSat,keySat,drumSat,outSat,masterDrive,revSend,dlySend;
 let drumTube,kickComp,vintageSat,phaserFX,lofiNoise,lofiComp,tapeWS,padsLFO,kickClkBP,snareRngBP,keysTrem,keysDrive;
 
-const fxPool=['AutoWah','AutoFilter','AutoPanner','Chebyshev','Chorus','Distortion','FeedbackDelay','Freeverb','FrequencyShifter','JCReverb','Phaser','PingPongDelay','PitchShift','Tremolo','Vibrato','StereoWidener'];
+const fxPool=['AutoWah','AutoFilter','AutoPanner','Chebyshev','Chorus','Distortion','FeedbackDelay','Freeverb','JCReverb','Phaser','PingPongDelay','Tremolo','Vibrato','StereoWidener'];
 let drumFX=[],bassFX=[],keysFX=[],padsFX=[],masterFX=[];
 
 // Each page load selects a playable style at random. The effect pool stays
@@ -451,7 +451,7 @@ padsFlt=new Tone.Filter(1000,'lowpass');
 padsLFO=new Tone.LFO(0.12,600,1400);
 padsLFO.start();
 padsLFO.connect(padsFlt.frequency);
-padsShift=new Tone.FrequencyShifter(rnd(-2,2));
+
 kickSat=new Tone.Chebyshev(2);
 keySat=new Tone.Chebyshev(2);
 drumSat=new Tone.Chebyshev(3);
@@ -541,8 +541,7 @@ const keysTexture=new Tone.Distortion(0.18);keysTexture.wet.value=0.6;
 const keysLP=new Tone.Filter(PARAMS.KEYS_LP_HZ,'lowpass');
 keysG.connect(keysTexture);keysTexture.connect(keysLP);keysLP.connect(masterG);keysLP.connect(revSend);keysLP.connect(dlySend);
 padsN.connect(padsFlt);
-padsFlt.connect(padsShift);
-padsShift.connect(padsG);
+padsFlt.connect(padsG);
 // old-sampler: 3.5kHz bandwidth + warmth on pads
 const padsBW=new Tone.Filter(PARAMS.PADS_LP_HZ,'lowpass');
 const padsSat=new Tone.Chebyshev(2);padsSat.wet.value=0.2;
@@ -772,7 +771,7 @@ const clearFXArray=(arr)=>arr.forEach(fx=>{try{fx.disconnect();fx.dispose();}cat
 [drumFX,bassFX,keysFX,padsFX,masterFX].forEach(clearFXArray);
 drumFX.length=bassFX.length=keysFX.length=padsFX.length=masterFX.length=0;
 const createFX=(isMaster)=>{
-const num=isMaster?3+Math.floor(Math.random()*6):2+Math.floor(Math.random()*4);
+const num=isMaster?0:1+Math.floor(Math.random()*2);
 const wet=isMaster?0.08+Math.random()*0.19:0.15+Math.random()*0.35;
 const fx=[];
 for(let i=0;i<num;i++){
@@ -783,7 +782,7 @@ switch(type){
 case'AutoWah':eff=new Tone.AutoWah(60+Math.random()*340,2+Math.random()*4,-40+Math.random()*30);break;
 case'AutoFilter':eff=new Tone.AutoFilter(0.1+Math.random()*7.9);if(eff.depth)eff.depth.value=0.3+Math.random()*0.7;eff.baseFrequency=100+Math.random()*1900;eff.start();break;
 case'AutoPanner':eff=new Tone.AutoPanner(0.2+Math.random()*5.8);if(eff.depth)eff.depth.value=0.4+Math.random()*0.6;eff.start();break;
-case'Chebyshev':eff=new Tone.Chebyshev(2+Math.floor(Math.random()*29));break;
+case'Chebyshev':eff=new Tone.Chebyshev(2+Math.floor(Math.random()*7));break;
 case'Chorus':eff=new Tone.Chorus(1+Math.random()*5,1+Math.random()*4,0.3+Math.random()*0.6);eff.start();break;
 case'Distortion':eff=new Tone.Distortion(0.1+Math.random()*0.7);break;
 case'FeedbackDelay':{const dt=Tone.Time(['8n','16n','8n.','4n'][Math.floor(Math.random()*4)]).toSeconds();eff=new Tone.FeedbackDelay(dt,0.15+Math.random()*0.45);}break;
@@ -792,7 +791,6 @@ case'FrequencyShifter':eff=new Tone.FrequencyShifter(-20+Math.random()*40);break
 case'JCReverb':eff=new Tone.JCReverb(0.3+Math.random()*0.55);break;
 case'Phaser':eff=new Tone.Phaser({frequency:0.2+Math.random()*3.8,octaves:1+Math.random()*4,baseFrequency:200+Math.random()*1300});break;
 case'PingPongDelay':{const dt=Tone.Time(['8n','16n','8n.','4n'][Math.floor(Math.random()*4)]).toSeconds();eff=new Tone.PingPongDelay(dt,0.1+Math.random()*0.4);}break;
-case'PitchShift':eff=new Tone.PitchShift([-12,-7,-5,5,7,12][Math.floor(Math.random()*6)]);break;
 case'Tremolo':eff=new Tone.Tremolo(0.5+Math.random()*11.5,0.3+Math.random()*0.6);eff.start();break;
 case'Vibrato':eff=new Tone.Vibrato(1+Math.random()*9,0.05+Math.random()*0.35);break;
 case'StereoWidener':eff=new Tone.StereoWidener(0.3+Math.random()*0.6);break;
@@ -806,7 +804,7 @@ drumFX=createFX(0);
 bassFX=createFX(0);
 keysFX=createFX(0);
 padsFX=createFX(0);
-masterFX=createFX(1);
+masterFX=[];
 const chainFX=(g,fx,target)=>{
 g.disconnect();
 if(!fx.length){g.connect(target);g.connect(revSend);g.connect(dlySend);return;}
@@ -878,14 +876,13 @@ const oKickSat=new Tone.Chebyshev(2);
 const oKickComp=new Tone.Compressor(-30,8);
 const oKeysChorus=new Tone.Chorus(2.5,.3,.3).start();
 const oPadsFlt=new Tone.Filter(800,'lowpass');
-const oPadsShift=new Tone.FrequencyShifter(0);
 oKickN.connect(oKickSat);oKickSub.connect(oKickSat);oKickClk.connect(oKickSat);oKickBody.connect(oKickSat);
 oKickSat.connect(oKickComp);oKickComp.connect(oDrumG);
 oSnareN.connect(oDrumSat);oSnareRng.connect(oDrumSat);oClapN.connect(oDrumSat);oHatN.connect(oDrumSat);oOpenN.connect(oDrumSat);
 oDrumSat.connect(oDrumG);
 oBassN.connect(oBassG);oBassSub.connect(oBassG);
 oKeysN.connect(oKeySat);oKeySat.connect(oKeysChorus);oKeysChorus.connect(oKeysG);
-oPadsN.connect(oPadsFlt);oPadsFlt.connect(oPadsShift);oPadsShift.connect(oPadsG);
+oPadsN.connect(oPadsFlt);oPadsFlt.connect(oPadsG);
 for(const g of [oDrumG,oBassG,oKeysG,oPadsG]){g.connect(oMaster);g.connect(oRevSend);g.connect(oDlySend);}
 // Schedule all steps using the shared triggerNotes helper
 for(let i=0;i<bars*16;i++){
