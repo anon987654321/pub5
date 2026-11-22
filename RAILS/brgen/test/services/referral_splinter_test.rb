@@ -44,7 +44,7 @@ class ReferralSplinterTest < ActiveSupport::TestCase
     assert_nil splinter.reload.redeemed_at
     assert_nil splinter.redeemed_by_id
     assert_equal 0, Shared::ReferralCredit.where(referral_splinter: splinter).count
-    assert_equal 0, Shared::CommerceLedgerEntry.where(idempotency_key: "referral-credit:%").count
+    assert_equal 0, Shared::CommerceLedgerEntry.where("idempotency_key LIKE ?", "referral-credit:%").count
   end
 
   test "same token and same invitee cannot redeem twice" do
