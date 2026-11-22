@@ -679,4 +679,80 @@ class TestSkills < Minitest::Test
     refute matched.any? { |skill| MASTER_WORKFLOW_SKILLS.key?(skill[:name]) }
   end
 
+  MATTPOCOCK_SKILL_NAMES = %w[
+    grill-me grill-with-docs improve-codebase-architecture tdd setup-matt-pocock-skills
+    handoff grilling prototype triage domain-modeling codebase-design teach diagnosing-bugs
+    code-review implement ask-matt wayfinder to-spec to-tickets research wizard
+    to-questionnaire writing-for-agents git-guardrails-claude-code setup-pre-commit
+    writing-beats writing-shape writing-fragments scaffold-exercises wait-what
+    migrate-to-shoehorn resolving-merge-conflicts loop-me claude-handoff setup-ts-deep-modules
+    implement-spec retro to-prd to-issues writing-great-skills pr diagnose write-a-skill
+    zoom-out caveman design-an-interface request-refactor-plan qa ubiquitous-language
+    obsidian-vault edit-article chief-of-staff review batch-grill-me decision-mapping
+    software-factory
+  ].freeze
+
+  MATTPOCOCK_SKILL_ROUTES = {
+    "grill-me" => "/grill-me", "grill-with-docs" => "/grill-with-docs",
+    "grilling" => "run a grilling session",
+    "improve-codebase-architecture" => "/improve-codebase-architecture",
+    "tdd" => "/tdd", "diagnosing-bugs" => "/diagnosing-bugs",
+    "code-review" => "/code-review", "wayfinder" => "/wayfinder",
+    "to-spec" => "/to-spec", "to-tickets" => "/to-tickets",
+    "chief-of-staff" => "/chief-of-staff", "software-factory" => "/software-factory",
+    "batch-grill-me" => "/batch-grill-me", "to-prd" => "/to-prd",
+    "to-issues" => "/to-issues", "obsidian-vault" => "/obsidian-vault"
+  }.freeze
+
+  def test_matt_pocock_catalogue_is_complete_and_revision_pinned
+    skills = registry.fetch("skills")
+    names = skills.map { |skill| skill.fetch("name") }
+    assert_equal 115, skills.size
+    assert_equal 115, registry.dig("meta", "count")
+    assert_equal names.size, names.uniq.size
+    assert_empty MATTPOCOCK_SKILL_NAMES - names
+    assert_equal 56, registry.dig("meta", "matt_pocock", "skills_sh_listing_count")
+    assert_equal "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+                 registry.dig("meta", "matt_pocock", "revision")
+    MATTPOCOCK_SKILL_NAMES.each do |name|
+      row = skills.find { |skill| skill["name"] == name }
+      refute_nil row, name
+      refute_empty row.fetch("body"), name
+      assert_operator row.fetch("body").length, :<=, 4_000, name
+    end
+  end
+
+  def test_matt_pocock_routes_cover_key_workflows
+    MATTPOCOCK_SKILL_ROUTES.each do |name, prompt|
+      assert_includes shipped_skills.trigger_for(prompt).map { |skill| skill[:name] }, name, prompt
+    end
+  end
+
+  def test_matt_pocock_historical_names_are_aliased_or_explicitly_retired
+    body = ->(name) { registry.fetch("skills").find { |skill| skill["name"] == name }.fetch("body") }
+    {
+      "to-prd" => /to-spec/, "to-issues" => /to-tickets/,
+      "writing-great-skills" => /writing-for-agents/, "write-a-skill" => /writing-for-agents/,
+      "design-an-interface" => /codebase-design/,
+      "request-refactor-plan" => /improve-codebase-architecture/, "qa" => /triage/,
+      "ubiquitous-language" => /domain-modeling/, "decision-mapping" => /wayfinder/,
+      "batch-grill-me" => /grilling/, "diagnose" => /diagnosing-bugs/, "review" => /code-review/
+    }.each { |name, replacement| assert_match replacement, body.call(name), name }
+    %w[resolving-merge-conflicts zoom-out caveman obsidian-vault edit-article].each do |name|
+      assert_match(/retired|removed|personal|no replacement|never meant/i, body.call(name), name)
+    end
+  end
+
+  def test_matt_pocock_workflows_obey_pub5_boundaries
+    body = ->(name) { registry.fetch("skills").find { |skill| skill["name"] == name }.fetch("body") }
+    assert_match(/no parallel implementers/, body.call("implement-spec"))
+    assert_match(/no branches or worktrees/, body.call("implement-spec"))
+    assert_match(/Ruby or zsh/, body.call("wizard"))
+    assert_match(/Do not install Husky/, body.call("setup-pre-commit"))
+    assert_match(/Preserve authorized fast-forward pushes to main/, body.call("git-guardrails-claude-code"))
+    assert_match(/Do not dispatch subagents, parallel writers or background work/, body.call("chief-of-staff"))
+    assert_match(/Do not create GLOSSARY.md/, body.call("grill-with-docs"))
+    assert_match(/Do not launch background agents or create a research Markdown file/, body.call("research"))
+  end
+
 end
