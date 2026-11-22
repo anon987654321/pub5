@@ -171,11 +171,13 @@ class TestPub5Alert < Minitest::Test
       quiet_box(dir)
       File.delete(File.join(dir, "cpu-watch.seen"))
       run_alert(dir, "watch")
-      assert_includes log(dir), "cpu-monitor-stale CPU pressure monitor heartbeat is missing"
+      assert_equal "", log(dir), "a newly absent heartbeat gets one expected interval to appear"
 
-      File.write(File.join(dir, "cpu-watch.seen"), (Time.now.to_i - 600).to_s)
-      run_alert(dir, "watch", "PUB5_ALERT_QUIET" => "0")
-      assert_includes log(dir), "CPU pressure monitor heartbeat is 600 seconds old"
+      missing_state = File.join(dir, "state", "cpu-monitor-stale.missing")
+      File.write(missing_state, (Time.now.to_i - 600).to_s)
+      run_alert(dir, "watch")
+      assert_includes log(dir), "cpu-monitor-stale CPU pressure monitor heartbeat is missing"
+      assert_includes log(dir), "startup grace 180s"
     end
   end
 

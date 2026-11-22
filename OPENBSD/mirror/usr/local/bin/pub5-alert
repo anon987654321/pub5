@@ -2,7 +2,7 @@
 # pub5-alert - the one place a recurring symptom becomes a durable, actionable line.
 #
 #   pub5-alert raise KEY MESSAGE...   record an alert, once per quiet window per KEY
-#   pub5-alert watch                  disk, swap, sustained load, failed services, stale backup
+#   pub5-alert watch                  disk, swap, load, monitor health, services, backup
 #   pub5-alert show [N]               the last N alerts (default 20)
 #
 # Why it exists. relayd-watchdog restarts relayd, resource_guard sheds apps and
@@ -171,9 +171,27 @@ watch_heartbeat() {
   label=$4
   t=$(now)
   if [[ ! -f $path ]]; then
-    raise "$key" "$label heartbeat is missing at $path - inspect the scheduled monitor and its log"
+    # First install and cron ordering can leave a heartbeat absent briefly.
+    # Start a per-monitor grace clock; only alert if it remains missing for
+    # one full expected interval. Existing but stale heartbeats alert at once.
+    missing_state=$STATE/$key.missing
+    if [[ ! -f $missing_state ]]; then
+      mkdir -p "$STATE" 2>/dev/null
+      print -r -- "$t" > "$missing_state"
+      return 0
+    fi
+    read missing_since < "$missing_state"
+    case $missing_since in *[!0-9]*|'') missing_since=$t ;; esac
+    missing_age=$(( t - missing_since ))
+    if (( missing_age < 0 )); then
+      print -r -- "$t" > "$missing_state"
+      return 0
+    fi
+    if (( missing_age <= max_age )); then return 0; fi
+    raise "$key" "$label heartbeat is missing at $path for $missing_age seconds (startup grace ${max_age}s) - inspect the scheduled monitor and its log"
     return 0
   fi
+  rm -f "$STATE/$key.missing"
   read last < "$path"
   case $last in *[!0-9]*|'') last=0 ;; esac
   age=$(( t - last ))
