@@ -114,6 +114,13 @@ class TestRg69Defaults < Minitest::Test
     refute_match(/const handler=debounce\(\(\)=>\{\s*const v=parseFloat\(inp.value\)/, js)
   end
 
+  def test_canvas_dimensions_are_not_measured_in_the_visual_frame_loop
+    body = js[/function updateVisuals\(\)(.*?)\n\}/m, 1] or raise "no updateVisuals"
+    refute_includes body, "resizeVizCanvas()"
+    assert_includes js, "window.addEventListener(\"resize\",resizeVizCanvas"
+    assert_includes body, ">=50"
+  end
+
   def test_transport_callback_defers_visual_work_to_one_animation_loop
     body = js[/function scheduleLoop\(time\).*?(?=\nlet stepUiByIndex)/m] or raise "no scheduleLoop"
     refute_includes body, "analyser.getValue()"
