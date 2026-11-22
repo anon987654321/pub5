@@ -222,9 +222,9 @@ each. A take is named for what it is, in draw order:
 `postpro_photo_03_neon_night_artistic_analog_v1.jpg`. A family of two or more also gets
 `postpro_photo_contact.jpg`, every take tiled with its number and look beneath it, so the
 family is judged side by side; `POSTPRO_CONTACT=0` leaves it out. The media, sidecars and
-contact sheet always sit beside the source photograph. A new run
-first removes the earlier renders of the same source, since renders are replaceable. If a
-generated name still exists, Postpro preserves it and chooses a timestamped sibling.
+contact sheet always sit beside the source photograph. A new run keeps every earlier take and
+sidecar. If a generated name or its sidecar already exists, Postpro preserves both and chooses
+a timestamped sibling; it never retires earlier output to make room for a new family.
 
 A take is graded exactly as a preset is. Every step, drawn or from a preset, goes through one
 dispatch, `grade_step`, which mixes each effect down from the look intensity by its own
