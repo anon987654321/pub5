@@ -526,5 +526,5 @@ workstreams:
   - id: commerce_ledger_first
     state: missing
     title: Append-only idempotent credits and entitlement ledger before any new payment path
-    implementation: RAILS/__shared/app/services/shared/commerce_ledger.rb
+    implementation: RAILS/__shared/app/services/shared/commerce.rb; RAILS/__shared/app/models/shared/commerce_ledger_entry.rb
     proof: RAILS/brgen/test/services/commerce_ledger_test.rb
