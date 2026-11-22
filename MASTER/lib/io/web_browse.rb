@@ -42,66 +42,7 @@ module Master
 
       # Fetch does not intercept every non-HTTP networking primitive (for example,
       # WebSockets). Disable those APIs before untrusted page scripts execute.
-      NETWORK_SANDBOX_SCRIPT = <<~JS.freeze
-        (() => {
-          const deny = () => { throw new DOMException("Network sockets are disabled in GET/HEAD-restricted browsing", "SecurityError"); };
-          for (const name of ["WebSocket", "WebTransport", "RTCPeerConnection", "webkitRTCPeerConnection"]) {
-            try { Object.defineProperty(window, name, { value: deny, configurable: false, writable: false }); } catch (_) {}
-          }
-        })();
-      JS
 
-      SCRIPT = <<~JS
-        (() => {
-          const candidates = ["main", "[role='main']", "article", ".content", "#content", ".post", ".article"];
-          let textRoot = null;
-          for (const selector of candidates) {
-            const node = document.querySelector(selector);
-            if (node && (node.innerText || "").trim().length > 200) {
-              textRoot = node;
-              break;
-            }
-          }
-          textRoot ||= document.body;
-          const text = (textRoot && textRoot.innerText) || "";
-          const headings = Array.from(document.querySelectorAll("h1, h2, h3, h4, h5, h6"))
-            .slice(0, 40)
-            .map(node => ({
-              level: node.tagName,
-              text: (node.innerText || "").trim().replace(/\s+/g, " ").slice(0, 120)
-            }))
-            .filter(item => item.text.length > 0);
-          const links = Array.from(document.querySelectorAll("a[href]")).map(a => ({
-            text: (a.innerText || a.getAttribute("aria-label") || "").trim().replace(/\s+/g, " ").slice(0, 120),
-            href: a.href
-          })).filter(link => link.text && /^https?:/.test(link.href));
-          const forms = Array.from(document.querySelectorAll("form")).slice(0, 20).map(form => ({
-            action: form.action,
-            method: (form.method || "get").toUpperCase(),
-            inputs: Array.from(form.querySelectorAll("input, textarea, select")).slice(0, 20).map(input => ({
-              name: input.name || "",
-              type: input.type || input.tagName.toLowerCase(),
-              placeholder: input.placeholder || ""
-            }))
-          }));
-          const counts = {
-            images: document.querySelectorAll("img").length,
-            links: document.querySelectorAll("a[href]").length,
-            interactive: document.querySelectorAll("button, input, select, textarea").length,
-            sections: document.querySelectorAll("article, section, .content, .post").length
-          };
-          return JSON.stringify({
-            title: document.title,
-            url: location.href,
-            text,
-            text_source: textRoot ? textRoot.tagName.toLowerCase() : "none",
-            headings,
-            links,
-            forms,
-            counts
-          });
-        })()
-      JS
 
       def initialize(governor:, event_bus: nil, broker: nil)
         @governor = governor
@@ -130,9 +71,7 @@ module Master
         host = canonical_host(allowed_host)
         raise ArgumentError, "browser transport requires a bound host" if host.empty?
 
-        page.command("Page.addScriptToEvaluateOnNewDocument", source: NETWORK_SANDBOX_SCRIPT)
-        page.command("Network.setCacheDisabled", cacheDisabled: true)
-        page.command("Network.setBypassServiceWorker", bypass: true)
+        page.harden_network
         budget = new_budget
         page.instance_variable_set(:@master_web_browse_budget, budget)
         guard_requests(page, budget:, allowed_host:)
@@ -165,28 +104,19 @@ module Master
       def render(uri, wait)
         raise ArgumentError, "Core-owned browser broker is unavailable; refusing to spawn Chromium outside Core" unless browser_broker_available?
 
-        require "ferrum"
-        require "json"
         lease = @broker.open(host: uri.host, url: uri.to_s)
-        browser = Ferrum::Browser.new(**driver_options(lease))
+        browser = @broker.attach(lease.id, timeout: TIMEOUT)
         page = browser.create_page
         secure_page(page, allowed_host: uri.host)
         page.go_to(uri.to_s)
         sleep wait
-        JSON.parse(page.evaluate(SCRIPT))
+        page.snapshot
       ensure
         begin
           browser&.quit
         ensure
           @broker&.close(lease.id) if lease
         end
-      end
-
-      # A lease is mandatory; Ferrum attaches to the broker's CDP endpoint.
-      def driver_options(lease)
-        raise ArgumentError, "Core-owned browser lease is required" unless lease
-
-        { ws_url: lease.cdp_url, timeout: TIMEOUT, process_timeout: TIMEOUT }
       end
 
       def new_budget
