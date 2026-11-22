@@ -101,6 +101,7 @@ module Master
         result = Master::Trace::WorkerReceipt.around(@bus, worker: "task_steward", job: "mission #{record["id"]}") do
           @runner.call(goal:, mission: record)
         end
+        recover_failed_result(result)
         ok = result_ok?(result)
         @bus&.publish("task_steward:result", mission: record["id"], ok:)
         notify_after_run(result)
@@ -198,11 +199,29 @@ module Master
 
       def defer_failed_mission(error)
         record = Mission.current(root: @root)
-        return unless record && %w[fold backlog].include?(record["origin"].to_s) && record["auto_continue"] == true
+        settle_mission_failure(record, "#{error.class}: #{error.message}")
+      rescue StandardError => e
+        @bus&.publish("task_steward:defer_error", error: "#{e.class}: #{e.message}")
+      end
+
+      def recover_failed_result(result)
+        return unless result.respond_to?(:err?) && result.err?
+
+        record = Mission.current(root: @root)
+        return unless record && record["state"].to_s == "running"
+
+        settle_mission_failure(record, result.message.to_s)
+      rescue StandardError => e
+        @bus&.publish("task_steward:result_recovery_error", error: "#{e.class}: #{e.message}")
+      end
+
+      def settle_mission_failure(record, message)
+        return unless record && %w[fold backlog].include?(record["origin"].to_s)
+        return unless record["auto_continue"] == true && record["state"].to_s == "running"
         return if leased_by_another_process?(record)
 
-        category = Master::Ground::FailureTaxonomy.shared.classify(error.message)
-        reason = "#{category}: #{error.class}: #{error.message}"
+        category = Master::Ground::FailureTaxonomy.shared.classify(message)
+        reason = "#{category}: #{message}"
         mission = Mission.new(root: @root, bus: @bus)
         case category
         when :transient
@@ -215,8 +234,6 @@ module Master
           mission.block!(reason: "human review required: #{reason}")
         end
         @bus&.publish("task_steward:failure_classified", mission: record["id"], category:)
-      rescue StandardError => e
-        @bus&.publish("task_steward:defer_error", error: "#{e.class}: #{e.message}")
       end
 
       def notify_after_run(result)
