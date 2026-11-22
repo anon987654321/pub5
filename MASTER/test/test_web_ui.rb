@@ -268,6 +268,8 @@ class TestWebUI < Minitest::Test
   def test_face_music_pack_is_wellformed_and_declared
     web = File.expand_path("../../MASTER/web", __dir__)
     pack = JSON.parse(File.read(File.join(web, "public", "face_music_packs.json")))
+    assert File.binread(File.join(web, "public", "face_music_packs.json")).end_with?("\n"),
+           "the face music JSON asset must end with a newline"
 
     # The engine fetches this one file and the pack is its only harmony table;
     # a malformed entry would cost the whole loop, so shape is checked here.
