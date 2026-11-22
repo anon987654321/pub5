@@ -115,7 +115,7 @@ function requirePrintReceipt(name, receiptPath, htmlPath, pdfPath) {
   if (receipt.schema !== 'biz.print.v1' || receipt.document !== name) {
     throw new Error(name + ': print receipt schema or document identity does not match');
   }
-  const pngPath = `${BIZ_ROOT}/${name === 'ragnhild_legater' ? 'ragnhild/' : ''}${receipt.front_png}`;
+  const pngPath = pdfPath.slice(0, -4) + '.png';
   if (!receipt.front_png || !existsSync(pngPath)) {
     throw new Error(name + ': print receipt cover PNG is missing');
   }
