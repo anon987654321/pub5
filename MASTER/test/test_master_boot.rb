@@ -176,7 +176,7 @@ class MasterBootTest < Minitest::Test
           end
         end
 
-        assert_equal paths.map { |path| "#{path} --intent=functional_change" }, seen
+        assert_equal paths.map { |path| "#{path} --mode=repair --apply --intent=functional_change" }, seen
         assert_equal paths.size, children.size
         assert parent_observations.all? { |record| record["origin"] == "backlog" && record["id"] == queued.id }
         assert_equal children.last.id, Master::Fix::Mission.current(root: mission_root, namespace: "fix").fetch("id")
