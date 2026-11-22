@@ -194,8 +194,11 @@ module Master
 
           @record["state"] = "failed"
           @record["error"] = error.to_s.byteslice(0, 1_200)
+          @record["auto_continue"] = false
+          @record["next_wake_at"] = nil
           @record["lease_owner"] = nil
           @record["lease_until"] = nil
+          @record["finished_at"] = now
           @record["last_seen_at"] = now
           persist!
         end
