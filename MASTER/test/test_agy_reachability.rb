@@ -25,7 +25,7 @@ class TestAgyReachability < Minitest::Test
   FakeConfig = Master::TestSupport::FakeConfig
   GUARDED = %w[
     XAI_API_KEY OPENROUTER_API_KEY ANTHROPIC_API_KEY OPENAI_API_KEY
-    DEEPSEEK_API_KEY GOOGLE_API_KEY GEMINI_API_KEY MISTRAL_API_KEY ZAI_API_KEY
+    DEEPSEEK_API_KEY GOOGLE_API_KEY GEMINI_API_KEY MISTRAL_API_KEY OLLAMA_API_KEY ZAI_API_KEY
     REPLICATE_API_TOKEN REPLICATE_API_KEY MASTER_MODEL
     MASTER_KEYLESS MASTER_WEB_CHAT MASTER_NO_GROK_CLI MASTER_NO_AGY_CLI AGY_BIN
   ].freeze
@@ -121,14 +121,14 @@ class TestAgyReachability < Minitest::Test
     end
   end
 
-  def test_agy_remains_a_fallback_after_the_declared_primary_when_an_api_key_is_configured
+  def test_agy_remains_a_fallback_after_glm_when_ollama_cloud_is_unavailable
     ENV["OPENROUTER_API_KEY"] = OPENROUTER_KEY
     ENV["ZAI_API_KEY"] = "zai-" + ("z" * 48)
     with_agy(true) do
       offered = chain
       assert_equal "glm-5.3-flash", Master.default_model
       assert_equal "glm-5.3-flash", offered.first,
-                   "the configured GLM primary precedes every subscription CLI"
+                   "the GLM fallback precedes every subscription CLI while Ollama Cloud is unavailable"
       assert_includes offered, "agy:auto",
                       "AGY remains available as a later fallback"
       assert_operator offered.index("agy:auto"), :>, offered.index("glm-5.3-flash")
