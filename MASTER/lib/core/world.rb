@@ -36,7 +36,7 @@ module Master::Core
     # The host supplies the process boundary. Core owns effect policy; the host
     # owns subprocess execution, cancellation and environment handling.
     def initialize(root:, ask: nil, critique_runner: nil, undo: nil, capabilities: Capabilities.for(:fix),
-                   network: nil, probe: nil, browser: nil, process_runner: nil, atomic_writer: nil, git_service: nil)
+                   network: nil, probe: nil, browser: nil, browser_effect: nil, process_runner: nil, atomic_writer: nil, git_service: nil)
       @root = File.expand_path(root)
       @ask = ask
       @critique_runner = critique_runner
@@ -45,20 +45,24 @@ module Master::Core
       @network = network
       @probe = probe
       @browser = browser
+      @browser_effect = browser_effect
       @process_runner = process_runner
       @atomic_writer = atomic_writer
       @git_service = git_service
     end
 
-    # The Core-owned browser broker, or nil. Injected for the same reason
-    # `network` is: Core reaches nothing in lib/, so the process owner arrives
-    # from outside and only a context whose table allows `:browser` is handed
-    # one. An adapter asks here; it never constructs a browser itself.
+    # The Core-owned broker. Tool adapters receive its Fiber-scoped facade;
+    # the Core browser Effect receives a separate read-only WebBrowse service.
     attr_reader :browser
 
-    # True when a brokered browser session can be opened in this context.
+    # A browser Effect is offered only when both the process owner and the
+    # guarded one-shot reader are present in this capability context.
     def browser?
-      @capabilities.allow?(:browser) && !@browser.nil?
+      return false unless @capabilities.allow?(:browser) && @browser && @browser_effect&.respond_to?(:call)
+
+      !@browser.respond_to?(:available?) || @browser.available?
+    rescue StandardError
+      false
     end
 
     # A World exposes only effects its capabilities and injected services can
@@ -78,6 +82,8 @@ module Master::Core
           process_runner? && @capabilities.allow?(:execute)
         when :write
           atomic_writer? && @capabilities.allow?(:write)
+        when :browser
+          browser?
         else
           @capabilities.allow?(CAPABILITIES.fetch(verb))
         end
@@ -232,6 +238,20 @@ module Master::Core
       result.ok? ? Observation.ok(result.value!.to_s) : Observation.no(result.message.to_s)
     rescue StandardError => e
       Observation.no("http: #{e.class}: #{e.message}")
+    end
+
+    # Browser Effects are one-shot, read-only visits. The injected WebBrowse
+    # owns operator permission, SSRF pinning, GET/HEAD request fencing, resource
+    # budgets and ensure-based lease cleanup; Core never receives a CDP URL.
+    def do_browser(url:, wait: 1.0, links: true, **)
+      return Observation.no("guarded browser unavailable") unless browser?
+
+      result = @browser_effect.call(url:, wait:, links:)
+      return Observation.no("browser service returned an invalid result") unless result.respond_to?(:ok?)
+
+      result.ok? ? Observation.ok(result.value!.to_s) : Observation.no(result.message.to_s)
+    rescue StandardError => e
+      Observation.no("browser: #{e.class}: #{e.message}")
     end
 
     def do_exec(argv:, timeout: 60, env: {}, **)
