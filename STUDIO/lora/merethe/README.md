@@ -1,5 +1,15 @@
 # Merethe identity LoRA
 
+## Subject identity
+
+The operator-confirmed subject is **Wenche Tommervik**, who uses **Merete** as
+her social-network nickname. The existing `merethe` directory, model slug and
+`MERETHE` trigger remain unchanged for compatibility. Tommervik.no is public
+provenance for the subject and campaign context; a public page or photograph
+does not establish consent for likeness generation, provider processing,
+training, publication or distribution.
+
+
 This subject lives beside the other trained identities at `STUDIO/lora/merethe/`. Generated stills land directly in `STUDIO/lora/`; the subject directory holds private model setup, sources, data and weights.
 
 ## Privacy
