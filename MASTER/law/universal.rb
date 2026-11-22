@@ -920,12 +920,13 @@ Law.define(:PORTABILITY_IS_VERIFIED) do
 end
 
 Law.define(:PRODUCTION_RELEASE_IS_PINNED) do
-  source "OpenBSD release engineering; immutable revision deployment"
-  ask "Can a moving branch reference change the code under deployment, or can a release be stamped without proof for the exact commit being deployed?"
-  practice "Resolve one immutable commit, require preflight and CI attestations to name that commit, deploy only that pin, and record the same revision in the receipt."
-  fix "Fetch once, pin the target SHA, verify ancestry and exact-SHA attestations, deploy only that SHA, and refuse a mismatch or missing required proof."
-  bad "Test one revision, then deploy the later moving branch tip."
-  good "CI, preflight, deployment and receipt all name the same immutable SHA."
+  path %r{(?:^|/)(?:OPENBSD/bin/vps-deploy|OPENBSD/bin/canary|OPENBSD/RUNBOOK\.md|MASTER/bin/operator|MASTER/lib/operator/canary\.rb)}
+  source "OpenBSD release engineering; immutable revision deployment and independent post-deploy verification"
+  ask "Can a moving branch reference change the code under deployment, do CI or preflight attestations name a different SHA, or can a release be reported successful without the exact pin being live, its loopback service checks and local canary passing, and an independent public canary passing after the remote deploy?"
+  practice "Resolve one immutable commit, require preflight and CI attestations to name that commit, deploy only that pin, verify service state and loopback health/local canary, then require the workstation-side public canary before reporting remote deploy success. A started or detached deploy is not a completed release."
+  fix "Fetch once, pin the target SHA, verify ancestry and exact-SHA attestations, deploy only that SHA, gate on service health and local canary, then run the public canary through the remote deploy collector and return failure if it does not pass. Keep the pin and public result in the same delivery record."
+  bad "CI, preflight and deployment share one SHA, but the operator reports success before the public canary runs or after it fails."
+  good "CI, preflight, deployment and receipt name one immutable SHA; loopback health and local canary pass; the workstation public canary passes; the remote deploy command returns success only after all evidence is present."
 end
 
 Law.define(:LEAST_PRIVILEGE) do
