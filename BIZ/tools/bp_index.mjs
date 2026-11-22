@@ -44,8 +44,8 @@ function verifyIndexInventory() {
 
   const templateDirectory = `${BIZ_ROOT}/__templates`;
   const templateFiles = readdirSync(templateDirectory)
-    .filter(name => /\\.(?:html|pdf)$/i.test(name));
-  const templateBases = [...new Set(templateFiles.map(name => name.replace(/\\.(?:html|pdf)$/i, '')))].sort();
+    .filter(name => /\.(?:html|pdf)$/i.test(name));
+  const templateBases = [...new Set(templateFiles.map(name => name.replace(/\.(?:html|pdf)$/i, '')))].sort();
   const expected = [...TEMPLATE_NAMES].sort();
   const unexpected = templateBases.filter(name => !expected.includes(name));
   const absent = expected.filter(name => !templateBases.includes(name));
