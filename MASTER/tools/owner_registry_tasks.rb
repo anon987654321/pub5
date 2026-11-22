@@ -5,6 +5,8 @@ require "json"
 require "fileutils"
 require "shellwords"
 require "yaml"
+require_relative "../lib/fix/constants"
+require_relative "../lib/ground/failure_taxonomy"
 require_relative "../lib/fix/task_contract"
 require_relative "../lib/fix/adaptive_journey"
 
@@ -448,15 +450,31 @@ module Backlog
     def enqueue_next!(model: nil, effort: "medium")
       current = @mission_class.current(root: @root)
       state = current && current["state"].to_s
-      return :busy if %w[running waiting].include?(state)
-      return :blocked if %w[blocked failed].include?(state)
-      if current && current["origin"].to_s == "backlog" && state == "completed"
+      origin = current && current["origin"].to_s
+      return :busy if state == "running"
+
+      if origin == "backlog" && state == "waiting"
+        return :busy if due_mission?(current)
+
+        park_current!(record: current)
+      elsif origin == "backlog" && %w[blocked failed].include?(state)
+        park_current!(record: current)
+      elsif state == "waiting"
+        return :busy
+      elsif %w[blocked failed].include?(state)
+        return :blocked
+      end
+
+      if current && origin == "backlog" && state == "completed"
         return :blocked unless record_completion!(record: current)
       end
 
       entries = Backlog.generate
       receipts = completed_receipts
-      candidates = entries.select { |row| eligible?(row) && !receipts.include?(item_digest(row)) }
+      parked = latest_parked_tasks
+      candidates = entries.select do |row|
+        eligible?(row) && !receipts.include?(item_digest(row)) && !parked_task?(row, parked)
+      end
       return :idle if candidates.empty?
 
       item, decision = select_next(candidates, completed_receipts: receipts)
@@ -516,11 +534,70 @@ module Backlog
       mission = @mission_class.new(root: @root).ensure_queued!(
         goal:, scope: @root, model:, effort:, plan:,
         origin: "backlog", auto_continue: true, mode: "repair",
-        intent: :functional_change,
+        intent: :functional_change, resume_blocked: resume_requested?(item, parked),
       )
       return :blocked if mission.respond_to?(:record) && mission.record&.fetch("state", nil) == "blocked"
 
       :queued
+    end
+
+    # Park an unsuccessful backlog item in the executor's existing durable
+    # receipt stream. The owner registry remains the task source; this is outcome
+    # history, not a second queue.
+    def park_current!(record:, result: nil)
+      return false unless record && record["origin"].to_s == "backlog"
+      return false unless %w[waiting blocked failed].include?(record["state"].to_s)
+
+      plan = JSON.parse(record["plan"].to_s)
+      return false unless plan["executor"] == "owner_registry"
+      source_item = Backlog.generate.find { |item| item[:id].to_s == plan["item_id"].to_s }
+      return false unless source_item && item_digest(source_item) == plan["item_digest"].to_s
+      return true if parked_task_rows.any? { |row| row["mission_id"].to_s == record["id"].to_s }
+
+      paths = Array(plan["scope_paths"]).map(&:to_s)
+      scope_digest = scope_digest_for(paths)
+      return false unless scope_digest
+
+      message = result.respond_to?(:message) ? result.message.to_s : ""
+      message = record["wake_reason"].to_s if message.empty?
+      message = record["error"].to_s if message.empty?
+      category = Master::Ground::FailureTaxonomy.shared.classify(message)
+      retry_at = if record["state"].to_s == "waiting" && %i[transient exhausted].include?(category)
+                   value = record["next_wake_at"].to_s
+                   value unless value.empty?
+                 end
+      append_executor_receipt(
+        "record_type" => "parked_task",
+        "item_id" => source_item.fetch(:id).to_s,
+        "item_digest" => plan.fetch("item_digest").to_s,
+        "mission_id" => record.fetch("id").to_s,
+        "mission_state" => record.fetch("state").to_s,
+        "failure_category" => category.to_s,
+        "retry_at" => retry_at,
+        "requires_operator" => record["state"].to_s == "blocked" || category == :ambiguous,
+        "scope_digest" => scope_digest,
+        "parked_at" => Time.now.utc.iso8601,
+      )
+      true
+    rescue JSON::ParserError, KeyError, ArgumentError, SystemCallError
+      false
+    end
+
+    # An explicit operator action can release one parked item. It does not
+    # mark the work complete or bypass its original proof command.
+    def resume_item!(item_id:)
+      item = Backlog.generate.find { |row| row[:id].to_s == item_id.to_s }
+      return false unless item
+
+      append_executor_receipt(
+        "record_type" => "resume_task",
+        "item_id" => item.fetch(:id).to_s,
+        "item_digest" => item_digest(item),
+        "resumed_at" => Time.now.utc.iso8601,
+      )
+      true
+    rescue SystemCallError
+      false
     end
 
     # Only a terminal Mission with delivery stage, a non-empty summary and
@@ -617,6 +694,99 @@ module Backlog
     end
 
     private
+
+    def due_mission?(record)
+      value = record["next_wake_at"].to_s
+      return true if value.empty?
+
+      Time.iso8601(value) <= Time.now.utc
+    rescue ArgumentError
+      true
+    end
+
+    def scope_digest_for(paths)
+      facts = Array(paths).map(&:to_s).uniq.sort.map do |relative|
+        return nil unless safe_scope_path?(relative)
+
+        full = File.join(@repo_root, relative)
+        [relative, Digest::SHA256.file(full).hexdigest]
+      end
+      Digest::SHA256.hexdigest(JSON.generate(facts))
+    rescue ArgumentError, SystemCallError
+      nil
+    end
+
+    def parked_task_rows
+      path = File.join(@root, RECEIPT_PATH)
+      return [] unless File.exist?(path)
+
+      stat = File.lstat(path)
+      return [] unless stat.file? && !stat.symlink? && (stat.mode & 0o077).zero?
+
+      File.foreach(path).filter_map do |line|
+        row = JSON.parse(line)
+        next unless row.is_a?(Hash)
+        next unless %w[parked_task resume_task].include?(row["record_type"].to_s)
+        next unless row["item_digest"].to_s.match?(/\\A[0-9a-f]{64}\\z/i)
+
+        row
+      rescue JSON::ParserError, ArgumentError
+        nil
+      end
+    rescue SystemCallError
+      []
+    end
+
+    def latest_parked_tasks
+      parked_task_rows.each_with_object({}) do |row, latest|
+        latest[row.fetch("item_digest")] = row
+      end
+    end
+
+    def parked_task?(item, parked)
+      latest = parked[item_digest(item)]
+      return false unless latest && latest["record_type"] == "parked_task"
+      return true if latest["requires_operator"] == true
+
+      retry_at = latest["retry_at"].to_s
+      unless retry_at.empty?
+        return false if Time.iso8601(retry_at) <= Time.now.utc
+      end
+
+      current_scope = scope_digest_for(item[:scope_paths])
+      return false if current_scope && current_scope != latest["scope_digest"].to_s
+
+      true
+    rescue ArgumentError
+      true
+    end
+
+    def resume_requested?(item, parked)
+      parked.dig(item_digest(item), "record_type") == "resume_task"
+    end
+
+    def append_executor_receipt(row)
+      directory = File.join(@root, ".master")
+      FileUtils.mkdir_p(directory, mode: 0o700)
+      path = File.join(@root, RECEIPT_PATH)
+      if File.exist?(path) || File.symlink?(path)
+        stat = File.lstat(path)
+        raise "unsafe executor receipt path" unless stat.file? && !stat.symlink? && (stat.mode & 0o077).zero?
+      end
+
+      flags = File::WRONLY | File::CREAT | File::APPEND
+      flags |= File::NOFOLLOW if defined?(File::NOFOLLOW)
+      File.open(path, flags, 0o600) do |file|
+        file.flock(File::LOCK_EX)
+        stat = file.stat
+        raise "unsafe executor receipt file" unless stat.file? && (stat.mode & 0o077).zero?
+
+        file.puts(JSON.generate(row))
+        file.flush
+        file.fsync
+      end
+      true
+    end
 
     def eligible?(row)
       tree = row[:tree].to_s
