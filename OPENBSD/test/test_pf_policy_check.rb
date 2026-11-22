@@ -80,14 +80,21 @@ class PfPolicyCheckTest < Minitest::Test
     end
   end
 
-  def test_bruteforce_block_must_precede_other_inbound_passes
+  def test_dynamic_ban_table_and_global_state_flush_are_rejected
     result = check_fixture("late_bruteforce_block.conf")
-    assert_includes result.failures.join("\n"), "precedes the <bruteforce> quick block"
+    assert_includes result.failures.join("\n"), "dynamic brute-force bans and global state flushes are forbidden"
   end
 
-  def test_bruteforce_block_is_required
-    result = check_fixture("missing_bruteforce_block.conf")
-    assert_includes result.failures.join("\n"), "quick block for <bruteforce> is missing"
+  def test_an_explicit_unthrottled_quick_ssh_pass_is_required
+    source = "block log all\npass in on $ext_if inet proto tcp to $brgen_ip port 22 keep state\n"
+    result = check_content(source)
+    assert_includes result.failures.join("\n"), "explicit quick SSH pass on $ext_if port 22 is required"
+  end
+
+  def test_ssh_must_not_have_per_source_limits
+    source = "block log all\npass in quick on $ext_if inet proto tcp to $brgen_ip port 22 keep state (max-src-conn-rate 3/10)\n"
+    result = check_content(source)
+    assert_includes result.failures.join("\n"), "SSH pass must not have per-source limits"
   end
 
   private

@@ -54,7 +54,7 @@ module Deploy
         result.fail("pf_policy: inbound pass on line #{rule.line} is not scoped to $ext_if")
       end
 
-      check_bruteforce_order(rules, result)
+      check_ssh_access(source, rules, result)
       result
     rescue SystemCallError, EncodingError => e
       result ||= CheckResult.new
@@ -180,35 +180,27 @@ module Deploy
       true
     end
 
-    def check_bruteforce_order(rules, result)
-      brute_index = rules.index do |rule|
-        rule.action == "block" && rule.text.match?(/\Ablock\s+quick\s+from\s+<bruteforce>(?:\s|\z)/)
+    def check_ssh_access(source, rules, result)
+      # PF syntax is validated by pfctl. This source guard protects an operational
+      # invariant that must not depend on rule ordering: no dynamic ban table and
+      # no global state flush can interfere with the only SSH recovery path.
+      executable = source.each_line.map { |line| line.split("#", 2).first }.join
+      if executable.match?(/<bruteforce>|\boverload\b|\bflush\s+global\b/i)
+        result.fail("pf_policy: dynamic brute-force bans and global state flushes are forbidden")
       end
-      ssh_index = rules.index do |rule|
+
+      ssh_rule = rules.find do |rule|
         rule.action == "pass" &&
           rule.text.match?(/\Apass\s+in\s+quick\s+on\s+\$ext_if\b/) &&
           rule.text.match?(/\bport\s+22\b/)
       end
-
-      unless brute_index
-        result.fail("pf_policy: quick block for <bruteforce> is missing")
+      unless ssh_rule
+        result.fail("pf_policy: explicit quick SSH pass on $ext_if port 22 is required")
         return
       end
 
-      unless ssh_index
-        result.fail("pf_policy: explicit quick SSH exception on $ext_if port 22 is missing")
-        return
-      end
-
-      if ssh_index > brute_index
-        result.fail("pf_policy: explicit SSH exception must precede the <bruteforce> quick block")
-      end
-
-      rules.each_with_index do |rule, index|
-        next unless rule.action == "pass" && rule.text.match?(/\Apass\s+in\b/)
-        next if index == ssh_index || index > brute_index
-
-        result.fail("pf_policy: inbound pass on line #{rule.line} precedes the <bruteforce> quick block")
+      if ssh_rule.text.match?(/\b(?:max-src-|source-track|overload)\b/i)
+        result.fail("pf_policy: SSH pass must not have per-source limits or automatic blocking")
       end
     end
   end
