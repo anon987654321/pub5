@@ -49,7 +49,7 @@ module Studio
           minimum_seconds = BILLING.fetch("minimum_training_seconds")
           margin_seconds = BILLING.fetch("cancellation_margin_seconds")
           maximum_seconds = (approved_budget / BILLING_RATE).floor
-          if maximum_seconds < minimumimum_reserved_seconds(minimum_seconds, margin_seconds)
+          if maximum_seconds < minimum_reserved_seconds(minimum_seconds, margin_seconds)
             raise Error, "approved spend ceiling is too small for the minimum #{minimum_seconds}s training window"
           end
 
@@ -141,10 +141,6 @@ module Studio
               "next_step" => "Compare each candidate model against that subject's approved source photographs. Set LIKELINESS_REVIEWED_VERSION only after human approval."
             }
           end
-        rescue TypeError, ArgumentError => error
-          raise error if error.message.include?("spend") || error.message.include?("timeout")
-
-          raise ArgumentError, "invalid LoRA training options: #{error.message}"
         end
 
         private
@@ -162,7 +158,7 @@ module Studio
           value.round(6).to_s("F")
         end
 
-        def minimumimum_reserved_seconds(minimum, margin)
+        def minimum_reserved_seconds(minimum, margin)
           minimum + margin
         end
 
