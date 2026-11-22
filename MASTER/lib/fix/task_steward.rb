@@ -80,6 +80,15 @@ module Master
         record = Mission.current(root: @root)
         return :idle unless eligible?(record)
 
+        if automatic_attempts_exhausted?(record)
+          reason = "automatic continuation blocked after #{Mission::MAX_AUTOMATIC_ATTEMPTS} attempts; an operator must review and resume the objective"
+          blocked = Mission.new(root: @root, bus: @bus).block_if_unleased!(id: record["id"], reason:)
+          return :idle unless blocked
+
+          @bus&.publish("task_steward:retry_budget_exhausted", mission: record["id"], attempts: Mission::MAX_AUTOMATIC_ATTEMPTS)
+          return Master::Result.err(reason, category: :validation)
+        end
+
         if continuation_only?(record)
           reason = "auto-continue blocked: #{record["goal"].to_s.inspect} is a continuation, not a durable task; submit the resolved objective"
           blocked = Mission.new(root: @root, bus: @bus).block_if_unleased!(id: record["id"], reason:)
@@ -127,6 +136,11 @@ module Master
         goal = goal[0...-1] while %w[! . ? ...].include?(goal[-1])
         intent = record.dig("operator", "intent").to_s
         intent == "continue_prior_plan" || CONTEXTLESS_GOALS.include?(goal.delete("'"))
+      end
+
+      def automatic_attempts_exhausted?(record)
+        record["auto_continue"] == true &&
+          record.fetch("attempt_count", 0).to_i >= Mission::MAX_AUTOMATIC_ATTEMPTS
       end
 
       def eligible?(record)
