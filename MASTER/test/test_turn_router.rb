@@ -178,6 +178,22 @@ class TurnRouterTest < Minitest::Test
     assert_equal "/deploy all --confirm", routed
   end
 
+  def test_openbsd_and_rails_deploy_uses_the_local_release_path_without_a_provider
+    message = "Can you redeploy OPENBSD and RAILS onto vm23 please?"
+    agent = Object.new
+    agent.define_singleton_method(:ask_once) { |*| flunk "explicit production release must not call a model" }
+    routed = nil
+
+    Master::CLI::TurnRouter.stub(:dispatch_slash, lambda { |command, **|
+      routed = command
+      Master::Result.ok({ rendered: "captured" })
+    }) do
+      Master::CLI::TurnRouter.call(message:, container: build_container(agent:))
+    end
+
+    assert_equal "/deploy all --confirm", routed
+  end
+
   def test_greeted_polite_full_stack_deploy_is_not_a_question
     message = "Hey, can you redeploy OPENBSD, RAILS, and MASTER web on vm23 please?"
 
