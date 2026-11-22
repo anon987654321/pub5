@@ -406,12 +406,14 @@ class TestStudioReplicateClientPaths < Minitest::Test
     assert_empty @client.requests
   end
 
-  def test_training_timeout_reports_cancellation_only_after_provider_confirmation
-    client, cancellations = timeout_client("canceled")
+  def test_training_timeout_returns_terminal_cancellation_metrics_after_provider_confirmation
+    client, cancellations = timeout_client("canceled", metrics: { "predict_time" => 80.0 })
 
-    error = assert_raises(RuntimeError) { client.wait_for_training("training_123", timeout: 1) }
+    result = client.wait_for_training("training_123", timeout: 1)
 
-    assert_includes error.message, "cancellation confirmed by provider"
+    assert_equal "canceled", result.fetch("status")
+    assert_equal true, result.fetch("client_cancel_confirmed")
+    assert_equal 80.0, result.dig("metrics", "predict_time")
     assert_equal ["training_123"], cancellations
   end
 
@@ -423,6 +425,18 @@ class TestStudioReplicateClientPaths < Minitest::Test
     assert_includes error.message, "cancellation NOT confirmed"
     assert_includes error.message, "processing"
     assert_equal ["training_123"], cancellations
+  end
+
+  def test_failed_training_returns_terminal_compute_metrics_for_spend_accounting
+    client = StubClient.new
+    client.define_singleton_method(:get_training) do |_id|
+      { "id" => "training_123", "status" => "failed", "metrics" => { "predict_time" => 35.0 } }
+    end
+
+    result = client.wait_for_training("training_123", timeout: 1)
+
+    assert_equal "failed", result.fetch("status")
+    assert_equal 35.0, result.dig("metrics", "predict_time")
   end
 
   def test_training_completion_racing_the_timeout_returns_provider_metrics
