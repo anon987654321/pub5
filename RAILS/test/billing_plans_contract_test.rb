@@ -70,7 +70,11 @@ class BillingPlansContractTest < Minitest::Test
     USER_APPS.each do |app|
       migration = Dir.glob(File.join(ROOT, app, "db/migrate/*_create_commerce_ledger_entries.rb"))
       assert_equal 1, migration.size, "#{app} commerce ledger migration"
-      assert_includes read("#{app}/db/schema.rb"), %(create_table "commerce_ledger_entries"), app
+      schema = read("#{app}/db/schema.rb")
+      assert_includes schema, %(create_table "commerce_ledger_entries"), app
+      assert_match(/\["idempotency_key"\].*unique: true/, schema, "#{app} ledger idempotency index")
+      assert_includes schema, %(add_foreign_key "commerce_ledger_entries", "users"), app
+      assert_includes schema, %(add_foreign_key "commerce_ledger_entries", "users", column: "actor_id"), app
     end
 
     ledger_model = read("__shared/app/models/shared/commerce_ledger_entry.rb")
