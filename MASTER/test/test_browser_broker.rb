@@ -53,6 +53,8 @@ class BrowserBrokerTest < Minitest::Test
     assert_includes bridge, "return nil unless capabilities.allow?(:browser)"
     assert_includes bridge, "Master::Io::BrowserBroker.new("
     assert_includes bridge, "capabilities:,"
+    assert_includes bridge, "browser_scope.with(browser, &fold)"
+    assert_includes builder, "browser_broker: Io::BrowserBroker::Scope.new"
   end
 
   def test_all_six_production_adapters_attach_only_to_broker_issued_leases
@@ -104,6 +106,31 @@ class BrowserBrokerTest < Minitest::Test
       assert_includes source[driver_index...release_index], "ensure",
                       "#{relative} must release its lease even if driver cleanup raises"
     end
+  end
+
+  def test_scoped_broker_is_unavailable_outside_the_active_core_fiber
+    scope = Broker::Scope.new
+    refute scope.available?
+    assert_empty scope.sessions
+    assert_equal 0, scope.size
+    assert_raises(Broker::Denied) { scope.open(host: "example.com") }
+
+    engine = FakeEngine.new
+    active = broker(engine:)
+    lease_id = nil
+    scope.with(active) do
+      assert scope.available?
+      lease = scope.open(host: "example.com")
+      lease_id = lease.id
+      assert_equal 1, scope.size
+      assert_equal [lease.id], scope.sessions
+      assert scope.close(lease.id)
+    end
+
+    refute scope.available?
+    assert_equal 0, scope.size
+    assert_equal 1, engine.stopped.size
+    assert_equal lease_id, engine.stopped.first && active.sessions.first
   end
 
   def test_a_context_without_the_capability_cannot_open_a_session
