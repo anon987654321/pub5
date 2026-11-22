@@ -159,7 +159,6 @@ for (const plan of ORDER) {
   notes.push(plan + ': sections ' + sections + ', fonts ' + fonts + ', chars ' + src.length);
 }
 
-
 function checkFundingGuide() {
   const label = 'ragnhild_legater';
   let src;

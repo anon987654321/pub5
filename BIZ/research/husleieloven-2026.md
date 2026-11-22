@@ -67,7 +67,6 @@ Denne kildeutgaven gjengir lovtekst og endringshistorikk for oppslag. Den gir ik
 
 ## Full lovtekst – etter
 
-
 ### Lov om husleieavtaler (husleieloven)
 
 *Jf. tidligere plakat 20 apr 1813, lover 25 juni 1935 nr. 13, 25 juni 1936 nr. 5 og 16 juni 1939 nr. 6 (se nærværende lov § 13-2 siste ledd).*
