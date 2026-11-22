@@ -306,8 +306,10 @@ class BrowserBrokerTest < Minitest::Test
     assert_equal "https://example.com/", page.url
     assert_equal "Example", page.snapshot.fetch("title")
     page.harden_network
+    page.network.intercept
     assert_equal [Broker::Page::NETWORK_SANDBOX_SCRIPT, true],
                  [raw_page.commands.first.last.fetch(:source), raw_page.network.intercepted]
+    assert_equal [Broker::Page::SNAPSHOT_SCRIPT], raw_page.evaluated
     assert_equal ["Page.addScriptToEvaluateOnNewDocument", "Network.setCacheDisabled", "Network.setBypassServiceWorker"],
                  raw_page.commands.map(&:first)
     assert_raises(Broker::Denied) { page.on(:response) {} }
