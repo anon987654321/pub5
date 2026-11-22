@@ -60,36 +60,48 @@ module Master
       # adapters share that one scoped broker without retaining a boot-wide
       # :fix capability or borrowing another conversation's lease.
       class Scope
-        STORAGE_KEY = :master_core_browser_broker
+        # The key is per scope, not a global Fiber slot. A plugin may construct
+        # its own Scope, but cannot bind a broker into the Scope it received.
+        class Binding
+          def initialize(storage_key)
+            @storage_key = storage_key
+          end
 
-        def with(broker)
-          previous = Fiber[STORAGE_KEY]
-          Fiber[STORAGE_KEY] = broker
-          yield
-        ensure
-          Fiber[STORAGE_KEY] = previous
+          def with(broker)
+            previous = Fiber[@storage_key]
+            Fiber[@storage_key] = broker
+            yield
+          ensure
+            Fiber[@storage_key] = previous
+          end
+        end
+        private_constant :Binding
+
+        def initialize
+          @storage_key = Object.new.freeze
+          yield Binding.new(@storage_key) if block_given?
         end
 
         def available?
-          current = Fiber[STORAGE_KEY]
+          current = Fiber[@storage_key]
           current&.available? == true
         end
 
         def open(**attributes) = current!.open(**attributes)
 
         def close(id)
-          current = Fiber[STORAGE_KEY]
+          current = Fiber[@storage_key]
           current ? current.close(id) : false
         end
 
         def close_all = current!.close_all
-        def sessions = Fiber[STORAGE_KEY]&.sessions || []
-        def size = Fiber[STORAGE_KEY]&.size || 0
+        def sessions = Fiber[@storage_key]&.sessions || []
+        def size = Fiber[@storage_key]&.size || 0
 
         private
 
         def current!
-          Fiber[STORAGE_KEY] || raise(Denied, "browser: no Core-scoped broker is active")
+          Fiber[@storage_key] || raise(Denied, "browser: no Core-scoped broker is active")
         end
       end
 
