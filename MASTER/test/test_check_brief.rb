@@ -90,6 +90,19 @@ class TestCheckBrief < Minitest::Test
     assert_equal "TIMEOUT", timeout.dig("steps", 0, "status")
     assert_equal 1, timeout.dig("counts", "timed_out")
 
+    nested_timeout = Operator::CheckRunner::Result.new(
+      name: "all tree suites", success: false, output: "nested child timeout",
+      timed_out: false, exit_status: 124, command: "rake test:all_trees"
+    )
+    nested = JSON.parse(Operator::CheckBrief.render_json(
+      profile: "full", results: [nested_timeout], metadata:,
+      started_at: "start", finished_at: "finish", duration_s: 8,
+      exit_status: 1, command: "MASTER/bin/check --profile=full --format=json"
+    ))
+    assert_equal "TIMEOUT", nested.fetch("status")
+    assert_equal "TIMEOUT", nested.dig("steps", 0, "status")
+    assert_equal 1, nested.dig("counts", "timed_out")
+
     failure = Operator::CheckRunner::Result.new(
       name: "security_sweep", success: false, output: "not included",
       timed_out: false, exit_status: 1, command: "rake security_sweep"
