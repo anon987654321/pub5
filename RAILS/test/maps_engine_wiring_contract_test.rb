@@ -45,6 +45,21 @@ class MapsEngineWiringContractTest < Minitest::Test
     assert_includes restaurants, "PlaceDirectory.for_city(city)"
   end
 
+  def test_places_have_stable_city_scoped_slugs_and_keep_numeric_links
+    model = host_read("app/models/place.rb")
+    controller = read("app/controllers/maps/places_controller.rb")
+    migration = host_read("db/migrate/20261122190000_enforce_place_slugs.rb")
+    schema = host_read("db/schema.rb")
+
+    assert_includes model, "include Shared::Sluggable"
+    assert_includes model, "sluggable_from :name"
+    assert_includes controller, "find_by_slug_or_id"
+    assert_includes controller, "redirect_id_to_slug"
+    assert_includes controller, "slug: place.slug"
+    assert_includes migration, "unique: true"
+    assert_match(/t\.index \[\"city_id\", \"slug\"\].*unique: true/, schema)
+  end
+
   def test_places_browse_paginates_and_serves_html
     controller = read("app/controllers/maps/places_controller.rb")
     # The browse block answers both page formats: finish_live_search responds
