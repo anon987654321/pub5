@@ -100,6 +100,19 @@ class TestCheckRunnerStdin < Minitest::Test
     assert_includes out, "No checks executed"
   end
 
+  def test_full_profile_lists_the_all_tree_sweep_without_running_it
+    script = File.expand_path("../bin/check", __dir__)
+    out, status = Open3.capture2e(
+      RbConfig.ruby, script, "--profile=full", "--list",
+      chdir: File.expand_path("..", __dir__),
+    )
+
+    assert status.success?, out
+    assert_includes out, "profile: full"
+    assert_includes out, "test:all_trees"
+    assert_includes out, "No checks executed"
+  end
+
   def test_check_show_log_refuses_missing_files_and_symlinks
     Dir.mktmpdir("check-log-cli") do |dir|
       script = File.expand_path("../bin/check", __dir__)
