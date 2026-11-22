@@ -2430,3 +2430,49 @@ Minitest/Rails suite, `MASTER/bin/check`, Chromium attach/teardown proof or
 vision integration was executed in this environment. No browser process,
 production host, payment provider or production database was used. Issue #5
 and the end-to-end sweep in Issue #6 remain open.
+
+
+### Browser broker teardown retry and orphan recovery (2026-11-22)
+
+The existing Core-scoped broker was retained; this follow-up hardens only its
+process lifecycle ownership.
+
+- `close` no longer removes the lease/handle before Chromium teardown succeeds.
+  A failed stop remains owned and can be retried. An in-flight guard prevents
+  two callers from stopping the same process group concurrently.
+- Expiry reaping applies the same rule: failed process stops remain tracked for
+  a later retry instead of silently dropping the only process handle.
+- `close_all` now treats a session still owned by another in-flight close as a
+  failure, rather than reporting shutdown completion while the process may
+  still be running.
+- If a start-after receipt fails and the emergency stop also fails, the broker
+  retains the process handle as an internal orphan. Orphans count against the
+  session limit and are included in subsequent expiry reaping and
+  `close_all`; they are never returned as a successful browser lease.
+- Added regressions for manual close retry, expiry retry, concurrent close vs
+  shutdown, and orphan recovery after failed start cleanup.
+
+Commits:
+`a820a914afadadcbbfada20037ac81f9a8c82e55` (retain handle after failed stop);
+`f0c322f36350021b4e1f5dd1d390f41cc5670316` (report in-flight close at shutdown);
+`d7be9bfeed02dc109ef86f8cad8ff0bf70ec8df2` (retry/concurrency regressions);
+`3d53fc4b0f7599051d61e05671969ec01ed409c2` (retain failed-start orphan);
+`56e25d2476a1c5b2bde5d2c7c93daa4795692376` (orphan recovery regression).
+
+Proof performed: latest `origin/main` was read as
+`56e25d2476a1c5b2bde5d2c7c93daa4795692376`; GitHub read-after-write
+verified the broker implementation, test source, operation-scoped broker
+factory and Builder's Fiber-scoped facade. These are source/readback checks,
+not execution evidence. The focused Ruby test file, complete
+`MASTER/bin/check`, Chromium launch/kill behavior, DNS rebinding, redirect
+and subresource probes, visual/vision handoff, interruption and real browser
+journeys remain **NOT_RUN**. No browser process, production host or remote
+service was used.
+
+Issue #5 remains open. A key architectural gap also remains explicit: current
+adapters attach Ferrum using the lease's CDP endpoint. That endpoint is more
+authority than the desired narrow plugin session interface; the present
+source-level broker and network guards do not yet prove that a compromised
+adapter cannot issue direct CDP commands around those guards. Do not close the
+issue or call the browser boundary complete until that interface is narrowed
+and its network/capability tests run.
