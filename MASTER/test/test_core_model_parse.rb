@@ -17,6 +17,25 @@ class TestModelParse < Minitest::Test
     assert_equal "A = 1\n", e.args[:content]
   end
 
+  def test_browser_effect_keeps_only_the_read_only_visit_arguments
+    e = parse('{"verb":"browser","args":{"url":"https://example.com/guide","wait":0.5,"links":false}}')
+    assert_equal :browser, e.verb
+    assert_equal "https://example.com/guide", e.args[:url]
+    assert_equal 0.5, e.args[:wait]
+    assert_equal false, e.args[:links]
+    assert_equal :policy_gated, e.reversibility.kind
+  end
+
+  def test_browser_effect_rejects_unknown_or_unbounded_arguments
+    unknown = parse('{"verb":"browser","args":{"url":"https://example.com","method":"POST"}}')
+    assert_equal :note, unknown.verb
+    assert_match(/unknown browser fields/, unknown.args[:text])
+
+    excessive = parse('{"verb":"browser","args":{"url":"https://example.com","wait":13}}')
+    assert_equal :note, excessive.verb
+    assert_match(/between 0 and 12/, excessive.args[:text])
+  end
+
   def test_done_effect
     e = parse('{"verb":"done","args":{"summary":"built it"}}')
     assert e.done?
