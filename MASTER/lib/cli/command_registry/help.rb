@@ -83,9 +83,9 @@ module Master
             "If the wait is interrupted or the result is not green, MASTER performs read-only",
             "vps-state reconciliation. It never launches a duplicate deploy, retries a mutation",
             "or guesses a rollback. The canonical operator remains the only deploy engine.",
-            "First rollout of the fleet-receipt broker requires the checked-out vm23 tree to be current,",
+            "First rollout of the durable receipt contract requires the checked-out vm23 tree to be current,",
             "then OPERATOR.sh --plan, --apply and --verify once; /deploy all cannot bootstrap an old",
-            "pub5-admin because the durable receipt gate runs before the normal mirror apply.",
+            "host mirror because the receipt gate runs before the normal mirror apply.",
           ],
         },
         "documents" => {

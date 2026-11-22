@@ -118,6 +118,14 @@ module Master
     # Persist the full builder diagnostic separately from boot output.
     # The report contains source paths and findings, but no provider credentials.
     def persist_self_test_report(self_test, path: File.join(Master::ROOT, ".master", "self-test.json"))
+      directory = File.dirname(path)
+      raise IOError, "self-test report directory is a symlink" if File.symlink?(directory)
+      FileUtils.mkdir_p(directory, mode: 0o700)
+      stat = File.lstat(directory)
+      raise IOError, "self-test report directory is not owned by this user" unless stat.uid == Process.uid
+      raise IOError, "self-test report directory is not a directory" unless stat.directory? && !stat.symlink?
+      File.chmod(0o700, directory)
+
       result = self_test.err? ? nil : self_test.value!
       payload = {
         "schema_version" => 1,
@@ -127,14 +135,6 @@ module Master
         "checks" => result&.to_h || {},
         "error" => (self_test.message if self_test.err?),
       }.compact
-
-      directory = File.dirname(path)
-      raise IOError, "self-test report directory is a symlink" if File.symlink?(directory)
-      FileUtils.mkdir_p(directory, mode: 0o700)
-      stat = File.lstat(directory)
-      raise IOError, "self-test report directory is not owned by this user" unless stat.uid == Process.uid
-      raise IOError, "self-test report directory is not a directory" unless stat.directory? && !stat.symlink?
-      File.chmod(0o700, directory)
 
       Master::Io::AtomicWrite.write_atomic(path, "#{JSON.pretty_generate(payload)}\n", mode: 0o600)
       path

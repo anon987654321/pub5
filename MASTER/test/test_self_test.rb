@@ -215,7 +215,7 @@ class TestSelfTest < Minitest::Test
       root = File.join(workspace, "MASTER")
       openbsd = File.join(workspace, "OPENBSD")
       FileUtils.mkdir_p(File.join(openbsd, "usr", "local", "sbin"))
-      path = File.join(openbsd, "usr", "local", "sbin", "pub5-admin")
+      path = File.join(openbsd, "usr", "local", "sbin", "deploy-helper")
       methods = 11.times.map { |index| "  def method_#{index}; end" }.join("\n")
       long_body = (1..21).map { |index| "      value_#{index} = #{index}" }.join("\n")
       source = "#!/usr/local/bin/ruby\nclass Large\n#{methods}\n  def long\n#{long_body}\n  end\nend\n"
@@ -523,12 +523,11 @@ class TestSelfTest < Minitest::Test
     root = Master::Review::Scan::SelfTest.new(root: Master::ROOT).send(:build_deploy_paths)
     openbsd = File.join(Master::REPO_ROOT, "OPENBSD")
     expected = %w[
-      etc/rc.d/master
+      mirror/etc/rc.d/master
       bin/vps-deploy
-      usr/local/sbin/pub5-admin
-      etc/pf.conf
-      var/nsd/etc/nsd.conf
-      var/nsd/zones/master/brgen.no.zone
+      mirror/etc/pf.conf
+      mirror/var/nsd/etc/nsd.conf
+      mirror/var/nsd/zones/master/brgen.no.zone
     ]
 
     expected.each { |relative| assert_includes root, File.join(openbsd, relative) }
