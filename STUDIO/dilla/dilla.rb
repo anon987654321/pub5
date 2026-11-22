@@ -3198,6 +3198,8 @@ module Dilla
       "engine" => "dilla", "version" => VERSION,
       "created_at" => Time.now.utc.iso8601,
       "ruby" => RUBY_VERSION,
+      "ruby_engine" => RUBY_ENGINE,
+      "ruby_platform" => RUBY_PLATFORM,
       "execution" => {
         "mode" => opts.mode.to_s,
         "style" => opts.style.to_s,
@@ -3264,9 +3266,13 @@ module Dilla
     raise ArgumentError, "provenance file exceeds 2 MiB" if File.size(source_path) > 2 * 1024 * 1024
 
     provenance = JSON.parse(File.read(source_path))
+    raise ArgumentError, "provenance root must be a JSON object" unless provenance.is_a?(Hash)
     raise ArgumentError, "unsupported provenance engine" unless provenance["engine"] == "dilla"
     raise ArgumentError, "provenance version does not match Dilla #{VERSION}" unless provenance["version"] == VERSION
-    raise ArgumentError, "Ruby runtime differs from the original render" unless provenance["ruby"] == RUBY_VERSION
+    unless provenance["ruby"] == RUBY_VERSION && provenance["ruby_engine"] == RUBY_ENGINE &&
+           provenance["ruby_platform"] == RUBY_PLATFORM
+      raise ArgumentError, "Ruby runtime or platform differs from the original render"
+    end
 
     execution = provenance["execution"]
     raise ArgumentError, "provenance execution record is missing" unless execution.is_a?(Hash)
@@ -3323,6 +3329,15 @@ module Dilla
 
     session = JSON.parse(File.read(session_path))
     quality = JSON.parse(File.read(quality_path))
+    raise ArgumentError, "session sidecar must be a JSON object" unless session.is_a?(Hash)
+    raise ArgumentError, "quality sidecar must be a JSON object" unless quality.is_a?(Hash)
+    progression = session["progression"]
+    required_session = %w[drums groove_profile kit voice rig]
+    unless progression.is_a?(Hash) && progression["id"].is_a?(String) &&
+           required_session.all? { |key| session[key].is_a?(String) && !session[key].empty? } &&
+           session["bars"].to_i.positive? && session["groove_scale"].is_a?(Numeric) && session["groove_scale"].finite?
+      raise ArgumentError, "session is missing effective render parameters"
+    end
     raise ArgumentError, "session seed differs from provenance" unless session["seed"] == seed
     raise ArgumentError, "session progression differs from provenance" unless
       session.dig("progression", "id") == source["progression_id"]
@@ -3331,6 +3346,9 @@ module Dilla
 
     render_record = provenance["render"]
     raise ArgumentError, "original WAV record is missing" unless render_record.is_a?(Hash)
+    unless render_record["sha256"].to_s.match?(/\\A[a-f0-9]{64}\\z/) && render_record["bytes"].to_i.positive?
+      raise ArgumentError, "original WAV record has an invalid digest or byte count"
+    end
     unless File.basename(render_record["wav"].to_s) == File.basename(render_path) &&
            File.file?(render_path) && !File.symlink?(render_path)
       raise ArgumentError, "original WAV is missing or not adjacent to its provenance"
