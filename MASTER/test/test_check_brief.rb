@@ -148,6 +148,38 @@ class TestCheckBrief < Minitest::Test
     assert_equal false, dirty.fetch("repository_evidence_complete")
   end
 
+  def test_file_evidence_is_bounded_and_refuses_links_or_escape
+    Dir.mktmpdir("check-log-evidence") do |root|
+      log = File.join(root, ".master", "check", "latest.log")
+      FileUtils.mkdir_p(File.dirname(log))
+      bytes = "private check output\n"
+      File.binwrite(log, bytes)
+
+      evidence = Operator::CheckBrief.file_evidence(root:, path: log)
+
+      assert_equal ".master/check/latest.log", evidence.fetch("path")
+      assert_equal bytes.bytesize, evidence.fetch("byte_count")
+      assert_equal Digest::SHA256.hexdigest(bytes), evidence.fetch("sha256")
+      refute_includes evidence.to_s, bytes
+
+      assert_raises(ArgumentError) do
+        Operator::CheckBrief.file_evidence(root:, path: File.join(root, "..", "outside.log"))
+      end
+
+      symlink = File.join(File.dirname(log), "symlink.log")
+      File.symlink(log, symlink)
+      assert_raises(IOError) do
+        Operator::CheckBrief.file_evidence(root:, path: symlink)
+      end
+
+      hardlink = File.join(File.dirname(log), "hardlink.log")
+      File.link(log, hardlink)
+      assert_raises(IOError) do
+        Operator::CheckBrief.file_evidence(root:, path: hardlink)
+      end
+    end
+  end
+
   def test_write_json_receipt_persists_atomically_with_private_permissions
     Dir.mktmpdir("check-receipt") do |root|
       receipt_id = SecureRandom.uuid
