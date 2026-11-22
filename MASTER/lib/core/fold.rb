@@ -100,6 +100,7 @@ private
       write: ["file changes", "no file was changed"],
       create: ["file creation", "no file was created"],
       network: ["network access", "no network request was sent"],
+      browser: ["browser access", "no page was opened"],
       read: ["file reads", "no file was read"],
       stdio: ["interactive input", "no interactive action was taken"],
       model: ["model calls", "no model call was made"],
