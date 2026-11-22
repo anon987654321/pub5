@@ -197,7 +197,7 @@ module Master
       def with_browser(session:, headless:, url: nil)
         require_ferrum!
         owner = broker
-        raise PolicyError, "travel_browser: Core-owned browser broker is unavailable" unless owner
+        raise PolicyError, "travel_browser: Core-owned browser broker is unavailable" unless owner && (!owner.respond_to?(:available?) || owner.available?)
 
         host = session_host(session, url)
         raise PolicyError, "travel_browser: open a validated HTTPS URL before starting a browser session" if host.empty?
