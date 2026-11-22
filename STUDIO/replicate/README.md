@@ -57,8 +57,13 @@ voice of the creative work.
   and `STUDIO_VIDEO_BUDGET_USD` can lower those ceilings, never raise them.
   Each film engine declares the input
   keys it takes, and the renderer preflights the model's own schema before any
-  upload, so a mismatched shape fails before a paid call. The provider's native
-  audio stays off: STUDIO lays the dilla bed under the cut itself.
+  upload, so a mismatched shape fails before a paid call. This MiniMax
+  reservation is a process-local per-run estimate, not a persistent daily
+  account cap. The LoRA batch ledger is separate and checkout-local. Other
+  paid model rows without a verified price are not treated as zero-cost or
+  covered by either budget; do not infer an all-provider spend ceiling. The
+  provider's native audio stays off: STUDIO lays the dilla bed under the cut
+  itself.
   Each successfully downloaded film receives a private `.mp4.json` receipt
   binding its source still and output by SHA-256, with the model, prediction
   ID/status, any catalogue-based pre-request estimate, and explicit
