@@ -3,7 +3,7 @@
 
 # Turn structured vps-deploy log lines into a stage timeline.
 # Usage: deploy-story [log path]
-# Default: /var/log/pub5/vps-deploy.log or /home/dev/vps-deploy.log or stdin.
+# Default: newest local transcript under ~/.pub5/deployments/ or stdin.
 #
 # Prefer lines that carry stage= (structured logger). Fall back to ==> markers.
 # The formatting, the field extraction and the 80-line window match the awk
@@ -12,8 +12,8 @@
 
 log = ARGV[0]
 unless log
-  log = ["/var/log/pub5/vps-deploy.log", "/home/dev/vps-deploy.log",
-         File.join(ENV["HOME"].to_s, "vps-deploy.log")].find { |path| File.file?(path) }
+  directory = File.join(ENV.fetch("HOME", ""), ".pub5", "deployments")
+  log = Dir[File.join(directory, "deploy-*.log")].reject { |path| path.end_with?(".status") }.max_by { |path| File.mtime(path) }
 end
 
 if log && File.file?(log)
