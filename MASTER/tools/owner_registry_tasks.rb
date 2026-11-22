@@ -558,9 +558,9 @@ module Backlog
       scope_digest = scope_digest_for(paths)
       return false unless scope_digest
 
-      message = result.respond_to?(:message) ? result.message.to_s : ""
-      message = record["wake_reason"].to_s if message.empty?
+      message = record["wake_reason"].to_s
       message = record["error"].to_s if message.empty?
+      message = result.message.to_s if message.empty? && result.respond_to?(:message)
       category = Master::Ground::FailureTaxonomy.shared.classify(message)
       retry_at = if record["state"].to_s == "waiting" && %i[transient exhausted].include?(category)
                    value = record["next_wake_at"].to_s
