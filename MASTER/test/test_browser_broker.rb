@@ -44,6 +44,17 @@ class BrowserBrokerTest < Minitest::Test
     Broker.new(capabilities:, engine:, ledger:, **opts)
   end
 
+  def test_only_corebridge_builds_a_broker_from_the_current_capability_set
+    builder = File.read(File.join(Master::ROOT, "lib", "builder.rb"))
+    bridge = File.read(File.join(Master::ROOT, "lib", "cli", "core_bridge.rb"))
+
+    refute_includes builder, "build_browser_broker"
+    refute_includes builder, "Capabilities.for(:fix)"
+    assert_includes bridge, "return nil unless capabilities.allow?(:browser)"
+    assert_includes bridge, "Master::Io::BrowserBroker.new("
+    assert_includes bridge, "capabilities:,"
+  end
+
   def test_a_context_without_the_capability_cannot_open_a_session
     engine = FakeEngine.new
     refused = broker(capabilities: Caps.read_only, engine:)
