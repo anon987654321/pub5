@@ -2390,8 +2390,18 @@ Commits for this follow-up:
 `dae8f5d3506e192cff5d3da06ebbd5f607be8ffa` (CoreBridge uses the host-side binder);
 `ca8df49d2f86a66d94af8b6a2d848922676eceff` (scope isolation regressions);
 `7b9405732b77ce18749220aa14d7293516723d9a` (binder/service source contract);
-`7b9405732b77ce18749220aa14d7293516723d9a` is the current `main` head
-at the time this receipt section was started.
+- Revalidated host-only leases too: when a browser profile is reopened with a
+  stored hostname but no navigation URL, the broker now resolves and validates
+  an HTTPS origin before Chromium starts. A stale earlier validation is not a
+  continuing destination grant.
+
+Additional commits:
+`83b923dfd2003edb7e6654c35581167a97d1fbe9` (host-only destination recheck);
+`9030f5a2858763da5589e29334c69126b1da8282` (host-only lease regression).
+
+The source/test state read back before this receipt append was
+`main@9030f5a2858763da5589e29334c69126b1da8282`; this receipt update is
+the next repository commit.
 
 **Still open — do not mark Issue #5 complete:**
 
