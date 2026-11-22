@@ -15,6 +15,9 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     get root_path
 
     assert_response :success
+    assert_select "button#new-conversation-button[type=button]" do |buttons|
+      assert_equal I18n.t("face.new_conversation"), buttons.first["aria-label"]
+    end
     assert_includes response.body, I18n.t("face.primer_title")
     assert_includes response.body, "MASTER_ASSET_PATHS"
     # The boot script is public/face_primer.js: digested, nonced, synchronous,

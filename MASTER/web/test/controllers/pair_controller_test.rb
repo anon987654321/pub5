@@ -79,6 +79,66 @@ class PairControllerTest < ActionDispatch::IntegrationTest
     refute rows.any? { |row| row["subject"] == subject }
   end
 
+  test "the admin page requires authentication" do
+    get "/pair/admin"
+
+    assert_response :unauthorized
+  end
+
+  test "the admin page lists only pairing metadata and never exposes bearer tokens" do
+    issued = Master::Ground::Pairing.issue(label: "studio tablet")
+    redeemed = Master::Ground::Pairing.redeem(issued[:code])
+
+    get "/pair/admin", headers: auth_headers
+
+    assert_response :success
+    assert_includes response.body, "studio tablet"
+    assert_includes response.body, redeemed[:subject]
+    assert_includes response.body, "messaging access"
+    assert_not_includes response.body, redeemed[:token]
+  end
+
+  test "the admin form issues a one-time code and shows it after redirect" do
+    post "/pair/admin/issue", params: { label: "laptop" }, headers: auth_headers
+
+    assert_response :see_other
+    assert_redirected_to "/pair/admin"
+    code = flash[:pair_code]
+    assert_match(/\A[A-HJ-NP-Z2-9]{8}\z/, code)
+
+    follow_redirect!
+    assert_response :success
+    assert_includes response.body, code
+    assert_includes response.body, "600 seconds"
+  end
+
+  test "admin revocation removes the subject's messaging access" do
+    issued = Master::Ground::Pairing.issue(label: "revoked device")
+    redeemed = Master::Ground::Pairing.redeem(issued[:code])
+
+    delete "/pair/admin/#{redeemed[:subject]}", headers: auth_headers
+
+    assert_response :see_other
+    assert_redirected_to "/pair/admin"
+    refute Master::Ground::Pairing.valid_token?(redeemed[:token])
+  end
+
+  test "admin audit shows issue pair and revoke without codes or bearer tokens" do
+    issued = Master::Ground::Pairing.issue(label: "audit tablet", actor: "web_operator")
+    paired = Master::Ground::Pairing.redeem(issued[:code])
+    delete "/pair/admin/#{paired[:subject]}", headers: auth_headers
+    assert_response :see_other
+
+    get "/pair/admin", headers: auth_headers
+    assert_response :success
+    assert_includes response.body, "One-time code issued"
+    assert_includes response.body, "Device paired"
+    assert_includes response.body, "Device access revoked"
+    assert_includes response.body, "messaging only"
+    refute_includes response.body, issued[:code]
+    refute_includes response.body, paired[:token]
+  end
+
   test "redeem is rate limited from the pairing budget" do
     prev = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new

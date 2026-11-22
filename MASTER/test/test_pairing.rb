@@ -118,4 +118,22 @@ class TestPairing < Minitest::Test
     assert_equal 8, Master::Ground::Pairing.redeem_per_minute
     assert_equal 60, Master::Ground::Pairing.redeem_window_seconds
   end
+
+  def test_audit_records_pairing_lifecycle_without_codes_or_tokens
+    issued = Master::Ground::Pairing.issue(root: @root, label: "test phone", actor: "test_operator")
+    paired = Master::Ground::Pairing.redeem(issued[:code], root: @root)
+    assert Master::Ground::Pairing.revoke(paired[:subject], root: @root, actor: "test_operator")
+
+    events = Master::Ground::Pairing.audit(root: @root)
+    assert_equal %w[device_revoked device_paired code_issued], events.map { |row| row[:event] }
+    assert_equal "test_operator", events.first[:actor]
+    assert_equal paired[:subject], events[1][:subject]
+    assert_equal "test phone", events.last[:label]
+
+    audit_path = Master::Ground::Pairing.audit_path(@root)
+    audit = File.read(audit_path)
+    assert_equal 0o600, File.stat(audit_path).mode & 0o777
+    refute_includes audit, issued[:code]
+    refute_includes audit, paired[:token]
+  end
 end

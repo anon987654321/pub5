@@ -177,6 +177,12 @@
         finished reply is announced once through #tts-live (face.part5). %>
     <div id="chat-log" tabindex="-1"></div>
     <form id="prompt-form" aria-label="<%= t("face.prompt_aria") %>" autocomplete="off">
+      <button
+        id="new-conversation-button"
+        type="button"
+        aria-label="<%= t("face.new_conversation") %>"
+        title="<%= t("face.new_conversation") %>"
+      >↺</button>
       <button id="photo-button" type="button" aria-label="<%= t("face.attach_photo") %>">+</button>
       <input id="photo" type="file" accept="image/*" hidden>
       <span class="prompt-sigil" aria-hidden="true"><%= Master::Face::Contract.shell_prompt %></span>

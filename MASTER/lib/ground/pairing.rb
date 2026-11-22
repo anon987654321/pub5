@@ -53,21 +53,24 @@ module Master
         wanted.start_with?(store + File::SEPARATOR) ? wanted : File.join(store, File.basename(DEFAULT_ALLOWLIST))
       end
       def codes_path(root = Master::ROOT) = File.join(File.dirname(allowlist_path(root)), "codes.yml")
+      def audit_path(root = Master::ROOT) = File.join(File.dirname(allowlist_path(root)), "audit.yml")
 
-      def issue(root: Master::ROOT, label: nil)
-        with_store_lock(root) { issue_unlocked(root:, label:) }
+      def issue(root: Master::ROOT, label: nil, actor: "operator")
+        with_store_lock(root) { issue_unlocked(root:, label:, actor:) }
       end
 
-      def issue_unlocked(root:, label:)
+      def issue_unlocked(root:, label:, actor: "operator")
         code = CODE_BYTES.times.map { ALPHABET[SecureRandom.random_number(ALPHABET.length)] }.join
         now = Time.now.to_i
         codes = load_yaml(codes_path(root))
         codes[code] = { "issued_at" => now, "expires_at" => now + code_ttl_seconds, "label" => label.to_s }
         persist(codes_path(root), codes)
+        append_audit_event(root:, event: "code_issued", actor:, label: label.to_s,
+                           expires_at: now + code_ttl_seconds)
         { code:, expires_in: code_ttl_seconds, label: label.to_s }
       end
 
-      def redeem(code, root: Master::ROOT)
+      def redeem(code, root: Master::ROOT, actor: "device")
         needle = code.to_s.strip.upcase
         return if needle.empty?
 
@@ -79,19 +82,20 @@ module Master
 
           codes.delete(needle)
           persist(codes_path(root), codes)
-          issue_token(row, root)
+          issue_token(row, root, actor:)
         end
       end
 
       # Called with the store lock already held and the pairing code already
       # spent: this mints what replaces it.
-      def issue_token(row, root)
+      def issue_token(row, root, actor:)
         token = SecureRandom.urlsafe_base64(TOKEN_BYTES)
         subject = SecureRandom.hex(8)
         allow = load_yaml(allowlist_path(root))
         allow[token] = { "subject" => subject, "paired_at" => Time.now.to_i, "label" => row["label"].to_s }
         persist(allowlist_path(root), allow)
         PersonalWorkspace.ensure!(root:, subject:)
+        append_audit_event(root:, event: "device_paired", actor:, subject:, label: row["label"].to_s)
         { token:, subject:, label: row["label"].to_s }
       end
 
@@ -101,20 +105,54 @@ module Master
       # Under the store lock like redeem: a revoke that read the allowlist
       # before a concurrent redeem wrote it would persist the stale copy and
       # bring a deleted token back.
-      def revoke(id, root: Master::ROOT)
+      def revoke(id, root: Master::ROOT, actor: "operator")
         with_store_lock(root) do
           allow = load_yaml(allowlist_path(root))
           key = allow.key?(id.to_s) ? id.to_s : allow.find { |_token, row| row["subject"] == id.to_s }&.first
           next false unless key
 
-          allow.delete(key)
+          row = allow.delete(key)
           persist(allowlist_path(root), allow)
+          append_audit_event(root:, event: "device_revoked", actor:, subject: row["subject"], label: row["label"])
           true
         end
       end
 
       def list(root: Master::ROOT)
         load_yaml(allowlist_path(root)).map { |_token, row| { subject: row["subject"], paired_at: row["paired_at"], label: row["label"] } }
+      end
+
+      # Full local audit history, rendered newest-first by the authenticated
+      # operator page. The file sits beside the 0600 allowlist and contains no
+      # bearer token or redeemable one-time code.
+      def audit(root: Master::ROOT)
+        load_audit(root).last(50).reverse.map do |row|
+          row.each_with_object({}) do |(key, value), result|
+            result[key.to_sym] = value if %w[at event actor subject label code_expires_at].include?(key)
+          end
+        end
+      end
+
+      def load_audit(root)
+        path = audit_path(root)
+        return [] unless File.file?(path)
+
+        rows = YAML.safe_load_file(path, permitted_classes: [], aliases: false)
+        rows.is_a?(Array) ? rows.select { |row| row.is_a?(Hash) } : []
+      rescue StandardError => e
+        Swallow.log(e, context: "Pairing.audit", severity: :load_bearing)
+        []
+      end
+
+      def append_audit_event(root:, event:, actor:, subject: nil, label: nil, expires_at: nil)
+        rows = load_audit(root)
+        row = { "at" => Time.now.to_i, "event" => event.to_s, "actor" => actor.to_s,
+                "subject" => subject, "label" => label, "code_expires_at" => expires_at }.compact
+        persist(audit_path(root), rows + [ row ])
+        true
+      rescue StandardError => e
+        Swallow.log(e, context: "Pairing.audit.append", severity: :load_bearing)
+        false
       end
 
       def apply_remote!(channel)

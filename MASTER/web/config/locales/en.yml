@@ -90,6 +90,7 @@ en:
     prompt_aria: "MASTER prompt"
     message_aria: "Message"
     attach_photo: "Attach photo"
+    new_conversation: "New conversation"
     music_loop: "Music on or off"
     stop_response: "Stop response"
     stop: "stop"
@@ -201,3 +202,36 @@ en:
       operator.
     key_plan: "%{plan}: %{quota} checks a month."
     key_docs: "How to use it"
+  pair_admin:
+    title: "Pairing access"
+    lede: "Manage devices that have redeemed a one-time pairing code."
+    access_policy: >-
+      Pairing grants messaging access only. It does not grant operator tools or shell
+      access. A redeemed pairing stays active until revoked.
+    back_to_master: "Back to MASTER"
+    one_time_code: "One-time pairing code"
+    code_expires: "This unredeemed code expires in %{seconds} seconds."
+    code_warning: "Show this code only to the intended device owner. It can be redeemed once."
+    issue_heading: "Issue a code"
+    device_label: "Device or person label"
+    issue_button: "Create one-time code"
+    active_heading: "Active pairings (%{count})"
+    none: "No active pairings."
+    unnamed: "Unlabelled pairing"
+    subject: "Subject"
+    paired_at: "Paired"
+    revoke: "Revoke access"
+    confirm_revoke: "Revoke this pairing? Its messaging access will stop."
+    no_token_expiry: >-
+      Redeemed pairings do not currently expire automatically. Revoke a subject here
+      to end its access.
+    scope: "Scope"
+    messaging_scope: "messaging only"
+    audit_heading: "Recent pairing activity"
+    audit_empty: "No pairing activity recorded."
+    audit_actor: "Action source"
+    code_expires_at: "Code expires"
+    audit_events:
+      code_issued: "One-time code issued"
+      device_paired: "Device paired"
+      device_revoked: "Device access revoked"

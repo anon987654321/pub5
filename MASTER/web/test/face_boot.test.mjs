@@ -1552,7 +1552,20 @@ test("session chrome reads brgen's family tokens and band without weakening mobi
 
   // The workspace tabs are gone; interactive controls retain the shared touch floor.
   assert.doesNotMatch(css, /master-session-tabs|master-session-tab/);
-  assert.match(css, /#photo-button, #music-loop-button, #pause-speech-button \{[^}]*min-inline-size: var\(--tap-min\); min-block-size: var\(--tap-min\);/);
+  assert.match(css, /#new-conversation-button,\s*#photo-button,\s*#music-loop-button,\s*#pause-speech-button/);
+  assert.match(css, /#pause-speech-button\s*\{[^}]*min-inline-size: var\(--tap-min\);/);
+  assert.match(css, /min-block-size: var\(--tap-min\)/);
+});
+
+test("new conversation is a real accessible prompt action", () => {
+  const view = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  const actions = readFileSync(join(publicDir, "chat_actions.js"), "utf8");
+  const sessionCss = readFileSync(join(root, "styles", "face", "60_session_chrome.css"), "utf8");
+  assert.match(view, /id="new-conversation-button"[^>]*aria-label="<%= t\("face\.new_conversation"\) %>"/);
+  assert.match(actions, /new-conversation-button[\s\S]*?startNewConversation\(\)/);
+  assert.match(actions, /fetch\("\/chat\/new"/);
+  assert.match(sessionCss, /#new-conversation-button[^}]*min-inline-size: var\(--tap-min\)/);
+  assert.match(sessionCss, /#new-conversation-button:focus-visible/);
 });
 
 test("shell chrome uses plain CLI prompt words and downloads no font", () => {
@@ -1680,4 +1693,19 @@ test("MASTER web highlighter escapes source and classifies shell and Ruby tokens
   assert.ok(sandbox.output.includes('&lt;img src=x&gt;'));
   assert.ok(sandbox.output.includes('&lt;script&gt;'));
   assert.doesNotMatch(sandbox.output, /<script>/);
+});
+
+
+test("the /new command requests a new server transcript and emits the mask event", () => {
+  const actions = readFileSync(join(publicDir, "chat_actions.js"), "utf8");
+  const controller = readFileSync(join(root, "app", "controllers", "chat_controller.rb"), "utf8");
+  const routes = readFileSync(join(root, "config", "routes.rb"), "utf8");
+
+  assert.match(actions, /fetch\("\/chat\/new"/);
+  assert.match(actions, /master:conversation-created/);
+  assert.match(actions, /event\.stopImmediatePropagation\(\)/);
+  assert.match(actions, /window\.location\.reload\(\)/);
+  assert.match(controller, /def new_conversation/);
+  assert.match(controller, /httponly: true/);
+  assert.match(routes, /post "chat\/new",\s+to: "chat#new_conversation"/);
 });
