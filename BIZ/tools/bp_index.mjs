@@ -1,5 +1,6 @@
 // Generate BIZ/index.html from the active portfolio and each financing table.
 // The amount is the explicit Innovasjon Norge row only, never project capital.
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { BIZ_ROOT } from './paths.mjs';
 
@@ -93,11 +94,45 @@ const PDF_FRESHNESS_INPUTS = {
   pubhealthcare: ['tools/bp_print.mjs'],
   govt_bergen: ['tools/bp_print.mjs'],
   future_healthcare_os: ['tools/bp_print.mjs'],
-  speis: ['tools/bp_print.mjs'],
-  future_nato_weapons: ['tools/bp_print.mjs'],
-  norwegianhedge: ['tools/bp_print.mjs'],
   fetat: ['tools/bp_print.mjs'],
 };
+
+function sha256(path) {
+  return createHash('sha256').update(readFileSync(path)).digest('hex');
+}
+
+function requirePrintReceipt(name, receiptPath, htmlPath, pdfPath) {
+  if (!existsSync(receiptPath)) {
+    throw new Error(name + ': print receipt missing; rebuild, print, review and publish the .print.json beside the pair');
+  }
+
+  let receipt;
+  try {
+    receipt = JSON.parse(readFileSync(receiptPath, 'utf8'));
+  } catch (error) {
+    throw new Error(name + ': print receipt is unreadable JSON: ' + error.message);
+  }
+  if (receipt.schema !== 'biz.print.v1' || receipt.document !== name) {
+    throw new Error(name + ': print receipt schema or document identity does not match');
+  }
+  const pngPath = `${BIZ_ROOT}/${name === 'ragnhild_legater' ? 'ragnhild/' : ''}${receipt.front_png}`;
+  if (!receipt.front_png || !existsSync(pngPath)) {
+    throw new Error(name + ': print receipt cover PNG is missing');
+  }
+  if (receipt.source_html_sha256 !== sha256(htmlPath) ||
+      receipt.pdf_sha256 !== sha256(pdfPath) ||
+      receipt.front_png_sha256 !== sha256(pngPath)) {
+    throw new Error(name + ': print receipt hashes do not match the published HTML/PDF/PNG');
+  }
+  if (!Number.isInteger(receipt.page_count) || receipt.page_count < 1 ||
+      receipt.page_size_points !== '442.08 x 663.12') {
+    throw new Error(name + ': print receipt page geometry is invalid');
+  }
+  const review = receipt.human_review;
+  if (!review || review.visual !== 'NOT_REVIEWED' || review.accessibility !== 'NOT_REVIEWED') {
+    throw new Error(name + ': print receipt must preserve explicit NOT_REVIEWED visual/accessibility status');
+  }
+}
 
 function requirePair(key) {
   const html = `${BIZ_ROOT}/${key}/${key}.html`;
@@ -135,7 +170,15 @@ function requirePair(key) {
   }
 }
 verifyIndexInventory();
-for (const [key] of ACTIVE) requirePair(key);
+for (const [key] of ACTIVE) {
+  requirePair(key);
+  requirePrintReceipt(
+    key,
+    `${BIZ_ROOT}/${key}/${key}.print.json`,
+    `${BIZ_ROOT}/${key}/${key}.html`,
+    `${BIZ_ROOT}/${key}/${key}.pdf`
+  );
+}
 for (const [key] of ARCHIVE) requirePair(key);
 for (const [key] of DRAFTS) {
   if (!existsSync(`${BIZ_ROOT}/tools/${key}.html`)) throw new Error(key + ': draft source missing');
@@ -148,6 +191,12 @@ for (const [key] of GUIDES) {
   }
   const html = `${BIZ_ROOT}/${key}.html`;
   const pdf = `${BIZ_ROOT}/${key}.pdf`;
+  requirePrintReceipt(
+    'ragnhild_legater',
+    `${BIZ_ROOT}/ragnhild/ragnhild_legater.print.json`,
+    html,
+    pdf
+  );
   if (statSync(pdf).mtimeMs < statSync(html).mtimeMs ||
       statSync(pdf).mtimeMs < statSync(`${BIZ_ROOT}/tools/bp_print.mjs`).mtimeMs) {
     throw new Error(key + ': guidance PDF is older than its HTML or current print tool; rerun print and review');
