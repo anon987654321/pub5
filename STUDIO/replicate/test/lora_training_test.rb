@@ -275,6 +275,20 @@ class TestStudioLoraTrainingRunner < Minitest::Test
     end
   end
 
+  def test_spend_lock_refuses_symlink_path
+    Dir.mktmpdir("studio-lora-lock-symlink-") do |root|
+      cache = File.join(root, ".cache")
+      Dir.mkdir(cache, 0o700)
+      target = File.join(root, "outside.lock")
+      File.write(target, "keep")
+      File.symlink(target, File.join(cache, "training-spend.lock"))
+      runner = Studio::Lora::Training::Runner.new(client: Object.new, validator: Object.new, root:)
+
+      assert_raises(SystemCallError) { runner.send(:with_training_lock) { flunk "symlinked lock must not be acquired" } }
+      assert_equal "keep", File.read(target)
+    end
+  end
+
   def test_private_spend_ledger_refuses_symlink_before_append
     Dir.mktmpdir("studio-lora-spend-symlink-") do |root|
       cache = File.join(root, ".cache")
