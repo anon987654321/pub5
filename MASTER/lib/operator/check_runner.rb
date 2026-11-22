@@ -66,7 +66,7 @@ module Operator
       )
       record_run_step(name, ok, elapsed, out, cmd, status)
       report(unit, name, ok, elapsed)
-      Master::Trace::Dmesg::Report.print(unit, out, parent: "#{@prefix}0") if !out.empty? && (!ok || ENV["CHECK_VERBOSE"] == "1")
+      Master::Trace::Dmesg::Report.print(unit, out, parent: "#{@prefix}0") if !@quiet && !out.empty? && (!ok || ENV["CHECK_VERBOSE"] == "1")
       ok
     end
 
