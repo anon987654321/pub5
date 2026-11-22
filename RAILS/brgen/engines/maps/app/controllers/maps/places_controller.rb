@@ -11,6 +11,7 @@ module Maps
     NAMED_CHECK_IN_DELAY = 1.hour
 
     include Shared::LiveSearchable
+    include Shared::FindableBySlug
 
     helper_method :place_kinds
 
@@ -43,8 +44,9 @@ module Maps
     end
 
     def show
-      @place = places_in_current_city.includes(:city, :neighborhood).find(params[:id])
+      @place = find_by_slug_or_id(places_in_current_city.includes(:city, :neighborhood), params[:id])
       @place.record_activity!("PlaceViewed", source_vertical: "maps") unless passive_request?
+      return if redirect_id_to_slug(@place)
       load_check_ins
       # Guests may check in (see the require_user_session check on #check_in),
       # so the "already here" flag has to follow the same identity. With
@@ -56,7 +58,7 @@ module Maps
     end
 
     def check_in
-      @place = places_in_current_city.find(params[:id])
+      @place = find_by_slug_or_id(places_in_current_city, params[:id])
       check_in = @place.place_check_ins.create!(
         user: Current.user,
         note: params[:note].to_s.strip.presence,
