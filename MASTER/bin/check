@@ -329,7 +329,6 @@ if format == "json"
   receipt_id = SecureRandom.uuid
   operation_id = SecureRandom.uuid
   relative_receipt_path = ".master/check/receipts/#{receipt_id}.json"
-  absolute_receipt_path = File.join(ROOT, relative_receipt_path)
   receipt = JSON.parse(Operator::CheckBrief.render_json(
     profile:, results: runner.results, metadata:,
     started_at: started_at.iso8601(3), finished_at: finished_at.iso8601(3),
@@ -344,7 +343,7 @@ if format == "json"
   json = JSON.pretty_generate(receipt) << "\n"
 
   begin
-    Master::Io::AtomicWrite.write_atomic(absolute_receipt_path, json, mode: 0o600)
+    Operator::CheckBrief.write_json_receipt(root: ROOT, receipt:)
   rescue IOError, SystemCallError => error
     receipt["status"] = "DELIVERY_FAILED"
     receipt["exit_status"] = 1
