@@ -2508,7 +2508,9 @@ boundary.
   `Effect.browser(url, wait:, links:)` factory. Its payload accepts only the
   URL, a finite wait from 0–12 seconds, and the links boolean; unknown fields
   (including a model-supplied method such as POST) become a parse error.
-  Its recovery class is `policy_gated`, never model-declared reversible.
+  Its recovery class is `approval_required`, never model-declared reversible.
+  The existing `effect_reversibility` law requests human approval before the
+  visit because page scripts and same-host GET endpoints can mutate remote state.
 - World offers the verb only when the active context has `:browser`, a live
   broker, and the guarded reader service. World dispatches the effect to the
   injected `WebBrowse` path; the Core Effect does not receive a CDP endpoint.
@@ -2522,6 +2524,8 @@ boundary.
   social publication, travel booking, credential or POST permission was added.
 - The constitutional secret rule now checks browser URLs. Shared effect
   telemetry labels the event `browser page visit` and does not persist the URL.
+  The Fold includes the URL as effect scope for lifecycle correlation; the
+  existing observer hashes that scope before durable persistence.
   The model contract identifies the returned page as untrusted data and
   forbids using this verb for interaction or credential entry.
 
