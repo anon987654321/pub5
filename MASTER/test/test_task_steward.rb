@@ -99,6 +99,41 @@ class TaskStewardTest < Minitest::Test
     end
   end
 
+  def test_future_backlog_mission_hands_off_to_independent_work
+    Dir.mktmpdir do |root|
+      mission = write_mission(
+        root, origin: "backlog", next_wake_at: (Time.now.utc + 300).iso8601,
+      )
+      observed = nil
+      steward = Master::Fix::TaskSteward.new(
+        root:, bus: nil, runner: ->(**) { flunk "future mission must not run yet" },
+        after_run: ->(mission:, result:) { observed = [mission, result] },
+      )
+
+      assert_equal :idle, steward.tick!
+      assert_equal mission.id, observed.first.fetch("id")
+      assert_equal "waiting", observed.first.fetch("state")
+      assert_equal :idle, observed.last
+    end
+  end
+
+  def test_disabled_backlog_mission_is_not_handed_off_to_unattended_intake
+    Dir.mktmpdir do |root|
+      write_mission(
+        root, origin: "backlog", auto_continue: false,
+        next_wake_at: (Time.now.utc + 300).iso8601,
+      )
+      callbacks = []
+      steward = Master::Fix::TaskSteward.new(
+        root:, bus: nil, runner: ->(**) { flunk "disabled mission must not run" },
+        after_run: ->(**) { callbacks << true },
+      )
+
+      assert_equal :idle, steward.tick!
+      assert_empty callbacks
+    end
+  end
+
   def test_expired_automatic_mission_is_reentered_after_many_attempts
     Dir.mktmpdir do |root|
       mission = write_mission(root, origin: "fold")
