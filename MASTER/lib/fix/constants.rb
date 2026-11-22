@@ -12,7 +12,7 @@ module Master
       # from TRANSIENT_RE, and matched before it, because an exhaustion notice
       # that also carries a 429 is still an exhaustion.
       EXHAUSTED_RE = /insufficient credits|credit balance|out of credits|quota exceeded|quota reached|payment required|\b402\b|billing|insufficient[_ ]quota|exceeded your current quota/i.freeze
-      TRANSIENT_RE = /429|throttl|rate.?limit|high demand|provider.?error|overload|capacity|503/i.freeze
+      TRANSIENT_RE = /429|throttl|rate.?limit|high demand|provider.?error|overload|capacity|503|timeout|timed out|execution expired|connection reset|connection refused|temporary failure|could not resolve host|network is unreachable|connection closed/i.freeze
       PERMANENT_RE = /syntax|missing dependency|permission denied|schema violation|enoent|eacces/i.freeze
       AMBIGUOUS_RE = /partial write|half.?committed|unknown|conflict/i.freeze
     end
