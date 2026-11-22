@@ -8,9 +8,10 @@ exec "$(dirname "$0")/ruby" -x "$0" "$@"
 #
 #   MASTER/bin/fix-here <MASTER|RAILS|OPENBSD|STUDIO|path> [--model ID|none] [--no-probe] [--no-publish] [--dry]
 #
-# This repository writes straight to main, so /fix runs in the checkout and its
-# verified per-pass commits land on main. The wrapper does the things that cost an
-# agent a rediscovery each time: it proves the model lane answers before the run,
+# This repository writes straight to main, so authorized /fix runs happen in the
+# checkout and their verified per-pass commits land on main. A plain wrapper run
+# is read-only; mutation requires explicit --mode=repair|elevate|all and --apply.
+# The wrapper does the things that cost an agent a rediscovery each time:
 # refuses to start with too little disk (a /fix run plus its tests writes logs and
 # caches, and disk filled twice in one session), boots the apps for a RAILS run,
 # and stops them afterwards. --no-publish holds the run's commits local, so
@@ -46,7 +47,7 @@ begin
     case token
     when "--dry", "--no-probe", "--no-publish", "--resume", "-h", "--help"
       wrapper_args << token
-    when "--model", "--lane"
+    when "--model", "--lane", "--mode"
       wrapper_args << token
       value = ARGV[index + 1]
       if value.nil? || value.start_with?("--")
@@ -54,7 +55,7 @@ begin
       end
       wrapper_args << value
       index += 1
-    when /\A--(?:model|lane|checks)=/
+    when /\A--(?:model|lane|mode|checks)=/
       wrapper_args << token
     else
       args << token
@@ -67,6 +68,7 @@ rescue OptionParser::ParseError => error
   detail = error.message
   detail = "--model requires an ID or 'none'" if detail.match?(/missing argument: --model/)
   detail = "--lane requires a lane name" if detail.match?(/missing argument: --lane/)
+  detail = "--mode requires repair, audit, visual, elevate or all" if detail.match?(/missing argument: --mode/)
   abort "fix-here: #{detail}"
 end
 
@@ -78,6 +80,7 @@ parser = OptionParser.new do |opts|
   opts.on("--resume", "Resume the existing run budget") { options[:resume] = true }
   opts.on("--model ID", "Pin a model, or use none for automatic routing") { |value| options[:model] = value }
   opts.on("--lane LANE", "Select the /fix lane") { |value| options[:lane] = value }
+  opts.on("--mode MODE", %w[repair audit visual elevate all], "Select the /fix mode") { |value| options[:mode] = value }
   opts.on("--checks=LIST", "Limit check stages, comma-separated") { |value| options[:checks] = value }
   opts.on("-h", "--help", "Show this help") do
     puts opts
@@ -91,6 +94,7 @@ rescue OptionParser::ParseError => error
   detail = error.message
   detail = "--model requires an ID or 'none'" if detail.match?(/missing argument: --model/)
   detail = "--lane requires a lane name" if detail.match?(/missing argument: --lane/)
+  detail = "--mode requires repair, audit, visual, elevate or all" if detail.match?(/missing argument: --mode/)
   abort "fix-here: #{detail}\n#{parser}"
 end
 
@@ -100,15 +104,21 @@ no_publish = options[:no_publish]
 resume = options[:resume]
 model_flag = options[:model]
 PASSED_FLAGS = %w[--apply --dry-run --read-only --no-autofix --no-critique --blockers --plan --until-checks --verbose --trace --boot-status --detail --everything].freeze
-passthrough = args.select { |arg| arg.match?(/\A--(?:autofix|max-files|lane)=/) || PASSED_FLAGS.include?(arg) }
+passthrough = args.select { |arg| arg.match?(/\A--(?:autofix|max-files|lane|mode)=/) || PASSED_FLAGS.include?(arg) }
 args -= passthrough
 passthrough << "--lane=#{options[:lane]}" if options[:lane]
+passthrough << "--mode=#{options[:mode]}" if options[:mode] && passthrough.none? { |arg| arg.start_with?("--mode=") }
+if passthrough.include?("--apply")
+  mode = options[:mode] || passthrough.find { |arg| arg.start_with?("--mode=") }.to_s.delete_prefix("--mode=")
+  abort "fix-here: --apply requires explicit --mode=repair|elevate|all" unless %w[repair elevate all].include?(mode)
+end
 read_only = (passthrough & %w[--dry-run --read-only --no-autofix --plan]).any?
-passthrough << "--apply" unless read_only || passthrough.include?("--apply")
+write_authorized = passthrough.include?("--apply") && !read_only
 check_stages = options[:checks].to_s
 tree = args.shift
 USAGE = "usage: MASTER/bin/fix-here <#{TREES.join('|')}|path> [--model ID|none] [--no-probe] [--no-publish] " \
-        "[--dry] [--dry-run|--read-only] [--autofix=off|dry|on] [--max-files=N] [--lane code|standard|visual|all] [--resume] " \
+        "[--dry] [--dry-run|--read-only] [--mode repair|audit|visual|elevate|all] [--apply] " \
+        "[--autofix=off|dry|on] [--max-files=N] [--lane code|standard|visual|all] [--resume] " \
         "[--blockers] [--plan] [--until-checks] [--verbose|--trace|--detail] " \
         "[--no-critique] [--checks=lexical,sprawl,...] [--help]"
 abort USAGE if tree.to_s.empty? || args.any?
@@ -160,7 +170,8 @@ elsif model
 end
 log = File.join(MasterPaths.fix_state(root: MASTER), "fix-#{File.basename(tree)}.log")
 
-puts "fix0 at fix-here: tree=#{tree} disk=#{format('%.1f', free)} GiB model=#{model || 'pool (none forced)'}"
+puts "fix0 at fix-here: tree=#{tree} disk=#{format('%.1f', free)} GiB model=#{model || 'pool (none forced)'} " \
+     "mode=#{options[:mode] || 'repair (default)'} access=#{write_authorized ? 'write-authorized' : 'read-only'}"
 if dry
   puts "fix0 at fix-here: --dry, would run MASTER/bin/master /fix #{tree}"
   exit 0
