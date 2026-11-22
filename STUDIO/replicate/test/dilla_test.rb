@@ -54,6 +54,59 @@ class TestDillaCliContract < Minitest::Test
     assert_includes out, "audit PATH.wav"
   end
 
+  def test_new_provenance_pins_renderer_theory_and_sample_digests
+    Dir.mktmpdir("dilla-provenance-") do |directory|
+      base = File.join(directory, "take")
+      wav = "#{base}.wav"
+      sample = File.join(directory, "rights-cleared-loop.wav")
+      File.binwrite(wav, "synthetic wav bytes")
+      File.binwrite(sample, "synthetic rights-cleared loop")
+
+      options = Dilla::Options.new
+      options.mode = :render
+      options.style = "j_dilla"
+      options.sample_loop = sample
+      plan = { progression: { "id" => "fixture", "source" => "engine" } }
+      performer = { "id" => "fixture" }
+      quality = { "duration_s" => 1.0, "lufs_estimate" => -18.0 }
+
+      provenance = Dilla.write_provenance(
+        base, options, plan, performer, wav, {}, quality, seed: 1234
+      )
+      record = JSON.parse(File.read("#{base}.provenance.json"))
+
+      assert_equal "render", record.dig("execution", "mode")
+      assert_equal "j_dilla", record.dig("execution", "style")
+      assert_equal Digest::SHA256.file(dilla).hexdigest, record.dig("execution", "renderer_sha256")
+      assert_equal Digest::SHA256.file(File.join(File.dirname(dilla), "data", "music_theory.json")).hexdigest,
+                   record.dig("execution", "music_theory_sha256")
+      assert_equal Digest::SHA256.file(sample).hexdigest, record.dig("source", "sample", "sha256")
+      assert_equal File.size(sample), record.dig("source", "sample", "bytes")
+      assert_equal sample, record.dig("source", "sample", "path")
+      assert_equal "operator_attestation_required", record.dig("source", "sample_rights_status")
+      assert_equal 1234, provenance.fetch("seed")
+    end
+  end
+
+  def test_provenance_marks_a_missing_sample_input_unavailable
+    Dir.mktmpdir("dilla-provenance-") do |directory|
+      base = File.join(directory, "take")
+      wav = "#{base}.wav"
+      File.binwrite(wav, "synthetic wav bytes")
+      options = Dilla::Options.new
+      options.sample_loop = File.join(directory, "missing-loop.wav")
+
+      provenance = Dilla.write_provenance(
+        base, options, { progression: { "id" => "fixture" } },
+        { "id" => "fixture" }, wav, {},
+        { "duration_s" => 1.0, "lufs_estimate" => -18.0 }, seed: 5
+      )
+
+      assert_equal "unavailable", provenance.dig("source", "sample", "status")
+      refute provenance.dig("source", "sample").key?("sha256")
+    end
+  end
+
   def test_output_path_answers_the_master_contract
     Dir.mktmpdir do |dir|
       # MASTER sends its clock as the optional third argument; the flat render
