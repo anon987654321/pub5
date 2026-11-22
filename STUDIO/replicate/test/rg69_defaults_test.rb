@@ -142,6 +142,17 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "async function initAudio(activationPromise)"
   end
 
+  def test_opaque_origins_do_not_abort_cross_tab_or_theme_storage_startup
+    assert_match(/let bc=null;\s*try\{\s*if\("BroadcastChannel"in window\)bc=new BroadcastChannel\("rg69"\);?\s*\}catch\(error\)\{/, js)
+    assert_includes js, "function readStorage(key){try{return window.localStorage.getItem(key)}catch(error){return null}}"
+    assert_includes js, "function writeStorage(key,value){try{window.localStorage.setItem(key,value);return true}catch(error){return false}}"
+    assert_includes js, "function removeStorage(key){try{window.localStorage.removeItem(key);return true}catch(error){return false}}"
+    assert_includes js, "writeStorage('rg69_theme',st_.theme)"
+    assert_includes js, "const savedTheme=readStorage('rg69_theme')||'dark';"
+    assert_equal 3, js.scan(/window\.localStorage\./).size,
+                 "every storage access must remain inside one guarded helper"
+  end
+
   def test_transport_callback_uses_numeric_note_durations
     body = js[/function triggerNotes\(.*?(?=\nfunction scheduleLoop)/m] or raise "no triggerNotes"
     refute_match(/triggerAttackRelease\([^;]*['"](?:8n|2n|16n|32n)['"]/, body,
