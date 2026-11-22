@@ -31,3 +31,41 @@ export function planBase(plan) {
 export const OUTPUT_DIR = resolve(
   process.env.BIZ_OUT_DIR || resolve(tmpdir(), 'pub5-good-BIZ'),
 );
+
+// The source graph for each printed document. Keep it beside the shared path
+// contract so the printer records it and the index verifies the same manifest.
+// Paths are relative to BIZ_ROOT; html inputs produce the document, pdf inputs
+// affect print output. The generated HTML/PDF/PNG are hashed in the receipt too.
+export const PUBLISHED_INPUTS = {
+  syre: {
+    html: ['tools/syre.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
+    pdf: ['tools/bp_print.mjs'],
+  },
+  ragnhild: {
+    html: ['tools/ragnhild.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
+    pdf: ['tools/bp_print.mjs'],
+  },
+  pubhealthcare: {
+    html: ['tools/pubhealthcare.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
+    pdf: ['tools/bp_print.mjs'],
+  },
+  govt_bergen: {
+    html: ['tools/govt_bergen.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
+    pdf: ['tools/bp_print.mjs'],
+  },
+  future_healthcare_os: {
+    html: ['tools/future_healthcare_os.html', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
+    pdf: ['tools/bp_print.mjs'],
+  },
+  ragnhild_legater: {
+    html: ['ragnhild/ragnhild_legater.html'],
+    pdf: ['tools/bp_print.mjs'],
+  },
+  speis: { html: ['tools/speis.html'], pdf: [] },
+  future_nato_weapons: { html: ['tools/future_nato_weapons.html'], pdf: [] },
+  norwegianhedge: { html: ['tools/norwegianhedge.html'], pdf: [] },
+  fetat: {
+    html: ['tools/fetat_build.rb', 'tools/fetat_image.jpg'],
+    pdf: ['tools/bp_print.mjs'],
+  },
+};
