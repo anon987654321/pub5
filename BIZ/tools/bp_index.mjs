@@ -14,6 +14,7 @@ const ACTIVE = [
 const DRAFTS = [
   ['nordvakt', 'NORDVAKT Arctic Systems (arbeidsnavn)', 'maritim situasjonsforståelse og dataintegrasjon i nordområdene', 'Maritime + Space'],
   ['norwegianfinancial', 'Norwegian Financial (arbeidsnavn)', 'partnerbasert digitalbankplattform, PWA og åpen bank', 'FinTech'],
+  ['neolimb', 'NEOLIMB (arbeidsnavn)', 'forskningsplattform for rekonstruktiv og regenerativ hånd- og armmedisin', 'Regenerative Medicine'],
 ];
 const GUIDES = [
   ['ragnhild/ragnhild_legater', 'Ragnhild Mæhle — søknadsveiledning', 'Kildebasert plan for utstillingsstøtte og kunstnerstipend; veiledning, ikke en innsendt søknad eller et tilsagn'],
