@@ -345,7 +345,7 @@ if format == "json"
 
   begin
     Master::Io::AtomicWrite.write_atomic(absolute_receipt_path, json, mode: 0o600)
-  rescue StandardError => error
+  rescue IOError, SystemCallError => error
     receipt["status"] = "DELIVERY_FAILED"
     receipt["exit_status"] = 1
     receipt["receipt_path"] = nil
