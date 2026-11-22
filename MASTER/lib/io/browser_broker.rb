@@ -903,7 +903,8 @@ module Master
         @mutex.synchronize do
           key = id.to_s
           lease = @leases[key]
-          next false unless lease
+          # Closing is revocation even before the process-stop receipt settles.
+          next false unless lease && !@closing[key]
 
           @leases[key] = lease.with(expires_at: @clock.call + @ttl_seconds)
           true
