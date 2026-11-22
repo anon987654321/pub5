@@ -66,7 +66,7 @@ module Master
         {
           plugin: manifest.id,
           runtime:,
-          browser: broker && ferrum_available? ? "ferrum" : "unavailable",
+          browser: broker&.available? && ferrum_available? ? "ferrum" : "unavailable",
           sites: SITES.keys.map { |id| site_status(id) },
         }
       end
