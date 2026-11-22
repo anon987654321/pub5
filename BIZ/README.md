@@ -176,13 +176,16 @@ Hedge sources remain as provenance. The build/check/print/index chain uses
 `bp_index.mjs`. Content modules are `plans_a.mjs`, `plans_b.mjs` and
 `content_add.mjs`; the two new plans also have proposal sources.
 
-Regenerate the published pair from those sources:
+Regenerate the published pair from those sources. Give each release attempt a fresh
+scratch directory; the builders refuse to replace earlier generated HTML, PDFs or
+cover images:
 
-    node BIZ/tools/bp_build.mjs       # bases + additions -> OUTPUT_DIR
+    export BIZ_OUT_DIR="$(mktemp -d)"
+    node BIZ/tools/bp_build.mjs       # bases + additions -> BIZ_OUT_DIR
     node BIZ/tools/bp_retemplate.mjs  # bob2 skin onto the builds
     node BIZ/tools/bp_check.mjs       # MASTER Law scan + BIZ print/data contract
-    node BIZ/tools/bp_print.mjs   # auto-detects Chrome/Chromium; pdfinfo checks page size
-    node BIZ/tools/bp_index.mjs       # this index
+    node BIZ/tools/bp_print.mjs       # auto-detects Chrome/Chromium; pdfinfo checks page size
+    node BIZ/tools/bp_index.mjs       # verify published pairs and regenerate this index
 
 `bp_check.mjs` delegates common HTML, prose and hygiene Laws to `MASTER/bin/operator lint` for the business-plan outputs and Ragnhild's funding guide. Business-plan checks remain specific to the Bob2/print contract and independently re-read financial arithmetic; the funding guide has a separate profile check for its five-page structure, accessible calendar headers, cited source links, source-check date and explicit eligibility/deadline caveats. The guide is not passed through the business-plan finance model or Bob2 skin.
 
@@ -191,7 +194,7 @@ macOS and Linux Chrome/Chromium executable names. Set `BIZ_CHROME_BIN` to
 the exact executable path only when automatic discovery cannot find it.
 `bp_print.mjs` prints with headless Chromium (no Python anywhere in the
 chain, per laws.yml REACH_non_native_tool) and checks every page size
-against the hefte canon (156mm 234mm); it also verifies the funding guide's five-page output. Raster generation is not visual approval. `bp_index.mjs` fails if a published or archived link lacks its HTML/PDF pair, if a workstream directory is unlisted, or if the retained `bob`, `bob2` and `bob3` templates are missing or unpaired. It lists guidance separately from plans;
+against the hefte canon (156mm 234mm); it also verifies the funding guide's five-page output. Raster generation is not visual approval. `bp_index.mjs` fails if a published or archived link lacks its HTML/PDF pair, if its PDF predates its HTML, if a known editable source or release tool is newer than its published HTML, if a workstream directory is unlisted, or if the retained `bob`, `bob2` and `bob3` templates are missing or unpaired. The timestamp check is a local freshness tripwire, not a reproducible content-hash receipt; an artifact whose timestamp has been normalised by an export remains unverified. It lists guidance separately from plans;
 it derives the Innovasjon Norge request only from that explicit row in each
 plan's financing table and reports source-only drafts separately. The retired
 poise/cover generation (bp_cover.mjs) left with its generation; its history
