@@ -443,6 +443,30 @@ class BrowserBrokerTest < Minitest::Test
     assert_equal 1, engine.stopped.size
   end
 
+  def test_close_all_does_not_claim_success_while_another_close_is_in_flight
+    engine = FakeEngine.new
+    entered = Queue.new
+    release = Queue.new
+    original_stop = engine.method(:stop)
+    engine.define_singleton_method(:stop) do |handle|
+      entered << true
+      release.pop
+      original_stop.call(handle)
+    end
+    b = broker(engine:)
+    lease = b.open(host: "example.com")
+    closer = Thread.new { b.close(lease.id) }
+
+    entered.pop
+    error = assert_raises(Broker::Denied) { b.close_all }
+
+    assert_match(/1 close\(s\) failed/, error.message)
+    assert_equal [lease.id], b.sessions
+  ensure
+    release << true if release
+    closer&.join
+  end
+
   def test_close_all_stops_every_lease_for_interruption_and_shutdown
     engine = FakeEngine.new
     b = broker(engine:)
