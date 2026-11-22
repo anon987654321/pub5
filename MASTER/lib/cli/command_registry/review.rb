@@ -456,6 +456,7 @@ module Master
                                 repo_root: Master.repo_root, kernel: nil, now: Time.now, record: true)
         return :cancelled if cancellation&.cancelled?
 
+        require_relative "../../agent/agent_cli"
         require_relative "../../agent/status_view"
         view = Master::Agent::StatusView.view
         counts = view.fetch(:counts)
