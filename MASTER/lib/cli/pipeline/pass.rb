@@ -83,6 +83,9 @@ module Master
           @task_contract = nil
           @task_contract_error = nil
           @t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          # Accumulated time for existing measured phase boundaries. Missing
+          # phases are absent, not inferred from the run's total duration.
+          @stage_timings = Hash.new(0.0)
           @unit = "review0"
           @observation_totals = {}
           @observed_counts = {}
@@ -150,6 +153,7 @@ module Master
                               failed_stages: @failed_stages.dup, totals: totals_for_report, causes: @causes.dup)
           Master::Trace::Dmesg.status(@unit, [ok ? "complete" : "incomplete", result.counts, "#{elapsed}s"].compact.join(", ")) if elapsed >= 1
           @bus&.publish("review:complete", target: resolved, apply:, ok:, elapsed_s: elapsed,
+                                            phase_elapsed_s: @stage_timings.transform_values { |seconds| seconds.round(3) },
                                             failed_stages: @failed_stages)
           result
         end
@@ -726,19 +730,27 @@ module Master
       Master::Trace::Dmesg.attach(unit, @unit, [kind, detail].compact.join(" "))
       t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       out = yield
-      elapsed = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0).round(1)
-      Master::Trace::Dmesg.status(unit, "#{elapsed}s") if elapsed >= 1
+      elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0
+      Master::Trace::Dmesg.status(unit, "#{elapsed.round(1)}s") if elapsed >= 1
       out
     rescue StandardError => e
       Master::Trace::Dmesg.status(unit, "#{e.class}: #{e.message}")
       raise
+    ensure
+      # Keep the measurements already exposed by dmesg, but also publish their
+      # accumulated duration as structured event data. Do not infer startup,
+      # inventory or delivery timings from phases this Pass does not own.
+      elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0 if t0
+      if elapsed && kind
+        @stage_timings ||= Hash.new(0.0)
+        @stage_timings[kind.to_s] += elapsed
+      end
     end
 
 # Fail-closed fallback for direct/internal Pass callers. The canonical /fix CLI
-# computes writes_requested? in CommandRegistry and passes apply explicitly:
-# a normal /fix repair writes; --dry-run, audit and visual pass apply:false.
-# Do not flip this fallback to true. A greeting or a plain question must never
-# become a write request; TurnRouter's question and intent gates own that boundary.
+# passes apply:true only after explicit --apply, mode and named-target validation.
+# Plain /fix, a greeting, a question or an autonomous trigger remains read-only.
+# Do not flip this fallback to true; TurnRouter and CommandRegistry own consent.
 def default_apply?(*) = false
 
 # The council is the largest model call in a pass: measured on lib/io, 46 files, the two scan phases
