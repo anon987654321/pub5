@@ -435,7 +435,9 @@ module Master
         failures = []
         ids.each do |id|
           begin
-            close(id)
+            closed = close(id)
+            still_owned = @mutex.synchronize { @handles.key?(id) || @leases.key?(id) }
+            failures << id if !closed && still_owned
           rescue StandardError
             failures << id
           end
