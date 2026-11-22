@@ -1388,9 +1388,11 @@ st_.playing=false;
 clearTimeout(st_.timer);
 clearInterval(st_.heartbeat);
 cancelAnimationFrame(st_.rafId);
+st_.rafId=null;
 releaseOwner();
 Tone.Transport.stop();
 Tone.Transport.cancel();
+st_.transportId=null;
 [kickN,kickSub,kickClk,kickBody,snareN,snareRng,clapN,hatN,openN,bassN,bassSub,keysN,padsN].forEach(s=>{
 s?.releaseAll?.();
 });
