@@ -143,6 +143,8 @@ model_defs:
   # Ollama Cloud model: context and capabilities are documented by Ollama.
   # The quality score is a conservative routing prior, not a measured MASTER
   # benchmark; it stays below the destructive-operation quality threshold.
+  # The hosted sender does not forward native tool schemas yet; keep this
+  # model on the governed ReAct fallback until that transport contract is tested.
   ollama_deepseek_v4_1_flash: &ollama_deepseek_v4_1_flash
     id: ollama_cloud:deepseek-v4.1-flash
     <<: *model_defaults
@@ -441,7 +443,6 @@ tool_capable_prefixes:
   - command-r
   - cohere/command
   - deepseek
-  - "ollama_cloud:deepseek-v4.1-flash"
   - stepfun
   - nvidia
   - nemotron
