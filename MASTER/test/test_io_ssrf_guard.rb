@@ -330,4 +330,36 @@ class SsrfGuardTest < Minitest::Test
     end
   end
 
+  def test_shared_request_identifies_connect_timeout_without_exposing_request_headers
+    uri = URI("https://example.com/data")
+    request = Net::HTTP::Get.new(uri)
+    request["Authorization"] = "Bearer do-not-log"
+    http = FakeOutboundHttp.new(FakeOutboundResponse.new)
+    http.define_singleton_method(:start) { |_block = nil, &block| raise Timeout::Error, "simulated" }
+
+    Guard.stub(:pinned_address, "93.184.216.34") do
+      Guard.stub(:http_for, ->(*_args, **_options) { http }) do
+        error = assert_raises(Timeout::Error) { Guard.request(uri, request, timeout: 3) }
+        assert_match(/outbound request exceeded 3s during connect_tls/, error.message)
+        refute_includes error.message, "do-not-log"
+      end
+    end
+  end
+
+  def test_shared_request_identifies_response_body_timeout
+    uri = URI("https://example.com/data")
+    response = FakeOutboundResponse.new(chunks: ["partial"])
+    response.define_singleton_method(:read_body) { |_block = nil, &block| raise Timeout::Error, "simulated" }
+    http = FakeOutboundHttp.new(response)
+
+    Guard.stub(:pinned_address, "93.184.216.34") do
+      Guard.stub(:http_for, ->(*_args, **_options) { http }) do
+        error = assert_raises(Timeout::Error) do
+          Guard.request(uri, Net::HTTP::Get.new(uri), timeout: 4)
+        end
+        assert_match(/outbound request exceeded 4s during response_body/, error.message)
+      end
+    end
+  end
+
 end
