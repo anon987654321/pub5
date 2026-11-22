@@ -915,26 +915,29 @@ log('FX randomized','k');
 
 async function exportWAV(){
 try{
+await rg69AudioProfileReady;
 const bars=8,len=bars*4*(60/aud_.bpm);
 $id('progress-wrap').style.display='block';
 $id('progress-pct').textContent='0%';
 $id('progress-fill').style.width='0%';
 log("exporting WAV...","i");
 const buf=await Tone.Offline(async()=>{
+const toneProfile=rg69AudioProfile.tone,kitProfile=rg69AudioProfile.kit,voiceProfile=rg69AudioProfile.voice;
 // Create isolated audio graph for offline rendering - never touch global synth variables
 const oDrumG=new Tone.Gain(mix_.drum/100);
 const oBassG=new Tone.Gain(mix_.bass/100);
-const oKeysG=new Tone.Gain(mix_.keys/100);
-const oPadsG=new Tone.Gain(mix_.pads/100);
+const oKeysG=new Tone.Gain(mix_.keys/100*rg69AudioProfile.voice.level);
+const oPadsG=new Tone.Gain(mix_.pads/100*rg69AudioProfile.voice.level);
 const oMaster=new Tone.Gain(mix_.master/100);
 const oFlt=new Tone.Filter(50+aud_.filter/100*15950,'lowpass');
 const oTape=new Tone.Distortion(0.08);
 const oComp=new Tone.Compressor(-18,1+aud_.comp/100*7);
 const oLimiter=new Tone.Limiter(-1);
-const oRevSend=new Tone.Gain((aud_.reverb/100)*0.35);
-const oDlySend=new Tone.Gain((aud_.delay/100)*0.28);
-const oRev=new Tone.Reverb(1+(aud_.reverb/100)*4);
-const oDly=new Tone.FeedbackDelay(Tone.Time('8n').toSeconds(),0.1+(aud_.delay/100)*0.55);
+const oRevSend=new Tone.Gain((aud_.reverb/100)*rg69AudioProfile.rig.reverb.level_chords);
+const oDlySend=new Tone.Gain((aud_.delay/100)*rg69AudioProfile.rig.delay.throw_chords);
+const oRev=new Tone.Reverb(1+(aud_.reverb/100)*rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale);
+const oDly=new Tone.FeedbackDelay(Tone.Time('8n').toSeconds(),rg69AudioProfile.rig.delay.feedback+(aud_.delay/100)*rg69AudioProfile.effects.delay_feedback_range);
+const oDlyFlt=new Tone.Filter(rg69AudioProfile.rig.delay.lowpass,'lowpass');
 oRev.wet.value=1;
 oDly.wet.value=1;
 oTape.wet.value=aud_.tape/100;
@@ -946,7 +949,8 @@ oLimiter.toDestination();
 oRevSend.connect(oRev);
 oDlySend.connect(oDly);
 oRev.connect(oComp);
-oDly.connect(oComp);
+oDly.connect(oDlyFlt);
+oDlyFlt.connect(oComp);
 // Create isolated synths in offline context
 const oKickN=new Tone.MembraneSynth({pitchDecay:.05,octaves:6,oscillator:{type:'sine'},envelope:{attack:.001,decay:.4,sustain:0,release:.1}});
 const oKickSub=new Tone.Synth({oscillator:{type:'sine'},envelope:{attack:.001,decay:.5,sustain:0,release:.1}});
