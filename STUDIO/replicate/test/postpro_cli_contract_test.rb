@@ -46,7 +46,10 @@ class TestPostproCliContract < Minitest::Test
     refute_includes constitution, "FileUtils.rm_f"
     refute_includes cli, "retire_previous_renders!"
     assert_includes constitution, "def verify_unused_output!"
+    assert_includes constitution, "existing = existing_output(output)"
+    assert_includes constitution, "raise ArgumentError, \"constitutional output already exists:"
     assert_includes constitution, "def available_output_path"
+    assert_includes constitution, "verify_unused_output!(output)"
   end
 
   def test_explicit_postpro_destinations_refuse_to_replace_existing_takes
