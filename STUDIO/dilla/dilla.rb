@@ -2908,7 +2908,7 @@ module Dilla
   def write_session(base, plan, performer, events, sample_report)
     data = {
       "engine" => "dilla #{VERSION}",
-      "progression" => plan[:progression].slice("id", "title", "key", "bpm", "loop_bars", "chords"),
+      "progression" => plan[:progression].slice("id", "title", "key", "bpm", "loop_bars", "chords", "source", "sample_provenance"),
       "arrangement" => plan[:arrangement],
       "drums" => plan[:drums], "groove_profile" => plan[:profile], "groove_scale" => plan[:groove_scale],
       "kit" => plan[:kit], "voice" => plan[:voice], "rig" => plan[:rig], "bars" => plan[:bars],
@@ -2921,12 +2921,23 @@ module Dilla
   end
 
   def write_provenance(base, opts, plan, performer, wav_path, session, quality)
+    sample_source = opts.sample_loop || ENV["SAMPLE_LOOP"]
     data = {
       "engine" => "dilla", "version" => VERSION,
       "created_at" => Time.now.utc.iso8601,
       "ruby" => RUBY_VERSION,
       "seed" => session && opts.seed ? opts.seed : (opts.seed || "random"),
       "performer" => performer["id"],
+      "source" => {
+        "progression_id" => plan[:progression]["id"],
+        "progression_tier" => plan[:progression]["source"] || "engine",
+        "sample_rights_status" => sample_source.to_s.empty? ? "not_used" : "operator_attestation_required"
+      },
+      "human_acceptance" => {
+        "listening" => "not_reviewed",
+        "reviewer" => nil,
+        "reviewed_at" => nil
+      },
       "flags" => {
         "out" => opts.out, "progression" => opts.progression, "drums" => opts.drums,
         "midi" => opts.midi, "midi_out" => opts.midi_out, "foley" => opts.foley,
@@ -2934,7 +2945,7 @@ module Dilla
         "kit" => opts.kit, "voice" => opts.voice, "rig" => opts.rig, "sonitex" => opts.sonitex,
         "sonitex_instances" => opts.sonitex_instances, "vcs" => opts.vcs,
         "drum_balance" => opts.drum_balance, "chord_balance" => opts.chord_balance,
-        "sample_loop" => opts.sample_loop || ENV["SAMPLE_LOOP"],
+        "sample_loop" => sample_source,
         "sample_vol" => opts.sample_vol || ENV["SAMPLE_LOOP_VOL"],
         "sample_weight" => opts.sample_weight || ENV["SAMPLE_LOOP_WEIGHT"],
         "sample_slices" => opts.sample_slices
