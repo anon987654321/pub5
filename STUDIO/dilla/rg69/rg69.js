@@ -552,7 +552,7 @@ log("audio engine init (analog++)","k");
 }
 
 function applyFX(){
-Tone.Transport.bpm.value=aud_.bpm;
+if(st_.started)Tone.Transport.bpm.value=aud_.bpm;
 if(drumG)drumG.gain.value=mix_.drum/100;
 if(bassG)bassG.gain.value=mix_.bass/100;
 if(keysG)keysG.gain.value=mix_.keys/100;
@@ -1391,19 +1391,9 @@ buildUI();
 syncUIFromState();
 log("RG-69 ready — type <b>help</b> in terminal","k");
 
-// Best-effort autostart: play immediately where the browser permits audio
-// without a gesture. Most browsers block it, so when the context is not
-// already running we leave the welcome gate up and build nothing; the first
-// click (its ▶ play button) boots the engine inside that gesture.
-(async()=>{
-try{
-await Tone.start();
-if(Tone.getContext().rawContext.state!=='running')return;
-await startPlayback();
-dismissWelcome();
-log('autostart','k');
-}catch(e){st_.playing=false;}
-})();
+// Audio is deliberately gesture-gated. Do not call Tone.start() or touch
+// Tone.Transport during page initialization; Chrome may create/resume the
+// AudioContext only from the welcome or Play button gesture.
 
 // ─── terminal ───────────────────────────────────────────────────────────────
 const TERM_CMDS=[
