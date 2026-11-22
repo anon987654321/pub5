@@ -90,8 +90,8 @@ class TestRg69Defaults < Minitest::Test
     assert_includes style_names, chip, "default chip #{chip.inspect} names no STYLES entry"
   end
 
-  # The point of the retune: the default is industrial techno over dilla's Blue
-  # Hour material, so the grid is four-on-the-floor and the master is driven and
+  # The point of the retune: the default is industrial techno over the engine's
+  # original F-minor harmony, so the grid is four-on-the-floor and the master is driven and
   # tight rather than swung and wet.
   def test_the_default_reads_as_industrial_techno
     aud = boot_aud
@@ -131,8 +131,9 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "synths.kickClk.triggerAttackRelease(thirtySecond,rt,vl*0.3)"
     assert_includes js, "synths.snare.triggerAttackRelease(eighth,rt,vl)"
     assert_includes js, "synths.clap.triggerAttackRelease(sixteenthDuration,rt,vl)"
-    assert_includes js, "synths.hat.triggerAttackRelease(200,sixteenthDuration,rt,vl)"
-    assert_includes js, "synths.open.triggerAttackRelease(200,eighth,rt,vl)"
+    assert_includes js, "synths.snareRng.triggerAttackRelease(pitch.snareRing,sixteenthDuration,rt,vl*0.5)"
+    assert_includes js, "synths.hat.triggerAttackRelease(pitch.hat,sixteenthDuration,rt,vl)"
+    assert_includes js, "synths.open.triggerAttackRelease(pitch.open,eighth,rt,vl)"
     refute_match(/synths\.(?:kickClk|snare|clap|hat|open)\.triggerAttackRelease\(rt,vl/, js)
   end
 
