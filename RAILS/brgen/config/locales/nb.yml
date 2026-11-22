@@ -118,6 +118,7 @@ nb:
     show_new_posts: Vis nye
     follow_sign_in: Logg inn
     follow_hint_html: "%{sign_in} for å se innlegg fra folk du følger."
+    following_cold_start: "Du følger ingen ennå. Vi viser populære innlegg fra byen din i stedet."
     local_posts: Lokale innlegg
     local_activity: Lokal aktivitet
     local_marketplace: Nytt i markedet
