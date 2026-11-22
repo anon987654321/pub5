@@ -181,7 +181,12 @@ module Master
           self
         end
 
-        def snapshot = JSON.parse(@page.evaluate(SNAPSHOT_SCRIPT))
+        def snapshot
+          source = @page.evaluate(SNAPSHOT_SCRIPT).to_s
+          raise Denied, "browser: DOM snapshot exceeds the observation budget" if source.bytesize > BrowserBroker::MAX_OBSERVATION_BYTES * 16
+
+          JSON.parse(source)
+        end
 
         def screenshot(path: nil, full: false, format: "png", encoding: :binary)
           raise Denied, "browser: only PNG screenshots are allowed" unless format.to_s == "png"
@@ -226,6 +231,7 @@ module Master
         end
 
         def text = @node.text.to_s
+        def tag_name = @node.tag_name.to_s
         def attribute(name) = @node.attribute(name.to_s)
         def property(name) = @node.property(name.to_s)
         def visible? = @node.visible?
