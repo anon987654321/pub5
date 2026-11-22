@@ -12,6 +12,7 @@ class CoreCapabilitiesTest < Minitest::Test
     assert_equal :probe, E.probe(%w[ruby -c check.rb]).capability
     assert_equal :execute, E.exec(%w[echo hi]).capability
     assert_equal :read, E.git(:diff).capability
+    assert_equal :browser, E.browser("https://example.com").capability
     assert_equal :write, E.git(:stage, paths: ["x"]).capability
     assert_equal :stdio, E.done("done").capability
   end
