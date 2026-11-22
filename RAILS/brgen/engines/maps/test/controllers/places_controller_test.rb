@@ -55,7 +55,7 @@ class MapsPlacesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "select[name=kind] option", text: I18n.t("maps.kinds.place"), count: 1
 
-    get "/places/#{place.id}"
+    get "/places/#{place.to_param}"
     assert_response :success
     assert_select "dt", text: I18n.t("maps.kind")
     assert_select "dd", text: I18n.t("maps.kinds.place")
@@ -90,10 +90,38 @@ class MapsPlacesControllerTest < ActionDispatch::IntegrationTest
     rows = JSON.parse(response.body)
     assert_equal 2, rows.size
     row = rows.find { |r| r["name"] == "Kafeteket" }
-    assert_equal %w[city id kind lat lng name neighborhood], row.keys.sort
+    assert_equal %w[city id kind lat lng name neighborhood slug], row.keys.sort
+    assert_equal cafe.slug, row["slug"]
     assert_equal cafe.latitude.to_f, row["lat"].to_f
     assert_equal cafe.longitude.to_f, row["lng"].to_f
     assert_equal @city.name, row["city"]
+  end
+
+  test "a legacy numeric place URL redirects to its canonical slug" do
+    place = Place.create!(city: @city, name: "Bryggen", kind: "attraction",
+                          latitude: 60.3974, longitude: 5.3244)
+
+    get "/places/#{place.id}"
+
+    assert_response :moved_permanently
+    assert_redirected_to "/places/#{place.slug}"
+    get "/places/#{place.slug}"
+    assert_response :success
+    assert_select "h1", text: place.name
+  end
+
+  test "a place can be fetched as a stable JSON resource by slug" do
+    place = Place.create!(city: @city, name: "Bryggen", kind: "attraction",
+                          latitude: 60.397456, longitude: 5.324456,
+                          location_precision: "neighbourhood")
+
+    get "/places/#{place.slug}.json"
+
+    assert_response :success
+    row = JSON.parse(response.body)
+    assert_equal place.id, row.fetch("id")
+    assert_equal place.slug, row.fetch("slug")
+    assert_equal [ 60.397, 5.324 ], [ row.fetch("lat"), row.fetch("lng") ]
   end
 
   test "the public JSON twin rounds coordinates to the place precision policy" do
@@ -152,7 +180,7 @@ class MapsPlacesControllerTest < ActionDispatch::IntegrationTest
       latitude: 60.397456, longitude: 5.324456, location_precision: "neighbourhood"
     )
 
-    get "/places/#{place.id}"
+    get "/places/#{place.to_param}"
 
     assert_response :success
     assert_includes response.body, "60.397, 5.324"
@@ -166,7 +194,7 @@ class MapsPlacesControllerTest < ActionDispatch::IntegrationTest
                           latitude: 60.3974, longitude: 5.3244)
     Place.create!(city: @city, name: "Nordnes", kind: "attraction", latitude: 60.3995, longitude: 5.3150)
 
-    get "/places/#{place.id}"
+    get "/places/#{place.to_param}"
 
     assert_response :success
     assert_select "h1", text: "Bryggen"
@@ -185,18 +213,18 @@ class MapsPlacesControllerTest < ActionDispatch::IntegrationTest
   test "a guest sees the check-in form and the write lands under the soft guest" do
     place = Place.create!(city: @city, name: "Bryggen", kind: "attraction", latitude: 60.3974, longitude: 5.3244)
 
-    get "/places/#{place.id}"
+    get "/places/#{place.to_param}"
 
     assert_response :success
-    assert_select "form[action=?]", "/places/#{place.id}/check_in" do
+    assert_select "form[action=?]", "/places/#{place.to_param}/check_in" do
       assert_select "input[name=note]"
     end
     assert_select "input[type=submit][value=?]", I18n.t("maps.check_in")
 
     assert_difference -> { PlaceCheckIn.count }, 1 do
-      post "/places/#{place.id}/check_in", params: { note: "her" }
+      post "/places/#{place.to_param}/check_in", params: { note: "her" }
     end
-    assert_redirected_to "/places/#{place.id}"
+    assert_redirected_to "/places/#{place.to_param}"
     assert_equal I18n.t("flash.checked_in_at", place: place.name), flash[:notice]
 
     check_in = PlaceCheckIn.includes(:place, :user).order(:id).last
@@ -211,7 +239,7 @@ class MapsPlacesControllerTest < ActionDispatch::IntegrationTest
     checked_in_at = Maps::PlacesController::NAMED_CHECK_IN_DELAY.ago - 1.minute
     PlaceCheckIn.create!(place: place, user: @user, note: "Solbaer i baggen", checked_in_at:)
 
-    get "/places/#{place.id}"
+    get "/places/#{place.to_param}"
 
     assert_response :success
     assert_select "li", text: /Solbaer i baggen/
@@ -222,9 +250,9 @@ class MapsPlacesControllerTest < ActionDispatch::IntegrationTest
     place = Place.create!(city: @city, name: "Bryggen", kind: "attraction", latitude: 60.3974, longitude: 5.3244)
 
     assert_no_difference -> { PlaceCheckIn.count } do
-      post "/places/#{place.id}/check_in", params: { note: "x" * 281 }
+      post "/places/#{place.to_param}/check_in", params: { note: "x" * 281 }
     end
-    assert_redirected_to "/places/#{place.id}"
+    assert_redirected_to "/places/#{place.to_param}"
     assert_equal I18n.t("flash.check_in_failed"), flash[:alert]
   end
 end
