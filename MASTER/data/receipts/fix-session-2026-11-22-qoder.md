@@ -1512,3 +1512,24 @@ the one Commerce domain and the Places substrate first (the fences demand it), t
 closes verticals in the user-value sequence, each slice proven locally and rendered,
 each live claim INCONCLUSIVE until its operator seam closes. Non-technical love is
 not a layer added at the end; it is the acceptance predicate every slice must pass.
+
+
+### Measurement and accessibility evidence refinements — 2026-11-22
+
+- The sunset scorer/data/test slice is described above. Its three implementation
+  commits are on `main`; none of the Ruby tests has been executed here.
+- Improved axe diagnostics to preserve every affected node selector for each
+  violation. The previous report kept only `v.nodes.length` and the first
+  node's target; the report now carries all targets and emits the complete
+  selector list, with an explicit placeholder when a violation has no target.
+  Updated `MASTER/test/test_axe.rb` to assert multiple targets and the
+  unmapped-Law label.
+  Commits:
+  `ccdb261cfb36125c3e21a06f90fbb294afbe8e17` (report),
+  `e0067286d3ef3a29dff09e754993ab1a12b8bea1` (focused fixture).
+- No axe-core vendor bytes, licence text or Law catalogue entry changed.
+  The separate suggestion to create an axe exemption remains refuted.
+
+Proof: read-after-write verification of the Ruby helper and regression fixture.
+NOT_RUN: `TestAxe`, Chrome/CDP execution, AxeCheck across product surfaces,
+Ruby syntax and full check suites. This is source-level evidence only.
