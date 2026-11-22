@@ -1045,3 +1045,21 @@ Proof: inspected and fetched the exact vendor header and licence, CDP source,
   verified the refutation entry by read-after-write.
 
 Not run: `TestAxe`, CDP/Chrome, licence audit and all Ruby checks.
+
+
+- Replaced the last present-tense reference to the deleted root `TODO.md`
+  in `MIGRATION.md` with the live convergence, gap, operator-seam, UX and
+  RAILS refinement owners. Historical table entries that accurately describe
+  the migration-era TODO remain as provenance.
+  Commit: `095d00d19707375c2bb1160dc75772f15335be7f`.
+- Verified that the three files named by MASTER/AGENTS.md's “Working alone”
+  section — `MASTER/test/test_entrypoint_requires.rb`,
+  `MASTER/lib/fix/code_watch.rb` and
+  `MASTER/checks/support/cdp_framing.rb` — exist at the documented paths.
+  This confirms path existence only, not the continued accuracy of every
+  operational statement in that section.
+
+Proof: read-after-write verification, targeted reference scan of all 518
+migration-record lines, and GitHub file reads for the three named paths.
+Not run: documentation lint, rendered Markdown inspection, test suite,
+`agent_context.rb` or `/fix`.
