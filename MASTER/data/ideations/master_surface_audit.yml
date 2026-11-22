@@ -15,11 +15,11 @@ method: >
   Same method as pass 1: spec-level candidates, adversarial critique, winners
   with reasons, losers keeping theirs. Read against the actual dashboard
   contract (dashboard payload computed in the live poll, CLAUDE.md's
-  resource_guard order amber then bsdports).
+  resource_guard order bsdports then amber).
 gaps: [master_fleet_health, master_dead_payload_facts]
 candidates:
   # master_fleet_health
-  - { id: masterweb_a01, gap: master_fleet_health, spec: "Fleet panel: the dashboard polls each sibling app's health endpoint on the same box, renders load/memory/shed-state per app, and names the resource_guard order (amber first, bsdports second).", hyperlocal: high, synergy: high, cost: M, laws_delta: none, reversibility: high }
+  - { id: masterweb_a01, gap: master_fleet_health, spec: "Fleet panel: the dashboard polls each sibling app's health endpoint on the same box, renders load/memory/shed-state per app, and names the resource_guard order (bsdports first, amber second).", hyperlocal: high, synergy: high, cost: M, laws_delta: none, reversibility: high }
   - { id: masterweb_a02, gap: master_fleet_health, spec: "Parse the system process table instead of calling the siblings - one source, no HTTP fan-out from a 1 GB box.", hyperlocal: medium, synergy: medium, cost: M, laws_delta: none, reversibility: medium }
   - { id: masterweb_a03, gap: master_fleet_health, spec: "Keep the console single-container and publish fleet state as a static JSON the operator curls - no dashboard surface.", hyperlocal: low, synergy: low, cost: S, laws_delta: none, reversibility: high }
   # master_dead_payload_facts
