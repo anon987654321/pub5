@@ -276,6 +276,10 @@ module Master
         end
       end
 
+      def browser_broker_available?
+        @broker && (!@broker.respond_to?(:available?) || @broker.available?)
+      end
+
       def open_session(key, host:, url: nil, headless:)
         @mutex.synchronize do
           if (existing = @sessions[key])
@@ -291,7 +295,7 @@ module Master
           end
           raise ArgumentError, "browser session limit reached (#{MAX_SESSIONS})" if @sessions.size >= MAX_SESSIONS
 
-          raise ArgumentError, "Core-owned browser broker is unavailable; refusing to spawn Chromium outside Core" unless @broker
+          raise ArgumentError, "Core-owned browser broker is unavailable; refusing to spawn Chromium outside Core" unless browser_broker_available?
 
           ferrum!
           lease = @broker.open(host: host.to_s.downcase, url:, headless:)
