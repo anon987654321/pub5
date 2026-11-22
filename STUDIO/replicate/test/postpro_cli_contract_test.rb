@@ -66,7 +66,7 @@ class TestPostproCliContract < Minitest::Test
     }
 
     identity = Postpro::Constitution.take_identity(**common, chain: chain_a)
-    assert_match(/\\A[a-f0-9]{64}\\z/, identity)
+    assert_match(/\A[a-f0-9]{64}\z/, identity)
     assert_equal identity, Postpro::Constitution.take_identity(**common, chain: chain_b)
     refute_equal identity, Postpro::Constitution.take_identity(**common.merge(seed: 1235), chain: chain_a)
     refute_equal identity, Postpro::Constitution.take_identity(**common.merge(input_sha256: "b" * 64), chain: chain_a)
