@@ -155,6 +155,7 @@ class BrowserBrokerTest < Minitest::Test
 
     assert_match(/bound to example\.com/, error.message)
     assert_raises(Broker::Denied) { b.navigate(lease.id, "file:///etc/passwd") }
+    assert_raises(Broker::Denied) { b.navigate(lease.id, "https://user:pass@example.com/") }
   end
 
   def test_a_refused_destination_never_starts_a_process
@@ -164,6 +165,22 @@ class BrowserBrokerTest < Minitest::Test
 
     assert_raises(Broker::Denied) { b.open(host: "example.com", url: "https://blocked.example/") }
     assert_empty engine.started, "a refused destination must not cost a browser launch"
+  end
+
+  def test_initial_url_must_match_the_bound_host_and_have_no_credentials
+    engine = FakeEngine.new
+    b = broker(engine:)
+
+    assert_raises(Broker::Denied) do
+      b.open(host: "example.com", url: "https://other.example/")
+    end
+    assert_raises(Broker::Denied) do
+      b.open(host: "example.com", url: "https://user:pass@example.com/")
+    end
+    assert_raises(Broker::Denied) do
+      b.open(host: "example.com", url: "file:///etc/passwd")
+    end
+    assert_empty engine.started, "invalid or mismatched initial URLs must be refused before Chromium starts"
   end
 
   def test_the_default_policy_refuses_a_non_public_destination_without_a_custom_check
