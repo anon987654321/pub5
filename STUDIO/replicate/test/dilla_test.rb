@@ -152,6 +152,39 @@ class TestDillaCliContract < Minitest::Test
     end
   end
 
+  def test_reproduce_refuses_changed_session_sidecar_and_original_output_path
+    Dir.mktmpdir("dilla-reproduce-sidecar-") do |directory|
+      original_base = File.join(directory, "original")
+      options = Dilla::Options.new
+      options.mode = :render
+      options.style = "j_dilla"
+      options.progression = Dilla.progressions.first.fetch("id")
+      options.bars = "1"
+      options.seed = "4321"
+      options.sample_loop = ""
+      options.out = original_base
+
+      original = Dilla.render(options, quiet: true)
+      provenance_path = "#{original_base}.provenance.json"
+      original_digest = Digest::SHA256.file(original.fetch(:wav)).hexdigest
+
+      error = assert_raises(ArgumentError) do
+        Dilla.reproduce_render(provenance_path, out: original.fetch(:wav))
+      end
+      assert_match(/must not replace the original take/, error.message)
+      assert_equal original_digest, Digest::SHA256.file(original.fetch(:wav)).hexdigest
+
+      session_path = "#{original_base}.session.json"
+      File.open(session_path, "ab") { |file| file.write(" ") }
+      replay_path = File.join(directory, "replay.wav")
+      error = assert_raises(ArgumentError) do
+        Dilla.reproduce_render(provenance_path, out: replay_path)
+      end
+      assert_match(/session sidecar byte count changed/, error.message)
+      refute File.exist?(replay_path)
+    end
+  end
+
   def test_reproduce_cli_requires_an_original_provenance_and_output
     options = Dilla.parse_cli(["reproduce", "take.provenance.json", "--out", "replay.wav"])
 
