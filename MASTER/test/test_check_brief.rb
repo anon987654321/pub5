@@ -120,6 +120,19 @@ class TestCheckBrief < Minitest::Test
     assert_equal "BLOCKED", blocked.fetch("status")
     assert_equal 1, blocked.dig("counts", "blocked")
 
+    measured_nothing = Operator::CheckRunner::Result.new(
+      name: "all tree tests", success: false, output: "Node.js unavailable",
+      timed_out: false, exit_status: 3, command: "rake test:all_trees"
+    )
+    inconclusive = JSON.parse(Operator::CheckBrief.render_json(
+      profile: "full", results: [measured_nothing], metadata:,
+      started_at: "start", finished_at: "finish", duration_s: 3,
+      exit_status: 1, command: "MASTER/bin/check --profile=full --format=json"
+    ))
+    assert_equal "INCONCLUSIVE", inconclusive.fetch("status")
+    assert_equal "INCONCLUSIVE", inconclusive.dig("steps", 0, "status")
+    assert_equal 1, inconclusive.dig("counts", "inconclusive")
+
     dirty = JSON.parse(Operator::CheckBrief.render_json(
       profile: "agent", results: [Operator::CheckRunner::Result.new(
         name: "law syntax", success: true, output: "ok",
