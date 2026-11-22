@@ -122,6 +122,28 @@ class TestCheckRunnerStdin < Minitest::Test
     end
   end
 
+  def test_quiet_runner_does_not_leak_failed_step_output_to_stdout
+    runner = Operator::CheckRunner.new(
+      prefix: "check-runner-json",
+      root: File.expand_path("../..", __dir__),
+      timeout: 5,
+      quiet: true,
+    )
+
+    stdout, stderr = capture_io do
+      refute runner.run(
+        "failing quiet check",
+        RbConfig.ruby,
+        "-e",
+        "puts 'secret diagnostic'; warn 'private warning'; exit 2",
+      )
+    end
+
+    assert_empty stdout
+    assert_empty stderr
+    assert_includes runner.results.fetch(0).output, "secret diagnostic"
+  end
+
   def test_noninteractive_step_receives_eof
     runner = Operator::CheckRunner.new(
       prefix: "check-runner-test",
