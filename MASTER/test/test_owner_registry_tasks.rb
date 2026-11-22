@@ -228,7 +228,7 @@ class TestOwnerRegistryTasks < Minitest::Test
           "failure_category" => "transient",
           "retry_at" => (Time.now.utc + 600).iso8601,
           "requires_operator" => false,
-          "scope_digest" => Digest::SHA256.hexdigest("scope"),
+          "scope_digest" => executor.send(:scope_digest_for, row.fetch(:scope_paths)),
           "parked_at" => Time.now.utc.iso8601,
         }
 
