@@ -232,10 +232,11 @@ PROFILES = {
 
 steps = PROFILES[profile]
 unless steps
-  Master::Trace::Dmesg.status("check0", "unknown profile #{profile}, have #{PROFILES.keys.join(", ")}")
+  Master::Trace::Dmesg.status("check0", "unknown profile #{profile}, have #{PROFILES.keys.join(", ")}", io: check_io)
   exit 64
 end
-Master::Trace::Dmesg.status("web0", "live web checks skipped, set MASTER_WEB_LIVE=1") if profile == "web" && !web_live
+check_io = format == "json" ? $stderr : $stdout
+Master::Trace::Dmesg.status("web0", "live web checks skipped, set MASTER_WEB_LIVE=1", io: check_io) if profile == "web" && !web_live
 
 if list
   puts "profile: #{profile}"
