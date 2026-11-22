@@ -2230,3 +2230,39 @@ definitions. Static inspection confirms that the test assertions refer to the
 existing schema names and callback. No Ruby syntax check, Rails test, migration,
 database transaction test, or browser test was executed here; both new tests
 remain **NOT_RUN**. No payment provider, production database or host was used.
+
+
+### REDUNDANT_CORE_REQUIRE false-positive correction — 2026-11-22
+
+- Narrowed `REDUNDANT_CORE_REQUIRE` to `require "set"`. Pub5's Gemfiles
+  declare Ruby `>= 3.2`; Set has been a built-in/autoloaded class since
+  Ruby 3.2. The detector no longer recommends deleting `require "pathname"`.
+- Kept the negative fixture on `require "pathname"` and made its supported
+  use explicit with `Pathname.instance_method(:find)` and
+  `Pathname.instance_method(:rmtree)`. Ruby 4.0's core Pathname does not
+  include those two methods; the library supplies them.
+- Added a targeted regression in the existing `test_law_fixtures.rb`, and
+  updated the existing canonical `checks/data/law_fixtures.yml` recording.
+  No new file or new Law was added.
+- This corrects the initial three-file patch in commit
+  `6b00e2cde2c51826f66b175c424c9c58492a3a8f`. The Ruby fixture, test
+  assertions and recorded YAML were then tightened for the Ruby 3.2 floor
+  in commits `528961d1a3e414641aebb18887200fbb9f560924`,
+  `ef6742222f3b4072331f4d86a5b3161d8f827e02` and
+  `c0b16a08c9b8f79ecf70b28d4100cae68b00d05d`.
+
+Proof actually performed: GitHub read-after-write verification of all three
+files; Ruby 3.3.8 syntax checks of the changed Law and test excerpts; direct
+predicate assertions (Set flagged, Pathname spared); a Ruby 3.3.8 check that
+Set autoloads without `require "set"` and Pathname `find`/`rmtree` are
+available after `require "pathname"`; and isolated YAML parsing of the
+updated negative fixture.
+
+Still **NOT_RUN**: the mandatory `ruby MASTER/tools/agent_context.rb --json`
+(the Pub5 checkout is not mounted here), the complete
+`MASTER/test/test_law_fixtures.rb`, full Ruby syntax over the repository,
+a fresh `REDUNDANT_CORE_REQUIRE` finding inventory, governed `/fix`
+cleanup of the remaining findings, and all other repository-wide checks.
+These local excerpt/runtime checks do not substitute for the registered
+repository tests. `redundant_core_require_cleanup` remains **partial**;
+no broad deletion of the original 85 findings is claimed.
