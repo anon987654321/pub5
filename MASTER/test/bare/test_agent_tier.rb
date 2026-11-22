@@ -245,6 +245,25 @@ module Master
         end
       end
 
+      def test_autopoiesis_file_presence_is_not_a_health_check
+        source = File.join(master_root, "data", "autopoietic_components.json")
+        Dir.mktmpdir do |dir|
+          output = File.join(dir, "components.json")
+          FileUtils.cp(source, output)
+          kernel = Autopoiesis::Kernel.new(repo_root: repo_root)
+          kernel.instance_variable_set(:@manifest_path, output)
+
+          results = kernel.health_check_all
+
+          results.each do |result|
+            component = JSON.parse(File.read(output)).fetch("components").find { |row| row["id"] == result[:id] }
+            expected = File.file?(File.join(repo_root, component["path"])) ? "inconclusive" : "degraded"
+            assert_equal expected, result[:status]
+          end
+          refute kernel.status[:healthy], "inventory-only evidence cannot establish component health"
+        end
+      end
+
       def test_prune_only_judges_laws_that_were_measured
         out, = capture_io { Prune.report }
         payload = JSON.parse(out[/\{.*\}/m])
