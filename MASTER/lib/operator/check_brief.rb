@@ -237,7 +237,7 @@ module Operator
     end
 
     def step_status(result)
-      return "TIMEOUT" if result.respond_to?(:timed_out) && result.timed_out
+      return "TIMEOUT" if (result.respond_to?(:timed_out) && result.timed_out) || result.exit_status == 124
       return "PASS" if result.success
       return "BLOCKED" if result.name.to_s.match?(/\bunavailable\b/i)
       return "INCONCLUSIVE" if result.exit_status == 3
