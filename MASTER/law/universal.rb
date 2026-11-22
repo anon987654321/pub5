@@ -1843,6 +1843,15 @@ Law.define(:ROBUSTNESS) do
   good "Input, authorization, resource bounds and failure recovery have explicit evidence-backed behavior."
 end
 
+Law.define(:ROBUSTNESS_bounded_operation_lifecycle) do
+  source "laws.yml ROBUSTNESS_bounded_operation_lifecycle - a timeout owns and cleans the whole operation"
+  ask "When a command or concurrent operation times out or fails, does its owner stop and reap every owned descendant and process group, close inherited pipes, join output readers within a bound, clean temporary resources and report the typed outcome? Or can a child holding a pipe, reader thread or cleanup task outlive the deadline and keep work alive after the caller believes it stopped?"
+  practice "A deadline owns the operation, not only its direct PID. Bound the process tree, readers, descriptors and cleanup as one lifecycle."
+  fix "Use the existing process supervisor to own the process group; send bounded TERM/KILL, drain or close pipes, join readers with a deadline, reap children, clean owned temporary state and preserve TIMEOUT/FAIL rather than reporting success."
+  bad "A timed-out shell command leaves a forked child holding stdout open, so the reader thread and caller continue waiting after the nominal deadline."
+  good "The supervisor terminates and reaps the owned group, closes every pipe, joins readers within the remaining budget and emits a typed timeout receipt."
+end
+
 Law.define(:ROBUSTNESS_mutation_requires_explicit_authorization) do
   source "laws.yml ROBUSTNESS_mutation_requires_explicit_authorization - /fix mutations require explicit authorization, mode and scope"
   ask "Does a mutating /fix repair require an explicit --apply authorization, an explicit requested mode and a named governed repository target before inventory or mutation begins? A bare /fix, startup, retry or plain run instruction is not write consent."
