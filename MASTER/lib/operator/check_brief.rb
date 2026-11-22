@@ -133,8 +133,8 @@ module Operator
       timed_out = statuses.count("TIMEOUT")
       blocked = statuses.count("BLOCKED")
       inconclusive = statuses.count("INCONCLUSIVE")
-      repository_evidence_complete = metadata[:main_sha].to_s.match?(/\\A[0-9a-f]{40}\\z/i) &&
-                                     metadata[:checked_out_sha].to_s.match?(/\\A[0-9a-f]{40}\\z/i) &&
+      repository_evidence_complete = metadata[:main_sha].to_s.match?(/\A[0-9a-f]{40}\z/i) &&
+                                     metadata[:checked_out_sha].to_s.match?(/\A[0-9a-f]{40}\z/i) &&
                                      !metadata[:branch].to_s.empty? &&
                                      metadata[:clean_checkout] == true &&
                                      !metadata[:main_ref].to_s.empty?
