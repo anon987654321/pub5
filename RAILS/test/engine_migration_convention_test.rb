@@ -43,6 +43,33 @@ class EngineMigrationConventionTest < Minitest::Test
                  "no declaration, because it looks like wiring")
   end
 
+  # CommerceLedger is intentionally shared code with per-app databases.
+  # Its migration must exist in both consumers and remain structurally identical;
+  # a shared-engine migration would run nowhere under this repository's topology.
+  def test_commerce_ledger_migration_and_schema_match_both_consuming_apps
+    apps = %w[brgen amber]
+    migrations = apps.to_h do |app|
+      path = File.join(ROOT, app, "db/migrate/20261122170000_create_commerce_ledger_entries.rb")
+      assert File.file?(path), "#{app} has no CommerceLedger migration"
+      [app, File.binread(path)]
+    end
+    assert_equal migrations.fetch("brgen"), migrations.fetch("amber"),
+                 "the shared ledger migration differs between its two app databases"
+
+    apps.each do |app|
+      schema = File.read(File.join(ROOT, app, "db/schema.rb"))
+      table = schema[/^  create_table "commerce_ledger_entries".*?^  end/m]
+      refute_nil table, "#{app}/db/schema.rb is missing commerce_ledger_entries"
+      %w[actor_id amount_minor currency expires_at entry_type entitlement
+         idempotency_key metadata source_id source_type user_id].each do |column|
+        assert_match(/t\\.(?:bigint|integer|string|datetime|json) "#{column}"/, table,
+                     "#{app} ledger schema is missing #{column}")
+      end
+      assert_match(/idempotency_key.*unique: true/, table,
+                   "#{app} ledger schema must enforce idempotency in the database")
+    end
+  end
+
   # What replaced it: every app carries the outbound_clicks migration itself, and
   # its schema knows the table. A missing one is a beacon writing to nothing.
   def test_every_app_carries_the_shared_tables_it_needs
