@@ -334,6 +334,25 @@ class TestRg69Defaults < Minitest::Test
     assert_includes apply, "profile.rig.reverb.size"
     assert_includes apply, "profile.rig.delay.lowpass"
   end
+  def test_rg69_stereo_pan_and_vinyl_rig_apply_in_live_and_offline
+    panners = js[/function createRG69Panners\(\)\{(.*?)\n\}/m, 1] or raise "no Dilla panner builder"
+    init = js[/async function initAudio\(.*?(?=\nfunction applyFX)/m] or raise "no initAudio"
+    export = js[/async function exportWAV\(.*?(?=\nlet mediaRecorder)/m] or raise "no exportWAV"
+    apply = js[/function applyFX\(\)(.*?)\n\}/m, 1] or raise "no applyFX"
+
+    %w[kick snare clap hat open].each do |lane|
+      assert_includes panners, "k.#{lane}"
+    end
+    assert_includes panners, "v.pan"
+    assert_includes init, "const livePanners=createRG69Panners();"
+    assert_includes export, "const offlinePanners=createRG69Panners();"
+    assert_includes apply, "profile.rig.vinyl.level"
+    assert_includes apply, "profile.rig.vinyl.crackle"
+    assert_includes export, "oVinylNoise.connect(oVinylFlt)"
+    assert_includes export, "oCrackleNoise.connect(oCrackleFlt)"
+    assert_includes export, "Tone.Time(rg69AudioProfile.effects.delay_time).toSeconds()"
+    assert_includes js, "instruments[lane].volume.value=20*Math.log10(level)"
+  end
   private
 
   def boot_aud
