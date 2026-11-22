@@ -98,12 +98,25 @@ voice of the creative work.
   [NET-A-PORTER’s FW26 trend report](https://www.net-a-porter.com/en-gb/porter/article-c99dca08ba956cfc/fashion/art-of-style/fw26-fashion-trends),
   [GQ’s A/W 2026 menswear edit featuring MR PORTER selections](https://www.gq-magazine.co.uk/article/autumn-winter-2026-menswear-trends)
   and [MR PORTER Norway’s clothing range](https://www.mrporter.com/en-no/mens/clothing).
-  `ruby STUDIO/lora/train.rb --all` validates all three private datasets,
-  consent records, captions, shared settings and Replicate destination visibility
-  before any upload, then trains sequentially and records immutable candidate
-  versions without approving them. The shared `training_standards.yml` governs
-  Replicate trainer pin, `training_steps=1000`, `lora_type=subject`, seed and
-  the shared FLUX inference settings; there are no per-person rank/optimizer knobs.
+  `ruby STUDIO/lora/train.rb --all --approve-spend-usd 5.00` validates all
+  three private datasets, consent records, captions, shared settings and
+  Replicate destination visibility before any upload, then trains sequentially
+  and records immutable candidate versions without approving them. The
+  explicit `--approve-spend-usd` ceiling is mandatory; it is the total for this
+  batch, not an automatic purchase authorisation. Each job's server-side
+  cancellation window is bounded by the remaining approved amount and the
+  pinned trainer rate. The current trainer pin uses 8× Nvidia H200 at
+  USD 0.0122 per compute-second (verified 2026-11-22; source and date live in
+  `training_standards.yml`). Terminal provider `metrics.predict_time` is
+  multiplied by that rate and recorded as a calculated estimate, never as an
+  invoice or a settled card charge. If a request has no terminal compute metric,
+  or the provider does not confirm cancellation after a timeout, the batch
+  stops before the next training and reports `SPEND_UNVERIFIED`. A private
+  `.cache/training-spend.lock` serialises training batches in this checkout
+  only; it is not an account-wide or cross-device spend lock. Do not start
+  concurrent training from another checkout. The shared `training_standards.yml`
+  governs the trainer pin, `training_steps=1000`, `lora_type=subject`, seed and
+  shared FLUX inference settings; there are no per-person rank/optimizer knobs.
   `ruby STUDIO/lora/review.rb --subject NAME --candidate` renders three private
   candidate samples after training, next to three approved source photographs,
   and writes a contact sheet plus Postpro measurements. Candidate renders stay
