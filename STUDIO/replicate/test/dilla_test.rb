@@ -1073,7 +1073,10 @@ class TestRG69BrowserContract < Minitest::Test
     refute_match(/\.innerHTML\b|\beval\s*\(/, javascript)
     refute_match(/wobbLFO\.connect\s*\(\s*Tone\.Transport\.bpm\s*\)/, javascript)
     assert_match(/function applyWobble\(\)/, javascript)
-    assert_match(/function applyFX\(\)\{\s*Tone\.Transport\.bpm\.value=aud_\.bpm;/, javascript)
+    assert_match(/function applyFX\(\)\{\s*if\(st_\.started\)Tone\.Transport\.bpm\.value=aud_\.bpm;/, javascript)
+    refute_match(/Best-effort autostart|await Tone\.start\(\);\s*if\(Tone\.getContext\(\)\.rawContext\.state/, javascript)
+    assert_match(/welcome-start[\s\S]*?addEventListener\("click",async\(\)=>\{[\s\S]*?startPlayback\(\)/, javascript)
+    assert_match(/play[\s\S]*?addEventListener\("click",async\(\)=>\{[\s\S]*?startPlayback\(\)/, javascript)
     assert_match(/function scheduleLoop\(\)\{\s*st_\.idx=\(st_\.idx\+1\)%st_\.stepCount;\s*applyWobble\(\);/, javascript)
     assert_includes javascript, "document.createTextNode"
     assert_includes File.read(css_path), "prefers-reduced-motion"
