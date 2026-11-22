@@ -188,7 +188,7 @@ module Master
 
       # Nothing is continued to Chromium's own network stack. A request is either
       # fetched directly to the address approved by SsrfGuard or aborted.
-      def guard_requests(page, budget:, allowed_host: nil)
+      def guard_requests(page, budget:, allowed_host:)
         page.network.intercept
         page.on(:request) do |request|
           handle_request(request, budget:, allowed_host:)
@@ -198,7 +198,7 @@ module Master
         end
       end
 
-      def handle_request(request, budget:, allowed_host: nil)
+      def handle_request(request, budget:, allowed_host:)
         return request.abort unless reserve_request!(budget)
 
         uri = URI(request.url.to_s)
