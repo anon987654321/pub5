@@ -91,6 +91,29 @@ class FixMissionTest < Minitest::Test
     end
   end
 
+  def test_blocked_backlog_mission_requires_an_explicit_resume
+    Dir.mktmpdir do |root|
+      goal = "Complete exactly this owner-registry task"
+      first = Master::Fix::Mission.new(root:).ensure_queued!(
+        goal:, scope: root, origin: "backlog", auto_continue: true,
+      )
+      first.block!(reason: "human decision required")
+
+      still_blocked = Master::Fix::Mission.new(root:).ensure_queued!(
+        goal:, scope: root, origin: "backlog", auto_continue: true,
+      )
+      assert_equal "blocked", still_blocked.record.fetch("state")
+      assert_equal first.id, still_blocked.id
+
+      resumed = Master::Fix::Mission.new(root:).ensure_queued!(
+        goal:, scope: root, origin: "backlog", auto_continue: true, resume_blocked: true,
+      )
+      assert_equal "waiting", resumed.record.fetch("state")
+      refute_equal first.id, resumed.id
+      assert_equal true, resumed.record.fetch("auto_continue")
+    end
+  end
+
   def test_manual_mission_is_not_limited_by_the_automatic_attempt_budget
     Dir.mktmpdir do |root|
       mission = Master::Fix::Mission.new(root:).start!(
