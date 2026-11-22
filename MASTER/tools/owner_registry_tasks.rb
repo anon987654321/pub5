@@ -735,8 +735,6 @@ module Backlog
       end
       return true if completed_receipts.include?(plan["item_digest"])
 
-      FileUtils.mkdir_p(File.join(@root, ".master"))
-      path = File.join(@root, RECEIPT_PATH)
       row = {
         "item_id" => plan.fetch("item_id"),
         "item_digest" => plan.fetch("item_digest"),
@@ -758,18 +756,23 @@ module Backlog
           "pending_repository_writes" => 0,
         },
       }
-      File.open(path, File::WRONLY | File::CREAT | File::APPEND, 0o600) do |file|
-        file.flock(File::LOCK_EX)
-        file.puts(JSON.generate(row))
-        file.flush
-        file.fsync
-      end
-      true
+      append_executor_receipt(row)
     rescue JSON::ParserError, KeyError, SystemCallError
       false
     end
 
     private
+
+    # Use the same root/remote normalization as Mission and every other
+    # durable /fix record. A caller may provide the repository root or MASTER
+    # tree root; both resolve to one private state directory.
+    def receipt_directory
+      MasterPaths.fix_state(root: @root)
+    end
+
+    def receipt_path
+      File.join(receipt_directory, File.basename(RECEIPT_PATH))
+    end
 
     def due_mission?(record)
       value = record["next_wake_at"].to_s
@@ -799,11 +802,11 @@ module Backlog
     end
 
     def parked_task_rows
-      directory = File.join(@root, ".master")
+      directory = receipt_directory
       directory_stat = File.lstat(directory)
       return [] unless private_receipt_directory?(directory, directory_stat)
 
-      path = File.join(directory, "backlog-executor.jsonl")
+      path = receipt_path
       return [] unless File.exist?(path)
 
       stat = File.lstat(path)
@@ -872,12 +875,12 @@ module Backlog
     end
 
     def append_executor_receipt(row)
-      directory = File.join(@root, ".master")
+      directory = receipt_directory
       FileUtils.mkdir_p(directory, mode: 0o700)
       directory_stat = File.lstat(directory)
       return false unless private_receipt_directory?(directory, directory_stat)
 
-      path = File.join(directory, "backlog-executor.jsonl")
+      path = receipt_path
       if File.exist?(path) || File.symlink?(path)
         stat = File.lstat(path)
         return false unless stat.file? && !stat.symlink? && stat.nlink == 1 && (stat.mode & 0o077).zero?
@@ -952,11 +955,15 @@ module Backlog
     end
 
     def completed_receipt_rows
-      path = File.join(@root, RECEIPT_PATH)
+      directory = receipt_directory
+      directory_stat = File.lstat(directory)
+      return [] unless private_receipt_directory?(directory, directory_stat)
+
+      path = receipt_path
       return [] unless File.exist?(path)
 
       stat = File.lstat(path)
-      return [] unless stat.file? && !stat.symlink? && (stat.mode & 0o077).zero?
+      return [] unless stat.file? && !stat.symlink? && stat.nlink == 1 && (stat.mode & 0o077).zero?
 
       File.foreach(path).filter_map do |line|
         row = JSON.parse(line)
