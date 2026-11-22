@@ -116,6 +116,22 @@ class TestCheckChain < Minitest::Test
     assert_equal 10, jobs.size
   end
 
+  def test_all_tree_rake_task_uses_the_canonical_suite_registry_once
+    rakefile = File.read(File.join(G::MASTER, "Rakefile"))
+    task = rakefile.split('task "test:all_trees" do', 2).fetch(1)
+                  .split("\nnamespace :test do", 2).first
+
+    assert_includes task, 'require_relative "lib/operator/check_chain"'
+    assert_includes task, "Operator::CheckChain.suite_jobs(suite_trees)"
+    assert_includes task, "Operator::CheckChain.suites(suite_trees)"
+    assert_includes task, '%w[RAILS OPENBSD STUDIO]'
+    assert_includes task, 'suite_trees << "BIZ"'
+    assert_includes task, "Ruby syntax"
+    assert_includes task, "shell syntax"
+    refute_includes task, 'system(RbConfig.ruby, "-S", "rake", "test"'
+    refute_includes task, "standalone_tests.each"
+  end
+
   def test_suite_inventory_cannot_pass_when_a_tree_has_no_registered_jobs
     G.stub(:suite_jobs, ->(_trees) { [] }) do
       ok, body, status = G.suites(%w[BIZ])
