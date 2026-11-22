@@ -2196,3 +2196,37 @@ Section T addendum — Brgen cold-start feed:
   normal-following behavior. Registered brgen_cold_start_feed as a partial workstream;
   the gap remains open pending runtime and rendered proof.
 - These Rails tests and the browser journey remain NOT_RUN. No pass is claimed.
+
+
+### Commerce ledger atomicity and schema parity — regression follow-up (2026-11-22)
+
+- Added a referral rollback regression in
+  `RAILS/brgen/test/services/referral_splinter_test.rb`. It forces the ledger
+  append to raise, then asserts that the invite token remains unredeemed, the
+  referral credit is absent, and no `referral-credit:` journal key exists.
+  This pins the existing after-create callback inside the referral transaction;
+  the test does not add another transaction or service.
+- Added a cross-app contract to
+  `RAILS/test/engine_migration_convention_test.rb`. It checks that the
+  Brgen and Amber CommerceLedger migrations are byte-identical, both schemas
+  contain the same ledger fields, and both databases retain the unique
+  idempotency-key index. This respects the existing one-migration-per-app rule;
+  no shared-engine migration path was introduced.
+- The existing referral integration test already checks the identity split:
+  the referrer owns the credit, the invitee is its actor, and the journal row
+  points to the persisted credit. The new rollback regression covers the
+  previously unpinned refusal case.
+
+Commits:
+`8c7cf6d8f50142fb77a2e8342fcd6e216337463e` (rollback regression);
+`6ffca3946a34c452e35425b21b642bf61bb28c2b` (prefix assertion correction);
+`c908bc6a4acf0b3c93c157e93be01b0dd3576c87` (per-app schema contract);
+`d6c7eb80168c1a1563a8566e2099b208c64562c4` (schema type matcher);
+`9910c791b553a3791ac7b2d44b195caa86f12d8d` (multiline unique-index matcher).
+
+Proof performed: GitHub read-after-write verification of both test files,
+the two migration files, shared ledger model/service and both schema table
+definitions. Static inspection confirms that the test assertions refer to the
+existing schema names and callback. No Ruby syntax check, Rails test, migration,
+database transaction test, or browser test was executed here; both new tests
+remain **NOT_RUN**. No payment provider, production database or host was used.
