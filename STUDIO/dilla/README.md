@@ -68,9 +68,15 @@ not presented as recovered song melodies.
 A render writes `<name>.wav` plus three sidecars: `.quality.json` (measured
 peak, crest, LUFS estimate, stem energy shares), `.session.json` (what was
 arranged: voicings, pattern, fills, sample plan) and `.provenance.json`
-(seed, performer, every flag). A render reproduces from its seed; without
-one the seed and performer rotate per run — deleting a take loses it for
-good, so keep what you like.
+(seed, performer, every flag, invocation mode/style, renderer source digest,
+music-theory data digest, and the supplied sample loop's path/size/SHA-256
+when it is available). A missing or symlinked sample source is recorded as
+unavailable, not treated as a reproducible input. These fingerprints make
+future replay checks possible; they do not yet provide a replay command or
+guarantee that external tools, Ruby version or an absent source file can be
+reconstructed. A render reproduces from its seed only when its complete inputs
+are still available; without one the seed and performer rotate per run —
+deleting a take loses it for good, so keep what you like.
 
 These profiles and controls describe compositional techniques, timing and
 production choices; they do not promise imitation of a named artist or exact
