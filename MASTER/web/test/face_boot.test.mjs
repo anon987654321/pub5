@@ -455,8 +455,8 @@ test("rotating characters change delivery only and preserve one MASTER intellige
   assert.match(archive, /Charisma:/);
   assert.match(archive, /Practical street sense:/);
   assert.match(archive, /serious_override:/);
-  assert.match(archive, /characters:\\s*\\n  iatmul-concentric:/);
-  assert.doesNotMatch(archive, /entries:[\\s\\S]*?character:/);
+  assert.match(archive, /characters:\s*\n  iatmul-concentric:/);
+  assert.doesNotMatch(archive, /entries:[\s\S]*?character:/);
   assert.match(readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8"), /MASTER_FACE_MASK_CHARACTERS =/);
   for (const id of ids) assert.ok(archive.includes(`id: "${id}"`), `missing ${id}`);
   for (const name of names) assert.ok(archive.includes(`name: "${name}"`), `missing ${name}`);
@@ -466,8 +466,6 @@ test("rotating characters change delivery only and preserve one MASTER intellige
   assert.match(service, /Fiber\[:master_persona_note\] = @persona_note/);
   assert.match(promptBuilder, /parts << Fiber\[:master_persona_note\]/);
 });
-
-test("explicit visual subjects fail closed and never fall through to text guesses", () => {
 
 test("explicit visual subjects fail closed and never fall through to text guesses", () => {
   const source = readFileSync(join(publicDir, "face_world.js"), "utf8");
