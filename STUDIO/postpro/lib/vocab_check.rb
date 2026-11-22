@@ -300,6 +300,7 @@ def run_introspect
       Postpro::Constitution.verify_output!(input_path: POSTPRO_ENTRY, output_path: out)
     else
       Postpro::Constitution.verify_distinct_source!(input_path: POSTPRO_ENTRY, output_path: out)
+      Postpro::Constitution.verify_unused_output!(out)
     end
     size = (argv_flag("--size") || "17").to_i
     export_lut(name.to_sym, out, size)
