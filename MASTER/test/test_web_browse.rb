@@ -215,7 +215,7 @@ class TestWebBrowse < Minitest::Test
     end
   end
 
-  def test_redirect_to_a_public_destination_is_dns_checked_before_browser_handoff
+  def test_redirect_to_another_public_host_is_blocked_by_the_page_host_grant
     request = InterceptedRequest.new(url: "https://example.com/start")
     response = FakeResponse.new(
       code: "302",
@@ -234,8 +234,10 @@ class TestWebBrowse < Minitest::Test
       end
     end
 
-    assert_equal 302, request.response_options[:responseCode]
-    assert_equal ["example.com", "cdn.example.net"], resolved_hosts
+    assert_equal 403, request.response_options[:responseCode]
+    assert_includes request.response_options[:body], "Blocked unsafe redirect"
+    assert_equal ["example.com"], resolved_hosts,
+                 "the unlisted redirect host must be refused before its DNS resolution"
   end
 
   def test_it_is_registered_for_the_builder_the_llm_and_the_catalogue
