@@ -203,6 +203,7 @@ class MessagePushTest < ActionDispatch::IntegrationTest
 
     post conversation_presence_path(@group), params: payload, as: :json
     assert_response :no_content
+    assert_includes ChannelPresence.ids_for(@group), @sender.id
     assert ChannelPresence.push_device_active?(
       conversation_id: @group.id,
       user_id: @sender.id,
@@ -219,6 +220,17 @@ class MessagePushTest < ActionDispatch::IntegrationTest
       device_id: subscription.id
     )
   end
+  test "the browser heartbeat leases its own push endpoint and releases it when hidden" do
+    source = Rails.root.join("../__shared/frontend/presence_controller.js").read
+
+    assert_includes source, "navigator.serviceWorker.ready"
+    assert_includes source, "registration.pushManager?.getSubscription()"
+    assert_includes source, 'device_type: "web"'
+    assert_includes source, 'document.addEventListener("visibilitychange"'
+    assert_includes source, 'window.addEventListener("pagehide"'
+    assert_includes source, 'this.#send("DELETE", this.#payload())'
+  end
+
   test "a device presence lease expires without requiring an explicit unload event" do
     subscription = PushSubscription.create!(
       user: @reader, endpoint: "https://push.example/ttl",
