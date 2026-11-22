@@ -66,9 +66,18 @@ module Master
         ready = mission_band.select do |route|
           route.dependencies.all? { |dependency| satisfied.include?(dependency) }
         end
+        independent_fallback = false
         if ready.empty?
-          unresolved = mission_band.flat_map(&:dependencies).uniq - satisfied.to_a
-          raise ArgumentError, "highest-priority routes are blocked by unsatisfied dependencies: #{unresolved.sort.join(", ")}"
+          # A dependency may need an operator, provider or external environment.
+          # Do not let that one route freeze unrelated work whose own dependencies
+          # are already satisfied. Keep the mission-priority band whenever it has
+          # at least one ready route; fall back only when the entire band is parked.
+          ready = candidates.select do |route|
+            route.dependencies.all? { |dependency| satisfied.include?(dependency) }
+          end
+          raise ArgumentError, "no route has satisfied dependencies" if ready.empty?
+
+          independent_fallback = true
         end
 
         ranked = ready.map { |route| [route, route_score(route, objective:), route_explanation(route)] }
@@ -88,6 +97,7 @@ module Master
         end
 
         route, score, reason = selected
+        reason = "higher-priority dependencies are waiting; independent ready route selected: #{reason}" if independent_fallback
         Decision.new(
           route:, score: score.round(4), reason:,
           alternatives: ranked.reject { |row| row[0].id == route.id }.first(5).map do |candidate, value, why|
