@@ -1,5 +1,8 @@
-# Aspirational features — out of scope for agents unless explicitly requested.
-# Canonical active inventory: apps.yml (status: done). Do not implement horizon items by default.
+# Aspirational features — full implementation is out of scope by default.
+# An explicit operator task may authorize a named preparatory slice (contracts, fixtures,
+# adapters, local tests) without promoting the whole feature to active or production-ready.
+# Full feature work still follows the recorded pick/workstream/Law-gated path.
+# Canonical active inventory: apps.yml (status: done). Do not silently implement horizon items.
 
 agent_policy: ignore
 
