@@ -62,6 +62,7 @@ module Studio
           client = @client || Studio::ReplicateClient.new
 
           with_training_lock do
+            prepare_spend_ledger!
             # Check/create every destination as private before the first dataset
             # ZIP is uploaded. A pre-existing public destination blocks the run.
             packages.each { |package| client.ensure_private_model!(package.fetch("destination")) }
@@ -122,7 +123,7 @@ module Studio
                      else
                        "PARTIAL_FAILURE"
                      end
-            {
+            report = {
               "status" => status,
               "provider_training_jobs" => results.count { |result| result["provider_request_dispatched"] },
               "spend" => {
@@ -140,6 +141,9 @@ module Studio
               "results" => results,
               "next_step" => "Compare each candidate model against that subject's approved source photographs. Set LIKELINESS_REVIEWED_VERSION only after human approval."
             }
+            append_spend_receipt!(report, subjects: names)
+            report["spend_receipt"] = ".cache/training-spend.jsonl"
+            report
           end
         end
 
@@ -195,6 +199,70 @@ module Studio
               file.flock(File::LOCK_UN)
             end
           end
+        end
+
+        def spend_ledger_path
+          File.join(@root, ".cache", "training-spend.jsonl")
+        end
+
+        def validate_private_ledger!(path)
+          stat = File.lstat(path)
+          unless stat.file? && !stat.symlink? && stat.uid == Process.uid &&
+                 stat.nlink == 1 && (stat.mode & 0o077).zero?
+            raise Error, "training spend ledger must be a singly-linked owner-only (0600) regular file"
+          end
+          stat
+        rescue Errno::ENOENT
+          nil
+        end
+
+        def prepare_spend_ledger!
+          path = spend_ledger_path
+          raise Error, "filesystem does not support safe no-follow ledger opens" unless File.const_defined?(:NOFOLLOW)
+
+          begin
+            File.open(path, File::WRONLY | File::CREAT | File::EXCL | File::NOFOLLOW, 0o600) {}
+          rescue Errno::EEXIST
+            validate_private_ledger!(path)
+          end
+          validate_private_ledger!(path) || raise(Error, "training spend ledger could not be created")
+        end
+
+        def append_spend_receipt!(report, subjects:)
+          path = spend_ledger_path
+          flags = File::WRONLY | File::APPEND | File::NOFOLLOW
+          File.open(path, flags) do |file|
+            path_stat = validate_private_ledger!(path)
+            opened_stat = file.stat
+            unless path_stat && path_stat.dev == opened_stat.dev && path_stat.ino == opened_stat.ino
+              raise Error, "training spend ledger changed while opening"
+            end
+            raise Error, "training spend ledger mode is not 0600" unless (opened_stat.mode & 0o777) == 0o600
+            raise Error, "cannot lock training spend ledger" unless file.flock(File::LOCK_EX)
+
+            safe_results = report.fetch("results").map do |result|
+              result.slice(
+                "subject", "status", "training_id", "model_version", "dataset_sha256",
+                "provider_request_dispatched", "billing", "reason"
+              )
+            end
+            record = {
+              "schema" => "studio.lora.training_spend.v1",
+              "recorded_at" => Time.now.utc.iso8601,
+              "subjects" => subjects,
+              "status" => report.fetch("status"),
+              "spend" => report.fetch("spend"),
+              "results" => safe_results
+            }
+            file.write(JSON.generate(record) + "\n")
+            file.flush
+            file.fsync
+          ensure
+            file.flock(File::LOCK_UN) if file && !file.closed?
+          end
+          path
+        rescue SystemCallError, IOError => error
+          raise Error, "could not persist private training spend receipt: #{error.class}"
         end
 
         def normalize_subjects(subjects)
