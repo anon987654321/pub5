@@ -209,6 +209,27 @@ class TestLawRegistryAudit < Minitest::Test
     refute_nil definition, "#{id} must have one executable semantic definition"
   end
 
+  def test_durable_cross_product_requirements_have_executable_law_owners
+    entries = Master.law_catalogue.fetch("entries")
+    definitions = Master::Review::Scan::LawTree.definitions
+
+    {
+      "ROBUSTNESS_bounded_operation_lifecycle" => ["error", "MASTER/law/universal.rb"],
+      "ROBUSTNESS_mutation_requires_explicit_authorization" => ["error", "MASTER/law/universal.rb"],
+      "ROBUSTNESS_autonomous_triggers_are_bounded" => ["error", "MASTER/law/universal.rb"],
+      "TRUTHFUL_STATUS_test_precedes_report" => ["error", "MASTER/law/universal.rb"],
+      "PRESERVE_FIRST_media_provenance" => ["error", "MASTER/law/practice.rb"],
+      "PROXIMITY_local_visual_audio_ownership" => ["warning", "MASTER/law/universal.rb"],
+    }.each do |id, (severity, source)|
+      entry = entries.fetch(id)
+      definition = definitions.find { |law| law.id.to_s.casecmp?(id) }
+
+      assert_equal severity, entry.fetch("severity"), id
+      assert_includes Array(entry.fetch("definition_sources")), source, id
+      refute_nil definition, "#{id} has a catalogue entry but no executable Law.define"
+    end
+  end
+
   def test_catalogue_reconciliation_is_an_enforced_gate
     report = audit.call
 
