@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "base64"
 require "fileutils"
 require "json"
 require "securerandom"
@@ -375,13 +376,31 @@ module Master
       end
 
       def save_screenshot(state)
+        raise ArgumentError, "Core-owned screenshot validator is unavailable" unless @broker&.respond_to?(:screenshot)
+
+        encoded = state.page.screenshot(format: "png", encoding: :base64).to_s
+        max_encoded_bytes = ((BrowserBroker::MAX_SCREENSHOT_BYTES + 2) / 3) * 4
+        raise ArgumentError, "browser screenshot exceeds the encoded byte budget" if encoded.bytesize > max_encoded_bytes
+
+        bytes = Base64.strict_decode64(encoded)
+        evidence = @broker.screenshot(state.lease_id, bytes)
+        validated = evidence.fetch(:bytes)
+        raise ArgumentError, "browser screenshot validator returned different bytes" unless validated == bytes
+
         directory = File.join(Dir.home, ".master", "plugins", "session_browser", "captures")
         @capture_mutex.synchronize do
           FileUtils.mkdir_p(directory, mode: 0o700)
           File.chmod(0o700, directory)
           stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S")
           path = File.join(directory, "#{stamp}_#{SecureRandom.hex(8)}.png")
-          state.page.screenshot(path:)
+          begin
+            File.open(path, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
+              file.write(validated)
+            end
+          rescue StandardError
+            File.delete(path) if File.file?(path)
+            raise
+          end
           File.chmod(0o600, path)
           prune_screenshots!(directory)
           path
