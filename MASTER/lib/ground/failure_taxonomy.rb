@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../fix/constants"
+
 module Master
   module Ground
     # Classify errors and return a retry strategy. DEFAULTS is the whole table;
