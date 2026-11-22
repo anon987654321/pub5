@@ -170,7 +170,7 @@ reference-root` answer the same policy for MASTER. `out/`, `samples/` and
 
 `rg69/rg69.js` reads the `tonejs_profiles.rg69` adapter in this catalogue. The adapter reuses `kit_break`, `prophet_5` and the dry `basement` rig, then maps their kit tuning, voice brightness and room sends into the browser's Tone.js instruments. The adapter is a translation layer: it does not claim that a Tone.js synth is the same instrument or circuit as Dilla's Ruby renderer.
 
-Live playback and WAV export call the same Tone.js instrument builder. The drum pitch/filter settings, FM keys, chorus/tremolo/drive chain, pad voice and its filters, and the room's delay/reverb controls come from that profile. If the catalogue cannot be fetched, a matching embedded RG-69 fallback keeps the browser page usable; the page reports which path it used.
+Live playback and WAV export call the same Tone.js instrument builder. The drum pitch/filter settings and kit pan/level, FM keys, voice pan, chorus/tremolo/drive chain, pad voice and its filters, the room's delay/reverb controls, and the vinyl/crackle bed come from that profile. If the catalogue cannot be fetched, a matching embedded RG-69 fallback keeps the browser page usable; the page reports which path it used.
 
 The two renderers share instrument and voice settings, not a promise of sample-identical output. Mastering graphs and browser/runtime behaviour still differ. Run the browser, export a WAV and audition it before claiming delivery or sound-quality parity; source checks cannot substitute for listening.
 ## Tests
