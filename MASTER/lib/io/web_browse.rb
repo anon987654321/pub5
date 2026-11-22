@@ -158,8 +158,12 @@ module Master
 
       private
 
+      def browser_broker_available?
+        @broker && (!@broker.respond_to?(:available?) || @broker.available?)
+      end
+
       def render(uri, wait)
-        raise ArgumentError, "Core-owned browser broker is unavailable; refusing to spawn Chromium outside Core" unless @broker
+        raise ArgumentError, "Core-owned browser broker is unavailable; refusing to spawn Chromium outside Core" unless browser_broker_available?
 
         require "ferrum"
         require "json"
