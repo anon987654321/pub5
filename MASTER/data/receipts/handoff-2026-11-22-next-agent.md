@@ -1690,13 +1690,19 @@ Representative commits on main:
 - `87515da5fc143c7058b55839f631be1648e0c243` — park unverified terminal work without stalling the backlog.
 - `f53e8f64b5bdeef15e30ca135fd433219621fd83` — regression test missing delivery proof with independent work.
 - `f874271b52cc8c0550048e65bcdbf35d2671badb` — keep the unverified-completion parking API minimal.
+- `48e01a900933eaf297906f59aefc033476892158` — preserve MASTER's intentional restricted group grant on private state directories.
+- `b28ed1f42317a0da6d662e254a049f784f8f3f47` — keep permanent failures parked for explicit release.
 
 ### Phase 20 evidence boundary
 
 READ_BACK:
 - GitHub read-after-write completed for all changed implementation, test and
-  documentation files; the current main HEAD at handoff is
-  `f874271b52cc8c0550048e65bcdbf35d2671badb`.
+  documentation files. The latest verified implementation HEAD before this
+  receipt amendment was `b28ed1f42317a0da6d662e254a049f784f8f3f47`.
+- The new append-only parking receipt uses the existing
+  `MasterPaths.private_dir_mode` policy: no access for others, owner access
+  retained, and an explicitly assigned foreign-group grant preserved for the
+  vm23 MASTER/Rails hand-off. The receipt file itself remains mode 0600.
 - Focused regression tests were added for attempts beyond the former ceiling,
   transient/exhausted/permanent/ambiguous outcomes, returned Result failures,
   explicit blocked-mission resume, dependency fallback, ordinary backlog parking,
