@@ -24,10 +24,10 @@ const PUB_SYRE = `${SRC}/syre.html`;
 mkdirSync(OUT, { recursive: true });
 const ORDER = ['syre', 'ragnhild', 'nordvakt', 'norwegianfinancial', 'pubhealthcare',
   'govt_bergen', 'future_healthcare_os'];
-const occupied = ORDER.filter(name => existsSync(`${OUT}/${name}/${name}.html`));
+const occupied = ORDER.filter(name => existsSync(`${OUT}/${name}`));
 if (occupied.length) {
-  throw new Error('BIZ build output already exists for: ' + occupied.join(', ') +
-    '; use a fresh empty BIZ_OUT_DIR to preserve the previous build');
+  throw new Error('BIZ build output directories already exist for: ' + occupied.join(', ') +
+    '; use a fresh empty BIZ_OUT_DIR to preserve every prior build artefact');
 }
 // Authored complete per their proposals; staged and re-verified, not injected.
 const COMPLETED = new Set(['nordvakt', 'norwegianfinancial', 'future_healthcare_os']);
