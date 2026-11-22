@@ -246,7 +246,7 @@ module Studio
             safe_results = report.fetch("results").map do |result|
               result.slice(
                 "subject", "status", "training_id", "model_version", "dataset_sha256",
-                "provider_request_dispatched", "billing", "reason"
+                "provider_request_dispatched", "provider_cancellation_confirmed", "billing", "reason"
               )
             end
             record = {
@@ -426,6 +426,7 @@ module Studio
           subject = package.fetch("subject")
           provider_request_dispatched = false
           billing = nil
+          training = nil
           begin
             upload_url = client.upload_zip(package.fetch("zip_path"), subject:)
             provider_request_dispatched = true
@@ -459,6 +460,7 @@ module Studio
               "manifest" => File.basename(manifest),
               "dataset_sha256" => package.fetch("dataset_sha256"),
               "provider_request_dispatched" => true,
+              "provider_cancellation_confirmed" => training["client_cancel_confirmed"] == true,
               "billing" => billing
             }
           rescue StandardError => error
@@ -468,6 +470,7 @@ module Studio
               "error" => "#{error.class}: #{error.message.to_s[0, 500]}",
               "dataset_sha256" => package.fetch("dataset_sha256"),
               "provider_request_dispatched" => provider_request_dispatched,
+              "provider_cancellation_confirmed" => training.is_a?(Hash) && training["client_cancel_confirmed"] == true,
               "billing" => billing || {
                 "cost_status" => (provider_request_dispatched ? "NOT_REPORTED_BY_PROVIDER" : "NOT_REQUESTED"),
                 "rate_usd_per_second" => decimal_string(billing_rate),
