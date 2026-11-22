@@ -1324,3 +1324,138 @@ resolve github.com. GitHub source writes and read-back worked, but no repository
 hook, Minitest/Rake suite or real audio render ran. The replay implementation
 must be validated by the actual one-bar integration test on a compatible
 checkout before treating Dilla reproduction as operationally accepted.
+
+
+## 15. Phase 18 — LoRA spend approval, terminal metrics and private batch ledger — 2026-11-22
+
+Status: the source, tests and owner documentation are on main and were read
+back. No provider training job was created. The actual Ruby/Minitest/Rake
+suites and live cancellation path remain NOT_RUN.
+
+### Provider facts and billing basis
+
+The pinned trainer is
+replicate/fast-flux-trainer:080f17375c73ef43e1009da9d560ab5f935176c61a0c7a88866c8b8387057675.
+The trainer page was checked on 2026-11-22 and states 8x Nvidia H200 hardware
+at USD 0.0122 per second:
+https://replicate.com/replicate/fast-flux-trainer/train
+
+The Replicate HTTP API documentation states that terminated trainings
+(succeeded, failed or canceled) include metrics.predict_time, the CPU/GPU
+compute seconds used by the training. It also documents a distinct training
+create and cancel endpoint. Its Cancel-After header is documented for
+predictions; it is not documented as a guaranteed training deadline:
+https://replicate.com/docs/reference/http/
+
+The billing record therefore uses the pinned trainer rate multiplied by
+provider metrics.predict_time. The result is explicitly labelled
+CALCULATED_FROM_PROVIDER_PREDICT_TIME_NOT_INVOICE. The calculated USD amount
+rounds upward to six decimal places to avoid understating measured use. It is
+not a card invoice, settled charge or substitute for the Replicate account's
+actual billing record.
+
+### Approval and batch control
+
+STUDIO/lora/train.rb now requires an explicit --approve-spend-usd value for
+every training batch, including --all. The default CLI example is:
+
+    ruby STUDIO/lora/train.rb --all --approve-spend-usd 5.00
+
+The total approval is shared across the sequential batch. Before package
+uploads or provider training creation, the runner validates the positive finite
+USD value, checks the timeout is in 1..86400 seconds, and verifies that the
+budget can reserve the configured minimum compute window plus its local margin.
+The 60-second minimum reservation and 10-second margin are local policy
+settings, not Replicate model minimums or provider guarantees.
+
+For each job, the client-side wait timeout is bounded by the remaining
+approved amount at the pinned rate and the operator timeout. On timeout, the
+client requests cancellation and fetches the training again. It does not
+describe cancellation as successful unless the provider status is canceled.
+If the provider is still starting/processing or the final status cannot be
+read, the batch stops before the next subject and reports SPEND_UNVERIFIED.
+A training that completes during the cancellation race returns its terminal
+record. Failed and canceled terminal records are also returned with their
+metrics so measured compute is not discarded.
+
+This is a client-side timeout/cancel guard, not a provider-enforced hard USD
+cap. A job may continue to incur charges if the provider does not complete
+cancellation. A measured overrun reports BUDGET_EXCEEDED and stops remaining
+jobs. The local lock and ledger coordinate one checkout only; they do not
+serialize another clone, device, account operator or external Replicate job.
+The README expressly warns against concurrent training from another checkout.
+
+### Private evidence
+
+The runner preflights a private mode-0600 append-only JSONL receipt at
+STUDIO/lora/.cache/training-spend.jsonl before its first provider operation.
+Each completed or partial batch appends schema
+studio.lora.training_spend.v1, including approval, rate/source/date, measured
+seconds, calculated cost, remaining amount, batch status and sanitized result
+fields. Provider error bodies and signed upload URLs are excluded. The local
+training-spend.lock is mode-0600, singly linked, owner-only and opened with
+NOFOLLOW; the ledger is also singly linked, owner-only and opened with
+NOFOLLOW. The open descriptor's device/inode is compared with the current path.
+A lock file or ledger symlink is refused.
+
+Successful per-subject candidate manifests also carry their billing record.
+Failed or budget-stopped runs remain represented in the batch ledger even
+when no candidate version was produced. Neither record is called an invoice.
+
+Files: STUDIO/lora/training_standards.yml, STUDIO/lora/train.rb,
+STUDIO/replicate/client.rb, STUDIO/replicate/test/lora_training_test.rb,
+STUDIO/replicate/test/replicate_client_test.rb, STUDIO/replicate/README.md.
+
+Principal implementation/test/documentation commits:
+8473ef8c7ac25fc7a71169d6d9bcc6207162695c (pinned rate);
+8a7517b8dad138ecc6e70739017a77505ae60668 (required approval and batch guard);
+cbbc841013daa5248c59dd222208a03f4cd9f47d (preflight error boundaries);
+ffc372e5224c390490bf3a93f6867deef93300cd (budget and compute tests);
+87c665ed6e2d669dd35c0f1c76ddfe1bb02c5709 (verify cancellation with provider);
+812a8d44ca39aefe078bfb4b7bc608d3ee1d0c5b (cancellation tests);
+c131f2b936cd67513d1b3078a16b6f575468f59a (private append-only ledger);
+a19d75e3474780bf3485495517a3c45389a1afb0 (ledger tests);
+295f32742019197a2352d194a324181ea77ec2da (no-follow lock and inode check);
+6d15f97791bb819afd1ba81786149a630e33d6c1 (lock symlink regression);
+05e2407cffebb374d175ed240cf81b4a6825ae2e (training CLI documentation);
+b1a4feac53024efbef604c1bf9efea787645cafb (ledger documentation);
+ed75aa79200e4201c4793f35c9a70691aa5269bf (retain terminal provider metrics);
+c97f367fe139b0c30cb4c1ab299ea6b27d3dab99 (persist cancellation state);
+831d3681d6246afa1b425d3f720afed7dc37e0e4 (terminal status metric tests);
+3bb0c87c31fad7eb14c87bd418999f43406faacd (label client-side guard);
+d47b5744bc5fe9a4cd347529d41499cac185fe7a (correct hard-cap documentation);
+d8b9c53fbc880ff792e79c5549d728bffc365b62 (name local reservation floor);
+4003a50474b411eb561c0fdd5381f59291934fa8 (billing policy provenance);
+fed1da352f61d05947b39e573ddb64acdfe8b503 (pre-dispatch wait bound and upward cost rounding);
+0ac4b663279a5e6b9dc2011e742fa810cd91630f (timeout, rounding and terminal-cost tests);
+dcdeadc7b5d7bcee31ef237c8d2d4d2b524fb2ac (local reservation documentation);
+31c473bce4054e60763d5842827e04c045aa1880 (batch ledger and guard assertions);
+06a3eba001c7932711a67b2893b7de6f732e15e9 (terminal response contract comment).
+
+### Execution boundary for Phase 18
+
+RUN:
+- Official Replicate trainer page and HTTP API documentation inspected for the
+  pinned hardware rate, terminal training metrics and Cancel-After scope.
+- GitHub read-after-write inspection of the billing standard, runner, provider
+  client, focused tests and owner README.
+- Ruby 3.3.8 and Node v22.16.0 runtime availability confirmed.
+- Local no-follow flag availability confirmed on the Linux sandbox.
+
+NOT_RUN:
+- The actual STUDIO/replicate/test/lora_training_test.rb and
+  STUDIO/replicate/test/replicate_client_test.rb Minitest suites.
+- cd STUDIO && rake test, cd STUDIO && rake check, full Ruby syntax census,
+  MASTER/tools/agent_context.rb --json --tree and governed /fix.
+- A real Replicate training create/cancel/status cycle, actual provider usage
+  metrics, paid-cost comparison, account invoice reconciliation and
+  cross-checkout concurrency test. No training or paid provider request was
+  launched in this phase.
+- OpenBSD-specific file-lock/no-follow proof and a real private home directory
+  permission audit.
+
+Blocker: this execution environment has Ruby 3.3.8 and Node v22.16.0 but cannot
+resolve github.com for git ls-remote or a checkout refresh. GitHub contents
+writes and read-back were available; repository hooks and project tests did not
+run. Do not mark training spend safety as runtime PASS or treat the calculated
+receipt as actual billing.
