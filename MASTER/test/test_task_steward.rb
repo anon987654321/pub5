@@ -169,6 +169,7 @@ class TaskStewardTest < Minitest::Test
       assert_equal "failed", record.fetch("state")
       assert_equal false, record.fetch("auto_continue")
       assert_match(/permanent:/, record.fetch("error"))
+      assert_match(/permanent:/, record.fetch("wake_reason"))
     end
   end
 
