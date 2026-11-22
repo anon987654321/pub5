@@ -70,16 +70,25 @@ class TestProviderConfig < Minitest::Test
     assert_equal model_id, definition["id"]
     assert_equal 1_000_000, definition["context_window"]
 
-    %w[default primary strong fast vision].each do |tier_name|
+    %w[default primary strong fast].each do |tier_name|
       tier = models.fetch("models").fetch(tier_name)
       assert_equal model_id, tier.fetch(0).fetch("id"), "#{tier_name} must lead with Ollama Cloud"
       assert_equal "glm-5.3-flash", tier.fetch(1).fetch("id"), "#{tier_name} must retain GLM as fallback"
     end
 
+    vision_ids = models.fetch("models").fetch("vision").map { |row| row.fetch("id") }
+    assert_equal %w[
+      google/gemini-3.1-flash-lite
+      x-ai/grok-4.3
+      openai/gpt-5.4
+      qwen/qwen3.8-flash
+    ], vision_ids
+    refute_includes vision_ids, model_id, "the text-only Ollama Cloud primary must not enter the vision tier"
+
     reads = Regexp.new(models.dig("vision_families", "reads_images").join("|"), Regexp::IGNORECASE)
     blind = Regexp.new(models.dig("vision_families", "blind").join("|"), Regexp::IGNORECASE)
-    assert reads.match?(model_id)
-    refute blind.match?(model_id)
+    refute reads.match?(model_id)
+    assert blind.match?(model_id)
     refute_includes models.fetch("tool_capable_prefixes"), model_id,
                     "the hosted sender must use the governed ReAct fallback until native tool payloads are supported"
   end
