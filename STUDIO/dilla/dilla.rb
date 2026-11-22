@@ -3165,16 +3165,41 @@ module Dilla
     base, opts, plan, performer, wav_path, session, quality, seed: nil, midi_path: nil, mp3_path: nil
   )
     sample_source = opts.sample_loop || ENV["SAMPLE_LOOP"]
+    sample_record = if sample_source.to_s.empty?
+                      { "status" => "not_used" }
+                    else
+                      sample_path = File.expand_path(sample_source.to_s)
+                      if File.file?(sample_path) && !File.symlink?(sample_path)
+                        {
+                          "status" => "present",
+                          "path" => sample_path,
+                          "bytes" => File.size(sample_path),
+                          "sha256" => Digest::SHA256.file(sample_path).hexdigest
+                        }
+                      else
+                        { "status" => "unavailable", "path" => sample_path }
+                      end
+                    end
+    theory_path = File.join(DATA_DIR, "music_theory.json")
     data = {
       "engine" => "dilla", "version" => VERSION,
       "created_at" => Time.now.utc.iso8601,
       "ruby" => RUBY_VERSION,
+      "execution" => {
+        "mode" => opts.mode.to_s,
+        "style" => opts.style.to_s,
+        "renderer_path" => SCRIPT_PATH,
+        "renderer_sha256" => Digest::SHA256.file(SCRIPT_PATH).hexdigest,
+        "music_theory_path" => theory_path,
+        "music_theory_sha256" => Digest::SHA256.file(theory_path).hexdigest
+      },
       "seed" => seed || opts.seed || "random",
       "performer" => performer["id"],
       "source" => {
         "progression_id" => plan[:progression]["id"],
         "progression_tier" => plan[:progression]["source"] || "engine",
-        "sample_rights_status" => sample_source.to_s.empty? ? "not_used" : "operator_attestation_required"
+        "sample_rights_status" => sample_source.to_s.empty? ? "not_used" : "operator_attestation_required",
+        "sample" => sample_record
       },
       "human_acceptance" => {
         "listening" => "not_reviewed",
