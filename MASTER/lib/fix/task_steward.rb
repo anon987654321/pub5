@@ -229,15 +229,16 @@ module Master
         category = Master::Ground::FailureTaxonomy.shared.classify(message)
         reason = "#{category}: #{message}"
         mission = Mission.new(root: @root, bus: @bus)
+        expected = { expected_id: record["id"], expected_lease_owner: record["lease_owner"] }
         case category
         when :transient
-          mission.defer!(reason:)
+          mission.defer!(reason:, **expected)
         when :exhausted
-          mission.defer!(reason:, seconds: Mission::RETRY_MAX_SECONDS)
+          mission.defer!(reason:, seconds: Mission::RETRY_MAX_SECONDS, **expected)
         when :permanent
-          mission.fail!(reason)
+          mission.fail!(reason, **expected)
         else
-          mission.block!(reason: "human review required: #{reason}")
+          mission.block!(reason: "human review required: #{reason}", **expected)
         end
         @bus&.publish("task_steward:failure_classified", mission: record["id"], category:)
       end
