@@ -140,7 +140,7 @@ class TestScanSpeedPaths < Minitest::Test
     snapshot = {
       "state" => "running", "pass" => "lexical", "law" => "ROBUSTNESS_HOMEOSTASIS",
       "file" => "MASTER/data/laws.yml", "checks" => 12, "n" => 2, "total" => 7,
-      "active" => 3, "at" => Time.now.to_f - 43,
+      "active" => 3, "at" => Time.now.to_f - 42.6,
     }
     lines = []
 
@@ -154,7 +154,7 @@ class TestScanSpeedPaths < Minitest::Test
     end
 
     assert_equal 1, lines.length
-    assert_match(/\\Ascan0: active lexical\\/ROBUSTNESS_HOMEOSTASIS MASTER\\/data\\/laws\\.yml, 2\\/7 laws, 3 workers, 43s\\z/, lines.first)
+    assert_equal "scan0: active lexical/ROBUSTNESS_HOMEOSTASIS MASTER/data/laws.yml, 2/7 laws, 3 workers, 43s", lines.first
     refute_includes lines.first, "checks="
     refute_match(/law=.*law=/, lines.first)
   end
