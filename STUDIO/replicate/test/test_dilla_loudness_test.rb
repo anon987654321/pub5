@@ -71,4 +71,35 @@ class TestDillaLoudness < Minitest::Test
     assert_equal Dilla::Master.steer_to_reference!(quiet).round(2), quiet_lufs.round(2),
                  "a quiet render is not inflated back up to the reference"
   end
+
+  # Saturate and Sonitex are nonlinear stages: on asymmetric material they
+  # bend the waveform back toward DC, and a DC blocker placed only before
+  # them cannot help. The render chain must block again after the last
+  # nonlinear stage, or every render ships a standing offset that eats
+  # headroom and thumps on playback transitions.
+  def test_saturation_reintroduces_dc_and_the_final_block_removes_it
+    biased = mix_of(110.0, 0.5, 1.0)
+    biased.l.each_index { |i| biased.l[i] += 0.1; biased.r[i] += 0.1 }
+
+    shaped = Dilla::Stereo.new(biased.l.length)
+    shaped.l.replace(biased.l)
+    shaped.r.replace(biased.r)
+    Dilla::Master.saturate!(shaped, 1.08)
+    shaped_mean = shaped.l.sum / shaped.l.length
+    assert_operator shaped_mean.abs, :>, 1.0 / 4096,
+                    "saturation on asymmetric material must measurably reintroduce DC"
+
+    blocked = Dilla::Stereo.new(shaped.l.length)
+    blocked.l.replace(shaped.l)
+    blocked.r.replace(shaped.r)
+    Dilla::Master.dc_block!(blocked)
+    blocked_mean = blocked.l.sum / blocked.l.length
+    # The one-pole block converges far past audibility; what remains is
+    # float accumulation across the recursion, so the bound is 8 LSB of
+    # 16-bit and a hundred-fold cut of what saturation produced.
+    assert_in_delta 0.0, blocked_mean, 8.0 / 32768,
+                    "the final DC block must leave the buffer offset-free to 16-bit dust"
+    assert_operator blocked_mean.abs, :<, shaped_mean.abs / 100,
+                    "the block must remove the saturation-introduced offset by two orders"
+  end
 end

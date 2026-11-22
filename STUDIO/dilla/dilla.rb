@@ -2671,6 +2671,10 @@ module Dilla
     Master.tilt!(mix, 0.8)
     Master.saturate!(mix, 1.08)
     Sonitex.apply!(mix, plan[:sonitex], plan[:sonitex_instances], rng)
+    # Saturate and Sonitex are nonlinear stages: on asymmetric material they
+    # bend the waveform back toward DC, so block again after the last
+    # nonlinear stage and before normalize pins the headroom.
+    Master.dc_block!(mix)
     Master.normalize!(mix)
     Master.fades!(mix)
     lufs = Master.steer_to_reference!(mix)
