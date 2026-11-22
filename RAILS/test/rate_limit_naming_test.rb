@@ -61,6 +61,22 @@ class RateLimitNamingTest < Minitest::Test
     refute_includes calls.last, "before_action"
   end
 
+  def test_security_rate_limit_budgets_remain_pinned
+    write_throttle = File.read(File.join(RAILS_ROOT, "__shared/app/controllers/concerns/shared/write_throttle.rb"))
+    sessions = File.read(File.join(RAILS_ROOT, "__shared/app/controllers/concerns/shared/sessions_actions.rb"))
+    passwords = File.read(File.join(RAILS_ROOT, "__shared/app/controllers/concerns/shared/passwords_actions.rb"))
+    account_security = File.read(File.join(
+      RAILS_ROOT, "__shared/app/controllers/concerns/shared/account_security_actions.rb"
+    ))
+
+    assert_match(/class_attribute :write_throttle_limit, default: 60/, write_throttle)
+    assert_match(/class_attribute :write_throttle_window, default: 1\.minute/, write_throttle)
+    assert_match(/rate_limit to: 8, within: 3\.minutes, only: :create, name: :password/, sessions)
+    assert_match(/rate_limit to: 5, within: 3\.minutes, only: :create, name: "request_reset"/, passwords)
+    assert_match(/rate_limit to: 5, within: 3\.minutes, only: :update, name: "consume_reset"/, passwords)
+    assert_match(/rate_limit to: 6, within: 10\.minutes, only: %i\[email password other_sessions\]/, account_security)
+  end
+
   def unnamed_pairs
     controllers.filter_map do |path|
       calls = rate_limit_calls(File.read(path))
