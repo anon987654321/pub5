@@ -6,6 +6,14 @@
 <% content_for :json_ld, json_ld_script(@port.software_application_schema(page_url: port_url(@port))) %>
 <article aria-label="<%= t("ports.details_label") %>">
   <header aria-label="<%= t("ports.header_label") %>">
+    <% unless @port.available? %>
+      <p class="ports-data-note" role="status">
+        <%= t(
+          "ports.package_unavailable",
+          seen: @port.package_index_seen_at&.strftime("%Y-%m-%d") || t("ports.unknown")
+        ) %>
+      </p>
+    <% end %>
     <h1><%= @port.name %> <%= tag.small @port.version %></h1>
     <small><%= link_to @port.category.name, category_path(@port.category) %></small>
   </header>

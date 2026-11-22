@@ -29,6 +29,9 @@
     <% if @last_import&.package_index_only? %>
       <p class="ports-data-note"><%= t("ports.package_index_only") %></p>
     <% end %>
+    <% if @unavailable_count.to_i.positive? %>
+      <p class="ports-data-note"><%= t("ports.unavailable_count", count: @unavailable_count) %></p>
+    <% end %>
 
     <%# sort=updated was written in the controller and reachable only by typing the
         query string. Name is the implicit default, so both are named here. The

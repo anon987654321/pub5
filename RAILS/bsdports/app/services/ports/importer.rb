@@ -19,6 +19,8 @@ module Ports
       @dependency_sync_port_ids = Set.new
       @imported_ports = {}
       @ports_count = 0
+      @package_index_port_ids = []
+      @package_index_refresh = false
     end
 
     # Three sources, best metadata first. Each is tried only if the one above
@@ -57,7 +59,13 @@ module Ports
 
       resolve_dependencies
       rebuild_fts
-      @import_run.mark_succeeded!(ports_count:, source_revision: source.to_s)
+      # The imported ids and the run status commit together. A failed/partial
+      # index can neither revive rows it happened to touch nor mark untouched
+      # package rows unavailable.
+      ImportRun.transaction do
+        @import_run.mark_succeeded!(ports_count:, source_revision: source.to_s)
+        reconcile_package_index_availability! if @package_index_refresh
+      end
       Result.new(platform:, import_run: @import_run, ports_count:, tree_path: source.to_s)
     rescue StandardError => e
       @import_run&.mark_failed!(e.message)
@@ -103,6 +111,7 @@ module Ports
       return nil if entries.nil? || entries.empty?
 
       entries.each { |metadata| upsert_port(metadata) }
+      @package_index_refresh = true
       fetcher.index_url
     end
 
@@ -135,16 +144,35 @@ module Ports
           permit_file_distfiles: metadata[:permit_file_distfiles] == true
         )
       end
+      # New synthetic rows stay hidden until this complete index run has
+      # succeeded. Existing rows keep their last known availability on failure.
+      attributes[:available] = false if thin_metadata && port.new_record?
       port.assign_attributes(attributes)
       unless thin_metadata
         port[:maintainer] = metadata[:maintainer]
         port.maintainer_id = maintainer&.id
       end
       port.save!
+      @package_index_port_ids << port.id if thin_metadata
       imported_ports[port.id] = port
       record_version_change(port, old_version)
       queue_dependencies(port, metadata)
       @ports_count += 1
+    end
+
+    # A package index is a complete snapshot only after every row parsed
+    # and every upsert succeeded. Keep older synthetic rows for direct history,
+    # but remove them from current catalogue results until they reappear.
+    def reconcile_package_index_availability!
+      seen_at = @import_run.started_at
+      now = Time.current
+      Port.where(id: @package_index_port_ids.uniq).update_all(
+        available: true, package_index_seen_at: seen_at, updated_at: now
+      )
+      Port.where(platform:)
+          .where("pkgpath LIKE ?", "#{Ports::Openbsd::PackageIndexParser::SYNTHETIC_PREFIX}/%")
+          .where("package_index_seen_at IS NULL OR package_index_seen_at <> ?", seen_at)
+          .update_all(available: false, updated_at: now)
     end
 
     def safe_homepage(value, pkgpath)
