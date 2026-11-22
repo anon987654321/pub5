@@ -1110,7 +1110,7 @@ operator_playbook:
 skills_registry:
   meta:
     source: runtime authority - edit this file directly; do not add data/skills/*.md
-    count: 22
+    count: 27
   skills:
   - name: algorithmic-art
     description: Make generative art from one seeded algorithm, reproducible and tunable.
@@ -1168,13 +1168,13 @@ skills_registry:
       Prefer minimal edits, preserve user work, and verify the change path end to end. Confirm behavior with tests, logs, or a reproducible check before treating the fix as complete.
 
   - name: growth
-    description: Audit public growth surfaces across search, permission marketing, partner attribution, and conversion measurement.
+    description: Audit distribution, demand, acquisition, conversion and cross-channel measurement across public growth surfaces.
     triggers:
-    - "\\b(?:growth|marketing|seo|newsletter|affiliate|conversion|acquisition)\\b"
+    - "\\b(?:growth|marketing|seo|newsletter|affiliate|conversion|acquisition|funnel|distribution|demand generation)\\b"
     body: |-
-      The growth skill audits pub5's public growth surfaces as one system: search and local discovery, permission marketing, partner and affiliate measurement, and the conversion path. Use current code and runtime evidence first: shared SEO and schema helpers, consent and newsletter jobs, outbound-click and partner-marketing models, and the existing frontend and production checks.
+      The growth skill owns the portfolio view of pub5's distribution and demand system: search and local discovery, permission marketing, partner acquisition, conversion paths and cross-channel measurement. Start with current code and runtime evidence: shared SEO/schema helpers, consent and newsletter jobs, outbound-click and partner-marketing models, product analytics, and existing frontend and production checks.
 
-      Separate observed instrumentation from inferred opportunity. Preserve consent, disclosure, local relevance, and first-party measurement; never invent traffic, conversions, or attribution. Prefer one small measurable experiment over broad promotional machinery. End with concrete file-backed gaps and the smallest next change.
+      Keep channel strategy, funnel diagnosis and experiment design here. Route detailed commission architecture, affiliate fraud and payout reconciliation to the affiliate skill; route pricing, packaging, revenue models and unit economics to monetization. Preserve consent, advertising disclosure, local relevance and first-party measurement. Distinguish observed instrumentation from inferred opportunity; never invent traffic, conversions, attribution or revenue. Prefer one measurable experiment over broad promotional machinery and end with file-backed gaps, a success measure and a decision rule.
 
   - name: frontend
     description: Run browser-first frontend verification across responsive composition, interaction states, and rendered evidence.
@@ -1288,6 +1288,68 @@ skills_registry:
       The workflow skill runs MASTER's internal pipeline when the operator asks for a full pass without naming individual steps. Phrases such as run this through MASTER, full pass, or tribunal infer scan, fix dry-run, and council deliberation in sequence.
 
       No /triad or /workflow command is required unless debugging. MASTER orchestrates the stages internally; the operator only needs the natural-language trigger.
+  - name: security
+    description: Route defensive security work and explicitly authorized assessments through evidence-first, bounded methods.
+    triggers:
+    - '\b(?:security audit|security review|secure code review|threat model(?:l?ing)?|attack surface|penetration test|pentest|vulnerability assessment|owasp|red[ -]?team|blue[ -]?team|incident response|digital forensics|ssrf|idor|xss|sql injection|jwt security|mobile app security|binary analysis|malware triage|supply.chain security|ai security|llm security|smart.contract security)\b'
+    body: |-
+      The security skill is a router and evidence discipline, not an exploit runner. Classify the request as source review, configuration/dependency audit, threat modelling, authorized live assessment, hardening, incident response, or forensics before selecting a method.
+
+      For any live target, require written authorization and an exact scope: owned organization, hosts and applications, environment, permitted methods, time window, test identities, data rules, stop conditions, and emergency contact. If any boundary is missing, stay with offline source review and public defensive guidance. Never infer permission from public reachability, a bug-bounty label, or repository access.
+
+      Default to read-only, non-destructive checks. Do not perform denial of service, destructive writes, production lockout brute force, credential harvesting, persistence, stealth or evasion, lateral movement, exfiltration, or access to real user data. Do not autonomously run exploit chains. Intrusive proof requires separate, explicit authorization and a safe isolated target.
+
+      Use the Yaklang collection as a topic map across reconnaissance and attack-surface mapping; exposed source control and dependency confusion; web, API, authentication and business-logic flaws; network, cloud, container and operating-system configuration; mobile; binary and reverse engineering; cryptography; smart contracts; AI/LLM/RAG/MCP tool boundaries; malware triage and forensics. Prefer safe source-level reasoning, harmless test fixtures and non-invasive confirmation over payload breadth.
+
+      Every finding names the affected asset and revision, evidence and reproduction conditions, prerequisites, realistic impact, confidence, severity rationale, remediation and a regression check. Separate confirmed findings from likely issues and hypotheses. Preserve evidence provenance; redact secrets and personal data. A fix is complete only after the original defect is retested and the regression check passes.
+  - name: affiliate
+    description: Design and audit affiliate and partner programs, commission economics, attribution, fraud controls and payouts.
+    triggers:
+    - '\b(?:affiliate(?:s| marketing| program| commission| payout| fraud)?|partner program|partnership marketing|commission rate|revenue share|referral partner|affiliate attribution|affiliate tracking|affiliate payout)\b'
+    body: |-
+      The affiliate skill designs the partner channel from product economics through verified payout. First establish the offer, audience, contribution margin, refund and cancellation behavior, sales cycle, geography, existing attribution and contractual constraints. Distinguish affiliate acquisition from customer referral rewards and ordinary partnerships.
+
+      Compare revenue share, flat CPA and hybrid commissions. Derive rates from contribution margin after fulfillment, payment fees, support, refunds, chargebacks, taxes and expected retention; show assumptions and sensitivity rather than inventing a market-standard rate. Define tiers, recurring duration, caps, attribution window, qualified-conversion rules, reversals, payout timing and dispute handling before launch.
+
+      Keep attribution first-party where the product owner controls the surface. Give each click, lead and paid transaction stable identifiers; deduplicate events and reconcile source, order, refund and commission ledgers. Treat last-click and platform reports as models, not ground truth. Measure incrementality where practical and disclose uncertainty when several channels touch one conversion.
+
+      Model invalid traffic, self-referrals, cookie stuffing, click injection, duplicate leads, coupon leakage, stolen attribution and refund abuse. Use proportionate anomaly review and documented appeal paths; do not accuse a partner from a single signal. Hold or reverse only under published terms and verified evidence. Never fabricate conversions, partner reach or earnings. Require conspicuous advertising disclosures and verify applicable local rules before launch or payout.
+  - name: monetization
+    description: Evaluate pricing, packaging and revenue models with explicit unit economics and low-cost validation.
+    triggers:
+    - '\b(?:moneti[sz](?:e|ation|ing)|revenue model|pricing strategy|pricing model|price architecture|packaging strategy|paywall|usage.based pricing|subscription tiers?|freemium|paid conversion|willingness to pay|revenue leakage)\b'
+    body: |-
+      The monetization skill compares three to five materially different revenue approaches, not five variations of the same subscription. Consider direct sales, subscriptions, memberships, usage or outcome pricing, licensing, services, sponsorship, advertising, marketplace take rates, digital goods and freemium where they fit the product and customer.
+
+      Start with customer segment, job-to-be-done, value metric, frequency of value, willingness-to-pay evidence, alternatives, sales cycle and company priority. Separate packaging (what is included), pricing metric (what is charged) and price point (how much). Preserve a free path to the core first-value moment when it materially improves activation; place paid limits around sustained or differentiated value, not arbitrary friction.
+
+      Show the economics: gross and contribution margin, variable delivery and support cost, CAC, payback period, retention, churn, expansion, LTV assumptions and sensitivity. For usage models, account for metering, event deduplication, rating, credits, overages, proration, refunds, billing reconciliation and an auditable ledger. Revenue forecasts are scenarios, never actual results.
+
+      Propose a small validation experiment for each viable model: customer interviews, paid pilot, landing-page intent test, price test or packaging test. State the sample, success threshold, guardrails and decision rule. Do not change production prices, paywalls or billing behavior without explicit authorization. Do not invent competitor prices, demand, conversion rates or willingness to pay. Reassess pricing when customer value, cost structure or market evidence materially changes.
+  - name: studio-production
+    description: Turn musical intent into a structured, editable composition and production plan using STUDIO's Ruby-first tools.
+    triggers:
+    - '\b(?:songwriting|music composition|compose music|arrange music|music production|produce a beat|make a beat|drum programming|melody writing|chord progression|harmony writing|music theory|mix a track|music arrangement|ableton live)\b'
+    body: |-
+      The studio-production skill turns an open-ended music request into an editable draft and a clean revision path. Extract constraints already supplied before asking anything. Resolve only missing high-impact decisions: genre/reference, mood and energy, tempo/groove, key/mode, form and section length, instrument priorities, vocal role and delivery target. Give a useful default and proceed when the brief is sufficient.
+
+      Write a compact production brief before rendering. Build a rhythmic anchor, harmonic movement and memorable motif; make at least two sections contrast in density, register, rhythmic activity or harmony while retaining a recognizable identity. Prefer short motifs, purposeful rests, voice-leading and repeatable patterns over ornamental complexity. Use STUDIO/dilla/data/music_theory.json and the existing Dilla renderer, style profiles, reference analysis and MIDI export rather than creating a parallel theory engine.
+
+      Keep STUDIO's Ruby-first architecture and existing provider boundaries. Check available instruments and tools before naming them; use a clearly labelled fallback when unavailable. Uisato's Ableton workflow is a method reference, not permission to add a Python MCP runtime or assume Ableton is installed. Do not start playback unless requested. Preserve existing sessions and material; append or create a new take rather than overwrite.
+
+      For a quick mix, balance drums and bass first, keep the low end centered, make support layers readable, avoid clipping and preserve headroom. Technical measures such as peak, RMS and LUFS do not establish musical quality. Record seed, source, settings and render hashes; perform structural checks, then require full human audition before claiming the music sounds finished. On revisions, preserve successful sections and change only the requested scope.
+  - name: cinema
+    description: Plan and produce music-led films and long-form audiovisual work as a timed, traceable sequence.
+    triggers:
+    - '\b(?:music video|cinematic video|long.form video|audiovisual film|audio.reactive visuals?|visualizer|storyboard|shot list|scene sequence|image.to.video|video production|film sequence)\b'
+    body: |-
+      The cinema skill treats a film as a directed timeline, not a collection of unrelated generations. Begin with the finished or working soundtrack, narrative intent, aspect ratio, duration, frame rate, delivery target and rights-cleared visual references. Map musical sections, bars and transitions to scene durations and shot purposes before generating footage.
+
+      Each shot should carry a stable ID, timeline range, source/reference provenance, subject identity, camera and movement intent, prompt, seed, provider/model version, generation receipt, expected continuity and selected take. Use reference frames and subject-consistency checks where appropriate. Match motion to musical structure without making every visual effect react to every beat. Every shot needs a narrative, emotional or rhythmic purpose.
+
+      Orchestrate existing STUDIO owners: Dilla for original music and audio analysis, LoRA for consent-validated subject identity, Replicate for model predictions, and Postpro for motion and finishing. Keep Replicate's CLI path and API boundary intact. Use provider/model-specific capabilities only when confirmed by the current catalogue; record cost and credit limits before batches. Keep source takes and intermediate renders, write outputs beside them, and never overwrite a selected take.
+
+      Render from a fixed timeline, frame rate, dimensions and declared color/audio settings. Review contact sheets and representative frames, then inspect temporal continuity, identity drift, camera motion, transitions, sync, clipping, captions and final runtime. A successful render or frame-level metric is not proof that a film works: require a full human watch and listen. Record rights, provenance, seeds, model versions, costs and unresolved defects in the handoff. Do not claim a future cinema orchestrator exists until its code and tests do.
   - name: amber-tenant-logo
     description: Dress a brgen tenant or any logo request in the amber mark law — locked Caprasimo glyphs, nine hairlines, plates from the generator, never redrawn.
     triggers:
