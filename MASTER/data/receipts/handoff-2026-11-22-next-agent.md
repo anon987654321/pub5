@@ -771,7 +771,7 @@ proposal's assumed paths.
 
 ### Delivered source corrections
 
-- **S-02 — Postpro prior-take retention: IMPLEMENTED, proof NOT_RUN.**
+- **S-02 — Postpro prior-take retention slice: PARTIAL, proof NOT_RUN.**
   The live `Postpro::Constitution.retire_previous_renders!` path deleted prior
   media and JSON sidecars for the same source before drawing a new family. The
   method and its call were removed. Existing `available_output_path` continues
@@ -786,6 +786,11 @@ proposal's assumed paths.
   `STUDIO/postpro/lib/cli.rb`,
   `STUDIO/postpro/README.md`,
   `STUDIO/replicate/test/postpro_cli_contract_test.rb`.
+  This closes the destructive Postpro path only. It does not yet provide
+  the proposed cross-STUDIO `rake studio:takes SUBJECT` inventory or a
+  unified take allocator through `output_paths.rb`; those remain open. Dilla
+  already refuses collisions by default and exposes `--overwrite` as an
+  explicit operator action, not as an autonomous default.
   Commits: `d5b9354ab701434976101da01e7bc739d68d61d7`,
   `ef30626cc2f3d68870e931797e4d128bcd281365`,
   `82a0fbee2f538c5c48b8091d19a0ac8c812119eb`,
