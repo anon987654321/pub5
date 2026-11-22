@@ -194,13 +194,13 @@ module Operator
     # The caller supplies only the UUID identity; paths never come from input.
     def write_json_receipt(root:, receipt:)
       receipt_id = receipt.fetch("receipt_id").to_s
-      raise ArgumentError, "invalid receipt ID" unless receipt_id.match?(/\\A[0-9a-f-]{36}\\z/i)
+      raise ArgumentError, "invalid receipt ID" unless receipt_id.match?(/\A[0-9a-f-]{36}\z/i)
 
       expected = ".master/check/receipts/#{receipt_id}.json"
       raise ArgumentError, "receipt path does not match its ID" unless receipt.fetch("receipt_path") == expected
 
       destination = File.join(File.expand_path(root), expected)
-      Master::Io::AtomicWrite.write_atomic(destination, JSON.pretty_generate(receipt) << "\\n", mode: 0o600)
+      Master::Io::AtomicWrite.write_atomic(destination, JSON.pretty_generate(receipt) << "\n", mode: 0o600)
       destination
     end
 
