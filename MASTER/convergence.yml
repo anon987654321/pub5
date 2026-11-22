@@ -510,9 +510,9 @@ workstreams:
   # --- shared vertical work, remeasured 2026-11-22 ---
   - id: brgen_place_directory
     state: partial
-    title: One city-scoped Places directory shared by Maps, Events, Marketplace and Takeaway
-    implementation: RAILS/brgen/app/services/place_directory.rb; RAILS/brgen/app/models/place.rb
-    proof: RAILS/brgen/test/models/place_test.rb; RAILS/brgen/engines/maps/test/controllers/places_controller_test.rb; consumer callsites in Events, Marketplace and Takeaway (import/refresh remains open; tests NOT_RUN)
+    title: One city-scoped Places directory shared by Maps, Events, Marketplace and Takeaway, with stable public slugs
+    implementation: RAILS/brgen/app/services/place_directory.rb; RAILS/brgen/app/models/place.rb; RAILS/brgen/db/migrate/20261122190000_enforce_place_slugs.rb; RAILS/brgen/engines/maps/app/controllers/maps/places_controller.rb
+    proof: RAILS/brgen/test/models/place_test.rb; RAILS/brgen/engines/maps/test/controllers/places_controller_test.rb; RAILS/test/place_directory_contract_test.rb (authored; import/refresh and runtime suites remain NOT_RUN)
   - id: messenger_device_presence
     state: partial
     title: Suppress chat pushes only on the browser or phone that has the conversation open
