@@ -53,8 +53,9 @@ class BrowserBrokerTest < Minitest::Test
     assert_includes bridge, "return nil unless capabilities.allow?(:browser)"
     assert_includes bridge, "Master::Io::BrowserBroker.new("
     assert_includes bridge, "capabilities:,"
-    assert_includes bridge, "browser_scope.with(browser, &fold)"
-    assert_includes builder, "browser_broker: Io::BrowserBroker::Scope.new"
+    assert_includes bridge, "browser_scope_binding.with(browser, &fold)"
+    assert_includes builder, "browser_broker_binding:"
+    refute_includes builder, "browser_broker_binding:" + " binding" # no tool factory gets the binder
   end
 
   def test_all_six_production_adapters_attach_only_to_broker_issued_leases
@@ -109,7 +110,9 @@ class BrowserBrokerTest < Minitest::Test
   end
 
   def test_scoped_broker_is_unavailable_outside_the_active_core_fiber
-    scope = Broker::Scope.new
+    binding = nil
+    scope = Broker::Scope.new { |core_binding| binding = core_binding }
+    refute_respond_to scope, :with
     refute scope.available?
     assert_empty scope.sessions
     assert_equal 0, scope.size
@@ -118,7 +121,7 @@ class BrowserBrokerTest < Minitest::Test
     engine = FakeEngine.new
     active = broker(engine:)
     lease_id = nil
-    scope.with(active) do
+    binding.with(active) do
       assert scope.available?
       other_fiber_availability = nil
       Fiber.new { other_fiber_availability = scope.available? }.resume
@@ -134,6 +137,22 @@ class BrowserBrokerTest < Minitest::Test
     assert_equal 0, scope.size
     assert_equal 1, engine.stopped.size
     refute_nil lease_id
+  end
+
+  def test_a_binder_for_another_scope_cannot_authorize_the_injected_scope
+    host_scope_binding = nil
+    host_scope = Broker::Scope.new { |core_binding| host_scope_binding = core_binding }
+    _separate_scope_binding = nil
+    separate_scope = Broker::Scope.new { |core_binding| _separate_scope_binding = core_binding }
+
+    separate_scope_binding = _separate_scope_binding
+    fake = broker
+    separate_scope_binding.with(fake) do
+      refute host_scope.available?
+      assert_raises(Broker::Denied) { host_scope.open(host: "example.com") }
+    end
+    refute host_scope.available?
+    refute_nil host_scope_binding
   end
 
   def test_a_context_without_the_capability_cannot_open_a_session
