@@ -720,6 +720,7 @@ document.querySelectorAll('.tool').forEach(btn => {
     { cmd: 'ping', hint: 'smoke test connection', category: 'health' },
     { action: 'dashboard', label: 'mission control', hint: 'open /dashboard', category: 'health' },
     { action: 'history', label: 'toggle history', hint: 'sidebar · Ctrl+Shift+H', category: 'session' },
+    { action: 'new_chat', label: 'new chat', hint: 'fresh transcript · rotate face character', category: 'session' },
     { action: 'export', label: 'export session', hint: 'markdown download · Ctrl+Shift+E', category: 'session' },
     { action: 'export_jsonl', label: 'export jsonl', hint: 'machine-readable session', category: 'session' },
     { action: 'export_png', label: 'export face png', hint: 'snapshot canvas', category: 'interface' },
@@ -759,8 +760,34 @@ document.querySelectorAll('.tool').forEach(btn => {
   let activeIndex = 0;
   let filtered = COMMANDS.slice();
 
+  let newChatPending = false;
+  async function beginNewChat() {
+    if (newChatPending) return;
+    newChatPending = true;
+    try {
+      const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+      const response = await fetch('/chat/new', {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'X-CSRF-Token': csrf }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.started !== true) {
+        throw new Error(data.error || `new chat failed (${response.status})`);
+      }
+      window._chatCancel?.();
+      window.MASTER_FACE?.ttsSkip?.();
+      window.location.reload();
+    } catch (error) {
+      newChatPending = false;
+      window.MASTER_LOG?.warn?.('chat:new_conversation', error);
+      const status = document.getElementById('ui-status');
+      if (status) status.textContent = 'new chat failed';
+    }
+  }
+
   function runEntry(entry) {
     closePalette();
+    if (entry.action === 'new_chat') { beginNewChat(); return; }
     if (entry.action === 'dashboard') { window.location.href = '/dashboard'; return; }
     if (entry.action === 'history') { window.MASTERHistory?.toggle?.(); return; }
     if (entry.action === 'export') { window.MASTERExport?.download?.(); return; }

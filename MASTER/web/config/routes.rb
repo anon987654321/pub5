@@ -10,6 +10,7 @@ Rails.application.routes.draw do
   get "dashboard", to: "dashboard#index"
   get "dashboard/live", to: "dashboard#live"
   post "chat/message",  to: "chat#message"
+  post "chat/new",      to: "chat#new_conversation"
   post "chat/photo",    to: "chat#photo"
   get  "chat/tts",        to: "tts#show"
   get  "chat/tts/phrases", to: "tts#phrases"

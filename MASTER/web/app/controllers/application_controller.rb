@@ -14,7 +14,7 @@ class ApplicationController < ActionController::Base
   AUTHENTICATED_ACTIONS = %i[history live metrics metrics_prometheus].freeze
   TTS_SYNTH_ACTIONS = %i[show].freeze
   TTS_POLL_ACTIONS = %i[status stream].freeze
-  WEB_WRITE_ACTIONS = %i[command enhance photo post_event research state].freeze
+  WEB_WRITE_ACTIONS = %i[command enhance photo post_event research state new_conversation].freeze
   # data/security.yml#web_rate_limits is the source; these literals are the
   # fallback for a checkout without it, as IngressController does for ingress.
   WEB_RATE_LIMIT_DEFAULTS = {
@@ -178,6 +178,12 @@ class ApplicationController < ActionController::Base
     existing = cookies[:master_conversation].to_s
     return existing if existing.match?(/\A[0-9a-f]{32}\z/)
 
+    renew_conversation_id
+  end
+
+  # Start a genuinely separate transcript while retaining the same browser
+  # privacy boundary. The raw cookie is HttpOnly and never returned to JavaScript.
+  def renew_conversation_id
     minted = SecureRandom.hex(16)
     cookies[:master_conversation] = {
       value: minted, expires: 1.year.from_now,

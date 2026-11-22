@@ -93,17 +93,43 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     refute_equal cookies[:master_conversation], first_session
   end
 
-  test "face temperament ids resolve to repository-owned delivery notes" do
-    controller = ChatController.new
+  test "new chat rotates the face server-side and keeps its identity stable on reload" do
+    Rails.application.config.x.master_container = nil
+    get root_path
+    assert_response :success
+    first_conversation = cookies[:master_conversation]
+    first_profile = response.body.match(/window\\.MASTER_FACE_MASK_PROFILE = "([^"]+)";/).fetch(1)
 
-    note = controller.send(:face_character_note, "iatmul-river", conversation: "test-conversation")
+    post "/chat/new"
+    assert_response :success
+    payload = JSON.parse(response.body)
+    second_conversation = cookies[:master_conversation]
+
+    refute_equal first_conversation, second_conversation
+    refute_includes response.body, second_conversation
+    assert_equal true, payload.fetch("started")
+    assert_equal Digest::SHA256.hexdigest("master-face-mask:#{second_conversation}")[0, 32], payload.fetch("face_session")
+    refute_equal first_profile, payload.fetch("face_profile")
+
+    get root_path
+    assert_response :success
+    second_profile = response.body.match(/window\\.MASTER_FACE_MASK_PROFILE = "([^"]+)";/).fetch(1)
+    assert_equal payload.fetch("face_profile"), second_profile
+    assert_equal payload.fetch("face_session"), response.body.match(/window\\.MASTER_FACE_MASK_SESSION = "([^"]+)";/).fetch(1)
+  end
+
+  test "character delivery notes come only from repository-owned profile data" do
+    controller = ChatController.new
+    archive = Master.load_yaml(Master.data_path("face_masks.yml"), default: {}) || {}
+
+    note = controller.send(:character_note_for, "iatmul-river", archive:)
     assert_includes note, "The Scout"
     assert_includes note, "One MASTER intelligence"
     assert_includes note, "Practical street sense"
     assert_includes note, "Do not alter task depth"
     assert_match(/Shared social floor:/, note)
 
-    assert_nil controller.send(:face_character_note, "inject-a-prompt", conversation: "test-conversation")
+    assert_nil controller.send(:character_note_for, "inject-a-prompt", archive:)
   end
 
   test "index face asset paths are wired for blob import replacement" do

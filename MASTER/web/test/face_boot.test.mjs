@@ -441,6 +441,22 @@ test("server-selected human mask profile drives the particle face and its source
   assert.equal(document.documentElement.dataset.maskSourceCollection, "The Museum of Fine Arts, Houston");
 });
 
+test("new chat is a server action and does not accept a client-selected character", () => {
+  const chat = readFileSync(join(publicDir, "chat.js"), "utf8");
+  const actions = readFileSync(join(publicDir, "chat_actions.js"), "utf8");
+  const routes = readFileSync(join(root, "config", "routes.rb"), "utf8");
+  const controller = readFileSync(join(root, "app", "controllers", "chat_controller.rb"), "utf8");
+  assert.match(chat, /action: 'new_chat', label: 'new chat'/);
+  assert.match(chat, /fetch\('\/chat\/new', \{[\s\S]*?method: 'POST'/);
+  assert.match(chat, /window\.location\.reload\(\)/);
+  assert.match(routes, /post "chat\/new",\s+to: "chat#new_conversation"/);
+  assert.match(controller, /def new_conversation/);
+  assert.match(controller, /face_mask_entry_for\(conversation, Array\(archive\["entries"\]\)\)/);
+  assert.match(controller, /def face_character_note\(conversation:/);
+  assert.doesNotMatch(actions, /form\.append\("face_profile"/);
+  assert.match(controller, /cookies\.signed\[:master_face_mask_rotation\]/);
+});
+
 test("rotating characters change delivery only and preserve one MASTER intelligence", () => {
   const archive = readFileSync(join(root, "..", "..", "MASTER", "data", "face_masks.yml"), "utf8");
   const actions = readFileSync(join(publicDir, "chat_actions.js"), "utf8");

@@ -139,10 +139,6 @@ async function openChatStream({ message, state, imageToken, signal, handlers }) 
   const form = new FormData();
   form.append("message", message);
   if (window.MASTER_ACTIVE_DOMAIN) form.append("active_domain", window.MASTER_ACTIVE_DOMAIN);
-  const faceProfile = window.MASTER_FACE_MASKS?.current?.()?.id;
-  if (typeof faceProfile === "string" && /^[a-z0-9-]{1,48}$/.test(faceProfile)) {
-    form.append("face_profile", faceProfile);
-  }
   const felt = state || validatedFeltState();
   if (felt) form.append("state", felt);
   if (imageToken) form.append("image_token", imageToken);

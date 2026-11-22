@@ -14,7 +14,7 @@ class ChatController < ApplicationController
   before_action :require_same_origin!, only: :command
   # Face shell renders immediately; container finishes booting in the background (~90s on VPS).
   # Metrics returns 401/503 JSON — must not hit the HTML warming check first.
-  skip_before_action :require_container!, only: %i[index metrics metrics_prometheus sensory]
+  skip_before_action :require_container!, only: %i[index metrics metrics_prometheus sensory new_conversation]
 
   def index
     c = container
@@ -30,36 +30,28 @@ class ChatController < ApplicationController
     mask_archive = Master.load_yaml(Master.data_path("face_masks.yml"), default: {}) || {}
     @face_mask_entries = Array(mask_archive["entries"])
     @face_mask_characters = mask_archive["characters"].is_a?(Hash) ? mask_archive["characters"] : {}
-    @face_mask_profile = ""
-    unless @face_mask_entries.empty?
-      rotation = cookies.signed[:master_face_mask_rotation]
-      same_conversation = rotation.is_a?(Hash) && rotation["conversation_id"] == conversation
-      previous_mask_index = if rotation.is_a?(Hash)
-                              Integer(rotation["index"], exception: false)
-                            else
-                              Integer(rotation, exception: false)
-                            end
-      next_mask_index = if same_conversation && previous_mask_index
-                          previous_mask_index % @face_mask_entries.length
-                        else
-                          ((previous_mask_index || -1) + 1) % @face_mask_entries.length
-                        end
-      @face_mask_entry = @face_mask_entries.fetch(next_mask_index)
-      @face_mask_profile = @face_mask_entry.fetch("particle_profile", "").to_s
-      cookies.signed[:master_face_mask_rotation] = {
-        value: { "conversation_id" => conversation, "index" => next_mask_index },
-        expires: 1.year.from_now,
-        secure: request.ssl?,
-        httponly: true,
-        same_site: :strict
-      }
-    end
+    @face_mask_entry = face_mask_entry_for(conversation, @face_mask_entries)
+    @face_mask_profile = @face_mask_entry ? @face_mask_entry.fetch("particle_profile", "").to_s : ""
     @model = c&.[](:agent)&.model.to_s.split("/").last.presence || "booting"
     @tier = request.env["master.tier"].to_s
     @profile = face_profile
     @container_ready = !c.nil?
     @face_law_field = Master::Face::LawField.browser_payload
     render layout: false
+  end
+
+  # A new conversation is a new transcript and a new face selection, not a
+  # reload of the current page. The browser receives only the public face-session
+  # digest; the HttpOnly conversation cookie itself never crosses this boundary.
+  def new_conversation
+    conversation = renew_conversation_id
+    archive = Master.load_yaml(Master.data_path("face_masks.yml"), default: {}) || {}
+    entry = face_mask_entry_for(conversation, Array(archive["entries"]))
+    render json: {
+      started: true,
+      face_session: Digest::SHA256.hexdigest("master-face-mask:#{conversation}")[0, 32],
+      face_profile: entry ? entry.fetch("particle_profile", "").to_s : ""
+    }
   end
 
   def metrics
@@ -225,7 +217,7 @@ class ChatController < ApplicationController
     return stream_smoke_reply(input) if smoke_chat_message?(input)
 
     conversation = conversation_id
-    persona_note = face_character_note(mp[:face_profile], conversation:)
+    persona_note = face_character_note(conversation:)
     response.headers["Content-Type"] = "text/event-stream"
     response.headers["Cache-Control"] = "no-cache"
     response.headers["X-Accel-Buffering"] = "no"
@@ -256,31 +248,28 @@ class ChatController < ApplicationController
 
   private
 
-  # The browser sends only a profile id. All behavioral instructions come from
-  # the repository-owned archive, after checking the five-profile allowlist.
-  # Museum/cultural metadata is never used to infer a temperament.
-  def face_character_note(profile_id, conversation:)
+  # Resolve delivery from the signed, HttpOnly per-conversation selection.
+  # The user-controlled request body cannot choose or inject a character prompt.
+  def face_character_note(conversation:)
     archive = Master.load_yaml(Master.data_path("face_masks.yml"), default: {}) || {}
     entries = Array(archive["entries"])
-    allowed = Array(archive["rotation_profiles"]).map(&:to_s)
-    requested = profile_id.to_s
-    entry = nil
+    rotation = cookies.signed[:master_face_mask_rotation]
+    return unless rotation.is_a?(Hash) && rotation["conversation_id"].to_s == conversation.to_s
 
-    unless requested.empty?
-      return unless allowed.include?(requested)
+    index = Integer(rotation["index"], exception: false)
+    return unless index && index >= 0 && index < entries.length
 
-      entry = entries.find { |row| row.is_a?(Hash) && row["particle_profile"].to_s == requested }
-    else
-      rotation = cookies.signed[:master_face_mask_rotation]
-      if rotation.is_a?(Hash) && rotation["conversation_id"].to_s == conversation.to_s
-        index = Integer(rotation["index"], exception: false)
-        entry = entries[index] if index && index >= 0 && index < entries.length
-      end
-    end
+    entry = entries[index]
+    profile_id = entry.is_a?(Hash) ? entry["particle_profile"].to_s : ""
+    character_note_for(profile_id, archive:)
+  rescue StandardError => e
+    Master::Ground::Swallow.log(e, context: "ChatController.face_character_note", event_bus: container&.dig(:bus))
+    nil
+  end
 
-    profile_key = entry.is_a?(Hash) ? entry["particle_profile"].to_s : requested
+  def character_note_for(profile_id, archive:)
     character_catalog = archive["characters"].is_a?(Hash) ? archive["characters"] : {}
-    character = character_catalog[profile_key]
+    character = character_catalog[profile_id.to_s]
     return unless character.is_a?(Hash)
 
     contract = archive["character_contract"].is_a?(Hash) ? archive["character_contract"] : {}
@@ -306,8 +295,33 @@ class ChatController < ApplicationController
       "</master_character_temperament>",
     ].join("\n")
   rescue StandardError => e
-    Master::Ground::Swallow.log(e, context: "ChatController.face_character_note", event_bus: container&.dig(:bus))
+    Master::Ground::Swallow.log(e, context: "ChatController.character_note_for", event_bus: container&.dig(:bus))
     nil
+  end
+
+  def face_mask_entry_for(conversation, entries)
+    return if entries.empty?
+
+    rotation = cookies.signed[:master_face_mask_rotation]
+    same_conversation = rotation.is_a?(Hash) && rotation["conversation_id"].to_s == conversation.to_s
+    previous_index = if rotation.is_a?(Hash)
+                       Integer(rotation["index"], exception: false)
+                     else
+                       Integer(rotation, exception: false)
+                     end
+    index = if same_conversation && previous_index
+              previous_index % entries.length
+            else
+              ((previous_index || -1) + 1) % entries.length
+            end
+    cookies.signed[:master_face_mask_rotation] = {
+      value: { "conversation_id" => conversation.to_s, "index" => index },
+      expires: 1.year.from_now,
+      secure: request.ssl?,
+      httponly: true,
+      same_site: :strict
+    }
+    entries.fetch(index)
   end
 
   def begin_command_operation_capture(command)
@@ -379,7 +393,7 @@ class ChatController < ApplicationController
   end
 
   def message_params
-    params.permit(:message, :state, :pre_enhanced, :voice, :image_token, :face_profile, image: %i[data mime name])
+    params.permit(:message, :state, :pre_enhanced, :voice, :image_token, image: %i[data mime name])
   end
 
   def metrics_payload(c)
