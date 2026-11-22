@@ -1695,15 +1695,22 @@ Representative commits on main:
 - `563b2202bdee52b050f7b70fb642d8ae3ba8fdc2` — make a permanent failure's stored reason authoritative for downstream classification.
 - `6c186498b64a6823c90fe97f0f12055d71a96fb3` — assert the authoritative reason in the TaskSteward regression test.
 - `84547a1dc1509fe4101d0bab027ae6acd0c474ac` — reject hard-linked backlog receipt files.
+- `7d21ce155958023250564f4e50443121a26e2312` — allow the assigned Rails group to append private receipts without opening access to others.
+- `becd8b98f0dc015f7cedf89d7b60fe6ae983926d` — test the private receipt group-access boundary.
 
 ### Phase 20 evidence boundary
 
 READ_BACK:
 - GitHub read-after-write completed for all changed implementation, test and
   documentation files. The latest verified implementation HEAD before this
-  receipt amendment was `84547a1dc1509fe4101d0bab027ae6acd0c474ac`.
-- Permanent terminal failures now overwrite any stale transient wake reason,
-  so the parked-item receipt keeps the final failure classification.
+  receipt amendment was `becd8b98f0dc015f7cedf89d7b60fe6ae983926d`.
+- Permanent terminal failures overwrite any stale transient wake reason, so
+  parked-item receipts retain the final failure classification.
+- Receipt-directory checks follow the private-state contract: the owner uses
+  `MasterPaths.private_dir_mode`; a non-owner must be a member of the assigned
+  group, owner access remains intact, group write/execute are required for the
+  append, and all other access is denied. Receipt files are singly linked,
+  symlink-refusing, owner-only mode 0600.
 - The new append-only parking receipt uses the existing
   `MasterPaths.private_dir_mode` policy: no access for others, owner access
   retained, and an explicitly assigned foreign-group grant preserved for the
