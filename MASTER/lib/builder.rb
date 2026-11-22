@@ -142,20 +142,11 @@ module Master
       ecology = Review::RepoEcology.new(root: workspace, event_bus: bus, code_index:)
       subscribe_ecology_reindex(bus:, ecology:)
       diag = Trace::Diag.new(homeostat: loop_c[:homeostat], breaker: reach[:breaker], logging: trace[:logging], event_bus: bus)
-      { renderer:, output_check:, output_guard:, code_index:, reference_graph:, ecology:, diag:, workspace_root: workspace,
-        browser_broker: build_browser_broker(workspace) }
-    end
-
-    # One broker per boot, so the tool path and the fold path lease from the same
-    # owner and a session opened by either is reaped by the same shutdown. The
-    # broker defaults to the SSRF destination guard, so a tool-path lease cannot
-    # reach an internal address even though the tool catalogue, not Core's
-    # capability table, is what enabled the Browser row. The Governor still
-    # requires fresh consent per action.
-    def build_browser_broker(_root)
-      return nil unless Io::BrowserBroker::ChromeEngine.available?
-
-      Io::BrowserBroker.new(capabilities: Master::Core::Capabilities.for(:fix))
+      # Browser sessions are not boot services. CoreBridge constructs a
+      # broker only for the current operation's capability set; exposing a
+      # process broker here would let ordinary chat/plugins inherit :fix powers.
+      { renderer:, output_check:, output_guard:, code_index:, reference_graph:, ecology:, diag:,
+        workspace_root: workspace }
     end
 
     def subscribe_ecology_reindex(bus:, ecology:)
