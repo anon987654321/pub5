@@ -37,7 +37,7 @@ module Master
 
       def journal_run_id
         roots.each do |root|
-          path = File.join(MasterPaths.fix_state(root: root), Kernel::LifecycleJournal::PATH)
+          path = File.join(MasterPaths.fix_state(root:), Kernel::LifecycleJournal::PATH)
           next unless File.file?(path)
 
           run = JSON.parse(File.read(path)).fetch("runs", []).reverse.find { |row| row["state"] == "active" }

@@ -711,7 +711,6 @@ next agent re-measures each item before acting; a finding is a hypothesis.
 - No Law PASS, no test PASS, no deploy claim. The handoff is a hypothesis
   list with named owners and named proof; the next agent re-measures.
 
-
 ## Implementation follow-up — 2026-11-22
 
 This appendix records the first landed implementation tranche. It does not close the
@@ -776,7 +775,6 @@ remaining sections above. Verified main head at close: `d54b70914cd6a49abe706c10
 
 The next implementation pass must continue with the remaining owned items above, not treat
 this appendix as a completed /fix, test suite, or deployment receipt.
-
 
 ## P. Professional graphic design and micro-pixel CSS craft (addendum)
 
@@ -999,7 +997,6 @@ network, not yet standalone vertical dominance.
      useful over noisy. Each vertical competes on locality and trust joined to
      the network, not on out-featuring a global incumbent on a 1 GB SQLite box.
 
-
 ### Continued implementation follow-up — 2026-11-22
 
 - Trimmed 80 trailing-whitespace lines in `MASTER/data/structural_recipes.yml`.
@@ -1029,7 +1026,6 @@ Markdown review, `agent_context.rb`, `/fix`, boot/doctor and repository-wide
 checks. These refinements are delivered; their runtime/editorial proof remains
 INCONCLUSIVE, not PASS.
 
-
 - Refuted the suggested axe-core craft-ledger exemption. The current vendor
   bundle is loaded by `Deploy::Axe` in the existing CDP page, and
   `TestAxe` pins its version header and MPL-2.0 licence. The craft ledger
@@ -1045,7 +1041,6 @@ Proof: inspected and fetched the exact vendor header and licence, CDP source,
   verified the refutation entry by read-after-write.
 
 Not run: `TestAxe`, CDP/Chrome, licence audit and all Ruby checks.
-
 
 - Replaced the last present-tense reference to the deleted root `TODO.md`
   in `MIGRATION.md` with the live convergence, gap, operator-seam, UX and
@@ -1063,7 +1058,6 @@ Proof: read-after-write verification, targeted reference scan of all 518
 migration-record lines, and GitHub file reads for the three named paths.
 Not run: documentation lint, rendered Markdown inspection, test suite,
 `agent_context.rb` or `/fix`.
-
 
 ### Static contract checks — 2026-11-22
 
@@ -1086,7 +1080,6 @@ Not run: documentation lint, rendered Markdown inspection, test suite,
 Proof: exact GitHub reads of the four registries/source files and static
 name-to-registry comparisons. No command or Ruby test was run; all runtime
 verification remains NOT_RUN.
-
 
 - Corrected sunset catch scoring. `measured_catches` is now accepted only as a
   non-negative integer; incidental digits and words such as “log”, “ledger”,
@@ -1112,7 +1105,6 @@ files. NOT_RUN: Ruby syntax, `TestSunsetMeasurements`, full MASTER suite,
 `sunset report` runtime output and JSON/YAML parser execution. The code/data
 change is delivered; runtime correctness remains INCONCLUSIVE until those
 checks run.
-
 
 ## S. Completion program in pseudocode (addendum, proposal-grade)
 
@@ -1513,7 +1505,6 @@ closes verticals in the user-value sequence, each slice proven locally and rende
 each live claim INCONCLUSIVE until its operator seam closes. Non-technical love is
 not a layer added at the end; it is the acceptance predicate every slice must pass.
 
-
 ### Measurement and accessibility evidence refinements — 2026-11-22
 
 - The sunset scorer/data/test slice is described above. Its three implementation
@@ -1533,7 +1524,6 @@ not a layer added at the end; it is the acceptance predicate every slice must pa
 Proof: read-after-write verification of the Ruby helper and regression fixture.
 NOT_RUN: `TestAxe`, Chrome/CDP execution, AxeCheck across product surfaces,
 Ruby syntax and full check suites. This is source-level evidence only.
-
 
 ## T. Incumbent parity maps (addendum, proposal-grade)
 
@@ -1663,7 +1653,6 @@ kitchens. Love is the acceptance predicate (section S1); proof is the gate; the
 operator owns the rendered value and the money. Re-measure before acting; route
 each missing row to gaps.yml / apps.yml / ideations, not to a new backlog.
 
-
 ## U. Rendered-evidence correction and bounded design measurement (addendum)
 
 Operator correction: evaluating graphic design requires the rendered surface,
@@ -1712,7 +1701,6 @@ Fresh sweep NOT_RUN (no Chrome/Ruby/host; agent browser verification refused).
 Title, tab-ink and search-height fixes are ux_refinements/tokens candidates,
 each needing fresh rendered proof before PASS. Taste stays operator-owned; this
 measures objective invariants, not beauty.
-
 
 ### Reliability execution control — first machine-readable check slice (2026-11-22)
 
@@ -1778,7 +1766,6 @@ or unify lifecycle/acknowledgement/retry state. Those remain open; issue #6
 stays open, and issue #5 remains open pending the previously recorded browser
 security and runtime proof gaps. No Laws were weakened or disabled.
 
-
 ### Reliability continuation — durable check receipt artifacts (2026-11-22)
 
 This continuation **supersedes the earlier stdout-only limitation above**.
@@ -1827,7 +1814,6 @@ device and production evidence. The check receipt path is durable now, but
 the larger cross-domain receipt schema, per-suite test counts, lifecycle/
 acknowledgement/retry unification and release matrix remain incomplete.
 Issue #5 and issue #6 stay open; no Law was weakened or disabled.
-
 
 ### Reliability hardening and design-scale correction — 2026-11-22
 
@@ -1890,7 +1876,6 @@ permission/path behavior, full check profiles, z-index rendered/canonical
 lint, visual token cleanup, `shared-010`, and all platform/production
 acceptance. No z-index rewrite was made and no Laws were weakened.
 
-
 ### Reliability continuation — full profile now reaches all owned trees (2026-11-22)
 
 The existing `MASTER/Rakefile` task `test:all_trees` was already the single
@@ -1936,7 +1921,6 @@ test files, Ruby syntax, the full profile itself, and all native app/domain/
 browser/visual/device/host acceptance. The new step is wired and explicit;
 its runtime success is not asserted.
 
-
 ### Reliability continuation — hashed gate-log artifact and five-tree verification (2026-11-22)
 
 - JSON check receipts now include `evidence.combined_log_artifact`: a
@@ -1978,7 +1962,6 @@ tests; Ruby syntax; `TestCheckBrief`; `TestCheckRunnerStdin`;
 MASTER/RAILS/OPENBSD/STUDIO/BIZ acceptance; and all rendered, browser, device,
 host and production checks. The check runner is more expressive and honest;
 its runtime acceptance is not yet established.
-
 
 ### Reliability continuation — canonical suite runner and nested status propagation (2026-11-22)
 
@@ -2026,7 +2009,6 @@ Ruby syntax, `rake test:all_trees`, `MASTER/bin/check --profile=full`,
 all app/host/visual/browser/device/production checks. No Ruby command was
 executed in this session. The suite wiring is present; all runtime outcomes
 remain NOT_RUN until measured on a supported checkout.
-
 
 ## Section T — Shared product spine: measured implementation follow-up (2026-11-22)
 
@@ -2097,7 +2079,6 @@ Proof boundary:
 - The local container's inability to resolve GitHub does not prove the remote build,
   staging or production state. No production or provider credentials were used.
 
-
 ### Generated JSON newline audit — 2026-11-22
 
 - The current `.editorconfig` already has no `[*.py]` block; no edit was
@@ -2136,7 +2117,6 @@ Still **NOT_RUN**: `test_law_index_writer_emits_a_final_newline`,
 `test_face_music_pack_is_wellformed_and_declared`, Ruby syntax, JSON parser
 execution and the full gate. The source writer is corrected; tests remain
 unexecuted.
-
 
 ### Evidence-helper hardening and regex correction — 2026-11-22
 
@@ -2180,7 +2160,6 @@ actual receipt/log creation, file replacement race tests, macOS/OpenBSD
 `File::NOFOLLOW` runtime support, all full profiles, and all RAILS/OPENBSD/
 STUDIO/BIZ rendered/browser/device/host/production acceptance.
 
-
 Section T addendum — Brgen cold-start feed:
 - The current empty Following lane was measured against HomeFeed, User#timeline_posts,
   Post::HOT_SQL and the CityTenantable scope. It previously reduced to the reader's
@@ -2196,7 +2175,6 @@ Section T addendum — Brgen cold-start feed:
   normal-following behavior. Registered brgen_cold_start_feed as a partial workstream;
   the gap remains open pending runtime and rendered proof.
 - These Rails tests and the browser journey remain NOT_RUN. No pass is claimed.
-
 
 ### Commerce ledger atomicity and schema parity — regression follow-up (2026-11-22)
 
@@ -2230,7 +2208,6 @@ definitions. Static inspection confirms that the test assertions refer to the
 existing schema names and callback. No Ruby syntax check, Rails test, migration,
 database transaction test, or browser test was executed here; both new tests
 remain **NOT_RUN**. No payment provider, production database or host was used.
-
 
 ### REDUNDANT_CORE_REQUIRE false-positive correction — 2026-11-22
 
@@ -2267,7 +2244,6 @@ These local excerpt/runtime checks do not substitute for the registered
 repository tests. `redundant_core_require_cleanup` remains **partial**;
 no broad deletion of the original 85 findings is claimed.
 
-
 ### Places substrate — existing cross-vertical consumers (2026-11-22)
 
 - Re-read the actual owner rather than creating another POI service:
@@ -2294,7 +2270,6 @@ Proof performed: GitHub read-after-write verification of the contract test,
 Place model, PlaceDirectory and all three consumers. The contract test itself,
 Place model tests, rendered map journeys, proximity discovery and any provider
 map-tile licensing check remain **NOT_RUN**. No new POI authority was added.
-
 
 ### Browser broker authority scoping — fail-closed correction (2026-11-22)
 
@@ -2325,7 +2300,6 @@ ledger callback; browser actions are not yet proven end-to-end against real
 redirects, subresources, cancellation, vision, or operator-approved side
 effects. No Chromium process was started here.
 
-
 Section T addendum — stable Places public identity (2026-11-22):
 - Confirmed the existing places table already owned a nullable slug column and a
   non-unique city/slug index. The implementation reuses that field; it adds no
@@ -2347,7 +2321,6 @@ Section T addendum — stable Places public identity (2026-11-22):
   browser rendering and cross-vertical runtime journeys remain NOT_RUN. The source
   and schema updates are verified by GitHub read-after-write only; no migration
   outcome is claimed.
-
 
 ### Browser scope binder isolation and six-adapter lifecycle follow-up (2026-11-22)
 
@@ -2430,7 +2403,6 @@ Minitest/Rails suite, `MASTER/bin/check`, Chromium attach/teardown proof or
 vision integration was executed in this environment. No browser process,
 production host, payment provider or production database was used. Issue #5
 and the end-to-end sweep in Issue #6 remain open.
-
 
 ### Browser broker teardown retry and orphan recovery (2026-11-22)
 

@@ -46,8 +46,8 @@ module Master
 
       Result = Struct.new(:sink, :url, :redacted, :truncated, :skipped, :error, keyword_init: true) do
         def to_h
-          { sink: sink, url: url, redacted: redacted, truncated: truncated,
-            skipped: skipped, error: error }.compact
+          { sink:, url:, redacted:, truncated:,
+            skipped:, error: }.compact
         end
       end
 

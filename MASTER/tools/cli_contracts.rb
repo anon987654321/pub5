@@ -39,7 +39,7 @@ module CliContracts
 
   def normalise(text) = text.gsub(/\d+/, "N")
 
-  def tokens(root, help_text)
+  def tokens(_root, help_text)
     help_text.lines.filter_map do |line|
       line = line.sub(/\A\s*(helpN at \w+: |helpN: )/, "")
       match = line.match(/\Abin\/[a-z-]+ (\S+)/) # "bin/operator check [--scan-only] ..."

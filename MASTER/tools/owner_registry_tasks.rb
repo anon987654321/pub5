@@ -330,7 +330,7 @@ module Backlog
       when "rake"
         allowed = case proof_type
                   when "full_suite"
-                    args == ["test"] || args == ["test:batch"] || args == ["check", "test"]
+                    args == ["test"] || args == ["test:batch"] || args == %w[check test]
                   when "focused_tests"
                     args.size == 1 && args.first.match?(/\Atest:[a-z0-9_:.-]+\z/i)
                   when "law_assessment"
@@ -1075,7 +1075,7 @@ module Backlog
           risk: { "OPENBSD" => 0.25, "RAILS" => 0.2, "MASTER" => 0.15 }.fetch(row[:tree].to_s, 0.1),
           reversibility: "easy",
           causes: [],
-          preserves: ["exact_single_tree_scope", "existing_paths", "operator_gates"],
+          preserves: %w[exact_single_tree_scope existing_paths operator_gates],
           dependencies: Array(row[:dependencies]).map(&:to_s),
         }
       rescue SystemCallError, ArgumentError

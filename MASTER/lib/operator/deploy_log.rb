@@ -107,7 +107,7 @@ module Operator
 
     def self.read_status(path)
       status_path = "#{File.expand_path(path)}.status"
-      return nil unless File.file?(status_path) && !File.symlink?(status_path)
+      return unless File.file?(status_path) && !File.symlink?(status_path)
 
       content = File.read(status_path)
       match = content.match(/\Aexit=(\d+)\n?\z/)

@@ -35,12 +35,12 @@ module Master
       # discovered sandbox endpoint is machine state, like a key in
       # ~/.config/master/env, and must not decide which lane a test sees.
       def wire!(env = ENV)
-        return nil if disabled?(env)
-        return nil if env["MASTER_LLM_GATEWAY_URL"].to_s.strip != ""
+        return if disabled?(env)
+        return if env["MASTER_LLM_GATEWAY_URL"].to_s.strip != ""
 
         base = env["OH_INTERNAL_SERVER_URL"].to_s.strip
         key = env["SESSION_API_KEY"].to_s.strip
-        return nil if base.empty? || key.empty?
+        return if base.empty? || key.empty?
 
         env["MASTER_LLM_GATEWAY_URL"] = "#{base.chomp('/')}/v1"
         env["MASTER_LLM_GATEWAY_KEY"] = key

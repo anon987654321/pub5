@@ -116,7 +116,7 @@ module Master
       end
 
       def parse_pinned_address(value)
-        return nil if value.nil? || value.to_s.empty?
+        return if value.nil? || value.to_s.empty?
 
         ip = IPAddr.new(value.to_s)
         ip = ip.native if ip.respond_to?(:ipv4_mapped?) && ip.ipv4_mapped?

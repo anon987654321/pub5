@@ -718,7 +718,7 @@ module Master::Core
 
         # Operator decree 2026-11-09 still applies to ordinary Soul-declared
         # paths, but never disables the preserved-media boundary above.
-        return nil if Master::Ground::Immutability.writes_allowed?
+        return if Master::Ground::Immutability.writes_allowed?
 
         master = governing_root(root)
 

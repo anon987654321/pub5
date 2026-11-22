@@ -248,7 +248,7 @@ module Master
         result_rows(sources, :blocked, "target is outside the safe regular-file boundary")
       end
 
-      def budget_blocked_rows(path, sources, relative, reason)
+      def budget_blocked_rows(_path, sources, relative, reason)
         publish("repair_loop:candidate_simulation_blocked", path: relative, reason:)
         result_rows(sources, :blocked, reason)
       end

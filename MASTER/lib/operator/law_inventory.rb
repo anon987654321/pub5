@@ -173,7 +173,7 @@ module Operator
         rows = value.map { |row| "law:twin #{row[:id]} #{row[:twin][:kind]}" }
         rows.empty? ? "law:twin: none" : rows.join("\n")
       when :matrix
-        return nil if value.empty?
+        return if value.empty?
 
         value.map { |row| "law:matrix #{row[:persona]} axes=#{row[:axes].join(",")} rules=#{row[:rules].join(",")}" }.join("\n")
       end

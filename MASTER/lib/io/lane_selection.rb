@@ -146,7 +146,7 @@ module Master
         return false unless (base = cfg.dig("ollama", "default_base_url"))
 
         addr = URI(base)
-        TCPSocket.new(addr.host || "localhost", addr.port || 11434).close
+        TCPSocket.new(addr.host || "localhost", addr.port || 11_434).close
         true
       rescue SystemCallError, IOError, SocketError, URI::InvalidURIError
         false

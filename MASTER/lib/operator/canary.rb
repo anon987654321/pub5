@@ -188,7 +188,7 @@ module Operator
         if rows.empty?
           detail = out.to_s.lines.last(3).join.strip
           detail = "runner returned no flow results#{status.success? ? "" : " and exited unsuccessfully"}#{detail.empty? ? "" : ": #{detail}"}"
-          return [Result.new(name: "flows", ok: false, state: "FAIL", detail: detail)]
+          return [Result.new(name: "flows", ok: false, state: "FAIL", detail:)]
         end
 
         problems = out.to_s.lines.filter_map { |line| FLOW_PROBLEM.match(line) }.to_h { |m| [m[:id], m[:why].strip] }

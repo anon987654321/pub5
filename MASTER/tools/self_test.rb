@@ -81,9 +81,9 @@ overall = if checks.any? { |check| check[:status] == "FAIL" }
 receipt = {
   schema: "master-self-test/v1",
   generated_at: Time.now.utc.iso8601,
-  root: root,
+  root:,
   status: overall,
-  checks: checks,
+  checks:,
 }
 puts JSON.pretty_generate(receipt)
 exit(overall == "FAIL" ? 1 : 0)

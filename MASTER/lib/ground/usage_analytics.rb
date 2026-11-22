@@ -81,7 +81,7 @@ module Master
       def consented?(user_id)
         return false if user_id.to_s.strip.empty?
 
-        @consent_check.call(user_id: user_id, purpose: PURPOSE) == true
+        @consent_check.call(user_id:, purpose: PURPOSE) == true
       rescue StandardError
         false
       end

@@ -105,10 +105,9 @@ module Acceptance
   # pub4 spells the app trees RAILS/<app>; pub5 spells them rails/<app>.
   # Whatever the target names, the same app in the same tree answers.
   def app_root(root, app)
-    ["RAILS", "rails"].map { |dir| File.join(root, dir, app) }
+    %w[RAILS rails].map { |dir| File.join(root, dir, app) }
                       .find { |candidate| File.directory?(candidate) }
   end
-
 
   def route_contracts(base)
     return Report.new("route contracts", "pending", "needs --base-url (a booted target)") unless base

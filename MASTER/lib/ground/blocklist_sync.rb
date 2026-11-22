@@ -172,7 +172,7 @@ module Master
       end
 
       def normalize_ttl(permanent, ttl_s)
-        return nil if permanent == true
+        return if permanent == true
         value = Integer(ttl_s)
         raise ArgumentError, "ttl_s must be 60..31536000 for temporary blocks" unless value.between?(60, 31_536_000)
         value

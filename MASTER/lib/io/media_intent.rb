@@ -899,10 +899,10 @@ module Master
           name.match?(/\A[a-zA-Z0-9_-]+\z/) &&
             File.directory?(subject) &&
             !File.symlink?(subject) &&
-            %w[subject.env subject.env.example train.yaml].any? { |entry|
+            %w[subject.env subject.env.example train.yaml].any? do |entry|
               path = File.join(subject, entry)
               File.file?(path) && !File.symlink?(path)
-            }
+            end
         end.sort
       end
 

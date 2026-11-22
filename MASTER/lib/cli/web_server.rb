@@ -78,7 +78,7 @@ module Master
           Master::Trace::Dmesg.status("web0", "web bundle unavailable, #{result.message}", io:)
           detail = result.output.to_s.strip
           Master::Trace::Dmesg.status("web0", detail, io:) unless detail.empty?
-          return nil
+          return
         end
 
         # ensure! may be a no-op when an operator explicitly disables automatic

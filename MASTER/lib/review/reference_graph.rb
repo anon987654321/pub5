@@ -754,7 +754,7 @@ module Master
           end
           signature = internal_edges.map { |edge| [edge.type, edge.from, edge.to].join("|") }.sort.join("\n")
           {
-            paths: paths,
+            paths:,
             edge_count: internal_edges.size,
             edge_types: internal_edges.map(&:type).uniq.map(&:to_s).sort,
             sha256: Digest::SHA256.hexdigest(signature),

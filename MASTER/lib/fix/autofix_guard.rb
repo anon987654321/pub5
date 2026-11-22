@@ -106,7 +106,7 @@ module Master
         # The reason a path may not be opened, or nil. Read-only: the sacred
         # paths come from soul.yml and are never written through here.
         def protected_reason(path, root: nil)
-          return nil if Master::Ground::Immutability.writes_allowed?
+          return if Master::Ground::Immutability.writes_allowed?
 
           absolute = File.expand_path(path.to_s)
           hit = PROTECTED.find { |pattern| absolute.match?(pattern) }
@@ -187,7 +187,7 @@ module Master
         def test_regression_reason(path)
           test = mapped_test(path)
           current = test_reason(path)
-          return nil if current.nil?
+          return if current.nil?
           return current if test.nil?
 
           baseline = @mutex.synchronize { @test_baselines[test] }
@@ -208,7 +208,7 @@ module Master
         # summary, which keeps that case on the conservative refusal.
         def suite_counts(reason)
           match = reason.to_s.match(/(\d+) failures?, (\d+) errors?/)
-          return nil unless match
+          return unless match
 
           { failures: match[1].to_i, errors: match[2].to_i }
         end

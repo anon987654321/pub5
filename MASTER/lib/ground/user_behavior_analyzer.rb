@@ -140,7 +140,7 @@ module Master
       def tracking_allowed?(user_id)
         return false unless @config[:cross_platform_tracking] == true
         return false unless @identity_key.bytesize >= 32 && @consent_check.respond_to?(:call)
-        @consent_check.call(user_id: user_id, purpose: PURPOSE) == true
+        @consent_check.call(user_id:, purpose: PURPOSE) == true
       rescue StandardError
         false
       end

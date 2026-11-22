@@ -471,7 +471,7 @@ module Operator
         { files: distinct_files.size, methods: methods.sort_by { |row| [row[:file], row[:line].to_i] } }
       end.sort_by { |row| [-row[:files], row[:methods].first&.dig(:method).to_s] }
 
-      { files: files.size, parsed:, unreadable:, clusters: clusters }
+      { files: files.size, parsed:, unreadable:, clusters: }
     end
 
     def method_definitions(node, found = [])

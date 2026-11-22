@@ -23,7 +23,7 @@ module Master
         return Readiness.new(state: :fail, detail: "configured pool has #{models.size} model(s), quorum is #{quorum}") if models.size < quorum
 
         router ||= Master::CLI::Routing::ModelRouter.new(
-          config: Master::Ground::Config.new(root), root: root,
+          config: Master::Ground::Config.new(root), root:,
         )
         reasons = models.to_h { |model| [model, router.unreachable_reason(model, wait: true)] }
         pending = reasons.select { |_model, reason| reason.to_s.start_with?("checking ") }
