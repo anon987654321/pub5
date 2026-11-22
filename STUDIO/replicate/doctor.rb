@@ -10,6 +10,7 @@ require "rubygems/version"
 require_relative "output_paths"
 require_relative "subprocess"
 require_relative "../lora/validate"
+require_relative "client"
 
 module Studio
   class Doctor
@@ -128,6 +129,8 @@ module Studio
         add(checks, "output_path", "FAIL", "#{error.class}: #{error.message}")
       end
 
+      provider_credential_check(checks)
+
       begin
         profile_report = Lora::Validator.new(root: File.join(@root, "lora")).validate_all
         invalid = profile_report.fetch("subjects").count { |subject| subject.fetch("state") != "PASS" }
@@ -184,6 +187,25 @@ module Studio
 
     def add(checks, id, state, detail)
       checks << { "id" => id, "state" => state, "detail" => detail }
+    end
+
+    def provider_credential_check(checks, paths: [ReplicateClient::CONFIG_PATH, File.expand_path("~/.config/master/env")])
+      unsafe = paths.any? do |path|
+        (File.exist?(path) || File.symlink?(path)) && !ReplicateClient.private_token_file?(path)
+      end
+      if unsafe
+        add(checks, "provider_credentials", "FAIL",
+            "A provider credential file has unsafe ownership, link count or permissions")
+        return
+      end
+
+      available = !ReplicateClient.load_token.to_s.strip.empty?
+      add(checks, "provider_credentials", available ? "PASS" : "INCONCLUSIVE",
+          available ? "A private Replicate credential is available; its value is hidden" :
+            "No usable Replicate credential is configured; provider readiness is inconclusive")
+    rescue StandardError => error
+      add(checks, "provider_credentials", "INCONCLUSIVE",
+          "Provider credential readiness could not be inspected: #{error.class}")
     end
 
     def private_media_check(checks)
