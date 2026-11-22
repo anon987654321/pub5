@@ -36,7 +36,7 @@ sources:
 gaps:
   # --- brgen (the city app proper) ---
   - { id: brgen_ai_feed_ranking, app: brgen, kind: logic, name: "AI feed ranking", source: apps_yml, status: picked, workstream: brgen_feed_ranking_deterministic }
-  - { id: brgen_cold_start_feed, app: brgen, kind: logic, name: "cold-start feed as follows union city popular", source: horizon, status: open }
+  - { id: brgen_cold_start_feed, app: brgen, kind: logic, name: "cold-start feed as follows union city popular", source: horizon, status: open, workstream: brgen_cold_start_feed, note: "empty authenticated Following lane uses the existing city-scoped hot feed plus the reader's timeline, with an explicit nb/en fallback label; focused tests authored, NOT_RUN" }
   - { id: brgen_creator_monetization, app: brgen, kind: logic, name: "creator monetization", source: apps_yml, status: open, note: "consumes commerce_shared_domain" }
   - { id: brgen_activitypub_inbound, app: brgen, kind: logic, name: "inbound ActivityPub storage", source: horizon, status: open, note: "blocked on remote media proxying, remote moderation and a blocklist per apps.yml notes" }
   - { id: brgen_recurring_events, app: brgen, kind: logic, name: "recurring events / ticketing beyond an external link", source: horizon, status: open }
