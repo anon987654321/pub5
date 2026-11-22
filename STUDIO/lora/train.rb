@@ -46,7 +46,7 @@ module Studio
           timeout = Integer(timeout)
           raise ArgumentError, "training timeout must be positive" unless timeout.positive?
 
-          minimum_seconds = BILLING.fetch("minimum_training_seconds")
+          minimum_seconds = BILLING.fetch("minimum_reservable_compute_seconds")
           margin_seconds = BILLING.fetch("cancellation_margin_seconds")
           maximum_seconds = (approved_budget / BILLING_RATE).floor
           if maximum_seconds < minimum_reserved_seconds(minimum_seconds, margin_seconds)
@@ -133,6 +133,7 @@ module Studio
                 "pricing_verified_on" => BILLING.fetch("verified_on"),
                 "pricing_source" => BILLING.fetch("source"),
                 "maximum_compute_seconds_at_rate" => maximum_seconds,
+                "guard_kind" => "CLIENT_SIDE_TIMEOUT_AND_CANCEL_NOT_A_PROVIDER_HARD_CAP",
                 "measured_provider_compute_seconds" => decimal_string(measured_seconds),
                 "calculated_cost_usd_not_invoice" => decimal_string(spent),
                 "remaining_approved_usd" => decimal_string([approved_budget - spent, BigDecimal("0")].max),
