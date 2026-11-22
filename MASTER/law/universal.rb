@@ -1843,6 +1843,24 @@ Law.define(:ROBUSTNESS) do
   good "Input, authorization, resource bounds and failure recovery have explicit evidence-backed behavior."
 end
 
+Law.define(:ROBUSTNESS_mutation_requires_explicit_authorization) do
+  source "laws.yml ROBUSTNESS_mutation_requires_explicit_authorization - /fix mutations require explicit authorization, mode and scope"
+  ask "Does a mutating /fix repair require an explicit --apply authorization, an explicit requested mode and a named governed repository target before inventory or mutation begins? A bare /fix, startup, retry or plain run instruction is not write consent."
+  practice "Treat a write flag as scoped operator consent, not as the default consequence of invoking a repair command."
+  fix "Refuse mutation until --apply, --mode and a named target are all present; keep the same guard in natural-language routing and compatibility entrypoints."
+  bad "A plain /fix MASTER starts editing because repair is the default mode."
+  good "A plain /fix is read-only; /fix --mode=repair --apply MASTER is the explicit bounded write request."
+end
+
+Law.define(:ROBUSTNESS_autonomous_triggers_are_bounded) do
+  source "laws.yml ROBUSTNESS_autonomous_triggers_are_bounded - autonomous repository mutations have opt-in and bounded task ownership"
+  ask "Can a startup, schedule or event trigger begin repository mutation only after explicit opt-in and admission of an exact allowlisted task and scope, with a bounded time/retry/resource budget, single-writer lease, stop condition and durable terminal receipt?"
+  practice "Autonomy is a bounded task runner, never ambient permission. A trigger may observe by default; it may mutate only through the existing admitted task contract."
+  fix "Require opt-in, exact task paths, declared proof, bounded retries and runtime, one writer lease, a stop condition and a truthful terminal receipt before enabling the mutator."
+  bad "A boot hook discovers arbitrary backlog work and starts unbounded concurrent repairs without a task contract or terminal record."
+  good "An explicitly enabled runner admits one allowlisted task at a time, holds the writer lease, enforces budgets and records PASS, FAIL or INCONCLUSIVE."
+end
+
 Law.define(:PROXIMITY) do
   source "laws.yml PROXIMITY - related concepts stay close and cohesive"
   ask "Are related responsibilities, evidence, states, controls or visual elements separated so far that their relationship is hard to understand or keep consistent? Evaluate semantic, structural and visual proximity for this artifact; return CLEAN when the grouping communicates the real relationships."
@@ -1850,6 +1868,15 @@ Law.define(:PROXIMITY) do
   fix "Move or group the related elements at the boundary that best reflects their shared responsibility without adding another abstraction layer."
   bad "A control is separated from its state, or related logic is duplicated across unrelated modules."
   good "The structure groups each responsibility and the interface groups information by its actual relationship."
+end
+
+Law.define(:PROXIMITY_local_visual_audio_ownership) do
+  source "laws.yml PROXIMITY_local_visual_audio_ownership - product layout, style and audio policy stay with their owner"
+  ask "Are layout, visual styling, product-specific typography or audio policy kept with the product, app, engine or STUDIO project that owns the experience? Does shared code contain only a genuinely common invariant rather than imposing one product's choices on unrelated surfaces?"
+  practice "Share a stable contract; keep expression and tuning with the surface that owns it."
+  fix "Return local visual or audio decisions to their existing product/project owner and preserve shared primitives only where multiple owners genuinely share the requirement."
+  bad "A global stylesheet or audio profile forces Amber's product styling onto Brgen and BSDPorts."
+  good "A shared rule defines only the common contract while each app and project retains its local visual and audio profile."
 end
 
 Law.define(:ABSTRACTION) do
@@ -2452,6 +2479,15 @@ Law.define(:TRUTHFUL_STATUS_profile_is_not_intent) do
   fix "Run the profile or usage receipt for the named dimensions and cite it, or withdraw the cost claim."
   bad "A path is called cheap because the token limit is high and the model estimated low usage."
   good "A current profile and provider-usage receipt measure the latency, allocations and spend the claim names."
+end
+
+Law.define(:TRUTHFUL_STATUS_test_precedes_report) do
+  source "laws.yml TRUTHFUL_STATUS_test_precedes_report - test evidence precedes a success claim"
+  ask "Does a PASS, ready, clean, complete or delivered status appear only after its required test, check or deployment verification has finished successfully for the same target and revision? If the check failed, was skipped, did not run or is inconclusive, is that exact state preserved rather than converted into success?"
+  practice "Finish the check first; report its observed result and revision, not the expected result."
+  fix "Move success reporting after the check and retain failed, skipped, NOT_RUN and INCONCLUSIVE states without promoting them."
+  bad "A deployment prints complete before the public canary runs, then leaves the canary failure in a later log."
+  good "The status follows successful evidence for the same revision; missing or failed evidence remains explicit."
 end
 
 Law.define(:ROBUSTNESS_least_authority_tracing) do
