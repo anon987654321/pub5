@@ -156,6 +156,11 @@ def write_chain_sidecar(input_path, output_path, chain, take: nil, original: nil
     lane: (take&.lane || random_chain_lane(chain)).to_s,
     chain: chain.map { |fx, params| { fx => params } },
   }
+  if take
+    data[:take_id] = Postpro::Constitution.take_identity(
+      input_sha256: data[:input_sha256], seed: $postpro_seed, take:, chain:, grade_version: GRADE_VERSION
+    )
+  end
   if original && processed
     data[:quality] = postpro_quality_report(original, processed, argv_flag("--reference"))
     data[:quality_analysis] = {
