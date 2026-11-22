@@ -70,7 +70,12 @@ class TestRg69Defaults < Minitest::Test
 
   def test_randomize_and_style_presets_sync_live_transport_state
     style = js[/chip.addEventListener\('click',\(\)=>\{(.*?)\n\}\);/m, 1] or raise "no style chip handler"
+    assert_includes style, "aud_.drive=s.dr[0]+Math.random()*(s.dr[1]-s.dr[0]);"
+    assert_includes style, "aud_.tape=s.tm[0]+Math.random()*(s.tm[1]-s.tm[0]);"
     assert_includes style, "syncUIFromState();"
+    terminal_style = js[/case'style':\{(.*?)break;\}/m, 1] or raise "no terminal style command"
+    assert_includes terminal_style, "aud_.drive=match.dr[0]+Math.random()*(match.dr[1]-match.dr[0]);"
+    assert_includes terminal_style, "aud_.tape=match.tm[0]+Math.random()*(match.tm[1]-match.tm[0]);"
     randomize = js[/function randomize\(\).*?(?=\nfunction randomizeFX)/m] or raise "no randomize"
     assert_includes randomize, "syncUIFromState();"
     random_fx = js[/function randomizeFX\(\).*?(?=\nasync function exportWAV)/m] or raise "no randomizeFX"

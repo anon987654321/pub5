@@ -1053,6 +1053,8 @@ pushHistory();
 pat_.d=s.d;pat_.b=s.b;pat_.k=s.k;pat_.p=s.p;
 aud_.bpm=s.bpm[0]+Math.random()*(s.bpm[1]-s.bpm[0]);
 aud_.swing=s.sw[0]+Math.random()*(s.sw[1]-s.sw[0]);
+aud_.drive=s.dr[0]+Math.random()*(s.dr[1]-s.dr[0]);
+aud_.tape=s.tm[0]+Math.random()*(s.tm[1]-s.tm[0]);
 syncUIFromState();
 log(`style: ${s.n}`,"k");
 });
@@ -1527,7 +1529,7 @@ break;}
 case'style':{
 const nm=args.join(' ');
 const match=STYLES.find(s=>s.n.toLowerCase()===nm||s.n.toLowerCase().replace(/\s+/g,'-')===nm.replace(/\s+/g,'-'));
-if(match){pushHistory();pat_.d=match.d;pat_.b=match.b;pat_.k=match.k;pat_.p=match.p;aud_.bpm=match.bpm[0]+Math.random()*(match.bpm[1]-match.bpm[0]);aud_.swing=match.sw[0]+Math.random()*(match.sw[1]-match.sw[0]);syncUIFromState();log(`style → ${match.n}`,'k');}
+if(match){pushHistory();pat_.d=match.d;pat_.b=match.b;pat_.k=match.k;pat_.p=match.p;aud_.bpm=match.bpm[0]+Math.random()*(match.bpm[1]-match.bpm[0]);aud_.swing=match.sw[0]+Math.random()*(match.sw[1]-match.sw[0]);aud_.drive=match.dr[0]+Math.random()*(match.dr[1]-match.dr[0]);aud_.tape=match.tm[0]+Math.random()*(match.tm[1]-match.tm[0]);syncUIFromState();log(`style → ${match.n}`,'k');}
 else log(`not found: ${nm}  (try: ls styles)`,'e');
 break;}
 case'mood':{
