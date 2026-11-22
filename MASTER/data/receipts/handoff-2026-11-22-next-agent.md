@@ -1243,3 +1243,84 @@ the repository's hooks, tests or build tools. The Postpro identity regex was
 corrected after read-back found it over-escaped; the current source and
 regression now use the proper Ruby beginning/end anchors. No project test,
 rendered approval or deployment is claimed.
+
+
+## 14. Phase 17 — Dilla fingerprint-gated WAV reproduction — 2026-11-22
+
+Status: CLI and replay implementation are on main; the replay method fragment
+passes Ruby syntax parsing. The actual seeded render/replay integration test,
+full STUDIO suite and audio comparison remain NOT_RUN.
+
+### Contract
+
+Dilla renderer/catalogue version is now 4.3.0. New provenance records exact
+Ruby version, engine and platform; the renderer SHA-256; the exact relative
+inventory and SHA-256 of dilla.rb, analog_core.rb and every data/*.json file;
+and the selected progression, sample status, performer and render flags.
+The source catalogue version is aligned. The tracked November 13 render and
+its 4.2.0 sidecars are retained unchanged as historical creative output.
+
+New provenance also hashes its quality and session sidecars. The Dilla
+reproduce command verifies the exact source inventory and digests, Ruby
+runtime/platform, original WAV bytes/hash, session/quality sidecar bytes/hashes,
+seed, progression and performer before it opens the new output path. It
+reconstructs effective render settings from the existing session/provenance
+records, preserves seeded performer selection and suppresses ambient
+SAMPLE_LOOP so the replay host cannot silently add an input.
+
+Usage:
+    ruby dilla.rb reproduce /path/to/take.provenance.json --out /path/to/replay.wav
+
+Only the WAV master is reproduced. Supported original modes: render, random
+and showcase. MIDI, MP3 and video companions are intentionally not regenerated.
+Sample-flip takes are refused because the old provenance lacks an FFmpeg
+decoder fingerprint and a recorded rights attestation. Older 4.2.0 provenance
+is refused because it lacks the new runtime/platform and sidecar-hash contract.
+Output is always a new path; source WAV, session, quality and provenance are
+never overwritten by the replay operation.
+
+The result is BYTE_MATCH or BYTE_MISMATCH against the original WAV SHA-256.
+BYTE_MATCH proves byte identity for this render only. Listening remains
+NOT_REVIEWED; this command does not certify taste, quality, source rights or
+publication approval.
+
+Files: STUDIO/dilla/dilla.rb, STUDIO/dilla/data/dilla.json,
+STUDIO/replicate/test/dilla_test.rb, STUDIO/dilla/README.md.
+
+Commits:
+8cf2a794da9f1a94b28110378126a66f9cbdc594 (fingerprint-gated WAV replay);
+a39c22155e325fc118f766db7481c8f8140b6186 (suppress ambient sample input);
+92a361ed8454000233d24e302dabfb3f29e39106 (seeded replay and refusal regression);
+94a5a450e8c3f0037972c875033fdd8259825d6c (replay documentation);
+cbdfa0e6a70e809fb2803753e5b3caeccf713018 (Ruby engine/platform pin and malformed-sidecar checks);
+fc4526dc33fe2ee8c1d605879e027ea8d7757aed (correct digest regexp anchors);
+e2b351a3b9671e70c95fc06672cef847eed3899c (catalogue version alignment);
+2fa15d6cbeabb839d732ab0128bbd3da9a536f56 (replace stale no-replay documentation);
+98d46d4e6b21a26bd8dda9342c6fd95bba453fc0 (runtime and catalogue version regressions).
+
+### Execution boundary for Phase 17
+
+RUN:
+- GitHub read-after-write verification of the Dilla implementation, test,
+  catalogue and README.
+- Ruby 3.3.8 syntax check of the complete extracted reproduce_render method:
+  PASS (ruby -c -).
+- Local runtime discovery: Ruby 3.3.8 and Node v22.16.0.
+- Previous isolated Postpro identity and BIZ source-digest smoke harnesses:
+  PASS (recorded in Phase 16).
+
+NOT_RUN:
+- The actual Dilla one-bar render/reproduce byte-match regression.
+- ruby -c STUDIO/dilla/dilla.rb and the complete STUDIO Ruby syntax census.
+- cd STUDIO && rake test, rake check, focused Dilla and Postpro tests.
+- Actual audio byte comparison, manual listening, sample-based replay,
+  external encoder pinning, MP3/video reproduction and live provider work.
+- The full repository agent-context, governed /fix, browser live journeys,
+  legal-source verification, PDF visual/accessibility review and OpenBSD
+  deployment remain NOT_RUN as recorded in earlier phases.
+
+Blocker: no local pub5 checkout can be refreshed because the sandbox cannot
+resolve github.com. GitHub source writes and read-back worked, but no repository
+hook, Minitest/Rake suite or real audio render ran. The replay implementation
+must be validated by the actual one-bar integration test on a compatible
+checkout before treating Dilla reproduction as operationally accepted.
