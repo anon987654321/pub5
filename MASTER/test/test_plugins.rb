@@ -244,6 +244,7 @@ class TestPlugins < Minitest::Test
     plugin.send(:with_browser, Dir.mktmpdir, "example.com", headless: true) { |_| }
 
     assert_equal "example.com", broker.opened.first[:host]
+    assert_equal ["lease-1"], broker.attached.map { |row| row[:id] }
     assert_equal ["lease-1"], broker.closed
   end
 
@@ -256,6 +257,7 @@ class TestPlugins < Minitest::Test
     plugin.send(:with_browser, session: "trip", headless: false, url: "https://example.com/book") { |_| }
 
     assert_equal "example.com", broker.opened.first[:host]
+    assert_equal ["lease-1"], broker.attached.map { |row| row[:id] }
     assert_equal ["lease-1"], broker.closed
   end
 
@@ -309,6 +311,7 @@ class TestPlugins < Minitest::Test
 
     assert_match %r{/profile\z}, broker.opened.first[:profile]
     assert_equal true, broker.opened.first[:persistent]
+    assert_equal ["lease-1"], broker.attached.map { |row| row[:id] }
     assert_equal ["lease-1"], broker.closed
   end
 
@@ -323,6 +326,7 @@ class TestPlugins < Minitest::Test
                                url: "https://fetlife.com/home", headless: true, runtime: "linux") { |_| }
 
     assert_equal "fetlife.com", broker.opened.first[:host]
+    assert_equal ["lease-1"], broker.attached.map { |row| row[:id] }
     assert_equal ["lease-1"], broker.closed
   end
 
