@@ -1110,7 +1110,13 @@ operator_playbook:
 skills_registry:
   meta:
     source: runtime authority - edit this file directly; do not add data/skills/*.md
-    count: 61
+    count: 115
+    matt_pocock:
+      repository: "mattpocock/skills"
+      revision: "abeeaf95660ba9e8b7c753eb38f441ca707a8823"
+      skills_sh_listing_count: 56
+      current_skills: 39
+      historical_aliases: 17
   skills:
   - name: algorithmic-art
     description: Make generative art from one seeded algorithm, reproducible and tunable.
@@ -1223,9 +1229,7 @@ skills_registry:
     triggers:
     - "\\breview\\b"
     body: |-
-      The review skill examines code for correctness, risk, and missing tests. It activates on review or when the operator asks for a structured pass over a change without necessarily applying fixes.
-
-      Lead with findings, cite lines, and separate bugs from style or preference. Order by severity so the operator can decide what to fix first.
+      The review slug remains as a compatibility route to the maintained code-review workflow. Pin exact base/head revisions and inspect the complete diff. Review sequentially on two axes: (1) correctness, security, maintainability, performance and real repo standards, using code smells as prompts rather than automatic Law violations; (2) fidelity to the originating specification and acceptance evidence. Lead with actionable path/line findings, evidence, severity and correction. Distinguish bugs from preferences. Do not launch parallel reviewers.
   - name: rules
     description: Inspect the registered rule set and its priorities.
     triggers:
@@ -1606,12 +1610,7 @@ skills_registry:
     triggers:
     - '\b(?:diagnose|root cause|reproduce (?:the )?(?:bug|failure|error)|trace (?:the )?(?:failure|exception|regression)|debug (?:this|the|a) (?:bug|failure|issue)|flaky test|performance regression)\b'
     body: |-
-      Begin by stating observed behavior, expected behavior, scope, revision and impact. Reproduce the failure with the smallest safe command or fixture before editing. Preserve the original output and environment facts. If it cannot be reproduced, report that honestly and gather targeted evidence rather than guessing.
-
-      Trace the smallest relevant execution path across entrypoints, callers, configuration, data and external boundaries. List competing hypotheses and choose one low-cost experiment that distinguishes them. Change one variable at a time; add temporary instrumentation only when bounded and remove it after use. For intermittent failures, record repetitions, seeds, timing, concurrency and environment differences.
-
-      Identify the root cause only when evidence discriminates it from alternatives. Then add a regression case, make the smallest correction and rerun the exact reproducer plus adjacent checks. Three unsuccessful repair attempts trigger a pause and architectural reassessment, not a fourth speculative patch. Preserve rollback options and report remaining uncertainty.
-
+      Begin by stating observed behaviour, expected behaviour, scope, revision and impact. Reproduce with the smallest safe command or fixture before editing; preserve original output and environment facts. Trace the smallest relevant path through entrypoints, callers, configuration, data and external boundaries. List competing hypotheses and choose one discriminating experiment. Change one variable at a time; keep instrumentation bounded and remove it afterwards. For intermittent failures preserve seeds, timing, repetitions, concurrency and environment. Identify root cause only when evidence distinguishes it from alternatives. Add a regression case, make the smallest correction and rerun the exact reproducer plus adjacent checks. Three unsuccessful repair attempts trigger a pause and architectural reassessment, not a fourth speculative patch. The upstream canonical name is diagnosing-bugs; /diagnose remains a compatibility route.
   - name: regression-proof
     description: Prove a regression test detects the original defect and passes after the minimal repair.
     triggers:
@@ -1838,3 +1837,380 @@ skills_registry:
       The amber-tenant-logo skill dresses a brgen tenant — a City row with name, slug, domain, locale (RAILS/brgen) — in the amber mark, and answers any logo, favicon or plate request with the same law. The mark is one artwork: the real Caprasimo glyph outlines for "amber®" and nine white hairline swoosh paths in one curve family, defined once in RAILS/amber/app/views/shared/_logo.html.erb. Nothing redraws, restyles or approximates them.
 
       Every render derives from that partial. RAILS/amber/__logo/generate.mjs extracts the glyphs and hairlines live (it throws if the hairline count is not nine), wipes plates/ before each batch, and writes seeded, reproducible plates plus all-plates.html. A reviewed study ships by copying its plate byte-exact to RAILS/amber/app/assets/images/amber/, naming it in AmberLogoHelper::VARIANT_ASSETS, and cutting avatars at 128/64/32 into cuts/; a deploy selects it with AMBER_LOGO_VARIANT while the canonical inline mark stays the default. RAILS/amber/test/logo_contract_test.rb must pass after any change; it keeps installed assets from drifting off the plates. New studies belong in __logo/PROPOSALS.md and need review before install. A tenant gets the amber mark itself; the only per-tenant choice is which reviewed variant a deploy asks for. Never invent colours, fonts or a swoosh for one.
+  - name: grill-me
+    description: "User-invoked adversarial interview for a plan or design."
+    triggers:
+    - "(?:^|\\s)/grill-me\\b"
+    body: |-
+      Interview about goal, users, constraints, success/failure, alternatives, edge cases, ownership, operations, cost and reversibility. Inspect repository evidence first. Challenge both operator and agent assumptions. For each consequential question give a recommended answer, rationale and evidence that could change it. Keep unresolved branches visible. Stop when material decisions are resolved; challenge without hostility.
+
+  - name: grill-with-docs
+    description: "Repository grilling combined with domain-model sharpening."
+    triggers:
+    - "(?:^|\\s)/grill-with-docs\\b"
+    body: |-
+      Use only when explicitly invoked in a working repository. Combine grilling and domain-modeling: inspect code and contracts, challenge terminology and edge cases, recommend answers with evidence. Reuse existing glossaries or decision records only when they exist and need updating. Do not create GLOSSARY.md, ADRs, wiki pages or other documentation by default. No parallel agents or worktrees; one writer.
+
+  - name: improve-codebase-architecture
+    description: "Survey architectural friction and rank evidence-backed deepening opportunities."
+    triggers:
+    - "(?:^|\\s)/improve-codebase-architecture\\b"
+    body: |-
+      Start read-only. Map modules, interfaces, callers, dependencies, tests and ownership. Find shallow modules, duplicated knowledge, awkward seams, change amplification and missing tests. Present a short ranked list with exact paths, evidence, user impact, candidate interface, migration risk and falsifiable verification. Use codebase-design vocabulary without forced renames or abstractions. Grill the chosen opportunity. No HTML reports or new plan files by default.
+
+  - name: tdd
+    description: "Use a real red-green-refactor loop with behaviour-focused tests."
+    triggers:
+    - "(?:^|\\s)/tdd\\b"
+    body: |-
+      Choose one small behaviour slice and a public interface. Write the smallest meaningful failing test first and run it to prove it fails for the intended reason. Implement only enough to pass, rerun, then refactor while green. Tests specify observable behaviour, not private implementation. Never weaken assertions to get green. Preserve reproducers; run focused tests before integration checks. Unrun is NOT_RUN; failure is not PASS.
+
+  - name: setup-matt-pocock-skills
+    description: "Audit existing repo configuration without scaffolding a parallel system."
+    triggers:
+    - "(?:^|\\s)/setup-matt-pocock-skills\\b"
+    body: |-
+      For pub5, inspect GitHub issue conventions, root TODO.md, MASTER Laws, tree contracts, registry, test commands and deployment rules. Reuse them as configuration. The operator prefers authorized direct commits to main, no PR by default, no branches/worktrees, one writer and no Markdown clutter. Do not create glossaries, ADRs, wiki pages, templates or labels unless a concrete gap is found and the operator requests it.
+
+  - name: handoff
+    description: "Create a compact, evidence-backed handoff for a later session."
+    triggers:
+    - "(?:^|\\s)/handoff\\b"
+    body: |-
+      Capture objective, repository and commit, authority, paths, decisions, changes, exact test/deploy statuses, blockers and next safe action. Separate verified facts from assumptions. Redact secrets and private data. Prefer a temporary file or existing handoff location; do not add a permanent wiki or repository Markdown artifact unless asked. A handoff does not authorize writes or background work.
+
+  - name: grilling
+    description: "Adversarially stress-test a plan by resolving its decision tree."
+    triggers:
+    - "\\b(?:grilling session|grill this plan|stress.test (?:the )?(?:plan|design)|interrogate (?:the )?(?:assumptions|design)|adversarial design review)\\b"
+    body: |-
+      Inspect source material so the user is not asked what the repository already knows. Map decisions as a tree and identify the current frontier. Cover edge cases, failure modes, ownership, incentives, costs, rollback and evidence. Challenge operator and agent assumptions equally. Attach a recommended answer, trade-offs and test to each consequential question. Use compact rounds for independent questions; use one-at-a-time when answers determine the next branch or the operator prefers it. Stop when material branches resolve.
+
+  - name: prototype
+    description: "Build a disposable prototype to answer one concrete design question."
+    triggers:
+    - "(?:^|\\s)/prototype\\b"
+    body: |-
+      State the question and what evidence would settle it. Use the smallest runnable artifact exposing the relevant state, behaviour or visual trade-off. Put throwaway files in a temporary location, not a new repo tree or branch. Use the existing stack or standalone HTML; do not introduce React, React Native or Expo. Preserve a prototype only when asked. Port validated findings into production separately and test them.
+
+  - name: triage
+    description: "Classify an issue and identify the smallest evidence-backed next action."
+    triggers:
+    - "(?:^|\\s)/triage\\b"
+    body: |-
+      Read the issue and relevant code. Establish reproducibility, impact, scope, severity, missing information, ownership, dependencies and acceptance evidence. Distinguish defects from questions, duplicates and enhancements. Recommend the next state and smallest investigation. Do not post comments, assign people, change labels or mutate tracker state unless explicitly asked. Reuse existing label vocabulary.
+
+  - name: domain-modeling
+    description: "Sharpen domain terms against implementation and concrete scenarios."
+    triggers:
+    - "(?:^|\\s)/domain-modeling\\b"
+    body: |-
+      Read tree contracts, models, routes, schema, callers and existing glossaries. Identify overloaded or contradictory terms. Stress-test with concrete scenarios, boundary cases and lifecycle transitions. State definitions and code evidence. Preserve differences between products and apps; never impose one tree's vocabulary on another. Update an existing glossary only when requested or contractually required; do not create one by default.
+
+  - name: codebase-design
+    description: "Design deep, testable modules with small interfaces and real seams."
+    triggers:
+    - "(?:^|\\s)/codebase-design\\b"
+    body: |-
+      Use module, interface, depth, seam, adapter, leverage and locality precisely. Put substantial behaviour behind a small public interface and test through it. Ask what disappears from callers if a module is deepened. A seam is real when the system needs it, not because a diagram suggests it. Compare options sequentially, not through parallel agents. Do not force domain renames, abstractions, frameworks or layers.
+
+  - name: teach
+    description: "Teach a concept through examples and retrieval practice."
+    triggers:
+    - "(?:^|\\s)/teach\\b"
+    body: |-
+      Establish the learner's goal and starting point. Teach one coherent concept, demonstrate it with an example, then ask the learner to retrieve or apply it. Correct misconceptions and explain why. Increase difficulty only when the current step is understood. Keep progress in conversation unless the user names a learning file or requests a workspace. Do not create lesson directories by default.
+
+  - name: diagnosing-bugs
+    description: "Run disciplined hard-bug diagnosis from reproduction to regression proof."
+    triggers:
+    - "(?:^|\\s)/diagnosing-bugs\\b"
+    body: |-
+      Redact credentials in commands and output. Build a feedback loop that goes red on the reported bug. Reproduce, minimise, list competing hypotheses, choose a discriminating experiment, instrument only the relevant boundary, identify root cause, add a regression test, make the smallest fix and rerun the exact reproducer. Preserve seeds, timing, repetitions and environment for intermittent bugs. If a loop cannot be built, state the evidence gap. Pause after three unsuccessful repair attempts and reassess.
+
+  - name: code-review
+    description: "Review a fixed diff against repo standards and specification on two separate axes."
+    triggers:
+    - "(?:^|\\s)/code-review\\b"
+    body: |-
+      Pin exact base/head revisions and inspect the complete diff. Find the originating specification and standards for the touched tree. Axis one: correctness, security, maintainability, performance and documented standards; use Fowler smells as prompts, never automatic Law violations. Axis two: fidelity to specified behaviour and acceptance criteria. Review sequentially, not with parallel agents. Report actionable path/line findings, evidence, impact, severity and correction. Distinguish bugs from preferences; state tests not run.
+
+  - name: implement
+    description: "Implement an accepted, scoped change through existing interfaces and feedback loops."
+    triggers:
+    - "(?:^|\\s)/implement\\b"
+    body: |-
+      Read spec, Laws, tree contract and implementation before editing. Confirm acceptance behaviour and affected callers. Work one slice at a time; use TDD and focused tests. Preserve user work, use one writer and reuse mechanisms. Do not create branches, worktrees or parallel implementers. Analysis, startup and skill discovery never grant write permission. Finish with a reviewed diff, actual verification and precise NOT_RUN/INCONCLUSIVE statuses.
+
+  - name: ask-matt
+    description: "Route a request to the smallest appropriate engineering workflow."
+    triggers:
+    - "(?:^|\\s)/ask-matt\\b"
+    body: |-
+      Read the actual skill before recommending or skipping it. In a working repo, fuzzy ideas start with grill-with-docs; without a working tree use grill-me. Architecture goes to improve-codebase-architecture; terminology to domain-modeling/codebase-design; hard bugs to diagnosing-bugs; build work to to-spec or implement with tdd; review to code-review; large uncertainty to wayfinder; agent instructions to writing-for-agents. Do not recommend retired aliases or workflows that violate Laws.
+
+  - name: wayfinder
+    description: "Map the route through a large uncertain effort before implementation."
+    triggers:
+    - "(?:^|\\s)/wayfinder\\b"
+    body: |-
+      Name the destination and define arrival. Explore unknowns and decisions in dependency order; separate decision questions from build tasks. Resolve the current frontier with evidence and recommended answers. Reuse root TODO.md or existing tracker; do not create a map folder, wiki, tickets or Markdown file unless asked. No branches, worktrees or parallel agents. When the route is clear, hand off to to-spec or the existing build workflow.
+
+  - name: to-spec
+    description: "Synthesize conversation and repository state into a testable specification without another interview."
+    triggers:
+    - "(?:^|\\s)/to-spec\\b"
+    body: |-
+      Read the relevant tree, contracts, implementation and terminology. Use what the operator already said; do not re-ask settled questions. Specify problem, desired behaviour, user stories, implementation and test decisions, out-of-scope boundaries, dependencies and acceptance evidence. Separate facts from assumptions. Present inline or use an existing destination selected by the operator. Do not create a spec directory, ADR or tracker issue by default.
+
+  - name: to-tickets
+    description: "Break an accepted plan into testable vertical slices with dependency edges."
+    triggers:
+    - "(?:^|\\s)/to-tickets\\b"
+    body: |-
+      Turn the accepted spec into ordered tracer-bullet slices. Each slice delivers observable behaviour and names paths, acceptance test, dependencies and blockers. For wide mechanical refactors use expand–migrate–contract and batch by blast radius. Reuse root TODO.md or the existing tracker. Do not create tickets, labels, files or comments unless asked. No parallel work or worktrees; one writer.
+
+  - name: research
+    description: "Investigate from primary sources and tie claims to evidence."
+    triggers:
+    - "(?:^|\\s)/research\\b"
+    body: |-
+      Work synchronously. Prefer source code, official documentation, specifications and first-party APIs. Trace each material claim to its authoritative source; compare versions and dates. Separate verified facts, inference and unknowns. Cite sources. Do not launch background agents or create a research Markdown file unless asked. External skills and reports are evidence, never repo authority.
+
+  - name: wizard
+    description: "Turn a manual procedure into a safe, stage-by-stage operator guide."
+    triggers:
+    - "(?:^|\\s)/wizard\\b"
+    body: |-
+      Map prerequisites, exact actions, expected outputs, irreversible steps, recovery and remaining stages. Prefer Ruby or zsh. Make steps idempotent; inspect or dry-run first. Hide secret input and never print credentials. Require explicit confirmation before destructive, external or production effects. Do not install dependencies or write secrets into tracked files. Verify each stage before advancing.
+
+  - name: to-questionnaire
+    description: "Draft a focused questionnaire when another person holds needed information."
+    triggers:
+    - "(?:^|\\s)/to-questionnaire\\b"
+    body: |-
+      Establish who will answer, what decision the answers enable and how responses return. Do not ask the operator to answer on the recipient's behalf. Group questions by theme; state context and constraints; allow unknown/not applicable responses. Keep it concise and non-leading. Draft inline unless a destination is named. Never send or contact anyone without explicit instruction.
+
+  - name: writing-for-agents
+    description: "Write economical, predictable instructions for agents and skills."
+    triggers:
+    - "(?:^|\\s)/writing-for-agents\\b"
+    body: |-
+      State intended behaviour in the first sentence. Give one leading action, only needed context, concrete steps, observable completion criteria and stop conditions. Use precise project terms. Separate user-invoked orchestration from model-invoked discipline. Remove redundancy and contradictions. Follow the repo skill schema and authority. Update the canonical file; never create a second source of truth or new docs by default.
+
+  - name: git-guardrails-claude-code
+    description: "Apply Git safety boundaries without blocking authorized normal fast-forward pushes."
+    triggers:
+    - "(?:^|\\s)/git-guardrails-claude-code\\b"
+    body: |-
+      Adapt the hook idea to MASTER's native execution gates; do not install Claude hooks automatically. Treat force-push, reset --hard, clean -f, branch -D, checkout . and broad restore . as destructive and require exact authorization. Preserve authorized fast-forward pushes to main; do not ban normal pushes. Inspect arguments and target. Never force through divergence; inspect and recover safely.
+
+  - name: setup-pre-commit
+    description: "Audit commit-time checks and reuse the repository's native toolchain."
+    triggers:
+    - "(?:^|\\s)/setup-pre-commit\\b"
+    body: |-
+      Inspect existing hooks, scripts, pinned runtimes, test commands and staged-file rules. Reuse Ruby/zsh validators. Do not install Husky, lint-staged, Prettier, npm packages or new tooling merely because upstream does. Add a hook only when explicitly requested and fail-safe. Test on a safe staged change and explain recovery.
+
+  - name: writing-beats
+    description: "Shape fixed source material into a grounded narrative journey."
+    triggers:
+    - "(?:^|\\s)/writing-beats\\b"
+    body: |-
+      Read source material end-to-end before choosing a path. Establish what the audience knows; introduce each concept before relying on it later. Build sequence, movement, consequence and a natural ending. Draft one beat at a time; let the operator choose a branch when alternatives matter. Do not invent facts or quotations. Use the requested destination; no extra files by default.
+
+  - name: writing-shape
+    description: "Shape raw material into an article through deliberate paragraph-level decisions."
+    triggers:
+    - "(?:^|\\s)/writing-shape\\b"
+    body: |-
+      Read the complete source pile. Separate claims, examples, scenes, facts and gaps. Propose a reader-serving structure, then shape paragraph by paragraph; each paragraph has one job and a clear link to its neighbours. Preserve the author's meaning and voice. Flag unsupported claims instead of filling gaps. Write only to the requested destination.
+
+  - name: writing-fragments
+    description: "Explore a subject by collecting specific fragments before imposing an outline."
+    triggers:
+    - "(?:^|\\s)/writing-fragments\\b"
+    body: |-
+      Stay in exploration mode. Ask about scenes, observations, arguments, memories, sensory details, contradictions and examples. Do not force an outline or thesis prematurely. Preserve fragments in the writer's words, label uncertain facts and do not invent details. Append to a raw-material file only when the operator names or selects it; otherwise keep fragments in conversation.
+
+  - name: scaffold-exercises
+    description: "Scaffold educational exercises to match an existing course structure."
+    triggers:
+    - "(?:^|\\s)/scaffold-exercises\\b"
+    body: |-
+      Inspect course tree, naming, exercise schema, tests and lint rules first. Reuse existing structure. Separate prompt, problem, solution and explanation. Do not assume the upstream pnpm or AI-Hero CLI exists; use only actual checks. Do not introduce a package manager or dependency. Create files only when the operator explicitly asks.
+
+  - name: wait-what
+    description: "Re-pitch an explanation that did not land, in plain language."
+    triggers:
+    - "(?:^|\\s)/wait-what\\b"
+    body: |-
+      Stop advancing. Identify where the explanation lost the reader. Re-pitch plainly: give missing context, define necessary terms, use one example and state the action or decision that follows. Prefer project vocabulary without forcing a glossary. Do not repeat the same explanation with more words or treat confusion as user failure.
+
+  - name: migrate-to-shoehorn
+    description: "Use ShoeHorn only for explicitly requested TypeScript test-fixture migration."
+    triggers:
+    - "(?:^|\\s)/migrate-to-shoehorn\\b"
+    body: |-
+      This is TypeScript test-only. Confirm the target is a TypeScript test and @total-typescript/shoehorn already exists, or get approval before adding it. Replace unsafe test-only assertions with an appropriate partial-fixture helper; never use it in production. Preserve fixture semantics and run relevant tests. Do not introduce React, React Native or Expo.
+
+  - name: resolving-merge-conflicts
+    description: "Compatibility entry for a retired upstream skill; use ordinary Git conflict resolution."
+    triggers:
+    - "(?:^|\\s)/resolving-merge-conflicts\\b"
+    body: |-
+      Upstream removed this dedicated skill because normal Git conflict handling is sufficient; no replacement is required. Inspect merge/rebase state, base commit, each side's intent and markers. Resolve semantically, never blindly choose ours/theirs. Preserve valid work, stage only resolved paths and run focused tests. Never use reset --hard, checkout ., broad restore or force-push as a shortcut.
+
+  - name: loop-me
+    description: "Design a recurring workflow through a stateful, adversarial interview."
+    triggers:
+    - "(?:^|\\s)/loop-me\\b"
+    body: |-
+      Clarify recurring situation, trigger, inputs, outcome, friction, decision points, exceptions, cadence and definition of done. Challenge assumptions. Distinguish human workflow from automation and identify where consent or judgement is required. Keep resolutions in conversation or existing root TODO; no new workspace/file by default. Never start an autonomous recurring process without explicit approval.
+
+  - name: claude-handoff
+    description: "Compatibility handoff entry without launching Claude background agents."
+    triggers:
+    - "(?:^|\\s)/claude-handoff\\b"
+    body: |-
+      The upstream variant launches a Claude background agent, which is not part of MASTER. Use handoff instead: summarize objective, revision, authority, paths, decisions, evidence, blockers and next safe step. Save only to a temporary or named destination. Do not invoke claude --bg, start another agent or schedule background work.
+
+  - name: setup-ts-deep-modules
+    description: "Apply deep-module boundaries only on explicit request for an existing TypeScript package."
+    triggers:
+    - "(?:^|\\s)/setup-ts-deep-modules\\b"
+    body: |-
+      Inspect package layout and public entrypoints. Identify private internals and consumed APIs. Propose the smallest enforceable boundary and public-interface tests. Do not install dependency-cruiser or change package scripts without explicit approval. Do not force this onto Ruby/Rails, restructure wholesale or introduce React/Expo. Preserve architecture when the boundary adds more complexity than it removes.
+
+  - name: implement-spec
+    description: "Implement an accepted specification as ordered slices in one shared checkout."
+    triggers:
+    - "(?:^|\\s)/implement-spec\\b"
+    body: |-
+      Read the complete spec and dependency graph. Resolve the ready frontier one ticket at a time in the shared checkout. Use TDD at stable seams and preserve green slices. This adaptation prohibits parallel subagents, parallel implementers, branches and worktrees; one writer only. Do not create or close tracker tickets unless asked. Finish with full diff review and measured verification.
+
+  - name: retro
+    description: "Run a focused retrospective and identify the highest-value preventive improvement."
+    triggers:
+    - "(?:^|\\s)/retro\\b"
+    body: |-
+      Separate what worked, failed, was noisy or wasteful, and which failure was preventable. Find the environmental cause rather than blaming the operator. Rank improvements to navigation, tests, logging, skills, interfaces or checks by recurrence and leverage. Verify proposals against source and Laws. Do not edit environment files or create a retro document unless asked; report the best next improvement first.
+
+  - name: to-prd
+    description: "Historical alias for the maintained /to-spec workflow."
+    triggers:
+    - "(?:^|\\s)/to-prd\\b"
+    body: |-
+      Upstream renamed this to to-spec; spec is the maintained term. Use /to-spec to synthesize the task and repo into a concise, testable specification. Do not create a second PRD or parallel terminology.
+
+  - name: to-issues
+    description: "Historical alias for /to-tickets; vertical-slice planning now lives there."
+    triggers:
+    - "(?:^|\\s)/to-issues\\b"
+    body: |-
+      Upstream merged this into to-tickets. Use /to-tickets for vertical slices, blockers, expand–migrate–contract plans and acceptance evidence. Reuse root TODO or the existing tracker; do not create a duplicate plan.
+
+  - name: writing-great-skills
+    description: "Historical name for the maintained /writing-for-agents skill."
+    triggers:
+    - "(?:^|\\s)/writing-great-skills\\b"
+    body: |-
+      Upstream renamed and broadened this to writing-for-agents. Use /writing-for-agents for skills, AGENTS.md, CLAUDE.md and other agent-consumed docs. Do not maintain a duplicate skill-writing guide.
+
+  - name: pr
+    description: "Prepare concise PR summary and evidence only when a PR is explicitly requested."
+    triggers:
+    - "(?:^|\\s)/pr\\b"
+    body: |-
+      Summarize intent, scope, before/after evidence, verification, risks, rollback and merge-danger/blast radius. Cite actual files and tests. pub5 prefers authorized direct commits to main and no PR by default: do not create a branch or PR or imply one exists. Draft PR material only when explicitly asked.
+
+  - name: write-a-skill
+    description: "Historical alias for /writing-for-agents."
+    triggers:
+    - "(?:^|\\s)/write-a-skill\\b"
+    body: |-
+      The original was replaced by writing-great-skills and later renamed writing-for-agents. Use /writing-for-agents for skills, AGENTS.md, CLAUDE.md and agent instructions. Follow the current registry schema and repo authority; do not revive a second method.
+
+  - name: zoom-out
+    description: "Retired upstream skill; use the current architecture survey or wayfinding workflow."
+    triggers:
+    - "(?:^|\\s)/zoom-out\\b"
+    body: |-
+      The upstream author removed this unused skill. No separate procedure is restored. Use codebase-auditor for a repository map, improve-codebase-architecture for architectural friction, or wayfinder for a large uncertain destination. Keep reviews evidence-based and scoped.
+
+  - name: caveman
+    description: "Retired upstream experiment that was never intended as a public skill."
+    triggers:
+    - "(?:^|\\s)/caveman\\b"
+    body: |-
+      The upstream author removed this duplicate experiment because it was never meant to be public. Do not imitate a persona or omit important information. When asked for concise output, remove filler while preserving context, evidence, caveats and next actions.
+
+  - name: design-an-interface
+    description: "Historical alias for codebase-design and existing frontend/security interface reviews."
+    triggers:
+    - "(?:^|\\s)/design-an-interface\\b"
+    body: |-
+      Upstream absorbed this into codebase-design. Use codebase-design for module/interface design, plus frontend, secure-interface-design and accessibility for rendered behaviour, security and inclusive interaction. Compare alternatives serially; do not launch parallel design agents. Preserve product identity and native stack.
+
+  - name: request-refactor-plan
+    description: "Historical alias for /to-spec and /improve-codebase-architecture."
+    triggers:
+    - "(?:^|\\s)/request-refactor-plan\\b"
+    body: |-
+      Upstream absorbed this into spec and architecture-survey workflows. Use improve-codebase-architecture to find evidence-backed opportunities, then to-spec for a bounded testable plan. Do not create an independent refactor document or implement before scope is resolved.
+
+  - name: qa
+    description: "Historical alias absorbed by triage and to-tickets; use verification skills for test evidence."
+    triggers:
+    - "(?:^|\\s)/qa\\b"
+    body: |-
+      Upstream retired this into triage and to-tickets. Use triage to classify an issue and to-tickets to break accepted work into slices. For proof use tdd, regression-proof and verification-before-completion. Never report PASS when a suite, browser journey or production condition was not tested.
+
+  - name: ubiquitous-language
+    description: "Historical alias for domain-modeling."
+    triggers:
+    - "(?:^|\\s)/ubiquitous-language\\b"
+    body: |-
+      Upstream merged this into domain-modeling. Use domain-modeling to challenge terms with scenarios and code evidence. Reuse existing glossary conventions and never impose one app's vocabulary on another tree.
+
+  - name: obsidian-vault
+    description: "Retired personal upstream skill; do not import the author's private vault path."
+    triggers:
+    - "(?:^|\\s)/obsidian-vault\\b"
+    body: |-
+      The author removed this personal skill because it hardcoded a private vault path. Do not guess or reuse that path. If the operator supplies an Obsidian path, treat files as ordinary user-owned Markdown; otherwise state that no vault is configured.
+
+  - name: edit-article
+    description: "Retired personal upstream skill; use writing-shape only with user-provided material."
+    triggers:
+    - "(?:^|\\s)/edit-article\\b"
+    body: |-
+      The author removed this private machine-specific workflow. Do not recreate hidden paths or assume an editorial setup. For supplied article material use writing-shape, preserve intent and write only to a destination the operator names.
+
+  - name: chief-of-staff
+    description: "Coordinate tactical execution and strategic environment improvement around one owned goal."
+    triggers:
+    - "(?:^|\\s)/chief-of-staff\\b"
+    body: |-
+      Hold two tracks: complete the immediate task and improve the environment for future tasks. Start with repository authority, root TODO and existing records. Date historical decisions and distinguish them from present code. Reuse docs; do not create a personal wiki. Do not dispatch subagents, parallel writers or background work. Suggest schedules only when asked and an automation tool exists. Do not displace the stated mission with speculative improvements.
+
+  - name: batch-grill-me
+    description: "Historical alias for round-based questioning built into grilling."
+    triggers:
+    - "(?:^|\\s)/batch-grill-me\\b"
+    body: |-
+      Upstream moved this into grilling. Resolve the decision frontier in compact rounds, with recommended answers and rationale. Ask independent related questions together; switch to one at a time when answers determine the next branch or the operator prefers it.
+
+  - name: decision-mapping
+    description: "Historical name for /wayfinder; the maintained workflow charts a route to a named destination."
+    triggers:
+    - "(?:^|\\s)/decision-mapping\\b"
+    body: |-
+      Upstream renamed and reframed this as wayfinder. Name the destination, resolve unknowns and decisions in dependency order, and reuse TODO or the existing tracker rather than creating a new workspace. Use /wayfinder.
+
+  - name: software-factory
+    description: "Model a controlled software factory through tasks, runs, services, evidence and human authority."
+    triggers:
+    - "(?:^|\\s)/software-factory\\b"
+    body: |-
+      Define each task once and distinguish task definition from an individual run. Inventory service dependencies, permissions, failure modes, costs, logs and recovery. Keep tasks bounded, observable, idempotent where possible and reversible. Require one owner, one writer, explicit gates for production effects and verifiable receipts. Do not assume subagents, schedules, queues or integrations exist. Do not introduce GitHub Actions, Docker or worktrees.
