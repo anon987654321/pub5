@@ -295,6 +295,29 @@ def test_a_worker_that_lost_its_lease_cannot_write
   end
 end
 
+# Recovery writes obey the same lease fence as stage and terminal writes.
+def test_a_worker_that_lost_its_lease_cannot_defer_or_block
+  Dir.mktmpdir do |root|
+    mission = Master::Fix::Mission.new(root:).start!(
+      goal: "recover the current task", scope: root, origin: "fold", auto_continue: true,
+    )
+    lease_to_another_worker(root)
+
+    assert_raises(Master::Fix::Mission::Fenced) do
+      mission.defer!(reason: "transient: provider overload")
+    end
+    assert_raises(Master::Fix::Mission::Fenced) do
+      mission.block!(reason: "human review required")
+    end
+
+    saved = Master::Fix::Mission.current(root:)
+    assert_equal "running", saved["state"]
+    assert_equal "other-host:4242:cafebabecafebabe", saved["lease_owner"]
+    assert_equal 0, saved.fetch("retry_count")
+    assert_nil saved["wake_reason"]
+  end
+end
+
 # Writes reload the current record; a replaced mission's handle used to adopt the new id.
 def test_a_replaced_mission_cannot_finish_its_successor
   Dir.mktmpdir do |root|
