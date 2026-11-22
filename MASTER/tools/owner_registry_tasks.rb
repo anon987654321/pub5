@@ -770,7 +770,7 @@ module Backlog
       return [] unless File.exist?(path)
 
       stat = File.lstat(path)
-      return [] unless stat.file? && !stat.symlink? && (stat.mode & 0o077).zero?
+      return [] unless stat.file? && !stat.symlink? && stat.nlink == 1 && (stat.mode & 0o077).zero?
 
       File.foreach(path).filter_map do |line|
         row = JSON.parse(line)
@@ -838,7 +838,7 @@ module Backlog
       path = File.join(directory, "backlog-executor.jsonl")
       if File.exist?(path) || File.symlink?(path)
         stat = File.lstat(path)
-        return false unless stat.file? && !stat.symlink? && (stat.mode & 0o077).zero?
+        return false unless stat.file? && !stat.symlink? && stat.nlink == 1 && (stat.mode & 0o077).zero?
       end
 
       flags = File::WRONLY | File::CREAT | File::APPEND
@@ -846,7 +846,7 @@ module Backlog
       File.open(path, flags, 0o600) do |file|
         file.flock(File::LOCK_EX)
         stat = file.stat
-        return false unless stat.file? && (stat.mode & 0o077).zero?
+        return false unless stat.file? && stat.nlink == 1 && (stat.mode & 0o077).zero?
 
         file.puts(JSON.generate(row))
         file.flush
