@@ -216,8 +216,11 @@ module Master
       rescue Ferrum::StatusError => e
         raise Error, "social_browser: navigation failed on #{site}: #{e.message}"
       ensure
-        browser&.quit
-        owner&.close(lease.id) if lease
+        begin
+          browser&.quit
+        ensure
+          owner&.close(lease.id) if lease
+        end
       end
 
       def broker = service(:browser_broker)
