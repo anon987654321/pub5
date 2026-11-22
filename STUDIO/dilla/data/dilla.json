@@ -2148,7 +2148,8 @@
       "effects": {
         "delay_feedback_range": 0.37,
         "reverb_decay_scale": 4,
-        "wobble_frequency_cap_hz": 0.15
+        "wobble_frequency_cap_hz": 0.15,
+        "delay_time": "8n"
       }
     }
   }
