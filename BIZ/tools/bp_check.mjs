@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { OUTPUT_DIR as OUT, BIZ_ROOT } from './paths.mjs';
 
-const ORDER = ['syre', 'ragnhild', 'nordvakt', 'norwegianfinancial', 'pubhealthcare', 'govt_bergen', 'future_healthcare_os'];
+const ORDER = ['syre', 'ragnhild', 'nordvakt', 'norwegianfinancial', 'pubhealthcare', 'govt_bergen', 'future_healthcare_os', 'neolimb'];
 const fails = [];
 const notes = [];
 const ROW4 = /<tr><td>([^<]+)<\/td><td>([^<]*)<\/td><td>([^<]*)<\/td><td>([^<]*)<\/td><\/tr>/g;

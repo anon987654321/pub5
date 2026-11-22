@@ -60,6 +60,7 @@ class TestProviderKeyWiring < Minitest::Test
     assert_includes envs, "REPLICATE_API_KEY"
     assert_includes envs, "REPLICATE_API_TOKEN"
     assert_includes envs, "ZAI_API_KEY"
+    assert_includes envs, "OLLAMA_API_KEY"
     previous = envs.to_h { |name| [name, ENV[name]] }
 
     envs.each do |name|

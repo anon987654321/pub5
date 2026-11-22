@@ -15,11 +15,11 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { OUTPUT_DIR as OUT } from './paths.mjs';
 
 const ORDER = ['syre', 'ragnhild', 'nordvakt', 'norwegianfinancial', 'pubhealthcare',
-  'govt_bergen', 'future_healthcare_os'];
+  'govt_bergen', 'future_healthcare_os', 'neolimb'];
 
 // NORDVAKT, Norwegian Financial and Future Healthcare OS are authored
 // straight into the final bob2 skin: verify the skin, never re-apply it.
-const COMPLETED = new Set(['nordvakt', 'norwegianfinancial', 'future_healthcare_os']);
+const COMPLETED = new Set(['nordvakt', 'norwegianfinancial', 'future_healthcare_os', 'neolimb']);
 
 // ---- the plan canon: bob2 tokens + the hefte print contract -----------------
 const CANON = `

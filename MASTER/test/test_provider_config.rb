@@ -50,4 +50,37 @@ class TestProviderConfig < Minitest::Test
     assert_equal "https://api.z.ai/api/paas/v4", endpoint["base"]
     assert_equal %w[ZAI_API_KEY], Array(endpoint["key_env"])
   end
+
+  def test_ollama_cloud_route_is_primary_and_keeps_glm_as_fallback
+    providers = YAML.safe_load_file(File.expand_path("../data/providers.yml", __dir__))
+    models = YAML.safe_load_file(File.expand_path("../data/models.yml", __dir__), aliases: true)
+
+    provider = providers.fetch("ollama_cloud")
+    assert_equal %w[OLLAMA_API_KEY], Array(provider["env"])
+    assert Regexp.new(provider.fetch("model_pattern")).match?("ollama_cloud:deepseek-v4.1-flash")
+    refute provider.key?("ruby_llm_key")
+
+    endpoint = models.dig("openai_compatible", "ollama_cloud")
+    assert_equal "https://ollama.com/v1", endpoint["base"]
+    assert_equal %w[OLLAMA_API_KEY], Array(endpoint["key_env"])
+    assert_equal "unknown", endpoint["privacy_posture"]
+
+    model_id = "ollama_cloud:deepseek-v4.1-flash"
+    definition = models.fetch("model_defs").fetch("ollama_deepseek_v4_1_flash")
+    assert_equal model_id, definition["id"]
+    assert_equal 1_000_000, definition["context_window"]
+
+    %w[default primary strong fast vision].each do |tier_name|
+      tier = models.fetch("models").fetch(tier_name)
+      assert_equal model_id, tier.fetch(0).fetch("id"), "#{tier_name} must lead with Ollama Cloud"
+      assert_equal "glm-5.3-flash", tier.fetch(1).fetch("id"), "#{tier_name} must retain GLM as fallback"
+    end
+
+    reads = Regexp.new(models.dig("vision_families", "reads_images").join("|"), Regexp::IGNORECASE)
+    blind = Regexp.new(models.dig("vision_families", "blind").join("|"), Regexp::IGNORECASE)
+    assert reads.match?(model_id)
+    refute blind.match?(model_id)
+    refute_includes models.fetch("tool_capable_prefixes"), model_id,
+                    "the hosted sender must use the governed ReAct fallback until native tool payloads are supported"
+  end
 end

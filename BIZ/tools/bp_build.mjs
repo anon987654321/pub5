@@ -23,14 +23,14 @@ const PLANS = { ...PLANS_A, ...PLANS_B };
 const PUB_SYRE = `${SRC}/syre.html`;
 mkdirSync(OUT, { recursive: true });
 const ORDER = ['syre', 'ragnhild', 'nordvakt', 'norwegianfinancial', 'pubhealthcare',
-  'govt_bergen', 'future_healthcare_os'];
+  'govt_bergen', 'future_healthcare_os', 'neolimb'];
 const occupied = ORDER.filter(name => existsSync(`${OUT}/${name}`));
 if (occupied.length) {
   throw new Error('BIZ build output directories already exist for: ' + occupied.join(', ') +
     '; use a fresh empty BIZ_OUT_DIR to preserve every prior build artefact');
 }
 // Authored complete per their proposals; staged and re-verified, not injected.
-const COMPLETED = new Set(['nordvakt', 'norwegianfinancial', 'future_healthcare_os']);
+const COMPLETED = new Set(['nordvakt', 'norwegianfinancial', 'future_healthcare_os', 'neolimb']);
 const TITLES = {
   syre: 'SYRE™ – forretningsplan',
   ragnhild: 'Ragnhild – forretningsplan',
@@ -39,6 +39,7 @@ const TITLES = {
   pubhealthcare: 'pub.healthcare – forretningsplan',
   govt_bergen: 'Bergen Selvstyreparti – forretningsplan',
   future_healthcare_os: 'Fremtidens helse-OS – forretningsplan',
+  neolimb: 'NEOLIMB – forretningsplan',
 };
 
 // ---- merge additions -------------------------------------------------------

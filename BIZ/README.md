@@ -12,9 +12,9 @@ not inflated language. The shared editorial standard lives in
 - **Published guidance:** Ragnhild Mæhle's five-page funding guide sits beside
   her plan. It prepares the applicant; it is not a submitted application or a
   grant decision, and it is not a sixth business plan.
-- **Draft sources:** NORDVAKT Arctic Systems and Norwegian Financial. Their
-  editable sources live in `tools/`. Neither has a published pair until its
-  build, print, arithmetic checks and page-by-page visual review pass.
+- **Draft sources:** NORDVAKT Arctic Systems, Norwegian Financial and NEOLIMB.
+  Their editable sources live in `tools/`. None has a published pair until
+  its build, print, arithmetic checks and page-by-page visual review pass.
 - **Historical sources:** SPEIS and Fremtidens NATO-våpen document the
   provenance of NORDVAKT. Norwegian Hedge remains a historical quant-fund
   concept, not the active consumer-bank plan.
@@ -25,7 +25,11 @@ software pilots. It does not assume owned ships, satellites, weapons, NATO
 procurement or partner agreements. Norwegian Financial reframes the former
 quant concept as a partner-first financial-software and future-bank strategy.
 Quantitative fund management remains separate from banking and customer
-deposits.
+deposits. NEOLIMB is an exploratory translational-research concept for reconstructive
+medicine. It is distinct from pub.healthcare and Fremtidens helse-OS: it builds
+neither hospital infrastructure nor a general health-IT operating system.
+Full-limb regeneration remains long-term research, not a clinical product or
+a promised outcome.
 
 The funding summary reads only the explicit `Innovasjon Norge` row in each
 financing table. It does not treat total project capital, political fundraising

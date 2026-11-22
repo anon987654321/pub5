@@ -14,6 +14,7 @@ const ACTIVE = [
 const DRAFTS = [
   ['nordvakt', 'NORDVAKT Arctic Systems (arbeidsnavn)', 'maritim situasjonsforståelse og dataintegrasjon i nordområdene', 'Maritime + Space'],
   ['norwegianfinancial', 'Norwegian Financial (arbeidsnavn)', 'partnerbasert digitalbankplattform, PWA og åpen bank', 'FinTech'],
+  ['neolimb', 'NEOLIMB (arbeidsnavn)', 'forskningsplattform for rekonstruktiv og regenerativ hånd- og armmedisin', 'Regenerative Medicine'],
 ];
 const GUIDES = [
   ['ragnhild/ragnhild_legater', 'Ragnhild Mæhle — søknadsveiledning', 'Kildebasert plan for utstillingsstøtte og kunstnerstipend; veiledning, ikke en innsendt søknad eller et tilsagn'],
@@ -256,7 +257,7 @@ footer p{margin:0 0 .5em;text-align:left}
 ${activeRows}
   </ol>
   <h2>Arbeidsutkast — ikke publisert som PDF</h2>
-  <p>To nye konsepter er under arbeid. Foreløpig Innovasjon Norge-forespørsel i utkastene: NOK ${formatNok(draftAsk)}. Beløpene er ikke innsendte søknader, tilsagn eller bekreftet støtteberettigelse.</p>
+  <p>Tre nye konsepter er under arbeid. Foreløpig Innovasjon Norge-forespørsel i utkastene: NOK ${formatNok(draftAsk)}. Beløpene er ikke innsendte søknader, tilsagn eller bekreftet støtteberettigelse.</p>
   <ol>
 ${draftRows}
   </ol>

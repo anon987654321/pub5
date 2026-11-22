@@ -1,4 +1,4 @@
-# Model routing profile — Replicate-first, with direct API, hosted, and free fallbacks.
+# Model routing profile — Ollama Cloud first, with GLM and other verified fallbacks.
 
 schema: 1
 routing:
@@ -140,6 +140,16 @@ model_defs:
     id: glm-5.3-flash
     <<: *model_defaults
     score: { quality: 0.93, speed: 0.97, cost: 1.0 }
+  # Ollama Cloud model: context and capabilities are documented by Ollama.
+  # The quality score is a conservative routing prior, not a measured MASTER
+  # benchmark; it stays below the destructive-operation quality threshold.
+  # The hosted sender does not forward native tool schemas yet; keep this
+  # model on the governed ReAct fallback until that transport contract is tested.
+  ollama_deepseek_v4_1_flash: &ollama_deepseek_v4_1_flash
+    id: ollama_cloud:deepseek-v4.1-flash
+    <<: *model_defaults
+    context_window: 1000000
+    score: { quality: 0.89, speed: 0.95, cost: 0.90 }
   # The zai-cli subscription lane rides bin/zai-chat, the operator's configured
   # z-ai SDK bridge; it asks for glm-5.3-flash (ZAI_CHAT_MODEL default) with the
   # key inside the CLI's own configuration, so it is the GLM-class lane on any
@@ -226,9 +236,8 @@ model_defs:
     <<: *model_defaults
     context_window: 4096
     score: { quality: 0.62, speed: 0.25, cost: 1.0 }
-# Ollama remains catalogued as a future recovery option, but the
-# operator's current account/quota constraint keeps it out of the live pool.
-# Do not enable it by zero-key discovery or background warmup.
+# The local Ollama daemon remains a separately gated recovery lane.
+# Hosted Ollama Cloud uses openai_compatible.ollama_cloud and this hosted sender.
 models:
   # OpenRouter's keyless free fallback head. Subscription CLIs belong to
   # their declared model tiers; they are never smuggled into this API list.
@@ -238,9 +247,8 @@ models:
     - *web_chat_grok
     - *web_chat_chatgpt
   default:
-    # Session-scoped reroute (operator request, 2026-11-17): glm-5.3-flash
-    # leads every /fix-serving tier for this session. Revert this commit to
-    # restore the replicate-first ordering.
+    # Ollama Cloud DeepSeek leads /fix-serving; GLM-5.3 Flash is its next lane.
+    - *ollama_deepseek_v4_1_flash
     - *glm_5_3_flash
     - *zai_cli_auto
     - *replicate_gpt_5_2
@@ -264,10 +272,8 @@ models:
     - *ollama_gemma
     - *llama_cli_gguf
   primary:
-    # Session-scoped reroute (operator request, 2026-11-17): glm-5.3-flash is
-    # the primary #1 model for this session, including the mainbus boot model
-    # and every /fix-serving tier (default/strong/fast lead with it too).
-    # Revert this commit to restore the replicate-first ordering.
+    # Ollama Cloud DeepSeek is the configured primary; GLM-5.3 Flash follows it.
+    - *ollama_deepseek_v4_1_flash
     - *glm_5_3_flash
     - *zai_cli_auto
     - *replicate_gpt_5_2
@@ -284,6 +290,7 @@ models:
     - *ollama_gemma
     - *llama_cli_gguf
   strong:
+    - *ollama_deepseek_v4_1_flash
     - *glm_5_3_flash
     - *zai_cli_auto
     - *replicate_gpt_5_2
@@ -302,6 +309,7 @@ models:
     - *ollama_gemma
     - *llama_cli_gguf
   vision:
+    - *ollama_deepseek_v4_1_flash
     - *glm_5_3_flash
     - *gemini_flash
     - *claude_sonnet
@@ -316,10 +324,9 @@ models:
     - *gemini_flash_openrouter
     - *gemini_flash
     - *mistral_small
-  # Short advisory calls (council personas, review, name and comment checks):
-  # glm-5.3-flash leads for this session (operator request, 2026-11-17);
-  # sonnet follows. Edit and file-write operations route to default/strong.
+  # Short advisory calls use the same primary/fallback order as the main pool.
   fast:
+    - *ollama_deepseek_v4_1_flash
     - *glm_5_3_flash
     - *zai_cli_auto
     - *claude_sonnet
@@ -400,8 +407,8 @@ task_strengths:
 vision_families:
   # Human-preference order from the Arena Vision board, snapshot 2026-11-08.
   # Ranking applies after image capability is established; it does not grant it.
-  reads_images: ['gemini-\d', claude, 'gpt-(?:4o|4\.1|5(?:\.\d+)?|6(?:\.\d+)?)', 'llama-4', 'qwen(?:3\.8-max|.*vl)', pixtral, 'gemma-[34]', 'glm-5\.3-flash', vision]
-  blind: ['glm(?!-5\.3-flash)', nemotron, 'deepseek(?!.*vl)', 'qwen3-next', gpt-oss, 'phi-4']
+  reads_images: ['gemini-\d', claude, 'gpt-(?:4o|4\.1|5(?:\.\d+)?|6(?:\.\d+)?)', 'llama-4', 'qwen(?:3\.8-max|.*vl)', pixtral, 'gemma-[34]', 'glm-5\.3-flash', 'deepseek-v4\.1-flash', vision]
+  blind: ['glm(?!-5\.3-flash)', nemotron, 'deepseek(?!.*(?:vl|v4\.1-flash))', 'qwen3-next', gpt-oss, 'phi-4']
   review_rank:
     - 'claude-(?:fable|opus)'
     - 'qwen3\.8-max'
@@ -726,6 +733,10 @@ openai_compatible:
   # Z.ai (Zhipu GLM), OpenAI-compatible. Endpoint declared but unverified from
   # this checkout: verify with a keyed probe on /models before the first paid
   # call, the way the keyless rows above name their verification dates.
+  ollama_cloud:
+    base: https://ollama.com/v1
+    key_env: [OLLAMA_API_KEY]
+    privacy_posture: unknown
   zai:
     base: https://api.z.ai/api/paas/v4
     key_env: [ZAI_API_KEY]
