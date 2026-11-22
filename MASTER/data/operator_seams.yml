@@ -64,6 +64,14 @@ seams:
     evidence: >-
       Worktree delivery against a real GitHub staging repository and token, with failure cleanup and accurate
       delivery reporting, leaving the operator checkout untouched.
+  - id: github_token_rotation
+    tree: MASTER
+    needs: credential
+    evidence: >-
+      Revoke the GitHub token previously used for repository operations. If continued automation needs a
+      replacement, create one with the minimum repository scope and a short expiry. Prove the old token is
+      rejected and the replacement works only from the approved credential store. No token value may enter
+      the repository, chat, command output, receipts, logs or screenshots.
   # OPENBSD
   - id: shell_init_credential_rotation
     tree: OPENBSD
