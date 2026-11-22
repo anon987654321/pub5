@@ -440,6 +440,32 @@ NXDOMAIN at the registrar or parked at Domeneshop.
 TLS terminates at relayd. Rails sets `config.assume_ssl = true`; do not enable
 `force_ssl`.
 
+### NSD and DNSSEC
+
+The committed `OPENBSD/mirror/var/nsd/etc/nsd.conf` and
+`OPENBSD/mirror/var/nsd/zones/master/*.zone` files are the pregenerated
+production payload. Normal deploy applies these files literally; it does not run
+the generator. The single `MASTER/bin/operator vps deploy all --remote` path
+validates the source zones, backs up current signed zones, signs every zone using
+its already-active KSK/ZSK set, validates every resulting `.zone.signed` file,
+then reloads or restarts NSD. A missing or ambiguous key pair fails the release
+before NSD activation.
+
+A signing success is not a public DNSSEC validation result. A validating
+resolver also needs the parent zone to publish a DS record matching the active
+KSK. `OPENBSD/bin/ds-records` derives DS records from the DNSKEYs in the signed
+zone. Publish only for domains that are registered and delegated to this
+nameserver; never publish DS for a parked, unregistered or differently
+delegated domain. Verify with a validating resolver (for example
+`delv <domain> SOA`) and require a validated answer.
+
+Routine signing preserves the DNSKEY set already published by each signed zone.
+A new key appearing on disk is not automatically adopted. KSK rollover requires
+publishing the new DNSKEY, adding its DS at the parent, waiting the parent DS
+TTL/propagation interval, and only then retiring the old KSK. The private keys
+must be backed up off-host in encrypted storage and a restore verified before
+any DS publication or key change.
+
 ### Mr. Damascy demo
 
 `https://mrd.brgen.no` serves RAILS/mrdamascy, the restaurant's ordering PWA, as
@@ -596,15 +622,16 @@ pull `20261011-0330` it restored and read back all three databases in 1.3 s
 October sit on the operator Mac under launchd job `no.brgen.pub4-dr`, which
 makes the Mac the only copy off vm23.
 
-**Restored separately.** `dr-pull` holds databases and uploads, nothing else, and
-no script in this repository copies the following off the box. After a rebuild
-they come from the operator's own records: `/etc/master.env` and
-`/etc/<app>.env` for brgen, amber and bsdports; the DNSSEC keys
-`K<zone>.+013+ksk.*` and `K<zone>.+013+zsk.*` in `/var/nsd/zones/master` (no DS is published at any registry today,
-so the signatures validate nothing yet; once DS records are published, losing
-the KSK makes every signed zone fail validation); the DKIM key `/etc/mail/dkim/private.rsa.key`; the
-ssh host keys; and the acme-client account key. Certificates and their domain
-keys under `/etc/ssl` are reissued by `acme-client`, once DNS answers.
+**Restored separately.** `dr-pull` holds databases and uploads, not host
+secrets. The DNSSEC KSK/ZSK private files in `/var/nsd/zones/master` are
+irreplaceable signing material and are not currently included in the off-host
+database pull. Before publishing DS records or changing any key, add these files
+to an encrypted off-host disaster-recovery set and verify a restore. Do not
+commit them to Git or regenerate a KSK as a deployment convenience. Other
+separate recovery inputs are `/etc/master.env`, `/etc/<app>.env`, the DKIM
+private key, SSH host keys and the acme-client account key. Certificates and
+their domain keys under `/etc/ssl` can be reissued by `acme-client` once DNS
+answers.
 
 **Litestream replicates nothing and never has.** It is not in OpenBSD ports, so
 `pkg_add litestream` cannot install it, `/usr/local/bin/litestream` does not

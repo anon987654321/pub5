@@ -48,6 +48,27 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes operator, 'validate_doas.ksh" install'
   end
 
+  def test_nsd_zone_changes_are_signed_and_validated_before_activation
+    operator = File.read(File.join(ROOT, "OPENBSD", "OPERATOR.sh"), encoding: "UTF-8")
+    apply = operator[operator.index('  apply)')..]
+    backup = apply.index("backup_signed_zones ||")
+    install = apply.index('install_one "$rel"')
+    sign = apply.index("nsd-resign --force --no-reload")
+    validate = apply.index('nsd-checkzone "${source_zone:t:r}" "$signed_zone"')
+    activate = apply.index("rcctl restart nsd")
+
+    refute_nil backup
+    refute_nil install
+    refute_nil sign
+    refute_nil validate
+    refute_nil activate
+    assert_operator backup, :<, install
+    assert_operator install, :<, sign
+    assert_operator sign, :<, validate
+    assert_operator validate, :<, activate
+    assert_includes operator, "NSD_CONFIG_CHANGED"
+  end
+
   def test_mirror_apply_does_not_turn_every_release_into_a_host_reboot
     operator = File.read(File.join(ROOT, "OPENBSD", "OPERATOR.sh"), encoding: "UTF-8")
     refute_match(/\b(?:reboot|shutdown)\b/, operator)

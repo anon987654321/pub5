@@ -17,7 +17,7 @@ LOCK_DIR=${OPENBSD_APPLY_LOCK_DIR:-/var/run/pub5-openbsd-apply.lock}
 LOCK_HELD=0
 typeset -a FILES CHANGED SIGNED_BEFORE
 typeset -A BACKUPS
-typeset -i failures=0 CRONTAB_APPLIED=0
+typeset -i failures=0 CRONTAB_APPLIED=0 NSD_CHANGED=0 NSD_CONFIG_CHANGED=0
 
 usage() {
   print -r -- "usage: doas zsh OPENBSD/OPERATOR.sh [--plan|--apply|--verify] [--doas]"
@@ -211,7 +211,7 @@ restore_signed_zones() {
     base=${zone_file:t}
     [[ -f $dir/$base ]] && cp -p "$dir/$base" "$zone_file" || return 1
   done
-  /usr/local/sbin/nsd-control reload
+  /usr/local/sbin/nsd-control reload && /usr/local/sbin/nsd-control notify
 }
 
 backup_file() {
@@ -445,6 +445,8 @@ case "$ACTION" in
   apply)
     print "OPENBSD mirror apply"
     print_plan
+    (( ${CHANGED[(Ie)var/nsd/etc/nsd.conf]} )) && NSD_CONFIG_CHANGED=1
+    (( ${CHANGED[(Ie)var/nsd/zones/master/*.zone]} || NSD_CONFIG_CHANGED )) && NSD_CHANGED=1
     if (( DOAS_NEEDED && ${#CHANGED} )); then
       print -u2 -- "OPERATOR: BLOCKED - --doas may only change doas.conf by itself; apply other mirror changes separately"
       exit 78
@@ -471,6 +473,12 @@ case "$ACTION" in
       print -u2 -- "OPERATOR: root crontab backup failed; nothing was installed"
       exit 1
     }
+    if (( NSD_CHANGED )); then
+      backup_signed_zones || {
+        print -u2 -- "OPERATOR: DNSSEC signed-zone backup failed; no tracked file has been installed"
+        exit 1
+      }
+    fi
     for rel in $CHANGED; do
       install_one "$rel" || {
         print -u2 -- "OPERATOR: install failed for /$rel"
@@ -511,14 +519,29 @@ case "$ACTION" in
     if (( failures == 0 && ${CHANGED[(Ie)etc/mail/smtpd.conf]} )); then
       /usr/sbin/rcctl restart smtpd || failures=1
     fi
-    if (( failures == 0 && ${CHANGED[(Ie)var/nsd/etc/nsd.conf]} )); then
-      /usr/sbin/rcctl restart nsd || failures=1
-    fi
-    if (( failures == 0 && ${CHANGED[(I)var/nsd/zones/master/*.zone]} )); then
-      if backup_signed_zones; then
-        /usr/local/bin/nsd-resign || failures=1
-      else
-        failures=1
+    if (( failures == 0 && NSD_CHANGED )); then
+      /usr/local/bin/nsd-resign --force --no-reload || failures=1
+      if (( failures == 0 )); then
+        for source_zone in /var/nsd/zones/master/*.zone(N); do
+          signed_zone="${source_zone}.signed"
+          if [[ ! -s $signed_zone || -L $signed_zone ]]; then
+            print -u2 -- "OPERATOR: signed DNSSEC zone is missing, empty or symlinked: $signed_zone"
+            failures=1
+            break
+          fi
+          /usr/local/sbin/nsd-checkzone "${source_zone:t:r}" "$signed_zone" || {
+            print -u2 -- "OPERATOR: signed DNSSEC zone failed validation: $signed_zone"
+            failures=1
+            break
+          }
+        done
+      fi
+      if (( failures == 0 )); then
+        if (( NSD_CONFIG_CHANGED )); then
+          /usr/sbin/rcctl restart nsd && /usr/sbin/rcctl check nsd || failures=1
+        else
+          /usr/local/sbin/nsd-control reload && /usr/local/sbin/nsd-control notify || failures=1
+        fi
       fi
     fi
     if (( failures )); then
