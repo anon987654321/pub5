@@ -257,7 +257,7 @@ footer p{margin:0 0 .5em;text-align:left}
 ${activeRows}
   </ol>
   <h2>Arbeidsutkast — ikke publisert som PDF</h2>
-  <p>To nye konsepter er under arbeid. Foreløpig Innovasjon Norge-forespørsel i utkastene: NOK ${formatNok(draftAsk)}. Beløpene er ikke innsendte søknader, tilsagn eller bekreftet støtteberettigelse.</p>
+  <p>Tre nye konsepter er under arbeid. Foreløpig Innovasjon Norge-forespørsel i utkastene: NOK ${formatNok(draftAsk)}. Beløpene er ikke innsendte søknader, tilsagn eller bekreftet støtteberettigelse.</p>
   <ol>
 ${draftRows}
   </ol>
