@@ -1118,3 +1118,127 @@ rendered visual comparison; legal research audit; governed `/fix`; deployment.
 No source read-back, authored regression or GitHub write is represented as a
 runtime test pass. Re-run the mandatory context and owner suites from a
 compatible local checkout before closing these lanes.
+
+
+## 13. Phase 16 — STUDIO take identity, BIZ source graph, Core browser consent — 2026-11-22
+
+Status: source changes are on main and were read back. One isolated Ruby
+identity harness ran successfully. Project suites, browser execution, rendered
+PDF review, legal-source review, governed /fix and deployment remain NOT_RUN.
+
+### STUDIO — Postpro random-take identity
+
+STUDIO/postpro/constitution.rb now derives a stable postpro.take.v1 SHA-256
+identity from the input image digest, seed, take number, look, lane, canonical
+effect chain and GRADE_VERSION (the existing digest of the Postpro renderer
+sources and Dilla analog core). Chain sidecars record the identity as take_id;
+preset sidecars retain their existing schema. Canonical Hash key ordering makes
+equivalent recipes produce the same ID. Changing the source, seed, take number,
+recipe or grade digest changes it. Invalid/non-finite recipe values are rejected.
+
+The implementation remains Postpro-owned. A universal STUDIO inventory was
+not introduced: Dilla, LoRA and Postpro produce into different ownership roots,
+and Postpro may write beside arbitrary source photographs. A partial cross-tool
+listing would falsely imply completeness.
+
+Files: STUDIO/postpro/constitution.rb, STUDIO/postpro/lib/sidecars.rb,
+STUDIO/replicate/test/postpro_cli_contract_test.rb,
+STUDIO/postpro/README.md.
+
+Commits: 61f01e455c66ad69066cdde413ae9babb5ad65f2,
+86159014b1c6786fdab1ddac3c76598b1edf4cfc,
+6def5bd23e5a7609913b0cae82f33464129b9c9f,
+50758a8bb84b2d2494701253ba9defd42f062124;
+regex correction: a4107fe8eaef0f0f1b3d6a5b843e80110a1ec02c,
+b24069ec1176a3471a40b6cafa2905a6f23248dc.
+
+### BIZ — source-bound print receipts
+
+BIZ/tools/paths.mjs now owns PUBLISHED_INPUTS, the single document-to-source
+manifest shared by bp_print.mjs and bp_index.mjs. The manifest covers
+editable plan sources, content modules, build/retemplate/check tools, the
+shared path contract, and print tools. It covers the published plans and guide,
+the scratch-only drafts, the archived source pairs, and FETAT's builder/image
+inputs according to each owner's production path.
+
+The printer emits biz.print.v2 receipts. Each receipt binds the source HTML,
+all unique declared source inputs, PDF and cover PNG by SHA-256. It captures
+source digests before rendering and checks them again afterward; a changed
+input prevents the receipt from being issued. The index requires exact source
+manifest keys, verifies every current source digest plus the published media
+digests, and retains the existing mtime, page geometry, raster-count, byte-size
+and explicit NOT_REVIEWED gates. Shared inputs appearing in both HTML and
+PDF dependencies are deduplicated consistently between printer and index.
+
+The published pairs have not been regenerated. Existing biz.print.v1
+receipts do not satisfy the new gate; after the operator-reviewed scratch
+release is copied to the existing owner directories, rerun the index. A print
+receipt is evidence of bytes and renderability, not approval of appearance or
+accessibility. Draft plans remain unpublished.
+
+Files: BIZ/tools/paths.mjs, BIZ/tools/bp_print.mjs,
+BIZ/tools/bp_index.mjs, BIZ/README.md.
+
+Commits: 15d8f5fce0920dc941a0a5a38997efb75f031366,
+fa04b837dc597afe4d42665c39120ad674391a20,
+031b226872ee9412f8c821d5c19457d01018877f,
+cefa78e8d961fecf5da6bacd7c74ab25b381bb21,
+b62344aa0fc986d1984a3e680d1b43078775dadb,
+125502b7803883789eae94dbd71b506a85feaf64,
+c0127559727fd8e0ae328961bff79f6fd7d0bf69.
+
+### MASTER — browser effect approval and lifecycle scope
+
+The Core browser effect is now approval_required, not merely policy_gated.
+A one-shot rendered page visit executes page JavaScript, and even same-host GET
+endpoints may mutate remote state. The Constitution therefore requests
+operator approval before the effect reaches World; a missing approval surface
+fails closed. The model contract and CoreBridge comment now state this boundary
+and do not describe GET/HEAD-only transport as read-only.
+
+The browser URL is included in the effect-lifecycle scope, allowing the
+existing observer to store a scope digest without persisting the raw URL.
+The existing no-secret rule still scans browser URLs. No login, click, form
+submission, credential-entry, POST or cross-host permission was added.
+
+Files: MASTER/lib/core.rb, MASTER/lib/core/fold.rb,
+MASTER/lib/core/model.rb, MASTER/lib/cli/core_bridge.rb,
+MASTER/test/test_core_reversibility.rb.
+
+Commits: ed4440fe1bbb22ae27d7389d2a57749a5f9e3dcc,
+8f6d318beead35da961280f1797ae0f46474ad3c,
+fa60ffa843e77ea0cae0bb9d7a8f714932cc0b92,
+a64708d58b9cbfef261e3be155e3070e69008fd0,
+602f4f94bc8748bec84e682f1668fa55342a07ba.
+
+### Execution boundary for Phase 16
+
+RUN:
+- GitHub read-after-write inspection of every changed file and returned commit
+  references.
+- Ruby 3.3.8 isolated harness for the Postpro identity implementation: PASS.
+  It accepted a valid 64-character digest, produced a stable identity under
+  reordered recipe Hash keys, and changed the identity when source, seed, grade
+  version or take number changed.
+- Local runtime discovery: Ruby 3.3.8 and Node v22.16.0 are installed.
+
+NOT_RUN:
+- The actual STUDIO/replicate/test/postpro_cli_contract_test.rb Minitest suite,
+  cd STUDIO && rake test, rake check, full Ruby syntax census and
+  MASTER/tools/agent_context.rb --json --tree.
+- node --check on the actual BIZ modules; the BIZ build/check/print/index
+  chain; fresh source-to-PDF generation; published index validation; full-page
+  raster comparison; visual or accessibility review.
+- The actual Core reversibility/world/bridge test suites, full MASTER checks,
+  browser process attach/teardown, adversarial live-network probes, browser
+  cancellation and screenshot-to-vision handoff.
+- Legal-source verification, governed repository-wide /fix, OpenBSD deployment
+  and live-host acceptance.
+
+Blocker: the local checkout cannot be refreshed because this environment's
+git ls-remote cannot resolve github.com. GitHub's contents/commit interface
+was available for path-scoped changes and read-back, but it does not execute
+the repository's hooks, tests or build tools. The Postpro identity regex was
+corrected after read-back found it over-escaped; the current source and
+regression now use the proper Ruby beginning/end anchors. No project test,
+rendered approval or deployment is claimed.
