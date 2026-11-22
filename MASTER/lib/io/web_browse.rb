@@ -126,7 +126,10 @@ module Master
 
       # Public, shared security setup: Browser uses the same fenced
       # request path rather than letting a second Ferrum instance access the net.
-      def secure_page(page, allowed_host: nil)
+      def secure_page(page, allowed_host:)
+        host = canonical_host(allowed_host)
+        raise ArgumentError, "browser transport requires a bound host" if host.empty?
+
         page.command("Page.addScriptToEvaluateOnNewDocument", source: NETWORK_SANDBOX_SCRIPT)
         page.command("Network.setCacheDisabled", cacheDisabled: true)
         page.command("Network.setBypassServiceWorker", bypass: true)
@@ -163,7 +166,7 @@ module Master
         lease = @broker.open(host: uri.host, url: uri.to_s)
         browser = Ferrum::Browser.new(**driver_options(lease))
         page = browser.create_page
-        secure_page(page)
+        secure_page(page, allowed_host: uri.host)
         page.go_to(uri.to_s)
         sleep wait
         JSON.parse(page.evaluate(SCRIPT))
@@ -209,7 +212,7 @@ module Master
         return request.abort unless address
 
         response, body = pinned_get(uri, address, request, method, budget)
-        if unsafe_redirect?(uri, response)
+        if unsafe_redirect?(uri, response, allowed_host:)
           return request.respond(
             responseCode: 403,
             responseHeaders: { "content-type" => "text/plain; charset=utf-8" },
@@ -232,9 +235,10 @@ module Master
       end
 
       def request_allowed_for_host?(uri, allowed_host)
-        return true if allowed_host.nil?
+        host = canonical_host(allowed_host)
+        return false if host.empty?
 
-        canonical_host(uri.host) == canonical_host(allowed_host)
+        canonical_host(uri.host) == host
       end
 
       def canonical_host(host)
@@ -314,14 +318,16 @@ module Master
       # the same DNS, address-class, scheme and port policy as a direct request.
       # The eventual browser request is intercepted and pinned again; this first
       # check prevents an unsafe Location from crossing the browser boundary.
-      def unsafe_redirect?(uri, response)
+      def unsafe_redirect?(uri, response, allowed_host:)
         return false unless response.code.to_i.between?(300, 399)
 
         location = response["location"].to_s
         return false if location.empty?
 
         target = URI.join(uri.to_s, location)
-        !web_uri?(target) || SsrfGuard.pinned_address(target).nil?
+        !web_uri?(target) ||
+          !request_allowed_for_host?(target, allowed_host) ||
+          SsrfGuard.pinned_address(target).nil?
       rescue StandardError
         true
       end
