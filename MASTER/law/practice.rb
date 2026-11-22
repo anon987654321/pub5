@@ -72,6 +72,15 @@ Law.define(:PRESERVE_FIRST) do
   good "reads the whole source, traces dependency and caller files, then changes only the justified lines"
 end
 
+Law.define(:PRESERVE_FIRST_media_provenance) do
+  source "laws.yml PRESERVE_FIRST_media_provenance - preserve original media, prior takes and provenance"
+  ask "When media is recorded, transformed, generated, graded or published, are the original source and approved prior take retained; are source, rights/consent, engine, seed and relevant inputs recorded; and is qualitative human acceptance kept separate from numeric or automated checks?"
+  practice "Preserve the source and the last good take. A checksum identifies bytes; it does not establish rights, consent, provenance or artistic acceptance."
+  fix "Write a new take by default, retain the previous take, record source and generation provenance, verify rights/consent for supplied material and obtain named human listening or viewing acceptance where the deliverable requires it."
+  bad "A new render replaces the only approved take, lists a reference artist as a rights grant, and reports quality from LUFS alone."
+  good "The source and prior take remain recoverable, sidecars record engine/seed/input hashes and rights provenance, and a human acceptance result is recorded separately."
+end
+
 Law.define(:BE_CONCISE) do
   source "MASTER constitution (soul.yml absolute.rules)"
   ask "Does this unit contain unnecessary verbosity in words, tokens, structure, or output?"
