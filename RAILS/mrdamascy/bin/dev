@@ -1,14 +1,15 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
+set -euo pipefail
 
 # Start web and Solid Queue side by side (overmind preferred, foreman fallback).
 
-if ! command -v overmind &> /dev/null && ! command -v foreman &> /dev/null; then
-  echo "Install overmind or foreman to run multiple processes." >&2
+if ! command -v overmind >/dev/null 2>&1 && ! command -v foreman >/dev/null 2>&1; then
+  print -u2 "Install overmind or foreman to run multiple processes."
   exit 1
 fi
 
-if command -v overmind &> /dev/null; then
-  overmind start -f Procfile.dev "$@"
+if command -v overmind >/dev/null 2>&1; then
+  exec overmind start -f Procfile.dev "$@"
 else
-  foreman start -f Procfile.dev "$@"
+  exec foreman start -f Procfile.dev "$@"
 fi
