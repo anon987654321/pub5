@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "base64"
 require "fileutils"
 require "json"
 require "securerandom"
@@ -45,7 +46,7 @@ module Master
       class Denied < StandardError; end
 
       # Broker-issued and opaque to the adapter. `handle` is private.
-      Lease = Data.define(:id, :host, :cdp_url, :expires_at) do
+      Lease = Data.define(:id, :host, :expires_at) do
         def expired?(now = Time.now) = now >= expires_at
 
         # The CDP websocket URL is a bearer capability: anyone who obtains it
@@ -63,6 +64,233 @@ module Master
       # What the engine returns from #start; only the broker stores it and only
       # the broker passes it back to #stop. `persistent` marks a caller-supplied
       # profile that holds sign-in state, which teardown must not delete.
+
+      # Adapters receive this deliberately small surface, never Ferrum::Browser
+      # or the broker's CDP bearer endpoint.
+      class Attachment
+        def initialize(broker:, lease_id:, browser:)
+          @broker = broker
+          @lease_id = lease_id
+          @browser = browser
+        end
+
+        def create_page = Page.new(broker: @broker, lease_id: @lease_id, page: @browser.create_page)
+
+        def quit(wait: true)
+          @browser.quit(wait:)
+        end
+      end
+
+      class Page
+        NETWORK_SANDBOX_SCRIPT = <<~JS.freeze
+                  (() => {
+          const deny = () => { throw new DOMException("Network sockets are disabled in GET/HEAD-restricted browsing", "SecurityError"); };
+          for (const name of ["WebSocket", "WebTransport", "RTCPeerConnection", "webkitRTCPeerConnection"]) {
+            try { Object.defineProperty(window, name, { value: deny, configurable: false, writable: false }); } catch (_) {}
+          }
+        })();
+        JS
+
+        SNAPSHOT_SCRIPT = <<~JS.freeze
+                  (() => {
+          const candidates = ["main", "[role='main']", "article", ".content", "#content", ".post", ".article"];
+          let textRoot = null;
+          for (const selector of candidates) {
+            const node = document.querySelector(selector);
+            if (node && (node.innerText || "").trim().length > 200) {
+              textRoot = node;
+              break;
+            }
+          }
+          textRoot ||= document.body;
+          const text = (textRoot && textRoot.innerText) || "";
+          const headings = Array.from(document.querySelectorAll("h1, h2, h3, h4, h5, h6"))
+            .slice(0, 40)
+            .map(node => ({
+              level: node.tagName,
+              text: (node.innerText || "").trim().replace(/\s+/g, " ").slice(0, 120)
+            }))
+            .filter(item => item.text.length > 0);
+          const links = Array.from(document.querySelectorAll("a[href]")).map(a => ({
+            text: (a.innerText || a.getAttribute("aria-label") || "").trim().replace(/\s+/g, " ").slice(0, 120),
+            href: a.href
+          })).filter(link => link.text && /^https?:/.test(link.href));
+          const forms = Array.from(document.querySelectorAll("form")).slice(0, 20).map(form => ({
+            action: form.action,
+            method: (form.method || "get").toUpperCase(),
+            inputs: Array.from(form.querySelectorAll("input, textarea, select")).slice(0, 20).map(input => ({
+              name: input.name || "",
+              type: input.type || input.tagName.toLowerCase(),
+              placeholder: input.placeholder || ""
+            }))
+          }));
+          const counts = {
+            images: document.querySelectorAll("img").length,
+            links: document.querySelectorAll("a[href]").length,
+            interactive: document.querySelectorAll("button, input, select, textarea").length,
+            sections: document.querySelectorAll("article, section, .content, .post").length
+          };
+          return JSON.stringify({
+            title: document.title,
+            url: location.href,
+            text,
+            text_source: textRoot ? textRoot.tagName.toLowerCase() : "none",
+            headings,
+            links,
+            forms,
+            counts
+          });
+        })()
+        JS
+
+        def initialize(broker:, lease_id:, page:)
+          @broker = broker
+          @lease_id = lease_id
+          @page = page
+          @network = Network.new(page.network)
+        end
+
+        def url = @page.url.to_s
+        def current_url = url
+        def title = @page.title.to_s
+        def body = @page.body.to_s
+        def go_to(value)
+          @broker.navigate(@lease_id, value)
+          @page.go_to(value.to_s)
+        end
+
+        def at_css(selector)
+          node = @page.at_css(selector.to_s)
+          node && Node.new(node)
+        end
+
+        def css(selector) = @page.css(selector.to_s).map { |node| Node.new(node) }
+        def network = @network
+
+        def on(event, &callback)
+          raise Denied, "browser: only request interception events are exposed" unless event.to_sym == :request
+          raise ArgumentError, "browser: request callback required" unless callback
+
+          @page.on(:request) { |request| callback.call(Request.new(request)) }
+        end
+
+        def harden_network
+          @page.command("Page.addScriptToEvaluateOnNewDocument", source: NETWORK_SANDBOX_SCRIPT)
+          @page.command("Network.setCacheDisabled", cacheDisabled: true)
+          @page.command("Network.setBypassServiceWorker", bypass: true)
+          self
+        end
+
+        def snapshot = JSON.parse(@page.evaluate(SNAPSHOT_SCRIPT))
+
+        def screenshot(path: nil, full: false, format: "png", encoding: :binary)
+          raise Denied, "browser: only PNG screenshots are allowed" unless format.to_s == "png"
+          raise Denied, "browser: screenshot encoding must be binary or base64" unless %i[binary base64].include?(encoding)
+
+          encoded = @page.screenshot(format: "png", encoding: :base64, full: full == true).to_s
+          max_encoded_bytes = ((BrowserBroker::MAX_SCREENSHOT_BYTES + 2) / 3) * 4
+          raise Denied, "browser: screenshot exceeds the encoded byte budget" if encoded.bytesize > max_encoded_bytes
+
+          bytes = Base64.strict_decode64(encoded)
+          evidence = @broker.screenshot(@lease_id, bytes)
+          validated = evidence.fetch(:bytes)
+          raise Denied, "browser: screenshot validator changed the image bytes" unless validated == bytes
+
+          return persist_screenshot(path, validated) if path
+          encoding == :base64 ? Base64.strict_encode64(validated) : validated
+        rescue ArgumentError => error
+          raise Denied, "browser: invalid screenshot encoding (#{error.class})"
+        end
+
+        private
+
+        def persist_screenshot(path, bytes)
+          target = File.expand_path(path.to_s)
+          raise Denied, "browser: screenshot destination already exists" if File.exist?(target) || File.symlink?(target)
+          raise Denied, "browser: screenshot directory is unavailable" unless File.directory?(File.dirname(target))
+
+          begin
+            File.open(target, File::WRONLY | File::CREAT | File::EXCL, 0o600) { |file| file.write(bytes) }
+          rescue StandardError
+            File.delete(target) if File.file?(target)
+            raise
+          end
+          File.chmod(0o600, target)
+          target
+        end
+      end
+
+      class Node
+        def initialize(node)
+          @node = node
+        end
+
+        def text = @node.text.to_s
+        def attribute(name) = @node.attribute(name.to_s)
+        def property(name) = @node.property(name.to_s)
+        def visible? = @node.visible?
+        def click = @node.click
+        def focus = Focus.new(@node.focus)
+      end
+
+      class Focus
+        def initialize(focus)
+          @focus = focus
+        end
+
+        def set(value) = @focus.set(value.to_s)
+
+        def type(value, key = nil)
+          raise Denied, "browser: unsupported keyboard key" unless key.nil? || key.to_s == "Enter"
+
+          key ? @focus.type(value.to_s, :Enter) : @focus.type(value.to_s)
+        end
+      end
+
+      class Network
+        def initialize(network)
+          @network = network
+        end
+
+        def intercept = @network.intercept
+
+        def wait_for_idle(timeout:)
+          seconds = Float(timeout).clamp(0.0, 30.0)
+          @network.wait_for_idle(timeout: seconds)
+        end
+      end
+
+      class Request
+        SAFE_HEADERS = %w[accept accept-language cache-control content-type range user-agent].freeze
+        MAX_RESPONSE_BYTES = 1_048_576
+
+        def initialize(request)
+          @request = request
+        end
+
+        def url = @request.url.to_s
+        def method = @request.method.to_s
+        def headers
+          source = @request.headers || {}
+          SAFE_HEADERS.each_with_object({}) do |name, result|
+            pair = source.find { |key, _value| key.to_s.downcase == name }
+            result[name] = pair.last.to_s if pair && !pair.last.to_s.empty?
+          end
+        end
+
+        def abort = @request.abort
+
+        def respond(responseCode:, responseHeaders: {}, body: "")
+          code = Integer(responseCode)
+          raise Denied, "browser: invalid intercepted response code" unless code.between?(100, 599)
+          raise Denied, "browser: invalid intercepted response headers" unless responseHeaders.is_a?(Hash) && responseHeaders.size <= 40
+          payload = body.to_s
+          raise Denied, "browser: intercepted response exceeds byte budget" if payload.bytesize > MAX_RESPONSE_BYTES
+
+          @request.respond(responseCode: code, responseHeaders:, body: payload)
+        end
+      end
+
       Handle = Data.define(:pid, :pgroup, :cdp_url, :profile_dir, :host, :persistent) do
         def persistent? = persistent
 
@@ -110,6 +338,7 @@ module Master
           broker ? broker.close(id) : false
         end
 
+        def attach(id, **options) = current!.attach(id, **options)
         def screenshot(id, bytes) = current!.screenshot(id, bytes)
         def close_all = current!.close_all
         def sessions = current&.sessions || []
@@ -358,8 +587,7 @@ module Master
           begin
             receipt(:browser_start, id:, host: bound, phase: :before) do
               handle = @engine.start(host: bound, lease_id: id, profile:, persistent:, headless:)
-              lease = Lease.new(id:, host: bound, cdp_url: handle.cdp_url,
-                                expires_at: @clock.call + bounded_ttl(ttl_seconds))
+              lease = Lease.new(id:, host: bound, expires_at: @clock.call + bounded_ttl(ttl_seconds))
             end
           rescue StandardError => error
             # A failed durable after-receipt must not strand the process that
@@ -413,6 +641,33 @@ module Master
         refresh!(id)
         text = snapshot.to_s.byteslice(0, MAX_OBSERVATION_BYTES)
         { lease_id: id, untrusted: true, note: UNTRUSTED_NOTE, body: text }
+      end
+
+
+      # Attach Ferrum inside the broker. Only an Attachment/Page capability set
+      # crosses back to adapters; the WebSocket endpoint and raw browser stay here.
+      def attach(id, timeout: 30, window_size: nil)
+        require_capability!
+        lease = lease!(id)
+        handle = @mutex.synchronize { @handles[id.to_s] }
+        raise Denied, "browser: lease process is unavailable" unless handle
+        raise Denied, "browser: expired session" if lease.expired?(@clock.call)
+
+        seconds = Float(timeout).clamp(1.0, 60.0)
+        options = { ws_url: handle.cdp_url, timeout: seconds, process_timeout: seconds }
+        if window_size
+          dimensions = Array(window_size).map { |value| Integer(value) }
+          unless dimensions.length == 2 && dimensions.all? { |value| value.between?(320, 4096) }
+            raise Denied, "browser: invalid window dimensions"
+          end
+          options[:window_size] = dimensions
+        end
+
+        require "ferrum"
+        browser = Ferrum::Browser.new(**options)
+        Attachment.new(broker: self, lease_id: id.to_s, browser:)
+      rescue LoadError
+        raise Denied, "browser: Ferrum is not installed"
       end
 
       # Screenshot bytes are validated and bounded here, so an adapter cannot
