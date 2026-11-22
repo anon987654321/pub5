@@ -2324,3 +2324,26 @@ lease CDP endpoint; the production CoreBridge broker currently has no durable
 ledger callback; browser actions are not yet proven end-to-end against real
 redirects, subresources, cancellation, vision, or operator-approved side
 effects. No Chromium process was started here.
+
+
+Section T addendum — stable Places public identity (2026-11-22):
+- Confirmed the existing places table already owned a nullable slug column and a
+  non-unique city/slug index. The implementation reuses that field; it adds no
+  parallel identifier or second Places model.
+- Place now uses Shared::Sluggable from :name. A new migration backfills missing
+  slugs, deterministically suffixes any same-city collision while preserving an
+  existing unique slug, then makes (city_id, slug) unique.
+- Maps show and check-in resolve slug first and numeric id second. HTML GETs to an
+  old numeric path redirect permanently to the canonical slug after city scoping.
+  JSON index now includes both id (backwards compatibility) and slug; JSON show is
+  reachable by slug and retains the existing public coordinate precision policy.
+- Added Place model slug tests, Maps controller tests for numeric redirect and slug
+  JSON detail, updated existing Maps route tests to use canonical slugs, and extended
+  the existing maps_engine_wiring_contract_test.rb to pin the shared model/controller/
+  migration/schema contract.
+- Workstream proof is the existing RAILS/test/maps_engine_wiring_contract_test.rb,
+  not a newly invented test file. Upstream POI import/refresh remains open.
+- The migration, Place tests, Maps controller tests, source contract, schema load,
+  browser rendering and cross-vertical runtime journeys remain NOT_RUN. The source
+  and schema updates are verified by GitHub read-after-write only; no migration
+  outcome is claimed.
