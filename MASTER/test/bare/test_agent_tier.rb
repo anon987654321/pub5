@@ -84,6 +84,24 @@ module Master
                      "the kind registry is where the exemption is owned, not the detector source"
       end
 
+      def test_law_index_writer_emits_a_final_newline
+        Dir.mktmpdir do |dir|
+          previous_path = LawIndex.instance_variable_get(:@index_path)
+          previous_index = LawIndex.instance_variable_get(:@index)
+          output = File.join(dir, "laws_index.json")
+          LawIndex.instance_variable_set(:@index_path, output)
+          LawIndex.instance_variable_set(:@index, nil)
+
+          LawIndex.write_index!
+
+          assert File.binread(output).end_with?("\\n"),
+                 "generated JSON must end with the repository-required newline"
+        ensure
+          LawIndex.instance_variable_set(:@index_path, previous_path)
+          LawIndex.instance_variable_set(:@index, previous_index)
+        end
+      end
+
       def test_status_view_buckets_without_swallowing_a_ledger
         view = StatusView.view
         assert_operator view[:counts].values.sum, :>, 100, "the union view must be reading real ledgers"
