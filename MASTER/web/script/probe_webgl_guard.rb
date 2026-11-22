@@ -75,7 +75,10 @@ begin
   end
   exit(exit_code || 0)
 rescue Deploy::CdpSession::Unavailable, Deploy::CdpSession::Timeout, Errno::ENOENT => error
-  raise if browser_started || ENV["PROBE_REQUIRE_BROWSER"] == "1"
+  if browser_started || ENV["PROBE_REQUIRE_BROWSER"] == "1"
+    warn "probe_webgl_guard: FAIL (#{error.class}: #{error.message})"
+    exit 1
+  end
 
   report_skip(error)
 rescue StandardError => error
