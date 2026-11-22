@@ -3181,6 +3181,11 @@ module Dilla
                       end
                     end
     theory_path = File.join(DATA_DIR, "music_theory.json")
+    engine_sources = [
+      SCRIPT_PATH,
+      File.join(ENGINE_ROOT, "analog_core.rb"),
+      *Dir[File.join(DATA_DIR, "*.json")].sort
+    ].uniq
     data = {
       "engine" => "dilla", "version" => VERSION,
       "created_at" => Time.now.utc.iso8601,
@@ -3191,7 +3196,13 @@ module Dilla
         "renderer_path" => SCRIPT_PATH,
         "renderer_sha256" => Digest::SHA256.file(SCRIPT_PATH).hexdigest,
         "music_theory_path" => theory_path,
-        "music_theory_sha256" => Digest::SHA256.file(theory_path).hexdigest
+        "music_theory_sha256" => Digest::SHA256.file(theory_path).hexdigest,
+        "engine_sources" => engine_sources.to_h do |source_path|
+          [source_path.delete_prefix("#{ENGINE_ROOT}/"), {
+            "path" => source_path,
+            "sha256" => Digest::SHA256.file(source_path).hexdigest
+          }]
+        end
       },
       "seed" => seed || opts.seed || "random",
       "performer" => performer["id"],
