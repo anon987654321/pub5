@@ -2064,10 +2064,8 @@ laws:
     bad: require "set"
     good: |
       require "pathname"
-      Pathname.mktmpdir do |dir|
-        Pathname.new(dir).find { |path| path }
-        Pathname.new(dir).rmtree
-      end
+      Pathname.instance_method(:find)
+      Pathname.instance_method(:rmtree)
   STRUCT_NEW_TO_DATA:
     status: docs
   GUARD_CLAUSE:
