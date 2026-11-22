@@ -112,7 +112,7 @@ gaps:
   - { id: bsdports_cli_sponsorship, app: bsdports, kind: logic, name: "optional pay-what-you-want support handoff", source: root_backlog, status: open, note: "requires a verified recipient and sponsor/payment URL; package search and CLI use remain free and unblocked" }
   # --- master web (the operator's window; found by the surface audit, not by apps.yml) ---
   - { id: master_fleet_health, app: master, kind: logic, name: "dashboard sees only its own container - the three sibling apps sharing the 1GB box are invisible", source: master_audit, status: picked, workstream: master_fleet_panel, note: "resource_guard.sh sheds bsdports then amber; restart storms spike load; the console renders none of it" }
-  - { id: master_dead_payload_facts, app: master, kind: knowledge, name: "model_quota and cache_efficiency computed into every dashboard/live poll, rendered by no panel", source: master_audit, status: picked, workstream: master_quota_facts }
+  - { id: master_dead_payload_facts, app: master, kind: knowledge, name: "model_quota and cache_efficiency computed into every dashboard/live poll, rendered by no panel", source: master_audit, status: satisfied, workstream: master_quota_facts, note: "Controller, view and live poller render provider/model quota and cache efficiency; TestDashboardFleetPanel owns the source regression." }
   - id: master_pair_admin_surface
     app: master
     kind: ux
