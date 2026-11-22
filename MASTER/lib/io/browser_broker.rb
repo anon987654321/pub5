@@ -791,7 +791,6 @@ module Master
         { lease_id: id, untrusted: true, note: UNTRUSTED_NOTE, body: text }
       end
 
-
       # Attach Ferrum inside the broker. Only an Attachment/Page capability set
       # crosses back to adapters; the WebSocket endpoint and raw browser stay here.
       def attach(id, timeout: 30, window_size: nil)

@@ -49,7 +49,6 @@ For local handwritten archives, `/documents analyze ~/Photos` reads a bounded se
 
 `bin/master` is the interactive assistant and command entrypoint. `bin/operator` is the operations surface for status, checks, tests and supported host tasks. The browser face and speech runtime live under `web/`; their policy belongs in the relevant data sources rather than duplicated literals. Music plays only after an explicit operator request; startup never begins audio on its own.
 
-
 ## Terminal type and accessibility
 
 MASTER does not set the terminal emulator's font size. PuTTY and Termux own

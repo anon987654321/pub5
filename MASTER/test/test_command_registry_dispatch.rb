@@ -192,7 +192,6 @@ class TestCommandRegistryDispatch < Minitest::Test
     Fiber[:master_visitor] = previous
   end
 
-
   def test_nsfw_command_requires_local_opt_in_and_passes_an_nsfw_task
     previous = %w[MASTER_NSFW MASTER_NSFW_MODEL MASTER_NO_OLLAMA].to_h { |key| [key, ENV[key]] }
     previous_visitor = Fiber[:master_visitor]

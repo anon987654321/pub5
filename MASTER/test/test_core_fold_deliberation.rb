@@ -25,8 +25,6 @@ class FoldDeliberationTest < Minitest::Test
     Master::Core::Observation.ok(output, execution_receipt: receipt)
   end
 
-
-
   def test_high_risk_blocks_done_without_critique
     memory = Master::Core::Memory.new(risk: :high)
     memory.note(:goal, "ship it")

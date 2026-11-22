@@ -365,7 +365,7 @@ module Master
             metadata_gaps: {
               folders_without_artist_hint: album_rows.count { |album| album[:artist_hint].nil? },
               folders_without_year_hint: album_rows.count { |album| album[:year_hint].nil? },
-              tracks_without_track_number_hint: album_rows.sum { |album| album[:tracks_without_track_number_hint] }
+              tracks_without_track_number_hint: album_rows.sum { |album| album[:tracks_without_track_number_hint] },
             },
             truncated: inventory[:truncated]
           },

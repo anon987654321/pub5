@@ -1840,7 +1840,6 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     assert_equal 0, @cli.drain_pending_turns!
   end
 
-
   def test_fold_output_is_only_suppressed_when_the_units_console_renders_it
     session = @cli
     session.instance_variable_set(:@unit_sub, -> {})

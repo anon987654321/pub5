@@ -210,7 +210,6 @@ def ssh_capture(remote_cmd, attempts: Integer(ENV.fetch("PUB5_SSH_RETRIES", "3")
   [last_err.to_s, false]
 end
 
-
 # vps-deploy keeps its output in the remote tmux pane only. This workstation
 # collector streams that in-memory scrollback into a private local file, so an
 # SSH interruption does not force a production transcript onto vm23's disk.

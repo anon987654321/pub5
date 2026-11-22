@@ -125,7 +125,6 @@ class BrowserBrokerTest < Minitest::Test
     end
   end
 
-
   def broker(capabilities: Caps.for(:fix), engine: FakeEngine.new, ledger: nil, **opts)
     Broker.new(capabilities:, engine:, ledger:, **opts)
   end
@@ -283,7 +282,6 @@ class BrowserBrokerTest < Minitest::Test
     assert_empty engine.started, "a refused context must not start a browser"
     refute refused.available?
   end
-
 
   def test_adapters_receive_only_the_broker_attachment_and_page_facades
     require "ferrum"
