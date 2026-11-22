@@ -586,7 +586,11 @@ lofiComp.attack.value=0.003;
 lofiComp.release.value=0.1;
 tapeWS=new Tone.WaveShaper((val)=>Math.tanh(val*1.5),4096);
 tapeWS.oversample='none';
-masterG=new Tone.Gain(0.8).connect(masterDrive);
+masterG=new Tone.Gain(0.8);
+// The gain node must stand alone: Tone's connect() returns the destination, so
+// chaining the constructor into connect() aliased masterG to masterDrive, threw
+// in applyFX on the missing .gain and looped widener back into the drive stage.
+masterG.connect(masterDrive);
 masterDrive.wet.value=0;
 masterDrive.connect(outSat);
 outSat.connect(limiter);
@@ -1252,9 +1256,8 @@ dp[trackKey][i]=dp[trackKey][i]>0?0:0.8;
 updateVelFill();
 }
 });
-step.addEventListener('contextmenu',e=>{
-e.preventDefault();
-showCtxMenu(e.clientX,e.clientY,[
+const openStepMenu=(x,y)=>{
+showCtxMenu(x,y,[
 {label:'Probability 25%',action:()=>{seq_[trackKey][i].p=25;step.dataset.prob='25'}},
 {label:'Probability 50%',action:()=>{seq_[trackKey][i].p=50;step.dataset.prob='50'}},
 {label:'Probability 75%',action:()=>{seq_[trackKey][i].p=75;step.dataset.prob='75'}},
@@ -1263,7 +1266,26 @@ showCtxMenu(e.clientX,e.clientY,[
 {label:'Velocity Mid (70%)',action:()=>{const dp=DRUM_PATTERNS[pat_.d];if(dp&&dp[trackKey]&&dp[trackKey][i]>0){dp[trackKey][i]=0.7;updateVelFill();}}},
 {label:'Velocity Full',action:()=>{const dp=DRUM_PATTERNS[pat_.d];if(dp&&dp[trackKey]&&dp[trackKey][i]>0){dp[trackKey][i]=1.0;updateVelFill();}}},
 ]);
-});
+};
+step.addEventListener('contextmenu',e=>{e.preventDefault();openStepMenu(e.clientX,e.clientY);});
+// Touch long-press: a held finger fires no contextmenu event on iOS or
+// Android, so probability and velocity editing needs its own gesture. The
+// one-shot capture click swallows the synthetic tap that follows touchend,
+// which would otherwise toggle the step and close the menu.
+let longPressTimer=null;
+step.addEventListener('touchstart',e=>{
+if(e.touches.length!==1)return;
+const touch=e.touches[0];
+longPressTimer=setTimeout(()=>{
+longPressTimer=null;
+step.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();},{capture:true,once:true});
+navigator.vibrate?.(10);
+openStepMenu(touch.clientX,touch.clientY);
+},480);
+},{passive:true});
+step.addEventListener('touchmove',()=>{if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null;}},{passive:true});
+step.addEventListener('touchend',()=>{if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null;}},{passive:true});
+step.addEventListener('touchcancel',()=>{if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null;}},{passive:true});
 step.addEventListener('mousedown',event=>{
 if(event.shiftKey){
 st_.paintMode=true;

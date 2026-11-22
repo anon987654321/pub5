@@ -4,11 +4,13 @@ require_relative "minitest_helper"
 require "json"
 
 # RG-69 is one HTML file, one JS file and one stylesheet, and a person meets it
-# through the defaults, not the sliders. Two things have gone wrong before and
-# are worth holding still: the markup controls drifted from the values the
-# engine boots with (so the panel showed one number and the machine played
-# another), and a default style could name a pattern key the tables do not
-# carry, which is silence rather than a wrong note.
+# through the defaults, not the sliders. Three things have gone wrong before and
+# are worth holding still: the panel can drift from the engine (so it shows one
+# number while the machine plays another), a boot style can name a pattern key
+# the tables do not carry (silence rather than a wrong note), and the master
+# chain can drift into randomized saturation that reads as unusable. Boot
+# selects a random playable style, so the panel contract is now sync-driven:
+# every control is written from engine state at boot and mapped back on input.
 #
 # This reads the two source files as text and asserts they agree. It never runs
 # the page: the sequencer is Tone.js and a browser, and the contract here is the
@@ -28,21 +30,32 @@ class TestRg69Defaults < Minitest::Test
   def tone = @tone ||= File.read(TONE)
   def dilla_data = @dilla_data ||= JSON.parse(File.read(DILLA_DATA))
 
-  def test_markup_controls_match_the_engine_boot_defaults
-    aud = boot_aud
+  def test_panel_controls_are_driven_by_engine_state_and_mapped_back
     CONTROLS.each do |name|
-      assert_equal aud.fetch(name.to_sym), range_value(name),
-                   "rg69.html ##{name} default and rg69.js aud_.#{name} disagree"
+      assert_operator range_value(name), :>, 0,
+                      "rg69.html ##{name} is missing or has no usable range default"
+      assert_includes js, "$id('#{name}').value=aud_.#{name};",
+                      "rg69.html ##{name} is not written from engine state at boot"
+      assert_includes js, "id==='#{name}')aud_.#{name}=v;",
+                      "moving ##{name} does not reach the engine state"
     end
+    assert_includes js, "syncUIFromState();",
+                    "boot must sync the panel from engine state after buildUI"
   end
 
   def test_boot_patterns_exist_in_the_tables
-    pattern = boot_pattern
-    %w[d b k p].each do |lane|
-      key = pattern.fetch(lane.to_sym)
-      assert_includes pattern_keys(lane), key,
-                      "boot pattern #{lane}=#{key.inspect} is not in the #{lane} table (silence)"
-    end
+    filter = js[/const bootStyleCandidates=STYLES\.filter\(style=>\{(.*?)\n\}\);/m, 1] or
+             raise "no boot style filter in rg69.js"
+    assert_includes filter, "DRUM_PATTERNS[style.d]"
+    assert_includes filter, "BASS_PATS[style.b]"
+    assert_includes filter, "KEYS_PATS[style.k]"
+    assert_includes filter, "PAD_PATS[style.p]"
+    assert_includes filter, "some(hit=>hit>0)",
+                    "the boot filter must reject silent drum rows"
+    assert_includes filter, "bass.some(note=>note)&&keys.some(note=>note&&note!==0)&&pads.some(note=>note&&note!==0)",
+                    "the boot filter must reject silent bass, keys and pads rows"
+    assert_includes js, "const bootStyle=bootStylePool[Math.floor(Math.random()*bootStylePool.length)];",
+                    "boot must pick its style from the filtered, playable pool"
   end
 
   def test_f_minor_dub_is_labelled_as_an_engine_original
@@ -85,18 +98,22 @@ class TestRg69Defaults < Minitest::Test
     assert_includes init, "if(st_.randomizeFxPending){st_.randomizeFxPending=false;randomizeFX();}else applyFX();"
   end
   def test_the_default_style_chip_names_a_declared_style
-    chip = js[/find\(c=>c\.textContent==='([^']+)'\)/, 1]
-    refute_nil chip, "no default style chip is selected in rg69.js"
-    assert_includes style_names, chip, "default chip #{chip.inspect} names no STYLES entry"
+    chip = js[/const defaultChip=\[.*?\]\.find\(c=>c\.textContent===([^)]+)\);/, 1]
+    assert_equal "bootStyle.n", chip,
+                 "the highlighted chip must be the boot style's chip"
+    assert_includes js, "if(defaultChip)defaultChip.classList.add('active');",
+                    "the boot style chip must be selected before the first paint"
   end
 
-  # The point of the retune: the default is industrial techno over the engine's
-  # original F-minor harmony, so the grid is four-on-the-floor and the master is driven and
-  # tight rather than swung and wet.
-  def test_the_default_reads_as_industrial_techno
-    aud = boot_aud
-    assert_operator aud.fetch(:swing), :<=, 20, "industrial techno is on-grid, not swung"
-    assert_operator aud.fetch(:drive), :>=, 60, "industrial techno wants a driven master"
+  # The point of the retune: the F-minor Dub style is the engine's original
+  # industrial-techno reading of the shared harmony, so its grid is
+  # four-on-the-floor and its master is driven and tight rather than swung
+  # and wet. The boot pool only admits styles whose rows actually play.
+  def test_the_f_minor_dub_style_reads_as_industrial_techno
+    assert_includes style_names, "F-minor Dub"
+    row = js[/\{n:'F-minor Dub',[^\n]+\}/] or raise "no F-minor Dub style row"
+    assert_includes row, "sw:[6,12]", "F-minor Dub is on-grid, not swung"
+    assert_includes row, "dr:[62,80]", "F-minor Dub wants a driven master"
 
     kick = boot_drum.fetch("k")
     [0, 4, 8, 12].each do |step|
@@ -138,7 +155,9 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_keyboard_shortcuts_work_from_welcome_and_range_controls
-    handler = js[/function handleKeys\(e\)(.*?)\n\}/m, 1] or raise "no handleKeys"
+    # The capture must run to the end of the function body, not to its first
+    # inner closing brace: the welcome branch closes on its own line.
+    handler = js[/function handleKeys\(e\)\{(.*?)(?=\n\/\/ One gesture)/m, 1] or raise "no handleKeys"
     assert_includes handler, "$id('welcome-start').click()"
     assert_includes handler, "toggleTrackMute"
     refute_includes handler, "if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;"
@@ -146,7 +165,7 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_welcome_overlay_does_not_swallow_advertised_shortcuts
-    handler = js[/function handleKeys\\(e\\)(.*?)\\n\\}/m, 1] or raise "no handleKeys"
+    handler = js[/function handleKeys\(e\)\{(.*?)(?=\n\/\/ One gesture)/m, 1] or raise "no handleKeys"
     assert_includes handler, "k==='p'"
     assert_includes handler, "const supportedShortcut=['s','r','e','l','t','m'].includes(k)"
     assert_includes handler, "dismissWelcome();"
@@ -255,7 +274,7 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_boot_installs_a_fixed_chain_and_never_randomizes
-    init = js[/async function initAudio\(\).*?(?=\n(?:async )?function )/m] or raise "no initAudio"
+    init = js[/async function initAudio\([^)]*\).*?(?=\n(?:async )?function )/m] or raise "no initAudio"
     assert_includes init, "installDefaultFX()"
     assert_includes init, "if(st_.randomizeFxPending){st_.randomizeFxPending=false;randomizeFX();}else applyFX();"
     refute_match(/installDefaultFX\(\);\s*randomizeFX\(\);/, init,
@@ -355,16 +374,6 @@ class TestRg69Defaults < Minitest::Test
   end
   private
 
-  def boot_aud
-    body = js[/let aud_=\{(.*?)\};/m, 1] or raise "no aud_ boot defaults in rg69.js"
-    body.scan(/(\w+):([\d.]+)/).to_h { |key, value| [key.to_sym, value.to_f] }
-  end
-
-  def boot_pattern
-    body = js[/let pat_=\{(.*?)\};/m, 1] or raise "no pat_ boot patterns in rg69.js"
-    body.scan(/(\w+):'([^']+)'/).to_h { |lane, key| [lane.to_sym, key] }
-  end
-
   def range_value(name)
     match = html.match(/id="#{Regexp.escape(name)}"\s+type="range"[^>]*\bvalue="([\d.]+)"/)
     raise "rg69.html has no range ##{name}" unless match
@@ -372,20 +381,12 @@ class TestRg69Defaults < Minitest::Test
     match[1].to_f
   end
 
-  # The keys a pattern table declares, read from the `const <TABLE>={ ... }`
-  # block so a default can be checked against what the engine actually carries.
-  def pattern_keys(lane)
-    table = { "d" => "DRUM_PATTERNS", "b" => "BASS_PATS", "k" => "KEYS_PATS", "p" => "PAD_PATS" }
-    name = table.fetch(lane)
-    block = js[/const #{name}=\{(.*?)\n\};/m, 1] or raise "no #{name} table in rg69.js"
-    block.scan(/^\s*'([^']+)':/).flatten
-  end
-
   def style_names = js.scan(/\{n:'([^']+)'/).flatten
 
-  def boot_drum
+  # The F-minor Dub row is the engine-original boot anchor; other tests read
+  # their tables directly. Key defaults to bluehour's four-on-the-floor grid.
+  def boot_drum(key = "bluehour")
     block = js[/const DRUM_PATTERNS=\{(.*?)\n\};/m, 1] or raise "no DRUM_PATTERNS table"
-    key = boot_pattern.fetch(:d)
     row = block[/'#{Regexp.escape(key)}':tpP\(\{(.*?)\}\)/m, 1] or raise "no drum pattern #{key}"
     row.scan(/(\w+):\[([^\]]*)\]/).to_h do |lane, list|
       [lane, list.split(",").map { |value| value.strip.empty? ? 0.0 : value.to_f }]
