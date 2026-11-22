@@ -1304,8 +1304,15 @@ const k=e.key.toLowerCase();
 const welcome=$id('welcome');
 const welcomeOpen=welcome&&getComputedStyle(welcome).display!=='none';
 if(welcomeOpen){
-if((k===' '||k==='enter')&&!e.repeat){e.preventDefault();$id('welcome-start').click();}
+if((k===' '||k==='enter'||k==='p')&&!e.repeat){
+e.preventDefault();
+$id('welcome-start').click();
 return;
+}
+const supportedShortcut=['s','r','e','l','t','m'].includes(k)||
+((k==='z'||k==='c'||k==='v')&&(e.ctrlKey||e.metaKey));
+if(!supportedShortcut)return;
+dismissWelcome();
 }
 if(k===' '&&target?.matches?.('button,a,summary,[role="button"]'))return;
 if(k===' '&&!e.repeat){e.preventDefault();$id('play').click();}
