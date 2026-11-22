@@ -134,6 +134,31 @@ class TestScanSpeedPaths < Minitest::Test
     previous_enabled ? ENV["MASTER_SCAN_PROGRESS"] = previous_enabled : ENV.delete("MASTER_SCAN_PROGRESS")
   end
 
+  def test_console_progress_uses_a_minute_heartbeat_and_a_compact_line
+    processor = Master::Fix::Scan::FileProcessor.new
+    processor.instance_variable_set(:@progress_path, "")
+    snapshot = {
+      "state" => "running", "pass" => "lexical", "law" => "ROBUSTNESS_HOMEOSTASIS",
+      "file" => "MASTER/data/laws.yml", "checks" => 12, "n" => 2, "total" => 7,
+      "active" => 3, "at" => Time.now.to_f - 43,
+    }
+    lines = []
+
+    Master::Trace::Dmesg.stub(:status, ->(unit, message, **_options) { lines << "#{unit}: #{message}" }) do
+      Process.stub(:clock_gettime, ->(*) { 100.0 }) do
+        assert_equal 95.0, processor.send(:emit_progress, snapshot, 95.0)
+        assert_empty lines, "a five-second heartbeat is unnecessary line noise"
+
+        assert_equal 40.0, processor.send(:emit_progress, snapshot, 40.0)
+      end
+    end
+
+    assert_equal 1, lines.length
+    assert_match(/\\Ascan0: active lexical\\/ROBUSTNESS_HOMEOSTASIS MASTER\\/data\\/laws\\.yml, 2\\/7 laws, 3 workers, 43s\\z/, lines.first)
+    refute_includes lines.first, "checks="
+    refute_match(/law=.*law=/, lines.first)
+  end
+
   def test_cross_file_findings_build_with_the_law_key
     Dir.mktmpdir do |root|
       %w[a b c].each { |name| write(root, "#{name}.rb", "x = ENV.fetch(\"SHARED_KEY\")\n") }

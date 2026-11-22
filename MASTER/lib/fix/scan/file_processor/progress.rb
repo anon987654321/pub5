@@ -15,7 +15,8 @@ module Master
       class FileProcessor
         PROGRESS_POLL_SECONDS = 1.0
         PROGRESS_IDLE_GRACE_SECONDS = 3.0
-        PROGRESS_HEARTBEAT_SECONDS = 5.0
+        # Match the scan-level checkpoint cadence; a live spinner covers the gaps.
+        PROGRESS_HEARTBEAT_SECONDS = 60.0
 
         private
 
@@ -235,8 +236,8 @@ module Master
 
         def progress_line(row)
           format(
-            "active pass=%s law=%s file=%s checks=%s law=%s/%s workers=%s for %ds",
-            row.fetch("pass"), row.fetch("law"), row.fetch("file"), row.fetch("checks"),
+            "active %s/%s %s, %s/%s laws, %s workers, %ds",
+            row.fetch("pass"), row.fetch("law"), row.fetch("file"),
             row.fetch("n"), row.fetch("total"), row.fetch("active", 1),
             [Time.now.to_f - row.fetch("at").to_f, 0].max.round
           )
