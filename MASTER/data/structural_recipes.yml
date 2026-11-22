@@ -50,20 +50,20 @@ recipes:
       end
       === WRITE RAILS/brgen/engines/marketplace/app/controllers/marketplace/listings_controller.rb
       # frozen_string_literal: true
-      
+
       class Marketplace::ListingsController < Marketplace::BaseController
           include StorefrontSearch
         include Shared::TwoFactorAuth
-      
+
         rate_limit to: 20, within: 3.minutes, only: %i[create],
           with: -> { redirect_to listings_path, alert: t("flash.listings_rate_limited") }
-      
+
         allow_unauthenticated_access only: %i[index show]
         before_action :require_user_session, only: %i[new create]
         before_action :set_listing, only: %i[show edit update destroy renew]
         # 2FA only for real accounts; guests list without identity ceremony.
         before_action -> { require_two_factor!(Current.user) }, only: %i[new create], if: :authenticated?
-      
+
         def index
           scope = policy_scope(Marketplace::Listing).with_attached_photos.includes(:user, :category)
           scope = apply_live_search(scope, columns: %w[title description location], vertical: "marketplace", filters: { category_id: params[:category_id] }.compact) if live_search_query.present?
@@ -105,14 +105,14 @@ recipes:
           # kind yet, which the results say differently from a search that found none.
           narrowing = params.values_at(:from, :category_id, :condition, :min_price, :max_price, :lat)
           @narrowed = live_search_query.present? || narrowing.any?(&:present?)
-      
+
           finish_storefront_search(partial: "marketplace/listings/live_search_results")
         end
-      
+
         def show
           authorize @listing
           return if redirect_id_to_slug(@listing)
-      
+
           @buy_box_result = Marketplace::BuyBoxSelector.for(@listing)
           @buy_box_reasons = @buy_box_result&.reasons_for(@listing) if Current.user.present? && Current.user.id == @listing.user_id
           @listing.increment!(:views_count)
@@ -130,7 +130,7 @@ recipes:
           @categories = Marketplace::Category.roots.includes(:children)
           @question = Marketplace::Question.new if Current.user.present?
         end
-      
+
         def new
           authorize Marketplace::Listing
           @kind = Marketplace::Listing.kind_from(params[:kind])
@@ -140,7 +140,7 @@ recipes:
           @listing.build_gig_detail if @kind == "gig"
           @categories, @stores = listing_form_options
         end
-      
+
         def create
           authorize Marketplace::Listing
           permitted = listing_params_for_kind(listing_params[:kind].presence || "goods")
@@ -169,12 +169,12 @@ recipes:
             render :new, status: :unprocessable_entity
           end
         end
-      
+
         def edit
           authorize @listing
           @categories, @stores = listing_form_options
         end
-      
+
         def update
           authorize @listing
           permitted = listing_update_params
@@ -192,23 +192,23 @@ recipes:
             render(:edit, status: :unprocessable_entity)
           end
         end
-      
+
         def destroy
           authorize @listing
           @listing.update!(status: "removed")
           redirect_to listings_path
         end
-      
+
         def renew
           authorize @listing
           @listing.renew!
           redirect_to listing_path(@listing), notice: t("flash.marketplace.listing_renewed")
         end
-      
+
         private
-      
+
         def set_listing = (@listing = find_by_slug_or_id(Marketplace::Listing.includes(:user, :store, :category, photos_attachments: :blob, video_attachment: :blob), params[:id]))
-      
+
         # The forms send kroner (price_kroner and the detail *_kroner fields). The øre
         # fields stay permitted for callers that already post them.
         def listing_params
@@ -222,14 +222,14 @@ recipes:
             gig_detail_attributes: %i[pay_kroner pay_cents starts_at hours]
           )
         end
-      
+
         # Only the detail block for the kind being listed. Permitting all three would
         # let a job advert arrive carrying rent, and the row would sit there with
         # nothing rendering it.
         def listing_form_options
           [Marketplace::Category.all, Marketplace::Store.active.where(owner: Current.user).order(:name)]
         end
-      
+
         def assign_listing_source(listing, source, store_id)
           if source == "shop"
             store = Marketplace::Store.active.find_by(id: store_id, owner_id: Current.user.id)
@@ -242,7 +242,7 @@ recipes:
             listing.store = nil
           end
         end
-      
+
         def listing_params_for_kind(kind)
           permitted = listing_params
           %w[job housing gig].each do |other_kind|
@@ -250,14 +250,14 @@ recipes:
           end
           permitted
         end
-      
+
         # kind is fixed at create. Switching a goods listing to a job afterwards would
         # drop the price requirement from a listing buyers already hold offers on.
         def listing_update_params = listing_params_for_kind(@listing.kind).except(:kind)
-      
+
         def nearby_listings_for(listing)
           return Marketplace::Listing.none unless listing.geo?
-      
+
           # Nearby means nearby of the same kind: a flat for rent has nothing to say
           # about the bicycles around it.
           policy_scope(Marketplace::Listing).active
@@ -266,16 +266,16 @@ recipes:
             .nearby(listing.latitude, listing.longitude, 5)
             .limit(6)
         end
-      
+
         def listing_distances(listings, lat:, lng:)
           return {} if lat.blank? || lng.blank?
-      
+
           listings.each_with_object({}) do |listing, distances|
             distance = listing.distance_to(lat, lng)
             distances[listing.id] = distance if distance
           end
         end
-      
+
         # Featured deals first; fill with popular active listings. Hidden while
         # searching or category-filtering so the grid stays the primary answer.
         #
@@ -285,7 +285,7 @@ recipes:
         # here or the page contradicts itself.
         def top_offers_for_index(kind)
           return [] if live_search_query.present? || params[:category_id].present?
-      
+
           limit = 6
           offers = Marketplace::Deal.live.featured
             .merge(Marketplace::Listing.where(kind: kind))
@@ -295,14 +295,14 @@ recipes:
           offers += top_offer_listings(kind, excluding: offers, limit: limit - offers.size, sellers: presence_seller_ids)
           offers + top_offer_listings(kind, excluding: offers, limit: limit - offers.size)
         end
-      
+
         # Local business presence (__shared/config/plans.yml, featured_listings): a
         # paying business's active listings come after the featured deals and before
         # the popular fill. Paid placement, so the card carries the sponsored label.
         def presence_seller_ids
           @presence_seller_ids ||= Shared::BillingSubscription.granting(:featured_listings).distinct.pluck(:user_id)
         end
-      
+
         # The strip's listings that are there because their seller pays. Every
         # presence listing the strip has room for comes before the popular fill, so a
         # paying seller's listing in the strip is always a paid one.
@@ -310,12 +310,12 @@ recipes:
           sellers = presence_seller_ids
           offers.filter_map { |row| row.id if row.is_a?(Marketplace::Listing) && sellers.include?(row.user_id) }
         end
-      
+
         # Popular active listings of +kind+ not already in +excluding+ (deals or
         # listings), from +sellers+ when given.
         def top_offer_listings(kind, excluding:, limit:, sellers: nil)
           return [] unless limit.positive?
-      
+
           seen = excluding.map { |row| row.is_a?(Marketplace::Deal) ? row.listing_id : row.id }
           listings = policy_scope(Marketplace::Listing).active.where(kind:)
           scope = listings.where.not(id: seen)
@@ -323,30 +323,30 @@ recipes:
           scope = scope.with_attached_photos.includes(:category)
           scope.popular.limit(limit).to_a
         end
-      
+
         def favorited_listing_ids_for(*collections)
           return Set.new unless Current.user.present?
-      
+
           ids = collections.flatten.compact.filter_map do |row|
             row.is_a?(Marketplace::Deal) ? row.listing_id : row.id
           end
           return Set.new if ids.empty?
-      
+
           Current.user.marketplace_favorites.where(listing_id: ids).pluck(:listing_id).to_set
         end
       end
       === WRITE RAILS/brgen/engines/marketplace/engines/takeaway/app/controllers/takeaway/restaurants_controller.rb
       # frozen_string_literal: true
-      
+
       class Takeaway::RestaurantsController < Takeaway::BaseController
           include StorefrontSearch
-      
+
         allow_unauthenticated_access only: %i[index show]
         before_action :require_real_user, except: %i[index show]
         before_action :set_restaurant, only: %i[show edit update destroy]
         before_action :authorize_owner!, only: %i[edit update destroy]
         before_action :load_city_places, only: %i[new create edit update]
-      
+
         def index
           # :city as well as :user — the card renders restaurant.city, which was one
           # query per restaurant (14 on a full page).
@@ -361,10 +361,10 @@ recipes:
           @promo_restaurant, @promo_menu_item = promotional_menu_feature if live_search_query.blank? && params[:cuisine].blank?
           finish_storefront_search(partial: "takeaway/restaurants/live_search_results")
         end
-      
+
         def show
           return if redirect_id_to_slug(@restaurant)
-      
+
           @menu_items = @restaurant.menu_items.available.with_attached_photo.includes(:menu_category)
             .order(:menu_category_id, :name).to_a
           @favorited = Current.user.present? && Current.user.takeaway_favorite_restaurants.exists?(restaurant: @restaurant)
@@ -372,26 +372,26 @@ recipes:
           @can_review = can_leave_review?
           @nearby_restaurants = nearby_restaurants_for(@restaurant)
         end
-      
+
         def new
           @restaurant = Takeaway::Restaurant.new
         end
-      
+
         def create
           @restaurant = Current.user.takeaway_restaurants.build(restaurant_params)
           @restaurant.save ?
             redirect_to(restaurant_path(@restaurant), notice: t("flash.takeaway.restaurant_created")) :
             render(:new, status: :unprocessable_entity)
         end
-      
+
         def edit; end
-      
+
         def update
           @restaurant.update(restaurant_params) ?
             redirect_to(restaurant_path(@restaurant)) :
             render(:edit, status: :unprocessable_entity)
         end
-      
+
         def destroy
           if @restaurant.orders.exists?
             # A closed kitchen may stop trading, but its orders are the customer's
@@ -403,19 +403,19 @@ recipes:
             redirect_to restaurants_path
           end
         end
-      
+
         private
-      
+
         # Open or closed for the page's restaurants, read once when the cards ask.
         def open_status = (@open_status ||= Takeaway::OpeningHour.status_for(@restaurants.to_a.map(&:id)))
         helper_method :open_status
-      
+
         def set_restaurant = (@restaurant = find_by_slug_or_id(Takeaway::Restaurant.publicly_visible, params[:id]))
-      
+
         def authorize_owner!
           redirect_to(restaurants_path, alert: t("flash.takeaway.not_the_owner")) unless @restaurant.owner?(Current.user)
         end
-      
+
         def restaurant_params = params.require(:restaurant).permit(
           :name,
           :description,
@@ -431,11 +431,11 @@ recipes:
           :place_id,
           :cover,
         )
-      
+
         def load_neighbour_reviews
           base = @restaurant.reviews.includes(:user).order(created_at: :desc).limit(12)
           return base unless authenticated? && Current.user&.latitude
-      
+
           my_lat = Current.user.latitude.to_f
           my_lng = Current.user.longitude.to_f
           base.select do |r|
@@ -445,11 +445,11 @@ recipes:
             User.haversine(my_lat, my_lng, rlat.to_f, rlng.to_f) <= 4.0
           end
         end
-      
+
         def can_leave_review?
           authenticated? && Current.user.takeaway_orders.where(restaurant: @restaurant, status: "delivered").exists?
         end
-      
+
         def promotional_menu_feature
           restaurant = Takeaway::Restaurant.publicly_visible
             .joins(menu_items: :photo_attachment)
@@ -459,19 +459,19 @@ recipes:
             .distinct
             .first
           return [ nil, nil ] unless restaurant
-      
+
           item = restaurant.menu_items.find { |menu_item| menu_item.available? && menu_item.photo.attached? }
           [ restaurant, item ]
         end
-      
+
         def load_city_places
           city = Current.city_record
           @places = city ? Place.where(city_id: city.id).order(:name) : Place.none
         end
-      
+
         def nearby_restaurants_for(restaurant)
           return Takeaway::Restaurant.none unless restaurant.geo?
-      
+
           Takeaway::Restaurant.publicly_visible
             .where.not(id: restaurant.id)
             .nearby(restaurant.latitude, restaurant.longitude, 5)
@@ -480,7 +480,7 @@ recipes:
       end
       === WRITE RAILS/brgen/engines/radio/playlist/app/controllers/playlist/playlists_controller.rb
       # frozen_string_literal: true
-      
+
       class Playlist::PlaylistsController < Playlist::BaseController
           include Playlist::OwnerVisibility
         include Playlist::WaveformComments
@@ -492,30 +492,30 @@ recipes:
         # The embed is the page the playlist hands out as an iframe snippet, so any
         # site may frame it; every other page keeps the app-wide frame_ancestors :self.
         content_security_policy(only: :embed) { |policy| policy.frame_ancestors "*" }
-      
+
         def index
           tracks = local_discovery_tracks
           @featured_track = tracks.first
           @tracks = tracks.drop(1)
           @playlists = Playlist::Playlist.city_trending(Current.city_record).includes(:user).limit(8)
         end
-      
+
         def show
           return if redirect_id_to_slug(@playlist)
-      
+
           @tracks = playlist_tracks
           @dilla_sketches = @playlist.dilla_sketches.recent.includes(:user)
           @track_comments = waveform_comments_for(@tracks.map(&:track))
           active = @tracks.first&.track
           @comments = active ? (@track_comments[active.id] || []) : []
         end
-      
+
         # Creator analytics are intentionally aggregate-only. They show counts for
         # tracks in this playlist, never listener identities or private listening
         # histories. Listen rows already exist as the source of truth.
         def analytics
           return if redirect_id_to_slug(@playlist)
-      
+
           @analytics_entries = playlist_tracks.to_a
           track_ids = @analytics_entries.map(&:playlist_track_id)
           listens = Playlist::Listen.where(playlist_track_id: track_ids)
@@ -524,7 +524,7 @@ recipes:
           @listen_counts = listens.group(:playlist_track_id).count
           @analytics_entries.sort_by! { |entry| -@listen_counts.fetch(entry.playlist_track_id, 0) }
         end
-      
+
         def embed
           @tracks = playlist_tracks
           @embed_options = {
@@ -536,33 +536,33 @@ recipes:
           response.headers.delete("X-Frame-Options")
           render layout: false
         end
-      
+
         def new
           @playlist = Playlist::Playlist.new
         end
-      
+
         def create
           @playlist = Current.user.playlist_playlists.build(playlist_params)
           @playlist.save ?
             redirect_to(playlist_path(@playlist), notice: t("flash.playlist.playlist_created")) :
             render(:new, status: :unprocessable_entity)
         end
-      
+
         def edit; end
-      
+
         def update
           @playlist.update(playlist_params) ?
             redirect_to(playlist_path(@playlist)) :
             render(:edit, status: :unprocessable_entity)
         end
-      
+
         def destroy
           @playlist.destroy
           redirect_to playlists_path
         end
-      
+
         private
-      
+
         def local_discovery_tracks
           scope = Playlist::Track.publicly_visible.unexpired
             .includes(:user, :audio_file_attachment, :artwork_attachment)
@@ -570,49 +570,49 @@ recipes:
           scope = scope.where(users: { city_id: Current.city_record.id }) if Current.city_record
           scope.recent.limit(24).to_a
         end
-      
+
         def set_playlist
           @playlist = find_by_slug_or_id(Playlist::Playlist.includes(:user), params[:id])
           return if playlist_visible_to_viewer?
-      
+
           render template: "shared/members_only", status: :forbidden
         end
-      
+
         def playlist_visible_to_viewer?
           return owner_active? if @playlist.public_access?
-      
+
           Current.user && (
             @playlist.user_id == Current.user.id ||
             @playlist.collaborations.exists?(user_id: Current.user.id)
           )
         end
-      
+
         def playlist_params
           params.require(:playlist).permit(:name, :description, :public_access, :collaborative)
         end
-      
+
         def playlist_tracks
           @playlist.playlist_tracks.joins(:track).merge(Playlist::Track.unexpired)
                    .includes(track: [ { audio_file_attachment: :blob }, { artwork_attachment: :blob } ])
         end
-      
+
         # The canvas fillStyle wants a CSS colour; the embed links pass bare hex
         # (color=ff0000), and anything else falls back to the default.
         def embed_color
           hex = params[:color].to_s.delete_prefix("#")
           hex.match?(/\A(?:\h{3}|\h{6})\z/) ? "##{hex}" : "#00d4ff"
         end
-      
+
         def authorize_owner_or_editor
           return if Current.user == @playlist.user
           collab = @playlist.collaborations.find_by(user: Current.user)
           return if collab && %w[owner editor].include?(collab.role)
           redirect_to(playlist_path(@playlist), alert: t("shared.flash.not_authorized"))
         end
-      
+
         def authorize_analytics_owner
           return if Current.user == @playlist.user
-      
+
           redirect_to(playlist_path(@playlist), alert: t("shared.flash.not_authorized"))
         end
       end
