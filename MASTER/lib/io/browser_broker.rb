@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "json"
 require "securerandom"
 require "time"
 require "tmpdir"
@@ -46,6 +47,15 @@ module Master
       # Broker-issued and opaque to the adapter. `handle` is private.
       Lease = Data.define(:id, :host, :cdp_url, :expires_at) do
         def expired?(now = Time.now) = now >= expires_at
+
+        # The CDP websocket URL is a bearer capability: anyone who obtains it
+        # can control the live browser. Keep routine diagnostics useful without
+        # serializing that endpoint into logs, exceptions or model context.
+        def diagnostic = { id:, host:, expires_at: expires_at.utc.iso8601 }.freeze
+
+        def inspect = "#<#{self.class} #{diagnostic.map { |key, value| "#{key}=#{value.inspect}" }.join(" ")}>"
+        def to_s = inspect
+        def to_json(*arguments) = diagnostic.to_json(*arguments)
       end
 
       # What the engine returns from #start; only the broker stores it and only
