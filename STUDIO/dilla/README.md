@@ -68,9 +68,9 @@ not presented as recovered song melodies.
 A render writes `<name>.wav` plus three sidecars: `.quality.json` (measured
 peak, crest, LUFS estimate, stem energy shares), `.session.json` (what was
 arranged: voicings, pattern, fills, sample plan) and `.provenance.json`
-(seed, performer, every flag, invocation mode/style, renderer source digest,
-music-theory data digest, and the supplied sample loop's path/size/SHA-256
-when it is available). A missing or symlinked sample source is recorded as
+(seed, performer, every flag, invocation mode/style, renderer and
+`analog_core.rb` digests, every `data/*.json` digest, and the supplied
+sample loop's path/size/SHA-256 when it is available). A missing or symlinked sample source is recorded as
 unavailable, not treated as a reproducible input. These fingerprints make
 future replay checks possible; they do not yet provide a replay command or
 guarantee that external tools, Ruby version or an absent source file can be
