@@ -27,9 +27,8 @@ class TestLawFixtures < Minitest::Test
 
     assert_equal 1, findings_for(law, law.bad).size
     assert_empty findings_for(law, law.good)
-    assert_includes law.good, "Pathname.mktmpdir"
-    assert_includes law.good, ".find"
-    assert_includes law.good, ".rmtree"
+    assert_includes law.good, "Pathname.instance_method(:find)"
+    assert_includes law.good, "Pathname.instance_method(:rmtree)"
   end
 
   def self.fixtured
