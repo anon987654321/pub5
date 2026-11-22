@@ -54,9 +54,11 @@ module Autopoiesis
     def health_check_all
       manifest = load_manifest
       results = manifest["components"].map do |comp|
-        # Real checks would invoke the component's own probe.
-        ok = File.exist?(File.join(@repo_root, comp["path"].to_s)) || comp["path"].nil?
-        comp["status"] = ok ? "healthy" : "degraded"
+        # File presence is inventory evidence, not a component health check.
+        # Missing source is degraded; present source remains inconclusive until
+        # the component registers and runs its own probe.
+        present = comp["path"].nil? || File.file?(File.join(@repo_root, comp["path"].to_s))
+        comp["status"] = present ? "inconclusive" : "degraded"
         { id: comp["id"], status: comp["status"] }
       end
       save_manifest(manifest)
