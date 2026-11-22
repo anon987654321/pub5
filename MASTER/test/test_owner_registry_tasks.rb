@@ -530,6 +530,27 @@ class TestOwnerRegistryTasks < Minitest::Test
     assert_match(/independent ready route selected/, decision.reason)
   end
 
+  def test_adaptive_journey_stops_when_every_route_has_an_unsatisfied_dependency
+    planner = Master::Fix::AdaptiveJourney.new
+    evidence = [
+      { id: "source", sha256: "a" * 64, verified: true },
+      { id: "command", sha256: "b" * 64, verified: true },
+    ]
+    routes = [
+      { id: "release", actions: ["deploy production"], evidence_ids: %w[source command],
+        impact: 1.0, confidence: 0.95, priority: 1.0, cost: 0.2, risk: 0.05,
+        reversibility: "easy", dependencies: ["missing-preflight"] },
+      { id: "independent", actions: ["run independent check"], evidence_ids: %w[source command],
+        impact: 0.8, confidence: 0.9, priority: 0.1, cost: 0.1, risk: 0.0,
+        reversibility: "easy", dependencies: ["also-missing"] },
+    ]
+
+    error = assert_raises(ArgumentError) do
+      planner.choose(routes:, verified_evidence: evidence, objective: "")
+    end
+    assert_match(/no route has satisfied dependencies/, error.message)
+  end
+
   def test_adaptive_journey_refuses_unverified_or_ungrounded_routes
     planner = Master::Fix::AdaptiveJourney.new
     error = assert_raises(ArgumentError) do
