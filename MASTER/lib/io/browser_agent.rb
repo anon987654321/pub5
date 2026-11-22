@@ -300,7 +300,7 @@ module Master
 
           ferrum!
           lease = @broker.open(host: host.to_s.downcase, url:, headless:)
-          browser = Ferrum::Browser.new(**driver_options(lease))
+          browser = @broker.attach(lease.id, timeout: WebBrowse::TIMEOUT)
           page = browser.create_page
           @transport.secure_page(page, allowed_host: host.to_s.downcase)
           @sessions[key] = Session.new(browser:, page:, mutex: Mutex.new, host: host.to_s.downcase,
@@ -313,14 +313,6 @@ module Master
           end
           raise
         end
-      end
-
-      # A lease is mandatory: Ferrum attaches to the broker's CDP endpoint and
-      # cannot start a second, unowned Chromium process.
-      def driver_options(lease)
-        raise ArgumentError, "Core-owned browser lease is required" unless lease
-
-        { ws_url: lease.cdp_url, timeout: WebBrowse::TIMEOUT, process_timeout: WebBrowse::TIMEOUT }
       end
 
       def ferrum!
@@ -367,7 +359,7 @@ module Master
       end
 
       def render(state, links:)
-        snapshot = JSON.parse(state.page.evaluate(WebBrowse::SCRIPT))
+        snapshot = state.page.snapshot
         result = @transport.deliver_snapshot(snapshot.fetch("url", state.page.url), snapshot, links:)
         return result unless result.ok?
 
