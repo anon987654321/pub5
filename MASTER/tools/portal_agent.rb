@@ -63,12 +63,12 @@ module Master
                       else
                         scout(browser, policy)
                       end
-          
+
           rescout_proc = lambda do |browser, reason|
             warn "[rescout] Triggered: #{reason}. Re-evaluating page..."
             scout(browser, policy, [])
           end
-          
+
           crawler = Crawler.new(browser, selectors: selectors, evidence_dir: evidence,
                                 max_pages: @opts[:max_pages], delay: @opts[:delay], rescout: rescout_proc).call
           buckets = Filter.presort(crawler.papers)
@@ -106,12 +106,12 @@ module Master
       def scout(browser, policy, start_history = [])
         warn "[handoff] Log in yourself in the browser window (credentials never pass through the model), then press Enter." if start_history.empty?
         $stdin.gets if start_history.empty?
-        
+
         handoff = lambda do |action|
           warn "[handoff] #{action["reason"] || "operator action needed (2FA/CAPTCHA)"}. Resolve it in the window, then press Enter."
           $stdin.gets
         end
-        
+
         Scout.new(browser, policy: policy, gateway: Gateway.new(model: @opts[:model]), handoff: handoff).call(start_history)
       end
 
