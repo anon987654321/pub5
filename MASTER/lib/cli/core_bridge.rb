@@ -112,7 +112,7 @@ module Master
             council_required: mode_spec[:council],
           )
           world = build_world(root: workspace_root, container:, capabilities:, network: network_client(container), probe: probe_policy,
-                              browser: browser_broker(container, capabilities:))
+                              browser: browser_broker(container, capabilities:, event_bus: lifecycle_bus))
           browser = world.browser
           mission.transition!(:execute)
           effect_observer = build_effect_observer(
@@ -190,13 +190,25 @@ module Master
       # re-checks that capability on every call — so a refused profile gets nil
       # here and a refusal there. The destination check is the same SSRF guard
       # the http verb uses, applied before any process starts.
-      def browser_broker(container, capabilities:)
+      def browser_broker(container, capabilities:, event_bus:)
         return nil unless capabilities.allow?(:browser)
         return nil unless Master::Io::BrowserBroker::ChromeEngine.available?
+        raise ArgumentError, "browser broker requires durable lifecycle persistence" unless event_bus.respond_to?(:publish_required)
+
+        ledger = lambda do |event:, phase:, lease:, host:|
+          event_bus.publish_required(
+            "core:browser:#{event}",
+            capability: :browser,
+            phase:,
+            lease_id: lease,
+            host:,
+          )
+        end
 
         Master::Io::BrowserBroker.new(
           capabilities:,
           destination_check: ->(url) { browser_destination_refusal(url) },
+          ledger:,
         )
       end
 
