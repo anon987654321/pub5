@@ -340,3 +340,87 @@ curl -fsS http://127.0.0.1:38182/up
 doas zsh RAILS/brgen/brgen.sh
 cd RAILS/brgen && bin/rails test
 ```
+
+## Full production redeployment prompt
+
+Use the following instruction with MASTER from the operator workstation when preparing to
+restore the production network. It defines the intended full redeployment; it does not waive
+any admission gate.
+
+Restore the pub5 production network on vm23 from one exact, reviewed commit on
+\`origin/main\`. The deployment scope is the tracked OpenBSD host mirror and every active
+production target in \`OPENBSD/deploy_inventory.json\`, generated from \`RAILS/apps.yml\`,
+including the MASTER web application. Do not invent targets from DNS records, old scripts,
+or historical notes. The canonical host is vm23 and its repository checkout is
+\`/home/dev/pub5\`.
+
+Work from the root of a clean workstation checkout. Read the complete current
+\`OPENBSD/RUNBOOK.md\`, \`OPENBSD/data/operator.yml\`, \`OPENBSD/README.md\`,
+\`MASTER/README.md\`, \`RAILS/apps.yml\`, \`OPENBSD/deploy_inventory.json\`, and the
+relevant deployment source, tests and recovery instructions. Resolve conflicts between
+implementation, tests, safety checks, runbooks and operator recipes before touching the host.
+For every OpenBSD-native command, service action or configuration interface, establish vm23's
+exact OpenBSD release and architecture and complete the runbook's target-version manual-page
+preflight. Do not substitute remembered behavior or current manuals for the target release.
+
+Begin with read-only inspection. Confirm that the workstation is on \`main\`, the working tree
+is clean, and local \`HEAD\` exactly equals the fetched \`origin/main\` SHA. Record that SHA.
+Verify vm23 identity, release, architecture, repository path, available disk and memory,
+current service state, existing deployment sessions and unresolved recovery receipts. Compare
+the host checkout and deployed app revisions with the pinned source. Inspect the intended
+service, filesystem, doas and ownership boundaries. Do not print secrets or copy credentials
+into logs.
+
+Run the complete local deployment admission checks, including the deploy rehearsal, OpenBSD
+configuration and safety checks, relevant MASTER boot/law checks, and the required Rails
+source and application test suites. Review every failure; a skipped, timed-out, inconclusive
+or unexecuted check is not a pass. Confirm that the deployment inventory, host mirror,
+installed configuration expectations and recovery path agree. Do not use break-glass
+environment variables or flags to turn a failed check into a pass.
+
+**Known blocker to resolve before deployment:** the repository has a brokerless deployment
+contract in the OpenBSD safety check, and \`vps-deploy\` describes native \`rcctl\` service
+control, but the tracked \`pub5-admin\` program and manual page remain. The deployment contract
+test and parts of the runbook and \`OPENBSD/data/operator.yml\` still assert or prescribe the
+older broker design. Trace every remaining broker reference and caller. Choose and implement
+one privilege architecture consistently across the deployer, helpers, doas policy, mirror,
+tests, safety checks, recovery paths and documentation. Audit the actual privilege boundary;
+do not simply delete the broker or restore broker calls to silence a test. Re-run the focused
+contracts and all admission checks after the migration. Until they pass together, report
+\`BLOCKED\` and do not deploy.
+
+Check domain ownership, DNS delegation, NSD zones, relayd routes, certificate SANs and public
+HTTPS independently. A city catalogue entry, DNS zone, certificate or relayd keypair is not
+proof that a hostname is publicly live. Deploy only hostnames with verified ownership and
+an approved service route. Preserve pending, parked, stale and unverified domains; do not
+publish them as restored. Do not make speculative registrar, DNS, firewall or certificate
+changes as part of an application deployment.
+
+When—and only when—every preflight item is \`PASS\`, execute the full deployment from the
+workstation repository root with this one canonical command:
+
+\`MASTER/bin/operator vps deploy all --remote\`
+
+This is the operator entrypoint. It performs the workstation preflight, pins the proven SHA,
+starts the serial deployment through the vm23 tmux session, applies the tracked host mirror
+and deploys the registered applications, including MASTER/web. Let its normal wait and
+post-deployment checks finish. Do not substitute a direct SSH command, invoke
+\`OPENBSD/bin/vps-deploy\` by hand, call individual app deploy scripts, run a separate mirror
+apply, or start parallel app deployments. Do not run \`/fix\` on vm23.
+
+After completion, capture the exact deployed SHA and the full deployment receipt. Verify
+\`MASTER/bin/operator vps state\`, the remote service and public route canaries, and
+\`OPENBSD/bin/domain_watch.rb --tls\`. Check each registered app and each intended public
+hostname separately. Report which services answer, which routes pass, which domains have
+verified DNS/TLS/HTTPS, and which remain offline or pending. A successful command launch,
+a tmux session, a successful mirror apply, or a certificate alone is not deployment success.
+
+**Stop and report immediately** if the checkout is dirty or divergent; the host identity or
+manual evidence is incomplete; any test, safety check or canary fails or cannot run; the
+privilege model is inconsistent; the host has insufficient resources; a deployment session
+or recovery receipt is unresolved; the pinned SHA differs at any stage; or DNS, TLS, service
+ownership or rollback state is uncertain. State the exact failed check, command, exit status,
+host and SHA, observed evidence, and the next safe read-only diagnostic. Do not retry
+automatically, skip tests, weaken a gate, change unrelated host configuration, or claim
+success. Recovery and rollback are deliberate, separately reviewed operations.
+
