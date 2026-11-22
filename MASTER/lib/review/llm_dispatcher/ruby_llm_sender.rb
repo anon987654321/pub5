@@ -13,6 +13,38 @@ module Master
 
         private
 
+        # Native tool-capable models sometimes return executable-looking tool calls as
+        # plain assistant text. A bounded retry through ReAct gives the same model a
+        # working protocol for the same governed tools.
+        #
+        # Never replay after native calls have run: they may have changed the world.
+        # Streaming is excluded because the first response may already be visible.
+        def send_ruby_llm_with_manual_tool_fallback(selected_model, messages, sys:, stream:, image: nil,
+                                                   temperature: nil, format: nil, &blk)
+          previous_rounds = Fiber[:master_native_tool_rounds]
+          return send_ruby_llm(selected_model, messages, sys:, stream:, image:, temperature:, format:, &blk) if
+            stream || format || Fiber[:master_no_tools] || Array(@tools).empty?
+
+          Fiber[:master_native_tool_rounds] = 0
+          result = send_ruby_llm(selected_model, messages, sys:, stream:, image:, temperature:, format:, &blk)
+          native_rounds = Fiber[:master_native_tool_rounds].to_i
+          return result unless result.ok? && native_rounds.zero?
+
+          response = result.to_s
+          names = unexecuted_tool_call_names(response)
+          return result if names.empty? || !unexecuted_tool_call_response?(response, names)
+
+          @bus&.publish(
+            "llm:manual_tool_fallback",
+            model: selected_model,
+            reason: "native_tool_call_returned_as_text",
+            tools: names.first(8),
+          )
+          react_tool_loop(selected_model, messages, sys:, stream: false, image:)
+        ensure
+          Fiber[:master_native_tool_rounds] = previous_rounds
+        end
+
         def send_ruby_llm(selected_model, messages, sys:, stream:, image: nil, temperature: nil, format: nil, &blk)
           chat_session = build_chat_session(selected_model, messages, sys:, image:, temperature:, format:)
           last_text = (messages.last || {})[:content].to_s
@@ -74,6 +106,7 @@ module Master
             next unless message.respond_to?(:tool_call?) && message.tool_call?
 
             rounds += 1
+            Fiber[:master_native_tool_rounds] = Fiber[:master_native_tool_rounds].to_i + 1
             raise ToolRoundLimit, "tool calling passed #{REACT_MAX_STEPS} rounds" if rounds > REACT_MAX_STEPS
           end
           chat_session.after_message(&count)
