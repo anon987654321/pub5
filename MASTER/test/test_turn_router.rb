@@ -131,6 +131,20 @@ class TurnRouterTest < Minitest::Test
                  router.send(:explicit_fix_request, "Please apply /fix MASTER")
   end
 
+  def test_operator_shell_commands_are_not_sent_to_the_model_from_the_prompt
+    agent = Object.new
+    agent.define_singleton_method(:ask_once) { |*| flunk "shell command text must not reach intent classification" }
+
+    result = Master::CLI::TurnRouter.call(
+      message: "bin/operator vps deploy all --remote",
+      container: build_container(agent:),
+    )
+
+    assert result.ok?
+    assert_includes result.value!.fetch(:output), "simply ask MASTER"
+    assert_includes result.value!.fetch(:output), "guarded deployment workflow"
+  end
+
   def test_semantic_operator_routing_resolves_inventory_aliases_and_exclusions
     response = {
       "intent" => "operator_action", "operation" => "deploy", "environment" => "production",
