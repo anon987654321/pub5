@@ -104,13 +104,13 @@ class TestEntrypointRequires < Minitest::Test
     assert status.success?, "git ls-files could not inspect the index: #{output}"
 
     broken = output.lines.filter_map do |entry|
-      mode, _object, _stage, path = entry.split(/\\s+/, 4)
+      mode, _object, _stage, path = entry.split(/\s+/, 4)
       next if path.to_s.end_with?(".md")
 
       "#{path}: index mode #{mode}" unless mode == "100755"
     end
 
-    assert_empty broken, "Direct bin entrypoints must be committed as mode 100755:\\n#{broken.join("\\n")}"
+    assert_empty broken, "Direct bin entrypoints must be committed as mode 100755:\n#{broken.join("\n")}"
   end
 
   def test_ruby_entrypoints_parse
