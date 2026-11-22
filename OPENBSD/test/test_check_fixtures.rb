@@ -319,6 +319,50 @@ class DeploySmokeFixtureTest < Minitest::Test
     failures
   end
 
+  def httpd_findings(body)
+    failures = []
+    check_httpd(failures, body)
+    failures
+  end
+
+  def test_httpd_acme_only_contract_passes
+    source = <<~HTTPD
+      server "*" {
+        listen on 0.0.0.0 port 80
+        location "/.well-known/acme-challenge/*" {
+          root "/acme"
+          request strip 2
+        }
+      }
+    HTTPD
+
+    assert_empty httpd_findings(source)
+  end
+
+  def test_httpd_redirect_and_secondary_site_are_rejected
+    source = <<~HTTPD
+      server "*" {
+        listen on 0.0.0.0 port 80
+        location "/.well-known/acme-challenge/*" {
+          root "/acme"
+          request strip 2
+        }
+        location * {
+          block return 301 "https://$HTTP_HOST$REQUEST_URI"
+        }
+      }
+      server "brgen.no" {
+        listen on 127.0.0.1 port 6666
+        root "/postpro"
+      }
+    HTTPD
+
+    findings = httpd_findings(source)
+    assert_includes findings.join("\\n"), "must have exactly one server block"
+    assert_includes findings.join("\\n"), "only /.well-known/acme-challenge/* may be served"
+    assert_includes findings.join("\\n"), "wildcard redirects and non-ACME content are forbidden"
+  end
+
   def test_a_warmup_that_needs_a_token_is_refused
     body = %(curl -fsS "http://127.0.0.1:${PORT}/chat/metrics?token=${TOKEN}"\n)
     named = rc_findings(body).join(" | ")

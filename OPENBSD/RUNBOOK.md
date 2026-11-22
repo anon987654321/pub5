@@ -113,6 +113,15 @@ Runtime contract: TLS terminates at relayd; apps listen on loopback-only ports;
 Rails uses SQLite plus Solid Queue/Cache; secrets live in `/etc/*.env`; source
 of truth on the VPS is `/home/dev/pub5`; long deploys run under tmux.
 
+HTTP serving is intentionally narrower: `httpd` listens on port 80 solely for
+`/.well-known/acme-challenge/*` (HTTP-01). It does not redirect ordinary
+requests, host static sites or terminate TLS. `acme-client` writes challenge
+files under `/var/www/acme`; certificate renewal restarts `relayd` only when a
+certificate actually changes. `relayd` terminates TLS on port 443 and forwards
+all application traffic to the registered Falcon loopback services. The former
+localhost Postpro static-photo preview on port 6666 is retired; Postpro itself
+remains a local processing tool.
+
 Check flow — local: `OPENBSD/bin/check` → `verify_deploy_identity` → Rails
 production/domain/ phantom/frontend checks → OpenBSD deploy smoke. Operator: `git
 pull --ff-only` on vm23 → `vps_ci.sh <app>` → `OPERATOR.sh` or per-app deploy →

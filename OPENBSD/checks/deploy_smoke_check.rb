@@ -46,20 +46,37 @@ end
 # acme-client writes HTTP-01 challenges to /var/www/acme, which is "/acme" inside
 # httpd's chroot. Lose the location and renewal fails without a word until every
 # certificate lapses.
-def check_httpd(failures)
-  unless File.file?(HTTPD)
-    failures << "missing tracked httpd.conf"
-    return
+def check_httpd(failures, source = nil)
+  unless source
+    unless File.file?(HTTPD)
+      failures << "missing tracked httpd.conf"
+      return
+    end
+    source = File.read(HTTPD)
   end
 
-  httpd = File.read(HTTPD)
-  failures << "httpd: no listener on port 80" unless httpd.match?(/^\s*listen on \S+ port 80\b/)
-  acme = httpd[%r{location "/\.well-known/acme-challenge/\*" \{(.*?)\}}m, 1]
+  server_count = source.scan(/^\s*server\b/).length
+  failures << "httpd: must have exactly one server block for ACME only" unless server_count == 1
+
+  listeners = source.lines.grep(/^\s*listen\s/)
+  unless listeners.length == 1 && listeners.first.match?(/\Alisten on 0\.0\.0\.0 port 80\s*\z/)
+    failures << "httpd: only 0.0.0.0:80 may listen; TLS and app traffic belong to relayd"
+  end
+
+  locations = source.lines.grep(/^\s*location\s/)
+  unless locations.length == 1 && locations.first.include?('"/.well-known/acme-challenge/*"')
+    failures << "httpd: only /.well-known/acme-challenge/* may be served"
+  end
+
+  acme = source[%r{location "/\.well-known/acme-challenge/\*" \{(.*?)\}}m, 1]
   if acme.nil?
     failures << "httpd: no /.well-known/acme-challenge/ location"
-  elsif !acme.include?('root "/acme"')
-    failures << "httpd: the ACME location must serve root \"/acme\", acme-client's challengedir inside the chroot"
+  elsif !acme.include?('root "/acme"') || !acme.include?("request strip 2")
+    failures << "httpd: ACME location must map /var/www/acme through root \"/acme\" and request strip 2"
   end
+
+  failures << "httpd: wildcard redirects and non-ACME content are forbidden" if
+    source.match?(/\bblock\s+return\b|\broot\s+(?!["']\/acme["'])|port\s+6666|\/postpro/i)
 end
 
 MASTER_RC = File.join(ROOT, "OPENBSD", "mirror", "etc", "rc.d", "master")
