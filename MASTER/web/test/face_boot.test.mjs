@@ -854,7 +854,7 @@ test("probe_chat_e2e script covers primer chat and felt state", () => {
 });
 
 test("probe_webgl_guard covers before-tap canvas lock and after-tap unlock", () => {
-  const probe = readFileSync(join(root, "script", "probe_webgl_guard.mjs"), "utf8");
+  const probe = readFileSync(join(root, "script", "probe_webgl_guard.rb"), "utf8");
   const ciProbe = readFileSync(join(root, "script", "ci_web_probe"), "utf8");
 // Not /HTMLCanvasElement/. The probe used to name the class because it
 // patched the prototype; it now asks a canvas it did not have before the
