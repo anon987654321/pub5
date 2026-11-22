@@ -65,6 +65,16 @@ class TestRg69Defaults < Minitest::Test
   # reaches Chebyshev 30, Distortion 0.8, BitCrusher 2 bits and PitchShift ±12
   # — at wet. A bad roll produced a crushed, detuned master, which read as
   # "unusable and inaudible". The boot must now install one fixed chain.
+  def test_audio_context_resume_is_invoked_directly_in_trusted_click_handlers
+    welcome = js[/\$id\('welcome-start'\)\.addEventListener\('click',async\(\)=>\{(.*?)\n\}\);/m, 1]
+    play = js[/\$id\('play'\)\.addEventListener\('click',async\(\)=>\{(.*?)\n\}\);/m, 1]
+    refute_nil welcome
+    refute_nil play
+    assert_match(/const activationPromise=Tone\.start\(\);\s*await startPlayback\(activationPromise\);/, welcome)
+    assert_match(/const activationPromise=Tone\.start\(\);\s*await startPlayback\(activationPromise\);/, play)
+    assert_includes js, "async function initAudio(activationPromise)"
+  end
+
   def test_transport_callback_uses_numeric_note_durations
     body = js[/function triggerNotes\(.*?(?=\nfunction scheduleLoop)/m] or raise "no triggerNotes"
     refute_match(/triggerAttackRelease\([^;]*['"](?:8n|2n|16n|32n)['"]/, body,
