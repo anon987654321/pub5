@@ -99,13 +99,13 @@ class TaskStewardTest < Minitest::Test
     end
   end
 
-  def test_expired_automatic_mission_at_attempt_limit_is_blocked_without_reentry
+  def test_expired_automatic_mission_is_reentered_after_many_attempts
     Dir.mktmpdir do |root|
       mission = write_mission(root, origin: "fold")
       mission.send(:with_lock) do
         record = mission.instance_variable_get(:@record)
         record["state"] = "running"
-        record["attempt_count"] = Master::Fix::Mission::MAX_AUTOMATIC_ATTEMPTS
+        record["attempt_count"] = 50
         record["lease_owner"] = nil
         record["lease_until"] = nil
         mission.send(:persist!)
@@ -113,18 +113,77 @@ class TaskStewardTest < Minitest::Test
 
       calls = []
       steward = Master::Fix::TaskSteward.new(
-        root:, bus: nil,
-        runner: ->(**) { calls << true; :continued },
+        root:, bus: nil, runner: ->(**) { calls << true; :continued },
       )
-      result = steward.tick!
 
+      assert_equal :continued, steward.tick!
+      assert_equal [true], calls
+      assert_equal 50, Master::Fix::Mission.current(root:).fetch("attempt_count")
+    end
+  end
+
+  def test_transient_failure_is_deferred_with_taxonomy_backoff
+    Dir.mktmpdir do |root|
+      write_mission(root)
+      steward = Master::Fix::TaskSteward.new(
+        root:, bus: nil, runner: ->(**) { raise "provider overload" },
+      )
+
+      result = steward.tick!
       assert result.err?
-      assert_empty calls
+      record = Master::Fix::Mission.current(root:)
+      assert_equal "waiting", record.fetch("state")
+      assert_equal true, record.fetch("auto_continue")
+      assert_equal 1, record.fetch("retry_count")
+      assert_operator Time.iso8601(record.fetch("next_wake_at")), :>, Time.now.utc
+      assert_match(/transient:/, record.fetch("wake_reason"))
+    end
+  end
+
+  def test_exhausted_provider_uses_long_reprobe_backoff
+    Dir.mktmpdir do |root|
+      write_mission(root)
+      steward = Master::Fix::TaskSteward.new(
+        root:, bus: nil, runner: ->(**) { raise "insufficient credits" },
+      )
+
+      steward.tick!
+      record = Master::Fix::Mission.current(root:)
+      delay = Time.iso8601(record.fetch("next_wake_at")) - Time.now.utc
+      assert_equal "waiting", record.fetch("state")
+      assert_operator delay, :>, Master::Fix::Mission::RETRY_MAX_SECONDS - 3
+      assert_operator delay, :<=, Master::Fix::Mission::RETRY_MAX_SECONDS
+      assert_match(/exhausted:/, record.fetch("wake_reason"))
+    end
+  end
+
+  def test_permanent_failure_fails_only_the_current_mission
+    Dir.mktmpdir do |root|
+      write_mission(root)
+      steward = Master::Fix::TaskSteward.new(
+        root:, bus: nil, runner: ->(**) { raise "permission denied" },
+      )
+
+      steward.tick!
+      record = Master::Fix::Mission.current(root:)
+      assert_equal "failed", record.fetch("state")
+      assert_equal false, record.fetch("auto_continue")
+      assert_match(/permanent:/, record.fetch("error"))
+    end
+  end
+
+  def test_ambiguous_failure_requires_human_review
+    Dir.mktmpdir do |root|
+      write_mission(root)
+      steward = Master::Fix::TaskSteward.new(
+        root:, bus: nil, runner: ->(**) { raise "partial write outcome unknown" },
+      )
+
+      steward.tick!
       record = Master::Fix::Mission.current(root:)
       assert_equal "blocked", record.fetch("state")
       assert_equal false, record.fetch("auto_continue")
-      assert_nil record.fetch("next_wake_at")
-      assert_match(/operator must review and resume/, record.fetch("wake_reason"))
+      assert_match(/human review required/, record.fetch("wake_reason"))
     end
   end
 
