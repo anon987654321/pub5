@@ -112,10 +112,13 @@ bass:{oscillator:"sawtooth",attack:.01,decay:.1,sustain:.5,release:.1,sub_freque
 keys:{max_polyphony:16,harmonicity:7,modulation_index:2.5,brightness_reference:.58,oscillator:"sine",attack:.005,decay:.1,sustain:.3,release:.1,modulation_oscillator:"square",mod_attack:.01,mod_decay:.2,mod_sustain:.2,mod_release:.3,filter_base_hz:1200,filter_brightness_span_hz:3800,chorus_frequency:2.5,chorus_delay_time:.3,chorus_depth:.3,tremolo_frequency:3.2,tremolo_depth:.2,tremolo_wet:.25,tremolo_spread:90,drive_amount:.08,drive_wet:.15,texture_amount:.18,texture_wet:.6},
 pads:{max_polyphony:16,oscillator:"fatsawtooth",count:3,spread:25,attack:2.2,decay:3.5,sustain:.75,release:4.8,filter_base_hz:600,filter_brightness_span_hz:400,lowpass_hz:3500,saturation_order:2,saturation_wet:.2}
 },
-kit:{kick:{tune:0,decay:.4,tone:.5},sub:{tune:-12,decay:.5},snare:{tune:0,decay:.2,tone:.6},hat:{tune:0,decay:.1,tone:.6},openhat:{decay:.3},perc:{decay:.15}},
-voice:{brightness:.58,level:1},
-rig:{delay:{feedback:.1,lowpass:16000,throw_chords:.28},reverb:{size:1,level_chords:.35},wobble:{rate_hz:.15},vinyl:{level:.1,crackle:.075}},
-effects:{delay_feedback_range:.55,reverb_decay_scale:4,wobble_frequency_cap_hz:.15}
+kit:{kick:{tune:2,decay:.3,tone:.5,level:.95},sub:{tune:-12,decay:.24,level:.293},snare:{tune:1,decay:.19,tone:.66,level:1},hat:{tune:1,decay:.045,tone:.7,level:.306},openhat:{decay:.26,level:.27},perc:{decay:.1,level:.222}},
+
+voice:{brightness:.58,level:.82},
+
+rig:{delay:{feedback:.18,lowpass:2600,throw_chords:.04},reverb:{size:.3,level_chords:.1},wobble:{rate_hz:.5},vinyl:{level:.05,crackle:.3},},
+
+effects:{delay_feedback_range:.37,reverb_decay_scale:4,wobble_frequency_cap_hz:.15}
 };
 function finalizeRG69AudioProfile(profile){
 const kit=profile.kit,tone=profile.tone;
@@ -148,7 +151,7 @@ const hatResonance=t.hat.resonance_base_hz+k.hat.tone*t.hat.resonance_tone_span_
 const openResonance=t.openhat.resonance_base_hz+k.hat.tone*t.openhat.resonance_tone_span_hz;
 const keysModulation=t.keys.modulation_index*(v.brightness/t.keys.brightness_reference);
 const bassSub=new Tone.Oscillator(t.bass.sub_frequency,t.bass.sub_oscillator).start();bassSub.volume.value=t.bass.sub_volume_db;
-return{
+const instruments={
 kick:new Tone.MembraneSynth({pitchDecay:t.kick.pitch_decay,octaves:t.kick.octaves,oscillator:{type:t.kick.oscillator},envelope:{attack:t.kick.attack,decay:k.kick.decay,sustain:0,release:t.kick.release}}),
 kickSub:new Tone.Synth({oscillator:{type:"sine"},envelope:{attack:.001,decay:k.sub.decay,sustain:0,release:.1}}),
 kickClk:new Tone.NoiseSynth({noise:{type:"white"},envelope:{attack:t.kick.click_attack,decay:t.kick.click_decay,sustain:0}}),
@@ -163,6 +166,11 @@ bassSub,
 keys:new Tone.PolySynth(Tone.FMSynth,{maxPolyphony:t.keys.max_polyphony,harmonicity:t.keys.harmonicity,modulationIndex:keysModulation,oscillator:{type:t.keys.oscillator},envelope:{attack:t.keys.attack,decay:t.keys.decay,sustain:t.keys.sustain,release:t.keys.release},modulation:{type:t.keys.modulation_oscillator},modulationEnvelope:{attack:t.keys.mod_attack,decay:t.keys.mod_decay,sustain:t.keys.mod_sustain,release:t.keys.mod_release}}),
 pads:new Tone.PolySynth(Tone.Synth,{maxPolyphony:t.pads.max_polyphony,oscillator:{type:t.pads.oscillator,count:t.pads.count,spread:t.pads.spread},envelope:{attack:t.pads.attack,decay:t.pads.decay,sustain:t.pads.sustain,release:t.pads.release}})
 };
+for(const [lane,source] of [["kick","kick"],["kickSub","sub"],["kickClk","kick"],["kickBody","kick"],["snare","snare"],["snareRing","snare"],["clap","perc"],["hat","hat"],["open","openhat"]]){
+const level=Math.max(0.001,Number(k[source].level)||1);
+instruments[lane].volume.value=20*Math.log10(level);
+}
+return instruments;
 }
 
 const DRUM_PATTERNS={
