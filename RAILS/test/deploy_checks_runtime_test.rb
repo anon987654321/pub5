@@ -66,14 +66,17 @@ class DeployChecksRuntimeTest < Minitest::Test
     refute_includes body, '[[ -n ${SKIP_MASTER_SCAN:-} ]]'
   end
 
-  def test_database_secret_reader_uses_zsh_native_parsing
+  def test_database_secret_reader_uses_native_atomic_writes
     source = File.read(File.join(ROOT, "_database.sh"))
     start = source.index("app_secret_for()")
     body = source[start, source.index("\n}\n", start) - start + 3]
 
     refute_match(/\|\s*(?:head|cut)\b/, body)
-    assert_includes body, "pub5-admin ensure-secret", "the broker owns the secret file; nothing here parses it"
-    assert_match(/\*\[!0123456789abcdefABCDEF\]\*\)/, body, "a non-hex answer from the broker is refused")
+    assert_includes body, "SECRET_KEY_BASE="
+    assert_includes body, "File.link(temporary, target)"
+    assert_includes body, "File.chown(0, Etc.getgrnam(app).gid, temporary)"
+    refute_includes body, "pub5-admin"
+    assert_match(/\*\[!0123456789abcdefABCDEF\]\*\)/, body, "a non-hex secret is refused")
   end
 
   def test_rails_runtime_check_runs_production_in_process

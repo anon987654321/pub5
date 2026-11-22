@@ -378,16 +378,17 @@ or unexecuted check is not a pass. Confirm that the deployment inventory, host m
 installed configuration expectations and recovery path agree. Do not use break-glass
 environment variables or flags to turn a failed check into a pass.
 
-**Known blocker to resolve before deployment:** the repository has a brokerless deployment
-contract in the OpenBSD safety check, and `vps-deploy` describes native `rcctl` service
-control, but the tracked `pub5-admin` program and manual page remain. The deployment contract
-test and parts of the runbook and `OPENBSD/data/operator.yml` still assert or prescribe the
-older broker design. Trace every remaining broker reference and caller. Choose and implement
-one privilege architecture consistently across the deployer, helpers, doas policy, mirror,
-tests, safety checks, recovery paths and documentation. Audit the actual privilege boundary;
-do not simply delete the broker or restore broker calls to silence a test. Re-run the focused
-contracts and all admission checks after the migration. Until they pass together, report
-`BLOCKED` and do not deploy.
+**Privilege boundary to verify before deployment:** the repository uses one
+brokerless deployment architecture: native `rcctl` service control, the fixed
+app-user helpers under `/usr/local/libexec/`, and durable receipts written by
+`OPENBSD/lib/deploy_records.rb`. The retired `pub5-admin` program and manual
+page are not tracked. Before deploying, trace the deployer, helpers, doas
+policy, mirror, tests, safety checks, recovery paths and operator instructions
+and confirm they agree. If any broker reference, stale test or contradictory
+instruction remains, stop and report `BLOCKED`; do not restore the broker,
+bypass a check, weaken a gate or widen privilege to make it pass. Correct the
+inconsistency in the owning source, re-run the focused contracts and all
+admission checks, and deploy only when they pass together.
 
 Check domain ownership, DNS delegation, NSD zones, relayd routes, certificate SANs and public
 HTTPS independently. A city catalogue entry, DNS zone, certificate or relayd keypair is not

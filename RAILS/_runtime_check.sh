@@ -10,8 +10,9 @@ master_scan_dep() {
   local master=${MASTER_ROOT:-/home/dev/pub5/MASTER}
   local log_dir=/var/db/pub5
   local log=${log_dir}/master_${app_name}_scan.log
-  # The scan runs in the deploy role, while /var/db/pub5 belongs to the root
-  # broker (pub5-admin stamps). A deploy run under run_as_deploy_user found
+  # The scan runs in the deploy role, while /var/db/pub5 belongs to root
+  # (the deployer writes the durable records there). A deploy run under
+  # run_as_deploy_user found
   # the directory unwritable on vm23 2026-11-08: keep the durable location
   # when the runner owns it, else fall back to the runner's tmpdir so the
   # scan still runs and its evidence still lands in the deploy run log.
