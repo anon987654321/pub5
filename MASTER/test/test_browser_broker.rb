@@ -260,6 +260,18 @@ class BrowserBrokerTest < Minitest::Test
     assert_raises(Broker::Denied) { b.navigate(lease.id, "https://user:pass@example.com/") }
   end
 
+  def test_host_only_lease_still_resolves_and_checks_its_public_origin
+    engine = FakeEngine.new
+    destinations = []
+    check = ->(url) { destinations << url; nil }
+    b = broker(engine:, destination_check: check)
+
+    b.open(host: "example.com")
+
+    assert_equal ["https://example.com/"], destinations
+    assert_equal 1, engine.started.size
+  end
+
   def test_a_refused_destination_never_starts_a_process
     engine = FakeEngine.new
     deny = ->(url) { url.include?("blocked") ? "reserved address" : nil }
@@ -290,6 +302,7 @@ class BrowserBrokerTest < Minitest::Test
     b = broker(engine:) # no destination_check: the SSRF guard is the default
 
     assert_raises(Broker::Denied) { b.open(host: "localhost", url: "http://127.0.0.1/") }
+    assert_raises(Broker::Denied) { b.open(host: "localhost") }
     assert_raises(Broker::Denied) { b.open(host: "internal", url: "http://10.0.0.1/") }
     assert_raises(Broker::Denied) { b.open(host: "example.com", url: "file:///etc/passwd") }
     assert_empty engine.started, "a refused default destination must not cost a browser launch"
