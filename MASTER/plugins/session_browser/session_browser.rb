@@ -64,7 +64,7 @@ module Master
         hosts = allowed_hosts
         {
           plugin: manifest.id,
-          browser: broker && ferrum_available? ? "ferrum" : "unavailable",
+          browser: broker&.available? && ferrum_available? ? "ferrum" : "unavailable",
           policy: hosts.empty? ? "blocked: no allowed hosts configured" : "host allowlist active",
           allowed_hosts: hosts,
           max_sessions: MAX_SESSIONS,
