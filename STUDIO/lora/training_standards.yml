@@ -6,6 +6,13 @@ replicate:
   training_steps: 1000
   lora_type: subject
   seed: 42
+billing:
+  hardware: "8x Nvidia H200 GPU"
+  usd_per_second: 0.0122
+  verified_on: "2026-11-22"
+  source: "https://replicate.com/replicate/fast-flux-trainer/train"
+  minimum_training_seconds: 60
+  cancellation_margin_seconds: 10
 quality:
   min_images: 12
   max_images: 18
