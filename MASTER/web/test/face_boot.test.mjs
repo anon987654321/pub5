@@ -376,14 +376,12 @@ test("server-selected human mask profile drives the particle face and its source
   const source = {
     id: "iatmul_mai", particle_profile: "iatmul-river",
     title: "Mask (Mai)", collection: "The Metropolitan Museum of Art",
-    character: { id: "the-scout", name: "The Scout", signature: "Alert, socially shrewd and practical." },
     accession: "1974.29.2", object_url: "https://www.metmuseum.org/art/collection/search/309933",
     rights: "Collection record; source image is not downloadable"
   };
   const nextSource = {
     id: "iatmul_mwai", particle_profile: "sepik-split",
     title: "Mask (Mwai)", collection: "The Museum of Fine Arts, Houston",
-    character: { id: "the-spark", name: "The Spark", signature: "Energetic, witty and memorable." },
     accession: "62.33", object_url: "https://emuseum.mfah.org/objects/47457/mask-mwai",
     rights: "Public Domain (object record); photograph © The Museum of Fine Arts, Houston"
   };
@@ -392,6 +390,10 @@ test("server-selected human mask profile drives the particle face and its source
     MASTER_FACE_MASK_PROFILE: "iatmul-river",
     MASTER_FACE_MASK_ENTRY: source,
     MASTER_FACE_MASK_CATALOG: [source, nextSource],
+    MASTER_FACE_MASK_CHARACTERS: {
+      "iatmul-river": { id: "the-scout", name: "The Scout", signature: "Alert, socially shrewd and practical." },
+      "sepik-split": { id: "the-spark", name: "The Spark", signature: "Energetic, witty and memorable." }
+    },
     MASTER_FACE_WORLD: {
       setSubjectForm(form, descriptor) { calls.push({ form, descriptor }); return form; }
     },
@@ -435,7 +437,6 @@ test("server-selected human mask profile drives the particle face and its source
   assert.equal(api.newConversation("next-chat"), true);
   assert.equal(api.current().id, "sepik-split");
   assert.equal(api.source().id, "iatmul_mwai");
-  assert.equal(api.source().character.id, "the-spark");
   assert.equal(document.documentElement.dataset.maskCharacter, "the-spark");
   assert.equal(document.documentElement.dataset.maskSourceCollection, "The Museum of Fine Arts, Houston");
 });
@@ -454,6 +455,9 @@ test("rotating characters change delivery only and preserve one MASTER intellige
   assert.match(archive, /Charisma:/);
   assert.match(archive, /Practical street sense:/);
   assert.match(archive, /serious_override:/);
+  assert.match(archive, /characters:\\s*\\n  iatmul-concentric:/);
+  assert.doesNotMatch(archive, /entries:[\\s\\S]*?character:/);
+  assert.match(readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8"), /MASTER_FACE_MASK_CHARACTERS =/);
   for (const id of ids) assert.ok(archive.includes(`id: "${id}"`), `missing ${id}`);
   for (const name of names) assert.ok(archive.includes(`name: "${name}"`), `missing ${name}`);
   assert.match(actions, /form\.append\("face_profile", faceProfile\)/);

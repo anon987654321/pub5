@@ -29,6 +29,7 @@ class ChatController < ApplicationController
     @face_mask_session = Digest::SHA256.hexdigest("master-face-mask:#{conversation}")[0, 32]
     mask_archive = Master.load_yaml(Master.data_path("face_masks.yml"), default: {}) || {}
     @face_mask_entries = Array(mask_archive["entries"])
+    @face_mask_characters = mask_archive["characters"].is_a?(Hash) ? mask_archive["characters"] : {}
     @face_mask_profile = ""
     unless @face_mask_entries.empty?
       rotation = cookies.signed[:master_face_mask_rotation]
@@ -277,7 +278,9 @@ class ChatController < ApplicationController
       end
     end
 
-    character = entry.is_a?(Hash) ? entry["character"] : nil
+    profile_key = entry.is_a?(Hash) ? entry["particle_profile"].to_s : requested
+    character_catalog = archive["characters"].is_a?(Hash) ? archive["characters"] : {}
+    character = character_catalog[profile_key]
     return unless character.is_a?(Hash)
 
     contract = archive["character_contract"].is_a?(Hash) ? archive["character_contract"] : {}

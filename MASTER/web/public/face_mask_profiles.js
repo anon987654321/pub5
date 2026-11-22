@@ -109,7 +109,10 @@
     if (!world?.setSubjectForm) return false;
     const profile = PROFILES[((index % PROFILES.length) + PROFILES.length) % PROFILES.length];
     const source = sourceFor(profile);
-    const character = source && source.character && typeof source.character === "object" ? source.character : null;
+    const characters = window.MASTER_FACE_MASK_CHARACTERS && typeof window.MASTER_FACE_MASK_CHARACTERS === "object"
+      ? window.MASTER_FACE_MASK_CHARACTERS : {};
+    const character = characters[profile.id] && typeof characters[profile.id] === "object"
+      ? characters[profile.id] : null;
     const characterName = String(character?.name || "");
     world.setSubjectForm("object", descriptor(profile));
 
