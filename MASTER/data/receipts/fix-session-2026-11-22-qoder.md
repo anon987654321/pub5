@@ -1935,3 +1935,46 @@ Still **NOT_RUN**: the list-only regression, exit-3 regression, both focused
 test files, Ruby syntax, the full profile itself, and all native app/domain/
 browser/visual/device/host acceptance. The new step is wired and explicit;
 its runtime success is not asserted.
+
+
+### Reliability continuation — hashed gate-log artifact and five-tree verification (2026-11-22)
+
+- JSON check receipts now include `evidence.combined_log_artifact`: a
+  repository-relative path, byte count and SHA-256 for the existing private
+  combined log. The log contents are never copied into the receipt. The helper
+  uses streaming SHA-256, rejects path escape, symlinks and hard links, and
+  verifies the source is a single-linked regular file.
+- Added focused tests for byte count/hash equality, path confinement, symlink
+  and hard-link refusal, and preservation of the hash object through the JSON
+  serializer. Updated `MASTER/README.md` to describe the metadata.
+- The `full` profile is now explicitly cross-tree: it includes the existing
+  `rake test:all_trees` task, after the MASTER CI floor and before the
+  probes/audit. That task inventories each owned root, Ruby syntax, discovered
+  Rake/standalone tests, Node test files, shell syntax and YAML/JSON parse.
+  Faster operator/contributor/agent profiles are unchanged.
+- The all-tree task's exit status 3 is the repo's declared "measured nothing /
+  runtime unavailable" result. `CheckBrief` reports it as `INCONCLUSIVE`,
+  counts it separately, and does not let the full profile return success.
+  Unavailable steps explicitly named "unavailable" remain `BLOCKED`.
+
+Commits:
+`e2672820011a0fbde32cf511d4e2ceca2422c351` (log artifact evidence);
+`fd50633491be8d1a5d25443a9782cb6b5b3e8b7c` (CLI supplies log evidence);
+`4f3568cf93b07c1e61060611d8445b243ac9723d` and
+`cc4d50e191792029ae401bbf20d06461b764cb19` (artifact metadata and guard tests);
+`7b10c1e9be69f4424d72ec7a97918c54cd873e2b` (README).
+
+Proof actually performed: GitHub read-after-write verification of the JSON
+serializer, runner/CLI, both focused test files and README; static inspection
+of the full-profile step list and the existing `test:all_trees` implementation.
+Current main at the start of this note was
+`cc4d50e191792029ae401bbf20d06461b764cb19`; concurrent Qoder commits may
+advance it independently.
+
+Still **NOT_RUN**: the new hash/path tests; the earlier persistence/immutability
+tests; Ruby syntax; `TestCheckBrief`; `TestCheckRunnerStdin`;
+`MASTER/bin/check --profile=full --list` on a booted checkout; the full
+`test:all_trees` sweep; artifact generation/read-back from a real run; full
+MASTER/RAILS/OPENBSD/STUDIO/BIZ acceptance; and all rendered, browser, device,
+host and production checks. The check runner is more expressive and honest;
+its runtime acceptance is not yet established.
