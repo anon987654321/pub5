@@ -302,7 +302,7 @@ private
       case effect.verb
       when :read, :write
         args[:path] || args["path"]
-      when :http
+      when :http, :browser
         args[:url] || args["url"]
       when :exec
         Array(args[:argv] || args["argv"]).map(&:to_s).join("\0")
