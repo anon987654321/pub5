@@ -73,6 +73,7 @@ Law.define(:PRESERVE_FIRST) do
 end
 
 Law.define(:PRESERVE_FIRST_media_provenance) do
+  path "STUDIO/"
   source "laws.yml PRESERVE_FIRST_media_provenance - preserve original media, prior takes and provenance"
   ask "When media is recorded, transformed, generated, graded or published, are the original source and approved prior take retained; are source, rights/consent, engine, seed and relevant inputs recorded; and is qualitative human acceptance kept separate from numeric or automated checks?"
   practice "Preserve the source and the last good take. A checksum identifies bytes; it does not establish rights, consent, provenance or artistic acceptance."
