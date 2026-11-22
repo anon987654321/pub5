@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "json"
+
 module Operator
   module CheckBrief
     HINTS = {
@@ -100,6 +102,76 @@ module Operator
       snippet = output_snippet(first.output)
       lines << "output_snippet: #{snippet}" if snippet
       lines.join("\n")
+    end
+
+    # A machine-readable projection of the exact steps this invocation ran.
+    # It deliberately omits command output and environment values: logs remain
+    # the bounded human diagnostic, while this receipt carries status evidence.
+    def render_json(profile:, results:, metadata:, started_at:, finished_at:,
+                    duration_s:, exit_status:, command:, log_path: nil)
+      step_rows = results.map do |result|
+        {
+          "name" => result.name.to_s,
+          "status" => step_status(result),
+          "started_at" => result.started_at,
+          "finished_at" => result.finished_at,
+          "duration_ms" => result.elapsed_s && (result.elapsed_s * 1000).round,
+          "exit_status" => result.exit_status,
+          "signal" => result.signal,
+          "command" => result.command,
+        }
+      end
+      statuses = step_rows.map { |row| row.fetch("status") }
+      passed = statuses.count("PASS")
+      failed = statuses.count("FAIL")
+      timed_out = statuses.count("TIMEOUT")
+      status = if failed.positive?
+                 "FAIL"
+               elsif timed_out.positive?
+                 "TIMEOUT"
+               elsif statuses.empty?
+                 "NOT_RUN"
+               else
+                 "PASS"
+               end
+
+      receipt = {
+        "schema_version" => 1,
+        "receipt_type" => "master_check",
+        "profile" => profile.to_s,
+        "status" => status,
+        "started_at" => started_at,
+        "finished_at" => finished_at,
+        "duration_ms" => (duration_s.to_f * 1000).round,
+        "repository" => metadata[:repository],
+        "branch" => metadata[:branch],
+        "main_sha" => metadata[:main_sha],
+        "main_ref" => metadata[:main_ref],
+        "checked_out_sha" => metadata[:checked_out_sha],
+        "clean_checkout" => metadata[:clean_checkout],
+        "environment" => metadata[:environment],
+        "command" => command,
+        "exit_status" => exit_status,
+        "counts" => {
+          "steps" => statuses.size,
+          "passed" => passed,
+          "failed" => failed,
+          "timed_out" => timed_out,
+        },
+        "test_counts" => nil,
+        "steps" => step_rows,
+        "evidence" => {
+          "combined_log" => log_path,
+          "raw_output_included" => false,
+        },
+      }
+      JSON.pretty_generate(receipt) << "\n"
+    end
+
+    def step_status(result)
+      return "TIMEOUT" if result.respond_to?(:timed_out) && result.timed_out
+
+      result.success ? "PASS" : "FAIL"
     end
 
     def output_snippet(output)
