@@ -40,8 +40,8 @@ module Master
       ResourceLimit = Class.new(StandardError)
       UnsupportedContentEncoding = Class.new(StandardError)
 
-      # Fetch does not intercept every non-HTTP networking primitive (for example,
-      # WebSockets). Disable those APIs before untrusted page scripts execute.
+      # BrowserBroker::Page#harden_network installs the shared socket sandbox
+      # before untrusted page scripts execute; this adapter owns request fencing.
 
 
       def initialize(governor:, event_bus: nil, broker: nil)
