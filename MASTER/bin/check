@@ -342,7 +342,11 @@ if format == "json"
     receipt_id:, operation_id:, receipt_path: relative_receipt_path,
     receipt_persisted: true
   ))
-  exit_status = receipt.fetch("status") == "PASS" ? 0 : 1
+  exit_status = case receipt.fetch("status")
+                when "PASS" then 0
+                when "TIMEOUT" then 124
+                else 1
+                end
   receipt["exit_status"] = exit_status
   json = JSON.pretty_generate(receipt) << "\n"
 
