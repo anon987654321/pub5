@@ -175,6 +175,8 @@ module Operator
           "blocked" => blocked,
         },
         "test_counts" => nil,
+        "receipt_path" => nil,
+        "receipt_output" => "stdout",
         "steps" => step_rows,
         "evidence" => {
           "combined_log" => log_path,
