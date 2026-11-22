@@ -20,10 +20,10 @@ module Master
 
       # Prepare an objective without consuming an execution attempt. The background
       # supervisor uses this to create work that will be claimed only when due.
-      def ensure_queued!(goal:, scope: @root, model: nil, effort: "medium", plan: nil, origin: "unknown", auto_continue: false, mode: "repair", risk: nil, intent: nil)
+      def ensure_queued!(goal:, scope: @root, model: nil, effort: "medium", plan: nil, origin: "unknown", auto_continue: false, mode: "repair", risk: nil, intent: nil, resume_blocked: false)
         with_lock do
           current = load_record
-          reuse = queued_reuse_state(current, goal:, scope:)
+          reuse = queued_reuse_state(current, goal:, scope:, resume_blocked:)
           if reuse == :active
             @record = current
             @id = current["id"]
@@ -137,11 +137,12 @@ module Master
       # An already-durable objective with the same goal and scope is reused as
       # :active (its handle is adopted) or :blocked (left untouched); anything
       # else starts a fresh record.
-      def queued_reuse_state(current, goal:, scope:)
+      def queued_reuse_state(current, goal:, scope:, resume_blocked: false)
         return nil unless current && current["goal"].to_s == goal.to_s &&
                           current["scope"].to_s == relative(scope).to_s
 
         return :active if %w[running waiting].include?(current["state"].to_s)
+        return nil if resume_blocked == true && current["state"].to_s == "blocked"
 
         current["state"].to_s == "blocked" ? :blocked : nil
       end
