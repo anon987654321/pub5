@@ -16,7 +16,7 @@ export default class extends Controller {
 
     this.stopped = false
     this.paused = document.hidden
-    this.ready = false
+    this.ready = true
     this.left = true
     this.endpoint = null
 
@@ -41,11 +41,13 @@ export default class extends Controller {
     window.addEventListener("pagehide", this.onLeave)
     document.addEventListener("turbo:before-visit", this.onLeave)
 
+    // Start ordinary presence immediately; waiting for a service-worker
+    // registration must never make the conversation appear closed.
+    this.#start()
     this.#resolveEndpoint().then(endpoint => {
       if (this.stopped) return
       this.endpoint = endpoint
-      this.ready = true
-      this.#start()
+      if (endpoint && !this.paused && !document.hidden && !this.left) this.#beat()
     })
   }
 
