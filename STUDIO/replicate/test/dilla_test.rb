@@ -80,6 +80,11 @@ class TestDillaCliContract < Minitest::Test
       assert_equal Digest::SHA256.file(dilla).hexdigest, record.dig("execution", "renderer_sha256")
       assert_equal Digest::SHA256.file(File.join(File.dirname(dilla), "data", "music_theory.json")).hexdigest,
                    record.dig("execution", "music_theory_sha256")
+      engine_sources = record.dig("execution", "engine_sources")
+      %w[analog_core.rb data/dilla.json data/music_theory.json data/recovered_music.json data/showcase.json].each do |relative|
+        source_path = File.join(File.dirname(dilla), relative)
+        assert_equal Digest::SHA256.file(source_path).hexdigest, engine_sources.dig(relative, "sha256")
+      end
       assert_equal Digest::SHA256.file(sample).hexdigest, record.dig("source", "sample", "sha256")
       assert_equal File.size(sample), record.dig("source", "sample", "bytes")
       assert_equal sample, record.dig("source", "sample", "path")
