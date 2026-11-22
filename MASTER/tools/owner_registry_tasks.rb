@@ -706,10 +706,16 @@ module Backlog
 
     def scope_digest_for(paths)
       facts = Array(paths).map(&:to_s).uniq.sort.map do |relative|
-        return nil unless safe_scope_path?(relative)
+        full = File.expand_path(relative, @repo_root)
+        return nil unless full.start_with?(@repo_root + File::SEPARATOR)
 
-        full = File.join(@repo_root, relative)
-        [relative, Digest::SHA256.file(full).hexdigest]
+        if File.file?(full) || File.symlink?(full)
+          return nil unless safe_scope_path?(relative)
+
+          [relative, Digest::SHA256.file(full).hexdigest]
+        else
+          [relative, "missing"]
+        end
       end
       Digest::SHA256.hexdigest(JSON.generate(facts))
     rescue ArgumentError, SystemCallError
@@ -727,7 +733,7 @@ module Backlog
         row = JSON.parse(line)
         next unless row.is_a?(Hash)
         next unless %w[parked_task resume_task].include?(row["record_type"].to_s)
-        next unless row["item_digest"].to_s.match?(/\\A[0-9a-f]{64}\\z/i)
+        next unless row["item_digest"].to_s.match?(/\A[0-9a-f]{64}\z/i)
 
         row
       rescue JSON::ParserError, ArgumentError
