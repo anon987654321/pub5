@@ -251,7 +251,6 @@ def run_random(subject = nil)
     Postpro::Constitution.verify_batch!(variation_count: count, explicit_count: !override.nil?)
     drawn = []
     looks = []
-    Postpro::Constitution.retire_previous_renders!(file)
     count.times do |index|
       number = index + 1
       lane = heavy_mode? ? HEAVY_LANE_DEAL[index % HEAVY_LANE_DEAL.size] : nil
