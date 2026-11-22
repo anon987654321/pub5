@@ -73,7 +73,7 @@ for (const name of ORDER) {
   const pdf = `${outputDir}/${name}.pdf`;
   const frontPng = `${outputDir}/${name}.png`;
   const numberedPngs = readdirSync(outputDir).filter(file =>
-    file.startsWith(`${name}-`) && /^[A-Za-z0-9_-]+-[0-9]+\\.png$/.test(file)
+    file.startsWith(`${name}-`) && /^[A-Za-z0-9_-]+-[0-9]+[.]png$/.test(file)
   );
   if (occupied(pdf) || occupied(frontPng) || numberedPngs.length) {
     throw new Error(`${name}: output exists; choose a fresh empty BIZ_OUT_DIR rather than replacing an earlier PDF/PNG`);
@@ -92,8 +92,8 @@ for (const name of ORDER) {
     throw new Error(`pdfinfo failed for ${pdf}: ${infoResult.error?.message || infoResult.stderr}`);
   }
   const info = infoResult.stdout || '';
-  const size = (info.match(/Page size:\\s*([\\d.]+ x [\\d.]+) pts/) || [])[1];
-  const pages = Number((info.match(/Pages:\\s*(\\d+)/) || [])[1]);
+  const size = (info.match(/^Page size:[ \t]*([0-9.]+ x [0-9.]+) pts$/m) || [])[1];
+  const pages = Number((info.match(/^Pages:[ \t]*([0-9]+)$/m) || [])[1]);
   if (!Number.isInteger(pages) || pages < 1) throw new Error(`${name}: pdfinfo did not report a valid page count`);
   if (name === 'ragnhild_legater' && pages !== 5) {
     throw new Error(`${name}: five source sheets should print as five pages; found ${pages}`);
@@ -108,7 +108,7 @@ for (const name of ORDER) {
   if (allPages.status !== 0) throw new Error(`${name}: full-page rasterization failed\\n${allPages.stderr}`);
   const pageRasters = readdirSync(AUDIT_DIR)
     .filter(file => file.startsWith(`${name}-`) && file.endsWith('.png'))
-    .map(file => ({ file, page: Number(file.match(/-([0-9]+)\\.png$/)?.[1]) }))
+    .map(file => ({ file, page: Number(file.match(/-([0-9]+)[.]png$/)?.[1]) }))
     .sort((a, b) => a.page - b.page);
   if (pageRasters.length !== pages || pageRasters.some((row, index) =>
     row.page !== index + 1 || statSync(join(AUDIT_DIR, row.file)).size < 2000
@@ -121,7 +121,7 @@ for (const name of ORDER) {
   // Poppler zero-pads the page number to the document's page count
   // (syre-01.png on a 17-page plan, fetat-1.png on a 6-page one).
   const raster = readdirSync(outputDir).find(file =>
-    file.startsWith(`${name}-`) && /^[A-Za-z0-9_-]+-[0-9]+\\.png$/.test(file)
+    file.startsWith(`${name}-`) && /^[A-Za-z0-9_-]+-[0-9]+[.]png$/.test(file)
   );
   if (!raster) throw new Error(`${name}: pdftoppm produced no front-page png`);
   renameSync(`${outputDir}/${raster}`, frontPng);
