@@ -195,6 +195,58 @@ class TestOwnerRegistryTasks < Minitest::Test
     end
   end
 
+  def test_backlog_status_is_read_only_and_omits_private_task_text
+    row = {
+      id: "status-provider-task", text: "PRIVATE PROMPT BODY MUST NOT APPEAR",
+      tree: "MASTER", kind: "mechanical", scope_paths: ["MASTER/lib/status_probe.rb"],
+      done_when: "rake test", size: "s", section: "MASTER",
+    }
+    fake_mission = Class.new do
+      class << self
+        attr_accessor :record
+        def current(root:) = record
+      end
+    end
+
+    Dir.mktmpdir("backlog-status") do |root|
+      Dir.mktmpdir("backlog-status-repo") do |repo_root|
+        full = File.join(repo_root, row.fetch(:scope_paths).first)
+        FileUtils.mkdir_p(File.dirname(full))
+        File.write(full, "VALUE = 1\\n")
+        fake_mission.record = {
+          "id" => "mission-status", "state" => "waiting", "origin" => "backlog",
+          "auto_continue" => true, "attempt_count" => 12, "retry_count" => 3,
+          "next_wake_at" => (Time.now.utc + 600).iso8601, "goal" => "PRIVATE MISSION GOAL",
+        }
+        executor = Backlog::Executor.new(root:, repo_root:, mission_class: fake_mission)
+        receipt = {
+          "record_type" => "parked_task",
+          "item_id" => row.fetch(:id),
+          "item_digest" => Backlog.item_digest(row),
+          "mission_id" => "mission-status",
+          "mission_state" => "waiting",
+          "failure_category" => "transient",
+          "retry_at" => (Time.now.utc + 600).iso8601,
+          "requires_operator" => false,
+          "scope_digest" => Digest::SHA256.hexdigest("scope"),
+          "parked_at" => Time.now.utc.iso8601,
+        }
+
+        Backlog.stub(:generate, [row]) do
+          assert executor.send(:append_executor_receipt, receipt)
+          status = executor.status
+          assert_equal 1, status.fetch("owner_registry_items")
+          assert_equal 1, status.fetch("eligible_items")
+          assert_equal 0, status.fetch("ready_items")
+          assert_equal 1, status.fetch("parked_items")
+          assert_equal 12, status.dig("current_mission", "attempt_count")
+          assert_equal "transient", status.dig("parked", 0, "failure_category")
+          refute_includes JSON.generate(status), "PRIVATE"
+        end
+      end
+    end
+  end
+
   def test_private_backlog_receipts_allow_only_the_assigned_group_handoff
     executor = Backlog::Executor.allocate
     original_owned = File.method(:owned?)
