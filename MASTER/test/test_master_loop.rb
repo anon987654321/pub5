@@ -64,32 +64,37 @@ class TestMasterLoop < Minitest::Test
     end
   end
 
-  # Building the runtime must not start the fix loop, which sleeps STARTUP_DELAY
-  # and then rewrites lib/ in the background. MASTER_AUTOFIX=1 is the only key;
-  # process defaults set it to 0 and MASTER_LOOP=fix is how a person asks.
-  def test_build_starts_the_fix_loop_only_when_autofix_is_asked_for
-    started = []
+  # MASTER_AUTOFIX remains an explicit per-invocation repair policy. It is
+  # not permission to start a whole-tree background mutator; autonomous tasks
+  # enter through the owner registry with exact paths and an allowlisted proof.
+  def test_master_autofix_does_not_start_unscoped_background_mutation
+    events = []
+    bus = Object.new
+    bus.define_singleton_method(:publish) { |event, **payload| events << [event, payload] }
     fake_loop = Object.new
     build = lambda do
       Master::Fix::FixLoop.stub(:new, fake_loop) do
-        Master::Builder.stub(:start_fix_loop_background, ->(loop, **) { started << loop }) do
-          Master::Builder.build_fix_loop(root: Master::ROOT, infra: {}, agent: nil, scanner: nil, axioms: nil,
-                                         laws: nil, learnings: nil, bus: nil, git: nil)
-        end
+        Master::Builder.build_fix_loop(root: Master::ROOT, infra: {}, agent: nil, scanner: nil, axioms: nil,
+                                       laws: nil, learnings: nil, bus:, git: nil)
       end
     end
 
     with_clean_env do
       assert_equal "0", Master::MasterRuntime::PROCESS_DEFAULTS["MASTER_AUTOFIX"]
-      build.call
-      assert_empty started, "an unset MASTER_AUTOFIX starts nothing"
+      assert_equal fake_loop, build.call
+      assert_empty events, "an unset MASTER_AUTOFIX makes no autonomous mutation request"
+
       ENV["MASTER_AUTOFIX"] = "0"
-      build.call
-      assert_empty started
+      assert_equal fake_loop, build.call
+      assert_empty events
 
       ENV["MASTER_AUTOFIX"] = "1"
-      build.call
-      assert_equal [fake_loop], started
+      assert_equal fake_loop, build.call
+      refusal = events.find { |event, _payload| event == "fix_loop:background_refused" }
+      refute_nil refusal
+      assert_match(/owner-registry task executor/, refusal.last.fetch(:reason))
+      assert_equal "MASTER_BACKLOG_AUTORUN", refusal.last.fetch(:executor)
+      refute Master::Builder.respond_to?(:start_fix_loop_background)
     end
   end
 
