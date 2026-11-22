@@ -1844,6 +1844,7 @@ Law.define(:ROBUSTNESS) do
 end
 
 Law.define(:ROBUSTNESS_bounded_operation_lifecycle) do
+  path %r{(?:^|/)(?:MASTER|RAILS|OPENBSD|STUDIO|BIZ)/}
   source "laws.yml ROBUSTNESS_bounded_operation_lifecycle - a timeout owns and cleans the whole operation"
   ask "When a command or concurrent operation times out or fails, does its owner stop and reap every owned descendant and process group, close inherited pipes, join output readers within a bound, clean temporary resources and report the typed outcome? Or can a child holding a pipe, reader thread or cleanup task outlive the deadline and keep work alive after the caller believes it stopped?"
   practice "A deadline owns the operation, not only its direct PID. Bound the process tree, readers, descriptors and cleanup as one lifecycle."
@@ -1853,6 +1854,7 @@ Law.define(:ROBUSTNESS_bounded_operation_lifecycle) do
 end
 
 Law.define(:ROBUSTNESS_mutation_requires_explicit_authorization) do
+  path %r{(?:^|/)MASTER/(?:lib/cli/|lib/boot/|bin/|tools/owner_registry_tasks)}
   source "laws.yml ROBUSTNESS_mutation_requires_explicit_authorization - /fix mutations require explicit authorization, mode and scope"
   ask "Does a mutating /fix repair require an explicit --apply authorization, an explicit requested mode and a named governed repository target before inventory or mutation begins? A bare /fix, startup, retry or plain run instruction is not write consent."
   practice "Treat a write flag as scoped operator consent, not as the default consequence of invoking a repair command."
@@ -1862,6 +1864,7 @@ Law.define(:ROBUSTNESS_mutation_requires_explicit_authorization) do
 end
 
 Law.define(:ROBUSTNESS_autonomous_triggers_are_bounded) do
+  path %r{(?:^|/)MASTER/(?:lib/boot/|lib/fix/|tools/owner_registry_tasks)}
   source "laws.yml ROBUSTNESS_autonomous_triggers_are_bounded - autonomous repository mutations have opt-in and bounded task ownership"
   ask "Can a startup, schedule or event trigger begin repository mutation only after explicit opt-in and admission of an exact allowlisted task and scope, with a bounded time/retry/resource budget, single-writer lease, stop condition and durable terminal receipt?"
   practice "Autonomy is a bounded task runner, never ambient permission. A trigger may observe by default; it may mutate only through the existing admitted task contract."
@@ -1880,6 +1883,7 @@ Law.define(:PROXIMITY) do
 end
 
 Law.define(:PROXIMITY_local_visual_audio_ownership) do
+  path %r{(?:^|/)(?:MASTER|RAILS|STUDIO|BIZ)/}
   source "laws.yml PROXIMITY_local_visual_audio_ownership - product layout, style and audio policy stay with their owner"
   ask "Are layout, visual styling, product-specific typography or audio policy kept with the product, app, engine or STUDIO project that owns the experience? Does shared code contain only a genuinely common invariant rather than imposing one product's choices on unrelated surfaces?"
   practice "Share a stable contract; keep expression and tuning with the surface that owns it."
@@ -2491,6 +2495,7 @@ Law.define(:TRUTHFUL_STATUS_profile_is_not_intent) do
 end
 
 Law.define(:TRUTHFUL_STATUS_test_precedes_report) do
+  path %r{(?:^|/)(?:MASTER|RAILS|OPENBSD|STUDIO|BIZ)/}
   source "laws.yml TRUTHFUL_STATUS_test_precedes_report - test evidence precedes a success claim"
   ask "Does a PASS, ready, clean, complete or delivered status appear only after its required test, check or deployment verification has finished successfully for the same target and revision? If the check failed, was skipped, did not run or is inconclusive, is that exact state preserved rather than converted into success?"
   practice "Finish the check first; report its observed result and revision, not the expected result."
