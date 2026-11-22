@@ -936,8 +936,7 @@ module Studio
 
           case training["status"]
           when "succeeded" then return training
-          when "failed" then raise "training failed: #{training['error']}"
-          when "canceled" then raise "training canceled"
+          when "failed", "canceled" then return training
           end
 
           remaining = deadline - monotonic_now
@@ -948,9 +947,16 @@ module Studio
             final = get_training(training_id)
             case final["status"]
             when "canceled"
-              raise "training timeout after #{timeout}s; cancellation confirmed by provider"
+              final["client_cancel_requested"] = true
+              final["client_cancel_confirmed"] = true
+              return final # retain terminal compute metrics for the spend receipt
             when "succeeded"
+              final["client_cancel_requested"] = true
+              final["client_cancel_raced_with_completion"] = true
               return final # completion raced the timeout; retain its metrics
+            when "failed"
+              final["client_cancel_requested"] = true
+              return final # provider failure is terminal; retain any compute metrics
             else
               status = final["status"].to_s.empty? ? "unknown" : final["status"]
               raise "training timeout after #{timeout}s; cancellation NOT confirmed (provider status: #{status})"
