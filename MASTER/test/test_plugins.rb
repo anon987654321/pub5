@@ -233,32 +233,6 @@ class TestPlugins < Minitest::Test
     end
   end
 
-  # A stand-in for Ferrum::Browser that spawns nothing and answers the two calls a
-  # plugin's with_browser makes: create_page and quit.
-  def fake_browser
-    page = Object.new
-    page.define_singleton_method(:go_to) { |_| }
-    browser = Object.new
-    browser.define_singleton_method(:create_page) { page }
-    browser.define_singleton_method(:quit) { true }
-    browser
-  end
-
-  # Ferrum is an optional dependency; these tests stub its constructor, so load it
-  # (and its error classes) only when present, then swap the constant.
-  def with_fake_ferrum_browser(browser)
-    require "ferrum"
-    fake = Object.new
-    fake.define_singleton_method(:new) { |**| browser }
-    original = Ferrum::Browser
-    Ferrum.send(:remove_const, :Browser)
-    Ferrum.const_set(:Browser, fake)
-    yield
-  ensure
-    Ferrum.send(:remove_const, :Browser)
-    Ferrum.const_set(:Browser, original)
-  end
-
   def test_session_browser_leases_its_process_from_the_injected_broker
     broker = FakeBroker.new
     plugin = Master::Plugin.load("session_browser", services: { browser_broker: broker })
@@ -267,9 +241,7 @@ class TestPlugins < Minitest::Test
       Object.new.tap { |t| t.define_singleton_method(:secure_page) { |*, **| true } }
     end
 
-    with_fake_ferrum_browser(fake_browser) do
-      plugin.send(:with_browser, Dir.mktmpdir, "example.com", headless: true) { |_| }
-    end
+    plugin.send(:with_browser, Dir.mktmpdir, "example.com", headless: true) { |_| }
 
     assert_equal "example.com", broker.opened.first[:host]
     assert_equal ["lease-1"], broker.closed
@@ -281,9 +253,7 @@ class TestPlugins < Minitest::Test
     plugin.define_singleton_method(:require_ferrum!) { true }
     plugin.define_singleton_method(:session_root) { Dir.mktmpdir }
 
-    with_fake_ferrum_browser(fake_browser) do
-      plugin.send(:with_browser, session: "trip", headless: false, url: "https://example.com/book") { |_| }
-    end
+    plugin.send(:with_browser, session: "trip", headless: false, url: "https://example.com/book") { |_| }
 
     assert_equal "example.com", broker.opened.first[:host]
     assert_equal ["lease-1"], broker.closed
@@ -295,10 +265,8 @@ class TestPlugins < Minitest::Test
     plugin.define_singleton_method(:require_ferrum!) { true }
     plugin.define_singleton_method(:session_root) { Dir.mktmpdir }
 
-    with_fake_ferrum_browser(fake_browser) do
-      assert_raises(Master::Plugin::PolicyError) do
-        plugin.send(:with_browser, session: "trip", headless: false) { |_| flunk "must not start an unbound browser" }
-      end
+    assert_raises(Master::Plugin::PolicyError) do
+      plugin.send(:with_browser, session: "trip", headless: false) { |_| flunk "must not start an unbound browser" }
     end
 
     assert_empty broker.opened
@@ -320,12 +288,10 @@ class TestPlugins < Minitest::Test
     plugin.define_singleton_method(:resolve_runtime) { |_| "linux" }
     plugin.define_singleton_method(:account_root) { Dir.mktmpdir }
 
-    with_fake_ferrum_browser(fake_browser) do
-      assert_raises(Master::Plugin::PolicyError) do
-        plugin.send(:with_browser, site: "fetlife", account: "test",
-                    url: "https://fetlife.com/home", headless: true, runtime: "linux") do
-          flunk "must not start a browser"
-        end
+    assert_raises(Master::Plugin::PolicyError) do
+      plugin.send(:with_browser, site: "fetlife", account: "test",
+                  url: "https://fetlife.com/home", headless: true, runtime: "linux") do
+        flunk "must not start a browser"
       end
     end
   end
@@ -338,10 +304,8 @@ class TestPlugins < Minitest::Test
       Object.new.tap { |t| t.define_singleton_method(:secure_page) { |*, **| true } }
     end
 
-    with_fake_ferrum_browser(fake_browser) do
-      plugin.send(:with_browser, Dir.mktmpdir, "example.com",
-                  url: "https://example.com/", headless: true) { |_| }
-    end
+    plugin.send(:with_browser, Dir.mktmpdir, "example.com",
+                url: "https://example.com/", headless: true) { |_| }
 
     assert_match %r{/profile\z}, broker.opened.first[:profile]
     assert_equal true, broker.opened.first[:persistent]
@@ -355,10 +319,8 @@ class TestPlugins < Minitest::Test
     plugin.define_singleton_method(:resolve_runtime) { |_| "linux" }
     plugin.define_singleton_method(:account_root) { Dir.mktmpdir }
 
-    with_fake_ferrum_browser(fake_browser) do
-      plugin.send(:with_browser, site: "fetlife", account: "me",
-                                 url: "https://fetlife.com/home", headless: true, runtime: "linux") { |_| }
-    end
+    plugin.send(:with_browser, site: "fetlife", account: "me",
+                               url: "https://fetlife.com/home", headless: true, runtime: "linux") { |_| }
 
     assert_equal "fetlife.com", broker.opened.first[:host]
     assert_equal ["lease-1"], broker.closed
