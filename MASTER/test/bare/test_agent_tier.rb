@@ -19,6 +19,7 @@ require "time"
 require "fileutils"
 require "minitest/autorun"
 require_relative "../../lib/agent/agent_cli"
+require_relative "../../lib/autopoiesis/kernel"
 
 # The router loads these lazily; the suite names them directly.
 %w[bare_scan law_index status_view receipts openbsd_tier fast_gate falsify
@@ -206,6 +207,24 @@ module Master
         rows.each do |row|
           refute_nil row["revision"], "a green with no revision is a green that measured nothing"
           refute_nil row["at"], "a green with no timestamp cannot be aged"
+        end
+      end
+
+      def test_coverage_state_json_ends_with_a_final_newline
+        path = File.join(master_root, "data", "coverage_map", "state.json")
+        assert File.binread(path).end_with?("\\n"),
+               "coverage state JSON must end with the repository-required newline"
+      end
+
+      def test_autopoiesis_manifest_writer_emits_a_final_newline
+        kernel = Autopoiesis::Kernel.new(repo_root: repo_root)
+        Dir.mktmpdir do |dir|
+          output = File.join(dir, "components.json")
+          kernel.instance_variable_set(:@manifest_path, output)
+          kernel.send(:save_manifest, { "components" => [] })
+
+          assert File.binread(output).end_with?("\\n"),
+                 "generated component JSON must end with the repository-required newline"
         end
       end
 
