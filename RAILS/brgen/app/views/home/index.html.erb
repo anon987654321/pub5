@@ -101,5 +101,8 @@
     <%= tag.p t("home.follow_hint_html", sign_in: link_to(t("home.follow_sign_in"), new_session_path)),
               class: "feed-hint" %>
   <% end %>
+  <% if @following_cold_start %>
+    <%= tag.p t("home.following_cold_start"), class: "feed-hint" %>
+  <% end %>
   <%= render "home/live_search_results" %>
 </section>
