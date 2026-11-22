@@ -391,6 +391,33 @@ class BrowserBrokerTest < Minitest::Test
     assert_equal 1, engine.stopped.size
   end
 
+  def test_lease_is_revoked_as_process_shutdown_begins
+    engine = FakeEngine.new
+    b = broker(engine:)
+    lease = b.open(host: "example.com")
+    stop_entered = Queue.new
+    release_stop = Queue.new
+    original_stop = engine.method(:stop)
+    engine.define_singleton_method(:stop) do |handle|
+      stop_entered << true
+      release_stop.pop
+      original_stop.call(handle)
+    end
+
+    closer = Thread.new { b.close(lease.id) }
+    stop_entered.pop
+
+    assert_raises(Broker::Denied) { b.assert_active!(lease.id) }
+    assert_equal 1, b.size, "the process handle remains owned until shutdown completes"
+
+    release_stop << true
+    assert_equal true, closer.value
+    assert_equal 1, engine.stopped.size
+  ensure
+    release_stop << true if release_stop && closer&.alive?
+    closer&.join
+  end
+
   def test_process_stop_is_attempted_when_the_stop_receipt_fails
     engine = FakeEngine.new
     ledger = lambda do |event:, phase:, **|
