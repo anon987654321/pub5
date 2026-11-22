@@ -96,6 +96,10 @@ module Master
 
       private
 
+      def browser_broker_available?
+        @broker && (!@broker.respond_to?(:available?) || @broker.available?)
+      end
+
       def enabled? = self.class.enabled?(rules: Master.models_config)
 
       def disabled_message
@@ -120,7 +124,7 @@ module Master
       end
 
       def with_browser
-        raise BrowserUnavailable, "#{@provider}: Core-owned browser broker is unavailable; refusing to spawn Chromium outside Core" unless @broker
+        raise BrowserUnavailable, "#{@provider}: Core-owned browser broker is unavailable; refusing to spawn Chromium outside Core" unless browser_broker_available?
 
         require "ferrum"
         PROFILE_MUTEX.synchronize do
