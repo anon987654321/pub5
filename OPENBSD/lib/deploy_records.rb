@@ -19,7 +19,7 @@ module Deploy
     RECOVERY_STATES = %w[none pending complete].freeze
     RUN_ID = /\A\d{8}T\d{6}Z-[a-z0-9_-]{1,32}-\d+\z/
     TIMESTAMP = /\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\z/
-    LOG_PATH = /\A\/[A-Za-z0-9_.\/-]{1,2048}\z/
+    LOG_PATH = /\A(?:\/[A-Za-z0-9_.\/-]{1,2048}|local:\/\/deploys\/[A-Za-z0-9_.-]{1,240}\.log)\z/
 
     def initialize(root: ROOT, repo_root: File.expand_path("../..", __dir__))
       @root = File.expand_path(root)
