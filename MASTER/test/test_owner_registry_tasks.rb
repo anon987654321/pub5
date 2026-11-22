@@ -195,6 +195,98 @@ class TestOwnerRegistryTasks < Minitest::Test
     end
   end
 
+  def test_parked_backlog_task_does_not_block_independent_ready_work
+    parked = {
+      id: "parked-task", text: "Repair the provider-dependent MASTER path.",
+      tree: "MASTER", kind: "mechanical", scope_paths: ["MASTER/lib/parked.rb"],
+      done_when: "rake test", size: "s", section: "MASTER",
+    }
+    independent = {
+      id: "independent-task", text: "Run independent source checks.",
+      tree: "MASTER", kind: "mechanical", scope_paths: ["MASTER/lib/independent.rb"],
+      done_when: "rake test", size: "s", section: "MASTER",
+    }
+    fake_mission = Class.new do
+      class << self
+        attr_accessor :queued
+        def current(root:) = nil
+      end
+      def initialize(root:); end
+      def ensure_queued!(**attributes)
+        self.class.queued = attributes
+      end
+    end
+
+    Dir.mktmpdir("backlog-parked") do |root|
+      Dir.mktmpdir("backlog-parked-repo") do |repo_root|
+        [parked, independent].each do |row|
+          full = File.join(repo_root, row.fetch(:scope_paths).first)
+          FileUtils.mkdir_p(File.dirname(full))
+          File.write(full, "VALUE = 1\\n")
+        end
+        executor = Backlog::Executor.new(root:, repo_root:, mission_class: fake_mission)
+        record = {
+          "id" => "mission-parked", "origin" => "backlog", "state" => "waiting",
+          "next_wake_at" => (Time.now.utc + 600).iso8601,
+          "wake_reason" => "transient: provider overload",
+          "plan" => JSON.generate(
+            "executor" => "owner_registry", "item_id" => parked.fetch(:id),
+            "item_digest" => Backlog.item_digest(parked),
+            "scope_paths" => parked.fetch(:scope_paths),
+          ),
+        }
+
+        Backlog.stub(:generate, [parked, independent]) do
+          assert executor.park_current!(record:)
+          assert_equal :queued, executor.enqueue_next!
+        end
+
+        plan = JSON.parse(fake_mission.queued.fetch(:plan))
+        assert_equal "independent-task", plan.fetch("item_id")
+        receipt = File.readlines(File.join(root, Backlog::Executor::RECEIPT_PATH))
+          .map { |line| JSON.parse(line) }.first
+        assert_equal "parked_task", receipt.fetch("record_type")
+        assert_equal "transient", receipt.fetch("failure_category")
+        assert_operator Time.iso8601(receipt.fetch("retry_at")), :>, Time.now.utc
+      end
+    end
+  end
+
+  def test_operator_can_release_one_human_parked_item_without_claiming_completion
+    row = {
+      id: "needs-human", text: "Review the explicit external acceptance seam.",
+      tree: "MASTER", kind: "mechanical", scope_paths: ["MASTER/lib/review.rb"],
+      done_when: "rake test", size: "s", section: "MASTER",
+    }
+    Dir.mktmpdir("backlog-resume") do |root|
+      Dir.mktmpdir("backlog-resume-repo") do |repo_root|
+        full = File.join(repo_root, row.fetch(:scope_paths).first)
+        FileUtils.mkdir_p(File.dirname(full))
+        File.write(full, "VALUE = 1\\n")
+        executor = Backlog::Executor.new(root:, repo_root:)
+        record = {
+          "id" => "mission-human", "origin" => "backlog", "state" => "blocked",
+          "wake_reason" => "human review required: external decision",
+          "plan" => JSON.generate(
+            "executor" => "owner_registry", "item_id" => row.fetch(:id),
+            "item_digest" => Backlog.item_digest(row),
+            "scope_paths" => row.fetch(:scope_paths),
+          ),
+        }
+
+        Backlog.stub(:generate, [row]) do
+          assert executor.park_current!(record:)
+          parked = executor.send(:latest_parked_tasks)
+          assert executor.send(:parked_task?, row, parked)
+          assert executor.resume_item!(item_id: "needs-human")
+          released = executor.send(:latest_parked_tasks)
+          refute executor.send(:parked_task?, row, released)
+          assert executor.send(:resume_requested?, row, released)
+        end
+      end
+    end
+  end
+
   def test_adaptive_journey_selects_a_prerequisite_before_its_dependent_route
     planner = Master::Fix::AdaptiveJourney.new
     evidence = [
