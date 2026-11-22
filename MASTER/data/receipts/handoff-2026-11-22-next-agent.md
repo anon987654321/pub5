@@ -1521,3 +1521,102 @@ resolve github.com for git ls-remote or a checkout refresh. GitHub contents
 writes and read-back were available; repository hooks and project tests did not
 run. Do not mark training spend safety as runtime PASS or treat the calculated
 receipt as actual billing.
+
+
+## 16. Phase 19 — blocker reduction and staged acceptance — 2026-11-22
+
+Status: blocker classification and scope documentation are updated on main and
+read back. This phase changes no live service, payment, DNS, account, privacy,
+rights or production acceptance claim. Runtime/project checks remain NOT_RUN.
+
+### Reduced implementation blockers
+
+The four rows previously marked status: blocked in MASTER/data/gaps.yml are now
+status: open, each with a bounded preparatory stage and an exact remaining
+external acceptance gate:
+
+- messenger_webrtc_calls: open for call-session lifecycle, ActionCable
+  signaling, permission/teardown UX and local/same-LAN ICE tests. Host STUN/TURN
+  and real cross-NAT tests still gate reliable production media.
+- marketplace_contact_relay: open for privacy-preserving in-app contact using
+  the existing buyer/seller conversation, masking and reviewed reveal. Inbound
+  mail aliases/forwarding still need vm23 MX/relay routing.
+- tv_live_stream_infra: open for provider-neutral ingest/delivery contract,
+  loopback adapter, readiness/failure checks and runbook. Production media
+  server/transcoding/delivery remain gated on the selected host infrastructure.
+- amber_weather_suggestions: open for deterministic suggestions over an
+  injected weather snapshot and a no-weather fallback. A live forecast provider,
+  freshness and attribution remain separate integration gates.
+
+The gap ledger now has zero rows with status: blocked. Open does not mean built,
+picked, deployed or accepted; each row remains subject to its existing
+ideation/pick/workstream and Law-gated implementation path.
+
+RAILS/apps.yml no longer marks the local TV live adapter stage or Amber's
+injected-weather stage as agent: ignore. Their entries remain status: planned
+and spell out that only local preparatory work is open. Other planned features
+that depend on architectural migrations, unpicked design decisions or external
+capability remain under their existing fences.
+
+RAILS/apps.horizon.yml now clarifies that an explicit operator request can
+authorize a named preparatory slice (contracts, fixtures, adapters and local
+tests) without promoting the whole aspirational feature to active or production
+ready. Its global agent_policy: ignore remains the default for unrequested
+full-feature implementation.
+
+### Narrowed external acceptance gates
+
+The old Section 5 has been replaced with 16 named external acceptance gates.
+For each, the local/contract/test/fixture work that can proceed without the
+missing external material is named separately from the live-production claim.
+This covers WebRTC, marketplace contact relay, TV ingest, ActivityPub,
+tiles/licensing, provider-staging payments, real-device PWA, SEO crawl,
+accessibility participants, live journeys, OAuth callbacks, radio/Whyp,
+operator alert relay, registrar DNSSEC, off-host backup/key recovery and
+production CSP/egress enforcement.
+
+MASTER/data/operator_seams.yml now states that a seam blocks only the live
+claim whose evidence it names. It is not a global work-stop flag: independent
+source changes, local/contract tests, dry-runs, adapters and failure-path proof
+must continue. The exact live evidence remains mandatory.
+
+Hard protections deliberately not relaxed:
+- subject consent, source rights and human likeness/publication approval;
+- paid-provider spend approval, private ledgers and truthful provider billing;
+- payment-provider staging and signature/idempotency proof before real money;
+- OAuth state/nonce/PKCE and secret-store requirements;
+- DNSSEC registrar DS publication and recovery proof;
+- off-host backup and key recovery;
+- production CSP/egress allowlisting and rollback;
+- truthful PASS/DELIVERED status, real test output and human accessibility,
+  audio or visual acceptance where the claim requires it;
+- the horizon default against silent implementation of unrequested features.
+
+Files: MASTER/data/gaps.yml, MASTER/data/operator_seams.yml,
+MASTER/data/receipts/handoff-2026-11-22-next-agent.md,
+RAILS/apps.yml, RAILS/apps.horizon.yml.
+
+Commits:
+b69a07c43b13be51d12e86e2fb3c5a07e89ef0d9 (open the four staged gap slices);
+e06f174d93b9aa6386caee413ea6101a8235fb90 (operator seams scope);
+7341cfcd81f481436e166b31744a074a70842fd5 (external gate reclassification);
+9a573afa2567af8a9dd0531fb215c97efab2841a (TV and weather local stages);
+32b3a465cb2f27e4e15bf7f77613f48334bf35f6 (explicit preparatory slice under horizon fence).
+
+### Execution boundary for Phase 19
+
+RUN:
+- GitHub read-after-write checks for the four gap rows, operator-seam contract,
+  apps.yml feature rows and horizon policy wording.
+- Gap registry scan found zero remaining rows with status: blocked.
+- Read-back confirms all 16 external gates are still explicitly listed in
+  Section 5 with local preparation and remaining production acceptance split.
+
+NOT_RUN:
+- The actual Rails app tests, MASTER gap/schema validations, Law checks,
+  full /fix, local browser journeys, same-LAN/cross-NAT calls, live TV ingest,
+  Whyp import, external OAuth, provider staging, real-device PWA, accessibility
+  participant review, registrar DS updates, off-host restore and vm23 enforcement.
+- No external service was installed, paid, enabled or contacted by this phase.
+- No previously unrequested horizon feature was promoted to picked or done.
+
