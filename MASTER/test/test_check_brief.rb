@@ -100,6 +100,19 @@ class TestCheckBrief < Minitest::Test
     assert_equal "NOT_RUN", empty.fetch("status")
     assert_equal 0, empty.dig("counts", "steps")
     assert_nil empty.fetch("exit_status")
+
+    unavailable = Operator::CheckRunner::Result.new(
+      name: "web ui behaviour unavailable", success: false,
+      output: "not measured", timed_out: false, exit_status: 3,
+      command: "ruby -e unavailable"
+    )
+    blocked = JSON.parse(Operator::CheckBrief.render_json(
+      profile: "web", results: [unavailable], metadata:,
+      started_at: "start", finished_at: "finish", duration_s: 1,
+      exit_status: 1, command: "MASTER/bin/check --profile=web --format=json"
+    ))
+    assert_equal "BLOCKED", blocked.fetch("status")
+    assert_equal 1, blocked.dig("counts", "blocked")
   end
 
   def test_render_failure
