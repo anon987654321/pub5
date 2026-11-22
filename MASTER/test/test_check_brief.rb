@@ -56,7 +56,7 @@ class TestCheckBrief < Minitest::Test
     assert_equal "bundle exec rake test:core", receipt.dig("steps", 0, "command")
     assert_nil receipt.fetch("test_counts")
     refute_includes json, "do-not-publish-this-output"
-    refute_includes json, "raw_output"
+    assert_equal false, receipt.dig("evidence", "raw_output_included")
   end
 
   def test_render_json_preserves_timeout_failure_and_not_run_states
