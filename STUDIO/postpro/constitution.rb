@@ -97,7 +97,7 @@ module Postpro
       return nil unless take
 
       input_digest = input_sha256.to_s
-      unless input_digest.match?(/\\A[a-f0-9]{64}\\z/)
+      unless input_digest.match?(/\A[a-f0-9]{64}\z/)
         raise ArgumentError, "take identity needs a lowercase SHA-256 input digest"
       end
 
