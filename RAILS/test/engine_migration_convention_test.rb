@@ -65,7 +65,7 @@ class EngineMigrationConventionTest < Minitest::Test
         assert_match(/t\.(?:bigint|integer|string|datetime|json) "#{column}"/, table,
                      "#{app} ledger schema is missing #{column}")
       end
-      assert_match(/idempotency_key.*unique: true/, table,
+      assert_match(/idempotency_key.*unique: true/m, table,
                    "#{app} ledger schema must enforce idempotency in the database")
     end
   end
