@@ -24,6 +24,11 @@ def grade_one_shot(input_path, output_path, preset_name)
   tiff16 = ARGV.include?("--tiff16") || output_path.to_s.end_with?(".tif", ".tiff")
   output_path = output_path.sub(/\.(jpg|jpeg|png|webp)$/i, ".tif") if tiff16
   Postpro::Constitution.verify_distinct_source!(input_path:, output_path:)
+  Postpro::Constitution.verify_unused_output!(output_path)
+  if ARGV.include?("--compare")
+    comparison_path = output_path.sub(/(\.[^.]+)\z/, "-comparison\\1")
+    Postpro::Constitution.verify_unused_output!(comparison_path)
+  end
 
   image = load_image(input_path)
   unless image
@@ -118,6 +123,7 @@ def run_stock_sheet
     Postpro::Constitution.verify_output!(input_path:, output_path: output)
   else
     Postpro::Constitution.verify_distinct_source!(input_path:, output_path: output)
+    Postpro::Constitution.verify_unused_output!(output)
   end
   image = load_image(input_path)
   abort "postpro: could not load #{input_path}" unless image
