@@ -1,0 +1,756 @@
+# Handoff — pub5 / brgen completion — 2026-11-22 — next agent
+
+Status: proposal-grade implementation brief. Session evidence under the receipts
+precedent (MASTER/data/receipts/fix-session-2026-11-19-grok.md and
+fix-session-2026-11-22-qoder.md), authorised by the operator's explicit request
+for a new handoff. It consolidates sections A-U of the intake receipt into one
+executable brief; the intake receipt remains the evidence log. This file creates
+no backlog authority: every slice routes to its owning registry (gaps.yml,
+apps.yml, convergence.yml, operator_seams.yml, ideations/, ux_refinements.yml,
+RAILS/refinements.yml, proposals.yml). Re-measure before acting; a finding is a
+hypothesis. No Ruby suite, rake task, Law detector, /fix lane or browser check
+ran in the intake session (no Ruby >= 3.2, no Chrome, no deploy host in the review
+sandbox); all such proof is NOT_RUN until you run it on a compatible host.
+
+## 0. Read first, in this order
+
+1. MASTER/data/soul.yml — highest authority: identity, preservation, source
+   precedence, absolute.sacred_paths (empty by the 2026-11-09 decree, but soul.yml
+   and laws.yml stay operator-owned for autonomous writers).
+2. MASTER/data/laws.yml — the Law catalogue. For every Law you touch read its
+   statement key, its law_catalogue.entries row (severity/mode/lifecycle/autofix/
+   languages/surfaces/path_exclude), its Law.define in MASTER/law/*.rb, its
+   fixtures or proved_by test, and the focused tests. 554 catalogue entries;
+   196 ALLCAPS statement keys; 34 bare roots.
+3. Run: ruby MASTER/tools/agent_context.rb --json (add --tree for cross-tree
+   work). Consume conduct, blocking_rules, coverage, task_contract_schema,
+   capabilities. This is the live brief, not a replacement for reading Laws.
+4. MASTER/AGENTS.md — the full contract, especially "Refused, and why" and
+   "Do Not Touch". Root AGENTS.md is generated from its marked block; verify with
+   cd MASTER && rake lint:agent_contracts (intake found them byte-equal).
+5. MASTER/data/law/TREE_CONTRACTS.md — the five-tree acceptance matrix.
+6. The owning tree/product entrypoint: RAILS/CLAUDE.md, RAILS/README.md, the
+   target app/engine README and any local AGENTS.md.
+
+Authority order: soul.yml > laws.yml > executable laws and gates > tree contracts
+> Git history. Git history is provenance, never an override.
+
+### Refused (do not propose or build these)
+
+No TUI; no third surface (MASTER is bin/master + the face); no external agent
+protocol (ACP/A2A/OpenAI-compatible /v1); no parallel change streams (one
+checkout, straight to main, no worktree/branch/PR); no second language in the
+MASTER runtime (Prism is stdlib; no tree-sitter/Herb/Python); no RBS/Steep yet;
+no performance machinery ahead of measured slowness; no telemetry/score/check
+without a reader; no golden traces or golden renders for model output or dilla;
+no detector/index/corpus without a subject; no audit without a path; no
+documentation outside its boundary (one README per boundary; no new Markdown —
+polish_policy.yml no_new_markdown); no unreviewed self-modification of soul.yml/
+laws.yml; no RAILS stack import (Kamal/Thruster/Docker/Inertia/Vite/ViewComponent/
+Lookbook/Cucumber/Percy/Chromatic/Playwright; frontend is importmaps/ERB/Stimulus/
+Turbo; visual_contract + layout_snapshot are the one paint and one layout
+baseline); no two-tower feed / neural ranker / pgvector on the 1 GB SQLite box
+(the portable result is a SQL union in RAILS/apps.horizon.yml); no serif for
+brgen/amber/master; no covert room listening; no capability adapter without
+PersonalPermissions.
+
+### Operator standing preferences (this work)
+
+All new code and tooling in Ruby; all new shell scripts in zsh with strict mode
+(ROBUSTNESS_strict_mode_zsh); replies and docs in Strunk & White English;
+screenshots for visual work saved under RAILS/*.png or .webp (run-scoped, never
+reused); logs published to gists or command-line pastebins (the runtime publishes
+redacted log0 to pste.us, dpaste.org fallback; MASTER_LOG_PUBLISH=0 keeps local);
+frequent small coherent commits with run vs NOT_RUN stated honestly.
+
+### Commit and delivery protocol
+
+One checkout; path-scoped commits straight to main; never force-push; never
+git add -A or git commit -a. Prefer bin/operator land -m <msg> <paths>. Commit
+shape (MASTER/data/commit_format.yml, enforced by .githooks/commit-msg):
+capitalised subject <= 72 chars, no type prefix, no trailing full stop; body with
+the numbers; Co-authored-by trailer. Before push: git log origin/main..HEAD names
+what goes with you. After push: git log origin/main..HEAD empty proves delivery;
+report DELIVERY_FAILED if the push cannot be proved. Install hooks first on a
+real host: bin/operator hooks (sets core.hooksPath). pre-push runs boot_smoke and
+the session ledger; a fresh clone has no hooks until installed.
+
+## 1. Bootstrap (exact commands)
+
+In a container with no Ruby/Chrome/libvips/root:
+
+    MASTER/bin/sandbox-bootstrap          # builds vendored Ruby, bundles every
+                                          # tree, libvips .deb closure, Chrome for
+                                          # Testing; --dry-run prints the plan
+    . MASTER/bin/sandbox-env              # source in the shell that follows
+    # on a machine that already has the stack, skip bootstrap
+
+With Ruby >= 3.2 (the shared floor; no patch-level pin is authoritative):
+
+    cd MASTER && bundle install
+    MASTER/bin/operator doctor            # checkout/host readiness (read-only)
+    MASTER/bin/doctor                     # MASTER runtime/provider/voice readiness
+    ruby MASTER/tools/agent_context.rb --json
+    bin/master '/fix --dry-run --critique --only critique,map MASTER/lib/cli'
+    # read veto, INCONCLUSIVE and skip lines as failures of proof, never success
+
+Rendered evidence path:
+
+    MASTER/bin/operator browser install
+    MASTER/bin/operator visual sweep APP --one-page     # then the full sweep
+    MASTER/bin/operator test PATH                       # smallest isolated proof
+    cd MASTER && MASTER_TEST_JOBS=1 bundle exec rake test   # full MASTER suite
+
+Repair vs verification: /fix [path] is the canonical repair loop (observe, repair,
+re-observe, scope-selected proof). bin/fix-here TREE wraps it (disk/parse/provider
+preflight, per-tree log, stall handling, RAILS lifecycle; --dry readiness only,
+--dry-run read-only preview, --no-publish local commits). bin/check is the
+profile verification runner (operator default, ci floor, full release); bin/ci is
+compat for bin/check --profile=ci. bin/operator check is the repo-wide
+Operator::CheckChain ladder (writes fixes by default; --scan-only to measure).
+Do not append bin/check --profile=full after every /fix.
+
+## 2. Measured intake facts (instrument named; re-verify on your host)
+
+    HEAD at intake        6d9d498 (main advanced concurrently during the session)
+    agent contract        root AGENTS.md == MASTER/AGENTS.md block (byte-equal)
+    laws.yml              parses; 554 catalogue entries: 279 warning / 176 info /
+                          98 error / 1 veto; 79 automatic autofix / 26 never;
+                          16 trusted / 8 advisory / 4 retired
+    laws_index.json       fresh at intake (rev 61330272 ancestor of HEAD; no
+                          laws.yml commit after it; law_count 554). Re-verify.
+    self_findings.yml     31585 findings / 145 rules. Top: rubocop 4583,
+                          LONG_LINE 4582, reek 4086, VERTICAL_BREATH 2289,
+                          CONSECUTIVE_BLANK_LINES 2200, TRAILING_WHITESPACE 2168,
+                          TYPOGRAPHIC_GRID 1711, QUOTES_BY_LOCALE 1566,
+                          PREFER_TAG_HELPERS 886, SMALL_FUNCTIONS 812,
+                          FEW_ARGUMENTS 650, LONG_PARAMETER_LIST 468,
+                          CYCLOMATIC_COMPLEXITY 447, ABC_SIZE 392,
+                          NARROW_SILENT_RESCUE 176, MAGIC_COLOR 143,
+                          SILENT_RESCUE 125, NO_CHANGELOG_COMMENT 87,
+                          CONFIGURATION_SHAPE 87, REDUNDANT_CORE_REQUIRE 85,
+                          DATA_CLUMPS 78, STIMULUS_PROGRESSIVE 68,
+                          NO_SPACED_EM_DASH 263, NO_LOGIC_IN_VIEW 243
+    FACE_WORLD.md         core block repeated 6x at offsets 292, 11762, 23091,
+                          33926, 44762, 55597; ~2/3 of 88 KB near-duplicate;
+                          later copies carry edits the first lacks
+    shebangs              297 tracked: 187 ruby, 43 zsh, 27 ksh, 24 /bin/sh,
+                          5 env sh, 2 bun, 2 falcon-host, 1 node, 1 expect,
+                          1 termux bash, 1 termux sh, 1 env bash,
+                          1 /usr/local/bin/ruby, 1 /bin/zsh
+    exec-bit bugs         102 shebang files committed mode 100644 (incl.
+                          MASTER/bin/master-session, checks/runner.rb,
+                          tools/boot_smoke.rb, tools/polish_lens.rb,
+                          tools/security_sweep.rb). AGENTS.md documents this class.
+    YAML                  0 safe_load failures across MASTER/data + checks/data
+                          (syntax only; Ruby psych semantics NOT_RUN)
+    whitespace            0 CRLF; 7 trailing-ws files: data/laws.yml,
+                          data/structural_recipes.yml, law/surface.rb,
+                          test/test_dialogue_rubric.rb, test/voice/test_voice_support.rb,
+                          tools/portal_agent.rb, web/public/three.face.module.js
+    final newline         5 missing: axe.min.js (vendored, leave),
+                          autopoietic_components.json, coverage_map/state.json,
+                          laws_index.json, face_music_packs.json
+    .editorconfig         carries a [*.py] block; zero .py files tracked
+    MASTER census         3154 tracked files, 921 test files, 914 lib/*.rb,
+                          32 law/*.rb, 146 tools entries; checks.yml 72 checks
+    convergence.yml       82 workstreams; ops_alert_channel the one "missing"
+    operator_seams.yml    67 seams, all open, each names needs/evidence
+    gaps.yml              54 gaps; statuses open/picked/blocked/satisfied
+    dup_census.yml        161 duplicate sets (mostly intentional; triage below)
+    lanes.yml             codex-cli and gemini marked dead
+
+## 3. Rendered-evidence findings (measured from committed captures; STALE)
+
+Instrument: read MASTER/checks/data/layout_snapshots/brgen-*-mobile.json (rendered
+geometry) and analysed MASTER/checks/data/route_screenshots/brgen/*.png with
+PIL/numpy. These are prior-revision baselines; rails_stale_capture_source_reconciliation
+is an open seam. The home PNG (__loopback__390.png) is DARK (#000000/#16181c,
+#e7e9ea text, #1d9bf0 blue) while marketplace/dating/takeaway PNGs are LIGHT
+(#efefef/#ffffff, #1e40af); the home snapshot reports a light tab contradicting
+its own dark PNG. Captures are mutually inconsistent. NONE stands as the current
+design. Take a fresh sweep (section 1) before any design PASS.
+
+Concrete findings, bounded to the captured revision, with exact owners:
+
+3.1 Title duplicates the city. Rendered: brgen core "Bergen - Bergen";
+    marketplace "Markedsplass - Bergen - Bergen"; other verticals correct
+    ("Dating - Bergen", "Restauranter - Bergen"). Investigate:
+    RAILS/brgen/app/views/layouts/application.html.erb (the <title> assembly),
+    RAILS/brgen/app/helpers/application_helper.rb (city_name = Current.city_name;
+    the comment "pages.home_title was the literal ... interpolate this rather
+    than name a city"), and the nb/en locale pages.home_title. Root cause is the
+    city appended to a title that already carries it. Intent content_only;
+    preserve every other title; prove with a rendered <title> assertion per
+    surface + the locale tests.
+
+3.2 Active tab text fails contrast on six verticals. The tab label uses
+    tokens.yml#tokens.vertical_accents.<v>.light on #f9f9f9 at 18px normal text.
+    House target normal_text_contrast is 7.0 (typography.accessibility); WCAG AA
+    is 4.5. Measured against CURRENT tokens:
+
+        vertical     tab colour   contrast on #f9f9f9   AA 4.5   house 7.0
+        marketplace  #1E40AF      8.28                  pass     pass
+        tv           #dc635c      3.33                  FAIL     FAIL
+        dating       #009579      3.58                  FAIL     FAIL
+        takeaway     #c26a30      3.69                  FAIL     FAIL
+        playlist     #0e8a94      3.93                  FAIL     FAIL
+        maps         #5585c5      3.60                  FAIL     FAIL
+        messenger    #6b7fd7      3.54                  FAIL     FAIL
+
+    (marketplace's snapshot showed #98876e 3.31 — stale; current blue passes.)
+    Owners: RAILS/brgen/app/views/shared/_mobile_chrome.html.erb (#app-tab-bar,
+    .tab-item, aria-current="page"), RAILS/brgen/app/assets/stylesheets/
+    _brgen_navigation.scss (the active-tab colour binding), tokens.yml
+    vertical_accents + vertical_accent_ink (#110f19). Fix options, each verified
+    per vertical, operator gates the rendered colour:
+      (a) add an accessible tab-text token per vertical derived to >= 7.0 on
+          #f9f9f9 (house target), falling back to >= 4.5 minimum;
+      (b) active tab = accent FILL + ink text; ink #110f19 on accent measured:
+          tv 5.41, dating 9.94, takeaway 6.38, playlist 7.70, maps 5.72,
+          messenger 5.10 (all >= 4.5) but marketplace 3.67 FAILS — marketplace
+          needs light text on its blue; verify each pair before choosing;
+      (c) active label >= 18.66px bold to use the 3:1 large-text rule; verify.
+    Prove: rendered contrast check + accessibility_axe + keyboard_flow at
+    390/768/1280, before/after screenshots under RAILS/*.png.
+
+3.3 Body/input text below the 16px minimum. Snapshot font_size 15.8px on nav,
+    search and buttons; typography.accessibility.body_min_px = 16 and
+    mobile_input_min_px = 16. Owners: _brgen_navigation.scss, the search partial
+    RAILS/brgen/app/views/shared/_search_palette.html.erb, button styles. Raise
+    to >= 16px (inputs especially, to avoid iOS zoom). Prove rendered + axe.
+
+3.4 Search field touch height 40px < 44 minimum (REACH_touch_target_min) on
+    marketplace and takeaway (#topHalf>div.search.marketplace...). Owners:
+    RAILS/brgen/app/views/shared/_storefront_nav_bar.html.erb,
+    engines/marketplace/app/views/marketplace/_nav_bar.html.erb, the search
+    styles. Raise to >= 44px (48 recommended). Prove rendered geometry.
+
+3.5 Structural skeleton is sound: h1_count = 1, landmarks main/nav/skip present,
+    scroll_width == viewport (no horizontal spill) at 390, most interactive
+    targets >= 44px, body contrast passes. Keep these green as you change surfaces.
+
+## 4. The execution program (ordered slices)
+
+Each slice: state a TaskContract (MASTER/data/task_contract.yml, validated by
+Master::Fix::TaskContract) with intent (content_only / content_and_structure /
+functional_change / redesign), repository-relative scope, mandatory preservation
+dimensions, proof, and new_paths justified only by a distinct responsibility
+(existing-first). Implement under the nearest existing owner. Prove locally
+(focused tests + changed-line Law assessment), then rendered where visual, then
+the named live seam. Record RUN / NOT_RUN / INCONCLUSIVE. Commit path-scoped, push,
+verify. Route the registry row. Operator gates rendered values, copy voice, money,
+live hosts, consent.
+
+### Phase 0 — quick wins (land first, one commit each)
+
+0.1 .editorconfig: delete the [*.py] block (zero .py tracked). Proof: doc lint.
+0.2 Generated JSON final newline: fix the WRITERS of autopoietic_components.json,
+    coverage_map/state.json, laws_index.json, face_music_packs.json (not the
+    artifacts); add a newline assertion to checks generated_asset fixtures. Leave
+    vendored axe.min.js bytes; record its vendor exemption with a freshness date.
+0.3 FACE_WORLD.md dedup: diff the six segments (offsets in section 2), keep the
+    union of unique lines, one canonical block, preserve every rendered-value
+    decision. Intent content_and_structure. Prove: section-count assertion +
+    editorial review. Largest single editorial win (88 KB toward ~30 KB).
+0.4 Exec-bit triage: for each of the 102 mode-100644 shebang files find the
+    caller. Direct exec (system/spawn path as argv0, shell) needs the bit:
+    chmod +x && git update-index --chmod=+x. Interpreter invocation (ruby path,
+    bundle exec ruby path) does not — pick one convention (set bit or drop
+    shebang) and write it into the shell law fixtures. Start with
+    MASTER/bin/master-session (bin/ scripts broke boot silently before). Extend
+    test/test_entrypoint_requires.rb to assert every direct-exec entrypoint is
+    100755 in the index. One directory slice per commit, boot proof after.
+0.5 Trailing whitespace: trim law/surface.rb, tools/portal_agent.rb,
+    test/test_dialogue_rubric.rb, test/voice/test_voice_support.rb,
+    web/public/three.face.module.js, data/structural_recipes.yml — one commit
+    each, focused test after, parse-verify YAML. Report data/laws.yml whitespace
+    to the operator (operator-owned; a human commits the trim).
+0.6 Dead-lane probe: probe codex-cli and gemini (lanes.yml) via /doctor keyless or
+    the lane probe; remove an entry only when the lane answers; record the answer.
+0.7 Title duplication (3.1), tab ink (3.2), 16px minimum (3.3), search height
+    (3.4): each a slice with fresh rendered proof. These are the highest-value
+    visible fixes; do them after a fresh sweep establishes the current baseline.
+0.8 incidents.yml "in-tree citation pending" rows: supply the citation or keep
+    the honest provenance string; never invent a reference.
+
+### Phase 1 — the shared spine (finish once; every vertical stands on it)
+
+The gaps demand ONE Commerce domain and ONE Places substrate; the horizon fence
+forbids a billing stack per engine. Build these first.
+
+1.1 Commerce (closes gaps.yml commerce_shared_domain; consumed by marketplace
+    coupons/boosts/analytics, dating premium, playlist donations, takeaway pro,
+    creator monetization, local ads, referral benefits). New owners under the
+    shared domain (justify in TaskContract.new_paths; existing-first):
+
+        module Commerce
+          Ledger       # append-only: charge/refund/credit/payout/fee; idempotent
+          Provider     # abstraction over Vipps + Dintero; never a second stack
+          Campaign     # coupons/bundles/referral credit; rules as data
+          Entitlement  # playlist_pro/dating_pro/takeaway_pro/boosts; usable benefits
+          Credit       # seller/referral credit; expires honestly, shown plainly
+          Payout       # seller/creator payout schedule; readable status
+          Receipt      # one honest receipt: line items, mva, delivery, total, ref
+          def self.checkout(order, provider:, return_to:)
+            total  = order.total_incl_mva_and_delivery       # honest_money
+            intent = Provider.create_intent(order, total, return_to: exact_allowlist(return_to))
+            Ledger.record(:charge_pending, order, intent)    # idempotency key = order.id
+            redirect intent.approval_url                     # hosted; no card data
+          end
+          def self.webhook(event)                            # behind Shared::OutboundHttp (pinned)
+            return unless Provider.verify_signature(event)
+            return if Ledger.seen?(event.id)                 # redelivery-safe (lock!+reload)
+            Ledger.record(event.kind, event.order, event)
+            Entitlement.grant_for(event.order)               # usable, not just recorded
+            EventEmitter.emit("commerce.settled", event.order)
+          end
+        end
+
+    Proof: payments_in_provider_staging seam; redelivery regression on SQLite +
+    FOR UPDATE; receipt rendered comparison; honest_money predicate. Operator
+    gates money. Fences: payment never buys trust/moderation/rank; no dark patterns.
+
+1.2 Places substrate (closes maps_poi_substrate; maps surface done but unconsumed
+    as a service). Public API consumed by every vertical:
+
+        module Places
+          def self.near(lat:, lng:, radius_km:, kind: nil)
+            POI.within(radius_km, lat, lng).filter(kind).rank_by(distance, trust)
+          end
+          def self.claim_or_suggest(user, place)
+            place.persist_or_queue_review; TrustScore.signal(:place_claim, place)
+          end
+        end
+
+    Proof: >= 2 verticals consume Places in a rendered journey;
+    maplibre_runtime_and_vendor_decision seam closed by operator (licensing)
+    before tiles ship; person area never exact coordinate.
+
+1.3 CityFeed (closes brgen_city_population_seeds [content; CitySeed covers 43
+    registry cities but no column/reader], brgen_cold_start_feed; workstream
+    brgen_feed_ranking_deterministic [picked]):
+
+        module CityFeed
+          def self.for(user, city)
+            return following_union_city_popular(user, city) if user.follows.empty?
+            deterministic_rank(scope: city.posts.visible_to(user),
+              signals: [recency, local_relevance, trust, engagement],   # SQL union
+              diversity: cap_per_author_and_tag,
+              explain: "why_am_i_seeing_this" link per card)
+          end
+          def self.seed(city)
+            CitySeed.read(city).each { |row| upsert_public_domain_row(row) }  # add reader
+            # real local public sources, attributed; never fabricate people/posts
+          end
+        end
+
+    Proof: cold-start journey renders a non-empty local attributed feed for a new
+    guest in each registry city; first_screen + content_honesty. No neural ranker.
+
+1.4 Trust (closes commerce_private_seller_verification; private seller has no
+    organisation number, needs its own proof):
+
+        module Trust
+          def self.badge(subject)
+            return :verified_org     if subject.organisation_number_verified?
+            return :verified_private if subject.id_verified? && subject.phone_verified?
+            return :new_member       # honest, not a stigma; shows how to verify
+          end
+          def self.report_path(surface)
+            ModerationWorkflow.open(surface, reporter: current_user)  # one tap, plain
+          end
+        end
+
+    Proof: badge unit + rendered trust panel; human_accessibility_participant_review
+    for plain language. Payment never buys a badge; moderation never sells.
+
+1.5 Attention (closes messenger_notify_suppression; calm by default):
+
+        module Attention
+          def self.notify(user, event)
+            return if user.quiet_hours?(now)                # default 22:00-08:00, editable
+            return if event.conversation_open_for?(user)    # suppress while reading
+            return if over_budget?(user, event.kind)        # daily budget per kind
+            deliver_later_as_digest(user, event)            # batch non-urgent
+          end
+        end
+
+    Proof: suppression regression (open conversation => no push); digest rendering;
+    messenger_journey_in_a_browser seam.
+
+1.6 Onboarding (guest -> member, plain, Vipps-first; Vipps login mock exists):
+
+        module Onboarding
+          def self.first_run(visitor)
+            show_value_first(visitor.city)                  # guest sees value, no wall
+            offer_one_step_signup(method: :vipps)           # oauth_callbacks_live seam
+            ask_only: [display_name, city]
+            explain_plain_nb("Vi bruker Vipps for å logge inn. Ingen passord å huske.")
+            consent_plainly(privacy, terms)                 # sharing default closed
+          end
+        end
+
+    Proof: guest-first journey; oauth_callbacks_live seam; accessibility; plain-
+    language review.
+
+### Phase 2 — Marketplace (markedsplass) -> bol.com parity
+
+Engine: RAILS/brgen/engines/marketplace. README: shop-first today; individual-
+listing model exists but classifieds experience unfinished. DONE: category + FTS
+search, locality filters, facets, saved searches, wishlist, reviews, public
+listing questions, variants, order state, returns, native seller surface,
+duplicate detection (Listing#duplicate_of, satisfied). Planned (apps.yml): Solidus
+core mount, starter storefront, native marketplace features, Dintero split
+checkout, Amazon feature parity map, AI recommendations.
+
+2.1 Finish the classifieds flow (the unfinished individual-listing experience):
+    60-second photo-first listing, suggested honest price range from similar,
+    auto category + place via Places, plain safety tip, duplicate check on publish.
+2.2 Canonical product catalog keyed by GTIN/EAN — one product page, many offers
+    (local shops + private sellers) — the bol mechanic, reachable on SQLite.
+2.3 Professional partner-seller program with Trust.badge verification.
+2.4 Deterministic recommendations + "often bought together" from co-order counts
+    in SQL (closes marketplace_ai_recs; no neural ranker). Explain "Fordi du så på ...".
+2.5 Coupons/referral credit/bundles via Commerce::Campaign (closes marketplace_coupons).
+2.6 Seller analytics: plain counts (views/contacts/sold), liquidity restock
+    suggestions (closes marketplace_seller_analytics; marketplace_liquidity
+    knowledge gap — liquidity before ads).
+2.7 Paid boosts via Commerce, labelled "Sponset", organic rank stays quality-
+    weighted (closes marketplace_paid_boosts; payment never buys rank/trust).
+2.8 Contact relay (marketplace_contact_relay) stays BLOCKED until inbound mail
+    routing + per-listing addresses on vm23 exist; else in-app message only.
+2.9 Land a bol.com parity map beside the planned Amazon parity map.
+    WALLED: bol catalog scale, ML, national logistics. NATIVE: a CITY product
+    catalog, Places geo-locates stock, Commerce split checkout (Dintero) + returns.
+    Proof: empty->seeded journey, 60s listing on a phone, checkout staging seam,
+    sponsored label rendered, first_screen.
+
+### Phase 3 — Takeaway -> DoorDash/foodora parity
+
+Engine: RAILS/brgen/engines/marketplace/engines/takeaway; canonical route /food on
+the Marketplace host (takeaway.<city> compatibility mount). DONE: discovery +
+cuisine filter + live search + nearby, menus/availability/photos/hours/min-order/
+fees/radii, guest ordering, server-calculated totals (client never trusted),
+guarded lifecycle, delivery-area validation (Restaurant#within_delivery,
+satisfied), cart expiry (Order CART_TTL + expire_stale_pending!, satisfied), tip.
+
+3.1 Live tracking map + driver assignment + honest ETA (prep time + distance, not
+    a sold guess). 3.2 Driver surface. 3.3 Scheduled + group orders. 3.4 Subscription
+    free-delivery tier via Commerce::Entitlement (DashPass-style). 3.5 Restaurant
+    coupons/loyalty/promotions via Commerce::Campaign (closes takeaway_pro_surface).
+    3.6 Reorder/favorites; ratings + photo reviews.
+    WALLED: the Dasher/rider logistics network, dispatch ML, capital, insurance.
+    NATIVE: restaurant self-delivery + local courier coordination on the spine.
+    Proof: hungry-user journey end to end, cart-expiry honesty (real TTL, not fake
+    urgency), checkout staging seam, live tracking journey, pro coupon rendered.
+    Never fake a live ETA or status badge.
+
+### Phase 4 — Dating -> happn/Tinder/Badoo parity
+
+Engine: RAILS/brgen/engines/dating. DONE: home#next one-candidate deck, like/
+dislike, rewind, matches page, who-liked-you page, five stored daily picks,
+mutual Profile.oriented_for (dating_two_sided_ranked_for satisfied), Vipps-verified
+phone, human-reviewed random-pose selfie verification, three profile prompts,
+path_crossings + nearby surfaces (route screenshots).
+
+4.1 Surface path_crossings as a first-class "people you crossed today" feed —
+    happn's whole product, data already exists. 4.2 Badoo-style people-nearby grid
+    + interests discovery (area-only, never exact). 4.3 Premium tier (closes
+    dating_premium_boost) unlocking unlimited rewind / who-liked-you / passport;
+    super-like; boost — via Commerce::Entitlement, member-visible real benefits,
+    price incl mva, no dark pattern, no fake scarcity. 4.4 Icebreaker games; safety
+    center. 4.5 Safety defaults: private by default, plain "Du bestemmer hvem som
+    ser deg. Del aldri adresse.", block/report one tap, verification optional.
+    WALLED: WebRTC video/voice (STUN/TURN host infra, blocked); liquidity at scale.
+    NATIVE: verified-local cross-paths with Vipps-verified phones — happn done
+    honestly. Premium never buys consent/trust/moderation; deterministic ranking.
+    Proof: safety-default journey, mutual-match journey, premium benefits rendered
+    + staging, human review of safety copy. Liquidity stays an honest market fact.
+
+### Phase 5 — Messenger
+
+DONE: core DM (conversation_between, mark_as_read), reactions. 5.1 Suppression
+while open (spine 1.5). 5.2 Business inbox + CRM via Commerce::Campaign (closes
+messenger_business_crm; orders + messages joined; plain labels new_order/question/
+refund). 5.3 WebRTC voice/video (messenger_webrtc_calls) stays BLOCKED until
+STUN/TURN host infra; ship honest_unavailable("Taler støttes ikke ennå.") meanwhile.
+    Proof: suppression regression, conversation journey seam, business inbox
+    journey; calls INCONCLUSIVE until host infra proven.
+
+### Phase 6 — Maps substrate
+
+Surface done; make it the service (spine 1.2). Consumer journeys: marketplace
+listings_near -> Places.near(kind: :for_sale); takeaway restaurants ->
+:restaurant; dating nearby -> :person_area (area only); brgen events -> :venue;
+commerce local_ads -> geo_target (after liquidity). Tiles gated on
+maplibre_runtime_and_vendor_decision (licensing) operator seam. Proof: >= 2
+verticals consume Places in a rendered journey; person area never exact.
+
+### Phase 7 — Playlist/Radio -> SoundCloud/whyp.it parity
+
+Engine: RAILS/brgen/engines/radio/playlist; host radio.<city> (playlist.<city> no
+longer resolves). DONE: playlists/sets, collaborators owner/editor/viewer, URL
+import (YouTube/Spotify/SoundCloud/Whyp/direct), hosted uploads for real accounts,
+synced listening parties + chat, moment-pinned comments (SoundCloud's signature),
+likes/listens discovery, DillaSketch -> DillaRenderJob -> Shared::DillaProcessor ->
+publish as track.
+
+7.1 Waveform render + scrub UI (the visual signature; media pipeline exists,
+    moment comments exist). 7.2 Creator profiles + follow + activity feed; reposts;
+    creator stats. 7.3 Donations + ad-free tier via Commerce (closes
+    playlist_creator_donations); referral benefits usable (closes
+    referral_reward_consumption — define + wire the gate, not just record).
+    7.4 Lossless/hi-fi playback path for OWNED uploads (the whyp angle).
+    7.5 Offline listening (PWA).
+    WALLED: major-label catalog licensing; SoundCloud scale/royalties. Stream only
+    licensed/owned audio (show_rights_honestly). NATIVE: local curation + listening
+    rooms + creator ownership + dilla generation — SoundCloud does not do this.
+    Proof: donation staging seam, ad-free entitlement gate regression, rights
+    honesty check, radio_tunnel_rendered_review + radio_whyp_tracks_imported seams.
+
+### Phase 8 — TV
+
+Engine: RAILS/brgen/engines/radio/tv; host tv.<city>. DONE: VOD structure;
+Tv::Broadcast models the live state machine. 8.1 Local VOD + creators first screen.
+8.2 Live streaming (tv_live_stream_infra) stays BLOCKED until a media server
+(MediaMTX/SRS/nginx-rtmp) + delivery tier on the host; Broadcast.transition +
+deliver_via_cdn_tier + calm follower notify when ready. Never ship a fake "Direkte"
+badge. Proof: VOD journey; live INCONCLUSIVE until host media tier proven.
+
+### Phase 9 — brgen core
+
+DONE: auth, communities, posts (hot/fresh/top), threaded comments, votes/likes,
+hashtags, mentions, follows, notifications, DM, FTS5 search, recent searches
+(satisfied), reading time, city subdomain routing (DomainRegistry), proximity,
+moderation (ModerationWorkflow/TrustScore), media pipeline (blurhash +
+responsive_image_tag), identity/trust primitives, Activity graph (EventEmitter),
+shared concerns (Notifiable/ActivityTrackable/GeoLocatable/Votable/Commentable/
+Taggable), LinkEmbed (oEmbed behind Shared::OutboundHttp).
+
+9.1 Recurring events/ticketing beyond an external link (closes brgen_recurring_events)
+    via Places venues; opt-in calm reminders. 9.2 Creator monetization (closes
+    brgen_creator_monetization) via Commerce creator fund. 9.3 Minimal art-directed
+    sponsored banner (brgen_art_ad_banner) ONLY when a certified consent platform +
+    approved copy + image rights exist; AdSense stays gated; else no ad slot.
+    9.4 ActivityPub inbound (brgen_activitypub_inbound) stays BLOCKED until remote
+    media proxying + remote moderation + blocklist exist; do not ship half-federation.
+    Proof: home first_screen, events journey, sponsored gate unit, creator tip
+    staging seam.
+
+### Phase 10 — Visual / CSS micro-pixel program
+
+Design constitution: tokens.yml (visual_identity signal_and_stillness, scale,
+layout_rules, typography, worn_type, pixel_perfection, rams_checklist, ui_polish,
+ultraminimalism, ux_laws, vertical_accents, vertical_accent_ink). css_architecture.yml:
+cascade layers reset/tokens/base/components/utilities/autofix; !important forbidden
+in components/utilities/autofix; specificity ceiling 0,3,0 in WARN mode. Instruments:
+geometry_probe walk.js/design_laws.js, rendered_geometry placement/space/grammar/
+composition/token checks, type_laws, contrast, reflow, occlusion, viewport_spill,
+layout_snapshot drift, first_screen, kanso_surface, web_vitals_budget.
+
+10.1 Drive the measured off-scale baselines (tokens.yml#tokens.scale.baselines) to
+     zero per surface, before/after screenshots at 390/768/1280 under RAILS/*.png:
+
+        apps:  off_scale_radius 19, tracking 6, opacity 20, duration 14, off_token_color 21
+        face:  tracking 12, opacity 27, duration 26, off_token_color 8 (fix part files,
+               never face.runtime.js)
+        compiled.amber:    font-size 40, padding 68, margin 35, gap 40, color 37,
+                           radius 17, letter-spacing 13, line-height 15, weight 9,
+                           z-index 13, box-shadow 1
+        compiled.brgen:    font-size 64, padding 127, margin 56, gap 48, color 67,
+                           border-color 26, radius 27, letter-spacing 17, line-height 18,
+                           weight 10, z-index 44, box-shadow 1
+        compiled.bsdports: font-size 27, padding 49, color 20, radius 12, z-index 10,
+                           box-shadow 1
+        compiled.mrdamascy: padding 30, margin 25, color 12, z-index 8, box-shadow 0
+
+     The box-shadow 1 in amber/brgen/bsdports is a flat_ui candidate: strip it or
+     record the named exception pixel_perfection.exception_policy demands.
+10.2 Add a z-index scale to tokens.scale (compiled z-index counts have no token
+     owner: brgen 44, amber 13, bsdports 10, mrdamascy 8). Name the layer stack in
+     CSS, not magic integers.
+10.3 Move specificity ceiling 0,3,0 from warn to error after cleanup.
+10.4 Enforce typography.accessibility: body_min_px 16, mobile_input_min_px 16,
+     normal_text_contrast 7.0, large_text_contrast 4.5; line_length 45-75ch ideal
+     66; line_height allowed [1,1.25,1.4,1.5,1.6] body 1.5; max 2 families / 3
+     weights / 8 sizes; h1_body ratio 1.75-5.5; all_caps tracking 0.05-0.15em;
+     body oldstyle-nums, tables tabular-nums; orphans/widows 3.
+10.5 Enforce layout_rules: 8px rhythm + 4px hairline; 12-column grid; proportional
+     split 0.618/0.382; gap before margin; internal padding <= external separation;
+     body left-aligned right rag; centre text <= 3 lines; 44/48px touch in bottom-
+     centre thumb zone; F/Z scan path.
+10.6 ui_polish: one button family (button-primary/ghost/danger/small/link/block/
+     share); finish RAILS/refinements.yml shared-010 (retire .button-small for
+     $compact-contexts in RAILS/__shared/app/assets/stylesheets/_buttons.scss);
+     space_not_lines cards (gap + elevated surface, not hairline borders); chrome
+     i18n nb/en via t() (ratchets chrome_i18n_lint.rb, empty_state_lint.rb,
+     adhoc_empty_lint.rb); every empty state has an action.
+10.7 Native modernisation (no third renderer, no ornament): cascade layers across
+     engine sheets; logical properties; clamp() typography within scale; container
+     queries for dialect cards; :has() for presentational state; text-wrap balance/
+     pretty + Norwegian hyphens lang=nb; :focus-visible rings from tokens;
+     font-display swap + variable sans (no serif); content-visibility for long
+     feeds; scrollbar-gutter stable; accent-color + native dialog/popover where
+     Stimulus wraps them; Turbo view transitions only as measured progressive
+     enhancement with reduced-motion equivalent.
+10.8 Reorganise stylesheets by engine ownership under the layer stack; run
+     dead_css_sweep/dead_css_static/dead_css_coverage; collapse CSS_DUPLICATE_DECLARATION
+     (6) + CSS_SHORTHAND_COLLAPSE (22); prove css_minify_integrity + css_brace_balance;
+     critical first-screen CSS via tools/rails/build_all_css.rb under first_screen +
+     page_weight budgets.
+10.9 Motion grammar: stillness default; animate existing elements before new;
+     bound population/duration/amplitude/cost/lifecycle; every meaningful animation
+     has a reduced-motion equivalent. Void grammar: negative space structural; one
+     focal point + one primary action per first screen. Rams checklist on every UI diff.
+     Work TYPOGRAPHIC_GRID (1711) + VERTICAL_BREATH (2289) to zero per surface;
+     operator gates every rendered value.
+
+### Phase 11 — DRY / KISS
+
+DRY and KISS are law roots; dup_census.yml tracks 161 sets with ceilings; the
+proposals ledger refuted several consolidation moves (family moves, lazy-class
+extraction, best-of-N, parallel streams). DRY = measured duplication with a named
+consumer, not ideological dedup. KISS = one owner per concept, not fewer files.
+The spine ratchet + cohesion census forbid convenience splits.
+
+11.1 Triage dup_census intentional vs accidental. Intentional: screenshot baselines
+     for generic routes (/up, historical locations) shared across apps; amber logo
+     plates/asset copies; mrdamascy standalone Vipps wordmark; BIZ published pairs.
+     Accidental candidates: MASTER/lib/operator/domain_signals.rb vs
+     OPENBSD/lib/domain_signals.rb (verify OPENBSD self-containment on the box
+     justifies the copy before merging); shared vs brgen anonymous_post_quotas
+     migration copy (engine-promotion residue); four identical Rakefiles
+     (MASTER/web, amber, bsdports, mrdamascy).
+11.2 Finish redundant_core_require_cleanup (85; convergence partial); spine test
+     green, body ceiling ratchets down.
+11.3 DENSITY_identical_branches + DEAD_CODE (6) by file with focused test.
+11.4 dead_route_sweep + content_dedup_scan; retire what has no consumer; price each
+     retirement in sunset.yml with its measured catch.
+11.5 KISS targets, measure before splitting: pass_runner/assessment_matrix.rb 74 KB,
+     command_registry help 40 KB / host 60 KB / review 58 KB, CONFIGURATION_SHAPE 87,
+     CHOICE_OVERLOAD 4, BOOLEAN_TRAP 2. The 812 SMALL_FUNCTIONS / 650 FEW_ARGUMENTS /
+     447 CYCLOMATIC / 392 ABC findings are a baseline; route only what a caller or
+     reading proves painful. Keep one counting method (CodeMetrics.body_lines shared
+     by lint:spine and SmallFunctionsRule).
+11.6 Resist new abstractions: the refused list is the KISS backbone. Every
+     extraction names the caller that needs it.
+
+### Phase 12 — Security
+
+12.1 ROTATE the GitHub PAT the operator pasted into chat. It was used only for the
+     clone and contents-API commits; it appears in no repo file/log/paste/receipt.
+     Add rotation to operator_seams.yml.
+12.2 Run security_sweep + RAILS/test/tracked_secrets_test.rb on a compatible host;
+     confirm filter_parameter_logging covers password/phone/authorization/api_key/
+     access_token/refresh_token/private_key/credit_card/card_number/iban.
+12.3 SsrfGuard: all-answer fail-closed, pinned ipaddr, SNI hostname, no env proxy,
+     bounded phases; every new HTTP client rides it (ROBUSTNESS_outbound_fetch_is_pinned).
+     Redirects checked before following (WebBrowse Location; ExternalAudit same-host).
+12.4 CSP report-only until PUB5_CSP_ENFORCE=1; csp_enforced_on_vm23 seam operator-owned;
+     propose the enforcement rehearsal with report review.
+12.5 Host egress (outbound_http_host_egress seam): network-layer denial of private/
+     metadata routes; application pinning is not a substitute; propose the pf rule
+     set as a deploy-host change with native proof.
+12.6 Confirm rate limits pinned (WriteThrottle 60/min, password 8/3min, reset 5/3min,
+     account security 6/10min); session cookie flags + multi-domain contract; Vipps
+     params[:to] exact "checkout" allowlist (no open redirect).
+12.7 PersonalPermissions default-deny; financial read-only; no adapter ships without
+     it. Repo is public: no receipt/paste/screenshot carries a secret/private path/
+     personal datum.
+
+## 5. Blocked remainders (name the exact need; do not fake)
+
+    messenger_webrtc_calls        STUN/TURN infra on the host
+    marketplace_contact_relay     inbound mail routing + per-listing addresses on vm23
+    tv_live_stream_infra          media server (MediaMTX/SRS/nginx-rtmp) + delivery tier
+    brgen_activitypub_inbound     remote media proxying + remote moderation + blocklist
+    maps tiles                    maplibre_runtime_and_vendor_decision (licensing)
+    payments live                 payments_in_provider_staging (Vipps/Dintero staging)
+    real devices                  pwa_on_real_devices
+    SEO                           seo_canonical_host_browser_crawl
+    accessibility acceptance      human_accessibility_participant_review
+    live journeys                 journeys_in_all_three_apps, messenger_journey_in_a_browser,
+                                  brgen_first_screen_in_chrome, tenant_isolation_live
+    oauth                         oauth_callbacks_live
+    radio                         radio_tunnel_rendered_review, radio_whyp_tracks_imported
+    ops alert                     ops_alert_channel (operator-owned relay; allowlisted
+                                  endpoint, secret outside the tree; never a Slack webhook)
+    DNSSEC                        dnssec_ds_at_registrars
+    backup                        second_offhost_backup_and_key_recovery (tested restore)
+    CSP / egress                  csp_enforced_on_vm23, outbound_http_host_egress
+
+Each stays INCONCLUSIVE/blocked until its evidence exists. Complete the independent
+work around it; name the remainder precisely.
+
+## 6. Acceptance — the love contract (every public surface must pass)
+
+    module LoveContract
+      def self.accepts?(surface)
+        one_job(surface)                   # one focal point + one primary action
+          .and plain_language(surface)     # nb copy, plain, no jargon
+          .and guest_first(surface)        # value before signup
+          .and fast_first_paint(surface)   # first_screen + web_vitals on a low-end phone
+          .and thumb_reachable(surface)    # primary action bottom-centre; >= 44/48px
+          .and honest_empty(surface)       # empty state teaches + offers next action
+          .and visible_trust(surface)      # who, verified how, why safe
+          .and safe_by_default(surface)    # privacy closed; consent plain; report one tap
+          .and calm_notifications(surface) # budget; suppress while open; quiet hours
+          .and offline_tolerant(surface)   # PWA shell + cached read + honest offline
+          .and accessible(surface)         # keyboard_flow + axe + reduced motion
+          .and recoverable(surface)        # every error says what happened + next step
+          .and honest_money(surface)       # total incl mva + delivery up front; sponsored labelled
+      end
+    end
+
+Proof gates: local focused tests + changed-line Law assessment; rendered screenshots
+390/768/1280 under RAILS/*.png (run-scoped, never reused, before/after); keyboard_walk,
+accessibility_axe, journey_invariant, reflow, occlusion, contrast, design_laws; then
+the named live seam. Status vocabulary: RUN / NOT_RUN / INCONCLUSIVE — never a false
+PASS. A stopped run is resumable, never successful. Aesthetic taste and rendered
+values stay operator-owned; the checks measure objective invariants, not beauty.
+
+## 7. Routing and registry intake (no new backlog)
+
+Route each slice to its owner, with the measurement that justifies it:
+- concrete defect claim -> MASTER/data/proposals.yml (state open; refutations recorded
+  with the measurement, never deleted)
+- missing capability -> MASTER/data/gaps.yml (respect satisfied/blocked statuses)
+- human-only evidence -> MASTER/data/operator_seams.yml (needs/evidence)
+- implementation state -> MASTER/convergence.yml (a named next measurement, not a
+  status bump)
+- polish candidates -> MASTER/data/ideations/polish.yml (with critique; mechanical
+  rows regenerable by Operator::PolishLens; taste operator-owned)
+- product features -> RAILS/apps.yml (feature truth) / RAILS/apps.horizon.yml (agent-ignore)
+- UX refinements -> MASTER/data/law/ux_refinements.yml (90 MASTER UX rows, acceptance_required)
+  and RAILS/refinements.yml (product; shared-010 open)
+bin/master status --agent is the read-only union; there is no parallel Markdown
+checklist. This handoff is session evidence, not a registry.
+
+## 8. Definition of done — "finished properly and loved"
+
+A vertical is done when: its named gaps.yml rows are closed or honestly blocked;
+its apps.yml planned features landed with rendered acceptance; its parity-map
+missing rows built on the shared Commerce/Places spine (never a per-engine stack);
+its walls held honest (catalog scale/ML for bol, label licensing for SoundCloud,
+liquidity for dating, driver logistics for DoorDash/foodora); the love contract
+passes on a fresh sweep at 390/768/1280; the live seams closed by the operator;
+and the truthful status is recorded. The strategy the architecture encodes: win
+the city, not the category — one network across verticals, local before global,
+useful over noisy. Each vertical competes on locality and trust joined to the
+network, not on out-featuring a global incumbent from a 1 GB SQLite box. Dominance
+copy without evidence violates persuasion_honesty/content_honesty; the BIZ plans
+may argue the thesis, the product must show the proof.
+
+## 9. Proof status of the intake session
+
+RUN: git clone/log/ls-files/rev-parse; text reads; PyYAML parses (0 failures);
+JSON parses; regex censuses; agent-contract byte comparison; FACE_WORLD segment
+offsets; shebang/mode census; whitespace/newline census; .py census; layout_snapshot
+geometry measurement; route_screenshots PNG pixel analysis (PIL/numpy); current-token
+contrast computation; GitHub contents-API commits + ref verification.
+NOT_RUN: every Ruby suite, rake task, Law detector, /fix lane, browser check, doctor,
+boot smoke, hook, deploy, fresh visual sweep. Blocker: no Ruby >= 3.2 (Debian buster,
+archived apt), no Chrome, no provider keys, no OpenBSD host; the sandbox recycled
+and lost the local checkout; agent browser verification is refused by the constitution.
+No Law PASS, no test PASS, no deploy claim, no design PASS. Re-measure everything.
