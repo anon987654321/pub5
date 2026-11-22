@@ -1724,12 +1724,33 @@ Additional commits on main:
   shutdown revocation change; unrelated to backlog recovery, included in
   the verified branch tip.
 
+### Lease takeover fencing
+
+- Mission retry, human block and permanent failure mutations accept the
+  observed mission ID and lease owner. When scheduler recovery supplies those
+  values, the write lock re-reads the current record and rejects a changed
+  mission or lease with `Mission::Fenced`.
+- TaskSteward passes the identity/lease snapshot it observed into each
+  classification outcome. A worker that lost its lease cannot defer, block or
+  fail the successor's mission; the current owner remains responsible for it.
+- Normal claimed mission handles retain the existing write fence. This adds a
+  fence to the supervisor's unclaimed recovery path without weakening the
+  single-writer model.
+
+Lease-fencing commits on main:
+- `7bc400f736a60a6715a7cce8fde603c3d4acb833` — enforce lease fencing on defer and block.
+- `7f9b5478abe05990f916441e29d6c40bd20f85ac` — test lease fencing on mission recovery writes.
+- `2963701af33485ed6a81c3b65053cd3d630a9bc3` — compare expected mission identity and lease under lock.
+- `a162e1308fbfcb221e421c5c77bdb1b558908d6c` — pass observed mission lease identity into recovery settlement.
+- `0a001412d6e57c0b318b473bbd0cd2a62d17b3f7` — preserve explicit `Fenced` outcomes.
+- `9d7b79cec0017fba202fe18ccc76c98cc6105c65` — test conditional scheduler recovery fencing for defer, block and fail.
+
 ### Phase 20 evidence boundary
 
 READ_BACK:
 - GitHub read-after-write completed for all changed implementation, test,
   operator and documentation files. The latest verified implementation HEAD
-  before this receipt amendment was `d4b40396e850460b4124ff4f6cca79625cf733a2`.
+  before this receipt amendment was `9d7b79cec0017fba202fe18ccc76c98cc6105c65`.
 - Permanent terminal failures overwrite any stale transient wake reason, so
   parked-item receipts retain the final failure classification.
 - Receipt-directory checks follow the private-state contract: the owner uses
