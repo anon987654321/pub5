@@ -314,15 +314,14 @@ class VpsDeployContractTest < Minitest::Test
     refute_includes sync, "pub5-admin"
   end
 
-  def test_rails_bundle_cache_setup_is_app_owned
+  def test_deploy_does_not_prepare_or_install_a_bundle_on_vm23
     deploy = File.read(File.join(ROOT, "RAILS", "_deploy.sh"), encoding: "UTF-8")
     helper = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "rails-task.ksh"), encoding: "UTF-8")
-
-    assert_includes deploy, 'run_rails_as_app "$app_name" "$APP_DIR" "bundle-cache-prepare"'
-    refute_includes deploy, 'doas mkdir -p "$bundle_home"'
-    refute_includes deploy, 'doas chown -R "${app_name}:${app_name}" "$bundle_home"'
-    assert_includes helper, 'bundle-cache-prepare)'
-    assert_includes helper, 'target="$bundle_home/$part"'
+    refute_includes deploy, "bundle-cache-prepare"
+    refute_includes deploy, "bundle_install_as_app"
+    refute_includes helper, "bundle-cache-prepare)"
+    refute_includes helper, "bundle-install)"
+    assert_includes deploy, '"bundle-check"'
   end
 
   def test_rails_production_bundle_uses_the_fixed_app_task
@@ -495,12 +494,12 @@ class VpsDeployContractTest < Minitest::Test
     refute_match(/doas\s+(?:sh\s+-c|(?:rm|mkdir|chown|chmod|tee|groupadd|usermod|tar)\b)/, CI_SOURCE)
     refute_includes CI_SOURCE, "sync_from_repo_legacy"
   end
-  def test_ci_runner_uses_the_fixed_helper_and_bounded_timeout
+  def test_ci_runner_is_retired_on_the_production_host
     runner = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "ci-run.ksh"), encoding: "UTF-8")
-    assert_includes CI_SOURCE, 'doas /usr/local/libexec/ci-run.ksh "$app" "$ci_timeout"'
-    assert_includes CI_SOURCE, 'ci_timeout=${PUB4_CI_TIMEOUT:-7200}'
-    assert_includes runner, 'exec /usr/bin/su -m "$app" -c "$script"'
-    refute_includes CI_SOURCE, 'doas sh -c "su -m'
+    assert_includes runner, "refused"
+    assert_includes runner, "workstation"
+    refute_includes runner, "bin/ci"
+    refute_includes CI_SOURCE, "ci-run.ksh"
   end
 
   def test_ci_uses_the_helper_for_account_and_storage_preparation
@@ -515,24 +514,22 @@ class VpsDeployContractTest < Minitest::Test
   # A CI attestation vouches for one commit: vps-deploy refuses any other, and
   # vps_ci.sh skips the suite only when the checked-out HEAD is that commit.
   def test_a_ci_attestation_covers_exactly_the_commit_it_names
-    assert_includes SOURCE, %q{[[ $VPS_DEPLOY_CI_SHA == $pin ]]}
-    assert_includes SOURCE, %q{deploy_refuse "bin/ci ran on $VPS_DEPLOY_CI_SHA but this run would deploy $pin"}
+    assert_includes SOURCE, %q{[[ ${VPS_DEPLOY_CI_SHA:-} == "$pin" ]]}
     assert_includes CI_SOURCE, %q{head=$(git -C "$repo" rev-parse HEAD)}
-    assert_includes CI_SOURCE, %q{( -n $attested && $attested == $head )}
-    # The no-tests break-glass needs the human acknowledgement and says so in the log.
-    assert_includes CI_SOURCE, %q{if [[ ${VPS_DEPLOY_SKIP_TESTS:-} == 1 && ${I_UNDERSTAND_FAST_DEPLOY:-} != 1 ]]; then}
-    assert_includes CI_SOURCE, "deployed with NO test run"
-    assert_includes CI_SOURCE, %q{bundle_install_as_app "$app" "$app_dir"}
-    assert_includes CI_SOURCE, %q{doas /usr/local/libexec/ci-run.ksh "$app" "$ci_timeout"}
+    assert_includes CI_SOURCE, %q{[[ $attested == "$head" ]]}
+    assert_includes CI_SOURCE, %q{"bundle-check"}
+    refute_includes CI_SOURCE, "ci-run.ksh"
+    refute_includes CI_SOURCE, "bundle_install_as_app"
+    refute_includes CI_SOURCE, "VPS_DEPLOY_SKIP_TESTS"
+    refute_includes SOURCE, "SKIP_CI=1"
   end
 
-  # The CI stamp says how the commit was tested; it said ci_ok even when the
-  # break-glass had skipped every suite.
-  def test_the_ci_stamp_names_how_the_commit_was_tested
-    %w[ci_stamp=ci_ok ci_stamp=ci_attested ci_stamp=ci_skipped].each { |line| assert_includes CI_SOURCE, line }
+  def test_the_ci_stamp_only_records_a_workstation_attestation
+    assert_includes CI_SOURCE, "ci_stamp=ci_attested"
+    refute_includes CI_SOURCE, "ci_stamp=ci_ok"
+    refute_includes CI_SOURCE, "ci_stamp=ci_skipped"
+    assert_includes CI_SOURCE, 'status == "ci_attested"'
     assert_includes CI_SOURCE, %q{doas "$RUBY" -rjson}
-    assert_includes CI_SOURCE, %q{raise "stamp path is a symlink"}
-    assert_includes CI_SOURCE, "%w[ci_ok ci_attested ci_skipped].include?(status)"
   end
 
   def test_it_runs_as_root_and_keeps_git_as_the_deploy_user
@@ -550,25 +547,12 @@ class VpsDeployContractTest < Minitest::Test
   # reaches rails_runtime_check through deploy_tracked_app. The name says otherwise,
   # and a hotfix pushed on that belief is how something bin/ci would have caught
   # gets onto the box. The branch must keep running the app script.
-  def test_skip_ci_takes_the_narrower_check_rather_than_no_check
-    branch = SOURCE[/if \[\[ \$\{SKIP_CI:-\} == 1 \]\]; then(.*?)^else$/m]
-
-    refute_nil branch, "the SKIP_CI branch is gone - the scan broke, or the path did"
-    assert_match(%r{RAILS/\$\{app\}/\$\{app\}\.sh}, branch,
-                 "SKIP_CI=1 must still run the app script, which is what reaches rails_runtime_check")
+  def test_no_skip_ci_bypass_exists
+    refute_includes SOURCE, "SKIP_CI"
+    assert_includes SOURCE, '[[ ${VPS_DEPLOY_CI_SHA:-} == "$pin" ]]'
+    assert_includes CI_SOURCE, '[[ $attested == "$head" ]]'
   end
 
-  GUARD = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "bin", "resource_guard.sh"), encoding: "UTF-8")
-
-  def flag_block
-    SOURCE[/^deploy_flag=.*?^trap 'exit 143' TERM$/m]
-  end
-
-  # resource_guard stops shedding while a .deploying* flag is fresh. rc.d holds
-  # one only across the restart, so CI and the checks ran as strikes and the app
-  # deployed last was shed on the first tick after its flag came off. The flag
-  # this script holds has to be one the guard reads, live across the deploy,
-  # and gone when the script exits.
   def test_the_deploy_flag_is_held_for_the_whole_deploy_and_released_on_exit
     refute_nil flag_block, "the deploy flag block is gone - the scan broke, or the flag did"
     guard_glob = GUARD[%r{^DEPLOY_FLAGS="(/home/dev/pub5/\.deploying\S*)"$}, 1]
@@ -830,15 +814,12 @@ class VpsDeployContractTest < Minitest::Test
     ci = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_ci.sh"), encoding: "UTF-8")
     sync = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "ci-sync.ksh"), encoding: "UTF-8")
     assert_includes sync, "shared_dir=$app_home/__shared"
-    # The engines ride the brgen app-tree copy: the rel list must carry engines/.
     assert_includes sync, "for rel in test app lib config bin db engines public vendor/javascript"
-    # The suite outlasts the guard's one-hour default on this box.
-    assert_includes ci, "ci_timeout=${PUB4_CI_TIMEOUT:-7200}"
-    # A directory the repo no longer has must not survive the sync, or its stale tests keep running.
+    assert_includes ci, '"bundle-check"'
+    refute_includes ci, "ci_timeout="
+    refute_includes ci, "ci-run.ksh"
     assert_includes sync, '[ -d "$src/engines" ] || rm -rf "$app_dir/engines"'
 
-    # master has no copy-tree and no vps_ci.sh run (vps_ci_all.sh skips it), so
-    # its ../.. path to MASTER is never mirrored.
     (APPS - ["master"]).each do |app|
       gemfile = File.join(ROOT, "RAILS", app, "Gemfile")
       next unless File.file?(gemfile)
@@ -970,26 +951,47 @@ class VpsDeployContractTest < Minitest::Test
     [out + (File.exist?(calls) ? File.read(calls) : ""), $?.exitstatus]
   end
 
-  def test_too_little_swap_refuses_the_deploy_and_brings_the_jobs_service_back
-    refute_nil swap_block, "the swap preflight is gone - the scan broke, or the check did"
-    Dir.mktmpdir do |dir|
-      out, status = swap_run(dir, available_blocks: 445_656)
-
-      assert_equal 1, status
-      assert_includes out, "217 MB of swap free, the floor is 400 MB"
-      assert_includes out, "admin_service start brgen_jobs"
-      refute_includes out, "passed"
-    end
+  def test_deploy_admission_requires_two_low_load_and_swap_samples_without_cpu_pressure
+    block = SOURCE[/^admit_host_load\(\) \{.*?^\}/m]
+    refute_nil block, "the host admission gate is missing"
+    assert_includes block, "for sample in 1 2"
+    assert_includes block, "sleep 60"
+    assert_includes block, "vm.loadavg"
+    assert_includes block, "n < 2.0"
+    assert_includes block, "free_swap >= 400"
+    assert_includes block, "cpu-pressure"
+    assert_includes block, "420 && pressure_busy >= 80"
+    assert_includes SOURCE, "admit_host_load"
   end
 
-  def test_enough_swap_lets_the_deploy_continue
-    Dir.mktmpdir do |dir|
-      out, status = swap_run(dir, available_blocks: 1_200_000)
+  def test_vps_deploy_and_master_deployer_are_build_free
+    master = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
+    rc = File.read(File.join(ROOT, "OPENBSD", "mirror", "etc", "rc.d", "master"), encoding: "UTF-8")
+    tasks = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "rails-task.ksh"), encoding: "UTF-8")
+    refute_includes SOURCE, "rails_assets_precompile_as_app"
+    refute_includes SOURCE, "ensure_smart_turn_assets"
+    refute_includes master, "bundle install"
+    refute_includes master, "assets:precompile"
+    assert_includes master, ".pub5-build-sha"
+    refute_includes rc, "assets:precompile"
+    refute_includes rc, "assets:build_face"
+    assert_includes rc, ".pub5-build-sha"
+    refute_includes tasks, "bundle-install)"
+    refute_includes tasks, "ci-bundle-install)"
+    refute_includes tasks, "assets-precompile)"
+    refute_includes tasks, "ci)"
+    assert_includes tasks, "bundle-check)"
+  end
 
-      assert_equal 0, status
-      assert_includes out, "passed"
-      refute_includes out, "admin_service start"
-    end
+  def test_legacy_fast_deploy_entrypoints_refuse_on_vm23
+    manual = File.read(File.join(ROOT, "OPENBSD", "bin", "manual_master_deploy.ksh"), encoding: "UTF-8")
+    fast = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_production_push.sh"), encoding: "UTF-8")
+    assert_includes manual, "exit 69"
+    assert_includes fast, "exit 69"
+    refute_includes manual, "pkill"
+    refute_includes manual, "assets:precompile"
+    refute_includes fast, "SKIP_CI=1"
+    refute_includes fast, "SKIP_RUNTIME_CHECK=1"
   end
 
   def disk_run(dir, free_kb:)

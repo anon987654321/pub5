@@ -420,12 +420,13 @@ class VpsDeployFlowTest < Minitest::Test
 
   # the rest of the sequence
 
-  def test_memory_heavy_steps_wait_for_booting_apps_and_flows_run_per_app
-    assert_operator SOURCE.index("settle_boots\n  jobs_service"), :<, SOURCE.index("OPENBSD/bin/vps_ci.sh")
-    assert_operator SOURCE.index("(assets precompile)\"\nsettle_boots"), :<, SOURCE.index("rails_assets_precompile_as_app")
+  def test_heavy_builds_are_not_part_of_the_remote_deploy_flow
+    assert_includes SOURCE, "admit_host_load"
+    assert_includes SOURCE, ".pub5-build-sha"
+    refute_includes SOURCE, "rails_assets_precompile_as_app"
+    refute_includes SOURCE, "ci-run.ksh"
+    refute_includes SOURCE, "ensure_smart_turn_assets"
     assert_includes SOURCE, 'FLOW_APP="$app" MASTER_STRICT=deploy CHECK_AUTOFIX=0 "$RUBY"'
-    # The master flow journeys live inside the deploy_app_group == master branch;
-    # the literal FLOW_APP=master was generalized to $app when that branch took over.
     assert_includes SOURCE, 'FLOW_APP="$app" MASTER_STRICT=deploy CHECK_AUTOFIX=0 CHECK_REQUIRE_LIVE=1 "$RUBY" "$repo/MASTER/checks/runner.rb" flow_journey'
   end
 

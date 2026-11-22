@@ -1106,7 +1106,8 @@ admit_host_load() {
       || deploy_refuse "five-minute load $load_five is not below 2.0"
     swap_output=$(${VPS_DEPLOY_SWAPCTL:-swapctl} -s 2>/dev/null) \
       || deploy_refuse "cannot read swap status"
-    swap_blocks=$("$RUBY" -e 'row = ARGV.fetch(0).lines.reject { |line| line.match?(/\\A\\s*Device/i) }.last; fields = row.to_s.split; abort "bad swapctl output" unless fields.length >= 4 && fields[1..3].all? { |value| value.match?(/\\A[0-9]+\\z/) }; print fields[3]' "$swap_output" 2>/dev/null) \
+    swap_blocks=$("$RUBY" -e 'match = ARGV.fetch(0).match(/([0-9]+)\\s+available/i); abort "missing available count" unless match; print match[1]' "$swap_output" 2>/dev/null) \\
+      || deploy_refuse "cannot parse free swap; admission is fail-closed"
       || deploy_refuse "cannot parse free swap; admission is fail-closed"
     free_swap=$(( swap_blocks * 512 / 1048576 ))
     (( free_swap >= 400 )) || deploy_refuse "only $free_swap MB swap is free; admission floor is 400 MB"
@@ -1394,19 +1395,6 @@ if [[ -x /usr/local/bin/config_drift_check.rb ]]; then
       exit 1
     fi
   fi
-fi
-
-# CI ran on the workstation. The host path is limited to a bounded
-# copy-tree refresh, exact-SHA attestation and read-only bundle check.
-set_stage preflight-swap
-min_swap_mb=${VPS_DEPLOY_MIN_FREE_SWAP_MB:-400}
-swap_output=$(${VPS_DEPLOY_SWAPCTL:-swapctl} -s 2>/dev/null)
-swap_blocks=${swap_output##* }
-[[ $swap_blocks == <-> ]] || swap_blocks=0
-free_swap_mb=$(( swap_blocks * 512 / 1048576 ))
-if (( free_swap_mb < min_swap_mb )); then
-  print -u2 "vps-deploy: $app refused - $free_swap_mb MB of swap free, floor $min_swap_mb MB; nothing was stopped"
-  exit 1
 fi
 
 set_stage sync+bundle-check

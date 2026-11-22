@@ -20,10 +20,14 @@ MASTER/bin/operator vps deploy rails --remote
 MASTER/bin/operator vps deploy all --remote --follow
 ```
 
-**One-time broker bootstrap (required before the first release on a host or after a broker-protocol change):** update vm23's `/home/dev/pub5` checkout to the same `origin/main` commit, then run `doas zsh OPENBSD/OPERATOR.sh --plan`, review the plan, and run `--apply` followed by `--verify`. The first `vps-deploy all` cannot install the broker it needs to write its initial durable run receipt; it fails closed until this separate bootstrap is complete. Do not treat the routine mirror apply inside `vps-deploy all` as a substitute for this prerequisite.
+The retired `pub5-admin` broker is not part of the active deployment path. The
+fixed root-owned task helpers are installed by the tracked OpenBSD mirror. Review
+`doas zsh OPENBSD/OPERATOR.sh --plan` before a mirror-only change; routine
+application releases use the workstation operator and pinned deployment path.
 
-Hands-off: local preflight → pin SHA → `tmux` session `pub5-deploy` on vm23 →
-`vps-deploy` as **root** (git still as `dev`) → workstation collector streams
+Hands-off: workstation preflight + serial Rails CI + asset build/attestation →
+pin SHA → stage production artifacts → `tmux` session `pub5-deploy` on vm23
+→ `vps-deploy` as **root** (git still as `dev`) → workstation collector streams
 tmux's in-memory pane into `~/.pub5/deployments/deploy-*.log` → local
 `vps-state` + public canary → redacted, expiring paste. The workstation capture
 process is detached from the terminal, so an SSH or terminal disconnect does
@@ -141,7 +145,8 @@ variables and restores the previous file on failure.
 - `usr/local/libexec/ci-prepare.ksh` verifies app paths and grants checkout-read
   group access.
 - `usr/local/libexec/ci-sync.ksh` stages tracked `HEAD` paths as the app user.
-- `usr/local/libexec/ci-run.ksh` runs the suite as the app user with a bounded
+- `bin/ci` runs on the workstation as the app user; vm23 refuses CI execution.
+The retired `ci-run.ksh` helper is a refusal stub.
   wall-clock timeout and a sanitized Ruby environment.
 - `usr/local/libexec/rails-task.ksh` exposes a closed task vocabulary and drops
   to the app user.
@@ -846,10 +851,11 @@ deliberately:
 | `zsh OPENBSD/bin/deploy_all.sh` | **No** | Runs from a workstation: syncs the pub5 checkout to vm23 and runs `OPERATOR.sh`, so it reapplies `/etc`, relayd and the services, not just app code. `--per-app` also runs each `RAILS/<app>/<app>.sh` | The box's config has drifted or a fresh install needs redoing — not for shipping a code change |
 | `ksh OPENBSD/bin/start_all_apps.sh` as `dev` | **No** — recovery only | Starts every inventory app with native `rcctl`; checks all services and pins them against `resource_guard.sh` shedding | Recovery after a deliberate decision to keep every app running despite load |
 
-`vps_production_push.sh` is the footgun under pressure: it restarts production
-without running CI. Use `vps_ci_all.sh` unless you explicitly need the fast path
-and accept the risk. `deploy_all.sh` is the wider footgun — it rewrites box
-config on the way past, so reach for it only when that is the thing you want.
+`vps_production_push.sh` and `manual_master_deploy.ksh` are retired refusal
+wrappers. They no longer offer a host-side fast path or manual precompile.
+Use the workstation operator command; it must complete local tests and asset
+builds before SSH. `deploy_all.sh` is the wider configuration operation,
+not a routine code deploy.
 
 ## Occasional operator tools
 
@@ -862,7 +868,7 @@ dead one until it is written down.
 | `ruby OPENBSD/sync.rb` (as `doas ruby`) | vm23 | Mirror live `/etc` config **back into** `OPENBSD/`, with secret redaction. The repo→live direction is well travelled; this is the return leg, and skipping it is how `relayd.conf` drifted for weeks (see the warning under *OpenBSD deploy*). |
 | `ruby OPENBSD/ptr_openbsd_amsterdam.rb --ipv4 … --hostname …` | anywhere | Set the PTR record via openbsd.amsterdam's `ptr4`/`ptr6` endpoints; `--ipv6` sets the v6 record. Needed only if the VM's IP changes. It prints the request as a dry run unless `APPLY_PTR=1` is set. |
 | `zsh OPENBSD/bin/vps_run_remote.sh` | workstation | Bootstrap a *fresh* VM: copies `vps_install_all.sh` up through the server4 hypervisor jump and runs it. Not for routine deploys — use `vps-deploy`. |
-| `ksh OPENBSD/bin/manual_master_deploy.ksh` | vm23, under tmux | Fallback when `vps_deploy_master.sh` stalls. It pkills the stuck deploy and its precompile, then precompiles MASTER web, runs the `master_web_assets` check, restarts master and relayd, and probes `/up`. Output goes to `/tmp/master_manual.log`, not the terminal — `tail -f` it. |
+| `ksh OPENBSD/bin/manual_master_deploy.ksh` | retired | Refuses; vm23 does not kill processes or compile production assets |
 | `sh OPENBSD/bin/amber_queue_sweep.sh [APP]` | vm23 | **Deletes** finished jobs, orphaned executions, unfinished Turbo broadcasts and duplicate media jobs from a Solid Queue backlog (amber by default); drain-jobs.sh runs due jobs, this removes what should never run. Named in `RAILS/amber/README.md` |
 | `zsh OPENBSD/bin/deploy-diff.sh` | workstation | Read-only: runs `config_drift_check.rb --remote`, then diffs `relayd.conf` (which the check excludes) and prints `rcctl check`. It changes nothing in either direction; `sync.rb` above is what pulls the live side back into the repo. |
 | `sh OPENBSD/bin/amber_queue_sweep.sh [APP]` | vm23 | Delete a stale Solid Queue backlog (finished jobs, orphaned executions, unfinished Turbo broadcasts, duplicate media jobs) with sqlite3, no Rails boot. `drain-jobs.sh` runs due jobs hourly; this removes what should never run. |
@@ -1149,10 +1155,15 @@ exist for it.
 
 - Integrity failure: run `ruby OPENBSD/checks/integrity_check.rb` and fix the first
   failing check.
-- App CI failure: run `zsh OPENBSD/bin/vps_ci.sh <app>` serially. If caches are
-  root-owned, export the app `HOME` and `NPM_CONFIG_CACHE`.
-- MASTER dead tap: precompile `MASTER/web` production assets, restart `master`,
-  then verify `https://ai.brgen.no` after the primer tap.
+- App CI failure: reproduce it on the workstation with that app's `bin/ci`;
+  never run a suite on vm23.
+- Missing production gems: build the matching OpenBSD/Ruby ABI bundle on an
+  isolated OpenBSD builder; never run `bundle install` on vm23.
+- Missing or stale assets: build on the workstation and stage them with a
+  `.pub5-build-sha` marker matching the pinned SHA; vm23 refuses to precompile.
+- MASTER dead tap: build and attest `MASTER/web` assets on the workstation,
+  stage them before restart, then verify `https://ai.brgen.no`. MASTER startup
+  verifies only; it never compiles.
 - relayd/domain drift: run `MASTER/checks/runner.rb domain_alignment` and
   `OPENBSD/checks/deploy_smoke_check.rb` before restarting relayd.
 - pf lockout: use the server4 console and flush the `bruteforce` table; do not
