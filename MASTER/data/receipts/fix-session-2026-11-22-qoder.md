@@ -1086,3 +1086,29 @@ Not run: documentation lint, rendered Markdown inspection, test suite,
 Proof: exact GitHub reads of the four registries/source files and static
 name-to-registry comparisons. No command or Ruby test was run; all runtime
 verification remains NOT_RUN.
+
+
+- Corrected sunset catch scoring. `measured_catches` is now accepted only as a
+  non-negative integer; incidental digits and words such as “log”, “ledger”,
+  “reading” or “count” no longer create a measurement. Unmeasured rows sort
+  after measured rows and receive explicit “unmeasured” advice rather than a
+  retirement recommendation. A measured zero remains eligible for retirement
+  review, and retired rows are identified as such.
+- Converted all five prose-only `measured_catches` values in
+  `MASTER/data/sunset.yml` to `null`, preserving their context as
+  `catch_note`. In particular, the 11,964 body-budget overage is no longer
+  mistaken for a count of catches.
+- Added `MASTER/test/test_sunset_measurements.rb` with focused regression
+  coverage for numeric-only counts, incidental digits, unmeasured advice,
+  measured zero, retired status and the ledger's numeric-or-null contract.
+
+Commits:
+`3b0dadb419546bb8f6dd3db4e8e9f44b6009e337` (scorer),
+`477b3eafbc0f38e1e5482f846a65bed5ea08a05c` (ledger),
+`bf0a0ee37bf1fe815b322ba2e2c013707aa17215` (tests).
+
+Proof: read-after-write verification of the complete source, data and new test
+files. NOT_RUN: Ruby syntax, `TestSunsetMeasurements`, full MASTER suite,
+`sunset report` runtime output and JSON/YAML parser execution. The code/data
+change is delivered; runtime correctness remains INCONCLUSIVE until those
+checks run.
