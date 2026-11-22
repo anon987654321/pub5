@@ -2294,3 +2294,33 @@ Proof performed: GitHub read-after-write verification of the contract test,
 Place model, PlaceDirectory and all three consumers. The contract test itself,
 Place model tests, rendered map journeys, proximity discovery and any provider
 map-tile licensing check remain **NOT_RUN**. No new POI authority was added.
+
+
+### Browser broker authority scoping — fail-closed correction (2026-11-22)
+
+- Removed the boot-wide `Builder.build_browser_broker` construction. It had
+  created a broker with `Capabilities.for(:fix)` during ordinary application
+  startup and placed it in shared agent/plugin services, before an individual
+  Core operation supplied its current capability set.
+- Ordinary Builder tools and `PluginObserve` now receive no browser broker by
+  default. Existing adapters already refuse to start Chromium when that broker
+  is absent. This keeps the ordinary plugin path closed rather than inheriting
+  the broadest repair profile.
+- `CoreBridge.browser_broker` remains the only construction path in the
+  current implementation; it receives the active operation's capabilities
+  and refuses creation unless `:browser` is allowed. A regression in
+  `MASTER/test/test_browser_broker.rb` pins this separation and prevents
+  reintroducing boot-wide `:fix` authority.
+
+Commits:
+`9331d60870d2bfcc98ffff34a72833d1d35f8cfa` (remove boot-wide broker);
+`0122a823a39d3d9a82789ea0d3b02e431f866be9` (boundary regression).
+
+Proof performed: GitHub read-after-write inspection of Builder wiring,
+CoreBridge broker construction and the regression test. The test is
+**NOT_RUN**. Issue #5 remains open: the CoreWorld browser object is not yet a
+complete public session API; plugin adapters still attach Ferrum using the
+lease CDP endpoint; the production CoreBridge broker currently has no durable
+ledger callback; browser actions are not yet proven end-to-end against real
+redirects, subresources, cancellation, vision, or operator-approved side
+effects. No Chromium process was started here.
