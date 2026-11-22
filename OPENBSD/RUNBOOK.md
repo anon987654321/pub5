@@ -148,9 +148,8 @@ variables and restores the previous file on failure.
 - `usr/local/libexec/ci-sync.ksh` stages tracked `HEAD` paths as the app user.
 - App `bin/ci` runs on the workstation; vm23 refuses CI execution.
 - The retired `ci-run.ksh` helper is a refusal stub.
-- `rails-task.ksh` exposes only read-only bundle checks and essential DB tasks.
-- `usr/local/libexec/rails-task.ksh` exposes a closed task vocabulary and drops
-  to the app user.
+- `usr/local/libexec/rails-task.ksh` exposes read-only bundle checks and
+  essential database tasks, then drops to the app user.
 - `usr/local/libexec/rails-sync.ksh` syncs the production tree as the app user
   and preserves runtime state.
 

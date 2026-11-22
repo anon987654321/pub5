@@ -116,8 +116,8 @@ rails_runtime_check() {
     rails_prepare_secondary_dbs_as_app "$app_name" "$app_dir" \
       || { deploy_status "$app_name" "runtime check: secondary dbs" "failed"; return 1; }
   else
-    (cd "$app_dir" && bundle_exec check) || { log_err "bundle check failed"; return 1; }
-    (cd "$app_dir" && RAILS_ENV=production bundle_exec exec rails db:prepare) \
+    (cd "$app_dir" && BUNDLE_FROZEN=true bundle_exec check) || { log_err "bundle check failed"; return 1; }
+    (cd "$app_dir" && BUNDLE_FROZEN=true RAILS_ENV=production bundle_exec exec rails db:prepare) \
       || { log_err "db:prepare failed"; return 1; }
   fi
   log_ok "runtime bundle, assets and database checks passed"

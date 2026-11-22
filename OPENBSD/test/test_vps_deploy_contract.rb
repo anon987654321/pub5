@@ -545,10 +545,8 @@ class VpsDeployContractTest < Minitest::Test
                  "a bare git call runs as root, which cannot reach github")
   end
 
-  # SKIP_CI=1 does not mean no check runs: it takes the ${app}.sh branch, which
-  # reaches rails_runtime_check through deploy_tracked_app. The name says otherwise,
-  # and a hotfix pushed on that belief is how something bin/ci would have caught
-  # gets onto the box. The branch must keep running the app script.
+  # All selected Rails suites must pass on the workstation before SSH; vm23
+  # checks only the immutable production bundle and the staged asset attestation.
   def test_no_skip_ci_bypass_exists
     refute_includes SOURCE, "SKIP_CI"
     assert_includes SOURCE, '[[ ${VPS_DEPLOY_CI_SHA:-} == "$pin" ]]'
@@ -964,6 +962,8 @@ class VpsDeployContractTest < Minitest::Test
     refute_includes tasks, "assets-precompile)"
     refute_includes tasks, "ci)"
     assert_includes tasks, "bundle-check)"
+    assert_includes tasks, 'command="BUNDLE_FROZEN=true $bundle check"'
+    assert_includes runtime, "BUNDLE_FROZEN=true bundle_exec check"
   end
 
   def test_legacy_fast_deploy_entrypoints_refuse_on_vm23

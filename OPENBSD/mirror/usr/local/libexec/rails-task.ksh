@@ -99,7 +99,7 @@ export SECRET_KEY_BASE
 
 case "$task" in
   bundle-check)
-    command="$bundle check" ;;
+    command="BUNDLE_FROZEN=true $bundle check" ;;
   npm-cache)
     command="mkdir -p /home/$app/.npm /home/$app/.cache" ;;
   bundle-cas-hydrate)
