@@ -230,6 +230,19 @@ class TestLawRegistryAudit < Minitest::Test
     end
   end
 
+  def test_evidence_and_visual_identity_laws_keep_their_distinct_boundaries
+    laws = YAML.safe_load_file(File.join(Master::ROOT, "data", "laws.yml"))
+    dual = laws.fetch("DUAL_MODALITY").fetch("statement")
+    rendered = laws.fetch("OPERATOR_RENDERED_contract").fetch("rules")
+    finding = laws.fetch("FINDING_HYGIENE").fetch("statement")
+
+    ["source reads", "diffs establish", "command and test output", "rendered evidence", "runtime evidence", "human review"].each do |evidence_class|
+      assert_includes dual, evidence_class
+    end
+    assert_includes dual, "None substitutes for another."
+    assert rendered.any? { |rule| rule.include?("another studio's exact identity, screen composition, wordmark, key art, characters, or protected expression") }
+    assert_match(/inconclusive finding never clears a ratchet/i, finding)
+  end
   def test_catalogue_reconciliation_is_an_enforced_gate
     report = audit.call
 

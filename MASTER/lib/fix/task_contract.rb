@@ -21,6 +21,10 @@ module Master
       MAX_PRESERVATION_ROWS = 256
       MAX_PRESERVATION_READ_BYTES = 128 * 1024 * 1024
       PRESERVATION_VERIFIERS = %w[artifact_preservation visual_custody].freeze
+      PRESERVATION_EVIDENCE_LEVELS = {
+        "artifact_preservation" => "source",
+        "visual_custody" => "rendered",
+      }.freeze
       PRESERVATION_DIMENSIONS_BY_CHECK = {
         "html_markup" => %w[structure],
         "inline_style_script_svg" => %w[visual_identity behavior assets],
@@ -380,7 +384,7 @@ module Master
           "format" => format.to_s.downcase.delete_prefix("."),
           "intent" => contract.intent,
           "verifier" => verifier,
-          "evidence_level" => verifier == "artifact_preservation" ? "source_level" : "runtime_or_external",
+          "evidence_level" => PRESERVATION_EVIDENCE_LEVELS.fetch(verifier),
           "status" => status,
           "checks" => checks,
           "dimensions" => dimensions,
@@ -410,12 +414,12 @@ module Master
 
         statuses = rows.map { |row| row["status"] }
         required = contract.preserve
-        external_rows = rows.select { |row| row["evidence_level"] == "runtime_or_external" }
-        source_rows = rows.select { |row| row["evidence_level"] == "source_level" }
-        covered = external_rows.flat_map { |row| Array(row["dimensions"]) }.uniq
+        rendered_rows = rows.select { |row| row["evidence_level"] == "rendered" }
+        source_rows = rows.select { |row| row["evidence_level"] == "source" }
+        covered = rendered_rows.flat_map { |row| Array(row["dimensions"]) }.uniq
         source_checked = source_rows.flat_map { |row| Array(row["dimensions"]) }.uniq
         missing = required - covered
-        source_only = source_rows.any? && external_rows.empty?
+        source_only = source_rows.any? && rendered_rows.empty?
         active_plan_digest = Thread.current[PLAN_KEY]
         missing_plan = active_plan_digest.to_s.empty?
         contract_digest = Digest::SHA256.hexdigest(JSON.generate(contract.to_h))

@@ -75,6 +75,7 @@ class TestTaskContract < Minitest::Test
         result:,
       )
       assert_equal "a" * 64, row.fetch("plan_digest")
+      assert_equal "source", row.fetch("evidence_level")
       assert_match(/\A[0-9a-f]{64}\z/, row.fetch("before_sha256"))
       assert_equal "INCONCLUSIVE", CONTRACT.preservation_evidence.fetch("status")
 
@@ -159,6 +160,7 @@ class TestTaskContract < Minitest::Test
       )
       evidence = CONTRACT.preservation_evidence
 
+      assert_equal "rendered", row.fetch("evidence_level")
       assert_equal %w[visual_identity layout], row.fetch("dimensions")
       assert_equal "INCONCLUSIVE", evidence.fetch("status")
       assert_includes evidence.fetch("missing_dimensions"), "accessibility"
