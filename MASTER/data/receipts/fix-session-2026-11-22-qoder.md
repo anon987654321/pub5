@@ -2136,3 +2136,46 @@ Still **NOT_RUN**: `test_law_index_writer_emits_a_final_newline`,
 `test_face_music_pack_is_wellformed_and_declared`, Ruby syntax, JSON parser
 execution and the full gate. The source writer is corrected; tests remain
 unexecuted.
+
+
+### Evidence-helper hardening and regex correction — 2026-11-22
+
+- Corrected double-escaped Ruby regexes in `CheckBrief`. The previous
+  commit-ID predicate matched literal backslash sequences rather than 40
+  hexadecimal characters, and the unavailable-step predicate used literal
+  backslash-b text rather than word boundaries. The existing JSON tests now
+  exercise these predicates with valid 40-character SHAs and an unavailable
+  step label.
+- Hardened `CheckBrief.file_evidence`: resolve the repository root; require
+  the artifact's parent to resolve to itself without symlink traversal; verify
+  the parent is a real directory; reject symlink/hardlink/non-regular files;
+  open with `File::NOFOLLOW` where available; compare descriptor and path
+  device/inode identities before reading; stream SHA-256 from the open
+  descriptor; then re-check file and parent identities, link count, size,
+  mtime and ctime after reading. Hash metadata contains only relative path,
+  byte count and digest.
+- Added a regression for a symlinked parent directory pointing outside the
+  checkout. Existing tests cover final-component symlink, hard link and
+  lexical path escape.
+- Confirmed `autopoiesis/kernel.rb` and `CoverageMap.write_state` already
+  append real newlines; their current state JSON files end with newlines and
+  the existing bare-tier suite has writer assertions. The served face music
+  JSON is a static data asset, and `test_web_ui.rb` already validates its
+  newline and shape.
+
+Commits:
+`c82756d3182c66aacce65ebc1c262a0efef07898` (regexes);
+`927bfc4cd29abd9a04712313f28ac8bb5581bf49` (descriptor-checked artifact hash);
+`b4e6b8a4b080c3ba770d63682e415638c406d022` (symlinked-parent regression);
+`403781a92a8cf7d68d0cecad2b31fb93724c9768` (law-index writer newline).
+
+Proof actually performed: read-after-write verification of source/test files;
+programmatic count of source backslash characters in the corrected regexes;
+static inspection of the writer newline strings and all four JSON asset endings;
+inspection of existing newline tests.
+
+Still **NOT_RUN**: `TestCheckBrief`, `TestCheckChain`,
+`TestCheckRunnerStdin`, bare Agent tier and web UI test suites; Ruby syntax;
+actual receipt/log creation, file replacement race tests, macOS/OpenBSD
+`File::NOFOLLOW` runtime support, all full profiles, and all RAILS/OPENBSD/
+STUDIO/BIZ rendered/browser/device/host/production acceptance.
