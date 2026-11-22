@@ -143,6 +143,27 @@ class BrowserBrokerTest < Minitest::Test
     refute_nil lease_id
   end
 
+  def test_scope_exposes_only_broker_validated_screenshot_bytes_for_its_active_lease
+    binding = nil
+    scope = Broker::Scope.new { |core_binding| binding = core_binding }
+    engine = FakeEngine.new
+    active = broker(engine:, destination_check: ->(_url) { true })
+    png = Broker::PNG_MAGIC + "fixture".b
+
+    binding.with(active) do
+      lease = scope.open(host: "example.com")
+      evidence = scope.screenshot(lease.id, png)
+
+      assert_equal lease.id, evidence.fetch(:lease_id)
+      assert_equal "image/png", evidence.fetch(:media_type)
+      assert_equal png, evidence.fetch(:bytes)
+      assert_raises(Broker::Denied) { scope.screenshot(lease.id, "not png") }
+      assert scope.close(lease.id)
+    end
+
+    assert_raises(Broker::Denied) { scope.screenshot("expired", png) }
+  end
+
   def test_a_binder_for_another_scope_cannot_authorize_the_injected_scope
     host_scope_binding = nil
     host_scope = Broker::Scope.new { |core_binding| host_scope_binding = core_binding }
