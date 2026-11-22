@@ -1,4 +1,4 @@
-#!/usr/bin/env zsh
+# Sourced zsh function library; do not execute or change the caller's shell options.
 
 # Use the same bounded, redacting publisher as /fix. Never send raw log bytes
 # directly to a paste service from this convenience command.
