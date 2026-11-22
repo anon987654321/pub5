@@ -203,13 +203,12 @@ module Master
         request.match?(/\b(?:everything|all(?:\s+(?:apps?|services?|stacks?|surfaces?))?|full\s+stack|entire\s+(?:stack|fleet))\b/i)
       end
 
-      # OPENBSD + the RAILS fleet + MASTER/web is the canonical full release.
-      # Resolve this explicit three-part scope locally rather than asking a model
-      # classifier that could omit the host mirror or web surface.
+      # OPENBSD + the RAILS fleet names the canonical production release.
+      # MASTER/web is part of that release even when the operator uses the
+      # shorter, natural name for the two deployment layers. Resolve this locally:
+      # provider availability must never decide whether an explicit release runs.
       def self.complete_stack_components?(request)
-        request.match?(/\bopenbsd\b/i) &&
-          request.match?(/\brails\b/i) &&
-          request.match?(/\bmaster(?:\s*(?:\/\s*|\s+)web)?\b/i)
+        request.match?(/\bopenbsd\b/i) && request.match?(/\brails\b/i)
       end
 
       def repository_root(root)
