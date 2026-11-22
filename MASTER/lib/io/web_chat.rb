@@ -137,7 +137,7 @@ module Master
             lease = @broker.open(host: provider_host, url: @config.fetch("url"),
                                  profile: profile_path, persistent: true,
                                  headless: ENV[HEADFUL_ENV] != "1")
-            browser = Ferrum::Browser.new(**driver_options(lease))
+            browser = @broker.attach(lease.id, timeout: ferrum_timeout_s)
             yield browser.create_page
           ensure
             begin
@@ -149,13 +149,6 @@ module Master
             end
           end
         end
-      end
-
-      # A lease is mandatory; Ferrum attaches to the broker's CDP endpoint.
-      def driver_options(lease)
-        raise BrowserUnavailable, "#{@provider}: Core-owned browser lease is required" unless lease
-
-        { ws_url: lease.cdp_url, timeout: ferrum_timeout_s, process_timeout: ferrum_timeout_s }
       end
 
       def provider_host = URI(@config.fetch("url")).host
