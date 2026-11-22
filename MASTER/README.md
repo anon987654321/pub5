@@ -220,6 +220,9 @@ owns repair and scope-aware proof; do not append a full verification profile
 after every run. `bin/fix-here TREE` is an optional terminal wrapper, not a
 requirement. `bin/check --help` explains the supplemental profiles,
 `bin/check --list --profile=operator` previews their steps, and
+`bin/check --profile=agent --format=json` emits a machine-readable receipt
+with exact local/main revisions, checkout cleanliness, per-step timings,
+exit states and the combined-log reference (without raw command output).
 `bin/check --show-log --tail=120` retrieves the latest diagnostic log without
 booting MASTER. While a repair is active, `bin/operator fix status` and
 `bin/operator fix tail` expose its progress and transcript.
