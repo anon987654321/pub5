@@ -23,9 +23,9 @@ module Master
     # table allows `:browser` — the same injection shape `network:` and `probe:`
     # already use, because Core reaches nothing in lib/.
     #
-    # An adapter only ever holds a Lease: a broker-issued id, the bound host and
-    # a bounded CDP endpoint. It never sees a PID, a profile path, a cookie or a
-    # page URL, so it cannot attach to or stop a browser it did not lease.
+    # An adapter holds an opaque Lease and a narrow Attachment/Page facade.
+    # The CDP endpoint, process handle and profile path stay inside this broker;
+    # adapters receive neither a raw Ferrum browser nor arbitrary CDP commands.
     #
     # Page content is untrusted data. Observations are bounded and labelled; the
     # broker never turns a page instruction into one of its own.
