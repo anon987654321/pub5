@@ -40,8 +40,8 @@ class TestVpsState < Minitest::Test
       "started_services" => %w[master brgen],
       "ports" => { "master" => 53187, "brgen" => 38182 },
       "restore_order" => %w[brgen master],
-      "run_log" => "/var/log/pub5/runs/deploy-20261117-all-12345.log",
-      "aggregate_log" => "/var/log/pub5/vps-deploy.log",
+      "run_log" => "local://deploys/deploy-20261117-all-12345.log",
+      "aggregate_log" => "local://deploys/deploy-aggregate.log",
       "snapshot_recorded" => snapshot_recorded,
     }
     path = File.join(directory, "#{run_id}.json")
@@ -123,7 +123,7 @@ class TestVpsState < Minitest::Test
       assert_equal %w[brgen master], row.fetch("restore_order")
       assert_equal({ "master" => 53187, "brgen" => 38182 }, row.fetch("ports"))
       assert_equal "restart-brgen", row.fetch("stage")
-      assert_equal "/var/log/pub5/runs/deploy-20261117-all-12345.log", row.fetch("run_log")
+      assert_equal "local://deploys/deploy-20261117-all-12345.log", row.fetch("run_log")
     end
   end
 
