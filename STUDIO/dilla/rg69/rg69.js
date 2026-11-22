@@ -669,6 +669,7 @@ const thirtySecond=sixteenth/2;
 const sixteenthDuration=sixteenth;
 const half=sixteenth*8;
 const dp=DRUM_PATTERNS[pat_.d]||DRUM_PATTERNS.basic;
+const pitch=rg69AudioProfile.notes;
 ['k','s','c','h','o'].forEach(v=>{
 if(opts.muteMap&&opts.muteMap[v])return;
 const vel=dp[v]?dp[v][stepIdx]:0;
@@ -681,17 +682,17 @@ const ratch=opts.applyRatchet?seq_[v][stepIdx].r||1:1;
 for(let r=0;r<ratch;r++){
 const rt=t+r*(sixteenth/ratch);
 if(v==='k'){
-const kpitch='C1';
-const kfreq=opts.applyTranspose?Tone.Frequency(kpitch).toFrequency()*(1+drift/1200):Tone.Frequency(kpitch).toFrequency();
+const kfreq=opts.applyTranspose?pitch.kick*(1+drift/1200):pitch.kick;
+const subfreq=opts.applyTranspose?pitch.kickSub*(1+drift/1200):pitch.kickSub;
 synths.kick.triggerAttackRelease(kfreq,eighth,rt,vl);
-synths.kickSub.triggerAttackRelease(opts.applyTranspose?Tone.Frequency(kpitch).transpose(-12):'C0',eighth,rt,vl*.7);
+synths.kickSub.triggerAttackRelease(subfreq,eighth,rt,vl*.7);
 synths.kickClk.triggerAttackRelease(thirtySecond,rt,vl*0.3);
-synths.kickBody.triggerAttackRelease(opts.applyTranspose?Tone.Frequency(kpitch).transpose(12):'C2',thirtySecond,rt,vl*.2);
+synths.kickBody.triggerAttackRelease(pitch.kickBody,thirtySecond,rt,vl*.2);
 }
-else if(v==='s'){synths.snare.triggerAttackRelease(eighth,rt,vl);synths.snareRng.triggerAttackRelease('E4',sixteenthDuration,rt,vl*0.5)}
+else if(v==='s'){synths.snare.triggerAttackRelease(eighth,rt,vl);synths.snareRng.triggerAttackRelease(pitch.snareRing,sixteenthDuration,rt,vl*0.5)}
 else if(v==='c')synths.clap.triggerAttackRelease(sixteenthDuration,rt,vl);
-else if(v==='h')synths.hat.triggerAttackRelease(200,sixteenthDuration,rt,vl);
-else if(v==='o')synths.open.triggerAttackRelease(200,eighth,rt,vl);
+else if(v==='h')synths.hat.triggerAttackRelease(pitch.hat,sixteenthDuration,rt,vl);
+else if(v==='o')synths.open.triggerAttackRelease(pitch.open,eighth,rt,vl);
 }
 }
 });
