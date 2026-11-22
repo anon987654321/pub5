@@ -102,10 +102,16 @@ voice of the creative work.
   three private datasets, consent records, captions, shared settings and
   Replicate destination visibility before any upload, then trains sequentially
   and records immutable candidate versions without approving them. The
-  explicit `--approve-spend-usd` ceiling is mandatory; it is the total for this
-  batch, not an automatic purchase authorisation. Each job's server-side
-  cancellation window is bounded by the remaining approved amount and the
-  pinned trainer rate. The current trainer pin uses 8× Nvidia H200 at
+  explicit `--approve-spend-usd` ceiling is mandatory; it is the total
+  client-side budget for this batch, not an automatic purchase authorisation.
+  Each job's local wait timeout is bounded by the remaining amount and the
+  pinned trainer rate; on timeout the client requests cancellation and checks
+  the provider status before it continues. Replicate documents `Cancel-After`
+  for predictions, not as a guaranteed training deadline, so this is not a
+  provider-enforced or account-wide hard USD cap. If cancellation remains
+  unconfirmed, the run stops and reports `SPEND_UNVERIFIED`; a still-running
+  provider job may continue to incur charges. The current trainer pin uses
+  8× Nvidia H200 at
   USD 0.0122 per compute-second (verified 2026-11-22; source and date live in
   `training_standards.yml`). Terminal provider `metrics.predict_time` is
   multiplied by that rate and recorded as a calculated estimate, never as an
