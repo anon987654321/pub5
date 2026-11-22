@@ -47,8 +47,8 @@ end
 
 # Ruby 3.2 made Set a built-in class, so requiring it is redundant across
 # pub5's declared Ruby >= 3.2 support range. Pathname is different: Ruby 4.0
-# moved its base class into core, but #find, #rmtree and .mktmpdir still live
-# in pathname.rb. Keep that require; do not infer safety from the constant.
+# moved its base class into core, but #find and #rmtree still live in
+# pathname.rb. Keep that require; do not infer safety from the constant.
 Law.define(:REDUNDANT_CORE_REQUIRE) do
   source "Ruby 3.2 built-in Set - only require 'set' is redundant"
   detect { |line| line.match?(/\A\s*require\s+["']set["']\s*(?:#[^\n]*)?\z/) }
@@ -56,10 +56,8 @@ Law.define(:REDUNDANT_CORE_REQUIRE) do
   bad  "require \"set\""
   good <<~'X'
     require "pathname"
-    Pathname.mktmpdir do |dir|
-      Pathname.new(dir).find { |path| path }
-      Pathname.new(dir).rmtree
-    end
+    Pathname.instance_method(:find)
+    Pathname.instance_method(:rmtree)
   X
 end
 
