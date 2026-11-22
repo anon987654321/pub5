@@ -26,6 +26,14 @@ class TestModelParse < Minitest::Test
     assert_equal :policy_gated, e.reversibility.kind
   end
 
+  def test_browser_effect_schema_declares_bounded_read_only_fields
+    properties = Master::Core::Model.schema.dig(:properties, :args, :properties)
+
+    assert_equal({ type: "string", maxLength: 2_048 }, properties[:url])
+    assert_equal({ type: "number", minimum: 0, maximum: 12 }, properties[:wait])
+    assert_equal({ type: "boolean" }, properties[:links])
+  end
+
   def test_browser_effect_rejects_unknown_or_unbounded_arguments
     unknown = parse('{"verb":"browser","args":{"url":"https://example.com","method":"POST"}}')
     assert_equal :note, unknown.verb
