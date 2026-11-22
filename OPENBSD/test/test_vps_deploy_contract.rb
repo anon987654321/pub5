@@ -524,6 +524,8 @@ class VpsDeployContractTest < Minitest::Test
     refute_includes CI_SOURCE, "bundle_install_as_app"
     refute_includes CI_SOURCE, "VPS_DEPLOY_SKIP_TESTS"
     refute_includes SOURCE, "SKIP_CI=1"
+    refute_includes SOURCE, "preflight-boot"
+    refute_includes SOURCE, 'canary.rb" --no-rehearse'
   end
 
   def test_the_ci_stamp_only_records_a_workstation_attestation

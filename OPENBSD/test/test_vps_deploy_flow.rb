@@ -27,14 +27,13 @@ class VpsDeployFlowTest < Minitest::Test
   # so they come from the same source rather than being stubbed. Without its own
   # `log`, zsh falls through to its `log` builtin and every call errors.
   DEPLOY_USER_LINES = SOURCE[/^DEPLOY_USER=.*\n^DEPLOY_HOME=.*$/]
-  # restore_preflight_checkout joined them with the 2026-10-12 pin work: the
-  # preflight's failure paths (and only a full run's EXIT trap) restore the
-  # detached checkout, so the pin block must carry its own definition.
+  # The production checkout is pinned only after workstation preflight. The
+  # deployer never detaches it for a repository scan.
   # write_deploy_run_receipt is a no-op in the harness (no VPS_DEPLOY_RUN_ID),
   # but set_stage calls it, so the real definition must be present. The finish
   # block's failure path calls restore_started, which needs stop_origin and
   # wait_up; all three come from the same source, never from a stub.
-  HELPER_NAMES = %w[run_as_deploy_user git_as_deploy_user log_ts log set_stage retry admin_service_retry restore_preflight_checkout write_deploy_run_receipt restore_started stop_origin wait_up].freeze
+  HELPER_NAMES = %w[run_as_deploy_user git_as_deploy_user log_ts log set_stage retry admin_service_retry write_deploy_run_receipt restore_started stop_origin wait_up].freeze
   HELPERS = HELPER_NAMES.to_h { |name| [name, SOURCE[/^#{name}\(\) \{.*?^\}$/m]] }
   HELPER_SOURCE = HELPERS.values.join("\n")
   # su stands in for root changing to the deploy user: it refuses any other user
@@ -111,38 +110,33 @@ class VpsDeployFlowTest < Minitest::Test
 
   def test_git_in_the_pin_runs_as_the_deploy_user
     with_box do |_dir, box, work, git|
-      push_commit(work, git, "two")
-      out, status = run_pin(box)
+      tip = push_commit(work, git, "two")
+      out, status = run_pin(box, VPS_DEPLOY_PREFLIGHT_SHA: tip)
       assert_equal 0, status, out
       assert_includes out, "git as dev)"
       refute_includes out, "su stub: unexpected"
     end
   end
 
-  def test_an_unattested_run_pins_origin_main_runs_the_preflight_and_moves_the_checkout
+  def test_missing_workstation_preflight_refuses_before_checkout_or_service_snapshot
     with_box do |_dir, box, work, git|
+      before = git.call("rev-parse", "HEAD", chdir: box)
       tip = push_commit(work, git, "two")
       out, status = run_pin(box)
-      assert_equal 0, status, out
-      assert_includes out, "SHA=#{tip}"
-      assert_includes out, "preflight on #{tip}"
-      assert_equal tip, git.call("rev-parse", "HEAD", chdir: box)
-      assert_equal "main", git.call("rev-parse", "--abbrev-ref", "HEAD", chdir: box)
-      assert_includes out, "STARTED=amber brgen master sshd", "the started services are recorded before anything is touched"
+      assert_equal 1, status
+      assert_includes out, "no workstation preflight attestation"
+      assert_includes out, "Nothing was stopped"
+      assert_equal before, git.call("rev-parse", "HEAD", chdir: box)
+      refute_includes out, "STARTED="
+      refute_includes out, "preflight on #{tip}"
     end
   end
 
-  def test_a_failing_preflight_refuses_and_leaves_the_checkout_on_the_old_commit
-    with_box do |_dir, box, work, git|
-      before = git.call("rev-parse", "HEAD", chdir: box)
-      push_commit(work, git, "BOOM")
-      out, status = run_pin(box)
-      assert_equal 1, status
-      assert_includes out, "preflight failed"
-      assert_includes out, "Nothing was stopped"
-      assert_equal before, git.call("rev-parse", "HEAD", chdir: box), "the checkout moved onto a commit that does not boot"
-      assert_equal "main", git.call("rev-parse", "--abbrev-ref", "HEAD", chdir: box)
-    end
+  def test_vm23_never_runs_repository_scans_or_detaches_the_checkout
+    refute_includes SOURCE, "preflight-boot"
+    refute_includes SOURCE, 'canary.rb" --no-rehearse'
+    refute_includes SOURCE, "git_as_deploy_user switch -q --detach"
+    assert_includes SOURCE, "vm23 will not run repository scans or boot checks"
   end
 
   def test_an_attested_preflight_must_name_the_sha_that_will_deploy
@@ -310,64 +304,20 @@ class VpsDeployFlowTest < Minitest::Test
     end
   end
 
-  def test_preflight_checkout_is_restored_on_every_exit_path
-    restore = SOURCE[/^restore_preflight_checkout\(\) \{.*?^\}/m]
+  def test_finish_trap_has_no_preflight_checkout_recovery_state
     finish = SOURCE[/^finish\(\) \{.*?^\}/m]
-    pin = SOURCE[/^deploy_refuse\(\).*?^fi$/m]
-
-    refute_nil restore, "preflight needs one named checkout-recovery operation"
-    refute_nil finish, "the failure trap must remain a single owner"
-    refute_nil pin, "the pinned preflight block must remain intact"
-    assert_includes restore, '(( preflight_active )) || return 0'
-    assert_includes restore, 'git_as_deploy_user switch -q'
-    assert_includes restore, 'preflight_active=0'
-    assert_includes finish, 'if (( preflight_active ))'
-    assert_includes finish, 'restore_preflight_checkout'
-    assert_operator SOURCE.index('preflight_active=1'), :<, SOURCE.index('switch -q --detach "$pin"'),
-                   "recovery ownership is set before the detached checkout begins"
-    assert_operator SOURCE.index('restore_preflight_checkout || deploy_refuse'), :<,
-                     SOURCE.index('git_as_deploy_user merge -q --ff-only "$pin"'),
-                     "the preflight checkout is restored before the release advances"
+    refute_nil finish
+    refute_includes SOURCE, "preflight_active"
+    refute_includes SOURCE, "restore_preflight_checkout"
+    assert_includes finish, "release_deploy_lock"
   end
 
-  def test_interrupted_preflight_restores_branch_and_detached_checkouts
-    restore = SOURCE[/^restore_preflight_checkout\(\) \{.*?^\}/m]
-    refute_nil restore
-
-    with_box do |_dir, box, work, git|
-      original = git.call("rev-parse", "HEAD", chdir: box)
-      pin = push_commit(work, git, "preflight-pin")
-      git.call("fetch", "-q", "origin", chdir: box)
-
-      [
-        ["main", "", "main"],
-        [original, "--detach", "detached"],
-      ].each do |back_to, flag, expected_branch|
-        if expected_branch == "detached"
-          git.call("switch", "-q", "--detach", original, chdir: box)
-        end
-        git.call("switch", "-q", "--detach", pin, chdir: box)
-
-        out, status = zsh(<<~ZSH)
-          repo=#{box}
-          preflight_active=1
-          preflight_back_to=#{back_to}
-          preflight_back_flag=(#{flag})
-          git_as_deploy_user() { (cd "$repo" && command git "$@"); }
-          log() { print "$*" }
-          #{restore}
-          restore_preflight_checkout
-          print "HEAD=$(git_as_deploy_user rev-parse HEAD)"
-          print "BRANCH=$(git_as_deploy_user symbolic-ref -q --short HEAD || print detached)"
-          print "ACTIVE=$preflight_active"
-        ZSH
-
-        assert_equal 0, status, out
-        assert_includes out, "HEAD=#{original}"
-        assert_includes out, "BRANCH=#{expected_branch}"
-        assert_includes out, "ACTIVE=0"
-      end
-    end
+  def test_master_deployer_requires_pinned_parent_admission
+    assert_includes MASTER_SH, 'VPS_DEPLOY_SHA:-'
+    assert_includes MASTER_SH, 'VPS_DEPLOY_ADMITTED_SHA:-'
+    assert_includes MASTER_SH, 'VPS_DEPLOY_PREFLIGHT_SHA:-'
+    refute_includes MASTER_SH, "git pull"
+    refute_includes MASTER_SH, "--from-laptop"
   end
 
   # the order

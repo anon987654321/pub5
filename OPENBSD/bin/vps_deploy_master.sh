@@ -1,21 +1,13 @@
 #!/usr/bin/env zsh
 # Run with zsh, as vps-deploy does: the runtime-dirs step uses zsh globs (tmp/**/*(/N)),
 # which a POSIX sh refuses to parse.
-# Deploy MASTER web + lib to vm23 after git pull.
+# Deploy prebuilt MASTER web + lib as a child of the pinned vps-deploy flow.
 #
 # This is the body of `bin/vps-deploy master`, which also writes the deploy
 # stamp; run that. Calling this file directly deploys without a stamp, which
 # is only right when vps-deploy itself is what is broken.
 #
-# Usage (from dev laptop):
-#   zsh OPENBSD/lib/ssh_vm23.sh exec 'zsh /home/dev/pub5/OPENBSD/bin/vps_deploy_master.sh'
-#   zsh OPENBSD/bin/vps_deploy_master.sh --from-laptop
-
-if [ "${1:-}" = "--from-laptop" ]; then
-  shift
-  _lib="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)/lib/ssh_vm23.sh"
-  exec zsh "$_lib" exec "zsh /home/dev/pub5/OPENBSD/bin/vps_deploy_master.sh" "$@"
-fi
+# Internal child only: invoke through OPENBSD/bin/vps-deploy.
 
 set -eo pipefail
 # SSH and direct invocation use a non-login shell; pin the OpenBSD package path.
@@ -28,17 +20,28 @@ fi
 . "$ROOT/OPENBSD/lib/ruby_select.sh"
 WEB="$ROOT/MASTER/web"
 
-# vps-deploy pins one SHA and moves the checkout to it before any step runs; this
-# script then only checks that nothing moved it. A hand run (no VPS_DEPLOY_SHA, the
-# fallback this file's header describes) still pulls.
+# This is an internal child, not a standalone deployment command.
+# Workstation preflight and parent load admission must already pass.
 cd "$ROOT"
-if [ -n "${VPS_DEPLOY_SHA:-}" ]; then
-  echo "==> checkout is pinned to $VPS_DEPLOY_SHA"
-  [ "$(git rev-parse HEAD)" = "$VPS_DEPLOY_SHA" ] || { echo "HEAD is $(git rev-parse HEAD), not the pinned SHA" >&2; exit 1; }
-else
-  echo "==> git pull"
-  git pull --ff-only origin main
-fi
+[ -n "${VPS_DEPLOY_SHA:-}" ] || {
+  echo "vps_deploy_master: refused - invoke MASTER/bin/operator vps deploy master --remote" >&2
+  exit 69
+}
+head=$(git rev-parse HEAD)
+[ "$head" = "$VPS_DEPLOY_SHA" ] || {
+  echo "vps_deploy_master: HEAD $head does not match pinned SHA $VPS_DEPLOY_SHA" >&2
+  exit 1
+}
+[ "${VPS_DEPLOY_ADMITTED_SHA:-}" = "$VPS_DEPLOY_SHA" ] || {
+  echo "vps_deploy_master: no matching parent load-admission token; refusing direct execution" >&2
+  exit 69
+}
+if [ "${VPS_DEPLOY_PREFLIGHT_SHA:-}" != "$VPS_DEPLOY_SHA" ] &&
+   ! { [ "${VPS_DEPLOY_SKIP_PREFLIGHT:-}" = 1 ] && [ "${I_UNDERSTAND_FAST_DEPLOY:-}" = 1 ]; }; then
+  echo "vps_deploy_master: no matching workstation preflight; refusing direct execution" >&2
+  exit 69
+}
+echo "==> pinned checkout and parent admission verified: $VPS_DEPLOY_SHA"
 
 cd "$WEB"
 export LANG=C.UTF-8 LC_ALL=C.UTF-8
