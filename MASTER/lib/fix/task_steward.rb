@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "time"
+require_relative "constants"
 require_relative "../ground/failure_taxonomy"
 
 module Master
@@ -90,7 +91,9 @@ module Master
           return :idle unless blocked
 
           @bus&.publish("task_steward:blocked", mission: record["id"], reason:)
-          return Master::Result.err(reason, category: :validation)
+          result = Master::Result.err(reason, category: :validation)
+          notify_after_run(result)
+          return result
         end
 
         goal = record["goal"].to_s
