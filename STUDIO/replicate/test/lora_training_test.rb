@@ -200,6 +200,8 @@ class TestStudioLoraTrainingRunner < Minitest::Test
       assert_equal "TRAINED_NEEDS_LIKENESS_REVIEW", report.fetch("status")
       assert_equal "4.392000", report.dig("spend", "calculated_cost_usd_not_invoice")
       assert_equal "0.108000", report.dig("spend", "remaining_approved_usd")
+      assert_equal "CLIENT_SIDE_TIMEOUT_AND_CANCEL_NOT_A_PROVIDER_HARD_CAP", report.dig("spend", "guard_kind")
+      assert_equal ".cache/training-spend.jsonl", report.fetch("spend_receipt")
     end
   end
 
@@ -227,6 +229,10 @@ class TestStudioLoraTrainingRunner < Minitest::Test
       assert_equal "SPEND_UNVERIFIED", report.fetch("status")
       assert_equal "SKIPPED_SPEND_UNVERIFIED", report.fetch("results")[1].fetch("status")
       assert_equal "SKIPPED_SPEND_UNVERIFIED", report.fetch("results")[2].fetch("status")
+      ledger = File.join(root, ".cache", "training-spend.jsonl")
+      record = JSON.parse(File.read(ledger))
+      assert_equal "SPEND_UNVERIFIED", record.fetch("status")
+      assert_equal "NOT_REPORTED_BY_PROVIDER", record.dig("results", 0, "billing", "cost_status")
     end
   end
 
