@@ -19,7 +19,10 @@ module Shared
     belongs_to :source, polymorphic: true, optional: true
 
     validates :entry_type, inclusion: { in: ENTRY_TYPES }
-    validates :idempotency_key, presence: true, length: { maximum: 160 }, uniqueness: true
+    # The unique database index arbitrates concurrent insertions. A model-level
+    # uniqueness query rejects a legitimate create_or_find_by! replay before the
+    # insert can reach that constraint.
+    validates :idempotency_key, presence: true, length: { maximum: 160 }
     validates :entitlement, presence: true, length: { maximum: 64 }
     validates :amount_minor,
               numericality: { only_integer: true, greater_than_or_equal_to: 0 },
