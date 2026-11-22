@@ -109,7 +109,9 @@ module Operator
     # It deliberately omits command output and environment values: logs remain
     # the bounded human diagnostic, while this receipt carries status evidence.
     def render_json(profile:, results:, metadata:, started_at:, finished_at:,
-                    duration_s:, exit_status:, command:, log_path: nil)
+                    duration_s:, exit_status:, command:, log_path: nil,
+                    receipt_id: SecureRandom.uuid, operation_id: SecureRandom.uuid,
+                    receipt_path: nil, receipt_persisted: false)
       step_rows = results.map do |result|
         {
           "name" => result.name.to_s,
@@ -148,8 +150,8 @@ module Operator
 
       receipt = {
         "schema_version" => 1,
-        "receipt_id" => SecureRandom.uuid,
-        "operation_id" => SecureRandom.uuid,
+        "receipt_id" => receipt_id,
+        "operation_id" => operation_id,
         "operation_type" => "check",
         "receipt_type" => "master_check",
         "profile" => profile.to_s,
@@ -175,11 +177,12 @@ module Operator
           "blocked" => blocked,
         },
         "test_counts" => nil,
-        "receipt_path" => nil,
-        "receipt_output" => "stdout",
+        "receipt_path" => receipt_path,
+        "receipt_output" => (receipt_persisted ? "stdout+file" : "stdout"),
         "steps" => step_rows,
         "evidence" => {
           "combined_log" => log_path,
+          "receipt_persisted" => receipt_persisted,
           "raw_output_included" => false,
         },
       }
