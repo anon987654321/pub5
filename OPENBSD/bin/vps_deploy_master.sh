@@ -46,10 +46,9 @@ echo "==> pinned checkout and parent admission verified: $VPS_DEPLOY_SHA"
 cd "$WEB"
 export LANG=C.UTF-8 LC_ALL=C.UTF-8
 export RAILS_ENV=production
-# The build steps below need a secret to boot Rails and never use it; the
-# running server takes its real key from /etc/master.env through rc.d/master.
-# SECRET_KEY_BASE_DUMMY says that outright, where a random key could be
-# mistaken for, or leak into, the real one.
+# The verification and migration steps need Rails to boot but never use the
+# production key; the running service takes its key from /etc/master.env.
+# SECRET_KEY_BASE_DUMMY makes that explicit.
 export SECRET_KEY_BASE_DUMMY=1
 
 # Primary database. MASTER/web's migrations reach ai.brgen.no's
@@ -57,10 +56,8 @@ export SECRET_KEY_BASE_DUMMY=1
 # ships code against a schema that is behind.
 #
 # db:prepare is idempotent: it creates the database when absent, loads the
-# schema when empty, and otherwise applies only pending migrations.
-# Gems first: db:prepare is the first `bundle exec`, and a gem the pull just
-# added (ferrum-0.17.2) stopped the deploy there with GemNotFound
-# while the install that would have fixed it waited two steps later.
+# schema when empty, and otherwise applies only pending migrations. The frozen
+# bundle checks above refuse missing OpenBSD gems before touching the database.
 echo "==> verify preinstalled production bundles"
 BUNDLE_PATH_DEV=/home/dev/.bundle/master
 export BUNDLE_WITHOUT=development:test BUNDLE_PATH="$BUNDLE_PATH_DEV" BUNDLE_FROZEN=true

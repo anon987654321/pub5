@@ -189,6 +189,8 @@ class VpsDeployFlowTest < Minitest::Test
     refute_match(/git -C "\$repo" pull/, SOURCE)
     assert_match(/rev-parse HEAD\) == "\$VPS_DEPLOY_SHA"/, SOURCE)
     assert_includes MASTER_SH, '[ "$head" = "$VPS_DEPLOY_SHA" ]'
+    refute_includes SOURCE, "pulls origin/main"
+    refute_includes MASTER_SH, "git pull"
     assert_includes SOURCE, "unset VPS_DEPLOY_ADMITTED_SHA"
     assert_operator SOURCE.index("deploy_refuse()"), :<, SOURCE.index(ORDER_BLOCK), "the pin comes before any deploy"
   end

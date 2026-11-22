@@ -1240,9 +1240,8 @@ if [[ $deploy_target_kind == all || $deploy_target_kind == group ]]; then
   exit 0
 fi
 
-# SHA and time are captured at write_stamp, not here. vps_deploy_master.sh
-# pulls origin/main; reading HEAD before that call stamped the pre-pull SHA
-# (76f1a65fa on 2026-08-12 while /health correctly said 5eff4d87a).
+# SHA and time are captured at write_stamp, after the pinned checkout and
+# workstation admission checks have passed. The MASTER child never pulls.
 
 write_stamp() {
   local name=$1 stamp_status=$2
