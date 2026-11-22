@@ -195,6 +195,30 @@ class TestOwnerRegistryTasks < Minitest::Test
     end
   end
 
+  def test_backlog_receipts_share_the_canonical_mission_state_from_either_root
+    Dir.mktmpdir("backlog-state-root") do |root|
+      repo_root = File.join(root, "repo")
+      master_root = File.join(repo_root, "MASTER")
+      state_root = File.join(root, "state")
+      FileUtils.mkdir_p(master_root)
+      assert system("git", "-C", repo_root, "init", "--quiet")
+      assert system("git", "-C", repo_root, "config", "remote.origin.url", "https://github.com/owner/pub5.git")
+
+      previous = ENV["MASTER_STATE_DIR"]
+      ENV["MASTER_STATE_DIR"] = state_root
+      repository_executor = Backlog::Executor.new(root: repo_root, repo_root:)
+      master_executor = Backlog::Executor.new(root: master_root, repo_root:)
+
+      assert_equal repository_executor.send(:receipt_path), master_executor.send(:receipt_path)
+      assert_equal(
+        File.join(MasterPaths.fix_state(root: repo_root), File.basename(Backlog::Executor::RECEIPT_PATH)),
+        repository_executor.send(:receipt_path),
+      )
+    ensure
+      previous.nil? ? ENV.delete("MASTER_STATE_DIR") : ENV["MASTER_STATE_DIR"] = previous
+    end
+  end
+
   def test_backlog_status_is_read_only_and_omits_private_task_text
     row = {
       id: "status-provider-task", text: "PRIVATE PROMPT BODY MUST NOT APPEAR",
