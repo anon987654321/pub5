@@ -228,6 +228,23 @@ module Master
         end
       end
 
+      def test_autopoiesis_does_not_claim_unimplemented_regeneration
+        source = File.join(master_root, "data", "autopoietic_components.json")
+        Dir.mktmpdir do |dir|
+          output = File.join(dir, "components.json")
+          FileUtils.cp(source, output)
+          kernel = Autopoiesis::Kernel.new(repo_root: repo_root)
+          kernel.instance_variable_set(:@manifest_path, output)
+          before = File.binread(output)
+
+          result = kernel.regenerate("trace_store")
+
+          assert_equal false, result[:ok]
+          assert_equal "INCONCLUSIVE", result[:status]
+          assert_equal before, File.binread(output), "an unimplemented regeneration must not mutate the manifest"
+        end
+      end
+
       def test_prune_only_judges_laws_that_were_measured
         out, = capture_io { Prune.report }
         payload = JSON.parse(out[/\{.*\}/m])
