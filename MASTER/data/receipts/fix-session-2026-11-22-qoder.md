@@ -1533,3 +1533,132 @@ not a layer added at the end; it is the acceptance predicate every slice must pa
 Proof: read-after-write verification of the Ruby helper and regression fixture.
 NOT_RUN: `TestAxe`, Chrome/CDP execution, AxeCheck across product surfaces,
 Ruby syntax and full check suites. This is source-level evidence only.
+
+
+## T. Incumbent parity maps (addendum, proposal-grade)
+
+Operator request: make marketplace more like bol.com, playlist more like
+SoundCloud/whyp.it, dating more like happn/Tinder/Badoo, takeaway more like
+DoorDash/foodora. Method: the parity map is already native (apps.yml carries a
+planned "Amazon feature parity map" row). Enumerate the incumbent's user-visible
+jobs, mark done/partial/missing/walled against the live engine, build the missing
+interaction patterns on the shared Commerce/Places spine, and hold the scale,
+licensing and logistics walls honest. Borrow the interaction pattern, not the
+scale infrastructure; win on locality, not parity. Grounded in the four engine
+READMEs and gaps.yml. Proposal only; suites NOT_RUN; operator gates value/money.
+
+### T1. Marketplace -> bol.com
+
+bol.com's defining mechanic is one canonical product page with many offers
+(retail + partner sellers), retail-grade trust, fast delivery and free returns.
+brgen marketplace is shop-first today; the individual-listing model exists but
+the classifieds experience is unfinished (engine README).
+
+    DONE    category + FTS search, locality filters, facets, saved searches,
+            wishlist, reviews, public listing questions, variants, order state,
+            returns, native seller surface, duplicate detection
+    PARTIAL individual classifieds flow (model exists, experience unfinished)
+    MISSING canonical product catalog keyed by GTIN/EAN that many sellers list
+            against (the bol mechanic); professional partner-seller program with
+            verification; "often bought together" + deterministic recommendations;
+            price history + price alerts; structured rich product content;
+            search autocomplete + category tree; local delivery promise
+    WALLED  bol's catalog scale, ML recommendations, national logistics network
+    NATIVE  a CITY product catalog: one product page, local shops + private
+            sellers offer against it, Places geo-locates stock, Commerce handles
+            split checkout (Dintero, planned) and returns. Deterministic SQL
+            "often bought together" from co-order counts, no neural ranker.
+            Liquidity before ads; payment never buys rank or trust.
+    MAP     land a bol.com parity map beside the planned Amazon parity map;
+            closes marketplace_ai_recs (deterministic), seller_analytics,
+            coupons; consumes commerce_shared_domain + maps_poi_substrate.
+
+### T2. Playlist -> SoundCloud / whyp.it
+
+SoundCloud's signature is the waveform with time-pinned comments plus creator
+upload and a social graph; whyp.it's angle is lossless, artist-first listening.
+brgen playlist already imports from YouTube/Spotify/SoundCloud/Whyp/direct,
+hosts uploads for real accounts, runs synced listening parties with chat, and
+pins comments to a moment in a track (engine README). The SoundCloud mechanic
+is largely native; whyp import already exists (radio_whyp_tracks_imported seam).
+
+    DONE    playlists/sets, collaborators (owner/editor/viewer), URL import
+            (incl. SoundCloud + Whyp), hosted uploads, listening parties,
+            moment-pinned comments, likes/listens discovery, DillaSketch render
+            -> publish as track
+    PARTIAL creator social graph (likes/listens exist; followers/feed thin)
+    MISSING waveform render + scrub UI (the visual signature); creator profiles
+            + follow + activity feed; reposts; creator stats; donations/ad-free
+            tier (planned); lossless/hi-fi playback path for owned audio;
+            offline listening (PWA)
+    WALLED  major-label catalog licensing; SoundCloud's scale and royalty system
+    NATIVE  local curation + listening rooms + creator ownership + dilla
+            generation is something SoundCloud does not do. Stream only
+            licensed/owned audio (show_rights_honestly); offer lossless for
+            owned uploads (the whyp angle) without a label catalog. Waveform
+            from the existing media pipeline; moment comments already exist.
+    MAP     closes playlist_creator_donations + referral_reward_consumption;
+            consumes commerce_shared_domain; radio_tunnel_rendered_review +
+            radio_whyp_tracks_imported seams prove the listening surface.
+
+### T3. Dating -> happn / Tinder / Badoo
+
+Tinder's mechanic is the swipe deck + gamified tiers; happn's is real-world
+cross-paths; Badoo's is people-nearby social discovery. brgen dating already
+runs home#next one-candidate deck, like/dislike, rewind, matches, who-liked-you,
+five stored daily picks, Vipps-verified phone, and human-reviewed random-pose
+selfie verification (engine README); path_crossings and nearby surfaces exist
+(route screenshots). The Tinder/happn mechanics are largely native.
+
+    DONE    swipe deck (home#next), like/dislike, rewind, matches, who-liked-you,
+            daily picks (5, stored), mutual oriented_for (satisfied gap),
+            Vipps phone verification, random-pose selfie verification,
+            path_crossings + nearby surfaces, three profile prompts
+    PARTIAL happn cross-paths as a first-class timeline/feed (surface exists)
+    MISSING premium tier (planned) unlocking unlimited rewind / who-liked-you /
+            passport; super-like; boost (planned); Badoo-style people-nearby
+            grid + interests discovery; icebreaker games; safety center
+    WALLED  WebRTC video/voice (STUN/TURN host infra); liquidity at scale
+    NATIVE  verified-local + cross-paths in your actual city is happn done
+            honestly with Vipps-verified phones. Surface path_crossings as a
+            "people you crossed today" feed; people-nearby grid as area-only
+            (never exact). Premium never buys consent, trust or moderation;
+            no dark patterns, no fake scarcity; deterministic ranking.
+    MAP     closes dating_premium_boost; consumes commerce_shared_domain;
+            human review of safety copy; liquidity stays an honest market fact.
+
+### T4. Takeaway -> DoorDash / foodora
+
+DoorDash/foodora's mechanic is dispatch logistics + live map tracking + a
+subscription (DashPass/foodora Plus). brgen takeaway already has discovery +
+cuisine filter + live search + nearby, restaurant menus/availability/photos/
+hours/min-order/fees/radii, guest ordering, server-calculated totals (client
+totals never trusted), and a guarded order lifecycle (engine README); delivery
+area and cart expiry are satisfied gaps. The ordering surface is native.
+
+    DONE    discovery, menus, guest ordering, server totals, guarded lifecycle,
+            delivery-area validation, cart expiry, optional tip
+    PARTIAL order tracking (lifecycle exists; live map + driver ETA unproven)
+    MISSING live tracking map + driver assignment + honest ETA; driver surface;
+            scheduled + group orders; subscription free-delivery tier; restaurant
+            coupons/loyalty/promotions (takeaway_pro, planned); reorder/favorites;
+            ratings + photo reviews
+    WALLED  the Dasher/rider logistics network, dispatch ML, capital, insurance
+    NATIVE  restaurant self-delivery + local courier coordination on the shared
+            spine; honest ETA from stated prep + distance, not a sold guess;
+            DashPass-style free-delivery Entitlement via Commerce; pro coupons
+            via Campaign. The wall is driver supply, not the ordering UI.
+    MAP     closes takeaway_pro_surface; consumes commerce_shared_domain +
+            maps_poi_substrate; payments_in_provider_staging + live tracking
+            journey seams prove it. Never fake a live ETA or a "Direkte" status.
+
+### T5. The shared rule
+
+Each parity map builds interaction patterns on the one Commerce domain and the
+Places substrate, never a per-engine stack. Each holds its wall honest: catalog
+scale and ML (bol), label licensing (SoundCloud), liquidity (dating), driver
+logistics (DoorDash/foodora). The locality twist is the product, not a consolation:
+a city product catalog, local listening rooms, verified cross-paths, city
+kitchens. Love is the acceptance predicate (section S1); proof is the gate; the
+operator owns the rendered value and the money. Re-measure before acting; route
+each missing row to gaps.yml / apps.yml / ideations, not to a new backlog.
