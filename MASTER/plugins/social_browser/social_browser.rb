@@ -196,7 +196,7 @@ module Master
         require_ferrum!
         validate_url!(site, url)
         owner = broker
-        raise PolicyError, "social_browser: Core-owned browser broker is unavailable" unless owner
+        raise PolicyError, "social_browser: Core-owned browser broker is unavailable" unless owner && (!owner.respond_to?(:available?) || owner.available?)
 
         account_name = safe_account_name(account)
         account_dir = File.join(account_root, account_name)
