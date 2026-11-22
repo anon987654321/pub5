@@ -64,6 +64,22 @@ class BillingPlansContractTest < Minitest::Test
     end
   end
 
+  # Credits and entitlements share one durable journal in each vertical
+  # database. This is deliberately not a second checkout or payment provider.
+  def test_every_selling_app_has_the_shared_commerce_ledger
+    USER_APPS.each do |app|
+      migration = Dir.glob(File.join(ROOT, app, "db/migrate/*_create_commerce_ledger_entries.rb"))
+      assert_equal 1, migration.size, "#{app} commerce ledger migration"
+      assert_includes read("#{app}/db/schema.rb"), %(create_table "commerce_ledger_entries"), app
+    end
+
+    ledger_model = read("__shared/app/models/shared/commerce_ledger_entry.rb")
+    assert_includes ledger_model, "before_update :refuse_mutation!"
+    assert_includes ledger_model, "before_destroy :refuse_mutation!"
+    assert_includes read("__shared/app/services/shared/commerce.rb"), "module Ledger"
+    assert_includes read("__shared/app/services/shared/commerce.rb"), "create_or_find_by!"
+  end
+
   # Subscription events reach billing from each selling app's Stripe endpoint.
   def test_each_selling_apps_stripe_webhook_hands_events_to_billing
     USER_APPS.each do |app|
