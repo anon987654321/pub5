@@ -12,7 +12,7 @@
 // Usage: node BIZ/tools/bp_build.mjs — build bases come from BIZ/tools
 // (SOURCE_DIR), completed builds land in OUTPUT_DIR for the operator to
 // review before anything is published into a plan folder.
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { OUTPUT_DIR as OUT, SOURCE_DIR as SRC } from './paths.mjs';
 import { PLANS_A } from './plans_a.mjs';
 import { PLANS_B } from './plans_b.mjs';
@@ -24,6 +24,11 @@ const PUB_SYRE = `${SRC}/syre.html`;
 mkdirSync(OUT, { recursive: true });
 const ORDER = ['syre', 'ragnhild', 'nordvakt', 'norwegianfinancial', 'pubhealthcare',
   'govt_bergen', 'future_healthcare_os'];
+const occupied = ORDER.filter(name => existsSync(`${OUT}/${name}/${name}.html`));
+if (occupied.length) {
+  throw new Error('BIZ build output already exists for: ' + occupied.join(', ') +
+    '; use a fresh empty BIZ_OUT_DIR to preserve the previous build');
+}
 // Authored complete per their proposals; staged and re-verified, not injected.
 const COMPLETED = new Set(['nordvakt', 'norwegianfinancial', 'future_healthcare_os']);
 const TITLES = {
