@@ -10,7 +10,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, linkSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
-import { OUTPUT_DIR as OUT, BIZ_ROOT } from './paths.mjs';
+import { OUTPUT_DIR as OUT, BIZ_ROOT, PUBLISHED_INPUTS } from './paths.mjs';
 
 const ORDER = ['syre', 'ragnhild', 'ragnhild_legater', 'nordvakt', 'norwegianfinancial', 'pubhealthcare', 'govt_bergen', 'future_healthcare_os', 'fetat'];
 // fetat.html is built by fetat_build.rb straight into the published BIZ
@@ -52,6 +52,17 @@ function sha256(path) {
   return createHash('sha256').update(readFileSync(path)).digest('hex');
 }
 
+function sourceInputDigests(name) {
+  const declared = PUBLISHED_INPUTS[name];
+  if (!declared) throw new Error(`${name}: source-input manifest is missing`);
+  const inputs = [...new Set([...declared.html, ...declared.pdf])].sort();
+  return Object.fromEntries(inputs.map(input => {
+    const path = resolve(BIZ_ROOT, input);
+    if (!existsSync(path)) throw new Error(`${name}: declared source input is missing: ${input}`);
+    return [input, sha256(path)];
+  }));
+}
+
 const CHROME = CHROME_CANDIDATES.find(available);
 const AUDIT_PARENT = process.env.BIZ_AUDIT_DIR ? resolve(process.env.BIZ_AUDIT_DIR) : tmpdir();
 mkdirSync(AUDIT_PARENT, { recursive: true });
@@ -73,6 +84,8 @@ for (const name of ORDER) {
     source = `${BIZ_ROOT}/ragnhild/ragnhild_legater.html`;
   }
   if (!existsSync(source)) throw new Error(`${name}: source HTML missing: ${source}`);
+  const sourceHtmlSha256 = sha256(source);
+  const sourceInputsSha256 = sourceInputDigests(name);
   mkdirSync(outputDir, { recursive: true });
   const src = `file://${source}`;
   const pdf = `${outputDir}/${name}.pdf`;
@@ -134,12 +147,18 @@ for (const name of ORDER) {
   if (!raster) throw new Error(`${name}: pdftoppm produced no front-page png`);
   renameSync(`${outputDir}/${raster}`, frontPng);
 
+  if (sha256(source) !== sourceHtmlSha256 ||
+      JSON.stringify(sourceInputDigests(name)) !== JSON.stringify(sourceInputsSha256)) {
+    throw new Error(`${name}: a source changed during printing; discard this scratch output and rerun from a fresh BIZ_OUT_DIR`);
+  }
+
   const printRecord = {
-    schema: 'biz.print.v1',
+    schema: 'biz.print.v2',
     generated_at: new Date().toISOString(),
     document: name,
     source_html: basename(source),
-    source_html_sha256: sha256(source),
+    source_html_sha256: sourceHtmlSha256,
+    source_inputs_sha256: sourceInputsSha256,
     pdf: basename(pdf),
     pdf_sha256: sha256(pdf),
     front_png: basename(frontPng),
