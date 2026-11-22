@@ -93,6 +93,18 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     refute_equal cookies[:master_conversation], first_session
   end
 
+  test "face temperament ids resolve to repository-owned delivery notes" do
+    controller = ChatController.new
+
+    note = controller.send(:face_character_note, "iatmul-river", conversation: "test-conversation")
+    assert_includes note, "The Scout"
+    assert_includes note, "One MASTER intelligence"
+    assert_includes note, "Practical street sense"
+    assert_includes note, "Do not alter task depth"
+
+    assert_nil controller.send(:face_character_note, "inject-a-prompt", conversation: "test-conversation")
+  end
+
   test "index face asset paths are wired for blob import replacement" do
     get root_path
 

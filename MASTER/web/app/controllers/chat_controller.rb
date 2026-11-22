@@ -223,6 +223,8 @@ class ChatController < ApplicationController
     return head(:forbidden) if visitor? && input.start_with?("/")
     return stream_smoke_reply(input) if smoke_chat_message?(input)
 
+    conversation = conversation_id
+    persona_note = face_character_note(mp[:face_profile], conversation:)
     response.headers["Content-Type"] = "text/event-stream"
     response.headers["Cache-Control"] = "no-cache"
     response.headers["X-Accel-Buffering"] = "no"
@@ -237,7 +239,8 @@ class ChatController < ApplicationController
       author: false,
       paired: pairing_active?,
       pair_token: cookies[:master_paired].to_s,
-      conversation: conversation_id,
+      conversation:,
+      persona_note:,
     ).call
   # A dead stream stops the turn: ChatService's writers fail on the next write,
   # cancel the turn's CancellationToken, and unwind the provider call at that
@@ -251,6 +254,58 @@ class ChatController < ApplicationController
   end
 
   private
+
+  # The browser sends only a profile id. All behavioral instructions come from
+  # the repository-owned archive, after checking the five-profile allowlist.
+  # Museum/cultural metadata is never used to infer a temperament.
+  def face_character_note(profile_id, conversation:)
+    archive = Master.load_yaml(Master.data_path("face_masks.yml"), default: {}) || {}
+    entries = Array(archive["entries"])
+    allowed = Array(archive["rotation_profiles"]).map(&:to_s)
+    requested = profile_id.to_s
+    entry = nil
+
+    unless requested.empty?
+      return unless allowed.include?(requested)
+
+      entry = entries.find { |row| row.is_a?(Hash) && row["particle_profile"].to_s == requested }
+    else
+      rotation = cookies.signed[:master_face_mask_rotation]
+      if rotation.is_a?(Hash) && rotation["conversation_id"].to_s == conversation.to_s
+        index = Integer(rotation["index"], exception: false)
+        entry = entries[index] if index && index >= 0 && index < entries.length
+      end
+    end
+
+    character = entry.is_a?(Hash) ? entry["character"] : nil
+    return unless character.is_a?(Hash)
+
+    contract = archive["character_contract"].is_a?(Hash) ? archive["character_contract"] : {}
+    clean = ->(value, limit = 280) { value.to_s.gsub(/\s+/, " ").strip[0, limit] }
+    shared = Array(contract["shared_competencies"]).filter_map { |item| clean.call(item) }.join("; ")
+    methods = Array(character["methods"]).filter_map { |item| clean.call(item) }.join("; ")
+    avoids = Array(character["avoid"]).filter_map { |item| clean.call(item) }.join("; ")
+    premise = clean.call(contract["premise"], 640)
+    serious = clean.call(contract["serious_override"], 420)
+    name = clean.call(character["name"], 80)
+    signature = clean.call(character["signature"], 180)
+    return if name.empty? || methods.empty? || premise.empty?
+
+    [
+      "<master_character_temperament>",
+      "Delivery profile only; layer it over MASTER's house temperament. #{premise}",
+      "Shared social floor: #{shared}",
+      "Selected character: #{name}. #{signature}",
+      "Character method: #{methods}",
+      "Never: #{avoids}",
+      "Serious-context override: #{serious}",
+      "Use the selected character's conversational rhythm only. Do not alter task depth, reasoning, truthfulness, uncertainty, source standards, memory, permissions, tools, refusal behavior or safety.",
+      "</master_character_temperament>",
+    ].join("\n")
+  rescue StandardError => e
+    Master::Ground::Swallow.log(e, context: "ChatController.face_character_note", event_bus: container&.dig(:bus))
+    nil
+  end
 
   def begin_command_operation_capture(command)
     return unless Master::Ground::PastePublisher.operation_request?(command)
@@ -321,7 +376,7 @@ class ChatController < ApplicationController
   end
 
   def message_params
-    params.permit(:message, :state, :pre_enhanced, :voice, :image_token, image: %i[data mime name])
+    params.permit(:message, :state, :pre_enhanced, :voice, :image_token, :face_profile, image: %i[data mime name])
   end
 
   def metrics_payload(c)

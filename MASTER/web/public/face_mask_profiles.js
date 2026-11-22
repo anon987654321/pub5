@@ -109,12 +109,16 @@
     if (!world?.setSubjectForm) return false;
     const profile = PROFILES[((index % PROFILES.length) + PROFILES.length) % PROFILES.length];
     const source = sourceFor(profile);
+    const character = source && source.character && typeof source.character === "object" ? source.character : null;
+    const characterName = String(character?.name || "");
     world.setSubjectForm("object", descriptor(profile));
 
     const root = document.documentElement;
     root.dataset.maskProfile = profile.id;
     root.dataset.maskFamily = profile.family;
     root.dataset.maskLabel = profile.name;
+    if (character?.id) root.dataset.maskCharacter = String(character.id);
+    else delete root.dataset.maskCharacter;
     if (source) {
       root.dataset.maskSourceTitle = String(source.title || "");
       root.dataset.maskSourceCollection = String(source.collection || "");
@@ -128,10 +132,11 @@
     const canvas = document.getElementById?.("face");
     if (canvas && source) {
       const credit = String(source.image_credit || source.collection || "");
-      canvas.title = `${profile.name} — original particle study. Reference: ${source.title || "collection object"}; ${source.collection || "collection"}; ${credit}.`;
+      const characterPrefix = characterName ? `${characterName}. ` : "";
+      canvas.title = `${characterPrefix}${profile.name} — original particle study. Reference: ${source.title || "collection object"}; ${source.collection || "collection"}; ${credit}.`;
       canvas.setAttribute?.(
         "aria-label",
-        `${profile.name}, an original monochrome particle-face study. Reference object: ${source.title || "collection object"}, ${source.collection || "collection"}. ${credit}.`
+        `${characterPrefix}${profile.name}, an original monochrome particle-face study. Reference object: ${source.title || "collection object"}, ${source.collection || "collection"}. ${credit}.`
       );
     } else if (canvas) {
       canvas.removeAttribute?.("title");
@@ -142,6 +147,11 @@
       detail: {
         id: profile.id, name: profile.name, family: profile.family,
         note: profile.note, index, reason,
+        character: character ? {
+          id: String(character.id || ""),
+          name: String(character.name || ""),
+          signature: String(character.signature || "")
+        } : null,
         source: source ? {
           id: source.id, title: source.title, collection: source.collection,
           accession: source.accession, object_url: source.object_url,

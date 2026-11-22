@@ -376,12 +376,14 @@ test("server-selected human mask profile drives the particle face and its source
   const source = {
     id: "iatmul_mai", particle_profile: "iatmul-river",
     title: "Mask (Mai)", collection: "The Metropolitan Museum of Art",
+    character: { id: "the-scout", name: "The Scout", signature: "Alert, socially shrewd and practical." },
     accession: "1974.29.2", object_url: "https://www.metmuseum.org/art/collection/search/309933",
     rights: "Collection record; source image is not downloadable"
   };
   const nextSource = {
     id: "iatmul_mwai", particle_profile: "sepik-split",
     title: "Mask (Mwai)", collection: "The Museum of Fine Arts, Houston",
+    character: { id: "the-spark", name: "The Spark", signature: "Energetic, witty and memorable." },
     accession: "62.33", object_url: "https://emuseum.mfah.org/objects/47457/mask-mwai",
     rights: "Public Domain (object record); photograph © The Museum of Fine Arts, Houston"
   };
@@ -424,6 +426,8 @@ test("server-selected human mask profile drives the particle face and its source
   assert.equal(calls[0].descriptor.kind, "custom");
   assert.equal(calls[0].descriptor.parts.length, 8);
   assert.equal(document.documentElement.dataset.maskSourceTitle, "Mask (Mai)");
+  assert.equal(document.documentElement.dataset.maskCharacter, "the-scout");
+  assert.match(canvas.title, /The Scout/);
   assert.match(canvas.title, /original particle study/);
   assert.match(attributes["aria-label"], /Mask \(Mai\)/);
   assert.equal(api.source().id, "iatmul_mai");
@@ -431,8 +435,35 @@ test("server-selected human mask profile drives the particle face and its source
   assert.equal(api.newConversation("next-chat"), true);
   assert.equal(api.current().id, "sepik-split");
   assert.equal(api.source().id, "iatmul_mwai");
+  assert.equal(api.source().character.id, "the-spark");
+  assert.equal(document.documentElement.dataset.maskCharacter, "the-spark");
   assert.equal(document.documentElement.dataset.maskSourceCollection, "The Museum of Fine Arts, Houston");
 });
+
+test("rotating characters change delivery only and preserve one MASTER intelligence", () => {
+  const archive = readFileSync(join(root, "..", "..", "MASTER", "data", "face_masks.yml"), "utf8");
+  const actions = readFileSync(join(publicDir, "chat_actions.js"), "utf8");
+  const controller = readFileSync(join(root, "app", "controllers", "chat_controller.rb"), "utf8");
+  const service = readFileSync(join(root, "app", "services", "chat_service.rb"), "utf8");
+  const promptBuilder = readFileSync(join(root, "..", "..", "MASTER", "lib", "review", "agent", "prompt_builder.rb"), "utf8");
+  const ids = ["the-host", "the-scout", "the-spark", "the-fixer", "the-anchor"];
+  const names = ["The Host", "The Scout", "The Spark", "The Fixer", "The Anchor"];
+
+  assert.match(archive, /One MASTER intelligence, one constitution and one standard of care/);
+  assert.match(archive, /Social awareness:/);
+  assert.match(archive, /Charisma:/);
+  assert.match(archive, /Practical street sense:/);
+  assert.match(archive, /serious_override:/);
+  for (const id of ids) assert.ok(archive.includes(`id: "${id}"`), `missing ${id}`);
+  for (const name of names) assert.ok(archive.includes(`name: "${name}"`), `missing ${name}`);
+  assert.match(actions, /form\.append\("face_profile", faceProfile\)/);
+  assert.match(controller, /allowed\.include\?\(requested\)/);
+  assert.match(controller, /face_character_note\(mp\[:face_profile\], conversation:/);
+  assert.match(service, /Fiber\[:master_persona_note\] = @persona_note/);
+  assert.match(promptBuilder, /parts << Fiber\[:master_persona_note\]/);
+});
+
+test("explicit visual subjects fail closed and never fall through to text guesses", () => {
 
 test("explicit visual subjects fail closed and never fall through to text guesses", () => {
   const source = readFileSync(join(publicDir, "face_world.js"), "utf8");

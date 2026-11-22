@@ -36,7 +36,7 @@ class ChatService
   class ClientGone < IOError; end
 
   def initialize(container:, params:, stream:, logger:, tier:, unlocked:, author:, paired: false, pair_token: nil,
-conversation: nil)
+conversation: nil, persona_note: nil)
     @container = container
     @params = params
     @stream = stream
@@ -47,6 +47,7 @@ conversation: nil)
     @paired = paired
     @pair_token = pair_token
     @conversation = conversation
+    @persona_note = persona_note.to_s
     @subscriptions = []
     @mutated_paths = []
     @mutated = false
@@ -181,6 +182,7 @@ conversation: nil)
     Fiber[:master_elevated] = @unlocked || @author
     Fiber[:master_paired] = @paired
     Fiber[:master_pair_subject] = Master::Ground::Pairing.subject_for(@pair_token.to_s) if @paired
+    Fiber[:master_persona_note] = @persona_note.empty? ? nil : @persona_note
   end
 
   def subscribe_to_events
