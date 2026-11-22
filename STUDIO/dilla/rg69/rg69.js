@@ -70,7 +70,6 @@ const PARAMS={
   WOBB_FREQ_MAX:0.15,
   WOBB_DEPTH_MAX:0.04,
   DRIFT_FREQ_MAX:0.15,
-  BITCRUSH_BITS:12,
   KEYS_LP_HZ:5000,
   PADS_LP_HZ:3500,
   INSTANCE_TTL_MS:8000,
@@ -261,21 +260,30 @@ log('mood applied','k');
 }
 
 
+const bootStyleCandidates=STYLES.filter(style=>{
+const drums=DRUM_PATTERNS[style.d];
+const bass=(BASS_PATS[style.b]||'').split(',');
+const keys=KEYS_PATS[style.k]||[];
+const pads=PAD_PATS[style.p]||[];
+return drums&&Object.values(drums).some(pattern=>pattern.some(hit=>hit>0))&&bass.some(note=>note)&&keys.some(note=>note&&note!==0)&&pads.some(note=>note&&note!==0);
+});
+const bootStylePool=bootStyleCandidates.length?bootStyleCandidates:STYLES;
+const bootStyle=bootStylePool[Math.floor(Math.random()*bootStylePool.length)];
 let st_={started:false,playing:false,idx:-1,timer:null,layoutIdx:49,heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,theme:'dark',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0}};
 let wobPhase=0;
-let aud_={bpm:96,swing:8,drive:72,tape:44,comp:78,width:52,reverb:34,delay:26,filter:62,wobble:8,vinyl:12,crackle:8,drift:0.05};
-let mix_={drum:80,bass:70,keys:60,pads:50,master:75};
-let pat_={d:'bluehour',b:'bluehourbass',k:'bluehourkeys',p:'bluehourwash'};
+let aud_={bpm:bootStyle.bpm[0]+Math.random()*(bootStyle.bpm[1]-bootStyle.bpm[0]),swing:bootStyle.sw[0]+Math.random()*(bootStyle.sw[1]-bootStyle.sw[0]),drive:72,tape:44,comp:78,width:52,reverb:34,delay:26,filter:62,wobble:8,vinyl:12,crackle:8,drift:0.05};
+let mix_={drum:80,bass:70,keys:60,pads:55,master:75};
+let pat_={d:bootStyle.d,b:bootStyle.b,k:bootStyle.k,p:bootStyle.p};
 let seq_={};
 ['k','s','c','h','o'].forEach(t=>{seq_[t]=Array(16).fill(0).map(()=>({v:0.85+rnd(0,0.15),t:rnd(-15,15),p:100,r:1}))});
 ['b','keys','p'].forEach(t=>{seq_[t]=Array(16).fill(0).map(()=>({v:0.85+rnd(0,0.15),t:rnd(-15,15),p:100,r:1}))});
 
 let kickN,kickSub,kickClk,kickBody,snareN,snareRng,clapN,hatN,openN,bassN,bassSub,keysN,keysChorus,padsN,padsFlt,padsShift;
 let drumG,bassG,keysG,padsG,masterG,limiter,vinylNoise,crackleNoise,driftLFO,analyser;
-let fxRev,fxDly,fxFlt,tapeSat,compPar,sslComp,widener,kickSat,keySat,drumSat,outSat,bitCrush,revSend,dlySend;
-let drumTube,kickComp,vintageSat,phaserFX,lofiNoise,lofiComp,tapeWS,padsLFO,kickClkBP,snareRngBP,keysTrem,keysCrush;
+let fxRev,fxDly,fxFlt,tapeSat,compPar,sslComp,widener,kickSat,keySat,drumSat,outSat,masterDrive,revSend,dlySend;
+let drumTube,kickComp,vintageSat,phaserFX,lofiNoise,lofiComp,tapeWS,padsLFO,kickClkBP,snareRngBP,keysTrem,keysDrive;
 
-const fxPool=['AutoWah','AutoFilter','AutoPanner','BitCrusher','Chebyshev','Chorus','Distortion','FeedbackDelay','Freeverb','FrequencyShifter','JCReverb','Phaser','PingPongDelay','PitchShift','Tremolo','Vibrato','StereoWidener'];
+const fxPool=['AutoWah','AutoFilter','AutoPanner','Chebyshev','Chorus','Distortion','FeedbackDelay','Freeverb','FrequencyShifter','JCReverb','Phaser','PingPongDelay','PitchShift','Tremolo','Vibrato','StereoWidener'];
 let drumFX=[],bassFX=[],keysFX=[],padsFX=[],masterFX=[];
 
 // The boot chain is fixed. A person meets RG-69 through its defaults, so the
@@ -439,8 +447,8 @@ keysN=new Tone.PolySynth(Tone.FMSynth,{maxPolyphony:16,harmonicity:7,modulationI
 keysChorus=new Tone.Chorus(2.5,.3,.3).start();
 keysTrem=new Tone.Tremolo({frequency:3.2,depth:0.2,wet:0.25,spread:90});
 keysTrem.start();
-keysCrush=new Tone.BitCrusher(4);
-keysCrush.wet.value=0.15;
+keysDrive=new Tone.Distortion(0.08);
+keysDrive.wet.value=0.15;
 padsN=new Tone.PolySynth(Tone.Synth,{maxPolyphony:16,oscillator:{type:'fatsawtooth',count:3,spread:25},envelope:{attack:2.2,decay:3.5,sustain:0.75,release:4.8}});
 padsFlt=new Tone.Filter(1000,'lowpass');
 padsLFO=new Tone.LFO(0.12,600,1400);
@@ -467,7 +475,7 @@ sslComp=new Tone.Compressor(-18,4);
 sslComp.attack.value=0.01;
 sslComp.release.value=0.3;
 widener=new Tone.StereoWidener(0.4);
-bitCrush=new Tone.BitCrusher(8);
+masterDrive=new Tone.Distortion(0.04);
 limiter=new Tone.Limiter(-1);
 outSat=new Tone.Distortion(0.01);
 vintageSat=new Tone.Chebyshev(2);
@@ -478,10 +486,10 @@ lofiComp=new Tone.Compressor(-24,3);
 lofiComp.attack.value=0.003;
 lofiComp.release.value=0.1;
 tapeWS=new Tone.WaveShaper((val)=>Math.tanh(val*1.5),4096);
-tapeWS.oversample='2x';
-masterG=new Tone.Gain(0.8).connect(bitCrush);
-bitCrush.wet.value=0;
-bitCrush.connect(outSat);
+tapeWS.oversample='none';
+masterG=new Tone.Gain(0.8).connect(masterDrive);
+masterDrive.wet.value=0;
+masterDrive.connect(outSat);
 outSat.connect(limiter);
 limiter.connect(Tone.Destination);
 masterG.disconnect();
@@ -532,12 +540,12 @@ bassSub.connect(bassG);
 keysN.connect(keySat);
 keySat.connect(keysChorus);
 keysChorus.connect(keysTrem);
-keysTrem.connect(keysCrush);
-keysCrush.connect(keysG);
+keysTrem.connect(keysDrive);
+keysDrive.connect(keysG);
 // old-sampler: 12-bit crush + 5kHz bandwidth limit on keys
-const keysBit=new Tone.BitCrusher(PARAMS.BITCRUSH_BITS);keysBit.wet.value=0.6;
+const keysTexture=new Tone.Distortion(0.18);keysTexture.wet.value=0.6;
 const keysLP=new Tone.Filter(PARAMS.KEYS_LP_HZ,'lowpass');
-keysG.connect(keysBit);keysBit.connect(keysLP);keysLP.connect(masterG);keysLP.connect(revSend);keysLP.connect(dlySend);
+keysG.connect(keysTexture);keysTexture.connect(keysLP);keysLP.connect(masterG);keysLP.connect(revSend);keysLP.connect(dlySend);
 padsN.connect(padsFlt);
 padsFlt.connect(padsShift);
 padsShift.connect(padsG);
@@ -568,7 +576,7 @@ if(compPar)compPar.ratio.value=1+aud_.comp/100*PARAMS.COMP_RATIO_MAX;
 if(widener)widener.width.value=aud_.width/100;
 if(vinylNoise)vinylNoise.volume.value=-60+aud_.vinyl/100*20;
 if(crackleNoise)crackleNoise.volume.value=-65+aud_.crackle/100*20;
-if(bitCrush)bitCrush.wet.value=(100-aud_.drive)/400;
+if(masterDrive)masterDrive.wet.value=(100-aud_.drive)/400;
 if(driftLFO)driftLFO.frequency.value=.05+aud_.drift*.15;
 }
 
@@ -637,20 +645,20 @@ wobPhase=(wobPhase+rate)%1;
 Tone.Transport.bpm.value=aud_.bpm*(1+Math.sin(wobPhase*2*Math.PI)*depth);
 }
 
-function scheduleLoop(){
+function scheduleLoop(time){
 st_.idx=(st_.idx+1)%st_.stepCount;
+const scheduledTime=Number.isFinite(time)?time:Tone.now();
 applyWobble();
 // beat pulse on every quarter note
-if(st_.idx%4===0){const posEl=$id('pos-display');posEl.classList.remove('beat-active');void posEl.offsetWidth;posEl.classList.add('beat-active');}
+if(st_.idx%4===0){const posEl=$id('pos-display');posEl.classList.remove('beat-active');requestAnimationFrame(()=>posEl.classList.add('beat-active'));}
 // update bar/beat display
 const beat=Math.floor(st_.idx/4)+1;
 const bar=Math.floor((st_.barCount||0)/16)+1;
 if(st_.idx===0)st_.barCount=(st_.barCount||0)+16;
 const posEl=$id('pos-display');
 if(posEl)posEl.textContent=`${bar}.${beat}`;
-const now=Tone.now();
 const sixteenth=60/aud_.bpm/4;
-triggerNotes(st_.idx,now,{
+triggerNotes(st_.idx,scheduledTime,{
 kick:kickN,
 kickSub:kickSub,
 kickClk:kickClk,
@@ -682,13 +690,20 @@ st_.peakR=Math.max(st_.peakR*PARAMS.VU_DECAY,rms);
 // timing via Tone.Transport.scheduleRepeat
 }
 
+let stepUiByIndex=Array.from({length:16},()=>[]);
+let activeStepUiIndex=-1;
 function updateStepUI(){
-document.querySelectorAll('.step').forEach((el,i)=>{
-el.classList.toggle('playing',i%16===st_.idx);
-});
+const next=st_.idx%16;
+if(activeStepUiIndex>=0)stepUiByIndex[activeStepUiIndex].forEach(el=>el.classList.remove('playing'));
+stepUiByIndex[next].forEach(el=>el.classList.add('playing'));
+activeStepUiIndex=next;
 }
 
 function updateVU(){
+if(!st_.playing){st_.rafId=null;return;}
+const now=performance.now();
+if(now-(st_.vuLastUpdate||0)>=33){
+st_.vuLastUpdate=now;
 const bars=$id('vu').children;
 const lBars=Math.round(st_.peakL*PARAMS.VU_BARS);
 const rBars=Math.round(st_.peakR*PARAMS.VU_BARS);
@@ -696,31 +711,28 @@ for(let i=0;i<10;i++){
 if(bars[i])bars[i].classList.toggle('active',i<lBars);
 if(bars[i+10])bars[i+10].classList.toggle('active',i<rBars);
 }
-// Throttle to ~30 FPS instead of 60 for better performance
-if(!st_.vuLastUpdate)st_.vuLastUpdate=0;
-const now=Date.now();
-if(now-st_.vuLastUpdate>=33){ // ~30 FPS
-st_.vuLastUpdate=now;
-st_.rafId=requestAnimationFrame(updateVU);
-}else{
-setTimeout(()=>st_.rafId=requestAnimationFrame(updateVU),16);
 }
+st_.rafId=requestAnimationFrame(updateVU);
 }
 
 function drawViz(){
 const cv=document.getElementById('viz');
-if(!cv||!analyser){return;}
-if(!st_.started){return;}
+if(!cv||!analyser||!st_.playing)return;
 requestAnimationFrame(drawViz);
+const now=performance.now();
+if(now-(st_.vizLastUpdate||0)<33)return;
+st_.vizLastUpdate=now;
+const w=Math.max(1,cv.clientWidth|0),h=Math.max(1,cv.clientHeight|0);
+if(cv.width!==w)cv.width=w;
+if(cv.height!==h)cv.height=h;
 const ctx=cv.getContext('2d');
-cv.width=cv.offsetWidth;cv.height=cv.offsetHeight;
-const w=cv.width,h=cv.height;
-ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--bg')||'#111';
+const colors=getComputedStyle(document.documentElement);
+ctx.fillStyle=colors.getPropertyValue('--bg')||'#111';
 ctx.fillRect(0,0,w,h);
 const data=analyser.getValue();
 const clipping=data.some(v=>Math.abs(v)>=0.98);
 ctx.beginPath();
-ctx.strokeStyle=clipping?'#e06c5a':(getComputedStyle(document.documentElement).getPropertyValue('--acc')||'#d79a42');
+ctx.strokeStyle=clipping?'#e06c5a':(colors.getPropertyValue('--acc')||'#d79a42');
 ctx.lineWidth=1.5;
 for(let i=0;i<data.length;i++){const x=(i/data.length)*w;const y=(1-(data[i]+1)/2)*h;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
 ctx.stroke();
@@ -787,7 +799,6 @@ switch(type){
 case'AutoWah':eff=new Tone.AutoWah(60+Math.random()*340,2+Math.random()*4,-40+Math.random()*30);break;
 case'AutoFilter':eff=new Tone.AutoFilter(0.1+Math.random()*7.9);if(eff.depth)eff.depth.value=0.3+Math.random()*0.7;eff.baseFrequency=100+Math.random()*1900;eff.start();break;
 case'AutoPanner':eff=new Tone.AutoPanner(0.2+Math.random()*5.8);if(eff.depth)eff.depth.value=0.4+Math.random()*0.6;eff.start();break;
-case'BitCrusher':eff=new Tone.BitCrusher(2+Math.floor(Math.random()*7));break;
 case'Chebyshev':eff=new Tone.Chebyshev(2+Math.floor(Math.random()*29));break;
 case'Chorus':eff=new Tone.Chorus(1+Math.random()*5,1+Math.random()*4,0.3+Math.random()*0.6);eff.start();break;
 case'Distortion':eff=new Tone.Distortion(0.1+Math.random()*0.7);break;
@@ -1030,7 +1041,7 @@ log(`style: ${s.n}`,"k");
 });
 styles_c.appendChild(chip);
 });
-const defaultChip=[...styles_c.querySelectorAll('.style-chip')].find(c=>c.textContent==='Blue Hour');
+const defaultChip=[...styles_c.querySelectorAll('.style-chip')].find(c=>c.textContent===bootStyle.n);
 if(defaultChip)defaultChip.classList.add('active');
 const moods_c=$id('moods');
 Object.keys(M).forEach(name=>{
@@ -1082,6 +1093,7 @@ step.setAttribute('role','switch');
 step.setAttribute('aria-label',`${nm} step ${i+1}`);
 step.dataset.track=trackKey;
 step.dataset.step=i;
+stepUiByIndex[i].push(step);
 const velFill=document.createElement('div');
 velFill.className='vel-fill';
 step.appendChild(velFill);
@@ -1272,8 +1284,6 @@ applyFX();
 st_.started=true;
 claimOwner();
 st_.heartbeat=setInterval(keepOwner,1800);
-st_.rafId=requestAnimationFrame(updateVU);
-drawViz();
 pushHistory();
 })();
 }
@@ -1285,6 +1295,8 @@ st_.booting=null;
 await Tone.start();
 }
 st_.playing=true;
+if(!st_.rafId)st_.rafId=requestAnimationFrame(updateVU);
+drawViz();
 st_.idx=-1;
 Tone.Transport.bpm.value=aud_.bpm;
 if(!st_.transportId)st_.transportId=Tone.Transport.scheduleRepeat(scheduleLoop,"16n");
@@ -1295,13 +1307,19 @@ log('playback started','k');
 }
 
 $id('welcome-start').addEventListener('click',async()=>{
-dismissWelcome();
+try{
 await startPlayback();
+dismissWelcome();
 log('engine started via welcome gate','k');
+}catch(error){
+st_.playing=false;
+st('audio startup failed — check browser permissions');
+log(`audio startup failed: ${error.message}`,'e');
+}
 });
 $id('play').addEventListener('click',async()=>{
 if(!st_.playing){
-await startPlayback();
+try{await startPlayback();}catch(error){st_.playing=false;st('audio startup failed');log(`audio startup failed: ${error.message}`,'e');}
 }else{
 Tone.Transport.pause();
 st_.playing=false;
@@ -1389,7 +1407,7 @@ applyLayout(finalBlend,'final blend');
 buildUI();
 // Reflect the boot default (Blue Hour) in the controls before the first paint.
 syncUIFromState();
-log("RG-69 ready — type <b>help</b> in terminal","k");
+log(`RG-69 ready — ${bootStyle.n} · type help in terminal`,"k");
 
 // Audio is deliberately gesture-gated. Do not call Tone.start() or touch
 // Tone.Transport during page initialization; Chrome may create/resume the
