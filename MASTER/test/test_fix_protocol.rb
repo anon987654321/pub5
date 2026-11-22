@@ -31,6 +31,10 @@ class TestFixProtocol < Minitest::Test
     text = Master::Fix::Protocol.instruction.gsub(/\s+/, " ")
 
     assert_includes text, "/fix and --dry-run are distinct"
+    assert_includes text, "Bare /fix is read-only"
+    assert_includes text, "explicit operator authorization"
+    assert_includes text, "named governed repository target"
+    assert_includes text, "Startup, retry and autonomous triggers never imply write consent"
     assert_includes text, "lexical_violations"
     assert_includes text, "semantic_opportunities"
     assert_includes text, "two consecutive evidence-backed clean readings"
