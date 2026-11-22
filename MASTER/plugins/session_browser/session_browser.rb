@@ -341,7 +341,7 @@ module Master
       # process and its lifecycle. A missing broker is a hard refusal.
       def with_browser(directory, host, url: nil, headless:)
         owner = broker
-        raise PolicyError, "session_browser: Core-owned browser broker is unavailable" unless owner
+        raise PolicyError, "session_browser: Core-owned browser broker is unavailable" unless owner && (!owner.respond_to?(:available?) || owner.available?)
 
         require_ferrum!
         profile = File.join(directory, "profile")
