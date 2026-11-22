@@ -1,6 +1,6 @@
 // Generate BIZ/index.html from the active portfolio and each financing table.
 // The amount is the explicit Innovasjon Norge row only, never project capital.
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { BIZ_ROOT } from './paths.mjs';
 
 const ACTIVE = [
@@ -75,11 +75,40 @@ function fundingAsk(path) {
   if (!Number.isFinite(value) || value < 0) throw new Error(path + ': invalid grant amount ' + raw);
   return Math.round(value);
 }
+const FRESHNESS_INPUTS = {
+  syre: ['tools/syre.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs'],
+  ragnhild: ['tools/ragnhild.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs'],
+  pubhealthcare: ['tools/pubhealthcare.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs'],
+  govt_bergen: ['tools/govt_bergen.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs'],
+  future_healthcare_os: ['tools/future_healthcare_os.html', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs'],
+  speis: ['tools/speis.html'],
+  future_nato_weapons: ['tools/future_nato_weapons.html'],
+  norwegianhedge: ['tools/norwegianhedge.html'],
+  fetat: ['tools/fetat_build.rb', 'tools/fetat_image.jpg'],
+};
+
 function requirePair(key) {
-  for (const ext of ['html', 'pdf']) {
-    if (!existsSync(`${BIZ_ROOT}/${key}/${key}.${ext}`)) {
-      throw new Error(key + ': published ' + ext + ' missing');
-    }
+  const html = `${BIZ_ROOT}/${key}/${key}.html`;
+  const pdf = `${BIZ_ROOT}/${key}/${key}.pdf`;
+  for (const [ext, path] of [['html', html], ['pdf', pdf]]) {
+    if (!existsSync(path)) throw new Error(key + ': published ' + ext + ' missing');
+  }
+
+  const htmlTime = statSync(html).mtimeMs;
+  const pdfTime = statSync(pdf).mtimeMs;
+  if (pdfTime < htmlTime) {
+    throw new Error(key + ': published PDF is older than its HTML; rerun the print and review step');
+  }
+
+  const inputs = FRESHNESS_INPUTS[key] || [];
+  const stale = inputs.filter(input => {
+    const source = `${BIZ_ROOT}/${input}`;
+    if (!existsSync(source)) throw new Error(key + ': freshness source missing: ' + input);
+    return statSync(source).mtimeMs > htmlTime;
+  });
+  if (stale.length) {
+    throw new Error(key + ': published HTML is older than editable source(s): ' + stale.join(', ') +
+      '; rebuild, retemplate, check and review before publishing');
   }
 }
 verifyIndexInventory();
@@ -93,6 +122,11 @@ for (const [key] of GUIDES) {
     if (!existsSync(`${BIZ_ROOT}/${key}.${ext}`)) {
       throw new Error(key + ': published guidance ' + ext + ' missing');
     }
+  }
+  const html = `${BIZ_ROOT}/${key}.html`;
+  const pdf = `${BIZ_ROOT}/${key}.pdf`;
+  if (statSync(pdf).mtimeMs < statSync(html).mtimeMs) {
+    throw new Error(key + ': guidance PDF is older than its HTML; rerun print and review');
   }
 }
 
