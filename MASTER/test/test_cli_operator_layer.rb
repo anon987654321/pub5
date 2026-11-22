@@ -89,6 +89,16 @@ class TestCliOperatorLayer < Minitest::Test
     assert_includes source, "MASTER/bin/master --daemon"
   end
 
+  def test_backlog_operator_exposes_status_and_explicit_resume
+    source = File.read(File.join(Master::ROOT, "bin", "operator"))
+
+    assert_includes source, "bin/operator backlog status"
+    assert_includes source, "bin/operator backlog resume <item-id>"
+    assert_includes source, 'when "backlog"'
+    assert_includes source, "executor.status"
+    assert_includes source, "executor.resume_item!(item_id:)"
+  end
+
   def test_short_cli_replies_are_not_silenced
     source = File.read(File.join(Master::ROOT, "lib", "cli", "session", "result_display.rb"))
 
