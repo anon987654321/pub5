@@ -2026,3 +2026,73 @@ Ruby syntax, `rake test:all_trees`, `MASTER/bin/check --profile=full`,
 all app/host/visual/browser/device/production checks. No Ruby command was
 executed in this session. The suite wiring is present; all runtime outcomes
 remain NOT_RUN until measured on a supported checkout.
+
+
+## Section T — Shared product spine: measured implementation follow-up (2026-11-22)
+
+This pass turned selected parts of Section S into source changes without treating the
+pseudocode as shipped functionality.
+
+Messenger:
+- Reconciled the prior ideation choice against the actual delivery path. Chat messages
+  are not Notification rows; MessagesController sends directly to Web Push and APNs.
+  The old bell/read-on-open choice therefore could not suppress the lock-screen push
+  on the device currently reading the conversation.
+- Reconsidered messenger_c04 (reject) and messenger_c05 (keep) in
+  data/ideations/messenger.yml. The replacement uses the existing ChannelPresence
+  owner and per-push-endpoint leases; it creates no new presence table or service.
+- The browser presence controller now resolves its own service-worker push
+  subscription, sends that endpoint as a device-scoped lease, keeps generic
+  conversation presence alive while the service worker resolves, leaves on hidden /
+  pagehide / Turbo navigation, and falls back to generic presence if the subscription
+  is stale. The server continues to touch the shared conversation roster and only
+  suppresses pushes for the endpoint whose lease is active.
+- Added source-contract assertions and an endpoint/roster regression to the existing
+  messenger push test. Ruby and browser suites were not run.
+
+Registry:
+- Added convergence rows for brgen_place_directory, messenger_device_presence and
+  master_pair_admin_surface, which were named by picked gap rows but absent from the
+  convergence registry.
+- Reconciled master_pair_admin_surface from picked to satisfied: its authenticated
+  issue/list/revoke surface and token-free audit already exist in PairController,
+  the admin view and PairControllerTest. The test suite remains NOT_RUN here.
+- Registered commerce_ledger_first as a partial workstream, matching the existing
+  ideation winner marketplace_c23: append-only credits and entitlements first, with
+  no new payment path.
+
+Commerce ledger:
+- Extended the existing Shared::Commerce owner in
+  RAILS/__shared/app/services/shared/commerce.rb. No duplicate Commerce root and no
+  provider adapter or checkout route was introduced.
+- Added Shared::CommerceLedgerEntry, a shared append-only-at-the-ActiveRecord-layer
+  journal row with a unique idempotency key, actor, user, optional polymorphic source,
+  event type, entitlement, expiry, optional amount/currency and bounded metadata.
+  Database uniqueness, rather than a model uniqueness validator, arbitrates replay;
+  the service uses create_or_find_by! and rejects reuse of one key for different facts.
+- Added the commerce_ledger_entries migration and schema entry to both Brgen and Amber,
+  including user and actor foreign keys. ReferralCredit now journals its grant in the
+  same database transaction; a failed journal write rolls back the credit grant.
+- Added focused tests for replay, conflicting reuse, immutable model behavior,
+  amount/currency pairing, metadata minimization, referral linkage and cross-app
+  migration/schema ownership. These tests are authored, not executed.
+
+Preservation:
+- Existing Stripe plan subscriptions remain under Shared::BillingPlan /
+  Shared::BillingSubscription / Shared::StripeBilling.
+- Existing Brgen Stripe, Vipps and Dintero order paths, Dintero split payout logic,
+  signed webhook handling and order idempotency were not changed.
+- No Law was commented out or disabled.
+- Places remains on its existing Place / PlaceDirectory owner. No second POI model,
+  per-vertical copy or dating person-location lookup was introduced.
+
+Proof boundary:
+- GitHub read-after-write checks were performed for every changed source, test,
+  migration, schema and registry file. The migration timestamp was checked against
+  both apps' migration directories and is unique there.
+- No Rails test, database migration, Ruby syntax check, JavaScript syntax check,
+  browser render, screenshot or staging payment was run in this pass. A local shallow
+  clone was attempted for verification but the container could not resolve
+  github.com. These remain NOT_RUN, not PASS.
+- The local container's inability to resolve GitHub does not prove the remote build,
+  staging or production state. No production or provider credentials were used.
