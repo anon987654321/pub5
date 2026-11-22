@@ -136,10 +136,13 @@ module Master
             browser = Ferrum::Browser.new(**driver_options(lease))
             yield browser.create_page
           ensure
-            cleanup_browser(browser) if browser
-            # The broker stops the process group; the signed-in profile dir stays,
-            # because the next keyless call reuses the same sign-in state.
-            @broker.close(lease.id) if lease
+            begin
+              cleanup_browser(browser) if browser
+            ensure
+              # The broker stops the process group; the signed-in profile dir stays,
+              # because the next keyless call reuses the same sign-in state.
+              @broker.close(lease.id) if lease
+            end
           end
         end
       end
