@@ -37,4 +37,23 @@ class TestPostproCliContract < Minitest::Test
     assert_includes usage, "--map                             unavailable:"
     refute_includes usage, "validate and record an image style contract"
   end
+
+  def test_random_renders_never_retire_previous_takes
+    constitution = source("postpro/constitution.rb")
+    cli = source("postpro/lib/cli.rb")
+
+    refute_includes constitution, "retire_previous_renders!"
+    refute_includes constitution, "FileUtils.rm_f"
+    refute_includes cli, "retire_previous_renders!"
+    assert_includes constitution, "def verify_unused_output!"
+    assert_includes constitution, "def available_output_path"
+  end
+
+  def test_explicit_postpro_destinations_refuse_to_replace_existing_takes
+    cli = source("postpro/lib/cli.rb")
+
+    assert_includes cli, "verify_unused_output!(output_path)"
+    assert_includes cli, "verify_unused_output!(comparison_path)"
+    assert_includes cli, "verify_unused_output!(output)"
+  end
 end
