@@ -576,7 +576,7 @@ module Backlog
         "mission_state" => record.fetch("state").to_s,
         "failure_category" => category.to_s,
         "retry_at" => retry_at,
-        "requires_operator" => record["state"].to_s == "blocked" || category == :ambiguous,
+        "requires_operator" => record["state"].to_s == "blocked" || %i[permanent ambiguous].include?(category),
         "scope_digest" => scope_digest,
         "parked_at" => Time.now.utc.iso8601,
       )
