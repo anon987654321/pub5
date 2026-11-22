@@ -252,9 +252,9 @@ module Master
 
       def build_on_turn_handler(accumulated, state)
         lambda do |line|
-          # The units console printed this turn as it ran; the transcript line
-          # would say it twice.
-          next state[:streamed] = state[:units_console] = true if @unit_sub
+          # A listener may receive events while normal mode deliberately hides
+          # unit rows. Suppress the Fold transcript only when those rows render.
+          next state[:streamed] = state[:units_console] = true if @unit_sub && verbose_output?
 
           accumulated << line << "\n"
           handle_stream_text(line + "\n", state) if $stdout.isatty
@@ -338,7 +338,7 @@ module Master
             state[:stream_probe] = nil
             state[:chat_stream_started] = true
           end
-          text = format_irc_stream(text, state:)
+          text = format_conversation_stream(text, state:)
         elsif state[:stream_suppressed]
           return
         end
@@ -360,7 +360,7 @@ module Master
           terminal_print("\r\n", guard: false)
           state[:stream_row_open] = true
         end
-        terminal_print(wrap_stream(text, state), guard: false)
+        terminal_print(wrap_stream(text, state), guard: false, preserve_blank_lines: true)
         state[:streamed] = true
       end
 

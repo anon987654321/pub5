@@ -128,9 +128,8 @@ module Master
     def validate_dmesg(value, errors)
       return unless value.is_a?(Hash)
 
-      strict_keys(value, %w[enabled verbosity style format env through scan_progress milestones flush boot_sgr
-                            boot_sgr_basic detail_max_chars detail_max_lines detail_truncate_marker],
-                  "dmesg", errors)
+      strict_keys(value, %w[enabled verbosity env boot_sgr boot_sgr_basic detail_max_chars
+                            detail_max_lines detail_truncate_marker], "dmesg", errors)
       %w[boot_sgr boot_sgr_basic].each { |key| validate_boot_sgr(value, errors, key:) }
       # Detail bounds are clamped identically by Trace::Dmesg.detail.
       errors << "dmesg.detail_max_chars must be an integer between 1 and 4000" unless
@@ -139,11 +138,11 @@ module Master
         value["detail_max_lines"].is_a?(Integer) && value["detail_max_lines"].between?(1, 100)
       errors << "dmesg.detail_truncate_marker must be non-empty text" unless
         value["detail_truncate_marker"].is_a?(String) && !value["detail_truncate_marker"].empty?
-      %w[verbosity style format env].each do |field|
+      %w[verbosity env].each do |field|
         errors << "dmesg.#{field} must be non-empty text" unless
           value[field].is_a?(String) && !value[field].strip.empty?
       end
-      %w[enabled through scan_progress milestones flush].each do |field|
+      %w[enabled].each do |field|
         errors << "dmesg.#{field} must be boolean" unless [true, false].include?(value[field])
       end
     end

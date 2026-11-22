@@ -142,21 +142,15 @@ module Master
           "unknown"
         end
 
-        # The state line carries model and context. The editable row keeps the
-        # checkout and Git branch, then uses the operator's IRC nick.
-        # The prompt is a tiny syntax surface: location, repository state and
-        # operator identity each have a stable semantic colour. Pastel disables
-        # escapes for pipes, dumb terminals and NO_COLOR, so the text contract
-        # remains identical everywhere else.
+        # The state line carries model and context. The editable row stays
+        # plain ASCII: checkout path, useful Git state and operator identity.
+        # No color or decoration is needed to distinguish these short fields.
         def shell_prompt(_phase, _last_ok, **)
           nick = bounded_prompt_segment(ENV.fetch("USER", "operator"), 12)
           nick = "operator" if nick.empty?
           git = git_prompt_segment
           path = prompt_path(suffix_length: git.length + nick.length + 4)
-          painted_path = @p.dim(path)
-          painted_git = git.empty? ? git : @p.cyan(git)
-          painted_identity = @p.green("<#{nick}>")
-          [painted_path, painted_git, painted_identity].reject(&:empty?).join(" ") + " "
+          [path, git, "<#{nick}>"].reject(&:empty?).join(" ") + " "
         end
 
         def operator_state(phase, last_ok, destination:, focused:, last_outcome: nil)

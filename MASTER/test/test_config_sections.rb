@@ -49,10 +49,12 @@ class TestConfigSections < Minitest::Test
     end
   end
 
-  def test_dmesg_does_not_configure_visual_log_indentation
+  def test_dmesg_declares_only_settings_with_runtime_consumers
     dmesg = load("console.yml").fetch("dmesg")
 
-    refute dmesg.key?("detail_indent")
+    %w[detail_indent style format through scan_progress milestones flush].each do |field|
+      refute dmesg.key?(field), "#{field} has no runtime consumer"
+    end
     assert_equal "...", dmesg.fetch("detail_truncate_marker")
   end
 

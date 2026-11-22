@@ -160,8 +160,7 @@ elsif model
 end
 log = File.join(MasterPaths.fix_state(root: MASTER), "fix-#{File.basename(tree)}.log")
 
-puts "fix0 at fix-here: tree=#{tree} root=#{ROOT}"
-puts "fix0 at fix-here: disk=#{format('%.1f', free)} GiB free, model=#{model || 'pool (none forced)'}, log=#{log}"
+puts "fix0 at fix-here: tree=#{tree} disk=#{format('%.1f', free)} GiB model=#{model || 'pool (none forced)'}"
 if dry
   puts "fix0 at fix-here: --dry, would run MASTER/bin/master /fix #{tree}"
   exit 0

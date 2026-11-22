@@ -1840,4 +1840,30 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     assert_equal 0, @cli.drain_pending_turns!
   end
 
+
+  def test_fold_output_is_only_suppressed_when_the_units_console_renders_it
+    session = @cli
+    session.instance_variable_set(:@unit_sub, -> {})
+    session.define_singleton_method(:verbose_output?) { false }
+    accumulated = +""
+    state = { streamed: false, units_console: false }
+
+    session.stub(:handle_stream_text, nil) do
+      session.send(:build_on_turn_handler, accumulated, state).call("fold0: complete, 1 turn")
+    end
+
+    assert_equal "fold0: complete, 1 turn\\n", accumulated
+    refute state[:streamed]
+    refute state[:units_console]
+
+    session.define_singleton_method(:verbose_output?) { true }
+    accumulated = +""
+    state = { streamed: false, units_console: false }
+    session.send(:build_on_turn_handler, accumulated, state).call("fold0: complete, 1 turn")
+
+    assert_empty accumulated
+    assert state[:streamed]
+    assert state[:units_console]
+  end
+
 end

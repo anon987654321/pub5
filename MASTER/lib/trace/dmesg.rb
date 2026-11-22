@@ -379,24 +379,22 @@ module Master
       # afterwards. Writes that are part of the draft's own machinery pass
       # guard: false and manage their rows alone. Pipe and log writers register
       # nothing, so they take the lock without the guard.
-      def terminal_write(io: $stdout, guard: true)
+      def terminal_write(io: $stdout, guard: true, preserve_blank_lines: false)
         emit_mutex.synchronize do
           hooks = guard && @draft_guard ? @draft_guard : nil
           hooks&.first&.call(io)
           begin
-            yield collapse_writer(io)
+            yield(preserve_blank_lines ? io : collapse_writer(io))
           ensure
             hooks&.last&.call(io)
           end
         end
       end
 
-      # Every console write lands through one writer that never opens a second
-      # consecutive newline: a blank row in an append-only log reads as a
-      # dropped line. A run of line breaks — "\n", "\n\n", "\r\n\r\n" — collapses
-      # to the first, and the tail is tracked across writes so a run split
-      # between two writes still collapses. A cursor move with no line break
-      # ("\r\e[K") passes untouched; "\r\n" is treated as one line break.
+      # Operational console records collapse consecutive line breaks: a blank
+      # row in an append-only log reads as a dropped line. Conversational prose
+      # opts into preserve_blank_lines without bypassing this writer or its lock.
+      # Cursor moves such as "\r\e[K" pass untouched; "\r\n" is one line break.
       def collapse_writer(io)
         @collapse_writers ||= {}
         @collapse_writers[io] ||= CollapseWriter.new(io)

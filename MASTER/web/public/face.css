@@ -892,15 +892,6 @@ body.mission-control a:focus-visible {
   outline-offset: 2px;
 }
 
-.tool-progress-chip {
-  font: var(--text-meta)/1.25 var(--font-mono);
-  color: var(--c-code);
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  margin-inline-start: 8px;
-  opacity: .85;
-}
-.tool-progress-chip:empty { display: none; }
 
 .fps-badge {
   position: fixed;

@@ -104,10 +104,7 @@ async function refresh() {
         `mission: ${m.id || 'none'}`,
         `mission state: ${m.state || 'idle'} / ${m.stage || '—'}`,
         `effort: ${m.effort || '—'}`,
-        `${L('labelCtx', 'ctx')}: ${d.tokens} ${L('labelTokens', 'tokens')}`,
-        `${L('labelCost', 'cost')}: ${Number(d.cost || 0).toFixed(4)}`,
-        `${L('labelAgentPool', 'agent pool')}: ${d.agent_pool} active`,
-        `${L('labelBreakers', 'breakers')}: ${(d.open_breakers || []).join(', ') || none}`
+        `${L('labelCost', 'cost')}: ${Number(d.cost || 0).toFixed(4)}`
       ].join('\n');
     });
 
@@ -199,7 +196,18 @@ async function refresh() {
     });
 
     renderPanel('bus', () => {
-      document.getElementById('bus').textContent = (d.bus_events || []).slice(-12).map(e => JSON.stringify(e)).join('\n') || L('i18nQuiet', '(quiet)');
+      const recent = (d.bus_events || []).slice(-12);
+      const counts = recent.reduce((total, event) => {
+        const name = String(typeof event === 'string' ? event : (event.event || event.name || 'event'));
+        const prefix = name.trim().match(/^[a-z][a-z0-9_-]*/i)?.[0] || 'event';
+        const group = prefix.replace(/\d+$/, '').toLowerCase() || 'event';
+        total[group] = (total[group] || 0) + 1;
+        return total;
+      }, {});
+      const rows = Object.entries(counts).sort((a, b) => b[1] - a[1])
+        .map(([name, count]) => `${name} ${count}`);
+      document.getElementById('bus').textContent =
+        rows.length ? `${recent.length} recent events · ${rows.join(', ')}` : L('i18nQuiet', '(quiet)');
     });
     refreshState.textContent = `${L('i18nUpdated', 'updated')}: ${new Date().toLocaleTimeString()}`;
     ok = true;

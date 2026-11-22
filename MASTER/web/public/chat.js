@@ -588,17 +588,6 @@ window._chatOnToolStack = (payload) => {
   const summary = stack.querySelector('summary');
   const body = stack.querySelector('.tool-stack-body');
   summary.textContent = `${_toolStackCount} tool call(s)`;
-  let chip = document.getElementById('tool-progress-chip');
-  if (!chip) {
-    chip = document.createElement('span');
-    chip.id = 'tool-progress-chip';
-    chip.className = 'tool-progress-chip';
-    chip.setAttribute('aria-live', 'polite');
-    const anchor = document.getElementById('ui-status') || document.getElementById('zsh-status');
-    (anchor?.parentElement || document.body).appendChild(chip);
-  }
-  chip.textContent = `tools ${_toolStackCount}`;
-  chip.dataset.count = String(_toolStackCount);
   const line = document.createElement('div');
   line.className = 'tool-stack-line';
   const tool = payload?.tool ? ` ${payload.tool}` : '';

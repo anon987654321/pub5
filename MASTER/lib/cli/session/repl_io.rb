@@ -19,8 +19,8 @@ module Master
       # an empty row between every pair of background messages. Writes that
       # belong to the draft machinery — spinner, activity row and read-end
       # bookkeeping — pass guard: false and manage their rows alone.
-      def terminal_write(io: $stdout, guard: true, &block)
-        Master::Trace::Dmesg.terminal_write(io:, guard:, &block)
+      def terminal_write(io: $stdout, guard: true, preserve_blank_lines: false, &block)
+        Master::Trace::Dmesg.terminal_write(io:, guard:, preserve_blank_lines:, &block)
       end
 
       # A write target may be any IO-like log; only a live terminal answers
@@ -94,12 +94,12 @@ module Master
         terminal_puts(Master::Trace::Dmesg.console_paint(@refs.renderer.splash(@refs.agent.model), $stdout))
       end
 
-      def terminal_puts(text = "", io: $stdout, guard: true)
-        terminal_write(io:, guard:) { |target| target.puts(text); target.flush }
+      def terminal_puts(text = "", io: $stdout, guard: true, preserve_blank_lines: false)
+        terminal_write(io:, guard:, preserve_blank_lines:) { |target| target.puts(text); target.flush }
       end
 
-      def terminal_print(text, io: $stdout, guard: true)
-        terminal_write(io:, guard:) { |target| target.print(text); target.flush }
+      def terminal_print(text, io: $stdout, guard: true, preserve_blank_lines: false)
+        terminal_write(io:, guard:, preserve_blank_lines:) { |target| target.print(text); target.flush }
       end
 
       def run_help(command = nil)
@@ -126,7 +126,7 @@ module Master
         return if text.to_s.empty?
         return if pageable_output?(text) && page_terminal_output(text)
 
-        terminal_puts(text)
+        terminal_puts(text, preserve_blank_lines: true)
       end
 
       def pageable_output?(text)

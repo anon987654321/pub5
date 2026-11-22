@@ -193,6 +193,23 @@ class TraceDmesgTest < Minitest::Test
     refute_includes painted, "48;2"
   end
 
+
+  def test_conversational_terminal_write_preserves_paragraph_breaks
+    io = StringIO.new
+    Master::Trace::Dmesg.terminal_write(io:, preserve_blank_lines: true) do |target|
+      target.puts("first paragraph\\n\\nsecond paragraph")
+    end
+    assert_equal "first paragraph\\n\\nsecond paragraph\\n", io.string
+  end
+
+  def test_default_terminal_write_still_collapses_paragraph_breaks_for_dmesg
+    io = StringIO.new
+    Master::Trace::Dmesg.terminal_write(io:) do |target|
+      target.puts("first fact\\n\\nsecond fact")
+    end
+    assert_equal "first fact\\nsecond fact\\n", io.string
+  end
+
   def with_colorterm(value)
     previous = ENV.fetch("COLORTERM", nil)
     previous_no_color = ENV.fetch("NO_COLOR", nil)

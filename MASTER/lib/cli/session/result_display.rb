@@ -117,10 +117,10 @@ module Master
           # The reply replaces its row through the guard: while a draft is
           # edited, the row is cleared and the draft is repainted under it.
           terminal_print("\r\e[K") if $stdout.isatty
-          display_prepared_terminal_output(format_irc_reply(text)) if routine
+          display_prepared_terminal_output(format_conversation_reply(text)) if routine
           unless routine
             output = markdown_rendered ? text.chomp : @refs.renderer.measure(text.chomp, width: reply_measure)
-            display_prepared_terminal_output(format_irc_reply(output))
+            display_prepared_terminal_output(format_conversation_reply(output))
           end
         end
 
@@ -207,9 +207,9 @@ module Master
       end
 
       # Conversation reads as ordinary terminal prose. Operational events
-      # already carry their own dmesg unit; timestamping every answer and
-      # inventing a speaker prefix made the shell feel like an IRC transcript.
-      def format_irc_reply(text)
+      # already carry their own dmesg unit; prose keeps its paragraph spacing
+      # and never receives a synthetic speaker or timestamp prefix.
+      def format_conversation_reply(text)
         text.to_s
       end
 
@@ -233,7 +233,7 @@ module Master
         first.length < 128 && markers.any? { |marker| marker.start_with?(first) }
       end
 
-      def format_irc_stream(text, state: nil)
+      def format_conversation_stream(text, state: nil)
         text.to_s
       end
 
@@ -351,13 +351,13 @@ module Master
 
         if !streamed.empty? && raw.start_with?(streamed)
           remainder = raw.delete_prefix(streamed)
-          terminal_print(remainder, guard: false) unless remainder.empty?
+          terminal_print(remainder, guard: false, preserve_blank_lines: true) unless remainder.empty?
           terminal_puts unless raw.end_with?("\n")
           return raw
         end
 
         terminal_puts unless streamed.empty? || streamed.end_with?("\n")
-        display_prepared_terminal_output(format_irc_reply(measured_reply(raw)))
+        display_prepared_terminal_output(format_conversation_reply(measured_reply(raw)))
         raw
       end
 

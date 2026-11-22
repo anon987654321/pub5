@@ -154,7 +154,8 @@ module Master
         def emit_progress(snapshot, last_console_beat)
           if @progress_path.empty?
             now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-            if snapshot["state"] == "running" && now - last_console_beat >= PROGRESS_HEARTBEAT_SECONDS
+            if Master::Trace::Dmesg.verbose? && snapshot["state"] == "running" &&
+               now - last_console_beat >= PROGRESS_HEARTBEAT_SECONDS
               Master::Trace::Dmesg.status("scan0", progress_line(snapshot))
               last_console_beat = now
             end

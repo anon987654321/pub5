@@ -446,16 +446,25 @@ module Master
       # Distinguish an infrastructure abort from a graceful/progress timeout.
       def stop_category = @exit_reason.to_s.match?(/disk (?:pressure|space|measurement unavailable)|protected path changed/) ? :infrastructure : :timeout
 
-      # One machine-readable heartbeat a minute, whatever the human line says.
+      # One machine-readable heartbeat a minute in redirected logs. A normal
+      # interactive terminal shows the human RunPulse line instead.
       def machine_beat(now)
         guard_check(now)
         return if now - (@last_machine_beat || 0) < MACHINE_BEAT_SECONDS
 
         @last_machine_beat = now
         renew_owned_mission_lease
-        @say.call(@pulse.machine_line(now - @started))
+        @say.call(@pulse.machine_line(now - @started)) unless machine_heartbeat_hidden?
         reasons = RunLedger.why_line
         @say.call("fix0: not landed so far, #{reasons}") if reasons
+      end
+
+      # Keep script-facing key/value beats in redirected run logs. A normal TTY
+      # already has the human RunPulse line and should not see a second copy.
+      def machine_heartbeat_hidden?
+        $stdout.respond_to?(:tty?) && $stdout.tty? && !Master::Trace::Dmesg.verbose?
+      rescue StandardError
+        false
       end
 
       # Mission#heartbeat! checks lease_owner before extending the durable lease, so this

@@ -120,7 +120,7 @@ class TestCLITerminalOutput < Minitest::Test
     cli.instance_variable_set(:@last_input, "hello")
 
     output = $stdout.stub(:tty?, true) do
-      cli.send(:format_irc_reply, "Hello.\n\nHow are you?")
+      cli.send(:format_conversation_reply, "Hello.\n\nHow are you?")
     end
 
     assert_equal "Hello.\n\nHow are you?", output
@@ -132,9 +132,9 @@ class TestCLITerminalOutput < Minitest::Test
     cli.instance_variable_set(:@last_input, "hello")
     state = {}
 
-    output = cli.send(:format_irc_stream, "Hello.\n\n", state:) +
-             cli.send(:format_irc_stream, "How", state:) +
-             cli.send(:format_irc_stream, " are you?\n", state:)
+    output = cli.send(:format_conversation_stream, "Hello.\n\n", state:) +
+             cli.send(:format_conversation_stream, "How", state:) +
+             cli.send(:format_conversation_stream, " are you?\n", state:)
 
     assert_equal "Hello.\n\nHow are you?\n", output
   end

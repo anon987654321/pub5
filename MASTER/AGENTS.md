@@ -688,10 +688,11 @@ that may stop during inventory and take the first N files; set
 `MASTER_FIX_RANK=1` to scan the complete eligible corpus before selecting the
 highest-impact N instead. `Fix::RunLedger` holds this state.
 
-A run says where it is and stops when it is going nowhere. Every minute it prints
-`fix0 phase=<name> fixed=a failed=b rejected=c lane=<id> elapsed=s`, a line a
-script can split on spaces and equals signs; the longer human line prints every
-half minute as before. A pass is reported stalled when no file finished (fixed,
+A run says where it is and stops when it is going nowhere. Its human RunPulse
+line prints once a minute. The script-facing
+`fix0 phase=<name> fixed=a failed=b rejected=c lane=<id> elapsed=s` record
+is retained in redirected run logs; a normal interactive terminal shows the
+human line without a second machine-format copy. A pass is reported stalled when no file finished (fixed,
 failed or rejected) in five minutes, and a sustained non-advisory stall ends the
 run rather than waiting on a silent provider. `MASTER_FIX_ABORT_ON_STALL=0` may
 request report-only behavior from explicit callers, but does not disable hard

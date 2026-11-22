@@ -300,11 +300,11 @@ when "rtfm"
 when "fix"
   # Read-only: /fix itself is started with bin/master "/fix <tree...>" (trees run
   # in the order typed) or bin/fix-here. This only reports on what it wrote.
-  # `fix tail` and `fix status --tail/--transcript` are one follower: the newest
-  # /fix log beside the newest run's transcript. The main checkout is searched
-  # too, because a /fix child writes its transcript there and not in its worktree.
+  # `fix tail` defaults to the newest human /fix log; `--transcript` selects
+  # the newest run's detailed NDJSON evidence instead. The main checkout is
+  # searched too, because a /fix child writes its transcript there and not in its worktree.
   sub = ARGV.shift
-  die("fix", "usage, bin/operator fix status [--trees=A,B] [--json] | fix tail [--tail[=N]] [--transcript] [--once]", 64) unless %w[tail status].include?(sub)
+  die("fix", "usage, bin/operator fix status [--trees=A,B] [--detail|--json] | fix tail [--tail[=N]] [--transcript] [--once]", 64) unless %w[tail status].include?(sub)
   following = sub == "tail" || ARGV.any? { |arg| arg == "--transcript" || arg.start_with?("--tail") }
   if following
     require "operator/fix_tail"
@@ -315,9 +315,10 @@ when "fix"
 
   require "operator/fix_status"
   json = !ARGV.delete("--json").nil?
+  detail = !ARGV.delete("--detail").nil?
   trees = ARGV.filter_map { |arg| arg[/\A--trees=(.+)\z/, 1] }.flat_map { |value| value.split(",") }
   trees << ARGV[ARGV.index("--trees") + 1].to_s if ARGV.include?("--trees")
-  output = Operator::FixStatus.new(root: ROOT, trees: trees).render(json:)
+  output = Operator::FixStatus.new(root: ROOT, trees: trees).render(json:, detail:)
   json ? puts(output) : Master::Trace::Dmesg::Report.print("/fix status", output)
 when "affiliate"
   require_relative "../lib/finance/tradedoubler"

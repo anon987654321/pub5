@@ -277,6 +277,19 @@ class TestFixWatchdog < Minitest::Test
     assert_equal "fix0 phase=stream fixed=1 failed=1 rejected=2 lane=grok-cli:auto elapsed=61", p.machine_line(61.4)
   end
 
+
+  def test_machine_heartbeat_is_not_echoed_beside_the_human_line_on_a_normal_tty
+    run = budget
+    run.instance_variable_set(:@pulse, pulse)
+
+    Master::Trace::Dmesg.with_verbosity("normal") do
+      $stdout.stub(:tty?, true) { run.send(:machine_beat, 61.0) }
+    end
+
+    assert_empty @said
+    assert_equal 61.0, run.instance_variable_get(:@last_machine_beat)
+  end
+
   def test_machine_heartbeat_renews_the_current_process_mission_lease
     mission = Master::Fix::Mission.new(root: @root).start_or_resume!(
       goal: "fix MASTER", scope: @root, model: "stub", effort: "high", plan: "observe", origin: "manual",

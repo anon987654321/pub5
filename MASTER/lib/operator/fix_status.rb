@@ -63,11 +63,11 @@ module Operator
       }
     end
 
-    def render(json: false)
+    def render(json: false, detail: false)
       data = payload
       return JSON.pretty_generate(data) if json
 
-      lines(data).join("\n")
+      (detail ? detailed_lines(data) : summary_lines(data)).join("\n")
     end
 
     # Queue as /fix received it: governed trees only, typed order, no repeats.
@@ -81,7 +81,7 @@ module Operator
 
     private
 
-    def lines(data)
+    def detailed_lines(data)
       out = ["/fix status", data[:online], data[:primary]]
       out << "processes:"
       out << "  none running" if data[:processes].empty?
@@ -119,7 +119,11 @@ module Operator
       out << "  none" if data[:logs].empty?
       data[:logs].each { |row| out << "  #{row[:name]} #{row[:age]} ago: #{row[:last]}" }
       commits = data[:commits]
-      out << "commits: #{commits[:ahead]} ahead of origin/main on #{commits[:branch]}, #{commits[:pushed] ? "pushed" : "not pushed"}"
+      out << if commits[:known]
+               "commits: #{commits[:ahead]} ahead of origin/main on #{commits[:branch]}, #{commits[:pushed] ? "pushed" : "not pushed"}"
+             else
+               "commits: unknown (origin/main could not be read) on #{commits[:branch]}"
+             end
       out << "dead lanes:"
       out << "  none" if data[:dead_lanes].empty?
       data[:dead_lanes].each { |row| out << "  #{row}" }
@@ -129,6 +133,60 @@ module Operator
         out << "  #{row[:branch]} #{row[:path] || "(no worktree)"} #{row[:ahead]} commit(s), " \
                "#{row[:pushed] ? "pushed" : "not pushed"}#{row[:dirty] ? ", #{row[:dirty]} dirty" : ""}"
       end
+      out
+    end
+
+    def summary_lines(data)
+      out = ["/fix status", data[:online], data[:primary]]
+      if data[:processes].empty?
+        out << "processes: none"
+      else
+        data[:processes].each do |row|
+          queue = row[:queue].empty? ? "(no tree named)" : row[:queue].join(" -> ")
+          out << "process0: pid=#{row[:pid]} elapsed=#{row[:elapsed]} queue=#{queue}"
+        end
+      end
+
+      active = data[:runs].select { |row| row[:state] == "active" }
+      visible_runs = active.empty? ? data[:runs].last(1) : active
+      if visible_runs.empty?
+        journal_error = data[:read_errors][JOURNAL]
+        out << (journal_error ? "runs: unavailable (#{journal_error})" :
+          "runs: none in the journal#{@trees.empty? ? "" : " for #{@trees.join(", ")}"}")
+      else
+        visible_runs.each do |row|
+          out << "fix0: #{row[:state]} tree=#{row[:tree]} pass=#{row[:pass]}/#{row[:max_passes]} files=#{row[:files]}" \
+                 "#{row[:alive] ? " pid=#{row[:pid]} alive" : ""}"
+          out << "result0: #{row[:message]}" unless row[:message].empty?
+          out << "assessment0: #{row[:assessment_proof]}" unless row[:assessment_proof] == "not recorded"
+          out << "verification0: #{row[:assessment_verification_summary]}" unless
+            row[:assessment_verification_summary] == "not recorded"
+        end
+      end
+
+      out << "heartbeat: #{data[:heartbeat] || "none yet"}"
+      mission = data[:mission]
+      mission_error = data[:read_errors][MISSION]
+      out << if mission_error
+               "mission: unavailable (#{mission_error})"
+             else
+               "mission: #{mission ? "#{mission[:state]}/#{mission[:stage]} #{mission[:scope]} attempt #{mission[:attempts]}" : "none"}"
+             end
+      commits = data[:commits]
+      out << if commits[:known]
+               "delivery: #{commits[:ahead]} ahead of origin/main on #{commits[:branch]}, #{commits[:pushed] ? "pushed" : "not pushed"}"
+             else
+               "delivery: unknown (origin/main could not be read) on #{commits[:branch]}"
+             end
+
+      data[:read_errors].each do |name, reason|
+        out << "read0: #{name} unavailable (#{reason})"
+      end
+      unless data[:dead_lanes].empty?
+        lanes = data[:dead_lanes].first(4)
+        out << "lanes0: #{lanes.join(", ")}#{data[:dead_lanes].size > lanes.size ? ", +#{data[:dead_lanes].size - lanes.size} more" : ""}"
+      end
+      out << "retained0: #{data[:retained].size} branch/worktree record(s); use --detail" unless data[:retained].empty?
       out
     end
 
@@ -304,9 +362,10 @@ module Operator
     end
 
     def commit_row
-      branch = git("branch", "--show-current").to_s
-      ahead = git("rev-list", "--count", "origin/main..HEAD").to_i
-      { branch:, ahead:, pushed: ahead.zero? }
+      branch = git("branch", "--show-current") || "unknown"
+      raw_ahead = git("rev-list", "--count", "origin/main..HEAD")
+      ahead = Integer(raw_ahead.to_s, exception: false)
+      { branch:, ahead:, known: !ahead.nil?, pushed: !ahead.nil? && ahead.zero? }
     end
 
     # Temp worktrees /fix keeps when a run fails, and the master/fix-* branches

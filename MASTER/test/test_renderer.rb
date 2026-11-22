@@ -291,6 +291,23 @@ class TestRenderer < Minitest::Test
     assert_equal "/", Master::Face::Contract.glyph(:output)
   end
 
+
+  def test_shell_prompt_is_plain_ascii_without_color_segments
+    renderer = FakeRenderer.new(config: {})
+    previous_user = ENV["USER"]
+    ENV["USER"] = "operator"
+
+    renderer.stub(:git_prompt_segment, "main dirty") do
+      renderer.stub(:prompt_path, "pub5/MASTER") do
+        prompt = renderer.send(:shell_prompt, :idle, true)
+        assert_equal "pub5/MASTER main dirty <operator> ", prompt
+        refute_match(/\e\[/, prompt)
+      end
+    end
+  ensure
+    previous_user ? ENV["USER"] = previous_user : ENV.delete("USER")
+  end
+
   def test_boot_identity_shell_token_follows_zsh_and_posix_conventions
     renderer = FakeRenderer.new(config: {})
     old_shell = ENV["SHELL"]
@@ -662,22 +679,20 @@ class TestRenderer < Minitest::Test
     prose = renderer.send(:beautify, %q{The council called this a "plateau" and stopped.})
     assert_equal "The council called this a \"plateau\" and stopped.", prose
   end
-  def test_shell_prompt_uses_semantic_colours_without_changing_plain_text
+  def test_shell_prompt_is_plain_and_does_not_call_terminal_color_wrappers
     renderer = FakeRenderer.new(config: {})
     renderer.define_singleton_method(:prompt_path) { |suffix_length: 0| "/repo/MASTER" }
     renderer.define_singleton_method(:git_prompt_segment) { "main" }
     pastel = Object.new
-    { dim: 2, cyan: 36, green: 32 }.each do |name, code|
-      pastel.define_singleton_method(name) { |value| "\e[#{code}m#{value}\e[0m" }
+    %i[dim cyan green].each do |name|
+      pastel.define_singleton_method(name) { |_value| raise "prompt must not use #{name}" }
     end
     renderer.instance_variable_set(:@p, pastel)
 
     prompt = renderer.shell_prompt("ready", true)
 
-    assert_includes prompt, "\e[2m/repo/MASTER"
-    assert_includes prompt, "\e[36mmain"
-    assert_includes prompt, "\e[32m<operator>"
-    assert_equal "/repo/MASTER main <operator> ", strip_ansi(prompt)
+    assert_equal "/repo/MASTER main <operator> ", prompt
+    refute_match(/\e\[/, prompt)
   end
 
   def test_terminal_markdown_highlights_code_only_when_colour_is_enabled

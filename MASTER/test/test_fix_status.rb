@@ -69,7 +69,9 @@ class TestFixStatus < Minitest::Test
 
   def test_status_and_tail_share_the_stream_and_show_the_latest_heartbeat
     beat = "fix0: pass 2/8 scan0 files 812/2638 (31%) fixes 1 ok 0 failed tokens = 5 (5) elapsed = 60s (1m00s) eta ~3m load 1.0"
-    write("fix-RAILS.log", "#{beat.sub("812", "700")}\nscan0: 9/10 a.rb\n#{beat}\nbudget0: spent\n")
+    write("fix-RAILS.log", "#{beat.sub("812", "700")}\nscan0: 9/10 a.rb\n#{beat}\n" \
+      "fix0 phase=stream fixed=3 failed=1 rejected=0 lane=free elapsed=62\n" \
+      "budget0: spent\n")
 
     status = Operator::FixStatus.new(root: @root)
 
@@ -101,7 +103,7 @@ class TestFixStatus < Minitest::Test
 
     status = Operator::FixStatus.new(root: @root)
     row = status.payload[:runs].first
-    rendered = status.render
+    rendered = status.render(detail: true)
 
     assert_equal "validation_failed", row[:state]
     assert_equal "validation failed: rendered output differs", row[:message]
@@ -164,6 +166,74 @@ class TestFixStatus < Minitest::Test
       assert_empty payload[:runs]
       assert_nil payload[:mission]
     end
+  end
+
+
+  def test_default_status_is_compact_and_detail_keeps_full_receipts
+    run = run_record("RAILS", state: "validation_failed", pid: 0).merge(
+      "message" => "validation failed: rendered output differs",
+      "evidence" => {
+        "observations" => 3, "files_observed" => 42, "findings" => 7,
+        "assessment_verification" => {
+          "schema_version" => 1, "id" => "fix-assessment-proof",
+          "subject" => "four-stream assessment matrix", "verifier" => "fix_assessment_matrix",
+          "status" => "partial", "checked_count" => 18, "failure_count" => 2,
+          "unchecked_count" => 3, "complete" => false,
+        },
+      }
+    )
+    write("fix_runs.json", JSON.generate("version" => 1, "runs" => [run]))
+    write_mission(JSON.generate("state" => "failed", "stage" => "verify", "scope" => "RAILS",
+                                 "attempt_count" => 1, "artifacts" => []))
+
+    status = Operator::FixStatus.new(root: @root)
+    compact = status.render
+    detailed = status.render(detail: true)
+    json = JSON.parse(status.render(json: true))
+
+    assert_includes compact, "fix0: validation_failed tree=RAILS"
+    assert_includes compact, "result0: validation failed"
+    assert_includes compact, "mission: failed/verify RAILS"
+    assert_includes compact, "verification0: partial incomplete checked=18 findings=2 unmeasured=3"
+    refute_includes compact, "assessment:"
+    assert_includes detailed, "assessment:"
+    assert_includes detailed, "receipt: recorded"
+    assert_equal "validation_failed", json.fetch("runs").first.fetch("state")
+  end
+
+  def test_fix_tail_separates_human_log_from_global_transcript_history
+    require "operator/fix_tail"
+    state = File.join(@root, "MASTER", ".master", "fix_transcripts", "run-1")
+    FileUtils.mkdir_p(state)
+    File.write(File.join(state, "scan.ndjson"), [
+      { at: "2026-11-01T10:00:00.000Z", kind: "scan", file: "a.rb" },
+      { at: "2026-11-01T10:00:03.000Z", kind: "scan", file: "c.rb" },
+    ].map(&:to_json).join("\n") + "\n")
+    File.write(File.join(state, "repair.ndjson"), [
+      { at: "2026-11-01T10:00:01.000Z", kind: "repair", file: "b.rb" },
+      { at: "2026-11-01T10:00:02.000Z", kind: "repair", file: "d.rb" },
+    ].map(&:to_json).join("\n") + "\n")
+    File.write(File.join(@root, "MASTER", ".master", "fix-RAILS.log"), "human log\n")
+
+    human = StringIO.new
+    Operator::FixTail.run(%w[--once --tail=2], roots: [File.join(@root, "MASTER")], io: human)
+    assert_equal "human log\n", human.string
+
+    transcript = StringIO.new
+    Operator::FixTail.run(%w[--once --tail=2 --transcript], roots: [File.join(@root, "MASTER")], io: transcript)
+
+    assert_equal 2, transcript.string.lines.size
+    assert_includes transcript.string, "repair: 2026-11-01T10:00:02.000Z repair"
+    assert_includes transcript.string, "scan: 2026-11-01T10:00:03.000Z scan"
+    refute_includes transcript.string, "human log"
+  end
+
+  def test_status_does_not_claim_delivery_when_origin_main_cannot_be_read
+    status = Operator::FixStatus.new(root: @root)
+
+    refute status.payload.fetch(:commits).fetch(:known)
+    refute status.payload.fetch(:commits).fetch(:pushed)
+    assert_includes status.render, "delivery: unknown (origin/main could not be read)"
   end
 
   def test_render_names_the_empty_cases

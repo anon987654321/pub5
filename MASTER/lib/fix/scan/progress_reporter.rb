@@ -130,7 +130,11 @@ module Master
 
         def log_scan_checkpoint(unit:, done:, total:, viol_total:, dirty:, top:, elapsed:, eta_s:)
           step = checkpoint_step(total)
-          return unless done == total || (done % step).zero? || heartbeat_due?
+          # RunPulse owns the timed human heartbeat during /fix and already
+          # receives scan:progress. Standalone scans retain this timed checkpoint.
+          timed_beat = heartbeat_due? &&
+                       !(defined?(Master::Fix::RunBudget) && Master::Fix::RunBudget.current)
+          return unless done == total || (done % step).zero? || timed_beat
 
           parts = ["#{done}/#{total} files", tally(viol_total, dirty), "#{elapsed.round}s"]
           parts << "eta #{eta_s}s" if eta_s&.positive?

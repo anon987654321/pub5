@@ -117,6 +117,29 @@ test("an authentication failure stops both the poll and the stream", async () =>
 });
 
 
+
+test("bus panel groups dmesg strings by subsystem and avoids raw event chatter", async () => {
+  const answer = {
+    status: 200,
+    ok: true,
+    json: async () => ({
+      model: "test/model",
+      mission: {},
+      bus_events: [
+        "fix0: pass 1",
+        "fix0: pass 2",
+        "scan0: done",
+        "llm0 at master0: selected model"
+      ]
+    })
+  };
+  const page = loadDashboard({ answers: [answer] });
+  await page.settle();
+
+  assert.equal(page.nodes.bus.textContent, "4 recent events · fix 2, scan 1, llm 1");
+  assert.doesNotMatch(page.nodes.bus.textContent, /selected model/);
+});
+
 test("one malformed panel does not prevent sibling panels from rendering", async () => {
   const malformed = {
     status: 200,
@@ -135,5 +158,6 @@ test("one malformed panel does not prevent sibling panels from rendering", async
   assert.match(page.nodes.fleet.textContent, /unavailable:.*map/i);
   assert.match(page.nodes.status.textContent, /test\/model/);
   assert.match(page.nodes.quota.textContent, /2026-11-12/);
-  assert.match(page.nodes.bus.textContent, /bus event survives/);
+  assert.match(page.nodes.bus.textContent, /bus 1/);
+  assert.doesNotMatch(page.nodes.bus.textContent, /bus event survives/);
 });

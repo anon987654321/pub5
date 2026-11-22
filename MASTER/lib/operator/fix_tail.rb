@@ -5,10 +5,9 @@ require_relative "../boot/paths"
 require_relative "../trace/dmesg"
 
 module Operator
-  # `bin/operator fix tail`: follows the newest /fix log and the newest run's
-  # transcript, printing lines as they arrive. A /fix child writes its log
-  # lines to stdout and its full records to .master/fix_transcripts/<run>/;
-  # this is the one place that shows both while the run is going.
+  # `bin/operator fix tail`: follows one representation at a time.
+  # Default shows the human run log; --transcript selects detailed NDJSON
+  # evidence. The human tail never merges two renderings of the same work.
   module FixTail
     POLL_SECONDS = 0.5
     DEFAULT_LINES = 20
@@ -26,7 +25,7 @@ module Operator
       return missing(io) if found.empty?
 
       offsets = {}
-      found.each { |path| print_history(path, limit, offsets, io) }
+      print_history(found, limit, offsets, io)
       return 0 if once
 
       count = 0
@@ -34,7 +33,7 @@ module Operator
         break if rounds && (count += 1) > rounds
 
         sleeper.call(POLL_SECONDS)
-        sources(roots, transcript_only).each { |path| print_new(path, offsets, io) }
+        print_new(sources(roots, transcript_only), offsets, io)
       end
       0
     end
@@ -45,17 +44,16 @@ module Operator
     end
 
     def sources(roots, transcript_only)
-      found = []
       directories = state_roots(roots)
-      newest = directories.flat_map { |root| Dir.glob(File.join(root, "fix_transcripts", "*")) }
-                          .select { |path| File.directory?(path) }.max_by { |path| File.mtime(path) }
-      found.concat(Dir.glob(File.join(newest, "*.ndjson")).sort) if newest
-      unless transcript_only
-        log = directories.flat_map { |root| Dir.glob(File.join(root, "fix-*.log")) }
-                          .max_by { |path| File.mtime(path) }
-        found.unshift(log) if log
+      if transcript_only
+        newest = directories.flat_map { |root| Dir.glob(File.join(root, "fix_transcripts", "*")) }
+                            .select { |path| File.directory?(path) }.max_by { |path| File.mtime(path) }
+        return newest ? Dir.glob(File.join(newest, "*.ndjson")).sort : []
       end
-      found
+
+      log = directories.flat_map { |root| Dir.glob(File.join(root, "fix-*.log")) }
+                        .max_by { |path| File.mtime(path) }
+      log ? [log] : []
     end
 
     # New state is preferred, while legacy locations remain readable until the
@@ -72,33 +70,64 @@ module Operator
       end.map { |path| File.expand_path(path) }.uniq
     end
 
-    def print_history(path, limit, offsets, io)
-      raw = File.binread(path)
-      # The offset counts file bytes; scrub can widen an invalid byte to three.
-      offsets[path] = raw.bytesize
-      text = raw.force_encoding("UTF-8").scrub
-      text.lines.last(limit).each { |line| io.puts(render(path, line)) }
+    def print_history(paths, limit, offsets, io)
+      rows = paths.flat_map do |path|
+        raw = File.binread(path)
+        offsets[path] = raw.bytesize
+        raw.force_encoding("UTF-8").scrub.lines.each_with_index.map do |line, index|
+          [row_time(path, line), path, index, line]
+        end
+      end
+      rows.sort_by! { |at, path, index, _line| [at, path, index] }
+      visible = rows.filter_map do |_at, path, _index, line|
+        rendered = render(path, line)
+        rendered unless rendered.nil? || rendered.empty?
+      end
+      visible.last(limit).each { |line| io.puts(line) }
       io.flush
     end
 
-    def print_new(path, offsets, io)
-      size = File.size(path)
-      from = offsets.fetch(path, 0)
-      from = 0 if size < from
-      return if size == from
+    def print_new(paths, offsets, io)
+      rows = paths.flat_map do |path|
+        size = File.size(path)
+        from = offsets.fetch(path, 0)
+        from = 0 if size < from
+        next [] if size == from
 
-      chunk = File.open(path, "rb") { |file| file.seek(from) && file.read }.to_s
-      newline = chunk.rindex("\n")
-      return unless newline
+        chunk = File.open(path, "rb") { |file| file.seek(from) && file.read }.to_s
+        newline = chunk.rindex("\n")
+        next [] unless newline
 
-      complete = chunk.byteslice(0, newline + 1)
-      offsets[path] = from + complete.bytesize
-      complete.force_encoding("UTF-8").scrub.lines.each { |line| io.puts(render(path, line)) }
-      io.flush
+        complete = chunk.byteslice(0, newline + 1)
+        offsets[path] = from + complete.bytesize
+        complete.force_encoding("UTF-8").scrub.lines.each_with_index.map do |line, index|
+          [row_time(path, line), path, index, line]
+        end
+      end
+      rows.sort_by! { |at, path, index, _line| [at, path, index] }
+      rows.each do |_at, path, _index, line|
+        rendered = render(path, line)
+        io.puts(rendered) unless rendered.nil? || rendered.empty?
+      end
+      io.flush unless rows.empty?
+    end
+
+    def row_time(path, line)
+      return "" unless path.end_with?(".ndjson")
+
+      JSON.parse(line)["at"].to_s
+    rescue JSON::ParserError
+      ""
     end
 
     def render(path, line)
-      return line.chomp unless path.end_with?(".ndjson")
+      unless path.end_with?(".ndjson")
+        text = line.chomp
+        # Script-facing key/value beats stay in the raw log, not the human tail.
+        return if text.match?(/\Afix0 phase=\S+ fixed=\d+ failed=\d+ rejected=\d+/)
+
+        return text
+      end
 
       row = JSON.parse(line)
       detail = [row["law"], row["file"] && File.basename(row["file"]), row["outcome"] || row["reason"], row["pick"] && row["pick"].to_s[0, 160], row["status"]].compact.join(" ")
