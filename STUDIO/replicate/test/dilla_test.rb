@@ -77,6 +77,11 @@ class TestDillaCliContract < Minitest::Test
       record = JSON.parse(File.read("#{base}.provenance.json"))
 
       assert_equal "render", record.dig("execution", "mode")
+      assert_equal Dilla::VERSION, record.fetch("version")
+      assert_equal RUBY_ENGINE, record.fetch("ruby_engine")
+      assert_equal RUBY_PLATFORM, record.fetch("ruby_platform")
+      engine_data = JSON.parse(File.read(File.join(File.dirname(dilla), "data", "dilla.json")))
+      assert_equal Dilla::VERSION, engine_data.dig("engine", "version")
       assert_equal "j_dilla", record.dig("execution", "style")
       assert_equal Digest::SHA256.file(dilla).hexdigest, record.dig("execution", "renderer_sha256")
       assert_equal Digest::SHA256.file(File.join(File.dirname(dilla), "data", "music_theory.json")).hexdigest,
