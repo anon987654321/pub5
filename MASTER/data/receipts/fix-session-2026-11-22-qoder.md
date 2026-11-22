@@ -2266,3 +2266,31 @@ cleanup of the remaining findings, and all other repository-wide checks.
 These local excerpt/runtime checks do not substitute for the registered
 repository tests. `redundant_core_require_cleanup` remains **partial**;
 no broad deletion of the original 85 findings is claimed.
+
+
+### Places substrate — existing cross-vertical consumers (2026-11-22)
+
+- Re-read the actual owner rather than creating another POI service:
+  `RAILS/brgen/app/models/place.rb` and
+  `RAILS/brgen/app/services/place_directory.rb` remain canonical.
+  `PlaceDirectory.for_city` returns an empty relation without a city,
+  excludes rejected Places by default, and supports explicit verification/kind
+  filters. Maps uses it for browse/show/nearby; Marketplace and Takeaway use it
+  when a shop or restaurant is assigned to a Place.
+- Added a source contract to the existing
+  `RAILS/test/maps_engine_wiring_contract_test.rb` proving that Maps,
+  Marketplace store setup and Takeaway restaurant setup all use that same
+  city-scoped directory. No new file, model, duplicate lookup path or database
+  migration was added.
+- Scope remains deliberately precise: this proves shared place assignment and
+  map browse, not that every vertical's end-user proximity ranking is already
+  driven by Places. Dating meet-spots and generalized commerce geo-discovery
+  remain open consumer work; the Maps vendor/licensing decision is separate.
+
+Commit:
+`0a38fb154553debebe28cdf51647cd8375d58f8b`.
+
+Proof performed: GitHub read-after-write verification of the contract test,
+Place model, PlaceDirectory and all three consumers. The contract test itself,
+Place model tests, rendered map journeys, proximity discovery and any provider
+map-tile licensing check remain **NOT_RUN**. No new POI authority was added.
