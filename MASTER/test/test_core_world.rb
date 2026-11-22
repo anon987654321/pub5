@@ -409,6 +409,47 @@ class WorldTest < Minitest::Test
     end
   end
 
+  def test_browser_effect_uses_the_injected_read_only_reader
+    Dir.mktmpdir("world_browser") do |root|
+      calls = []
+      broker = Object.new
+      broker.define_singleton_method(:available?) { true }
+      response = Class.new do
+        def ok? = true
+        def value! = "rendered page text"
+      end.new
+      reader = lambda do |url:, wait:, links:|
+        calls << { url:, wait:, links: }
+        response
+      end
+      world = build_world(
+        root:, capabilities: Master::Core::Capabilities.for(:fix),
+        browser: broker, browser_effect: reader,
+      )
+
+      assert_includes world.verbs, :browser
+      result = world.perform(E.browser("https://example.com/guide", wait: 0.5, links: false))
+
+      assert result.ok?, result.message
+      assert_equal "rendered page text", result.value!
+      assert_equal [{ url: "https://example.com/guide", wait: 0.5, links: false }], calls
+    end
+  end
+
+  def test_browser_effect_is_not_offered_without_both_broker_and_reader
+    Dir.mktmpdir("world_browser_closed") do |root|
+      broker = Object.new
+      broker.define_singleton_method(:available?) { true }
+      world = build_world(root:, browser: broker)
+
+      refute_includes world.verbs, :browser
+      result = world.perform(E.browser("https://example.com"))
+
+      refute result.ok?
+      assert_match(/browser unavailable/, result.message)
+    end
+  end
+
   def test_http_requires_network_capability_and_uses_the_injected_client
     seen = []
     network = ->(url:) { seen << url; Master::Core::Observation.ok("body from #{url}") }
