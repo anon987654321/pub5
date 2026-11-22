@@ -55,6 +55,32 @@ class BrowserBrokerTest < Minitest::Test
     assert_includes bridge, "capabilities:,"
   end
 
+  def test_all_six_production_adapters_attach_only_to_broker_issued_leases
+    adapters = {
+      "lib/io/web_browse.rb" => ["@broker.open", "Core-owned browser broker is unavailable"],
+      "lib/io/browser_agent.rb" => ["@broker.open", "Core-owned browser broker is unavailable"],
+      "lib/io/web_chat.rb" => ["@broker.open", "Core-owned browser broker is unavailable"],
+      "plugins/session_browser/session_browser.rb" => ["owner.open", "Core-owned browser broker is unavailable"],
+      "plugins/social_browser/social_browser.rb" => ["owner.open", "Core-owned browser broker is unavailable"],
+      "plugins/travel_browser/travel_browser.rb" => ["owner.open", "Core-owned browser broker is unavailable"],
+    }
+
+    adapters.each do |relative, required|
+      source = File.read(File.join(Master::ROOT, relative))
+      required.each { |needle| assert_includes source, needle, "#{relative} lost its broker gate" }
+      assert_includes source, "Ferrum::Browser.new(**driver_options(lease))",
+                      "#{relative} must attach with the broker-issued lease"
+      assert_includes source, "lease.cdp_url",
+                      "#{relative} must not choose a Chromium process or CDP endpoint itself"
+      refute_match(/Process\\.spawn|Process\\.fork/, source,
+                   "#{relative} must never start a process outside BrowserBroker")
+    end
+
+    broker_source = File.read(File.join(Master::ROOT, "lib", "io", "browser_broker.rb"))
+    assert_match(/Process\\.spawn/, broker_source,
+                 "BrowserBroker is the sole owner of Chromium process creation")
+  end
+
   def test_a_context_without_the_capability_cannot_open_a_session
     engine = FakeEngine.new
     refused = broker(capabilities: Caps.read_only, engine:)
