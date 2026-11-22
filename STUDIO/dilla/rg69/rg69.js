@@ -307,7 +307,7 @@ let drumG,bassG,keysG,padsG,masterG,limiter,vinylNoise,crackleNoise,driftLFO,ana
 let fxRev,fxDly,fxFlt,tapeSat,compPar,sslComp,widener,kickSat,keySat,drumSat,outSat,masterDrive,revSend,dlySend;
 let drumTube,kickComp,vintageSat,phaserFX,lofiNoise,lofiComp,tapeWS,padsLFO,kickClkBP,snareRngBP,keysTrem,keysDrive;
 
-const fxPool=['AutoWah','AutoFilter','AutoPanner','Chebyshev','Chorus','Distortion','FeedbackDelay','Freeverb','JCReverb','Phaser','PingPongDelay','Tremolo','Vibrato','StereoWidener'];
+const fxPool=['AutoWah','AutoFilter','AutoPanner','Chebyshev','Chorus','Distortion','FeedbackDelay','Phaser','PingPongDelay','Tremolo','Vibrato','StereoWidener'];
 let drumFX=[],bassFX=[],keysFX=[],padsFX=[],masterFX=[];
 
 // Each page load selects a playable style at random. The effect pool stays
@@ -321,7 +321,7 @@ try{add(bass,new Tone.Chorus(1.8,3.5,0.4).start(),0.12);}catch(e){log('FX defaul
 try{add(keys,new Tone.Chorus(1.6,2.5,0.5).start(),0.2);}catch(e){log('FX default: '+e.message,'w');}
 try{add(keys,new Tone.FeedbackDelay(Tone.Time('8n.').toSeconds(),0.26),0.14);}catch(e){log('FX default: '+e.message,'w');}
 try{add(pads,new Tone.Chorus(0.9,3.5,0.6).start(),0.28);}catch(e){log('FX default: '+e.message,'w');}
-try{add(pads,new Tone.Freeverb(0.55),0.22);}catch(e){log('FX default: '+e.message,'w');}
+// Pad ambience uses the shared native Reverb send; no FeedbackCombFilter worklet.
 try{add(pads,new Tone.StereoWidener(0.45),0.4);}catch(e){log('FX default: '+e.message,'w');}
 return {drum,bass,keys,pads};
 }
@@ -445,7 +445,7 @@ async function initAudio(activationPromise){
 await (activationPromise||Tone.start());
 Tone.getContext().rawContext.addEventListener('statechange',()=>{
   if(Tone.getContext().rawContext.state==='suspended'){
-    st_.playing=false;clearTimeout(st_.timer);st('suspended — tap to resume');log('⚠ audio suspended by browser','w');
+    st_.playing=false;clearTimeout(st_.timer);$id('play').textContent='▶ Play';st('suspended — tap to resume');log('audio suspended by browser','w');
   }
 });
 driftLFO=new Tone.LFO(rnd(0.05,0.2),-4,4).start();
@@ -825,8 +825,8 @@ case'Chebyshev':eff=new Tone.Chebyshev(2+Math.floor(Math.random()*7));break;
 case'Chorus':eff=new Tone.Chorus(1+Math.random()*5,1+Math.random()*4,0.3+Math.random()*0.6);eff.start();break;
 case'Distortion':eff=new Tone.Distortion(0.1+Math.random()*0.7);break;
 case'FeedbackDelay':{const dt=Tone.Time(['8n','16n','8n.','4n'][Math.floor(Math.random()*4)]).toSeconds();eff=new Tone.FeedbackDelay(dt,0.15+Math.random()*0.45);}break;
-case'Freeverb':eff=new Tone.Freeverb(0.3+Math.random()*0.65);eff.dampening=1000+Math.random()*7000;break;
-case'JCReverb':eff=new Tone.JCReverb(0.3+Math.random()*0.55);break;
+
+
 case'Phaser':eff=new Tone.Phaser({frequency:0.2+Math.random()*3.8,octaves:1+Math.random()*4,baseFrequency:200+Math.random()*1300});break;
 case'PingPongDelay':{const dt=Tone.Time(['8n','16n','8n.','4n'][Math.floor(Math.random()*4)]).toSeconds();eff=new Tone.PingPongDelay(dt,0.1+Math.random()*0.4);}break;
 case'Tremolo':eff=new Tone.Tremolo(0.5+Math.random()*11.5,0.3+Math.random()*0.6);eff.start();break;
@@ -1339,6 +1339,8 @@ else if(k==='v'&&(e.ctrlKey||e.metaKey)){e.preventDefault();navigator.clipboard.
 // One gesture is enough: boot the engine if it is not running yet, then start
 // the transport. The welcome gate and the play button both land here, so the
 // first click plays music instead of only arming the engine.
+function startToneFromGesture(){Tone.getContext();return Tone.start();}
+
 async function startPlayback(activationPromise){
 if(!st_.started){
 if(!st_.booting){
@@ -1373,7 +1375,7 @@ $id('welcome-start').addEventListener('click',async()=>{
 try{
 dismissWelcome();
 st('starting audio…');
-const activationPromise=Tone.start();
+const activationPromise=startToneFromGesture();
 await startPlayback(activationPromise);
 log('engine started via welcome gate','k');
 }catch(error){
@@ -1384,7 +1386,7 @@ log(`audio startup failed: ${error.message}`,'e');
 });
 $id('play').addEventListener('click',async()=>{
 if(!st_.playing){
-try{const activationPromise=Tone.start();await startPlayback(activationPromise);}catch(error){st_.playing=false;st('audio startup failed');log(`audio startup failed: ${error.message}`,'e');}
+try{const activationPromise=startToneFromGesture();await startPlayback(activationPromise);}catch(error){st_.playing=false;st('audio startup failed');log(`audio startup failed: ${error.message}`,'e');}
 }else{
 Tone.Transport.pause();
 st_.playing=false;
@@ -1395,7 +1397,7 @@ log('playback paused');
 });
 $id('stop').addEventListener('click',()=>{
 st_.playing=false;
-Tone.Transport.stop();Tone.Transport.cancel();st_.transportId=null;
+if(st_.started){Tone.Transport.stop();Tone.Transport.cancel();}st_.transportId=null;
 st_.idx=-1;
 st_.barCount=0;
 const posEl=$id('pos-display');if(posEl)posEl.textContent='●';
@@ -1441,8 +1443,7 @@ clearInterval(st_.heartbeat);
 cancelAnimationFrame(st_.rafId);
 st_.rafId=null;
 releaseOwner();
-Tone.Transport.stop();
-Tone.Transport.cancel();
+if(st_.started){Tone.Transport.stop();Tone.Transport.cancel();}
 st_.transportId=null;
 [kickN,kickSub,kickClk,kickBody,snareN,snareRng,clapN,hatN,openN,bassN,bassSub,keysN,padsN].forEach(s=>{
 s?.releaseAll?.();
