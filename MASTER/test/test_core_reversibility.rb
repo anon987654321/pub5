@@ -73,7 +73,7 @@ class TestCoreReversibility < Minitest::Test
     assert_equal(
       {
         read: :non_mutating, write: :reversible, probe: :non_mutating, exec: :policy_gated, git: :non_mutating,
-        http: :policy_gated, browser: :policy_gated, ask: :non_mutating, note: :session_state,
+        http: :policy_gated, browser: :approval_required, ask: :non_mutating, note: :session_state,
         critique: :non_mutating, done: :non_mutating
       },
       by_verb.transform_values { |effect| effect.reversibility.kind },
@@ -137,11 +137,32 @@ class TestCoreReversibility < Minitest::Test
     assert_equal :scoped_checkpoint_restore, E.write("a.rb", "A = 1").reversibility.compensation
     assert_equal :policy_gated, E.exec(%w[ruby -v]).reversibility.kind
     assert_equal :policy_gated, E.http("https://example.com").reversibility.kind
-    assert_equal :policy_gated, E.browser("https://example.com").reversibility.kind
+    assert_equal :approval_required, E.browser("https://example.com").reversibility.kind
     assert_equal :approval_required, E.git(:stage, paths: ["a.rb"]).reversibility.kind
     assert_equal :policy_gated, E.git(:commit, paths: ["a.rb"]).reversibility.kind
     refute_predicate E.git(:commit, paths: ["a.rb"]).reversibility, :approval_required?
     assert_equal :unknown, E.git(:reset).reversibility.kind
+  end
+
+  def test_browser_visit_requires_operator_approval_because_page_scripts_can_mutate_state
+    effect = E.browser("https://example.com/catalog")
+    verdict = C.load(data_dir: DATA_DIR).admit(effect, Master::Core::Memory.new)
+
+    assert_instance_of Master::Core::Verdict::Request, verdict
+    assert_equal :effect_reversibility, verdict.by
+    assert_includes verdict.reason, "same-host GET endpoints may mutate remote state"
+  end
+
+  def test_browser_scope_is_bound_for_lifecycle_evidence
+    fold = Master::Core::Fold.new(
+      model: ScriptedModel.new,
+      constitution: C.new(laws: []),
+      world: RecordingWorld.new,
+      memory: Master::Core::Memory.new,
+    )
+    url = "https://example.com/catalog?query=projector"
+
+    assert_equal url, fold.send(:effect_scope, E.browser(url))
   end
 
   def test_admitted_read_only_probe_is_non_mutating
