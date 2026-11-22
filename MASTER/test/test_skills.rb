@@ -552,4 +552,34 @@ class TestSkills < Minitest::Test
     end
   end
 
+
+  REPAIR_SKILLS = {
+    "codebase-auditor" => ["audit the codebase", "map the codebase"],
+    "diagnose" => ["diagnose the failure", "reproduce the bug"],
+    "regression-proof" => ["prove the regression", "test catches the bug"],
+    "verification-before-completion" => ["verify before claiming", "completion evidence"],
+    "independent-code-review" => ["review the full diff", "independent code review"],
+  }.freeze
+
+  def test_repair_skills_route_from_plain_requests
+    REPAIR_SKILLS.each do |name, requests|
+      requests.each do |request|
+        assert_includes shipped_skills.trigger_for(request).map { |skill| skill[:name] }, name, request
+      end
+    end
+  end
+
+  def test_repair_skill_bodies_fit_injection_limit_and_keep_evidence_contracts
+    REPAIR_SKILLS.each do |name, _requests|
+      body = registry.fetch("skills").find { |skill| skill["name"] == name }.fetch("body")
+      assert_operator body.length, :<=, 4_000, "#{name} is cut by the injection"
+    end
+    assert_match(/Start read-only/, registry.fetch("skills").find { |s| s["name"] == "codebase-auditor" }.fetch("body"))
+    assert_match(/Three unsuccessful repair attempts/, registry.fetch("skills").find { |s| s["name"] == "diagnose" }.fetch("body"))
+    assert_match(/fail because the reported defect is present/, registry.fetch("skills").find { |s| s["name"] == "regression-proof" }.fetch("body"))
+    assert_match(/NOT_RUN/, registry.fetch("skills").find { |s| s["name"] == "verification-before-completion" }.fetch("body"))
+    assert_match(/complete diff against its parent/, registry.fetch("skills").find { |s| s["name"] == "independent-code-review" }.fetch("body"))
+  end
+
+
 end
