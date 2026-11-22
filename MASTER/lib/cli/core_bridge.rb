@@ -111,9 +111,10 @@ module Master
             model_tier: mode_spec[:model_tier],
             council_required: mode_spec[:council],
           )
-          world = build_world(root: workspace_root, container:, capabilities:, network: network_client(container), probe: probe_policy,
-                              browser: browser_broker(container, capabilities:, event_bus: lifecycle_bus))
-          browser = world.browser
+          browser = browser_broker(container, capabilities:, event_bus: lifecycle_bus)
+          browser_effect = browser_reader(container, broker: browser, event_bus: lifecycle_bus)
+          world = build_world(root: workspace_root, container:, capabilities:, network: network_client(container),
+                              probe: probe_policy, browser:, browser_effect:)
           browser_scope_binding = container[:browser_broker_binding] if container.respond_to?(:[])
           mission.transition!(:execute)
           effect_observer = build_effect_observer(
@@ -183,12 +184,12 @@ module Master
 
       # Only the interactive session sets an asker; see Session#terminal_ask.
       def build_world(root:, container:, capabilities: Master::Core::Capabilities.for(:fix), network: nil,
-                      probe: nil, browser: nil, process_runner: Master::Io::Exec,
+                      probe: nil, browser: nil, browser_effect: nil, process_runner: Master::Io::Exec,
                       atomic_writer: Master::Io::AtomicWrite, git_service: nil)
         critique_runner = container ? CouncilCrit.runner_for(container) : nil
         git_service ||= Master::Io::GitOperations.new(root)
         Master::Core::World.new(root:, ask: Fiber[:master_terminal_ask], critique_runner:,
-                                undo: container&.fetch(:undo, nil), capabilities:, network:, probe:, browser:,
+                                undo: container&.fetch(:undo, nil), capabilities:, network:, probe:, browser:, browser_effect:,
                                 process_runner:, atomic_writer:, git_service:)
       end
 
@@ -217,6 +218,18 @@ module Master
           destination_check: ->(url) { browser_destination_refusal(url) },
           ledger:,
         )
+      end
+
+      # The Core Effect is intentionally narrower than the plugin tool surface:
+      # one-shot, read-only rendering only. It is available only when the active
+      # broker and the normal operator governor are both present.
+      def browser_reader(container, broker:, event_bus:)
+        return unless broker
+
+        governor = container&.fetch(:governor, nil)
+        return unless governor&.respond_to?(:permit?)
+
+        Master::Io::WebBrowse.new(governor:, event_bus:, broker:)
       end
 
       def browser_destination_refusal(url)
