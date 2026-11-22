@@ -61,10 +61,6 @@ module Master
         def to_json(*arguments) = diagnostic.to_json(*arguments)
       end
 
-      # What the engine returns from #start; only the broker stores it and only
-      # the broker passes it back to #stop. `persistent` marks a caller-supplied
-      # profile that holds sign-in state, which teardown must not delete.
-
       # Adapters receive this deliberately small surface, never Ferrum::Browser
       # or the broker's CDP bearer endpoint.
       class Attachment
@@ -317,6 +313,9 @@ module Master
         end
       end
 
+      # What the engine returns from #start; only the broker stores it and only
+      # the broker passes it back to #stop. A persistent profile holds sign-in
+      # state and must survive process teardown.
       Handle = Data.define(:pid, :pgroup, :cdp_url, :profile_dir, :host, :persistent) do
         def persistent? = persistent
 
