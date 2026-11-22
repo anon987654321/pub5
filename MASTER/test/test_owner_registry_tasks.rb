@@ -252,6 +252,63 @@ class TestOwnerRegistryTasks < Minitest::Test
     end
   end
 
+  def test_unverified_terminal_backlog_item_is_parked_and_independent_work_continues
+    unverified = {
+      id: "unverified-task", text: "Verify the completed task's actual delivery receipt.",
+      tree: "MASTER", kind: "mechanical", scope_paths: ["MASTER/lib/unverified.rb"],
+      done_when: "rake test", size: "s", section: "MASTER",
+    }
+    independent = {
+      id: "independent-after-proof-gap", text: "Run independent checks while delivery proof is reviewed.",
+      tree: "MASTER", kind: "mechanical", scope_paths: ["MASTER/lib/independent_after.rb"],
+      done_when: "rake test", size: "s", section: "MASTER",
+    }
+    fake_mission = Class.new do
+      class << self
+        attr_accessor :current_record, :queued
+        def current(root:) = current_record
+      end
+      def initialize(root:); end
+      def ensure_queued!(**attributes)
+        self.class.queued = attributes
+      end
+    end
+
+    Dir.mktmpdir("backlog-unverified") do |root|
+      Dir.mktmpdir("backlog-unverified-repo") do |repo_root|
+        [unverified, independent].each do |row|
+          full = File.join(repo_root, row.fetch(:scope_paths).first)
+          FileUtils.mkdir_p(File.dirname(full))
+          File.write(full, "VALUE = 1\\n")
+        end
+        record = {
+          "id" => "mission-unverified", "origin" => "backlog", "state" => "completed",
+          "stage" => "deliver", "summary" => "attempt returned without an accepted receipt",
+          "plan" => JSON.generate(
+            "executor" => "owner_registry", "item_id" => unverified.fetch(:id),
+            "item_digest" => Backlog.item_digest(unverified),
+            "scope_paths" => unverified.fetch(:scope_paths),
+          ),
+        }
+        fake_mission.current_record = record
+        executor = Backlog::Executor.new(root:, repo_root:, mission_class: fake_mission)
+
+        Backlog.stub(:generate, [unverified, independent]) do
+          assert_equal :queued, executor.enqueue_next!
+        end
+
+        plan = JSON.parse(fake_mission.queued.fetch(:plan))
+        assert_equal "independent-after-proof-gap", plan.fetch("item_id")
+        receipt = File.readlines(File.join(root, Backlog::Executor::RECEIPT_PATH))
+          .map { |line| JSON.parse(line) }.first
+        assert_equal "parked_task", receipt.fetch("record_type")
+        assert_equal "completed_unverified", receipt.fetch("mission_state")
+        assert_equal true, receipt.fetch("requires_operator")
+        refute receipt.key?("completed_at")
+      end
+    end
+  end
+
   def test_operator_can_release_one_human_parked_item_without_claiming_completion
     row = {
       id: "needs-human", text: "Review the explicit external acceptance seam.",
