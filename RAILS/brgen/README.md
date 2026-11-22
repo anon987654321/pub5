@@ -29,40 +29,136 @@ data. The city, not a global timeline, remains the organising principle.
 A city is an apex host, and the apex serves the social feed. The canonical city records
 live in `config/cities.yml`; `Brgen::DomainRegistry` projects their host identity into
 the stable six-field `ENTRIES` API, and `CitySeed` reads coordinates and time zones
-from those same records. The catalogue currently lists forty-three apexes, including
-brgen.no for Bergen, oshlo.no, lsangeles.com, lndon.uk and chcago.us. The public
-network has eleven members, while LIVE_DOMAINS records the seven apexes with
-verified TLS in the deployment contract. Footer, search palette and mobile city
-navigation show only CITY_NETWORK_DOMAINS intersected with LIVE_DOMAINS; the four
-pending network domains are omitted until DNS and certificates are ready.
-Membership, registry support and live deployment are separate facts. The registry is
-the only list of hosts, and a host that is not in it does not exist. Local requests to 127.0.0.1
-or localhost resolve to Bergen.
+from those same records. The catalogue contains 43 city apexes. This table documents
+the full catalogue, not a promise that every domain is registered, delegated, certified
+or publicly live.
 
-Tenancy is acts_as_tenant on the city, taken from the Host header, so one deploy holds many
-cities that share users and sessions but not content. The apps default to Norwegian. Every city
-entry names its own language, but only two translations ship, nb and en, so the Nordic cities
-get Norwegian and every other city gets English. brgen.no is nb and lsangeles.com is en-US. A
-city that names Italian or Polish is still served in English, because a page with five
-translated words reads worse than an honest page in one language.
+| City | Country | Apex host | Marketplace host |
+|---|:---:|---|---|
+| Bergen | NO | `brgen.no` | `markedsplass.brgen.no` |
+| Longyearbyen | NO | `longyearbyn.no` | `markedsplass.longyearbyn.no` |
+| Oslo | NO | `oshlo.no` | `markedsplass.oshlo.no` |
+| Stavanger | NO | `stvanger.no` | `markedsplass.stvanger.no` |
+| Tromsø | NO | `trmso.no` | `markedsplass.trmso.no` |
+| Trondheim | NO | `trndheim.no` | `markedsplass.trndheim.no` |
+| Reykjavík | IS | `reykjavk.is` | `markadur.reykjavk.is` |
+| København | DK | `kbenhvn.dk` | `markedsplads.kbenhvn.dk` |
+| Göteborg | SE | `gtebrg.se` | `marknadsplats.gtebrg.se` |
+| Malmö | SE | `mlmoe.se` | `marknadsplats.mlmoe.se` |
+| Stockholm | SE | `stholm.se` | `marknadsplats.stholm.se` |
+| Helsinki | FI | `hlsinki.fi` | `markkinapaikka.hlsinki.fi` |
+| Birmingham | GB | `brmingham.uk` | `marketplace.brmingham.uk` |
+| Cardiff | GB | `cardff.uk` | `marketplace.cardff.uk` |
+| Edinburgh | GB | `edinbrgh.uk` | `marketplace.edinbrgh.uk` |
+| Glasgow | GB | `glasgw.uk` | `marketplace.glasgw.uk` |
+| London | GB | `lndon.uk` | `marketplace.lndon.uk` |
+| Liverpool | GB | `lverpool.uk` | `marketplace.lverpool.uk` |
+| Manchester | GB | `mnchester.uk` | `marketplace.mnchester.uk` |
+| Amsterdam | NL | `amstrdam.nl` | `marktplaats.amstrdam.nl` |
+| Rotterdam | NL | `rottrdam.nl` | `marktplaats.rottrdam.nl` |
+| Utrecht | NL | `utrcht.nl` | `marktplaats.utrcht.nl` |
+| Brussels | BE | `brssels.be` | `marche.brssels.be` |
+| Zürich | CH | `zrich.ch` | `marktplatz.zrich.ch` |
+| Liechtenstein | LI | `lchtenstein.li` | `marktplatz.lchtenstein.li` |
+| Frankfurt | DE | `frankfrt.de` | `marktplatz.frankfrt.de` |
+| Bordeaux | FR | `brdeaux.fr` | `marche.brdeaux.fr` |
+| Marseille | FR | `mrseille.fr` | `marche.mrseille.fr` |
+| Milan | IT | `mlan.it` | `mercato.mlan.it` |
+| Lisbon | PT | `lisbon.pt` | `mercado.lisbon.pt` |
+| Warszawa | PL | `wrsawa.pl` | `marktplatz.wrsawa.pl` |
+| Gdańsk | PL | `gdnsk.pl` | `marktplatz.gdnsk.pl` |
+| Austin | US | `austn.us` | `marketplace.austn.us` |
+| Chicago | US | `chcago.us` | `marketplace.chcago.us` |
+| Denver | US | `denvr.us` | `marketplace.denvr.us` |
+| Dallas | US | `dllas.us` | `marketplace.dllas.us` |
+| Detroit | US | `dtroit.us` | `marketplace.dtroit.us` |
+| Houston | US | `houstn.us` | `marketplace.houstn.us` |
+| Los Angeles | US | `lsangeles.com` | `marketplace.lsangeles.com` |
+| Minneapolis / Minnesota | US | `mnnesota.com` | `marketplace.mnnesota.com` |
+| New York | US | `newyrk.us` | `marketplace.newyrk.us` |
+| Portland | US | `prtland.com` | `marketplace.prtland.com` |
+| Washington DC | US | `wshingtondc.com` | `marketplace.wshingtondc.com` |
+
+`CITY_NETWORK_DOMAINS` is product membership (eleven cities). `LIVE_DOMAINS` is
+the smaller operator-controlled set with relayd TLS keypairs (seven city apexes at
+the time of writing). Neither constant proves public delegation or a successful
+HTTPS request. Check registrar state with `OPENBSD/bin/domain_watch.rb`, and public
+DNS, certificate coverage and HTTPS with `OPENBSD/bin/domain_watch.rb --tls`.
+The footer, search palette and mobile city navigation expose only
+`CITY_NETWORK_DOMAINS & LIVE_DOMAINS`. The four network members not in
+`LIVE_DOMAINS` stay out of public navigation until their DNS and TLS are verified.
+
+## Host and subdomain map
+
+For each city apex above, the generated DNS and certificate inventory uses these
+hostnames:
+
+| Purpose | Hostname pattern | Notes |
+|---|---|---|
+| City feed | `https://<apex>` | Canonical city host |
+| WWW alias | `https://www.<apex>` | DNS and certificate alias; not a separate app |
+| Marketplace | `https://<marketplace>.<apex>` | Localized per city in the table above |
+| Radio | `https://radio.<apex>` | Canonical public host for the Playlist engine |
+| Dating | `https://dating.<apex>` | Dating engine |
+| TV | `https://tv.<apex>` | TV engine |
+| Food compatibility host | `https://takeaway.<apex>` | Legacy host for the Takeaway engine |
+| Maps | `https://maps.<apex>` | Maps engine |
+| Messenger | `https://messenger.<apex>` | Messenger engine |
+
+Food ordering's preferred URL is `https://<marketplace>.<apex>/food`.
+The `takeaway.<apex>` hostname remains a compatibility mount of the same
+Takeaway engine; it is not a separate Rails application.
+
+`https://playlist.brgen.no` is an additional host for the Radio/Playlist engine.
+It is an alias only on Bergen's apex; other cities use `radio.<apex>` alone.
+`https://ai.brgen.no` is MASTER, and `https://mrd.brgen.no` is the Mr Damascy
+application. Both are separate applications, not Brgen vertical engines.
+`mail.brgen.no` is an email endpoint, not a website or vertical.
+
+The city list above is not the whole DNS inventory. Standalone domains are managed
+outside the city catalogue:
+
+| Application or purpose | Apex host | Additional configured HTTPS name |
+|---|---|---|
+| Amber | `amberapp.art` | `www.amberapp.art` |
+| BSDPorts | `bsdports.org` | `www.bsdports.org` |
+| Other standalone zones | `pub.attorney`, `pub.healthcare`, `freehelp.legal`, `bsddocs.org`, `discordb.org`, `stacyspassion.com`, `foball.no` | Each has a configured `www.<apex>` certificate name |
+
+A DNS zone or ACME block does not prove an application route. Use
+`RAILS/apps.yml`, `OPENBSD/deploy_inventory.json` and
+`OPENBSD/mirror/etc/relayd.conf` to establish the intended service mapping.
+The registrar snapshot is `OPENBSD/data/domain_inventory.yml`; pending, parked,
+unregistered and stale domains must not be reported as live websites.
+
+Two stale entries require particular care: `amstrdam.nl` has been recorded as
+re-registered elsewhere, and `dnver.us` is an old Denver spelling that is absent
+from this city catalogue but remains in legacy DNS configuration. Neither is a
+deployment target without an explicit ownership and cleanup decision.
+
+Tenancy is `acts_as_tenant` on the city, taken from the Host header, so one deploy
+holds many cities that share users and sessions but not content. The apps default
+to Norwegian. Every city entry names its own language, but only two translations
+ship, nb and en, so the Nordic cities get Norwegian and every other city gets English.
+`brgen.no` is nb and `lsangeles.com` is en-US. A city that names Italian or Polish
+is still served in English, because a page with five translated words reads worse
+than an honest page in one language.
 
 ## Verticals
 
-The host app holds the feed, communities, events, stories, direct messages and moderation. Every
-other part of the network is a mountable Rails engine under `brgen/engines/` inside the host app
-tree, mounted at the root of a subdomain of the city apex: dating.brgen.no, markedsplass.brgen.no,
-tv.brgen.no, maps.brgen.no, radio.brgen.no, messenger.brgen.no. The same word works on every
-apex, so dating.oshlo.no and dating.lsangeles.com exist on the same rule.
+The host app holds the feed, communities, events, stories, direct messages and
+moderation. The city-scoped engines live under `brgen/engines/` and are mounted
+on the subdomains listed above. The marketplace hostname is the only translated
+vertical name; radio, dating, tv, takeaway, maps and messenger use the same
+subdomain labels across cities.
 
-The engines are engines/dating, engines/maps, engines/marketplace, engines/messenger, and
-engines/radio, which holds two, tv and playlist. The playlist engine answers on radio.<apex>, and the public
-name changed to radio with no alias kept, so playlist.<apex> is gone. The marketplace is the one
-subdomain that is localised, because the word is part of the brand in each market: markedsplass
-in Norway, marketplace in the United States and Britain, marktplatz in Germany. Food ordering is
-the Takeaway engine, nested inside the marketplace engine and served at /food on the marketplace
-host. The old takeaway.<apex> host still resolves, as a compatibility mount of the same engine.
-Messenger is an engine whose routes are drawn in the host, under messenger.<apex>. ai.brgen.no
-is MASTER, a separate application with its own service, and is not a vertical.
+The engines are engines/dating, engines/maps, engines/marketplace,
+engines/messenger, and engines/radio, which holds Playlist and TV. The public
+Radio hostname is `radio.<apex>`; Playlist is the engine name, and
+`playlist.brgen.no` is its additional Bergen host. Food ordering is the Takeaway
+engine, nested inside Marketplace and served at `/food` on the localized
+marketplace host. The legacy `takeaway.<apex>` host still resolves to that engine.
+Messenger is an engine whose routes are drawn in the host. MASTER and Mr Damascy
+remain separate applications, not verticals.
 
 **Vertical product briefs:** [Dating](engines/dating/README.md) ·
 [Marketplace](engines/marketplace/README.md) ·
@@ -74,18 +170,6 @@ is MASTER, a separate application with its own service, and is not a vertical.
 
 These briefs preserve the distinct product promises while treating the active engine,
 routes and tests as the authority for what is actually available.
-
-Each engine includes Shared::VerticalEngine, which gives it autoload paths, its own migrations,
-views and JavaScript, and names its initializers after its namespace. Two details cost a boot
-each to find. The Gemfile line for an engine needs require: with the engine's own entry file,
-because Bundler would otherwise require the dashed gem name and the engine class would be
-undefined when routes are drawn. And the mount in config/routes.rb must sit at the top level
-with a constraints: keyword, never inside a constraints block, because a nested mount still
-routes but Rails then drops the mounted helper that host code calls, as in tv.channel_url.
-Applied migrations stay where they ran, and an engine owns its db/migrate only for new ones. The
-shared models, authentication and design system live in the pub5-shared engine, and no vertical
-redefines them.
-
 ## Marketplace integration
 
 The Marketplace engine owns listings, stores, orders and its storefront; the Brgen host owns
