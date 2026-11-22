@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "base64"
+require "tmpdir"
 require_relative "test_helper"
 require "yaml"
 
@@ -116,6 +118,38 @@ class TestBrowserAgent < Minitest::Test
     end
     assert_raises(ArgumentError) do
       agent.send(:open_session, "default", host: "example.com", headless: true)
+    end
+  end
+
+  def test_screenshot_is_validated_by_the_broker_before_private_persistence
+    png = Master::Io::BrowserBroker::PNG_MAGIC + "fixture".b
+    encoded = Base64.strict_encode64(png)
+    seen = []
+    screenshot_options = []
+    broker = Object.new
+    broker.define_singleton_method(:screenshot) do |lease_id, bytes|
+      seen << [lease_id, bytes.dup]
+      { lease_id:, media_type: "image/png", bytesize: bytes.bytesize, bytes: }
+    end
+    page = Object.new
+    page.define_singleton_method(:screenshot) do |format:, encoding:|
+      screenshot_options << [format, encoding]
+      encoded
+    end
+    agent = Master::Io::BrowserAgent.new(root: Dir.pwd, governor: Governor.new, broker:)
+    state = Master::Io::BrowserAgent::Session.new(page:, mutex: Mutex.new, lease_id: "lease-1")
+
+    Dir.mktmpdir("browser-capture") do |home|
+      Dir.stub(:home, home) do
+        path = agent.send(:save_screenshot, state)
+        directory = File.dirname(path)
+
+        assert_equal png, File.binread(path)
+        assert_equal [["lease-1", png]], seen
+        assert_equal [["png", :base64]], screenshot_options
+        assert_equal 0o700, File.stat(directory).mode & 0o777
+        assert_equal 0o600, File.stat(path).mode & 0o777
+      end
     end
   end
 
