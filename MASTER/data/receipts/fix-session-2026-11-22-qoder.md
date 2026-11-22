@@ -2627,3 +2627,81 @@ Browser diagnostic addendum — 2026-11-22:
 - Repository Minitest and complete MASTER checks remain NOT_RUN. The direct
   lease.cdp_url accessor used by trusted adapters remains present, so this
   does not close the narrow-session/API boundary or Issue #5.
+### Narrow browser attachment and page facade — 2026-11-22
+
+This continuation replaces the six adapters' direct Ferrum/CDP attachment path
+with one broker-owned attachment API. The broker keeps the CDP endpoint and
+raw Ferrum browser internally; adapters receive only an opaque lease and the
+Attachment / Page facade.
+
+Landed on main:
+- BrowserBroker#attach validates the active browser capability, live lease,
+  bounded timeout and optional window dimensions, then attaches Ferrum inside
+  the broker. Scope#attach resolves only the broker bound to the current Core
+  Fiber. The Lease no longer contains a CDP URL.
+- Attachment exposes page creation and teardown, including the existing
+  asynchronous WebChat cleanup path when the pinned Ferrum version offers
+  synchronous-only quit.
+- Page exposes host-checked navigation, a fixed broker-owned DOM snapshot,
+  bounded PNG capture, a small DOM-node/focus interface, bounded idle waiting
+  and only the request-interception hook needed by WebBrowse. It does not expose
+  evaluate or command to adapters. Request wrappers bound response bodies and
+  expose only the existing safe request-header allowlist. The existing
+  WebBrowse socket sandbox now lives with the broker-owned page interface.
+- Migrated all six production adapters: WebBrowse, BrowserAgent, WebChat,
+  SessionBrowser, SocialBrowser and TravelBrowser. None constructs Ferrum,
+  reads lease.cdp_url, calls arbitrary page evaluation or issues raw CDP
+  commands. Each attaches by its broker-issued lease.
+- Kept the existing product permission differences. WebBrowse, BrowserAgent
+  and SessionBrowser retain the guarded GET/HEAD transport. Social, Travel and
+  WebChat retain their existing separate action semantics; no general POST
+  grant or SessionBrowser POST right was added.
+- Updated the existing test_browser_broker.rb, test_plugins.rb and
+  test_web_browse.rb to assert the new boundary, broker attachment, plugin
+  lease lifecycle, fixed observation script, request hardening, network
+  sandbox owner and non-escaping click results. Removed obsolete direct-Ferrum
+  plugin test stubs.
+
+Selected commits:
+48c0ba76118801b3ab9dfbe34b99b31f7a4beb6e (broker attachment/page facade);
+04b82a83fa423da309db1a4aa34ffe1d3b9cbfc1 (WebBrowse);
+984dc218ac6a73600bd10238ccacbba63cf6b1ee (BrowserAgent);
+5b0b251329b10490d2a808de7f2548d38a08eeb0 (SessionBrowser);
+3668c3f54a92ed506af4b56fdd94a60895170703 (WebChat);
+752f12f3a6ec0781f93f2fadcd8d1b8b2aa7d730 (SocialBrowser);
+4995152d827821fc8ce29e38382937227e63b6ce (TravelBrowser);
+3935c92d0f127c0768e85bb5f9701613683c6908 (page facade contract);
+85ca02d0a6922ca46ea309bff3d79a069b6206aa and
+71f5dcb26e9a11b1eba772221862dcdd5cc35422 (source/facade regressions);
+482c8e0f4e2f3825148ae3f96434a86dafe2962e and
+06b14550145d46d5e2bec62d1963763d5202733a (plugin fake migration);
+83ab009e6b0fafa4becf628749ad33f71f1f0301 (snapshot/response bounds);
+4879e2522a8d605171b880deb5cd1d9ba5ec3df7 (request-header compatibility);
+12e41e7807a169072d39187e8fd1cd7310c4d64d (raw Ferrum result containment);
+9e100f55734be6b1604b26511df6bf84dd80f113 and
+794d93d9f985fbe4258ce66a114478d1a81faf04 (final test corrections).
+
+Proof performed: GitHub read-after-write verification of all six adapter
+files, broker, and affected test sources. A fresh source audit confirms each
+adapter uses attach(lease.id) and contains no direct Ferrum constructor,
+lease CDP access, arbitrary page evaluation or raw CDP command. The broker is
+the only production owner of those operations. These are source/contract
+checks, not executed test evidence.
+
+NOT_RUN: ruby MASTER/tools/agent_context.rb --json (no local pub5 checkout);
+Ruby syntax and all affected Minitest files; MASTER/bin/check; real Chromium
+startup/attach/teardown; real redirects and subresource probes for all six
+adapters; browser interruption/cancellation; end-to-end screenshot delivery
+to a vision model; and real user browser journeys.
+
+Remaining boundary: this is a narrow API for trusted in-process adapters,
+not an isolation boundary against hostile Ruby code using reflection on
+instance variables. Chromium creation still uses Process.spawn inside the
+IO broker rather than a Core process-runner effect. Request interception and
+action-specific method grants are still incomplete for SocialBrowser,
+TravelBrowser and WebChat; the guarded WebBrowse GET/HEAD transport must not be
+mistaken for their write policy. BrowserAgent screenshots pass through the
+broker byte validator but the vision lane still receives no image bytes.
+In-flight cancellation and live Chromium proof remain outstanding. Issue #5
+stays OPEN. The session_browser_post_policy operator-rights seam remains
+unchanged.
