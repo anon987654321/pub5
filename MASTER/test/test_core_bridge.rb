@@ -25,6 +25,20 @@ class CoreBridgeTest < Minitest::Test
     def publish_required(name, payload = {}) = @events << [name, payload]
   end
 
+  def test_browser_reader_requires_the_active_broker_and_operator_governor
+    broker = Object.new
+    governor = Object.new
+    governor.define_singleton_method(:permit?) { |*| nil }
+    bus = FakeBus.new
+
+    reader = Master::CLI::CoreBridge.browser_reader({ governor: }, broker:, event_bus: bus)
+
+    assert_instance_of Master::Io::WebBrowse, reader
+    assert_same broker, reader.instance_variable_get(:@broker)
+    assert_nil Master::CLI::CoreBridge.browser_reader({ governor: }, broker: nil, event_bus: bus)
+    assert_nil Master::CLI::CoreBridge.browser_reader({}, broker:, event_bus: bus)
+  end
+
   # Test fixtures run the exact argv vectors the proof policy recognises.
   # Producer strings embedded in echo commands are deliberately not accepted.
   def evidence_then_done(root:, extra: [], summary:)
