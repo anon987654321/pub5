@@ -102,39 +102,23 @@ module Master
         # delay/retries are read after with_lock returns; block locals die with it.
         delay = 0
         retries = 0
-        exhausted = false
         with_lock do
           load_current_unlocked!
           return self unless @record
 
-          retries = @record.fetch("retry_count", 0).to_i
-          if @record["auto_continue"] == true &&
-             @record.fetch("attempt_count", 0).to_i >= MAX_AUTOMATIC_ATTEMPTS
-            exhausted = true
-            @record["state"] = "blocked"
-            @record["stage"] = "verify"
-            @record["auto_continue"] = false
-            @record["next_wake_at"] = nil
-            @record["wake_reason"] = "automatic retry budget exhausted after #{MAX_AUTOMATIC_ATTEMPTS} attempts: #{reason}".byteslice(0, 240)
-          else
-            retries += 1
-            delay = seconds || backoff_seconds(retries)
-            @record["state"] = "waiting"
-            @record["stage"] = "verify"
-            @record["retry_count"] = retries
-            @record["next_wake_at"] = (Time.now.utc + delay).iso8601
-            @record["wake_reason"] = reason.to_s[0, 240]
-          end
+          retries = @record.fetch("retry_count", 0).to_i + 1
+          delay = seconds || backoff_seconds(retries)
+          @record["state"] = "waiting"
+          @record["stage"] = "verify"
+          @record["retry_count"] = retries
+          @record["next_wake_at"] = (Time.now.utc + delay).iso8601
+          @record["wake_reason"] = reason.to_s[0, 240]
           @record["lease_owner"] = nil
           @record["lease_until"] = nil
           @record["last_seen_at"] = now
           persist!
         end
-        if exhausted
-          emit("mission:retry_budget_exhausted", id: @id, reason:, attempts: MAX_AUTOMATIC_ATTEMPTS)
-        else
-          emit("mission:deferred", id: @id, reason:, delay_seconds: delay, retry_count: retries)
-        end
+        emit("mission:deferred", id: @id, reason:, delay_seconds: delay, retry_count: retries)
         self
       end
 
