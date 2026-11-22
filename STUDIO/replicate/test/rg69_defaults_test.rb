@@ -100,6 +100,13 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "chip.addEventListener('keydown'"
   end
 
+  def test_welcome_overlay_does_not_swallow_advertised_shortcuts
+    handler = js[/function handleKeys\\(e\\)(.*?)\\n\\}/m, 1] or raise "no handleKeys"
+    assert_includes handler, "k==='p'"
+    assert_includes handler, "const supportedShortcut=['s','r','e','l','t','m'].includes(k)"
+    assert_includes handler, "dismissWelcome();"
+  end
+
   def test_sliders_update_without_trailing_debounce
     assert_includes js, "let fxUpdateFrame=null;"
     assert_includes js, "out.textContent=Math.round(v)"
