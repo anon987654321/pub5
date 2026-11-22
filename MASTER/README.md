@@ -229,6 +229,10 @@ Each JSON run also writes a private, atomic artifact under
 `.master/check/receipts/<receipt-id>.json`; the path and persistence state
 are included in the emitted receipt. A failed artifact write is
 `DELIVERY_FAILED` and returns a non-zero exit.
+`bin/check --profile=full` adds the existing `rake test:all_trees` sweep
+for MASTER, RAILS, OPENBSD, STUDIO and BIZ (native tests, syntax, shell and
+YAML/JSON parsing). Its exit-3 missing-runtime outcome is reported as
+`INCONCLUSIVE`, never as a pass.
 `bin/check --show-log --tail=120` retrieves the latest diagnostic log without
 booting MASTER. While a repair is active, `bin/operator fix status` and
 `bin/operator fix tail` expose its progress and transcript.
