@@ -26,6 +26,36 @@ class TestReferenceGraph < Minitest::Test
     end
   end
 
+  def test_indexes_a_valid_utf8_file_whose_probe_ends_mid_character
+    Dir.mktmpdir("reference-graph") do |root|
+      path = File.join(root, "RAILS", "brgen", "db", "seeds.rb")
+      FileUtils.mkdir_p(File.dirname(path))
+      # 8191 ASCII bytes then a two-byte character: the 8192-byte probe holds
+      # only its first byte, which is not valid UTF-8 on its own.
+      File.binwrite(path, ("a" * 8191) + "é" + "tail\n")
+
+      graph = Master::Review::ReferenceGraph.new(root:)
+      result = graph.build(refresh: true, required_paths: [path])
+
+      assert_includes result[:nodes], "RAILS/brgen/db/seeds.rb"
+      assert graph.includes_path?(path)
+      assert_empty result[:analysis_failures]
+    end
+  end
+
+  def test_rejects_a_file_with_an_invalid_utf8_byte_in_the_body
+    Dir.mktmpdir("reference-graph") do |root|
+      path = File.join(root, "RAILS", "brgen", "db", "seeds.rb")
+      FileUtils.mkdir_p(File.dirname(path))
+      File.binwrite(path, ("a" * 100) + "\xFF".b + ("b" * 100))
+
+      graph = Master::Review::ReferenceGraph.new(root:)
+      result = graph.build(refresh: true, required_paths: [path])
+
+      refute_includes result[:nodes], "RAILS/brgen/db/seeds.rb"
+    end
+  end
+
   def test_resolves_require_relative_from_the_callers_directory
     Dir.mktmpdir("reference-graph") do |root|
       caller = File.join(root, "RAILS", "brgen", "config", "boot.rb")

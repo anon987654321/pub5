@@ -400,8 +400,26 @@ module Master
         # Extensionless source and dotfiles are common authoritative inputs
         # (Rakefile, Gemfile, Makefile, .gitignore). Include all readable text
         # instead of quietly narrowing the dependency graph by suffix.
-        probe.dup.force_encoding(Encoding::UTF_8).valid_encoding?
+        utf8_probe?(probe, truncated: size > probe.bytesize)
       rescue SystemCallError
+        false
+      end
+
+      # A probe that ends inside a multi-byte UTF-8 character is not a binary
+      # file: RAILS/brgen/db/seeds.rb was excluded because byte 8192 landed on
+      # the second byte of a character, so the graph refused every RAILS repair
+      # with "eligible file(s) absent from dependency graph". Only a truncated
+      # probe may lose a tail, and only the three bytes a UTF-8 sequence can
+      # still be missing; an invalid byte in the body still rejects the file.
+      def utf8_probe?(probe, truncated:)
+        text = probe.dup.force_encoding(Encoding::UTF_8)
+        return true if text.valid_encoding?
+        return false unless truncated
+
+        1.upto(3) do |cut|
+          prefix = text.byteslice(0, text.bytesize - cut)
+          return true if prefix&.force_encoding(Encoding::UTF_8)&.valid_encoding?
+        end
         false
       end
 
