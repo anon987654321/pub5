@@ -83,6 +83,30 @@ class TestRg69Defaults < Minitest::Test
     assert_includes panic, "st_.transportId=null;"
   end
 
+  def test_percussion_synthesizers_receive_their_correct_tonejs_arguments
+    assert_includes js, "synths.kickClk.triggerAttackRelease(thirtySecond,rt,vl*0.3)"
+    assert_includes js, "synths.snare.triggerAttackRelease(eighth,rt,vl)"
+    assert_includes js, "synths.clap.triggerAttackRelease(sixteenthDuration,rt,vl)"
+    assert_includes js, "synths.hat.triggerAttackRelease(200,sixteenthDuration,rt,vl)"
+    assert_includes js, "synths.open.triggerAttackRelease(200,eighth,rt,vl)"
+    refute_match(/synths\.(?:kickClk|snare|clap|hat|open)\.triggerAttackRelease\(rt,vl/, js)
+  end
+
+  def test_keyboard_shortcuts_work_from_welcome_and_range_controls
+    handler = js[/function handleKeys\(e\)(.*?)\n\}/m, 1] or raise "no handleKeys"
+    assert_includes handler, "$id('welcome-start').click()"
+    assert_includes handler, "toggleTrackMute"
+    refute_includes handler, "if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;"
+    assert_includes js, "chip.addEventListener('keydown'"
+  end
+
+  def test_sliders_update_without_trailing_debounce
+    assert_includes js, "let fxUpdateFrame=null;"
+    assert_includes js, "out.textContent=Math.round(v)"
+    assert_includes js, "scheduleFXUpdate()"
+    refute_match(/const handler=debounce\(\(\)=>\{\s*const v=parseFloat\(inp.value\)/, js)
+  end
+
   def test_transport_callback_defers_visual_work_to_one_animation_loop
     body = js[/function scheduleLoop\(time\).*?(?=\nlet stepUiByIndex)/m] or raise "no scheduleLoop"
     refute_includes body, "analyser.getValue()"
