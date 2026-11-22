@@ -44,11 +44,20 @@ module Master
         def report
           rows = ledger.map do |row|
             cost = row["cost_minutes_per_landing"].to_f
-            catches = row["measured_catches"].to_s
+            catches = row["measured_catches"]
+            measured = measured_count?(catches)
             value = catch_score(catches, row["status"])
-            row.merge("rank" => { "cost_minutes" => cost, "catch_weight" => value,
-                                  "advice" => advice(cost, value, catches) })
-          end.sort_by { |r| [r.dig("rank", "catch_weight"), -r.dig("rank", "cost_minutes")] }
+            row.merge("rank" => {
+              "cost_minutes" => cost,
+              "measured" => measured,
+              "catch_weight" => value,
+              "advice" => advice(cost, value, measured:, status: row["status"]),
+            })
+          end.sort_by do |row|
+            [row.dig("rank", "measured") ? 0 : 1,
+             row.dig("rank", "catch_weight"),
+             -row.dig("rank", "cost_minutes")]
+          end
 
           emit(
             command: "sunset report",
@@ -59,19 +68,25 @@ module Master
           0
         end
 
-        # A dry, exact catch weight: instrument readings and named catches
-        # earn weight; prose-only claims of value earn none.
-        def catch_score(catches, status)
-          return 0.0 if status == "retired"
-          return 1.0 if catches.match?(/\d+/)
-          return 0.5 if catches.match?(/log|ledger|reading|count/i)
-
-          0.0
+        # Only an explicit non-negative integer from an instrument is a
+        # measured catch. Prose, dates and counts mentioned in a note are not.
+        def measured_count?(catches)
+          catches.is_a?(Integer) && catches >= 0
         end
 
-        def advice(cost, value, catches)
+        def catch_score(catches, status)
+          return 0.0 if status == "retired"
+          return 0.0 unless measured_count?(catches)
+
+          catches.positive? ? 1.0 : 0.0
+        end
+
+        def advice(cost, value, measured:, status:)
+          return "already retired: no active ceremony cost" if status == "retired"
+          return "unmeasured: record a non-negative integer catch count from the owning instrument before ranking or retirement" unless measured
+
           if value.zero? && cost.positive?
-            "retire candidate: standing cost, no counted catch; name the evidence that would revive it before dissolving"
+            "retire candidate: standing cost, measured zero catches; name the evidence that would revive it before dissolving"
           elsif value.positive? && cost > 10
             "keep, but make cheaper: the catch is counted, the cost is the largest in the ledger"
           elsif value.positive?
