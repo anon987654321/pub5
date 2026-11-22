@@ -2179,3 +2179,20 @@ Still **NOT_RUN**: `TestCheckBrief`, `TestCheckChain`,
 actual receipt/log creation, file replacement race tests, macOS/OpenBSD
 `File::NOFOLLOW` runtime support, all full profiles, and all RAILS/OPENBSD/
 STUDIO/BIZ rendered/browser/device/host/production acceptance.
+
+
+Section T addendum — Brgen cold-start feed:
+- The current empty Following lane was measured against HomeFeed, User#timeline_posts,
+  Post::HOT_SQL and the CityTenantable scope. It previously reduced to the reader's
+  own posts when the follow graph was empty.
+- It now combines the reader's timeline with the existing city-scoped Post.hot
+  relation using SQL subqueries under the same kept/private-community scope. It is
+  limited to the authenticated Following lane with no follows; the default root feed,
+  guest DemoFeed, communities lane and an established Following graph are unchanged.
+- The home page says in nb/en that city-popular posts are being shown because the
+  reader follows nobody yet. It adds no signup wall, geolocation dependency, ranking
+  model or new service.
+- Added HomeFeed unit tests and rendered HomeController tests for both fallback and
+  normal-following behavior. Registered brgen_cold_start_feed as a partial workstream;
+  the gap remains open pending runtime and rendered proof.
+- These Rails tests and the browser journey remain NOT_RUN. No pass is claimed.
