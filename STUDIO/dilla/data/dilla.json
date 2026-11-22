@@ -2030,5 +2030,112 @@
       "bpm": 104
     }
   },
-  "comment": " Production profiles are intent presets. The Flying Lotus profile is an original jazz-fusion/electronic study, not a claimed transcription of a specific track. The royksopp profile is a separate melodic synth-pop lane built around the Dusty Paradise six-chord study, a steady electronic pulse and a slow Juno ensemble patch."
+  "comment": " Production profiles are intent presets. The Flying Lotus profile is an original jazz-fusion/electronic study, not a claimed transcription of a specific track. The royksopp profile is a separate melodic synth-pop lane built around the Dusty Paradise six-chord study, a steady electronic pulse and a slow Juno ensemble patch.",
+  "tonejs_profiles": {
+    "rg69": {
+      "name": "RG-69 punch / basement adapter",
+      "source": {
+        "kit": "kit_break",
+        "voice": "prophet_5",
+        "rig": "basement"
+      },
+      "tone": {
+        "kick": {
+          "pitch_decay": 0.05,
+          "octaves": 6,
+          "oscillator": "sine",
+          "attack": 0.001,
+          "release": 0.1,
+          "click_attack": 0.001,
+          "click_decay": 0.02,
+          "body_oscillator": "triangle",
+          "body_attack": 0.001,
+          "body_decay": 0.08,
+          "click_filter_base_hz": 600,
+          "click_filter_tone_span_hz": 1200,
+          "click_filter_q": 5
+        },
+        "snare": {
+          "noise": "white",
+          "attack": 0.001,
+          "ring_oscillator": "triangle",
+          "ring_attack": 0.001,
+          "ring_decay": 0.15,
+          "ring_frequency": 400,
+          "ring_filter_base_hz": 100,
+          "ring_filter_tone_span_hz": 450,
+          "ring_filter_q": 3
+        },
+        "clap": {
+          "noise": "pink",
+          "attack": 0.001
+        },
+        "hat": {
+          "frequency": 200,
+          "attack": 0.001,
+          "release": 0.01,
+          "harmonicity": 5.1,
+          "modulation_index": 32,
+          "resonance_base_hz": 500,
+          "resonance_tone_span_hz": 5000,
+          "octaves": 1.5
+        },
+        "openhat": {
+          "frequency": 200,
+          "attack": 0.001,
+          "release": 0.2,
+          "harmonicity": 5.1,
+          "modulation_index": 32,
+          "resonance_base_hz": 500,
+          "resonance_tone_span_hz": 5000,
+          "octaves": 1.5
+        },
+        "bass": {
+          "oscillator": "sawtooth",
+          "attack": 0.01,
+          "decay": 0.1,
+          "sustain": 0.5,
+          "release": 0.1,
+          "sub_frequency": 40,
+          "sub_oscillator": "sine",
+          "sub_volume_db": -12
+        },
+        "keys": {
+          "max_polyphony": 16,
+          "harmonicity": 7,
+          "modulation_index": 2.5,
+          "brightness_reference": 0.58,
+          "oscillator": "sine",
+          "attack": 0.005,
+          "decay": 0.1,
+          "sustain": 0.3,
+          "release": 0.1,
+          "modulation_oscillator": "square",
+          "mod_attack": 0.01,
+          "mod_decay": 0.2,
+          "mod_sustain": 0.2,
+          "mod_release": 0.3,
+          "filter_base_hz": 1200,
+          "filter_brightness_span_hz": 3800
+        },
+        "pads": {
+          "max_polyphony": 16,
+          "oscillator": "fatsawtooth",
+          "count": 3,
+          "spread": 25,
+          "attack": 2.2,
+          "decay": 3.5,
+          "sustain": 0.75,
+          "release": 4.8,
+          "filter_base_hz": 600,
+          "filter_brightness_span_hz": 400
+        }
+      },
+      "effects": {
+        "delay_feedback_range": 0.37,
+        "reverb_decay_scale": 4,
+        "wobble_frequency_cap_hz": 0.15
+      }
+    }
+  }
 }
