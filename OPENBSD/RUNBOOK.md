@@ -23,8 +23,13 @@ MASTER/bin/operator vps deploy all --remote --follow
 **One-time broker bootstrap (required before the first release on a host or after a broker-protocol change):** update vm23's `/home/dev/pub5` checkout to the same `origin/main` commit, then run `doas zsh OPENBSD/OPERATOR.sh --plan`, review the plan, and run `--apply` followed by `--verify`. The first `vps-deploy all` cannot install the broker it needs to write its initial durable run receipt; it fails closed until this separate bootstrap is complete. Do not treat the routine mirror apply inside `vps-deploy all` as a substitute for this prerequisite.
 
 Hands-off: local preflight → pin SHA → `tmux` session `pub5-deploy` on vm23 →
-`vps-deploy` as **root** (git still as `dev`) → streams the log until finished →
-`vps-state` + public canary. Survives SSH disconnect. Logs: `/var/log/pub5/vps-deploy.log` (aggregate), `/var/log/pub5/runs/deploy-*.log` (per run), also `/home/dev/vps-deploy.log` and `vps-deploy-latest.log` symlinks.
+`vps-deploy` as **root** (git still as `dev`) → workstation collector streams
+tmux's in-memory pane into `~/.pub5/deployments/deploy-*.log` → local
+`vps-state` + public canary → redacted, expiring paste. The workstation capture
+process is detached from the terminal, so an SSH or terminal disconnect does
+not stop the collector while the workstation remains running. vm23 writes no
+deploy transcript: only structured recovery receipts remain under
+`/var/db/pub5/deploy_runs`.
 
 A direct natural-language instruction to deploy **OPENBSD + all RAILS apps + MASTER/web
 to vm23** is an explicit execution request; the equivalent shorthand **“redeploy
@@ -52,56 +57,31 @@ This is the controlled equivalent of copying the mirror into `/`, not a blind re
 
 For a mirror-only operation, inspect first with `doas zsh OPENBSD/OPERATOR.sh --plan`; apply only after review with `doas zsh OPENBSD/OPERATOR.sh --apply`; verify with `doas zsh OPENBSD/OPERATOR.sh --verify`. A full `vps-deploy all` already runs the apply step as part of its pinned release.
 
-## Log rotation
+## Deployment transcripts and paste sharing
 
-OpenBSD uses `newsyslog(8)`, not logrotate. The repository mirror is
-`OPENBSD/mirror/etc/newsyslog.conf`; install it only through a deliberate
-`OPERATOR.sh` run.
+Deployment transcripts live on the operator workstation, not vm23:
 
-| Log | count | size (KB) | when | flags |
-|---|---:|---:|---|---|
-| `/var/log/pub5/vps-deploy.log` | 12 | 512 | weekly | Z (compress) |
-| `/home/dev/vps-deploy.log` | 12 | 512 | weekly | Z |
-| Base `/var/log/messages` and other system logs | see config | | | |
+- `~/.pub5/deployments/deploy-*.log`, directory mode `0700`, file mode `0600`.
+- Each completed deploy publishes a redacted engineering transcript using
+  MASTER's existing paste publisher. The preferred paste expires after one day;
+  the fallback expires after seven days. The paste URL and publication result
+  are appended to the local transcript.
+- Credentials, private-key blocks, authorization headers, cookies, URL
+  credentials, tokens and email addresses are redacted before publication.
+  `MASTER_LOG_PUBLISH=0` disables paste publication without disabling local
+  logging.
+- OpenSSH transport diagnostics remain local at
+  `~/.pub5/ssh-connections.log`.
 
-The count is the number of rotated siblings to keep. Size is a threshold in
-kilobytes; either size or time can trigger rotation. `$W0D0` means weekly
-on Sunday, and `Z` compresses the rotated file with gzip.
+On vm23, `vps-deploy` writes only the bounded recovery receipts under
+`/var/db/pub5/deploy_runs`. Its receipt stores a `local://deploys/...`
+reference, not a remote log path. Remote tmux scrollback is an in-memory
+transport buffer and is removed after the workstation collector receives the
+terminal exit marker. It is not a durable log store.
 
-Validate the mirror before installation:
-
-```sh
-doas newsyslog -nv -f OPENBSD/mirror/etc/newsyslog.conf
-```
-
-`rotate_deploy_log` in `vps-deploy` renames the aggregate log to `.1` when
-it exceeds `VPS_DEPLOY_LOG_MAX_BYTES` (default 10 MB) at deploy start. This is
-only a safety net if newsyslog has not run; it does not replace newsyslog.
-
-Per-run logs under `/var/log/pub5/runs/deploy-*.log` have unique names, so
-fixed-path newsyslog rules do not cover them. Prefer a weekly age-prune job
-that retains the last 30 days (roughly one deploy per day). A directory size
-cap that deletes oldest runs is an alternative; newsyslog filename patterns
-are not supported because it needs fixed paths.
-
-On the operator workstation, `~/.pub4/ssh-connections.log` is written by
-`MASTER/bin/operator` for each remote action. Rotate it locally with weekly
-launchd/cron or a manual size check:
-
-```sh
-# Keep roughly 5 MB
-[[ $(stat -f%z ~/.pub4/ssh-connections.log 2>/dev/null || echo 0) -gt 5000000 ]] \
-  && mv ~/.pub4/ssh-connections.log{,.1}
-```
-
-OpenSSH `-E` also appends protocol diagnostics to that file when
-`LogLevel` is INFO or higher (`PUB4_SSH_LOG_LEVEL`).
-
-Do not install a partial `newsyslog.conf`: a partial file previously wiped
-base rules and filled `/var`. Do not send deploy logs to remote syslog until
-`/var` headroom and the privacy of receipt lines have been reviewed.
-
-Already on the box as `dev`: `zsh OPENBSD/bin/vps-deploy all`.
+`newsyslog(8)` continues to rotate the system and host-service logs in the
+OpenBSD mirror. It no longer has rules for deploy transcripts because those
+files are not written on vm23.
 
 ## Repo layout
 
