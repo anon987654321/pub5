@@ -207,7 +207,7 @@ module Master
         # owns the process; the lease is bound to the provider host.
         lease = owner.open(host: URI(url.to_s).host, url:, profile: account_dir,
                            persistent: true, headless:)
-        browser = Ferrum::Browser.new(**driver_options(lease))
+        browser = owner.attach(lease.id, timeout: 20, window_size: [1280, 900])
         page = browser.create_page
         page.go_to(url)
         yield(page, run_dir)
@@ -224,12 +224,6 @@ module Master
       end
 
       def broker = service(:browser_broker)
-
-      def driver_options(lease)
-        raise PolicyError, "social_browser: Core-owned browser lease is required" unless lease
-
-        { ws_url: lease.cdp_url, timeout: 20, window_size: [1280, 900] }
-      end
 
       def resolve_runtime(value)
         requested = value.to_s
