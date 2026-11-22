@@ -60,48 +60,67 @@ module Master
       # adapters share that one scoped broker without retaining a boot-wide
       # :fix capability or borrowing another conversation's lease.
       class Scope
-        # The key is per scope, not a global Fiber slot. A plugin may construct
-        # its own Scope, but cannot bind a broker into the Scope it received.
+        # The broker is keyed by Fiber.current, not Fiber storage: Ruby copies
+        # Fiber storage into a new Fiber by default. A child/concurrent Fiber must
+        # not inherit the browser authority of the operation that created it.
         class Binding
-          def initialize(storage_key)
-            @storage_key = storage_key
+          def initialize(scope)
+            @scope = scope
           end
 
-          def with(broker)
-            previous = Fiber[@storage_key]
-            Fiber[@storage_key] = broker
-            yield
-          ensure
-            Fiber[@storage_key] = previous
+          def with(broker, &block)
+            @scope.__send__(:bind_current_fiber, broker, &block)
           end
         end
         private_constant :Binding
 
         def initialize
-          @storage_key = Object.new.freeze
-          yield Binding.new(@storage_key) if block_given?
+          @active_by_fiber = {}
+          @mutex = Mutex.new
+          yield Binding.new(self) if block_given?
         end
 
         def available?
-          current = Fiber[@storage_key]
           current&.available? == true
         end
 
         def open(**attributes) = current!.open(**attributes)
 
         def close(id)
-          current = Fiber[@storage_key]
-          current ? current.close(id) : false
+          broker = current
+          broker ? broker.close(id) : false
         end
 
         def close_all = current!.close_all
-        def sessions = Fiber[@storage_key]&.sessions || []
-        def size = Fiber[@storage_key]&.size || 0
+        def sessions = current&.sessions || []
+        def size = current&.size || 0
 
         private
 
+        def current
+          @mutex.synchronize { @active_by_fiber[Fiber.current] }
+        end
+
         def current!
-          Fiber[@storage_key] || raise(Denied, "browser: no Core-scoped broker is active")
+          current || raise(Denied, "browser: no Core-scoped broker is active")
+        end
+
+        def bind_current_fiber(broker)
+          fiber = Fiber.current
+          previous = @mutex.synchronize do
+            old = @active_by_fiber[fiber]
+            @active_by_fiber[fiber] = broker
+            old
+          end
+          yield
+        ensure
+          @mutex.synchronize do
+            if previous
+              @active_by_fiber[fiber] = previous
+            else
+              @active_by_fiber.delete(fiber)
+            end
+          end
         end
       end
 
