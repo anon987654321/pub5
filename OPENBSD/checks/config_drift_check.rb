@@ -139,9 +139,8 @@ def doas_cat(path) = doas_run("cat", path)
 def doas_root_crontab = doas_run("crontab", "-l", "-u", "root")
 
 # One SSH round-trip for all files, the crontab included. Reading them one at a
-# time is 11 rapid reconnects, which is what pf bruteforce blocks (RUNBOOK: one
-# session at a time), and a separate connection for the crontab would be the
-# twelfth. Each file emits `<marker><path>` on its own line then its contents;
+# time adds avoidable handshakes and delays a read-only integrity check.
+# Each file emits `<marker><path>` on its own line then its contents;
 # echo, not printf, because printf backslash escaping is fragile across ruby ->
 # ssh -> shell.
 def live_files(paths)

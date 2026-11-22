@@ -118,15 +118,11 @@ switch -- $mode {
     at_prompt
     send "chown -R dev:dev /home/dev/.ssh && chmod 600 /home/dev/.ssh/authorized_keys\r"
     at_prompt
-    send "doas pfctl -t bruteforce -T flush 2>/dev/null || true\r"
-    at_prompt
     console_close
   }
   start_install {
     set timeout 20
     console_open
-    at_prompt_loose
-    send "doas pfctl -t bruteforce -T flush 2>/dev/null\r"
     at_prompt_loose
     send "nohup /tmp/vps_on_vm_install.sh >/tmp/pub4_on_vm_install.log 2>&1 &\r"
     at_prompt_loose

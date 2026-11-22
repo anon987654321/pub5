@@ -353,13 +353,16 @@ when the underlying operation has its own receipt or health check.
 
 ## SSH
 
-One session at a time. Rapid reconnects trip pf bruteforce.
+PF has an explicit, unthrottled quick-pass rule for TCP port 22. There is no
+dynamic brute-force table, automatic source ban, or global state flush. HTTP,
+HTTPS and SMTP limits are local to their own service rules and cannot remove SSH
+states. SSH remains key-only with root login and password authentication disabled.
 
 | Target | Command |
 |--------|---------|
 | VM (apps) | `ssh -i ~/.ssh/id_ed25519_brgen dev@brgen.no` or `ssh brgen` |
 | VMM host | `ssh -p 31415 -i ~/.ssh/id_ed25519_brgen dev@server4.openbsd.amsterdam` |
-| Console | `vmctl console vm23` then `doas pfctl -t bruteforce -T flush` |
+| Console | `vmctl console vm23` |
 
 SSH aliases, host topology and provider access are kept in this runbook so live-operation guidance has one source.
 

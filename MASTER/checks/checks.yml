@@ -521,7 +521,7 @@ browser_policy:
 openbsd_pf_policy:
   require: OPENBSD/checks/pf_policy_check
   class: Deploy::PfPolicyCheck
-  pass: "PF policy: default-deny, scoped ingress and SSH/bruteforce ordering intact"
+  pass: "PF policy: default-deny, scoped ingress and an unthrottled SSH recovery path intact"
 
 # Source contract for the split edge/app response-security policy. This does not claim live CSP enforcement.
 security_headers_source:

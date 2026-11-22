@@ -1067,9 +1067,9 @@ operator_playbook:
 
     - id: pf_ssh_not_bruteforce
       area: openbsd
-      signal: "Operator assumes SSH lockout is pf bruteforce after rapid reconnects"
-      action: "Tracked pf.conf exempts SSH (pass in quick ... port 22) before bruteforce table. Bruteforce is fed by HTTP/HTTPS rate limits only. Lockouts are usually RAM/CPU saturation from parallel SSH or bin/ci - use tmux, one app CI at a time, flush bruteforce only when HTTP wedge suspected."
-      proof: "grep 'port 22' OPENBSD/mirror/etc/pf.conf shows quick pass before block quick from <bruteforce>"
+      signal: "Operator suspects a dynamic PF ban after an SSH reconnect fails"
+      action: "Tracked pf.conf keeps SSH on an unthrottled quick-pass rule and contains no dynamic source-ban table or global state flush. Inspect route, sshd, authentication and host load; do not flush unrelated PF state."
+      proof: "OPENBSD/checks/pf_policy_check.rb passes; PF has no <bruteforce> table, overload rule or flush global"
 
     - id: vps_one_ssh_no_parallel_ci
       area: deploy
