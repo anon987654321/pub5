@@ -24,12 +24,11 @@ module Master
         with_lock do
           current = load_record
           reuse = queued_reuse_state(current, goal:, scope:, resume_blocked:)
-          if reuse == :active
+          if %i[active blocked].include?(reuse)
             @record = current
             @id = current["id"]
             return self
           end
-          return self if reuse == :blocked
 
           raise active_mission_conflict(current, goal:, scope:) if active_for_other_target?(current, goal:, scope:)
 
