@@ -3376,7 +3376,7 @@ module Dilla
     # from the same seeded stream; an explicitly selected performer stays fixed.
     opts.performer = flags["performer"] unless flags["performer"].nil?
     opts.foley = flags["foley"] == true
-    opts.sample_loop = nil
+    opts.sample_loop = "" # suppress ambient SAMPLE_LOOP so replay inputs stay explicit
     opts.sample_vol = nil
     opts.sample_weight = nil
     opts.sample_slices = nil
