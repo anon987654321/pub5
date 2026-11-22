@@ -14,7 +14,7 @@ case "$app" in
   *) echo "rails-task: refused unknown app: $app" >&2; exit 64 ;;
 esac
 case "$task" in
-  bundle-install|bundle-check|ci-bundle-install|db-prepare|db-seed|assets-precompile|ci|db-storage-migrate|npm-cache|bundle-cache-prepare|overlay-initializers|overlay-public) [ "$#" -eq 2 ] || exit 64 ;;
+  bundle-check|db-prepare|db-seed|db-storage-migrate|npm-cache|overlay-initializers|overlay-public) [ "$#" -eq 2 ] || exit 64 ;;
   bundle-cas-hydrate)
     [ "$#" -eq 3 ] || exit 64
     printf "%s\n" "$database" | /usr/bin/grep -Eq "^ruby([0-9]{2}|[0-9]+[.][0-9]+)\$" || exit 64
@@ -98,8 +98,6 @@ candidate="/usr/local/bin/bundle$suffix"
 export SECRET_KEY_BASE
 
 case "$task" in
-  bundle-install)
-    command="mkdir -p .bundle && printf '%s\\n' '---' 'BUNDLE_PATH: /home/$app/.bundle/gems' > .bundle/config && $bundle config set --local frozen false && $bundle config set --local deployment true && $bundle config set --local without \"development test\" && RAILS_ENV=production $bundle install" ;;
   bundle-check)
     command="$bundle check" ;;
   npm-cache)
@@ -146,51 +144,6 @@ for source in "$cas_root"/*/*/*.gem; do
   cp "$source" "$target"
 done
 ' ;;
-  bundle-cache-prepare)
-    command='set -eu
-home="/home/$PUB4_TASK_APP"
-bundle_home="$home/.bundle"
-if [ -e "$bundle_home" ] || [ -L "$bundle_home" ]; then
-  [ -d "$bundle_home" ] && [ ! -L "$bundle_home" ] &&
-    [ "$(stat -f %u "$bundle_home")" = "$PUB4_TASK_UID" ] || {
-      echo "rails-task: .bundle must be a real app-owned directory" >&2
-      exit 1
-    }
-else
-  mkdir "$bundle_home"
-fi
-for part in gems cache; do
-  target="$bundle_home/$part"
-  if [ -e "$target" ] || [ -L "$target" ]; then
-    [ -d "$target" ] && [ ! -L "$target" ] &&
-      [ "$(stat -f %u "$target")" = "$PUB4_TASK_UID" ] || {
-        echo "rails-task: bundle $part path must be a real app-owned directory" >&2
-        exit 1
-      }
-  else
-    mkdir "$target"
-  fi
-done
-# The current broker contract is the PUB5_TASK_* set; the PUB4_TASK_* names
-# remain exported as compatibility aliases for the installed legacy callers.
-ruby_version=$("$PUB5_TASK_RUBY" -e "print RUBY_VERSION.split(46.chr).first(2).join")
-shared="/var/cache/pub4/bundle/ruby$ruby_version"
-if [ -d "$shared" ] && [ ! -L "$shared" ] &&
-   [ "$(stat -f %u "$shared")" -eq 0 ] && [ -d "$shared/gems" ] &&
-   [ ! -L "$shared/gems" ] && [ -d "$shared/cache" ] && [ ! -L "$shared/cache" ]; then
-  for part in gems cache; do
-    for entry in "$shared/$part"/*; do
-      [ -e "$entry" ] || [ -L "$entry" ] || continue
-      name=${entry##*/}
-      target="$bundle_home/$part/$name"
-      [ -e "$target" ] || [ -L "$target" ] || cp -R "$entry" "$target"
-    done
-  done
-fi
-'
-    ;;
-  ci-bundle-install)
-    command="$bundle config unset without && $bundle install --jobs=2" ;;
   db-storage-migrate)
     command='if [ ! -d db ]; then exit 0; fi
 [ ! -L db ] || { echo "rails-task: refusing db symlink" >&2; exit 1; }
@@ -210,8 +163,6 @@ done' ;;
     command="RAILS_ENV=production $bundle exec rails db:seed" ;;
   demo-seed)
     command="RAILS_ENV=production $bundle exec rails ${app}:demo_seed" ;;
-  assets-precompile)
-    command="RAILS_ENV=production $bundle exec rails assets:precompile" ;;
   schema-load)
     command="DISABLE_DATABASE_ENVIRONMENT_CHECK=1 RAILS_ENV=production $bundle exec rails db:schema:load:${database}" ;;
   secondary-db-check)
@@ -223,8 +174,6 @@ done' ;;
       ''|*[!A-Za-z0-9_]*|[!A-Za-z_]*) echo "rails-task: invalid schema table for $database" >&2; exit 1 ;;
     esac
     command="/usr/local/bin/sqlite3 $db_file \"select 1 from $table limit 1;\"" ;;
-  ci)
-    command="PUB5_RAILS_ROOT=/home/$app/pub4-rails/RAILS RAILS_ENV=test CI=1 PUB4_CI_GUARD=1 $bundle exec bin/ci" ;;
   overlay-initializers)
     command='shared=/home/dev/pub5/RAILS/__shared/config/initializers
 target=/home/$PUB4_TASK_APP/app/config/initializers

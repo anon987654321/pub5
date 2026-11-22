@@ -58,62 +58,44 @@ export SECRET_KEY_BASE_DUMMY=1
 # Gems first: db:prepare is the first `bundle exec`, and a gem the pull just
 # added (ferrum-0.17.2) stopped the deploy there with GemNotFound
 # while the install that would have fixed it waited two steps later.
-echo "==> bundle"
-# dev cannot write the system gem directory, and Bundler falls back to it
-# (mkdir /usr/local/lib/ruby/gems/3.4/cache/bundler) unless a path is set. The
-# path lives in each Gemfile's .bundle/config so rc.d's `bundle exec` as master
-# finds the same gems; /home/dev is group _pub4ci, which master belongs to.
+echo "==> verify preinstalled production bundles"
 BUNDLE_PATH_DEV=/home/dev/.bundle/master
-# `bundle config set --local` makes Bundler 4 re-resolve and rewrite Gemfile.lock,
-# and on the box that rewrite dropped the Rails git source, so the next
-# `bundle exec` died with "git source ... is not yet checked out". Write a setting
-# only when it is absent; the environment carries it for this script's own calls.
-bundle_config_once() { # dir key value
-  grep -qs "^BUNDLE_$2:" "$1/.bundle/config" || (cd "$1" && "$BUNDLE" config set --local "$2" "$3")
+export BUNDLE_WITHOUT=development:test BUNDLE_PATH="$BUNDLE_PATH_DEV" BUNDLE_FROZEN=true
+for gemfile in "$WEB/Gemfile" "$ROOT/MASTER/Gemfile"; do
+  (cd "${gemfile%/Gemfile}" && BUNDLE_GEMFILE="$gemfile" "$BUNDLE" check) || {
+    echo "vps_deploy_master: production bundle incomplete for $gemfile; build it on a matching OpenBSD builder" >&2
+    exit 1
+  }
+done
+asset_dir="$WEB/public/assets"
+asset_manifest="$asset_dir/.manifest.json"
+asset_stamp="$asset_dir/.pub5-build-sha"
+[ -d "$asset_dir" ] && [ ! -L "$asset_dir" ] || {
+  echo "vps_deploy_master: prebuilt public/assets directory missing; refusing host-side compilation" >&2
+  exit 1
 }
-bundle_config_once "$WEB" WITHOUT 'development:test'
-bundle_config_once "$WEB" PATH "$BUNDLE_PATH_DEV"
-export BUNDLE_WITHOUT=development:test BUNDLE_PATH="$BUNDLE_PATH_DEV"
-# Always install, never `check || install`: on the box `bundle check` re-resolves offline and
-# writes a lockfile without the Rails git source; `install` resolves in full and keeps it.
-"$BUNDLE" install
-# The tts-worker and media tools boot from MASTER/Gemfile, not web's. rc.d/master
-# only checks it now, because it runs as root; installing belongs here, as dev.
-bundle_config_once "$ROOT/MASTER" PATH "$BUNDLE_PATH_DEV"
-(cd "$ROOT/MASTER" && BUNDLE_GEMFILE=Gemfile "$BUNDLE" install)
-# From here the lock is read, never written: a later `bundle exec` re-resolved and wrote a lock
-# without the Rails git source, and the asset step died on it. rc.d runs frozen for the same reason.
-export BUNDLE_FROZEN=true
+[ -s "$asset_manifest" ] && [ ! -L "$asset_manifest" ] || {
+  echo "vps_deploy_master: prebuilt production asset manifest missing; refusing host-side compilation" >&2
+  exit 1
+}
+[ -s "$asset_stamp" ] && [ ! -L "$asset_stamp" ] || {
+  echo "vps_deploy_master: workstation asset attestation missing; refusing host-side compilation" >&2
+  exit 1
+}
+[ "$(cat "$asset_stamp")" = "${VPS_DEPLOY_SHA:-}" ] || {
+  echo "vps_deploy_master: assets do not match the pinned source SHA" >&2
+  exit 1
+}
+
+echo "==> db prepare"
+BUNDLE_GEMFILE="$WEB/Gemfile" BUNDLE_WITHOUT=development:test "$BUNDLE" exec rails db:prepare
 
 echo "==> db prepare"
 BUNDLE_WITHOUT=development:test "$BUNDLE" exec rails db:prepare
 
-echo "==> assets precompile"
-# rc.d master precompiles as root; dev cannot rewrite root-owned public/assets/assets.
-doas /bin/ksh -c '
-  set -eu
-  public=/home/dev/pub5/MASTER/web/public
-  for path in /home /home/dev /home/dev/pub5 /home/dev/pub5/MASTER /home/dev/pub5/MASTER/web "$public"; do
-    [ -d "$path" ] && [ ! -L "$path" ] || { echo "unsafe MASTER web path: $path" >&2; exit 1; }
-  done
-  assets=$public/assets
-  [ ! -L "$assets" ] || { echo "refusing symlinked assets directory" >&2; exit 1; }
-  if [ -d "$assets" ]; then
-    links=$(find "$assets" -type l -print -quit)
-    [ -z "$links" ] || { echo "symlink inside public/assets: $links" >&2; exit 1; }
-    rm -rf "$assets"
-  fi
-  links=$(find "$public" -type l -print -quit)
-  [ -z "$links" ] || { echo "symlink inside public tree: $links" >&2; exit 1; }
-  chown -R dev:dev "$public"
-'
-BUNDLE_WITHOUT=development:test "$BUNDLE" exec rails assets:build_face_runtime assets:build_face_modules_bundle assets:build_face_vision_bundle 2>/dev/null || true
-BUNDLE_WITHOUT=development:test "$BUNDLE" exec rails assets:precompile
-# rc.d master runs the daemon as `master`, which writes web/tmp and web/log and
-# nothing else under the checkout: both are dev:master 2775 (see the header of
-# etc/rc.d/master). The dev-run steps above leave tmp owned dev:dev 0755, and
-# Rails.cache then dies mkdir-ing tmp/cache, so every rate-limited request 500s
-# (2026-10-12: chat and /health, while / and /up still answered).
+echo "==> verify prebuilt assets"
+BUNDLE_WITHOUT=development:test BUNDLE_GEMFILE="$WEB/Gemfile" "$BUNDLE" exec ruby "$ROOT/MASTER/checks/runner.rb" master_web_assets
+
 echo "==> runtime dirs"
 doas /bin/ksh -c '
   set -eu

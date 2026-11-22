@@ -232,105 +232,33 @@ rc_pre() {
       exit 1
     }
   fi
-  # Propshaft must not re-digest public/assets/ (nested assets/assets wedges boot).
-  rm -rf /home/dev/pub5/MASTER/web/public/assets/assets 2>/dev/null || true
-  _face_ok=1
-  for _f in /home/dev/pub5/MASTER/web/public/face.js /home/dev/pub5/MASTER/web/public/face.modules.bundle.js /home/dev/pub5/MASTER/web/public/face_vision.bundle.js; do
-    [[ -f "$_f" ]] || _face_ok=0
-  done
-  if [[ "$_face_ok" = "0" ]]; then
-    (cd /home/dev/pub5/MASTER/web && RAILS_ENV=production "$_bundle" exec rails assets:build_face_runtime assets:build_face_modules_bundle assets:build_face_vision_bundle) 2>/dev/null || true
+  # Startup verifies workstation-built assets; it never repairs them by
+  # compiling on vm23. The deployer checks this same SHA before stopping services.
+  _head=$(git -C /home/dev/pub5 rev-parse HEAD 2>/dev/null) || {
+    logger -t master "cannot read pinned source SHA; refusing startup"
+    rm -f /home/dev/pub5/.deploying 2>/dev/null || true
+    return 1
+  }
+  _asset_dir=/home/dev/pub5/MASTER/web/public/assets
+  _asset_manifest=$_asset_dir/.manifest.json
+  _asset_stamp=$_asset_dir/.pub5-build-sha
+  if [[ ! -d "$_asset_dir" || -L "$_asset_dir" || ! -s "$_asset_manifest" || -L "$_asset_manifest" ||
+        ! -s "$_asset_stamp" || -L "$_asset_stamp" || "$(cat "$_asset_stamp" 2>/dev/null)" != "$_head" ]]; then
+    logger -t master "workstation-built assets missing, unsafe or stale for source $_head; refusing startup"
+    rm -f /home/dev/pub5/.deploying 2>/dev/null || true
+    return 1
   fi
-  _manifest=/home/dev/pub5/MASTER/web/public/assets/.manifest.json
-  _stamp=/home/dev/pub5/MASTER/web/tmp/.assets_precompile_stamp
-  # Every asset the chat shell loads comes from web/config/face_assets.yml via
-  # face_asset_paths.rb, so a new face module is covered the moment it is added
-  # to the manifest. The hand-maintained list this replaces covered 23 of 38
-  # files; the 15 it missed included particle_kernel.js, face.runtime.js and
-  # three.face.module.js — edit one of those, restart, and precompile was
-  # silently skipped with a stale fingerprint. The tail below is the non-asset
-  # inputs (stylesheet, service worker, the views themselves), which the
-  # manifest does not and should not describe.
-  _face_assets=$(cd /home/dev/pub5/MASTER/web && "$_ruby" script/face_asset_paths.rb 2>/dev/null)
-  _face_assets_rc=$?
-  _force_precompile=0
-  if [[ "$_face_assets_rc" != "0" ]] || [[ -z "$_face_assets" ]]; then
-    # The same rule the two stamp writes below keep, on the quieter half. An
-    # empty list narrows the digest to the hardcoded tail, which is exactly the
-    # stale fingerprint the paragraph above says this replaced: every
-    # manifest-described asset drops out of the fingerprint, the stamp still
-    # matches, and precompile is skipped with the face wrong. Fail toward the
-    # expensive answer instead.
-    logger -t master "face_asset_paths.rb produced no asset list - digest would be narrowed, precompiling instead of trusting the stamp"
-    _face_assets=""
-    _force_precompile=1
-  fi
-  _digest=$(cksum $_face_assets \
-    /home/dev/pub5/MASTER/web/public/face.part*.txt \
-    /home/dev/pub5/MASTER/web/public/face.css \
-    /home/dev/pub5/MASTER/web/public/face.js \
-    /home/dev/pub5/MASTER/web/public/face.modules.bundle.js \
-    /home/dev/pub5/MASTER/web/public/sw.js \
-    /home/dev/pub5/MASTER/web/app/views/shared/_face_boot.html.erb \
-    /home/dev/pub5/MASTER/web/app/views/chat/index.html.erb 2>/dev/null | cksum)
-  _skip=0
-  if [[ "$_force_precompile" = "0" ]] && [[ -f "$_manifest" ]] && [[ -f "$_stamp" ]] && [[ "$(cat "$_stamp" 2>/dev/null)" = "$_digest" ]]; then
-    _skip=1
-  fi
-  if [[ "$_skip" = "0" ]]; then
-    # Stamp only on success. `|| true` swallowed a failed precompile and the
-    # stamp went down regardless — and because the skip test above is
-    # stamp-equals-digest, one failure then made every later start skip
-    # precompile as well. Nothing retries until an input file changes.
-    #
-    # Measured 2026-08-13 on vm23: MASTER/web had no public/assets directory at
-    # all, a stamp from that day's deploy, and /health reporting
-    # face_runtime_digest: null — the field the deploy-confidence playbook says
-    # to check. It stayed invisible because public/ is served undigested, so the
-    # face kept working while every fingerprinted asset was missing.
-    if (cd /home/dev/pub5/MASTER/web && RAILS_ENV=production "$_bundle" exec rails assets:precompile) 2>/dev/null; then
-      if [[ "$_force_precompile" = "1" ]]; then
-        logger -t master "precompiled but stamp not written: the digest was computed without the manifest list and would license a skip"
-      else
-        mkdir -p /home/dev/pub5/MASTER/web/tmp
-        echo "$_digest" > "$_stamp"
-      fi
-    else
-      logger -t master "assets:precompile failed - stamp not written, will retry next start"
-    fi
-  fi
-  # Load-bearing asset check: refuse to start serving a broken face.js/manifest
-  # mismatch (the exact class of bug that wedged the primer boot on 2026-07-10).
-  # One self-heal precompile retry before actually blocking the start.
   _check=/home/dev/pub5/MASTER/checks/runner.rb
-  _check_name=master_web_assets
-  if [[ -f "$_check" ]]; then
-    _check_out=$(cd /home/dev/pub5/MASTER/web && RAILS_ENV=production "$_bundle" exec ruby "$_check" "$_check_name" 2>&1)
-    _check_rc=$?
-    if [[ "$_check_rc" != "0" ]]; then
-      logger -t master "assets check failed, forcing fresh precompile and retrying once: $_check_out"
-      # Same rule as the stamp above, and this is the path where breaking it
-      # hurts most: the check has already said the assets are wrong, so stamping
-      # a precompile that failed makes every later start skip the retry.
-      if (cd /home/dev/pub5/MASTER/web && RAILS_ENV=production "$_bundle" exec rails assets:precompile) 2>/dev/null; then
-        if [[ "$_force_precompile" = "1" ]]; then
-          logger -t master "retry precompiled but stamp not written: narrowed digest"
-        else
-          mkdir -p /home/dev/pub5/MASTER/web/tmp
-          echo "$_digest" > "$_stamp"
-        fi
-      else
-        logger -t master "retry precompile failed - stamp not written, the check below decides the start"
-      fi
-      _check_out=$(cd /home/dev/pub5/MASTER/web && RAILS_ENV=production "$_bundle" exec ruby "$_check" "$_check_name" 2>&1)
-      _check_rc=$?
-      if [[ "$_check_rc" != "0" ]]; then
-        logger -t master "CRITICAL: assets check still failing after retry, refusing to start with broken assets: $_check_out"
-        rm -f /home/dev/pub5/.deploying 2>/dev/null || true
-        exit 1
-      fi
-      logger -t master "assets check passed after retry precompile"
-    fi
+  if [[ ! -f "$_check" || -L "$_check" ]]; then
+    logger -t master "trusted master asset check missing; refusing startup"
+    rm -f /home/dev/pub5/.deploying 2>/dev/null || true
+    return 1
+  fi
+  _check_out=$(cd /home/dev/pub5/MASTER/web && RAILS_ENV=production "$_bundle" exec ruby "$_check" master_web_assets 2>&1)
+  if [[ $? != 0 ]]; then
+    logger -t master "CRITICAL: workstation-built assets failed verification; refusing startup: $_check_out"
+    rm -f /home/dev/pub5/.deploying 2>/dev/null || true
+    return 1
   fi
   sleep 1
 }

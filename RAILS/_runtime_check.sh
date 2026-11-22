@@ -57,7 +57,7 @@ run_rails_as_app() {
   esac
   [[ $app_dir == "/home/${app_name}/app" ]] || { log_err "run_rails_as_app: refused app path: $app_dir"; return 2; }
   case "$task" in
-    bundle-install|ci-bundle-install|bundle-check|bundle-cache-prepare|db-storage-migrate|db-prepare|db-seed|demo-seed|assets-precompile|ci|overlay-initializers|overlay-public) [[ -z $database ]] || return 2 ;;
+    bundle-check|db-storage-migrate|db-prepare|db-seed|demo-seed|overlay-initializers|overlay-public) [[ -z $database ]] || return 2 ;;
     schema-load|secondary-db-check) [[ $database == cache || $database == queue || $database == cable ]] || return 2 ;;
     bundle-cas-hydrate)
       [[ $database == ruby[0-9][0-9] || $database == ruby[0-9].[0-9] ]] || return 2 ;;
@@ -76,68 +76,49 @@ run_rails_as_app() {
   fi
 }
 
-# rails_runtime_check APP_NAME APP_DIR — bundle check + db:prepare + bin/ci + master scan before rcctl restart.
+# rails_runtime_check APP_NAME APP_DIR — read-only bundle, asset and essential DB checks.
 rails_runtime_check() {
   local app_name=${1:-}
   local app_dir=${2:-$1}
-  [[ -d $app_dir ]] || {
-    log_err "rails_runtime_check: missing ${app_dir}"
+  local checkout_sha asset_dir asset_manifest asset_stamp
+  [[ -d $app_dir && ! -L $app_dir ]] || {
+    log_err "rails_runtime_check: missing or unsafe ${app_dir}"
     return 1
   }
-  if [[ ${SKIP_RUNTIME_CHECK:-} == 1 ]]; then
-    if [[ ${I_UNDERSTAND_FAST_DEPLOY:-0} != 1 ]]; then
-      log_err "runtime check skip requires I_UNDERSTAND_FAST_DEPLOY=1"
-      return 1
-    fi
-    log_warn "runtime check skipped by explicit fast-deploy acknowledgement"
-    return 0
-  fi
+  checkout_sha=$(git -C /home/dev/pub5 rev-parse HEAD) || {
+    log_err "cannot read pinned checkout SHA"
+    return 1
+  }
+  [[ ${VPS_DEPLOY_SHA:-} == "$checkout_sha" && ${VPS_DEPLOY_CI_SHA:-} == "$checkout_sha" ]] || {
+    log_err "runtime check requires workstation CI attestation for the exact pinned SHA"
+    return 1
+  }
+  asset_dir="$app_dir/public/assets"
+  asset_manifest="$asset_dir/.manifest.json"
+  asset_stamp="$asset_dir/.pub5-build-sha"
+  [[ -d $asset_dir && ! -L $asset_dir && -s $asset_manifest && ! -L $asset_manifest &&
+     -s $asset_stamp && ! -L $asset_stamp ]] || {
+    log_err "workstation-built production assets or SHA marker are missing"
+    return 1
+  }
+  [[ $(<"$asset_stamp") == "$checkout_sha" ]] || {
+    log_err "production asset SHA does not match the pinned checkout"
+    return 1
+  }
   if [[ -n $app_name ]]; then
-    master_scan_dep "$app_name" || { log_err "MASTER scan failed"; return 1; }
-  fi
-  log "runtime check: ci bundle + db:prepare + bin/ci"
-  if [[ -n $app_name ]]; then
-    deploy_status "$app_name" "runtime check: bundle install"
-    run_rails_as_app "$app_name" "$app_dir" \
-      "ci-bundle-install" \
-      || { deploy_status "$app_name" "runtime check: bundle install" "failed"; log_err "ci bundle install failed"; return 1; }
     deploy_status "$app_name" "runtime check: bundle check"
     run_rails_as_app "$app_name" "$app_dir" "bundle-check" \
-      || { deploy_status "$app_name" "runtime check: bundle check" "failed"; log_err "bundle check failed"; return 1; }
+      || { deploy_status "$app_name" "runtime check: bundle check" "failed"; log_err "production bundle check failed"; return 1; }
     deploy_status "$app_name" "runtime check: db:prepare"
-    run_rails_as_app "$app_name" "$app_dir" \
-      "db-prepare" \
+    run_rails_as_app "$app_name" "$app_dir" "db-prepare" \
       || { deploy_status "$app_name" "runtime check: db:prepare" "failed"; log_err "db:prepare failed"; return 1; }
     deploy_status "$app_name" "runtime check: secondary dbs"
     rails_prepare_secondary_dbs_as_app "$app_name" "$app_dir" \
       || { deploy_status "$app_name" "runtime check: secondary dbs" "failed"; return 1; }
-    deploy_status "$app_name" "runtime check: assets precompile"
-    rails_assets_precompile_as_app "$app_name" "$app_dir" \
-      || { deploy_status "$app_name" "runtime check: assets precompile" "failed"; return 1; }
-    [[ -x ${app_dir}/bin/ci ]] || {
-      deploy_status "$app_name" "runtime check: bin/ci" "failed"
-      log_err "runtime check: missing executable ${app_dir}/bin/ci"
-      return 1
-    }
-    local rails_tree=${PUB5_RAILS_ROOT:-/home/dev/pub5/RAILS}
-    if [[ -d $rails_tree ]]; then
-      # traversal is group-based (710 dev:_pub5ci) — vps_ci.sh converges it;
-      # this check must not widen /home/dev to the world.
-      chmod -R u+rX,g+rX "$rails_tree" 2>/dev/null || true
-    fi
-    deploy_status "$app_name" "runtime check: bin/ci"
-    run_rails_as_app "$app_name" "$app_dir" \
-      "ci" \
-      || { deploy_status "$app_name" "runtime check: bin/ci" "failed"; log_err "bin/ci failed"; return 1; }
   else
     (cd "$app_dir" && bundle_exec check) || { log_err "bundle check failed"; return 1; }
     (cd "$app_dir" && RAILS_ENV=production bundle_exec exec rails db:prepare) \
       || { log_err "db:prepare failed"; return 1; }
-    [[ -x ${app_dir}/bin/ci ]] || {
-      log_err "runtime check: missing executable ${app_dir}/bin/ci"
-      return 1
-    }
-    (cd "$app_dir" && bundle_exec exec bin/ci) || { log_err "bin/ci failed"; return 1; }
   fi
-  log_ok "runtime check passed"
+  log_ok "runtime bundle, assets and database checks passed"
 }

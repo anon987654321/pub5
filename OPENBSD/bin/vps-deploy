@@ -41,7 +41,7 @@ esac
 # doas strips the caller environment (the dev rule has no keepenv — intentional,
 # so RUBYOPT and friends cannot cross the privilege boundary). Re-exec through
 # /usr/bin/env with a prefix allowlist (VPS_DEPLOY_*, PUB5_DEPLOY_*, plus PUB5_ROOT,
-# SKIP_CI, I_UNDERSTAND_FAST_DEPLOY) so pin, preflight, canary and logging
+# I_UNDERSTAND_FAST_DEPLOY) so pin, preflight, canary and logging
 # knobs survive. Not keepenv: RUBYOPT and friends still cannot cross.
 if [[ $(id -u) -ne 0 ]]; then
   if command -v doas >/dev/null 2>&1; then
@@ -55,7 +55,7 @@ if [[ $(id -u) -ne 0 ]]; then
     # the deploy reads. New knobs named under those prefixes need no edit here.
     for _name in ${(k)parameters}; do
       case $_name in
-        VPS_DEPLOY_*|PUB5_DEPLOY_*|PUB5_ROOT|SKIP_CI|I_UNDERSTAND_FAST_DEPLOY)
+        VPS_DEPLOY_*|PUB5_DEPLOY_*|PUB5_ROOT|I_UNDERSTAND_FAST_DEPLOY)
           deploy_env+=("$_name=${(P)_name}")
           ;;
       esac
@@ -858,21 +858,6 @@ restore_preflight_checkout() {
   log "preflight checkout restored ref=$preflight_back_to"
 }
 
-# Vendorables are not tracked in git (TREE_CONTRACTS.md, 8 November 2026):
-# master's smart-turn runtime bytes are fetched when absent, with pinned
-# versions and sha256-verified digests. Failure leaves ?smart_turn=1
-# unavailable — the feature is default-off — and the deploy continues.
-ensure_smart_turn_assets() {
-  local vendor="$repo/MASTER/web/public/vendor/onnxruntime"
-  local model="$repo/MASTER/web/public/models/smart-turn-v3.2-cpu.onnx"
-  [[ -f $vendor/ort-wasm-simd-threaded.wasm && -f $vendor/ort.wasm.min.mjs && -f $model ]] && return 0
-  print "vps-deploy: smart_turn assets absent; fetching pinned, checksummed copies"
-  if ! run_as_deploy_user "cd $(printf '%q' "$repo/MASTER/web") && sh script/build_smart_turn.sh"; then
-    print -u2 "vps-deploy: smart_turn fetch failed; ?smart_turn=1 stays unavailable (default-off) until MASTER/web/script/build_smart_turn.sh succeeds"
-  fi
-}
-
-
 # One durable receipt belongs to the lock-owning parent. Child app deploys
 # inherit the ID, snapshot and owner identity and update only the current stage.
 if (( lock_owner )) && [[ $app != recover ]]; then
@@ -1108,6 +1093,36 @@ fi
 # checkout where it was. VPS_DEPLOY_SKIP_PREFLIGHT=1 is break-glass and, like the
 # runtime-check skip, needs the human-only I_UNDERSTAND_FAST_DEPLOY=1.
 deploy_refuse() { log "refused: $1"; print -u2 "vps-deploy: refused - $1"; print -u2 "            Nothing was stopped."; exit 1 }
+
+admit_host_load() {
+  local sample load_raw load_five swap_output swap_blocks free_swap
+  local pressure_file=/var/db/pub5/cpu-pressure pressure_stamp pressure_busy now
+  for sample in 1 2; do
+    load_raw=$(${VPS_DEPLOY_SYSCTL:-sysctl} -n vm.loadavg 2>/dev/null) \
+      || deploy_refuse "cannot read vm.loadavg; admission is fail-closed"
+    load_five=$("$RUBY" -e 'values = ARGV.fetch(0).scan(/[0-9]+(?:[.][0-9]+)?/); abort "bad vm.loadavg" unless values.length == 3; print values[1]' "$load_raw" 2>/dev/null) \
+      || deploy_refuse "cannot parse five-minute load; admission is fail-closed"
+    "$RUBY" -e 'n = Float(ARGV.fetch(0)); exit(n < 2.0 ? 0 : 1)' "$load_five" >/dev/null 2>&1 \
+      || deploy_refuse "five-minute load $load_five is not below 2.0"
+    swap_output=$(${VPS_DEPLOY_SWAPCTL:-swapctl} -s 2>/dev/null) \
+      || deploy_refuse "cannot read swap status"
+    swap_blocks=$("$RUBY" -e 'row = ARGV.fetch(0).lines.reject { |line| line.match?(/\\A\\s*Device/i) }.last; fields = row.to_s.split; abort "bad swapctl output" unless fields.length >= 4 && fields[1..3].all? { |value| value.match?(/\\A[0-9]+\\z/) }; print fields[3]' "$swap_output" 2>/dev/null) \
+      || deploy_refuse "cannot parse free swap; admission is fail-closed"
+    free_swap=$(( swap_blocks * 512 / 1048576 ))
+    (( free_swap >= 400 )) || deploy_refuse "only $free_swap MB swap is free; admission floor is 400 MB"
+    if [[ -e $pressure_file ]]; then
+      [[ -f $pressure_file && ! -L $pressure_file ]] || deploy_refuse "CPU-pressure state is not a regular file"
+      read pressure_stamp pressure_busy < "$pressure_file" || deploy_refuse "cannot read CPU-pressure state"
+      now=$(date +%s)
+      [[ $pressure_stamp == <-> && $pressure_busy == <-> && $now == <-> ]] || deploy_refuse "cannot parse CPU-pressure state"
+      if (( now >= pressure_stamp && now - pressure_stamp <= 420 && pressure_busy >= 80 )); then
+        deploy_refuse "sustained CPU pressure is active ($pressure_busy% busy)"
+      fi
+    fi
+    log "admission sample $sample/2 passed (5m load=$load_five, free swap=${free_swap}MB)"
+    (( sample == 1 )) && sleep 60
+  done
+}
 if (( lock_owner )); then
   set_stage pin
     retry "${VPS_DEPLOY_GIT_RETRIES:-3}" 2 git_as_deploy_user fetch -q origin main \
@@ -1186,11 +1201,7 @@ fi
   (( ${#DEPLOY_ALL} )) || deploy_refuse "the pinned deployment inventory has no active apps"
   deploy_app_group=$(inventory_app_group "$app")
   if [[ $deploy_app_group == rails ]]; then
-    [[ ${SKIP_CI:-0} != 1 ]] || deploy_refuse "SKIP_CI=1 is forbidden; workstation CI attestation is required"
     [[ ${VPS_DEPLOY_CI_SHA:-} == "$pin" ]] || deploy_refuse "Rails app has no workstation CI attestation for pinned commit $pin"
-  fi
-  if [[ $deploy_target_kind == all || $deploy_app_group == master ]]; then
-    ensure_smart_turn_assets
   fi
 
 # The deployment sequence is data in RAILS/apps.yml. Degraded mode
@@ -1270,9 +1281,7 @@ write_stamp() {
 set_stage "$deploy_app_group"
 if [[ $deploy_app_group == master ]]; then
   print "vps-deploy: master web"
-  # master's bundle, native gem builds and precompile run as long as an app's CI,
-  # and this branch never reached the keeper below: on 2026-10-27 the guard read
-  # deploy=0 through a 30-minute master deploy and shed amber and bsdports twice.
+  admit_host_load
   keep_deploy_flag
   settle_boots
   if zsh "$repo/OPENBSD/bin/vps_deploy_master.sh"; then
@@ -1351,6 +1360,7 @@ done
 set_stage preflight
 print "vps-deploy: $app (preflight load)"
 admin_request resource-guard || true
+admit_host_load
 
 keep_deploy_flag
 
@@ -1403,6 +1413,16 @@ set_stage sync+bundle-check
 print "vps-deploy: $app (sync + read-only bundle check)"
 zsh "$repo/OPENBSD/bin/vps_ci.sh" "$app"
 
+set_stage assets-attestation
+asset_dir="/home/${app}/app/public/assets"
+asset_manifest="$asset_dir/.manifest.json"
+asset_stamp="$asset_dir/.pub5-build-sha"
+[[ -d $asset_dir && ! -L $asset_dir ]] || deploy_refuse "$app prebuilt public/assets directory is missing"
+[[ -f $asset_manifest && ! -L $asset_manifest && -s $asset_manifest ]] || deploy_refuse "$app production asset manifest is missing; build on the workstation and stage it"
+[[ -f $asset_stamp && ! -L $asset_stamp && -s $asset_stamp ]] || deploy_refuse "$app has no workstation asset-build attestation; vm23 will not precompile"
+asset_sha=$(<"$asset_stamp")
+[[ $asset_sha == "$pin" ]] || deploy_refuse "$app assets are for ${asset_sha:-unknown}, not pinned commit $pin"
+
 # Primary database, then the cache/queue/cable schemas.
 #
 # db_create_migrate_as_app runs db:prepare, which is idempotent — it creates the
@@ -1418,7 +1438,6 @@ print "vps-deploy: $app (primary db migrate + secondary schemas)"
 . "$repo/RAILS/_bundle.sh"
 . "$repo/RAILS/_runtime_check.sh"
 . "$repo/RAILS/_database.sh"
-. "$repo/RAILS/_assets.sh"
 # Same reason RAILS/_deploy.sh stops first: db:prepare hangs on the write
 # lock a live Falcon worker already holds on production.sqlite3.
 print "vps-deploy: $app (stop for sqlite migrate)"
@@ -1427,17 +1446,10 @@ app_stopped=1
 own_stops+=("$app")
 db_create_migrate_as_app "$app" "/home/${app}/app"
 
-# The SKIP_CI=1 path (${app}.sh -> deploy_tracked_app -> rails_runtime_check)
-# already precompiles as part of its check. The default ci+sync path
-# (vps_ci.sh) only runs tests against a throwaway test DB and never
-# touches production assets -- without this, public/assets/ is simply
-# never created for a plain `vps-deploy $app` run, so Propshaft 404s
-# every asset_path() and the page renders with no CSS at all. Safe to
-# call unconditionally: Propshaft precompile is idempotent.
-set_stage precompile
-print "vps-deploy: $app (assets precompile)"
-settle_boots
-rails_assets_precompile_as_app "$app" "/home/${app}/app" || exit 1
+# Static asset generation is workstation-only. The exact SHA marker was
+# verified before database or service changes.
+set_stage assets-verified
+print "vps-deploy: $app (workstation-built assets verified)"
 
 set_stage restart
 print "vps-deploy: $app (restart)"

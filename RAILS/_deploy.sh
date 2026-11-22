@@ -18,7 +18,7 @@ typeset _deploy_sh_dir=${${(%):-%x}:A:h}
 . "${_deploy_sh_dir}/_runtime_check.sh"
 . "${_deploy_sh_dir}/_service.sh"
 
-# deploy_tracked_app APP_NAME — copy the app tree, install bundle/db/service, then restart.
+# deploy_tracked_app APP_NAME — sync the app tree, verify bundle/assets, migrate and restart.
 deploy_tracked_app() {
   local app_name=${1:-$APP_NAME}
   case "$app_name" in
@@ -93,23 +93,30 @@ deploy_tracked_app() {
   # The app-user sync preserves log, storage and compiled public/assets in the
   # staged replacement. No root chown of checkout-owned tree content is needed.
 
-  deploy_status "$app_name" "master scan"
-  if ! master_scan_dep "$app_name"; then
-    log "MASTER scan violations - aborting per laws.yml"
-    deploy_status "$app_name" "master scan" "failed"
-    exit 1
-  fi
-
-  cd "$APP_DIR"
-
-  run_rails_as_app "$app_name" "$APP_DIR" "bundle-cache-prepare" || {
-    log_err "bundle cache preparation failed for $app_name"
+  local repo_root checkout_sha asset_dir asset_manifest asset_stamp
+  repo_root="${_deploy_sh_dir:h}"
+  checkout_sha=$(git -C "$repo_root" rev-parse HEAD) || {
+    log_err "cannot read pinned checkout SHA"
+    return 1
+  }
+  [[ ${VPS_DEPLOY_SHA:-} == "$checkout_sha" && ${VPS_DEPLOY_CI_SHA:-} == "$checkout_sha" ]] || {
+    log_err "refusing per-app deploy without workstation CI attestation for exact checkout SHA"
+    return 1
+  }
+  run_rails_as_app "$app_name" "$APP_DIR" "bundle-check" || {
+    log_err "preinstalled production bundle is incomplete; build it on a matching OpenBSD builder"
+    return 1
+  }
+  asset_dir="$APP_DIR/public/assets"
+  asset_manifest="$asset_dir/.manifest.json"
+  asset_stamp="$asset_dir/.pub5-build-sha"
+  [[ -d $asset_dir && ! -L $asset_dir && -s $asset_manifest && ! -L $asset_manifest &&
+     -s $asset_stamp && ! -L $asset_stamp && "$(<"$asset_stamp")" == "$checkout_sha" ]] || {
+    log_err "workstation-built assets are missing or do not match the pinned SHA"
     return 1
   }
 
-  deploy_status "$app_name" "bundle install"
-  bundle_install_as_app "$APP_NAME" "$APP_DIR"
-  log_ok "production bundle installed for ${app_name}"
+  cd "$APP_DIR"
   # Both the one-time db/ → storage/ relocation and db:prepare mutate the live
   # SQLite files. A Falcon worker can keep the source inode open and hold WAL
   # locks, so prove the service is stopped before either operation begins.
