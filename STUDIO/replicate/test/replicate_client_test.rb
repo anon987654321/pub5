@@ -411,6 +411,48 @@ class TestStudioReplicateClientPaths < Minitest::Test
     end
   end
 
+  def test_download_dns_accepts_public_ipv6_only_answers
+    addresses = ["2001:4860:4860::8888"]
+
+    Studio::ReplicateClient.stub(:resolve_download_addresses, ->(_host) { addresses }) do
+      assert_equal addresses.fetch(0), Studio::ReplicateClient.public_download_address!("replicate.delivery")
+    end
+  end
+
+  def test_download_dns_rejects_private_ipv6_and_public_then_private_answers
+    [
+      ["fd00::1"],
+      ["93.184.216.34", "fd00::1"]
+    ].each do |addresses|
+      Studio::ReplicateClient.stub(:resolve_download_addresses, ->(_host) { addresses }) do
+        assert_raises(ArgumentError) do
+          Studio::ReplicateClient.public_download_address!("replicate.delivery")
+        end
+      end
+    end
+  end
+
+  def test_download_rejects_redirects_without_following_the_location
+    Dir.mktmpdir do |directory|
+      target = File.join(directory, "audio.wav")
+      File.binwrite(target, "previous output")
+      response = FakeResponse.new(
+        code: "302",
+        headers: { "location" => "https://127.0.0.1/private", "content-length" => "0" }
+      )
+
+      with_http(response) do
+        error = assert_raises(RuntimeError) do
+          @client.download_url("https://replicate.delivery/audio.wav", target)
+        end
+        assert_match(/download failed 302/, error.message)
+      end
+
+      assert_equal "previous output", File.binread(target)
+      assert_empty Dir.children(directory).grep(/replicate-download-/)
+    end
+  end
+
   def test_download_is_atomic_and_streamed_under_the_declared_byte_cap
     Dir.mktmpdir do |directory|
       target = File.join(directory, "audio.wav")
