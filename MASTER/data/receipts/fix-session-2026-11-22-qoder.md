@@ -2615,3 +2615,15 @@ this API was used without replacing the repository's pinned dependency.
 The repository Minitest files, full Ruby syntax/test sweep, MASTER/bin/check,
 real Chromium attach/teardown and end-to-end vision delivery remain **NOT_RUN**
 in this environment.
+
+Browser diagnostic addendum — 2026-11-22:
+- The internal BrowserBroker::Handle now has the same bounded inspect, to_s
+  and JSON projection. Its CDP endpoint, profile path and process id are omitted;
+  only host and persistence state remain visible.
+- Added a regression to the existing test_browser_broker.rb. Isolated Ruby
+  3.3.8 smoke execution for Lease and Handle redaction returned PASS.
+- Commits: 6448c8fc2789bca6eecd1289f0fc721281968b58 (Handle projection);
+  9301e1aae913adf35a9ac4ff43bdf32714dce975 (Handle regression).
+- Repository Minitest and complete MASTER checks remain NOT_RUN. The direct
+  lease.cdp_url accessor used by trusted adapters remains present, so this
+  does not close the narrow-session/API boundary or Issue #5.
