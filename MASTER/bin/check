@@ -270,6 +270,7 @@ rescue Timeout::Error, SystemCallError
 end
 
 def check_git_metadata(root)
+  repository_root = check_git_value(root, "rev-parse", "--show-toplevel") || root
   checked_out_sha = check_git_value(root, "rev-parse", "--verify", "HEAD")
   branch = check_git_value(root, "branch", "--show-current")
   main_ref = if check_git_value(root, "rev-parse", "--verify", "refs/heads/main")
@@ -284,7 +285,7 @@ def check_git_metadata(root)
   repository = repository_candidate if repository_candidate.match?(/\A[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+\z/)
 
   {
-    repository: repository || File.basename(root),
+    repository: repository || File.basename(repository_root),
     branch: branch,
     main_sha: main_sha,
     main_ref: main_ref,
