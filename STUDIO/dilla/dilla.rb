@@ -43,7 +43,7 @@ module Dilla
   ENGINE_ROOT = File.expand_path(__dir__)
   DATA_DIR = File.join(ENGINE_ROOT, "data")
   SCRIPT_PATH = File.expand_path(__FILE__)
-  VERSION = "4.2.0"
+  VERSION = "4.3.0"
   SAMPLE_RATE = 44_100
 
   module_function
@@ -162,6 +162,10 @@ module Dilla
       opts.mode = :audit
       args.shift
       opts.source = args.shift or abort "audit: provide the rendered WAV path"
+    when "reproduce"
+      opts.mode = :reproduce
+      args.shift
+      opts.source = args.shift or abort "reproduce: provide the original .provenance.json path"
     when "output-path"
       opts.mode = :output_path
       args.shift
@@ -253,6 +257,8 @@ module Dilla
         ruby dilla.rb output-path dilla-render-directory [ISO8601]
         ruby dilla.rb output-path reference-root
       ruby dilla.rb audit PATH.wav              verify sidecars, WAV structure and checksums
+      ruby dilla.rb reproduce TAKE.provenance.json --out replay.wav
+                                                 rerender the WAV only; verify source/runtime fingerprints
         ruby dilla.rb demo-each                  catalogue, one mp3 per track
       sample flip:
         SAMPLE_LOOP=rights-cleared.wav [--sample-vol 0.42] [--sample-weight 0.6] [--sample-slices 8]
@@ -274,6 +280,8 @@ module Dilla
     when :help then puts help_text
     when :output_path then output_path(opts)
     when :audit then puts JSON.pretty_generate(audit_render(opts.source, overwrite: opts.overwrite))
+    when :reproduce
+      puts JSON.pretty_generate(reproduce_render(opts.source, out: opts.out, overwrite: opts.overwrite))
     when :list then print_list
     when :reference then reference(opts)
     when :industrial_techno then render_industrial_techno(opts)
@@ -3235,12 +3243,170 @@ module Dilla
         "bytes" => File.size(wav_path), "sha256" => Digest::SHA256.file(wav_path).hexdigest
       },
       "files" => {
+        "quality" => artifact_record("#{base}.quality.json"),
+        "session" => artifact_record("#{base}.session.json"),
         "midi" => artifact_record(midi_path),
         "mp3" => artifact_record(mp3_path)
       }.compact
     }
     Dilla.atomic_write("#{base}.provenance.json", JSON.pretty_generate(data))
     data
+  end
+
+  # Re-render only the lossless WAV master from a pinned provenance record.
+  # External sample decoding, MP3 encoding and video output are deliberately
+  # excluded until their executable versions are part of the receipt.
+  def reproduce_render(provenance_path, out:, overwrite: false)
+    source_path = File.expand_path(provenance_path.to_s)
+    suffix = ".provenance.json"
+    raise ArgumentError, "reproduce expects a .provenance.json file" unless source_path.end_with?(suffix)
+    raise ArgumentError, "provenance file is missing or unsafe" unless File.file?(source_path) && !File.symlink?(source_path)
+    raise ArgumentError, "provenance file exceeds 2 MiB" if File.size(source_path) > 2 * 1024 * 1024
+
+    provenance = JSON.parse(File.read(source_path))
+    raise ArgumentError, "unsupported provenance engine" unless provenance["engine"] == "dilla"
+    raise ArgumentError, "provenance version does not match Dilla #{VERSION}" unless provenance["version"] == VERSION
+    raise ArgumentError, "Ruby runtime differs from the original render" unless provenance["ruby"] == RUBY_VERSION
+
+    execution = provenance["execution"]
+    raise ArgumentError, "provenance execution record is missing" unless execution.is_a?(Hash)
+    engine_sources = execution["engine_sources"]
+    raise ArgumentError, "provenance engine-source map is missing" unless engine_sources.is_a?(Hash)
+    current_paths = [
+      SCRIPT_PATH,
+      File.join(ENGINE_ROOT, "analog_core.rb"),
+      *Dir[File.join(DATA_DIR, "*.json")].sort
+    ].uniq
+    current_sources = current_paths.to_h do |path|
+      [path.delete_prefix("#{ENGINE_ROOT}/"), Digest::SHA256.file(path).hexdigest]
+    end
+    unless engine_sources.keys.sort == current_sources.keys.sort
+      raise ArgumentError, "renderer source inventory changed; this take cannot be replayed by the current engine"
+    end
+    current_sources.each do |relative, digest|
+      recorded = engine_sources.fetch(relative)
+      unless recorded.is_a?(Hash) && recorded["sha256"] == digest
+        raise ArgumentError, "renderer source changed: #{relative}"
+      end
+    end
+    renderer_digest = Digest::SHA256.file(SCRIPT_PATH).hexdigest
+    raise ArgumentError, "renderer fingerprint mismatch" unless execution["renderer_sha256"] == renderer_digest
+    theory_digest = Digest::SHA256.file(File.join(DATA_DIR, "music_theory.json")).hexdigest
+    raise ArgumentError, "music-theory fingerprint mismatch" unless execution["music_theory_sha256"] == theory_digest
+
+    seed = Integer(provenance.fetch("seed"))
+    source = provenance["source"]
+    raise ArgumentError, "source record is missing" unless source.is_a?(Hash)
+    sample = source["sample"]
+    unless sample.is_a?(Hash) && sample["status"] == "not_used" &&
+           source["sample_rights_status"] == "not_used"
+      raise ArgumentError, "sample-based renders are not replayable yet: the sample decoder version and rights attestation are not pinned"
+    end
+
+    base = source_path.delete_suffix(suffix)
+    session_path = "#{base}.session.json"
+    quality_path = "#{base}.quality.json"
+    render_path = "#{base}.wav"
+    records = provenance["files"]
+    raise ArgumentError, "provenance artifact hashes are missing; legacy take cannot be replayed safely" unless records.is_a?(Hash)
+
+    { "session" => session_path, "quality" => quality_path }.each do |kind, path|
+      record = records[kind]
+      unless record.is_a?(Hash) && record["path"].to_s != "" &&
+             File.basename(record["path"].to_s) == File.basename(path) &&
+             File.file?(path) && !File.symlink?(path)
+        raise ArgumentError, "#{kind} sidecar is missing or not bound to this take"
+      end
+      raise ArgumentError, "#{kind} sidecar byte count changed" unless File.size(path) == record["bytes"].to_i
+      raise ArgumentError, "#{kind} sidecar digest changed" unless Digest::SHA256.file(path).hexdigest == record["sha256"]
+    end
+
+    session = JSON.parse(File.read(session_path))
+    quality = JSON.parse(File.read(quality_path))
+    raise ArgumentError, "session seed differs from provenance" unless session["seed"] == seed
+    raise ArgumentError, "session progression differs from provenance" unless
+      session.dig("progression", "id") == source["progression_id"]
+    raise ArgumentError, "session performer differs from provenance" unless
+      session.dig("performer", "id") == provenance["performer"]
+
+    render_record = provenance["render"]
+    raise ArgumentError, "original WAV record is missing" unless render_record.is_a?(Hash)
+    unless File.basename(render_record["wav"].to_s) == File.basename(render_path) &&
+           File.file?(render_path) && !File.symlink?(render_path)
+      raise ArgumentError, "original WAV is missing or not adjacent to its provenance"
+    end
+    raise ArgumentError, "original WAV byte count changed" unless File.size(render_path) == render_record["bytes"].to_i
+    raise ArgumentError, "original WAV digest changed" unless
+      Digest::SHA256.file(render_path).hexdigest == render_record["sha256"]
+
+    output_path = File.expand_path(out.to_s)
+    raise ArgumentError, "reproduce requires a new .wav output path" unless output_path.match?(/\.wav\z/i)
+    raise ArgumentError, "reproduce output must not replace the original take" if output_path == render_path
+    if File.exist?(output_path) && File.identical?(output_path, render_path)
+      raise ArgumentError, "reproduce output is the original take (including a hard link)"
+    end
+
+    flags = provenance["flags"]
+    raise ArgumentError, "original render flags are missing" unless flags.is_a?(Hash)
+    original_mode = execution["mode"].to_s
+    unless %w[render random showcase].include?(original_mode)
+      raise ArgumentError, "reproduce supports render, random and showcase modes; found #{original_mode.inspect}"
+    end
+
+    opts = Options.new
+    opts.mode = :render
+    opts.style = execution.fetch("style").to_s
+    opts.out = output_path
+    opts.progression = session.dig("progression", "id")
+    opts.drums = session["drums"]
+    opts.profile = session["groove_profile"]
+    opts.groove = session["groove_scale"].to_s
+    opts.bpm = flags["bpm"]
+    opts.bars = session["bars"].to_s
+    opts.kit = session["kit"]
+    opts.voice = session["voice"]
+    opts.rig = session["rig"]
+    opts.sonitex = flags["sonitex"] || quality["sonitex"]
+    opts.sonitex_instances = (flags["sonitex_instances"] || 1).to_s
+    opts.vcs = flags["vcs"]
+    opts.drum_balance = flags["drum_balance"]
+    opts.chord_balance = flags["chord_balance"]
+    opts.seed = seed.to_s
+    # Keep the original RNG consumption: an implicit performer must be picked
+    # from the same seeded stream; an explicitly selected performer stays fixed.
+    opts.performer = flags["performer"] unless flags["performer"].nil?
+    opts.foley = flags["foley"] == true
+    opts.sample_loop = nil
+    opts.sample_vol = nil
+    opts.sample_weight = nil
+    opts.sample_slices = nil
+    opts.midi = false
+    opts.midi_out = nil
+    opts.mp3 = false
+    opts.video = false
+    opts.overwrite = overwrite
+
+    result = original_mode == "showcase" ? render_showcase(opts) : render(opts)
+    actual_digest = Digest::SHA256.file(result.fetch(:wav)).hexdigest
+    expected_digest = render_record.fetch("sha256").to_s
+    {
+      "schema" => "dilla.replay.v1",
+      "state" => (actual_digest == expected_digest ? "BYTE_MATCH" : "BYTE_MISMATCH"),
+      "original_sha256" => expected_digest,
+      "reproduced_sha256" => actual_digest,
+      "original_wav" => render_path,
+      "reproduced_wav" => result.fetch(:wav),
+      "listening" => "NOT_REVIEWED",
+      "note" => "A byte match proves deterministic output only; it does not establish musical quality, rights or listening acceptance."
+    }
+  rescue JSON::ParserError => error
+    raise ArgumentError, "reproduce found invalid JSON: #{error.message}"
+  rescue KeyError => error
+    raise ArgumentError, "reproduce provenance is incomplete: #{error.message}"
+  rescue TypeError, ArgumentError => error
+    raise error if error.message.start_with?("reproduce ")
+
+    raise ArgumentError, "reproduce could not validate take: #{error.message}"
   end
 end
 
