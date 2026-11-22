@@ -88,6 +88,57 @@ class MasterBootTest < Minitest::Test
     assert Master.respond_to?(:validate_data!)
   end
 
+  def test_backlog_transient_failures_are_deferred_without_dropping_auto_continue
+    Dir.mktmpdir("backlog-transient") do |root|
+      mission = Master::Fix::Mission.new(root:).start!(
+        goal: "retry the provider-dependent task", scope: root,
+        origin: "backlog", auto_continue: true,
+      )
+
+      assert Master.settle_backlog_failure!(mission, "provider overload")
+
+      record = Master::Fix::Mission.current(root:)
+      assert_equal "waiting", record.fetch("state")
+      assert_equal true, record.fetch("auto_continue")
+      assert_equal 1, record.fetch("retry_count")
+      assert_match(/transient:/, record.fetch("wake_reason"))
+      assert_operator Time.iso8601(record.fetch("next_wake_at")), :>, Time.now.utc
+    end
+  end
+
+  def test_backlog_permanent_failure_ends_only_the_current_mission
+    Dir.mktmpdir("backlog-permanent") do |root|
+      mission = Master::Fix::Mission.new(root:).start!(
+        goal: "repair the owned task", scope: root,
+        origin: "backlog", auto_continue: true,
+      )
+
+      assert Master.settle_backlog_failure!(mission, "permission denied")
+
+      record = Master::Fix::Mission.current(root:)
+      assert_equal "failed", record.fetch("state")
+      assert_equal false, record.fetch("auto_continue")
+      assert_match(/permanent:/, record.fetch("error"))
+      assert_nil record.fetch("next_wake_at")
+    end
+  end
+
+  def test_backlog_ambiguous_failure_stays_parked_for_human_review
+    Dir.mktmpdir("backlog-ambiguous") do |root|
+      mission = Master::Fix::Mission.new(root:).start!(
+        goal: "resolve the uncertain task", scope: root,
+        origin: "backlog", auto_continue: true,
+      )
+
+      assert Master.settle_backlog_failure!(mission, "partial write outcome unknown")
+
+      record = Master::Fix::Mission.current(root:)
+      assert_equal "blocked", record.fetch("state")
+      assert_equal false, record.fetch("auto_continue")
+      assert_match(/human review required/, record.fetch("wake_reason"))
+    end
+  end
+
   def test_backlog_runner_uses_scoped_fix_and_records_verified_origin_delivery
     Dir.mktmpdir("backlog-runner") do |mission_root|
       Dir.mktmpdir("backlog-repo") do |repo_root|
