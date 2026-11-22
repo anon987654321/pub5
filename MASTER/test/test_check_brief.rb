@@ -48,7 +48,10 @@ class TestCheckBrief < Minitest::Test
     assert_equal 1, receipt.fetch("schema_version")
     assert_equal "master_check", receipt.fetch("receipt_type")
     assert_equal "PASS", receipt.fetch("status")
-    assert_equal "abc123", receipt.fetch("main_sha")
+    assert_match(/\A[0-9a-f-]{36}\z/, receipt.fetch("receipt_id"))
+    assert_equal "check", receipt.fetch("operation_type")
+    assert_equal "abc123", receipt.fetch("exact_main_sha")
+    assert_equal "abc123", receipt.fetch("exact_checked_out_sha")
     assert_equal true, receipt.fetch("clean_checkout")
     assert_equal 1, receipt.dig("counts", "passed")
     assert_equal 1_250, receipt.dig("steps", 0, "duration_ms")
@@ -96,6 +99,7 @@ class TestCheckBrief < Minitest::Test
     ))
     assert_equal "NOT_RUN", empty.fetch("status")
     assert_equal 0, empty.dig("counts", "steps")
+    assert_nil empty.fetch("exit_status")
   end
 
   def test_render_failure
