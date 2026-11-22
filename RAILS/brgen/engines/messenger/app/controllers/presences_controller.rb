@@ -19,13 +19,12 @@ class PresencesController < ApplicationController
       end
       return head :unprocessable_entity unless touched
 
-      # Keep the conversation roster current as well as the device's push
-      # lease. The device key is separate, so push can be suppressed on one
-      # endpoint without treating another endpoint as open.
-      ChannelPresence.touch!(conversation: @conversation, user: Current.user)
-    else
-      ChannelPresence.touch!(conversation: @conversation, user: Current.user)
     end
+
+    # Keep the conversation roster current as well as the device's push lease.
+    # The device key is separate, so push can be suppressed on one endpoint
+    # without treating another endpoint as open.
+    ChannelPresence.touch!(conversation: @conversation, user: Current.user)
     head :no_content
   end
 
