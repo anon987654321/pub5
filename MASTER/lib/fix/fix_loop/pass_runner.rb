@@ -8,6 +8,7 @@ require "time"
 require_relative "../kernel"
 require_relative "../../boot/paths"
 require_relative "../lane_preflight"
+require_relative "../lane_probe"
 
 # Some callers load PassRunner directly. Establish the canonical class identity
 # before child files reopen FixLoop, without recursively loading a half-evaluated
@@ -634,10 +635,8 @@ module Master
 
           @lanes_probed = true
           return unless LaneProbe.enabled? && ENV["MASTER_IN_PROOF"] != "1" && @agent.respond_to?(:ask_once)
-          # The preflight probe covers the run: it asked the same lanes and
-          # dropped the failures for the run already.
-          return if LanePreflight.probed?
-
+          # This probe follows the deterministic fast stage. Unavailable lanes
+          # are shed from model work; they do not erase independent findings.
           models = if @agent.respond_to?(:candidate_models)
                      Array(@agent.candidate_models(task_type: :code_generation))
                    else

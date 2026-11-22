@@ -2,6 +2,8 @@
 
 require_relative "test_helper"
 require_relative "../lib/fix/lane_preflight"
+require_relative "../lib/fix/lane_probe"
+require_relative "../lib/review/consensus"
 
 class TestFixLanePreflight < Minitest::Test
   Preflight = Master::Fix::LanePreflight
@@ -15,12 +17,6 @@ class TestFixLanePreflight < Minitest::Test
     def model_for(operation:) = @routes.fetch(operation, OPUS)
   end
 
-  class ExplodingAgent
-    def model_for(**)
-      raise "model route must not be queried"
-    end
-  end
-
   class RoutedAgent < Agent
     def initialize(routes, candidates)
       super(routes)
@@ -30,43 +26,24 @@ class TestFixLanePreflight < Minitest::Test
     def candidate_models(_message = nil, task_type: nil) = @candidates
   end
 
-  # A probing agent: the routes agent plus the ask_once the preflight probe
-  # needs and a bounded candidate list, so a test never probes the host's
-  # real catalogue.
   class ProbingAgent < Agent
-    def initialize(routes, answers: false, candidates: %w[fake-a:model fake-b:model])
-      super(routes)
-      @answers = answers
-      @candidates = candidates
-    end
+    def ask_once(*) = "OK"
 
-    def ask_once(*)
-      @answers ? "OK" : raise(StandardError, "session limit, resets in 2h")
-    end
-
-    def candidate_models(task_type: nil) = @candidates
+    def candidate_models(_message = nil, task_type: nil) = [OPUS]
   end
 
   def setup
     Master::Io::ModelSkipCache.clear!
     Master::Io::LaneQuota.clear_run_drops!
-    Preflight.instance_variable_set(:@probed, nil)
-    @probe_env = ENV["MASTER_FIX_PROBE"]
-    ENV.delete("MASTER_FIX_PROBE")
   end
 
   def teardown
-    ENV["MASTER_FIX_PROBE"] = @probe_env
     Master::Io::ModelSkipCache.clear!
     Master::Io::LaneQuota.clear_run_drops!
-    Preflight.instance_variable_set(:@probed, nil)
   end
 
-  def preflight_check(jury_state: :pass, jury_detail: "fixture jury readiness", **options)
-    readiness = Master::Review::Consensus::Readiness.new(state: jury_state, detail: jury_detail)
-    Master::Review::Consensus.stub(:jury_readiness, readiness) do
-      Preflight.check(**options)
-    end
+  def preflight_check(**options)
+    Preflight.check(**options)
   end
 
   def check(routes, live:, env: {})
@@ -83,68 +60,18 @@ class TestFixLanePreflight < Minitest::Test
     [result, lines]
   end
 
-  def probe(routes, live:, answers: false, candidates: %w[fake-a:model fake-b:model])
-    lines = []
-    result = nil
+  def test_preflight_leaves_provider_and_consensus_probes_to_their_owners
+    agent = ProbingAgent.new({})
 
-    Master::Trace::Dmesg.stub(:verbose?, false) do
-      Master::Trace::Dmesg.stub(:status, ->(_unit, text, **) { lines << text }) do
-        Master::Io::LaneSelection.stub(:live_lanes, live) do
-          Master::Io::LaneSelection.stub(:alive?, ->(_id) { true }) do
-            agent = ProbingAgent.new(routes, answers:, candidates:)
-            result = preflight_check(agent:, env: {})
+    Master::Review::Consensus.stub(:jury_readiness, ->(**) { flunk "jury readiness is not a run-wide gate" }) do
+      Master::Fix::LaneProbe.stub(:run, ->(**) { flunk "provider probing belongs after deterministic fast fixes" }) do
+        Master::Trace::Dmesg.stub(:verbose?, false) do
+          Master::Io::LaneSelection.stub(:live_lanes, [OPUS]) do
+            assert_nil Preflight.check(agent:, env: {})
           end
         end
       end
     end
-    [result, lines]
-  end
-
-  def test_preflight_reuses_the_live_agent_model_router_for_jury_readiness
-    agent = Agent.new({})
-    router = Object.new
-    agent.define_singleton_method(:model_router) { router }
-    captured = nil
-    readiness = Master::Review::Consensus::Readiness.new(state: :pass, detail: "ready")
-
-    Master::Review::Consensus.stub(:jury_readiness, lambda { |router: nil, **|
-      captured = router
-      readiness
-    }) do
-      Master::Trace::Dmesg.stub(:verbose?, false) do
-        Master::Io::LaneSelection.stub(:live_lanes, [OPUS]) do
-          assert_nil Preflight.check(agent:, env: {})
-        end
-      end
-    end
-
-    assert_same router, captured
-  end
-
-  def test_a_broken_consensus_jury_blocks_before_model_routes_are_consulted
-    agent = ExplodingAgent.new
-
-    result = preflight_check(agent:, env: {}, jury_state: :fail, jury_detail: "author exclusion leaves only 1/2 voters")
-
-    assert_kind_of Master::Result::Err, result
-    assert_equal :inconclusive, result.category
-    assert_includes result.message, "consensus jury is not ready (fail)"
-    assert_includes result.message, "author exclusion leaves only 1/2 voters"
-    assert_includes result.message, "/doctor consensus-jury"
-  end
-
-  def test_an_unmeasured_consensus_jury_is_not_treated_as_ready
-    agent = ExplodingAgent.new
-
-    result = preflight_check(
-      agent:, env: { "MASTER_FIX_FREE_OK" => "1" },
-      jury_state: :unmeasured, jury_detail: "provider probe timed out",
-    )
-
-    assert_kind_of Master::Result::Err, result
-    assert_equal :inconclusive, result.category
-    assert_includes result.message, "consensus jury is not ready (unmeasured)"
-    assert_includes result.message, "provider probe timed out"
   end
 
   def test_a_free_lane_for_a_tree_read_while_opus_is_live_refuses_the_run
@@ -232,71 +159,6 @@ class TestFixLanePreflight < Minitest::Test
     result, = check({ tree: GEMMA }, live: [OPUS, GEMMA], env: { "MASTER_FIX_FREE_OK" => "1" })
 
     assert_nil result
-  end
-
-  def test_a_run_whose_probed_lanes_all_fail_is_refused
-    result, lines = probe({}, live: [OPUS], answers: false)
-
-    assert_kind_of Master::Result::Err, result
-    assert_match(/no model provider answered after 2 readiness checks/, result.message)
-    assert_includes result.message, "/doctor keyless"
-    refute_includes result.message, "MASTER_FIX_PROBE=0"
-    assert_equal :offline, result.category
-    assert_includes lines, "lane probe: no reply from 2 eligible provider(s)"
-  end
-
-  def test_a_catalogue_with_nothing_alive_is_refused_without_a_call
-    result, lines = probe({}, live: [OPUS], answers: true, candidates: [])
-
-    assert_kind_of Master::Result::Err, result
-    assert_match(/no eligible model provider is available/, result.message)
-    assert_includes result.message, "/doctor keyless"
-    refute(lines.any? { |line| line.include?("lane probe") })
-  end
-
-  def test_preflight_distinguishes_unavailable_candidates_from_failed_probes
-    result = nil
-    lines = []
-
-    Master::Trace::Dmesg.stub(:verbose?, false) do
-      Master::Trace::Dmesg.stub(:status, ->(_unit, text, **) { lines << text }) do
-        Master::Io::LaneSelection.stub(:alive?, ->(_id) { true }) do
-          Master::Io::LaneSelection.stub(:order, ->(_ids, **_options) { [] }) do
-            Master::Io::LaneSelection.stub(:live_lanes, [OPUS]) do
-              result = preflight_check(
-                agent: ProbingAgent.new({}, answers: true, candidates: [OPUS]),
-                env: {},
-              )
-            end
-          end
-        end
-      end
-    end
-
-    assert_kind_of Master::Result::Err, result
-    assert_match(/no eligible model provider is available/, result.message)
-    refute_match(/after 0 readiness checks/, result.message)
-    assert_includes lines, "lane probe: no eligible provider to check"
-  end
-
-  def test_a_run_with_one_answering_lane_starts
-    result, = probe({}, live: [OPUS], answers: true)
-
-    assert_nil result
-  end
-
-  def test_the_preflight_probe_covers_the_run
-    probe({}, live: [OPUS], answers: true)
-
-    assert_predicate Preflight, :probed?
-  end
-
-  def test_the_probe_can_be_skipped_by_the_environment
-    ENV["MASTER_FIX_PROBE"] = "0"
-    result, = probe({}, live: [OPUS], answers: false)
-
-    assert_nil result
-    refute_predicate Preflight, :probed?
   end
 
   def test_default_route_and_skipped_lane_details_are_quiet
