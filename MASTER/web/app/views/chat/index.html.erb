@@ -58,6 +58,7 @@
     window.MASTER_FACE_MASK_ENTRY = <%= raw json_escape((@face_mask_entry || {}).to_json) %>;
     window.MASTER_FACE_MASK_CATALOG = <%= raw json_escape(Array(@face_mask_entries).to_json) %>;
     window.MASTER_FACE_MASK_CHARACTERS = <%= raw json_escape((@face_mask_characters || {}).to_json) %>;
+    window.MASTER_FACE_MASK_CHARACTER_ROTATION = <%= raw json_escape(Array(@face_mask_character_rotation).to_json) %>;
     window.MASTER_FACE_LAW_FIELD = <%= raw json_escape(@face_law_field.to_json) %>;
     window.MASTER_COMMANDS = <%= raw json_escape(Master::CLI::CommandRegistry.command_surface.to_json) %>;
     window.MASTER_I18N = <%= raw json_escape(t("face.js").to_json) %>;

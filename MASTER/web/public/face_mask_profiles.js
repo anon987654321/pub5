@@ -111,8 +111,12 @@
     const source = sourceFor(profile);
     const characters = window.MASTER_FACE_MASK_CHARACTERS && typeof window.MASTER_FACE_MASK_CHARACTERS === "object"
       ? window.MASTER_FACE_MASK_CHARACTERS : {};
-    const character = characters[profile.id] && typeof characters[profile.id] === "object"
-      ? characters[profile.id] : null;
+    const characterRotation = Array.isArray(window.MASTER_FACE_MASK_CHARACTER_ROTATION)
+      ? window.MASTER_FACE_MASK_CHARACTER_ROTATION : [];
+    const characterId = characterRotation[ROTATION_PROFILE_IDS.indexOf(profile.id)];
+    const character = characterId && characters[String(characterId)] &&
+      typeof characters[String(characterId)] === "object"
+      ? characters[String(characterId)] : null;
     const characterName = String(character?.name || "");
     world.setSubjectForm("object", descriptor(profile));
 

@@ -390,9 +390,10 @@ test("server-selected human mask profile drives the particle face and its source
     MASTER_FACE_MASK_PROFILE: "iatmul-river",
     MASTER_FACE_MASK_ENTRY: source,
     MASTER_FACE_MASK_CATALOG: [source, nextSource],
+    MASTER_FACE_MASK_CHARACTER_ROTATION: ["host", "scout", "spark", "fixer", "anchor"],
     MASTER_FACE_MASK_CHARACTERS: {
-      "iatmul-river": { id: "the-scout", name: "The Scout", signature: "Alert, socially shrewd and practical." },
-      "sepik-split": { id: "the-spark", name: "The Spark", signature: "Energetic, witty and memorable." }
+      scout: { id: "the-scout", name: "The Scout", signature: "Alert, socially shrewd and practical." },
+      spark: { id: "the-spark", name: "The Spark", signature: "Energetic, witty and memorable." }
     },
     MASTER_FACE_WORLD: {
       setSubjectForm(form, descriptor) { calls.push({ form, descriptor }); return form; }
@@ -472,7 +473,9 @@ test("rotating characters change delivery only and preserve one MASTER intellige
   assert.match(archive, /Charisma:/);
   assert.match(archive, /Practical street sense:/);
   assert.match(archive, /serious_override:/);
-  assert.match(archive, /characters:\s*\n  iatmul-concentric:/);
+  assert.match(archive, /character_rotation:\s*\n  - "host"/);
+  assert.match(archive, /characters:\s*\n  host:/);
+  assert.match(readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8"), /MASTER_FACE_MASK_CHARACTER_ROTATION =/);
   assert.doesNotMatch(archive, /entries:[\s\S]*?character:/);
   assert.match(readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8"), /MASTER_FACE_MASK_CHARACTERS =/);
   for (const id of ids) assert.ok(archive.includes(`id: "${id}"`), `missing ${id}`);

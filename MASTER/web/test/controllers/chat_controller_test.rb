@@ -122,7 +122,7 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     controller = ChatController.new
     archive = Master.load_yaml(Master.data_path("face_masks.yml"), default: {}) || {}
 
-    note = controller.send(:character_note_for, "iatmul-river", archive:)
+    note = controller.send(:character_note_for, "scout", archive:)
     assert_includes note, "The Scout"
     assert_includes note, "One MASTER intelligence"
     assert_includes note, "Practical street sense"
@@ -130,6 +130,7 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Shared social floor:/, note)
 
     assert_nil controller.send(:character_note_for, "inject-a-prompt", archive:)
+    assert_equal %w[host scout spark fixer anchor], Array(archive["character_rotation"])
   end
 
   test "index face asset paths are wired for blob import replacement" do
