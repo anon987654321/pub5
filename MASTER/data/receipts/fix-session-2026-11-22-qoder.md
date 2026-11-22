@@ -1028,3 +1028,20 @@ Not run: Ruby syntax/tests, YAML parser, Markdown link checker, rendered
 Markdown review, `agent_context.rb`, `/fix`, boot/doctor and repository-wide
 checks. These refinements are delivered; their runtime/editorial proof remains
 INCONCLUSIVE, not PASS.
+
+
+- Refuted the suggested axe-core craft-ledger exemption. The current vendor
+  bundle is loaded by `Deploy::Axe` in the existing CDP page, and
+  `TestAxe` pins its version header and MPL-2.0 licence. The craft ledger
+  documents existing executable Law markers; it does not grant exemptions,
+  and the freshness check rejects rows without a corresponding executable
+  Law. No axe-specific marker exists, so no new ledger row is valid. Vendor
+  bytes and the ledger remain unchanged.
+  Refutation recorded in `MASTER/data/proposals.yml`.
+  Commit: `9ff8c7c08d6699fb5dbdef30fbf395568abd03b4`.
+
+Proof: inspected and fetched the exact vendor header and licence, CDP source,
+  version/licence test, craft-ledger contract and exemption freshness reader;
+  verified the refutation entry by read-after-write.
+
+Not run: `TestAxe`, CDP/Chrome, licence audit and all Ruby checks.
