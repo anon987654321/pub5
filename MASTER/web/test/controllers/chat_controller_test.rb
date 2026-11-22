@@ -100,7 +100,7 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     get root_path
     assert_response :success
     first_cookie = cookies[:master_conversation]
-    first_profile = response.body.match(/window\\.MASTER_FACE_MASK_PROFILE = "([^"]*)";/).fetch(1)
+    first_profile = response.body.match(/window[.]MASTER_FACE_MASK_PROFILE = "([^"]*)";/).fetch(1)
 
     post "/chat/new"
     assert_response :created
@@ -114,17 +114,17 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
 
     get root_path
     assert_response :success
-    next_session = response.body.match(/window\\.MASTER_FACE_MASK_SESSION = "([^"]+)";/).fetch(1)
-    next_profile = response.body.match(/window\\.MASTER_FACE_MASK_PROFILE = "([^"]*)";/).fetch(1)
+    next_session = response.body.match(/window[.]MASTER_FACE_MASK_SESSION = "([^"]+)";/).fetch(1)
+    next_profile = response.body.match(/window[.]MASTER_FACE_MASK_PROFILE = "([^"]*)";/).fetch(1)
     assert_equal payload.fetch("face_session"), next_session
     refute_equal first_profile, next_profile
 
     get root_path
     assert_response :success
     assert_equal next_session,
-                 response.body.match(/window\\.MASTER_FACE_MASK_SESSION = "([^"]+)";/).fetch(1)
+                 response.body.match(/window[.]MASTER_FACE_MASK_SESSION = "([^"]+)";/).fetch(1)
     assert_equal next_profile,
-                 response.body.match(/window\\.MASTER_FACE_MASK_PROFILE = "([^"]*)";/).fetch(1)
+                 response.body.match(/window[.]MASTER_FACE_MASK_PROFILE = "([^"]*)";/).fetch(1)
   ensure
     Rails.application.config.x.master_container = previous_container
   end
