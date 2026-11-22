@@ -111,7 +111,10 @@ voice of the creative work.
   multiplied by that rate and recorded as a calculated estimate, never as an
   invoice or a settled card charge. If a request has no terminal compute metric,
   or the provider does not confirm cancellation after a timeout, the batch
-  stops before the next training and reports `SPEND_UNVERIFIED`. A private
+  stops before the next training and reports `SPEND_UNVERIFIED`. Each batch also appends a private mode-0600
+  receipt to `STUDIO/lora/.cache/training-spend.jsonl`, including failed and
+  budget-stopped results while omitting provider error bodies and signed URLs.
+  The local receipt records computed usage, not an invoice. A private
   `.cache/training-spend.lock` serialises training batches in this checkout
   only; it is not an account-wide or cross-device spend lock. Do not start
   concurrent training from another checkout. The shared `training_standards.yml`
