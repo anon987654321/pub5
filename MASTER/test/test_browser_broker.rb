@@ -315,6 +315,7 @@ class BrowserBrokerTest < Minitest::Test
     assert_raises(Broker::Denied) { page.on(:response) {} }
     assert_equal "Example link", page.at_css("a").text
     assert_equal "A", page.at_css("a").tag_name
+    assert_equal true, page.at_css("a").click
     assert_equal ["Example link"], page.css("a").map(&:text)
     refute_respond_to page.at_css("a"), :node
     refute_respond_to page.at_css("a"), :native
