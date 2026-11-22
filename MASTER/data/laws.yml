@@ -167,6 +167,16 @@ TRUTHFUL_STATUS_profile_is_not_intent:
     budget requires current measurements for the cost dimensions it names.
   resolution: review
 
+TRUTHFUL_STATUS_test_precedes_report:
+  parent: TRUTHFUL_STATUS
+  statement: >
+    A PASS, ready, clean, complete or delivered status is reported before its
+    required test, check or deployment verification finishes successfully for
+    the same target and revision, or omits the actual failed, skipped or
+    inconclusive result.
+  resolution: never
+  evidence: { result: output, revision: sha256 }
+
 EXTERNAL_RESEARCH_IS_EVIDENCE_NOT_AUTHORITY:
   parent: TRUTHFUL_STATUS
   statement: "Third-party research is evidence bounded by its source, method, population and date; it does not override constitutional Law, operator intent or operator-owned product identity."
@@ -272,6 +282,21 @@ ROBUSTNESS_production_release_is_pinned:
 ROBUSTNESS_bounded_operation_lifecycle:
   parent: ROBUSTNESS
   statement: "A timeout bounds the direct child but leaves owned descendants, inherited pipes, readers or cleanup unbounded."
+  resolution: never
+
+ROBUSTNESS_mutation_requires_explicit_authorization:
+  parent: ROBUSTNESS
+  statement: >
+    A mutating /fix repair runs without an explicit --apply authorization, an
+    explicit requested mode and a named governed repository target.
+  resolution: never
+
+ROBUSTNESS_autonomous_triggers_are_bounded:
+  parent: ROBUSTNESS
+  statement: >
+    An autonomous repository mutator starts without explicit opt-in, an exact
+    allowlisted task and scope, bounded time and retry budgets, single-writer
+    ownership, a stop condition and a durable terminal receipt.
   resolution: never
 
 ROBUSTNESS_proactive_defect_audit:
@@ -486,6 +511,14 @@ PROXIMITY:
   semantic: human
   enforcement: declared
   coverage_mode: semantic
+
+PROXIMITY_local_visual_audio_ownership:
+  parent: PROXIMITY
+  statement: >
+    A product or STUDIO project’s layout, visual styling or audio policy is
+    moved into an unrelated global owner, or a shared rule overrides a local
+    product contract instead of sharing only a genuinely common invariant.
+  resolution: review
 
 PROXIMITY_path_purpose:
   parent: PROXIMITY
@@ -786,7 +819,7 @@ OPERATOR_RENDERED_contract:
     - Selected navigation items have an explicit state marker and remain understandable without colour.
     - Brand marks are original artwork; wordmark typography does not replace semantic page headings.
     - Generated artwork keeps critical copy editable and out of generative photographic pixels.
-    - Never copy another work's wordmark, key art, characters, or protected expression.
+    - Never copy another studio's exact identity, screen composition, wordmark, key art, characters, or protected expression; external research informs technique but never overrides the local product or project identity.
     - Culturally specific visual references remain attributed to their named communities and places; unrelated traditions are never collapsed into a generic style.
     - Sacred, restricted, funerary, or community-governed motifs are not reproduced as interface decoration; use an original formal abstraction unless permission and context are explicit.
     - Semantic morphs represent only declared or clearly grounded subjects; uncertain classification stays with the face or a neutral field rather than inventing anatomy or symbolism.
@@ -899,13 +932,17 @@ DUAL_MODALITY:
   root: visible_state
   statement: >
     Every executable Law has a truthful assessment contract. Deterministic
-    detectors and semantic assessments are distinct; a human assessor is
-    not a deterministic detector. The registry audit reports which paths
-    actually run and measures each gap. Missing evidence is INCONCLUSIVE,
-    never a pass. Rendered or interactive subjects also require visual and
-    behavioral evidence. Reduce a gap only when independently verified
-    coverage improves; never hide it by renaming Laws or shrinking the
-    population.
+    detectors, semantic assessments and human assessors are distinct. Evidence
+    classes also remain distinct: source reads establish what was inspected;
+    diffs establish what changed; command and test output establish what ran;
+    rendered evidence establishes captured presentation; runtime evidence
+    establishes observed live behaviour; human review establishes qualitative
+    acceptance such as listening, rights, consent or contextual judgement.
+    None substitutes for another. The registry audit reports what actually
+    runs and measures each gap. Missing evidence is INCONCLUSIVE, never a pass.
+    Rendered or interactive subjects require visual and behavioural evidence.
+    Reduce a gap only when independently verified coverage improves; never
+    hide a gap by renaming Laws or shrinking the population.
   severity: warning
   resolution: review
   mechanical: Master::Lint#both_modalities
@@ -2210,6 +2247,15 @@ PRESERVE_FIRST:
   statement: "Preserve working code and behaviour before improving it; never break what exists to build what does not yet exist."
   resolution: review
 
+PRESERVE_FIRST_media_provenance:
+  parent: PRESERVE_FIRST
+  statement: >
+    A source media asset or approved prior take is overwritten, degraded or
+    published without preserving its original bytes and identity, recording
+    relevant source, rights or consent provenance and generation inputs, and
+    keeping qualitative human acceptance distinct from automated measurements.
+  resolution: never
+
 STEWARDSHIP_utilitas:
   parent: STEWARDSHIP
   statement: "A thing with no purpose a person can name."
@@ -3331,6 +3377,10 @@ law_catalogue:
     TRUTHFUL_STATUS_profile_is_not_intent:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
+    TRUTHFUL_STATUS_test_precedes_report:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      autofix: never
     ROBUSTNESS_least_authority_tracing:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
@@ -3340,6 +3390,14 @@ law_catalogue:
     ROBUSTNESS_homeostasis:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
+    ROBUSTNESS_mutation_requires_explicit_authorization:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      autofix: never
+    ROBUSTNESS_autonomous_triggers_are_bounded:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      autofix: never
     ROBUSTNESS_morphological_exploration:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
@@ -4449,6 +4507,10 @@ law_catalogue:
     PRESERVE_FIRST:
       definition_sources: [MASTER/law/practice.rb]
       severity: error
+    PRESERVE_FIRST_media_provenance:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: error
+      autofix: never
     PREDICATE_SIDE_EFFECTS:
       definition_sources: [MASTER/law/structural.rb]
       severity: info
@@ -4522,6 +4584,10 @@ law_catalogue:
       definition_sources: [MASTER/law/universal.rb]
       severity: error
       lifecycle: trusted
+      autofix: never
+    PROXIMITY_local_visual_audio_ownership:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
       autofix: never
     PSYCHOLOGICAL_ACCEPTABILITY:
       definition_sources: [MASTER/law/universal.rb]
