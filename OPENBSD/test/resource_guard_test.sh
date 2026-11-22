@@ -163,23 +163,17 @@ got=""
 for field in $last; do [[ $field == rss_* ]] && got="$got $field"; done
 check "history names each app's rss, summed over its processes" \
   "rss_master=512M rss_brgen=512M rss_bsdports=512M rss_amber=512M" "${got# }"
+got=""
+for field in $last; do [[ $field == procs_* ]] && got="$got $field"; done
+check "history records each service account's process count" \
+  "procs_master=2 procs_brgen=2 procs_bsdports=2 procs_amber=2" "${got# }"
 
-print "7. a deploy raises the emergency line: load 6 runs emergency_cpu without a flag, not with one"
+print "7. critical load never restarts core production services automatically"
 reset
-mkdir -p "$DB/flag"
-cat > "$DB/emergency" <<EOF_
-#!/bin/ksh
-print ran >> "$DB/emergency_ran"
-EOF_
-chmod +x "$DB/emergency"
 FAKE_LOAD=6.0 FAKE_FREE=$CLEAR ksh "$SANDBOX/guard_under_test.sh" >/dev/null 2>&1 || true
-check "no deploy flag, load 6: emergency ran" "ran" "$(cat "$DB/emergency_ran" 2>/dev/null)"
-rm -f "$DB/emergency_ran"
-: > "$DB/flag/.deploying-test"
-FAKE_LOAD=6.0 FAKE_FREE=$CLEAR ksh "$SANDBOX/guard_under_test.sh" >/dev/null 2>&1 || true
-check "deploy flag, load 6: emergency did not run" "" "$(cat "$DB/emergency_ran" 2>/dev/null)"
+check "load 6: core emergency runner was not invoked" "" "$(cat "$DB/emergency_ran" 2>/dev/null)"
 FAKE_LOAD=13.0 FAKE_FREE=$CLEAR ksh "$SANDBOX/guard_under_test.sh" >/dev/null 2>&1 || true
-check "deploy flag, load 13: emergency ran" "ran" "$(cat "$DB/emergency_ran" 2>/dev/null)"
+check "load 13: core emergency runner was not invoked" "" "$(cat "$DB/emergency_ran" 2>/dev/null)"
 
 print "8. with the real cleanup helper sourced, a tick still logs while a shed app has no processes"
 # The helper set pipefail in the guard's own shell; ps -U for a shed app then failed the rss

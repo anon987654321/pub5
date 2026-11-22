@@ -32,6 +32,14 @@ PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
 # config-drift-check — relayd/acme/NSD drift detection
 */15 * * * * /usr/local/bin/config-drift-check >> /var/log/config_drift.log 2>&1
 
+# cpu-pressure-watch — five one-second vmstat intervals, once a minute.
+# -s prevents overlap; pub5-alert checks its heartbeat and resource_guard reads its signal.
+* * * * * -s /usr/local/bin/cpu-pressure-watch.sh >> /var/log/cpu-watch.log 2>&1
+
+# network-watch — cumulative vio0 byte counters, converted to five-minute deltas.
+# Threshold alerts stay disabled until the provider supplies an agreed budget.
+*/5 * * * * -s /usr/local/bin/network-watch.sh >> /var/log/network-watch.log 2>&1
+
 # resource_guard — load shedding when vm23 is overloaded
 */5 * * * * /usr/local/bin/resource_guard.sh
 

@@ -36,6 +36,10 @@ failures << "deploy_smoke" unless runner.run("deploy smoke", RUBY, "OPENBSD/chec
 failures << "resource guard" unless runner.run("resource guard", "ksh",
                                                "OPENBSD/test/resource_guard_test.sh",
                                                "OPENBSD/mirror/usr/local/bin/resource_guard.sh")
+failures << "CPU pressure monitor" unless runner.run("CPU pressure monitor", RUBY,
+                                                     "OPENBSD/test/test_cpu_pressure_watch.rb")
+failures << "network monitor" unless runner.run("network monitor", RUBY,
+                                                "OPENBSD/test/test_network_watch.rb")
 # shell_syntax_check reads each script's shebang, so the set is the tree and the
 # parser is the one that file declares.
 failures << "shell syntax" unless runner.run("shell syntax", RUBY, "OPENBSD/checks/shell_syntax_check.rb")

@@ -36,7 +36,7 @@ SHED_STATE=/var/db/resource_guard_shed
 # first sample, because a genuine crisis should not wait.
 SHED_STRIKES=${GUARD_SHED_STRIKES:-2}
 STRIKE_STATE=/var/db/resource_guard_strikes
-CPU_PRESSURE_FILE=/var/db/pub4/cpu_pressure
+CPU_PRESSURE_FILE=/var/db/pub5/cpu-pressure
 CPU_PRESSURE_MAX_AGE=420
 CORE="master brgen"
 # Ordered cheapest-to-lose first, because shedding now takes one per tick.
@@ -188,15 +188,19 @@ vmstat_free() {
 
 # Kilobytes of resident memory one daemon user owns; 0 when ps finds none.
 sum_rss() {
-  ps -o rss= -U "$1" 2>/dev/null | {
-    typeset s=0 tok
+  # Capture first so a missing (shed) service user cannot trip pipefail and
+  # prevent the guard from recording the rest of the fleet.
+  ps_out=$(ps -o rss= -U "$1" 2>/dev/null) || ps_out=""
+  print -r -- "$ps_out" | {
+    typeset s=0 count=0 tok
     while read -r tok; do
       case $tok in
       '' | *[!0-9]*) continue ;;
       esac
       s=$(( s + tok ))
+      count=$(( count + 1 ))
     done
-    print -r -- "$s"
+    print -r -- "$s $count"
   }
 }
 
@@ -385,8 +389,10 @@ fi
 rss=""
 for app in $CORE $OPTIONAL; do
   # A shed app has no processes and ps exits 1; that is 0M, not a reason to end the tick.
-  kb=$(sum_rss "$app") || kb=0
-  rss="$rss rss_$app=$(( ${kb:-0} / 1024 ))M"
+  stats=$(sum_rss "$app") || stats="0 0"
+  kb=${stats%% *}
+  procs=${stats#* }
+  rss="$rss rss_$app=$(( ${kb:-0} / 1024 ))M procs_$app=${procs:-0}"
 done
 # The tick's line is written once the tick has decided, not before. It used to
 # be written here, ahead of the strike counter, with shed= carrying the raw
@@ -406,18 +412,32 @@ log_tick() {
     >> /var/log/resource_guard_history.log 2>/dev/null || true
 }
 
-if [[ -f $ALL_APPS_FLAG ]]; then
-  log_tick
-  exit 0
+# The all-apps pin protects ordinary operation, not a measured emergency.
+# Confirmed CPU saturation, critical load or dangerously low available memory
+# may still shed optional services. Active deploy flags retain their separate
+# protection below; core services are never restarted by this guard.
+all_apps_pinned=0
+pin_override=0
+[[ -f $ALL_APPS_FLAG ]] && all_apps_pinned=1
+if [[ $all_apps_pinned -eq 1 ]]; then
+  if [[ $cpu_pressure -eq 1 ]] || at_least "$load" "$LOAD_CRIT" || (( mem_avail_pct < 6 )); then
+    pin_override=1
+    logger -t resource-guard "overriding all-apps pin under critical pressure (load=$load mem_avail=${mem_avail_pct}% cpu_pressure=$cpu_pressure)"
+  else
+    log_tick
+    exit 0
+  fi
 fi
 
 # Consecutive-breach counter. Reset the moment a tick comes back clean, so
 # strikes only accumulate for sustained pressure, never across unrelated spikes
 # hours apart.
 strikes=0
-if [[ $cpu_pressure -eq 1 && $deploying -eq 0 ]]; then
-  # The CPU monitor already proved sustained saturation over minute samples;
-  # this is exactly the threshold, not another strike to increment.
+confirmed_pressure=0
+if [[ $cpu_pressure -eq 1 || $pin_override -eq 1 ]]; then confirmed_pressure=1; fi
+if [[ $confirmed_pressure -eq 1 && $deploying -eq 0 ]]; then
+  # CPU sampling or the all-apps emergency override already proved pressure;
+  # do not add another five-minute strike before shedding.
   strikes=$SHED_STRIKES
 else
   if [[ -f $STRIKE_STATE ]]; then

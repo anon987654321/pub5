@@ -197,6 +197,8 @@ install_root_configs() {
     usr/local/libexec/rails-sync.ksh
     checks/solid_queue_proof.rb
     usr/local/bin/resource_guard.sh
+    usr/local/bin/cpu-pressure-watch.sh
+    usr/local/bin/network-watch.sh
   )
   typeset rel
   for rel in ${privileged_sources[@]}; do
@@ -227,7 +229,9 @@ install_root_configs() {
              /usr/local/libexec/pub4/solid_queue_proof.rb \
              /usr/local/libexec/pub5/solid_queue_proof.rb \
              /usr/local/bin/resource_guard.sh \
-             /usr/local/bin/emergency_cpu.sh; do
+             /usr/local/bin/emergency_cpu.sh \
+             /usr/local/bin/cpu-pressure-watch.sh \
+             /usr/local/bin/network-watch.sh; do
     if [[ -L $rel ]]; then
       log ERROR "refusing symlinked privileged destination file: $rel"
       return 1
@@ -281,6 +285,16 @@ install_root_configs() {
     [[ -f /etc/rc.d/$svc ]] && chmod 555 /etc/rc.d/$svc
   done
   for f in /usr/local/bin/*(N); do [[ -f $f ]] && chmod 755 "$f"; done
+  # Scheduled monitor entrypoints execute as root; keep them root-owned and
+  # immutable after the broad application-bin mode pass.
+  for f in /usr/local/bin/cpu-pressure-watch.sh /usr/local/bin/network-watch.sh; do
+    if [[ ! -f $f || -L $f ]]; then
+      log ERROR "installed root monitor is missing or symlinked: $f"
+      return 1
+    fi
+    chown root:wheel "$f" || return 1
+    chmod 555 "$f" || return 1
+  done
   for f in /usr/local/libexec/ci-prepare.ksh \
            /usr/local/libexec/ci-run.ksh \
            /usr/local/libexec/ci-sync.ksh \

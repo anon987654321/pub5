@@ -25,6 +25,8 @@ class TestPub5Alert < Minitest::Test
       "PUB5_ALERT_STATE" => File.join(dir, "state"),
       "PUB5_ALERT_LOGGER" => "true",
       "PUB5_DR_MARKER" => File.join(dir, "marker"),
+      "PUB5_ALERT_CPU_HEARTBEAT" => File.join(dir, "cpu-watch.seen"),
+      "PUB5_ALERT_NETWORK_HEARTBEAT" => File.join(dir, "network-watch.seen"),
     }.merge(extra)
   end
 
@@ -43,6 +45,8 @@ class TestPub5Alert < Minitest::Test
     fake(dir, "rcctl", "exit 0")
     fake(dir, "sysctl", %(echo "0.50 0.40 0.30"))
     File.write(File.join(dir, "marker"), Time.now.to_i.to_s)
+    File.write(File.join(dir, "cpu-watch.seen"), Time.now.to_i.to_s)
+    File.write(File.join(dir, "network-watch.seen"), Time.now.to_i.to_s)
   end
 
   def test_a_healthy_box_records_nothing
@@ -124,23 +128,22 @@ class TestPub5Alert < Minitest::Test
     end
   end
 
-  def test_watch_flags_sustained_load_after_enough_consecutive_ticks
+  def test_watch_flags_sustained_load_after_three_five_minute_checks
     Dir.mktmpdir do |dir|
       quiet_box(dir)
       fake(dir, "sysctl", %(echo "2.50 2.70 3.10"))
 
-      7.times { run_alert(dir, "watch") }
+      2.times { run_alert(dir, "watch") }
       assert_equal "", log(dir), "under the strike count nothing records"
 
       run_alert(dir, "watch")
-      assert_includes log(dir), "load-sustained 1-minute load 2.50 for 8 recorded ticks (limit 2.0)"
-      assert_includes log(dir), "for hours with nothing shedding"
+      assert_includes log(dir), "load-sustained 1-minute load 2.50 for 3 consecutive five-minute checks (at least 15 minutes; limit 2.0)"
+      assert_includes log(dir), "top cpu:"
 
-      # The raise resets the strike count, so a continued breach re-fires after
-      # two more hours of ticks, and the quiet window folds those to one line.
-      run_alert(dir, "watch")
-      run_alert(dir, "watch")
-      assert_equal log(dir).lines.size, 1, log(dir)
+      # The strike counter resets after the alert; the six-hour quiet window
+      # folds continued pressure into one durable line.
+      3.times { run_alert(dir, "watch") }
+      assert_equal 1, log(dir).lines.size, log(dir)
     end
   end
 
@@ -158,8 +161,30 @@ class TestPub5Alert < Minitest::Test
       fake(dir, "sysctl", %(echo "0.30 0.40 0.50"))
       run_alert(dir, "watch")
       fake(dir, "sysctl", %(echo "2.99 0.0 0.0"))
-      7.times { run_alert(dir, "watch") }
+      2.times { run_alert(dir, "watch") }
       assert_equal "", log(dir), log(dir)
+    end
+  end
+
+  def test_watch_alerts_when_cpu_monitor_heartbeat_is_missing_or_stale
+    Dir.mktmpdir do |dir|
+      quiet_box(dir)
+      File.delete(File.join(dir, "cpu-watch.seen"))
+      run_alert(dir, "watch")
+      assert_includes log(dir), "cpu-monitor-stale CPU pressure monitor heartbeat is missing"
+
+      File.write(File.join(dir, "cpu-watch.seen"), (Time.now.to_i - 600).to_s)
+      run_alert(dir, "watch", "PUB5_ALERT_QUIET" => "0")
+      assert_includes log(dir), "CPU pressure monitor heartbeat is 600 seconds old"
+    end
+  end
+
+  def test_watch_alerts_when_network_monitor_heartbeat_is_stale
+    Dir.mktmpdir do |dir|
+      quiet_box(dir)
+      File.write(File.join(dir, "network-watch.seen"), (Time.now.to_i - 1800).to_s)
+      run_alert(dir, "watch")
+      assert_includes log(dir), "network-monitor-stale network byte monitor heartbeat is 1800 seconds old"
     end
   end
 

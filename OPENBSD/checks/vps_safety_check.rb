@@ -102,6 +102,14 @@ if File.file?(guard_wrapper_path) && !File.symlink?(guard_wrapper_path) &&
                           operator.include?('refusing symlinked privileged destination file: $rel') &&
                           operator.include?('installed resource guard is missing or symlinked')
   failures << "BOOTSTRAP.sh must preflight, install, and verify the root-owned load guard" unless guard_install_contract
+
+  monitor_sources = %w[usr/local/bin/cpu-pressure-watch.sh usr/local/bin/network-watch.sh]
+  monitor_contract = monitor_sources.all? { |path| source_list.include?(path) } &&
+                     operator.include?("/usr/local/bin/cpu-pressure-watch.sh") &&
+                     operator.include?("/usr/local/bin/network-watch.sh") &&
+                     operator.include?('chown root:wheel "$f"') &&
+                     operator.include?('chmod 555 "$f"')
+  failures << "BOOTSTRAP.sh must install CPU and network monitor scripts as root-owned, read-only entrypoints" unless monitor_contract
 else
   failures << "missing or symlinked resource-guard wrapper/runner source"
 end

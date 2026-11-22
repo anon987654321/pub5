@@ -883,9 +883,11 @@ Tracked mirror: `OPENBSD/data/root.crontab` (installed idempotently by
 |-----|----------|--------------|
 | `relayd-watchdog` | `*/5 * * * *` | syslog tag `relayd-watchdog` — restarts relayd when unhealthy or backend table stale. It does **not** heal `doas.conf`: that step ran `validate_doas.ksh` from a dev-owned checkout as root every five minutes and was removed, with the reason in the script's own header |
 | `config-drift-check` | `*/15 * * * *` | `/var/log/config_drift.log` — relayd Host routes vs acme SANs vs NSD zones vs DNSSEC paths |
-| `resource_guard.sh` | `*/5 * * * *` | sheds bsdports then amber under sustained pressure; `/var/log/resource_guard_history.log` |
+| `cpu-pressure-watch.sh` | `* * * * * -s` | five one-second CPU samples; `/var/log/cpu-watch.log`; heartbeat and pressure signal under `/var/db/pub5` |
+| `network-watch.sh` | `*/5 * * * * -s` | `vio0` RX/TX byte deltas in `/var/log/network-watch.log`; optional provider-derived thresholds |
+| `resource_guard.sh` | `*/5 * * * *` | sheds bsdports then amber under sustained pressure; critical pressure overrides the all-apps pin; `/var/log/resource_guard_history.log` |
 | `uptime-check.sh` | `*/5 * * * *` | `/var/log/uptime-check.log`, with `ALLOW_BSDPORTS_DOWN=1` |
-| `pub5-alert watch` | `*/5 * * * *` | `/var/log/pub5-alerts.log`, shown by `vps-state` — disk 90%, swap 92%, 1-minute load at or above 2.00 for eight consecutive ticks, failed services except `brgen_jobs`, and a missing or stale (48h) dr-pull backup report. Ordinary recurring keys quiet for 6 hours |
+| `pub5-alert watch` | `*/5 * * * *` | `/var/log/pub5-alerts.log`, shown by `vps-state` — disk 90%, swap 92%, load at or above 2.00 for three checks (15 minutes), stale CPU/network monitor heartbeats, failed services except `brgen_jobs`, and a missing or stale (48h) dr-pull backup report. Ordinary recurring keys quiet for 6 hours |
 | `drain-jobs.sh` | `5 * * * *` | `/var/log/drain-jobs.log` |
 | `core-reclaim.sh` | `40 * * * *` | `/var/log/core-reclaim.log` — returns a core app's grown resident set |
 | `keep-warm.sh` | `*/10 * * * *` | `/var/log/keep-warm.log` — brgen and amber only |
@@ -906,17 +908,32 @@ A healer that works hides the fault that makes it run. `relayd-watchdog` stamps
 each restart in `/var/db/pub4/relayd-watchdog.restarts` and raises a
 `relayd-restarts` alert on the third inside an hour; `uptime-check.sh` raises
 `uptime-down` when an endpoint is down for three ticks running. Sustained load
-is watched by `pub5-alert watch` (1-minute load at or above 2.00 across eight
-consecutive ticks) and shed by `resource_guard.sh` on its own load and memory
-strikes; the per-minute `vmstat` CPU sampler retired with `pub4-alert`, so the
-guard’s `cpu_pressure` fast path stays quiet until a successor writes it.
-`pub5-alert show` and `vps-state` print the durable alerts. The dr-pull job
+is watched by `pub5-alert watch` (1-minute load at or above 2.00 across three
+consecutive five-minute checks) and shed by `resource_guard.sh` on its own load
+and memory strikes. `cpu-pressure-watch.sh` samples five one-second `vmstat`
+intervals each minute, writes an atomic pressure signal after sustained 80% CPU,
+and records process identity only. The guard can override the all-apps pin under
+confirmed CPU pressure, critical load or less than 6% available memory; it still
+never restarts core services. `pub5-alert watch` also checks both monitor
+heartbeats. `pub5-alert show` and `vps-state` print the durable alerts. The dr-pull job
 reports to the box by writing `~dev/.dr_pull_ok` after each pull, which is what
 the stale-backup alert reads.
 
 `nsd-resign` is **not** in root crontab — it runs from `etc/daily.local` (daily
 DNSSEC re-sign + backup pass). Failures surface in syslog (`daily.local` tag)
 and `/var/log/nsd-resign` if present.
+
+## Network accounting
+
+Network accounting is observational until the provider supplies an agreed traffic
+budget. `network-watch.sh` samples OpenBSD's cumulative
+`netstat -I vio0 -b` byte counters and records RX/TX deltas and average bit
+rates. Set `PUB5_NET_WARN_TX_BPS` and, if useful,
+`PUB5_NET_WARN_RX_BPS` in the installed root cron environment only after
+comparing Mischa's exact limits and measurement window. Zero means no threshold
+alert. This is interface-wide accounting, not per-process attribution; use the
+provider's flow reports and bounded connection/socket inspection to identify a
+source. No PF shaping or blocking is applied automatically.
 
 ## External uptime check
 
@@ -941,8 +958,8 @@ five one-second `vmstat` intervals. It raises a macOS notification after
 three consecutive five-minute samples at 80% CPU (15 minutes), two at 95%
 (10 minutes), three recovery samples below 60%, or two consecutive failed
 SSH probes. That outside check still runs when vm23's own cron/watch process
-is wedged. The on-box sampler is faster (one check per minute) and supplies
-the process-name diagnosis and optional-app shedding signal; the Mac check is
+is wedged. The on-box sampler is faster (five one-second samples per minute)
+and supplies process-identity diagnosis and the optional-app shedding signal; the Mac check is
 the independent alert path. The public `/up` checks still raise on the third
 consecutive failure and recovery — catching DNS, TLS, relayd or registrar
 failures from a real visitor's network. Hosts and waivers mirror
