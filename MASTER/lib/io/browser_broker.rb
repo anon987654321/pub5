@@ -169,6 +169,7 @@ module Master
         def go_to(value)
           @broker.navigate(@lease_id, value)
           @page.go_to(value.to_s)
+          self
         end
 
         def at_css(selector)
@@ -184,6 +185,7 @@ module Master
           raise ArgumentError, "browser: request callback required" unless callback
 
           @page.on(:request) { |request| callback.call(Request.new(request)) }
+          true
         end
 
         def harden_network
@@ -244,10 +246,13 @@ module Master
 
         def text = @node.text.to_s
         def tag_name = @node.tag_name.to_s
-        def attribute(name) = @node.attribute(name.to_s)
-        def property(name) = @node.property(name.to_s)
-        def visible? = @node.visible?
-        def click = @node.click
+        def attribute(name) = @node.attribute(name.to_s)&.to_s
+        def property(name) = @node.property(name.to_s)&.to_s
+        def visible? = @node.visible? == true
+        def click
+          @node.click
+          true
+        end
         def focus = Focus.new(@node.focus)
       end
 
@@ -256,12 +261,16 @@ module Master
           @focus = focus
         end
 
-        def set(value) = @focus.set(value.to_s)
+        def set(value)
+          @focus.set(value.to_s)
+          true
+        end
 
         def type(value, key = nil)
           raise Denied, "browser: unsupported keyboard key" unless key.nil? || key.to_s == "Enter"
 
           key ? @focus.type(value.to_s, :Enter) : @focus.type(value.to_s)
+          true
         end
       end
 
@@ -270,11 +279,15 @@ module Master
           @network = network
         end
 
-        def intercept = @network.intercept
+        def intercept
+          @network.intercept
+          true
+        end
 
         def wait_for_idle(timeout:)
           seconds = Float(timeout).clamp(0.0, 30.0)
           @network.wait_for_idle(timeout: seconds)
+          true
         end
       end
 
@@ -300,7 +313,10 @@ module Master
           end
         end
 
-        def abort = @request.abort
+        def abort
+          @request.abort
+          true
+        end
 
         def respond(responseCode:, responseHeaders: {}, body: "")
           code = Integer(responseCode)
@@ -310,6 +326,7 @@ module Master
           raise Denied, "browser: intercepted response exceeds byte budget" if payload.bytesize > MAX_RESPONSE_BYTES
 
           @request.respond(responseCode: code, responseHeaders:, body: payload)
+          true
         end
       end
 
