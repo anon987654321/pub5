@@ -147,7 +147,7 @@ class LogPublicationTest < Minitest::Test
     source = File.read(File.expand_path("../../scripts/publish_log.zsh", __dir__))
 
     assert_includes source, "Sourced zsh function library"
-    refute_match(/\\A#!/, source)
+    refute_match(/\A#!/, source)
     assert_includes source, "Master::Fix::LogPublication.publish"
     refute_includes source, "curl -F"
   end
