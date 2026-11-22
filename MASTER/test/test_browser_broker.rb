@@ -62,23 +62,27 @@ class BrowserBrokerTest < Minitest::Test
                     "the binder must not be placed in agent/plugin services"
   end
 
-  def test_all_six_production_adapters_attach_only_to_broker_issued_leases
+  def test_all_six_production_adapters_use_the_narrow_broker_session
     adapters = {
-      "lib/io/web_browse.rb" => ["@broker.open", "Core-owned browser broker is unavailable"],
-      "lib/io/browser_agent.rb" => ["@broker.open", "Core-owned browser broker is unavailable"],
-      "lib/io/web_chat.rb" => ["@broker.open", "Core-owned browser broker is unavailable"],
-      "plugins/session_browser/session_browser.rb" => ["owner.open", "Core-owned browser broker is unavailable"],
-      "plugins/social_browser/social_browser.rb" => ["owner.open", "Core-owned browser broker is unavailable"],
-      "plugins/travel_browser/travel_browser.rb" => ["owner.open", "Core-owned browser broker is unavailable"],
+      "lib/io/web_browse.rb" => ["@broker.open", "@broker.attach(lease.id", "Core-owned browser broker is unavailable"],
+      "lib/io/browser_agent.rb" => ["@broker.open", "@broker.attach(lease.id", "Core-owned browser broker is unavailable"],
+      "lib/io/web_chat.rb" => ["@broker.open", "@broker.attach(lease.id", "Core-owned browser broker is unavailable"],
+      "plugins/session_browser/session_browser.rb" => ["owner.open", "owner.attach(lease.id", "Core-owned browser broker is unavailable"],
+      "plugins/social_browser/social_browser.rb" => ["owner.open", "owner.attach(lease.id"],
+      "plugins/travel_browser/travel_browser.rb" => ["owner.open", "owner.attach(lease.id"],
     }
 
     adapters.each do |relative, required|
       source = File.read(File.join(Master::ROOT, relative))
       required.each { |needle| assert_includes source, needle, "#{relative} lost its broker gate" }
-      assert_includes source, "Ferrum::Browser.new(**driver_options(lease))",
-                      "#{relative} must attach with the broker-issued lease"
-      assert_includes source, "lease.cdp_url",
-                      "#{relative} must not choose a Chromium process or CDP endpoint itself"
+      refute_includes source, "Ferrum::Browser.new",
+                      "#{relative} must never receive or construct a raw Ferrum browser"
+      refute_includes source, "lease.cdp_url",
+                      "#{relative} must never receive the CDP bearer endpoint"
+      refute_includes source, "page.evaluate(",
+                      "#{relative} must use the broker's fixed page-observation operation"
+      refute_includes source, "page.command(",
+                      "#{relative} must not issue arbitrary CDP commands"
       refute_includes source, "Process.spawn",
                       "#{relative} must never start a process outside BrowserBroker"
       refute_includes source, "Process.fork",
@@ -88,6 +92,11 @@ class BrowserBrokerTest < Minitest::Test
     broker_source = File.read(File.join(Master::ROOT, "lib", "io", "browser_broker.rb"))
     assert_includes broker_source, "Process.spawn",
                     "BrowserBroker is the sole owner of Chromium process creation"
+    assert_includes broker_source, "Ferrum::Browser.new(**options)",
+                    "only the broker attaches to the private CDP endpoint"
+    assert_includes broker_source, "class Attachment"
+    assert_includes broker_source, "class Page"
+    refute_match(/Lease = Data\.define\([^\n]*cdp_url/, broker_source)
   end
 
   def test_all_six_adapters_release_the_broker_even_when_driver_quit_raises
@@ -198,7 +207,9 @@ class BrowserBrokerTest < Minitest::Test
     refute_respond_to lease, :pid
     refute_respond_to lease, :profile_dir
     assert_equal "example.com", lease.host
-    assert_match(%r{\Aws://127\.0\.0\.1}, lease.cdp_url)
+    refute_respond_to lease, :cdp_url
+    refute_includes lease.inspect, "ws://"
+    refute_includes JSON.generate(lease), "ws://"
 
     refute b.close("not-a-lease"), "an unknown lease id must not stop anything"
     assert_empty engine.stopped, "an unknown lease id must not stop anything"
@@ -615,6 +626,7 @@ class BrowserBrokerTest < Minitest::Test
     refute_respond_to lease, :profile_dir
     refute_respond_to lease, :kill
     refute_respond_to b, :spawn
-    assert_equal "ws://127.0.0.1:9222/devtools/browser/fake", lease.cdp_url
+    refute_respond_to lease, :cdp_url
+    refute_includes lease.inspect, "ws://"
   end
 end
