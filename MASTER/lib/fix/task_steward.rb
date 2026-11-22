@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "time"
+require_relative "../ground/failure_taxonomy"
 
 module Master
   module Fix
@@ -78,15 +79,9 @@ module Master
 
       def tick!
         record = Mission.current(root: @root)
-        return :idle unless eligible?(record)
-
-        if automatic_attempts_exhausted?(record)
-          reason = "automatic continuation blocked after #{Mission::MAX_AUTOMATIC_ATTEMPTS} attempts; an operator must review and resume the objective"
-          blocked = Mission.new(root: @root, bus: @bus).block_if_unleased!(id: record["id"], reason:)
-          return :idle unless blocked
-
-          @bus&.publish("task_steward:retry_budget_exhausted", mission: record["id"], attempts: Mission::MAX_AUTOMATIC_ATTEMPTS)
-          return Master::Result.err(reason, category: :validation)
+        unless eligible?(record)
+          notify_after_run(:idle)
+          return :idle
         end
 
         if continuation_only?(record)
@@ -105,12 +100,14 @@ module Master
         end
         ok = result_ok?(result)
         @bus&.publish("task_steward:result", mission: record["id"], ok:)
-        @after_run&.call(mission: Mission.current(root: @root), result:) if ok
+        notify_after_run(result)
         result
       rescue StandardError => e
         defer_failed_mission(e)
         @bus&.publish("task_steward:error", error: "#{e.class}: #{e.message}")
-        Master::Result.err("task steward: #{e.message}", category: :infrastructure)
+        result = Master::Result.err("task steward: #{e.message}", category: :infrastructure)
+        notify_after_run(result)
+        result
       end
 
       private
@@ -136,11 +133,6 @@ module Master
         goal = goal[0...-1] while %w[! . ? ...].include?(goal[-1])
         intent = record.dig("operator", "intent").to_s
         intent == "continue_prior_plan" || CONTEXTLESS_GOALS.include?(goal.delete("'"))
-      end
-
-      def automatic_attempts_exhausted?(record)
-        record["auto_continue"] == true &&
-          record.fetch("attempt_count", 0).to_i >= Mission::MAX_AUTOMATIC_ATTEMPTS
       end
 
       def eligible?(record)
@@ -206,12 +198,28 @@ module Master
         return unless record && %w[fold backlog].include?(record["origin"].to_s) && record["auto_continue"] == true
         return if leased_by_another_process?(record)
 
-        Mission.new(root: @root, bus: @bus).defer!(
-          reason: "steward: #{error.class}: #{error.message}",
-          seconds: Mission::RETRY_BASE_SECONDS,
-        )
+        category = Master::Ground::FailureTaxonomy.shared.classify(error.message)
+        reason = "#{category}: #{error.class}: #{error.message}"
+        mission = Mission.new(root: @root, bus: @bus)
+        case category
+        when :transient
+          mission.defer!(reason:)
+        when :exhausted
+          mission.defer!(reason:, seconds: Mission::RETRY_MAX_SECONDS)
+        when :permanent
+          mission.fail!(reason)
+        else
+          mission.block!(reason: "human review required: #{reason}")
+        end
+        @bus&.publish("task_steward:failure_classified", mission: record["id"], category:)
       rescue StandardError => e
         @bus&.publish("task_steward:defer_error", error: "#{e.class}: #{e.message}")
+      end
+
+      def notify_after_run(result)
+        @after_run&.call(mission: Mission.current(root: @root), result:)
+      rescue StandardError => e
+        @bus&.publish("task_steward:after_run_error", error: "#{e.class}: #{e.message}")
       end
 
       def leased_by_another_process?(record)
