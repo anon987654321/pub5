@@ -610,7 +610,7 @@ module Backlog
     # A run may be terminal without satisfying the executor's stronger
     # delivery receipt. Keep that objective visibly unverified and park it
     # for review; never convert it into a completion receipt.
-    def park_unverified_completion!(record:, reason: "terminal mission lacks current delivery proof")
+    def park_unverified_completion!(record:)
       return false unless record && record["origin"].to_s == "backlog" && record["state"].to_s == "completed"
 
       plan = JSON.parse(record["plan"].to_s)
