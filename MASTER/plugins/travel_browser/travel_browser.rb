@@ -218,8 +218,11 @@ module Master
       rescue Ferrum::StatusError => e
         raise Error, "travel_browser: browser navigation failed: #{e.message}"
       ensure
-        browser&.quit
-        owner&.close(lease.id) if lease
+        begin
+          browser&.quit
+        ensure
+          owner&.close(lease.id) if lease
+        end
       end
 
       def broker = service(:browser_broker)
