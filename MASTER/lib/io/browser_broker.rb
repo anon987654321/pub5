@@ -289,6 +289,7 @@ module Master
         @clock = clock || -> { Time.now }
         @leases = {}
         @handles = {}
+        @closing = {}
         @mutex = Mutex.new
       end
 
@@ -404,15 +405,26 @@ module Master
       end
 
       def close(id)
-        handle = nil
-        @mutex.synchronize do
-          @leases.delete(id)
-          handle = @handles.delete(id)
-        end
-        return false unless handle
+        handle = @mutex.synchronize do
+          return false unless @handles.key?(id)
+          return false if @closing[id]
 
-        stop_handle(id, handle)
-        true
+          @closing[id] = true
+          @handles.fetch(id)
+        end
+
+        begin
+          stop_handle(id, handle)
+          @mutex.synchronize do
+            @leases.delete(id)
+            @handles.delete(id)
+          end
+          true
+        ensure
+          # Failed stops keep their lease and private handle for a later retry;
+          # only the in-flight guard is released here.
+          @mutex.synchronize { @closing.delete(id) }
+        end
       end
 
       # Conversation shutdown and interruption both land here. A failed stop or
@@ -463,13 +475,21 @@ module Master
         expired_ids = @leases.select { |_id, lease| lease.expired?(now) }.keys
         failures = []
         expired_ids.each do |id|
-          handle = @handles.delete(id)
-          @leases.delete(id)
-          next unless handle
+          next if @closing[id]
+
+          handle = @handles[id]
+          unless handle
+            failures << id
+            next
+          end
 
           begin
             stop_handle(id, handle)
+            @handles.delete(id)
+            @leases.delete(id)
           rescue StandardError
+            # Keep the lease and handle: a subsequent operation can retry the
+            # process-group teardown instead of forgetting a possible orphan.
             failures << id
           end
         end
