@@ -2,7 +2,7 @@
 // The amount is the explicit Innovasjon Norge row only, never project capital.
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
-import { BIZ_ROOT } from './paths.mjs';
+import { BIZ_ROOT, PUBLISHED_INPUTS } from './paths.mjs';
 
 const ACTIVE = [
   ['syre', 'SYRE™', '3D-printede sko', 'Environment & Sustainability'],
@@ -76,27 +76,6 @@ function fundingAsk(path) {
   if (!Number.isFinite(value) || value < 0) throw new Error(path + ': invalid grant amount ' + raw);
   return Math.round(value);
 }
-const FRESHNESS_INPUTS = {
-  syre: ['tools/syre.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
-  ragnhild: ['tools/ragnhild.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
-  pubhealthcare: ['tools/pubhealthcare.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
-  govt_bergen: ['tools/govt_bergen.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
-  future_healthcare_os: ['tools/future_healthcare_os.html', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
-  speis: ['tools/speis.html'],
-  future_nato_weapons: ['tools/future_nato_weapons.html'],
-  norwegianhedge: ['tools/norwegianhedge.html'],
-  fetat: ['tools/fetat_build.rb', 'tools/fetat_image.jpg'],
-};
-
-const PDF_FRESHNESS_INPUTS = {
-  syre: ['tools/bp_print.mjs'],
-  ragnhild: ['tools/bp_print.mjs'],
-  pubhealthcare: ['tools/bp_print.mjs'],
-  govt_bergen: ['tools/bp_print.mjs'],
-  future_healthcare_os: ['tools/bp_print.mjs'],
-  fetat: ['tools/bp_print.mjs'],
-};
-
 function sha256(path) {
   return createHash('sha256').update(readFileSync(path)).digest('hex');
 }
@@ -112,7 +91,7 @@ function requirePrintReceipt(name, receiptPath, htmlPath, pdfPath) {
   } catch (error) {
     throw new Error(name + ': print receipt is unreadable JSON: ' + error.message);
   }
-  if (receipt.schema !== 'biz.print.v1' || receipt.document !== name) {
+  if (receipt.schema !== 'biz.print.v2' || receipt.document !== name) {
     throw new Error(name + ': print receipt schema or document identity does not match');
   }
   if (receipt.source_html !== htmlPath.slice(htmlPath.lastIndexOf('/') + 1) ||
@@ -128,6 +107,21 @@ function requirePrintReceipt(name, receiptPath, htmlPath, pdfPath) {
       receipt.pdf_sha256 !== sha256(pdfPath) ||
       receipt.front_png_sha256 !== sha256(pngPath)) {
     throw new Error(name + ': print receipt hashes do not match the published HTML/PDF/PNG');
+  }
+  const declared = PUBLISHED_INPUTS[name];
+  if (!declared) throw new Error(name + ': source-input manifest is missing');
+  const expectedInputs = [...declared.html, ...declared.pdf].sort();
+  const recordedInputs = receipt.source_inputs_sha256;
+  if (!recordedInputs || typeof recordedInputs !== 'object' || Array.isArray(recordedInputs) ||
+      JSON.stringify(Object.keys(recordedInputs).sort()) !== JSON.stringify(expectedInputs)) {
+    throw new Error(name + ': print receipt source-input manifest is missing or incomplete');
+  }
+  for (const input of expectedInputs) {
+    const sourcePath = `${BIZ_ROOT}/${input}`;
+    if (!existsSync(sourcePath)) throw new Error(name + ': declared source input is missing: ' + input);
+    if (recordedInputs[input] !== sha256(sourcePath)) {
+      throw new Error(name + ': source input changed since print: ' + input + '; rebuild, reprint and review');
+    }
   }
   if (!Number.isInteger(receipt.page_count) || receipt.page_count < 1 ||
       receipt.page_size_points !== '442.08 x 663.12' ||
@@ -156,7 +150,7 @@ function requirePair(key) {
     throw new Error(key + ': published PDF is older than its HTML; rerun the print and review step');
   }
 
-  const htmlInputs = FRESHNESS_INPUTS[key] || [];
+  const htmlInputs = PUBLISHED_INPUTS[key]?.html || [];
   const staleHtml = htmlInputs.filter(input => {
     const source = `${BIZ_ROOT}/${input}`;
     if (!existsSync(source)) throw new Error(key + ': freshness source missing: ' + input);
@@ -167,7 +161,7 @@ function requirePair(key) {
       '; rebuild, retemplate, check and review before publishing');
   }
 
-  const pdfInputs = PDF_FRESHNESS_INPUTS[key] || [];
+  const pdfInputs = PUBLISHED_INPUTS[key]?.pdf || [];
   const stalePdf = pdfInputs.filter(input => {
     const source = `${BIZ_ROOT}/${input}`;
     if (!existsSync(source)) throw new Error(key + ': print source missing: ' + input);
