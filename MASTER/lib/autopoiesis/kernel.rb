@@ -40,22 +40,15 @@ module Autopoiesis
       comp = manifest["components"].find { |c| c["id"] == component_id }
       return { ok: false, error: "unknown component" } unless comp
 
-      # Placeholder: real regeneration would re-derive the component from
-      # laws + soul + current traces, then verify it.
-      comp["status"] = "healthy"
-      comp["regenerated_at"] = Time.now.utc.iso8601
-      manifest["last_regeneration"] = Time.now.utc.iso8601
-      save_manifest(manifest)
-
-      @traces&.emit(
-        kind: :verification,
-        subject: "autopoiesis/#{component_id}",
-        payload: { action: "regenerate", result: "healthy" },
-        strength: 1.0,
-        source: "autopoiesis.kernel"
-      )
-
-      { ok: true, component: comp }
+      # A placeholder is not a regeneration. Until a component-specific
+      # rebuild and verification callable exists, preserve the manifest and
+      # report the capability as inconclusive rather than manufacturing health.
+      {
+        ok: false,
+        status: "INCONCLUSIVE",
+        component: component_id,
+        error: "component regeneration is not implemented; no state was changed",
+      }
     end
 
     def health_check_all
