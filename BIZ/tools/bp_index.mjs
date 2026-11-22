@@ -130,8 +130,12 @@ function requirePrintReceipt(name, receiptPath, htmlPath, pdfPath) {
     throw new Error(name + ': print receipt hashes do not match the published HTML/PDF/PNG');
   }
   if (!Number.isInteger(receipt.page_count) || receipt.page_count < 1 ||
-      receipt.page_size_points !== '442.08 x 663.12') {
-    throw new Error(name + ': print receipt page geometry is invalid');
+      receipt.page_size_points !== '442.08 x 663.12' ||
+      receipt.full_page_raster_count !== receipt.page_count ||
+      !Number.isSafeInteger(receipt.full_page_raster_bytes) || receipt.full_page_raster_bytes <= 0 ||
+      receipt.pdf_bytes !== statSync(pdfPath).size ||
+      receipt.front_png_bytes !== statSync(pngPath).size) {
+    throw new Error(name + ': print receipt page/raster/byte evidence is incomplete or mismatched');
   }
   const review = receipt.human_review;
   if (!review || review.visual !== 'NOT_REVIEWED' || review.accessibility !== 'NOT_REVIEWED') {
