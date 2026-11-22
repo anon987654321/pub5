@@ -1,0 +1,143 @@
+# frozen_string_literal: true
+
+require_relative "test_helper"
+
+class TestReplayReader < Minitest::Test
+  include Master
+
+  def setup
+    @dir = Dir.mktmpdir
+    @events_dir = File.join(@dir, "runtime", "events")
+    FileUtils.mkdir_p(@events_dir, mode: 0o700)
+  end
+
+  def teardown
+    FileUtils.rm_rf(@dir)
+  end
+
+  def test_replay_activity_formats_recent_events
+    path = File.join(@events_dir, "activity.jsonl")
+    write_private(path, "{\"timestamp\":\"2026-06-25T10:00:00Z\",\"event\":\"scan:complete\",\"payload\":{\"count\":1}}\n")
+    output = Trace::ReplayReader.new(root: @dir).render(arg: "5")
+    assert_includes output, "replay activity"
+    assert_includes output, "scan:complete"
+  end
+
+  def test_event_records_use_unpadded_dmesg_lines
+    reader = Trace::ReplayReader.new(root: @dir)
+    line = reader.send(:format_record, {
+      "timestamp" => "2026-06-25T10:00:00Z",
+      "event" => "scan:complete",
+      "payload" => { "count" => 1 },
+    })
+    assert_equal "event0: 10:00:00 scan:complete count=1", line
+    refute_match(/ {2,}/, line)
+  end
+
+  def test_replay_commit_correlates_nearby_events
+    repo = File.join(@dir, "repo")
+    FileUtils.mkdir_p(repo)
+    system("git", "-C", repo, "init", "-q")
+    system("git", "-C", repo, "config", "user.email", "test@example.com")
+    system("git", "-C", repo, "config", "user.name", "Test")
+    File.write(File.join(repo, "README"), "hi\n")
+    system("git", "-C", repo, "add", "README")
+    system("git", "-C", repo, "commit", "-q", "-m", "seed")
+    sha = `git -C #{repo} rev-parse --short HEAD`.strip
+    committed_at = `git -C #{repo} show -s --format=%aI HEAD`.strip
+
+    master_root = File.join(repo, "MASTER")
+    FileUtils.mkdir_p(File.join(master_root, "runtime", "events"))
+    write_private(
+      File.join(master_root, "runtime", "events", "activity.jsonl"),
+      "{\"timestamp\":\"#{committed_at}\",\"event\":\"ops:commit\",\"payload\":{\"head\":\"#{sha}\"}}\n",
+    )
+
+    output = Trace::ReplayReader.new(root: master_root).render(arg: "commit #{sha}")
+    assert_includes output, "replay commit"
+    assert_includes output, "seed"
+    assert_includes output, "ops:commit"
+  end
+
+  def test_replay_evidence_reads_operational_stream
+    evidence_path = File.join(@events_dir, "evidence.jsonl")
+    write_private(evidence_path, "{\"timestamp\":\"2026-06-25T10:00:00Z\",\"event\":\"ops:commit\",\"payload\":{\"head\":\"abc\"}}\n")
+    output = Trace::ReplayReader.new(root: @dir).render(arg: "evidence")
+    assert_includes output, "replay evidence"
+    assert_includes output, "ops:commit"
+  end
+
+  def test_session_receipt_summarizes_private_transcript_and_telemetry_without_payloads
+    session = Trace::Session.new(root: @dir)
+    session.add_message(role: :user, content: "Private question: never print this phrase")
+    session.add_message(role: :assistant, content: "Private answer: never print this phrase")
+    session.add_message(role: :user, content: "Private shell output: never print this phrase", layer: :execution)
+    session.save!
+
+    Trace::Log::Event.new(root: @dir, stream: "activity").append!(
+      "tool:after", { tool: "read_file", output: "PRIVATE TOOL PAYLOAD" }
+    )
+    Trace::Log::Event.new(root: @dir, stream: "evidence").append!(
+      "core:effect:complete", { output: "PRIVATE EFFECT PAYLOAD" }
+    )
+
+    output = Trace::ReplayReader.new(root: @dir).render_session_receipt(session:)
+
+    assert_includes output, "session receipt0: OBSERVED"
+    assert_includes output, "sha256="
+    assert_includes output, "persisted_messages=3"
+    assert_includes output, "memory_messages=3"
+    assert_includes output, "execution=1"
+    assert_includes output, "tool:after=1"
+    assert_includes output, "core:effect:complete=1"
+    refute_includes output, "Private question"
+    refute_includes output, "Private answer"
+    refute_includes output, "PRIVATE TOOL PAYLOAD"
+    refute_includes output, "PRIVATE EFFECT PAYLOAD"
+  end
+
+  def test_session_command_dispatches_the_read_only_receipt
+    session = Trace::Session.new(root: @dir)
+    session.save!
+
+    output = Master::CLI::CommandRegistry.dispatch_session(session, ctx: { args: "receipt" })
+
+    assert_includes output, "session receipt0: OBSERVED"
+    assert_includes output, "read-only"
+    refute_includes output, "message text"
+  end
+
+  def test_session_receipt_is_inconclusive_when_transcript_telemetry_is_corrupt
+    session = Trace::Session.new(root: @dir)
+    session.add_message(role: :user, content: "not emitted")
+    session.save!
+    write_private(File.join(@events_dir, "activity.jsonl"), "{broken json\n")
+
+    output = Trace::ReplayReader.new(root: @dir).render_session_receipt(session:)
+
+    assert_includes output, "session receipt0: INCONCLUSIVE"
+    assert_includes output, "status=unavailable"
+    refute_includes output, "not emitted"
+    refute_includes output, "broken json"
+  end
+
+  def test_replay_failures_filters_error_events
+    path = File.join(@events_dir, "activity.jsonl")
+    write_private(path, [
+      "{\"timestamp\":\"2026-06-25T10:00:00Z\",\"event\":\"scan:complete\",\"payload\":{}}",
+      "{\"timestamp\":\"2026-06-25T10:00:01Z\",\"event\":\"scan:error\",\"payload\":{\"error\":\"boom\"}}",
+    ].join("\n") + "\n")
+    output = Trace::ReplayReader.new(root: @dir).render(arg: "failures")
+    assert_includes output, "scan:error"
+    refute_includes output, "scan:complete"
+  end
+
+  private
+
+  # File.write's mode: kwarg holds open(2) flags, not permission bits; match
+  # the production log contract by chmodding the written file to 0600.
+  def write_private(path, content)
+    File.write(path, content)
+    File.chmod(0o600, path)
+  end
+end

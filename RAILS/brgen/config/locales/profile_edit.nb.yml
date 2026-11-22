@@ -1,0 +1,19 @@
+nb:
+  profile:
+    bio: Om deg
+    bio_hint:
+      one: "Maks %{count} tegn. Vises under navnet ditt på profilen."
+      other: "Maks %{count} tegn. Vises under navnet ditt på profilen."
+    avatar: Profilbilde
+    avatar_choose: Velg et bilde
+    avatar_hint: JPEG, PNG, WebP, GIF, HEIC eller AVIF. Bildet beskjæres til et kvadrat.
+    avatar_remove: Fjern bildet og bruk mønsteret igjen
+    username_rule: "%{min}–%{max} tegn: bokstaver a–z, tall og understrek."
+    username_available: "«%{name}» er ledig."
+    username_taken: "«%{name}» er tatt."
+    username_invalid: "Bruk %{min}–%{max} tegn: bokstaver a–z, tall og understrek."
+  activerecord:
+    attributes:
+      user:
+        bio: Om deg
+        avatar: Profilbilde

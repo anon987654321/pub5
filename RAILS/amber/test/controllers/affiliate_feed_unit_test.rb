@@ -1,0 +1,118 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+# amber had AffiliateLink — a URL an owner pastes onto one wardrobe item — and
+# no network inventory, so there was nothing to place between posts. These pin
+# that the shared band actually renders here, because a partial that is moved
+# but never reached is the failure this whole move was for.
+class AffiliateFeedUnitTest < ActionDispatch::IntegrationTest
+  FEED_EVERY = Shared::AffiliateHelper::FEED_EVERY
+
+  def seed_products(count, category: "fashion")
+    count.times do |i|
+      Shared::AffiliateProduct.create!(
+        source: "tradedoubler", external_id: "fixture-#{category}-#{i}",
+        title: "Linen shirt #{i}", description: "Lightweight linen for everyday wear",
+        merchant: "Fjord Studio", image_url: "https://example.test/images/linen-shirt-#{i}.jpg",
+        click_url: "https://example.test/p/#{i}",
+        category: category, market: "NO", in_stock: true,
+        placeholder: false, last_seen_at: Time.current
+      )
+    end
+  end
+
+  def sign_in_as(email)
+    user = User.strict_loading(false).create!(email_address: email, password: "password")
+    post session_path, params: { email_address: user.email_address, password: "password" }
+    user
+  end
+
+  # The feed is behind authentication, so seeding signs in as its author.
+  def seed_posts(count)
+    user = sign_in_as("feed-#{SecureRandom.hex(4)}@example.test")
+    count.times { |i| Post.create!(user: user, body: "Outfit #{i}") }
+  end
+
+  def test_the_band_renders_between_posts_once_there_is_inventory
+    seed_products(4)
+    seed_posts(FEED_EVERY + 1)
+
+    get feed_posts_url
+
+    assert_response :success
+    assert_includes response.body, "affiliate_feed_unit--post"
+    assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_intro", text: I18n.t("affiliate.feed_unit_intro")
+    assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_card"
+    assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_media"
+    assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_header"
+    assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_sponsored", count: 0
+    assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_ad", text: I18n.t("affiliate.ad_label")
+    assert_select "aside.affiliate_feed_unit--post details.affiliate_feed_post_menu summary[aria-label]"
+    assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_media img[alt]"
+    assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_copy h2", text: /Linen shirt/
+    assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_menu_panel a[rel='noopener sponsored']", text: I18n.t("affiliate.cta.view_offer")
+    assert_includes response.body, "affiliate_feed_link_disclosure"
+    assert_match(/data-outbound-click-epi-value=/, response.body)
+    refute_includes response.body, "affiliate_feed_grid"
+  end
+
+  # The unit reads the shared locale file. Until the engine loaded every locale
+  # rather than social.<locale>.yml literally, affiliate.en.yml sat on disk
+  # unread and this rendered translation-missing spans in the app it moved for.
+  def test_the_bands_strings_resolve_rather_than_reporting_missing
+    seed_products(4)
+    seed_posts(FEED_EVERY + 1)
+
+    get feed_posts_url
+
+    assert_not_includes response.body, "translation missing"
+    assert_includes response.body, I18n.t("affiliate.feed_unit_intro")
+  end
+
+  # An electronics deal between two outfits reads as a banner; a garment reads
+  # as the app working. The category filter is the difference.
+  def test_inventory_outside_the_category_is_not_shown
+    seed_products(4, category: "electronics")
+    seed_posts(FEED_EVERY + 1)
+
+    get feed_posts_url
+
+    assert_response :success
+    assert_not_includes response.body, "affiliate_feed_unit--post"
+    assert_not_includes response.body, "affiliate_feed_grid"
+  end
+
+  # A band in the last slot reads as the end of the feed.
+  def test_a_feed_shorter_than_the_cadence_gets_no_band
+    seed_products(4)
+    seed_posts(FEED_EVERY)
+
+    get feed_posts_url
+
+    assert_response :success
+    assert_not_includes response.body, "affiliate_feed_unit--post"
+    assert_not_includes response.body, "affiliate_feed_grid"
+  end
+
+  # affiliate_honesty reads the partial's source; this reads the page a buyer
+  # sees next to the garment's shop links.
+  def test_an_item_page_carries_the_affiliate_disclosure_in_its_footer
+    user = sign_in_as("disclosure-#{SecureRandom.hex(4)}@example.test")
+    item = user.items.create!(title: "Ullkåpe", category: "Outerwear")
+
+    get item_path(item)
+
+    assert_response :success
+    assert_select "footer.amber-footer p.affiliate-fine[role=note]", text: /#{Regexp.escape(I18n.t("legal.affiliate_disclosure"))}/
+  end
+
+  def test_no_inventory_renders_no_band_rather_than_an_empty_one
+    seed_posts(FEED_EVERY + 1)
+
+    get feed_posts_url
+
+    assert_response :success
+    assert_not_includes response.body, "affiliate_feed_unit"
+  end
+end

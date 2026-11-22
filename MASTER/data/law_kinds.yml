@@ -1,0 +1,45 @@
+# Exemptions as kinds, not hardcoded paths.
+#
+# The NO_PUTS comment records the day a rename re-armed a law on its own
+# exempted subject: lib/now/ became lib/cli/, the in-detector address stayed,
+# and 105 findings arrived overnight on exactly what the exemption was for.
+# A path written inside a detector is an exemption with no owner, no reason
+# and no relocation alarm.
+#
+# This registry is where exemptions live instead. A kind names a family of
+# files, the reason the family is exempt from a law, and the globs that prove
+# the family still exists. The catalogue's own path_exclude is the reach
+# policy both scanners read; every path_exclude an entry names must be
+# accounted for here or in the entry itself with a reason. `bin/master kinds
+# check` walks every exempted path's subjects: when the subject moves or
+# dies, the exemption is a finding instead of a silent re-arm.
+#
+# Fields:
+#   id           the kind's name, stable across relocations
+#   description  what the family is, in one sentence
+#   subjects     globs that must still match at least one live path
+#   exemptions   law id -> why the kind is exempt from it
+schema: 1
+kinds:
+  - id: agent_interface
+    description: >
+      The zero-dependency agent tier prints for a living: its JSON answers,
+      status views and hook reports are the interface an outside agent reads,
+      the same argument that exempts the REPL session code. A puts here is
+      interface output, not debug output.
+    subjects:
+      - MASTER/lib/agent/**/*.rb
+    exemptions:
+      NO_PUTS: >
+        stdout is the tier's only channel; there is no event bus below the
+        runtime boot, and an agent reading JSON is the reader the law's
+        logger clause is meant to serve.
+
+  - id: repl_session
+    description: >
+      The interactive CLI session code prints for a living: menus, prompts,
+      renderings. The whole of lib/cli/session carries deliberate puts.
+    subjects:
+      - MASTER/lib/cli/session/**/*.rb
+    exemptions:
+      NO_PUTS: interface output of the REPL; the law addresses library code.

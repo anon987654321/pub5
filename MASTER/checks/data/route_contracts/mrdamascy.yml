@@ -1,0 +1,176 @@
+---
+schema: 1
+app: mrdamascy
+host: mrd.brgen.no
+routes:
+  "/":
+    status: 200
+    type: text/html
+    title: Menyen
+    heading: Fra Damaskus med kjærlighet
+    landmarks:
+    - header
+    - nav
+    - main
+    - footer
+    - form
+    forms:
+    - "/cart/add_item"
+  "/about":
+    status: 200
+    type: text/html
+    title: Fra Damaskus med kjærlighet
+    heading: Fra Damaskus med kjærlighet
+    landmarks:
+    - header
+    - nav
+    - main
+    - footer
+    forms: []
+  "/cart":
+    status: 200
+    type: text/html
+    title: Kurven din
+    heading: Kurven din
+    landmarks:
+    - header
+    - nav
+    - main
+    - footer
+    forms: []
+  "/checkout":
+    status: 302
+    type: text/html
+    location: "/cart"
+    landmarks: []
+    forms: []
+  "/checkout/zone":
+    status: 200
+    type: application/json
+  "/courier/runs":
+    status: 302
+    type: text/html
+    location: "/"
+    landmarks: []
+    forms: []
+  "/loyalty":
+    status: 200
+    type: text/html
+    title: Sahtein-kortet
+    landmarks:
+    - header
+    - nav
+    - main
+    - footer
+    forms: []
+  "/manifest.json":
+    status: 200
+    type: application/json
+  "/menu":
+    status: 200
+    type: text/html
+    title: Menyen
+    heading: Fra Damaskus med kjærlighet
+    landmarks:
+    - header
+    - nav
+    - main
+    - footer
+    - form
+    forms:
+    - "/cart/add_item"
+  "/offline":
+    status: 200
+    type: text/html
+    title: Du er offline
+    heading: Du er offline
+    landmarks:
+    - header
+    - nav
+    - main
+    - footer
+    forms: []
+  "/orders":
+    status: 302
+    type: text/html
+    location: "/session/new"
+    landmarks: []
+    forms: []
+  "/recede_historical_location":
+    status: 200
+    type: text/html
+    landmarks: []
+    forms: []
+  "/refresh_historical_location":
+    status: 200
+    type: text/html
+    landmarks: []
+    forms: []
+  "/resume_historical_location":
+    status: 200
+    type: text/html
+    landmarks: []
+    forms: []
+  "/service-worker.js":
+    status: 200
+    type: text/javascript
+  "/session/new":
+    status: 200
+    type: text/html
+    title: Logg inn med telefonen
+    heading: Logg inn med telefonen
+    landmarks:
+    - header
+    - nav
+    - main
+    - footer
+    - form
+    forms:
+    - "/session/request_code"
+  "/session/vipps":
+    status: 302
+    type: text/html
+    location: "/vipps/login_mock?to="
+    landmarks: []
+    forms: []
+  "/session/vipps/callback":
+    status: 302
+    type: text/html
+    location: "/session/new"
+    landmarks: []
+    forms: []
+  "/staff/board":
+    status: 302
+    type: text/html
+    location: "/"
+    landmarks: []
+    forms: []
+  "/stripe/mock":
+    status: 302
+    type: text/html
+    location: "/"
+    landmarks: []
+    forms: []
+  "/up":
+    status: 200
+    type: text/html
+    landmarks: []
+    forms: []
+  "/vipps/login_mock":
+    status: 200
+    type: text/html
+    title: Mr. Damascy — Shawarma &amp; Kebab
+    landmarks:
+    - header
+    - nav
+    - main
+    - footer
+    - form
+    forms:
+    - "/session/vipps/callback"
+  "/vipps/mock":
+    status: 302
+    type: text/html
+    location: "/"
+    landmarks: []
+    forms: []

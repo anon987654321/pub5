@@ -1,0 +1,17 @@
+<% if @notifications.any? %>
+  <% @group_order.each do |kind| %>
+    <% items = @grouped_notifications[kind] || [] %>
+    <% next if items.empty? %>
+    <section class="notification-group">
+      <%= tag.h2 t("notifications.kinds.#{kind}") %>
+      <% notification_clusters(kind, items).each do |cluster| %>
+        <%= notification_cluster_card(cluster) %>
+      <% end %>
+    </section>
+  <% end %>
+<% else %>
+  <%= render "shared/empty_state",
+        title: t("notifications.empty_title"),
+        body: t("notifications.empty_body"),
+        action: { label: t("nav.home"), path: root_path } %>
+<% end %>

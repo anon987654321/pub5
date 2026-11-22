@@ -1,0 +1,70 @@
+# frozen_string_literal: true
+
+module Deploy
+  # Secrets and app data that anyone on the box can read, and daemon logs the
+  # daemon cannot write.
+  #
+  # Both have happened. The app homes were world-readable until 2026-08-25, with
+  # production databases inside them. And `.master/tts-worker-0.log` came back
+  # `root:master` while the daemon runs as `master`: it could not open its own
+  # log, died before creating a socket, and /health read tts true while no
+  # socket existed. OPERATOR.sh and vps_ci.sh set the modes; nothing checked
+  # they stayed set.
+  #
+  # The policy is what those scripts write: `/etc/<app>.env` root:<app> 0640,
+  # `/home/<app>/app/storage` 0750. So the rule is "no permission for other" on
+  # both, not an exact mode, which leaves the group bits to the scripts that own
+  # them. Stats are injected so the rule is decidable off the box.
+  module PermissionAudit
+    module_function
+
+    # entries: [{ path:, mode:, owner:, group:, expected_owner:, expected_group: }]
+    # — mode is File::Stat#mode; owner/group are names (or numeric fallback).
+    # Expected fields are optional so this audit can check only what the
+    # deployment contract explicitly guarantees. Returns failure lines.
+    # Inspect every component from the filesystem root: lstat on only the
+    # leaf would miss a secret reached through a symlinked parent directory.
+    def path_contains_symlink?(path)
+      current = File::SEPARATOR
+      File.expand_path(path.to_s).split(File::SEPARATOR).reject(&:empty?).any? do |part|
+        current = File.join(current, part)
+        File.symlink?(current)
+      end
+    end
+
+    def failures(secrets:, private_dirs:, daemon_logs:, daemon_user:)
+      lines = []
+      (secrets + private_dirs + daemon_logs).each do |entry|
+        if entry[:symlink]
+          lines << "permissions: #{entry[:path]} is a symlink; refusing to trust a redirected permission target"
+        end
+      end
+
+      (secrets + private_dirs).each do |entry|
+        next if entry[:symlink]
+
+        mode = entry[:mode].to_i
+        if mode.anybits?(0o007)
+          lines << format("permissions: %<path>s is %<mode>04o - other can reach it", path: entry[:path],
+                                                                                      mode: mode & 0o7777)
+        end
+
+        expected_owner = entry[:expected_owner]
+        if expected_owner && entry[:owner] != expected_owner
+          lines << "permissions: #{entry[:path]} is owned by #{entry[:owner]}, expected #{expected_owner}"
+        end
+
+        expected_group = entry[:expected_group]
+        if expected_group && entry[:group] != expected_group
+          lines << "permissions: #{entry[:path]} has group #{entry[:group]}, expected #{expected_group}"
+        end
+      end
+      daemon_logs.each do |entry|
+        next if entry[:owner] == daemon_user
+
+        lines << "permissions: #{entry[:path]} is owned by #{entry[:owner]}, and #{daemon_user} writes it"
+      end
+      lines
+    end
+  end
+end

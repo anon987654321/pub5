@@ -1,0 +1,62 @@
+<% content_for :title, @live_stream.title %>
+<% content_for :json_ld, json_ld_for(@live_stream, type: :video) %>
+
+<%= tag.article class: "tv-live-stream" do %>
+  <%= tag.header class: "page-header" do %>
+    <%= tag.h1 @live_stream.title %>
+    <%= turbo_stream_from @live_stream.status_stream %>
+    <%= render "tv/live_streams/status", live_stream: @live_stream %>
+  <% end %>
+  <%= render "shared/errors", object: @live_stream %>
+
+  <div data-controller="tv-player" data-tv-player-auto-wake-lock-value="true">
+    <div class="tv-media">
+      <% thumb = @live_stream.channel&.banner %>
+      <% if thumb&.attached? %>
+        <%= image_tag main_app.url_for(thumb), class: tv_media_image_classes(thumb), alt: @live_stream.title, width: 1280, height: 720 %>
+      <% else %>
+        <div class="tv-media-image replicate-hero" role="img" aria-label="<%= @live_stream.title %>"></div>
+      <% end %>
+    </div>
+  </div>
+
+  <%= tag.section class: "live-stream-details" do %>
+    <%= tag.p @live_stream.description if @live_stream.description.present? %>
+    <%# Nothing writes viewer_count yet, so a zero is "not counted", not "nobody
+        is watching"; the line shows only for a count something recorded. %>
+    <% if @live_stream.viewer_count.to_i.positive? %>
+      <%= tag.p t("tv.live_streams.viewers", count: @live_stream.viewer_count) %>
+    <% end %>
+  <% end %>
+
+<%# The owner's controls. go_live and end_live had routes and no button, and
+    the stream key is the owner's alone: anyone holding it can broadcast. %>
+<% if @owner_view %>
+  <%= tag.section class: "live-stream-owner", aria: { labelledby: "live-stream-owner-heading" } do %>
+    <%= tag.h2 t("tv.live_streams.owner_heading"), id: "live-stream-owner-heading" %>
+    <% if @live_stream.status == "scheduled" %>
+      <%= button_to t("tv.live_streams.go_live"), go_live_live_stream_path(@live_stream), method: :patch,
+            class: "button button-primary" %>
+    <% elsif @live_stream.status == "live" %>
+      <%= button_to t("tv.live_streams.end_live"), end_live_live_stream_path(@live_stream), method: :patch,
+            class: "button", form: { data: { turbo_confirm: t("tv.live_streams.end_live_confirm") } } %>
+    <% end %>
+    <% if @live_stream.stream_key.present? %>
+      <details>
+        <%= tag.summary t("tv.live_streams.stream_key") %>
+        <%= tag.code @live_stream.stream_key, class: "live-stream-key" %>
+        <%= tag.p t("tv.live_streams.stream_key_note") %>
+      </details>
+    <% end %>
+  <% end %>
+<% end %>
+
+  <%= tag.section class: "live-stream-chat" do %>
+    <%= tag.h2 t("tv.live_streams.chat") %>
+    <%= turbo_stream_from "tv:live_stream:#{@live_stream.id}:entries" %>
+    <%= tag.div id: "tv-live-stream-#{@live_stream.id}-entries", role: "log", aria: { live: "polite" } do %>
+      <%= render partial: "tv/stream_chats/stream_chat", collection: @stream_chats, as: :stream_chat %>
+    <% end %>
+    <%= render "tv/stream_chats/composer", live_stream: @live_stream if authenticated? %>
+  <% end %>
+<% end %>

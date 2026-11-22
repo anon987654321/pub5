@@ -1,0 +1,166 @@
+# frozen_string_literal: true
+
+require "securerandom"
+
+class User < ApplicationRecord
+  include Shared::EmailVerification
+  include Shared::Billable
+  has_secure_password
+
+  has_one :profile, dependent: :destroy
+  has_one :creator_profile, dependent: :destroy
+  has_one :privacy_setting, dependent: :destroy
+
+  has_many :posts,           dependent: :destroy
+
+  has_many :encounters, dependent: :delete_all
+  has_many :encounters_as_partner, class_name: "Encounter", foreign_key: :partner_id,
+                                     dependent: :nullify, inverse_of: :partner
+  has_many :comments,        dependent: :destroy
+  # votes.user_id is a foreign key: without the cascade, deleting a voter is a 500.
+  has_many :votes,           dependent: :destroy
+  # reactions.user_id is one too, since Reaction became a model (57f30ee2f).
+  has_many :reactions,       dependent: :destroy, strict_loading: false
+  has_many :items,           dependent: :destroy
+  has_many :wardrobe_items,  dependent: :destroy
+  has_many :outfits,         dependent: :destroy
+  has_many :planned_outfits, dependent: :destroy
+  has_many :style_preferences, dependent: :destroy
+  has_many :packing_lists, dependent: :destroy
+  has_many :recommendations, dependent: :destroy
+  has_many :identity_verifications, dependent: :destroy
+  has_many :consent_events, dependent: :destroy
+  has_many :declutter_reviews, dependent: :destroy
+  has_many :declutter_challenges, dependent: :destroy
+  has_many :declutter_outcomes, dependent: :destroy
+  has_many :connections_requested, class_name: "Connection", foreign_key: :requester_id, dependent: :destroy,
+           inverse_of: :requester
+  has_many :connections_received, class_name: "Connection", foreign_key: :addressee_id, dependent: :destroy,
+           inverse_of: :addressee
+  has_many :live_streams, dependent: :destroy
+  has_many :sent_messages, class_name: "Message", foreign_key: :sender_id, dependent: :destroy, inverse_of: :sender
+  has_many :received_messages, class_name: "Message", foreign_key: :recipient_id, dependent: :destroy,
+           inverse_of: :recipient
+
+  has_many :follows_as_follower, class_name: "Follow", foreign_key: :follower_id, dependent: :destroy,
+           inverse_of: :follower
+  has_many :follows_as_followee, class_name: "Follow", foreign_key: :followee_id, dependent: :destroy,
+           inverse_of: :followee
+  has_many :following,       through: :follows_as_follower, source: :followee
+  has_many :followers,       through: :follows_as_followee, source: :follower
+  has_many :sessions,        dependent: :destroy, inverse_of: :user
+  has_many :external_identities, dependent: :destroy
+  has_many :account_merges, dependent: :destroy
+  has_many :account_merges_as_guest, class_name: "AccountMerge", foreign_key: :guest_user_id,
+           dependent: :destroy, inverse_of: :guest_user
+  has_many :entitlements, dependent: :destroy
+  has_many :payment_transactions, dependent: :destroy
+  has_many :vipps_payments, dependent: :destroy
+  has_many :vipps_agreements, dependent: :destroy
+
+  normalizes :email_address, with: ->(e) { e.strip.downcase }
+
+  scope :publicly_visible, -> { where(guest: false, deleted_at: nil, deletion_scheduled_at: nil) }
+
+  validates :email_address, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
+
+  after_create :ensure_identity_records, unless: :guest?
+
+  def guest? = has_attribute?(:guest) && self[:guest]
+  def bot? = has_attribute?(:bot) && self[:bot]
+  def master_bot? = bot? && email_address.to_s == "master@amber.local"
+
+  # Does this user currently hold access to this specific gated thing? The
+  # premium plan answers yes for everything ticketed; a stored Entitlement
+  # (a PPV unlock, a live ticket, a Vipps agreement's grant) answers for the
+  # one subject it names. Ownership is not access - the host's controller
+  # decides that - but the author of a thing never needs an entitlement.
+  def entitled_to?(subject)
+    return true if entitled?(:amber_premium)
+
+    entitlements.live.for_subject(subject).exists?
+  end
+
+  # Record the grant a payment just bought. Idempotent: a retried webhook
+  # grants once (Entitlement.grant! holds the uniqueness).
+  def grant_entitlement!(subject: nil, source: "ppv", entitlement_name: nil, expires_at: nil)
+    Entitlement.grant!(self, subject:, source:, entitlement_name:, expires_at:)
+  end
+
+  # The compliance gate reads only this stored answer; how it was earned (a
+  # third-party age-assurance vendor) lives outside this app's data.
+  def age_verified? = age_verified_at.present?
+
+  # Scheduled for deletion or already gone. The person still has a row, so a
+  # lookup by id finds them; what they no longer have is a mailbox, which is
+  # why #messageable_users filters them out of the directory. Anything that
+  # reaches a user by id instead has to ask this the same way.
+  def departing? = deleted_at.present? || deletion_scheduled_at.present?
+
+  def self.master_bot
+    bot = find_or_initialize_by(email_address: "master@amber.local")
+    bot.username = "master" if bot.respond_to?(:username=)
+    bot.guest = true if bot.respond_to?(:guest=)
+    bot.bot = true
+    bot.password = SecureRandom.hex(24) if bot.new_record?
+    bot.save!
+    bot
+  end
+
+  def display_name
+    return "MASTER" if master_bot?
+    return "anon" if guest? || departing?
+
+    profile&.display_name.presence || email_address.to_s.split("@").first
+  end
+
+  after_commit :broadcast_live_refresh
+
+  def broadcast_live_refresh
+    broadcast_refresh_to self
+  end
+
+  def following?(other) = follows_as_follower.exists?(followee: other)
+
+  def connected_with?(other)
+    return false if other.blank? || other.id == id
+
+    Connection.accepted.where(requester_id: id, addressee_id: other.id)
+              .or(Connection.accepted.where(requester_id: other.id, addressee_id: id))
+              .exists?
+  end
+
+  def messageable_users
+    requested = Connection.accepted.where(requester_id: id).select(:addressee_id)
+    received = Connection.accepted.where(addressee_id: id).select(:requester_id)
+    User.publicly_visible.where(id: requested).or(User.publicly_visible.where(id: received)).includes(:profile).order(:email_address)
+  end
+  # A subquery over the join table, not `following.to_a`.
+  #
+  # User is strict_loading, so materialising the association raised
+  # StrictLoadingViolationError for every signed-in visitor and PostsController#feed
+  # was a 500 nobody had seen — the surface had no test until the shared affiliate
+  # band was placed on it. `following?` and `messageable_users` above already query
+  # their join tables directly for the same reason; this is the one that did not.
+  #
+  # It also stops loading every followed user into memory to throw them away: the
+  # ids are all the WHERE needs.
+  def feed_posts
+    followee_ids = Follow.where(follower_id: id).select(:followee_id)
+    Post.where(user_id: followee_ids).or(Post.where(user_id: id)).recent
+  end
+
+  def public_creator? = creator_profile&.public? || false
+  def wardrobe_public? = privacy_setting&.public_wardrobe? || false
+  def declutter_summary = DeclutterDashboard.new(self).summary
+
+  private
+
+  # Created by class, not through create_profile!: the has_one builder would read the association under
+  # strict loading. It was wrapped in strict_loading!(false) do ... end, which takes no block, so neither
+  # record was ever made and no account had a profile or privacy settings.
+  def ensure_identity_records
+    Profile.create!(user: self)
+    PrivacySetting.create!(user: self)
+  end
+end

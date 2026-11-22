@@ -1,0 +1,1168 @@
+# frozen_string_literal: true
+
+require "digest"
+require "fileutils"
+require "rbconfig"
+require "rubygems"
+require_relative "../trace/dmesg"
+require_relative "../io/process_spawn"
+
+module Master
+  module Boot
+    # Repairs the runtime environment before an entrypoint loads application code.
+    #
+    # The order matters:
+    # 1. use the Ruby that launched MASTER;
+    # 2. install the Bundler version recorded by Gemfile.lock when absent;
+    # 3. ask Bundler whether the locked graph is installed;
+    # 4. require explicit operator approval before installing OS build tools;
+    # 5. retry once, then report the real command and output.
+    #
+    # Nothing here updates a lockfile on a healthy bundle. Dependency changes remain
+    # an explicit Bundler operation, not a surprise hidden inside boot.
+    class DependencyManager
+      SYSTEM_PACKAGES = {
+        termux: %w[git clang make cmake pkg-config sqlite openssl libffi libyaml libvips],
+        openbsd: %w[pkgconf gmake sqlite3 libffi],
+        macos: %w[pkg-config openssl@3 libyaml libffi sqlite],
+        debian: %w[build-essential pkg-config libssl-dev libyaml-dev libffi-dev libsqlite3-dev],
+        fedora: %w[gcc gcc-c++ make cmake pkgconf-pkg-config openssl-devel libyaml-devel libffi-devel sqlite-devel],
+        arch: %w[base-devel cmake pkgconf openssl libyaml libffi sqlite],
+      }.freeze
+
+      BUNDLE_CONTEXT_KEYS = %w[
+        BUNDLE_APP_CONFIG
+        BUNDLE_BIN
+        BUNDLE_DEPLOYMENT
+        BUNDLE_FROZEN
+        BUNDLE_GEMFILE
+        BUNDLE_IGNORE_CONFIG
+        BUNDLE_JOBS
+        BUNDLE_LOCKFILE
+        BUNDLE_ONLY
+        BUNDLE_PATH
+        BUNDLE_RETRY
+        BUNDLE_USER_CONFIG
+        BUNDLE_DISABLE_SHARED_GEMS
+        BUNDLE_USER_HOME
+        BUNDLE_VERSION
+        BUNDLE_WITH
+        BUNDLE_WITHOUT
+      ].freeze
+
+      DEPENDENCY_CONFLICT = /could not find compatible versions|conflicting dependencies|incompatible requirements/i.freeze
+
+      NATIVE_FAILURE = /
+        extconf\ failed|
+        cannot\ find|
+        no\ such\ file|file\ not\ found|
+        fatal\ error|
+        failed\ to\ build\ gem|
+        native\ extension|
+        make:\s.*not\ found|
+        pkg-config|
+        linked\ to\ incompatible|
+        incompatible\ architecture
+      /ix.freeze
+
+      LOCK_WAIT_SECONDS = 60
+      CAPTURE_DEADLINE_SECONDS = 900
+      CAPTURE_POLL_SECONDS = 0.25
+      CAPTURE_DRAIN_SECONDS = 1.0
+
+      # An ABI-stale bundle is moved aside and reinstalled; only a toolchain or
+      # header failure that survives that rebuild needs OS packages. A header
+      # failure with no ABI-stale line keeps its store; OS packages require explicit approval.
+      NATIVE_REPAIR_REFUSED = "native bundle repair refused (no ABI-stale evidence; gem store left intact)"
+
+      SYSTEM_RECOVERY_MESSAGES = [
+        "bundle install failed",
+        "bundle install failed in user path",
+        "bundle native extension repair failed",
+        NATIVE_REPAIR_REFUSED,
+      ].freeze
+      ABI_STALE_LINE = /linked\ to\ incompatible|incompatible\ architecture/i.freeze
+
+      Result = Data.define(
+        :ok,
+        :changed,
+        :bundler,
+        :bundle,
+        :system,
+        :message,
+        :output,
+      ) do
+        def success? = ok
+      end
+
+      def self.ensure!(root:, env: ENV, out: $stderr, **options)
+        new(root:, env:, out:, **options).ensure!
+      end
+
+      def self.install!(root:, env: ENV, out: $stderr, **options)
+        new(root:, env:, out:, **options).install!
+      end
+
+      def self.system!(root:, env: ENV, out: $stderr, **options)
+        new(root:, env:, out:, **options).install_system_packages!
+      end
+
+      def initialize(
+        root:,
+        env: ENV,
+        out: $stderr,
+        runner: nil,
+        command_path: nil,
+        home: nil,
+        input: $stdin,
+        approval: nil
+      )
+        @root = File.expand_path(root)
+        @env = env
+        @out = out
+        @runner = runner || method(:capture)
+        @command_path = command_path || method(:which)
+        @home = home || File.expand_path(@env.fetch("MASTER_DEPENDENCY_HOME", "~"))
+        @input = input
+        @approval = approval
+      end
+
+    end
+
+    module DependencyManagerLifecycle
+      Result = DependencyManager::Result
+      def ensure!
+        return ok_result("auto-install disabled", changed: false) unless enabled?
+        return ok_result("no Gemfile", changed: false) unless gemfile?
+
+        deployed = adopt_deploy_bundle
+        return deployed if deployed && !deployed.ok
+
+        activate_environment!
+        return deployed if deployed
+
+        report("checking pinned Ruby, Bundler and gem dependencies")
+        result = with_lock { ensure_locked_bundle }
+        report(result.message || "locked Ruby dependencies ready") if result.ok
+        result
+      rescue StandardError => e
+        report("dependency bootstrap failed: #{e.class}: #{e.message}")
+        Result.new(ok: false, changed: false, bundler: nil, bundle: nil, system: nil,
+                   message: e.message, output: e.full_message)
+      end
+
+      def update!(*gems)
+        return ok_result("no Gemfile", changed: false) unless gemfile?
+
+        with_lock { update_locked_bundle(*gems) }
+      rescue StandardError => e
+        report("bundle update failed: #{e.class}: #{e.message}")
+        Result.new(ok: false, changed: false, bundler: nil, bundle: nil, system: nil,
+                   message: e.message, output: e.full_message)
+      end
+
+      def install!
+        return ok_result("no Gemfile", changed: false) unless gemfile?
+
+        with_lock { install_locked_bundle }
+      rescue StandardError => e
+        report("dependency install failed: #{e.class}: #{e.message}")
+        Result.new(ok: false, changed: false, bundler: nil, bundle: nil, system: nil,
+                   message: e.message, output: e.full_message)
+      end
+
+      def install_system_packages!
+        with_lock { install_system_packages }
+      rescue StandardError => e
+        report("system dependency install failed: #{e.class}: #{e.message}")
+        { ok: false, changed: false, command: nil, output: e.full_message }
+      end
+
+      # Apply the same sanitized Bundler context used by ensure!/install! to the
+      # current process before requiring bundler/setup. Without this, a standalone
+      # bin/master can validate one bundle context and activate another, producing the
+      # misleading "git source is not yet checked out" error after a successful install.
+      # A test boot keeps the :test group: running the test suite is the boot's
+      # purpose, and the law-file preflight on the deploy host requires minitest
+      # from it. A deploy bundle still excludes tooling groups by default, but
+      # the exclusion is a parameter now, not an unconditional truth.
+      def activate_environment!(without: nil)
+        bundle_env(without:).each do |key, value|
+          if value.nil?
+            @env.delete(key)
+          else
+            @env[key] = value
+          end
+        end
+        refresh_gem_state! if @env.equal?(ENV)
+        true
+      end
+
+      def status
+        bundler_version = locked_bundler_version
+        bundle_ok, bundle_output, = run_bundle("check")
+        {
+          ruby: RUBY_VERSION,
+          ruby_required: locked_ruby_version,
+          bundler: bundler_version,
+          bundler_installed: bundler_path(bundler_version),
+          bundle_ok:,
+          bundle_output:,
+          package_manager: package_manager_name,
+        }
+      end
+
+      # The same package set drives recovery, bin/deps system and the standalone
+      # bootstrap plan. It is limited to native build prerequisites, not every
+      # optional MASTER capability.
+      def system_package_plan
+        manager = package_manager_name
+        {
+          package_manager: manager,
+          packages: DependencyManager::SYSTEM_PACKAGES.fetch(manager, []).dup,
+          commands: package_commands.map { |argv, label| { label:, argv: argv.dup } },
+        }
+      end
+
+      private
+
+      # ensure!'s locked leg: the pinned bundler, then the bundle itself; a
+      # system-recovery failure gets one system-package round and a retry.
+      def ensure_locked_bundle
+        bundler = ensure_bundler
+        return bundler unless bundler.ok
+
+        bundle = ensure_bundle
+        return bundle if bundle.ok
+        return bundle unless system_recovery_failure?(bundle)
+
+        ensure_recovered_bundle(bundler, bundle)
+      end
+
+      def ensure_recovered_bundle(bundler, bundle)
+        system = install_system_packages_for_recovery
+        return recovered_bundle_system_failure(bundle, system) unless system[:ok]
+
+        retry_bundle = ensure_bundle
+        recovered_bundle_result(bundler, bundle, system, retry_bundle)
+      end
+
+      def recovered_bundle_system_failure(bundle, system)
+        fail_result(
+          "bundle install failed; system build dependencies unavailable",
+          output: join_output(bundle.output, system[:output]),
+        )
+      end
+
+      def recovered_bundle_result(bundler, bundle, system, retry_bundle)
+        Result.new(
+          ok: retry_bundle.ok,
+          changed: bundler.changed || system[:changed] || retry_bundle.changed,
+          bundler: bundler.bundler,
+          bundle: retry_bundle.bundle,
+          system:,
+          message: retry_bundle.message,
+          output: join_output(bundle.output, system[:output], retry_bundle.output),
+        )
+      end
+
+      # update!'s locked leg: bundle update, with the system-package recovery
+      # round and one retry when a native build fails.
+      def update_locked_bundle(*gems)
+        bundler = ensure_bundler
+        return bundler unless bundler.ok
+
+        args = ["update", *gems]
+        report("updating bundle#{gems.empty? ? "" : " #{gems.join(" ")}"}")
+        ok, stdout, stderr = run_bundle(*args)
+        output = join_output(stdout, stderr)
+        return update_retried_result(args, bundler, output) if !ok && native_build_failure?(output)
+        return fail_result("bundle update failed", output:) unless ok
+
+        ok_result("bundle updated", changed: true, bundle: true, output:, bundler: bundler.bundler)
+      end
+
+      # update!'s recovery leg: install system packages once, then retry the
+      # same command; every output accumulates in run order.
+      def update_retried_result(args, bundler, previous_output)
+        system = install_system_packages_for_recovery
+        unless system[:ok]
+          return fail_result("bundle update failed; system dependencies unavailable",
+                             output: join_output(previous_output, system[:output]))
+        end
+
+        output = join_output(previous_output, system[:output])
+        ok, stdout, stderr = run_bundle(*args)
+        output = join_output(output, join_output(stdout, stderr))
+        if ok
+          ok_result("bundle updated", changed: true, bundle: true, output:, bundler: bundler.bundler)
+        else
+          fail_result("bundle update failed", output:)
+        end
+      end
+
+      # install!'s locked leg: the pinned bundler, then one install; a native
+      # build failure gets the system-package round and one reinstall.
+      def install_locked_bundle
+        bundler = ensure_bundler
+        return bundler unless bundler.ok
+
+        bundle = install_bundle
+        return install_repaired_bundle(bundler, bundle) if !bundle.ok && native_build_failure?(bundle.output)
+
+        install_result(bundler, bundle, nil)
+      end
+
+      def install_repaired_bundle(bundler, failed_bundle)
+        system = install_system_packages_for_recovery
+        unless system[:ok]
+          return fail_result(
+            "bundle install failed; system build dependencies unavailable",
+            output: join_output(failed_bundle.output, system[:output]),
+          )
+        end
+
+        previous_output = failed_bundle.output
+        bundle = install_bundle
+        bundle = Result.new(**bundle.to_h.merge(
+          system:,
+          output: join_output(previous_output, system[:output], bundle.output),
+        ))
+        install_result(bundler, bundle, system)
+      end
+
+      # install!'s shared result shape; system carries the recovery hash when
+      # the repair leg ran, and is otherwise folded into the bundle result.
+      def install_result(bundler, bundle, system)
+        Result.new(
+          ok: bundle.ok,
+          changed: bundler.changed || bundle.changed || system&.fetch(:changed, false) || false,
+          bundler: bundler.bundler,
+          bundle: bundle.bundle,
+          system: system || bundle.system,
+          message: bundle.message,
+          output: bundle.output,
+        )
+      end
+    end
+
+    module DependencyManagerBundleDiscovery
+      # Constants live on DependencyManager; the mixins alias them, because a
+      # method's constants resolve lexically in its own module, not in the
+      # including class. Without these aliases, repair_native_bundle crashed
+      # with NameError on exactly the native-build failure it exists to
+      # repair: first on ABI_STALE_LINE, then on NATIVE_REPAIR_REFUSED one
+      # line later in the same method.
+      ABI_STALE_LINE = DependencyManager::ABI_STALE_LINE
+      NATIVE_REPAIR_REFUSED = DependencyManager::NATIVE_REPAIR_REFUSED
+
+      private
+
+      def enabled?
+        @env.fetch("MASTER_AUTO_INSTALL", "1") != "0" &&
+          @env.fetch("MASTER_AUTO_BUNDLE", "1") != "0"
+      end
+
+      def gemfile?
+        File.file?(File.join(@root, "Gemfile"))
+      end
+
+      def locked_bundler_version
+        lock = File.join(@root, "Gemfile.lock")
+        return "" unless File.file?(lock)
+
+        File.read(lock)[/^BUNDLED WITH\n\s+(.+)$/m, 1].to_s.strip
+      end
+
+      def locked_ruby_version
+        lock = File.join(@root, "Gemfile.lock")
+        return "" unless File.file?(lock)
+
+        File.read(lock)[/^RUBY VERSION\n\s+ruby\s+(.+)$/m, 1].to_s.strip
+      end
+
+      # The bundle the deploy installed. vps_deploy_master.sh runs `bundle install`
+      # as the deploy user with the path recorded in MASTER/.bundle/config, and
+      # the daemon runs as another user whose HOME holds no private store: asking
+      # it to build one means a 177-gem install under a probe timeout, with the
+      # real bundle sitting next door. A bundle that already satisfies the lock
+      # is read as it stands (frozen, no install, no lock write); one that does
+      # not is refused loudly when this user cannot write it, and left to the
+      # private store when it can, which is the behaviour before the deploy
+      # bundle existed.
+      def adopt_deploy_bundle
+        path = deploy_bundle_path
+        return unless path
+
+        @deploy_bundle = path
+        result = inspect_deploy_bundle(path)
+        return result if result
+
+        @deploy_bundle = nil
+        nil
+      end
+
+      def inspect_deploy_bundle(path)
+        ok, stdout, stderr = run_bundle("check")
+        output = join_output(stdout, stderr)
+        native_ok, native_stdout, native_stderr = ok ? probe_native_bundle : [true, "", ""]
+        return ok_result("deploy bundle clean", changed: false, bundle: true, output:) if ok && native_ok
+
+        output = join_output(output, native_stdout, native_stderr)
+        return unless File.writable?(path)
+
+        fail_result(
+          "deploy bundle at #{path} does not satisfy #{File.join(@root, 'Gemfile.lock')} " \
+          "and uid #{Process.uid} cannot write it; run vps-deploy as the deploy user",
+          output:,
+        )
+      end
+
+      def deploy_bundle_path
+        config = File.join(@root, ".bundle", "config")
+        return unless File.file?(config)
+
+        path = File.read(config)[/^BUNDLE_PATH:\s*"?([^"\s]+)"?\s*$/, 1]
+        path if path && File.directory?(path)
+      rescue SystemCallError
+        nil
+      end
+
+      def ensure_bundle
+        ok, stdout, stderr = run_bundle("check")
+        output = join_output(stdout, stderr)
+        return install_bundle unless ok
+
+        native_ok, native_stdout, native_stderr = probe_native_bundle
+        handle_native_bundle_probe(output, native_ok, join_output(native_stdout, native_stderr))
+      end
+
+      def handle_native_bundle_probe(output, native_ok, native_output)
+        return ok_result("bundle clean", changed: false, bundle: true, output: join_output(output, native_output)) if native_ok
+        return fail_result("bundle native probe failed", output: join_output(output, native_output)) unless native_build_failure?(native_output)
+        unless native_output.match?(ABI_STALE_LINE) || @env["MASTER_DEPS_DISCARD_BUNDLE"] == "1"
+          return fail_result(
+            "bundle native probe failed (no ABI-stale evidence; gem store left intact)",
+            output: join_output(output, native_output),
+          )
+        end
+
+        rebuild_native_extensions(output, native_output)
+      end
+
+      # The rebuild leg shared by ensure_bundle and repair_native_bundle: move
+      # the stale store aside, reinstall once, and re-probe. base_output is
+      # joined ahead of every repair output; cleanup_output is what the
+      # cleanup-failure refusal carries (ensure_bundle's own is nil).
+      def rebuild_native_extensions(*base_output, cleanup_output: nil)
+        report("rebuilding native bundle extensions")
+        unless discard_stale_native_bundle!
+          return fail_result("stale native bundle cleanup failed", output: cleanup_output)
+        end
+
+        repair_ok, repair_stdout, repair_stderr = run_bundle("install", "--jobs", bundle_jobs.to_s, "--retry", "3")
+        repair_output = join_output(repair_stdout, repair_stderr)
+        unless repair_ok
+          return fail_result("bundle native extension repair failed",
+                             output: join_output(*base_output, repair_output))
+        end
+
+        repaired_ok, repaired_stdout, repaired_stderr = probe_native_bundle
+        repaired_output = join_output(repaired_stdout, repaired_stderr)
+        return repaired_native_result(*base_output, repair_output:, repaired_output:) if repaired_ok
+
+        fail_result("bundle native extension repair failed",
+                    output: join_output(*base_output, repair_output, repaired_output))
+      end
+
+      def repaired_native_result(*base_output, repair_output:, repaired_output:)
+        ok_result(
+          "bundle native extensions repaired",
+          changed: true,
+          bundle: true,
+          output: join_output(*base_output, repair_output, repaired_output),
+        )
+      end
+
+      def probe_native_bundle
+        @runner.call(
+          [RbConfig.ruby, "-rbundler/setup", "-rjson", "-e", "exit"],
+          chdir: @root,
+          env: bundle_env,
+        )
+      end
+
+      def install_bundle
+        report("installing bundle for #{File.basename(@root)}")
+        ok, stdout, stderr = run_bundle("install", "--jobs", bundle_jobs.to_s, "--retry", "3")
+        output = join_output(stdout, stderr)
+        return install_probe_outcome(output) if ok
+        return install_to_user_path(output) if permission_failure?(output)
+        return repair_native_bundle(output) if native_build_failure?(output)
+
+        fail_result(bundle_failure_message(output), output:)
+      end
+
+      # install_bundle's success leg: probe the fresh install; a native probe
+      # failure is repaired in place, a permission failure moves to the user
+      # path, anything else is a plain probe failure.
+      def install_probe_outcome(output)
+        native_ok, native_stdout, native_stderr = probe_native_bundle
+        native_output = join_output(native_stdout, native_stderr)
+        combined_output = join_output(output, native_output)
+        return ok_result("bundle installed", changed: true, bundle: true, output: combined_output) if native_ok
+
+        unless native_build_failure?(native_output)
+          return install_to_user_path(combined_output) if permission_failure?(native_output)
+
+          return fail_result("bundle native probe failed", output: combined_output)
+        end
+
+        repair_native_bundle(combined_output)
+      end
+
+      def bundle_failure_message(output)
+        dependency_conflict?(output) ?
+          "bundle dependency constraints conflict; no automatic lockfile rewrite was attempted" :
+          "bundle install failed"
+      end
+
+      def repair_native_bundle(previous_output)
+        unless previous_output.to_s.match?(ABI_STALE_LINE) || @env["MASTER_DEPS_DISCARD_BUNDLE"] == "1"
+          return fail_result(NATIVE_REPAIR_REFUSED, output: previous_output)
+        end
+
+        rebuild_native_extensions(previous_output, cleanup_output: previous_output)
+      end
+
+      def install_to_user_path(previous_output)
+        path = File.join(@home, ".local", "share", "master", "bundles", bundle_key)
+        report("bundle path is not writable; using #{path}")
+        install_to_user_bundle(path, previous_output)
+      end
+
+      def install_to_user_bundle(path, previous_output)
+        ok, stdout, stderr = run_bundle_config("path", path)
+        return fail_result("could not set user bundle path",
+          output: join_output(previous_output, stdout, stderr)) unless ok
+
+        install_user_bundle(previous_output)
+      end
+
+      def install_user_bundle(previous_output)
+        ok, stdout, stderr = run_bundle("install", "--jobs", bundle_jobs.to_s, "--retry", "3")
+        output = join_output(previous_output, stdout, stderr)
+        return ok_result("bundle installed in user path", changed: true, bundle: true, output:) if ok
+
+        message = dependency_conflict?(output) ?
+          "bundle dependency constraints conflict; no automatic lockfile rewrite was attempted" :
+          "bundle install failed in user path"
+        fail_result(message, output:)
+      end
+
+    end
+
+    module DependencyManagerBundleEnvironment
+      BUNDLE_CONTEXT_KEYS = DependencyManager::BUNDLE_CONTEXT_KEYS
+      private
+
+      # Keep the lockfile's Bundler version in a dedicated tool store. It is
+      # deliberately separate from the application bundle: installing Bundler
+      # must not mutate Gemfile.lock or pollute the app's gem path.
+      def ensure_bundler
+        version = locked_bundler_version
+        return ok_result("no pinned Bundler version", changed: false) if version.empty?
+        return ok_result("bundler ready", changed: false, bundler: true) if bundler_path(version)
+
+        gem = gem_command
+        return fail_result("gem executable not found; cannot install Bundler #{version}") unless gem
+
+        install_dir = bundler_gem_home
+        command = [gem, "install", "bundler", "-v", version, "--no-document", "--install-dir", install_dir]
+        install_env = base_bundle_env.merge(
+          "GEM_HOME" => install_dir,
+          "GEM_PATH" => [*gem_search_paths(install_dir), Gem.default_dir].uniq.join(File::PATH_SEPARATOR),
+        )
+        ok, stdout, stderr = run(command, chdir: @root, env: install_env)
+        output = join_output(stdout, stderr)
+        return fail_result("could not install pinned Bundler #{version}", output:) unless ok
+        return fail_result("Bundler #{version} install completed but its executable is unavailable", output:) unless bundler_path(version)
+
+        ok_result("Bundler #{version} installed", changed: true, bundler: true, output:)
+      end
+
+      def run_bundle(*args)
+        bundle = bundler_path(locked_bundler_version) || @command_path.call("bundle")
+        return [false, "", "bundle executable not found"] unless bundle
+
+        @runner.call(
+          [bundle, *args],
+          chdir: @root,
+          env: bundle_env,
+        )
+      end
+
+      def run_bundle_config(key, value)
+        bundle = bundler_path(locked_bundler_version) || @command_path.call("bundle")
+        return [false, "", "bundle executable not found"] unless bundle
+
+        @runner.call(
+          [bundle, "config", "set", "--local", key, value],
+          chdir: @root,
+          env: bundle_env,
+        )
+      end
+
+      def bundler_path(version)
+        return if version.to_s.empty?
+
+        bundler_spec(version)&.then do |spec|
+          executable = File.join(spec.full_gem_path, "exe", "bundle")
+          executable if File.executable?(executable)
+        end
+      rescue Gem::Exception
+        nil
+      end
+
+      def bundler_spec(version)
+        candidates = bundler_spec_candidates(version)
+        candidates.compact.find { |spec| usable_bundler_spec?(spec) }
+      rescue Gem::Exception
+        nil
+      end
+
+      def bundler_spec_candidates(version)
+        path = File.join(bundler_gem_home, "specifications", "bundler-#{version}.gemspec")
+        local = File.file?(path) ? Gem::Specification.load(path) : nil
+        installed = Gem::Specification.find_all_by_name("bundler").select do |spec|
+          spec.version.to_s == version.to_s
+        end
+        [local, *installed]
+      end
+
+      def usable_bundler_spec?(spec)
+        File.executable?(File.join(spec.full_gem_path, "exe", "bundle"))
+      end
+
+      def refresh_gem_state!
+        Gem.clear_paths
+        if @env.equal?(ENV)
+          gem_home = @env["GEM_HOME"].to_s
+          gem_path = @env["GEM_PATH"].to_s.split(File::PATH_SEPARATOR).reject(&:empty?)
+          Gem.use_paths(gem_home, gem_path) unless gem_home.empty?
+        end
+        Gem::Specification.reset
+      end
+
+      # Bundler 4 installs a configured path as <path>/ruby/<version>/{gems,specs,...},
+      # a layout plain RubyGems cannot search. The per-Ruby gem dir therefore joins
+      # the search path beside the configured path, so the locked default gems
+      # (date, json, psych) stay activatable outside Bundler, and require "time"
+      # cannot silently activate the default date on a fresh checkout.
+      def gem_search_paths(path)
+        nested = File.join(path, "ruby", RbConfig::CONFIG.fetch("ruby_version"))
+        # Bundler names the specification dir "specifications"; RubyGems "specs".
+        gem_dir = [File.join(nested, "specifications"), File.join(nested, "specs")].find { |dir| File.directory?(dir) }
+        gem_dir ? [path, nested] : [path]
+      end
+
+      def gem_command
+        candidate = File.join(RbConfig::CONFIG.fetch("bindir"), Gem.default_exec_format.sub("@", "gem"))
+        return candidate if File.executable?(candidate)
+
+        @command_path.call("gem")
+      end
+
+      def bundle_env(without: nil)
+        env = base_bundle_env
+        clear_inherited_bundle_context!(env)
+        configure_owned_bundle_context!(env)
+        apply_without_group(env, without)
+      end
+
+      def clear_inherited_bundle_context!(env)
+        keys = BUNDLE_CONTEXT_KEYS + %w[RUBYOPT RUBYLIB BUNDLE_BIN_PATH BUNDLER_SETUP BUNDLER_VERSION]
+        keys.each { |key| env[key] = nil }
+      end
+
+      def configure_owned_bundle_context!(env)
+        env.merge!(
+          "BUNDLE_GEMFILE" => File.join(@root, "Gemfile"),
+          "BUNDLE_RETRY" => "3",
+          "BUNDLE_JOBS" => bundle_jobs.to_s,
+          "BUNDLE_APP_CONFIG" => File.join(bundle_config_root, "app"),
+          "BUNDLE_USER_CONFIG" => File.join(bundle_config_root, "global"),
+          "BUNDLE_PATH" => bundle_gems_path,
+          "BUNDLE_DISABLE_SHARED_GEMS" => "1",
+          "BUNDLE_FROZEN" => "true",
+        )
+      end
+
+      # The interpreter, gem home and search path the pinned Bundler must run
+      # with. Nothing here reads user configuration; MASTER owns the context.
+      def base_bundle_env
+        bundle_gem_home = File.join(bundle_config_root, "gems")
+        default_gem_path = Gem.default_dir
+        ruby_bin = File.dirname(RbConfig.ruby)
+        {
+          "PATH" => bundle_executable_path(ruby_bin, bundle_gem_home),
+          "RUBY" => RbConfig.ruby,
+          "GEM_HOME" => bundle_gem_home,
+          "GEM_PATH" => bundle_gem_search_path(bundle_gem_home, default_gem_path),
+        }
+      end
+
+      def bundle_executable_path(ruby_bin, bundle_gem_home)
+        [
+          ruby_bin,
+          File.join(bundle_gem_home, "bin"),
+          File.join(bundler_gem_home, "bin"),
+          @env.fetch("PATH", ""),
+        ].reject(&:empty?).join(File::PATH_SEPARATOR)
+      end
+
+      def bundle_gem_search_path(bundle_gem_home, default_gem_path)
+        [
+          *gem_search_paths(bundle_gem_home),
+          *gem_search_paths(bundler_gem_home),
+          default_gem_path,
+        ].uniq.join(File::PATH_SEPARATOR)
+      end
+
+      # BUNDLE_WITHOUT resolution order: the caller's group, the inherited
+      # variable, the tts skip, then the deploy bundle's own default.
+      def apply_without_group(env, without)
+        without = without.to_s unless without.nil?
+        without = @env["BUNDLE_WITHOUT"].to_s if without.nil? || without.empty?
+        without = "tts" if without.empty? && @env["MASTER_SKIP_TTS"] == "1"
+        env["BUNDLE_WITHOUT"] = without unless without.empty?
+        deploy_bundle_env(env, without:)
+      end
+
+      # The deploy bundle is installed without the development and test groups
+      # and is only ever read. A caller may keep a group it deliberately needs
+      # (the test boot keeps :test for minitest); its gems must exist in the
+      # bundle or the law-file preflight fails naming them, which is the honest
+      # error an absent harness deserves.
+      def deploy_bundle_env(env, without: nil)
+        return env unless @deploy_bundle
+
+        env.merge!(
+          "BUNDLE_PATH" => @deploy_bundle,
+          "BUNDLE_FROZEN" => "true",
+          "BUNDLE_APP_CONFIG" => nil,
+          "GEM_HOME" => nil,
+          "GEM_PATH" => nil,
+        )
+        env["BUNDLE_WITHOUT"] ||= "development:test"
+        env["BUNDLE_WITHOUT"] = without if without && !without.empty?
+        env
+      end
+
+      def bundle_config_root
+        File.join(
+          @home,
+          ".master",
+          "bundler",
+          Digest::SHA256.hexdigest([dependency_store_root, ruby_identity].join("\0"))[0, 16],
+        )
+      end
+
+      # Worktrees of one Git checkout share the immutable dependency store. The
+      # checkout path itself must not create another copy of every gem.
+      def dependency_store_root
+        common_dir = git_common_dir
+        return common_dir if common_dir
+
+        @root
+      end
+
+      def git_common_dir
+        output = IO.popen(["git", "-C", @root, "rev-parse", "--git-common-dir"], err: File::NULL, &:read)
+        return unless $?.success?
+
+        # Resolved, because git reports /private/var for a linked worktree and
+        # /var for the main checkout when the system temp directory is a symlink.
+        File.realpath(File.expand_path(output.strip, @root))
+      rescue StandardError
+        nil
+      end
+
+      # Native gems are ABI-bound to the Ruby installation that built them.
+      # The Ruby version alone is not enough on macOS: Homebrew Ruby and an
+      # rbenv Ruby can expose the same version while linking different libruby
+      # paths. Keep their private Bundler stores separate.
+      def ruby_identity
+        ruby = File.realpath(RbConfig.ruby)
+        prefix = RbConfig::CONFIG.fetch("prefix", "")
+        library = RbConfig::CONFIG.fetch("LIBRUBY_SO", "")
+        [ruby, prefix, library, RbConfig::CONFIG.fetch("ruby_version", RUBY_VERSION), RUBY_PLATFORM].join("\0")
+      rescue StandardError
+        [RbConfig.ruby, RbConfig::CONFIG.fetch("ruby_version", RUBY_VERSION), RUBY_PLATFORM].join("\0")
+      end
+
+      def discard_stale_native_bundle!
+        path = bundle_gems_path
+        return true unless File.directory?(path)
+
+        trash = "#{path}.stale-#{Process.pid}-#{Time.now.to_i}"
+        suffix = 0
+        while File.exist?(trash)
+          suffix += 1
+          trash = "#{path}.stale-#{Process.pid}-#{Time.now.to_i}-#{suffix}"
+        end
+        report("moving stale native bundle #{path} to #{trash}")
+        File.rename(path, trash)
+        true
+      rescue StandardError => e
+        report("stale native bundle cleanup failed: #{e.class}: #{e.message}")
+        false
+      end
+
+      def bundle_gems_path
+        File.join(bundle_config_root, "gems")
+      end
+
+      def bundler_gem_home
+        File.join(bundle_config_root, "bundler")
+      end
+
+      def bundle_jobs
+        @env["MASTER_LOW_RESOURCE"] == "1" ? 2 : 4
+      end
+    end
+
+    module DependencyManagerSystemPackages
+      SYSTEM_PACKAGES = DependencyManager::SYSTEM_PACKAGES
+      SYSTEM_RECOVERY_MESSAGES = DependencyManager::SYSTEM_RECOVERY_MESSAGES
+      ABI_STALE_LINE = DependencyManager::ABI_STALE_LINE
+      DEPENDENCY_CONFLICT = DependencyManager::DEPENDENCY_CONFLICT
+      NATIVE_FAILURE = DependencyManager::NATIVE_FAILURE
+      private
+
+      def system_recovery_failure?(result)
+        return false unless SYSTEM_RECOVERY_MESSAGES.include?(result.message)
+
+        toolchain = result.output.to_s.lines.reject { |line| line.match?(ABI_STALE_LINE) }
+        native_build_failure?(toolchain.join)
+      end
+
+      def dependency_conflict?(output) = output.to_s.match?(DEPENDENCY_CONFLICT)
+
+      def native_build_failure?(output) = output.to_s.match?(NATIVE_FAILURE)
+
+      def permission_failure?(output) = output.to_s.match?(/permission denied|not writable|EACCES/i)
+
+      def bundle_key
+        [RbConfig::CONFIG.fetch("ruby_version", RUBY_VERSION), RUBY_PLATFORM].join("-")
+      end
+
+      def install_system_packages_for_recovery
+        plan = system_package_plan
+        packages = plan[:packages]
+        commands = plan[:commands]
+        manager = plan[:package_manager]
+
+        if packages.empty? || commands.empty?
+          return {
+            ok: false,
+            changed: false,
+            command: nil,
+            output: "no supported system package installation path detected; install native build prerequisites manually",
+          }
+        end
+
+        return install_system_packages if @env["MASTER_AUTO_SYSTEM_PACKAGES"] == "1"
+        unless approve_system_packages?(packages, manager)
+          return {
+            ok: false,
+            changed: false,
+            command: nil,
+            output: [
+              "system build dependency installation requires explicit approval",
+              "package manager: #{manager}",
+              "packages: #{packages.join(" ")}",
+              "run `bin/deps system` after reviewing the package list, or set MASTER_AUTO_SYSTEM_PACKAGES=1 for an explicitly pre-authorized unattended host",
+            ].join("; "),
+          }
+        end
+
+        install_system_packages
+      end
+
+      def approve_system_packages?(packages, manager)
+        return !!@approval.call(packages.dup) if @approval.respond_to?(:call)
+        return @approval == true unless @approval.nil?
+
+        interactive = @input.respond_to?(:tty?) && @input.tty? &&
+                      @out.respond_to?(:tty?) && @out.tty?
+        return false unless interactive
+
+        @out.puts
+        @out.puts("MASTER needs native build prerequisites to finish installing its locked Ruby dependencies.")
+        @out.puts("Package manager: #{manager}")
+        @out.puts("Packages: #{packages.join(" ")}")
+        @out.print("Install these system packages now? [y/N] ")
+        @out.flush if @out.respond_to?(:flush)
+        answer = @input.gets
+        %w[y yes].include?(answer.to_s.strip.downcase)
+      rescue IOError, SystemCallError => e
+        report("system package approval could not be read: #{e.class}: #{e.message}")
+        false
+      end
+
+      def install_system_packages
+        specs = package_commands
+        return { ok: false, changed: false, command: nil, output: "no supported package manager found" } if specs.empty?
+
+        outputs = []
+        specs.each do |argv, label|
+          report("installing system build dependencies via #{label}")
+          ok, stdout, stderr = @runner.call(argv, chdir: @root, env: @env.to_h)
+          outputs << join_output(stdout, stderr)
+          next if ok
+
+          return { ok: false, changed: false, command: argv, output: outputs.reject(&:empty?).join("\n") }
+        end
+
+        { ok: true, changed: true, command: specs.map(&:first), output: outputs.reject(&:empty?).join("\n") }
+      end
+
+      # Compatibility helper for callers and tests that need one representative
+      # package command. Installation uses package_commands so multi-step package
+      # managers cannot silently discard their prerequisite step.
+      def package_command = package_commands.first
+
+      def package_commands
+        packages = SYSTEM_PACKAGES.fetch(package_manager_name, [])
+        package_commands_for(package_manager_name, packages)
+      end
+
+      def package_commands_for(manager, packages)
+        return [] if packages.empty?
+
+        case manager
+        when :termux then [[[ "pkg", "install", "-y", *packages ], "pkg"]]
+        when :openbsd then [privileged(["pkg_add", "-I", *packages], "pkg_add")].compact
+        when :macos then [[[ "brew", "install", *packages ], "brew"]]
+        when :debian then debian_package_commands(packages)
+        when :fedora then [privileged(["dnf", "install", "-y", *packages], "dnf")].compact
+        when :arch then [privileged(["pacman", "-Sy", "--needed", "--noconfirm", *packages], "pacman")].compact
+        else []
+        end
+      end
+
+      # apt needs its index refreshed before the install, so debian is the one
+      # package manager whose entry is two commands.
+      def debian_package_commands(packages)
+        [
+          privileged(%w[apt-get update], "apt-get"),
+          privileged(["apt-get", "install", "-y", *packages], "apt-get"),
+        ].compact
+      end
+
+      def privileged(command, label)
+        return [command, label] if root?
+
+        noninteractive = !(@input.respond_to?(:tty?) && @input.tty?)
+        flags = noninteractive ? ["-n"] : []
+        return [["doas", *flags, *command], "#{label} via doas"] if @command_path.call("doas")
+        return [["sudo", *flags, *command], "#{label} via sudo"] if @command_path.call("sudo")
+        nil
+      end
+
+      def root? = Process.uid.zero?
+
+      def package_manager_name
+        return :termux if termux_package_manager?
+        return :openbsd if openbsd_package_manager?
+        return :macos if macos_package_manager?
+        return :debian if @command_path.call("apt-get")
+        return :fedora if @command_path.call("dnf")
+
+        :arch if @command_path.call("pacman")
+      end
+
+      def termux_package_manager?
+        @env["PREFIX"].to_s.start_with?("/data/data/com.termux/") && @command_path.call("pkg")
+      end
+
+      def openbsd_package_manager?
+        RUBY_PLATFORM.include?("openbsd") && @command_path.call("pkg_add")
+      end
+
+      def macos_package_manager?
+        RUBY_PLATFORM.include?("darwin") && @command_path.call("brew")
+      end
+
+    end
+
+    module DependencyManagerProcessCapture
+      Result = DependencyManager::Result
+      LOCK_WAIT_SECONDS = DependencyManager::LOCK_WAIT_SECONDS
+      CAPTURE_DEADLINE_SECONDS = DependencyManager::CAPTURE_DEADLINE_SECONDS
+      CAPTURE_POLL_SECONDS = DependencyManager::CAPTURE_POLL_SECONDS
+      CAPTURE_DRAIN_SECONDS = DependencyManager::CAPTURE_DRAIN_SECONDS
+      CAPTURE_TERM_GRACE_SECONDS = 0.25
+      CAPTURE_KILL_GRACE_SECONDS = 1.0
+      CAPTURE_GROUP_POLL_SECONDS = 0.02
+      private
+
+      def with_lock(wait_seconds: LOCK_WAIT_SECONDS)
+        lock_path = File.join(@home, ".master", "dependency.lock")
+        FileUtils.mkdir_p(File.dirname(lock_path), mode: 0o700)
+        File.open(lock_path, File::RDWR | File::CREAT, 0o600) do |lock|
+          deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + wait_seconds.to_f
+          until lock.flock(File::LOCK_EX | File::LOCK_NB)
+            if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+              raise "dependency lock held elsewhere over #{wait_seconds}s: #{lock_path}"
+            end
+            sleep 0.05
+          end
+          yield
+        end
+      end
+
+      # Runs before Bundler activation, so this uses only spawn, pipes and
+      # monotonic clock primitives. A stopped package manager must not wedge boot.
+      def capture(argv, chdir:, env:, deadline_seconds: CAPTURE_DEADLINE_SECONDS)
+        stdout_r, stdout_w = IO.pipe
+        stderr_r, stderr_w = IO.pipe
+        pid = Process.spawn(Master::Io::ProcessSpawn.environment(env), *argv, chdir:, out: stdout_w, err: stderr_w, pgroup: true)
+        stdout_w.close
+        stderr_w.close
+        stdout_thread = Thread.new { stdout_r.read rescue "" }
+        stderr_thread = Thread.new { stderr_r.read rescue "" }
+        finish_capture(argv, pid, deadline_seconds, [stdout_r, stderr_r], [stdout_thread, stderr_thread])
+      ensure
+        [stdout_r, stdout_w, stderr_r, stderr_w].compact.each do |io|
+          io.close unless io.closed?
+        end
+      end
+
+      # capture's wait leg: poll the child, kill the process group at the
+      # deadline, then bound the pipe drain before assembling the answer.
+      def finish_capture(argv, pid, deadline_seconds, reader_ios, threads)
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + [deadline_seconds.to_f, 0.01].max
+        status, killed, stop_result = wait_for_capture(pid, deadline)
+        killed, stop_reason, stop_result = drain_capture_readers(reader_ios, threads, pid, killed, stop_result)
+        stdout = threads[0].alive? ? "" : threads[0].value.to_s
+        stderr = threads[1].alive? ? "" : threads[1].value.to_s
+        if killed
+          detail = %i[stopped already_gone].include?(stop_result) ?
+            "process group stop confirmed" : "process group termination UNCONFIRMED"
+          stderr = join_output(stderr, "#{argv.first} #{detail} after #{deadline_seconds}s #{stop_reason}")
+        end
+        [!killed && status&.success? == true, stdout, stderr]
+      end
+
+      def wait_for_capture(pid, deadline)
+        loop do
+          pair = Process.waitpid2(pid, Process::WNOHANG)
+          return [pair.last, false, nil] if pair
+
+          remaining = deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          if remaining <= 0
+            stop_result = kill_capture_group(pid)
+            _waited, status = Process.waitpid2(pid, 0)
+            return [status, true, stop_result]
+          end
+
+          sleep [CAPTURE_POLL_SECONDS, remaining].min
+        end
+      end
+
+      # A successful parent can leave a grandchild holding an inherited pipe.
+      # Bound draining even after the parent timed out; never call Thread#value
+      # on a reader that could still be waiting for an escaped descendant.
+      def drain_capture_readers(reader_ios, threads, pid, killed, stop_result)
+        drained = !killed && threads[0].join(CAPTURE_DRAIN_SECONDS) && threads[1].join(CAPTURE_DRAIN_SECONDS)
+        return [killed, "deadline", stop_result] if drained
+
+        stop_result = kill_capture_group(pid)
+        reader_ios.each { |io| io.close unless io.closed? }
+        threads.each do |thread|
+          thread.kill if thread.alive?
+          thread.join(0.1)
+        end
+        [true, "output pipe drain", stop_result]
+      end
+
+      def kill_capture_group(pid)
+        group = Integer(pid)
+        return :already_gone unless capture_group_alive?(group)
+
+        signal_capture_group("TERM", group)
+        return :stopped if wait_capture_group_exit(group, CAPTURE_TERM_GRACE_SECONDS)
+
+        signal_capture_group("KILL", group)
+        return :stopped if wait_capture_group_exit(group, CAPTURE_KILL_GRACE_SECONDS)
+
+        :unconfirmed
+      rescue ArgumentError, TypeError
+        :unconfirmed
+      end
+
+      def signal_capture_group(signal, group)
+        Process.kill(signal, -group)
+        true
+      rescue Errno::ESRCH
+        false
+      rescue Errno::EPERM
+        nil
+      end
+
+      def capture_group_alive?(group)
+        Process.kill(0, -group)
+        true
+      rescue Errno::ESRCH
+        false
+      rescue Errno::EPERM
+        true
+      end
+
+      def wait_capture_group_exit(group, timeout)
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+        loop do
+          return true unless capture_group_alive?(group)
+          return false if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+          sleep CAPTURE_GROUP_POLL_SECONDS
+        end
+      end
+
+      # Not Io::Exec.which: Exec loads Swallow, which loads json, and this runs
+      # before Bundler activates the locked graph (test_helper.rb needs that
+      # order). The one PATH lookup that must stay standalone.
+      def which(name) = @env.fetch("PATH", "").split(File::PATH_SEPARATOR).lazy.map do |dir|
+        path = File.join(dir, name)
+        path if File.file?(path) && File.executable?(path)
+      end.find(&:itself)
+
+      def run(command, chdir:, env:)
+        @runner.call(command, chdir:, env:)
+      end
+
+      def ok_result(message, changed:, bundler: nil, bundle: nil, output: nil)
+        Result.new(ok: true, changed:, bundler:, bundle:, system: nil, message:, output:)
+      end
+
+      def fail_result(message, output: nil)
+        report(message)
+        Result.new(ok: false, changed: false, bundler: nil, bundle: nil, system: nil, message:, output:)
+      end
+
+      def join_output(*parts) = parts.flatten.compact.map(&:to_s).reject(&:empty?).join("\n").strip
+
+      def report(message) = Master::Trace::Dmesg.status("deps0", message, io: @out)
+    end
+
+    class DependencyManager
+      include DependencyManagerLifecycle
+      include DependencyManagerBundleDiscovery
+      include DependencyManagerBundleEnvironment
+      include DependencyManagerSystemPackages
+      include DependencyManagerProcessCapture
+    end
+  end
+end

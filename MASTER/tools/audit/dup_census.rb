@@ -1,0 +1,151 @@
+# frozen_string_literal: true
+
+# Exact-duplicate census over every tracked file outside generated/runtime state, whose two
+# permanent sets are explained at the exclusion. The lightgallery defect —
+# one file vendored twice, diverging silently, amber shipping 404 icons for
+# months — is a CLASS, and the 2026-08-22 sitting found 65 sets of it worth
+# 546KB. This counts what remains after the provable collapses so the next
+# shadow copy is a +1 against a ceiling, not a quiet arrival.
+#
+#   ruby MASTER/tools/audit/dup_census.rb            # list sets over the ceiling
+#   ruby MASTER/tools/audit/dup_census.rb --ratchet  # record a new low
+#
+# Known-legitimate duplicates remain visible rather than excluded: per-app
+# 422/500.html (ShowExceptions reads each app's public path). Equivalent route
+# snapshots are declared in geometry_surfaces.yml#snapshot_aliases and share one
+# canonical baseline, so they are contracts without duplicate tracked content.
+#
+# Golden screenshots under checks/data/route_screenshots/ are the other class.
+# Each is what one recorded route answered a real browser for one host at one
+# width (tools/rails/golden_screenshots.rb), so two apps that share a layout
+# answer byte-identical pixels by design. Those PNGs are distinct evidence per
+# host — collapsing them to one file would destroy the per-app baseline the
+# tool checks against — so they are priced here, not deduplicated. They account
+# for 13 of the 43 sets.
+
+require "digest"
+require "yaml"
+require_relative "../../lib/trace/dmesg"
+
+module Operator
+  module DupCensus
+    ROOT = File.expand_path("../../..", __dir__)
+    CEILING = File.join(ROOT, "MASTER", "data", "dup_census.yml")
+    MIN_SIZE = 200 # tiny stubs legitimately repeat
+
+    module_function
+
+    def sets
+      # Excluded: MASTER/tools — one-off census and lint copies that duplicate
+      # the lib homes they were extracted from; their duplicates are not a
+      # shadow-copy class of the lightgallery kind.
+      #
+      # STUDIO is NOT excluded, and this comment once wrongly said it was:
+      # 48efff385 (2026-09-25) replaced that exclusion with the MASTER/tools one
+      # and left the old prose here. Two STUDIO sets therefore entered the
+      # count — `lora/<subject>/lora` (byte-identical per subject on purpose:
+      # the file derives the subject from its own directory and hands over to
+      # the shared toolkit) and `project/learnings/last_learn.json` (the newest
+      # learning under a stable name). Both are correct by construction and are
+      # priced in data/dup_census.yml rather than hidden here.
+      #
+      # uniq, because a merge with a conflict in it is a state this runs in. git
+      # ls-files prints an unmerged path once per stage, so two conflicted files
+      # read as six and this reported duplicates that do not exist. A census that
+      # lies only mid-merge is worse than one that always does: the run right
+      # after a merge is when somebody reads it.
+      files = check_corpus!(`git -C #{ROOT} ls-files -z`.split("\0").uniq)
+              .reject { |f| f.start_with?("MASTER/tools/") }
+      by = Hash.new { |h, k| h[k] = [] }
+      files.each do |f|
+        path = File.join(ROOT, f)
+        # A symlink is the one file seen twice, not a copy: it cannot diverge from its target, which
+        # is the failure this census exists for (FUN/zshrc.shared -> OPENBSD/lib/zshrc.shared).
+        next if File.symlink?(path)
+        next unless File.file?(path) && File.size(path) >= MIN_SIZE
+        by[[Digest::SHA256.file(path).hexdigest, File.size(path)]] << f
+      end
+      by.select { |_, v| v.size > 1 }
+    end
+
+    # Same reason as the ceiling itself: a census that reads nothing finds no
+    # duplicates and passes. `git ls-files` coming back empty -- a wrong root, a
+    # git that failed -- looks exactly like a clean tree from here, which is how
+    # STUDIO check spent a worktree reporting on a corpus of zero files.
+    def check_corpus!(files)
+      return files if files.size >= 500
+
+      Master::Trace::Dmesg.status("dup0", "git ls-files returned #{files.size} paths; corpus collapsed", io: $stderr)
+      raise "dup_census: corpus collapsed"
+    end
+
+    def recorded
+      File.exist?(CEILING) ? (YAML.safe_load_file(CEILING) || {}) : {}
+    end
+
+    def ceiling = recorded.fetch("duplicate_sets", 0)
+
+    # The members behind the count. Without them "over by two" names no pair,
+    # and the next reader re-derives the whole list against an older commit by
+    # hand — the gap data_reach and self_findings both closed on 2026-08-31.
+    # One line per set, its paths sorted and joined, so two runs of an
+    # unchanged tree produce the same list.
+    def recorded_members = Array(recorded["duplicate_members"])
+
+    def members(sets) = sets.values.map { |paths| paths.sort.join(" | ") }.sort
+
+    def report_delta(current)
+      if recorded_members.empty?
+        Master::Trace::Dmesg.status("dup0", "no members recorded, attribution unavailable; run --ratchet to seed it")
+        return
+      end
+
+      (current - recorded_members).each { |set| Master::Trace::Dmesg.status("dup0", "arrived, #{set}") }
+      (recorded_members - current).each { |set| Master::Trace::Dmesg.status("dup0", "gone, #{set}") }
+    end
+
+    # Anything above `duplicate_sets:` is written by a person and is kept: a
+    # bare to_yaml dump eats comment prose, and a ceiling that silently drops
+    # the paragraph explaining why it is where it is teaches the next reader
+    # nothing. The current file carries no such prose — both revisions since
+    # the pub4 migration were `---` plus the two keys — so this preserves what
+    # is there rather than assuming a paragraph exists.
+    def rewritten_ceiling(count, member_list)
+      existing = File.exist?(CEILING) ? File.read(CEILING) : "---\n"
+      prose = existing.sub(/^duplicate_sets: .*\n(?:duplicate_members:\n(?:- .*\n)*)?\z/, "")
+      "#{prose}duplicate_sets: #{count}\nduplicate_members:\n#{member_list.map { |m| "- #{m}\n" }.join}"
+    end
+
+    def run(ratchet: false, list: false)
+      d = sets
+      Master::Trace::Dmesg.status("dup0", "#{d.size} duplicate set(s), #{d.sum { |(_, size), v| size * (v.size - 1) } / 1024}KB shadowed, ceiling #{ceiling}")
+      # A count nobody can act on is a ratchet, not a finding. --list prints
+      # what was counted, largest shadow first, and changes no number.
+      if list
+        d.sort_by { |(_, size), v| -size * (v.size - 1) }.each do |(_, size), v|
+          Master::Trace::Dmesg.status("dup0", "#{size / 1024}KB, #{v.size} copies, #{v.join(", ")}")
+        end
+        return 0
+      end
+      # <=, not <, so a census sitting exactly at its ceiling can record its
+      # members without having to fall first. A census already over cannot:
+      # a baseline containing the overage would report it as known.
+      if ratchet && d.size <= ceiling
+        previous = ceiling
+        File.write(CEILING, rewritten_ceiling(d.size, members(d)))
+        Master::Trace::Dmesg.status("dup0", "#{d.size < previous ? "recorded #{d.size} as the new low" : "re-recorded #{d.size}"}, with its members")
+        return 0
+      end
+      return 0 unless d.size > ceiling
+
+      report_delta(members(d))
+      d.sort_by { |(_, s), v| -s * (v.size - 1) }.first(10).each do |(_, size), v|
+        Master::Trace::Dmesg.status("dup0", "#{size / 1024}KB, #{v.size} copies, #{v.join(", ")[0, 150]}")
+      end
+      Master::Trace::Dmesg.status("dup0", "a tracked file now exists twice, collapse it or price the ceiling")
+      1
+    end
+  end
+end
+
+exit Operator::DupCensus.run(ratchet: ARGV.include?("--ratchet"), list: ARGV.include?("--list")) if $PROGRAM_NAME == __FILE__

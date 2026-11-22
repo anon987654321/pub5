@@ -1,0 +1,25 @@
+# frozen_string_literal: true
+
+module Master
+  module Fix
+    class FixLoop
+      # Convergence/cycle threshold readers pinned to FixLoop constants — kept separate from FixLoop's run/background-lifecycle
+      # responsibilities so NO_GOD_CLASS's public-method count reflects those
+      # two concerns on their own.
+      module ConvergenceConfig
+        def max_passes_default
+          configured = MAX_PASSES
+          mode_cap = begin
+            Master::Ground::ModePosture.current(root: @root)[:max_fix_passes]
+          rescue StandardError => e
+            Master::Ground::Swallow.log(e, context: "ConvergenceConfig.mode_cap")
+            raise "fix_loop: mode posture unreadable: #{e.class}: #{e.message}"
+          end
+          [mode_cap, configured].compact.map(&:to_i).min
+        end
+        def clean_runs_required = CLEAN_RUNS
+        def plateau_window = PLATEAU_WINDOW
+      end
+    end
+  end
+end

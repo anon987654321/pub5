@@ -1,0 +1,202 @@
+---
+# Every tracked path costs maintenance: source, test, asset, fixture,
+# documentation and configuration alike. The ceiling exists so a commit that
+# buys structure has to say what it bought. Read `tracked_files` and
+# `tracked_directories` as one priced fact — they answer "how much structure
+# does this checkout carry?", not two independent quality signals.
+#
+# Set deliberately on 2026-11-07, never inferred from whatever the tree
+# happened to hold. The pub4 -> pub5 migration arrived at 6,738 tracked files
+# against a ceiling of 6,664, so this ratchet was born red and stayed red
+# through 365 further additions. The additions since the migration, read one
+# class at a time:
+#
+# 306  MASTER/checks/data/route_screenshots/<app>/<route>__<width>__<state>.png
+#      plus the three <app>.golden.yml manifests. One approved baseline per
+#      route, width and state, compared by pixel. Three apps share the layout,
+#      so a route renders at three widths, and the manifests already name 600
+#      rows; approval is human-gated, so the PNGs arrive slower than the rows.
+#      This is the per-app baseline the screenshot check exists to hold, not a
+#      shadow copy: the pixel comparison is the whole point.
+#  18  BIZ/<plan>/{html,pdf}. Each published plan carries the pair the tree
+#      promises (plus the svg mark where one exists); the html is the
+#      source, the pdf its printed counterpart.
+#  41  code and tests: 11 MASTER lib and tool entry points, 7 MASTER tests,
+#      9 RAILS, 5 STUDIO, and 6 BIZ build/check instruments under BIZ/tools
+#      (one tree with the plan folders since 2026-11-08).
+#
+# lone_dirs is the ceiling that still does real work. It counts a directory
+# holding one file and no subdirectories, so it says "this namespace was
+# bought for one occupant". 37 are recorded; the overwhelming majority are
+# Rails-convention single-file test directories (test/services/x_test.rb,
+# test/i18n/, test/stylesheets/), fixture trees mirroring a real repository
+# layout (bsdports/.../gettext/Makefile), and deployment paths OpenBSD fixes
+# (etc/ssh/sshd_config). That is the framework's shape, not our sprawl.
+#
+# stutter is a genuine quality flag and stays at 0. It found
+# STUDIO/dilla/dilla.rb: a `#!/usr/bin/env ruby` entry point recorded without
+# the executable bit, so the census could not tell it from a module file that
+# says its own name twice. The fix was the mode, not the ceiling.
+#
+# The mrdamascy production host bought two files on 2026-11-11: falcon.rb,
+# the Falcon service config (one worker, port 47314), and preload.rb, which
+# boots Rails in the host process; the duplicate agent wish list left the same
+# day. tracked_files re-set to the checkout as it stands.
+# The vendorables ruling executed on 2026-11-08: the onnxruntime WASM, the
+# smart-turn model, the face mask and the three web/images JPGs left git
+# (eight files, ~23.6 MiB, three directories — one of them lone — per
+# TREE_CONTRACTS.md). tracked_files was re-set to the checkout the cut and
+# the rebased upstream docs additions produced; the other fields keep their
+# set values until re-read by the same instrument that set them.
+#
+# 2026-11-12: re-set to the checkout as cloned at e5d9d83. The +72 files and
+# +9 directories were bought upstream before the clone; no path in this
+# checkout could commit anything until the census matched what HEAD itself
+# contains. No path added by this session.
+#
+# 2026-11-13: re-set to 7287 because the 2026-11-12 re-set undercounted the
+# tree it was written against: 44742be and HEAD alike hold 7287 tracked paths
+# (`git ls-tree -r` and `git ls-files` agree), so the recorded 7283 priced a
+# checkout four files smaller than the one carrying it and even a commit that
+# adds nothing could not pass the gate. No path added by this session; the
+# count is corrected, not raised above what HEAD already contains.
+# 2026-11-13 (2): upstream commits between the re-set above and this one
+# (read-only tool/model/MCP inventory, agent_work bootstrap artifacts among
+# them) bought ten paths into two new directories; ls-files and ls-tree agree
+# on 7297 files and the growth instrument reads 889 directories. No path
+# added by this session; the count follows what HEAD already contains.
+# 2026-11-13 (3): the sandbox bootstrap was not repository tooling. Remove its
+# nine temporary files and the obsolete PROGRESS ledger. The resulting Git
+# tree contains 7561 regular tracked files and 894 tracked directories. The
+# intervening additions were 209 curated RAILS visual-review captures, 54
+# MASTER code/test/skeleton files and 8 STUDIO LoRA/runtime files. Keep the
+# lone_dirs ceiling at 37: the agent skeleton's two single-file eval/test
+# namespaces are visible growth, not a reason to silently raise the allowance.
+# 2026-11-13 (4): the consent prelude and carousel controller add two source
+# files inside existing support directories; no new directory is introduced.
+# 2026-11-13 (5): re-set to the checkout as it stands. HEAD holds 7,915 tracked
+# paths and the instrument reads 7,912 regular files and 979 directories, so the
+# recorded 7,563/894 priced a tree 349 files and 85 directories smaller than the
+# one carrying it and no path could commit. The growth is upstream content bought
+# before this clone: the OPENBSD mirror reorganization (+189), RAILS/mytoonz
+# (+89) and STUDIO/lora (+50). No path added by this session. lone_dirs stays at
+# 37 by policy below; stutter was a real repair (STUDIO/dilla/dilla.rb regained
+# its execute bit), not a ceiling change.
+# 2026-11-14 (6): re-set to the checkout as it stands. HEAD holds 7,935 tracked
+# paths and the instrument read 7,932 regular files and 981 directories against
+# the recorded 7,912/979, so no path could commit: 20 files and 2 directories
+# are upstream content bought before this clone by the MASTER face-expression
+# series landed on main (9c38f65df through b4d7d3c3). This session's split of
+# brgen's 639-line _brgen_dating.scss (over the 300-line lint gate) adds three
+# sheets inside the existing stylesheets directory, no new directory; the
+# instrument now reads 7,935. lone_dirs rides the face work, 42 from 37;
+# stutter and vague_names stay at 0.
+# 2026-11-16 (7): re-set to the checkout as it stands. The instrument reads
+# 7,944 regular files and 982 directories against the recorded 7,935/981, so no
+# path could commit. The nine files added since the last set (0755994, which
+# held 7,938) landed upstream on main: ARCHITECTURE.md, bin/bootstrap,
+# BIZ/ragnhild/ragnhild_legater.pdf, three RAILS tests and known_failures.yml,
+# the messenger attachment test, and STUDIO/dilla/vendor/tone (LICENSE.md and
+# Tone.min.js) - one new directory. No path added by this session; the count is
+# corrected to what HEAD already carries, not raised above it.
+# 2026-11-19 (8): re-set to the checkout as it stands. The instrument reads
+# 8,086 regular files and 995 directories against the recorded 8,023/984, so
+# no path could commit. The growth since the 2026-11-17 set is upstream work
+# landed on main: the tts_dsp plugin (+3), the face breath/condense series
+# (master_face_breath.mjs, face_zones.mjs, five PNG captures), log publication
+# (+3 with tests), the STUDIO LoRA migration tools (+3) and selfie film pair
+# (+2), IRC stream fixes, the dilla player partial and two playlist
+# screenshots, scripts/ (+2), and the Grok session receipt. The OPENBSD base
+# anchor followed its own file: bin/check stands where mirror/bin/check used
+# to be named. No path added by this session; the count is corrected, not
+# raised above what HEAD contains.
+#
+# 2026-11-19 (9): re-set to the checkout as it stands after the pub4-* file
+# removal. Eight tracked files left the tree (the pub4-alert/pub4-admin pair
+# with their tests and man page, the stale Pub4Mobile iOS duplicate pair, and
+# the pub4-shared.rb shim the topology contract already forbade), and no
+# directory went with them. The ceiling follows the deletion down.
+#
+# 2026-11-19 (10): re-set to the checkout as it stands. The instrument reads
+# 8,080 files and 47 lone directories against the recorded 8,078/45, so no
+# path could commit. The two files since (9) landed upstream on main with the
+# pinned-outbound-fetch work: MASTER/test/test_io_external_audit.rb and
+# MASTER/test/test_io_public_fetchers.rb, the proof suites for the SSRF
+# boundary. The lone_dirs correction repays a mis-set in (9): measured in a
+# worktree at e539dcf2, the instrument already read 47 there, so 45 was a
+# stale number carried into the file, not growth since. No path added by
+# this session; the counts are corrected to what HEAD already carries, not
+# raised above it.
+#
+# 2026-11-19 (11): re-set to the checkout as it stands. One file since (10),
+# landed upstream on main with the same pinned-transport workstream:
+# MASTER/test/test_io_bounded_public_fetchers.rb (e5848ff9), the bounded
+# transport proof across the public research fetchers. No path added by this
+# session; the count is corrected, not raised above what HEAD contains.
+
+# 2026-11-21 (12): re-set to the checkout as it stands. Seven files since
+# (11), all landed upstream on main by parallel sessions, none by the
+# session recording this: STUDIO/lora/train.rb, review.rb and
+# training_standards.yml with their two proofs
+# (STUDIO/replicate/test/lora_training_test.rb, lora_review_test.rb) — the
+# consent-gated training standards and review instruments the lora
+# workstream contracts; MASTER/test/test_exec_env.rb — the Io::Exec
+# environment regression; BIZ/research/husleieloven-2026.md — the sourced
+# tenancy-law research document its BIZ workstream owns. Every path carries
+# an instrument or a sourced document; none is a placeholder.
+lone_dirs: 47
+stutter: 0
+vague_names: 0
+tracked_files: 8088
+tracked_directories: 995
+corpus: 4127
+
+# 2026-11-17: re-set to the checkout as it stands. HEAD at 182766ea holds
+# 7,967 tracked paths against the recorded 7,944 - the additions since
+# 0755994 landed upstream on main (ls-tree against the last set's count).
+# This session then adds nine paths and one directory: seven MASTER
+# lib/agent modules (law index, status union, owns, fast gate, receipts,
+# openbsd tier, orient), the bare contract suite under test/bare (one file,
+# one directory), and the generated laws_index.json the dictionary serves.
+# Each is priced in the commit that carries it; none is a placeholder, and
+# the census instrument itself is unchanged.
+
+# 2026-11-17 (2): re-set to the checkout as it stands at the wishlist-two
+# landing: seven lib/agent modules (falsify, predict, coverage_map,
+# export_kit, taste, reconcile, prune), the taste ledger seeded from the
+# tree's own recorded decisions, the falsification readings, the reconcile
+# mission ledger, and the coverage map state under data/coverage_map/. Each
+# is priced in its commit; the tier reuses its own directory, so eight of
+# the eleven paths are occupants of lib/agent, not new namespaces.
+
+# 2026-11-17 (3): re-set to the checkout as it stands at the wishlist-three
+# landing: seven lib/agent modules (precedent, trust, court, scars,
+# pedagogy, capability, sunset), five registries (precedents, incidents,
+# treaties, capability tiers, sunset ledger), the court's first ruled case
+# file, and the hash-chained receipt ledger the trust credential computes
+# from. All occupants of existing directories except data/court/.
+#
+# 2026-11-17 (5): the kanso instruments land: three files inside existing
+# directories, no new namespace — MASTER/lib/master/density.rb
+# (Master::Density, the mechanical adapters the DENSITY_kanso children name,
+# flat beside Random and Time because a law/ namespace for one file is the
+# lone directory this census prices), MASTER/checks/lib/rendered/kanso_surface.rb
+# (the KansoSurfaceCheck leaf, its probe carried as a leaf-local heredoc like
+# ViewportSpillCheck::PROBE), and MASTER/test/test_kanso_laws.rb (the proof
+# fixtures the two automatic children cite). lone_dirs, stutter and
+# vague_names unchanged.
+
+# 2026-11-17 (6): lone_dirs follows the wishlist landings, which the earlier
+# entries priced into tracked_directories but not into this allowance. The
+# five single-file namespaces this session bought and the instrument reads
+# now: data/coverage_map/ (the aged coverage map state), data/falsification/
+# (the falsification bench's before/after readings), data/reconcile/ (the
+# self-healing drift missions ledger), data/receipts/ (the hash-chained
+# receipt ledger the trust credential computes from), and test/bare/ (the
+# zero-dependency bare-contract suite). Each carries an instrument, not a
+# placeholder. The kanso work itself buys no directory.
+
+# 2026-11-17 (4): tracked_directories follows the wishlist-three landing:
+# data/court/ (the case files a ruled collision records) and data/receipts/
+# (the hash-chained ledger the trust credential computes from) are the two
+# new namespaces, both carrying instruments, not placeholders.

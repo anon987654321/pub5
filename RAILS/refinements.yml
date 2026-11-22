@@ -1,0 +1,23 @@
+# RAILS refinement ledger.
+# Only unresolved items remain here; completed and disproved rows are preserved in Git history.
+# Close an item only with its declared source and rendered evidence, then remove it
+# from this active ledger in the same change that records its accepted proof.
+---
+schema: 1
+items:
+- id: shared-010
+  app: shared
+  area: design
+  size: M
+  path: RAILS/__shared/app/assets/stylesheets/_buttons.scss
+  item: Retire the .button-small class in favour of $compact-contexts; markup is meant
+    to name no size.
+  status: open
+- id: shared-029
+  app: shared
+  area: privacy
+  size: M
+  path: RAILS/__shared/app/views/shared/_link_embed.html.erb
+  item: Serve embed thumbnails from a first-party cache; loading them from the provider
+    on page view contacts the provider before the play press the facade promises.
+  status: open

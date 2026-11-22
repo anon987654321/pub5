@@ -1,0 +1,11 @@
+---
+nb:
+  post:
+    sign_in_to_vote: "Poengsum %{score}. Logg inn for å stemme"
+    read_more: Les hele innlegget
+    embed: Kopier innbyggingskode
+    voting: Stemmer på innlegget
+    upvote: Stem opp
+    downvote: Stem ned
+  legal:
+    changelog: Endringslogg

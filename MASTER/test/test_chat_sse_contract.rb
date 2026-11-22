@@ -1,0 +1,54 @@
+# frozen_string_literal: true
+
+require_relative "test_helper"
+
+class TestChatSseContract < Minitest::Test
+  WEB_ROOT = File.join(Master::ROOT, "..", "MASTER", "web")
+
+  def test_chat_service_smoke_messages
+    source = File.read(File.join(WEB_ROOT, "app", "services", "chat_service.rb"))
+    assert_includes source, "SMOKE_MESSAGES = %w[ping pong health up]"
+    assert_includes source, "data: [DONE]"
+  end
+
+  def test_chat_service_forwards_uploaded_images_into_the_turn
+    source = File.read(File.join(WEB_ROOT, "app", "services", "chat_service.rb"))
+    assert_includes source, "image: image_payload"
+    assert_includes source, "def image_payload"
+  end
+
+  def test_chat_service_sse_handlers_are_keyed_to_this_conversation
+    source = File.read(File.join(WEB_ROOT, "app", "services", "chat_service.rb"))
+    assert_includes source, "next unless mine && ev[:conversation] == mine"
+  end
+
+  def test_chat_service_exposes_the_conversation_scoped_visual_subject_sidecar
+    source = File.read(File.join(WEB_ROOT, "app", "services", "chat_service.rb"))
+    runtime = File.read(File.join(WEB_ROOT, "public", "face.part5.txt"))
+
+    assert_includes source, 'subscribe("assistant:visual-subject")'
+    assert_includes source, 'write_json_event("visual_subject", payload)'
+    assert_includes source, "def assistant_visual_subject_payload(event)"
+    assert_includes source, "next unless mine && ev[:conversation] == mine"
+    assert_includes runtime, "event === 'visual_subject'"
+    assert_includes runtime, "master:visual-subject"
+  end
+
+  def test_message_action_sets_sse_headers
+    source = File.read(File.join(WEB_ROOT, "app", "controllers", "chat_controller.rb"))
+    assert_includes source, "text/event-stream"
+    assert_includes source, "ChatService.new"
+  end
+
+  def test_enhance_runs_under_the_visitor_fiber
+    source = File.read(File.join(WEB_ROOT, "app", "controllers", "chat_controller.rb"))
+    enhance = source[/def enhance\n.*?\n  end/m]
+    assert enhance, "enhance action missing"
+    assert_includes enhance, "with_master_fiber"
+  end
+
+  def test_visitor_sse_strips_conversation_as_well_as_job_id
+    source = File.read(File.join(WEB_ROOT, "app", "controllers", "events_controller.rb"))
+    assert_includes source, ':conversation, "conversation"'
+  end
+end

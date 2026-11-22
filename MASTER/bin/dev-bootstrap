@@ -1,0 +1,289 @@
+#!/bin/sh
+# dev-bootstrap — a suitable Ruby for this checkout, on any host, without root.
+#
+# bin/ruby probes the Rubies a macOS workstation already has. A constrained
+# environment — a Linux container, a VPS without a dev package manager, an
+# agent sandbox with no sudo — has nothing to probe, and the operator's
+# answer ("compile one") arrived only as tribal knowledge: which libyaml,
+# which configure flags, where it may write. This script is that knowledge,
+# written down and executable. It is the same path the 2026-11-08 container
+# /fix run walked, by hand, twice.
+#
+# Usage:
+#   bin/dev-bootstrap                # build if needed, print the receipt
+#   bin/dev-bootstrap [args...]      # ensure a Ruby, then exec it with args
+#
+# Order of preference:
+#   1. $PUB5_RUBY                       (the operator's explicit compatible override)
+#   2. the generic Ruby already selected by PATH (>= 3.2)
+#   3. another compatible installed Ruby, only if generic Ruby is too old
+#   4. a Ruby this script built earlier (MASTER/.tools/ruby)
+#   5. build one only when no compatible interpreter exists
+#
+# MASTER_DEV_BOOTSTRAP_BUILD=0 refuses step 4 (use it where the network is
+# unavailable and the honest answer is a named failure, not a hang).
+set -eu
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ROOT=$(dirname -- "$SCRIPT_DIR")
+TOOLS="$ROOT/.tools"
+PREFIX="$TOOLS/ruby"
+# The supporting libraries install into the Ruby's own prefix, not a sibling
+# directory. mkmf searches that prefix by default, so a later `bundle install`
+# can build fiddle (libffi), psych (libyaml) and friends without a pkg-config
+# path handed to it, and without any dev package from the host.
+YAML_PREFIX="$PREFIX"
+ZLIB_PREFIX="$PREFIX"
+OPENSSL_PREFIX="$PREFIX"
+OPENSSL_VER=3.0.15
+FFI_PREFIX="$PREFIX"
+MIN_MAJOR=3
+MIN_MINOR=2
+# Must satisfy the Gemfile floor (`ruby ">= 3.2"`). A 3.1.x build here produced an
+# interpreter this script and Bundler both reject under the previous floor; the current floor accepts 3.2+ so the no-root fallback can
+# never boot MASTER.
+RUBY_VER=3.3.6
+
+say() { printf 'dev-bootstrap: %s\n' "$*"; }
+
+version_key() {
+  # "3.2.6" -> 3*1000000+3*1000+6 ; unsuitable versions print nothing.
+  version=$1
+  case $version in
+    *.*.*) ;;
+    *) return 1 ;;
+  esac
+  major=${version%%.*}
+  rest=${version#*.}
+  minor=${rest%%.*}
+  patch=${rest#*.}
+  case $major in *[!0-9]*|'') return 1 ;; esac
+  case $minor in *[!0-9]*|'') return 1 ;; esac
+  case $patch in *[!0-9]*|'') return 1 ;; esac
+  [ "$major" -lt "$MIN_MAJOR" ] && return 1
+  [ "$major" -eq "$MIN_MAJOR" ] && [ "$minor" -lt "$MIN_MINOR" ] && return 1
+  printf '%d\n' $((major * 1000000 + minor * 1000 + patch))
+}
+
+best_on_path() {
+  best_key=-1
+  best_ruby=
+
+  # Hermetic test seam; production always checks generic PATH Ruby first.
+  if [ -n "${MASTER_RUBY_CANDIDATES:+x}" ]; then
+    set -- $(printf '%s' "$MASTER_RUBY_CANDIDATES" | tr ':' ' ')
+    for candidate in "$@"; do
+      [ -n "$candidate" ] || continue
+      [ -x "$candidate" ] || continue
+      version=$("$candidate" -e 'print RUBY_VERSION' 2>/dev/null) || continue
+      key=$(version_key "$version") || continue
+      [ "$key" -gt "$best_key" ] || continue
+      best_key=$key
+      best_ruby=$candidate
+    done
+    [ -n "$best_ruby" ] && printf '%s\n' "$best_ruby"
+    return
+  fi
+
+  generic=$(command -v ruby 2>/dev/null || true)
+  if [ -n "$generic" ] && [ -x "$generic" ]; then
+    version=$("$generic" -e 'print RUBY_VERSION' 2>/dev/null || true)
+    if key=$(version_key "$version"); then
+      printf '%s\n' "$generic"
+      return
+    fi
+  fi
+
+  for candidate in "$HOME"/.rubies/*/bin/ruby "$HOME"/.rbenv/versions/*/bin/ruby; do
+    [ -x "$candidate" ] || continue
+    version=$("$candidate" -e 'print RUBY_VERSION' 2>/dev/null) || continue
+    key=$(version_key "$version") || continue
+    [ "$key" -gt "$best_key" ] || continue
+    best_key=$key
+    best_ruby=$candidate
+  done
+
+  old_ifs=$IFS
+  IFS=:
+  for directory in $PATH; do
+    [ -d "$directory" ] || continue
+    for candidate in "$directory"/ruby[0-9]*; do
+      [ -x "$candidate" ] || continue
+      version=$("$candidate" -e 'print RUBY_VERSION' 2>/dev/null) || continue
+      key=$(version_key "$version") || continue
+      [ "$key" -gt "$best_key" ] || continue
+      best_key=$key
+      best_ruby=$candidate
+    done
+  done
+  IFS=$old_ifs
+  [ -n "$best_ruby" ] && printf '%s\n' "$best_ruby"
+}
+
+fetch() {
+  url=$1
+  out=$2
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSLo "$out" "$url"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO "$out" "$url"
+  else
+    say "no curl or wget to fetch $url"
+    exit 1
+  fi
+}
+
+# The OpenSSL built above trusts the bundle at its own openssldir, which is
+# $PREFIX/ssl/cert.pem (Ruby reads it as OpenSSL::X509::DEFAULT_CERT_FILE). A
+# container has no such file, so every HTTPS call the Ruby makes — RubyGems, a
+# model lane — fails certificate verification even though the network is fine.
+# Install the host bundle, or fetch Mozilla's with the host curl/wget.
+install_ca_bundle() {
+  bundle="$PREFIX/ssl/cert.pem"
+  if [ -s "$bundle" ]; then
+    return 0
+  fi
+  mkdir -p "$PREFIX/ssl"
+  for candidate in /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt /etc/ssl/cert.pem; do
+    if [ -s "$candidate" ]; then
+      cp "$candidate" "$bundle"
+      say "installed the host CA bundle at $bundle"
+      return 0
+    fi
+  done
+  say "fetching the Mozilla CA bundle for $bundle"
+  fetch https://curl.se/ca/cacert.pem "$bundle"
+}
+
+build() {
+  say "no suitable Ruby found; building $RUBY_VER into $PREFIX (no root needed)"
+  mkdir -p "$TOOLS"
+  cd "$TOOLS"
+
+  if [ ! -f yaml-0.2.5/.built ]; then
+    say "fetching libyaml 0.2.5"
+    fetch https://pyyaml.org/download/libyaml/yaml-0.2.5.tar.gz yaml.tar.gz
+    rm -rf yaml-0.2.5
+    tar xzf yaml.tar.gz
+    (cd yaml-0.2.5 && CC=${CC:-cc} ./configure --prefix="$YAML_PREFIX" \
+      --disable-shared --with-pic >/dev/null && make -j2 >/dev/null && make install >/dev/null)
+    touch yaml-0.2.5/.built
+  fi
+  say "libyaml ready at $YAML_PREFIX"
+
+  # zlib and OpenSSL are built from source for the same reason libyaml is: a
+  # container with no dev packages has no headers, and without OpenSSL the built
+  # Ruby's RubyGems cannot fetch a gem over HTTPS at all.
+  if [ ! -f zlib-1.3.1/.built ]; then
+    say "fetching zlib 1.3.1"
+    fetch https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz zlib.tar.gz
+    rm -rf zlib-1.3.1
+    tar xzf zlib.tar.gz
+    (cd zlib-1.3.1 && CC=${CC:-cc} ./configure --prefix="$ZLIB_PREFIX" >/dev/null \
+      && make -j2 >/dev/null && make install >/dev/null)
+    touch zlib-1.3.1/.built
+  fi
+  say "zlib ready at $ZLIB_PREFIX"
+
+  if [ ! -f "openssl-$OPENSSL_VER/.built" ]; then
+    say "fetching openssl $OPENSSL_VER"
+    fetch "https://www.openssl.org/source/openssl-$OPENSSL_VER.tar.gz" openssl.tar.gz
+    rm -rf "openssl-$OPENSSL_VER"
+    tar xzf openssl.tar.gz
+    (cd "openssl-$OPENSSL_VER" && CC=${CC:-cc} ./config --prefix="$OPENSSL_PREFIX" \
+      --libdir=lib no-shared no-tests >/dev/null \
+      && make -j2 >/dev/null && make install_sw >/dev/null)
+    touch "openssl-$OPENSSL_VER/.built"
+  fi
+  say "openssl ready at $OPENSSL_PREFIX"
+  install_ca_bundle
+
+  # libffi is what the fiddle gem (a default gem Ruby rebuilds) needs to build.
+  # It must be shared: fiddle links it into a shared object, and a static-only
+  # archive without PIC cannot be linked there.
+  if [ ! -f libffi-3.4.6/.built ]; then
+    say "fetching libffi 3.4.6"
+    fetch https://github.com/libffi/libffi/releases/download/v3.4.6/libffi-3.4.6.tar.gz \
+      libffi.tar.gz
+    rm -rf libffi-3.4.6
+    tar xzf libffi.tar.gz
+    (cd libffi-3.4.6 && CC=${CC:-cc} ./configure --prefix="$FFI_PREFIX" >/dev/null \
+      && make -j2 >/dev/null && make install >/dev/null)
+    touch libffi-3.4.6/.built
+  fi
+  say "libffi ready at $FFI_PREFIX"
+
+  if [ ! -f ruby-$RUBY_VER/.built ]; then
+    say "fetching ruby $RUBY_VER (this is the long step; re-running resumes)"
+    if [ ! -d ruby-$RUBY_VER ]; then
+      # The series directory tracks RUBY_VER; a hard-coded one fetched a tarball
+      # whose name never matched the version the build then looked for.
+      series=$(printf '%s' "$RUBY_VER" | cut -d. -f1,2)
+      fetch "https://cache.ruby-lang.org/pub/ruby/$series/ruby-$RUBY_VER.tar.gz" ruby.tar.gz
+      tar xzf ruby.tar.gz
+    fi
+    (cd ruby-$RUBY_VER \
+      && CPPFLAGS="-I$YAML_PREFIX/include -I$ZLIB_PREFIX/include -I$OPENSSL_PREFIX/include -I$FFI_PREFIX/include" \
+         LDFLAGS="-L$YAML_PREFIX/lib -L$ZLIB_PREFIX/lib -L$OPENSSL_PREFIX/lib -L$FFI_PREFIX/lib" \
+         CC=${CC:-cc} ./configure --prefix="$PREFIX" --disable-install-doc \
+           --with-yaml-dir="$YAML_PREFIX" --with-openssl-dir="$OPENSSL_PREFIX" \
+           --with-libffi-dir="$FFI_PREFIX" \
+           --without-gmp --enable-shared >/dev/null \
+      && make -j2 >/dev/null && make install >/dev/null)
+    touch ruby-$RUBY_VER/.built
+  fi
+  say "built: $PREFIX/bin/ruby"
+}
+
+# 1 and 2: an explicit compatible override, or the generic/available host Ruby.
+# A build already in place keeps its own OpenSSL trust store current before any
+# exec path below (generic, prior build, or a fresh build) runs it.
+[ -x "$PREFIX/bin/ruby" ] && install_ca_bundle
+
+if [ -n "${PUB5_RUBY:-}" ]; then
+  [ -x "$PUB5_RUBY" ] || { say "PUB5_RUBY is not executable: $PUB5_RUBY"; exit 1; }
+  version=$("$PUB5_RUBY" -e 'print RUBY_VERSION' 2>/dev/null || true)
+  key=$(version_key "$version") || { say "PUB5_RUBY must be Ruby >= $MIN_MAJOR.$MIN_MINOR (found ${version:-unreadable})"; exit 1; }
+  exec "$PUB5_RUBY" "$@"
+fi
+
+if chosen=$(best_on_path) && [ -n "$chosen" ]; then
+  exec "$chosen" "$@"
+fi
+
+# 3: a Ruby this script built before, when it still meets the floor. A build
+# left by an older RUBY_VER must not be trusted blind: a 3.1.x build answered
+# here and then failed Bundler's own `ruby ">= 3.2"` check.
+if [ -x "$PREFIX/bin/ruby" ]; then
+  built=$("$PREFIX/bin/ruby" -e 'print RUBY_VERSION' 2>/dev/null || true)
+  stale=
+  case "$built" in
+    [0-9]*.[0-9]*.[0-9]*) version_key "$built" >/dev/null || stale=1 ;;
+  esac
+  if [ -z "$stale" ]; then
+    install_ca_bundle
+    LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    export LD_LIBRARY_PATH
+    exec "$PREFIX/bin/ruby" "$@"
+  fi
+  say "ignoring $PREFIX/bin/ruby: $built is below Ruby $MIN_MAJOR.$MIN_MINOR"
+fi
+
+# 4: build one, then answer through it.
+if [ "${MASTER_DEV_BOOTSTRAP_BUILD:-1}" = "0" ]; then
+  say "no Ruby >= $MIN_MAJOR.$MIN_MINOR on this host, and building is disabled (MASTER_DEV_BOOTSTRAP_BUILD=0)"
+  say "install a compatible Ruby, set PUB5_RUBY explicitly, or allow the fallback build"
+  exit 1
+fi
+
+build
+LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH
+if [ "$#" -gt 0 ]; then
+  exec "$PREFIX/bin/ruby" "$@"
+fi
+
+say "receipt: $PREFIX/bin/ruby ($("$PREFIX/bin/ruby" -e 'print RUBY_VERSION'))"
+say "support libraries: $PREFIX (static, private to this checkout)"
+say "use: bin/dev-bootstrap [args...] runs args on it"
+say "  or: export LD_LIBRARY_PATH=$PREFIX/lib and PATH=$PREFIX/bin:\$PATH"

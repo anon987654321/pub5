@@ -1,0 +1,433 @@
+# frozen_string_literal: true
+
+require_relative "../capability_stamp"
+require_relative "../../voice/typography"
+require_relative "../../voice/strunk_pass"
+
+module Master
+  module CLI
+    class Session
+      private
+
+      def display_result(result:, accumulated:, streamed:, units_console: false)
+        case result
+        in Master::Result::Ok => ok
+          @last_ok = true
+          @last_outcome = nil
+          @exit_code = 0
+          display_ok(ok:, accumulated:, streamed:, units_console:)
+        in Master::Result::Err => err
+          # Do not label a requested stop as complete. Report cancellation
+          # only after the pipeline has actually returned its abort result;
+          # until then the spinner says "stopping" and /stop says "request".
+          if err.category == :abort
+            @last_ok = false
+            @last_outcome = :cancelled
+            @exit_code = cancellation_exit_code
+            return Master::Trace::Dmesg.status("turn0", cancellation_status)
+          end
+
+          @last_ok = false
+          @last_outcome = :error
+          @exit_code = exit_code_for(err)
+          return exit_cli if err.category == :shutdown
+
+          print_error(err)
+        end
+      end
+
+      def cancellation_status
+        reason = @turn_cancellation&.reason.to_s
+        return "cancelled by /stop" if reason.start_with?("/stop ")
+        return "interrupted by Ctrl-C" if reason.start_with?("Ctrl-C ")
+
+        "aborted"
+      end
+
+      def cancellation_exit_code
+        @turn_cancellation&.reason.to_s.start_with?("Ctrl-C ") ? 130 : 2
+      end
+
+      # One line for a one-line error; its own lines for a structured one. The
+      # fold reports as header, turn evidence and summary — flattened into a
+      # ribbon and cut mid-word, that evidence was unreadable, which is a
+      # second error on top of the first.
+      # Structured reports already carry the unit that produced them. Reuse
+      # that unit instead of prefixing the whole report with a second err0.
+      REPORT_UNIT = /\A([a-z][a-z0-9_]*\d+):\s/
+
+      def print_error(err)
+        text = Master::Voice::StrunkPass.brevity(err.message.to_s)
+        text = "operation failed" if text.strip.empty?
+        return Master::Trace::Dmesg.status("err0", bounded_line(text)) if text.lines.one?
+
+        unit = text[REPORT_UNIT, 1]
+        return Master::Trace::Dmesg.block("err0", text) if unit.nil? || unit == "err0"
+
+        Master::Trace::Dmesg.block(unit, text.sub(/\A#{Regexp.escape(unit)}:\s*/, ""))
+      end
+
+      def bounded_line(text)
+        Master::Voice::Typography.ellipsis(text.gsub(/\s+/, " ").strip, ERROR_TEXT_MAX_CHARS)
+      end
+
+      def display_ok(ok:, accumulated:, streamed:, units_console: false)
+        text = if streamed || (conversational_input? && !accumulated.to_s.strip.empty?)
+                 accumulated
+               else
+                 success_text(ok)
+               end
+        text = conversation_output(text)
+        if text.to_s.strip.empty?
+          # Detailed dmesg replays a line-turn through the units console, so
+          # the empty buffer is empty by construction, not an empty answer.
+          # The err0 report lied: a long reply followed "turn completed
+          # without output" (Johann's log 2026-11-07).
+          return display_units_console_turn(ok) if units_console
+
+          return display_empty_success(ok)
+        end
+        routine = !streamed && routine_success?(text)
+        command = diagnostic_command(@last_input)
+        markdown_rendered = false
+
+        if !streamed && command.nil? && !structured_payload?(text) &&
+           @refs.renderer.respond_to?(:terminal_markdown)
+          text = @refs.renderer.terminal_markdown(text, width: reply_measure)
+          markdown_rendered = true
+        end
+
+        if streamed
+          # The stream is already visible. Reconcile its complete text with
+          # the settled result: close it, append a confirmed missing suffix,
+          # or print a genuinely different final answer on its own row.
+          text = print_unstreamed_reply(ok, streamed_text: text)
+        elsif command
+          # Pipeline commands already streamed their live dmesg units. Other
+          # commands get their human-readable result attached to their command
+          # unit. Explicit JSON payloads remain payloads, not terminal prose.
+          unless %w[fix review critique].include?(command)
+            if structured_payload?(text)
+              terminal_puts(text)
+            else
+              Master::Trace::Dmesg::Report.print(command, text)
+            end
+          end
+        else
+          # The reply replaces its row through the guard: while a draft is
+          # edited, the row is cleared and the draft is repainted under it.
+          terminal_print("\r\e[K") if $stdout.isatty
+          display_prepared_terminal_output(format_irc_reply(text)) if routine
+          unless routine
+            output = markdown_rendered ? text.chomp : @refs.renderer.measure(text.chomp, width: reply_measure)
+            display_prepared_terminal_output(format_irc_reply(output))
+          end
+        end
+
+        spoken = spoken_form(text)
+        unless Master::Trace::Dmesg.log_voice_active? ||
+               Master::Trace::Dmesg.log_voice_spoken_recently?(spoken)
+          Master::Voice::Playback.speak(spoken)
+        end
+        print_fix_activity_footer
+        print_previous_question_footer
+        print_parallel_errors_footer(ok)
+        print_capability_stamp(ok)
+      end
+
+      def display_empty_success(ok)
+        @last_ok = false
+        @exit_code = 2
+        Master::Trace::Dmesg.status("err0", "turn completed without output")
+        value = ok.value
+        Master::Trace::Dmesg.status("err0", "result=#{value.class}") if value
+      end
+
+      # The turn's text already reached the operator through the units
+      # console; keep the ok bookkeeping and the footers, print no reply.
+      # The footers read the turn's Result, not the boolean bookkeeping:
+      # print_parallel_errors_footer calls .value on what it is handed, and
+      # @last_ok is a boolean - passing it raised "undefined method 'value'
+      # for true" out of a queued turn's display, and the queue worker
+      # reported the crash (Johann's log 2026-11-08).
+      def display_units_console_turn(ok)
+        print_fix_activity_footer
+        print_previous_question_footer
+        print_parallel_errors_footer(ok)
+        print_capability_stamp(ok)
+      end
+
+      CODE_REQUEST = /\b(?:code|script|program|source code|snippet|function|class)\b/i
+
+      def conversational_input?
+        diagnostic_command(@last_input).nil? && !@last_input.to_s.match?(CODE_REQUEST)
+      end
+
+      def conversation_output(text)
+        return text unless conversational_input?
+
+        unwrap_ruby_say_wrapper(text) || text
+      end
+
+      # Some model turns have incorrectly returned an executable say helper
+      # instead of the words it was meant to print. Never execute model output.
+      # Recognise only that narrow wrapper and recover its literal say lines.
+      def unwrap_ruby_say_wrapper(text)
+        source = text.to_s
+        has_entry = source.match?(/^#!\/usr\/bin\/env ruby\b/m) ||
+                    source.match?(/^\s*STDOUT\.sync\s*=\s*true\s*$/m)
+        definition = source.match(/^\s*def\s+say\s*\(\s*([a-zA-Z_]\w*)\s*=\s*""\s*\)\s*$/m)
+        return unless has_entry && definition && source.match?(/^\s*(?:safe\s+do|begin)\s*$/m)
+
+        argument = Regexp.escape(definition[1])
+        puts_helper = source.match?(/^\s*STDOUT\.puts\(\s*#{argument}(?:\.to_s)?\s*\)\s*$/m)
+        write_helper = source.match?(/^\s*STDOUT\.write\(\s*#{argument}\.to_s\s*\)\s*$/m) &&
+                       source.match?(/^\s*STDOUT\.write\(\s*"\\n"\s*\)\s*$/m)
+        return unless puts_helper || write_helper
+
+        calls = source.each_line.filter_map do |line|
+          match = line.match(/\A([ \t]*)say(?:[ \t]+("(?:\\.|[^"\\])*")|[ \t]*\([ \t]*("(?:\\.|[^"\\])*")[ \t]*\))?[ \t]*;?[ \t]*\z/)
+          next unless match
+
+          literal = match[2] || match[3]
+          [match[1].length, literal ? literal.undump : ""]
+        end
+        return if calls.empty?
+
+        # Rescue handlers often contain a second, generic fallback sentence.
+        # Keep only the primary say block rather than appending that fallback
+        # to the answer as though it had also been spoken.
+        indent = calls.map(&:first).min
+        messages = calls.filter_map { |level, message| message if level == indent }
+        return if messages.empty?
+
+        messages.join("\n")
+      rescue ArgumentError
+        nil
+      end
+
+      # Conversation reads as ordinary terminal prose. Operational events
+      # already carry their own dmesg unit; timestamping every answer and
+      # inventing a speaker prefix made the shell feel like an IRC transcript.
+      def format_irc_reply(text)
+        text.to_s
+      end
+
+      # The first streamed packet is held only long enough to distinguish the
+      # accidental executable wrapper from an ordinary sentence.
+      def ruby_say_wrapper_stream?(source)
+        first = source.to_s.lstrip
+        return true if first.start_with?("#!/usr/bin/env ruby")
+        return true if first.match?(/\A(?:STDOUT|STDERR)\.sync\s*=\s*true(?:\s*\z|\s*\r?\n)/)
+        return true if first.match?(/\A# frozen_string_literal: true\b/) &&
+                       first.match?(/^\s*def\s+say\b/m) &&
+                       first.match?(/STDOUT\.puts\(line\.to_s\)/m)
+
+        false
+      end
+
+      def ruby_say_wrapper_prefix_pending?(source)
+        first = source.to_s.lstrip.lines.first.to_s.rstrip
+        markers = ["#!/usr/bin/env ruby", "STDOUT.sync = true", "STDERR.sync = true",
+                   "# frozen_string_literal: true", "def say"]
+        first.length < 128 && markers.any? { |marker| marker.start_with?(first) }
+      end
+
+      def format_irc_stream(text, state: nil)
+        text.to_s
+      end
+
+      def diagnostic_command(input)
+        word = input.to_s.strip.split(/\s+/, 2).first.to_s
+        return unless word.start_with?("/") || input.to_s.strip.match?(/\A(?:fix|review|critique)\b/i)
+
+        word.delete_prefix("/").downcase
+      end
+
+      def structured_payload?(text)
+        stripped = text.to_s.lstrip
+        stripped.start_with?("{", "[") && stripped.match?(/[}\]]\s*\z/)
+      end
+
+      # A pass report is a log, and reading a log aloud from the top takes
+      # longer than the pass did. Its milestones were already spoken as they
+      # happened (Session::MILESTONE), so what is left to say is the line that
+      # closes it. Anything that is not a report is spoken whole.
+      REPORT_FOOTER = /\A[a-z]+\d+: (?:complete|incomplete)\b/
+
+      def spoken_form(text)
+        last = text.to_s.lines.map(&:strip).reject(&:empty?).last.to_s
+        return text unless text.to_s.lines.size > REPORT_MIN_LINES && last.match?(REPORT_FOOTER)
+
+        last
+      end
+
+      REPORT_MIN_LINES = 8
+
+      def reply_measure
+        [Master::Voice::Renderer::MEASURE, TTY::Screen.width - 1].min
+      rescue StandardError
+        Master::Voice::Renderer::MEASURE
+      end
+
+      def print_previous_question_footer
+        return unless @last_input.to_s.lstrip.start_with?("/fix", "fix ")
+        return unless @last_ok
+
+        question = @refs.session.last_user_question(before: @last_input)
+        return if question.to_s.empty?
+
+        line = "next0: your previous question - #{question}"
+        Master::Trace::Dmesg.status("next0", question)
+        # The question is continuity context, not a second reply. Keep it visible
+        # so /fix can resume the thread without putting two utterances on the speaker.
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "cli.previous_question_footer", event_bus: @refs.bus)
+      end
+
+      def print_fix_activity_footer
+        return unless @last_input.to_s.lstrip.start_with?("/fix", "fix ")
+
+        summary = @activity&.fix_summary
+        return if summary.to_s.empty?
+
+        Master::Trace::Dmesg.status("fix0", summary.delete_prefix("fix0: "))
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "cli.fix_activity_footer", event_bus: @refs.bus)
+      end
+
+      def print_capability_stamp(ok)
+        return unless verbose_output?
+        return unless ok.respond_to?(:model)
+
+        model = ok.model
+        return if model.to_s.empty?
+
+        Master::Trace::Dmesg.status(
+          "model0",
+          Master::CLI::CapabilityStamp.render(model:, root: Master::ROOT).to_s.delete_prefix("model0 at master0: "),
+        )
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "cli.capability_stamp", event_bus: @refs.bus)
+      end
+
+      def print_parallel_errors_footer(ok)
+        return unless ok.respond_to?(:value)
+
+        value = ok.value
+        return unless value.respond_to?(:[])
+
+        errors = Array(value[:_parallel_errors]).map(&:to_s).reject(&:empty?)
+        timeout = value[:_parallel_timeout]
+        stage_err = value[:_stage_error].to_s
+        lines = errors
+        lines << "parallel timeout" if timeout
+        lines << stage_err unless stage_err.empty?
+        return if lines.empty?
+
+        Master::Trace::Dmesg.status("parallel0", lines.first(3).join("; "))
+      end
+
+      # A fallback lane or tool loop can settle a reply after its stream stops.
+      # Compare complete text, not an arbitrary prefix: a 120-character match
+      # can hide an unseen tail, while a short streamed prefix can be printed
+      # twice with the full answer. Append only when the settled answer begins
+      # with every character already shown; otherwise keep the final answer on
+      # its own row rather than splice two different replies together.
+      def print_unstreamed_reply(ok, streamed_text:)
+        streamed = streamed_text.to_s
+        raw = raw_success_text(ok).to_s.strip
+
+        if raw.empty?
+          terminal_puts unless streamed.empty? || streamed.end_with?("\n")
+          return streamed
+        end
+
+        raw = conversation_output(raw).to_s
+        if streamed.include?(raw)
+          terminal_puts unless streamed.empty? || streamed.end_with?("\n")
+          return streamed
+        end
+
+        if !streamed.empty? && raw.start_with?(streamed)
+          remainder = raw.delete_prefix(streamed)
+          terminal_print(remainder, guard: false) unless remainder.empty?
+          terminal_puts unless raw.end_with?("\n")
+          return raw
+        end
+
+        terminal_puts unless streamed.empty? || streamed.end_with?("\n")
+        display_prepared_terminal_output(format_irc_reply(measured_reply(raw)))
+        raw
+      end
+
+      # The reply before presentation: the stream printed raw chunks, so the
+      # duplicate check and the spoken form read the bytes the stream carried.
+      # The value is a Hash when a turn carried rendered/output text; anything
+      # else displays as itself - a String responding to [] with a Symbol is a
+      # TypeError that killed the queue worker, not a display.
+      def raw_success_text(ok)
+        value = ok.value
+        fields = result_fields(value)
+        return value.to_s unless fields
+
+        output = fields[:output].to_s
+        output.empty? ? fields[:rendered].to_s : output
+      end
+
+      def measured_reply(text)
+        rendered = text
+        rendered = @refs.renderer.terminal_markdown(text, width: reply_measure) if @refs.renderer.respond_to?(:terminal_markdown)
+        @refs.renderer.measure(rendered.to_s.chomp, width: reply_measure)
+      end
+
+      def success_text(ok)
+        value = ok.value
+        fields = result_fields(value)
+        return value.to_s unless fields
+
+        rendered = fields[:rendered].to_s
+        return rendered unless rendered.empty?
+
+        fields[:output].to_s
+      end
+
+      # Commands may return the typed PipelineContext produced by the last
+      # stage, not a plain Hash. It deliberately exposes only [] and key? as
+      # its read surface; render its fields instead of leaking Object#to_s.
+      def result_fields(value)
+        return value if value.is_a?(Hash)
+        return value if value.respond_to?(:key?) && value.respond_to?(:[])
+
+        nil
+      end
+
+      def routine_success?(text)
+        text = text.to_s
+        !text.empty? && text.lines.size == 1 && text.length <= ROUTINE_SUCCESS_MAX_LENGTH
+      end
+
+      def violations_count
+        @violations_mutex.synchronize { @violations }
+      end
+
+      def set_violations(count)
+        @violations_mutex.synchronize do
+          @violations = count
+          @prev_violations = count
+        end
+      end
+
+      def exit_code_for(err)
+        case err.category
+        when :validation, :policy, :axiom_violation
+          1
+        when :provider_error, :llm_failure, :llm_call_failure, :no_api_key
+          3
+        else
+          2
+        end
+      end
+    end
+  end
+end

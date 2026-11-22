@@ -1,0 +1,64 @@
+# frozen_string_literal: true
+
+require "test_helper"
+require "yaml"
+
+class LeftoverEnglishChromeTest < ActiveSupport::TestCase
+  ROOT = Rails.root.to_s
+
+  # Vertical engines sit under brgen/engines/<name> (Rails.root/engines/<name>), in the repo and
+  # in the box's copy-tree alike.
+  def read(rel)
+    File.read(File.expand_path(File.join("..", rel), ROOT))
+  end
+
+  test "tv channel owner action uses the tv.upload_video key" do
+    source = read("brgen/engines/radio/tv/app/views/tv/channels/show.html.erb")
+    assert_includes source, 't("tv.upload_video")'
+    refute_includes source, '"Upload video"'
+  end
+
+  test "takeaway order show does not humanize status" do
+    source = read("brgen/engines/marketplace/engines/takeaway/app/views/takeaway/orders/show.html.erb")
+    refute_includes source, "status.humanize"
+    assert_includes source, 't("takeaway.statuses.'
+    assert_includes source, "again_order_path"
+    refute_includes source, "link_to t(\"actions.reorder\")"
+  end
+
+  test "dating matches chrome uses locale keys" do
+    index = read("brgen/engines/dating/app/views/dating/matches/index.html.erb")
+    card = read("brgen/engines/dating/app/views/dating/matches/_match.html.erb")
+    assert_includes index, 't("dating.matches")'
+    assert_includes index, 't("dating.discover")'
+    refute_includes index, ">Matcher<"
+    refute_includes index, '"Oppdag"'
+    assert_includes card, 't("dating.unmatch")'
+    assert_includes card, 't("dating.matched_on"'
+    refute_includes card, "Matched on"
+  end
+
+  test "dating discover rewind uses the locale key" do
+    source = read("brgen/engines/dating/app/views/dating/home/index.html.erb")
+    assert_includes source, 't("dating.rewind")'
+    assert_includes source, "rewind_path"
+  end
+
+  test "playlist set card uses privacy and tracks keys" do
+    source = read("brgen/engines/radio/playlist/app/views/playlist/sets/_card.html.erb")
+    refute_includes source, '"Public"'
+    refute_includes source, "tracks ·"
+    assert_includes source, 't("playlist.privacy.'
+  end
+
+  # The status labels the order timeline reads, in both languages. Whole-file en/nb
+  # parity is RAILS/test/locale_contract_test.rb's job and it compares every key,
+  # not just the roots; this asserts the one subtree the view above depends on.
+  test "takeaway status labels exist in both languages" do
+    en = YAML.safe_load_file(File.join(ROOT, "config/locales/en.yml")).fetch("en")
+    nb = YAML.safe_load_file(File.join(ROOT, "config/locales/nb.yml")).fetch("nb")
+    assert_equal en.dig("takeaway", "statuses").keys.sort, nb.dig("takeaway", "statuses").keys.sort
+    assert en.dig("takeaway", "statuses", "out_for_delivery")
+    assert nb.dig("takeaway", "statuses", "out_for_delivery")
+  end
+end

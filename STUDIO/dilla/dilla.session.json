@@ -1,0 +1,36 @@
+{
+  "engine": "dilla 4.2.0",
+  "progression": {
+    "id": "blue_hour",
+    "title": "Blue Hour - Dilla Minor Dub Cut",
+    "key": "Fm",
+    "bpm": 86,
+    "loop_bars": 4,
+    "chords": [
+      "Fm9",
+      "Ab13",
+      "Dbmaj9#11",
+      "C7b9"
+    ]
+  },
+  "arrangement": null,
+  "drums": "dilla_shadow_full",
+  "groove_profile": "dilla_shadow",
+  "groove_scale": 1.0,
+  "kit": "kit_dust",
+  "voice": "rhodes_mark1",
+  "rig": "dilla_night",
+  "bars": 16,
+  "performer": {
+    "id": "vinyl_tap",
+    "name": "Vinyl Tap"
+  },
+  "event_counts": {
+    "drum": 444,
+    "chord": 23,
+    "bass": 50,
+    "melody": 68,
+    "foley": 0
+  },
+  "sample_flip": null
+}

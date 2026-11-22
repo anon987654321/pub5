@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="nb">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>SPEIS – forretningsplan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&display=swap">
+    <style>
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --color-text: #000; --color-muted: #777; --color-link: #005f73; --color-link-bold: #003087;
+  --color-print-muted: #aaa; --color-border: #ddd; --color-icon: #000; --color-background: #fff;
+  --color-footer-text: #888; --font-size-base: 1rem; --font-size-small: 0.9rem;
+  --font-size-xsmall: 0.75rem; --font-size-h1: 3.6rem; --font-size-h2: 1.8rem;
+  --line-height-normal: 1.5; --line-height-heading: 1.2;
+  --line-height-subheading: 1.4; --space-xs: 0.75rem; --space-s: 0.75rem; --space-m: 0.75rem;
+  --space-l: 1.5rem; --space-xl: 3rem; --space-xxl: 4.5rem; --space-list-item: 0;
+  --width-content: 33rem; --width-indent: 16.2px; --layout-margin: auto;
+  --font-text: "Source Serif 4", serif; --font-heading: "EB Garamond", serif;
+  --underline-thickness: 1.5px; --underline-offset: 2px;
+}
+html { font-size: 16px; }
+body {
+  font: 400 var(--font-size-base)/var(--line-height-normal) var(--font-text);
+  color: var(--color-text); background: var(--color-background);
+  width: 90%; max-width: var(--width-content); margin: var(--layout-margin);
+  text-rendering: optimizeLegibility; letter-spacing: -0.01em;
+}
+main { padding-inline: var(--space-m); }
+article { margin-bottom: var(--space-xxl); hanging-punctuation: first last; }
+/* The cover is the page, not a column: the plan mark, the title pushed to
+   the foot of the page and the byline carry page one as on fetat. */
+header.cover {
+  min-height: 94vh; display: flex; flex-direction: column;
+  text-align: center; padding: var(--space-xl) 0;
+  break-after: page; page-break-after: always;
+}
+.cover .mark, .cover .mark-brand { margin: 0 auto; }
+.cover h1 {
+  font: 600 2.6rem/1.2 var(--font-heading);
+  margin: auto 0; letter-spacing: -0.015em; text-wrap: balance;
+}
+.cover .byline { font-style: italic; color: var(--color-muted); margin: var(--space-m) 0; }
+h2 {
+  font: 600 var(--font-size-h2)/var(--line-height-subheading) var(--font-heading);
+  margin: var(--space-xl) 0; letter-spacing: -0.01em; text-wrap: balance;
+}
+h3 { font: 600 1.3rem/1.3 var(--font-heading); margin: var(--space-l) 0 var(--space-s); text-wrap: balance; }
+h4 { font: 400 1.05rem/1.3 var(--font-heading); margin: var(--space-m) 0 var(--space-xs); color: var(--color-text); }
+p { margin-bottom: var(--space-l); orphans: 2; widows: 2; }
+strong { font-weight: 600; }
+.count { font-variant-numeric: tabular-nums; }
+a {
+  color: var(--color-link); text-decoration: underline;
+  text-decoration-thickness: var(--underline-thickness); text-underline-offset: var(--underline-offset);
+}
+a:focus { outline: 2px solid var(--color-link); outline-offset: 2px; }
+code { font-family: ui-monospace, Menlo, monospace; font-size: 0.88em; }
+ul { margin: 0 0 var(--space-l); padding-left: 1.1em; }
+li { margin-bottom: var(--space-list-item); text-wrap: pretty; }
+li::marker { color: var(--color-muted); }
+dl { margin: 0 0 var(--space-l); }
+dt { font-weight: 600; margin-top: 0.6em; }
+dd { margin: 0 0 0.35em; padding-left: 1.1em; text-wrap: pretty; }
+/* Tables and figures: the archive rules, retokenised onto bob2's colors. */
+table { width: 100%; border-collapse: collapse; margin: var(--space-l) 0; font-size: 0.9em; font-variant-numeric: tabular-nums lining-nums; }
+caption { caption-side: top; text-align: left; font-style: italic; color: var(--color-muted); font-size: 0.8em; padding-bottom: 0.5rem; }
+th, td { padding: 0.3rem 0.6rem 0.3rem 0; border-bottom: 1px solid var(--color-border); text-align: left; vertical-align: baseline; hyphens: auto; }
+thead th { border-top: 2px solid var(--color-text); border-bottom: 1px solid var(--color-text); font-weight: 600; }
+tfoot td { border-top: 1px solid var(--color-text); border-bottom: 2px solid var(--color-text); font-weight: 600; }
+table.numbers td, table.numbers th { text-align: right; }
+table.numbers td:first-child, table.numbers th:first-child { text-align: left; }
+figure { margin: var(--space-xl) 0; }
+figure svg { display: block; width: 100%; height: auto; }
+figcaption { font-size: 0.8em; font-style: italic; color: var(--color-muted); margin-top: 0.5rem; }
+.mark-plain { font-weight: 400; font-size: 1.3em; letter-spacing: 0.05em; line-height: 1.2; }
+/* The brand wordmark carries its own display font (ragnhild's Nosifer);
+   the rule is the base's, ported so the plan's own mark reads as itself. */
+.mark-brand {
+  font-family: 'Nosifer', 'EB Garamond', Georgia, serif;
+  font-weight: 400; font-size: 2.1em; line-height: 1.45; margin: 0 auto; color: inherit;
+}
+.mark-brand:empty { display: none; }
+.toc {
+  font-size: var(--font-size-small); line-height: 1.6;
+  margin: 0 auto var(--space-xxl); padding: var(--space-m) 0;
+  break-after: page; page-break-after: always;
+}
+.toc .lv1 { font-family: var(--font-heading); font-weight: 600; margin: var(--space-s) 0 2px; }
+.toc p { margin: 0; }
+.toc h2 { font: 600 1.4rem/1.3 var(--font-heading); margin: 0 0 var(--space-s); }
+footer {
+  font-size: var(--font-size-xsmall); color: var(--color-footer-text);
+  margin-top: var(--space-xl); padding: var(--space-m) 0;
+}
+footer p { margin: 0 0 var(--space-s); }
+footer a { color: var(--color-footer-text); }
+footer a strong { color: var(--color-link-bold); }
+@media (max-width: 768px) {
+  :root { --font-size-h1: 2.1rem; --font-size-h2: 1.35rem; }
+}
+@media print {
+  /* The printed document is the Chrome render, paged, exactly as fetat:
+     the @page box adds the hefte size, the folio and break hygiene only.
+     A zero top margin on the first page makes the cover the page. */
+  @page {
+    size: 156mm 234mm;
+    margin: 6mm 0 12mm;
+    @bottom-center { content: counter(page); font: 0.75rem/1.4 var(--font-heading); color: var(--color-print-muted); }
+  }
+  @page :first { margin-top: 0; }
+  /* body keeps its auto margins in print: the browser centres the 33rem
+     column on the page box, and the pdf must be laid out by the same
+     algorithm - pinning body margin to 0 shifted every printed page to
+     the left edge and broke the html/pdf twin. */
+  header.cover { min-height: 221mm; }
+  h2, h3, h4 { break-after: avoid; }
+  table, li, figure { break-inside: avoid; }
+  h1 { page-break-inside: avoid; }
+  footer { page-break-before: always; }
+  a { color: inherit; text-decoration: none; }
+  a[target="_blank"]::after, a[href^="mailto:"]::after { content: none; }
+  a:focus { outline: none; }
+}
+
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <header class="cover">
+<p class="mark" style="margin:0 auto;font-size:1.3em;line-height:1.15;font-weight:800;letter-spacing:.02em;width:max-content;background:linear-gradient(45deg, #ff007f, #00c9ff, #ffcc00, #ff007f);-webkit-background-clip:text;background-clip:text;color:transparent;print-color-adjust:exact;-webkit-print-color-adjust:exact;">SPEIS</p>
+<h1>Arktiske dominanseskip og kampfly 7–10. generasjon</h1>
+<p class="byline">SPEIS · søkt finansiering: NOK 500 000 · november 2026</p>
+        </header>
+        <div class="toc" aria-label="Innhold">
+          <h2>Innhold</h2>
+<p class="lv1">Sammendrag</p>
+<p class="lv1">Markedsanalyse</p>
+<p class="lv1">Teknologi og Innovasjon</p>
+<p class="lv1">Forretningsmodell</p>
+<p class="lv1">Utviklingsveikart</p>
+<p class="lv1">Finansieringsbehov</p>
+<p class="lv1">Team og Kompetanse</p>
+<p class="lv1">Bærekraft og Samfunnsansvar</p>
+        </div>
+<section id="sammendrag">
+<h2>Sammendrag</h2>
+<h3>Visjon</h3>
+<p>SPEIS skal etablere Norge som ledende leverandør av arktiske dominanseskip og neste generasjons kampfly til NATO. Vi kombinerer nukleær hybridteknologi med AI-drevet propulsjon for å sikre norsk og alliert overlegenhet i Arktis.</p>
+<h3>Misjon</h3>
+<p>Utvikle og produsere nuclear-hybrid Arctic dominance ships som overgår russiske Arktika-klasse isbrytere, samt kampfly generasjon 7-10 med modulære misjonssystemer for fremtidens forsvarsbehov.</p>
+<h3>Innovasjon</h3>
+<p>Nuclear-hybrid propulsion med AI-optimalisering, 3.5m isbryting-kapasitet, modular mission bay systems, og kvantedatalink for swarm coordination av kampfly.</p>
+<h3>Kundefordel</h3>
+<p>NATO får overlegen arktisk kontroll, Norge styrker nasjonal sikkerhet og forsvarsindustri, teknologideling med SYRE™ for materialer og 3D-printing.</p>
+
+<h3>Hvorfor nå</h3>
+<p>NATOs medlemsland har forpliktet seg til vesentlig høyere forsvarsbudsjetter frem mot 2035, og nordområdene har rykket frem som alliansens mest sårbare flanke etter Finlands og Sveriges NATO-medlemskap. Samtidig mangler vestlige makter arktisk kapasitet som kan matche de russiske isbryterklassene, og norsk forsvarsindustri står i sin beste konjunktur noensinne. Teknologibitene – dual-reactor design, AI-propulsjon, modulære misjonssystemer – er modne samtidig, for første gang. Kombinasjonen av politisk vilje, kapabilitetsgap og teknologisk beredskap gjør 2026 til åpningsvinduet.</p>
+</section>
+<section id="markedsanalyse">
+<h2>Markedsanalyse</h2>
+<table class="numbers">
+<caption>Marked og vekst</caption>
+<thead><tr><th>Omfang</th><th>Verdi</th></tr></thead>
+<tbody>
+<tr><td>Marked i Norge</td><td>NOK 50 000 000 000</td></tr>
+<tr><td>Marked i Norden</td><td>NOK 120 000 000 000</td></tr>
+<tr><td>Årlig vekst</td><td>5 %</td></tr>
+</tbody>
+</table>
+<h3>Kundesegmenter</h3>
+<ul>
+<li>NATO medlemsland med arktiske interesser (Norge, USA, Canada, Danmark)</li>
+<li>Norsk Forsvarsmateriell (FMA) for Sjøforsvaret og Luftforsvaret</li>
+<li>Arktiske ressurskontroll-organisasjoner (olje, gass, fiskeri)</li>
+<li>Kystvakt og Search &amp; Rescue operasjoner i nordområdene</li>
+</ul>
+<h3>Konkurranse</h3>
+<ul>
+<li>Russlands Arktika-klasse isbrytere (50 Let Pobedy, 75,000 ton)</li>
+<li>USA Zumwalt-class destroyers og Ford-class carriers</li>
+<li>Kinas Type 055 destroyers og polar research vessels</li>
+<li>Frankrike/Tyskland FCAS (Future Combat Air System) kampfly</li>
+<li>USA NGAD (Next Generation Air Dominance) program</li>
+</ul>
+<h3>Konkurransefortrinn</h3>
+<ul>
+<li>Dual nuclear reactor design gir ubegrenset rekkevidde i arktiske farvann</li>
+<li>Polar Class 1 hull med 3.5m isbryting vs. 2.8m for Arktika</li>
+<li>AI-drevet propulsjon optimaliserer energibruk i sanntid</li>
+<li>Modular mission bay tillater hurtig rekonfigurering for ulike oppdrag</li>
+<li>Generasjon 7-10 kampfly med swarm intelligence og autonomous operations</li>
+<li>Teknologideling med SYRE™ for 3D-printede aerospace komponenter</li>
+</ul>
+
+<h3>Kundeinnsikt og problemforståelse</h3>
+<p>Simuleringsarbeidet med SINTEF Marintek og dialogene med forsvarssektoren peker på samme hull: Kystvakten og Sjøforsvaret opererer i dag uten egen isbryterkapasitet i Polar Class 1, og allierte forsterkninger nordfor polarsirkelen er avhengige av isforhold og rekkevidde som dieselflåten ikke har. Kunderapporterte behov kretser rundt tre punkter: ubegrenset operasjonell rekkevidde uten bunkring i nordområdene, skjult drift (null akustisk signatur) i overvåkingsperioder, og modulære rom som kan skiftes mellom redningsoppdrag, forskning og beredskap uten verftsopphold. Begrensningene dagens alternativer har – russisk klasseoverlegenhet i is, dieselskip i rekkevidde, researchfartøy i funksjonalitet – er dokumentert i konkurransedelen og bekreftet i simuleringene.</p>
+<h3>Markedsføring og salg</h3>
+<p>Salgssporet i forsvarssektoren går gjennom referanser og klassifikasjon, ikke reklame: DNV GLs designvurdering i Q1 2026 er det første tillitsdokumentet, presentasjonen for NATO Defence Innovation Accelerator i Q3 det andre. Partnerskapet med Kongsberg Defence & Aerospace gir både kompetanse og innpass hos FMA. Første kontrakt søkes med Sjøforsvaret (ett skip), deretter tilbud til de arktiske NATO-medlemmene Canada, USA og Danmark gjennom teknologilisens-ordningen for land uten kjernefysisk program. De sivile avledningene – isbrytertjenester for shipping og offshore – selges til kommersielle aktører som flerårige servicekontrakter og gir stabil baseinntekt mellom skipskontraktene.</p>
+</section>
+<section id="teknologi">
+<h2>Teknologi og Innovasjon</h2>
+<h3>Teknologibeskrivelse</h3>
+<p>SPEIS Aurora-skip benytter dual-reactor layout med RITM-200 inspirert design (175 MW). AI-drevet propulsion system analyserer is-tetthet, strøm og vær i sanntid for optimal rute. Kampfly generasjon 7-10 inkluderer directed energy weapons, hypersonic missiles, og autonomous swarm coordination.</p>
+<h3>Unik innovasjon</h3>
+<p>Hybrid nuclear-electric propulsion lar skip operere i elektro-modus for stealth operations (zero akustisk signatur). Kampfly har adaptive camouflage nanocoating som endrer farge/reflektivitet basert på omgivelser.</p>
+<h3>Immaterielle rettigheter</h3>
+<p>Klassifisert forsvarsteknologi under NATO Security Agreement. Deler av AI-algoritmer patent-beskyttet. Samarbeidsavtale med Kongsberg Defence &amp; Aerospace.</p>
+<h3>Utviklingsstadium</h3>
+<p>Skip: Konseptdesign fase med SINTEF Marintek. Kampfly: Prototype avionics testet i simulator. Krever full-skala produksjonsfasilitet og testing.</p>
+
+<h3>3D-printede komponenter og MASTER-adaptasjon</h3>
+<p>Teknologidelingen med SYRE™ omfatter den parametriske printstakken og MASTER-adaptasjonen: pub5s Ruby-baserte styringskjerne der hver produksjonsjobb er et forslag som først når maskinen når lovkatalogen har verifisert toleranser, materialsertifikater og sikkerhetsgrenser. For flykomponenter betyr det at hver 3D-printet del følger en sporbar kjede fra materialbatch til montering, med skannerlogg som bevismateriale i luftdyktighetsdokumentasjonen. MASTER-oppsettet gjør det også mulig å gjenbruke SYRE™s compoundsøk – metodikk for systematisk screening av materialkombinasjoner mot målte egenskaper – på aerospace-legeringer og kompositter: samme testprotokoll, samme låsing av vinnercompound som produksjonslov. Dermed får kampflyprogrammet en materialplattform som vedlikeholdes som kunnskapsbase, ikke et engangsvalg som aldri revideres.</p>
+</section>
+<section id="forretningsmodell">
+<h2>Forretningsmodell</h2>
+<h3>Inntektskilder</h3>
+<ul>
+<li>Direkte salg til NATO medlemsland: NOK 15-25 milliarder per skip</li>
+<li>Kampfly kontrakter: NOK 800 millioner – 1.5 milliarder per fly</li>
+<li>Vedlikehold og oppgraderinger: 15% av initial kostnad årlig (30 års levetid)</li>
+<li>Teknologilisenser til allierte nasjoner: NOK 500 millioner årlig</li>
+<li>Sivilavledede teknologier (isbrytere for shipping): NOK 5-8 milliarder per skip</li>
+</ul>
+<h3>Lønnsomhet</h3>
+<p>Første skip-kontrakt sikrer profitabilitet (margin 20-25%). Kampfly-programmet krever 5-7 års investering før første leveranse. Vedlikeholdskontrakter gir stabil langsiktig inntekt.</p>
+<h3>Skalerbarhet</h3>
+<p>Modular design tillater parallell produksjon av skip-seksjoner. Kampfly kan produseres 12-24 enheter årlig ved full kapasitet. Teknologiplattform skalerbar til ubemannede varianter.</p>
+
+<h3>Enhetsøkonomi</h3>
+<p>Enhetsøkonomien i skipsbygging styres av kontraktstruktur: fastpris per milepæl, med vedlikehold som langsiktig annenhåndsinntekt.</p>
+<table class="numbers">
+<caption>Enhetsøkonomi per Aurora-skip, NOK</caption>
+<thead><tr><th>Post</th><th>Beløp</th></tr></thead>
+<tbody>
+<tr><td>Kontraktssum per skip</td><td>15–25 milliarder</td></tr>
+<tr><td>Byggekost per skip</td><td>12–20 milliarder</td></tr>
+<tr><td>Bruttomargin per skip</td><td>20–25 %</td></tr>
+<tr><td>Vedlikeholdskontrakt per år (30 år)</td><td>15 % av kontraktssum</td></tr>
+<tr><td>Kampfly per enhet</td><td>0,8–1,5 milliarder</td></tr>
+</tbody>
+</table>
+<p>Første skip bærer utviklingskostnaden; fra skip nummer to faller marginen i modulproduksjonen inn. Vedlikeholdskontraktene over 30 års levetid løfter livstidsverdien per skip vesentlig over kontraktssummen.</p>
+</section>
+<section id="veikart">
+<h2>Utviklingsveikart</h2>
+<dl>
+<dt>Q1 2026</dt>
+<dd>Sikre Innovasjon Norge finansiering. Fullføre preliminary design review for Aurora-skip. Etablere partnerskap med Kongsberg Defence.</dd>
+<dt>Q2 2026</dt>
+<dd>Bygge full-skala prototype av AI propulsion system. Påbegynne kampfly avionics integration testing. Ansette 25 ingeniører.</dd>
+<dt>Q3 2026</dt>
+<dd>Presentere Aurora-design for NATO Defence Innovation Accelerator. Secure første kontrakt med Sjøforsvaret (1 skip, NOK 18 milliarder).</dd>
+<dt>Q4 2026</dt>
+<dd>Starte konstruksjon av prototype Aurora-skip. Kampfly simulator operativ for pilot training. Ansette 50 flere fagarbeidere.</dd>
+<dt>2027 og videre</dt>
+<dd>Første Aurora-skip på sjøen for arktisk testing. Kampfly prototype første testflyvning. Ekspandere til produksjonsfasilitet for 3 skip parallelt.</dd>
+</dl>
+
+<h3>Milepæler og måltall</h3>
+<table class="numbers">
+<caption>Milepæler 2026–2027 med måltall</caption>
+<thead><tr><th>Milepæl</th><th>Tidspunkt</th><th>Måltall</th></tr></thead>
+<tbody>
+<tr><td>Preliminary design review med DNV GL</td><td>Q1 2026</td><td>Designklasseskjema påbegynt</td></tr>
+<tr><td>AI-propulsjonsprototype og avionics-integrasjon</td><td>Q2 2026</td><td>25 ingeniører ansatt</td></tr>
+<tr><td>NATO DIAC-presentasjon og første kontrakt</td><td>Q3 2026</td><td>Sjøforsvaret, 1 skip, NOK 18 mrd</td></tr>
+<tr><td>Prototypekonstruksjon starter</td><td>Q4 2026</td><td>75 ansatte totalt</td></tr>
+<tr><td>Sjøtesting Aurora og testflyvning kampfly</td><td>2027</td><td>Kapasitet 3 skip parallelt</td></tr>
+</tbody>
+</table>
+</section>
+<section id="finansiering">
+<h2>Finansieringsbehov</h2>
+<p><strong>Totalt kapitalbehov: NOK 1 000 000.</strong></p>
+<h3>Bevegelsens finansiering</h3>
+<p>Totalt kapitalbehov er NOK 1 000 000, fordelt på tre kilder:</p>
+<table class="numbers">
+<caption>Bevegelsens finansiering, NOK</caption>
+<thead><tr><th>Kilde</th><th>Beløp</th></tr></thead>
+<tbody>
+<tr><td>Innovasjon Norge</td><td>500 000</td></tr>
+<tr><td>Forsvarsbudsjettet</td><td>300 000</td></tr>
+<tr><td>Risikokapital</td><td>200 000</td></tr>
+</tbody>
+<tfoot><tr><td>Samlet kapitalbehov</td><td>1 000 000</td></tr></tfoot>
+</table>
+<h3>Budsjettallokering</h3>
+<table class="numbers">
+<thead><tr><th>Kategori</th><th>Beløp (NOK)</th><th>Andel</th></tr></thead>
+<tbody>
+<tr><td>Forskning</td><td>250 000</td><td>25 %</td></tr>
+<tr><td>Prototype</td><td>300 000</td><td>30 %</td></tr>
+<tr><td>Fasiliteter</td><td>200 000</td><td>20 %</td></tr>
+<tr><td>Loenn</td><td>150 000</td><td>15 %</td></tr>
+<tr><td>Sikkerhet</td><td>50 000</td><td>5 %</td></tr>
+<tr><td>Driftskapital</td><td>50 000</td><td>5 %</td></tr>
+</tbody>
+<tfoot><tr><td>Sum</td><td>1 000 000</td><td>100 %</td></tr></tfoot>
+</table>
+
+<p>Budsjettallokeringen ovenfor utgjør investeringsbudsjettet for finansieringsperioden. Inntektene i resultatbudsjettet bokføres per kontraktsmilepæl i tråd med regnskapspraksis for langtidskontrakter; selve skipsleveransene ligger etter budsjettperioden.</p>
+<h3>Resultatbudsjett 2026–2028</h3>
+<table class="numbers">
+<caption>Resultatbudsjett, NOK millioner</caption>
+<thead><tr><th>Post</th><th>2026</th><th>2027</th><th>2028</th></tr></thead>
+<tbody>
+<tr><td>Inntekter (milepælsbokført)</td><td>12,0</td><td>60,0</td><td>180,0</td></tr>
+<tr><td>Kostnader, utvikling og drift</td><td>−14,0</td><td>−54,0</td><td>−150,0</td></tr>
+<tr><td>Driftsresultat</td><td>−2,0</td><td>6,0</td><td>30,0</td></tr>
+<tr><td>Finansposter</td><td>0,0</td><td>−0,2</td><td>−0,5</td></tr>
+</tbody>
+<tfoot><tr><td>Resultat før skatt</td><td>−2,0</td><td>5,8</td><td>29,5</td></tr></tfoot>
+</table>
+<h3>Likviditetsbudsjett 2026–2028</h3>
+<table class="numbers">
+<caption>Likviditetsbudsjett, NOK millioner</caption>
+<thead><tr><th>Post</th><th>2026</th><th>2027</th><th>2028</th></tr></thead>
+<tbody>
+<tr><td>Inngående saldo</td><td>0,0</td><td>0,55</td><td>5,05</td></tr>
+<tr><td>Innbetalinger (inkl. kundeforskudd)</td><td>13,5</td><td>62,0</td><td>182,0</td></tr>
+<tr><td>Utbetalinger, drift</td><td>−13,2</td><td>−56,0</td><td>−156,0</td></tr>
+<tr><td>Investeringer</td><td>−0,75</td><td>−1,5</td><td>−2,0</td></tr>
+<tr><td>Kapitalinnbetaling</td><td>1,0</td><td>0,0</td><td>0,0</td></tr>
+</tbody>
+<tfoot><tr><td>Utgående saldo</td><td>0,55</td><td>5,05</td><td>29,05</td></tr></tfoot>
+</table>
+<p>Kundeforskudd i forsvarskontrakter er bransjenorm og bærer likviditeten gjennom utviklingsfasene. Kapitalinnbetalingen er de 1 000 000 kronene fra Innovasjon Norge, Forsvarsbudsjettet og risikokapital.</p>
+<h3>Risiko og risikoredusering</h3>
+<table>
+<caption>Risikomatrise</caption>
+<thead><tr><th>Risiko</th><th>Sannsynlighet</th><th>Konsekvens</th><th>Tiltak</th></tr></thead>
+<tbody>
+<tr><td>Reaktorgodkjenning forsinkes (IAEA/DNV)</td><td>Middels</td><td>Høy</td><td>Lisensiert design, tidlig dialog med tilsyn, uavhengig sikkerhetsaudit</td></tr>
+<tr><td>Kontraktsavhengighet av enkelte statlige kunder</td><td>Middels</td><td>Høy</td><td>Diversifisering til sivile isbrytertjenester, teknologilisens til allianseland</td></tr>
+<tr><td>Kostnadsoverskridelser i utvikling</td><td>Middels</td><td>Middels</td><td>Modulær bygging, fastpris per milepæl, stoppgrenser i kontraktsverk</td></tr>
+<tr><td>Leverandørrisiko knyttet til reaktordesign-lisens</td><td>Lav</td><td>Høy</td><td>Re-evaluering av designgrunnlag, alternativ leverandørbase, juridisk due diligence</td></tr>
+</tbody>
+</table>
+</section>
+<section id="team">
+<h2>Team og Kompetanse</h2>
+<h3>Admiral (ret.) Bjørn Haugen – CEO &amp; Strategic Advisor</h3>
+<p>35 år i Sjøforsvaret, tidligere sjef for Kystvakten. Ekspert i arktiske operasjoner og NATO-samarbeid. Master i Strategiske Studier fra Naval Postgraduate School.</p>
+<h3>Dr. Siri Johansen – CTO Nuclear Systems</h3>
+<p>PhD i Nuclear Engineering fra MIT. 12 år hos Institute for Energy Technology. Designet sikkerhetssystemer for norske forskningsreaktorer.</p>
+<h3>Colonel (ret.) Erik Svendsen – Chief Aerospace Engineer</h3>
+<p>25 år i Luftforsvaret, testet F-35 og F-16. Master i Aerospace Engineering fra NTNU. Leder for avionics integration team.</p>
+<h3>Knut Andreassen – COO &amp; Manufacturing Director</h3>
+<p>18 år hos Kongsberg Maritime, bygget subsea production systems. Ekspert i prosjektledelse for komplekse forsvarssystemer.</p>
+
+<h3>Behov for ekstern kompetanse</h3>
+<p>Konsernet kjøper inn klassifikasjon og sertifisering hos DNV GL, tilsynsrelatert kompetanse mot IAEA-regimet, advokatdekning for eksportkontroll og NATO-sikkerhetsavtaler, samt uavhengig sikkerhetsklarering gjennom NSM. Verftsdriften i Ålesund bygges med innleid fagarbeiderkompetanse fra etablerte maritime miljøer.</p>
+</section>
+<section id="baerekraft">
+<h2>Bærekraft og Samfunnsansvar</h2>
+<h3>Miljøpåvirkning</h3>
+<p>Nuclear propulsion gir zero-emission operations sammenlignet med diesel-drevne skip (80,000 tonn CO₂ spart per skip årlig). Modulær design forlenger levetid til 50+ år, reduserer behov for nybygg.</p>
+<h3>Sosial påvirkning</h3>
+<p>Skaper 500+ høykompetanse jobber i Norge innen maritim og aerospace engineering. Styrker Norges rolle i NATO og nordområdesikkerhet. Samarbeid med NTNU og universiteter for forskeropplæring.</p>
+<h3>Økonomisk påvirkning</h3>
+<p>Reduserer Norges avhengighet av utenlandsk forsvarsteknologi. Eksportpotensiale NOK 50+ milliarder over 20 år. Teknologispinn-offs til sivil shipping og energi-sektor.</p>
+<p>Støtter FNs bærekraftsmål: <strong>8, 9, 16</strong>.</p>
+<figure>
+<svg viewBox="0 0 660 192" role="img" aria-label="Kapabiliteter vs Konkurrenter" font-family="'EB Garamond',Georgia,serif">
+<text x="0" y="16.5" font-size="13" fill="#211C15">Isbryting</text>
+<rect x="98.5" y="6" width="495.42499999999995" height="8" fill="#211C15"/>
+<rect x="98.5" y="16" width="417.20000000000005" height="8" fill="#8B8073"/>
+<text x="0" y="42.5" font-size="13" fill="#211C15">Stealth</text>
+<rect x="98.5" y="32" width="443.275" height="8" fill="#211C15"/>
+<rect x="98.5" y="42" width="208.60000000000002" height="8" fill="#8B8073"/>
+<text x="0" y="68.5" font-size="13" fill="#211C15">Rekkevidde</text>
+<rect x="98.5" y="58" width="521.5" height="8" fill="#211C15"/>
+<rect x="98.5" y="68" width="443.275" height="8" fill="#8B8073"/>
+<text x="0" y="94.5" font-size="13" fill="#211C15">Payload</text>
+<rect x="98.5" y="84" width="469.35" height="8" fill="#211C15"/>
+<rect x="98.5" y="94" width="443.275" height="8" fill="#8B8073"/>
+<text x="0" y="120.5" font-size="13" fill="#211C15">AI-system</text>
+<rect x="98.5" y="110" width="495.42499999999995" height="8" fill="#211C15"/>
+<rect x="98.5" y="120" width="260.75" height="8" fill="#8B8073"/>
+<text x="0" y="146.5" font-size="13" fill="#211C15">Modularitet</text>
+<rect x="98.5" y="136" width="469.35" height="8" fill="#211C15"/>
+<rect x="98.5" y="146" width="312.9" height="8" fill="#8B8073"/>
+<line x1="98.5" y1="6" x2="98.5" y2="162" stroke="#211C15" stroke-width="1"/>
+<rect x="98.5" y="172" width="12" height="8" fill="#211C15"/>
+<text x="116.5" y="180" font-size="12.5" fill="#5C5344">SPEIS Aurora</text>
+<rect x="288.5" y="172" width="12" height="8" fill="#8B8073"/>
+<text x="306.5" y="180" font-size="12.5" fill="#5C5344">Russland Arktika</text>
+</svg>
+<figcaption>Figur 1. Kapabiliteter vs Konkurrenter.</figcaption>
+</figure>
+<figure>
+<svg viewBox="0 0 660 152" role="img" aria-label="Utviklingstidsplan" font-family="'EB Garamond',Georgia,serif">
+<line x1="110" y1="24" x2="110" y2="146" stroke="#211C15" stroke-width="1"/>
+<line x1="155" y1="24" x2="155" y2="146" stroke="#D9CFBC" stroke-width="1"/>
+<line x1="200" y1="24" x2="200" y2="146" stroke="#D9CFBC" stroke-width="1"/>
+<line x1="245" y1="24" x2="245" y2="146" stroke="#D9CFBC" stroke-width="1"/>
+<line x1="290" y1="24" x2="290" y2="146" stroke="#211C15" stroke-width="1"/>
+<line x1="335" y1="24" x2="335" y2="146" stroke="#D9CFBC" stroke-width="1"/>
+<line x1="380" y1="24" x2="380" y2="146" stroke="#D9CFBC" stroke-width="1"/>
+<line x1="425" y1="24" x2="425" y2="146" stroke="#D9CFBC" stroke-width="1"/>
+<line x1="470" y1="24" x2="470" y2="146" stroke="#211C15" stroke-width="1"/>
+<line x1="515" y1="24" x2="515" y2="146" stroke="#D9CFBC" stroke-width="1"/>
+<line x1="560" y1="24" x2="560" y2="146" stroke="#D9CFBC" stroke-width="1"/>
+<line x1="605" y1="24" x2="605" y2="146" stroke="#D9CFBC" stroke-width="1"/>
+<line x1="650" y1="24" x2="650" y2="146" stroke="#211C15" stroke-width="1"/>
+<text x="200" y="14" font-size="11.5" fill="#5C5344" text-anchor="middle">2026</text>
+<text x="380" y="14" font-size="11.5" fill="#5C5344" text-anchor="middle">2027</text>
+<text x="560" y="14" font-size="11.5" fill="#5C5344" text-anchor="middle">2028</text>
+<text x="0" y="43" font-size="13" fill="#211C15">Design</text>
+<rect x="110" y="32" width="135" height="14" fill="#211C15"/>
+<text x="0" y="73" font-size="13" fill="#211C15">Prototype</text>
+<rect x="155" y="62" width="225" height="14" fill="#211C15"/>
+<text x="0" y="103" font-size="13" fill="#211C15">Testing</text>
+<rect x="290" y="92" width="180" height="14" fill="#211C15"/>
+<text x="0" y="133" font-size="13" fill="#211C15">Produksjon</text>
+<rect x="380" y="122" width="270" height="14" fill="#211C15"/>
+</svg>
+<figcaption>Figur 2. Utviklingstidsplan.</figcaption>
+</figure>
+</section>
+</main>
+<footer>
+<p>Satt i Source Serif 4 (brødtekst) og EB Garamond (titler) · mål 66 tegn · linjeavstand 1,5 · tabelltall i tabeller · titler i setningscase uten versaler – etter Robert Bringhurst, The Elements of Typographic Style.</p>
+<p>Kilde: bplans/data/speis.json · november 2026.</p>
+<p>Gjenopprettet fra pub-, pub2- og pub3-arkivene og fullført med kundeinnsikt, salgsspor, enhetsøkonomi, milepæler, risikomatrise og tre-års budsjetter etter Innovasjon Norges vurderingskriterier · november 2026.</p>
+<p>Logo: «SPEIS»-ordmerket i pub2-gradienten (#ff007f – #00c9ff – #ffcc00), her i statisk gjengivelse.</p>
+</footer>
+      </article>
+    </main>
+  </body>
+</html>

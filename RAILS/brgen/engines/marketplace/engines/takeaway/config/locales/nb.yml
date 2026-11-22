@@ -1,0 +1,46 @@
+# Engine-local strings.
+#
+# Every engine string used to live in brgen/config/locales, which made a
+# literal in the markup the path of least resistance for engine work and left
+# the engine unmountable anywhere else. Rails::Engine appends
+# config/locales/*.yml to I18n.load_path on its own -- no wiring beyond this
+# file existing -- and I18n deep-merges across load paths, so keys under the
+# same namespace in the host file stay reachable.
+#
+# Keys the host already carries are NOT copied here. Use them.
+nb:
+  takeaway:
+    setup_store_linked: "Restauranten kobles til Marketplace-butikken din."
+    setup_draft_hint: "Restauranten starter som et privat utkast. Legg inn meny og åpningstider, og publiser når alt er klart."
+    incoming_order_from: "Ny bestilling fra %{name}"
+    sort_label: "Sorter restauranter"
+    sorts:
+      popular: "Best vurdert"
+      delivery_fee: "Lavest leveringsgebyr"
+      minimum_order: "Lavest minsteordre"
+    opening_hours_heading: "Åpningstider"
+    opening_hours_invalid_time: "Skriv åpningstid i 24-timersformatet TT:MM."
+    opens_at: "åpner"
+    closes_at: "stenger"
+    publish_needs_menu_and_hours: "Legg inn minst én tilgjengelig rett og åpningstider før du publiserer."
+    weekdays:
+      monday: Mandag
+      tuesday: Tirsdag
+      wednesday: Onsdag
+      thursday: Torsdag
+      friday: Fredag
+      saturday: Lørdag
+      sunday: Søndag
+    closed_all_day: "Stengt"
+    tip_line: "Tips: %{amount}"
+    position: "Posisjon"
+    use_current_location: "Bruk nåværende posisjon"
+    locating: "Henter posisjonen din…"
+    location_denied: "Fikk ikke lest posisjonen. Du kan skrive den inn selv."
+    vehicle_types:
+      bicycle: "Sykkel"
+      scooter: "Scooter"
+      car: "Bil"
+      van: "Varebil"
+      walking: "Til fots"
+    driver_updated: "Sjåføren er oppdatert."

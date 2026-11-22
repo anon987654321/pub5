@@ -1,0 +1,116 @@
+---
+schema: 1
+app: mrdamascy
+widths:
+- 390
+- 768
+- 1280
+rows:
+  "|/|390|page": 6c90072accc9df1fbe1a0df719b071c65796fa67dc8a94b3f1aaa6cd480ff509
+  "|/|390|dialog":
+    present: false
+  "|/|768|page": b885029ddd1f9b9210f3a32813a90e22575406d0154ed853289952f65b80c774
+  "|/|768|dialog":
+    present: false
+  "|/|1280|page": 52a4052452490d653e58ea2443ad349387d36268b3d1c7f5ce558c1a31f29456
+  "|/|1280|dialog":
+    present: false
+  "|/about|390|page": ca4b12942e6be72e5fef852abe0337a6b87af1129148d88e3d2284ebdd906167
+  "|/about|390|dialog":
+    present: false
+  "|/about|768|page": d58d94ef9933bb1978055189583d5d9e5e34847340fe6f3f67a956e86579baa4
+  "|/about|768|dialog":
+    present: false
+  "|/about|1280|page": ea2bf62622ead05fa8f301c8d7d48706ee4e504df6fa5a33d1605f05897a50f0
+  "|/about|1280|dialog":
+    present: false
+  "|/cart|390|page": c54eee8604c650b13f6648de96ac65d80a8a6bb5f2c485ce324f1ec071c88c9f
+  "|/cart|390|dialog":
+    present: false
+  "|/cart|768|page": 00db7eac975083a982e558f4f207d9bcf257ecb350b384f1106d719098112834
+  "|/cart|768|dialog":
+    present: false
+  "|/cart|1280|page": 20d90dea7424325795cc6fa190d1d09f28fb9f03bcff6264ee45b2f8ef588481
+  "|/cart|1280|dialog":
+    present: false
+  "|/loyalty|390|page": 291bb3e3ffb0423da73b6a98cdf3608727ba906c87d2dd0dfcb1941af26d9b9e
+  "|/loyalty|390|dialog":
+    present: false
+  "|/loyalty|768|page": 44548ae6aae45cfae3cd9465aa4e7861977a52788a1632de97d66369be6d677d
+  "|/loyalty|768|dialog":
+    present: false
+  "|/loyalty|1280|page": f73a0c5ca005d2f862ba781de5df566f264ae15a311e9e38d21828bec29de46a
+  "|/loyalty|1280|dialog":
+    present: false
+  "|/menu|390|page": 32eda8fe148cf6699d340f85acfe68a80b46d14489d0368d5d22c18387e35770
+  "|/menu|390|dialog":
+    present: false
+  "|/menu|768|page": eaa43ff512a9e8d9a75577ca9385f9dcf3e87bcf29a9bb62af9d633c4f7d6a89
+  "|/menu|768|dialog":
+    present: false
+  "|/menu|1280|page": 52a4052452490d653e58ea2443ad349387d36268b3d1c7f5ce558c1a31f29456
+  "|/menu|1280|dialog":
+    present: false
+  "|/offline|390|page": 6952b8c9af0e0088dfca6025ddc856608cfae916ab47ee04966353e039229abd
+  "|/offline|390|dialog":
+    present: false
+  "|/offline|768|page": 98c3cdebf59fa18587c2344116d8f937a7489dbc4b233b9c681507ab1a66b8a2
+  "|/offline|768|dialog":
+    present: false
+  "|/offline|1280|page": 91e166559078cb75093cd4848b295baac09eebd67487209de3aecc44c7abda36
+  "|/offline|1280|dialog":
+    present: false
+  "|/recede_historical_location|390|page": 5bb54ed008a13d5867bd9bd27d9de21ee56a8e5eda40cb27253acbd13ce8465a
+  "|/recede_historical_location|390|dialog":
+    present: false
+  "|/recede_historical_location|768|page": 24041bf99118da2e39901f9dfcb10c78fb17221d167afcc2a8fee5055df1d017
+  "|/recede_historical_location|768|dialog":
+    present: false
+  "|/recede_historical_location|1280|page": 2b1215c48d208dc146fbd31620267c69defb8f3f5d3f5980a381ab1cc6127105
+  "|/recede_historical_location|1280|dialog":
+    present: false
+  "|/refresh_historical_location|390|page": c4417957a03250b8eeac8d67be708e3b58a90fb94a21a56d4a02b50037045d0e
+  "|/refresh_historical_location|390|dialog":
+    present: false
+  "|/refresh_historical_location|768|page": 8c78ca6480d10cd4427e6f257abbfbc9fff8930d4dcbd23b5dcb2b8083359cad
+  "|/refresh_historical_location|768|dialog":
+    present: false
+  "|/refresh_historical_location|1280|page": 1e542a22c4609bf3cf23f821af4f56c056267db4f2aa98c8e13857a8866e0dec
+  "|/refresh_historical_location|1280|dialog":
+    present: false
+  "|/resume_historical_location|390|page": 2ffec6542dec3d54617d51992c0d158d7b9bb675cecb55f5ec98147aa6a0b5d0
+  "|/resume_historical_location|390|dialog":
+    present: false
+  "|/resume_historical_location|768|page": 670f0747840f0e2f1146a0a13e8679fc80cfebe2a274627e79f7c9d5ef4412fc
+  "|/resume_historical_location|768|dialog":
+    present: false
+  "|/resume_historical_location|1280|page": 56270f8074e42dbec3d4351318b9f02beea1dd45b49e06786e9031c43ee570a1
+  "|/resume_historical_location|1280|dialog":
+    present: false
+  "|/session/new|390|page": 0f83272f978c03b239e40acdda37ed9552a8f29f87d0571ea1032cdac96a4d48
+  "|/session/new|390|dialog":
+    present: false
+  "|/session/new|768|page": 7436389595292f8cff58c5bb7115dc2ff363dc0dc6485ae5441f0ba006122560
+  "|/session/new|768|dialog":
+    present: false
+  "|/session/new|1280|page": 66cde87d2f1db9cab004717304b6a013e0057e8a7abf9997060634097b7b8d55
+  "|/session/new|1280|dialog":
+    present: false
+  "|/up|390|page": c8937e384e18d911585d52c9c5124035b1c66a0228204c0e1ee22787a8b9438d
+  "|/up|390|dialog":
+    present: false
+  "|/up|768|page": 4ba6db461a2ee6c888c85028f84997a7ad71bfd397e4f634228d182f8f2858de
+  "|/up|768|dialog":
+    present: false
+  "|/up|1280|page": 62c2410ac72927753a7dd9a0530364a9e02f52826cafdb66a512eafbe3985c70
+  "|/up|1280|dialog":
+    present: false
+  "|/vipps/login_mock|390|page": b82012fbacfc66bb67b7faf857b7ec132a797a001dca3ff57d35b61c2c509402
+  "|/vipps/login_mock|390|dialog":
+    present: false
+  "|/vipps/login_mock|768|page": 57a0cdcccec3f28cc57016353c2222265c8ca4641c2659e322ecc1ef62c7da1b
+  "|/vipps/login_mock|768|dialog":
+    present: false
+  "|/vipps/login_mock|1280|page": bd4558869fe991de8e2e4bcd64c538a2cf36eca631e84b068d4aebc946d7a254
+  "|/vipps/login_mock|1280|dialog":
+    present: false

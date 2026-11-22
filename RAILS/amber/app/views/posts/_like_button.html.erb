@@ -1,0 +1,17 @@
+<%= button_to like_post_path(post),
+              method: :post,
+              class: "feed-action",
+              form_class: "feed-action-form",
+              form: { id: dom_id(post, :like) },
+              aria: {
+                label: t("post.like"),
+                pressed: post.liked_by?(Current.user),
+                describedby: dom_id(post, :like_count)
+              },
+              title: t("post.like") do %>
+  <%= render "shared/feed_icon", name: "like" %>
+  <%= tag.span(post.likes_count.to_i.positive? ? post.likes_count : "",
+               id: dom_id(post, :like_count),
+               class: "feed-action-count",
+               data: { post_like_count: dom_id(post) }) %>
+<% end %>

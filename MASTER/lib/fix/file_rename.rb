@@ -1,0 +1,178 @@
+# frozen_string_literal: true
+
+require "prism"
+require_relative "file_rename/references"
+require_relative "file_rename/css_build"
+require_relative "../ground/preserve_user_intent"
+require_relative "../ground/known_good"
+require_relative "../operator/ratchet_sponsor"
+require_relative "../io/exec"
+require_relative "commit_message"
+
+module Master
+  module Fix
+    # Moves one file to a better name, rewrites every reference to it across the
+    # four governed trees, and keeps the move only if it can be proved harmless; otherwise
+    # it puts everything back. One commit per rename, so a bad name is one revert.
+    #
+    # The kinds it renames are the ones whose name nothing but a path reaches:
+    # Sass partials and Markdown documents. A Ruby file's name is its constant
+    # under Zeitwerk and a Rails partial's is its render call, and those need a
+    # different proof, so they are not renamed here.
+    class FileRename
+      KINDS = {
+        stylesheet: %r{/stylesheets/_[^/]+\.scss\z},
+        document: %r{\.md\z},
+      }.freeze
+      # A convention file is found by its name; renaming it loses it.
+      FIXED_NAMES = %w[README.md CLAUDE.md AGENTS.md GEMINI.md CHANGELOG.md LICENSE.md].freeze
+
+      def self.kind(path)
+        return if FIXED_NAMES.include?(File.basename(path)) || path.match?(%r{/(vendor|node_modules|builds)/})
+
+        KINDS.find { |_, pattern| path.match?(pattern) }&.first
+      end
+
+      def initialize(repo_root:, git: nil, css_rules: ->(root) { CssBuild.rules(root) },
+                     preserve_user_intent: nil, ground_truth: nil)
+        @root = repo_root
+        @git = git || Io::GitOperations.new(repo_root)
+        @css_rules = css_rules
+        @preserve_user_intent = preserve_user_intent || Ground::PreserveUserIntent.new(root: repo_root)
+        @ground_truth = ground_truth
+        @known_good = Ground::KnownGood.new(root: repo_root)
+      end
+
+      # from is repository-relative; to_basename is the new file name alone.
+      def call(from, to_basename, reason:)
+        to = File.join(File.dirname(from), to_basename)
+        kind = self.class.kind(from)
+        return Result.err("rename: #{from} is not a kind FileRename can prove", category: :policy) unless kind
+        return Result.err("rename: #{from} or its readers have uncommitted changes", category: :policy) unless clean?(from, to)
+        stale = ground_truth_failure(from, to)
+        return Result.err(stale, category: :policy) if stale
+
+        before = kind == :stylesheet ? @css_rules.call(@root) : nil
+        edited = move_and_rewrite(from, to)
+        failure = proof_failure(kind:, from:, to:, before:, edited:)
+        failure ||= delivery_safety_failure(from, to, edited)
+        return undo(from, to, edited, failure) if failure
+
+        commit(from, to, edited, reason)
+      end
+
+      private
+
+      def clean?(from, to)
+        return false if File.exist?(File.join(@root, to))
+
+        readers = References.each_file(@root).select { |path| References.rewrite(read(path), from, to) }
+        paths = [from, *readers.map { |path| relative(path) }]
+        @git.status_lines(nil).none? { |line| paths.include?(line[3..].to_s.strip) }
+      end
+
+      def move_and_rewrite(from, to)
+        @git.git!("mv", "--", from, to)
+        References.each_file(@root).filter_map do |path|
+          rewritten = References.rewrite(read(path), from, to)
+          next unless rewritten
+
+          File.write(path, rewritten)
+          relative(path)
+        end
+      end
+
+      def proof_failure(kind:, from:, to:, before:, edited:)
+        left = References.remaining(@root, from, to)
+        return "still named at #{left.first(3).map { |path| relative(path) }.join(", ")}" unless left.empty?
+
+        broken = edited.select { |path| path.end_with?(".rb") && Prism.parse_file(File.join(@root, path)).failure? }
+        return "Ruby no longer parses in #{broken.join(", ")}" unless broken.empty?
+        return unless kind == :stylesheet
+
+        after = @css_rules.call(@root)
+        changed = before.keys.reject { |app| before[app] == after[app] }
+        "compiled CSS changed for #{changed.join(", ")}" unless changed.empty?
+      rescue StandardError => e
+        "proof could not run: #{e.message}"
+      end
+
+      # Structural edits use the same pre-delivery boundaries as an ordinary
+      # /fix commit. A plausible rename is not enough if it changes protected
+      # behavior, violates a source ratchet, or was proposed from stale reads.
+      def delivery_safety_failure(from, to, edited)
+        paths = [from, to, *edited].uniq
+        ::Operator::RatchetSponsor.validate!(root: @root, changed_paths: paths)
+        diff, status = Master::Io::Exec.capture2e("git", "-C", @root, "diff", "HEAD", "--", *paths)
+        raise "git diff failed while checking rename delivery safety" unless status.success?
+
+        preserved = @preserve_user_intent&.assert_preserved!(
+          diff,
+          message: "refactor: #{from} is #{File.basename(to)}",
+        )
+        return preserved.message if preserved&.err?
+
+        nil
+      rescue StandardError => e
+        "delivery safety: #{e.class}: #{e.message}"
+      end
+      # Check Ruby readers before changing them; after the rewrite their bytes
+      # should differ from the version read to form the proposal.
+      def ground_truth_failure(from, to)
+        return unless @ground_truth
+
+        affected = References.each_file(@root).filter_map do |path|
+          next unless path.end_with?(".rb") && References.rewrite(read(path), from, to)
+
+          relative(path)
+        end
+        stale = affected.reject { |path| @ground_truth.fresh?(File.join(@root, path)) }
+        stale.empty? ? nil : "ground_truth: stale read required for #{stale.join(", ")} before rename"
+      end
+      def undo(from, to, edited, failure)
+        @git.git!("reset", "-q", "--", from, to, *edited)
+        @git.git!("checkout", "--", from, *edited)
+        target = File.join(@root, to)
+        File.delete(target) if File.exist?(target)
+        Result.err("rename #{from} -> #{File.basename(to)} undone: #{failure}", category: :validation)
+      end
+
+      def rename_message(from:, to:, edited:, reason:)
+        CommitMessage.compose("Rename #{File.basename(from)} to #{File.basename(to)}",
+                              what: "#{from} is now #{File.basename(to)}: #{reason}",
+                              why: "/fix rewrote #{edited.size} reference(s) and the proof held")
+      end
+
+      def commit(from, to, edited, reason)
+        message = rename_message(from:, to:, edited:, reason:)
+        # Not GitOperations#commit: it `git add`s every path, and the old one
+        # no longer exists; git mv has already staged its removal.
+        @git.git!("add", "--", to, *edited)
+        @git.git!("commit", "-m", message, "-m", Master::Core::World::COMMIT_TRAILER, "--", from, to, *edited)
+        head = begin
+          @git.head
+        rescue StandardError => e
+          return Result.err("rename committed but HEAD is unreadable; delivery status unknown: #{e.message}",
+                            category: :infrastructure)
+        end
+        begin
+          @git.push
+          ahead, = @git.ahead_behind
+        rescue StandardError => e
+          return Result.err("rename committed but delivery pending/unverified: #{e.message} (commit #{head})",
+                            category: :infrastructure)
+        end
+        return Result.err(
+          "rename #{from} -> #{File.basename(to)} committed but not delivered (#{ahead} commit(s) remain ahead)",
+          category: :infrastructure,
+        ) unless ahead.zero?
+
+        @known_good.promote!(commit: head, paths: [from, to, *edited])
+        Result.ok(from:, to:, references: edited.size, head:)
+      end
+
+      def read(path) = File.read(path, encoding: "UTF-8").then { |text| text.valid_encoding? ? text : "" }
+      def relative(path) = path.delete_prefix("#{@root}/")
+    end
+  end
+end

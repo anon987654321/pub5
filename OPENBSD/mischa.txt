@@ -1,0 +1,54 @@
+OpenBSD Amsterdam
+
+Mischa <mischa@openbsd.amsterdam>
+Sep 27, 2025, 1:33 PM
+to me
+
+Hi Johann,
+
+Welcome to OpenBSD Amsterdam! Your VM has been deployed.
+
+You are on host: server27.openbsd.amsterdam
+Your VM name: vm08
+
+IPv4 address: 185.52.176.18
+IPv4 subnet:  255.255.255.192
+IPv4 gateway: 185.52.176.1
+
+IPv6 address: 2a03:6000:76f1:608::18
+IPv6 subnet:  64
+IPv6 gateway: 2a03:6000:76f1:608::1
+
+You should be able to ssh into your VM.
+
+The username you provided was: dev
+
+You can also ssh into the host on port 31415 with the same username
+and SSH key and use vmctl to manage your VM.
+
+More information to be found at:
+https://openbsd.amsterdam/onboard.html
+https://openbsd.amsterdam/backup.html
+
+To set your PTR / reverse DNS you can follow the steps at:
+https://openbsd.amsterdam/ptr.html
+
+Your payment for the year is €69.
+
+Stripe: https://buy.stripe.com/8wMaEO0i67LS1eE288
+iDEAL: https://bunq.me/openbsdams/69/vm08%20server27
+Paypal: https://paypal.me/runbsd/69eur
+
+For all payment options, have a look at:
+https://openbsd.amsterdam/pay.html
+
+Have fun!
+
+Mischa
+
+PS: When you are going to FDE your VM, keep in mind that we can not
+start your VM.
+
+PPS: You can follow us on https://mastodon.bsd.cafe/@OpenBSDAms and would
+be great if you can share your story there.
+

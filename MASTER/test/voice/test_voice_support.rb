@@ -1,0 +1,668 @@
+# frozen_string_literal: true
+
+require_relative "../test_helper"
+require "stringio"
+require "yaml"
+require "rbconfig"
+
+# Enrich adds paralinguistic tags, Playback speaks a reply at a terminal and
+# nowhere else, and ProductionDna is the reference table Voice::Dilla reads.
+# Nothing here plays audio: the player is looked up on a PATH built for the test
+# and never run.
+class TestVoiceSupport < Minitest::Test
+  PB = Master::Voice::Playback
+
+  # The gate is a hash of the text, so the same reply is always tagged the same
+  # way: one tag, never on the first sentence.
+  def test_enrich_tags_a_later_sentence_deterministically
+    emotion = { primary: :humor, scores: { humor: 1.0 } }
+    text = "One. Two. Three."
+
+    assert_equal "One. [chuckle] Two. Three.", Master::Voice::Enrich.apply(text, emotion, tags: true)
+    assert_equal "One. [chuckle] Two. Three.", Master::Voice::Enrich.apply(text, emotion, tags: true)
+    assert_equal "A. B. C.", Master::Voice::Enrich.apply("A. B. C.", emotion, tags: true)
+  end
+
+  def test_enrich_leaves_single_sentences_and_quiet_comfort_alone
+    assert_equal "Only one.", Master::Voice::Enrich.apply("Only one.", { primary: :humor }, tags: true)
+    assert_equal "A. B.", Master::Voice::Enrich.apply(
+      "A. B.", { primary: :comfort, scores: { comfort: 0.1 } }, tags: true
+    )
+  end
+
+  def test_enrich_is_dry_by_default
+    result = Master::Voice::Enrich.apply("One. Two.", { primary: :humor, scores: { humor: 1.0 } })
+    refute_includes result, "["
+  end
+
+  def with_env(values)
+    previous = values.keys.to_h { |key| [key, ENV[key]] }
+    values.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+    yield
+  ensure
+    previous.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+  end
+
+  # Playback.which prefers the Homebrew directories, so a test that builds a
+  # PATH of fake players looks only in that PATH.
+  def path_only_which = ->(cmd) { Master::Io::Exec.which(cmd) }
+
+  def test_playback_speak_now_falls_back_to_native_speech_when_synthesis_is_missing
+    spoken = []
+    PB.stub(:enabled?, true) do
+      PB.stub(:available?, true) do
+        PB.stub(:synthesize, nil) do
+          PB.stub(:native_say, ->(text, **) { spoken << text; true }) do
+            assert PB.speak_now("hello")
+          end
+        end
+      end
+    end
+
+    assert_equal ["hello"], spoken
+  end
+
+  # The 2026-11-08 transcript read "audio playback failed - /usr/bin/afplay"
+  # and could not tell whether anything else had been tried. play records every
+  # rung it walked, so the refusal a test utterance prints must name that whole
+  # ladder, not only the last player.
+  def test_playback_speak_now_refusal_names_the_whole_ladder_it_tried
+    ladder = "afplay exit 1, sox exit 127 #{Process.pid}"
+    previous_error = PB.instance_variable_get(:@last_error)
+    PB.stub(:enabled?, true) do
+      PB.stub(:available?, true) do
+        PB.stub(:synthesize, "/tmp/m_tts_ladder_probe.mp3") do
+          PB.stub(:play, false) do
+            PB.stub(:android_speak, false) do
+              PB.stub(:native_say, false) do
+                PB.instance_variable_set(:@last_error, ladder)
+                out, = capture_io { refute PB.speak_now("hello") }
+                assert_includes out, ladder,
+                                "the refusal named only the last rung: #{out}"
+              end
+            end
+          end
+        end
+      end
+    end
+  ensure
+    PB.instance_variable_set(:@last_error, previous_error)
+  end
+
+  def test_playback_background_speech_does_not_repeat_a_failed_reply_through_native_voice
+    spoken = []
+    queue = Queue.new
+    queue << ["hello", "hello", true, :christopher, :warm]
+    queue.close
+    PB.instance_variable_set(:@queue, queue)
+    PB.stub(:native_say, ->(text, **) { spoken << text; true }) do
+      PB.stub(:synthesize, nil) do
+        worker = Thread.new { PB.send(:drain) }
+        worker.join
+      end
+    end
+
+    assert_empty spoken
+  ensure
+    PB.instance_variable_set(:@queue, nil)
+  end
+
+  def test_failed_player_exit_is_reported_as_failed_playback
+    dir = Dir.mktmpdir("failed-player")
+    player_path = File.join(dir, "ffplay")
+    audio_path = File.join(dir, "reply.mp3")
+    File.write(player_path, "#!/bin/sh\nexit 7\n")
+    File.chmod(0o755, player_path)
+    File.write(audio_path, "audio")
+
+    PB.remove_instance_variable(:@player) if PB.instance_variable_defined?(:@player)
+    with_env("PATH" => dir) do
+      PB.stub(:which, path_only_which) do
+        PB.stub(:generation_active?, true) do
+          refute PB.play(audio_path)
+        end
+      end
+    end
+  ensure
+    PB.remove_instance_variable(:@player) if PB.instance_variable_defined?(:@player)
+    FileUtils.rm_rf(dir)
+  end
+
+  def test_failed_preferred_player_falls_through_to_working_player
+    dir = Dir.mktmpdir("voice-players")
+    bad = File.join(dir, "afplay")
+    good = File.join(dir, "ffplay")
+    audio = File.join(dir, "reply.mp3")
+    File.write(bad, "#!/bin/sh\nexit 7\n")
+    File.write(good, "#!/bin/sh\nexit 0\n")
+    [bad, good].each { |path| File.chmod(0o755, path) }
+    File.write(audio, "audio")
+
+    PB.stub(:player, [bad, []]) do
+      PB.stub(:which, ->(cmd) { cmd == "ffplay" ? good : nil }) do
+        PB.stub(:generation_active?, true) do
+          assert PB.play(audio)
+        end
+      end
+    end
+  ensure
+    FileUtils.rm_rf(dir)
+  end
+
+  def test_player_attempt_failure_falls_back_after_the_player_exits
+    dir = Dir.mktmpdir("voice-fallback")
+    player = File.join(dir, "ffplay")
+    audio = File.join(dir, "reply.mp3")
+    File.write(player, "#!/bin/sh\nexit 7\n")
+    File.chmod(0o755, player)
+    File.write(audio, "audio")
+    spoken = []
+
+    with_env("PATH" => dir) do
+      PB.stub(:player, [player, []]) do
+        PB.stub(:which, path_only_which) do
+          PB.stub(:native_say, ->(text, **) { spoken << text; true }) do
+            PB.stub(:generation_active?, true) do
+              assert PB.send(:play_or_fallback, audio, "same reply", generation: 0)
+            end
+          end
+        end
+      end
+    end
+
+    assert_equal ["same reply"], spoken
+  ensure
+    FileUtils.rm_rf(dir)
+  end
+
+  def test_failed_audio_playback_does_not_fall_through_to_native_voice
+    spoken = []
+    PB.stub(:player, ["/tmp/missing-player", []]) do
+      PB.stub(:native_say, ->(text, **) { spoken << text; true }) do
+        PB.stub(:generation_active?, true) do
+          refute PB.play("/tmp/missing-audio")
+        end
+      end
+    end
+
+    assert_empty spoken
+  end
+
+  def test_playback_reports_queued_and_active_speech
+    previous_queue = PB.instance_variable_get(:@queue)
+    previous_active = PB.instance_variable_get(:@active_playback)
+    previous_pid = PB.instance_variable_get(:@playing_pid)
+    PB.instance_variable_set(:@active_playback, false)
+    PB.instance_variable_set(:@playing_pid, nil)
+    PB.instance_variable_set(:@queue, Queue.new)
+    PB.stub(:external_speaking?, false) do
+      refute PB.speaking?
+      PB.instance_variable_get(:@queue) << "queued"
+      assert PB.speaking?
+      PB.instance_variable_set(:@queue, Queue.new)
+      PB.instance_variable_set(:@active_playback, true)
+      assert PB.speaking?
+      PB.instance_variable_set(:@active_playback, false)
+      refute PB.speaking?
+    end
+  ensure
+    PB.instance_variable_set(:@queue, previous_queue)
+    PB.instance_variable_set(:@active_playback, previous_active)
+    PB.instance_variable_set(:@playing_pid, previous_pid)
+  end
+
+  def test_state_listener_receives_both_playback_edges
+    states = []
+    previous_queue = PB.instance_variable_get(:@queue)
+    previous_pid = PB.instance_variable_get(:@playing_pid)
+    previous_active = PB.instance_variable_get(:@active_playback)
+    PB.instance_variable_set(:@queue, Queue.new)
+    PB.instance_variable_set(:@playing_pid, nil)
+    PB.instance_variable_set(:@active_playback, false)
+    PB.state_listener = -> { states << PB.speaking? }
+
+    PB.stub(:external_speaking?, false) do
+      PB.stub(:dequeue_nowait, nil) do
+        PB.stub(:start_prefetch, nil) do
+          PB.stub(:prepare_job, Object.new) do
+            PB.stub(:consume_prepared, nil) do
+              PB.stub(:cleanup_prepared, nil) do
+                PB.stub(:await_prefetch, nil) do
+                  PB.send(:process_job_sequence, :job)
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+
+    assert_equal [true, false], states
+  ensure
+    PB.state_listener = nil
+    PB.instance_variable_set(:@queue, previous_queue)
+    PB.instance_variable_set(:@playing_pid, previous_pid)
+    PB.instance_variable_set(:@active_playback, previous_active)
+  end
+
+  def test_cli_playback_is_on_by_default_and_can_be_turned_off
+    $stdout.stub(:isatty, true) do
+      with_env("MASTER_CLI_SPEAK" => nil, "MASTER_SKIP_TTS" => nil, "CI" => nil) { assert PB.enabled? }
+      with_env("MASTER_CLI_SPEAK" => "1", "MASTER_SKIP_TTS" => nil, "CI" => nil) { assert PB.enabled? }
+      with_env("MASTER_CLI_SPEAK" => "0", "MASTER_SKIP_TTS" => nil, "CI" => nil) { refute PB.enabled? }
+      with_env("MASTER_CLI_SPEAK" => "1", "MASTER_SKIP_TTS" => "1", "CI" => nil) { refute PB.enabled? }
+      with_env("MASTER_CLI_SPEAK" => "1", "MASTER_SKIP_TTS" => nil, "CI" => "1") { refute PB.enabled? }
+    end
+    $stdout.stub(:isatty, false) do
+      with_env("MASTER_CLI_SPEAK" => "1", "MASTER_SKIP_TTS" => nil, "CI" => nil) { refute PB.enabled? }
+    end
+  end
+
+  def test_the_first_player_on_path_wins_in_preference_order
+    dir = Dir.mktmpdir("players_")
+    %w[mpv ffplay].each do |name|
+      File.write(File.join(dir, name), "#!/bin/sh\n")
+      File.chmod(0o755, File.join(dir, name))
+    end
+    PB.remove_instance_variable(:@player) if PB.instance_variable_defined?(:@player)
+    with_env("PATH" => dir) do
+      PB.stub(:which, path_only_which) do
+        assert_equal [File.join(dir, "ffplay"), %w[-nodisp -autoexit -loglevel quiet]], PB.player
+      end
+    end
+  ensure
+    PB.remove_instance_variable(:@player) if PB.instance_variable_defined?(:@player)
+    FileUtils.rm_rf(dir)
+  end
+
+  def test_speak_refuses_empty_and_keeps_only_the_current_reply
+    queued = []
+    long = "x" * 12_000
+    PB.instance_variable_set(:@queue, queued)
+    PB.instance_variable_set(:@pending, nil)
+    PB.stub(:enabled?, true) do
+      PB.stub(:available?, true) do
+        PB.stub(:ensure_queue, queued) do
+          PB.stub(:start_worker!, nil) do
+            PB.speak("   ")
+            PB.speak(long)
+            PB.speak(" hello ")
+          end
+        end
+      end
+    end
+
+    assert_equal 1, queued.size
+    assert_equal " hello ".strip, queued.first[1]
+    refute_includes queued.map { |job| job[1] }, long
+  ensure
+    PB.instance_variable_set(:@queue, nil)
+    PB.instance_variable_set(:@pending, nil)
+    PB.instance_variable_set(:@generation, 0)
+  end
+
+  # Two paths reached the door with one reply and MASTER said it twice; a
+  # retried synthesis said it a third time. A repeat past the window still
+  # speaks, because asking the same question twice is a thing a person does.
+  def test_reply_preempts_older_diagnostic_audio
+    queued = []
+    terminated = false
+    PB.instance_variable_set(:@queue, queued)
+    PB.instance_variable_set(:@generation, 7)
+    PB.instance_variable_set(:@playing_pid, 1234)
+    PB.instance_variable_set(:@pending, Set.new)
+
+    PB.stub(:enabled?, true) do
+      PB.stub(:available?, true) do
+        PB.stub(:ensure_queue, queued) do
+          PB.stub(:start_worker!, nil) do
+            PB.stub(:terminate_player_locked, -> { terminated = true; PB.instance_variable_set(:@playing_pid, nil) }) do
+              PB.speak("new answer")
+            end
+          end
+        end
+      end
+    end
+
+    assert terminated
+    assert_equal 8, PB.instance_variable_get(:@generation)
+    assert_equal 1, queued.size
+    assert_equal "new answer", queued.first[0]
+    assert_equal "new answer", queued.first[1]
+    assert_equal true, queued.first[2]
+    assert_equal 8, queued.first[7]
+  ensure
+    PB.instance_variable_set(:@queue, nil)
+    PB.instance_variable_set(:@pending, nil)
+    PB.instance_variable_set(:@generation, 0)
+    PB.instance_variable_set(:@playing_pid, nil)
+  end
+
+  def test_a_line_already_waiting_or_just_spoken_is_not_spoken_again
+    queued = []
+    PB.instance_variable_set(:@queue, queued)
+    PB.instance_variable_set(:@pending, nil)
+    PB.instance_variable_set(:@last_said, nil)
+    PB.instance_variable_set(:@last_at, 0.0)
+
+    PB.stub(:enabled?, true) do
+      PB.stub(:available?, true) do
+        PB.stub(:ensure_queue, queued) do
+          PB.stub(:start_worker!, nil) do
+            PB.speak("the same sentence")
+            PB.speak("the same sentence")
+            PB.send(:spoken, "the same sentence")
+            PB.speak("the same sentence")
+            PB.speak("a different sentence")
+            PB.instance_variable_set(:@last_at, Process.clock_gettime(Process::CLOCK_MONOTONIC) - PB::ECHO_WINDOW_S - 1)
+            PB.speak("the same sentence")
+          end
+        end
+      end
+    end
+
+    assert_equal ["the same sentence"], queued.map(&:first)
+  ensure
+    PB.instance_variable_set(:@queue, nil)
+    PB.instance_variable_set(:@pending, nil)
+    PB.instance_variable_set(:@last_said, nil)
+    PB.instance_variable_set(:@generation, 0)
+  end
+
+  # One Edge round trip carried the whole reply, so a long answer stood silent
+  # for its entire synthesis and then spoke. Speech.chunks packed sentences and
+  # had no caller.
+  def test_a_reply_is_spoken_sentence_by_sentence_so_the_first_words_come_first
+    queued = []
+    reply = "The pool is every model this machine can reach. A lane joins it when it can answer. " \
+            "A model outside it carries the one thing to do about that. " \
+            "The council argues inside the loop, and its picks ride into the repair as context."
+    PB.instance_variable_set(:@pending, nil)
+    PB.instance_variable_set(:@last_said, nil)
+
+    PB.stub(:enabled?, true) do
+      PB.stub(:available?, true) do
+        PB.stub(:transcendent_mode?, false) do
+          PB.stub(:ensure_queue, queued) do
+            PB.stub(:start_worker!, nil) { PB.speak(reply) }
+          end
+        end
+      end
+    end
+
+    assert_operator queued.size, :>, 1, "the reply went out as one utterance"
+    assert_equal reply, queued.map { |job| job[1] }.join(" "), "the words changed on the way out"
+    assert_equal [false] * (queued.size - 1) + [true], queued.map { |job| job[2] }, "only the last utterance closes the reply"
+  ensure
+    PB.instance_variable_set(:@pending, nil)
+    PB.instance_variable_set(:@last_said, nil)
+  end
+
+  def test_transcendent_reply_stays_one_synthesis_unit
+    queued = []
+    reply = "The melody must stay intact. The phrase contour belongs to one utterance."
+    PB.instance_variable_set(:@pending, nil)
+
+    PB.stub(:enabled?, true) do
+      PB.stub(:available?, true) do
+        PB.stub(:transcendent_mode?, true) do
+          PB.stub(:ensure_queue, queued) { PB.stub(:start_worker!, nil) { PB.speak(reply) } }
+        end
+      end
+    end
+
+    assert_equal 1, queued.size
+    assert_equal reply, queued.first[1]
+    assert_equal true, queued.first[2]
+  ensure
+    PB.instance_variable_set(:@pending, nil)
+  end
+
+  def test_prefetch_returns_prepared_audio_after_background_synthesis
+    job = ["second", "second", true, :christopher, :neutral, "+0%", "+0Hz", 0]
+    prepared = PB::PreparedAudio.new(
+      job:, text: "second", part: "second", last: true, voice: :christopher,
+      style: :neutral, rate: "+0%", pitch: "+0Hz", generation: 0,
+      path: "/tmp/m_tts_prefetch_test.mp3"
+    )
+
+    PB.instance_variable_set(:@generation, 0)
+    PB.stub(:prefetch_enabled?, true) do
+      PB.stub(:prepare_job, prepared) do
+        pending = PB.send(:start_prefetch, job)
+        result = PB.send(:await_prefetch, pending)
+        assert_same prepared, result
+        refute pending.thread.alive?
+      end
+    end
+  end
+
+  def test_prefetch_is_disabled_for_transcendent_mode
+    PB.stub(:transcendent_mode?, true) do
+      PB.stub(:prefetch_enabled?, false) do
+        refute PB.send(:prefetch_enabled?)
+      end
+    end
+  end
+
+  def test_interrupt_clears_queued_speech_and_forgets_last_utterance
+    queue = Queue.new
+    queue << ["queued", "queued", true, 0]
+    PB.instance_variable_set(:@queue, queue)
+    PB.instance_variable_set(:@generation, 0)
+    PB.instance_variable_set(:@pending, Set.new(["queued"]))
+    PB.instance_variable_set(:@last_said, "queued")
+
+    assert PB.interrupt!("voice")
+    assert_equal 0, PB.instance_variable_get(:@queue).size
+    assert_empty PB.instance_variable_get(:@pending)
+    assert_nil PB.instance_variable_get(:@last_said)
+    assert_equal 1, PB.instance_variable_get(:@generation)
+  ensure
+    PB.instance_variable_set(:@queue, nil)
+    PB.instance_variable_set(:@pending, nil)
+    PB.instance_variable_set(:@last_said, nil)
+    PB.instance_variable_set(:@generation, 0)
+  end
+
+  DNA = Master::Voice::ProductionDna
+
+  def test_the_dna_brief_restates_the_dilla_table
+    dilla = DNA.producer("j_dilla")
+    timing = dilla[:timing]
+
+    assert_includes DNA.brief, "#{timing[:ppqn]} PPQN"
+    assert_includes DNA.brief, "#{timing[:swing_percent].min}-#{timing[:swing_percent].max}% swing"
+    assert_includes DNA.brief, "#{timing[:bpm].min}-#{timing[:bpm].max} BPM"
+  end
+
+  def test_every_numbered_progression_has_one_numeral_per_chord
+    DNA::CHORDS.each_value do |collections|
+      collections.each_value do |tracks|
+        tracks.each do |track|
+          next unless track[:roman]
+
+          assert_equal track[:chords].size, track[:roman].size, track[:track]
+        end
+      end
+    end
+  end
+
+  def test_unknown_names_raise_rather_than_reading_nil
+    assert_raises(KeyError) { DNA.producer(:nobody) }
+    assert_raises(KeyError) { DNA.chords_for(:j_dilla, :not_an_album) }
+    assert_kind_of Hash, DNA.preset(:dilla_drum_bus)
+  end
+
+  def test_edge_stream_returns_structured_result_and_byte_count
+    audio = StringIO.new
+    sock = StringIO.new([5].pack("Q>") + "hello" + [0].pack("Q>"))
+    target = Master::Voice::SpeechWorker::StreamTarget.build(io: audio)
+
+    result = Master::Voice::Speech.send(:pump_socket_stream, sock, target)
+
+    assert_instance_of Master::Voice::SpeechWorker::StreamResult, result
+    assert result.ok
+    assert_equal 5, result.bytes
+    assert_equal "hello", audio.string
+  end
+
+  def test_edge_stream_marks_eof_after_partial_audio_without_losing_byte_count
+    audio = StringIO.new
+    sock = StringIO.new([5].pack("Q>") + "he")
+    target = Master::Voice::SpeechWorker::StreamTarget.build(io: audio)
+
+    result = Master::Voice::Speech.send(:pump_socket_stream, sock, target)
+
+    refute result.ok
+    assert_equal 2, result.bytes
+    assert_equal "he", audio.string
+  end
+
+  def test_stream_failure_after_audio_never_resynthesizes_the_utterance
+    fallback = false
+    outcome = PB::StreamOutcome.new(ok: false, played_bytes: 1024)
+
+    PB.stub(:stream_player, ["ffplay", []]) do
+      PB.stub(:pump_stream_pipe, outcome) do
+        PB.stub(:stream_fallback, ->(_values) { fallback = true; true }) do
+          PB.stub(:generation_active?, true) do
+            refute PB.send(:stream_utterance, { generation: 0, part: "hello" }, "jenny", {})
+          end
+        end
+      end
+    end
+
+    refute fallback, "partially heard speech must never be replayed from the beginning"
+  end
+
+  def test_background_playback_falls_back_to_policy_native_voice_when_player_fails
+    spoken = []
+    job = ["hello", "hello", true, :christopher, :warm]
+    delivered = false
+    queue = Object.new
+    queue.define_singleton_method(:pop) do |_non_block = false|
+      next nil if delivered
+
+      delivered = true
+      job
+    end
+
+    PB.instance_variable_set(:@queue, queue)
+    PB.instance_variable_set(:@generation, 0)
+    PB.instance_variable_set(:@job_generations, { job.object_id => 0 })
+
+    audio = Tempfile.new(["reply", ".mp3"])
+    PB.stub(:stream_playback_ready?, false) do
+      PB.stub(:synthesize, audio.path) do
+        PB.stub(:play, false) do
+          PB.stub(:native_say, ->(text, **) { spoken << text; true }) do
+            PB.send(:drain)
+          end
+        end
+      end
+    end
+
+    assert_equal ["hello"], spoken
+  ensure
+    PB.instance_variable_set(:@queue, nil)
+    PB.instance_variable_set(:@job_generations, {})
+    PB.instance_variable_set(:@generation, 0)
+    audio&.close!
+  end
+
+  def test_playback_warning_deduplicates_repeats_but_preserves_distinct_causes
+    warned = PB.instance_variable_get(:@warned)
+    PB.instance_variable_set(:@warned, Set.new)
+    events = []
+    reporter = ->(unit, message) { events << [unit, message] }
+
+    Master::Trace::Dmesg.stub(:status, reporter) do
+      2.times { PB.send(:warn_once, "audio player error - IOError: socket timed out") }
+      PB.send(:warn_once, "audio player error - Errno::EPIPE: broken pipe")
+    end
+
+    assert_equal [
+      ["voice0", "audio player error - IOError: socket timed out"],
+      ["voice0", "audio player error - Errno::EPIPE: broken pipe"],
+    ], events
+  ensure
+    PB.instance_variable_set(:@warned, warned || Set.new)
+  end
+
+  def test_live_stream_pipe_is_binary_before_mp3_bytes_are_written
+    observed_encoding = nil
+    outcome = nil
+    stub_stream = lambda do |text:, voice_name:, style_config:, io:, stale_test:|
+      observed_encoding = io.external_encoding
+      io.write("\xFF".b)
+      Struct.new(:ok, :bytes).new(true, 1)
+    end
+
+    PB.stub(:generation_active?, true) do
+      Master::Voice::Speech.stub(:stream_edge_to_io, stub_stream) do
+        outcome = PB.send(:pump_stream_pipe, [RbConfig.ruby, "-e", "STDIN.read"], {},
+                          { generation: 0, part: "probe" }, "en-US-ChristopherNeural", {})
+      end
+    end
+
+    assert_equal Encoding::BINARY, observed_encoding
+    assert outcome.ok
+  end  
+  def test_canonical_music_vocabulary_contains_researched_dilla_grammars_and_voicings
+    path = File.expand_path("../../data/music_theory_chords.yml", __dir__)
+    catalogue = YAML.safe_load_file(path, permitted_classes: [], aliases: false)
+    progressions = catalogue.fetch("progressions")
+    voicings = catalogue.fetch("voicings")
+
+    expected = {
+      "j5_donut_loop" => %w[IVmaj7 iii7 vi7 ii7],
+      "relative_answer" => %w[Imaj7 vi7 IVmaj7 ii7],
+      "dorian_four" => %w[i9 IV9],
+      "flexible_sixth" => %w[i9 vm11 Vmaj9],
+      "mediant_lift" => %w[Imaj7 iii7 IIImaj7],
+    }
+    expected.each do |name, progression|
+      assert_equal progression, progressions.fetch(name), "wrong movement grammar: #{name}"
+    end
+
+    %w[so_what_quartal rootless_ninth add2_cluster pedal_planing flexible_sixth voice_leading].each do |name|
+      assert voicings.fetch(name).to_s.length >= 24, "missing useful voicing guidance: #{name}"
+    end
+  end
+
+  def test_dilla_brief_surfaces_sourced_measurements_without_tuning_the_generator
+    producer = Master::Voice::ProductionDna.producer(:j_dilla)
+    timing = producer.fetch(:timing)
+    before = {
+      ppqn: timing.fetch(:ppqn),
+      bpm: timing.fetch(:bpm),
+      swing_percent: timing.fetch(:swing_percent),
+    }
+
+    brief = Master::Voice::Dilla.brief
+    catalogue_brief = Master::Voice::ProductionDna.brief
+
+    [brief, catalogue_brief].each do |text|
+      assert_includes text, "Dilla research observations"
+      assert_includes text, "100ms"
+      assert_includes text, "10 of 13 kick notes"
+      assert_includes text, "deviations repeat identically every bar"
+      assert_includes text, "3, 5, 7 bars"
+      assert_includes text, "Mike Hankinson"
+      assert_includes text, "musicismysanctuary.com"
+      assert_includes text, "academia.edu 29812748"
+      assert_includes text, "The Jackson 5, All I Do Is Think of You"
+      assert_includes text, "Dionne Warwick (exact side unconfirmed"
+      assert_includes text, "note-by-note transcription"
+      assert_includes text, "not synthesis defaults"
+    end
+
+    assert_equal before, {
+      ppqn: timing.fetch(:ppqn),
+      bpm: timing.fetch(:bpm),
+      swing_percent: timing.fetch(:swing_percent),
+    }
+    assert_equal [53, 56], [timing.fetch(:swing_percent).begin, timing.fetch(:swing_percent).end]
+  end
+end

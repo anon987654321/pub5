@@ -1,0 +1,155 @@
+/* Brgen dating: the swipe stack. Horizontal card drags leave vertical page
+   scrolling to the browser; the deck, its stamps and the empty state live
+   here, split from _brgen_dating.scss at the module boundary. */
+/* Dating swipe stack. Horizontal card drags leave vertical page scrolling to the browser. */
+.dating-discover {
+  touch-action: pan-y;
+}
+
+/* A path-crossing row: photo column, one text/action column. The fill gives
+   the row its two columns and its separation; what the card looks like is
+   still the designer's. */
+.dating-crossing {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+  padding-block: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.track-row {
+  touch-action: pan-y;
+}
+
+#swipe-stack {
+  display: grid;
+  position: relative;
+  min-height: min(72dvh, 640px);
+  max-width: min(100%, 420px);
+  margin-inline: auto;
+}
+
+.swipe-card {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--dating-card, var(--surface));
+
+  border: 0;
+  padding: var(--space-2);
+  transition:
+    transform 220ms var(--ease-spring),
+    opacity var(--transition-fast) var(--ease-out),
+    border-color var(--transition-fast) var(--ease-out);
+  overflow: hidden;
+}
+
+@for $i from 0 through 15 {
+  .swipe-card--stack-#{$i} {
+    transform: translateY(#{$i * 5px}) scale(#{1 - $i * 0.018});
+    z-index: #{100 - $i};
+    opacity: #{1 - $i * 0.04};
+  }
+}
+
+.swipe-photo {
+  position: relative;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+  background: var(--surface-elevated);
+}
+
+.swipe-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.swipe-caption {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 2.5rem 1rem 1rem;
+  background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--bg) 82%, transparent) 72%);
+  color: var(--text);
+  pointer-events: none;
+}
+
+.swipe-caption h2 {
+  margin: 0;
+  font: var(--weight-bold) clamp(1.35rem, 4.5vw, 1.75rem) / 1.5 var(--font);
+  letter-spacing: var(--tracking-tighter);
+  color: var(--text);
+}
+
+.swipe-name {
+  display: inline;
+}
+
+.swipe-age {
+  font-weight: var(--weight-bold);
+  opacity: 0.92;
+}
+
+/* Place and neighbourhood, two spans spaced apart rather than dot-joined. */
+.swipe-location {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+  margin: 0.25rem 0 0;
+  font: var(--text-small) / 1 var(--font);
+  color: var(--text-secondary);
+}
+
+.swipe-stamp {
+  position: absolute;
+  top: 1.25rem;
+  padding: 4px var(--space-2);
+  border: 3px solid currentColor;
+  border-radius: var(--radius-small);
+  font: var(--weight-heavy) 1.5rem / 1 var(--font);
+  letter-spacing: var(--tracking-wider);
+  opacity: 0;
+  transform: rotate(-18deg) scale(0.85);
+  transition: opacity 140ms var(--ease-out), transform var(--transition-fast) var(--ease-spring);
+  pointer-events: none;
+}
+
+.swipe-stamp--like {
+  inset-inline-start: 1rem;
+  color: var(--dating-accent);
+}
+
+.swipe-stamp--pass {
+  inset-inline-end: 1rem;
+  color: var(--dating-pass);
+  transform: rotate(18deg) scale(0.85);
+}
+
+.swipe-card.liked .swipe-stamp--like,
+.swipe-card.passed .swipe-stamp--pass {
+  opacity: 1;
+  transform: rotate(-14deg) scale(1);
+}
+
+.swipe-card.passed .swipe-stamp--pass {
+  transform: rotate(14deg) scale(1);
+}
+
+.swipe-placeholder {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  background: var(--surface-elevated);
+}
+
+.swipe-placeholder span {
+  font-size: clamp(3rem, 14vw, 4.5rem);
+  font-weight: var(--weight-heavy);
+  color: var(--text-secondary);
+  opacity: 0.18;
+}
+

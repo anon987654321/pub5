@@ -1,0 +1,8 @@
+{
+  "ollama_chat/llama3": {
+    "max_input_tokens": 32768,
+    "max_output_tokens": 8192,
+    "supports_assistant_prefill": false,
+    "supports_system_prompt": true
+  }
+}

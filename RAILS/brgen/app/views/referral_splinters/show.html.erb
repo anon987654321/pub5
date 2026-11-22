@@ -1,0 +1,19 @@
+<% content_for :title, t("growth.referral_title") %>
+
+<main class="page-shell">
+  <article class="brgen-splinter-card">
+    <div class="splinter-artwork">
+      <span class="art-badge"><%= t("growth.referral_badge") %></span>
+    </div>
+    <div class="splinter-content">
+      <h1 class="splinter-headline"><%= t("growth.referral_headline") %></h1>
+      <p><%= t("growth.referral_description", vertical: @vertical) %></p>
+      <% if @token.present? %>
+        <%= render "shared/copyable", value: @share_url, label: t("growth.referral_copy") %>
+      <% else %>
+        <%= button_to t("growth.referral_claim"), redeem_referral_splinter_path(params[:token]), method: :post,
+              class: "button button-primary" %>
+      <% end %>
+    </div>
+  </article>
+</main>

@@ -1,0 +1,39 @@
+{
+  "engine": "dilla",
+  "version": "4.2.0",
+  "created_at": "2026-11-13T03:26:20Z",
+  "ruby": "3.3.8",
+  "seed": "random",
+  "performer": "vinyl_tap",
+  "flags": {
+    "out": "dilla.wav",
+    "progression": null,
+    "drums": null,
+    "midi": false,
+    "midi_out": null,
+    "foley": false,
+    "profile": null,
+    "groove": null,
+    "bpm": null,
+    "bars": null,
+    "kit": null,
+    "voice": null,
+    "rig": null,
+    "sonitex": null,
+    "sonitex_instances": 1,
+    "vcs": null,
+    "drum_balance": null,
+    "chord_balance": null,
+    "sample_loop": null,
+    "sample_vol": null,
+    "sample_weight": null,
+    "sample_slices": null
+  },
+  "render": {
+    "wav": "/workspace/project/pub5/STUDIO/dilla/dilla.wav",
+    "duration_s": 47.25,
+    "lufs": -9.5,
+    "bytes": 8335152,
+    "sha256": "3f8d5e13c7b9ab072d6dc25d8e0b5f9c584bf2deccf1c3719b25911f12a851b9"
+  }
+}

@@ -1,0 +1,161 @@
+---
+schema: 1
+app: bsdports
+widths:
+- 390
+- 768
+- 1280
+rows:
+  "|/|390|page": '04769c097f0aeb3eed6d0b2bf131b2c2d83db580d25dd8be522379f0c3363275'
+  "|/|390|dialog":
+    present: false
+  "|/|768|page": 9822dd91efa3929984f696b8290502bf30d77add27cfd364e9fe86e8f9f3b0cd
+  "|/|768|dialog":
+    present: false
+  "|/|1280|page": 45f4b9f18765b3cfa4bccee8234c92332f9cff98dc65602c156cdbc0130f538c
+  "|/|1280|dialog":
+    present: false
+  "|/categories|390|page": f184d18f7b4c4829df5e6890d06cd54ee61ba63619645ea43bdb3f810f686047
+  "|/categories|390|dialog":
+    present: false
+  "|/categories|768|page": 3970fa2bd9ca40a99e15b4eeef3fe43a665eb68ac7f1e3b57791561647ad485e
+  "|/categories|768|dialog":
+    present: false
+  "|/categories|1280|page": f53cf36fc38e7cf7768e85b79a4086c2bfe984dcc7a5ed40982899fa00b4e338
+  "|/categories|1280|dialog":
+    present: false
+  "|/changelog|390|page": d5915f957ceb90b6909fbdf2ddb0d0ab813cc3e4799f38fc1ea9722a11aa9564
+  "|/changelog|390|dialog":
+    present: false
+  "|/changelog|768|page": d300d52192940654192950a04d9ec5196d374edb5b5c06b687bb7c638cfe0656
+  "|/changelog|768|dialog":
+    present: false
+  "|/changelog|1280|page": e39255b79eafbd3785a91f785803db07a8ff32103da08b2a68e5dab6c8110e74
+  "|/changelog|1280|dialog":
+    present: false
+  "|/cookies|390|page": c91abab2db7677dd8ca8b2d25fa710c3cfd6dedc84e24eab964df626bf613552
+  "|/cookies|390|dialog":
+    present: false
+  "|/cookies|768|page": 5d4d8e2bf0854ebe58f50e0112faa61e47784c6890be6b2050f545bd0c8aaa09
+  "|/cookies|768|dialog":
+    present: false
+  "|/cookies|1280|page": ef287ab7cc1c1c3cf9be951b6f2f586de8eb36b97146fa188085b5e5ac146b28
+  "|/cookies|1280|dialog":
+    present: false
+  "|/maintainers|390|page": 476365f4f815a9af9e12b062cafd0b5e83ecc77ad18717ac20c7880c8ea1c98b
+  "|/maintainers|390|dialog":
+    present: false
+  "|/maintainers|768|page": '0841681731574cbe3e5ae660154cf82be05e03e6001a54c2880791a9600a8133'
+  "|/maintainers|768|dialog":
+    present: false
+  "|/maintainers|1280|page": 4792b462d64eeb9dcb2d61999c229ede77fe13e2f83bd1f5073ee86a31d993f9
+  "|/maintainers|1280|dialog":
+    present: false
+  "|/offline|390|page": eea4f3021191c760d250f81194863c930ccd3d555f1ce886df4748bb7c3a5274
+  "|/offline|390|dialog":
+    present: false
+  "|/offline|768|page": 7b87f534c29aee3a2e38213374dd19adee15c36283f584f1b9c81a8c82ec03ec
+  "|/offline|768|dialog":
+    present: false
+  "|/offline|1280|page": 872b14c725862783edbdbe94413645d662017bdd6f4a1a72910fef0c040205bc
+  "|/offline|1280|dialog":
+    present: false
+  "|/passwords/new|390|page": eb7e7b3e9a973336069e91205b3c9761766e9ab6010a00d1904ce9b7a0e1b4e0
+  "|/passwords/new|390|dialog":
+    present: false
+  "|/passwords/new|768|page": cfb2717050141ff1d10157dc38125210d661dafcad4fef59e7167d642b7f0366
+  "|/passwords/new|768|dialog":
+    present: false
+  "|/passwords/new|1280|page": 22b9e9cc4131c1c679bbcd11eefa9e6be6ac6efe1fef2ce9c8a6cab1b1c20362
+  "|/passwords/new|1280|dialog":
+    present: false
+  "|/ports|390|page": 3dbf298f5ab3cc8aca544c29bf6621e01686f729bb29c71877c9954db6a4c270
+  "|/ports|390|dialog":
+    present: false
+  "|/ports|768|page": 112cbfe80f382e4d31ea8e68ff96776703ea096a506d23b4bc790a5f84bd75ff
+  "|/ports|768|dialog":
+    present: false
+  "|/ports|1280|page": 06ff830a14c85a815e6160d7d4224963c5be2d333c83c73a9d739e4a124ee89e
+  "|/ports|1280|dialog":
+    present: false
+  "|/privacy|390|page": 7d11a432125dc52f8383b49e2d7459f5ea47a4aab3d67f296fa84f02474a78bf
+  "|/privacy|390|dialog":
+    present: false
+  "|/privacy|768|page": '028a2021076251852745745d6e79d0d1de6a6a6666ee9080d121ab92e74d0d23'
+  "|/privacy|768|dialog":
+    present: false
+  "|/privacy|1280|page": eda28ffd301e0f3351ebec0e13311bf024f30905469d3416bc1d85dd38291985
+  "|/privacy|1280|dialog":
+    present: false
+  "|/recede_historical_location|390|page": 5bb54ed008a13d5867bd9bd27d9de21ee56a8e5eda40cb27253acbd13ce8465a
+  "|/recede_historical_location|390|dialog":
+    present: false
+  "|/recede_historical_location|768|page": 24041bf99118da2e39901f9dfcb10c78fb17221d167afcc2a8fee5055df1d017
+  "|/recede_historical_location|768|dialog":
+    present: false
+  "|/recede_historical_location|1280|page": 2b1215c48d208dc146fbd31620267c69defb8f3f5d3f5980a381ab1cc6127105
+  "|/recede_historical_location|1280|dialog":
+    present: false
+  "|/refresh_historical_location|390|page": c4417957a03250b8eeac8d67be708e3b58a90fb94a21a56d4a02b50037045d0e
+  "|/refresh_historical_location|390|dialog":
+    present: false
+  "|/refresh_historical_location|768|page": 8c78ca6480d10cd4427e6f257abbfbc9fff8930d4dcbd23b5dcb2b8083359cad
+  "|/refresh_historical_location|768|dialog":
+    present: false
+  "|/refresh_historical_location|1280|page": 1e542a22c4609bf3cf23f821af4f56c056267db4f2aa98c8e13857a8866e0dec
+  "|/refresh_historical_location|1280|dialog":
+    present: false
+  "|/resume_historical_location|390|page": 2ffec6542dec3d54617d51992c0d158d7b9bb675cecb55f5ec98147aa6a0b5d0
+  "|/resume_historical_location|390|dialog":
+    present: false
+  "|/resume_historical_location|768|page": 670f0747840f0e2f1146a0a13e8679fc80cfebe2a274627e79f7c9d5ef4412fc
+  "|/resume_historical_location|768|dialog":
+    present: false
+  "|/resume_historical_location|1280|page": 56270f8074e42dbec3d4351318b9f02beea1dd45b49e06786e9031c43ee570a1
+  "|/resume_historical_location|1280|dialog":
+    present: false
+  "|/rules|390|page": a80cb8663ecdad74225be29ca76811b56fc5702f34190e0a6ae493cc5b3c8550
+  "|/rules|390|dialog":
+    present: false
+  "|/rules|768|page": bdc911e78aee85b66c734f712e946677891be086b7b47937e657dbf4fad11644
+  "|/rules|768|dialog":
+    present: false
+  "|/rules|1280|page": 52dfd3b45310e98266c28453d13dabe10570c53ad7a661dfff109fc7945fb742
+  "|/rules|1280|dialog":
+    present: false
+  "|/safety|390|page": 798227491df99be50c580a02f1da2684daa4e2dfcc6081a847a2560734c476e9
+  "|/safety|390|dialog":
+    present: false
+  "|/safety|768|page": bcba414a3aa1b2b688e787af4d9b6ab58226cf8c59efa2d7986e64bf8b61fc63
+  "|/safety|768|dialog":
+    present: false
+  "|/safety|1280|page": c32d1b101af4d70676a3f515219b7e83cedc1f5d10e108b075a6d2db57f9b711
+  "|/safety|1280|dialog":
+    present: false
+  "|/session/new|390|page": 5941e00273bd59defdc9ddd7f24663dc9522b509fb6341b3f19e9473c6329bf2
+  "|/session/new|390|dialog":
+    present: false
+  "|/session/new|768|page": 56edab2c0bc368e424f30150254a8287861d7083a09c0e8435ffc432d39a5e13
+  "|/session/new|768|dialog":
+    present: false
+  "|/session/new|1280|page": 186256f3046d0415509f9e822993098836d52a3500a0d4672fc4bb7284667941
+  "|/session/new|1280|dialog":
+    present: false
+  "|/terms|390|page": 8715fe5bffd2b061f220a253a39f26fd1904372cd0e1b2229c844eaf6cc7ff3d
+  "|/terms|390|dialog":
+    present: false
+  "|/terms|768|page": d58dd2a60a319fddca4ffcc328424dcd11faddfc530b1ad22b4bfbf4b975e15f
+  "|/terms|768|dialog":
+    present: false
+  "|/terms|1280|page": 7823aee3c7b854655a03ef900533b7e55a54a184654d577d761c3501ffdd544a
+  "|/terms|1280|dialog":
+    present: false
+  "|/up|390|page": c8937e384e18d911585d52c9c5124035b1c66a0228204c0e1ee22787a8b9438d
+  "|/up|390|dialog":
+    present: false
+  "|/up|768|page": 4ba6db461a2ee6c888c85028f84997a7ad71bfd397e4f634228d182f8f2858de
+  "|/up|768|dialog":
+    present: false
+  "|/up|1280|page": 62c2410ac72927753a7dd9a0530364a9e02f52826cafdb66a512eafbe3985c70
+  "|/up|1280|dialog":
+    present: false

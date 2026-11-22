@@ -1,0 +1,186 @@
+# frozen_string_literal: true
+
+require_relative "test_helper"
+require "tmpdir"
+
+# The style stage of the /fix pass reads the marks operator-facing strings
+# actually wear. The audit is scoped to the speaking trees, so a fixture tree
+# holds the violations and the real tree stays out of the assertion.
+class TestFixTypographyAudit < Minitest::Test
+  Audit = Master::Fix::TypographyAudit
+
+  def test_reports_the_marks_that_reached_a_person
+    Dir.mktmpdir do |dir|
+      write_cli_file(dir, 'lib/cli/fixture.rb', <<~RUBY)
+        module Fixture
+          LINE = "waiting for it\u2026"
+          DASH = "ready -- go"
+          FLAGS = "--dry-run and --trace"
+          GLOB = Dir.glob("lib/**/*.rb")
+        end
+      RUBY
+
+      report = Audit.new(root: dir).call
+
+      assert_match(/\Astyle0: 2 findings, 1 non ascii punctuation, 1 prose double dash\z/, report.lines.first.chomp)
+      assert_match(/lib\/cli\/fixture\.rb:2 non_ascii_punctuation/, report)
+      assert_match(/lib\/cli\/fixture\.rb:3 prose_double_dash/, report)
+      refute_match(/FLAGS/, report, "flags keep their hyphens")
+      refute_match(/GLOB/, report, "globs keep their dots")
+    end
+  end
+
+  def test_a_clean_scope_reads_clean
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(File.join(dir, "lib", "voice"))
+      File.write(File.join(dir, "lib", "voice", "clean.rb"), <<~RUBY)
+        module Clean
+          LINE = "waiting for it... - the note"
+        end
+      RUBY
+
+      assert_match(/\Astyle0: clean/, Audit.new(root: dir).call)
+    end
+  end
+
+  def test_measures_long_terminal_output_literals_in_fix_sources
+    Dir.mktmpdir do |dir|
+      write_cli_file(dir, 'lib/fix/fixture.rb', <<~RUBY)
+        module Fixture
+          Master::Trace::Dmesg.status(
+          "fix0",
+          "This terminal status sentence is deliberately much too long for the operator display and should wrap naturally."
+        )
+        end
+      RUBY
+
+      report = Audit.new(root: dir).call
+      assert_match(/terminal measure/, report)
+      assert_match(/lib\/fix\/fixture\.rb:2 terminal_measure/, report)
+    end
+  end
+
+  def test_rejects_indentation_padding_and_fixed_width_terminal_columns
+    Dir.mktmpdir do |dir|
+      write_cli_file(dir, "lib/cli/fixture.rb", <<~RUBY)
+        module Fixture
+          Master::Trace::Dmesg.status("mov0", "init     /Users/Mac/Downloads")
+          Master::Trace::Dmesg.status("disk0", "check    8.4GB available")
+          puts format("%-8s %-9s %s", "disk0", "check", "8.4GB")
+          printf("%8.2f", 4.2)
+          Master::Trace::Dmesg.status("disk0", "count %8d")
+          Master::Trace::Dmesg.status("mov0", "initializing /Users/Mac/Downloads")
+        end
+      RUBY
+
+      write_cli_file(dir, "lib/io/detail.rb", <<~RUBY)
+        Master::Trace::Dmesg.detail("disk0", "disk0     check 8.4GB")
+      RUBY
+
+      report = Audit.new(root: dir).call
+
+      assert_match(/terminal_alignment/, report)
+      assert_match(/lib\/io\/detail\.rb:1 terminal_alignment/, report)
+      refute_match(/initializing \/Users/, report)
+    end
+  end
+
+  def test_terminal_output_typography_is_a_canonical_executable_law
+    require File.expand_path("../law/definition", __dir__) unless defined?(::Law::Definition)
+    require File.expand_path("../law/typesetting", __dir__) unless defined?(::Law::Typesetting)
+    ::Law.load_all(File.expand_path("../law", __dir__)) if ::Law.definitions.empty?
+    law = ::Law.definitions.fetch(:TERMINAL_OUTPUT_TYPOGRAPHY)
+
+    assert law.scannable?
+    assert_includes law.tags, :TYPOGRAPHY
+    assert law.assessment_surfaces.include?(:whole_file)
+    bad = law.scan(
+      'Master::Trace::Dmesg.status("fix0", "This operator-facing sentence is deliberately much too long for the terminal measure and must be rewritten as concise copy.")',
+      file: "MASTER/lib/cli/fixture.rb",
+    )
+    good = law.scan(
+      'Master::Trace::Dmesg.status("fix0", "repair complete")',
+      file: "MASTER/lib/cli/fixture.rb",
+    )
+    refute_empty bad
+    assert_empty good
+
+    punctuation = law.scan(
+      'Master::Trace::Dmesg.status("fix0", "waiting for it…")',
+      file: "MASTER/lib/cli/fixture.rb",
+    )
+    refute_empty punctuation, "terminal punctuation must be ASCII whether the scanner path is rooted at MASTER or the repository"
+    alignment = law.scan(
+      'Master::Trace::Dmesg.status("mov0", "init     /Users/Mac/Downloads")',
+      file: "MASTER/lib/cli/fixture.rb",
+    )
+    refute_empty alignment, "padded log fields must be rejected by the executable Law"
+    ordinary = law.scan(
+      'Master::Trace::Dmesg.status("mov0", "initializing /Users/Mac/Downloads")',
+      file: "MASTER/lib/cli/fixture.rb",
+    )
+    assert_empty ordinary, "ordinary single-space status text remains clean"
+    assert ::Law::Typesetting::TERMINAL_PATH.match?("STUDIO/postpro/rescue.rb")
+    studio_alignment = law.scan(
+      'PostproBootstrap.dmesg("init     /Users/Mac/Downloads")',
+      file: "STUDIO/postpro/bootstrap.rb",
+    )
+    refute_empty studio_alignment, "the same log rule covers STUDIO command output"
+    assert_includes law.fix, "lowercase subsystem0:"
+    assert_includes law.fix, "Never indent or pad fields to align records"
+    assert_includes law.fix, "never use fixed-width or tabular columns"
+    assert_includes law.ask, "Do not treat a user-requested data table"
+    policy = ::Law.catalogue_entry("TERMINAL_OUTPUT_TYPOGRAPHY")
+    assert_equal "error", policy.fetch("severity")
+    assert_equal "trusted", policy.fetch("lifecycle")
+    assert_equal "never", policy.fetch("autofix")
+    io_alignment = law.scan(
+      'Master::Trace::Dmesg.detail("disk0", "disk0     check 8.4GB")',
+      file: "MASTER/lib/io/llm.rb",
+    )
+    refute_empty io_alignment, "detail output must obey the same terminal layout law"
+    assert ::Law::Typesetting::TERMINAL_PATH.match?("MASTER/lib/io/llm.rb")
+    assert ::Law::Typesetting::TERMINAL_PATH.match?("MASTER/lib/review/llm_dispatcher.rb")
+  end
+
+  def test_typesetting_reads_plain_business_html_and_markdown_readme
+    require File.expand_path("../law/definition", __dir__) unless defined?(::Law::Definition)
+    require File.expand_path("../law/typesetting", __dir__) unless defined?(::Law::Typesetting)
+    html = ::Law::Typesetting.each_text("<p>En lesbar plan.</p>", "BIZ/plan.html").to_a
+    business_markdown = ::Law::Typesetting.each_text("# Plan\nEn lesbar plan.", "BIZ/research/bringhurst-strunk-research.md").to_a
+    readme = ::Law::Typesetting.each_text("A readable paragraph.", "MASTER/README.md").to_a
+
+    assert_equal "En lesbar plan.", html.first.first
+    assert_equal "En lesbar plan.", business_markdown.last.first
+    assert_equal "A readable paragraph.", readme.first.first
+    assert_equal "nb", ::Law::Typesetting.locale("BIZ/plan.html")
+    assert_equal "en", ::Law::Typesetting.locale("MASTER/README.md")
+    assert ::Law::Typesetting::PATH.match?("BIZ/plan.html")
+    assert ::Law::Typesetting::PATH.match?("BIZ/research/bringhurst-strunk-research.md")
+    assert ::Law::Typesetting::PATH.match?("MASTER/README.md")
+    assert ::Law::Typesetting::PATH.match?("MASTER/AGENTS.md")
+    assert ::Law::Typesetting::PATH.match?("OPENBSD/docs/operations.md")
+
+    require File.expand_path("../law/prose", __dir__) unless defined?(::Law::Prose)
+    assert ::Law::Prose::SCOPES.fetch("nb").match?("BIZ/research/bringhurst-strunk-research.md")
+    assert ::Law::Prose::SCOPES.fetch("en").match?("MASTER/README.md")
+    assert ::Law::Prose::SCOPES.fetch("en").match?("RAILS/mrdamascy/APP_SPEC.md")
+    assert ::Law::Prose::SCOPES.fetch("en").match?("MASTER/lib/cli/entry.rb")
+    assert_includes ::Law.catalogue_entry("PROSE_OMIT_QUALIFIERS_NB").fetch("languages"), "markdown"
+    assert_includes ::Law.catalogue_entry("PROSE_ACTIVE_VOICE_NB").fetch("languages"), "markdown"
+  end
+
+  def test_a_scope_that_is_not_there_is_not_an_error
+    Dir.mktmpdir do |dir|
+      assert_match(/\Astyle0: clean/, Audit.new(root: dir).call)
+    end
+  end
+
+  private
+
+  def write_cli_file(root, relative, content)
+    path = File.join(root, relative)
+    FileUtils.mkdir_p(File.dirname(path))
+    File.write(path, content)
+  end
+end

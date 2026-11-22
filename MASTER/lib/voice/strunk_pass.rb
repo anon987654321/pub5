@@ -1,0 +1,127 @@
+# frozen_string_literal: true
+
+require_relative "language"
+
+module Master
+  module Voice
+    # Deterministic Strunk & White strip for prose prompts and output.
+    # Fence-aware; loads rules from data/voice.yml voice.strunk.
+    class StrunkPass
+      FENCE_RE = /(```.*?```)/m.freeze
+      HEADER_RE = %r{^\#{1,6}\s+}.freeze
+      BOLD_RE = /\*\*(.+?)\*\*/
+      ITALIC_RE = /(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/
+      BULLET_RE = /^\s*[-*+]\s+/
+      NUMBERED_RE = /^\s*\d+\.\s+/
+      HR_RE = /^-{3,}\s*$/
+      LINK_RE = /\[([^\]]+)\]\([^)]+\)/
+      SYCOPHANCY_PREFIXES = [
+        %w[certain ly].join,
+        %w[absolute ly].join,
+        "of course",
+        "great question",
+        "sure",
+        "no problem",
+        "happy to help",
+      ].freeze
+      SYCOPHANCY_RE = Regexp.new(
+        "\\A\\s*(?:#{SYCOPHANCY_PREFIXES.map { |p| Regexp.escape(p) }.join('|')}|" \
+        "i(?:'d| would) be (?:happy|glad))[!.,]*\\s*",
+        Regexp::IGNORECASE,
+      ).freeze
+
+      # These terms carry uncertainty, time, or ability. Removing them can turn
+      # "could not verify" into the ungrammatical and misleading "not verify".
+      MEANING_BEARING_HEDGES = (
+        %w[will would might could may perhaps maybe possibly probably likely seems appears
+           muligens kanskje muligvis mulig] + ["virker som", "kan hende", "det kan hende"]
+      ).freeze
+
+      def self.call(text, language: nil) = new(language:).call(text)
+      def self.brevity(text, language: nil) = new(language:).brevity(text)
+
+      def initialize(language: nil)
+        @language = language&.to_sym
+      end
+
+      def call(text)
+        prose = text.to_s.strip
+        return "" if prose.empty?
+
+        prune_mixed(prose).gsub(/\s+/, " ").strip
+      end
+
+      # Padding only — sycophancy openers, preambles, endings, hedges — with
+      # markdown, code fences and line breaks left intact. call() is the TTS
+      # strip that also flattens layout into one line; brevity is what a commit
+      # message, a comment or chat output can pass through without losing a code
+      # block or a deliberate break. It removes the fake warmth, not the real
+      # content, so it serves brevity and warmth at once rather than trading one
+      # for the other.
+      def brevity(text)
+        prose = text.to_s
+        return "" if prose.strip.empty?
+
+        prose.split(FENCE_RE).map do |segment|
+          segment.start_with?("```") ? segment : trim_padding(segment)
+        end.join.strip
+      end
+
+      private
+
+      def trim_padding(text)
+        cleaned = text.sub(SYCOPHANCY_RE, "")
+        rules.fetch("preambles", []).each { |phrase| cleaned = cleaned.sub(/\A\s*#{Regexp.escape(phrase)}\s*/i, "") }
+        rules.fetch("endings", []).each { |phrase| cleaned = cleaned.sub(/\s*#{Regexp.escape(phrase)}\s*\z/i, "") }
+        hedges_for(cleaned).each do |hedge|
+          next if MEANING_BEARING_HEDGES.include?(hedge.to_s.downcase)
+
+          # Remove padding only at a sentence opening. A global substitution
+          # used to leave broken grammar when it deleted words inside a clause.
+          cleaned = cleaned.sub(/\A\s*#{Regexp.escape(hedge)}\b\s*/i, "")
+        end
+        cleaned
+      end
+
+      def prune_mixed(text)
+        text.split(FENCE_RE).map do |segment|
+          segment.start_with?("```") ? segment : strip_all(segment)
+        end.join
+      end
+
+      # The TTS strip is the brevity strip plus markdown removal, so it reuses the
+      # one rather than restating its four passes.
+      def strip_all(text)
+        trim_padding(text)
+          .gsub(HEADER_RE, "")
+          .gsub(BOLD_RE, '\1')
+          .gsub(ITALIC_RE, '\1')
+          .gsub(LINK_RE, '\1')
+          .gsub(HR_RE, "")
+          .gsub(BULLET_RE, "")
+          .gsub(NUMBERED_RE, "")
+          .gsub(/\n{3,}/, "\n\n")
+          .strip
+      end
+
+      def rules
+        path = Master.data_path("voice.yml")
+        stat = File.stat(path)
+        signature = [stat.size, stat.ino, stat.mtime.to_r]
+        return @rules if @rules_signature == signature && @rules
+
+        data = Master.load_yaml(path) || {}
+        @rules_signature = signature
+        @rules = (data.dig("voice", "strunk") || {}).freeze
+      end
+
+      def hedges_for(text)
+        configured = rules.fetch("hedges", [])
+        return Array(configured) unless configured.is_a?(Hash)
+
+        language = (@language || Language.detect(text)).to_s
+        Array(configured[language] || configured["en"])
+      end
+    end
+  end
+end

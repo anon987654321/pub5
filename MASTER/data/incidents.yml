@@ -1,0 +1,126 @@
+# incidents.yml - the casebook of scars.
+#
+# Every law was born from a failure. This file links each law to the
+# incident that wrote it and the alternatives that were tried and refuted,
+# so a newcomer reads the scar tissue and not only the rule, and Chesterton's
+# fence stops being a warning and becomes a lesson. A row without a
+# verifiable citation says so: provenance "operator session record,
+# in-tree citation pending" is honest, invented file references are not.
+schema: 1
+incidents:
+  - id: I-001
+    date: "2026-11"
+    title: "The rename that re-armed a law on its own exempted subject"
+    summary: >
+      lib/now/ became lib/cli/; NO_PUTS's exemption address stayed; 105
+      findings arrived overnight on exactly what the exemption was for -
+      100 deliberate puts in the REPL session code.
+    laws_born: []
+    laws_governed: [NO_PUTS]
+    refuted_alternatives:
+      - "broaden the detector's regex - it would have exempted library code too"
+      - "silence the findings - the exemption has an owner, not the findings"
+    citation: "MASTER/law/lexical.rb NO_PUTS check comment; governed now by data/law_kinds.yml (precedent P-003)"
+
+  - id: I-002
+    date: "2026-08-12"
+    title: "The files exempt from the law they enforce"
+    summary: >
+      SelfCheck and rake constitution scanned a path literal: core/ sat
+      beside lib/ from 2026-07-20 to 2026-08-12, so the six files that judge
+      every effect were the only files in the tree exempt from the law they
+      enforce. Nobody decided that and nothing said it; it fell out of a
+      string. The 2026-08-12 merge closed the exemption silently - the same
+      failure in the other direction.
+    laws_born: []
+    laws_governed: []
+    refuted_alternatives: []
+    citation: "MASTER/data/scan_coverage.yml header - 'This file is that number'"
+
+  - id: I-003
+    date: "2026-09"
+    title: "A writer that could not write"
+    summary: >
+      Io::AtomicWrite defined write_atomic while both call sites asked for
+      atomic_write - the same two words reversed - so every rename and every
+      insertion raised NoMethodError on the line that was about to change the
+      file. Nothing in the suite named AstEdit, which is why a tool whose
+      whole job was writing had been unable to write.
+    laws_born: []
+    laws_governed: []
+    refuted_alternatives: []
+    citation: "MASTER/data/spine.yml AstEdit commentary; the test covers both operations"
+
+  - id: I-004
+    date: "2026-10-27"
+    title: "The repair that never finished"
+    summary: >
+      The default 240 s file budget was one model call's clock, but a repair
+      is a proposal, a retry and a verifier call - three or four calls - so
+      Opus timed out on 2026-10-27 and every lane without a named entry
+      failed the same shape. Budgets now default to the repair (precedent
+      P-004); a free lane stays bounded by its own 60 s call timeout.
+    laws_born: []
+    laws_governed: []
+    refuted_alternatives:
+      - "raise the per-call timeout - that hides a dead lane instead of pricing a repair"
+    citation: "MASTER/data/budgets.yml fix_time commentary"
+
+  - id: I-005
+    date: "2026-10"
+    title: "Seven graceful degradations reported as defects"
+    summary: >
+      The fleet's health endpoints rescue to false - the health-check idiom,
+      absorbing the error into the answer. The silent-rescue rule read them
+      as swallows: seven error-severity findings for degrading gracefully.
+      The ruling (precedent P-002) is that only nil/false are handling.
+    laws_born: []
+    laws_governed: [MODIFIER_SILENT_RESCUE]
+    refuted_alternatives:
+      - "exempt health endpoints by path - the idiom is the argument, not the path"
+    citation: "MASTER/law/lexical.rb SilentRescue discard_body? comment"
+
+  - id: I-006
+    date: "2026-11"
+    title: "Seventeen loop skips read as error-severity swallows"
+    summary: >
+      A rescue whose whole body is `next` sits in a loop over members, and
+      skipping the member IS the handling: the method's answer is that this
+      one contributed nothing. All 17 in the four trees are that shape - a
+      census walking files, a check walking hosts - and 16 would land at
+      error severity, so adding the token asks the fleet to annotate its own
+      idiom.
+    laws_born: []
+    laws_governed: [MODIFIER_SILENT_RESCUE]
+    refuted_alternatives:
+      - "require scan:intentional markers - seventeen annotations of an idiom nobody doubts"
+    citation: "MASTER/law/lexical.rb discard_token? comment"
+
+  - id: I-007
+    date: "unrecorded"
+    title: "The dead tap's thirty provisional fixes"
+    summary: >
+      The operator's session record: a dead tap absorbed thirty provisional
+      fixes before anyone measured which one held. The session that wished
+      for cheap proof cited it as the shape that proves measuring first is
+      cheaper than fixing twice. In-tree citation pending: recorded here
+      from the operator's account so the scar is readable even before the
+      commit that cites it lands.
+    laws_born: []
+    laws_governed: []
+    refuted_alternatives: []
+    citation: "operator session record, 2026-11-17; in-tree citation pending"
+
+  - id: I-008
+    date: "unrecorded"
+    title: "The MutationObserver loop"
+    summary: >
+      The operator's session record: a MutationObserver wired to react to
+      its own DOM writes fed itself until the page starved. The surviving
+      observers in MASTER/web/public/visual_bridge.js read addedNodes counts
+      and queue a microtask instead of re-writing from inside the
+      callback. In-tree citation for the original failure pending.
+    laws_born: []
+    laws_governed: []
+    refuted_alternatives: []
+    citation: "operator session record, 2026-11-17; shape visible at MASTER/web/public/visual_bridge.js:358-380"

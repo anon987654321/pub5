@@ -1,0 +1,214 @@
+# frozen_string_literal: true
+
+require_relative "test_helper"
+
+class TestDmesgDetail < Minitest::Test
+  Dmesg = Master::Trace::Dmesg
+
+  def setup
+    @env = %w[MASTER_DMESG MASTER_DMESG_DETAIL MASTER_QUIET MASTER_CLI_QUIET MASTER_BOOT_STATUS MASTER_CLI_VERBOSE MASTER_CLI_TRACE NO_COLOR].to_h do |key|
+      [key, ENV[key]]
+    end
+    @draft_guard = Dmesg.draft_guard
+    ENV.delete("MASTER_DMESG")
+    ENV.delete("MASTER_DMESG_DETAIL")
+    ENV.delete("MASTER_QUIET")
+    ENV.delete("MASTER_CLI_QUIET")
+    ENV.delete("MASTER_BOOT_STATUS")
+    ENV.delete("MASTER_CLI_VERBOSE")
+    ENV.delete("MASTER_CLI_TRACE")
+    ENV.delete("NO_COLOR")
+    Dmesg.draft_guard = nil
+    Fiber[:master_dmesg_detail_units] = nil
+    Dmesg.reload!
+  end
+
+  def teardown
+    @env.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+    Dmesg.draft_guard = @draft_guard
+    Fiber[:master_dmesg_detail_units] = nil
+    Dmesg.reload!
+  end
+
+  def enable_detail
+    ENV["MASTER_DMESG_DETAIL"] = "1"
+  end
+
+  def test_interactive_defaults_are_normal_and_redirected_defaults_are_quiet
+    Dmesg.configure_cli_output_default!(stdin_tty: true, stdout_tty: true)
+    assert_nil ENV["MASTER_CLI_QUIET"]
+
+    Dmesg.configure_cli_output_default!(stdin_tty: false, stdout_tty: true)
+    assert_equal "1", ENV["MASTER_CLI_QUIET"]
+  end
+
+  def test_verbose_trace_and_detail_are_one_canonical_verbosity_setting
+    Dmesg.configure_cli_verbosity("verbose")
+    assert_equal "verbose", Dmesg.verbosity
+    assert_equal "0", ENV["MASTER_CLI_QUIET"]
+    assert_equal "1", ENV["MASTER_BOOT_STATUS"]
+
+    Dmesg.configure_cli_verbosity("trace")
+    assert_equal "trace", Dmesg.verbosity
+    assert Dmesg.trace?
+
+    Dmesg.configure_cli_verbosity("everything")
+    assert_equal "everything", Dmesg.verbosity
+    assert Dmesg.detail_enabled?
+
+    Dmesg.configure_cli_verbosity("trace")
+    assert_equal "trace", Dmesg.verbosity
+    refute Dmesg.detail_enabled?
+  end
+
+  def test_last_verbosity_option_wins_before_boot
+    Dmesg.prime_cli_verbosity!(%w[--verbose --trace --detail])
+
+    assert_equal "everything", Dmesg.verbosity
+    assert Dmesg.detail_enabled?
+  end
+
+  def test_detail_does_not_leak_into_redirected_stdout
+    enable_detail
+    output = StringIO.new
+    previous_stdout = $stdout
+    previous_stdin = $stdin
+    $stdout = output
+    $stdin = StringIO.new
+
+    Dmesg.detail("read0", "private source")
+
+    assert_empty output.string
+  ensure
+    $stdout = previous_stdout if previous_stdout
+    $stdin = previous_stdin if previous_stdin
+  end
+
+  def test_detail_is_silent_without_explicit_consent
+    output = StringIO.new
+
+    Dmesg.detail("read0", "private source", io: output)
+
+    assert_empty output.string
+  end
+
+  def test_detail_prefixes_each_line_without_visual_indentation
+    enable_detail
+    output = StringIO.new
+
+    Dmesg.detail("llm0", "prompt:\nfirst line\nsecond line", io: output)
+
+    assert_equal "llm0: prompt:\nllm0: first line\nllm0: second line\n", output.string
+  end
+
+  def test_detail_truncates_a_long_line_at_the_configured_character_limit
+    enable_detail
+    Dmesg.instance_variable_set(:@cfg, Dmesg.cfg.merge("detail_max_chars" => 12))
+    output = StringIO.new
+
+    Dmesg.detail("read0", "x" * 5_000, io: output)
+
+    body = output.string.lines.first.delete_prefix("read0: ").chomp
+    assert_equal 12, body.length
+    assert body.end_with?("...")
+  end
+
+  def test_short_detail_limit_also_bounds_the_truncation_marker
+    enable_detail
+    Dmesg.instance_variable_set(:@cfg, Dmesg.cfg.merge("detail_max_chars" => 2))
+    output = StringIO.new
+
+    Dmesg.detail("read0", "long body", io: output)
+
+    body = output.string.lines.first.delete_prefix("read0: ").chomp
+    assert_equal "..", body
+    assert_equal 2, body.length
+  end
+
+  def test_detail_drops_blank_rows_and_prefixes_every_retained_line
+    enable_detail
+    Dmesg.instance_variable_set(:@cfg, Dmesg.cfg.merge("detail_max_lines" => 8))
+    output = StringIO.new
+
+    Dmesg.detail("read0", "line 1\n\nline 2\n", io: output)
+
+    assert_equal "read0: line 1\nread0: line 2\n", output.string
+  end
+
+  def test_detail_reports_omitted_lines_instead_of_implying_they_were_complete
+    enable_detail
+    Dmesg.instance_variable_set(:@cfg, Dmesg.cfg.merge("detail_max_lines" => 8))
+    output = StringIO.new
+
+    Dmesg.detail("read0", (1..50).map { |n| "line #{n}" }.join("\n"), io: output)
+
+    lines = output.string.lines
+    assert_equal 9, lines.size
+    assert_equal "read0: ... 42 more line(s)\n", lines.last
+  end
+
+  def test_detail_uses_the_terminal_write_draft_guard
+    enable_detail
+    calls = []
+    Dmesg.draft_guard = [
+      ->(_io) { calls << :begin },
+      ->(_io) { calls << :end },
+    ]
+
+    Dmesg.detail("write0", "diff", io: StringIO.new)
+
+    assert_equal %i[begin end], calls
+  end
+
+  def test_detail_is_uncoloured_even_on_a_terminal
+    enable_detail
+    terminal = Class.new(StringIO) { def tty? = true }.new
+
+    Dmesg.detail("fix0", "diff", io: terminal)
+
+    assert_equal "fix0: diff\n", terminal.string
+    refute_match(/\e\[/, terminal.string)
+  end
+
+  def test_everything_is_trace_plus_detail
+    Dmesg.with_verbosity("everything") do
+      assert_equal "everything", Dmesg.verbosity
+      assert Dmesg.verbose?
+      assert Dmesg.trace?
+      assert Dmesg.detail_enabled?
+    end
+  end
+
+  def test_detail_disables_model_call_burst_rollups
+    enable_detail
+    Dmesg.with_verbosity("normal") do
+      console = Dmesg::Console.new
+      lines = 8.times.flat_map do
+        console.lines(event: "llm:send", model: "provider/model") +
+          console.lines(event: "llm:provider_outcome", model: "provider/model", status: :success, latency_ms: 10)
+      end
+
+      assert_equal 16, lines.size
+      assert lines.all? { |line| line.start_with?("llm") }
+    end
+  end
+
+  def test_tool_details_reuse_the_numbered_unit_from_the_event_console
+    enable_detail
+    console = Dmesg::Console.new
+    console.lines(event: "tool:call", tool: "read_file", subject_kind: "path", subject_bytes: 9)
+    output = StringIO.new
+
+    Dmesg.detail("read_file", "file content", io: output)
+
+    assert_equal "read0: file content\n", output.string
+  end
+
+  def test_diff_head_contains_hunks_without_temporary_file_headers
+    diff = Dmesg.diff_head("before\n", "after\n")
+
+    assert_includes diff, "-before"
+    assert_includes diff, "+after"
+    refute_includes diff, "unified-diff"
+  end
+end

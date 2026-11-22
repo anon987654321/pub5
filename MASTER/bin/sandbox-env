@@ -1,0 +1,79 @@
+#!/bin/sh
+# sandbox-env — the environment the pub5 tooling needs on a bare Linux
+# container. Source it; do not execute it:
+#
+#   . MASTER/bin/sandbox-env
+#
+# Three things, each discovered rather than assumed:
+#   PATH       the checkout's vendored ruby leads, so bin/ruby, bundle and
+#              gem resolve to one interpreter everywhere
+#   LD_LIBRARY_PATH  the libvips closure sandbox-bootstrap extracted (ruby-vips
+#              needs the C ABI the host does not ship); empty and harmless
+#              when the tree is absent
+#   CHROME_PATH the headless shell tools/chrome_install.rb installed, for the
+#              CDP-based rendered checks; empty and harmless when missing
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd)
+MASTER=$(dirname -- "$SCRIPT_DIR")
+# A sourced script sees the caller's $0, so the resolution above lands
+# outside this checkout and silently exports nothing (the documented
+# usage is `. MASTER/bin/sandbox-env`). Recover by walking up from the
+# working directory to the checkout that actually holds the vendored
+# Ruby; the executed-script path still wins when it resolves.
+if [ ! -x "$MASTER/.tools/ruby/bin/ruby" ]; then
+  MASTER=""
+  cursor=$PWD
+  while [ -n "$cursor" ] && [ "$cursor" != / ]; do
+    if [ -x "$cursor/MASTER/.tools/ruby/bin/ruby" ]; then
+      MASTER="$cursor/MASTER"
+      break
+    fi
+    cursor=$(dirname -- "$cursor")
+  done
+fi
+ROOT=$(dirname -- "$MASTER")
+
+if [ -n "${XDG_CACHE_HOME:-}" ]; then
+  CACHE_ROOT=$XDG_CACHE_HOME
+elif [ -n "${HOME:-}" ]; then
+  CACHE_ROOT=$HOME/.cache
+else
+  CACHE_ROOT=$(getent passwd "$(id -u)" 2>/dev/null | cut -d: -f6)/.cache
+  [ -n "$CACHE_ROOT" ] && [ "$CACHE_ROOT" != /.cache ] || CACHE_ROOT=$ROOT/.cache
+fi
+VIPS_LIB=${PUB5_SANDBOX_LIBS:-$CACHE_ROOT/pub5/libs}/extracted/usr/lib/x86_64-linux-gnu
+if [ -d "$VIPS_LIB" ]; then
+  case ":${LD_LIBRARY_PATH:-}:" in
+    *":$VIPS_LIB:"*) ;;
+    *) LD_LIBRARY_PATH="$VIPS_LIB${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" ;;
+  esac
+fi
+
+# Selenium (bin/ci system tests) finds chromedriver on PATH, and
+# chromedriver finds the browser as a PATH entry named `chrome`.
+DRIVER_DIR=$CACHE_ROOT/pub5/chromedriver-linux64
+CHROME_BIN_DIR=$CACHE_ROOT/pub5/chrome-bin
+for dir in "$DRIVER_DIR" "$CHROME_BIN_DIR"; do
+  if [ -x "$dir/chromedriver" ] || [ -x "$dir/chrome" ]; then
+    case ":$PATH:" in
+      *":$dir:"*) ;;
+      *) PATH="$dir:$PATH" ;;
+    esac
+  fi
+done
+unset DRIVER_DIR CHROME_BIN_DIR
+
+if [ -x "$MASTER/.tools/ruby/bin/ruby" ]; then
+  case ":$PATH:" in
+    *":$MASTER/.tools/ruby/bin:"*) ;;
+    *) PATH="$MASTER/.tools/ruby/bin:$PATH" ;;
+  esac
+fi
+
+if [ -z "${CHROME_PATH:-}" ] && [ -n "${HOME:-}" ]; then
+  found=$(find "$HOME/.cache/pub5" -name chrome-headless-shell -type f 2>/dev/null | sort | tail -1)
+  [ -n "$found" ] && CHROME_PATH="$found"
+fi
+
+export PATH LD_LIBRARY_PATH
+[ -n "${CHROME_PATH:-}" ] && export CHROME_PATH
+unset SCRIPT_DIR MASTER ROOT VIPS_LIB CACHE_ROOT found

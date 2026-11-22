@@ -1,0 +1,241 @@
+# frozen_string_literal: true
+
+require_relative "test_helper"
+require_relative "../lib/configuration_guard"
+require_relative "../lib/ground/boot_checks"
+
+class TestRuntimeCatalogueValidation < Minitest::Test
+  Guard = Master::ConfigurationGuard
+  BootChecks = Master::Ground::BootChecks
+
+  def catalogue_path(name)
+    File.join(Master::ROOT, "data", name)
+  end
+
+  def validated_file(name)
+    path = catalogue_path(name)
+    Guard.validate(path:, content: File.read(path, encoding: "UTF-8"))
+  end
+
+  def test_live_provider_catalogue_satisfies_schema
+    assert_nil validated_file("providers.yml")
+  end
+
+  def test_live_model_catalogue_satisfies_schema_and_references
+    assert_nil validated_file("models.yml")
+  end
+
+
+  def test_the_declared_nsfw_tier_may_be_empty
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("models")["nsfw"] = []
+
+    assert_nil Guard.validate(path:, content: YAML.dump(data))
+  end
+
+  def test_model_definition_identifiers_may_contain_underscores
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    example = data.fetch("model_defs").values.first
+    data.fetch("model_defs")["underscore_probe"] = example.merge("id" => "model_identifier_with_underscores")
+
+    assert_nil Guard.validate(path:, content: YAML.dump(data))
+  end
+
+  def test_other_model_tiers_must_not_be_empty
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("models")["fast"] = []
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/models.fast must be a non-empty list/, error)
+  end
+
+  def test_keyless_endpoint_requires_a_selection_rule
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("openai_compatible").fetch("llm7").fetch("keyless")["tier"] = nil
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/models.yml openai_compatible.llm7.keyless.tier must be non-empty text unless allow or isFree selects/, error)
+  end
+
+  def test_keyless_endpoint_rejects_non_text_tier_without_raising
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("openai_compatible").fetch("llm7").fetch("keyless")["tier"] = 7
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/models.yml openai_compatible.llm7.keyless.tier must be non-empty text/, error)
+  end
+
+  def test_replicate_chat_budget_requires_a_price_for_every_automatic_model
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("replicate_chat_budget").fetch("prices_usd_per_million").delete("openai/gpt-5.2")
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/replicate_chat_budget missing prices for openai\/gpt-5\.2/, error)
+  end
+
+  def test_replicate_chat_budget_rejects_nonpositive_model_prices
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("replicate_chat_budget").fetch("prices_usd_per_million")
+      .fetch("openai/gpt-5.2")["output"] = 0
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/replicate_chat_budget\.prices_usd_per_million\.openai\/gpt-5\.2\.output must be positive/, error)
+  end
+
+  def test_media_lanes_must_reference_declared_media_providers
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("media_lanes").fetch("image").first["provider"] = "missing_provider"
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/models.yml media_lanes.image\[0\].provider must name a declared media provider/, error)
+  end
+
+  def test_validator_helpers_are_private_without_hiding_public_helpers
+    refute Master::ModelCatalogueGuard.respond_to?(:validate_top_level)
+    assert Master::ModelCatalogueGuard.respond_to?(:validate_scores)
+    refute Master::ModelCatalogueSectionsGuard.respond_to?(:validate_cli_lane)
+    assert Master::ModelCatalogueSectionsGuard.respond_to?(:strict_fields)
+  end
+
+  def test_ollama_enabled_must_be_a_boolean
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("ollama")["enabled"] = "false"
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/models.yml ollama.enabled must be boolean/, error)
+  end
+
+  def test_provider_registry_rejects_a_non_array_environment_list
+    path = catalogue_path("providers.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("openrouter")["env"] = "OPENROUTER_API_KEY"
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/provider openrouter\.env must be a unique list/, error)
+  end
+
+  def test_unknown_provider_fields_are_rejected
+    path = catalogue_path("providers.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("openrouter")["api_key_environemnt"] = "OPENROUTER_API_KEY"
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/provider openrouter has unknown field\(s\): api_key_environemnt/, error)
+  end
+
+  def test_model_routes_must_reference_declared_tiers
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("routes")["code_generation"] = "catalogue_typo"
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/models\.yml route code_generation must reference a declared model tier/, error)
+  end
+
+  def test_unknown_nested_model_policy_fields_are_rejected
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("routing")["provder"] = "agy"
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/models\.yml routing has unknown field\(s\): provder/, error)
+  end
+
+  def test_media_lane_promotion_must_have_a_valid_date_and_lower_price
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    lane = data.fetch("media_lanes").fetch("video").find { |row| row["model"] == "minimax/h3-lite" }
+    lane.fetch("promotion")["until"] = "2026-13-40"
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/media_lanes.video\[0\].promotion.until must be a YYYY-MM-DD date/, error)
+  end
+
+  def test_boot_checks_apply_model_reference_validation_before_startup
+    Dir.mktmpdir("master-model-catalogue-boot") do |tmp|
+      root = File.join(tmp, "MASTER")
+      data_dir = File.join(root, "data")
+      FileUtils.mkdir_p(data_dir)
+
+      providers_path = File.join(data_dir, "providers.yml")
+      models_path = File.join(data_dir, "models.yml")
+      FileUtils.cp(catalogue_path("providers.yml"), providers_path)
+      data = YAML.safe_load_file(catalogue_path("models.yml"), aliases: true)
+      data.fetch("routes")["code_generation"] = "not_a_tier"
+      File.write(models_path, YAML.dump(data))
+
+      result = BootChecks.send(:check_models_yaml, root)
+
+      refute result.ok
+      assert_equal :fatal, result.severity
+      assert_match(/models\.yml route code_generation must reference a declared model tier/, result.message)
+    end
+  end
+
+  def test_model_scores_must_stay_in_the_closed_interval
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("model_defs").fetch("agy_auto").fetch("score")["quality"] = 1.5
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/model_defs\.agy_auto\.score\.quality must be between 0 and 1/, error)
+  end
+
+  def test_boot_checks_reject_invalid_dynamic_tool_catalogue
+    Dir.mktmpdir("master-dynamic-tool-boot") do |root|
+      data_dir = File.join(root, "data")
+      FileUtils.mkdir_p(data_dir)
+      path = File.join(data_dir, "tools.dynamic.yml")
+      File.write(path, YAML.dump("name" => "broken_tool", "url" => "https://example.com"))
+
+      result = BootChecks.send(:check_dynamic_tools_yaml, root)
+
+      refute result.ok
+      assert_equal :fatal, result.severity
+      assert_match(/must be a YAML list/, result.message)
+    end
+  end
+
+  def test_canonical_boot_validates_token_catalogue
+    result = BootChecks.send(:check_tokens_yaml, Master::ROOT)
+
+    assert result.ok, result.message
+    assert_match(/schema and references valid/, result.message)
+  end
+
+  def test_canonical_boot_validates_provider_catalogue
+    result = BootChecks.send(:check_providers_yaml, Master::ROOT)
+
+    assert result.ok, result.message
+    assert_match(/schema and references valid/, result.message)
+  end
+
+  def test_canonical_boot_validates_model_catalogue
+    result = BootChecks.send(:check_models_yaml, Master::ROOT)
+
+    assert result.ok, result.message
+    assert_match(/schema and references valid/, result.message)
+  end
+end

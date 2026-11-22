@@ -1,0 +1,294 @@
+# frozen_string_literal: true
+
+require "fileutils"
+require "rubygems"
+
+# Ruby may activate a default gem before Bundler.setup. A bundle can resolve a
+# newer compatible copy than the interpreter's bundled default, so make the
+# bundle's installed gem path visible and activate only versions actually
+# recorded in Gemfile.lock before stdlib files load them. No Ruby patch release
+# is selected or required here; the running interpreter remains authoritative.
+#
+# On a fresh checkout the locked copies may not be installed yet, so this early
+# pass is best-effort. The same lockfile versions are retried after dependency
+# bootstrap, before require-time activation can conflict with Bundler.
+boot_root = File.expand_path("../..", __dir__)
+bundle_config = File.join(boot_root, ".bundle", "config")
+deploy_bundle = File.file?(bundle_config) ? File.binread(bundle_config)[/^BUNDLE_PATH:\s*"?([^"\s]+)"?\s*$/, 1] : nil
+if deploy_bundle
+  gem_dirs = Dir.glob(File.join(deploy_bundle, "ruby", "*")).select { |dir| File.directory?(File.join(dir, "gems")) }
+  unless gem_dirs.empty?
+    Gem.paths = { "GEM_HOME" => Gem.paths.home, "GEM_PATH" => [*gem_dirs, *Gem.path].join(File::PATH_SEPARATOR) }
+  end
+end
+boot_lockfile = File.join(boot_root, "Gemfile.lock")
+boot_lock = File.file?(boot_lockfile) ? File.binread(boot_lockfile) : ""
+%w[json date psych].each do |name|
+  pin = boot_lock[/^    #{name} \(([\d.]+)\)$/, 1]
+  next unless pin
+
+  begin
+    gem name, pin
+  rescue Gem::LoadError
+    nil
+  end
+end
+
+require_relative "dependency_manager"
+require_relative "../trace/dmesg"
+require_relative "../operator/environment"
+require_relative "../operator/ruby_runner"
+
+module Master
+  module Boot
+    module Entrypoint
+      module_function
+
+      def prepare!(root:, env: ENV, out: $stderr, argv: ARGV, program: $PROGRAM_NAME)
+        # Every source file and data file in pub5 is UTF-8. A non-login shell on vm23 has no
+        # locale, so Ruby read files as US-ASCII and the deploy preflight's boot died on 2026-10-22
+        # matching a regex against domain_registry.rb's Norwegian letters. bin/master pinned this for
+        # itself; every MASTER process boots through here.
+        Encoding.default_external = Encoding::UTF_8
+        root = File.expand_path(root)
+        boot_timed("mobile preflight", env:, out:) { prepare_mobile!(env:, out:) }
+        boot_timed("Ruby selection", env:, out:) { reexec_best_ruby!(root:, env:, out:, argv:, program:) }
+        manager = DependencyManager.new(root:, env:, out:)
+        result = boot_timed("dependency check", env:, out:) { manager.ensure! }
+        unless result.ok
+          Master::Trace::Dmesg.status("deps0", result.message, io: out)
+          detail = result.output.to_s.strip
+          Master::Trace::Dmesg.status("deps0", detail, io: out) unless detail.empty?
+          exit 78
+        end
+
+        boot_timed("dependency environment", env:, out:) do
+          manager.activate_environment!
+          reexec_mismatched_bundler!(root:, env:, out:, argv:, program:)
+          activate_bundle!(root)
+        end
+        boot_timed("boot receipt", env:, out:) { write_boot_receipt!(root:, out:) }
+
+        true
+      end
+
+      # Loaded here, not at file top: lib/mobile requires yaml the moment it
+      # loads, which would activate the default psych before the locked copy
+      # could be pinned on a fresh checkout. Off a phone the early load bought
+      # nothing.
+      def boot_timed(name, env:, out:)
+        return yield unless env["MASTER_BOOT_TIMING"] == "1"
+
+        started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        yield
+      ensure
+        if started
+          elapsed = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1_000).round
+          Master::Trace::Dmesg.status("timing0", "#{name}=#{elapsed}ms", io: out)
+        end
+      end
+
+      def prepare_mobile!(env:, out:)
+        require_relative "../mobile/bootstrap"
+        return unless Master::Mobile::Profile.new(env:).activate!
+
+        result = Master::Mobile::Bootstrap.new(env:).ensure!
+        result.messages.each { |line| Master::Trace::Dmesg.status("mobile0", line, io: out) }
+        exit 78 unless result.ok
+      end
+
+      def reexec_mismatched_bundler!(root:, env:, out:, argv:, program:)
+        lock_version = locked_bundler_version(root)
+        return if lock_version.empty?
+
+        active = Gem.loaded_specs["bundler"]&.version&.to_s
+        return if active.nil? || active == lock_version
+        return if env["MASTER_BUNDLER_REEXEC_DONE"] == "1"
+        if program.to_s == "-e"
+          Master::Trace::Dmesg.status("bundler0", "cannot switch Bundler for inline -e; invoke a script file", io: out)
+          exit 78
+        end
+
+        Master::Trace::Dmesg.status("bundler0", "switching #{active} to #{lock_version}", io: out)
+        exec(clean_bundler_env(env), *reexec_command(program, argv), unsetenv_others: true)
+      rescue Errno::ENOENT => e
+        Master::Trace::Dmesg.status("bundler0", "cannot re-exec #{program}, #{e.message}", io: out)
+        exit 78
+      end
+
+      # The variables that name the bundle being left, so the new process derives
+      # its own instead of inheriting the one Bundler already activated.
+      BUNDLER_ENV_KEYS = %w[
+        BUNDLE_APP_CONFIG BUNDLE_BIN BUNDLE_DEPLOYMENT BUNDLE_FROZEN
+        BUNDLE_GEMFILE BUNDLE_IGNORE_CONFIG BUNDLE_JOBS BUNDLE_LOCKFILE
+        BUNDLE_ONLY BUNDLE_PATH BUNDLE_RETRY BUNDLE_USER_CONFIG
+        BUNDLE_USER_HOME BUNDLE_VERSION BUNDLE_WITH BUNDLE_WITHOUT
+      ].freeze
+
+      def clean_bundler_env(env)
+        clean = env.to_h.dup
+        (%w[RUBYOPT RUBYLIB] + BUNDLER_ENV_KEYS).each { |key| clean.delete(key) }
+        clean["MASTER_BUNDLER_REEXEC_DONE"] = "1"
+        clean
+      end
+
+      # A tool run as `ruby tools/x.rb` has no executable bit; exec'ing it directly
+      # raises EACCES. Bundler's own restart prefixes the interpreter for exactly
+      # this case, so do the same.
+      def reexec_command(program, argv)
+        target = File.expand_path(program)
+        File.executable?(target) ? [target, *argv] : [RbConfig.ruby, target, *argv]
+      end
+
+      def activate_bundle!(root)
+        gemfile = File.join(root, "Gemfile")
+        return unless File.file?(gemfile)
+
+        ENV["BUNDLE_GEMFILE"] = gemfile
+        activate_locked_bundler(locked_bundler_version(root))
+        pin_running_bundler_version!
+        activate_locked_defaults!(root)
+        require "bundler/setup"
+        # time.rb requires "date" internally. Load it only now that Bundler has
+        # activated the locked copies: on a fresh checkout the retry pin above
+        # still cannot see the just-installed store, so loading time earlier
+        # activated the interpreter's default date and Bundler.setup crashed
+        # with "already activated date 3.4.1, but your Gemfile requires 3.5.1"
+        # (Ruby 3.4.6 vs the lock written on a Ruby whose default date is
+        # newer, self-test boot 2026-11-18). The default-gem pins above remain
+        # for the paths where they do resolve (deploy bundle, vm23).
+        require "time"
+      end
+
+      # Bundler's auto-switch re-execs the program whenever the lock names a
+      # version other than the running one, and re-execs it on every boot when
+      # that version is not installed: an unbounded loop, not the "using the
+      # installed one" fallback activate_locked_bundler reports. Bundler reads
+      # BUNDLER_VERSION to decide whether to switch, so pin it to the version
+      # actually running before bundler/setup runs; its autoswitching_applies?
+      # then returns false and the fallback holds.
+      def pin_running_bundler_version!
+        return if ENV["BUNDLER_VERSION"].to_s != ""
+
+        require "bundler"
+        ENV["BUNDLER_VERSION"] = Bundler::VERSION
+      rescue LoadError => e
+        warn "boot0: cannot pin the running Bundler version, #{e.message}" if ENV["MASTER_BOOT_DEBUG"]
+      end
+
+      # Retry the locked default-gem pins now that the dependency manager has
+      # installed them. time/date themselves are required by activate_bundle!
+      # only after bundler/setup: loading them here would activate the
+      # interpreter's default date whenever the pin cannot resolve in this
+      # process's Gem.path, and Bundler.setup then refuses the version swap.
+      def activate_locked_defaults!(root)
+        lockfile = File.join(root, "Gemfile.lock")
+        lock = File.file?(lockfile) ? File.binread(lockfile) : ""
+        %w[json date psych].each do |name|
+          pin = lock[/^    #{name} \(([\d.]+)\)$/, 1]
+          next unless pin
+
+          begin
+            gem name, pin
+          rescue Gem::LoadError => e
+            warn "boot0: pin #{name} #{pin} failed, #{e.message}" if ENV["MASTER_BOOT_DEBUG"]
+          end
+        end
+        warn "boot0: Gem.path=#{Gem.path.inspect} date=#{Gem.loaded_specs['date']&.full_name.inspect}" if ENV["MASTER_BOOT_DEBUG"]
+      end
+
+      # The lock records the Bundler that wrote it (4.x on Ruby 4.0); vm23's
+      # Ruby 3.4 package ships Bundler 2.6. Bundler reads a newer lock and only
+      # warns, so a missing exact version is named and the installed one used.
+      def activate_locked_bundler(version)
+        return if version.empty?
+
+        gem("bundler", version)
+      rescue Gem::LoadError => e
+        reason = e.is_a?(Gem::MissingSpecError) ? "not installed" : "another is active"
+        Master::Trace::Dmesg.status("bundler0", "lock wants bundler #{version}, #{reason}; using the installed one")
+      end
+
+      def locked_bundler_version(root)
+        lockfile = File.join(root, "Gemfile.lock")
+        return "" unless File.file?(lockfile)
+
+        File.read(lockfile)[/^BUNDLED WITH\n\s+(.+)$/m, 1].to_s.strip
+      end
+
+      def reexec_best_ruby!(root:, env:, out:, argv:, program:)
+        return if env["MASTER_RUBY_REEXEC_DONE"] == "1"
+
+        candidate = ::Operator::RubyRunner.best_available_ruby(root:)
+        return unless candidate
+
+        # Inline Ruby has no script path to re-exec. Check the interpreter version
+        # before comparing executable paths: version-manager shims can point to
+        # the same Ruby through different filesystem paths.
+        if program.to_s == "-e"
+          return if RUBY_VERSION == candidate[:version].to_s
+
+          Master::Trace::Dmesg.status("ruby0", "cannot switch Ruby for inline -e from #{RUBY_VERSION} to #{candidate[:version]}; invoke a script file", io: out)
+          exit 78
+        end
+        return if same_file?(RbConfig.ruby, candidate[:path])
+
+        Master::Trace::Dmesg.status(
+          "ruby0",
+          "switching #{RUBY_VERSION} to #{candidate[:version]} (#{candidate[:path]})",
+          io: out,
+        )
+        # GEM_HOME, GEM_PATH, BUNDLE_* and BUNDLER_* (BUNDLER_SETUP alone preloads
+        # bundler/setup from the old store) name the store of the Ruby
+        # being left; the new Ruby must derive its own, or it loads native gems
+        # linked to the old libruby.
+        clean_env = env.to_h.dup
+        (%w[RUBYOPT RUBYLIB GEM_HOME GEM_PATH] + DependencyManager::BUNDLE_CONTEXT_KEYS).each { |key| clean_env.delete(key) }
+        clean_env.delete_if { |key, _| key.start_with?("BUNDLER_") || key == "BUNDLE_BIN_PATH" }
+        clean_env["MASTER_RUBY_REEXEC_DONE"] = "1"
+        # exec merges env into the inherited one; only unsetenv_others drops the keys deleted above.
+        exec(clean_env, candidate[:path], File.expand_path(program), *argv, unsetenv_others: true)
+      rescue ArgumentError => e
+        Master::Trace::Dmesg.status("ruby0", "Ruby selection failed, #{e.message}", io: out)
+        exit 78
+      end
+
+      def write_boot_receipt!(root:, out:)
+        require "json"
+        path = File.join(root, ".master", "boot.json")
+        payload = {
+          "pid" => Process.pid,
+          "ruby" => RUBY_VERSION,
+          "ruby_path" => RbConfig.ruby,
+          "platform" => RUBY_PLATFORM,
+          "bundler" => Gem.loaded_specs["bundler"]&.version&.to_s,
+          "root" => root,
+          "at" => Time.now.utc.iso8601,
+        }
+        # The persistent-state layer refuses group/world-writable /fix state,
+        # so the receipt must land private no matter what umask the caller
+        # had. mkdir_p's mode only shapes created leaves (and the umask still
+        # narrows it), hence the explicit chmod that also normalizes any
+        # broad legacy directory left by older versions.
+        dir = File.dirname(path)
+        FileUtils.mkdir_p(dir, mode: 0o700)
+        File.chmod(0o700, dir)
+        tmp = "#{path}.#{Process.pid}.tmp"
+        File.write(tmp, JSON.generate(payload) + "\n", mode: "w", encoding: "UTF-8", perm: 0o600)
+        File.rename(tmp, path)
+      rescue StandardError => e
+        Master::Trace::Dmesg.status("boot0", "receipt unavailable, #{e.class}: #{e.message}", io: out)
+      ensure
+        File.delete(tmp) if defined?(tmp) && tmp && File.exist?(tmp)
+      end
+
+      def same_file?(a, b)
+        return File.identical?(a, b) if File.exist?(a)
+
+        false
+      rescue StandardError
+        false
+      end
+    end
+  end
+end

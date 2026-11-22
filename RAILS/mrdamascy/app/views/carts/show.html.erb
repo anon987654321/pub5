@@ -1,0 +1,9 @@
+<% content_for :title, t("cart.title") %>
+
+<%# CartsController#show provides @cart with cart_items (line snapshots:
+    unit_price_ore, options_list, note) and @promo. Steppers post patch/delete
+    to the line routes; the CTA hands over to the confirm screen. %>
+
+<h1 class="page-title"><%= t("cart.title") %></h1>
+
+<%= render "carts/contents", cart: @cart, promo: @promo %>

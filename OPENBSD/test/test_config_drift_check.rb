@@ -1,0 +1,178 @@
+# frozen_string_literal: true
+
+require "minitest/autorun"
+require "tmpdir"
+# See test_restore_scripts.rb: the weekly integrity run on vm23 invokes these
+# under a C locale, where Ruby reads files as US-ASCII and every read of this
+# UTF-8 source raises "invalid byte sequence".
+require_relative "../lib/utf8"
+require_relative "../checks/config_drift_check"
+
+# The crontab half of the drift check, with the shape it must flag and the shape
+# it must not.
+#
+# It exists because the /etc half passed clean while a scheduled job was missing.
+# `data/root.crontab:97` has named /usr/local/bin/vps_weekly_integrity.sh for
+# weeks; the box has no such line and no such file, and the weekly integrity pass
+# has never run. Every file the check compared matched, so it said clean and meant
+# it — it was comparing the wrong thing.
+class ConfigDriftCheckCrontabTest < Minitest::Test
+  REPO = <<~CRON
+    # a comment, and a blank line follow
+    PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
+
+    */5 * * * * /usr/local/bin/relayd-watchdog
+    */5 * * * * ALLOW_BSDPORTS_DOWN=1 /usr/local/bin/uptime-check.sh >> /var/log/uptime-check.log 2>&1
+    30 3 * * 0 /usr/local/bin/vps_weekly_integrity.sh
+  CRON
+
+  # The real live crontab, in the state measured on 2026-09-10: the weekly line
+  # was never merged onto the box.
+  LIVE_WITHOUT_WEEKLY = <<~CRON
+    PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
+    */5 * * * * /usr/local/bin/relayd-watchdog
+    */5 * * * * ALLOW_BSDPORTS_DOWN=1 /usr/local/bin/uptime-check.sh >> /var/log/uptime-check.log 2>&1
+  CRON
+
+  def test_the_command_is_the_first_absolute_path_not_the_environment_or_the_redirect
+    assert_equal(
+      %w[/usr/local/bin/relayd-watchdog /usr/local/bin/uptime-check.sh /usr/local/bin/vps_weekly_integrity.sh],
+      scheduled_commands(REPO)
+    )
+  end
+
+  def test_a_path_assignment_is_not_a_scheduled_command
+    assert_empty scheduled_commands("PATH=/bin:/usr/local/bin\n")
+  end
+
+  # The shape it must flag.
+  def test_a_declared_job_the_box_does_not_schedule_is_drift
+    cron = crontab_report(REPO, LIVE_WITHOUT_WEEKLY)
+
+    refute cron[:ok], "a job scheduled only in the repo read as clean"
+    assert_equal ["/usr/local/bin/vps_weekly_integrity.sh"], cron[:absent]
+    assert_empty cron[:extra]
+  end
+
+  # The other shape it must flag: a hand-edit on the box that nobody copied back.
+  def test_a_job_only_the_box_schedules_is_drift
+    cron = crontab_report(REPO, "#{REPO}0 1 * * * /usr/local/bin/hand-added.sh\n")
+
+    refute cron[:ok]
+    assert_equal ["/usr/local/bin/hand-added.sh"], cron[:extra]
+  end
+
+  # The shape it must not flag, and the one that cost four false alarms on the
+  # first run: OpenBSD ships root its own crontab and OPERATOR.sh merges onto it.
+  def test_the_base_system_crontab_is_not_drift
+    stock = <<~CRON
+      0\t*\t*\t*\t*\t/usr/bin/newsyslog
+      30\t1\t*\t*\t*\t/bin/sh /etc/daily
+      30\t3\t*\t*\t6\t/bin/sh /etc/weekly
+    CRON
+
+    cron = crontab_report(REPO, REPO + stock)
+
+    assert cron[:ok], "OpenBSD's own cron lines reported as drift: #{cron[:extra]}"
+  end
+
+  # The shape it must not flag. Order and formatting differ because OPERATOR.sh
+  # merges rather than overwrites, so only the set of commands is comparable.
+  def test_the_same_commands_in_another_order_are_not_drift
+    reordered = <<~CRON
+      30 3 * * 0 /usr/local/bin/vps_weekly_integrity.sh
+      */5 * * * * MAIL_IMG_FMT=png /usr/local/bin/uptime-check.sh >> /var/log/uptime-check.log 2>&1
+      */5 * * * * /usr/local/bin/relayd-watchdog
+    CRON
+
+    cron = crontab_report(REPO, reordered)
+
+    assert cron[:ok], "a reordered but equivalent crontab reported drift: #{cron[:absent]} #{cron[:extra]}"
+    assert_equal 3, cron[:declared]
+  end
+
+  # Nothing found and nothing missing are different answers. Reporting every
+  # declared job as absent when the crontab could not be read is ten false alarms
+  # and the fastest way to teach a reader to skip this section.
+  def test_an_unreadable_crontab_skips_rather_than_failing_everything
+    cron = crontab_report(REPO, nil)
+
+    assert cron[:ok]
+    assert_empty cron[:absent]
+    assert_includes cron[:summary], "not readable"
+  end
+
+  # The check is only as good as its mirror. If root.crontab stops parsing, every
+  # comparison below it silently compares nothing.
+  def test_the_real_tracked_crontab_parses
+    tracked = File.join(File.expand_path("..", __dir__), "data", "root.crontab")
+    commands = scheduled_commands(File.read(tracked))
+
+    refute_empty commands, "data/root.crontab parsed to no commands - the check would pass having measured nothing"
+    assert(commands.all? { |c| c.start_with?("/") }, "a parsed command is not an absolute path: #{commands.inspect}")
+  end
+end
+
+# The byte-compare half: the doas keepenv root-RCE stayed live for days because
+# nothing compared the mirror with /etc.
+class ConfigDriftCheckVerbatimTest < Minitest::Test
+  # The box exactly as the repo describes it.
+  def matching_box
+    VERBATIM.to_h do |repo_rel, live_path|
+      [live_path, File.read(File.join(MIRROR, repo_rel))]
+    end
+  end
+
+  def test_the_mirror_is_found_and_matches_itself
+    report = verbatim_report(matching_box)
+
+    assert_empty report[:unfound], "the check cannot find the repo mirror, so it compares nothing"
+    assert_equal VERBATIM.size, report[:compared].size
+    assert_empty report[:drift]
+  end
+
+  # The installed copy once resolved its mirror beside itself, found none, and
+  # said clean having compared nothing. Unfound is counted, not skipped.
+  def test_a_mirror_that_is_not_there_is_unfound_rather_than_clean
+    Dir.mktmpdir("no-mirror") do |empty|
+      report = verbatim_report(matching_box, mirror: empty)
+
+      assert_equal VERBATIM.keys, report[:unfound]
+      assert_empty report[:compared]
+    end
+  end
+
+  # The shape it must flag: a hand-edit on the box.
+  def test_a_live_file_that_differs_from_its_mirror_is_drift
+    box = matching_box
+    box["/etc/doas.conf"] = "permit keepenv persist :wheel\n"
+    report = verbatim_report(box)
+
+    assert_equal ["etc/doas.conf"], report[:drift].keys
+    assert_match(/repo sha=\h{12} .* vs live sha=\h{12}/, report[:drift]["etc/doas.conf"])
+  end
+
+  def test_a_live_file_that_is_absent_is_missing_not_clean
+    box = matching_box
+    box["/usr/local/bin/emergency_cpu.sh"] = nil
+
+    assert_equal ["usr/local/bin/emergency_cpu.sh"], verbatim_report(box)[:missing]
+  end
+
+  # Files formerly excluded as templates are now literal filesystem payloads.
+  def test_configs_are_mirrored_and_compared_as_literal_files
+    %w[etc/relayd.conf etc/mail/smtpd.conf etc/litestream.yml etc/acme-client.conf].each do |path|
+      assert VERBATIM.key?(path), "#{path} must be part of the copy-ready mirror contract"
+    end
+    assert_empty EXCLUDED
+    assert_empty verbatim_report(matching_box)[:drift]
+  end
+  def test_local_and_remote_native_command_paths_require_operator_rtfm
+    source = File.read(File.expand_path("../checks/config_drift_check.rb", __dir__))
+    assert_includes source, 'OPERATOR, "rtfm", "--local", "--source", SOURCE_PATH'
+    assert_includes source, 'OPERATOR, "rtfm", "--host", SSH_HOST, "--key", SSH_KEY'
+    assert_includes source, 'config-drift: BLOCKED - native command was not executed'
+    assert_includes source, 'config-drift: BLOCKED - remote command was not executed'
+  end
+
+end

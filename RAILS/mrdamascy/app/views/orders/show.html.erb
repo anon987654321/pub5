@@ -1,0 +1,92 @@
+<% content_for :title, "#{t("orders.title")} · ##{@order&.id}" %>
+
+<%# OrdersController#show provides @order with order_items. %>
+<% order = @order %>
+
+<%# The page doubles as the printable receipt: who sold it, when, and how it
+    was paid, with the screen's chrome left off the print (_utilities.scss).
+    No VAT line: the codebase holds no VAT rates for the kitchen's sales, and
+    a "herav mva" figure must come from rates the kitchen has confirmed. %>
+<% kitchen = order.kitchen %>
+<%= tag.section class: "receipt-seller", aria: { label: t("orders.receipt_title") } do %>
+  <%= tag.strong kitchen.name %>
+  <%= tag.span kitchen.address if kitchen.address.present? %>
+  <%= tag.span t("orders.payment_lane", lane: order.payment_lane_name) %>
+<% end %>
+
+<header class="order-head">
+  <%= state_chip(order) %>
+  <% if order.payment_state.present? %>
+    <%= tag.span t("orders.payment_state.#{order.payment_state}"), class: "badge badge-payment" %>
+  <% end %>
+  <% if order.payment_steps.to_i == 3 %>
+    <%= tag.span t("orders.paid_steps", steps: order.payment_steps), class: "badge badge-paid-steps" %>
+  <% end %>
+  <% if order.placed_at.present? %>
+    <p>
+      #<%= order.id %> ·
+      <%= tag.time t("orders.placed_at", when: l(order.placed_at, format: :placed)),
+            datetime: order.placed_at.iso8601 %>
+    </p>
+  <% end %>
+</header>
+
+<section class="card">
+  <h2 class="section-title"><%= t("orders.items_title") %></h2>
+  <ul class="order-lines-list">
+  <% order.order_items.each do |line| %>
+    <li class="order-line">
+      <%# The line keeps its dish name, so the menu card's photo finds it. %>
+      <% if (photo = food_photo(line)) %>
+        <%= image_tag photo, alt: "", class: "line-photo", loading: "lazy", size: "44x44" %>
+      <% else %>
+        <%= tag.span line.emoji, aria: { hidden: true } %>
+      <% end %>
+      <span>
+        <%= tag.strong "#{line.quantity}× #{line.name}" %>
+        <%= tag.span line.options_text, class: "line-options" if line.options_text.present? %>
+      </span>
+      <%= tag.strong money(line.line_total_ore) %>
+    </li>
+  <% end %>
+  </ul>
+
+  <p class="order-delivery">
+    <% if order.delivery_mode == "pickup" %>
+      <%= render "shared/mode_icon", mode: "pickup" %>
+      <%= t("orders.pickup_at", address: current_kitchen&.address) %>
+    <% else %>
+      <%= render "shared/mode_icon", mode: "delivery" %>
+      <%= t("orders.delivery_to", address: [order.address, order.postcode].compact_blank.join(" ")) %>
+    <% end %>
+  </p>
+</section>
+
+<dl class="card totals">
+  <dt><%= t("orders.subtotal") %></dt>
+  <dd><%= money(order.subtotal_ore) %></dd>
+  <% if order.delivery_fee_ore.to_i.positive? && order.delivery_mode != "pickup" %>
+    <dt><%= t("orders.delivery_fee") %></dt>
+    <dd><%= money(order.delivery_fee_ore) %></dd>
+  <% end %>
+  <% if order.discount_ore.to_i.positive? %>
+    <dt class="totals-discount"><%= t("orders.discount") %></dt>
+    <dd class="totals-discount">−<%= money(order.discount_ore) %></dd>
+  <% end %>
+  <% if order.tipped? %>
+    <%# Kept beside the total, not in it: the app never charged the tip. %>
+    <dt><%= t("orders.tip_line") %></dt>
+    <dd><%= money(order.tip_ore) %></dd>
+  <% end %>
+  <%= tag.dt t("orders.total"), class: "totals-sum" %>
+  <%= tag.dd money(order.total_ore), class: "totals-sum" %>
+</dl>
+
+<%= tag.nav class: "page-actions", aria: { label: t("orders.title") } do %>
+  <% if order.tracking_token.present? %>
+    <%= link_to t("orders.track"), track_path(order.tracking_token), class: "button button-primary" %>
+  <% end %>
+  <%= link_to t("orders.back"), orders_path, class: "button" %>
+  <%= tag.button t("orders.print_receipt"), type: "button", class: "button", hidden: true,
+        data: { controller: "print", action: "print#print" } %>
+<% end %>

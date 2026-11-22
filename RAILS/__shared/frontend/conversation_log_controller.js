@@ -1,0 +1,410 @@
+import { Controller } from "@hotwired/stimulus"
+
+// Marks who sent each message, and keeps the log pinned to the newest line.
+//
+// Why this can't be done in the partial alone: Message#broadcasts_to renders
+// messages/_message inside Turbo::Streams::ActionBroadcastJob, a background
+// job with no request and therefore no Current.user. Every live-appended
+// message fell through to data-from="peer" — so your own messages appeared as
+// though a stranger had sent them the moment they arrived over the wire, and
+// only looked right after a reload.
+//
+// The server stamps data-sender-id (viewer-independent, so it is correct in a
+// job) and the log carries the viewer's id from the in-request render.
+// Grouping and the unread pill are here for the same reason as the stamping: a
+// broadcast-rendered message has no idea what came before it, so "is this the
+// same speaker as the line above?" can only be answered once it is in the DOM.
+const GROUP_WINDOW_MS = 5 * 60 * 1000
+
+export default class extends Controller {
+  static values = {
+    viewerId: String,
+    viewerAccount: { type: Boolean, default: false },
+    unreadOne: { type: String, default: "%{count} new message ↓" },
+    unreadOther: { type: String, default: "%{count} new messages ↓" },
+    todayLabel: { type: String, default: "Today" },
+    yesterdayLabel: { type: String, default: "Yesterday" },
+    locale: { type: String, default: "en" },
+    historyUrl: { type: String, default: "" },
+    olderLabel: { type: String, default: "Load earlier messages" },
+    // Where the "N new messages" pill goes when the page, not the log, is what
+    // scrolls: after the log it sits at the end of the thread, out of sight of
+    // a reader scrolled up. A selector for something always on screen (brgen's
+    // sticky composer area); empty keeps it after the log.
+    pillHome: { type: String, default: "" }
+  }
+
+  connect() {
+    this.unread = 0
+    // History loading owns two flags, and both exist to keep this controller's
+    // own machinery from misreading its own work: a page of older lines must
+    // not count toward the unread pill (the reader asked for them, so they are
+    // the oldest lines in the room, not new ones), and the scroll pin below
+    // must not yank the reader to the tail in the instant they have scrolled
+    // to the top to walk backward.
+    this.loadingHistory = false
+    this.appendingHistory = false
+    this.#installHistorySentinel()
+    this.#stampAll()
+    this.#dayBreaks()
+    this.#group()
+    this.#pinToNewest()
+
+    this.observer = new MutationObserver((mutations) => {
+      const added = mutations.flatMap((m) => Array.from(m.addedNodes))
+      if (!added.length) return
+      added.forEach((node) => { if (node.nodeType === Node.ELEMENT_NODE) this.#stamp(node) })
+      // #dayBreaks writes children of the element this observer watches, so it
+      // would wake itself forever. Suspending is the whole guard.
+      this.observer.disconnect()
+      this.#dayBreaks()
+      this.observer.observe(this.element, { childList: true })
+      this.#group()
+      const wasAtTail = this.#atTail()
+      this.#pinToNewest()
+      if (!wasAtTail && !this.appendingHistory) {
+        this.unread += added.filter((n) => n.nodeType === Node.ELEMENT_NODE).length
+        this.#renderPill()
+      }
+    })
+    this.observer.observe(this.element, { childList: true })
+
+    // A reaction replaces the chips inside a line, which the observer above
+    // does not see: it watches the log's own children, and widening it to the
+    // subtree would re-run grouping and day breaks on every chip. This one
+    // looks only for a fresh chip row and presses the viewer's own reactions.
+    this.reactionObserver = new MutationObserver((mutations) => {
+      mutations.forEach((m) => m.addedNodes.forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE && node.matches(".msg_reactions")) this.#markReactions(node)
+      }))
+    })
+    this.reactionObserver.observe(this.element, { childList: true, subtree: true })
+
+    this.onScroll = () => {
+      if (this.#atTail()) { this.unread = 0; this.#renderPill() }
+    }
+    this.element.addEventListener("scroll", this.onScroll, { passive: true })
+    // Below the wide layout the log is as tall as its lines and something
+    // around it scrolls instead, so "scrolled up" is read from any scroll.
+    document.addEventListener("scroll", this.onScroll, { passive: true, capture: true })
+
+    if (this.sentinel) {
+      // The window shows the newest page, so the sentinel sits above the
+      // first line, out of view. It enters the viewport exactly when the
+      // reader has walked back to the ceiling of what is loaded, which is
+      // the whole trigger. root is the scrolling element itself — the log
+      // scrolls under a fixed composer, not under the document.
+      this.historyObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => { if (entry.isIntersecting) this.loadOlder() })
+      }, { root: this.element, rootMargin: "120px 0px 0px 0px" })
+      this.historyObserver.observe(this.sentinel)
+    }
+
+    // Tap-to-reveal for the reaction picker. On a touch viewport the picker was
+    // permanently visible (`@media (hover: none) { opacity: 1 }`), which put a
+    // 44px row of seven buttons under every single line — the exact cost the
+    // reactions partial says it exists to avoid. Bubbles were tall enough to
+    // hide it; an IRC transcript is not.
+    //
+    // One delegated listener on the log, not a controller per message: there
+    // are already 271 controller instances on a brgen page and a per-line
+    // controller would scale with the transcript. Tapping the line is the
+    // affordance, so this adds no chrome of its own. Hover/focus keeps working
+    // untouched for pointer and keyboard users.
+    this.onLineTap = (event) => {
+      if (!this.#isTouch()) return
+      // Let real controls do their job — chips, the picker itself, links.
+      if (event.target.closest("button, a, input, textarea, select")) return
+
+      const li = event.target.closest("li")
+      if (!li || li.parentElement !== this.element) return
+      const open = li.dataset.reactionsOpen === "true"
+      this.#closeAllPickers()
+      if (!open) li.dataset.reactionsOpen = "true"
+    }
+    this.element.addEventListener("click", this.onLineTap)
+
+    this.onKeydown = (event) => { if (event.key === "Escape") this.#closeAllPickers() }
+    this.element.addEventListener("keydown", this.onKeydown)
+  }
+
+  disconnect() {
+    this.observer?.disconnect()
+    this.observer = null
+    this.reactionObserver?.disconnect()
+    this.reactionObserver = null
+    this.historyObserver?.disconnect()
+    this.historyObserver = null
+    this.element.removeEventListener("scroll", this.onScroll)
+    document.removeEventListener("scroll", this.onScroll, { capture: true })
+    this.element.removeEventListener("click", this.onLineTap)
+    this.element.removeEventListener("keydown", this.onKeydown)
+    this.pill?.remove()
+    this.pill = null
+  }
+
+  #isTouch() {
+    return window.matchMedia?.("(hover: none)")?.matches ?? false
+  }
+
+  #closeAllPickers() {
+    this.element.querySelectorAll('li[data-reactions-open="true"]')
+      .forEach((li) => { delete li.dataset.reactionsOpen })
+  }
+
+  // Jump back to the newest line. Bound from the pill.
+  toTail() {
+    const scroller = this.#pageScrolls() ? this.#outerScroller() : this.element
+    scroller.scrollTop = scroller.scrollHeight
+    this.unread = 0
+    this.#renderPill()
+  }
+
+  // One page of history above the cursor. The server renders message partials
+  // alone and names the next cursor in X-History-Next, so the walker here
+  // stays dumb: fetch, insert at the top, re-anchor the scroll to the line the
+  // reader was on, and only re-arm the sentinel when the server said there is
+  // more. The button stays a real control — the observer auto-fires it for
+  // pointer scrolling, and it stays pressable for keyboard and no-observer
+  // paths — and a failed fetch leaves everything in place to press again,
+  // because a control that vanishes on error is lying about what happened.
+  async loadOlder() {
+    if (!this.historyUrlValue || this.loadingHistory) return
+
+    this.loadingHistory = true
+    const button = this.#historyButton
+    if (button) button.disabled = true
+    this.sentinel?.setAttribute("aria-busy", "true")
+    try {
+      const response = await fetch(this.historyUrlValue, {
+        headers: { Accept: "text/html" },
+        credentials: "same-origin"
+      })
+      if (!response.ok) throw new Error(String(response.status))
+
+      const html = await response.text()
+      this.historyUrlValue = response.headers.get("X-History-Next") || ""
+      const heightBefore = this.element.scrollHeight
+      this.appendingHistory = true
+      this.sentinel?.remove()
+      this.sentinel = null
+      this.element.insertAdjacentHTML("afterbegin", html)
+      // The lines the reader was reading just moved down by the height of the
+      // page inserted above them; move the scroll with them, so walking back
+      // through a thread does not teleport anyone.
+      this.element.scrollTop += this.element.scrollHeight - heightBefore
+      this.#installHistorySentinel()
+    } catch {
+      // The URL and the button survive unchanged: nothing was loaded, so the
+      // affordance keeps telling the truth.
+    } finally {
+      this.loadingHistory = false
+      this.appendingHistory = false
+      this.historyObserver?.disconnect()
+      if (this.sentinel) this.historyObserver?.observe(this.sentinel)
+    }
+  }
+
+  #installHistorySentinel() {
+    if (!this.historyUrlValue) return
+
+    this.sentinel = document.createElement("li")
+    this.sentinel.className = "history-sentinel"
+    this.sentinel.setAttribute("role", "listitem")
+    const button = document.createElement("button")
+    button.type = "button"
+    button.className = "history-load"
+    button.textContent = this.olderLabelValue
+    button.addEventListener("click", () => this.loadOlder())
+    this.sentinel.append(button)
+    this.element.prepend(this.sentinel)
+  }
+
+  get #historyButton() {
+    return this.sentinel?.querySelector(".history-load")
+  }
+
+  // Consecutive lines from one speaker lose their repeated name/time header, so
+  // a back-and-forth reads as two voices instead of a stack of identical
+  // letterheads. Anything older than the window starts a fresh group even from
+  // the same speaker, because a reply hours later is not the same breath.
+  // The date, once, where the day turns.
+  //
+  // Derived here rather than in the partial for the same reason grouping is: a
+  // message rendered by Turbo::Streams::ActionBroadcastJob has no idea what came
+  // before it, and a thread left open across midnight has to grow a separator
+  // without a reload. Both facts are already in the DOM — every message carries
+  // its own <time datetime> — so this needs nothing from the server.
+  //
+  // Separators are removed and re-derived on every pass rather than patched. The
+  // list is a conversation, not a table: it is short enough that recomputing is
+  // cheaper than reasoning about which break a late-arriving message invalidated.
+  #dayBreaks() {
+    this.element.querySelectorAll(":scope > .day-break").forEach((el) => el.remove())
+
+    let prevDay = null
+
+    Array.from(this.element.children).forEach((li) => {
+      const iso = li.querySelector("[data-sender-id] time")?.getAttribute("datetime")
+      if (!iso) return
+
+      const at = new Date(iso)
+      if (Number.isNaN(at.getTime())) return
+
+      const day = at.toDateString()
+      if (day === prevDay) return
+
+      prevDay = day
+      li.insertAdjacentElement("beforebegin", this.#dayBreakFor(at))
+    })
+  }
+
+  // Today and yesterday by name, the week by weekday, anything older by date.
+  // The ladder is what makes the label worth its line: "onsdag" locates a
+  // message in a way "22.08.2026" does not, right up until the week turns over
+  // and it stops being unambiguous.
+  #dayBreakFor(at) {
+    const li = document.createElement("li")
+    li.className = "day-break"
+    li.setAttribute("role", "separator")
+
+    const full = at.toLocaleDateString(this.localeValue, {
+      weekday: "long", day: "numeric", month: "long", year: "numeric"
+    })
+    li.setAttribute("aria-label", full)
+
+    const label = document.createElement("span")
+    label.textContent = this.#dayLabel(at)
+    li.append(label)
+    return li
+  }
+
+  #dayLabel(at) {
+    const midnight = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+    const days = Math.round((midnight(new Date()) - midnight(at)) / 86400000)
+
+    if (days === 0) return this.todayLabelValue
+    if (days === 1) return this.yesterdayLabelValue
+    if (days > 1 && days < 7) return at.toLocaleDateString(this.localeValue, { weekday: "long" })
+
+    return at.toLocaleDateString(this.localeValue, { day: "numeric", month: "long", year: "numeric" })
+  }
+
+  #group() {
+    let prevSender = null
+    let prevAt = 0
+
+    Array.from(this.element.children).forEach((li) => {
+      const art = li.querySelector("[data-sender-id]")
+      // A day break ends the run: two lines from the same person a minute apart
+      // across midnight are not one utterance, and grouping them would hide the
+      // header directly under the separator that just announced a new day.
+      if (!art) { prevSender = null; prevAt = 0; return }
+      const sender = art.dataset.senderId
+      const at = Date.parse(art.querySelector("time")?.getAttribute("datetime") || "") || 0
+      const continues =
+        sender && sender === prevSender && prevAt && Math.abs(at - prevAt) < GROUP_WINDOW_MS
+
+      art.dataset.grouped = continues ? "true" : "false"
+      prevSender = sender
+      prevAt = at
+    })
+  }
+
+  #atTail() {
+    if (this.#pageScrolls()) {
+      const box = this.element.getBoundingClientRect()
+      return box.bottom - window.innerHeight < 80
+    }
+
+    const { scrollTop, scrollHeight, clientHeight } = this.element
+    return scrollHeight - scrollTop - clientHeight < 80
+  }
+
+  // True when the log is not its own scroller: its overflow is visible, or it
+  // holds less than its height, so something around it carries the scroll.
+  #pageScrolls() {
+    return !this.#scrolls(this.element)
+  }
+
+  // The nearest ancestor that scrolls, or the document.
+  #outerScroller() {
+    for (let node = this.element.parentElement; node; node = node.parentElement) {
+      if (this.#scrolls(node)) return node
+    }
+    return document.scrollingElement
+  }
+
+  #scrolls(node) {
+    const overflow = getComputedStyle(node).overflowY
+    return (overflow === "auto" || overflow === "scroll") && node.scrollHeight > node.clientHeight + 1
+  }
+
+  #renderPill() {
+    if (this.unread < 1) { this.pill?.remove(); this.pill = null; return }
+
+    if (!this.pill) {
+      this.pill = document.createElement("button")
+      this.pill.type = "button"
+      this.pill.className = "conversation_unread_pill"
+      this.pill.addEventListener("click", () => this.toTail())
+      const home = this.pillHomeValue && this.#pageScrolls() ? document.querySelector(this.pillHomeValue) : null
+      if (home) home.prepend(this.pill)
+      else this.element.insertAdjacentElement("afterend", this.pill)
+    }
+    const n = this.unread
+    const template = n === 1 ? this.unreadOneValue : this.unreadOtherValue
+    this.pill.textContent = template.replace("%{count}", String(n))
+    this.pill.setAttribute("aria-live", "polite")
+  }
+
+  #stampAll() {
+    this.element.querySelectorAll("[data-sender-id]").forEach((el) => this.#stamp(el))
+  }
+
+  #stamp(node) {
+    if (!this.viewerIdValue) return
+    const targets = node.matches?.("[data-sender-id]")
+      ? [node]
+      : Array.from(node.querySelectorAll?.("[data-sender-id]") || [])
+
+    targets.forEach((el) => {
+      const own = el.dataset.senderId === this.viewerIdValue
+      el.dataset.from = own ? "self" : "peer"
+      // A broadcast line carries every control, marked for whom (see
+      // messages/_message); only the ones for this viewer stay.
+      el.querySelectorAll(own ? '[data-for="others"]' : '[data-for="sender"]').forEach((control) => control.remove())
+      if (!this.viewerAccountValue) el.querySelectorAll("[data-needs-account]").forEach((control) => control.remove())
+      el.querySelectorAll(".msg_reactions").forEach((chips) => this.#markReactions(chips))
+    })
+  }
+
+  // A broadcast chip row presses nobody's chip (see messages/_reactions); each
+  // chip names who used it, and the viewer's own is pressed here. The button
+  // carries the attributes; button_to puts it inside a form.
+  #markReactions(chips) {
+    if (!this.viewerIdValue) return
+    chips.querySelectorAll("[data-reactor-ids]").forEach((chip) => {
+      const ids = chip.dataset.reactorIds.split(" ")
+      if (!ids.includes(this.viewerIdValue)) return
+      chip.classList.add("is_mine")
+      chip.setAttribute("aria-pressed", "true")
+      if (chip.dataset.mineLabel) chip.setAttribute("aria-label", chip.dataset.mineLabel)
+    })
+  }
+
+  // Only follow the tail if the reader is already at it — yanking the view
+  // down while someone scrolls back through history is worse than not
+  // following at all.
+  #pinToNewest() {
+    // The page carries the scroll: follow the tail only from the observer,
+    // for a reader already at it, so opening a thread does not move the page.
+    if (this.#pageScrolls()) {
+      if (this.observer && this.#atTail()) this.toTail()
+      return
+    }
+    if (this.#atTail() || this.element.scrollTop === 0) {
+      this.element.scrollTop = this.element.scrollHeight
+    }
+  }
+}

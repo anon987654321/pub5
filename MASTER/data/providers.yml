@@ -1,0 +1,118 @@
+---
+schema: 1
+# `model_pattern` names the model ids a provider's key serves, read by
+# Io::LaneSelection.key_present_for?: an owner/name id goes through OpenRouter,
+# a bare id through its vendor. A provider with none is reached another way.
+# agy is the Antigravity CLI, not a RubyLLM provider: `command` is how it is
+# reached and AGY_BIN/ANTIGRAVITY_BIN name a binary, not an API key. It carries
+# no `ruby_llm_key` for that reason. It used to carry `agy_api_key`, which is
+# not an attribute RubyLLM::Configuration has, so apply_api_keys raised
+# NoMethodError on every boot and nothing in MASTER started. Availability is
+# Master.agy_cli_available?, which looks for the executable.
+agy:
+  env: [AGY_BIN, ANTIGRAVITY_BIN]
+  command: agy
+  strengths: [reasoning, coding, long_context, multimodal, agentic]
+  default_model: agy:auto
+
+openai:
+  env: [OPENAI_API_KEY]
+  ruby_llm_key: openai_api_key
+  min_key_length: 40
+  strengths: [reasoning, coding, multimodal]
+  default_model: gpt-5.5-thinking
+
+anthropic:
+  env: [ANTHROPIC_API_KEY]
+  model_pattern: '\Aclaude-'
+  ruby_llm_key: anthropic_api_key
+  min_key_length: 80
+  strengths: [coding, long_context, instruction_following]
+  default_model: claude-sonnet-5-5
+
+gemini:
+  env: [GOOGLE_API_KEY, GEMINI_API_KEY]
+  model_pattern: '\Agemini'
+  ruby_llm_key: gemini_api_key
+  min_key_length: 20
+  strengths: [long_context, multimodal]
+  default_model: gemini-2.5-flash
+
+openrouter:
+  env: [OPENROUTER_API_KEY]
+  # Match owner/model IDs, not custom transport IDs such as replicate:owner/model.
+  model_pattern: '\A[^:]+\/'
+  ruby_llm_key: openrouter_api_key
+  min_key_length: 40
+  strengths: [cheap, routing, free_tier]
+  default_model: nvidia/nemotron-3-super-120b-a12b:free
+
+deepseek:
+  env: [DEEPSEEK_API_KEY]
+  # Bare vendor IDs only: an owner/name id like deepseek/deepseek-chat routes
+  # through OpenRouter (its key, its catalogue), never through this direct key.
+  model_pattern: '\Adeepseek[^/:]*\z'
+  ruby_llm_key: deepseek_api_key
+  min_key_length: 20
+  strengths: [coding, cheap]
+  default_model: deepseek-chat
+
+xai:
+  env: [XAI_API_KEY]
+  model_pattern: '\Agrok-\d'
+  ruby_llm_key: xai_api_key
+  min_key_length: 20
+  strengths: [reasoning, coding, fast]
+  # grok-4-fast and grok-4 are both deprecated by xAI (confirmed 2026-07-11 via
+  # direct API test: 404 "xAI recommends switching to Grok 4.3"). This provider
+  # block only activates with a direct XAI_API_KEY (not set here — OpenRouter
+  # is the active path), so it's a dormant fallback, but keep it non-dead.
+  default_model: grok-4.3
+
+mistral:
+  env: [MISTRAL_API_KEY]
+  ruby_llm_key: mistral_api_key
+  min_key_length: 20
+  strengths: [reasoning, coding]
+  default_model: mistralai/mistral-large
+
+replicate:
+  env: [REPLICATE_API_TOKEN, REPLICATE_API_KEY]
+  model_pattern: '\Areplicate:'
+  # Replicate uses its own sender, not a RubyLLM setter. These credentials
+  # still count as configured API access for global reachability and keyless policy.
+  strengths: [image_generation, video_generation, tts, fast_inference, specialized_models, edge, hosted_llms]
+  # Replicate hosts large chat models beside its image and video models; the
+  # dispatcher reaches them as replicate:<owner>/<name> (data/models.yml
+  # replicate_chat, ReplicateSender#send_replicate_chat). Verified 2026-11-13
+  # from a cold sandbox: a keyed POST to each replicate_chat slug's
+  # /predictions answered, and each model's own schema declares a different key
+  # spelling for the token cap and system prompt, which send_replicate_chat now
+  # shapes from the schema (REPLICATE_CHAT_SHAPES).
+  default_model: black-forest-labs/flux-2-pro
+
+# Z.ai (Zhipu GLM). Reached the openai_compatible way (models.yml), not through
+# RubyLLM, which has no zhipu setter: no ruby_llm_key here on purpose, the trap
+# test_provider_key_wiring exists to catch. A bare glm- id reaches it when
+# ZAI_API_KEY is set; the key is never recorded in any repository file.
+zai:
+  env: [ZAI_API_KEY]
+  # OpenAI-compatible custom sender; no RubyLLM setter, but this is a paid API key.
+  model_pattern: '\Aglm'
+  # tts: the glm_tts voice lane rides this account through bin/zai-tts
+  # (data/tts.yml), the same way replicate's strengths name its Kokoro lane.
+  strengths: [cheap, coding, long_context, agentic, tts]
+  default_model: glm-5.3-flash
+
+# Explicit local Ollama-only content lane. MASTER_NSFW_MODEL is a model
+# identifier already installed on the operator's own daemon, never an API key.
+# The LaneSelection NSFW gate is the only reader; this is not a general model tier.
+local_uncensored:
+  env: [MASTER_NSFW_MODEL]
+  strengths: [local, privacy]
+  default_model: local_uncensored:configured
+
+local:
+  env: []
+  strengths: [privacy, offline, cheap]
+  default_model: local

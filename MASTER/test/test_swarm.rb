@@ -1,0 +1,295 @@
+# frozen_string_literal: true
+
+require_relative "test_helper"
+require "master"
+
+class TestSwarm < Minitest::Test
+  class FakeBus
+    attr_reader :events
+    def initialize = @events = []
+    def publish(event, **payload) = @events << { event: event.to_s, **payload }
+    def subscribe(*) = nil
+  end
+
+  class FakeAgent
+    attr_reader :calls
+    def initialize(responses = {}) = (@responses = responses; @calls = [])
+    def ask_once(_prompt, model: nil, system: nil)
+      @calls << { model:, system: }
+      @responses.fetch(model) { @responses[:default] || "ok" }
+    end
+  end
+
+  class FailingAgent
+    attr_reader :calls
+    def initialize(fallback_response) = (@fallback_response = fallback_response; @calls = []; @fail_count = 0)
+    def ask_once(_prompt, model: nil, system: nil)
+      @calls << { model: }
+      @fail_count += 1
+      raise "preferred model unavailable" if @fail_count == 1
+      @fallback_response
+    end
+  end
+
+  def setup
+    @bus = FakeBus.new
+  end
+
+  def build_coordinator(agent)
+    Master::Review::Swarm::Coordinator.new(agent:, event_bus: @bus)
+  end
+
+  # Swarm result votes when reviewer casts explicit approved: true
+  def test_votes_approved_when_reviewer_approves
+    agent = FakeAgent.new(default: '{"approved": true, "violations": []}')
+    reviewer =Master::Review::Swarm::Workers::Reviewer.new(agent:, event_bus: @bus)
+    result   = reviewer.call(task: "check code", context_slice: { code: "puts 1" })
+    assert result.ok?
+    assert result.value!["approved"]
+  end
+
+  # The reviewer is the security layer, and its old parser read three different
+  # failures as consent: an empty object, prose with no JSON in it, and a
+  # JSON::ParserError. Each printed "swarm: approved" through Pipeline::Pass.
+  def test_an_unreadable_review_is_not_an_approval
+    ["", "Looks fine to me.", '{"approved": true', "{}"].each do |reply|
+      reviewer = Master::Review::Swarm::Workers::Reviewer.new(agent: FakeAgent.new(default: reply), event_bus: @bus)
+      result = reviewer.call(task: "check code", context_slice: { code: "puts 1" })
+
+      assert result.ok?, "the worker still answers; it is the verdict that changes"
+      refute result.value!["approved"], "approved on an unreadable reply: #{reply.inspect}"
+    end
+  end
+
+  # A verdict with violations and no approved key is a reviewer that found
+  # something and did not say the word. It is not an approval either.
+  def test_a_verdict_missing_the_key_is_not_an_approval
+    agent = FakeAgent.new(default: '{"violations": [{"type": "sql_injection", "line": 4}]}')
+    reviewer = Master::Review::Swarm::Workers::Reviewer.new(agent:, event_bus: @bus)
+
+    refute reviewer.call(task: "check", context_slice: {}).value!["approved"]
+  end
+
+  def test_direct_fallback_does_not_approve_plain_prose
+    agent = Object.new
+    agent.define_singleton_method(:ask) { |_task| "looks fine to me" }
+    coord = build_coordinator(agent)
+
+    result = coord.send(:direct_fallback, "check this")
+
+    assert_equal :insufficient_quorum, result.verdict
+    refute result.approved?
+    assert_equal 1, result.votes[:neutral]
+  end
+
+  def test_direct_fallback_honors_only_explicit_structured_verdicts
+    %i[approved rejected].each do |verdict|
+      agent = Object.new
+      approved = verdict == :approved
+      agent.define_singleton_method(:ask) { |_task| { "approved" => approved } }
+      coord = build_coordinator(agent)
+
+      result = coord.send(:direct_fallback, "check this")
+
+      assert_equal verdict, result.verdict
+      assert_equal approved, result.approved?
+    end
+  end
+
+  def test_swarm_result_has_votes_field
+    agent = FakeAgent.new(default: '{"approved": true, "violations": []}')
+    coord = build_coordinator(agent)
+
+    # Fake a results hash as coordinator would build it
+    results = {
+      reviewer: Master::Result.ok({ "approved" => true }),
+      analyst:  Master::Result.ok({ "summary" => "ok", "issues" => [] }),
+    }
+    sr = coord.send(:build_swarm_result, results)
+    assert_equal 1, sr.votes[:approved]
+    assert_equal 0, sr.votes[:rejected]
+    assert_equal 1, sr.votes[:neutral]
+  end
+
+  def test_derive_verdict_uses_votes_over_confidence
+    coord = build_coordinator(FakeAgent.new(default: "ok"))
+    # Low confidence but all votes approve
+    votes = { approved: 2, rejected: 0, neutral: 0 }
+    verdict = coord.send(:derive_verdict, 0.4, votes)
+    assert_equal :approved, verdict
+  end
+
+  def test_derive_verdict_rejected_when_votes_against
+    coord = build_coordinator(FakeAgent.new(default: "ok"))
+    votes = { approved: 0, rejected: 2, neutral: 0 }
+    verdict = coord.send(:derive_verdict, 0.9, votes)
+    assert_equal :rejected, verdict
+  end
+
+  def test_derive_verdict_falls_back_to_confidence_when_no_votes
+    coord = build_coordinator(FakeAgent.new(default: "ok"))
+    votes = { approved: 0, rejected: 0, neutral: 2 }
+    assert_equal :approved, coord.send(:derive_verdict, 0.9, votes)
+    assert_equal :mixed,    coord.send(:derive_verdict, 0.6, votes)
+    assert_equal :error,    coord.send(:derive_verdict, 0.0, votes)
+    assert_equal :rejected, coord.send(:derive_verdict, 0.3, votes)
+  end
+
+  def test_worker_fallback_fires_when_preferred_raises
+    workers = Master::Review::Swarm::Workers
+    agent = FailingAgent.new('{"summary": "ok", "issues": []}')
+    analyst = workers::Analyst.new(agent:, event_bus: @bus)
+
+    result = analyst.call(task: "check", context_slice: {})
+
+    assert result.ok?
+    assert_equal [workers::Analyst::PREFERRED_MODEL, workers::Analyst::FALLBACK_MODEL],
+                 agent.calls.map { |call| call[:model] }
+  end
+
+  def test_worker_without_fallback_reports_the_failure
+    agent = FailingAgent.new('{"approved": true}')
+    reviewer = Master::Review::Swarm::Workers::Reviewer.new(agent:, event_bus: @bus)
+
+    result = reviewer.call(task: "check", context_slice: {})
+
+    refute result.ok?
+    assert_equal 1, agent.calls.size
+  end
+
+  def test_fan_out_bounds_concurrency_and_accounts_for_every_task
+    mutex = Mutex.new
+    active = 0
+    maximum = 0
+    calls = 0
+    coordinator = build_coordinator(FakeAgent.new(default: "ok"))
+    coordinator.define_singleton_method(:run_with_subagent_policy) { |_role, &block| block.call }
+    coordinator.define_singleton_method(:dispatch) do |role, task:, context_slice:|
+      mutex.synchronize do
+        active += 1
+        calls += 1
+        maximum = [maximum, active].max
+      end
+      sleep 0.005
+      Result.ok({ "task" => task })
+    ensure
+      mutex.synchronize { active -= 1 }
+    end
+    roles = %i[analyst reviewer coder researcher]
+    tasks = (1..21).map do |index|
+      { role: roles[index % roles.size], task: "task-#{index}", context_slice: {} }
+    end
+
+    result = coordinator.fan_out(tasks)
+
+    assert result.ok?
+    assert_operator maximum, :>, 1
+    assert_operator maximum, :<=, Master::Review::Swarm::Coordinator::MAX_CONCURRENT
+    assert_equal roles.size, result.value!.artifacts.size
+    assert_equal 21, calls
+  end
+
+  def test_fan_out_keeps_each_timed_out_role_in_the_result_ledger
+    started = Queue.new
+    coder_finished = Queue.new
+    release = Queue.new
+    coordinator = build_coordinator(FakeAgent.new(default: "ok"))
+    coordinator.define_singleton_method(:run_with_subagent_policy) { |_role, &block| block.call }
+    coordinator.define_singleton_method(:dispatch) do |role, task:, context_slice:|
+      started << role
+      if role == :coder
+        coder_finished << true
+        return Result.ok({ "task" => task })
+      end
+
+      release.pop
+      Result.ok({ "task" => task })
+    end
+    tasks = %i[analyst reviewer coder].map do |role|
+      { role:, task: role.to_s, context_slice: {} }
+    end
+
+    runner = Thread.new { coordinator.fan_out(tasks, timeout: 0.05) }
+    3.times { started.pop(timeout: 2) }
+    coder_finished.pop(timeout: 2)
+    runner.join
+    result = runner.value
+    done = @bus.events.find { |event| event[:event] == "swarm_fan_out_done" }
+
+    assert result.ok?
+    assert_equal %w[analyst coder reviewer], done.fetch(:roles).map(&:to_s).sort
+    assert_equal :insufficient_quorum, result.value!.verdict
+    assert_equal ["coder"], result.value!.artifacts.keys.map(&:to_s)
+  ensure
+    release << :continue if release
+    runner&.join(1)
+  end
+
+  def test_fan_out_joins_started_workers_and_accounts_for_unstarted_tasks
+    original_new = Thread.method(:new)
+    started = Queue.new
+    worker_ready = Queue.new
+    worker_finished = Queue.new
+    release = Queue.new
+    calls = 0
+    coordinator = build_coordinator(FakeAgent.new(default: "ok"))
+    coordinator.define_singleton_method(:run_with_subagent_policy) { |_role, &block| block.call }
+    coordinator.define_singleton_method(:dispatch) do |role, task:, context_slice:|
+      started << task
+      worker_ready << true
+      begin
+        release.pop
+        Result.ok({ "task" => task, "role" => role.to_s })
+      ensure
+        worker_finished << task
+      end
+    end
+    tasks = (1..10).map do |index|
+      { role: :"role_#{index}", task: index == 1 ? "first" : "task-#{index}", context_slice: {} }
+    end
+    coordinator_thread = original_new.call do
+      Thread.stub(:new, lambda { |*args, **kwargs, &worker_block|
+        calls += 1
+        raise ThreadError, "thread limit reached" if calls == 2
+
+        original_new.call(*args, **kwargs, &worker_block).tap do
+          raise ThreadError, "first task did not start" unless worker_ready.pop(timeout: 2)
+        end
+      }) do
+        coordinator.fan_out(tasks, timeout: 2)
+      end
+    end
+
+    assert_equal "first", started.pop(timeout: 2)
+    release << :continue
+    coordinator_thread.join
+    result = coordinator_thread.value
+
+    assert result.ok?
+    assert_equal 2, calls
+    assert_equal "first", worker_finished.pop(timeout: 2)
+    assert_equal 9, @bus.events.count { |event| event[:event] == "swarm:worker_start_failed" }
+    assert_equal :insufficient_quorum, result.value!.verdict
+    assert_equal :role_1, result.value!.artifacts.keys.first
+  end
+
+  def test_consensus_predicate
+    coord = build_coordinator(FakeAgent.new(default: "ok"))
+    results = {
+      reviewer: Master::Result.ok({ "approved" => true }),
+      analyst:  Master::Result.ok({ "approved" => true }),
+    }
+    sr = coord.send(:build_swarm_result, results)
+    assert sr.consensus?
+  end
+
+  def test_no_consensus_when_rejected
+    coord = build_coordinator(FakeAgent.new(default: "ok"))
+    results = {
+      reviewer: Master::Result.ok({ "approved" => false }),
+      analyst:  Master::Result.ok({ "approved" => false }),
+    }
+    sr = coord.send(:build_swarm_result, results)
+    refute sr.consensus?
+  end
+end

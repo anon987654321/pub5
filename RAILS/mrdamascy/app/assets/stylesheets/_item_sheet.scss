@@ -1,0 +1,170 @@
+// Item sheet: head, options, quantity stepper, pinned add button. The
+// option chips and stepper are shared with checkout and the cart.
+// The head is left-aligned like the hero (z-pattern, max 3 centered lines).
+.sheet-head {
+  border: 0;
+  border-radius: var(--radius);
+  padding: var(--space-24) var(--space-20);
+  margin-bottom: var(--space-16);
+}
+
+.sheet-emoji {
+  display: block;
+  font-size: var(--text-display-extra-large);
+  line-height: 1;
+  margin-bottom: var(--space-8);
+}
+
+.sheet-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  margin: var(--space-8) 0 0;
+}
+
+.sheet-description {
+  font-size: var(--text-body);
+}
+
+.origin-story {
+  border-inline-start: 3px solid var(--mint-300);
+  padding: var(--space-4) 0 var(--space-4) var(--space-12);
+  color: var(--ink-soft);
+  font-size: var(--text-meta);
+  font-style: italic;
+}
+
+.sheet-allergens h2 {
+  font-size: var(--text-meta);
+  font-weight: 700;
+  margin: 0;
+}
+
+.sheet-allergens p {
+  font-size: var(--text-meta);
+  margin: var(--space-4) 0 0;
+}
+
+.option-group legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: var(--space-8);
+}
+
+// The sauce cap, said in the legend beside the group's name.
+.legend-note {
+  color: var(--ink-soft);
+  font-size: var(--text-meta);
+}
+
+.option-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.option-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-min);
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-16);
+  border-radius: var(--radius-pill);
+  background: var(--surface-elevated);
+  border: 1px solid var(--line);
+  font-size: var(--text-meta);
+  cursor: pointer;
+}
+
+.option-chip input[type="checkbox"],
+.option-chip input[type="radio"] {
+  accent-color: var(--mint-600);
+  margin: 0;
+}
+
+.option-chip:has(input:checked) {
+  background: var(--mint-100);
+  border-color: var(--mint-300);
+}
+
+.option-chip input:disabled {
+  opacity: 0.4;
+}
+
+.option-price {
+  color: var(--ink-soft);
+  font-size: var(--text-meta);
+}
+
+// Quantity stepper.
+.quantity-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.quantity-button {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  background: var(--surface-elevated);
+  font-size: var(--text-title);
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+}
+
+.quantity-input {
+  width: 56px;
+  text-align: center;
+  font-weight: 700;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  padding: var(--space-12) var(--space-4);
+}
+
+.sheet-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-12) var(--space-2);
+  font-size: var(--text-body);
+  font-weight: 700;
+}
+
+// Sticky pay bar for the sheet — flat chrome above the tab bar: solid
+// surface + 1px border, no gradient (pixel_perfection).
+.sheet-footer {
+  position: fixed;
+  inset-inline: 0;
+  bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom, 0px));
+  z-index: var(--z-sheet-footer);
+  display: flex;
+  justify-content: center;
+  padding: var(--space-12) var(--space-16) var(--space-16);
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+  pointer-events: none;
+}
+
+.sheet-footer .button {
+  pointer-events: auto;
+  max-width: 448px;
+}
+
+.sheet-photo {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: var(--radius);
+  margin: 0 auto var(--space-12);
+  background: var(--mint-100);
+}

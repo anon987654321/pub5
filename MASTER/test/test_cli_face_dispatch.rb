@@ -1,0 +1,508 @@
+# frozen_string_literal: true
+
+require_relative "test_helper"
+require_relative "../lib/cli/face/transcriber"
+require_relative "../lib/cli/face/ear"
+
+class TestCliFaceDispatch < Minitest::Test
+  def test_master_boot_loads_the_master_operator_mode
+    assert defined?(Master::Operator::Mode), "interactive fold routing needs Master::Operator::Mode"
+  end
+
+  def test_fix_registry_loads_the_foreign_check_chain_before_dispatch
+    require_relative "../lib/cli/command_registry/review"
+
+    assert defined?(::Operator::CheckChain), "fix registry must load top-level Operator::CheckChain"
+  end
+
+  def test_run_input_starts_a_new_ground_truth_turn_before_dispatch
+    session = Master::CLI::Session.allocate
+    truth = Master::Ground::Truth.new
+    session.instance_variable_set(:@refs, Struct.new(:ground_truth).new(truth))
+    session.instance_variable_set(:@turn_queue_mutex, Mutex.new)
+    session.define_singleton_method(:turn_cancel_requested?) { false }
+    session.define_singleton_method(:check_budget_blocks) { |*| nil }
+    session.define_singleton_method(:init_turn_state) { |_input| [false, { streamed: false }, []] }
+    session.define_singleton_method(:dispatch_turn) do |*_args|
+      Master::Result.ok(truth.current_turn_id)
+    end
+    session.define_singleton_method(:print_thinking_indicator) {}
+    session.define_singleton_method(:stop_thinking_indicator) {}
+    session.define_singleton_method(:close_unit_console) {}
+    session.define_singleton_method(:print_bridge_footer) { |*| nil }
+    session.define_singleton_method(:display_result) { |*| nil }
+
+    result = session.run_input("hello")
+
+    assert result.ok?
+    assert_equal 1, result.value!
+  end
+
+  def test_registered_slash_command_starts_a_new_ground_truth_turn
+    session = Master::CLI::Session.allocate
+    truth = Master::Ground::Truth.new
+    session.instance_variable_set(:@refs, Struct.new(:ground_truth).new(truth))
+    session.instance_variable_set(:@container, {
+      commands: {
+        "probe" => ->(args:) {
+          Master::Result.ok("turn=#{truth.current_turn_id}")
+        },
+      },
+    })
+    session.define_singleton_method(:print_terminal_output) { |*| nil }
+
+    result = session.send(:dispatch_registered_slash_command, "/probe")
+
+    assert result.ok?
+    assert_equal "turn=1", result.value!
+  end
+
+  def test_known_slash_commands_bypass_the_llm_turn
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@container, {
+      commands: {
+        "play" => Master::CLI::CommandRegistry::Command.new { |ctx| "dilla0: #{ctx.fetch(:args)}" },
+      },
+    })
+    renderer = Object.new
+    def renderer.render(text, **); text; end
+    session.instance_variable_set(:@refs, Struct.new(:renderer).new(renderer))
+    out, = capture_io { session.send(:dispatch_core_slash_command, "/play flying lotus") }
+    assert_includes out, "dilla0: flying lotus"
+  end
+
+  def test_unknown_slash_command_still_reaches_the_sentence_router
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@container, { commands: {} })
+    assert_equal :unhandled, session.send(:dispatch_core_slash_command, "/not-a-command")
+  end
+
+  def test_terminal_agent_turn_runs_the_turn_in_process
+    session = Master::CLI::Session.allocate
+    session.define_singleton_method(:host_refusal_for) { |_line| nil }
+    calls = []
+    session.define_singleton_method(:run_input) do |line|
+      calls << line
+      :result
+    end
+
+    assert_equal :result, session.send(:run_agent_turn, "hello")
+    assert_equal ["hello"], calls
+  end
+
+  def test_undo_uses_the_registered_command_instead_of_the_model_turn
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@container, {
+      commands: {
+        "undo" => Master::CLI::CommandRegistry::Command.new { "reverted: note.txt" },
+      },
+    })
+    renderer = Object.new
+    def renderer.render(text, **); text; end
+    session.instance_variable_set(:@refs, Struct.new(:renderer).new(renderer))
+    out, = capture_io { session.send(:dispatch_core_slash_command, "/undo") }
+
+    assert_includes out, "reverted: note.txt"
+  end
+
+  def test_repeat_last_sends_the_last_repeatable_input_again
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@last_repeatable_input, "repeat me")
+    calls = []
+    session.define_singleton_method(:run_input) do |input|
+      calls << input
+      :repeated
+    end
+
+    assert_equal :repeated, session.send(:repeat_last)
+    assert_equal ["repeat me"], calls
+  end
+
+  def test_bang_command_accepts_optional_space_after_marker
+    parser = Master::CLI::Session::BANG
+
+    assert_equal "git pull", parser.match("! git pull")[:command]
+    assert_equal "git pull", parser.match("!git pull")[:command]
+    assert_equal "git pull", parser.match("!  git pull")[:command]
+    assert_nil parser.match("!")
+  end
+
+  def test_direct_shell_returns_the_result_to_the_terminal
+    session = Master::CLI::Session.allocate
+    shell = Object.new
+    shell.define_singleton_method(:call) { |command:| Master::Result.ok("shell output") }
+    session.define_singleton_method(:bang_shell) { shell }
+    renderer = Object.new
+    def renderer.render(text, **); text; end
+    session.instance_variable_set(:@refs, Struct.new(:renderer).new(renderer))
+
+    out, = capture_io { session.send(:run_direct_shell, "echo hello") }
+
+    assert_includes out, "shell output"
+    assert_equal 0, session.instance_variable_get(:@exit_code)
+  end
+
+  def test_cd_changes_the_persistent_repl_directory_inside_the_checkout
+    original = Dir.pwd
+    workspace = File.realpath(Master.repo_root)
+    Dir.chdir(File.join(workspace, "MASTER"))
+    session = Master::CLI::Session.allocate
+    renderer = Object.new
+    def renderer.render(text, **); text; end
+    session.instance_variable_set(:@refs, Struct.new(:renderer).new(renderer))
+    session.define_singleton_method(:terminal_puts) { |_text, **| }
+
+    result = session.send(:run_direct_shell, "cd ..")
+
+    assert_equal :changed, result
+    assert_equal workspace, Dir.pwd
+    assert_nil session.instance_variable_get(:@bang_shell)
+  ensure
+    Dir.chdir(original) if original
+  end
+
+  def test_cd_refuses_to_leave_the_checkout
+    original = Dir.pwd
+    workspace = File.realpath(Master.repo_root)
+    Dir.chdir(workspace)
+    session = Master::CLI::Session.allocate
+    renderer = Object.new
+    def renderer.render(text, **); text; end
+    session.instance_variable_set(:@refs, Struct.new(:renderer).new(renderer))
+    session.define_singleton_method(:terminal_puts) { |_text, **| }
+
+    result = session.send(:run_direct_shell, "cd /tmp")
+
+    assert_equal :failed, result
+    assert_equal workspace, Dir.pwd
+  ensure
+    Dir.chdir(original) if original
+  end
+
+  def test_direct_shell_stdout_is_saved_as_execution_context
+    recorded = []
+    session_store = Object.new
+    session_store.define_singleton_method(:add_message) { |**entry| recorded << entry }
+    refs = Struct.new(:renderer, :session, :bus).new(
+      Object.new.tap { |renderer| renderer.define_singleton_method(:render) { |text, **| text } },
+      session_store,
+      nil,
+    )
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@refs, refs)
+    shell = Object.new
+    shell.define_singleton_method(:call) { |command:| Master::Result.ok("current directory output") }
+    session.define_singleton_method(:bang_shell) { shell }
+    session.define_singleton_method(:terminal_puts) { |_text, **| }
+
+    session.send(:run_direct_shell, "pwd")
+
+    assert_equal 1, recorded.size
+    assert_equal :execution, recorded.first.fetch(:layer)
+    assert_includes recorded.first.fetch(:content), "$ pwd"
+    assert_includes recorded.first.fetch(:content), "current directory output"
+    assert_includes recorded.first.fetch(:content), "status=success"
+  end
+
+  def test_execution_evidence_is_bounded_redacted_and_labelled_untrusted
+    Dir.mktmpdir("execution-evidence") do |dir|
+      store = Master::Trace::Session.new(root: dir)
+      session = Master::CLI::Session.allocate
+      session.instance_variable_set(:@refs, Struct.new(:session, :bus).new(store, nil))
+      token = "ghp_#{'A' * 36}"
+      raw = "\e[31mcredential #{token}\e[0m " + ("output " * 3_000)
+
+      session.send(:record_execution_output, command: "echo #{token}", text: raw)
+
+      message = store.messages.last
+      assert_equal :execution, message[:layer]
+      assert_includes message[:content], "[untrusted execution evidence; status=unknown; output may be truncated]"
+      assert_includes message[:content], "[REDACTED]"
+      assert_includes message[:content], "[execution output truncated]"
+      refute_includes message[:content], token
+      refute_match(/\e\[/, message[:content])
+      assert_nil store.name, "execution output must not name the conversation"
+    end
+  end
+
+  def test_failed_shell_output_is_marked_as_failure_evidence
+    Dir.mktmpdir("execution-failure") do |dir|
+      store = Master::Trace::Session.new(root: dir)
+      session = Master::CLI::Session.allocate
+      session.instance_variable_set(:@refs, Struct.new(:session, :bus).new(store, nil))
+      shell = Object.new
+      shell.define_singleton_method(:call) do |command:|
+        Master::Result.err("blocked command: #{command}", category: :validation)
+      end
+      session.define_singleton_method(:bang_shell) { shell }
+      session.define_singleton_method(:terminal_puts) { |_text, **| }
+      renderer = Object.new
+      renderer.define_singleton_method(:render) { |text, **| text }
+      session.instance_variable_set(:@refs, Struct.new(:session, :bus, :renderer).new(store, nil, renderer))
+
+      session.send(:run_direct_shell, "rm -rf /")
+
+      assert_includes store.messages.last[:content], "status=failure"
+      assert_includes store.messages.last[:content], "blocked command"
+    end
+  end
+
+  def test_model_selector_stdout_is_saved_for_the_next_turn
+    recorded = []
+    session_store = Object.new
+    session_store.define_singleton_method(:add_message) { |**entry| recorded << entry }
+    refs = Struct.new(:session, :ground_truth, :bus).new(session_store, nil, nil)
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@refs, refs)
+    session.instance_variable_set(:@container, {
+      commands: { "model" => ->(args:) { "model list: grok-cli:auto" } },
+    })
+    session.define_singleton_method(:print_terminal_output) { |_text, **| }
+
+    session.send(:dispatch_registered_slash_command, "/model list")
+
+    assert_equal 1, recorded.size
+    assert_equal :execution, recorded.first.fetch(:layer)
+    assert_includes recorded.first.fetch(:content), "/model list"
+    assert_includes recorded.first.fetch(:content), "grok-cli:auto"
+    assert_includes recorded.first.fetch(:content), "status=success"
+  end
+
+  def test_units_console_footers_receive_the_result_not_the_success_boolean
+    session = Master::CLI::Session.allocate
+    ok = Master::Result.ok(output: "", rendered: "")
+    received = []
+    session.instance_variable_set(:@last_ok, true)
+    session.define_singleton_method(:print_fix_activity_footer) {}
+    session.define_singleton_method(:print_previous_question_footer) {}
+    session.define_singleton_method(:print_parallel_errors_footer) do |result|
+      received << result
+      result.value
+    end
+    session.define_singleton_method(:print_capability_stamp) { |result| received << result }
+
+    session.send(
+      :display_ok,
+      ok:,
+      accumulated: +"",
+      streamed: false,
+      units_console: true,
+    )
+
+    assert_equal [ok, ok], received
+  end
+
+  def test_help_returns_its_text_to_the_terminal
+    session = Master::CLI::Session.allocate
+    printed = []
+    session.define_singleton_method(:print_terminal_output) { |text, **| printed << text }
+
+    result = Master::CLI::CommandRegistry.stub(:help_text, "status help") do
+      session.send(:run_help, "status")
+    end
+
+    assert result.ok?
+    assert_equal "status help", result.value!
+    assert_equal ["status help"], printed
+  end
+
+  def test_clear_dispatches_the_deterministic_registered_command
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@container, {
+      commands: {
+        "clear" => Master::CLI::CommandRegistry::Command.new { "context cleared" },
+      },
+    })
+    renderer = Object.new
+    def renderer.render(text, **); text; end
+    session.instance_variable_set(:@refs, Struct.new(:renderer).new(renderer))
+
+    out, = capture_io { session.send(:dispatch_core_slash_command, "/clear") }
+
+    assert_includes out, "context cleared"
+  end
+
+  def test_registered_command_failure_is_returned_as_a_visible_error
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@container, {
+      commands: { "broken" => ->(args:) { raise IOError, "command output unavailable" } },
+    })
+    session.define_singleton_method(:print_terminal_output) { |*| nil }
+
+    result = session.send(:dispatch_registered_slash_command, "/broken")
+
+    # A failed command answers nil; the terminal already printed the error and
+    # the exit code carries the failure out of pipe mode.
+    assert_nil result
+    assert_equal 2, session.instance_variable_get(:@exit_code)
+  end
+
+  def test_listen_starts_a_visible_hands_free_session_and_reuses_run_input
+    ear = Object.new
+    ear.define_singleton_method(:missing) { nil }
+    ear.define_singleton_method(:listen) do |stop:, on_partial:|
+      raise "unexpected interim callback" unless on_partial.nil?
+      stop.call ? nil : "voice transcript"
+    end
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@refs, Struct.new(:root).new(Master::REPO_ROOT))
+    output = []
+    submitted = []
+    session.define_singleton_method(:terminal_puts) { |line| output << line }
+    session.define_singleton_method(:run_input) do |text|
+      submitted << text
+      @voice_listen_stop = true
+      :submitted
+    end
+
+    result = Master::CLI::Face::Ear.stub(:new, ear) do
+      $stdin.stub(:tty?, true) do
+        $stdout.stub(:tty?, true) do
+          Master::Voice::Playback.stub(:speaking?, false) do
+            session.send(:dispatch_core_slash_command, "/listen")
+          end
+        end
+      end
+    end
+
+    assert_equal :submitted, result
+    assert_equal ["voice transcript"], submitted
+    assert_equal ["mic0 at mainbus0: hands-free active; Ctrl-C returns to text; capture pauses during replies"], output
+    refute session.instance_variable_get(:@voice_mic_active)
+  end
+
+  def test_listen_refuses_to_open_the_microphone_without_both_local_grants
+    ear = Object.new
+    ear.define_singleton_method(:missing) { "mic0: voice input is off by default" }
+    ear.define_singleton_method(:listen) { |**| flunk("permission-denied microphone was opened") }
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@refs, Struct.new(:root).new(Master::REPO_ROOT))
+    output = []
+    session.define_singleton_method(:terminal_puts) { |line| output << line }
+
+    Master::CLI::Face::Ear.stub(:new, ear) do
+      $stdin.stub(:tty?, true) do
+        $stdout.stub(:tty?, true) { session.send(:dispatch_core_slash_command, "/listen") }
+      end
+    end
+
+    assert_equal ["mic0: voice input is off by default"], output
+  end
+
+  def test_voice_indicator_overlay_shows_each_input_output_state
+    session = Master::CLI::Session.allocate
+    states = [
+      [false, false, "○ ○"],
+      [true, false, "\e[97m●\e[0m ○"],
+      [false, true, "○ \e[97m●\e[0m"],
+      [true, true, "\e[97m●\e[0m \e[97m●\e[0m"],
+    ]
+
+    states.each do |mic, tts, expected|
+      session.instance_variable_set(:@voice_mic_active, mic)
+      overlay = Master::Voice::Playback.stub(:speaking?, tts) do
+        TTY::Screen.stub(:width, 80) { session.send(:voice_indicator_overlay) }
+      end
+
+      assert_includes overlay, "\e[1;77H#{expected}"
+      assert_includes overlay, "\e7"
+      assert_includes overlay, "\e8"
+      refute_includes overlay, "MIC"
+      refute_includes overlay, "TTS"
+    end
+  end
+
+  def test_assistant_indicator_fills_while_the_turn_is_active_before_audio
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@user_active, true)
+    session.instance_variable_set(:@voice_mic_active, false)
+
+    overlay = Master::Voice::Playback.stub(:speaking?, false) do
+      TTY::Screen.stub(:width, 80) { session.send(:voice_indicator_overlay) }
+    end
+
+    assert_includes overlay, "\e[97m●\e[0m"
+    assert_includes overlay, "○"
+  end
+
+  def test_ctrl_c_leaves_hands_free_mode
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@voice_listen_active, true)
+
+    assert_raises(Interrupt) { session.send(:on_int) }
+    assert session.instance_variable_get(:@voice_listen_stop)
+  end
+
+  def test_listen_requires_an_interactive_terminal_before_opening_the_microphone
+    ear = Object.new
+    ear.define_singleton_method(:missing) { nil }
+    ear.define_singleton_method(:listen) { |**| flunk("non-interactive CLI opened the microphone") }
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@refs, Struct.new(:root).new(Master::REPO_ROOT))
+    output = []
+    session.define_singleton_method(:terminal_puts) { |line| output << line }
+
+    Master::CLI::Face::Ear.stub(:new, ear) { session.send(:dispatch_core_slash_command, "/listen") }
+
+    assert_equal ["mic0 at mainbus0: hands-free input requires an interactive terminal"], output
+  end
+
+  def test_general_help_uses_one_live_shell_cap_and_plain_multiline_guidance
+    session = Master::CLI::Session.allocate
+    printed = []
+    session.define_singleton_method(:print_terminal_output) { |text, **| printed << text }
+
+    session.send(:run_help)
+    output = printed.fetch(0)
+    shell_lines = output.lines.grep(/^shell0 at master0:/)
+
+    assert_equal 1, shell_lines.size
+    timeout = defined?(Master::Io::Shell::TIMEOUT) ? Master::Io::Shell::TIMEOUT : 30
+    assert_includes shell_lines.first, "#{timeout}s"
+    assert_includes output, "<< starts multiline input; a blank line sends it."
+    assert_includes output, "/stop cancels and pauses"
+    refute_includes output, "30-second timeout"
+    refute_includes output, "Anything else is a prompt"
+  end
+
+  def test_operation_report_includes_new_dmesg_lines_and_the_final_result
+    snapshots = [
+      ["older event"],
+      ["older event", "fix0: pass 1", "test0: 4 runs, 8 assertions"],
+    ]
+    logger = Object.new
+    logger.define_singleton_method(:snapshot) { snapshots.shift }
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@refs, Struct.new(:logging).new(logger))
+
+    report = session.send(:operation_log_output, ["older event"], "fix0: complete")
+
+    assert_equal "fix0: pass 1\ntest0: 4 runs, 8 assertions\n\nfix0: complete", report
+  end
+
+  def test_registered_operation_publishes_a_redacted_report_and_prints_the_url
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@container, {
+      commands: { "probe" => ->(args:) { Master::Result.ok("probe completed") } },
+    })
+    session.instance_variable_set(:@refs, Struct.new(:ground_truth).new(nil))
+    session.define_singleton_method(:print_terminal_output) { |*| }
+    printed = []
+    session.define_singleton_method(:terminal_puts) { |line, **| printed << line }
+
+    published = []
+    publisher = Object.new
+    publisher.define_singleton_method(:publish) do |**details|
+      published << details
+      Master::Ground::PastePublisher::Outcome.new(url: "https://pste.us/test123", service: :pste_us, expires_in: "1 day")
+    end
+
+    Master::Ground::PastePublisher.stub(:new, ->(**) { publisher }) do
+      session.send(:dispatch_registered_slash_command, "/probe")
+    end
+
+    assert_equal [{ operation: "/probe", status: "success", output: "probe completed" }], published
+    assert_includes printed, "log0: published https://pste.us/test123 (pste_us; expires in 1 day)"
+  end
+
+end

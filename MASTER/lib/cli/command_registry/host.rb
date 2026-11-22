@@ -1,0 +1,1168 @@
+# frozen_string_literal: true
+
+require "shellwords"
+require "yaml"
+require "json"
+require_relative "../skills"
+require_relative "../../operator/capability_graph"
+require_relative "../../io/exec"
+require_relative "../../ground/personal_workspace"
+require_relative "../../device/owner_preferences"
+require_relative "../../ground/personal_calendar"
+require_relative "../../ground/assistant_tasks"
+require_relative "../../ground/capability_catalog"
+require_relative "../../io/mcp_coordinator"
+require_relative "../../../../OPENBSD/lib/deploy_inventory"
+
+module Master
+  module CLI
+    module CommandRegistry
+      module_function
+
+      # A full fleet deploy is serial. Allow six hours for workstation preflight,
+      # per-app CI, the remote rollout and its final public canary. The remote
+      # tmux run survives a disconnected waiter; reconciliation is read-only.
+      DEPLOY_CAPTURE_TIMEOUT = 21_600
+      DEPLOY_RECONCILE_TIMEOUT = 45
+
+      # /pair — issue, list, revoke or redeem a pairing code.
+      def dispatch_pair(root, ctx: nil)
+        arg = arg_for(ctx).to_s.strip
+        return "pair: local-only; visitors may only redeem a pairing code" if pair_visitor_refused?(arg)
+
+        case arg
+        when "", "status" then pair_status(root)
+        when /\Aowner(?:\s+(.*))?\z/ then pair_claim_owner(root, $1.to_s.strip)
+        when /\Aissue(?:\s+(.*))?\z/ then pair_issue(root, $1.to_s.strip)
+        when "release" then pair_release(root)
+        when "list" then pair_list(root)
+        when /\Arevoke\s+(\S+)\z/ then pair_revoke($1, root)
+        else pair_redeem(arg, root)
+        end
+      end
+
+      # Visitors may only redeem a pairing code; any other /pair spelling is refused.
+      def pair_visitor_refused?(arg)
+        return false unless Fiber[:master_visitor] == true
+
+        alphabet = Master::Ground::Pairing::ALPHABET
+        code_attempt = arg.length == Master::Ground::Pairing::CODE_BYTES &&
+                       arg.upcase.each_char.all? { |character| alphabet.include?(character) }
+        !code_attempt
+      end
+
+      def pair_status(root)
+        status = Master::Ground::Pairing.status
+        device = Master::Device::Agent.status(root:)
+        { pairing: status, device: }.inspect
+      end
+
+      def pair_claim_owner(root, label)
+        return "pair: local owner pairing requires Android/Termux" unless Master::Device.android? && Fiber[:master_visitor] != true
+
+        result = Master::Device::Agent.claim_owner!(root:, label:)
+        [Master::Ground::Pairing.redeem_notice(result), result[:onboarding]].compact.join("\n")
+      end
+
+      def pair_issue(root, label)
+        issued = Master::Ground::Pairing.issue(root:, label:)
+        "pair code #{issued[:code]} expires in #{issued[:expires_in]}s - redeem via /pair #{issued[:code]} or the face field"
+      end
+
+      def pair_release(root)
+        return "pair: local-only" unless Fiber[:master_visitor] != true
+
+        subject = Master::Device::Agent.release_owner!(root:)
+        "pair: released #{subject}"
+      end
+
+      def pair_list(root)
+        rows = Master::Ground::Pairing.list(root:)
+        return "pair: no allowlist entries" if rows.empty?
+
+        rows.map { |row| "#{row[:subject]} #{row[:label]}".strip }.join("\n")
+      end
+
+      def pair_revoke(code, root)
+        Master::Ground::Pairing.revoke(code, root:) ? "pair: revoked" : "pair: not found"
+      end
+
+      def pair_redeem(arg, root)
+        result = Master::Ground::Pairing.redeem(arg.split.first, root:)
+        return "pair: invalid or expired code" unless result
+
+        Fiber[:master_paired] = true
+        Fiber[:master_pair_subject] = result[:subject]
+        Master::Ground::Pairing.redeem_notice(result)
+      end
+
+      private_class_method :pair_visitor_refused?, :pair_status, :pair_claim_owner, :pair_issue,
+                           :pair_release, :pair_list, :pair_revoke, :pair_redeem
+
+      # /privacy is local-only. Personal memory and the explicitly imported,
+      # read-only calendar use subject-bound grants; device, external messaging and
+      # financial capabilities remain unavailable until their adapters enforce policy.
+      def dispatch_privacy(root, ctx: nil)
+        return "privacy: local-only; visitors cannot grant personal capabilities" if Fiber[:master_visitor] == true
+
+        permissions = Master::Ground::PersonalPermissions.new(root:)
+        voice_args = Shellwords.split(arg_for(ctx).to_s)
+        reply = privacy_voice_action(permissions, voice_args, voice_args[1].to_s.downcase)
+        return reply if reply
+
+        subject = paired_local_subject(root)
+        return privacy_unpaired_status(permissions, voice_args) if subject.empty?
+
+        privacy_command(root, permissions, arg_for(ctx).to_s.strip.downcase, subject)
+      rescue StandardError => e
+        "privacy0: unavailable - #{e.class}: #{e.message}"
+      end
+
+      # The paired subject this session may act for: the redeemed pairing code's
+      # subject, or the Android owner's subject while the device stays paired.
+      # /preferences strips the owner subject; privacy and agenda keep it verbatim.
+      def paired_local_subject(root, strip: false)
+        subject = Fiber[:master_pair_subject].to_s.strip
+        if subject.empty? && defined?(Master::Device::Agent) && Master::Device.respond_to?(:android?) &&
+            Master::Device.android? && Master::Device::Agent.paired?(root:)
+          subject = Master::Device::Agent.owner_subject(root:).to_s
+          subject = subject.strip if strip
+        end
+        subject
+      end
+
+      # The voice consent spellings that need no paired subject: notification
+      # storage and the one-hour microphone / speech-recognition grants. Returns
+      # the reply, or nil when the words are none of these commands.
+      def privacy_voice_action(permissions, voice_args, voice_scope)
+        case [voice_args[0].to_s.downcase, voice_scope]
+        when ["grant", "notifications"]
+          privacy_grant_notifications(permissions, voice_args)
+        when ["revoke", "notifications"]
+          privacy_revoke_notifications(permissions)
+        when ["grant", "microphone"], ["grant", "speech_recognition"]
+          privacy_grant_voice(permissions, voice_args, voice_scope)
+        when ["revoke", "microphone"], ["revoke", "speech_recognition"]
+          privacy_revoke_voice(permissions, voice_scope)
+        end
+      end
+
+      def privacy_grant_notifications(permissions, voice_args)
+        confirmation = "GRANT notifications"
+        expected = ["grant", "notifications", "--confirm", confirmation]
+        unless voice_args == expected
+          return "privacy: notification consent requires the exact command /privacy grant notifications --confirm \"#{confirmation}\""
+        end
+        permissions.grant(
+          scope: "notifications", confirmed_by: "local operator",
+          purpose: Master::Ground::NotificationAggregator::PURPOSE,
+        )
+        "privacy: local notification storage enabled; revoke with /privacy revoke notifications"
+      end
+
+      def privacy_revoke_notifications(permissions)
+        revoked = permissions.revoke(
+          scope: "notifications", confirmed_by: "local operator",
+          reason: "local notification storage revoked by owner",
+        )
+        revoked ? "privacy: local notification storage disabled immediately" : "privacy: no active notification grant"
+      end
+
+      def privacy_grant_voice(permissions, voice_args, voice_scope)
+        purpose = voice_scope == "microphone" ?
+          Master::Ground::PersonalPermissions::MICROPHONE_PURPOSE :
+          Master::Ground::PersonalPermissions::SPEECH_RECOGNITION_PURPOSE
+        confirmation = "GRANT #{voice_scope}"
+        expected = ["grant", voice_scope, "--confirm", confirmation]
+        unless voice_args == expected
+          return "privacy: voice consent requires the exact command /privacy grant #{voice_scope} --confirm \"#{confirmation}\""
+        end
+        permissions.grant(
+          scope: voice_scope,
+          confirmed_by: "local operator",
+          purpose:,
+          expires_at: Time.now.utc + Master::Ground::PersonalPermissions::VOICE_GRANT_SECONDS
+        )
+        "privacy: #{voice_scope} enabled for one hour; OS microphone permission is still required"
+      end
+
+      def privacy_revoke_voice(permissions, voice_scope)
+        permissions.revoke(scope: voice_scope, confirmed_by: "local operator",
+                           reason: "voice input revoked by local operator")
+        "privacy: #{voice_scope} revoked immediately"
+      end
+
+      def privacy_unpaired_status(permissions, voice_args)
+        if voice_args.empty? || voice_args == ["status"]
+          microphone = permissions.allowed?(scope: "microphone", purpose: Master::Ground::PersonalPermissions::MICROPHONE_PURPOSE)
+          speech_recognition = permissions.allowed?(scope: "speech_recognition", purpose: Master::Ground::PersonalPermissions::SPEECH_RECOGNITION_PURPOSE)
+          notifications = permissions.allowed?(scope: "notifications", purpose: Master::Ground::NotificationAggregator::PURPOSE)
+          return "privacy: microphone #{microphone ? "enabled" : "disabled"}; speech recognition #{speech_recognition ? "enabled" : "disabled"}; notifications #{notifications ? "enabled" : "disabled"}; personal memory requires a paired local subject"
+        end
+        "privacy: no paired subject; pair the local owner before enabling personal memory"
+      end
+
+      # The commands that need a paired subject: status, subject-bound grants,
+      # revocations and the durable memory reads.
+      def privacy_command(root, permissions, arg, subject)
+        case arg
+        when "", "status" then privacy_status(permissions, subject)
+        when "grant personal_memory" then privacy_grant_memory(permissions, subject)
+        when "grant calendar_read" then privacy_grant_calendar(permissions, subject)
+        when /\Arevoke calendar_read(?:\s+(.+))?\z/
+          privacy_revoke_calendar(permissions, subject, Regexp.last_match(1).to_s.strip)
+        when /\Arevoke personal_memory(?:\s+(.+))?\z/
+          privacy_revoke_memory(permissions, subject, Regexp.last_match(1).to_s.strip)
+        when "memory show", "memory export", "memory forget --confirm", /\Amemory forget(?:\s.*)?\z/
+          privacy_memory_command(root, arg, subject)
+        else
+          "privacy: status | grant personal_memory | revoke personal_memory | grant notifications --confirm \"GRANT notifications\" | revoke notifications | grant microphone | grant speech_recognition | revoke microphone | revoke speech_recognition"
+        end
+      end
+
+      def privacy_memory_command(root, arg, subject)
+        case arg
+        when "memory show", "memory export"
+          data = Master::Ground::PersonalWorkspace.snapshot(root:, subject:)
+          data.map { |name, body| "#{name}\n#{body}" }.join("\n\n")
+        when "memory forget --confirm"
+          Master::Ground::PersonalWorkspace.forget_memory!(root:, subject:)
+          "privacy0 at master0: durable memory cleared; USER.md profile retained"
+        else
+          "privacy: erasing durable memory requires the exact command /privacy memory forget --confirm; the USER.md profile is retained"
+        end
+      end
+
+      def privacy_status(permissions, subject)
+        active = permissions.allowed?(
+          scope: "personal_memory", subject:, purpose: Master::Ground::PersonalWorkspace::MEMORY_PERMISSION_PURPOSE,
+        )
+        calendar = permissions.allowed?(
+          scope: "calendar_read", subject:, purpose: Master::Ground::PersonalCalendar::READ_PERMISSION_PURPOSE,
+        )
+        microphone = permissions.allowed?(scope: "microphone", purpose: Master::Ground::PersonalPermissions::MICROPHONE_PURPOSE)
+        speech_recognition = permissions.allowed?(scope: "speech_recognition", purpose: Master::Ground::PersonalPermissions::SPEECH_RECOGNITION_PURPOSE)
+        notifications = permissions.allowed?(scope: "notifications", purpose: Master::Ground::NotificationAggregator::PURPOSE)
+        "privacy: personal profile and memory #{active ? "enabled" : "disabled"}; local calendar #{calendar ? "enabled" : "disabled"}; microphone #{microphone ? "enabled" : "disabled"}; speech recognition #{speech_recognition ? "enabled" : "disabled"}; notifications #{notifications ? "enabled" : "disabled"}; voice grants expire after one hour"
+      end
+
+      def privacy_grant_memory(permissions, subject)
+        permissions.grant(
+          scope: "personal_memory", subject:, confirmed_by: "local operator",
+          purpose: Master::Ground::PersonalWorkspace::MEMORY_PERMISSION_PURPOSE
+        )
+        "privacy: personal profile and memory enabled for this paired subject"
+      end
+
+      def privacy_grant_calendar(permissions, subject)
+        permissions.grant(
+          scope: "calendar_read", subject:, confirmed_by: "local operator",
+          purpose: Master::Ground::PersonalCalendar::READ_PERMISSION_PURPOSE
+        )
+        "privacy: local calendar reading enabled for this paired subject"
+      end
+
+      def privacy_revoke_calendar(permissions, subject, reason)
+        revoked = permissions.revoke(
+          scope: "calendar_read", subject:, confirmed_by: "local operator",
+          reason: reason.empty? ? "calendar reading revoked by owner" : reason
+        )
+        revoked ? "privacy: local calendar reading disabled immediately" : "privacy: no active calendar-reading grant"
+      end
+
+      def privacy_revoke_memory(permissions, subject, reason)
+        revoked = permissions.revoke(
+          scope: "personal_memory", subject:, confirmed_by: "local operator",
+          reason: reason.empty? ? "personal memory revoked by owner" : reason
+        )
+        revoked ? "privacy: personal profile and memory disabled immediately" : "privacy: no active personal-memory grant"
+      end
+
+      private_class_method :paired_local_subject, :privacy_voice_action, :privacy_grant_notifications,
+                           :privacy_revoke_notifications, :privacy_grant_voice, :privacy_revoke_voice,
+                           :privacy_unpaired_status, :privacy_command, :privacy_memory_command,
+                           :privacy_status, :privacy_grant_memory, :privacy_grant_calendar,
+                           :privacy_revoke_calendar, :privacy_revoke_memory
+
+      # /preferences — consented, subject-scoped interaction preferences.
+      def dispatch_preferences(root, ctx: nil)
+        return "preferences: local-only; visitors cannot access personal preferences" if Fiber[:master_visitor] == true
+
+        subject = paired_local_subject(root, strip: true)
+        return "preferences: no paired subject; pair the local owner first" if subject.empty?
+        unless Master::Device::OwnerPreferences.permission_granted?(root:, subject:)
+          return "preferences: disabled; explicitly enable with /privacy grant personal_memory in the local paired session"
+        end
+
+        args = Shellwords.split(arg_for(ctx).to_s)
+        preferences_command(root, subject, args.shift.to_s.downcase, args)
+      rescue ArgumentError => e
+        "preferences0: #{e.message}"
+      rescue StandardError => e
+        "preferences0: unavailable - #{e.class}: #{e.message}"
+      end
+
+      def preferences_command(root, subject, action, args)
+        case action
+        when "", "show", "status" then preferences_show(root, subject, args)
+        when "set" then preferences_set(root, subject, args)
+        when "suggest" then preferences_suggest(root, subject, args)
+        when "forget" then preferences_forget(root, subject, args)
+        when "accept", "reject" then preferences_suggestion_command(root, subject, action, args)
+        when "learn", "reset", "export" then preferences_mode_command(root, subject, action, args)
+        else
+          "preferences: show [scope] | set KEY=VALUE [scope=SCOPE] | suggest KEY=VALUE [scope=SCOPE] [reason=\"...\"] | accept ID | reject ID | forget KEY [scope=SCOPE] | learn on|off | reset --confirm | export"
+        end
+      end
+
+      def preferences_show(root, subject, args)
+        preferences = Master::Device::OwnerPreferences
+        return "preferences: usage /preferences show [#{preferences::SCOPES.join("|")}]" if args.size > 1
+
+        state = preferences.status(root:, subject:)
+        requested_scope = args.first
+        scope = requested_scope ? preferences.normalize_scope(requested_scope) : "all"
+        lines = preference_state_lines(preferences, state, requested_scope, scope)
+        if state.fetch("suggestions").empty?
+          lines << "preferences: no pending suggestions"
+        else
+          state.fetch("suggestions").each do |entry|
+            lines << preferences_suggestion_line(entry)
+          end
+        end
+        lines.join("\n")
+      end
+
+      # The rendered state rows: the learning switch plus one row per preference
+      # entry of the requested (or every) scope.
+      def preference_state_lines(preferences, state, requested_scope, scope)
+        scopes = if requested_scope.nil? || scope == "all"
+                   preferences::SCOPES
+                 else
+                   %w[all].concat([scope])
+                 end
+        lines = ["preferences: learning=#{state.fetch("learning_enabled") ? "on" : "off"}"]
+        scopes.each do |name|
+          state.fetch("preferences").fetch(name, {}).each do |key, entry|
+            reason = entry["reason"] ? ", reason=#{entry.fetch("reason")}" : ""
+            lines << "#{name} #{key}=#{entry.fetch("value")} (source=#{entry.fetch("source")}, confidence=#{entry.fetch("confidence")}#{reason})"
+          end
+        end
+        lines
+      end
+
+      def preferences_suggestion_line(entry)
+        "suggestion #{entry.fetch("id")} #{entry.fetch("scope")} #{entry.fetch("key")}=#{entry.fetch("value")} (origin=#{entry.fetch("origin", "owner")}, evidence=#{entry.fetch("evidence_count", 0)}, confidence=#{entry.fetch("confidence")}): #{entry.fetch("reason")}"
+      end
+
+      def preferences_set(root, subject, args)
+        key_value = args.shift.to_s
+        key, value = key_value.split("=", 2)
+        options = parse_preference_options(args, %w[scope])
+        return "preferences: usage /preferences set KEY=VALUE [scope=SCOPE]" unless key && value && options
+
+        result = Master::Device::OwnerPreferences.set(root:, subject:, key:, value:, scope: options.fetch("scope", "all"))
+        "preferences: set #{result.fetch("scope")} #{result.fetch("key")}=#{result.fetch("value")}"
+      end
+
+      def preferences_suggest(root, subject, args)
+        key_value = args.shift.to_s
+        key, value = key_value.split("=", 2)
+        options = parse_preference_options(args, %w[scope reason confidence])
+        return "preferences: usage /preferences suggest KEY=VALUE [scope=SCOPE] [reason=\"...\"] [confidence=0.7]" unless key && value && options
+
+        confidence = options.key?("confidence") ? Float(options.fetch("confidence")) : 0.7
+        candidate = Master::Device::OwnerPreferences.suggest(
+          root:, subject:, key:, value:, scope: options.fetch("scope", "all"),
+          reason: options.fetch("reason", "Preference candidate"),
+          confidence:
+        )
+        "preferences: suggestion #{candidate.fetch("id")} staged but inactive; inspect with /preferences show and use /preferences accept #{candidate.fetch("id")} to activate"
+      end
+
+      def preferences_forget(root, subject, args)
+        key = args.shift.to_s
+        options = parse_preference_options(args, %w[scope])
+        return "preferences: usage /preferences forget KEY [scope=SCOPE]" if key.empty? || !options
+
+        preferences = Master::Device::OwnerPreferences
+        preferences.forget(root:, subject:, key:, scope: options.fetch("scope", "all")) ?
+          "preferences: forgot #{options.fetch("scope", "all")} #{key}" : "preferences: no such preference"
+      end
+
+      # The one-suggestion spellings: accept activates, reject discards.
+      def preferences_suggestion_command(root, subject, action, args)
+        preferences = Master::Device::OwnerPreferences
+        case action
+        when "accept"
+          return "preferences: usage /preferences accept <suggestion-id>" unless args.size == 1
+
+          candidate = preferences.accept(root:, subject:, id: args.first)
+          "preferences: accepted #{candidate.fetch("id")} - #{candidate.fetch("scope")} #{candidate.fetch("key")}=#{candidate.fetch("value")}"
+        when "reject"
+          return "preferences: usage /preferences reject <suggestion-id>" unless args.size == 1
+
+          preferences.reject(root:, subject:, id: args.first) ? "preferences: suggestion rejected" : "preferences: suggestion not found"
+        end
+      end
+
+      # The learning switch, the reset to defaults, and the export read.
+      def preferences_mode_command(root, subject, action, args)
+        preferences = Master::Device::OwnerPreferences
+        case action
+        when "learn"
+          return "preferences: usage /preferences learn on|off" unless args.size == 1 && %w[on off].include?(args.first.downcase)
+
+          enabled = args.first.downcase == "on"
+          preferences.set_learning(root:, subject:, enabled:)
+          "preferences: learning #{enabled ? "enabled" : "disabled"}; repeated low-risk correction signals can stage inactive suggestions; owner acceptance is still required"
+        when "reset"
+          return "preferences: reset requires the exact command /preferences reset --confirm" unless args == ["--confirm"]
+
+          preferences.reset(root:, subject:)
+          "preferences: reset to defaults; learning is off"
+        when "export"
+          return "preferences: usage /preferences export" unless args.empty?
+
+          preferences.export(root:, subject:)
+        end
+      end
+
+      private_class_method :preferences_command, :preferences_show, :preference_state_lines,
+                           :preferences_suggestion_line, :preferences_set, :preferences_suggest,
+                           :preferences_forget, :preferences_suggestion_command, :preferences_mode_command
+
+      def parse_preference_options(tokens, allowed)
+        pairs = tokens.map do |token|
+          key, value = token.split("=", 2)
+          return nil unless value && allowed.include?(key)
+          [key, value]
+        end
+        return unless pairs.map(&:first).uniq.size == pairs.size
+
+        pairs.to_h
+      end
+
+      # /agenda reads an owner-imported local iCalendar export; it never mutates
+      # the provider calendar or reaches a remote service.
+      def dispatch_agenda(root, ctx: nil)
+        return "agenda: local-only; visitors cannot access a personal calendar" if Fiber[:master_visitor] == true
+
+        subject = paired_local_subject(root)
+        return "agenda: pair this local session before accessing a personal calendar" if subject.empty?
+
+        calendar = Master::Ground::PersonalCalendar.new(root:)
+        arg = arg_for(ctx).to_s.strip
+        case arg
+        when "", "today", "status" then agenda_today(calendar, subject, arg)
+        when /\Aimport\s+(.+)\z/m then agenda_import(calendar, subject, Regexp.last_match(1))
+        when /\A\d{4}-\d{2}-\d{2}\z/ then render_agenda(calendar.events_for(subject:, date: Date.iso8601(arg)))
+        else
+          "agenda: status | import /path/to/calendar.ics | today | YYYY-MM-DD"
+        end
+      rescue StandardError => e
+        "agenda0: unavailable - #{e.class}: #{e.message}"
+      end
+
+      def agenda_today(calendar, subject, arg)
+        if arg == "status"
+          state = calendar.status(subject:)
+          return state[:imported] ?
+            "agenda: local calendar imported; #{state[:event_count]} events, #{state[:recurring_series]} recurring series not expanded" :
+            "agenda: no local calendar imported; use /agenda import /path/to/calendar.ics"
+        end
+        render_agenda(calendar.events_for(subject:, date: Date.today))
+      end
+
+      def agenda_import(calendar, subject, source)
+        source_args = Shellwords.split(source)
+        return "agenda: usage is /agenda import /path/to/calendar.ics" unless source_args.size == 1
+
+        imported = calendar.import!(subject:, source: source_args.first)
+        "agenda: imported #{imported[:event_count]} events from #{imported[:filename]}; #{imported[:recurring_series]} recurring series will be reported but are not expanded"
+      end
+
+      private_class_method :agenda_today, :agenda_import
+
+      def render_agenda(result)
+        events = result.fetch(:events)
+        date = result.fetch(:date).iso8601
+        lines = events.map do |event|
+          when_text = event.all_day ? "all day" : [event.clock, event.timezone].compact.reject(&:empty?).join(" ")
+          location = event.location.empty? ? "" : " - #{event.location}"
+          series = event.recurring ? " (recurring series; DTSTART only)" : ""
+          "#{when_text} #{event.summary}#{location}#{series}".strip
+        end
+        lines = ["agenda: no events for #{date} (#{result.fetch(:total_events)} imported)"] if lines.empty?
+        lines << "agenda: note: #{result.fetch(:recurring_series)} recurring series are not expanded; verify their occurrences in the source calendar" if result.fetch(:recurring_series).positive?
+        lines.join("\n")
+      end
+
+      # /skill reviews declared capability contracts and allows an explicit
+      # local operator to approve or revoke one exact content revision.
+      def dispatch_skill(root, ctx: nil, approval_path: File.join(Dir.home, ".master", "skill_approvals.yml"))
+        return "skill: local operator only; visitors cannot approve executable skill revisions" if Fiber[:master_visitor] == true
+
+        args = Shellwords.split(arg_for(ctx).to_s)
+        skills = Master::CLI::Skills.new(root:, approval_path:).tap(&:discover!)
+
+        case args.shift.to_s.downcase
+        when "", "list", "review" then skill_inventory(skills)
+        when "inspect" then skill_inspect(skills, args)
+        when "approve" then skill_approve(skills, args)
+        when "revoke" then skill_revoke(skills, args)
+        else
+          "skill: list | inspect <name> | approve <name> <full SHA-256 revision> --confirm | revoke <name> <full SHA-256 revision> --confirm"
+        end
+      rescue ArgumentError => e
+        "skill0: #{e.message}"
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "cli.skill", event_bus: nil)
+        "skill0: unavailable - #{e.class}: #{e.message}"
+      end
+
+      def skill_inventory(skills)
+        rows = skills.contract_inventory.select { |row| row[:declared] }
+        return "skill0 at master0: no declared skill contracts; legacy skills remain unreviewed and compatible" if rows.empty?
+
+        rows.map do |row|
+          errors = row[:errors].empty? ? "" : " errors=#{row[:errors].join(",")}"
+          "#{row[:name]} revision=#{row[:revision]} status=#{row[:status]} risk=#{row[:risk]} " \
+            "promotable=#{row[:promotable] ? "yes" : "no"} approved=#{row[:operator_approved] ? "yes" : "no"} " \
+            "active=#{row[:active_for_trigger] ? "yes" : "no"}#{errors}"
+        end.join("\n")
+      end
+
+      def skill_inspect(skills, args)
+        return "skill: usage /skill inspect <name>" unless args.length == 1
+
+        row = skills.contract_for(args.first)
+        return "skill: not found or has no contract" unless row
+
+        [
+          "name=#{row[:name]}",
+          "revision=#{row[:revision]}",
+          "status=#{row[:status]} risk=#{row[:risk]}",
+          "declared=#{row[:declared]} promotable=#{row[:status] == :candidate && row[:errors].empty?}",
+          "operator_approved=#{row[:operator_approved]} active=#{row[:active_for_trigger]}",
+          "capabilities=#{Array(row[:required_capabilities]).join(",")}",
+          "laws=#{Array(row[:law_ids]).join(",")}",
+          "fixtures=#{Array(row[:fixture_refs]).join(",")}",
+          "errors=#{Array(row[:errors]).join(",")}",
+        ].join("\n")
+      end
+
+      def skill_approve(skills, args)
+        unless args.length == 3 && args[2] == "--confirm"
+          return "skill: approval requires the exact command /skill approve <name> <full SHA-256 revision> --confirm"
+        end
+
+        approved_by = ENV["USER"].to_s.strip
+        approved_by = "local-operator" if approved_by.empty?
+        row = skills.approve_revision!(name: args[0], revision: args[1], approved_by:)
+        "skill0 at master0: approved #{args[0]} revision=#{args[1]} by=#{approved_by}; activation is limited to this exact revision"
+      end
+
+      def skill_revoke(skills, args)
+        unless args.length == 3 && args[2] == "--confirm"
+          return "skill: revocation requires the exact command /skill revoke <name> <full SHA-256 revision> --confirm"
+        end
+
+        removed = skills.revoke_revision!(name: args[0], revision: args[1])
+        removed ? "skill0 at master0: revoked #{args[0]} revision=#{args[1]}" :
+          "skill0 at master0: no matching approval for #{args[0]} revision=#{args[1]}"
+      end
+
+      private_class_method :skill_inventory, :skill_inspect, :skill_approve, :skill_revoke
+
+      # /task is a local, durable personal task board. It records supplied
+      # verification evidence but never executes actions; a due task rings only in an open session.
+      def dispatch_task(root, ctx: nil)
+        return "task: local-owner only; visitor sessions cannot access personal tasks" if Fiber[:master_visitor] == true
+
+        args = Shellwords.split(arg_for(ctx).to_s)
+        tasks = Master::Ground::AssistantTasks.new(root:)
+        task_command(tasks, args.shift.to_s.downcase, args)
+      rescue ArgumentError, Master::Ground::AssistantTasks::Error => e
+        "task0: #{e.message}"
+      rescue StandardError => e
+        "task0: unavailable - #{e.class}: #{e.message}"
+      end
+
+      def task_command(tasks, action, args)
+        case action
+        when "", "list" then render_task_list(tasks.call(action: "list"))
+        when "search" then task_search(tasks, args)
+        when "create" then task_create(tasks, args)
+        when "show" then task_show(tasks, args)
+        when "step", "add-step" then task_add_step(tasks, args)
+        when "start-step", "block-step", "verify-step" then task_step_transition(tasks, action, args)
+        when "block", "resume", "complete" then task_transition(tasks, action, args)
+        when "update" then task_update(tasks, args)
+        else
+          "task: list | search <words> | create <title> | show <id> | step <id> <title> | start-step <id> <step-id> <note> | verify-step <id> <step-id> <evidence> | block-step <id> <step-id> <reason> | block <id> <reason> | resume <id> <note> | complete <id> <evidence> | update <id> <field> <value>"
+        end
+      end
+
+      def task_search(tasks, args)
+        query = args.join(" ")
+        return "task: usage /task search <words>" if query.empty?
+
+        render_task_list(tasks.call(action: "list", query:))
+      end
+
+      def task_create(tasks, args)
+        title = args.join(" ")
+        return "task: usage /task create <title>" if title.empty?
+
+        task = tasks.call(action: "create", title:)
+        "task: created #{task["id"]} [#{task["state"]}] #{task["title"]}"
+      end
+
+      def task_show(tasks, args)
+        return "task: usage /task show <id>" unless args.size == 1
+
+        render_task(tasks.call(action: "show", id: args.first))
+      end
+
+      def task_add_step(tasks, args)
+        id = args.shift.to_s
+        title = args.join(" ")
+        return "task: usage /task step <id> <step title>" if id.empty? || title.empty?
+
+        step = tasks.call(action: "add_step", id:, step_title: title).fetch("step")
+        "task: step #{step["id"]} added to #{id} - #{step["title"]}"
+      end
+
+      def task_step_transition(tasks, action, args)
+        id = args.shift.to_s
+        step_id = args.shift.to_s
+        detail = args.join(" ")
+        return "task: usage /task #{action} <id> <step-id> <note or evidence>" if [id, step_id, detail].any?(&:empty?)
+
+        verb = { "start-step" => "start_step", "block-step" => "block_step", "verify-step" => "verify_step" }.fetch(action)
+        payload = verb == "verify_step" ? { evidence: detail } : { note: detail }
+        result = tasks.call(action: verb, id:, step_id:, **payload)
+        "task: #{action} #{result.fetch("step")["state"]} - #{result.fetch("step")["title"]}#{verb == "verify_step" ? " (evidence recorded; not independently authenticated)" : ""}"
+      end
+
+      def task_transition(tasks, action, args)
+        id = args.shift.to_s
+        detail = args.join(" ")
+        return "task: usage /task #{action} <id> <reason or evidence>" if id.empty? || detail.empty?
+
+        payload = action == "complete" ? { evidence: detail } : { note: detail }
+        result = tasks.call(action:, id:, **payload)
+        "task: #{result["id"]} [#{result["state"]}] #{result["title"]}#{action == "complete" ? " (completion recorded against supplied evidence)" : ""}"
+      end
+
+      def task_update(tasks, args)
+        id = args.shift.to_s
+        field = args.shift.to_s
+        value = args.join(" ")
+        return "task: usage /task update <id> title|description|priority|due_at <value>" if id.empty? || value.empty?
+        return "task: update field must be title, description, priority or due_at" unless %w[title description priority due_at].include?(field)
+
+        task = tasks.call(action: "update", id:, **{ field.to_sym => value })
+        "task: updated #{task["id"]} - #{task["title"]}"
+      end
+
+      private_class_method :task_command, :task_search, :task_create, :task_show, :task_add_step,
+                           :task_step_transition, :task_transition, :task_update
+
+      def render_task_list(result)
+        rows = result.fetch("tasks")
+        lines = rows.map do |task|
+          verified = Array(task["steps"]).count { |step| step["state"] == "verified" }
+          due = task["due_at"].to_s.empty? ? "" : " due=#{task["due_at"]}"
+          overdue = task["overdue"] ? " overdue" : ""
+          "#{task["id"]} [#{task["state"]}] #{task["title"]}#{due}#{overdue} steps=#{verified}/#{Array(task["steps"]).size}"
+        end
+        lines = ["task: no tasks yet; create one with /task create <title>"] if lines.empty?
+        lines << "task: showing #{rows.size} of #{result["count"]}" if result["truncated"]
+        lines << "task: due dates are local metadata; no background notifications are sent"
+        lines.join("\n")
+      end
+
+      def render_task(task)
+        lines = ["#{task["id"]} [#{task["state"]}] #{task["title"]}",
+                 "priority=#{task["priority"]} due=#{task["due_at"] || "none"}"]
+        lines << task["description"] unless task["description"].to_s.empty?
+        Array(task["steps"]).each do |step|
+          lines << "  #{step["id"]} [#{step["state"]}] #{step["title"]}"
+          lines << "    evidence: #{step["evidence"]}" unless step["evidence"].to_s.empty?
+          lines << "    note: #{step["note"]}" unless step["note"].to_s.empty?
+        end
+        lines << "verification: #{task["verification_note"]}" unless task["verification_note"].to_s.empty?
+        lines.join("\n")
+      end
+
+      # /mcp reports only what the boot-time coordinator already knows. This
+      # path is passive: it never connects, restarts or invokes a server.
+      def dispatch_mcp(coordinator, root, ctx: nil)
+        return "mcp: local operator only; visitors cannot inspect operator servers" if Fiber[:master_visitor] == true
+
+        args = Shellwords.split(arg_for(ctx).to_s)
+        action = args.shift.to_s.downcase
+        action = "status" if action.empty?
+        return "mcp: usage /mcp [status|list]" unless args.empty? && %w[status list].include?(action)
+
+        render_mcp_status(coordinator || Master::Io::McpCoordinator.new(root:))
+      rescue ArgumentError, KeyError => e
+        "mcp0: invalid status request - #{e.message}"
+      rescue StandardError => e
+        "mcp0: status unavailable - #{e.class}: #{e.message}"
+      end
+
+      def render_mcp_status(view)
+        snapshot = view.status
+        lines = [
+          "mcp: configured=#{snapshot.fetch(:configured)} enabled=#{snapshot.fetch(:enabled)} " \
+          "connected=#{snapshot.fetch(:connected)} failed=#{snapshot.fetch(:failed)}",
+        ]
+        Array(snapshot.fetch(:servers)).each do |server|
+          lines << "mcp #{server.fetch(:name)} [#{server.fetch(:state)}] " \
+                   "transport=#{server.fetch(:transport)} tier=#{server.fetch(:tier)}"
+        end
+        lines << "mcp: no servers configured" if Array(snapshot.fetch(:servers)).empty?
+        lines << "mcp: read-only; no server was contacted by this command"
+        lines.join("\n")
+      end
+
+      private_class_method :render_mcp_status
+
+      # Show the universal inventory without running tools or loading provider code.
+      def dispatch_capabilities(root, ctx: nil)
+        return "capabilities: local operator only; visitor inventory is restricted" if Fiber[:master_visitor] == true
+
+        args = Shellwords.split(arg_for(ctx).to_s)
+        action = args.shift.to_s.downcase
+        action = "list" if action.empty?
+        case action
+        when "list" then capabilities_list(root)
+        when "search" then capabilities_search(root, args)
+        when "describe" then capabilities_describe(root, args)
+        else
+          "capabilities: list | search <words> | describe <tool|plugin|plugin:id:action>"
+        end
+      rescue ArgumentError => e
+        "capabilities0: #{e.message}"
+      rescue StandardError => e
+        "capabilities0: unavailable - #{e.class}: #{e.message}"
+      end
+
+      def capabilities_list(root)
+        result = Master::Ground::CapabilityCatalog.call(action: "list", root:)
+        lines = ["capabilities: profile=#{result["profile"]}"]
+        result.fetch("core_tools").each do |tool|
+          profile = tool["allowed_by_current_profile"] ? "profile" : "withheld"
+          tier = tool["elevated_required"] ? "elevated" : "standard"
+          enabled = tool["boot_enabled"] ? "enabled" : "disabled"
+          lines << "tool #{tool["name"]} [#{profile}, #{tier}, #{enabled}] - #{tool["description"]}"
+        end
+        result.fetch("plugins").each do |plugin|
+          actions = plugin.fetch("observation_actions").map { |row| row["name"] }.join(",")
+          lines << "plugin #{plugin["id"]} [#{plugin["status"]}; observations=#{actions.empty? ? "none" : actions}] - #{plugin["description"]}"
+        end
+        lines << "capabilities: metadata only; registration does not prove runtime availability"
+        lines.join("\n")
+      end
+
+      def capabilities_search(root, args)
+        query = args.join(" ")
+        return "capabilities: usage /capabilities search <words>" if query.empty?
+
+        result = Master::Ground::CapabilityCatalog.call(action: "search", query:, root:)
+        result.fetch("results").map { |row| "#{row["kind"]} #{row["name"] || row["id"]} - #{row["description"]}" }.join("\n").then { |body| body.empty? ? "capabilities: no matches" : body }
+      end
+
+      def capabilities_describe(root, args)
+        name = args.join(" ")
+        return "capabilities: usage /capabilities describe <tool|plugin|plugin:id:action>" if name.empty?
+
+        JSON.pretty_generate(Master::Ground::CapabilityCatalog.call(action: "describe", name:, root:))
+      end
+
+      private_class_method :capabilities_list, :capabilities_search, :capabilities_describe
+
+      SCREEN_NAME = /\A[\w.-]{1,40}\z/
+
+      # /screen — keep MASTER running in a GNU screen session you can leave and come back to.
+      # It starts bin/master detached and names the command that reattaches; it never
+      # attaches itself, because this terminal is already inside a session.
+      def dispatch_screen(root, ctx: nil)
+        word = arg_for(ctx).split(/\s+/).first.to_s
+        return "screen: not installed" unless screen_path
+        return screen_list if word == "list"
+
+        name = word.empty? ? "master" : word
+        return "screen: names are letters, digits, dot, dash and underscore" unless name.match?(SCREEN_NAME)
+        return "screen: #{name} is running; reattach with: screen -r #{name}" if screen_running?(name)
+
+        _out, status = Master::Io::Exec.capture2e(screen_path, "-dmS", name, File.join(root, "bin", "master"), chdir: root, timeout: 15)
+        status.success? ? "screen: started #{name}; attach with: screen -r #{name}" : "screen: could not start #{name}"
+      end
+
+      def screen_path = Master::Io::Exec.which("screen")
+
+      def screen_list
+        out, = Master::Io::Exec.capture2e(screen_path, "-ls", timeout: 10)
+        out.to_s.strip
+      end
+
+      def screen_running?(name) = screen_list.match?(/\d+\.#{Regexp.escape(name)}\s/)
+
+      # /deploy — canonical remote vm23 deployment. Command#review_check requires
+      # --confirm before this handler can mutate production.
+      #
+      # The default operator mode waits for the detached tmux run, verifies its
+      # terminal receipt and executes the public canary. Never return on "started".
+      # An ambiguous result triggers a read-only state/receipt reconciliation;
+      # it never starts a second deploy or guesses a rollback.
+      def dispatch_deploy(_root, ctx: nil)
+        target = arg_for(ctx).split(/\s+/).reject { |token| token.start_with?("--") }.first.to_s.downcase
+        target = "all" if target.empty?
+        inventory = Deploy::Inventory.new(root: MasterPaths.repo)
+        return "deploy: unknown target #{target.inspect}; no registered app or deployment group matched" if inventory.target_kind(target) == :unknown
+
+        operator = File.join(MasterPaths.repo, "MASTER", "bin", "operator")
+        output, status = Master::Io::Exec.capture2e(
+          RbConfig.ruby, operator, "vps", "deploy", target, "--remote",
+          chdir: MasterPaths.repo, timeout: DEPLOY_CAPTURE_TIMEOUT, raise_on_timeout: true
+        )
+        summary = deploy_summary(output, status, target)
+        return Result.err("deploy: #{summary}", category: :infrastructure) if deploy_preflight_blocked?(output)
+        if status.respond_to?(:cancelled?) && status.cancelled?
+          state = deploy_remote_reconciliation(MasterPaths.repo, target:, inventory:)
+          return Result.err(
+            ["deploy: local wait was cancelled; the remote tmux run may still be active",
+             state[:summary], "Do not launch another deployment. Observe the existing run and reconcile its receipt first."].join("\n"),
+            category: :cancelled,
+          )
+        end
+
+        state = deploy_remote_reconciliation(MasterPaths.repo, target:, inventory:)
+        return Result.ok([summary, state[:summary]].join("\n")) if deploy_success_receipt?(output, status, target) && state[:ok]
+
+        Result.err(
+          ["deploy: #{summary}", state[:summary],
+           "No automatic retry or rollback was attempted. Reconcile the run receipt before another mutation."].join("\n"),
+          category: :infrastructure,
+        )
+      rescue Master::Io::Exec::TimeoutError => error
+        output = Array(error.result).first.to_s
+        summary = deploy_interrupted_summary(output, "deployment wait exceeded #{DEPLOY_CAPTURE_TIMEOUT}s")
+        state = target && inventory ? deploy_remote_reconciliation(MasterPaths.repo, target:, inventory:) :
+          { ok: false, summary: "remote state: not queried; deployment target was not resolved" }
+        Result.err(
+          ["deploy: #{summary}", state[:summary], "The tmux run may still be active; do not launch another deployment."].join("\n"),
+          category: :infrastructure,
+        )
+      rescue StandardError => error
+        summary = "execution failed (#{error.class}: #{error.message}); deployment completion is unverified"
+        state = target && inventory ? deploy_remote_reconciliation(MasterPaths.repo, target:, inventory:) :
+          { ok: false, summary: "remote state: not queried; deployment target was not resolved" }
+        Result.err(
+          ["deploy: #{summary}", state[:summary], "Do not retry until the remote run and its receipt are reconciled."].join("\n"),
+          category: :infrastructure,
+        )
+      end
+
+      # A zero exit is not enough. The canonical waiter must report the exact
+      # target's terminal receipt, its tmux exit marker and execution of the
+      # public canary. The waiter's exit status then records the canary result.
+      def deploy_success_receipt?(output, status, target = "all")
+        return false unless status.success?
+
+        escaped = Regexp.escape(target.to_s)
+        lines = output.to_s.lines.map(&:strip)
+        target_receipt = lines.any? { |line| line.match?(/\Avps-deploy:\s+#{escaped}\s+ok(?:\s|\(|\z)/i) }
+        terminal_exit = lines.include?("vps-deploy: finished exit=0")
+        public_canary = lines.include?("vps-deploy: post-check public canary")
+        target_receipt && terminal_exit && public_canary
+      end
+
+      def deploy_preflight_blocked?(output)
+        output.to_s.match?(/deploy refused,|RTFM_FIRST blocked|^preflight:\s+\S+\s+FAILED\b/i)
+      end
+
+      def deploy_summary(output, status, target = "all")
+        lines = output.to_s.lines.map(&:strip).reject(&:empty?)
+        return deploy_interrupted_summary(output, "local deployment wait was cancelled") if status.respond_to?(:cancelled?) && status.cancelled?
+
+        running = lines.find { |line| line.match?(/\Avps-deploy: session [\w.-]+ already running\z/i) }
+        if running
+          session = running[/session ([\w.-]+) already running/i, 1]
+          return [
+            "deployment not started: tmux session #{session} is already running",
+            "attach: tmux attach -t #{session}",
+            "log: ~/vps-deploy.log",
+            "do not start another deployment while this session exists",
+          ].join("\n")
+        end
+
+        escaped = Regexp.escape(target.to_s)
+        success_line = lines.reverse.find { |line| line.match?(/\Avps-deploy:\s+#{escaped}\s+ok(?:\s|\(|\z)/i) }
+        finished = lines.reverse.find { |line| line.match?(/\Avps-deploy: finished exit=\d+\z/i) }
+        public_canary = lines.include?("vps-deploy: post-check public canary")
+        if status.success? && success_line && finished == "vps-deploy: finished exit=0" && public_canary
+          return "remote: #{success_line}; tmux exit=0; public canary completed"
+        end
+
+        # A local refusal happens before SSH. Keep the failed check and its
+        # diagnostic together; compressing it to the final summary hid the cause.
+        preflight_end = lines.rindex { |line| line.match?(/\Apreflight:\s+\S+\s+FAILED\b/i) }
+        if preflight_end
+          failure_start = lines.rindex { |line| line.match?(/\AFAIL preflight\b/i) }
+          start = failure_start || [preflight_end - 10, 0].max
+          detail = lines[start..preflight_end]
+          return (["deployment blocked before SSH; nothing was sent to vm23:", *detail]).join("\n")
+        end
+
+        if output.to_s.match?(/deploy refused,|RTFM_FIRST blocked/i)
+          return "deployment blocked before SSH: #{lines.last(3).join(" | ")[0, 150]}"
+        end
+
+        started = lines.find { |line| line.match?(/\Avps-deploy: started in tmux session [\w.-]+/i) }
+        return deploy_interrupted_summary(output, "remote wait ended without a terminal deployment receipt") if started && !finished
+
+        decisive = lines.reverse.find { |line| line.match?(/\b(?:fatal|failed|refused|error|aborted|conflict|not ready|did not|could not|FAIL)\b/i) }
+        detail = decisive || finished || lines.last || "no remote output or terminal deploy receipt"
+        detail = lines.last(2).join(" | ") if decisive && lines.last != decisive && lines.last.length < 120
+        detail = detail[0, 150]
+        exit = finished && finished[/exit=(\d+)/, 1]
+        status.success? ? "remote exit 0 without complete success evidence: #{detail}" :
+          "remote exit #{exit || status.exitstatus || "signal"}: #{detail}"
+      end
+
+      def deploy_interrupted_summary(output, reason)
+        text = output.to_s
+        started = text[/vps-deploy: started in tmux session ([\w.-]+)/i, 1]
+        existing = text[/vps-deploy: session ([\w.-]+) already running/i, 1]
+        session = started || existing
+        return "#{reason}; remote start state is unknown. Read vps state --json --remote and the deploy-run receipt on vm23 before retrying." unless session
+
+        state = existing ? "was already running" : "was started"
+        "#{reason}; vm23 reported that tmux session #{session} #{state}. Its current state, completion and canary are unverified. " \
+          "Read vps state --json --remote; if active, attach with: tmux attach -t #{session}. " \
+          "Inspect the deploy-run receipt and ~/vps-deploy.log before retrying."
+      end
+
+      # Read-only reconciliation is the reflex for a lost waiter, transport
+      # error, pre-existing session or non-green deploy. It never retries a
+      # mutation, restarts a service or guesses which release should be active.
+      def deploy_remote_reconciliation(root, target:, inventory:)
+        operator = File.join(root, "MASTER", "bin", "operator")
+        output, status = Master::Io::Exec.capture2e(
+          RbConfig.ruby, operator, "vps", "state", "--json", "--remote",
+          chdir: root, timeout: DEPLOY_RECONCILE_TIMEOUT, raise_on_timeout: true
+        )
+        unless status.success?
+          detail = output.to_s.lines.map(&:strip).reject(&:empty?).last(2).join(" | ")
+          return { ok: false, summary: "remote state: unavailable (exit #{status.exitstatus || "signal"})#{detail.empty? ? "" : ": #{detail[0, 240]}"}" }
+        end
+
+        deploy_reconciliation_summary(JSON.parse(output), target:, inventory:)
+      rescue StandardError => error
+        { ok: false, summary: "remote state: unavailable (#{error.class}: #{error.message})" }
+      end
+
+      def deploy_reconciliation_summary(payload, target:, inventory:)
+        errors = []
+        host = payload["host"].to_s
+        sha = payload["dev_sha"].to_s
+        lines = ["vm23 state: host=#{host.empty? ? "unknown" : host} checkout=#{sha.empty? ? "unknown" : sha}"]
+        host_inventory = YAML.safe_load(File.read(File.join(inventory.root, "OPENBSD", "data", "operator.yml")))
+        canonical_hosts = host_inventory.dig("host_scope", "canonical_hosts")
+        unless canonical_hosts.is_a?(Array) && !canonical_hosts.empty? && canonical_hosts.all? { |name| name.is_a?(String) && !name.empty? }
+          errors << "canonical host inventory is missing or invalid"
+        end
+        errors << "remote host #{host.empty? ? "unknown" : host.inspect} is not in the canonical host inventory" unless Array(canonical_hosts).include?(host)
+        errors << "remote checkout SHA is missing or invalid" unless sha.match?(/\A[0-9a-f]{7,40}\z/i)
+
+        kind = inventory.target_kind(target)
+        selected = case kind
+                   when :all then inventory.ordered_apps
+                   when :group then inventory.apps_for_group(target)
+                   when :app then inventory.apps.select { |app| app.name.casecmp?(target) }
+                   else []
+                   end
+        errors << "no registered applications resolved for #{target}" if selected.empty?
+        rows = Array(payload["apps"]).select { |row| row.is_a?(Hash) }.to_h { |row| [row["app"].to_s, row] }
+        selected.each do |app|
+          row = rows[app.name.to_s]
+          unless row
+            errors << "#{app.name}: missing from vps-state"
+            next
+          end
+
+          lines << "#{app.name}: service=#{row["service"] || "unknown"} port=#{row["port_state"] || "unknown"} deployed=#{row["deployed_sha"] || "unknown"}"
+          errors << "#{app.name}: service is not healthy" unless row["service"] == "ok"
+          errors << "#{app.name}: port is not listening" unless row["port_state"] == "listening"
+          errors << "#{app.name}: deployed SHA does not match the checkout" unless row["deployed_sha"].to_s.casecmp?(sha) && row["drift"] == false
+          stamp = row["last_deploy"]
+          errors << "#{app.name}: missing or non-green deploy stamp" unless stamp.is_a?(Hash) && stamp["status"] == "ok" && stamp["sha"].to_s.casecmp?(sha)
+          progress = row["deploy_in_progress"]
+          if progress
+            lines << "#{app.name}: deploy-progress state=#{progress["state"] || "unknown"} step=#{progress["step"] || "unknown"} pid=#{progress["pid"] || "unknown"}"
+            errors << "#{app.name}: deploy still reports in progress"
+          end
+        end
+
+        if kind == :all
+          master = payload["master"].is_a?(Hash) ? payload["master"] : {}
+          lines << "master web: service=#{master["service"] || "unknown"} port=#{master["port_state"] || "unknown"}"
+          errors << "MASTER web service is not healthy" unless master["service"] == "ok"
+          errors << "MASTER web port is not listening" unless master["port_state"] == "listening"
+          stamp = master["last_deploy"]
+          errors << "MASTER web: missing or non-green deploy stamp" unless stamp.is_a?(Hash) && stamp["status"] == "ok" && stamp["sha"].to_s.casecmp?(sha)
+          progress = master["deploy_in_progress"]
+          if progress
+            lines << "master web: deploy-progress state=#{progress["state"] || "unknown"} step=#{progress["step"] || "unknown"} pid=#{progress["pid"] || "unknown"}"
+            errors << "MASTER web: deploy still reports in progress"
+          end
+        end
+
+        recovery = payload["deploy_recovery"].is_a?(Hash) ? payload["deploy_recovery"] : {}
+        recovery_state = recovery["state"] || "unknown"
+        recovery_count = recovery["count"] || "unknown"
+        lines << "recovery: #{recovery_state} pending=#{recovery_count}"
+        case recovery_state
+        when "pending", "truncated"
+          Array(recovery["pending"]).first(8).each do |run|
+            next unless run.is_a?(Hash)
+
+            owner = run["pid_state"] || "unknown"
+            next_action = owner == "gone" ? "review_recover_plan" : "observe_current_run"
+            lines << "receipt #{run["run_id"]}: target=#{run["target"]} status=#{run["status"]} stage=#{run["stage"]} " \
+                     "owner=#{owner} snapshot=#{run["snapshot"]} sha=#{run["pinned_sha"] || "unknown"} next=#{next_action}"
+            lines << "  plan only: zsh OPENBSD/bin/vps-deploy recover --plan" if owner == "gone"
+          end
+          errors << "deploy recovery receipts are pending or unavailable"
+        when "corrupt", "unavailable"
+          detail = recovery["error"].to_s
+          lines << "recovery detail: #{detail[0, 220]}" unless detail.empty?
+          errors << "deploy recovery receipts are pending or unavailable"
+        else
+          errors << "deploy recovery receipts are pending or unavailable" unless recovery_state == "none" && recovery_count == 0
+        end
+        lines << (errors.empty? ? "verification: selected surfaces match #{sha}; no pending deploy receipts" :
+          "verification: NOT GREEN - #{errors.join("; ")}")
+        { ok: errors.empty?, summary: lines.join("\n") }
+      end
+
+      # /android and /ios are the public mobile onboarding entrypoints. The
+      # platform selects the starting lane; capability ownership stays below
+      # the command surface.
+      def dispatch_android(root, ctx: nil)
+        dispatch_mobile_onboarding(:android, root, ctx:)
+      end
+
+      def dispatch_ios(root, ctx: nil)
+        dispatch_mobile_onboarding(:ios, root, ctx:)
+      end
+
+      def dispatch_mobile_onboarding(platform, root, ctx: nil)
+        label = arg_for(ctx)
+        Master::Device::Onboarding.new(
+          android: platform == :android,
+          root:,
+        ).mobile_start!(platform:, label:)
+      rescue ArgumentError => e
+        "#{platform}0: #{e.message}"
+      rescue StandardError => e
+        "#{platform}0: unavailable - #{e.class}: #{e.message}"
+      end
+
+      # /wake — explicit microphone wake-word consent and status.
+      def dispatch_wake(root, ctx: nil)
+        return "wake: local-only" if Fiber[:master_visitor] == true
+        return "wake: Android/Termux only" unless Master::Device.android? && Master::Device.termux?
+
+        wake = Master::Device::WakeWord.new(root:)
+        word, rest = subcommand(ctx)
+        case word
+        when "", "status" then "wake: #{wake.enabled? ? "on" : "off"} phrases=#{wake.phrases.join(", ")}"
+        when "on", "enable" then wake_enable(root, wake)
+        when "off", "disable" then wake_off(wake)
+        else
+          "wake: status | on | off"
+        end
+      rescue StandardError => e
+        "wake0: unavailable - #{e.class}: #{e.message}"
+      end
+
+      def wake_enable(root, wake)
+        pet = Master::Device::Agent.owner_subject(root:)
+        phrases = ["hey master"]
+        unless pet.empty?
+          profile = Master::Device::OwnerProfile.values(root:, subject: pet)
+          name = profile["pet_name"].to_s.strip
+          phrases << "hey #{name.downcase}" unless name.empty?
+        end
+        wake.enable!(phrases:)
+        "wake: on - #{wake.phrases.join(", ")}"
+      end
+
+      def wake_off(wake)
+        wake.disable!
+        "wake: off"
+      end
+
+      private_class_method :wake_enable, :wake_off
+
+      # /doctor — bin/doctor's report followed by the security audit.
+      # `/doctor device` asks the hardware the host exposes through Termux:API.
+      def dispatch_doctor(root, ctx: nil)
+        word, rest = subcommand(ctx)
+        return dispatch_device(root, ctx: rest) if word == "device"
+        return dispatch_doctor_tools(root, ctx: rest) if word == "tools"
+        return dispatch_keyless_probe(root) if word == "keyless"
+
+        script = File.join(root, "bin", "doctor")
+        body = if File.file?(script)
+                 out, err, status = Master::Io::Exec.capture3(Gem.ruby, script, chdir: root)
+                 text = [out, err].map(&:strip).reject(&:empty?).join("\n")
+                 status.success? ? text : "#{text}\ndoctor: exit #{status.exitstatus}"
+               else
+                 "doctor: missing #{script}"
+               end
+        audit = Master::Ground::SecurityAudit.report(root:)
+        capabilities = ::Operator::CapabilityGraph.new(root:).render(model: ENV["MASTER_MODEL"])
+        [body, audit, capabilities].reject { |part| part.to_s.strip.empty? }.join("\n")
+      end
+
+      def dispatch_keyless_probe(root)
+        script = File.join(root, "bin", "doctor")
+        return "keyless0: missing #{script}" unless File.file?(script)
+
+        out, err, status = Master::Io::Exec.capture3(Gem.ruby, script, "--keyless", chdir: root)
+        text = [out, err].map(&:strip).reject(&:empty?).join("\n")
+        status.success? ? text : "#{text}\nkeyless0: exit #{status.exitstatus}"
+      end
+
+      # /doctor tools lists the tool calls whose outcome nobody knows: each one
+      # blocks a repeat with the same arguments. `/doctor tools reconcile <id>
+      # <outcome> <evidence>` records what the operator verified and lifts it.
+      def dispatch_doctor_tools(root, ctx: nil)
+        bus = Master::Trace::EventBus.new(event_log: Master::Trace::Log::Event.new(root:),
+                                          evidence_log: Master::Trace::Log::Evidence.new(root:))
+        observer = Master::Trace::ToolObserver.new(bus:)
+        verb, id, outcome, evidence = arg_for(ctx).split
+        if verb == "reconcile"
+          held = observer.reconcile_invocation!(invocation_id: id, outcome:, evidence_ref: evidence)
+          return "tools0: #{held.tool} #{held.invocation_id} reconciled #{outcome}"
+        end
+
+        held = observer.unresolved
+        return "tools0: no unresolved tool outcome" if held.empty?
+
+        outcomes = Master::Trace::ToolObserver::RECONCILIATIONS.join("|")
+        (held.map { |identity| "tools0: #{identity.invocation_id} #{identity.tool} #{identity.tier} unresolved" } <<
+          "reconcile with /doctor tools reconcile <id> <#{outcomes}> <evidence_ref>").join("\n")
+      rescue ArgumentError => e
+        "tools0: #{e.message}"
+      end
+    end
+  end
+end

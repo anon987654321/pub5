@@ -1,0 +1,38 @@
+<% content_for :title, t("pages.planner") %>
+<%= turbo_stream_from "planned_outfits" %>
+<%= tag.h1 t("pages.planner") %>
+<%# With no outfit there is nothing to plan: say so and point to making one,
+    rather than a form whose submit can only fail. %>
+<% no_outfits = @outfits.none? %>
+<% if no_outfits %>
+  <%= render "shared/empty_state",
+        title: t("empty.no_outfits"),
+        body: t("planned.no_outfits_body"),
+        action: { label: t("pages.new_outfit"), path: new_outfit_path } %>
+<% end %>
+<%= form_with model: PlannedOutfit.new, url: planned_outfits_path do |f| %>
+  <%# aria-label rather than visible <label>s: .field-row lays these out as one
+      horizontal strip ending in the submit, and stacking three labels over it
+      would redesign the row. The names are for assistive tech only; the visible
+      affordances (the date picker, the "Select outfit…" blank, the placeholder)
+      stay exactly as they are. %>
+  <div class="field-row">
+    <%= f.date_field :planned_date, min: Date.current, class: "input",
+          aria: { label: t("planned.date") } %>
+    <%= f.select :outfit_id, @outfits.map { |o| [o.name, o.id] },
+          { include_blank: t("planned.select_outfit") },
+          { aria: { label: t("planned.outfit") } } %>
+    <%= f.text_field :notes, placeholder: t("planned.notes"), aria: { label: t("planned.notes") } %>
+    <%= f.submit t("planned.plan_it"), class: "button", disabled: no_outfits %>
+  </div>
+<% end %>
+<%= render "planned_outfits/list" %>
+<%= render "shared/infinite_scroll_sentinel",
+           pagy: @pagy,
+           reflex: "PlannedOutfitsInfiniteScrollReflex#load_more",
+           sentinel_id: "amber-planned-outfits-sentinel" %>
+<%# Pager kept as the no-JS path: the sentinel needs a reflex round trip over
+    ActionCable, so without JavaScript a truncated list would say nothing about
+    the rest of itself. noscript, so a reader with JavaScript sees one
+    mechanism rather than two. %>
+<noscript><%= render "shared/pager", pagy: @pagy %></noscript>

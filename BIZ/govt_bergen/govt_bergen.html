@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="nb">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Bergen Selvstyreparti – forretningsplan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&display=swap">
+    <style>
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --color-text: #000; --color-muted: #777; --color-link: #005f73; --color-link-bold: #003087;
+  --color-print-muted: #aaa; --color-border: #ddd; --color-icon: #000; --color-background: #fff;
+  --color-footer-text: #888; --font-size-base: 1rem; --font-size-small: 0.9rem;
+  --font-size-xsmall: 0.75rem; --font-size-h1: 3.6rem; --font-size-h2: 1.8rem;
+  --line-height-normal: 1.5; --line-height-heading: 1.2;
+  --line-height-subheading: 1.4; --space-xs: 0.75rem; --space-s: 0.75rem; --space-m: 0.75rem;
+  --space-l: 1.5rem; --space-xl: 3rem; --space-xxl: 4.5rem; --space-list-item: 0;
+  --width-content: 33rem; --width-indent: 16.2px; --layout-margin: auto;
+  --font-text: "Source Serif 4", serif; --font-heading: "EB Garamond", serif;
+  --underline-thickness: 1.5px; --underline-offset: 2px;
+}
+html { font-size: 16px; }
+body {
+  font: 400 var(--font-size-base)/var(--line-height-normal) var(--font-text);
+  color: var(--color-text); background: var(--color-background);
+  width: 90%; max-width: var(--width-content); margin: var(--layout-margin);
+  text-rendering: optimizeLegibility; letter-spacing: -0.01em;
+}
+main { padding-inline: var(--space-m); }
+article { margin-bottom: var(--space-xxl); hanging-punctuation: first last; }
+/* The cover is the page, not a column: the plan mark, the title pushed to
+   the foot of the page and the byline carry page one as on fetat. */
+header.cover {
+  min-height: 94vh; display: flex; flex-direction: column;
+  text-align: center; padding: var(--space-xl) 0;
+  break-after: page; page-break-after: always;
+}
+.cover .mark, .cover .mark-brand { margin: 0 auto; }
+.cover h1 {
+  font: 600 2.6rem/1.2 var(--font-heading);
+  margin: auto 0; letter-spacing: -0.015em; text-wrap: balance;
+}
+.cover .byline { font-style: italic; color: var(--color-muted); margin: var(--space-m) 0; }
+h2 {
+  font: 600 var(--font-size-h2)/var(--line-height-subheading) var(--font-heading);
+  margin: var(--space-xl) 0; letter-spacing: -0.01em; text-wrap: balance;
+}
+h3 { font: 600 1.3rem/1.3 var(--font-heading); margin: var(--space-l) 0 var(--space-s); text-wrap: balance; }
+h4 { font: 400 1.05rem/1.3 var(--font-heading); margin: var(--space-m) 0 var(--space-xs); color: var(--color-text); }
+p { margin-bottom: var(--space-l); orphans: 2; widows: 2; }
+strong { font-weight: 600; }
+.count { font-variant-numeric: tabular-nums; }
+a {
+  color: var(--color-link); text-decoration: underline;
+  text-decoration-thickness: var(--underline-thickness); text-underline-offset: var(--underline-offset);
+}
+a:focus { outline: 2px solid var(--color-link); outline-offset: 2px; }
+code { font-family: ui-monospace, Menlo, monospace; font-size: 0.88em; }
+ul { margin: 0 0 var(--space-l); padding-left: 1.1em; }
+li { margin-bottom: var(--space-list-item); text-wrap: pretty; }
+li::marker { color: var(--color-muted); }
+dl { margin: 0 0 var(--space-l); }
+dt { font-weight: 600; margin-top: 0.6em; }
+dd { margin: 0 0 0.35em; padding-left: 1.1em; text-wrap: pretty; }
+/* Tables and figures: the archive rules, retokenised onto bob2's colors. */
+table { width: 100%; border-collapse: collapse; margin: var(--space-l) 0; font-size: 0.9em; font-variant-numeric: tabular-nums lining-nums; }
+caption { caption-side: top; text-align: left; font-style: italic; color: var(--color-muted); font-size: 0.8em; padding-bottom: 0.5rem; }
+th, td { padding: 0.3rem 0.6rem 0.3rem 0; border-bottom: 1px solid var(--color-border); text-align: left; vertical-align: baseline; hyphens: auto; }
+thead th { border-top: 2px solid var(--color-text); border-bottom: 1px solid var(--color-text); font-weight: 600; }
+tfoot td { border-top: 1px solid var(--color-text); border-bottom: 2px solid var(--color-text); font-weight: 600; }
+table.numbers td, table.numbers th { text-align: right; }
+table.numbers td:first-child, table.numbers th:first-child { text-align: left; }
+figure { margin: var(--space-xl) 0; }
+figure svg { display: block; width: 100%; height: auto; }
+figcaption { font-size: 0.8em; font-style: italic; color: var(--color-muted); margin-top: 0.5rem; }
+.mark-plain { font-weight: 400; font-size: 1.3em; letter-spacing: 0.05em; line-height: 1.2; }
+/* The brand wordmark carries its own display font (ragnhild's Nosifer);
+   the rule is the base's, ported so the plan's own mark reads as itself. */
+.mark-brand {
+  font-family: 'Nosifer', 'EB Garamond', Georgia, serif;
+  font-weight: 400; font-size: 2.1em; line-height: 1.45; margin: 0 auto; color: inherit;
+}
+.mark-brand:empty { display: none; }
+.toc {
+  font-size: var(--font-size-small); line-height: 1.6;
+  margin: 0 auto var(--space-xxl); padding: var(--space-m) 0;
+  break-after: page; page-break-after: always;
+}
+.toc .lv1 { font-family: var(--font-heading); font-weight: 600; margin: var(--space-s) 0 2px; }
+.toc p { margin: 0; }
+.toc h2 { font: 600 1.4rem/1.3 var(--font-heading); margin: 0 0 var(--space-s); }
+footer {
+  font-size: var(--font-size-xsmall); color: var(--color-footer-text);
+  margin-top: var(--space-xl); padding: var(--space-m) 0;
+}
+footer p { margin: 0 0 var(--space-s); }
+footer a { color: var(--color-footer-text); }
+footer a strong { color: var(--color-link-bold); }
+@media (max-width: 768px) {
+  :root { --font-size-h1: 2.1rem; --font-size-h2: 1.35rem; }
+}
+@media print {
+  /* The printed document is the Chrome render, paged, exactly as fetat:
+     the @page box adds the hefte size, the folio and break hygiene only.
+     A zero top margin on the first page makes the cover the page. */
+  @page {
+    size: 156mm 234mm;
+    margin: 6mm 0 12mm;
+    @bottom-center { content: counter(page); font: 0.75rem/1.4 var(--font-heading); color: var(--color-print-muted); }
+  }
+  @page :first { margin-top: 0; }
+  /* body keeps its auto margins in print: the browser centres the 33rem
+     column on the page box, and the pdf must be laid out by the same
+     algorithm - pinning body margin to 0 shifted every printed page to
+     the left edge and broke the html/pdf twin. */
+  header.cover { min-height: 221mm; }
+  h2, h3, h4 { break-after: avoid; }
+  table, li, figure { break-inside: avoid; }
+  h1 { page-break-inside: avoid; }
+  footer { page-break-before: always; }
+  a { color: inherit; text-decoration: none; }
+  a[target="_blank"]::after, a[href^="mailto:"]::after { content: none; }
+  a:focus { outline: none; }
+}
+
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <header class="cover">
+<p class="mark mark-plain">Bergens Selvstyreparti</p>
+<h1>Blockchain-basert lokalt styresett og transparent beslutningstaking</h1>
+<p class="byline">Bergen Selvstyreparti · søkt finansiering: NOK 200 000 · november 2026</p>
+        </header>
+        <div class="toc" aria-label="Innhold">
+          <h2>Innhold</h2>
+<p class="lv1">Sammendrag</p>
+<p class="lv1">Markedsanalyse</p>
+<p class="lv1">Teknologi og Innovasjon</p>
+<p class="lv1">Forretningsmodell</p>
+<p class="lv1">Utviklingsveikart</p>
+<p class="lv1">Finansieringsbehov</p>
+<p class="lv1">Team og Kompetanse</p>
+<p class="lv1">Bærekraft og Samfunnsansvar</p>
+        </div>
+<section id="sammendrag">
+<h2>Sammendrag</h2>
+<h3>Visjon</h3>
+<p>Bergen Selvstyreparti skal demokratisere kommunalt styresett gjennom teknologi. Vi tror at hver innbygger skal ha direkte innflytelse over lokalpolitiske beslutninger, ikke bare hvert 4. år.</p>
+<h3>Misjon</h3>
+<p>Utvikle og implementere en blockchain-basert governance-plattform som gir bergensere direkte stemmerett i kommunale saker. Full transparens i budsjettbruk og beslutningstaking.</p>
+<h3>Innovasjon</h3>
+<p>Decentralized Autonomous Organization (DAO) for kommunestyret. Blockchain-basert stemming med kryptografisk anonymitet. Smart contracts for budsjettallokeringer. AI-drevet policy-analyse.</p>
+<h3>Kundefordel</h3>
+<p>Innbyggere får reell innflytelse på lokalpolitikk. Reduserer korrupsjon og ineffektivitet gjennom transparens. Engasjerer unge velgere (18-35 år) som tradisjonelt har lav valgdeltakelse.</p>
+
+<h3>Hvorfor nå</h3>
+<p>Tillitsskanden i demokratiet er målt, ikke antatt: valgdeltakelsen blant unge ligger langt under gjennomsnittet, og tryggheten på at innvirkning overhodet teller, svekkes for hvert valg. Samtidig har referanseprosjektene modnet – Estlands digitale forvaltning, Barcelona En Comú og Decidim-plattformen og OwnYourDatas arbeid på datalagring hos borgeren viser vei uten å gi direkte demokrati. Bergen kommunes digitaliseringsstrategi åpner for pilotering, og Polygon-arkitekturen har gjort transaksjonskostnaden lav nok til kommunal skala. Vinduet er politisk: den første kommunen som gjennomfører blockchain-basert saksbehandling, setter standarden for de neste 355.</p>
+
+<h3>Visjon, misjon og verdier</h3>
+<p>Bevegelsen bak plattformen heter Bergens Selvstyrepartiet; arkivene lanserte den også under navnet Evighetspartiet, med mottoet «Frihet, autonomi, transparens». Visjonen er en selvstyrt og autonom Bergen der innbyggerne deltar i beslutningsprosessene og får direkte innflytelse på hvordan byen styres. Misjonen er å redusere byråkrati, gi makten tilbake til folket og etablere et styresett med frihet, autonomi og rettferdighet i sentrum. Fem kjerneverdier bærer arbeidet: transparens, deltakelse, lokal autonomi, bærekraft og digital innovasjon.</p>
+</section>
+<section id="markedsanalyse">
+<h2>Markedsanalyse</h2>
+<table class="numbers">
+<caption>Marked og vekst</caption>
+<thead><tr><th>Omfang</th><th>Verdi</th></tr></thead>
+<tbody>
+<tr><td>Marked i Norge</td><td>NOK 15 000 000 000</td></tr>
+<tr><td>Marked i Norden</td><td>NOK 50 000 000 000</td></tr>
+<tr><td>Årlig vekst</td><td>15 %</td></tr>
+</tbody>
+</table>
+<h3>Kundesegmenter</h3>
+<ul>
+<li>Bergenske innbyggere (287,000) som ønsker mer direkte demokrati</li>
+<li>Andre norske kommuner (356 totalt) som kan adoptere plattformen</li>
+<li>Nordiske byer interessert i demokrati-innovasjon</li>
+<li>Politiske partier som ønsker medlemsengasjement-verktøy</li>
+<li>Internasjonale governance-organisasjoner (UNDP, World Bank)</li>
+</ul>
+<h3>Konkurranse</h3>
+<ul>
+<li>Tradisjonell representativ demokrati (4-års valgsyklus, begrenset deltakelse)</li>
+<li>Innbyggerinitiativ-plattformer (Change.org, petisjon.no) – ingen reell beslutningsmakt</li>
+<li>Estnias e-governance (digitalt, men ikke blockchain-basert eller direkte demokrati)</li>
+<li>Barcelona En Comú (bruker Decidim, men ikke blockchain)</li>
+<li>Aragon DAO framework (generisk, ikke kommunetilpasset)</li>
+</ul>
+<h3>Konkurransefortrinn</h3>
+<ul>
+<li>Første blockchain-baserte kommunestyret i verden – global media attention</li>
+<li>Kryptografisk sikker og anonym stemming (ingen coercion eller vote buying)</li>
+<li>Smart contracts sikrer automatisk utførelse av vedtak (ingen byråkratisk forsinkelse)</li>
+<li>AI policy-analyse gir innbyggere forståelig sammendrag av komplekse saker</li>
+<li>Full budsjett-transparens i sanntid – hver krone sporet på blockchain</li>
+<li>Åpen kildekode – andre kommuner kan adoptere gratis (vi tjener på support/hosting)</li>
+</ul>
+
+<h3>Kundeinnsikt og problemforståelse</h3>
+<p>MVP-en i Årstad bydel – 500 testbrukere og 15 gjennomførte pilotavstemninger – gir dokumentert innsikt i tre lag. Innbyggerne deltar når saken er forståelig: AI-genererte saksammenfatninger løfter engasjementet vesentlig mot rene tekniske vedtak. Innbyggerne deltar når innvirkningen er reell: testbrukerne skiller skarpt mellom høringsrunder (advarsel om at beslutningen allerede er tatt) og kvadratiske avstemninger der utfallet binder. Og byråkratiet ser fordelene før politikere: administrasjonens estimerte sparepotensial på IT-drift (NOK 5 millioner mot 50+ millioner for tradisjonelle systemer) er det mest konkrete salgsargumentet overfor kommunesektoren. Problemet plattformen løser er ikke manglende teknologi, men manglende innvirkning og manglende transparens – og begge deler er målbare.</p>
+
+<h3>Politisk landskap</h3>
+<p>Bevegelsens analyse fra lanseringsfasen målte etterspørselen etter et nytt lokalt alternativ: 60 prosent av bergenserne ønsker mer direkte demokrati, 45 prosent er misfornøyde med det byråkratiske systemet, 70 prosent støtter økt lokal autonomi fra Oslo, og 80 prosent ønsker mer transparent styring. Tallene peker mot samme konklusjon som Årstad-piloten: involvering vinner når innvirkningen er reell, og transparensen er selv produktet.</p>
+<h3>Markedsføring og salg</h3>
+<p>Bergen er referanse og bevisplattform: live-lanseringen med fem reelle kommunestyresaker og 30 % deltakelsesmål er det grunnlaget alle videre salg hviler på. Intensjonsavtalene med ti kommuner fra Q3 2026 tegnes med utgangspunkt i Bergens dokumenterte kostnadsbesparelser og deltakelsestall, og de første tre (Trondheim, Tromsø, Stavanger) går live i Q4. Nasjonal mediedekning følger hver milepæl – verdens første blockchain-baserte kommunestyre er en historie som forteller seg selv. Internasjonalt åpner OECD Democracy Forum i Paris kontoret til UNDP- og Verdensbanken-organisasjonene, der plattformen selges som land-deployment med konsulentpakke. Forretningsmodellen med åpen kildekode og betalt hosting/support gjør adopsjonen billig og inntektsmodellen vedvarende: kommunene kopierer fritt og betaler for drift, support og videreutvikling.</p>
+
+<h3>Politisk plattform</h3>
+<p>Plattformsaken ligger i partiets hovedprogram som fem saker: full autonomi for Bergen kommune, direkte demokrati med folkeavstemninger om viktige saker, grønn omstilling med karbonnøytral by innen 2030, boligpolitikk som gir rimelige boliger til alle bergensere, og næringslivspolitikk som støtter lokale bedrifter og startups. Sakslisten er også salgsargumentet: hver sak gir plattformen en konkret brukssak, fra åpne budsjettvedtak til boligsaken, slik at valgprogrammet og produktet validerer hverandre.</p>
+</section>
+<section id="teknologi">
+<h2>Teknologi og Innovasjon</h2>
+<h3>Teknologibeskrivelse</h3>
+<p>Plattformen bygger på Ethereum blockchain med Layer 2 scaling (Polygon). Smart contracts skrevet i Solidity. Frontend er Ruby on Rails med React. BankID-integrasjon for sikker autentisering. IPFS for decentralisert dokumentlagring.</p>
+<h3>Unik innovasjon</h3>
+<p>Quadratic voting: Innbyggere får 100 ‘voice credits’ per måned. Kan bruke 1 credit på 1 sak (1 stemme), eller 100 credits på 1 sak (10 stemmer) – kostnaden er kvadratisk. Dette balanserer intense minoriteter mot apathetic majoriteter.</p>
+<h3>Immaterielle rettigheter</h3>
+<p>Åpen kildekode (MIT lisens). Bergen Selvstyreparti™ trademark registrert. Quadratic voting-implementasjon for kommunalt styresett er patent-pending (202400456).</p>
+<h3>Utviklingsstadium</h3>
+<p>MVP live med 500 testbrukere i Årstad bydel. Gjennomført 15 pilotavstemninger. Smart contracts audited av ConsenSys. Krever skalering til 287,000 brukere og juridisk godkjenning.</p>
+
+<h3>Plattformforslag 1: FETAT – ny barnevernsforvaltning</h3>
+<p>Den samme governanse-stakken bærer et konkret forvaltningsforslag som allerede er utarbeidet som eget dokument i pub5-arbeidet (FETAT-proposisjonen, STUDIO/docs/fetat/proposal.md): en ny norsk barnevernstjeneste – FETAT, Familieetaten – bygget på tre prinsipper: sikkerhet, rettferdighet og ansvarliggjøring. Der dagens Barnevern dokumenterte svakheter som manglende rettssikkerhet, svake bevis og barns ønsker som ble oversett (se arkivets analyse av konkrete saker), foreslår FETAT bevisbasert saksbehandling med krav om primærkilder og motbevis, 48-timers førstegangs-vurdering av meldinger, tverrfaglige team med gruppebeslutninger, regionale enheter utenfor kommunens egeninteresse, barnevennlige midlertidige plasseringer og uavhengig etterprøving av alvorlige avgjørelser. Barnets varslingslinje (nummer 123) og loggføring av alle meldinger inn i plattformen gir sporbarhet fra første melding til endelig avgjørelse. Forretningsmodellen følger govt_bergen-mønsteret: åpen kildekode, betalt hosting og support til stat og fylkeskommuner, med MASTERs lovkatalog som garanterer at ingen algoritmiske vurderinger om barn fjernes eller returneres uten menneskelig, dokumentert og etterprøvbar beslutning.</p>
+<p>Faktagrunnlaget fra FETAT-heftet: Norge er felt i Den europeiske menneskerettsdomstolen 24 ganger for brudd på EMK artikkel 8, retten til familieliv – på ingen andre områder har Norge flere fellelser – og barnevernet koster samfunnet 26 milliarder kroner årlig fordelt på 356 kommuner. Vilkårligheten er målt: klageinstansene ga 3 prosent medhold på akuttvedtak i Trøndelag og 35 prosent i Oslo, og standardisert samværspraksis på 2–6 årlige samvær «sementerer situasjonen» i stedet for å bevare familiebånd. NOU 2023:7 oppsummerer systemet: «Et system med svakheter i kompetanse, prioritering, struktur og tilsyn. Et system som åpner for vilkårlighet.»</p>
+<p>Heftets fire pilarer – gjenforeningsfokus fra dag én, tverrfaglige team etter Barnahús-modellen, tidlig familiestøtte før krisen eskalerer, og kvalitetssikring som dokumenterer barnets stemme – fordeler seg over de samme prinsippene.</p>
+<table class="numbers">
+<caption>FETAT: forventet effekt</caption>
+<thead><tr><th>Indikator</th><th>Mål</th></tr></thead>
+<tbody>
+<tr><td>Reduksjon i unødvendige omsorgsovertakelser</td><td>30 %</td></tr>
+<tr><td>Økning i vellykkede tilbakeføringer</td><td>50 %</td></tr>
+<tr><td>EMD-fellelser for deltakende kommuner</td><td>0</td></tr>
+<tr><td>Årlig samfunnsbesparelse ved 50 kommuner</td><td>400 mill. kr</td></tr>
+</tbody>
+</table>
+<table>
+<caption>FETAT: implementering</caption>
+<thead><tr><th>Fase</th><th>Tidsrom</th><th>Innhold</th></tr></thead>
+<tbody>
+<tr><td>Pilot</td><td>2026</td><td>3 kommuner, metodikkutvikling, forskningssamarbeid</td></tr>
+<tr><td>Validering</td><td>2027</td><td>12 måneder drift, uavhengig evaluering, justering</td></tr>
+<tr><td>Skalering</td><td>2028–2030</td><td>Utvidelse til 50 kommuner, regional struktur</td></tr>
+</tbody>
+</table>
+<p>Hva som kreves: politisk vilje på kommunalt og nasjonalt nivå, lovhjemmel for alternative organiseringsformer, pilotkommuner som går foran, og forskningssamarbeid for uavhengig evaluering. Norge kan ikke fortsette å tape i Strasbourg; FETAT tilbyr veien ut – et barnevern som beskytter barn og respekterer familiers grunnleggende rettigheter. Dokumentet står som eget hefte i arkivet (STUDIO/docs/fetat/proposal.md) og kontakteres på fetat.no og post@fetat.no.</p>
+<h3>Plattformforslag 2: politietaten under loven</h3>
+<p>Erfaringene oppsummert i «Byen vest for loven» – utbredt korrupsjon og lukkede avgjørelsesrom i politiet – peker på samme strukturelle problem som i barnevernet: makt uten sporbarhet. Forslaget er en politiplattform på samme stakk (OpenBSD, Ruby, MASTER-governanse) med fire moduler: kjededokumentert bevishåndering fra anholdelse til rettssak (hver håndtering logges kryptografisk, ingen redigering i ettertid), klage- og varslerlinje for både publikum og egne ansatte med beskyttet identitet og uavhengig saksbehandling, åpen statistikk over påstander, avsløringer og sanksjoner per stasjon per år, og AI-støttet mønsteranalyse som flagger avvik – gjentatte henleggelsesmønstre, mangelende dokumentasjon, uvanlige kontaktpunkter – til manuell granskning. Algoritmene foreslår aldri straffansvar; de gjør mønstre synlige for de menneskelige kontrollorganene. Plattformen leveres i første rekke til Statskontoret og fylkespolitimesterne som tilleggstjeneste på govt_bergen-stakken, med Bergen som pilot for klage- og dokumentasjonsmodulene.</p>
+
+<h3>Plattformforslag 3: parametrisk arkitektur og Bergen-coin</h3>
+<p>Partiprogrammet strekker forvaltningsteknologien ut i to satsinger som bygger på samme tillitsinfrastruktur. Parametrisk arkitektur skal gi bærekraftige og fleksible bygg i Bergen: adaptiv design som tilpasser seg klimaendringer og befolkningsvekst, slik at kommunale bygg følger bruk og vær i stedet for å låses i statiske planer. Bergen-coin er forslaget om lokal kryptovaluta for lokal økonomi, under samme transparenskrav som resten av plattformen: åpen kildekode, offentlig hovedbok og smarte kontrakter som automatiserer tjenesteleveranser og kutter byråkratiske mellomledd. Det transparente budsjettet hører samme sted hjemme: alle kommunale utgifter legges åpent, i åpen kildekode, slik at hver innbygger kan følge kronene fra vedtak til leveranse.</p>
+</section>
+<section id="forretningsmodell">
+<h2>Forretningsmodell</h2>
+<h3>Inntektskilder</h3>
+<ul>
+<li>Bergen kommune: Hosting og support fee NOK 5M årlig (vs. NOK 50M+ tradisjonelle IT-systemer)</li>
+<li>Lisensering til andre norske kommuner: NOK 500k setup + NOK 200k årlig per kommune</li>
+<li>Konsulentarbeid for demokrati-innovasjon: NOK 2M per prosjekt</li>
+<li>Internasjonale organisasjoner (UNDP, World Bank): NOK 10M per land-deployment</li>
+<li>Training og workshops for politiker og innbyggere: NOK 500k årlig</li>
+</ul>
+<h3>Lønnsomhet</h3>
+<p>Break-even ved 5 kommuner + Bergen-kontrakt (år 2). Ved 30 kommuner (10% av Norge): NOK 11M årlige inntekter. Internasjonal skalering kan nå NOK 100M+ ved deployments i 10+ land.</p>
+<h3>Skalerbarhet</h3>
+<p>Plattformen er designet for millioner av brukere (Polygon håndterer 7,000 tx/sec). Hver kommune er en separat smart contract instance. Teknisk skalering billig (AWS + Polygon). Hovedutfordring er juridisk tilpasning per jurisdiksjon.</p>
+
+<h3>Enhetsøkonomi</h3>
+<table class="numbers">
+<caption>Enhetsøkonomi per kommune, NOK millioner per år</caption>
+<thead><tr><th>Post</th><th>Beløp</th></tr></thead>
+<tbody>
+<tr><td>Hosting og support per kommune</td><td>5,0</td></tr>
+<tr><td>Driftskost per kommune-instans</td><td>−0,4</td></tr>
+</tbody>
+<tfoot><tr><td>Dekningsbidrag per kommune</td><td>4,6</td></tr></tfoot>
+</table>
+<p>Nye kommuner kommer i tillegg med engangsbetalt oppsett (NOK 500 000) og årlig lisens (NOK 200 000); konsulentprosjektene for demokrati-innovasjon ligger på 2 millioner per prosjekt. Bergen-kontrakten alene dekker fastkostnadene: 30 kommuner gir rundt NOK 11 millioner i årlige inntekter, og internasjonale deployments ligger på NOK 10 millioner per land.</p>
+</section>
+<section id="veikart">
+<h2>Utviklingsveikart</h2>
+<dl>
+<dt>Q1 2026</dt>
+<dd>Finansiering sikret. Fullføre juridisk godkjenning fra Bergen kommune og Kommunaldepartementet. Skalere plattform til 287,000 brukere.</dd>
+<dt>Q2 2026</dt>
+<dd>Live-lansering i Bergen med 5 reelle kommunestyresaker. Oppnå 30% innbyggerdeltakelse (vs. 60% i kommunevalg). Media-kampanje nasjonalt.</dd>
+<dt>Q3 2026</dt>
+<dd>10 kommuner signerer intensjonsavtaler. Gjennomføre 50 avstemninger i Bergen. Dokumentere kostnadsbesparelser og økt deltakelse.</dd>
+<dt>Q4 2026</dt>
+<dd>Første 3 kommuner går live (Trondheim, Tromsø, Stavanger). Presentere på OECD Democracy Forum i Paris. Sikre NOK 10M i internasjonale kontrakter.</dd>
+<dt>2027 og videre</dt>
+<dd>30 norske kommuner på plattformen. Første internasjonale deployment (Reykjavik, Island). Ansette 20 utviklere. Nå NOK 15M årlig omsetning.</dd>
+</dl>
+
+<h3>Milepæler og måltall</h3>
+<table class="numbers">
+<caption>Milepæler 2026–2027 med måltall</caption>
+<thead><tr><th>Milepæl</th><th>Tidspunkt</th><th>Måltall</th></tr></thead>
+<tbody>
+<tr><td>Juridisk godkjenning og skaleringsklar plattform</td><td>Q1 2026</td><td>287 000 brukere klargjort</td></tr>
+<tr><td>Live-lansering Bergen</td><td>Q2 2026</td><td>5 reelle saker, 30 % deltakelse</td></tr>
+<tr><td>Intensjonsavtaler og pilotvolum</td><td>Q3 2026</td><td>10 kommuner, 50 avstemninger</td></tr>
+<tr><td>Første tre kommuner live</td><td>Q4 2026</td><td>Trondheim, Tromsø, Stavanger</td></tr>
+<tr><td>30 kommuner og første land-deployment</td><td>2027</td><td>Reykjavik, NOK 15 M omsetning</td></tr>
+</tbody>
+</table>
+
+<h3>Bevegelsens faser</h3>
+<p>Partiet driver i tre faser som løper foran plattformens milepæler. Mobiliseringen (0–6 måneder) bygger grasrotbevegelsen, etablerer den digitale plattformen og rekrutterer kandidater. Valgkampen (6–12 måneder) lanserer det politiske programmet, gjennomfører folkemøter og bygger allianser. Implementeringen (12 måneder og frem) vinner lokalvalget, implementerer reformene og etablerer den nye styringsmodellen – med lokalvalget 2027 som fullskalapilot for både parti og plattform.</p>
+</section>
+<section id="finansiering">
+<h2>Finansieringsbehov</h2>
+<p><strong>Totalt kapitalbehov: NOK 400 000.</strong></p>
+<h3>Finansieringskilder</h3>
+<ul>
+<li><strong>Innovasjon Norge:</strong> NOK 200 000</li>
+<li><strong>Risikokapital:</strong> NOK 150 000</li>
+<li><strong>Kommunalt tilskudd:</strong> NOK 50 000</li>
+</ul>
+<h3>Budsjettallokering</h3>
+<table class="numbers">
+<thead><tr><th>Kategori</th><th>Beløp (NOK)</th><th>Andel</th></tr></thead>
+<tbody>
+<tr><td>Utvikling</td><td>150 000</td><td>37,5 %</td></tr>
+<tr><td>Sikkerhet Audit</td><td>80 000</td><td>20 %</td></tr>
+<tr><td>Juridisk</td><td>60 000</td><td>15 %</td></tr>
+<tr><td>Markedsfoering</td><td>50 000</td><td>12,5 %</td></tr>
+<tr><td>Loenn</td><td>40 000</td><td>10 %</td></tr>
+<tr><td>Driftskapital</td><td>20 000</td><td>5 %</td></tr>
+</tbody>
+<tfoot><tr><td>Sum</td><td>400 000</td><td>100 %</td></tr></tfoot>
+</table>
+
+<p>Budsjettallokeringen ovenfor utgjør investeringsbudsjettet for finansieringsperioden. Tabellene bygger på veikartet: Bergen-kontrakt fra 2026, fem kommuner mot årets slutt, break-even ved fem kommuner plus Bergen i 2027, og NOK 15 millioner i omsetning i 2027.</p>
+<h3>Resultatbudsjett 2026–2028</h3>
+<table class="numbers">
+<caption>Resultatbudsjett, NOK millioner</caption>
+<thead><tr><th>Post</th><th>2026</th><th>2027</th><th>2028</th></tr></thead>
+<tbody>
+<tr><td>Inntekter (hosting, lisenser, konsulent)</td><td>6,5</td><td>15,0</td><td>28,0</td></tr>
+<tr><td>Kostnader, drift og utvikling</td><td>−7,5</td><td>−12,5</td><td>−21,5</td></tr>
+<tr><td>Driftsresultat</td><td>−1,0</td><td>2,5</td><td>6,5</td></tr>
+<tr><td>Finansposter</td><td>0,0</td><td>−0,1</td><td>−0,1</td></tr>
+</tbody>
+<tfoot><tr><td>Resultat før skatt</td><td>−1,0</td><td>2,4</td><td>6,4</td></tr></tfoot>
+</table>
+<h3>Likviditetsbudsjett 2026–2028</h3>
+<table class="numbers">
+<caption>Likviditetsbudsjett, NOK millioner</caption>
+<thead><tr><th>Post</th><th>2026</th><th>2027</th><th>2028</th></tr></thead>
+<tbody>
+<tr><td>Inngående saldo</td><td>0,0</td><td>0,14</td><td>1,94</td></tr>
+<tr><td>Innbetalinger</td><td>7,0</td><td>15,2</td><td>28,5</td></tr>
+<tr><td>Utbetalinger, drift</td><td>−6,9</td><td>−12,9</td><td>−22,0</td></tr>
+<tr><td>Investeringer</td><td>−0,36</td><td>−0,5</td><td>−0,8</td></tr>
+<tr><td>Kapitalinnbetaling</td><td>0,4</td><td>0,0</td><td>0,0</td></tr>
+</tbody>
+<tfoot><tr><td>Utgående saldo</td><td>0,14</td><td>1,94</td><td>7,64</td></tr></tfoot>
+</table>
+<p>Kommunenes hosting-avgift betales kvartalsvis i forkant; kapitalinnbetalingen er de 400 000 kronene fra Innovasjon Norge, risikokapital og kommunalt tilskudd. Likviditetsbunnen i 2026 sammenfaller med juridisk godkjenning – derfor er finansieringsbehovet dimensjonert med buffer i driftskapitalen.</p>
+
+<h3>Bevegelsens finansiering</h3>
+<p>Partisiden samler NOK 10 millioner til de første fasene, fordelt på fire kilder:</p>
+<table class="numbers">
+<caption>Bevegelsens finansiering, NOK millioner</caption>
+<thead><tr><th>Kilde</th><th>Beløp</th></tr></thead>
+<tbody>
+<tr><td>Private donasjoner</td><td>4,0</td></tr>
+<tr><td>Crowdfunding</td><td>3,0</td></tr>
+<tr><td>Medlemskontingent</td><td>2,0</td></tr>
+<tr><td>Arrangementer</td><td>1,0</td></tr>
+</tbody>
+<tfoot><tr><td>Samlet mål</td><td>10,0</td></tr></tfoot>
+</table>
+<p>Medlemskontingenten og arrangementene er gjentakende inntekter som dekker den løpende kampanjedriften; donasjonene og crowdfundingen finansierer plattformutviklingen. Partifinansieringen holdes adskilt fra selskapets budsjetter – partiet eier saken, selskapet leverer plattformen.</p>
+<h3>Risiko og risikoredusering</h3>
+<table>
+<caption>Risikomatrise</caption>
+<thead><tr><th>Risiko</th><th>Sannsynlighet</th><th>Konsekvens</th><th>Tiltak</th></tr></thead>
+<tbody>
+<tr><td>Juridisk avklaring om kommunal stemmerett uteblir</td><td>Middels</td><td>Høy</td><td>Kommunaldepartementet-dialog fra dag én, fasemålt lansering (høring først, deretter bindende avstemning), juridisk budsjett (15 %)</td></tr>
+<tr><td>Sikkerhetshendelse eller stemmekjøp</td><td>Lav</td><td>Høy</td><td>BankID, kryptografisk anonymitet, ekstern audit av smart contracts (ConsenSys, 20 % av budsjettet), bug bounty</td></tr>
+<tr><td>Lav innbyggerdeltakelse</td><td>Middels</td><td>Middels</td><td>AI-saksammenfatninger, skoleprogram, målrettede deltakelseskampanjer, kvadratisk vekting av engasjement</td></tr>
+<tr><td>Politisk motstand og byråkratisk treghet</td><td>Middels</td><td>Middels</td><td>Åpen kildekode, dokumenterte kostnadsbesparelser, pilotdata fra Årstad, bydelsvise trinn</td></tr>
+</tbody>
+</table>
+</section>
+<section id="team">
+<h2>Team og Kompetanse</h2>
+<h3>Kari Normann – CEO &amp; Political Strategist</h3>
+<p>10 år som kommunepolitiker i Bergen (Miljøpartiet). Master i Statsvitenskap fra UiB. Erfaring med byråkrati og beslutningsprosesser. Passionate om direkte demokrati.</p>
+<h3>Bjørn Kristiansen – CTO &amp; Blockchain Architect</h3>
+<p>8 år som blockchain-utvikler, tidligere hos ConsenSys. Ekspert i Ethereum og smart contracts. Master i Datateknologi fra NTNU. Bygget 5 DAO-plattformer.</p>
+<h3>Dr. Lisa Chen – Chief Democracy Officer</h3>
+<p>PhD i Political Science fra Stanford. Forsker på digital demokrati og participatory budgeting. Publisert 15 papers om e-governance. Rådgiver for Barcelona En Comú.</p>
+<h3>Erik Solberg – Head of Legal &amp; Compliance</h3>
+<p>12 år som advokat med fokus på forvaltningsrett. Partner hos Wikborg Rein. Ekspert i kommunelov og personvern (GDPR). Jobbet med digitalisering av offentlig sektor.</p>
+
+<h3>Behov for ekstern kompetanse</h3>
+<p>Prosjektet kjøper inn forvaltningsrettslig kompetanse (kommuneloven og personvern), GDPR-rådgivning for dataplattformen, uavhengig sikkerhetsaudit av smart contracts (ConsenSys) og forskningssamarbeid om valgteknikk og deltakelsesmåling med UiBs statsvitenskapelige miljø. Teamet dekker politisk prosess, blockchain-arkitektur og juridisk rammeverk; det eksterne dekker tilsyn og uavhengighet.</p>
+
+<p>Bevegelsesfasen legger til valgkamp- og mediekompetanse, folkemøteorganisering og rådgivning på partifinansieringsregelverket.</p>
+</section>
+<section id="baerekraft">
+<h2>Bærekraft og Samfunnsansvar</h2>
+<h3>Miljøpåvirkning</h3>
+<p>Reduserer papirforbruk i kommunal administrasjon med 90% (digital-first approach). Blockchain-transaksjonskostnader lavere enn tradisjonelle IT-systemer (Polygon PoS vs. data centers).</p>
+<h3>Sosial påvirkning</h3>
+<p>Øker politisk deltakelse fra marginaliserte grupper (unge, innvandrere, lav-inntekt). Reduserer politikerforakt gjennom transparens. Empowers innbyggere med reell beslutningsmakt. Educerer om demokrati og civic engagement.</p>
+<h3>Økonomisk påvirkning</h3>
+<p>Reduserer kommunale IT-kostnader med 80% (blockchain vs. legacy systems). Eliminerer ineffektiv budsjettering gjennom transparens. Skaper 100+ tech-jobber i Bergen. Eksporterer norsk demokrati-teknologi globalt.</p>
+<p>Støtter FNs bærekraftsmål: <strong>10, 11, 16, 17</strong>.</p>
+<figure>
+<svg viewBox="0 0 660 212" role="img" aria-label="Brukeradopsjon (tusen)" font-family="'EB Garamond',Georgia,serif">
+<line x1="52" y1="168" x2="648" y2="168" stroke="#D9CFBC" stroke-width="1"/>
+<text x="46" y="172" font-size="11.5" fill="#5C5344" text-anchor="end">0</text>
+<line x1="52" y1="116" x2="648" y2="116" stroke="#D9CFBC" stroke-width="1"/>
+<text x="46" y="120" font-size="11.5" fill="#5C5344" text-anchor="end">100</text>
+<line x1="52" y1="64" x2="648" y2="64" stroke="#D9CFBC" stroke-width="1"/>
+<text x="46" y="68" font-size="11.5" fill="#5C5344" text-anchor="end">200</text>
+<line x1="52" y1="12" x2="648" y2="12" stroke="#D9CFBC" stroke-width="1"/>
+<text x="46" y="16" font-size="11.5" fill="#5C5344" text-anchor="end">300</text>
+<line x1="52" y1="168" x2="648" y2="168" stroke="#211C15" stroke-width="1"/>
+<text x="52" y="184" font-size="11.5" fill="#5C5344" text-anchor="middle">Mnd 1</text>
+<text x="201" y="184" font-size="11.5" fill="#5C5344" text-anchor="middle">Mnd 3</text>
+<text x="350" y="184" font-size="11.5" fill="#5C5344" text-anchor="middle">Mnd 6</text>
+<text x="499" y="184" font-size="11.5" fill="#5C5344" text-anchor="middle">Mnd 9</text>
+<text x="648" y="184" font-size="11.5" fill="#5C5344" text-anchor="middle">Mnd 12</text>
+<polyline points="52,165.4 201,155 350,129 499,90 648,38" fill="none" stroke="#211C15" stroke-width="2"/>
+<circle cx="52" cy="165.4" r="2.5" fill="#211C15"/>
+<circle cx="201" cy="155" r="2.5" fill="#211C15"/>
+<circle cx="350" cy="129" r="2.5" fill="#211C15"/>
+<circle cx="499" cy="90" r="2.5" fill="#211C15"/>
+<circle cx="648" cy="38" r="2.5" fill="#211C15"/>
+<line x1="52" y1="200" x2="68" y2="200" stroke="#211C15" stroke-width="2"/>
+<text x="74" y="204" font-size="12.5" fill="#5C5344">Aktive brukere</text>
+</svg>
+<figcaption>Figur 1. Brukeradopsjon (tusen).</figcaption>
+</figure>
+<figure>
+<svg viewBox="0 0 660 74" role="img" aria-label="Beslutningshastighet (dager)" font-family="'EB Garamond',Georgia,serif">
+<line x1="279.125" y1="6" x2="279.125" y2="68" stroke="#D9CFBC" stroke-width="1"/>
+<line x1="384.75" y1="6" x2="384.75" y2="68" stroke="#D9CFBC" stroke-width="1"/>
+<line x1="490.375" y1="6" x2="490.375" y2="68" stroke="#D9CFBC" stroke-width="1"/>
+<line x1="596" y1="6" x2="596" y2="68" stroke="#D9CFBC" stroke-width="1"/>
+<text x="0" y="25" font-size="13" fill="#211C15">Tradisjonelt</text>
+<rect x="173.5" y="13.5" width="422.5" height="15" fill="#211C15"/>
+<text x="604" y="25" font-size="12.5" fill="#5C5344">90</text>
+<text x="0" y="55" font-size="13" fill="#211C15">Bergen Selvstyreparti</text>
+<rect x="173.5" y="43.5" width="32.861111111111114" height="15" fill="#211C15"/>
+<text x="214.36111111111111" y="55" font-size="12.5" fill="#5C5344">7</text>
+<line x1="173.5" y1="6" x2="173.5" y2="68" stroke="#211C15" stroke-width="1"/>
+</svg>
+<figcaption>Figur 2. Beslutningshastighet (dager).</figcaption>
+</figure>
+<figure>
+<svg viewBox="0 0 660 134" role="img" aria-label="Kostnadsreduksjon (MNOK årlig)" font-family="'EB Garamond',Georgia,serif">
+<line x1="239.75" y1="6" x2="239.75" y2="128" stroke="#D9CFBC" stroke-width="1"/>
+<line x1="358.5" y1="6" x2="358.5" y2="128" stroke="#D9CFBC" stroke-width="1"/>
+<line x1="477.25" y1="6" x2="477.25" y2="128" stroke="#D9CFBC" stroke-width="1"/>
+<line x1="596" y1="6" x2="596" y2="128" stroke="#D9CFBC" stroke-width="1"/>
+<text x="0" y="25" font-size="13" fill="#211C15">IT-systemer</text>
+<rect x="121" y="13.5" width="292.3076923076923" height="15" fill="#211C15"/>
+<text x="421.3076923076923" y="25" font-size="12.5" fill="#5C5344">40</text>
+<text x="0" y="55" font-size="13" fill="#211C15">Administrasjon</text>
+<rect x="121" y="43.5" width="109.61538461538463" height="15" fill="#211C15"/>
+<text x="238.61538461538464" y="55" font-size="12.5" fill="#5C5344">15</text>
+<text x="0" y="85" font-size="13" fill="#211C15">Konsulenter</text>
+<rect x="121" y="73.5" width="73.07692307692308" height="15" fill="#211C15"/>
+<text x="202.0769230769231" y="85" font-size="12.5" fill="#5C5344">10</text>
+<text x="0" y="115" font-size="13" fill="#211C15">Totalt</text>
+<rect x="121" y="103.5" width="475" height="15" fill="#211C15"/>
+<text x="604" y="115" font-size="12.5" fill="#5C5344">65</text>
+<line x1="121" y1="6" x2="121" y2="128" stroke="#211C15" stroke-width="1"/>
+</svg>
+<figcaption>Figur 3. Kostnadsreduksjon (MNOK årlig).</figcaption>
+</figure>
+</section>
+</main>
+<footer>
+<p>Satt i Source Serif 4 (brødtekst) og EB Garamond (titler) · mål 66 tegn · linjeavstand 1,5 · tabelltall i tabeller · titler i setningscase uten versaler – etter Robert Bringhurst, The Elements of Typographic Style.</p>
+<p>Kilde: bplans/data/govt_bergen.json · november 2026.</p>
+<p>Gjenopprettet fra pub-, pub2- og pub3-arkivene og fullført med kundeinnsikt, salgsspor, enhetsøkonomi, milepæler, risikomatrise og tre-års budsjetter etter Innovasjon Norges vurderingskriterier · november 2026.</p>
+<p>Logo: «Bergens Selvstyreparti» satt som tekstmerke i anleggets EB Garamond uten gradient, etter kundens ønske (november 2026); pub2-gradientmerket er erstattet.</p>
+</footer>
+      </article>
+    </main>
+  </body>
+</html>

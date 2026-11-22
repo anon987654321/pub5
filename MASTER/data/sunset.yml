@@ -1,0 +1,53 @@
+# sunset.yml - the final ratchet: the one that turns on the ratchet.
+#
+# Once everything is measured and predicted and pruned, governance itself
+# owes an account of itself: what each ceremony costs per landing, what it
+# catches, and whether the catch still pays the cost. A ceremony that no
+# longer earns its place dissolves - including, where a simpler contract
+# would serve better, this runtime's own role as a constitution.
+#
+# cost_minutes_per_landing is the declared, priced estimate the row's
+# sponsor wrote; measured_catches is the count the ledgers show. The report
+# is advisory: retiring a ceremony is the operator's ruling, recorded like
+# any precedent, never a silent deletion.
+schema: 1
+ceremonies:
+  - id: pre-commit-gate
+    ceremony: ".githooks/pre-commit (cross-tree refusal, boot smoke, census)"
+    owner_file: ".githooks/pre-commit"
+    cost_minutes_per_landing: 0.2
+    measured_catches: "refused cross-tree commits, unbootable lib changes and census drifts; the exact counts live in the hook's own log"
+    status: active
+    note: "the gate that catches drift between audits; the fast tier made its seconds-scale half cheap"
+
+  - id: fast-gate
+    ceremony: "bin/master selfcheck --fast"
+    owner_file: "MASTER/lib/agent/fast_gate.rb"
+    cost_minutes_per_landing: 0.05
+    measured_catches: "lib body ceiling 11964 lines over; RUNBOOK cron drift; catalogue field shape"
+    status: active
+    note: "judged like everything else: if it stops catching and starts costing, this row says so"
+
+  - id: falsification-harness
+    ceremony: "bin/master falsify run"
+    owner_file: "MASTER/lib/agent/falsify.rb"
+    cost_minutes_per_landing: 0.05
+    measured_catches: "not yet a landing gate; an instrument reading, run deliberately"
+    status: active
+    note: "carries the README's thesis; a harness that never gets run is the ceremony to retire first"
+
+  - id: agent-tier
+    ceremony: "bin/master <agent commands>"
+    owner_file: "MASTER/lib/agent/agent_cli.rb"
+    cost_minutes_per_landing: 0.1
+    measured_catches: "receipt validation, status union, ownership answers; per-command"
+    status: active
+    note: "this tier is itself a ceremony: if the full runtime makes it redundant, retire it here"
+
+  - id: full-audit
+    ceremony: "the 48-minute full selfcheck"
+    owner_file: "MASTER/lib/fix"
+    cost_minutes_per_landing: 48
+    measured_catches: "the deep checks the fast tier cannot run (rendered, semantic, cross-tree)"
+    status: active
+    note: "the expensive half of the pair; the fast gate exists so this one can stay rare"

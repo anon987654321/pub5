@@ -1,0 +1,98 @@
+<% content_for :title, t("orders.track_title") %>
+
+<%# Public tracking by token (OrdersController#track provides @order).
+    5-step timeline with 8-point star milestones; track_controller polls
+    track_status_path every 10s and refreshes the page in place on a state
+    change, so the polite status line below announces the new state. %>
+<% order = @order %>
+<%# A pickup order ends when the customer collects it ("Hentet"); a delivery
+    order at the door. picked_up sits between ready and delivered for a
+    delivery, so the timeline keeps everything through ready lit
+    mid-courier. %>
+<% last_step = order.pickup? ? "picked_up" : "delivered" %>
+<% steps = %w[placed confirmed preparing ready] << last_step %>
+<% current_index = steps.index(order.state) || { "picked_up" => 3, "delivered" => 4 }[order.state] %>
+
+<section class="track-head card"
+     data-controller="track"
+     data-track-url-value="<%= track_status_path(order.tracking_token) %>"
+     data-track-state-value="<%= order.state %>"
+     data-track-eta-template-value="<%= t("orders.eta") %>">
+
+  <h1 class="page-title"><%= t("orders.track_title") %></h1>
+  <%= tag.p t("orders.state_announcement", state: t("orders.states.#{order.state}")),
+        class: "visually-hidden", role: "status", aria: { live: "polite" } %>
+  <% mode_key = order.delivery_mode == "pickup" ? "checkout.mode_pickup" : "checkout.mode_delivery" %>
+  <%= tag.p "##{order.id} · #{t(mode_key)}" %>
+
+  <% if order.state == "cancelled" %>
+    <p class="track-cancelled"><%= t("orders.states.cancelled") %></p>
+  <% else %>
+    <% if order.eta_minutes.present? && order.state != "delivered" %>
+      <p class="track-eta" data-track-target="eta">
+        <%= t("orders.eta", eta: order.eta_minutes) %>
+      </p>
+    <% end %>
+
+    <ol class="timeline" data-track-target="steps">
+      <% steps.each_with_index do |step, index| %>
+        <%= tag.li class: ["step", ("step-done" if current_index && index <= current_index)],
+              aria: { current: ("step" if current_index == index) }, data: { state: step } do %>
+          <span class="step-star" aria-hidden="true"></span>
+          <%= tag.span t("orders.states.#{step}"), class: "step-label" %>
+          <%= tag.span t("orders.step_done"), class: "visually-hidden" if current_index && index < current_index %>
+        <% end %>
+      <% end %>
+    </ol>
+
+    <% if order.state == "picked_up" %>
+      <p class="courier-line"><%= render "shared/mode_icon", mode: "delivery" %> <%= t("orders.courier_line") %></p>
+    <% end %>
+  <% end %>
+</section>
+
+<% if order.state == "delivered" %>
+  <section class="card">
+    <% if Rails.configuration.x.tips %>
+      <%# One tip per order: once given, its chip stays pressed and the chips
+          are spent. The tip is not charged in the app (Order#add_tip!). %>
+      <%= tag.h2 t("orders.tip_title"), class: "section-title" %>
+      <%= tag.div tip_buttons(order), class: "tip-choices" %>
+      <%= tag.p t("orders.tip_unpaid") %>
+    <% end %>
+
+    <%= tag.h2 t("orders.review_title"), class: "section-title" %>
+    <% review = order.review %>
+    <% if review&.persisted? %>
+      <%# One review per order: once given, the page shows it back. %>
+      <p class="review-given">
+        <%= tag.span "★" * review.rating, aria: { hidden: true } %>
+        <%= tag.span t("orders.review_star_option", count: review.rating), class: "visually-hidden" %>
+      </p>
+      <%= tag.p review.body if review.body.present? %>
+    <% else %>
+    <%= form_with url: order_review_path(order.id), class: "review-form" do %>
+      <%# Radios named in words: a screen reader spells out star glyphs. %>
+      <fieldset class="option-group">
+        <legend><%= t("orders.review_stars") %></legend>
+        <div class="option-chips">
+          <% 5.downto(1) do |stars| %>
+            <label class="option-chip">
+              <%= radio_button_tag :rating, stars, false, required: true %>
+              <%= tag.span "★" * stars, aria: { hidden: true } %>
+              <%= tag.span t("orders.review_star_option", count: stars), class: "visually-hidden" %>
+            </label>
+          <% end %>
+        </div>
+      </fieldset>
+      <div class="field">
+        <%= label_tag :body, t("orders.review_body") %>
+        <%= text_area_tag :body, nil, placeholder: t("orders.review_body_placeholder") %>
+      </div>
+      <%= tag.button t("orders.review_submit"), type: "submit", class: "button-primary" %>
+    <% end %>
+    <% end %>
+
+    <%= tag.p t("orders.thanks"), class: "thanks-line" %>
+  </section>
+<% end %>

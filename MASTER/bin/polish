@@ -1,0 +1,62 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# MASTER/bin/polish
+# Discover, emit, or (safely) apply polishing opportunities.
+# Intended to be called from /fix and from continuous loops.
+#
+# Usage:
+#   MASTER/bin/polish discover [--limit N]
+#   MASTER/bin/polish emit [--limit N]
+#   MASTER/bin/polish apply-safe [--limit N]
+#   MASTER/bin/polish health
+
+require "json"
+require "optparse"
+
+master_root = File.expand_path("..", __dir__)
+repo_root = File.expand_path("../..", __dir__)
+$LOAD_PATH.unshift(File.join(master_root, "lib"))
+
+require "polish/fix_integration"
+
+mode = ARGV.shift || "discover"
+limit = 50
+
+OptionParser.new do |o|
+  o.on("--limit N", Integer) { |n| limit = n }
+  o.on("-h", "--help") do
+    puts <<~HELP
+      MASTER/bin/polish — continuous polishing under the Laws
+
+      Commands:
+        discover     Print opportunities as JSON
+        emit         Discover and write into TraceStore
+        apply-safe   Apply only cosmetic/minor mechanical fixes (intent + trace)
+        health       TraceStore + Autopoietic Kernel status
+
+      Options:
+        --limit N    Maximum opportunities (default 50)
+    HELP
+    exit 0
+  end
+end.parse!(ARGV)
+
+integration = Polish::FixIntegration.new(repo_root: repo_root)
+
+case mode
+when "discover"
+  opps = integration.run(mode: :discover, limit: limit)
+  puts JSON.pretty_generate(opps.map(&:to_h))
+when "emit"
+  opps = integration.run(mode: :discover_and_emit, limit: limit)
+  puts JSON.pretty_generate({ emitted: opps.size, opportunities: opps.map(&:to_h) })
+when "apply-safe"
+  results = integration.run(mode: :apply_safe, limit: limit)
+  puts JSON.pretty_generate({ applied: results.size, results: results })
+when "health"
+  puts JSON.pretty_generate(integration.health)
+else
+  warn "unknown mode: #{mode}"
+  exit 1
+end

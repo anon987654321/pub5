@@ -1,0 +1,103 @@
+# frozen_string_literal: true
+
+require "yaml"
+
+module Master
+  module Voice
+    # MASTER's behavioral persona: voice, TTS settings, and LLM style.
+    class Personality
+      include PersonalityPromptBuilder
+
+      DEFAULT = :anchor
+      AXIOM_DISPLAY_LIMIT = 10
+
+      # Stands in for DEFAULT (:anchor) when personas.yml is missing, so it has to
+      # match that entry. It had drifted into describing anchor's style with
+      # Ryan's voice and an "English (UK)" label anchor never had.
+      # English unless addressed in Norwegian: "Norwegian" opened the identity line, and the
+      # Norwegian TTS voice is a voice, not the language of every reply.
+      FALLBACK_PERSONA = {
+        "voice" => "nb-NO-PernilleNeural",
+        "tts_rate" => "-8%",
+        "tts_pitch" => "+8Hz",
+        "style" => "clear",
+        "description" => "Clear. Curious. Plain editorial voice. Answers in the language it is addressed in, and in English when that is unclear.",
+      }.freeze
+
+      MOOD_LINES = {
+        tense: "Mood: tense - error rate elevated. Be conservative; verify before asserting.",
+        weary: "Mood: weary - fatigue high. Cut non-essential elaboration; defer deep dives.",
+        curious: "Mood: curious - novelty hunger. Explore lateral framings when warranted.",
+        focused: "Mood: focused - drives at setpoint. Default depth and tier.",
+      }.freeze
+
+      PHASE_LINES = {
+        morning: "Phase: morning. Bias toward structural work; prefer rigorous review.",
+        afternoon: "Phase: afternoon. Steady throughput; pragmatic decisions.",
+        evening: "Phase: evening. Wrap loops; avoid starting large refactors.",
+        night: "Phase: night. Minimal voice; conserve cycles; defer non-urgent.",
+      }.freeze
+
+      attr_reader :name, :voice, :tts_rate, :tts_pitch, :style, :description, :knowledge_sources, :disclaimer
+
+      def self.persona_names(root: nil)
+        Ground::Laws.new(root:).data(:personas).keys.map(&:to_sym)
+      end
+
+      def self.why_prompt(law)
+        "Explain the MASTER coding Law '#{law}' in 2-3 sentences, " \
+          "give a before/after Ruby example, and state why it matters."
+      end
+
+      def initialize(name = DEFAULT, root: nil, homeostat: nil)
+        @name = name.to_sym
+        @laws = Ground::Laws.new(root:)
+        personas = @laws.data(:personas)
+        persona = personas[@name.to_s] || personas[DEFAULT.to_s] || FALLBACK_PERSONA
+        assign_persona(persona)
+        @homeostat = homeostat
+      end
+
+      def system_prompt(context: :full)
+        @system_prompt_cache ||= {}
+        @system_prompt_cache[context] ||= build_system_prompt(context:)
+      end
+
+      def browser_profile
+        policy = Master::Voice::Policy
+        synth_voice = policy.neural_voice
+        {
+          name: @name.to_s,
+          voice: policy.persona_affects_text_only? ? synth_voice : @voice,
+          tts_rate: policy.persona_affects_text_only? ? policy.default_rate : @tts_rate,
+          tts_pitch: policy.persona_affects_text_only? ? policy.default_pitch : @tts_pitch,
+          style: @style,
+          description: @description,
+          knowledge_sources: @knowledge_sources,
+          disclaimer: @disclaimer,
+          tts_policy: policy.browser_payload,
+        }
+      end
+
+      private
+
+      def assign_persona(persona)
+        @voice = persona["voice"]
+        @tts_rate = persona["tts_rate"]
+        @tts_pitch = persona["tts_pitch"]
+        @style = persona["style"]&.to_sym
+        @desc = persona["description"]
+        @description = @desc
+        @knowledge_sources = Array(persona["knowledge_sources"]).compact
+        @disclaimer = persona["disclaimer"].to_s.strip
+      end
+
+      def persona_knowledge_sources
+        return if @knowledge_sources.empty?
+
+        lines = @knowledge_sources.map { |source| "- #{source}" }
+        ["<master_knowledge_sources>", *lines, "</master_knowledge_sources>"].join("\n")
+      end
+    end
+  end
+end

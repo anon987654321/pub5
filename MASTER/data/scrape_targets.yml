@@ -1,0 +1,19 @@
+---
+# Public scrape targets for the public_scrape standing order.
+# Operator-owned. Only public HTTP(S) on standard ports is fetched.
+# No credentials, cookies, or login flows. Auth-walled and personal-data
+# sites are out of scope.
+#
+# Each entry:
+#   url: absolute http(s) URL on port 80/443
+#   label: short name used in reports and snapshot files (optional)
+#   max_bytes: optional per-URL body cap (default 200_000)
+#
+# Enable the order with: /orders enable public_scrape
+# Or set enabled: true on the public_scrape entry in data/state.yml.
+
+targets:
+  # - url: https://www.example.com/
+  #   label: example
+  # - url: https://www.nrk.no/
+  #   label: nrk

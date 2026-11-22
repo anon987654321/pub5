@@ -1,0 +1,56 @@
+<%= form_with model: [:playlist, track], url: track.persisted? ? hosted_track_path(track) : hosted_tracks_path do |form| %>
+  <%= render "shared/errors", object: track %>
+
+  <div class="field">
+    <%= form.label :title %>
+    <%= form.text_field :title, required: true %>
+  </div>
+
+  <div class="field">
+    <%= form.label :artist %>
+    <%= form.text_field :artist %>
+  </div>
+
+  <div class="field">
+    <%= form.label :album %>
+    <%= form.text_field :album %>
+  </div>
+
+  <div class="field">
+    <%= form.label :source_type %>
+    <%= form.select :source_type,
+          Playlist::Track::SOURCE_TYPES.map { |type| [t("playlist.source_types.#{type}"), type] },
+          include_blank: true %>
+  </div>
+
+  <div class="field">
+    <%= form.label :source_url %>
+    <%= form.url_field :source_url, inputmode: "url" %>
+  </div>
+
+  <div class="field">
+    <%= form.label :privacy %>
+    <%= form.select :privacy, Playlist::Track::PRIVACY_LEVELS.map { |level| [t("playlist.privacy.#{level}"), level] } %>
+  </div>
+
+  <div class="field">
+    <%= form.label :expires_at %>
+    <%= form.datetime_field :expires_at %>
+  </div>
+
+  <div class="field">
+    <%= form.label :audio_file, track.persisted? ? t("playlist.replace_audio_file") : t("playlist.audio_files_bulk") %>
+    <%= form.file_field :audio_file, accept: "audio/*", multiple: !track.persisted?,
+          direct_upload: true, data: { controller: "direct-upload" } %>
+    <% if track.persisted? && track.audio_file.attached? %>
+      <small><%= t("playlist.current_file", name: track.audio_file.filename) %></small>
+    <% end %>
+  </div>
+
+  <div class="field">
+    <%= form.label :artwork %>
+    <%= form.file_field :artwork, accept: "image/*", direct_upload: true, data: { controller: "direct-upload" } %>
+  </div>
+
+  <%= form.submit class: "button button-primary button-small" %>
+<% end %>

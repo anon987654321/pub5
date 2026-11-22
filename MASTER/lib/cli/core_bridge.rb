@@ -1,0 +1,751 @@
+# frozen_string_literal: true
+
+require_relative "../io/exec"
+require_relative "../io/atomic_write"
+require_relative "../design/authoring"
+require_relative "../trace/effect_observer"
+require_relative "../io/git_operations"
+require_relative "fold_risk"
+
+module Master
+  module CLI
+    # CoreBridge — run one coding goal through the core Fold from the CLI and web
+    # cutover. Folds agent turns; slash commands use command_registry directly.
+    #
+    # Turns stream to the event bus as they happen, so the terminal and the web
+    # dashboard see the same live trace they get from the legacy path.
+    module CoreBridge
+      class DeliveryFailed < StandardError; end
+
+      # A report shows each turn as one line: the first line of what came back,
+      # cut here, and how much was left out. An observation can be a whole file;
+      # a blocked fold printed all of AGENTS.md as forty err0 lines.
+      REPORT_TURN_CHARS = 200
+
+      # Git's reading verbs answer the fold's questions about history and
+      # state. They run through exec without a shell, so the write vectors
+      # left in them — --output (writes its argument to a file) and
+      # --ext-diff (runs a configured external tool) — are the only shapes
+      # refused. The old three-command table kept the fold replaying blind
+      # variations of one refused command until it died (Johann's log
+      # 2026-11-08): eleven turns, risk low, nothing to show.
+      GIT_READING_VERBS = %w[diff log show status].freeze
+
+      module_function
+
+      def report_turn(entry)
+        text = entry.to_s
+        if (match = text.match(/\A(\d+): read\(path\) -> ok: (.*)\z/m))
+          output = match[2]
+          return "#{match[1]}: read(path) -> ok: #{output.bytesize}B, #{output.lines.size} lines"
+        end
+
+        lines = text.lines
+        first = lines.first.to_s.chomp
+        first = "#{first[0, REPORT_TURN_CHARS]}..." if first.length > REPORT_TURN_CHARS
+        lines.size > 1 ? "#{first} (+#{lines.size - 1} lines)" : first
+      end
+
+      def run(goal, root:, bus: nil, model: nil, model_id: nil, max_turns: 40, on_turn: nil, memory: nil,
+              container: nil, risk: :low, mode: nil, allowed_tools: nil, cancellation: nil)
+        cancellation.activate! if cancellation&.respond_to?(:activate!)
+        workspace_root = workspace_root_for(root)
+        lifecycle_bus = lifecycle_event_bus(bus:, requested_root: root, workspace_root:)
+        incoming_intent = Master::CLI::IntentRouter.new.classify(goal)
+        saved = Master::Fix::Mission.current(root:)
+        resume_authorised = incoming_intent == :continue_prior_plan &&
+                            (mode.nil? || mode.to_s == saved&.dig("operator", "mode")) &&
+                            resumable_repository_mission?(saved)
+        if resume_authorised
+          goal = saved.fetch("goal")
+          incoming_intent = saved.dig("operator", "intent").to_s.to_sym
+          mode = saved.dig("operator", "mode") || "repair"
+          risk = saved.dig("operator", "risk") || risk
+        end
+        requested_mode = mode ? Master::Operator::Mode.for(mode) : :repair
+        delivery_authorized = Master::CLI::FoldRisk.repository_delivery_authorized?(incoming_intent, mode: requested_mode)
+        risk = :high if delivery_authorized && !%i[high critical].include?(risk.to_s.downcase.to_sym)
+
+        mission = start_mission(
+          goal,
+          root:,
+          bus:,
+          model: model_id || model,
+          mode: requested_mode,
+          risk:,
+          intent: incoming_intent,
+          auto_continue: delivery_authorized,
+        )
+        memory ||= Master::Core::Memory.new(risk:)
+        memory.proof.escalate_risk!(risk)
+        if delivery_authorized
+          memory.proof.authorize_repository_delivery!(
+            root: workspace_root,
+            written_paths: mission.repository_writes(repository_root: workspace_root),
+          )
+        end
+        model ||= begin
+          slug, endpoint = fold_model(model_id, container)
+          Master::Core::Model.new(**{ model_id: slug, endpoint:, chat: agent_chat(container, bus:) }.compact)
+        end
+        transcript = []
+        observer = build_turn_observer(
+          transcript, root: workspace_root, bus:, on_turn:, mission:, repository_delivery: delivery_authorized,
+        )
+        seed_continuation(memory, mission.record)
+        seed_design_brief(memory, goal, mission.record, root:)
+        begin
+          mission.transition!(
+            :plan,
+            plan: Master::Ground::ActivePlan.read(root) || "fold plan: constitutional turn loop",
+          )
+          operator_mode = Master::Operator::Mode.for(mission.record.dig("operator", "mode") || requested_mode)
+          mode_spec = Master::Operator::Mode.spec(operator_mode)
+          capabilities = Master::Operator::Mode.capabilities(operator_mode)
+          capabilities = grant_tools(capabilities, allowed_tools) unless allowed_tools.nil?
+          probe_policy = read_only_probe(root: workspace_root)
+          bus&.publish(
+            "operator:mode",
+            mode: requested_mode,
+            risk: mission.record.dig("operator", "risk") || mode_spec[:risk],
+            model_tier: mode_spec[:model_tier],
+            council_required: mode_spec[:council],
+          )
+          world = build_world(root: workspace_root, container:, capabilities:, network: network_client(container), probe: probe_policy,
+                              browser: browser_broker(container, capabilities:))
+          browser = world.browser
+          mission.transition!(:execute)
+          effect_observer = build_effect_observer(
+            bus: lifecycle_bus, mission_id: mission.id, attempt_id: mission_attempt_id(mission),
+          )
+          done = build_fold(root: workspace_root, model:, memory:, world:, max_turns:, observer:, effect_observer:, capabilities:, cancellation:, probe: probe_policy).run(goal)
+          unless %i[cancelled trace_failed needs_user blocked unknown_outcome recovery_failed].include?(done.reason)
+            mission.transition!(:verify, summary: continuation_summary(done))
+          end
+          settle_mission(mission, done, proof: memory.proof.scope)
+
+          { mission: mission.record, reason: done.reason, turns: done.turns, summary: done.summary,
+            transcript:, risk: memory.proof.risk }
+        rescue StandardError => e
+          defer_mission_on_error(mission, e)
+          raise
+        ensure
+          # Every browser session this conversation opened is stopped here, on
+          # the success path, the error path and a cancellation alike. A fold
+          # that ends mid-navigation must not leave a Chromium process group
+          # behind; the broker owns the process and this is where it is told the
+          # conversation is over.
+          browser&.close_all
+        end
+      end
+
+      # The tool names a person already types, as the capabilities the fold holds.
+      # A list narrows the mode's profile and never widens it: Capabilities can
+      # drop and cannot acquire, so a tool the profile lacks stays refused.
+      # Reading and bounded read-only probes are always held; an empty list never grants exec.
+      TOOL_CAPABILITIES = {
+        "read" => %i[read], "glob" => %i[read], "grep" => %i[read], "ls" => %i[read],
+        "edit" => %i[write], "multiedit" => %i[write], "notebookedit" => %i[write],
+        "write" => %i[write create],
+        "bash" => %i[execute],
+        "webfetch" => %i[network], "websearch" => %i[network]
+      }.freeze
+      ALWAYS_HELD = %i[stdio read probe].freeze
+      TOOL_ENTRY = /[^\s,()]+(?:\([^)]*\))?/
+
+      # `plan` reads and proposes; every other permission mode runs the repair
+      # profile, because the Constitution judges each effect whichever is named.
+      def mode_for_permission(value)
+        value.to_s == "plan" ? :plan : nil
+      end
+
+      # A scoped entry such as Bash(git diff:*) is refused rather than widened to
+      # the whole tool: the fold has no per-command grant to give it.
+      def grant_tools(capabilities, list)
+        granted = []
+        list.to_s.scan(TOOL_ENTRY).each do |entry|
+          caps = entry.match?(/[()]/) ? nil : TOOL_CAPABILITIES[entry.downcase]
+          if caps
+            granted.concat(caps)
+          else
+            Master::Trace::Dmesg.status("cli0", "allowed tool ignored, #{entry}", io: $stderr)
+          end
+        end
+        capabilities.drop(*(capabilities.capabilities - granted - ALWAYS_HELD))
+      end
+
+      # Only the interactive session sets an asker; see Session#terminal_ask.
+      def build_world(root:, container:, capabilities: Master::Core::Capabilities.for(:fix), network: nil,
+                      probe: nil, browser: nil, process_runner: Master::Io::Exec,
+                      atomic_writer: Master::Io::AtomicWrite, git_service: nil)
+        critique_runner = container ? CouncilCrit.runner_for(container) : nil
+        git_service ||= Master::Io::GitOperations.new(root)
+        Master::Core::World.new(root:, ask: Fiber[:master_terminal_ask], critique_runner:,
+                                undo: container&.fetch(:undo, nil), capabilities:, network:, probe:, browser:,
+                                process_runner:, atomic_writer:, git_service:)
+      end
+
+      # The brokered Chromium session, or nil. A browser process is only ever
+      # started for a context whose table allows `:browser`, and the broker
+      # re-checks that capability on every call — so a refused profile gets nil
+      # here and a refusal there. The destination check is the same SSRF guard
+      # the http verb uses, applied before any process starts.
+      def browser_broker(container, capabilities:)
+        return nil unless capabilities.allow?(:browser)
+        return nil unless Master::Io::BrowserBroker::ChromeEngine.available?
+
+        Master::Io::BrowserBroker.new(
+          capabilities:,
+          destination_check: ->(url) { browser_destination_refusal(url) },
+        )
+      end
+
+      def browser_destination_refusal(url)
+        uri = URI(url.to_s)
+        return "only public http(s) URLs are allowed" unless %w[http https].include?(uri.scheme)
+
+        Master::Io::SsrfGuard.pinned_address(uri) ? nil : "refused internal/reserved address"
+      rescue StandardError => e
+        "unreadable destination: #{e.class}"
+      end
+
+      # MASTER/ is the runtime's own root; the tree the fold edits is the repository
+      # around it. The Constitution and the World both take this one answer, so a
+      # relative path means the same file to the check that judges it and the hand that writes it.
+      def workspace_root_for(root)
+        path = File.expand_path(root)
+        path == Master::ROOT ? Master::REPO_ROOT : path
+      end
+
+      # This is an explicit allowlist, not a shell sandbox. Probe argv is exact:
+      # Ruby's syntax-only parser on one existing in-tree .rb file, Git's
+      # tracked-path listing, or a whitespace check with external diff disabled.
+      # It cannot run tests,
+      # scripts, package hooks, arbitrary binaries, or model-supplied code.
+      def read_only_probe(root:)
+        workspace = File.realpath(root)
+        lambda do |argv|
+          read_only_probe_refusal(Array(argv), workspace)
+        rescue StandardError => e
+          "probe policy could not establish scope: #{e.class}"
+        end
+      rescue StandardError => e
+        ->(_argv) { "probe workspace unavailable: #{e.class}" }
+      end
+
+      def read_only_probe_refusal(values, workspace)
+        return if values == %w[git ls-files] || values == %w[git ls-files -z]
+        return if whitespace_check?(values) || git_reading_verb?(values)
+        return if values.length == 3 && values[0] == "wc" && values[1] == "-l" &&
+                  in_tree_relative_path?(values[2], workspace)
+        return ruby_syntax_probe_refusal(values[2], workspace) if ruby_syntax_probe_command?(values)
+
+        tried = values.first(4).join(" ")[0, 80]
+        "probe refused: #{tried.inspect} - only ruby -c on one in-tree .rb file, " \
+          "wc -l on one in-tree file, git ls-files, or git's reading verbs " \
+          "(status, log, show, diff) are allowed"
+      end
+
+      def ruby_syntax_probe_command?(values)
+        values.length == 3 && values[0] == "ruby" && values[1] == "-c"
+      end
+
+      def ruby_syntax_probe_refusal(path, workspace)
+        invalid = path.empty? || path.start_with?(File::SEPARATOR) ||
+                  path.split(/[\\\/]/).include?("..") || File.extname(path) != ".rb"
+        return "ruby -c requires one relative .rb path" if invalid
+
+        expanded = File.expand_path(path, workspace)
+        real = File.realpath(expanded) if File.file?(expanded)
+        return "probe path is missing or escapes the workspace" unless
+          real && (real == workspace || real.start_with?("#{workspace}#{File::SEPARATOR}"))
+
+        nil
+      end
+
+      private_class_method :read_only_probe_refusal, :ruby_syntax_probe_command?, :ruby_syntax_probe_refusal
+
+      # git diff --check reads the working tree against the index and names
+      # whitespace-conflict lines; it writes nothing. --no-pager and
+      # --no-ext-diff are the flags that keep it that way, accepted in the
+      # positions git itself takes them.
+      def whitespace_check?(values)
+        rest = values.reject { |value| value == "--no-pager" || value == "--no-ext-diff" }
+        rest[0, 2] == %w[git diff] && rest[2..] == %w[--check]
+      end
+
+      # One reading verb of git, in the strict shapes git itself takes:
+      # --no-pager rides before the verb, --output and --ext-diff stay out.
+      def git_reading_verb?(values)
+        git, verb, *rest = values.reject { |value| value == "--no-pager" }
+        return false unless git == "git" && GIT_READING_VERBS.include?(verb)
+        return false if rest.any? { |flag| flag.start_with?("--output", "--ext-diff") }
+
+        true
+      end
+
+      # One relative path that resolves inside the workspace: the shape the
+      # ruby -c and wc -l probes share, with the extension check left to the
+      # caller that needs it.
+      def in_tree_relative_path?(path, workspace)
+        return false if path.nil? || path.empty? || path.start_with?(File::SEPARATOR) ||
+                        path.split(/[\\\/]/).include?("..")
+
+        expanded = File.expand_path(path, workspace)
+        real = File.realpath(expanded) if File.file?(expanded)
+        !real.nil? && (real == workspace || real.start_with?("#{workspace}#{File::SEPARATOR}"))
+      rescue StandardError
+        false
+      end
+
+      def network_client(container)
+        governor = container&.fetch(:governor, nil)
+        return unless governor
+
+        fetcher = Master::Io::WebFetch.new(governor:, event_bus: container[:bus])
+        ->(url:) { fetcher.call(url:) }
+      end
+
+      def resumable_repository_mission?(record)
+        return false unless record && record["origin"].to_s == "fold"
+        return false unless record["auto_continue"] == true
+        return false unless %w[running waiting].include?(record["state"].to_s)
+
+        operator = record["operator"].is_a?(Hash) ? record["operator"] : {}
+        Master::CLI::FoldRisk.repository_delivery_authorized?(operator["intent"], mode: operator["mode"])
+      end
+
+      def start_mission(goal, root:, bus:, model:, mode:, risk:, intent:, auto_continue:)
+        checkpoint = lambda do |id:, root:, files:|
+          Master::Fix::Checkpoint.new(root:).create(
+            label: "mission-#{id}", files:,
+          )
+        end
+        Master::Fix::Mission.new(root:, bus:, checkpoint:).start_or_resume!(
+          goal:, scope: root, model:, effort: ENV.fetch("MASTER_EFFORT", "medium"),
+          plan: Master::Ground::ActivePlan.read(root), origin: "fold", auto_continue:,
+          mode:, risk:, intent:
+        )
+      end
+
+      def defer_mission_on_error(mission, error)
+        record = Master::Fix::Mission.current(root: mission.root)
+        return unless record && %w[running waiting].include?(record["state"].to_s)
+
+        if error.is_a?(DeliveryFailed)
+          mission.block!(reason: error.message)
+        else
+          mission.fail!("#{error.class}: #{error.message}")
+        end
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "CoreBridge.defer_mission_on_error")
+      end
+
+      # A frontend mission starts from the design brief the fixer is held to, so the
+      # fold plans against the house direction instead of its own habits.
+      def seed_design_brief(memory, goal, record, root:)
+        return unless record.dig("operator", "intent").to_s == "design_frontend"
+
+        memory.note(:design, Master::Design::Authoring.mission_context(goal:, root:))
+      end
+
+      def seed_continuation(memory, record)
+        return unless record && record["attempt_count"].to_i > 1
+
+        summary = record["summary"].to_s
+        reason = record["wake_reason"].to_s
+        memory.note(:continuation, "This is another bounded attempt at the same durable task. Previous attempt: #{summary}. Wake: #{reason}. Re-inspect the current tree; never assume the old state is unchanged.")
+      end
+
+      def continuation_summary(done)
+        done.summary.to_s.empty? ? "attempt ended: #{done.reason}" : done.summary
+      end
+
+      def settle_mission(mission, done, proof: nil)
+        return mission if mission.record&.fetch("state", nil) == "blocked"
+
+        if done.reason == :complete
+          if mission.record&.fetch("origin", nil) == "backlog" && !mission.record_proof!(proof:)
+            mission.block!(reason: "PROOF_MISSING: completed fold did not persist its proof receipt")
+            return mission
+          end
+          mission.finish!(state: "completed", summary: done.summary)
+        elsif %i[needs_user blocked].include?(done.reason)
+          mission.block!(reason: done.summary.to_s)
+        elsif done.reason == :trace_failed
+          # The effect may already have happened, but its after-record is missing.
+          # Preserve ambiguity explicitly; never auto-continue and repeat the effect.
+          mission.finish!(state: "unknown_outcome", summary: done.summary)
+        elsif %i[cancelled unknown_outcome recovery_failed].include?(done.reason)
+          # Explicit stop or an outcome that could not be reconciled is terminal
+          # for this attempt. The supervisor must not replay it as a blind retry.
+          mission.finish!(state: done.reason.to_s, summary: done.summary)
+        else
+          mission.defer!(reason: "attempt #{done.reason}: #{continuation_summary(done)}")
+        end
+      end
+
+      # Core::Model speaks RubyLLM's chat shape and, left alone, calls RubyLLM
+      # itself. The agent's dispatcher is the door every other call passes:
+      # MASTER_MODEL, ollama, the circuit breaker, the failover hop and the cost
+      # ledger all live there, and a fold that went round it had none of them —
+      # forced to a local model, it still asked OpenRouter and died on a 503.
+      #
+      # Every model is asked the same way: one schema, temperature 0. The fold
+      # behaves alike whichever model answers, and each tier enforces the
+      # schema as far as it can. The reply's `why` is the model's reason for the
+      # effect, and the bus carries it to the operator before the effect runs.
+      #
+      # The schema is the turn's offer (Core::Model.offer). Core::Model builds a
+      # fresh chat each turn, so the ladder is shared by all of them.
+      AgentChat = Struct.new(:agent, :bus, :system, :format, :ladder) do
+        def with_instructions(text) = AgentChat.new(agent, bus, text, format, ladder)
+        def with_format(schema) = AgentChat.new(agent, bus, system, schema, ladder)
+
+        def ask(prompt)
+          reply = agent.ask_once(prompt, system:, law: false, temperature: 0,
+                                         format: format || Master::Core::Model::SCHEMA, **Hash(ladder&.pinned))
+          ladder&.hear(reply)
+          why = CoreBridge.reason_in(reply)
+          if why
+            # The reason can echo prompts, source snippets, paths, or secrets. Persist only
+            # bounded diagnostic metadata; the local turn still owns the actual reply.
+            bus&.publish("core:reason", Master::Execution::Contract.diagnostic_fields(why, key: :why))
+            # The shared event keeps only digest and size; detail is a separate,
+            # terminal-only view enabled by the operator's explicit flag.
+            Master::Trace::Dmesg.detail("fold0", "reason: #{why}")
+          end
+          Reply.new(reply)
+        end
+      end
+      Reply = Struct.new(:content)
+
+      # A local model that cannot hold the fold says so the same way twice: a
+      # reply with no object in it, or an object with no verb the fold knows.
+      # A refusal arrives as one of those. After STRIKES in a row the fold asks
+      # the next larger model this machine runs, and past the largest, the
+      # routed cloud lane when the network answers. It climbs and never steps
+      # back down within a goal: a model that failed twice in a row on this
+      # transcript has shown what it does with it.
+      class ModelLadder
+        STRIKES = 2
+        LOCAL = /\Aollama[:\/]/
+
+        def initialize(agent:, bus: nil, router: nil, online: -> { Master::Ground::BootReceipt.network? })
+          @agent = agent
+          @bus = bus
+          @router = router
+          @online = online
+          @model = nil
+          @strikes = 0
+        end
+
+        def pinned = @model ? { model: @model } : {}
+
+        def hear(reply)
+          @strikes = unparsed?(reply) ? @strikes + 1 : 0
+          climb if @strikes >= STRIKES
+        end
+
+        private
+
+        # parse answers a note whose kind is :parse_error, and only for these.
+        def unparsed?(reply)
+          Master::Core::Model.parse(reply, verbs: Master::Core::VERBS).args[:kind] == :parse_error
+        end
+
+        def climb
+          current = @model || @agent.model
+          @strikes = 0
+          higher = larger_local(current) || cloud_lane(current)
+          @bus&.publish("core:escalation", from: current, to: higher, strikes: STRIKES)
+          @model = higher if higher
+        end
+
+        # The smallest pulled model heavier than this one, among those that fit.
+        def larger_local(current)
+          return unless current.to_s.match?(LOCAL)
+
+          sized = router.local_models.map { |id| [id, router.ollama_size(id.sub(LOCAL, ""))] }
+          floor = router.ollama_size(current.to_s.sub(LOCAL, ""))
+          sized.select { |_, size| size > floor }.min_by(&:last)&.first
+        end
+
+        def cloud_lane(current)
+          return unless @online.call
+
+          Array(@agent.candidate_models).find { |id| !id.to_s.match?(LOCAL) && id != current }
+        end
+
+        def router
+          @router ||= Master::CLI::Routing::ModelRouter.new(config: Master::Ground::Config.new(Master::ROOT))
+        end
+      end
+
+      # Read the way Core::Model.parse reads the object: first brace to last.
+      def reason_in(reply)
+        json = reply.to_s.gsub(/```[a-z]*/i, "")[/\{.*\}/m]
+        why = json && JSON.parse(json)["why"].to_s.strip
+        why unless why.to_s.empty?
+      rescue JSON::ParserError, TypeError => e
+        # No reason is a reply without one, not a failed turn: Model.parse
+        # reports the malformed object itself.
+        Master::Ground::Swallow.log(e, context: "CoreBridge.reason_in")
+      end
+
+      def agent_chat(container, bus:)
+        agent = container && container[:agent]
+        return unless agent.respond_to?(:ask_once)
+
+        AgentChat.new(agent, bus, nil, nil, ModelLadder.new(agent:, bus:))
+      end
+
+      # The Fold's brain rides the lane the booted agent resolved — the same id
+      # /model prints. A hosted lane (models.yml openai_compatible) cannot go
+      # to RubyLLM as a bare id: the registry's unknown-slug fallback is the
+      # keyed OpenRouter provider, which dies on the exact device the free
+      # tiers exist for. Hosted lanes translate to their OpenAI-compatible
+      # endpoint, the local bed to the native ollama provider; anything else
+      # keeps the bare-id path (a keyed lane whose slug the registry knows).
+      def fold_model(forced, container)
+        lane = forced.to_s.strip
+        agent = container && container[:agent]
+        if lane.empty? && agent.respond_to?(:model)
+          lane = agent.model.to_s.strip
+        end
+        return [nil, nil] if lane.empty?
+
+        router = agent.respond_to?(:model_router) ? agent.model_router : nil
+        resolver = if router.respond_to?(:hosted_endpoint_for)
+                     router
+                   else
+                     Master::CLI::Routing::ModelRouter.hosted_resolver(root: Master::ROOT)
+                   end
+        endpoint = resolver.hosted_endpoint_for(lane)
+        if endpoint.is_a?(Hash) && endpoint[:base]
+          slug = lane.include?(":") ? lane.split(":", 2).last : lane
+          return [slug, { provider: :openai, base: endpoint[:base], key: endpoint[:key] }]
+        end
+        if lane.start_with?("ollama:") &&
+           (base = Master::Io::LaneSelection.config.dig("ollama", "default_base_url"))
+          return [lane.split(":", 2).last, { provider: :ollama, base: }]
+        end
+
+        [lane, nil]
+      end
+
+      # The Fold writes through World rather than the Io tools, so the turn's
+      # WriteTracker hears of a write only from here.
+      def build_turn_observer(transcript, root:, bus:, on_turn:, mission: nil, repository_delivery: false)
+        lambda do |turn:, effect:, observation:|
+          line = "#{turn}: #{effect} -> #{observation}"
+          transcript << line
+          record_repository_delivery_effect(effect, observation, mission:, root:, bus:) if repository_delivery
+          if effect.verb == :write && observation.ok?
+            Master::Trace::WriteTracker.current&.record(File.expand_path(effect.args[:path].to_s, root))
+          end
+          bus&.publish("core:turn", turn:, effect: effect.to_s, verb: effect.verb, subject: effect_subject(effect),
+                                    ok: observation.ok?, detail: public_effect_detail(observation),
+                                    **public_output_metrics(effect, observation))
+          # The fold keeps the full observation in memory for reasoning, but a
+          # terminal/dashboard turn line is a status update, not a file viewer.
+          # Reuse the bounded report shape so reading a long file never floods
+          # the prompt or hides the following refusal/status.
+          on_turn&.call(report_turn(line))
+        end
+      end
+
+      # Keep repository-delivery bookkeeping outside the turn callback: the
+      # observer should report one effect, not own a nested commit protocol.
+      def record_repository_delivery_effect(effect, observation, mission:, root:, bus:)
+        return unless observation.ok?
+
+        case effect.verb
+        when :write
+          mission.record_repository_write!(
+            path: effect.args[:path], content: effect.args[:content], repository_root: root,
+          )
+        when :git
+          record_repository_delivery_commit(effect, mission:, root:, bus:) if
+            effect.args[:operation].to_s == "commit"
+        end
+      end
+
+      def record_repository_delivery_commit(effect, mission:, root:, bus:)
+        committed = mission.record_repository_commit!(
+          expected_hashes: effect.args[:expected_hashes], repository_root: root,
+        )
+        return unless mission.record&.fetch("origin", nil) == "backlog"
+
+        raise DeliveryFailed, "DELIVERY_FAILED: commit write receipt could not be reconciled" unless committed
+
+        push_backlog_commit!(mission:, root:, bus:)
+      end
+
+      # Always audit even when no host supplied a bus. In that case persist to the
+      # relevant runtime root without subscribers; never turn missing UI wiring
+      # into an execution-audit bypass.
+      def lifecycle_event_bus(bus:, requested_root:, workspace_root:)
+        return bus if bus
+
+        requested_root = File.expand_path(requested_root)
+        canonical_roots = [Master::ROOT, Master::REPO_ROOT].map { |path| File.expand_path(path) }
+        telemetry_root = canonical_roots.include?(requested_root) ? Master::ROOT : workspace_root
+        event_log = Master::Trace::Log::Event.new(root: telemetry_root)
+        Master::Trace::EventBus.new(event_log:)
+      end
+
+      # The lifecycle stream intentionally excludes effect arguments: argv, URLs,
+      # prompts and write content may contain secrets or private user data.
+      # A backlog commit is not complete while it exists only in a local
+      # checkout. Push each path-scoped commit immediately through the existing
+      # GitOperations policy and pre-push hook; never bypass a multi-session veto.
+      def push_backlog_commit!(mission:, root:, bus: nil)
+        mission.hold_lease!
+        repository, status = Master::Io::Exec.capture2e("git", "-C", root, "rev-parse", "--show-toplevel")
+        raise DeliveryFailed, "DELIVERY_FAILED: repository root could not be resolved" unless status.success?
+
+        repository = File.realpath(repository.strip)
+        git = Master::Io::GitOperations.new(repository)
+        remote, target = git.push_target
+        unless remote == "origin" && target == "HEAD:main"
+          raise DeliveryFailed, "DELIVERY_FAILED: expected origin/main, got #{remote}:#{target}"
+        end
+
+        git.push
+        remote_output, remote_status = Master::Io::Exec.capture2e(
+          "git", "-C", repository, "ls-remote", "origin", "refs/heads/main",
+        )
+        head, head_status = Master::Io::Exec.capture2e("git", "-C", repository, "rev-parse", "HEAD")
+        unless remote_status.success? && head_status.success? &&
+               remote_output.split.first == head.strip && head.to_s.strip.match?(/\A[0-9a-f]{40}\z/i)
+          raise DeliveryFailed, "DELIVERY_FAILED: origin/main does not prove the current HEAD after push"
+        end
+
+        unless mission.record_repository_push!(remote: "origin", branch: "main", commit: head.strip)
+          raise DeliveryFailed, "DELIVERY_FAILED: remote push could not be recorded on the mission"
+        end
+        bus&.publish("backlog_executor:pushed", remote: "origin", branch: "main", commit: head.strip)
+        Master::Trace::Dmesg.status("backlog0", "pushed #{head.strip[0, 12]} to origin/main")
+        head.strip
+      rescue DeliveryFailed => error
+        mission.block!(reason: error.message)
+        raise
+      rescue StandardError => error
+        failure = DeliveryFailed.new("DELIVERY_FAILED: #{error.class}: #{error.message}")
+        mission.block!(reason: failure.message)
+        raise failure
+      end
+
+      def build_effect_observer(bus:, mission_id: nil, attempt_id: nil)
+        Master::Trace::EffectObserver.new(bus:, mission_id:, attempt_id:)
+      end
+
+      def mission_attempt_id(mission)
+        attempt = [mission.record.fetch("attempt_count", 1).to_i, 1].max
+        "#{mission.id}:#{attempt}"
+      end
+
+      # The part of an effect a person names it by: the file, the command, the
+      # question. Written content stays out; it is the payload.
+      # This stream is shared and persisted. Identify the action without copying
+      # paths, argv, URLs, prompts, note text, summaries or file contents into it.
+      # The full observation remains available on the operator's local transcript.
+      def effect_subject(effect)
+        case effect.verb
+        when :read then "file read"
+        when :write then "file write"
+        when :exec then "command"
+        when :probe then "read-only diagnostic"
+        when :git then "git action"
+        when :http then "network request"
+        when :ask then "approval request"
+        when :note then "note"
+        when :critique then "review"
+        when :done then "completion"
+        else effect.verb.to_s
+        end
+      end
+
+      def public_effect_detail(observation)
+        observation.ok? ? "completed" : "failed"
+      end
+
+      # Keep useful speech/dashboard measurements, never the text being measured.
+      def public_output_metrics(effect, observation)
+        return {} unless %i[read probe exec].include?(effect.verb)
+
+        output = observation.message.to_s
+        { output_bytes: output.bytesize, output_lines: output.lines.size }
+      end
+
+      def build_fold(root:, model:, memory:, world:, max_turns:, observer:, effect_observer: nil,
+                     capabilities: Master::Core::Capabilities.for(:fix), cancellation: nil, probe: nil,
+                     data_dir: Master.data_path)
+        Master::Core::Fold.new(
+          model:,
+          constitution: Master::Core::Constitution.load(data_dir:, workspace_root: root,
+                                                        verify: ToolHooks.wrap_verifier(scan_verifier(root:), root:),
+                                                        sandbox: ToolHooks.wrap_sandbox(shell_sandbox(root:), root:),
+                                                        probe:, capabilities:),
+          world:,
+          memory:,
+          max_turns:,
+          observer:,
+          effect_observer:,
+          cancellation:,
+        )
+      end
+
+      # The Fold writes through World, not through the Io tools, so it needs the
+      # same guard handed to it. Handed in as `verify:` rather than required by
+      # Constitution, because a require puts lib/review/ inside the fold spine
+      # (test_core_no_lib_backedges). Returns the blocking findings as strings.
+      #
+      # The effect's path is relative to the workspace, so the guard is given the
+      # absolute one: it reads the file's current content as the "before" side
+      # of the comparison, and a relative path would resolve against the process
+      # cwd and compare against the wrong file (or none).
+      def scan_verifier(root: nil)
+        lambda do |path:, content:|
+          path = File.expand_path(path.to_s, root) if root
+          Master::Fix::WriteGuard.default.verdict(path:, content:).blocking
+                                          .map { |f| "#{f[:law]}:#{f[:line]} #{f[:message]}" }
+        end
+      end
+
+      # And the Fold EXECS through World, not through Io::Shell — the same
+      # sentence, one verb over. Io::Shell has consulted Ground::Policy::Sandbox
+      # since that check was wired in, so the hardened policy was live on the tool
+      # path and absent from the constitutional one, which is the path that runs
+      # unattended. Handed in rather than required, because core reaches nothing
+      # in lib/ (test_no_lib_backedges).
+      #
+      # Scope is checked before policy classification. Policy decides whether
+      # a command is safe, needs a person, or is unknown; scope decides whether
+      # the argv can explicitly reach outside this workspace at all. Unknown
+      # policy does not mean unlimited filesystem authority.
+      def shell_sandbox(root:)
+        lambda { |argv|
+          scope_error = Master::Ground::Policy::Sandbox.scope_violation(argv, root:)
+          next scope_error if scope_error
+
+          decision = Master::Ground::Policy::Sandbox.decide(argv.join(" "))
+          next decision.reason if decision.deny?
+          next({ ask: decision.reason }) if decision.recognised_ask?
+
+          nil
+        }
+      end
+
+      def run_string(goal, root:, bus: nil, model: nil, model_id: nil)
+        return "core: no goal" if goal.to_s.strip.empty?
+        # The dispatcher owns lane reachability. A local model or a signed-in CLI
+        # can answer without an API key; a blanket preflight here would hide it.
+        result = run(goal, root:, bus:, model:, model_id:)
+        header = "core: #{result[:reason]} turns=#{result[:turns]}"
+        [header, *result[:transcript].map { |entry| report_turn(entry) }, result[:summary]].compact.join("\n")
+      end
+    end
+  end
+end

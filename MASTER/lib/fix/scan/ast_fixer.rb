@@ -1,0 +1,439 @@
+# frozen_string_literal: true
+
+require "prism"
+require "set"
+require "yaml"
+require "json"
+require_relative "../../io/exec"
+require_relative "../../io/atomic_write"
+require "strscan"
+require_relative "ast_fixer/syntax_transforms"
+require_relative "ast_fixer/web_transforms"
+require_relative "ast_fixer/scale_transforms"
+require_relative "ast_fixer/dead_code_and_commas"
+
+module Master
+  module Fix
+    module Scan
+      # Architecture #4: deterministic AST-level autofixes for mechanical rules.
+      # No LLM call, no token cost. Applied before LLM sweep on every scan cycle.
+      # Each transform is idempotent — safe to apply repeatedly.
+      #
+      # This class is dispatch plus the four whitespace transforms that need no
+      # knowledge of the source at all: pick the strategies whose predicate
+      # matches the path, run their transforms in order, refuse any transform
+      # that turns parseable Ruby into unparseable Ruby, write back. Everything
+      # that has to know something — the language's syntax, HTML/JS/CSS, or
+      # which lines sit inside multi-line literals — lives in a mixin.
+      class AstFixer
+        JS_EXTS = %w[.js .ts .jsx .tsx].freeze
+
+        STYLE_EXTS = %w[.css .scss].freeze
+        HTML_VOID_TAGS = %w[area base br col embed hr img input link meta param source track wbr].freeze
+        HTML_OPTIONAL_END_TAGS = %w[li p dt dd rt rp optgroup option thead tbody tfoot tr td th].freeze
+        HTML_TAG_TOKEN = /<\s*(\/?)\s*([a-z][a-z0-9:-]*)\b((?:"[^"]*"|'[^']*'|[^'">])*)>/im
+
+        Result = Struct.new(:path, :changed, :transforms, :content, keyword_init: true)
+        Strategy = Struct.new(:predicate, :transforms, keyword_init: true)
+
+        STRATEGIES = [
+          Strategy.new(
+            predicate: :ruby?,
+            transforms: %i[add_frozen_header fix_bare_rescue freeze_mutable_constants remove_immediate_dead_code
+                           add_trailing_commas],
+          ),
+          Strategy.new(predicate: :sql_context?, transforms: %i[normalise_null_comparison]),
+          Strategy.new(predicate: :shell?, transforms: %i[add_strict_mode]),
+          Strategy.new(predicate: :html?, transforms: %i[add_html_lang add_meta_charset add_viewport_fit add_skip_to_main add_lazy_loading]),
+          Strategy.new(predicate: :javascript?, transforms: %i[replace_unreassigned_var convert_for_in_arrays convert_string_concat convert_optional_chaining]),
+          Strategy.new(predicate: :style?, transforms: %i[
+            snap_to_design_scale
+            remove_decorative_fx
+            enforce_flat_pixels
+            snap_touch_targets
+          ]),
+        ].freeze
+
+        # remove_immediate_dead_code and add_trailing_commas are Ruby-AST
+        # heuristics and sit in the ruby? strategy above, not here: on other
+        # source Prism.parse fails, literal_lines comes back empty and they run
+        # unguarded (a CSS `}` gains a comma; a live JS branch reads as dead).
+        UNIVERSAL_TRANSFORMS = %i[strip_accidental_sub_wrapper expand_tabs collapse_blank_lines strip_trailing_whitespace ensure_final_newline].freeze
+
+        # Runtime transform safety policy is part of the existing Law catalogue.
+        # Invalid policy fails closed; Ruby does not keep a shadow default.
+        def self.transformation_policy
+          @transformation_policy ||= begin
+            raw = Master.law("transformation_policy").fetch("ast_fixer")
+            patterns = raw.fetch("protected_path_patterns")
+            raise ArgumentError, "transformation_policy.ast_fixer protected paths must be a non-empty array" unless
+              patterns.is_a?(Array) && !patterns.empty?
+
+            protected_patterns = patterns.map do |pattern|
+              raise ArgumentError, "transformation_policy.ast_fixer paths must be regex strings" unless
+                pattern.is_a?(String) && !pattern.empty?
+
+              Regexp.new(pattern)
+            end.freeze
+
+            line_length = Integer(raw.fetch("generated_line_length"))
+            raise ArgumentError, "transformation_policy.ast_fixer generated line length must be positive" unless line_length.positive?
+
+            tab_pattern = raw.fetch("tab_significant_filename_pattern")
+            raise ArgumentError, "transformation_policy.ast_fixer tab pattern must be a regex string" unless
+              tab_pattern.is_a?(String) && !tab_pattern.empty?
+
+            {
+              protected_path_patterns: protected_patterns,
+              generated_line_length: line_length,
+              tab_significant_filename_pattern: Regexp.new(tab_pattern, Regexp::IGNORECASE),
+            }.freeze
+          end
+        end
+
+        include SyntaxTransforms
+        include WebTransforms
+        include ScaleTransforms
+        include DeadCodeAndCommas
+
+        # A transform that takes code out is a different risk from one that puts
+        # an attribute in, and this is the one place that knows which is which.
+        # Both ways in read it: Scanner#should_autofix? for the rule-driven path
+        # and self.fix for a whole file, so a deletion waits for MASTER_AUTOFIX=1
+        # while an addition runs unattended.
+        #
+        # Autofix tiers by transform, not by a finding's reversibility or
+        # blast_radius. Only the semantic and meta rules fill those fields, and
+        # their findings carry fix: nil, so they never reach lib/fix. A transform
+        # whose risk the add-or-delete split cannot state gets its rule classified
+        # in laws.yml by hand.
+        DELETING_TRANSFORMS = %w[remove_immediate_dead_code].freeze
+
+        # What a person asking looks like from here, and the same signal
+        # Fix::RepairLoop reads: the background convergence loop and the unattended
+        # ladder both leave MASTER_AUTOFIX off.
+        def self.deletions_allowed? = ENV["MASTER_AUTOFIX"] == "1"
+
+        def self.fix(path, source, event_bus: nil, allow_deletions: deletions_allowed?)
+          new(path, source, event_bus:, allow_deletions:).apply
+        end
+
+        # A candidate without touching the filesystem, so a caller can judge the
+        # content before it becomes the file. MechanicalAutofix is the governed
+        # writer on the /scan path; `fix` above stays transform-and-write for the
+        # callers that have no check to run.
+        def self.propose(path, source, event_bus: nil, allow_deletions: deletions_allowed?)
+          new(path, source, event_bus:, allow_deletions:).propose
+        end
+
+        # The other half of propose, for a caller that has judged the candidate.
+        # Same atomic rename and mode-preserving write `fix` performs, and the
+        # same event, so a governed write is indistinguishable downstream from
+        # the one that used to happen unasked.
+        def self.write(path, content, event_bus: nil, transforms: [])
+          new(path, content, event_bus:).write!(content, transforms:)
+        end
+
+        def initialize(path, source, event_bus: nil, allow_deletions: self.class.deletions_allowed?)
+          @path = path
+          @source = source
+          @bus = event_bus
+          @allow_deletions = allow_deletions
+          @transforms = []
+        end
+
+        # OpenBSD mirrors and Law fixtures are protected because transforms
+        # break upstream fidelity or erase load-bearing fixtures.
+
+        def apply
+          candidate = propose
+          write!(candidate.content, transforms: @transforms) if candidate.changed
+          candidate
+        end
+
+        # The atomic, mode-preserving write and the event that says a file
+        # changed. Public because propose and this are the two halves a governed
+        # caller uses: transform, judge the candidate, then write it.
+        def write!(content, transforms: [])
+          write_back(content)
+          @bus&.publish("ast_fixer:transform", path: @path, transforms:)
+          content
+        end
+
+        def propose
+          return unchanged if protected_path? || generated_bundle?
+
+          out = apply_strategies(@source)
+          Result.new(path: @path, changed: out != @source, transforms: @transforms, content: out)
+        end
+
+        private
+
+        def unchanged = Result.new(path: @path, changed: false, transforms: [], content: @source)
+
+        def apply_strategies(src)
+          out = apply_transforms(src, UNIVERSAL_TRANSFORMS.first(2))
+          applicable_strategies.each do |strategy|
+            out = apply_transforms(out, strategy.transforms)
+          end
+          apply_transforms(out, UNIVERSAL_TRANSFORMS.drop(2))
+        end
+
+        def applicable_strategies
+          STRATEGIES.select { |strategy| send(strategy.predicate) }
+        end
+
+        # An explicit accumulator loop, deliberately — not reduce, not
+        # each_with_object. The accumulator is the rewritten source, so each
+        # step must produce the next value; each_with_object throws the block
+        # result away and turns every transform into a no-op. A plain loop
+        # gives the EACH_WITH_OBJECT sweep no `reduce` to rewrite and keeps the
+        # data-flow on the page.
+        def apply_transforms(src, transforms)
+          current = src
+
+          transforms.each do |transform|
+            next if !@allow_deletions && DELETING_TRANSFORMS.include?(transform.to_s)
+
+            transform_labels = @transforms.dup
+            candidate = send(transform, current)
+
+            if candidate != current && broke_syntax?(current, candidate)
+              # Transform turned valid source into unparseable source — a
+              # line-heuristic misfire on a multi-line construct. Discard it
+              # (and any label it recorded); keep the prior source.
+              @transforms.replace(transform_labels)
+              next
+            end
+
+            current = candidate
+          end
+          current
+        end
+
+        # The net used to cover Ruby only, so a JS or CSS transform that mangled
+        # a multi-line construct had no backstop at all — the exact asymmetry
+        # that let add_trailing_commas rewrite every CSS `}` as `;,` in
+        # production. Same shape as the Ruby check in all three languages: a
+        # transform is discarded only when the source parsed BEFORE it and stops
+        # parsing after. When no validator is available for a language (no node
+        # on PATH for JS), nothing is measured and nothing is judged.
+        def broke_syntax?(before, after)
+          validator = syntax_validator
+
+          return false unless validator
+          return false unless send(validator, before)
+
+          !send(validator, after)
+        end
+
+        def syntax_validator
+          return :parses? if ruby?
+          return :javascript_parses? if javascript? && self.class.node_available?
+          return :style_balanced? if style?
+          return :html_tags_balanced? if html?
+          return :yaml_parses? if yaml?
+          return :json_parses? if json?
+          return :markdown_fences_balanced? if markdown?
+
+          nil
+        end
+
+        def yaml? = %w[.yml .yaml].include?(File.extname(@path).downcase)
+
+        def json? = File.extname(@path).downcase == ".json"
+
+        def yaml_parses?(src)
+          YAML.parse(src)
+          true
+        rescue Psych::SyntaxError
+          false
+        end
+
+        def json_parses?(src)
+          JSON.parse(src)
+          true
+        rescue JSON::ParserError
+          false
+        end
+
+        def html_tags_balanced?(src)
+          text = src.gsub(/<%.*?%>/m, "").gsub(/<!--.*?-->/m, "")
+          text = text.gsub(/(<\s*(script|style|textarea|title)\b[^>]*>).*?(<\s*\/\s*\2\s*>)/im) do
+            "#{$1}#{$3}"
+          end
+          stack = []
+
+          text.scan(HTML_TAG_TOKEN) do |closing, raw_name, attributes|
+            name = raw_name.downcase
+            if closing == "/"
+              index = stack.rindex(name)
+              return false unless index
+              return false if stack[(index + 1)..].any? { |open| !HTML_OPTIONAL_END_TAGS.include?(open) }
+
+              stack.slice!(index..)
+              next
+            end
+
+            close_optional_before_start(stack, name)
+            self_closing = attributes.to_s.match?(%r{/\s*\z})
+            stack << name unless self_closing || HTML_VOID_TAGS.include?(name)
+          end
+
+          stack.all? { |name| HTML_OPTIONAL_END_TAGS.include?(name) }
+        end
+
+        def close_optional_before_start(stack, name)
+          closable = case name
+                     when "li" then %w[li]
+                     when "dt", "dd" then %w[dt dd]
+                     when "p" then %w[p]
+                     when "option" then %w[option]
+                     when "optgroup" then %w[option optgroup]
+                     when "tr" then %w[td th tr]
+                     when "td", "th" then %w[td th]
+                     when "thead", "tbody", "tfoot" then %w[td th tr thead tbody tfoot]
+                     else
+                       %w[address article aside blockquote div dl fieldset footer form h1 h2 h3 h4 h5 h6
+                          header hr menu nav ol pre section table ul].include?(name) ? %w[p] : []
+                     end
+          stack.pop while closable.include?(stack.last)
+        end
+
+        def markdown_fences_balanced?(src)
+          fence = nil
+          src.each_line do |line|
+            marker = line.match(/\A {0,3}(\x60{3,}|~{3,})/)
+            next unless marker
+
+            token = marker[1]
+            if fence
+              fence = nil if token[0] == fence[0] && token.length >= fence.length
+            else
+              fence = token
+            end
+          end
+          fence.nil?
+        end
+
+        def parses?(src) = !Prism.parse(src).failure?
+
+        # Both module and script parses are tried because a bundle using
+        # `import` is invalid as a script and a file using `with` is invalid as
+        # a module; accepting either keeps the check a syntax test rather than a
+        # module-system opinion.
+        def javascript_parses?(src)
+          %w[module commonjs].any? { |mode| node_accepts?(src, mode) }
+        end
+
+        def node_accepts?(src, mode)
+          _out, status = Master::Io::Exec.capture2e("node", "--input-type=#{mode}", "--check", stdin_data: src)
+          status.success?
+        rescue StandardError
+          false
+        end
+
+        def self.node_available?
+          return @node_available unless @node_available.nil?
+
+          @node_available = ENV["PATH"].to_s.split(File::PATH_SEPARATOR).any? do |dir|
+            File.executable?(File.join(dir, "node"))
+          end
+        end
+
+        # CSS has no cheap parser to hand, but every failure this net exists to
+        # catch shows up as an unbalanced block. Quotes and comments are skipped
+        # so a brace inside `content: "}"` does not read as structure.
+        def style_balanced?(src)
+          depth = 0
+          scanner = StringScanner.new(src)
+
+          until scanner.eos?
+            case
+            when scanner.scan(%r{/\*.*?\*/}m) then next
+            when scanner.scan(/"(?:[^"\\]|\\.)*"/) then next
+            when scanner.scan(/'(?:[^'\\]|\\.)*'/) then next
+            when scanner.scan(/\{/) then depth += 1
+            when scanner.scan(/\}/) then depth -= 1
+            else scanner.pos += 1
+            end
+
+            return false if depth.negative?
+          end
+          depth.zero?
+        end
+
+        # Tabs are syntax in make recipes, the delimiter in TSV, gofmt's
+        # output in Go, and convention in .conf mirrors — expanding them is a
+        # break, not a cleanup. dilla's demo_manifest.tsv lost its columns to
+        # this on 2026-08-18.
+        def expand_tabs(src)
+          return src unless src.include?("\t")
+          return src if self.class.transformation_policy.fetch(:tab_significant_filename_pattern).match?(File.basename(@path.to_s))
+
+          out = src.gsub("\t", "  ")
+          @transforms << :expand_tabs if out != src
+          out
+        end
+
+        def collapse_blank_lines(src)
+          out = src.gsub(/(\n\n)\n+/, "\\1")
+          @transforms << :collapse_blank_lines if out != src
+          out
+        end
+
+        def strip_trailing_whitespace(src)
+          out = if markdown?
+                  # Two or more trailing spaces are a Markdown hard line
+                  # break. Strip whitespace-only lines and single stray
+                  # blanks; leave the breaks standing.
+                  src.gsub(/^[ \t]+$/, "").gsub(/(?<=[^ \t\n])[ \t](?=\n|\z)/, "")
+                else
+                  src.gsub(/[ \t]+(?=\n|\z)/, "")
+                end
+
+          @transforms << :trailing_whitespace if out != src
+          out
+        end
+
+        def ensure_final_newline(src)
+          return src if src.empty? || src.end_with?("\n")
+
+          @transforms << :final_newline
+          src + "\n"
+        end
+
+        def ruby? = File.extname(@path).downcase == ".rb"
+
+        def markdown? = File.extname(@path).downcase == ".md"
+
+        def protected_path?
+          self.class.transformation_policy.fetch(:protected_path_patterns).any? do |pattern|
+            @path.to_s.match?(pattern)
+          end
+        end
+
+        def generated_bundle?
+          threshold = self.class.transformation_policy.fetch(:generated_line_length)
+          @source.each_line.any? { |line| line.length > threshold }
+        end
+
+        def shell? = %w[.zsh .sh .bash].include?(File.extname(@path).downcase)
+
+        def html? = %w[.html .erb .html.erb].any? { |ext| @path.to_s.downcase.end_with?(ext) }
+
+        def javascript? = JS_EXTS.include?(File.extname(@path).downcase)
+
+        def style? = STYLE_EXTS.include?(File.extname(@path).downcase)
+
+        def sql_context?
+          ruby? || %w[.sql .erb].include?(File.extname(@path).downcase)
+        end
+
+        def write_back(content)
+          Master::Io::AtomicWrite.write_atomic(@path, content)
+        end
+      end
+    end
+  end
+end

@@ -1,0 +1,144 @@
+<%# At rest this is one thin pill and nothing else — avatar, prompt, no field.
+    Clicking it opens the composer as a floating dialog rather than growing the
+    feed downward, which is the Facebook shape: the resting row stays the same
+    height whether or not you are writing, and the writing surface gets the
+    whole screen's attention instead of competing with the post below it.
+
+    The <dialog> carries the real form. It is in the DOM at rest (so the browser
+    owns focus trapping, Esc, and the backdrop) but not rendered until
+    showModal(). %>
+<div class="compose-launcher" data-controller="feed-compose"
+     data-feed-compose-discard-value="<%= t("feed.compose_discard") %>"
+     data-feed-compose-remove-media-value="<%= t("compose.media.remove") %>"
+     data-feed-compose-media-alt-value="<%= t("compose.media.photo_alt") %>">
+  <button type="button" class="compose-trigger" data-action="click->feed-compose#open">
+    <% if guest? %>
+      <span class="compose-avatar" aria-hidden="true">G</span>
+    <% else %>
+      <%= image_tag Current.user.avatar_url, class: "compose-avatar", alt: "", width: 40, height: 40 %>
+    <% end %>
+    <span class="compose-trigger-prompt"><%= t("feed.compose_prompt") %></span>
+  </button>
+
+  <dialog class="composer" data-feed-compose-target="dialog"
+          data-action="click->feed-compose#backdropClose cancel->feed-compose#cancel close->feed-compose#closed">
+    <%= form_with model: Post.new, url: main_app.posts_path, class: "composer-form",
+          data: { controller: "form-submit draft-store", draft_store_key_value: "brgen-feed-compose",
+                  feed_compose_target: "box", pwa_offline: true, pwa_queued_text: t("pwa.queued"),
+                  action: "submit->form-submit#lock",
+                  form_submit_blank: t("feed.compose_blank") } do |f| %>
+      <header class="composer-header">
+        <h2 class="composer-title"><%= t("feed.compose_title", city: city_name) %></h2>
+        <button type="button" class="composer-close" data-action="click->feed-compose#close"
+                aria-label="<%= t("common.close") %>">
+          <%= icon :close, size: 20 %>
+        </button>
+      </header>
+
+      <div class="composer-author">
+        <% if guest? %>
+          <span class="compose-avatar" aria-hidden="true">G</span>
+          <span class="composer-author-name">
+            <%= t("feed.posting_as_guest") %>
+            <%= f.hidden_field :anonymous, value: true %>
+          </span>
+        <% else %>
+          <%= image_tag Current.user.avatar_url, class: "compose-avatar", alt: "", width: 40, height: 40 %>
+          <span class="composer-author-name"><%= Current.user.display_name %></span>
+        <% end %>
+      </div>
+
+      <%# draft-store on the form keeps the text across a close or a backdrop
+          click; character-counter counts what is written, with the live cap
+          beside it, since a Live post stops at 500. %>
+      <div class="composer-body" data-controller="tiptap-editor link-preview character-counter">
+        <%= f.label :content, t("feed.compose_title", city: city_name), class: "visually-hidden" %>
+        <%= f.hidden_field :title, data: { feed_compose_target: "title" } %>
+        <%= f.text_area :content,
+              rows: 3,
+              placeholder: t("feed.compose_prompt"),
+              class: "compose-input",
+              data: {
+                feed_compose_target: "input",
+                tiptap_editor_target: "field",
+                character_counter_target: "input",
+                action: "input->feed-compose#syncTitle input->link-preview#scan"
+              } %>
+        <div class="tiptap_mount" data-tiptap-editor-target="mount" hidden></div>
+        <p class="char-counter">
+          <%= tag.span data: { character_counter_target: "counter" }, aria: { live: "polite" } %>
+          <%= tag.span t("feed.compose_live_limit", count: Post::LIVE_CONTENT_MAX) %>
+        </p>
+        <%= tag.output data: { link_preview_target: "preview" },
+                       aria: { live: "polite", label: t("link_preview.label") } %>
+        <%# One row, two groups: what marks up the text on the left, what
+            attaches to it on the right. These were stacked, which read as two
+            unrelated toolbars and cost a row of height on a phone. %>
+        <div class="composer-toolbar">
+          <%= render "shared/tiptap_toolbar", hidden: false %>
+          <div class="compose-actions">
+            <%# Each of these wraps its input in a <label>, which normally names it —
+                but the label's only content is an aria-hidden icon, so the
+                accessible name computes to "". title= is a tooltip, not a name.
+                The three inputs read as "unlabelled file upload" to a screen
+                reader, one after another, with nothing to tell them apart.
+                aria-label rather than visible text: these are 20px icon buttons in
+                a row and adding words would redesign the compose bar. %>
+            <label class="compose-action" title="<%= t("compose.add_photo") %>">
+              <%= icon :camera, size: 20 %>
+              <%= f.file_field :image, accept: "image/*", capture: "environment",
+                    class: "visually-hidden", aria: { label: t("compose.add_photo") },
+                    data: { action: "change->feed-compose#mediaSelected" } %>
+            </label>
+            <label class="compose-action" title="<%= t("compose.record_video") %>">
+              <%= icon :video, size: 20 %>
+              <%= f.file_field :video, accept: "video/*", capture: "environment",
+                    class: "visually-hidden", aria: { label: t("compose.record_video") },
+                    data: { action: "change->feed-compose#mediaSelected" } %>
+            </label>
+            <label class="compose-action" title="<%= t("compose.record_audio") %>">
+              <%= icon :mic, size: 20 %>
+              <%= f.file_field :audio, accept: "audio/*", capture: "user",
+                    class: "visually-hidden", aria: { label: t("compose.record_audio") },
+                    data: { action: "change->feed-compose#mediaSelected" } %>
+            </label>
+          </div>
+        </div>
+        <%# What is attached, with a way to take it off (feed_compose#renderMedia).
+            Hidden until a file is chosen, so an empty list says nothing. %>
+        <%= tag.ul class: "compose-media", role: "list", hidden: true,
+                   aria: { label: t("compose.media.label"), live: "polite" },
+                   data: { feed_compose_target: "media" } %>
+      </div>
+
+      <%# The Live layer, folded in, and asked for. A Live post is stamped with
+          your area and posted anonymously with a 500-character cap
+          (Post#stamp_live_location!), so this cannot be a hidden default: as one
+          it turned every signed-in post anonymous under the name shown above. %>
+      <% if Current.user&.latitude.present? && Current.user.longitude.present? %>
+        <%# The coordinates are rounded to two decimals (Post::LIVE_LOCATION_PRECISION),
+            about a kilometre, which is what the label promises. %>
+        <label>
+          <%= f.check_box :nearby, { aria: { describedby: "composer-nearby-hint" } }, "true", "false" %>
+          <%= t("feed.post_nearby", count: Post::LIVE_CONTENT_MAX) %>
+        </label>
+        <%= tag.p t("feed.post_nearby_hint", count: Post::LIVE_CONTENT_MAX), id: "composer-nearby-hint",
+                  class: "compose-hint" %>
+      <% end %>
+
+      <%= f.submit t("feed.post_action"), class: "button button-primary composer-submit" %>
+
+      <%# Guests used to get two sentences here: how many posts remained in this
+          browser, and why the cap exists. The cap is a rule you meet at most once
+          and the dialog is a writing surface, so the count moved out of the way of
+          the draft; refusing a post still explains itself at the moment it
+          happens. The signed-in link stays — it is a way out of this dialog to the
+          full form, not commentary on it. %>
+      <% unless guest? %>
+        <div class="compose-hint">
+          <%= link_to t("feed.advanced_post"), main_app.new_post_path %>
+        </div>
+      <% end %>
+    <% end %>
+  </dialog>
+</div>

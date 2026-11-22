@@ -1,0 +1,403 @@
+# frozen_string_literal: true
+
+require "timeout"
+require "fileutils"
+require "digest"
+require "uri"
+
+module Master
+  module Io
+    # Browser bridge to the two configured free web chat UIs (Grok, ChatGPT).
+    # It needs a signed-in website profile, not an API key; it is an automatic
+    # fallback only in keyless mode, unless an operator opts in. Site-imposed
+    # quotas are respected; persistent profiles are never recycled to evade them.
+    class WebChat
+      DEFAULT_TIMEOUT = 120
+      ENABLE_ENV = "MASTER_WEB_CHAT"
+      HEADFUL_ENV = "MASTER_WEB_CHAT_HEADFUL"
+      POLL_INTERVAL_S = 0.5
+      LOGIN_POLL_INTERVAL_S = 1.0
+      COMPOSER_TIMEOUT_S = 20
+      # The dispatcher caps free calls at 60s. Ferrum gets a shorter per-operation
+      # ceiling so navigation/input failures unwind before the outer call expires.
+      FERRUM_TIMEOUT_S = 45
+      PNG_SIGNATURE = "\x89PNG\r\n\x1a\n".b.freeze
+      PROFILE_CLEANUP_WAIT_S = 0.25
+      PROFILE_MUTEX = Mutex.new
+      PROFILE_CLEANUP = { thread: nil, failed: nil }
+
+      DisabledError = Class.new(StandardError)
+      ProviderError = Class.new(StandardError)
+      BrowserUnavailable = Class.new(StandardError)
+      RequestTimeout = Class.new(StandardError)
+
+      def self.call(provider:, prompt:, system: nil, broker: nil)
+        new(provider:, broker:).ask(prompt:, system:)
+      end
+
+      # Browser-mediated accounts are a keyless fallback, not a default
+      # destination when a paid API key is already configured. Explicit opt-in
+      # remains available for an operator who has signed into the local profile.
+      def self.enabled?(rules: Master.models_config)
+        return false if ENV["MASTER_LOCAL_ONLY"] == "1"
+        return false unless ENV["MASTER_NO_KEYLESS"].to_s.empty?
+        return false if ENV["MASTER_NO_WEB_CHAT"] == "1"
+        return false if ENV["MASTER_WEB_CHAT"].to_s == "0"
+        return true if ENV["MASTER_WEB_CHAT"] == "1" || ENV["MASTER_KEYLESS"] == "1"
+
+        rules.dig("ferrum_web_chat", "auto_when_keyless") != false && !Master.any_api_key_present?
+      end
+
+      # Browser-session failures are not transient provider 5xxs. A missing
+      # login, stale composer or absent assistant reply must skip this profile;
+      # a real timeout/offline browser must not be retried in another mode.
+      def self.failure_category(error)
+        message = error.message.to_s
+        # Ferrum::ProcessTimeoutError says the browser did not produce a
+        # websocket URL "within N seconds"; PendingConnectionsError likewise
+        # marks a page that failed to go idle at its deadline. Neither is a
+        # Timeout::Error with a "timed out" message. Treat both as hard timeouts
+        # or the fallback chain retries the same browser profile after 30/60s.
+        classes = error.class.ancestors.filter_map(&:name)
+        timeout_class = classes.any? do |name|
+          name.match?(/\A(?:Ferrum::)?(?:(?:Process)?TimeoutError|PendingConnectionsError)\z/)
+        end
+        return :model_missing if error.is_a?(BrowserUnavailable)
+        return :timeout if timeout_class || error.is_a?(Timeout::Error) || message.match?(/timed out/i)
+        return :offline if error.is_a?(SystemCallError) || classes.include?("Ferrum::DeadBrowserError")
+        return :model_missing if classes.include?("Ferrum::BinaryNotFoundError") ||
+                                 message.match?(/unknown web chat provider/i)
+        return :auth_error if error.is_a?(DisabledError) || error.is_a?(ProviderError)
+
+        :provider_error
+      end
+
+      def initialize(provider:, broker: nil)
+        @provider = provider.to_s
+        @config = provider_config(@provider)
+        @broker = broker
+      end
+
+      def ask(prompt:, system: nil)
+        raise DisabledError, disabled_message unless enabled?
+
+        @screenshot_evidence = []
+        @screenshot_capture_failure_reported = false
+        @submitted_text = nil
+        full_prompt = [system, prompt].compact.join("\n\n")
+        Timeout.timeout(timeout_seconds, RequestTimeout) { with_browser { |page| converse(page, full_prompt) } }
+      rescue RequestTimeout
+        raise ProviderError, "#{@provider}: timed out after #{timeout_seconds}s"
+      end
+
+      # Metadata proves which visible states were captured without retaining chat
+      # images in memory after the request or writing private screenshots by default.
+      def screenshot_evidence = Array(@screenshot_evidence).map(&:dup)
+
+      private
+
+      def enabled? = self.class.enabled?(rules: Master.models_config)
+
+      def disabled_message
+        "web chat needs a keyless setup or explicit opt-in (MASTER_WEB_CHAT=1 or MASTER_KEYLESS=1)"
+      end
+
+      def provider_config(name)
+        providers = Master.models_config.dig("ferrum_web_chat", "providers") || {}
+        providers.fetch(name) { raise ProviderError, "unknown web chat provider: #{name}" }
+      end
+
+      def ferrum_config
+        Master.models_config.dig("ferrum_web_chat") || {}
+      end
+
+      def ferrum_timeout_s = [timeout_seconds, FERRUM_TIMEOUT_S].min
+
+      def profile_path
+        raw = ferrum_config["profile_dir"].to_s
+        raw = "~/.config/master/web-chat-profile" if raw.empty?
+        File.expand_path(raw)
+      end
+
+      def with_browser
+        raise BrowserUnavailable, "#{@provider}: Core-owned browser broker is unavailable; refusing to spawn Chromium outside Core" unless @broker
+
+        require "ferrum"
+        PROFILE_MUTEX.synchronize do
+          refuse_if_cleanup_pending!
+          browser = nil
+          lease = nil
+          begin
+            FileUtils.mkdir_p(profile_path, mode: 0o700)
+            File.chmod(0o700, profile_path)
+            lease = @broker.open(host: provider_host, url: @config.fetch("url"),
+                                 profile: profile_path, persistent: true,
+                                 headless: ENV[HEADFUL_ENV] != "1")
+            browser = Ferrum::Browser.new(**driver_options(lease))
+            yield browser.create_page
+          ensure
+            cleanup_browser(browser) if browser
+            # The broker stops the process group; the signed-in profile dir stays,
+            # because the next keyless call reuses the same sign-in state.
+            @broker.close(lease.id) if lease
+          end
+        end
+      end
+
+      # A lease is mandatory; Ferrum attaches to the broker's CDP endpoint.
+      def driver_options(lease)
+        raise BrowserUnavailable, "#{@provider}: Core-owned browser lease is required" unless lease
+
+        { ws_url: lease.cdp_url, timeout: ferrum_timeout_s, process_timeout: ferrum_timeout_s }
+      end
+
+      def provider_host = URI(@config.fetch("url")).host
+
+      # Ferrum 0.17.1's quit is synchronous. When the dispatcher deadline fires,
+      # waiting for teardown here defeats that deadline. Finish teardown off-thread;
+      # do not reopen the shared profile until that cleanup has actually exited.
+      def cleanup_browser(browser)
+        # Ferrum >= 0.19.1 can kill Chrome asynchronously itself and returns
+        # the cleanup thread. Older locked versions have only synchronous
+        # #quit, so put that call on one worker instead.
+        raw_worker = if async_quit_supported?(browser)
+                       browser.quit(wait: false)
+                     else
+                       Thread.new do
+                         Thread.current.report_on_exception = false
+                         browser.quit
+                       end
+                     end
+        raise ProviderError, "#{@provider}: browser cleanup did not return a worker" unless raw_worker.is_a?(Thread)
+        raw_worker.report_on_exception = false if raw_worker.respond_to?(:report_on_exception=)
+
+        # Observe both Ferrum's native worker and the compatibility worker.
+        # Thread#join does not surface an exception; #value does. Keep a small
+        # watcher as the profile lease and remember a failed teardown forever
+        # in this process rather than risk opening a second Chrome on that profile.
+        worker = Thread.new { observe_browser_cleanup(raw_worker) }
+        PROFILE_CLEANUP[:thread] = worker
+        return if worker.join(PROFILE_CLEANUP_WAIT_S)
+
+        begin
+          Master::Trace::Dmesg.status(
+            "web0", "#{@provider}: browser cleanup continues; shared profile temporarily unavailable"
+          )
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "WebChat.browser_cleanup_status", provider: @provider)
+        end
+      rescue StandardError => e
+        PROFILE_CLEANUP[:failed] ||= e.class.name
+        Master::Ground::Swallow.log(e, context: "WebChat.browser_cleanup_start", provider: @provider)
+      end
+
+      def observe_browser_cleanup(worker)
+        worker.value
+      rescue StandardError => e
+        PROFILE_CLEANUP[:failed] ||= e.class.name
+        Master::Ground::Swallow.log(e, context: "WebChat.browser_cleanup", provider: @provider)
+      end
+
+      def async_quit_supported?(browser)
+        browser.method(:quit).parameters.any? do |kind, name|
+          kind == :keyrest || (%i[key keyreq].include?(kind) && name == :wait)
+        end
+      rescue StandardError
+        false
+      end
+
+      def refuse_if_cleanup_pending!
+        failure = PROFILE_CLEANUP[:failed]
+        raise ProviderError, "#{@provider}: prior browser cleanup failed (#{failure}); shared profile is unavailable until restart" if failure
+
+        worker = PROFILE_CLEANUP[:thread]
+        raise ProviderError, "#{@provider}: prior browser cleanup is still running; shared profile is unavailable" if worker&.alive?
+
+        PROFILE_CLEANUP[:thread] = nil
+      end
+
+      def converse(page, text)
+        page.go_to(@config.fetch("url"))
+        capture_screenshot(page, stage: "loaded")
+        previous = reply_state(page)
+        @submitted_text = text.to_s
+        fill_prompt(page, text)
+        capture_screenshot(page, stage: "submitted")
+        reply = read_reply(page, previous:)
+        capture_screenshot(page, stage: "answered")
+        reply
+      end
+
+      def fill_prompt(page, text)
+        selector = @config.fetch("input_selector")
+        field = wait_for_element(page, selector, timeout: [COMPOSER_TIMEOUT_S, timeout_seconds - 5].min)
+        field ||= wait_for_login(page, selector) if ENV[HEADFUL_ENV] == "1"
+        unless field
+          detail = ENV[HEADFUL_ENV] == "1" ? "sign-in did not expose the chat input" : "login required? set #{HEADFUL_ENV}=1 to sign in once"
+          raise ProviderError, "#{@provider}: input not found (#{detail})"
+        end
+        field.focus.type(text, :Enter)
+      end
+
+      def wait_for_element(page, selector, timeout:)
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + [timeout.to_f, 0].max
+        loop do
+          field = find_element(page, selector)
+          return field if field
+          break if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+          sleep POLL_INTERVAL_S
+        end
+        nil
+      end
+
+      # A dedicated Ferrum profile has its own cookies. In explicit headful mode,
+      # let the operator sign in on the real provider page before sending a prompt.
+      def wait_for_login(page, selector)
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + [timeout_seconds - COMPOSER_TIMEOUT_S - 5, 1].max
+        loop do
+          field = find_element(page, selector)
+          return field if field
+          break if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+          sleep LOGIN_POLL_INTERVAL_S
+        end
+        nil
+      end
+
+      def read_reply(page, previous: nil)
+        reply = wait_for_reply(page, previous:)
+        return reply unless reply.to_s.strip.empty?
+
+        raise ProviderError, "#{@provider}: no new assistant reply appeared after submission"
+      end
+
+      # A page can contain earlier assistant turns. Read the last matching node
+      # and its count so a repeated, text-identical answer still counts as new.
+      def reply_state(page)
+        nodes = page.css(@config.fetch("reply_selector")).select { |node| reply_candidate?(node) }
+        node = nodes.last
+        [nodes.size, node ? extract_text(node) : ""]
+      end
+
+      # Some provider selectors include both sides of the conversation. Reject
+      # nodes marked as user input and the prompt echo before deciding that a
+      # visible change is a new assistant answer.
+      def reply_candidate?(node)
+        roles = %w[data-message-author-role data-role role].filter_map do |name|
+          value = node.attribute(name).to_s.strip.downcase
+          value unless value.empty?
+        rescue StandardError
+          nil
+        end
+        return false if roles.any? { |value| value.match?(/\b(user|human|prompt|question|query)\b/) }
+        return true if roles.any? { |value| value.match?(/\b(assistant|bot|model)\b/) }
+
+        metadata = %w[class data-testid aria-label].filter_map do |name|
+          value = node.attribute(name).to_s.strip.downcase
+          value unless value.empty?
+        rescue StandardError
+          nil
+        end.join(" ")
+        return false if metadata.match?(/(?:\A|[\s_-])(user|human|prompt|question|query)(?:\z|[\s_-])/)
+        return true if metadata.match?(/assistant|response|bot|model|markdown-body|message-content/)
+
+        text = extract_text(node)
+        !submitted_prompt_echo?(text) && !submitted_prompt_in_container?(text)
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "WebChat.reply_candidate", provider: @provider)
+        false
+      end
+
+      def submitted_prompt_echo?(value)
+        prompt = normalized_text(@submitted_text)
+        text = normalized_text(value)
+        !prompt.empty? && text == prompt
+      end
+
+      def submitted_prompt_in_container?(value)
+        prompt = normalized_text(@submitted_text)
+        text = normalized_text(value)
+        !prompt.empty? && text.include?(prompt)
+      end
+
+      def normalized_text(value)
+        value.to_s.gsub(/\s+/, " ").strip.downcase
+      end
+
+      def find_element(page, selector)
+        selector.to_s.split(",").map(&:strip).each do |css|
+          node = page.at_css(css)
+          return node if node && element_visible?(node)
+        end
+        nil
+      end
+
+      def element_visible?(node)
+        !node.respond_to?(:visible?) || node.visible?
+      rescue StandardError
+        false
+      end
+
+      def extract_text(node)
+        text = node.text.to_s.strip
+        return text unless text.empty?
+        node.property("innerHTML").to_s.gsub(/<[^>]+>/, " ").gsub(/\s+/, " ").strip
+      end
+
+      def wait_for_reply(page, previous: nil)
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout_seconds
+        last_state = nil
+        stable = 0
+        loop do
+          state = reply_state(page)
+          changed = previous.nil? || state[0] > previous[0] || state[1] != previous[1]
+          if changed && !state[1].strip.empty? && state == last_state
+            stable += 1
+          elsif changed && !state[1].strip.empty?
+            stable = 1
+          else
+            stable = 0
+          end
+          return state[1] if stable >= 2
+
+          last_state = state
+          break if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+          sleep POLL_INTERVAL_S
+        end
+        nil
+      end
+
+      # Ferrum returns the PNG bytes directly when :binary is requested. Images
+      # stay in memory unless the operator explicitly sets a capture directory.
+      def capture_screenshot(page, stage:)
+        bytes = page.screenshot(encoding: :binary, format: "png")
+        return unless bytes.is_a?(String) && bytes.start_with?(PNG_SIGNATURE)
+
+        evidence = { stage:, bytes: bytes.bytesize, sha256: Digest::SHA256.hexdigest(bytes) }
+        directory = ENV["MASTER_WEB_CHAT_SCREENSHOT_DIR"].to_s.strip
+        unless directory.empty?
+          capture_dir = File.expand_path(directory)
+          FileUtils.mkdir_p(capture_dir, mode: 0o700)
+          File.chmod(0o700, capture_dir)
+          provider = @provider.gsub(/[^a-z0-9_-]/i, "_")
+          stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S%6N")
+          path = File.join(capture_dir, "#{provider}-#{Process.pid}-#{stamp}-#{stage}-#{evidence[:sha256][0, 10]}.png")
+          File.open(path, File::WRONLY | File::CREAT | File::EXCL, 0o600) { |file| file.write(bytes) }
+          evidence[:path] = path
+        end
+        (@screenshot_evidence ||= []) << evidence.freeze
+        evidence
+      rescue StandardError => e
+        unless @screenshot_capture_failure_reported
+          @screenshot_capture_failure_reported = true
+          Master::Ground::Swallow.log(e, context: "WebChat.screenshot", provider: @provider)
+        end
+        nil
+      end
+
+      def timeout_seconds = (@config["timeout"] || DEFAULT_TIMEOUT).to_i
+    end
+  end
+end

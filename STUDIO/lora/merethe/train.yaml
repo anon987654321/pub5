@@ -1,0 +1,9 @@
+---
+schema: 1
+subject: merethe
+trigger_word: MERETHE
+dataset:
+  path: dataset
+  caption_ext: txt
+destination_env: REPLICATE_DESTINATION
+model_directory: merethe

@@ -1,0 +1,17 @@
+# Instruments that report the same problem under different names. Read by
+# Fix::ConflictResolver: on one file and line, findings that name the same
+# canonical law become one finding, so /fix decides once and the model is asked
+# once. The canonical law is kept; the others are listed on it as also:.
+#
+# Measured on the 2026-10-22 MASTER scan: LONG_LINE and Layout/LineLength fired
+# together on 2,699 lines.
+#
+# A key is a law id, or "<instrument>:<rule>" for rubocop and reek, whose rule
+# name opens the finding's message.
+#
+# Where a linter rule and a Law measure one fact at one threshold, the linter's
+# copy is off in .rubocop.yml / .reek.yml and the Law is the one source, so no
+# row is needed. Metrics/AbcSize stays on while it is stricter (20) than the
+# ABC_SIZE ratchet (40); where both fire on a line they are one finding.
+ABC_SIZE:
+  - rubocop:Metrics/AbcSize

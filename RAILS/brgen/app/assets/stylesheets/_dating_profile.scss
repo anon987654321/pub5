@@ -1,0 +1,161 @@
+/* Brgen dating: the profile detail and photo gallery. Meta rows, trait
+   pills, action forms and the media strip a card or profile shows, split
+   from _brgen_dating.scss at the module boundary. */
+/* Profile detail meta rows. The label/value pairs are elements and the gap
+   separates them (layout_rules.whitespace.gap_over_margin); &nbsp; entities
+   would collapse at some widths, wrap mid-pair at others and read aloud as a
+   space. */
+.profile-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+}
+
+.swipe-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-inline: var(--space-1);
+}
+
+/* Gender and what the person looks for: hairline pills, so two facts read as
+   two tags rather than one run of text. */
+.swipe-traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.swipe-traits li {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font: var(--text-extra-small) / 1 var(--font);
+  padding: var(--space-1) var(--space-2);
+}
+
+.swipe-prompt {
+  margin: 0;
+  font: var(--text-small) / 1.4 var(--font);
+}
+
+.swipe-recency {
+  margin: var(--space-1) 0 0;
+  font: var(--text-extra-small) / 1.25 var(--font);
+  color: var(--dating-muted, var(--text-secondary));
+}
+
+.swipe-overflow {
+  margin-top: var(--space-1);
+}
+
+.swipe-overflow summary {
+  list-style: none;
+  cursor: pointer;
+  min-height: var(--tap-min);
+  display: inline-flex;
+  align-items: center;
+  color: var(--dating-muted, var(--text-secondary));
+}
+
+.swipe-overflow summary::-webkit-details-marker { display: none; }
+
+.swipe-overflow-menu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.swipe-actions {
+  display: flex;
+  gap: var(--space-5);
+  margin-top: var(--space-1);
+  justify-content: center;
+  align-items: center;
+}
+
+.swipe-actions form {
+  display: contents;
+}
+
+.swipe-action {
+  /* Primary action (like/pass) — rounded up to the 64px rhythm step, not
+     down to 48, since ux_laws.fitts favors larger for primary actions. */
+  width: var(--space-16);
+  height: var(--space-16);
+  border-radius: var(--radius-pill);
+  border: 2px solid transparent;
+  font-size: var(--text-extra-large);
+  line-height: var(--leading-normal);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform 160ms var(--ease-out), background 160ms var(--ease-out);
+}
+
+.swipe-action:active {
+  transform: scale(0.94);
+}
+
+.swipe-action--pass {
+  background: rgb(from var(--dating-pass) r g b / var(--opacity-soft));
+  border-color: color-mix(in srgb, var(--dating-pass) 45%, transparent);
+  color: var(--dating-pass);
+}
+
+.swipe-action--like {
+  background: color-mix(in srgb, var(--dating-accent) 18%, var(--surface-elevated));
+  border-color: color-mix(in srgb, var(--dating-accent) 55%, transparent);
+  color: var(--dating-accent);
+}
+
+.swipe-action--rewind {
+  width: var(--space-12);
+  height: var(--space-12);
+  font-size: var(--text-large);
+  background: transparent;
+  border-color: var(--border);
+  color: var(--dating-muted, var(--text-secondary));
+}
+
+.swipe-signin {
+  width: 100%;
+  text-align: center;
+}
+
+.swipe-card.dragging {
+  cursor: grabbing;
+  border-color: var(--dating-accent);
+}
+
+.swipe-card.liked {
+  border-color: color-mix(in srgb, var(--dating-accent) 55%, transparent);
+}
+
+.swipe-card.passed {
+  border-color: color-mix(in srgb, var(--dating-pass) 55%, transparent);
+}
+
+.media-gallery {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(72%, 1fr);
+  gap: var(--space-3);
+  overflow-x: auto;
+  padding: 4px 4px var(--space-3);
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  touch-action: pan-x;
+}
+
+.photo-thumb-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: center;
+}
+

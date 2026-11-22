@@ -1,0 +1,28 @@
+en:
+  messages:
+    preview_photo: "Photo"
+    preview_voice: "Voice message"
+    requests_link: "Message requests (%{count})"
+    requests_title: "Message requests"
+    requests_empty_title: "No message requests"
+    requests_empty_body: >-
+      Messages from people you have not talked to and do not follow wait here until you accept them.
+    request_title: "%{name} wants to send you a message"
+    request_body: >-
+      You have not talked before. They will not see that you have read this until you accept,
+      and you can decline without them being told.
+    request_accept: "Accept"
+    request_decline: "Decline"
+    confirm_request_decline: >-
+      Decline this request? The conversation is removed from your messages and the sender is not told.
+    request_report_block: "Report and block"
+    confirm_request_report_block: >-
+      Report and block the sender? The message goes to the moderators, they cannot write to you again,
+      and the conversation is removed from your messages. The sender is not told.
+    request_report_details: "Reported from a message request."
+    group_add_person: "Add %{name}"
+    back_to_group: "Back to the group"
+    chosen_photo: "The photo you chose"
+    remove_photo: "Remove the photo"
+  flash:
+    message_request_reported: "Request reported and the sender blocked."

@@ -1,0 +1,21 @@
+<%= turbo_stream.replace dom_id(@item, :stats) do %>
+  <%= turbo_frame_tag dom_id(@item, :stats), class: "tag-row item-detail-tags" do %>
+    <span class="interaction-success" data-state="success" aria-hidden="true">
+      <svg class="interaction-mark" viewBox="0 0 24 24">
+        <path class="interaction-check" d="M5 12.5 10 17l9-10"></path>
+      </svg>
+    </span>
+    <span class="tag"><%= t("items.wear_count", count: @item.times_worn.to_i) %></span>
+    <% if @item.price? && @item.times_worn.to_i.positive? %>
+      <span class="tag"><%= t("items.per_wear", amount: number_to_currency(@item.cost_per_wear || (@item.price / @item.times_worn.to_i))) %></span>
+    <% end %>
+    <%= tag.span lifecycle_state_label(@item.lifecycle_state), class: "tag" if @item.lifecycle_state.present? %>
+    <% if @item.analysis_status.present? %><span class="tag"><%= analysis_status_label(@item.analysis_status) %></span><% end %>
+  <% end %>
+<% end %>
+<%= turbo_stream.update dom_id(@item, :worn), t("items.worn_times", count: @item.times_worn.to_i) %>
+<%# A wear pressed on a wardrobe card has no stats frame to replace, so the
+    card showed nothing; the toast confirms it from the grid and the page alike. %>
+<%= turbo_stream.append_all "body" do %>
+  <%= tag.div render("shared/toast", message: t("flash.worn_today"), variant: "success"), class: "toast-stack" %>
+<% end %>

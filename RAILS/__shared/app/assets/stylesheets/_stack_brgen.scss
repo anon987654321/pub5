@@ -1,0 +1,45 @@
+// brgen's stack is _stack.scss less two files. _minimal is the base amber and
+// bsdports build on, and brgen has its own chrome; _modal is the dialog and
+// sheet rules that mirror brgen's _mobile.scss, which brgen still carries.
+// Forwarding either here would declare those selectors twice.
+@forward "fonts";
+// brgen states its palette at an unlayered :root in both themes, which
+// outranks the layered one, and reads none of amber's luxury tokens.
+@forward "tokens" with ($palette: false);
+@forward "typography";
+@forward "post_voting";
+@forward "layout_chrome";
+@forward "animations";
+// Immediately before components, and that is a cascade position rather than an
+// alphabetical one: _components's forced-colors block ties with `.button` at 0-1-0
+// and has to keep the later word.
+@forward "buttons" with (
+  $base: false,
+  // shared-010 keeps the retired .button-small working for the markup below that
+  // still names a size while its container is verified context by context; every
+  // context in this list held only compact buttons at the 2026-11-07 tree-wide
+  // sweep. Sites whose container also carries a full-size .button (rsvp-bar,
+  // push-prompt, messenger-details-section, order-actions, the form-wrap--flush
+  // listings, the generic .cluster/.page-header/.field primitives and the
+  // no-class rows) keep the legacy class until each is measured rendered.
+  $legacy-small: true,
+  $compact-contexts: (".profile-header", ".home-neighborhood-filter", ".local-activity-heading",
+                      ".feed-quote-form", ".feed-post-actions", ".cart-item", ".cart-address",
+                      ".comment header", ".thread-summary", ".comment-form",
+                      ".notification-item", ".newsletter-cta", ".messenger-artifact-body",
+                      ".msg-reply-context", ".notification-undo-toast",
+                      ".messenger-composer-preview", ".compose-media-item",
+                      ".story-viewer-head", ".messenger-inbox-row", ".activity-event-cta",
+                      ".report-picker", ".search_palette_recents", ".verify-email-notice",
+                      ".nearby-alert", ".nearby-locate-actions", ".post-crosspost",
+                      ".match-overlay-card", ".pick-card", ".dilla-sketch", ".video-lineage",
+                      ".field--row", ".form-wrap--compact", ".group-share",
+                      ".listing-published-notice", ".marketplace-actions",
+                      ".menu-item-allergens-edit", ".store-pdp-description",
+                      ".notification-actions", ".sidebar-card", ".playlist-admin")
+);
+@forward "components";
+@forward "search_yep";
+@forward "empty_state";
+@forward "offline_page";
+@forward "layout_primitives";

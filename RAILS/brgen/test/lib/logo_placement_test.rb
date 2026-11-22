@@ -1,0 +1,149 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+# The city wordmark must land in exactly the same place on every brgen surface.
+# It did not: playlist overrode top, inset-inline-start, padding, min-height,
+# min-width and font-size, putting the mark at (6, 4) 53x23 against (14, 9)
+# 63x44 everywhere else — a visible jump when moving between verticals.
+#
+# Asserted against the stylesheet rather than a rendered page because the
+# offending rules were body.vertical-* overrides, and a request spec only ever
+# exercises one surface at a time.
+class LogoPlacementTest < ActiveSupport::TestCase
+  STYLESHEETS = Rails.root.glob("app/assets/stylesheets/*.scss").freeze
+
+  # Anything that moves or resizes the mark. Colour and z-index are fine: a
+  # vertical may need to win a stacking contest or invert on its own backdrop.
+  PLACEMENT = %w[
+    top bottom left right inset inset-block-start inset-inline-start
+    padding margin min-height min-width width height
+    font-size font-weight letter-spacing position transform
+  ].freeze
+
+  def logo_override_declarations
+    STYLESHEETS.flat_map do |path|
+      source = path.read
+      # body.vertical-x .brgen-logo-mark { ... } — the surface-scoped ones only.
+      source.scan(/^\s*body\.vertical-[\w-]+[^{]*\.brgen-logo-mark[^{]*\{([^}]*)\}/m).flat_map do |(body)|
+        body.scan(/^\s*([a-z-]+)\s*:/).flatten.map { |prop| [ path.basename.to_s, prop ] }
+      end
+    end
+  end
+
+  def test_no_vertical_moves_or_resizes_the_wordmark
+    offenders = logo_override_declarations.select { |(_file, prop)| PLACEMENT.include?(prop) }
+
+    assert_empty offenders.map { |file, prop| "#{file}: #{prop}" },
+                 "the wordmark must sit in the same spot on every surface"
+  end
+
+  # The layout renders it once, unconditionally, outside any vertical guard —
+  # so every surface gets one and only one.
+  #
+  # Asserted through the shared partial rather than the class literal. The mark
+  # moved into shared/_brand_mark so brgen, amber and bsdports render the same
+  # one: brgen had a fixed wordmark, amber a non-fixed SVG, bsdports none at all
+  # (and, once counted, three separate links home). brgen still passes
+  # .brgen-logo-mark alongside .brand-mark, so every rule already written against
+  # it keeps applying — but the class name is now an argument, not markup, and a
+  # test that greps for the literal was testing the spelling.
+  def test_layout_renders_exactly_one_wordmark
+    layout = Rails.root.join("app/views/layouts/application.html.erb").read
+
+    assert_equal 1, layout.scan(%r{render "shared/brand_mark"}).size
+    assert_includes layout, "brgen-logo-mark"
+  end
+
+  # Unconditional: no vertical, auth or guest branch may skip it.
+  def test_the_wordmark_is_not_behind_a_conditional
+    layout = Rails.root.join("app/views/layouts/application.html.erb").read
+    line = layout.lines.find { |l| l.include?('render "shared/brand_mark"') }
+
+    refute_nil line
+    refute_match(/\bif\b|\bunless\b/, line,
+                 "the mark must render on every surface, not behind a guard")
+  end
+
+  def test_city_wordmark_uses_helvetica_bold_and_a_reduced_motion_particle_overlay
+    layout = Rails.root.join("app/views/layouts/application.html.erb").read
+    storefront = Rails.root.join("app/views/shared/_storefront_nav_bar.html.erb").read
+    partial = Rails.root.join("..", "__shared", "app/views/shared/_brand_mark.html.erb").read
+    core = Rails.root.join("app/assets/stylesheets/_brgen_core_shell.scss").read
+    overrides = Rails.root.join("app/assets/stylesheets/_brgen_shared_overrides.scss").read
+    amber_layout = Rails.root.join("..", "amber", "app/views/layouts/application.html.erb").read
+    bsdports_layout = Rails.root.join("..", "bsdports", "app/views/layouts/application.html.erb").read
+
+    assert_includes layout, "particle: true"
+    assert_includes storefront, "particle: true"
+    refute_includes amber_layout, "particle: true"
+    refute_includes bsdports_layout, "particle: true"
+    assert_includes partial, "local_assigns.fetch(:particle, false) == true"
+    assert_includes partial, 'class="brand-text__particles" aria-hidden="true"'
+    assert_includes core, '$brgen-logo-font: "Helvetica Neue", Helvetica, Arial, sans-serif;'
+    assert_includes core, 'font: 700 clamp(0.9375rem, 2.8vw, 1.125rem) / 1 #{$brgen-logo-font};'
+    assert_includes core, "letter-spacing: var(--tracking-tightest)"
+    assert_includes core, "@keyframes brgen-tenant-wordmark-resolve"
+    assert_includes core, "background-image: radial-gradient(circle, currentColor 0.85px, transparent 1px)"
+    assert_includes core, "@media (prefers-reduced-motion: reduce)"
+    assert_includes overrides, "font-family: var(--font);"
+    assert_includes overrides, "font-weight: var(--weight-heavy);"
+    assert_includes overrides, "letter-spacing: var(--tracking-tightest)"
+  end
+  def test_marketplace_keeps_its_original_face_and_cart_with_a_bounded_burst
+    logo = Rails.root.join("engines", "marketplace", "app", "views", "marketplace", "_animated_logo.html.erb").read
+    controller = Rails.root.join("engines", "marketplace", "app", "javascript", "controllers", "marketplace_logo_controller.js").read
+
+    assert_includes logo, 'id="marketplace-logo-a"'
+    assert_includes logo, 'id="marketplace-logo-j"'
+    assert_equal 8, logo.scan('data-marketplace-logo-target="smileyPath"').size
+    assert_equal 2, logo.scan('data-marketplace-logo-target="cartPath"').size
+    assert_includes controller, "i <= 16"
+    assert_includes controller, "data-marketplace-logo-particle"
+    assert_includes controller, "connectionToken !== this.connectionToken"
+    assert_includes controller, "targets: particles"
+    assert_includes controller, 'querySelectorAll(":scope > span")'
+    assert_includes controller, "if (span !== seedPlus) span.remove()"
+    assert_includes controller, "particles.forEach((particle) => particle.remove())"
+    assert_includes controller, 'if (window.matchMedia("(prefers-reduced-motion: reduce)").matches)'
+    assert_includes controller, "this.#staticEndState()"
+  end
+
+  def test_dating_draws_its_heart_with_css_doodle
+    splash = Rails.root.join("engines", "dating", "app", "views", "dating", "home", "splash.html.erb").read
+    controller = Rails.root.join("engines", "dating", "app", "javascript", "controllers", "dating_splash_controller.js").read
+    stylesheet = Rails.root.join("app/assets/stylesheets/_dating_splash.scss").read
+
+    # The reference the operator could not find: a css-doodle heart over a red
+    # bloom. css-doodle 0.60.0 is vendored and pinned (config/importmap.rb); the
+    # element is only upgraded, and the mark only drawn, once the controller
+    # imports that build on this one screen.
+    assert_includes splash, "<css-doodle>"
+    assert_includes splash, "@shape: heart"
+    assert_includes splash, 'data-dating-splash-target="heart"'
+    refute_includes splash, "dating/home/hjerterom_logo"
+
+    importmap = Rails.root.join("config/importmap.rb").read
+    assert_includes importmap, 'pin "css-doodle"'
+    assert_includes controller, 'import("css-doodle")'
+
+    # The heart is a shape, not a timeline. Keep it still until a real pause
+    # control exists; a forever-loop pulse on a decorative mark is not justified.
+    assert_includes stylesheet, ".dating-splash-heart css-doodle"
+    refute_includes stylesheet, "dating-heart-pulse"
+    refute_match(/animation\s*:/, stylesheet)
+  end
+
+  def test_playlist_tunnel_has_its_own_decorative_wave_mark
+    tunnel = Rails.root.join("engines", "radio", "playlist", "app", "views", "playlist", "playlists", "_radio_tunnel.html.erb").read
+    stylesheet = Rails.root.join("app/assets/stylesheets/_brgen_vertical_surfaces.scss").read
+
+    assert_includes tunnel, '<svg class="radio-brand-mark"'
+    assert_includes tunnel, 'aria-hidden="true" focusable="false"'
+    assert_match(/radio-now-playing.*radio-brand-mark.*radio-track-display/m, tunnel)
+    refute_includes tunnel, '<header class="radio-header">'
+    assert_includes stylesheet, ".radio-brand-mark"
+    assert_includes stylesheet, "color: var(--color-accent)"
+    refute_includes stylesheet, ".radio-header h1"
+  end
+end

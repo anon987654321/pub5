@@ -1,0 +1,299 @@
+# frozen_string_literal: true
+
+class PostsController < ApplicationController
+  include Shared::FindableBySlug
+  include PostComposeChoices
+  # Flood protection on content creation (Rails 8 built-in), per-user or per-IP.
+  # `name:` is what keeps this and the sustained limit below separate — unnamed,
+  # both build the cache key ["rate-limit", controller_path, nil, by] and share a
+  # counter for every signed-out request. See RAILS/test/rate_limit_naming_test.rb.
+  rate_limit to: 12, within: 1.minute, only: :create, name: "burst",
+             by: -> { Current.user&.id ? "u#{Current.user.id}" : request.remote_ip }
+  before_action :require_verified_email, only: %i[create share]
+  include Shared::LiveSearchable
+
+  rate_limit to: 30, within: 3.minutes, only: %i[create share], name: "sustained",
+    with: -> { redirect_to posts_path, alert: t("shared.flash.rate_limited") }
+
+  # ONE declaration. Rails deduplicates callbacks by filter name, so declaring
+  # :require_real_user twice did not add a second check -- the later `only:`
+  # REPLACED the earlier one, and edit/update/destroy silently lost it. Read off
+  # the callback chain: PostsController had exactly one require_real_user.
+  # authorize_owner still covered those three here, which is why nothing broke
+  # visibly; amber's ItemsController had the identical pattern with nothing
+  # behind it and served an anonymous GET /items/new 200.
+  before_action :require_real_user, only: %i[edit update destroy share]
+  before_action :set_post,          only: [ :show, :edit, :update, :destroy ]
+  before_action :authorize_owner,   only: [ :edit, :update, :destroy ]
+  before_action :set_community,     only: [ :new, :create ]
+  # Update too: an edit that moves a post into a community is posting there.
+  before_action :enforce_community_posting_rules, only: %i[create update]
+  skip_before_action :verify_authenticity_token, only: [ :share ]
+
+  def index
+    scope = Post.sorted_lane(params[:sort], viewer: Current.user)
+    scope = Post.visible_to(Current.user).merge(scope)
+    # A block holds on /posts as it does on the front page.
+    scope = Brgen::HomeFeed.exclude_blocked(scope, Current.user)
+    scope = scope.with_attached_image.with_attached_images.includes(:user, :community, :votes)
+    scope = apply_live_search(scope, columns: %w[title content], vertical: "feed") if live_search_query.present?
+    @pagy, @posts = pagy(scope)
+    # The cached list the front page reads, not a query on every render.
+    @popular_communities = Community.popular_cached(limit: 8)
+    finish_live_search(partial: "posts/live_search_results")
+  end
+
+  COMMENT_SORTS = %w[best new top controversial].freeze
+  COMMENT_SORT_SCOPES = {
+    "best" => :best, "new" => :new_first, "top" => :top, "controversial" => :controversial
+  }.freeze
+
+  def show
+    return render_members_only unless @post.readable_by?(Current.user)
+    return if redirect_id_to_slug(@post)
+
+    @comment_sort = COMMENT_SORTS.include?(params[:sort]) ? params[:sort] : "best"
+    roots = sorted_comment_roots.includes(:user, :votes, replies: [ :user, :votes ])
+    @comments_pagy, @comments = pagy(roots, limit: 30, page_key: "comments_page")
+    @new_comment = Comment.new
+    @quotes = @post.reposts.quoted.includes(:user).order(created_at: :desc)
+    @quote_comment = @post.quote_comment_by(Current.user)
+    @crossposts = (@post.crossposted_from || @post).crossposts.includes(:community).where.not(id: @post.id)
+    # Where this post can still go. Communities the reader may post in, minus
+    # the one it is already in and the ones it already reached — an option that
+    # answers "already crossposted" is a control that does nothing.
+    @crosspost_targets = crosspost_targets_for(@post)
+    respond_to do |format|
+      format.html
+      format.md { render markdown: @post }
+    end
+  end
+
+  def new
+    shared_url = params[:url].to_s.strip
+    shared_text = params[:text].to_s.strip
+    @post = Post.new(
+      community: @community,
+      title: params[:title].to_s.strip.presence,
+      content: [ shared_text.presence, shared_url.presence ].compact.join("\n\n")
+    )
+    load_compose_choices
+  end
+
+  def create
+    anon = Shared::AnonymousPost.new(request: request, user: Current.user)
+    unless anon.allowed?
+      redirect_to new_session_path, alert: t("flash.anonymous_post_limit", limit: Shared::AnonymousPost::LIMIT)
+      return
+    end
+
+    @post = Post.new(post_params.except(:nearby))
+
+    @post.user = Current.user
+    @post.anonymous = true if Current.user.guest? || ActiveModel::Type::Boolean.new.cast(post_params[:anonymous])
+    stamp_nearby!
+    if @post.content.present?
+      plain = ActionController::Base.helpers.strip_tags(@post.content.to_s).squish
+      tagged = @post.title.present? && @post.title.match?(/<[^>]+>/)
+      if @post.title.blank? || tagged
+        @post.title = (plain.presence || @post.title.to_s).truncate(300)
+      end
+    end
+    @post.community = @community if @community
+    verdict = PostModeration.new(@post).decide
+    unless verdict.approved
+      refuse_by_moderation(verdict)
+      return
+    end
+
+    if @post.save
+      anon.record_post!
+
+      preset = post_params[:preset].presence
+      PostproJob.perform_later(@post.to_gid.to_s, preset) if preset && @post.image.attached?
+      redirect_to @post, notice: t("flash.posted")
+    else
+      load_compose_choices
+      render :new, status: :unprocessable_entity
+    end
+  end
+
+  def edit
+    load_compose_choices
+  end
+
+  def update
+    unless @post.revise(post_params)
+      load_compose_choices
+      return render :edit, status: :unprocessable_entity
+    end
+
+    redirect_to @post, notice: t("flash.post_updated")
+  end
+
+  # Back to the page the author deleted from, unless that page was the post
+  # itself, which no longer exists.
+  def destroy
+    @post.destroy
+    redirect_to after_destroy_path, notice: t("flash.post_deleted")
+  end
+
+  def share
+    city = Current.city_record
+    return redirect_to(new_post_path, alert: t("flash.draft_failed")) unless city
+
+    uploads = Array(params[:media]).reject(&:blank?)
+    unless uploads.all? { |file| file.respond_to?(:read) && file.respond_to?(:content_type) }
+      redirect_to new_post_path, alert: t("flash.draft_failed")
+      return
+    end
+
+    images = uploads.select { |file| file.content_type.to_s.downcase.start_with?("image/") }
+    videos = uploads.select { |file| file.content_type.to_s.downcase.start_with?("video/") }
+    if images.size + videos.size != uploads.size ||
+       images.size > ShareDraft::MAX_IMAGES || videos.size > 1 ||
+       uploads.size > ShareDraft::MAX_MEDIA
+      redirect_to new_post_path, alert: t("flash.share_limits")
+      return
+    end
+
+    content = share_content
+    if uploads.empty? && params[:title].blank? && content.blank?
+      redirect_to new_post_path, alert: t("flash.share_nothing")
+      return
+    end
+
+    draft = ShareDraft.new(
+      user: Current.user,
+      city: city,
+      title: share_title(media_kind: images.any? ? :image : (videos.any? ? :video : nil)),
+      content: content,
+      expires_at: 24.hours.from_now
+    )
+    draft.images.attach(images) if images.any?
+    draft.video.attach(videos.first) if videos.any?
+
+    if draft.save
+      redirect_to share_draft_path(draft),
+                  notice: t("flash.shared_into_draft")
+    else
+      redirect_to new_post_path,
+                  alert: t("flash.draft_failed")
+    end
+  end
+
+  private
+
+  # A blocked author's comments stay out of the reader's thread; replies are
+  # filtered the same way in comment_children.
+  def sorted_comment_roots
+    roots = @post.comments.where(parent_id: nil)
+    roots = roots.where.not(user_id: Current.user&.blocked_user_ids.to_a)
+    roots.public_send(COMMENT_SORT_SCOPES.fetch(@comment_sort, :best))
+  end
+
+  # postable_by? reads bans before privacy, so a community that banned this
+  # account never appears as somewhere to send the post.
+  def crosspost_targets_for(post)
+    return [] if Current.user.blank?
+
+    taken = [ post.community_id, post.crossposted_from&.community_id ].compact +
+            (post.crossposted_from || post).crossposts.pluck(:community_id)
+    Community.where.not(id: taken.uniq).order(:name).limit(50)
+             .select { |community| community.postable_by?(Current.user) }
+             .map { |community| [ community.name, community.slug ] }
+  end
+
+  def set_post
+    @post = find_by_slug_or_id(
+      Post.includes(:user, :community).with_attached_image.with_attached_video.with_attached_audio.with_attached_images,
+      params[:id]
+    )
+    # A moderator-removed post is gone for everyone, including via direct link.
+    raise ActiveRecord::RecordNotFound if @post&.removed_at?
+  end
+
+  # Named refusals, so the link rule tells the author what to change, and the
+  # form comes back with what was typed rather than empty.
+  def refuse_by_moderation(verdict)
+    key = verdict.reason == :unverified_author_spam_signals ? "flash.link_requires_verified_account"
+                                                         : "flash.post_blocked_by_moderation"
+    flash.now[:alert] = t(key)
+    load_compose_choices
+    render :new, status: :unprocessable_entity
+  end
+
+  def render_members_only
+    render template: "shared/members_only", status: :forbidden
+  end
+
+  def authorize_owner
+    return if Current.user == @post.user
+
+    redirect_to @post, alert: t("shared.flash.not_authorized")
+  end
+
+  def set_community
+    @community = Community.find_by(id: params[:community_id])
+  end
+
+  def post_params
+    permitted = params.require(:post).permit(:title, :content, :community_id, :neighborhood_id, :anonymous, :image,
+                                             :video, :audio, :preset, :flair, :nearby,
+                                             images: [], remove_image_ids: [], image_positions: {})
+    # A multi-file field sends [""] when untouched; Post#revise adds the rest.
+    images = Array(permitted.delete(:images)).compact_blank
+    permitted[:images] = images if images.any?
+    permitted
+  end
+
+  # What is left of the Live layer, and the only part of it the front page did
+  # not already have.
+  #
+  # /live was a separate Jodel-shaped surface, but its posts were never a
+  # separate pool: they are ordinary rows in `posts`, Brgen::HomeFeed applies no
+  # geo exclusion, and Post#author_name already renders a geo-stamped post as
+  # "anon" wherever it appears. The Live page was a radius-filtered, locally
+  # vote-ranked *view* of the same feed, plus this one compose step. So folding
+  # the surface into the front page costs nothing except the stamp, which moves
+  # here.
+  #
+  # Opt-in, and only offered to someone who has already shared coordinates —
+  # attaching a location to a post because the author happened to have GPS on
+  # would be a privacy change made silently. stamp_live_location! coarsens to
+  # ~1km (LIVE_LOCATION_PRECISION) so it marks an area, not a doorway.
+  def stamp_nearby!
+    return unless ActiveModel::Type::Boolean.new.cast(post_params[:nearby])
+
+    user = Current.user
+    return unless user&.latitude.present? && user.longitude.present?
+
+    @post.stamp_live_location!(lat: user.latitude, lng: user.longitude)
+  end
+
+  # A restricted community lets the whole city read it and only members post;
+  # a private one lets neither. Enforced here rather than only in the view,
+  # because a hidden form is not a permission check.
+  def enforce_community_posting_rules
+    target = @community || Community.find_by(id: post_params[:community_id])
+    return if target.blank? || target.postable_by?(Current.user)
+
+    redirect_to(target.readable_by?(Current.user) ? community_path(target) : communities_path,
+                alert: t("flash.community.members_only"))
+  end
+
+  def share_title(media_kind: nil)
+    raw = params[:title].presence || params[:text].presence || params[:url].presence
+    return ActionController::Base.helpers.strip_tags(raw.to_s).squish.truncate(300) if raw.present?
+
+    case media_kind
+    when :image then t("share.photo_title")
+    when :video then t("share.video_title")
+    else "Shared draft"
+    end
+  end
+
+  def share_content
+    [ params[:text].presence, params[:url].presence ].compact.join("\n\n")
+  end
+end

@@ -1,0 +1,44 @@
+<% content_for :title, t("messages.title") %>
+
+<header aria-label="<%= t("messages.title") %>">
+  <%= tag.h1 t("pages.messages") %>
+  <% if @unread_count.to_i.positive? %>
+    <p><%= t("messages.unread_count", count: @unread_count) %></p>
+  <% else %>
+    <p><%= t("messages.inbox_clear") %></p>
+  <% end %>
+  <%= render "shared/master_invite",
+        path: invite_master_messages_path,
+        invited: @master_invited %>
+</header>
+
+<section class="form-wrap" aria-label="<%= t("messages.composer") %>">
+  <%= render "messages/form", message: @message, recipients: @recipients, with: @partner&.id %>
+</section>
+
+<% if @partner %>
+  <section aria-label="<%= t("messages.conversation_with", name: @partner.display_name) %>">
+    <%= tag.h2 t("messages.conversation_with", name: @partner.display_name) %>
+    <%= link_to t("messages.all_conversations"), messages_path %>
+    <%# create.turbo_stream prepends a message sent to this person here. %>
+    <%= tag.ol render(partial: "messages/message", collection: @messages, as: :message),
+               id: "message-list", class: "amber-message-list" %>
+  </section>
+<% else %>
+  <section aria-label="<%= t("messages.title") %>">
+    <%# One row per person, newest first. An ol even when empty: create.turbo_stream
+        puts the first conversation into it and removes the empty state beside it. %>
+    <%= tag.ol render(partial: "messages/conversation", collection: @conversations, as: :message,
+                      locals: { unread_from: @unread_from }),
+               id: "conversation-list", class: "amber-message-list" %>
+    <% if @conversations.empty? %>
+      <%= tag.div render("shared/empty_state",
+                         title: t("empty.no_messages"),
+                         body: t("messages.empty_body"),
+                         action: { label: t("messages.connections"), path: connections_path }),
+                  id: "message-list-empty" %>
+    <% end %>
+  </section>
+<% end %>
+
+<%= render "shared/pager", pagy: @pagy %>

@@ -1,0 +1,10 @@
+<% if @votable.is_a?(Post) %>
+  <%= turbo_stream.replace dom_id(@votable, :vote_rail) do %>
+    <%= render "shared/post_vote_rail", post: @votable,
+          vote_path: post_vote_path(@votable), vote_score: @votable.score %>
+  <% end %>
+<% elsif @votable.is_a?(Comment) %>
+  <%= turbo_stream.replace dom_id(@votable) do %>
+    <%= render "comments/comment", comment: @votable %>
+  <% end %>
+<% end %>

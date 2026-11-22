@@ -1,0 +1,277 @@
+<%# Inside the window. The frame id matches the one conversations/index renders,
+    so a click in the rail swaps this pane and leaves the rail alone; arriving at
+    this URL directly still renders the whole window, because the rail is loaded
+    for show as well as index. %>
+<section class="messenger-window" aria-label="<%= t("messages.title") %>">
+  <%= render "conversations/rooms_rail" %>
+  <%# message-reply: a Reply on any line in the log fills the composer below
+      without reloading the pane; the link's ?reply_to= is the no-JS path. %>
+  <%= turbo_frame_tag "messenger-pane", class: "messenger-pane",
+        data: { controller: "message-reply",
+                message_reply_label_value: t("messages.replying_to", name: "%{name}"),
+                message_reply_cancel_value: t("actions.cancel") } do %>
+    <%= turbo_stream_from @conversation %>
+    <% content_for :body_attrs do %>data-push-seen="true"<% end %>
+
+    <%# The header names the room and offers two things. Everything else it used
+        to hold — the group roster, the add-member form, the rename form and the
+        disappearing-messages select — is in the panel behind ⋯, per
+        UX_LAWS.progressive_disclosure.require_advanced_hidden: those are the
+        settings of a conversation, not the conversation, and they were sitting
+        above every message in it.
+
+        No presence dot. There is no presence system behind one, and a status
+        light that reports nothing is the fake-progress case RAMS_CHECKLIST names
+        under `honest`. A group says how many people are in it, which is true and
+        cheap — participants is already preloaded for the roster. A DM says
+        nothing, because there is nothing true to say yet. %>
+    <header class="messenger-conversation-header">
+      <%= link_to conversations_path, class: "messenger-header-back",
+                  data: { turbo_frame: "_top" },
+                  aria: { label: t("messages.back_all") } do %>
+        <%= icon :chevron_left, size: 20 %>
+      <% end %>
+
+      <%= render "conversations/person_avatar",
+                 person: (@conversation.other_participants(Current.user).first if @conversation.direct?),
+                 name: @conversation.display_name_for(Current.user), css_class: "messenger-header-avatar", size: 40 %>
+
+      <div class="messenger-header-identity">
+        <%# A DM's name is a person, so it opens their profile; a group's is not. %>
+        <% other = @conversation.direct? ? @conversation.other_participants(Current.user).first : nil %>
+        <% if other && !other.guest? && other.deleted_at.blank? %>
+          <%= tag.h1 link_to(other.display_name, user_path(other), data: { turbo_frame: "_top" }) %>
+        <% else %>
+          <%= tag.h1 @conversation.display_name_for(Current.user) %>
+        <% end %>
+        <% if @conversation.group_dm? %>
+          <p class="messenger-header-meta"><%= t("messages.member_count", count: @conversation.participants.size) %></p>
+        <% end %>
+      </div>
+
+      <nav class="messenger-header-actions" aria-label="<%= t("messages.nav_label") %>">
+        <%= link_to search_conversations_path(conversation_id: @conversation.id),
+                    class: "messenger-header-action",
+                    aria: { label: t("messages.search") } do %>
+          <%= icon :search, size: 19 %>
+        <% end %>
+
+        <details class="messenger-details">
+          <summary class="messenger-header-action" aria-label="<%= t("messages.nav_label") %>">
+            <%= icon :more, size: 20 %>
+          </summary>
+
+          <div class="messenger-details-panel">
+            <% if @conversation.group_dm? %>
+              <section class="messenger-details-section" aria-label="<%= t("messages.group_members_label") %>">
+                <h2><%= t("messages.group_members_label") %></h2>
+                <ul class="messenger-member-list" role="list">
+                  <% @conversation.participants.each do |participant| %>
+                    <li role="listitem">
+                      <%= render "conversations/person_avatar", person: participant, name: participant.display_name,
+                                                                css_class: "messenger-member-avatar", size: 32 %>
+                      <span class="messenger-member-name"><%= participant.display_name %></span>
+                      <% if @is_group_admin || participant.id == Current.user.id %>
+                        <%= button_to participant.id == Current.user.id ? t("messages.group_leave") : t("actions.remove"),
+                              group_member_path(@conversation, participant), method: :delete,
+                              class: "button button-ghost button-small",
+                              data: { turbo_confirm: t("messages.confirm_group_remove") } %>
+                      <% end %>
+                    </li>
+                  <% end %>
+                </ul>
+                <%# The people picker, not a field that wanted an exact username. %>
+                <%= link_to t("messages.group_add"), new_group_member_path(@conversation),
+                            class: "button button-small" %>
+                <% if @is_group_admin %>
+                  <%= form_with model: @conversation, url: group_path(@conversation), method: :patch,
+                                class: "messenger-details-form" do |f| %>
+                    <%= f.label :name, t("messages.group_name") %>
+                    <%= f.text_field :name, value: @conversation.name, maxlength: 80 %>
+                    <%= f.submit t("actions.save"), class: "button button-small" %>
+                  <% end %>
+                <% end %>
+              </section>
+            <% end %>
+
+            <section class="messenger-details-section">
+              <%= render "shared/master_invite",
+                    path: invite_master_conversation_path(@conversation),
+                    invited: @master_invited %>
+            </section>
+
+            <%# Handling of your own inbox: each of these is yours alone and the
+                other side is told nothing. Block is only offered in a direct
+                thread; a group is left by leaving it. %>
+            <section class="messenger-details-section">
+              <% if @participant&.muted? %>
+                <%# destructive: no-confirm-ok — reversible — the thread is muted again with one click %>
+                <%= button_to t("messages.unmute"), conversation_mute_path(@conversation), method: :delete, class: "button button-ghost button-small" %>
+              <% else %>
+                <%= button_to t("messages.mute"), conversation_mute_path(@conversation), class: "button button-ghost button-small" %>
+              <% end %>
+              <% if @participant&.archived? %>
+                <%# destructive: no-confirm-ok — reversible — the thread is archived again with one click %>
+                <%= button_to t("messages.unarchive"), conversation_archive_path(@conversation), method: :delete, class: "button button-ghost button-small" %>
+              <% else %>
+                <%= button_to t("messages.archive"), conversation_archive_path(@conversation), class: "button button-ghost button-small", form: { data: { turbo_frame: "_top" } } %>
+              <% end %>
+              <% if @conversation.direct? && (blockee = @conversation.other_participants(Current.user).first) %>
+                <% if @blocked_by_me %>
+                  <%# destructive: no-confirm-ok — reversible — lifting a block loses nothing; the person can be blocked again %>
+                  <%= button_to t("messages.unblock_user"), unblock_user_path(blockee), method: :delete, class: "button button-ghost button-small" %>
+                <% else %>
+                  <%= button_to t("messages.block_user"), block_user_path(blockee),
+                        class: "button button-ghost button-small",
+                        data: { turbo_confirm: t("messages.confirm_block") } %>
+                <% end %>
+              <% end %>
+            </section>
+
+            <section class="messenger-details-section">
+              <% if @conversation.disappearing_settable_by?(Current.user) %>
+              <%= form_with url: conversation_path(@conversation), method: :patch,
+                    data: { controller: "auto-submit", auto_submit_delay_value: 0 },
+                    class: "disappearing-settings#{" disappearing-settings--active" if @conversation.disappearing_messages?}" do |form| %>
+                <span class="disappearing-badge" aria-hidden="true"></span>
+                <label for="disappearing"><%= t("messages.disappearing") %></label>
+                <%= form.select :disappearing,
+                      Conversation::DISAPPEARING_OPTIONS.keys.map { |key| [t("messages.disappearing_options.#{key}"), key] },
+                      { selected: Conversation::DISAPPEARING_OPTIONS.key(@conversation.disappearing_duration) || "off" },
+                      { id: "disappearing", data: { action: "change->auto-submit#submit" } } %>
+                <%# An inline onchange stops once the CSP is enforced; the button is
+                    for a browser without JavaScript, where nothing listens. %>
+                <noscript><%= form.submit t("actions.save"), class: "button" %></noscript>
+              <% end %>
+              <% end %>
+              <%# Said once, where the setting is: a disappearing message is a
+                  courtesy between people, not a guarantee. We cannot see a
+                  screenshot, so we do not claim to. %>
+              <% if @conversation.ephemeral? %>
+                <p class="messenger-header-meta"><%= t("messages.disappearing_note") %></p>
+              <% end %>
+            </section>
+          </div>
+        </details>
+      </nav>
+    </header>
+
+    <%# The frame is named message_log, not messages. It and the list inside it
+        both answered to "messages", which is invalid HTML and, once the messenger
+        became one window, a hazard: two elements with one id while Turbo swaps
+        panes. target: "_top" stays, so a link inside a message leaves the window
+        rather than loading a whole page into the pane. %>
+    <%= turbo_frame_tag "message_log", target: "_top" do %>
+      <%# Three attributes this list did not have, and each was a real absence.
+
+          class="conversation-log" — Message#broadcast_to_logs appends to
+          `targets: ".conversation-log"`. Channels carried the class and the
+          nearby widget carried it; the DM did not. So a message was delivered
+          live everywhere except the one surface where somebody is waiting for
+          it, and the recipient had to reload to see anything. The stylesheet
+          also tests for it with :has() to decide master-detail on a phone.
+
+          data-controller — the unread divider and the stick-to-tail behaviour
+          channels have had all along.
+
+          role="log" — the ARIA role for a list that grows at the bottom, with an
+          implicit polite live region, so an arriving message is announced rather
+          than changing the page silently.
+
+          data-turbo-permanent is gone: preserving this element across a
+          navigation was harmless when a room was a page, and wrong now that
+          switching rooms swaps a frame — the old room's messages would be kept
+          under the new room's name. %>
+      <%# history-url-value carries the first cursor only when the window hit
+          its ceiling: the extra row show fetched said there is more behind
+          the log. The conversation-log controller owns the "load earlier"
+          control that URL feeds, so the markup carries no button of its own. %>
+      <%= tag.ul id: "messages", role: "log", class: "conversation-log",
+            data: {
+              controller: "conversation-log conversation-catch-up",
+              conversation_catch_up_url_value: conversation_messages_path(@conversation),
+              conversation_log_viewer_id_value: Current.user&.id,
+              conversation_log_viewer_account_value: authenticated?,
+              conversation_log_unread_one_value: t("messages.unread_one"),
+              conversation_log_unread_other_value: t("messages.unread_other"),
+              conversation_log_today_label_value: t("messages.today"),
+              conversation_log_yesterday_label_value: t("messages.yesterday"),
+              conversation_log_locale_value: I18n.locale,
+              conversation_log_older_label_value: t("messages.older"),
+              conversation_log_pill_home_value: ".messenger-composer-area"
+            }.merge(@older_available && @messages.any? ? {
+              conversation_log_history_url_value: conversation_messages_path(@conversation, before: @messages.first.id)
+            } : {}) do %>
+        <% @messages.each do |m| %>
+          <%= render "messages/message", message: m %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%# The composer and everything that speaks for it sit in one region at the
+        foot of the pane, so the log scrolls under a fixed floor rather than the
+        composer scrolling away with the conversation. %>
+    <div class="messenger-composer-area">
+      <p id="typing-indicator" class="messenger-typing" role="status"
+         data-controller="typing" data-typing-conversation-id-value="<%= @conversation.id %>"
+         data-typing-viewer-value="<%= Current.user&.id %>"></p>
+
+      <%# The box at the foot is its own frame: Edit on a line swaps only this,
+          the edit form in place of the composer, and saving or cancelling swaps
+          the composer back, so the log above is never reloaded. %>
+      <%= turbo_frame_tag "messenger_composer", class: "messenger-composer-frame" do %>
+      <% if @editing %>
+        <%# edit-box: the cursor lands at the end of the text, Escape cancels. %>
+        <%= form_with model: @editing, url: conversation_message_path(@conversation, @editing), method: :patch,
+                      class: "messenger-edit-form",
+                      data: { controller: "edit-box", action: "keydown.esc->edit-box#cancel" } do |f| %>
+          <div class="field">
+            <%= f.label :content, t("messages.editing") %>
+            <%= f.text_area :content, rows: 3, value: @editing.content, autofocus: true,
+                            aria: { describedby: "edit_window_note" },
+                            data: { edit_box_target: "field" } %>
+          </div>
+          <%# The window is the model's rule; saying when it shuts beats a refusal after it has. %>
+          <%= tag.p t("messages.editable_until", time: l(@editing.created_at + Message::EDIT_WINDOW, format: "%H:%M")),
+                    id: "edit_window_note", class: "form-help" %>
+          <p>
+            <%= f.submit t("actions.save"), class: "button button-primary" %>
+            <%= link_to t("actions.cancel"), conversation_path(@conversation), class: "button button-ghost",
+                        data: { edit_box_target: "cancel" } %>
+          </p>
+        <% end %>
+      <% end %>
+
+      <% if @blocked %>
+        <p class="messenger-blocked" role="status"><%= @blocked_by_me ? t("messages.blocked_by_me") : t("messages.blocked_either") %></p>
+      <% elsif @participant&.request? %>
+        <%# A message request: read it, then accept or decline. Answering is
+            accepting, so the composer waits behind the choice. %>
+        <section aria-labelledby="message_request_title">
+          <%= tag.h2 t("messages.request_title", name: @conversation.display_name_for(Current.user)),
+                     id: "message_request_title" %>
+          <%= tag.p t("messages.request_body") %>
+          <%= button_to t("messages.request_accept"), conversation_request_path(@conversation),
+                class: "button button-primary button-small", form: { data: { turbo_frame: "_top" } } %>
+          <%= button_to t("messages.request_decline"), conversation_request_path(@conversation), method: :delete,
+                class: "button button-ghost button-small",
+                form: { data: { turbo_frame: "_top", turbo_confirm: t("messages.confirm_request_decline") } } %>
+          <% if @conversation.direct? %>
+            <%= button_to t("messages.request_report_block"), conversation_request_path(@conversation, report: 1),
+                  method: :delete, class: "button button-ghost button-small",
+                  form: { data: { turbo_frame: "_top", turbo_confirm: t("messages.confirm_request_report_block") } } %>
+          <% end %>
+        </section>
+      <%# One box at a time: the edit form above replaces the composer until saved or cancelled. %>
+      <% elsif !@editing %>
+        <%= render "conversations/composer",
+                      conversation: @conversation,
+                      message: @message,
+                      reply_to: @reply_to %>
+      <% end %>
+      <% end %>
+    </div>
+  <% end %>
+  <%= render "shared/messenger_artifacts", messages: @messages %>
+
+</section>

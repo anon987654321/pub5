@@ -1,0 +1,169 @@
+# frozen_string_literal: true
+
+module Master
+  class Result
+    # Functor/monad composition for Result::Err — all three are identity
+    # no-ops (an Err short-circuits the chain) — kept separate from Err's own
+    # value-identity and error-classification methods.
+    module ErrChaining
+      def map(&) = self
+      def flat_map(&) = self
+      def and_then(*) = self
+    end
+    # Retry-policy classification for Result::Err — separate from Err's own
+    # value-identity and monad-chaining methods.
+    #
+    # FallbackChain reads `permanent?` to stop retrying a model whose request was
+    # refused, so a category missing from both lists is a retry loop that quietly
+    # sleeps through backoff it cannot cure.
+    #
+    # The partition is total and disjoint, and test_err_classification.rb holds
+    # it to both — a category added to CATEGORIES and to neither list here is the
+    # same defect returning.
+    module ErrClassification
+      # Worth trying again as-is, or after a wait: the failure is in the
+      # environment rather than in what was asked.
+      RETRIABLE = %i[infrastructure timeout provider_error llm_failure llm_call_failure delivery_failed reloading
+                     rate_limit exhausted offline inconclusive].freeze
+
+      # Retrying reproduces it, a decision belongs to the operator, or the
+      # outcome already describes a stable stop rather than a transient fault.
+      PERMANENT = %i[validation model_missing axiom_violation invalid_request budget no_api_key auth_error policy
+                     shutdown abort handler_exception crash skip human_decision plateau failed cancelled unknown_outcome
+                     recovery_failed].freeze
+
+      def retriable? = RETRIABLE.include?(@category)
+      def permanent? = PERMANENT.include?(@category)
+
+      # :unknown is the one category that is neither, and deliberately: it is
+      # what Result.err defaults to, so it means "nobody said", and answering
+      # either question for it would be an invention. A caller that must decide
+      # should treat it as permanent — the safe direction is not retrying.
+      def classified? = retriable? || permanent?
+    end
+    # Functor/monad composition for Result::Ok (map/flat_map/and_then) — kept
+    # separate from Ok's own value-identity methods (ok?/value!/unwrap/...).
+    module OkChaining
+      def map(&blk) = Result.ok(blk.call(@value))
+      def flat_map(&blk) = blk.call(@value)
+
+      def and_then(label = nil, &blk)
+        result = blk.call(@value)
+        result.is_a?(Result) ? result : Result.ok(result)
+      rescue StandardError => e
+        Result.err("#{label || "stage"}: #{e.message}", category: :infrastructure)
+      end
+    end
+
+    CATEGORIES = {
+      validation: "input failed preconditions",
+      invalid_request: "provider rejected the request or its parameters",
+      model_missing: "the provider answered and holds no such model",
+      axiom_violation: "constitutional rule broken",
+      provider_error: "upstream model / network failure",
+      llm_failure: "LLM returned unusable output",
+      llm_call_failure: "LLM dispatch exception (network / SDK)",
+      no_api_key: "no LLM API key configured in env",
+      auth_error: "the provider rejected the configured credentials",
+      infrastructure: "system / disk / git error",
+      delivery_failed: "verified work could not be published; retry the delivery step",
+      human_decision: "operator decision required before work can continue",
+      plateau: "repair stopped without proving convergence",
+      reloading: "runtime reload interrupted the attempt; resume after restart",
+      failed: "operation failed without a more specific failure category",
+      handler_exception: "unexpected error during handler execution",
+      crash: "unexpected process failure during a fix stage",
+      timeout: "operation exceeded deadline",
+      offline: "no network route to the provider - a local model can still answer",
+      rate_limit: "tier rate limit exceeded",
+      budget: "cost limit hit",
+      exhausted: "paid provider spend limit - the tier could not run (Io::QuotaCheck)",
+      policy: "blocked by policy / kernel rule",
+      shutdown: "user quit / shutdown requested",
+      abort: "operation aborted",
+      skip: "nothing to do for this target (no app, no checkout) - neither failure nor success",
+      inconclusive: "evidence could not be gathered (browser, surface or reviewer unavailable) - no verdict either way",
+      cancelled: "execution was cancelled; do not resume without checking the current state",
+      unknown_outcome: "the operation may have run without a reliable receipt; reconcile before retrying",
+      recovery_failed: "the system could not prove that recovery restored the prior state",
+    }.freeze
+
+    def self.ok(value) = Ok.new(value)
+
+    def self.from(value, err_msg:, category: :validation, context: nil)
+      value.nil? ? err(err_msg, category:, context:) : ok(value)
+    end
+
+    # `gap` is a Master::Gap when the failure is one that may resolve, or wait
+    # on a person; Trace::Dmesg.gap prints it and /fix reads its decidability.
+    def self.err(msg, category: :unknown, context: nil, gap: nil)
+      raise ArgumentError, "unknown category: #{category}" unless category == :unknown || CATEGORIES.key?(category)
+
+      Err.new(msg, category, error_context(msg, context, caller_locations(1, 1).first), gap)
+    end
+
+    def self.error_context(msg, context, location)
+      base = { file: location&.path, method: location&.base_label, attempted: msg.to_s }
+      return base unless context
+      context.respond_to?(:merge) ? base.merge(context) : base.merge(detail: context)
+    end
+
+    def self.wrap(val) = val.is_a?(Result) ? val : Ok.new(val)
+
+    class Ok < Result
+      include OkChaining
+
+      # `model` is the model that produced the value, when a model did. After a
+      # fallback it is not the model that was routed, and the answer is the only
+      # place a caller can still learn which one spoke. Positional, so a bare
+      # hash value is never read as keywords.
+      attr_reader :value, :model
+
+      def initialize(value, model = nil)
+        @value = value
+        @model = model
+        freeze
+      end
+
+      def with_model(id) = Ok.new(@value, id)
+
+      def ok? = true
+      def err? = false
+      def value! = @value
+      def unwrap = @value
+      def value_or(_) = @value
+
+      def deconstruct_keys(_keys) = { value: @value }
+      def to_s = @value.to_s
+      def inspect = "Ok(#{@value.inspect})"
+    end
+
+    class Err < Result
+      include ErrChaining
+      include ErrClassification
+
+      attr_reader :message, :category, :context, :gap
+
+      def initialize(message, category = :unknown, context = nil, gap = nil)
+        raise ArgumentError, "message cannot be nil" if message.nil?
+        raise ArgumentError, "category must be a symbol" unless category.is_a?(Symbol)
+
+        @message = message
+        @category = category
+        @context = context
+        @gap = gap
+        freeze
+      end
+
+      def ok? = false
+      def err? = true
+      def value! = raise(Master::UnwrapError, "Err#value! called: #{@message}")
+      def unwrap = value!
+      def value_or(default) = default
+
+      def deconstruct_keys(_keys) = { message: @message, category: @category, context: @context, gap: @gap }
+      def to_s = @message
+      def inspect = @context ? "Err(#{@category}: #{@message} @ #{@context})" : "Err(#{@category}: #{@message})"
+    end
+  end
+end

@@ -1,0 +1,29 @@
+---
+schema: 1
+replicate:
+  trainer: replicate/fast-flux-trainer
+  version: "080f17375c73ef43e1009da9d560ab5f935176c61a0c7a88866c8b8387057675"
+  training_steps: 1000
+  lora_type: subject
+  seed: 42
+quality:
+  min_images: 12
+  max_images: 18
+dataset:
+  path: dataset
+  caption_ext: txt
+  require_trigger_word: true
+  target_resolution: 1024
+review:
+  candidate_render_count: 3
+  final_render_count: 4
+inference:
+  model: dev
+  aspect_ratio: "2:3"
+  num_outputs: 1
+  guidance_scale: 7.5
+  num_inference_steps: 28
+  output_format: jpg
+  output_quality: 95
+  go_fast: false
+  lora_scale: 1.0

@@ -1,0 +1,105 @@
+schema: 1
+name: "Papua New Guinea humanoid mask reference collection"
+selection: "round_robin_per_new_chat"
+rotation_profiles:
+  - "iatmul-concentric"
+  - "iatmul-river"
+  - "sepik-split"
+  - "tatanua-crest"
+  - "elema-hollow"
+rendering:
+  base: "MASTER original monochrome one-pixel particle portrait"
+  profile_notice: >
+    The particle profiles are original, face-readable geometric studies informed
+    only by broad human facial proportions in the cited objects. They are not
+    replicas, ceremonial reconstructions, sacred characters, or depictions of
+    the source masks. The existing particle field, carrier count, one-pixel
+    marks, spacing, and void composition remain MASTER's own design.
+  image_policy: >
+    Embed a reference photograph only when the collection record states an
+    image-level reuse licence. Preserve the image unchanged and retain its
+    attribution and object link. Otherwise link to the collection record only.
+  cultural_policy: >
+    Copyright permission is not cultural permission. Do not infer or reproduce
+    clan, initiation, spirit, restricted, or ceremonial designs and meanings.
+    Use broad face proportions only; do not use source photographs as training
+    material. A museum description of an object's use is context, not permission
+    to reproduce it.
+entries:
+  - id: "iatmul_large_human_face"
+    profile: "baining"
+    particle_profile: "iatmul-concentric"
+    title: "Large Mask of Human Face"
+    culture: "Iatmul people"
+    region: "East Sepik Province, Papua New Guinea"
+    period: "20th century"
+    medium: "Wood"
+    collection: "Brooklyn Museum"
+    accession: "69.57"
+    rights: "Creative Commons-BY (museum object record)"
+    object_url: "https://opencollection.brooklynmuseum.org/objects/94871"
+    image_url: "https://d1lfxha3ugu3d4.cloudfront.net/images/opencollection/objects/size4/69.57_bw.jpg"
+    image_credit: "Brooklyn Museum, 69.57_bw.jpg"
+    image_rights_url: "https://opencollection.brooklynmuseum.org/objects/94871"
+    note: "A clearly legible human-face silhouette; only its broad oval proportions inform the abstract particle profile."
+  - id: "iatmul_mai"
+    profile: "iatmul_mei"
+    particle_profile: "iatmul-river"
+    title: "Mask (Mai)"
+    culture: "Iatmul people"
+    region: "Middle Sepik River, Papua New Guinea"
+    period: "19th to early 20th century"
+    medium: "Wood, pigment, and shell"
+    collection: "The Metropolitan Museum of Art"
+    accession: "1974.29.2"
+    rights: "Collection record; source image is not downloadable"
+    object_url: "https://www.metmuseum.org/art/collection/search/309933"
+    image_status: "Reference link only; the museum page says the image cannot be downloaded."
+    image_credit: "The Metropolitan Museum of Art"
+    note: "The collection record describes an oblong human face and elongated nose; no arch, motif, or costume detail is copied."
+  - id: "iatmul_mwai"
+    profile: "sepik_woven"
+    particle_profile: "sepik-split"
+    title: "Mask (Mwai)"
+    culture: "Iatmul people"
+    region: "Wombun Village, Papua New Guinea"
+    period: "1935–1962"
+    medium: "Wood, shells, hair, tusks, clay, plant fiber, and paint"
+    collection: "The Museum of Fine Arts, Houston"
+    accession: "62.33"
+    rights: "Public Domain (object record); photograph © The Museum of Fine Arts, Houston"
+    object_url: "https://emuseum.mfah.org/objects/47457/mask-mwai"
+    image_status: "Reference link only; the collection record credits the photograph to MFAH."
+    image_credit: "The Museum of Fine Arts, Houston"
+    note: "Elongated human-face proportions inform the particle silhouette only; the profile omits shell placement, surface pattern, tusks, and ornament."
+  - id: "tatanua_new_ireland"
+    profile: "maprik_yam"
+    particle_profile: "tatanua-crest"
+    title: "Tatanua Mask"
+    culture: "Northern New Ireland artist"
+    region: "New Ireland Province, Papua New Guinea"
+    period: "Mid-19th to early 20th century"
+    medium: "Wood, indigenous paints, red ochre, shell, seed burrs, coconut-husk fiber, rootlets, bark cloth, and string"
+    collection: "Saint Louis Art Museum"
+    accession: "177:1975"
+    rights: "Public Domain (object record)"
+    object_url: "https://www.slam.org/collection/objects/7724/"
+    image_status: "Reference link only; image-level reuse terms are not stated here."
+    image_credit: "Saint Louis Art Museum"
+    note: "The face's broad proportions inform the abstract profile; crest, hair, paint, and adornment are not reproduced."
+  - id: "elema_eharo"
+    profile: "highlands_gourd"
+    particle_profile: "elema-hollow"
+    title: "Eharo Mask"
+    culture: "Elema people"
+    region: "Gulf Province, Papua New Guinea"
+    period: "Early 20th century"
+    medium: "Bark cloth, wood, cane, fiber, feather, and paint"
+    collection: "The Metropolitan Museum of Art"
+    accession: "1978.412.751"
+    rights: "Collection record; source image is not downloadable"
+    object_url: "https://www.metmuseum.org/art/collection/search/311193"
+    image_status: "Reference link only; the museum page says the image cannot be downloaded."
+    image_credit: "The Metropolitan Museum of Art"
+    cultural_caution: "The Met distinguishes eharo masks, made primarily for amusement, from sacred hevehe water-spirit masks. This record may describe spirit or totemic imagery; do not reproduce specific iconography or ceremonial meaning."
+    note: "Only a broad human-face proportion informs the abstract particle shape; no character, totem, surface design, or ritual function is copied."

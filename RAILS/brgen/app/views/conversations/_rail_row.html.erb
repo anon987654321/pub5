@@ -1,0 +1,34 @@
+<%# One DM in the rooms rail: the compact size of conversations/_conversation_row.
+    Rendered by the rail and by InboxBroadcastJob, once per reader into their
+    own stream, so the viewer is a local there; the id is what that job
+    replaces. %>
+<% viewer = local_assigns[:viewer] || Current.user %>
+<% unread = unread_counts.fetch(room.id, 0) %>
+<% last = last_messages[room.id] %>
+<% name = room.display_name_for(viewer) %>
+<% pinned = local_assigns.fetch(:pinned_ids, Set.new).include?(room.id) %>
+<% muted = local_assigns.fetch(:muted_ids, Set.new).include?(room.id) %>
+<li role="listitem" id="<%= dom_id(room, :rail) %>">
+  <%= link_to conversation_path(room), class: "messenger-inbox-room",
+              data: { turbo_frame: "messenger-pane" },
+              aria: { current: local_assigns[:current_room]&.id == room.id ? "page" : nil } do %>
+    <%= render "conversations/person_avatar", person: (room.other_participants(viewer).first if room.direct?),
+                                              name:, css_class: "messenger-room-avatar", size: 32 %>
+    <span class="messenger-room-copy">
+      <%= tag.span name, class: "messenger-inbox-name" %>
+      <% if last %>
+        <%= tag.span conversation_preview(room, last, length: 56), class: "messenger-room-preview" %>
+      <% end %>
+    </span>
+    <span class="messenger-room-meta">
+      <%= tag.small t("messages.pinned"), class: "messenger-rail-flag" if pinned %>
+      <%= tag.small t("messages.muted"), class: "messenger-rail-flag" if muted %>
+      <% if unread.positive? %>
+        <%= tag.span unread, class: "messenger-rail-unread", aria: { hidden: true } %>
+        <%= tag.span t("messages.unread_badge", count: unread), class: "visually-hidden" %>
+      <% elsif last %>
+        <time datetime="<%= last.created_at.iso8601 %>"><%= time_ago(last.created_at) %></time>
+      <% end %>
+    </span>
+  <% end %>
+</li>

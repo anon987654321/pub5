@@ -1,0 +1,390 @@
+# frozen_string_literal: true
+
+# Indexes external model catalogs into ~/.master/provider_catalog.sqlite3.
+#
+# Adding a source: add an entry to SOURCES with url/kind/normalizer,
+# implement normalize_<name> (or reuse one), refresh via
+# MASTER/bin/provider-catalog or CatalogIndex#refresh. Built-ins:
+# openrouter (llm_router), replicate (model_marketplace), replicate_github
+# (github_model_index, URL from REPLICATE_MODELS_INDEX_URL). File imports
+# use import_file(source_name, path, normalizer:).
+
+require "fileutils"
+require "json"
+require "net/http"
+require "sqlite3"
+require "time"
+require "uri"
+require_relative "../boot/paths"
+require_relative "ssrf_guard"
+
+# Zeitwerk-ignored (see lib/master.rb's ignore list) and required directly by
+# bin/provider-catalog, which doesn't load the full Master boot chain --
+# ensure the Master namespace shell exists before reopening it below.
+module Master; end
+
+module Master::Io
+  class CatalogIndex
+    DEFAULT_DB = MasterPaths.state("provider_catalog.sqlite3")
+    SOURCES = {
+      "openrouter" => {
+        url: "https://openrouter.ai/api/v1/models",
+        kind: "llm_router",
+        normalizer: "openrouter",
+      },
+      "openai" => { url: "https://api.openai.com/v1/models", kind: "provider", normalizer: "openai" },
+      "gemini" => { url: "https://generativelanguage.googleapis.com/v1beta/openai/models", kind: "provider", normalizer: "openai" },
+      "deepseek" => { url: "https://api.deepseek.com/models", kind: "provider", normalizer: "openai" },
+      "xai" => { url: "https://api.x.ai/v1/language-models", kind: "provider", normalizer: "xai" },
+      "mistral" => { url: "https://api.mistral.ai/v1/models", kind: "provider", normalizer: "mistral" },
+      "replicate" => {
+        url: "https://api.replicate.com/v1/models",
+        kind: "model_marketplace",
+        normalizer: "replicate",
+      },
+      "replicate_github" => {
+        url: ENV["REPLICATE_MODELS_INDEX_URL"],
+        kind: "github_model_index",
+        normalizer: "replicate",
+      },
+    }.freeze
+
+    # Whether the refreshed catalog prices this id at zero both ways, read from the
+    # provider's own row. The normalised price columns cannot answer it: a missing
+    # price is stored as 0.0 as well. Opened read-only, and false with no catalog,
+    # because a cost path must never create the database. Memoised per process.
+    def self.verified_free?(id, source: "openrouter", db_path: DEFAULT_DB)
+      @verified_free ||= {}
+      @verified_free.fetch([db_path, source, id.to_s]) do |key|
+        @verified_free[key] = read_verified_free(id.to_s, source, db_path)
+      end
+    end
+
+    def self.read_verified_free(id, source, db_path)
+      return false unless File.file?(db_path)
+
+      database = SQLite3::Database.new(db_path, readonly: true)
+      raw = database.get_first_value("SELECT raw_json FROM provider_models WHERE source = ? AND id = ?", [source, id])
+      pricing = raw && JSON.parse(raw)["pricing"]
+      return false unless pricing.is_a?(Hash) && pricing.key?("prompt") && pricing.key?("completion")
+
+      pricing["prompt"].to_s.strip.match?(/\A0+(\.0+)?\z/) && pricing["completion"].to_s.strip.match?(/\A0+(\.0+)?\z/)
+    rescue SQLite3::Exception, JSON::ParserError
+      false
+    ensure
+      database&.close
+    end
+    private_class_method :read_verified_free
+
+    def initialize(db_path: DEFAULT_DB)
+      @db_path = db_path
+      FileUtils.mkdir_p(File.dirname(db_path))
+      migrate
+    end
+
+    def stale?(source_name, max_age: 86_400)
+      snapshot = db.get_first_value("SELECT fetched_at FROM provider_snapshots WHERE source = ?", [source_name])
+      return true unless snapshot
+
+      Time.now - Time.parse(snapshot) >= max_age
+    rescue SQLite3::Exception, ArgumentError
+      true
+    end
+
+    def refresh(source_name, token: nil, url: nil)
+      source = SOURCES.fetch(source_name)
+      source_url = url || source.fetch(:url)
+      if source_url.nil? || source_url.empty?
+        raise "missing URL for #{source_name}; set REPLICATE_MODELS_INDEX_URL or pass --url"
+      end
+
+      payload = fetch_json(source_url, token:)
+      upsert_snapshot(source: source_name, kind: source.fetch(:kind), url: source_url, payload:)
+      rows = normalize(source.fetch(:normalizer), payload)
+      replace_models(source_name, rows)
+      rows.size
+    end
+
+    def import_file(source_name, path, normalizer: nil)
+      source = SOURCES.fetch(source_name, { kind: "file_import", normalizer: normalizer || source_name })
+      payload = JSON.parse(File.read(path))
+      upsert_snapshot(source: source_name, kind: source.fetch(:kind), url: path, payload:)
+      rows = normalize(source.fetch(:normalizer), payload)
+      replace_models(source_name, rows)
+      rows.size
+    end
+
+    def search(query = nil, source: nil, limit: 50)
+      clauses = []
+      params = []
+      if source
+        clauses << "source = ?"
+        params << source
+      end
+      if query && !query.empty?
+        clauses << "(id LIKE ? OR name LIKE ? OR description LIKE ? OR tags LIKE ?)"
+        4.times { params << "%#{query}%" }
+      end
+      sql = <<~SQL.chomp
+        SELECT source, id, name, description, context_length, input_modalities,
+               output_modalities, price_prompt, price_completion, tags, free_latency_s, updated_at
+        FROM provider_models
+      SQL
+      sql += " WHERE #{clauses.join(" AND ")}" unless clauses.empty?
+      sql += " ORDER BY source, id LIMIT ?"
+      params << limit
+      db.execute(sql, params)
+    end
+
+    # A measured answer time for a free slug, recorded by the runtime that
+    # made the call. The provider catalog never carries this field; it is
+    # this checkout's own fact about the row, which is why it writes as an
+    # UPDATE and never rides the snapshot replace.
+    def record_free_latency(source:, id:, seconds:, observed_at: Time.now.utc)
+      raise ArgumentError, "seconds must be a non-negative number" unless seconds.is_a?(Numeric) && seconds >= 0
+
+      db.execute(
+        "UPDATE provider_models SET free_latency_s = ?, free_latency_observed_at = ? WHERE source = ? AND id = ?",
+        [seconds.to_f, observed_at.utc.iso8601, source, id],
+      )
+    end
+
+    def free_latency_s(id, source: "openrouter")
+      row = db.execute(
+        "SELECT free_latency_s FROM provider_models WHERE source = ? AND id = ? LIMIT 1", [source, id]
+      ).first
+      value = row.is_a?(Hash) ? row["free_latency_s"] : nil
+      value && Float(value)
+    rescue ArgumentError, TypeError
+      nil
+    end
+
+    private
+
+    attr_reader :db_path
+
+    def db
+      @db ||= SQLite3::Database.new(db_path).tap { |database| database.results_as_hash = true }
+    end
+
+    def migrate
+      create_provider_tables
+      create_provider_indexes
+    end
+
+    def create_provider_tables
+      create_provider_snapshots_table
+      create_provider_models_table
+    end
+
+    def create_provider_snapshots_table
+      db.execute_batch <<~SQL
+        CREATE TABLE IF NOT EXISTS provider_snapshots (
+          source TEXT PRIMARY KEY,
+          kind TEXT NOT NULL,
+          url TEXT NOT NULL,
+          fetched_at TEXT NOT NULL,
+          raw_json TEXT NOT NULL
+        );
+      SQL
+    end
+
+    def create_provider_models_table
+      db.execute_batch <<~SQL
+        CREATE TABLE IF NOT EXISTS provider_models (
+          source TEXT NOT NULL,
+          id TEXT NOT NULL,
+          name TEXT,
+          description TEXT,
+          context_length INTEGER,
+          input_modalities TEXT,
+          output_modalities TEXT,
+          price_prompt REAL,
+          price_completion REAL,
+          tags TEXT,
+          free_latency_s REAL,
+          free_latency_observed_at TEXT,
+          raw_json TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (source, id)
+        );
+      SQL
+      # Catalogues written before free ranking carried no latency column; the
+      # ALTER runs only when the column is absent, so an existing database
+      # keeps its rows.
+      columns = db.execute("PRAGMA table_info(provider_models)").map { |row| row["name"] }
+      unless columns.include?("free_latency_s")
+        db.execute("ALTER TABLE provider_models ADD COLUMN free_latency_s REAL")
+        db.execute("ALTER TABLE provider_models ADD COLUMN free_latency_observed_at TEXT")
+      end
+    end
+
+    def create_provider_indexes
+      db.execute_batch <<~SQL
+        CREATE INDEX IF NOT EXISTS idx_provider_models_source ON provider_models(source);
+        CREATE INDEX IF NOT EXISTS idx_provider_models_name ON provider_models(name);
+      SQL
+    end
+
+    def fetch_json(url, token: nil)
+      uri = URI(url)
+      raise ArgumentError, "catalog fetch requires https" unless uri.is_a?(URI::HTTPS)
+      open_t = Integer(ENV.fetch("MASTER_HTTP_OPEN_TIMEOUT", "10"))
+      read_t = Integer(ENV.fetch("MASTER_HTTP_READ_TIMEOUT", "30"))
+      request = Net::HTTP::Get.new(uri.request_uri)
+      request["Authorization"] = "Bearer #{token}" if token && !token.empty?
+      request["Accept"] = "application/json"
+      request["User-Agent"] = "MASTER provider catalog index"
+      response = Master::Io::SsrfGuard.request(
+        uri, request, max_bytes: 8 * 1024 * 1024, timeout: [open_t, read_t].max,
+        open_timeout: open_t, read_timeout: read_t, write_timeout: open_t
+      )
+      raise "#{url} returned #{response.code}: #{response.body.to_s[0, 200]}" unless response.is_a?(Net::HTTPSuccess)
+
+      JSON.parse(response.body)
+    end
+
+    def upsert_snapshot(source:, kind:, url:, payload:)
+      db.execute(<<~SQL, [source, kind, url, Time.now.utc.iso8601, JSON.generate(payload)])
+        INSERT INTO provider_snapshots(source, kind, url, fetched_at, raw_json)
+        VALUES(?, ?, ?, ?, ?)
+        ON CONFLICT(source) DO UPDATE SET
+          kind=excluded.kind, url=excluded.url,
+          fetched_at=excluded.fetched_at, raw_json=excluded.raw_json
+      SQL
+    end
+
+    def replace_models(source, rows)
+      db.transaction do
+        # The snapshot replace reflects the provider's catalog; the measured
+        # free latency is this checkout's own fact about a row, so a refresh
+        # carries it across for every id that survives.
+        preserved = db.execute(
+          "SELECT id, free_latency_s, free_latency_observed_at FROM provider_models WHERE source = ?", [source]
+        ).to_h { |row| [row["id"], row] }
+        db.execute("DELETE FROM provider_models WHERE source = ?", [source])
+        rows.each do |row|
+          db.execute(<<~SQL, [
+            INSERT INTO provider_models(
+              source, id, name, description, context_length,
+              input_modalities, output_modalities,
+              price_prompt, price_completion, tags, raw_json, updated_at
+            ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          SQL
+            source, row.fetch(:id), row[:name], row[:description],
+            row[:context_length], row[:input_modalities], row[:output_modalities],
+            row[:price_prompt], row[:price_completion], row[:tags],
+            JSON.generate(row[:raw]), Time.now.utc.iso8601
+          ])
+          kept = preserved[row.fetch(:id).to_s]
+          next unless kept
+
+          db.execute(
+            "UPDATE provider_models SET free_latency_s = ?, free_latency_observed_at = ? WHERE source = ? AND id = ?",
+            [kept["free_latency_s"], kept["free_latency_observed_at"], source, row.fetch(:id).to_s],
+          )
+        end
+      end
+    end
+
+    def normalize(kind, payload)
+      case kind
+      when "openrouter"
+        Array(payload["data"]).map { |model| normalize_openrouter(model) }
+      when "openai"
+        Array(payload["data"]).map { |model| normalize_openai(model) }
+      when "xai"
+        Array(payload["models"] || payload["data"]).map { |model| normalize_xai(model) }
+      when "mistral"
+        Array(payload["data"]).map { |model| normalize_mistral(model) }
+      when "replicate"
+        replicate_items(payload).map { |model| normalize_replicate(model) }
+      else
+        []
+      end.compact
+    end
+
+    def replicate_items(payload)
+      case payload
+      when Array then payload
+      when Hash
+        payload["results"] || payload["data"] || payload["models"] || payload.values.find { |value| value.is_a?(Array) } || []
+      else
+        []
+      end
+    end
+
+    def normalize_openai(model)
+      id = model["id"].to_s
+      return if id.empty?
+
+      {
+        id:,
+        name: model["name"] || id,
+        description: model["description"],
+        context_length: model["context_length"] || model["max_context_length"],
+        input_modalities: Array(model["input_modalities"]).join(","),
+        output_modalities: Array(model["output_modalities"]).join(","),
+        price_prompt: model["prompt_text_token_price"] || model.dig("pricing", "prompt"),
+        price_completion: model["completion_text_token_price"] || model.dig("pricing", "completion"),
+        tags: [model["owned_by"], model["object"]].compact.join(","),
+        raw: model,
+      }
+    end
+
+    def normalize_xai(model)
+      normalize_openai(model)&.merge(
+        input_modalities: Array(model["input_modalities"]).join(","),
+        output_modalities: Array(model["output_modalities"]).join(","),
+      )
+    end
+
+    def normalize_mistral(model)
+      normalize_openai(model)&.merge(
+        context_length: model["max_context_length"],
+        tags: [model["owned_by"], model.dig("capabilities", "completion_chat") ? "chat" : nil,
+               model.dig("capabilities", "function_calling") ? "tools" : nil,
+               model.dig("capabilities", "vision") ? "vision" : nil].compact.join(","),
+      )
+    end
+
+    def normalize_openrouter(model)
+      return if model["id"].to_s.empty?
+
+      pricing = model["pricing"] || {}
+      architecture = model["architecture"] || {}
+      {
+        id: model["id"],
+        name: model["name"] || model["id"],
+        description: model["description"],
+        context_length: model["context_length"],
+        input_modalities: Array(architecture["input_modalities"]).join(","),
+        output_modalities: Array(architecture["output_modalities"]).join(","),
+        price_prompt: pricing["prompt"].to_f,
+        price_completion: pricing["completion"].to_f,
+        tags: [architecture["modality"], architecture["tokenizer"], model["top_provider"]&.dig("context_length")].compact.join(","),
+        raw: model,
+      }
+    end
+
+    def normalize_replicate(model)
+      owner = model["owner"] || model.dig("user", "username") || model["namespace"]
+      name = model["name"] || model["model_name"] || model["slug"]
+      id = model["id"] || model["full_name"] || [owner, name].compact.join("/")
+      return if id.nil? || id.empty?
+
+      {
+        id:,
+        name: name || id,
+        description: model["description"] || model["summary"],
+        context_length: nil,
+        input_modalities: Array(model["input_modalities"] || model["inputs"]).join(","),
+        output_modalities: Array(model["output_modalities"] || model["outputs"]).join(","),
+        price_prompt: nil,
+        price_completion: nil,
+        tags: Array(model["tags"] || model["categories"]).join(","),
+        raw: model,
+      }
+    end
+  end
+end

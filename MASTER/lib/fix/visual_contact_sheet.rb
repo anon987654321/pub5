@@ -1,0 +1,132 @@
+# frozen_string_literal: true
+
+require "base64"
+require_relative "visual_cross_page_overlay"
+
+module Master
+  module Fix
+    # Every captured surface and mobile journey state on one page, screenshotted
+    # to one image, so Council judges the surfaces against each other rather
+    # than one at a time.
+    class VisualContactSheet
+      def initialize(dir:, root:)
+        @dir = dir
+        @root = root
+      end
+
+      def render(captures)
+        html_path = File.join(@dir, "rendered-ui-contact-sheet.html")
+        File.write(html_path, page(captures))
+        screenshot = File.join(@dir, "rendered-ui-contact-sheet.png")
+        shoot(html_path, screenshot)
+        screenshot
+      end
+
+      # Chrome refuses a texture taller than about 16k px ("Page is too large"),
+      # and a full-page figure per state does not fit once a sweep holds hundreds.
+      # Figures are capped, resting renders first, and a sheet that is still too
+      # tall is shot again with every figure cropped to its top.
+      MAX_FIGURES = Integer(ENV.fetch("MASTER_VISUAL_SHEET_FIGURES", "40"))
+
+      private
+
+      def shoot(html_path, screenshot)
+        Deploy::GeometryProbe.with_browser(root: @root, warm: []) do |cdp|
+          cdp.viewport(1800, 1400, mobile: false)
+          cdp.navigate("file://#{html_path}")
+          begin
+            cdp.screenshot(screenshot, capture_beyond_viewport: true)
+          rescue Deploy::CdpSession::Error => e
+            raise unless e.message.include?("too large")
+
+            cdp.evaluate("document.body.classList.add('cropped')")
+            cdp.screenshot(screenshot, capture_beyond_viewport: true)
+          end
+        end
+      end
+
+      def page(captures)
+        ordered = captures.each_with_index.sort_by { |capture, i| [capture.dig(:payload, "composition", "state") == "resting" ? 0 : 1, i] }.map(&:first)
+        figures = ordered.lazy.flat_map { |capture| items(capture) }.first(MAX_FIGURES)
+        <<~HTML
+          <!doctype html>
+          <html><head><meta charset="utf-8"><style>
+          * { box-sizing: border-box; }
+          html, body { margin: 0; background: #fff; color: #111; }
+          body { padding: 24px; font: 16px/1.4 system-ui, sans-serif; }
+          h1 { margin: 0 0 20px; font-size: 24px; }
+          .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+          figure { margin: 0; min-width: 0; } figcaption { margin: 0 0 8px; font-weight: 700; }
+          img { display: block; width: 100%; height: auto; border: 1px solid #bbb; }
+          .cropped img { max-height: 700px; object-fit: cover; object-position: top; }
+          </style></head><body>
+          <h1>MASTER rendered visual evidence: #{captures.length} surfaces#{figures.length >= MAX_FIGURES ? " (first #{MAX_FIGURES} figures)" : ""}</h1>
+          <div class="grid">#{(figures + cross_page_items(captures)).join("\n")}</div>
+          </body></html>
+        HTML
+      end
+
+      def items(capture)
+        # The back/forward return-path states carry no screenshot; they reach
+        # Council as text in the context rows, not as a figure here.
+        [item(capture), *visual_evidence_items(capture)] + Array(capture[:journeys]).filter_map do |journey|
+          next unless journey["screenshot"]
+          journey_item(capture[:surface], journey)
+        end
+      end
+
+      # Each overlay once, however many of its member surfaces carry it.
+      def cross_page_items(captures)
+        VisualCrossPageOverlay.collect(captures).filter_map do |overlay|
+          next unless overlay[:screenshot]
+
+          image_item(overlay[:screenshot], "cross-page overlay | #{overlay[:label]} | #{overlay[:layers]} pages")
+        end
+      end
+
+      def visual_evidence_items(capture)
+        evidence = capture[:visual_evidence]
+        return [] unless evidence
+
+        items = []
+        if (ghost = evidence[:ghost])
+          items << image_item(ghost[:screenshot], "#{ghost[:label]} | onion stack")
+          items << image_item(ghost[:diff], "#{ghost[:label]} | newest vs previous difference") if ghost[:diff]
+          items << image_item(ghost[:geometry], "#{ghost[:label]} | geometry registration") if ghost[:geometry]
+          items << image_item(ghost[:grid], "#{ghost[:label]} | registration grid") if ghost[:grid]
+          items << image_item(ghost[:focus], "#{ghost[:label]} | 2x focus registration") if ghost[:focus]
+          items << image_item(ghost[:squint], "#{ghost[:label]} | squint composition") if ghost[:squint]
+        end
+        items
+      end
+
+      def image_item(path, label)
+        encoded = Base64.strict_encode64(File.binread(path))
+        %(<figure><figcaption>#{escape_html(label)}</figcaption><img src="data:image/png;base64,#{encoded}" alt="#{escape_html(label)}"></figure>)
+      rescue StandardError => e
+        "<figure><figcaption>#{escape_html(label)} | evidence error: #{escape_html(e.message)}</figcaption></figure>"
+      end
+
+      def journey_item(surface, journey)
+        encoded = Base64.strict_encode64(File.binread(journey.fetch("screenshot")))
+        label = "#{surface.id} | mobile state=#{journey["kind"]} | #{journey["label"]}"
+        %(<figure><figcaption>#{escape_html(label)}</figcaption><img src="data:image/png;base64,#{encoded}" alt="#{escape_html(label)}"></figure>)
+      rescue StandardError => e
+        "<figure><figcaption>#{escape_html(surface.id)} | journey evidence error: #{escape_html(e.message)}</figcaption></figure>"
+      end
+
+      def item(capture)
+        surface = capture[:surface]
+        encoded = Base64.strict_encode64(File.binread(capture[:screenshot]))
+        label = "#{surface.id} | #{surface.viewport} | #{surface.url}"
+        "<figure><figcaption>#{escape_html(label)}</figcaption><img src=\"data:image/png;base64,#{encoded}\" alt=\"#{escape_html(label)}\"></figure>"
+      rescue StandardError => e
+        "<figure><figcaption>#{escape_html(surface.id)} | contact-sheet error: #{escape_html(e.message)}</figcaption></figure>"
+      end
+
+      def escape_html(value)
+        value.to_s.gsub("&", "&amp;").gsub("<", "&lt;").gsub(">", "&gt;").gsub('"', "&quot;")
+      end
+    end
+  end
+end

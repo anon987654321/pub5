@@ -1,0 +1,24 @@
+<% content_for :title, t("notifications.title") %>
+
+<%= turbo_frame_tag "notifications" do %>
+  <div class="page-header">
+    <hgroup>
+      <%= tag.h1 t("notifications.title") %>
+    </hgroup>
+    <% unread = @notifications.count { |n| !n.read? } %>
+    <% if unread.positive? %>
+      <%= button_to t("notifications.mark_all"), read_all_notifications_path, method: :patch, class: "button button-primary", data: { turbo_stream: true } %>
+    <% end %>
+  </div>
+
+  <% if @notifications.any? %>
+    <% @notifications.each do |notification| %>
+      <%= render "notifications/notification", notification: notification %>
+    <% end %>
+  <% else %>
+    <%= render "shared/empty_state",
+          title: t("notifications.empty_title"),
+          body: t("notifications.empty_body"),
+          action: { label: t("nav.home"), path: root_path } %>
+  <% end %>
+<% end %>

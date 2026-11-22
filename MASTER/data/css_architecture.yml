@@ -1,0 +1,61 @@
+# css_architecture.yml - the cascade architecture, owned once.
+#
+# Every consumer reads the layer order and the specificity ceiling from here:
+# laws.yml states the requirement, the Deploy checks measure it, the autofix
+# writer places its output, and the RAILS entry template declares it. No app
+# or partial restates a layer list of its own.
+#
+# Companion rows live in laws.yml (CSS_LAYER_STACK, CSS_SPECIFICITY_CEILING)
+# and the checks that name them are registered in checks/checks.yml under
+# layout_suite.
+schema: 1
+
+cascade_layers:
+  # The one ordered stack. An entry stylesheet declares it exactly once, as
+  # `@layer reset, tokens, base, components, utilities, autofix;`, and places
+  # author rules inside named layers. Order is precedence: a later layer wins
+  # over an earlier one for normal declarations, so autofix - the last named
+  # layer - beats components and utilities without !important.
+  order:
+  - reset
+  - tokens
+  - base
+  - components
+  - utilities
+  - autofix
+  rules:
+    # One order statement per app, in the entry stylesheet. Partials never
+    # declare one; a second statement anywhere is a competing architecture.
+    single_order_statement: true
+    # Generated autofix rules (GeometryAutofix / KansoAutofix) land only in
+    # this layer - and only once the entry declares the stack. While an
+    # entry's author CSS is still unlayered the writers append unlayered at
+    # end-of-file instead, because unlayered normal declarations beat layered
+    # ones: wrapping generated fixes into a layer before the author CSS is
+    # layered would silently demote every touch/overflow fix below the rules
+    # it exists to beat.
+    autofix_layer: autofix
+    # Layers that must never carry !important. Layer order reverses for
+    # important declarations - an !important in an early layer would beat a
+    # later layer - so the ban is what keeps "autofix wins" true.
+    forbid_important_in:
+    - components
+    - utilities
+    - autofix
+
+specificity:
+  # Compiled selectors above this tuple are findings. 0,3,0 = no id, at most
+  # three classes/attributes/pseudo-classes. Layers already decide precedence;
+  # a selector past the ceiling is a specificity war this architecture exists
+  # to end. :where() contributes zero and is removed before counting.
+  ceiling: "0,3,0"
+  # SCSS nesting depth inside a layer block. Sass nesting only expands
+  # selectors - deep nesting is how the ceiling gets breached.
+  max_scss_nesting: 3
+  # warn first: record baselines per app, then switch to fail and ratchet.
+  # INCONCLUSIVE is honest: no compiled build means no measurement.
+  mode: warn
+#
+# Kanso rendered proxies are owned upstream: the DENSITY_kanso* instruments in
+# laws.yml, measured by KansoSurfaceCheck (checks/lib/rendered/kanso_surface.rb)
+# and judged by Master::Density (lib/master/density.rb). No thresholds live here.

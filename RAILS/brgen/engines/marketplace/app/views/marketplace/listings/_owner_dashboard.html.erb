@@ -1,0 +1,75 @@
+<%# What the listing's owner sees: the dashboard chips, the buy-box feedback,
+    the offers with their accept and decline buttons, and the remove control.
+    Its own partial because listings/show carries a length ceiling
+    (RAILS/test/file_length_ratchet_test.rb). %>
+<% if Current.user.present? && Current.user == listing.user %>
+  <div class="section-divider">
+    <%= tag.h2 t("marketplace.seller_dashboard"), class: "section-heading--md" %>
+    <div class="chips">
+      <span class="chip"><%= t("marketplace.views", count: listing.views_count.to_i) %></span>
+      <span class="chip"><%= t("marketplace.offers") %>: <%= listing.orders.size %></span>
+      <span class="chip"><%= t("marketplace.saves", count: listing.favorites.size) %></span>
+      <%= tag.span t("marketplace.listing_statuses.#{listing.status}", default: listing.status.to_s.humanize),
+                   class: "chip" %>
+      <%= link_to t("marketplace.variants"), listing_variants_path(listing), class: "chip" %>
+    </div>
+
+    <% if buy_box_reasons.present? %>
+      <section class="buy-box-reasons" aria-label="<%= t("marketplace.buy_box_seller_feedback") %>">
+        <%= tag.h2 t("marketplace.buy_box_seller_feedback") %>
+        <ul><% buy_box_reasons.each do |reason| %><li><%= reason %></li><% end %></ul>
+        <% if (score = buy_box_result&.score_for(listing)) %>
+          <p><%= t("marketplace.buy_box_score", score: (score.total * 100).round) %></p>
+        <% end %>
+      </section>
+    <% end %>
+    <% if seller_performance %>
+      <p class="deal-meta"><%= t("marketplace.seller_performance_window") %></p>
+      <div class="chips">
+        <span class="chip"><%= t("marketplace.seller_purchases", count: seller_performance[:purchases]) %></span>
+        <span class="chip"><%= t("marketplace.seller_shipped", count: seller_performance[:shipped]) %></span>
+        <span class="chip"><%= t("marketplace.seller_delivered", count: seller_performance[:delivered]) %></span>
+        <span class="chip"><%= t("marketplace.seller_returns", count: seller_performance[:returns]) %></span>
+        <% if seller_performance[:delivery_completion_rate] %>
+          <span class="chip"><%= t("marketplace.seller_delivery_completion", rate: number_to_percentage(seller_performance[:delivery_completion_rate] * 100, precision: 0)) %></span>
+        <% end %>
+        <% if seller_performance[:return_rate] %>
+          <span class="chip"><%= t("marketplace.seller_return_rate", rate: number_to_percentage(seller_performance[:return_rate] * 100, precision: 0)) %></span>
+        <% end %>
+        <% seller_performance[:paid_sales_by_currency].each do |currency, cents| %>
+          <span class="chip"><%= t("marketplace.seller_paid_sales", amount: Shared::MoneyDisplay.format(cents, currency)) %></span>
+        <% end %>
+        <% if seller_performance[:average_rating] %>
+          <span class="chip"><%= t("marketplace.seller_average_rating", rating: number_with_precision(seller_performance[:average_rating], precision: 2), count: seller_performance[:review_count]) %></span>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="section-divider">
+    <%= tag.h2 t("marketplace.offers"), class: "section-heading--md" %>
+    <% if listing.orders.any? %>
+      <% listing.orders.includes(:buyer).each do |order| %>
+        <article>
+          <%= tag.strong order.buyer&.display_name || t("chat.anon") %>
+           — <%= t("marketplace.order_statuses.#{order.status}", default: order.status.to_s.humanize) %>
+          <% if order.message.present? %><%= tag.p order.message %><% end %>
+          <% if order.status == "pending" %>
+            <div class="cluster mt-8">
+              <%= button_to t("marketplace.accept"), listing_order_path(listing, order), params: { accept: true }, method: :patch, class: "button button-primary button-small" %>
+              <%= button_to t("marketplace.decline"), listing_order_path(listing, order), params: { decline: true }, method: :patch, class: "button button-ghost button-small" %>
+            </div>
+          <% end %>
+        </article>
+      <% end %>
+    <% else %>
+      <%= render "shared/empty_state",
+            title: t("empty.no_offers"),
+            body: t("marketplace.no_offers_body"),
+            action: { label: t("marketplace.edit_listing"), path: edit_listing_path(listing) } %>
+    <% end %>
+    <%= button_to t("marketplace.remove_listing"), listing_path(listing), method: :delete,
+        data: { turbo_confirm: t("marketplace.confirm_remove_listing") },
+        class: "button button-danger button-small m-16" %>
+  </div>
+<% end %>

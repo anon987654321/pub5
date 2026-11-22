@@ -1,0 +1,387 @@
+# frozen_string_literal: true
+
+require_relative "master_design"
+require_relative "../lib/design/scale"
+
+module Operator
+  # Ratchet: every spacing, line-height, radius and weight literal in the family's
+  # stylesheets must land on a declared step.
+  #
+  # This is the axis BreakpointLint's header lists as already single-sourced and
+  # is not. Colour is single-sourced, motion is single-sourced, elevation is
+  # single-sourced, viewport is single-sourced since breakpoint_lint. Rhythm was
+  # never measured, and it drifted the way an unmeasured axis always does:
+  # 539 spacing literals over 93 distinct values, and 13 distinct line-heights
+  # for what is one body-text rhythm (1.5, 1.55, 1.45, 1.4, 1.3, 1.25, 1.2, 1.15,
+  # 1.6, 1.7 …), measured 2026-08-15.
+  #
+  # The nearest prior art is the stylelint ecosystem — `stylelint-scales`
+  # (numeric scales per property, with autofix to the nearest allowed step),
+  # `rhythmguard` (token-or-scale enforcement for spacing/radius/type), and
+  # `stylelint-a11y`'s line-height-is-vertical-rhythmed. None of them run here:
+  # this tree has no Node in its check path and its lints are Ruby over source.
+  # So the rule families are reimplemented, not the tools.
+  #
+  # Five kinds, because they fail differently:
+  #
+  #   off_scale_space       a padding/margin/gap step nothing else in the family
+  #                         uses. Two of these next to each other read as a
+  #                         mistake even when neither is wrong alone.
+  #   off_scale_line_height a body rhythm invented at the call site. This is the
+  #                         one that shows as "the page looks unsettled": a
+  #                         paragraph at 1.45 beside one at 1.55 is a half-pixel
+  #                         of drift per line that accumulates down the column.
+  #   absolute_line_height  `line-height: 28px`. It does not inherit — any child
+  #                         at another font-size gets 28px anyway, which is the
+  #                         defect stylelint-a11y's rule exists for, and it is
+  #                         worse here because brgen's root is 18px.
+  #   off_scale_radius      a corner nothing else in the family has.
+  #   off_scale_font_weight a weight the loaded faces may not even have, which
+  #                         the browser then synthesises.
+  #
+  # Same contract as breakpoint_lint and chrome_i18n_lint: a baseline per kind,
+  # never raised to silence a new finding. Opt out one line with `// scale: ok`
+  # on it or the line above.
+  module ScaleLint
+    RAILS_ROOT = File.expand_path("../../RAILS", __dir__)
+    OPT_OUT = "scale: ok"
+
+    SKIP = %r{(?:\A|/)(node_modules|vendor|builds|public/assets|tmp)/} # on rel(path), so a /tmp/ export is read
+
+    # The scale rules (which properties, how a value is read, the nearest step)
+    # are Master::Design::Scale's, shared with the EIGHT_PX_RHYTHM and
+    # LINE_HEIGHT_ON_SCALE Laws and the AstFixer transform that repairs them.
+    SPACE_PROPS = Master::Design::Scale::SPACE_PROPS
+    UNMEASURABLE = Master::Design::Scale::UNMEASURABLE
+
+    Finding = Struct.new(:file, :line, :kind, :value, :property)
+
+    module_function
+
+    def findings
+      stylesheets.flat_map do |path|
+        # Two views of the same file. Declarations are read from the copy with
+        # comments blanked, so a commented-out rule is not a declaration; the
+        # opt-out is read from the raw copy, because `// scale: ok` is itself a
+        # comment and blanking it left every opt-out in the tree inert.
+        raw = File.readlines(path, encoding: "UTF-8")
+        lines = source_lines(path)
+        lines.each_with_index.flat_map do |line, index|
+          next [] if opted_out?(raw, index)
+
+          line.to_enum(:scan, DECLARATION).map { Regexp.last_match }
+              .flat_map { |m| check(rel(path), index + 1, m[:prop], m[:value].strip) }
+        end
+      end
+    end
+
+    def findings_for(surface_name)
+      findings.select { |finding| surface(File.join(REPO_ROOT, finding.file)) == surface_name }
+    end
+
+    def counts_for(surface_name)
+      findings_for(surface_name).group_by(&:kind).transform_values(&:size)
+    end
+
+    def counts = findings.group_by(&:kind).transform_values(&:size)
+
+    SURFACES = %w[apps face].freeze
+
+    def baselines = @baselines ||= scale.fetch("baselines")
+
+    def baselines_for(surface_name) = baselines.fetch(surface_name)
+
+    # The nearest declared step, for a report that says what to write instead.
+    def nearest(finding)
+      allowed = case finding.kind
+      when "off_scale_space" then space_px
+      when "off_scale_radius" then radius_px
+      else return
+      end
+      m = finding.value.match(LENGTH) or return
+      "#{rules.nearest(to_px(m[1], m[2].to_s), allowed).to_i}px"
+    end
+
+    def tokens = @tokens ||= MasterDesign.tokens
+
+    def scale = @scale ||= tokens.fetch("scale")
+
+    def rules = @rules ||= Master::Design::Scale.new(scale)
+
+    # rem is normalised at 16, not at brgen's 18. A scale step is a design
+    # decision expressed in one unit or the other, and 0.75rem and 12px are the
+    # same decision written twice -- the canonical design system keeps one owner
+    # when it explains why chrome_inset is absolute. What brgen's root does to
+    # the rendered pixel is a different question from whether the author picked
+    # a step off the scale, and only the second one is answerable from source.
+    def to_px(value, unit) = Master::Design::Scale.to_px(value, unit)
+
+    REPO_ROOT = File.expand_path("..", RAILS_ROOT)
+
+    # MASTER's web face is the fourth surface of this family and it is governed
+    # from here already: MASTER/data/tokens.yml carries a `face_root:` section and
+    # MASTER/tools/rails/generate_face_root_css.rb writes it into face.css's :root. The
+    # tokens were shared and the rhythm was not -- face.css sits on a 2px
+    # sub-grid (6px x14, 10px x10, 14px x5, 5px x3) while the three apps are on
+    # 4px, so a button in the face and the same button in brgen are a pixel or
+    # two apart for no reason either file records.
+    #
+    # Counted separately from the apps, because they have different histories
+    # and a single number would hide which surface moved. Measured against the
+    # same scale, because that is the whole point.
+    #
+    # The face's sheets live in MASTER/web/public (fe829068c). The directory is
+    # found by where face.css actually is rather than named once, because each
+    # time the sources moved the corpus emptied silently and every face/*
+    # baseline read as fixed while nothing was measured.
+    FACE = %w[public src].map { |dir| File.join(REPO_ROOT, "MASTER", "web", dir) }
+                         .find { |dir| File.file?(File.join(dir, "face.css")) } ||
+           File.join(REPO_ROOT, "MASTER", "web", "public")
+
+    def app_stylesheets
+      @app_stylesheets ||= (
+        Dir.glob(File.join(RAILS_ROOT, "*/app/assets/stylesheets/**/*.{scss,css}")) +
+        Dir.glob(File.join(RAILS_ROOT, "*/engines/*/app/assets/stylesheets/**/*.{scss,css}")) +
+        Dir.glob(File.join(RAILS_ROOT, "__shared/app/assets/stylesheets/**/*.{scss,css}"))
+      ).uniq.sort.reject { |path| rel(path).match?(SKIP) }
+    end
+
+    # face.css only. The face's :root is generated; the rest is hand-written and
+    # is what this measures. chat_upload.css joins it because it paints the same
+    # surface.
+    def face_stylesheets
+      @face_stylesheets ||= Dir.glob(File.join(FACE, "*.css")).sort.reject { |path| rel(path).match?(SKIP) }
+    end
+
+    def stylesheets = app_stylesheets + face_stylesheets
+
+    # Which surface a path belongs to, so a finding can be counted against the
+    # right baseline.
+    def surface(path) = path.start_with?(FACE) ? "face" : "apps"
+
+    # Comments blanked, line numbering preserved. Same reasoning as
+    # breakpoint_lint: a paragraph explaining why a value was changed contains
+    # the value, and a lint that reports its own documentation gets the
+    # documentation deleted.
+    def source_lines(path)
+      raw = File.read(path, encoding: "UTF-8")
+      raw = raw.gsub(%r{/\*.*?\*/}m) { |block| block.gsub(/[^\n]/, " ") }
+      raw.gsub(%r{//[^\n]*}) { |line| " " * line.length }.lines
+    end
+
+    def opted_out?(lines, index)
+      [ lines[index], index.positive? ? lines[index - 1] : nil ]
+        .compact.any? { |line| line.include?(OPT_OUT) }
+    end
+
+    LENGTH = Master::Design::Scale::LENGTH
+
+    def strip_computed(value) = Master::Design::Scale.strip_computed(value)
+
+    def steps(value) = Master::Design::Scale.steps(value)
+
+    def off_scale_lengths(value, allowed_px) = rules.off_scale_lengths(value, allowed_px)
+
+    def space_px = @space_px ||= scale.fetch("space_px").map { |v| Float(v) }
+
+    def radius_px = @radius_px ||= scale.fetch("radius_px").map { |v| Float(v) }
+
+    def line_heights = @line_heights ||= scale.fetch("line_height").map { |v| Float(v) }
+    def letter_spacings = @letter_spacings ||= scale.fetch("letter_spacing_em").map { |v| Float(v) }
+    def durations = @durations ||= scale.fetch("duration_ms").map { |v| Float(v) }
+
+    # name -> weight, read from the stylesheet that declares the tokens. Without
+    # it a weight reaching an element through var(--weight-heavy) is invisible to
+    # a check that only reads literals.
+    def weight_tokens
+      @weight_tokens ||= begin
+        file = File.join(REPO_ROOT, "RAILS", "__shared", "app/assets/stylesheets/_dialect_tokens.scss")
+        body = File.file?(file) ? File.read(file) : ""
+        body.scan(/(--weight-[\w-]+)\s*:\s*(\d+)\s*;/).to_h { |n, v| [ n, v.to_i ] }
+      end
+    end
+
+    def font_weights = @font_weights ||= scale.fetch("font_weight").map { |v| Integer(v) }
+
+    DECLARATION = Master::Design::Scale::DECLARATION
+
+    def check(file, line, prop, value)
+      colours = off_token(prop, value).map { |literal| Finding.new(file, line, "off_token_color", literal, prop) }
+      check_alpha(file, line, prop, value) + colours + case prop
+      when *SPACE_PROPS
+        off_scale_lengths(value, space_px).map { |v| Finding.new(file, line, "off_scale_space", v, prop) }
+      when "border-radius"
+        check_radius(file, line, prop, value)
+      when "line-height"
+        check_line_height(file, line, prop, value)
+      when "transition", "transition-duration"
+        check_duration(file, line, prop, value)
+      when "letter-spacing"
+        check_letter_spacing(file, line, prop, value)
+      when "font-weight"
+        check_font_weight(file, line, prop, value)
+      else
+        []
+      end
+    end
+
+    # Alpha is not a property, so unlike every other axis here this runs on the
+    # value of any declaration. It arrives four ways: rgba()'s fourth argument,
+    # the slash form in rgb()/hsl(), and color-mix against `transparent`, which
+    # is an alpha written as a mix. A value already reading a token is on scale
+    # by construction and never re-examined.
+    #
+    # color-mix against an OPAQUE colour is deliberately not read. There 22% is
+    # the ratio between two colours, not a transparency, and snapping it to an
+    # alpha step would be a colour decision wearing a lint's clothes.
+    ALPHA_RGBA = /rgba?\(\s*[^)]*?,\s*(\d*\.?\d+)\s*\)/
+    ALPHA_SLASH = %r{(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch)\([^)]*?/\s*(\d*\.?\d+)\s*\)}
+    # The colour argument may itself contain a comma -- var(--x, #fff), rgb(0,0,0)
+    # -- so this cannot stop at the first one. `color-mix(in <space>,` anchors the
+    # front and `N%, transparent)` the back; everything between is the colour.
+    ALPHA_MIX = /color-mix\(\s*in\s+[\w-]+\s*,\s*.+?\s+(\d+(?:\.\d+)?)%\s*,\s*transparent\s*\)/
+
+    def check_alpha(file, line, prop, value)
+      found = value.scan(ALPHA_RGBA).flatten.map { |a| [ a, Float(a) ] } +
+              value.scan(ALPHA_SLASH).flatten.map { |a| [ a, Float(a) ] } +
+              value.scan(ALPHA_MIX).flatten.map { |p| [ "#{p}%", Float(p) / 100 ] }
+
+      found.filter_map do |written, alpha|
+        next if alpha.zero? || alpha == 1.0 || opacity.include?(alpha)
+
+        Finding.new(file, line, "off_scale_opacity", written, prop)
+      end
+    end
+
+    def opacity = @opacity ||= scale.fetch("opacity").map { |v| Float(v) }
+
+    # stylelint-declaration-strict-value's rule, in Ruby: a colour property names a token, a
+    # keyword or a colour tokens.yml declares. A literal hex or rgb() nothing declares is drift;
+    # one that matches a declared colour is still a literal, but not a new colour.
+    COLOR_PROPS = %w[color background background-color border border-top border-right border-bottom border-left
+                     border-color outline outline-color fill stroke caret-color text-decoration-color
+                     accent-color].freeze
+    LITERAL_COLOR = /#\h{3,8}\b|rgba?\([^)]*\)/
+
+    def off_token(prop, value)
+      return [] unless COLOR_PROPS.include?(prop)
+
+      value.scan(LITERAL_COLOR).select do |literal|
+        hex = hex_of(literal)
+        hex && !palette.include?(hex)
+      end
+    end
+
+    def hex_of(literal)
+      if literal.start_with?("#")
+        digits = literal.delete_prefix("#").downcase
+        digits = digits.chars.map { |digit| digit * 2 }.join if digits.size <= 4
+        return "##{digits[0, 6]}"
+      end
+      channels = literal.scan(/[\d.]+/).first(3).map { |part| part.to_f.round.clamp(0, 255) }
+      format("#%02x%02x%02x", *channels) if channels.size == 3
+    end
+
+    def palette = @palette ||= (%w[#000000 #ffffff] + hexes(tokens)).uniq
+
+    def hexes(node)
+      case node
+      when Hash then node.values.flat_map { |value| hexes(value) }
+      when Array then node.flat_map { |value| hexes(value) }
+      else node.to_s.match?(/\A#\h{3}(?:\h{3})?\z/) ? [hex_of(node.to_s.strip)] : []
+      end
+    end
+
+    # A percentage radius is a circle or a pill, not a step -- 50% and 100% are
+    # shapes and the scale has nothing to say about them.
+    def check_radius(file, line, prop, value)
+      return [] if value.include?("%")
+
+      off_scale_lengths(value, radius_px).map { |v| Finding.new(file, line, "off_scale_radius", v, prop) }
+    end
+
+    def check_line_height(file, line, prop, value)
+      bare = strip_computed(value).strip
+      return [] if bare.empty? || bare.match?(UNMEASURABLE)
+
+      if (m = bare.match(/\A(-?[\d.]+)(px|rem|em|%)\z/))
+        return [ Finding.new(file, line, "absolute_line_height", "#{m[1]}#{m[2]}", prop) ]
+      end
+      return [] unless bare.match?(/\A[\d.]+\z/)
+      return [] if line_heights.include?(Float(bare))
+
+      [ Finding.new(file, line, "off_scale_line_height", bare, prop) ]
+    end
+
+    # em only. A px tracking does not scale with the type it tracks and a unitless
+    # one is not a length: both are off the scale by being the wrong kind of value
+    # rather than the wrong size. `normal` is the initial value, not a step.
+    # A transition written as a literal rather than as the token that already holds
+    # that number. A duration reaching an element through var(--transition-fast) is
+    # blanked by strip_computed and never gets here, which is the point: the token
+    # is the way to write a duration and this reports the ways that are not.
+    #
+    # Zero is not a step. `visibility 0s linear 220ms` turns visibility off at once
+    # on purpose, and a scale has nothing to say about a duration of none.
+    def check_duration(file, line, prop, value)
+      steps(value).filter_map do |step|
+        next unless (m = step.match(/\A(\d*\.?\d+)(ms|s)\z/))
+
+        ms = m[2] == "s" ? Float(m[1]) * 1000 : Float(m[1])
+        next if ms.zero? || durations.include?(ms)
+
+        Finding.new(file, line, "off_scale_duration", step, prop)
+      end
+    end
+
+    def check_letter_spacing(file, line, prop, value)
+      bare = strip_computed(value).strip
+      return [] if bare.empty? || bare == "normal" || bare.match?(UNMEASURABLE)
+
+      m = bare.match(/\A(-?\.?[\d.]+)em\z/)
+      return [ Finding.new(file, line, "off_scale_tracking", bare, prop) ] unless m
+      return [] if letter_spacings.include?(Float(m[1]))
+
+      [ Finding.new(file, line, "off_scale_tracking", bare, prop) ]
+    end
+
+    def check_font_weight(file, line, prop, value)
+      bare = strip_computed(value).strip
+      bare = weight_tokens[value[/--weight-[\w-]+/]].to_s if value.include?("var(--weight-")
+      return [] unless bare.match?(/\A\d+\z/)
+      return [] if font_weights.include?(Integer(bare))
+
+      [ Finding.new(file, line, "off_scale_font_weight", bare, prop) ]
+    end
+
+    # Relative to the repo root, not to RAILS: the corpus spans two trees now
+    # and a path that resolves against the wrong one points at nothing.
+    def rel(path) = path.sub("#{REPO_ROOT}/", "")
+
+    module Census
+      PROPS = %w[font-size line-height font-weight letter-spacing color background-color border-color border-radius
+                 padding margin gap box-shadow z-index].freeze
+      DECLARATION = /(?<![-\w])(?<prop>[a-z-]+)\s*:\s*(?<value>[^;{}]+)/
+      BUILD = "app/assets/builds/application.css"
+
+      module_function
+
+      # prop => number of distinct values, comments stripped and values normalised.
+      def counts(css)
+        body = css.gsub(%r{/\*.*?\*/}m, " ")
+        seen = Hash.new { |hash, key| hash[key] = {} }
+        body.scan(DECLARATION) { seen[Regexp.last_match[:prop]][normal(Regexp.last_match[:value])] = true }
+        PROPS.to_h { |prop| [prop, seen[prop].size] }
+      end
+
+      def normal(value) = value.sub(/!important/, "").strip.downcase.squeeze(" ")
+
+      # app => compiled stylesheet, for the apps whose build is present in this tree.
+      def builds(rails_root)
+        Dir.glob(File.join(rails_root, "*", BUILD)).to_h do |path|
+        [path.delete_prefix("#{rails_root}/").split("/").first, path]
+      end
+      end
+    end
+  end
+end

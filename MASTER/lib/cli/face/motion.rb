@@ -1,0 +1,314 @@
+# frozen_string_literal: true
+
+require_relative "../../voice/policy"
+
+module Master
+  module CLI
+    module Face
+      # The live terminal face is quiet in idle. A semantic state or an explicit
+      # event wakes its springs: listening leans in, thinking turns, speech shapes
+      # the mouth, and keys can nudge the head and carriers. When the cause ends,
+      # the pose returns to the canonical still face.
+      #
+      # Motion is the one mutable part of this projection. The window keeps one
+      # instance and hands it to Face.frame with each tick; Pose remains the pure,
+      # deterministic counterpart for snapshots and cross-renderer fixtures.
+      class Motion
+        TAU = 2 * Math::PI
+        # The pure pose retains canonical turn parameters. Live idle motion is
+        # gated by Face::Contract.still_mode? and settles back to the front.
+        ASCII = Master::Face::Contract.ascii.fetch("motion").freeze
+        SPIN = ASCII.fetch("spin").to_f
+        SPINNING = ASCII.fetch("spin_states").map(&:to_sym).freeze
+        BREATH = ASCII.fetch("breath").to_f
+        GLANCE_INITIAL = ASCII.fetch("glance_initial", 0.9).to_f
+        GLANCE_INTERVAL = ASCII.fetch("glance_interval", [0.35, 2.2]).map(&:to_f).freeze
+        GLANCE_HORIZONTAL = ASCII.fetch("glance_horizontal", 0.09).to_f
+        GLANCE_VERTICAL = ASCII.fetch("glance_vertical", 0.04).to_f
+        # The key light's start and orbit, in radians and radians a second.
+        LIGHT = Master::Face::Contract.ascii.fetch("light").freeze
+        EVENTS = %i[key listen nod thinking phantom council anticipate].freeze
+        # How the face attends, from the contract the browser face reads too.
+        AWARE = Master::Voice::Policy.awareness.freeze
+        LISTENING = AWARE.fetch("listening", {}).freeze
+        GLANCE_SCALE = { listening: LISTENING.fetch("glance_scale", 1.0),
+                         speaking: AWARE.fetch("speaking", {}).fetch("glance_scale", 1.0) }.freeze
+
+        # A critically damped spring, stepped implicitly so a long frame can
+        # never make it overshoot or blow up.
+        Spring = Struct.new(:x, :v) do
+          def toward(target, omega, dt)
+            f = 1.0 + (2.0 * dt * omega)
+            hoo = dt * omega * omega
+            det = f + (dt * hoo)
+            self.x, self.v = ((f * x) + (dt * v) + (dt * hoo * target)) / det, (v + (hoo * (target - x))) / det
+            x
+          end
+        end
+
+        Particle = Struct.new(:angle, :radius, :height, :spin, :rise, :push, :lift)
+
+        def initialize(seed: 7, session: nil)
+          @rng = ::Random.new(seed)
+          @seed = seed
+          @mask = Masks.pick(session)
+          @mix_state = nil
+          @mix = 0.0
+          @t = nil
+          @yaw, @pitch, @roll, @lean, @dip = Array.new(5) { Spring.new(0.0, 0.0) }
+          @turn = 0.0
+          @dolly = Spring.new(1.0, 0.0)
+          @eye = Spring.new(1.0, 0.0)
+          @gaze_lon, @gaze_lat, @mouth, @mouth_wide = Array.new(4) { Spring.new(0.0, 0.0) }
+          @mouth_open = Spring.new(1.0, 0.0)
+          @viseme = "neutral"
+          @next_blink = 2.2
+          @next_glance = GLANCE_INITIAL
+          @glance = [0.0, 0.0]
+          @particles = []
+        end
+
+        # Advances to time t in seconds and answers the Look to draw.
+        def step(state:, t:, level: nil, events: [], count: 24, heard: false, viseme: "neutral")
+          dt = @t ? (t - @t).clamp(0.0, 0.25) : 0.0
+          @t = t
+          @heard = heard && state == :listening
+          @viseme = viseme
+          event_list = Array(events)
+          @last_event_at = t unless event_list.empty?
+          recent_event = @last_event_at && ((t - @last_event_at) * 1000 < Master::Face::Contract.still_after_activity_ms)
+          still = Master::Face::Contract.still_mode?(state) && event_list.empty? && !recent_event
+          event_list.each { |event| react(event) }
+          turn(state, t, dt, still:)
+          spin(state, dt, still:)
+          ease_mask(state, t)
+          features(state, t, dt, level, still:)
+          drift(state, t, dt, count, still:)
+          look(t, still:)
+        end
+
+        def particles = @particles
+
+        private
+
+        def react(event)
+          raise ArgumentError, "face: unknown event #{event.inspect}" unless EVENTS.include?(event)
+
+          case event
+          when :key
+            @pitch.v += 0.9
+            @yaw.v += @rng.rand(-0.4..0.4)
+            @dip.v -= 0.25
+            @particles.each { |p| p.push += @rng.rand(0.6..1.4) if p.height < -0.2 }
+          when :listen
+            @particles.each { |p| p.push -= 0.5 }
+          when :nod
+            @pitch.v += 1.6
+          when :thinking
+            @pitch.v -= 0.35
+            @yaw.v += @rng.rand(-0.12..0.12)
+          when :phantom
+            @roll.v += @rng.rand(-0.8..0.8)
+            @dip.v += 0.5
+            @dolly.v += 0.08
+            @particles.each { |p| p.push += @rng.rand(0.8..1.5) }
+          when :council
+            @yaw.v += @rng.rand(-0.3..0.3)
+            @pitch.v += 0.45
+          when :anticipate
+            @pitch.v += 0.18
+            @dolly.v += 0.04
+            @glance = [0.0, 0.0]
+            @next_glance = 0.0
+            @next_blink = 0.12
+          end
+        end
+
+        # The face stays readable in front view. State changes alter the
+        # amount and speed of the turn, but never enough to hide the features.
+        def turn(state, t, dt, still: false)
+          if still
+            [@yaw, @pitch, @roll, @lean, @dip].each { |spring| spring.x = spring.v = 0.0 }
+            @dolly.x = 1.0
+            @dolly.v = 0.0
+            return
+          end
+
+          sway = state == :speaking ? 0.2 * noise(t * 0.4, 1) : 0.05 * noise(t * 0.3, 2)
+          @yaw.toward(sway, 2.5, dt)
+          @pitch.toward(pitch_for(state, t), 6.0, dt)
+          @roll.toward(state == :listening ? 0.13 : 0.18 * Math.sin(t * 0.7), 4.0, dt)
+          @lean.toward(lean_for(state), 4.0, dt)
+          @dip.toward(0.0, 7.0, dt)
+          @dolly.toward(dolly_for(state, t), 3.8, dt)
+        end
+
+        # Turning is constant while at rest; attending eases the head back to
+        # the nearest front so the features face the user.
+        def spin(state, dt, still: false)
+          if still
+            @turn = (@turn / TAU).round * TAU
+            return
+          end
+          unless SPINNING.include?(state)
+            @turn += ((@turn / TAU).round * TAU - @turn) * (1 - Math.exp(-2.5 * dt))
+            return
+          end
+
+          @turn += SPIN * dt
+        end
+
+        # Leaning in is the listening settle, and a little more while the user is
+        # actually speaking; the browser feeds the same number through the contract.
+        def lean_for(state)
+          return 0.0 unless state == :listening
+
+          LISTENING.fetch("lean", 0.1) + (@heard ? LISTENING.fetch("heard_lean", 0.0) : 0.0)
+        end
+
+        def dolly_for(state, t)
+          base = { idle: 1.0, listening: 1.018, thinking: 1.045, speaking: 1.032 }.fetch(state, 1.0)
+          base + (0.012 * Math.sin(t * 0.37))
+        end
+
+        def pitch_for(state, t)
+          nod = ASCII.fetch("pitch_sway").to_f * Math.sin(t * ASCII.fetch("pitch_rate").to_f)
+          return nod - 0.12 if state == :thinking
+          return 0.08 if state == :listening
+
+          nod
+        end
+
+        def features(state, t, dt, level, still: false)
+          if still
+            @eye.x = 1.0
+            @eye.v = 0.0
+            [@gaze_lon, @gaze_lat, @mouth, @mouth_wide].each { |spring| spring.x = spring.v = 0.0 }
+            @mouth_open.x = 1.0
+            @mouth_open.v = 0.0
+            return
+          end
+
+          blink(t)
+          @eye.toward(eye_target(state, t), 32.0, dt)
+          glance(state, t)
+          @gaze_lon.toward(@glance[0], 26.0, dt)
+          @gaze_lat.toward(@glance[1], 26.0, dt)
+          heard = level.nil? ? Face.timed_level((t * FPS).to_i) : level.to_f.clamp(0.0, 1.0)
+          @mouth.toward(state == :speaking ? heard : 0.0, 24.0, dt)
+          shape = state == :speaking && @viseme != "neutral" ? Master::Voice::Policy.mouth_shape(@viseme) : nil
+          @mouth_open.toward(shape ? shape.fetch("open") : 1.0, 30.0, dt)
+          @mouth_wide.toward(shape ? shape.fetch("wide") : 0.0, 30.0, dt)
+        end
+
+        def blink(t)
+          return if t < @next_blink + 0.16
+
+          double = @rng.rand < 0.15
+          @next_blink = t + (double ? 0.25 : @rng.rand(1.8..5.5))
+        end
+
+        def eye_target(state, t)
+          return 0.0 if t.between?(@next_blink, @next_blink + 0.16)
+
+          state == :listening ? LISTENING.fetch("eye_open", 1.4) : 1.0
+        end
+
+        # A glance lands somewhere near centre and holds for a moment; now
+        # and then it comes home. Thinking looks up and away.
+        def glance(state, t)
+          return if t < @next_glance
+
+          @next_glance = t + @rng.rand(GLANCE_INTERVAL.fetch(0)..GLANCE_INTERVAL.fetch(1))
+          home = @rng.rand < 0.3
+          scale = GLANCE_SCALE.fetch(state, 1.0)
+          @glance = home ? [0.0, 0.0] : [@rng.rand(-GLANCE_HORIZONTAL..GLANCE_HORIZONTAL) * scale, @rng.rand(-GLANCE_VERTICAL..GLANCE_VERTICAL) * scale]
+          @glance = [@glance[0] + 0.05, @glance[1] + 0.05] if state == :thinking
+        end
+
+        def drift(state, t, dt, count, still: false)
+          @particles << spawn(@rng.rand(-1.1..1.1)) while @particles.size < count
+          @particles.pop while @particles.size > count
+          return if still
+
+          @particles.each { |p| move(p, state, t, dt) }
+        end
+
+        def spawn(height)
+          Particle.new(@rng.rand(TAU), @rng.rand(1.1..1.7), height, @rng.rand(0.15..0.45) * [-1, 1].sample(random: @rng),
+                       @rng.rand(0.03..0.09), 0.0, @rng.rand(TAU))
+        end
+
+        # Orbit, rise and ease back to a resting radius; thinking pulls them
+        # into a fast flat ring, listening pulls them close.
+        def move(particle, state, t, dt)
+          thinking = state == :thinking
+          particle.angle += particle.spin * (thinking ? 4.0 : 1.0) * dt
+          rest = { thinking: 1.2, listening: 0.95 }.fetch(state, 1.35)
+          particle.push += ((rest - particle.radius) * 1.5 - particle.push) * (1 - Math.exp(-3.0 * dt))
+          particle.radius = [particle.radius + (particle.push * dt), 0.85].max
+          particle.height += thinking ? -particle.height * 2.0 * dt : particle.rise * dt
+          particle.height += 0.02 * noise((t * 0.5) + particle.lift, 5) * dt
+          return unless particle.height > 1.15
+
+          spawn(-1.15).each_pair { |field, value| particle[field] = value }
+        end
+
+        # The mask's mix follows Masks.mix from the moment the state last changed.
+        def ease_mask(state, t)
+          if state != @mix_state
+            @mix_state = state
+            @mix_since = t
+            @mix_from = @mix
+          end
+          @mix = Masks.mix(state, t, since: @mix_since, from: @mix_from)
+        end
+
+        def look(t, still: false)
+          breath = still ? 1.0 : 1.0 + (BREATH * Math.sin(t * 1.6))
+          Look.new(
+            yaw: @yaw.x, turn: @turn, pitch: @pitch.x, roll: @roll.x, scale: breath * (1.0 + @lean.x),
+            dolly: @dolly.x.clamp(0.96, 1.09),
+            bob: still ? 0.0 : (0.02 * Math.sin(t * 1.1)) + (0.01 * noise(t * 0.5, 6)) + @dip.x,
+            eye_open: @eye.x.clamp(0.0, 1.5), gaze: [@gaze_lon.x, @gaze_lat.x], mouth: @mouth.x.clamp(0.0, 1.0),
+            mouth_open: @mouth_open.x.clamp(0.0, 1.0), mouth_wide: @mouth_wide.x.clamp(-1.0, 1.0),
+            light: still ? LIGHT.fetch("start") : LIGHT.fetch("start") + (LIGHT.fetch("orbit") * t),
+            particles: @particles.map { |p| place(p, t, still:) }, mask: @mask, mix: @mix
+          )
+        end
+
+        # Where a particle sits in the world, with the mouth's ripple on it.
+        def place(particle, t, still: false)
+          ripple = still ? 1.0 : 1.0 + (0.08 * @mouth.x * Math.sin((3 * particle.angle) + (9 * t)))
+          r = particle.radius * ripple
+          [r * 0.75 * Math.sin(particle.angle), particle.height, r * 0.65 * Math.cos(particle.angle)]
+        end
+
+        # One frame's worth of motion, in model units and radians.
+        Look = Data.define(:yaw, :turn, :pitch, :roll, :scale, :dolly, :bob, :eye_open, :gaze, :mouth, :mouth_open, :mouth_wide, :light, :particles, :mask, :mix)
+
+        # A Look at rest, for a still frame or a test: front, eyes open, mouth shut.
+        def self.rest(**over)
+          Look.new(**{ yaw: 0.0, turn: 0.0, pitch: 0.0, roll: 0.0, scale: 1.0, dolly: 1.0, bob: 0.0, eye_open: 1.0, gaze: [0.0, 0.0],
+                       mouth: 0.0, mouth_open: 1.0, mouth_wide: 0.0, light: LIGHT.fetch("start").to_f, particles: [], mask: nil, mix: 0.0 }.merge(over))
+        end
+
+        # Smooth value noise in [-1, 1]: lattice values from an integer hash,
+        # eased between, so drift wanders without repeating.
+        def noise(x, channel)
+          i = x.floor
+          f = x - i
+          ease = f * f * (3 - (2 * f))
+          a = lattice(i, channel)
+          a + ((lattice(i + 1, channel) - a) * ease)
+        end
+
+        def lattice(i, channel)
+          h = ((i * 374_761_393) + (channel * 668_265_263) + (@seed * 2_246_822_519)) & 0xffffffff
+          h = ((h ^ (h >> 13)) * 1_274_126_177) & 0xffffffff
+          ((h ^ (h >> 16)) / 2_147_483_647.5) - 1.0
+        end
+      end
+    end
+  end
+end

@@ -1,0 +1,67 @@
+<% content_for :title, @user.display_name %>
+<% content_for :description, t("users.profile_description", name: @user.display_name) %>
+<%# Crawlable so a crawler reads this; a member profile stays out of the index.
+    The public, indexable page is the creator profile. %>
+<% content_for :head, robots_meta(index: false) %>
+<%= turbo_stream_from @user %>
+<header class="profile-header" aria-label="<%= t("users.profile_header") %>">
+  <%= tag.h1 @user.display_name %>
+  <%= tag.p t("users.profile_counts", items: @user.items.count, followers: @user.followers.count, following: @user.following.count) %>
+  <%= render "users/follow", user: @user %>
+  <% if @user.public_creator? %>
+    <%= tag.p link_to(t("actions.creator_profile"), creator_profile_path(@user.creator_profile.handle),
+                      class: "button"),
+              class: "profile-creator-link" %>
+  <% elsif authenticated? && Current.user == @user %>
+    <%= tag.p link_to(t("actions.setup_creator"), new_my_creator_profile_path, class: "button"),
+              class: "profile-creator-link" %>
+  <% end %>
+</header>
+<%= tag.h2 t("users.recent_items") %>
+<% if @items.empty? && Current.user == @user %>
+  <%= render "shared/empty_state", title: t("empty.no_items"), action: { label: t("home.first_item"), path: new_item_path } %>
+<% elsif @items.empty? %>
+  <%= render "shared/empty_state", title: t("empty.no_items"), action: { label: t("home.browse_demo"), path: demo_wardrobe_path } %>
+<% end %>
+<%# The card the wardrobe and the demo draw, without the owner's wear, joy and
+    edit buttons: a bare link with an image and a <p> looked like neither. %>
+<div class="item-grid">
+  <% @items.each do |item| %>
+    <%= tag.article class: "item-card", id: dom_id(item) do %>
+      <% if item.photos.attached? %>
+        <%= responsive_image_tag item.photos.first, alt: item.title, preset: :card,
+                                                    sizes: "(max-width: 768px) 50vw, 240px", class: "item-photo" %>
+      <% else %>
+        <%= tag.div item.category.to_s.first, class: "item-photo item-photo--placeholder", aria: { hidden: true } %>
+      <% end %>
+      <%= link_to item.title, item_path(item), class: "item-title" %>
+      <p class="item-meta">
+        <%= tag.span item_category_label(item.category) %>
+        <%= tag.span item.color if item.color.present? %>
+      </p>
+    <% end %>
+  <% end %>
+</div>
+<%# Loaded by the controller under the same visibility policy as the items,
+    and never drawn until now; hidden when there is nothing to show. %>
+<% if @outfits.load.any? %>
+  <%= tag.h2 t("users.outfits") %>
+  <%= tag.div render(@outfits), class: "item-grid item-grid--wardrobe" %>
+<% end %>
+<%= tag.h2 t("users.posts") %>
+<%# A list like posts#index, and only the owner is invited to write one:
+    a visitor on someone else's empty profile was asked to post. %>
+<% if @posts.any? %>
+  <ul class="feed_list post-card-list" role="list">
+    <% @posts.each do |post| %>
+      <%= tag.li render(post) %>
+    <% end %>
+  </ul>
+<% elsif Current.user == @user %>
+  <%= render "shared/empty_state",
+        title: t("empty.no_posts_yet"),
+        action: { label: t("empty.first_post"), path: new_post_path } %>
+<% else %>
+  <%# empty_state: no-action-ok — a visitor cannot post on someone else's behalf %>
+  <%= render "shared/empty_state", title: t("empty.no_posts_yet") %>
+<% end %>

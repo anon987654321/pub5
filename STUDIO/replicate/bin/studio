@@ -1,0 +1,97 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# studio — the one CLI in front of STUDIO's render tools (the pub5 port's
+# Phase 4 seam: "dilla and postpro behind one CLI").
+#
+#   STUDIO/replicate/bin/studio dilla [...]     # the beat engine: STUDIO/dilla/dilla.rb
+#   STUDIO/replicate/bin/studio postpro [...]   # the film grade: STUDIO/postpro/postpro.rb
+#   STUDIO/replicate/bin/studio ableton inventory DIRECTORY [--export-all]
+#   STUDIO/replicate/bin/studio ableton export SET.als [--json PATH] [--ruby PATH]
+#   STUDIO/replicate/bin/studio ableton midi SET.als [--out PATH] [--wav PATH --soundfont FILE]
+#   STUDIO/replicate/bin/studio photograph [...] # subject-aware still and film generation
+#   STUDIO/replicate/bin/studio gallery [...]    # rebuild the static selfie gallery manifest
+#   STUDIO/replicate/bin/studio doctor [--json]  # inspect local readiness without provider calls
+#   STUDIO/replicate/bin/studio promo --subject NAME --audio TRACK --out FILE.mp4
+#   STUDIO/replicate/bin/studio --list           # the tools this CLI reaches
+#
+# It is a dispatcher, not a second interface: every argument after the tool
+# name goes to the owning tool unchanged, so the tools' own contracts (their
+# READMEs and flags) stay the one documentation. Exit status is the tool's.
+
+require "rbconfig"
+require_relative "../subprocess"
+
+STUDIO_ROOT = File.expand_path("../..", __dir__)
+RUBY = RbConfig.ruby
+
+TOOLS = {
+  "dilla" => File.join(STUDIO_ROOT, "dilla", "dilla.rb"),
+  "postpro" => File.join(STUDIO_ROOT, "postpro", "postpro.rb"),
+  "lora" => File.join(STUDIO_ROOT, "lora", "lora.rb"),
+  "photograph" => File.join(STUDIO_ROOT, "lora", "photograph.rb"),
+  "gallery" => File.join(STUDIO_ROOT, "lora", "selfies_gallery.rb"),
+  "doctor" => File.join(STUDIO_ROOT, "replicate", "doctor.rb"),
+  "logo" => File.join(STUDIO_ROOT, "replicate", "particle_logo.rb"),
+  "promo" => File.join(STUDIO_ROOT, "replicate", "promo.rb"),
+}.freeze
+
+ABLETON_TOOLS = {
+  "inventory" => File.join(STUDIO_ROOT, "dilla", "lib", "als_export.rb"),
+  "export" => File.join(STUDIO_ROOT, "dilla", "lib", "als_export.rb"),
+  "midi" => File.join(STUDIO_ROOT, "dilla", "lib", "als_to_midi.rb"),
+}.freeze
+
+def usage
+  warn "usage: STUDIO/replicate/bin/studio <dilla|postpro|lora|photograph|gallery|doctor|promo|logo> [args...]"
+  warn "       STUDIO/replicate/bin/studio ableton <inventory|export|midi> [args...]"
+  warn "       STUDIO/replicate/bin/studio --list"
+  warn "  dilla     the beat engine — see STUDIO/dilla/README.md"
+  warn "  postpro   the film grade — see STUDIO/postpro/README.md"
+  warn "  lora      subject-aware likeness tools, private recovery and read-only audit"
+  warn "  photograph generate subject-aware stills and films"
+  warn "  gallery   rebuild the publication-gated selfie gallery manifest"
+  warn "  doctor    inspect local readiness; read-only, no provider calls"
+  warn "  promo     cut stills into one vertical clip with a soundtrack"
+  warn "  logo      render the deterministic plur1bus particle mark"
+  warn "  ableton   Live Set inventory, composition export and MIDI recovery"
+end
+
+if ARGV.empty? || ARGV == ["-h"] || ARGV == ["--help"]
+  usage
+  exit(ARGV.empty? ? 64 : 0)
+end
+
+if ARGV == ["--list"]
+  TOOLS.each { |name, path| puts format("%-8s %s", name, path) }
+  puts format("%-8s %s", "ableton", "dilla/lib/als*.rb")
+  exit 0
+end
+
+tool = ARGV.shift
+if tool == "ableton"
+  operation = ARGV.shift
+  path = ABLETON_TOOLS[operation]
+  unless path
+    warn "studio: unknown Ableton operation: #{operation}"
+    usage
+    exit 64
+  end
+  unless File.file?(path)
+    warn "studio: Ableton recovery entrypoint is missing: #{path}"
+    exit 66
+  end
+  exec(Studio::Subprocess.environment, RUBY, path, *ARGV)
+end
+path = TOOLS[tool]
+unless path
+  warn "studio: unknown tool: #{tool}"
+  usage
+  exit 64
+end
+unless File.file?(path)
+  warn "studio: #{tool} entrypoint is missing: #{path}"
+  exit 66
+end
+
+exec(Studio::Subprocess.environment, RUBY, path, *ARGV)

@@ -1,0 +1,25 @@
+<% content_for :title, t(".title") %>
+
+<header class="page-header">
+  <h1><%= t("app.name") %></h1>
+</header>
+<p class="dim"><%= t(".tagline") %></p>
+
+<% if authenticated? %>
+  <section aria-labelledby="generate-comic-heading">
+    <h2 id="generate-comic-heading"><%= t(".generate_heading") %></h2>
+    <%= form_with model: ComicStrip.new, url: comic_strips_path, class: "comic-form" do |form| %>
+      <%= form.text_area :prompt, placeholder: t(".prompt_placeholder"), required: true, rows: 3, maxlength: 4_000 %>
+      <%= form.select :style, ComicStrip::STYLES.map { |style| [t("comic_strips.styles.#{style}"), style] }, {}, required: true %>
+      <div class="provider-consent">
+        <%= check_box_tag :provider_consent, "1", false, required: true %>
+        <%= label_tag :provider_consent, t(".provider_consent") %>
+      </div>
+      <%= form.submit t(".generate") %>
+    <% end %>
+  </section>
+<% else %>
+  <p><%= link_to t("nav.sign_in"), new_session_path %> <%= t(".sign_in_to_generate") %></p>
+<% end %>
+
+<%= live_search_index url: comic_strips_path, results_partial: "comic_strips/live_search_results", placeholder: t(".search_placeholder"), label: t(".search_label"), frame_id: "mytoonz-comics" %>

@@ -1,0 +1,122 @@
+<% content_for :title, @community.name %>
+<%# A shared link previews with the community's own words and banner. %>
+<% if @community.description.present? %>
+  <% content_for :description, truncate(strip_tags(@community.description), length: 160) %>
+<% end %>
+<% if (og_image = seo_image_url(@community.banner)) %>
+  <% content_for :og_image, og_image %>
+<% end %>
+<% content_for :json_ld, json_ld_script(collection_page_schema(
+      name: @community.name,
+      url: schema_url_for(@community),
+      items: @posts,
+      item_type: "Article"
+    )) %>
+<% content_for :json_ld, json_ld_script(breadcrumb_json_ld([
+      [city_name, main_app.root_url],
+      [@community.name, seo_canonical_url]
+    ])) %>
+
+<%# Asked once: the compose link, the empty state and the About aside all hang on it. %>
+<% can_post = @community.postable_by?(Current.user) %>
+
+<header class="community-header">
+  <%= tag.h1 @community.name %>
+  <% if @community.description.present? %><%= tag.p @community.description %><% end %>
+  <p>
+    <%= t("community.posts_count", count: header_posts_count) %> ·
+    <%= render "communities/members_count", community: @community %>
+  </p>
+  <%# user_id, not user: comparing the association is a lazy read on a
+      strict-loading record. Preloaded in the controller too, but the id
+      comparison is what makes this page independent of that. %>
+  <%= render "communities/membership", community: @community,
+                                        joined: authenticated? && Current.user.member_of?(@community) %>
+  <%# The wiki is readable by whoever can read the community, so the link is not
+      moderator-only — only writing it is. %>
+  <p class="cluster">
+    <%= link_to t("wiki.heading"), community_wiki_index_path(@community), class: "button button-ghost button-small" %>
+  </p>
+  <%# Moderators maintain rules and flair; only an owner can delete the place. %>
+  <% if @moderator %>
+    <p class="cluster">
+      <%= link_to t("actions.edit"), edit_community_path(@community), class: "button button-ghost button-small" %>
+      <%= link_to t("community.mod_queue"), community_moderation_index_path(@community), class: "button button-ghost button-small" %>
+      <% if @community.owner?(Current.user) %>
+        <%= link_to t("community.moderators"), community_moderators_path(@community),
+              class: "button button-ghost button-small" %>
+        <%= button_to t("actions.delete"), community_path(@community), method: :delete, data: { turbo_confirm: t("communities.confirm_delete") }, class: "button button-danger button-small" %>
+      <% end %>
+    </p>
+  <% end %>
+</header>
+
+<% if @community.rule_list.any? %>
+  <section class="community-rules" role="region" aria-label="<%= t("community.rules") %>">
+    <%= tag.h2 t("community.rules") %>
+    <ol>
+      <% @community.rule_list.each do |rule| %><li><%= rule %></li><% end %>
+    </ol>
+  </section>
+<% end %>
+
+<% if @community.flair_options.any? %>
+  <nav class="chips" aria-label="<%= t("community.filter_by_flair") %>">
+    <%= link_to t("community.all_flair"), community_path(@community),
+          class: "chip#{" active" if @flair.blank?}", aria: { current: ("page" if @flair.blank?) } %>
+    <% @community.flair_options.each do |flair| %>
+      <%= link_to flair, community_path(@community, flair: flair),
+            class: "chip#{" active" if @flair == flair}", aria: { current: ("page" if @flair == flair) } %>
+    <% end %>
+  </nav>
+<% end %>
+
+<%# postable_by? rather than "signed in": a restricted community lets the whole
+    city read and only members post, and offering a compose link that will be
+    refused on submit is worse than not offering it. %>
+<% if can_post %>
+  <p><%= link_to t("community.new_post", name: @community.name), new_community_post_path(@community) %></p>
+<% elsif Current.user.present? && @community.privacy != "public" %>
+  <p><%= t("community.members_only_posting") %></p>
+<% end %>
+
+<% if @posts.any? %>
+  <ul class="post-feed feed_list post-card-list" id="community-posts" role="list">
+    <%= safe_join(@posts.map { |post| tag.li(render("posts/post", post:)) }) %>
+  </ul>
+  <%# The sentinel the other feeds use, with this community's scope in
+      CommunityPostsInfiniteScrollReflex; the pager stays as the no-JS path. %>
+  <%= render "shared/infinite_scroll_sentinel",
+             pagy: @pagy,
+             reflex: "CommunityPostsInfiniteScrollReflex#load_more",
+             sentinel_id: "community-posts-sentinel",
+             data: { community_id: @community.id, flair: @flair.presence } %>
+  <noscript><%= render "shared/pager", pagy: @pagy %></noscript>
+<% else %>
+  <%# The compose action only for someone who may post; the Join button in the
+      header is the way in for everyone else. %>
+  <%= render "shared/empty_state",
+        title: t("empty.no_posts_yet"),
+        body: t("empty.start_community", name: @community.name),
+        action: (can_post ? { label: t("nav.new_post"), path: new_community_post_path(@community) } : nil) %>
+<% end %>
+
+<% if @other_communities.present? %>
+  <aside>
+    <%= tag.h2 t("communities.also_in_city", city: city_name) %>
+    <ul>
+      <% @other_communities.each do |community| %>
+        <li><%= link_to community.name, community_path(community) %></li>
+      <% end %>
+    </ul>
+  </aside>
+<% end %>
+
+<aside>
+  <%= tag.h2 t("communities.about", name: @community.name) %>
+  <%# The header already prints the description; this says only that there is none. %>
+  <% if @community.description.blank? %><%= tag.p t("communities.no_description") %><% end %>
+  <% if can_post %>
+    <p><%= link_to t("nav.new_post"), new_community_post_path(@community) %></p>
+  <% end %>
+</aside>

@@ -1,0 +1,96 @@
+/* Brgen dating: the immersive vertical's branding and first screen. The dark
+   stage, the historical heart mark and the colour contracts, split from
+   _brgen_dating.scss at the module boundary. */
+/* Dating: the immersive vertical's own branding. */
+body.vertical-dating {
+  --dating-bg: var(--bg);
+  --dating-ink: var(--text);
+  --dating-muted: var(--text-secondary);
+  --dating-card: var(--surface-elevated);
+  --dating-border: var(--border);
+  --dating-accent: var(--accent);
+  /* The Nordic teal is a fill colour. As ink on the light surface this vertical
+     actually renders on it measures 1.77:1 — the BankID trust line, which is
+     the one label on the intro a user is meant to read carefully. Same hue,
+     darkened until it clears AA: 5.62:1 on --bg. Dark mode keeps the bright
+     teal, which is already 9.42:1 there. */
+  /* brgen defaults light on all eight surfaces
+     (ApplicationHelper::DEFAULT_SURFACE_THEME), where --dating-accent resolves
+     to the map's light slot #009579 and measures 3.77 on #ffffff. That clears
+     the 3:1 non-text floor visual_contract_lint holds accents to and misses AA
+     for text, and the BankID trust line is text. #00705c is 6.05 there, so it
+     is the ink, and the :root[data-theme="dark"] body.vertical-dating rule below
+     restores the bright teal, 9.11 on the card. Operator decision. */
+  --dating-accent-ink: #00705c;
+  --dating-pass: var(--danger);
+  background: var(--dating-bg);
+  color: var(--dating-ink);
+  font-family: var(--font);
+}
+
+/* Dating's first screen keeps the dark Hjerterom-inspired stage and the
+   historic red heart mark. The SVG is an inline, self-contained source asset. */
+.dating-splash {
+  --dating-splash-bg: #1f2124;
+  --dating-splash-ink: #ffffff;
+  --dating-splash-quiet: #9a9a9a;
+  --dating-splash-bloom: rgb(170 40 14 / 45%);
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  justify-items: center;
+  min-height: 100dvh;
+  padding:
+    max(var(--space-8), env(safe-area-inset-top)) var(--space-4)
+    max(var(--space-6), env(safe-area-inset-bottom));
+  background:
+    radial-gradient(closest-side at 50% 48%, var(--dating-splash-bloom), transparent 75%),
+    var(--dating-splash-bg);
+  color: var(--dating-splash-ink);
+  touch-action: pan-x pan-y;
+  user-select: none;
+}
+
+.dating-splash-start {
+  color: inherit;
+  font-size: var(--text-extra-extra-large);
+  text-decoration: none;
+}
+
+.dating-splash-heart {
+  position: relative;
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: min(80vw, 420px);
+  aspect-ratio: 4 / 3;
+}
+
+/* The first screen draws the historical heart as a css-doodle shape over the
+   stage's red bloom. The element fills the heart box and holds still:
+   AUTO_MOTION_PAUSABLE holds motion still by default, and a decorative,
+   aria-hidden mark that advances by itself forever would need a pause
+   control its first screen has no room for. The doodle and the bloom carry
+   the splash; git history holds the pulse if the operator wants it back. */
+.dating-splash-heart css-doodle {
+  display: block;
+  width: min(64vw, 320px);
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.dating-splash-title {
+  margin: 0 0 var(--space-8);
+  font-size: var(--text-display);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+}
+
+.dating-splash-trust {
+  margin: 0;
+  color: var(--dating-splash-quiet);
+  font-size: var(--text-large);
+}
+
+.dating-splash-trust strong {
+  color: var(--dating-splash-ink);
+}

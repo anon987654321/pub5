@@ -1,0 +1,341 @@
+---
+schema: 1
+app: amber
+user: contractdemo@amber.test
+routes:
+  "/connections":
+    status: 200
+    type: text/html
+    title: Forbindelser — Amber
+    heading: Forbindelser
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
+  "/creator_profile/edit":
+    status: 302
+    type: text/html
+    location: "/creator_profile/new"
+    landmarks: []
+    forms: []
+  "/creator_profile/new":
+    status: 200
+    type: text/html
+    title: Opprett skaperprofil — Amber
+    heading: Opprett skaperprofil
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/creator_profile"
+    - "/encounters"
+  "/declutter":
+    status: 200
+    type: text/html
+    title: Amber
+    heading: Rydding
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
+  "/items/new":
+    status: 200
+    type: text/html
+    title: Legg til plagg — Amber
+    heading: Legg til plagg
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
+    - "/items"
+  "/items/shopping_list":
+    status: 200
+    type: text/html
+    title: Handle smartere — Amber
+    heading: Handle smartere
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
+  "/live_streams":
+    status: 200
+    type: text/html
+    title: Stiløkter — Amber
+    heading: Stiløkter
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
+    - "/live_streams"
+  "/messages":
+    status: 200
+    type: text/html
+    title: Meldinger — Amber
+    heading: Meldinger
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
+    - "/messages"
+    - "/messages/invite_master"
+  "/messages/widget":
+    status: 200
+    type: text/html
+    title: Amber
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
+    - "/messages"
+  "/outfits/dressing_room":
+    status: 200
+    type: text/html
+    title: Miks &amp;amp; match — Amber
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
+    - "/outfits/save_look"
+  "/outfits/new":
+    status: 200
+    type: text/html
+    title: Nytt antrekk — Amber
+    heading: Nytt antrekk
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
+    - "/outfits"
+  "/planned_outfits":
+    status: 200
+    type: text/html
+    title: Antrekk-planlegger — Amber
+    heading: Antrekk-planlegger
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
+    - "/planned_outfits"
+  "/posts/new":
+    status: 200
+    type: text/html
+    title: Del et look — Amber
+    heading: Del et look
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
+    - "/posts"
+  "/privacy_setting":
+    status: 200
+    type: text/html
+    title: Personvern og KI — Amber
+    heading: Personvern og KI
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
+    - "/privacy_setting"
+  "/wardrobe_items/analytics":
+    status: 200
+    type: text/html
+    title: Garderobeanalyse — Amber
+    heading: Garderobeanalyse
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
+  "/wardrobe_items/new":
+    status: 200
+    type: text/html
+    title: Nytt garderobeplagg — Amber
+    heading: Nytt garderobeplagg
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
+    - "/wardrobe_items"
+  "/wardrobe_items/organize":
+    status: 200
+    type: text/html
+    title: Garderobeorganisering — Amber
+    heading: Garderobeorganisering
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
+  "/wardrobe_items/timeline":
+    status: 200
+    type: text/html
+    title: Stilutvikling — Amber
+    heading: Stilutvikling
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
+  "/account":
+    status: 200
+    type: text/html
+    title: Amber
+    heading: Konto
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/account"
+    - "/account/email"
+    - "/account/other_sessions"
+    - "/account/password"
+    - "/ai/search"
+    - "/encounters"
+  "/two_factor_setup":
+    status: 200
+    type: text/html
+    title: Amber
+    heading: Tofaktorautentisering
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
+    - "/two_factor_setup"
+  "/notifications":
+    status: 200
+    type: text/html
+    title: Varsler — Amber
+    heading: Varsler
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
+  "/billing":
+    status: 200
+    type: text/html
+    title: Abonnement — Amber
+    heading: Abonnement
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"

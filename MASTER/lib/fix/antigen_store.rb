@@ -1,0 +1,132 @@
+# frozen_string_literal: true
+
+require "digest"
+require "fileutils"
+require "json"
+require "time"
+
+module Master
+  module Fix
+    # AntigenStore — durable memory and recognition of failure signatures
+    # (ROBUSTNESS_antigen_memory).
+    #
+    # Records veto reasons, high-cost trajectories and defect classes so later
+    # probes can be down-weighted or refused early when they match a known
+    # antigen at the same high-risk boundary.
+    #
+    # Storage is append-only JSONL under .master/antigens/. Matching is by
+    # normalised signature key (law id + boundary + defect class digest).
+    class AntigenStore
+      SCHEMA = 1
+      DIR = File.join(".master", "antigens")
+      FILE = "signatures.jsonl"
+      EVIDENCE_FIELDS = %w[source_sha256 outcome attempts trace_id run_id tangle_digest paths edge_types cost_usd cost_tokens cost_basis usage_status exact_receipts exact_amount exact_tokens estimated_records estimated_amount estimated_tokens].freeze
+      SAFE_NOTES = [
+        "repair attempt rejected against unchanged source",
+        "resolved source dependency cycle in ReferenceGraph",
+        "repair attempt crossed its Law budget",
+      ].freeze
+
+      def initialize(root: nil)
+        @root = root || (defined?(Master::REPO_ROOT) && Master::REPO_ROOT) || Dir.pwd
+        @path = File.join(@root, DIR, FILE)
+      end
+
+      # Record a failure signature. Returns the antigen id.
+      def record(law:, boundary:, defect_class:, evidence: {}, note: nil, severity: "warning")
+        raise ArgumentError, "law required" if law.to_s.empty?
+        raise ArgumentError, "boundary required" if boundary.to_s.empty?
+        raise ArgumentError, "defect_class required" if defect_class.to_s.empty?
+
+        signature = signature_key(law, boundary, defect_class)
+        antigen = {
+          "schema_version" => SCHEMA,
+          "id" => Digest::SHA256.hexdigest("#{signature}-#{Time.now.to_f}")[0, 16],
+          "signature" => signature,
+          "law" => law.to_s,
+          "boundary" => boundary.to_s,
+          "defect_class" => defect_class.to_s,
+          "severity" => severity.to_s,
+          "evidence" => safe_evidence(evidence),
+          "note" => (note.to_s if SAFE_NOTES.include?(note.to_s)),
+          "recorded_at" => Time.now.utc.iso8601,
+          "hits" => 1,
+        }.compact
+
+        FileUtils.mkdir_p(File.dirname(@path), mode: 0o700)
+        File.chmod(0o700, File.dirname(@path))
+        File.open(@path, "a:UTF-8", 0o600) do |file|
+          file.flock(File::LOCK_EX)
+          begin
+            file.puts(JSON.generate(antigen))
+            file.flush
+          ensure
+            file.flock(File::LOCK_UN)
+          end
+        end
+        File.chmod(0o600, @path)
+        antigen["id"]
+      end
+
+      # Match a proposed probe against known antigens. Returns matching records
+      # (most recent first) or [].
+      def match(law:, boundary:, defect_class: nil, limit: 5, source_sha256: nil)
+        sig = if defect_class
+                signature_key(law, boundary, defect_class)
+              else
+                prefix = "#{law}|#{boundary}|"
+                nil
+              end
+
+        recent(limit: 500).select do |a|
+          signature_match = if sig
+                              a["signature"] == sig
+                            else
+                              a["signature"].to_s.start_with?(prefix)
+                            end
+          digest_match = source_sha256.nil? || a.dig("evidence", "source_sha256") == source_sha256
+          signature_match && digest_match
+        end.last(limit.to_i).reverse
+      end
+
+      # True when a known antigen exists for this exact signature.
+      def known?(law:, boundary:, defect_class:, source_sha256: nil)
+        !match(law: law, boundary: boundary, defect_class: defect_class, source_sha256:, limit: 1).empty?
+      end
+
+      def recent(limit: 50)
+        return [] unless File.file?(@path)
+
+        File.readlines(@path, encoding: "UTF-8").last(limit.to_i).filter_map do |line|
+          JSON.parse(line)
+        rescue JSON::ParserError
+          nil
+        end
+      end
+
+      private
+
+      # Keep the ledger useful as operational evidence, not a second transcript.
+      # Only stable identifiers, digests and bounded path lists are retained.
+      def safe_evidence(value)
+        return {} unless value.is_a?(Hash)
+
+        value.each_with_object({}) do |(key, item), safe|
+          name = key.to_s
+          next unless EVIDENCE_FIELDS.include?(name)
+          clean = case item
+                  when String then item[0, 256]
+                  when Numeric, TrueClass, FalseClass then item
+                  when Array then item.first(32).filter_map { |entry| entry.to_s[0, 256] }
+                  end
+          safe[name] = clean unless clean.nil?
+        end
+      end
+
+      def signature_key(law, boundary, defect_class)
+        digest = Digest::SHA256.hexdigest(defect_class.to_s)[0, 12]
+        "#{law}|#{boundary}|#{digest}"
+      end
+    end
+  end
+end

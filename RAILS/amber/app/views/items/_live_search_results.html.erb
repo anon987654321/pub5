@@ -1,0 +1,50 @@
+<%# Counted over the whole filtered wardrobe, not the cards loaded so far. %>
+<div class="tag-row">
+  <%= tag.span t("items.wears_total", count: @totals[:wears].to_i), class: "tag" %>
+  <%= tag.span t("items.joy_keepers", count: @totals[:joy]), class: "tag" %>
+  <%= tag.span t("items.categories", count: @totals[:categories]), class: "tag" %>
+</div>
+
+<%# A GET filter the server applies, so appended pages are filtered too. %>
+<%= form_with url: items_path, method: :get, class: "field",
+              data: { controller: "filter", turbo_frame: "_top" } do |form| %>
+  <%= hidden_field_tag :lifecycle, @lifecycle_filter %>
+  <%= hidden_field_tag :usage, @usage_filter if @usage_filter %>
+  <%= hidden_field_tag :q, live_search_query if live_search_query.present? %>
+  <%= form.label :category, t("items.filter_by_category"), for: "category-filter" %>
+  <% categories = [ [ t("items.filter_all"), "" ], *amber_item_category_options ] %>
+  <%= form.select :category, options_for_select(categories, @category_filter),
+                  {}, id: "category-filter", data: { action: "change->filter#submit" } %>
+  <noscript><%= form.submit t("items.filter_by_category"), class: "button" %></noscript>
+<% end %>
+
+<%= turbo_frame_tag "items", target: "_top" do %>
+<%# One band after every FEED_EVERY garments, never trailing the last — a band in
+    the final slot reads as the end of the wardrobe. in_grid because this is a
+    grid: the band spans the row rather than sitting in it as a tile.
+    ItemsInfiniteScrollReflex#after_row keeps the same rhythm on appended pages,
+    counting slots from the top rather than restarting each scroll. %>
+<div class="item-grid item-grid--wardrobe" id="items">
+  <% @items.each_with_index do |item, index| %>
+    <%= render item %>
+    <% if ((index + 1) % Shared::AffiliateHelper::FEED_EVERY).zero? && index + 1 < @items.size %>
+      <%= render "shared/affiliate_feed_unit", category: "fashion", in_grid: true %>
+    <% end %>
+  <% end %>
+</div>
+
+<% if @items.empty? %>
+  <%= render "shared/empty_state",
+        title: t("empty.no_items"),
+        body: t("empty.no_items_body"),
+        action: { label: t("home.first_item"), path: new_item_path } %>
+<% end %>
+
+<%= render "shared/infinite_scroll_sentinel",
+           pagy: @pagy,
+           reflex: "ItemsInfiniteScrollReflex#load_more",
+           sentinel_id: "amber-items-sentinel",
+           q: live_search_query,
+           lifecycle: @lifecycle_filter,
+           data: { usage: @usage_filter, category: @category_filter }.compact %>
+<% end %>

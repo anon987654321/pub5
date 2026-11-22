@@ -1,0 +1,57 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Standalone access to the exact dependency preflight used by bin/master.
+require_relative "../lib/boot/entrypoint"
+
+ROOT = File.expand_path("..", __dir__)
+Master::Boot::Entrypoint.reexec_best_ruby!(
+  root: ROOT, env: ENV, out: $stderr, argv: ARGV, program: $PROGRAM_NAME
+)
+
+command = ARGV.shift
+manager = Master::Boot::DependencyManager.new(root: ROOT)
+
+case command
+when "--help", "-h"
+  puts <<~HELP
+    usage: bin/bootstrap [--check | --plan]
+
+    no arguments   install/verify the locked Ruby bundle and prepare the boot environment
+    --check        inspect the current Ruby/Bundler bundle without installing
+    --plan         show the platform's native build package set and package-manager commands
+
+    bin/master runs the same dependency preflight automatically before normal startup.
+    Native OS packages are installed only when a locked gem build needs them and the
+    operator approves the consolidated plan. For an explicit manual install, use bin/deps system.
+  HELP
+  exit 0
+when "--plan"
+  plan = manager.system_package_plan
+  puts "package manager: #{plan[:package_manager] || "not detected"}"
+  puts "native build prerequisites: #{plan[:packages].empty? ? "none mapped" : plan[:packages].join(" ")}"
+  if plan[:commands].empty?
+    puts "installation command: unavailable"
+    exit 78
+  end
+  plan[:commands].each do |entry|
+    puts "#{entry[:label]}: #{entry[:argv].join(" ")}"
+  end
+  puts "These packages are recovery prerequisites, not optional MASTER applications."
+  exit 0
+when "--check"
+  status = manager.status
+  puts "ruby: #{status[:ruby]} (required #{status[:ruby_required].empty? ? "none" : status[:ruby_required]})"
+  puts "bundler: #{status[:bundler].empty? ? "not pinned" : status[:bundler]} (#{status[:bundler_installed] ? "installed" : "not installed"})"
+  puts "bundle: #{status[:bundle_ok] ? "ready" : "incomplete"}"
+  puts "package manager: #{status[:package_manager] || "not detected"}"
+  puts status[:bundle_output] unless status[:bundle_output].to_s.empty?
+  exit(status[:bundle_ok] ? 0 : 1)
+when nil, "install"
+  Master::Boot::Entrypoint.prepare!(root: ROOT)
+  puts "bootstrap0: READY — locked Ruby dependencies verified and boot environment activated"
+  exit 0
+else
+  warn "bootstrap: unknown command #{command.inspect}; use --help"
+  exit 64
+end

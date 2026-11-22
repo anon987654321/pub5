@@ -1,0 +1,216 @@
+# frozen_string_literal: true
+
+require "json"
+require "net/http"
+require "uri"
+require_relative "../../../io/lane_selection"
+require_relative "../../../io/web_chat"
+
+module Master
+  module CLI
+    module Routing
+      class ModelRouter
+        # Which API, AGY CLI and browser-chat lanes are reachable right now.
+        module ProviderAvailability
+          # Only a direct xAI key activates the direct Grok API model.
+          # OpenRouter credentials must not activate a subscription CLI or
+          # an unrelated free model through this provider-specific path.
+          def primary_models
+            models = grok_api_models
+            if agy_cli_available?
+              agy_ids = Array(@rules.dig("models", "primary")).filter_map { |m| m["id"] }
+                .select { |id| id.to_s.start_with?("agy:") || id.to_s == "agy" }
+              agy_ids << "agy:auto" if agy_ids.empty?
+              models.concat(agy_ids)
+            end
+            models.uniq
+          end
+
+          def agy_cli_available?
+            return false if ENV["MASTER_NO_AGY_CLI"] == "1"
+            return @agy_cli_available unless @agy_cli_available.nil?
+            @agy_cli_available = !find_agy_executable.nil?
+          end
+
+          def find_agy_executable
+            if ENV["AGY_BIN"] && File.file?(ENV["AGY_BIN"]) && File.executable?(ENV["AGY_BIN"])
+              return ENV["AGY_BIN"]
+            end
+            home_bin = File.expand_path("~/.local/bin/agy")
+            return home_bin if File.file?(home_bin) && File.executable?(home_bin)
+
+            ENV["PATH"].to_s.split(File::PATH_SEPARATOR).each do |dir|
+              candidate = File.join(dir, "agy")
+              return candidate if File.file?(candidate) && File.executable?(candidate)
+            end
+            nil
+          end
+
+          def grok_api_models
+            return [] unless grok_api_available?
+
+            model = Master.provider_config(root: @root).dig("xai", "default_model")
+            model.to_s.empty? ? [] : [model]
+          end
+
+          def grok_api_available? = Master.api_key_present?("XAI_API_KEY", root: @root)
+
+          def keyless_mode?
+            return false unless ENV["MASTER_NO_KEYLESS"].to_s.empty?
+            return true if ENV["MASTER_KEYLESS"].to_s != ""
+            return true if auto_keyless? && !Master.any_api_key_present?
+            false
+          end
+
+          # API-backed free models remain ahead of browser-mediated free chat.
+          # Keep the browser lane separate so one explicit order governs every task.
+          def continuity_models
+            return [] if @rules.dig("continuity", "enabled") == false
+
+            [@rules.dig("openrouter", "free_latest"), live_free_models].flatten.compact.uniq
+          end
+
+          def browser_chat_models
+            return [] unless web_chat_enabled?
+
+            Array(@rules.dig("ferrum_web_chat", "free_latest"))
+          end
+
+          # WebChat owns the shared keyless/explicit-opt-in policy so route
+          # discovery and the actual browser bridge cannot disagree.
+          def web_chat_enabled? = Master::Io::WebChat.enabled?(rules: @rules)
+
+          def auto_keyless?
+            @rules.dig("ferrum_web_chat", "auto_when_keyless") != false
+          end
+
+          def web_chat_model?(model_id) = model_id.to_s.start_with?("web-chat:")
+
+          # Delegate to the same opt-in policy used by /fix, boot selection and
+          # the emergency catalogue fallback; this prevents a disabled local lane
+          # from reappearing through a separate model-router gate.
+          def ollama_enabled?
+            Master::Io::LaneSelection.ollama_enabled?(cfg: @rules)
+          end
+
+def ollama_model?(model_id) = model_id.to_s.start_with?("ollama:", "ollama/")
+
+# The local chain is allowlisted in models.yml and presence-checked against
+# /api/tags. When discovery is unavailable, the configured fallback remains
+# available and the dispatcher reports any actual provider failure.
+def ollama_pulled?(model_id)
+  installed = ollama_installed_models
+  return true if installed.nil?
+
+  name = model_id.to_s.sub(%r{\Aollama[:/]}, "")
+  installed.include?(name) || installed.include?("#{name}:latest")
+end
+
+# Read once per router: the answer changes when someone runs
+# `ollama pull`, not between two turns.
+def ollama_installed_models
+  return @ollama_installed_models if defined?(@ollama_installed_models)
+
+  @ollama_installed_models = fetch_ollama_tags
+end
+
+# Remotely executed Ollama cloud IDs are recognized only so routing can reject
+# them. There is deliberately no cloud catalogue or opt-in path.
+def ollama_cloud_model?(model_id)
+  name = model_id.to_s.sub(%r{\Aollama[:/]}, "")
+  name.end_with?(":cloud", "-cloud")
+end
+
+# The local tier is limited to configured, explicitly allowlisted models.
+# Discovery checks presence but never expands the allowlist. If the daemon is
+# unavailable, the declared local fallback remains available with truthful
+# provider-level failure reporting.
+LOCAL_FIT = 0.6
+
+def local_models
+  return [] unless ollama_enabled?
+
+  configured = Array(@rules.dig("models", "local")).filter_map { |row| row["id"] }
+  ollama_rules = @rules["ollama"].is_a?(Hash) ? @rules["ollama"] : {}
+  allowlist_configured = ollama_rules.key?("local_model_allowlist")
+  if allowlist_configured
+    allowed = Array(ollama_rules["local_model_allowlist"]).map(&:to_s)
+    configured = configured.select { |id| allowed.include?(id.to_s) }
+  end
+
+  installed = ollama_installed_models
+  return configured if installed.nil?
+
+  pulled = configured.select { |id| ollama_pulled?(id) }
+  # An explicit local allowlist makes discovery a presence check. It must not
+  # silently expand the fallback to every model installed on the host.
+  return pulled.select { |id| runs_here?(id) } if allowlist_configured
+
+  extra = installed.reject { |name| name.match?(/embed/i) }
+                   .each_with_index.sort_by { |name, index| [-ollama_size(name), index] }
+                   .map { |name, _| "ollama:#{name.delete_suffix(':latest')}" }
+  (pulled + extra).uniq.select { |id| runs_here?(id) }
+end
+
+def runs_here?(model_id)
+  name = model_id.to_s.sub(%r{\Aollama[:/]}, "")
+  return false if name.end_with?(":cloud", "-cloud")
+
+  size = ollama_size(name)
+  memory_mb = Master::Core::Memory.host_memory_mb
+  size.zero? || memory_mb.nil? || size <= memory_mb * 1_048_576 * LOCAL_FIT
+end
+
+# Bytes on disk, which is close to what the weights take in memory; 0 when
+# the daemon did not say.
+def ollama_size(name)
+  sizes = @ollama_sizes || {}
+  sizes.fetch(name) { sizes.fetch("#{name}:latest", 0) }
+end
+
+OLLAMA_TAGS_TIMEOUT_S = 2
+
+# OLLAMA_BASE_URL decides whether the tier is offered while online. The
+# daemon's address does not depend on it, so an unset variable still asks the
+# default one, which is what an offline laptop has.
+def ollama_tags_base_url
+  base = ENV["OLLAMA_BASE_URL"].to_s.strip
+  base = @rules.dig("ollama", "default_base_url").to_s if base.empty?
+  base = "http://localhost:11434" if base.empty?
+  base.chomp("/").delete_suffix("/v1")
+end
+
+def fetch_ollama_tags
+  uri = URI("#{ollama_tags_base_url}/api/tags")
+  response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https",
+                                                 open_timeout: OLLAMA_TAGS_TIMEOUT_S,
+                                                 read_timeout: OLLAMA_TAGS_TIMEOUT_S) do |http|
+    http.get(uri.request_uri)
+  end
+  return unless response.is_a?(Net::HTTPSuccess)
+
+  rows = Array(JSON.parse(response.body.to_s)["models"])
+  @ollama_sizes = rows.to_h { |row| [row["name"].to_s, row["size"].to_i] }
+  rows.filter_map { |row| row["name"]&.to_s }
+rescue StandardError => e
+  record_pool_discovery_error("ollama_local_catalog", e)
+  nil
+end
+
+          # Live free slugs refreshed into the SQLite catalog; read-only, never creates the DB.
+          def live_free_models
+            return [] unless @rules.dig("openrouter", "use_live_catalog")
+            require_relative "../../../io/catalog_index"
+            db = Master::Io::CatalogIndex::DEFAULT_DB
+            return [] unless File.exist?(db)
+            rows = Master::Io::CatalogIndex.new(db_path: db).search(":free", source: "openrouter", limit: 40)
+            rows.filter_map { |row| row["id"] }.select { |id| id.to_s.end_with?(":free") }
+          rescue StandardError => e
+            record_pool_discovery_error("openrouter_free_catalog", e)
+            []
+          end
+        end
+      end
+    end
+  end
+end

@@ -1,0 +1,176 @@
+<% content_for :title, t("checkout.title") %>
+
+<%# The single confirm screen (§6/§7). CheckoutController#load_checkout_vars
+    provides @cart, @mode, @order, @returning_customer, @zone, @subtotal_ore,
+    @discount_ore, @delivery_fee_ore, @total_ore and @eta_minutes. Live zone
+    feedback comes from zone_check_controller → GET /checkout/zone. POSTing
+    checkout_path builds the order and redirects to the chosen PSP (Vipps or
+    Stripe) — each pay button submits its own payment_method value, so the
+    choice needs no script. %>
+
+<h1 class="page-title"><%= t("checkout.title") %></h1>
+<%# Outside the kitchen's weekly hours the order is refused on submit; say so first. %>
+<%= tag.p @closed_text, class: "checkout-closed", role: "status" if @closed_text %>
+<%# What is being paid for, folded under one line so the confirm screen
+    stays one screen. %>
+<% if @subtotal_ore.positive? %>
+  <details class="checkout-lines card">
+    <summary>
+      <%= tag.span t("checkout.cart_summary") %>
+      <%= tag.span t("cart.bar_items", count: @cart.total_quantity) %>
+      <%= tag.strong money(@subtotal_ore) %>
+    </summary>
+    <%= tag.ul safe_join(@lines.map { |line| render("checkout/line", line:) }), class: "order-lines-list" %>
+  </details>
+<% end %>
+
+<%# The zero-typing path (§12): one tap logs in with Vipps, and Vipps hands
+    back the verified phone, name and address — the confirm screen then
+    arrives prefilled and the only remaining button is "Betal med Vipps". %>
+<% unless current_user %>
+  <section class="vipps-login card">
+    <strong><%= t("checkout.login_row") %></strong>
+    <%= tag.p t("checkout.login_note") %>
+    <%= link_to t("checkout.login_cta"), session_vipps_path(to: "checkout"), class: "button button-vipps" %>
+    <%= tag.p t("checkout.login_or"), class: "login-or" %>
+  </section>
+<% end %>
+
+<%= form_with url: checkout_path, method: :post, class: "checkout-form",
+      data: { controller: "zone-check",
+              zone_check_url_value: checkout_zone_path,
+              zone_check_ok_value: t("checkout.zone_ok"),
+              zone_check_fail_value: t("checkout.zone_fail"),
+              zone_check_checking_value: t("checkout.checking"),
+              zone_check_pickup_value: t("checkout.pickup_note") } do |f| %>
+
+  <fieldset class="option-group">
+    <legend><%= t("checkout.mode") %></legend>
+    <div class="mode-toggle">
+      <label class="option-chip">
+        <%= radio_button_tag :mode, "delivery", @mode != "pickup",
+              data: { action: "change->zone-check#modeChanged" } %>
+        <span><%= t("checkout.mode_delivery") %></span>
+      </label>
+      <label class="option-chip">
+        <%= radio_button_tag :mode, "pickup", @mode == "pickup",
+              data: { action: "change->zone-check#modeChanged" } %>
+        <span><%= t("checkout.mode_pickup") %></span>
+      </label>
+    </div>
+  </fieldset>
+
+  <div class="field" data-zone-check-target="addressWrap">
+    <%= label_tag :address, t("checkout.address") %>
+    <%= text_field_tag :address, @order.address,
+          placeholder: t("checkout.address_placeholder"),
+          autocomplete: "street-address", required: true, disabled: @mode == "pickup",
+          aria: field_error_aria(@field_errors, :address) %>
+    <%= field_error(@field_errors, :address) %>
+  </div>
+
+  <div class="field" data-zone-check-target="addressWrap">
+    <%= label_tag :postcode, t("checkout.postcode") %>
+    <%= text_field_tag :postcode, @order.postcode,
+          inputmode: "numeric", autocomplete: "postal-code", maxlength: 4,
+          required: true, pattern: "[0-9]{4}", disabled: @mode == "pickup",
+          placeholder: t("checkout.postcode_placeholder"),
+          aria: field_error_aria(@field_errors, :postcode),
+          data: { zone_check_target: "postcode", action: "input->zone-check#check" } %>
+    <%= field_error(@field_errors, :postcode) %>
+    <p class="zone-feedback" data-zone-check-target="feedback" aria-live="polite"></p>
+    <%= tag.p @minimum_text, class: "zone-fail", hidden: @minimum_text.blank?,
+          data: { zone_check_target: "minimum" }, aria: { live: "polite" } %>
+  </div>
+
+  <div class="field" data-zone-check-target="addressWrap">
+    <%= label_tag :delivery_note, t("checkout.delivery_note") %>
+    <%= text_field_tag :delivery_note, @order.delivery_note, maxlength: 200, disabled: @mode == "pickup",
+          placeholder: t("checkout.delivery_note_placeholder") %>
+  </div>
+
+  <div class="field">
+    <%= label_tag :name, t("checkout.name_label") %>
+    <%= text_field_tag :name, @order.customer_name, autocomplete: "name", maxlength: 80,
+          placeholder: t("checkout.name_placeholder") %>
+  </div>
+
+  <div class="field">
+    <%= label_tag :phone, t("checkout.phone_label") %>
+    <%= telephone_field_tag :phone, @order.phone,
+          inputmode: "numeric", autocomplete: "tel", maxlength: 12, required: true,
+          placeholder: t("checkout.phone_placeholder"),
+          aria: field_error_aria(@field_errors, :phone) %>
+    <%= field_error(@field_errors, :phone) %>
+  </div>
+
+  <section class="payment-option card">
+    <%= image_tag "vipps/vipps-wordmark.svg", alt: "", class: "vipps-wordmark" %>
+    <p class="payment-option-text">
+      <%= tag.strong t("checkout.vipps_row") %>
+      <%= t("checkout.vipps_note") %>
+    </p>
+    <%= tag.span t("checkout.sist_brukt"), class: "badge badge-last-used" if @returning_customer %>
+  </section>
+
+  <section class="payment-option card">
+    <%= tag.span t("checkout.card_mark"), class: "stripe-wordmark", aria: { hidden: true } %>
+    <p class="payment-option-text">
+      <%= tag.strong t("checkout.stripe_row") %>
+      <%= t("checkout.stripe_note") %>
+    </p>
+  </section>
+
+  <% if @promo[:promo].present? %>
+    <p class="promo-line">
+      <span aria-hidden="true">✓</span> <%= t("checkout.promo_auto", code: @promo[:promo].code) %>
+    </p>
+  <% end %>
+
+  <section class="totals card">
+    <p class="checkout-subtotal">
+      <%= tag.span t("checkout.subtotal") %>
+      <%= tag.strong money(@subtotal_ore) %>
+    </p>
+    <% if @discount_ore.positive? %>
+      <p class="checkout-subtotal totals-discount">
+        <%= tag.span t("checkout.discount") %>
+        <%= tag.strong "−#{money(@discount_ore)}" %>
+      </p>
+    <% end %>
+    <% unless @mode == "pickup" %>
+      <p class="checkout-subtotal">
+        <%= tag.span t("checkout.delivery_fee") %>
+        <%= tag.strong money(@delivery_fee_ore), data: { zone_check_target: "fee" } %>
+      </p>
+    <% end %>
+    <p class="checkout-subtotal totals-sum">
+      <%= tag.span t("checkout.total") %>
+      <%= tag.strong money(@total_ore), data: { zone_check_target: "total" } %>
+    </p>
+    <%= tag.p (t("checkout.eta_delivery", eta: @eta_minutes) if @eta_minutes), hidden: @eta_minutes.nil?,
+          data: { zone_check_target: "eta" } %>
+    <%= tag.p t("checkout.totals_note"), class: "totals-note" %>
+  </section>
+
+  <%# One form, two lanes: each button submits its own payment_method value
+      (plain params, PaymentGateway.normalize! guards it server-side).
+      Vipps stays the recommended primary; the card button is the fallback
+      for customers without the Vipps app. button_tag keeps the label free
+      from the submitted value (f.submit would print the value instead).
+      No script, no card fields here — Stripe hosts the card entry on its
+      own PCI-scoped page. %>
+<%# The amount rides on the button once it is settled: pickup, or a
+    postcode the zone lookup knows. Before that a total would leave out
+    the delivery fee. %>
+<% total_known = @mode == "pickup" || @zone.present? %>
+  <%= button_tag type: :submit, name: "payment_method", value: "vipps",
+        class: "button-vipps", data: { turbo_submits_with: t("checkout.paying"), zone_check_target: "vipps" } do %>
+    <%= total_known ? t("checkout.vipps_cta_total", total: money(@total_ore)) : t("checkout.vipps_cta") %>
+  <% end %>
+  <%= button_tag type: :submit, name: "payment_method", value: "stripe",
+        class: "button-stripe", data: { turbo_submits_with: t("checkout.paying"), zone_check_target: "stripe" } do %>
+    <%= total_known ? t("checkout.stripe_cta_total", total: money(@total_ore)) : t("checkout.stripe_cta") %>
+  <% end %>
+  <%= tag.p t("checkout.steps_note"), class: "steps-note" %>
+<% end %>

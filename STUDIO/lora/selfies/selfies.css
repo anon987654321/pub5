@@ -1,0 +1,49 @@
+/* STUDIO selfie gallery — same industrial dark language as RG-69. */
+:root{--bg:#0c0c0c;--brd:#252525;--txt:#d0d0d0;--mut:#484848;--acc:#c8902e;--dng:#8c3030;--transition-fast:100ms}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--txt);font:12px/1.5 ui-monospace,"SFMono-Regular",Menlo,monospace}
+body{padding:8px 12px;display:flex;flex-direction:column;min-height:100vh}
+
+/* skip link and header */
+.skip-link{position:absolute;left:-999px;top:0;background:var(--acc);color:#160a00;padding:6px 10px;z-index:10}
+.skip-link:focus{left:8px;top:8px}
+.gallery-header{border-bottom:1px solid var(--brd);padding-bottom:8px;margin-bottom:8px}
+h1{font:700 clamp(22px,5vw,44px)/1 "Arial Black",Impact,sans-serif;letter-spacing:0.04em;text-transform:uppercase}
+.header-sub{color:var(--acc);font-size:0.4em;font-weight:400;letter-spacing:0.08em;vertical-align:middle}
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 0}
+.subject-filter{display:flex;flex-wrap:wrap;gap:4px}
+.gallery-status{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:0.08em}
+
+/* buttons — flat, text-forward, always keyboard-reachable */
+button{background:none;border:1px solid var(--brd);color:var(--mut);padding:4px 10px;font:10px/1.5 ui-monospace,monospace;text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;touch-action:manipulation;min-height:28px}
+button:hover{border-color:var(--mut);color:var(--txt)}
+button:active{opacity:0.5}
+button[aria-pressed="true"]{border-color:var(--acc);color:var(--acc)}
+button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-color:var(--acc);color:var(--acc)}
+a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
+/* rail — Swiper markup, scroll-snap when the library is absent */
+.gallery-main{flex:1}
+.swiper{overflow:visible}
+.gallery-track{display:flex;flex-wrap:wrap;gap:12px;align-items:stretch}
+.no-swiper .gallery-track{flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding-bottom:8px}
+.no-swiper .swiper-slide{scroll-snap-align:start;flex-shrink:0}
+.rail-nav{display:flex;gap:6px;margin-top:8px}
+
+/* items */
+.gallery-item{width:min(320px,78vw);background:var(--bg);border:1px solid var(--brd);display:flex;flex-direction:column}
+.gallery-media{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;background:#111}
+body.gallery-fill .gallery-media{object-fit:fill}
+.is-film .gallery-media{aspect-ratio:16/9;object-fit:contain;background:#000}
+.gallery-caption{padding:6px 8px;font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:0.06em;border-top:1px solid var(--brd)}
+
+/* empty state and footer */
+.gallery-empty{border:1px dashed var(--brd);padding:16px;color:var(--mut);max-width:640px}
+.gallery-empty code{color:var(--acc)}
+.gallery-footer{border-top:1px solid var(--brd);margin-top:10px;padding-top:6px;font-size:10px;color:var(--mut)}
+
+/* reduced motion: no smooth panning, no transitions */
+@media (prefers-reduced-motion: reduce){
+  .no-swiper .gallery-track{scroll-behavior:auto}
+  *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+}

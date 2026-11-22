@@ -1,0 +1,5 @@
+# Per-endpoint tuning for whatever model the operator names with --model.
+# Duplicate the entry and rename it to match your chosen model prefix.
+- name: ollama_chat/llama3
+  extra_params:
+    num_ctx: 32768

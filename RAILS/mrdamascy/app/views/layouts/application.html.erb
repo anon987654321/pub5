@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="<%= I18n.locale %>">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title><%= content_for?(:title) ? yield(:title) : t("app.title") %></title>
+    <%# A page may say what it is (content_for :description); the app's own
+        line otherwise. The share card (public/og-card.png) rides along. %>
+    <% description = content_for?(:description) ? yield(:description) : t("app.description") %>
+    <%= tag.meta name: "description", content: description %>
+    <%= tag.meta property: "og:type", content: "website" %>
+    <%= tag.meta property: "og:site_name", content: t("app.name") %>
+    <%= tag.meta property: "og:title", content: content_for?(:title) ? yield(:title) : t("app.title") %>
+    <%= tag.meta property: "og:description", content: description %>
+    <%= tag.meta property: "og:url", content: request.original_url %>
+    <%= tag.meta property: "og:image", content: "#{request.base_url}/og-card.png" %>
+    <%= tag.meta property: "og:locale", content: I18n.locale == :en ? "en_GB" : "nb_NO" %>
+    <%= tag.meta name: "twitter:card", content: "summary_large_image" %>
+    <%# The browser chrome takes the brand bar's own surface. %>
+    <%= tag.meta name: "theme-color", content: design_token("--paper") %>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <%# Body classes drive shell styling: page-<controller> hides the pay-bar on
+      cart/checkout pages, act-<action> lifts content above the item sheet's
+      sticky footer. %>
+  <body class="page-<%= controller_name %> act-<%= action_name %>">
+    <%# Turbo page-refresh morphing keeps the brand bar, pay-bar and tab bar
+        steady while streams swap in new cart counts and order states. %>
+    <%= turbo_refreshes_with method: :morph, scroll: :preserve %>
+
+    <% active_tab =
+         case controller_name
+         when "menu" then "menu"
+         when "carts", "checkout" then "cart"
+         when "loyalty" then "loyalty"
+         when "pages", "sessions", "orders" then "mer"
+         end %>
+
+    <a class="skip-link" href="#main-content"><%= t("nav.skip") %></a>
+
+    <header class="brand-bar">
+      <%= link_to root_path, class: "brand-link" do %>
+        <%= image_tag "/logo.svg", alt: t("app.brand"), class: "brand-logo" %>
+        <%= tag.span t("app.name"), class: "brand-name" %>
+      <% end %>
+    </header>
+
+    <main class="shell" id="main-content">
+      <%# One toast slot: streams replace its content, so rapid adds never stack. %>
+      <%= tag.div render("shared/toast"), id: "toasts" %>
+      <%= yield %>
+
+      <footer class="app-footer">
+        <% if current_kitchen %>
+          <p class="footer-facts">
+            <%= tag.span t("app.name") %>
+            <%= tag.span current_kitchen.address %>
+            <%= tag.span current_kitchen.localized_opening_hours %>
+          </p>
+        <% end %>
+        <%= tag.p t("footer.sahtein"), class: "footer-sahtein" %>
+      </footer>
+    </main>
+
+    <%= render "shared/cart_bar", cart_count: cart_count, cart_total_ore: cart_subtotal_ore %>
+
+    <nav class="tab-bar" aria-label="<%= t("nav.label") %>">
+      <ul>
+        <li>
+          <%= link_to root_path, class: "tab", aria: { current: ("page" if active_tab == "menu") } do %>
+            <span class="tab-icon" aria-hidden="true">
+              <%= render "shared/icons/utensils" %>
+            </span>
+            <%= tag.span t("nav.meny"), class: "tab-label" %>
+          <% end %>
+        </li>
+        <li>
+          <%= link_to cart_path, class: "tab", aria: { current: ("page" if active_tab == "cart") } do %>
+            <span class="tab-icon" aria-hidden="true">
+              <%= render "shared/icons/bag" %>
+              <%= tag.span cart_count.to_i, id: "cart_count", class: "tab-badge", hidden: cart_count.to_i.zero? %>
+            </span>
+            <%= tag.span t("nav.bestill"), class: "tab-label" %>
+          <% end %>
+        </li>
+        <li>
+          <%= link_to loyalty_path, class: "tab", aria: { current: ("page" if active_tab == "loyalty") } do %>
+            <span class="tab-icon" aria-hidden="true">
+              <%= render "shared/icons/khatam" %>
+            </span>
+            <%= tag.span t("nav.klubb"), class: "tab-label" %>
+          <% end %>
+        </li>
+        <li>
+          <%= link_to about_path, class: "tab", aria: { current: ("page" if active_tab == "mer") } do %>
+            <span class="tab-icon" aria-hidden="true">
+              <%= render "shared/icons/ellipsis" %>
+            </span>
+            <%= tag.span t("nav.mer"), class: "tab-label" %>
+          <% end %>
+        </li>
+      </ul>
+    </nav>
+  </body>
+</html>

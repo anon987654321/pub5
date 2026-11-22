@@ -1,0 +1,1 @@
+{"receipt":"1","law":"NO_PUTS","subject":"MASTER/lib/agent/agent_cli.rb","evidence":{"kind":"shell","command":"scan --bare","exit":0},"claim":"PASS","measured_at":"2026-11-17T00:50:49Z","revision":"6761fdea","note":"bare scan zero findings","prev_hash":"genesis"}
