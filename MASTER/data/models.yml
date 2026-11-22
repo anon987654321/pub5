@@ -142,13 +142,14 @@ model_defs:
     score: { quality: 0.95, speed: 0.80, cost: 0.85 }
   # glm-5.3-flash routed primary-first by operator request (2026-11-16): the
   # same Z.ai open-platform lane (providers.yml zai block, ZAI_API_KEY) with
-  # the provider's own default_model as the chain head. It also carries the
-  # vision_families reads_images grant the blind pattern already excepts.
+  # the provider's own default_model as the chain head. Image understanding
+  # is routed separately through the explicit vision tier below.
   glm_5_3_flash: &glm_5_3_flash
     id: glm-5.3-flash
     <<: *model_defaults
     score: { quality: 0.93, speed: 0.97, cost: 1.0 }
-  # Ollama Cloud model: context and capabilities are documented by Ollama.
+  # Ollama Cloud text model. MASTER does not infer image input from its text
+  # capability; the separately governed vision tier names verified image lanes.
   # The quality score is a conservative routing prior, not a measured MASTER
   # benchmark; it stays below the destructive-operation quality threshold.
   # The hosted sender does not forward native tool schemas yet; keep this
@@ -434,7 +435,6 @@ vision_families:
     - 'gpt-6'
     - gemini
     - gpt-5
-    - 'glm-5\.3-flash'
     - 'qwen.*vl'
     - pixtral
     - 'gpt-4'
