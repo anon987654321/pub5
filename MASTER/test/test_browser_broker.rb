@@ -55,7 +55,10 @@ class BrowserBrokerTest < Minitest::Test
     assert_includes bridge, "capabilities:,"
     assert_includes bridge, "browser_scope_binding.with(browser, &fold)"
     assert_includes builder, "browser_broker_binding:"
-    refute_includes builder, "browser_broker_binding:" + " binding" # no tool factory gets the binder
+    agent_boot = File.read(File.join(Master::ROOT, "lib", "builder", "ai_boot.rb"))
+    assert_includes agent_boot, "browser_broker: infra[:browser_broker]"
+    refute_includes agent_boot, "browser_broker_binding",
+                    "the binder must not be placed in agent/plugin services"
   end
 
   def test_all_six_production_adapters_attach_only_to_broker_issued_leases
@@ -142,10 +145,9 @@ class BrowserBrokerTest < Minitest::Test
   def test_a_binder_for_another_scope_cannot_authorize_the_injected_scope
     host_scope_binding = nil
     host_scope = Broker::Scope.new { |core_binding| host_scope_binding = core_binding }
-    _separate_scope_binding = nil
-    separate_scope = Broker::Scope.new { |core_binding| _separate_scope_binding = core_binding }
+    separate_scope_binding = nil
+    Broker::Scope.new { |core_binding| separate_scope_binding = core_binding }
 
-    separate_scope_binding = _separate_scope_binding
     fake = broker
     separate_scope_binding.with(fake) do
       refute host_scope.available?
