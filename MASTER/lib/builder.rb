@@ -143,10 +143,16 @@ module Master
       subscribe_ecology_reindex(bus:, ecology:)
       diag = Trace::Diag.new(homeostat: loop_c[:homeostat], breaker: reach[:breaker], logging: trace[:logging], event_bus: bus)
       # Browser sessions are not boot services. CoreBridge constructs a
-      # broker only for the current operation's capability set; exposing a
-      # process broker here would let ordinary chat/plugins inherit :fix powers.
-      { renderer:, output_check:, output_guard:, code_index:, reference_graph:, ecology:, diag:,
-        workspace_root: workspace, browser_broker: Io::BrowserBroker::Scope.new }
+      # broker only for the current operation's capability set; tools receive
+      # only the read/use facade, never the binder that can install authority.
+      browser_broker_binding = nil
+      browser_broker = Io::BrowserBroker::Scope.new do |binding|
+        browser_broker_binding = binding
+      end
+      {
+        renderer:, output_check:, output_guard:, code_index:, reference_graph:, ecology:, diag:,
+        workspace_root: workspace, browser_broker:, browser_broker_binding:
+      }
     end
 
     def subscribe_ecology_reindex(bus:, ecology:)
