@@ -419,7 +419,7 @@ test("server-selected human mask profile drives the particle face and its source
 
   const api = window.MASTER_FACE_MASKS;
   assert.equal(api.current().id, "iatmul-river");
-  assert.match(controller, /@face_mask_profile = @face_mask_entry.fetch\("particle_profile", ""\)\.to_s/);
+  assert.match(controller, /@face_mask_profile = @face_mask_entry \? @face_mask_entry\.fetch\("particle_profile", ""\)\.to_s/);
   assert.match(view, /window\.MASTER_FACE_MASK_PROFILE =/);
   assert.match(view, /window\.MASTER_FACE_MASK_CATALOG =/);
   assert.match(archive, /particle_profile: "iatmul-river"/);
@@ -451,7 +451,8 @@ test("new chat is a server action and does not accept a client-selected characte
   assert.match(chat, /window\.location\.reload\(\)/);
   assert.match(routes, /post "chat\/new",\s+to: "chat#new_conversation"/);
   assert.match(controller, /def new_conversation/);
-  assert.match(controller, /face_mask_entry_for\(conversation, Array\(archive\["entries"\]\)\)/);
+  assert.match(controller, /face_mask_entry_for\(conversation, archive\)/);
+  assert.match(controller, /profiles = Array\(archive\["rotation_profiles"\]\)\.map\(&:to_s\)/);
   assert.match(controller, /def face_character_note\(conversation:/);
   assert.doesNotMatch(actions, /form\.append\("face_profile"/);
   assert.match(controller, /cookies\.signed\[:master_face_mask_rotation\]/);
