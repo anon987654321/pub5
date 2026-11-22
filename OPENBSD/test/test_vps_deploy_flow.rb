@@ -421,7 +421,7 @@ class VpsDeployFlowTest < Minitest::Test
   # the rest of the sequence
 
   def test_heavy_builds_are_not_part_of_the_remote_deploy_flow
-    assert_includes SOURCE, "admit_host_load"
+    assert_includes SOURCE, "ensure_host_admission"
     assert_includes SOURCE, ".pub5-build-sha"
     refute_includes SOURCE, "rails_assets_precompile_as_app"
     refute_includes SOURCE, "ci-run.ksh"

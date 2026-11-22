@@ -943,6 +943,20 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes block, "cpu-pressure"
     assert_includes block, "420 && pressure_busy >= 80"
     assert_includes SOURCE, "admit_host_load"
+    assert_includes SOURCE, "VPS_DEPLOY_ADMITTED_SHA=$pin"
+  end
+
+  def test_fleet_admission_runs_once_before_mirror_and_children
+    parent = SOURCE.index("if [[ $deploy_target_kind == all || $deploy_target_kind == group ]]; then")
+    gate = SOURCE.index("  ensure_host_admission", parent)
+    mirror = SOURCE.index('zsh "$repo/OPENBSD/OPERATOR.sh" --apply', parent)
+    child = SOURCE.index('zsh "$0" "$one"', parent)
+
+    refute_nil gate
+    assert_operator gate, :<, mirror
+    assert_operator gate, :<, child
+    assert_includes SOURCE, 'if [[ ${VPS_DEPLOY_ADMITTED_SHA:-} == "$pin" ]]; then'
+    assert_includes SOURCE, "resource shedding remains active"
   end
 
   def test_vps_deploy_and_master_deployer_are_build_free

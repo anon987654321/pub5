@@ -1123,6 +1123,16 @@ admit_host_load() {
     (( sample == 1 )) && sleep 60
   done
 }
+
+ensure_host_admission() {
+  if [[ ${VPS_DEPLOY_ADMITTED_SHA:-} == "$pin" ]]; then
+    log "host admission already passed for pinned SHA $pin"
+    return 0
+  fi
+  admit_host_load
+  VPS_DEPLOY_ADMITTED_SHA=$pin
+  export VPS_DEPLOY_ADMITTED_SHA
+}
 if (( lock_owner )); then
   set_stage pin
     retry "${VPS_DEPLOY_GIT_RETRIES:-3}" 2 git_as_deploy_user fetch -q origin main \
@@ -1231,8 +1241,9 @@ choose_deploy_order() {
 }
 
 if [[ $deploy_target_kind == all || $deploy_target_kind == group ]]; then
-  # The parent spans child deploys and cooldowns. Its marker protects the
-  # deploy process from stale-CI cleanup; resource shedding remains active.
+  # The parent checks capacity once before any mirror/app rollout. The exact SHA
+  # token is inherited by serial children; resource shedding stays active.
+  ensure_host_admission
   keep_deploy_flag
   typeset -i first=1
   typeset -a deploy_order
@@ -1281,7 +1292,7 @@ write_stamp() {
 set_stage "$deploy_app_group"
 if [[ $deploy_app_group == master ]]; then
   print "vps-deploy: master web"
-  admit_host_load
+  ensure_host_admission
   keep_deploy_flag
   settle_boots
   if zsh "$repo/OPENBSD/bin/vps_deploy_master.sh"; then
@@ -1360,7 +1371,7 @@ done
 set_stage preflight
 print "vps-deploy: $app (preflight load)"
 admin_request resource-guard || true
-admit_host_load
+ensure_host_admission
 
 keep_deploy_flag
 
