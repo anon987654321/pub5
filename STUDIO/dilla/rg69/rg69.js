@@ -576,7 +576,9 @@ widener.connect(analyser=new Tone.Analyser('waveform',256));
 revSend.connect(fxRev);
 fxRev.connect(compPar);
 dlySend.connect(fxDly);
-fxDly.connect(compPar);
+fxDlyFlt=new Tone.Filter(rg69AudioProfile.rig.delay.lowpass,'lowpass');
+fxDly.connect(fxDlyFlt);
+fxDlyFlt.connect(compPar);
 if(fxRev&&typeof fxRev.generate==="function")await fxRev.generate();
 lofiNoise=new Tone.Noise('pink').start();
 lofiNoise.volume.value=-45;
@@ -609,14 +611,14 @@ keysChorus.connect(keysTrem);
 keysTrem.connect(keysDrive);
 keysDrive.connect(keysG);
 // Warm, worklet-free saturation + 5kHz bandwidth limit on keys
-const keysTexture=new Tone.Distortion(0.18);keysTexture.wet.value=0.6;
-const keysLP=new Tone.Filter(PARAMS.KEYS_LP_HZ,'lowpass');
+const keysTexture=new Tone.Distortion(toneProfile.keys.texture_amount);keysTexture.wet.value=toneProfile.keys.texture_wet;
+const keysLP=new Tone.Filter(toneProfile.keys.filter_base_hz+voiceProfile.brightness*toneProfile.keys.filter_brightness_span_hz,'lowpass');
 keysG.connect(keysTexture);keysTexture.connect(keysLP);keysLP.connect(masterG);keysLP.connect(revSend);keysLP.connect(dlySend);
 padsN.connect(padsFlt);
 padsFlt.connect(padsG);
 // old-sampler: 3.5kHz bandwidth + warmth on pads
-const padsBW=new Tone.Filter(PARAMS.PADS_LP_HZ,'lowpass');
-const padsSat=new Tone.Chebyshev(2);padsSat.wet.value=0.2;
+const padsBW=new Tone.Filter(toneProfile.pads.lowpass_hz,'lowpass');
+const padsSat=new Tone.Chebyshev(toneProfile.pads.saturation_order);padsSat.wet.value=toneProfile.pads.saturation_wet;
 padsG.connect(padsBW);padsBW.connect(padsSat);padsSat.connect(masterG);padsSat.connect(revSend);padsSat.connect(dlySend);
 // route remaining tracks
 [drumG,bassG].forEach(g=>{g.connect(masterG);g.connect(revSend);g.connect(dlySend);});
@@ -626,16 +628,18 @@ log("audio engine init (analog++)","k");
 }
 
 function applyFX(){
+const profile=rg69AudioProfile;
 if(st_.started)Tone.Transport.bpm.value=aud_.bpm;
 if(drumG)drumG.gain.value=mix_.drum/100;
 if(bassG)bassG.gain.value=mix_.bass/100;
-if(keysG)keysG.gain.value=mix_.keys/100;
-if(padsG)padsG.gain.value=mix_.pads/100;
+if(keysG)keysG.gain.value=mix_.keys/100*profile.voice.level;
+if(padsG)padsG.gain.value=mix_.pads/100*profile.voice.level;
 if(masterG)masterG.gain.value=mix_.master/100;
-if(revSend)revSend.gain.value=(aud_.reverb/100)*PARAMS.REVERB_SEND;
-if(dlySend)dlySend.gain.value=(aud_.delay/100)*PARAMS.DELAY_SEND;
-if(fxRev){fxRev.wet.value=1;fxRev.decay=1+(aud_.reverb/100)*PARAMS.REVERB_DECAY_MAX;}
-if(fxDly){fxDly.wet.value=1;fxDly.feedback.value=0.1+(aud_.delay/100)*PARAMS.DELAY_FB_MAX;}
+if(revSend)revSend.gain.value=(aud_.reverb/100)*profile.rig.reverb.level_chords;
+if(dlySend)dlySend.gain.value=(aud_.delay/100)*profile.rig.delay.throw_chords;
+if(fxRev){fxRev.wet.value=1;fxRev.decay=1+(aud_.reverb/100)*profile.rig.reverb.size*profile.effects.reverb_decay_scale;}
+if(fxDly){fxDly.wet.value=1;fxDly.feedback.value=profile.rig.delay.feedback+(aud_.delay/100)*profile.effects.delay_feedback_range;}
+if(fxDlyFlt)fxDlyFlt.frequency.value=profile.rig.delay.lowpass;
 if(fxFlt)fxFlt.frequency.value=PARAMS.FILTER_MIN_HZ+aud_.filter/100*PARAMS.FILTER_MAX_HZ;
 if(tapeSat)tapeSat.wet.value=aud_.tape/100;
 if(compPar)compPar.ratio.value=1+aud_.comp/100*PARAMS.COMP_RATIO_MAX;
@@ -643,7 +647,7 @@ if(widener)widener.width.value=aud_.width/100;
 if(vinylNoise)vinylNoise.volume.value=-60+aud_.vinyl/100*20;
 if(crackleNoise)crackleNoise.volume.value=-65+aud_.crackle/100*20;
 if(masterDrive)masterDrive.wet.value=(100-aud_.drive)/400;
-if(driftLFO)driftLFO.frequency.value=.05+aud_.wobble/100*PARAMS.WOBB_FREQ_MAX;
+if(driftLFO)driftLFO.frequency.value=.05+aud_.wobble/100*Math.min(rg69AudioProfile.rig.wobble.rate_hz,rg69AudioProfile.effects.wobble_frequency_cap_hz);
 }
 
 // Shared helper function for triggering notes - eliminates duplication between scheduleLoop and exportWAV
