@@ -68,6 +68,50 @@ class FixMissionTest < Minitest::Test
     end
   end
 
+  def test_automatic_mission_blocks_after_its_bounded_attempt_budget
+    Dir.mktmpdir do |root|
+      mission = Master::Fix::Mission.new(root:).start!(
+        goal: "repair repository", scope: root, origin: "fold", auto_continue: true,
+      )
+      mission.send(:with_lock) do
+        record = mission.instance_variable_get(:@record)
+        record["attempt_count"] = Master::Fix::Mission::MAX_AUTOMATIC_ATTEMPTS
+        mission.send(:persist!)
+      end
+
+      mission.defer!(reason: "worker failed")
+
+      record = Master::Fix::Mission.current(root:)
+      assert_equal "blocked", record.fetch("state")
+      assert_equal false, record.fetch("auto_continue")
+      assert_equal Master::Fix::Mission::MAX_AUTOMATIC_ATTEMPTS, record.fetch("attempt_count")
+      assert_equal 0, record.fetch("retry_count")
+      assert_nil record.fetch("next_wake_at")
+      assert_match(/automatic retry budget exhausted/, record.fetch("wake_reason"))
+    end
+  end
+
+  def test_manual_mission_is_not_limited_by_the_automatic_attempt_budget
+    Dir.mktmpdir do |root|
+      mission = Master::Fix::Mission.new(root:).start!(
+        goal: "repair repository", scope: root, origin: "manual", auto_continue: false,
+      )
+      mission.send(:with_lock) do
+        record = mission.instance_variable_get(:@record)
+        record["attempt_count"] = Master::Fix::Mission::MAX_AUTOMATIC_ATTEMPTS + 20
+        mission.send(:persist!)
+      end
+
+      mission.defer!(reason: "operator will retry manually", seconds: 60)
+
+      record = Master::Fix::Mission.current(root:)
+      assert_equal "waiting", record.fetch("state")
+      assert_equal false, record.fetch("auto_continue")
+      assert_equal 1, record.fetch("retry_count")
+      assert_equal "operator will retry manually", record.fetch("wake_reason")
+    end
+  end
+
   def test_namespaced_fix_mission_keeps_backlog_parent_lease_and_record
     Dir.mktmpdir do |root|
       parent = Master::Fix::Mission.new(root:).start!(
