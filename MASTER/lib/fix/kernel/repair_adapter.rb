@@ -71,10 +71,11 @@ module Master
       # Single-pass fixer for one law across a set of files.
       # Kernel::ConvergenceAdapter owns convergence; this adapter repairs one batch per call.
       #
-      # Fix routing (per violation severity + file size):
-      #   error tier  → council_fix   (3-reviewer veto before apply)
-      #   large file  → diff_fix      (unified diff patch; arch #5)
-      #   small file  → genetic_fix   (N candidates, rescan, best wins; arch #9)
+      # Candidate gates are independent of proposal strategy:
+      #   error/critical → independent consensus before source application
+      #   large file     → unified diff proposal
+      #   other findings → ordinary proposal, then reflexion verification
+      #   visual styles  → optional bounded BestOfN render simulation when enabled
       class RepairAdapter
         RATE_LIMIT_SLEEP = 10
         MAX_FIX_RETRIES = 2

@@ -459,9 +459,9 @@ workstreams:
     proof: Concurrent writer test, lease/lock receipt, interruption cleanup and proof no other writer's paths were staged
   - id: council_readiness_admission
     state: partial
-    title: Independent juror readiness is checked before /fix spends its repair budget
-    implementation: MASTER/lib/fix; MASTER/lib/ai
-    proof: Exclude each possible author family in turn and retain the independent voter quorum and admission receipt
+    title: Candidate-level consensus protects high-risk repairs without gating deterministic work
+    implementation: MASTER/lib/fix/lane_preflight.rb; MASTER/lib/fix/fix_loop/pass_runner.rb; MASTER/lib/fix/kernel/repair_adapter.rb; MASTER/lib/review/consensus.rb
+    proof: MASTER/test/test_fix_lane_preflight.rb (no run-wide jury/provider probe); MASTER/test/test_consensus.rb (independent quorum and author exclusion); full Ruby execution NOT_RUN
   - id: law_reload_diagnosis
     state: partial
     title: Law reload records its reason, resolved root and changed paths before reload semantics are altered

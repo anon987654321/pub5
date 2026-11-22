@@ -38,10 +38,11 @@ class BestOfNTest < Minitest::Test
   end
 
   def measurer = ->(_surfaces, root:) { [[@surface, rendering(File.read(@path)[/kind-(\w+)/, 1] || "mid")]] }
+  def read = -> { File.read(@path) }
   def write = ->(src) { File.write(@path, src) }
 
   def rank(*candidates, **over)
-    B.rank(candidates, original: @original, surfaces: [@surface], root: @root, measurer:, write:, **over)
+    B.rank(candidates, original: @original, surfaces: [@surface], root: @root, measurer:, read:, write:, **over)
   end
 
   def test_the_best_scoring_candidate_wins_and_the_original_is_restored
@@ -69,7 +70,24 @@ class BestOfNTest < Minitest::Test
 
   def test_unrenderable_candidates_are_discarded
     none = ->(_s, root:) { [] }
-    assert_nil B.rank([".a{}"], original: @original, surfaces: [@surface], root: @root, measurer: none, write:)
+    assert_nil B.rank([".a{}"], original: @original, surfaces: [@surface], root: @root, measurer: none, read:, write:)
+  end
+
+  def test_concurrent_source_change_during_render_is_preserved
+    good = ".a { margin: 16px; } /* kind-good */\n"
+    concurrent = ".a { margin: 21px; } /* another writer */\n"
+    measurer = lambda do |_surfaces, root:|
+      File.write(@path, concurrent)
+      [[@surface, rendering("good")]]
+    end
+
+    error = assert_raises(B::SourceChanged) do
+      B.rank([good], original: @original, surfaces: [@surface], root: @root,
+             measurer:, read:, write:)
+    end
+
+    assert_match(/concurrent content was preserved/, error.message)
+    assert_equal concurrent, File.read(@path)
   end
 
   def test_one_candidate_keeps_todays_behaviour

@@ -13,13 +13,11 @@ require_relative "user_simulation/execution"
 
 module Master
   module Fix
-    # Best-of-N for one visual finding, the way postpro keeps the best-scoring
-    # of several drafts: the fixer proposes N distinct candidates, each is
-    # written in turn, the affected surfaces are re-rendered and measured, and
-    # the file goes back to its original before the next. A candidate is
-    # discarded when its layout score drops past the tolerance, a quality-check
-    # metric worsens, or chrome drifts off its budget. Of the survivors the
-    # highest mean layout score wins, the smallest diff breaking a tie.
+    # Bounded visual candidate selection for one finding. Candidates are
+    # rendered one at a time under the existing pass transaction, then the
+    # original source is restored before the next trial. A candidate is discarded
+    # when layout quality, a quality-check metric or chrome drift regresses.
+    # The best surviving score wins; the smallest diff breaks a tie.
     #
     # MASTER_FIX_BEST_OF sets N (default 1). At 1 the pass is inactive and
     # RepairLoop behaves exactly as it did without it.
@@ -34,6 +32,8 @@ module Master
         "Candidate approach: prefer an existing design token or layout primitive over a new value.",
       ].freeze
       Scored = Data.define(:source, :score, :problems, :diff)
+
+      class SourceChanged < StandardError; end
 
       module_function
 
@@ -58,8 +58,16 @@ module Master
         initial_authors = Array(Thread.current[:master_fix_candidate_author_models])
         extra_authors = Hash.new { |hash, key| hash[key] = [] }
         extra = extra_candidate_sources(loop, violation, original, extra_authors)
-        selected = rank([first, *extra], original:, surfaces: custody.surfaces, root:, measurer:, anchors: [violation[:anchor]].compact,
-                        write: ->(src) { loop.send(:write_atomic, path, src) })
+        selected = rank(
+          [first, *extra],
+          original:,
+          surfaces: custody.surfaces,
+          root:,
+          measurer:,
+          anchors: [violation[:anchor]].compact,
+          read: -> { File.read(path, encoding: "UTF-8") },
+          write: ->(src) { loop.send(:write_atomic, path, src) },
+        )
         note_candidate_authors(selected, initial_authors, extra_authors[selected])
         selected
       end
@@ -87,15 +95,25 @@ module Master
           (initial_authors + Array(selected_authors)).compact.map(&:to_s).reject(&:empty?).uniq.freeze
       end
 
-      def rank(candidates, original:, surfaces:, root:, measurer:, write:, anchors: [])
+      def rank(candidates, original:, surfaces:, root:, measurer:, read:, write:, anchors: [])
         pool = candidates.map(&:to_s).reject { |c| c.strip.empty? || c == original }.uniq
         scored = pool.each_with_index.map do |source, i|
+          raise SourceChanged, "source changed before visual candidate trial" unless read.call == original
+
           write.call(source)
+          raise SourceChanged, "candidate write did not match the proposed source" unless read.call == source
+
           row = score(source, original, measurer.call(surfaces, root:), root:, anchors:)
           log(i + 1, pool.size, row)
           row
         ensure
-          write.call(original)
+          current = read.call
+          if current == source
+            write.call(original)
+          elsif current != original
+            raise SourceChanged, "source changed during visual measurement; concurrent content was preserved"
+          end
+          raise SourceChanged, "original source restoration could not be verified" unless read.call == original
         end
         scored.select { |row| row.problems.empty? }.max_by { |row| [(row.score / TIE).round, -row.diff] }&.source
       end
