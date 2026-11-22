@@ -708,7 +708,7 @@ activeStepUiIndex=next;
 function updateVisuals(){
 if(!st_.playing){st_.rafId=null;return;}
 const now=performance.now();
-if(now-(st_.visualLastUpdate||0)>=33){
+if(now-(st_.visualLastUpdate||0)>=50){
 st_.visualLastUpdate=now;
 const data=analyser?.getValue();
 if(data&&data.length){
@@ -722,7 +722,6 @@ if(Math.abs(sample)>=0.98)clipping=true;
 const rms=Math.sqrt(sumSquares/data.length);
 st_.peakL=Math.max(st_.peakL*PARAMS.VU_DECAY,rms);
 st_.peakR=Math.max(st_.peakR*PARAMS.VU_DECAY,rms);
-resizeVizCanvas();
 if(vizContext&&vizCanvas){
 const width=vizCanvas.width,height=vizCanvas.height;
 vizContext.fillStyle=vizColors.background;
