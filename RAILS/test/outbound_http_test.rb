@@ -269,6 +269,8 @@ class FediverseSsrfTest < Minitest::Test
   private
 
   ChunkedResponse = Struct.new(:chunks, :body, :chunks_read) do
+    def [](_key) = nil
+
     def read_body
       self.chunks_read = 0
       chunks.each do |chunk|

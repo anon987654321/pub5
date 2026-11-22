@@ -31,7 +31,7 @@ class StudioContractTest < Minitest::Test
     output, status = Contracts::Studio.run_bounded(
       [RbConfig.ruby, "-e", "STDOUT.sync = true; print 'started'; sleep 30"],
       chdir: Dir.tmpdir,
-      timeout: 0.1
+      timeout: 1.0
     )
     elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
 

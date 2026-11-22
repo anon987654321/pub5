@@ -143,8 +143,8 @@ class LayoutContractSurfacesTest < Minitest::Test
     # Anchor to the base rules: the sheet also carries a luxury override whose
     # selector ends in .amber-masthead--home, and a minified restore row, and
     # the spacious stage is the base rule's contract.
-    masthead_rules = styles.scan(/^\.amber-masthead--home\s*\{([^}]*)\}/m).flatten
-    logo_rules = styles.scan(/^\.amber-masthead--home\s+\.amber-logo-home\s*\{([^}]*)\}/m).flatten
+    masthead_rules = styles.scan(/^\s*\.amber-masthead--home\s*\{([^}]*)\}/m).flatten
+    logo_rules = styles.scan(/^\s*\.amber-masthead--home\s+\.amber-logo-home\s*\{([^}]*)\}/m).flatten
 
     refute_empty masthead_rules, "Amber home masthead rule is missing"
     refute_empty logo_rules, "Amber home wordmark sizing rule is missing"

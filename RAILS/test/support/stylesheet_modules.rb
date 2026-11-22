@@ -15,12 +15,15 @@
 module StylesheetModules
   ROOT = File.expand_path("../..", __dir__)
 
-  MODULE_OPEN = /\A\/\/ ={5,} module: ([a-z0-9_]+)\s*\z/.freeze
-  MODULE_CLOSE = /\A\/\/ ={5,} \/module: /.freeze
+  MODULE_OPEN = /\A\s*\/\/ ={5,} module: ([a-z0-9_]+)\s*\z/.freeze
+  MODULE_CLOSE = /\A\s*\/\/ ={5,} \/module: /.freeze
 
   # brgen was re-cut into `@use` partials on 2026-11-01; amber and bsdports keep
   # the banner layout. Both are read here so the law tests name modules, not files.
   LOCAL_USE = /\A@use "([a-z0-9_]+)";\s*\z/.freeze
+  # The layered entry sheet loads its partials through meta.load-css, which the
+  # bare @use scan above cannot see.
+  LOAD_CSS = /\A\s*@include meta\.load-css\("([a-z0-9_]+)"\);\s*\z/.freeze
   WRAPPER_LINE = %r{\A\s*(?:@use\b.*|//.*)?\z}.freeze
 
   def application_scss(app)
@@ -32,9 +35,11 @@ module StylesheetModules
     path if File.file?(path)
   end
 
-  # Local partials the root sheet loads with a bare `@use`, in cascade order.
+  # Local partials the root sheet loads, in cascade order.
   def used_partials(app)
-    application_scss(app).lines.filter_map { |line| line[LOCAL_USE, 1] }.select { |name| partial_path(app, name) }
+    application_scss(app).lines.filter_map do |line|
+      line[LOCAL_USE, 1] || line[LOAD_CSS, 1]
+    end.select { |name| partial_path(app, name) }
   end
 
   # The whole stylesheet as the compiler sees it: root sheet plus its partials.

@@ -42,7 +42,7 @@ class FeedRankingContractTest < Minitest::Test
     assert_includes source, "else ranked_for(viewer: viewer)", "the default feed lane is ranked_for"
     assert_includes source, 'when "hot" then hot', "hot keeps its own tab"
     assert_match(/when "following".*followed_by\(viewer\)/m, source, "the following lane keeps its resolver")
-    assert_match(%r{scope :followed_by.*order\(created_at: :desc\)}m, source,
+    assert_match(%r{scope :followed_by.*order\(created_at: :desc(?:, id: :desc)?\)}m, source,
                  "the following lane is chronological on purpose; ranking chosen people is the fenced horizon")
     assert_match(/def self\.ranked_for.*kept\.order/m, source, "removed posts never appear in the ranked lane")
   end

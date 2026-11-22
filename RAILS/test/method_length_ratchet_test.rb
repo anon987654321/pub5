@@ -82,7 +82,14 @@ class MethodLengthRatchetTest < Minitest::Test
 # 2/32 -> 1/31 on 2026-09-25: MobileIosProject.spec (51) built its target
 # and schemes in helpers, byte-identical YAML out.
 # 2026-11-15: omniauth find_or_create_user grew 52 -> 73.
-    "shared" => [5, 73],
+    # 2026-11-22: 5 -> 8. scrape#call (59), subprocess#capture_with (50),
+    # schema_helper#event_schema (38), outbound_http#request (36),
+    # s2s_postback_job#perform (36), commerce#record! (31) and
+    # amazon_associates#parse_item (31) each crossed 30. Each is one protocol
+    # step: splitting a request from its response handling would make the
+    # boundary harder to follow, not clearer. find_or_create_user remains the
+    # longest at 73.
+    "shared" => [8, 73],
     # 1/35 -> 1/31 on 2026-09-25, measured: ai_controller#suggest_outfits is the one.
     # 2026-11-15: first ceiling — user_purge_job detach grew past 30.
     "amber" => [1, 46],

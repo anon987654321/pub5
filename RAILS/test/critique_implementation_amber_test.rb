@@ -74,7 +74,7 @@ class CritiqueImplementationAmberTest < Minitest::Test
     assert_includes shared_post_css, ".feed-card.post-reading-card .feed-card-time {\n  font-variant-numeric: tabular-nums;"
     assert_includes feed, 'class: "feed-action"'
     assert_includes feed, 'form_class: "feed-action-form"'
-    luxury_titles = css[/body\[data-surface="luxury"\] :is\((.*?)\n\) \{/m, 1]
+    luxury_titles = css[/body\[data-surface="luxury"\] :is\((.*?)\n\s*\) \{/m, 1]
     refute_nil luxury_titles, "Amber luxury heading selector should remain explicit"
     refute_match(/\.post-reading-title/, luxury_titles, "feed cards keep the shared family title face")
     # The detail page's h1 repeats the body's opening words, so it is for

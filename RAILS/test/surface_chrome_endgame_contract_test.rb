@@ -44,7 +44,7 @@ class SurfaceChromeEndgameContractTest < Minitest::Test
       assert_includes app, selector
     end
 
-    assert_match(/\n@include endgame\.amber;\s*\z/, endpoint,
+    assert_match(/\n\s*@include endgame\.amber;\s*\z/, endpoint,
                  "the endgame include must remain the module's last rule")
     assert_operator app.rindex("module: amber_shared_overrides"), :>,
                     app.rindex(".feed-card {"),

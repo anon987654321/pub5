@@ -84,7 +84,10 @@ class SharedWiringCheckTest < Minitest::Test
     end
   end
 
-  ERROR_PAGES = (Dir[File.join(ROOT, "{amber,brgen,bsdports}/public/*.html")] + Dir[File.join(ROOT, "__shared/public/*.html")]).freeze
+  # tunnel.html is the radio visualizer, not an error page; the error-page
+  # language and custom-property contracts do not apply to it.
+  ERROR_PAGES = (Dir[File.join(ROOT, "{amber,brgen,bsdports}/public/*.html")] + Dir[File.join(ROOT, "__shared/public/*.html")])
+                .reject { |path| File.basename(path) == "tunnel.html" }.freeze
   ERRORS_CSS = File.read(File.join(ROOT, "__shared/public/styles/errors.css"))
 
   def declared(css) = css.scan(/(--[\w-]+)\s*:/).flatten
