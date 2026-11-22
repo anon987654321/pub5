@@ -233,7 +233,7 @@ class BrowserBrokerTest < Minitest::Test
 
     assert b.navigate(lease.id, "https://EXAMPLE.com/page")
     error = assert_raises(Broker::Denied) { b.navigate(lease.id, "https://www.example.com/page") }
-    assert_match(/bound to example\\.com/, error.message)
+    assert_includes error.message, "bound to example.com"
     error = assert_raises(Broker::Denied) { b.navigate(lease.id, "https://other.example/") }
 
     assert_match(/bound to example\.com/, error.message)
