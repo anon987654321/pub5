@@ -127,6 +127,11 @@ module Operator
       failed = statuses.count("FAIL")
       timed_out = statuses.count("TIMEOUT")
       blocked = statuses.count("BLOCKED")
+      repository_evidence_complete = metadata[:main_sha].to_s.match?(/\\A[0-9a-f]{40}\\z/i) &&
+                                     metadata[:checked_out_sha].to_s.match?(/\\A[0-9a-f]{40}\\z/i) &&
+                                     !metadata[:branch].to_s.empty? &&
+                                     metadata[:clean_checkout] == true &&
+                                     !metadata[:main_ref].to_s.empty?
       status = if failed.positive?
                  "FAIL"
                elsif timed_out.positive?
@@ -135,6 +140,8 @@ module Operator
                  "BLOCKED"
                elsif statuses.empty?
                  "NOT_RUN"
+               elsif !repository_evidence_complete
+                 "INCONCLUSIVE"
                else
                  "PASS"
                end
@@ -142,6 +149,7 @@ module Operator
       receipt = {
         "schema_version" => 1,
         "receipt_id" => SecureRandom.uuid,
+        "operation_id" => SecureRandom.uuid,
         "operation_type" => "check",
         "receipt_type" => "master_check",
         "profile" => profile.to_s,
@@ -155,6 +163,7 @@ module Operator
         "main_ref" => metadata[:main_ref],
         "exact_checked_out_sha" => metadata[:checked_out_sha],
         "clean_checkout" => metadata[:clean_checkout],
+        "repository_evidence_complete" => repository_evidence_complete,
         "environment" => metadata[:environment],
         "command" => command,
         "exit_status" => (statuses.empty? ? nil : exit_status),
