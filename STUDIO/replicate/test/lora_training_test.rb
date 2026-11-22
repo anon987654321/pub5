@@ -244,6 +244,51 @@ class TestStudioLoraTrainingRunner < Minitest::Test
     assert_equal 2, Studio::Lora::Training.run_cli(["--subject", "johann"])
   end
 
+  def test_private_spend_ledger_records_partial_costs_without_provider_error_text
+    Dir.mktmpdir("studio-lora-spend-ledger-") do |root|
+      cache = File.join(root, ".cache")
+      Dir.mkdir(cache, 0o700)
+      runner = Studio::Lora::Training::Runner.new(client: Object.new, validator: Object.new, root:)
+      runner.send(:prepare_spend_ledger!)
+      report = {
+        "status" => "SPEND_UNVERIFIED",
+        "spend" => { "approved_batch_budget_usd" => "5.0", "status" => "SPEND_UNVERIFIED" },
+        "results" => [{
+          "subject" => "johann",
+          "status" => "FAILED",
+          "training_id" => "training_123",
+          "provider_request_dispatched" => true,
+          "billing" => { "cost_status" => "NOT_REPORTED_BY_PROVIDER" },
+          "error" => "must not enter the receipt; includes a signed upload URL"
+        }]
+      }
+
+      path = runner.send(:append_spend_receipt!, report, subjects: ["johann"])
+      record = JSON.parse(File.read(path))
+
+      assert_equal "studio.lora.training_spend.v1", record.fetch("schema")
+      assert_equal "SPEND_UNVERIFIED", record.fetch("status")
+      assert_equal "NOT_REPORTED_BY_PROVIDER", record.dig("results", 0, "billing", "cost_status")
+      refute_includes File.read(path), "signed upload URL"
+      assert_equal 0o600, File.stat(path).mode & 0o777
+      assert_equal 1, File.readlines(path).length
+    end
+  end
+
+  def test_private_spend_ledger_refuses_symlink_before_append
+    Dir.mktmpdir("studio-lora-spend-symlink-") do |root|
+      cache = File.join(root, ".cache")
+      Dir.mkdir(cache, 0o700)
+      target = File.join(root, "outside.jsonl")
+      File.write(target, "keep")
+      File.symlink(target, File.join(cache, "training-spend.jsonl"))
+      runner = Studio::Lora::Training::Runner.new(client: Object.new, validator: Object.new, root:)
+
+      assert_raises(Studio::Lora::Training::Error) { runner.send(:prepare_spend_ledger!) }
+      assert_equal "keep", File.read(target)
+    end
+  end
+
   def test_all_three_subjects_are_the_default_batch
     assert_equal %w[johann ragnhild merethe], Studio::Lora::Training::SUBJECTS
   end
