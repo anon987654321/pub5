@@ -340,8 +340,8 @@ class TestRg69Defaults < Minitest::Test
     export = js[/async function exportWAV\(.*?(?=\nlet mediaRecorder)/m] or raise "no exportWAV"
     apply = js[/function applyFX\(\)(.*?)\n\}/m, 1] or raise "no applyFX"
 
-    %w[kick snare clap hat open].each do |lane|
-      assert_includes panners, "k.#{lane}"
+    { "kick" => "k.kick", "snare" => "k.snare", "clap" => "k.perc", "hat" => "k.hat", "open" => "k.openhat" }.each_value do |source|
+      assert_includes panners, source
     end
     assert_includes panners, "v.pan"
     assert_includes init, "const livePanners=createRG69Panners();"
