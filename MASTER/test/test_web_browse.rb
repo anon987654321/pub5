@@ -101,7 +101,7 @@ class TestWebBrowse < Minitest::Test
 
     Guard.stub(:pinned_address, ->(uri) { uri.host == "example.com" ? "93.184.216.34" : nil }) do
       Guard.stub(:http_for, ->(_uri, address, timeout:) { addresses << [address, timeout]; client }) do
-        tool.send(:handle_request, request, budget: tool.send(:new_budget))
+        tool.send(:handle_request, request, budget: tool.send(:new_budget), allowed_host: "example.com")
       end
     end
 
@@ -114,6 +114,24 @@ class TestWebBrowse < Minitest::Test
     assert_equal "identity", client.last_request["accept-encoding"]
   end
 
+  def test_subrequest_to_an_unlisted_public_host_is_aborted
+    request = InterceptedRequest.new(url: "https://cdn.example.net/app.js")
+    calls = []
+    Guard.stub(:pinned_address, ->(uri) { calls << uri.host; "93.184.216.34" }) do
+      tool.send(:handle_request, request, budget: tool.send(:new_budget), allowed_host: "example.com")
+    end
+
+    assert request.aborted
+    refute request.response_options
+    assert_empty calls, "a host outside the page grant must be refused before DNS pinning or HTTP"
+  end
+
+  def test_secure_page_requires_an_explicit_bound_host
+    page = Object.new
+    assert_raises(ArgumentError) { tool.secure_page(page, allowed_host: nil) }
+    assert_raises(ArgumentError) { tool.secure_page(page, allowed_host: "") }
+  end
+
   def test_non_identity_content_encoding_is_aborted_before_chromium_decodes_it
     request = InterceptedRequest.new(url: "https://example.com/compressed.js")
     response = FakeResponse.new(
@@ -124,7 +142,7 @@ class TestWebBrowse < Minitest::Test
 
     Guard.stub(:pinned_address, "93.184.216.34") do
       Guard.stub(:http_for, ->(_uri, _address, timeout:) { client }) do
-        tool.send(:handle_request, request, budget: tool.send(:new_budget))
+        tool.send(:handle_request, request, budget: tool.send(:new_budget), allowed_host: "example.com")
       end
     end
 
@@ -135,7 +153,7 @@ class TestWebBrowse < Minitest::Test
   def test_non_http_subrequests_are_aborted
     request = InterceptedRequest.new(url: "file:///etc/passwd")
 
-    tool.send(:handle_request, request, budget: tool.send(:new_budget))
+    tool.send(:handle_request, request, budget: tool.send(:new_budget), allowed_host: "example.com")
 
     assert request.aborted
     refute request.response_options
@@ -144,7 +162,7 @@ class TestWebBrowse < Minitest::Test
   def test_mutating_http_methods_are_aborted
     request = InterceptedRequest.new(url: "https://example.com/cart", method: "POST")
 
-    tool.send(:handle_request, request, budget: tool.send(:new_budget))
+    tool.send(:handle_request, request, budget: tool.send(:new_budget), allowed_host: "example.com")
 
     assert request.aborted
   end
@@ -156,7 +174,7 @@ class TestWebBrowse < Minitest::Test
 
     Guard.stub(:pinned_address, "93.184.216.34") do
       Guard.stub(:http_for, ->(_uri, _address, timeout:) { client }) do
-        tool.send(:handle_request, request, budget: tool.send(:new_budget))
+        tool.send(:handle_request, request, budget: tool.send(:new_budget), allowed_host: "example.com")
       end
     end
 
@@ -184,9 +202,9 @@ class TestWebBrowse < Minitest::Test
         requested_hosts << uri.host
         client
       }) do
-        tool.send(:handle_request, request, budget:)
+        tool.send(:handle_request, request, budget:, allowed_host: "example.com")
         follow_up = InterceptedRequest.new(url: "http://127.0.0.1/admin")
-        tool.send(:handle_request, follow_up, budget:)
+        tool.send(:handle_request, follow_up, budget:, allowed_host: "example.com")
 
         assert_equal 403, request.response_options[:responseCode]
         assert_includes request.response_options[:body], "Blocked unsafe redirect"
@@ -212,7 +230,7 @@ class TestWebBrowse < Minitest::Test
       { "example.com" => "93.184.216.34", "cdn.example.net" => "8.8.8.8" }[uri.host]
     }) do
       Guard.stub(:http_for, ->(_uri, _address, timeout:) { client }) do
-        tool.send(:handle_request, request, budget: tool.send(:new_budget))
+        tool.send(:handle_request, request, budget: tool.send(:new_budget), allowed_host: "example.com")
       end
     end
 
