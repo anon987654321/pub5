@@ -305,13 +305,17 @@ class BrowserBrokerTest < Minitest::Test
     refute_respond_to page, :network_object
     assert_equal "https://example.com/", page.url
     assert_equal "Example", page.snapshot.fetch("title")
-    assert_equal [Broker::Page::NETWORK_SANDBOX_SCRIPT, true], [raw_page.commands.first.last.fetch(:source), raw_page.network.intercepted]
+    page.harden_network
+    assert_equal [Broker::Page::NETWORK_SANDBOX_SCRIPT, true],
+                 [raw_page.commands.first.last.fetch(:source), raw_page.network.intercepted]
     assert_equal ["Page.addScriptToEvaluateOnNewDocument", "Network.setCacheDisabled", "Network.setBypassServiceWorker"],
-                 (page.harden_network; raw_page.commands.map(&:first))
+                 raw_page.commands.map(&:first)
     assert_raises(Broker::Denied) { page.on(:response) {} }
     assert_equal "Example link", page.at_css("a").text
     assert_equal "A", page.at_css("a").tag_name
-    assert_equal [raw_page], page.css("a").map { |node| node.instance_variable_get(:@node) }
+    assert_equal ["Example link"], page.css("a").map(&:text)
+    refute_respond_to page.at_css("a"), :node
+    refute_respond_to page.at_css("a"), :native
   ensure
     attachment&.quit
     b&.close(lease.id) if lease
