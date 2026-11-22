@@ -191,6 +191,10 @@ pads:new Tone.Panner(pan(v.pan))
 };
 }
 
+function rg69NoiseLevelDb(base,control,amount,reference){
+return base+(Number(control)||0)/100*20+20*Math.log10(Math.max(.001,Number(amount)||0)/reference);
+}
+
 const DRUM_PATTERNS={
 'eth-mulatu':tpP({k:[1,0,0,.5,0,0,.7,0,0,1,0,0,.5,0,.6,0],s:[0,0,0,0,.8,0,0,.3,0,0,0,0,.9,0,0,.3],c:[0,0,0,0,0,0,0,0,0,0,.4,0,0,0,0,0],h:[.6,.3,.5,.3,.6,.3,.5,.3,.6,.3,.5,.3,.6,.3,.5,.3],o:[0,0,0,0,0,0,0,.4,0,0,0,0,0,0,0,.3]}),
 'eth-funk':tpP({k:[1,0,0,0,.6,0,1,0,0,.5,0,0,1,0,.5,0],s:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,.4],c:[0,0,.3,0,0,0,.3,0,0,0,.3,0,0,0,.3,0],h:[.7,.5,.7,.5,.7,.5,.7,.5,.7,.5,.7,.5,.7,.5,.7,.5],o:[0,0,0,0,0,0,0,.5,0,0,0,0,0,0,0,.5]}),
@@ -678,8 +682,8 @@ if(fxFlt)fxFlt.frequency.value=PARAMS.FILTER_MIN_HZ+aud_.filter/100*PARAMS.FILTE
 if(tapeSat)tapeSat.wet.value=aud_.tape/100;
 if(compPar)compPar.ratio.value=1+aud_.comp/100*PARAMS.COMP_RATIO_MAX;
 if(widener)widener.width.value=aud_.width/100;
-if(vinylNoise)vinylNoise.volume.value=-60+aud_.vinyl/100*20;
-if(crackleNoise)crackleNoise.volume.value=-65+aud_.crackle/100*20;
+if(vinylNoise)vinylNoise.volume.value=rg69NoiseLevelDb(-60,aud_.vinyl,profile.rig.vinyl.level,.1);
+if(crackleNoise)crackleNoise.volume.value=rg69NoiseLevelDb(-65,aud_.crackle,profile.rig.vinyl.crackle,.5);
 if(masterDrive)masterDrive.wet.value=(100-aud_.drive)/400;
 if(driftLFO)driftLFO.frequency.value=.05+aud_.wobble/100*Math.min(rg69AudioProfile.rig.wobble.rate_hz,rg69AudioProfile.effects.wobble_frequency_cap_hz);
 }
@@ -985,6 +989,12 @@ oDlySend.connect(oDly);
 oRev.connect(oComp);
 oDly.connect(oDlyFlt);
 oDlyFlt.connect(oComp);
+const oVinylNoise=new Tone.Noise('brown').start();
+oVinylNoise.volume.value=rg69NoiseLevelDb(-60,aud_.vinyl,rg69AudioProfile.rig.vinyl.level,.1);
+const oVinylFlt=new Tone.Filter(2000,'lowpass');oVinylNoise.connect(oVinylFlt);oVinylFlt.connect(oComp);
+const oCrackleNoise=new Tone.Noise('white').start();
+oCrackleNoise.volume.value=rg69NoiseLevelDb(-65,aud_.crackle,rg69AudioProfile.rig.vinyl.crackle,.5);
+const oCrackleFlt=new Tone.Filter(380,'bandpass');oCrackleFlt.Q.value=5;oCrackleNoise.connect(oCrackleFlt);oCrackleFlt.connect(oComp);
 // Live and offline use the same profile-driven instrument constructor.
 const offlineSynths=createToneInstruments();
 const oKickN=offlineSynths.kick,oKickSub=offlineSynths.kickSub,oKickClk=offlineSynths.kickClk,oKickBody=offlineSynths.kickBody;
