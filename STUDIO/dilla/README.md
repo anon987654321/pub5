@@ -90,6 +90,23 @@ nor a seed establishes musical quality, rights or consent. Final listening
 acceptance is a separate human decision and must be recorded separately from
 automated tests.
 
+Replay a supported WAV take only when the exact Ruby runtime, renderer
+source set, original WAV, session sidecar and quality sidecar still match their
+recorded fingerprints:
+
+```sh
+ruby dilla.rb reproduce /path/to/take.provenance.json --out /path/to/replay.wav
+```
+
+Replay supports the pure-Ruby render, random and showcase paths. It writes a
+new WAV only, never replaces the source take, and reports `BYTE_MATCH` only
+when the new WAV hash equals the original. It refuses sample-flip renders
+because the historical receipt does not pin the FFmpeg decoder version and
+rights attestation; it also refuses older receipts without sidecar hashes or
+renders whose source/runtime has changed. MIDI, MP3 and video companions are
+not regenerated. A byte match proves deterministic output, not listening
+acceptance.
+
 Audit a completed WAV without pretending a machine has listened to it:
 
 ```sh
