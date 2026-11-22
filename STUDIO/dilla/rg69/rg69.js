@@ -22,6 +22,23 @@ if(!window.Tone){
 const INSTANCE_KEY="rg69_inst",INSTANCE_TTL=8e3,selfId=`${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const bc=("BroadcastChannel"in window)?new BroadcastChannel("rg69"):null;
 const $id=s=>document.getElementById(s),DP=s=>$id(s).parentElement;
+const vizCanvas=$id("viz");
+let vizContext=null;
+let vizColors={background:"#0c0c0c",accent:"#c8902e"};
+function refreshVizColors(){
+  const style=getComputedStyle(document.documentElement);
+  vizColors.background=style.getPropertyValue("--bg").trim()||"#0c0c0c";
+  vizColors.accent=style.getPropertyValue("--acc").trim()||"#c8902e";
+}
+function resizeVizCanvas(){
+  if(!vizCanvas)return;
+  const width=Math.max(1,vizCanvas.clientWidth|0);
+  const height=Math.max(1,vizCanvas.clientHeight|0);
+  if(vizCanvas.width!==width)vizCanvas.width=width;
+  if(vizCanvas.height!==height)vizCanvas.height=height;
+  if(!vizContext)vizContext=vizCanvas.getContext("2d");
+}
+window.addEventListener("resize",resizeVizCanvas,{passive:true});
 const welcomeStart=$id("welcome-start");
 if(welcomeStart){
   welcomeStart.focus({preventScroll:true});
@@ -336,6 +353,7 @@ document.querySelectorAll("section,aside,article").forEach(n=>n.style.padding=`$
 document.querySelectorAll("button").forEach(n=>n.style.minHeight=`${cfg.bh}px`);
 document.querySelectorAll(".step").forEach(n=>n.style.minHeight=`${cfg.sh}px`);
 document.documentElement.style.setProperty("--acc",`hsl(${cfg.ac} 65% 56%)`);
+refreshVizColors();
 $id("meta").textContent=`layout: ${nm} / instance: ${selfId.slice(-6)}`;
 }
 
@@ -640,14 +658,17 @@ synths.pads.triggerAttackRelease(pad,half,baseTime+seq_.p[stepIdx].t/1000,seq_.p
 function scheduleLoop(time){
 st_.idx=(st_.idx+1)%st_.stepCount;
 const scheduledTime=Number.isFinite(time)?time:Tone.now();
-// beat pulse on every quarter note
-if(st_.idx%4===0){const posEl=$id('pos-display');posEl.classList.remove('beat-active');requestAnimationFrame(()=>posEl.classList.add('beat-active'));}
-// update bar/beat display
+// Update the small transport display on beats, not every sixteenth note.
+const posEl=$id('pos-display');
+if(st_.idx%4===0){
 const beat=Math.floor(st_.idx/4)+1;
 const bar=Math.floor((st_.barCount||0)/16)+1;
 if(st_.idx===0)st_.barCount=(st_.barCount||0)+16;
-const posEl=$id('pos-display');
 if(posEl)posEl.textContent=`${bar}.${beat}`;
+posEl?.classList.add('beat-active');
+}else{
+posEl?.classList.remove('beat-active');
+}
 const sixteenth=60/aud_.bpm/4;
 triggerNotes(st_.idx,scheduledTime,{
 kick:kickN,
@@ -671,14 +692,8 @@ sixteenth:sixteenth,
 addSwing:true,
 applyTranspose:true
 });
-updateStepUI();
-if(st_.playing&&analyser){
-const data=analyser.getValue();
-const rms=Math.sqrt(data.reduce((s,v)=>s+v*v,0)/data.length);
-st_.peakL=Math.max(st_.peakL*PARAMS.VU_DECAY,rms);
-st_.peakR=Math.max(st_.peakR*PARAMS.VU_DECAY,rms);
-}
-// timing via Tone.Transport.scheduleRepeat
+st_.uiDirty=true;
+// Timing callback: no canvas work, analyser reads, or per-step DOM repaint.
 }
 
 let stepUiByIndex=Array.from({length:16},()=>[]);
@@ -690,43 +705,52 @@ stepUiByIndex[next].forEach(el=>el.classList.add('playing'));
 activeStepUiIndex=next;
 }
 
-function updateVU(){
+function updateVisuals(){
 if(!st_.playing){st_.rafId=null;return;}
 const now=performance.now();
-if(now-(st_.vuLastUpdate||0)>=33){
-st_.vuLastUpdate=now;
+if(now-(st_.visualLastUpdate||0)>=33){
+st_.visualLastUpdate=now;
+const data=analyser?.getValue();
+if(data&&data.length){
+let sumSquares=0;
+let clipping=false;
+for(let i=0;i<data.length;i++){
+const sample=data[i];
+sumSquares+=sample*sample;
+if(Math.abs(sample)>=0.98)clipping=true;
+}
+const rms=Math.sqrt(sumSquares/data.length);
+st_.peakL=Math.max(st_.peakL*PARAMS.VU_DECAY,rms);
+st_.peakR=Math.max(st_.peakR*PARAMS.VU_DECAY,rms);
+resizeVizCanvas();
+if(vizContext&&vizCanvas){
+const width=vizCanvas.width,height=vizCanvas.height;
+vizContext.fillStyle=vizColors.background;
+vizContext.fillRect(0,0,width,height);
+vizContext.beginPath();
+vizContext.strokeStyle=clipping?'#e06c5a':vizColors.accent;
+vizContext.lineWidth=1.5;
+for(let i=0;i<data.length;i++){
+const x=(i/data.length)*width;
+const y=(1-(data[i]+1)/2)*height;
+if(i===0)vizContext.moveTo(x,y);else vizContext.lineTo(x,y);
+}
+vizContext.stroke();
+}
+}
 const bars=$id('vu').children;
-const lBars=Math.round(st_.peakL*PARAMS.VU_BARS);
-const rBars=Math.round(st_.peakR*PARAMS.VU_BARS);
-for(let i=0;i<10;i++){
-if(bars[i])bars[i].classList.toggle('active',i<lBars);
-if(bars[i+10])bars[i+10].classList.toggle('active',i<rBars);
+const leftBars=Math.round(st_.peakL*PARAMS.VU_BARS);
+const rightBars=Math.round(st_.peakR*PARAMS.VU_BARS);
+for(let i=0;i<PARAMS.VU_BARS;i++){
+if(bars[i])bars[i].classList.toggle('active',i<leftBars);
+if(bars[i+PARAMS.VU_BARS])bars[i+PARAMS.VU_BARS].classList.toggle('active',i<rightBars);
+}
+if(st_.uiDirty){
+updateStepUI();
+st_.uiDirty=false;
 }
 }
-st_.rafId=requestAnimationFrame(updateVU);
-}
-
-function drawViz(){
-const cv=document.getElementById('viz');
-if(!cv||!analyser||!st_.playing)return;
-requestAnimationFrame(drawViz);
-const now=performance.now();
-if(now-(st_.vizLastUpdate||0)<33)return;
-st_.vizLastUpdate=now;
-const w=Math.max(1,cv.clientWidth|0),h=Math.max(1,cv.clientHeight|0);
-if(cv.width!==w)cv.width=w;
-if(cv.height!==h)cv.height=h;
-const ctx=cv.getContext('2d');
-const colors=getComputedStyle(document.documentElement);
-ctx.fillStyle=colors.getPropertyValue('--bg')||'#111';
-ctx.fillRect(0,0,w,h);
-const data=analyser.getValue();
-const clipping=data.some(v=>Math.abs(v)>=0.98);
-ctx.beginPath();
-ctx.strokeStyle=clipping?'#e06c5a':(colors.getPropertyValue('--acc')||'#d79a42');
-ctx.lineWidth=1.5;
-for(let i=0;i<data.length;i++){const x=(i/data.length)*w;const y=(1-(data[i]+1)/2)*h;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
-ctx.stroke();
+st_.rafId=requestAnimationFrame(updateVisuals);
 }
 
 function updateRootDisplay(){
@@ -1120,10 +1144,10 @@ showCtxMenu(e.clientX,e.clientY,[
 {label:'Velocity Full',action:()=>{const dp=DRUM_PATTERNS[pat_.d];if(dp&&dp[trackKey]&&dp[trackKey][i]>0){dp[trackKey][i]=1.0;updateVelFill();}}},
 ]);
 });
-step.addEventListener('mousedown',()=>{
+step.addEventListener('mousedown',event=>{
 if(event.shiftKey){
 st_.paintMode=true;
-st_.paintState=!step.getAttribute('aria-pressed')==='true';
+st_.paintState=step.getAttribute('aria-pressed')!=='true';
 }
 });
 step.addEventListener('mouseenter',()=>{
@@ -1198,6 +1222,7 @@ setTimeout(()=>document.addEventListener('click',hide),10);
 function toggleTheme(){
 st_.theme=st_.theme==='dark'?'light':'dark';
 document.documentElement.setAttribute('data-theme',st_.theme);
+refreshVizColors();
 localStorage.setItem('rg69_theme',st_.theme);
 log(`theme: ${st_.theme}`);
 }
@@ -1283,8 +1308,7 @@ st_.booting=null;
 await (activationPromise||Tone.start());
 }
 st_.playing=true;
-if(!st_.rafId)st_.rafId=requestAnimationFrame(updateVU);
-drawViz();
+if(!st_.rafId)st_.rafId=requestAnimationFrame(updateVisuals);
 st_.idx=-1;
 Tone.Transport.bpm.value=aud_.bpm;
 if(!st_.transportId)st_.transportId=Tone.Transport.scheduleRepeat(scheduleLoop,"16n");
@@ -1296,9 +1320,10 @@ log('playback started','k');
 
 $id('welcome-start').addEventListener('click',async()=>{
 try{
+dismissWelcome();
+st('starting audio…');
 const activationPromise=Tone.start();
 await startPlayback(activationPromise);
-dismissWelcome();
 log('engine started via welcome gate','k');
 }catch(error){
 st_.playing=false;
@@ -1391,8 +1416,10 @@ log("remote stop","e");
 const savedTheme=localStorage.getItem('rg69_theme')||'dark';
 st_.theme=savedTheme;
 document.documentElement.setAttribute('data-theme',st_.theme);
+refreshVizColors();
 
 applyLayout(finalBlend,'final blend');
+resizeVizCanvas();
 buildUI();
 // Reflect this page load's random playable style before the first paint.
 syncUIFromState();
