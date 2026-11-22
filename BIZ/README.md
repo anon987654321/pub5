@@ -187,10 +187,13 @@ cover images:
     node BIZ/tools/bp_print.mjs       # PDF, cover PNG and per-document print receipt
 
 Review every full-page raster in the audit directory and the cover PNG yourself.
-Only after you accept the appearance, copy that document's HTML, PDF, PNG and
-`.print.json` from `BIZ_OUT_DIR/<document>/` into its existing
-`BIZ/<document>/` owner directory; do not bulk-publish drafts or replace an
-existing pair without preserving the prior version. Then run:
+Only after you accept the appearance, copy each active plan's HTML, PDF, PNG
+and `.print.json` from `BIZ_OUT_DIR/<plan>/` into its existing
+`BIZ/<plan>/` owner directory. Ragnhild's guide HTML remains its source in
+`BIZ/ragnhild/ragnhild_legater.html`; copy its generated PDF, PNG and
+`ragnhild_legater.print.json` from `BIZ_OUT_DIR/ragnhild/`. Do not
+bulk-publish drafts or replace an existing pair without preserving the prior
+version. Then run:
 
     node BIZ/tools/bp_index.mjs       # verify published pairs and regenerate this index
 
