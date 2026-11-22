@@ -19,7 +19,7 @@ class TestStudioLoraTrainingRunner < Minitest::Test
 
     runner = Studio::Lora::Training::Runner.new(client:, validator:, root: Dir.pwd)
     error = assert_raises(Studio::Lora::Training::Error) do
-      runner.run(subjects: ["johann"])
+      runner.run(subjects: ["johann"], approve_spend_usd: "5.00")
     end
 
     assert_match(/consent is missing/, error.message)
@@ -43,7 +43,7 @@ class TestStudioLoraTrainingRunner < Minitest::Test
     end
 
     error = assert_raises(Studio::Lora::Training::Error) do
-      runner.run(subjects: %w[johann ragnhild])
+      runner.run(subjects: %w[johann ragnhild], approve_spend_usd: "5.00")
     end
     assert_match(/distinct private Replicate destination/, error.message)
   end
@@ -120,7 +120,7 @@ class TestStudioLoraTrainingRunner < Minitest::Test
         "trigger_word" => "johann_lora", "training_steps" => 1000, "lora_type" => "subject", "seed" => 42
       }
 
-      path = runner.send(:write_candidate_manifest, package, "owner/johann:version123", { "id" => "training123" })
+      path = runner.send(:write_candidate_manifest, package, "owner/johann:version123", { "id" => "training123" }, billing: { "cost_status" => "CALCULATED_FROM_PROVIDER_PREDICT_TIME_NOT_INVOICE", "calculated_cost_usd" => "1.464000" })
       document = JSON.parse(File.read(path))
       assert_equal "TRAINED_NEEDS_LIKENESS_REVIEW", document.fetch("status")
       assert_equal true, document.fetch("likeness_review_required")
@@ -128,6 +128,7 @@ class TestStudioLoraTrainingRunner < Minitest::Test
       assert_equal 1000, document.fetch("training_steps")
       assert_equal "subject", document.fetch("lora_type")
       assert_equal 42, document.fetch("seed")
+      assert_equal "CALCULATED_FROM_PROVIDER_PREDICT_TIME_NOT_INVOICE", document.dig("billing", "cost_status")
       assert_equal 0o600, File.stat(path).mode & 0o777
     end
   end
@@ -150,12 +151,97 @@ class TestStudioLoraTrainingRunner < Minitest::Test
         "trigger_word" => "ragnhild", "training_steps" => 1000, "lora_type" => "subject", "seed" => 42
       }
 
-      runner.send(:write_candidate_manifest, package, "owner/ragnhild:newversion", { "id" => "training456" })
+      runner.send(:write_candidate_manifest, package, "owner/ragnhild:newversion", { "id" => "training456" }, billing: { "cost_status" => "NOT_REPORTED_BY_PROVIDER" })
       backups = Dir.glob(File.join(cache, "previous-training-*.json"))
       assert_equal 1, backups.length
       assert_equal old, File.read(backups.first)
       assert_equal "owner/ragnhild:newversion", JSON.parse(File.read(old_path)).fetch("version")
     end
+  end
+
+  def test_training_requires_a_minimum_approved_compute_window_before_preflight
+    runner = Studio::Lora::Training::Runner.new(client: Object.new, validator: Object.new, root: Dir.pwd)
+    runner.define_singleton_method(:prepare_subject!) { |_subject| flunk "budget must be rejected before local packaging" }
+
+    error = assert_raises(Studio::Lora::Training::Error) do
+      runner.run(subjects: ["johann"], approve_spend_usd: "0.50")
+    end
+    assert_match(/too small for the minimum/, error.message)
+  end
+
+  def test_batch_budget_is_shared_and_each_training_gets_a_remaining_time_ceiling
+    Dir.mktmpdir("studio-lora-budget-") do |root|
+      client = Object.new
+      client.define_singleton_method(:ensure_private_model!) { |_destination| true }
+      runner = Studio::Lora::Training::Runner.new(client:, validator: Object.new, root:)
+      runner.define_singleton_method(:prepare_subject!) do |subject|
+        { "subject" => subject, "destination" => "owner/#{subject}" }
+      end
+      timeouts = []
+      runner.define_singleton_method(:train_subject!) do |_client, package, timeout:, billing_rate:, approved_budget_usd:, reserved_timeout_seconds:|
+        timeouts << timeout
+        assert_equal billing_rate, Studio::Lora::Training::BILLING_RATE
+        assert_equal approved_budget_usd, BigDecimal("4.50")
+        assert_equal timeout, reserved_timeout_seconds
+        {
+          "subject" => package.fetch("subject"),
+          "status" => "TRAINED_NEEDS_LIKENESS_REVIEW",
+          "provider_request_dispatched" => true,
+          "billing" => {
+            "cost_status" => "CALCULATED_FROM_PROVIDER_PREDICT_TIME_NOT_INVOICE",
+            "provider_compute_seconds" => "120.000000",
+            "calculated_cost_usd" => "1.464000"
+          }
+        }
+      end
+
+      report = runner.run(subjects: %w[johann ragnhild merethe], approve_spend_usd: "4.50")
+      assert_equal [358, 238, 118], timeouts
+      assert_equal "TRAINED_NEEDS_LIKENESS_REVIEW", report.fetch("status")
+      assert_equal "4.392000", report.dig("spend", "calculated_cost_usd_not_invoice")
+      assert_equal "0.108000", report.dig("spend", "remaining_approved_usd")
+    end
+  end
+
+  def test_unreported_training_cost_stops_the_remaining_paid_batch
+    Dir.mktmpdir("studio-lora-unknown-cost-") do |root|
+      client = Object.new
+      client.define_singleton_method(:ensure_private_model!) { |_destination| true }
+      runner = Studio::Lora::Training::Runner.new(client:, validator: Object.new, root:)
+      runner.define_singleton_method(:prepare_subject!) do |subject|
+        { "subject" => subject, "destination" => "owner/#{subject}" }
+      end
+      calls = []
+      runner.define_singleton_method(:train_subject!) do |_client, package, **_options|
+        calls << package.fetch("subject")
+        {
+          "subject" => package.fetch("subject"),
+          "status" => "FAILED",
+          "provider_request_dispatched" => true,
+          "billing" => { "cost_status" => "NOT_REPORTED_BY_PROVIDER" }
+        }
+      end
+
+      report = runner.run(subjects: %w[johann ragnhild merethe], approve_spend_usd: "5.00")
+      assert_equal ["johann"], calls
+      assert_equal "SPEND_UNVERIFIED", report.fetch("status")
+      assert_equal "SKIPPED_SPEND_UNVERIFIED", report.fetch("results")[1].fetch("status")
+      assert_equal "SKIPPED_SPEND_UNVERIFIED", report.fetch("results")[2].fetch("status")
+    end
+  end
+
+  def test_provider_predict_time_is_converted_to_a_calculated_cost_not_an_invoice
+    runner = Studio::Lora::Training::Runner.new(client: Object.new, validator: Object.new, root: Dir.pwd)
+    receipt = runner.send(:training_cost_receipt, { "metrics" => { "predict_time" => 120.0, "total_time" => 150.0 } }, Studio::Lora::Training::BILLING_RATE)
+
+    assert_equal "CALCULATED_FROM_PROVIDER_PREDICT_TIME_NOT_INVOICE", receipt.fetch("cost_status")
+    assert_equal "120.000000", receipt.fetch("provider_compute_seconds")
+    assert_equal "1.464000", receipt.fetch("calculated_cost_usd")
+    assert_equal "0.0122", receipt.fetch("rate_usd_per_second")
+  end
+
+  def test_cli_refuses_paid_training_without_a_spend_approval
+    assert_equal 2, Studio::Lora::Training.run_cli(["--subject", "johann"])
   end
 
   def test_all_three_subjects_are_the_default_batch
