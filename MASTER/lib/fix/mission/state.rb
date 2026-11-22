@@ -98,12 +98,12 @@ module Master
         true
       end
 
-      def defer!(reason:, seconds: nil)
+      def defer!(reason:, seconds: nil, expected_id: nil, expected_lease_owner: nil)
         # delay/retries are read after with_lock returns; block locals die with it.
         delay = 0
         retries = 0
         with_lock do
-          load_writable_unlocked!
+          load_expected_or_writable_unlocked!(expected_id:, expected_lease_owner:)
           return self unless @record
 
           retries = @record.fetch("retry_count", 0).to_i + 1
@@ -122,9 +122,9 @@ module Master
         self
       end
 
-      def block!(reason:)
+      def block!(reason:, expected_id: nil, expected_lease_owner: nil)
         with_lock do
-          load_writable_unlocked!
+          load_expected_or_writable_unlocked!(expected_id:, expected_lease_owner:)
           return self unless @record
 
           @record["state"] = "blocked"
@@ -187,9 +187,9 @@ module Master
         self
       end
 
-      def fail!(error)
+      def fail!(error, expected_id: nil, expected_lease_owner: nil)
         with_lock do
-          load_writable_unlocked!
+          load_expected_or_writable_unlocked!(expected_id:, expected_lease_owner:)
           return self unless @record
 
           @record["state"] = "failed"
@@ -211,6 +211,22 @@ module Master
       end
 
       private
+
+      # Scheduler recovery starts from a read snapshot. Re-check both
+      # mission identity and lease owner under the write lock so a concurrent
+      # takeover or manual replacement cannot be overwritten by stale recovery.
+      def load_expected_or_writable_unlocked!(expected_id:, expected_lease_owner:)
+        return load_writable_unlocked! if expected_id.nil?
+
+        load_current_unlocked!
+        return unless @record
+        return if @record["id"].to_s == expected_id.to_s &&
+                  @record["lease_owner"].to_s == expected_lease_owner.to_s
+
+        reason = "mission #{expected_id} no longer holds the expected lease"
+        emit("mission:fenced", id: expected_id, reason:)
+        raise Fenced, reason
+      end
 
       # No external caller (grep lib/ and test/ confirmed); retained as the
       # record's artifact register mutation, the non-payload sibling of
