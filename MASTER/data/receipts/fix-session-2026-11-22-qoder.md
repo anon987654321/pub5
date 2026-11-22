@@ -1712,3 +1712,68 @@ Fresh sweep NOT_RUN (no Chrome/Ruby/host; agent browser verification refused).
 Title, tab-ink and search-height fixes are ux_refinements/tokens candidates,
 each needing fresh rendered proof before PASS. Taste stays operator-owned; this
 measures objective invariants, not beauty.
+
+
+### Reliability execution control — first machine-readable check slice (2026-11-22)
+
+Current source head at the end of this slice: `fa3ce271e3ef21b065191bfc7258d984d9af03de`.
+
+Implemented on `main`:
+
+- `MASTER/lib/operator/check_runner.rb` now captures a typed result per step:
+  UTC start/end timestamps, monotonic elapsed duration, exact argv rendering,
+  exit status, terminating signal and timeout state. Timeout is distinct from a
+  normal failure in the private combined log.
+- `MASTER/lib/operator/check_brief.rb` now renders a versioned JSON check
+  receipt. It includes a unique receipt ID and operation ID, profile, overall
+  status, exact main and checked-out commit IDs, main ref, branch, pre-run
+  worktree cleanliness, Ruby runtime, process exit, step counts, per-step
+  status/timing/command and the private combined-log reference.
+- `MASTER/bin/check --format=json` emits the receipt on stdout. Child output,
+  raw diagnostics and environment variables are deliberately excluded. The
+  receipt explicitly says `receipt_path: null` and `receipt_output: stdout`:
+  durable JSON receipt-file persistence is not implemented in this slice.
+- `PASS` requires complete 40-character main/checkout IDs, branch/ref identity
+  and a clean worktree captured before the checks execute. Empty runs remain
+  `NOT_RUN`; unavailable acceptance steps are `BLOCKED`; timeout is
+  `TIMEOUT`; incomplete repository evidence is `INCONCLUSIVE`. Every status
+  other than `PASS` yields a non-zero process exit in JSON mode.
+- The `web` profile now includes an explicit blocked integration step unless
+  `MASTER_WEB_LIVE=1`; missing Node/browser probe steps are likewise visible
+  as unavailable instead of disappearing from the profile.
+- JSON mode is quiet: child diagnostics do not contaminate stdout. Its combined
+  log must remain inside the repository. Repository identity is taken from a
+  validated GitHub owner/repo remote or the actual Git top-level directory;
+  credential-bearing or nonstandard remote URLs are never echoed.
+- Updated `MASTER/README.md` to document the JSON interface.
+
+Focused regression coverage was added to the existing
+`MASTER/test/test_check_brief.rb` and
+`MASTER/test/test_check_runner_stdin.rb` for JSON fields, IDs, exact revisions,
+clean/dirty evidence, PASS/FAIL/BLOCKED/TIMEOUT/NOT_RUN/INCONCLUSIVE states,
+omission of raw output, and quiet-run stdout/stderr behavior.
+
+Selected implementation commits:
+`61f9b8b2e9c4713a7b2d42d5fbaab77af03d01be` (typed runner results);
+`d012b84acc8d62231207c77408573346481db5ab` (JSON serializer);
+`fb0cfaafd50a63c67e0cc2ba65c43d8e61628c9b` (CLI output);
+`dda8f00eb654a9a3d7c2332fa3edf81f683222ee` (clean Git evidence);
+`d2b44d4aed4dedd31958dea9b5e0f61d806205d8` (explicit unavailable web gates);
+`e064a91d6c5e34ec451d0d37610f74cdb5a2f4d4` (exit code follows receipt);
+`fa3ce271e3ef21b065191bfc7258d984d9af03de` (stdout-only receipt test).
+
+Proof actually performed: GitHub read-after-write verification for each changed
+source, test and documentation path; inspected the resulting source excerpts,
+the profile wiring, the JSON schema/status rules, and the test fixtures.
+No local pub5 checkout is mounted in this execution environment, so the
+following remain **NOT_RUN**: Ruby syntax checks, both focused Minitest files,
+`MASTER/bin/check --format=json` in a real checkout, stdout parsing against a
+booted MASTER, `bin/check` profiles, full MASTER tests, and all RAILS/OPENBSD/
+STUDIO/BIZ, rendered, device and production checks.
+
+Scope boundary: this is the first JSON reporting slice, not the canonical
+cross-domain RunReceipt library. It does not yet persist an append-only JSON
+artifact, derive actual test-case counts, expose the full per-suite gate matrix,
+or unify lifecycle/acknowledgement/retry state. Those remain open; issue #6
+stays open, and issue #5 remains open pending the previously recorded browser
+security and runtime proof gaps. No Laws were weakened or disabled.
