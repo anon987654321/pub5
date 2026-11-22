@@ -41,6 +41,14 @@ export const PUBLISHED_INPUTS = {
     html: ['tools/syre.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
     pdf: ['tools/bp_print.mjs'],
   },
+  nordvakt: {
+    html: ['tools/nordvakt.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
+    pdf: ['tools/bp_print.mjs'],
+  },
+  norwegianfinancial: {
+    html: ['tools/norwegianfinancial.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
+    pdf: ['tools/bp_print.mjs'],
+  },
   ragnhild: {
     html: ['tools/ragnhild.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
     pdf: ['tools/bp_print.mjs'],
