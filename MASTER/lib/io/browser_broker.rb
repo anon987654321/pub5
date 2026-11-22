@@ -283,7 +283,11 @@ module Master
       end
 
       class Request
-        SAFE_HEADERS = %w[accept accept-language cache-control content-type range user-agent].freeze
+        SAFE_HEADERS = %w[
+          accept accept-language cookie origin referer user-agent
+          sec-fetch-dest sec-fetch-mode sec-fetch-site sec-ch-ua
+          sec-ch-ua-mobile sec-ch-ua-platform
+        ].freeze
         MAX_RESPONSE_BYTES = 1_048_576
 
         def initialize(request)
