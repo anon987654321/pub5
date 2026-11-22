@@ -21,6 +21,18 @@ class PlaceTest < ActiveSupport::TestCase
     assert place(latitude: -90, longitude: 180).valid?
   end
 
+  test "public slugs are stable and unique within each city" do
+    first = Place.create!(city: @city, name: "Bryggen", kind: "attraction",
+                          latitude: 60.3974, longitude: 5.3244)
+    second = Place.create!(city: @city, name: "Bryggen", kind: "attraction",
+                           latitude: 60.3980, longitude: 5.3250)
+
+    assert_equal "bryggen", first.slug
+    assert_equal "bryggen", first.to_param
+    assert_equal "bryggen-2", second.slug
+    assert_equal first.id, Place.find_by!(city: @city, slug: first.to_param).id
+  end
+
   test "external source identity is stable and unique within a city" do
     first = Place.create!(
       city: @city, name: "OpenStreetMap place", kind: "cafe",
