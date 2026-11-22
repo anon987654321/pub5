@@ -576,6 +576,13 @@ if(driftLFO)driftLFO.frequency.value=.05+aud_.wobble/100*PARAMS.WOBB_FREQ_MAX;
 // Shared helper function for triggering notes - eliminates duplication between scheduleLoop and exportWAV
 function triggerNotes(stepIdx,baseTime,synths,opts){
 const sixteenth=opts.sixteenth||60/aud_.bpm/4;
+// Resolve note lengths to seconds before scheduling. Tone's musical-time
+// parser consults Transport when given strings such as "8n"; doing that
+// inside a Transport callback causes timing warnings and extra work.
+const eighth=sixteenth*2;
+const thirtySecond=sixteenth/2;
+const sixteenthDuration=sixteenth;
+const half=sixteenth*8;
 const dp=DRUM_PATTERNS[pat_.d]||DRUM_PATTERNS.basic;
 ['k','s','c','h','o'].forEach(v=>{
 if(opts.muteMap&&opts.muteMap[v])return;
@@ -591,12 +598,12 @@ const rt=t+(opts.addSwing?r*(sixteenth/ratch):r*(sixteenth/ratch));
 if(v==='k'){
 const kpitch='C1';
 const kfreq=opts.applyTranspose?Tone.Frequency(kpitch).toFrequency()*(1+drift/1200):Tone.Frequency(kpitch).toFrequency();
-synths.kick.triggerAttackRelease(kfreq,'8n',rt,vl);
-synths.kickSub.triggerAttackRelease(opts.applyTranspose?Tone.Frequency(kpitch).transpose(-12):'C0','8n',rt,vl*.7);
+synths.kick.triggerAttackRelease(kfreq,eighth,rt,vl);
+synths.kickSub.triggerAttackRelease(opts.applyTranspose?Tone.Frequency(kpitch).transpose(-12):'C0',eighth,rt,vl*.7);
 synths.kickClk.triggerAttackRelease(rt,vl*0.3);
-synths.kickBody.triggerAttackRelease(opts.applyTranspose?Tone.Frequency(kpitch).transpose(12):'C2','32n',rt,vl*.2);
+synths.kickBody.triggerAttackRelease(opts.applyTranspose?Tone.Frequency(kpitch).transpose(12):'C2',thirtySecond,rt,vl*.2);
 }
-else if(v==='s'){synths.snare.triggerAttackRelease(rt,vl);synths.snareRng.triggerAttackRelease('E4','16n',rt,vl*0.5)}
+else if(v==='s'){synths.snare.triggerAttackRelease(rt,vl);synths.snareRng.triggerAttackRelease('E4',sixteenthDuration,rt,vl*0.5)}
 else if(v==='c')synths.clap.triggerAttackRelease(rt,vl);
 else if(v==='h')synths.hat.triggerAttackRelease(rt,vl);
 else if(v==='o')synths.open.triggerAttackRelease(rt,vl);
@@ -608,23 +615,23 @@ if(bn[stepIdx]&&bn[stepIdx]!==''){
 const nt=bn[stepIdx];
 const drift=opts.applyTranspose?(Math.random()-0.5)*2:0;
 const freq=opts.applyTranspose?Tone.Frequency(nt).toFrequency()*(1+drift/1200):Tone.Frequency(nt).toFrequency();
-synths.bass.triggerAttackRelease(freq,'8n',baseTime+seq_.b[stepIdx].t/1000,seq_.b[stepIdx].v);
+synths.bass.triggerAttackRelease(freq,eighth,baseTime+seq_.b[stepIdx].t/1000,seq_.b[stepIdx].v);
 synths.bassSub.frequency.setValueAtTime(Tone.Frequency(nt).toFrequency()/2,baseTime+seq_.b[stepIdx].t/1000);
 }
 const kn=KEYS_PATS[pat_.k]||[];
 if(kn[stepIdx]&&kn[stepIdx]!==0){
 const ch=kn[stepIdx];
 if(Array.isArray(ch)){
-synths.keys.triggerAttackRelease(ch,'8n',baseTime+seq_.keys[stepIdx].t/1000,seq_.keys[stepIdx].v);
+synths.keys.triggerAttackRelease(ch,eighth,baseTime+seq_.keys[stepIdx].t/1000,seq_.keys[stepIdx].v);
 }else if(typeof ch==='string'){
-synths.keys.triggerAttackRelease(ch,'8n',baseTime+seq_.keys[stepIdx].t/1000,seq_.keys[stepIdx].v);
+synths.keys.triggerAttackRelease(ch,eighth,baseTime+seq_.keys[stepIdx].t/1000,seq_.keys[stepIdx].v);
 }
 }
 const pn=PAD_PATS[pat_.p]||[];
 if(pn[stepIdx]&&pn[stepIdx]!==0){
 const pad=pn[stepIdx];
 if(Array.isArray(pad)){
-synths.pads.triggerAttackRelease(pad,'2n',baseTime+seq_.p[stepIdx].t/1000,seq_.p[stepIdx].v*0.6);
+synths.pads.triggerAttackRelease(pad,half,baseTime+seq_.p[stepIdx].t/1000,seq_.p[stepIdx].v*0.6);
 }
 }
 }
