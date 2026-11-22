@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+require "bigdecimal"
 require "digest"
 require "fileutils"
 require "json"
@@ -24,6 +25,8 @@ module Studio
         STANDARD_PATH, permitted_classes: [], permitted_symbols: [], aliases: false
       ).freeze
       DEFAULT_TIMEOUT = 14_400
+      BILLING = STANDARD.fetch("billing").freeze
+      BILLING_RATE = BigDecimal(BILLING.fetch("usd_per_second").to_s).freeze
 
       class Error < StandardError; end
 
@@ -38,7 +41,18 @@ module Studio
         # Every subject is validated and packaged before the first provider call.
         # A single missing permission, image, caption or private setting blocks
         # the whole batch before a paid upload or training request can begin.
-        def run(subjects: SUBJECTS, timeout: DEFAULT_TIMEOUT)
+        def run(subjects: SUBJECTS, timeout: DEFAULT_TIMEOUT, approve_spend_usd:)
+          approved_budget = approved_budget!(approve_spend_usd)
+          timeout = Integer(timeout)
+          raise ArgumentError, "training timeout must be positive" unless timeout.positive?
+
+          minimum_seconds = BILLING.fetch("minimum_training_seconds")
+          margin_seconds = BILLING.fetch("cancellation_margin_seconds")
+          maximum_seconds = (approved_budget / BILLING_RATE).floor
+          if maximum_seconds < minimumimum_reserved_seconds(minimum_seconds, margin_seconds)
+            raise Error, "approved spend ceiling is too small for the minimum #{minimum_seconds}s training window"
+          end
+
           names = normalize_subjects(subjects)
           packages = names.map { |subject| prepare_subject!(subject) }
           destinations = packages.map { |package| package.fetch("destination") }
@@ -46,24 +60,146 @@ module Studio
             raise Error, "each subject must have a distinct private Replicate destination"
           end
           client = @client || Studio::ReplicateClient.new
-          # Check/create every destination as private before the first dataset
-          # ZIP is uploaded. A pre-existing public destination blocks the run.
-          packages.each { |package| client.ensure_private_model!(package.fetch("destination")) }
 
-          results = packages.map do |package|
-            train_subject!(client, package, timeout: Integer(timeout))
+          with_training_lock do
+            # Check/create every destination as private before the first dataset
+            # ZIP is uploaded. A pre-existing public destination blocks the run.
+            packages.each { |package| client.ensure_private_model!(package.fetch("destination")) }
+
+            results = []
+            spent = BigDecimal("0")
+            measured_seconds = BigDecimal("0")
+            spend_state = "MEASURED"
+            packages.each_with_index do |package, index|
+              remaining = approved_budget - spent
+              available_seconds = (remaining / BILLING_RATE).floor - margin_seconds
+              job_timeout = [timeout, available_seconds].min
+
+              if job_timeout < minimum_seconds
+                results << skipped_result(package, "SKIPPED_BUDGET", "remaining approved spend cannot reserve a useful training window")
+                next
+              end
+
+              result = train_subject!(
+                client, package, timeout: job_timeout, billing_rate: BILLING_RATE,
+                approved_budget_usd: approved_budget, reserved_timeout_seconds: job_timeout
+              )
+              results << result
+              next unless result["provider_request_dispatched"]
+
+              billing = result.fetch("billing")
+              unless billing["cost_status"] == "CALCULATED_FROM_PROVIDER_PREDICT_TIME_NOT_INVOICE"
+                spend_state = "SPEND_UNVERIFIED"
+                packages.drop(index + 1).each do |remaining_package|
+                  results << skipped_result(
+                    remaining_package, "SKIPPED_SPEND_UNVERIFIED",
+                    "a prior training request has no terminal provider compute metric"
+                  )
+                end
+                break
+              end
+
+              spent += BigDecimal(billing.fetch("calculated_cost_usd"))
+              measured_seconds += BigDecimal(billing.fetch("provider_compute_seconds"))
+              if spent > approved_budget
+                spend_state = "BUDGET_EXCEEDED"
+                packages.drop(index + 1).each do |remaining_package|
+                  results << skipped_result(remaining_package, "SKIPPED_BUDGET_EXCEEDED",
+                                            "measured provider compute exceeded the approved batch ceiling")
+                end
+                break
+              end
+            end
+
+            successful = results.length == packages.length &&
+                         results.all? { |result| result.fetch("status") == "TRAINED_NEEDS_LIKENESS_REVIEW" }
+            status = if spend_state == "BUDGET_EXCEEDED"
+                       "BUDGET_EXCEEDED"
+                     elsif spend_state == "SPEND_UNVERIFIED"
+                       "SPEND_UNVERIFIED"
+                     elsif successful
+                       "TRAINED_NEEDS_LIKENESS_REVIEW"
+                     else
+                       "PARTIAL_FAILURE"
+                     end
+            {
+              "status" => status,
+              "provider_training_jobs" => results.count { |result| result["provider_request_dispatched"] },
+              "spend" => {
+                "approved_batch_budget_usd" => decimal_string(approved_budget),
+                "rate_usd_per_second" => decimal_string(BILLING_RATE),
+                "pricing_hardware" => BILLING.fetch("hardware"),
+                "pricing_verified_on" => BILLING.fetch("verified_on"),
+                "pricing_source" => BILLING.fetch("source"),
+                "maximum_compute_seconds_at_rate" => maximum_seconds,
+                "measured_provider_compute_seconds" => decimal_string(measured_seconds),
+                "calculated_cost_usd_not_invoice" => decimal_string(spent),
+                "remaining_approved_usd" => decimal_string([approved_budget - spent, BigDecimal("0")].max),
+                "status" => spend_state
+              },
+              "results" => results,
+              "next_step" => "Compare each candidate model against that subject's approved source photographs. Set LIKELINESS_REVIEWED_VERSION only after human approval."
+            }
           end
+        rescue TypeError, ArgumentError => error
+          raise error if error.message.include?("spend") || error.message.include?("timeout")
 
-          successful = results.all? { |result| result.fetch("status") == "TRAINED_NEEDS_LIKENESS_REVIEW" }
-          {
-            "status" => successful ? "TRAINED_NEEDS_LIKENESS_REVIEW" : "PARTIAL_FAILURE",
-            "provider_training_jobs" => results.count { |result| result["training_id"] },
-            "results" => results,
-            "next_step" => "Compare each candidate model against that subject's approved source photographs. Set LIKELINESS_REVIEWED_VERSION only after human approval."
-          }
+          raise ArgumentError, "invalid LoRA training options: #{error.message}"
         end
 
         private
+
+        def approved_budget!(value)
+          amount = BigDecimal(value.to_s)
+          raise ArgumentError, "approved spend must be a finite positive USD amount" unless amount.finite? && amount.positive?
+
+          amount
+        rescue ArgumentError, TypeError
+          raise ArgumentError, "approved spend must be a finite positive USD amount"
+        end
+
+        def decimal_string(value)
+          value.round(6).to_s("F")
+        end
+
+        def minimumimum_reserved_seconds(minimum, margin)
+          minimum + margin
+        end
+
+        def skipped_result(package, status, reason)
+          {
+            "subject" => package.fetch("subject"),
+            "status" => status,
+            "provider_request_dispatched" => false,
+            "reason" => reason
+          }
+        end
+
+        # Prevent two training batches in this checkout from spending against
+        # separate copies of the same local approval at the same time.
+        def with_training_lock
+          cache = File.join(@root, ".cache")
+          secure_directory!(cache)
+          path = File.join(cache, "training-spend.lock")
+          flags = File::RDWR | File::CREAT
+          flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+
+          File.open(path, flags, 0o600) do |file|
+            stat = File.lstat(path)
+            unless stat.file? && !stat.symlink? && stat.uid == Process.uid &&
+                   stat.nlink == 1 && (stat.mode & 0o077).zero?
+              raise Error, "training spend lock must be a private singly-linked owner file"
+            end
+            raise Error, "another LoRA training batch holds the spend lock" unless
+              file.flock(File::LOCK_EX | File::LOCK_NB)
+
+            begin
+              yield
+            ensure
+              file.flock(File::LOCK_UN)
+            end
+          end
+        end
 
         def normalize_subjects(subjects)
           names = Array(subjects).map(&:to_s)
@@ -219,11 +355,14 @@ module Studio
           File.chmod(0o700, path)
         end
 
-        def train_subject!(client, package, timeout:)
+        def train_subject!(client, package, timeout:, billing_rate:, approved_budget_usd:, reserved_timeout_seconds:)
           subject = package.fetch("subject")
-          training = begin
+          provider_request_dispatched = false
+          billing = nil
+          begin
             upload_url = client.upload_zip(package.fetch("zip_path"), subject:)
-            client.train_lora(
+            provider_request_dispatched = true
+            training = client.train_lora(
               upload_url,
               package.fetch("destination"),
               trigger_word: package.fetch("trigger_word"),
@@ -234,32 +373,73 @@ module Studio
               wait: true,
               subject:
             )
+            billing = training_cost_receipt(training, billing_rate).merge(
+              "approved_batch_budget_usd" => decimal_string(approved_budget_usd),
+              "reserved_timeout_seconds" => reserved_timeout_seconds
+            )
+            raise Error, "#{subject}: Replicate training did not succeed (#{training["status"]})" unless training["status"] == "succeeded"
+
+            version_id = client.latest_version(package.fetch("destination"))
+            raise Error, "#{subject}: Replicate returned an invalid model version" unless version_id.to_s.match?(/\A[A-Za-z0-9][A-Za-z0-9_-]{0,127}\z/)
+
+            full_version = "#{package.fetch("destination")}:#{version_id}"
+            manifest = write_candidate_manifest(package, full_version, training, billing:)
+            {
+              "subject" => subject,
+              "status" => "TRAINED_NEEDS_LIKENESS_REVIEW",
+              "training_id" => training["id"],
+              "model_version" => full_version,
+              "manifest" => File.basename(manifest),
+              "dataset_sha256" => package.fetch("dataset_sha256"),
+              "provider_request_dispatched" => true,
+              "billing" => billing
+            }
+          rescue StandardError => error
+            {
+              "subject" => subject,
+              "status" => "FAILED",
+              "error" => "#{error.class}: #{error.message.to_s[0, 500]}",
+              "dataset_sha256" => package.fetch("dataset_sha256"),
+              "provider_request_dispatched" => provider_request_dispatched,
+              "billing" => billing || {
+                "cost_status" => (provider_request_dispatched ? "NOT_REPORTED_BY_PROVIDER" : "NOT_REQUESTED"),
+                "rate_usd_per_second" => decimal_string(billing_rate),
+                "pricing_source" => BILLING.fetch("source")
+              }
+            }
           end
-          raise Error, "#{subject}: Replicate training did not succeed (#{training["status"]})" unless training["status"] == "succeeded"
+        end
 
-          version_id = client.latest_version(package.fetch("destination"))
-          raise Error, "#{subject}: Replicate returned an invalid model version" unless version_id.to_s.match?(/\A[A-Za-z0-9][A-Za-z0-9_-]{0,127}\z/)
+        def training_cost_receipt(training, rate)
+          metrics = training.is_a?(Hash) ? training["metrics"] : nil
+          seconds = metrics.is_a?(Hash) ? metrics["predict_time"] : nil
+          valid = seconds.is_a?(Numeric) && seconds.finite? && seconds >= 0
+          unless valid
+            return {
+              "cost_status" => "NOT_REPORTED_BY_PROVIDER",
+              "provider_compute_seconds" => nil,
+              "rate_usd_per_second" => decimal_string(rate),
+              "calculated_cost_usd" => nil,
+              "pricing_hardware" => BILLING.fetch("hardware"),
+              "pricing_verified_on" => BILLING.fetch("verified_on"),
+              "pricing_source" => BILLING.fetch("source")
+            }
+          end
 
-          full_version = "#{package.fetch("destination")}:#{version_id}"
-          manifest = write_candidate_manifest(package, full_version, training)
+          compute_seconds = BigDecimal(seconds.to_s)
+          calculated = (compute_seconds * rate).round(6)
           {
-            "subject" => subject,
-            "status" => "TRAINED_NEEDS_LIKENESS_REVIEW",
-            "training_id" => training["id"],
-            "model_version" => full_version,
-            "manifest" => File.basename(manifest),
-            "dataset_sha256" => package.fetch("dataset_sha256"),
-          }
-        rescue StandardError => error
-          {
-            "subject" => subject,
-            "status" => "FAILED",
-            "error" => "#{error.class}: #{error.message.to_s[0, 500]}",
-            "dataset_sha256" => package.fetch("dataset_sha256"),
+            "cost_status" => "CALCULATED_FROM_PROVIDER_PREDICT_TIME_NOT_INVOICE",
+            "provider_compute_seconds" => decimal_string(compute_seconds),
+            "rate_usd_per_second" => decimal_string(rate),
+            "calculated_cost_usd" => decimal_string(calculated),
+            "pricing_hardware" => BILLING.fetch("hardware"),
+            "pricing_verified_on" => BILLING.fetch("verified_on"),
+            "pricing_source" => BILLING.fetch("source")
           }
         end
 
-        def write_candidate_manifest(package, version, training)
+        def write_candidate_manifest(package, version, training, billing:)
           subject_directory = package.fetch("subject_directory")
           model_directory = File.join(subject_directory, "weights", package.fetch("model_directory"))
           secure_directory!(File.join(subject_directory, "weights"))
@@ -299,6 +479,7 @@ module Studio
             "training_steps" => package.fetch("training_steps"),
             "lora_type" => package.fetch("lora_type"),
             "seed" => package.fetch("seed"),
+            "billing" => billing,
             "status" => "TRAINED_NEEDS_LIKENESS_REVIEW",
             "likeness_review_required" => true,
             "trained_at" => Time.now.utc.iso8601,
@@ -320,15 +501,20 @@ module Studio
       module_function
 
       def run_cli(argv)
-        options = { subjects: SUBJECTS, timeout: DEFAULT_TIMEOUT }
+        options = { subjects: SUBJECTS, timeout: DEFAULT_TIMEOUT, approve_spend_usd: nil }
         OptionParser.new do |parser|
-          parser.banner = "Usage: ruby STUDIO/lora/train.rb [--all | --subject NAME] [--timeout SECONDS]"
+          parser.banner = "Usage: ruby STUDIO/lora/train.rb [--all | --subject NAME] --approve-spend-usd USD [--timeout SECONDS]"
           parser.on("--all", "preflight and train Johann, Ragnhild and Merethe sequentially") { options[:subjects] = SUBJECTS }
           parser.on("--subject NAME", "train one subject after its full private preflight") { |value| options[:subjects] = [value] }
-          parser.on("--timeout SECONDS", Integer, "maximum wait per training (default #{DEFAULT_TIMEOUT})") { |value| options[:timeout] = value }
+          parser.on("--approve-spend-usd USD", "required total spend ceiling for this batch") { |value| options[:approve_spend_usd] = value }
+          parser.on("--timeout SECONDS", Integer, "maximum wait per training, further limited by the approved budget") { |value| options[:timeout] = value }
         end.parse!(argv)
 
-        result = Runner.new.run(subjects: options[:subjects], timeout: options[:timeout])
+        raise Error, "--approve-spend-usd is required before any paid training request" if options[:approve_spend_usd].to_s.strip.empty?
+        result = Runner.new.run(
+          subjects: options[:subjects], timeout: options[:timeout],
+          approve_spend_usd: options[:approve_spend_usd]
+        )
         puts JSON.pretty_generate(result)
         result["status"] == "TRAINED_NEEDS_LIKENESS_REVIEW" ? 0 : 1
       rescue Error, ArgumentError, SystemCallError, IOError, Psych::Exception => error
