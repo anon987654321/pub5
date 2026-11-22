@@ -1620,8 +1620,6 @@ NOT_RUN:
 - No external service was installed, paid, enabled or contacted by this phase.
 - No previously unrequested horizon feature was promoted to picked or done.
 
-
-
 ---
 
 ## Phase 20 — Uninterrupted mission and backlog recovery

@@ -509,11 +509,12 @@ module Master
           def initialize(root: Master::ROOT)
             super()
             @root = File.expand_path(root)
+            @ownership_root = ownership_root
           end
 
           def owned
             @owned ||= begin
-              y = Master.load_yaml(File.join(@root, "PATH_OWNERSHIP.yml")) || {}
+              y = Master.load_yaml(File.join(@ownership_root, "PATH_OWNERSHIP.yml")) || {}
 
               Array((y["ownership"] || {}).keys)
             rescue StandardError => e
@@ -521,7 +522,7 @@ module Master
               # returning [] here makes every path look owned and the scan
               # reports the tree clean having judged nothing.
               Master::Ground::Swallow.log(e, context: "PathPurposeLaw.owned",
-                                            severity: :load_bearing, path: File.join(@root, "PATH_OWNERSHIP.yml"))
+                                            severity: :load_bearing, path: File.join(@ownership_root, "PATH_OWNERSHIP.yml"))
               []
             end
           end
@@ -567,7 +568,17 @@ module Master
 
           def under_root?(path)
             expanded = File.expand_path(path.to_s)
-            expanded == @root || expanded.start_with?(@root + File::SEPARATOR)
+            expanded == @ownership_root || expanded.start_with?(@ownership_root + File::SEPARATOR)
+          end
+
+          # The ownership map belongs to MASTER even when the scan root is the
+          # repository: BIZ, RAILS and OPENBSD have no entries and must be
+          # skipped, not reported as gaps against another tree's map.
+          def ownership_root
+            return @root if File.file?(File.join(@root, "PATH_OWNERSHIP.yml"))
+
+            master = File.expand_path(Master::ROOT)
+            File.file?(File.join(master, "PATH_OWNERSHIP.yml")) ? master : @root
           end
 
           def shallowest_gap(dir)

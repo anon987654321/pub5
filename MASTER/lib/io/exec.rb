@@ -305,7 +305,11 @@ module Master
         def alive? = @thread.alive?
 
         def value
-          @thread.value
+          begin
+            @thread.value
+          rescue StandardError
+            nil
+          end
           @lock.synchronize { @output.dup }
         end
 

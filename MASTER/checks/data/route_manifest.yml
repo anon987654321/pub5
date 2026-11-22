@@ -724,7 +724,7 @@ apps:
       active_storage/disk#show:
       - "/rails/active_storage/disk/:encoded_key/*filename"
   master:
-    digest: f541c08bc0a1f9d9
+    digest: 8617fb2a9eb76b71
     routes:
       chat#index:
       - "/"

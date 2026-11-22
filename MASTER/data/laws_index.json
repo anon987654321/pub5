@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "generated_at": "2026-11-20T22:44:26Z",
-  "revision": "6133027203788a331753a2820b56efedfc175f9d",
-  "law_count": 554,
+  "generated_at": "2026-11-22T19:25:21Z",
+  "revision": "c0c389f7c25553ed889bef154b4b7be1ea57045d",
+  "law_count": 560,
   "laws": {
     "A_FINDING_IS_A_HYPOTHESIS": {
       "id": "A_FINDING_IS_A_HYPOTHESIS",
@@ -2915,6 +2915,25 @@
       ],
       "bare_detector": false
     },
+    "TRUTHFUL_STATUS_test_precedes_report": {
+      "id": "TRUTHFUL_STATUS_test_precedes_report",
+      "statement": "A PASS, ready, clean, complete or delivered status is reported before its required test, check or deployment verification finishes successfully for the same target and revision, or omits the actual failed, skipped or inconclusive result.\n",
+      "parent": "TRUTHFUL_STATUS",
+      "severity": "error",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "never",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
     "ROBUSTNESS_least_authority_tracing": {
       "id": "ROBUSTNESS_least_authority_tracing",
       "statement": "Observability itself must obey least authority. Continuous profiles, eBPF or agent traces may observe only what is required for the current investigation or budget; unrestricted always-on high-fidelity tracing of every path without sampling or purpose is a privilege expansion.\n",
@@ -2955,12 +2974,50 @@
     },
     "ROBUSTNESS_homeostasis": {
       "id": "ROBUSTNESS_homeostasis",
-      "statement": "The system returns to a healthy state after interruption, budget collapse, orphaned missions or checkpoint loss. Failure to recover durable mission state or to surface the unrecovered remainder is a robustness failure.\n",
+      "statement": "The system returns to a healthy state after interruption, budget collapse, orphaned missions, checkpoint loss or provider failure. A failed provider must not discard the active task, conversation context or declared capability requirements. The system routes only to another healthy, authorised and compatible provider within bounded retry and resource budgets. When no eligible provider answers, it preserves resumable mission state and reports the unrecovered remainder explicitly.\n",
       "parent": "ROBUSTNESS",
       "severity": "warning",
       "mode": "violation",
       "lifecycle": "active",
       "autofix": "review",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "ROBUSTNESS_mutation_requires_explicit_authorization": {
+      "id": "ROBUSTNESS_mutation_requires_explicit_authorization",
+      "statement": "A mutating /fix repair runs without an explicit --apply authorization, an explicit requested mode and a named governed repository target.\n",
+      "parent": "ROBUSTNESS",
+      "severity": "error",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "never",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "ROBUSTNESS_autonomous_triggers_are_bounded": {
+      "id": "ROBUSTNESS_autonomous_triggers_are_bounded",
+      "statement": "An autonomous repository mutator starts without explicit opt-in, an exact allowlisted task and scope, bounded time and retry budgets, single-writer ownership, a stop condition and a durable terminal receipt.\n",
+      "parent": "ROBUSTNESS",
+      "severity": "error",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "never",
       "languages": [],
       "surfaces": [],
       "exemptions": {
@@ -9186,6 +9243,25 @@
       ],
       "bare_detector": false
     },
+    "PRESERVE_FIRST_media_provenance": {
+      "id": "PRESERVE_FIRST_media_provenance",
+      "statement": "A source media asset or approved prior take is overwritten, degraded or published without preserving its original bytes and identity, recording relevant source, rights or consent provenance and generation inputs, and keeping qualitative human acceptance distinct from automated measurements.\n",
+      "parent": "PRESERVE_FIRST",
+      "severity": "error",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "never",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/practice.rb"
+      ],
+      "bare_detector": false
+    },
     "PREDICATE_SIDE_EFFECTS": {
       "id": "PREDICATE_SIDE_EFFECTS",
       "severity": "info",
@@ -9606,6 +9682,25 @@
       },
       "fixtures": {
         "status": "docs"
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "PROXIMITY_local_visual_audio_ownership": {
+      "id": "PROXIMITY_local_visual_audio_ownership",
+      "statement": "A product or STUDIO project’s layout, visual styling or audio policy is moved into an unrelated global owner, or a shared rule overrides a local product contract instead of sharing only a genuinely common invariant.\n",
+      "parent": "PROXIMITY",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "never",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
@@ -10071,7 +10166,7 @@
         "status": "fixture",
         "file": "-",
         "bad": "require \"set\"",
-        "good": "points = Set.new"
+        "good": "require \"pathname\"\nPathname.instance_method(:find)\nPathname.instance_method(:rmtree)\n"
       },
       "definition_sources": [
         "MASTER/law/ruby.rb"
@@ -10289,6 +10384,25 @@
       },
       "fixtures": {
         "status": "docs"
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
+    "ROBUSTNESS_bounded_operation_lifecycle": {
+      "id": "ROBUSTNESS_bounded_operation_lifecycle",
+      "statement": "A timeout bounds the direct child but leaves owned descendants, inherited pipes, readers or cleanup unbounded.",
+      "parent": "ROBUSTNESS",
+      "severity": "error",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "never",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
@@ -11864,7 +11978,7 @@
         "status": "fixture",
         "file": "/repo/app/models/example.rb",
         "bad": "  # FIXME: the retry has no cap\n",
-        "good": "  # the reasoning is in TODO.md\n  MARKERS = /TODO|FIXME|XXX/\n"
+        "good": "  # the reasoning is in convergence.yml\n  MARKERS = /TODO|FIXME|XXX/\n"
       },
       "definition_sources": [
         "MASTER/law/lexical.rb"

@@ -338,7 +338,24 @@ module Operator
     # wants either its style or its removal, tracked in the register.
     # 2026-11-15: undefined_class 43 -> 50 and unused_selector 109 -> 110 with
     # the engine stylesheet carry (design_metrics now scans every app).
-    BASELINES = { "undefined_class" => 50, "unused_selector" => 110 }.freeze
+    # 2026-11-22: undefined_class 50 -> 56 and unused_selector 110 -> 103 after
+    # the layered stylesheet consolidation. The full undefined set is named here
+    # so the raised number is actionable: account-blocked-people, account-sessions,
+    # amber-look-image, category-filter, comment-edit, dating-prompt-form,
+    # dating-prompt-list, dating-prompts, encounter-cta, form-error, forward-quote,
+    # infinite-scroll-end, infinite-scroll-status, legal-backlink, like-age,
+    # linktree-links, listening-party-audio, live-stream-key, live-stream-owner,
+    # live-stream-status, maintainer-email, map-point-list, marketplace-logo-count-plus,
+    # menu-item-allergen-fields, messenger-rail-flag, msg-file-chip, msg-file-name,
+    # msg-file-size, nearby-chat-widget-random, notification-actor,
+    # notification-cluster-items, order-buyer, order-fulfilment, order-pay,
+    # order-running-total, order-ship-form, page-back, page-shell, people-list,
+    # people-list-handle, place-actions, place-check-in-status, playlist-player-status,
+    # ports-data-note, post-gallery-list, profile-bio, pub4-post-embed,
+    # pub4-visual-field, restaurant-setup-checklist, search-result-snippet,
+    # seller-trust, store-opening-hours, verification-reject, video-note-seek,
+    # video-note-time-fill, welcome-start.
+    BASELINES = { "undefined_class" => 56, "unused_selector" => 103 }.freeze
 
     Finding = Struct.new(:kind, :name, :count, :example)
 

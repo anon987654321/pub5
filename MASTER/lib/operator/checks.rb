@@ -560,8 +560,8 @@ module Deploy
         runs_check = content.match?(/checks\/runner\.rb"?\s+master_web_assets/)
         result.fail("#{relative_path} must run the master_web_assets check") unless runs_check
 
-        restarts_master = content.match?(/rcctl restart master/)
-        starts_master = content.match?(/rcctl start master/)
+        restarts_master = content.match?(/(?:rcctl|admin_service)\s+restart\s+master/)
+        starts_master = content.match?(/(?:rcctl|admin_service)\s+start\s+master/)
 
         if restart_mode == :restart
           result.fail("#{relative_path} must restart master after precompile") unless restarts_master
