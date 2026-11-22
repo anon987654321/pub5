@@ -301,8 +301,11 @@ module Master
           @sessions[key] = Session.new(browser:, page:, mutex: Mutex.new, host: host.to_s.downcase,
                                        headless:, lease_id: lease&.id)
         rescue StandardError
-          browser&.quit
-          @broker&.close(lease.id) if lease
+          begin
+            browser&.quit
+          ensure
+            @broker&.close(lease.id) if lease
+          end
           raise
         end
       end
