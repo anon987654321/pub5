@@ -52,6 +52,7 @@ class TestDillaCliContract < Minitest::Test
     assert_includes out, "reference"
     assert_includes out, "output-path"
     assert_includes out, "audit PATH.wav"
+    assert_includes out, "reproduce TAKE.provenance.json"
   end
 
   def test_new_provenance_pins_renderer_theory_and_sample_digests
@@ -110,6 +111,48 @@ class TestDillaCliContract < Minitest::Test
       assert_equal "unavailable", provenance.dig("source", "sample", "status")
       refute provenance.dig("source", "sample").key?("sha256")
     end
+  end
+
+  def test_provenance_reproduces_the_same_wav_bytes
+    Dir.mktmpdir("dilla-reproduce-") do |directory|
+      original_base = File.join(directory, "original")
+      options = Dilla::Options.new
+      options.mode = :render
+      options.style = "j_dilla"
+      options.progression = Dilla.progressions.first.fetch("id")
+      options.bars = "1"
+      options.seed = "1234"
+      options.sample_loop = ""
+      options.out = original_base
+
+      original = Dilla.render(options, quiet: true)
+      replay_path = File.join(directory, "replay.wav")
+      report = Dilla.reproduce_render("#{original_base}.provenance.json", out: replay_path)
+
+      assert_equal "BYTE_MATCH", report.fetch("state")
+      assert_equal Digest::SHA256.file(original.fetch(:wav)).hexdigest, report.fetch("original_sha256")
+      assert_equal report.fetch("original_sha256"), report.fetch("reproduced_sha256")
+      assert_equal report.fetch("reproduced_wav"), replay_path
+      assert_equal "NOT_REVIEWED", report.fetch("listening")
+
+      provenance_path = "#{original_base}.provenance.json"
+      provenance = JSON.parse(File.read(provenance_path))
+      provenance["execution"]["renderer_sha256"] = "0" * 64
+      Dilla.atomic_write(provenance_path, JSON.pretty_generate(provenance))
+      refused_path = File.join(directory, "must-not-render.wav")
+      assert_raises(ArgumentError) do
+        Dilla.reproduce_render(provenance_path, out: refused_path)
+      end
+      refute File.exist?(refused_path)
+    end
+  end
+
+  def test_reproduce_cli_requires_an_original_provenance_and_output
+    options = Dilla.parse_cli(["reproduce", "take.provenance.json", "--out", "replay.wav"])
+
+    assert_equal :reproduce, options.mode
+    assert_equal "take.provenance.json", options.source
+    assert_equal "replay.wav", options.out
   end
 
   def test_output_path_answers_the_master_contract
