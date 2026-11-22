@@ -691,6 +691,7 @@ module Master
         when :probe then "read-only diagnostic"
         when :git then "git action"
         when :http then "network request"
+        when :browser then "browser page visit"
         when :ask then "approval request"
         when :note then "note"
         when :critique then "review"
