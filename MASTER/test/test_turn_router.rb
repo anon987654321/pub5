@@ -120,6 +120,17 @@ class TurnRouterTest < Minitest::Test
     assert_equal "/fix --dry-run ../RAILS/amber", rewritten
   end
 
+  def test_natural_fix_routing_never_invents_write_authorization
+    router = Master::CLI::TurnRouter
+
+    assert_equal "/fix --mode=repair MASTER",
+                 router.send(:explicit_fix_request, "Please run /fix MASTER")
+    assert_equal "/fix --mode=repair MASTER --apply",
+                 router.send(:explicit_fix_request, "Please run /fix --apply MASTER")
+    assert_equal "/fix --mode=repair MASTER --apply",
+                 router.send(:explicit_fix_request, "Please apply /fix MASTER")
+  end
+
   def test_semantic_operator_routing_resolves_inventory_aliases_and_exclusions
     response = {
       "intent" => "operator_action", "operation" => "deploy", "environment" => "production",
