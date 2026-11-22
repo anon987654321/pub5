@@ -14,6 +14,11 @@
 #
 # needs: console (vm23), registrar, device, provider (paid), browser, ears, material (photos, data),
 #        credential, rights (a decision about publication), idle-host.
+# These are acceptance seams, not global work-stop flags. An unmet seam blocks
+# only the live claim whose evidence it names. Agents must continue independent
+# source work, local/contract tests, dry-runs, adapters and failure-path proofs
+# that do not require the missing operator material or external environment.
+# Production readiness remains INCONCLUSIVE until the exact seam evidence lands.
 schema: 1
 seams:
   # MASTER
