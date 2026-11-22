@@ -355,10 +355,9 @@ module Operator
     # tracked files in the governed trees, because the box deploys origin/main and a
     # preflight of anything else proves nothing about what it will run.
     #
-    # For one Rails app, the app's bin/ci runs here too and a green run adds
-    # VPS_DEPLOY_CI_SHA: the box then installs the bundle and skips its own suite,
-    # which takes about 50 minutes on vm23's single core. VPS_DEPLOY_LOCAL_CI=0
-    # leaves the suite to the box.
+    # Every Rails app selected by the target runs bin/ci here, serially, before
+    # SSH. Group and all targets are included: no child deploy can run its suite
+    # on vm23.
     def remote_command(root:, app:, env: ENV, git: method(:git_out), runner: method(:capture), out: $stdout,
                        ci_runner: method(:local_ci))
       inventory = Deploy::Inventory.new(root:)
@@ -374,35 +373,52 @@ module Operator
 
       lead = "cd /home/dev/pub5 && VPS_DEPLOY_SHA=#{sha}"
       tail = "zsh OPENBSD/bin/vps-deploy #{app}"
+      preflight_word = nil
       if env["VPS_DEPLOY_SKIP_PREFLIGHT"] == "1"
         return [false, "VPS_DEPLOY_SKIP_PREFLIGHT=1 needs the human-only I_UNDERSTAND_FAST_DEPLOY=1"] unless env["I_UNDERSTAND_FAST_DEPLOY"] == "1"
 
-        return [true, "#{lead} VPS_DEPLOY_SKIP_PREFLIGHT=1 I_UNDERSTAND_FAST_DEPLOY=1 #{tail}"]
+        preflight_word = "VPS_DEPLOY_SKIP_PREFLIGHT=1 I_UNDERSTAND_FAST_DEPLOY=1"
+      else
+        results = run(root:, runner:)
+        out.puts(report(results))
+        return [false, "preflight failed on #{sha[0, 9]}; nothing was sent to the box"] unless results.all?(&:ok)
+
+        preflight_word = "VPS_DEPLOY_PREFLIGHT_SHA=#{sha}"
       end
 
-      results = run(root:, runner:)
-      out.puts(report(results))
-      return [false, "preflight failed on #{sha[0, 9]}; nothing was sent to the box"] unless results.all?(&:ok)
-
-      run_ci = lambda do
-        out.puts("ci0: #{app} bin/ci on #{sha[0, 9]} here; a green run lets the box skip its suite")
-        ci_runner.call(root:, app:)
+      run_ci = lambda do |ci_app|
+        out.puts("ci0: #{ci_app} bin/ci on #{sha[0, 9]} here; vm23 will only verify the installed bundle")
+        ci_runner.call(root:, app: ci_app)
       end
-      ok, ci_word = ci_attestation(root:, app:, sha:, env:, run: run_ci)
+      ok, ci_word = ci_attestation(root:, target: app, sha:, run: run_ci)
       return [false, ci_word] unless ok
 
-      [true, ["#{lead} VPS_DEPLOY_PREFLIGHT_SHA=#{sha}", ci_word, tail].compact.join(" ")]
+      [true, [lead, preflight_word, ci_word, tail].compact.join(" ")]
     rescue GitCommandError => error
       [false, "repository preflight failed: #{error.message}; nothing was sent to vm23"]
     end
 
-    # Local CI applies to any single inventory app whose deploy_root belongs to
-    # RAILS. Group targets leave per-app CI to their serial VPS child processes.
-    def ci_attestation(root:, app:, sha:, env:, run:)
+    # CI scope follows the canonical inventory. A batch runs each selected Rails
+    # app locally in deploy order; MASTER remains covered by the local preflight.
+    def ci_attestation(root:, target:, sha:, run:)
       inventory = Deploy::Inventory.new(root:)
-      row = inventory.apps.find { |candidate| candidate.name == app }
-      return [true, nil] unless row&.deploy_group == "rails" && env["VPS_DEPLOY_LOCAL_CI"] != "0"
-      return [false, "#{app} bin/ci failed here on #{sha[0, 9]}; nothing was sent to the box"] unless run.call
+      rows = case inventory.target_kind(target)
+             when :app
+               inventory.apps.select { |candidate| candidate.name == target }
+             when :group
+               inventory.ordered_apps(group: target)
+             when :all
+               inventory.ordered_apps
+             else
+               []
+             end
+      rails_apps = rows.select { |candidate| candidate.deploy_group == "rails" }
+      rails_apps.each do |candidate|
+        next if run.call(candidate.name)
+
+        return [false, "#{candidate.name} bin/ci failed here on #{sha[0, 9]}; nothing was sent to the box"]
+      end
+      return [true, nil] if rails_apps.empty?
 
       [true, "VPS_DEPLOY_CI_SHA=#{sha}"]
     end

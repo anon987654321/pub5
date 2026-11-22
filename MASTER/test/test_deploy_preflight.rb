@@ -121,7 +121,7 @@ class DeployPreflightTest < Minitest::Test
   end
 
   def remote(env: {}, runner: ->(*) { ["", true] }, app: "all",
-             ci_runner: ->(**) { flunk "bin/ci must not run" }, git: nil, **git_state)
+             ci_runner: ->(**) { true }, git: nil, **git_state)
     apps = {
       "master" => { "title" => "MASTER", "domain" => "ai.example.test", "port" => 53_187,
                     "deploy_script" => "OPENBSD/master.sh", "deploy_root" => "MASTER/web",
@@ -197,8 +197,7 @@ class DeployPreflightTest < Minitest::Test
     assert_includes reason, "nothing was sent to vm23"
   end
 
-  # vm23 runs brgen's suite in about 50 minutes on one core; a green bin/ci here
-  # on the same commit lets the box install the bundle and skip it.
+  # Every selected Rails suite runs on the workstation before SSH begins.
   def test_a_green_local_ci_attests_that_exact_commit_for_one_app
     ran = []
     ok, command = remote(app: "brgen", ci_runner: ->(root:, app:) { ran << app; true })
@@ -266,11 +265,14 @@ class DeployPreflightTest < Minitest::Test
     assert_includes reason, "nothing was sent to the box"
   end
 
-  def test_local_ci_can_be_left_to_the_box
-    ok, command = remote(app: "bsdports", env: { "VPS_DEPLOY_LOCAL_CI" => "0" })
+  def test_local_ci_cannot_be_delegated_to_vm23
+    ran = []
+    ok, command = remote(app: "bsdports", env: { "VPS_DEPLOY_LOCAL_CI" => "0" },
+                         ci_runner: ->(root:, app:) { ran << app; true })
 
     assert ok
-    refute_includes command, "VPS_DEPLOY_CI_SHA"
+    assert_equal ["bsdports"], ran
+    assert_includes command, "VPS_DEPLOY_CI_SHA=#{SHA}"
   end
 
   def test_new_inventory_app_gets_local_ci_without_a_code_list_change
@@ -282,12 +284,23 @@ class DeployPreflightTest < Minitest::Test
     assert_includes command, "VPS_DEPLOY_CI_SHA=#{SHA}"
   end
 
-  def test_rails_group_leaves_ci_to_its_serial_remote_children
-    ok, command = remote(app: "rails", ci_runner: ->(**) { flunk "group CI runs per remote child" })
+  def test_rails_group_runs_every_selected_ci_serially_on_the_workstation
+    ran = []
+    ok, command = remote(app: "rails", ci_runner: ->(root:, app:) { ran << app; true })
 
     assert ok
-    refute_includes command, "VPS_DEPLOY_CI_SHA"
+    assert_equal %w[brgen amber bsdports future_service], ran
+    assert_includes command, "VPS_DEPLOY_CI_SHA=#{SHA}"
     assert_includes command, "vps-deploy rails"
+  end
+
+  def test_all_target_runs_each_rails_ci_locally_before_returning_a_command
+    ran = []
+    ok, command = remote(app: "all", ci_runner: ->(root:, app:) { ran << app; true })
+
+    assert ok
+    assert_equal %w[brgen amber bsdports future_service], ran
+    assert_includes command, "VPS_DEPLOY_CI_SHA=#{SHA}"
   end
 
   def test_workstation_deploy_uses_the_operator_without_a_redeploy_wrapper
@@ -298,10 +311,10 @@ class DeployPreflightTest < Minitest::Test
     assert_includes source, "Operator::DeployPreflight.remote_command"
   end
 
-  def test_remote_command_pins_the_sha_and_attests_the_preflight
+  def test_remote_command_pins_the_sha_and_attests_preflight_and_all_rails_ci
     ok, command = remote
     assert ok
-    assert_equal "cd /home/dev/pub5 && VPS_DEPLOY_SHA=#{SHA} VPS_DEPLOY_PREFLIGHT_SHA=#{SHA} zsh OPENBSD/bin/vps-deploy all", command
+    assert_equal "cd /home/dev/pub5 && VPS_DEPLOY_SHA=#{SHA} VPS_DEPLOY_PREFLIGHT_SHA=#{SHA} VPS_DEPLOY_CI_SHA=#{SHA} zsh OPENBSD/bin/vps-deploy all", command
   end
 
   def test_remote_command_refuses_a_failed_preflight_and_sends_nothing
@@ -337,9 +350,15 @@ class DeployPreflightTest < Minitest::Test
     refute ok
     assert_includes reason, "I_UNDERSTAND_FAST_DEPLOY=1"
 
-    ok, command = remote(env: { "VPS_DEPLOY_SKIP_PREFLIGHT" => "1", "I_UNDERSTAND_FAST_DEPLOY" => "1" }, runner: ->(*) { flunk "skipped" })
+    ran = []
+    ok, command = remote(env: { "VPS_DEPLOY_SKIP_PREFLIGHT" => "1", "I_UNDERSTAND_FAST_DEPLOY" => "1" },
+                         runner: ->(*) { flunk "preflight skipped" },
+                         ci_runner: ->(root:, app:) { ran << app; true })
     assert ok
+    assert_equal %w[brgen amber bsdports future_service], ran
     assert_includes command, "VPS_DEPLOY_SHA=#{SHA}"
+    assert_includes command, "VPS_DEPLOY_SKIP_PREFLIGHT=1"
+    assert_includes command, "VPS_DEPLOY_CI_SHA=#{SHA}"
     refute_includes command, "VPS_DEPLOY_PREFLIGHT_SHA"
   end
 
