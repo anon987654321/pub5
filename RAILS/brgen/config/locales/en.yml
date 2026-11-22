@@ -1526,6 +1526,16 @@ en:
     order_food: Menus nearby
     orders_empty: No orders yet
     orders_empty_body: Your order history collects here once you order from a restaurant.
+    setup_heading: Your restaurant is not live yet
+    setup_private_notice: It stays hidden from customers until every step below is done.
+    setup_done: Done
+    setup_needed: To do
+    setup_steps:
+      profile: Name, address and cuisine
+      menu: At least one available dish
+      hours: Opening hours
+      cover: A cover image
+      storefront: A shared storefront
     add_restaurant: Add restaurant
     edit_restaurant: Edit restaurant
     delivery_drivers: Delivery drivers

@@ -42,7 +42,7 @@
           <span class="opening-hours-day"><%= t("takeaway.weekdays.#{day_key}") %></span>
           <%= time_field_tag "opening_hours[#{weekday}][opens_at]", opens_value, aria: { label: t("takeaway.weekdays.#{day_key}") + " " + t("takeaway.opens_at") } %>
           <%= time_field_tag "opening_hours[#{weekday}][closes_at]", closes_value, aria: { label: t("takeaway.weekdays.#{day_key}") + " " + t("takeaway.closes_at") } %>
-          <%= check_box_tag "opening_hours[#{weekday}][closed]", "1", closed, id: closed_id %>
+          <%= check_box_tag "opening_hours[#{weekday}][closed]", "1", closed, id: closed_id, aria: { label: t("takeaway.closed_all_day") } %>
           <%= label_tag closed_id, t("takeaway.closed_all_day") %>
         </div>
       <% end %>

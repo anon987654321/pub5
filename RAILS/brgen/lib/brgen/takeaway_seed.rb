@@ -144,104 +144,121 @@ module Brgen
         },
       )
       restaurant = result.restaurant
-      store = result.store
+      result.store.update!(active: true)
+      prune_mrdamascy_categories!(restaurant)
+      restaurant.update!(active: true, demo: false, metadata: mrdamascy_metadata)
+      seed_mrdamascy_items!(restaurant, mrdamascy_categories(restaurant))
+      seed_mrdamascy_hours!(restaurant)
+      attach_mrdamascy_cover!(restaurant)
+      restaurant
+    end
 
-      store.update!(active: true)
+    def self.prune_mrdamascy_categories!(restaurant)
       restaurant.menu_categories.where(name: Takeaway::Provisioner::DEFAULT_MENU_CATEGORIES).each do |category|
         category.destroy! unless category.menu_items.exists?
       end
+    end
 
-      restaurant.update!(
-        active: true,
-        demo: false,
+    def self.mrdamascy_metadata
+      {
+        "menu_sections" => MRDAMASCY_CATEGORIES.map do |key, name, name_en, emoji, position|
+          { "key" => key, "name" => name, "name_en" => name_en, "emoji" => emoji, "position" => position }
+        end,
+        "seed_source" => "RAILS/mrdamascy",
+        "seed_profile" => "mrdamascy-bergen",
+        "opening_hours_text" => "Man–Fre 11–21 · Lør–Søn 14–21",
+        "opening_hours_text_en" => "Mon–Fri 11am–9pm · Sat–Sun 2pm–9pm",
+        "delivery_zones" => MRDAMASCY_DELIVERY_ZONES,
+        "promotions" => MRDAMASCY_PROMOTIONS,
+        "features_not_yet_wired" => %w[postcode_delivery_zones promo_code_checkout configurable_item_options loyalty_stamps],
+        "brand_assets" => {
+          "logo" => "takeaway/mrdamascy/brand/logo-transparent.svg",
+          "icon" => "takeaway/mrdamascy/brand/icon.svg",
+          "og_card" => "takeaway/mrdamascy/brand/og-card.png",
+          "screenshots" => %w[
+            takeaway/mrdamascy/screenshots/menu.jpg
+            takeaway/mrdamascy/screenshots/tracking.jpg
+          ],
+        },
+      }
+    end
+
+    def self.mrdamascy_categories(restaurant)
+      MRDAMASCY_CATEGORIES.to_h do |key, name, _name_en, _emoji, _position|
+        [ key, restaurant.menu_categories.find_or_create_by!(name:) ]
+      end
+    end
+
+    def self.seed_mrdamascy_items!(restaurant, categories)
+      MRDAMASCY_ITEMS.each do |row|
+        category_key, name, *_, photo_name, _options = row
+        item = restaurant.menu_items.find_or_initialize_by(name:)
+        assign_mrdamascy_item!(item, categories.fetch(category_key), row)
+        item.save!
+        attach_mrdamascy_photo!(item, photo_name)
+      end
+    end
+
+    def self.assign_mrdamascy_item!(item, category, row)
+      _category_key, _name, name_en, origin, heat, price_kr, emoji, badges,
+        weight_g, description, _photo_name, options = row
+      item.assign_attributes(
+        menu_category: category,
+        description:,
+        price_cents: (price_kr * 100).to_i,
+        available: true,
+        vegetarian: Array(badges&.split(",")).include?("veg"),
+        vegan: false,
+        allergens: nil,
         metadata: {
-          "menu_sections" => MRDAMASCY_CATEGORIES.map do |key, name, name_en, emoji, position|
-            { "key" => key, "name" => name, "name_en" => name_en, "emoji" => emoji, "position" => position }
-          end,
-          "seed_source" => "RAILS/mrdamascy",
-          "seed_profile" => "mrdamascy-bergen",
-          "opening_hours_text" => "Man–Fre 11–21 · Lør–Søn 14–21",
-          "opening_hours_text_en" => "Mon–Fri 11am–9pm · Sat–Sun 2pm–9pm",
-          "delivery_zones" => MRDAMASCY_DELIVERY_ZONES,
-          "promotions" => MRDAMASCY_PROMOTIONS,
-          "features_not_yet_wired" => %w[postcode_delivery_zones promo_code_checkout configurable_item_options loyalty_stamps],
-          "brand_assets" => {
-            "logo" => "takeaway/mrdamascy/brand/logo-transparent.svg",
-            "icon" => "takeaway/mrdamascy/brand/icon.svg",
-            "og_card" => "takeaway/mrdamascy/brand/og-card.png",
-            "screenshots" => %w[
-              takeaway/mrdamascy/screenshots/menu.jpg
-              takeaway/mrdamascy/screenshots/tracking.jpg
-            ],
-          },
+          "name_en" => name_en,
+          "origin" => origin,
+          "heat" => heat,
+          "emoji" => emoji,
+          "badges" => badges.to_s.split(",").reject(&:empty?),
+          "weight_g" => weight_g,
+          "options" => options,
         },
       )
+    end
 
-      categories = {}
-      MRDAMASCY_CATEGORIES.each do |key, name, _name_en, _emoji, _position|
-        categories[key] = restaurant.menu_categories.find_or_create_by!(name:)
+    def self.attach_mrdamascy_photo!(item, photo_name)
+      photo_path = Rails.root.join(
+        "engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food",
+        photo_name,
+      )
+      return unless File.file?(photo_path) && !item.photo.attached?
+
+      File.open(photo_path, "rb") do |image|
+        item.photo.attach(io: image, filename: photo_name, content_type: "image/jpeg")
       end
+    end
 
-      MRDAMASCY_ITEMS.each do |row|
-        category_key, name, name_en, origin, heat, price_kr, emoji, badges,
-          weight_g, description, photo_name, options = row
-        item = restaurant.menu_items.find_or_initialize_by(name:)
-        item.assign_attributes(
-          menu_category: categories.fetch(category_key),
-          description:,
-          price_cents: (price_kr * 100).to_i,
-          available: true,
-          vegetarian: Array(badges&.split(",")).include?("veg"),
-          vegan: false,
-          allergens: nil,
-          metadata: {
-            "name_en" => name_en,
-            "origin" => origin,
-            "heat" => heat,
-            "emoji" => emoji,
-            "badges" => badges.to_s.split(",").reject(&:empty?),
-            "weight_g" => weight_g,
-            "options" => options,
-          },
-        )
-        item.save!
-
-        photo_path = Rails.root.join(
-          "engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/food",
-          photo_name,
-        )
-        if File.file?(photo_path) && !item.photo.attached?
-          File.open(photo_path, "rb") do |image|
-            item.photo.attach(io: image, filename: photo_name, content_type: "image/jpeg")
-          end
-        end
-      end
-
-      hours = {
-        1 => [11 * 60, 21 * 60],
-        2 => [11 * 60, 21 * 60],
-        3 => [11 * 60, 21 * 60],
-        4 => [11 * 60, 21 * 60],
-        5 => [11 * 60, 21 * 60],
-        6 => [14 * 60, 21 * 60],
-        0 => [14 * 60, 21 * 60],
-      }
-      hours.each do |weekday, (opens_minute, closes_minute)|
+    def self.seed_mrdamascy_hours!(restaurant)
+      {
+        1 => [ 11 * 60, 21 * 60 ],
+        2 => [ 11 * 60, 21 * 60 ],
+        3 => [ 11 * 60, 21 * 60 ],
+        4 => [ 11 * 60, 21 * 60 ],
+        5 => [ 11 * 60, 21 * 60 ],
+        6 => [ 14 * 60, 21 * 60 ],
+        0 => [ 14 * 60, 21 * 60 ],
+      }.each do |weekday, (opens_minute, closes_minute)|
         hour = restaurant.opening_hours.find_or_initialize_by(weekday:)
         hour.assign_attributes(opens_minute:, closes_minute:)
         hour.save!
       end
+    end
 
+    def self.attach_mrdamascy_cover!(restaurant)
       cover_path = Rails.root.join(
         "engines/marketplace/engines/takeaway/app/assets/images/takeaway/mrdamascy/brand/og-card.png",
       )
-      if File.file?(cover_path) && !restaurant.cover.attached?
-        File.open(cover_path, "rb") do |image|
-          restaurant.cover.attach(io: image, filename: "mrdamascy-og-card.png", content_type: "image/png")
-        end
-      end
+      return unless File.file?(cover_path) && !restaurant.cover.attached?
 
-      restaurant
+      File.open(cover_path, "rb") do |image|
+        restaurant.cover.attach(io: image, filename: "mrdamascy-og-card.png", content_type: "image/png")
+      end
     end
 
     # Mandarinen — the wok & sushi restaurant arm of the house that runs the
@@ -377,6 +394,9 @@ module Brgen
       ],
     ].freeze
 
-    private_class_method :seed_restaurants, :seed_menu, :seed_order, :seed_drivers
+    private_class_method :seed_restaurants, :seed_menu, :seed_order, :seed_drivers,
+                         :prune_mrdamascy_categories!, :mrdamascy_metadata, :mrdamascy_categories,
+                         :seed_mrdamascy_items!, :assign_mrdamascy_item!, :attach_mrdamascy_photo!,
+                         :seed_mrdamascy_hours!, :attach_mrdamascy_cover!
   end
 end

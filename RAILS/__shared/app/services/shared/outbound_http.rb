@@ -193,7 +193,7 @@ module Shared
 
       response = nil
       Timeout.timeout(total, DeadlineExceeded, "outbound request exceeded its #{total}s total deadline") do
-        http.request(request) do |incoming|
+        returned = http.request(request) do |incoming|
           response = incoming
           declared = incoming["content-length"].to_s
           if declared.match?(/\A\d+\z/) && declared.to_i > cap
@@ -201,6 +201,7 @@ module Shared
           end
           incoming.body = capped_body(incoming, cap)
         end
+        response ||= returned
       end
       raise IOError, "outbound HTTP returned no response" unless response
 

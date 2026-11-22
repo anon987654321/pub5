@@ -1534,6 +1534,16 @@ nb:
     order_food: Menyer i nærheten
     orders_empty: Ingen bestillinger ennå
     orders_empty_body: Bestillingshistorikken din samles her når du bestiller fra en restaurant.
+    setup_heading: Restauranten er ikke publisert ennå
+    setup_private_notice: Den er skjult for kundene til hvert steg nedenfor er fullført.
+    setup_done: Ferdig
+    setup_needed: Gjenstår
+    setup_steps:
+      profile: Navn, adresse og kjøkken
+      menu: Minst én tilgjengelig rett
+      hours: Åpningstider
+      cover: Et forsidebilde
+      storefront: En delt butikkfront
     add_restaurant: Legg til restaurant
     edit_restaurant: Rediger restaurant
     delivery_drivers: Budsjåfører
