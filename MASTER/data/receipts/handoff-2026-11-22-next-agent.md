@@ -1296,7 +1296,8 @@ cbdfa0e6a70e809fb2803753e5b3caeccf713018 (Ruby engine/platform pin and malformed
 fc4526dc33fe2ee8c1d605879e027ea8d7757aed (correct digest regexp anchors);
 e2b351a3b9671e70c95fc06672cef847eed3899c (catalogue version alignment);
 2fa15d6cbeabb839d732ab0128bbd3da9a536f56 (replace stale no-replay documentation);
-98d46d4e6b21a26bd8dda9342c6fd95bba453fc0 (runtime and catalogue version regressions).
+98d46d4e6b21a26bd8dda9342c6fd95bba453fc0 (runtime and catalogue version regressions);
+7da4de318078f8b8d1fc249d47c802de952fbb8b (refuse sidecar tampering and original-WAV overwrite).
 
 ### Execution boundary for Phase 17
 
@@ -1384,6 +1385,14 @@ cancellation. A measured overrun reports BUDGET_EXCEEDED and stops remaining
 jobs. The local lock and ledger coordinate one checkout only; they do not
 serialize another clone, device, account operator or external Replicate job.
 The README expressly warns against concurrent training from another checkout.
+
+The existing MiniMax H3 reservation remains a separate process-local per-run
+estimate in STUDIO/replicate/models.rb. It is not a daily or account-wide cap.
+The image/audio catalogue contains paid rows without verified per-model rates,
+so these paths are not counted as zero-cost and have not been represented as
+covered by the LoRA ledger or video reservation. A genuinely shared all-provider
+ceiling requires authoritative rates for each paid model and a single durable
+reservation/settlement owner; no duplicate authority was introduced here.
 
 ### Private evidence
 
