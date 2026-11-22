@@ -51,7 +51,9 @@ module Master
         # The CDP websocket URL is a bearer capability: anyone who obtains it
         # can control the live browser. Keep routine diagnostics useful without
         # serializing that endpoint into logs, exceptions or model context.
-        def diagnostic = { id:, host:, expires_at: expires_at.utc.iso8601 }.freeze
+        def diagnostic
+          { id: id.dup.freeze, host: host.dup.freeze, expires_at: expires_at.getutc.iso8601.freeze }.freeze
+        end
 
         def inspect = "#<#{self.class} #{diagnostic.map { |key, value| "#{key}=#{value.inspect}" }.join(" ")}>"
         def to_s = inspect
