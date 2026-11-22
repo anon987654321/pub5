@@ -244,5 +244,24 @@ print -r -- "$(date +%s) 88" > "$DB/cpu-pressure"
 run_tick "$CLEAR"
 check "deploy flag keeps optional services up" "amber bsdports" "$(running)"
 
+print "14. the all-apps pin holds during ordinary pressure"
+reset
+: > "$DB/all_apps"
+FAKE_LOAD=3.0 FAKE_FREE=$CLEAR ksh "$SANDBOX/guard_under_test.sh" >/dev/null 2>&1 || true
+check "ordinary pressure does not break the all-apps pin" "amber bsdports" "$(running)"
+
+print "15. confirmed CPU pressure overrides the all-apps pin"
+reset
+: > "$DB/all_apps"
+print -r -- "$(date +%s) 88" > "$DB/cpu-pressure"
+run_tick "$CLEAR"
+check "critical CPU pressure still sheds bsdports with the pin present" "amber" "$(running)"
+
+print "16. critically low memory overrides the all-apps pin"
+reset
+: > "$DB/all_apps"
+run_tick "$BREACH"
+check "critical memory pressure still sheds bsdports with the pin present" "amber" "$(running)"
+
 rm -rf "$SANDBOX"
 [[ $fail -eq 0 ]] && print "\nALL PASS" || { print "\nFAILURES"; exit 1; }
