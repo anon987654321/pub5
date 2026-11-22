@@ -243,7 +243,7 @@ class TestPhantomRecovery < Minitest::Test
       end
     end
 
-    attr_reader :bus, :calls, :native_sends
+    attr_reader :bus, :calls, :native_sends, :manual_no_tools_flags
 
     def initialize(native_reply:, manual_replies:, native_rounds: 0)
       @calls = []
@@ -254,6 +254,7 @@ class TestPhantomRecovery < Minitest::Test
       @manual_replies = manual_replies.dup
       @native_rounds = native_rounds
       @native_sends = 0
+      @manual_no_tools_flags = []
     end
 
     def send_ruby_llm(*, **)
@@ -263,6 +264,7 @@ class TestPhantomRecovery < Minitest::Test
     end
 
     def send_llm_request(*, **)
+      @manual_no_tools_flags << Fiber[:master_no_tools]
       Master::Result.ok(@manual_replies.shift.to_s)
     end
 
@@ -292,6 +294,8 @@ class TestPhantomRecovery < Minitest::Test
     assert_equal "The tool ran and returned counter evidence.", result.to_s
     assert_equal 1, harness.native_sends, "the native provider turn must not be repeated"
     assert_equal [:called], harness.calls, "manual fallback should execute the tool exactly once"
+    assert_equal [true, true], harness.manual_no_tools_flags,
+                 "the fallback turns must use text-tool mode instead of recursively requesting native tools"
     assert harness.bus.events.any? do |event, payload|
       event == "llm:manual_tool_fallback" &&
         payload[:reason] == "native_tool_call_returned_as_text" &&
