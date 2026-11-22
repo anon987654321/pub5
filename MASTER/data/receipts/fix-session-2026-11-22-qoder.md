@@ -2497,3 +2497,51 @@ narrow plugin session interface is not yet established.
 Do not close issue #5 until both boundaries are addressed and tested. Preserve
 the current fail-closed `session_browser_post_policy` operator seam; no POST
 authority has been added by this work.
+
+### Read-only browser Core Effect — partial implementation (2026-11-22)
+
+A bounded first-class browser Effect is now wired through the existing Core
+spine. This is a useful first slice, not completion of the interactive browser
+boundary.
+
+- Added `:browser` to the closed Core verb/capability vocabulary, with an
+  `Effect.browser(url, wait:, links:)` factory. Its payload accepts only the
+  URL, a finite wait from 0–12 seconds, and the links boolean; unknown fields
+  (including a model-supplied method such as POST) become a parse error.
+  Its recovery class is `policy_gated`, never model-declared reversible.
+- World offers the verb only when the active context has `:browser`, a live
+  broker, and the guarded reader service. World dispatches the effect to the
+  injected `WebBrowse` path; the Core Effect does not receive a CDP endpoint.
+- CoreBridge builds that reader only when the active broker and the operator
+  governor are both present. It is one-shot and read-only: the existing
+  governor permission, public-destination/SSRF checks, page-host request
+  restrictions, GET/HEAD fencing, resource budget and ensure-based lease
+  cleanup remain authoritative.
+- No `:browser` capability was added to `observe` or `plan`; the existing
+  profile restriction remains. No login, click, form submission, prompt send,
+  social publication, travel booking, credential or POST permission was added.
+- The constitutional secret rule now checks browser URLs. Shared effect
+  telemetry labels the event `browser page visit` and does not persist the URL.
+  The model contract identifies the returned page as untrusted data and
+  forbids using this verb for interaction or credential entry.
+
+Source regressions were added/extended in:
+`MASTER/test/test_core_capabilities.rb`,
+`MASTER/test/test_core_model_parse.rb`,
+`MASTER/test/test_core_reversibility.rb`,
+`MASTER/test/test_core_world.rb`, and
+`MASTER/test/test_core_bridge.rb`.
+
+This does **not** close the wider browser boundary. The six in-process
+adapters still receive a Ferrum/CDP attachment path; the lease's raw CDP URL
+has not yet been replaced by a narrow session API. The WebChat, SocialBrowser
+and TravelBrowser interactive transports still need distinct action-scoped
+network grants. Screenshot bytes are still not delivered end-to-end to the
+vision lane. Cooperative cancellation of an in-flight browser action and real
+browser journey tests also remain open. The `session_browser_post_policy`
+rights seam is unchanged.
+
+Verification: GitHub read-after-write source inspection only. All tests named
+above, Ruby syntax checks, `MASTER/bin/check`, Chromium attach/teardown,
+network adversarial probes, cancellation and screenshot/vision integration
+remain **NOT_RUN** in this environment. Issue #5 remains open.
