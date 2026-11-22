@@ -617,15 +617,18 @@ every commit beneath yours, including other people's. Name in your report what
 went with you.
 
 **One verb, explicit modes.** `/fix [path] [--mode=repair|audit|visual|elevate|all]`
-is the only pipeline command. `repair` is the default write-enabled observe,
-critique, repair, re-observe and verify lifecycle. `audit` is a read-only tree review: first-read, execution trace, non-persisting
+is the only pipeline command. `repair` is the default read-only observe,
+critique, repair-preview, re-observe and verify lifecycle. A mutating run
+requires explicit `--apply`, an explicit `--mode=repair|elevate|all`, and a
+named governed repository target. `audit` is a read-only tree review: first-read, execution trace, non-persisting
 backlog review when due, structural review, scanner/structural preview,
 typography and principle map, council critique, and the existing per-tree repo
 sweep probes (RepoEcology without its history cache, SprawlCensus, Cohesion,
 DupCensus, data/law reach, namespace, design baseline and tree-specific checks). Probe exit success is not a Law PASS. Repair is
 replaced by preview; tree, backlog and structural-review proposals are not persisted. `visual` is a read-only style pass; `elevate` selects the
-improvement lane; `all` selects the existing all-work lane. `--dry-run`
-always means no writes. Audit and visual cannot be made write-enabled by
+improvement lane; `all` selects the existing all-work lane but remains read-only without
+explicit authorization. `--dry-run` and `--read-only` always mean no writes
+and override `--apply`. Audit and visual cannot be made write-enabled by
 `--apply`. Elevate and all retain the existing resource, file and stall
 budgets and every sacred-path, visual-custody, transaction and restructuring
 proof gate.
@@ -635,17 +638,19 @@ The existing compatibility spellings rewrite to `/fix --mode=...`:
 means the read-only repair preview; `/visual` and `/style` mean visual;
 `/elevate` and `/map` mean elevate; `/all`, `/workflow`, `/triad`,
 `/sweep`, `/through` and `/self` mean all.
-Use `/fix --mode=audit|visual|elevate|all` for explicit mode selection. `--read-only` is an explicit no-write alias for `--dry-run`.
+Use `/fix --mode=repair|audit|visual|elevate|all` for explicit mode selection. `--read-only` is an explicit no-write alias for `--dry-run`. A write requires `--apply` with an explicit mode and target; `--apply` alone is refused.
 Use `/fix` in new instructions.
 
 The run footer's file outcome docket names files that entered the repair
 adapter, their Laws, attempts and latest result. It is not a whole-tree census:
 untouched or unmeasured files must not be described as clean.
 
-**That means a fix mutates the tree** — it has broken dilla and MASTER's own
-chat path. `--no-autofix`, `--read-only` and `--dry-run` hold it back. Read the printed diff
-before committing, and never commit rewrites of generated caches: the scanner
-descends into them.
+**A mutating fix changes the tree only after explicit authorization** — past
+runs have broken Dilla and MASTER's own chat path. Plain `/fix` is read-only;
+use `--mode=repair --apply <target>` (or an explicitly selected `elevate` or
+`all` mode) to authorize a scoped write. `--no-autofix`, `--read-only` and
+`--dry-run` do not authorize writes. Read the printed diff before committing,
+and never commit rewrites of generated caches: the scanner descends into them.
 
 The deterministic autofix stage, which runs before any model is asked, answers
 to `Fix::AutofixGuard`. It never opens a protected path: Soul declares
