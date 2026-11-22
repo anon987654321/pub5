@@ -146,7 +146,7 @@ module Master
       # broker only for the current operation's capability set; exposing a
       # process broker here would let ordinary chat/plugins inherit :fix powers.
       { renderer:, output_check:, output_guard:, code_index:, reference_graph:, ecology:, diag:,
-        workspace_root: workspace }
+        workspace_root: workspace, browser_broker: Io::BrowserBroker::Scope.new }
     end
 
     def subscribe_ecology_reindex(bus:, ecology:)
