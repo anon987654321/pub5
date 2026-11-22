@@ -319,6 +319,12 @@ module Master
           raise Denied, "browser: bound host #{bound} does not match initial URL host #{initial_host}" unless initial_host == bound
 
           check_destination!(initial_uri.to_s)
+        else
+          # Some adapters reopen an existing, host-bound profile without an
+          # explicit navigation URL. That is still a new Chromium process and
+          # must re-resolve the host; a stale earlier validation is not a grant.
+          origin = URI::HTTPS.build(host: bound, path: "/")
+          check_destination!(origin.to_s)
         end
 
         @mutex.synchronize do
