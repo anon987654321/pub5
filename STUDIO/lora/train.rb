@@ -25,6 +25,7 @@ module Studio
         STANDARD_PATH, permitted_classes: [], permitted_symbols: [], aliases: false
       ).freeze
       DEFAULT_TIMEOUT = 14_400
+      MAXIMUM_TIMEOUT = 86_400
       BILLING = STANDARD.fetch("billing").freeze
       BILLING_RATE = BigDecimal(BILLING.fetch("usd_per_second").to_s).freeze
 
@@ -44,7 +45,9 @@ module Studio
         def run(subjects: SUBJECTS, timeout: DEFAULT_TIMEOUT, approve_spend_usd:)
           approved_budget = approved_budget!(approve_spend_usd)
           timeout = Integer(timeout)
-          raise ArgumentError, "training timeout must be positive" unless timeout.positive?
+          unless timeout.positive? && timeout <= MAXIMUM_TIMEOUT
+            raise ArgumentError, "training timeout must be between 1 and #{MAXIMUM_TIMEOUT} seconds"
+          end
 
           minimum_seconds = BILLING.fetch("minimum_reservable_compute_seconds")
           margin_seconds = BILLING.fetch("cancellation_margin_seconds")
@@ -497,7 +500,7 @@ module Studio
           end
 
           compute_seconds = BigDecimal(seconds.to_s)
-          calculated = (compute_seconds * rate).round(6)
+          calculated = (compute_seconds * rate).ceil(6)
           {
             "cost_status" => "CALCULATED_FROM_PROVIDER_PREDICT_TIME_NOT_INVOICE",
             "provider_compute_seconds" => decimal_string(compute_seconds),
