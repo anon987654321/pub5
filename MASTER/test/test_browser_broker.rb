@@ -416,6 +416,36 @@ class BrowserBrokerTest < Minitest::Test
     assert_empty b.sessions
   end
 
+  def test_failed_start_cleanup_remains_owned_until_shutdown_retry
+    engine = FakeEngine.new
+    stop_attempts = 0
+    original_stop = engine.method(:stop)
+    engine.define_singleton_method(:stop) do |handle|
+      stop_attempts += 1
+      raise "transient emergency stop failure" if stop_attempts == 1
+
+      original_stop.call(handle)
+    end
+    ledger = lambda do |event:, phase:, **|
+      raise IOError, "start after receipt unavailable" if event == :browser_start && phase == :after
+    end
+    b = broker(engine:, ledger:)
+
+    error = assert_raises(Broker::Denied) { b.open(host: "example.com") }
+
+    assert_match(/process cleanup failed/, error.message)
+    assert_equal 1, b.size
+    orphan_id = b.sessions.fetch(0)
+    refute_nil orphan_id
+    assert_empty engine.stopped
+
+    assert_equal 1, b.close_all
+    assert_equal 2, stop_attempts
+    assert_equal 1, engine.stopped.size
+    assert_equal 0, b.size
+    assert_empty b.sessions
+  end
+
   def test_receipts_carry_only_safe_identity_metadata
     seen = []
     b = broker(ledger: ->(**row) { seen << row })
