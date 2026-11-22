@@ -96,55 +96,35 @@ print "vps_ci: $app (sync + mutex + load check)"
 # synchronizer reads the checkout and updates the CI copy-tree.
 pub5_ensure_ci_lock >/dev/null
 doas /usr/local/libexec/ci-prepare.ksh "$app"
-# The checkout is owned by dev, so this permission repair does not cross doas.
-chmod -R u+rX,g+rX "${repo}/MASTER/tools"
 deploy_status "$app" "sync tree"
 sync_from_repo
-# VPS_DEPLOY_CI_SHA: the operator's machine ran this app's bin/ci on exactly the
-# commit checked out here (bin/operator vps deploy --remote sets it only after a
-# green run). The box then installs the bundle and skips the suite, which takes
-# about 50 minutes on this 1 vCPU / 1 GB machine; any other commit runs it here.
-# VPS_DEPLOY_SKIP_TESTS=1 is break-glass: the operator deploys without any test
-# run, and like the preflight bypass it needs I_UNDERSTAND_FAST_DEPLOY=1. The log
-# says the suite did not run anywhere, which is the difference from an attestation.
+
+# Every selected Rails app runs bin/ci on the workstation before SSH.
+# vm23 verifies the attestation against this checkout and performs a read-only
+# check of the preinstalled OpenBSD/Ruby production bundle.
 attested=${VPS_DEPLOY_CI_SHA:-}
 head=$(git -C "$repo" rev-parse HEAD)
-if [[ ${VPS_DEPLOY_SKIP_TESTS:-} == 1 && ${I_UNDERSTAND_FAST_DEPLOY:-} != 1 ]]; then
-  print -u2 "vps_ci: VPS_DEPLOY_SKIP_TESTS=1 needs the human-only I_UNDERSTAND_FAST_DEPLOY=1"
-  exit 2
-fi
-if [[ ${VPS_DEPLOY_SKIP_TESTS:-} == 1 || ( -n $attested && $attested == $head ) ]]; then
-  deploy_status "$app" "bundle install (suite skipped)"
-  . "${repo}/RAILS/_runtime_check.sh"
-  . "${repo}/RAILS/_bundle.sh"
-  bundle_install_as_app "$app" "$app_dir" \
-    || { deploy_status "$app" "bundle install (suite skipped)" "failed"; exit 1; }
-  if [[ -n $attested && $attested == $head ]]; then
-    print "vps_ci: $app suite skipped - bin/ci passed on the operator's machine for $attested"
-    ci_stamp=ci_attested
-  else
-    print "vps_ci: WARNING - $app deployed with NO test run (VPS_DEPLOY_SKIP_TESTS=1, break-glass) on $head"
-    ci_stamp=ci_skipped
-  fi
-else
-  deploy_status "$app" "bundle install + bin/ci"
-  # The brgen suite ran 59 minutes on this 1 vCPU box (coverage on) and was cut off at the
-  # guard's default 3600s still running, so CI gets two hours; the guard itself stays on.
-  ci_timeout=${PUB4_CI_TIMEOUT:-7200}
-  doas /usr/local/libexec/ci-run.ksh "$app" "$ci_timeout" \
-    || { deploy_status "$app" "bundle install + bin/ci" "failed"; exit 1; }
-  ci_stamp=ci_ok
-fi
+[[ $attested == "$head" ]] || {
+  print -u2 "vps_ci: refused - no matching workstation CI attestation for $head; host-side tests and installs are forbidden"
+  exit 1
+}
+. "${repo}/RAILS/_runtime_check.sh"
+deploy_status "$app" "bundle check"
+run_rails_as_app "$app" "$app_dir" "bundle-check" || {
+  deploy_status "$app" "bundle check" "failed"
+  print -u2 "vps_ci: $app production bundle is incomplete; build the matching OpenBSD bundle off-host"
+  exit 1
+}
+print "vps_ci: $app CI attested locally; production bundle already present"
+ci_stamp=ci_attested
 
 sha=$(git -C "$repo" rev-parse --short HEAD 2>/dev/null || echo unknown)
-# The stamp says how this commit was tested: ci_ok (the suite ran here),
-# ci_attested (it passed on the operator's machine) or ci_skipped (break-glass,
-# no suite anywhere). It said ci_ok for all three.
+# This stamp records that bin/ci passed on the workstation for the pinned SHA.
 doas "$RUBY" -rjson -retc -rtime -rsecurerandom -rfileutils -rsocket -e '
   app, sha, status = ARGV
   abort "invalid app" unless app.match?(/\A[a-z][a-z0-9_]{0,31}\z/)
   abort "invalid SHA" unless sha == "unknown" || sha.match?(/\A[0-9a-f]{7,40}\z/i)
-  abort "invalid CI status" unless %w[ci_ok ci_attested ci_skipped].include?(status)
+  abort "invalid CI status" unless status == "ci_attested"
   root = "/var/db/pub5"
   raise "unsafe /var/db/pub5" if File.symlink?(root)
   FileUtils.mkdir_p(root, mode: 0o755)

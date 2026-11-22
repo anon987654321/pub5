@@ -16,10 +16,8 @@ usage() {
   recover --apply <run-id>     restore only services recorded as up before that run
   VPS_DEPLOY_SHA=<sha>   deploy exactly this commit (default: origin/main, fetched once)
   VPS_DEPLOY_PREFLIGHT_SHA=<sha>   the operator's machine already proved this commit boots
-  VPS_DEPLOY_CI_SHA=<sha>   the operator's machine ran the app's bin/ci green on this commit; the box skips its suite
+  VPS_DEPLOY_CI_SHA=<sha>   every selected Rails app passed bin/ci on the workstation; vm23 checks installed bundles
   VPS_DEPLOY_SKIP_PREFLIGHT=1      break-glass, needs I_UNDERSTAND_FAST_DEPLOY=1
-  VPS_DEPLOY_SKIP_TESTS=1          break-glass: no test suite anywhere, needs I_UNDERSTAND_FAST_DEPLOY=1
-  SKIP_CI=1    skip vps_ci.sh; \${app}.sh and its runtime check still run
   VPS_DEPLOY_DRIFT=fail   refuse to deploy when the box's configs differ from the repo
   PUB5_DEPLOY_BROWSER_CHECKS=1   add the browser checks after restart
   VPS_DEPLOY_LOG_REF=local://deploys/name.log
@@ -1187,6 +1185,10 @@ fi
   set_stage inventory-ready
   (( ${#DEPLOY_ALL} )) || deploy_refuse "the pinned deployment inventory has no active apps"
   deploy_app_group=$(inventory_app_group "$app")
+  if [[ $deploy_app_group == rails ]]; then
+    [[ ${SKIP_CI:-0} != 1 ]] || deploy_refuse "SKIP_CI=1 is forbidden; workstation CI attestation is required"
+    [[ ${VPS_DEPLOY_CI_SHA:-} == "$pin" ]] || deploy_refuse "Rails app has no workstation CI attestation for pinned commit $pin"
+  fi
   if [[ $deploy_target_kind == all || $deploy_app_group == master ]]; then
     ensure_smart_turn_assets
   fi
@@ -1218,8 +1220,8 @@ choose_deploy_order() {
 }
 
 if [[ $deploy_target_kind == all || $deploy_target_kind == group ]]; then
-  # The parent spans child deploys and cooldowns. Its own flag keeps the
-  # resource guard out until the whole batch (or its failure recovery) ends.
+  # The parent spans child deploys and cooldowns. Its marker protects the
+  # deploy process from stale-CI cleanup; resource shedding remains active.
   keep_deploy_flag
   typeset -i first=1
   typeset -a deploy_order
@@ -1236,8 +1238,8 @@ if [[ $deploy_target_kind == all || $deploy_target_kind == group ]]; then
     zsh "$repo/OPENBSD/OPERATOR.sh" --apply || deploy_refuse "OpenBSD filesystem mirror apply failed; no application deployment was started"
   fi
   for one in $deploy_order; do
-    # Let the previous app's deploy drain before starting the next one's CI.
-    # Serial builds protect this one-core host from overlapping load peaks.
+    # Let the previous app's deploy drain before the next app is touched.
+    # Serial releases protect this one-core host from overlapping load peaks.
     if (( ! first )); then
       print "vps-deploy: $app - settling for ${PUB5_DEPLOY_COOLDOWN:-60}s before $one"
       sleep ${PUB5_DEPLOY_COOLDOWN:-60}
@@ -1384,67 +1386,22 @@ if [[ -x /usr/local/bin/config_drift_check.rb ]]; then
   fi
 fi
 
-if [[ ${SKIP_CI:-} == 1 ]]; then
-  print "vps-deploy: $app (sync via ${app}.sh, SKIP_CI=1)"
-  # The app entrypoints refuse root (line 5 of every one of them: checkout
-  # code is operator-owned, privileged actions go through dev's doas and the
-  # pub5_rcctl broker), so the sync runs as the deploy user, not as this
-  # script's root. First exercised on vm23 2026-11-08: as root, brgen.sh
-  # refused and the app stage died before stop, leaving the release serving.
-  run_as_deploy_user "cd $(printf '%q' "$repo") && zsh $(printf '%q' "$repo/RAILS/${app}/${app}.sh")"
-else
-  # The app's resident Solid Queue worker stands down for the CI run.
-  #
-  # vm23 is 1 GB. brgen_jobs holds ~380 MB resident and brgen's suite is 896
-  # tests: on 2026-08-23 the runner was OOM-killed mid-suite with swap at 898 MB
-  # of 1264, and the failure is silent in the worst way — 155 dots, no summary,
-  # no failure block, and vps_ci reporting "Tests: Rails failed". Dots then
-  # nothing in a CI test section means the runner was killed, not that a test
-  # failed. Stopped and restarted here so the knowledge lives in the deploy
-  # rather than in whoever remembers to type it.
-  # No other app may still be booting when CI starts: a Falcon cold boot and a test
-  # suite on one core is how the apps were shed.
-  settle_boots
-  jobs_service="${app}_jobs"
-  jobs_was_up=0
-  if admin_service get "$jobs_service" >/dev/null 2>&1 && admin_service check "$jobs_service" >/dev/null 2>&1; then
-    print "vps-deploy: $app (stand down $jobs_service for the CI run)"
-    admin_service stop "$jobs_service" >/dev/null 2>&1 && { jobs_was_up=1; own_stops+=("$jobs_service") }
-  fi
-
-  # Swap floor, measured after the stand-down above has freed what it frees.
-  # CI, bundle and asset work on a 1 GB box with swap nearly gone is how every
-  # app was shed: on 2026-11-03 a gem fetch at ~200 MB free took all sites down
-  # for 17 minutes, and on 2026-11-04 a MASTER run at 217 MB free timed brgen out.
-  set_stage preflight-swap
-  min_swap_mb=${VPS_DEPLOY_MIN_FREE_SWAP_MB:-400}
-  swap_blocks=${${(M)${(z)"$(${VPS_DEPLOY_SWAPCTL:-swapctl} -s 2>/dev/null)"}:#<->}[3]:-}
-  if [[ $swap_blocks == <-> ]] && (( swap_blocks * 512 / 1048576 < min_swap_mb )); then
-    (( jobs_was_up )) && admin_service start "$jobs_service" >/dev/null 2>&1
-    free_swap_mb=$(( swap_blocks * 512 / 1048576 ))
-    print -u2 "vps-deploy: $app refused - $free_swap_mb MB of swap free, the floor is $min_swap_mb MB."
-    print -u2 "            The app's jobs service is back up; nothing else was stopped. Free memory (stop another"
-    print -u2 "            app's *_jobs service), then rerun: doas zsh OPENBSD/bin/vps-deploy $app"
-    exit 1
-  fi
-
-  set_stage ci+sync
-  print "vps-deploy: $app (ci + sync)"
-  # `|| ci_status=$?` rather than a bare call and `ci_status=$?` after it. This
-  # script runs under `set -e`, so a bare failing CI run exits here and the
-  # restart below — the whole reason the stand-down records jobs_was_up — never
-  # runs, leaving the worker stopped with nothing 5xx'ing and the queue simply not
-  # draining. A command followed by `||` is exempt from errexit, which is what
-  # makes the status capture reachable at all.
-  ci_status=0
-  zsh "$repo/OPENBSD/bin/vps_ci.sh" "$app" || ci_status=$?
-
-  if (( jobs_was_up )); then
-    admin_service start "$jobs_service" >/dev/null 2>&1 \
-      || print -u2 "vps-deploy: $jobs_service did not come back - start it"
-  fi
-  (( ci_status == 0 )) || exit $ci_status
+# CI ran on the workstation. The host path is limited to a bounded
+# copy-tree refresh, exact-SHA attestation and read-only bundle check.
+set_stage preflight-swap
+min_swap_mb=${VPS_DEPLOY_MIN_FREE_SWAP_MB:-400}
+swap_output=$(${VPS_DEPLOY_SWAPCTL:-swapctl} -s 2>/dev/null)
+swap_blocks=${swap_output##* }
+[[ $swap_blocks == <-> ]] || swap_blocks=0
+free_swap_mb=$(( swap_blocks * 512 / 1048576 ))
+if (( free_swap_mb < min_swap_mb )); then
+  print -u2 "vps-deploy: $app refused - $free_swap_mb MB of swap free, floor $min_swap_mb MB; nothing was stopped"
+  exit 1
 fi
+
+set_stage sync+bundle-check
+print "vps-deploy: $app (sync + read-only bundle check)"
+zsh "$repo/OPENBSD/bin/vps_ci.sh" "$app"
 
 # Primary database, then the cache/queue/cable schemas.
 #
