@@ -25,12 +25,14 @@ class Brgen::HomeFeedTest < ActiveSupport::TestCase
   test "an empty Following graph gets followed posts plus city popular posts" do
     mine = create_post(@reader, "Own post")
     local = create_post(@other, "Popular city post")
+    local.update_column(:score, 20)
 
     assert Brgen::HomeFeed.following_cold_start?(feed: "following", authenticated: true, user: @reader)
-    feed = Brgen::HomeFeed.scope(feed: "following", authenticated: true, user: @reader)
+    feed = Brgen::HomeFeed.scope(feed: "following", authenticated: true, user: @reader).to_a
 
     assert_includes feed.map(&:id), mine.id
     assert_includes feed.map(&:id), local.id
+    assert_equal local.id, feed.first.id, "existing decayed-hot ranking puts the more-engaged city post first"
     assert feed.all? { |post| post.city_id == @city.id }
   end
 
