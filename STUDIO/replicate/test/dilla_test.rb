@@ -511,6 +511,10 @@ class TestDillaRender < Minitest::Test
       shares = quality.fetch("stem_energy_share")
       assert_operator shares.fetch("drums"), :>=, 0.12, "drums must carry the mix"
       provenance = JSON.parse(File.read("#{base}.provenance.json"))
+      source = provenance.fetch("source")
+      assert_equal "engine", source.fetch("progression_tier")
+      assert_equal "not_used", source.fetch("sample_rights_status")
+      assert_equal "not_reviewed", provenance.dig("human_acceptance", "listening")
       render = provenance.fetch("render")
       assert_equal File.size("#{base}.wav"), render.fetch("bytes")
       assert_equal Digest::SHA256.file("#{base}.wav").hexdigest, render.fetch("sha256")
