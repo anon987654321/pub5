@@ -998,3 +998,33 @@ network, not yet standalone vertical dominance.
      not the category. One network across verticals, local before global,
      useful over noisy. Each vertical competes on locality and trust joined to
      the network, not on out-featuring a global incumbent on a 1 GB SQLite box.
+
+
+### Continued implementation follow-up — 2026-11-22
+
+- Trimmed 80 trailing-whitespace lines in `MASTER/data/structural_recipes.yml`.
+  GitHub read-after-write preserved all 624 lines and the final newline; a
+  byte-for-byte comparison confirmed the result equals trailing-space
+  normalization. YAML parsing and the focused Ruby test were NOT_RUN.
+  Commit: `989eda5bcff56ef0c385c492fb7e75573b5d70de`.
+- Reduced the root README's `First hour` section to its unique disposable-
+  sandbox bootstrap instructions and a pointer to the canonical MASTER
+  first-hour/doctor guide. The shared host diagnostics and first-repair
+  sequence are no longer repeated there.
+  Commit: `87bacfdba5807b6ce0c36d04e91849f00c867618`.
+- Marked `MIGRATION.md` as historical provenance, not live policy, runtime
+  configuration, backlog or runbook. A repository search found references
+  only in the inventory, legacy-state comments and tests; no maintained
+  reader-facing document routes to it as current authority.
+  Commit: `27ba43d4691e7d19c644093e8b9d1dac0b9e4ee5`.
+
+Proof actually run: GitHub read-after-write verification for all three paths;
+line-count, final-newline and trailing-space assertions for
+`structural_recipes.yml`; section-boundary and canonical-heading checks for
+the README pointer; exact-reference search and inspection of every returned
+`MIGRATION.md` reference.
+
+Not run: Ruby syntax/tests, YAML parser, Markdown link checker, rendered
+Markdown review, `agent_context.rb`, `/fix`, boot/doctor and repository-wide
+checks. These refinements are delivered; their runtime/editorial proof remains
+INCONCLUSIVE, not PASS.
