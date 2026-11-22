@@ -105,8 +105,10 @@ voice of the creative work.
   explicit `--approve-spend-usd` ceiling is mandatory; it is the total
   client-side budget for this batch, not an automatic purchase authorisation.
   Each job's local wait timeout is bounded by the remaining amount and the
-  pinned trainer rate; on timeout the client requests cancellation and checks
-  the provider status before it continues. Replicate documents `Cancel-After`
+  pinned trainer rate. The 60-second minimum compute reservation and
+  10-second cancellation margin are local policy values, not Replicate minimums.
+  On timeout the client requests cancellation and checks the provider status
+  before it continues. Replicate documents `Cancel-After`
   for predictions, not as a guaranteed training deadline, so this is not a
   provider-enforced or account-wide hard USD cap. If cancellation remains
   unconfirmed, the run stops and reports `SPEND_UNVERIFIED`; a still-running
