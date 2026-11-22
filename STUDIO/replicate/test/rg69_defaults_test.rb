@@ -16,12 +16,14 @@ class TestRg69Defaults < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
   JS = File.join(ROOT, "dilla", "rg69", "rg69.js")
   HTML = File.join(ROOT, "dilla", "rg69", "rg69.html")
+  TONE = File.join(ROOT, "dilla", "vendor", "tone", "Tone.min.js")
 
   # The controls whose markup default must equal the engine's boot default.
   CONTROLS = %w[bpm swing drive tape comp width reverb delay filter wobble vinyl crackle].freeze
 
   def js = @js ||= File.read(JS)
   def html = @html ||= File.read(HTML)
+  def tone = @tone ||= File.read(TONE)
 
   def test_markup_controls_match_the_engine_boot_defaults
     aud = boot_aud
@@ -137,8 +139,8 @@ class TestRg69Defaults < Minitest::Test
     play = js[/\$id\('play'\)\.addEventListener\('click',async\(\)=>\{(.*?)\n\}\);/m, 1]
     refute_nil welcome
     refute_nil play
-    assert_match(/const activationPromise=Tone\.start\(\);\s*await startPlayback\(activationPromise\);/, welcome)
-    assert_match(/const activationPromise=Tone\.start\(\);\s*await startPlayback\(activationPromise\);/, play)
+    assert_match(/const activationPromise=startToneFromGesture\(\);\s*await startPlayback\(activationPromise\);/, welcome)
+    assert_match(/const activationPromise=startToneFromGesture\(\);\s*await startPlayback\(activationPromise\);/, play)
     assert_includes js, "async function initAudio(activationPromise)"
   end
 
@@ -151,6 +153,35 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "const savedTheme=readStorage('rg69_theme')||'dark';"
     assert_equal 3, js.scan(/window\.localStorage\./).size,
                  "every storage access must remain inside one guarded helper"
+  end
+
+  def test_tone_default_context_is_lazy_until_first_audio_request
+    assert_includes tone, "Destination:()=>w().destination"
+    assert_includes tone, "Draw:()=>w().draw"
+    assert_includes tone, "Listener:()=>w().listener"
+    assert_includes tone, "Master:()=>w().destination"
+    assert_includes tone, "Transport:()=>w().transport"
+    assert_includes tone, "context:()=>w()"
+    refute_includes tone, "const xm=w().transport;const wm=w().destination,bm=w().destination;const Tm=w().listener;const Sm=w().draw;const km=w();"
+  end
+
+  def test_rg69_does_not_construct_tone_audio_worklet_reverbs
+    refute_match(/Tone\.(?:Freeverb|JCReverb)/, js,
+                 "both reverbs instantiate FeedbackCombFilter AudioWorklets, which fail on blob:null origins")
+    refute_match(/['"](?:Freeverb|JCReverb)['"]/, js)
+    refute_match(/case'(?:Freeverb|JCReverb)'/, js)
+  end
+
+  def test_audio_context_is_created_before_resume_inside_the_user_gesture
+    assert_includes js, "function startToneFromGesture(){Tone.getContext();return Tone.start();}"
+    welcome = js[/\$id\('welcome-start'\)\.addEventListener\('click',async\(\)=>\{(.*?)\n\}\);/m, 1]
+    play = js[/\$id\('play'\)\.addEventListener\('click',async\(\)=>\{(.*?)\n\}\);/m, 1]
+    refute_nil welcome
+    refute_nil play
+    assert_includes welcome, "const activationPromise=startToneFromGesture();"
+    assert_includes play, "const activationPromise=startToneFromGesture();"
+    assert_equal 2, js.scan(/if\(st_\.started\)\{Tone\.Transport\.stop\(\);Tone\.Transport\.cancel\(\);\}/).size,
+                 "Stop and Panic must not instantiate the Tone context before Play"
   end
 
   def test_transport_callback_uses_numeric_note_durations
@@ -193,7 +224,8 @@ class TestRg69Defaults < Minitest::Test
     refute_match(/\brnd\(/, body, "a default effect parameter must be fixed, not rolled")
 
     # The curated chain still uses real effects, not an empty passthrough.
-    %w[Tone.Chorus Tone.Distortion Tone.Freeverb Tone.FeedbackDelay Tone.StereoWidener].each do |fx|
+    assert_includes js, "fxRev=new Tone.Reverb(1.5)", "pads still use the shared native reverb send"
+    %w[Tone.Chorus Tone.Distortion Tone.FeedbackDelay Tone.StereoWidener].each do |fx|
       assert_includes body, fx, "the fixed chain should include #{fx}"
     end
   end
