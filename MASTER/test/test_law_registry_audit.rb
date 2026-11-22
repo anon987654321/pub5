@@ -227,6 +227,7 @@ class TestLawRegistryAudit < Minitest::Test
       assert_equal severity, entry.fetch("severity"), id
       assert_includes Array(entry.fetch("definition_sources")), source, id
       refute_nil definition, "#{id} has a catalogue entry but no executable Law.define"
+      refute_nil definition.path, "#{id} must declare positive path reach in Law.define"
     end
   end
 
