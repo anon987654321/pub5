@@ -245,6 +245,11 @@ def collect_remote_deploy(session:, app:, sha:, log:)
   loop do
     output, ok = ssh_capture(remote_deploy_capture_command(session), attempts: 1)
     unless ok
+      if output.start_with?("RTFM_FIRST blocked:")
+        log.append("capture: RTFM admission refused further SSH capture: #{output}\n")
+        exit_code = 1
+        break
+      end
       consecutive_transport_failures += 1
       if (consecutive_transport_failures % 6).zero?
         log.append("transport: SSH capture still unavailable after #{consecutive_transport_failures} attempts; retrying\n")
@@ -1218,7 +1223,10 @@ when "vps"
       ZSH
       launch_output, launched = ssh_capture(Shellwords.join(["zsh", "-fc", remote_script]), attempts: 1)
       log.append("remote launch (#{launched ? 'started' : 'failed'}):\n#{launch_output}\n")
-      die("vps", "remote deploy launch failed; local log: #{log.path}", 1) unless launched
+      unless launched
+        log.finish(status: "failure", exit_code: 1)
+        die("vps", "remote deploy launch failed; local log: #{log.path}", 1)
+      end
       pid, waiter = launch_local_deploy_collector(session:, log_path: log.path, app:, sha:)
       log.append("local collector pid: #{pid}\n")
       if detach
