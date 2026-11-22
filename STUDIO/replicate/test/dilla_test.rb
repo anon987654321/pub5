@@ -1077,7 +1077,15 @@ class TestRG69BrowserContract < Minitest::Test
     refute_match(/Best-effort autostart|await Tone\.start\(\);\s*if\(Tone\.getContext\(\)\.rawContext\.state/, javascript)
     assert_match(/welcome-start[\s\S]*?addEventListener\("click",async\(\)=>\{[\s\S]*?startPlayback\(\)/, javascript)
     assert_match(/play[\s\S]*?addEventListener\("click",async\(\)=>\{[\s\S]*?startPlayback\(\)/, javascript)
-    assert_match(/function scheduleLoop\(\)\{\s*st_\.idx=\(st_\.idx\+1\)%st_\.stepCount;\s*applyWobble\(\);/, javascript)
+    assert_match(/const bootStyleCandidates=STYLES\.filter/, javascript)
+    assert_match(/let pat_=\{d:bootStyle\.d,b:bootStyle\.b,k:bootStyle\.k,p:bootStyle\.p\}/, javascript)
+    assert_match(/let mix_=\{drum:80,bass:70,keys:60,pads:55,master:75\}/, javascript)
+    assert_match(/muteState:\{k:0,s:0,c:0,h:0,o:0\}/, javascript)
+    refute_match(/Tone\.BitCrusher/, javascript)
+    assert_match(/let stepUiByIndex=Array\.from\(\{length:16\}/, javascript)
+    refute_match(/void posEl\.offsetWidth/, javascript)
+    assert_match(/cv\.width!==w/, javascript)
+    assert_match(/function scheduleLoop\(time\)\{\s*st_\.idx=\(st_\.idx\+1\)%st_\.stepCount;\s*const scheduledTime=Number\.isFinite\(time\)\?time:Tone\.now\(\);[\s\S]*?triggerNotes\(st_\.idx,scheduledTime,/, javascript)
     assert_includes javascript, "document.createTextNode"
     assert_includes File.read(css_path), "prefers-reduced-motion"
     assert_includes File.read(css_path), ":focus-visible"
