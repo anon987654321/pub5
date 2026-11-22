@@ -26,8 +26,9 @@ module Maps
       respond_to do |format|
         format.json do
           render json: scope.limit(200).map { |p|
+            latitude, longitude = p.public_coordinates
             { id: p.id, name: p.name, kind: p.kind,
-              lat: p.latitude, lng: p.longitude,
+              lat: latitude, lng: longitude,
               city: p.city&.name, neighborhood: p.neighborhood&.name }
           }
         end

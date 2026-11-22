@@ -43,8 +43,16 @@ module Ports
         }
       end
 
+      # A complete refresh is deletion authority for synthetic rows, so one
+      # malformed package line must invalidate the whole snapshot. Silently
+      # filter_map'ing it would make a partial parse look like a complete index.
       def self.parse(io)
-        io.each_line.filter_map { |line| parse_line(line) }
+        package_lines = io.each_line.select { |line| line.match?(/\.tgz\s*\z/) }
+        raise ArgumentError, "package index contains no package rows" if package_lines.empty?
+
+        package_lines.map do |line|
+          parse_line(line) || raise(ArgumentError, "unparseable package index row")
+        end
       end
 
       SYNTHETIC_PREFIX = "packages"

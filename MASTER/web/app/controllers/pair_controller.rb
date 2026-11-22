@@ -5,7 +5,29 @@ class PairController < ApplicationController
   before_action :require_same_origin!, only: %i[create issue destroy]
   skip_before_action :require_container!
   before_action :enforce_pair_redeem_rate_limit, only: :create
-  before_action :require_authenticated!, only: %i[issue list destroy]
+  before_action :require_authenticated!, only: %i[admin issue_admin destroy_admin issue list destroy]
+
+  def admin
+    @pairings = Master::Ground::Pairing.list.sort_by { |row| row[:paired_at].to_i }.reverse
+    render layout: false
+  end
+
+  # The one-time code is shown only in this redirect's flash. Redeemed tokens
+  # are never returned to this page; they are represented only by subject,
+  # label and paired time, and remain active until explicitly revoked.
+  def issue_admin
+    issued = Master::Ground::Pairing.issue(label: params[:label].to_s.strip.first(80))
+    flash[:pair_code] = issued.fetch(:code)
+    flash[:pair_code_expires_in] = issued.fetch(:expires_in)
+    redirect_to pair_admin_path, status: :see_other
+  end
+
+  def destroy_admin
+    ok = Master::Ground::Pairing.revoke(params[:subject].to_s)
+    redirect_to pair_admin_path,
+                status: :see_other,
+                notice: (ok ? "Pairing revoked." : "Pairing not found.")
+  end
 
   def show
     with_master_fiber(unlocked: unlocked?) do

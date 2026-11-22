@@ -36,6 +36,23 @@ class EventsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "the event place picker excludes rejected places in the current city" do
+    visible = Place.create!(
+      city: @city, name: "Visible venue", kind: "venue", latitude: 60.3974, longitude: 5.3244
+    )
+    rejected = Place.create!(
+      city: @city, name: "Rejected venue", kind: "venue", latitude: 60.3974, longitude: 5.3244,
+      verification_state: "rejected"
+    )
+    sign_in_as(@organiser)
+
+    get new_event_path
+
+    assert_response :success
+    assert_select "select[name='event[place_id]'] option[value='#{visible.id}']"
+    assert_select "select[name='event[place_id]'] option[value='#{rejected.id}']", count: 0
+  end
+
   test "creating an event puts the organiser on their own guest list" do
     sign_in_as(@organiser)
 

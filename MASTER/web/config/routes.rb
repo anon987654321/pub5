@@ -35,6 +35,9 @@ Rails.application.routes.draw do
   get  "up" => "rails/health#show", as: :rails_health_check
   get  "health" => "health#show"
   get  "ingress/health", to: "ingress#health"
+  get  "pair/admin", to: "pair#admin", as: :pair_admin
+  post "pair/admin/issue", to: "pair#issue_admin"
+  delete "pair/admin/:subject", to: "pair#destroy_admin"
   get  "pair", to: "pair#show"
   post "pair", to: "pair#create"
   post "pair/issue", to: "pair#issue"

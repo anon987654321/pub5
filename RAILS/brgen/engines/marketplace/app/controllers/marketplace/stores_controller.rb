@@ -98,7 +98,7 @@ module Marketplace
 
     def load_city_places
       city = Current.city_record
-      @places = city ? Place.where(city_id: city.id).order(:name) : Place.none
+      @places = PlaceDirectory.for_city(city).order(:name)
     end
   end
 end

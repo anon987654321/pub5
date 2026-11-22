@@ -20,6 +20,13 @@ class ItemDetailPhotosTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "every display derivative keeps only the ICC colour profile" do
+    Item::PHOTO_VARIANTS.each_value do |transformations|
+      assert_equal 8, transformations.dig(:saver, :keep)
+    end
+    assert_same Item::PHOTO_VARIANTS, Outfit::IMAGE_VARIANTS
+  end
+
   test "several photos are numbered in their alt text and their lightbox links" do
     attach_photos(2)
 

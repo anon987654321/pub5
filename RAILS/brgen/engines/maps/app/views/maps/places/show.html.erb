@@ -35,13 +35,14 @@
       <dt><%= t("maps.neighborhood") %></dt>
       <%= tag.dd @place.neighborhood.name %>
     <% end %>
+    <% public_latitude, public_longitude = @place.public_coordinates %>
     <dt><%= t("maps.coordinates") %></dt>
-    <dd><%= @place.latitude %>, <%= @place.longitude %></dd>
+    <dd><%= public_latitude %>, <%= public_longitude %></dd>
   </dl>
 
   <div class="place-actions">
     <%= link_to t("maps.open_in_map"),
-        "https://www.openstreetmap.org/?mlat=#{@place.latitude}&mlon=#{@place.longitude}#map=16/#{@place.latitude}/#{@place.longitude}",
+        "https://www.openstreetmap.org/?mlat=#{public_latitude}&mlon=#{public_longitude}#map=16/#{public_latitude}/#{public_longitude}",
         class: "button", target: "_blank", rel: "noopener" %>
     <%# PlacesController#check_in asks for require_user_session -- the check that
         means "any identity, guests included". Gating the form on authenticated?

@@ -9,9 +9,8 @@ class MaintainersController < ApplicationController
     scope = Maintainer.order(:name)
     scope = apply_live_search(scope, columns: %w[name email], vertical: "maintainers") if live_search_query.present?
     @pagy, @maintainers = pagy(scope)
-    # One grouped COUNT for the page; includes(:ports) loaded every port row
-    # of every maintainer on it to print a number.
-    @port_counts = Port.where(maintainer_id: @maintainers.map(&:id)).group(:maintainer_id).count
+    # One grouped COUNT for the page; historical package rows are not current catalogue entries.
+    @port_counts = Port.available.where(maintainer_id: @maintainers.map(&:id)).group(:maintainer_id).count
     finish_live_search(partial: "maintainers/live_search_results")
   end
 
@@ -23,9 +22,9 @@ class MaintainersController < ApplicationController
     # keeps a same-second import from expanding to an unchanged key.
     return unless stale?(etag: [
       @maintainer.cache_key_with_version,
-      @maintainer.ports.maximum(:updated_at)&.to_fs(:usec), @maintainer.ports.count
+      @maintainer.ports.available.maximum(:updated_at)&.to_fs(:usec), @maintainer.ports.available.count
     ])
 
-    @pagy, @ports = pagy(@maintainer.ports.order(:name))
+    @pagy, @ports = pagy(@maintainer.ports.available.order(:name))
   end
 end

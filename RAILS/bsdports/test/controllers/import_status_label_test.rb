@@ -33,6 +33,68 @@ class ImportStatusLabelTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, I18n.t("ports.package_index_only")
   end
 
+  test "the index excludes unavailable packages but reports retained history" do
+    platform = platforms(:openbsd)
+    category = Category.create!(platform:, name: "uncategorised", slug: "uncategorised")
+    Port.create!(platform:, category:, name: "git", version: "2.50", pkgpath: "packages/git")
+    Port.create!(platform:, category:, name: "retired", version: "1", pkgpath: "packages/retired",
+                 available: false, package_index_seen_at: 2.days.ago)
+    ImportRun.create!(
+      platform:, status: "succeeded", started_at: 1.hour.ago, ports_count: 1,
+      source_revision: "https://cdn.openbsd.org/pub/OpenBSD/7.8/packages/amd64/index.txt"
+    )
+
+    get root_url(locale: "en")
+    assert_response :success
+    assert_includes response.body, I18n.t("ports.unavailable_count", count: 1, locale: :en)
+    assert_includes response.body, "git"
+    assert_not_includes response.body, "retired"
+  end
+
+  test "a directly opened historical package explains its last observed date" do
+    platform = platforms(:openbsd)
+    category = Category.create!(platform:, name: "uncategorised", slug: "uncategorised")
+    observed = Time.zone.parse("2026-11-01 12:00:00")
+    retired = Port.create!(
+      platform:, category:, name: "retired", version: "1", pkgpath: "packages/retired",
+      available: false, package_index_seen_at: observed
+    )
+
+    get port_url(retired, locale: "en")
+    assert_response :success
+    assert_includes response.body,
+                    I18n.t("ports.package_unavailable", seen: "2026-11-01", locale: :en)
+  end
+
+  test "category pages show only currently available package records" do
+    platform = platforms(:openbsd)
+    category = Category.create!(platform:, name: "availability", slug: "availability")
+    Port.create!(platform:, category:, name: "current", version: "1", pkgpath: "packages/current")
+    Port.create!(platform:, category:, name: "historical", version: "1", pkgpath: "packages/historical",
+                 available: false)
+
+    get category_url(category, locale: "en")
+
+    assert_response :success
+    assert_includes response.body, "current"
+    assert_not_includes response.body, "historical"
+  end
+
+  test "maintainer pages show only currently available package records" do
+    platform = platforms(:openbsd)
+    category = Category.create!(platform:, name: "availability", slug: "availability")
+    maintainer = Maintainer.create!(name: "Available Maintainer")
+    Port.create!(platform:, category:, maintainer:, name: "current", version: "1", pkgpath: "packages/current")
+    Port.create!(platform:, category:, maintainer:, name: "historical", version: "1", pkgpath: "packages/historical",
+                 available: false)
+
+    get maintainer_url(maintainer, locale: "en")
+
+    assert_response :success
+    assert_includes response.body, "current"
+    assert_not_includes response.body, "historical"
+  end
+
   test "the last import names its status in the reader's language" do
     platform = platforms(:openbsd)
     category = Category.create!(platform:, name: "devel", slug: "devel")
