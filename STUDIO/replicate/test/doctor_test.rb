@@ -45,6 +45,40 @@ class TestStudioDoctor < Minitest::Test
     assert report.fetch("checks").all? { |check| check.keys.sort == %w[detail id state] }
   end
 
+  def test_missing_provider_credential_is_inconclusive_and_not_ready
+    checks = []
+    doctor = Studio::Doctor.new
+
+    Studio::ReplicateClient.stub(:load_token, "") do
+      doctor.send(:provider_credential_check, checks, paths: [])
+    end
+
+    check = checks.fetch(0)
+    assert_equal "provider_credentials", check.fetch("id")
+    assert_equal "INCONCLUSIVE", check.fetch("state")
+    refute Studio::Doctor.ready?(checks)
+    refute_includes check.fetch("detail"), "token"
+  end
+
+  def test_world_readable_provider_token_file_fails_closed
+    Dir.mktmpdir do |directory|
+      token_path = File.join(directory, "config.json")
+      File.write(token_path, '{"api_token":"not-a-real-token"}')
+      File.chmod(0o644, token_path)
+      checks = []
+
+      Studio::ReplicateClient.stub(:load_token, "") do
+        Studio::Doctor.new.send(:provider_credential_check, checks, paths: [token_path])
+      end
+
+      check = checks.fetch(0)
+      assert_equal "provider_credentials", check.fetch("id")
+      assert_equal "FAIL", check.fetch("state")
+      refute_includes check.fetch("detail"), token_path
+      refute Studio::Doctor.ready?(checks)
+    end
+  end
+
   def test_private_index_and_history_findings_hide_subject_names_and_paths
     doctor = Studio::Doctor.new
     checks = []
