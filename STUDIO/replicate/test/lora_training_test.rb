@@ -159,6 +159,16 @@ class TestStudioLoraTrainingRunner < Minitest::Test
     end
   end
 
+  def test_unsupported_timeout_is_rejected_before_subject_packaging
+    runner = Studio::Lora::Training::Runner.new(client: Object.new, validator: Object.new, root: Dir.pwd)
+    runner.define_singleton_method(:prepare_subject!) { |_subject| flunk "invalid timeout must be rejected before packaging" }
+
+    error = assert_raises(ArgumentError) do
+      runner.run(subjects: ["johann"], timeout: 86_401, approve_spend_usd: "5.00")
+    end
+    assert_match(/between 1 and 86400 seconds/, error.message)
+  end
+
   def test_training_requires_a_minimum_approved_compute_window_before_preflight
     runner = Studio::Lora::Training::Runner.new(client: Object.new, validator: Object.new, root: Dir.pwd)
     runner.define_singleton_method(:prepare_subject!) { |_subject| flunk "budget must be rejected before local packaging" }
@@ -244,6 +254,47 @@ class TestStudioLoraTrainingRunner < Minitest::Test
     assert_equal "120.000000", receipt.fetch("provider_compute_seconds")
     assert_equal "1.464000", receipt.fetch("calculated_cost_usd")
     assert_equal "0.0122", receipt.fetch("rate_usd_per_second")
+  end
+
+  def test_calculated_cost_rounds_up_to_avoid_understating_provider_usage
+    runner = Studio::Lora::Training::Runner.new(client: Object.new, validator: Object.new, root: Dir.pwd)
+    receipt = runner.send(:training_cost_receipt, { "metrics" => { "predict_time" => 0.0001 } }, Studio::Lora::Training::BILLING_RATE)
+
+    assert_equal "0.000002", receipt.fetch("calculated_cost_usd")
+  end
+
+  def test_confirmed_cancelled_training_keeps_terminal_compute_cost
+    client = Object.new
+    client.define_singleton_method(:upload_zip) { |_path, subject:| "https://upload.invalid/#{subject}.zip" }
+    client.define_singleton_method(:train_lora) do |*_arguments, **_options|
+      {
+        "status" => "canceled",
+        "metrics" => { "predict_time" => 80.0 },
+        "client_cancel_confirmed" => true
+      }
+    end
+    runner = Studio::Lora::Training::Runner.new(client:, validator: Object.new, root: Dir.pwd)
+    package = {
+      "subject" => "johann",
+      "zip_path" => "/private/johann.zip",
+      "destination" => "owner/johann",
+      "trigger_word" => "johann_lora",
+      "training_steps" => 1000,
+      "lora_type" => "subject",
+      "seed" => 42,
+      "dataset_sha256" => "a" * 64
+    }
+
+    result = runner.send(
+      :train_subject!, client, package,
+      timeout: 400, billing_rate: Studio::Lora::Training::BILLING_RATE,
+      approved_budget_usd: BigDecimal("5"), reserved_timeout_seconds: 400
+    )
+
+    assert_equal "FAILED", result.fetch("status")
+    assert_equal true, result.fetch("provider_cancellation_confirmed")
+    assert_equal "CALCULATED_FROM_PROVIDER_PREDICT_TIME_NOT_INVOICE", result.dig("billing", "cost_status")
+    assert_equal "0.976000", result.dig("billing", "calculated_cost_usd")
   end
 
   def test_cli_refuses_paid_training_without_a_spend_approval
