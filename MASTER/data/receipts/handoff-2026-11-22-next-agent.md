@@ -1828,3 +1828,35 @@ NOT_RUN:
   unexecuted in this environment. No PASS is claimed from source read-back.
 - No vm23 deployment, production action, external provider call or paid work
   was performed.
+
+### Phase 20 follow-up — canonical receipt state and legacy continuity
+
+A final path audit found that the boot runner can receive either the repository
+root or the `MASTER/` tree root, while the new operator command is rooted at
+`Master::ROOT`. Joining `.master/backlog-executor.jsonl` directly to those
+different inputs could split the operator's view from the boot runner's receipts
+when MASTER uses a Git-remote-scoped state directory.
+
+- New backlog writes now resolve through `MasterPaths.fix_state(root:)`, the
+  same canonical root and remote identity as mission records.
+- Both repository-root and `MASTER/`-root callers resolve to the same receipt
+  path for one canonical remote. Temporary/non-Git roots retain the local
+  `.master/backlog-executor.jsonl` path used by the existing tests.
+- Existing checkout-local receipt files are still read during migration. Legacy
+  rows are processed before canonical rows, so a newer explicit resume in the
+  canonical store supersedes an older checkout-local human-review park.
+- Completion and parking receipts use the same protected append routine.
+  Reads validate the directory, regular-file type, single link and private mode.
+- Added regressions for root normalization and legacy parked-task release after
+  the state store moves to the remote-scoped location.
+
+Commits:
+- `8b0cc140072fd0387999f7c1f203bdba7c431b9a` — canonical backlog receipt state.
+- `aa8d34d8723174fbde49b242a45d0d8ba1aadc0a` — root-shape path regression.
+- `7df6ab6bca31f1c34bc494891ce4dadc31ab3cfe` — legacy receipt read compatibility.
+- `9e425dde22a5c5e9f3062923241b09d928a984e6` — ignore malformed non-object rows.
+- `8dd5a6aabdbe5837d93538c1d634907070d01f71` — legacy resume migration regression.
+
+NOT_RUN:
+- These tests remain source-level regressions only; the Ruby test runner was not
+  available against a complete local checkout in this execution environment.
