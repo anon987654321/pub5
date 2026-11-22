@@ -28,6 +28,16 @@ class TestDomainWatchTls < Minitest::Test
     end.uniq
   end
 
+  def active_certificate_hosts
+    File.read(Deploy::DomainWatch::ACME_CONF, encoding: "UTF-8").scan(
+      /domain "([^"]+)" \{\s*alternative names \{([^}]*)\}/
+    ).flat_map do |apex, names|
+      next [] unless relayd_keypairs.include?(apex)
+
+      [apex, *names.scan(/"([^"]+)"/).flatten.reject { |host| host.start_with?("mail.") }]
+    end
+  end
+
   def test_every_relayd_keypair_is_probed
     hosts = Deploy::DomainWatch.tls_hosts
 
@@ -35,26 +45,32 @@ class TestDomainWatchTls < Minitest::Test
     assert_equal hosts.uniq, hosts
   end
 
-  def test_every_hostname_under_each_served_zone_is_probed
+  def test_every_san_for_an_active_relayd_certificate_is_probed
+    expected = active_certificate_hosts
     hosts = Deploy::DomainWatch.tls_hosts
-    city_zones = RenderDns.city_zones
-    served_zones = relayd_keypairs & city_zones.keys
 
-    assert_operator served_zones.size, :>, 1
-    served_zones.each do |domain|
-      assert_includes hosts, "www.#{domain}"
-      city_zones.fetch(domain).each do |subdomain|
-        assert_includes hosts, "#{subdomain}.#{domain}"
-      end
-    end
+    assert_operator expected.size, :>, 10
+    expected.each { |name| assert_includes hosts, name }
   end
 
-  def test_unserved_city_zones_are_not_added_to_the_tls_probe
+  def test_standalone_application_www_hosts_are_probed
+    hosts = Deploy::DomainWatch.tls_hosts
+
+    assert_includes hosts, "www.amberapp.art"
+    assert_includes hosts, "www.bsdports.org"
+  end
+
+  def test_mail_san_is_not_treated_as_a_website
+    refute_includes Deploy::DomainWatch.tls_hosts, "mail.brgen.no"
+  end
+
+  def test_unserved_city_certificates_are_not_added_to_the_tls_probe
     hosts = Deploy::DomainWatch.tls_hosts
     pending = RenderDns.city_zones.find { |domain, subdomains| subdomains.any? && !relayd_keypairs.include?(domain) }
 
     refute_nil pending, "fixture needs at least one city zone without a relayd keypair"
     refute_includes hosts, "www.#{pending.first}"
+    refute_includes hosts, "marketplace.#{pending.first}"
   end
 
   def test_a_certificate_covers_its_names_and_one_wildcard_label_only

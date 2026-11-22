@@ -259,19 +259,22 @@ module Deploy
     # The keypairs decide which apexes are served; RenderDns supplies their hosts.
     # Reads only. A host that does not answer is reported as that, never healthy.
     RELAYD_CONF = File.join(ROOT, "OPENBSD/mirror/etc/relayd.conf")
+    ACME_CONF = File.join(ROOT, "OPENBSD/mirror/etc/acme-client.conf")
 
     def tls_hosts
       keypairs = File.readlines(RELAYD_CONF, encoding: "UTF-8").filter_map do |line|
         line.sub(/#.*/, "").match(/tls keypair "([^"]+)"/)&.captures&.first
       end.uniq
 
-      city_zones = RenderDns.city_zones
-      served_zones = keypairs & city_zones.keys
-      generated_hosts = served_zones.flat_map do |domain|
-        ["www.#{domain}", *city_zones.fetch(domain).map { |subdomain| "#{subdomain}.#{domain}" }]
+      certificate_hosts = File.read(ACME_CONF, encoding: "UTF-8").scan(
+        /domain "([^"]+)" \{\s*alternative names \{([^}]*)\}/
+      ).flat_map do |apex, names|
+        next [] unless keypairs.include?(apex)
+
+        [apex, *names.scan(/"([^"]+)"/).flatten.reject { |host| host.start_with?("mail.") }]
       end
 
-      (keypairs + generated_hosts).uniq
+      (keypairs + certificate_hosts).uniq
     end
 
     def dig(*args)
