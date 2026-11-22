@@ -22,13 +22,39 @@ class TestDomainWatchTls < Minitest::Test
     cert
   end
 
-  def test_every_relayd_keypair_is_probed_with_the_brgen_verticals
+  def relayd_keypairs
+    File.readlines(Deploy::DomainWatch::RELAYD_CONF, encoding: "UTF-8").filter_map do |line|
+      line.sub(/#.*/, "").match(/\\btls keypair "([^"]+)"/)&.captures&.first
+    end.uniq
+  end
+
+  def test_every_relayd_keypair_is_probed
     hosts = Deploy::DomainWatch.tls_hosts
-    File.read(Deploy::DomainWatch::RELAYD_CONF, encoding: "UTF-8").scan(/tls keypair "([^"]+)"/).flatten.each do |name|
-      assert_includes hosts, name
-    end
-    assert_includes hosts, "markedsplass.brgen.no"
+
+    relayd_keypairs.each { |name| assert_includes hosts, name }
     assert_equal hosts.uniq, hosts
+  end
+
+  def test_every_hostname_under_each_served_zone_is_probed
+    hosts = Deploy::DomainWatch.tls_hosts
+    city_zones = RenderDns.city_zones
+    served_zones = relayd_keypairs & city_zones.keys
+
+    assert_operator served_zones.size, :>, 1
+    served_zones.each do |domain|
+      assert_includes hosts, "www.#{domain}"
+      city_zones.fetch(domain).each do |subdomain|
+        assert_includes hosts, "#{subdomain}.#{domain}"
+      end
+    end
+  end
+
+  def test_unserved_city_zones_are_not_added_to_the_tls_probe
+    hosts = Deploy::DomainWatch.tls_hosts
+    pending = RenderDns.city_zones.find { |domain, subdomains| subdomains.any? && !relayd_keypairs.include?(domain) }
+
+    refute_nil pending, "fixture needs at least one city zone without a relayd keypair"
+    refute_includes hosts, "www.#{pending.first}"
   end
 
   def test_a_certificate_covers_its_names_and_one_wildcard_label_only

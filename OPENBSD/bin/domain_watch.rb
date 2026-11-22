@@ -253,19 +253,25 @@ module Deploy
   end
 
 
-    # What a visitor sees, per host relayd holds a keypair for (plus the brgen
-    # verticals): nameservers and DS from the public resolver, the A/AAAA
-    # answers, the certificate dates and whether its names cover the host, and the
-    # HTTPS status. Reads only; every external call is bounded. A host that does not
-    # answer is reported as that, never as healthy.
-    # playlist.brgen.no is the radio engine's second host (restored 2026-11-19);
-    # it has its own DNS record and acme SAN, so it is watched like a vertical.
-    TLS_VERTICALS = %w[markedsplass dating radio playlist takeaway tv messenger maps].freeze
+    # What a visitor sees, per host relayd holds a keypair for, plus every
+    # generated host beneath those served zones: nameservers and DS from the
+    # public resolver, A/AAAA answers, certificate coverage and HTTPS status.
+    # The keypairs decide which apexes are served; RenderDns supplies their hosts.
+    # Reads only. A host that does not answer is reported as that, never healthy.
     RELAYD_CONF = File.join(ROOT, "OPENBSD/mirror/etc/relayd.conf")
 
     def tls_hosts
-      keypairs = File.read(RELAYD_CONF, encoding: "UTF-8").scan(/tls keypair "([^"]+)"/).flatten.uniq
-      (keypairs + TLS_VERTICALS.map { |v| "#{v}.brgen.no" }).uniq
+      keypairs = File.readlines(RELAYD_CONF, encoding: "UTF-8").filter_map do |line|
+        line.sub(/#.*/, "").match(/\\btls keypair "([^"]+)"/)&.captures&.first
+      end.uniq
+
+      city_zones = RenderDns.city_zones
+      served_zones = keypairs & city_zones.keys
+      generated_hosts = served_zones.flat_map do |domain|
+        ["www.#{domain}", *city_zones.fetch(domain).map { |subdomain| "#{subdomain}.#{domain}" }]
+      end
+
+      (keypairs + generated_hosts).uniq
     end
 
     def dig(*args)
