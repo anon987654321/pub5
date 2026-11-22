@@ -695,6 +695,54 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
+  def test_film_render_writes_private_receipt_with_hashes_and_estimate
+    Dir.mktmpdir do |dir|
+      still = File.join(dir, "source.jpg")
+      File.binwrite(still, "approved still")
+      provider_receipt = {
+        "schema" => "studio.replicate.prediction.v1",
+        "model" => "minimax/h3-highspeed",
+        "version" => "a" * 64,
+        "prediction_id" => "prediction-test",
+        "status" => "succeeded",
+        "estimated_cost_usd" => 0.30,
+        "actual_cost_usd" => nil,
+        "actual_cost_status" => "NOT_REPORTED_BY_PREDICTION_API"
+      }
+      client = Object.new
+      client.define_singleton_method(:predict_with_receipt) do |model, input, timeout:|
+        raise "unexpected model" unless model == "minimax/h3-highspeed"
+        raise "unexpected timeout" unless timeout == 600
+        raise "missing first frame" unless input.key?(:first_frame_image)
+        { "output" => "https://files.replicate.delivery/test.mp4", "receipt" => provider_receipt }
+      end
+      client.define_singleton_method(:download_url) do |url, path|
+        raise "unexpected download URL" unless url == "https://files.replicate.delivery/test.mp4"
+        File.binwrite(path, "video bytes")
+        path
+      end
+      picture = Studio::Visual::IdeaPicture.new(subject: "probe", client:, directory: dir)
+      video = picture.send(:render_film, "slow camera move", still, "probe_film_test", 5)
+      receipt_path = "#{video}.json"
+      receipt = JSON.parse(File.read(receipt_path))
+
+      assert_equal "studio.film_render.v1", receipt.fetch("schema")
+      assert_equal "probe", receipt.fetch("subject")
+      assert_equal "minimax/h3-highspeed", receipt.fetch("model")
+      assert_equal 5, receipt.fetch("requested_duration_seconds")
+      assert_equal Digest::SHA256.file(still).hexdigest, receipt.fetch("source_still_sha256")
+      assert_equal Digest::SHA256.file(video).hexdigest, receipt.fetch("output_video_sha256")
+      assert_equal "prediction-test", receipt.dig("provider_prediction", "prediction_id")
+      assert_nil receipt.dig("provider_prediction", "actual_cost_usd")
+      assert_equal "NOT_REPORTED_BY_PREDICTION_API",
+                   receipt.dig("provider_prediction", "actual_cost_status")
+      assert_equal "NOT_REVIEWED", receipt.dig("human_review", "visual")
+      assert_equal "NOT_REVIEWED", receipt.dig("human_review", "likeness")
+      assert_equal 0o600, File.stat(video).mode & 0o777
+      assert_equal 0o600, File.stat(receipt_path).mode & 0o777
+    end
+  end
+
   def test_the_film_engine_defaults_to_h3_highspeed_when_not_selected
     picture = Studio::Visual::IdeaPicture.new(subject: "probe", directory: Dir.pwd)
     assert_equal "minimax/h3-highspeed", picture.film_engine
