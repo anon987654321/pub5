@@ -152,10 +152,10 @@ class ScheduledJobsTest < Minitest::Test
   end
 
   def write_zone_keys(zone = "brgen.no", ksk: "AAAA", zsk: "AAAB")
-    write("K#{zone}.+013+04242.key", "#{zone}. IN DNSKEY 257 3 13 #{ksk}\\n")
-    write("K#{zone}.+013+05242.key", "#{zone}. IN DNSKEY 256 3 13 #{zsk}\\n")
-    write("K#{zone}.+013+04242.private", "Private-key-format: v1.3\\n")
-    write("K#{zone}.+013+05242.private", "Private-key-format: v1.3\\n")
+    write("K#{zone}.+013+04242.key", "#{zone}. IN DNSKEY 257 3 13 #{ksk}\n")
+    write("K#{zone}.+013+05242.key", "#{zone}. IN DNSKEY 256 3 13 #{zsk}\n")
+    write("K#{zone}.+013+04242.private", "Private-key-format: v1.3\n")
+    write("K#{zone}.+013+05242.private", "Private-key-format: v1.3\n")
   end
 
   def test_nsd_resign_reads_the_earliest_signature_expiry
@@ -188,9 +188,9 @@ class ScheduledJobsTest < Minitest::Test
   end
 
   def test_nsd_resign_fails_when_any_zone_lacks_a_complete_key_pair
-    write("brgen.no.zone", "$ORIGIN brgen.no.\\n")
+    write("brgen.no.zone", "$ORIGIN brgen.no.\n")
     write_zone_keys
-    write("other.example.zone", "$ORIGIN other.example.\\n")
+    write("other.example.zone", "$ORIGIN other.example.\n")
     out, status = resign
 
     refute status.success?
@@ -199,10 +199,10 @@ class ScheduledJobsTest < Minitest::Test
   end
 
   def test_active_signed_ksk_is_preserved_when_a_new_key_file_appears
-    write("brgen.no.zone", "$ORIGIN brgen.no.\\n")
+    write("brgen.no.zone", "$ORIGIN brgen.no.\n")
     write_zone_keys
-    write("Kbrgen.no.+013+06242.key", "brgen.no. IN DNSKEY 257 3 13 AAEA\\n")
-    write("Kbrgen.no.+013+06242.private", "Private-key-format: v1.3\\n")
+    write("Kbrgen.no.+013+06242.key", "brgen.no. IN DNSKEY 257 3 13 AAEA\n")
+    write("Kbrgen.no.+013+06242.private", "Private-key-format: v1.3\n")
     active = File.read(File.join(@tmp, "Kbrgen.no.+013+04242.key"))
     zsk = File.read(File.join(@tmp, "Kbrgen.no.+013+05242.key"))
     signed = write("brgen.no.zone.signed", active + zsk + rrsig((Date.today + 25).strftime("%Y%m%d000000")))
