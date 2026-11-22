@@ -44,7 +44,7 @@ gaps:
   - { id: brgen_recent_searches, app: brgen, kind: ux, name: "recent searches in the search palette", source: horizon, status: satisfied, evidence: "SearchRecent#recent_for in the palette (brgen/app/models/search_recent.rb, brgen/app/views/shared/_search_palette.html.erb)" }
   - { id: brgen_art_ad_banner, app: brgen, kind: ux, name: "minimal art-directed sponsored banner", source: root_backlog, status: open, note: "requires approved sponsored copy, image rights and destination; AdSense remains gated until a certified consent platform is in place" }
   # --- messenger ---
-  - { id: messenger_webrtc_calls, app: messenger, kind: logic, name: "messenger voice and video calls (WebRTC)", source: horizon, status: blocked, note: "needs STUN/TURN infra on the host" }
+  - { id: messenger_webrtc_calls, app: messenger, kind: logic, name: "messenger voice and video calls (WebRTC)", source: horizon, status: open, note: "Stage 1 can proceed: call-session lifecycle, ActionCable signaling, permission/teardown UX and same-LAN/local ICE tests. Reliable cross-NAT media and production launch remain gated on host STUN/TURN and live network proof." }
   - id: messenger_notify_suppression
     app: messenger
     kind: ux
@@ -60,7 +60,7 @@ gaps:
   # --- marketplace ---
   - { id: marketplace_ai_recs, app: marketplace, kind: logic, name: "AI recommendations", source: apps_yml, status: open }
   - { id: marketplace_coupons, app: marketplace, kind: logic, name: "coupons / referral credit / bundle pricing", source: horizon, status: open, note: "consumes commerce_shared_domain" }
-  - { id: marketplace_contact_relay, app: marketplace, kind: logic, name: "anonymised buyer-seller contact relay", source: horizon, status: blocked, note: "needs inbound mail routing and per-listing addresses on vm23" }
+  - { id: marketplace_contact_relay, app: marketplace, kind: logic, name: "anonymised buyer-seller contact relay", source: horizon, status: open, note: "Stage 1 can proceed through the existing buyer-seller conversation: privacy-preserving in-app contact, address masking and a reviewed reveal flow. Per-listing inbound email aliases and forwarding remain gated on vm23 MX/relay routing." }
   - { id: marketplace_duplicates, app: marketplace, kind: logic, name: "duplicate-listing detection", source: horizon, status: satisfied, evidence: "Marketplace::Listing#duplicate_of files an open duplicate ModerationReport on creation (RAILS/brgen/engines/marketplace/app/models/marketplace/listing.rb)" }
   - { id: marketplace_liquidity, app: marketplace, kind: knowledge, name: "liquidity signals (empty categories, unmet demand)", source: horizon, status: open, note: "city/kind empty states already distinguish no local inventory from an over-narrowed search and offer a real listing action; unmet-demand counts remain open because Brgen has no public search log, and must not expose per-user recent searches" }
   - { id: marketplace_paid_boosts, app: marketplace, kind: logic, name: "paid listing boosts and category/homepage placement", source: horizon, status: open, note: "organic discovery stays quality-weighted; payment never buys a trust outcome" }
@@ -76,7 +76,7 @@ gaps:
   - { id: takeaway_cart_expiry, app: takeaway, kind: logic, name: "cart expiry", source: horizon, status: satisfied, evidence: "Takeaway::Order stamps CART_TTL_MINUTES on every cart and expire_stale_pending! sweeps it (engines/takeaway/app/models/takeaway/order.rb)" }
   - { id: takeaway_pro_surface, app: takeaway, kind: logic, name: "takeaway Pro (restaurant promotion, coupons, loyalty)", source: horizon, status: open, note: "consumes commerce_shared_domain" }
   # --- tv ---
-  - { id: tv_live_stream_infra, app: tv, kind: logic, name: "live stream infrastructure", source: apps_yml, status: blocked, note: "needs a media server (MediaMTX / SRS / nginx-rtmp) plus a delivery tier on the host; Tv::Broadcast already models the state machine" }
+  - { id: tv_live_stream_infra, app: tv, kind: logic, name: "live stream infrastructure", source: apps_yml, status: open, note: "Stage 1 can proceed: provider-neutral ingest/delivery contract, local loopback adapter, readiness checks, failure states and operator runbook. Production ingest, transcoding and viewer delivery remain gated on a selected media server and host delivery tier; Tv::Broadcast already models the state machine." }
   # --- maps ---
   - id: maps_poi_substrate
     app: maps
@@ -101,7 +101,7 @@ gaps:
   - { id: amber_mood_matcher, app: amber, kind: ux, name: "mood matcher", source: horizon, status: open }
   - { id: amber_event_outfit_planner, app: amber, kind: ux, name: "event outfit planner", source: horizon, status: open }
   - { id: amber_sustainable_resale, app: amber, kind: logic, name: "sustainable styles / resale", source: horizon, status: open, note: "resale surface would consume the marketplace domain, not clone it" }
-  - { id: amber_weather_suggestions, app: amber, kind: logic, name: "weather-based suggestions", source: horizon, status: blocked, note: "needs a weather source; no external API is called anywhere in the suite today" }
+  - { id: amber_weather_suggestions, app: amber, kind: logic, name: "weather-based suggestions", source: horizon, status: open, note: "Stage 1 can proceed: StyleAssistant already accepts weather as an explicit parameter, so deterministic suggestions and no-weather fallback can be built/tested from an injected snapshot without network calls. A live forecast provider, source freshness and attribution remain a separate integration gate." }
   - { id: amber_outfit_whole_score, app: amber, kind: logic, name: "outfit scored as a whole (item scores minus clash); wears-well-with on items#show", source: horizon, status: open }
   - { id: amber_trends_designers, app: amber, kind: content, name: "global trends / local designer highlights", source: horizon, status: open }
   - { id: amber_style_agents, app: amber, kind: logic, name: "style agents (MASTER integration)", source: horizon, status: open }
