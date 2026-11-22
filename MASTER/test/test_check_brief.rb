@@ -191,6 +191,15 @@ class TestCheckBrief < Minitest::Test
         Operator::CheckBrief.file_evidence(root:, path: symlink)
       end
 
+      Dir.mktmpdir("check-log-outside") do |outside|
+        File.binwrite(File.join(outside, "latest.log"), bytes)
+        linked_parent = File.join(root, "linked-parent")
+        File.symlink(outside, linked_parent)
+        assert_raises(IOError) do
+          Operator::CheckBrief.file_evidence(root:, path: File.join(linked_parent, "latest.log"))
+        end
+      end
+
       hardlink = File.join(File.dirname(log), "hardlink.log")
       File.link(log, hardlink)
       assert_raises(IOError) do
