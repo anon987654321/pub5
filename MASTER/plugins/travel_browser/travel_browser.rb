@@ -210,7 +210,7 @@ module Master
         # The session profile remains plugin-owned. Every Chromium process is
         # leased from Core and bound to the last URL that passed this plugin's policy.
         lease = owner.open(host:, url:, profile: dir, persistent: true, headless:)
-        browser = Ferrum::Browser.new(**driver_options(lease))
+        browser = owner.attach(lease.id, timeout: 30, window_size: [1440, 1000])
         page = browser.create_page
         yield(page, run_dir)
       rescue Ferrum::TimeoutError => e
@@ -237,12 +237,6 @@ module Master
         host = url ? URI(url.to_s).host : @session_hosts[session.to_s]
         @session_hosts[session.to_s] = host
         host.to_s
-      end
-
-      def driver_options(lease)
-        raise PolicyError, "travel_browser: Core-owned browser lease is required" unless lease
-
-        { ws_url: lease.cdp_url, timeout: 30, window_size: [1440, 1000] }
       end
 
       def validate_url!(value)
