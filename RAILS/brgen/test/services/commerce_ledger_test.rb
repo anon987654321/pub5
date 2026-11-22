@@ -15,17 +15,17 @@ class CommerceLedgerTest < ActiveSupport::TestCase
   end
 
   def record(key: "test:credit:one", entitlement: "playlist_pro", **overrides)
-    Shared::Commerce::Ledger.record!(
-      {
-        idempotency_key: key,
-        entry_type: "credit_granted",
-        user_id: @user.id,
-        actor_id: @actor.id,
-        entitlement:,
-        expires_at: 30.days.from_now.change(usec: 0),
-        metadata: { vertical: "playlist" }
-      }.merge(overrides)
-    )
+    attributes = {
+      idempotency_key: key,
+      entry_type: "credit_granted",
+      user_id: @user.id,
+      actor_id: @actor.id,
+      entitlement:,
+      expires_at: (@ledger_expiry ||= 30.days.from_now.change(usec: 0)),
+      metadata: { vertical: "playlist" }
+    }.merge(overrides)
+
+    Shared::Commerce::Ledger.record!(**attributes)
   end
 
   test "a repeated idempotency key returns the original journal row" do
