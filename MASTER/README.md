@@ -139,6 +139,12 @@ The serial diagnostic test run is:
 
 A scan-only run does not authorize edits. Source checks do not prove rendered behavior, accessibility, runtime health or deployment; run the evidence required by the changed surface. Report skipped and unmeasured work as such. Never turn a missing instrument, unrun test or unavailable host into a PASS.
 
+### Measure before making /fix faster
+
+`MASTER_BOOT_TIMING=1` records the existing startup stages. The `review:complete` event includes `phase_elapsed_s` for the measured Pass boundaries (`observe`, `critique`, `converge`, `style` and `map`). These are accumulated durations, not a decomposition of every operation: `observe` includes its current observation work, and `converge` includes the FixLoop lifecycle. Do not rename either as a separate scan, model, verification or delivery measurement. Missing stage timings mean unmeasured, not zero.
+
+Before changing performance policy, compare the same pinned target, runtime, resource conditions and proof population. Record the actual files and Law assessments measured, elapsed time, memory/CPU and any unavailable reviewers. Reuse cached work only while its source, Law, scope, authority, toolchain and adapter digests remain current; the existing finding cache and FixPlan already own those checks. Keep deterministic repair before model work, retain the stream's bounded worker and resource limits, and preserve full-target recollection after incremental repair. A council or rendering result that cannot run stays INCONCLUSIVE. Reject any speedup that omits a file, Law, surface, human assessment or required proof.
+
 ## Configuration has owners
 
 - `data/providers.yml` and `data/models.yml` own provider and model configuration; `lib/io/model_quota.rb` owns quota measurement and fallback decisions.
