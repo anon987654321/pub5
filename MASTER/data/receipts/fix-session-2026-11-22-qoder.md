@@ -776,3 +776,225 @@ remaining sections above. Verified main head at close: `d54b70914cd6a49abe706c10
 
 The next implementation pass must continue with the remaining owned items above, not treat
 this appendix as a completed /fix, test suite, or deployment receipt.
+
+
+## P. Professional graphic design and micro-pixel CSS craft (addendum)
+
+The first intake underweighted the rendered surface. The design constitution is
+already professional and encoded: tokens.yml carries visual_identity
+(signal_and_stillness), scale, layout_rules, typography, worn_type,
+pixel_perfection, rams_checklist, ui_polish, ultraminimalism, ux_laws,
+vertical_accents and vertical_accent_ink. css_architecture.yml orders the
+cascade reset, tokens, base, components, utilities, autofix, forbids !important
+in the last three, and caps specificity at 0,3,0 in warn mode. The instruments
+exist: geometry_probe walk.js and design_laws.js, rendered_geometry placement,
+space, grammar, composition and token checks, type_laws, contrast, reflow,
+occlusion, viewport_spill, layout_snapshot drift, first_screen, kanso_surface,
+web_vitals_budget. The work is to drive their measured findings to zero per
+surface, not to invent a second design system.
+
+Measured off-scale baselines (tokens.yml#tokens.scale.baselines, the worklist):
+
+219. Apps: off_scale_radius 19, off_scale_tracking 6, off_scale_opacity 20,
+     off_scale_duration 14, off_token_color 21. Route each to the scale arrays
+     (radius 0/2/4/8/12/16, tracking -0.03..0.14em, opacity 0.03..0.8,
+     duration 180/300ms) or document a scoped exception at the point of use.
+220. Face: off_scale_tracking 12, off_scale_opacity 27, off_scale_duration 26,
+     off_token_color 8. The face is generated; fix the part files, never
+     face.runtime.js.
+221. Compiled amber: font-size 40 off-scale, padding 68, margin 35, gap 40,
+     color 37, background-color 9, border-color 9, border-radius 17,
+     letter-spacing 13, line-height 15, font-weight 9, z-index 13, and one
+     box-shadow. The box-shadow is a flat_ui candidate: strip it or record the
+     named exception pixel_perfection.exception_policy demands.
+222. Compiled brgen: font-size 64 off-scale, color 67, letter-spacing 17,
+     line-height 18, font-weight 10. Work by engine stylesheet, one coherent
+     slice per commit, before/after screenshots at 390/768/1280.
+223. Add a z-index scale to tokens.scale; the compiled z-index counts have no
+     token owner today. Name the layer stack in CSS, not magic integers.
+224. Enforce the 8px rhythm with 4px hairline allowance (layout_rules.grid);
+     off_scale_space is already 0 for apps and face; keep it 0 as pages grow.
+225. Apply the proportional split 0.618/0.382 for major panels; replace
+     arbitrary widths; prove with rendered_geometry placement checks.
+226. Apply whitespace rules: internal padding never exceeds external
+     separation, gap before margin, section padding 4-8rem, paragraph margin
+     1.5em. These are Gestalt proximity made executable; route findings to the
+     space checks, not a new law.
+227. Apply alignment rules: body left-aligned with right rag, centre text
+     capped at three lines, asymmetry before decoration, critical content on
+     the F/Z scan path, primary area top-left, terminal bottom-right.
+228. Apply touch rules: 44px minimum, 48px recommended, primary actions in the
+     bottom-centre thumb zone; flag critical mobile interactions in unreachable
+     top corners; REACH_touch_target_min owns the contract.
+229. Apply type tokens: page titles var(--text-title, 1.25rem), display
+     1.75rem, page-header min-height 48px; no hardcoded 20px headers; dialect
+     fonts (Caprasimo luxury, JetBrains mono CRT) only on named brand surfaces;
+     the no-serif directive stands for brgen, amber and master.
+230. Apply line-height scale 1/1.25/1.4/1.5/1.6; absolute line-height baseline
+     is 0; keep it 0; worn_type feeds the geometry_type measure.
+231. Apply space_not_lines: list/grid cards separate with gap and elevated
+     surface, not hairline borders; forms and the bsdports CRT dialect may keep
+     1px borders; prefer border:0 with var(--surface-elevated).
+232. Apply the one button family: button-primary, button-ghost, button-danger,
+     button-small, button-link, button-block, button-share; the BEM twins are
+     retired; RAILS/refinements shared-010 retires button-small in favour of
+     $compact-contexts; finish it.
+233. Apply chrome_i18n: shell and empty/search chrome use I18n t() keys (nb
+     default, en available); hardcoded English "No ..." titles and "Search ..."
+     placeholders are debt; the ratchets are chrome_i18n_lint.rb,
+     empty_state_lint.rb, adhoc_empty_lint.rb; every empty state needs an action.
+234. Score every UI diff against the Rams checklist (useful, understandable,
+     unobtrusive, honest, thorough) in council and aesthetic scan tags; design
+     empty, loading, error and reduced-motion states before calling a surface
+     done.
+235. Honour the motion grammar: animate existing elements before creating new
+     ones, travelling waves and threshold cohorts over generic fades, bound
+     population/duration/amplitude/cost/lifecycle, every meaningful animation
+     has a reduced-motion equivalent, stillness is the default.
+236. Honour the void grammar: negative space is structural, never decorative
+     noise; one dominant focal point and one primary action per first screen.
+
+Modernisation that stays native to the house (importmaps, ERB, Stimulus, Turbo;
+no third renderer, no ornament):
+
+237. Move specificity ceiling 0,3,0 from warn to error after the off-scale
+     cleanup; a ceiling that only warns is a suggestion.
+238. Adopt CSS cascade layers fully across engine stylesheets; the order is
+     already declared; confirm every engine emits into the same stack and no
+     sheet escapes it.
+239. Adopt logical properties (LOGICAL_PROPERTIES rule) for margin/padding/
+     inset; nb and en share direction today, but the property discipline
+     prevents a future locale regression.
+240. Adopt clamp() typography (CLAMP_TYPOGRAPHY rule) for fluid display sizes
+     within the token scale; no arbitrary viewport breakpoints outside
+     tokens.viewport.
+241. Evaluate container queries for vertical dialect components so a card
+     adapts to its container, not the viewport; keep the 12-column grid for
+     page structure.
+242. Evaluate :has() for stateful component styling without a Stimulus value
+     where the state is purely presentational; keep behaviour in Stimulus.
+243. Adopt text-wrap: balance for headings and pretty for body rag; Norwegian
+     hyphens: auto with lang=nb; prove no overflow at 320px.
+244. Adopt :focus-visible rings from tokens; REACH_focus_visible owns the
+     contract; never remove outline without a token replacement.
+245. Adopt font-display: swap and a variable sans within the no-serif rule;
+     confirm font weights stay on the 400-800 scale.
+246. Adopt content-visibility: auto for long feeds and lists with contain-
+     intrinsic-size from measured row heights; prove with web_vitals_budget.
+247. Adopt scrollbar-gutter: stable and overscroll-behavior: contain on
+     scrollable panels; no layout shift on scrollbar appearance.
+248. Adopt accent-color and native dialog/popover where Stimulus already wraps
+     them; do not introduce a second dialog renderer.
+249. Keep Turbo navigation; evaluate view transitions only as a progressive
+     enhancement with a reduced-motion equivalent and a measured cost.
+250. Reorganise stylesheets by engine ownership under the layer stack; run
+     dead_css_sweep, dead_css_static and dead_css_coverage; collapse the 6
+     CSS_DUPLICATE_DECLARATION and 22 CSS_SHORTHAND_COLLAPSE findings; prove
+     css_minify_integrity and css_brace_balance after each build.
+251. Build critical first-screen CSS through tools/rails/build_all_css.rb;
+     first_screen and page_weight budgets own the numbers; no render-blocking
+     sheet above the fold.
+252. Drive TYPOGRAPHIC_GRID (1711) and VERTICAL_BREATH (2289) to zero per
+     surface with rendered evidence; the operator gates every rendered value;
+     screenshots under RAILS/*.png before and after, run-scoped, never reused.
+
+## Q. DRY and KISS opportunities (addendum)
+
+The repo already governs both: DRY and KISS are law roots; dup_census.yml
+tracks 161 duplicate sets with ceilings; DENSITY_identical_branches,
+content_dedup_scan, dead_css_sweep, dead_route_sweep and the 85
+REDUNDANT_CORE_REQUIRE findings are the instruments. The proposals ledger
+refuted several consolidation moves (family moves, lazy-class extraction,
+best-of-N, parallel streams). DRY here means measured duplication with a named
+consumer, not ideological deduplication; KISS means one owner per concept, not
+fewer files. The spine ratchet and cohesion census forbid convenience splits.
+
+253. Triage dup_census intentional vs accidental. Intentional: screenshot
+     baselines for generic routes (/up, historical locations) shared across
+     apps; amber logo plates and asset copies; mrdamascy standalone Vipps
+     wordmark; BIZ published pairs. Accidental candidates: MASTER/lib/operator/
+     domain_signals.rb vs OPENBSD/lib/domain_signals.rb (verify whether OPENBSD
+     self-containment on the box justifies the copy before merging); the shared
+     vs brgen anonymous_post_quotas migration copy (engine-promotion residue);
+     the four identical Rakefiles (MASTER/web, amber, bsdports, mrdamascy).
+254. Finish redundant_core_require_cleanup (85 findings, convergence partial);
+     the spine test stays green and the body ceiling ratchets down.
+255. Work DENSITY_identical_branches and DEAD_CODE (6) by file with the focused
+     test; a branch that differs only in a constant is a parameter, not a copy.
+256. Collapse the measured CSS duplication (item 250) through the existing
+     autofix regions; no blanket rewrite.
+257. Run dead_route_sweep and content_dedup_scan; retire routes and content
+     with no consumer; record each retirement in the sunset ledger with its
+     measured catch.
+258. KISS targets, measure before splitting: assessment_matrix.rb 74 KB,
+     command_registry help 40 KB / host 60 KB / review 58 KB, CONFIGURATION_SHAPE
+     87, CHOICE_OVERLOAD 4, BOOLEAN_TRAP 2. The 812 SMALL_FUNCTIONS, 650
+     FEW_ARGUMENTS, 447 CYCLOMATIC_COMPLEXITY and 392 ABC_SIZE findings are a
+     measurement baseline; many are not defects; route only the ones a caller
+     or a reading proves painful.
+259. Resist new abstractions: the refused list is the KISS backbone. No second
+     queue, no second memory, no second presenter, no second recovery contract,
+     no detector without a subject, no writer for a reader that does not exist.
+     Every proposed extraction names the caller that needs it.
+260. Keep one counting method: CodeMetrics.body_lines is shared by lint:spine
+     and SmallFunctionsRule; never introduce a second line counter to make a
+     number look better.
+
+## R. Vertical competitive readiness (addendum, evidence-bound)
+
+The honest verdict on the repo's own standard: no brgen vertical is yet proven
+competitive with the incumbent it names. Feature source counts are high
+(apps.yml: core substantially done, takeaway 6/6, tv 11/12, dating 11/12,
+playlist 8/9, marketplace 17/23), but the constitution separates declaration,
+implementation, passing test and excellent product. Rendered acceptance, live
+payments, real devices, SEO crawl, human accessibility review and the named
+logic gaps remain INCONCLUSIVE or operator seams. The brand contract itself
+says verticals inherit Brgen identity and gain a surface dialect; they become
+standalone brands only when they have a distinct market and promise. The moat
+is the city network, not per-vertical feature parity. Dominance language is BIZ
+narrative; engineering evidence supports a coherent, locally differentiated
+network, not yet standalone vertical dominance.
+
+261. Marketplace vs Finn.no: 17/23 done; Solidus core mount, starter storefront,
+     native marketplace features, Dintero split checkout, the Amazon parity map
+     and AI recommendations are planned, not landed. gaps.yml names liquidity
+     (knowledge), coupons, contact relay, duplicates (landed), paid boosts,
+     seller analytics. Verdict: credible local classifieds structure; no
+     proven liquidity, no split-payment proof, no parity. Finn's inventory and
+     habit are the wall; the city-first trust angle is the opening.
+262. Takeaway vs Wolt/Foodora: 6/6 source done, but gaps.yml names delivery
+     area (landed), cart expiry (landed) and the pro surface (planned); live
+     driver logistics, restaurant inventory and tracking are unproven; payments
+     in provider staging is an operator seam. Verdict: ordering flow exists;
+     the logistics network and restaurant supply that define Wolt do not yet.
+263. Dating vs Tinder/Hinge: 11/12 done; premium/boost planned; gaps.yml names
+     two-sided ranked-for and cold-start liquidity. Verdict: matching structure
+     exists; a dating product is its liquidity, and that is unproven. The
+     local, trust-scored angle is the differentiation.
+264. Messenger vs WhatsApp/Messenger: core DM done; gaps.yml names WebRTC calls
+     and business CRM; notify suppression is a UX gap. Verdict: text messaging
+     exists; calls and the network effect do not. Competing head-on is the
+     wrong frame; city-community messaging is the native niche.
+265. Maps vs Google Maps: gaps.yml names the POI substrate; the MapLibre runtime
+     and vendor decision is an operator seam (licensing). Verdict: a map surface
+     without a POI corpus is a renderer, not a maps product. The local graph is
+     the asset; the substrate must be sourced and licensed.
+266. Radio/Playlist vs Spotify: 8/9 done; creator donations/ad-free planned;
+     gaps.yml names creator donations. Verdict: playlist structure exists;
+     streaming licensing is the wall the repo cannot code around. Local
+     curation and creator ownership are the opening.
+267. TV vs YouTube/Twitch: 11/12 done; live stream infrastructure planned.
+     Verdict: VOD structure exists; live infra and creator supply do not.
+268. What would change the verdict, per vertical: close the named gaps.yml
+     rows; land the planned apps.yml features with rendered acceptance; run the
+     operator seams (payments staging, real devices, SEO crawl, human
+     accessibility, live journeys); record market evidence (liquidity, supply,
+     retention) as research with provenance, not assertion. Until then the
+     truthful status is INCONCLUSIVE, and the repo is right to mark it so.
+269. Do not assert dominance in product copy without the evidence; the
+     persuasion_honesty and content_honesty checks own that contract. The BIZ
+     plans may argue the thesis; the product must show the proof.
+270. The competitive strategy the architecture already encodes: win the city,
+     not the category. One network across verticals, local before global,
+     useful over noisy. Each vertical competes on locality and trust joined to
+     the network, not on out-featuring a global incumbent on a 1 GB SQLite box.
