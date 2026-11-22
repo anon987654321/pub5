@@ -205,6 +205,8 @@ module Master
         end
         emit("mission:finish", id: @id, state: "failed", error: @record["error"])
         self
+      rescue Fenced
+        raise
       rescue StandardError => e
         warn("mission0: #{e.class}: #{e.message}")
         self
