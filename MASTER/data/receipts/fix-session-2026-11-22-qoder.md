@@ -2347,3 +2347,76 @@ Section T addendum — stable Places public identity (2026-11-22):
   browser rendering and cross-vertical runtime journeys remain NOT_RUN. The source
   and schema updates are verified by GitHub read-after-write only; no migration
   outcome is claimed.
+
+
+### Browser scope binder isolation and six-adapter lifecycle follow-up (2026-11-22)
+
+- Replaced the boot-wide broker with a per-operation binding path. Builder
+  creates an adapter-facing `BrowserBroker::Scope` plus a separate host-side
+  binder. The six adapter/tool services receive only the scope facade
+  (`open`, `close`, `available?`, bounded session inspection); the binder
+  is kept out of `Review::Agent::Dependencies` and plugin service injection.
+  CoreBridge binds the one real broker, built from the active operation's
+  `:browser` capability set, only while the Fold runs. Its existing
+  `ensure` closes all remaining leases afterwards.
+- The scope is isolated by `Fiber.current` identity and a mutex-protected
+  map, not Ruby Fiber storage. Ruby's documented Fiber storage is inherited
+  by newly created Fibers by default, so using it here would let a child Fiber
+  inherit a browser grant; the regression creates a separate Fiber and proves
+  it sees no active broker. A binder for a different Scope cannot activate
+  this Scope. <https://docs.ruby-lang.org/en/3.2/Fiber.html>
+- The Core-only binder is not exposed through the adapter-facing Scope:
+  `Scope#with` is absent, and agent boot passes only
+  `browser_broker: infra[:browser_broker]`. This avoids giving plugin code
+  the method that installs or replaces the current operation's broker.
+- All six production adapters remain fail-closed without an active broker and
+  attach Ferrum only with a broker-issued lease. Their teardown now attempts
+  `broker.close(lease.id)` in a nested `ensure`, even when Ferrum's
+  `quit`/cleanup raises. Status reports the browser unavailable outside the
+  active Core scope.
+- The existing WebBrowse read transport now requires an explicit page-host
+  grant, rejects unlisted public subresources and redirects before resolving
+  their DNS, and continues to pin allowed requests through the existing SSRF
+  transport. SessionBrowser's established apex/`www` alias normalization is
+  intentionally preserved; unrelated subdomains remain outside the grant.
+
+Commits for this follow-up:
+`e85621d292fd32e9e176141ea5287fbedd5ec8d4` (initial scope facade);
+`87f2895f127b69ef313be34c0ae3a185ce715f76` (Builder facade injection);
+`ae087b7e10e19b91dd6032b6321b144a27d67b09` (CoreBridge scope binding);
+`5f0cc89b1e7578bb153f7666b9ef3e2086291c99` (Fiber-identity isolation);
+`51e735cae62e6911abf33b6e77b8ebcc4adf586d` (separate binder);
+`b20831728af470f076e96dfca4b14354528d403f` (Builder keeps binder out of tool dependencies);
+`dae8f5d3506e192cff5d3da06ebbd5f607be8ffa` (CoreBridge uses the host-side binder);
+`ca8df49d2f86a66d94af8b6a2d848922676eceff` (scope isolation regressions);
+`7b9405732b77ce18749220aa14d7293516723d9a` (binder/service source contract);
+`7b9405732b77ce18749220aa14d7293516723d9a` is the current `main` head
+at the time this receipt section was started.
+
+**Still open — do not mark Issue #5 complete:**
+
+- `WebChat`, `SocialBrowser` and `TravelBrowser` still need a shared,
+  pinned per-request transport with action-specific method grants. Their
+  prompt submission, owned-account publishing/inbound reply and travel
+  booking flows have different write semantics; applying the observer's
+  GET/HEAD-only rule blindly would break those flows, while allowing generic
+  POST would widen authority. No such widening was made.
+- BrowserAgent's `look` path still saves a local screenshot and returns its
+  path. The broker's bounded PNG-byte validator is not yet connected to the
+  image-capable model route; no end-to-end vision handoff is claimed.
+- Chromium process creation is still inside `BrowserBroker::ChromeEngine`
+  via `Process.spawn`. A complete Core process-capability/World boundary,
+  along with the full browser action contract, remains to be proven.
+- Request interception across every browser runtime, socket API, redirect
+  chain and page subresource is not yet centrally enforced for all six
+  adapters. The guarded WebBrowse/BrowserAgent/SessionBrowser read path is
+  not evidence that the WebChat/Social/Travel paths are contained.
+
+Proof performed: GitHub read-after-write verification of the scope, Builder
+and CoreBridge wiring, all six adapter cleanup paths, the browser transport,
+the per-Fiber regression and the capability-profile assertions. All newly
+added/modified Ruby tests remain **NOT_RUN**: no Ruby syntax check,
+Minitest/Rails suite, `MASTER/bin/check`, Chromium attach/teardown proof or
+vision integration was executed in this environment. No browser process,
+production host, payment provider or production database was used. Issue #5
+and the end-to-end sweep in Issue #6 remain open.
