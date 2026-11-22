@@ -26,12 +26,7 @@ module Maps
 
       respond_to do |format|
         format.json do
-          render json: scope.limit(200).map { |p|
-            latitude, longitude = p.public_coordinates
-            { id: p.id, name: p.name, kind: p.kind,
-              lat: latitude, lng: longitude,
-              city: p.city&.name, neighborhood: p.neighborhood&.name }
-          }
+          render json: scope.limit(200).map { |place| public_place_json(place) }
         end
         # Both page formats, not html alone: finish_live_search answers a
         # turbo_stream request with its own respond_to, and an outer block that
@@ -45,6 +40,8 @@ module Maps
 
     def show
       @place = find_by_slug_or_id(places_in_current_city.includes(:city, :neighborhood), params[:id])
+      return render(json: public_place_json(@place)) if request.format.json?
+
       @place.record_activity!("PlaceViewed", source_vertical: "maps") unless passive_request?
       return if redirect_id_to_slug(@place)
       load_check_ins
@@ -70,6 +67,22 @@ module Maps
     end
 
     private
+
+    # Stable, city-safe JSON identity for maps and other vertical consumers.
+    # Keep the numeric id for old clients; slug is the canonical public key.
+    def public_place_json(place)
+      latitude, longitude = place.public_coordinates
+      {
+        id: place.id,
+        slug: place.slug,
+        name: place.name,
+        kind: place.kind,
+        lat: latitude,
+        lng: longitude,
+        city: place.city&.name,
+        neighborhood: place.neighborhood&.name
+      }
+    end
 
     def load_check_ins
       named_before = NAMED_CHECK_IN_DELAY.ago
