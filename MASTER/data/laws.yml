@@ -274,9 +274,10 @@ ROBUSTNESS_portability_is_verified:
 ROBUSTNESS_production_release_is_pinned:
   parent: ROBUSTNESS
   statement: >
-    A production release moves between revisions, the deployed revision differs
-    from its required attestations, or a remote operation targets a host outside
-    the canonical, reviewed host scope.
+    A production release moves between revisions, its CI/preflight attestations
+    name a different SHA, or success is reported without the pinned service
+    passing loopback health and local canary checks followed by the independent
+    public canary for that deployed fleet.
   resolution: never
 
 ROBUSTNESS_bounded_operation_lifecycle:
