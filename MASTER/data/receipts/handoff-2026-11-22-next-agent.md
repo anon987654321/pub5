@@ -1064,8 +1064,9 @@ this environment has no working checkout and cannot resolve GitHub for clone.
   explicit `NOT_REVIEWED` visual/accessibility states. The record is
   published atomically without replacing an existing receipt.
   `bp_index.mjs` requires matching print receipts for active plans and
-  Ragnhild's funding guide; verifies their filenames, hashes, geometry and
-  review states; and checks editable HTML freshness separately from print/PDF
+  Ragnhild's funding guide; verifies their filenames, hashes, geometry, PDF/
+  cover byte sizes and full-page raster count against the receipt; and checks
+  editable HTML freshness separately from print/PDF
   freshness. Archives are still checked for their existing HTML/PDF pairs but
   are not forced through the new receipt gate. The BIZ README describes the
   scratch build, manual full-page/cover review and precise copy-in step.
@@ -1080,7 +1081,8 @@ this environment has no working checkout and cannot resolve GitHub for clone.
   `58c77c5219a51b5d8fc5275919778184ed1adfdf`,
   `61821895eb2bf205cbd6cbc5340e2a3c039ae862`,
   `9b8b858b58459953f3e7db5b92371198d5d19923`,
-  `d9cb370dee08b37163167a84297e5ce22df0fcf5`.
+  `d9cb370dee08b37163167a84297e5ce22df0fcf5`,
+  `87ca9087f0c121bf7830b01754ad50ab7e676dc9`.
 
 ### Remaining operator/evidence boundaries
 
