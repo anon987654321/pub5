@@ -476,9 +476,11 @@ test("rotating characters change delivery only and preserve one MASTER intellige
   assert.match(readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8"), /MASTER_FACE_MASK_CHARACTERS =/);
   for (const id of ids) assert.ok(archive.includes(`id: "${id}"`), `missing ${id}`);
   for (const name of names) assert.ok(archive.includes(`name: "${name}"`), `missing ${name}`);
-  assert.match(actions, /form\.append\("face_profile", faceProfile\)/);
-  assert.match(controller, /allowed\.include\?\(requested\)/);
-  assert.match(controller, /face_character_note\(mp\[:face_profile\], conversation:/);
+  assert.doesNotMatch(actions, /form\.append\("face_profile"/);
+  assert.doesNotMatch(controller, /params\[:face_profile\]/);
+  assert.match(controller, /face_character_note\(conversation:/);
+  assert.match(controller, /rotation\["conversation_id"\]/);
+  assert.match(controller, /character_note_for\(profile_id, archive:/);
   assert.match(service, /Fiber\[:master_persona_note\] = @persona_note/);
   assert.match(promptBuilder, /parts << Fiber\[:master_persona_note\]/);
 });

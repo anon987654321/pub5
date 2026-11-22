@@ -98,7 +98,7 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     get root_path
     assert_response :success
     first_conversation = cookies[:master_conversation]
-    first_profile = response.body.match(/window\\.MASTER_FACE_MASK_PROFILE = "([^"]+)";/).fetch(1)
+    first_profile = response.body.match(/window\.MASTER_FACE_MASK_PROFILE = "([^"]+)";/).fetch(1)
 
     post "/chat/new"
     assert_response :success
@@ -113,9 +113,9 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
 
     get root_path
     assert_response :success
-    second_profile = response.body.match(/window\\.MASTER_FACE_MASK_PROFILE = "([^"]+)";/).fetch(1)
+    second_profile = response.body.match(/window\.MASTER_FACE_MASK_PROFILE = "([^"]+)";/).fetch(1)
     assert_equal payload.fetch("face_profile"), second_profile
-    assert_equal payload.fetch("face_session"), response.body.match(/window\\.MASTER_FACE_MASK_SESSION = "([^"]+)";/).fetch(1)
+    assert_equal payload.fetch("face_session"), response.body.match(/window\.MASTER_FACE_MASK_SESSION = "([^"]+)";/).fetch(1)
   end
 
   test "character delivery notes come only from repository-owned profile data" do
