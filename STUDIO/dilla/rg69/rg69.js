@@ -500,7 +500,7 @@ tapeWS.connect(tapeSat);
 tapeSat.connect(compPar);
 compPar.connect(sslComp);
 sslComp.connect(widener);
-widener.connect(bitCrush);
+widener.connect(masterDrive);
 widener.connect(analyser=new Tone.Analyser('waveform',256));
 revSend.connect(fxRev);
 fxRev.connect(compPar);
@@ -540,7 +540,7 @@ keySat.connect(keysChorus);
 keysChorus.connect(keysTrem);
 keysTrem.connect(keysDrive);
 keysDrive.connect(keysG);
-// old-sampler: 12-bit crush + 5kHz bandwidth limit on keys
+// Warm, worklet-free saturation + 5kHz bandwidth limit on keys
 const keysTexture=new Tone.Distortion(0.18);keysTexture.wet.value=0.6;
 const keysLP=new Tone.Filter(PARAMS.KEYS_LP_HZ,'lowpass');
 keysG.connect(keysTexture);keysTexture.connect(keysLP);keysLP.connect(masterG);keysLP.connect(revSend);keysLP.connect(dlySend);
