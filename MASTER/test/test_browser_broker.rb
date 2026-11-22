@@ -305,6 +305,11 @@ class BrowserBrokerTest < Minitest::Test
     refute_respond_to page, :network_object
     assert_equal "https://example.com/", page.url
     assert_equal "Example", page.snapshot.fetch("title")
+    assert_raises(Broker::Denied) { page.go_to("https://other.example/") }
+    assert_same page, page.go_to("https://example.com/next")
+    assert_equal ["https://example.com/next"], raw_page.navigations
+    assert_equal Broker::PNG_MAGIC + "fake-png".b, page.screenshot
+    assert_raises(Broker::Denied) { page.screenshot(format: "jpeg") }
     page.harden_network
     page.network.intercept
     assert_equal [Broker::Page::NETWORK_SANDBOX_SCRIPT, true],
