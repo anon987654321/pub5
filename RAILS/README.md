@@ -31,6 +31,19 @@ each app keeps its own contract in an `AGENTS.md`. Product copy keeps each
 brand's voice; technical documentation follows the shared editorial standard
 in [MASTER/AGENTS.md](../MASTER/AGENTS.md).
 
+## Shared-engine impact review
+
+A change to `RAILS/__shared` or a mountable Brgen engine is a cross-product
+change until its consumers have been checked. Read the active consumer list
+from `apps.yml`; trace the changed contract through each consuming app and
+nested engine; compare its routes, authorization, data meaning, locales and
+product-specific presentation; then run the shared tests and the affected
+app/engine suites. A rendered or interaction change also needs browser,
+viewport, keyboard and accessibility evidence for the affected surfaces.
+Record which consumers were measured and which could not be run. Do not
+homogenize Brgen, Amber or BSDPorts to make a shared implementation easier;
+share stable behavior, not their distinct product identities.
+
 brgen is not a folder of apps. Every city apex in `Brgen::DomainRegistry` serves
 the feed, and the verticals are engines reached on subdomains of that apex, so
 `dating.brgen.no` and `dating.lsangeles.com` are the same code under two city
