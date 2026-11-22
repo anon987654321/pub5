@@ -126,7 +126,7 @@ module Master
           # an accumulator, and freezing it arms a FrozenError that only fires
           # on the first append — a failure list crashes exactly when it has a
           # failure to report.
-          MUTATING_SENDS = /\s*(?:<<|\[[^\]]*\]\s*=|\.(?:push|append|unshift|prepend|concat|pop|shift|clear|delete|delete_if|store|update|merge!|replace|insert)\b)/
+          MUTATING_SENDS = /\s*(?:<<|\[[^\]]*\]\s*(?:\|\|=|[+\-*\/%&|^]?=)|\.(?:push|append|unshift|prepend|concat|pop|shift|clear|delete|delete_if|store|update|merge!|replace|insert)\b|\|\|=|[+\-*\/%&|^]=)/
 
           def freeze_mutable_constants(src)
             changed = false

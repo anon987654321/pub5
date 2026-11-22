@@ -244,6 +244,22 @@ class TestAstFixerTransforms < Minitest::Test
     assert_includes result[:content], "APPS = %w[amber brgen].freeze"
   end
 
+  def test_freeze_declines_a_constant_updated_by_indexed_or_assignment
+    src = <<~RUBY
+      # frozen_string_literal: true
+
+      LANE_SLOTS = {}
+
+      def slot(name)
+        LANE_SLOTS[name] ||= 1
+      end
+    RUBY
+    result = fix("slots.rb", src)
+
+    assert_includes result[:content], "LANE_SLOTS = {}\n", "froze a hash that ||= mutates - FrozenError on first slot"
+    refute_includes result[:transforms], :freeze_constants
+  end
+
   def test_freeze_declines_a_constant_that_heads_a_chain
     src = <<~RUBY
       # frozen_string_literal: true
