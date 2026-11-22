@@ -2096,3 +2096,43 @@ Proof boundary:
   github.com. These remain NOT_RUN, not PASS.
 - The local container's inability to resolve GitHub does not prove the remote build,
   staging or production state. No production or provider credentials were used.
+
+
+### Generated JSON newline audit — 2026-11-22
+
+- The current `.editorconfig` already has no `[*.py]` block; no edit was
+  needed and no dead section was reintroduced.
+- Verified the current generated/runtime JSON artifacts
+  `MASTER/data/autopoietic_components.json`,
+  `MASTER/data/coverage_map/state.json`,
+  `MASTER/data/laws_index.json` and the served static
+  `MASTER/web/public/face_music_packs.json` all end with a final newline.
+  The coverage-map state is under `MASTER/data/coverage_map/`, not the older
+  `MASTER/checks/data/coverage_map/` path from the intake note.
+- The autopoiesis manifest writer and coverage-map writer already append a
+  real newline, and `MASTER/test/bare/test_agent_tier.rb` already asserts
+  this for both writers. `MASTER/test/test_web_ui.rb` already asserts the
+  face music asset's newline and schema.
+- Found and corrected one real remaining defect:
+  `Master::Agent::LawIndex.write_index!` contained a double-escaped
+  `\\n`, which writes literal backslash-n characters instead of a line-feed.
+  It now appends a real newline. Its existing
+  `test_law_index_writer_emits_a_final_newline` regression test would catch
+  this; no duplicate test was added.
+- No generated JSON artifacts were edited by hand, and no new manifest or
+  output file was added.
+
+Commit: `403781a92a8cf7d68d0cecad2b31fb93724c9768`.
+
+Proof actually performed: read-after-write verification of the writer;
+static inspection of exact backslash counts in the three writer methods;
+read-after-write of all four JSON artifacts and final-newline assertions;
+inspection of the three existing bare-tier newline tests and face music
+asset test; inspection of current `.editorconfig`.
+
+Still **NOT_RUN**: `test_law_index_writer_emits_a_final_newline`,
+`test_coverage_state_json_ends_with_a_final_newline`,
+`test_autopoiesis_manifest_writer_emits_a_final_newline`,
+`test_face_music_pack_is_wellformed_and_declared`, Ruby syntax, JSON parser
+execution and the full gate. The source writer is corrected; tests remain
+unexecuted.
