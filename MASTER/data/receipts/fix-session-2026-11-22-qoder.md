@@ -2718,3 +2718,29 @@ Broker facade acceptance addendum — 2026-11-22:
   5001598916a07c311982e7aac30eca8d9a401518 (host/screenshot facade tests).
 - These tests are source changes only; execution remains NOT_RUN. Issue #5
   remains open with the boundaries recorded above.
+
+Browser facade revocation addendum — 2026-11-22:
+- Added a broker-side active-lease assertion to the narrow browser facade.
+  Page reads, snapshots, network hardening, screenshots, element reads/clicks,
+  focus/type operations, network waits/interception and request-wrapper reads
+  or responses now revalidate their lease before reaching Ferrum.
+- Attachment#create_page is refused after the lease is closed. A connection
+  racing with close is detached if the lease has already been revoked when
+  Ferrum finishes attaching. Lease refresh now reports revocation rather than
+  silently succeeding after the lease has disappeared.
+- Extended test_browser_broker.rb with retained-object regressions: after
+  closing a lease, old Page, Node, Focus, Network and Request wrappers cannot
+  be reused. The request fixture also verifies the allowlist omits
+  Authorization.
+- Commits: dcf6fc76a6c84188cebfa33ef6bc06f512d8fce9 (broker lease fencing);
+  331bc7b33ea2c6fa1e520dd9829f3b548a0d239d (revocation regressions).
+- Read-after-write source audit: PASS for the checked broker/test predicates
+  and exact main-branch blob identities. This is static source evidence only.
+- NOT_RUN: ruby -c, test_browser_broker.rb, MASTER/bin/check, Core integration,
+  real Chromium lifecycle, concurrent close-vs-in-flight calls and end-to-end
+  journeys. Ruby 3.3.8 exists in the tool container, but no pub5 checkout or
+  repository test/dependency context is mounted there.
+- Boundary: per-call checks revoke stale objects after close/expiry; they do
+  not serialize an operation already in flight against a simultaneous close.
+  Chromium process ownership still uses Process.spawn inside the broker and
+  Core process-supervisor integration remains open. Issue #5 remains OPEN.
