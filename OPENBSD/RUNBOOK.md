@@ -736,6 +736,23 @@ failure. Nothing is stopped before step 4.
    deploy stopped it, `resource_guard` shed it, or it went down for another reason.
    The exit status stays the failure's, and the trap names the stage.
 
+#### Public release acceptance
+
+The remote `MASTER/bin/operator vps deploy <app|group|all> --remote` path
+waits for the pinned vm23 deploy and then runs `OPENBSD/bin/canary --public`
+from the workstation's independent network vantage. The collector returns a
+nonzero result if that public canary fails or cannot run; the deploy is not
+accepted as complete until the log records `post-deploy public canary (PASS)`.
+A `--detach` response means only that the tmux job was started. It is not a
+successful release; follow the local deploy transcript and public-canary result.
+
+Running `OPENBSD/bin/vps-deploy` directly on vm23 performs the pinned
+preflight/CI checks, live-service and loopback health checks, and local canary,
+but does not itself provide an independent public vantage. After a direct run,
+execute `MASTER/bin/operator vps canary` from the workstation before
+reporting public release success. A failed public canary remains a failed
+release assessment even when the local deploy stamp says `ok`.
+
 #### Interrupted deploy receipt recovery
 
 The EXIT/HUP/INT/TERM path writes a terminal receipt after it attempts restoration.
