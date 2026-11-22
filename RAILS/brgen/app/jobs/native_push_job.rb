@@ -33,6 +33,14 @@ class NativePushJob < ApplicationJob
   # under one heading rather than interleaving every conversation.
   def deliver_message(message)
     tokens = NativePushToken.where(user_id: message.fetch(:user_id)).to_a
+    if message[:conversation_id] && defined?(ChannelPresence)
+      tokens.reject! do |token|
+        ChannelPresence.push_device_active?(
+          conversation_id: message[:conversation_id], user_id: token.user_id,
+          device_type: "native", device_id: token.id
+        )
+      end
+    end
     return if tokens.empty?
 
     Apns.deliver(tokens, message.slice(:title, :body, :path, :thread))

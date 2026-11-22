@@ -25,13 +25,13 @@ module Shared
     # subscription cleanup in Shared::Pushable is what actually fixes the cause.
     discard_on ActiveJob::DeserializationError
 
-    def perform(user_id = nil, title: nil, body: "", url: "/", notification_id: nil)
+    def perform(user_id = nil, title: nil, body: "", url: "/", notification_id: nil, conversation_id: nil)
       return deliver_notification(notification_id) if notification_id
 
       user = User.find_by(id: user_id)
       return unless user
 
-      Shared::Pushable.deliver_now(user, title:, body:, url:)
+      Shared::Pushable.deliver_now(user, title:, body:, url:, conversation_id:)
     end
 
     private
