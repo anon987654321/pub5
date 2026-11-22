@@ -89,7 +89,7 @@ end
 #
 # One check entrypoint. A profile is a named list of steps — pick one:
 #
-#   bin/check [--profile NAME] [--format brief]
+#   bin/check [--profile NAME] [--format human|brief|json]
 #
 #   operator     (default) unit suite + core spine + data singularity
 #   contributor  fast: unit suite + data singularity
