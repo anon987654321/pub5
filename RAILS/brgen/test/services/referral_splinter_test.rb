@@ -29,6 +29,24 @@ class ReferralSplinterTest < ActiveSupport::TestCase
     assert @referrer.reload.entitled?(:playlist_pro)
   end
 
+  test "a failed ledger append rolls back the referral redemption and credit" do
+    token = Shared::ReferralSplinter.generate!(referrer: @referrer, vertical: "playlist")
+    splinter = Shared::ReferralSplinter.find_by!(referrer: @referrer, redeemed_by: nil)
+    failure = Shared::Commerce::Ledger::IdempotencyConflict.new("forced ledger failure")
+
+    Shared::Commerce::Ledger.stub(:record_credit!, ->(_credit) { raise failure }) do
+      raised = assert_raises(Shared::Commerce::Ledger::IdempotencyConflict) do
+        Shared::ReferralSplinter.redeem!(token:, user: @invitee)
+      end
+      assert_same failure, raised
+    end
+
+    assert_nil splinter.reload.redeemed_at
+    assert_nil splinter.redeemed_by_id
+    assert_equal 0, Shared::ReferralCredit.where(referral_splinter: splinter).count
+    assert_equal 0, Shared::CommerceLedgerEntry.where(idempotency_key: "referral-credit:%").count
+  end
+
   test "same token and same invitee cannot redeem twice" do
     token = Shared::ReferralSplinter.generate!(referrer: @referrer, vertical: "dating")
     Shared::ReferralSplinter.redeem!(token:, user: @invitee)
