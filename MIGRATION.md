@@ -1,5 +1,7 @@
 # Migration record — pub4 → pub5
 
+> **Historical provenance only.** This file records the pub4-to-pub5 port; it is not current policy, runtime configuration, a work backlog or an operator runbook. For current authority, start with [AGENTS.md](AGENTS.md) and the owning tree's maintained entrypoint.
+
 pub5 is a new repository built by porting pub4, not rewriting it: every
 behaviour is locked as an executable contract, then rebuilt smaller against
 that contract. This file records what the port carried, what it changed,
