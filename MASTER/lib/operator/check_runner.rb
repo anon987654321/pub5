@@ -8,10 +8,17 @@ require_relative "../trace/dmesg"
 
 module Operator
   class CheckRunner
-    Result = Struct.new(:name, :success, :output, keyword_init: true)
+    Result = Struct.new(
+      :name, :success, :output, :started_at, :finished_at, :elapsed_s,
+      :exit_status, :signal, :timed_out, :command,
+      keyword_init: true
+    )
 
     TimeoutStatus = Struct.new(:success?) do
       def initialize = super(false)
+      def timed_out? = true
+      def exitstatus = nil
+      def signaled? = false
     end
 
     attr_reader :results, :log_path
@@ -42,11 +49,21 @@ module Operator
     def run(name, *cmd, env: {})
       unit = "#{@prefix}#{@results.size + 1}"
       Master::Trace::Dmesg.attach(unit, "#{@prefix}0", name) unless @quiet
+      started_at = Time.now.utc
       started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       out, status = capture(env, *cmd)
       elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+      finished_at = Time.now.utc
       ok = status.success?
-      @results << Result.new(name:, success: ok, output: out)
+      timed_out = status.respond_to?(:timed_out?) && status.timed_out?
+      exit_status = status.respond_to?(:exitstatus) ? status.exitstatus : nil
+      signal = status.respond_to?(:signaled?) && status.signaled? ? status.termsig : nil
+      @results << Result.new(
+        name:, success: ok, output: out,
+        started_at: started_at.iso8601(3), finished_at: finished_at.iso8601(3),
+        elapsed_s: elapsed, exit_status:, signal:, timed_out:,
+        command: Shellwords.join(cmd)
+      )
       record_run_step(name, ok, elapsed, out, cmd, status)
       report(unit, name, ok, elapsed)
       Master::Trace::Dmesg::Report.print(unit, out, parent: "#{@prefix}0") if !out.empty? && (!ok || ENV["CHECK_VERBOSE"] == "1")
