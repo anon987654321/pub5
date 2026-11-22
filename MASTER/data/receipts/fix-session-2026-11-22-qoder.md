@@ -1662,3 +1662,53 @@ a city product catalog, local listening rooms, verified cross-paths, city
 kitchens. Love is the acceptance predicate (section S1); proof is the gate; the
 operator owns the rendered value and the money. Re-measure before acting; route
 each missing row to gaps.yml / apps.yml / ideations, not to a new backlog.
+
+
+## U. Rendered-evidence correction and bounded design measurement (addendum)
+
+Operator correction: evaluating graphic design requires the rendered surface,
+not source. Accepted. Earlier design remarks were source-derived hypotheses;
+the constitution says HTML source checks prove only named source invariants.
+This section records what the committed rendered captures measure and why a
+fresh sweep is required.
+
+Instrument: read MASTER/checks/data/layout_snapshots/brgen-*-mobile.json
+(rendered geometry) and analysed route_screenshots/brgen/* PNGs with PIL/numpy
+(dimensions, palette, tab-bar strip). Committed baselines of a prior revision,
+NOT a fresh sweep of current main; rails_stale_capture_source_reconciliation open.
+
+Findings, bounded to the captured revision:
+
+    TITLE   brgen-core "Bergen - Bergen"; marketplace "Markedsplass - Bergen -
+            Bergen" duplicate the city; other verticals correct. Owning title
+            helper appends the city twice on core and marketplace.
+    CONTRAST active tab-item uses the vertical accent on #f9f9f9, failing WCAG
+            AA 4.5:1 for 18px normal text on every vertical: marketplace #98876e
+            3.31 | dating #009579 3.58 | takeaway #c26a30 3.69 | playlist #0e8a94
+            3.93 | tv #dc635c 3.33 | messenger #6b7fd7 3.54 | maps #5585c5 3.60.
+            Route to tokens vertical_accent_ink or darken; operator gates colour.
+    TOUCH   marketplace + takeaway search field height 40px < 44 minimum.
+    SOUND   h1_count=1, landmarks main/nav/skip, no horizontal spill, most
+            targets >=44px, body contrast passes. Structural skeleton is good.
+
+Stale-capture proof: brgen home PNG __loopback__390.png is DARK (#000000/#16181c,
+#e7e9ea text, #1d9bf0 blue) while marketplace/dating/takeaway PNGs are LIGHT
+(#efefef/#ffffff, #1e40af). The home layout snapshot reports a LIGHT tab that
+disagrees with its own dark PNG. Captures are mutually inconsistent across
+revisions/themes; none stands as the current design. The stale-capture seam,
+visible.
+
+Fresh-sweep protocol (house-native; agent does not drive a browser):
+
+    MASTER/bin/operator browser install
+    MASTER/bin/operator visual sweep APP --one-page   # then full sweep
+    # run-scoped screenshots into RAILS/*.png / .webp; failed sweep leaves no
+    # review set; never reuse a prior render. visual_contract, layout_snapshot,
+    # rendered_geometry, contrast, design_laws, accessibility_axe, keyboard_flow,
+    # reflow, occlusion measure fresh captures; before/after; operator gates value.
+
+Status: geometry + pixel measurement RUN on committed captures (PIL/numpy/JSON).
+Fresh sweep NOT_RUN (no Chrome/Ruby/host; agent browser verification refused).
+Title, tab-ink and search-height fixes are ux_refinements/tokens candidates,
+each needing fresh rendered proof before PASS. Taste stays operator-owned; this
+measures objective invariants, not beauty.
