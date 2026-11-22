@@ -59,7 +59,7 @@ def check_httpd(failures, source = nil)
   failures << "httpd: must have exactly one server block for ACME only" unless server_count == 1
 
   listeners = source.lines.grep(/^\s*listen\s/)
-  unless listeners.length == 1 && listeners.first.match?(/\Alisten on 0\.0\.0\.0 port 80\s*\z/)
+  unless listeners.length == 1 && listeners.first.match?(/\A\s*listen on 0\.0\.0\.0 port 80\s*\z/)
     failures << "httpd: only 0.0.0.0:80 may listen; TLS and app traffic belong to relayd"
   end
 

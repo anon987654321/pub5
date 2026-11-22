@@ -17,7 +17,7 @@ esac
   echo "ci-run: timeout must be an integer from 1 to 7200" >&2
   exit 64
 }
-[[ "$(id -u)" -eq 0 ]] || { echo "ci-run: must run as root through pub5-admin" >&2; exit 77; }
+[[ "$(id -u)" -eq 0 ]] || { echo "ci-run: must run as root through the fixed helper" >&2; exit 77; }
 
 bundle=/usr/local/bin/bundle
 ruby_path=/usr/local/bin/ruby

@@ -421,7 +421,11 @@ else
   }
   deploy_log_ref=$VPS_DEPLOY_LOG_REF
 fi
-[[ $deploy_log_ref =~ '^local://deploys/[A-Za-z0-9_.-]{1,240}[.]logexport VPS_DEPLOY_LOG=$deploy_log VPS_DEPLOY_RUN_LOG=$deploy_run_log VPS_DEPLOY_LOGGING=1
+[[ $deploy_log_ref =~ '^local://deploys/[A-Za-z0-9_.-]{1,240}[.]log$' ]] || {
+  print -u2 "vps-deploy: workstation log reference must be local://deploys/<name>.log"
+  exit 64
+}
+export VPS_DEPLOY_LOG=$deploy_log VPS_DEPLOY_RUN_LOG=$deploy_run_log VPS_DEPLOY_LOGGING=1
 
 log_ts() { date -u '+%Y-%m-%dT%H:%M:%SZ'; }
 
@@ -544,7 +548,7 @@ admin_service() {
   shift || true
   if [[ $action == list-started ]]; then
     local listing service
-    listing=$(/usr/sbin/rcctl ls started) || return $?
+    listing=$("/usr/sbin/rcctl" ls started) || return $?
     while IFS= read -r service; do
       [[ -n $service ]] || continue
       service_is_registered "$service" && print -r -- "$service"
@@ -562,7 +566,7 @@ admin_service() {
     return 64
   }
   (( $# == 1 )) || { print -u2 "vps-deploy: one service argument required"; return 64; }
-  /usr/sbin/rcctl "$action" "$service"
+  "/usr/sbin/rcctl" "$action" "$service"
 }
 
 records_call() {

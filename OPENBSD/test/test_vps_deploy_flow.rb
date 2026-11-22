@@ -19,7 +19,7 @@ class VpsDeployFlowTest < Minitest::Test
   # The sequence's own inventory read sits at a two-space indent inside the
   # target dispatch, after the pin; the restore-order hint arrays near the top
   # of the file are flush-left `DEPLOY_ALL=` lines that must not be captured
-  # here, or the block would drag the pub5-admin broker gate and the lock
+  # here, or the block would drag the durable receipt gate and the lock
   # setup into a harness that stubs neither.
   ORDER_BLOCK = SOURCE[/^  DEPLOY_ALL=\(.*?^choose_deploy_order\(\) \{.*?^\}$/m]
   # The script runs as root and does git as DEPLOY_USER through su; it records

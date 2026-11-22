@@ -24,10 +24,6 @@ set -e
 set -o pipefail
 LOG=/tmp/master_manual.log
 exec >"$LOG" 2>&1
-if [[ -L /usr/local/sbin/pub5-admin || ! -x /usr/local/sbin/pub5-admin ]]; then
-  echo "pub5-admin missing or symlinked; run the reviewed OPERATOR.sh sync first" >&2
-  exit 2
-fi
 . /home/dev/pub5/OPENBSD/lib/ruby_select.sh
 set -x
 _fail=0

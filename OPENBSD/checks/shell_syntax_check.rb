@@ -25,8 +25,9 @@ INTERPRETERS = %w[zsh ksh sh bash].freeze
 SHEBANG = %r{\A\#!\s*(?:/usr/bin/env\s+)?(?:\S*/)?(#{INTERPRETERS.join('|')})\b}
 
 # ksh -n on OpenBSD warns about `[[ -gt ]]` in scripts that are otherwise valid.
+# ksh93 on Debian additionally calls `$(( x + 1 ))` slower than `(( x += 1 ))`.
 # The check is about parse errors, not about a style the tree has settled on.
-STYLE_WARNING = /obsolete/
+STYLE_WARNING = /obsolete|is slower than/
 # A relocated zsh (Debian package extracted without root, as a sandbox does)
 # cannot serve its compiled module path, so `-n` prints "failed to load
 # module `zsh/watch'" for scripts that name `log` — the module provides that

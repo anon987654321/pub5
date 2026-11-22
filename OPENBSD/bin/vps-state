@@ -134,8 +134,8 @@ def pid_alive?(pid)
   Deploy::PidProbe.alive?(pid)
 end
 
-# Fleet receipts are root-private under /var/db/pub5. On the real VPS read
-# them only through the fixed broker; custom stamp roots are local test/drill
+# Fleet receipts are root-private under /var/db/pub5. The real VPS reads them
+# directly from that directory; custom stamp roots are local test/drill
 # fixtures and use the same bounded response contract.
 DEPLOY_RUN_SCAN_LIMIT = 500
 DEPLOY_RUN_PENDING_LIMIT = 100

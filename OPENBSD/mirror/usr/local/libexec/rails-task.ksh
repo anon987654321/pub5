@@ -24,7 +24,7 @@ case "$task" in
   *) echo "rails-task: refused task: $task" >&2; exit 64 ;;
 esac
 
-[[ "$(id -u)" -eq 0 ]] || { echo "rails-task: must run as root through pub5-admin" >&2; exit 77; }
+[[ "$(id -u)" -eq 0 ]] || { echo "rails-task: must run as root through the fixed helper" >&2; exit 77; }
 
 app_uid=$(/usr/bin/id -u "$app")
 [ -d /home ] && [ ! -L /home ] && [ "$(stat -f %u /home)" -eq 0 ] || {

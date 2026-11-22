@@ -11,7 +11,7 @@ case "$app" in
   *) echo "ci-prepare: refused unknown app: $app" >&2; exit 64 ;;
 esac
 
-[[ "$(id -u)" -eq 0 ]] || { echo "ci-prepare: must run as root through pub5-admin" >&2; exit 77; }
+[[ "$(id -u)" -eq 0 ]] || { echo "ci-prepare: must run as root through the fixed helper" >&2; exit 77; }
 
 # Do not let an allowlisted app name turn a symlinked home/app path into a
 # privileged chmod target. Verify each ancestor and its ownership before touching

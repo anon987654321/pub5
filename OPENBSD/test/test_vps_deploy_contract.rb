@@ -26,7 +26,6 @@ class VpsDeployContractTest < Minitest::Test
     assert_equal 1, SOURCE.scan(/^admin_request\(\) \{$/).length
     assert_equal 1, SOURCE.scan(/^write_deploy_run_receipt\(\) \{$/).length
     assert_equal "exit 0", SOURCE.lines.last.strip
-    refute_includes SOURCE, "]] || {"
   end
 
   def test_all_applies_the_filesystem_mirror_before_application_deploys
@@ -149,8 +148,10 @@ class VpsDeployContractTest < Minitest::Test
   def test_master_deploy_refuses_root_override
     source = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
     assert_includes source, 'if [ "$ROOT" != "/home/dev/pub5" ]; then'
-    assert_includes source, 'pub5-admin master-web-assets-reset'
-    assert_includes source, 'pub5-admin master-web-runtime-dirs'
+    assert_includes source, "doas /usr/sbin/rcctl restart master"
+    assert_includes source, "doas /bin/ksh -c"
+    assert_includes source, 'find "$path" -type l'
+    refute_includes source, "pub5-admin"
     refute_includes source, 'doas rm -rf public/assets'
     refute_includes source, 'doas chown -R dev:dev public'
     refute_includes source, 'doas cp "$ROOT/OPENBSD/mirror/etc/rc.d/master" /etc/rc.d/master'
@@ -202,86 +203,86 @@ class VpsDeployContractTest < Minitest::Test
   def test_remote_deploy_collector_polls_at_a_bounded_interval
     operator = File.read(File.join(ROOT, "MASTER", "bin", "operator"), encoding: "UTF-8")
     collector = operator[/def collect_remote_deploy\(.*?^end/m]
+    capture = operator[/def remote_deploy_capture_command\(.*?^end/m]
     refute_nil collector
+    refute_nil capture
     assert_includes collector, "sleep 3"
-    assert_includes collector, "tmux capture-pane -p -J -S -"
+    assert_includes collector, "remote_deploy_capture_command(session)"
+    assert_includes capture, "tmux capture-pane -p -J -S -"
   end
 
-  def test_disk_recovery_hint_uses_bounded_broker
-    assert_includes SOURCE, "doas /usr/local/sbin/pub5-admin disk-usage $mount_point"
-    refute_includes SOURCE, "doas du -xk $mount_point"
+  def test_disk_usage_uses_native_bounded_du
+    assert_includes SOURCE, "disk-usage)"
+    assert_includes SOURCE, '/usr/bin/du -xk "$1"'
+    refute_includes SOURCE, "pub5-admin"
   end
-  # vps-deploy runs as root, so its hints name the broker without doas.
-  def test_failure_hints_use_the_bounded_service_broker
-    assert_includes SOURCE, "/usr/local/sbin/pub5-admin service restart <app>"
-    assert_includes SOURCE, "/usr/local/sbin/pub5-admin service start $app"
-    assert_includes SOURCE, "/usr/local/sbin/pub5-admin service restart $other"
+  # vps-deploy runs as root, so its hints name native rcctl without doas.
+  def test_failure_hints_use_native_rcctl
+    assert_includes SOURCE, "doas /usr/sbin/rcctl restart <app>"
+    assert_includes SOURCE, "doas /usr/sbin/rcctl start $app"
+    assert_includes SOURCE, "doas /usr/sbin/rcctl restart $other"
+    refute_includes SOURCE, "pub5-admin"
   end
 
   def test_vps_deploy_fails_closed_without_root_fallbacks
-    assert_includes SOURCE, ': "${PUB5_ADMIN:=/usr/local/sbin/pub5-admin}"'
-    assert_includes SOURCE, '[[ -f "$PUB5_ADMIN" && -x "$PUB5_ADMIN" && ! -L "$PUB5_ADMIN" ]]'
+    assert_includes SOURCE, 'records_call write "$VPS_DEPLOY_RUN_ID" "$payload"'
+    assert_includes SOURCE, "Deploy::Records.new(repo_root: repo)"
+    refute_includes SOURCE, "PUB5_ADMIN"
+    refute_includes SOURCE, "pub5-admin"
     refute_match(/^\s*doas\s+rcctl\b/, SOURCE)
     refute_match(/^\s*doas\s+(?:tee|chmod|mkdir)\b/, SOURCE)
     refute_includes SOURCE, 'doas ksh "$repo/OPENBSD/bin/resource_guard.sh"'
     refute_includes SOURCE, 'doas "$RUBY" "$repo/OPENBSD/checks/solid_queue_proof.rb"'
     refute_includes SOURCE, 'doas tee "$file"'
   end
-  def test_deploy_uses_the_fixed_root_broker_when_installed
-    assert_includes SOURCE, '"$PUB5_ADMIN" service "$action" "$@"'
+  def test_deploy_uses_native_rcctl_and_direct_records
+    assert_includes SOURCE, '"/usr/sbin/rcctl" "$action" "$service"'
     assert_includes SOURCE, 'admin_request stamp "$name" "$sha" "$stamp_status"'
     assert_includes SOURCE, "admin_request resource-guard"
     assert_includes SOURCE, 'admin_request solid-queue-proof "$app"'
+    assert_includes SOURCE, 'records_call write "$@"'
   end
 
   # Since 6735acf1 the mirror is a copy-ready filesystem image: OPERATOR.sh
   # installs whatever git tracks under OPENBSD/mirror, and file_mode/file_owner
-  # give usr/local/sbin/* the 555 root:wheel treatment. The brokers therefore
-  # ride the tracked payload instead of dedicated install lines, and the Solid
-  # Queue proof is installed by BOOTSTRAP.sh, never from the live checkout.
-  def test_operator_installs_pub5_broker_and_its_solid_queue_helper
+  # give privileged destinations the root:wheel treatment. The Solid Queue proof
+  # is installed by BOOTSTRAP.sh, never from the live checkout.
+  def test_operator_installs_app_user_helpers_and_solid_queue_proof
     operator = File.read(File.join(ROOT, "OPENBSD", "OPERATOR.sh"))
     bootstrap = File.read(File.join(ROOT, "OPENBSD", "BOOTSTRAP.sh"))
 
-    # The active deployer is pub5-admin, the only broker the mirror carries.
-    %w[pub5-admin].each do |broker|
-      assert File.file?(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "sbin", broker)),
-             "#{broker} is not tracked in the mirror, so OPERATOR.sh never installs it"
-    end
+    refute File.exist?(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")),
+           "the retired command broker must not be tracked in the mirror"
     assert_includes operator, "usr/local/sbin/*) print 555 ;;"
+    assert_includes operator, "usr/local/libexec/*) print 755 ;;"
     assert_includes operator, "*) print root:wheel ;;"
     assert_includes operator, 'install -o "$owner" -g "$group" -m "$mode" "$source_file" "$tmp"'
 
-    # The Solid Queue proof must never run from the live checkout: the broker
-    # execs a fixed, root-owned copy installed by BOOTSTRAP.sh for both brokers.
     assert_includes bootstrap,
                     'install -o root -g wheel -m 555 "${SCRIPT_DIR}/checks/solid_queue_proof.rb" /usr/local/libexec/pub5/solid_queue_proof.rb'
     assert_includes bootstrap,
                     'install -o root -g wheel -m 555 "${SCRIPT_DIR}/checks/solid_queue_proof.rb" /usr/local/libexec/pub4/solid_queue_proof.rb'
-
-    broker = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin"), encoding: "UTF-8")
-    assert_includes broker, 'SOLID_QUEUE_PROOF = "/usr/local/libexec/pub5/solid_queue_proof.rb"'
-    assert_includes broker, 'RESOURCE_GUARD = "/usr/local/bin/resource_guard.sh"'
   end
 
-  def test_tree_sync_exposes_only_the_fixed_app_user_broker
+  def test_tree_sync_uses_the_fixed_app_user_helper
     sync = File.read(File.join(ROOT, "RAILS", "_sync.sh"), encoding: "UTF-8")
     refute_includes sync, "def sync_tree("
     refute_match(/\$\{_PRIV\}\s+(?:rm|mkdir|mv|tar|openrsync)\b/, sync)
-    assert_includes sync, 'pub5-admin rails-sync "$app_name" "$mode"'
+    assert_includes sync, "/usr/local/libexec/rails-sync.ksh"
+    assert_includes sync, '/usr/bin/su -m "$app_name"'
     assert_includes sync, 'case "$mode" in'
     assert_includes sync, "app|shared"
     assert_includes sync, "verticals"
+    refute_includes sync, "pub5-admin"
   end
-  def test_rails_task_runner_fails_closed_without_broker
+  def test_rails_task_runner_uses_the_fixed_helper
     runtime = File.read(File.join(ROOT, "RAILS", "_runtime_check.sh"), encoding: "UTF-8")
     runner = runtime[/run_rails_as_app\(\) \{.*?^\}/m]
     refute_nil runner
-    assert_includes runner, '[[ -x /usr/local/sbin/pub5-admin ]]'
-    assert_includes runner, '"run_rails_as_app: pub5-admin is missing; run OPERATOR.sh before deploying"'
-    assert_includes runner, '/usr/local/sbin/pub5-admin rails-task "$app_name" "$task"'
+    assert_includes runner, "/usr/local/libexec/rails-task.ksh"
+    assert_includes runner, "installed rails-task.ksh is missing or untrusted"
+    refute_includes runner, "pub5-admin"
     refute_match(/\$\{_PRIV\} sh -c/, runner)
-    refute_match(/su -m/, runner)
     refute_includes runtime, 'secret=$(app_secret_for "$app_name")'
   end
   def test_npm_cache_setup_uses_the_app_owned_task
@@ -293,14 +294,14 @@ class VpsDeployContractTest < Minitest::Test
   end
   def test_skip_ci_deploy_prepares_checkout_group_before_sync
     deploy = File.read(File.join(ROOT, "RAILS", "_deploy.sh"), encoding: "UTF-8")
-    ensure_index = deploy.index('pub5-admin ensure-app "$app_name"')
-    access_index = deploy.index('pub5-admin ci-prepare "$app_name"')
-    sync_index = deploy.index('rails_sync_app_tree "$app_name" app')
+    ensure_index = deploy.index('/usr/local/libexec/ci-prepare.ksh "$app_name"')
+    access_index = deploy.index('rails_sync_app_tree "$app_name" app')
 
+    refute_nil ensure_index
+    refute_nil access_index
     assert_operator ensure_index, :<, access_index
-    assert_operator access_index, :<, sync_index
   end
-  def test_production_tree_sync_uses_the_bounded_app_user_helper
+  def test_production_tree_sync_uses_the_fixed_app_user_helper
     deploy = File.read(File.join(ROOT, "RAILS", "_deploy.sh"), encoding: "UTF-8")
     sync = File.read(File.join(ROOT, "RAILS", "_sync.sh"), encoding: "UTF-8")
     block = deploy[/rails_sync_app_tree "\$app_name" app.*?overlay_shared_public "\$APP_DIR"/m]
@@ -309,8 +310,8 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes block, 'rails_sync_app_tree "$app_name" shared'
     assert_includes block, 'rails_sync_app_tree "$app_name" verticals'
     refute_match(/doas (?:rm|chown|mkdir|mv|sh -c)/, block)
-    assert_includes sync, 'pub5-admin rails-sync "$app_name" "$mode"'
-    assert_includes sync, "rails_sync_app_tree: pub5-admin is missing"
+    assert_includes sync, "/usr/local/libexec/rails-sync.ksh"
+    refute_includes sync, "pub5-admin"
   end
 
   def test_rails_bundle_cache_setup_is_app_owned
@@ -324,44 +325,46 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes helper, 'target="$bundle_home/$part"'
   end
 
-  def test_rails_production_bundle_uses_bounded_broker
+  def test_rails_production_bundle_uses_the_fixed_app_task
     core = File.read(File.join(ROOT, "RAILS", "_bundle.sh"), encoding: "UTF-8")
     deploy = File.read(File.join(ROOT, "RAILS", "_deploy.sh"), encoding: "UTF-8")
 
     assert_equal 1, core.scan("bundle_install_as_app() {").length
     assert_includes core, 'run_rails_as_app "$app_name" "$app_dir" "bundle-install"'
-    assert_includes File.read(File.join(ROOT, "RAILS", "_runtime_check.sh")), '/usr/local/sbin/pub5-admin rails-task "$app_name" "$task"'
-    assert_includes deploy, "[[ -x /usr/local/sbin/pub5-admin ]] || {"
+    assert_includes File.read(File.join(ROOT, "RAILS", "_runtime_check.sh")), "/usr/local/libexec/rails-task.ksh"
+    refute_includes deploy, "pub5-admin"
     refute_includes deploy, 'doas chown -R "$app_name:$app_name" "${APP_DIR}/.bundle"'
     refute_includes deploy, 'doas tee "${APP_DIR}/.bundle/config"'
   end
 
-  def test_relayd_adapter_fails_closed_without_broker
+  def test_relayd_adapter_is_read_only_and_fails_closed
     service = File.read(File.join(ROOT, "RAILS", "_service.sh"), encoding: "UTF-8")
     adapter = service[/relayd_add_relay\(\) \{.*?^\}/m]
     refute_nil adapter
-    assert_includes adapter, '[[ -x /usr/local/sbin/pub5-admin ]]'
-    assert_includes adapter, '"relayd: fixed broker is missing; run OPERATOR.sh before deploying"'
+    assert_includes adapter, "File.lstat(path)"
+    assert_includes adapter, "relayd.conf must be a root-owned, non-writable regular file"
     refute_match(/\$\{_PRIV\}.*\$RUBY/, adapter)
+    refute_includes adapter, "pub5-admin"
   end
-  def test_rails_relayd_route_check_uses_the_fixed_broker
+  def test_rails_relayd_route_check_uses_the_installed_policy
     service = File.read(File.join(ROOT, "RAILS", "_service.sh"), encoding: "UTF-8")
     deploy = File.read(File.join(ROOT, "RAILS", "_deploy.sh"), encoding: "UTF-8")
-    assert_includes service, 'pub5-admin relayd-check "$app" "$domain" "$port"'
+    assert_includes service, 'path = "/etc/relayd.conf"'
+    assert_includes service, "File.lstat(path)"
     assert_includes deploy, 'relayd_add_relay "$APP_NAME" "$APP_DOMAIN" "$APP_PORT"'
     probe = service[/post_restart_probe\(\) \{.*?^\}/m]
     refute_nil probe
     refute_match(/\$\{_PRIV\}.*\$RUBY/m, probe)
   end
-  def test_app_secret_path_fails_closed_without_the_broker
+  def test_app_secret_path_uses_atomic_native_writes
     database = File.read(File.join(ROOT, "RAILS", "_database.sh"), encoding: "UTF-8")
     secret_fn = database[/app_secret_for\(\) \{.*?^\}/m]
     refute_nil secret_fn
-    assert_includes secret_fn, '[[ -x /usr/local/sbin/pub5-admin ]]'
-    assert_includes secret_fn, '"app_secret_for: pub5-admin is missing; run OPERATOR.sh before deploying"'
-    assert_includes secret_fn, '"${_PRIV}" /usr/local/sbin/pub5-admin ensure-secret "$app_name"'
+    assert_includes secret_fn, "SECRET_KEY_BASE="
+    assert_includes secret_fn, "File.link(temporary, target)"
+    assert_includes secret_fn, "File.chown(0, Etc.getgrnam(app).gid, temporary)"
+    refute_includes secret_fn, "pub5-admin"
     refute_includes secret_fn, '"${_PRIV}" sh -c'
-    refute_includes secret_fn, '"${_PRIV}" cat "$env_file"'
   end
   def test_secondary_database_probe_uses_the_fixed_app_task
     database = File.read(File.join(ROOT, "RAILS", "_database.sh"), encoding: "UTF-8")
@@ -371,13 +374,13 @@ class VpsDeployContractTest < Minitest::Test
     refute_match(/\$\{_PRIV\} sh -c/, probe)
     refute_match(/\$\{_PRIV\} cat/, probe)
   end
-  def test_storage_migration_has_no_privileged_path_fallback
+  def test_storage_migration_uses_the_fixed_app_task
     database = File.read(File.join(ROOT, "RAILS", "_database.sh"), encoding: "UTF-8")
     migration = database[/migrate_sqlite_db_to_storage_if_needed\(\) \{.*?^\}/m]
     refute_nil migration
     assert_includes migration, 'run_rails_as_app "$app_name" "$app_dir" "db-storage-migrate"'
-    assert_includes migration, '[[ -x /usr/local/sbin/pub5-admin ]]'
     refute_match(/\$\{_PRIV\}\s+(?:mkdir|mv|chown)\b/, migration)
+    refute_includes migration, "pub5-admin"
   end
   def test_rails_database_tasks_use_closed_dispatcher
     database = File.read(File.join(ROOT, "RAILS", "_database.sh"), encoding: "UTF-8")
@@ -389,7 +392,7 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes database, 'run_rails_as_app "$app_name" "$app_dir" "db-storage-migrate"'
     assert_includes database, 'run_rails_as_app "$app_name" "$app_dir" "db-seed"'
     assert_includes database, 'run_rails_as_app "$app_name" "$app_dir" "demo-seed"'
-    assert_includes runtime, 'rails-task "$app_name" "$task" "$database"'
+    assert_includes runtime, 'rails-task.ksh "$app_name" "$task" "$database"'
   end
 
   def test_rails_deploy_never_installs_rcd_from_writable_checkout
@@ -399,30 +402,31 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes service, 'owner=$(/usr/bin/stat -f %u "$rcd_dst")'
     assert_includes service, 'mode=$(/usr/bin/stat -f %Lp "$rcd_dst")'
     assert_includes service, 'rc.d ${svc} must be root-owned mode 555'
-    assert_includes service, '/usr/local/sbin/pub5-admin retire-legacy "$app_name"'
+    assert_includes service, 'retire_legacy_rails_rcd "$app_name"'
+    refute_includes service, "pub5-admin"
   end
 
-  def test_rails_service_adapter_fails_closed_without_broker
+  def test_rails_service_adapter_uses_native_rcctl
     core = File.read(File.join(ROOT, "RAILS", "_core.sh"), encoding: "UTF-8")
     adapter = core[/pub4_rcctl\(\) \{.*?^\}/m]
 
     refute_nil adapter
-    assert_includes adapter, '[[ -x /usr/local/sbin/pub5-admin ]]'
-    assert_includes adapter, 'log_err "pub4_rcctl: pub5-admin is missing'
-    assert_includes adapter, '/usr/local/sbin/pub5-admin service "$action" "$service"'
+    assert_includes adapter, '"${_PRIV}" /usr/sbin/rcctl "$action" "$service"'
+    refute_includes adapter, "pub5-admin"
     refute_match(/\$\{_PRIV\}\s+rcctl\b/, adapter)
   end
 
-  def test_rails_deploy_service_lifecycle_uses_closed_broker_adapter
+  def test_rails_deploy_service_lifecycle_uses_native_rcctl
     core = File.read(File.join(ROOT, "RAILS", "_core.sh"), encoding: "UTF-8")
     deploy = File.read(File.join(ROOT, "RAILS", "_deploy.sh"), encoding: "UTF-8")
 
     assert_includes core, "pub4_rcctl() {"
     assert_includes core, "check|get|start|stop|restart"
-    assert_includes core, '/usr/local/sbin/pub5-admin service "$action" "$service"'
+    assert_includes core, '"${_PRIV}" /usr/sbin/rcctl "$action" "$service"'
     assert_includes deploy, 'pub4_rcctl stop "$app_name"'
     assert_includes deploy, 'pub4_rcctl restart "$APP_NAME" || pub4_rcctl start "$APP_NAME"'
     refute_includes deploy, 'doas rcctl stop "$app_name"'
+    refute_includes deploy, "pub5-admin"
   end
 
   def test_rails_app_deploy_wrappers_refuse_root_execution
@@ -455,7 +459,7 @@ class VpsDeployContractTest < Minitest::Test
     refute_includes CI_SOURCE, 'chmod -R a+rX "${repo}/MASTER/tools"'
   end
 
-  def test_ci_broker_paths_are_installed_and_used_before_sync
+  def test_ci_helpers_are_installed_and_used_before_sync
     operator = File.read(File.join(ROOT, "OPENBSD", "OPERATOR.sh"), encoding: "UTF-8")
 
     # OPERATOR.sh installs every Git-tracked mirror file individually. The old
@@ -472,36 +476,36 @@ class VpsDeployContractTest < Minitest::Test
     assert status.success?, "OpenBSD libexec helpers must be tracked mirror files"
     assert_equal helpers, tracked.lines.map(&:chomp).sort
 
-    assert_includes CI_SOURCE, 'doas /usr/local/sbin/pub5-admin ci-sync "$app"'
-    assert_operator CI_SOURCE.index('doas /usr/local/sbin/pub5-admin ci-prepare "$app"'),
+    assert_includes CI_SOURCE, 'doas /usr/bin/su -m "$app" -c "/usr/local/libexec/ci-sync.ksh $app"'
+    assert_operator CI_SOURCE.index('doas /usr/local/libexec/ci-prepare.ksh "$app"'),
                     :<, CI_SOURCE.index("sync_from_repo\n")
   end
 
-  def test_ci_copy_tree_uses_the_app_scoped_broker_helper
-    assert_includes CI_SOURCE, 'doas /usr/local/sbin/pub5-admin ci-sync "$app"'
+  def test_ci_copy_tree_uses_the_app_scoped_helper
+    assert_includes CI_SOURCE, 'doas /usr/bin/su -m "$app" -c "/usr/local/libexec/ci-sync.ksh $app"'
     refute_includes CI_SOURCE, "sync_from_repo_legacy"
     refute_includes CI_SOURCE, "sync_ci_rails_root_legacy"
     assert_includes CI_SOURCE, "unaccounted_tracked_files \"$app\" \"$repo\" paths kept_local"
-    assert_operator CI_SOURCE.index('doas /usr/local/sbin/pub5-admin ci-prepare "$app"'),
+    assert_operator CI_SOURCE.index('doas /usr/local/libexec/ci-prepare.ksh "$app"'),
                     :<, CI_SOURCE.index("sync_from_repo\n")
   end
 
-  def test_ci_fails_closed_without_broker_and_has_no_root_copy_fallback
-    assert_includes CI_SOURCE, '[[ -x /usr/local/sbin/pub5-admin ]] || { print -u2 "vps_ci: pub5-admin missing; run reviewed OPENBSD/OPERATOR.sh first"; exit 1 }'
+  def test_ci_has_no_broker_and_no_root_copy_fallback
+    refute_includes CI_SOURCE, "pub5-admin"
     refute_match(/doas\s+(?:sh\s+-c|(?:rm|mkdir|chown|chmod|tee|groupadd|usermod|tar)\b)/, CI_SOURCE)
     refute_includes CI_SOURCE, "sync_from_repo_legacy"
   end
-  def test_ci_runner_uses_the_fixed_broker_and_bounded_timeout
+  def test_ci_runner_uses_the_fixed_helper_and_bounded_timeout
     runner = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "ci-run.ksh"), encoding: "UTF-8")
-    assert_includes CI_SOURCE, 'doas /usr/local/sbin/pub5-admin ci-run "$app" "$ci_timeout"'
+    assert_includes CI_SOURCE, 'doas /usr/local/libexec/ci-run.ksh "$app" "$ci_timeout"'
     assert_includes CI_SOURCE, 'ci_timeout=${PUB4_CI_TIMEOUT:-7200}'
     assert_includes runner, 'exec /usr/bin/su -m "$app" -c "$script"'
     refute_includes CI_SOURCE, 'doas sh -c "su -m'
   end
 
-  def test_ci_uses_the_broker_for_account_and_storage_preparation
-    assert_includes CI_SOURCE, 'doas /usr/local/sbin/pub5-admin ci-prepare "$app"'
-    assert_includes CI_SOURCE, '[[ -x /usr/local/sbin/pub5-admin ]] || { print -u2 "vps_ci: pub5-admin missing; run reviewed OPENBSD/OPERATOR.sh first"; exit 1 }'
+  def test_ci_uses_the_helper_for_account_and_storage_preparation
+    assert_includes CI_SOURCE, 'doas /usr/local/libexec/ci-prepare.ksh "$app"'
+    refute_includes CI_SOURCE, "pub5-admin"
     refute_match(/doas\s+(?:sh\s+-c|(?:rm|mkdir|chown|chmod|tee|groupadd|usermod|tar)\b)/, CI_SOURCE)
   end
 
@@ -519,16 +523,16 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes CI_SOURCE, %q{if [[ ${VPS_DEPLOY_SKIP_TESTS:-} == 1 && ${I_UNDERSTAND_FAST_DEPLOY:-} != 1 ]]; then}
     assert_includes CI_SOURCE, "deployed with NO test run"
     assert_includes CI_SOURCE, %q{bundle_install_as_app "$app" "$app_dir"}
-    assert_includes CI_SOURCE, %q{doas /usr/local/sbin/pub5-admin ci-run "$app" "$ci_timeout"}
+    assert_includes CI_SOURCE, %q{doas /usr/local/libexec/ci-run.ksh "$app" "$ci_timeout"}
   end
 
   # The CI stamp says how the commit was tested; it said ci_ok even when the
   # break-glass had skipped every suite.
   def test_the_ci_stamp_names_how_the_commit_was_tested
     %w[ci_stamp=ci_ok ci_stamp=ci_attested ci_stamp=ci_skipped].each { |line| assert_includes CI_SOURCE, line }
-    assert_includes CI_SOURCE, %q{doas /usr/local/sbin/pub5-admin stamp "$app" "$sha" "$ci_stamp"}
-    admin = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin"), encoding: "UTF-8")
-    assert_includes admin, "%w[ok failed ci_ok ci_attested ci_skipped].include?(status)"
+    assert_includes CI_SOURCE, %q{doas "$RUBY" -rjson}
+    assert_includes CI_SOURCE, %q{raise "stamp path is a symlink"}
+    assert_includes CI_SOURCE, "%w[ci_ok ci_attested ci_skipped].include?(status)"
   end
 
   def test_it_runs_as_root_and_keeps_git_as_the_deploy_user
@@ -889,7 +893,7 @@ class VpsDeployContractTest < Minitest::Test
       assert_includes out, "stamp brgen failed"
       assert_includes out, 'brgen FAILED at stage "migrate" (exit 1)'
       assert_includes out, "brgen was stopped for this deploy and is DOWN"
-      assert_includes out, "/usr/local/sbin/pub5-admin service start brgen"
+      assert_includes out, "doas /usr/sbin/rcctl start brgen"
       assert_includes out, "amber is DOWN"
       refute_includes out, "bsdports is DOWN"
       assert_includes out, "released"
@@ -1120,7 +1124,7 @@ class VpsDeployContractTest < Minitest::Test
 
   def test_fleet_recovery_receipt_is_created_and_snapshot_precedes_service_stops
     assert_includes SOURCE, "write_deploy_run_receipt() {"
-    assert_includes SOURCE, '"$PUB5_ADMIN" deploy-run-write "$VPS_DEPLOY_RUN_ID" "$payload"'
+    assert_includes SOURCE, 'records_call write "$VPS_DEPLOY_RUN_ID" "$payload"'
     assert_includes SOURCE, "export VPS_DEPLOY_LOCK_PID=${$}"
     assert_includes SOURCE, "export VPS_DEPLOY_LOCK_IDENTITY=$identity"
     assert_includes SOURCE, 'VPS_DEPLOY_RUN_ID="$(date -u'

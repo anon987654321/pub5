@@ -28,7 +28,7 @@ class CpuPressureWatchTest < Minitest::Test
       done
     SH
     fake("ps", <<~SH)
-      printf 'PID PPID PGID USER STATE %CPU TIME\\n'
+      printf 'PID PPID PGID USER STATE %%CPU TIME\\n'
       printf '123 1 123 _master R 85.0 00:10\\n'
       printf '124 1 124 _brgen R 40.0 00:08\\n'
       printf '125 1 125 _amber S 10.0 00:02\\n'

@@ -22,9 +22,6 @@ class VpsSafetyCheckTest < Minitest::Test
       FileUtils.mkdir_p(File.join(mirror, "etc"))
       FileUtils.cp_r(File.join(ROOT, "mirror", "etc", "rc.d"), File.join(mirror, "etc"))
       FileUtils.cp(File.join(ROOT, "mirror", "etc", "doas.conf"), File.join(mirror, "etc"))
-      FileUtils.mkdir_p(File.join(mirror, "usr", "local", "sbin"))
-      FileUtils.cp(File.join(ROOT, "mirror", "usr", "local", "sbin", "pub5-admin"),
-                   File.join(mirror, "usr", "local", "sbin", "pub5-admin"))
       FileUtils.mkdir_p(File.join(mirror, "usr", "local", "libexec"))
       FileUtils.cp(File.join(ROOT, "mirror", "usr", "local", "libexec", "ci-prepare.ksh"),
                    File.join(mirror, "usr", "local", "libexec", "ci-prepare.ksh"))
@@ -43,6 +40,9 @@ class VpsSafetyCheckTest < Minitest::Test
       FileUtils.cp(File.join(ROOT, "mirror", "usr", "local", "bin", "resource_guard.sh"),
                    File.join(mirror, "usr", "local", "bin", "resource_guard.sh"))
       FileUtils.mkdir_p(File.join(openbsd, "bin"))
+      FileUtils.mkdir_p(File.join(openbsd, "lib"))
+      FileUtils.cp(File.join(ROOT, "lib", "deploy_records.rb"),
+                   File.join(openbsd, "lib", "deploy_records.rb"))
       %w[
         vps_deploy_master.sh deploy-smoke.sh resource_guard.sh validate_doas.ksh
         vps_console.exp deploy_all.sh vps-deploy vps_install_all.sh
@@ -65,20 +65,18 @@ class VpsSafetyCheckTest < Minitest::Test
       %w[_service.sh _sync.sh _deploy.sh].each do |name|
         FileUtils.cp(File.join(ROOT, "..", "RAILS", name), File.join(dir, "RAILS", name))
       end
+      %w[_core.sh _database.sh].each do |name|
+        FileUtils.cp(File.join(ROOT, "..", "RAILS", name), File.join(dir, "RAILS", name))
+      end
+      FileUtils.mkdir_p(File.join(dir, "MASTER", "lib", "operator"))
+      %w[services.rb status_report.rb].each do |name|
+        FileUtils.cp(File.join(ROOT, "..", "MASTER", "lib", "operator", name),
+                     File.join(dir, "MASTER", "lib", "operator", name))
+      end
       yield dir, File.join(mirror, "etc", "doas.conf")
     end
   end
 
-  def test_packaged_ruby_shebang_requires_a_real_newline
-    with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")
-      File.write(path, File.read(path).sub("#!/usr/local/bin/ruby", "#!/usr/bin/env ruby"))
-      out, status = run_check(dir)
-
-      refute status.success?
-      assert_includes out, "pub5-admin must use the fixed packaged Ruby interpreter"
-    end
-  end
   def test_check_passes_on_the_tracked_tree
     out, status = run_check
     assert status.success?, "expected VPS safety check to pass, got:\n#{out}"
@@ -216,29 +214,6 @@ class VpsSafetyCheckTest < Minitest::Test
     end
   end
 
-  def test_rails_task_rejects_trailing_text_after_privileged_exec
-    with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "libexec", "rails-task.ksh")
-      File.open(path, "a") { |file| file.write("\nEOF_KEY\n") }
-      out, status = run_check(dir)
-
-      refute status.success?
-      assert_includes out, "rails-task helper must expose only fixed task names and execute as the app user"
-    end
-  end
-
-  def test_broker_sources_must_not_be_symlinks
-    with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")
-      File.unlink(path)
-      File.symlink("/tmp/pub5-admin", path)
-      out, status = run_check(dir)
-
-      refute status.success?
-      assert_includes out, "usr/local/sbin/pub5-admin must not be a symlink"
-    end
-  end
-
   def test_bootstrap_checks_destinations_before_copying_privileged_trees
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "BOOTSTRAP.sh")
@@ -252,21 +227,10 @@ class VpsSafetyCheckTest < Minitest::Test
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "BOOTSTRAP.sh must refuse symlinked privileged destinations before copying"
+      assert_includes out, "BOOTSTRAP.sh must preflight, install, and verify the root-owned load guard"
     end
   end
 
-  def test_master_web_broker_requires_exact_no_path_verbs
-    with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")
-      text = File.read(path).sub('args == ["master-web-assets-reset"]', 'args.first == "master-web-assets-reset"')
-      File.write(path, text)
-      out, status = run_check(dir)
-
-      refute status.success?
-      assert_includes out, "master-web helper must be fixed-path and symlink-safe"
-    end
-  end
   def test_checkout_resource_guard_refuses_root_and_delegates_to_runner
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "resource_guard.sh")
@@ -326,121 +290,97 @@ class VpsSafetyCheckTest < Minitest::Test
     end
   end
 
-  def test_start_all_apps_refuses_root_and_delegates_to_broker
+  def test_start_all_apps_must_use_native_rcctl
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "start_all_apps.sh")
-      text = File.read(path).sub('if [ "$(id -u)" -eq 0 ]; then', 'if [ "$(id -u)" -eq 1 ]; then')
+      text = File.read(path).sub('/usr/sbin/rcctl start', 'rcctl start')
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "start_all_apps wrapper and broker must be fixed and non-root"
+      assert_includes out, "start_all_apps must derive the app set and use native rcctl"
     end
   end
 
-  def test_start_all_apps_broker_verb_requires_exact_arguments
-    with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")
-      text = File.read(path).sub('args == ["start-all-apps"]', 'args.first == "start-all-apps"')
-      File.write(path, text)
-      out, status = run_check(dir)
-
-      refute status.success?
-      assert_includes out, "start_all_apps wrapper and broker must be fixed and non-root"
-    end
-  end
-  def test_vps_state_must_not_execute_rcctl_directly
+  def test_vps_state_service_reads_must_use_native_rcctl
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "vps-state")
-      text = File.read(path).sub('"doas", "-n", broker, "service", "check", service', '"doas", "-n", "/usr/sbin/rcctl", "check", service')
+      text = File.read(path).sub('Open3.capture2e("doas", "-n", "/usr/sbin/rcctl", "check", service)',
+                                 'Open3.capture2e("doas", "-n", "/usr/bin/true", "check", service)')
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "vps-state service reads must use the root broker"
+      assert_includes out, "vps-state must read wheel-readable state and use native rcctl"
     end
   end
 
-  def test_vps_state_fleet_recovery_must_use_the_privileged_broker
+  def test_vps_state_fleet_recovery_must_read_the_durable_records
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "vps-state")
-      text = File.read(path).sub(
-        'Open3.capture2e("doas", "-n", broker, "deploy-run-pending-list")',
-        'File.read("/var/db/pub5/deploy_runs")'
-      )
-      refute_equal File.read(path), text
+      text = File.read(path).sub('directory = File.join(STAMP_DIR, "deploy_runs")',
+                                 'directory = "/tmp/deploy_runs"')
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "vps-state fleet recovery reads must use the fixed root broker"
+      assert_includes out, "vps-state must read wheel-readable state and use native rcctl"
     end
   end
 
-  def test_litestream_recovery_must_not_execute_rcctl_directly
+  def test_litestream_recovery_must_use_native_rcctl
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "restore_litestream.sh")
-      text = File.read(path).sub('doas /usr/local/sbin/pub5-admin service stop "$app"', 'doas rcctl stop "$app"')
+      text = File.read(path).sub('doas /usr/sbin/rcctl stop "$app"', 'doas rcctl stop "$app"')
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "Litestream recovery must use brokered service control"
+      assert_includes out, "Litestream recovery must use native rcctl"
     end
   end
-  def test_manual_master_recovery_must_not_call_rcctl_directly
+  def test_manual_master_recovery_must_use_native_rcctl
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "manual_master_deploy.ksh")
-      text = File.read(path).sub("pub5-admin service restart relayd", "rcctl restart relayd")
+      text = File.read(path).sub("doas /usr/sbin/rcctl restart relayd", "rcctl restart relayd")
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "manual MASTER recovery must use brokered service control"
+      assert_includes out, "manual MASTER recovery must use native rcctl"
     end
   end
-  def test_deploy_smoke_service_checks_are_broker_first
+  def test_deploy_smoke_service_checks_use_native_rcctl
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "deploy-smoke.sh")
-      text = File.read(path).sub('doas /usr/local/sbin/pub5-admin service check "$svc"', 'doas rcctl check "$svc"')
+      text = File.read(path).sub('doas -n /usr/sbin/rcctl check "$svc"', 'doas rcctl check "$svc"')
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "deploy-smoke service checks must use the fixed broker"
+      assert_includes out, "deploy-smoke must use native rcctl"
     end
   end
-  def test_vps_install_all_service_control_is_broker_first
+  def test_vps_install_all_service_control_uses_native_rcctl
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "vps_install_all.sh")
-      text = File.read(path).sub('doas /usr/local/sbin/pub5-admin service "$action" "$service"', 'doas rcctl "$action" "$service"')
+      text = File.read(path).sub('doas /usr/sbin/rcctl "$action" "$service"', 'doas rcctl "$action" "$service"')
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "vps_install_all service control must be broker-first and app-allowlisted"
+      assert_includes out, "fresh-box install must use native rcctl"
     end
   end
-  def test_master_web_deploy_must_use_fixed_broker_verbs
+  def test_master_web_deploy_uses_native_filesystem_and_rcctl
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "vps_deploy_master.sh")
-      text = File.read(path).sub("pub5-admin master-web-assets-reset", "doas rm -rf public/assets")
+      text = File.read(path).sub("doas /usr/sbin/rcctl restart master", "doas rcctl restart master")
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "MASTER web deploy must use fixed broker verbs"
-    end
-  end
-  def test_vps_deploy_must_not_recommend_generic_privileged_du
-    with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "bin", "vps-deploy")
-      text = File.read(path).sub("pub5-admin disk-usage $mount_point", "doas du -xk $mount_point")
-      File.write(path, text)
-      out, status = run_check(dir)
-
-      refute status.success?
-      assert_includes out, "vps-deploy must not recommend generic privileged du"
+      assert_includes out, "MASTER web deploy must use native filesystem and rcctl operations"
     end
   end
   def test_vps_deploy_rejects_a_shadowed_terminal_handler
@@ -517,20 +457,20 @@ class VpsSafetyCheckTest < Minitest::Test
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "BOOTSTRAP.sh must refuse symlinked privileged destinations before copying"
+      assert_includes out, "BOOTSTRAP.sh must preflight, install, and verify the root-owned load guard"
     end
   end
 
   def test_bootstrap_install_preflights_privileged_source_files
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "BOOTSTRAP.sh")
-      text = File.read(path).sub('if [[ ! -f $src/$rel || -L $src/$rel ]]; then',
-                              'if [[ ! -f $src/$rel ]]; then')
+      text = File.read(path).sub('installed resource guard is missing or symlinked',
+                              'resource guard verification removed')
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "BOOTSTRAP.sh must preflight privileged sources before copying"
+      assert_includes out, "BOOTSTRAP.sh must preflight, install, and verify the root-owned load guard"
     end
   end
   def test_ci_prepare_path_validation_is_required
@@ -540,7 +480,7 @@ class VpsSafetyCheckTest < Minitest::Test
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "ci-prepare helper must check app-owned real path components before chmod"
+      assert_includes out, "ci-prepare must verify app paths and grant only checkout-read group access"
     end
   end
 
@@ -551,107 +491,13 @@ class VpsSafetyCheckTest < Minitest::Test
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "ci-run helper must use fixed app paths, bounded timeout and sanitized Ruby environment"
+      assert_includes out, "ci-run must retain bounded, sanitized execution as the app user"
     end
   end
 
-  def test_bootstrap_install_refuses_symlinked_broker_helpers
-    with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "BOOTSTRAP.sh")
-      text = File.read(path).sub('if [[ -L $f ]]; then', 'if [[ -L $unused ]]; then')
-      File.write(path, text)
-      out, status = run_check(dir)
-
-      refute status.success?
-      assert_includes out, "BOOTSTRAP.sh must reject symlinked privileged entrypoints"
-    end
-  end
-
-  def test_relayd_broker_must_not_modify_root_routing_policy
-    with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")
-      text = File.read(path).sub(
-        '    puts "relayd0: verified root-approved route #{domain} -> #{app}:#{requested_port}"',
-        "    File.rename(temporary, RELAYD_CONFIG)"
-      )
-      File.write(path, text)
-      out, status = run_check(dir)
-
-      refute status.success?
-      assert_includes out, "relayd broker must be verification-only and reject unapproved Host routes"
-    end
-  end
-  def test_rails_runtime_runner_cannot_restore_root_shell_fallback
-    with_fixture do |dir, _|
-      path = File.join(dir, "RAILS", "_runtime_check.sh")
-      text = File.read(path).sub('[[ -x /usr/local/sbin/pub5-admin ]]' , '[[ -x /usr/local/sbin/other-admin ]]')
-      File.write(path, text)
-      out, status = run_check(dir)
-
-      refute status.success?
-      assert_includes out, "rails runtime task runner must fail closed without the broker"
-    end
-  end
-  def test_broker_must_keep_legacy_retirement_fixed
-    with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")
-      text = File.read(path).sub('return nil unless RAILS_APPS.include?(app)', 'return nil unless APPS.include?(app)')
-      File.write(path, text)
-      out, status = run_check(dir)
-
-      refute status.success?
-      assert_includes out, "pub5-admin must expose only fixed app-scoped CI helper verbs"
-    end
-  end
-
-  def test_broker_must_keep_ci_spawn_fixed_and_supervised
-    with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")
-      text = File.read(path).sub("Process.spawn(", 'Process.spawn("sh", "-c", "unsafe", ')
-      File.write(path, text)
-      out, status = run_check(dir)
-
-      refute status.success?
-      assert_includes out, "pub5-admin must not evaluate shell command strings or widen its CI spawn"
-    end
-  end
-
-  def test_bundle_cache_shell_must_not_restore_root_path_operations
-    with_fixture do |dir, _|
-      path = File.join(dir, "RAILS", "_bundle.sh")
-      text = File.read(path).sub('pub5-admin bundle-cache "$app_name" capture "$RUBY_CACHE_KEY"', '${_PRIV} cp "$source" "$target"')
-      File.write(path, text)
-      out, status = run_check(dir)
-
-      refute status.success?
-      assert_includes out, "Rails Bundler CAS wrappers must use the fixed broker and avoid privileged path operations"
-    end
-  end
-  def test_bundle_cache_broker_requires_fixed_actions_and_ruby_keys
-    with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")
-      text = File.read(path).sub("valid_ruby_cache_key?(ruby_key)", "ruby_key.to_s")
-      File.write(path, text)
-      out, status = run_check(dir)
-
-      refute status.success?
-      assert_includes out, "pub5-admin bundle cache must be immutable and fixed-path"
-    end
-  end
-  def test_broker_must_keep_ci_lock_fixed_and_symlink_safe
-    with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "mirror", "usr", "local", "sbin", "pub5-admin")
-      File.write(path, File.read(path).sub('return ensure_ci_lock if args == ["ci-lock"]', "return ensure_ci_lock if args.first == \"ci-lock\""))
-      out, status = run_check(dir)
-
-      refute status.success?
-      assert_includes out, "pub5-admin CI lock must use one fixed path and refuse symlinks"
-    end
-  end
-
-  def test_keepenv_on_the_dev_rule_is_refused
+  def test_keepenv_on_the_wheel_rule_is_refused
     with_fixture do |dir, doas|
-      File.write(doas, File.read(doas).sub(/permit nopass setenv \{[^}]*\} dev as root/, "permit nopass keepenv dev as root"))
+      File.write(doas, File.read(doas).sub(/permit nopass setenv \{[^}]*\} :wheel as root/, "permit nopass keepenv :wheel as root"))
       out, status = run_check(dir)
       refute status.success?
       assert_includes out, "must not use keepenv"

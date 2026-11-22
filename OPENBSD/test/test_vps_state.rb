@@ -58,25 +58,26 @@ class TestVpsState < Minitest::Test
     end
   end
 
-  def test_stamp_reader_and_broker_use_the_pub5_host_ledger
+  def test_stamp_reader_uses_the_pub5_host_ledger
     source = File.read(SCRIPT)
 
     assert_includes source, %q{STAMP_DIR = ENV.fetch("PUB5_STAMP_DIR", "/var/db/pub5")}
-    assert_equal 2, source.scan(%q{File.expand_path(STAMP_DIR) == "/var/db/pub5"}).length
+    assert_operator source.scan(%q{File.expand_path(STAMP_DIR) == "/var/db/pub5"}).length, :>=, 2
     refute_includes source, %q{File.expand_path(STAMP_DIR) == "/var/db/pub4"}
   end
 
-  def test_production_status_reader_uses_fixed_broker_verb
+  def test_production_status_reader_uses_native_state_and_rcctl
     source = File.read(SCRIPT)
 
-    assert_includes source, 'Open3.capture2e("doas", "-n", broker, "deploy-status-read", app)'
-    assert_includes source, 'broker = "/usr/local/sbin/pub5-admin"'
-    assert_includes source, 'Open3.capture2e("doas", "-n", broker, "deploy-run-pending-list")'
+    assert_includes source, 'path = File.join(STAMP_DIR, "deploy_status", "#{app}.json")'
+    assert_includes source, 'directory = File.join(STAMP_DIR, "deploy_runs")'
+    assert_includes source, 'Open3.capture2e("doas", "-n", "/usr/sbin/rcctl", "check", service)'
     assert_includes source, "DEPLOY_RUN_SCAN_LIMIT = 500"
     assert_includes source, "DEPLOY_RUN_PENDING_LIMIT = 100"
     assert_includes source, 'def deploy_recovery_status'
     assert_includes source, 'status["unavailable"] ? "unavailable"'
     assert_includes source, 'File.expand_path(STAMP_DIR) == "/var/db/pub5"'
+    refute_includes source, "pub5-admin"
   end
 
   def test_corrupt_in_progress_deploy_status_is_visible

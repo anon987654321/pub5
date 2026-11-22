@@ -35,7 +35,7 @@ if File.file?(doas_conf)
   failures << "doas.conf must end with newline (OpenBSD parser rejects EOF without one)" unless text.end_with?("\n")
 
   rules = text.lines.reject { |line| line.strip.empty? || line.strip.start_with?("#") }
-  dev_rule = rules.find { |line| line.match?(/\b:wheel\s+as\s+root\b/) }
+  dev_rule = rules.find { |line| line.match?(/:wheel\s+as\s+root\b/) }
 
   # keepenv on the dev rule is a root RCE by construction: it carries RUBYOPT,
   # RUBYLIB, GEM_HOME and BUNDLE_* across the boundary, so `RUBYOPT=-r/tmp/x.rb doas
@@ -179,7 +179,7 @@ if File.file?(records_path) && !File.symlink?(records_path)
                      records.include?("File.chmod(0o640, temporary)") &&
                      records.include?("Inventory.new(root: repo_root)") &&
                      records.include?("terminal deploy-run receipt cannot be changed") &&
-                     records.include?("snapshot field")
+                     records.include?('deploy-run snapshot #{field} cannot change')
   failures << "deployment records must be inventory-derived, atomic and root:wheel readable" unless records_contract
 else
   failures << "missing OPENBSD/lib/deploy_records.rb"

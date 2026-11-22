@@ -127,58 +127,50 @@ production/domain/ phantom/frontend checks → OpenBSD deploy smoke. Operator: `
 pull --ff-only` on vm23 → `vps_ci.sh <app>` → `OPERATOR.sh` or per-app deploy →
 `rcctl restart` affected services → `health_check --public --all-ready-apps`.
 
-## Privileged deploy broker
+## Privileged deploy boundary
 
-The current staged root boundary is `/usr/local/sbin/pub5-admin`, mirrored at
-`OPENBSD/mirror/usr/local/sbin/pub5-admin`. A deliberate `OPERATOR.sh` sync installs
-it as `root:wheel`, mode `0555`, and installs the fixed CI preparation/sync/runner
-plus Rails task and Rails tree-sync helpers under `/usr/local/libexec/`; the Solid Queue proof
-is installed under `/usr/local/libexec/pub4/`.
+The host has no command broker. Ordinary privileged operations use OpenBSD's
+native commands under the single `:wheel as root` doas rule in
+`OPENBSD/mirror/etc/doas.conf`. The rule has no `keepenv`; only the measured
+`setenv` allowlist crosses the boundary. `OPERATOR.sh` installs the policy only
+through `validate_doas.ksh`, which checks both the root path and the allowlisted
+variables and restores the previous file on failure.
 
-The broker exposes allowlisted service actions, per-app deploy-status records,
-and fleet-level recovery receipts in the private `/var/db/pub5/deploy_runs/`
-directory. Receipt writes use validated fixed verbs and atomic replacement; the
-pinned commit, original service snapshot, port map, restore order and last stage
-are retained for interrupted-run diagnosis. CI lock/preparation operations and
-trusted helper verbs remain fixed-argument operations. CI and production Rails
-tree mutations run with the selected app's UID, primary GID and only the required
-`_pub4ci` supplementary group. Production sync stages tracked `HEAD` paths from a
-Git archive, not ignored files from the mutable working tree. The CI runner has a real wall-clock deadline and terminates
-its full process group, including `bundle install`. Rails tasks use a closed
-task vocabulary; `SECRET_KEY_BASE` crosses only in the child environment, never
-in the shell command text. Bundle directories and initial cache seeding are created
-by the target app user. The shared Bundler CAS has a fixed Ruby-version namespace;
-root accepts only app-owned `.gem` inputs, stores SHA-256-addressed read-only copies,
-and the app copies objects back without hard links.
+`OPERATOR.sh` also installs the fixed app-user helpers from the tracked mirror:
 
-The MASTER web deploy has two argument-free broker verbs for the fixed
-`/home/dev/pub5/MASTER/web` tree: `master-web-assets-reset` and
-`master-web-runtime-dirs`. `vps_deploy_master.sh` refuses a `ROOT` override and
-compares the tracked `rc.d/master` with the installed root-owned service file;
-a mismatch requires a deliberate `OPERATOR.sh` sync instead of copying checkout
-code into `/etc` as root. `deploy-smoke` uses brokered service checks too.
+- `usr/local/libexec/ci-prepare.ksh` verifies app paths and grants checkout-read
+  group access.
+- `usr/local/libexec/ci-sync.ksh` stages tracked `HEAD` paths as the app user.
+- `usr/local/libexec/ci-run.ksh` runs the suite as the app user with a bounded
+  wall-clock timeout and a sanitized Ruby environment.
+- `usr/local/libexec/rails-task.ksh` exposes a closed task vocabulary and drops
+  to the app user.
+- `usr/local/libexec/rails-sync.ksh` syncs the production tree as the app user
+  and preserves runtime state.
 
-`vps_install_all.sh` is a fresh-box bootstrap: its service-control helper uses
-the broker when present, with a documented direct-`rcctl` fallback only before
-the broker has been installed. That exception must be removed or formally
-confined before the `dev` doas rule or wheel membership can be narrowed.
-`relayd-check` is read-only: it verifies the root-owned relay configuration's
-TLS keypair, Host route and app backend/port. It refuses unapproved routes rather
-than letting a deploy caller rewrite public routing policy. New hostnames must be
-added to `OPENBSD/mirror/etc/relayd.conf` in a deliberate `OPERATOR.sh` change first.
-The loopback health probe runs as the deploy user and needs no privilege.
+`vps-deploy` controls services with `/usr/sbin/rcctl` as root. It writes durable
+fleet receipts through `OPENBSD/lib/deploy_records.rb` to the root-private
+`/var/db/pub5/deploy_runs/` directory. Receipt writes are inventory-derived,
+atomic and readable as `root:wheel` mode `0640`; the pinned commit, original
+service snapshot, port map, restore order and last stage are retained for
+interrupted-run diagnosis. `vps-state` reads the same records directly and uses
+native `rcctl` for service state. `vps_ci.sh` writes its per-app stamp with a
+native atomic Ruby write.
 
-`vps-deploy`, CI receipt writes, CI lock setup, CI preparation/sync/execution,
-production Rails tree sync, Rails runtime tasks and relay route verification use the broker when
-the installed copy exists. It creates the canonical `/var/db/pub4/ci.lock`; keep
-`PUB4_CI_LOCK` unset on vm23 until the legacy override seam is removed.
-Both `vps_ci.sh` and `vps-deploy` now refuse to run until the reviewed broker is installed. Those entrypoints no longer contain root-copy/root-shell fallback, direct `rcctl` fallback, direct receipt writes, checkout-sourced resource-guard execution, or direct Solid Queue proof execution. The Rails deploy adapter also refuses service control without the broker. The broader recovery and operator scripts still need a complete privilege audit before narrowing `doas.conf`.
+`SECRET_KEY_BASE` is read or created by `RAILS/_database.sh` with an atomic
+`File.link` write; it crosses only in the child environment, never in the shell
+command text. Bundle directories and caches are app-owned. `relayd` route
+verification is read-only: it checks the installed root-owned
+`/etc/relayd.conf`, the TLS keypair and the app backend/port. New hostnames must
+be added to `OPENBSD/mirror/etc/relayd.conf` in a deliberate `OPERATOR.sh`
+change first. `deploy-smoke` and `vps_install_all.sh` use native `rcctl`.
 
-This is **not yet the complete privilege migration**: recovery, operator and a few ancillary install scripts still require a direct-`doas` audit. Keep the current `doas.conf` and wheel membership
-unchanged until those paths are migrated, the broker is installed, and the focused
-and full OpenBSD contract suites pass. Then narrow the `dev` rule and remove wheel
-membership in one planned rollout, with an authenticated operator recovery path
-established first.
+The retired `pub5-admin` program and manual page are not tracked. Do not restore
+them. The active deployer, helpers, doas policy, mirror, tests, safety check and
+recovery paths all use the native boundary above. Keep the `doas.conf` and wheel
+membership unchanged until the focused and full OpenBSD contract suites pass;
+narrow the `dev` rule only in a separately reviewed rollout with an authenticated
+operator recovery path established first.
 
 ## Command selection and diagnosis
 
@@ -475,7 +467,7 @@ orders and users included. It ran once at first deploy; a deploy never seeds,
 so run it again only to reset the demo:
 
 ```zsh
-doas /usr/local/sbin/pub5-admin rails-task mrdamascy db-seed
+doas /usr/local/libexec/rails-task.ksh mrdamascy db-seed
 ```
 
 **Stop the demo** (reversible; the tree, database and certificate stay):
@@ -690,7 +682,7 @@ When `bin/vps-deploy` fails it says where. Whatever the stage (pull, ci+sync,
 migrate, precompile, restart, health, checks), an exit trap stamps
 `last_deploy_<app>.json` failed, prints `FAILED at stage "<stage>"`, says
 whether the app was stopped for the deploy and so is down (the next command is
-`doas /usr/local/sbin/pub5-admin service start <app>` or a rerun), lists amber or bsdports if they are down,
+`doas /usr/sbin/rcctl start <app>` or a rerun), lists amber or bsdports if they are down,
 releases the lock and the deploy flag, and appends `finished ... exit=N
 stage=...` to `/home/dev/vps-deploy.log` directly, so a dropped ssh session still leaves
 the verdict. A kill or hangup counts as a failure with the stage it interrupted.
@@ -761,11 +753,11 @@ remains `running` with `recovery_state=pending`. It records the exact run ID, ow
 PID and process fingerprint, pinned and previous SHAs, original running services,
 restore order, ports, per-run log path and last durable stage.
 
-The first rollout of this receipt protocol has one broker prerequisite. The new
-`vps-deploy` deliberately refuses before service control if the installed
-`pub5-admin` lacks `deploy-run-*` verbs. Apply and verify the reviewed mirror once
-before using the new deployer; do not rely on `vps-deploy all` to bootstrap this
-version transition because its receipt preflight runs before its normal mirror apply:
+The first rollout of this receipt protocol has one host prerequisite. `vps-deploy`
+deliberately refuses before service control if it cannot create the durable
+receipt. Apply and verify the reviewed mirror once before using the new deployer;
+do not rely on `vps-deploy all` to bootstrap this version transition because its
+receipt preflight runs before its normal mirror apply:
 
 ```sh
 cd /home/dev/pub5 && git pull --ff-only
@@ -774,11 +766,12 @@ doas zsh OPENBSD/OPERATOR.sh --apply
 doas zsh OPENBSD/OPERATOR.sh --verify
 ```
 
-The bounded state and five-minute monitor view also require the installed
-`pub5-admin deploy-run-pending-list` verb. An older installed broker is shown
-as unavailable by `vps-state` and raises a monitor alert; it is never treated as
-an empty receipt list. Re-run the reviewed `OPERATOR.sh --plan/--apply/--verify`
-sequence after updating the mirror before relying on the new monitoring fields.
+The bounded state and five-minute monitor view read
+`/var/db/pub5/deploy_runs/` directly. A missing, symlinked or wrongly owned
+directory is shown as unavailable by `vps-state` and raises a monitor alert; it
+is never treated as an empty receipt list. Re-run the reviewed
+`OPERATOR.sh --plan/--apply/--verify` sequence after updating the mirror before
+relying on the new monitoring fields.
 
 After an interrupted run, inspect first:
 
@@ -851,7 +844,7 @@ deliberately:
 | `zsh OPENBSD/bin/vps_ci_all.sh` | **Yes** — serial `vps_ci.sh` per app | Every app in the inventory's RAILS namespace | Normal code change; tests must pass |
 | `I_UNDERSTAND_FAST_DEPLOY=1 zsh OPENBSD/bin/vps_production_push.sh` | **No** — `SKIP_CI=1 SKIP_RUNTIME_CHECK=1 bin/vps-deploy all`; only the post-restart checks run, and the runtime skip requires that exact acknowledgement. | Every active inventory app, in `deploy_order`; `DEMO_SEED_ON_DEPLOY=1` adds Brgen's demo seed | Fast hotfix; skips test check |
 | `zsh OPENBSD/bin/deploy_all.sh` | **No** | Runs from a workstation: syncs the pub5 checkout to vm23 and runs `OPERATOR.sh`, so it reapplies `/etc`, relayd and the services, not just app code. `--per-app` also runs each `RAILS/<app>/<app>.sh` | The box's config has drifted or a fresh install needs redoing — not for shipping a code change |
-| `ksh OPENBSD/bin/start_all_apps.sh` as `dev` | **No** — recovery only | Calls the fixed `pub5-admin start-all-apps` broker verb; checks all services and pins them against `resource_guard.sh` shedding | Recovery after a deliberate decision to keep every app running despite load |
+| `ksh OPENBSD/bin/start_all_apps.sh` as `dev` | **No** — recovery only | Starts every inventory app with native `rcctl`; checks all services and pins them against `resource_guard.sh` shedding | Recovery after a deliberate decision to keep every app running despite load |
 
 `vps_production_push.sh` is the footgun under pressure: it restarts production
 without running CI. Use `vps_ci_all.sh` unless you explicitly need the fast path
@@ -1061,7 +1054,7 @@ workstation environment.
 
 ## Recovery
 
-Load shedding: `ksh OPENBSD/bin/resource_guard.sh` as `dev`; the wrapper refuses root and delegates to the installed root-owned runner. Full stack: `ksh OPENBSD/bin/start_all_apps.sh` (as dev; only the fixed broker runs as root). Core health: `doas /usr/local/sbin/pub5-admin service check master` (repeat for brgen/relayd)
+Load shedding: `ksh OPENBSD/bin/resource_guard.sh` as `dev`; the wrapper refuses root and delegates to the installed root-owned runner. Full stack: `ksh OPENBSD/bin/start_all_apps.sh` (as dev; it uses native `rcctl`). Core health: `doas /usr/sbin/rcctl check master` (repeat for brgen/relayd)
 pf`.
 
 SSH lockout only: `ssh server4`, then `vmctl console vm23` (manual — not
@@ -1202,14 +1195,14 @@ precisely so no bin/ file carries a fleet-wide delete. Run it BY HAND, per app,
 on launch day:
 
 1. `ruby OPENBSD/bin/dr-pull` from the Mac — a verified pre-wipe snapshot.
-2. On vm23, stop the app and its optional job worker: `doas /usr/local/sbin/pub5-admin service stop <app>` and, if configured, `doas /usr/local/sbin/pub5-admin service stop <app>_jobs`.
+2. On vm23, stop the app and its optional job worker: `doas /usr/sbin/rcctl stop <app>` and, if configured, `doas /usr/sbin/rcctl stop <app>_jobs`.
 3. Move the primary aside (never delete): `mv
    /home/<app>/app/storage/production.sqlite3{,.pre-launch}`.
 4. As the app user: `bundle exec bin/rails db:prepare` — schema, no seeds.
    brgen demo seeds are the DEMO; a launch database starts empty. If a curated
    skeleton is wanted (cities, categories, admin), seed ONLY
    `db/seeds/launch.rb` — write it that week, review it that week.
-5. Start the app with `doas /usr/local/sbin/pub5-admin service start <app>` and, if configured, start its job worker with `doas /usr/local/sbin/pub5-admin service start <app>_jobs`; then run the route-manifest probe.
+5. Start the app with `doas /usr/sbin/rcctl start <app>` and, if configured, start its job worker with `doas /usr/sbin/rcctl start <app>_jobs`; then run the route-manifest probe.
 6. The .pre-launch file stays until the first week survives; dr-pull keeps
    pulling nightly either way.
 
