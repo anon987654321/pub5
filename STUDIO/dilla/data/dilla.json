@@ -2116,7 +2116,18 @@
           "mod_sustain": 0.2,
           "mod_release": 0.3,
           "filter_base_hz": 1200,
-          "filter_brightness_span_hz": 3800
+          "filter_brightness_span_hz": 3800,
+          "chorus_frequency": 2.5,
+          "chorus_delay_time": 0.3,
+          "chorus_depth": 0.3,
+          "tremolo_frequency": 3.2,
+          "tremolo_depth": 0.2,
+          "tremolo_wet": 0.25,
+          "tremolo_spread": 90,
+          "drive_amount": 0.08,
+          "drive_wet": 0.15,
+          "texture_amount": 0.18,
+          "texture_wet": 0.6
         },
         "pads": {
           "max_polyphony": 16,
@@ -2128,7 +2139,10 @@
           "sustain": 0.75,
           "release": 4.8,
           "filter_base_hz": 600,
-          "filter_brightness_span_hz": 400
+          "filter_brightness_span_hz": 400,
+          "lowpass_hz": 3500,
+          "saturation_order": 2,
+          "saturation_wet": 0.2
         }
       },
       "effects": {
