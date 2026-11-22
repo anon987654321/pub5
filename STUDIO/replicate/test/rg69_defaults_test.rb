@@ -309,7 +309,7 @@ class TestRg69Defaults < Minitest::Test
     assert_equal 3, js.scan(/createToneInstruments\(\)/).size,
                  "one builder definition and one call in each rendering path"
     refute_match(/new Tone\.PolySynth\(\{\s*maxPolyphony:(?:8|4)/, export,
-                 "WAV export must not construct its old, different keys/pads voices"
+                 "WAV export must not construct its old, different keys/pads voices")
   end
 
   def test_rg69_kit_tuning_and_voice_fx_are_shared_by_live_and_wav_paths
