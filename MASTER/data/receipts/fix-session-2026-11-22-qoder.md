@@ -2705,3 +2705,16 @@ broker byte validator but the vision lane still receives no image bytes.
 In-flight cancellation and live Chromium proof remain outstanding. Issue #5
 stays OPEN. The session_browser_post_policy operator-rights seam remains
 unchanged.
+Broker facade acceptance addendum — 2026-11-22:
+- Frozen both String fields in each broker-created Lease: the lease identity
+  and canonical bound host. This prevents a caller from mutating the host
+  grant after admission or changing a key used by the broker's lease map.
+- Extended the existing broker facade regression to attempt both mutations,
+  reject navigation to a different host through Page#go_to, verify an
+  accepted same-host navigation and require screenshot bytes to pass through
+  the broker's PNG validator.
+- Commits: d33c43446c89c726138932347c3ef256cbbd15bc (freeze lease fields);
+  41a8ac818ef85bf6d6380c6c69bef7537c6c847d (immutability regression);
+  5001598916a07c311982e7aac30eca8d9a401518 (host/screenshot facade tests).
+- These tests are source changes only; execution remains NOT_RUN. Issue #5
+  remains open with the boundaries recorded above.
