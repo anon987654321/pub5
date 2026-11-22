@@ -8,7 +8,7 @@ class TestLanePolicyFromYaml < Minitest::Test
   Selection = Master::Io::LaneSelection
 
   # Image understanding has its own Google, Grok, ChatGPT and Qwen tier.
-  # DeepSeek V4.1 Flash is the text primary, not an image-input model.
+  # DeepSeek V4.1 Flash is the text primary; its image-input capability is not verified here.
   def test_vision_tier_uses_the_four_designated_families
     expected = %w[
       google/gemini-3.1-flash-lite
