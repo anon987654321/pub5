@@ -99,6 +99,20 @@ class TestEntrypointRequires < Minitest::Test
     assert_empty broken, "A bin/ script that cannot be run directly:\n#{broken.join("\n")}"
   end
 
+  def test_bin_entrypoints_are_committed_executable
+    output, status = Open3.capture2e("git", "ls-files", "-s", "--", "MASTER/bin", chdir: REPO_ROOT)
+    assert status.success?, "git ls-files could not inspect the index: #{output}"
+
+    broken = output.lines.filter_map do |entry|
+      mode, _object, _stage, path = entry.split(/\\s+/, 4)
+      next if path.to_s.end_with?(".md")
+
+      "#{path}: index mode #{mode}" unless mode == "100755"
+    end
+
+    assert_empty broken, "Direct bin entrypoints must be committed as mode 100755:\\n#{broken.join("\\n")}"
+  end
+
   def test_ruby_entrypoints_parse
     broken = ruby_entrypoints.filter_map do |script, _source|
       _out, status = Open3.capture2e(RbConfig.ruby, "-c", script)
