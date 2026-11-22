@@ -89,12 +89,37 @@ class TestSelfiesGallery < Minitest::Test
     File.chmod(0o600, consent_path)
   end
 
-  def test_an_unapproved_subject_cannot_enter_a_publication_manifest
+  def test_an_unapproved_subject_is_excluded_from_the_manifest
     File.write(File.join(@lora, "unapproved_selfie_01.jpg"), "private render")
 
-    error = assert_raises(Studio::Lora::Consent::Error) { build }
-    assert_match(/publication blocked/, error.message)
-    refute File.exist?(@out), "a denied subject must not leave a manifest behind"
+    manifest = build
+
+    assert_equal "PARTIAL", manifest.fetch("publication_state")
+    assert_equal 1, manifest.fetch("excluded_subject_count")
+    assert_empty manifest.fetch("subjects")
+    assert_empty manifest.fetch("items")
+    body = File.read(@out)
+    refute_includes body, "unapproved"
+    refute_includes body, "private render"
+  end
+
+  def test_revoked_publication_consent_removes_subject_from_existing_manifest
+    revoked = touch("ragnhild_selfie_01.jpg")
+    kept = touch("merethe_selfie_01.jpg")
+    first = build
+    assert_equal %w[merethe ragnhild], first.fetch("subjects")
+
+    FileUtils.rm_f(File.join(@lora, "ragnhild", "consent.yml"))
+    second = build
+
+    assert_equal "PARTIAL", second.fetch("publication_state")
+    assert_equal 1, second.fetch("excluded_subject_count")
+    assert_equal ["merethe"], second.fetch("subjects")
+    assert second.fetch("items").all? { |item| item.fetch("subject") == "merethe" }
+    body = File.read(@out)
+    refute_includes body, "ragnhild"
+    assert File.file?(revoked), "revocation must not delete the private source render"
+    assert File.file?(kept), "the separately approved subject's render remains"
   end
 
   def test_a_still_becomes_an_item_named_for_its_subject
