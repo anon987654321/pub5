@@ -942,8 +942,19 @@ module Studio
 
           remaining = deadline - monotonic_now
           if remaining <= 0
-            cancel_training(id)
-            raise "training timeout after #{timeout}s (canceled)"
+            cancel_training(training_id)
+            # A successful cancel POST is not proof that the running job
+            # stopped. Read the provider's terminal state before reporting it.
+            final = get_training(training_id)
+            case final["status"]
+            when "canceled"
+              raise "training timeout after #{timeout}s; cancellation confirmed by provider"
+            when "succeeded"
+              return final # completion raced the timeout; retain its metrics
+            else
+              status = final["status"].to_s.empty? ? "unknown" : final["status"]
+              raise "training timeout after #{timeout}s; cancellation NOT confirmed (provider status: #{status})"
+            end
           end
           sleep [delay, remaining].min
           delay = [delay + 2, 15].min
