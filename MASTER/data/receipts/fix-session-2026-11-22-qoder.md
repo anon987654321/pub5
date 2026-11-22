@@ -710,3 +710,69 @@ next agent re-measures each item before acting; a finding is a hypothesis.
   OpenBSD host; the sandbox recycled twice and lost the local checkout.
 - No Law PASS, no test PASS, no deploy claim. The handoff is a hypothesis
   list with named owners and named proof; the next agent re-measures.
+
+
+## Implementation follow-up — 2026-11-22
+
+This appendix records the first landed implementation tranche. It does not close the
+remaining sections above. Verified main head at close: `d54b70914cd6a49abe706c10435e4d195e9c9631`.
+
+### Landed
+
+- Removed the unused `[*.py]` editor block.
+- Updated the canonical Law-index writer to emit a final newline; added a temporary-output
+  generator regression and updated the committed JSON projection.
+- Updated the coverage-state and autopoiesis-manifest writers to emit final newlines.
+  Added focused newline assertions; added a final-newline assertion for the face music JSON.
+- Consolidated `MASTER/FACE_WORLD.md` from six repeated runtime/catalogue copies to one
+  606-line canonical document. The retained copy is the expanded latest structure; the
+  measured 1.075 spacing, Hollow Gaze, Faultline and state-force semantics were preserved.
+- Changed `MASTER/bin/master-session` to index mode 100755 and added an index-mode regression
+  for direct `MASTER/bin` entrypoints.
+- Trimmed trailing whitespace in five maintained source/test files:
+  `law/surface.rb` (9), `tools/portal_agent.rb` (4),
+  `test/test_dialogue_rubric.rb` (1), `test/voice/test_voice_support.rb` (1),
+  and `web/public/three.face.module.js` (13).
+- Converted the Termux bootstrap to its installed zsh with `set -euo pipefail`; updated
+  its syntax test to use `zsh -n`.
+- Converted `RAILS/mrdamascy/bin/dev` from bash to strict zsh while retaining overmind-first
+  and foreman-fallback behavior.
+- Removed the misleading executable shebang from `scripts/publish_log.zsh`; it defines a
+  function and is a sourced library, so it must not change the caller's shell options.
+  Added a source-only regression.
+- Replaced `probe_webgl_guard.mjs` with `probe_webgl_guard.rb`, using the existing
+  `Deploy::CdpSession`, shared Chrome discovery and SwiftShader launch. Updated both CI
+  entrypoints and the face boot contract; removed the Node probe. The new probe has no
+  hardcoded macOS Chrome path.
+- Corrected two autopoiesis honesty defects: unimplemented regeneration now returns
+  `INCONCLUSIVE` without changing the manifest; file presence alone no longer yields a
+  healthy component. Added regressions for both behaviors.
+
+### Proof actually run
+
+- GitHub Contents API reads/writes and main-ref verification for the changed paths.
+- Git Trees API: `MASTER/bin/master-session` is mode 100755; the retired
+  `probe_webgl_guard.mjs` path is absent; the Ruby replacement and converted shell paths
+  are present with the observed modes.
+- In-session JavaScript assertions: `JSON.parse` succeeded for
+  `laws_index.json`, `coverage_map/state.json`, `autopoietic_components.json`, and
+  `face_music_packs.json`; each has a final newline. FACE_WORLD's candidate passed the
+  measured section and retained-content assertions before commit.
+
+### Not run / not claimed
+
+- Ruby syntax checks, every Minitest/Rake suite, Law detectors, `agent_context.rb`,
+  `/fix`, boot/doctor, the new Ruby CDP browser probe, screenshots, Termux device tests,
+  mrdamascy app tests, hooks, OpenBSD host checks, NSD/DNSSEC proof and deployment.
+- No Law was commented out. No runtime Law pass was established; the conditional
+  disablement instruction was not invoked because no specific blocking Law was proven
+  in the source-only tranche.
+- The five whitespace edits and all other source changes remain unverified by Ruby tests.
+- The Z-AI Bun-to-Ruby bridges and the ten BIZ Node-to-Ruby tools remain unported. Their
+  credential/SDK and rendered-PDF contracts need a measured replacement and the focused
+  provider/PDF proof; neither lane was deleted.
+- The exposed PAT rotation remains an operator action. Rotate it in GitHub; this session
+  cannot revoke or replace a token from chat.
+
+The next implementation pass must continue with the remaining owned items above, not treat
+this appendix as a completed /fix, test suite, or deployment receipt.
