@@ -544,6 +544,42 @@ module Backlog
       :queued
     end
 
+    # Read-only overview of owner-registry intake and durable task outcomes.
+    # Raw prompts and exception text are intentionally not exposed here.
+    def status
+      current = @mission_class.current(root: @root)
+      entries = Backlog.generate
+      completed = completed_receipts.to_set
+      parked = latest_parked_tasks
+      eligible = entries.select { |item| eligible?(item) }
+      ready = eligible.count do |item|
+        digest = item_digest(item)
+        !completed.include?(digest) && !parked_task?(item, parked)
+      end
+      parked_rows = parked.filter_map do |digest, receipt|
+        next unless receipt["record_type"] == "parked_task"
+
+        {
+          "item_id" => receipt["item_id"].to_s,
+          "failure_category" => receipt["failure_category"].to_s,
+          "mission_state" => receipt["mission_state"].to_s,
+          "requires_operator" => receipt["requires_operator"] == true,
+          "retry_at" => receipt["retry_at"],
+          "item_current" => entries.any? { |item| item_digest(item) == digest },
+        }
+      end
+      {
+        "current_mission" => current&.slice("id", "state", "origin", "auto_continue",
+                                            "attempt_count", "retry_count", "next_wake_at"),
+        "owner_registry_items" => entries.size,
+        "eligible_items" => eligible.size,
+        "completed_items" => completed.size,
+        "ready_items" => ready,
+        "parked_items" => parked_rows.size,
+        "parked" => parked_rows.sort_by { |row| row.fetch("item_id") },
+      }
+    end
+
     # Park an unsuccessful backlog item in the executor's existing durable
     # receipt stream. The owner registry remains the task source; this is outcome
     # history, not a second queue.
@@ -591,7 +627,7 @@ module Backlog
     # mark the work complete or bypass its original proof command.
     def resume_item!(item_id:)
       item = Backlog.generate.find { |row| row[:id].to_s == item_id.to_s }
-      return false unless item
+      return false unless item && eligible?(item)
 
       parked = latest_parked_tasks[item_digest(item)]
       return false unless parked && parked["record_type"] == "parked_task"
