@@ -1110,7 +1110,7 @@ operator_playbook:
 skills_registry:
   meta:
     source: runtime authority - edit this file directly; do not add data/skills/*.md
-    count: 50
+    count: 52
   skills:
   - name: algorithmic-art
     description: Make generative art from one seeded algorithm, reproducible and tunable.
@@ -1644,6 +1644,43 @@ skills_registry:
       Look for correctness defects, broken invariants, authorization gaps, unsafe input handling, data loss, race conditions, resource leaks, compatibility breaks, migration hazards, missing regression tests, duplicated mechanisms and unnecessary dependencies. Check whether error paths, retries, rollback and partial failure remain safe. Review user-visible and operational effects as well as code style.
 
       Report actionable findings first, ordered by severity, with exact path and line, concrete failure scenario, evidence and a minimal remedy. Separate confirmed defects from questions and preferences. If no findings are found, state the scope reviewed and the limits; do not imply exhaustive proof. Do not edit during an independent review unless explicitly asked to switch into repair.
+
+  - name: simplicity
+    description: Reduce unnecessary complexity without weakening laws, contracts, product identity or behavior.
+    triggers:
+    - '\b(?:simplify (?:this |the )?(?:diff|change|code|implementation|workflow|design)|simplification|reduce complexity|remove unnecessary abstractions?|apply KISS|YAGNI|minimal solution|over.engineer(?:ed|ing)?)\b'
+    body: |-
+      The simplicity skill reduces unnecessary concepts, states, branches, dependencies and duplicated mechanisms. It does not optimize line count or impose a generic minimalist style. First read the task contract, applicable MASTER Laws, tree ownership, existing implementation and tests. The authority order is unchanged: soul.yml, laws.yml, executable laws and gates, tree contracts, then Git history.
+
+      Use three lenses. Constraints: identify which behavior, safety boundary, data invariant and compatibility requirement must remain. Simplicity: find the smallest coherent change that removes a real source of complexity. Parametricity: replace repeated special cases with an existing shared mechanism only when the cases truly share one contract; do not invent a framework for hypothetical reuse.
+
+      Work on the requested scope and only the callers or consumers that must change with it. Review the diff as an ablation: remove one proposed layer, branch, option or dependency at a time; run the focused regression checks; keep the removal only when required behavior and edge cases still hold. Preserve complexity that earns its place through security, consent, authorization, data integrity, recovery, concurrency, accessibility or measured scale.
+
+      Prefer the project's Ruby and zsh idioms, existing registries, shared helpers and native OpenBSD controls. Do not add a new language, package, service, framework, abstraction or permission mechanism just to make a local edit shorter. Never bypass a Law, test, consent gate, path guard, deploy preflight or recovery control in the name of simplicity. Do not import React, Expo, Tailwind, Bootstrap, Docker, Kamal, nginx or Puma into this repository.
+
+      Preserve each product's existing brand, typography, component system and visual intent. Minimalism is not a universal palette, font ban, icon ban, layout template or permission to homogenize Brgen, Amber, BSDPorts and MASTER. Remove decoration only when the relevant product evidence and design contract support it.
+
+      Report each simplification as a behavior-preserving change, name the complexity removed, list the checks run and state what was deliberately retained. If the current design is already the simplest safe form, say so and stop.
+
+  - name: likeness-consent
+    description: Make STUDIO LoRA and selfie permission records easier to prepare and diagnose without bypassing action-scoped consent or source rights.
+    triggers:
+    - '\b(?:lora|LoRA|likeness|selfie|portrait|face model)\b.*\b(?:consent|permission|rights|authorize|authorise|friend|training)\b'
+    - '\b(?:consent|permission|rights)\b.*\b(?:lora|likeness|selfie|portrait|face model)\b'
+    body: |-
+      This skill helps record and diagnose real permission already given by the subject and the owners of the source photographs. It is a workflow guide for the existing STUDIO tools, not a new consent service. Never bypass, infer, fabricate, broaden or silently reuse consent. A person's express permission is a valid starting point: help the operator capture the actual evidence and exact scope so the existing gate can accept it.
+
+      Read STUDIO/lora/consent.example.yml, consent.rb, validate.rb, the requested subject's private descriptor and the relevant source-set inventory. Keep the consent record, evidence, subject.env, images and model manifests under the subject's ignored private directory. Subject directories and evidence/source directories are owner-only 0700; records, evidence and media are owner-only 0600, singly linked and non-symlinked. Never copy private evidence into Git or a public receipt, and never send the consent document to the image provider.
+
+      Separate the permissions by action. Generation requires subject consent for likeness_generation and provider_processing, plus source rights for generation_use and provider_processing for each local source set. LoRA training additionally requires subject consent for model_training and model_retention, source training_use for each source set, and a separate training_dataset evidence entry. Publication and distribution each need their own explicit subject and source scopes; a private render or trained model does not imply either.
+
+      An evidence entry names who granted the permission, the actual ISO date, the exact scopes covered and a separate file under evidence/. A clear email, message export or signed record may be stored as evidence when it really documents the grant and its scope. Do not invent the grantor, date, wording or source ownership. The validator checks record shape, declared scopes, private file paths and metadata; it does not authenticate a signature or decide whether the evidence is legally sufficient. A human must inspect the evidence content and confirm that it actually says what the record claims.
+
+      Run the existing read-only validation first. ruby STUDIO/lora/validate.rb --subject NAME --json reports training readiness; it is not a generation-only verdict. ruby STUDIO/lora/photograph.rb --check-model --subject NAME exercises the generation consent, pinned-model and provider-schema preflight without rendering. Then use --selfie-series --subject NAME for that one subject. For training, use ruby STUDIO/lora/train.rb --subject NAME --approve-spend-usd USD; the spend ceiling is a separate explicit operator approval. --all is an all-subject training batch and keeps its all-selected-subject preflight atomic. Do not use it when only one subject is requested.
+
+      For --all-subjects selfie generation, preflight every subject before the first prediction, then process only subjects whose own consent, pinned model and input schema pass. One blocked person must not block another independently authorized person. Report READY, RENDERED, INCOMPLETE, FAILED and BLOCKED per subject; a partial batch is not a complete pass. Never generate for a blocked subject.
+
+      A newly trained model still needs a separate human likeness review against the approved references. Candidate rendering is not approval. Set LIKELINESS_REVIEWED_VERSION only to the exact immutable version that a human has reviewed. Gallery publication uses its separate publication-consent gate. Keep the smallest valid scope, explain the exact missing evidence and let the subject or source owner provide it; do not turn a refusal into an automatic allow.
 
   - name: amber-tenant-logo
     description: Dress a brgen tenant or any logo request in the amber mark law — locked Caprasimo glyphs, nine hairlines, plates from the generator, never redrawn.

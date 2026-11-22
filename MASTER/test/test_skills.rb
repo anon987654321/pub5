@@ -582,4 +582,40 @@ class TestSkills < Minitest::Test
   end
 
 
+
+  NEW_GUARDRAIL_SKILLS = {
+    "simplicity" => [
+      "simplify the current diff", "remove unnecessary abstractions", "apply KISS without changing behavior"
+    ],
+    "likeness-consent" => [
+      "check LoRA consent", "prepare my friend's likeness consent for training",
+      "why is selfie generation blocked by consent"
+    ],
+  }.freeze
+
+  def test_simplicity_and_likeness_consent_skills_route_from_plain_requests
+    NEW_GUARDRAIL_SKILLS.each do |name, requests|
+      requests.each do |request|
+        assert_includes shipped_skills.trigger_for(request).map { |skill| skill[:name] }, name, request
+      end
+    end
+  end
+
+  def test_new_guardrail_skills_preserve_repository_and_consent_boundaries
+    body = ->(name) { registry.fetch("skills").find { |skill| skill["name"] == name }.fetch("body") }
+    simplicity = body.call("simplicity")
+    consent = body.call("likeness-consent")
+
+    assert_operator simplicity.length, :<=, 4_000
+    assert_operator consent.length, :<=, 4_000
+    assert_match(/Never bypass a Law, test, consent gate/, simplicity)
+    assert_match(/preserve each product's existing brand/i, simplicity)
+    assert_match(/actual evidence and exact scope/, consent)
+    assert_match(/model_training and model_retention/, consent)
+    assert_match(/Publication and distribution each need their own explicit/, consent)
+    assert_match(/One blocked person must not block another/, consent)
+    assert_match(/human must inspect the evidence content/, consent)
+  end
+
+
 end

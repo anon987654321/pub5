@@ -1,8 +1,9 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Canonical STUDIO selfie entrypoint. With no arguments, render the four-take
-# series for all three consented subjects through the existing photograph lane.
+# Canonical STUDIO selfie entrypoint. With no arguments, preflight each subject
+# independently, then render four takes only for subjects whose own consent and
+# pinned-model checks pass. A blocked subject does not block the others.
 require "rbconfig"
 require_relative "../replicate/subprocess"
 

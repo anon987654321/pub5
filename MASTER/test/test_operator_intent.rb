@@ -381,4 +381,33 @@ class OperatorIntentTest < Minitest::Test
       assert_equal :unavailable, result.status
     end
   end
+
+  def test_all_rails_apps_plus_master_web_is_a_deterministic_full_release
+    with_inventory do |root|
+      message = "deploy all Rails apps plus MASTER web to vm23"
+      result = Master::CLI::OperatorIntent.new(root:, agent: Object.new).call(message)
+
+      assert Master::CLI::OperatorIntent.direct_full_stack_confirmation?(message)
+      assert_equal :deploy, result.status
+      assert_equal "all", result.target
+      assert_equal %w[control_web city_app wardrobe_app private_service], result.selected
+    end
+  end
+
+  def test_production_full_release_includes_every_active_rails_app_and_master_web
+    repository_root = File.dirname(Master::ROOT)
+    inventory = Deploy::Inventory.new(root: repository_root)
+    expected = %w[amber brgen bsdports master mrdamascy]
+    assert_equal expected, inventory.app_names.sort
+    master = inventory.apps.find { |app| app.name == "master" }
+    assert_equal "MASTER/web", master.deploy_root
+
+    message = "deploy all Rails apps plus MASTER web to vm23"
+    result = Master::CLI::OperatorIntent.new(root: Master::ROOT, agent: Object.new).call(message)
+    assert_equal :deploy, result.status
+    assert_equal "all", result.target
+    assert_equal inventory.ordered_apps.map(&:name), result.selected
+  end
+
+
 end

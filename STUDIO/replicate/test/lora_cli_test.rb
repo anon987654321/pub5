@@ -113,4 +113,56 @@ class TestStudioLoraCli < Minitest::Test
   end
 
 
+
+  def test_all_subjects_preflight_independently_before_any_prediction
+    events = []
+    factory = lambda do |subject|
+      series = Object.new
+      series.define_singleton_method(:preflight!) do
+        events << [:preflight, subject]
+        raise "private consent is missing" if subject == "blocked"
+      end
+      series.define_singleton_method(:run) do |count:|
+        events << [:render, subject, count]
+        ["#{subject}_selfie_01.jpg"]
+      end
+      series
+    end
+
+    report = studio_all_subjects_render(
+      subjects: %w[ready blocked], count: 1, series_factory: factory
+    )
+
+    assert_equal "PARTIAL", report.fetch("status")
+    assert_equal ["ready_selfie_01.jpg"], report.fetch("subjects").fetch("ready")
+    assert_empty report.fetch("subjects").fetch("blocked")
+    assert_equal "RENDERED", report.fetch("subject_status").fetch("ready").fetch("state")
+    assert_equal "BLOCKED", report.fetch("subject_status").fetch("blocked").fetch("state")
+    assert_match(/private consent is missing/, report.fetch("subject_status").fetch("blocked").fetch("reason"))
+    assert_equal [
+      [:preflight, "ready"],
+      [:preflight, "blocked"],
+      [:render, "ready", 1],
+    ], events
+  end
+
+  def test_all_subjects_reports_blocked_when_no_subject_passes_preflight
+    rendered = []
+    factory = lambda do |subject|
+      series = Object.new
+      series.define_singleton_method(:preflight!) { raise "#{subject} consent missing" }
+      series.define_singleton_method(:run) { |count:| rendered << subject; [] }
+      series
+    end
+
+    report = studio_all_subjects_render(
+      subjects: %w[first second], count: 1, series_factory: factory
+    )
+
+    assert_equal "BLOCKED", report.fetch("status")
+    assert_empty rendered
+    assert_equal %w[BLOCKED BLOCKED], report.fetch("subject_status").values.map { |item| item.fetch("state") }
+  end
+
+
 end

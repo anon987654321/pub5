@@ -97,7 +97,7 @@ def studio_photograph_options(argv)
     parser.on("--soundtrack PATH", "lay a music bed under the film (e.g. dilla.wav)") { |value| options[:soundtrack] = value }
     parser.on("--subject NAME", "subject directory under STUDIO/lora (default ragnhild)") { |value| options[:subject] = value }
     parser.on("--selfie-series", "render four portraits using --subject's own LoRA") { options[:series] = true }
-    parser.on("--all-subjects", "preflight and render four LoRA portraits for Johann, Ragnhild and Merethe") { options[:all_subjects] = true }
+    parser.on("--all-subjects", "preflight each subject and render only those with valid consent and a pinned LoRA") { options[:all_subjects] = true }
     parser.on("--count N", Integer, "series length, 1..24 (default 4)") { |value| options[:count] = value }
     # Compatibility flag; earlier stills are always retained.
     parser.on("--keep", "compatibility flag; prior generated stills are always retained") { options[:keep] = true }
@@ -109,6 +109,62 @@ def studio_photograph_options(argv)
     parser.on("--check-model", "verify the subject's local manifest or private Replicate model") { options[:check_model] = true }
   end.parse!(argv)
   options
+end
+
+
+# All-subject generation is independent per person. Every subject is preflighted
+# before the first prediction, but one person's missing permission/model must not
+# prevent another subject with a complete, valid preflight from proceeding.
+def studio_all_subjects_render(subjects:, count:, series_factory: nil)
+  factory = series_factory || ->(subject) { Studio::Visual::SelfieSeries.new(subject:) }
+  prepared = subjects.map do |subject|
+    begin
+      series = factory.call(subject)
+      series.preflight!
+      { "subject" => subject, "state" => "READY", "series" => series }
+    rescue StandardError => error
+      { "subject" => subject, "state" => "BLOCKED",
+        "reason" => "#{error.class}: #{error.message.to_s.gsub(/\s+/, " ")[0, 240]}" }
+    end
+  end
+
+  rendered = {}
+  subject_status = {}
+  prepared.each do |entry|
+    subject = entry.fetch("subject")
+    if entry.fetch("state") == "BLOCKED"
+      rendered[subject] = []
+      subject_status[subject] = { "state" => "BLOCKED", "reason" => entry.fetch("reason") }
+      next
+    end
+
+    begin
+      paths = entry.fetch("series").run(count:)
+      rendered[subject] = paths
+      complete = paths.length == count
+      subject_status[subject] = {
+        "state" => complete ? "RENDERED" : "INCOMPLETE",
+        "expected" => count,
+        "rendered" => paths.length,
+      }
+    rescue StandardError => error
+      rendered[subject] = []
+      subject_status[subject] = {
+        "state" => "FAILED",
+        "reason" => "#{error.class}: #{error.message.to_s.gsub(/\s+/, " ")[0, 240]}",
+      }
+    end
+  end
+
+  statuses = subject_status.values
+  all_complete = !statuses.empty? && statuses.all? { |item| item.fetch("state") == "RENDERED" }
+  any_output = rendered.values.any?(&:any?)
+  {
+    "status" => all_complete ? "COMPLETE" : (any_output ? "PARTIAL" : "BLOCKED"),
+    "subjects" => rendered,
+    "subject_status" => subject_status,
+    "prior_renders_retained" => true,
+  }
 end
 
 def studio_photograph_interactive?(arguments, tty:)
@@ -169,17 +225,9 @@ if $PROGRAM_NAME == __FILE__
     elsif options[:all_subjects]
       raise ArgumentError, "--all-subjects requires the subject's trained LoRA; --engine is not allowed" if options[:engine]
  
-      subjects = %w[johann ragnhild merethe]
-      series = subjects.to_h { |subject| [subject, Studio::Visual::SelfieSeries.new(subject:)] }
-      # Validate every subject's consent, pinned model and input schema before
-      # the first prediction. A missing model blocks the whole batch up front.
-      series.each_value(&:preflight!)
-      rendered = subjects.to_h do |subject|
-        [subject, series.fetch(subject).run(count: options[:count] || 4)]
-      end
-      incomplete = rendered.select { |_subject, paths| paths.length != (options[:count] || 4) }
-      raise "INCOMPLETE: subjects with incomplete output: #{incomplete.keys.join(", ")}" unless incomplete.empty?
-      { "subjects" => rendered, "prior_renders_retained" => true }
+      studio_all_subjects_render(
+        subjects: %w[johann ragnhild merethe], count: options[:count] || 4
+      )
     elsif options[:series]
       # A series defaults to the subject's pinned LoRA. An explicit --engine is
       # an intentional opt-out for reference/text experiments.
@@ -211,4 +259,6 @@ if $PROGRAM_NAME == __FILE__
     end
   end
   puts JSON.generate(result)
+  exit 1 if options[:all_subjects] && result["status"] == "PARTIAL"
+  exit 2 if options[:all_subjects] && result["status"] == "BLOCKED"
 end

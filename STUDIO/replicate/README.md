@@ -83,10 +83,12 @@ voice of the creative work.
   The exact version must also be recorded in private `subject.env` as
   `LIKELINESS_REVIEWED_VERSION` after full-size comparison with approved
   reference photographs. Retrained or changed versions are blocked until reviewed.
-  `ruby STUDIO/lora/photograph.rb --all-subjects --count 4` preflights Johann,
-  Ragnhild and Merethe together and appends four curated FW26 wardrobe scenes each.
-  Earlier generated stills and sidecars are always retained; no stale-render
-  deletion path exists.
+  ruby STUDIO/lora/photograph.rb --all-subjects --count 4 preflights Johann,
+  Ragnhild and Merethe independently before the first prediction. It renders only
+  subjects whose own consent, pinned model and provider schema pass; one blocked
+  subject no longer blocks another. The JSON reports per-subject RENDERED,
+  INCOMPLETE, FAILED or BLOCKED state. Exit 1 means partial output; exit 2 means
+  no subject was eligible. Earlier generated stills and sidecars are retained.
   Each selfie is then graded separately by
   `STUDIO/postpro/postpro.rb --heavy --count 1` through
   `IdeaPicture#render_still`. The provider original is preserved, Postpro
