@@ -1339,7 +1339,7 @@ else if(k==='v'&&(e.ctrlKey||e.metaKey)){e.preventDefault();navigator.clipboard.
 // One gesture is enough: boot the engine if it is not running yet, then start
 // the transport. The welcome gate and the play button both land here, so the
 // first click plays music instead of only arming the engine.
-function startToneFromGesture(){Tone.getContext();return Tone.start();}
+function startToneFromGesture(){const context=Tone.getContext();if(location.origin==="null")context.clockSource="timeout";return Tone.start();}
 
 async function startPlayback(activationPromise){
 if(!st_.started){
