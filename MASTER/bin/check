@@ -186,14 +186,14 @@ ci_steps += [run_bin["smoke"], rake["selfcheck"], rake["constitution"]] unless E
 ci_steps << web_node_step
 ci_steps << rake["test:integration_web"] unless ENV["MASTER_CI_WEB"] == "0"
 unless ENV["MASTER_CI_BROWSER"] == "0"
-  webgl = File.join(ROOT, "..", "MASTER", "web", "script", "probe_webgl_guard.mjs")
-  if node_bin && File.file?(webgl)
-    # The probe reads this itself; without it a machine with no browser reports
-    # a pass having launched nothing.
+  webgl = File.join(ROOT, "..", "MASTER", "web", "script", "probe_webgl_guard.rb")
+  if File.file?(webgl)
+    # The Ruby CDP probe reads the page itself and requires a real browser
+    # response; source-only or missing-browser evidence cannot turn green.
     ENV["PROBE_REQUIRE_BROWSER"] ||= "1"
-    ci_steps << ["webgl probe", node_bin, webgl]
+    ci_steps << ["webgl probe", RUBY, webgl]
   else
-    Master::Trace::Dmesg.status("web0", "webgl probe skipped, #{node_bin ? "missing #{webgl}" : "no node"}")
+    Master::Trace::Dmesg.status("web0", "webgl probe skipped, missing #{webgl}")
   end
 end
 
