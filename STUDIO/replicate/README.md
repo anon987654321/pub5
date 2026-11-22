@@ -38,6 +38,11 @@ voice of the creative work.
   only, and requires separate publication consent plus source-rights evidence
   for every included subject. Renders and source media stay local-only; older
   public Git objects still need separate repository-visibility and history cleanup.
+  A gallery rebuild excludes any subject whose publication permission is absent
+  or revoked, writes the restricted manifest atomically as an owner-only file,
+  and reports `PARTIAL` without deleting the private media. A previous public
+  manifest must be rebuilt after permission changes; this does not retract copies
+  already downloaded or cached outside the local gallery.
 - `lora/photograph.rb` and `lora/idea_picture.rb` — the image-generation
   entrypoint and its IdeaPicture implementation. A still renders from an engine
   chosen with `--engine`; a film animates it from an engine chosen with
@@ -54,6 +59,11 @@ voice of the creative work.
   keys it takes, and the renderer preflights the model's own schema before any
   upload, so a mismatched shape fails before a paid call. The provider's native
   audio stays off: STUDIO lays the dilla bed under the cut itself.
+  Each successfully downloaded film receives a private `.mp4.json` receipt
+  binding its source still and output by SHA-256, with the model, prediction
+  ID/status, any catalogue-based pre-request estimate, and explicit
+  `NOT_REPORTED_BY_PREDICTION_API` actual-cost status. Visual and likeness review
+  remain `NOT_REVIEWED`; the receipt is not an invoice or an approval.
 - `replicate/client.rb` — the Studio-owned Replicate provider client
   (`Studio::ReplicateClient`), with version-aware input-schema reads, bounded
   transfers and explicit provider errors. `train_lora`, `upload_file` and
