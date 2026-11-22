@@ -126,10 +126,13 @@ module Operator
       passed = statuses.count("PASS")
       failed = statuses.count("FAIL")
       timed_out = statuses.count("TIMEOUT")
+      blocked = statuses.count("BLOCKED")
       status = if failed.positive?
                  "FAIL"
                elsif timed_out.positive?
                  "TIMEOUT"
+               elsif blocked.positive?
+                 "BLOCKED"
                elsif statuses.empty?
                  "NOT_RUN"
                else
@@ -160,6 +163,7 @@ module Operator
           "passed" => passed,
           "failed" => failed,
           "timed_out" => timed_out,
+          "blocked" => blocked,
         },
         "test_counts" => nil,
         "steps" => step_rows,
@@ -173,8 +177,10 @@ module Operator
 
     def step_status(result)
       return "TIMEOUT" if result.respond_to?(:timed_out) && result.timed_out
+      return "PASS" if result.success
+      return "BLOCKED" if result.name.to_s.match?(/\bunavailable\b/i)
 
-      result.success ? "PASS" : "FAIL"
+      "FAIL"
     end
 
     def output_snippet(output)
