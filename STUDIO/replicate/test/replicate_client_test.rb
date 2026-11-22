@@ -199,6 +199,31 @@ class TestStudioReplicateClientPaths < Minitest::Test
     models.reset_video_budget!
   end
 
+  def test_prediction_receipt_separates_reserved_estimate_from_actual_billing
+    models = Studio::ReplicateClient::Models
+    models.reset_video_budget!
+    client = H3VideoClient.new
+
+    result = client.predict_with_receipt(
+      "minimax/h3-highspeed",
+      { prompt: "a quiet harbour", first_frame_image: "https://example.test/frame.jpg", duration: 10 }
+    )
+    expected = models.video_cost_usd("minimax/h3-highspeed", { "duration" => 10 }, today: Date.today)
+    receipt = result.fetch("receipt")
+
+    assert_equal "ok", result.fetch("output")
+    assert_equal "studio.replicate.prediction.v1", receipt.fetch("schema")
+    assert_equal "prediction_123", receipt.fetch("prediction_id")
+    assert_equal "succeeded", receipt.fetch("status")
+    assert_in_delta expected, receipt.fetch("estimated_cost_usd"), 0.001
+    assert_nil receipt.fetch("actual_cost_usd")
+    assert_equal "NOT_REPORTED_BY_PREDICTION_API", receipt.fetch("actual_cost_status")
+    assert_equal expected, models.video_budget_spent
+    assert_equal %i[get get post], client.requests.map(&:first)
+  ensure
+    models.reset_video_budget!
+  end
+
   def test_pinned_model_reference_uses_its_version_schema_before_prediction
     version = "a" * 64
 
