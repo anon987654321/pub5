@@ -21,6 +21,14 @@ class VpsDeployContractTest < Minitest::Test
   APPS = Deploy::Inventory.new(root: ROOT).app_names
   MASTER_DEPLOY = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
 
+  def test_deploy_entrypoint_has_one_complete_service_and_receipt_layer
+    assert_equal 1, SOURCE.scan(/^admin_service\(\) \{$/).length
+    assert_equal 1, SOURCE.scan(/^admin_request\(\) \{$/).length
+    assert_equal 1, SOURCE.scan(/^write_deploy_run_receipt\(\) \{$/).length
+    assert_equal "exit 0", SOURCE.lines.last.strip
+    refute_includes SOURCE, "]] || {"
+  end
+
   def test_all_applies_the_filesystem_mirror_before_application_deploys
     assert_includes SOURCE, 'zsh "$repo/OPENBSD/OPERATOR.sh" --apply'
     assert_operator SOURCE.index('OPENBSD/OPERATOR.sh" --apply'), :<, SOURCE.index('for one in $deploy_order')
