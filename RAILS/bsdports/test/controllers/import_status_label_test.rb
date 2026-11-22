@@ -66,6 +66,35 @@ class ImportStatusLabelTest < ActionDispatch::IntegrationTest
                     I18n.t("ports.package_unavailable", seen: "2026-11-01", locale: :en)
   end
 
+  test "category pages show only currently available package records" do
+    platform = platforms(:openbsd)
+    category = Category.create!(platform:, name: "availability", slug: "availability")
+    Port.create!(platform:, category:, name: "current", version: "1", pkgpath: "packages/current")
+    Port.create!(platform:, category:, name: "historical", version: "1", pkgpath: "packages/historical",
+                 available: false)
+
+    get category_url(category, locale: "en")
+
+    assert_response :success
+    assert_includes response.body, "current"
+    assert_not_includes response.body, "historical"
+  end
+
+  test "maintainer pages show only currently available package records" do
+    platform = platforms(:openbsd)
+    category = Category.create!(platform:, name: "availability", slug: "availability")
+    maintainer = Maintainer.create!(name: "Available Maintainer")
+    Port.create!(platform:, category:, maintainer:, name: "current", version: "1", pkgpath: "packages/current")
+    Port.create!(platform:, category:, maintainer:, name: "historical", version: "1", pkgpath: "packages/historical",
+                 available: false)
+
+    get maintainer_url(maintainer, locale: "en")
+
+    assert_response :success
+    assert_includes response.body, "current"
+    assert_not_includes response.body, "historical"
+  end
+
   test "the last import names its status in the reader's language" do
     platform = platforms(:openbsd)
     category = Category.create!(platform:, name: "devel", slug: "devel")
