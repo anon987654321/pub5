@@ -18,7 +18,6 @@ class PresencesController < ApplicationController
         )
       end
       return head :unprocessable_entity unless touched
-
     end
 
     # Keep the conversation roster current as well as the device's push lease.
