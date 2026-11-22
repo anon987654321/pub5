@@ -22,6 +22,7 @@ module Master
         def send_ruby_llm_with_manual_tool_fallback(selected_model, messages, sys:, stream:, image: nil,
                                                    temperature: nil, format: nil, &blk)
           previous_rounds = Fiber[:master_native_tool_rounds]
+          previous_no_tools = Fiber[:master_no_tools]
           return send_ruby_llm(selected_model, messages, sys:, stream:, image:, temperature:, format:, &blk) if
             stream || format || Fiber[:master_no_tools] || Array(@tools).empty?
 
@@ -40,8 +41,12 @@ module Master
             reason: "native_tool_call_returned_as_text",
             tools: names.first(8),
           )
+          # ReAct's inner dispatcher must stay in text-tool mode; otherwise it
+          # would recurse back into native tool calling on the very same lane.
+          Fiber[:master_no_tools] = true
           react_tool_loop(selected_model, messages, sys:, stream: false, image:)
         ensure
+          Fiber[:master_no_tools] = previous_no_tools
           Fiber[:master_native_tool_rounds] = previous_rounds
         end
 
