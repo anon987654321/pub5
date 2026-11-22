@@ -126,6 +126,58 @@ class TestCheckChain < Minitest::Test
     end
   end
 
+  def test_suite_aggregator_preserves_child_inconclusive_status
+    job = ["BIZ documents", ["node", "BIZ/tools/bp_check.mjs"], G::ROOT, {}, "BIZ"]
+
+    G.stub(:suite_jobs, [job]) do
+      G.stub(:capture, ->(*_args, **_kwargs) { [false, ["Node.js unavailable"], 3] }) do
+        Master::Trace::Dmesg.stub(:status, ->(*) {}) do
+          ok, body, status = G.suites(%w[BIZ])
+
+          refute ok
+          assert_equal 3, status
+          assert_includes body.join("\n"), "BIZ documents: INCONCLUSIVE"
+          assert_includes body.join("\n"), "Node.js unavailable"
+          assert_includes body.join("\n"), "1 inconclusive"
+        end
+      end
+    end
+  end
+
+  def test_suite_aggregator_preserves_child_timeout_status
+    job = ["STUDIO media", [G::RUBY, "-S", "rake", "test"], G::ROOT, {}, "STUDIO", true]
+
+    G.stub(:suite_jobs, [job]) do
+      G.stub(:capture, ->(*_args, **_kwargs) { [false, ["child timeout"], 124] }) do
+        Master::Trace::Dmesg.stub(:status, ->(*) {}) do
+          ok, body, status = G.suites(%w[STUDIO])
+
+          refute ok
+          assert_equal 124, status
+          assert_includes body.join("\n"), "STUDIO media: TIMEOUT"
+          assert_includes body.join("\n"), "1 timed out"
+        end
+      end
+    end
+  end
+
+  def test_suite_aggregator_keeps_ordinary_failures_as_failures
+    job = ["OPENBSD", [G::RUBY, "test/run_all.rb"], G::ROOT, {}, "OPENBSD"]
+
+    G.stub(:suite_jobs, [job]) do
+      G.stub(:capture, ->(*_args, **_kwargs) { [false, ["assertion failed"], 1] }) do
+        Master::Trace::Dmesg.stub(:status, ->(*) {}) do
+          ok, body, status = G.suites(%w[OPENBSD])
+
+          refute ok
+          assert_equal 1, status
+          assert_includes body.join("\n"), "OPENBSD: FAIL"
+          assert_includes body.join("\n"), "assertion failed"
+        end
+      end
+    end
+  end
+
   def test_biz_scope_reads_the_published_documents
     job = G.suite_jobs(%w[BIZ]).first
 
