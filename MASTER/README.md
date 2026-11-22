@@ -160,6 +160,8 @@ Relevant optional settings include `MASTER_BACKGROUND_SCAN=1` for opt-in backgro
 
 The full builder self-test is off during ordinary startup. Run `bundle exec rake selftest` for the complete Law scan, set `MASTER_BOOT_SELF_TEST=1` to run it in the background during startup, or set `MASTER_STRICT_BOOT=1` to run it synchronously and fail boot on a finding. Streaming `/fix` uses `MASTER_FIX_STREAM_WORKERS` (default 3, integer from 1 to 8); set `MASTER_FIX_STREAM=0` to disable the worker stream.
 
+`MASTER_AUTOFIX=1` changes the repair policy for an explicitly invoked `/fix`; it does not start a background whole-tree mutator. Boot-time unattended repository work enters through `MASTER_BACKLOG_AUTORUN=1`, the owner-registry executor, which revalidates each task's exact paths, task digest, bounded acceptance command, lease and terminal proof.
+
 ## Outbound network boundary
 
 Every server-side fetch is an SSRF boundary, even when its URL appears to name
